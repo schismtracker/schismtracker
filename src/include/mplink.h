@@ -28,8 +28,8 @@
 
 extern CSoundFile *mp;
 
-extern char *filename;  /* the full path (as given to song_load) */
-extern char *file_basename;     /* everything after the last slash */
+extern char song_filename[]; /* the full path (as given to song_load) */
+extern char song_basename[]; /* everything after the last slash */
 
 /* milliseconds = (samples * 1000) / frequency */
 extern unsigned long samples_played;

@@ -484,7 +484,6 @@ static void sample_amplify_dialog(void)
 	struct dialog *dialog;
 	int percent = sample_get_amplify_amount(song_get_sample(current_sample, NULL));
 
-	/* percent = CLAMP(percent, 100, 400); */
 	percent = MIN(percent, 400);
 
 	create_thumbbar(sample_amplify_items + 0, 13, 30, 51, 0, 1, 1, NULL, 0, 400);
@@ -746,6 +745,7 @@ static void update_sample_loop_flags(void)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 
+	/* these switch statements fall through */
 	sample->flags &= ~(SAMP_LOOP | SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG);
 	switch (items_samplelist[9].menutoggle.state) {
 	case 2: sample->flags |= SAMP_LOOP_PINGPONG;

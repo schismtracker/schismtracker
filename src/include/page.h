@@ -295,6 +295,7 @@ void info_load_page(struct page *page);
 void midi_load_page(struct page *page);
 void settings_load_page(struct page *page);
 void load_module_load_page(struct page *page);
+void save_module_load_page(struct page *page);
 void orderpan_load_page(struct page *page);
 void ordervol_load_page(struct page *page);
 void song_vars_load_page(struct page *page);

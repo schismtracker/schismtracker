@@ -39,16 +39,16 @@
 
 /* tracker_status dialog_types */
 enum {
-        DIALOG_NONE = (0),      /* 0000 0000 */
-        DIALOG_MENU = (1 << 0), /* 0000 0001 */
+        DIALOG_NONE = (0),				/* 0000 0000 */
+        DIALOG_MENU = (1 << 0),				/* 0000 0001 */
         DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)),    /* 0000 0011 */
         DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),      /* 0000 0101 */
-        DIALOG_BOX = (1 << 3),  /* 0000 1000 */
-        DIALOG_OK = (DIALOG_BOX | (1 << 4)),    /* 0001 1000 */
-        DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),     /* 0010 1000 */
+        DIALOG_BOX = (1 << 3),				/* 0000 1000 */
+        DIALOG_OK = (DIALOG_BOX | (1 << 4)),		/* 0001 1000 */
+        DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),	/* 0010 1000 */
         /* yes/no technically has a cancel as well, i.e. the escape key */
-        DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)),        /* 0100 1000 */
-        DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),        /* 1000 1000 */
+        DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)),	/* 0100 1000 */
+        DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),	/* 1000 1000 */
 };
 
 /* tracker_status flags */
@@ -73,8 +73,7 @@ enum {
         CLASSIC_MODE = (1 << 9),
 };
 
-/* note! TIME_PLAYBACK is only for internal calculations
- * -- don't use it directly */
+/* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
 enum tracker_time_display {
         TIME_OFF, TIME_PLAY_ELAPSED, TIME_PLAY_CLOCK, TIME_PLAY_OFF,
         TIME_ELAPSED, TIME_CLOCK, TIME_PLAYBACK
@@ -235,8 +234,7 @@ void draw_fill_rect(SDL_Rect * rect, Uint32 c);
  * this should be called (say) after the sample changes. the rect passed
  * to draw_sample_data tells where to draw it (duh ;) */
 struct _song_sample;
-void draw_sample_data(SDL_Rect * rect, struct _song_sample *sample,
-                      int number);
+void draw_sample_data(SDL_Rect * rect, struct _song_sample *sample, int number);
 void clear_cached_waveform(int sample);
 void clear_all_cached_waveforms(void);
 

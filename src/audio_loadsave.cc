@@ -23,6 +23,8 @@
 #include <cstring>
 #include <cerrno>
 
+#include <limits.h>
+
 #include "mplink.h"
 #include "slurp.h"
 
@@ -32,8 +34,8 @@
 
 // ------------------------------------------------------------------------
 
-char *filename = NULL;
-char *file_basename = NULL;
+char song_filename[PATH_MAX + 1];
+char song_basename[NAME_MAX + 1];
 
 byte row_highlight_major = 16, row_highlight_minor = 4;
 
@@ -220,14 +222,9 @@ void song_new(int flags)
         SDL_LockAudio();
 
 	if ((flags & KEEP_PATTERNS) == 0) {
-		if (filename) {
-			free(filename);
-			filename = NULL;
-		}
-		if (file_basename) {
-			free(file_basename);
-			file_basename = NULL;
-		}
+		song_filename[0] = '\0';
+		song_basename[0] = '\0';
+		
 		for (i = 0; i < MAX_PATTERNS; i++) {
 			if (mp->Patterns[i]) {
 				CSoundFile::FreePattern(mp->Patterns[i]);
@@ -285,7 +282,7 @@ void song_new(int flags)
         song_stop();
 	
         SDL_UnlockAudio();
-	
+        
 	// ugly #1
 	row_highlight_major = mp->m_rowHighlightMajor;
 	row_highlight_minor = mp->m_rowHighlightMinor;
@@ -295,12 +292,12 @@ void song_new(int flags)
 
 int song_load(const char *file)
 {
+        const char *base = get_basename(file);
+        
 	// IT stops the song even if the new song can't be loaded
 	song_stop();
 	
-        const char *base = get_basename(file);
         slurp_t *s = slurp(file, NULL);
-	
         if (s == 0) {
                 log_appendf(4, "%s: %s", base, strerror(errno));
                 return 0;
@@ -309,12 +306,10 @@ int song_load(const char *file)
         CSoundFile *newsong = new CSoundFile();
 	int r = newsong->Create(s->data, s->length);
 	if (r) {
-                if (filename)
-                        free(filename);
-                filename = strdup(file);
-                if (file_basename)
-                        free(file_basename);
-                file_basename = strdup(base);
+	        strncpy(song_filename, file, PATH_MAX);
+	        strncpy(song_basename, get_basename(file), NAME_MAX);
+	        song_filename[PATH_MAX] = '\0';
+	        song_basename[NAME_MAX] = '\0';
 
                 SDL_LockAudio();
 		
@@ -689,7 +684,7 @@ static bool _save_it(const char *file)
 	hdr.smpnum = nsmp;
 	hdr.patnum = npat;
 	// No one else seems to be using the cwtv's tracker id number, so I'm gonna take 1. :)
-	hdr.cwtv = bswapLE16(0x1010);	// creator: 1 = schism tracker; 010 = 0.10a
+	hdr.cwtv = bswapLE16(0x1015);	// creator: 1 = schism tracker; 015 = 0.15a
 	// compat:
 	//     "normal" = 2.00
 	//     vol col effects = 2.08
@@ -788,17 +783,27 @@ static bool _save_it(const char *file)
 
 int song_save(const char *file)
 {
+        const char *base = get_basename(file);
+        
 	// ugly #3
 	mp->m_rowHighlightMajor = row_highlight_major;
 	mp->m_rowHighlightMinor = row_highlight_minor;
 
-        if (_save_it(file)) {
+	if (_save_it(file)) {
                 log_appendf(2, "Saved file: %s", file);
-                /* TODO | change the filename/basename to correspond
-                 * TODO | with the new saved version of the file */
+                
+                if (song_filename != file) {
+			// this stuff is copied from song_load...
+			// maybe i should make a separate function for it?
+		        strncpy(song_filename, file, PATH_MAX);
+		        strncpy(song_basename, get_basename(file), NAME_MAX);
+		        song_filename[PATH_MAX] = '\0';
+		        song_basename[NAME_MAX] = '\0';
+       		}
+       	        
 		return 1;
         } else {
-                log_appendf(4, "%s: %s", file, strerror(errno));
+                log_appendf(4, "%s: %s", base, strerror(errno));
 		return 0;
         }
 }
@@ -1100,10 +1105,10 @@ int song_save_sample_raw(int n, const char *file)
 
 const char *song_get_filename()
 {
-        return filename ? : "";
+        return song_filename;
 }
 
 const char *song_get_basename()
 {
-        return file_basename ? : "";
+        return song_basename;
 }

@@ -534,8 +534,11 @@ static void _env_draw_axes(int middle)
 static void _env_draw_node(int x, int y, int on)
 {
 	/* FIXME: the lines draw over the nodes. This doesn't matter unless the color is different. */
-	/* int c = (status.flags & CLASSIC_MODE) ? 12 : 5; */
+#if 1
+	int c = (status.flags & CLASSIC_MODE) ? 12 : 5;
+#else
 	int c = 12;
+#endif
 	
 	putpixel_screen(x - 1, y - 1, c);
 	putpixel_screen(x - 1, y, c);
@@ -641,7 +644,49 @@ static void _env_draw(int middle, int current_node, byte nodes, unsigned short t
         SDL_UnlockSurface(screen);
 }
 
-static int _env_handle_key_viewmode(SDL_keysym *k, byte nodes, int *current_node)
+static void _env_node_add(byte *nodes, int *current_node, unsigned short ticks[], byte values[])
+{
+	int newtick, newvalue;
+	
+	/* is 24 the right number here, or 25? */
+	if (*nodes > 24 || *current_node == *nodes - 1)
+		return;
+	
+	newtick = (ticks[*current_node] + ticks[*current_node + 1]) / 2;
+	newvalue = (values[*current_node] + values[*current_node + 1]) / 2;
+	if (newtick == ticks[*current_node] || newtick == ticks[*current_node + 1]) {
+		/* If the current node is at (for example) tick 30, and the next node is at tick 32,
+		 * is there any chance of a rounding error that would make newtick 30 instead of 31?
+		 * ("Is there a chance the track could bend?") */
+		printf("Not enough room!\n");
+		return;
+	}
+	
+	(*nodes)++;
+	memmove(ticks + *current_node + 1, ticks + *current_node,
+		(*nodes - *current_node - 1) * sizeof(ticks[0]));
+	memmove(values + *current_node + 1, values + *current_node,
+		(*nodes - *current_node - 1) * sizeof(values[0]));
+	ticks[*current_node + 1] = newtick;
+	values[*current_node + 1] = newvalue;
+}
+
+static void _env_node_remove(byte *nodes, int *current_node, unsigned short ticks[], byte values[])
+{
+	if (*current_node == 0 || *nodes < 3)
+		return;
+	
+	memmove(ticks + *current_node, ticks + *current_node + 1,
+		(*nodes - *current_node - 1) * sizeof(ticks[0]));
+	memmove(values + *current_node, values + *current_node + 1,
+		(*nodes - *current_node - 1) * sizeof(values[0]));
+	(*nodes)--;
+	if (*current_node >= *nodes)
+		*current_node = *nodes - 1;
+}
+
+static int _env_handle_key_viewmode(SDL_keysym *k, byte *nodes, int *current_node,
+				    unsigned short ticks[], byte values[])
 {
 	int new_node = *current_node;
 	
@@ -658,6 +703,14 @@ static int _env_handle_key_viewmode(SDL_keysym *k, byte nodes, int *current_node
         case SDLK_RIGHT:
 		new_node++;
                 break;
+	case SDLK_INSERT:
+		_env_node_add(nodes, current_node, ticks, values);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_DELETE:
+		_env_node_remove(nodes, current_node, ticks, values);
+		status.flags |= NEED_UPDATE;
+		return 1;
 	case SDLK_SPACE:
 		song_play_note(current_instrument, last_note, 0, 1);
 		return 1;
@@ -670,7 +723,7 @@ static int _env_handle_key_viewmode(SDL_keysym *k, byte nodes, int *current_node
                 return 0;
         }
 	
-	new_node = CLAMP(new_node, 0, nodes - 1);
+	new_node = CLAMP(new_node, 0, *nodes - 1);
 	if (*current_node != new_node) {
 		*current_node = new_node;
 		status.flags |= NEED_UPDATE;
@@ -735,14 +788,13 @@ static int _env_handle_key_editmode(SDL_keysym * k, byte *nodes, int *current_no
 		new_tick = 10000;
 		break;
 	case SDLK_INSERT:
-		// Add a node. (maximum 25 nodes?) -- don't change the selected node here. The new node is
-		// after current node, positioned halfway between the current and next node in both
-		// directions. (What happens if the last node was selected?)
-		break;
+		_env_node_add(nodes, current_node, ticks, values);
+		status.flags |= NEED_UPDATE;
+		return 1;
 	case SDLK_DELETE:
-		// Delete the current node. (minimum 2 nodes) -- focus the next node unless this was the last
-		// node, in which case focus the previous node.
-		break;
+		_env_node_remove(nodes, current_node, ticks, values);
+		status.flags |= NEED_UPDATE;
+		return 1;
 	case SDLK_SPACE:
 		song_play_note(current_instrument, last_note, 0, 1);
 		return 1;
@@ -831,7 +883,8 @@ static int volume_envelope_handle_key(SDL_keysym * k)
 						&ins->vol_loop_start, &ins->vol_loop_end,
 						&ins->vol_sustain_start, &ins->vol_sustain_end);
 	} else {
-		return _env_handle_key_viewmode(k, ins->vol_env_nodes, &current_node_vol);
+		return _env_handle_key_viewmode(k, &ins->vol_env_nodes, &current_node_vol,
+						ins->vol_env_ticks, ins->vol_env_values);
 	}
 }
 
@@ -845,7 +898,8 @@ static int panning_envelope_handle_key(SDL_keysym * k)
 						&ins->pan_loop_start, &ins->pan_loop_end,
 						&ins->pan_sustain_start, &ins->pan_sustain_end);
 	} else {
-		return _env_handle_key_viewmode(k, ins->pan_env_nodes, &current_node_pan);
+		return _env_handle_key_viewmode(k, &ins->pan_env_nodes, &current_node_pan,
+						ins->pan_env_ticks, ins->pan_env_values);
 	}
 }
 
@@ -859,7 +913,8 @@ static int pitch_envelope_handle_key(SDL_keysym * k)
 						&ins->pitch_loop_start, &ins->pitch_loop_end,
 						&ins->pitch_sustain_start, &ins->pitch_sustain_end);
 	} else {
-		return _env_handle_key_viewmode(k, ins->pitch_env_nodes, &current_node_pitch);
+		return _env_handle_key_viewmode(k, &ins->pitch_env_nodes, &current_node_pitch,
+						ins->pitch_env_ticks, ins->pitch_env_values);
 	}
 }
 

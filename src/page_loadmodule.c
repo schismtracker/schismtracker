@@ -39,6 +39,7 @@ static const int type_colors[] = { 7, 3, 5, 6, 2, 4 };
 /* the locals */
 
 static struct item items_loadmodule[5];
+static struct item items_savemodule[5];
 
 static char **dirs = NULL;
 struct file_list_data {
@@ -59,58 +60,94 @@ static int top_dir = 0, current_dir = 0, num_dirs = 0, allocated_size_dirs = 0;
 
 #define BLOCK_SIZE 256			/* this is probably plenty */
 
-/* filename_entry is updated whenever the selected file is changed.
- * (this differs from impulse tracker, which accepts wildcards in the
- * filename box... i'm not doing this partly because filenames could be
- * longer than the visible text in the browser, and partly because i
- * just don't want to write that code.)
- * 
- * dirname_entry is copied from the module directory (off the vars page)
- * when this page is loaded, and copied back when the directory is
- * changed. in general the two variables will be the same, but editing
- * the text directly won't screw up the directory listing or anything.
- * (hitting enter will cause the changed callback, which will copy the
- * text from dirname_entry to the actual configured string and update
- * the current directory.)
- * 
- * whew. */
+/* filename_entry is updated whenever the selected file is changed. (this differs from impulse tracker, which
+accepts wildcards in the filename box... i'm not doing this partly because filenames could be longer than the
+visible text in the browser, and partly because i just don't want to write that code.)
+
+dirname_entry is copied from the module directory (off the vars page) when this page is loaded, and copied back
+when the directory is changed. in general the two variables will be the same, but editing the text directly
+won't screw up the directory listing or anything. (hitting enter will cause the changed callback, which will
+copy the text from dirname_entry to the actual configured string and update the current directory.)
+
+whew. */
 static char filename_entry[NAME_MAX + 1] = "";
 static char dirname_entry[PATH_MAX + 1] = "";
 
 /* --------------------------------------------------------------------- */
 /* page-dependent stuff (load or save) */
 
-/* there should be a more useful way to determine which page to set. i.e.,
- * if there were errors/warnings, show the log; otherwise, switch to the
- * blank page (or, for the loader, maybe the previously set page if
- * classic mode is off?)
- * idea for return codes:
- *     0 = couldn't load/save, error dumped to log
- *     1 = no warnings or errors were printed.
- *     2 = there were warnings, but the song was still loaded/saved. */
+/* there should be a more useful way to determine which page to set. i.e., if there were errors/warnings, show
+the log; otherwise, switch to the blank page (or, for the loader, maybe the previously set page if classic mode
+is off?)
+idea for return codes:
+    0 = couldn't load/save, error dumped to log
+    1 = no warnings or errors were printed.
+    2 = there were warnings, but the song was still loaded/saved. */
 
-static void handle_file_entered_L(const char *ptr)
+static void handle_file_entered_L(char *ptr)
 {
 	if (song_load(ptr)) {
 		//set_page(PAGE_LOG);
 		set_page(PAGE_BLANK);
 	}
+	free(ptr);
 }
 
-static void handle_file_entered_S(const char *ptr)
+/* FIXME: this is *really* ugly. dialogs need an extra data pointer to pass to callback functions. */
+
+static void do_save_song_really(char *ptr)
 {
 	set_page(PAGE_LOG);
 	if (song_save(ptr)) {
-		//set_page(PAGE_LOG);
-		set_page(PAGE_BLANK);
+		set_page(PAGE_LOG);
+		//set_page(PAGE_BLANK);
 	}
 }
 
-static void (*handle_file_entered)(const char *);
+static char *save_filename;
+static void do_save_song(void)
+{
+	do_save_song_really(save_filename);
+	free(save_filename);
+}
+static void do_not_save_song(void)
+{
+	free(save_filename);
+}
+
+static void handle_file_entered_S(char *ptr)
+{
+	struct stat buf;
+	
+	/* this seems to work, at least for the normal cases. it still needs some more testing, especially with
+	weird stuff like trying to overwrite a device/socket, making sure the right thing happens when saving
+	to a symlink (should follow it), etc. */
+	if (stat(ptr, &buf) < 0) {
+		if (errno == ENOENT) {
+			do_save_song_really(ptr);
+		} else {
+			log_appendf(4, "%s: %s", ptr, strerror(errno));
+		}
+	} else {
+		if (S_ISDIR(buf.st_mode)) {
+			/* maybe change the current directory in this case? */
+			log_appendf(4, "%s: Is a directory", ptr);
+		} else if (S_ISREG(buf.st_mode)) {
+			save_filename = ptr;
+			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song, do_not_save_song, 1);
+			return; /* don't free the pointer here */
+		} else {
+			log_appendf(4, "%s: Not overwriting non-regular file", ptr);
+		}
+	}
+	free(ptr);
+}
+
+
+static void (*handle_file_entered)(char *);
 
 /* --------------------------------------------------------------------- */
-/* for all of these, buf should be (at least) 27 chars. anything past
- * that isn't used.
+/* for all of these, buf should be (at least) 27 chars. anything past that isn't used.
  * FIXME: also defined in page_loadsample.c; should be moved elsewhere */
 
 static char *get_date_string(time_t when, char *buf)
@@ -304,13 +341,16 @@ static void dir_list_reposition(void)
 
 static void update_filename_entry(void)
 {
-        items_loadmodule[2].textentry.firstchar =
-                items_loadmodule[2].textentry.cursor_pos = 0;
-        if (files)
-                strncpy(filename_entry, files[current_file]->filename,
-                        NAME_MAX);
-        else
-                filename_entry[0] = 0;
+	if (status.current_page == PAGE_LOAD_MODULE) {
+	        items_loadmodule[2].textentry.firstchar = items_loadmodule[2].textentry.cursor_pos = 0;
+	} else {
+	        items_savemodule[2].textentry.firstchar = items_savemodule[2].textentry.cursor_pos = 0;
+        }
+	if (files)
+	        strncpy(filename_entry, files[current_file]->filename,
+	                NAME_MAX);
+	else
+	        filename_entry[0] = 0;
 }
 
 /* --------------------------------------------------------------------- */
@@ -325,10 +365,8 @@ static void search_redraw(void)
         draw_text_len(search_text + search_first_char, 25, 51, 37, 5, 0);
 
         /* draw the cursor if it's on the dir/file list */
-        if (ACTIVE_PAGE.selected_item == 0
-            || ACTIVE_PAGE.selected_item == 1) {
-                draw_char(0, 51 + search_text_length - search_first_char,
-                          37, 6, 6);
+        if (ACTIVE_PAGE.selected_item == 0 || ACTIVE_PAGE.selected_item == 1) {
+                draw_char(0, 51 + search_text_length - search_first_char, 37, 6, 6);
         }
 }
 
@@ -347,9 +385,7 @@ static void search_update(void)
         if (*selected_item == 0) {
                 for (n = 0; n < num_files; n++) {
                         /* FIXME: strncasecmp isn't very portable... */
-                        if (strncasecmp
-                            (files[n]->filename, search_text,
-                             search_text_length) == 0) {
+                        if (strncasecmp(files[n]->filename, search_text, search_text_length) == 0) {
                                 found_something = 1;
                                 current_file = n;
                                 file_list_reposition();
@@ -358,8 +394,7 @@ static void search_update(void)
                 }
         } else {
                 for (n = 0; n < num_dirs; n++) {
-                        if (strncasecmp(dirs[n], search_text,
-					search_text_length) == 0) {
+                        if (strncasecmp(dirs[n], search_text, search_text_length) == 0) {
                                 found_something = 1;
                                 current_dir = n;
                                 dir_list_reposition();
@@ -418,20 +453,20 @@ static void load_module_draw_const(void)
         draw_text_unlocked("Filename", 4, 46, 0, 2);
         draw_text_unlocked("Directory", 3, 47, 0, 2);
         draw_char_unlocked(0, 51, 37, 0, 6);
-        draw_box_unlocked(2, 12, 47, 44,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(49, 12, 68, 34,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(50, 36, 77, 38,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(50, 39, 77, 44,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(12, 45, 77, 48,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box_unlocked(2, 12, 47, 44, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box_unlocked(49, 12, 68, 34, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box_unlocked(50, 36, 77, 38, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box_unlocked(50, 39, 77, 44, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box_unlocked(12, 45, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
         SDL_UnlockSurface(screen);
 
         draw_fill_chars(51, 37, 76, 37, 0);
         draw_fill_chars(13, 46, 76, 47, 0);
+}
+
+static void save_module_draw_const(void)
+{
+	load_module_draw_const();
 }
 
 /* --------------------------------------------------------------------- */
@@ -445,9 +480,7 @@ static void fill_file_info(struct file_list_data *file)
 
         fi = file_info_get(ptr, NULL);
         if (fi == NULL) {
-                file->type_name = strdup((errno == EPROTO)
-					 ? "Unknown module format"
-					 : strerror(errno));
+                file->type_name = strdup((errno == EPROTO) ? "Unknown module format" : strerror(errno));
                 file->title = strdup("");
                 file->color = 7;
         } else {
@@ -470,13 +503,11 @@ static void file_list_draw(void)
         draw_fill_chars(3, 13, 46, 43, 0);
 
         if (files) {
-                for (n = top_file, pos = 13; n < num_files && pos < 44;
-                     n++, pos++) {
+                for (n = top_file, pos = 13; n < num_files && pos < 44; n++, pos++) {
                         if (!files[n]->title)
                                 fill_file_info(files[n]);
 
-                        if (n == current_file
-                            && ACTIVE_PAGE.selected_item == 0) {
+                        if (n == current_file && ACTIVE_PAGE.selected_item == 0) {
                                 fg1 = fg2 = 0;
                                 bg = 3;
                         } else {
@@ -485,24 +516,17 @@ static void file_list_draw(void)
                                 bg = 0;
                         }
 
-                        draw_text_len(files[n]->filename, 18, 3, pos, fg1,
-                                      bg);
+                        draw_text_len(files[n]->filename, 18, 3, pos, fg1, bg);
                         draw_char(168, 21, pos, 2, bg);
-                        draw_text_len(files[n]->title, 25, 22, pos, fg2,
-                                      bg);
+                        draw_text_len(files[n]->title, 25, 22, pos, fg2, bg);
                 }
 
                 /* info for the current file */
-                draw_text_len(files[current_file]->type_name, 26, 51, 40,
-                              5, 0);
+		draw_text_len(files[current_file]->type_name, 26, 51, 40, 5, 0);
                 sprintf(buf, "%09d", files[current_file]->filesize);
                 draw_text_len(buf, 26, 51, 41, 5, 0);
-                draw_text_len(get_date_string
-                              (files[current_file]->timestamp, buf), 26,
-                              51, 42, 5, 0);
-                draw_text_len(get_time_string
-                              (files[current_file]->timestamp, buf), 26,
-                              51, 43, 5, 0);
+                draw_text_len(get_date_string(files[current_file]->timestamp, buf), 26, 51, 42, 5, 0);
+                draw_text_len(get_time_string(files[current_file]->timestamp, buf), 26, 51, 43, 5, 0);
         } else {
                 if (ACTIVE_PAGE.selected_item == 0) {
                         draw_text("No files.", 3, 13, 0, 3);
@@ -559,8 +583,7 @@ static int file_list_handle_key(SDL_keysym * k)
                         return 1;
                 asprintf(&ptr, "%s/%s", cfg_dir_modules,
                          files[current_file]->filename);
-		handle_file_entered(ptr);
-		free(ptr);
+		handle_file_entered(ptr); /* ... which frees it */
                 return 1;
         case SDLK_BACKSPACE:
                 if (k->mod & KMOD_CTRL)
@@ -635,8 +658,7 @@ static int dir_list_handle_key(SDL_keysym * k)
                 if (current_dir == 0) {
                         ptr = strdup("/");
                 } else {
-                        asprintf(&ptr, "%s/%s", cfg_dir_modules,
-                                 dirs[current_dir]);
+                        asprintf(&ptr, "%s/%s", cfg_dir_modules, dirs[current_dir]);
                 }
                 if (realpath(ptr, buf) == NULL) {
                         perror(ptr);
@@ -688,8 +710,7 @@ static void filename_entered(void)
         } else {
                 asprintf(&ptr, "%s/%s", cfg_dir_modules, filename_entry);
         }
-	handle_file_entered(ptr);
-        free(ptr);
+	handle_file_entered(ptr); /* ... which frees it */
 }
 
 /* strangely similar to the dir list's code :) */
@@ -711,12 +732,10 @@ static void dirname_entered(void)
 
 /* --------------------------------------------------------------------- */
 
-static void load_module_set_page(void)
+/* used by {load,save}_module_set_page. return 1 => contents changed */
+static int update_directory(void)
 {
         struct stat st;
-	
-	/* blecch! */
-	handle_file_entered = handle_file_entered_L;
         
 	/* if we have a list, the directory didn't change,
 	 * and the mtime is the same, we're set */
@@ -724,7 +743,7 @@ static void load_module_set_page(void)
 	    && (status.flags & DIR_MODULES_CHANGED) == 0
 	    && stat(cfg_dir_modules, &st) == 0 
 	    && st.st_mtime == directory_mtime) {
-		return;
+		return 0;
 	}
 	
         strcpy(dirname_entry, cfg_dir_modules);
@@ -735,12 +754,19 @@ static void load_module_set_page(void)
         top_file = current_file = top_dir = current_dir = 0;
         /* clear_directory(); <- useless; read_directory() does this */
         read_directory();
-        pages[PAGE_LOAD_MODULE].selected_item = files ? 0 : 1;
-	
 	search_text_clear();
+	
+	return 1;
 }
 
 /* --------------------------------------------------------------------- */
+
+static void load_module_set_page(void)
+{
+	handle_file_entered = handle_file_entered_L;
+        if (update_directory())
+		pages[PAGE_LOAD_MODULE].selected_item = files ? 0 : 1;
+}
 
 void load_module_load_page(struct page *page)
 {
@@ -761,4 +787,36 @@ void load_module_load_page(struct page *page)
         create_textentry(items_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL,
                          dirname_entry, PATH_MAX);
 	items_loadmodule[3].activate = dirname_entered;
+}
+
+/* --------------------------------------------------------------------- */
+
+static void save_module_set_page(void)
+{
+	handle_file_entered = handle_file_entered_S;
+	
+	update_directory();
+	/* impulse tracker always resets these; so will i */
+	filename_entry[0] = 0;
+	pages[PAGE_SAVE_MODULE].selected_item = 2;
+}
+
+void save_module_load_page(struct page *page)
+{
+        page->title = "Save Module (F10)";
+        page->draw_const = save_module_draw_const;
+        page->set_page = save_module_set_page;
+        page->total_items = 4;
+        page->items = items_savemodule;
+        page->help_index = HELP_GLOBAL;
+        page->selected_item = 2;
+	
+	create_other(items_savemodule + 0, 1, file_list_handle_key, file_list_draw);
+	items_savemodule[0].next.left = items_savemodule[0].next.right = 1;
+	create_other(items_savemodule + 1, 2, dir_list_handle_key, dir_list_draw);
+
+        create_textentry(items_savemodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
+	items_savemodule[2].activate = filename_entered;
+        create_textentry(items_savemodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
+	items_savemodule[3].activate = dirname_entered;
 }

@@ -1,5 +1,26 @@
   _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
 |                                                                         /
+| Probably the most obvious addition for version      [version 0.15a]    /
+| 0.15a is its ability to (cue fanfare) SAVE THE  _ ___ _______ ________/
+| SONG! Yes, that's right, it's finally possible        _ __ ___\
+| to press F10, type a filename, and save!  This
+| means 0.15a is the first truly usable version.  (I've written songs using
+| previous versions, but that doesn't mean they're usable. ;)
+|
+| Other nifty features:
+|
+|     * Real envelope editing! Ins/del now add and remove nodes, infinitely
+|       more useful than before.
+|     * Envelope nodes are drawn in a different color.  (This can be turned
+|       off with the "classic mode" setting,  as are most non-IT features.)
+|     * Hook scripts:  if  ~/.schism/startup-hook  and  ~/.schism/exit-hook
+:       are executable,  they will be run at startup  and exit.
+.
+' -----=----==---===--====-=====//////
+
+
+  _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
+|                                                                         /
 | I am pleased to announce the release of Schism       [version 0.1a]    /
 | Tracker v0.1, with a TON of new stuff:          _ ___ _______ ________/
 |                                                       _ __ ___\

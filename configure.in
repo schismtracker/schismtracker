@@ -17,15 +17,16 @@ dnl You should have received a copy of the GNU General Public License
 dnl along with this program; if not, write to the Free Software
 dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-AC_INIT(src/main.c)
+AC_INIT
+AC_CONFIG_SRCDIR([src/main.c])
 
 dnl We'll need machine type later
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET([])
 machtype=$target_cpu
 
 dnl when changing the version, also change the CWTV in audio_loadsave.cc
 dnl (TODO: come up with some way to do it automatically)
-AM_INIT_AUTOMAKE(schism, 0.1a)
+AM_INIT_AUTOMAKE(schism, 0.15a)
 AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------------------------------
@@ -40,7 +41,7 @@ AC_PROG_LN_S
 AC_PROG_RANLIB
 
 dnl We're using C
-AC_LANG_C
+AC_LANG([C])
 
 dnl Check for endianness
 dnl This procures a warning from autoconf :(
@@ -110,26 +111,26 @@ if test x$ADD_OPT \!= xno; then
         case $machtype in
         i?86)
                 CFLAGS="$CFLAGS -g0 -s -O3 -ffast-math"
-                CFLAGS="$CFLAGS -mcpu=$machtype -march=$machtype"
+                CFLAGS="$CFLAGS -march=$machtype"
                 CFLAGS="$CFLAGS -fstrength-reduce -fomit-frame-pointer"
                 CFLAGS="$CFLAGS -frerun-cse-after-loop -funroll-loops"
-                CFLAGS="$CFLAGS -malign-functions=5 -malign-jumps=5"
-                CFLAGS="$CFLAGS -malign-loops=5 -malign-double"
-                CFLAGS="$CFLAGS -fno-exceptions -fno-rtti -fno-ident"
+                CFLAGS="$CFLAGS -falign-functions=5 -falign-jumps=5"
+                CFLAGS="$CFLAGS -falign-loops=5 -malign-double"
+                CFLAGS="$CFLAGS -fno-exceptions -fno-ident"
                 
                 CXXFLAGS="$CXXFLAGS -g0 -s -O3 -ffast-math"
-                CXXFLAGS="$CXXFLAGS -mcpu=$machtype -march=$machtype"
+                CXXFLAGS="$CXXFLAGS -march=$machtype"
                 CXXFLAGS="$CXXFLAGS -fstrength-reduce -fomit-frame-pointer"
                 CXXFLAGS="$CXXFLAGS -frerun-cse-after-loop -funroll-loops"
-                CXXFLAGS="$CXXFLAGS -malign-functions=5 -malign-jumps=5"
-                CXXFLAGS="$CXXFLAGS -malign-loops=5 -malign-double"
+                CXXFLAGS="$CXXFLAGS -falign-functions=5 -falign-jumps=5"
+                CXXFLAGS="$CXXFLAGS -falign-loops=5 -malign-double"
                 CXXFLAGS="$CXXFLAGS -fno-exceptions -fno-rtti -fno-ident"
                 CXXFLAGS="$CXXFLAGS -fno-enforce-eh-specs"
                 ;;
         *)
                 CFLAGS="$CFLAGS -g0 -s -O3 -ffast-math"
                 CFLAGS="$CFLAGS -fomit-frame-pointer -fno-exceptions"
-                CFLAGS="$CFLAGS -fno-rtti -funroll-loops"
+                CFLAGS="$CFLAGS -funroll-loops"
                 CFLAGS="$CFLAGS -frerun-cse-after-loop -fno-ident"
                 
                 CXXFLAGS="$CXXFLAGS -g0 -s -O3 -ffast-math"
@@ -152,9 +153,10 @@ fi
 
 dnl - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
         Makefile
         src/Makefile
         src/fmt/Makefile
         src/libmodplug/Makefile
 ])
+AC_OUTPUT

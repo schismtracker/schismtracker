@@ -32,7 +32,8 @@ libmodplug_a_SOURCES = tables.cpp          \
                         load_psm.cpp
 
 INCLUDES = -DMODPLUG_PLAYER -DMODPLUG_TRACKER
-CXXFLAGS = @CXXFLAGS@ -Wno-unused
+## wtf! now automake bitches about this.
+CXXFLAGS = -Wno-unused
 
 CLEANFILES = *~
 DISTCLEANFILES = .deps/*.P

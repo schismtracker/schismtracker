@@ -123,28 +123,37 @@ void dialog_destroy_all(void)
 
 void dialog_yes(void)
 {
+        void (*action) (void);
+	
 	ENSURE_DIALOG();
-
-	RUN_IF(dialogs[num_dialogs - 1].action_yes);
+	
+	action = dialogs[num_dialogs - 1].action_yes;
 	dialog_destroy();
+	RUN_IF(action);
 	status.flags |= NEED_UPDATE;
 }
 
 void dialog_no(void)
 {
+        void (*action) (void);
+
 	ENSURE_DIALOG();
 
-	RUN_IF(dialogs[num_dialogs - 1].action_no);
+	action = dialogs[num_dialogs - 1].action_no;
 	dialog_destroy();
+	RUN_IF(action);
 	status.flags |= NEED_UPDATE;
 }
 
 void dialog_cancel(void)
 {
+        void (*action) (void);
+
 	ENSURE_DIALOG();
 
-	RUN_IF(dialogs[num_dialogs - 1].action_cancel);
+	action = dialogs[num_dialogs - 1].action_cancel;
 	dialog_destroy();
+	RUN_IF(action);
 	status.flags |= NEED_UPDATE;
 }
 

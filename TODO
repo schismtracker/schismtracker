@@ -7,8 +7,7 @@ ignore it :)
 
 --------------------------------------------------------------------------
 
-Info page is missing the 64-channel pattern view, technical information,
-and note dots.
+Info page is missing the technical information and note dots.
 
 On the subject, it'd be interesting to have an oscilloscope view :)
 
@@ -56,6 +55,8 @@ For the pattern bit...
 
 More from the aforementioned department: inserting extended chars with
 alt-numpad. This will probably be quite difficult.
+
+(better answer: xim + compose key)
 
 --------------------------------------------------------------------------
 
@@ -294,12 +295,6 @@ meters. (And it'll be more correct...)
 
 --------------------------------------------------------------------------
 
-How 'bout something like Ctrl-F8 to stop the song with a fadeout?
-
-(And some key to pause/restart...)
-
---------------------------------------------------------------------------
-
 On the sample/instrument lists:
 
 Thumbbars that get their values shifted to make their ranges match
@@ -436,7 +431,7 @@ not restarting the audio the "right" way?
 --------------------------------------------------------------------------
 
 editing an envelope loop point should enable the loop
-editing an envelope node should enable the envelope (irrelevant thus far)
+editing an envelope node should enable the envelope
 changing instrument panning should turn it on
 
 --------------------------------------------------------------------------
@@ -444,3 +439,7 @@ changing instrument panning should turn it on
 when checking for a blank pattern, channel 43, row 10 seems to be the
 last note that gets tested. weird boundary byte count or something?
 (683 notes...)
+
+--------------------------------------------------------------------------
+
+Do something (besides segfaulting!) if the audio device is in use.

@@ -267,6 +267,8 @@ static void new_song_dialog(void)
 /* returns 1 if the key was handled */
 static inline int handle_key_global(SDL_keysym * k)
 {
+	int i;
+
         /* first, check the truly global keys (the ones that still work if
          * a dialog's open) */
         switch (k->sym) {
@@ -428,11 +430,26 @@ static inline int handle_key_global(SDL_keysym * k)
                         break;
                 }
                 return 1;
+        case SDLK_s:
+        	if (k->mod & KMOD_CTRL) {
+        		const char *f = song_get_filename();
+        		
+        		if (f[0]) {
+        			if (song_save(f)) {
+		                        set_page(PAGE_BLANK);
+        			} else {
+        				set_page(PAGE_LOG);
+		                }
+        		} else {
+        			set_page(PAGE_SAVE_MODULE);
+        		}
+        	} else {
+        		break;
+        	}
+        	return 1;
         case SDLK_F10:
                 if (NO_MODIFIER(k->mod)) {
-                        /* TODO: actually have a save screen ;) */
-                        set_page(PAGE_LOG);
-                        song_save("test.it");
+                        set_page(PAGE_SAVE_MODULE);
                 } else {
                         break;
                 }
@@ -464,25 +481,22 @@ static inline int handle_key_global(SDL_keysym * k)
         }
 	
 	/* got a bit ugly here, sorry */
-	do {
-		int i = k->sym;
+	i = k->sym;
+	if (k->mod & (KMOD_ALT | KMOD_META)) {
+		if (i >= SDLK_F1 && i <= SDLK_F8)
+			i -= SDLK_F1;
+		else if (i >= SDLK_KP1 && i <= SDLK_KP8)
+			i -= SDLK_KP1;
+		else
+			return 0;
 		
-		if (k->mod & (KMOD_ALT | KMOD_META)) {
-			if (i >= SDLK_F1 && i <= SDLK_F8)
-				i -= SDLK_F1;
-			else if (i >= SDLK_KP1 && i <= SDLK_KP8)
-				i -= SDLK_KP1;
-			else
-				break;
-			
-			song_toggle_channel_mute(i);
-			if (status.current_page == PAGE_PATTERN_EDITOR) {
-				status.flags |= NEED_UPDATE;
-			}
-			orderpan_recheck_muted_channels();
-			return 1;
+		song_toggle_channel_mute(i);
+		if (status.current_page == PAGE_PATTERN_EDITOR) {
+			status.flags |= NEED_UPDATE;
 		}
-        } while (0);
+		orderpan_recheck_muted_channels();
+		return 1;
+	}
 
         /* oh well */
         return 0;
@@ -519,30 +533,20 @@ void handle_key(SDL_keysym * k)
         default:
                 switch (k->unicode) {
                 case '{':
-                        song_set_current_speed(song_get_current_speed()
-                                               - 1);
-                        status_text_flash("Speed set to %d frames per row",
-                                          song_get_current_speed());
+                        song_set_current_speed(song_get_current_speed() - 1);
+                        status_text_flash("Speed set to %d frames per row", song_get_current_speed());
                         return;
                 case '}':
-                        song_set_current_speed(song_get_current_speed()
-                                               + 1);
-                        status_text_flash("Speed set to %d frames per row",
-                                          song_get_current_speed());
+                        song_set_current_speed(song_get_current_speed() + 1);
+                        status_text_flash("Speed set to %d frames per row", song_get_current_speed());
                         return;
                 case '[':
-                        song_set_current_global_volume
-                                (song_get_current_global_volume() - 1);
-                        status_text_flash("Global volume set to %d",
-                                          song_get_current_global_volume
-                                          ());
+                        song_set_current_global_volume(song_get_current_global_volume() - 1);
+                        status_text_flash("Global volume set to %d", song_get_current_global_volume());
                         return;
                 case ']':
-                        song_set_current_global_volume
-                                (song_get_current_global_volume() + 1);
-                        status_text_flash("Global volume set to %d",
-                                          song_get_current_global_volume
-                                          ());
+                        song_set_current_global_volume(song_get_current_global_volume() + 1);
+                        status_text_flash("Global volume set to %d", song_get_current_global_volume());
                         return;
                 default:
                         break;
@@ -561,6 +565,9 @@ void handle_key(SDL_keysym * k)
 /* --------------------------------------------------------------------- */
 /* Jeffrey, dude, you made this HARD TO DO :) */
 
+#define TOP_BANNER_NORMAL "Schism Tracker v" VERSION " Copyright (C) 2003-2004 chisel"
+#define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
+
 static void draw_top_info_const(void)
 {
         int n;
@@ -569,19 +576,9 @@ static void draw_top_info_const(void)
         
         /* gcc optimizes out the strlen's here :) */
         if (status.flags & CLASSIC_MODE) {
-#define TOP_BANNER_TEXT "Impulse Tracker v2.14" \
-        " Copyright (C) 1995-1998 Jeffrey Lim"
-                draw_text_unlocked(TOP_BANNER_TEXT,
-                                   (80 - strlen(TOP_BANNER_TEXT)) / 2,
-                                   1, 0, 2);
-#undef TOP_BANNER_TEXT
+		draw_text_unlocked(TOP_BANNER_CLASSIC, (80 - strlen(TOP_BANNER_CLASSIC)) / 2, 1, 0, 2);
         } else {
-#define TOP_BANNER_TEXT "Schism Tracker v" VERSION \
-        " Copyright (C) 2003-2004 chisel"
-                draw_text_unlocked(TOP_BANNER_TEXT,
-                                   (80 - strlen(TOP_BANNER_TEXT)) / 2,
-                                   1, 0, 2);
-#undef TOP_BANNER_TEXT
+                draw_text_unlocked(TOP_BANNER_NORMAL, (80 - strlen(TOP_BANNER_NORMAL)) / 2, 1, 0, 2);
         }
 
         draw_text_unlocked("Song Name", 2, 3, 0, 2);
@@ -594,8 +591,7 @@ static void draw_top_info_const(void)
         draw_text_unlocked("Octave", 43, 5, 0, 2);
 
         draw_text_unlocked("F1...Help       F9.....Load", 21, 6, 0, 2);
-        draw_text_unlocked("ESC..Main Menu  F5/F8..Play / Stop", 21, 7, 0,
-                           2);
+        draw_text_unlocked("ESC..Main Menu  F5/F8..Play / Stop", 21, 7, 0, 2);
 
         /* the neat-looking (but incredibly ugly to draw) borders */
         draw_char_unlocked(128, 30, 4, 3, 2);
@@ -828,8 +824,7 @@ void set_page(int new_page)
         if (status.flags & SAMPLE_CHANGED) {
                 if (song_is_instrument_mode())
                         instrument_synchronize_to_sample();
-#if 0
-		/* This breaks samples. */
+#if 0 /* This breaks samples. */
                 else
 			instrument_set(sample_get_current());
 #endif
@@ -889,6 +884,7 @@ void load_pages(void)
         settings_load_page(pages + PAGE_SETTINGS);
         midi_load_page(pages + PAGE_MIDI);
         load_module_load_page(pages + PAGE_LOAD_MODULE);
+        save_module_load_page(pages + PAGE_SAVE_MODULE);
         orderpan_load_page(pages + PAGE_ORDERLIST_PANNING);
         ordervol_load_page(pages + PAGE_ORDERLIST_VOLUMES);
         song_vars_load_page(pages + PAGE_SONG_VARIABLES);

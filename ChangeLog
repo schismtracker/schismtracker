@@ -1,9 +1,68 @@
-Sun Sep  5 02:17:27 2004  chisel  <someguy@here.is>
+Fri Dec 10 10:27:03 2004  chisel  <someguy@here.is>
 
-	* Trust me, I haven't ignored Schism for a month. I just haven't
-	bothered to write stuff down.
+        * Changed version number to 0.15a.
 
-	* Fixed automake stuff to accommodate latest version.
+	* The song's filename and basename are now char arrays (rather
+	than pointers). I'm not sure why I did it like that in the first
+	place, but this makes much more sense.
+
+	* Saving a song now updates the filename correctly.
+
+	* Ctrl-S works properly now. (I think.)
+	
+	* Killed warning with optimize flags. (It seems like gcc3 is quite
+	a bit different than 2.9x, I'm getting a bunch of "inline failed"
+	warnings. I suppose eventually I'll get around to fixing it, since
+	practically none of the inline functions actually *get* inlined,
+	thus defeating the whole point of making them inline... argh!!1!@!)
+
+
+Thu Dec  9 00:20:04 2004  chisel  <someguy@here.is>
+
+	* Save module page seems to work. Ctrl-S partially implemented as
+	well, with "partially" meaning "prints a message" and "implemented"
+	meaning "and does nothing else."
+
+
+Wed Dec  8 11:23:50 2004  chisel  <someguy@here.is>
+
+	* dialog.c: Delay running the action callbacks until after the
+	dialog has been destroyed.
+	
+	* page_loadmodule.c: Finally got some semblance of a save page. I
+	don't doubt it still needs a lot of work, but hey, at least now
+	it's possible to give a filename to save instead of having to
+	switch to a shell and 'mv test.it whatever.it', so that's
+	progress.
+	
+	* page_instruments.c: I swear I did some stuff last night, but I
+	can't remember what. At least I remembered to save it twice
+	without changing anything to prevent being able to figure out
+	what I did by diffing with the backup file. :P~
+
+Thu Nov 18 12:17:52 2004  chisel  <someguy@here.is>
+
+	* page_instruments.c: Finally added code to add/remove envelope
+	points. Also, the envelope points are now drawn in a different
+	colour from the lines (as for everything, this can be turned off
+	with CLASSIC_MODE) -- it's not perfect, since the way I'm drawing
+	the envelope, the lines are drawn on top of the points, so it
+	looks a bit weird. I'll fix that. Eventually.
+
+
+Sat Sep 25 16:29:02 2004  chisel  <someguy@here.is>
+
+	* main.c: Added quick hack to run a hook script on startup and
+	exit. Just put whatever you want to run in ~/.schism/startup-hook
+	and ~/.schism/exit-hook and chmod +x it, and Schism will run it.
+	Useful for mounting a disk, changing the keyboard layout,
+	signalling the screensaver, putting esd on standby, or whatever
+	else you might want to do. Use your imagination.
+
+
+Wed Sep  8 16:50:15 2004  chisel  <someguy@here.is>
+
+	* Create ~/.schism/ if it doesn't exist. (Oops.)
 
 
 Tue Aug 10 09:00:51 2004  chisel  <someguy@here.is>

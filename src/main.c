@@ -224,11 +224,42 @@ static inline void handle_active_event(SDL_ActiveEvent * a)
 
 /* --------------------------------------------------------------------- */
 
+static void run_startup_hook(void)
+{
+	char filename[PATH_MAX + 1];
+	const char *home_dir = getenv("HOME") ? : "/";
+	
+	strncpy(filename, home_dir, PATH_MAX);
+	strncat(filename, "/.schism/startup-hook", PATH_MAX);
+	filename[PATH_MAX] = 0;
+	
+	if (access(filename, X_OK) == 0)
+		system(filename);
+}
+
+static void run_exit_hook(void)
+{
+	char filename[PATH_MAX + 1];
+	const char *home_dir = getenv("HOME") ? : "/";
+	
+	strncpy(filename, home_dir, PATH_MAX);
+	strncat(filename, "/.schism/exit-hook", PATH_MAX);
+	filename[PATH_MAX] = 0;
+	
+	if (access(filename, X_OK) == 0)
+		system(filename);
+}
+
+/* --------------------------------------------------------------------- */
+
 int main(int argc, char **argv) NORETURN;
 int main(int argc, char **argv)
 {
 	SDL_Event event;
 
+	run_startup_hook();
+	atexit(run_exit_hook);
+	
 	save_font();
 	atexit(restore_font);
 
