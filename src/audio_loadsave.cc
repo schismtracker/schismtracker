@@ -742,15 +742,16 @@ static bool _save_it(const char *file)
 	
 	// instruments, samples, and patterns
 	for (n = 0; n < nins; n++) {
-		para_ins[n] = ftell(fp);
+		para_ins[n] = bswapLE32(ftell(fp));
 		_save_it_instrument(n, fp, 0);
 	}
 	for (n = 0; n < nsmp; n++) {
+		// the sample parapointers are byte-swapped later
 		para_smp[n] = ftell(fp);
 		_save_it_sample(n, fp);
 	}
 	for (n = 0; n < npat; n++) {
-		para_pat[n] = ftell(fp);
+		para_pat[n] = bswapLE32(ftell(fp));
 		if (!_save_it_pattern(n, fp))
 			para_pat[n] = 0;
 	}
@@ -767,10 +768,12 @@ static bool _save_it(const char *file)
 		fwrite(&tmp, 4, 1, fp);
 		fseek(fp, 0, SEEK_END);
 		fwrite(smp->pSample, (smp->uFlags & CHN_16BIT ? 2 : 1), smp->nLength, fp);
+		
+		// done using the pointer internally, so *now* swap it
+		para_smp[n] = bswapLE32(para_smp[n]);
 	}
 	
 	// rewrite the parapointers
-	// (TODO: byte-swap the parapointers)
 	fseek(fp, 0xc0 + nord, SEEK_SET);
 	fwrite(para_ins, 4, nins, fp);
 	fwrite(para_smp, 4, nsmp, fp);

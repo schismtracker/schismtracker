@@ -1710,7 +1710,7 @@ fi
 
 # Define the identity of the package.
  PACKAGE=schism
- VERSION=0.18a
+ VERSION=0.181a
 
 
 cat >>confdefs.h <<_ACEOF

@@ -1,3 +1,8 @@
+Tue Feb 15 22:04:08 2005  chisel  <someguy@here.is>
+
+	* audio_loadsave.cc: Fixed parapointer endianness on file save.
+
+
 Mon Feb 14 15:10:06 2005  chisel  <someguy@here.is>
 
 	* After gdb'ing the crap out of the pattern resizing code,
