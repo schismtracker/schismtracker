@@ -1,6 +1,7 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+ * URL: http://rigelseven.com/schism/
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +39,7 @@ int instrument_list_subpage = PAGE_INSTRUMENT_LIST_GENERAL;
 static struct item items_general[18];
 static struct item items_volume[17];
 static struct item items_panning[19];
-static struct item items_pitch[18];
+static struct item items_pitch[20];
 
 static int subpage_switches_group[5] = { 1, 2, 3, 4, -1 };
 static int nna_group[5] = { 6, 7, 8, 9, -1 };
@@ -1146,12 +1147,15 @@ static void instrument_list_pitch_predraw_hook(void)
 	items_pitch[12].numentry.value = ins->pitch_sustain_start;
 	items_pitch[13].numentry.value = ins->pitch_sustain_end;
 	
+	items_pitch[14].thumbbar.value = ins->filter_cutoff & 0x7f;
+	items_pitch[15].thumbbar.value = ins->filter_resonance & 0x7f;
+	
 	/* printf("ins%02d: ch%04d pgm%04d bank%06d drum%04d\n", current_instrument,
 		ins->midi_channel, ins->midi_program, ins->midi_bank, ins->midi_drum_key); */
-	items_pitch[14].thumbbar.value = ins->midi_channel;
-	items_pitch[15].thumbbar.value = (signed char) ins->midi_program;
-	items_pitch[16].thumbbar.value = (signed char) (ins->midi_bank & 0xff);
-	items_pitch[17].thumbbar.value = (signed char) (ins->midi_bank >> 8);
+	items_pitch[16].thumbbar.value = ins->midi_channel;
+	items_pitch[17].thumbbar.value = (signed char) ins->midi_program;
+	items_pitch[18].thumbbar.value = (signed char) (ins->midi_bank & 0xff);
+	items_pitch[19].thumbbar.value = (signed char) (ins->midi_bank >> 8);
 	/* what is midi_drum_key for? */
 }
 
@@ -1201,6 +1205,7 @@ static void instrument_list_volume_update_values(void)
 static void instrument_list_panning_update_values(void)
 {
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
+	int n;
 	
 	ins->flags &= ~(ENV_PANNING | ENV_PANCARRY | ENV_PANLOOP | ENV_PANSUSTAIN | ENV_SETPANNING);
         if (items_panning[6].toggle.state)
@@ -1219,7 +1224,11 @@ static void instrument_list_panning_update_values(void)
         ins->pan_sustain_start = items_panning[12].numentry.value;
         ins->pan_sustain_end = items_panning[13].numentry.value;
 	
-	ins->panning = items_panning[15].thumbbar.value << 2;
+	n = items_panning[15].thumbbar.value << 2;
+	if (ins->panning != n) {
+		ins->panning = n;
+		ins->flags |= ENV_SETPANNING;
+	}
 	/* (items_panning[16] is the pitch-pan center) */
         ins->pitch_pan_separation = items_panning[17].thumbbar.value;
         ins->pan_swing = items_panning[18].thumbbar.value;
@@ -1246,14 +1255,15 @@ static void instrument_list_pitch_update_values(void)
 		ins->flags |= ENV_PITCHSUSTAIN;
 	
 	ins->pitch_loop_start = items_pitch[9].numentry.value;
-	ins->pitch_loop_end= items_pitch[10].numentry.value;
+	ins->pitch_loop_end = items_pitch[10].numentry.value;
 	ins->pitch_sustain_start = items_pitch[12].numentry.value;
 	ins->pitch_sustain_end = items_pitch[13].numentry.value;
-	
-	ins->midi_channel = items_pitch[14].thumbbar.value;
-	ins->midi_program = items_pitch[15].thumbbar.value;
-	ins->midi_bank = ((items_pitch[17].thumbbar.value << 8)
-			  | (items_pitch[16].thumbbar.value & 0xff));
+	ins->filter_cutoff = items_pitch[14].thumbbar.value | 0x80;
+	ins->filter_resonance = items_pitch[15].thumbbar.value | 0x80;
+	ins->midi_channel = items_pitch[16].thumbbar.value;
+	ins->midi_program = items_pitch[17].thumbbar.value;
+	ins->midi_bank = ((items_pitch[19].thumbbar.value << 8)
+			  | (items_pitch[18].thumbbar.value & 0xff));
 }
 
 /* --------------------------------------------------------------------- */
@@ -1378,7 +1388,7 @@ static void instrument_list_pitch_draw_const(void)
         draw_box_unlocked(53, 27, 63, 30, BOX_THICK | BOX_INNER | BOX_INSET);
         draw_box_unlocked(53, 31, 63, 35, BOX_THICK | BOX_INNER | BOX_INSET);
         draw_box_unlocked(53, 36, 63, 40, BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(53, 41, 71, 46, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box_unlocked(53, 41, 71, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 	
 	draw_text_unlocked("Frequency Envelope", 35, 28, 0, 2);
 	draw_text_unlocked("Carry", 48, 29, 0, 2);
@@ -1388,10 +1398,12 @@ static void instrument_list_pitch_draw_const(void)
         draw_text_unlocked("Sustain Loop", 41, 37, 0, 2);
         draw_text_unlocked("SusLoop Begin", 40, 38, 0, 2);
         draw_text_unlocked("SusLoop End", 42, 39, 0, 2);
-	draw_text_unlocked("MIDI Channel", 36, 42, 0, 2);
-	draw_text_unlocked("MIDI Program", 36, 43, 0, 2);
-	draw_text_unlocked("MIDI Bank Low", 36, 44, 0, 2);
-	draw_text_unlocked("MIDI Bank High", 36, 45, 0, 2);
+	draw_text_unlocked("Default Cutoff", 36, 42, 0, 2);
+	draw_text_unlocked("Default Resonance", 36, 43, 0, 2);
+	draw_text_unlocked("MIDI Channel", 36, 44, 0, 2);
+	draw_text_unlocked("MIDI Program", 36, 45, 0, 2);
+	draw_text_unlocked("MIDI Bank Low", 36, 46, 0, 2);
+	draw_text_unlocked("MIDI Bank High", 36, 47, 0, 2);
 	
 	SDL_UnlockSurface(screen);
 }
@@ -1590,7 +1602,7 @@ void instrument_list_pitch_load_page(struct page *page)
 	
         page->draw_const = instrument_list_pitch_draw_const;
         page->predraw_hook = instrument_list_pitch_predraw_hook;
-        page->total_items = 18;
+        page->total_items = 20;
 	
         /* 5 = pitch envelope */
 	create_other(items_pitch + 5, 0, pitch_envelope_handle_key, pitch_envelope_draw);
@@ -1621,18 +1633,24 @@ void instrument_list_pitch_load_page(struct page *page)
                         instrument_list_pitch_update_values, 0, 1,
                         numentry_cursor_pos + 2);
 	
-	/* 14-17 = midi crap */
-	create_thumbbar(items_pitch + 14, 54, 42, 17, 13, 15, 0,
-			instrument_list_pitch_update_values, 0, 17);
+	/* 14-15 = nothing (will be filter cutoff/resonance) */
+        create_thumbbar(items_pitch + 14, 54, 42, 17, 13, 15, 0,
+			instrument_list_pitch_update_values, 0, 127);
 	create_thumbbar(items_pitch + 15, 54, 43, 17, 14, 16, 0,
-			instrument_list_pitch_update_values, -1, 127);
+			instrument_list_pitch_update_values, 0, 127);
+	
+	/* 16-19 = midi crap */
 	create_thumbbar(items_pitch + 16, 54, 44, 17, 15, 17, 0,
+			instrument_list_pitch_update_values, 0, 17);
+	create_thumbbar(items_pitch + 17, 54, 45, 17, 16, 18, 0,
 			instrument_list_pitch_update_values, -1, 127);
-	create_thumbbar(items_pitch + 17, 54, 45, 17, 16, 17, 0,
+	create_thumbbar(items_pitch + 18, 54, 46, 17, 15, 19, 0,
 			instrument_list_pitch_update_values, -1, 127);
-	items_pitch[14].thumbbar.text_at_min = "Off";
-	items_pitch[14].thumbbar.text_at_max = "Mapped";
-	items_pitch[15].thumbbar.text_at_min = "Off";
+	create_thumbbar(items_pitch + 19, 54, 47, 17, 18, 19, 0,
+			instrument_list_pitch_update_values, -1, 127);
 	items_pitch[16].thumbbar.text_at_min = "Off";
+	items_pitch[16].thumbbar.text_at_max = "Mapped";
 	items_pitch[17].thumbbar.text_at_min = "Off";
+	items_pitch[18].thumbbar.text_at_min = "Off";
+	items_pitch[19].thumbbar.text_at_min = "Off";
 }

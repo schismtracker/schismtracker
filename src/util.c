@@ -1,6 +1,7 @@
 /*
  * util.c - Various useful functions
- * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <storlek@chisel.cjb.net>
+ * URL: http://rigelseven.com/
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

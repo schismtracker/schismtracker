@@ -406,11 +406,6 @@ The loops in the pattern editor should be arranged like:
 
 --------------------------------------------------------------------------
 
-The node values for the panning (and pitch -- but not filter) envelope
-should be shifted from [0..64] to [-32..32].
-
---------------------------------------------------------------------------
-
 Take a look at newkarma.s3m and numb.it -- why don't the Bxx/Cxx tricks
 at the end work?
 
@@ -432,7 +427,6 @@ not restarting the audio the "right" way?
 
 editing an envelope loop point should enable the loop
 editing an envelope node should enable the envelope
-changing instrument panning should turn it on
 
 --------------------------------------------------------------------------
 

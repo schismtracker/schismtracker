@@ -1,6 +1,7 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+ * URL: http://rigelseven.com/schism/
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning "Alsa mixer is a stub - TODO"
+
 #include "headers.h"
 
 #include "mixer.h"
@@ -26,17 +29,14 @@
 
 int mixer_get_max_volume(void)
 {
-	return 64;
+	return 1;
 }
 
 void mixer_read_volume(int *left, int *right)
 {
-	printf("faking read\n");
-	
-	*left = *right = 48;
+	*left = *right = 0;
 }
 
-void mixer_write_volume(int left, int right)
+void mixer_write_volume(UNUSED int left, UNUSED int right)
 {
-	printf("faking write\n");
 }

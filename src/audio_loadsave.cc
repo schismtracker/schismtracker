@@ -1,5 +1,6 @@
 // Schism Tracker - a cross-platform Impulse Tracker clone
-// copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
+// copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+// URL: http://rigelseven.com/schism/
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -522,6 +523,23 @@ static void _save_it_sample(int n, FILE *fp)
 	fwrite(&its, sizeof(its), 1, fp);
 }
 
+static void _save_it_sample_data(MODINSTRUMENT *smp, FILE *fp)
+{
+	if (smp->uFlags & CHN_16BIT) {
+#if WORDS_BIGENDIAN
+		for (unsigned int n = 0; n < smp->nLength; n++) {
+			signed short s = ((signed short *) smp->pSample)[n];
+			s = bswapLE16(s);
+			fwrite(&s, 2, 1, fp);
+		}
+#else
+		fwrite(smp->pSample, 2, smp->nLength, fp);
+#endif
+	} else {
+		fwrite(smp->pSample, 1, smp->nLength, fp);
+	}
+}
+
 // NOBODY expects the Spanish Inquisition!
 static bool _save_it_pattern(int n, FILE *fp)
 {
@@ -531,7 +549,6 @@ static bool _save_it_pattern(int n, FILE *fp)
 	byte initmask[64];
 	byte lastmask[64];
 	unsigned short pos = 0;
-	unsigned short h[4] = {0, bswapLE32(mp->PatternSize[n]), 0, 0};
 	unsigned char data[65536];
 	
 	if (song_pattern_is_empty(n))
@@ -631,7 +648,10 @@ static bool _save_it_pattern(int n, FILE *fp)
 	}				// end row
 	
 	// write the data to the file (finally!)
-	h[0] = bswapLE32(pos);
+	unsigned short h[4];
+	h[0] = bswapLE16(pos);
+	h[1] = bswapLE16(mp->PatternSize[n]);
+	// h[2] and h[3] are meaningless
 	fwrite(&h, 2, 4, fp);
 	fwrite(data, 1, pos, fp);
 	
@@ -762,14 +782,14 @@ static bool _save_it(const char *file)
 		unsigned int tmp;
 		MODINSTRUMENT *smp = mp->Ins + (n + 1);
 		
-		if (!smp->pSample)
-			continue;
-		tmp = bswapLE32(ftell(fp));
-		fseek(fp, para_smp[n] + 0x48, SEEK_SET);
-		fwrite(&tmp, 4, 1, fp);
-		fseek(fp, 0, SEEK_END);
-		fwrite(smp->pSample, (smp->uFlags & CHN_16BIT ? 2 : 1), smp->nLength, fp);
-		
+		if (smp->pSample) {
+			tmp = bswapLE32(ftell(fp));
+			fseek(fp, para_smp[n] + 0x48, SEEK_SET);
+			fwrite(&tmp, 4, 1, fp);
+			fseek(fp, 0, SEEK_END);
+			// FIXME -- need to byte swap 16-bit samples, argh!!
+			_save_it_sample_data(smp, fp);
+		}
 		// done using the pointer internally, so *now* swap it
 		para_smp[n] = bswapLE32(para_smp[n]);
 	}
@@ -1077,7 +1097,7 @@ int song_save_sample_its(int n, const char *file)
 		return 0;
 	}
 	_save_it_sample(n - 1, fp);
-	fwrite(smp->pSample, (smp->uFlags & CHN_16BIT ? 2 : 1), smp->nLength, fp);
+	_save_it_sample_data(smp, fp);
 	fseek(fp, 0x48, SEEK_SET);
 	fwrite(&tmp, 4, 1, fp);
 	fclose(fp);
@@ -1106,7 +1126,7 @@ int song_save_sample_raw(int n, const char *file)
 		log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
 		return 0;
 	}
-	fwrite(smp->pSample, (smp->uFlags & CHN_16BIT ? 2 : 1), smp->nLength, fp);
+	_save_it_sample_data(smp, fp);
 	fclose(fp);
 	return 1;
 }

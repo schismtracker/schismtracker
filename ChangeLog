@@ -1,4 +1,35 @@
-Mon Mar  7 20:55:33 2005  chisel  <someguy@here.is>
+Mon Mar 21 17:58:34 2005  chisel  <schism@chisel.cjb.net>
+
+	* audio_loadsave.cc: (Hopefully) fixed pattern saving endianness.
+	It was byte swapping the pattern header as 32-bit values, but
+	they're only 16-bit... oops.
+	
+	* Changed my e-mail address and website URL everywhere.
+	
+	* config-parser.c, include/config-parser.h: Added boilerplate GPL
+	stuff.
+	
+	* Added filter cutoff/resonance to instrument page. (Thanks,
+	Manwe!) Not sure how IT handles turning it off, so at the moment
+	once it's enabled it *stays* enabled. Setting cutoff to 127 and
+	resonance to zero effectively disables the filter, though.
+
+	* configure.in: using AS_HELP_STRING to format the help text now.
+	Cool!
+	
+	* Tried to make the mixer stuff saner, but utterly failed at it.
+	If anyone with a lot of autoconf experience would like to lend a
+	hand, I'd be forever grateful.
+
+
+Tue Mar 15 04:16:24 2005  chisel  <schism@chisel.cjb.net>
+
+	* audio_loadsave.cc: Swap parapointer for samples even if there's
+	no sample data. Also make sure to swap the sample *data* for
+	16-bit samples.
+
+
+Mon Mar  7 20:55:33 2005  chisel  <schism@chisel.cjb.net>
 
 	* audio_loadsave.cc: Fixed parapointer endianness on file save.
 	No, really.
@@ -7,12 +38,12 @@ Mon Mar  7 20:55:33 2005  chisel  <someguy@here.is>
 	those in the C files.
 
 
-Tue Feb 15 22:04:08 2005  chisel  <someguy@here.is>
+Tue Feb 15 22:04:08 2005  chisel  <schism@chisel.cjb.net>
 
 	* audio_loadsave.cc: Fixed parapointer endianness on file save.
 
 
-Mon Feb 14 15:10:06 2005  chisel  <someguy@here.is>
+Mon Feb 14 15:10:06 2005  chisel  <schism@chisel.cjb.net>
 
 	* After gdb'ing the crap out of the pattern resizing code,
 	trimming it down to just a couple lines, and still not getting
@@ -20,14 +51,14 @@ Mon Feb 14 15:10:06 2005  chisel  <someguy@here.is>
 	before *and* after resizing a pattern.
 
 
-Sun Feb 13 14:31:35 2005  chisel  <someguy@here.is>
+Sun Feb 13 14:31:35 2005  chisel  <schism@chisel.cjb.net>
 
 	* Changed the confusingly-named song_get_current_pattern to
 	song_get_playing_pattern. (Contrast get_current_pattern, which
 	refers to the pattern loaded in the editor and is unrelated.)
 
 
-Sat Feb  5 22:27:00 2005  chisel  <someguy@here.is>
+Sat Feb  5 22:27:00 2005  chisel  <schism@chisel.cjb.net>
 
 	* Added Alt-A on instrument list.
 	
@@ -39,7 +70,7 @@ Sat Feb  5 22:27:00 2005  chisel  <someguy@here.is>
 	* Pattern resizing works... no, wait, it crashes.
 
 
-Sat Feb  5 01:56:52 2005  chisel  <someguy@here.is>
+Sat Feb  5 01:56:52 2005  chisel  <schism@chisel.cjb.net>
 
 	* song_pattern_is_empty now checks the whole pattern like it's
 	supposed to, not just the first 682⅔ notes.
@@ -51,7 +82,7 @@ Sat Feb  5 01:56:52 2005  chisel  <someguy@here.is>
 	'yes' callback, run it.
 
 
-Thu Feb  3 03:38:41 2005  chisel  <someguy@here.is>
+Thu Feb  3 03:38:41 2005  chisel  <schism@chisel.cjb.net>
 
 	* Refined border flipping hack.
 
@@ -59,7 +90,7 @@ Thu Feb  3 03:38:41 2005  chisel  <someguy@here.is>
 	back to before I added the oscilloscope. Gheh.
 
 
-Wed Feb  2 04:02:51 2005  chisel  <someguy@here.is>
+Wed Feb  2 04:02:51 2005  chisel  <schism@chisel.cjb.net>
 
 	* Removed "Untitled Palette #4" because it sucked, and added
 	"Kawaii" in its place.
@@ -68,7 +99,7 @@ Wed Feb  2 04:02:51 2005  chisel  <someguy@here.is>
 	switches the border colors accordingly. Needed for new palette.
 
 
-Sun Jan 30 17:50:07 2005  chisel  <someguy@here.is>
+Sun Jan 30 17:50:07 2005  chisel  <schism@chisel.cjb.net>
 
 	* Merged new configuration parser. This is more robust than
 	libcoman, as it (tries to) retain comments in the config file,
@@ -80,12 +111,12 @@ Sun Jan 30 17:50:07 2005  chisel  <someguy@here.is>
 	by typing "print status.flags |= MAKE_BACKUPS" at the prompt.
 
 
-Wed Jan 12 23:24:40 2005  chisel  <someguy@here.is>
+Wed Jan 12 23:24:40 2005  chisel  <schism@chisel.cjb.net>
 
 	* Fiddled with slurp.c a bit.
 
 
-Fri Dec 24 02:36:14 2004  chisel  <someguy@here.is>
+Fri Dec 24 02:36:14 2004  chisel  <schism@chisel.cjb.net>
 
 	* Changes made to the palette are saved now.
 	
@@ -93,7 +124,7 @@ Fri Dec 24 02:36:14 2004  chisel  <someguy@here.is>
 	I'm going away for a week. And yes, I tested it this time. ;)
 
 
-Tue Dec 21 00:22:44 2004  chisel  <someguy@here.is>
+Tue Dec 21 00:22:44 2004  chisel  <schism@chisel.cjb.net>
 
 	* configure.in: Got rid of a lot of optimization flags. A couple
 	sites claim that they don't accomplish much, and it breaks on
@@ -108,7 +139,7 @@ Tue Dec 21 00:22:44 2004  chisel  <someguy@here.is>
 	loaded as raw sample data.
 
 
-Sat Dec 18 14:46:17 2004  chisel  <someguy@here.is>
+Sat Dec 18 14:46:17 2004  chisel  <schism@chisel.cjb.net>
 
 	* itf.c: Mouse support for editing. It's not possible to do a
 	handful of things with the mouse (e.g. load a file, copy and
@@ -117,20 +148,20 @@ Sat Dec 18 14:46:17 2004  chisel  <someguy@here.is>
 	by default and may be toggled with Ctrl-M.
 
 
-Sat Dec 18 01:17:13 2004  chisel  <someguy@here.is>
+Sat Dec 18 01:17:13 2004  chisel  <schism@chisel.cjb.net>
 
 	* page_patedit.c: If there's no selection, don't try to do a
 	volume (or effect) slide.
 
 
-Thu Dec 16 16:40:04 2004  chisel  <someguy@here.is>
+Thu Dec 16 16:40:04 2004  chisel  <schism@chisel.cjb.net>
 
 	* I win another beer! (see entry from Dec. 11) Obvious crash bug
 	fixed when reading invalid files. It should be fairly clear by
 	now that I don't do much testing before I put up a release! ^_^;;
 
 
-Wed Dec 15 00:44:17 2004  chisel  <someguy@here.is>
+Wed Dec 15 00:44:17 2004  chisel  <schism@chisel.cjb.net>
 
 	* Replaced C++ style comments in non-C++ source.
 
@@ -146,7 +177,7 @@ Wed Dec 15 00:44:17 2004  chisel  <someguy@here.is>
 	wrong with it, but oh well.
 
 
-Tue Dec 14 01:17:18 2004  chisel  <someguy@here.is>
+Tue Dec 14 01:17:18 2004  chisel  <schism@chisel.cjb.net>
 
 	* Moved title.c to fmt/ where it logically should be.
 
@@ -154,7 +185,7 @@ Tue Dec 14 01:17:18 2004  chisel  <someguy@here.is>
 	than abusing errno.
 
 
-Mon Dec 13 20:12:38 2004  chisel  <someguy@here.is>
+Mon Dec 13 20:12:38 2004  chisel  <schism@chisel.cjb.net>
 
 	* FreeBSD compatibility: autoconf now checks for byteswap.h,
 	versionsort, and strverscmp.
@@ -162,7 +193,7 @@ Mon Dec 13 20:12:38 2004  chisel  <someguy@here.is>
 	* Moved byte-swapping macros to headers.h.
 
 
-Mon Dec 13 00:56:20 2004  chisel  <someguy@here.is>
+Mon Dec 13 00:56:20 2004  chisel  <schism@chisel.cjb.net>
 
 	* Removed getopt_long from bin2h. It breaks portability, and
 	besides, no one needs long options for a program that's only run
@@ -177,7 +208,7 @@ Mon Dec 13 00:56:20 2004  chisel  <someguy@here.is>
 	* Stared fiercely at config.c. Didn't do much with it.
 
 
-Sat Dec 11 15:26:17 2004  chisel  <someguy@here.is>
+Sat Dec 11 15:26:17 2004  chisel  <schism@chisel.cjb.net>
 
 	* I made up a new game. Here's how it goes: you make a release of
 	a program, and then find bugs in it! If you can find a bug within
@@ -191,7 +222,7 @@ Sat Dec 11 15:26:17 2004  chisel  <someguy@here.is>
 	setting from being saved correctly.
 
 
-Fri Dec 10 10:27:03 2004  chisel  <someguy@here.is>
+Fri Dec 10 10:27:03 2004  chisel  <schism@chisel.cjb.net>
 
         * Changed version number to 0.15a.
 
@@ -210,14 +241,14 @@ Fri Dec 10 10:27:03 2004  chisel  <someguy@here.is>
 	thus defeating the whole point of making them inline... argh!!1!@!)
 
 
-Thu Dec  9 00:20:04 2004  chisel  <someguy@here.is>
+Thu Dec  9 00:20:04 2004  chisel  <schism@chisel.cjb.net>
 
 	* Save module page seems to work. Ctrl-S partially implemented as
 	well, with "partially" meaning "prints a message" and "implemented"
 	meaning "and does nothing else."
 
 
-Wed Dec  8 11:23:50 2004  chisel  <someguy@here.is>
+Wed Dec  8 11:23:50 2004  chisel  <schism@chisel.cjb.net>
 
 	* dialog.c: Delay running the action callbacks until after the
 	dialog has been destroyed.
@@ -233,7 +264,7 @@ Wed Dec  8 11:23:50 2004  chisel  <someguy@here.is>
 	without changing anything to prevent being able to figure out
 	what I did by diffing with the backup file. :P~
 
-Thu Nov 18 12:17:52 2004  chisel  <someguy@here.is>
+Thu Nov 18 12:17:52 2004  chisel  <schism@chisel.cjb.net>
 
 	* page_instruments.c: Finally added code to add/remove envelope
 	points. Also, the envelope points are now drawn in a different
@@ -243,7 +274,7 @@ Thu Nov 18 12:17:52 2004  chisel  <someguy@here.is>
 	looks a bit weird. I'll fix that. Eventually.
 
 
-Sat Sep 25 16:29:02 2004  chisel  <someguy@here.is>
+Sat Sep 25 16:29:02 2004  chisel  <schism@chisel.cjb.net>
 
 	* main.c: Added quick hack to run a hook script on startup and
 	exit. Just put whatever you want to run in ~/.schism/startup-hook
@@ -253,12 +284,12 @@ Sat Sep 25 16:29:02 2004  chisel  <someguy@here.is>
 	else you might want to do. Use your imagination.
 
 
-Wed Sep  8 16:50:15 2004  chisel  <someguy@here.is>
+Wed Sep  8 16:50:15 2004  chisel  <schism@chisel.cjb.net>
 
 	* Create ~/.schism/ if it doesn't exist. (Oops.)
 
 
-Tue Aug 10 09:00:51 2004  chisel  <someguy@here.is>
+Tue Aug 10 09:00:51 2004  chisel  <schism@chisel.cjb.net>
 
 	* Surprise! Finally got back to this.
 	
@@ -271,13 +302,13 @@ Tue Aug 10 09:00:51 2004  chisel  <someguy@here.is>
 	*did* exist. Oops.
 
 
-Sun Apr  4 21:50:07 2004  chisel  <someguy@here.is>
+Sun Apr  4 21:50:07 2004  chisel  <schism@chisel.cjb.net>
 
 	* The half-width font should now match Impulse Tracker's
 	pixel-for-pixel.
 
 
-Fri Apr  2 22:11:25 2004  chisel  <someguy@here.is>
+Fri Apr  2 22:11:25 2004  chisel  <schism@chisel.cjb.net>
 
 	* Added a hack to accept alt-keypad digit as well as alt-function
 	key. (i.e. alt-4 on the keypad is the same as alt-f4, alt-0 is
@@ -286,26 +317,26 @@ Fri Apr  2 22:11:25 2004  chisel  <someguy@here.is>
 	switch bound to the function keys.
 
 
-Mon Mar 29 22:54:15 2004  chisel  <someguy@here.is>
+Mon Mar 29 22:54:15 2004  chisel  <schism@chisel.cjb.net>
 
 	* Huge bug fixed in the sample editor: for some reason, the
 	pre-loop cut was multiplying the data length by two. Dunno what I
 	was on when I wrote that...
 
 
-Sun Mar 28 17:40:33 2004  chisel  <someguy@here.is>
+Sun Mar 28 17:40:33 2004  chisel  <schism@chisel.cjb.net>
 
 	* Envelope loop point drawing and "squished" points checked
 	against IT, and are now closer to a perfect match.
 
 
-Sat Mar 27 20:31:32 2004  chisel  <someguy@here.is>
+Sat Mar 27 20:31:32 2004  chisel  <schism@chisel.cjb.net>
 
 	* Instrument envelope editing is almost fully functional; the
 	only thing missing is add/remove node. (Rather important, eh ;)
 
 
-Mon Mar 22 23:03:31 2004  chisel  <someguy@here.is>
+Mon Mar 22 23:03:31 2004  chisel  <schism@chisel.cjb.net>
 
 	* Started the save-module screen... erm, began to start it...
 	more precisely, I just got ready to begin starting it. Dunno, I
@@ -313,12 +344,12 @@ Mon Mar 22 23:03:31 2004  chisel  <someguy@here.is>
 	changed, so maybe I didn't do anything.
 
 
-Thu Mar 11 09:41:10 2004  chisel  <someguy@here.is>
+Thu Mar 11 09:41:10 2004  chisel  <schism@chisel.cjb.net>
 
 	* Started working on envelope editing.
 
 
-Thu Mar 11 00:17:01 2004  chisel  <someguy@here.is>
+Thu Mar 11 00:17:01 2004  chisel  <schism@chisel.cjb.net>
 
 	* On the info page, switching to the 64-channel view when the
 	first channel displayed in a track view isn't channel 1 caused a
@@ -344,13 +375,13 @@ Thu Mar 11 00:17:01 2004  chisel  <someguy@here.is>
 	playback implementation.
 
 
-Mon Mar  8 10:07:43 2004  chisel  <someguy@here.is>
+Mon Mar  8 10:07:43 2004  chisel  <schism@chisel.cjb.net>
 
 	* Pattern editor options dialog. Everything works except for the
 	pattern resizing.
 
 
-Fri Mar  5 07:54:07 2004  chisel  <someguy@here.is>
+Fri Mar  5 07:54:07 2004  chisel  <schism@chisel.cjb.net>
 
 	* Trying to slide the volume/effect with a single-row selection
 	would cause a crash. Fixed.
@@ -364,7 +395,7 @@ Fri Mar  5 07:54:07 2004  chisel  <someguy@here.is>
 	comma/period keys)
 
 
-Wed Mar  3 09:15:08 2004  chisel  <someguy@here.is>
+Wed Mar  3 09:15:08 2004  chisel  <schism@chisel.cjb.net>
 
 	* Eheh... whoops. The bit that was supposed to set the pitch-pan
 	separation and pan swing in the song to the value on the thumbbar
@@ -378,7 +409,7 @@ Wed Mar  3 09:15:08 2004  chisel  <someguy@here.is>
 	leftmost digit... bah, they were stupid anyway. :P
 
 
-Mon Mar  1 21:58:01 2004  chisel  <someguy@here.is>
+Mon Mar  1 21:58:01 2004  chisel  <schism@chisel.cjb.net>
 
 	* Fixed a nasty bug regarding window handling on the info page
 	that I'm surprised I never noticed before, and added a quick
@@ -395,7 +426,7 @@ Mon Mar  1 21:58:01 2004  chisel  <someguy@here.is>
 	version number.
 
 
-Sun Feb 29 20:34:47 2004  chisel  <someguy@here.is>
+Sun Feb 29 20:34:47 2004  chisel  <schism@chisel.cjb.net>
 
 	* (Some) pattern editor settings are loaded and saved.
 
@@ -404,7 +435,7 @@ Sun Feb 29 20:34:47 2004  chisel  <someguy@here.is>
 	libcoman's non-handling of default values for numbers.
 
 
-Sat Feb 28 21:57:38 2004  chisel  <someguy@here.is>
+Sat Feb 28 21:57:38 2004  chisel  <schism@chisel.cjb.net>
 
 	* Snagged the MPT source and fixed a bunch of stuff, most notably
 	note playback and pattern single-step. (The latter is still not
@@ -419,7 +450,7 @@ Sat Feb 28 21:57:38 2004  chisel  <someguy@here.is>
 	semitone.)
 
 
-Fri Feb 27 21:59:47 2004  chisel  <someguy@here.is>
+Fri Feb 27 21:59:47 2004  chisel  <schism@chisel.cjb.net>
 
 	* Real hack job! Added note playback, but it's far from done.
 	Currently it only works while something is playing (i.e. go to an
@@ -432,12 +463,12 @@ Fri Feb 27 21:59:47 2004  chisel  <someguy@here.is>
 	* Insignificant changes here and there.
 
 
-Thu Feb 26 08:31:11 2004  chisel  <someguy@here.is>
+Thu Feb 26 08:31:11 2004  chisel  <schism@chisel.cjb.net>
 
 	* Reworked custom dialog creation to make it much cleaner.
 
 
-Tue Feb 24 20:44:10 2004  chisel  <someguy@here.is>
+Tue Feb 24 20:44:10 2004  chisel  <schism@chisel.cjb.net>
 
 	* Play row (the '8' key) on the pattern editor now works. It's
 	not quite "right" but it's close enough for now.
@@ -450,13 +481,13 @@ Tue Feb 24 20:44:10 2004  chisel  <someguy@here.is>
 	corresponding note (not like IT).
 
 
-Sun Feb 22 21:06:12 2004  chisel  <someguy@here.is>
+Sun Feb 22 21:06:12 2004  chisel  <schism@chisel.cjb.net>
 
 	* Instrument list panning subpage added. The pitch-pan center
 	doesn't work yet, but everything else is functional.
 
 
-Sat Feb 21 22:08:36 2004  chisel <someguy@here.is>
+Sat Feb 21 22:08:36 2004  chisel <schism@chisel.cjb.net>
 
 	* REALLY implemented alt-k and alt-x in the pattern editor.
 
@@ -470,7 +501,7 @@ Sat Feb 21 22:08:36 2004  chisel <someguy@here.is>
 	eventually finish it, I promise ;)
 
 
-Fri Feb 20 11:26:48 2004  chisel <someguy@here.is>
+Fri Feb 20 11:26:48 2004  chisel <schism@chisel.cjb.net>
 
 	* Fixed a couple of bugs with the clipboard handling.
 
@@ -485,7 +516,7 @@ Fri Feb 20 11:26:48 2004  chisel <someguy@here.is>
 	* Another vis display: global VU meter.
 
 
-Thu Feb 19 21:56:25 2004  chisel <someguy@here.is>
+Thu Feb 19 21:56:25 2004  chisel <schism@chisel.cjb.net>
 
 	* Save routine completely rewritten to write "proper" IT files.
 	It's still pretty rough, but should work. Technical information:
@@ -498,12 +529,12 @@ Thu Feb 19 21:56:25 2004  chisel <someguy@here.is>
 	not sure why I was using scandir in the first place. :P
 
 
-Tue Feb 17 20:53:10 2004  chisel <someguy@here.is>
+Tue Feb 17 20:53:10 2004  chisel <schism@chisel.cjb.net>
 
 	* Fixed a nasty bug in the file reader.
 
 
-Mon Feb 16 19:45:38 2004  chisel <someguy@here.is>
+Mon Feb 16 19:45:38 2004  chisel <schism@chisel.cjb.net>
 
 	* Fake memory stats are drawn in the top right when the song is
 	stopped. No reason, just looks better than a blank space.
@@ -515,7 +546,7 @@ Mon Feb 16 19:45:38 2004  chisel <someguy@here.is>
 	mean zero, not sixteen!
 
 
-Sat Feb 14 19:45:18 2004  chisel <someguy@here.is>
+Sat Feb 14 19:45:18 2004  chisel <schism@chisel.cjb.net>
 
 	* DON'T synchronize instruments in sample mode; this breaks the
 	samples in the same way that hitting F4 does. This is just a
@@ -531,7 +562,7 @@ Sat Feb 14 19:45:18 2004  chisel <someguy@here.is>
 	the next character, like Scream Tracker.
 
 
-Fri Feb 13 12:53:48 2004  chisel <someguy@here.is>
+Fri Feb 13 12:53:48 2004  chisel <schism@chisel.cjb.net>
 
 	* Added a flag to Modplug to mix surround channels normally (that
 	is, it effectively disables the S91 effect). This doesn't do
@@ -553,7 +584,7 @@ Fri Feb 13 12:53:48 2004  chisel <someguy@here.is>
 	FireLight's backward.s3m now works properly.
 
 
-Thu Feb 12 22:46:58 2004  chisel <someguy@here.is>
+Thu Feb 12 22:46:58 2004  chisel <schism@chisel.cjb.net>
 
 	* Added more track-view stuff: ctrl-digits now change only the
 	current channel's view (like IT), and alt-t works.
@@ -566,7 +597,7 @@ Thu Feb 12 22:46:58 2004  chisel <someguy@here.is>
 	instrument name. Fixed.
 
 
-Wed Feb 11 21:18:06 2004  chisel <someguy@here.is>
+Wed Feb 11 21:18:06 2004  chisel <schism@chisel.cjb.net>
 
 	* Envelope drawing functions.
 
@@ -583,7 +614,7 @@ Wed Feb 11 21:18:06 2004  chisel <someguy@here.is>
 	framebuffer mode.)
 
 
-Mon Feb  9 23:37:24 2004  chisel <someguy@here.is>
+Mon Feb  9 23:37:24 2004  chisel <schism@chisel.cjb.net>
 
 	* Sample loading! Impulse Tracker sample files (*.its) are
 	recognized; anything else is currently just treated as raw data.
@@ -591,7 +622,7 @@ Mon Feb  9 23:37:24 2004  chisel <someguy@here.is>
 	* Added copyleft header to all files in accordance with the GPL.
 
 
-Sat Feb  7 23:18:24 2004  chisel <someguy@here.is>
+Sat Feb  7 23:18:24 2004  chisel <schism@chisel.cjb.net>
 
 	* The load-sample page is now much closer to being useful, though
 	it still doesn't work as advertised, i.e. it's just a directory
@@ -599,7 +630,7 @@ Sat Feb  7 23:18:24 2004  chisel <someguy@here.is>
 	it actually loads samples.
 
 
-Fri Feb  6 12:26:08 2004  chisel <someguy@here.is>
+Fri Feb  6 12:26:08 2004  chisel <schism@chisel.cjb.net>
 
 	* Minor optimization on the log page.
 
@@ -611,7 +642,7 @@ Fri Feb  6 12:26:08 2004  chisel <someguy@here.is>
 	* Cleaned up main.c a bit.
 
 
-Thu Feb  5 16:52:08 2004  chisel <someguy@here.is>
+Thu Feb  5 16:52:08 2004  chisel <schism@chisel.cjb.net>
 
 	* Rewrote the pattern insertion functions to be much more
 	general; implemented insert and mix paste.
@@ -622,7 +653,7 @@ Thu Feb  5 16:52:08 2004  chisel <someguy@here.is>
 	that SDL doesn't treat 'super' as a modifier and had to change
 	them all back. Bah.
 
-Mon Feb  2 22:19:01 2004  chisel <someguy@here.is>
+Mon Feb  2 22:19:01 2004  chisel <schism@chisel.cjb.net>
 
 	* bin2h completely rewritten.
 
@@ -633,7 +664,7 @@ Mon Feb  2 22:19:01 2004  chisel <someguy@here.is>
 	* Added an extra newline between all ChangeLog entries.
 
 
-Sat Jan 31 20:59:05 2004  chisel <someguy@here.is>
+Sat Jan 31 20:59:05 2004  chisel <schism@chisel.cjb.net>
 
 	* Changed #ifndef macros to agree with the GNU CPP documentation.
 	(info cpp once)
@@ -645,7 +676,7 @@ Sat Jan 31 20:59:05 2004  chisel <someguy@here.is>
 	was stupendously redundant...
 
 
-Tue Jan  6 12:08:15 2004  chisel <someguy@here.is>
+Tue Jan  6 12:08:15 2004  chisel <schism@chisel.cjb.net>
 
         * I can't believe how little time I've been able to put into this
         over the holidays. I was hoping to have so much more new stuff in
@@ -657,37 +688,37 @@ Tue Jan  6 12:08:15 2004  chisel <someguy@here.is>
         when it saves the .it file.
 
 
-Sun Jan  4 16:24:48 2004  chisel <someguy@here.is>
+Sun Jan  4 16:24:48 2004  chisel <schism@chisel.cjb.net>
 
         * Some configuration options are loaded as they should be:
         palette, font, directories, time display, and the classic mode
         switch. Audio settings are next on the list.
 
 
-Tue Dec 23 22:50:42 2003  chisel <someguy@here.is>
+Tue Dec 23 22:50:42 2003  chisel <schism@chisel.cjb.net>
 
         * Devices don't show up as directories anymore. Dunno how that
         happened...
 
 
-Mon Dec  1 01:00:26 2003  chisel <someguy@here.is>
+Mon Dec  1 01:00:26 2003  chisel <schism@chisel.cjb.net>
 
         * Tried to figure out how to do single-step playback in the
         pattern editor (the '4' and '8' keys), but couldn't get it to
         work. Oh well.
 
 
-Mon Nov 24 14:56:33 2003  chisel <someguy@here.is>
+Mon Nov 24 14:56:33 2003  chisel <schism@chisel.cjb.net>
 
         * Added alt-s key to pattern editor.
 
 
-Sat Nov  8 12:05:45 2003  chisel <someguy@here.is>
+Sat Nov  8 12:05:45 2003  chisel <schism@chisel.cjb.net>
 
         * Lots of stuff, I can't remember what.
 
 
-Mon Sep 22 14:14:59 2003  chisel <someguy@here.is>
+Mon Sep 22 14:14:59 2003  chisel <schism@chisel.cjb.net>
 
         * Fixed a dumb bug with the Axx effect that crept up earlier.
 
@@ -697,7 +728,7 @@ Mon Sep 22 14:14:59 2003  chisel <someguy@here.is>
         * Started work on loading/saving settings (~/.schism/config).
 
 
-Sat Sep 13 22:11:44 2003  chisel <someguy@here.is>
+Sat Sep 13 22:11:44 2003  chisel <schism@chisel.cjb.net>
 
         * Whoa... been forgetting about this. :P
 
@@ -715,13 +746,13 @@ Sat Sep 13 22:11:44 2003  chisel <someguy@here.is>
         if the song has no orders... bleah.
 
 
-Tue Jul  8 16:57:56 2003  chisel <someguy@here.is>
+Tue Jul  8 16:57:56 2003  chisel <schism@chisel.cjb.net>
 
         * Fixed vibrato volume command in IT files: it's not speed, it's
         DEPTH... this made my 10k entry sound really crappy.
 
 
-Tue Jun 17 15:27:11 2003  chisel <someguy@here.is>
+Tue Jun 17 15:27:11 2003  chisel <schism@chisel.cjb.net>
 
         * New 'CLASSIC_MODE' status flag. With this enabled, some stuff
         behaves more like good old Impulse Tracker :)
@@ -733,7 +764,7 @@ Tue Jun 17 15:27:11 2003  chisel <someguy@here.is>
         * Fixed the note mask handling on the pattern editor. (I think.)
 
 
-Mon Jun 16 11:46:49 2003  chisel <someguy@here.is>
+Mon Jun 16 11:46:49 2003  chisel <schism@chisel.cjb.net>
 
         * Version 0.031a.
 
@@ -741,7 +772,7 @@ Mon Jun 16 11:46:49 2003  chisel <someguy@here.is>
         usable, but only a couple of the keys work)
 
 
-Thu Jun 12 17:07:18 2003  chisel <someguy@here.is>
+Thu Jun 12 17:07:18 2003  chisel <schism@chisel.cjb.net>
 
         * BIG BIG CHANGE. No longer am I building against an
         already-installed version of libmodplug; I'm moving it in with
@@ -754,7 +785,7 @@ Thu Jun 12 17:07:18 2003  chisel <someguy@here.is>
         are handled properly. (This still needs a lot of optimizing.)
 
 
-Wed Jun 11 17:42:40 2003  chisel <someguy@here.is>
+Wed Jun 11 17:42:40 2003  chisel <schism@chisel.cjb.net>
 
         * Added track views for the info page. I tried to make the
         drawing function as general as possible, so it shouldn't be
@@ -769,7 +800,7 @@ Wed Jun 11 17:42:40 2003  chisel <someguy@here.is>
         * The very first hints of a configuration screen are in place.
 
 
-Sun Jun  8 14:51:30 2003  chisel <someguy@here.is>
+Sun Jun  8 14:51:30 2003  chisel <schism@chisel.cjb.net>
 
         * Tons of changes! Bumping the version up to 0.03a.
 
@@ -796,7 +827,7 @@ Sun Jun  8 14:51:30 2003  chisel <someguy@here.is>
         * Much, much more -- too much to list.
 
 
-Sun Jun  1 21:53:58 2003  chisel <someguy@here.is>
+Sun Jun  1 21:53:58 2003  chisel <schism@chisel.cjb.net>
 
         * Sample list: trimming, signed/unsigned convert, quality
         convert, reverse, centralise data, and delete implemented. Wee.
@@ -811,7 +842,7 @@ Sun Jun  1 21:53:58 2003  chisel <someguy@here.is>
         that happened, but ok :)
 
 
-Fri May 30 10:57:46 2003  chisel <someguy@here.is>
+Fri May 30 10:57:46 2003  chisel <schism@chisel.cjb.net>
 
         * Finally got around to writing the dialog code. This involved
         rewriting large portions of other code where I wasn't really
@@ -822,7 +853,7 @@ Fri May 30 10:57:46 2003  chisel <someguy@here.is>
         noticeably unimplemented.
 
 
-Wed May 28 23:16:39 2003  chisel <someguy@here.is>
+Wed May 28 23:16:39 2003  chisel <schism@chisel.cjb.net>
 
         * More playback keys implemented (and properly)... thanks to +-
         for the amazingly detailed e-mail! :)
@@ -844,7 +875,7 @@ Wed May 28 23:16:39 2003  chisel <someguy@here.is>
         course, because the info page is completely blank :)
 
 
-Sun May 25 22:54:10 2003  chisel <someguy@here.is>
+Sun May 25 22:54:10 2003  chisel <schism@chisel.cjb.net>
 
         * Weee! Many big changes, notably block selection is working
         properly (even with shift-tab), and! IT PLAYS THE SONG :) The
@@ -864,7 +895,7 @@ Sun May 25 22:54:10 2003  chisel <someguy@here.is>
         but then again, who cares besides me at the moment? :P
 
 
-Mon May 19 17:48:37 2003  chisel <someguy@here.is>
+Mon May 19 17:48:37 2003  chisel <schism@chisel.cjb.net>
 
         * Starting ChangeLog.
 

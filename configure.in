@@ -1,7 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 
 dnl Schism Tracker - a cross-platform Impulse Tracker clone
-dnl copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
+dnl copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+dnl URL: http://rigelseven.com/schism/
 dnl
 dnl This program is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -26,7 +27,7 @@ machtype=$target_cpu
 
 dnl when changing the version, also change the CWTV in audio_loadsave.cc
 dnl (TODO: come up with some way to do it automatically)
-AM_INIT_AUTOMAKE(schism, 0.182a)
+AM_INIT_AUTOMAKE(schism, 0.185a)
 AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------------------------------
@@ -91,7 +92,7 @@ AC_STRUCT_TM
 dnl -----------------------------------------------------------------------
 
 AC_ARG_ENABLE(alsa-mixer,
-	      [  --enable-alsa-mixer     Use Alsa for the master volume control],
+	      AS_HELP_STRING([--enable-alsa-mixer], [Use Alsa for the master volume control]),
 	      alsa_mixer=$enableval,
 	      alsa_mixer=no)
 AM_CONDITIONAL([USE_ALSA_MIXER], [test "$alsa_mixer" = yes])
@@ -103,12 +104,12 @@ dnl (This ought to be above AC_PROG_CC, but that causes configure to fail
 dnl when all the insane warnings are are enabled.)
 
 AC_ARG_ENABLE(extra-opt,
-              [  --enable-extra-opt      Add extra optimizations (egcs/GCC >= 2.95 only)],
+	      AS_HELP_STRING([--enable-extra-opt], [Add extra optimizations (egcs/GCC >= 2.95 only)]),
               ADD_OPT=$enableval,
               ADD_OPT=no)
 
 AC_ARG_ENABLE(all-warnings,
-              [  --enable-all-warnings   Enable ridiculous compiler warnings (GCC)],
+	      AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings (GCC)]),
               ADD_WARN=$enableval,
               ADD_WARN=no)
 
