@@ -353,6 +353,8 @@ MixDone:
 /////////////////////////////////////////////////////////////////////////////
 // Handles navigation/effects
 
+#define PV(v) printf("%s = %d\n", #v, v)
+
 BOOL CSoundFile::ProcessRow()
 //---------------------------
 {
@@ -414,9 +416,10 @@ BOOL CSoundFile::ProcessRow()
                                         if (m_nRepeatCount > 0) m_nRepeatCount--;
 					m_nCurrentPattern = m_nRestartPos;
 					//m_nRow = 0; <chisel> this makes firelight's backward.s3m play wrong
-					if ((Order[m_nCurrentPattern] >= MAX_PATTERNS) || (!Patterns[Order[m_nCurrentPattern]])) return FALSE;
-				} else
-				{
+					if ((Order[m_nCurrentPattern] >= MAX_PATTERNS)
+					    || (!Patterns[Order[m_nCurrentPattern]]))
+						return FALSE;
+				} else {
 					m_nCurrentPattern++;
 				}
 				m_nPattern = (m_nCurrentPattern < MAX_ORDERS) ? Order[m_nCurrentPattern] : 0xFF;

@@ -1,5 +1,5 @@
 // Schism Tracker - a cross-platform Impulse Tracker clone
-// copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+// copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -684,7 +684,7 @@ static bool _save_it(const char *file)
 	hdr.smpnum = nsmp;
 	hdr.patnum = npat;
 	// No one else seems to be using the cwtv's tracker id number, so I'm gonna take 1. :)
-	hdr.cwtv = bswapLE16(0x1017); // cwtv 0xtxyy = tracker id t, version x.yy
+	hdr.cwtv = bswapLE16(0x1018); // cwtv 0xtxyy = tracker id t, version x.yy
 	// compat:
 	//     "normal" = 2.00
 	//     vol col effects = 2.08
@@ -788,7 +788,17 @@ int song_save(const char *file)
 	// ugly #3
 	mp->m_rowHighlightMajor = row_highlight_major;
 	mp->m_rowHighlightMinor = row_highlight_minor;
-
+	
+	/* FIXME | need to do something more clever here, to make sure things don't get horribly broken
+	 * FIXME | if the save failed: preferably, nothing should be overwritten until the file has been
+	 * FIXME | written to disk completely, and at that point back up the old file (if backups are on)
+	 * FIXME | and dump the saved file in its place.... at the very least, if the save failed and it
+	 * FIXME | broke the original file, it would be nice to restore the backup. (while this might mean
+	 * FIXME | losing an existing backup, at least it won't screw up the file it's trying to save to
+	 * FIXME | in the process)
+	 * FIXME | ... or at least trim this text down, it's clumsy and longwinded :P */
+	if (status.flags & MAKE_BACKUPS)
+		make_backup_file(file);
 	if (_save_it(file)) {
                 log_appendf(2, "Saved file: %s", file);
                 

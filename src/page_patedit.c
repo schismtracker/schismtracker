@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include "page.h"
 #include "song.h"
 #include "pattern-view.h"
+#include "config-parser.h"
 
 #include <SDL.h>
 #include <ctype.h>
@@ -90,6 +91,72 @@ static int volume_percent = 100;
 static int fast_volume_percent = 67;
 static int fast_volume_mode = 0;	/* toggled with ctrl-j */
 
+/* --------------------------------------------------------------------- */
+/* block selection and clipboard handling */
+
+/* *INDENT-OFF* */
+static struct {
+        int first_channel;
+        int last_channel;
+        int first_row;
+        int last_row;
+} selection = { 0, 0, 0, 0 };
+
+static struct {
+        int in_progress;
+        int first_channel;
+        int first_row;
+} shift_selection = { 0, 0, 0 };
+
+static struct {
+        song_note *data;
+        int channels;
+        int rows;
+} clipboard = { NULL, 0, 0 };
+/* *INDENT-ON* */
+
+/* set to 1 if the last movement key was shifted */
+int previous_shift = 0;
+
+/* this is set to 1 on the first alt-d selection,
+ * and shifted left on each successive press. */
+static int block_double_size;
+
+/* if first_channel is zero, there's no selection, as the channel
+ * numbers start with one. (same deal for last_channel, but i'm only
+ * caring about one of them to be efficient.) */
+#define SELECTION_EXISTS (selection.first_channel)
+
+/* --------------------------------------------------------------------- */
+/* this is for the multiple track views stuff. */
+
+struct track_view {
+	int width;
+	draw_channel_header_func draw_channel_header;
+	draw_note_func draw_note;
+};
+
+static const struct track_view track_views[] = {
+#define TRACK_VIEW(n) {n, draw_channel_header_##n, draw_note_##n}
+	TRACK_VIEW(13),			/* 5 channels */
+	TRACK_VIEW(10),			/* 6/7 channels */
+	TRACK_VIEW(7),			/* 9/10 channels */
+	TRACK_VIEW(6),			/* 10/12 channels */
+	TRACK_VIEW(3),			/* 18/24 channels */
+	TRACK_VIEW(2),			/* 24/36 channels */
+	TRACK_VIEW(1),			/* 36/64 channels */
+#undef  TRACK_VIEW
+};
+
+#define NUM_TRACK_VIEWS ARRAY_SIZE(track_views)
+
+static byte track_view_scheme[64];
+static int visible_channels, visible_width;
+
+static void recalculate_visible_area(void);
+static void set_view_scheme(int scheme);
+static void pattern_editor_reposition(void);
+
 /* --------------------------------------------------------------------------------------------------------- */
 /* options dialog */
 
@@ -99,12 +166,22 @@ static int options_selected_item = 0;
 
 static void options_close(void)
 {
+	int old_size, new_size;
+	
 	options_selected_item = *selected_item;
 	
 	skip_value = options_items[1].thumbbar.value;
 	row_highlight_minor = options_items[2].thumbbar.value;
 	row_highlight_major = options_items[3].thumbbar.value;
 	link_effect_column = !!(options_items[5].togglebutton.state);
+	
+	old_size = song_get_pattern(current_pattern, NULL);
+	new_size = options_items[4].thumbbar.value;
+	if (old_size != new_size) {
+		song_pattern_resize(current_pattern, new_size);
+		current_row = MIN(current_row, new_size - 1);
+		pattern_editor_reposition();
+	}
 	
 	/* TODO: change the number of rows if applicable.
 	
@@ -180,7 +257,7 @@ void pattern_editor_display_options(void)
 			    NULL, "Link", 3, options_link_split);
 	create_togglebutton(options_items + 6, 52, 38, 9, 4, 7, 5, 5, 5,
 			    NULL, "Split", 3, options_link_split);
-	create_button(options_items + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_cancel, "Done", 3);
+	create_button(options_items + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes, "Done", 3);
 	
 	options_items[0].thumbbar.value = kbd_get_current_octave();
 	options_items[1].thumbbar.value = skip_value;
@@ -191,6 +268,7 @@ void pattern_editor_display_options(void)
 	
 	dialog = dialog_create_custom(10, 18, 60, 26, options_items, 8, options_selected_item,
 				      options_draw_const);
+	dialog->action_yes = options_close;
 	dialog->action_cancel = options_close;
 	dialog->handle_key = options_handle_key;
 }
@@ -235,8 +313,6 @@ static void fast_volume_toggle(void)
 		create_thumbbar(volume_setup_items + 0, 33, 30, 11,
 				0, 1, 1, NULL, 10, 90);
 		volume_setup_items[0].thumbbar.value = fast_volume_percent;
-		/* not in IT: enter on the thumbbar => ok */
-		volume_setup_items[0].activate = dialog_yes;
 		create_button(volume_setup_items + 1, 31, 33, 6,
 			      0, 1, 2, 2, 2, dialog_yes, "OK", 3);
 		create_button(volume_setup_items + 2, 41, 33, 6,
@@ -282,8 +358,6 @@ static void volume_amplify(void)
 	create_thumbbar(volume_setup_items + 0, 26, 30, 26,
 			0, 1, 1, NULL, 0, 200);
 	volume_setup_items[0].thumbbar.value = volume_percent;
-	/* not in IT: enter on the thumbbar => ok */
-	volume_setup_items[0].activate = dialog_yes;
 	create_button(volume_setup_items + 1, 31, 33, 6,
 			      0, 1, 2, 2, 2, dialog_yes, "OK", 3);
 	create_button(volume_setup_items + 2, 41, 33, 6,
@@ -294,76 +368,11 @@ static void volume_amplify(void)
 	dialog->action_yes = volume_amplify_ok;
 }
 
-/* --------------------------------------------------------------------- */
-/* block selection and clipboard handling */
-
-/* *INDENT-OFF* */
-static struct {
-        int first_channel;
-        int last_channel;
-        int first_row;
-        int last_row;
-} selection = { 0, 0, 0, 0 };
-
-static struct {
-        int in_progress;
-        int first_channel;
-        int first_row;
-} shift_selection = { 0, 0, 0 };
-
-static struct {
-        song_note *data;
-        int channels;
-        int rows;
-} clipboard = { NULL, 0, 0 };
-/* *INDENT-ON* */
-
-/* set to 1 if the last movement key was shifted */
-int previous_shift = 0;
-
-/* this is set to 1 on the first alt-d selection,
- * and shifted left on each successive press. */
-static int block_double_size;
-
-/* if first_channel is zero, there's no selection, as the channel
- * numbers start with one. (same deal for last_channel, but i'm only
- * caring about one of them to be efficient.) */
-#define SELECTION_EXISTS (selection.first_channel)
-
-/* --------------------------------------------------------------------- */
-/* this is for the multiple track views stuff. */
-
-struct track_view {
-	int width;
-	draw_channel_header_func draw_channel_header;
-	draw_note_func draw_note;
-};
-
-static const struct track_view track_views[] = {
-#define TRACK_VIEW(n) {n, draw_channel_header_##n, draw_note_##n}
-	TRACK_VIEW(13),			/* 5 channels */
-	TRACK_VIEW(10),			/* 6/7 channels */
-	TRACK_VIEW(7),			/* 9/10 channels */
-	TRACK_VIEW(6),			/* 10/12 channels */
-	TRACK_VIEW(3),			/* 18/24 channels */
-	TRACK_VIEW(2),			/* 24/36 channels */
-	TRACK_VIEW(1),			/* 36/64 channels */
-#undef  TRACK_VIEW
-};
-
-#define NUM_TRACK_VIEWS ARRAY_SIZE(track_views)
-
-static byte track_view_scheme[64];
-static int visible_channels, visible_width;
-
-static void recalculate_visible_area(void);
-static void set_view_scheme(int scheme);
-static void pattern_editor_reposition(void);
-
 /* --------------------------------------------------------------------------------------------------------- */
 /* settings */
 
-void cfg_save_patedit(void)
+#define CFG_SET_PE(v) cfg_set_number(cfg, "Pattern Editor", #v, v)
+void cfg_save_patedit(cfg_file_t *cfg)
 {
 	int n;
 	char s[65];
@@ -372,31 +381,32 @@ void cfg_save_patedit(void)
 		s[n] = track_view_scheme[n] + 'a';
 	s[64] = 0;
 	
-	cfg_set_number("Pattern Editor", "link_effect_column", link_effect_column);
-	cfg_set_number("Pattern Editor", "draw_divisions", draw_divisions);
-	cfg_set_number("Pattern Editor", "centralise_cursor", centralise_cursor);
-	cfg_set_number("Pattern Editor", "highlight_current_row", highlight_current_row);
-	cfg_set_number("Pattern Editor", "mask_fields", mask_fields);
-	cfg_set_number("Pattern Editor", "volume_percent", volume_percent);
-	cfg_set_number("Pattern Editor", "fast_volume_percent", fast_volume_percent);
-	cfg_set_number("Pattern Editor", "fast_volume_mode", fast_volume_mode);
-	cfg_set_string("Pattern Editor", "track_view_scheme", s);
+	CFG_SET_PE(link_effect_column);
+	CFG_SET_PE(draw_divisions);
+	CFG_SET_PE(centralise_cursor);
+	CFG_SET_PE(highlight_current_row);
+	CFG_SET_PE(mask_fields);
+	CFG_SET_PE(volume_percent);
+	CFG_SET_PE(fast_volume_percent);
+	CFG_SET_PE(fast_volume_mode);
+	cfg_set_string(cfg, "Pattern Editor", "track_view_scheme", s);
 }
 
-void cfg_load_patedit(void)
+#define CFG_GET_PE(v,d) v = cfg_get_number(cfg, "Pattern Editor", #v, d)
+void cfg_load_patedit(cfg_file_t *cfg)
 {
 	int n, r = 0;
 	byte s[65];
 	
-	link_effect_column = cfg_get_number("Pattern Editor", "link_effect_column", 0);
-	draw_divisions = cfg_get_number("Pattern Editor", "draw_divisions", 1);
-	centralise_cursor = cfg_get_number("Pattern Editor", "centralise_cursor", 0);
-	highlight_current_row = cfg_get_number("Pattern Editor", "highlight_current_row", 0);
-	mask_fields = cfg_get_number("Pattern Editor", "mask_fields", MASK_INSTRUMENT | MASK_VOLUME);
-	volume_percent = cfg_get_number("Pattern Editor", "volume_percent", 100);
-	fast_volume_percent = cfg_get_number("Pattern Editor", "fast_volume_percent", 67);
-	fast_volume_mode = cfg_get_number("Pattern Editor", "fast_volume_mode", 0);
-	cfg_get_string("Pattern Editor", "track_view_scheme", s, 65, "a");
+	CFG_GET_PE(link_effect_column, 0);
+	CFG_GET_PE(draw_divisions, 1);
+	CFG_GET_PE(centralise_cursor, 0);
+	CFG_GET_PE(highlight_current_row, 0);
+	CFG_GET_PE(mask_fields, MASK_INSTRUMENT | MASK_VOLUME);
+	CFG_GET_PE(volume_percent, 100);
+	CFG_GET_PE(fast_volume_percent, 67);
+	CFG_GET_PE(fast_volume_mode, 0);
+	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", s, 65, "a");
 	
 	/* "decode" the track view scheme */
 	for (n = 0; n < 64; n++) {
@@ -2129,7 +2139,7 @@ static void pattern_editor_playback_update(void)
 	static int prev_pattern = -1;
 
 	playing_row = song_get_current_row();
-	playing_pattern = song_get_current_pattern();
+	playing_pattern = song_get_playing_pattern();
 
 	if ((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) != 0
 	    && (playing_row != prev_row || playing_pattern != prev_pattern)) {
@@ -2143,7 +2153,7 @@ static void pattern_editor_playback_update(void)
 			current_row = playing_row;
 			pattern_editor_reposition();
 			status.flags |= NEED_UPDATE;
-		} else if (current_pattern == song_get_current_pattern()) {
+		} else if (current_pattern == song_get_playing_pattern()) {
 			status.flags |= NEED_UPDATE;
 		}
 	}

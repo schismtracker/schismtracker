@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ static inline void draw_song_playing_status(void)
 {
         int pos = 2;
         char buf[16];
-        int pattern = song_get_current_pattern();
+        int pattern = song_get_playing_pattern();
 
         SDL_LockSurface(screen);
 
@@ -93,7 +93,7 @@ static inline void draw_pattern_playing_status(void)
 {
         int pos = 2;
         char buf[16];
-        int pattern = song_get_current_pattern();
+        int pattern = song_get_playing_pattern();
 
         SDL_LockSurface(screen);
 

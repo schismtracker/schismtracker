@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -343,6 +343,7 @@ void song_sample_free(signed char *data);
 // these return NULL on failure.
 song_sample *song_get_sample(int n, char **name_ptr);
 song_instrument *song_get_instrument(int n, char **name_ptr);
+int song_get_instrument_number(song_instrument *ins); // 0 => no instrument; ignore above comment =)
 song_channel *song_get_channel(int n);
 
 // this one should probably be organized somewhere else..... meh
@@ -365,6 +366,8 @@ int song_pattern_is_empty(int p);
 int song_get_num_orders(void);
 int song_get_num_patterns(void);
 int song_get_rows_in_pattern(int pattern);
+
+void song_pattern_resize(int pattern, int rows);
 
 int song_get_initial_speed(void);
 void song_set_initial_speed(int new_speed);
@@ -422,7 +425,7 @@ int song_get_current_tempo(void);
 int song_get_current_global_volume(void);
 
 int song_get_current_order(void);
-int song_get_current_pattern(void);
+int song_get_playing_pattern(void);
 int song_get_current_row(void);
 
 void song_set_current_order(int order);

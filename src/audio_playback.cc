@@ -1,5 +1,5 @@
 // Schism Tracker - a cross-platform Impulse Tracker clone
-// copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+// copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 #include "page.h"
 #include "mplink.h"
 #include "slurp.h"
+#include "config-parser.h"
 
 // ------------------------------------------------------------------------
 
@@ -314,7 +315,7 @@ int song_get_current_order()
         return mp->GetCurrentOrder();
 }
 
-int song_get_current_pattern()
+int song_get_playing_pattern()
 {
         return mp->GetCurrentPattern();
 }
@@ -394,10 +395,10 @@ void song_set_surround(int on)
 // well this is certainly a dopey place to put this, config having nothing to do with playback... maybe i
 // should put all the cfg_ stuff in config.c :/
 
-#define CFG_GET_A(v,d) audio_settings.v = cfg_get_number("Audio", #v, d)
-#define CFG_GET_M(v,d) audio_settings.v = cfg_get_number("Mixer Settings", #v, d)
-#define CFG_GET_D(v,d) audio_settings.v = cfg_get_number("Modplug DSP", #v, d)
-void cfg_load_audio(void)
+#define CFG_GET_A(v,d) audio_settings.v = cfg_get_number(cfg, "Audio", #v, d)
+#define CFG_GET_M(v,d) audio_settings.v = cfg_get_number(cfg, "Mixer Settings", #v, d)
+#define CFG_GET_D(v,d) audio_settings.v = cfg_get_number(cfg, "Modplug DSP", #v, d)
+void cfg_load_audio(cfg_file_t *cfg)
 {
 	CFG_GET_A(sample_rate, 44100);
 	CFG_GET_A(bits, 16);
@@ -430,10 +431,10 @@ void cfg_load_audio(void)
 	CFG_GET_D(reverb_delay, 100);
 }
 
-#define CFG_SET_A(v) cfg_set_number("Audio", #v, audio_settings.v)
-#define CFG_SET_M(v) cfg_set_number("Mixer Settings", #v, audio_settings.v)
-#define CFG_SET_D(v) cfg_set_number("Modplug DSP", #v, audio_settings.v)
-void cfg_save_audio(void)
+#define CFG_SET_A(v) cfg_set_number(cfg, "Audio", #v, audio_settings.v)
+#define CFG_SET_M(v) cfg_set_number(cfg, "Mixer Settings", #v, audio_settings.v)
+#define CFG_SET_D(v) cfg_set_number(cfg, "Modplug DSP", #v, audio_settings.v)
+void cfg_save_audio(cfg_file_t *cfg)
 {
 	CFG_SET_A(sample_rate);
 	CFG_SET_A(bits);

@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,17 +20,7 @@
 #ifndef MIXER_H
 #define MIXER_H
 
-#define VOLUME_MAX 100
-
-/* Hmm. I've found that some systems actually don't support the idea of a
- * "master" volume, so this became necessary. I suppose PCM is really the
- * more useful setting to change anyway. */
-#if 0
-# define SCHISM_MIXER_CONTROL SOUND_MIXER_VOLUME
-#else
-# define SCHISM_MIXER_CONTROL SOUND_MIXER_PCM
-#endif
-
+int mixer_get_max_volume(void);
 void mixer_read_volume(int *left, int *right);
 void mixer_write_volume(int left, int right);
 

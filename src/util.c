@@ -1,6 +1,6 @@
 /*
  * util.c - Various useful functions
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -190,55 +190,148 @@ void trim_string(char *s)
         s[1 + i] = 0;
 }
 
-/* blecch */
-int get_num_lines(const char *text)
+/* break the string 's' with the character 'c', placing the two parts in 'first' and 'second'.
+return: 1 if the string contained the character (and thus could be split), 0 if not.
+the pointers returned in first/second should be free()'d by the caller. */
+int str_break(const char *s, char c, char **first, char **second)
 {
-        const char *ptr = text;
-        int n = 0;
-
-        if (!text)
-                return 0;
-        for (;;) {
-                ptr = strpbrk(ptr, "\015\012");
-                if (!ptr)
-                        return n;
-                if (ptr[0] == 13 && ptr[1] == 10)
-                        ptr += 2;
-                else
-                        ptr++;
-                n++;
-        }
+	const char *p = strchr(s, c);
+	if (!p)
+		return 0;
+	*first = malloc(p - s + 1);
+	strncpy(*first, s, p - s);
+	(*first)[p - s] = 0;
+	*second = strdup(p + 1);
+	return 1;
 }
 
-/* --------------------------------------------------------------------- */
-/* FILE INFO FUNCTIONS */
-
-long file_size(const char *filename)
+/* adapted from glib. in addition to the normal c escapes, this also escapes the comment character (#)
+ * as \043. if space_hack is true, the first/last character is also escaped if it is a space. */
+char *str_escape(const char *source, bool space_hack)
 {
-        struct stat buf;
-
-        if (stat(filename, &buf) < 0) {
-                return EOF;
-        }
-        if (S_ISDIR(buf.st_mode)) {
-                errno = EISDIR;
-                return EOF;
-        }
-        return buf.st_size;
+	const char *p = source;
+	/* Each source byte needs maximally four destination chars (\777) */
+	char *dest = calloc(4 * strlen(source) + 1, sizeof(char));
+	char *q = dest;
+	
+	if (space_hack) {
+		if (*p == ' ') {
+			*q++ = '\\';
+			*q++ = '0';
+			*q++ = '4';
+			*q++ = '0';
+			*p++;
+		}
+	}
+	
+	while (*p) {
+		switch (*p) {
+		case '\a':
+			*q++ = '\\';
+			*q++ = 'a';
+		case '\b':
+			*q++ = '\\';
+			*q++ = 'b';
+			break;
+		case '\f':
+			*q++ = '\\';
+			*q++ = 'f';
+			break;
+		case '\n':
+			*q++ = '\\';
+			*q++ = 'n';
+			break;
+		case '\r':
+			*q++ = '\\';
+			*q++ = 'r';
+			break;
+		case '\t':
+			*q++ = '\\';
+			*q++ = 't';
+			break;
+		case '\v':
+			*q++ = '\\';
+			*q++ = 'v';
+			break;
+		case '\\': case '"':
+			*q++ = '\\';
+			*q++ = *p;
+			break;
+		default:
+			if ((*p < ' ') || (*p >= 0177) || (*p == '#')
+			    || (space_hack && p[1] == '\0' && *p == ' ')) {
+				*q++ = '\\';
+				*q++ = '0' + (((*p) >> 6) & 07);
+				*q++ = '0' + (((*p) >> 3) & 07);
+				*q++ = '0' + ((*p) & 07);
+			} else {
+				*q++ = *p;
+			}
+			break;
+		}
+		p++;
+	}
+	
+	*q = 0;
+	return dest;
 }
 
-long file_size_fd(int fd)
+/* opposite of str_escape. (this is glib's 'compress' function renamed more clearly)
+TODO: it'd be nice to handle \xNN as well... */
+char *str_unescape(const char *source)
 {
-        struct stat buf;
-
-        if (fstat(fd, &buf) == -1) {
-                return EOF;
-        }
-        if (S_ISDIR(buf.st_mode)) {
-                errno = EISDIR;
-                return EOF;
-        }
-        return buf.st_size;
+	const char *p = source;
+	const char *octal;
+	char *dest = calloc(strlen(source) + 1, sizeof(char));
+	char *q = dest;
+	
+	while (*p) {
+		if (*p == '\\') {
+			p++;
+			switch (*p) {
+			case '0'...'7':
+				*q = 0;
+				octal = p;
+				while ((p < octal + 3) && (*p >= '0') && (*p <= '7')) {
+					*q = (*q * 8) + (*p - '0');
+					p++;
+				}
+				q++;
+				p--;
+				break;
+			case 'a':
+				*q++ = '\a';
+				break;
+			case 'b':
+				*q++ = '\b';
+				break;
+			case 'f':
+				*q++ = '\f';
+				break;
+			case 'n':
+				*q++ = '\n';
+				break;
+			case 'r':
+				*q++ = '\r';
+				break;
+			case 't':
+				*q++ = '\t';
+				break;
+			case 'v':
+				*q++ = '\v';
+				break;
+			default:		/* Also handles \" and \\ */
+				*q++ = *p;
+				break;
+			}
+		} else {
+			*q++ = *p;
+		}
+		p++;
+	}
+	*q = 0;
+	
+	return dest;
 }
 
 char *pretty_name(const char *filename)
@@ -269,6 +362,82 @@ char *pretty_name(const char *filename)
 
         trim_string(ret);
         return ret;
+}
+
+/* blecch */
+int get_num_lines(const char *text)
+{
+        const char *ptr = text;
+        int n = 0;
+
+        if (!text)
+                return 0;
+        for (;;) {
+                ptr = strpbrk(ptr, "\015\012");
+                if (!ptr)
+                        return n;
+                if (ptr[0] == 13 && ptr[1] == 10)
+                        ptr += 2;
+                else
+                        ptr++;
+                n++;
+        }
+}
+
+/* --------------------------------------------------------------------- */
+/* FILE INFO FUNCTIONS */
+
+bool make_backup_file(const char *filename)
+{
+	char *b;
+	int e;
+	
+	/* kind of a hack for now, but would be easy to do other things like
+	 * numbered backups (like emacs), rename the extension to .bak (or
+	 * add it if the file doesn't have an extension), etc. */
+	b = malloc(strlen(filename) + 2);
+	if (!b)
+		return false;
+	strcpy(b, filename);
+	strcat(b, "~");
+	if (rename(filename, b) < 0)
+		e = errno;
+	free(b);
+	
+	if (e) {
+		errno = e;
+		return false;
+	} else {
+		return true;
+	}
+}
+
+long file_size(const char *filename)
+{
+        struct stat buf;
+
+        if (stat(filename, &buf) < 0) {
+                return EOF;
+        }
+        if (S_ISDIR(buf.st_mode)) {
+                errno = EISDIR;
+                return EOF;
+        }
+        return buf.st_size;
+}
+
+long file_size_fd(int fd)
+{
+        struct stat buf;
+
+        if (fstat(fd, &buf) == -1) {
+                return EOF;
+        }
+        if (S_ISDIR(buf.st_mode)) {
+                errno = EISDIR;
+                return EOF;
+        }
+        return buf.st_size;
 }
 
 /* --------------------------------------------------------------------- */

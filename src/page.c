@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -572,12 +572,20 @@ void handle_key(SDL_keysym * k)
 /* --------------------------------------------------------------------- */
 /* Jeffrey, dude, you made this HARD TO DO :) */
 
-#define TOP_BANNER_NORMAL "Schism Tracker v" VERSION " Copyright (C) 2003-2004 chisel"
+#define TOP_BANNER_NORMAL "Schism Tracker v" VERSION " Copyright (C) 2003-2005 chisel"
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
 
 static void draw_top_info_const(void)
 {
-        int n;
+        int n, tl, br;
+
+	if (status.flags & INVERTED_PALETTE) {
+		tl = 3;
+		br = 1;
+	} else {
+		tl = 1;
+		br = 3;
+	}
 
         SDL_LockSurface(screen);
         
@@ -601,59 +609,59 @@ static void draw_top_info_const(void)
         draw_text_unlocked("ESC..Main Menu  F5/F8..Play / Stop", 21, 7, 0, 2);
 
         /* the neat-looking (but incredibly ugly to draw) borders */
-        draw_char_unlocked(128, 30, 4, 3, 2);
-        draw_char_unlocked(128, 57, 4, 3, 2);
-        draw_char_unlocked(128, 19, 5, 3, 2);
-        draw_char_unlocked(128, 51, 5, 3, 2);
-        draw_char_unlocked(129, 36, 4, 3, 2);
-        draw_char_unlocked(129, 50, 6, 3, 2);
-        draw_char_unlocked(129, 17, 8, 3, 2);
-        draw_char_unlocked(129, 18, 8, 3, 2);
-        draw_char_unlocked(131, 37, 3, 3, 2);
-        draw_char_unlocked(131, 78, 3, 3, 2);
-        draw_char_unlocked(131, 19, 6, 3, 2);
-        draw_char_unlocked(131, 19, 7, 3, 2);
-        draw_char_unlocked(132, 49, 3, 1, 2);
-        draw_char_unlocked(132, 49, 4, 1, 2);
-        draw_char_unlocked(132, 49, 5, 1, 2);
-        draw_char_unlocked(134, 75, 2, 1, 2);
-        draw_char_unlocked(134, 76, 2, 1, 2);
-        draw_char_unlocked(134, 77, 2, 1, 2);
-        draw_char_unlocked(136, 37, 4, 3, 2);
-        draw_char_unlocked(136, 78, 4, 3, 2);
-        draw_char_unlocked(136, 30, 5, 3, 2);
-        draw_char_unlocked(136, 57, 5, 3, 2);
-        draw_char_unlocked(136, 51, 6, 3, 2);
-        draw_char_unlocked(136, 19, 8, 3, 2);
-        draw_char_unlocked(137, 49, 6, 3, 2);
-        draw_char_unlocked(137, 11, 8, 3, 2);
-        draw_char_unlocked(138, 37, 2, 1, 2);
-        draw_char_unlocked(138, 78, 2, 1, 2);
-        draw_char_unlocked(139, 11, 2, 1, 2);
-        draw_char_unlocked(139, 49, 2, 1, 2);
+        draw_char_unlocked(128, 30, 4, br, 2);
+        draw_char_unlocked(128, 57, 4, br, 2);
+        draw_char_unlocked(128, 19, 5, br, 2);
+        draw_char_unlocked(128, 51, 5, br, 2);
+        draw_char_unlocked(129, 36, 4, br, 2);
+        draw_char_unlocked(129, 50, 6, br, 2);
+        draw_char_unlocked(129, 17, 8, br, 2);
+        draw_char_unlocked(129, 18, 8, br, 2);
+        draw_char_unlocked(131, 37, 3, br, 2);
+        draw_char_unlocked(131, 78, 3, br, 2);
+        draw_char_unlocked(131, 19, 6, br, 2);
+        draw_char_unlocked(131, 19, 7, br, 2);
+        draw_char_unlocked(132, 49, 3, tl, 2);
+        draw_char_unlocked(132, 49, 4, tl, 2);
+        draw_char_unlocked(132, 49, 5, tl, 2);
+        draw_char_unlocked(134, 75, 2, tl, 2);
+        draw_char_unlocked(134, 76, 2, tl, 2);
+        draw_char_unlocked(134, 77, 2, tl, 2);
+        draw_char_unlocked(136, 37, 4, br, 2);
+        draw_char_unlocked(136, 78, 4, br, 2);
+        draw_char_unlocked(136, 30, 5, br, 2);
+        draw_char_unlocked(136, 57, 5, br, 2);
+        draw_char_unlocked(136, 51, 6, br, 2);
+        draw_char_unlocked(136, 19, 8, br, 2);
+        draw_char_unlocked(137, 49, 6, br, 2);
+        draw_char_unlocked(137, 11, 8, br, 2);
+        draw_char_unlocked(138, 37, 2, tl, 2);
+        draw_char_unlocked(138, 78, 2, tl, 2);
+        draw_char_unlocked(139, 11, 2, tl, 2);
+        draw_char_unlocked(139, 49, 2, tl, 2);
 
         for (n = 0; n < 5; n++) {
-                draw_char_unlocked(132, 11, 3 + n, 1, 2);
-                draw_char_unlocked(129, 12 + n, 8, 3, 2);
-                draw_char_unlocked(134, 12 + n, 2, 1, 2);
-                draw_char_unlocked(129, 20 + n, 5, 3, 2);
-                draw_char_unlocked(129, 31 + n, 4, 3, 2);
-                draw_char_unlocked(134, 32 + n, 2, 1, 2);
-                draw_char_unlocked(134, 50 + n, 2, 1, 2);
-                draw_char_unlocked(129, 52 + n, 5, 3, 2);
-                draw_char_unlocked(129, 58 + n, 4, 3, 2);
-                draw_char_unlocked(134, 70 + n, 2, 1, 2);
+                draw_char_unlocked(132, 11, 3 + n, tl, 2);
+                draw_char_unlocked(129, 12 + n, 8, br, 2);
+                draw_char_unlocked(134, 12 + n, 2, tl, 2);
+                draw_char_unlocked(129, 20 + n, 5, br, 2);
+                draw_char_unlocked(129, 31 + n, 4, br, 2);
+                draw_char_unlocked(134, 32 + n, 2, tl, 2);
+                draw_char_unlocked(134, 50 + n, 2, tl, 2);
+                draw_char_unlocked(129, 52 + n, 5, br, 2);
+                draw_char_unlocked(129, 58 + n, 4, br, 2);
+                draw_char_unlocked(134, 70 + n, 2, tl, 2);
         }
         for (; n < 10; n++) {
-                draw_char_unlocked(134, 12 + n, 2, 1, 2);
-                draw_char_unlocked(129, 20 + n, 5, 3, 2);
-                draw_char_unlocked(134, 50 + n, 2, 1, 2);
-                draw_char_unlocked(129, 58 + n, 4, 3, 2);
+                draw_char_unlocked(134, 12 + n, 2, tl, 2);
+                draw_char_unlocked(129, 20 + n, 5, br, 2);
+                draw_char_unlocked(134, 50 + n, 2, tl, 2);
+                draw_char_unlocked(129, 58 + n, 4, br, 2);
         }
         for (; n < 20; n++) {
-                draw_char_unlocked(134, 12 + n, 2, 1, 2);
-                draw_char_unlocked(134, 50 + n, 2, 1, 2);
-                draw_char_unlocked(129, 58 + n, 4, 3, 2);
+                draw_char_unlocked(134, 12 + n, 2, tl, 2);
+                draw_char_unlocked(134, 50 + n, 2, tl, 2);
+                draw_char_unlocked(129, 58 + n, 4, br, 2);
         }
 
         draw_text_unlocked("Time", 63, 9, 0, 2);
@@ -664,15 +672,6 @@ static void draw_top_info_const(void)
         draw_char_unlocked(':', 52, 3, 7, 0);
 	
         SDL_UnlockSurface(screen);
-	
-	/* This is where the rectangle used to be drawn, but I've moved
-	 * it down to where the oscilloscope is drawn in redraw_screen.
-	 * Eventually I'm going to have a couple other things there, and
-	 * there will be an option on the settings page (like for the time
-	 * display) -- for example, it'll be possible to set it up so that
-	 * an oscilloscope is drawn when the song is playing, but when it's
-	 * stopped it gets replaced with a little "Schism Tracker" graphic
-	 * or something. */
 }
 
 /* --------------------------------------------------------------------- */

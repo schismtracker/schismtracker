@@ -1,6 +1,6 @@
 /*
  * bin2h - Utility to include binary files in source code
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,7 +73,7 @@ static void print_version(FILE *f)
 	fprintf(f, "bin2h v" BIN2H_VERSION "\n"
 		"Written by chisel <someguy@here.is>.\n"
 		"\n"
-		"Copyright (C) 2004 chisel.\n"
+		"Copyright (C) 2004-2005 chisel.\n"
 		"This is free software; see the source for copying conditions.  There is NO\n"
 		"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 		);

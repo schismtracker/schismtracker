@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -204,23 +204,23 @@ struct it_palette palettes[] = {
                 /* 14 */ {20, 20, 20},
                 /* 15 */ {10, 10, 10},
         }},
-        {"Untitled Palette #4", { /* mine */
-                /*  0 */ { 0,  0,  0},
-                /*  1 */ { 0, 18, 20},
-                /*  2 */ { 0, 31, 37},
-                /*  3 */ {27, 61, 63},
-                /*  4 */ {47,  0, 63},
-                /*  5 */ {55, 63, 32},
-                /*  6 */ {24, 17, 63},
-                /*  7 */ { 7,  3, 30},
-                /*  8 */ { 4,  5, 15},
-                /*  9 */ { 5, 11, 24},
-                /* 10 */ {16, 28, 26},
-                /* 11 */ {23,  0, 43},
-                /* 12 */ {38, 46, 33},
-                /* 13 */ {41, 16, 23},
-                /* 14 */ { 0,  5, 20},
-                /* 15 */ { 2,  0, 12},
+        {"Kawaii", { /* mine (+mml) */
+                /*  0 */ {61, 60, 63},
+		/*  1 */ {63, 53, 60},
+		/*  2 */ {51, 38, 47},
+		/*  3 */ {18, 10, 17},
+		/*  4 */ {63, 28, 50},
+		/*  5 */ {21, 34, 50},
+		/*  6 */ {40, 32, 45},
+		/*  7 */ {63, 52, 59},
+		/*  8 */ {48, 55, 63},
+		/*  9 */ {51, 48, 63},
+		/* 10 */ {45, 29, 44},
+		/* 11 */ {57, 48, 59},
+		/* 12 */ {34, 18, 32},
+		/* 13 */ {50, 42, 63},
+		/* 14 */ {50, 53, 60},
+		/* 15 */ {63, 58, 56},
         }},
         {"Gold (Vintage)", { /* more directly based on the ST3 palette */
                 /*  0 */ { 0,  0,  0},

@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
-
 #include "pattern-view.h"
+#include "config-parser.h"
 
 #include <SDL.h>
 #include <assert.h>
@@ -132,8 +132,7 @@ static void info_draw_samples(int base, int height, UNUSED int active,
                         draw_vu_meter(5, pos, 24, vu, 5, 4);
 
                 /* second box: sample number/name */
-                /* not sure how to get the ins. number :( */
-                ins = channel->instrument ? 42 : 0;
+                ins = song_get_instrument_number(channel->instrument);
                 /* figuring out the sample number is an ugly hack...
                  * considering all the crap that's copied to the channel,
                  * i'm surprised that the sample and instrument numbers
@@ -220,7 +219,7 @@ static void _draw_track_view(int base, int height, int first_channel,
         switch (song_get_mode()) {
         case MODE_PATTERN_LOOP:
                 prev_pattern_rows = next_pattern_rows = cur_pattern_rows
-                        = song_get_pattern(song_get_current_pattern(),
+                        = song_get_pattern(song_get_playing_pattern(),
 					   &cur_pattern);
                 prev_pattern = next_pattern = cur_pattern;
                 break;
@@ -710,27 +709,28 @@ static void recalculate_windows(void)
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
-/* settings */
+/* settings
+ * TODO: save all the windows in a single key, maybe comma-separated or something */
 
-void cfg_save_info(void)
+void cfg_save_info(cfg_file_t *cfg)
 {
 	char key[] = "windowX";
 	int i;
 	
-	cfg_set_number("Info Page", "num_windows", num_windows);
+	cfg_set_number(cfg, "Info Page", "num_windows", num_windows);
 	
 	for (i = 0; i < num_windows; i++) {
 		key[6] = i + '0';
-		cfg_set_number("Info Page", key, (windows[i].type << 8) | (windows[i].height));
+		cfg_set_number(cfg, "Info Page", key, (windows[i].type << 8) | (windows[i].height));
 	}
 }
 
-void cfg_load_info(void)
+void cfg_load_info(cfg_file_t *cfg)
 {
 	char key[] = "windowX";
 	int i;
 	
-	num_windows = cfg_get_number("Info Page", "num_windows", -1);
+	num_windows = cfg_get_number(cfg, "Info Page", "num_windows", -1);
 	if (num_windows <= 0 || num_windows > MAX_WINDOWS)
 		num_windows = -1;
 	
@@ -738,7 +738,7 @@ void cfg_load_info(void)
 		int tmp;
 		
 		key[6] = i + '0';
-		tmp = cfg_get_number("Info Page", key, -1);
+		tmp = cfg_get_number(cfg, "Info Page", key, -1);
 		if (tmp == -1) {
 			num_windows = -1;
 			break;

@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -189,6 +189,8 @@ static void change_modplug(void)
 
 void settings_load_page(struct page *page)
 {
+	int max = mixer_get_max_volume();
+	
         page->title = "Settings (Shift-F5)";
         page->draw_const = settings_draw_const;
         page->set_page = settings_set_page;
@@ -196,8 +198,8 @@ void settings_load_page(struct page *page)
         page->items = items_settings;
         page->help_index = HELP_GLOBAL;
 
-        create_thumbbar(items_settings + 0, 18, 14, 17, 0, 1, 12, change_volume, 0, VOLUME_MAX);
-        create_thumbbar(items_settings + 1, 18, 15, 17, 0, 2, 12, change_volume, 0, VOLUME_MAX);
+        create_thumbbar(items_settings + 0, 18, 14, 17, 0, 1, 12, change_volume, 0, max);
+        create_thumbbar(items_settings + 1, 18, 15, 17, 0, 2, 12, change_volume, 0, max);
         create_thumbbar(items_settings + 2, 18, 17, 17, 1, 3, 12, change_modplug, 4, 256);
         create_numentry(items_settings + 3, 18, 18, 7, 2, 4, 13, change_audio, 4000, 50000, &sample_rate_cursor);
         create_menutoggle(items_settings + 4, 18, 19, 3, 5, 14, 14, 14, change_audio, bit_rates);

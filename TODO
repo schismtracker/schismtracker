@@ -436,12 +436,6 @@ changing instrument panning should turn it on
 
 --------------------------------------------------------------------------
 
-when checking for a blank pattern, channel 43, row 10 seems to be the
-last note that gets tested. weird boundary byte count or something?
-(683 notes...)
-
---------------------------------------------------------------------------
-
 Do something (besides segfaulting!) if the audio device is in use.
 
 (This seems to have something to do with the alsa driver, since with
@@ -492,3 +486,19 @@ the current pattern's name.)
 Another idea (heh): on the info page, bind some key to pop up a menu of
 all the different displays. Might be easier than pgup/pgdn through a ton
 of different window types.
+
+--------------------------------------------------------------------------
+
+for win32 progress:
+
+#include <dirent.h>
+#include <string.h>
+
+int alphasort(const struct dirent **a, const struct dirent **b) {
+	return strcmp((*a)->d_name, (*b)->d_name);
+}
+
+--------------------------------------------------------------------------
+
+Take a look at libvo/x11_common.c in mplayer's source to see how it
+disables the screensaver.

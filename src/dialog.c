@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -163,6 +163,7 @@ void dialog_cancel(void)
 int dialog_handle_key(SDL_keysym * k)
 {
 	struct dialog *d;
+	int yes = 0;
 	
 	ENSURE_DIALOG(0);
 
@@ -192,13 +193,21 @@ int dialog_handle_key(SDL_keysym * k)
 	case SDLK_ESCAPE:
 		dialog_cancel();
 		return 1;
+	case SDLK_RETURN:
+	case SDLK_KP_ENTER:
+		yes = 1;
+		break;
 	default:
 		break;
 	}
 	
 	d = dialogs + num_dialogs - 1;
-	if (d->handle_key)
-		return d->handle_key(k);
+	if (d->handle_key && d->handle_key(k)) {
+		return 1;
+	} else if (yes) {
+		dialog_yes();
+		return 1;
+	}
 	return 0;
 }
 

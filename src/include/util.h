@@ -1,6 +1,6 @@
 /*
  * util.h - Various useful functions
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -115,10 +115,14 @@ const char *get_extension(const char *filename);
 char *clean_path(const char *path);
 char *get_parent_directory(const char *dirname);
 void trim_string(char *s);
+int str_break(const char *s, char c, char **first, char **second);
+char *str_escape(const char *source, bool space_hack);
+char *str_unescape(const char *source);
 char *pretty_name(const char *filename);
 int get_num_lines(const char *text);
 
 /* filesystem */
+bool make_backup_file(const char *filename);
 long file_size(const char *filename);
 long file_size_fd(int fd);
 bool is_directory(const char *filename);

@@ -1,6 +1,6 @@
 /*
  * slurp - General-purpose file reader
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,8 +41,18 @@
 /* --------------------------------------------------------------------- */
 
 /* CHUNK is how much memory is allocated at once. Too large a number is a
- * waste of memory; too small means constantly realloc'ing. */
-#define CHUNK 131072
+ * waste of memory; too small means constantly realloc'ing.
+ * 
+ * <mml> also, too large a number might take the OS more than an efficient number of reads to read in one
+ *       hit -- which you could be processing/reallocing while waiting for the next bit
+ * <mml> we had something for some proggy on the server that was sucking data off stdin
+ * <mml> and had our resident c programmer and resident perl programmer competing for the fastest code
+ * <mml> but, the c coder found that after a bunch of test runs with time, 64k worked out the best case
+ * ...
+ * <mml> but, on another system with a different block size, 64 blocks may still be efficient, but 64k
+ *       might not be 64 blocks
+ * (so maybe this should grab the block size from stat() insetad...) */
+#define CHUNK 65536
 
 static int _slurp_stdio_pipe(slurp_t * t, int fd)
 {

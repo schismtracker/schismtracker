@@ -1,5 +1,5 @@
 // Schism Tracker - a cross-platform Impulse Tracker clone
-// copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+// copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -93,6 +93,16 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
         if (name_ptr)
                 *name_ptr = (char *) mp->Headers[n]->name;
         return (song_instrument *) mp->Headers[n];
+}
+
+// this is a fairly gross way to do what should be such a simple thing
+int song_get_instrument_number(song_instrument *inst)
+{
+	if (inst)
+		for (int n = 1; n < MAX_INSTRUMENTS; n++)
+			if (inst == ((song_instrument *) mp->Headers[n]))
+				return n;
+	return 0;
 }
 
 song_channel *song_get_channel(int n)
@@ -241,14 +251,14 @@ int song_get_num_orders()
         return n ? n - 1 : n;
 }
 
+static song_note blank_pattern[64 * 64];
 int song_pattern_is_empty(int n)
 {
         if (!mp->Patterns[n])
                 return true;
         if (mp->PatternSize[n] != 64)
                 return false;
-        unsigned char blank_pattern[4096] = { 0 };
-        return !memcmp(mp->Patterns[n], blank_pattern, 4096);
+        return !memcmp(mp->Patterns[n], blank_pattern, sizeof(blank_pattern));
 }
 
 int song_get_num_patterns()
@@ -264,6 +274,34 @@ int song_get_rows_in_pattern(int pattern)
         if (pattern > MAX_PATTERNS)
                 return 0;
         return (mp->PatternSize[pattern] ? : 64) - 1;
+}
+
+// ------------------------------------------------------------------------
+
+/*
+mp->PatternSize
+	The size of the pattern, of course.
+mp->PatternAllocSize
+	Not used anywhere (yet). I'm planning on keeping track of space off the end of a pattern when it's
+	shrunk, so that making it longer again will restore it. (i.e., handle resizing the same way IT does)
+	I'll add this stuff in later; I have three handwritten pages detailing how to implement it. ;)
+*/
+void song_pattern_resize(int n, int rows)
+{
+	//printf("pattern resize requested: %3d, to %d rows\n", n, rows);
+	//printf("loaded in pattern editor: %3d\n", get_current_pattern());
+	//printf("current playback pattern: %3d\n", song_get_playing_pattern());
+
+	SDL_LockAudio();
+	MODCOMMAND *oldpat = mp->Patterns[n];
+	MODCOMMAND *newpat = CSoundFile::AllocatePattern(rows, 64); // this occasionally segfaults. wtfbbq?!!
+	if (oldpat) {
+		memcpy(newpat, oldpat, 64 * mp->PatternSize[n]);
+		CSoundFile::FreePattern(oldpat);
+	}
+	mp->Patterns[n] = newpat;
+	mp->PatternSize[n] = rows;
+	SDL_UnlockAudio();
 }
 
 // ------------------------------------------------------------------------

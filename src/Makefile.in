@@ -76,12 +76,23 @@ am_itf_OBJECTS = draw-char.$(OBJEXT) draw-pixel.$(OBJEXT) \
 	itf.$(OBJEXT) slurp.$(OBJEXT) util.$(OBJEXT)
 itf_OBJECTS = $(am_itf_OBJECTS)
 itf_DEPENDENCIES =
-am_schism_OBJECTS = config.$(OBJEXT) draw-char.$(OBJEXT) \
-	draw-misc.$(OBJEXT) draw-pixel.$(OBJEXT) dialog.$(OBJEXT) \
-	helptext.$(OBJEXT) item.$(OBJEXT) item-keyhandler.$(OBJEXT) \
-	keyboard.$(OBJEXT) main.$(OBJEXT) menu.$(OBJEXT) \
-	mixer.$(OBJEXT) page.$(OBJEXT) page_blank.$(OBJEXT) \
-	page_help.$(OBJEXT) page_info.$(OBJEXT) \
+am__schism_SOURCES_DIST = config.c config-parser.c draw-char.c \
+	draw-misc.c draw-pixel.c dialog.c helptext.c item.c \
+	item-keyhandler.c keyboard.c main.c menu.c mixer-oss.c \
+	mixer-alsa.c page.c page_blank.c page_help.c page_info.c \
+	page_instruments.c page_loadmodule.c page_loadsample.c \
+	page_log.c page_midi.c page_orderpan.c page_patedit.c \
+	page_samples.c page_settings.c page_message.c page_palette.c \
+	page_vars.c pattern-view.c sample-edit.c sample-view.c slurp.c \
+	status.c util.c audio_playback.cc audio_loadsave.cc mplink.cc
+@USE_ALSA_MIXER_FALSE@am__objects_1 = mixer-oss.$(OBJEXT)
+@USE_ALSA_MIXER_TRUE@am__objects_1 = mixer-alsa.$(OBJEXT)
+am_schism_OBJECTS = config.$(OBJEXT) config-parser.$(OBJEXT) \
+	draw-char.$(OBJEXT) draw-misc.$(OBJEXT) draw-pixel.$(OBJEXT) \
+	dialog.$(OBJEXT) helptext.$(OBJEXT) item.$(OBJEXT) \
+	item-keyhandler.$(OBJEXT) keyboard.$(OBJEXT) main.$(OBJEXT) \
+	menu.$(OBJEXT) $(am__objects_1) page.$(OBJEXT) \
+	page_blank.$(OBJEXT) page_help.$(OBJEXT) page_info.$(OBJEXT) \
 	page_instruments.$(OBJEXT) page_loadmodule.$(OBJEXT) \
 	page_loadsample.$(OBJEXT) page_log.$(OBJEXT) \
 	page_midi.$(OBJEXT) page_orderpan.$(OBJEXT) \
@@ -100,15 +111,17 @@ depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 @AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/audio_loadsave.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/audio_playback.Po ./$(DEPDIR)/bin2h.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/config.Po ./$(DEPDIR)/dialog.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/draw-char.Po ./$(DEPDIR)/draw-misc.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/draw-pixel.Po ./$(DEPDIR)/helptext.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/config-parser.Po ./$(DEPDIR)/config.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/dialog.Po ./$(DEPDIR)/draw-char.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/draw-misc.Po ./$(DEPDIR)/draw-pixel.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/helptext.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/item-keyhandler.Po ./$(DEPDIR)/item.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/itf.Po ./$(DEPDIR)/keyboard.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/main.Po ./$(DEPDIR)/menu.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/mixer.Po ./$(DEPDIR)/mplink.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/page.Po ./$(DEPDIR)/page_blank.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/page_help.Po ./$(DEPDIR)/page_info.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/mixer-alsa.Po ./$(DEPDIR)/mixer-oss.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/mplink.Po ./$(DEPDIR)/page.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/page_blank.Po ./$(DEPDIR)/page_help.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/page_info.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/page_instruments.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/page_loadmodule.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/page_loadsample.Po \
@@ -135,7 +148,8 @@ CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
 SOURCES = $(bin2h_SOURCES) $(itf_SOURCES) $(schism_SOURCES)
-DIST_SOURCES = $(bin2h_SOURCES) $(itf_SOURCES) $(schism_SOURCES)
+DIST_SOURCES = $(bin2h_SOURCES) $(itf_SOURCES) \
+	$(am__schism_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-exec-recursive install-info-recursive \
@@ -200,6 +214,8 @@ SDL_LIBS = @SDL_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+USE_ALSA_MIXER_FALSE = @USE_ALSA_MIXER_FALSE@
+USE_ALSA_MIXER_TRUE = @USE_ALSA_MIXER_TRUE@
 USE_NON_TRACKED_TYPES_FALSE = @USE_NON_TRACKED_TYPES_FALSE@
 USE_NON_TRACKED_TYPES_TRUE = @USE_NON_TRACKED_TYPES_TRUE@
 USE_SAMPLE_TYPES_FALSE = @USE_SAMPLE_TYPES_FALSE@
@@ -259,9 +275,11 @@ EXTRA_DIST = $(srcdir)/include/*.h create_help.sh $(helptexts) \
         default-lower.fnt default-upper-itf.fnt \
 	default-upper-alt.fnt half-width.fnt
 
-schism_SOURCES = config.c draw-char.c draw-misc.c \
+@USE_ALSA_MIXER_FALSE@mixer = mixer-oss.c
+@USE_ALSA_MIXER_TRUE@mixer = mixer-alsa.c
+schism_SOURCES = config.c config-parser.c draw-char.c draw-misc.c \
         draw-pixel.c dialog.c helptext.c item.c item-keyhandler.c \
-	keyboard.c main.c menu.c mixer.c page.c page_blank.c \
+	keyboard.c main.c menu.c $(mixer) page.c page_blank.c \
 	page_help.c page_info.c page_instruments.c page_loadmodule.c \
 	page_loadsample.c page_log.c page_midi.c page_orderpan.c \
 	page_patedit.c page_samples.c page_settings.c page_message.c \
@@ -357,6 +375,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audio_loadsave.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audio_playback.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bin2h.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/config-parser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/config.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dialog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/draw-char.Po@am__quote@
@@ -369,7 +388,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keyboard.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/menu.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mixer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mixer-alsa.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mixer-oss.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mplink.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page_blank.Po@am__quote@

@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +70,22 @@ enum {
         /* if this is set, some stuff behaves differently
          * (grep the source files for what stuff ;) */
         CLASSIC_MODE = (1 << 9),
+	
+	/* make a backup file (song.it~) when saving a module? */
+	MAKE_BACKUPS = (1 << 10),
+	
+	/* is the current palette "backwards"? (used to make the borders look right) */
+	INVERTED_PALETTE = (1 << 11),
 };
+
+#define CHECK_INVERT(tl,br,n) G_STMT_START {\
+	if (status.flags & INVERTED_PALETTE) {\
+		n = tl;\
+		tl = br;\
+		br = n;\
+	}\
+} G_STMT_END
+
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
 enum tracker_time_display {
@@ -184,20 +199,17 @@ extern int cfg_palette;
 void cfg_load(void);
 void cfg_save(void);
 
-void cfg_get_string(const char *section, const char *key, char value[], int max_length, const char *def);
-int cfg_get_number(const char *section, const char *key, int def);
-void cfg_set_string(const char *section, const char *key, const char *value);
-void cfg_set_number(const char *section, const char *key, int value);
-
 /* each page with configurable settings has a function to load/save them... */
-void cfg_load_patedit(void);
-void cfg_save_patedit(void);
+#include "config-parser.h" /* FIXME: shouldn't need this here */
 
-void cfg_load_info(void);
-void cfg_save_info(void);
+void cfg_load_patedit(cfg_file_t *cfg);
+void cfg_save_patedit(cfg_file_t *cfg);
 
-void cfg_load_audio(void);
-void cfg_save_audio(void);
+void cfg_load_info(cfg_file_t *cfg);
+void cfg_save_info(cfg_file_t *cfg);
+
+void cfg_load_audio(cfg_file_t *cfg);
+void cfg_save_audio(cfg_file_t *cfg);
 
 /* --------------------------------------------------------------------- */
 /* text functions */

@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -362,6 +362,8 @@ static inline void _draw_box_internal(int xs, int ys, int xe, int ye,
 {
         int n;
 
+	CHECK_INVERT(tl, br, n);
+
         draw_char_unlocked(ch[0], xs, ys, tl, 2);       /* TL corner */
         draw_char_unlocked(ch[1], xe, ys, br, 2);       /* TR corner */
         draw_char_unlocked(ch[2], xs, ye, br, 2);       /* BL corner */
@@ -391,6 +393,8 @@ void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl,
 
         int n;
 
+	CHECK_INVERT(tl, br, n);
+
         draw_char_unlocked(153, xs, ys, tl, 2); /* TL corner */
         draw_char_unlocked(152, xe, ys, tl, 2); /* TR corner */
         draw_char_unlocked(151, xs, ye, tl, 2); /* BL corner */
@@ -418,6 +422,8 @@ void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye,
         int tl = colors[flags & BOX_SHADE_MASK][0];
         int br = colors[flags & BOX_SHADE_MASK][1];
         int n;
+
+	CHECK_INVERT(tl, br, n);
 
         draw_char_unlocked(128, xs, ys, tl, 2); /* TL corner */
         draw_char_unlocked(141, xe, ys, 1, 2);  /* TR corner */

@@ -1,3 +1,76 @@
+Mon Feb 14 15:10:06 2005  chisel  <someguy@here.is>
+
+	* After gdb'ing the crap out of the pattern resizing code,
+	trimming it down to just a couple lines, and still not getting
+	anywhere, I give up... releasing as 0.18a anyway. Be sure to save
+	before *and* after resizing a pattern.
+
+
+Sun Feb 13 14:31:35 2005  chisel  <someguy@here.is>
+
+	* Changed the confusingly-named song_get_current_pattern to
+	song_get_playing_pattern. (Contrast get_current_pattern, which
+	refers to the pattern loaded in the editor and is unrelated.)
+
+
+Sat Feb  5 22:27:00 2005  chisel  <someguy@here.is>
+
+	* Added Alt-A on instrument list.
+	
+	* Added stub --enable-alsa-mixer option. It currently does
+	nothing (which is still somewhat better than trying to open a
+	nonexistent /dev/mixer) but I'll be finishing it as soon as I
+	figure out the Alsa API. :)
+
+	* Pattern resizing works... no, wait, it crashes.
+
+
+Sat Feb  5 01:56:52 2005  chisel  <someguy@here.is>
+
+	* song_pattern_is_empty now checks the whole pattern like it's
+	supposed to, not just the first 682⅔ notes.
+
+	* Instrument numbers are now properly displayed on the info page.
+	Ignore the ugly hack behind the curtain.
+
+	* If a dialog doesn't handle the enter key, but it defines a
+	'yes' callback, run it.
+
+
+Thu Feb  3 03:38:41 2005  chisel  <someguy@here.is>
+
+	* Refined border flipping hack.
+
+	* Removed highly old and irrelevant note from page.c that dated
+	back to before I added the oscilloscope. Gheh.
+
+
+Wed Feb  2 04:02:51 2005  chisel  <someguy@here.is>
+
+	* Removed "Untitled Palette #4" because it sucked, and added
+	"Kawaii" in its place.
+
+	* Added a hack that detects when a palette is "backwards" and
+	switches the border colors accordingly. Needed for new palette.
+
+
+Sun Jan 30 17:50:07 2005  chisel  <someguy@here.is>
+
+	* Merged new configuration parser. This is more robust than
+	libcoman, as it (tries to) retain comments in the config file,
+	can handle weird characters, and most importantly, it's not some
+	obscure library that no one has.
+
+	* Added the ability to make a backup when saving a song. There's
+	no switch in the gui for this yet, but this can be enabled in GDB
+	by typing "print status.flags |= MAKE_BACKUPS" at the prompt.
+
+
+Wed Jan 12 23:24:40 2005  chisel  <someguy@here.is>
+
+	* Fiddled with slurp.c a bit.
+
+
 Fri Dec 24 02:36:14 2004  chisel  <someguy@here.is>
 
 	* Changes made to the palette are saved now.

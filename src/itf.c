@@ -1,6 +1,6 @@
 /*
  * ITFedit - an Impulse / Schism Tracker font file editor
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,6 +58,13 @@ SDL_Surface *screen;
 /* this is in config.c for schism, but itf is compiled without config.c
  * (for obvious reasons) */
 char cfg_font[NAME_MAX + 1] = "font.cfg";
+
+/* d'oh! the only reason this needs to be defined here at all is because the
+box drawing uses (status.flags & INVERTED_PALETTE), and it's rather excessive
+to define a separate variable just for that one flag. (in schism, that is)
+this whole itf editor is a bunch of hacks, anyway, so i'm not going to lose
+any sleep over this... */
+struct tracker_status status;
 
 /* --------------------------------------------------------------------- */
 /* statics & local constants
@@ -270,11 +277,12 @@ static inline int get_fb_size(void)
 
 static void draw_frame(const byte * name, int x, int y, int inner_width, int inner_height, int active)
 {
-	int n;
+	int n, c;
 	int len = strlen(name);
 
 	if (len > inner_width + 2)
 		len = inner_width + 2;
+	c = (status.flags & INVERTED_PALETTE) ? 1 : 3;
 
 	SDL_LockSurface(screen);
 
@@ -283,12 +291,12 @@ static void draw_frame(const byte * name, int x, int y, int inner_width, int inn
 	draw_box_unlocked(x + 1, y + 2, x + inner_width + 4,
 			  y + inner_height + 5, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_char_unlocked(128, x, y, 3, 2);
+	draw_char_unlocked(128, x, y, c, 2);
 	for (n = 0; n < len + 1; n++)
-		draw_char_unlocked(129, x + n + 1, y, 3, 2);
-	draw_char_unlocked(130, x + n, y, 3, 2);
-	draw_char_unlocked(131, x, y + 1, 3, 2);
-	draw_char_unlocked(137, x + len + 1, y + 1, 3, 2);
+		draw_char_unlocked(129, x + n + 1, y, c, 2);
+	draw_char_unlocked(130, x + n, y, c, 2);
+	draw_char_unlocked(131, x, y + 1, c, 2);
+	draw_char_unlocked(137, x + len + 1, y + 1, c, 2);
 
 	SDL_UnlockSurface(screen);
 
@@ -489,7 +497,7 @@ static inline void draw_helptext(void)
 			draw_char_unlocked(*ptr, column, line, 12, 0);
 		ptr++;
 	}
-	draw_text_unlocked("(c) 2003-2004 chisel", 57, 46, 1, 0);
+	draw_text_unlocked("(c) 2003-2005 chisel", 57, 46, 1, 0);
 
 	SDL_UnlockSurface(screen);
 }

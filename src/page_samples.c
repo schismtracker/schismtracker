@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -487,7 +487,6 @@ static void sample_amplify_dialog(void)
 	percent = MIN(percent, 400);
 
 	create_thumbbar(sample_amplify_items + 0, 13, 30, 51, 0, 1, 1, NULL, 0, 400);
-	sample_amplify_items[0].activate = dialog_yes;
 	sample_amplify_items[0].thumbbar.value = percent;
 	create_button(sample_amplify_items + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes, "OK", 3);
 	create_button(sample_amplify_items + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);

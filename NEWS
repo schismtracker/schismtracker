@@ -1,5 +1,32 @@
  _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
 |                                                                         /
+| There's not  quite as many  shiny new features      [version 0.18a]    /
+| in this version  as I was hoping to have,  but  _ ___ _______ ________/
+| the forum's been too quiet lately. :)                 _ __ ___\
+|
+| Noteworthy changes:
+|
+|     * The crappy  "Untitled Palette #4"  has been replaced  with the much
+|       less crappy "Kawaii."
+|
+|     * Alt-A implemented on the instrument note translation table.
+|
+|     * New configuration  parser removes the dependency on libcoman.  This
+|       parser  preserves comments  and  indentation,  and  saves  a backup
+|       (config~) when writing the configuration  file.
+|
+|     * The info page displays real instrument numbers now, not just "42".
+|
+|     * Option  added to make a backup when saving.  Currently this is only
+|       accessible under GDB; see the ChangeLog for details.
+|
+| Of course,  there's also  the usual  minor bug fixes,  code cleanup,  and
+: other assorted stuff no one pays much attention to.
+.
+' -----=----==---===--====-=====//////
+
+ _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
+|                                                                         /
 | New stuff:                                          [version 0.17a]    /
 |                                                 _ ___ _______ ________/
 |     * Sample names are displayed on the sample        _ __ ___\

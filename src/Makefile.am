@@ -32,9 +32,15 @@ EXTRA_DIST = $(srcdir)/include/*.h create_help.sh $(helptexts) \
         default-lower.fnt default-upper-itf.fnt \
 	default-upper-alt.fnt half-width.fnt
 
-schism_SOURCES = config.c draw-char.c draw-misc.c \
+if USE_ALSA_MIXER
+mixer = mixer-alsa.c
+else
+mixer = mixer-oss.c
+endif
+
+schism_SOURCES = config.c config-parser.c draw-char.c draw-misc.c \
         draw-pixel.c dialog.c helptext.c item.c item-keyhandler.c \
-	keyboard.c main.c menu.c mixer.c page.c page_blank.c \
+	keyboard.c main.c menu.c $(mixer) page.c page_blank.c \
 	page_help.c page_info.c page_instruments.c page_loadmodule.c \
 	page_loadsample.c page_log.c page_midi.c page_orderpan.c \
 	page_patedit.c page_samples.c page_settings.c page_message.c \

@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,14 @@ void palette_apply(void)
 				 VALUE_TRANSLATE(current_palette[n][2]));
 		}
         }
+        
+        /* is the "light" border color actually darker than the "dark" color? */
+	if ((current_palette[1][0] + current_palette[1][1] + current_palette[1][2])
+	    > (current_palette[3][0] + current_palette[3][1] + current_palette[3][2])) {
+		status.flags |= INVERTED_PALETTE;
+	} else {
+		status.flags &= ~INVERTED_PALETTE;
+	}
 }
 
 void palette_load_preset(int palette_index)

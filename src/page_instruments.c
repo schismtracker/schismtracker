@@ -1,6 +1,6 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ * copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -407,6 +407,27 @@ static void note_trans_draw(void)
         SDL_UnlockSurface(screen);
 }
 
+static int note_trans_handle_alt_key(SDL_keysym * k)
+{
+        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+	int n, s;
+	
+	switch (k->sym) {
+	case SDLK_a:
+		s = sample_get_current();
+		for (n = 0; n < 120; n++)
+			ins->sample_map[n] = s;
+		break;
+	default:
+		return 0;
+	}
+	
+	status.flags |= NEED_UPDATE;
+	return 1;
+
+
+}
+
 static int note_trans_handle_key(SDL_keysym * k)
 {
         int prev_line = note_trans_sel_line;
@@ -414,10 +435,13 @@ static int note_trans_handle_key(SDL_keysym * k)
         int prev_pos = note_trans_cursor_pos;
         int new_pos = prev_pos;
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
-        char c = unicode_to_ascii(k->unicode);
+        char c;
         int n;
 
-        switch (k->sym) {
+	if (k->mod & (KMOD_ALT | KMOD_META))
+		return note_trans_handle_alt_key(k);
+		
+       	switch (k->sym) {
         case SDLK_UP:
                 if (--new_line < 0) {
                         change_focus_to(1);
@@ -458,14 +482,15 @@ static int note_trans_handle_key(SDL_keysym * k)
                 sample_set(ins->sample_map[note_trans_sel_line]);
                 return 1;
         default:
+		c = unicode_to_ascii(k->unicode);
+		
                 switch (note_trans_cursor_pos) {
                 case 0:        /* note */
                         n = kbd_get_note(c);
                         if (n <= 0 || n > 120)
                                 return 0;
                         ins->note_map[note_trans_sel_line] = n;
-                        ins->sample_map[note_trans_sel_line] =
-                                sample_get_current();
+                        ins->sample_map[note_trans_sel_line] = sample_get_current();
                         new_line++;
                         break;
                 case 1:        /* octave */

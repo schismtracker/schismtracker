@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 dnl Schism Tracker - a cross-platform Impulse Tracker clone
-dnl copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+dnl copyright (c) 2003-2005 chisel <someguy@here.is> <http://here.is/someguy/>
 dnl
 dnl This program is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ machtype=$target_cpu
 
 dnl when changing the version, also change the CWTV in audio_loadsave.cc
 dnl (TODO: come up with some way to do it automatically)
-AM_INIT_AUTOMAKE(schism, 0.17a)
+AM_INIT_AUTOMAKE(schism, 0.18a)
 AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------------------------------
@@ -58,11 +58,6 @@ dnl TODO | just use the uncompressed help text.
 AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffDecompress, ,
              AC_MSG_ERROR([*** libbz2 not found.]))
 
-dnl libcoman is used for the configuration. this may change in the future
-dnl if anyone has a better library for handling settings.
-AC_CHECK_LIB(coman, InitConfig, ,
-             AC_MSG_ERROR([*** libcoman not found.]))
-
 dnl This stuff is for the title library. Eventually I'll probably make
 dnl a "real" library out of it, but for now I'm just going to cheat.
 dnl Hope no one minds. =)
@@ -92,6 +87,14 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
+
+dnl -----------------------------------------------------------------------
+
+AC_ARG_ENABLE(alsa-mixer,
+	      [  --enable-alsa-mixer     Use Alsa for the master volume control],
+	      alsa_mixer=$enableval,
+	      alsa_mixer=no)
+AM_CONDITIONAL([USE_ALSA_MIXER], [test "$alsa_mixer" = yes])
 
 dnl -----------------------------------------------------------------------
 dnl Optimizations borrowed and modified a bit from DGen.

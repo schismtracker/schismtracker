@@ -557,6 +557,7 @@ public:	// for Editing
 	MODCHANNELSETTINGS ChnSettings[MAX_BASECHANNELS]; // Channels settings
 	MODCOMMAND *Patterns[MAX_PATTERNS];				// Patterns
 	WORD PatternSize[MAX_PATTERNS];					// Patterns Lengths
+	WORD PatternAllocSize[MAX_PATTERNS];				// Allocated pattern lengths (for async. resizing/playback) <chisel>
 	BYTE Order[MAX_ORDERS];							// Pattern Orders
 	MODMIDICFG m_MidiCfg;							// Midi macro config table
 	SNDMIXPLUGIN m_MixPlugins[MAX_MIXPLUGINS];		// Mix plugins

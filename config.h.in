@@ -22,9 +22,6 @@
 /* Define to 1 if you have the `bz2' library (-lbz2). */
 #undef HAVE_LIBBZ2
 
-/* Define to 1 if you have the `coman' library (-lcoman). */
-#undef HAVE_LIBCOMAN
-
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
