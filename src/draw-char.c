@@ -99,25 +99,6 @@ static inline int squeeze_8x16_font(FILE * fp)
         if (fread(data_8x16, 4096, 1, fp) != 1)
                 return -1;
 
-        // the "ideal" method:
-        //
-        //  0 ...x.... > 0      0 ...x....
-        //  1 ..xxx... \ fold   1 ..xxx...
-        //  2 ..xxx... / to 1   2 .xx.xx..
-        //  3 .xx.xx.. \ fold   3 xx...xx.
-        //  4 .xx.xx.. / to 2   4 xxxxxxx.
-        //  5 xx...xx. \ fold   5 xx...xx.
-        //  6 xx...xx. / to 3   6 xx...xx.
-        //  7 xx...xx. > lost   7 ........
-        //  8 xxxxxxx. \ fold
-        //  9 xxxxxxx. / to 4
-        // 10 xx...xx. \ fold   - copy first/last scanline directly
-        // 11 xx...xx. / to 5   - find unique scanlines
-        // 12 xx...xx. \ fold   - if more than 6, combine adjacents
-        // 13 xx...xx. / to 6     with 'or'
-        // 14 xx...xx. > lost
-        // 15 ........ > 7
-
         for (n = 0; n < 2048; n++)
                 font_normal[n] = data_8x16[2 * n] | data_8x16[2 * n + 1];
 
@@ -130,10 +111,16 @@ int font_load(const char *filename)
         FILE *fp;
         long pos;
         byte data[4];
+        char font_file[PATH_MAX + 1];
 
-        fp = fopen(filename, "rb");
+        strncpy(font_file, getenv("HOME"), PATH_MAX);
+        strncat(font_file, "/.schism/fonts/", PATH_MAX);
+        strncat(font_file, filename, PATH_MAX);
+        font_file[PATH_MAX] = 0;
+
+        fp = fopen(font_file, "rb");
         if (fp == NULL) {
-                SDL_SetError("%s: %s", filename, strerror(errno));
+                SDL_SetError("%s: %s", font_file, strerror(errno));
                 return -1;
         }
 
@@ -144,7 +131,7 @@ int font_load(const char *filename)
 
                 fseek(fp, -2, SEEK_CUR);
                 if (fread(data, 2, 1, fp) < 1) {
-                        SDL_SetError("%s: %s", filename,
+                        SDL_SetError("%s: %s", font_file,
                                      feof(fp) ? "Unexpected EOF on read" :
                                      strerror(errno));
                         fclose(fp);
@@ -152,7 +139,7 @@ int font_load(const char *filename)
                 }
                 if (data[1] != 0x2 || data[0] != 0x12) {
                         SDL_SetError("%s: Unsupported ITF file version",
-                                     filename);
+                                     font_file);
                         fclose(fp);
                         return -1;
                 }
@@ -167,20 +154,20 @@ int font_load(const char *filename)
                         fclose(fp);
                         return 0;
                 } else {
-                        SDL_SetError("%s: %s", filename,
+                        SDL_SetError("%s: %s", font_file,
                                      feof(fp) ? "Unexpected EOF on read" :
                                      strerror(errno));
                         fclose(fp);
                         return -1;
                 }
         } else {
-                SDL_SetError("%s: Invalid font file", filename);
+                SDL_SetError("%s: Invalid font file", font_file);
                 fclose(fp);
                 return -1;
         }
 
         if (fread(font_normal, 2048, 1, fp) != 1) {
-                SDL_SetError("%s: %s", filename,
+                SDL_SetError("%s: %s", font_file,
                              feof(fp) ? "Unexpected EOF on read" :
                              strerror(errno));
                 fclose(fp);
@@ -197,19 +184,26 @@ int font_save(const char *filename)
 {
         FILE *fp;
         byte ver[2] = { 0x12, 0x2 };
+        char font_file[PATH_MAX + 1];
 
+        /* Hmm... I can't remember why I did this. */
         if (!filename)
                 return 0;
 
-        fp = fopen(filename, "wb");
+        strncpy(font_file, getenv("HOME"), PATH_MAX);
+        strncat(font_file, "/.schism/fonts/", PATH_MAX);
+        strncat(font_file, filename, PATH_MAX);
+        font_file[PATH_MAX] = 0;
+
+        fp = fopen(font_file, "wb");
         if (fp == NULL) {
-                SDL_SetError("%s: %s", filename, strerror(errno));
+                SDL_SetError("%s: %s", font_file, strerror(errno));
                 return -1;
         }
 
         if (fwrite(font_normal, 2048, 1, fp) < 1
             || fwrite(ver, 2, 1, fp) < 1) {
-                SDL_SetError("%s: %s", filename, strerror(errno));
+                SDL_SetError("%s: %s", font_file, strerror(errno));
                 fclose(fp);
                 return -1;
         }
@@ -225,7 +219,7 @@ void font_set_bank(int bank)
 
 void font_init(void)
 {
-        if (font_load("font.cfg") != 0)
+        if (font_load(cfg_font) != 0)
                 font_reset();
         memcpy(font_alt, DEFAULT_LOWER, 1024);
         memcpy(font_alt + 1024, DEFAULT_UPPER_ALT, 1024);

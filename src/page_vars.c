@@ -200,12 +200,14 @@ void song_vars_load_page(struct page *page)
                             group_slides);
         /* 14 - 16: directories */
         create_textentry(items_vars + 14, 13, 42, 65, 12, 15, 15,
-                         dir_modules_changed, NULL, dir_modules, PATH_MAX);
+                         dir_modules_changed, NULL,
+                         cfg_dir_modules, PATH_MAX);
         create_textentry(items_vars + 15, 13, 43, 65, 14, 16, 16,
-                         dir_samples_changed, NULL, dir_samples, PATH_MAX);
+                         dir_samples_changed, NULL,
+                         cfg_dir_samples, PATH_MAX);
         create_textentry(items_vars + 16, 13, 44, 65, 15, 17, 17,
-                         dir_instruments_changed, NULL, dir_instruments,
-                         PATH_MAX);
+                         dir_instruments_changed, NULL,
+                         cfg_dir_instruments, PATH_MAX);
         /* 17 = save all preferences */
         create_button(items_vars + 17, 28, 47, 22, 16, 17, 17, 17, 17,
                       NULL, "Save all Preferences", 2);

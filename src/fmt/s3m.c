@@ -2,7 +2,7 @@
 
 #include "title.h"
 
-/* ----------------------------------------------------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 bool fmt_s3m_read_info(const byte * data, size_t length, file_info * fi);
 bool fmt_s3m_read_info(const byte * data, size_t length, file_info * fi)

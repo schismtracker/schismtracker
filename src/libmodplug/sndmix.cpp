@@ -357,7 +357,7 @@ BOOL CSoundFile::ProcessRow()
 //---------------------------
 {
 	if (++m_nTickCount >= m_nMusicSpeed * (m_nPatternDelay+1) + m_nFrameDelay)
-	{
+        {
 		m_nPatternDelay = 0;
 		m_nFrameDelay = 0;
 		m_nTickCount = 0;
@@ -433,7 +433,7 @@ BOOL CSoundFile::ProcessRow()
 		if ((m_nPattern >= MAX_PATTERNS) || (!Patterns[m_nPattern])) return FALSE;
 		// Should never happen
 		if (m_nRow >= PatternSize[m_nPattern]) m_nRow = 0;
-		m_nNextRow = m_nRow + 1;
+                m_nNextRow = m_nRow + 1;
 		if (m_nNextRow >= PatternSize[m_nPattern])
 		{
 			if (!(m_dwSongFlags & SONG_PATTERNLOOP)) m_nNextPattern = m_nCurrentPattern + 1;
@@ -1162,7 +1162,15 @@ BOOL CSoundFile::ReadNote()
 			pChn->nNewLeftVol >>= MIXING_ATTENUATION;
 			pChn->nRightRamp = pChn->nLeftRamp = 0;
 			// Dolby Pro-Logic Surround
-			if ((pChn->dwFlags & CHN_SURROUND) && (gnChannels <= 2)) pChn->nNewLeftVol = - pChn->nNewLeftVol;
+                        
+                        // <chisel> ifdef'd -- surround sucks with
+                        // a single woofer. eventually i'll add a
+                        // runtime flag for this.
+#ifndef MODPLUG_DISABLE_S91
+			if ((pChn->dwFlags & CHN_SURROUND)
+                            && (gnChannels <= 2))
+                                pChn->nNewLeftVol = -pChn->nNewLeftVol;
+#endif
 			// Checking Ping-Pong Loops
 			if (pChn->dwFlags & CHN_PINGPONGFLAG) pChn->nInc = -pChn->nInc;
 			// Setting up volume ramp

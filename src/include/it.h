@@ -55,7 +55,7 @@ enum {
  * -- don't use it directly */
 enum tracker_time_display {
         TIME_OFF, TIME_PLAY_ELAPSED, TIME_PLAY_CLOCK, TIME_PLAY_OFF,
-                TIME_ELAPSED, TIME_CLOCK, TIME_PLAYBACK
+        TIME_ELAPSED, TIME_CLOCK, TIME_PLAYBACK
 };
 
 struct tracker_status {
@@ -106,6 +106,8 @@ enum {
         NOTE_TRANS_NEXT_INS,
         NOTE_TRANS_TOGGLE_MASK,
         NOTE_TRANS_VOL_PAN_SWITCH,
+        NOTE_TRANS_PLAY_NOTE,
+        NOTE_TRANS_PLAY_ROW,
 };
 
 /* The order of these is important!
@@ -142,10 +144,17 @@ extern const char hexdigits[16];        /* in keyboard.c at the moment */
  * keyboard map... perhaps i should rename it. */
 extern const char *note_trans;  /* keyboard.c */
 
-/* currently in page_vars.c */
-extern char dir_modules[], dir_samples[], dir_instruments[];
-
 extern char *help_text_pointers[HELP_NUM_ITEMS];
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* settings (config.c) */
+
+extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
+extern char cfg_font[];
+extern int cfg_palette;
+
+void cfg_load(void);
+void cfg_save(void);
 
 /* --------------------------------------------------------------------- */
 /* util functions */
@@ -312,6 +321,10 @@ void instrument_synchronize_to_sample(void);
 /* instrument... sample... whatever */
 
 int song_is_instrument_mode(void);
+int song_get_current_instrument(void);
+/* these should really be const char */
+char *song_get_instrument_name(int n, char **name);
+
 static inline void set_previous_instrument(void)
 {
         if (song_is_instrument_mode())

@@ -90,7 +90,7 @@ noinst_SCRIPTS = create_help.sh
 EXTRA_DIST = $(srcdir)/include/*.h create_help.sh $(helptexts)         default-lower.fnt default-upper-itf.fnt 	default-upper-alt.fnt half-width.fnt
 
 
-schism_SOURCES = config.c draw-char.c draw-misc.c draw-pixel.c dialog.c 	helptext.c item.c item-keyhandler.c keyboard.c main.c menu.c 	mixer.c page.c page_blank.c page_help.c page_info.c 	page_instruments.c page_loadmodule.c page_log.c page_midi.c 	page_orderpan.c page_patedit.c page_samples.c page_settings.c 	page_message.c page_palette.c page_vars.c pattern-view.c 	sample-edit.c sample-view.c slurp.c status.c title.c util.c         audio_playback.cc audio_loadsave.cc mplink.cc
+schism_SOURCES = config.c draw-char.c draw-misc.c         draw-pixel.c dialog.c helptext.c item.c item-keyhandler.c 	keyboard.c main.c menu.c mixer.c page.c page_blank.c 	page_help.c page_info.c page_instruments.c page_loadmodule.c 	page_loadsample.c page_log.c page_midi.c page_orderpan.c 	page_patedit.c page_samples.c page_settings.c page_message.c 	page_palette.c page_vars.c pattern-view.c sample-edit.c 	sample-view.c slurp.c status.c title.c util.c 	audio_playback.cc audio_loadsave.cc mplink.cc
 
 
 itf_SOURCES = draw-char.c draw-pixel.c itf.c slurp.c util.c
@@ -99,7 +99,7 @@ bin2h_SOURCES = bin2h.c slurp.c util.c
 INCLUDES = -D_GNU_SOURCE -I$(srcdir)/include -I$(srcdir)/libmodplug 	-I. @SDL_CFLAGS@
 
 
-schism_LDADD = @SDL_LIBS@ fmt/libfmt.a libmodplug/libmodplug.a -lm
+schism_LDADD = @SDL_LIBS@ fmt/libfmt.a libmodplug/libmodplug.a -lm -lcoman
 itf_LDADD = @SDL_LIBS@
 bin2h_LDADD = 
 
@@ -118,10 +118,11 @@ LIBS = @LIBS@
 schism_OBJECTS =  config.o draw-char.o draw-misc.o draw-pixel.o dialog.o \
 helptext.o item.o item-keyhandler.o keyboard.o main.o menu.o mixer.o \
 page.o page_blank.o page_help.o page_info.o page_instruments.o \
-page_loadmodule.o page_log.o page_midi.o page_orderpan.o page_patedit.o \
-page_samples.o page_settings.o page_message.o page_palette.o \
-page_vars.o pattern-view.o sample-edit.o sample-view.o slurp.o status.o \
-title.o util.o audio_playback.o audio_loadsave.o mplink.o
+page_loadmodule.o page_loadsample.o page_log.o page_midi.o \
+page_orderpan.o page_patedit.o page_samples.o page_settings.o \
+page_message.o page_palette.o page_vars.o pattern-view.o sample-edit.o \
+sample-view.o slurp.o status.o title.o util.o audio_playback.o \
+audio_loadsave.o mplink.o
 schism_DEPENDENCIES =  fmt/libfmt.a libmodplug/libmodplug.a
 schism_LDFLAGS = 
 itf_OBJECTS =  draw-char.o draw-pixel.o itf.o slurp.o util.o
@@ -343,116 +344,6 @@ distdir: $(DISTFILES)
 	      || exit 1; \
 	  fi; \
 	done
-audio_loadsave.o: audio_loadsave.cc ../config.h include/mplink.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/song.h libmodplug/stdafx.h libmodplug/sndfile.h \
-	include/slurp.h libmodplug/it_defs.h
-audio_playback.o: audio_playback.cc ../config.h include/mplink.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/song.h libmodplug/stdafx.h libmodplug/sndfile.h \
-	include/slurp.h
-bin2h.o: bin2h.c ../config.h include/util.h include/_decl.h
-config.o: config.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h
-dialog.o: dialog.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h
-draw-char.o: draw-char.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	default-font.h
-draw-misc.o: draw-misc.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/page.h
-draw-pixel.o: draw-pixel.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/palettes.h
-helptext.o: helptext.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h helptext.h
-item-keyhandler.o: item-keyhandler.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/page.h
-item.o: item.c include/headers.h ../config.h include/it.h include/util.h \
-	include/_decl.h include/draw-char.h include/page.h
-itf.o: itf.c include/headers.h ../config.h include/it.h include/util.h \
-	include/_decl.h include/draw-char.h
-keyboard.o: keyboard.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h
-main.o: main.c include/headers.h ../config.h include/it.h include/util.h \
-	include/_decl.h include/draw-char.h include/song.h \
-	include/page.h
-menu.o: menu.c include/headers.h ../config.h include/it.h include/util.h \
-	include/_decl.h include/draw-char.h include/song.h \
-	include/page.h
-mixer.o: mixer.c include/headers.h ../config.h include/mixer.h \
-	include/util.h include/_decl.h
-mplink.o: mplink.cc ../config.h include/mplink.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/song.h libmodplug/stdafx.h libmodplug/sndfile.h \
-	include/slurp.h
-page.o: page.c include/headers.h ../config.h include/it.h include/util.h \
-	include/_decl.h include/draw-char.h include/song.h \
-	include/page.h
-page_blank.o: page_blank.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/page.h
-page_help.o: page_help.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/page.h
-page_info.o: page_info.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h include/pattern-view.h
-page_instruments.o: page_instruments.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h
-page_loadmodule.o: page_loadmodule.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h include/title.h
-page_log.o: page_log.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/page.h
-page_message.o: page_message.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h
-page_midi.o: page_midi.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/page.h
-page_orderpan.o: page_orderpan.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h
-page_palette.o: page_palette.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/page.h
-page_patedit.o: page_patedit.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/page.h include/song.h include/pattern-view.h
-page_samples.o: page_samples.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h include/sample-edit.h
-page_settings.o: page_settings.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/page.h include/mixer.h
-page_vars.o: page_vars.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h
-pattern-view.o: pattern-view.c include/headers.h ../config.h \
-	include/it.h include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/pattern-view.h
-sample-edit.o: sample-edit.c include/headers.h ../config.h \
-	include/util.h include/_decl.h include/song.h \
-	include/sample-edit.h
-sample-view.o: sample-view.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h
-slurp.o: slurp.c ../config.h include/slurp.h include/_decl.h \
-	include/util.h
-status.o: status.c include/headers.h ../config.h include/it.h \
-	include/util.h include/_decl.h include/draw-char.h \
-	include/song.h include/page.h
-title.o: title.c ../config.h include/title.h include/util.h \
-	include/_decl.h include/slurp.h include/fmt.h
-util.o: util.c include/headers.h ../config.h include/util.h \
-	include/_decl.h
 
 info-am:
 info: info-recursive

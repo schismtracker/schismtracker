@@ -307,6 +307,10 @@ static int sample_list_handle_key_on_list(SDL_keysym * k)
                         new_sample += 16;
                 }
                 break;
+        case SDLK_RETURN:
+        case SDLK_KP_ENTER:
+                set_page(PAGE_LOAD_SAMPLE);
+                break;
         case SDLK_BACKSPACE:
                 if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0) {
                         if (sample_list_cursor_pos < 25) {

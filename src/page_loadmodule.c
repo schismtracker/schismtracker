@@ -127,7 +127,8 @@ static void read_directory(void)
         clear_directory();
 
         /* FIXME: some systems don't have scandir */
-        total = scandir(dir_modules, &ents, dirent_select, versionsort);
+        total = scandir(cfg_dir_modules, &ents, dirent_select,
+                        versionsort);
         if (total < 0) {
                 perror("scandir");
                 ents = NULL;
@@ -146,17 +147,19 @@ static void read_directory(void)
                         /* symlinks to files get stat()'ed twice
                          * (which isn't too much of a problem, as the
                          * inode is cached for the second stat...) */
-                        asprintf(&ptr, "%s/%s", dir_modules,
+                        asprintf(&ptr, "%s/%s", cfg_dir_modules,
                                  ents[i]->d_name);
                         if (stat(ptr, &st) < 0) {
                                 /* doesn't exist? */
                                 perror(ptr);
-                        } else if (st.st_mode & S_IFREG) {
-                                ents[i]->d_type = DT_REG;
-                                num_files++;
-                        } else if (st.st_mode & S_IFDIR) {
-                                ents[i]->d_type = DT_DIR;
-                                num_dirs++;
+                        } else {
+                                if (S_ISREG(st.st_mode)) {
+                                        ents[i]->d_type = DT_REG;
+                                        num_files++;
+                                } else if (S_ISDIR(st.st_mode)) {
+                                        ents[i]->d_type = DT_DIR;
+                                        num_dirs++;
+                                }
                         }
                         free(ptr);
                         break;
@@ -181,7 +184,7 @@ static void read_directory(void)
         for (i = 0; i < total; i++) {
                 switch (ents[i]->d_type) {
                 case DT_REG:
-                        asprintf(&ptr, "%s/%s", dir_modules,
+                        asprintf(&ptr, "%s/%s", cfg_dir_modules,
                                  ents[i]->d_name);
                         if (stat(ptr, &st) == 0) {
                                 free(ptr);
@@ -372,7 +375,7 @@ static void fill_file_info(struct file_list_data *file)
         char fname[PATH_MAX + 1];
         file_info *fi;
 
-        snprintf(fname, PATH_MAX, "%s/%s", dir_modules, file->filename);
+        snprintf(fname, PATH_MAX, "%s/%s", cfg_dir_modules, file->filename);
 
         fi = file_info_get(fname, NULL);
         if (fi == NULL) {
@@ -487,7 +490,7 @@ static int file_list_handle_key(SDL_keysym * k)
 
                 if (!files)
                         return 1;
-                asprintf(&ptr, "%s/%s", dir_modules,
+                asprintf(&ptr, "%s/%s", cfg_dir_modules,
                          files[current_file]->filename);
                 set_page(PAGE_LOG);
                 song_load(ptr);
@@ -566,13 +569,13 @@ static int dir_list_handle_key(SDL_keysym * k)
                 if (current_dir == 0) {
                         ptr = strdup("/");
                 } else {
-                        asprintf(&ptr, "%s/%s", dir_modules,
+                        asprintf(&ptr, "%s/%s", cfg_dir_modules,
                                  dirs[current_dir]);
                 }
                 if (realpath(ptr, buf) == NULL) {
                         perror(ptr);
                 } else {
-                        strcpy(dir_modules, buf);
+                        strcpy(cfg_dir_modules, buf);
                         strcpy(dirname_entry, buf);
 
                         read_directory();
@@ -617,7 +620,7 @@ static void filename_entered(void)
                 /* hmm... */
                 ptr = strdup(filename_entry);
         } else {
-                asprintf(&ptr, "%s/%s", dir_modules, filename_entry);
+                asprintf(&ptr, "%s/%s", cfg_dir_modules, filename_entry);
         }
         set_page(PAGE_LOG);
         song_load(ptr);
@@ -632,7 +635,7 @@ static void dirname_entered(void)
         if (realpath(dirname_entry, buf) == NULL) {
                 perror(dirname_entry);
         } else {
-                strcpy(dir_modules, buf);
+                strcpy(cfg_dir_modules, buf);
                 strcpy(dirname_entry, buf);
                 top_file = current_file = top_dir = current_dir = 0;
                 read_directory();
@@ -649,7 +652,7 @@ static void load_module_set_page(void)
         if (files && (status.flags & DIR_MODULES_CHANGED) == 0)
                 return;
 
-        strcpy(dirname_entry, dir_modules);
+        strcpy(dirname_entry, cfg_dir_modules);
         update_filename_entry();
 
         status.flags &= ~DIR_MODULES_CHANGED;

@@ -17,6 +17,10 @@
 
 SDL_Surface *screen;
 
+/* this is in config.c for schism, but itf is compiled without config.c
+ * (for obvious reasons) */
+char cfg_font[NAME_MAX + 1] = "font.cfg";
+
 /* --------------------------------------------------------------------- */
 /* statics & local constants */
 
@@ -405,7 +409,7 @@ static inline void draw_helptext(void)
                         draw_char_unlocked(*ptr, column, line, 12, 0);
                 ptr++;
         }
-        draw_text_unlocked("(c) 2003 chisel", 62, 46, 1, 0);
+        draw_text_unlocked("(c) 2003-2004 chisel", 57, 46, 1, 0);
 
         SDL_UnlockSurface(screen);
 }
@@ -932,12 +936,18 @@ static int dirent_select(const struct dirent *ent)
 static void load_fontlist(void)
 {
         struct dirent **names;
-
+        char font_dir[PATH_MAX + 1];
+        int n;
+        
+        strncpy(font_dir, getenv("HOME"), PATH_MAX);
+        strncat(font_dir, "/.schism/fonts", PATH_MAX);
+        font_dir[PATH_MAX] = 0;
+        
         /* FIXME: some systems don't have scandir */
-        int n = scandir(".", &names, dirent_select, versionsort);
-
+        n = scandir(font_dir, &names, dirent_select, versionsort);
+        
         if (n < 0) {
-                perror("scandir");
+                perror(font_dir);
                 names = NULL;
                 n = 0;
         }
@@ -979,12 +989,6 @@ int main(UNUSED int argc, UNUSED char **argv)
 {
         SDL_Event event;
         Uint32 second = -1, new_second;
-        char buf[PATH_MAX];
-
-        /* try to find the font directory */
-        if (chdir("../extra/fonts") == 0 || chdir("extra/fonts") == 0) {
-                printf("found font dir: %s\n", getcwd(buf, sizeof(buf)));
-        }
 
         font_init();
         load_fontlist();

@@ -2,7 +2,7 @@
 
 #include "title.h"
 
-/* ----------------------------------------------------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 bool fmt_ntk_read_info(const byte * data, size_t length, file_info * fi);
 bool fmt_ntk_read_info(const byte * data, size_t length, file_info * fi)

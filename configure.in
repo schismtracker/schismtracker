@@ -6,7 +6,7 @@ dnl We'll need machine type later
 AC_CANONICAL_SYSTEM
 machtype=$target_cpu
 
-AM_INIT_AUTOMAKE(schism, 0.031a)
+AM_INIT_AUTOMAKE(schism, 0.04a)
 AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------------------------------
@@ -37,6 +37,11 @@ dnl TODO | gzip isn't available either (as may be the case on win32)
 dnl TODO | just use the uncompressed help text.
 AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffDecompress, ,
              AC_MSG_ERROR([*** libbz2 not found.]))
+
+dnl libcoman is used for the configuration. this may change in the future
+dnl if anyone has a better library for handling settings.
+AC_CHECK_LIB(coman, InitConfig, ,
+             AC_MSG_ERROR([*** libcoman not found.]))
 
 dnl This stuff is for the title library. Eventually I'll probably make
 dnl a "real" library out of it, but for now I'm just going to cheat.
@@ -126,7 +131,7 @@ if test x$ADD_WARN \!= xno; then
         CXXFLAGS="$CXXFLAGS $ADD_WARN"
 fi
 
-dnl -----------------------------------------------------------------------
+dnl - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 AC_OUTPUT([
         Makefile

@@ -1807,12 +1807,14 @@ void CSoundFile::ExtendedChannelEffect(MODCHANNEL *pChn, UINT param)
 	if (m_nTickCount) return;
 	switch(param & 0x0F)
 	{
-	// S90: Surround Off
-	case 0x00:	pChn->dwFlags &= ~CHN_SURROUND;	break;
-	// S91: Surround On
+        // S91: Surround On
 	case 0x01:	pChn->dwFlags |= CHN_SURROUND; pChn->nPan = 128; break;
 	////////////////////////////////////////////////////////////
 	// Modplug Extensions
+	// S90: Surround Off
+        // <chisel> moved down with the modplug extensions -- impulse
+        // tracker doesn't do anything for S90
+	case 0x00:	pChn->dwFlags &= ~CHN_SURROUND;	break;
 	// S98: Reverb Off
 	case 0x08:
 		pChn->dwFlags &= ~CHN_REVERB;
@@ -2132,7 +2134,9 @@ void CSoundFile::SetSpeed(UINT param)
 	//if ((m_nType & MOD_TYPE_S3M) && (param > 0x80)) param -= 0x80;
         
 	//if ((param) && (param <= max)) <-- neither does this
-        m_nMusicSpeed = param;
+        // eheheh... whoops, forgot that speed = 0 still needs checked ;)
+        if (param)
+                m_nMusicSpeed = param;
 }
 
 
@@ -2175,6 +2179,8 @@ int CSoundFile::PatternLoop(MODCHANNEL *pChn, UINT param)
                                 //     ... .. .. SB0
                                 //     ... .. .. SB1
                                 //     ... .. .. SB1
+                                // it still doesn't work right in a few
+                                // strange cases, but oh well :P
                                 pChn->nPatternLoop = m_nRow + 1;
                                 return -1;
                         }

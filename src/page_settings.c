@@ -88,8 +88,28 @@ static void settings_set_page(void)
         mixer_read_master_volume(&(items_settings[0].thumbbar.value),
                                  &(items_settings[1].thumbbar.value));
 
+        /* these all need to be set (and, of course, handled) properly */
+        items_settings[2].thumbbar.value = 256; /* channel limit */
+        items_settings[3].numentry.value = 44100; /* sample rate */
+        items_settings[4].menutoggle.state = 1; /* 16 bit */
+        items_settings[5].menutoggle.state = 3; /* 8-tap fir filter */
+        items_settings[6].toggle.state = 1; /* oversampling */
+        items_settings[7].toggle.state = 1; /* hq resampling */
+        items_settings[8].toggle.state = 1; /* noise reduction */
+        items_settings[9].toggle.state = 0; /* headphones */
+        
         items_settings[10].menutoggle.state = status.time_display;
         items_settings[11].toggle.state = !!(status.flags & CLASSIC_MODE);
+        
+        items_settings[12].toggle.state = 0; /* xbass */
+        items_settings[13].thumbbar.value = 35;
+        items_settings[14].thumbbar.value = 50;
+        items_settings[15].toggle.state = 0; /* surround */
+        items_settings[16].thumbbar.value = 20;
+        items_settings[17].thumbbar.value = 20;
+        items_settings[18].toggle.state = 0; /* reverb */
+        items_settings[19].thumbbar.value = 30;
+        items_settings[20].thumbbar.value = 100;
 }
 
 /* --------------------------------------------------------------------- */

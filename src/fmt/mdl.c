@@ -4,7 +4,7 @@
 
 #include "title.h"
 
-/* ----------------------------------------------------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 #ifdef WORDS_BIGENDIAN
 # define bswapLE32(x) bswap_32(x)
@@ -12,7 +12,7 @@
 # define bswapLE32(x) (x)
 #endif
 
-/* ----------------------------------------------------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 /* MDL is nice, but it's a pain to read the title... */
 
@@ -25,7 +25,8 @@ bool fmt_mdl_read_info(byte * data, size_t length, file_info * fi)
         UNUSED int n;
         char artist[21], title[33];
 
-        if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1        /* major version 0 or 1 */
+        /* data[4] = major version number (accept 0 or 1) */
+        if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1
               && memcmp(data, "DMDL", 4) == 0))
                 return false;
 

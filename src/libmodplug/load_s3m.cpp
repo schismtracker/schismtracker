@@ -434,9 +434,14 @@ BOOL CSoundFile::SaveS3M(LPCSTR lpszFileName, UINT nPacking)
 	header[0x1B] = 0;
 	header[0x1C] = 0x1A;
 	header[0x1D] = 0x10;
-	nbo = (GetNumPatterns() + 15) & 0xF0;
-	if (!nbo) nbo = 16;
-	header[0x20] = nbo & 0xFF;
+        // <chisel> the prev. behaviour would lose the orderlist when saving
+        // an s3m with >240 orders
+        nbo = (GetNumPatterns());
+        if (nbo == 0)
+                nbo = 2;
+        else if (nbo & 1)
+                nbo++;
+        header[0x20] = nbo & 0xFF;
 	header[0x21] = nbo >> 8;
 	nbi = m_nInstruments;
 	if (!nbi) nbi = m_nSamples;

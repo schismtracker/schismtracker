@@ -13,17 +13,15 @@
 /* --------------------------------------------------------------------- */
 /* globals */
 
-/* *INDENT-OFF* */
 struct tracker_status status = {
-        current_page: (PAGE_BLANK),
-        previous_page: (PAGE_BLANK),
-        current_help_index: (HELP_GLOBAL),
-        dialog_type: (DIALOG_NONE),
-        flags: (IS_FOCUSED | IS_VISIBLE),
-        time_display: (TIME_PLAY_ELAPSED),
-        last_keysym: (0),
+        .current_page = PAGE_BLANK,
+        .previous_page = PAGE_BLANK,
+        .current_help_index = HELP_GLOBAL,
+        .dialog_type = DIALOG_NONE,
+        .flags = IS_FOCUSED | IS_VISIBLE,
+        .time_display = TIME_PLAY_ELAPSED,
+        .last_keysym = 0,
 };
-/* *INDENT-ON* */
 
 struct page pages[32];
 
@@ -218,8 +216,7 @@ static inline int handle_key_global(SDL_keysym * k)
                         /* FIXME | screen reset stuff should probably be
                          * FIXME | in a separate function. (which should
                          * FIXME | be called on startup as well) */
-                        if (font_load("font.cfg") != 0)
-                                font_reset();
+                        font_init();
                         clear_all_cached_waveforms();
 
                         status.flags |= NEED_UPDATE;
@@ -316,6 +313,7 @@ static inline int handle_key_global(SDL_keysym * k)
         case SDLK_F8:
                 if (NO_MODIFIER(k->mod)) {
                         song_stop();
+                        status.flags |= NEED_UPDATE;
                 } else {
                         break;
                 }
@@ -466,20 +464,22 @@ static void draw_top_info_const(void)
         int n;
 
         SDL_LockSurface(screen);
-
-        /* FIXME | the position of the title text should be calculated
-         * FIXME | so that it's still centered if the text changes. i
-         * FIXME | think gcc can find the length of a constant string,
-         * FIXME | so maybe i could take advantage of that and not have
-         * FIXME | to do all the calculating every time this stuff gets
-         * FIXME | redrawn. */
+        
+        /* gcc optimizes out the strlen's here :) */
         if (status.flags & CLASSIC_MODE) {
-                draw_text_unlocked("Impulse Tracker v2.14 Copyright (C) "
-                                   "1995-1998 Jeffrey Lim", 11, 1, 0, 2);
+#define TOP_BANNER_TEXT "Impulse Tracker v2.14" \
+        " Copyright (C) 1995-1998 Jeffrey Lim"
+                draw_text_unlocked(TOP_BANNER_TEXT,
+                                   (80 - strlen(TOP_BANNER_TEXT)) / 2,
+                                   1, 0, 2);
+#undef TOP_BANNER_TEXT
         } else {
-                draw_text_unlocked("Schism Tracker v" VERSION
-                                   " Copyright (C) 2003 chisel",
-                                   16, 1, 0, 2);
+#define TOP_BANNER_TEXT "Schism Tracker v" VERSION \
+        " Copyright (C) 2003-2004 chisel"
+                draw_text_unlocked(TOP_BANNER_TEXT,
+                                   (80 - strlen(TOP_BANNER_TEXT)) / 2,
+                                   1, 0, 2);
+#undef TOP_BANNER_TEXT
         }
 
         draw_text_unlocked("Song Name", 2, 3, 0, 2);
@@ -593,15 +593,11 @@ void update_current_instrument(void)
                 draw_text("    Sample", 39, 3, 0, 2);
                 n = sample_get_current();
         }
-
+        
         if (n > 0) {
-                if (ins_mode)
-                        song_get_instrument(n, &name);
-                else
-                        song_get_sample(n, &name);
-
                 draw_text(numtostr_2(n, buf), 50, 3, 5, 0);
-                draw_text_len(name, 25, 53, 3, 5, 0);
+                draw_text_len(song_get_instrument_name(n, &name), 25,
+                              53, 3, 5, 0);
         } else {
                 draw_text("..", 50, 3, 5, 0);
                 draw_text(".........................", 53, 3, 5, 0);
@@ -754,6 +750,7 @@ void load_pages(void)
         palette_load_page(pages + PAGE_PALETTE_EDITOR);
         message_load_page(pages + PAGE_MESSAGE);
         log_load_page(pages + PAGE_LOG);
+        load_sample_load_page(pages + PAGE_LOAD_SAMPLE);
 
         items = pages[PAGE_BLANK].items;
         selected_item = &(pages[PAGE_BLANK].selected_item);
@@ -810,8 +807,13 @@ void show_exit_prompt(void)
          * instance) it needs to get rid of any other open dialogs.
          * (dialog_create takes care of closing menus.) */
         dialog_destroy_all();
-        dialog_create(DIALOG_OK_CANCEL, "Exit Impulse Tracker?", exit_ok,
-                      NULL, 0);
+        if (status.flags & CLASSIC_MODE) {
+                dialog_create(DIALOG_OK_CANCEL, "Exit Impulse Tracker?",
+                              exit_ok, NULL, 0);
+        } else {
+                dialog_create(DIALOG_OK_CANCEL, "Exit Schism Tracker?",
+                              exit_ok, NULL, 0);
+        }
 }
 
 void show_song_length(void)

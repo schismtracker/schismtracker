@@ -1,5 +1,5 @@
----------------------------------------------------------------------------
-----[.blurb.]
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+- [.blurb.]
 
 This is actually the very first program I ever did with SDL. (Even the
 ITF editor came some amount of time afterward.) It's also the first time
@@ -8,8 +8,8 @@ first ever program to have an actual structure.
 
 Considering all that, I'd say this came out pretty well.
 
----------------------------------------------------------------------------
-----[.features.]
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+- [.features.]
 
       - Based on Modplug, so there's support for *lots* of file types. If
         you've ever wanted to load, say, a PTM file in Impulse Tracker,
@@ -61,10 +61,10 @@ Considering all that, I'd say this came out pretty well.
         It's missing a few things, but it accomplishes more or less the
         same task.)
 
----------------------------------------------------------------------------
-----[.the.bottom.]
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+- [.the.bottom.]
 
-Copyright (c) 2003 chisel. All rights reversed.
+Copyright (c) 2003-2004 chisel. All rights reversed.
 See the file COPYING in the distribution for license details.
 
 Contact me for any reason, business or pleasure, rain or shine:

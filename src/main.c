@@ -222,10 +222,12 @@ int main(int argc, char **argv)
 #else
         SDL_Event event;
 #endif
-
+        
+        cfg_load();
+        
         display_init();
         font_init();
-        palette_load_preset(7);
+        palette_load_preset(current_palette);
         setup_help_text_pointers();
         load_pages();
         song_initialize(main_song_changed_cb);
@@ -239,7 +241,7 @@ int main(int argc, char **argv)
         } else {
                 set_page(PAGE_LOAD_MODULE);
         }
-
+        
 #ifdef USE_EVENT_THREAD
         m = SDL_CreateMutex();
         SDL_CreateThread(display_thread, m);

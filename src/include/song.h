@@ -338,6 +338,7 @@ void song_stop(void);
 void song_loop_pattern(int pattern, int row);
 void song_start_at_order(int order, int row);
 void song_start_at_pattern(int pattern, int row);
+void song_single_step(int pattern, int row);
 
 /* see the enum above */
 enum song_mode song_get_mode(void);

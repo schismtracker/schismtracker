@@ -354,40 +354,6 @@ distdir: $(DISTFILES)
 	    || cp -p $$d/$$file $(distdir)/$$file || :; \
 	  fi; \
 	done
-669.o: 669.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-ams.o: ams.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-dtm.o: dtm.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-f2r.o: f2r.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-far.o: far.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-it.o: it.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-liq.o: liq.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-mdl.o: mdl.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-mod.o: mod.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-mt2.o: mt2.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-mtm.o: mtm.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-ntk.o: ntk.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-rtm.o: rtm.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-s3m.o: s3m.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-stm.o: stm.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-ult.o: ult.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
-xm.o: xm.c ../include/headers.h ../../config.h ../include/title.h \
-	../include/util.h ../include/_decl.h
 
 info-am:
 info: info-am

@@ -79,8 +79,7 @@ VERSION = @VERSION@
 noinst_LIBRARIES = libmodplug.a
 libmodplug_a_SOURCES = tables.cpp                                  sndmix.cpp                                 sndfile.cpp                                snd_fx.cpp                                 snd_flt.cpp                                snd_dsp.cpp                                fastmix.cpp                                mmcmp.cpp                                  load_xm.cpp                                load_wav.cpp                               load_umx.cpp                               load_ult.cpp                               load_stm.cpp                               load_s3m.cpp                               load_ptm.cpp                               load_okt.cpp                               load_mtm.cpp                               load_mod.cpp                               load_med.cpp                               load_mdl.cpp                               load_it.cpp                                load_far.cpp                               load_dsm.cpp                               load_dmf.cpp                               load_dbm.cpp                               load_ams.cpp                               load_amf.cpp                               load_669.cpp                               load_j2b.cpp                               load_mt2.cpp                               load_psm.cpp
 
-
-INCLUDES = -DMODPLUG_PLAYER -DMODPLUG_TRACKER
+INCLUDES = -DMODPLUG_PLAYER -DMODPLUG_TRACKER -DMODPLUG_DISABLE_S91
 CXXFLAGS = @CXXFLAGS@ -Wno-unused
 
 CLEANFILES = *~
@@ -210,37 +209,6 @@ distdir: $(DISTFILES)
 	    || cp -p $$d/$$file $(distdir)/$$file || :; \
 	  fi; \
 	done
-fastmix.o: fastmix.cpp stdafx.h sndfile.h ../../config.h
-load_669.o: load_669.cpp stdafx.h sndfile.h ../../config.h
-load_amf.o: load_amf.cpp stdafx.h sndfile.h ../../config.h
-load_ams.o: load_ams.cpp stdafx.h sndfile.h ../../config.h
-load_dbm.o: load_dbm.cpp stdafx.h sndfile.h ../../config.h
-load_dmf.o: load_dmf.cpp stdafx.h sndfile.h ../../config.h
-load_dsm.o: load_dsm.cpp stdafx.h sndfile.h ../../config.h
-load_far.o: load_far.cpp stdafx.h sndfile.h ../../config.h
-load_it.o: load_it.cpp stdafx.h sndfile.h ../../config.h it_defs.h
-load_j2b.o: load_j2b.cpp stdafx.h sndfile.h ../../config.h
-load_mdl.o: load_mdl.cpp stdafx.h sndfile.h ../../config.h
-load_med.o: load_med.cpp stdafx.h sndfile.h ../../config.h
-load_mod.o: load_mod.cpp stdafx.h sndfile.h ../../config.h
-load_mt2.o: load_mt2.cpp stdafx.h sndfile.h ../../config.h
-load_mtm.o: load_mtm.cpp stdafx.h sndfile.h ../../config.h
-load_okt.o: load_okt.cpp stdafx.h sndfile.h ../../config.h
-load_psm.o: load_psm.cpp stdafx.h sndfile.h ../../config.h
-load_ptm.o: load_ptm.cpp stdafx.h sndfile.h ../../config.h
-load_s3m.o: load_s3m.cpp stdafx.h sndfile.h ../../config.h
-load_stm.o: load_stm.cpp stdafx.h sndfile.h ../../config.h
-load_ult.o: load_ult.cpp stdafx.h sndfile.h ../../config.h
-load_umx.o: load_umx.cpp stdafx.h sndfile.h ../../config.h
-load_wav.o: load_wav.cpp stdafx.h sndfile.h ../../config.h
-load_xm.o: load_xm.cpp stdafx.h sndfile.h ../../config.h
-mmcmp.o: mmcmp.cpp stdafx.h sndfile.h ../../config.h
-snd_dsp.o: snd_dsp.cpp stdafx.h sndfile.h ../../config.h
-snd_flt.o: snd_flt.cpp stdafx.h sndfile.h ../../config.h
-snd_fx.o: snd_fx.cpp stdafx.h sndfile.h ../../config.h
-sndfile.o: sndfile.cpp stdafx.h sndfile.h ../../config.h
-sndmix.o: sndmix.cpp stdafx.h sndfile.h ../../config.h
-tables.o: tables.cpp stdafx.h sndfile.h ../../config.h
 
 info-am:
 info: info-am

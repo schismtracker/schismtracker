@@ -49,6 +49,8 @@ static void song_reset_play_state()
 {
         // this is lousy and wrong, but it sort of works
         mp->SetCurrentOrder(0);
+        
+        mp->m_dwSongFlags &= ~SONG_STEP;
 
         samples_played = 0;
 }
@@ -71,6 +73,8 @@ void song_stop()
         // modplug doesn't actually have a "stop" mode, but if this is
         // set, mp->Read just returns.
         mp->m_dwSongFlags |= SONG_ENDREACHED;
+        
+        mp->m_dwSongFlags &= ~SONG_STEP;
 
         SDL_UnlockAudio();
 }
@@ -122,12 +126,23 @@ void song_start_at_pattern(int pattern, int row)
         song_loop_pattern(pattern, row);
 }
 
+void song_single_step(int pattern, int row)
+{
+        mp->m_nPattern = pattern;
+        mp->m_nRow = mp->m_nNextRow = row;
+        
+        mp->m_dwSongFlags |= SONG_STEP;
+        mp->m_dwSongFlags &= ~SONG_ENDREACHED;
+        
+        max_channels_used = 0;
+}
+
 // ------------------------------------------------------------------------
 // info on what's playing
 
 enum song_mode song_get_mode()
 {
-        if (mp->m_dwSongFlags & SONG_ENDREACHED)
+        if (mp->m_dwSongFlags & (SONG_ENDREACHED | SONG_STEP))
                 return MODE_STOPPED;
         if (mp->m_dwSongFlags & SONG_PATTERNLOOP)
                 return MODE_PATTERN_LOOP;

@@ -15,7 +15,8 @@
 /* --------------------------------------------------------------------- */
 /* palette */
 
-int current_palette = 2;
+/* this is set in cfg_load() (config.c) */
+int current_palette;
 
 static Uint32 palette_lookup[16] = { 0 };
 

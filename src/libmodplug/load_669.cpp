@@ -51,12 +51,20 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	 || (!pfh->patterns) || (pfh->patterns > 128)) return FALSE;
 	DWORD dontfuckwithme = 0x1F1 + pfh->samples * sizeof(SAMPLE669) + pfh->patterns * 0x600;
 	if (dontfuckwithme > dwMemLength) return FALSE;
-	for (UINT ichk=0; ichk<pfh->samples; ichk++)
+        // <chisel> not checking the sample lengths.
+        // corehop.669 is like, 32 bytes short :(
+        /*
+	for (UINT ichk=0; ichk<128; ichk++)
 	{
 		DWORD len = bswapLE32(*((DWORD *)(&psmp[ichk].length)));
 		dontfuckwithme += len;
 	}
 	if (dontfuckwithme > dwMemLength) return FALSE;
+        */
+        // <chisel> ... but i *will* check these ;)
+        for (int n = 0; n < 128; n++)
+                if (pfh->breaks[n] > 0x3f)
+                        return false;
 	// That should be enough checking: this must be a 669 module.
 	m_nType = MOD_TYPE_669;
 	m_dwSongFlags |= SONG_LINEARSLIDES;

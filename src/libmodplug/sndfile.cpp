@@ -238,8 +238,9 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	// Check invalid instruments
 	while ((m_nInstruments > 0) && (!Headers[m_nInstruments])) m_nInstruments--;
 	// Set default values
-	if (m_nSongPreAmp < 0x20) m_nSongPreAmp = 0x20;
-	if (m_nDefaultTempo < 32) m_nDefaultTempo = 125;
+        // <chisel> fixed lame ranges
+	//if (m_nSongPreAmp < 0x20) m_nSongPreAmp = 0x20;
+	if (m_nDefaultTempo < 31) m_nDefaultTempo = 31;
 	if (!m_nDefaultSpeed) m_nDefaultSpeed = 6;
 	m_nMusicSpeed = m_nDefaultSpeed;
 	m_nMusicTempo = m_nDefaultTempo;
@@ -270,9 +271,11 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	}
 	if (m_nType)
 	{
+                /* <chisel>
 		UINT maxpreamp = 0x10+(m_nChannels*8);
 		if (maxpreamp > 100) maxpreamp = 100;
 		if (m_nSongPreAmp > maxpreamp) m_nSongPreAmp = maxpreamp;
+                */
 		return TRUE;
 	}
 	return FALSE;

@@ -2,7 +2,7 @@
 
 #include "title.h"
 
-/* ----------------------------------------------------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 /* Dunno why there's DigiTrekker and DigiTrakker, and why the
  * formats are completely different, but whatever :) */

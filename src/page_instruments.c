@@ -150,6 +150,18 @@ static void instrument_list_delete_next_char(void)
         status.flags |= NEED_UPDATE;
 }
 
+static void clear_instrument_text(void)
+{
+        char *name;
+        
+        song_get_instrument(current_instrument, &name)->filename[0] = 0;
+        memset(name, 0, 26);
+        if (instrument_cursor_pos != 25)
+                instrument_cursor_pos = 0;
+        
+        status.flags |= NEED_UPDATE;
+}
+
 /* --------------------------------------------------------------------- */
 
 static void instrument_list_draw_list(void)
@@ -273,9 +285,13 @@ static int instrument_list_handle_key_on_list(SDL_keysym * k)
                         instrument_list_delete_next_char();
                 return 1;
         default:
-                if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0) {
+                if (k->mod & (KMOD_ALT | KMOD_META)) {
+                        if (k->sym == SDLK_c) {
+                                clear_instrument_text();
+                                return 1;
+                        }
+                } else if ((k->mod & KMOD_CTRL) == 0) {
                         char c = unicode_to_ascii(k->unicode);
-
                         if (c == 0)
                                 return 0;
 

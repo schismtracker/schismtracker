@@ -336,3 +336,20 @@ int song_is_instrument_mode()
 {
         return !!mp->m_nInstruments;
 }
+
+char *song_get_instrument_name(int n, char **name)
+{
+        if (song_is_instrument_mode())
+                song_get_instrument(n, name);
+        else
+                song_get_sample(n, name);
+        return *name;
+}
+
+int song_get_current_instrument()
+{
+        return (song_is_instrument_mode()
+                ? instrument_get_current()
+                : sample_get_current()
+                );
+}

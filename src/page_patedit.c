@@ -210,6 +210,36 @@ static void selection_erase(void)
         }
 }
 
+static void selection_set_sample(void)
+{
+        int row, chan;
+        song_note *pattern, *note;
+
+        song_get_pattern(current_pattern, &pattern);
+
+        if (SELECTION_EXISTS) {
+                for (chan = selection.first_channel;
+                     chan <= selection.last_channel; chan++) {
+                        note = pattern + 64 * selection.first_row
+                                + chan - 1;
+                        for (row = selection.first_row;
+                             row <= selection.last_row; row++) {
+                                if (note->instrument) {
+                                        note->instrument =
+                                                song_get_current_instrument
+                                                ();
+                                }
+                                note += 64;
+                        }
+                }
+        } else {
+                note = pattern + 64 * current_row + current_channel - 1;
+                if (note->instrument) {
+                        note->instrument = song_get_current_instrument();
+                }
+        }
+}
+
 static void clipboard_free(void)
 {
         if (clipboard.data) {
@@ -604,6 +634,7 @@ static void pattern_delete_row(void)
 }
 
 /* --------------------------------------------------------------------- */
+/* kill all humans */
 
 static void raise_notes_by_semitone(void)
 {
@@ -769,6 +800,8 @@ static int pattern_editor_insert(char c)
                         /* copy mask to note */
                         n = mask_note.note;
                         /* if n == 0, don't care */
+                } else if (c == note_trans[NOTE_TRANS_PLAY_ROW]) {
+                        song_single_step(current_pattern, current_row);
                 } else {
                         n = kbd_get_note(c);
                         if (n < 0)
@@ -1019,6 +1052,9 @@ static int pattern_editor_handle_alt_key(SDL_keysym * k)
                         selection.first_row = 0;
                         selection.last_row = total_rows;
                 }
+                break;
+        case SDLK_s:
+                selection_set_sample();
                 break;
         case SDLK_u:
                 if (SELECTION_EXISTS) {

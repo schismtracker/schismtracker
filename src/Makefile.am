@@ -15,14 +15,15 @@ EXTRA_DIST = $(srcdir)/include/*.h create_help.sh $(helptexts) \
         default-lower.fnt default-upper-itf.fnt \
 	default-upper-alt.fnt half-width.fnt
 
-schism_SOURCES = config.c draw-char.c draw-misc.c draw-pixel.c dialog.c \
-	helptext.c item.c item-keyhandler.c keyboard.c main.c menu.c \
-	mixer.c page.c page_blank.c page_help.c page_info.c \
-	page_instruments.c page_loadmodule.c page_log.c page_midi.c \
-	page_orderpan.c page_patedit.c page_samples.c page_settings.c \
-	page_message.c page_palette.c page_vars.c pattern-view.c \
-	sample-edit.c sample-view.c slurp.c status.c title.c util.c \
-        audio_playback.cc audio_loadsave.cc mplink.cc
+schism_SOURCES = config.c draw-char.c draw-misc.c \
+        draw-pixel.c dialog.c helptext.c item.c item-keyhandler.c \
+	keyboard.c main.c menu.c mixer.c page.c page_blank.c \
+	page_help.c page_info.c page_instruments.c page_loadmodule.c \
+	page_loadsample.c page_log.c page_midi.c page_orderpan.c \
+	page_patedit.c page_samples.c page_settings.c page_message.c \
+	page_palette.c page_vars.c pattern-view.c sample-edit.c \
+	sample-view.c slurp.c status.c title.c util.c \
+	audio_playback.cc audio_loadsave.cc mplink.cc
 
 itf_SOURCES = draw-char.c draw-pixel.c itf.c slurp.c util.c
 bin2h_SOURCES = bin2h.c slurp.c util.c
@@ -30,7 +31,7 @@ bin2h_SOURCES = bin2h.c slurp.c util.c
 INCLUDES = -D_GNU_SOURCE -I$(srcdir)/include -I$(srcdir)/libmodplug \
 	-I. @SDL_CFLAGS@
 
-schism_LDADD = @SDL_LIBS@ fmt/libfmt.a libmodplug/libmodplug.a -lm
+schism_LDADD = @SDL_LIBS@ fmt/libfmt.a libmodplug/libmodplug.a -lm -lcoman
 itf_LDADD = @SDL_LIBS@
 bin2h_LDADD =
 

@@ -189,15 +189,19 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 	memcpy(m_szNames[0], pifh.songname, 26);
 	m_szNames[0][26] = 0;
 	// Global Volume
-	if (pifh.globalvol)
-	{
-		m_nDefaultGlobalVolume = pifh.globalvol << 1;
-		if (!m_nDefaultGlobalVolume) m_nDefaultGlobalVolume = 256;
-		if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
-	}
+        // <chisel> this is stupid... why can't the initial global volume
+        // be zero?
+	//if (pifh.globalvol)
+	//{
+        m_nDefaultGlobalVolume = pifh.globalvol << 1;
+        //if (!m_nDefaultGlobalVolume) m_nDefaultGlobalVolume = 256;
+        if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
+	//}
 	if (pifh.speed) m_nDefaultSpeed = pifh.speed;
 	if (pifh.tempo) m_nDefaultTempo = pifh.tempo;
-	m_nSongPreAmp = pifh.mv & 0x7F;
+	m_nSongPreAmp = pifh.mv;
+        if (m_nSongPreAmp > 128)
+                m_nSongPreAmp = 128;
 	// Reading Channels Pan Positions
 	for (int ipan=0; ipan<64; ipan++) if (pifh.chnpan[ipan] != 0xFF)
 	{

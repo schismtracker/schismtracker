@@ -117,7 +117,7 @@ static inline void _resize_patterns(void)
 // orderlist is empty, stick something in it
 static inline void _check_orderlist(void)
 {
-        if (mp->Order[0] > 199)
+        if (mp->Order[0] > 199 && mp->Order[0] != ORDER_SKIP)
                 mp->Order[0] = 0;
 }
 

@@ -32,6 +32,7 @@ libmodplug_a_SOURCES = tables.cpp          \
                         load_psm.cpp
 
 INCLUDES = -DMODPLUG_PLAYER -DMODPLUG_TRACKER
+INCLUDES += -DMODPLUG_DISABLE_S91
 CXXFLAGS = @CXXFLAGS@ -Wno-unused
 
 CLEANFILES = *~

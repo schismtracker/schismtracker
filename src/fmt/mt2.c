@@ -6,7 +6,7 @@
  * - this is wrong :)
  * - look for an author name; if it's not "Unregistered" use it */
 
-/* ----------------------------------------------------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 bool fmt_mt2_read_info(const byte * data, size_t length, file_info * fi);
 bool fmt_mt2_read_info(const byte * data, size_t length, file_info * fi)

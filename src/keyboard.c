@@ -30,6 +30,8 @@ const char *note_trans = "zsxdcvgbhnjmq2w3er5t6y7ui9o0p"
         "'"     /* next ins */
         ","     /* toggle mask */
         "`"     /* volume/panning */
+        "4"     /* play note */
+        "8"     /* play row */
 ;
 #elif KEY_LAYOUT == DVORAK
 const char *note_trans = ";oqejkixdbhm'2,3.p5y6f7gc9r0l"
@@ -42,6 +44,8 @@ const char *note_trans = ";oqejkixdbhm'2,3.p5y6f7gc9r0l"
         "-"     /* next ins */
         "w"     /* toggle mask */
         "`"     /* volume/panning */
+        "4"     /* play note */
+        "8"     /* play row */
 ;
 #else
 #error "Unknown keyboard type."
