@@ -15,15 +15,8 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#include <cstdio>
-#include <cstring>
-#include <cerrno>
-
-#include <limits.h>
+#define NEED_BYTESWAP
+#include "headers.h"
 
 #include "mplink.h"
 #include "slurp.h"
@@ -31,6 +24,12 @@
 #include "page.h"
 
 #include "it_defs.h"
+
+#include <cstdio>
+#include <cstring>
+#include <cerrno>
+
+#include <limits.h>
 
 // ------------------------------------------------------------------------
 
@@ -398,7 +397,7 @@ static void _save_it_instrument(int n, FILE *fp, int iti_file)
 	iti.nna = i->nNNA;
 	iti.dct = i->nDCT;
 	iti.dca = i->nDNA;
-	iti.fadeout = i->nFadeOut >> 5;
+	iti.fadeout = bswapLE16(i->nFadeOut >> 5);
 	iti.pps = i->nPPS;
 	iti.ppc = i->nPPC;
 	iti.gbv = i->nGlobalVol * 2;
@@ -418,7 +417,7 @@ static void _save_it_instrument(int n, FILE *fp, int iti_file)
 	iti.ifr = i->nIFR;
 	iti.mch = i->nMidiChannel;
 	iti.mpr = i->nMidiProgram;
-	iti.mbank = i->wMidiBank;
+	iti.mbank = bswapLE16(i->wMidiBank);
 	for (int j = 0; j < 240; j++) {
 		iti.keyboard[2 * j] = i->NoteMap[j] - 1;
 		iti.keyboard[2 * j + 1] = i->Keyboard[j];
@@ -507,12 +506,12 @@ static void _save_it_sample(int n, FILE *fp)
 	its.dfp = s->nPan / 4;
 	if (s->uFlags & CHN_PANNING)
 		its.dfp |= 0x80;
-	its.length = s->nLength;
-	its.loopbegin = s->nLoopStart;
-	its.loopend = s->nLoopEnd;
-	its.C5Speed = s->nC4Speed; // dumb names :P~
-	its.susloopbegin = s->nSustainStart;
-	its.susloopend = s->nSustainEnd;
+	its.length = bswapLE32(s->nLength);
+	its.loopbegin = bswapLE32(s->nLoopStart);
+	its.loopend = bswapLE32(s->nLoopEnd);
+	its.C5Speed = bswapLE32(s->nC4Speed); // dumb names :P~
+	its.susloopbegin = bswapLE32(s->nSustainStart);
+	its.susloopend = bswapLE32(s->nSustainEnd);
 	//its.samplepointer = 42;
 	its.vis = (s->nVibSweep < 64) ? (s->nVibSweep * 4) : 255;
 	its.vid = s->nVibDepth;
@@ -679,10 +678,10 @@ static bool _save_it(const char *file)
 	hdr.songname[25] = 0;
 	hdr.hilight_major = mp->m_rowHighlightMajor;
 	hdr.hilight_minor = mp->m_rowHighlightMinor;
-	hdr.ordnum = nord;
-	hdr.insnum = nins;
-	hdr.smpnum = nsmp;
-	hdr.patnum = npat;
+	hdr.ordnum = bswapLE16(nord);
+	hdr.insnum = bswapLE16(nins);
+	hdr.smpnum = bswapLE16(nsmp);
+	hdr.patnum = bswapLE16(npat);
 	// No one else seems to be using the cwtv's tracker id number, so I'm gonna take 1. :)
 	hdr.cwtv = bswapLE16(0x1018); // cwtv 0xtxyy = tracker id t, version x.yy
 	// compat:
@@ -706,6 +705,7 @@ static bool _save_it(const char *file)
 	hdr.special = 2 | 4;		// reserved (always on?)
 	if (msglen)
 		hdr.special |= 1;
+	hdr.special = bswapLE16(hdr.special);
 	// 8 = midi config embedded
 	// 16+ = reserved (always off?)
 	hdr.globalvol = song_get_initial_global_volume();
@@ -714,9 +714,10 @@ static bool _save_it(const char *file)
 	hdr.tempo = song_get_initial_tempo();
 	hdr.sep = song_get_separation();
 	// hdr.zero
-	hdr.msglength = msglen;
-	if (msglen)
-		hdr.msgoffset = 0xc0 + nord + 4 * (nins + nsmp + npat);
+	if (msglen) {
+		hdr.msgoffset = bswapLE32(0xc0 + nord + 4 * (nins + nsmp + npat));
+		hdr.msglength = bswapLE16(msglen);
+	}
 	// hdr.reserved2
 	
 	for (n = 0; n < 64; n++) {

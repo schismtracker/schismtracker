@@ -1,3 +1,12 @@
+Mon Mar  7 20:55:33 2005  chisel  <someguy@here.is>
+
+	* audio_loadsave.cc: Fixed parapointer endianness on file save.
+	No, really.
+
+	* Organized headers in C++ files to be a bit more consistent with
+	those in the C files.
+
+
 Tue Feb 15 22:04:08 2005  chisel  <someguy@here.is>
 
 	* audio_loadsave.cc: Fixed parapointer endianness on file save.
