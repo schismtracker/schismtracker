@@ -19,6 +19,9 @@
 
 #include "headers.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 /* I don't really like libcoman; maybe some day I'll write a better one.
  * In particular, there's no provision for default settings, so all the number settings are a big hack. */
 #include <libcoman.h>
@@ -92,7 +95,17 @@ void cfg_load(void)
 	int i;
 	
 	strncpy(filename, home_dir, PATH_MAX);
-	strncat(filename, "/.schism/config", PATH_MAX);
+	strncat(filename, "/.schism", PATH_MAX);
+	if (!is_directory(filename)) {
+		printf("Creating directory ~/.schism where Schism Tracker will store your settings.\n");
+		i = mkdir(filename, 0777);
+		if (i != 0) {
+			perror("Error creating directory");
+			fprintf(stderr, "Everything will still work, but saving preferences will not work.\n");
+		}
+	}
+	
+	strncat(filename, "/config", PATH_MAX);
 	filename[PATH_MAX] = 0;
 	config_handle = InitConfig(filename);
 
