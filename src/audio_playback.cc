@@ -385,9 +385,14 @@ void song_set_surround(int on)
 		CSoundFile::gdwSoundSetup &= ~SNDMIX_NOSURROUND;
 	else
 		CSoundFile::gdwSoundSetup |= SNDMIX_NOSURROUND;
+	
+	// without copying the value back to audio_settings, it won't get saved (oops)
+	audio_settings.surround_effect = on;
 }
 
 // ------------------------------------------------------------------------------------------------------------
+// well this is certainly a dopey place to put this, config having nothing to do with playback... maybe i
+// should put all the cfg_ stuff in config.c :/
 
 #define CFG_GET_A(v,d) audio_settings.v = cfg_get_number("Audio", #v, d)
 #define CFG_GET_M(v,d) audio_settings.v = cfg_get_number("Mixer Settings", #v, d)

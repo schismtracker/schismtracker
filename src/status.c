@@ -20,12 +20,12 @@
 #define NEED_TIME
 #include "headers.h"
 
-#include <SDL.h>
-#include <stdarg.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
+
+#include <SDL.h>
+#include <stdarg.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -158,7 +158,8 @@ void status_text_redraw(void)
 			}
 			/* else... fall through */
 		default:
-			//draw_fill_chars(2, 9, 62, 9, 2);
+			/* clear the status area? (not necessary, as every redraw clears the whole screen)
+			draw_fill_chars(2, 9, 62, 9, 2); */
                         break;
                 }
         }

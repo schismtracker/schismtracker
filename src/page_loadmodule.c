@@ -21,22 +21,29 @@
 #define NEED_TIME
 #include "headers.h"
 
-#include <SDL.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <ctype.h>
-#include <errno.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
 
 #include "title.h"
 
-static const int type_colors[] = { 7, 3, 5, 6, 2, 4 };
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <SDL.h>
+#include <fcntl.h>
+#include <ctype.h>
+#include <errno.h>
+
+/* FIXME: do this somewhere else */
+#ifndef HAVE_STRVERSCMP
+# define strverscmp strcasecmp
+#endif
 
 /* --------------------------------------------------------------------- */
 /* the locals */
+
+static const int type_colors[] = { 7, 3, 5, 6, 2, 4 };
 
 static struct item items_loadmodule[5];
 static struct item items_savemodule[5];
@@ -87,7 +94,7 @@ idea for return codes:
 static void handle_file_entered_L(char *ptr)
 {
 	if (song_load(ptr)) {
-		//set_page(PAGE_LOG);
+		/* set_page(PAGE_LOG); */
 		set_page(PAGE_BLANK);
 	}
 	free(ptr);
@@ -100,7 +107,7 @@ static void do_save_song_really(char *ptr)
 	set_page(PAGE_LOG);
 	if (song_save(ptr)) {
 		set_page(PAGE_LOG);
-		//set_page(PAGE_BLANK);
+		/* set_page(PAGE_BLANK); */
 	}
 }
 
@@ -119,9 +126,6 @@ static void handle_file_entered_S(char *ptr)
 {
 	struct stat buf;
 	
-	/* this seems to work, at least for the normal cases. it still needs some more testing, especially with
-	weird stuff like trying to overwrite a device/socket, making sure the right thing happens when saving
-	to a symlink (should follow it), etc. */
 	if (stat(ptr, &buf) < 0) {
 		if (errno == ENOENT) {
 			do_save_song_really(ptr);
@@ -137,7 +141,8 @@ static void handle_file_entered_S(char *ptr)
 			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song, do_not_save_song, 1);
 			return; /* don't free the pointer here */
 		} else {
-			log_appendf(4, "%s: Not overwriting non-regular file", ptr);
+			/* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
+			dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0);
 		}
 	}
 	free(ptr);
@@ -475,22 +480,37 @@ static void fill_file_info(struct file_list_data *file)
 {
         char *ptr;
         file_info *fi;
+        int ret;
 	
         asprintf(&ptr, "%s/%s", cfg_dir_modules, file->filename);
 
-        fi = file_info_get(ptr, NULL);
-        if (fi == NULL) {
-                file->type_name = strdup((errno == EPROTO) ? "Unknown module format" : strerror(errno));
-                file->title = strdup("");
-                file->color = 7;
-        } else {
+	ret = file_info_get(ptr, NULL, &fi);
+        switch (ret) {
+        case FINF_SUCCESS:
                 file->title = fi->title;
                 file->type_name = fi->description;
                 file->color = type_colors[fi->type];
                 free(fi->extension);
                 free(fi);
+                free(ptr);
+                return;
+	case FINF_UNSUPPORTED:
+		file->type_name = strdup("Unknown module format");
+		break;
+	case FINF_EMPTY:
+		file->type_name = strdup("Empty file");
+		break;
+	case FINF_ERRNO:
+                file->type_name = strdup(strerror(errno));
+                break;
+        default:
+        	log_appendf(4, "file_info_get returned unhandled status (%d)", ret);
+        	file->type_name = strdup("Unknown file error");
+        	break;
         }
 	
+	file->title = strdup("");
+	file->color = 7;
 	free(ptr);
 }
 

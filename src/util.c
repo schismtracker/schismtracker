@@ -17,18 +17,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/* This is just a collection of some useful functions. None of these use any
+extraneous libraries (i.e. GLib).
+I use this file for several programs, so please don't break it. ;) */
+
+
 #define NEED_DIRENT
 #define NEED_TIME
 #include "headers.h"
 
-#include <sys/stat.h>
-#include <errno.h>
-
 #include "util.h"
 
-/* This is just a collection of some useful functions. None of these use
- * any extraneous libraries (i.e. GLib).
- * I use this file for several programs, so please don't break it. ;) */
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <errno.h>
 
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS

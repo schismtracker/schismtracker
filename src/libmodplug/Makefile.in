@@ -111,7 +111,7 @@ CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = -Wno-unused
+CXXFLAGS = @CXXFLAGS@ -Wno-unused
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -228,7 +228,7 @@ libmodplug_a_SOURCES = tables.cpp          \
                         load_mt2.cpp       \
                         load_psm.cpp
 
-INCLUDES = -DMODPLUG_PLAYER -DMODPLUG_TRACKER
+INCLUDES = -DMODPLUG_PLAYER -DMODPLUG_TRACKER -I$(srcdir)/../include
 CLEANFILES = *~
 DISTCLEANFILES = .deps/*.P
 noinst_HEADERS = it_defs.h stdafx.h sndfile.h

@@ -23,14 +23,13 @@
 #define NEED_TIME
 #include "headers.h"
 
-#include <SDL.h>
-#include <stdarg.h>
+/* FIXME | Including the IT header here is overkill.
+ * FIXME | All the stuff that isn't specific to IT really should be moved
+ * FIXME | to a separate header. */
+#include "it.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
+#include <sys/types.h>
 #include <sys/ioctl.h>
 #if HAVE_SYS_KD_H
 # include <sys/kd.h>
@@ -38,12 +37,18 @@
 #if HAVE_LINUX_FB_H
 # include <linux/fb.h>
 #endif
+
+#include <SDL.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
 #include <unistd.h>
 
-/* FIXME | Including the IT header here is overkill.
- * FIXME | All the stuff that isn't specific to IT really should be moved
- * FIXME | to a separate header. */
-#include "it.h"
+/* FIXME: do this somewhere else */
+#ifndef HAVE_VERSIONSORT
+# define versionsort alphasort
+#endif
 
 /* --------------------------------------------------------------------- */
 /* globals */

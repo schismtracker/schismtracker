@@ -22,13 +22,13 @@
 
 #include "headers.h"
 
-#include <SDL.h>
-#include <ctype.h>
-
 #include "it.h"
 #include "page.h"
 #include "song.h"
 #include "pattern-view.h"
+
+#include <SDL.h>
+#include <ctype.h>
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -107,16 +107,27 @@ static void options_close(void)
 	link_effect_column = !!(options_items[5].togglebutton.state);
 	
 	/* TODO: change the number of rows if applicable.
-	 * 
-	 * this needs to make sure the pattern is not shrunk when it's being used. if the rows are decreased,
-	 * set a flag that gets checked on pattern change (both playing and editing) -- when the affected
-	 * pattern isn't being played *and* it's also not the current pattern in the pattern editor, the size
-	 * can be changed. also, the playing pattern shouldn't pay any attention to the actual size of the
-	 * pattern once it's been set: if the pattern is resized, that only affects the area which can be
-	 * edited until the pattern is no longer being accessed by the player or the editor.
-	 * 
-	 * this is all very confusing, and i'll have to give it a lot of thought before i can implement it
-	 * properly. */
+	
+	this needs to make sure the pattern is not shrunk when it's being used. if the rows are decreased,
+	set a flag that gets checked on pattern change (both playing and editing) -- when the affected
+	pattern isn't being played *and* it's also not the current pattern in the pattern editor, the size
+	can be changed. also, the playing pattern shouldn't pay any attention to the actual size of the
+	pattern once it's been set: if the pattern is resized, that only affects the area which can be
+	edited until the pattern is no longer being accessed by the player or the editor.
+	
+	this is all very confusing, and i'll have to give it a lot of thought before i can implement it
+	properly.
+	
+	... hmm, coming back to this, sounds kind of like i'd be keeping some sort of reference count on the
+	pattern. maybe the way to do this would be:
+		- when the number of rows in the pattern is decreased, add that pattern to a resize queue
+		- the editor should set a bit (somewhere...) indicating that it's being edited
+		- the player should set another bit (somewhere...) indicating that it's being played
+		- whenever the currently playing/edited pattern changes, see if any patterns are waiting to
+		  be resized, and if so, resize any of them that have both bits cleared (somewhere...)
+		- need to make sure the right thing happens when resizing a pattern that's already in the
+		  queue (especially when changing it so that it'd eventually be *bigger* -- this would mean
+		  it could be removed from the queue altogether) */
 }
 
 static void options_draw_const(void)
@@ -185,6 +196,11 @@ void pattern_editor_display_options(void)
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
+/* volume fiddling */
+
+static void selection_amplify(int percentage);
+
+/* --------------------------------------------------------------------------------------------------------- */
 /* volume amplify/attenuate and fast volume setup handlers */
 
 /* this is shared by the fast and normal volume dialogs */
@@ -196,13 +212,6 @@ static void fast_volume_setup_ok(void)
 	fast_volume_mode = 1;
 	status_text_flash("Alt-I / Alt-J fast volume changes enabled");
 }
-
-/* FIXME | dialog_{yes,no,cancel} should be public.
- * FIXME | this would eliminate a lot of the hoops that have to be jumped
- * FIXME | through to have normal ok/cancel buttons on custom dialogs.
- * FIXME | i.e. just set the ok/cancel button callbacks to dialog_{yes,cancel}
- * FIXME | and set the dialog's yes/cancel actions to the corresponding cb
- * FIXME | functions. */
 
 static void fast_volume_setup_cancel(void)
 {
@@ -263,7 +272,7 @@ static void volume_amplify_ok(void)
 {
 	volume_percent = volume_setup_items[0].thumbbar.value;
 	
-	status_text_flash("TODO: volume amplify %d%%", volume_percent);
+	selection_amplify(volume_percent);
 }
 
 static void volume_amplify(void)
@@ -679,6 +688,35 @@ static void selection_wipe_volume(int reckless)
 			if (reckless || (note->note == 0 && note->instrument == 0)) {
 				note->volume = 0;
 				note->volume_effect = VOL_EFFECT_NONE;
+			}
+		}
+	}
+}
+
+static void selection_amplify(int percentage)
+{
+	int row, chan, volume;
+	song_note *pattern, *note;
+
+	if (!SELECTION_EXISTS) {
+		/* this should be one column wider (see selection_swap) */
+		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
+		return;
+	}
+
+	song_get_pattern(current_pattern, &pattern);
+
+	for (row = selection.first_row; row <= selection.last_row; row++) {
+		note = pattern + 64 * row + selection.first_channel - 1;
+		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
+			if (note->volume_effect == VOL_EFFECT_NONE && note->instrument != 0) {
+				/* Modplug hack: volume bit shift */
+				volume = song_get_sample(note->instrument, NULL)->volume >> 2;
+				
+				note->volume = volume * percentage / 100;
+				note->volume_effect = VOL_EFFECT_VOLUME;
+			} else if (note->volume_effect == VOL_EFFECT_VOLUME) {
+				note->volume = note->volume * percentage / 100;
 			}
 		}
 	}
@@ -1641,6 +1679,10 @@ static int pattern_editor_handle_alt_key(SDL_keysym * k)
 			selection.first_row = 0;
 			selection.last_row = total_rows;
 		}
+		break;
+	case SDLK_r:
+		draw_divisions = 1;
+		set_view_scheme(0);
 		break;
 	case SDLK_s:
 		selection_set_sample();

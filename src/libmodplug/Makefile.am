@@ -31,9 +31,13 @@ libmodplug_a_SOURCES = tables.cpp          \
                         load_mt2.cpp       \
                         load_psm.cpp
 
-INCLUDES = -DMODPLUG_PLAYER -DMODPLUG_TRACKER
-## wtf! now automake bitches about this.
-CXXFLAGS = -Wno-unused
+INCLUDES = -DMODPLUG_PLAYER -DMODPLUG_TRACKER -I$(srcdir)/../include
+
+## automake complains about me changing CXXFLAGS here. however, if i use
+## AM_CXXFLAGS like it suggests, then -Wno-unused goes *before* the rest of
+## the flags, and the -W cancels it out later!! plus, its complaint is that
+## i shouldn't *override* this. i'm not, i'm ADDING to it.... arghbbq.
+CXXFLAGS += -Wno-unused
 
 CLEANFILES = *~
 DISTCLEANFILES = .deps/*.P

@@ -19,11 +19,11 @@
 
 #include "headers.h"
 
-#include <SDL.h>
-
 #include "util.h"
 #include "song.h"
 #include "sample-edit.h"
+
+#include <SDL.h>
 
 /* --------------------------------------------------------------------- */
 /* helper functions */

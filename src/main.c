@@ -21,25 +21,25 @@
 
 #include "headers.h"
 
-#include <SDL.h>
+#include "it.h"
+#include "song.h"
+#include "page.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
 #if HAVE_SYS_KD_H
 # include <sys/kd.h>
 #endif
 #if HAVE_LINUX_FB_H
 # include <linux/fb.h>
 #endif
-#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
 
-#include "it.h"
-#include "song.h"
-#include "page.h"
+#include <SDL.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -170,7 +170,7 @@ static inline void display_print_info(void)
 
 /* If we're not not debugging, don't not dump core. (Have I ever mentioned
  * that NDEBUG is poorly named -- or that identifiers for settings in the
- * negative form are a bad idea? */
+ * negative form are a bad idea?) */
 #if defined(NDEBUG)
 # define SDL_INIT_FLAGS SDL_INIT_AUDIO | SDL_INIT_VIDEO
 #else
@@ -280,7 +280,7 @@ int main(int argc, char **argv)
 	/* TODO: getopt */
 	if (argc >= 2) {
 		if (song_load(argv[1])) {
-			//set_page(PAGE_LOG);
+			/* set_page(PAGE_LOG); */
 			set_page(PAGE_BLANK);
 		}
 	} else {

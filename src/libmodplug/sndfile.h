@@ -6,7 +6,7 @@
 */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include <config.h>
 #endif
 
 #ifndef __SNDFILE_H
@@ -941,46 +941,9 @@ int _muldiv(long a, long b, long c);
 int _muldivr(long a, long b, long c);
 
 
-// Byte swapping functions from the GNU C Library and libsdl
-
-// <chisel> using byteswap.h instead of shifts
-// --- so byteswap.h had better exist :)
-
-#include <byteswap.h>
-
-#if (defined ARM) && (defined _WIN32_WCE)
-static __inline unsigned short int
-ARM_get16(const void *data)
-{
-	unsigned short int s;
-	memcpy(&s,data,sizeof(s));
-	return s;
-}
-
-static __inline unsigned int
-ARM_get32(const void *data)
-{
-	unsigned int s;
-	memcpy(&s,data,sizeof(s));
-	return s;
-}
-
-#define bswapLE16(X) ARM_get16(&X)
-#define bswapLE32(X) ARM_get32(&X)
-#define bswapBE16(X) bswap_16(ARM_get16(&X))
-#define bswapBE32(X) bswap_32(ARM_get32(&X))
-
-// From libsdl
-#elif WORDS_BIGENDIAN
-#define bswapLE16(X) bswap_16(X)
-#define bswapLE32(X) bswap_32(X)
-#define bswapBE16(X) (X)
-#define bswapBE32(X) (X)
-#else
-#define bswapLE16(X) (X)
-#define bswapLE32(X) (X)
-#define bswapBE16(X) bswap_16(X)
-#define bswapBE32(X) bswap_32(X)
-#endif
+// <chisel> moved byte swapping to my general include file
+// (which uses byteswap.h, if it exists)
+#define NEED_BYTESWAP
+#include "headers.h"
 
 #endif

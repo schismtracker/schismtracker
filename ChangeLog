@@ -1,3 +1,64 @@
+Wed Dec 15 00:44:17 2004  chisel  <someguy@here.is>
+
+	* Replaced C++ style comments in non-C++ source.
+
+	* __BEGIN_DECLS and __END_DECLS removed; I guess they don't exist
+	in Cygwin-land. Also, NAME_MAX is set to 256 in headers.h if some
+	system header hasn't already defined it.
+
+	* page_patedit.c: Implemented volume amplify (Alt-J). The fast
+	volume stuff still doesn't do anything, but it's trivial to add
+	it (once I check how IT does it so I can get it right).
+
+	* Packaging as ver. 0.16a. I bet tomorrow I'll find something
+	wrong with it, but oh well.
+
+
+Tue Dec 14 01:17:18 2004  chisel  <someguy@here.is>
+
+	* Moved title.c to fmt/ where it logically should be.
+
+	* Rewrote file_info_get to return a logical status code, rather
+	than abusing errno.
+
+
+Mon Dec 13 20:12:38 2004  chisel  <someguy@here.is>
+
+	* FreeBSD compatibility: autoconf now checks for byteswap.h,
+	versionsort, and strverscmp.
+
+	* Moved byte-swapping macros to headers.h.
+
+
+Mon Dec 13 00:56:20 2004  chisel  <someguy@here.is>
+
+	* Removed getopt_long from bin2h. It breaks portability, and
+	besides, no one needs long options for a program that's only run
+	automatically from within the build process.
+
+	* Cleaned up #include ordering to cater to those silly FreeBSD
+	people. Apparently it's important to them. ;)
+
+	* Got rid of references to <features.h>. I don't remember why I
+	had those in the first place.
+	
+	* Stared fiercely at config.c. Didn't do much with it.
+
+
+Sat Dec 11 15:26:17 2004  chisel  <someguy@here.is>
+
+	* I made up a new game. Here's how it goes: you make a release of
+	a program, and then find bugs in it! If you can find a bug within
+	a day of releasing it, you win a prize!
+	("And what do you win? Another beer!")
+
+	* I'd completely forgotten the menu items existed, so most of
+	them didn't do anything. Ghehh... fixed.
+
+	* Fixed a bug in config saving that kept the surround effect
+	setting from being saved correctly.
+
+
 Fri Dec 10 10:27:03 2004  chisel  <someguy@here.is>
 
         * Changed version number to 0.15a.

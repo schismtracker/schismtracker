@@ -17,14 +17,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h"
+/* This is way more work than it ought to be... */
 
-#include <vorbis/codec.h>
-#include <vorbis/vorbisfile.h>
+#include "headers.h"
 
 #include "title.h"
 
-/* This is way more work than it ought to be... */
+#include <vorbis/codec.h>
+#include <vorbis/vorbisfile.h>
 
 /* --------------------------------------------------------------------- */
 

@@ -17,19 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#define NEED_BYTESWAP
 #include "headers.h"
 
-#include <byteswap.h>
-
 #include "title.h"
-
-/* --------------------------------------------------------------------- */
-
-#ifdef WORDS_BIGENDIAN
-# define bswapLE32(x) bswap_32(x)
-#else
-# define bswapLE32(x) (x)
-#endif
 
 /* --------------------------------------------------------------------- */
 

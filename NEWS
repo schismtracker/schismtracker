@@ -1,4 +1,17 @@
-  _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
+ _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
+|                                                                         /
+| This is  mostly a portability-fix  release; it      [version 0.16a]    /
+| should build  properly  on FreeBSD and  Cygwin  _ ___ _______ ________/
+| now,  but  since I don't  have  either, that's        _ __ ___\
+| only a guess.
+|
+| Volume amplify works  (in the pattern editor)  -- select a block,  thwack
+: Alt-J, and be all "OMG LOL CHISEL R0X0RZ!!1" (or... not)
+.
+' -----=----==---===--====-=====//////
+
+
+ _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
 |                                                                         /
 | Probably the most obvious addition for version      [version 0.15a]    /
 | 0.15a is its ability to (cue fanfare) SAVE THE  _ ___ _______ ________/

@@ -21,20 +21,22 @@
 # include <config.h>
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "slurp.h"
+#include "util.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <errno.h>
-#include <fcntl.h>
+
 #if HAVE_MMAP
 # include <sys/mman.h>
 #endif
 
-#include "slurp.h"
-#include "util.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -60,9 +62,10 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
 		/* Have to cast away the const... */
                 realloc_buf = realloc((void *) t->data, CHUNK * chunks);
                 if (realloc_buf == NULL) {
+                        old_errno = errno;
                         fclose(fp);
                         free((void *) t->data);
-                        errno = ENOMEM;
+                        errno = old_errno;
                         return 0;
                 }
                 t->data = realloc_buf;

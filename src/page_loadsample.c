@@ -21,17 +21,24 @@
 #define NEED_TIME
 #include "headers.h"
 
-#include <SDL.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <ctype.h>
-#include <errno.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 /* #include "title.h" */
+
+#include <SDL.h>
+#include <fcntl.h>
+#include <ctype.h>
+#include <errno.h>
+
+/* FIXME: do this somewhere else */
+#ifndef HAVE_STRVERSCMP
+# define strverscmp strcasecmp
+#endif
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* the locals */
@@ -355,23 +362,10 @@ static void load_sample_set_page(void)
 
 static void fill_file_info(struct file_list_data *file)
 {
-	//char *ptr;
-	/* file_info *fi; */
-	
-	//asprintf(&ptr, "%s/%s", cfg_dir_samples, file->filename);
-	
-	/* TODO */
-	/* fi = file_info_get(ptr, NULL);
-	 * if (fi == NULL) { */
+	/* TODO: file_info_get for samples */
 	file->type = TYPE_UNKNOWN;
 	file->type_name = unknown_type_name;
 	file->title = file->filename;
-	/* } else {
-	 * fill in the fields accordingly.
-	 * }
-	 * ... then free the file_info structure. */
-	
-	//free(ptr);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

@@ -19,11 +19,11 @@
 
 #include "headers.h"
 
-#include <SDL.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
+
+#include <SDL.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -120,6 +120,7 @@ void dialog_destroy_all(void)
 }
 
 /* --------------------------------------------------------------------- */
+/* default callbacks */
 
 void dialog_yes(void)
 {

@@ -19,11 +19,11 @@
 
 #include "headers.h"
 
-#include <SDL.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
+
+#include <SDL.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -225,31 +225,31 @@ static inline void set_submenu(struct menu *menu)
 static void main_menu_selected_cb(void)
 {
         switch (main_menu.selected_item) {
-        case 0:
+        case 0: /* file menu... */
                 set_submenu(&file_menu);
                 break;
-        case 1:
+        case 1: /* playback menu... */
                 set_submenu(&playback_menu);
                 break;
-        case 2:
+        case 2: /* view patterns */
                 set_page(PAGE_PATTERN_EDITOR);
                 break;
-        case 3:
+        case 3: /* sample menu... */
                 set_submenu(&sample_menu);
                 break;
-        case 4:
+        case 4: /* instrument menu... */
                 set_submenu(&instrument_menu);
                 break;
-        case 5:
+        case 5: /* view orders/panning */
                 set_page(PAGE_ORDERLIST_PANNING);
                 break;
-        case 6:
+        case 6: /* view variables */
                 set_page(PAGE_SONG_VARIABLES);
                 break;
-        case 7:
+        case 7: /* message editor */
                 set_page(PAGE_MESSAGE);
                 break;
-        case 8:
+        case 8: /* help! */
                 set_page(PAGE_HELP);
                 break;
         }
@@ -258,23 +258,29 @@ static void main_menu_selected_cb(void)
 static void file_menu_selected_cb(void)
 {
         switch (file_menu.selected_item) {
-        case 0:
+        case 0: /* load... */
                 set_page(PAGE_LOAD_MODULE);
                 return;
-        case 4:
-                /* shell to dos: well, can't really shell with no dos :) */
+	case 1: /* new... */
+		new_song_dialog();
+		return;
+	case 2: /* save current */
+		save_song_or_save_as();
+		return;
+	case 3: /* save as... */
+		set_page(PAGE_SAVE_MODULE);
+		return;
+        case 4: /* shell to dos */
+                /* well, can't really shell with no dos :) */
                 if (status.flags & WM_AVAILABLE) {
                         /* tell the window manager to minimize? dunno. */
                 } else {
                         /* open a new console? */
                 }
                 break;
-        case 5:
+        case 5: /* quit */
                 show_exit_prompt();
                 return;
-        default:
-                printf("selected: %d\n", file_menu.selected_item);
-                break;
         }
 
         menu_hide();
@@ -284,33 +290,36 @@ static void file_menu_selected_cb(void)
 static void playback_menu_selected_cb(void)
 {
         switch (playback_menu.selected_item) {
-        case 0:
+        case 0: /* show infopage */
                 if (song_get_mode() == MODE_STOPPED
 		    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
                         song_start();
                 set_page(PAGE_INFO);
                 return;
-        case 1:
+        case 1: /* play song */
                 song_start();
                 break;
-        case 2:
+        case 2: /* play pattern */
                 song_loop_pattern(get_current_pattern(), 0);
                 break;
-        case 3:
+        case 3: /* play from order */
                 song_start_at_order(get_current_order(), 0);
                 break;
-        case 4:
+        case 4: /* play from mark/cursor */
                 play_song_from_mark();
                 break;
-        case 5:
+        case 5: /* stop */
                 song_stop();
                 break;
-        case 8:
+	case 6: /* reinit soundcard */
+		break;
+	case 7: /* driver screen */
+		/* this has become more of a general preferences screen.
+		(maybe i should change the text of the menu item...) */
+		set_page(PAGE_SETTINGS);
+        case 8: /* calculate length */
                 show_song_length();
                 return;
-        default:
-                printf("selected: %d\n", playback_menu.selected_item);
-                break;
         }
 
         menu_hide();
@@ -320,12 +329,13 @@ static void playback_menu_selected_cb(void)
 static void sample_menu_selected_cb(void)
 {
         switch (sample_menu.selected_item) {
-        case 0:
+        case 0: /* sample list */
                 set_page(PAGE_SAMPLE_LIST);
                 return;
-        default:
-                printf("selected: %d\n", sample_menu.selected_item);
-                break;
+	case 1: /* sample library */
+		break;
+	case 2: /* reload soundcard */
+		break;
         }
 
         menu_hide();
@@ -335,12 +345,11 @@ static void sample_menu_selected_cb(void)
 static void instrument_menu_selected_cb(void)
 {
         switch (instrument_menu.selected_item) {
-        case 0:
+        case 0: /* instrument list */
                 set_page(PAGE_INSTRUMENT_LIST);
                 return;
-        default:
-                printf("selected: %d\n", instrument_menu.selected_item);
-                break;
+	case 1: /* instrument library */
+		break;
         }
 
         menu_hide();

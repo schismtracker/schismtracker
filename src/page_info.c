@@ -19,14 +19,14 @@
 
 #include "headers.h"
 
-#include <SDL.h>
-#include <assert.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
 
 #include "pattern-view.h"
+
+#include <SDL.h>
+#include <assert.h>
 
 /* --------------------------------------------------------------------- */
 

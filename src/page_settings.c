@@ -19,13 +19,13 @@
 
 #include "headers.h"
 
-#include <SDL.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
 
 #include "mixer.h"
+
+#include <SDL.h>
 
 /* --------------------------------------------------------------------- */
 /* statics */

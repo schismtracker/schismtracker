@@ -1,7 +1,7 @@
 Ok... here's the deal. This is a HACKED version of the library with a few
 changes, mostly bug fixes and stuff but also some behavior changes (for
 example, channel limit is changed to 256, songs repeat when they hit the
-end, and various other things suited to a tracker. I do plan on sending
+end, and various other things suited to a tracker). I do plan on sending
 patches to whoever's maintaining libmodplug these days (as well as to
 Olivier so they can be integrated into "official" Modplug).
 

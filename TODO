@@ -443,3 +443,52 @@ last note that gets tested. weird boundary byte count or something?
 --------------------------------------------------------------------------
 
 Do something (besides segfaulting!) if the audio device is in use.
+
+(This seems to have something to do with the alsa driver, since with
+SDL_AUDIODRIVER=oss, it dosen't crash if something else is playing -- it
+says "Couldn't initialise audio: No available audio device" like it's
+supposed to.)
+
+--------------------------------------------------------------------------
+
+Sample loaders for mp3/ogg files would ROCK.
+
+The ability to load a sample as a module would ALSO ROCK.
+
+(hmm... if I did this, and also made it so that mp3/ogg samples weren't
+decompressed unless they needed to be for editing, that would make Schism
+Tracker double as an mp3/ogg player! cool!)
+
+--------------------------------------------------------------------------
+
+Idea: pattern comments.
+
+Some key could then be bound to "display pattern comments" (alt-backslash
+maybe? it's not used anywhere) which would bring up a little window (like
+the f2 dialog) with a little text box in it.
+
+This could be saved in the file by extending the four unused bytes -- not
+directly, as this would make it impossible to do anything else with them
+later, but (say) by turning the first byte into a flag field indicating
+that more stuff follows the pattern data. (which would be a separate
+block of data which would include the pattern comment pointer)
+
+One thing to consider, though, is what about files that have random
+non-zero junk there? I could add some flag to the module header or
+something, maybe... hmm.
+
+
+Another idea: pattern names. Editable the same way, and the pattern's
+name could be displayed next to the number in the order list (in the
+blank space before the channel panning, maybe shifting that stuff to the
+right in the process?)
+
+(Building off that, there could be an info page view that displays the
+name of whatever pattern is playing, and the status text area could show
+the current pattern's name.)
+
+--------------------------------------------------------------------------
+
+Another idea (heh): on the info page, bind some key to pop up a menu of
+all the different displays. Might be easier than pgup/pgdn through a ton
+of different window types.

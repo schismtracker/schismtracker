@@ -24,12 +24,14 @@
 # include <config.h>
 #endif
 
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include <features.h>
 #include "util.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <unistd.h>
+
+/* --------------------------------------------------------------------- */
 
 enum { SLURP_MMAP, SLURP_MALLOC };
 
@@ -41,7 +43,9 @@ typedef struct {
 
 /* --------------------------------------------------------------------- */
 
-__BEGIN_DECLS;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* slurp returns NULL and sets errno on error. in most cases buf can be
  * NULL; it's only useful if you've already done a stat on the file. */
@@ -49,6 +53,8 @@ slurp_t *slurp(const char *filename, struct stat *buf);
 
 void unslurp(slurp_t * t);
 
-__END_DECLS;
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ! SLURP_H */

@@ -20,11 +20,11 @@
 #define NEED_TIME
 #include "headers.h"
 
-#include <SDL.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
+
+#include <SDL.h>
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -227,7 +227,7 @@ static void new_song_draw_const(void)
 	SDL_UnlockSurface(screen);
 }
 
-static void new_song_dialog(void)
+void new_song_dialog(void)
 {
 	struct dialog *dialog;
 
@@ -259,6 +259,23 @@ static void new_song_dialog(void)
 	dialog = dialog_create_custom(21, 20, 38, 19, new_song_items, 10, 8, new_song_draw_const);
 	dialog->action_yes = new_song_ok;
 	dialog->action_cancel = new_song_cancel;
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+void save_song_or_save_as(void)
+{
+	const char *f = song_get_filename();
+	
+	if (f[0]) {
+		if (song_save(f)) {
+			set_page(PAGE_BLANK);
+		} else {
+			set_page(PAGE_LOG);
+		}
+	} else {
+		set_page(PAGE_SAVE_MODULE);
+	}
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -432,17 +449,7 @@ static inline int handle_key_global(SDL_keysym * k)
                 return 1;
         case SDLK_s:
         	if (k->mod & KMOD_CTRL) {
-        		const char *f = song_get_filename();
-        		
-        		if (f[0]) {
-        			if (song_save(f)) {
-		                        set_page(PAGE_BLANK);
-        			} else {
-        				set_page(PAGE_LOG);
-		                }
-        		} else {
-        			set_page(PAGE_SAVE_MODULE);
-        		}
+			save_song_or_save_as();
         	} else {
         		break;
         	}
@@ -505,7 +512,7 @@ static inline int handle_key_global(SDL_keysym * k)
 /* this is the important one */
 void handle_key(SDL_keysym * k)
 {
-	// short circuit booleans rock
+	/* short circuit booleans rock */
 	if (handle_key_global(k) || menu_handle_key(k) || item_handle_key(k))
                 return;
 	
@@ -778,7 +785,7 @@ void redraw_screen(void)
 	
 	if ((status.flags & CLASSIC_MODE) == 0 && song_get_mode()) {
 		vis_oscilloscope();
-		//vis_vu_meter();
+		/*vis_vu_meter();*/
 	} else {
 		vis_fakemem();
 	}

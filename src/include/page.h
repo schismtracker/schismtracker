@@ -366,6 +366,9 @@ void draw_vu_meter(int x, int y, int val, int width, int color, int peak_color);
 int page_is_instrument_list(int page);
 void update_current_instrument(void);
 
+void new_song_dialog(void);
+void save_song_or_save_as(void);
+
 /* page_patedit.c */
 void update_current_row(void);
 void update_current_pattern(void);

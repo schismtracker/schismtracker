@@ -3,6 +3,9 @@
 /* Define to 1 if you have the `asprintf' function. */
 #undef HAVE_ASPRINTF
 
+/* Define to 1 if you have the <byteswap.h> header file. */
+#undef HAVE_BYTESWAP_H
+
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
 #undef HAVE_DIRENT_H
@@ -70,6 +73,9 @@
 /* Define to 1 if you have the `strtol' function. */
 #undef HAVE_STRTOL
 
+/* Define to 1 if you have the `strverscmp' function. */
+#undef HAVE_STRVERSCMP
+
 /* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
    */
 #undef HAVE_SYS_DIR_H
@@ -89,6 +95,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the `versionsort' function. */
+#undef HAVE_VERSIONSORT
 
 /* Name of package */
 #undef PACKAGE

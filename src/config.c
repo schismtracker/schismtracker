@@ -19,14 +19,14 @@
 
 #include "headers.h"
 
+#include "it.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
 /* I don't really like libcoman; maybe some day I'll write a better one.
  * In particular, there's no provision for default settings, so all the number settings are a big hack. */
 #include <libcoman.h>
-
-#include "it.h"
 
 /* --------------------------------------------------------------------- */
 /* config settings */
@@ -68,8 +68,9 @@ int cfg_get_number(const char *section, const char *key, int def)
 		/* Not a number */
 		return def;
 	} else if (*e) {
-		/* Junk at the end of the string */
-		//return def;
+		/* Junk at the end of the string. I'm accepting the number here, but it would also be
+		acceptable to treat it as junk and return the default value. */
+		/* return def; */
 	}
 	return n;
 }
@@ -101,7 +102,7 @@ void cfg_load(void)
 		i = mkdir(filename, 0777);
 		if (i != 0) {
 			perror("Error creating directory");
-			fprintf(stderr, "Everything will still work, but saving preferences will not work.\n");
+			fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
 		}
 	}
 	

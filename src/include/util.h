@@ -20,9 +20,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <features.h>
-
-/* FIXME: should include the standard header with all that #ifdef crap */
+/* FIXME: should include the standard header with all that #ifdef crap.
+ * (the only reason time.h is here is for the time_t definition) */
 #include <time.h>
 
 /* --------------------------------------------------------------------- */
@@ -79,17 +78,30 @@ typedef unsigned char byte;
 # endif
 #endif
 
-#define RUN_IF(func, ...) G_STMT_START {\
+/* well then. #define RUN_IF(func, ...) is the iso c99 conformant way to define a varargs macro, but it seems
+to cause problems on freebsd for some reason. RUN_IF(func, args...) is a gcc-ism that precedes the iso spec,
+but it at least works. perhaps some day I'll get around to writing a configure check for this. or not. */
+#if 0
+# define RUN_IF(func, ...) G_STMT_START {\
         if (func != NULL) {\
                 func(__VA_ARGS__);\
         }\
 } G_STMT_END
+#else
+# define RUN_IF(func, args...) G_STMT_START {\
+        if (func != NULL) {\
+                func(args);\
+        }\
+} G_STMT_END
+#endif
 
 /* --------------------------------------------------------------------- */
 /* functions returning const char * use a static buffer; ones returning
  * char * malloc their return value (thus it needs free'd). */
 
-__BEGIN_DECLS;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* formatting */
 const char *format_time(int seconds);
@@ -114,6 +126,8 @@ bool has_subdirectories(const char *dirname);
 
 /* TODO: strreplace(str, from, to) */
 
-__END_DECLS;
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ! UTIL_H */

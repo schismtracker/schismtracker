@@ -684,7 +684,7 @@ static bool _save_it(const char *file)
 	hdr.smpnum = nsmp;
 	hdr.patnum = npat;
 	// No one else seems to be using the cwtv's tracker id number, so I'm gonna take 1. :)
-	hdr.cwtv = bswapLE16(0x1015);	// creator: 1 = schism tracker; 015 = 0.15a
+	hdr.cwtv = bswapLE16(0x1016);	// creator: 1 = schism tracker; 016 = 0.16a
 	// compat:
 	//     "normal" = 2.00
 	//     vol col effects = 2.08

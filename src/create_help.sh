@@ -39,7 +39,7 @@ done) > "$tempfile"
 
 rm -f "$outfile"
 echo '/* this file should only be included by helptext.c */' > "$outfile"
-bzip2 -9 < "$tempfile" | "$bin2h" -n compressed_help_text --data-type 'static unsigned char' >> "$outfile" || exit 1
+bzip2 -9 < "$tempfile" | "$bin2h" -n compressed_help_text -t 'static unsigned char' >> "$outfile" || exit 1
 echo "#define UNCOMPRESSED_HELP_TEXT_SIZE" `wc -c < "$tempfile"` >> \
 	"$outfile" || exit 1
 

@@ -19,10 +19,10 @@
 
 #include "headers.h"
 
-#include <id3tag.h>
-
 #include "title.h"
 #include "slurp.h"
+
+#include <id3tag.h>
 
 /* --------------------------------------------------------------------- */
 

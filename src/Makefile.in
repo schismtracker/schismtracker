@@ -90,7 +90,7 @@ am_schism_OBJECTS = config.$(OBJEXT) draw-char.$(OBJEXT) \
 	page_palette.$(OBJEXT) page_vars.$(OBJEXT) \
 	pattern-view.$(OBJEXT) sample-edit.$(OBJEXT) \
 	sample-view.$(OBJEXT) slurp.$(OBJEXT) status.$(OBJEXT) \
-	title.$(OBJEXT) util.$(OBJEXT) audio_playback.$(OBJEXT) \
+	util.$(OBJEXT) audio_playback.$(OBJEXT) \
 	audio_loadsave.$(OBJEXT) mplink.$(OBJEXT)
 schism_OBJECTS = $(am_schism_OBJECTS)
 schism_DEPENDENCIES = fmt/libfmt.a libmodplug/libmodplug.a
@@ -124,8 +124,7 @@ am__depfiles_maybe = depfiles
 @AMDEP_TRUE@	./$(DEPDIR)/pattern-view.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/sample-edit.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/sample-view.Po ./$(DEPDIR)/slurp.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/status.Po ./$(DEPDIR)/title.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/util.Po
+@AMDEP_TRUE@	./$(DEPDIR)/status.Po ./$(DEPDIR)/util.Po
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
@@ -265,8 +264,8 @@ schism_SOURCES = config.c draw-char.c draw-misc.c \
 	page_loadsample.c page_log.c page_midi.c page_orderpan.c \
 	page_patedit.c page_samples.c page_settings.c page_message.c \
 	page_palette.c page_vars.c pattern-view.c sample-edit.c \
-	sample-view.c slurp.c status.c title.c util.c \
-	audio_playback.cc audio_loadsave.cc mplink.cc
+	sample-view.c slurp.c status.c util.c audio_playback.cc \
+	audio_loadsave.cc mplink.cc
 
 itf_SOURCES = draw-char.c draw-pixel.c itf.c slurp.c util.c
 bin2h_SOURCES = bin2h.c slurp.c util.c
@@ -391,7 +390,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sample-view.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/slurp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/status.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/title.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
 
 .c.o:

@@ -21,6 +21,8 @@
 # include <config.h>
 #endif
 
+#include "util.h"
+
 #include <ctype.h>
 #include <getopt.h>
 #include <stdio.h>
@@ -28,9 +30,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "util.h"
+#define BIN2H_VERSION "0.6"
 
-#define BIN2H_VERSION "0.51"
+/* --------------------------------------------------------------------- */
 
 /* TODO:
  * - char format ('a', 'b', 'c') with dec/hex/oct for non-ascii chars
@@ -56,32 +58,7 @@ char *variable_name = NULL;
 int position_comments = 0;
 const char *output_filename = "-";
 const char *data_type = "static unsigned const char";
-#define VARIABLE_CHARS "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_" \
-	"abcdefghijklmnopqrstuvwxyz"
-
-/* --------------------------------------------------------------------- */
-
-/* *INDENT-OFF* */
-static const struct option long_options[] = {
-	{"use-decimal",           no_argument, NULL, 'D'},
-	{"use-octal",             no_argument, NULL, 'O'},
-	{"use-hexadecimal",       no_argument, NULL, 'X'},
-	
-	{   "position-comments",  no_argument, NULL,-'P'},
-	{"no-position-comments",  no_argument, NULL,-'p'},
-	
-	{"output-filename", required_argument, NULL, 'o'},
-	{"max-width",       required_argument, NULL, 'w'},
-	{"start-position",  required_argument, NULL,-'s'},
-	{"name",            required_argument, NULL, 'n'},
-	{"data-type",       required_argument, NULL,-'t'},
-	
-	{"version",               no_argument, NULL,-'v'},
-	{"help",                  no_argument, NULL, 'h'},
-	
-	{NULL, 0, NULL, 0}
-};
-/* *INDENT-ON* */
+#define VARIABLE_CHARS "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
 /* --------------------------------------------------------------------- */
 
@@ -104,26 +81,24 @@ static void print_version(FILE *f)
 
 static void print_help(FILE *f)
 {
-	const struct option *o = long_options;
 	static int did_this = 0;
-	const char *arg_strings[] = {"", " <arg>", " [arg]"};
 
 	if (did_this)
 		return;
 	did_this = 1;
 
 	print_version(f);
-	fprintf(f, "\nUsage: bin2h [<options>] [infile]\n");
-	for (o = long_options; o->name; o++) {
-		if (o->val > 0)
-			fprintf(f, "\t-%c --%s%s\n", o->val, o->name,
-				arg_strings[o->has_arg]);
-		else
-			fprintf(f, "\t   --%s%s\n", o->name,
-				arg_strings[o->has_arg]);
-	}
-	fprintf(f, "\nSee the imaginary documentation"
-		" for less vague help.\n");
+	fprintf(f, "\n"
+		"Usage: bin2h [<options>] [infile]\n"
+		"\t-D -O -X     output mode: decimal, octal, hex\n"
+		"\t-P -p        enable/disable position comments\n"
+		"\t-o <file>    name of output file (default stdout)\n"
+		"\t-w <num>     maximum (input) characters per line\n"
+		"\t-s <num>     starting byte position\n"
+		"\t-n <var>     variable name\n"
+		"\t-t <str>     data type (e.g. \"static const char\")\n"
+		"\t-v           print version (look about ten lines up)\n"
+		"\t-h           print help (you're reading it now)\n");
 }
 
 static long get_number(const char *str, long error_value)
@@ -143,9 +118,7 @@ static void handle_options(int argc, char **argv)
 {
 	int opt, should_exit = -1;
 
-	while ((opt =
-		getopt_long(argc, argv, "DOXo:w:n:h", long_options,
-			    NULL)) != EOF) {
+	while ((opt = getopt(argc, argv, "DOXPpo:w:s:n:t:vh")) != EOF) {
 		switch (opt) {
 		case 'D':
 			print_mode = DECIMAL;
@@ -156,10 +129,10 @@ static void handle_options(int argc, char **argv)
 		case 'X':
 			print_mode = HEXADECIMAL;
 			break;
-		case -'P':
+		case 'P':
 			position_comments = 1;
 			break;
-		case -'p':
+		case 'p':
 			position_comments = 0;
 			break;
 		case 'o':
@@ -168,7 +141,7 @@ static void handle_options(int argc, char **argv)
 		case 'w':
 			max_width = get_number(optarg, max_width);
 			break;
-		case -'s':
+		case 's':
 			start_pos = get_number(optarg, 0);
 			start_pos = MAX(0, start_pos);
 			break;
@@ -177,10 +150,10 @@ static void handle_options(int argc, char **argv)
 				free(variable_name);
 			variable_name = strdup(optarg);
 			break;
-		case -'t':
+		case 't':
 			data_type = optarg;
 			break;
-		case -'v':
+		case 'v':
 			print_version(stdout);
 			should_exit = 0;
 			break;
@@ -194,8 +167,7 @@ static void handle_options(int argc, char **argv)
 			should_exit = 1;
 			break;
 		default:
-			fprintf(stderr, "bin2h: unhandled option 0x%02x\n",
-				opt);
+			fprintf(stderr, "bin2h: unhandled option 0x%02x\n", opt);
 		}
 	}
 
@@ -272,8 +244,7 @@ int main(int argc, char **argv)
 	}
 
 	if (isatty(fileno(in))) {
-		fprintf(stderr, "bin2h: I won't read binary data from a"
-			" terminal.\n");
+		fprintf(stderr, "bin2h: I won't read binary data from a terminal.\n");
 		exit(1);
 	}
 	/* create the read buffer */
@@ -282,13 +253,11 @@ int main(int argc, char **argv)
 	/* skip to the start position */
 	if (start_pos > 0) {
 		if (fseek(in, 0, SEEK_END) != 0) {
-			fprintf(stderr, "bin2h: starting position"
-				" requested, but input is not seekable\n");
+			fprintf(stderr, "bin2h: starting position requested, but input is not seekable\n");
 			exit(1);
 		}
 		if (ftell(in) >= start_pos) {
-			fprintf(stderr, "bin2h: starting position is after"
-				" end of input\n");
+			fprintf(stderr, "bin2h: starting position is after end of input\n");
 			exit(1);
 		}
 		if (fseek(in, start_pos, SEEK_SET) != 0) {
@@ -298,8 +267,7 @@ int main(int argc, char **argv)
 	}
 	cur_byte = start_pos;
 
-	fprintf(out, "%s %s[] = {\n", data_type,
-		variable_name ? variable_name : "bin_data");
+	fprintf(out, "%s %s[] = {\n", data_type, variable_name ? variable_name : "bin_data");
 
 	for (;;) {
 		int pos, nbuf;
@@ -316,15 +284,12 @@ int main(int argc, char **argv)
 
 		fprintf(out, "\t");
 		if (position_comments) {
-			fprintf(out, format_strings[print_mode]
-				[POSITION_COMMENT], cur_byte,
-				cur_byte + nbuf - 1);
+			fprintf(out, format_strings[print_mode][POSITION_COMMENT],
+				cur_byte, cur_byte + nbuf - 1);
 		}
 		for (pos = 0; pos < nbuf - 1; pos++)
-			fprintf(out, format_strings[print_mode][LINE_BYTE],
-				buf[pos]);
-		fprintf(out, format_strings[print_mode][LAST_BYTE],
-			buf[pos]);
+			fprintf(out, format_strings[print_mode][LINE_BYTE], buf[pos]);
+		fprintf(out, format_strings[print_mode][LAST_BYTE], buf[pos]);
 		fprintf(out, "\n");
 
 		cur_byte += nbuf;

@@ -19,15 +19,16 @@
 
 #include "headers.h"
 
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/soundcard.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
 #include "mixer.h"
 #include "util.h"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <sys/soundcard.h>
+
+#include <errno.h>
+#include <fcntl.h>
 
 /* --------------------------------------------------------------------- */
 

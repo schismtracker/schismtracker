@@ -19,13 +19,13 @@
 
 #include "headers.h"
 
-#include <SDL.h>
-#include <math.h>			/* for pow */
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
 #include "sample-edit.h"
+
+#include <SDL.h>
+#include <math.h>			/* for pow */
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -590,17 +590,14 @@ static inline void sample_list_handle_alt_key(SDL_keysym * k)
 				      do_quality_convert, do_quality_toggle, 0);
 		return;
 	case SDLK_o:
-		// if (file exists) prompt for overwrite
-		// else
+		/* if (file exists) prompt for overwrite; else */
 		sample_save_its();
 		return;
 	case SDLK_t:
-		// if (file exists) prompt for overwrite
-		// else
+		/* if (file exists) prompt for overwrite; else */
 		sample_save_s3i();
 	case SDLK_w:
-		// if (file exists) prompt for overwrite
-		// else
+		/* if (file exists) prompt for overwrite; else */
 		sample_save_raw();
 		return;
 	default:

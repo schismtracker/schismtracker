@@ -39,8 +39,8 @@ schism_SOURCES = config.c draw-char.c draw-misc.c \
 	page_loadsample.c page_log.c page_midi.c page_orderpan.c \
 	page_patedit.c page_samples.c page_settings.c page_message.c \
 	page_palette.c page_vars.c pattern-view.c sample-edit.c \
-	sample-view.c slurp.c status.c title.c util.c \
-	audio_playback.cc audio_loadsave.cc mplink.cc
+	sample-view.c slurp.c status.c util.c audio_playback.cc \
+	audio_loadsave.cc mplink.cc
 
 itf_SOURCES = draw-char.c draw-pixel.c itf.c slurp.c util.c
 bin2h_SOURCES = bin2h.c slurp.c util.c

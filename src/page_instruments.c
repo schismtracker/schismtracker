@@ -17,13 +17,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h"
+/* This is getting almost as disturbing as the pattern editor. */
 
-#include <SDL.h>
+#include "headers.h"
 
 #include "it.h"
 #include "song.h"
 #include "page.h"
+
+#include <SDL.h>
 
 /* --------------------------------------------------------------------- */
 /* just one global variable... */
@@ -967,7 +969,7 @@ static void pitch_pan_center_draw(void)
 
 static inline void instrument_list_handle_alt_key(SDL_keysym *k)
 {
-	//song_instrument *ins = song_get_instrument(current_instrument, NULL);
+	/* song_instrument *ins = song_get_instrument(current_instrument, NULL); */
 	
 	switch (k->sym) {
 	case SDLK_n:
@@ -1098,7 +1100,7 @@ static void instrument_list_panning_predraw_hook(void)
 	
 	items_panning[14].toggle.state = !!(ins->flags & ENV_SETPANNING);
 	items_panning[15].thumbbar.value = ins->panning >> 2;
-	// (items_panning[16] is the pitch-pan center)
+	/* (items_panning[16] is the pitch-pan center) */
 	items_panning[17].thumbbar.value = ins->pitch_pan_separation;
 	items_panning[18].thumbbar.value = ins->pan_swing;
 }
@@ -1119,13 +1121,13 @@ static void instrument_list_pitch_predraw_hook(void)
 	items_pitch[12].numentry.value = ins->pitch_sustain_start;
 	items_pitch[13].numentry.value = ins->pitch_sustain_end;
 	
-	//printf("ins%02d: ch%04d pgm%04d bank%06d drum%04d\n", current_instrument,
-	//       ins->midi_channel, ins->midi_program, ins->midi_bank, ins->midi_drum_key);
+	/* printf("ins%02d: ch%04d pgm%04d bank%06d drum%04d\n", current_instrument,
+		ins->midi_channel, ins->midi_program, ins->midi_bank, ins->midi_drum_key); */
 	items_pitch[14].thumbbar.value = ins->midi_channel;
 	items_pitch[15].thumbbar.value = (signed char) ins->midi_program;
 	items_pitch[16].thumbbar.value = (signed char) (ins->midi_bank & 0xff);
 	items_pitch[17].thumbbar.value = (signed char) (ins->midi_bank >> 8);
-	// what is midi_drum_key for?
+	/* what is midi_drum_key for? */
 }
 
 /* --------------------------------------------------------------------- */
@@ -1193,7 +1195,7 @@ static void instrument_list_panning_update_values(void)
         ins->pan_sustain_end = items_panning[13].numentry.value;
 	
 	ins->panning = items_panning[15].thumbbar.value << 2;
-	// (items_panning[16] is the pitch-pan center)
+	/* (items_panning[16] is the pitch-pan center) */
         ins->pitch_pan_separation = items_panning[17].thumbbar.value;
         ins->pan_swing = items_panning[18].thumbbar.value;
 }

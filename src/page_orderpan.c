@@ -19,11 +19,11 @@
 
 #include "headers.h"
 
-#include <SDL.h>
-
 #include "it.h"
 #include "song.h"
 #include "page.h"
+
+#include <SDL.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -224,7 +224,7 @@ static void orderlist_add_unused_patterns(void)
 		if (used[p] || song_pattern_is_empty(p))
 			continue;
 		if (n > 255) {
-			//status_text_flash("No more room in orderlist");
+			/* status_text_flash("No more room in orderlist"); */
 			break;
 		}
 		list[n++] = p;

@@ -19,15 +19,15 @@
 # include <config.h>
 #endif
 
+#include "mplink.h"
+#include "slurp.h"
+
 #include <string>
 
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
 #include <cmath>
-
-#include "mplink.h"
-#include "slurp.h"
 
 // ------------------------------------------------------------------------
 // variables

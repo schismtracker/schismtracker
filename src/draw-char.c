@@ -19,12 +19,12 @@
 
 #include "headers.h"
 
+#include "it.h"
+#include "default-font.h"
+
 #include <SDL.h>
 #include <assert.h>
 #include <errno.h>
-
-#include "it.h"
-#include "default-font.h"
 
 /* --------------------------------------------------------------------- */
 /* statics */

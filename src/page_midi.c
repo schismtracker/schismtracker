@@ -17,14 +17,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h"
+/* TODO: write this */
 
-#include <SDL.h>
+#include "headers.h"
 
 #include "it.h"
 #include "page.h"
 
-/* TODO: write this */
+#include <SDL.h>
 
 /* --------------------------------------------------------------------- */
 
