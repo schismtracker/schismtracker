@@ -1,3 +1,10 @@
+Thu Dec 16 16:40:04 2004  chisel  <someguy@here.is>
+
+	* I win another beer! (see entry from Dec. 11) Obvious crash bug
+	fixed when reading invalid files. It should be fairly clear by
+	now that I don't do much testing before I put up a release! ^_^;;
+
+
 Wed Dec 15 00:44:17 2004  chisel  <someguy@here.is>
 
 	* Replaced C++ style comments in non-C++ source.

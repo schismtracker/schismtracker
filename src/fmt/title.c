@@ -89,6 +89,6 @@ int file_info_get(const char *filename, struct stat * buf, file_info **fi)
         unslurp(t);
         if (n)
         	return FINF_SUCCESS;
-       	free(fi);
+       	free(*fi);
        	return FINF_UNSUPPORTED;
 }

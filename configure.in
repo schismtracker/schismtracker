@@ -26,7 +26,7 @@ machtype=$target_cpu
 
 dnl when changing the version, also change the CWTV in audio_loadsave.cc
 dnl (TODO: come up with some way to do it automatically)
-AM_INIT_AUTOMAKE(schism, 0.16a)
+AM_INIT_AUTOMAKE(schism, 0.161a)
 AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------------------------------
