@@ -188,6 +188,14 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 	if (pifh.flags & 0x1000) m_dwSongFlags |= SONG_EXFILTERRANGE;
 	memcpy(m_szNames[0], pifh.songname, 26);
 	m_szNames[0][26] = 0;
+	// <chisel> added row highlight stuff
+	if (pifh.cwtv >= 0x0213) {
+		m_rowHighlightMinor = pifh.hilight_minor;
+		m_rowHighlightMajor = pifh.hilight_major;
+	} else {
+		m_rowHighlightMinor = 4;
+		m_rowHighlightMajor = 16;
+	}
 	// Global Volume
         // <chisel> this is stupid... why can't the initial global volume
         // be zero?
@@ -202,6 +210,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 	m_nSongPreAmp = pifh.mv;
         if (m_nSongPreAmp > 128)
                 m_nSongPreAmp = 128;
+	m_nStereoSeparation = pifh.sep;	// <chisel>
 	// Reading Channels Pan Positions
 	for (int ipan=0; ipan<64; ipan++) if (pifh.chnpan[ipan] != 0xFF)
 	{
@@ -628,8 +637,8 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
         // FIXME | why 27? the maximum length of a title is 26, and that
         // FIXME | even includes the NULL at the end!
 	lstrcpyn((char *) header.songname, m_szNames[0], 27);
-	header.hilight_minor = 4;
-	header.hilight_major = 16;
+	header.hilight_minor = m_rowHighlightMinor;
+	header.hilight_major = m_rowHighlightMajor;
 	header.ordnum = 0;
 	while ((header.ordnum < MAX_ORDERS) && (Order[header.ordnum] < 0xFF)) header.ordnum++;
 	if (header.ordnum < MAX_ORDERS) Order[header.ordnum++] = 0xFF;
@@ -648,11 +657,12 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 	if (m_dwSongFlags & SONG_EXFILTERRANGE) header.flags |= 0x1000;
 	header.globalvol = m_nDefaultGlobalVolume >> 1;
 	header.mv = m_nSongPreAmp;
-	if (header.mv < 0x20) header.mv = 0x20;
-	if (header.mv > 0x7F) header.mv = 0x7F;
+	// <chisel> bah! why?!
+	//if (header.mv < 0x20) header.mv = 0x20;
+	//if (header.mv > 0x7F) header.mv = 0x7F;
 	header.speed = m_nDefaultSpeed;
 	header.tempo = m_nDefaultTempo;
-	header.sep = 128;
+	header.sep = m_nStereoSeparation;	// <chisel>
 	dwHdrPos = sizeof(header) + header.ordnum;
 	// Channel Pan and Volume
 	memset(header.chnpan, 0xFF, 64);

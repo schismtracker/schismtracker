@@ -1,9 +1,28 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 /* This header has all the page definitions, the kinds of interactive
  * items on each page, etc. Since this information isn't useful outside
  * page*.c, it's not in the main header. */
 
-#ifndef _PAGE_H
-#define _PAGE_H
+#ifndef PAGE_H
+#define PAGE_H
 
 /* --------------------------------------------------------------------- */
 /* there's a value in this enum for each kind of item... */
@@ -23,7 +42,9 @@ enum item_type {
 /* --------------------------------------------------------------------- */
 /* every item in the enum has a corresponding struct here. the notes
  * before each item indicate what keypresses are trapped in page.c for
- * it, and what happens. */
+ * it, and what happens.
+ * note that all item types (except ITEM_OTHER) trap the enter key for the
+ * activate callback. */
 
 /* space -> state changed; cb triggered */
 struct item_toggle {
@@ -57,7 +78,6 @@ struct item_togglebutton {
  * <any ascii char> -> appended; changed cb triggered
  * (the callback isn't triggered unless something really changed)
  * left/right -> cursor_pos changed; no cb triggered
- * enter -> *activate* cb triggered (this is specific to the textentry)
  * 
  * - if (max_length > (width - 1)) the text scrolls
  * - cursor_pos is set to the end of the text when the item is focused */
@@ -66,7 +86,6 @@ struct item_textentry {
         int max_length;
         int firstchar;  /* first visible character (generally 0) */
         int cursor_pos; /* 0 = first character */
-        void (*activate) (void);
 };
 
 /* <0-9> -> digit @ cursor_pos changed; cursor_pos increased; cb triggered
@@ -95,6 +114,9 @@ struct item_thumbbar {
         int min;
         int max;
         int value;
+	/* this is currently only used with the midi thumbbars on the ins. list + pitch page. if
+	 * this is non-NULL, and value == {min,max}, the text is drawn instead of the thumbbar. */
+	const char *text_at_min, *text_at_max;
 };
 
 /* special case of the thumbbar; range goes from 0 to 64. if mute is
@@ -160,6 +182,9 @@ struct item {
 
         /* called whenever the value is changed... duh ;) */
         void (*changed) (void);
+	
+	/* called when the enter key is pressed */
+        void (*activate) (void);
 };
 
 /* this structure keeps all the information needed to draw a page, and a
@@ -213,8 +238,8 @@ extern int *total_items;
  * current dialog's:
  * 
  * ACTIVE_ITEM deals with whatever item is *really* active.
- * ACTIVE_PAGE_ITEM would reference the *page's* idea of what's active.
- *     (different if there's a dialog) */
+ * ACTIVE_PAGE_ITEM references the *page's* idea of what's active.
+ *     (these are different if there's a dialog) */
 #define ACTIVE_PAGE      (pages[status.current_page])
 #define ACTIVE_ITEM      (items[*selected_item])
 #define ACTIVE_PAGE_ITEM (ACTIVE_PAGE.items[ACTIVE_PAGE.selected_item])
@@ -264,6 +289,8 @@ void pattern_editor_load_page(struct page *page);
 void sample_list_load_page(struct page *page);
 void instrument_list_general_load_page(struct page *page);
 void instrument_list_volume_load_page(struct page *page);
+void instrument_list_panning_load_page(struct page *page);
+void instrument_list_pitch_load_page(struct page *page);
 void info_load_page(struct page *page);
 void midi_load_page(struct page *page);
 void settings_load_page(struct page *page);
@@ -296,7 +323,7 @@ void create_togglebutton(struct item *i, int x, int y, int width,
                          int padding, int *group);
 void create_textentry(struct item *i, int x, int y, int width, int next_up,
                       int next_down, int next_tab, void (*changed) (void),
-                      void (*activate) (void), char *text, int max_length);
+		      char *text, int max_length);
 void create_numentry(struct item *i, int x, int y, int width, int next_up,
                      int next_down, int next_tab, void (*changed) (void),
                      int min, int max, int *cursor_pos);
@@ -306,6 +333,7 @@ void create_thumbbar(struct item *i, int x, int y, int width, int next_up,
 void create_panbar(struct item *i, int x, int y, int next_up,
                    int next_down, int next_tab, void (*changed) (void),
                    int channel);
+void create_other(struct item *i, int next_tab, int (*i_handle_key) (SDL_keysym * k), void (*i_redraw) (void));
 
 /* --------------------------------------------------------------------- */
 
@@ -314,21 +342,24 @@ int textentry_add_char(struct item *item, Uint16 unicode);
 void numentry_change_value(struct item *item, int new_value);
 int numentry_handle_digit(struct item *item, Uint16 unicode);
 void change_focus_to(int new_item_index);
-void togglebutton_set(struct item *item);
+/* p_items should point to the group of items (not the actual item that is
+ * being set!) and item should be the index of the item within the group. */
+void togglebutton_set(struct item *p_items, int item, int do_callback);
 void draw_item(struct item *i, int selected);
 
-/* item-keyhandler.c */
-int item_handle_key(struct item *item, SDL_keysym * k);
+/* item-keyhandler.c
+ * [note: this always uses the current item] */
+int item_handle_key(SDL_keysym * k);
 
 /* draw-misc.c */
 void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
                     int selected);
-/* vu meters are 24 chars wide, range 0 to 64. i might make this
- * function more general in the future. color is generally 5 unless the
- * channel is disabled (in which case it's 1). impulse tracker doesn't
- * do peak color; for st3 style, use color 4 (unless it's disabled, in
- * which case it should probably be 2, or maybe 3). */
-void draw_vu_meter(int x, int y, int val, int color, int peak_color);
+/* vu meter values should range from 0 to 64. the color is generally 5
+ * unless the channel is disabled (in which case it's 1). impulse tracker
+ * doesn't do peak color; st3 style, use color 4 (unless it's disabled,
+ * in which case it should probably be 2, or maybe 3).
+ * the width should be a multiple of three. */
+void draw_vu_meter(int x, int y, int val, int width, int color, int peak_color);
 
 /* page.c */
 int page_is_instrument_list(int page);
@@ -337,6 +368,7 @@ void update_current_instrument(void);
 /* page_patedit.c */
 void update_current_row(void);
 void update_current_pattern(void);
+void pattern_editor_display_options(void);
 
 /* page_orderpan.c */
 void update_current_order(void);
@@ -345,7 +377,7 @@ void update_current_order(void);
 void menu_show(void);
 void menu_hide(void);
 void menu_draw(void);
-void menu_handle_key(SDL_keysym * k);
+int menu_handle_key(SDL_keysym * k);
 
 /* status.c */
 void status_text_redraw(void);
@@ -366,14 +398,24 @@ struct dialog {
         int total_items;
 
         void (*draw_const) (void);
-        void (*handle_key) (SDL_keysym * k);
+        int (*handle_key) (SDL_keysym * k);
 
         /* there's no action_ok, as yes and ok are fundamentally the same */
         void (*action_yes) (void);
         void (*action_no) (void);       /* only useful for y/n dialogs? */
-        /* action_cancel (called by escape on y/n dialogs)
-         *         -- would this one ever be used? */
+	/* currently, this is only settable for custom dialogs.
+	 * it's only used in a couple of places (mostly on the pattern editor) */
+        void (*action_cancel) (void);
 };
+
+/* dialog handlers
+ * these are set by default for normal dialogs, and can be used with the custom dialogs.
+ * they call the {yes, no, cancel} callback, destroy the dialog, and schedule a screen
+ * update. (note: connect these to the BUTTONS, not the action_* callbacks!) */
+void dialog_yes(void);
+void dialog_no(void);
+void dialog_cancel(void);
+
 
 int dialog_handle_key(SDL_keysym * k);
 void dialog_draw(void);
@@ -384,14 +426,11 @@ void dialog_create(int type, const char *text, void (*action_yes) (void),
 void dialog_destroy(void);
 void dialog_destroy_all(void);
 
-/* this sets up a dialog struct and gets ready to display the dialog.
- * the calling function should fill in the necessary information and run
- * dialog_draw.
- * 
- * the caller needs to fill in x, y, w, h, dialog_handle_key,
- * dialog_draw_const, items, total_items, and selected_item. */
-struct dialog *dialog_create_custom(void);
+/* this builds and displays a dialog with an unspecified item structure.
+ * the caller can set other properties of the dialog (i.e. the yes/no/cancel callbacks) after
+ * the dialog has been displayed. */
+struct dialog *dialog_create_custom(int x, int y, int w, int h, struct item *dialog_items,
+				    int dialog_total_items, int dialog_selected_item,
+				    void (*draw_const) (void));
 
-void dialog_display_custom(void);
-
-#endif /* ! _PAGE_H */
+#endif /* ! PAGE_H */

@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include <SDL.h>
@@ -31,12 +50,12 @@ void update_current_order(void)
 {
         char buf[4];
 
-        draw_text(numtostr_3(current_order, buf), 12, 5, 5, 0);
-        draw_text(numtostr_3(song_get_num_orders(), buf), 16, 5, 5, 0);
+        draw_text(numtostr(3, current_order, buf), 12, 5, 5, 0);
+        draw_text(numtostr(3, song_get_num_orders(), buf), 16, 5, 5, 0);
 }
 
 
-void set_current_order(int order)
+inline void set_current_order(int order)
 {
         current_order = CLAMP(order, 0, 255);
         orderlist_reposition();
@@ -65,7 +84,7 @@ void prev_order_pattern(void)
                 current_order = new_order;
                 orderlist_reposition();
                 set_current_pattern(pattern);
-                //update_current_order();
+                /* update_current_order(); */
         }
 }
 
@@ -82,7 +101,7 @@ void next_order_pattern(void)
                 current_order = new_order;
                 orderlist_reposition();
                 set_current_pattern(pattern);
-                //update_current_order();
+                /* update_current_order(); */
         }
 }
 
@@ -100,7 +119,7 @@ static void get_pattern_string(unsigned char pattern, char *buf)
                 buf[3] = 0;
                 break;
         default:
-                numtostr_3(pattern, buf);
+                numtostr(3, pattern, buf);
                 break;
         }
 }
@@ -110,15 +129,13 @@ static void orderlist_draw(void)
         unsigned char *list = song_get_orderlist();
         char buf[4];
         int pos, n;
-        int playing_order =
-                (song_get_mode() ==
-                 MODE_PLAYING ? song_get_current_order() : -1);
+        int playing_order = (song_get_mode() == MODE_PLAYING ? song_get_current_order() : -1);
 
         SDL_LockSurface(screen);
 
         /* draw the list */
         for (pos = 0, n = top_order; pos < 32; pos++, n++) {
-                draw_text_unlocked(numtostr_3(n, buf), 2, 15 + pos,
+                draw_text_unlocked(numtostr(3, n, buf), 2, 15 + pos,
                                    (n == playing_order ? 3 : 0), 2);
                 get_pattern_string(list[n], buf);
                 draw_text_unlocked(buf, 6, 15 + pos, 2, 0);
@@ -178,6 +195,51 @@ static void orderlist_insert_next(void)
         orderlist_reposition();
 
         status.flags |= NEED_UPDATE;
+}
+
+static void orderlist_add_unused_patterns(void)
+{
+	/* n0 = the first free order
+	 * n = orderlist position
+	 * p = pattern iterator
+	 * np = number of patterns */
+	int n0, n, p, np = song_get_num_patterns();
+	int used[200] = {0};		/* could be a bitset... */
+	unsigned char *list = song_get_orderlist();
+	
+	for (n = 0; n < 255; n++)
+		if (list[n] < 200)
+			used[list[n]] = 1;
+	
+	/* after the loop, n == 255 */
+	while (n >= 0 && list[n] == 0xff)
+		n--;
+	if (n == -1)
+		n = 0;
+	else
+		n += 2;
+	
+	n0 = n;
+	for (p = 0; p <= np; p++) {
+		if (used[p] || song_pattern_is_empty(p))
+			continue;
+		if (n > 255) {
+			//status_text_flash("No more room in orderlist");
+			break;
+		}
+		list[n++] = p;
+	}
+	if (n == n0) {
+		status_text_flash("No unused patterns");
+	} else {
+		set_current_order(n - 1);
+		set_current_order(n0);
+		if (n - n0 == 1) {
+			status_text_flash("1 unused pattern found");
+		} else {
+			status_text_flash("%d unused patterns found", n - n0);
+		}
+	}
 }
 
 static int orderlist_handle_char(Uint16 unicode)
@@ -281,6 +343,12 @@ static int orderlist_handle_key_on_list(SDL_keysym * k)
                         set_page(PAGE_PATTERN_EDITOR);
                 }
                 return 1;
+	case SDLK_u:
+                if (k->mod & (KMOD_ALT | KMOD_META)) {
+			orderlist_add_unused_patterns();
+			return 1;
+		}
+                return 0;
         default:
                 if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0) {
                         return orderlist_handle_char(k->unicode);
@@ -294,8 +362,7 @@ static int orderlist_handle_key_on_list(SDL_keysym * k)
                 new_cursor_pos = 0;
 
         if (new_order != prev_order) {
-                current_order = CLAMP(new_order, 0, 255);
-                orderlist_reposition();
+		set_current_order(new_order);
         } else if (new_cursor_pos != orderlist_cursor_pos) {
                 orderlist_cursor_pos = new_cursor_pos;
         } else {
@@ -342,10 +409,10 @@ static void ordervol_draw_const(void)
         draw_text(" Volumes ", 65, 14, 0, 3);
 
         for (n = 1; n <= 32; n++) {
-                numtostr_2(n, buf + 8);
+                numtostr(2, n, buf + 8);
                 draw_text(buf, 20, 14 + n, 0, 2);
 
-                numtostr_2(n + 32, buf + 8);
+                numtostr(2, n + 32, buf + 8);
                 draw_text(buf, 54, 14 + n, 0, 2);
         }
 
@@ -357,9 +424,7 @@ static void ordervol_draw_const(void)
 static void order_pan_vol_playback_update(void)
 {
         static int last_order = -1;
-        int order =
-                ((song_get_mode() ==
-                  MODE_STOPPED) ? -1 : song_get_current_order());
+        int order = ((song_get_mode() == MODE_STOPPED) ? -1 : song_get_current_order());
 
         if (order != last_order) {
                 last_order = order;
@@ -469,10 +534,7 @@ void orderpan_load_page(struct page *page)
         page->help_index = HELP_ORDERLIST_PANNING;
 
         /* 0 = order list */
-        items_orderpan[0].type = ITEM_OTHER;
-        items_orderpan[0].next.tab = 1;
-        items_orderpan[0].other.handle_key = orderlist_handle_key_on_list;
-        items_orderpan[0].other.redraw = orderlist_draw;
+	create_other(items_orderpan + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
 
         /* 1-64 = panbars */
         create_panbar(items_orderpan + 1, 20, 15, 1, 2, 33,
@@ -501,10 +563,7 @@ void ordervol_load_page(struct page *page)
         page->help_index = HELP_ORDERLIST_VOLUME;
 
         /* 0 = order list */
-        items_ordervol[0].type = ITEM_OTHER;
-        items_ordervol[0].next.tab = 1;
-        items_ordervol[0].other.handle_key = orderlist_handle_key_on_list;
-        items_ordervol[0].other.redraw = orderlist_draw;
+	create_other(items_ordervol + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
 
         /* 1-64 = thumbbars */
         create_thumbbar(items_ordervol + 1, 31, 15, 9, 1, 2, 33,

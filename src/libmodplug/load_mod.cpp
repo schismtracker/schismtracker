@@ -303,14 +303,15 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 	m_nMaxPeriod = 3424 << 2;
 	memcpy(m_szNames, lpStream, 20);
 	// Setting channels pan
+	// <chisel> always use full left/right, and change the separation
+	// to make the panning "softer"
 	for (UINT ich=0; ich<m_nChannels; ich++)
 	{
 		ChnSettings[ich].nVolume = 64;
-		if (gdwSoundSetup & SNDMIX_MAXDEFAULTPAN)
-			ChnSettings[ich].nPan = (((ich&3)==1) || ((ich&3)==2)) ? 256 : 0;
-		else
-			ChnSettings[ich].nPan = (((ich&3)==1) || ((ich&3)==2)) ? 0xC0 : 0x40;
+		ChnSettings[ich].nPan = (((ich&3)==1) || ((ich&3)==2)) ? 256 : 0;
 	}
+	m_nStereoSeparation = (gdwSoundSetup & SNDMIX_MAXDEFAULTPAN) ? 128 : 64;
+	
 	// Reading channels
 	for (UINT ipat=0; ipat<nbp; ipat++)
 	{

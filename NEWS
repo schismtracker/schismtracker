@@ -1,5 +1,26 @@
   _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
 |                                                                         /
+| I am pleased to announce the release of Schism       [version 0.1a]    /
+| Tracker v0.1, with a TON of new stuff:          _ ___ _______ ________/
+|                                                       _ __ ___\
+|     * Sample loading and saving
+|     * Standalone sample playback
+|     * Closer, more IT-compatible file saving
+|     * Several more features implemented on the pattern editor
+|     * A  handful  of added  and  improved  sample  editing keys  (notably
+|       amplify, loop editing, and tuning keys)
+|     * Major parts of the instrument page completed
+|
+| Along with  all that, Schism  now has a few  more bells and  whistles: an
+| oscilloscope, global VU meters (currently  not enabled, but they do work)
+| and a finally implemented 64-channel view on the info page. (I'm not sure
+: why I didn't finish that a long time ago...)
+.
+' -----=----==---===--====-=====//////
+
+
+  _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
+|                                                                         /
 | Finally, after several months of dead silence,      [version 0.04a]    /
 | here is v0.04a of Schism Tracker. Wee.          _ ___ _______ ________/
 |                                                       _ __ ___\
@@ -18,6 +39,6 @@
 |                                                                         /
 | Fake news item, just to satisfy automake :)        [version 0.031a]    /
 :                                                 _ ___ _______ ________/
-.                                                       _ __ ___\
+. [first released version, so no real news]             _ __ ___\
 
 ' -----=----==---===--====-=====//////

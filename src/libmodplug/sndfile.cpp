@@ -50,6 +50,7 @@ CSoundFile::CSoundFile()
 {
 	m_nType = MOD_TYPE_NONE;
 	m_dwSongFlags = 0;
+	m_nStereoSeparation = 128;	// <chisel> added
 	m_nChannels = 0;
 	m_nMixChannels = 0;
 	m_nSamples = 0;
@@ -62,6 +63,8 @@ CSoundFile::CSoundFile()
 	m_nMinPeriod = 0x20;
 	m_nMaxPeriod = 0x7FFF;
 	m_nRepeatCount = 0;
+	m_rowHighlightMajor = 16;
+	m_rowHighlightMinor = 4;
 	memset(Chn, 0, sizeof(Chn));
 	memset(ChnMix, 0, sizeof(ChnMix));
 	memset(Ins, 0, sizeof(Ins));
@@ -86,8 +89,10 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 {
 	int i;
 
+	// deja vu...
 	m_nType = MOD_TYPE_NONE;
 	m_dwSongFlags = 0;
+	m_nStereoSeparation = 128;	// <chisel> added
 	m_nChannels = 0;
 	m_nMixChannels = 0;
 	m_nSamples = 0;

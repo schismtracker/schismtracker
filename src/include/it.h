@@ -1,16 +1,38 @@
-#ifndef _IT_H
-#define _IT_H
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#ifndef IT_H
+#define IT_H
 
 #include <SDL.h>
 #include <stdio.h>
 
+#include <features.h>
 #include "util.h"
-#include "_decl.h"
 
 /* --------------------------------------------------------------------- */
 /* preprocessor stuff */
 
 #define SDL_ToggleCursor() SDL_ShowCursor(!SDL_ShowCursor(-1))
+
+#define NO_MODIFIER(mod) \
+        (((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_META | KMOD_SHIFT)) == 0)
 
 /* --------------------------------------------------------------------- */
 /* structs 'n enums */
@@ -127,7 +149,7 @@ enum {
 
 /* --------------------------------------------------------------------- */
 
-DECL_BEGIN();
+__BEGIN_DECLS;
 
 /* --------------------------------------------------------------------- */
 /* global crap */
@@ -140,13 +162,18 @@ extern int current_palette;
 
 extern const char hexdigits[16];        /* in keyboard.c at the moment */
 
+/* currently in audio_loadsave.cc */
+extern byte row_highlight_major, row_highlight_minor;
+
 /* this used to just translate keys to notes, but it's sort of become the
  * keyboard map... perhaps i should rename it. */
 extern const char *note_trans;  /* keyboard.c */
 
 extern char *help_text_pointers[HELP_NUM_ITEMS];
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+extern int show_default_volumes;	/* pattern-view.c */
+
+/* --------------------------------------------------------------------- */
 /* settings (config.c) */
 
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
@@ -156,48 +183,20 @@ extern int cfg_palette;
 void cfg_load(void);
 void cfg_save(void);
 
-/* --------------------------------------------------------------------- */
-/* util functions */
+void cfg_get_string(const char *section, const char *key, char value[], int max_length, const char *def);
+int cfg_get_number(const char *section, const char *key, int def);
+void cfg_set_string(const char *section, const char *key, const char *value);
+void cfg_set_number(const char *section, const char *key, int value);
 
-/* essentially the same as sprintf(buf, "%02d", n),
- * just without the overhead */
+/* each page with configurable settings has a function to load/save them... */
+void cfg_load_patedit(void);
+void cfg_save_patedit(void);
 
-static inline char *numtostr_2(int n, char *buf)
-{
-        buf[2] = 0;
-        buf[1] = '0' + n / 1 % 10;
-        buf[0] = '0' + n / 10 % 10;
-        return buf;
-}
+void cfg_load_info(void);
+void cfg_save_info(void);
 
-static inline char *numtostr_3(int n, char *buf)
-{
-        buf[3] = 0;
-        buf[2] = '0' + n / 1 % 10;
-        buf[1] = '0' + n / 10 % 10;
-        buf[0] = '0' + n / 100 % 10;
-        return buf;
-}
-
-static inline char *numtostr_7(int n, char *buf)
-{
-        buf[7] = 0;
-        buf[6] = '0' + n / 1 % 10;
-        buf[5] = '0' + n / 10 % 10;
-        buf[4] = '0' + n / 100 % 10;
-        buf[3] = '0' + n / 1000 % 10;
-        buf[2] = '0' + n / 10000 % 10;
-        buf[1] = '0' + n / 100000 % 10;
-        buf[0] = '0' + n / 1000000 % 10;
-        return buf;
-}
-
-static inline char *numtostr_n(int n, char *buf)
-{
-        /* bah */
-        sprintf(buf, "%d", n);
-        return buf;
-}
+void cfg_load_audio(void);
+void cfg_save_audio(void);
 
 /* --------------------------------------------------------------------- */
 /* text functions */
@@ -241,6 +240,15 @@ void draw_sample_data(SDL_Rect * rect, struct _song_sample *sample,
 void clear_cached_waveform(int sample);
 void clear_all_cached_waveforms(void);
 
+/* this works like draw_sample_data, just without having to allocate a
+ * song_sample structure, and without caching the waveform.
+ * mostly it's just for the oscilloscope view. */
+void draw_sample_data_rect(SDL_Rect *rect, signed short *data, int length);
+
+/* these are in audio_playback.cc */
+extern signed short *audio_buffer;
+extern int audio_buffer_size;
+
 /* --------------------------------------------------------------------- */
 /* page functions */
 
@@ -257,7 +265,7 @@ void handle_key(SDL_keysym * k);        /* whenever there's a keypress ;) */
  * anywhere else, use status.flags |= NEED_UPDATE instead. */
 void redraw_screen(void);
 
-/* set up in main.c to be called from song.cc whenever the song changes */
+/* called whenever the song changes (from song_new or song_load) */
 void main_song_changed_cb(void);
 
 /* --------------------------------------------------------------------- */
@@ -266,6 +274,7 @@ void main_song_changed_cb(void);
 int font_load(const char *filename);
 void palette_set(byte colors[16][3]);
 void palette_load_preset(int palette_index);
+Uint32 palette_get(Uint32 c);
 
 /* mostly for the itf editor */
 int font_save(const char *filename);
@@ -300,7 +309,6 @@ int kbd_get_current_octave(void);
 void kbd_set_current_octave(int new_octave);
 
 int kbd_get_note(char c);
-int kbd_play_note(char c);      /* 1 if it was a valid note, 0 if not */
 
 /* --------------------------------------------------------------------- */
 /* log.c */
@@ -366,6 +374,6 @@ void show_song_length(void);
 
 /* --------------------------------------------------------------------- */
 
-DECL_END();
+__END_DECLS;
 
-#endif /* ! _IT_H */
+#endif /* ! IT_H */

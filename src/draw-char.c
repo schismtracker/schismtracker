@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include <SDL.h>
@@ -15,7 +34,7 @@ static byte font_normal[2048];
 /* There's no way to change the other fontsets at the moment.
  * (other than recompiling, of course) */
 static byte font_alt[2048];
-static byte font_half_data[1024] = HALF_WIDTH_FONT;
+static byte font_half_data[1024];
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -60,32 +79,32 @@ static inline void make_half_width_middot(void)
                 (font_normal[184 * 8 + 7] & 0xf);
 }
 
-// just the non-itf chars
+/* just the non-itf chars */
 inline void font_reset_lower(void)
 {
-        memcpy(font_normal, DEFAULT_LOWER, 1024);
+        memcpy(font_normal, font_default_lower, 1024);
 }
 
-// just the itf chars
+/* just the itf chars */
 inline void font_reset_upper(void)
 {
-        memcpy(font_normal + 1024, DEFAULT_UPPER_ITF, 1024);
+        memcpy(font_normal + 1024, font_default_upper_itf, 1024);
         make_half_width_middot();
 }
 
-// all together now!
+/* all together now! */
 void font_reset(void)
 {
         font_reset_lower();
         font_reset_upper();
 }
 
-// or kill the upper chars as well
+/* or kill the upper chars as well */
 void font_reset_bios(void)
 {
         font_reset_lower();
 
-        memcpy(font_normal + 1024, DEFAULT_UPPER_ALT, 1024);
+        memcpy(font_normal + 1024, font_default_upper_alt, 1024);
         make_half_width_middot();
 }
 
@@ -113,7 +132,7 @@ int font_load(const char *filename)
         byte data[4];
         char font_file[PATH_MAX + 1];
 
-        strncpy(font_file, getenv("HOME"), PATH_MAX);
+        strncpy(font_file, getenv("HOME") ? : "/", PATH_MAX);
         strncat(font_file, "/.schism/fonts/", PATH_MAX);
         strncat(font_file, filename, PATH_MAX);
         font_file[PATH_MAX] = 0;
@@ -190,7 +209,7 @@ int font_save(const char *filename)
         if (!filename)
                 return 0;
 
-        strncpy(font_file, getenv("HOME"), PATH_MAX);
+        strncpy(font_file, getenv("HOME") ? : "/", PATH_MAX);
         strncat(font_file, "/.schism/fonts/", PATH_MAX);
         strncat(font_file, filename, PATH_MAX);
         font_file[PATH_MAX] = 0;
@@ -219,10 +238,13 @@ void font_set_bank(int bank)
 
 void font_init(void)
 {
+	memcpy(font_half_data, font_half_width, 1024);
+	
         if (font_load(cfg_font) != 0)
                 font_reset();
-        memcpy(font_alt, DEFAULT_LOWER, 1024);
-        memcpy(font_alt + 1024, DEFAULT_UPPER_ALT, 1024);
+	
+        memcpy(font_alt, font_default_lower, 1024);
+        memcpy(font_alt + 1024, font_default_upper_alt, 1024);
 }
 
 /* --------------------------------------------------------------------- */

@@ -1,7 +1,26 @@
-#ifndef _SONG_H
-#define _SONG_H
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
-#include "_decl.h"
+#ifndef SONG_H
+#define SONG_H
+
+#include <features.h>
 #include "util.h"
 
 /* --------------------------------------------------------------------- */
@@ -41,16 +60,16 @@ typedef struct _song_instrument {
         unsigned long flags;    // any of the ENV_* flags below
         unsigned short global_volume;
         unsigned short panning;
-        unsigned short VolPoints[32];
-        unsigned short PanPoints[32];
-        unsigned short PitchPoints[32];
-        byte VolEnv[32];
-        byte PanEnv[32];
-        byte PitchEnv[32];
+        unsigned short vol_env_ticks[32];
+        unsigned short pan_env_ticks[32];
+        unsigned short pitch_env_ticks[32];
+        byte vol_env_values[32];
+        byte pan_env_values[32];
+        byte pitch_env_values[32];
         byte sample_map[128], note_map[128];
-        byte nVolEnv;
-        byte nPanEnv;
-        byte nPitchEnv;
+        byte vol_env_nodes;
+        byte pan_env_nodes;
+        byte pitch_env_nodes;
         byte vol_loop_start, vol_loop_end;
         byte vol_sustain_start, vol_sustain_end;
         byte pan_loop_start, pan_loop_end;
@@ -59,14 +78,14 @@ typedef struct _song_instrument {
         byte pitch_sustain_start, pitch_sustain_end;
         byte nna, dct, dca;
         byte pan_swing, volume_swing;
-        byte nIFC;
-        byte nIFR;
-        unsigned short wMidiBank;
-        byte nMidiProgram;
-        byte nMidiChannel;
-        byte nMidiDrumKey;
-        signed char nPPS;
-        byte nPPC;
+        byte filter_cutoff;
+        byte filter_resonance;
+        unsigned short midi_bank;
+        byte midi_program;
+        byte midi_channel;
+        byte midi_drum_key;
+        signed char pitch_pan_separation;
+        byte pitch_pan_center;
         char name[32];
         char filename[12];
 } song_instrument;
@@ -159,6 +178,23 @@ typedef struct _song_mix_channel {
 } song_mix_channel;
 
 /* --------------------------------------------------------------------- */
+/* non-song-related structures */
+
+/* defined in audio_playback.cc; also used by page_settings.c */
+
+struct audio_settings {
+	int sample_rate, bits, channels, buffer_size;
+	int channel_limit, interpolation_mode;
+	int oversampling, hq_resampling;
+	int noise_reduction, surround_effect;
+	int xbass, xbass_amount, xbass_range;
+	int surround, surround_depth, surround_delay;
+	int reverb, reverb_depth, reverb_delay;
+};
+
+extern struct audio_settings audio_settings;
+
+/* --------------------------------------------------------------------- */
 /* some enums */
 
 // sample flags
@@ -249,27 +285,47 @@ enum {
         VOL_EFFECT_VIBRATO,
         VOL_EFFECT_PANSLIDELEFT,
         VOL_EFFECT_PANSLIDERIGHT,
-        VOL_EFFECT_TONEPORTAMENTO,
+	VOL_EFFECT_TONEPORTAMENTO,
         VOL_EFFECT_PORTAUP,
         VOL_EFFECT_PORTADOWN
 };
 
 /* for song_get_mode */
 enum song_mode {
-        MODE_STOPPED,
-        MODE_PLAYING,
-        MODE_PATTERN_LOOP
+        MODE_STOPPED = 0,
+        MODE_PLAYING = 1,
+        MODE_PATTERN_LOOP = 2,
+	MODE_SINGLE_STEP = 4,
+};
+
+enum song_new_flags {
+	KEEP_PATTERNS = 1,
+	KEEP_SAMPLES = 2,
+	KEEP_INSTRUMENTS = 4,
+	KEEP_ORDERLIST = 8,
 };
 
 /* --------------------------------------------------------------------- */
 
-DECL_BEGIN();
+__BEGIN_DECLS;
 
 /* --------------------------------------------------------------------- */
 
-void song_load(const char *file);
-void song_new(void);
-void song_save(const char *file);
+void song_new(int flags);
+int song_load(const char *file);
+int song_save(const char *file);
+
+void song_clear_sample(int n);
+int song_load_sample(int n, const char *file);
+int song_save_sample_its(int n, const char *file);
+int song_save_sample_s3i(int n, const char *file);
+int song_save_sample_raw(int n, const char *file);
+
+/*
+void song_load_sample_library(const char *file);
+void song_free_sample_library(void);
+void song_load_sample_from_library(int from, int to);
+*/
 
 const char *song_get_filename(void);
 const char *song_get_basename(void);
@@ -278,6 +334,10 @@ char *song_get_message(void);   // editable
 
 // returned value = seconds
 unsigned long song_get_length(void);
+
+// gee. can't just use malloc/free... no, that would be too simple.
+signed char *song_sample_allocate(int bytes);
+void song_sample_free(signed char *data);
 
 // these return NULL on failure.
 song_sample *song_get_sample(int n, char **name_ptr);
@@ -299,6 +359,8 @@ int song_find_last_channel(void);
 int song_get_pattern(int n, song_note ** buf);  // return 0 -> error
 byte *song_get_orderlist(void);
 
+int song_pattern_is_empty(int p);
+
 int song_get_num_orders(void);
 int song_get_num_patterns(void);
 int song_get_rows_in_pattern(int pattern);
@@ -313,7 +375,7 @@ void song_set_initial_global_volume(int new_vol);
 int song_get_mixing_volume(void);
 void song_set_mixing_volume(int new_vol);
 int song_get_separation(void);
-/* void song_set_separation(int new_sep); ??? */
+void song_set_separation(int new_sep);
 
 /* these next few are booleans... */
 int song_is_stereo(void);
@@ -327,11 +389,19 @@ void song_set_linear_pitch_slides(int value);
 int song_is_instrument_mode(void);
 /* void song_set_instrument_mode(int value); ??? */
 
-// need to call this before anything else audio related
-void song_initialize(void (*song_changed) (void));
+/* this is called way early */
+void song_initialise(void);
+
+/* these are called later at startup, and also when the relevant settings are changed */
+void song_init_audio(void);
+void song_init_modplug(void);
 
 /* --------------------------------------------------------------------- */
 /* playback */
+
+void song_toggle_multichannel_mode(void);
+void song_change_current_play_channel(int relative, int wraparound);
+void song_play_note(int ins, int note, int chan, int useins);   /* channel 0 = use multichannel */
 
 void song_start(void);
 void song_stop(void);
@@ -359,7 +429,7 @@ void song_set_current_order(int order);
 int song_get_playing_channels(void);
 int song_get_max_channels(void);
 
-unsigned long song_get_vu_meter(void);
+void song_get_vu_meter(int *left, int *right);
 
 void song_set_current_speed(int speed);
 void song_set_current_global_volume(int volume);
@@ -390,10 +460,13 @@ int song_get_mix_state(unsigned long **channel_list);
 
 void song_flip_stereo(void);
 
+int song_get_surround(void);
+void song_set_surround(int on);
+
 static const song_note empty_note = { 0, 0, 0, 0, 0, 0 };
 
 /* --------------------------------------------------------------------- */
 
-DECL_END();
+__END_DECLS;
 
-#endif /* ! _SONG_H */
+#endif /* ! SONG_H */

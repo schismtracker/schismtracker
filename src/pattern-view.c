@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include "it.h"
@@ -38,13 +57,22 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
                          note_buf, vol_buf, get_effect_char(note->effect),
                          note->parameter);
 
+	if (show_default_volumes && note->volume_effect == VOL_EFFECT_NONE && note->instrument > 0) {
+		/* Modplug-specific hack: volume bit shift */
+		int n = song_get_sample(note->instrument, NULL)->volume >> 2;
+		note_text[6] = 0xbf;
+		note_text[7] = '0' + n / 10 % 10;
+		note_text[8] = '0' + n / 1 % 10;
+		note_text[9] = 0xc0;
+	}
+	
         draw_text_unlocked(note_text, x, y, fg, bg);
 
         /* lazy coding here: the panning is written twice, or if the
          * cursor's on it, *three* times. */
-        if (note->volume_effect == VOL_EFFECT_PANNING)
+	if (note->volume_effect == VOL_EFFECT_PANNING)
                 draw_text_unlocked(vol_buf, x + 7, y, 2, bg);
-
+	
         if (cursor_pos >= 0) {
                 cursor_pos = cursor_pos_map[cursor_pos];
                 draw_char_unlocked(note_text[cursor_pos], x + cursor_pos,
@@ -71,7 +99,7 @@ void draw_note_10(int x, int y, song_note * note, int cursor_pos,
 
         get_note_string(note->note, note_buf);
         if (note->instrument) {
-                numtostr_2(note->instrument, ins_buf);
+                numtostr(2, note->instrument, ins_buf);
         } else {
                 ins_buf[0] = ins_buf[1] = 173;
                 ins_buf[2] = 0;
@@ -128,7 +156,7 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
 
         get_note_string(note->note, note_buf);
         if (note->instrument)
-                numtostr_2(note->instrument, ins_buf);
+                numtostr(2, note->instrument, ins_buf);
         else
                 ins_buf[0] = ins_buf[1] = 173;
         get_volume_string(note->volume, note->volume_effect, vol_buf);
@@ -245,7 +273,7 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg,
                 cursor_pos -= 1;
                 buf[0] = ' ';
                 if (note->instrument) {
-                        numtostr_2(note->instrument, buf + 1);
+                        numtostr(2, note->instrument, buf + 1);
                 } else {
                         buf[1] = buf[2] = 173;
                         buf[3] = 0;
@@ -287,7 +315,7 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg,
                 draw_text_unlocked(buf, x, y, fg, bg);
         } else if (note->instrument) {
                 buf[0] = ' ';
-                numtostr_2(note->instrument, buf + 1);
+                numtostr(2, note->instrument, buf + 1);
                 draw_text_unlocked(buf, x, y, fg, bg);
         } else if (note->volume_effect) {
                 if (cursor_pos != 0
@@ -368,7 +396,7 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg,
         case 3:
                 cursor_pos -= 2;
                 if (note->instrument) {
-                        numtostr_2(note->instrument, buf);
+                        numtostr(2, note->instrument, buf);
                 } else {
                         buf[0] = buf[1] = 173;
                         buf[2] = 0;
@@ -402,7 +430,7 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg,
                 get_note_string_short(note->note, buf);
                 draw_text_unlocked(buf, x, y, fg, bg);
         } else if (note->instrument) {
-                numtostr_2(note->instrument, buf);
+                numtostr(2, note->instrument, buf);
                 draw_text_unlocked(buf, x, y, fg, bg);
         } else if (note->volume_effect) {
                 if (cursor_pos != 0
@@ -490,7 +518,7 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg,
         case 3:
                 cursor_pos -= 2;
                 if (note->instrument)
-                        numtostr_2(note->instrument, buf);
+                        numtostr(2, note->instrument, buf);
                 else
                         buf[0] = buf[1] = 173;
                 if (cursor_pos == 0)
@@ -523,7 +551,7 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg,
                 get_note_string_short(note->note, buf);
                 draw_char_unlocked(buf[0], x, y, fg, bg);
         } else if (note->instrument) {
-                numtostr_2(note->instrument, buf);
+                numtostr(2, note->instrument, buf);
                 draw_half_width_chars_unlocked(buf[0], buf[1], x, y, fg,
                                                bg, fg, bg);
         } else if (note->volume_effect) {
@@ -560,7 +588,7 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos,
 
         get_note_string_short(note->note, note_buf);
         if (note->instrument)
-                numtostr_2(note->instrument, ins_buf);
+                numtostr(2, note->instrument, ins_buf);
         else
                 ins_buf[0] = ins_buf[1] = 173;
         get_volume_string(note->volume, note->volume_effect, vol_buf);

@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #define NEED_DIRENT
 #define NEED_TIME
 #include "headers.h"
@@ -22,23 +41,23 @@ static const int type_colors[] = { 7, 3, 5, 6, 2, 4 };
 static struct item items_loadmodule[5];
 
 static char **dirs = NULL;
-static struct file_list_data {
+struct file_list_data {
         char *filename;
         time_t timestamp;
         size_t filesize;
-        /* if title == NULL, the rest of fields need to be filled in */
+        /* if title == NULL, the rest of the fields need to be filled in */
         char *title;
         const char *type_name;
         int color;
-} **files = NULL;
+};
+static struct file_list_data **files = NULL;
 
-int top_file = 0;
-int current_file = 0;
-int num_files = 0;
+static time_t directory_mtime;
 
-int top_dir = 0;
-int current_dir = 0;
-int num_dirs = 0;
+static int top_file = 0, current_file = 0, num_files = 0, allocated_size_files = 0;
+static int top_dir = 0, current_dir = 0, num_dirs = 0, allocated_size_dirs = 0;
+
+#define BLOCK_SIZE 256			/* this is probably plenty */
 
 /* filename_entry is updated whenever the selected file is changed.
  * (this differs from impulse tracker, which accepts wildcards in the
@@ -59,8 +78,40 @@ static char filename_entry[NAME_MAX + 1] = "";
 static char dirname_entry[PATH_MAX + 1] = "";
 
 /* --------------------------------------------------------------------- */
+/* page-dependent stuff (load or save) */
+
+/* there should be a more useful way to determine which page to set. i.e.,
+ * if there were errors/warnings, show the log; otherwise, switch to the
+ * blank page (or, for the loader, maybe the previously set page if
+ * classic mode is off?)
+ * idea for return codes:
+ *     0 = couldn't load/save, error dumped to log
+ *     1 = no warnings or errors were printed.
+ *     2 = there were warnings, but the song was still loaded/saved. */
+
+static void handle_file_entered_L(const char *ptr)
+{
+	if (song_load(ptr)) {
+		//set_page(PAGE_LOG);
+		set_page(PAGE_BLANK);
+	}
+}
+
+static void handle_file_entered_S(const char *ptr)
+{
+	set_page(PAGE_LOG);
+	if (song_save(ptr)) {
+		//set_page(PAGE_LOG);
+		set_page(PAGE_BLANK);
+	}
+}
+
+static void (*handle_file_entered)(const char *);
+
+/* --------------------------------------------------------------------- */
 /* for all of these, buf should be (at least) 27 chars. anything past
- * that isn't used. */
+ * that isn't used.
+ * FIXME: also defined in page_loadsample.c; should be moved elsewhere */
 
 static char *get_date_string(time_t when, char *buf)
 {
@@ -88,131 +139,147 @@ static char *get_time_string(time_t when, char *buf)
 
 /* --------------------------------------------------------------------- */
 
-static int dirent_select(const struct dirent *ent)
-{
-        return (ent->d_name[0] != '.'
-                && ent->d_name[_D_EXACT_NAMLEN(ent) - 1] != '~');
-}
-
 static void clear_directory(void)
 {
         int n;
+	
+        if (files) {
+		for (n = 0; n < num_files; n++) {
+			free(files[n]->filename);
+			free(files[n]->title);
+		}
+		
+		free(files);
+		files = NULL;
+	}
 
-        if (!files)
-                return;
-
-        for (n = 0; n < num_files; n++) {
-                free(files[n]->filename);
-                free(files[n]->title);
-        }
-        free(files);
-        files = NULL;
-
-        for (n = 0; n < num_dirs; n++) {
-                free(dirs[n]);
-        }
-        free(dirs);
-        dirs = NULL;
-
+	if (dirs) {
+		for (n = 0; n < num_dirs; n++) {
+			free(dirs[n]);
+		}
+		free(dirs);
+		dirs = NULL;
+	}
+	
+	top_file = top_dir = 0;
+	current_file = current_dir = 0;
         num_files = num_dirs = 0;
+	allocated_size_files = allocated_size_dirs = 0;
+}
+
+static void allocate_more_files(void)
+{
+	if (allocated_size_files == 0) {
+		allocated_size_files = BLOCK_SIZE;
+		files = malloc(BLOCK_SIZE * sizeof(struct file_list_data *));
+	} else {
+		/* Double the size. */
+		allocated_size_files *= 2;
+		files = realloc(files, allocated_size_files * sizeof(struct file_list_data *));
+	}
+}
+
+static void allocate_more_dirs(void)
+{
+	if (allocated_size_dirs == 0) {
+		allocated_size_dirs = BLOCK_SIZE;
+		dirs = malloc(BLOCK_SIZE * sizeof(char *));
+	} else {
+		/* Double the size. */
+		allocated_size_dirs *= 2;
+		dirs = realloc(dirs, allocated_size_dirs * sizeof(char *));
+	}
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+static void add_file_to_list(char *filename, time_t timestamp, size_t filesize)
+{
+	struct file_list_data *fi = malloc(sizeof(struct file_list_data));
+	fi->filename = filename;
+	fi->timestamp = timestamp;
+	fi->filesize = filesize;
+	fi->title = NULL;
+	
+	if (num_files >= allocated_size_files)
+		allocate_more_files();
+	files[num_files++] = fi;
+}
+
+static void add_dir_to_list(char *filename)
+{
+	if (num_dirs >= allocated_size_dirs)
+		allocate_more_dirs();
+	dirs[num_dirs++] = filename;
+}
+
+static int qsort_compare_file(const void *_a, const void *_b)
+{
+	const struct file_list_data *a = *(const struct file_list_data **) _a;
+	const struct file_list_data *b = *(const struct file_list_data **) _b;
+	
+	return strverscmp(a->filename, b->filename);
+}
+
+static int qsort_compare_dir(const void *_a, const void *_b)
+{
+	const char *a = *(const char **) _a;
+	const char *b = *(const char **) _b;
+	
+	/* put "/" and ".." first */
+	if (!strcmp(a, "/"))
+		return -1;
+	else if (!strcmp(b, "/"))
+		return 1;
+	else if (!strcmp(a, ".."))
+		return -1;
+	else if (!strcmp(b, ".."))
+		return 1;
+	else
+		return strverscmp(a, b);
 }
 
 static void read_directory(void)
 {
-        struct dirent **ents;
-        int total, i;
+	DIR *dir;
+        struct dirent *ent;
+	char *ptr;
         struct stat st;
-        char *ptr;
-
+	
         clear_directory();
+	
+	if (stat(cfg_dir_modules, &st) < 0 || (dir = opendir(cfg_dir_modules)) == NULL) {
+		perror(cfg_dir_modules);
+		/* add "/" so it's still possible to do something */
+		add_dir_to_list(strdup("/"));
+		return;
+	}
+	
+	directory_mtime = st.st_mtime;
+	
+	while ((ent = readdir(dir)) != NULL) {
+		if (ent->d_name[0] == '.' || ent->d_name[_D_EXACT_NAMLEN(ent) -1] == '~')
+			continue;
+		
+		asprintf(&ptr, "%s/%s", cfg_dir_modules, ent->d_name);
+		if (stat(ptr, &st) < 0) {
+			/* doesn't exist? */
+			perror(ptr);
+		} else if (S_ISDIR(st.st_mode)) {
+			add_dir_to_list(strdup(ent->d_name));
+		} else if (S_ISREG(st.st_mode)) {
+			add_file_to_list(strdup(ent->d_name), st.st_mtime, st.st_size);
+		}
+		free(ptr);
+	}
 
-        /* FIXME: some systems don't have scandir */
-        total = scandir(cfg_dir_modules, &ents, dirent_select,
-                        versionsort);
-        if (total < 0) {
-                perror("scandir");
-                ents = NULL;
-        }
-
-        for (i = 0; i < total; i++) {
-                switch (ents[i]->d_type) {
-                case DT_REG:
-                        num_files++;
-                        break;
-                case DT_DIR:
-                        num_dirs++;
-                        break;
-                case DT_LNK:
-                case DT_UNKNOWN:
-                        /* symlinks to files get stat()'ed twice
-                         * (which isn't too much of a problem, as the
-                         * inode is cached for the second stat...) */
-                        asprintf(&ptr, "%s/%s", cfg_dir_modules,
-                                 ents[i]->d_name);
-                        if (stat(ptr, &st) < 0) {
-                                /* doesn't exist? */
-                                perror(ptr);
-                        } else {
-                                if (S_ISREG(st.st_mode)) {
-                                        ents[i]->d_type = DT_REG;
-                                        num_files++;
-                                } else if (S_ISDIR(st.st_mode)) {
-                                        ents[i]->d_type = DT_DIR;
-                                        num_dirs++;
-                                }
-                        }
-                        free(ptr);
-                        break;
-                }
-        }
-
-        if (num_files)
-                files = calloc(num_files, sizeof(struct file_list_data *));
-
-        num_files = 0;
-        if (ents) {
-                dirs = calloc(num_dirs + 2, sizeof(char *));
-                num_dirs = 2;
-                dirs[0] = strdup("/");
-                dirs[1] = strdup("..");
-        } else {
-                dirs = malloc(sizeof(char *));
-                num_dirs = 1;
-                dirs[0] = strdup("/");
-        }
-
-        for (i = 0; i < total; i++) {
-                switch (ents[i]->d_type) {
-                case DT_REG:
-                        asprintf(&ptr, "%s/%s", cfg_dir_modules,
-                                 ents[i]->d_name);
-                        if (stat(ptr, &st) == 0) {
-                                free(ptr);
-                        } else {
-                                perror(ptr);
-                                free(ptr);
-                                break;
-                        }
-
-                        files[num_files] =
-                                malloc(sizeof(struct file_list_data));
-                        files[num_files]->filename =
-                                strdup(ents[i]->d_name);
-                        files[num_files]->title = NULL;
-                        files[num_files]->timestamp = st.st_mtime;
-                        files[num_files]->filesize = st.st_size;
-                        num_files++;
-                        break;
-                case DT_DIR:
-                        dirs[num_dirs] = strdup(ents[i]->d_name);
-                        num_dirs++;
-                        break;
-                }
-                free(ents[i]);
-        }
-
-        if (ents)
-                free(ents);
+	closedir(dir);
+	
+	add_dir_to_list(strdup("/"));
+	add_dir_to_list(strdup(".."));
+	
+	qsort(files, num_files, sizeof(struct file_list_data *), qsort_compare_file);
+	qsort(dirs, num_dirs, sizeof(char *), qsort_compare_dir);
 }
 
 /* --------------------------------------------------------------------- */
@@ -270,11 +337,11 @@ static void search_update(void)
         int found_something = 0;
         int n;
 
-        search_first_char = 0;
-        if (search_text_length > search_first_char + 25) {
+        if (search_text_length > 25)
                 search_first_char = search_text_length - 25;
-        }
-
+        else
+		search_first_char = 0;
+	
         /* go through the file/dir list (whatever one is selected) and
          * find the first entry matching the text */
         if (*selected_item == 0) {
@@ -291,9 +358,8 @@ static void search_update(void)
                 }
         } else {
                 for (n = 0; n < num_dirs; n++) {
-                        if (strncasecmp
-                            (dirs[n], search_text,
-                             search_text_length) == 0) {
+                        if (strncasecmp(dirs[n], search_text,
+					search_text_length) == 0) {
                                 found_something = 1;
                                 current_dir = n;
                                 dir_list_reposition();
@@ -324,13 +390,13 @@ static void search_text_delete_char(void)
 {
         if (search_text_length == 0)
                 return;
-
+	
         search_text[--search_text_length] = 0;
-
-        search_first_char = 0;
-        if (search_text_length > search_first_char + 25) {
+	
+        if (search_text_length > 25)
                 search_first_char = search_text_length - 25;
-        }
+        else
+		search_first_char = 0;
 
         status.flags |= NEED_UPDATE;
 }
@@ -372,17 +438,16 @@ static void load_module_draw_const(void)
 
 static void fill_file_info(struct file_list_data *file)
 {
-        char fname[PATH_MAX + 1];
+        char *ptr;
         file_info *fi;
+	
+        asprintf(&ptr, "%s/%s", cfg_dir_modules, file->filename);
 
-        snprintf(fname, PATH_MAX, "%s/%s", cfg_dir_modules, file->filename);
-
-        fi = file_info_get(fname, NULL);
+        fi = file_info_get(ptr, NULL);
         if (fi == NULL) {
-                file->type_name =
-                        strdup((errno ==
-                                EPROTO) ? "Unknown module format" :
-                               strerror(errno));
+                file->type_name = strdup((errno == EPROTO)
+					 ? "Unknown module format"
+					 : strerror(errno));
                 file->title = strdup("");
                 file->color = 7;
         } else {
@@ -392,6 +457,8 @@ static void fill_file_info(struct file_list_data *file)
                 free(fi->extension);
                 free(fi);
         }
+	
+	free(ptr);
 }
 
 static void file_list_draw(void)
@@ -455,7 +522,7 @@ static void file_list_draw(void)
                         draw_char_unlocked(168, 21, pos++, 2, 0);
                 SDL_UnlockSurface(screen);
         }
-
+	
         /* bleh */
         search_redraw();
 }
@@ -492,9 +559,8 @@ static int file_list_handle_key(SDL_keysym * k)
                         return 1;
                 asprintf(&ptr, "%s/%s", cfg_dir_modules,
                          files[current_file]->filename);
-                set_page(PAGE_LOG);
-                song_load(ptr);
-                free(ptr);
+		handle_file_entered(ptr);
+		free(ptr);
                 return 1;
         case SDLK_BACKSPACE:
                 if (k->mod & KMOD_CTRL)
@@ -622,8 +688,7 @@ static void filename_entered(void)
         } else {
                 asprintf(&ptr, "%s/%s", cfg_dir_modules, filename_entry);
         }
-        set_page(PAGE_LOG);
-        song_load(ptr);
+	handle_file_entered(ptr);
         free(ptr);
 }
 
@@ -648,21 +713,31 @@ static void dirname_entered(void)
 
 static void load_module_set_page(void)
 {
-        /* if we have a list, and the directory's the same, we're set */
-        if (files && (status.flags & DIR_MODULES_CHANGED) == 0)
-                return;
-
+        struct stat st;
+	
+	/* blecch! */
+	handle_file_entered = handle_file_entered_L;
+        
+	/* if we have a list, the directory didn't change,
+	 * and the mtime is the same, we're set */
+	if (files != NULL
+	    && (status.flags & DIR_MODULES_CHANGED) == 0
+	    && stat(cfg_dir_modules, &st) == 0 
+	    && st.st_mtime == directory_mtime) {
+		return;
+	}
+	
         strcpy(dirname_entry, cfg_dir_modules);
         update_filename_entry();
 
         status.flags &= ~DIR_MODULES_CHANGED;
 
         top_file = current_file = top_dir = current_dir = 0;
-        clear_directory();
+        /* clear_directory(); <- useless; read_directory() does this */
         read_directory();
-        *selected_item = files ? 0 : 1;
-
-        search_text_clear();
+        pages[PAGE_LOAD_MODULE].selected_item = files ? 0 : 1;
+	
+	search_text_clear();
 }
 
 /* --------------------------------------------------------------------- */
@@ -675,21 +750,15 @@ void load_module_load_page(struct page *page)
         page->total_items = 4;
         page->items = items_loadmodule;
         page->help_index = HELP_GLOBAL;
-
-        items_loadmodule[0].type = ITEM_OTHER;
-        items_loadmodule[0].next.left = items_loadmodule[0].next.right =
-                items_loadmodule[0].next.tab = 1;
-        items_loadmodule[0].other.handle_key = file_list_handle_key;
-        items_loadmodule[0].other.redraw = file_list_draw;
-
-        items_loadmodule[1].type = ITEM_OTHER;
-        items_loadmodule[1].next.left = items_loadmodule[1].next.right = 0;
-        items_loadmodule[1].next.tab = 2;
-        items_loadmodule[1].other.handle_key = dir_list_handle_key;
-        items_loadmodule[1].other.redraw = dir_list_draw;
+	
+	create_other(items_loadmodule + 0, 1, file_list_handle_key, file_list_draw);
+	items_loadmodule[0].next.left = items_loadmodule[0].next.right = 1;
+	create_other(items_loadmodule + 1, 2, dir_list_handle_key, dir_list_draw);
 
         create_textentry(items_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL,
-                         filename_entered, filename_entry, NAME_MAX);
+                         filename_entry, NAME_MAX);
+	items_loadmodule[2].activate = filename_entered;
         create_textentry(items_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL,
-                         dirname_entered, dirname_entry, PATH_MAX);
+                         dirname_entry, PATH_MAX);
+	items_loadmodule[3].activate = dirname_entered;
 }

@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 /* Well, this page is just a big hack factory, but it's at least an
  * improvement over the message editor :P */
 
@@ -50,23 +69,23 @@ static void help_redraw(void)
         ptr = newline_pointers + top_line;
         for (pos = 13, n = top_line; pos < 45; pos++, n++) {
                 switch (**ptr) {
-                case '|':      // normal line
+                case '|':      /* normal line */
                         draw_text_len(*ptr + 1,
                                       strcspn(*ptr + 1, "\015\012"), 2,
                                       pos, 6, 0);
                         break;
-                case '#':      // hidden line
+                case '#':      /* hidden line */
                         draw_text_len(*ptr + 1,
                                       strcspn(*ptr + 1, "\015\012"), 2,
                                       pos, 7, 0);
                         break;
-                case '%':      // separator line
+                case '%':      /* separator line */
                         SDL_LockSurface(screen);
                         for (x = 2; x < 78; x++)
                                 draw_char_unlocked(154, x, pos, 6, 0);
                         SDL_UnlockSurface(screen);
                         break;
-                default:       // ack!
+                default:       /* ack! */
                         fprintf(stderr, "unknown help line format %c\n",
                                 **ptr);
                         break;
@@ -195,7 +214,5 @@ void help_load_page(struct page *page)
         page->total_items = 1;
         page->items = items_help;
 
-        items_help[0].type = ITEM_OTHER;
-        items_help[0].other.redraw = help_redraw;
-        items_help[0].other.handle_key = help_handle_key;
+	create_other(items_help + 0, 0, help_handle_key, help_redraw);
 }

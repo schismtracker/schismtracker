@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include <SDL.h>
@@ -54,6 +73,11 @@ void palette_load_preset(int palette_index)
         palette_set(palettes[current_palette].colors);
 }
 
+inline Uint32 palette_get(Uint32 c)
+{
+	return (screen->format->BytesPerPixel == 1) ? c : palette_lookup[c];
+}
+
 /* --------------------------------------------------------------------- */
 
 /*
@@ -100,19 +124,14 @@ inline void putpixel(SDL_Surface * surface, int x, int y, Uint32 pixel)
 
 void putpixel_screen(int x, int y, Uint32 pixel)
 {
-        if (screen->format->BytesPerPixel != 1)
-                pixel = palette_lookup[pixel];
-        putpixel(screen, x, y, pixel);
+        putpixel(screen, x, y, palette_get(pixel));
 }
 
 /* --------------------------------------------------------------------- */
 
 inline void draw_fill_rect(SDL_Rect * rect, Uint32 color)
 {
-        if (screen->format->BytesPerPixel == 1)
-                SDL_FillRect(screen, rect, color);
-        else
-                SDL_FillRect(screen, rect, palette_lookup[color]);
+	SDL_FillRect(screen, rect, palette_get(color));
 }
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
@@ -208,7 +227,5 @@ void draw_line(SDL_Surface * surface, int xs, int ys, int xe, int ye,
 
 void draw_line_screen(int xs, int ys, int xe, int ye, Uint32 c)
 {
-        if (screen->format->BytesPerPixel != 1)
-                c = palette_lookup[c];
-        draw_line(screen, xs, ys, xe, ye, c);
+        draw_line(screen, xs, ys, xe, ye, palette_get(c));
 }

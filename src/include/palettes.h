@@ -1,5 +1,24 @@
-#ifndef _PALETTES_H
-# define _PALETTES_H
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#ifndef PALETTES_H
+#define PALETTES_H
 
 #include "util.h"
 
@@ -231,4 +250,4 @@ struct it_palette palettes[] = {
 
 #define NUM_PALETTES (ARRAY_SIZE(palettes) - 1)
 
-#endif /* ! _PALETTES_H */
+#endif /* ! PALETTES_H */

@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include <SDL.h>
@@ -129,7 +148,7 @@ char *get_volume_string(int volume, int volume_effect, char *buf)
                 /* Yeah, a bit confusing :)
                  * The display stuff makes the distinction here with
                  * a different color for panning. */
-                numtostr_2(volume, buf);
+                numtostr(2, volume, buf);
                 break;
         default:
                 buf[0] = cmd_table[volume_effect];
@@ -264,30 +283,4 @@ inline int kbd_get_note(char c)
         pos = ptr - note_trans + 1;
         note = 12 * current_octave + pos;
         return CLAMP(note, 1, 120);
-}
-
-int kbd_play_note(char c)
-{
-        char buf[4];
-        int note = kbd_get_note(c);
-
-        if (note <= 0 || note > 120)
-                return 0;
-
-        if (song_is_instrument_mode()
-            && status.current_page != PAGE_SAMPLE_LIST) {
-                song_instrument *ins =
-                        song_get_instrument(instrument_get_current(),
-                                            NULL);
-                if (!(ins->sample_map[note] && ins->note_map[note]))
-                        return 1;
-                printf("kbd_play_note: instrument #%d, note %s (0x%02x)\n",
-                       instrument_get_current(),
-                       get_note_string(note, buf), note);
-        } else {
-                printf("kbd_play_note: sample #%d, note %s (0x%02x)\n",
-                       sample_get_current(), get_note_string(note, buf),
-                       note);
-        }
-        return 1;
 }

@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include <errno.h>
@@ -26,7 +45,7 @@ static int open_mixer_device(void)
 
         if (!device_file) {
                 ptr = "/dev/sound/mixer";
-                if (!access(ptr, F_OK)) {
+                if (access(ptr, F_OK) < 0) {
                         /* this had better work :) */
                         ptr = "/dev/mixer";
                 }
@@ -38,7 +57,7 @@ static int open_mixer_device(void)
 
 /* --------------------------------------------------------------------- */
 
-void mixer_read_master_volume(int *left, int *right)
+void mixer_read_volume(int *left, int *right)
 {
         int fd;
         struct stereo_volume volume;
@@ -50,7 +69,7 @@ void mixer_read_master_volume(int *left, int *right)
                 return;
         }
 
-        if (ioctl(fd, SOUND_MIXER_READ_VOLUME, &volume) == EOF) {
+        if (ioctl(fd, MIXER_READ(SCHISM_MIXER_CONTROL), &volume) == EOF) {
                 perror(device_file);
                 *left = *right = 0;
         } else {
@@ -61,7 +80,7 @@ void mixer_read_master_volume(int *left, int *right)
         close(fd);
 }
 
-void mixer_write_master_volume(int left, int right)
+void mixer_write_volume(int left, int right)
 {
         int fd;
         struct stereo_volume volume = {
@@ -75,7 +94,7 @@ void mixer_write_master_volume(int left, int right)
                 return;
         }
 
-        if (ioctl(fd, SOUND_MIXER_WRITE_VOLUME, &volume) == EOF) {
+        if (ioctl(fd, MIXER_WRITE(SCHISM_MIXER_CONTROL), &volume) == EOF) {
                 perror(device_file);
         }
 

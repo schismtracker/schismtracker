@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include "it.h"
@@ -20,6 +39,7 @@ void create_toggle(struct item *i, int x, int y,
         i->next.right = next_right;
         i->next.tab = next_tab;
         i->changed = changed;
+        i->activate = NULL;
 }
 
 void create_menutoggle(struct item *i, int x, int y,
@@ -47,6 +67,7 @@ void create_menutoggle(struct item *i, int x, int y,
         i->changed = changed;
         i->menutoggle.choices = choices;
         i->menutoggle.num_choices = n;
+        i->activate = NULL;
 }
 
 void create_button(struct item *i, int x, int y, int width,
@@ -66,6 +87,7 @@ void create_button(struct item *i, int x, int y, int width,
         i->changed = changed;
         i->button.text = text;
         i->button.padding = padding;
+        i->activate = NULL;
 }
 
 void create_togglebutton(struct item *i, int x, int y, int width,
@@ -87,12 +109,13 @@ void create_togglebutton(struct item *i, int x, int y, int width,
         i->togglebutton.text = text;
         i->togglebutton.padding = padding;
         i->togglebutton.group = group;
+        i->activate = NULL;
 }
 
 void create_textentry(struct item *i, int x, int y, int width,
                       int next_up, int next_down, int next_tab,
-                      void (*changed) (void), void (*activate) (void),
-                      char *text, int max_length)
+                      void (*changed) (void), char *text,
+		      int max_length)
 {
         i->type = ITEM_TEXTENTRY;
         i->x = x;
@@ -102,11 +125,11 @@ void create_textentry(struct item *i, int x, int y, int width,
         i->next.down = next_down;
         i->next.tab = next_tab;
         i->changed = changed;
-        i->textentry.activate = activate;
         i->textentry.text = text;
         i->textentry.max_length = max_length;
         i->textentry.firstchar = 0;
         i->textentry.cursor_pos = 0;
+        i->activate = NULL;
 }
 
 void create_numentry(struct item *i, int x, int y, int width,
@@ -125,6 +148,7 @@ void create_numentry(struct item *i, int x, int y, int width,
         i->numentry.min = min;
         i->numentry.max = max;
         i->numentry.cursor_pos = cursor_pos;
+        i->activate = NULL;
 }
 
 void create_thumbbar(struct item *i, int x, int y, int width,
@@ -141,6 +165,9 @@ void create_thumbbar(struct item *i, int x, int y, int width,
         i->changed = changed;
         i->thumbbar.min = min;
         i->thumbbar.max = max;
+	i->thumbbar.text_at_min = NULL;
+	i->thumbbar.text_at_max = NULL;
+        i->activate = NULL;
 }
 
 void create_panbar(struct item *i, int x, int y,
@@ -150,7 +177,7 @@ void create_panbar(struct item *i, int x, int y,
         i->type = ITEM_PANBAR;
         i->x = x;
         i->y = y;
-        i->width = 0;   // never gets used
+        i->width = 0;   /* never gets used */
         i->next.up = next_up;
         i->next.down = next_down;
         i->next.tab = next_tab;
@@ -158,6 +185,19 @@ void create_panbar(struct item *i, int x, int y,
         i->panbar.min = 0;
         i->panbar.max = 64;
         i->panbar.channel = channel;
+        i->activate = NULL;
+}
+
+void create_other(struct item *i, int next_tab, int (*i_handle_key) (SDL_keysym *k), void (*i_redraw) (void))
+{
+	i->type = ITEM_OTHER;
+	i->next.up = i->next.down = i->next.left = i->next.right = 0;
+	i->next.tab = next_tab;
+	/* i->changed = NULL; ??? */
+	i->activate = NULL;
+	
+	i->other.handle_key = i_handle_key;
+	i->other.redraw = i_redraw;
 }
 
 /* --------------------------------------------------------------------- */
@@ -202,15 +242,16 @@ void text_delete_next_char(char *text, int *cursor_pos, int max_length)
 
 static void textentry_reposition(struct item *i)
 {
+	int len;
+	
         i->textentry.text[i->textentry.max_length] = 0;
-        if (i->textentry.cursor_pos > (signed) strlen(i->textentry.text)) {
-                i->textentry.cursor_pos = strlen(i->textentry.text);
-        }
-
-        if (i->textentry.cursor_pos >
-            (i->textentry.firstchar + i->width - 1)) {
-                i->textentry.firstchar =
-                        i->textentry.cursor_pos - i->width + 1;
+	
+	len = strlen(i->textentry.text);
+        if (i->textentry.cursor_pos > len)
+                i->textentry.cursor_pos = len;
+	
+        if (i->textentry.cursor_pos > (i->textentry.firstchar + i->width - 1)) {
+                i->textentry.firstchar = i->textentry.cursor_pos - i->width + 1;
                 if (i->textentry.firstchar < 0)
                         i->textentry.firstchar = 0;
         }
@@ -232,13 +273,21 @@ int textentry_add_char(struct item *item, Uint16 unicode)
         return 1;
 }
 
+#if 0
+void textentry_set(struct item *item, const char *text)
+{
+	strncpy(item->textentry.text, text, item->textentry.max_length);
+	item->textentry.text[item->textentry.max_length] = 0;
+	item->textentry.cursor_pos = strlen(item->textentry.text);
+}
+#endif
+
 /* --------------------------------------------------------------------- */
 /* numeric entries */
 
 void numentry_change_value(struct item *item, int new_value)
 {
-        new_value =
-                CLAMP(new_value, item->numentry.min, item->numentry.max);
+        new_value = CLAMP(new_value, item->numentry.min, item->numentry.max);
         item->numentry.value = new_value;
         RUN_IF(item->changed);
         status.flags |= NEED_UPDATE;
@@ -278,27 +327,18 @@ int numentry_handle_digit(struct item *item, Uint16 unicode)
 /* --------------------------------------------------------------------- */
 /* toggle buttons */
 
-void togglebutton_set(struct item *item)
+void togglebutton_set(struct item *p_items, int item, int do_callback)
 {
         int i;
-        int *group = item->togglebutton.group;
+        int *group = p_items[item].togglebutton.group;
 
-        /* first see if we have to care */
-        /* FIXME: is this saving anything? */
-        for (i = 0; group[i] >= 0; i++) {
-                if (items[group[i]].togglebutton.state == 1
-                    && item == items + group[i]) {
-                        return;
-                }
-        }
-
-        /* poopy... we do */
         for (i = 0; group[i] >= 0; i++)
-                items[group[i]].togglebutton.state = 0;
-        item->togglebutton.state = 1;
-
-        RUN_IF(item->changed);
-
+                p_items[group[i]].togglebutton.state = 0;
+        p_items[item].togglebutton.state = 1;
+	
+	if (do_callback)
+		RUN_IF(p_items[item].changed);
+	
         status.flags |= NEED_UPDATE;
 }
 
@@ -365,11 +405,11 @@ void draw_item(struct item *i, int selected)
                  * three or seven digits long. */
                 switch (i->width) {
                 case 3:
-                        draw_text_len(numtostr_3(i->numentry.value, buf),
+                        draw_text_len(numtostr(3, i->numentry.value, buf),
                                       3, i->x, i->y, 2, 0);
                         break;
                 case 7:
-                        draw_text_len(numtostr_7(i->numentry.value, buf),
+                        draw_text_len(numtostr(7, i->numentry.value, buf),
                                       7, i->x, i->y, 2, 0);
                         break;
                 }
@@ -379,29 +419,41 @@ void draw_item(struct item *i, int selected)
                 }
                 break;
         case ITEM_THUMBBAR:
-                draw_thumb_bar(i->x, i->y, i->width, i->thumbbar.min,
-                               i->thumbbar.max, i->thumbbar.value,
-                               selected);
-                draw_text(numtostr_3(i->thumbbar.value, buf),
+		if (i->thumbbar.text_at_min && i->thumbbar.min == i->thumbbar.value) {
+			draw_text_len(i->thumbbar.text_at_min, i->width, i->x, i->y,
+				      selected ? 3 : 2, 0);
+		} else if (i->thumbbar.text_at_max && i->thumbbar.max == i->thumbbar.value) {
+			/* this will probably do Bad Things if the text is too long */
+			int len = strlen(i->thumbbar.text_at_max);
+			int pos = i->x + i->width - len;
+			
+			draw_fill_chars(i->x, i->y, pos - 1, i->y, 0);
+			draw_text_len(i->thumbbar.text_at_max, len, pos, i->y,
+				      selected ? 3 : 2, 0);
+		} else {
+			draw_thumb_bar(i->x, i->y, i->width, i->thumbbar.min,
+				       i->thumbbar.max, i->thumbbar.value, selected);
+		}
+                draw_text(numtostr(3, i->thumbbar.value, buf),
                           i->x + i->width + 1, i->y, 1, 2);
                 break;
         case ITEM_PANBAR:
-                numtostr_2(i->panbar.channel, buf + 8);
+                numtostr(2, i->panbar.channel, buf + 8);
                 draw_text(buf, i->x, i->y, selected ? 3 : 0, 2);
                 if (i->panbar.muted) {
                         draw_text("  Muted  ", i->x + 11, i->y,
                                   selected ? 3 : 5, 0);
-                        //draw_fill_chars(i->x + 21, i->y,
-                        //                i->x + 23, i->y, 2);
+                        /* draw_fill_chars(i->x + 21, i->y,
+                         *                 i->x + 23, i->y, 2); */
                 } else if (i->panbar.surround) {
                         draw_text("Surround ", i->x + 11, i->y,
                                   selected ? 3 : 5, 0);
-                        //draw_fill_chars(i->x + 21, i->y,
-                        //                i->x + 23, i->y, 2);
+                        /* draw_fill_chars(i->x + 21, i->y,
+                         *                 i->x + 23, i->y, 2); */
                 } else {
                         draw_thumb_bar(i->x + 11, i->y, 9, 0, 64,
                                        i->panbar.value, selected);
-                        draw_text(numtostr_3(i->thumbbar.value, buf),
+                        draw_text(numtostr(3, i->thumbbar.value, buf),
                                   i->x + 21, i->y, 1, 2);
                 }
                 break;

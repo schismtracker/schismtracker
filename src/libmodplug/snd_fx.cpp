@@ -427,8 +427,8 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 }
 
 
-void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv)
-//---------------------------------------------------------------------------
+void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BOOL bManual)
+//-----------------------------------------------------------------------------------------
 {
 	if (note < 1) return;
 	MODCHANNEL * const pChn = &Chn[nChn];
@@ -583,6 +583,14 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv)
 #ifndef NO_FILTER
 		if ((pChn->nCutOff < 0x7F) && (bFlt)) SetupChannelFilter(pChn, TRUE);
 #endif // NO_FILTER
+	}
+	// Special case for MPT
+	if (bManual) pChn->dwFlags &= ~CHN_MUTE;
+	if (((pChn->dwFlags & CHN_MUTE) && (gdwSoundSetup & SNDMIX_MUTECHNMODE))
+	    || ((pChn->pInstrument) && (pChn->pInstrument->uFlags & CHN_MUTE) && (!bManual))
+	    || ((pChn->pHeader) && (pChn->pHeader->dwFlags & ENV_MUTE) && (!bManual)))
+	{
+		if (!bManual) pChn->nPeriod = 0;
 	}
 }
 
@@ -1780,11 +1788,16 @@ void CSoundFile::ExtendedS3MCommands(UINT nChn, UINT param)
 	// SAx: Set 64k Offset
 	case 0xA0:	if (!m_nTickCount)
 				{
-					pChn->nOldHiOffset = param;
-					if ((pChn->nRowNote) && (pChn->nRowNote < 0x80))
-					{
-						DWORD pos = param << 16;
-						if (pos < pChn->nLength) pChn->nPos = pos;
+					if (m_nType & MOD_TYPE_S3M) {
+						pChn->nPan = ((param ^ 8) << 4) + 8;
+						pChn->dwFlags |= CHN_FASTVOLRAMP;
+					} else {
+						pChn->nOldHiOffset = param;
+						if ((pChn->nRowNote) && (pChn->nRowNote < 0x80))
+						{
+							DWORD pos = param << 16;
+							if (pos < pChn->nLength) pChn->nPos = pos;
+						}
 					}
 				}
 				break;
@@ -2114,9 +2127,9 @@ void CSoundFile::KeyOff(UINT nChn)
 void CSoundFile::SetSpeed(UINT param)
 //-----------------------------------
 {
-        // <chisel> why is the maximum speed 128 for non-IT?
-        // it ought to be 255 for everything... *shrug*
-	//UINT max = (m_nType == MOD_TYPE_IT) ? 256 : 128;
+	// <chisel> #if 0 around all this stuff. bleh :P
+#if 0
+	UINT max = (m_nType == MOD_TYPE_IT) ? 256 : 128;
 	// Modplug Tracker and Mod-Plugin don't do this check
 #ifndef MODPLUG_TRACKER
 #ifndef MODPLUG_FASTSOUNDLIB
@@ -2130,13 +2143,14 @@ void CSoundFile::SetSpeed(UINT param)
 	}
 #endif // MODPLUG_FASTSOUNDLIB
 #endif // MODPLUG_TRACKER
-        // <chisel> wtf... this line doesn't make any sense at all
-	//if ((m_nType & MOD_TYPE_S3M) && (param > 0x80)) param -= 0x80;
+	if ((m_nType & MOD_TYPE_S3M) && (param > 0x80)) param -= 0x80;
         
-	//if ((param) && (param <= max)) <-- neither does this
-        // eheheh... whoops, forgot that speed = 0 still needs checked ;)
+	if ((param) && (param <= max))
+                m_nMusicSpeed = param;
+#else
         if (param)
                 m_nMusicSpeed = param;
+#endif
 }
 
 
@@ -2189,12 +2203,14 @@ int CSoundFile::PatternLoop(MODCHANNEL *pChn, UINT param)
                         // hmm. the pattern loop shouldn't care about
                         // other channels at all... i'm not really
                         // sure what this code is doing :/
+#if 0
 			MODCHANNEL *p = Chn;
 			for (UINT i=0; i<m_nChannels; i++, p++) if (p != pChn)
 			{
 				// Loop already done
 				if (p->nPatternLoopCount) return -1;
 			}
+#endif
 			pChn->nPatternLoopCount = param;
 		}
 		return pChn->nPatternLoop;

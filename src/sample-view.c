@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include <SDL.h>
@@ -36,44 +55,52 @@ void clear_all_cached_waveforms(void)
 /* sample drawing
  * there are only two changes between 8- and 16-bit samples:
  * - the type of 'data'
- * - the amount to shift (note though, this number is used twice!) */
+ * - the amount to divide (note though, this number is used twice!) */
 
-static inline void _draw_sample_data_8(SDL_Surface * surface,
-                                       signed char *data,
-                                       unsigned long length)
+static inline void _draw_sample_data_8(SDL_Surface * surface, SDL_Rect *rect,
+                                       signed char *data, unsigned long length,
+				       Uint32 c)
 {
+	SDL_Rect srect = {0, 0, surface->w, surface->h};
         unsigned long pos = length;
-        int level1, level2 = data[length] >> 3;
-        int xs, ys, xe, ye;
-
+        int level1, level2, xs, ys, xe, ye;
+	
+	if (!rect)
+		rect = &srect;
+	
+	level2 = data[length] * rect->h / (SCHAR_MAX - SCHAR_MIN + 1);
         while (pos) {
-                level1 = data[pos - 1] >> 3;
-                xs = pos * (surface->w - 1) / length;
-                ys = (surface->h / 2 - 1) - level2;
+                level1 = data[pos - 1] * rect->h / (SCHAR_MAX - SCHAR_MIN + 1);
+                xs = pos * (rect->w - 1) / length + rect->x;
+                ys = (rect->h / 2 - 1) - level2 + rect->y;
                 pos--;
-                xe = pos * (surface->w - 1) / length;
-                ye = (surface->h / 2 - 1) - level1;
-                draw_line(surface, xs, ys, xe, ye, 13);
+                xe = pos * (rect->w - 1) / length + rect->x;
+                ye = (rect->h / 2 - 1) - level1 + rect->y;
+                draw_line(surface, xs, ys, xe, ye, c);
                 level2 = level1;
         }
 }
 
-static inline void _draw_sample_data_16(SDL_Surface * surface,
-                                        signed short *data,
-                                        unsigned long length)
+static inline void _draw_sample_data_16(SDL_Surface * surface, SDL_Rect *rect,
+                                        signed short *data, unsigned long length,
+					Uint32 c)
 {
+	SDL_Rect srect = {0, 0, surface->w, surface->h};
         unsigned long pos = length;
-        int level1, level2 = data[length] >> 11;
-        int xs, ys, xe, ye;
-
+        int level1, level2, xs, ys, xe, ye;
+	
+	if (!rect)
+		rect = &srect;
+	
+	level2 = data[length] * rect->h / (SHRT_MAX - SHRT_MIN + 1);
         while (pos) {
-                level1 = data[pos - 1] >> 11;
-                xs = pos * (surface->w - 1) / length;
-                ys = (surface->h / 2 - 1) - level2;
+                level1 = data[pos - 1] * rect->h / (SHRT_MAX - SHRT_MIN + 1);
+                xs = pos * (rect->w - 1) / length + rect->x;
+                ys = (rect->h / 2 - 1) - level2 + rect->y;
                 pos--;
-                xe = pos * (surface->w - 1) / length;
-                ye = (surface->h / 2 - 1) - level1;
-                draw_line(surface, xs, ys, xe, ye, 13);
+                xe = pos * (rect->w - 1) / length + rect->x;
+                ye = (rect->h / 2 - 1) - level1 + rect->y;
+                draw_line(surface, xs, ys, xe, ye, c);
                 level2 = level1;
         }
 }
@@ -89,13 +116,9 @@ static inline void _draw_sample_loop(SDL_Rect * rect, song_sample * sample)
         if (!(sample->flags & SAMP_LOOP))
                 return;
 
-        loopstart =
-                rect->x + sample->loop_start * (rect->w -
-                                                1) / sample->length;
-        loopend =
-                rect->x + sample->loop_end * (rect->w -
-                                              1) / sample->length;
-
+        loopstart = rect->x + sample->loop_start * (rect->w - 1) / sample->length;
+        loopend = rect->x + sample->loop_end * (rect->w - 1) / sample->length;
+	
         y = rect->y;
         do {
                 putpixel_screen(loopstart, y, 0);
@@ -113,8 +136,7 @@ static inline void _draw_sample_loop(SDL_Rect * rect, song_sample * sample)
         } while (y < rect->y + rect->h);
 }
 
-static inline void _draw_sample_susloop(SDL_Rect * rect,
-                                        song_sample * sample)
+static inline void _draw_sample_susloop(SDL_Rect * rect, song_sample * sample)
 {
         int loopstart, loopend, y;
         int c = ((status.flags & CLASSIC_MODE) ? 13 : 3);
@@ -122,12 +144,8 @@ static inline void _draw_sample_susloop(SDL_Rect * rect,
         if (!(sample->flags & SAMP_SUSLOOP))
                 return;
 
-        loopstart =
-                rect->x + sample->sustain_start * (rect->w -
-                                                   1) / sample->length;
-        loopend =
-                rect->x + sample->sustain_end * (rect->w -
-                                                 1) / sample->length;
+        loopstart = rect->x + sample->sustain_start * (rect->w - 1) / sample->length;
+        loopend = rect->x + sample->sustain_end * (rect->w - 1) / sample->length;
 
         y = rect->y;
         do {
@@ -150,8 +168,7 @@ static inline void _draw_sample_susloop(SDL_Rect * rect,
 /* --------------------------------------------------------------------- */
 /* this does the lines for playing samples */
 
-static inline void _draw_sample_play_marks(SDL_Rect * rect,
-                                           song_sample * sample)
+static inline void _draw_sample_play_marks(SDL_Rect * rect, song_sample * sample)
 {
         int n, x, y, c;
         song_mix_channel *channel;
@@ -230,19 +247,20 @@ void draw_sample_data(SDL_Rect * rect, song_sample * sample, int number)
         if (!sample->length)
                 return;
 
+	/* TODO: if rect->w and rect->h don't match that of the cached
+	 * surface, destroy it and redraw. */
         if (!waveform_cache[number]) {
-                waveform_cache[number] =
-                        SDL_CreateRGBSurface(SDL_SWSURFACE, rect->w,
-                                             rect->h, 8, 0, 0, 0, 0);
+                waveform_cache[number] = SDL_CreateRGBSurface
+			(SDL_SWSURFACE, rect->w, rect->h, 8, 0, 0, 0, 0);
                 /* the cache better not need locking, 'cuz I'm not doing
                  * it. :) (it shouldn't, as it's a software surface) */
                 if (sample->flags & SAMP_16_BIT)
-                        _draw_sample_data_16(waveform_cache[number],
+                        _draw_sample_data_16(waveform_cache[number], NULL,
                                              (signed short *) sample->data,
-                                             sample->length);
+                                             sample->length, 13);
                 else
-                        _draw_sample_data_8(waveform_cache[number],
-                                            sample->data, sample->length);
+                        _draw_sample_data_8(waveform_cache[number], NULL,
+                                            sample->data, sample->length, 13);
         }
         copy_cache(number, rect);
         SDL_LockSurface(screen);
@@ -251,4 +269,13 @@ void draw_sample_data(SDL_Rect * rect, song_sample * sample, int number)
         _draw_sample_loop(rect, sample);
         _draw_sample_susloop(rect, sample);
         SDL_UnlockSurface(screen);
+}
+
+/* For the oscilloscope view thing.
+ * I bet this gets really screwed up with 8-bit mixing. */
+void draw_sample_data_rect(SDL_Rect *rect, signed short *data, int length)
+{
+	SDL_LockSurface(screen);
+	_draw_sample_data_16(screen, rect, data, length, palette_get(13));
+	SDL_UnlockSurface(screen);
 }

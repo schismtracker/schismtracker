@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 /* It's lo-og, lo-og, it's big, it's heavy, it's wood!
  * It's lo-og, lo-og, it's better than bad, it's good! */
 
@@ -35,8 +54,8 @@ static void log_redraw(void)
         int n;
 
         for (n = 0; n <= last_line; n++)
-                draw_text_len(lines[n].text, 74, 3, 14 + n, lines[n].color,
-                              0);
+                draw_text_len(lines[n].text, 74, 3, 14 + n,
+			      lines[n].color, 0);
 }
 
 /* --------------------------------------------------------------------- */
@@ -49,25 +68,19 @@ void log_load_page(struct page *page)
         page->items = items_log;
         page->help_index = HELP_GLOBAL;
 
-        items_log[0].type = ITEM_OTHER;
-        items_log[0].next.tab = 1;
-        items_log[0].other.handle_key = log_handle_key;
-        items_log[0].other.redraw = log_redraw;
+	create_other(items_log + 0, 1, log_handle_key, log_redraw);
 }
 
 /* --------------------------------------------------------------------- */
 
 inline void log_append(int color, int must_free, const char *text)
 {
-        int n;
-
         if (last_line < NUM_LINES - 1) {
                 last_line++;
         } else {
                 if (lines[0].must_free)
                         free((void *) lines[0].text);
-                for (n = 0; n < last_line; n++)
-                        lines[n] = lines[n + 1];
+		memmove(lines, lines + 1, last_line * sizeof(struct log_line));
         }
         lines[last_line].text = text;
         lines[last_line].color = color;

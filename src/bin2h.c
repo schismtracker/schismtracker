@@ -1,497 +1,347 @@
+/*
+ * bin2h - Utility to include binary files in source code
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <locale.h>
 #include <ctype.h>
 #include <getopt.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+
 #include "util.h"
 
+#define BIN2H_VERSION "0.51"
+
 /* TODO:
- * - optionally start lines with some number of spaces instead of a tab
- * - optionally surround with #ifdef and #endif in define mode
- * - different escape modes: perl, ...
- * - "bracket" mode: instead of "binary data\n"
- *   output {'b', 'i', 'n', 'a', 'r', 'y', ' ', 'd', 'a', 't', 'a', '\n'}
- *   (would be much bigger, but might be needed for stupid compilers)
- * - check read/write operations for errors
- * - check return value of fclose()s */
+ * - char format ('a', 'b', 'c') with dec/hex/oct for non-ascii chars
+ * - option to use three or four spaces for decimal (four looks nicer
+ *   with other bin2h output in hex/octal format, three occupies less
+ *   space) */
 
-/* bleh, this got ugly really fast */
 
-/* --------------------------------------------------------------------- */
+enum { HEXADECIMAL, DECIMAL, OCTAL };
+enum { LINE_BYTE, LAST_BYTE, POSITION_COMMENT };
 
-#define VARIABLE_CHARS "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
-        "_abcdefghijklmnopqrstuvwxyz"
+const char *format_strings[3][3] = {
+	{"0x%02x, ", "0x%02x,", "/* 0x%08x - 0x%08x */ "},
+	{"%4d, ", "%4d,", "/* %10d - %10d */ "},
+	{"%04o, ", "%04o,", "/* %010o - %010o */ "},
+};
 
+/* these can be changed by command-line options */
+int print_mode = HEXADECIMAL;
+int max_width = 16;	/* number of chars to write per line */
+int start_pos = 0;	/* where to start in the file */
 char *variable_name = NULL;
-
-int max_width = 126;
-int tab_size = 8;
-int bytes = 0;
-int start = 0;
-
-enum {
-        /* use a #define statement (rather than a variable)? */
-        DEFINE_MODE = (1 << 0),
-        /* line up the backslashes at the end of the line in define mode? */
-        ALIGN_BACKSLASHES = (1 << 1),
-        /* cram the backslashes against the close quote in define mode? */
-        CRAM_BACKSLASHES = (1 << 2),
-        /* escape all chars? (this makes the file bigger...) */
-        ESCAPE_ALL_CHARS = (1 << 3),
-        /* use the locale's definition of a printable char? */
-        LOCALE_CHARS = (1 << 4),
-        /* display digits in octal? (default is hex) */
-        USE_OCTAL = (1 << 5),
-        /* write comments indicating byte positions? (for debugging) */
-        POSITION_COMMENTS = (1 << 6),
-};
-
-int flags = DEFINE_MODE | ALIGN_BACKSLASHES;
-
-/* --------------------------------------------------------------------- */
-
-/* *INDENT-OFF* */
-const struct {
-        char from;
-        const char *to;
-} escapes[] = {
-        {'\0', "\\0"},
-        {'\a', "\\a"},
-        {'\b', "\\b"},
-        {'\t', "\\t"},
-        {'\n', "\\n"},
-        {'\v', "\\v"},
-        {'\f', "\\f"},
-        {'\r', "\\r"},
-        /* {'\e', "\\e"}, */
-        {'"', "\\\""},
-        {'\\', "\\\\"},
-        {0, NULL}
-};
-/* *INDENT-ON* */
+int position_comments = 0;
+const char *output_filename = "-";
+const char *data_type = "static unsigned const char";
+#define VARIABLE_CHARS "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_" \
+	"abcdefghijklmnopqrstuvwxyz"
 
 /* --------------------------------------------------------------------- */
 
 /* *INDENT-OFF* */
 static const struct option long_options[] = {
-        {"no-define-mode",       no_argument, NULL, 'D'},
-        {   "define-mode",       no_argument, NULL, 'd'},
-        {"no-align-backslashes", no_argument, NULL, 'A'},
-        {   "align-backslashes", no_argument, NULL, 'a'},
-        {"no-cram-backslashes",  no_argument, NULL, 'C'},
-        {   "cram-backslashes",  no_argument, NULL, 'c'},
-        {"no-escape-all-chars",  no_argument, NULL, 'E'},
-        {   "escape-all-chars",  no_argument, NULL, 'e'},
-        {"no-locale-chars",      no_argument, NULL, 'L'},
-        {   "locale-chars",      no_argument, NULL, 'l'},
-        {"use-octal",            no_argument, NULL, 'o'},
-        {"use-hexadecimal",      no_argument, NULL, 'x'},
-        {"no-position-comments", no_argument, NULL, 'P'},
-        {   "position-comments", no_argument, NULL, 'p'},
-        
-        {"max-width",      required_argument, NULL, 'w'},
-        {"tab-size",       required_argument, NULL, 't'},
-        {"bytes",          required_argument, NULL, -'b'},
-        {"start",          required_argument, NULL, -'s'},
-        {"name",           required_argument, NULL, 'n'},
-        
-        {"version",              no_argument, NULL, -'v'},
-        {"help",                 no_argument, NULL, -'h'},
-
-        {NULL, 0, NULL, 0}
+	{"use-decimal",           no_argument, NULL, 'D'},
+	{"use-octal",             no_argument, NULL, 'O'},
+	{"use-hexadecimal",       no_argument, NULL, 'X'},
+	
+	{   "position-comments",  no_argument, NULL,-'P'},
+	{"no-position-comments",  no_argument, NULL,-'p'},
+	
+	{"output-filename", required_argument, NULL, 'o'},
+	{"max-width",       required_argument, NULL, 'w'},
+	{"start-position",  required_argument, NULL,-'s'},
+	{"name",            required_argument, NULL, 'n'},
+	{"data-type",       required_argument, NULL,-'t'},
+	
+	{"version",               no_argument, NULL,-'v'},
+	{"help",                  no_argument, NULL, 'h'},
+	
+	{NULL, 0, NULL, 0}
 };
 /* *INDENT-ON* */
 
 /* --------------------------------------------------------------------- */
 
-static char *get_variable_name(char *filename)
+static void print_version(FILE *f)
 {
-        const char *base;
-        char *ret, *ptr;
-        const char *variable_chars = VARIABLE_CHARS;
+	static int did_this = 0;
 
-        base = get_basename(filename);
-        if (isdigit(base[0])) {
-                ret = calloc(strlen(base) + 2, sizeof(char));
-                sprintf(ret, "_%s", base);
-        } else {
-                ret = strdup(base);
-        }
+	if (did_this)
+		return;
+	did_this = 1;
 
-        ptr = ret;
-
-        if (flags & DEFINE_MODE) {
-                do {
-                        if (strchr(variable_chars, *ptr)) {
-                                *ptr = toupper(*ptr);
-                        } else {
-                                *ptr = '_';
-                        }
-                        ptr++;
-                } while (*ptr);
-        } else {
-                do {
-                        ptr += strspn(ptr, variable_chars);
-                        if (*ptr) {
-                                *ptr = '_';
-                        }
-                } while (*ptr);
-        }
-
-        return ret;
+	fprintf(f, "bin2h v" BIN2H_VERSION "\n"
+		"Written by chisel <someguy@here.is>.\n"
+		"\n"
+		"Copyright (C) 2004 chisel.\n"
+		"This is free software; see the source for copying conditions.  There is NO\n"
+		"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+		);
 }
 
-static inline int need_escape(int c)
+static void print_help(FILE *f)
 {
-        return ((flags & USE_OCTAL)
-                ? (c >= '0' && c <= '7')
-                : ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
-                   || (c >= 'a' && c <= 'f')));
+	const struct option *o = long_options;
+	static int did_this = 0;
+	const char *arg_strings[] = {"", " <arg>", " [arg]"};
+
+	if (did_this)
+		return;
+	did_this = 1;
+
+	print_version(f);
+	fprintf(f, "\nUsage: bin2h [<options>] [infile]\n");
+	for (o = long_options; o->name; o++) {
+		if (o->val > 0)
+			fprintf(f, "\t-%c --%s%s\n", o->val, o->name,
+				arg_strings[o->has_arg]);
+		else
+			fprintf(f, "\t   --%s%s\n", o->name,
+				arg_strings[o->has_arg]);
+	}
+	fprintf(f, "\nSee the imaginary documentation"
+		" for less vague help.\n");
 }
-
-static int escape_char(int c, char *buf, int escape_if_digit)
-{
-        int e;
-
-        if (!(flags & ESCAPE_ALL_CHARS)) {
-                for (e = 0; escapes[e].to; e++) {
-                        if (escapes[e].from == c) {
-                                strcpy(buf, escapes[e].to);
-                                return need_escape(buf[strlen(buf) - 1]);
-                        }
-                }
-
-                if ((!(escape_if_digit && need_escape(c)))
-                    && ((flags & LOCALE_CHARS) ? isprint(c)
-                        : (c >= 32 && c < 127))) {
-                        buf[0] = c;
-                        buf[1] = 0;
-                        return 0;
-                }
-        }
-        sprintf(buf, ((flags & USE_OCTAL) ? "\\%o" : "\\x%x"), c);
-        return need_escape(buf[strlen(buf) - 1]);
-}
-
-/* --------------------------------------------------------------------- */
-
-static void print_version(FILE * f)
-{
-        static int did_this = 0;
-
-        if (did_this)
-                return;
-        did_this = 1;
-
-        fprintf(f, "blah blah version blah gpl blah blah no warranty"
-                " blah blah sandwich blah blah blah\n");
-}
-
-static void print_help(FILE * f)
-{
-        const struct option *o = long_options;
-        static int did_this = 0;
-
-        if (did_this)
-                return;
-        did_this = 1;
-
-        print_version(f);
-        fprintf(f, "\nUsage: bin2h [<options>] [infile [outfile]]\n");
-        while (o->name) {
-                switch (o->has_arg) {
-                case required_argument:
-                        if (o->val > 0)
-                                fprintf(f, "\t-%c --%s <arg>\n", o->val,
-                                        o->name);
-                        else
-                                fprintf(f, "\t   --%s <arg>\n", o->name);
-                        break;
-                case optional_argument:
-                        if (o->val > 0)
-                                fprintf(f, "\t-%c --%s [arg]\n", o->val,
-                                        o->name);
-                        else
-                                fprintf(f, "\t   --%s [arg]\n", o->name);
-                        break;
-                default:
-                        if (o->val > 0)
-                                fprintf(f, "\t-%c --%s\n", o->val,
-                                        o->name);
-                        else
-                                fprintf(f, "\t   --%s\n", o->name);
-                        break;
-                }
-                o++;
-        }
-        fprintf(f,
-                "\nSee the imaginary documentation for less vague help.\n");
-}
-
-/* --------------------------------------------------------------------- */
 
 static long get_number(const char *str, long error_value)
 {
-        char *endptr;
-        long n = strtol(str, &endptr, 0);
+	char *endptr;
+	long n = strtol(str, &endptr, 0);
 
-        if (endptr == str || *endptr) {
-                fprintf(stderr, "bin2h: invalid number \"%s\"\n", str);
-                return error_value;
-        }
+	if (endptr == str || *endptr) {
+		fprintf(stderr, "bin2h: invalid number \"%s\"\n", str);
+		return error_value;
+	}
 
-        return n;
+	return n;
+}
+
+static void handle_options(int argc, char **argv)
+{
+	int opt, should_exit = -1;
+
+	while ((opt =
+		getopt_long(argc, argv, "DOXo:w:n:h", long_options,
+			    NULL)) != EOF) {
+		switch (opt) {
+		case 'D':
+			print_mode = DECIMAL;
+			break;
+		case 'O':
+			print_mode = OCTAL;
+			break;
+		case 'X':
+			print_mode = HEXADECIMAL;
+			break;
+		case -'P':
+			position_comments = 1;
+			break;
+		case -'p':
+			position_comments = 0;
+			break;
+		case 'o':
+			output_filename = optarg;
+			break;
+		case 'w':
+			max_width = get_number(optarg, max_width);
+			break;
+		case -'s':
+			start_pos = get_number(optarg, 0);
+			start_pos = MAX(0, start_pos);
+			break;
+		case 'n':
+			if (variable_name)
+				free(variable_name);
+			variable_name = strdup(optarg);
+			break;
+		case -'t':
+			data_type = optarg;
+			break;
+		case -'v':
+			print_version(stdout);
+			should_exit = 0;
+			break;
+		case 'h':
+			print_help(stdout);
+			should_exit = 0;
+			break;
+		case '?':      /* unknown option */
+		case ':':      /* missing parameter */
+			print_help(stderr);
+			should_exit = 1;
+			break;
+		default:
+			fprintf(stderr, "bin2h: unhandled option 0x%02x\n",
+				opt);
+		}
+	}
+
+	if (should_exit >= 0)
+		exit(should_exit);
 }
 
 /* --------------------------------------------------------------------- */
 
-static void handle_options(int argc, char **argv)
+static char *get_variable_name(char *filename)
 {
-        int opt, should_exit = 0;
+	const char *base;
+	char *ret, *ptr;
+	const char *variable_chars = VARIABLE_CHARS;
 
-        while ((opt =
-                getopt_long(argc, argv, "DdAaCcEeLloxPpw:t:n:",
-                            long_options, NULL)) != EOF) {
-                switch (opt) {
-                case 'D':
-                        flags &= ~DEFINE_MODE;
-                        break;
-                case 'd':
-                        flags |= DEFINE_MODE;
-                        break;
-                case 'A':
-                        flags &= ~ALIGN_BACKSLASHES;
-                        break;
-                case 'a':
-                        flags |= ALIGN_BACKSLASHES;
-                        break;
-                case 'C':
-                        flags &= ~CRAM_BACKSLASHES;
-                        break;
-                case 'c':
-                        flags |= CRAM_BACKSLASHES;
-                        break;
-                case 'E':
-                        flags &= ~ESCAPE_ALL_CHARS;
-                        break;
-                case 'e':
-                        flags |= ESCAPE_ALL_CHARS;
-                        break;
-                case 'L':
-                        flags &= ~LOCALE_CHARS;
-                        break;
-                case 'l':
-                        flags |= LOCALE_CHARS;
-                        break;
-                case 'o':
-                        flags |= USE_OCTAL;
-                        break;
-                case 'x':
-                        flags &= ~USE_OCTAL;
-                        break;
-                case 'P':
-                        flags &= ~POSITION_COMMENTS;
-                        break;
-                case 'p':
-                        flags |= POSITION_COMMENTS;
-                        break;
-                case 'w':
-                        max_width = get_number(optarg, max_width);
-                        break;
-                case 't':
-                        tab_size = get_number(optarg, tab_size);
-                        break;
-                case -'b':
-                        bytes = get_number(optarg, 0);
-                        bytes = MAX(0, bytes);
-                        break;
-                case -'s':
-                        start = get_number(optarg, 0);
-                        start = MAX(0, start);
-                        break;
-                case 'n':
-                        if (variable_name)
-                                free(variable_name);
-                        variable_name = strdup(optarg);
-                        break;
-                case -'v':
-                        print_version(stdout);
-                        should_exit = 1;
-                        break;
-                case -'h':
-                        print_help(stdout);
-                        should_exit = 1;
-                        break;
-                case '?':      /* unknown option */
-                case ':':      /* missing parameter */
-                        print_help(stderr);
-                        should_exit = 2;
-                        break;
-                default:
-                        fprintf(stderr, "bin2h: unhandled option 0x%02x\n",
-                                opt);
-                }
-        }
+	base = get_basename(filename);
+	if (isdigit(base[0])) {
+		ret = calloc(strlen(base) + 2, sizeof(char));
+		sprintf(ret, "_%s", base);
+	} else {
+		ret = strdup(base);
+	}
 
-        if (should_exit)
-                exit(should_exit - 1);
+	ptr = ret;
+
+	do {
+		ptr += strspn(ptr, variable_chars);
+		if (*ptr)
+			*ptr = '_';
+	} while (*ptr);
+
+	return ret;
 }
 
 /* --------------------------------------------------------------------- */
 
 int main(int argc, char **argv)
 {
-        FILE *in = stdin, *out = stdout;
-        int c, width, escape_if_digit = 0, cur_byte;
-        int byte_at_bol = 0;
-        char buf[16];
-        char *filename;
+	FILE *in = stdin, *out = stdout;
+	int cur_byte = 0;       /* in the file */
+	unsigned char *buf;     /* the line buffer */
+	char *filename;
 
-        setlocale(LC_ALL, "");
+	handle_options(argc, argv);
 
-        handle_options(argc, argv);
-        if (argc - optind > 2) {
-                print_help(stderr);
-                exit(1);
-        }
+	switch (argc - optind) {
+	case 0:
+		break;
+	default:
+		print_help(stderr);
+		exit(1);
+	case 1:
+		filename = argv[optind];
+		if (strcmp(filename, "-") == 0)
+			break;
+		in = fopen(filename, "rb");
+		if (!in) {
+			perror(filename);
+			exit(2);
+		}
+		if (!variable_name)
+			variable_name = get_variable_name(filename);
+		break;
+	}
+	
+	if (strcmp(output_filename, "-") != 0) {
+		/* TODO: prompt for overwrite if the file already exists
+		 * (add an -f option like with cp, ln, etc.) */
+		out = fopen(output_filename, "w");
+		if (!out) {
+			perror(filename);
+			exit(2);
+		}
+	}
 
-        tab_size = MAX(0, tab_size);
-        max_width = MAX(tab_size + 8, max_width);
+	if (isatty(fileno(in))) {
+		fprintf(stderr, "bin2h: I won't read binary data from a"
+			" terminal.\n");
+		exit(1);
+	}
+	/* create the read buffer */
+	buf = malloc(max_width);
 
-        switch (argc - optind) {
-        case 2:
-                filename = argv[optind + 1];
-                if (strcmp(filename, "-") != 0) {
-                        out = fopen(filename, "w");
-                        if (out == NULL) {
-                                perror(filename);
-                                exit(2);
-                        }
-                }
-        case 1:
-                filename = argv[optind];
-                if (strcmp(filename, "-") != 0) {
-                        in = fopen(filename, "rb");
-                        if (in == NULL) {
-                                perror(filename);
-                                exit(2);
-                        }
-                        if (!variable_name) {
-                                variable_name =
-                                        get_variable_name(filename);
-                        }
-                }
-        }
+	/* skip to the start position */
+	if (start_pos > 0) {
+		if (fseek(in, 0, SEEK_END) != 0) {
+			fprintf(stderr, "bin2h: starting position"
+				" requested, but input is not seekable\n");
+			exit(1);
+		}
+		if (ftell(in) >= start_pos) {
+			fprintf(stderr, "bin2h: starting position is after"
+				" end of input\n");
+			exit(1);
+		}
+		if (fseek(in, start_pos, SEEK_SET) != 0) {
+			perror("bin2h: fseek failed");
+			exit(1);
+		}
+	}
+	cur_byte = start_pos;
 
-        if (isatty(fileno(in))) {
-                fprintf(stderr, "bin2h: I won't read binary data"
-                        " from a terminal.\n");
-                exit(1);
-        }
+	fprintf(out, "%s %s[] = {\n", data_type,
+		variable_name ? variable_name : "bin_data");
 
-        for (cur_byte = 0; cur_byte < start; cur_byte++) {
-                if (fgetc(in) == EOF) {
-                        fprintf(stderr,
-                                "error: EOF before start position\n");
-                        exit(1);
-                }
-        }
+	for (;;) {
+		int pos, nbuf;
 
-        if (flags & DEFINE_MODE) {
-                fprintf(out, "#define %s \\\n\t\"",
-                        variable_name ? variable_name : "BIN_DATA");
-        } else {
-                fprintf(out, "static const unsigned char *%s =\n\t\"",
-                        variable_name ? variable_name : "bin_data");
-        }
-        width = tab_size + 1;
+		nbuf = fread(buf, 1, max_width, in);
+		if (nbuf <= 0) {
+			if (ferror(in)) {
+				perror("bin2h: input error");
+				exit(1);
+			} else {
+				break;
+			}
+		}
 
-        cur_byte = 0;
-        while ((c = fgetc(in)) != EOF) {
-                int printlen, newlen;
+		fprintf(out, "\t");
+		if (position_comments) {
+			fprintf(out, format_strings[print_mode]
+				[POSITION_COMMENT], cur_byte,
+				cur_byte + nbuf - 1);
+		}
+		for (pos = 0; pos < nbuf - 1; pos++)
+			fprintf(out, format_strings[print_mode][LINE_BYTE],
+				buf[pos]);
+		fprintf(out, format_strings[print_mode][LAST_BYTE],
+			buf[pos]);
+		fprintf(out, "\n");
 
-                if (bytes > 0 && cur_byte >= bytes)
-                        break;
-                cur_byte++;
+		cur_byte += nbuf;
+	}
 
-                escape_if_digit = escape_char(c, buf, escape_if_digit);
-                newlen = strlen(buf);
+	fprintf(out, "};\n");
 
-                if (flags & DEFINE_MODE) {
-                        if (width + newlen +
-                            ((flags & CRAM_BACKSLASHES) ? 2 : 3) >
-                            max_width) {
-                                fprintf(out, "\"");
-                                width++;
-                                if (!(flags & CRAM_BACKSLASHES)) {
-                                        fprintf(out, " ");
-                                        width++;
-                                }
-                                if (flags & ALIGN_BACKSLASHES) {
-                                        while (width < max_width - 1) {
-                                                fprintf(out, " ");
-                                                width++;
-                                        }
-                                }
+	/* is this stuff even useful at the end of the program? */
+	free(buf);
 
-                                if (flags & POSITION_COMMENTS) {
-                                        if (flags & USE_OCTAL)
-                                                fprintf(out,
-                                                        "/* 0%o - 0%o */",
-                                                        byte_at_bol,
-                                                        cur_byte - 1);
-                                        else
-                                                fprintf(out,
-                                                        "/* 0x%x - 0x%x */",
-                                                        byte_at_bol,
-                                                        cur_byte - 1);
-                                }
+	if (variable_name)
+		free(variable_name);
 
-                                fprintf(out, "\\\n\t\"");
-                                width = tab_size + 1;
-                                byte_at_bol = cur_byte;
-                        }
-                } else {
-                        if (width + newlen + 1 > max_width) {
-                                if (flags & POSITION_COMMENTS) {
-                                        if (flags & USE_OCTAL)
-                                                fprintf(out,
-                                                        "\" /* 0%o - 0%o */\n\t\"",
-                                                        byte_at_bol,
-                                                        cur_byte - 1);
-                                        else
-                                                fprintf(out,
-                                                        "\" /* 0x%x - 0x%x */\n\t\"",
-                                                        byte_at_bol,
-                                                        cur_byte - 1);
-                                } else {
-                                        fprintf(out, "\"\n\t\"");
-                                }
-                                width = tab_size + 1;
-                                byte_at_bol = cur_byte;
-                        }
-                }
+	if (in != stdin)
+		fclose(in);
+	if (out != stdout)
+		fclose(out);
 
-                printlen = fprintf(out, "%s", buf);
-                width += printlen;
-        }
-
-        fprintf(out, ((flags & DEFINE_MODE) ? "\"\n" : "\"\n\t;\n"));
-
-        /* is this stuff even useful at the end of the program? */
-        if (variable_name)
-                free(variable_name);
-
-        if (in != stdin)
-                fclose(in);
-        if (out != stdout)
-                fclose(out);
-
-        return 0;
+	return 0;
 }

@@ -122,6 +122,7 @@ typedef const BYTE * LPCBYTE;
 #define ENV_VOLCARRY		0x0800
 #define ENV_PANCARRY		0x1000
 #define ENV_PITCHCARRY		0x2000
+#define ENV_MUTE		0x4000
 
 #define CMD_NONE                        0
 #define CMD_ARPEGGIO			1
@@ -276,6 +277,8 @@ typedef const BYTE * LPCBYTE;
 #define SNDMIX_ENABLEMMX		0x20000
 #define SNDMIX_NOBACKWARDJUMPS	0x40000
 #define SNDMIX_MAXDEFAULTPAN	0x80000	// Used by the MOD loader
+#define SNDMIX_MUTECHNMODE                0x100000        // Notes are not played on muted channels
+#define SNDMIX_NOSURROUND 0x200000 // <chisel> surround flag added
 
 
 // Reverb Types (GM2 Presets)
@@ -539,7 +542,6 @@ public:	// Static Members
 	static UINT m_nXBassDepth, m_nXBassRange;
 	static UINT m_nReverbDepth, m_nReverbDelay, gnReverbType;
 	static UINT m_nProLogicDepth, m_nProLogicDelay;
-	static UINT m_nStereoSeparation;
 	static UINT m_nMaxMixChannels;
 	static LONG m_nStreamVolume;
 	static DWORD gdwSysInfo, gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
@@ -560,6 +562,7 @@ public:	// for Editing
 	SNDMIXPLUGIN m_MixPlugins[MAX_MIXPLUGINS];		// Mix plugins
 	UINT m_nDefaultSpeed, m_nDefaultTempo, m_nDefaultGlobalVolume;
 	DWORD m_dwSongFlags;							// Song flags SONG_XXXX
+	UINT m_nStereoSeparation;	// <chisel> made non-static
 	UINT m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
 	UINT m_nType, m_nSamples, m_nInstruments;
 	UINT m_nTickCount, m_nTotalCount, m_nPatternDelay, m_nFrameDelay;
@@ -571,6 +574,7 @@ public:	// for Editing
 	LONG m_nMinPeriod, m_nMaxPeriod, m_nRepeatCount, m_nInitialRepeatCount;
 	DWORD m_nGlobalFadeSamples, m_nGlobalFadeMaxSamples;
 	UINT m_nMaxOrderPosition;
+	BYTE m_rowHighlightMajor, m_rowHighlightMinor;   // <chisel> added
 	UINT m_nPatternNames;
 	LPSTR m_lpszSongComments, m_lpszPatternNames;
 	char m_szNames[MAX_INSTRUMENTS][32];    // changed from CHAR
@@ -700,7 +704,7 @@ public:
 	BOOL ProcessEffects();
 	UINT GetNNAChannel(UINT nChn) const;
 	void CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut);
-	void NoteChange(UINT nChn, int note, BOOL bPorta=FALSE, BOOL bResetEnv=TRUE);
+	void NoteChange(UINT nChn, int note, BOOL bPorta=FALSE, BOOL bResetEnv=TRUE, BOOL bManual=FALSE);
 	void InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta=FALSE,BOOL bUpdVol=TRUE,BOOL bResetEnv=TRUE);
 	// Channel Effects
 	void PortamentoUp(MODCHANNEL *pChn, UINT param);

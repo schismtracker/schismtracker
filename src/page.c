@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #define NEED_TIME
 #include "headers.h"
 
@@ -6,9 +25,6 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
-
-#define NO_MODIFIER(mod) \
-        (((mod) & (KMOD_SHIFT | KMOD_ALT | KMOD_META | KMOD_CTRL)) == 0)
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -44,16 +60,17 @@ static int check_time(void)
         struct tm local;
         int h, m, s;
         enum tracker_time_display td = status.time_display;
+	int is_playing = song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP);
 
         switch (td) {
         case TIME_PLAY_ELAPSED:
-                td = (song_get_mode()? TIME_PLAYBACK : TIME_ELAPSED);
+                td = (is_playing ? TIME_PLAYBACK : TIME_ELAPSED);
                 break;
         case TIME_PLAY_CLOCK:
-                td = (song_get_mode()? TIME_PLAYBACK : TIME_CLOCK);
+                td = (is_playing ? TIME_PLAYBACK : TIME_CLOCK);
                 break;
         case TIME_PLAY_OFF:
-                td = (song_get_mode()? TIME_PLAYBACK : TIME_OFF);
+                td = (is_playing ? TIME_PLAYBACK : TIME_OFF);
                 break;
         default:
                 break;
@@ -82,8 +99,7 @@ static int check_time(void)
                 break;
         }
 
-        if (h == current_time.h && m == current_time.m
-            && s == current_time.s) {
+        if (h == current_time.h && m == current_time.m && s == current_time.s) {
                 return 0;
         }
 
@@ -96,13 +112,11 @@ static int check_time(void)
 static inline void draw_time(void)
 {
         char buf[16];
-
-        if (status.time_display == TIME_OFF
-            || (status.time_display == TIME_PLAY_OFF
-                && song_get_mode() == MODE_STOPPED)) {
+	int is_playing = song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP);
+	
+        if (status.time_display == TIME_OFF || (status.time_display == TIME_PLAY_OFF && !is_playing))
                 return;
-        }
-
+        
         /* this allows for 999 hours... that's like... 41 days...
          * who on earth leaves a tracker running for 41 days? */
         sprintf(buf, "%3d:%02d:%02d", current_time.h % 1000,
@@ -178,7 +192,76 @@ inline int page_is_instrument_list(int page)
         }
 }
 
-/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------------------------------------- */
+
+static struct item new_song_items[10] = {};
+static int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
+
+static void new_song_ok(void)
+{
+	int flags = 0;
+	if (new_song_items[0].togglebutton.state)
+		flags |= KEEP_PATTERNS;
+	if (new_song_items[2].togglebutton.state)
+		flags |= KEEP_SAMPLES;
+	if (new_song_items[4].togglebutton.state)
+		flags |= KEEP_INSTRUMENTS;
+	if (new_song_items[6].togglebutton.state)
+		flags |= KEEP_ORDERLIST;
+	song_new(flags);
+}
+
+static void new_song_cancel(void)
+{
+	printf("new song cancel\n");
+}
+
+static void new_song_draw_const(void)
+{
+	SDL_LockSurface(screen);
+	draw_text("New Song", 36, 21, 3, 2);
+	draw_text("Patterns", 26, 24, 0, 2);
+	draw_text("Samples", 27, 27, 0, 2);
+	draw_text("Instruments", 23, 30, 0, 2);
+	draw_text("Order List", 24, 33, 0, 2);
+	SDL_UnlockSurface(screen);
+}
+
+static void new_song_dialog(void)
+{
+	struct dialog *dialog;
+
+	if (new_song_items[0].width == 0) {
+		create_togglebutton(new_song_items + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep", 2,
+				    new_song_groups[0]);
+		create_togglebutton(new_song_items + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear", 2,
+				    new_song_groups[0]);
+		create_togglebutton(new_song_items + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep", 2,
+				    new_song_groups[1]);
+		create_togglebutton(new_song_items + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear", 2,
+				    new_song_groups[1]);
+		create_togglebutton(new_song_items + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep", 2,
+				    new_song_groups[2]);
+		create_togglebutton(new_song_items + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear", 2,
+				    new_song_groups[2]);
+		create_togglebutton(new_song_items + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep", 2,
+				    new_song_groups[3]);
+		create_togglebutton(new_song_items + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear", 2,
+				    new_song_groups[3]);
+		create_button(new_song_items + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes, "OK", 4);
+		create_button(new_song_items + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel, "Cancel", 2);
+		togglebutton_set(new_song_items, 1, 0);
+		togglebutton_set(new_song_items, 3, 0);
+		togglebutton_set(new_song_items, 5, 0);
+		togglebutton_set(new_song_items, 7, 0);
+	}
+	
+	dialog = dialog_create_custom(21, 20, 38, 19, new_song_items, 10, 8, new_song_draw_const);
+	dialog->action_yes = new_song_ok;
+	dialog->action_cancel = new_song_cancel;
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
 /* This is an ugly monster. */
 
 /* returns 1 if the key was handled */
@@ -239,6 +322,12 @@ static inline int handle_key_global(SDL_keysym * k)
                         return 1;
                 }
                 break;
+	case SDLK_n:
+		if (k->mod & KMOD_CTRL) {
+			new_song_dialog();
+			return 1;
+		}
+		break;
         case SDLK_p:
                 if (k->mod & KMOD_CTRL) {
                         show_song_length();
@@ -257,16 +346,20 @@ static inline int handle_key_global(SDL_keysym * k)
                 }
                 return 1;
         case SDLK_F2:
-                /* TODO | different stuff happens if it's already on the
-                 * TODO | pattern editor:
-                 * TODO |      F2 => Pattern editor options
-                 * TODO | Ctrl-F2 => Set pattern length dialog */
-                if (NO_MODIFIER(k->mod)) {
-                        set_page(PAGE_PATTERN_EDITOR);
-                } else {
-                        break;
+		if (k->mod & KMOD_CTRL) {
+			if (status.current_page == PAGE_PATTERN_EDITOR) {
+				/* TODO: set pattern length dialog */
+				return 1;
+			}
+		} else if (NO_MODIFIER(k->mod)) {
+			if (status.current_page == PAGE_PATTERN_EDITOR) {
+				pattern_editor_display_options();
+			} else {
+				set_page(PAGE_PATTERN_EDITOR);
+			}
+                        return 1;
                 }
-                return 1;
+		break;
         case SDLK_F3:
                 if (NO_MODIFIER(k->mod)) {
                         set_page(PAGE_SAMPLE_LIST);
@@ -287,7 +380,8 @@ static inline int handle_key_global(SDL_keysym * k)
                 } else if (k->mod & KMOD_SHIFT) {
                         set_page(PAGE_SETTINGS);
                 } else if (NO_MODIFIER(k->mod)) {
-                        if (song_get_mode() == MODE_STOPPED)
+                        if (song_get_mode() == MODE_STOPPED
+			    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
                                 song_start();
                         set_page(PAGE_INFO);
                 } else {
@@ -368,16 +462,27 @@ static inline int handle_key_global(SDL_keysym * k)
         default:
                 break;
         }
-
-        if ((k->mod & (KMOD_ALT | KMOD_META))
-            && (k->sym >= SDLK_F1 && k->sym <= SDLK_F8)) {
-                song_toggle_channel_mute(k->sym - SDLK_F1);
-                if (status.current_page == PAGE_PATTERN_EDITOR) {
-                        status.flags |= NEED_UPDATE;
-                }
-                orderpan_recheck_muted_channels();
-                return 1;
-        }
+	
+	/* got a bit ugly here, sorry */
+	do {
+		int i = k->sym;
+		
+		if (k->mod & (KMOD_ALT | KMOD_META)) {
+			if (i >= SDLK_F1 && i <= SDLK_F8)
+				i -= SDLK_F1;
+			else if (i >= SDLK_KP1 && i <= SDLK_KP8)
+				i -= SDLK_KP1;
+			else
+				break;
+			
+			song_toggle_channel_mute(i);
+			if (status.current_page == PAGE_PATTERN_EDITOR) {
+				status.flags |= NEED_UPDATE;
+			}
+			orderpan_recheck_muted_channels();
+			return 1;
+		}
+        } while (0);
 
         /* oh well */
         return 0;
@@ -386,16 +491,13 @@ static inline int handle_key_global(SDL_keysym * k)
 /* this is the important one */
 void handle_key(SDL_keysym * k)
 {
-        if (handle_key_global(k)) {
+	// short circuit booleans rock
+	if (handle_key_global(k) || menu_handle_key(k) || item_handle_key(k))
                 return;
-        }
-        if (status.dialog_type & DIALOG_MENU) {
-                menu_handle_key(k);
-                return;
-        }
-        if (item_handle_key(&ACTIVE_ITEM, k)) {
-                return;
-        }
+	
+	/* Maybe this should be after the page's key handler
+	 * (which should return true/false depending on whether
+	 * it handled the key or not, like the item handlers...) */
         if (k->sym == SDLK_ESCAPE) {
                 if (status.dialog_type != DIALOG_NONE) {
                         dialog_handle_key(k);
@@ -557,19 +659,17 @@ static void draw_top_info_const(void)
         draw_char_unlocked('/', 15, 7, 1, 0);
         draw_char_unlocked('/', 53, 4, 1, 0);
         draw_char_unlocked(':', 52, 3, 7, 0);
-
+	
         SDL_UnlockSurface(screen);
-
-        /* This is where the memory stats are supposed to go, but that info
-         * isn't really useful in multitasking environments, with computers
-         * that have tons of ram and big swap files... maybe I'll stick an
-         * oscilloscope or something here.
-         * (well... if I get my own player core written, and add hardware
-         * mixing support for the l33t soundcards that have it, I could put
-         * the soundcard RAM stats there maybe... how does IT present that
-         * information? my card's not l33t enough, heh) */
-        draw_box(62, 5, 78, 8, BOX_THIN | BOX_INNER | BOX_INSET);
-        draw_fill_chars(63, 6, 77, 7, 0);
+	
+	/* This is where the rectangle used to be drawn, but I've moved
+	 * it down to where the oscilloscope is drawn in redraw_screen.
+	 * Eventually I'm going to have a couple other things there, and
+	 * there will be an option on the settings page (like for the time
+	 * display) -- for example, it'll be possible to set it up so that
+	 * an oscilloscope is drawn when the song is playing, but when it's
+	 * stopped it gets replaced with a little "Schism Tracker" graphic
+	 * or something. */
 }
 
 /* --------------------------------------------------------------------- */
@@ -589,15 +689,16 @@ void update_current_instrument(void)
         if (ins_mode) {
                 draw_text("Instrument", 39, 3, 0, 2);
                 n = instrument_get_current();
+		song_get_instrument(n, &name);
         } else {
                 draw_text("    Sample", 39, 3, 0, 2);
                 n = sample_get_current();
+		song_get_sample(n, &name);
         }
         
         if (n > 0) {
-                draw_text(numtostr_2(n, buf), 50, 3, 5, 0);
-                draw_text_len(song_get_instrument_name(n, &name), 25,
-                              53, 3, 5, 0);
+                draw_text(numtostr(2, n, buf), 50, 3, 5, 0);
+                draw_text_len(name, 25, 53, 3, 5, 0);
         } else {
                 draw_text("..", 50, 3, 5, 0);
                 draw_text(".........................", 53, 3, 5, 0);
@@ -617,9 +718,43 @@ static void redraw_top_info(void)
         update_current_pattern();
         update_current_row();
 
-        draw_text(numtostr_3(song_get_current_speed(), buf), 50, 4, 5, 0);
-        draw_text(numtostr_3(song_get_current_tempo(), buf), 54, 4, 5, 0);
+        draw_text(numtostr(3, song_get_current_speed(), buf), 50, 4, 5, 0);
+        draw_text(numtostr(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
         draw_char('0' + kbd_get_current_octave(), 50, 5, 5, 0);
+}
+
+static inline void _draw_vis_box(void)
+{
+	draw_box(62, 5, 78, 8, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_fill_chars(63, 6, 77, 7, 0);
+}
+
+static void vis_oscilloscope(void)
+{
+	SDL_Rect vis_rect = { 504, 48, 120, 16 };
+	
+	_draw_vis_box();
+	draw_sample_data_rect(&vis_rect, audio_buffer, audio_buffer_size);
+}
+
+static void vis_vu_meter(void)
+{
+	int left, right;
+	
+	song_get_vu_meter(&left, &right);
+	left /= 4;
+	right /= 4;
+	
+	_draw_vis_box();
+	draw_vu_meter(63, 6, 15, left, 5, 4);
+	draw_vu_meter(63, 7, 15, right, 5, 4);
+}
+
+static void vis_fakemem(void)
+{
+	/* Fill it in with something relatively meaningless ;) */
+	draw_text("FreeMem 206k", 63, 6, 0, 2);
+	draw_text("FreeEMS 65344k", 63, 7, 0, 2);
 }
 
 /* this completely redraws everything. */
@@ -628,9 +763,9 @@ void redraw_screen(void)
         int n;
         char buf[4];
         SDL_Rect r = { 0, 0, 640, 400 };
-
+	
         draw_fill_rect(&r, 2);
-
+	
         SDL_LockSurface(screen);
         draw_char_unlocked(128, 0, 0, 3, 2);
         for (n = 79; n > 49; n--)
@@ -640,15 +775,22 @@ void redraw_screen(void)
                 draw_char_unlocked(131, 0, n, 3, 2);
         } while (--n);
         SDL_UnlockSurface(screen);
-
+	
         draw_top_info_const();
         redraw_top_info();
         draw_page();
-
+	
+	if ((status.flags & CLASSIC_MODE) == 0 && song_get_mode()) {
+		vis_oscilloscope();
+		//vis_vu_meter();
+	} else {
+		vis_fakemem();
+	}
+	    
         draw_time();
 
-        draw_text(numtostr_3(song_get_current_speed(), buf), 50, 4, 5, 0);
-        draw_text(numtostr_3(song_get_current_tempo(), buf), 54, 4, 5, 0);
+        draw_text(numtostr(3, song_get_current_speed(), buf), 50, 4, 5, 0);
+        draw_text(numtostr(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
 
         status_text_redraw();
 
@@ -674,10 +816,10 @@ void set_page(int new_page)
         if (new_page != prev_page)
                 status.previous_page = prev_page;
         status.current_page = new_page;
-
+	
         if (new_page != PAGE_HELP)
                 status.current_help_index = ACTIVE_PAGE.help_index;
-
+	
         /* synchronize the sample/instrument.
          * FIXME | this isn't quite right. for instance, in impulse
          * FIXME | tracker, flipping back and forth between the sample
@@ -686,8 +828,11 @@ void set_page(int new_page)
         if (status.flags & SAMPLE_CHANGED) {
                 if (song_is_instrument_mode())
                         instrument_synchronize_to_sample();
+#if 0
+		/* This breaks samples. */
                 else
-                        instrument_set(sample_get_current());
+			instrument_set(sample_get_current());
+#endif
         } else if (status.flags & INSTRUMENT_CHANGED) {
                 sample_set(instrument_get_current());
         }
@@ -713,8 +858,8 @@ void set_page(int new_page)
                         return;
                 }
 #endif
-                if (new_page == prev_page)
-                        return;
+		if (new_page == prev_page)
+			return;
         }
 
         /* update the pointers */
@@ -736,10 +881,10 @@ void load_pages(void)
         help_load_page(pages + PAGE_HELP);
         pattern_editor_load_page(pages + PAGE_PATTERN_EDITOR);
         sample_list_load_page(pages + PAGE_SAMPLE_LIST);
-        instrument_list_general_load_page(pages +
-                                          PAGE_INSTRUMENT_LIST_GENERAL);
-        instrument_list_volume_load_page(pages +
-                                         PAGE_INSTRUMENT_LIST_VOLUME);
+        instrument_list_general_load_page(pages + PAGE_INSTRUMENT_LIST_GENERAL);
+        instrument_list_volume_load_page(pages + PAGE_INSTRUMENT_LIST_VOLUME);
+        instrument_list_panning_load_page(pages + PAGE_INSTRUMENT_LIST_PANNING);
+        instrument_list_pitch_load_page(pages + PAGE_INSTRUMENT_LIST_PITCH);
         info_load_page(pages + PAGE_INFO);
         settings_load_page(pages + PAGE_SETTINGS);
         midi_load_page(pages + PAGE_MIDI);

@@ -1,3 +1,22 @@
+/*
+ * util.c - Various useful functions
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #define NEED_DIRENT
 #define NEED_TIME
 #include "headers.h"
@@ -69,6 +88,21 @@ char *format_size(size_t size, bool power_of_two, const char *base_unit)
                              power_of_two ? "i" : "", base_unit);
 
         return (n < 0) ? NULL : buf;
+}
+
+char *numtostr(int digits, int n, char *buf)
+{
+	if (digits > 0) {
+		char fmt[] = "%03d";
+		
+		digits %= 10;
+		fmt[2] = '0' + digits;
+		snprintf(buf, digits + 1, fmt, n);
+		buf[digits] = 0;
+	} else {
+		sprintf(buf, "%d", n);
+	}
+	return buf;
 }
 
 /* --------------------------------------------------------------------- */
@@ -268,8 +302,8 @@ bool has_subdirectories(const char *dirname)
         while ((ent = readdir(dir)) != NULL) {
                 if (ent->d_name[0] == '.')
                         continue;
-                /* FIXME: check return of snprintf */
                 snprintf(npath, PATH_MAX, "%s/%s", dirname, ent->d_name);
+		npath[PATH_MAX - 1] = 0;
                 if (is_directory(npath)) {
                         closedir(dir);
                         return true;

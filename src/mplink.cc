@@ -1,3 +1,20 @@
+// Schism Tracker - a cross-platform Impulse Tracker clone
+// copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -16,7 +33,6 @@
 // variables
 
 CSoundFile *mp = NULL;
-void (*song_changed_cb) (void) = NULL;
 
 // ------------------------------------------------------------------------
 // song information
@@ -35,6 +51,19 @@ char *song_get_message()
 unsigned long song_get_length()
 {
         return mp->GetSongTime();
+}
+
+// ------------------------------------------------------------------------
+// Memory allocation wrappers. Stupid 'new' operator.
+
+signed char *song_sample_allocate(int bytes)
+{
+	return CSoundFile::AllocateSample(bytes);
+}
+
+void song_sample_free(signed char *data)
+{
+	CSoundFile::FreeSample(data);
 }
 
 // ------------------------------------------------------------------------
@@ -57,10 +86,10 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
         // TODO | what about saving? sample mode? (how modplug stores
         // TODO | and handles instrument data is really unclear to me.)
         if (!mp->Headers[n]) {
-                mp->Headers[n] = (INSTRUMENTHEADER *)
-                        calloc(1, sizeof(INSTRUMENTHEADER));
+                mp->Headers[n] = new INSTRUMENTHEADER;
+		memset(mp->Headers[n], 0, sizeof(INSTRUMENTHEADER));
         }
-
+	
         if (name_ptr)
                 *name_ptr = (char *) mp->Headers[n]->name;
         return (song_instrument *) mp->Headers[n];
@@ -84,7 +113,7 @@ int song_get_mix_state(unsigned long **channel_list)
 {
         if (channel_list)
                 *channel_list = mp->ChnMix;
-        return mp->m_nMixChannels;
+        return MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 }
 
 // ------------------------------------------------------------------------
@@ -123,8 +152,7 @@ void song_handle_channel_solo(int channel)
                         // undo the solo
                         while (n) {
                                 n--;
-                                song_set_channel_mute(n,
-                                                      channel_states[n]);
+                                song_set_channel_mute(n, channel_states[n]);
                         }
                         solo_channel = -1;
                 } else {
@@ -188,9 +216,8 @@ int song_get_pattern(int n, song_note ** buf)
         if (buf) {
                 if (!mp->Patterns[n]) {
                         mp->PatternSize[n] = 64;
-                        mp->Patterns[n] = (MODCOMMAND *)
-                                calloc(64 * mp->PatternSize[n],
-                                       sizeof(MODCOMMAND));
+			mp->Patterns[n] = CSoundFile::AllocatePattern
+				(mp->PatternSize[n], 64);
                 }
                 *buf = (song_note *) mp->Patterns[n];
         } else {
@@ -214,7 +241,7 @@ int song_get_num_orders()
         return n ? n - 1 : n;
 }
 
-static inline bool pattern_is_empty(int n)
+int song_pattern_is_empty(int n)
 {
         if (!mp->Patterns[n])
                 return true;
@@ -227,7 +254,7 @@ static inline bool pattern_is_empty(int n)
 int song_get_num_patterns()
 {
         int n;
-        for (n = 199; n && pattern_is_empty(n); n--)
+        for (n = 199; n && song_pattern_is_empty(n); n--)
                 /* do nothing */ ;
         return n;
 }
@@ -283,9 +310,12 @@ void song_set_mixing_volume(int new_vol)
 
 int song_get_separation()
 {
-        // FIXME | d'oh, this is static! also, modplug always writes 128
-        // FIXME | for the separation... garh
-        return CSoundFile::m_nStereoSeparation;
+        return mp->m_nStereoSeparation;
+}
+
+void song_set_separation(int new_sep)
+{
+	mp->m_nStereoSeparation = CLAMP(new_sep, 0, 128);
 }
 
 int song_is_stereo()

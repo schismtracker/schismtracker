@@ -1,3 +1,22 @@
+/*
+ * slurp - General-purpose file reader
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -38,21 +57,22 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
 
         do {
                 chunks++;
-                realloc_buf = realloc(t->data, CHUNK * chunks);
+		/* Have to cast away the const... */
+                realloc_buf = realloc((void *) t->data, CHUNK * chunks);
                 if (realloc_buf == NULL) {
                         fclose(fp);
-                        free(t->data);
+                        free((void *) t->data);
                         errno = ENOMEM;
                         return 0;
                 }
                 t->data = realloc_buf;
-                read_buf = t->data + (CHUNK * (chunks - 1));
+                read_buf = (void *) (t->data + (CHUNK * (chunks - 1)));
                 this_len = fread(read_buf, 1, CHUNK, fp);
                 if (this_len <= 0) {
                         if (ferror(fp)) {
                                 old_errno = errno;
                                 fclose(fp);
-                                free(t->data);
+                                free((void *) t->data);
                                 errno = old_errno;
                                 return 0;
                         }
@@ -93,12 +113,12 @@ static int _slurp_stdio(slurp_t * t, int fd)
          * so keep trying until it returns zero. */
         need = t->length;
         do {
-                len = fread(t->data + got, 1, need, fp);
+                len = fread((void *) (t->data + got), 1, need, fp);
                 if (len <= 0) {
                         if (ferror(fp)) {
                                 old_errno = errno;
                                 fclose(fp);
-                                free(t->data);
+                                free((void *) t->data);
                                 errno = old_errno;
                                 return 0;
                         }
@@ -109,8 +129,8 @@ static int _slurp_stdio(slurp_t * t, int fd)
                                 t->length = got;
                         }
                 } else {
-                        got -= len;
-                        need += len;
+                        got += len;
+                        need -= len;
                 }
         } while (need > 0);
 
@@ -180,11 +200,11 @@ void unslurp(slurp_t * t)
         switch (t->type) {
 #if HAVE_MMAP
         case SLURP_MMAP:
-                munmap(t->data, t->length);
+                munmap((void *) t->data, t->length);
                 break;
 #endif
         case SLURP_MALLOC:
-                free(t->data);
+                free((void *) t->data);
                 break;
         default:
                 /* should never, ever happen. */

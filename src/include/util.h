@@ -1,7 +1,26 @@
-#ifndef _UTIL_H
-#define _UTIL_H
+/*
+ * util.h - Various useful functions
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
-#include "_decl.h"
+#ifndef UTIL_H
+#define UTIL_H
+
+#include <features.h>
 
 /* FIXME: should include the standard header with all that #ifdef crap */
 #include <time.h>
@@ -70,12 +89,13 @@ typedef unsigned char byte;
 /* functions returning const char * use a static buffer; ones returning
  * char * malloc their return value (thus it needs free'd). */
 
-DECL_BEGIN();
+__BEGIN_DECLS;
 
 /* formatting */
 const char *format_time(int seconds);
 const char *format_date(time_t t);
 char *format_size(size_t size, bool power_of_two, const char *base_unit);
+char *numtostr(int digits, int n, char *buf);
 
 /* string handling */
 const char *get_basename(const char *filename);
@@ -94,6 +114,6 @@ bool has_subdirectories(const char *dirname);
 
 /* TODO: strreplace(str, from, to) */
 
-DECL_END();
+__END_DECLS;
 
-#endif /* ! _UTIL_H */
+#endif /* ! UTIL_H */

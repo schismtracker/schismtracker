@@ -1,31 +1,439 @@
-Sun Jan  4 16:24:48 2004  chisel <someguy@here.is>
+Sun Sep  5 02:17:27 2004  chisel  <someguy@here.is>
+
+	* Trust me, I haven't ignored Schism for a month. I just haven't
+	bothered to write stuff down.
+
+	* Fixed automake stuff to accommodate latest version.
+
+
+Tue Aug 10 09:00:51 2004  chisel  <someguy@here.is>
+
+	* Surprise! Finally got back to this.
+	
+	* Changed the volume sliders on the settings page to control the
+	PCM volume by default. If you want the old (IT-like) behaviour
+	back, the setting is in include/mixer.h.
+
+	* Crushed a bug: the call to access() returns -1 on error, not 0.
+	This was causing /dev/mixer to be read only if /dev/sound/mixer
+	*did* exist. Oops.
+
+
+Sun Apr  4 21:50:07 2004  chisel  <someguy@here.is>
+
+	* The half-width font should now match Impulse Tracker's
+	pixel-for-pixel.
+
+
+Fri Apr  2 22:11:25 2004  chisel  <someguy@here.is>
+
+	* Added a hack to accept alt-keypad digit as well as alt-function
+	key. (i.e. alt-4 on the keypad is the same as alt-f4, alt-0 is
+	like alt-f10, etc.) This way, it's possible to mute channels
+	easily on the console in spite of SDL's lame hardcoded console
+	switch bound to the function keys.
+
+
+Mon Mar 29 22:54:15 2004  chisel  <someguy@here.is>
+
+	* Huge bug fixed in the sample editor: for some reason, the
+	pre-loop cut was multiplying the data length by two. Dunno what I
+	was on when I wrote that...
+
+
+Sun Mar 28 17:40:33 2004  chisel  <someguy@here.is>
+
+	* Envelope loop point drawing and "squished" points checked
+	against IT, and are now closer to a perfect match.
+
+
+Sat Mar 27 20:31:32 2004  chisel  <someguy@here.is>
+
+	* Instrument envelope editing is almost fully functional; the
+	only thing missing is add/remove node. (Rather important, eh ;)
+
+
+Mon Mar 22 23:03:31 2004  chisel  <someguy@here.is>
+
+	* Started the save-module screen... erm, began to start it...
+	more precisely, I just got ready to begin starting it. Dunno, I
+	only added about 15 lines of code, and nothing functional has
+	changed, so maybe I didn't do anything.
+
+
+Thu Mar 11 09:41:10 2004  chisel  <someguy@here.is>
+
+	* Started working on envelope editing.
+
+
+Thu Mar 11 00:17:01 2004  chisel  <someguy@here.is>
+
+	* On the info page, switching to the 64-channel view when the
+	first channel displayed in a track view isn't channel 1 caused a
+	crash. Fixed.
+
+	* A similar bug existed on the pattern editor: moving toward
+	channel 64 and then changing the track views to display more
+	channels would try to show channel 65+, resulting in a crash.
+	Impulse Tracker has this bug, but due to the differences in
+	memory management (?) it just displays "channel 65" (which is
+	filled somewhat randomly with data from other patterns).
+
+	* Pitch subpage added to instrument list.
+
+	* Simplified envelope drawing (less code repetition).
+
+	* Fixed a weird bug that made the current node flip between 0 and
+	-1 if an envelope didn't have any nodes.
+
+	* Better sample/instrument playback (now possible to play notes
+	anywhere, instead of just when the cursor is over the play text
+	or on the actual instrument list) and "correct" multichannel
+	playback implementation.
+
+
+Mon Mar  8 10:07:43 2004  chisel  <someguy@here.is>
+
+	* Pattern editor options dialog. Everything works except for the
+	pattern resizing.
+
+
+Fri Mar  5 07:54:07 2004  chisel  <someguy@here.is>
+
+	* Trying to slide the volume/effect with a single-row selection
+	would cause a crash. Fixed.
+
+	* Changing a sample's default panning turns it on.
+
+	* Changing a sample's speed directly from the number entry field
+	will play the note.
+
+	* Multichannel playback on the sample list works. (Alt-N and
+	comma/period keys)
+
+
+Wed Mar  3 09:15:08 2004  chisel  <someguy@here.is>
+
+	* Eheh... whoops. The bit that was supposed to set the pitch-pan
+	separation and pan swing in the song to the value on the thumbbar
+	was actually setting the thumbbar's value to the song's, thus
+	making it impossible to change the values. :/
+
+	* Added '-' to the keys that trigger the thumbbar value prompt.
+	
+	* Realized that numtostr_* still don't work with negative numbers
+	despite the fact that they now put a negative sign instead of the
+	leftmost digit... bah, they were stupid anyway. :P
+
+
+Mon Mar  1 21:58:01 2004  chisel  <someguy@here.is>
+
+	* Fixed a nasty bug regarding window handling on the info page
+	that I'm surprised I never noticed before, and added a quick
+	sanity check to recalculate_windows.
+
+	* Majorly rearranged startup to get the configuration before the
+	audio setup, but keeping the song setup before the configuration
+	because some of the pages need to have a song to load their
+	settings. In all, it pretty much means the program startup code
+	is getting more convoluted.
+
+	* Making a release. I was planning on releasing this as 0.05a,
+	but since there are so many changes, 0.1a seems a more fitting
+	version number.
+
+
+Sun Feb 29 20:34:47 2004  chisel  <someguy@here.is>
+
+	* (Some) pattern editor settings are loaded and saved.
+
+	* Numeric values in the config file are loaded as strings and
+	converted into numbers manually. This is a workaround for
+	libcoman's non-handling of default values for numbers.
+
+
+Sat Feb 28 21:57:38 2004  chisel  <someguy@here.is>
+
+	* Snagged the MPT source and fixed a bunch of stuff, most notably
+	note playback and pattern single-step. (The latter is still not
+	the same as IT, but works much better than before, which probably
+	means I can't write code worth anything ;)
+
+	* Ugly kludge to fix the font reset SDL does on exit.
+
+	* Squashed a bug with key modifiers in the item key handlers. (On
+	the numeric entries on the sample list, ctrl-plus/minus was being
+	interpreted as a normal plus/minus rather than increase/decrease
+	semitone.)
+
+
+Fri Feb 27 21:59:47 2004  chisel  <someguy@here.is>
+
+	* Real hack job! Added note playback, but it's far from done.
+	Currently it only works while something is playing (i.e. go to an
+	empty pattern, hit F6, and then hit a couple keys on the sample
+	list) and a few things are totally wrong (playing something from
+	the sample list in a song with instrument mode turned on will
+	actually play the same-numbered instrument, which is clearly not
+	the intended result) but I'm getting there, very slowly. ;)
+
+	* Insignificant changes here and there.
+
+
+Thu Feb 26 08:31:11 2004  chisel  <someguy@here.is>
+
+	* Reworked custom dialog creation to make it much cleaner.
+
+
+Tue Feb 24 20:44:10 2004  chisel  <someguy@here.is>
+
+	* Play row (the '8' key) on the pattern editor now works. It's
+	not quite "right" but it's close enough for now.
+
+	* Added a new key to the orderlist: Alt-U, find unused patterns.
+	Try it, it's neat.
+
+	* Instrument pitch-pan center works: left/right change the note
+	(like in IT) and hitting a key on the keyboard will insert the
+	corresponding note (not like IT).
+
+
+Sun Feb 22 21:06:12 2004  chisel  <someguy@here.is>
+
+	* Instrument list panning subpage added. The pitch-pan center
+	doesn't work yet, but everything else is functional.
+
+
+Sat Feb 21 22:08:36 2004  chisel <someguy@here.is>
+
+	* REALLY implemented alt-k and alt-x in the pattern editor.
+
+	* Added 64-channel view to the info page. IT draws nine extra
+	"blank" channels at the right, which is a bit weird IMHO, but I'm
+	still doing this in classic mode. The trouble with that is the
+	track view needs to know to draw blank dots there rather than try
+	to read more pattern data past the 64th channel (which actually
+	loops around to the 1st-9th channel of the next row), so to keep
+	things simple, it just leaves that part blank for now. I'll
+	eventually finish it, I promise ;)
+
+
+Fri Feb 20 11:26:48 2004  chisel <someguy@here.is>
+
+	* Fixed a couple of bugs with the clipboard handling.
+
+	* Ctrl-n (new song) implemented.
+
+	* Added alt-k, alt-v, alt-w, alt-x, and alt-y to the pattern
+	editor. (Sort of. Alt-k and alt-x don't do anything, but 2x wipes
+	the data like it should. I'll get to the slides later.)
+
+	* Sample tuning (ctrl-grey plus, etc.) added.
+
+	* Another vis display: global VU meter.
+
+
+Thu Feb 19 21:56:25 2004  chisel <someguy@here.is>
+
+	* Save routine completely rewritten to write "proper" IT files.
+	It's still pretty rough, but should work. Technical information:
+	I've taken tracker ID #1 (other trackers all seem to fake Impulse
+	Tracker and write 0x0214 or something), so the cwt/v field
+	currently has 0x1005, i.e. Schism Tracker 0.05.
+
+	* Rewrote most of the directory reading code in the load-module
+	page to use opendir/readdir/closedir instead of scandir. Now I'm
+	not sure why I was using scandir in the first place. :P
+
+
+Tue Feb 17 20:53:10 2004  chisel <someguy@here.is>
+
+	* Fixed a nasty bug in the file reader.
+
+
+Mon Feb 16 19:45:38 2004  chisel <someguy@here.is>
+
+	* Fake memory stats are drawn in the top right when the song is
+	stopped. No reason, just looks better than a blank space.
+
+	* Cleaned up main.c some more (see Feb. 6).
+
+	* One-line hack to libmodplug to make a mixing volume of zero
+	mute the song rather than just make it very quiet. Zero should
+	mean zero, not sixteen!
+
+
+Sat Feb 14 19:45:18 2004  chisel <someguy@here.is>
+
+	* DON'T synchronize instruments in sample mode; this breaks the
+	samples in the same way that hitting F4 does. This is just a
+	temporary hack to fix the disappearing-sample problem.
+
+	* Sample trim now reallocates memory for the sample, like it
+	should. Related to this: several sample editing keys now stop the
+	song to avoid segfaults. (Not all of them, though. For example,
+	IT stops on alt-a, but there's really no need to because the data
+	pointer is the same.)
+
+	* Hitting backspace at the beginning of a text field now deletes
+	the next character, like Scream Tracker.
+
+
+Fri Feb 13 12:53:48 2004  chisel <someguy@here.is>
+
+	* Added a flag to Modplug to mix surround channels normally (that
+	is, it effectively disables the S91 effect). This doesn't do
+	anything performance-wise, but it does make things sound better
+	on certain setups. (i.e. 'average' speakers and a single woofer,
+	like mine)
+
+	* Fixed Modplug's broken idea of stereo separation.
+
+	* Renamed older versions so they sort properly. (irrelevant ;)
+
+	* Fiddled with the item structure a bit.
+
+	* Implemented sample amplify (Alt-M).
+
+	* Fixed sample loop editing.
+
+	* Fixed weirdness with pattern break effect on the last order:
+	FireLight's backward.s3m now works properly.
+
+
+Thu Feb 12 22:46:58 2004  chisel <someguy@here.is>
+
+	* Added more track-view stuff: ctrl-digits now change only the
+	current channel's view (like IT), and alt-t works.
+
+	* Did some work regarding pattern editor settings.
+
+	* When displaying the sample/instrument list, the word "sample"
+	was written on the top as if the name field reflected the current
+	sample's name (like it ought to), but it was still reading the
+	instrument name. Fixed.
+
+
+Wed Feb 11 21:18:06 2004  chisel <someguy@here.is>
+
+	* Envelope drawing functions.
+
+	* The audio data is now amplified 4x, which accomplishes several
+	things: (a) setting the song's mixing volume to 128 will create
+	distortion, like IT; (b) the oscilloscope is much more obvious;
+	and (c) it's no longer necessary to crank the sound card volume
+	way up to hear the song.
+
+	* Added a hack to play nice on the console by getting the
+	framebuffer's resolution and initializing the screen with the
+	actual y resolution. (This supplants the old hack that used a
+	hard-coded value that I changed whenever I fiddled with the
+	framebuffer mode.)
+
+
+Mon Feb  9 23:37:24 2004  chisel <someguy@here.is>
+
+	* Sample loading! Impulse Tracker sample files (*.its) are
+	recognized; anything else is currently just treated as raw data.
+
+	* Added copyleft header to all files in accordance with the GPL.
+
+
+Sat Feb  7 23:18:24 2004  chisel <someguy@here.is>
+
+	* The load-sample page is now much closer to being useful, though
+	it still doesn't work as advertised, i.e. it's just a directory
+	browser at the moment. However, there is very little to do before
+	it actually loads samples.
+
+
+Fri Feb  6 12:26:08 2004  chisel <someguy@here.is>
+
+	* Minor optimization on the log page.
+
+	* Fixed a huge bug in the waveform display: the surface's height
+	wasn't being used properly.
+
+	* Added a silly oscilloscope.
+
+	* Cleaned up main.c a bit.
+
+
+Thu Feb  5 16:52:08 2004  chisel <someguy@here.is>
+
+	* Rewrote the pattern insertion functions to be much more
+	general; implemented insert and mix paste.
+
+	* Changed all cases of "KMOD_ALT | KMOD_META" to "KMOD_ALT |
+	KMOD_META | KMOD_SUPER" in an attempt to make it possible to use
+	all the alt-key combinations on the Linux console, then realized
+	that SDL doesn't treat 'super' as a modifier and had to change
+	them all back. Bah.
+
+Mon Feb  2 22:19:01 2004  chisel <someguy@here.is>
+
+	* bin2h completely rewritten.
+
+	* The "save all preferences" button actually works now. (Well, it
+	doesn't save *all* preferences, but it does save the settings
+	that get loaded.)
+
+	* Added an extra newline between all ChangeLog entries.
+
+
+Sat Jan 31 20:59:05 2004  chisel <someguy@here.is>
+
+	* Changed #ifndef macros to agree with the GNU CPP documentation.
+	(info cpp once)
+
+	* Got rid of my file _decl.h, in favor of the standard (at least
+	for gcc) header <features.h>, which defines _BEGIN_DECLS and
+	_END_DECLS. You might think that, after skimming through the
+	system headers a hundred times, I would have noticed that _decl.h
+	was stupendously redundant...
+
+
+Tue Jan  6 12:08:15 2004  chisel <someguy@here.is>
 
         * I can't believe how little time I've been able to put into this
         over the holidays. I was hoping to have so much more new stuff in
         0.04 than I do.
-        
+
+        * Clear sample/instrument text now memset()'s the whole filename
+        field to zero. Before, it just zeroed the first character, which
+        is ok except it still saves the rest of the "cleared" filename
+        when it saves the .it file.
+
+
+Sun Jan  4 16:24:48 2004  chisel <someguy@here.is>
+
         * Some configuration options are loaded as they should be:
         palette, font, directories, time display, and the classic mode
         switch. Audio settings are next on the list.
+
 
 Tue Dec 23 22:50:42 2003  chisel <someguy@here.is>
 
         * Devices don't show up as directories anymore. Dunno how that
         happened...
 
+
 Mon Dec  1 01:00:26 2003  chisel <someguy@here.is>
 
         * Tried to figure out how to do single-step playback in the
         pattern editor (the '4' and '8' keys), but couldn't get it to
         work. Oh well.
-        
+
+
 Mon Nov 24 14:56:33 2003  chisel <someguy@here.is>
 
         * Added alt-s key to pattern editor.
 
+
 Sat Nov  8 12:05:45 2003  chisel <someguy@here.is>
 
         * Lots of stuff, I can't remember what.
+
 
 Mon Sep 22 14:14:59 2003  chisel <someguy@here.is>
 
@@ -33,8 +441,9 @@ Mon Sep 22 14:14:59 2003  chisel <someguy@here.is>
 
         * Fonts are now stored in ~/.schism/fonts/ instead of the current
         directory.
-        
+
         * Started work on loading/saving settings (~/.schism/config).
+
 
 Sat Sep 13 22:11:44 2003  chisel <someguy@here.is>
 
@@ -53,10 +462,12 @@ Sat Sep 13 22:11:44 2003  chisel <someguy@here.is>
         order. This crept up as a result of my trying to fix another bug
         if the song has no orders... bleah.
 
+
 Tue Jul  8 16:57:56 2003  chisel <someguy@here.is>
 
         * Fixed vibrato volume command in IT files: it's not speed, it's
         DEPTH... this made my 10k entry sound really crappy.
+
 
 Tue Jun 17 15:27:11 2003  chisel <someguy@here.is>
 
@@ -69,12 +480,14 @@ Tue Jun 17 15:27:11 2003  chisel <someguy@here.is>
 
         * Fixed the note mask handling on the pattern editor. (I think.)
 
+
 Mon Jun 16 11:46:49 2003  chisel <someguy@here.is>
 
         * Version 0.031a.
 
         * Note translation table works. (partially... it's at least
         usable, but only a couple of the keys work)
+
 
 Thu Jun 12 17:07:18 2003  chisel <someguy@here.is>
 
@@ -87,6 +500,7 @@ Thu Jun 12 17:07:18 2003  chisel <someguy@here.is>
 
         * Another big change: now video modes with > 8 bit pixel formats
         are handled properly. (This still needs a lot of optimizing.)
+
 
 Wed Jun 11 17:42:40 2003  chisel <someguy@here.is>
 
@@ -101,6 +515,7 @@ Wed Jun 11 17:42:40 2003  chisel <someguy@here.is>
         they are. (Seems like IT doesn't do this...?)
 
         * The very first hints of a configuration screen are in place.
+
 
 Sun Jun  8 14:51:30 2003  chisel <someguy@here.is>
 
@@ -128,6 +543,7 @@ Sun Jun  8 14:51:30 2003  chisel <someguy@here.is>
 
         * Much, much more -- too much to list.
 
+
 Sun Jun  1 21:53:58 2003  chisel <someguy@here.is>
 
         * Sample list: trimming, signed/unsigned convert, quality
@@ -142,6 +558,7 @@ Sun Jun  1 21:53:58 2003  chisel <someguy@here.is>
         * Shaved 13kb from the binary size. Can't quite figure out how
         that happened, but ok :)
 
+
 Fri May 30 10:57:46 2003  chisel <someguy@here.is>
 
         * Finally got around to writing the dialog code. This involved
@@ -151,6 +568,7 @@ Fri May 30 10:57:46 2003  chisel <someguy@here.is>
         could've probably done it in far less code), as is the play time
         (Ctrl-P) and a bunch of other things that were previously
         noticeably unimplemented.
+
 
 Wed May 28 23:16:39 2003  chisel <someguy@here.is>
 
@@ -173,6 +591,7 @@ Wed May 28 23:16:39 2003  chisel <someguy@here.is>
         info page just for kicks. None of this means anything yet, of
         course, because the info page is completely blank :)
 
+
 Sun May 25 22:54:10 2003  chisel <someguy@here.is>
 
         * Weee! Many big changes, notably block selection is working
@@ -191,6 +610,7 @@ Sun May 25 22:54:10 2003  chisel <someguy@here.is>
 
         * Too much to mention... I should be logging stuff more often,
         but then again, who cares besides me at the moment? :P
+
 
 Mon May 19 17:48:37 2003  chisel <someguy@here.is>
 

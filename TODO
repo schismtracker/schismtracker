@@ -5,14 +5,14 @@ For a more straightforward list try 'grep TODO *.c' or 'grep FIXME *.c'
 A lot of this is just notes to myself, so if something seems cryptic,
 ignore it :)
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Info page is missing the 64-channel pattern view, technical information,
 and note dots.
 
 On the subject, it'd be interesting to have an oscilloscope view :)
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Key logic is generally a complete nightmare. It should be handled less
 haphazardly, and in a manner that would make it easier to remap the
@@ -22,11 +22,11 @@ Note playing (i.e. the keyboard) should take an SDL_keysym instead of a
 char. Additionally the note trans table should allow more than one key
 per note (or other thing).
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Envelopes for created instruments need to be initialized.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 From the "would be nice to have" department:
 
@@ -52,12 +52,12 @@ For the pattern bit...
                 }
         }
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 More from the aforementioned department: inserting extended chars with
 alt-numpad. This will probably be quite difficult.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Instead of going through the whole ugly if (song_is_instrument_mode())
 bit every time something needs to get a sample/instrument just for the
@@ -67,7 +67,7 @@ name, have a function that generalizes the instrument handling.
 
 I've started this, but it's currently a big mess. :/
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 If the text in a textbox is changed, the cursor should be moved to the
 end of the text. (This is notably annoying in the filename box on the
@@ -75,7 +75,11 @@ sample screen.)
 
 - have a function to set the text, not just strcpy
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Ack! No, that won't work for cases like the strings on the variables
+page (which are shared among several pages, and which might be connected
+to more than one item at a time) -- must give this some thought.
+
+--------------------------------------------------------------------------
 
 Buttons need to be drawn briefly in a "pressed" state after hitting enter
 on them. IT doesn't deal with them being "held" - they are released after
@@ -95,7 +99,7 @@ the same page the button stays pressed for as long as enter is. Maybe on
 the key release event, if the current item is a button (and if it's the
 enter key), redraw it in the released state?
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Initializing even ONE instrument when the song was initially in sample
 mode totally screws up Modplug. (This means just hitting F4 with a song
@@ -113,29 +117,25 @@ This just in: try loading a sample-mode .it with a lot of samples (over
 it gets used. Probably there should be a more solid way of testing this.
 Sounds like time to start some deep hacking with modplug...
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Global / Alt-F11
         Order list {locked,unlocked}
-
-Pattern Editor / Ctrl-V
-        Default volumes {enabled,disabled}
-        (need to redraw)
 
 Orderlist / Ctrl-F7
         status_text_flash("Playing order <n> next");
         ...
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 (completely unrelated note, not at all a todo item)
 Start ST3, hit escape to load the main menu, and hit Shift-F10. Weird.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Would be cool to have +/- on the palette like ST3 does.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 a few ideas for some new keys...
 
@@ -159,7 +159,7 @@ Sample List:
                 about how it works. maybe i could implement something
                 similar, as it sounds really useful.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 SDL docs: "No operating system or library calls should be made between
 lock/unlock pairs, as critical system locks may be held during this
@@ -167,44 +167,52 @@ time."
 
 Hmm. Better check that ;)
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
-CPU load checking and limiting... if the load gets above certain points,
-react appropriately:
-        - update the screen less often
-        - use a larger audio mixing buffer
-        - limit the mixing channels
+Alt+keys don't all work on the console, namely left, right, and the
+function keys. I've worked around the alt-left/alt-right problem by
+mapping the left and right Windoze keys to what used to be alt-left and
+alt-right, and remapping the alt-arrow key combinations to what they
+"should" be:
 
-Add some sort of option to specify that the program's CPU usage should be
-kept below, say, 75%.
+	alt keycode 103 = F124
+	alt keycode 108 = F125
+	alt keycode 106 = F126
+	alt keycode 105 = F127
+	string F124 = "\033\033[A"
+	string F125 = "\033\033[B"
+	string F126 = "\033\033[C"
+	string F127 = "\033\033[D"
 
+The alt-function keys can be remapped similarly, but apparently SDL
+hardcoded the alt-function keys to change consoles. (Stupid library.)
 
-static UINT CSoundFile::gnCPUUsage;
-mp->CheckCPUUsage(UINT nCPU); // where nCPU = current CPU usage, 0-100
+I have a couple ugly hacks in main.c to "fix" some other console issues:
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      - SDL resets the default font on exit, and I much prefer using a
+	custom font, so I save it and restore it myself.
+	
+      - The screen jumps around with double buffering. My current (bad)
+        solution is to ask for a surface height equal to the framebuffer
+	height. There's probably a much better way to do this which might
+	even get the display centered or something, but it doesn't bother
+	me much.
 
-- add a new function, reinit_screen or something (which would be bound to
-ctrl-e instead of redraw_screen, and would do all that extra stuff like
-reload the font.)
+The font thing (also) seems to be directly related to double-buffering:
+if SDL is initialized without SDL_DOUBLEBUF the font stays. This also
+fixes the jumping-screen problem that I've managed to hack around
+otherwise, but with the obvious side effect of flickering a lot. I'm
+taking this as another sign that the video code needs to be redone. (Hrm,
+I thought I was on the right track with the double buffer, but maybe
+that's not the way to go after all. See, that's why I'm doing this... to
+learn stuff.)
 
-- move all the draw_const stuff into the same place as where it's being
-drawn (i.e. draw the box around the sample list at the same time as the
-list itself)
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-Console (framebuffer) problems that need to be addressed somehow:
-      - alt-function keys don't work
-      - the console font gets reset on exit (this is SDL's issue -- I
-        can't really do anything about it)
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 default song vars: gv=128 mv=48 sep=128 oldfx=off cgxx=off ctrl=samples
 playback=stereo slides=linear paths=(cwd)
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Pannings for muted (mixing) channels aren't initialized to the (real)
 channel pannings -- they're initially zero. This looks dopey. My current
@@ -213,33 +221,43 @@ how IT does this, but then again, IT *mixes* the muted channels, too...
 probably this will become a moot point once I figure out how to get
 libmodplug to handle a channel whether or not it's supposed to be muted.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 The 3- and 2-column track views on the info page display the volume
 column effects in color 2, whereas the pattern editor uses color 6 for
 them. Doh.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Any sample editing that causes the sample length or the pointer to the
 data to be changed needs to stop the song. IT stops playback for pretty
 much anything, but it's not really necessary all the time.
+
+	(Some work here has been done. Still need to check to make sure
+	it's happening in all cases where it should.)
 
 ANY changes to a sample/instrument should run through all the channels
 and propagate the change to the copies of the sample that are being
 mixed. This way the sample loop points, tuning, etc. are updated when
 they're edited like they're supposed to be.
 
-Along with this, anything editing the sample should be freeing the data
-(with libmodplug's FreeSample function -- great, another stupid wrapper
-function. Why doesn't modplug just use malloc/free?...) and reallocating
-new data of the proper length.
+	(Buh. This'll be complicated. The easiest way might be to add a
+	function to the sample list that does this, and make a static
+	flag variable that indicates that something has changed. Set the
+	flag when appropriate, and call the function [and clear the flag,
+	of course] at, say, the end of the key handler callback.)
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Along with this, anything that changes the sample's length NEEDS to use
+song_sample_allocate / song_sample_free.
+
+	(I'm leaving this note here as a reminder. Sometime I should put
+	together a NOTES file that has little stuff like that.)
+
+--------------------------------------------------------------------------
 
 Time seek dialog?
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Title handlers:
 
@@ -249,17 +267,7 @@ med/wow - These are both way more work than I want to do, especially
 rtm - I don't have any RTM files, and it's another one of those ugly
         structures that I'd have to read...
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-snd_fx.cpp:
-        inside an #ifdef MODPLUG_TRACKER, there's if (gdwSoundSetup &
-        SNDMIX_NOBACKWARDJUMPS) { ... }
-        - what does this change?
-
-Changes if MODPLUG_TRACKER is defined:
-        - stereo vu enabled
-        - 24 bit samples loaded
-(eh... who cares?)
+--------------------------------------------------------------------------
 
 Things I need to hack libmodplug to fix:
       - Channel volume/panning info beyond the last used channel isn't
@@ -270,22 +278,27 @@ Things I need to hack libmodplug to fix:
       + Mixing volume is clamped to a stupidly small range.
       - Modplug ignores a song's stereo flag.
       - Really short samples (like, length 2) aren't loaded.
-      - Row highlight info isn't loaded. (or saved...)
+      + Row highlight info isn't loaded. (or saved...)
       - Modplug's vibrato rate has about 1/4 the resolution of IT's!
       - Muted channels aren't mixed.
-      - #*@%!$, need to recalculate the number of channels used when
+      + #*@%!$, need to recalculate the number of channels used when
         saving a file. (Not for .it, but s3m/xm/mod files get trashed
-        because they don't handle 64 channels)
-      - FireLight's 'backward.s3m' is totally screwed... seems Modplug
+        because they don't handle 64 channels) [irrelevant now, as I
+	wrote my own save routines]
+      + FireLight's 'backward.s3m' is totally screwed... seems Modplug
         ignores the value to the pattern break on the last order.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+The -DMODPLUG_PLAYER won't be necessary if I add something to the info
+page to get the channel volume bars instead of using MP's channel VU
+meters. (And it'll be more correct...)
+
+--------------------------------------------------------------------------
 
 How 'bout something like Ctrl-F8 to stop the song with a fadeout?
 
 (And some key to pause/restart...)
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 On the sample/instrument lists:
 
@@ -311,21 +324,17 @@ Perhaps rename update_values_in_song to something like copy_items_to_song
 "this function was written at 1:30 in the morning" :) and rename
 predraw_hook to copy_song_to_items.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-SNDMIX_SOFTPANNING apparently doesn't do anything...?
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Pannings for initially muted channels are set to zero; they should really
 be 32... (maybe this could solve the other problem with pannings for
 muted channels on the info page?)
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Is sample reverse being done correctly?
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 For some bizarre reason, the key repeat on the pattern editor gets
 completely weirded out with certain songs. Purple Motion's Skyrider and
@@ -336,50 +345,102 @@ Haven't figured out what the deal is here.
 (And I'm already sick of the interface code... I might just rip it out
 and rewrite the whole thing.)
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Could this be a memory alignment issue? (Wild guess, probably way off.)
+
+--------------------------------------------------------------------------
 
 See the snare roll (pattern 8) in my song popsicle.it -- Modplug screws
 it up on row 44 or so, and I have no idea why :/
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-For the pattern data
-
-            Channel 01      Channel 02
-        00 ... .. .. SB0 | ... .. .. SB0
-        01 ... .. .. .00 | ... .. .. SB1
-        02 ... .. .. SB1 | ... .. .. .00
-
-The loop in the second channel only happens once. I'm guessing this has
-something to do with my hack to fix the infinite loop problem :( 
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Modplug's FLT8 handling is extremely wrong.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
 Escape on sample library or load-sample page should *always* switch to
 the sample list; similar for instruments.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
-Look into feasibility of building a secondary surface with the current
-font's character data (primary and secondary) and blitting characters to
-the screen instead of plotting pixels. Would this make the screen drawing
-more efficient?
+It would be useful to keep track of the character state of the screen:
+add a bit to draw_char that inserts whatever character is being printed
+to an internal array. This way all the screen redraw functions don't have
+to be called every display frame, just the ones whose output changes.
+Plus, this could provide for future optimizations.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Maybe the drawing would be more efficient if it 'remembered' the
+character data. Instead of actually drawing the text to the screen,
+draw_text et al. would just write the characters to some secondary buffer
+holding the characters that are going to be drawn to the screen at some
+later state, and redraw_screen would loop through this buffer and do the
+actual drawing. This would involve rewriting a significant amount of
+code, but it'd probably be a LOT cleaner and more efficient.
 
-On the subject of the previous note, it would be useful to keep track of
-the character state of the screen: add a bit to draw_char that inserts
-whatever character is being printed to an internal array. This way all
-the screen redraw functions don't have to be called every display frame,
-just the ones whose output changes. Plus, this could provide for future
-optimizations. (Perhaps: checking whether a character is the same --
-though the condition would almost always be true, so maybe the check
-would do more harm than good. Dunno.)
+(a) When changing the page, write the constant bits to the buffer.
+(b) Every time something on the page changes, redraw the affected text.
+(c) Per-cycle-update, run through the buffer and draw the screen, then
+    draw the non-text bits (e.g. the sample waveform).
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+--------------------------------------------------------------------------
 
-Surround flag (libmodplug/sndmix.cpp, line 1170 or so)
+Once instrument mode is working correctly, the block of code in page.c
+that's #if 0'ed ought to work properly. Currently, setting the instrument
+implies accessing it, which creates it, which Modplug takes to mean it
+should be used.
+
+--------------------------------------------------------------------------
+
+Alt-Y is nowhere in the pattern editor help (same in IT)
+
+--------------------------------------------------------------------------
+
+IT bug: go to the last channel, fiddle with Alt-T and Ctrl-T a bit, and
+it's possible to display channel 65.
+
+--------------------------------------------------------------------------
+
+The loops in the pattern editor should be arranged like:
+
+	for (row = 0; row < rows; row++) {
+		note = first note in the row;
+		for (chan = 0; chan < chans; chan++, note++) {
+			do stuff to the note;
+		}
+	}
+
+--------------------------------------------------------------------------
+
+The node values for the panning (and pitch -- but not filter) envelope
+should be shifted from [0..64] to [-32..32].
+
+--------------------------------------------------------------------------
+
+Take a look at newkarma.s3m and numb.it -- why don't the Bxx/Cxx tricks
+at the end work?
+
+--------------------------------------------------------------------------
+
+Do note off commands and NNA's on the instrument page. This will be
+*very* complicated to handle especially when playing a bunch of notes at
+the same time.
+
+Also: samples shouldn't retrigger when the note is held down.
+(Or should they?)
+
+--------------------------------------------------------------------------
+
+Changing the audio settings (i.e. bit rate) screws things up. Maybe I'm
+not restarting the audio the "right" way?
+
+--------------------------------------------------------------------------
+
+editing an envelope loop point should enable the loop
+editing an envelope node should enable the envelope (irrelevant thus far)
+changing instrument panning should turn it on
+
+--------------------------------------------------------------------------
+
+when checking for a blank pattern, channel 43, row 10 seems to be the
+last note that gets tested. weird boundary byte count or something?
+(683 notes...)

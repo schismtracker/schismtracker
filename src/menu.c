@@ -1,3 +1,22 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
 #include <SDL.h>
@@ -110,7 +129,7 @@ static struct menu instrument_menu = {
 /* *INDENT-ON* */
 
 /* updated to whatever menu is currently active.
- * this generalizes the key handling.
+ * this generalises the key handling.
  * if status.dialog_type == DIALOG_SUBMENU, use current_menu[1]
  * else, use current_menu[0] */
 static struct menu *current_menu[2] = { NULL, NULL };
@@ -266,7 +285,8 @@ static void playback_menu_selected_cb(void)
 {
         switch (playback_menu.selected_item) {
         case 0:
-                if (song_get_mode() == MODE_STOPPED)
+                if (song_get_mode() == MODE_STOPPED
+		    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
                         song_start();
                 set_page(PAGE_INFO);
                 return;
@@ -329,13 +349,16 @@ static void instrument_menu_selected_cb(void)
 
 /* --------------------------------------------------------------------- */
 
-void menu_handle_key(SDL_keysym * k)
+/* As long as there's a menu active, this function will return true. */
+int menu_handle_key(SDL_keysym * k)
 {
-        struct menu *menu =
-                (status.dialog_type ==
-                 DIALOG_SUBMENU ? current_menu[1] : current_menu[0]);
+        struct menu *menu;
+	
+	if ((status.dialog_type & DIALOG_MENU) == 0)
+		return 0;
 
-        ENSURE_MENU();
+	menu = (status.dialog_type == DIALOG_SUBMENU
+		? current_menu[1] : current_menu[0]);
 
         switch (k->sym) {
         case SDLK_ESCAPE:
@@ -352,13 +375,13 @@ void menu_handle_key(SDL_keysym * k)
                         menu->selected_item--;
                         break;
                 }
-                return;
+                return 1;
         case SDLK_DOWN:
                 if (menu->selected_item < menu->num_items - 1) {
                         menu->selected_item++;
                         break;
                 }
-                return;
+                return 1;
                 /* home/end are new here :) */
         case SDLK_HOME:
                 menu->selected_item = 0;
@@ -369,10 +392,12 @@ void menu_handle_key(SDL_keysym * k)
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
                 menu->selected_cb();
-                return;
+                return 1;
         default:
-                return;
+                return 1;
         }
 
         status.flags |= NEED_UPDATE;
+	
+	return 1;
 }

@@ -73,7 +73,8 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	m_nDefaultTempo = 125;
 	m_nDefaultSpeed = 6;
 	m_nChannels = 8;
-	memcpy(m_szNames[0], pfh->songmessage, 16);
+	// <chisel> title length changed from 16 chars.
+	memcpy(m_szNames[0], pfh->songmessage, 36);
 	m_nSamples = pfh->samples;
 	for (UINT nins=1; nins<=m_nSamples; nins++, psmp++)
 	{
@@ -94,9 +95,16 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 		Ins[nins].nPan = 128;
 	}
 	// Song Message
-	m_lpszSongComments = new char[109];
-	memcpy(m_lpszSongComments, pfh->songmessage, 108);
-	m_lpszSongComments[108] = 0;
+	// <chisel> cut the message text into three lines
+	m_lpszSongComments = new char[114];
+	memcpy(m_lpszSongComments, pfh->songmessage, 36);
+	m_lpszSongComments[36] = '\015';
+	m_lpszSongComments[37] = '\012';
+	memcpy(m_lpszSongComments + 38, pfh->songmessage + 36, 36);
+	m_lpszSongComments[74] = '\015';
+	m_lpszSongComments[75] = '\012';
+	memcpy(m_lpszSongComments + 76, pfh->songmessage + 72, 36);
+	m_lpszSongComments[113] = 0;
 	// Reading Orders
 	memcpy(Order, pfh->orders, 128);
 	m_nRestartPos = pfh->restartpos;

@@ -7,8 +7,8 @@ typedef struct tagITFILEHEADER
 {
 	DWORD id;			// 0x4D504D49
 	CHAR songname[26];
-        // <chisel> added highlight info (previously was 'reserved1')
-        BYTE hilight_minor;
+	// <chisel> added highlight info (previously was 'reserved1')
+	BYTE hilight_minor;
 	BYTE hilight_major;
 	WORD ordnum;
 	WORD insnum;

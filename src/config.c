@@ -1,5 +1,26 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "headers.h"
 
+/* I don't really like libcoman; maybe some day I'll write a better one.
+ * In particular, there's no provision for default settings, so all the number settings are a big hack. */
 #include <libcoman.h>
 
 #include "it.h"
@@ -7,127 +28,138 @@
 /* --------------------------------------------------------------------- */
 /* config settings */
 
-char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1],
-        cfg_dir_instruments[PATH_MAX + 1];
+char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1];
 char cfg_font[NAME_MAX + 1];
 
-/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------------------------------------- */
 
-static void get_string_safe(const char *string, const char *def_string,
-                            char save[], int max_length, int config)
+static int config_handle;
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+void cfg_get_string(const char *section, const char *key, char value[], int max_length, const char *def)
 {
-        const char *ptr = GetString(string, config);
-        if (!ptr)
-                ptr = def_string;
-        strncpy(save, ptr, max_length);
-        save[max_length] = 0;
+	const char *s;
+	
+	SetGroup(section, config_handle);
+	s = GetString(key, config_handle);
+	if (!s)
+		s = def;
+	strncpy(value, s, max_length);
+	value[max_length] = 0;
 }
+
+int cfg_get_number(const char *section, const char *key, int def)
+{
+	long n;
+	const char *s;
+	char *e;
+	
+	SetGroup(section, config_handle);
+	s = GetString(key, config_handle);
+	if (!s)
+		return def;
+	
+	n = strtol(s, &e, 10);
+	if (e == s) {
+		/* Not a number */
+		return def;
+	} else if (*e) {
+		/* Junk at the end of the string */
+		//return def;
+	}
+	return n;
+}
+
+void cfg_set_string(const char *section, const char *key, const char *value)
+{
+	SetGroup(section, config_handle);
+	WriteString(key, value, config_handle);
+}
+
+void cfg_set_number(const char *section, const char *key, int value)
+{
+	SetGroup(section, config_handle);
+	WriteNumber(key, value, config_handle);
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 void cfg_load(void)
 {
-        int config;
-        char filename[PATH_MAX + 1], *home_dir;
+	char filename[PATH_MAX + 1];
+	const char *home_dir = getenv("HOME") ? : "/";
+	int i;
+	
+	strncpy(filename, home_dir, PATH_MAX);
+	strncat(filename, "/.schism/config", PATH_MAX);
+	filename[PATH_MAX] = 0;
+	config_handle = InitConfig(filename);
 
-        home_dir = getenv("HOME");
+	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-        strncpy(filename, home_dir, PATH_MAX);
-        strncat(filename, "/.schism/config", PATH_MAX);
-        filename[PATH_MAX] = 0;
-        config = InitConfig(filename);
-
-        /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-        SetGroup("Directories", config);
-        get_string_safe("modules", home_dir, cfg_dir_modules,
-                        PATH_MAX, config);
-        get_string_safe("samples", home_dir, cfg_dir_samples,
-                        PATH_MAX, config);
-        get_string_safe("instruments", home_dir, cfg_dir_instruments,
-                        PATH_MAX, config);
-
-        /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-        // [Info Page]
-        // num_windows=3
-        // window0=0,19,1
-        // window1=7,3,1
-        // window2=5,15,1
-
-        /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-        // [Pattern Editor]
-        // link_effect_column=0
-        // track_divisions=0
-        // centralise_cursor=0
-        // highlight_row=0
-        // edit_mask=3
-        // track_view_scheme=(list of 64 numbers)
-
-        /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-        // [Audio]
-        // sample_rate=44100
-        // bits=16
-        // stereo=1
-        // channel_limit=256
-        // interpolation_mode=3
-        // oversampling=1
-        // hq_resampling=1
-        // noise_reduction=1
-        // headphones=0
-
-        /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-        // [Modplug DSP]
-        // xbass=0
-        // xbass_amount=35
-        // xbass_range=50
-        // surround=0
-        // surround_depth=20
-        // surround_delay=20
-        // reverb=0
-        // reverb_depth=30
-        // reverb_delay=100
-
-        /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-        SetGroup("General", config);
-
-        status.time_display = GetNumber("time_display", config);
-        if (status.time_display > 0
-            && status.time_display <= TIME_PLAYBACK)
-                status.time_display--;
-        else
-                status.time_display = TIME_PLAY_ELAPSED;
-        
-        if (GetNumber("classic_mode", config))
-                status.flags |= CLASSIC_MODE;
-        else
-                status.flags &= ~CLASSIC_MODE;
-
-        // fullscreen?
-
-        get_string_safe("font", "font.cfg", cfg_font, NAME_MAX, config);
-
-        current_palette = GetNumber("palette", config);
-        if (current_palette)
-                current_palette--;
-        else
-                current_palette = 2;
-
-        /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-        /* argh! why does it insist on rewriting the file even when
-         * nothing at all has changed? */
-        CloseConfig("/dev/null", config);
+	cfg_get_string("Directories", "modules", cfg_dir_modules, PATH_MAX, home_dir);
+	cfg_get_string("Directories", "samples", cfg_dir_samples, PATH_MAX, home_dir);
+	cfg_get_string("Directories", "instruments", cfg_dir_instruments, PATH_MAX, home_dir);
+	
+	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+	
+	cfg_load_info();
+	cfg_load_patedit();
+	cfg_load_audio();
+	
+	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+	
+	i = cfg_get_number("General", "time_display", TIME_PLAY_ELAPSED);
+	/* default to play/elapsed for invalid values */
+	if (i < 0 || i >= TIME_PLAYBACK)
+		i = TIME_PLAY_ELAPSED;
+	status.time_display = i;
+	
+	if (cfg_get_number("General", "classic_mode", 0))
+		status.flags |= CLASSIC_MODE;
+	else
+		status.flags &= ~CLASSIC_MODE;
+	
+	cfg_get_string("General", "font", cfg_font, NAME_MAX, "font.cfg");
+	
+	current_palette = cfg_get_number("General", "palette", 2);
+	
+	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+	
+	/* argh! why does it insist on rewriting the file even when
+	 * nothing at all has changed? */
+	CloseConfig("/dev/null", config_handle);
 }
 
 void cfg_save(void)
 {
-        /* TODO: actually save the settings */
+	char filename[PATH_MAX + 1];
 
-        /* int WriteString(const char *SettingName, const char *Value,
-         *                 int config);
-         * int WriteNumber(const char *SettingName, int Value,
-         *                 int config); */
+	strncpy(filename, getenv("HOME") ? : "/", PATH_MAX);
+	strncat(filename, "/.schism/config", PATH_MAX);
+	filename[PATH_MAX] = 0;
+	config_handle = InitConfig(filename);
+
+	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+	cfg_set_string("Directories", "modules", cfg_dir_modules);
+	cfg_set_string("Directories", "samples", cfg_dir_samples);
+	cfg_set_string("Directories", "instruments", cfg_dir_instruments);
+
+	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+	cfg_save_info();
+	cfg_save_patedit();
+	cfg_save_audio();
+	
+	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+	cfg_set_number("General", "time_display", status.time_display);
+	cfg_set_number("General", "classic_mode", !!(status.flags & CLASSIC_MODE));
+	cfg_set_number("General", "palette", current_palette);
+	
+	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+	CloseConfig(filename, config_handle);
 }

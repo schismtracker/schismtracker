@@ -1,9 +1,32 @@
-#ifndef _SAMPLE_EDIT_H
-#define _SAMPLE_EDIT_H
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2004 chisel <someguy@here.is> <http://here.is/someguy/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#ifndef SAMPLE_EDIT_H
+#define SAMPLE_EDIT_H
 
 void sample_sign_convert(song_sample * sample);
 void sample_reverse(song_sample * sample);
 void sample_centralise(song_sample * sample);
+void sample_amplify(song_sample *sample, int percent);
+/* Return the maximum amplification that can be done without clipping (as a
+ * percentage, suitable to pass to sample_amplify). */
+int sample_get_amplify_amount(song_sample *sample);
 
 /* if convert_data is nonzero, the sample data is modified (so it sounds
  * the same); otherwise, the sample length is changed and the data is
@@ -16,4 +39,4 @@ void sample_toggle_quality(song_sample * sample, int convert_data);
 void sample_invert(song_sample * sample);
 void sample_delta_decode(song_sample * sample);
 
-#endif /* ! _SAMPLE_EDIT_H */
+#endif /* ! SAMPLE_EDIT_H */
