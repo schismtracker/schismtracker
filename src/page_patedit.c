@@ -536,6 +536,7 @@ static void selection_swap(void)
 	song_note *pattern, *s_note, *p_note, tmp;
 	int row, chan, num_rows, num_chans, total_rows;
 	
+	/* TODO: make this a macro or something, it's used in a lot of different places */
 	if (!SELECTION_EXISTS) {
 		/* this should be one column wider (with the extra column on the left) */
 		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
@@ -606,6 +607,14 @@ static void selection_slide_volume(void)
 	int first, last;		/* the volumes */
 	int ve, lve;			/* volume effect */
 	
+	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
+	if (!SELECTION_EXISTS) {
+		/* this should be one column wider (with the extra column on the left) */
+		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
+		return;
+	}
+	
+	/* can't slide one row */
 	if (selection.first_row == selection.last_row)
 		return;
 	
@@ -727,6 +736,13 @@ static void selection_slide_effect(void)
 	int row, chan;
 	song_note *pattern, *note;
 	int first, last;		/* the effect values */
+	
+	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
+	if (!SELECTION_EXISTS) {
+		/* this should be one column wider (with the extra column on the left) */
+		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
+		return;
+	}
 	
 	if (selection.first_row == selection.last_row)
 		return;

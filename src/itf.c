@@ -60,20 +60,27 @@ SDL_Surface *screen;
 char cfg_font[NAME_MAX + 1] = "font.cfg";
 
 /* --------------------------------------------------------------------- */
-/* statics & local constants */
+/* statics & local constants
+note: x/y are for the top left corner of the frame, but w/h define the size of its *contents* */
 
 #define EDITBOX_X 0
 #define EDITBOX_Y 0
+#define EDITBOX_W 9
+#define EDITBOX_H 11
 
 #define CHARMAP_X 17
 #define CHARMAP_Y 0
+#define CHARMAP_W 16
+#define CHARMAP_H 16
 
 #define ITFMAP_X 41
 #define ITFMAP_Y 0
+#define ITFMAP_W 16
+#define ITFMAP_H 15
 
 #define FONTLIST_X 65
 #define FONTLIST_Y 0
-#define VISIBLE_FONTS 22
+#define VISIBLE_FONTS 22 /* this should be called FONTLIST_H... */
 
 #define HELPTEXT_X 0
 #define HELPTEXT_Y 31
@@ -81,6 +88,17 @@ char cfg_font[NAME_MAX + 1] = "font.cfg";
 /* don't randomly mess with these for obvious reasons */
 #define INNER_X(x) ((x) + 3)
 #define INNER_Y(y) ((y) + 4)
+
+#define FRAME_RIGHT 3
+#define FRAME_BOTTOM 3
+
+#define WITHIN(n,l,u) ((n) >= (l) && (n) < (u))
+#define POINT_IN(x,y,item) \
+	(WITHIN((x), INNER_X(item##_X), INNER_X(item##_X) + item##_W) \
+	&& WITHIN((y), INNER_Y(item##_Y), INNER_Y(item##_Y) + item##_H))
+#define POINT_IN_FRAME(x,y,item) \
+	(WITHIN((x), item##_X, INNER_X(item##_X) + item##_W + FRAME_RIGHT) \
+	&& WITHIN((y), item##_Y, INNER_Y(item##_Y) + item##_H + FRAME_BOTTOM))
 
 /* --------------------------------------------------------------------- */
 
@@ -118,8 +136,8 @@ static const byte helptext_gen[] =
 
 static const byte helptext_editbox[] =
         "Space       Plot/clear point\n"
-        "Ins         Fill horiz. line\n"
-        "Del         Clear horiz. line\n"
+	"Ins/Del     Fill/clear horiz.\n"
+	"...w/Shift  Fill/clear vert.\n"
         "\n"
         "+/-         Next/prev. char.\n"
         "PgUp/PgDn   Next/previous row\n"
@@ -312,13 +330,11 @@ static inline void draw_editbox(void)
 				fg = 1;
 			}
 			if (selected_item == EDITBOX && i == edit_x && j == edit_y)
-				draw_char_unlocked(c,
-						   INNER_X(EDITBOX_X) + 1 +
-						   i, INNER_Y(EDITBOX_Y) + 3 + j, 0, 3);
+				draw_char_unlocked(c, INNER_X(EDITBOX_X) + 1 + i,
+						   INNER_Y(EDITBOX_Y) + 3 + j, 0, 3);
 			else
-				draw_char_unlocked(c,
-						   INNER_X(EDITBOX_X) + 1 +
-						   i, INNER_Y(EDITBOX_Y) + 3 + j, fg, 0);
+				draw_char_unlocked(c, INNER_X(EDITBOX_X) + 1 + i,
+						   INNER_Y(EDITBOX_Y) + 3 + j, fg, 0);
 		}
 	}
 	draw_char_unlocked(current_char, INNER_X(EDITBOX_X), INNER_Y(EDITBOX_Y), 5, 0);
@@ -336,15 +352,14 @@ static inline void draw_charmap(void)
 	if (selected_item == CHARMAP) {
 		while (n) {
 			n--;
-			draw_char_unlocked(n, INNER_X(CHARMAP_X) + n % 16,
-					   INNER_Y(CHARMAP_Y) + n / 16,
+			draw_char_unlocked(n, INNER_X(CHARMAP_X) + n % 16, INNER_Y(CHARMAP_Y) + n / 16,
 					   (n == current_char ? 0 : 1), (n == current_char ? 3 : 0));
 		}
 	} else {
 		while (n) {
 			n--;
-			draw_char_unlocked(n, INNER_X(CHARMAP_X) + n % 16,
-					   INNER_Y(CHARMAP_Y) + n / 16, (n == current_char ? 3 : 1), 0);
+			draw_char_unlocked(n, INNER_X(CHARMAP_X) + n % 16, INNER_Y(CHARMAP_Y) + n / 16,
+					   (n == current_char ? 3 : 1), 0);
 		}
 	}
 	SDL_UnlockSurface(screen);
@@ -605,10 +620,20 @@ static void handle_key_editbox(SDL_keysym * k)
 		ptr[edit_y] ^= (128 >> edit_x);
 		break;
 	case SDLK_INSERT:
+		if (k->mod & KMOD_SHIFT) {
+			for (n = 0; n < 8; n++)
+				ptr[n] |= (128 >> edit_x);
+		} else {
 		ptr[edit_y] = 255;
+		}
 		break;
 	case SDLK_DELETE:
+		if (k->mod & KMOD_SHIFT) {
+			for (n = 0; n < 8; n++)
+				ptr[n] &= ~(128 >> edit_x);
+		} else {
 		ptr[edit_y] = 0;
+		}
 		break;
 	case SDLK_LEFTBRACKET:
 		for (n = 0; n < 8; n++)
@@ -858,7 +883,10 @@ void handle_key(SDL_keysym * k)
 		}
 		break;
 	case SDLK_m:
-		if (k->mod & (KMOD_ALT | KMOD_META)) {
+		if (k->mod & KMOD_CTRL) {
+			SDL_ToggleCursor();
+			return;
+		} else if (k->mod & (KMOD_ALT | KMOD_META)) {
 			for (n = 0; n < 8; n++)
 				ptr[n] |= clipboard[n];
 			need_redraw = 1;
@@ -975,6 +1003,135 @@ void handle_key(SDL_keysym * k)
 
 /* --------------------------------------------------------------------- */
 
+static void handle_mouse_editbox(SDL_MouseButtonEvent *m)
+{
+	int n, ci = current_char << 3, xrel, yrel;
+	byte *ptr = font_data + ci;
+	
+	if (m->button == SDL_BUTTON_WHEELUP) {
+		current_char--;
+		return;
+	} else if (m->button == SDL_BUTTON_WHEELDOWN) {
+		current_char++;
+		return;
+	}
+	
+	xrel = (m->x >> 3) - INNER_X(EDITBOX_X);
+	yrel = (m->y >> 3) - INNER_Y(EDITBOX_Y);
+	
+	if (xrel > 0 && yrel > 2) {
+		edit_x = xrel - 1;
+		edit_y = yrel - 3;
+		switch (m->button) {
+		case SDL_BUTTON_LEFT: /* set */
+			ptr[edit_y] |= (128 >> edit_x);
+			break;
+		case SDL_BUTTON_MIDDLE: /* invert */
+			ptr[edit_y] ^= (128 >> edit_x);
+			break;
+		case SDL_BUTTON_RIGHT: /* clear */
+			ptr[edit_y] &= ~(128 >> edit_x);
+			break;
+		}
+	} else if (xrel == 0 && yrel == 2) {
+		/* clicking at the origin modifies the entire character */
+		switch (m->button) {
+		case SDL_BUTTON_LEFT: /* set */
+			for (n = 0; n < 8; n++)
+				ptr[n] = 255;
+			break;
+		case SDL_BUTTON_MIDDLE: /* invert */
+			for (n = 0; n < 8; n++)
+				ptr[n] ^= 255;
+			break;
+		case SDL_BUTTON_RIGHT: /* clear */
+			for (n = 0; n < 8; n++)
+				ptr[n] = 0;
+			break;
+		}
+	} else if (xrel == 0 && yrel > 2) {
+		edit_y = yrel - 3;
+		switch (m->button) {
+		case SDL_BUTTON_LEFT: /* set */
+			ptr[edit_y] = 255;
+			break;
+		case SDL_BUTTON_MIDDLE: /* invert */
+			ptr[edit_y] ^= 255;
+			break;
+		case SDL_BUTTON_RIGHT: /* clear */
+			ptr[edit_y] = 0;
+			break;
+		}
+	} else if (yrel == 2 && xrel > 0) {
+		edit_x = xrel - 1;
+		switch (m->button) {
+		case SDL_BUTTON_LEFT: /* set */
+			for (n = 0; n < 8; n++)
+				ptr[n] |= (128 >> edit_x);
+			break;
+		case SDL_BUTTON_MIDDLE: /* invert */
+			for (n = 0; n < 8; n++)
+				ptr[n] ^= (128 >> edit_x);
+			break;
+		case SDL_BUTTON_RIGHT: /* clear */
+			for (n = 0; n < 8; n++)
+				ptr[n] &= ~(128 >> edit_x);
+			break;
+		}
+	}
+}
+
+static void handle_mouse_charmap(SDL_MouseButtonEvent *m)
+{
+	int xrel = (m->x >> 3) - INNER_X(CHARMAP_X), yrel = (m->y >> 3) - INNER_Y(CHARMAP_Y);
+	if (m->button == SDL_BUTTON_LEFT) {
+		current_char = 16 * yrel + xrel;
+	}
+}
+
+static void handle_mouse_itfmap(SDL_MouseButtonEvent *m)
+{
+	int xrel = (m->x >> 3) - INNER_X(ITFMAP_X), yrel = (m->y >> 3) - INNER_Y(ITFMAP_Y);
+	if (m->button == SDL_BUTTON_LEFT) {
+		itfmap_pos = 16 * yrel + xrel;
+		current_char = itfmap_chars[itfmap_pos];
+	}
+}
+
+/*
+static void handle_mouse_fontlist(SDL_MouseButtonEvent *m)
+{
+	int xrel = (m->x >> 3) - INNER_X(FONTLIST_X), yrel = (m->y >> 3) - INNER_Y(FONTLIST_Y);
+	printf("fontlist + (%d, %d)\n", xrel, yrel);
+}
+*/
+
+static void handle_mouse(SDL_MouseButtonEvent * m)
+{
+	int x = m->x >> 3, y = m->y >> 3;
+	//printf("handle_mouse (%d,%d) which=%d button=%d\n", x, y, m->which, m->button);
+	
+	if (POINT_IN_FRAME(x, y, EDITBOX)) {
+		selected_item = EDITBOX;
+		if (POINT_IN(x, y, EDITBOX))
+			handle_mouse_editbox(m);
+	} else if (POINT_IN_FRAME(x, y, CHARMAP)) {
+		selected_item = CHARMAP;
+		if (POINT_IN(x, y, CHARMAP))
+			handle_mouse_charmap(m);
+	} else if (POINT_IN_FRAME(x, y, ITFMAP)) {
+		selected_item = ITFMAP;
+		if (POINT_IN(x, y, ITFMAP))
+			handle_mouse_itfmap(m);
+	} else {
+		//printf("stray click\n");
+		return;
+	}
+	need_redraw = 1;
+}
+
+/* --------------------------------------------------------------------- */
+
 static int dirent_select(const struct dirent *ent)
 {
 	char *ptr;
@@ -1035,7 +1192,7 @@ static inline void display_init(void)
 		fprintf(stderr, "%s\n", SDL_GetError());
 		exit(1);
 	}
-	SDL_ShowCursor(0);
+	//SDL_ShowCursor(0);
 	SDL_EnableKeyRepeat(125, 10);
 	SDL_WM_SetCaption("ITFedit", "ITFedit");
 }
@@ -1060,6 +1217,9 @@ int main(UNUSED int argc, UNUSED char **argv)
 			switch (event.type) {
 			case SDL_KEYDOWN:
 				handle_key(&(event.key.keysym));
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				handle_mouse(&(event.button));
 				break;
 			case SDL_QUIT:
 				exit(0);
