@@ -1,0 +1,372 @@
+This is just general stuff that doesn't exactly fit in the code anywhere.
+For a more straightforward list try 'grep TODO *.c' or 'grep FIXME *.c'
+(the latter being the more important set of stuff)
+
+A lot of this is just notes to myself, so if something seems cryptic,
+ignore it :)
+
+---------------------------------------------------------------------------
+
+Info page is missing the 64-channel pattern view, technical information,
+and note dots.
+
+On the subject, it'd be interesting to have an oscilloscope view :)
+
+---------------------------------------------------------------------------
+
+Key logic is generally a complete nightmare. It should be handled less
+haphazardly, and in a manner that would make it easier to remap the
+keyboard.
+
+Note playing (i.e. the keyboard) should take an SDL_keysym instead of a
+char. Additionally the note trans table should allow more than one key
+per note (or other thing).
+
+---------------------------------------------------------------------------
+
+Envelopes for created instruments need to be initialized.
+
+---------------------------------------------------------------------------
+
+From the "would be nice to have" department:
+
+        A pattern with > 200 rows should be split into two patterns of
+        half the size (or maybe just a 200-row pattern and another one
+        for the remaining rows?) to be IT-compliant. MPT can handle
+        256-row patterns, which is nice, but they make Impulse Tracker
+        die painfully.
+
+        Impulse Tracker actually does this for XM files, but not for IT
+        files because they AREN'T SUPPOSED TO HAVE THAT MANY ROWS #*$@&~%
+
+For the pattern bit...
+        if (rows > 200) {
+                newpat = find_empty_pattern();
+                copy rows 128-n to newpat;
+                resize the pattern to 128 rows;
+                for (order = 0; order < length of orderlist; order++) {
+                        if (orderlist[order] == pattern) {
+                                insert newpat after this order;
+                                order++; // skip the new one
+                        }
+                }
+        }
+
+---------------------------------------------------------------------------
+
+More from the aforementioned department: inserting extended chars with
+alt-numpad. This will probably be quite difficult.
+
+---------------------------------------------------------------------------
+
+Instead of going through the whole ugly if (song_is_instrument_mode())
+bit every time something needs to get a sample/instrument just for the
+name, have a function that generalizes the instrument handling.
+
+---------------------------------------------------------------------------
+
+If the text in a textbox is changed, the cursor should be moved to the
+end of the text. (This is notably annoying in the filename box on the
+sample screen.)
+
+- have a function to set the text, not just strcpy
+
+---------------------------------------------------------------------------
+
+Buttons need to be drawn briefly in a "pressed" state after hitting enter
+on them. IT doesn't deal with them being "held" - they are released after
+a half second or so - so this could all be done from the key handler.
+Note, though, that if the button does something that takes a lot of time,
+it's still "pressed" during that time, so the order should go:
+
+      - draw in pressed state
+      - run the callback
+      - delay for a tiny bit (1/4 second?)
+      - draw in released state (if it's still on the same page)
+
+
+Argh! I was wrong; the button stays pressed until the key is released.
+The callback gets run a tiny bit after enter is pressed, but if it's on
+the same page the button stays pressed for as long as enter is. Maybe on
+the key release event, if the current item is a button (and if it's the
+enter key), redraw it in the released state?
+
+---------------------------------------------------------------------------
+
+Initializing even ONE instrument when the song was initially in sample
+mode totally screws up Modplug. (This means just hitting F4 with a song
+that's in sample mode will fubar it, as instruments are set up when
+they're selected.)
+
+Modplug seems to use 'if (m_nInstruments)' in code to check whether the
+file's in instrument mode.
+
+(How are these two things related?)
+
+---------------------------------------------------------------------------
+
+Global / Alt-F11
+        Order list {locked,unlocked}
+
+Pattern Editor / Ctrl-V
+        Default volumes {enabled,disabled}
+        (need to redraw)
+
+Orderlist / Ctrl-F7
+        status_text_flash("Playing order <n> next");
+        ...
+
+---------------------------------------------------------------------------
+
+(completely unrelated note, not at all a todo item)
+Start ST3, hit escape to load the main menu, and hit Shift-F10. Weird.
+
+---------------------------------------------------------------------------
+
+Would be cool to have +/- on the palette like ST3 does.
+
+... plusminus? heh ;)
+
+---------------------------------------------------------------------------
+
+a few ideas for some new keys...
+
+Pattern Editor:
+        Ctrl-L - one-shot cursor centralise (unlike Ctrl-C)
+
+Sample List:
+        Alt-I - invert sample
+        Alt-T - smart sample trim (instead of save ST3 sample, which is
+                getting rather dated by now) - ask for a "variance" and
+                trim all samples from the beginning and end of the sample
+                that are within that percent of zero.
+        ??? - interpolate sample start / end to zero
+                - pretty much a quick fade from zero to "fix" samples
+                  that don't begin/end at zero
+                - maybe these two could be Alt-I ('i'nterpolate) and
+                  Alt-J (meaningless key, just J comes right after I, and
+                  it's not already used for something)
+        ??? - optimize loop
+                farandole has a function to do this... check the docs
+                about how it works. maybe i could implement something
+                similar, as it sounds really useful.
+
+---------------------------------------------------------------------------
+
+SDL docs: "No operating system or library calls should be made between
+lock/unlock pairs, as critical system locks may be held during this
+time."
+
+Hmm. Better check that ;)
+
+---------------------------------------------------------------------------
+
+CPU load checking and limiting... if the load gets above certain points,
+react appropriately:
+        - update the screen less often
+        - use a larger audio mixing buffer
+        - limit the mixing channels
+
+Add some sort of option to specify that the program's CPU usage should be
+kept below, say, 75%.
+
+
+static UINT CSoundFile::gnCPUUsage;
+mp->CheckCPUUsage(UINT nCPU); // where nCPU = current CPU usage, 0-100
+
+---------------------------------------------------------------------------
+
+- add a new function, reinit_screen or something (which would be bound to
+ctrl-e instead of redraw_screen, and would do all that extra stuff like
+reload the font.)
+
+- move all the draw_const stuff into the same place as where it's being
+drawn (i.e. draw the box around the sample list at the same time as the
+list itself)
+
+---------------------------------------------------------------------------
+
+Console (framebuffer) problems that need to be addressed somehow:
+      - alt-function keys don't work
+      - the console font gets reset on exit (this is SDL's issue -- I
+        can't really do anything about it)
+
+---------------------------------------------------------------------------
+
+default song vars: gv=128 mv=48 sep=128 oldfx=off cgxx=off ctrl=samples
+playback=stereo slides=linear paths=(cwd)
+
+---------------------------------------------------------------------------
+
+Pannings for muted (mixing) channels aren't initialized to the (real)
+channel pannings -- they're initially zero. This looks dopey. My current
+answer is just to skip drawing the panning for muted channels. This isn't
+how IT does this, but then again, IT *mixes* the muted channels, too...
+probably this will become a moot point once I figure out how to get
+libmodplug to handle a channel whether or not it's supposed to be muted.
+
+---------------------------------------------------------------------------
+
+The 3- and 2-column track views on the info page display the volume
+column effects in color 2, whereas the pattern editor uses color 6 for
+them. Doh.
+
+---------------------------------------------------------------------------
+
+Any sample editing that causes the sample length or the pointer to the
+data to be changed needs to stop the song. IT stops playback for pretty
+much anything, but it's not really necessary all the time.
+
+ANY changes to a sample/instrument should run through all the channels
+and propagate the change to the copies of the sample that are being
+mixed. This way the sample loop points, tuning, etc. are updated when
+they're edited like they're supposed to be.
+
+Along with this, anything editing the sample should be freeing the data
+(with libmodplug's FreeSample function -- great, another stupid wrapper
+function. Why doesn't modplug just use malloc/free?...) and reallocating
+new data of the proper length.
+
+---------------------------------------------------------------------------
+
+Time seek dialog?
+
+---------------------------------------------------------------------------
+
+Title handlers:
+
+med/wow - These are both way more work than I want to do, especially
+        considering I only have one of each.
+
+rtm - I don't have any RTM files, and it's another one of those ugly
+        structures that I'd have to read...
+
+---------------------------------------------------------------------------
+
+snd_fx.cpp:
+        inside an #ifdef MODPLUG_TRACKER, there's if (gdwSoundSetup &
+        SNDMIX_NOBACKWARDJUMPS) { ... }
+        - what does this change?
+
+Changes if MODPLUG_TRACKER is defined:
+        - stereo vu enabled
+        - 24 bit samples loaded
+(eh... who cares?)
+
+Things I need to hack libmodplug to fix:
+      - Channel volume/panning info beyond the last used channel isn't
+        loaded.
+      - Instruments aren't even read if the song's in sample mode.
+      - An IT with initial global volume set to 0 is set to 128.
+      - If the initial tempo is 31, it's reset to 125.
+      - Mixing volume is clamped to a stupidly small range.
+      - Modplug ignores a song's stereo flag.
+      - Really short samples (like, length 2) aren't loaded.
+      - Row highlight info isn't loaded. (or saved...)
+      - Modplug's vibrato rate has about 1/4 the resolution of IT's!
+      - Muted channels aren't mixed.
+      - #*@%!$, need to recalculate the number of channels used when
+        saving a file. (Not for .it, but s3m/xm/mod files get trashed
+        because they don't handle 64 channels)
+      - FireLight's 'backward.s3m' is totally screwed... seems Modplug
+        ignores the value to the pattern break on the last order.
+
+---------------------------------------------------------------------------
+
+How 'bout something like Ctrl-F8 to stop the song with a fadeout?
+
+(And some key to pause/restart...
+
+---------------------------------------------------------------------------
+
+On the sample/instrument lists:
+
+Thumbbars that get their values shifted to make their ranges match
+Impulse Tracker's are difficult to edit due to the fact that the page's
+predraw hook just sets the previous value back again. This is incredibly
+ugly style...
+
+The behaviour before I started doing the double buffer redrawing (which
+is what caused this bug, really) was that the number could be set to any
+arbitrary number, and the only time it got reset was when the whole page
+was drawn (page change, screen redraw, and sample change were the only
+causes of this, I think).
+
+The simple way to deal with this would be to just call the predraw hook
+in the circumstances outlined above, and of course change the name to
+something more suitable. This way, the whole bunch of stuff that happens
+in that function isn't called on *every* screen redraw, being as it's
+redundant to set the values more than once anyway.
+
+Perhaps rename update_values_in_song to something like copy_items_to_song
+(but more understandably, not the kind of name that just SCREAMS out
+"this function was written at 1:30 in the morning" :) and rename
+predraw_hook to copy_song_to_items.
+
+---------------------------------------------------------------------------
+
+SNDMIX_SOFTPANNING apparently doesn't do anything...?
+
+---------------------------------------------------------------------------
+
+Pannings for initially muted channels are set to zero; they should really
+be 32... (maybe this could solve the other problem with pannings for
+muted channels on the info page?)
+
+---------------------------------------------------------------------------
+
+"!Scream!", case sensitive.
+
+(btw: this is exactly the kind of cryptic note to myself that I was
+referring to at the top of this file. ;)
+
+---------------------------------------------------------------------------
+
+Is sample reverse being done correctly?
+
+---------------------------------------------------------------------------
+
+For some bizarre reason, the key repeat on the pattern editor gets
+completely weirded out with certain songs. Purple Motion's Skyrider and
+Cool City (skyrider.s3m and ccity12.s3m) are prime examples.
+
+Haven't figured out what the deal is here.
+
+(And I'm already sick of the interface code... I might just rip it out
+and rewrite the whole thing.)
+
+---------------------------------------------------------------------------
+
+The thumbbar positions on the orderlist/panning list and the
+orderlist/volume list are NOT linked.
+
+---------------------------------------------------------------------------
+
+See the snare roll (pattern 8) in my song popsicle.it -- Modplug screws
+it up on row 44 or so, and I have no idea why :/
+
+---------------------------------------------------------------------------
+
+S3M saver bug: if there's more than 240 orders, the orderlist gets lost.
+Fix: change
+        nbo = (GetNumPatterns() + 15) & 0xF0;
+        if (!nbo) nbo = 16;
+to
+        nbo = (GetNumPatterns());
+        if (nbo == 0)
+                nbo = 2;
+        else if (nbo & 1)
+                nbo++;
+(this will also get rid of the save-15-extra-orders nonsense)
+
+---------------------------------------------------------------------------
+
+For the pattern data
+
+            Channel 01      Channel 02
+        00 ... .. .. SB0 | ... .. .. SB0
+        01 ... .. .. .00 | ... .. .. SB1
+        02 ... .. .. SB1 | ... .. .. .00
+
+The loop in the second channel only happens once. I'm guessing this has
+something to do with my hack to fix the infinite loop problem :( 

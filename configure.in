@@ -1,0 +1,136 @@
+dnl Process this file with autoconf to produce a configure script.
+
+AC_INIT(src/main.c)
+
+dnl We'll need machine type later
+AC_CANONICAL_SYSTEM
+machtype=$target_cpu
+
+AM_INIT_AUTOMAKE(schism, 0.031a)
+AM_CONFIG_HEADER(config.h)
+
+dnl -----------------------------------------------------------------------
+
+dnl Check for standard programs
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_CXX
+AC_PROG_CXXCPP
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_RANLIB
+
+dnl We're using C
+AC_LANG_C
+
+dnl Check for endianness
+dnl This procures a warning from autoconf :(
+dnl (and it'll cause problems when I get to doing cross builds)
+AC_C_BIGENDIAN
+
+dnl Check for SDL libs
+AM_PATH_SDL(1.1.8, , AC_MSG_ERROR([*** SDL version >= 1.1.8 not found.]))
+
+dnl libbz2 is used for help text compression.
+dnl TODO | don't actually *require* bz2. gzip could work too, and if
+dnl TODO | gzip isn't available either (as may be the case on win32)
+dnl TODO | just use the uncompressed help text.
+AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffDecompress, ,
+             AC_MSG_ERROR([*** libbz2 not found.]))
+
+dnl This stuff is for the title library. Eventually I'll probably make
+dnl a "real" library out of it, but for now I'm just going to cheat.
+dnl Hope no one minds. =)
+AM_CONDITIONAL(USE_NON_TRACKED_TYPES, false)
+AM_CONDITIONAL(HAVE_LIBID3TAG, false)
+AM_CONDITIONAL(HAVE_VORBIS, false)
+
+dnl Functions
+AC_FUNC_MEMCMP
+AC_FUNC_MMAP
+AC_FUNC_STRFTIME
+AC_CHECK_FUNCS(strchr memmove strerror)
+dnl ... strspn strcspn strpbrk
+AC_CHECK_FUNCS(strtol strcasecmp strncasecmp asprintf)
+
+dnl Headers, typedef crap, et al.
+AC_HEADER_STDC
+AC_HEADER_DIRENT
+AC_HEADER_TIME
+AC_CHECK_HEADERS(fcntl.h limits.h unistd.h)
+dnl TODO: add AC_REPLACE_FUNCS(scandir), then reimplement in scandir.c
+
+AC_C_CONST
+AC_C_INLINE
+AC_TYPE_OFF_T
+AC_TYPE_SIZE_T
+AC_STRUCT_TM
+
+dnl -----------------------------------------------------------------------
+dnl Optimizations borrowed and modified a bit from DGen.
+dnl I really don't know what they all do, to be honest :)
+dnl (This ought to be above AC_PROG_CC, but that causes configure to fail
+dnl when all the insane warnings are are enabled.)
+
+AC_ARG_ENABLE(extra-opt,
+              [  --enable-extra-opt      Add extra optimizations (egcs/GCC >= 2.95 only)],
+              ADD_OPT=$enableval,
+              ADD_OPT=no)
+
+AC_ARG_ENABLE(all-warnings,
+              [  --enable-all-warnings   Enable ridiculous compiler warnings (GCC)],
+              ADD_WARN=$enableval,
+              ADD_WARN=no)
+
+if test x$ADD_OPT \!= xno; then
+        case $machtype in
+        i?86)
+                CFLAGS="$CFLAGS -g0 -s -O3 -ffast-math"
+                CFLAGS="$CFLAGS -mcpu=$machtype -march=$machtype"
+                CFLAGS="$CFLAGS -fstrength-reduce -fomit-frame-pointer"
+                CFLAGS="$CFLAGS -frerun-cse-after-loop -funroll-loops"
+                CFLAGS="$CFLAGS -malign-functions=5 -malign-jumps=5"
+                CFLAGS="$CFLAGS -malign-loops=5 -malign-double"
+                CFLAGS="$CFLAGS -fno-exceptions -fno-rtti -fno-ident"
+                
+                CXXFLAGS="$CXXFLAGS -g0 -s -O3 -ffast-math"
+                CXXFLAGS="$CXXFLAGS -mcpu=$machtype -march=$machtype"
+                CXXFLAGS="$CXXFLAGS -fstrength-reduce -fomit-frame-pointer"
+                CXXFLAGS="$CXXFLAGS -frerun-cse-after-loop -funroll-loops"
+                CXXFLAGS="$CXXFLAGS -malign-functions=5 -malign-jumps=5"
+                CXXFLAGS="$CXXFLAGS -malign-loops=5 -malign-double"
+                CXXFLAGS="$CXXFLAGS -fno-exceptions -fno-rtti -fno-ident"
+                CXXFLAGS="$CXXFLAGS -fno-enforce-eh-specs"
+                ;;
+        *)
+                CFLAGS="$CFLAGS -g0 -s -O3 -ffast-math"
+                CFLAGS="$CFLAGS -fomit-frame-pointer -fno-exceptions"
+                CFLAGS="$CFLAGS -fno-rtti -funroll-loops"
+                CFLAGS="$CFLAGS -frerun-cse-after-loop -fno-ident"
+                
+                CXXFLAGS="$CXXFLAGS -g0 -s -O3 -ffast-math"
+                CXXFLAGS="$CXXFLAGS -fomit-frame-pointer -fno-exceptions"
+                CXXFLAGS="$CXXFLAGS -fno-rtti -funroll-loops"
+                CXXFLAGS="$CXXFLAGS -frerun-cse-after-loop -fno-ident"
+                CXXFLAGS="$CXXFLAGS -fno-enforce-eh-specs"
+                ;;
+        esac
+fi
+
+if test x$ADD_WARN \!= xno; then
+        ADD_WARN="-Wall -W -Winline -Wshadow -Wcast-align"
+        ADD_WARN="$ADD_WARN -Wwrite-strings -Waggregate-return"
+        ADD_WARN="$ADD_WARN -Wmissing-prototypes -Wpacked"
+        CFLAGS="$CFLAGS $ADD_WARN -Wstrict-prototypes"
+        CFLAGS="$CFLAGS -Wmissing-declarations -Wnested-externs"
+        CXXFLAGS="$CXXFLAGS $ADD_WARN"
+fi
+
+dnl -----------------------------------------------------------------------
+
+AC_OUTPUT([
+        Makefile
+        src/Makefile
+        src/fmt/Makefile
+        src/libmodplug/Makefile
+])

@@ -1,0 +1,15 @@
+|                         ‹††††††††††††††††††††††††††Š
+|                         „  Order List and Panning  ‘
+|                         ‰–
+|
+| Order Keys.
+|   N                 Insert next pattern
+|   -                 End of song mark
+|   +                 Skip to next Order mark
+|   Ins               Insert a pattern
+|   Del               Delete a pattern
+|   Tab/Shift-Tab     Move to next window
+|   Ctrl-F7           Play this Order next
+|
+| Panning Keys.
+|   L/M/R/S           Set panning to Left/Middle/Right/Surround

@@ -1,0 +1,76 @@
+---------------------------------------------------------------------------
+----[.blurb.]
+
+This is actually the very first program I ever did with SDL. (Even the
+ITF editor came some amount of time afterward.) It's also the first time
+I used threads, the first I ever got autoconf to work properly ;), and my
+first ever program to have an actual structure.
+
+Considering all that, I'd say this came out pretty well.
+
+---------------------------------------------------------------------------
+----[.features.]
+
+      - Based on Modplug, so there's support for *lots* of file types. If
+        you've ever wanted to load, say, a PTM file in Impulse Tracker,
+        now's your chance!
+
+      - Since the GUI is written with SDL, it's portable to about any
+        system that SDL can run on. (well, as long as Modplug also works
+        on it... otherwise there's not much point to the program, now is
+        there? :) Most notably, this means that those unfortunate enough
+        to have "upgraded" to WinXP can still keep the IT environment.
+
+      - Much improved text entries. They work a bit more like Scream
+        Tracker's in that the edit point isn't always fixed to the length
+        of the text. Maybe this is what Jeffrey Lim had in mind when he
+        wrote that "the routines need to be rewritten" for his text
+        entries. :)
+
+      - 12-channel and 64-channel pattern view modes. (IT has a
+        64-channel view on the info page, but no corresponding setup in
+        the pattern editor.)
+
+      - Thumbbar value editing with the arrow keys is a bit easier: in
+        IT, shift-arrows changed the value by a multiple of 4, ctrl-arrow
+        changed it by 2, and that was about it. I've added alt-arrow to
+        change the value by 8; in addition, holding more than one
+        modifier multiplies them -- for example, alt-shift-right will
+        increase a value by 32 (8 x 4).
+
+      - Home/end work on the menus, help viewer, and message editor when
+        it's in view mode.
+
+      - The greatest sample waveform display on earth. Well, maybe not,
+        but the loop points are marked in a different colour from the
+        sample data.
+
+      - No free memory stats... I don't see much use for them, what with
+        the ability to allocate a 4gb swapfile. :) In that space is
+        currently a big ugly black rectangle, but in the future I might
+        stick some eye candy there. (Oscilloscope? Spectrum analyzer? VU
+        meter? Some stupid pixmap? I haven't decided yet.)
+
+      - The palette preset selector has been rewritten. Now you can save
+        a custom palette to any of 20 different slots. (In theory, at
+        least. At the moment, it's still all hard-coded.)
+
+      - Support for Impulse Tracker's font files... an ITF editor is
+        included as well, so you can make your own fonts, too! (Very
+        loosely based on ZaStaR's ITF.EXE, though not just a clone of it.
+        It's missing a few things, but it accomplishes more or less the
+        same task.)
+
+---------------------------------------------------------------------------
+----[.the.bottom.]
+
+Copyright (c) 2003 chisel. All rights reversed.
+See the file COPYING in the distribution for license details.
+
+Contact me for any reason, business or pleasure, rain or shine:
+
+Website: http://here.is/someguy/
+E-mail: someguy@here.is (no binary attachments, please)
+Snail: haha, sure...
+
+This is the last line.

@@ -1,0 +1,124 @@
+#if !defined(_DRAW_CHAR_H) && !defined(__cplusplus)
+#define _DRAW_CHAR_H
+
+#include <SDL.h>
+
+void draw_char_unlocked(byte c, int x, int y, Uint32 fg, Uint32 bg);
+static inline void draw_char(byte c, int x, int y, Uint32 fg, Uint32 bg)
+{
+        SDL_LockSurface(screen);
+        draw_char_unlocked(c, x, y, fg, bg);
+        SDL_UnlockSurface(screen);
+}
+
+/* return value is the number of characters drawn */
+int draw_text_unlocked(const byte * text, int x, int y, Uint32 fg,
+                       Uint32 bg);
+static inline int draw_text(const byte * text, int x, int y, Uint32 fg,
+                            Uint32 bg)
+{
+        int n;
+
+        SDL_LockSurface(screen);
+        n = draw_text_unlocked(text, x, y, fg, bg);
+        SDL_UnlockSurface(screen);
+
+        return n;
+}
+
+/* return value is the length of text drawn
+ * (so len - return is the number of spaces) */
+int draw_text_len(const byte * text, int len, int x, int y, Uint32 fg,
+                  Uint32 bg);
+
+void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color);
+
+void draw_half_width_chars_unlocked(byte c1, byte c2, int x, int y,
+                                    Uint32 fg1, Uint32 bg1, Uint32 fg2,
+                                    Uint32 bg2);
+static inline void draw_half_width_chars(byte c1, byte c2, int x, int y,
+                                         Uint32 fg1, Uint32 bg1,
+                                         Uint32 fg2, Uint32 bg2)
+{
+        SDL_LockSurface(screen);
+        draw_half_width_chars_unlocked(c1, c2, x, y, fg1, bg1, fg2, bg2);
+        SDL_UnlockSurface(screen);
+}
+
+/* --------------------------------------------------------------------- */
+/* boxes */
+
+/* don't use these directly */
+void draw_thin_inner_box(int xs, int ys, int xe, int ye, Uint32 tl,
+                         Uint32 br);
+void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl,
+                          Uint32 br);
+void draw_thin_outer_box(int xs, int ys, int xe, int ye, Uint32 c);
+void draw_thick_outer_box(int xs, int ys, int xe, int ye, Uint32 c);
+void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye,
+                                  int shade_mask);
+
+/* the type is comprised of one value from each of these enums.
+ * the "default" box type is thin, inner, and with outset shading. */
+
+/* for outer boxes, outset/inset work like light/dark respectively
+ * (because using two different colors for an outer box results in some
+ * ugliness at the corners) */
+enum {
+        BOX_OUTSET = (0),
+        BOX_INSET = (1),
+        BOX_FLAT_LIGHT = (2),
+        BOX_FLAT_DARK = (3),
+};
+#define BOX_SHADE_MASK 3
+
+enum {
+        BOX_INNER = (0 << 2),   /* 00 00 */
+        BOX_OUTER = (1 << 2),   /* 01 00 */
+        BOX_CORNER = (2 << 2),  /* 10 00 */
+};
+#define BOX_TYPE_MASK 12
+
+/* the thickness is ignored for corner boxes, which are always thin */
+enum {
+        BOX_THIN = (0 << 4),    /* 0 00 00 */
+        BOX_THICK = (1 << 4),   /* 1 00 00 */
+};
+#define BOX_THICKNESS_MASK 16
+
+static inline void draw_box_unlocked(int xs, int ys, int xe, int ye,
+                                     int flags)
+{
+        const int colors[4][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1} };
+        int tl = colors[flags & BOX_SHADE_MASK][0];
+        int br = colors[flags & BOX_SHADE_MASK][1];
+
+        switch (flags & (BOX_TYPE_MASK | BOX_THICKNESS_MASK)) {
+        case BOX_THIN | BOX_INNER:
+                draw_thin_inner_box(xs, ys, xe, ye, tl, br);
+                break;
+        case BOX_THICK | BOX_INNER:
+                draw_thick_inner_box(xs, ys, xe, ye, tl, br);
+                break;
+        case BOX_THIN | BOX_OUTER:
+                draw_thin_outer_box(xs, ys, xe, ye, tl);
+                break;
+        case BOX_THICK | BOX_OUTER:
+                draw_thick_outer_box(xs, ys, xe, ye, tl);
+                break;
+        case BOX_THIN | BOX_CORNER:
+        case BOX_THICK | BOX_CORNER:
+                draw_thin_outer_cornered_box(xs, ys, xe, ye,
+                                             flags & BOX_SHADE_MASK);
+                break;
+        }
+}
+
+static inline void draw_box(int xs, int ys, int xe, int ye, int flags)
+{
+        SDL_LockSurface(screen);
+        draw_box_unlocked(xs, ys, xe, ye, flags);
+        SDL_UnlockSurface(screen);
+}
+
+#endif /* ! _DRAW_CHAR_H */
