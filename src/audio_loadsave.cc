@@ -684,7 +684,7 @@ static bool _save_it(const char *file)
 	hdr.smpnum = nsmp;
 	hdr.patnum = npat;
 	// No one else seems to be using the cwtv's tracker id number, so I'm gonna take 1. :)
-	hdr.cwtv = bswapLE16(0x1016);	// creator: 1 = schism tracker; 016 = 0.16a
+	hdr.cwtv = bswapLE16(0x1017); // cwtv 0xtxyy = tracker id t, version x.yy
 	// compat:
 	//     "normal" = 2.00
 	//     vol col effects = 2.08
@@ -897,7 +897,6 @@ bool _load_sample_its(const byte *data, size_t length, song_sample *smp, char *t
 
 bool _load_sample_au(const byte * data, size_t length, song_sample * smp, char *title)
 {
-	// magic_number data_offset data_size encoding sample_rate channels
 	// encoding:
 	//     1  =  u-law
 	//     2  =  8-bit linear pcm  = RS_PCM8U
@@ -911,10 +910,8 @@ bool _load_sample_au(const byte * data, size_t length, song_sample * smp, char *
 		unsigned long magic_number, data_offset, data_size, encoding, sample_rate, channels;
 	} au;
 	
-	if (length < 24) {
-		printf("too small, bah!\n");
+	if (length < 24)
 		return false;
-	}
 
 	memcpy(&au, data, sizeof(au));
 	// optimization: could #ifdef this out on big-endian machines

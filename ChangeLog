@@ -1,3 +1,26 @@
+Fri Dec 24 02:36:14 2004  chisel  <someguy@here.is>
+
+	* Changes made to the palette are saved now.
+	
+	* Packing this up for release as version 0.17a, mostly because
+	I'm going away for a week. And yes, I tested it this time. ;)
+
+
+Tue Dec 21 00:22:44 2004  chisel  <someguy@here.is>
+
+	* configure.in: Got rid of a lot of optimization flags. A couple
+	sites claim that they don't accomplish much, and it breaks on
+	some systems anyway, so...
+
+	* Sample load screen now displays titles for supported sample
+	types. Additionally, just for the heck of it, the *module* load
+	screen displays titles for supported sample types, and the sample
+	load screen displays titles for supported module types. In other
+	words, if the file has a title, Schism displays it. Note,
+	however, that modules aren't "browsable" yet; they are still
+	loaded as raw sample data.
+
+
 Sat Dec 18 14:46:17 2004  chisel  <someguy@here.is>
 
 	* itf.c: Mouse support for editing. It's not possible to do a

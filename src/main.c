@@ -266,10 +266,10 @@ int main(int argc, char **argv)
 	song_initialise();
 	cfg_load();
 	display_init();
+	palette_apply();
 	font_init();
 	song_init_audio();
 	song_init_modplug();
-	palette_load_preset(current_palette);
 	setup_help_text_pointers();
 	load_pages();
 	main_song_changed_cb();

@@ -32,7 +32,6 @@ bool fmt_mdl_read_info(byte * data, size_t length, file_info * fi);
 bool fmt_mdl_read_info(byte * data, size_t length, file_info * fi)
 {
         unsigned int position, block_length;
-        UNUSED int n;
         char artist[21], title[33];
 
         /* data[4] = major version number (accept 0 or 1) */

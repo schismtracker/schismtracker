@@ -624,7 +624,7 @@ static void handle_key_editbox(SDL_keysym * k)
 			for (n = 0; n < 8; n++)
 				ptr[n] |= (128 >> edit_x);
 		} else {
-		ptr[edit_y] = 255;
+			ptr[edit_y] = 255;
 		}
 		break;
 	case SDLK_DELETE:
@@ -632,7 +632,7 @@ static void handle_key_editbox(SDL_keysym * k)
 			for (n = 0; n < 8; n++)
 				ptr[n] &= ~(128 >> edit_x);
 		} else {
-		ptr[edit_y] = 0;
+			ptr[edit_y] = 0;
 		}
 		break;
 	case SDLK_LEFTBRACKET:
@@ -834,6 +834,7 @@ void handle_key(SDL_keysym * k)
 		if (k->mod & KMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
+		palette_apply();
 		need_redraw = 1;
 		return;
 	case '0':
@@ -844,6 +845,7 @@ void handle_key(SDL_keysym * k)
 		if (k->mod & KMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
+		palette_apply();
 		need_redraw = 1;
 		return;
 	case SDLK_F2:
@@ -1211,6 +1213,7 @@ int main(UNUSED int argc, UNUSED char **argv)
 
 	display_init();
 	palette_load_preset(7);
+	palette_apply();
 
 	for (;;) {
 		while (SDL_PollEvent(&event)) {

@@ -126,6 +126,9 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
+/* Read titles of samples */
+#undef USE_SAMPLE_TYPES
+
 /* Version number of package */
 #undef VERSION
 

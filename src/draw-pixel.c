@@ -34,14 +34,18 @@
 /* --------------------------------------------------------------------- */
 /* palette */
 
-/* this is set in cfg_load() (config.c) */
-int current_palette;
+/* this is set in cfg_load() (config.c)
+palette_apply() must be called after changing this to update the display. */
+byte current_palette[16][3];
+/* this should be changed only with palette_load_preset() (which doesn't call
+palette_apply() automatically, so do that as well) */
+int current_palette_index;
 
 static Uint32 palette_lookup[16] = { 0 };
 
 #define VALUE_TRANSLATE(n) ((int) ((n) / 63.0 * 255.0 + 0.5))
 
-void palette_set(byte colors[16][3])
+void palette_apply(void)
 {
         int n;
 
@@ -49,18 +53,19 @@ void palette_set(byte colors[16][3])
                 SDL_Color c[16];
 
                 for (n = 0; n < 16; n++) {
-                        c[n].r = VALUE_TRANSLATE(colors[n][0]);
-                        c[n].g = VALUE_TRANSLATE(colors[n][1]);
-                        c[n].b = VALUE_TRANSLATE(colors[n][2]);
+                        c[n].r = VALUE_TRANSLATE(current_palette[n][0]);
+                        c[n].g = VALUE_TRANSLATE(current_palette[n][1]);
+                        c[n].b = VALUE_TRANSLATE(current_palette[n][2]);
                 }
                 SDL_SetColors(screen, c, 0, 16);
         } else {
-                for (n = 0; n < 16; n++)
-                        palette_lookup[n] =
-                                SDL_MapRGB(screen->format,
-                                           VALUE_TRANSLATE(colors[n][0]),
-                                           VALUE_TRANSLATE(colors[n][1]),
-                                           VALUE_TRANSLATE(colors[n][2]));
+                for (n = 0; n < 16; n++) {
+                        palette_lookup[n] = SDL_MapRGB
+				(screen->format,
+				 VALUE_TRANSLATE(current_palette[n][0]),
+				 VALUE_TRANSLATE(current_palette[n][1]),
+				 VALUE_TRANSLATE(current_palette[n][2]));
+		}
         }
 }
 
@@ -69,8 +74,8 @@ void palette_load_preset(int palette_index)
         if (palette_index < 0 || palette_index >= NUM_PALETTES)
                 return;
 
-        current_palette = palette_index;
-        palette_set(palettes[current_palette].colors);
+	current_palette_index = palette_index;
+	memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
 }
 
 inline Uint32 palette_get(Uint32 c)

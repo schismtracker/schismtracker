@@ -158,7 +158,8 @@ extern SDL_Surface *screen;
 extern struct tracker_status status;
 extern byte *font_data; /* ... which is 2048 bytes */
 extern struct it_palette palettes[];
-extern int current_palette;
+extern byte current_palette[16][3];
+extern int current_palette_index;
 
 extern const char hexdigits[16];        /* in keyboard.c at the moment */
 
@@ -271,7 +272,7 @@ void main_song_changed_cb(void);
 /* colors and fonts */
 
 int font_load(const char *filename);
-void palette_set(byte colors[16][3]);
+void palette_apply(void);
 void palette_load_preset(int palette_index);
 Uint32 palette_get(Uint32 c);
 

@@ -43,7 +43,7 @@
 /* --------------------------------------------------------------------- */
 /* the locals */
 
-static const int type_colors[] = { 7, 3, 5, 6, 2, 4 };
+static const int type_colors[] = { 7, 3, 5, 6, 2, 4, 7 };
 
 static struct item items_loadmodule[5];
 static struct item items_savemodule[5];
@@ -57,6 +57,7 @@ struct file_list_data {
         char *title;
         const char *type_name;
         int color;
+        int loadable;
 };
 static struct file_list_data **files = NULL;
 
@@ -490,6 +491,7 @@ static void fill_file_info(struct file_list_data *file)
                 file->title = fi->title;
                 file->type_name = fi->description;
                 file->color = type_colors[fi->type];
+                file->loadable = !(fi->type == TYPE_OTHER || fi->type == TYPE_SAMPLE);
                 free(fi->extension);
                 free(fi);
                 free(ptr);
@@ -532,7 +534,7 @@ static void file_list_draw(void)
                                 bg = 3;
                         } else {
                                 fg1 = files[n]->color;
-                                fg2 = 3;
+                                fg2 = files[n]->loadable ? 3 : 7;
                                 bg = 0;
                         }
 

@@ -25,10 +25,10 @@
 #include "song.h"
 #include "page.h"
 
+#include "title.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
-
-/* #include "title.h" */
 
 #include <SDL.h>
 #include <fcntl.h>
@@ -75,29 +75,31 @@ static char *get_time_string(time_t when, char *buf)
 /* --------------------------------------------------------------------------------------------------------- */
 
 /*
- * TYPE_UNCHECKED = color 6, name = the filename
- *   - any file that hasn't been identified as a module, sample, or unknown type
- *     (all non-directories are initially TYPE_UNCHECKED)
- *     The color for this type doesn't matter: with the way I'm implementing this, all files will be checked
- *     before they get drawn. This is also the case for the module browser; in fact, I used the unchecked
- *     color for XM files. I'll use that color for libraries here, since in IT they're the same color as
- *     regular samples. (Come to think of it, if I use a different color to indicate libraries, maybe I
- *     could replace the "....Library...." text with the module's name.)
- * TYPE_DIRECTORY = color 5, name = "........Directory........"
- *   - directories, duh ;)            [note: the dots are really char 154]
- * TYPE_SAMPLE = color 3, name = whatever the sample's name is
- *   - anything loadable as a structured sample, i.e. *.its files
- *     also, anything within a sample library is TYPE_SAMPLE.
- * TYPE_LIBRARY = color 3, name ".........Library........."
- *   - any modplug-readable format
- * TYPE_UNKNOWN = color 2, name = the filename
- *   - any file that's not a recognised module or sample type
- * 
- * Note: the ordering here roughly corresponds with the cache.its format values.
- * TODO: check the actual format values cache.its uses, and actually copy them here.
- */
-enum { TYPE_UNCHECKED, TYPE_DIRECTORY, TYPE_SAMPLE, TYPE_LIBRARY, TYPE_UNKNOWN };
-static const int type_colors[] = { 4, 5, 3, 6, 2 };
+LTYP_UNCHECKED = color 6, name = the filename
+  - any file that hasn't been identified as a module, sample, or unknown type
+    (all non-directories are initially LTYP_UNCHECKED)
+    The color for this type doesn't matter: with the way I'm implementing this, all files will be checked
+    before they get drawn. This is also the case for the module browser; in fact, I used the unchecked
+    color for XM files. I'll use that color for libraries here, since in IT they're the same color as
+    regular samples. (Come to think of it, if I use a different color to indicate libraries, maybe I
+    could replace the "....Library...." text with the module's name.)
+LTYP_DIRECTORY = color 5, name = "........Directory........"
+  - directories, duh ;)            [note: the dots are really char 154]
+LTYP_SAMPLE = color 3, name = whatever the sample's name is
+  - anything loadable as a structured sample, i.e. *.its files
+    also, anything within a sample library is LTYP_SAMPLE.
+LTYP_LIBRARY = color 3, name ".........Library........."
+  - any modplug-readable format
+LTYP_UNKNOWN = color 2, name = the filename
+  - any file that's not a recognised module or sample type
+
+"ltyp" used to be "type", but the title library is using TYPE_* to identify the "family" of a particular file.
+
+Note: the ordering here roughly corresponds with the cache.its format values.
+TODO: check the actual format values cache.its uses, and actually copy them here.
+*/
+enum { LTYP_UNCHECKED, LTYP_DIRECTORY, LTYP_SAMPLE, LTYP_LIBRARY, LTYP_UNKNOWN };
+static const int ltyp_colors[] = { 4, 5, 3, 6, 2 };
 
 /* note: this has do be split up like this; otherwise it gets read as '\x9ad'
  * which is the Wrong Thing. */
@@ -113,18 +115,18 @@ static const byte *directory_type_name = "Directory";
 static const byte *unknown_type_name = "Unknown sample format";
 
 struct file_list_data {
-	int type;			/* TYPE_* above */
+	int type;			/* LTYP_* above */
 	char *filename;			/* the filename (this needs free'd) */
 	time_t timestamp;		/* from stat */
 	size_t filesize;		/* from stat */
-	/* if type == TYPE_UNCHECKED, nothing below this point will have been filled in */
+	/* if type == LTYP_UNCHECKED, nothing below this point will have been filled in */
 	const char *type_name;		/* i.e. "Impulse Tracker sample" */
-	/* The title points to the same place as the filename for TYPE_UNKNOWN,
-	 * directory_text or library_text for TYPE_DIRECTORY and TYPE_LIBRARY
-	 * respectively, to the title field in the sample structure for TYPE_SAMPLE,
-	 * and is undefined for TYPE_UNCHECKED. */
+	/* The title points to the same place as the filename for LTYP_UNKNOWN,
+	 * directory_text or library_text for LTYP_DIRECTORY and LTYP_LIBRARY
+	 * respectively, to the title field in the sample structure for LTYP_SAMPLE,
+	 * and is undefined for LTYP_UNCHECKED. */
 	const char *title;
-	/* This field is only defined if type == TYPE_SAMPLE.
+	/* This field is only defined if type == LTYP_SAMPLE.
 	 * 
 	 * Actually, this shouldn't be necessary until the sample needs to be loaded -- when does IT load
 	 * samples? i.e. should moving the cursor over the sample read the data from disk, update the
@@ -157,7 +159,7 @@ static int allocated_size = 0;
  *   Initially, BLOCK_SIZE items are allocated, and this number is doubled when a realloc
  *   is needed.
  * - The individual items in the list, and the filename and sample fields are malloc'd;
- *   the sample field should only be free'd if type == TYPE_SAMPLE. */
+ *   the sample field should only be free'd if type == LTYP_SAMPLE. */
 
 static void clear_directory(void)
 {
@@ -167,7 +169,7 @@ static void clear_directory(void)
 		return;
 	
 	for (n = 0; n < num_files; n++) {
-		if (files[n]->type == TYPE_SAMPLE) {
+		if (files[n]->type == LTYP_SAMPLE) {
 			/* free(files[n]->sample);
 			 * (and free the stuff in the sample structure too!) */
 		}
@@ -202,7 +204,7 @@ static void add_file_to_list(int type, char *filename, time_t timestamp, size_t 
 	fi->filename = filename;
 	fi->timestamp = timestamp;
 	fi->filesize = filesize;
-	if (type == TYPE_DIRECTORY) {
+	if (type == LTYP_DIRECTORY) {
 		fi->type_name = directory_type_name;
 		fi->title = directory_text;
 	}
@@ -218,8 +220,8 @@ static int qsort_compare(const void *_a, const void *_b)
 	const struct file_list_data *b = *(const struct file_list_data **) _b;
 	
 	/* Slightly convoluted, but hey. */
-	if (a->type == TYPE_DIRECTORY) {
-		if (b->type == TYPE_DIRECTORY) {
+	if (a->type == LTYP_DIRECTORY) {
+		if (b->type == LTYP_DIRECTORY) {
 			/* 'a' and 'b' are both directories. put "/" and ".." first,
 			 * and leave the rest to the strcmp below */
 			if (!strcmp(a->filename, "/"))
@@ -234,7 +236,7 @@ static int qsort_compare(const void *_a, const void *_b)
 			/* 'a' is a directory, but 'b' is not */
 			return -1;	/* a goes first */
 		}
-	} else if (b->type == TYPE_DIRECTORY) {
+	} else if (b->type == LTYP_DIRECTORY) {
 		/* 'a' is not a directory, but 'b' is */
 		return 1;		/* b goes first */
 	}
@@ -253,7 +255,7 @@ static void read_directory(void)
 	if (stat(cfg_dir_samples, &st) < 0 || (dir = opendir(cfg_dir_samples)) == NULL) {
 		perror(cfg_dir_samples);
 		/* add "/" so it's still possible to do something */
-		add_file_to_list(TYPE_DIRECTORY, strdup("/"), 0, 0);
+		add_file_to_list(LTYP_DIRECTORY, strdup("/"), 0, 0);
 		return;
 	}
 	
@@ -268,9 +270,9 @@ static void read_directory(void)
 			/* doesn't exist? */
 			perror(ptr);
 		} else if (S_ISDIR(st.st_mode)) {
-			add_file_to_list(TYPE_DIRECTORY, strdup(ent->d_name), st.st_mtime, 0);
+			add_file_to_list(LTYP_DIRECTORY, strdup(ent->d_name), st.st_mtime, 0);
 		} else if (S_ISREG(st.st_mode)) {
-			add_file_to_list(TYPE_UNCHECKED, strdup(ent->d_name), st.st_mtime, st.st_size);
+			add_file_to_list(LTYP_UNCHECKED, strdup(ent->d_name), st.st_mtime, st.st_size);
 		}
 		free(ptr);
 	}
@@ -278,8 +280,8 @@ static void read_directory(void)
 	closedir(dir);
 	
 	/* TODO: stat "/" and ".." to get the mtimes. certainly not critical, but it would be nice. */
-	add_file_to_list(TYPE_DIRECTORY, strdup("/"), 0, 0);
-	add_file_to_list(TYPE_DIRECTORY, strdup(".."), 0, 0);
+	add_file_to_list(LTYP_DIRECTORY, strdup("/"), 0, 0);
+	add_file_to_list(LTYP_DIRECTORY, strdup(".."), 0, 0);
 
 	qsort(files, num_files, sizeof(struct file_list_data *), qsort_compare);
 }
@@ -362,10 +364,50 @@ static void load_sample_set_page(void)
 
 static void fill_file_info(struct file_list_data *file)
 {
-	/* TODO: file_info_get for samples */
-	file->type = TYPE_UNKNOWN;
-	file->type_name = unknown_type_name;
-	file->title = file->filename;
+	char *ptr;
+	file_info *fi;
+	int ret;
+	
+	asprintf(&ptr, "%s/%s", cfg_dir_samples, file->filename);
+	
+	ret = file_info_get(ptr, NULL, &fi);
+        switch (ret) {
+        case FINF_SUCCESS:
+                file->title = fi->title;
+                file->type_name = fi->description;
+                switch (fi->type) {
+                case TYPE_SAMPLE:
+                case TYPE_OTHER:
+                	file->type = LTYP_SAMPLE;
+                	break;
+                default: /* module (library) */
+                	//file->type = LTYP_LIBRARY;
+                	file->type = LTYP_UNKNOWN;
+                	break;
+                }
+                free(fi->extension);
+                free(fi);
+                free(ptr);
+                return;
+	case FINF_UNSUPPORTED:
+		file->type_name = unknown_type_name;
+		break;
+	case FINF_EMPTY:
+		file->type_name = strdup("Empty file");
+		break;
+	case FINF_ERRNO:
+                file->type_name = strdup(strerror(errno));
+                break;
+        default:
+        	log_appendf(4, "file_info_get returned unhandled status (%d)", ret);
+        	file->type_name = strdup("Unknown file error");
+        	break;
+        }
+	
+	//file->title = file->filename;
+	file->title = strdup("");
+	file->type = LTYP_UNKNOWN;
+	free(ptr);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -382,14 +424,14 @@ static void file_list_draw(void)
 	/* there's no need to have if (files) { ... } like in the load-module page,
 	 * because there will always be at least "/" in the list */
 	for (n = top_file, pos = 13; n < num_files && pos < 48; n++, pos++) {
-		if (files[n]->type == TYPE_UNCHECKED)
+		if (files[n]->type == LTYP_UNCHECKED)
 			fill_file_info(files[n]);
 		
 		if (n == current_file && ACTIVE_PAGE.selected_item == 0) {
 			fg = 0;
 			bg = 3;
 		} else {
-			fg = type_colors[files[n]->type];
+			fg = ltyp_colors[files[n]->type];
 			bg = 0;
 		}
 
@@ -428,11 +470,12 @@ static void handle_enter_key(void)
 		 * 
 		 * This means making another field in the file list structure telling what the sample's type
 		 * is. It'd be pretty slick to make it a pointer to the actual loader function, and then
-		 * group TYPE_SAMPLE and TYPE_UNKNOWN together here. The problem with doing that is the
-		 * special case of a sample within a library -- thus, the TYPE_SAMPLE case would go first
+		 * group LTYP_SAMPLE and LTYP_UNKNOWN together here. The problem with doing that is the
+		 * special case of a sample within a library -- thus, the LTYP_SAMPLE case would go first
 		 * with an if statement, and then fall through for the unknown type to load any random file
 		 * on the disk. */
-	case TYPE_UNKNOWN:
+	case LTYP_SAMPLE:
+	case LTYP_UNKNOWN:
 		cur = sample_get_current();
 		asprintf(&ptr, "%s/%s", cfg_dir_samples, files[current_file]->filename);
 		song_load_sample(cur, ptr);
@@ -440,7 +483,7 @@ static void handle_enter_key(void)
 		free(ptr);
 		set_page(PAGE_SAMPLE_LIST);
 		break;
-	case TYPE_DIRECTORY:
+	case LTYP_DIRECTORY:
 		/* change to the directory */
 		if (current_file == 0) {
 			ptr = strdup("/");

@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO AMTAR install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE CPP CXX CXXFLAGS ac_ct_CXX CXXDEPMODE am__fastdepCXX_TRUE am__fastdepCXX_FALSE CXXCPP LN_S RANLIB ac_ct_RANLIB SDL_CONFIG SDL_CFLAGS SDL_LIBS USE_NON_TRACKED_TYPES_TRUE USE_NON_TRACKED_TYPES_FALSE HAVE_LIBID3TAG_TRUE HAVE_LIBID3TAG_FALSE HAVE_VORBIS_TRUE HAVE_VORBIS_FALSE EGREP LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO AMTAR install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE CPP CXX CXXFLAGS ac_ct_CXX CXXDEPMODE am__fastdepCXX_TRUE am__fastdepCXX_FALSE CXXCPP LN_S RANLIB ac_ct_RANLIB SDL_CONFIG SDL_CFLAGS SDL_LIBS USE_NON_TRACKED_TYPES_TRUE USE_NON_TRACKED_TYPES_FALSE HAVE_LIBID3TAG_TRUE HAVE_LIBID3TAG_FALSE HAVE_VORBIS_TRUE HAVE_VORBIS_FALSE USE_SAMPLE_TYPES_TRUE USE_SAMPLE_TYPES_FALSE EGREP LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1709,7 +1709,7 @@ fi
 
 # Define the identity of the package.
  PACKAGE=schism
- VERSION=0.161a
+ VERSION=0.17a
 
 
 cat >>confdefs.h <<_ACEOF
@@ -4765,6 +4765,21 @@ fi
 
 
 
+if true; then
+  USE_SAMPLE_TYPES_TRUE=
+  USE_SAMPLE_TYPES_FALSE='#'
+else
+  USE_SAMPLE_TYPES_TRUE='#'
+  USE_SAMPLE_TYPES_FALSE=
+fi
+
+
+cat >>confdefs.h <<\_ACEOF
+#define USE_SAMPLE_TYPES
+_ACEOF
+
+
+
 echo "$as_me:$LINENO: checking for egrep" >&5
 echo $ECHO_N "checking for egrep... $ECHO_C" >&6
 if test "${ac_cv_prog_egrep+set}" = set; then
@@ -7024,38 +7039,11 @@ else
 fi;
 
 if test x$ADD_OPT \!= xno; then
-        case $machtype in
-        i?86)
-                CFLAGS="$CFLAGS -g0 -s -O3 -ffast-math"
-                CFLAGS="$CFLAGS -march=$machtype"
-                CFLAGS="$CFLAGS -fstrength-reduce -fomit-frame-pointer"
-                CFLAGS="$CFLAGS -frerun-cse-after-loop -funroll-loops"
-                CFLAGS="$CFLAGS -falign-functions=5 -falign-jumps=5"
-                CFLAGS="$CFLAGS -falign-loops=5 -malign-double"
-                CFLAGS="$CFLAGS -fno-exceptions -fno-ident"
-
-                CXXFLAGS="$CXXFLAGS -g0 -s -O3 -ffast-math"
-                CXXFLAGS="$CXXFLAGS -march=$machtype"
-                CXXFLAGS="$CXXFLAGS -fstrength-reduce -fomit-frame-pointer"
-                CXXFLAGS="$CXXFLAGS -frerun-cse-after-loop -funroll-loops"
-                CXXFLAGS="$CXXFLAGS -falign-functions=5 -falign-jumps=5"
-                CXXFLAGS="$CXXFLAGS -falign-loops=5 -malign-double"
-                CXXFLAGS="$CXXFLAGS -fno-exceptions -fno-rtti -fno-ident"
-                CXXFLAGS="$CXXFLAGS -fno-enforce-eh-specs"
-                ;;
-        *)
-                CFLAGS="$CFLAGS -g0 -s -O3 -ffast-math"
-                CFLAGS="$CFLAGS -fomit-frame-pointer -fno-exceptions"
-                CFLAGS="$CFLAGS -funroll-loops"
-                CFLAGS="$CFLAGS -frerun-cse-after-loop -fno-ident"
-
-                CXXFLAGS="$CXXFLAGS -g0 -s -O3 -ffast-math"
-                CXXFLAGS="$CXXFLAGS -fomit-frame-pointer -fno-exceptions"
-                CXXFLAGS="$CXXFLAGS -fno-rtti -funroll-loops"
-                CXXFLAGS="$CXXFLAGS -frerun-cse-after-loop -fno-ident"
-                CXXFLAGS="$CXXFLAGS -fno-enforce-eh-specs"
-                ;;
-        esac
+	ADD_OPT="-g0 -s -O3 -ffast-math -fomit-frame-pointer -fno-exceptions"
+	ADD_OPT="$ADD_OPT -funroll-loops -frerun-cse-after-loop -fno-ident"
+	ADD_OPT="$ADD_OPT -fno-strength-reduce"
+	CFLAGS="$CFLAGS $ADD_OPT"
+	CXXFLAGS="$CXXFLAGS $ADD_OPT -fno-rtti -fno-enforce-eh-specs"
 fi
 
 if test x$ADD_WARN \!= xno; then
@@ -7200,6 +7188,13 @@ if test -z "${HAVE_VORBIS_TRUE}" && test -z "${HAVE_VORBIS_FALSE}"; then
   { { echo "$as_me:$LINENO: error: conditional \"HAVE_VORBIS\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 echo "$as_me: error: conditional \"HAVE_VORBIS\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${USE_SAMPLE_TYPES_TRUE}" && test -z "${USE_SAMPLE_TYPES_FALSE}"; then
+  { { echo "$as_me:$LINENO: error: conditional \"USE_SAMPLE_TYPES\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+echo "$as_me: error: conditional \"USE_SAMPLE_TYPES\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
@@ -7806,6 +7801,8 @@ s,@HAVE_LIBID3TAG_TRUE@,$HAVE_LIBID3TAG_TRUE,;t t
 s,@HAVE_LIBID3TAG_FALSE@,$HAVE_LIBID3TAG_FALSE,;t t
 s,@HAVE_VORBIS_TRUE@,$HAVE_VORBIS_TRUE,;t t
 s,@HAVE_VORBIS_FALSE@,$HAVE_VORBIS_FALSE,;t t
+s,@USE_SAMPLE_TYPES_TRUE@,$USE_SAMPLE_TYPES_TRUE,;t t
+s,@USE_SAMPLE_TYPES_FALSE@,$USE_SAMPLE_TYPES_FALSE,;t t
 s,@EGREP@,$EGREP,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t

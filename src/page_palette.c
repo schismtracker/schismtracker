@@ -88,12 +88,11 @@ static void update_thumbbars(void)
         int n;
 
         for (n = 0; n < 16; n++) {
-                items_palette[3 * n].thumbbar.value =
-                        palettes[current_palette].colors[n][0];
-                items_palette[3 * n + 1].thumbbar.value =
-                        palettes[current_palette].colors[n][1];
-                items_palette[3 * n + 2].thumbbar.value =
-                        palettes[current_palette].colors[n][2];
+		/* palettes[current_palette_index].colors[n] ?
+		 * or current_palette[n] ? */
+                items_palette[3 * n].thumbbar.value = current_palette[n][0];
+                items_palette[3 * n + 1].thumbbar.value = current_palette[n][1];
+                items_palette[3 * n + 2].thumbbar.value = current_palette[n][2];
         }
 }
 
@@ -120,9 +119,7 @@ static void palette_list_draw(void)
 static int palette_list_handle_key_on_list(SDL_keysym * k)
 {
         int new_palette = selected_palette;
-        const int focus_offsets[] =
-                { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10,
-    11, 12 };
+        const int focus_offsets[] = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12 };
 
         switch (k->sym) {
         case SDLK_UP:
@@ -153,6 +150,7 @@ static int palette_list_handle_key_on_list(SDL_keysym * k)
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
                 palette_load_preset(selected_palette);
+		palette_apply();
                 update_thumbbars();
                 status.flags |= NEED_UPDATE;
                 return 1;
@@ -210,14 +208,13 @@ static void palette_list_handle_key(SDL_keysym * k)
 static void update_palette(void)
 {
         int n;
-        byte colors[16][3];
 
         for (n = 0; n < 16; n++) {
-                colors[n][0] = items_palette[3 * n].thumbbar.value;
-                colors[n][1] = items_palette[3 * n + 1].thumbbar.value;
-                colors[n][2] = items_palette[3 * n + 2].thumbbar.value;
+                current_palette[n][0] = items_palette[3 * n].thumbbar.value;
+                current_palette[n][1] = items_palette[3 * n + 1].thumbbar.value;
+                current_palette[n][2] = items_palette[3 * n + 2].thumbbar.value;
         }
-        palette_set(colors);
+        palette_apply();
         status.flags |= NEED_UPDATE;
 }
 
@@ -234,7 +231,7 @@ void palette_load_page(struct page *page)
         page->items = items_palette;
         page->help_index = HELP_GLOBAL;
 
-        selected_palette = current_palette;
+        selected_palette = current_palette_index;
 
         for (n = 0; n < 16; n++) {
                 int tabs[3] = { 3 * n + 21, 3 * n + 22, 3 * n + 23 };
@@ -256,13 +253,8 @@ void palette_load_page(struct page *page)
                                 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
                                 3 * n + 1, 3 * n + 3, tabs[2],
                                 update_palette, 0, 63);
-                items_palette[3 * n].thumbbar.value =
-                        palettes[current_palette].colors[n][0];
-                items_palette[3 * n + 1].thumbbar.value =
-                        palettes[current_palette].colors[n][1];
-                items_palette[3 * n + 2].thumbbar.value =
-                        palettes[current_palette].colors[n][2];
-        }
+	}
+	update_thumbbars();
 	
 	create_other(items_palette + 48, 0, palette_list_handle_key_on_list, palette_list_draw);
 }

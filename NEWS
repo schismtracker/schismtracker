@@ -1,5 +1,19 @@
  _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
 |                                                                         /
+| New stuff:                                          [version 0.17a]    /
+|                                                 _ ___ _______ ________/
+|     * Sample names are displayed on the sample        _ __ ___\
+|       load screen for supported file types.
+|     * Mouse support in the ITF editor. (Sort of.)
+|     * Changes made to the palette are saved.
+|     * A couple minor bugs (which I bet nobody noticed) have been fixed.
+|
+: Umm... that's all, actually. Merry ${HOLIDAY_NAME}!
+.
+' -----=----==---===--====-=====//////
+
+ _   _  __ ___ _____ ________ _____________ ________ _____ ___ __  _   _
+|                                                                         /
 | This is  mostly a portability-fix  release; it      [version 0.16a]    /
 | should build  properly  on FreeBSD and  Cygwin  _ ___ _______ ________/
 | now,  but  since I don't  have  either, that's        _ __ ___\

@@ -41,12 +41,15 @@
  * lined up with how IT displays 'em, and partly to make the directory
  * list more colorful. ^_^ */
 enum file_type {
-        TYPE_UNKNOWN = (0),     /* shouldn't ever come up */
-        TYPE_IT = (1),
-        TYPE_S3M = (2),
-        TYPE_XM = (3),
-        TYPE_MOD = (4),
-        TYPE_OTHER = (5),       /* for non-tracked stuff */
+	/* for internal use only (file_info_get returns FINF_UNSUPPORTED and doesn't fill in the structure,
+	so no other functions will see TYPE_UNKNOWN) */
+	TYPE_UNKNOWN = (0),
+	TYPE_IT,
+	TYPE_S3M,
+	TYPE_XM,
+	TYPE_MOD,
+	TYPE_OTHER,		/* for non-tracked stuff */
+	TYPE_SAMPLE = (6),	/* drawn in color 3 in IT */
 };
 
 enum {
@@ -57,10 +60,10 @@ enum {
 };
 
 typedef struct {
-        char *description;      /* "Impulse Tracker" */
-        char *extension;        /* "it" (the *expected* extension) */
-        char *title;    /* the song title field, or NULL if none */
-        enum file_type type;    /* for filename colors */
+        char *description;	/* "Impulse Tracker" */
+        char *extension;	/* "it" (the *expected* extension) */
+        char *title;		/* the song title field, or NULL if none */
+        enum file_type type;	/* for filename colors */
 } file_info;
 
 /* buf can be NULL; it's just for if you've already stat'ed the file.

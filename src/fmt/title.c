@@ -76,6 +76,7 @@ int file_info_get(const char *filename, struct stat * buf, file_info **fi)
         if (*fi == NULL)
         	/* eep, out of memory! */
                 return FINF_ERRNO;
+        memset(*fi, 0, sizeof(file_info));
 
         t = slurp(filename, buf);
         if (t == NULL)

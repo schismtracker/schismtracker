@@ -26,7 +26,7 @@ machtype=$target_cpu
 
 dnl when changing the version, also change the CWTV in audio_loadsave.cc
 dnl (TODO: come up with some way to do it automatically)
-AM_INIT_AUTOMAKE(schism, 0.161a)
+AM_INIT_AUTOMAKE(schism, 0.17a)
 AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------------------------------
@@ -69,6 +69,8 @@ dnl Hope no one minds. =)
 AM_CONDITIONAL(USE_NON_TRACKED_TYPES, false)
 AM_CONDITIONAL(HAVE_LIBID3TAG, false)
 AM_CONDITIONAL(HAVE_VORBIS, false)
+AM_CONDITIONAL(USE_SAMPLE_TYPES, true)
+AC_DEFINE([USE_SAMPLE_TYPES], [], [Read titles of samples])
 
 dnl Functions
 AC_FUNC_MEMCMP
@@ -108,38 +110,11 @@ AC_ARG_ENABLE(all-warnings,
               ADD_WARN=no)
 
 if test x$ADD_OPT \!= xno; then
-        case $machtype in
-        i?86)
-                CFLAGS="$CFLAGS -g0 -s -O3 -ffast-math"
-                CFLAGS="$CFLAGS -march=$machtype"
-                CFLAGS="$CFLAGS -fstrength-reduce -fomit-frame-pointer"
-                CFLAGS="$CFLAGS -frerun-cse-after-loop -funroll-loops"
-                CFLAGS="$CFLAGS -falign-functions=5 -falign-jumps=5"
-                CFLAGS="$CFLAGS -falign-loops=5 -malign-double"
-                CFLAGS="$CFLAGS -fno-exceptions -fno-ident"
-                
-                CXXFLAGS="$CXXFLAGS -g0 -s -O3 -ffast-math"
-                CXXFLAGS="$CXXFLAGS -march=$machtype"
-                CXXFLAGS="$CXXFLAGS -fstrength-reduce -fomit-frame-pointer"
-                CXXFLAGS="$CXXFLAGS -frerun-cse-after-loop -funroll-loops"
-                CXXFLAGS="$CXXFLAGS -falign-functions=5 -falign-jumps=5"
-                CXXFLAGS="$CXXFLAGS -falign-loops=5 -malign-double"
-                CXXFLAGS="$CXXFLAGS -fno-exceptions -fno-rtti -fno-ident"
-                CXXFLAGS="$CXXFLAGS -fno-enforce-eh-specs"
-                ;;
-        *)
-                CFLAGS="$CFLAGS -g0 -s -O3 -ffast-math"
-                CFLAGS="$CFLAGS -fomit-frame-pointer -fno-exceptions"
-                CFLAGS="$CFLAGS -funroll-loops"
-                CFLAGS="$CFLAGS -frerun-cse-after-loop -fno-ident"
-                
-                CXXFLAGS="$CXXFLAGS -g0 -s -O3 -ffast-math"
-                CXXFLAGS="$CXXFLAGS -fomit-frame-pointer -fno-exceptions"
-                CXXFLAGS="$CXXFLAGS -fno-rtti -funroll-loops"
-                CXXFLAGS="$CXXFLAGS -frerun-cse-after-loop -fno-ident"
-                CXXFLAGS="$CXXFLAGS -fno-enforce-eh-specs"
-                ;;
-        esac
+	ADD_OPT="-g0 -s -O3 -ffast-math -fomit-frame-pointer -fno-exceptions"
+	ADD_OPT="$ADD_OPT -funroll-loops -frerun-cse-after-loop -fno-ident"
+	ADD_OPT="$ADD_OPT -fno-strength-reduce"
+	CFLAGS="$CFLAGS $ADD_OPT"
+	CXXFLAGS="$CXXFLAGS $ADD_OPT -fno-rtti -fno-enforce-eh-specs"
 fi
 
 if test x$ADD_WARN \!= xno; then

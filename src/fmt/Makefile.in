@@ -70,24 +70,26 @@ libfmt_a_AR = $(AR) $(ARFLAGS)
 libfmt_a_LIBADD =
 am__libfmt_a_SOURCES_DIST = title.c 669.c ams.c dtm.c f2r.c far.c it.c \
 	liq.c mdl.c mod.c mp3.c mt2.c mtm.c ntk.c ogg.c rtm.c s3m.c \
-	sid.c stm.c ult.c xm.c
+	sid.c stm.c ult.c xm.c au.c its.c
 @HAVE_LIBID3TAG_TRUE@@USE_NON_TRACKED_TYPES_TRUE@am__objects_1 = mp3.$(OBJEXT)
 @HAVE_VORBIS_TRUE@@USE_NON_TRACKED_TYPES_TRUE@am__objects_2 =  \
 @HAVE_VORBIS_TRUE@@USE_NON_TRACKED_TYPES_TRUE@	ogg.$(OBJEXT)
 @USE_NON_TRACKED_TYPES_TRUE@am__objects_3 = sid.$(OBJEXT)
+@USE_SAMPLE_TYPES_TRUE@am__objects_4 = au.$(OBJEXT) its.$(OBJEXT)
 am_libfmt_a_OBJECTS = title.$(OBJEXT) 669.$(OBJEXT) ams.$(OBJEXT) \
 	dtm.$(OBJEXT) f2r.$(OBJEXT) far.$(OBJEXT) it.$(OBJEXT) \
 	liq.$(OBJEXT) mdl.$(OBJEXT) mod.$(OBJEXT) $(am__objects_1) \
 	mt2.$(OBJEXT) mtm.$(OBJEXT) ntk.$(OBJEXT) $(am__objects_2) \
 	rtm.$(OBJEXT) s3m.$(OBJEXT) $(am__objects_3) stm.$(OBJEXT) \
-	ult.$(OBJEXT) xm.$(OBJEXT)
+	ult.$(OBJEXT) xm.$(OBJEXT) $(am__objects_4)
 libfmt_a_OBJECTS = $(am_libfmt_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 @AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/669.Po ./$(DEPDIR)/ams.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/dtm.Po ./$(DEPDIR)/f2r.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/far.Po ./$(DEPDIR)/it.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/au.Po ./$(DEPDIR)/dtm.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/f2r.Po ./$(DEPDIR)/far.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/it.Po ./$(DEPDIR)/its.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/liq.Po ./$(DEPDIR)/mdl.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/mod.Po ./$(DEPDIR)/mp3.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/mt2.Po ./$(DEPDIR)/mtm.Po \
@@ -161,6 +163,8 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 USE_NON_TRACKED_TYPES_FALSE = @USE_NON_TRACKED_TYPES_FALSE@
 USE_NON_TRACKED_TYPES_TRUE = @USE_NON_TRACKED_TYPES_TRUE@
+USE_SAMPLE_TYPES_FALSE = @USE_SAMPLE_TYPES_FALSE@
+USE_SAMPLE_TYPES_TRUE = @USE_SAMPLE_TYPES_TRUE@
 VERSION = @VERSION@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
@@ -209,9 +213,10 @@ noinst_LIBRARIES = libfmt.a
 @HAVE_LIBID3TAG_TRUE@@USE_NON_TRACKED_TYPES_TRUE@mp3 = mp3.c
 @HAVE_VORBIS_TRUE@@USE_NON_TRACKED_TYPES_TRUE@ogg = ogg.c
 @USE_NON_TRACKED_TYPES_TRUE@sid = sid.c
+@USE_SAMPLE_TYPES_TRUE@sampletypes = au.c its.c
 libfmt_a_SOURCES = title.c 669.c ams.c dtm.c f2r.c far.c it.c liq.c \
 	mdl.c mod.c $(mp3) mt2.c mtm.c ntk.c $(ogg) rtm.c s3m.c $(sid) \
-	stm.c ult.c xm.c
+	stm.c ult.c xm.c $(sampletypes)
 
 INCLUDES = -D_GNU_SOURCE -I$(srcdir)/../include
 CLEANFILES = *~
@@ -265,10 +270,12 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/669.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ams.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/au.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dtm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/f2r.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/far.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/it.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/its.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liq.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mdl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mod.Po@am__quote@

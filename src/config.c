@@ -89,6 +89,39 @@ void cfg_set_number(const char *section, const char *key, int value)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+static void cfg_load_palette(void)
+{
+	byte colors[48];
+	int n;
+	char palette_text[49] = "";
+	const char *ptr;
+	
+	palette_load_preset(cfg_get_number("General", "palette", 2));
+	
+	cfg_get_string("General", "palette_cur", palette_text, 50, "");
+	for (n = 0; n < 48; n++) {
+		if (palette_text[n] == '\0' || (ptr = strchr(palette_trans, palette_text[n])) == NULL)
+			return;
+		colors[n] = ptr - palette_trans;
+	}
+	memcpy(current_palette, colors, sizeof(current_palette));
+}
+static void cfg_save_palette(void)
+{
+	int n;
+	char palette_text[49] = "";
+	
+	cfg_set_number("General", "palette", current_palette_index);
+
+	for (n = 0; n < 48; n++) {
+		/* tricky little hack: this is *massively* overstepping the array boundary */
+		palette_text[n] = palette_trans[current_palette[0][n]];
+	}
+	palette_text[48] = '\0';
+	cfg_set_string("General", "palette_cur", palette_text);
+}
+
 void cfg_load(void)
 {
 	char filename[PATH_MAX + 1];
@@ -137,7 +170,7 @@ void cfg_load(void)
 	
 	cfg_get_string("General", "font", cfg_font, NAME_MAX, "font.cfg");
 	
-	current_palette = cfg_get_number("General", "palette", 2);
+	cfg_load_palette();
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 	
@@ -171,7 +204,7 @@ void cfg_save(void)
 
 	cfg_set_number("General", "time_display", status.time_display);
 	cfg_set_number("General", "classic_mode", !!(status.flags & CLASSIC_MODE));
-	cfg_set_number("General", "palette", current_palette);
+	cfg_save_palette();
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 

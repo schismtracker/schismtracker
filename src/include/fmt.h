@@ -49,12 +49,16 @@ FORMAT(ogg);
 # endif
 #endif
 
+#ifdef USE_SAMPLE_TYPES
+FORMAT(its);
+FORMAT(au);
+#endif
+
 #undef FORMAT
 
 /* --------------------------------------------------------------------- */
 
-typedef file_info *(*fmt_read_info_func) (const byte * data,
-                                          size_t length, file_info * fi);
+typedef file_info *(*fmt_read_info_func) (const byte * data, size_t length, file_info * fi);
 
 #define FILETYPE(t) fmt_##t##_read_info
 
@@ -121,6 +125,12 @@ static const fmt_read_info_func types[] = {
         FILETYPE(sid),  /* 6581 0wnz j00! */
 #endif
         FILETYPE(mdl),
+
+	/* dunno where to put these */
+#ifdef USE_SAMPLE_TYPES
+	FILETYPE(its),
+	FILETYPE(au),
+#endif
 
         FILETYPE(ult),
         FILETYPE(liq),
