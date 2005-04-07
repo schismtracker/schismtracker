@@ -131,10 +131,9 @@ int item_handle_key(SDL_keysym * k)
 		case ITEM_OTHER:
 			break;
 		case ITEM_TEXTENTRY:
-			/* ????...
-			 * RUN_IF(item->changed);
-			 * status.flags |= NEED_UPDATE; */
-			return 1;
+			/* for a text entry, the only thing enter does is run the activate callback.
+			thus, if no activate callback is defined, the key wasn't handled */
+			return (item->activate != NULL);
 		case ITEM_TOGGLEBUTTON:
 			if (item->togglebutton.group) {
 				/* this also runs the changed callback
@@ -154,10 +153,6 @@ int item_handle_key(SDL_keysym * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		default:
-			/* ????...
-			 * RUN_IF(item->changed);
-			 * status.flags |= NEED_UPDATE;
-			 * return 1; */
 			break;
 		}
 		break;

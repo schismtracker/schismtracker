@@ -59,51 +59,59 @@ void clear_all_cached_waveforms(void)
  * - the amount to divide (note though, this number is used twice!) */
 
 static inline void _draw_sample_data_8(SDL_Surface * surface, SDL_Rect *rect,
-                                       signed char *data, unsigned long length,
+                                       signed char *data, unsigned long length, // 8/16
 				       Uint32 c)
 {
 	SDL_Rect srect = {0, 0, surface->w, surface->h};
-        unsigned long pos = length;
-        int level1, level2, xs, ys, xe, ye;
-	
+	unsigned long pos;
+	int level, xs, ys, xe, ye, step;
+
 	if (!rect)
 		rect = &srect;
+
+	level = data[0] * rect->h / (SCHAR_MAX - SCHAR_MIN + 1); // 8/16
+	xs = rect->x;
+	ys = (rect->h / 2 - 1) - level + rect->y;
+	step = MAX(1, length / (rect->w << 8));
 	
-	level2 = data[length] * rect->h / (SCHAR_MAX - SCHAR_MIN + 1);
-        while (pos) {
-                level1 = data[pos - 1] * rect->h / (SCHAR_MAX - SCHAR_MIN + 1);
-                xs = pos * (rect->w - 1) / length + rect->x;
-                ys = (rect->h / 2 - 1) - level2 + rect->y;
-                pos--;
-                xe = pos * (rect->w - 1) / length + rect->x;
-                ye = (rect->h / 2 - 1) - level1 + rect->y;
-                draw_line(surface, xs, ys, xe, ye, c);
-                level2 = level1;
-        }
+	for (pos = 0; pos < length; pos += step) {
+		level = data[pos] * rect->h / (SCHAR_MAX - SCHAR_MIN + 1); // 8/16
+		xe = pos * (rect->w - 1) / length + rect->x;
+		ye = (rect->h / 2 - 1) - level + rect->y;
+		if (xs == ys && xe == ye)
+			continue;
+		draw_line(surface, xs, ys, xe, ye, c);
+		xs = xe;
+	        ys = ye;
+	}
 }
 
 static inline void _draw_sample_data_16(SDL_Surface * surface, SDL_Rect *rect,
-                                        signed short *data, unsigned long length,
-					Uint32 c)
+                                       signed short *data, unsigned long length,
+				       Uint32 c)
 {
 	SDL_Rect srect = {0, 0, surface->w, surface->h};
-        unsigned long pos = length;
-        int level1, level2, xs, ys, xe, ye;
-	
+	unsigned long pos;
+	int level, xs, ys, xe, ye, step;
+
 	if (!rect)
 		rect = &srect;
+
+	level = data[0] * rect->h / (SHRT_MAX - SHRT_MIN + 1);
+	xs = rect->x;
+	ys = (rect->h / 2 - 1) - level + rect->y;
+	step = MAX(1, length / (rect->w << 8));
 	
-	level2 = data[length] * rect->h / (SHRT_MAX - SHRT_MIN + 1);
-        while (pos) {
-                level1 = data[pos - 1] * rect->h / (SHRT_MAX - SHRT_MIN + 1);
-                xs = pos * (rect->w - 1) / length + rect->x;
-                ys = (rect->h / 2 - 1) - level2 + rect->y;
-                pos--;
-                xe = pos * (rect->w - 1) / length + rect->x;
-                ye = (rect->h / 2 - 1) - level1 + rect->y;
-                draw_line(surface, xs, ys, xe, ye, c);
-                level2 = level1;
-        }
+	for (pos = 0; pos < length; pos += step) {
+		level = data[pos] * rect->h / (SHRT_MAX - SHRT_MIN + 1);
+		xe = pos * (rect->w - 1) / length + rect->x;
+		ye = (rect->h / 2 - 1) - level + rect->y;
+		if (xs == ys && xe == ye)
+			continue;
+		draw_line(surface, xs, ys, xe, ye, c);
+		xs = xe;
+	        ys = ye;
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -252,16 +260,14 @@ void draw_sample_data(SDL_Rect * rect, song_sample * sample, int number)
 	 * surface, destroy it and redraw. */
         if (!waveform_cache[number]) {
                 waveform_cache[number] = SDL_CreateRGBSurface
-			(SDL_SWSURFACE, rect->w, rect->h, 8, 0, 0, 0, 0);
+                        (SDL_SWSURFACE, rect->w, rect->h, 8, 0, 0, 0, 0);
                 /* the cache better not need locking, 'cuz I'm not doing
                  * it. :) (it shouldn't, as it's a software surface) */
                 if (sample->flags & SAMP_16_BIT)
-                        _draw_sample_data_16(waveform_cache[number], NULL,
-                                             (signed short *) sample->data,
+                        _draw_sample_data_16(waveform_cache[number], NULL, (signed short *) sample->data,
                                              sample->length, 13);
                 else
-                        _draw_sample_data_8(waveform_cache[number], NULL,
-                                            sample->data, sample->length, 13);
+                        _draw_sample_data_8(waveform_cache[number], NULL, sample->data, sample->length, 13);
         }
         copy_cache(number, rect);
         SDL_LockSurface(screen);

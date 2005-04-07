@@ -735,6 +735,21 @@ void CSoundFile::ResetChannels()
 }
 
 
+void CSoundFile::ResetTimestamps() // <chisel> added function
+//--------------------------------
+{
+	int n;
+	
+	for (n = 1; n < MAX_SAMPLES; n++) {
+		Ins[n].played = 0;
+	}
+	for (n = 1; n < MAX_INSTRUMENTS; n++) {
+		if (Headers[n])
+			Headers[n]->played = 0;
+	}
+}
+
+
 void CSoundFile::LoopPattern(int nPat, int nRow)
 //----------------------------------------------
 {

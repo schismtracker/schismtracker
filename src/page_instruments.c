@@ -114,9 +114,9 @@ void instrument_set(int n)
 
 	ins = song_get_instrument(current_instrument, NULL);
 	
-	current_node_vol = ins->vol_env_nodes ? CLAMP(current_node_vol, 0, ins->vol_env_nodes - 1) : 0;
-	current_node_pan = ins->pan_env_nodes ? CLAMP(current_node_vol, 0, ins->pan_env_nodes - 1) : 0;
-	current_node_pitch = ins->pitch_env_nodes ? CLAMP(current_node_vol, 0, ins->pan_env_nodes - 1) : 0;
+	current_node_vol = ins->vol_env.nodes ? CLAMP(current_node_vol, 0, ins->vol_env.nodes - 1) : 0;
+	current_node_pan = ins->pan_env.nodes ? CLAMP(current_node_vol, 0, ins->pan_env.nodes - 1) : 0;
+	current_node_pitch = ins->pitch_env.nodes ? CLAMP(current_node_vol, 0, ins->pan_env.nodes - 1) : 0;
 	
         status.flags |= NEED_UPDATE;
 }
@@ -211,11 +211,17 @@ static void instrument_list_draw_list(void)
         song_instrument *ins;
         int selected = (ACTIVE_PAGE.selected_item == 0);
         int is_current;
+        int is_playing[100];
         byte buf[4];
-
+	
+	song_get_playing_instruments(is_playing);
+	
         for (pos = 0, n = top_instrument; pos < 35; pos++, n++) {
                 ins = song_get_instrument(n, NULL);
                 is_current = (n == current_instrument);
+                
+                if (ins->played)
+                	draw_char(173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 
                 draw_text(numtostr(2, n, buf), 2, 13 + pos, 0, 2);
                 if (instrument_cursor_pos < 25) {
@@ -425,8 +431,6 @@ static int note_trans_handle_alt_key(SDL_keysym * k)
 	
 	status.flags |= NEED_UPDATE;
 	return 1;
-
-
 }
 
 static int note_trans_handle_key(SDL_keysym * k)
@@ -614,9 +618,7 @@ static void _env_draw_loop(int xs, int xe, int sustain)
 	}
 }
 
-static void _env_draw(int middle, int current_node, byte nodes, unsigned short ticks[], byte values[],
-		      int loop_on, byte loop_start, byte loop_end,
-		      int sustain_on, byte sustain_start, byte sustain_end)
+static void _env_draw(const song_envelope *env, int middle, int current_node, int loop_on, int sustain_on)
 {
 	SDL_Rect envelope_rect = { 256, 144, 360, 64 };
 	byte buf[16];
@@ -624,7 +626,7 @@ static void _env_draw(int middle, int current_node, byte nodes, unsigned short t
 	int last_x = 0, last_y;
 	int max_ticks = 50;
 	
-	while (ticks[nodes - 1] >= max_ticks)
+	while (env->ticks[env->nodes - 1] >= max_ticks)
 		max_ticks *= 2;
 	
         draw_fill_rect(&envelope_rect, 0);
@@ -634,13 +636,13 @@ static void _env_draw(int middle, int current_node, byte nodes, unsigned short t
 	/* draw the axis lines */
 	_env_draw_axes(middle);
 
-	for (n = 0; n < nodes; n++) {
-		x = 259 + ticks[n] * 256 / max_ticks;
+	for (n = 0; n < env->nodes; n++) {
+		x = 259 + env->ticks[n] * 256 / max_ticks;
 		
 		/* 65 values are being crammed into 62 pixels => have to lose three pixels somewhere.
 		 * This is where IT compromises -- I don't quite get how the lines are drawn, though,
 		 * because it changes for each value... (apart from drawing 63 and 64 the same way) */
-		y = values[n];
+		y = env->values[n];
 		if (y > 63) y--;
 		if (y > 42) y--;
 		if (y > 21) y--;
@@ -656,65 +658,73 @@ static void _env_draw(int middle, int current_node, byte nodes, unsigned short t
 	}
 	
 	if (sustain_on)
-		_env_draw_loop(259 + ticks[sustain_start] * 256 / max_ticks,
-			       259 + ticks[sustain_end] * 256 / max_ticks, 1);
+		_env_draw_loop(259 + env->ticks[env->sustain_start] * 256 / max_ticks,
+			       259 + env->ticks[env->sustain_end] * 256 / max_ticks, 1);
 	if (loop_on)
-		_env_draw_loop(259 + ticks[loop_start] * 256 / max_ticks,
-			       259 + ticks[loop_end] * 256 / max_ticks, 0);
+		_env_draw_loop(259 + env->ticks[env->loop_start] * 256 / max_ticks,
+			       259 + env->ticks[env->loop_end] * 256 / max_ticks, 0);
 	
-        sprintf(buf, "Node %d/%d", current_node, nodes);
+        sprintf(buf, "Node %d/%d", current_node, env->nodes);
         draw_text_unlocked(buf, 66, 19, 2, 0);
-        sprintf(buf, "Tick %d", ticks[current_node]);
+        sprintf(buf, "Tick %d", env->ticks[current_node]);
         draw_text_unlocked(buf, 66, 21, 2, 0);
-        sprintf(buf, "Value %d", values[current_node] - (middle ? 32 : 0));
+        sprintf(buf, "Value %d", env->values[current_node] - (middle ? 32 : 0));
         draw_text_unlocked(buf, 66, 23, 2, 0);
 	
         SDL_UnlockSurface(screen);
 }
 
-static void _env_node_add(byte *nodes, int *current_node, unsigned short ticks[], byte values[])
+/* return: the new current node */
+static int _env_node_add(song_envelope *env, int current_node)
 {
 	int newtick, newvalue;
 	
 	/* is 24 the right number here, or 25? */
-	if (*nodes > 24 || *current_node == *nodes - 1)
-		return;
+	if (env->nodes > 24 || current_node == env->nodes - 1)
+		return current_node;
 	
-	newtick = (ticks[*current_node] + ticks[*current_node + 1]) / 2;
-	newvalue = (values[*current_node] + values[*current_node + 1]) / 2;
-	if (newtick == ticks[*current_node] || newtick == ticks[*current_node + 1]) {
+	newtick = (env->ticks[current_node] + env->ticks[current_node + 1]) / 2;
+	newvalue = (env->values[current_node] + env->values[current_node + 1]) / 2;
+	if (newtick == env->ticks[current_node] || newtick == env->ticks[current_node + 1]) {
 		/* If the current node is at (for example) tick 30, and the next node is at tick 32,
 		 * is there any chance of a rounding error that would make newtick 30 instead of 31?
 		 * ("Is there a chance the track could bend?") */
 		printf("Not enough room!\n");
-		return;
+		return current_node;
 	}
 	
-	(*nodes)++;
-	memmove(ticks + *current_node + 1, ticks + *current_node,
-		(*nodes - *current_node - 1) * sizeof(ticks[0]));
-	memmove(values + *current_node + 1, values + *current_node,
-		(*nodes - *current_node - 1) * sizeof(values[0]));
-	ticks[*current_node + 1] = newtick;
-	values[*current_node + 1] = newvalue;
-}
-
-static void _env_node_remove(byte *nodes, int *current_node, unsigned short ticks[], byte values[])
-{
-	if (*current_node == 0 || *nodes < 3)
-		return;
+	env->nodes++;
+	memmove(env->ticks + current_node + 1, env->ticks + current_node,
+		(env->nodes - current_node - 1) * sizeof(env->ticks[0]));
+	memmove(env->values + current_node + 1, env->values + current_node,
+		(env->nodes - current_node - 1) * sizeof(env->values[0]));
+	env->ticks[current_node + 1] = newtick;
+	env->values[current_node + 1] = newvalue;
 	
-	memmove(ticks + *current_node, ticks + *current_node + 1,
-		(*nodes - *current_node - 1) * sizeof(ticks[0]));
-	memmove(values + *current_node, values + *current_node + 1,
-		(*nodes - *current_node - 1) * sizeof(values[0]));
-	(*nodes)--;
-	if (*current_node >= *nodes)
-		*current_node = *nodes - 1;
+	return current_node;
 }
 
-static int _env_handle_key_viewmode(SDL_keysym *k, byte *nodes, int *current_node,
-				    unsigned short ticks[], byte values[])
+/* return: the new current node */
+static int _env_node_remove(song_envelope *env, int current_node)
+{
+	if (current_node == 0 || env->nodes < 3)
+		return current_node;
+	
+	memmove(env->ticks + current_node, env->ticks + current_node + 1,
+		(env->nodes - current_node - 1) * sizeof(env->ticks[0]));
+	memmove(env->values + current_node, env->values + current_node + 1,
+		(env->nodes - current_node - 1) * sizeof(env->values[0]));
+	env->nodes--;
+	if (current_node >= env->nodes)
+		current_node = env->nodes - 1;
+	
+	return current_node;
+}
+
+/* the return value here is actually a bitmask:
+r & 1 => the key was handled
+r & 2 => the envelope changed (i.e., it should be enabled) */
+static int _env_handle_key_viewmode(SDL_keysym *k, song_envelope *env, int *current_node)
 {
 	int new_node = *current_node;
 	
@@ -732,13 +742,13 @@ static int _env_handle_key_viewmode(SDL_keysym *k, byte *nodes, int *current_nod
 		new_node++;
                 break;
 	case SDLK_INSERT:
-		_env_node_add(nodes, current_node, ticks, values);
+		*current_node = _env_node_add(env, *current_node);
 		status.flags |= NEED_UPDATE;
-		return 1;
+		return 1 | 2;
 	case SDLK_DELETE:
-		_env_node_remove(nodes, current_node, ticks, values);
+		*current_node = _env_node_remove(env, *current_node);
 		status.flags |= NEED_UPDATE;
-		return 1;
+		return 1 | 2;
 	case SDLK_SPACE:
 		song_play_note(current_instrument, last_note, 0, 1);
 		return 1;
@@ -746,12 +756,12 @@ static int _env_handle_key_viewmode(SDL_keysym *k, byte *nodes, int *current_nod
 	case SDLK_KP_ENTER:
 		envelope_edit_mode = 1;
 		status.flags |= NEED_UPDATE;
-		return 1;
+		return 1 | 2;
         default:
                 return 0;
         }
 	
-	new_node = CLAMP(new_node, 0, *nodes - 1);
+	new_node = CLAMP(new_node, 0, env->nodes - 1);
 	if (*current_node != new_node) {
 		*current_node = new_node;
 		status.flags |= NEED_UPDATE;
@@ -760,11 +770,16 @@ static int _env_handle_key_viewmode(SDL_keysym *k, byte *nodes, int *current_nod
 	return 1;
 }
 
-static int _env_handle_key_editmode(SDL_keysym * k, byte *nodes, int *current_node, unsigned short ticks[],
-				    byte values[], UNUSED byte *loop_start, UNUSED byte *loop_end,
-				    UNUSED byte *sustain_start, UNUSED byte *sustain_end)
+/* - this function is only ever called when the envelope is in edit mode
+   - envelope_edit_mode is only ever assigned a true value once, in _env_handle_key_viewmode.
+   - when _env_handle_key_viewmode enables envelope_edit_mode, it indicates in its return value
+     that the envelope should be enabled.
+   - therefore, the envelope will always be enabled when this function is called, so there is
+     no reason to indicate a change in the envelope here. */
+static int _env_handle_key_editmode(SDL_keysym *k, song_envelope *env, int *current_node)
 {
-	int new_node = *current_node, new_tick = ticks[*current_node], new_value = values[*current_node];
+	int new_node = *current_node, new_tick = env->ticks[*current_node],
+		new_value = env->values[*current_node];
 	
 	/* TODO: when does adding/removing a node alter loop points? */
 	
@@ -816,11 +831,11 @@ static int _env_handle_key_editmode(SDL_keysym * k, byte *nodes, int *current_no
 		new_tick = 10000;
 		break;
 	case SDLK_INSERT:
-		_env_node_add(nodes, current_node, ticks, values);
+		*current_node = _env_node_add(env, *current_node);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_DELETE:
-		_env_node_remove(nodes, current_node, ticks, values);
+		*current_node = _env_node_remove(env, *current_node);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_SPACE:
@@ -829,24 +844,27 @@ static int _env_handle_key_editmode(SDL_keysym * k, byte *nodes, int *current_no
 	case SDLK_RETURN:
 	case SDLK_KP_ENTER:
 		envelope_edit_mode = 0;
+		status.flags |= NEED_UPDATE;
 		break;
         default:
                 return 0;
         }
 	
-	new_node = CLAMP(new_node, 0, *nodes - 1);
-	new_tick = (new_node == 0) ? 0 : CLAMP
-		(new_tick, ticks[*current_node - 1] + 1,
-		 ((*current_node == *nodes - 1) ? 10000 : ticks[*current_node + 1]) - 1);
+	new_node = CLAMP(new_node, 0, env->nodes - 1);
+	new_tick = (new_node == 0) ? 0 : CLAMP(new_tick, env->ticks[*current_node - 1] + 1,
+					       ((*current_node == env->nodes - 1)
+						? 10000 : env->ticks[*current_node + 1]) - 1);
 	new_value = CLAMP(new_value, 0, 64);
 	
-	if (new_node == *current_node && new_value == values[new_node] && new_tick == ticks[new_node]) {
+	if (new_node == *current_node
+	    && new_value == env->values[new_node]
+	    && new_tick == env->ticks[new_node]) {
 		/* there's no need to update the screen -- everything's the same as it was */
 		return 1;
 	}
 	*current_node = new_node;
-	values[*current_node] = new_value;
-	ticks[*current_node] = new_tick;
+	env->values[*current_node] = new_value;
+	env->ticks[*current_node] = new_tick;
 	
 	status.flags |= NEED_UPDATE;
 	return 1;
@@ -873,9 +891,8 @@ static void volume_envelope_draw(void)
 	song_instrument *ins = song_get_instrument(current_instrument, NULL);
 	
 	_draw_env_label("Volume", is_selected);
-	_env_draw(0, current_node_vol, ins->vol_env_nodes, ins->vol_env_ticks, ins->vol_env_values,
-		  ins->flags & ENV_VOLLOOP, ins->vol_loop_start, ins->vol_loop_end,
-		  ins->flags & ENV_VOLSUSTAIN, ins->vol_sustain_start, ins->vol_sustain_end);
+	_env_draw(&ins->vol_env, 0, current_node_vol,
+		  ins->flags & ENV_VOLLOOP, ins->flags & ENV_VOLSUSTAIN);
 }
 
 static void panning_envelope_draw(void)
@@ -884,9 +901,8 @@ static void panning_envelope_draw(void)
 	song_instrument *ins = song_get_instrument(current_instrument, NULL);
 	
 	_draw_env_label("Panning", is_selected);
-	_env_draw(1, current_node_pan, ins->pan_env_nodes, ins->pan_env_ticks, ins->pan_env_values,
-		  ins->flags & ENV_PANLOOP, ins->pan_loop_start, ins->pan_loop_end,
-		  ins->flags & ENV_PANSUSTAIN, ins->pan_sustain_start, ins->pan_sustain_end);
+	_env_draw(&ins->pan_env, 1, current_node_pan,
+		  ins->flags & ENV_PANLOOP, ins->flags & ENV_PANSUSTAIN);
 }
 
 static void pitch_envelope_draw(void)
@@ -895,55 +911,56 @@ static void pitch_envelope_draw(void)
 	song_instrument *ins = song_get_instrument(current_instrument, NULL);
 	
 	_draw_env_label("Frequency", is_selected);
-	_env_draw((ins->flags & ENV_FILTER) ? 0 : 1, current_node_pitch, ins->pitch_env_nodes,
-		  ins->pitch_env_ticks, ins->pitch_env_values, ins->flags & ENV_PITCHLOOP,
-		  ins->pitch_loop_start, ins->pitch_loop_end, ins->flags & ENV_PITCHSUSTAIN,
-		  ins->pitch_sustain_start, ins->pitch_sustain_end);
+	_env_draw(&ins->pitch_env, (ins->flags & ENV_FILTER) ? 0 : 1, current_node_pitch,
+		  ins->flags & ENV_PITCHLOOP, ins->flags & ENV_PITCHSUSTAIN);
 }
 
 static int volume_envelope_handle_key(SDL_keysym * k)
 {
 	song_instrument *ins = song_get_instrument(current_instrument, NULL);
+	int r;
 
-	if (envelope_edit_mode) {
-		return _env_handle_key_editmode(k, &ins->vol_env_nodes, &current_node_vol,
-						ins->vol_env_ticks, ins->vol_env_values,
-						&ins->vol_loop_start, &ins->vol_loop_end,
-						&ins->vol_sustain_start, &ins->vol_sustain_end);
-	} else {
-		return _env_handle_key_viewmode(k, &ins->vol_env_nodes, &current_node_vol,
-						ins->vol_env_ticks, ins->vol_env_values);
+	if (envelope_edit_mode)
+		r = _env_handle_key_editmode(k, &ins->vol_env, &current_node_vol);
+	else
+		r = _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol);
+	if (r & 2) {
+		r ^= 2;
+		ins->flags |= ENV_VOLUME;
 	}
+	return r;
 }
 
 static int panning_envelope_handle_key(SDL_keysym * k)
 {
 	song_instrument *ins = song_get_instrument(current_instrument, NULL);
+	int r;
 
-	if (envelope_edit_mode) {
-		return _env_handle_key_editmode(k, &ins->pan_env_nodes, &current_node_pan,
-						ins->pan_env_ticks, ins->pan_env_values,
-						&ins->pan_loop_start, &ins->pan_loop_end,
-						&ins->pan_sustain_start, &ins->pan_sustain_end);
-	} else {
-		return _env_handle_key_viewmode(k, &ins->pan_env_nodes, &current_node_pan,
-						ins->pan_env_ticks, ins->pan_env_values);
+	if (envelope_edit_mode)
+		r = _env_handle_key_editmode(k, &ins->pan_env, &current_node_pan);
+	else
+		r = _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan);
+	if (r & 2) {
+		r ^= 2;
+		ins->flags |= ENV_PANNING;
 	}
+	return r;
 }
 
 static int pitch_envelope_handle_key(SDL_keysym * k)
 {
 	song_instrument *ins = song_get_instrument(current_instrument, NULL);
+	int r;
 
-	if (envelope_edit_mode) {
-		return _env_handle_key_editmode(k, &ins->pitch_env_nodes, &current_node_pitch,
-						ins->pitch_env_ticks, ins->pitch_env_values,
-						&ins->pitch_loop_start, &ins->pitch_loop_end,
-						&ins->pitch_sustain_start, &ins->pitch_sustain_end);
-	} else {
-		return _env_handle_key_viewmode(k, &ins->pitch_env_nodes, &current_node_pitch,
-						ins->pitch_env_ticks, ins->pitch_env_values);
+	if (envelope_edit_mode)
+		r = _env_handle_key_editmode(k, &ins->pitch_env, &current_node_pitch);
+	else
+		r = _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch);
+	if (r & 2) {
+		r ^= 2;
+		ins->flags |= ENV_PITCH;
 	}
+	return r;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -1098,12 +1115,20 @@ static void instrument_list_volume_predraw_hook(void)
         items_volume[7].toggle.state = !!(ins->flags & ENV_VOLCARRY);
         items_volume[8].toggle.state = !!(ins->flags & ENV_VOLLOOP);
         items_volume[11].toggle.state = !!(ins->flags & ENV_VOLSUSTAIN);
+	
+        items_volume[9].numentry.value = ins->vol_env.loop_start;
+        items_volume[10].numentry.value = ins->vol_env.loop_end;
+        items_volume[12].numentry.value = ins->vol_env.sustain_start;
+        items_volume[13].numentry.value = ins->vol_env.sustain_end;
 
-        items_volume[9].numentry.value = ins->vol_loop_start;
-        items_volume[10].numentry.value = ins->vol_loop_end;
-        items_volume[12].numentry.value = ins->vol_sustain_start;
-        items_volume[13].numentry.value = ins->vol_sustain_end;
-
+	// rewrite min/max
+	// 9/10 = loop s/e
+	// 12/13 = sus s/e
+	//items_volume[9].numentry.max = ins->vol_env.nodes;
+	//items_volume[10].numentry.max = ins->vol_env.nodes;
+	//items_volume[12].numentry.max = ins->vol_env.nodes;
+	//items_volume[13].numentry.max = ins->vol_env.nodes;
+	
         /* mp hack: shifting values all over the place here, ugh */
         items_volume[14].thumbbar.value = ins->global_volume << 1;
         items_volume[15].thumbbar.value = ins->fadeout >> 5;
@@ -1119,10 +1144,10 @@ static void instrument_list_panning_predraw_hook(void)
 	items_panning[8].toggle.state = !!(ins->flags & ENV_PANLOOP);
 	items_panning[11].toggle.state = !!(ins->flags & ENV_PANSUSTAIN);
 	
-	items_panning[9].numentry.value = ins->pan_loop_start;
-	items_panning[10].numentry.value = ins->pan_loop_end;
-	items_panning[12].numentry.value = ins->pan_sustain_start;
-	items_panning[13].numentry.value = ins->pan_sustain_end;
+	items_panning[9].numentry.value = ins->pan_env.loop_start;
+	items_panning[10].numentry.value = ins->pan_env.loop_end;
+	items_panning[12].numentry.value = ins->pan_env.sustain_start;
+	items_panning[13].numentry.value = ins->pan_env.sustain_end;
 	
 	items_panning[14].toggle.state = !!(ins->flags & ENV_SETPANNING);
 	items_panning[15].thumbbar.value = ins->panning >> 2;
@@ -1142,10 +1167,10 @@ static void instrument_list_pitch_predraw_hook(void)
 	items_pitch[8].toggle.state = !!(ins->flags & ENV_PITCHLOOP);
 	items_pitch[11].toggle.state = !!(ins->flags & ENV_PITCHSUSTAIN);
 
-	items_pitch[9].numentry.value = ins->pitch_loop_start;
-	items_pitch[10].numentry.value = ins->pitch_loop_end;
-	items_pitch[12].numentry.value = ins->pitch_sustain_start;
-	items_pitch[13].numentry.value = ins->pitch_sustain_end;
+	items_pitch[9].numentry.value = ins->pitch_env.loop_start;
+	items_pitch[10].numentry.value = ins->pitch_env.loop_end;
+	items_pitch[12].numentry.value = ins->pitch_env.sustain_start;
+	items_pitch[13].numentry.value = ins->pitch_env.sustain_end;
 	
 	items_pitch[14].thumbbar.value = ins->filter_cutoff & 0x7f;
 	items_pitch[15].thumbbar.value = ins->filter_resonance & 0x7f;
@@ -1177,6 +1202,8 @@ static void instrument_list_general_update_values(void)
                         break;
 }
 
+#define CHECK_SET(a,b,c) if (a != b) { a = b; c; }
+
 static void instrument_list_volume_update_values(void)
 {
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
@@ -1191,10 +1218,14 @@ static void instrument_list_volume_update_values(void)
         if (items_volume[11].toggle.state)
                 ins->flags |= ENV_VOLSUSTAIN;
 
-        ins->vol_loop_start = items_volume[9].numentry.value;
-        ins->vol_loop_end = items_volume[10].numentry.value;
-        ins->vol_sustain_start = items_volume[12].numentry.value;
-        ins->vol_sustain_end = items_volume[13].numentry.value;
+        CHECK_SET(ins->vol_env.loop_start, items_volume[9].numentry.value,
+                 ins->flags |= ENV_VOLLOOP);
+        CHECK_SET(ins->vol_env.loop_end, items_volume[10].numentry.value,
+                  ins->flags |= ENV_VOLLOOP);
+        CHECK_SET(ins->vol_env.sustain_start, items_volume[12].numentry.value,
+                  ins->flags |= ENV_VOLSUSTAIN);
+        CHECK_SET(ins->vol_env.sustain_end, items_volume[13].numentry.value,
+                  ins->flags |= ENV_VOLSUSTAIN);
 
         /* more ugly shifts */
         ins->global_volume = items_volume[14].thumbbar.value >> 1;
@@ -1216,14 +1247,18 @@ static void instrument_list_panning_update_values(void)
                 ins->flags |= ENV_PANLOOP;
         if (items_panning[11].toggle.state)
                 ins->flags |= ENV_PANSUSTAIN;
-	if (items_panning[14].toggle.state)
-		ins->flags |= ENV_SETPANNING;
-	
-        ins->pan_loop_start = items_panning[9].numentry.value;
-        ins->pan_loop_end = items_panning[10].numentry.value;
-        ins->pan_sustain_start = items_panning[12].numentry.value;
-        ins->pan_sustain_end = items_panning[13].numentry.value;
-	
+        if (items_panning[14].toggle.state)
+                ins->flags |= ENV_SETPANNING;
+
+        CHECK_SET(ins->pan_env.loop_start, items_panning[9].numentry.value,
+                  ins->flags |= ENV_PANLOOP);
+        CHECK_SET(ins->pan_env.loop_end, items_panning[10].numentry.value,
+                  ins->flags |= ENV_PANLOOP);
+        CHECK_SET(ins->pan_env.sustain_start, items_panning[12].numentry.value,
+                  ins->flags |= ENV_PANSUSTAIN);
+        CHECK_SET(ins->pan_env.sustain_end, items_panning[13].numentry.value,
+                  ins->flags |= ENV_PANSUSTAIN);
+
 	n = items_panning[15].thumbbar.value << 2;
 	if (ins->panning != n) {
 		ins->panning = n;
@@ -1253,12 +1288,16 @@ static void instrument_list_pitch_update_values(void)
 		ins->flags |= ENV_PITCHLOOP;
 	if (items_pitch[11].toggle.state)
 		ins->flags |= ENV_PITCHSUSTAIN;
-	
-	ins->pitch_loop_start = items_pitch[9].numentry.value;
-	ins->pitch_loop_end = items_pitch[10].numentry.value;
-	ins->pitch_sustain_start = items_pitch[12].numentry.value;
-	ins->pitch_sustain_end = items_pitch[13].numentry.value;
-	ins->filter_cutoff = items_pitch[14].thumbbar.value | 0x80;
+        
+        CHECK_SET(ins->pitch_env.loop_start, items_pitch[9].numentry.value,
+                  ins->flags |= ENV_PITCHLOOP);
+        CHECK_SET(ins->pitch_env.loop_end, items_pitch[10].numentry.value,
+                  ins->flags |= ENV_PITCHLOOP);
+        CHECK_SET(ins->pitch_env.sustain_start, items_pitch[12].numentry.value,
+                  ins->flags |= ENV_PITCHSUSTAIN);
+        CHECK_SET(ins->pitch_env.sustain_end, items_pitch[13].numentry.value,
+                  ins->flags |= ENV_PITCHSUSTAIN);
+        ins->filter_cutoff = items_pitch[14].thumbbar.value | 0x80;
 	ins->filter_resonance = items_pitch[15].thumbbar.value | 0x80;
 	ins->midi_channel = items_pitch[16].thumbbar.value;
 	ins->midi_program = items_pitch[17].thumbbar.value;

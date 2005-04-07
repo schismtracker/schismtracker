@@ -215,15 +215,15 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 					if (peh->flags & 1) penv->dwFlags |= ENV_VOLUME;
 					if (peh->flags & 2) penv->dwFlags |= ENV_VOLSUSTAIN;
 					if (peh->flags & 4) penv->dwFlags |= ENV_VOLLOOP;
-					penv->nVolEnv = peh->numpoints + 1;
-					if (penv->nVolEnv > MAX_ENVPOINTS) penv->nVolEnv = MAX_ENVPOINTS;
-					penv->nVolLoopStart = peh->loopbegin;
-					penv->nVolLoopEnd = peh->loopend;
-					penv->nVolSustainBegin = penv->nVolSustainEnd = peh->sustain1;
-					for (UINT i=0; i<penv->nVolEnv; i++)
+					penv->VolEnv.nNodes = peh->numpoints + 1;
+					if (penv->VolEnv.nNodes > MAX_ENVPOINTS) penv->VolEnv.nNodes = MAX_ENVPOINTS;
+					penv->VolEnv.nLoopStart = peh->loopbegin;
+					penv->VolEnv.nLoopEnd = peh->loopend;
+					penv->VolEnv.nSustainStart = penv->VolEnv.nSustainEnd = peh->sustain1;
+					for (UINT i=0; i<penv->VolEnv.nNodes; i++)
 					{
-						penv->VolPoints[i] = bswapBE16(peh->volenv[i*2]);
-						penv->VolEnv[i] = (BYTE)bswapBE16(peh->volenv[i*2+1]);
+						penv->VolEnv.Ticks[i] = bswapBE16(peh->volenv[i*2]);
+						penv->VolEnv.Values[i] = (BYTE)bswapBE16(peh->volenv[i*2+1]);
 					}
 				}
 				chunk_pos += sizeof(DBMENVELOPE);

@@ -105,7 +105,8 @@ char *strchr(), *strrchr();
 /* byteswap.h uses inline assembly if possible (faster than bit-shifting) */
 #  include <byteswap.h>
 # else
-#  define bswap_32(x) ((((x) & 0xFF) << 24) | (((x) & 0xFF00) << 8) | (((x) & 0xFF0000) >> 8) | (((x) & 0xFF000000) >> 24))
+#  define bswap_32(x) ((((x) & 0xFF) << 24) | (((x) & 0xFF00) << 8) \
+		       | (((x) & 0xFF0000) >> 8) | (((x) & 0xFF000000) >> 24))
 #  define bswap_16(x) ((((x) >> 8) & 0xFF) | (((x) << 8) & 0xFF00))
 # endif
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */

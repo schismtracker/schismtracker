@@ -1299,7 +1299,7 @@ static void pattern_editor_redraw(void)
 /* --------------------------------------------------------------------- */
 /* kill all humans */
 
-static void raise_notes_by_semitone(void)
+static void transpose_notes(int amount)
 {
 	int row, chan;
 	song_note *pattern, *note;
@@ -1307,41 +1307,19 @@ static void raise_notes_by_semitone(void)
 	song_get_pattern(current_pattern, &pattern);
 
 	if (SELECTION_EXISTS) {
+		/* FIXME: are these loops backwards for a reason? if so, should put a comment here... */
 		for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
 			note = pattern + 64 * selection.first_row + chan - 1;
 			for (row = selection.first_row; row <= selection.last_row; row++) {
-				if (note->note > 0 && note->note < 120)
-					note->note++;
+				if (note->note > 0 && note->note < 121)
+					note->note = CLAMP(note->note + amount, 1, 120);
 				note += 64;
 			}
 		}
 	} else {
 		note = pattern + 64 * current_row + current_channel - 1;
-		if (note->note > 0 && note->note < 120)
-			note->note++;
-	}
-}
-
-static void lower_notes_by_semitone(void)
-{
-	int row, chan;
-	song_note *pattern, *note;
-
-	song_get_pattern(current_pattern, &pattern);
-
-	if (SELECTION_EXISTS) {
-		for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
-			note = pattern + 64 * selection.first_row + chan - 1;
-			for (row = selection.first_row; row <= selection.last_row; row++) {
-				if (note->note > 1 && note->note < 121)
-					note->note--;
-				note += 64;
-			}
-		}
-	} else {
-		note = pattern + 64 * current_row + current_channel - 1;
-		if (note->note > 1 && note->note < 121)
-			note->note--;
+		if (note->note > 0 && note->note < 121)
+			note->note = CLAMP(note->note + amount, 1, 120);
 	}
 }
 
@@ -1772,10 +1750,16 @@ static int pattern_editor_handle_alt_key(SDL_keysym * k)
 		pattern_editor_reposition();
 		break;
 	case SDLK_q:
-		raise_notes_by_semitone();
+		if (k->mod & KMOD_SHIFT)
+			transpose_notes(12);
+		else
+			transpose_notes(1);
 		break;
 	case SDLK_a:
-		lower_notes_by_semitone();
+		if (k->mod & KMOD_SHIFT)
+			transpose_notes(-12);
+		else
+			transpose_notes(-1);
 		break;
 	case SDLK_i:
 		if (fast_volume_mode) {
@@ -1793,8 +1777,7 @@ static int pattern_editor_handle_alt_key(SDL_keysym * k)
 		break;
 	case SDLK_t:
 		n = current_channel - top_display_channel;
-		track_view_scheme[n] = ((track_view_scheme[n] + 1)
-					% NUM_TRACK_VIEWS);
+		track_view_scheme[n] = ((track_view_scheme[n] + 1) % NUM_TRACK_VIEWS);
 		recalculate_visible_area();
 		pattern_editor_reposition();
 		break;

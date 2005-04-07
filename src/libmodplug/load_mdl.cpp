@@ -458,23 +458,23 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 			for (UINT nve=0; nve<nvolenv; nve++, pve+=33) if (pve[0]+1 == insvolenv[iIns])
 			{
 				WORD vtick = 1;
-				penv->nVolEnv = 15;
+				penv->VolEnv.nNodes = 15;
 				for (UINT iv=0; iv<15; iv++)
 				{
 					if (iv) vtick += pve[iv*2+1];
-					penv->VolPoints[iv] = vtick;
-					penv->VolEnv[iv] = pve[iv*2+2];
+					penv->VolEnv.Ticks[iv] = vtick;
+					penv->VolEnv.Values[iv] = pve[iv*2+2];
 					if (!pve[iv*2+1])
 					{
-						penv->nVolEnv = iv+1;
+						penv->VolEnv.nNodes = iv+1;
 						break;
 					}
 				}
-				penv->nVolSustainBegin = penv->nVolSustainEnd = pve[31] & 0x0F;
+				penv->VolEnv.nSustainStart = penv->VolEnv.nSustainEnd = pve[31] & 0x0F;
 				if (pve[31] & 0x10) penv->dwFlags |= ENV_VOLSUSTAIN;
 				if (pve[31] & 0x20) penv->dwFlags |= ENV_VOLLOOP;
-				penv->nVolLoopStart = pve[32] & 0x0F;
-				penv->nVolLoopEnd = pve[32] >> 4;
+				penv->VolEnv.nLoopStart = pve[32] & 0x0F;
+				penv->VolEnv.nLoopEnd = pve[32] >> 4;
 			}
 		}
 		// Setup panning envelope
@@ -484,22 +484,22 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 			for (UINT npe=0; npe<npanenv; npe++, ppe+=33) if (ppe[0]+1 == inspanenv[iIns])
 			{
 				WORD vtick = 1;
-				penv->nPanEnv = 15;
+				penv->PanEnv.nNodes = 15;
 				for (UINT iv=0; iv<15; iv++)
 				{
 					if (iv) vtick += ppe[iv*2+1];
-					penv->PanPoints[iv] = vtick;
-					penv->PanEnv[iv] = ppe[iv*2+2];
+					penv->PanEnv.Ticks[iv] = vtick;
+					penv->PanEnv.Values[iv] = ppe[iv*2+2];
 					if (!ppe[iv*2+1])
 					{
-						penv->nPanEnv = iv+1;
+						penv->PanEnv.nNodes = iv+1;
 						break;
 					}
 				}
 				if (ppe[31] & 0x10) penv->dwFlags |= ENV_PANSUSTAIN;
 				if (ppe[31] & 0x20) penv->dwFlags |= ENV_PANLOOP;
-				penv->nPanLoopStart = ppe[32] & 0x0F;
-				penv->nPanLoopEnd = ppe[32] >> 4;
+				penv->PanEnv.nLoopStart = ppe[32] & 0x0F;
+				penv->PanEnv.nLoopEnd = ppe[32] >> 4;
 			}
 		}
 	}

@@ -338,8 +338,10 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	pChn->nNewIns = 0;
 	if (psmp)
 	{
+		psmp->played = 1; // <chisel>
 		if (penv)
 		{
+			penv->played = 1; // <chisel>
 			pChn->nInsVol = (psmp->nGlobalVol * penv->nGlobalVol) >> 6;
 			if (penv->dwFlags & ENV_SETPANNING) pChn->nPan = penv->nPan;
 			pChn->nNNA = penv->nNNA;
@@ -1215,7 +1217,7 @@ BOOL CSoundFile::ProcessEffects()
 				if (pChn->pHeader)
 				{
 					INSTRUMENTHEADER *penv = pChn->pHeader;
-					if ((pChn->dwFlags & CHN_PANENV) && (penv->nPanEnv) && (param > penv->PanPoints[penv->nPanEnv-1]))
+					if ((pChn->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes) && (param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1]))
 					{
 						pChn->dwFlags &= ~CHN_PANENV;
 					}

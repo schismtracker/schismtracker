@@ -46,10 +46,6 @@
 
 static const char *device_file = NULL;
 
-struct stereo_volume {
-        byte left, right;
-};
-
 /* --------------------------------------------------------------------- */
 
 static int open_mixer_device(void)
@@ -78,7 +74,7 @@ int mixer_get_max_volume(void)
 void mixer_read_volume(int *left, int *right)
 {
         int fd;
-        struct stereo_volume volume;
+	byte volume[4];
 
         fd = open_mixer_device();
         if (fd < 0) {
@@ -87,12 +83,12 @@ void mixer_read_volume(int *left, int *right)
                 return;
         }
 
-        if (ioctl(fd, MIXER_READ(SCHISM_MIXER_CONTROL), &volume) == EOF) {
+        if (ioctl(fd, MIXER_READ(SCHISM_MIXER_CONTROL), volume) == EOF) {
                 perror(device_file);
                 *left = *right = 0;
         } else {
-                *left = volume.left;
-                *right = volume.right;
+                *left = volume[0];
+                *right = volume[1];
         }
 
         close(fd);
@@ -101,18 +97,18 @@ void mixer_read_volume(int *left, int *right)
 void mixer_write_volume(int left, int right)
 {
         int fd;
-        struct stereo_volume volume = {
-                CLAMP(left, 0, VOLUME_MAX),
-                CLAMP(right, 0, VOLUME_MAX)
-        };
-
+	byte volume[4];
+	
+	volume[0] = CLAMP(left, 0, VOLUME_MAX);
+	volume[1] = CLAMP(right, 0, VOLUME_MAX);
+	
         fd = open_mixer_device();
         if (fd < 0) {
                 perror(device_file);
                 return;
         }
 
-        if (ioctl(fd, MIXER_WRITE(SCHISM_MIXER_CONTROL), &volume) == EOF) {
+        if (ioctl(fd, MIXER_WRITE(SCHISM_MIXER_CONTROL), volume) == EOF) {
                 perror(device_file);
         }
 

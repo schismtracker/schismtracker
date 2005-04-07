@@ -50,6 +50,7 @@ static void file_menu_selected_cb(void);
 static void playback_menu_selected_cb(void);
 static void sample_menu_selected_cb(void);
 static void instrument_menu_selected_cb(void);
+static void settings_menu_selected_cb(void);
 
 /* --------------------------------------------------------------------- */
 
@@ -65,8 +66,8 @@ struct menu {
 
 /* *INDENT-OFF* */
 static struct menu main_menu = {
-        x: 6, y: 14, w: 25, title: " Main Menu",
-        num_items: 9, {
+        x: 6, y: 11, w: 25, title: " Main Menu",
+        num_items: 10, {
                 "File Menu...",
                 "Playback Menu...",
                 "View Patterns        (F2)",
@@ -75,42 +76,41 @@ static struct menu main_menu = {
                 "View Orders/Panning (F11)",
                 "View Variables      (F12)",
                 "Message Editor (Shift-F9)",
+                "Settings Menu...",
                 "Help!                (F1)",
         }, selected_item: 0, active_item: -1,
         main_menu_selected_cb
 };
 
 static struct menu file_menu = {
-        x: 25, y: 16, w: 22, title: "File Menu",
+        x: 25, y: 13, w: 22, title: "File Menu",
         num_items: 6, {
                 "Load...           (F9)",
                 "New...        (Ctrl-N)",
                 "Save Current  (Ctrl-S)",
                 "Save As...       (F10)",
-                "Shell to DOS  (Ctrl-D)",
+                "Message Log  (Ctrl-F1)",
                 "Quit          (Ctrl-Q)",
         }, selected_item: 0, active_item: -1,
         file_menu_selected_cb
 };
 
 static struct menu playback_menu = {
-        x: 25, y: 16, w: 27, title: " Playback Menu",
-        num_items: 9, {
+        x: 25, y: 13, w: 27, title: " Playback Menu",
+        num_items: 7, {
                 "Show Infopage          (F5)",
                 "Play Song         (Ctrl-F5)",
                 "Play Pattern           (F6)",
                 "Play from Order  (Shift-F6)",
                 "Play from Mark/Cursor  (F7)",
                 "Stop                   (F8)",
-                "Reinit Soundcard   (Ctrl-I)",
-                "Driver Screen    (Shift-F5)",
                 "Calculate Length   (Ctrl-P)",
         }, selected_item: 0, active_item: -1,
         playback_menu_selected_cb
 };
 
 static struct menu sample_menu = {
-        x: 25, y: 23, w: 25, title: "Sample Menu",
+        x: 25, y: 20, w: 25, title: "Sample Menu",
         num_items: 3, {
                 "Sample List          (F3)",
                 "Sample Library  (Ctrl-F3)",
@@ -127,6 +127,19 @@ static struct menu instrument_menu = {
         }, selected_item: 0, active_item: -1,
         instrument_menu_selected_cb
 };
+
+static struct menu settings_menu = {
+        x: 22, y: 32, w: 30, title: "Settings Menu",
+	/* num_items is fiddled with when the menu is loaded (if there's no window manager,
+	the toggle fullscreen item doesn't appear) */
+        num_items: 2, {
+                "Preferences         (Shift-F5)",
+                "Palette Editor      (Ctrl-F12)",
+                "Toggle Fullscreen  (Alt-Enter)",
+        }, selected_item: 0, active_item: -1,
+        settings_menu_selected_cb
+};
+
 /* *INDENT-ON* */
 
 /* updated to whatever menu is currently active.
@@ -250,7 +263,12 @@ static void main_menu_selected_cb(void)
         case 7: /* message editor */
                 set_page(PAGE_MESSAGE);
                 break;
-        case 8: /* help! */
+        case 8: /* settings menu */
+		if (status.flags & WM_AVAILABLE)
+			settings_menu.num_items = 3;
+                set_submenu(&settings_menu);
+                break;
+        case 9: /* help! */
                 set_page(PAGE_HELP);
                 break;
         }
@@ -261,31 +279,23 @@ static void file_menu_selected_cb(void)
         switch (file_menu.selected_item) {
         case 0: /* load... */
                 set_page(PAGE_LOAD_MODULE);
-                return;
+                break;
 	case 1: /* new... */
 		new_song_dialog();
-		return;
+		break;
 	case 2: /* save current */
 		save_song_or_save_as();
-		return;
+		break;
 	case 3: /* save as... */
 		set_page(PAGE_SAVE_MODULE);
-		return;
-        case 4: /* shell to dos */
-                /* well, can't really shell with no dos :) */
-                if (status.flags & WM_AVAILABLE) {
-                        /* tell the window manager to minimize? dunno. */
-                } else {
-                        /* open a new console? */
-                }
-                break;
+		break;
+	case 4: /* message log */
+		set_page(PAGE_LOG);
+		break;
         case 5: /* quit */
                 show_exit_prompt();
-                return;
+                break;
         }
-
-        menu_hide();
-        status.flags |= NEED_UPDATE;
 }
 
 static void playback_menu_selected_cb(void)
@@ -312,13 +322,7 @@ static void playback_menu_selected_cb(void)
         case 5: /* stop */
                 song_stop();
                 break;
-	case 6: /* reinit soundcard */
-		break;
-	case 7: /* driver screen */
-		/* this has become more of a general preferences screen.
-		(maybe i should change the text of the menu item...) */
-		set_page(PAGE_SETTINGS);
-        case 8: /* calculate length */
+        case 6: /* calculate length */
                 show_song_length();
                 return;
         }
@@ -350,6 +354,24 @@ static void instrument_menu_selected_cb(void)
                 set_page(PAGE_INSTRUMENT_LIST);
                 return;
 	case 1: /* instrument library */
+		break;
+        }
+
+        menu_hide();
+        status.flags |= NEED_UPDATE;
+}
+
+static void settings_menu_selected_cb(void)
+{
+        switch (settings_menu.selected_item) {
+        case 0: /* preferences page */
+                set_page(PAGE_PREFERENCES);
+                return;
+	case 1: /* palette configuration */
+                set_page(PAGE_PALETTE_EDITOR);
+		return;
+	case 2: /* toggle fullscreen */
+		SDL_WM_ToggleFullScreen(screen);
 		break;
         }
 

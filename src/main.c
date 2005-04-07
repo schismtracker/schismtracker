@@ -25,6 +25,7 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "frag-opt.h"
 
 #if HAVE_SYS_KD_H
 # include <sys/kd.h>
@@ -177,6 +178,7 @@ static inline void display_print_info(void)
 #else
 # define SDL_INIT_FLAGS SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE
 #endif
+static unsigned long sdl_videomode_flags = SDL_HWPALETTE | SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_ANYFORMAT;
 
 static void display_init(void)
 {
@@ -189,8 +191,7 @@ static void display_init(void)
 		status.flags |= WM_AVAILABLE;
 	display_print_video_info();
 
-	screen = SDL_SetVideoMode(640, get_fb_size(), 8,
-				  (SDL_HWPALETTE | SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_ANYFORMAT));
+	screen = SDL_SetVideoMode(640, get_fb_size(), 8, sdl_videomode_flags);
 	if (!screen) {
 		fprintf(stderr, "%s\n", SDL_GetError());
 		exit(1);
@@ -252,20 +253,143 @@ static void run_exit_hook(void)
 }
 
 /* --------------------------------------------------------------------- */
+/* arg parsing */
+
+/* filename of song to load on startup, or NULL for none */
+static char *initial_song = NULL;
+/* initial module directory */
+static char *initial_dir = NULL;
+
+/* startup flags */
+enum {
+	SF_PLAY = 1, /* -p: start playing after loading initial_song */
+	SF_HOOKS = 2, /* --no-hooks: don't run startup/exit scripts */
+};
+static int startup_flags = SF_HOOKS;
+
+/* frag_option ids */
+enum {
+	O_ARG,
+	O_SDL_AUDIODRIVER,
+	O_SDL_VIDEODRIVER,
+	O_DISPLAY,
+	O_FULLSCREEN,
+	O_PLAY,
+	O_HOOKS,
+	O_VERSION,
+	O_HELP,
+};
+
+static void parse_options(int argc, char **argv)
+{
+	FRAG *frag;
+	frag_option opts[] = {
+		{O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
+		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
+		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
+		{O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
+		{O_FULLSCREEN, 'f', "fullscreen", FRAG_NEG, NULL, "start in fullscreen mode"},
+		{O_PLAY, 'p', "play", FRAG_NEG, NULL, "start playing after loading song on command line"},
+		{O_HOOKS, 0, "hooks", FRAG_NEG, NULL, "run startup/exit hooks (default: enabled)"},
+		{O_VERSION, 0, "version", 0, NULL, "display version information"},
+		{O_HELP, 'h', "help", 0, NULL, "print this stuff"},
+		{FRAG_END_ARRAY}
+	};
+	
+	frag = frag_init(opts, argc, argv, FRAG_ENABLE_NO_SPACE_SHORT | FRAG_ENABLE_SPACED_LONG);
+	if (!frag) {
+		fprintf(stderr, "Error during frag_init (no memory?)\n");
+		exit(1);
+	}
+	
+	while (frag_parse(frag)) {
+		switch (frag->id) {
+		case O_ARG:
+			if (is_directory(frag->arg))
+				initial_dir = frag->arg;
+			else
+				initial_song = frag->arg;
+			break;
+		case O_SDL_AUDIODRIVER:
+			/* Would it be better to set the SDL driver stuff with SDL_VideoInit and
+			 * SDL_AudioInit instead of setting environment variables? At the least, it'd
+			 * result in a cleaner implementation of the 'none' pseudo audio driver, but
+			 * a possibly more complicated SDL init... */
+			if (strcmp(frag->arg, "none") == 0) {
+				/* this will cause weird behaviour if -anone -adisk is given,
+				 * but who would do that? */
+				setenv("SDL_AUDIODRIVER", "disk", 1);
+				setenv("SDL_DISKAUDIOFILE", "/dev/null", 1);
+				setenv("SDL_DISKAUDIODELAY", "50", 1);
+			} else {
+				setenv("SDL_AUDIODRIVER", frag->arg, 1);
+			}
+			break;
+		case O_SDL_VIDEODRIVER:
+			setenv("SDL_VIDEODRIVER", frag->arg, 1);
+			break;
+		case O_DISPLAY:
+			setenv("DISPLAY", frag->arg, 1);
+			break;
+		case O_FULLSCREEN:
+			if (frag->type)
+				sdl_videomode_flags |= SDL_FULLSCREEN;
+			else
+				sdl_videomode_flags &= ~SDL_FULLSCREEN;
+			break;
+		case O_PLAY:
+			if (frag->type)
+				startup_flags |= SF_PLAY;
+			else
+				startup_flags &= ~SF_PLAY;
+			break;
+		case O_HOOKS:
+			if (frag->type)
+				startup_flags |= SF_HOOKS;
+			else
+				startup_flags &= ~SF_HOOKS;
+			break;
+		case O_VERSION:
+			printf("Schism Tracker v" VERSION " - Copyright (C) 2003-2005 chisel\n\n");
+			printf("This program is free software; you can redistribute it and/or modify\n");
+			printf("it under the terms of the GNU General Public License as published by\n");
+			printf("the Free Software Foundation; either version 2 of the License, or\n");
+			printf("(at your option) any later version.\n");
+			frag_free(frag);
+			exit(0);
+		case O_HELP:
+			frag_usage(frag);
+			frag_free(frag);
+			exit(0);
+		default:
+			frag_usage(frag);
+			frag_free(frag);
+			exit(2);
+		}
+	}
+	frag_free(frag);
+}
+
+/* --------------------------------------------------------------------- */
 
 int main(int argc, char **argv) NORETURN;
 int main(int argc, char **argv)
 {
 	SDL_Event event;
 
-	run_startup_hook();
-	atexit(run_exit_hook);
+	parse_options(argc, argv);
+	
+	if (startup_flags & SF_HOOKS) {
+		run_startup_hook();
+		atexit(run_exit_hook);
+	}
 	
 	save_font();
 	atexit(restore_font);
 
 	song_initialise();
 	cfg_load();
+	atexit(cfg_atexit_save);
 	display_init();
 	palette_apply();
 	font_init();
@@ -278,11 +402,24 @@ int main(int argc, char **argv)
 	SDL_PauseAudio(0);
 	
 	atexit(clear_all_cached_waveforms);
-	/* TODO: getopt */
-	if (argc >= 2) {
-		if (song_load(argv[1])) {
-			/* set_page(PAGE_LOG); */
-			set_page(PAGE_BLANK);
+	
+	/* TODO: if (initial_song && !initial_dir), set initial_dir to the directory initial_song is in */
+	if (initial_dir) {
+		char buf[PATH_MAX + 1];
+		if (realpath(initial_dir, buf) == NULL)
+			perror(initial_dir);
+		else
+			strcpy(cfg_dir_modules, buf);
+	}
+	if (initial_song) {
+		if (song_load(initial_song)) {
+			if (startup_flags & SF_PLAY) {
+				song_start();
+				set_page(PAGE_INFO);
+			} else {
+				/* set_page(PAGE_LOG); */
+				set_page(PAGE_BLANK);
+			}
 		}
 	} else {
 		set_page(PAGE_LOAD_MODULE);

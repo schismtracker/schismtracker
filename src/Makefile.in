@@ -33,7 +33,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-SOURCES = $(bin2h_SOURCES) $(itf_SOURCES) $(schism_SOURCES)
+
+SOURCES = $(libfrag_opt_a_SOURCES) $(bin2h_SOURCES) $(itf_SOURCES) $(schism_SOURCES)
 
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
@@ -67,6 +68,13 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
+LIBRARIES = $(noinst_LIBRARIES)
+AR = ar
+ARFLAGS = cru
+libfrag_opt_a_AR = $(AR) $(ARFLAGS)
+libfrag_opt_a_LIBADD =
+am_libfrag_opt_a_OBJECTS = frag-opt.$(OBJEXT)
+libfrag_opt_a_OBJECTS = $(am_libfrag_opt_a_OBJECTS)
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
@@ -82,10 +90,11 @@ am__schism_SOURCES_DIST = config.c config-parser.c draw-char.c \
 	item-keyhandler.c keyboard.c main.c menu.c mixer-oss.c \
 	mixer-alsa.c page.c page_blank.c page_help.c page_info.c \
 	page_instruments.c page_loadmodule.c page_loadsample.c \
-	page_log.c page_midi.c page_orderpan.c page_patedit.c \
-	page_samples.c page_settings.c page_message.c page_palette.c \
-	page_vars.c pattern-view.c sample-edit.c sample-view.c slurp.c \
-	status.c util.c audio_playback.cc audio_loadsave.cc mplink.cc
+	page_log.c page_message.c page_midi.c page_orderpan.c \
+	page_palette.c page_patedit.c page_preferences.c \
+	page_samples.c page_vars.c pattern-view.c sample-edit.c \
+	sample-view.c slurp.c status.c util.c audio_playback.cc \
+	audio_loadsave.cc mplink.cc
 @USE_ALSA_MIXER_FALSE@am__objects_1 = mixer-oss.$(OBJEXT)
 @USE_ALSA_MIXER_TRUE@am__objects_1 = mixer-alsa.$(OBJEXT)
 am_schism_OBJECTS = config.$(OBJEXT) config-parser.$(OBJEXT) \
@@ -96,16 +105,17 @@ am_schism_OBJECTS = config.$(OBJEXT) config-parser.$(OBJEXT) \
 	page_blank.$(OBJEXT) page_help.$(OBJEXT) page_info.$(OBJEXT) \
 	page_instruments.$(OBJEXT) page_loadmodule.$(OBJEXT) \
 	page_loadsample.$(OBJEXT) page_log.$(OBJEXT) \
-	page_midi.$(OBJEXT) page_orderpan.$(OBJEXT) \
-	page_patedit.$(OBJEXT) page_samples.$(OBJEXT) \
-	page_settings.$(OBJEXT) page_message.$(OBJEXT) \
-	page_palette.$(OBJEXT) page_vars.$(OBJEXT) \
+	page_message.$(OBJEXT) page_midi.$(OBJEXT) \
+	page_orderpan.$(OBJEXT) page_palette.$(OBJEXT) \
+	page_patedit.$(OBJEXT) page_preferences.$(OBJEXT) \
+	page_samples.$(OBJEXT) page_vars.$(OBJEXT) \
 	pattern-view.$(OBJEXT) sample-edit.$(OBJEXT) \
 	sample-view.$(OBJEXT) slurp.$(OBJEXT) status.$(OBJEXT) \
 	util.$(OBJEXT) audio_playback.$(OBJEXT) \
 	audio_loadsave.$(OBJEXT) mplink.$(OBJEXT)
 schism_OBJECTS = $(am_schism_OBJECTS)
-schism_DEPENDENCIES = fmt/libfmt.a libmodplug/libmodplug.a
+schism_DEPENDENCIES = libfrag-opt.a fmt/libfmt.a \
+	libmodplug/libmodplug.a
 SCRIPTS = $(noinst_SCRIPTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -115,7 +125,7 @@ am__depfiles_maybe = depfiles
 @AMDEP_TRUE@	./$(DEPDIR)/config-parser.Po ./$(DEPDIR)/config.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/dialog.Po ./$(DEPDIR)/draw-char.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/draw-misc.Po ./$(DEPDIR)/draw-pixel.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/helptext.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/frag-opt.Po ./$(DEPDIR)/helptext.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/item-keyhandler.Po ./$(DEPDIR)/item.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/itf.Po ./$(DEPDIR)/keyboard.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/main.Po ./$(DEPDIR)/menu.Po \
@@ -132,8 +142,8 @@ am__depfiles_maybe = depfiles
 @AMDEP_TRUE@	./$(DEPDIR)/page_orderpan.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/page_palette.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/page_patedit.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/page_preferences.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/page_samples.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/page_settings.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/page_vars.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/pattern-view.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/sample-edit.Po \
@@ -148,9 +158,10 @@ CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
-SOURCES = $(bin2h_SOURCES) $(itf_SOURCES) $(schism_SOURCES)
-DIST_SOURCES = $(bin2h_SOURCES) $(itf_SOURCES) \
-	$(am__schism_SOURCES_DIST)
+SOURCES = $(libfrag_opt_a_SOURCES) $(bin2h_SOURCES) $(itf_SOURCES) \
+	$(schism_SOURCES)
+DIST_SOURCES = $(libfrag_opt_a_SOURCES) $(bin2h_SOURCES) \
+	$(itf_SOURCES) $(am__schism_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-exec-recursive install-info-recursive \
@@ -278,13 +289,15 @@ EXTRA_DIST = $(srcdir)/include/*.h create_help.sh $(helptexts) \
 
 @USE_ALSA_MIXER_FALSE@mixer = mixer-oss.c
 @USE_ALSA_MIXER_TRUE@mixer = mixer-alsa.c
+noinst_LIBRARIES = libfrag-opt.a
+libfrag_opt_a_SOURCES = frag-opt.c
 schism_SOURCES = config.c config-parser.c draw-char.c draw-misc.c \
         draw-pixel.c dialog.c helptext.c item.c item-keyhandler.c \
 	keyboard.c main.c menu.c $(mixer) page.c page_blank.c \
 	page_help.c page_info.c page_instruments.c page_loadmodule.c \
-	page_loadsample.c page_log.c page_midi.c page_orderpan.c \
-	page_patedit.c page_samples.c page_settings.c page_message.c \
-	page_palette.c page_vars.c pattern-view.c sample-edit.c \
+	page_loadsample.c page_log.c page_message.c page_midi.c \
+	page_orderpan.c page_palette.c page_patedit.c page_preferences.c \
+	page_samples.c page_vars.c pattern-view.c sample-edit.c \
 	sample-view.c slurp.c status.c util.c audio_playback.cc \
 	audio_loadsave.cc mplink.cc
 
@@ -293,7 +306,7 @@ bin2h_SOURCES = bin2h.c slurp.c util.c
 INCLUDES = -D_GNU_SOURCE -I$(srcdir)/include -I$(srcdir)/libmodplug -I. \
 	@SDL_CFLAGS@
 
-schism_LDADD = @SDL_LIBS@ fmt/libfmt.a libmodplug/libmodplug.a -lm
+schism_LDADD = @SDL_LIBS@ libfrag-opt.a fmt/libfmt.a libmodplug/libmodplug.a -lm
 itf_LDADD = @SDL_LIBS@
 bin2h_LDADD = 
 CLEANFILES = *~ include/*~ helptext/*~ test.*
@@ -331,6 +344,13 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
+
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+libfrag-opt.a: $(libfrag_opt_a_OBJECTS) $(libfrag_opt_a_DEPENDENCIES) 
+	-rm -f libfrag-opt.a
+	$(libfrag_opt_a_AR) libfrag-opt.a $(libfrag_opt_a_OBJECTS) $(libfrag_opt_a_LIBADD)
+	$(RANLIB) libfrag-opt.a
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(mkdir_p) "$(DESTDIR)$(bindir)"
@@ -382,6 +402,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/draw-char.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/draw-misc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/draw-pixel.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/frag-opt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/helptext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/item-keyhandler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/item.Po@am__quote@
@@ -405,8 +426,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page_orderpan.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page_palette.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page_patedit.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page_preferences.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page_samples.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page_settings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/page_vars.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pattern-view.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sample-edit.Po@am__quote@
@@ -611,7 +632,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-recursive
-all-am: Makefile $(PROGRAMS) $(SCRIPTS)
+all-am: Makefile $(LIBRARIES) $(PROGRAMS) $(SCRIPTS)
 installdirs: installdirs-recursive
 installdirs-am:
 	for dir in "$(DESTDIR)$(bindir)"; do \
@@ -645,8 +666,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-recursive
 
-clean-am: clean-binPROGRAMS clean-generic clean-noinstPROGRAMS \
-	mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
+	clean-noinstPROGRAMS mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -rf ./$(DEPDIR)
@@ -696,18 +717,19 @@ uninstall-am: uninstall-binPROGRAMS uninstall-info-am
 uninstall-info: uninstall-info-recursive
 
 .PHONY: $(RECURSIVE_TARGETS) CTAGS GTAGS all all-am check check-am \
-	clean clean-binPROGRAMS clean-generic clean-noinstPROGRAMS \
-	clean-recursive ctags ctags-recursive distclean \
-	distclean-compile distclean-generic distclean-recursive \
-	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-binPROGRAMS install-data \
-	install-data-am install-exec install-exec-am install-info \
-	install-info-am install-man install-strip installcheck \
-	installcheck-am installdirs installdirs-am maintainer-clean \
-	maintainer-clean-generic maintainer-clean-recursive \
-	mostlyclean mostlyclean-compile mostlyclean-generic \
-	mostlyclean-recursive pdf pdf-am ps ps-am tags tags-recursive \
-	uninstall uninstall-am uninstall-binPROGRAMS uninstall-info-am
+	clean clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
+	clean-noinstPROGRAMS clean-recursive ctags ctags-recursive \
+	distclean distclean-compile distclean-generic \
+	distclean-recursive distclean-tags distdir dvi dvi-am html \
+	html-am info info-am install install-am install-binPROGRAMS \
+	install-data install-data-am install-exec install-exec-am \
+	install-info install-info-am install-man install-strip \
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic \
+	maintainer-clean-recursive mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-recursive pdf pdf-am ps ps-am \
+	tags tags-recursive uninstall uninstall-am \
+	uninstall-binPROGRAMS uninstall-info-am
 
 
 draw-char.o: default-font.h
@@ -724,7 +746,7 @@ default-font.h: bin2h default-lower.fnt default-upper-alt.fnt \
 
 helptext.h: bin2h create_help.sh $(helptexts)
 	$(srcdir)/create_help.sh ./bin2h ./helptext.h \
-	        $(srcdir) $(helptexts)
+		$(srcdir) $(helptexts)
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

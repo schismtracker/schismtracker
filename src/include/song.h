@@ -43,6 +43,8 @@ typedef struct _song_sample {
         byte vib_depth;
         byte vib_speed;
         char filename[22];
+	
+	int played;
 } song_sample;
 
 /* modchannelsettings */
@@ -54,28 +56,23 @@ typedef struct _song_channel {
         char name[20];
 } song_channel;
 
+/* instrumentenvelope */
+typedef struct _song_envelope {
+	unsigned short ticks[32];
+	byte values[32];
+	byte nodes;
+	byte loop_start, loop_end;
+	byte sustain_start, sustain_end;
+} song_envelope;
+
 /* instrumentheader */
 typedef struct _song_instrument {
         unsigned long fadeout;
         unsigned long flags;    // any of the ENV_* flags below
         unsigned short global_volume;
         unsigned short panning;
-        unsigned short vol_env_ticks[32];
-        unsigned short pan_env_ticks[32];
-        unsigned short pitch_env_ticks[32];
-        byte vol_env_values[32];
-        byte pan_env_values[32];
-        byte pitch_env_values[32];
         byte sample_map[128], note_map[128];
-        byte vol_env_nodes;
-        byte pan_env_nodes;
-        byte pitch_env_nodes;
-        byte vol_loop_start, vol_loop_end;
-        byte vol_sustain_start, vol_sustain_end;
-        byte pan_loop_start, pan_loop_end;
-        byte pan_sustain_start, pan_sustain_end;
-        byte pitch_loop_start, pitch_loop_end;
-        byte pitch_sustain_start, pitch_sustain_end;
+	song_envelope vol_env, pan_env, pitch_env;
         byte nna, dct, dca;
         byte pan_swing, volume_swing;
         byte filter_cutoff;
@@ -88,6 +85,8 @@ typedef struct _song_instrument {
         byte pitch_pan_center;
         char name[32];
         char filename[12];
+	
+	int played;
 } song_instrument;
 
 /* modcommand */
@@ -320,7 +319,7 @@ int song_save(const char *file);
 void song_clear_sample(int n);
 int song_load_sample(int n, const char *file);
 int song_save_sample_its(int n, const char *file);
-int song_save_sample_s3i(int n, const char *file);
+int song_save_sample_au(int n, const char *file);
 int song_save_sample_raw(int n, const char *file);
 
 /*
@@ -435,6 +434,12 @@ int song_get_playing_channels(void);
 int song_get_max_channels(void);
 
 void song_get_vu_meter(int *left, int *right);
+
+/* fill the array with flags of each playing sample/instrument, such that iff
+ * sample #7 is playing, samples[7] will be nonzero. these are a bit processor
+ * intensive since they require a linear traversal through the mix channels. */
+void song_get_playing_samples(int samples[]);
+void song_get_playing_instruments(int instruments[]);
 
 void song_set_current_speed(int speed);
 void song_set_current_global_volume(int volume);

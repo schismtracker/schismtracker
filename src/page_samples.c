@@ -26,6 +26,7 @@
 #include "sample-edit.h"
 
 #include <SDL.h>
+#include <assert.h>
 #include <math.h>			/* for pow */
 
 /* --------------------------------------------------------------------- */
@@ -49,23 +50,6 @@ static const char *loop_states[] = { "Off", "On Forwards", "On Ping Pong", NULL 
 
 /* playback */
 static int last_note = 61;		/* C-5 */
-
-/* --------------------------------------------------------------------- */
-
-/*
- * 0 = hasn't been played (no dot)
- * 1 = initial attack ('big' dot, color 3)
- * 2 = currently active ('little' dot, color 3)
- * 3 = was playing at some point ('little' dot, color 1)
- */
-
-#if 0
-static byte samples_played[99] = 0;
-
-void update_played_samples(void)
-{
-blah...}
-#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -117,13 +101,19 @@ static void sample_list_draw_list(void)
 	song_sample *sample;
 	int has_data, is_selected;
 	char buf[64];
+	int is_playing[100];
+	
+	song_get_playing_samples(is_playing);
 
 	/* list */
 	for (pos = 0, n = top_sample; pos < 35; pos++, n++) {
 		sample = song_get_sample(n, &name);
 		is_selected = (n == current_sample);
 		has_data = (sample->data != NULL);
-
+		
+		if (sample->played)
+			draw_char(173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
+		
 		draw_text(numtostr(2, n, buf), 2, 13 + pos, 0, 2);
 		draw_text_len(name, 25, 5, 13 + pos, 6, (is_selected ? 14 : 0));
 		draw_char(168, 30, 13 + pos, 2, (is_selected ? 14 : 0));
@@ -367,6 +357,10 @@ static int sample_list_handle_key_on_list(SDL_keysym * k)
  * these don't need to do any actual redrawing, because the screen gets
  * redrawn anyway when the dialog is cleared. */
 
+/* TODO | Deleting a sample doesn't require stopping the song because Modplug cleanly stops any playing copies
+ * TODO | of the sample when it destroys it. It'd be nice if the other sample manipulations (quality convert,
+ * TODO | loop cut, etc.) did this as well. */
+
 static void do_sign_convert(void)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
@@ -377,6 +371,7 @@ static void do_sign_convert(void)
 static void do_quality_convert(void)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
+	song_stop();
 	sample_toggle_quality(sample, 1);
 	clear_cached_waveform(current_sample);
 }
@@ -384,13 +379,13 @@ static void do_quality_convert(void)
 static void do_quality_toggle(void)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
+	song_stop();
 	sample_toggle_quality(sample, 0);
 	clear_cached_waveform(current_sample);
 }
 
 static void do_delete_sample(void)
 {
-	/* song_stop(); ??? */
 	song_clear_sample(current_sample);
 	clear_cached_waveform(current_sample);
 }
@@ -498,49 +493,141 @@ static void sample_amplify_dialog(void)
 
 /* --------------------------------------------------------------------- */
 
-static void sample_save_its(void)
+struct sample_format {
+	const char *name;
+	const char *ext;
+	int (*func) (int n, const char *file);
+} formats[] = {
+	{"Impulse Tracker", "its", song_save_sample_its},
+//	{"Raw", "aiff", song_save_sample_raw},
+	{"Sun/NeXT", "au", song_save_sample_au},
+//	{"Raw", "wav", song_save_sample_raw},
+	{"Raw", "raw", song_save_sample_raw},
+//	{"Raw", "mp3", song_save_sample_raw},
+};
+
+enum {
+	SMP_ITS = 0,
+	SMP_AU = 1,
+	SMP_RAW = 2,
+	SMP_SENTINEL = 3,
+};
+
+/* filename can be NULL, in which case the sample filename is used (quick save) */
+static void sample_save(const char *filename, int format)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
-
 	char *ptr;
-	asprintf(&ptr, "%s/%s", cfg_dir_samples, sample->filename);
 
-	if (song_save_sample_its(current_sample, ptr))
-		status_text_flash("Impulse Tracker sample saved (sample %d)", current_sample);
+	assert(format < SMP_SENTINEL);
+
+	asprintf(&ptr, "%s/%s", cfg_dir_samples, filename ? : sample->filename);
+	/* TODO: ask before overwriting the file */
+	if (formats[format].func(current_sample, ptr))
+		status_text_flash("%s sample saved (sample %d)", formats[format].name, current_sample);
 	else
 		status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
-
 	free(ptr);
 }
 
-static void sample_save_s3i(void)
+/* export sample dialog */
+
+static struct item export_sample_items[6];
+static char export_sample_filename[NAME_MAX + 1] = "";
+static char export_sample_options[64] = "fnord";
+static int export_sample_format = 0;
+
+static void do_export_sample(void)
 {
-	song_sample *sample = song_get_sample(current_sample, NULL);
-
-	char *ptr;
-	asprintf(&ptr, "%s/%s", cfg_dir_samples, sample->filename);
-
-	if (song_save_sample_s3i(current_sample, ptr))
-		status_text_flash("Scream Tracker sample saved (sample %d)", current_sample);
-	else
-		status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
-
-	free(ptr);
+	sample_save(export_sample_filename, export_sample_format);
 }
 
-static void sample_save_raw(void)
+static void export_sample_list_draw(void)
 {
-	song_sample *sample = song_get_sample(current_sample, NULL);
+        int n, focused = (*selected_item == 3);
+        
+	draw_fill_chars(53, 24, 56, 31, 0);
+	for (n = 0; n < SMP_SENTINEL; n++) {
+		int fg = 6, bg = 0;
+		if (focused && n == export_sample_format) {
+			fg = 0;
+			bg = 3;
+		} else if (n == export_sample_format) {
+			bg = 14;
+		}
+		draw_text_len(formats[n].ext, 4, 53, 24 + n, fg, bg);
+	}
+}
 
-	char *ptr;
-	asprintf(&ptr, "%s/%s", cfg_dir_samples, sample->filename);
+static int export_sample_list_handle_key(SDL_keysym * k)
+{
+        int new_format = export_sample_format;
 
-	if (song_save_sample_raw(current_sample, ptr))
-		status_text_flash("RAW Sample saved (sample %d)", current_sample);
-	else
-		status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
+        switch (k->sym) {
+        case SDLK_UP:
+                new_format--;
+                break;
+        case SDLK_DOWN:
+                new_format++;
+                break;
+        case SDLK_PAGEUP:
+        case SDLK_HOME:
+                new_format = 0;
+                break;
+        case SDLK_PAGEDOWN:
+        case SDLK_END:
+                new_format = SMP_SENTINEL - 1;
+                break;
+        case SDLK_LEFT:
+        case SDLK_RIGHT:
+        case SDLK_TAB:
+                change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
+                return 1;
+        default:
+                return 0;
+        }
 
-	free(ptr);
+        new_format = CLAMP(new_format, 0, SMP_SENTINEL - 1);
+        if (new_format != export_sample_format) {
+        	/* update the option string */
+                export_sample_format = new_format;
+                status.flags |= NEED_UPDATE;
+        }
+
+        return 1;
+}
+
+static void export_sample_draw_const(void)
+{
+	draw_text("Export Sample", 34, 21, 0, 2);
+
+	draw_text("Filename", 24, 24, 0, 2);
+	draw_box(32, 23, 51, 25, BOX_THICK | BOX_INNER | BOX_INSET);
+
+	draw_text("Options", 25, 27, 0, 2);
+	draw_box(32, 26, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+
+	draw_box(52, 23, 57, 32, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+static void configure_options(void)
+{
+	dialog_create(DIALOG_OK, "This doesn't do anything yet. Stay tuned! :)", NULL, NULL, 0);
+}
+
+static void export_sample_dialog(void)
+{
+	struct dialog *dialog;
+
+	create_textentry(export_sample_items + 0, 33, 24, 18, 0, 1, 3, NULL, export_sample_filename, NAME_MAX);
+	create_textentry(export_sample_items + 1, 33, 27, 18, 0, 2, 3, NULL, export_sample_options, 256);
+	create_button(export_sample_items + 2, 33, 30, 9, 1, 4, 3, 3, 3, configure_options, "Configure", 1);
+	create_other(export_sample_items + 3, 0, export_sample_list_handle_key, export_sample_list_draw);
+	create_button(export_sample_items + 4, 31, 35, 6, 2, 4, 5, 5, 5, dialog_yes, "OK", 3);
+	create_button(export_sample_items + 5, 42, 35, 6, 3, 5, 4, 4, 4, dialog_cancel, "Cancel", 1);
+	
+	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_items, 6, 0, export_sample_draw_const);
+	dialog->action_yes = do_export_sample;
 }
 
 /* --------------------------------------------------------------------- */
@@ -590,15 +677,13 @@ static inline void sample_list_handle_alt_key(SDL_keysym * k)
 				      do_quality_convert, do_quality_toggle, 0);
 		return;
 	case SDLK_o:
-		/* if (file exists) prompt for overwrite; else */
-		sample_save_its();
+		sample_save(NULL, SMP_ITS);
 		return;
 	case SDLK_t:
-		/* if (file exists) prompt for overwrite; else */
-		sample_save_s3i();
+		export_sample_dialog();
+		return;
 	case SDLK_w:
-		/* if (file exists) prompt for overwrite; else */
-		sample_save_raw();
+		sample_save(NULL, SMP_RAW);
 		return;
 	default:
 		return;

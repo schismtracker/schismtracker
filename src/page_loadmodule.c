@@ -574,6 +574,36 @@ static void file_list_draw(void)
         search_redraw();
 }
 
+static void do_delete_file(void)
+{
+	char *ptr;
+	int old_top_file, old_current_file, old_top_dir, old_current_dir;
+	
+	asprintf(&ptr, "%s/%s", cfg_dir_modules, files[current_file]->filename);
+	/* would be neat to send it to the trash can if there is one */
+	unlink(ptr);
+	free(ptr);
+	
+	/* remember the list positions */
+	old_top_file = top_file;
+	old_current_file = current_file;
+	old_top_dir = top_dir;
+	old_current_dir = current_dir;
+	
+	read_directory();
+	search_text_clear();
+	
+	/* put the list positions back */
+	top_file = old_top_file;
+	current_file = old_current_file;
+	top_dir = old_top_dir;
+	current_dir = old_current_dir;
+	/* edge case: if this was the last file, move the cursor up */
+	if (current_file >= num_files)
+		current_file = num_files - 1;
+	file_list_reposition();
+}
+
 static int file_list_handle_key(SDL_keysym * k)
 {
         int new_file = current_file;
@@ -604,10 +634,14 @@ static int file_list_handle_key(SDL_keysym * k)
 
                 if (!files)
                         return 1;
-                asprintf(&ptr, "%s/%s", cfg_dir_modules,
-                         files[current_file]->filename);
+                asprintf(&ptr, "%s/%s", cfg_dir_modules, files[current_file]->filename);
 		handle_file_entered(ptr); /* ... which frees it */
                 return 1;
+        case SDLK_DELETE:
+                if (!files)
+                        return 1;
+		dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1);
+		return 1;
         case SDLK_BACKSPACE:
                 if (k->mod & KMOD_CTRL)
                         search_text_clear();
@@ -774,8 +808,6 @@ static int update_directory(void)
 
         status.flags &= ~DIR_MODULES_CHANGED;
 
-        top_file = current_file = top_dir = current_dir = 0;
-        /* clear_directory(); <- useless; read_directory() does this */
         read_directory();
 	search_text_clear();
 	

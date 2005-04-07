@@ -199,6 +199,7 @@ extern int cfg_palette;
 
 void cfg_load(void);
 void cfg_save(void);
+void cfg_atexit_save(void); /* this only saves a handful of settings, not everything */
 
 /* each page with configurable settings has a function to load/save them... */
 #include "config-parser.h" /* FIXME: shouldn't need this here */
@@ -211,6 +212,7 @@ void cfg_save_info(cfg_file_t *cfg);
 
 void cfg_load_audio(cfg_file_t *cfg);
 void cfg_save_audio(cfg_file_t *cfg);
+void cfg_atexit_save_audio(cfg_file_t *cfg);
 
 /* --------------------------------------------------------------------- */
 /* text functions */

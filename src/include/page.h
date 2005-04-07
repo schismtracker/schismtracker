@@ -259,7 +259,7 @@ enum page_numbers {
         PAGE_INFO = (5),
 
         PAGE_MIDI = (6),
-        PAGE_SETTINGS = (7),
+        PAGE_PREFERENCES = (7),
 
         PAGE_LOAD_MODULE = (9),
         PAGE_SAVE_MODULE = (10),
@@ -294,7 +294,7 @@ void instrument_list_panning_load_page(struct page *page);
 void instrument_list_pitch_load_page(struct page *page);
 void info_load_page(struct page *page);
 void midi_load_page(struct page *page);
-void settings_load_page(struct page *page);
+void preferences_load_page(struct page *page);
 void load_module_load_page(struct page *page);
 void save_module_load_page(struct page *page);
 void orderpan_load_page(struct page *page);

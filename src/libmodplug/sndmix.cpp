@@ -617,29 +617,29 @@ BOOL CSoundFile::ReadNote()
 			{
 				INSTRUMENTHEADER *penv = pChn->pHeader;
 				// Volume Envelope
-				if ((pChn->dwFlags & CHN_VOLENV) && (penv->nVolEnv))
+				if ((pChn->dwFlags & CHN_VOLENV) && (penv->VolEnv.nNodes))
 				{
 					int envpos = pChn->nVolEnvPosition;
-					UINT pt = penv->nVolEnv - 1;
-					for (UINT i=0; i<(UINT)(penv->nVolEnv-1); i++)
+					UINT pt = penv->VolEnv.nNodes - 1;
+					for (UINT i=0; i<(UINT)(penv->VolEnv.nNodes-1); i++)
 					{
-						if (envpos <= penv->VolPoints[i])
+						if (envpos <= penv->VolEnv.Ticks[i])
 						{
 							pt = i;
 							break;
 						}
 					}
-					int x2 = penv->VolPoints[pt];
+					int x2 = penv->VolEnv.Ticks[pt];
 					int x1, envvol;
 					if (envpos >= x2)
 					{
-						envvol = penv->VolEnv[pt] << 2;
+						envvol = penv->VolEnv.Values[pt] << 2;
 						x1 = x2;
 					} else
 					if (pt)
 					{
-						envvol = penv->VolEnv[pt-1] << 2;
-						x1 = penv->VolPoints[pt-1];
+						envvol = penv->VolEnv.Values[pt-1] << 2;
+						x1 = penv->VolEnv.Ticks[pt-1];
 					} else
 					{
 						envvol = 0;
@@ -648,26 +648,26 @@ BOOL CSoundFile::ReadNote()
 					if (envpos > x2) envpos = x2;
 					if ((x2 > x1) && (envpos > x1))
 					{
-						envvol += ((envpos - x1) * (((int)penv->VolEnv[pt]<<2) - envvol)) / (x2 - x1);
+						envvol += ((envpos - x1) * (((int)penv->VolEnv.Values[pt]<<2) - envvol)) / (x2 - x1);
 					}
 					if (envvol < 0) envvol = 0;
 					if (envvol > 256) envvol = 256;
 					vol = (vol * envvol) >> 8;
 				}
 				// Panning Envelope
-				if ((pChn->dwFlags & CHN_PANENV) && (penv->nPanEnv))
+				if ((pChn->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes))
 				{
 					int envpos = pChn->nPanEnvPosition;
-					UINT pt = penv->nPanEnv - 1;
-					for (UINT i=0; i<(UINT)(penv->nPanEnv-1); i++)
+					UINT pt = penv->PanEnv.nNodes - 1;
+					for (UINT i=0; i<(UINT)(penv->PanEnv.nNodes-1); i++)
 					{
-						if (envpos <= penv->PanPoints[i])
+						if (envpos <= penv->PanEnv.Ticks[i])
 						{
 							pt = i;
 							break;
 						}
 					}
-					int x2 = penv->PanPoints[pt], y2 = penv->PanEnv[pt];
+					int x2 = penv->PanEnv.Ticks[pt], y2 = penv->PanEnv.Values[pt];
 					int x1, envpan;
 					if (envpos >= x2)
 					{
@@ -676,8 +676,8 @@ BOOL CSoundFile::ReadNote()
 					} else
 					if (pt)
 					{
-						envpan = penv->PanEnv[pt-1];
-						x1 = penv->PanPoints[pt-1];
+						envpan = penv->PanEnv.Values[pt-1];
+						x1 = penv->PanEnv.Ticks[pt-1];
 					} else
 					{
 						envpan = 128;
@@ -769,30 +769,30 @@ BOOL CSoundFile::ReadNote()
 			}
 
 			// Pitch/Filter Envelope
-			if ((pChn->pHeader) && (pChn->dwFlags & CHN_PITCHENV) && (pChn->pHeader->nPitchEnv))
+			if ((pChn->pHeader) && (pChn->dwFlags & CHN_PITCHENV) && (pChn->pHeader->PitchEnv.nNodes))
 			{
 				INSTRUMENTHEADER *penv = pChn->pHeader;
 				int envpos = pChn->nPitchEnvPosition;
-				UINT pt = penv->nPitchEnv - 1;
-				for (UINT i=0; i<(UINT)(penv->nPitchEnv-1); i++)
+				UINT pt = penv->PitchEnv.nNodes - 1;
+				for (UINT i=0; i<(UINT)(penv->PitchEnv.nNodes-1); i++)
 				{
-					if (envpos <= penv->PitchPoints[i])
+					if (envpos <= penv->PitchEnv.Ticks[i])
 					{
 						pt = i;
 						break;
 					}
 				}
-				int x2 = penv->PitchPoints[pt];
+				int x2 = penv->PitchEnv.Ticks[pt];
 				int x1, envpitch;
 				if (envpos >= x2)
 				{
-					envpitch = (((int)penv->PitchEnv[pt]) - 32) * 8;
+					envpitch = (((int)penv->PitchEnv.Values[pt]) - 32) * 8;
 					x1 = x2;
 				} else
 				if (pt)
 				{
-					envpitch = (((int)penv->PitchEnv[pt-1]) - 32) * 8;
-					x1 = penv->PitchPoints[pt-1];
+					envpitch = (((int)penv->PitchEnv.Values[pt-1]) - 32) * 8;
+					x1 = penv->PitchEnv.Ticks[pt-1];
 				} else
 				{
 					envpitch = 0;
@@ -801,7 +801,7 @@ BOOL CSoundFile::ReadNote()
 				if (envpos > x2) envpos = x2;
 				if ((x2 > x1) && (envpos > x1))
 				{
-					int envpitchdest = (((int)penv->PitchEnv[pt]) - 32) * 8;
+					int envpitchdest = (((int)penv->PitchEnv.Values[pt]) - 32) * 8;
 					envpitch += ((envpos - x1) * (envpitchdest - envpitch)) / (x2 - x1);
 				}
 				if (envpitch < -256) envpitch = -256;
@@ -1007,13 +1007,13 @@ BOOL CSoundFile::ReadNote()
 				// Volume Loop ?
 				if (penv->dwFlags & ENV_VOLLOOP)
 				{
-					UINT volloopend = penv->VolPoints[penv->nVolLoopEnd];
+					UINT volloopend = penv->VolEnv.Ticks[penv->VolEnv.nLoopEnd];
 					if (m_nType != MOD_TYPE_XM) volloopend++;
 					if (pChn->nVolEnvPosition == volloopend)
 					{
-						pChn->nVolEnvPosition = penv->VolPoints[penv->nVolLoopStart];
-						if ((penv->nVolLoopEnd == penv->nVolLoopStart) && (!penv->VolEnv[penv->nVolLoopStart])
-						 && ((!(m_nType & MOD_TYPE_XM)) || (penv->nVolLoopEnd+1 == penv->nVolEnv)))
+						pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nLoopStart];
+						if ((penv->VolEnv.nLoopEnd == penv->VolEnv.nLoopStart) && (!penv->VolEnv.Values[penv->VolEnv.nLoopStart])
+						 && ((!(m_nType & MOD_TYPE_XM)) || (penv->VolEnv.nLoopEnd+1 == penv->VolEnv.nNodes)))
 						{
 							pChn->dwFlags |= CHN_NOTEFADE;
 							pChn->nFadeOutVol = 0;
@@ -1023,15 +1023,15 @@ BOOL CSoundFile::ReadNote()
 				// Volume Sustain ?
 				if ((penv->dwFlags & ENV_VOLSUSTAIN) && (!(pChn->dwFlags & CHN_KEYOFF)))
 				{
-					if (pChn->nVolEnvPosition == (UINT)penv->VolPoints[penv->nVolSustainEnd]+1)
-						pChn->nVolEnvPosition = penv->VolPoints[penv->nVolSustainBegin];
+					if (pChn->nVolEnvPosition == (UINT)penv->VolEnv.Ticks[penv->VolEnv.nSustainEnd]+1)
+						pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nSustainStart];
 				} else
 				// End of Envelope ?
-				if (pChn->nVolEnvPosition > penv->VolPoints[penv->nVolEnv - 1])
+				if (pChn->nVolEnvPosition > penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1])
 				{
 					if ((m_nType & MOD_TYPE_IT) || (pChn->dwFlags & CHN_KEYOFF)) pChn->dwFlags |= CHN_NOTEFADE;
-					pChn->nVolEnvPosition = penv->VolPoints[penv->nVolEnv - 1];
-					if ((!penv->VolEnv[penv->nVolEnv-1]) && ((nChn >= m_nChannels) || (m_nType & MOD_TYPE_IT)))
+					pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1];
+					if ((!penv->VolEnv.Values[penv->VolEnv.nNodes-1]) && ((nChn >= m_nChannels) || (m_nType & MOD_TYPE_IT)))
 					{
 						pChn->dwFlags |= CHN_NOTEFADE;
 						pChn->nFadeOutVol = 0;
@@ -1046,21 +1046,21 @@ BOOL CSoundFile::ReadNote()
 				pChn->nPanEnvPosition++;
 				if (penv->dwFlags & ENV_PANLOOP)
 				{
-					UINT panloopend = penv->PanPoints[penv->nPanLoopEnd];
+					UINT panloopend = penv->PanEnv.Ticks[penv->PanEnv.nLoopEnd];
 					if (m_nType != MOD_TYPE_XM) panloopend++;
 					if (pChn->nPanEnvPosition == panloopend)
-						pChn->nPanEnvPosition = penv->PanPoints[penv->nPanLoopStart];
+						pChn->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nLoopStart];
 				}
 				// Panning Sustain ?
-				if ((penv->dwFlags & ENV_PANSUSTAIN) && (pChn->nPanEnvPosition == (UINT)penv->PanPoints[penv->nPanSustainEnd]+1)
+				if ((penv->dwFlags & ENV_PANSUSTAIN) && (pChn->nPanEnvPosition == (UINT)penv->PanEnv.Ticks[penv->PanEnv.nSustainEnd]+1)
 				 && (!(pChn->dwFlags & CHN_KEYOFF)))
 				{
 					// Panning sustained
-					pChn->nPanEnvPosition = penv->PanPoints[penv->nPanSustainBegin];
+					pChn->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nSustainStart];
 				} else
 				{
-					if (pChn->nPanEnvPosition > penv->PanPoints[penv->nPanEnv - 1])
-						pChn->nPanEnvPosition = penv->PanPoints[penv->nPanEnv - 1];
+					if (pChn->nPanEnvPosition > penv->PanEnv.Ticks[penv->PanEnv.nNodes - 1])
+						pChn->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nNodes - 1];
 				}
 			}
 			// Pitch Envelope
@@ -1071,18 +1071,18 @@ BOOL CSoundFile::ReadNote()
 				// Pitch Loop ?
 				if (penv->dwFlags & ENV_PITCHLOOP)
 				{
-					if (pChn->nPitchEnvPosition >= penv->PitchPoints[penv->nPitchLoopEnd])
-						pChn->nPitchEnvPosition = penv->PitchPoints[penv->nPitchLoopStart];
+					if (pChn->nPitchEnvPosition >= penv->PitchEnv.Ticks[penv->PitchEnv.nLoopEnd])
+						pChn->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nLoopStart];
 				}
 				// Pitch Sustain ?
 				if ((penv->dwFlags & ENV_PITCHSUSTAIN) && (!(pChn->dwFlags & CHN_KEYOFF)))
 				{
-					if (pChn->nPitchEnvPosition == (UINT)penv->PitchPoints[penv->nPitchSustainEnd]+1)
-						pChn->nPitchEnvPosition = penv->PitchPoints[penv->nPitchSustainBegin];
+					if (pChn->nPitchEnvPosition == (UINT)penv->PitchEnv.Ticks[penv->PitchEnv.nSustainEnd]+1)
+						pChn->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nSustainStart];
 				} else
 				{
-					if (pChn->nPitchEnvPosition > penv->PitchPoints[penv->nPitchEnv - 1])
-						pChn->nPitchEnvPosition = penv->PitchPoints[penv->nPitchEnv - 1];
+					if (pChn->nPitchEnvPosition > penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1])
+						pChn->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1];
 				}
 			}
 		}

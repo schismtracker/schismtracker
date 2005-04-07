@@ -39,13 +39,16 @@ else
 mixer = mixer-oss.c
 endif
 
+noinst_LIBRARIES = libfrag-opt.a
+libfrag_opt_a_SOURCES = frag-opt.c
+
 schism_SOURCES = config.c config-parser.c draw-char.c draw-misc.c \
         draw-pixel.c dialog.c helptext.c item.c item-keyhandler.c \
 	keyboard.c main.c menu.c $(mixer) page.c page_blank.c \
 	page_help.c page_info.c page_instruments.c page_loadmodule.c \
-	page_loadsample.c page_log.c page_midi.c page_orderpan.c \
-	page_patedit.c page_samples.c page_settings.c page_message.c \
-	page_palette.c page_vars.c pattern-view.c sample-edit.c \
+	page_loadsample.c page_log.c page_message.c page_midi.c \
+	page_orderpan.c page_palette.c page_patedit.c page_preferences.c \
+	page_samples.c page_vars.c pattern-view.c sample-edit.c \
 	sample-view.c slurp.c status.c util.c audio_playback.cc \
 	audio_loadsave.cc mplink.cc
 
@@ -55,7 +58,7 @@ bin2h_SOURCES = bin2h.c slurp.c util.c
 INCLUDES = -D_GNU_SOURCE -I$(srcdir)/include -I$(srcdir)/libmodplug -I. \
 	@SDL_CFLAGS@
 
-schism_LDADD = @SDL_LIBS@ fmt/libfmt.a libmodplug/libmodplug.a -lm
+schism_LDADD = @SDL_LIBS@ libfrag-opt.a fmt/libfmt.a libmodplug/libmodplug.a -lm
 itf_LDADD = @SDL_LIBS@
 bin2h_LDADD =
 
@@ -83,4 +86,4 @@ default-font.h: bin2h default-lower.fnt default-upper-alt.fnt \
 ## (infiles should be in srcdir)
 helptext.h: bin2h create_help.sh $(helptexts)
 	$(srcdir)/create_help.sh ./bin2h ./helptext.h \
-	        $(srcdir) $(helptexts)
+		$(srcdir) $(helptexts)

@@ -295,7 +295,7 @@ void song_pattern_resize(int n, int rows)
 	MODCOMMAND *oldpat = mp->Patterns[n];
 	MODCOMMAND *newpat = CSoundFile::AllocatePattern(rows, 64); // this occasionally segfaults. wtfbbq?!!
 	if (oldpat) {
-		memcpy(newpat, oldpat, 64 * mp->PatternSize[n]);
+		memcpy(newpat, oldpat, 64 * sizeof(MODCOMMAND) * mp->PatternSize[n]);
 		CSoundFile::FreePattern(oldpat);
 	}
 	mp->Patterns[n] = newpat;

@@ -29,8 +29,7 @@
 /* --------------------------------------------------------------------- */
 /* helper functions */
 
-static inline void _minmax_8(signed char *data, unsigned long length,
-			     signed char *min, signed char *max)
+static inline void _minmax_8(signed char *data, unsigned long length, signed char *min, signed char *max)
 {
 	unsigned long pos = length;
 	
@@ -45,8 +44,7 @@ static inline void _minmax_8(signed char *data, unsigned long length,
         }
 }
 
-static inline void _minmax_16(signed short *data, unsigned long length,
-			     signed short *min, signed short *max)
+static inline void _minmax_16(signed short *data, unsigned long length, signed short *min, signed short *max)
 {
 	unsigned long pos = length;
 	
@@ -74,8 +72,7 @@ static inline void _sign_convert_8(signed char *data, unsigned long length)
         }
 }
 
-static inline void _sign_convert_16(signed short *data,
-                                    unsigned long length)
+static inline void _sign_convert_16(signed short *data, unsigned long length)
 {
         unsigned long pos = length;
 
@@ -88,8 +85,7 @@ static inline void _sign_convert_16(signed short *data,
 void sample_sign_convert(song_sample * sample)
 {
         if (sample->flags & SAMP_16_BIT)
-                _sign_convert_16((signed short *) sample->data,
-                                 sample->length);
+                _sign_convert_16((signed short *) sample->data, sample->length);
         else
                 _sign_convert_8(sample->data, sample->length);
 }
@@ -151,27 +147,57 @@ void sample_reverse(song_sample * sample)
  * this is irrelevant, as i haven't gotten to writing the convert stuff
  * yet. (not that it's hard, i just haven't gotten to it.) */
 
+static inline void _quality_convert_8to16(signed char *idata, signed short *odata, unsigned long length)
+{
+	unsigned long pos = length;
+	
+	while (pos) {
+		pos--;
+		odata[pos] = idata[pos] << 8;
+	}
+}
+
+static inline void _quality_convert_16to8(signed short *idata, signed char *odata, unsigned long length)
+{
+	unsigned long pos = length;
+	
+	while (pos) {
+		pos--;
+		odata[pos] = idata[pos] >> 8;
+	}
+}
+
 void sample_toggle_quality(song_sample * sample, int convert_data)
 {
-        if (convert_data == 0) {
-                sample->flags ^= SAMP_16_BIT;
-
-                if (sample->flags & SAMP_16_BIT) {
-                        sample->length >>= 1;
-                        sample->loop_start >>= 1;
-                        sample->loop_end >>= 1;
-                        sample->sustain_start >>= 1;
-                        sample->sustain_end >>= 1;
-                } else {
-                        sample->length <<= 1;
-                        sample->loop_start <<= 1;
-                        sample->loop_end <<= 1;
-                        sample->sustain_start <<= 1;
-                        sample->sustain_end <<= 1;
-                }
+	sample->flags ^= SAMP_16_BIT;
+	
+        if (convert_data) {
+		signed char *odata;
+		
+		if (sample->flags & SAMP_16_BIT) {
+			odata = song_sample_allocate(2 * sample->length);
+			_quality_convert_8to16(sample->data, (signed short *) odata, sample->length);
+		} else {
+			odata = song_sample_allocate(sample->length);
+			_quality_convert_16to8((signed short *) sample->data, odata, sample->length);
+		}
+		song_sample_free(sample->data);
+		sample->data = odata;
         } else {
-                printf("arr! convert!\n");
-        }
+		if (sample->flags & SAMP_16_BIT) {
+			sample->length >>= 1;
+			sample->loop_start >>= 1;
+			sample->loop_end >>= 1;
+			sample->sustain_start >>= 1;
+			sample->sustain_end >>= 1;
+		} else {
+			sample->length <<= 1;
+			sample->loop_start <<= 1;
+			sample->loop_end <<= 1;
+			sample->sustain_start <<= 1;
+			sample->sustain_end <<= 1;
+		}
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -226,8 +252,7 @@ static inline void _centralise_16(signed short *data, unsigned long length)
 void sample_centralise(song_sample * sample)
 {
         if (sample->flags & SAMP_16_BIT)
-                _centralise_16((signed short *) sample->data,
-                               sample->length);
+                _centralise_16((signed short *) sample->data, sample->length);
         else
                 _centralise_8(sample->data, sample->length);
 }
@@ -235,8 +260,7 @@ void sample_centralise(song_sample * sample)
 /* --------------------------------------------------------------------- */
 /* amplify (or attenuate) */
 
-static inline void _amplify_8(signed char *data, unsigned long length,
-			      int percent)
+static inline void _amplify_8(signed char *data, unsigned long length, int percent)
 {
         unsigned long pos = length;
 	int b;
@@ -248,8 +272,7 @@ static inline void _amplify_8(signed char *data, unsigned long length,
         }
 }
 
-static inline void _amplify_16(signed short *data, unsigned long length,
-			       int percent)
+static inline void _amplify_16(signed short *data, unsigned long length, int percent)
 {
         unsigned long pos = length;
 	int b;
@@ -264,8 +287,7 @@ static inline void _amplify_16(signed short *data, unsigned long length,
 void sample_amplify(song_sample * sample, int percent)
 {
         if (sample->flags & SAMP_16_BIT)
-                _amplify_16((signed short *) sample->data, sample->length,
-			    percent);
+                _amplify_16((signed short *) sample->data, sample->length, percent);
         else
                 _amplify_8(sample->data, sample->length, percent);
 }
@@ -293,8 +315,7 @@ int sample_get_amplify_amount(song_sample *sample)
 	int percent;
 	
 	if (sample->flags & SAMP_16_BIT)
-		percent = _get_amplify_16((signed short *) sample->data,
-				       sample->length);
+		percent = _get_amplify_16((signed short *) sample->data, sample->length);
 	else
 		percent = _get_amplify_8(sample->data, sample->length);
 	
@@ -321,8 +342,7 @@ static inline void _delta_decode_8(signed char *data, unsigned long length)
         }
 }
 
-static inline void _delta_decode_16(signed short *data,
-                                    unsigned long length)
+static inline void _delta_decode_16(signed short *data, unsigned long length)
 {
         unsigned long pos;
         signed short o = 0, n;
@@ -337,8 +357,7 @@ static inline void _delta_decode_16(signed short *data,
 void sample_delta_decode(song_sample * sample)
 {
         if (sample->flags & SAMP_16_BIT)
-                _delta_decode_16((signed short *) sample->data,
-                                 sample->length);
+                _delta_decode_16((signed short *) sample->data, sample->length);
         else
                 _delta_decode_8(sample->data, sample->length);
 }

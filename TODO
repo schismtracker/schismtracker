@@ -327,10 +327,6 @@ muted channels on the info page?)
 
 --------------------------------------------------------------------------
 
-Is sample reverse being done correctly?
-
---------------------------------------------------------------------------
-
 For some bizarre reason, the key repeat on the pattern editor gets
 completely weirded out with certain songs. Purple Motion's Skyrider and
 Cool City (skyrider.s3m and ccity12.s3m) are prime examples.
@@ -358,27 +354,6 @@ the sample list; similar for instruments.
 
 --------------------------------------------------------------------------
 
-It would be useful to keep track of the character state of the screen:
-add a bit to draw_char that inserts whatever character is being printed
-to an internal array. This way all the screen redraw functions don't have
-to be called every display frame, just the ones whose output changes.
-Plus, this could provide for future optimizations.
-
-Maybe the drawing would be more efficient if it 'remembered' the
-character data. Instead of actually drawing the text to the screen,
-draw_text et al. would just write the characters to some secondary buffer
-holding the characters that are going to be drawn to the screen at some
-later state, and redraw_screen would loop through this buffer and do the
-actual drawing. This would involve rewriting a significant amount of
-code, but it'd probably be a LOT cleaner and more efficient.
-
-(a) When changing the page, write the constant bits to the buffer.
-(b) Every time something on the page changes, redraw the affected text.
-(c) Per-cycle-update, run through the buffer and draw the screen, then
-    draw the non-text bits (e.g. the sample waveform).
-
---------------------------------------------------------------------------
-
 Once instrument mode is working correctly, the block of code in page.c
 that's #if 0'ed ought to work properly. Currently, setting the instrument
 implies accessing it, which creates it, which Modplug takes to mean it
@@ -392,17 +367,6 @@ Alt-Y is nowhere in the pattern editor help (same in IT)
 
 IT bug: go to the last channel, fiddle with Alt-T and Ctrl-T a bit, and
 it's possible to display channel 65.
-
---------------------------------------------------------------------------
-
-The loops in the pattern editor should be arranged like:
-
-	for (row = 0; row < rows; row++) {
-		note = first note in the row;
-		for (chan = 0; chan < chans; chan++, note++) {
-			do stuff to the note;
-		}
-	}
 
 --------------------------------------------------------------------------
 
@@ -436,6 +400,18 @@ Do something (besides segfaulting!) if the audio device is in use.
 SDL_AUDIODRIVER=oss, it dosen't crash if something else is playing -- it
 says "Couldn't initialise audio: No available audio device" like it's
 supposed to.)
+
+... Okay, it seems be because of some INCREDIBLY retarded code in, of all
+things, the fricking arts driver. Apparently it has no way of telling if
+it can open the audio device when SDL is looking for a driver it can use,
+so it *always* says it can, and then when the program tries to set up the
+audio, it just crashes.
+
+ZSNES actually double checks whether or not the device is available when
+it's setting it up, but doing that in Schism would mean setting up the
+display and then going to open the audio and *then* exiting, which is a
+bit stupid. Probably the only good way to fix this is by rearranging most
+of the startup code.
 
 --------------------------------------------------------------------------
 
@@ -496,3 +472,7 @@ int alphasort(const struct dirent **a, const struct dirent **b) {
 
 Take a look at libvo/x11_common.c in mplayer's source to see how it
 disables the screensaver.
+
+--------------------------------------------------------------------------
+
+Fix envelope loops; they're broken and always have been.

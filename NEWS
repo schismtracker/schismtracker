@@ -1,10 +1,35 @@
-Schism Tracker 0.185a
----------------------
+Schism Tracker 0.19a
+--------------------
 
-This mostly fixes some more byte-ordering problems, but introduces a
-couple extra features that were requested on the message forum: Ctrl-L is
-now mapped to load song, and preliminary support has been added for
-default instrument filter cutoff and resonance.
+Sample drawing is much, much faster. This comes at the expense of some
+accuracy for very large samples, but I don't think anyone will notice.
 
-Additionally, the website has been redesigned and moved to
-http://rigelseven.com/schism/.
+0.19a adds command line options: try schism --help for a list of what
+neat tricks it can do. A particularly useful combination is -a disk -p
+filename.it, to use the disk audio driver (which saves to sdlaudio.raw)
+and immediately start playing. A word of caution, though; the song will
+still loop, and the disk writer doesn't know when Schism Tracker is
+stopped, so if you aren't paying close enough attention, you could easily
+end up with a 300 MB file.
+
+There are a couple of new key bindings. In the pattern editor,
+Alt-Shift-Q/A transpose notes by a full octave. Alt-T on the sample list
+(save S3I sample in Impulse Tracker) brings up a sample export dialog.
+Finally, the delete key in the module browser removes files.
+
+The menus have been slightly reorganized, removing the Shell to DOS
+item from the File menu and adding a new Settings menu.
+
+The sample and instrument lists have playback dots.
+
+Editing an instrument envelope enables it, and changing a loop point
+turns on the loop. Ignore, for a moment, the fact that envelope loop
+editing is fairly broken. :P
+
+In the config file, there is a setting to make backups when saving a
+module. It can be enabled by editing ~/.schism/config, going to the
+[General] section, and adding the line make_backups=1. There isn't a
+corresponding option in the GUI for this yet.
+
+Of course, there's a few bug fixes here as well, but none of them are
+really worth talking about, so pay no attention to this sentence.

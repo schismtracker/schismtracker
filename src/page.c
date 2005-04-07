@@ -212,11 +212,6 @@ static void new_song_ok(void)
 	song_new(flags);
 }
 
-static void new_song_cancel(void)
-{
-	printf("new song cancel\n");
-}
-
 static void new_song_draw_const(void)
 {
 	SDL_LockSurface(screen);
@@ -259,7 +254,6 @@ void new_song_dialog(void)
 	
 	dialog = dialog_create_custom(21, 20, 38, 19, new_song_items, 10, 8, new_song_draw_const);
 	dialog->action_yes = new_song_ok;
-	dialog->action_cancel = new_song_cancel;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -398,7 +392,7 @@ static inline int handle_key_global(SDL_keysym * k)
                 if (k->mod & KMOD_CTRL) {
                         song_start();
                 } else if (k->mod & KMOD_SHIFT) {
-                        set_page(PAGE_SETTINGS);
+                        set_page(PAGE_PREFERENCES);
                 } else if (NO_MODIFIER(k->mod)) {
                         if (song_get_mode() == MODE_STOPPED
 			    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
@@ -519,21 +513,34 @@ void handle_key(SDL_keysym * k)
 	if (handle_key_global(k) || menu_handle_key(k) || item_handle_key(k))
                 return;
 	
-	/* Maybe this should be after the page's key handler
-	 * (which should return true/false depending on whether
-	 * it handled the key or not, like the item handlers...) */
-        if (k->sym == SDLK_ESCAPE) {
-                if (status.dialog_type != DIALOG_NONE) {
-                        dialog_handle_key(k);
-                        return;
-                } else if (NO_MODIFIER(k->mod)) {
-                        menu_show();
-                        return;
-                }
-        }
-
         /* now check a couple other keys. */
         switch (k->sym) {
+#if 0 /* these don't work properly */
+	case SDLK_LEFT:
+		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
+			if (song_get_mode() == MODE_PLAYING)
+				song_set_current_order(song_get_current_order() - 1);
+			return;
+		}
+		break;
+	case SDLK_RIGHT:
+		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
+			if (song_get_mode() == MODE_PLAYING)
+				song_set_current_order(song_get_current_order() + 1);
+			return;
+		}
+		break;
+#endif
+	case SDLK_ESCAPE:
+		/* TODO | Page key handlers should return true/false depending on if the key was handled
+		   TODO | (same as with other handlers), and the escape key check should go *after* the
+		   TODO | page gets a chance to grab it. This way, the load sample page can switch back
+		   TODO | to the sample list on escape like it's supposed to. */
+		if (status.dialog_type == DIALOG_NONE && NO_MODIFIER(k->mod)) {
+			menu_show();
+			return;
+		}
+		break;
         case SDLK_KP_DIVIDE:
                 kbd_set_current_octave(kbd_get_current_octave() - 1);
                 return;
@@ -742,7 +749,7 @@ static void vis_oscilloscope(void)
 	draw_sample_data_rect(&vis_rect, audio_buffer, audio_buffer_size);
 }
 
-static void vis_vu_meter(void)
+UNUSED static void vis_vu_meter(void)
 {
 	int left, right;
 	
@@ -890,7 +897,7 @@ void load_pages(void)
         instrument_list_panning_load_page(pages + PAGE_INSTRUMENT_LIST_PANNING);
         instrument_list_pitch_load_page(pages + PAGE_INSTRUMENT_LIST_PITCH);
         info_load_page(pages + PAGE_INFO);
-        settings_load_page(pages + PAGE_SETTINGS);
+        preferences_load_page(pages + PAGE_PREFERENCES);
         midi_load_page(pages + PAGE_MIDI);
         load_module_load_page(pages + PAGE_LOAD_MODULE);
         save_module_load_page(pages + PAGE_SAVE_MODULE);

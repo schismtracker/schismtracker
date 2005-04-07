@@ -320,8 +320,24 @@ typedef struct _MODINSTRUMENT
 	BYTE nVibDepth;
 	BYTE nVibRate;
 	CHAR name[22];
+	
+	// <chisel> for note playback dots
+	int played;
 } MODINSTRUMENT;
 
+// <chisel> moved all envelope stuff to a separate struct.
+// the comments after each field indicate the variable's original name
+// (w.r.t. the volume envelope; replace "Vol" with "Pan" or "Pitch" for the
+// pan and pitch envelopes, of course)
+typedef struct _INSTRUMENTENVELOPE {
+	WORD Ticks[32]; // VolPoints
+	BYTE Values[32]; // VolEnv
+	BYTE nNodes; // nVolEnv
+	BYTE nLoopStart; // nVolLoopStart
+	BYTE nLoopEnd; // nVolLoopEnd
+	BYTE nSustainStart; // nVolSustainBegin
+	BYTE nSustainEnd; // nVolSustainEnd
+} INSTRUMENTENVELOPE;
 
 // Instrument Struct
 typedef struct _INSTRUMENTHEADER
@@ -330,30 +346,11 @@ typedef struct _INSTRUMENTHEADER
 	DWORD dwFlags;
 	WORD nGlobalVol;
 	WORD nPan;
-	WORD VolPoints[MAX_ENVPOINTS];
-	WORD PanPoints[MAX_ENVPOINTS];
-	WORD PitchPoints[MAX_ENVPOINTS];
-	BYTE VolEnv[MAX_ENVPOINTS];
-	BYTE PanEnv[MAX_ENVPOINTS];
-	BYTE PitchEnv[MAX_ENVPOINTS];
 	BYTE Keyboard[128];
 	BYTE NoteMap[128];
-
-	BYTE nVolEnv;
-	BYTE nPanEnv;
-	BYTE nPitchEnv;
-	BYTE nVolLoopStart;
-	BYTE nVolLoopEnd;
-	BYTE nVolSustainBegin;
-	BYTE nVolSustainEnd;
-	BYTE nPanLoopStart;
-	BYTE nPanLoopEnd;
-	BYTE nPanSustainBegin;
-	BYTE nPanSustainEnd;
-	BYTE nPitchLoopStart;
-	BYTE nPitchLoopEnd;
-	BYTE nPitchSustainBegin;
-	BYTE nPitchSustainEnd;
+	INSTRUMENTENVELOPE VolEnv;
+	INSTRUMENTENVELOPE PanEnv;
+	INSTRUMENTENVELOPE PitchEnv;
 	BYTE nNNA;
 	BYTE nDCT;
 	BYTE nDNA;
@@ -369,6 +366,9 @@ typedef struct _INSTRUMENTHEADER
 	unsigned char nPPC;
 	CHAR name[32];
 	CHAR filename[12];
+
+	// <chisel> for note playback dots
+	int played;
 } INSTRUMENTHEADER;
 
 
@@ -768,6 +768,7 @@ public:
 	BOOL ITInstrToMPT(const void *p, INSTRUMENTHEADER *penv, UINT trkvers);
 	UINT SaveMixPlugins(FILE *f=NULL, BOOL bUpdate=TRUE);
 	UINT LoadMixPlugins(const void *pData, UINT nLen);
+	void ResetTimestamps(); // <chisel> for note playback dots
 #ifndef NO_FILTER
 	DWORD CutOffToFrequency(UINT nCutOff, int flt_modifier=256) const; // [0-255] => [1-10KHz]
 #endif

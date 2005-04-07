@@ -117,6 +117,10 @@ void cfg_load(void)
 		status.flags |= CLASSIC_MODE;
 	else
 		status.flags &= ~CLASSIC_MODE;
+	if (cfg_get_number(&cfg, "General", "make_backups", 0))
+		status.flags |= MAKE_BACKUPS;
+	else
+		status.flags &= ~MAKE_BACKUPS;
 	
 	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
 	
@@ -154,10 +158,32 @@ void cfg_save(void)
 
 	cfg_set_number(&cfg, "General", "time_display", status.time_display);
 	cfg_set_number(&cfg, "General", "classic_mode", !!(status.flags & CLASSIC_MODE));
+	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
 	cfg_save_palette(&cfg);
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+	cfg_write(&cfg);
+	cfg_free(&cfg);
+}
+
+void cfg_atexit_save(void)
+{
+	char filename[PATH_MAX + 1];
+	cfg_file_t cfg;
+
+	strncpy(filename, getenv("HOME") ? : "/", PATH_MAX);
+	strncat(filename, "/.schism/config", PATH_MAX);
+	filename[PATH_MAX] = 0;
+	
+	cfg_init(&cfg, filename);
+	
+	cfg_atexit_save_audio(&cfg);
+	
+	/* hm... most of the time probably nothing's different, so saving the
+	config file here just serves to make the backup useless. maybe add a
+	'dirty' flag to the config parser that checks if any settings are
+	actually *different* from those in the file? */
 	cfg_write(&cfg);
 	cfg_free(&cfg);
 }

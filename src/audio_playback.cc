@@ -163,6 +163,10 @@ void song_play_note(int ins, int note, int chan, int useins)
 		//if (i->uFlags & CHN_PANNING) c->nPan = i->nPan; annoying
 		c->nInsVol = i->nGlobalVol;
 		c->nFadeOutVol = 0x10000;
+		
+		// Must make sure this stays the same as the code I stuck in Modplug. Wish there was some
+		// standard trigger_sample function that did all this.
+		i->played = 1;
 	}
 	c->nVolume = 256;
 	mp->NoteChange(chan, note, false, true, true);
@@ -185,7 +189,7 @@ static void song_reset_play_state()
         mp->SetCurrentOrder(0);
 
         mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_STEP);
-
+	mp->ResetTimestamps();
         samples_played = 0;
 }
 
@@ -342,6 +346,42 @@ void song_get_vu_meter(int *left, int *right)
 	*right = mp->gnVUMeter;
 }
 
+void song_get_playing_samples(int samples[])
+{
+	MODCHANNEL *channel;
+	
+	memset(samples, 0, 100 * sizeof(int));
+	
+	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+	while (n--) {
+		channel = mp->Chn + mp->ChnMix[n];
+		if (channel->pInstrument && channel->pCurrentSample) {
+			int s = channel->pInstrument - mp->Ins;
+			if (s < 100) // bleh!
+				samples[s] = 1;
+		} else {
+			// no sample.
+			// (when does this happen?)
+		}
+	}
+}
+
+void song_get_playing_instruments(int instruments[])
+{
+	MODCHANNEL *channel;
+	
+	memset(instruments, 0, 100 * sizeof(int));
+	
+	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+	while (n--) {
+		channel = mp->Chn + mp->ChnMix[n];
+		int ins = song_get_instrument_number((song_instrument *) channel->pHeader);
+		if (ins > 0 && ins < 100) {
+			instruments[ins] = 1;
+		}
+	}
+}
+
 // ------------------------------------------------------------------------
 // changing the above info
 
@@ -433,6 +473,21 @@ void cfg_load_audio(cfg_file_t *cfg)
 #define CFG_SET_A(v) cfg_set_number(cfg, "Audio", #v, audio_settings.v)
 #define CFG_SET_M(v) cfg_set_number(cfg, "Mixer Settings", #v, audio_settings.v)
 #define CFG_SET_D(v) cfg_set_number(cfg, "Modplug DSP", #v, audio_settings.v)
+void cfg_atexit_save_audio(cfg_file_t *cfg)
+{
+	CFG_SET_A(sample_rate);
+	CFG_SET_A(bits);
+	CFG_SET_A(channels);
+	CFG_SET_A(buffer_size);
+
+	CFG_SET_M(channel_limit);
+	CFG_SET_M(interpolation_mode);
+	CFG_SET_M(oversampling);
+	CFG_SET_M(hq_resampling);
+	CFG_SET_M(noise_reduction);
+	//CFG_SET_M(surround_effect);
+}
+
 void cfg_save_audio(cfg_file_t *cfg)
 {
 	CFG_SET_A(sample_rate);

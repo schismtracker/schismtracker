@@ -1,3 +1,71 @@
+Wed Apr  6 15:40:53 2005  chisel  <schism@chisel.cjb.net>
+
+	* Sample export dialog works.
+
+	* Boxing this as 0.19a.
+
+
+Wed Apr  6 01:45:18 2005  chisel  <schism@chisel.cjb.net>
+
+	* Much, much faster sample drawing.
+
+	* Envelopes and envelope loops are enabled on change.
+
+	* Squashed a minor bug: switching from edit to view mode on an
+	envelope wasn't causing a screen redraw.
+
+
+Sun Apr  3 22:52:46 2005  chisel  <schism@chisel.cjb.net>
+
+	* Alt-Shift-Q and Alt-Shift-A transpose notes by a full octave.
+
+
+Thu Mar 31 23:52:32 2005  chisel  <schism@chisel.cjb.net>
+
+	* Option parsing! *throws confetti* I'm using Midianian's
+	frag-opt for this; however, since it's not very widely used, I've
+	simply added the parser to the source tree (built as a separate
+	static library). I'll tweak the autoconf stuff later to use an
+	already-installed version if one exists.
+	
+	* Some audio-related options are now saved on exit; changing
+	these options will flash a message.
+
+
+Thu Mar 31 16:25:58 2005  chisel  <schism@chisel.cjb.net>
+
+	* Moved all envelope-related stuff to a separate structure, and
+	cleaned up the envelope drawing and key handling.
+
+
+Sat Mar 26 12:22:03 2005  chisel  <schism@chisel.cjb.net>
+
+	* mixer-oss.c: Discovered that the OSS mixer actually uses *four*
+	bytes for the volume for some reason, even though it only uses
+	the first two bytes. Bleh.
+
+
+Sat Mar 26 02:47:45 2005  chisel  <schism@chisel.cjb.net>
+
+	* Added playback dots to the sample and instrument lists. They
+	don't indicate when the sample just started playing, but they do
+	show whether the sample is currently playing or not, and the dots
+	are cleared when the song changes modes.
+
+	* page_loadmodule.c: Delete key implemented.
+
+	* Added a config file entry for the MAKE_BACKUPS flag.
+
+
+Fri Mar 25 18:07:23 2005  chisel  <schism@chisel.cjb.net>
+
+	* Renamed settings page to preferences, and moved it out of
+	the playback menu since it isn't completely playback-related. Got
+	rid of the not-very-useful Shell to DOS menu item, and added a
+	new settings submenu (hence the renaming) with menu items for the
+	preferences and palette editor.
+
+
 Mon Mar 21 17:58:34 2005  chisel  <schism@chisel.cjb.net>
 
 	* audio_loadsave.cc: (Hopefully) fixed pattern saving endianness.
@@ -20,6 +88,8 @@ Mon Mar 21 17:58:34 2005  chisel  <schism@chisel.cjb.net>
 	* Tried to make the mixer stuff saner, but utterly failed at it.
 	If anyone with a lot of autoconf experience would like to lend a
 	hand, I'd be forever grateful.
+
+	* Released as 0.185a.
 
 
 Tue Mar 15 04:16:24 2005  chisel  <schism@chisel.cjb.net>
@@ -224,7 +294,7 @@ Sat Dec 11 15:26:17 2004  chisel  <schism@chisel.cjb.net>
 
 Fri Dec 10 10:27:03 2004  chisel  <schism@chisel.cjb.net>
 
-        * Changed version number to 0.15a.
+	* Changed version number to 0.15a.
 
 	* The song's filename and basename are now char arrays (rather
 	than pointers). I'm not sure why I did it like that in the first
@@ -678,226 +748,226 @@ Sat Jan 31 20:59:05 2004  chisel <schism@chisel.cjb.net>
 
 Tue Jan  6 12:08:15 2004  chisel <schism@chisel.cjb.net>
 
-        * I can't believe how little time I've been able to put into this
-        over the holidays. I was hoping to have so much more new stuff in
-        0.04 than I do.
+	* I can't believe how little time I've been able to put into this
+	over the holidays. I was hoping to have so much more new stuff in
+	0.04 than I do.
 
-        * Clear sample/instrument text now memset()'s the whole filename
-        field to zero. Before, it just zeroed the first character, which
-        is ok except it still saves the rest of the "cleared" filename
-        when it saves the .it file.
+	* Clear sample/instrument text now memset()'s the whole filename
+	field to zero. Before, it just zeroed the first character, which
+	is ok except it still saves the rest of the "cleared" filename
+	when it saves the .it file.
 
 
 Sun Jan  4 16:24:48 2004  chisel <schism@chisel.cjb.net>
 
-        * Some configuration options are loaded as they should be:
-        palette, font, directories, time display, and the classic mode
-        switch. Audio settings are next on the list.
+	* Some configuration options are loaded as they should be:
+	palette, font, directories, time display, and the classic mode
+	switch. Audio settings are next on the list.
 
 
 Tue Dec 23 22:50:42 2003  chisel <schism@chisel.cjb.net>
 
-        * Devices don't show up as directories anymore. Dunno how that
-        happened...
+	* Devices don't show up as directories anymore. Dunno how that
+	happened...
 
 
 Mon Dec  1 01:00:26 2003  chisel <schism@chisel.cjb.net>
 
-        * Tried to figure out how to do single-step playback in the
-        pattern editor (the '4' and '8' keys), but couldn't get it to
-        work. Oh well.
+	* Tried to figure out how to do single-step playback in the
+	pattern editor (the '4' and '8' keys), but couldn't get it to
+	work. Oh well.
 
 
 Mon Nov 24 14:56:33 2003  chisel <schism@chisel.cjb.net>
 
-        * Added alt-s key to pattern editor.
+	* Added alt-s key to pattern editor.
 
 
 Sat Nov  8 12:05:45 2003  chisel <schism@chisel.cjb.net>
 
-        * Lots of stuff, I can't remember what.
+	* Lots of stuff, I can't remember what.
 
 
 Mon Sep 22 14:14:59 2003  chisel <schism@chisel.cjb.net>
 
-        * Fixed a dumb bug with the Axx effect that crept up earlier.
+	* Fixed a dumb bug with the Axx effect that crept up earlier.
 
-        * Fonts are now stored in ~/.schism/fonts/ instead of the current
-        directory.
+	* Fonts are now stored in ~/.schism/fonts/ instead of the current
+	directory.
 
-        * Started work on loading/saving settings (~/.schism/config).
+	* Started work on loading/saving settings (~/.schism/config).
 
 
 Sat Sep 13 22:11:44 2003  chisel <schism@chisel.cjb.net>
 
-        * Whoa... been forgetting about this. :P
+	* Whoa... been forgetting about this. :P
 
-        * The load-sample page exists, but it's nonfunctional.
+	* The load-sample page exists, but it's nonfunctional.
 
-        * Title text (the copyright thing) is much more flexible -- I
-        took advantage of some GCC-ness so I don't have to figure out
-        where the text is supposed to be placed. Wee.
+	* Title text (the copyright thing) is much more flexible -- I
+	took advantage of some GCC-ness so I don't have to figure out
+	where the text is supposed to be placed. Wee.
 
-        * The settings page still doesn't work, but it at least sets the
-        thumbbars to sane values.
+	* The settings page still doesn't work, but it at least sets the
+	thumbbars to sane values.
 
-        * Fixed a bug with loading songs having a "+++" in the first
-        order. This crept up as a result of my trying to fix another bug
-        if the song has no orders... bleah.
+	* Fixed a bug with loading songs having a "+++" in the first
+	order. This crept up as a result of my trying to fix another bug
+	if the song has no orders... bleah.
 
 
 Tue Jul  8 16:57:56 2003  chisel <schism@chisel.cjb.net>
 
-        * Fixed vibrato volume command in IT files: it's not speed, it's
-        DEPTH... this made my 10k entry sound really crappy.
+	* Fixed vibrato volume command in IT files: it's not speed, it's
+	DEPTH... this made my 10k entry sound really crappy.
 
 
 Tue Jun 17 15:27:11 2003  chisel <schism@chisel.cjb.net>
 
-        * New 'CLASSIC_MODE' status flag. With this enabled, some stuff
-        behaves more like good old Impulse Tracker :)
+	* New 'CLASSIC_MODE' status flag. With this enabled, some stuff
+	behaves more like good old Impulse Tracker :)
 
-        * Implemented a few of the fields on the config screen.
+	* Implemented a few of the fields on the config screen.
 
-        * Killed a couple stupid bugs on the instrument list.
+	* Killed a couple stupid bugs on the instrument list.
 
-        * Fixed the note mask handling on the pattern editor. (I think.)
+	* Fixed the note mask handling on the pattern editor. (I think.)
 
 
 Mon Jun 16 11:46:49 2003  chisel <schism@chisel.cjb.net>
 
-        * Version 0.031a.
+	* Version 0.031a.
 
-        * Note translation table works. (partially... it's at least
-        usable, but only a couple of the keys work)
+	* Note translation table works. (partially... it's at least
+	usable, but only a couple of the keys work)
 
 
 Thu Jun 12 17:07:18 2003  chisel <schism@chisel.cjb.net>
 
-        * BIG BIG CHANGE. No longer am I building against an
-        already-installed version of libmodplug; I'm moving it in with
-        the source, compiling it, and linking it statically. This will
-        make it much much easier for me to fix bugs I find without having
-        to reinstall libmodplug every time, too. (for example, the broken
-        DigiTrakker volume slides)
+	* BIG BIG CHANGE. No longer am I building against an
+	already-installed version of libmodplug; I'm moving it in with
+	the source, compiling it, and linking it statically. This will
+	make it much much easier for me to fix bugs I find without having
+	to reinstall libmodplug every time, too. (for example, the broken
+	DigiTrakker volume slides)
 
-        * Another big change: now video modes with > 8 bit pixel formats
-        are handled properly. (This still needs a lot of optimizing.)
+	* Another big change: now video modes with > 8 bit pixel formats
+	are handled properly. (This still needs a lot of optimizing.)
 
 
 Wed Jun 11 17:42:40 2003  chisel <schism@chisel.cjb.net>
 
-        * Added track views for the info page. I tried to make the
-        drawing function as general as possible, so it shouldn't be
-        difficult to add new ones.
+	* Added track views for the info page. I tried to make the
+	drawing function as general as possible, so it shouldn't be
+	difficult to add new ones.
 
-        * Fixed .liq module title reading (even though Modplug doesn't
-        load them :).
+	* Fixed .liq module title reading (even though Modplug doesn't
+	load them :).
 
-        * Playing samples have little lines drawn on them to show where
-        they are. (Seems like IT doesn't do this...?)
+	* Playing samples have little lines drawn on them to show where
+	they are. (Seems like IT doesn't do this...?)
 
-        * The very first hints of a configuration screen are in place.
+	* The very first hints of a configuration screen are in place.
 
 
 Sun Jun  8 14:51:30 2003  chisel <schism@chisel.cjb.net>
 
-        * Tons of changes! Bumping the version up to 0.03a.
+	* Tons of changes! Bumping the version up to 0.03a.
 
-        * Info page works. Only two views at the moment, but it works.
+	* Info page works. Only two views at the moment, but it works.
 
-        * Now using double buffering (like for the ITF editor) - much
-        cleaner code, easier to write, and a smaller binary as a result.
-        (And there was happiness throughout the land.)
+	* Now using double buffering (like for the ITF editor) - much
+	cleaner code, easier to write, and a smaller binary as a result.
+	(And there was happiness throughout the land.)
 
-        * SDL parachute isn't disabled for non-debug builds.
+	* SDL parachute isn't disabled for non-debug builds.
 
-        * Moved a large portion of the key handling code to a new file,
-        thus making page.c much easier to deal with.
+	* Moved a large portion of the key handling code to a new file,
+	thus making page.c much easier to deal with.
 
-        * Changed some file type descriptions to be more consistent with
-        Impulse Tracker's. This was actually harder than it sounds. :)
+	* Changed some file type descriptions to be more consistent with
+	Impulse Tracker's. This was actually harder than it sounds. :)
 
-        * Added a new bit in the pattern editor help about imported FT2
-        effects.
+	* Added a new bit in the pattern editor help about imported FT2
+	effects.
 
-        * A bunch of messages about the audio/video are now dumped to the
-        program log (Ctrl-F1) on startup.
+	* A bunch of messages about the audio/video are now dumped to the
+	program log (Ctrl-F1) on startup.
 
-        * Much, much more -- too much to list.
+	* Much, much more -- too much to list.
 
 
 Sun Jun  1 21:53:58 2003  chisel <schism@chisel.cjb.net>
 
-        * Sample list: trimming, signed/unsigned convert, quality
-        convert, reverse, centralise data, and delete implemented. Wee.
+	* Sample list: trimming, signed/unsigned convert, quality
+	convert, reverse, centralise data, and delete implemented. Wee.
 
-        * Added a focus handler that causes a 500ms delay per cycle if
-        the window isn't focused -- no sense in updating the screen all
-        the time when it's in the background. There's a 100ms delay if a
-        dialog/menu is active, but I might change that later on if it
-        annoys me ;)
+	* Added a focus handler that causes a 500ms delay per cycle if
+	the window isn't focused -- no sense in updating the screen all
+	the time when it's in the background. There's a 100ms delay if a
+	dialog/menu is active, but I might change that later on if it
+	annoys me ;)
 
-        * Shaved 13kb from the binary size. Can't quite figure out how
-        that happened, but ok :)
+	* Shaved 13kb from the binary size. Can't quite figure out how
+	that happened, but ok :)
 
 
 Fri May 30 10:57:46 2003  chisel <schism@chisel.cjb.net>
 
-        * Finally got around to writing the dialog code. This involved
-        rewriting large portions of other code where I wasn't really
-        thinking about the fact that dialogs have items ;) This means
-        that the number input on thumbbars is working now (though I
-        could've probably done it in far less code), as is the play time
-        (Ctrl-P) and a bunch of other things that were previously
-        noticeably unimplemented.
+	* Finally got around to writing the dialog code. This involved
+	rewriting large portions of other code where I wasn't really
+	thinking about the fact that dialogs have items ;) This means
+	that the number input on thumbbars is working now (though I
+	could've probably done it in far less code), as is the play time
+	(Ctrl-P) and a bunch of other things that were previously
+	noticeably unimplemented.
 
 
 Wed May 28 23:16:39 2003  chisel <schism@chisel.cjb.net>
 
-        * More playback keys implemented (and properly)... thanks to +-
-        for the amazingly detailed e-mail! :)
+	* More playback keys implemented (and properly)... thanks to +-
+	for the amazingly detailed e-mail! :)
 
-        * Channel solo/mute now actually solo/mute the channel, not just
-        pretend to.
+	* Channel solo/mute now actually solo/mute the channel, not just
+	pretend to.
 
-        * Currently playing row/order are now drawn in a different color
-        like they're supposed to be.
+	* Currently playing row/order are now drawn in a different color
+	like they're supposed to be.
 
-        * Pattern editor: centralise cursor, current row highlighting,
-        and playback tracing implemented. Redrawing code improved muchly
-        as well, so the playback tracing is nice and smooth.
+	* Pattern editor: centralise cursor, current row highlighting,
+	and playback tracing implemented. Redrawing code improved muchly
+	as well, so the playback tracing is nice and smooth.
 
-        * Alt-F1 -> Alt-F8 (toggle channel 1-8 muted) work.
+	* Alt-F1 -> Alt-F8 (toggle channel 1-8 muted) work.
 
-        * Implemented a couple more global keys, and a few toggles on the
-        info page just for kicks. None of this means anything yet, of
-        course, because the info page is completely blank :)
+	* Implemented a couple more global keys, and a few toggles on the
+	info page just for kicks. None of this means anything yet, of
+	course, because the info page is completely blank :)
 
 
 Sun May 25 22:54:10 2003  chisel <schism@chisel.cjb.net>
 
-        * Weee! Many big changes, notably block selection is working
-        properly (even with shift-tab), and! IT PLAYS THE SONG :) The
-        status text is now working as well, including the ability to
-        flash messages on it (like "cursor step set to 2").
+	* Weee! Many big changes, notably block selection is working
+	properly (even with shift-tab), and! IT PLAYS THE SONG :) The
+	status text is now working as well, including the ability to
+	flash messages on it (like "cursor step set to 2").
 
-        * Note mask replication is working.
+	* Note mask replication is working.
 
-        * Added a couple new experimental palettes.
+	* Added a couple new experimental palettes.
 
-        * A few big changes in the ITF editor, mostly trying out SDL's
-        double buffering support and doing a single SDL_Flip(screen) when
-        the screen needs redrawn, rather than tons of calls to
-        SDL_UpdateRects(). I might keep this; then again, I might not.
+	* A few big changes in the ITF editor, mostly trying out SDL's
+	double buffering support and doing a single SDL_Flip(screen) when
+	the screen needs redrawn, rather than tons of calls to
+	SDL_UpdateRects(). I might keep this; then again, I might not.
 
-        * Too much to mention... I should be logging stuff more often,
-        but then again, who cares besides me at the moment? :P
+	* Too much to mention... I should be logging stuff more often,
+	but then again, who cares besides me at the moment? :P
 
 
 Mon May 19 17:48:37 2003  chisel <schism@chisel.cjb.net>
 
-        * Starting ChangeLog.
+	* Starting ChangeLog.
 
-        * Now using automake/autoconf, after exactly three hours of
-        coaxing. Seems to work...
+	* Now using automake/autoconf, after exactly three hours of
+	coaxing. Seems to work...

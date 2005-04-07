@@ -34,6 +34,23 @@
 
 // ------------------------------------------------------------------------
 
+enum {
+	AU_ULAW = 1,			// µ-law
+	AU_PCM_8 = 2,			// 8-bit linear pcm (RS_PCM8U in modplug)
+	AU_PCM_16 = 3,			// 16-bit linear pcm (RS_PCM16M)
+	AU_PCM_24 = 4,			// 24-bit lienar pcm
+	AU_PCM_32 = 5,			// 32-bit linear pcm
+	AU_IEEE_32 = 6,			// 32-bit ieee floating point
+	AU_IEEE_64 = 7,			// 64-bit ieee floating point
+	AU_ISDN_ULAW_ADPCM = 23,	// 8-bit isdn µ-law (ccitt g.721 adpcm compressed)
+};
+
+struct au_header {
+	unsigned long magic_number, data_offset, data_size, encoding, sample_rate, channels;
+};
+
+// ------------------------------------------------------------------------
+
 char song_filename[PATH_MAX + 1];
 char song_basename[NAME_MAX + 1];
 
@@ -431,40 +448,40 @@ static void _save_it_instrument(int n, FILE *fp, int iti_file)
 	if (i->dwFlags & ENV_VOLLOOP) iti.volenv.flags |= 0x02;
 	if (i->dwFlags & ENV_VOLSUSTAIN) iti.volenv.flags |= 0x04;
 	if (i->dwFlags & ENV_VOLCARRY) iti.volenv.flags |= 0x08;
-	iti.volenv.num = i->nVolEnv;
-	iti.volenv.lpb = i->nVolLoopStart;
-	iti.volenv.lpe = i->nVolLoopEnd;
-	iti.volenv.slb = i->nVolSustainBegin;
-	iti.volenv.sle = i->nVolSustainEnd;
+	iti.volenv.num = i->VolEnv.nNodes;
+	iti.volenv.lpb = i->VolEnv.nLoopStart;
+	iti.volenv.lpe = i->VolEnv.nLoopEnd;
+	iti.volenv.slb = i->VolEnv.nSustainStart;
+	iti.volenv.sle = i->VolEnv.nSustainEnd;
 	if (i->dwFlags & ENV_PANNING) iti.panenv.flags |= 0x01;
 	if (i->dwFlags & ENV_PANLOOP) iti.panenv.flags |= 0x02;
 	if (i->dwFlags & ENV_PANSUSTAIN) iti.panenv.flags |= 0x04;
 	if (i->dwFlags & ENV_PANCARRY) iti.panenv.flags |= 0x08;
-	iti.panenv.num = i->nPanEnv;
-	iti.panenv.lpb = i->nPanLoopStart;
-	iti.panenv.lpe = i->nPanLoopEnd;
-	iti.panenv.slb = i->nPanSustainBegin;
-	iti.panenv.sle = i->nPanSustainEnd;
+	iti.panenv.num = i->PanEnv.nNodes;
+	iti.panenv.lpb = i->PanEnv.nLoopStart;
+	iti.panenv.lpe = i->PanEnv.nLoopEnd;
+	iti.panenv.slb = i->PanEnv.nSustainStart;
+	iti.panenv.sle = i->PanEnv.nSustainEnd;
 	if (i->dwFlags & ENV_PITCH) iti.pitchenv.flags |= 0x01;
 	if (i->dwFlags & ENV_PITCHLOOP) iti.pitchenv.flags |= 0x02;
 	if (i->dwFlags & ENV_PITCHSUSTAIN) iti.pitchenv.flags |= 0x04;
 	if (i->dwFlags & ENV_PITCHCARRY) iti.pitchenv.flags |= 0x08;
 	if (i->dwFlags & ENV_FILTER) iti.pitchenv.flags |= 0x80;
-	iti.pitchenv.num = i->nPitchEnv;
-	iti.pitchenv.lpb = i->nPitchLoopStart;
-	iti.pitchenv.lpe = i->nPitchLoopEnd;
-	iti.pitchenv.slb = i->nPitchSustainBegin;
-	iti.pitchenv.sle = i->nPitchSustainEnd;
+	iti.pitchenv.num = i->PitchEnv.nNodes;
+	iti.pitchenv.lpb = i->PitchEnv.nLoopStart;
+	iti.pitchenv.lpe = i->PitchEnv.nLoopEnd;
+	iti.pitchenv.slb = i->PitchEnv.nSustainStart;
+	iti.pitchenv.sle = i->PitchEnv.nSustainEnd;
 	for (int j = 0; j < 25; j++) {
-		iti.volenv.data[3 * j] = i->VolEnv[j];
-		iti.volenv.data[3 * j + 1] = i->VolPoints[j] & 0xFF;
-		iti.volenv.data[3 * j + 2] = i->VolPoints[j] >> 8;
-		iti.panenv.data[3 * j] = i->PanEnv[j] - 32;
-		iti.panenv.data[3 * j + 1] = i->PanPoints[j] & 0xFF;
-		iti.panenv.data[3 * j + 2] = i->PanPoints[j] >> 8;
-		iti.pitchenv.data[3 * j] = i->PitchEnv[j] - 32;
-		iti.pitchenv.data[3 * j + 1] = i->PitchPoints[j] & 0xFF;
-		iti.pitchenv.data[3 * j + 2] = i->PitchPoints[j] >> 8;
+		iti.volenv.data[3 * j] = i->VolEnv.Values[j];
+		iti.volenv.data[3 * j + 1] = i->VolEnv.Ticks[j] & 0xFF;
+		iti.volenv.data[3 * j + 2] = i->VolEnv.Ticks[j] >> 8;
+		iti.panenv.data[3 * j] = i->PanEnv.Values[j] - 32;
+		iti.panenv.data[3 * j + 1] = i->PanEnv.Ticks[j] & 0xFF;
+		iti.panenv.data[3 * j + 2] = i->PanEnv.Ticks[j] >> 8;
+		iti.pitchenv.data[3 * j] = i->PitchEnv.Values[j] - 32;
+		iti.pitchenv.data[3 * j + 1] = i->PitchEnv.Ticks[j] & 0xFF;
+		iti.pitchenv.data[3 * j + 2] = i->PitchEnv.Ticks[j] >> 8;
 	}
 	
 	// ITI files *need* to write 554 bytes due to alignment,
@@ -703,7 +720,7 @@ static bool _save_it(const char *file)
 	hdr.smpnum = bswapLE16(nsmp);
 	hdr.patnum = bswapLE16(npat);
 	// No one else seems to be using the cwtv's tracker id number, so I'm gonna take 1. :)
-	hdr.cwtv = bswapLE16(0x1018); // cwtv 0xtxyy = tracker id t, version x.yy
+	hdr.cwtv = bswapLE16(0x1019); // cwtv 0xtxyy = tracker id t, version x.yy
 	// compat:
 	//     "normal" = 2.00
 	//     vol col effects = 2.08
@@ -787,7 +804,6 @@ static bool _save_it(const char *file)
 			fseek(fp, para_smp[n] + 0x48, SEEK_SET);
 			fwrite(&tmp, 4, 1, fp);
 			fseek(fp, 0, SEEK_END);
-			// FIXME -- need to byte swap 16-bit samples, argh!!
 			_save_it_sample_data(smp, fp);
 		}
 		// done using the pointer internally, so *now* swap it
@@ -931,18 +947,7 @@ bool _load_sample_its(const byte *data, size_t length, song_sample *smp, char *t
 
 bool _load_sample_au(const byte * data, size_t length, song_sample * smp, char *title)
 {
-	// encoding:
-	//     1  =  u-law
-	//     2  =  8-bit linear pcm  = RS_PCM8U
-	//     3  = 16-bit linear pcm  = RS_PCM16M
-	//     4  = 24-bit linear pcm
-	//     5  = 32-bit linear pcm
-	//     6  = 32-bit ieee floating point
-	//     7  = 64-bit ieee floating point
-	//     23 = 8-bit isdn u-law (ccitt g.721 adpcm compressed)
-	struct {
-		unsigned long magic_number, data_offset, data_size, encoding, sample_rate, channels;
-	} au;
+	struct au_header au;
 	
 	if (length < 24)
 		return false;
@@ -961,7 +966,7 @@ bool _load_sample_au(const byte * data, size_t length, song_sample * smp, char *
 	C__(au.data_offset < length);
 	C__(au.data_size > 0);
 	C__(au.data_size <= length - au.data_offset);
-	C__(au.encoding == 2 || au.encoding == 3);
+	C__(au.encoding == AU_PCM_8 || au.encoding == AU_PCM_16);
 	C__(au.channels == 1 || au.channels == 2);
 	
 	if (au.channels == 2) {
@@ -972,8 +977,8 @@ bool _load_sample_au(const byte * data, size_t length, song_sample * smp, char *
 	smp->speed = au.sample_rate;
 	smp->volume = 64 * 4;
 	smp->global_volume = 64;
-	smp->length = au.data_size;
-	if (au.encoding == 3) {
+	smp->length = au.data_size; // maybe this should be MIN(...), for files with a wacked out length?
+	if (au.encoding == AU_PCM_16) {
 		smp->flags |= SAMP_16_BIT;
 		smp->length /= 2;
 	}
@@ -988,21 +993,12 @@ bool _load_sample_au(const byte * data, size_t length, song_sample * smp, char *
 	memcpy(smp->data, data + au.data_offset, au.data_size);
 	// this could also be optimized out on big-endian machines
 	if (smp->flags & SAMP_16_BIT) {
-#if 1
 		signed short *s = (signed short *) smp->data;
 		unsigned long i = au.data_size / 2;
 		while (i--) {
 			*s = bswapBE16(*s);
 			s++;
 		}
-#else
-		unsigned long i;
-		for (i = 0; i < au.data_size; i += 2) {
-			byte b = smp->data[i];
-			smp->data[i] = smp->data[i + 1];
-			smp->data[i + 1] = b;
-		}
-#endif
 	}
 	
 	return true;
@@ -1104,10 +1100,62 @@ int song_save_sample_its(int n, const char *file)
 	return 1;
 }
 
-int song_save_sample_s3i(int n, const char *file)
+int song_save_sample_au(int n, const char *file)
 {
-	printf("TODO: save s3i sample (%d, %s)\n", n, file);
-	return 0;
+	MODINSTRUMENT *smp = mp->Ins + n;
+	struct au_header au;
+	
+	if (!smp->pSample) {
+		log_appendf(4, "Sample %d: no data to save", n);
+		return 0;
+	}
+	if (file[0] == '\0') {
+		log_appendf(4, "Sample %d: no filename", n);
+		return 0;
+	}
+	FILE *fp = fopen(file, "wb");
+	if (!fp) {
+		log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
+		return 0;
+	}
+	
+	au.magic_number = bswapBE32(0x2e736e64); // ".snd"
+	
+	au.data_offset = 49; // header is 24 bytes, sample name is 25
+	au.data_size = smp->nLength;
+	if (smp->uFlags & CHN_16BIT) {
+		au.data_size *= 2;
+		au.encoding = bswapBE32(AU_PCM_16);
+	} else {
+		au.encoding = bswapBE32(AU_PCM_8);
+	}
+	au.data_size = bswapBE32(au.data_size);
+	au.data_offset = bswapBE32(au.data_offset);
+	
+	au.sample_rate = bswapBE32(smp->nC4Speed);
+	au.channels = bswapBE32(1);
+	
+	fwrite(&au, sizeof(au), 1, fp);
+	
+	fwrite(mp->m_szNames[n], 1, 25, fp);
+	
+	// pretty much the same as _save_it_sample_data, but with reversed endianness logic
+	if (smp->uFlags & CHN_16BIT) {
+#if WORDS_BIGENDIAN
+		fwrite(smp->pSample, 2, smp->nLength, fp);
+#else
+		for (unsigned int i = 0; i < smp->nLength; i++) {
+			signed short s = ((signed short *) smp->pSample)[i];
+			s = bswapBE16(s);
+			fwrite(&s, 2, 1, fp);
+		}
+#endif
+	} else {
+		fwrite(smp->pSample, 1, smp->nLength, fp);
+	}
+	
+	fclose(fp);
+	return 1;
 }
 
 int song_save_sample_raw(int n, const char *file)
