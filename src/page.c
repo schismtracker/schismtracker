@@ -42,9 +42,9 @@ struct tracker_status status = {
 
 struct page pages[32];
 
-struct item *items = NULL;
-int *selected_item = NULL;
-int *total_items = NULL;
+struct widget *widgets = NULL;
+int *selected_widget = NULL;
+int *total_widgets = NULL;
 
 /* --------------------------------------------------------------------- */
 
@@ -58,7 +58,7 @@ static struct {
 static int check_time(void)
 {
         time_t timep = 0;
-        struct tm local;
+        struct tm tm, *tmr;
         int h, m, s;
         enum tracker_time_display td = status.time_display;
 	int is_playing = song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP);
@@ -90,13 +90,12 @@ static int check_time(void)
         default:
                 /* this will never happen */
         case TIME_CLOCK:
-                /* Impulse Tracker doesn't have this, but I always wanted
-                 * it, so here 'tis. */
+                /* Impulse Tracker doesn't have this, but I always wanted it, so here 'tis. */
                 time(&timep);
-                localtime_r(&timep, &local);
-                h = local.tm_hour;
-                m = local.tm_min;
-                s = local.tm_sec;
+                tmr = localtime_r(&timep, &tm);
+                h = tmr->tm_hour;
+                m = tmr->tm_min;
+                s = tmr->tm_sec;
                 break;
         }
 
@@ -131,24 +130,20 @@ static void draw_page_title(void)
 {
         int x, tpos, tlen = strlen(ACTIVE_PAGE.title);
 
-        SDL_LockSurface(screen);
-
         if (tlen > 0) {
                 tpos = 41 - ((tlen + 1) / 2);
 
                 for (x = 1; x < tpos - 1; x++)
-                        draw_char_unlocked(154, x, 11, 1, 2);
-                draw_char_unlocked(0, tpos - 1, 11, 1, 2);
-                draw_text_unlocked(ACTIVE_PAGE.title, tpos, 11, 0, 2);
-                draw_char_unlocked(0, tpos + tlen, 11, 1, 2);
+                        draw_char(154, x, 11, 1, 2);
+                draw_char(0, tpos - 1, 11, 1, 2);
+                draw_text(ACTIVE_PAGE.title, tpos, 11, 0, 2);
+                draw_char(0, tpos + tlen, 11, 1, 2);
                 for (x = tpos + tlen + 1; x < 79; x++)
-                        draw_char_unlocked(154, x, 11, 1, 2);
+                        draw_char(154, x, 11, 1, 2);
         } else {
                 for (x = 1; x < 79; x++)
-                        draw_char_unlocked(154, x, 11, 1, 2);
+                        draw_char(154, x, 11, 1, 2);
         }
-
-        SDL_UnlockSurface(screen);
 }
 
 /* --------------------------------------------------------------------- */
@@ -157,19 +152,16 @@ static void draw_page_title(void)
 
 static void draw_page(void)
 {
-        int n = ACTIVE_PAGE.total_items;
+        int n = ACTIVE_PAGE.total_widgets;
 
         draw_page_title();
         RUN_IF(ACTIVE_PAGE.draw_const);
         RUN_IF(ACTIVE_PAGE.predraw_hook);
 
-        /* this doesn't use items[] because it needs to draw the page's
-         * items whether or not a dialog is active */
-        while (n) {
-                n--;
-                draw_item(ACTIVE_PAGE.items + n,
-                          n == ACTIVE_PAGE.selected_item);
-        }
+        /* this doesn't use widgets[] because it needs to draw the page's
+         * widgets whether or not a dialog is active */
+        while (n--)
+                draw_widget(ACTIVE_PAGE.widgets + n, n == ACTIVE_PAGE.selected_widget);
 
         /* redraw the area over the menu if there is one */
         if (status.dialog_type & DIALOG_MENU)
@@ -195,64 +187,63 @@ inline int page_is_instrument_list(int page)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-static struct item new_song_items[10] = {};
+static struct widget new_song_widgets[10] = {};
 static int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
 
-static void new_song_ok(void)
+static void new_song_ok(UNUSED void *data)
 {
 	int flags = 0;
-	if (new_song_items[0].togglebutton.state)
+	if (new_song_widgets[0].togglebutton.state)
 		flags |= KEEP_PATTERNS;
-	if (new_song_items[2].togglebutton.state)
+	if (new_song_widgets[2].togglebutton.state)
 		flags |= KEEP_SAMPLES;
-	if (new_song_items[4].togglebutton.state)
+	if (new_song_widgets[4].togglebutton.state)
 		flags |= KEEP_INSTRUMENTS;
-	if (new_song_items[6].togglebutton.state)
+	if (new_song_widgets[6].togglebutton.state)
 		flags |= KEEP_ORDERLIST;
 	song_new(flags);
 }
 
 static void new_song_draw_const(void)
 {
-	SDL_LockSurface(screen);
 	draw_text("New Song", 36, 21, 3, 2);
 	draw_text("Patterns", 26, 24, 0, 2);
 	draw_text("Samples", 27, 27, 0, 2);
 	draw_text("Instruments", 23, 30, 0, 2);
 	draw_text("Order List", 24, 33, 0, 2);
-	SDL_UnlockSurface(screen);
 }
 
 void new_song_dialog(void)
 {
 	struct dialog *dialog;
 
-	if (new_song_items[0].width == 0) {
-		create_togglebutton(new_song_items + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep", 2,
-				    new_song_groups[0]);
-		create_togglebutton(new_song_items + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear", 2,
-				    new_song_groups[0]);
-		create_togglebutton(new_song_items + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep", 2,
-				    new_song_groups[1]);
-		create_togglebutton(new_song_items + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear", 2,
-				    new_song_groups[1]);
-		create_togglebutton(new_song_items + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep", 2,
-				    new_song_groups[2]);
-		create_togglebutton(new_song_items + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear", 2,
-				    new_song_groups[2]);
-		create_togglebutton(new_song_items + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep", 2,
-				    new_song_groups[3]);
-		create_togglebutton(new_song_items + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear", 2,
-				    new_song_groups[3]);
-		create_button(new_song_items + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes, "OK", 4);
-		create_button(new_song_items + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel, "Cancel", 2);
-		togglebutton_set(new_song_items, 1, 0);
-		togglebutton_set(new_song_items, 3, 0);
-		togglebutton_set(new_song_items, 5, 0);
-		togglebutton_set(new_song_items, 7, 0);
+	/* only create everything if it hasn't been set up already */
+	if (new_song_widgets[0].width == 0) {
+		create_togglebutton(new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep",
+				    2, new_song_groups[0]);
+		create_togglebutton(new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear",
+				    2, new_song_groups[0]);
+		create_togglebutton(new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep",
+				    2, new_song_groups[1]);
+		create_togglebutton(new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear",
+				    2, new_song_groups[1]);
+		create_togglebutton(new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep",
+				    2, new_song_groups[2]);
+		create_togglebutton(new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear",
+				    2, new_song_groups[2]);
+		create_togglebutton(new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep",
+				    2, new_song_groups[3]);
+		create_togglebutton(new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear",
+				    2, new_song_groups[3]);
+		create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes_NULL, "OK", 4);
+		create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel_NULL, "Cancel", 2);
+		togglebutton_set(new_song_widgets, 1, 0);
+		togglebutton_set(new_song_widgets, 3, 0);
+		togglebutton_set(new_song_widgets, 5, 0);
+		togglebutton_set(new_song_widgets, 7, 0);
 	}
 	
-	dialog = dialog_create_custom(21, 20, 38, 19, new_song_items, 10, 8, new_song_draw_const);
+	dialog = dialog_create_custom(21, 20, 38, 19, new_song_widgets, 10, 8, new_song_draw_const, NULL);
 	dialog->action_yes = new_song_ok;
 }
 
@@ -277,7 +268,7 @@ void save_song_or_save_as(void)
 /* This is an ugly monster. */
 
 /* returns 1 if the key was handled */
-static inline int handle_key_global(SDL_keysym * k)
+static int handle_key_global(SDL_keysym * k)
 {
 	int i;
 
@@ -466,7 +457,10 @@ static inline int handle_key_global(SDL_keysym * k)
                                 set_page(PAGE_ORDERLIST_PANNING);
                         }
                 } else if (k->mod & (KMOD_ALT | KMOD_META)) {
-                        printf("TODO: lock/unlock order list\n");
+			if (song_toggle_orderlist_locked())
+				status_text_flash("Order list locked");
+			else
+				status_text_flash("Order list unlocked");
                 } else {
                         break;
                 }
@@ -510,12 +504,11 @@ static inline int handle_key_global(SDL_keysym * k)
 void handle_key(SDL_keysym * k)
 {
 	/* short circuit booleans rock */
-	if (handle_key_global(k) || menu_handle_key(k) || item_handle_key(k))
+	if (handle_key_global(k) || menu_handle_key(k) || widget_handle_key(k))
                 return;
 	
         /* now check a couple other keys. */
         switch (k->sym) {
-#if 0 /* these don't work properly */
 	case SDLK_LEFT:
 		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			if (song_get_mode() == MODE_PLAYING)
@@ -530,13 +523,15 @@ void handle_key(SDL_keysym * k)
 			return;
 		}
 		break;
-#endif
 	case SDLK_ESCAPE:
 		/* TODO | Page key handlers should return true/false depending on if the key was handled
 		   TODO | (same as with other handlers), and the escape key check should go *after* the
 		   TODO | page gets a chance to grab it. This way, the load sample page can switch back
-		   TODO | to the sample list on escape like it's supposed to. */
-		if (status.dialog_type == DIALOG_NONE && NO_MODIFIER(k->mod)) {
+		   TODO | to the sample list on escape like it's supposed to. (The status.current_page
+		   TODO | checks above won't be necessary, either.) */
+		if (NO_MODIFIER(k->mod) && status.dialog_type == DIALOG_NONE
+		    && status.current_page != PAGE_LOAD_SAMPLE
+		    && status.current_page != PAGE_LOAD_INSTRUMENT) {
 			menu_show();
 			return;
 		}
@@ -597,91 +592,87 @@ static void draw_top_info_const(void)
 		br = 3;
 	}
 
-        SDL_LockSurface(screen);
-        
         /* gcc optimizes out the strlen's here :) */
         if (status.flags & CLASSIC_MODE) {
-		draw_text_unlocked(TOP_BANNER_CLASSIC, (80 - strlen(TOP_BANNER_CLASSIC)) / 2, 1, 0, 2);
+		draw_text(TOP_BANNER_CLASSIC, (80 - strlen(TOP_BANNER_CLASSIC)) / 2, 1, 0, 2);
         } else {
-                draw_text_unlocked(TOP_BANNER_NORMAL, (80 - strlen(TOP_BANNER_NORMAL)) / 2, 1, 0, 2);
+                draw_text(TOP_BANNER_NORMAL, (80 - strlen(TOP_BANNER_NORMAL)) / 2, 1, 0, 2);
         }
 
-        draw_text_unlocked("Song Name", 2, 3, 0, 2);
-        draw_text_unlocked("File Name", 2, 4, 0, 2);
-        draw_text_unlocked("Order", 6, 5, 0, 2);
-        draw_text_unlocked("Pattern", 4, 6, 0, 2);
-        draw_text_unlocked("Row", 8, 7, 0, 2);
+        draw_text("Song Name", 2, 3, 0, 2);
+        draw_text("File Name", 2, 4, 0, 2);
+        draw_text("Order", 6, 5, 0, 2);
+        draw_text("Pattern", 4, 6, 0, 2);
+        draw_text("Row", 8, 7, 0, 2);
 
-        draw_text_unlocked("Speed/Tempo", 38, 4, 0, 2);
-        draw_text_unlocked("Octave", 43, 5, 0, 2);
+        draw_text("Speed/Tempo", 38, 4, 0, 2);
+        draw_text("Octave", 43, 5, 0, 2);
 
-        draw_text_unlocked("F1...Help       F9.....Load", 21, 6, 0, 2);
-        draw_text_unlocked("ESC..Main Menu  F5/F8..Play / Stop", 21, 7, 0, 2);
+        draw_text("F1...Help       F9.....Load", 21, 6, 0, 2);
+        draw_text("ESC..Main Menu  F5/F8..Play / Stop", 21, 7, 0, 2);
 
         /* the neat-looking (but incredibly ugly to draw) borders */
-        draw_char_unlocked(128, 30, 4, br, 2);
-        draw_char_unlocked(128, 57, 4, br, 2);
-        draw_char_unlocked(128, 19, 5, br, 2);
-        draw_char_unlocked(128, 51, 5, br, 2);
-        draw_char_unlocked(129, 36, 4, br, 2);
-        draw_char_unlocked(129, 50, 6, br, 2);
-        draw_char_unlocked(129, 17, 8, br, 2);
-        draw_char_unlocked(129, 18, 8, br, 2);
-        draw_char_unlocked(131, 37, 3, br, 2);
-        draw_char_unlocked(131, 78, 3, br, 2);
-        draw_char_unlocked(131, 19, 6, br, 2);
-        draw_char_unlocked(131, 19, 7, br, 2);
-        draw_char_unlocked(132, 49, 3, tl, 2);
-        draw_char_unlocked(132, 49, 4, tl, 2);
-        draw_char_unlocked(132, 49, 5, tl, 2);
-        draw_char_unlocked(134, 75, 2, tl, 2);
-        draw_char_unlocked(134, 76, 2, tl, 2);
-        draw_char_unlocked(134, 77, 2, tl, 2);
-        draw_char_unlocked(136, 37, 4, br, 2);
-        draw_char_unlocked(136, 78, 4, br, 2);
-        draw_char_unlocked(136, 30, 5, br, 2);
-        draw_char_unlocked(136, 57, 5, br, 2);
-        draw_char_unlocked(136, 51, 6, br, 2);
-        draw_char_unlocked(136, 19, 8, br, 2);
-        draw_char_unlocked(137, 49, 6, br, 2);
-        draw_char_unlocked(137, 11, 8, br, 2);
-        draw_char_unlocked(138, 37, 2, tl, 2);
-        draw_char_unlocked(138, 78, 2, tl, 2);
-        draw_char_unlocked(139, 11, 2, tl, 2);
-        draw_char_unlocked(139, 49, 2, tl, 2);
+        draw_char(128, 30, 4, br, 2);
+        draw_char(128, 57, 4, br, 2);
+        draw_char(128, 19, 5, br, 2);
+        draw_char(128, 51, 5, br, 2);
+        draw_char(129, 36, 4, br, 2);
+        draw_char(129, 50, 6, br, 2);
+        draw_char(129, 17, 8, br, 2);
+        draw_char(129, 18, 8, br, 2);
+        draw_char(131, 37, 3, br, 2);
+        draw_char(131, 78, 3, br, 2);
+        draw_char(131, 19, 6, br, 2);
+        draw_char(131, 19, 7, br, 2);
+        draw_char(132, 49, 3, tl, 2);
+        draw_char(132, 49, 4, tl, 2);
+        draw_char(132, 49, 5, tl, 2);
+        draw_char(134, 75, 2, tl, 2);
+        draw_char(134, 76, 2, tl, 2);
+        draw_char(134, 77, 2, tl, 2);
+        draw_char(136, 37, 4, br, 2);
+        draw_char(136, 78, 4, br, 2);
+        draw_char(136, 30, 5, br, 2);
+        draw_char(136, 57, 5, br, 2);
+        draw_char(136, 51, 6, br, 2);
+        draw_char(136, 19, 8, br, 2);
+        draw_char(137, 49, 6, br, 2);
+        draw_char(137, 11, 8, br, 2);
+        draw_char(138, 37, 2, tl, 2);
+        draw_char(138, 78, 2, tl, 2);
+        draw_char(139, 11, 2, tl, 2);
+        draw_char(139, 49, 2, tl, 2);
 
         for (n = 0; n < 5; n++) {
-                draw_char_unlocked(132, 11, 3 + n, tl, 2);
-                draw_char_unlocked(129, 12 + n, 8, br, 2);
-                draw_char_unlocked(134, 12 + n, 2, tl, 2);
-                draw_char_unlocked(129, 20 + n, 5, br, 2);
-                draw_char_unlocked(129, 31 + n, 4, br, 2);
-                draw_char_unlocked(134, 32 + n, 2, tl, 2);
-                draw_char_unlocked(134, 50 + n, 2, tl, 2);
-                draw_char_unlocked(129, 52 + n, 5, br, 2);
-                draw_char_unlocked(129, 58 + n, 4, br, 2);
-                draw_char_unlocked(134, 70 + n, 2, tl, 2);
+                draw_char(132, 11, 3 + n, tl, 2);
+                draw_char(129, 12 + n, 8, br, 2);
+                draw_char(134, 12 + n, 2, tl, 2);
+                draw_char(129, 20 + n, 5, br, 2);
+                draw_char(129, 31 + n, 4, br, 2);
+                draw_char(134, 32 + n, 2, tl, 2);
+                draw_char(134, 50 + n, 2, tl, 2);
+                draw_char(129, 52 + n, 5, br, 2);
+                draw_char(129, 58 + n, 4, br, 2);
+                draw_char(134, 70 + n, 2, tl, 2);
         }
         for (; n < 10; n++) {
-                draw_char_unlocked(134, 12 + n, 2, tl, 2);
-                draw_char_unlocked(129, 20 + n, 5, br, 2);
-                draw_char_unlocked(134, 50 + n, 2, tl, 2);
-                draw_char_unlocked(129, 58 + n, 4, br, 2);
+                draw_char(134, 12 + n, 2, tl, 2);
+                draw_char(129, 20 + n, 5, br, 2);
+                draw_char(134, 50 + n, 2, tl, 2);
+                draw_char(129, 58 + n, 4, br, 2);
         }
         for (; n < 20; n++) {
-                draw_char_unlocked(134, 12 + n, 2, tl, 2);
-                draw_char_unlocked(134, 50 + n, 2, tl, 2);
-                draw_char_unlocked(129, 58 + n, 4, br, 2);
+                draw_char(134, 12 + n, 2, tl, 2);
+                draw_char(134, 50 + n, 2, tl, 2);
+                draw_char(129, 58 + n, 4, br, 2);
         }
 
-        draw_text_unlocked("Time", 63, 9, 0, 2);
-        draw_char_unlocked('/', 15, 5, 1, 0);
-        draw_char_unlocked('/', 15, 6, 1, 0);
-        draw_char_unlocked('/', 15, 7, 1, 0);
-        draw_char_unlocked('/', 53, 4, 1, 0);
-        draw_char_unlocked(':', 52, 3, 7, 0);
-	
-        SDL_UnlockSurface(screen);
+        draw_text("Time", 63, 9, 0, 2);
+        draw_char('/', 15, 5, 1, 0);
+        draw_char('/', 15, 6, 1, 0);
+        draw_char('/', 15, 7, 1, 0);
+        draw_char('/', 53, 4, 1, 0);
+        draw_char(':', 52, 3, 7, 0);
 }
 
 /* --------------------------------------------------------------------- */
@@ -692,8 +683,7 @@ void update_current_instrument(void)
         char *name;
         char buf[4];
 
-        if (page_is_instrument_list(status.current_page)
-            || status.current_page == PAGE_SAMPLE_LIST)
+        if (page_is_instrument_list(status.current_page) || status.current_page == PAGE_SAMPLE_LIST)
                 ins_mode = 0;
         else
                 ins_mode = song_is_instrument_mode();
@@ -735,7 +725,7 @@ static void redraw_top_info(void)
         draw_char('0' + kbd_get_current_octave(), 50, 5, 5, 0);
 }
 
-static inline void _draw_vis_box(void)
+static void _draw_vis_box(void)
 {
 	draw_box(62, 5, 78, 8, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_fill_chars(63, 6, 77, 7, 0);
@@ -749,7 +739,7 @@ static void vis_oscilloscope(void)
 	draw_sample_data_rect(&vis_rect, audio_buffer, audio_buffer_size);
 }
 
-UNUSED static void vis_vu_meter(void)
+static void vis_vu_meter(void)
 {
 	int left, right;
 	
@@ -769,6 +759,24 @@ static void vis_fakemem(void)
 	draw_text("FreeEMS 65344k", 63, 7, 0, 2);
 }
 
+static inline void draw_vis(void)
+{
+	switch (status.vis_style) {
+	case VIS_FAKEMEM:
+		vis_fakemem();
+		break;
+	case VIS_OSCILLOSCOPE:
+		vis_oscilloscope();
+		break;
+	case VIS_VU_METER:
+		vis_vu_meter();
+		break;
+	default:
+	case VIS_OFF:
+		break;
+	}
+}
+
 /* this completely redraws everything. */
 void redraw_screen(void)
 {
@@ -776,37 +784,27 @@ void redraw_screen(void)
         char buf[4];
         SDL_Rect r = { 0, 0, 640, 400 };
 	
-        draw_fill_rect(&r, 2);
+        draw_fill_rect(screen, &r, 2);
 	
-        SDL_LockSurface(screen);
-        draw_char_unlocked(128, 0, 0, 3, 2);
-        for (n = 79; n > 49; n--)
-                draw_char_unlocked(129, n, 0, 3, 2);
-        do {
-                draw_char_unlocked(129, n, 0, 3, 2);
-                draw_char_unlocked(131, 0, n, 3, 2);
-        } while (--n);
-        SDL_UnlockSurface(screen);
+	/* border around the whole screen */
+	draw_char(128, 0, 0, 3, 2);
+	for (n = 79; n > 49; n--)
+		draw_char(129, n, 0, 3, 2);
+	do {
+		draw_char(129, n, 0, 3, 2);
+		draw_char(131, 0, n, 3, 2);
+	} while (--n);
 	
         draw_top_info_const();
         redraw_top_info();
         draw_page();
-	
-	if ((status.flags & CLASSIC_MODE) == 0 && song_get_mode()) {
-		vis_oscilloscope();
-		/*vis_vu_meter();*/
-	} else {
-		vis_fakemem();
-	}
-	    
+	draw_vis();
         draw_time();
 
         draw_text(numtostr(3, song_get_current_speed(), buf), 50, 4, 5, 0);
         draw_text(numtostr(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
 
         status_text_redraw();
-
-        SDL_Flip(screen);
 }
 
 /* important :) */
@@ -840,10 +838,8 @@ void set_page(int new_page)
         if (status.flags & SAMPLE_CHANGED) {
                 if (song_is_instrument_mode())
                         instrument_synchronize_to_sample();
-#if 0 /* This breaks samples. */
                 else
 			instrument_set(sample_get_current());
-#endif
         } else if (status.flags & INSTRUMENT_CHANGED) {
                 sample_set(instrument_get_current());
         }
@@ -874,9 +870,9 @@ void set_page(int new_page)
         }
 
         /* update the pointers */
-        items = ACTIVE_PAGE.items;
-        selected_item = &(ACTIVE_PAGE.selected_item);
-        total_items = &(ACTIVE_PAGE.total_items);
+        widgets = ACTIVE_PAGE.widgets;
+        selected_widget = &(ACTIVE_PAGE.selected_widget);
+        total_widgets = &(ACTIVE_PAGE.total_widgets);
 
         status.flags |= NEED_UPDATE;
 }
@@ -909,9 +905,9 @@ void load_pages(void)
         log_load_page(pages + PAGE_LOG);
         load_sample_load_page(pages + PAGE_LOAD_SAMPLE);
 
-        items = pages[PAGE_BLANK].items;
-        selected_item = &(pages[PAGE_BLANK].selected_item);
-        total_items = &(pages[PAGE_BLANK].total_items);
+        widgets = pages[PAGE_BLANK].widgets;
+        selected_widget = &(pages[PAGE_BLANK].selected_widget);
+        total_widgets = &(pages[PAGE_BLANK].total_widgets);
 }
 
 /* --------------------------------------------------------------------- */
@@ -951,9 +947,9 @@ void main_song_changed_cb(void)
 /* --------------------------------------------------------------------- */
 /* not sure where else to toss this crap */
 
-static void exit_ok(void)
+static void exit_ok(UNUSED void *data)
 {
-        /* this is be the place to prompt for a save before exiting */
+        /* this is the place to prompt for a save before exiting */
         exit(0);
 }
 
@@ -966,10 +962,10 @@ void show_exit_prompt(void)
         dialog_destroy_all();
         if (status.flags & CLASSIC_MODE) {
                 dialog_create(DIALOG_OK_CANCEL, "Exit Impulse Tracker?",
-                              exit_ok, NULL, 0);
+                              exit_ok, NULL, 0, NULL);
         } else {
                 dialog_create(DIALOG_OK_CANCEL, "Exit Schism Tracker?",
-                              exit_ok, NULL, 0);
+                              exit_ok, NULL, 0, NULL);
         }
 }
 
@@ -981,5 +977,5 @@ void show_song_length(void)
         snprintf(buf, 64, "Total song time: %3ld:%02ld:%02ld",
                  length / 3600, (length / 60) % 60, length % 60);
 
-        dialog_create(DIALOG_OK, buf, NULL, NULL, 0);
+        dialog_create(DIALOG_OK, buf, NULL, NULL, 0, NULL);
 }

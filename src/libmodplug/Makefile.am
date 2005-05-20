@@ -27,7 +27,6 @@ libmodplug_a_SOURCES = tables.cpp          \
                         load_ams.cpp       \
                         load_amf.cpp       \
                         load_669.cpp       \
-                        load_j2b.cpp       \
                         load_mt2.cpp       \
                         load_psm.cpp
 

@@ -19,22 +19,29 @@
  */
 
 #include "headers.h"
-
-#include "title.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_its_read_info(const byte * data, size_t length, file_info * fi);
-bool fmt_its_read_info(const byte * data, size_t length, file_info * fi)
-{
-	if (!(length > 80 && memcmp(data, "IMPS", 4) == 0))
-		return false;
+/* does IT's raw sample loader use signed or unsigned samples? */
 
-	fi->description = strdup("Impulse Tracker Sample");
-	fi->extension = strdup("its");
-	fi->title = calloc(26, sizeof(char));
-	memcpy(fi->title, data + 20, 25);
-	fi->title[25] = 0;
-	fi->type = TYPE_SAMPLE;
+bool fmt_raw_load_sample(const byte *data, size_t length, song_sample *smp, UNUSED char *title)
+{
+	smp->speed = 8363;
+	smp->volume = 64 * 4;
+	smp->global_volume = 64;
+	
+	/* log_appendf(2, "Loading as raw."); */
+	
+	smp->data = song_sample_allocate(length);
+	memcpy(smp->data, data, length);
+	smp->length = length;
+	
+	return true;
+}
+
+bool fmt_raw_save_sample(FILE *fp, song_sample *smp, UNUSED char *title)
+{
+	fwrite(smp->data, (smp->flags & SAMP_16_BIT) ? 2 : 1, smp->length, fp);
 	return true;
 }

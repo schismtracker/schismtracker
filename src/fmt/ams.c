@@ -19,19 +19,17 @@
  */
 
 #include "headers.h"
-
-#include "title.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
 /* TODO: test this code.
- * Modplug seems to have a totally different idea of ams than this.
- * I don't know what this data's supposed to be for :) */
+Modplug seems to have a totally different idea of ams than this.
+I don't know what this data's supposed to be for :) */
 
 /* btw: AMS stands for "Advanced Module System" */
 
-bool fmt_ams_read_info(const byte * data, size_t length, file_info * fi);
-bool fmt_ams_read_info(const byte * data, size_t length, file_info * fi)
+bool fmt_ams_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         byte n;
 
@@ -41,11 +39,11 @@ bool fmt_ams_read_info(const byte * data, size_t length, file_info * fi)
         n = data[7];
         if (n > 30)
                 n = 30;
-        fi->description = strdup("Velvet Studio");
-        fi->extension = strdup("ams");
-        fi->title = calloc(n + 1, sizeof(char));
-        memcpy(fi->title, data + 8, n);
-        fi->title[n] = 0;
-        fi->type = TYPE_XM;
+        file->description = "Velvet Studio";
+        /*file->extension = strdup("ams");*/
+        file->title = calloc(n + 1, sizeof(char));
+        memcpy(file->title, data + 8, n);
+        file->title[n] = 0;
+        file->type = TYPE_MODULE_XM;
         return true;
 }

@@ -99,7 +99,7 @@ BOOL CSoundFile::ReadSTM(const BYTE *lpStream, DWORD dwMemLength)
 		pIns->nVolume = pStm->volume << 2;
 		if (pIns->nVolume > 256) pIns->nVolume = 256;
 		pIns->nLength = pStm->length;
-		if ((pIns->nLength < 4) || (!pIns->nVolume)) pIns->nLength = 0;
+		if ((pIns->nLength < 2) || (!pIns->nVolume)) pIns->nLength = 0;
 		pIns->nLoopStart = pStm->loopbeg;
 		pIns->nLoopEnd = pStm->loopend;
 		if ((pIns->nLoopEnd > pIns->nLoopStart) && (pIns->nLoopEnd != 0xFFFF)) pIns->uFlags |= CHN_LOOP;

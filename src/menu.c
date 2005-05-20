@@ -157,18 +157,13 @@ static void _draw_menu(struct menu *menu)
         while (n--) {
                 draw_box(2 + menu->x, 4 + menu->y + 3 * n,
                          5 + menu->x + menu->w, 6 + menu->y + 3 * n,
-                         BOX_THIN | BOX_CORNER | (n ==
-                                                  menu->
-                                                  active_item ? BOX_INSET :
-                                                  BOX_OUTSET));
+                         BOX_THIN | BOX_CORNER | (n == menu->active_item ? BOX_INSET : BOX_OUTSET));
 
-                draw_text_len(menu->items[n], menu->w, 4 + menu->x,
-                              5 + menu->y + 3 * n,
+                draw_text_len(menu->items[n], menu->w, 4 + menu->x, 5 + menu->y + 3 * n,
                               (n == menu->selected_item ? 3 : 0), 2);
 
                 draw_char(0, 3 + menu->x, 5 + menu->y + 3 * n, 0, 2);
-                draw_char(0, 4 + menu->x + menu->w, 5 + menu->y + 3 * n, 0,
-                          2);
+                draw_char(0, 4 + menu->x + menu->w, 5 + menu->y + 3 * n, 0, 2);
 
                 h += 3;
         }
@@ -177,8 +172,7 @@ static void _draw_menu(struct menu *menu)
                  BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
         draw_box(menu->x + 1, menu->y + 1, menu->x + menu->w + 6,
                  menu->y + h - 2, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
-        draw_fill_chars(menu->x + 2, menu->y + 2, menu->x + menu->w + 5,
-                        menu->y + 3, 2);
+        draw_fill_chars(menu->x + 2, menu->y + 2, menu->x + menu->w + 5, menu->y + 3, 2);
         draw_text(menu->title, menu->x + 6, menu->y + 2, 3, 2);
 }
 

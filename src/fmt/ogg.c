@@ -20,9 +20,11 @@
 
 /* This is way more work than it ought to be... */
 
-#include "headers.h"
+/* TODO: test this again since I rearranged the artist/title stuff.
+Can't be bothered actually compiling it now to make sure it works. :P */
 
-#include "title.h"
+#include "headers.h"
+#include "fmt.h"
 
 #include <vorbis/codec.h>
 #include <vorbis/vorbisfile.h>
@@ -37,8 +39,7 @@ struct sheep {
 
 /* --------------------------------------------------------------------- */
 
-static size_t fake_read(void *buf, size_t size, size_t nmemb,
-                        void *void_data)
+static size_t fake_read(void *buf, size_t size, size_t nmemb, void *void_data)
 {
         struct sheep *file_data = (struct sheep *) void_data;
 
@@ -50,8 +51,7 @@ static size_t fake_read(void *buf, size_t size, size_t nmemb,
                 read_size = nmemb * size;
         }
         if (nmemb > 0) {
-                memcpy(buf, file_data->data + file_data->position,
-                       read_size);
+                memcpy(buf, file_data->data + file_data->position, read_size);
                 file_data->position += read_size;
         }
         return nmemb;
@@ -93,11 +93,9 @@ static long fake_tell(void *void_data)
 
 /* --------------------------------------------------------------------- */
 
-static char *get_title_from_ogg(OggVorbis_File * vf)
+static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **title_ptr)
 {
-        char *buf;
-        char *key, *value;
-        char *artist = NULL, *title = NULL;
+	char *buf, *key, *value;
         char **ptr = ov_comment(vf, -1)->user_comments;
         int n = -1;
 
@@ -105,41 +103,28 @@ static char *get_title_from_ogg(OggVorbis_File * vf)
                 key = strdup(*ptr);
                 value = strchr(key, '=');
                 if (value == NULL) {
-                        // buh?
+                        /* buh? */
                         free(key);
                         continue;
                 }
-                // hack? where?
+                /* hack? where? */
                 *value = 0;
                 value = strdup(value + 1);
-
+		
                 if (strcmp(key, "artist") == 0)
-                        artist = value;
+                        *artist_ptr = value;
                 else if (strcmp(key, "title") == 0)
-                        title = value;
+                        *title_ptr = value;
                 else
                         free(value);
                 free(key);
                 ptr++;
         }
-
-        if (artist || title) {
-                /* TODO: customizable artist/title format */
-                n = asprintf(&buf, "%s / %s", artist ? : "Unknown",
-                             title ? : "Unknown");
-                if (artist)
-                        free(artist);
-                if (title)
-                        free(title);
-        }
-
-        return (n < 0) ? NULL : buf;
 }
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_ogg_read_info(const byte * data, size_t length, file_info * fi);
-bool fmt_ogg_read_info(const byte * data, size_t length, file_info * fi)
+bool fmt_ogg_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         OggVorbis_File vf;
         ov_callbacks cb;
@@ -157,12 +142,12 @@ bool fmt_ogg_read_info(const byte * data, size_t length, file_info * fi)
         if (ov_open_callbacks(&file_data, &vf, NULL, 0, cb) < 0)
                 return false;
 
-        // song_length = ov_time_total(&vf, -1);
+        /* song_length = ov_time_total(&vf, -1); */
 
-        fi->title = get_title_from_ogg(&vf);
-        fi->description = strdup("Ogg Vorbis");
-        fi->extension = strdup("ogg");
-        fi->type = TYPE_OTHER;
+        get_title_from_ogg(&vf, &file->artist, &file->title);
+        file->description = "Ogg Vorbis";
+        /*file->extension = strdup("ogg");*/
+        file->type = TYPE_SAMPLE_COMPR;
 
         ov_clear(&vf);
 

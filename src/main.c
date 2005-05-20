@@ -25,6 +25,7 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "dmoz.h"
 #include "frag-opt.h"
 
 #if HAVE_SYS_KD_H
@@ -35,13 +36,19 @@
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/ioctl.h>
+#if HAVE_SYS_IOCTL_H
+# include <sys/ioctl.h>
+#endif
 
 #include <SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#if !defined(WIN32) && !defined(__amigaos4__)
+# define ENABLE_HOOKS 1
+#endif
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -105,7 +112,7 @@ static inline int get_fb_size(void)
 
 /* --------------------------------------------------------------------- */
 
-static inline void display_print_video_info(void)
+static void display_print_video_info(void)
 {
 	const SDL_VideoInfo *info = SDL_GetVideoInfo();
 
@@ -146,7 +153,7 @@ static inline void display_print_video_info(void)
 	log_append(0, 0, "");
 }
 
-static inline void display_print_info(void)
+static void display_print_info(void)
 {
 	char buf[256];
 
@@ -199,7 +206,7 @@ static void display_init(void)
 	SDL_ShowCursor(0);
 	display_print_info();
 
-	SDL_EnableKeyRepeat(125, 0);
+	SDL_EnableKeyRepeat(125, 25);
 
 	SDL_WM_SetCaption("Schism Tracker v" VERSION, "Schism Tracker");
 	SDL_EnableUNICODE(1);
@@ -207,7 +214,7 @@ static void display_init(void)
 
 /* --------------------------------------------------------------------- */
 
-static inline void handle_active_event(SDL_ActiveEvent * a)
+static void handle_active_event(SDL_ActiveEvent * a)
 {
 	if (a->state & SDL_APPACTIVE) {
 		if (a->gain)
@@ -226,31 +233,23 @@ static inline void handle_active_event(SDL_ActiveEvent * a)
 
 /* --------------------------------------------------------------------- */
 
+#if ENABLE_HOOKS
 static void run_startup_hook(void)
 {
-	char filename[PATH_MAX + 1];
-	const char *home_dir = getenv("HOME") ? : "/";
-	
-	strncpy(filename, home_dir, PATH_MAX);
-	strncat(filename, "/.schism/startup-hook", PATH_MAX);
-	filename[PATH_MAX] = 0;
-	
-	if (access(filename, X_OK) == 0)
-		system(filename);
+	char *ptr = dmoz_path_concat(cfg_dir_dotschism, "startup-hook");
+	if (access(ptr, X_OK) == 0)
+		system(ptr);
+	free(ptr);
 }
 
 static void run_exit_hook(void)
 {
-	char filename[PATH_MAX + 1];
-	const char *home_dir = getenv("HOME") ? : "/";
-	
-	strncpy(filename, home_dir, PATH_MAX);
-	strncat(filename, "/.schism/exit-hook", PATH_MAX);
-	filename[PATH_MAX] = 0;
-	
-	if (access(filename, X_OK) == 0)
-		system(filename);
+	char *ptr = dmoz_path_concat(cfg_dir_dotschism, "exit-hook");
+	if (access(ptr, X_OK) == 0)
+		system(ptr);
+	free(ptr);
 }
+#endif
 
 /* --------------------------------------------------------------------- */
 /* arg parsing */
@@ -275,7 +274,9 @@ enum {
 	O_DISPLAY,
 	O_FULLSCREEN,
 	O_PLAY,
+#if ENABLE_HOOKS
 	O_HOOKS,
+#endif
 	O_VERSION,
 	O_HELP,
 };
@@ -287,10 +288,13 @@ static void parse_options(int argc, char **argv)
 		{O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
 		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
 		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
+		/* FIXME: #if HAVE_X11? */
 		{O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
 		{O_FULLSCREEN, 'f', "fullscreen", FRAG_NEG, NULL, "start in fullscreen mode"},
 		{O_PLAY, 'p', "play", FRAG_NEG, NULL, "start playing after loading song on command line"},
+#if ENABLE_HOOKS
 		{O_HOOKS, 0, "hooks", FRAG_NEG, NULL, "run startup/exit hooks (default: enabled)"},
+#endif
 		{O_VERSION, 0, "version", 0, NULL, "display version information"},
 		{O_HELP, 'h', "help", 0, NULL, "print this stuff"},
 		{FRAG_END_ARRAY}
@@ -305,10 +309,15 @@ static void parse_options(int argc, char **argv)
 	while (frag_parse(frag)) {
 		switch (frag->id) {
 		case O_ARG:
-			if (is_directory(frag->arg))
-				initial_dir = frag->arg;
-			else
-				initial_song = frag->arg;
+			if (is_directory(frag->arg)) {
+				initial_dir = dmoz_path_normal(frag->arg);
+				if (!initial_dir)
+					perror(frag->arg);
+			} else {
+				initial_song = dmoz_path_normal(frag->arg);
+				if (!initial_song)
+					perror(frag->arg);
+			}
 			break;
 		case O_SDL_AUDIODRIVER:
 			/* Would it be better to set the SDL driver stuff with SDL_VideoInit and
@@ -328,6 +337,7 @@ static void parse_options(int argc, char **argv)
 		case O_SDL_VIDEODRIVER:
 			setenv("SDL_VIDEODRIVER", frag->arg, 1);
 			break;
+			/* FIXME: #if HAVE_X11? */
 		case O_DISPLAY:
 			setenv("DISPLAY", frag->arg, 1);
 			break;
@@ -343,12 +353,14 @@ static void parse_options(int argc, char **argv)
 			else
 				startup_flags &= ~SF_PLAY;
 			break;
+#if ENABLE_HOOKS
 		case O_HOOKS:
 			if (frag->type)
 				startup_flags |= SF_HOOKS;
 			else
 				startup_flags &= ~SF_HOOKS;
 			break;
+#endif
 		case O_VERSION:
 			printf("Schism Tracker v" VERSION " - Copyright (C) 2003-2005 chisel\n\n");
 			printf("This program is free software; you can redistribute it and/or modify\n");
@@ -372,60 +384,27 @@ static void parse_options(int argc, char **argv)
 
 /* --------------------------------------------------------------------- */
 
-int main(int argc, char **argv) NORETURN;
-int main(int argc, char **argv)
+static void check_update(void)
+{
+	/* this function is a misnomer, but whatever :P */
+	playback_update();
+	
+	if (status.flags & NEED_UPDATE) {
+		redraw_screen();
+		SDL_Flip(screen);
+		SDL_Delay(10);
+		status.flags &= ~NEED_UPDATE;
+	}
+}
+
+static void event_loop(void) NORETURN;
+static void event_loop(void)
 {
 	SDL_Event event;
 
-	parse_options(argc, argv);
-	
-	if (startup_flags & SF_HOOKS) {
-		run_startup_hook();
-		atexit(run_exit_hook);
-	}
-	
-	save_font();
-	atexit(restore_font);
-
-	song_initialise();
-	cfg_load();
-	atexit(cfg_atexit_save);
-	display_init();
-	palette_apply();
-	font_init();
-	song_init_audio();
-	song_init_modplug();
-	setup_help_text_pointers();
-	load_pages();
-	main_song_changed_cb();
-	song_stop();
-	SDL_PauseAudio(0);
-	
-	atexit(clear_all_cached_waveforms);
-	
-	/* TODO: if (initial_song && !initial_dir), set initial_dir to the directory initial_song is in */
-	if (initial_dir) {
-		char buf[PATH_MAX + 1];
-		if (realpath(initial_dir, buf) == NULL)
-			perror(initial_dir);
-		else
-			strcpy(cfg_dir_modules, buf);
-	}
-	if (initial_song) {
-		if (song_load(initial_song)) {
-			if (startup_flags & SF_PLAY) {
-				song_start();
-				set_page(PAGE_INFO);
-			} else {
-				/* set_page(PAGE_LOG); */
-				set_page(PAGE_BLANK);
-			}
-		}
-	} else {
-		set_page(PAGE_LOAD_MODULE);
-	}
-	
 	for (;;) {
+		check_update();
+		
 		/* handle events */
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
@@ -442,23 +421,71 @@ int main(int argc, char **argv)
 			default:
 				break;
 			}
+			
+			check_update();
 		}
-
-		/* see if stuff changed.
-		 * this function is a misnomer, but whatever :P */
-		playback_update();
-
-		/* redraw the screen if it's needed */
-		if (status.flags & NEED_UPDATE) {
-			redraw_screen();
-			status.flags &= ~NEED_UPDATE;
-		}
-
+		
 		/* be nice to the cpu */
-		if (status.flags & IS_VISIBLE) {
-			SDL_Delay((status.flags & IS_FOCUSED) ? 30 : 200);
-		} else {
+		if (status.flags & IS_VISIBLE)
+			SDL_Delay((status.flags & IS_FOCUSED) ? 30 : 300);
+		else
 			SDL_WaitEvent(NULL);
-		}
 	}
+}
+
+int main(int argc, char **argv) NORETURN;
+int main(int argc, char **argv)
+{
+	parse_options(argc, argv);
+	
+	cfg_init_dir();
+	
+#if ENABLE_HOOKS
+	if (startup_flags & SF_HOOKS) {
+		run_startup_hook();
+		atexit(run_exit_hook);
+	}
+ #endif
+
+	save_font();
+	atexit(restore_font);
+
+	song_initialise();
+	cfg_load();
+	atexit(cfg_atexit_save);
+	display_init();
+	palette_apply();
+	font_init();
+	song_init_audio();
+	song_init_modplug();
+	setup_help_text_pointers();
+	load_pages();
+	main_song_changed_cb();
+
+	atexit(clear_all_cached_waveforms);
+	atexit(ccache_destroy);
+
+	if (initial_song && !initial_dir)
+		initial_dir = get_parent_directory(initial_song);
+	if (initial_dir) {
+		strncpy(cfg_dir_modules, initial_dir, PATH_MAX);
+		cfg_dir_modules[PATH_MAX] = 0;
+		free(initial_dir);
+	}
+	if (initial_song) {
+		if (song_load(initial_song)) {
+			if (startup_flags & SF_PLAY) {
+				song_start();
+				set_page(PAGE_INFO);
+			} else {
+				/* set_page(PAGE_LOG); */
+				set_page(PAGE_BLANK);
+			}
+		}
+		free(initial_song);
+	} else {
+		set_page(PAGE_LOAD_MODULE);
+	}
+	
+	event_loop(); /* never returns */
 }

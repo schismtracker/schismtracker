@@ -51,17 +51,6 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	 || (!pfh->patterns) || (pfh->patterns > 128)) return FALSE;
 	DWORD dontfuckwithme = 0x1F1 + pfh->samples * sizeof(SAMPLE669) + pfh->patterns * 0x600;
 	if (dontfuckwithme > dwMemLength) return FALSE;
-        // <chisel> not checking the sample lengths.
-        // corehop.669 is like, 32 bytes short :(
-        /*
-	for (UINT ichk=0; ichk<128; ichk++)
-	{
-		DWORD len = bswapLE32(*((DWORD *)(&psmp[ichk].length)));
-		dontfuckwithme += len;
-	}
-	if (dontfuckwithme > dwMemLength) return FALSE;
-        */
-        // <chisel> ... but i *will* check these ;)
         for (int n = 0; n < 128; n++)
                 if (pfh->breaks[n] > 0x3f)
                         return false;
@@ -73,8 +62,8 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	m_nDefaultTempo = 125;
 	m_nDefaultSpeed = 6;
 	m_nChannels = 8;
-	// <chisel> title length changed from 16 chars.
-	memcpy(m_szNames[0], pfh->songmessage, 36);
+	memcpy(m_szNames[0], pfh->songmessage, 31);
+	m_szNames[0][31] = 0;
 	m_nSamples = pfh->samples;
 	for (UINT nins=1; nins<=m_nSamples; nins++, psmp++)
 	{
@@ -95,7 +84,6 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 		Ins[nins].nPan = 128;
 	}
 	// Song Message
-	// <chisel> cut the message text into three lines
 	m_lpszSongComments = new char[114];
 	memcpy(m_lpszSongComments, pfh->songmessage, 36);
 	m_lpszSongComments[36] = '\015';

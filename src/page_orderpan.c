@@ -28,7 +28,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct item items_orderpan[65], items_ordervol[65];
+static struct widget widgets_orderpan[65], widgets_ordervol[65];
 
 static int top_order = 0;
 static int current_order = 0;
@@ -132,26 +132,19 @@ static void orderlist_draw(void)
         int pos, n;
         int playing_order = (song_get_mode() == MODE_PLAYING ? song_get_current_order() : -1);
 
-        SDL_LockSurface(screen);
-
         /* draw the list */
         for (pos = 0, n = top_order; pos < 32; pos++, n++) {
-                draw_text_unlocked(numtostr(3, n, buf), 2, 15 + pos,
-                                   (n == playing_order ? 3 : 0), 2);
+                draw_text(numtostr(3, n, buf), 2, 15 + pos, (n == playing_order ? 3 : 0), 2);
                 get_pattern_string(list[n], buf);
-                draw_text_unlocked(buf, 6, 15 + pos, 2, 0);
+                draw_text(buf, 6, 15 + pos, 2, 0);
         }
 
         /* draw the cursor */
-        if (ACTIVE_PAGE.selected_item == 0) {
+        if (ACTIVE_PAGE.selected_widget == 0) {
                 get_pattern_string(list[current_order], buf);
                 pos = current_order - top_order;
-                draw_char_unlocked(buf[orderlist_cursor_pos],
-                                   orderlist_cursor_pos + 6, 15 + pos, 0,
-                                   3);
+                draw_char(buf[orderlist_cursor_pos], orderlist_cursor_pos + 6, 15 + pos, 0, 3);
         }
-
-        SDL_UnlockSurface(screen);
 
         status.flags |= NEED_UPDATE;
 }
@@ -162,8 +155,7 @@ static void orderlist_insert_pos(void)
 {
         unsigned char *list = song_get_orderlist();
 
-        memmove(list + current_order + 1, list + current_order,
-                255 - current_order);
+        memmove(list + current_order + 1, list + current_order, 255 - current_order);
         list[current_order] = ORDER_LAST;
 
         status.flags |= NEED_UPDATE;
@@ -173,8 +165,7 @@ static void orderlist_delete_pos(void)
 {
         unsigned char *list = song_get_orderlist();
 
-        memmove(list + current_order, list + current_order + 1,
-                255 - current_order);
+        memmove(list + current_order, list + current_order + 1, 255 - current_order);
         list[255] = ORDER_LAST;
 
         status.flags |= NEED_UPDATE;
@@ -205,7 +196,7 @@ static void orderlist_add_unused_patterns(void)
 	 * p = pattern iterator
 	 * np = number of patterns */
 	int n0, n, p, np = song_get_num_patterns();
-	int used[200] = {0};		/* could be a bitset... */
+	byte used[200] = {0};		/* could be a bitset... */
 	unsigned char *list = song_get_orderlist();
 	
 	for (n = 0; n < 255; n++)
@@ -300,44 +291,78 @@ static int orderlist_handle_key_on_list(SDL_keysym * k)
 
         switch (k->sym) {
         case SDLK_TAB:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 change_focus_to(1);
                 return 1;
         case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_cursor_pos--;
                 break;
         case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_cursor_pos++;
                 break;
         case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_order = 0;
                 break;
         case SDLK_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_order = song_get_num_orders();
                 if (song_get_orderlist()[new_order] != ORDER_LAST)
                         new_order++;
                 break;
         case SDLK_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_order--;
                 break;
         case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_order++;
                 break;
         case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_order -= 16;
                 break;
         case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_order += 16;
                 break;
         case SDLK_INSERT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 orderlist_insert_pos();
                 return 1;
         case SDLK_DELETE:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 orderlist_delete_pos();
                 return 1;
+	case SDLK_F7:
+		if (k->mod & KMOD_CTRL) {
+			song_set_next_order(current_order);
+			status_text_flash("Playing order %d next", current_order);
+		} else {
+			return 0;
+		}
+		return 1;
         case SDLK_n:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 orderlist_insert_next();
                 return 1;
         case SDLK_g:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 n = song_get_orderlist()[new_order];
                 if (n < 200) {
                         set_current_pattern(n);
@@ -404,20 +429,16 @@ static void ordervol_draw_const(void)
 
         order_pan_vol_draw_const();
 
-        SDL_LockSurface(screen);
-
         draw_text(" Volumes ", 31, 14, 0, 3);
         draw_text(" Volumes ", 65, 14, 0, 3);
 
         for (n = 1; n <= 32; n++) {
                 numtostr(2, n, buf + 8);
                 draw_text(buf, 20, 14 + n, 0, 2);
-
+		
                 numtostr(2, n + 32, buf + 8);
                 draw_text(buf, 54, 14 + n, 0, 2);
         }
-
-        SDL_UnlockSurface(screen);
 }
 
 /* --------------------------------------------------------------------- */
@@ -444,16 +465,14 @@ static void orderpan_update_values_in_song(void)
                 chn = song_get_channel(n);
 
                 /* yet another modplug hack here! */
-                chn->panning = items_orderpan[n + 1].panbar.value * 4;
+                chn->panning = widgets_orderpan[n + 1].panbar.value * 4;
 
-                if (items_orderpan[n + 1].panbar.surround) {
+                if (widgets_orderpan[n + 1].panbar.surround)
                         chn->flags |= CHN_SURROUND;
-                } else {
+                else
                         chn->flags &= ~CHN_SURROUND;
-                }
 
-                song_set_channel_mute(n,
-                                      items_orderpan[n + 1].panbar.muted);
+                song_set_channel_mute(n, widgets_orderpan[n + 1].panbar.muted);
         }
 }
 
@@ -462,8 +481,7 @@ static void ordervol_update_values_in_song(void)
         int n;
 
         for (n = 0; n < 64; n++)
-                song_get_channel(n)->volume =
-                        items_ordervol[n + 1].thumbbar.value;
+                song_get_channel(n)->volume = widgets_ordervol[n + 1].thumbbar.value;
 }
 
 /* called when a channel is muted/unmuted by means other than the panning
@@ -472,8 +490,7 @@ void orderpan_recheck_muted_channels(void)
 {
         int n;
         for (n = 0; n < 64; n++)
-                items_orderpan[n + 1].panbar.muted =
-                        !!(song_get_channel(n)->flags & CHN_MUTE);
+                widgets_orderpan[n + 1].panbar.muted = !!(song_get_channel(n)->flags & CHN_MUTE);
 
         if (status.current_page == PAGE_ORDERLIST_PANNING)
                 status.flags |= NEED_UPDATE;
@@ -486,13 +503,10 @@ static void order_pan_vol_song_changed_cb(void)
 
         for (n = 0; n < 64; n++) {
                 chn = song_get_channel(n);
-                items_orderpan[n + 1].panbar.value = chn->panning / 4;
-                items_orderpan[n + 1].panbar.surround =
-                        !!(chn->flags & CHN_SURROUND);
-                items_orderpan[n + 1].panbar.muted =
-                        !!(chn->flags & CHN_MUTE);
-
-                items_ordervol[n + 1].thumbbar.value = chn->volume;
+                widgets_orderpan[n + 1].panbar.value = chn->panning / 4;
+                widgets_orderpan[n + 1].panbar.surround = !!(chn->flags & CHN_SURROUND);
+                widgets_orderpan[n + 1].panbar.muted = !!(chn->flags & CHN_MUTE);
+                widgets_ordervol[n + 1].thumbbar.value = chn->volume;
         }
 }
 
@@ -500,8 +514,11 @@ static void order_pan_vol_song_changed_cb(void)
 
 static void order_pan_vol_handle_key(SDL_keysym * k)
 {
-        int n = *selected_item;
+        int n = *selected_widget;
 
+	if (!NO_MODIFIER(k->mod))
+		return;
+	
         switch (k->sym) {
         case SDLK_PAGEDOWN:
                 n += 8;
@@ -514,7 +531,7 @@ static void order_pan_vol_handle_key(SDL_keysym * k)
         }
 
         n = CLAMP(n, 1, 64);
-        if (*selected_item != n)
+        if (*selected_widget != n)
                 change_focus_to(n);
 }
 
@@ -530,25 +547,22 @@ void orderpan_load_page(struct page *page)
         page->song_changed_cb = order_pan_vol_song_changed_cb;
         page->playback_update = order_pan_vol_playback_update;
         page->handle_key = order_pan_vol_handle_key;
-        page->total_items = 65;
-        page->items = items_orderpan;
+        page->total_widgets = 65;
+        page->widgets = widgets_orderpan;
         page->help_index = HELP_ORDERLIST_PANNING;
 
         /* 0 = order list */
-	create_other(items_orderpan + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
+	create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
 
         /* 1-64 = panbars */
-        create_panbar(items_orderpan + 1, 20, 15, 1, 2, 33,
-                      orderpan_update_values_in_song, 1);
+        create_panbar(widgets_orderpan + 1, 20, 15, 1, 2, 33, orderpan_update_values_in_song, 1);
         for (n = 2; n <= 32; n++) {
-                create_panbar(items_orderpan + n, 20, 14 + n, n - 1, n + 1,
-                              n + 32, orderpan_update_values_in_song, n);
-                create_panbar(items_orderpan + n + 31, 54, 13 + n, n + 30,
-                              n + 32, 0, orderpan_update_values_in_song,
-                              n + 31);
+                create_panbar(widgets_orderpan + n, 20, 14 + n, n - 1, n + 1, n + 32,
+                              orderpan_update_values_in_song, n);
+                create_panbar(widgets_orderpan + n + 31, 54, 13 + n, n + 30, n + 32, 0,
+                              orderpan_update_values_in_song, n + 31);
         }
-        create_panbar(items_orderpan + 64, 54, 46, 63, 64, 0,
-                      orderpan_update_values_in_song, 64);
+        create_panbar(widgets_orderpan + 64, 54, 46, 63, 64, 0, orderpan_update_values_in_song, 64);
 }
 
 void ordervol_load_page(struct page *page)
@@ -559,24 +573,20 @@ void ordervol_load_page(struct page *page)
         page->draw_const = ordervol_draw_const;
         page->playback_update = order_pan_vol_playback_update;
         page->handle_key = order_pan_vol_handle_key;
-        page->total_items = 65;
-        page->items = items_ordervol;
+        page->total_widgets = 65;
+        page->widgets = widgets_ordervol;
         page->help_index = HELP_ORDERLIST_VOLUME;
 
         /* 0 = order list */
-	create_other(items_ordervol + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
+	create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
 
         /* 1-64 = thumbbars */
-        create_thumbbar(items_ordervol + 1, 31, 15, 9, 1, 2, 33,
-                        ordervol_update_values_in_song, 0, 64);
+        create_thumbbar(widgets_ordervol + 1, 31, 15, 9, 1, 2, 33, ordervol_update_values_in_song, 0, 64);
         for (n = 2; n <= 32; n++) {
-                create_thumbbar(items_ordervol + n, 31, 14 + n, 9, n - 1,
-                                n + 1, n + 32,
+                create_thumbbar(widgets_ordervol + n, 31, 14 + n, 9, n - 1, n + 1, n + 32,
                                 ordervol_update_values_in_song, 0, 64);
-                create_thumbbar(items_ordervol + n + 31, 65, 13 + n, 9,
-                                n + 30, n + 32, 0,
+                create_thumbbar(widgets_ordervol + n + 31, 65, 13 + n, 9, n + 30, n + 32, 0,
                                 ordervol_update_values_in_song, 0, 64);
         }
-        create_thumbbar(items_ordervol + 64, 65, 46, 9, 63, 64, 0,
-                        ordervol_update_values_in_song, 0, 64);
+        create_thumbbar(widgets_ordervol + 64, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
 }

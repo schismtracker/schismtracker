@@ -54,13 +54,13 @@ void clear_all_cached_waveforms(void)
 
 /* --------------------------------------------------------------------- */
 /* sample drawing
- * there are only two changes between 8- and 16-bit samples:
- * - the type of 'data'
- * - the amount to divide (note though, this number is used twice!) */
+there are only two changes between 8- and 16-bit samples:
+- the type of 'data'
+- the amount to divide (note though, this number is used twice!) */
 
-static inline void _draw_sample_data_8(SDL_Surface * surface, SDL_Rect *rect,
-                                       signed char *data, unsigned long length, // 8/16
-				       Uint32 c)
+static void _draw_sample_data_8(SDL_Surface * surface, SDL_Rect *rect,
+				signed char *data, unsigned long length, // 8/16
+				Uint32 c)
 {
 	SDL_Rect srect = {0, 0, surface->w, surface->h};
 	unsigned long pos;
@@ -76,7 +76,7 @@ static inline void _draw_sample_data_8(SDL_Surface * surface, SDL_Rect *rect,
 	
 	for (pos = 0; pos < length; pos += step) {
 		level = data[pos] * rect->h / (SCHAR_MAX - SCHAR_MIN + 1); // 8/16
-		xe = pos * (rect->w - 1) / length + rect->x;
+		xe = pos * rect->w / length + rect->x;
 		ye = (rect->h / 2 - 1) - level + rect->y;
 		if (xs == ys && xe == ye)
 			continue;
@@ -86,9 +86,9 @@ static inline void _draw_sample_data_8(SDL_Surface * surface, SDL_Rect *rect,
 	}
 }
 
-static inline void _draw_sample_data_16(SDL_Surface * surface, SDL_Rect *rect,
-                                       signed short *data, unsigned long length,
-				       Uint32 c)
+static void _draw_sample_data_16(SDL_Surface * surface, SDL_Rect *rect,
+				 signed short *data, unsigned long length,
+				 Uint32 c)
 {
 	SDL_Rect srect = {0, 0, surface->w, surface->h};
 	unsigned long pos;
@@ -104,7 +104,7 @@ static inline void _draw_sample_data_16(SDL_Surface * surface, SDL_Rect *rect,
 	
 	for (pos = 0; pos < length; pos += step) {
 		level = data[pos] * rect->h / (SHRT_MAX - SHRT_MIN + 1);
-		xe = pos * (rect->w - 1) / length + rect->x;
+		xe = pos * rect->w / length + rect->x;
 		ye = (rect->h / 2 - 1) - level + rect->y;
 		if (xs == ys && xe == ye)
 			continue;
@@ -115,9 +115,10 @@ static inline void _draw_sample_data_16(SDL_Surface * surface, SDL_Rect *rect,
 }
 
 /* --------------------------------------------------------------------- */
-/* loop drawing */
+/* these functions assume the screen is locked! */
 
-static inline void _draw_sample_loop(SDL_Rect * rect, song_sample * sample)
+/* loop drawing */
+static void _draw_sample_loop(SDL_Rect * rect, song_sample * sample)
 {
         int loopstart, loopend, y;
         int c = ((status.flags & CLASSIC_MODE) ? 13 : 3);
@@ -130,22 +131,14 @@ static inline void _draw_sample_loop(SDL_Rect * rect, song_sample * sample)
 	
         y = rect->y;
         do {
-                putpixel_screen(loopstart, y, 0);
-                putpixel_screen(loopend, y, 0);
-                y++;
-                putpixel_screen(loopstart, y, c);
-                putpixel_screen(loopend, y, c);
-                y++;
-                putpixel_screen(loopstart, y, c);
-                putpixel_screen(loopend, y, c);
-                y++;
-                putpixel_screen(loopstart, y, 0);
-                putpixel_screen(loopend, y, 0);
-                y++;
+                putpixel(screen, loopstart, y, 0); putpixel(screen, loopend, y, 0); y++;
+                putpixel(screen, loopstart, y, c); putpixel(screen, loopend, y, c); y++;
+                putpixel(screen, loopstart, y, c); putpixel(screen, loopend, y, c); y++;
+                putpixel(screen, loopstart, y, 0); putpixel(screen, loopend, y, 0); y++;
         } while (y < rect->y + rect->h);
 }
 
-static inline void _draw_sample_susloop(SDL_Rect * rect, song_sample * sample)
+static void _draw_sample_susloop(SDL_Rect * rect, song_sample * sample)
 {
         int loopstart, loopend, y;
         int c = ((status.flags & CLASSIC_MODE) ? 13 : 3);
@@ -159,25 +152,15 @@ static inline void _draw_sample_susloop(SDL_Rect * rect, song_sample * sample)
         y = rect->y;
         do {
                 /* unrolled once */
-                putpixel_screen(loopstart, y, c);
-                putpixel_screen(loopend, y, c);
-                y++;
-                putpixel_screen(loopstart, y, 0);
-                putpixel_screen(loopend, y, 0);
-                y++;
-                putpixel_screen(loopstart, y, c);
-                putpixel_screen(loopend, y, c);
-                y++;
-                putpixel_screen(loopstart, y, 0);
-                putpixel_screen(loopend, y, 0);
-                y++;
+                putpixel(screen, loopstart, y, c); putpixel(screen, loopend, y, c); y++;
+                putpixel(screen, loopstart, y, 0); putpixel(screen, loopend, y, 0); y++;
+                putpixel(screen, loopstart, y, c); putpixel(screen, loopend, y, c); y++;
+                putpixel(screen, loopstart, y, 0); putpixel(screen, loopend, y, 0); y++;
         } while (y < rect->y + rect->h);
 }
 
-/* --------------------------------------------------------------------- */
 /* this does the lines for playing samples */
-
-static inline void _draw_sample_play_marks(SDL_Rect * rect, song_sample * sample)
+static void _draw_sample_play_marks(SDL_Rect * rect, song_sample * sample)
 {
         int n, x, y, c;
         song_mix_channel *channel;
@@ -203,73 +186,66 @@ static inline void _draw_sample_play_marks(SDL_Rect * rect, song_sample * sample
                 y = rect->y;
                 do {
                         /* unrolled 8 times */
-                        putpixel_screen(x, y++, c);
-                        putpixel_screen(x, y++, c);
-                        putpixel_screen(x, y++, c);
-                        putpixel_screen(x, y++, c);
-                        putpixel_screen(x, y++, c);
-                        putpixel_screen(x, y++, c);
-                        putpixel_screen(x, y++, c);
-                        putpixel_screen(x, y++, c);
+                        putpixel(screen, x, y++, c); putpixel(screen, x, y++, c);
+                        putpixel(screen, x, y++, c); putpixel(screen, x, y++, c);
+                        putpixel(screen, x, y++, c); putpixel(screen, x, y++, c);
+                        putpixel(screen, x, y++, c); putpixel(screen, x, y++, c);
                 } while (y < rect->y + rect->h);
         }
-
+	
         SDL_UnlockAudio();
-}
-
-/* --------------------------------------------------------------------- */
-
-static inline void copy_cache(int number, SDL_Rect * rect)
-{
-        Uint8 *cacheptr = waveform_cache[number]->pixels;
-        int x, y;
-
-        /* TODO: optimize this a whole much */
-        SDL_LockSurface(screen);
-        y = rect->y;
-        do {
-                x = rect->x;
-                do {
-                        /* unrolled 8 times */
-                        putpixel_screen(x++, y, *cacheptr++);
-                        putpixel_screen(x++, y, *cacheptr++);
-                        putpixel_screen(x++, y, *cacheptr++);
-                        putpixel_screen(x++, y, *cacheptr++);
-                        putpixel_screen(x++, y, *cacheptr++);
-                        putpixel_screen(x++, y, *cacheptr++);
-                        putpixel_screen(x++, y, *cacheptr++);
-                        putpixel_screen(x++, y, *cacheptr++);
-                } while (x < rect->x + rect->w);
-                y++;
-        } while (y < rect->y + rect->h);
-        SDL_UnlockSurface(screen);
 }
 
 /* --------------------------------------------------------------------- */
 /* meat! */
 
 /* use sample #0 for the sample library */
-void draw_sample_data(SDL_Rect * rect, song_sample * sample, int number)
+void draw_sample_data(SDL_Rect * rect, song_sample *sample, int n)
 {
-        draw_fill_rect(rect, 0);
-
+	int need_draw = 0;
+	SDL_Surface *s;
+	
+	draw_fill_rect(screen, rect, 0);
+	
         if (!sample->length)
                 return;
-
-	/* TODO: if rect->w and rect->h don't match that of the cached
-	 * surface, destroy it and redraw. */
-        if (!waveform_cache[number]) {
-                waveform_cache[number] = SDL_CreateRGBSurface
-                        (SDL_SWSURFACE, rect->w, rect->h, 8, 0, 0, 0, 0);
-                /* the cache better not need locking, 'cuz I'm not doing
-                 * it. :) (it shouldn't, as it's a software surface) */
+	
+	/* if it already exists, but it's the wrong size, kill it */
+	if (waveform_cache[n] && (rect->w != waveform_cache[n]->w || rect->h != waveform_cache[n]->h))
+		clear_cached_waveform(n);
+	/* if it doesn't exist, create a new surface */
+	if (waveform_cache[n] == NULL) {
+		s = SDL_CreateRGBSurface
+			(SDL_SWSURFACE, rect->w, rect->h, screen->format->BitsPerPixel,
+			 screen->format->Rmask, screen->format->Gmask,
+			 screen->format->Bmask, screen->format->Amask);
+		/* Why is this needed? Isn't the surface using the display format already? */
+		waveform_cache[n] = SDL_DisplayFormat(s);
+		SDL_FreeSurface(s);
+		need_draw = 1;
+	}
+	
+	while (need_draw || SDL_BlitSurface(waveform_cache[n], NULL, screen, rect) == -2) {
+		need_draw = 0;
+		
+		draw_fill_rect(waveform_cache[n], NULL, 0);
+		
+		if (SDL_MUSTLOCK(waveform_cache[n])) {
+			while (SDL_LockSurface(waveform_cache[n]) < 0)
+				SDL_Delay(10);
+		}
+		
+		/* do the actual drawing */
                 if (sample->flags & SAMP_16_BIT)
-                        _draw_sample_data_16(waveform_cache[number], NULL, (signed short *) sample->data,
+                        _draw_sample_data_16(waveform_cache[n], NULL, (signed short *) sample->data,
                                              sample->length, 13);
                 else
-                        _draw_sample_data_8(waveform_cache[number], NULL, sample->data, sample->length, 13);
-        }
-        copy_cache(number, rect);
+                        _draw_sample_data_8(waveform_cache[n], NULL, sample->data, sample->length, 13);
+		
+		if (SDL_MUSTLOCK(waveform_cache[n]))
+			SDL_UnlockSurface(waveform_cache[n]);
+	}
+	
         SDL_LockSurface(screen);
         if ((status.flags & CLASSIC_MODE) == 0)
                 _draw_sample_play_marks(rect, sample);
@@ -283,6 +259,6 @@ void draw_sample_data(SDL_Rect * rect, song_sample * sample, int number)
 void draw_sample_data_rect(SDL_Rect *rect, signed short *data, int length)
 {
 	SDL_LockSurface(screen);
-	_draw_sample_data_16(screen, rect, data, length, palette_get(13));
+	_draw_sample_data_16(screen, rect, data, length, 13);
 	SDL_UnlockSurface(screen);
 }

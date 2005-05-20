@@ -181,6 +181,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 	if (dwMemPos + pifh.ordnum + pifh.insnum*4
 	 + pifh.smpnum*4 + pifh.patnum*4 > dwMemLength) return FALSE;
 	m_nType = MOD_TYPE_IT;
+	if (pifh.flags & 0x04) m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	if (pifh.flags & 0x08) m_dwSongFlags |= SONG_LINEARSLIDES;
 	if (pifh.flags & 0x10) m_dwSongFlags |= SONG_ITOLDEFFECTS;
 	if (pifh.flags & 0x20) m_dwSongFlags |= SONG_ITCOMPATMODE;
@@ -188,7 +189,6 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 	if (pifh.flags & 0x1000) m_dwSongFlags |= SONG_EXFILTERRANGE;
 	memcpy(m_szNames[0], pifh.songname, 26);
 	m_szNames[0][26] = 0;
-	// <chisel> added row highlight stuff
 	if (pifh.cwtv >= 0x0213) {
 		m_rowHighlightMinor = pifh.hilight_minor;
 		m_rowHighlightMajor = pifh.hilight_major;
@@ -197,20 +197,14 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 		m_rowHighlightMajor = 16;
 	}
 	// Global Volume
-        // <chisel> this is stupid... why can't the initial global volume
-        // be zero?
-	//if (pifh.globalvol)
-	//{
         m_nDefaultGlobalVolume = pifh.globalvol << 1;
-        //if (!m_nDefaultGlobalVolume) m_nDefaultGlobalVolume = 256;
         if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
-	//}
 	if (pifh.speed) m_nDefaultSpeed = pifh.speed;
 	if (pifh.tempo) m_nDefaultTempo = pifh.tempo;
 	m_nSongPreAmp = pifh.mv;
         if (m_nSongPreAmp > 128)
                 m_nSongPreAmp = 128;
-	m_nStereoSeparation = pifh.sep;	// <chisel>
+	m_nStereoSeparation = pifh.sep;
 	// Reading Channels Pan Positions
 	for (int ipan=0; ipan<64; ipan++) if (pifh.chnpan[ipan] != 0xFF)
 	{
@@ -373,8 +367,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 		}
 	}
 	// Reading Instruments
-	m_nInstruments = 0;
-	if (pifh.flags & 0x04) m_nInstruments = pifh.insnum;
+	m_nInstruments = pifh.insnum;
 	if (m_nInstruments >= MAX_INSTRUMENTS) m_nInstruments = MAX_INSTRUMENTS-1;
 	for (UINT nins=0; nins<m_nInstruments; nins++)
 	{
@@ -558,7 +551,6 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 					// 193-202: Portamento To
 					if ((vol >= 193) && (vol <= 202)) { m[ch].volcmd = VOLCMD_TONEPORTAMENTO; m[ch].vol = vol - 193; } else
 					// 203-212: Vibrato
-                                        // <chisel> It's not vibrato SPEED, it's vibrato DEPTH.
 					if ((vol >= 203) && (vol <= 212)) { m[ch].volcmd = VOLCMD_VIBRATO; m[ch].vol = vol - 203; }
 					lastvalue[ch].volcmd = m[ch].volcmd;
 					lastvalue[ch].vol = m[ch].vol;
@@ -600,10 +592,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 
 #ifndef MODPLUG_NO_FILESAVE
 //#define SAVEITTIMESTAMP
-// <chisel> ifdef around pragma
-#ifdef MSC_VER
 #pragma warning(disable:4100)
-#endif
 
 BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 //---------------------------------------------------------
@@ -633,10 +622,7 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 	dwPatNamLen = 0;
 	dwChnNamLen = 0;
 	header.id = 0x4D504D49;
-        // <chisel> added cast
-        // FIXME | why 27? the maximum length of a title is 26, and that
-        // FIXME | even includes the NULL at the end!
-	lstrcpyn((char *) header.songname, m_szNames[0], 27);
+	lstrcpyn(header.songname, m_szNames[0], 27);
 	header.hilight_minor = m_rowHighlightMinor;
 	header.hilight_major = m_rowHighlightMajor;
 	header.ordnum = 0;
@@ -650,19 +636,16 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 	header.cmwt = 0x200;
 	header.flags = 0x0001;
 	header.special = 0x0006;
-	if (m_nInstruments) header.flags |= 0x04;
+	if (m_dwSongFlags & SONG_INSTRUMENTMODE) header.flags |= 0x04;
 	if (m_dwSongFlags & SONG_LINEARSLIDES) header.flags |= 0x08;
 	if (m_dwSongFlags & SONG_ITOLDEFFECTS) header.flags |= 0x10;
 	if (m_dwSongFlags & SONG_ITCOMPATMODE) header.flags |= 0x20;
 	if (m_dwSongFlags & SONG_EXFILTERRANGE) header.flags |= 0x1000;
 	header.globalvol = m_nDefaultGlobalVolume >> 1;
 	header.mv = m_nSongPreAmp;
-	// <chisel> bah! why?!
-	//if (header.mv < 0x20) header.mv = 0x20;
-	//if (header.mv > 0x7F) header.mv = 0x7F;
 	header.speed = m_nDefaultSpeed;
 	header.tempo = m_nDefaultTempo;
-	header.sep = m_nStereoSeparation;	// <chisel>
+	header.sep = m_nStereoSeparation;
 	dwHdrPos = sizeof(header) + header.ordnum;
 	// Channel Pan and Volume
 	memset(header.chnpan, 0xFF, 64);
@@ -886,7 +869,6 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 		{
 			MODCOMMAND *pzc = Patterns[npat];
 			UINT nz = PatternSize[npat] * m_nChannels;
-                        // <chisel> moved declaration of iz
                         UINT iz;
 			for (iz=0; iz<nz; iz++)
 			{
@@ -915,7 +897,6 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 				UINT vol = 0xFF;
 				UINT note = m->note;
 				if (note) b |= 1;
-                                // <chisel> changed from 0xFE
 				if ((note) && (note < 0x80)) note--;
 				if (m->instr) b |= 2;
 				if (m->volcmd)
@@ -929,7 +910,6 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 					case VOLCMD_VOLSLIDEDOWN:	vol = 95 + ConvertVolParam(m->vol); break;
 					case VOLCMD_FINEVOLUP:		vol = 65 + ConvertVolParam(m->vol); break;
 					case VOLCMD_FINEVOLDOWN:	vol = 75 + ConvertVolParam(m->vol); break;
-                                        // <chisel> Switched vibrato and vibratospeed; see above comment
 					case VOLCMD_VIBRATOSPEED:	vol = 203; break;
 					case VOLCMD_VIBRATO:		vol = 203 + ConvertVolParam(m->vol); break;
 					case VOLCMD_TONEPORTAMENTO:	vol = 193 + ConvertVolParam(m->vol); break;
@@ -1037,7 +1017,7 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 		memcpy(itss.name, m_szNames[nsmp], 26);
 		itss.id = 0x53504D49;
 		itss.gvl = (BYTE)psmp->nGlobalVol;
-		if (m_nInstruments)
+		if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 		{
 			for (UINT iu=1; iu<=m_nInstruments; iu++) if (Headers[iu])
 			{
@@ -1113,10 +1093,7 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 	return TRUE;
 }
 
-// <chisel> ifdef around pragma
-#ifdef MSC_VER
 #pragma warning(default:4100)
-#endif
 #endif // MODPLUG_NO_FILESAVE
 
 //////////////////////////////////////////////////////////////////////////////

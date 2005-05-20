@@ -572,8 +572,6 @@ BOOL CSoundFile::ReadMed(const BYTE *lpStream, DWORD dwMemLength)
 	m_nChannels = 4;
 	m_nSamples = pmsh->numsamples;
 	if (m_nSamples > 63) m_nSamples = 63;
-	// <chisel> presumably use the stereo separation in the header.
-	// I have exactly one .med file, so this is totally untested.
 	m_nStereoSeparation = ((pmsh2->mix_stereosep < 0) ? -32 : 32) * pmsh2->mix_stereosep;
 	// Tempo
 	m_nDefaultTempo = 125;

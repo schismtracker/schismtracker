@@ -19,29 +19,26 @@
  */
 
 #include "headers.h"
-
-#include "title.h"
-#include "util.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
-/* TODO: proper artist/title handling; copyright field */
+/* TODO: copyright field? */
 
 /*
- * 00 | 50 53 49 44  00 02 00 7c  00 00 11 62  11 68 00 02 | PSID...|...b.h..
- * 10 | 00 01 00 00  00 00 53 6f  6c 69 74 61  78 20 28 45 | ......Solitax (E
- * 20 | 6e 64 20 53  65 71 75 65  6e 63 65 29  00 00 00 00 | nd Sequence)....
- * 30 | 00 00 00 00  00 00 4a 65  73 70 65 72  20 4f 6c 73 | ......Jesper Ols
- * 40 | 65 6e 00 00  00 00 00 00  00 00 00 00  00 00 00 00 | en..............
- * 50 | 00 00 00 00  00 00 31 39  39 30 2d 39  32 20 41 6d | ......1990-92 Am
- * 60 | 6f 6b 20 53  6f 75 6e 64  20 44 65 70  74 2e 00 00 | ok Sound Dept...
- * 70 | 00 00 00 00  00 00 00 00  00 00 00 00  62 11 4c 72 | ............b.Lr
- */
+00 | 50 53 49 44  00 02 00 7c  00 00 11 62  11 68 00 02 | PSID...|...b.h..
+10 | 00 01 00 00  00 00 53 6f  6c 69 74 61  78 20 28 45 | ......Solitax (E
+20 | 6e 64 20 53  65 71 75 65  6e 63 65 29  00 00 00 00 | nd Sequence)....
+30 | 00 00 00 00  00 00 4a 65  73 70 65 72  20 4f 6c 73 | ......Jesper Ols
+40 | 65 6e 00 00  00 00 00 00  00 00 00 00  00 00 00 00 | en..............
+50 | 00 00 00 00  00 00 31 39  39 30 2d 39  32 20 41 6d | ......1990-92 Am
+60 | 6f 6b 20 53  6f 75 6e 64  20 44 65 70  74 2e 00 00 | ok Sound Dept...
+70 | 00 00 00 00  00 00 00 00  00 00 00 00  62 11 4c 72 | ............b.Lr
+*/
 
-bool fmt_sid_read_info(const byte * data, size_t length, file_info * fi);
-bool fmt_sid_read_info(const byte * data, size_t length, file_info * fi)
+bool fmt_sid_read_info(dmoz_file_t *file, const byte *data, size_t length);
 {
-        char artist[33], title[33];
+        char buf[33];
         int n;
 
         /* i'm not sure what the upper bound on the size of a sid is, but
@@ -53,21 +50,16 @@ bool fmt_sid_read_info(const byte * data, size_t length, file_info * fi)
         if (!(length > 128 && memcmp(data, "PSID", 4) == 0))
                 return false;
 
-        memcpy(title, data + 22, 32);
-        memcpy(artist, data + 54, 32);
-        // memcpy(copyright, data + 86, 32);
-        title[32] = 0;
-        artist[32] = 0;
-        trim_string(title);
-        trim_string(artist);
+	memcpy(buf, data + 22, 32);
+	buf[32] = 0;
+	file->title = strdup(buf);
+	memcpy(buf, data + 54, 32);
+	buf[32] = 0;
+	file->artist = strdup(buf);
+	/* memcpy(buf, data + 86, 32); - copyright... */
 
-        n = asprintf(&fi->title, "%s / %s", artist, title);
-        if (n < 0) {
-                // gah!
-                return false;
-        }
-        fi->description = strdup("Commodore 64 SID");
-        fi->extension = strdup("sid");
-        fi->type = TYPE_OTHER;
+        file->description = "Commodore 64 SID";
+        /*file->extension = strdup("sid");*/
+        file->type = TYPE_SAMPLE_COMPR; /* FIXME: not even close. */
         return true;
 }

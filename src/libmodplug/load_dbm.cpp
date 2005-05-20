@@ -193,6 +193,7 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 				chunk_pos += sizeof(DBMINSTRUMENT);
 				m_nInstruments = iIns+1;
 			}
+			m_dwSongFlags |= SONG_INSTRUMENTMODE;
 		} else
 		// Volume Envelopes
 		if (chunk_id == DBM_ID_VENV)

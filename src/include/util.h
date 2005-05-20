@@ -96,24 +96,33 @@ but it at least works. perhaps some day I'll get around to writing a configure c
 } G_STMT_END
 #endif
 
+/* Path stuff that differs by platform */
+#ifdef WIN32
+# define DIR_SEPARATOR '\\'
+# define DIR_SEPARATOR_STR "\\"
+#else
+# define DIR_SEPARATOR '/'
+# define DIR_SEPARATOR_STR "/"
+#endif
+
 /* --------------------------------------------------------------------- */
-/* functions returning const char * use a static buffer; ones returning
- * char * malloc their return value (thus it needs free'd). */
+/* functions returning const char * use a static buffer; ones returning char * malloc their return value
+(thus it needs free'd)... except numtostr, get_time_string, and get_date_string, which return the buffer
+passed to them in the 'buf' parameter. */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* formatting */
-const char *format_time(int seconds);
-const char *format_date(time_t t);
-char *format_size(size_t size, bool power_of_two, const char *base_unit);
+/* for get_{time,date}_string, buf should be (at least) 27 chars; anything past that isn't used. */
+char *get_date_string(time_t when, char *buf);
+char *get_time_string(time_t when, char *buf);
 char *numtostr(int digits, int n, char *buf);
 
 /* string handling */
 const char *get_basename(const char *filename);
 const char *get_extension(const char *filename);
-char *clean_path(const char *path);
 char *get_parent_directory(const char *dirname);
 void trim_string(char *s);
 int str_break(const char *s, char c, char **first, char **second);
@@ -127,9 +136,7 @@ bool make_backup_file(const char *filename);
 long file_size(const char *filename);
 long file_size_fd(int fd);
 bool is_directory(const char *filename);
-bool has_subdirectories(const char *dirname);
-
-/* TODO: strreplace(str, from, to) */
+char *get_home_directory(void); /* should free() the resulting string */
 
 #ifdef __cplusplus
 }

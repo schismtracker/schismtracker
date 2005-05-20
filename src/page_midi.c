@@ -29,7 +29,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct item items_midi[1];
+static struct widget widgets_midi[1];
 
 /* --------------------------------------------------------------------- */
 
@@ -53,9 +53,9 @@ void midi_load_page(struct page *page)
         page->playback_update = NULL;
         page->handle_key = NULL;
         page->set_page = NULL;
-        page->total_items = 1;
-        page->items = items_midi;
+        page->total_widgets = 1;
+        page->widgets = widgets_midi;
         page->help_index = HELP_GLOBAL;
 
-	create_other(items_midi + 0, 0, midi_page_handle_key, midi_page_redraw);
+	create_other(widgets_midi + 0, 0, midi_page_handle_key, midi_page_redraw);
 }

@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <limits.h>
 
 /* Portability is a pain. */
@@ -41,6 +42,16 @@ char *strchr(), *strrchr();
 #  define memcpy(d, s, n) bcopy ((s), (d), (n))
 #  define memmove(d, s, n) bcopy ((s), (d), (n))
 # endif
+#endif
+
+#if !defined(HAVE_STRCASECMP) && defined(HAVE_STRICMP)
+# define strcasecmp stricmp
+#endif
+#if !defined(HAVE_STRNCASECMP) && defined(HAVE_STRNICMP)
+# define strncasecmp strnicmp
+#endif
+#ifndef HAVE_STRVERSCMP
+# define strverscmp strcasecmp
 #endif
 
 #if HAVE_UNISTD_H
@@ -139,4 +150,31 @@ static inline unsigned int ARM_get32(const void *data)
 #  define bswapLE16(x) (x)
 #  define bswapLE32(x) (x)
 # endif
+#endif
+
+/* Prototypes for replacement functions */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef HAVE_ASPRINTF
+int asprintf(char **strp, const char *fmt, ...);
+int vasprintf(char **strp, const char *fmt, va_list ap);
+#endif
+
+#ifndef HAVE_REALPATH
+char *realpath(const char *path, char *resolved_path);
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+
+/* Various other stuff */
+#ifdef WIN32
+# define mkdir(path,mode) mkdir(path)
+# define localtime_r(a,b) localtime(a) /* FIXME: not thread safe and stuff */
+# define setenv(a,b,c) /* stupid windows */
 #endif

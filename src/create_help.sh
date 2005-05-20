@@ -1,6 +1,6 @@
 #!/bin/sh
 # Schism Tracker - a cross-platform Impulse Tracker clone
-# copyright (c) 2003-2004 chisel <schism@chisel.cjb.net>
+# copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
 # URL: http://rigelseven.com/schism/
 #
 # This program is free software; you can redistribute it and/or modify
@@ -34,14 +34,11 @@ fi
 tempfile="$tempfile/create_help.$$"
 
 (for f in "$@"; do
-	cat "$srcdir/$f" || exit 1
-	head -c1 /dev/zero
+	cat "$srcdir/$f" "$srcdir/zero" || exit 1
 done) > "$tempfile"
 
 rm -f "$outfile"
 echo '/* this file should only be included by helptext.c */' > "$outfile"
-bzip2 -9 < "$tempfile" | "$bin2h" -n compressed_help_text -t 'static unsigned char' >> "$outfile" || exit 1
-echo "#define UNCOMPRESSED_HELP_TEXT_SIZE" `wc -c < "$tempfile"` >> \
-	"$outfile" || exit 1
+"$bin2h" -n help_text -t 'static unsigned char' "$tempfile" >> "$outfile" || exit 1
 
 rm -f "$tempfile" || exit 1

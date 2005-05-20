@@ -1,78 +1,81 @@
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-- [.blurb.]
+// Preface.
 
-This is actually the very first program I ever did with SDL. (Even the
-ITF editor came some amount of time afterward.) It's also the first time
-I used threads, the first I ever got autoconf to work properly ;), and my
-first ever program to have an actual structure.
+	This is it... it's a lot like IT. Except, not exactly like IT,
+	because it does things IT doesn't do, but IT does things it
+	doesn't do. Confused enough? Good.
 
-Considering all that, I'd say this came out pretty well.
+	If you're not familiar with Impulse Tracker I recommend
+	downloading it and browsing through its text files. Although
+	there are some discrepancies here and there, functionally almost
+	everything is the same as far as documentation goes.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-- [.features.]
+	If you ARE familiar with IT, and you find something that isn't
+	quite right, by all means, let me know! I'd like to make this as
+	faithful a copy as possible. (Obviously, some things are markedly
+	different, e.g. the layout of the load/save module screens, so
+	don't tell me about those, as I already know. ;)
 
-      - Based on Modplug, so there's support for *lots* of file types. If
-	you've ever wanted to load, say, a PTM file in Impulse Tracker,
-	now's your chance!
 
-      - Since the GUI is written with SDL, it's portable to about any
-	system that SDL can run on. (well, as long as Modplug also works
-	on it... otherwise there's not much point to the program, now is
-	there? :) Most notably, this means that those unfortunate enough
-	to have "upgraded" to WinXP can still keep the IT environment.
+// Things that aren't obvious.
 
-      - Much improved text entries. They work a bit more like Scream
-	Tracker's in that the edit point isn't always fixed to the length
-	of the text. Maybe this is what Jeffrey Lim had in mind when he
-	wrote that "the routines need to be rewritten" for his text
-	entries. :)
+	Text boxes are more like Scream Tracker than IT, in that the edit
+	point isn't always fixed to the length of the text. Maybe this is
+	what Jeffrey Lim had in mind when he wrote that "the routines
+	need to be rewritten" for his text entries. :)
 
-      - 12-channel and 64-channel pattern view modes. (IT has a
-	64-channel view on the info page, but no corresponding setup in
-	the pattern editor.)
-
-      - Thumbbar value editing with the arrow keys is a bit easier: in
+	Thumbbar value editing with the arrow keys is a bit easier: in
 	IT, shift-arrows changed the value by a multiple of 4, ctrl-arrow
 	changed it by 2, and that was about it. I've added alt-arrow to
 	change the value by 8; in addition, holding more than one
 	modifier multiplies them -- for example, alt-shift-right will
 	increase a value by 32 (8 x 4).
 
-      - Home/end work on the menus, help viewer, and message editor when
+	Home/end work on the menus, help viewer, and message editor when
 	it's in view mode.
 
-      - The greatest sample waveform display on earth. Well, maybe not,
-	but the loop points are marked in a different colour from the
-	sample data.
+	While the pattern editor doesn't work quite like Impulse Tracker,
+	it has new modes for 12 and 64 channel views. Hit Ctrl-Shift-<n>
+	(n being a number from 1 to 6) to switch the mode. (By the way,
+	if anyone would like to write a detailed description of how
+	Impulse Tracker's pattern "track views" actually work, I'd be
+	more than willing to implement it. I just never used those
+	features myself, so I have no idea how they function.)
 
-      - No free memory stats... I don't see much use for them, what with
-	the ability to allocate a 4gb swapfile. :) I've replaced that
-	space with visualisation displays: oscilloscope, VU meters, etc.
+	Hit Alt-Enter to switch between fullscreen and a window. As far
+	as I can tell, this only works with the X11 video driver.
 
-	(All right, so I have "fake" free memory stats now. Maybe I'll
-	think up something useful.)
+	For power users: if ~/.schism/startup-hook or ~/.schism/exit-hook
+	are executable, Schism Tracker will run them on startup and exit,
+	respectively. For example, you can have the startup hook switch
+	the video mode, turn up the volume on the sound card, kill the
+	screensaver, and load a different keyboard map, and then put it
+	all back the way it was on exit.
 
-      - The palette preset selector has been rewritten. Now you can save
+	The palette preset selector has been rewritten. Now you can save
 	a custom palette to any of 20 different slots. (In theory, at
 	least. At the moment, it's still all hard-coded.)
 
-      - Support for Impulse Tracker's font files... an ITF editor is
-	included as well, so you can make your own fonts, too! (Very
-	loosely based on ZaStaR's ITF.EXE, though not just a clone of it.
-	It's missing a few things, but it accomplishes more or less the
-	same task.)
+	Custom font support: copy your font to ~/.schism/fonts/font.cfg,
+	and Schism Tracker will do its best to use it. It supports
+	Impulse Tracker's ITF fonts (of course) and raw 8x8 pixel data
+	such as Linux console .fnt files. It also tries to squeeze down
+	8x16 fonts to 8x8, but usually they aren't very readable.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-- [.the.bottom.]
+	Alt-T on the sample list (which used to be "Save S3I sample" in
+	Impulse Tracker) brings up an export sample dialog with a list of
+	various sample formats.
 
-Copyright (c) 2003-2005 chisel. All rights reversed.
-See the file COPYING in the distribution for license details.
 
-Contact me for any reason, business or pleasure, rain or shine:
+// The bottom.
 
-      Website: http://rigelseven.com/schism/
-Support forum: http://rigelseven.com/cgi-bin/yabb/YaBB.pl?board=schism
-       E-mail: schism@chisel.cjb.net (no binary attachments, please)
-        Snail: haha, sure...
+	Copyright (c) 2003-2005 chisel. All rights reversed. See the file
+	COPYING in the distribution for license details.
+
+	Contact me for any reason, business or pleasure, rain or shine:
+
+	Website: http://rigelseven.com/schism/
+	Forum:   http://rigelseven.com/cgi-bin/yabb/YaBB.pl?board=schism
+	E-mail:  schism@chisel.cjb.net (no binary attachments, please)
+        Snail:   Haha... if you really want to, e-mail me first.
 
 This is the last line.

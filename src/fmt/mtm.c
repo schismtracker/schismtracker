@@ -19,22 +19,20 @@
  */
 
 #include "headers.h"
-
-#include "title.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_mtm_read_info(const byte * data, size_t length, file_info * fi);
-bool fmt_mtm_read_info(const byte * data, size_t length, file_info * fi)
+bool fmt_mtm_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         if (!(length > 24 && memcmp(data, "MTM", 3) == 0))
                 return false;
 
-        fi->description = strdup("MultiTracker Module");
-        fi->extension = strdup("mtm");
-        fi->title = calloc(21, sizeof(char));
-        memcpy(fi->title, data + 4, 20);
-        fi->title[20] = 0;
-        fi->type = TYPE_MOD;
+        file->description = "MultiTracker Module";
+        /*file->extension = strdup("mtm");*/
+        file->title = calloc(21, sizeof(char));
+        memcpy(file->title, data + 4, 20);
+        file->title[20] = 0;
+        file->type = TYPE_MODULE_MOD;
         return true;
 }

@@ -107,6 +107,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 	instruments = bswapLE16(*((WORD *)(lpStream+72)));
 	if (instruments >= MAX_INSTRUMENTS) instruments = MAX_INSTRUMENTS-1;
 	m_nInstruments = instruments;
+	m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	m_nSamples = 0;
 	memcpy(&xmflags, lpStream+74, 2);
 	xmflags = bswapLE16(xmflags);

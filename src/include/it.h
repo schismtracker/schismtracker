@@ -79,19 +79,15 @@ enum {
 	INVERTED_PALETTE = (1 << 11),
 };
 
-#define CHECK_INVERT(tl,br,n) G_STMT_START {\
-	if (status.flags & INVERTED_PALETTE) {\
-		n = tl;\
-		tl = br;\
-		br = n;\
-	}\
-} G_STMT_END
-
-
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
 enum tracker_time_display {
         TIME_OFF, TIME_PLAY_ELAPSED, TIME_PLAY_CLOCK, TIME_PLAY_OFF,
         TIME_ELAPSED, TIME_CLOCK, TIME_PLAYBACK
+};
+
+/* what should go in the little box on the top right? */
+enum tracker_vis_style {
+	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_SENTINEL
 };
 
 struct tracker_status {
@@ -101,6 +97,7 @@ struct tracker_status {
         int dialog_type;        /* one of the DIALOG_* constants above */
         int flags;
         enum tracker_time_display time_display;
+	enum tracker_vis_style vis_style;
         SDLKey last_keysym;
 };
 
@@ -108,31 +105,21 @@ struct tracker_status {
 struct log_line {
         int color;
         const char *text;
-        /* Generally, if the buffer for a string was malloc'ed, this
-         * flag should be set, so the log knows it's supposed to free it
-         * when it scrolls out of view. However if a screen is changing
-         * a text pointer after adding it to the log, this should *not*
-         * be set so that the "owner" page doesn't end up dereferencing
-         * an invalid pointer later on. (In this case, the page NEEDS to
-         * set the text pointer to some constant value, for example "",
-         * so that the log page doesn't dereference an invalid pointer
-         * on redraw. Kind of a hack, but this is not likely to come up,
-         * anyway.)
-         * 
-         * In short, set this if the string was malloc'ed, and don't try
-         * doing any weird stuff like modifying the text pointer after
-         * appending it to the message log unless you really understood
-         * that last paragraph. */
+	/* Set this flag if the text should be free'd when it is scrolled offscreen.
+	DON'T set it if the text is going to be modified after it is added to the log (e.g. for displaying
+	status information for module loaders like IT); in that case, change the text pointer to some
+	constant value such as "". Also don't try changing must_free after adding a line to the log, since
+	there's a chance that the line scrolled offscreen, and it'd never get free'd. (Also, ignore this
+	comment since there's currently no interface for manipulating individual lines in the log after
+	adding them.) */
         int must_free;
 };
 
-/* hahaaaa.... i just realized this takes 69 bytes */
 struct it_palette {
         char name[21];
         byte colors[16][3];
 };
 
-/* this is for note_trans */
 enum {
         NOTE_TRANS_CLEAR = (30),
         NOTE_TRANS_NOTE_CUT,
@@ -173,6 +160,7 @@ extern "C" {
 extern SDL_Surface *screen;
 extern struct tracker_status status;
 extern byte *font_data; /* ... which is 2048 bytes */
+extern SDL_Surface **charcache;
 extern struct it_palette palettes[];
 extern byte current_palette[16][3];
 extern int current_palette_index;
@@ -194,9 +182,11 @@ extern int show_default_volumes;	/* pattern-view.c */
 /* settings (config.c) */
 
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
+extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */
 extern char cfg_font[];
 extern int cfg_palette;
 
+void cfg_init_dir(void);
 void cfg_load(void);
 void cfg_save(void);
 void cfg_atexit_save(void); /* this only saves a handful of settings, not everything */
@@ -231,15 +221,10 @@ static inline char unicode_to_ascii(Uint16 unicode)
 /* drawing functions */
 
 /* h4rdc0r3 drawing - not really useful except in a few places.
- * note: these need to be called with the surface locked! */
+putpixel and draw_line need to be called with the surface locked. */
 void putpixel(SDL_Surface * surface, int x, int y, Uint32 c);
-/* always use putpixel_screen(...) instead of putpixel(screen, ...) */
-void putpixel_screen(int x, int y, Uint32 c);
-void draw_line(SDL_Surface * surface, int xs, int ys, int xe, int ye,
-               Uint32 c);
-/* same deal here as with putpixel_screen */
-void draw_line_screen(int xs, int ys, int xe, int ye, Uint32 c);
-void draw_fill_rect(SDL_Rect * rect, Uint32 c);
+void draw_line(SDL_Surface * surface, int xs, int ys, int xe, int ye, Uint32 c);
+void draw_fill_rect(SDL_Surface *surface, SDL_Rect * rect, Uint32 c);
 
 /* character drawing (in a separate header so they're easier to find) */
 #include "draw-char.h"
@@ -289,7 +274,6 @@ void main_song_changed_cb(void);
 int font_load(const char *filename);
 void palette_apply(void);
 void palette_load_preset(int palette_index);
-Uint32 palette_get(Uint32 c);
 
 /* mostly for the itf editor */
 int font_save(const char *filename);

@@ -56,15 +56,7 @@ inline LONG MulDiv (long a, long b, long c)
   return ((unsigned long long) a * (unsigned long long) b ) / c;
 }
 
-// <chisel> Commented this out.
-// For a tracker, ya kinda *need* to be able to save files :)
-//#define MODPLUG_NO_FILESAVE
-// ... and added NO_PACKING because gcc doesn't seem to like
-// the data types or something :P
-// (and I don't feel like trying to comprehend all the stupid
-// #define CHAR crap)
-#define NO_PACKING
-
+#define MODPLUG_NO_FILESAVE
 #define NO_AGC
 #define LPCTSTR LPCSTR
 #define lstrcpyn strncpy

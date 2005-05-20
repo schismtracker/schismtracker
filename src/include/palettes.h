@@ -245,7 +245,7 @@ struct it_palette palettes[] = {
                 // also no place for the yellow (63, 63, 0)
                 //         (note dots?)
         }},
-        {"", {{0}}}
+	{"", {{0}}}
 };
 /* *INDENT-ON* */
 

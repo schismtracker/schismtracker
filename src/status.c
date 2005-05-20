@@ -31,25 +31,19 @@
 /* --------------------------------------------------------------------- */
 
 static char *status_text = NULL;
-static struct timeval text_timeout;
+static Uint32 text_timeout;
 
 /* --------------------------------------------------------------------- */
 
 void status_text_flash(const char *format, ...)
 {
         va_list ap;
-
-        if (gettimeofday(&text_timeout, NULL) < 0) {
-                perror("gettimeofday");
-                return;
-        }
-
-        /* the message expires in one second */
-        text_timeout.tv_sec++;
-
+	
+	text_timeout = SDL_GetTicks() + 1000;
+	
         if (status_text)
                 free(status_text);
-
+	
         va_start(ap, format);
         vasprintf(&status_text, format, ap);
         va_end(ap);
@@ -65,26 +59,23 @@ static inline void draw_song_playing_status(void)
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        SDL_LockSurface(screen);
-
-        pos += draw_text_unlocked("Playing, Order: ", 2, 9, 0, 2);
-        pos += draw_text_unlocked(numtostr(0, song_get_current_order(), buf), pos, 9, 3, 2);
-        draw_char_unlocked('/', pos, 9, 0, 2);
+        pos += draw_text("Playing, Order: ", 2, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_current_order(), buf), pos, 9, 3, 2);
+        draw_char('/', pos, 9, 0, 2);
         pos++;
-        pos += draw_text_unlocked(numtostr(0, song_get_num_orders(), buf), pos, 9, 3, 2);
-        pos += draw_text_unlocked(", Pattern: ", pos, 9, 0, 2);
-        pos += draw_text_unlocked(numtostr(0, pattern, buf), pos, 9, 3, 2);
-        pos += draw_text_unlocked(", Row: ", pos, 9, 0, 2);
-        pos += draw_text_unlocked(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);
-        draw_char_unlocked('/', pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_num_orders(), buf), pos, 9, 3, 2);
+        pos += draw_text(", Pattern: ", pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
+        pos += draw_text(", Row: ", pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);
+        draw_char('/', pos, 9, 0, 2);
         pos++;
-        pos += draw_text_unlocked(numtostr(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
-        draw_char_unlocked(',', pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
+        draw_char(',', pos, 9, 0, 2);
         pos++;
-        draw_char_unlocked(0, pos, 9, 0, 2);
+        draw_char(0, pos, 9, 0, 2);
         pos++;
-        pos += draw_text_unlocked(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
-        SDL_UnlockSurface(screen);
+        pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
 	
         if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
                 draw_char(16, 61, 9, 1, 2);
@@ -96,21 +87,18 @@ static inline void draw_pattern_playing_status(void)
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        SDL_LockSurface(screen);
-
-        pos += draw_text_unlocked("Playing, Pattern: ", 2, 9, 0, 2);
-        pos += draw_text_unlocked(numtostr(0, pattern, buf), pos, 9, 3, 2);
-        pos += draw_text_unlocked(", Row: ", pos, 9, 0, 2);
-        pos += draw_text_unlocked(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);
-        draw_char_unlocked('/', pos, 9, 0, 2);
+        pos += draw_text("Playing, Pattern: ", 2, 9, 0, 2);
+        pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
+        pos += draw_text(", Row: ", pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);
+        draw_char('/', pos, 9, 0, 2);
         pos++;
-        pos += draw_text_unlocked(numtostr(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
-        draw_char_unlocked(',', pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
+        draw_char(',', pos, 9, 0, 2);
         pos++;
-        draw_char_unlocked(0, pos, 9, 0, 2);
+        draw_char(0, pos, 9, 0, 2);
         pos++;
-        pos += draw_text_unlocked(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
-        SDL_UnlockSurface(screen);
+        pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
 
         if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
                 draw_char(16, 61, 9, 1, 2);
@@ -121,27 +109,21 @@ static inline void draw_playing_channels(void)
 	int pos = 2;
 	char buf[16];
 	
-	SDL_LockSurface(screen);
-	
-	pos += draw_text_unlocked("Playing, ", 2, 9, 0, 2);
-	pos += draw_text_unlocked(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
-	draw_text_unlocked(" Channels", pos, 9, 0, 2);
-	
-	SDL_UnlockSurface(screen);
+	pos += draw_text("Playing, ", 2, 9, 0, 2);
+	pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
+	draw_text(" Channels", pos, 9, 0, 2);
 }
 
 void status_text_redraw(void)
 {
-        struct timeval tv;
-
-        gettimeofday(&tv, NULL);
+	Uint32 now = SDL_GetTicks();
 
         /* if there's a message set, and it's expired, clear it */
-        if (status_text && timercmp(&tv, &text_timeout, >)) {
+        if (status_text && now > text_timeout) {
                 free(status_text);
                 status_text = NULL;
         }
-
+	
         if (status_text) {
                 draw_text_len(status_text, 60, 2, 9, 0, 2);
         } else {

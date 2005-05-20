@@ -193,6 +193,19 @@ struct audio_settings {
 
 extern struct audio_settings audio_settings;
 
+
+/* for saving samples; see also enum sample_format_ids below */
+
+//typedef bool (*fmt_save_sample_func) (FILE *fp, song_sample *smp, char *title);
+struct sample_save_format {
+	const char *name;
+	const char *ext;
+	//fmt_save_sample_func *save_func;
+	bool (*save_func) (FILE *fp, song_sample *smp, char *title);
+};
+
+extern struct sample_save_format sample_save_formats[];
+
 /* --------------------------------------------------------------------- */
 /* some enums */
 
@@ -304,6 +317,15 @@ enum song_new_flags {
 	KEEP_ORDERLIST = 8,
 };
 
+/* used as indices to sample_save_formats[] */
+enum sample_save_format_ids {
+	SSMP_ITS = 0,
+	SSMP_AIFF = 1,
+	SSMP_AU = 2,
+	SSMP_RAW = 3,
+	SSMP_SENTINEL = 4,
+};
+
 /* --------------------------------------------------------------------- */
 
 #ifdef __cplusplus
@@ -317,16 +339,9 @@ int song_load(const char *file);
 int song_save(const char *file);
 
 void song_clear_sample(int n);
+void song_copy_sample(int n, song_sample *src, char *srcname);
 int song_load_sample(int n, const char *file);
-int song_save_sample_its(int n, const char *file);
-int song_save_sample_au(int n, const char *file);
-int song_save_sample_raw(int n, const char *file);
-
-/*
-void song_load_sample_library(const char *file);
-void song_free_sample_library(void);
-void song_load_sample_from_library(int from, int to);
-*/
+int song_save_sample(int n, const char *file, int format_id);
 
 const char *song_get_filename(void);
 const char *song_get_basename(void);
@@ -391,7 +406,7 @@ void song_set_compatible_gxx(int value);
 int song_has_linear_pitch_slides(void);
 void song_set_linear_pitch_slides(int value);
 int song_is_instrument_mode(void);
-/* void song_set_instrument_mode(int value); ??? */
+void song_set_instrument_mode(int value);
 
 /* this is called way early */
 void song_initialise(void);
@@ -429,6 +444,8 @@ int song_get_playing_pattern(void);
 int song_get_current_row(void);
 
 void song_set_current_order(int order);
+void song_set_next_order(int order);
+int song_toggle_orderlist_locked(void);
 
 int song_get_playing_channels(void);
 int song_get_max_channels(void);
@@ -464,6 +481,20 @@ song_mix_channel *song_get_mix_channel(int n);
  *         }
  * it's kind of ugly, but it'll do... i hope :) */
 int song_get_mix_state(unsigned long **channel_list);
+	
+/* --------------------------------------------------------------------- */
+/* rearranging stuff */
+
+/* exchange = only in list; swap = in list and song */
+void song_exchange_samples(int a, int b);
+void song_exchange_instruments(int a, int b);
+void song_swap_samples(int a, int b);
+void song_swap_instruments(int a, int b);
+
+void song_insert_sample_slot(int n);
+void song_remove_sample_slot(int n);
+void song_insert_instrument_slot(int n);
+void song_remove_instrument_slot(int n);
 
 /* --------------------------------------------------------------------- */
 /* misc. */

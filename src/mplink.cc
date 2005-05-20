@@ -21,11 +21,8 @@
 #include "mplink.h"
 #include "slurp.h"
 
-#include <string>
-
 #include <cstdio>
 #include <cstring>
-#include <cerrno>
 #include <cmath>
 
 // ------------------------------------------------------------------------
@@ -76,17 +73,28 @@ song_sample *song_get_sample(int n, char **name_ptr)
         return (song_sample *) mp->Ins + n;
 }
 
+static void _init_envelope(INSTRUMENTENVELOPE *e, int n)
+{
+	e->Ticks[0] = 0;
+	e->Values[0] = n;
+	e->Ticks[1] = 100;
+	e->Values[1] = n;
+	e->nNodes = 2;
+}
+
 song_instrument *song_get_instrument(int n, char **name_ptr)
 {
         if (n >= MAX_INSTRUMENTS)
                 return NULL;
-        
+
         // Make a new instrument if it doesn't exist.
-        // TODO | what about saving? sample mode? (how modplug stores
-        // TODO | and handles instrument data is really unclear to me.)
         if (!mp->Headers[n]) {
                 mp->Headers[n] = new INSTRUMENTHEADER;
 		memset(mp->Headers[n], 0, sizeof(INSTRUMENTHEADER));
+		
+		_init_envelope(&mp->Headers[n]->VolEnv, 64);
+		_init_envelope(&mp->Headers[n]->PanEnv, 32);
+		_init_envelope(&mp->Headers[n]->PitchEnv, 32);
         }
 	
         if (name_ptr)
@@ -148,8 +156,7 @@ void song_toggle_channel_mute(int channel)
         // i'm just going by the playing channel's state...
         // if the actual channel is muted but not the playing one,
         // tough luck :)
-        song_set_channel_mute(channel,
-                              (mp->Chn[channel].dwFlags & CHN_MUTE) == 0);
+        song_set_channel_mute(channel, (mp->Chn[channel].dwFlags & CHN_MUTE) == 0);
 }
 
 void song_handle_channel_solo(int channel)
@@ -159,18 +166,14 @@ void song_handle_channel_solo(int channel)
         if (solo_channel >= 0) {
                 if (channel == solo_channel) {
                         // undo the solo
-                        while (n) {
-                                n--;
+                        while (n-- > 0)
                                 song_set_channel_mute(n, channel_states[n]);
-                        }
                         solo_channel = -1;
                 } else {
                         // change the solo channel
                         // mute all channels...
-                        while (n) {
-                                n--;
+                        while (n-- > 0)
                                 song_set_channel_mute(n, 1);
-                        }
                         // then unmute the current channel
                         song_set_channel_mute(channel, 0);
                         solo_channel = channel;
@@ -178,10 +181,8 @@ void song_handle_channel_solo(int channel)
         } else {
                 // set the solo channel:
                 // save each channel's state, then mute it...
-                while (n) {
-                        n--;
-                        channel_states[n] =
-                                (song_get_channel(n)->flags & CHN_MUTE);
+                while (n-- > 0) {
+                        channel_states[n] = song_get_channel(n)->flags & CHN_MUTE;
                         song_set_channel_mute(n, 1);
                 }
                 // ... and then, unmute the current channel
@@ -284,22 +285,21 @@ mp->PatternAllocSize
 	Not used anywhere (yet). I'm planning on keeping track of space off the end of a pattern when it's
 	shrunk, so that making it longer again will restore it. (i.e., handle resizing the same way IT does)
 	I'll add this stuff in later; I have three handwritten pages detailing how to implement it. ;)
+get_current_pattern() = in pattern editor
+song_get_playing_pattern() = current pattern being played
 */
-void song_pattern_resize(int n, int rows)
+void song_pattern_resize(int pattern, int newsize)
 {
-	//printf("pattern resize requested: %3d, to %d rows\n", n, rows);
-	//printf("loaded in pattern editor: %3d\n", get_current_pattern());
-	//printf("current playback pattern: %3d\n", song_get_playing_pattern());
-
 	SDL_LockAudio();
-	MODCOMMAND *oldpat = mp->Patterns[n];
-	MODCOMMAND *newpat = CSoundFile::AllocatePattern(rows, 64); // this occasionally segfaults. wtfbbq?!!
-	if (oldpat) {
-		memcpy(newpat, oldpat, 64 * sizeof(MODCOMMAND) * mp->PatternSize[n]);
-		CSoundFile::FreePattern(oldpat);
+	int oldsize = mp->PatternSize[pattern];
+	MODCOMMAND *olddata = mp->Patterns[pattern];
+	MODCOMMAND *newdata = CSoundFile::AllocatePattern(newsize, 64);
+	if (olddata) {
+		memcpy(newdata, olddata, 64 * sizeof(MODCOMMAND) * MIN(newsize, oldsize));
+		CSoundFile::FreePattern(olddata);
 	}
-	mp->Patterns[n] = newpat;
-	mp->PatternSize[n] = rows;
+	mp->Patterns[pattern] = newdata;
+	mp->PatternSize[pattern] = newsize;
 	SDL_UnlockAudio();
 }
 
@@ -401,7 +401,18 @@ void song_set_linear_pitch_slides(int value)
 
 int song_is_instrument_mode()
 {
-        return !!mp->m_nInstruments;
+	return !!(mp->m_dwSongFlags & SONG_INSTRUMENTMODE);
+}
+
+void song_set_instrument_mode(int value)
+{
+	int oldvalue = song_is_instrument_mode();
+	
+	if (value && !oldvalue) {
+		mp->m_dwSongFlags |= SONG_INSTRUMENTMODE;
+	} else if (!value && oldvalue) {
+		mp->m_dwSongFlags &= ~SONG_INSTRUMENTMODE;
+	}
 }
 
 char *song_get_instrument_name(int n, char **name)
@@ -415,8 +426,168 @@ char *song_get_instrument_name(int n, char **name)
 
 int song_get_current_instrument()
 {
-        return (song_is_instrument_mode()
-                ? instrument_get_current()
-                : sample_get_current()
-                );
+        return (song_is_instrument_mode() ? instrument_get_current() : sample_get_current());
+}
+
+// ------------------------------------------------------------------------
+
+void song_exchange_samples(int a, int b)
+{
+	if (a == b)
+		return;
+	
+	song_sample tmp;
+	memcpy(&tmp, mp->Ins + a, sizeof(song_sample));
+	memcpy(mp->Ins + a, mp->Ins + b, sizeof(song_sample));
+	memcpy(mp->Ins + b, &tmp, sizeof(song_sample));
+	
+	char text[32];
+	memcpy(text, mp->m_szNames[a], sizeof(text));
+	memcpy(mp->m_szNames[a], mp->m_szNames[b], sizeof(text));
+	memcpy(mp->m_szNames[b], text, sizeof(text));
+	
+	clear_cached_waveform(a);
+	clear_cached_waveform(b);
+}
+
+void song_exchange_instruments(int a, int b)
+{
+	if (a == b)
+		return;
+	
+	INSTRUMENTHEADER *tmp;
+	
+	tmp = mp->Headers[a];
+	mp->Headers[a] = mp->Headers[b];
+	mp->Headers[b] = tmp;
+}
+
+// instrument, sample, whatever.
+static void _swap_instruments_in_patterns(int a, int b)
+{
+	for (int pat = 0; pat < MAX_PATTERNS; pat++) {
+		MODCOMMAND *note = mp->Patterns[pat];
+		if (note == NULL)
+			continue;
+		for (int n = 0; n < 64 * mp->PatternSize[pat]; n++, note++) {
+			if (note->instr == a)
+				note->instr = b;
+			else if (note->instr == b)
+				note->instr = a;
+		}
+	}
+}
+
+void song_swap_samples(int a, int b)
+{
+	if (a == b)
+		return;
+	
+	if (song_is_instrument_mode()) {
+		// ... or should this be done even in sample mode?
+		for (int n = 1; n < MAX_INSTRUMENTS; n++) {
+			INSTRUMENTHEADER *ins = mp->Headers[n];
+			
+			if (ins == NULL)
+				continue;
+			// sizeof(ins->Keyboard)...
+			for (int s = 0; s < 128; s++) {
+				if (ins->Keyboard[s] == a)
+					ins->Keyboard[s] = b;
+				else if (ins->Keyboard[s] == b)
+					ins->Keyboard[s] = a;
+			}
+		}
+	} else {
+		_swap_instruments_in_patterns(a, b);
+	}
+	song_exchange_samples(a, b);
+}
+
+void song_swap_instruments(int a, int b)
+{
+	if (a == b)
+		return;
+	
+	if (song_is_instrument_mode())
+		_swap_instruments_in_patterns(a, b);
+	song_exchange_instruments(a, b);
+}
+
+static void _adjust_instruments_in_patterns(int start, int delta)
+{
+	for (int pat = 0; pat < MAX_PATTERNS; pat++) {
+		MODCOMMAND *note = mp->Patterns[pat];
+		if (note == NULL)
+			continue;
+		for (int n = 0; n < 64 * mp->PatternSize[pat]; n++, note++) {
+			if (note->instr >= start)
+				note->instr = CLAMP(note->instr + delta, 0, MAX_SAMPLES - 1);
+		}
+	}
+}
+
+static void _adjust_samples_in_instruments(int start, int delta)
+{
+	for (int n = 1; n < MAX_INSTRUMENTS; n++) {
+		INSTRUMENTHEADER *ins = mp->Headers[n];
+		
+		if (ins == NULL)
+			continue;
+		// sizeof...
+		for (int s = 0; s < 128; s++) {
+			if (ins->Keyboard[s] >= start)
+				ins->Keyboard[s] = CLAMP(ins->Keyboard[s] + delta, 0, MAX_SAMPLES - 1);
+		}
+	}
+}
+
+void song_insert_sample_slot(int n)
+{
+	if (mp->Ins[99].pSample != NULL)
+		return;
+	
+	SDL_LockAudio();
+	
+	memmove(mp->Ins + n + 1, mp->Ins + n, (MAX_SAMPLES - n - 1) * sizeof(MODINSTRUMENT));
+	memmove(mp->m_szNames + n + 1, mp->m_szNames + n, (MAX_SAMPLES - n - 1) * 32);
+        memset(mp->Ins + n, 0, sizeof(MODINSTRUMENT));
+        memset(mp->m_szNames[n], 0, 32);
+
+	if (song_is_instrument_mode())
+		_adjust_samples_in_instruments(n, 1);
+	else
+		_adjust_instruments_in_patterns(n, 1);
+	
+	SDL_UnlockAudio();
+}
+
+void song_remove_sample_slot(int n)
+{
+	if (mp->Ins[n].pSample != NULL)
+		return;
+	
+	SDL_LockAudio();
+	
+	memmove(mp->Ins + n, mp->Ins + n + 1, (MAX_SAMPLES - n - 1) * sizeof(MODINSTRUMENT));
+	memmove(mp->m_szNames + n, mp->m_szNames + n + 1, (MAX_SAMPLES - n - 1) * 32);
+        memset(mp->Ins + MAX_SAMPLES - 1, 0, sizeof(MODINSTRUMENT));
+        memset(mp->m_szNames[MAX_SAMPLES - 1], 0, 32);
+
+	if (song_is_instrument_mode())
+		_adjust_samples_in_instruments(n, -1);
+	else
+		_adjust_instruments_in_patterns(n, -1);
+	
+	SDL_UnlockAudio();
+}
+
+void song_insert_instrument_slot(int n)
+{
+	status_text_flash("TODO: insert instrument slot (%d)", n);
+}
+
+void song_remove_instrument_slot(int n)
+{
+	status_text_flash("TODO: remove instrument slot (%d)", n);
 }

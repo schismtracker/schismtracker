@@ -30,7 +30,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct item items_help[2];
+static struct widget widgets_help[1];
 
 /* newline_pointers[0] = top of text
  * newline_pointers[1] = second line
@@ -81,14 +81,11 @@ static void help_redraw(void)
                                       pos, 7, 0);
                         break;
                 case '%':      /* separator line */
-                        SDL_LockSurface(screen);
                         for (x = 2; x < 78; x++)
-                                draw_char_unlocked(154, x, pos, 6, 0);
-                        SDL_UnlockSurface(screen);
+                                draw_char(154, x, pos, 6, 0);
                         break;
                 default:       /* ack! */
-                        fprintf(stderr, "unknown help line format %c\n",
-                                **ptr);
+                        fprintf(stderr, "unknown help line format %c\n", **ptr);
                         break;
                 }
                 ptr++;
@@ -212,8 +209,8 @@ void help_load_page(struct page *page)
         page->title = "Help";
         page->draw_const = help_draw_const;
         page->set_page = help_set_page;
-        page->total_items = 1;
-        page->items = items_help;
+        page->total_widgets = 1;
+        page->widgets = widgets_help;
 
-	create_other(items_help + 0, 0, help_handle_key, help_redraw);
+	create_other(widgets_help + 0, 0, help_handle_key, help_redraw);
 }

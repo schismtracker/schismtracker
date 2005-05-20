@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 	FILE *in = stdin, *out = stdout;
 	int cur_byte = 0;       /* in the file */
 	unsigned char *buf;     /* the line buffer */
-	char *filename;
+	char *filename = NULL;
 
 	handle_options(argc, argv);
 

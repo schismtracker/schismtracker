@@ -44,7 +44,8 @@ int current_palette_index;
 
 static Uint32 palette_lookup[16] = { 0 };
 
-#define VALUE_TRANSLATE(n) ((int) ((n) / 63.0 * 255.0 + 0.5))
+/* #define VALUE_TRANSLATE(n) ((int) ((n) / 63.0 * 255.0 + 0.5)) */
+#define VALUE_TRANSLATE(n) ((n) * 255 / 63)
 
 void palette_apply(void)
 {
@@ -68,7 +69,10 @@ void palette_apply(void)
 				 VALUE_TRANSLATE(current_palette[n][2]));
 		}
         }
-        
+
+	ccache_destroy();
+	clear_all_cached_waveforms();
+
         /* is the "light" border color actually darker than the "dark" color? */
 	if ((current_palette[1][0] + current_palette[1][1] + current_palette[1][2])
 	    > (current_palette[3][0] + current_palette[3][1] + current_palette[3][2])) {
@@ -87,7 +91,7 @@ void palette_load_preset(int palette_index)
 	memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
 }
 
-inline Uint32 palette_get(Uint32 c)
+static inline Uint32 palette_get(Uint32 c)
 {
 	return (screen->format->BytesPerPixel == 1) ? c : palette_lookup[c];
 }
@@ -95,20 +99,19 @@ inline Uint32 palette_get(Uint32 c)
 /* --------------------------------------------------------------------- */
 
 /*
-static void putpixel_8(SDL_Surface * surface, int x, int y,
-                       Uint32 c)
+static void putpixel_8(SDL_Surface * surface, int x, int y, Uint32 c)
 {
         *((Uint8 *) surface->pixels + y * surface->pitch + x) = c;
 }
 */
 
-inline void putpixel(SDL_Surface * surface, int x, int y, Uint32 pixel)
+void putpixel(SDL_Surface * surface, int x, int y, Uint32 color)
 {
-        int bpp = surface->format->BytesPerPixel;
+	int bpp = surface->format->BytesPerPixel;
+        int pixel = palette_get(color); /* meh */
         /* Here p is the address to the pixel we want to set */
-        Uint8 *p =
-                (Uint8 *) surface->pixels + y * surface->pitch + x * bpp;
-
+        Uint8 *p = (Uint8 *) surface->pixels + y * surface->pitch + x * bpp;
+	
         switch (bpp) {
         case 1:
                 *p = pixel;
@@ -136,16 +139,11 @@ inline void putpixel(SDL_Surface * surface, int x, int y, Uint32 pixel)
         }
 }
 
-void putpixel_screen(int x, int y, Uint32 pixel)
-{
-        putpixel(screen, x, y, palette_get(pixel));
-}
-
 /* --------------------------------------------------------------------- */
 
-inline void draw_fill_rect(SDL_Rect * rect, Uint32 color)
+void draw_fill_rect(SDL_Surface *surface, SDL_Rect * rect, Uint32 color)
 {
-	SDL_FillRect(screen, rect, palette_get(color));
+	SDL_FillRect(surface, rect, palette_get(color));
 }
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
@@ -153,14 +151,13 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
         SDL_Rect rect = {
                 xs << 3, ys << 3, (xe - xs + 1) << 3, (ye - ys + 1) << 3
         };
-        draw_fill_rect(&rect, color);
+	SDL_FillRect(screen, &rect, palette_get(color));
 }
 
 /* --------------------------------------------------------------------- */
 /* From SDLroids. Hacked a bit. */
 
-static inline void _draw_line_horiz(SDL_Surface * surface, int xs, int xe,
-                                    int y, Uint32 c)
+static inline void _draw_line_horiz(SDL_Surface * surface, int xs, int xe, int y, Uint32 c)
 {
         int x;
         if (xs < xe)
@@ -171,8 +168,7 @@ static inline void _draw_line_horiz(SDL_Surface * surface, int xs, int xe,
                         putpixel(surface, x, y, c);
 }
 
-static inline void _draw_line_vert(SDL_Surface * surface, int x, int ys,
-                                   int ye, Uint32 c)
+static inline void _draw_line_vert(SDL_Surface * surface, int x, int ys, int ye, Uint32 c)
 {
         int y;
         if (ys < ye)
@@ -184,8 +180,7 @@ static inline void _draw_line_vert(SDL_Surface * surface, int x, int ys,
 }
 
 /* Draw a line between two coordinates */
-void draw_line(SDL_Surface * surface, int xs, int ys, int xe, int ye,
-               Uint32 c)
+void draw_line(SDL_Surface * surface, int xs, int ys, int xe, int ye, Uint32 c)
 {
         int d, x, y, ax, ay, sx, sy, dx, dy;
 
@@ -237,9 +232,4 @@ void draw_line(SDL_Surface * surface, int xs, int ys, int xe, int ye,
                         d += ax;
                 }
         }
-}
-
-void draw_line_screen(int xs, int ys, int xe, int ye, Uint32 c)
-{
-        draw_line(screen, xs, ys, xe, ye, palette_get(c));
 }

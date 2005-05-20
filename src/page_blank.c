@@ -27,7 +27,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct item items_blank[1];
+static struct widget widgets_blank[1];
 
 /* --------------------------------------------------------------------- */
 
@@ -45,9 +45,9 @@ static void blank_page_redraw(void)
 void blank_load_page(struct page *page)
 {
         page->title = "";
-        page->total_items = 1;
-        page->items = items_blank;
+        page->total_widgets = 1;
+        page->widgets = widgets_blank;
         page->help_index = HELP_GLOBAL;
 
-	create_other(items_blank + 0, 0, blank_page_handle_key, blank_page_redraw);
+	create_other(widgets_blank + 0, 0, blank_page_handle_key, blank_page_redraw);
 }

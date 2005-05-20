@@ -25,8 +25,7 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
-
-#include "title.h"
+#include "dmoz.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -36,38 +35,18 @@
 #include <ctype.h>
 #include <errno.h>
 
-/* FIXME: do this somewhere else */
-#ifndef HAVE_STRVERSCMP
-# define strverscmp strcasecmp
-#endif
-
 /* --------------------------------------------------------------------- */
 /* the locals */
 
-static const int type_colors[] = { 7, 3, 5, 6, 2, 4, 7 };
+static struct widget widgets_loadmodule[5];
+static struct widget widgets_savemodule[5];
 
-static struct item items_loadmodule[5];
-static struct item items_savemodule[5];
-
-static char **dirs = NULL;
-struct file_list_data {
-        char *filename;
-        time_t timestamp;
-        size_t filesize;
-        /* if title == NULL, the rest of the fields need to be filled in */
-        char *title;
-        const char *type_name;
-        int color;
-        int loadable;
-};
-static struct file_list_data **files = NULL;
-
+static int top_file = 0, top_dir = 0;
+static int current_file = 0, current_dir = 0;
 static time_t directory_mtime;
+dmoz_filelist_t flist;
+dmoz_dirlist_t dlist;
 
-static int top_file = 0, current_file = 0, num_files = 0, allocated_size_files = 0;
-static int top_dir = 0, current_dir = 0, num_dirs = 0, allocated_size_dirs = 0;
-
-#define BLOCK_SIZE 256			/* this is probably plenty */
 
 /* filename_entry is updated whenever the selected file is changed. (this differs from impulse tracker, which
 accepts wildcards in the filename box... i'm not doing this partly because filenames could be longer than the
@@ -99,12 +78,10 @@ static void handle_file_entered_L(char *ptr)
 		/* set_page(PAGE_LOG); */
 		set_page(PAGE_BLANK);
 	}
-	free(ptr);
 }
 
-/* FIXME: this is *really* ugly. dialogs need an extra data pointer to pass to callback functions. */
 
-static void do_save_song_really(char *ptr)
+static void do_save_song(void *ptr)
 {
 	set_page(PAGE_LOG);
 	if (song_save(ptr)) {
@@ -113,24 +90,13 @@ static void do_save_song_really(char *ptr)
 	}
 }
 
-static char *save_filename;
-static void do_save_song(void)
-{
-	do_save_song_really(save_filename);
-	free(save_filename);
-}
-static void do_not_save_song(void)
-{
-	free(save_filename);
-}
-
 static void handle_file_entered_S(char *ptr)
 {
 	struct stat buf;
 	
 	if (stat(ptr, &buf) < 0) {
 		if (errno == ENOENT) {
-			do_save_song_really(ptr);
+			do_save_song(ptr);
 		} else {
 			log_appendf(4, "%s: %s", ptr, strerror(errno));
 		}
@@ -139,191 +105,64 @@ static void handle_file_entered_S(char *ptr)
 			/* maybe change the current directory in this case? */
 			log_appendf(4, "%s: Is a directory", ptr);
 		} else if (S_ISREG(buf.st_mode)) {
-			save_filename = ptr;
-			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song, do_not_save_song, 1);
-			return; /* don't free the pointer here */
+			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song, free, 1, ptr);
 		} else {
 			/* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
-			dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0);
+			dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0, NULL);
 		}
 	}
-	free(ptr);
 }
 
 
 static void (*handle_file_entered)(char *);
 
 /* --------------------------------------------------------------------- */
-/* for all of these, buf should be (at least) 27 chars. anything past that isn't used.
- * FIXME: also defined in page_loadsample.c; should be moved elsewhere */
 
-static char *get_date_string(time_t when, char *buf)
+/* get a color index from a dmoz_file_t 'type' field */
+static inline int get_type_color(int type)
 {
-        struct tm tm;
-        char month[16] = "";
-
-        /* plugh */
-        strftime(month, 16, "%B", localtime_r(&when, &tm));
-        month[15] = 0;
-        snprintf(buf, 27, "%s %d, %d", month, tm.tm_mday,
-                 1900 + tm.tm_year);
-
-        return buf;
+	/* 7 unknown
+	   3 it
+	   5 s3m
+	   6 xm
+	   2 mod
+	   4 other
+	   7 sample */
+	if (type == TYPE_MODULE_MOD)
+		return 2;
+	if (type == TYPE_MODULE_S3M)
+		return 5;
+	if (type == TYPE_MODULE_XM)
+		return 6;
+	if (type == TYPE_MODULE_IT)
+		return 3;
+	if (type == TYPE_SAMPLE_COMPR)
+		return 4; /* mp3/ogg 'sample'... i think */
+	return 7;
 }
 
-static char *get_time_string(time_t when, char *buf)
-{
-        struct tm tm;
-
-        localtime_r(&when, &tm);
-        snprintf(buf, 27, "%d:%02d%s", tm.tm_hour % 12 ? : 12, tm.tm_min,
-                 tm.tm_hour < 12 ? "am" : "pm");
-        return buf;
-}
-
-/* --------------------------------------------------------------------- */
 
 static void clear_directory(void)
 {
-        int n;
-	
-        if (files) {
-		for (n = 0; n < num_files; n++) {
-			free(files[n]->filename);
-			free(files[n]->title);
-		}
-		
-		free(files);
-		files = NULL;
-	}
-
-	if (dirs) {
-		for (n = 0; n < num_dirs; n++) {
-			free(dirs[n]);
-		}
-		free(dirs);
-		dirs = NULL;
-	}
-	
+	dmoz_free(&flist, &dlist);
 	top_file = top_dir = 0;
 	current_file = current_dir = 0;
-        num_files = num_dirs = 0;
-	allocated_size_files = allocated_size_dirs = 0;
-}
-
-static void allocate_more_files(void)
-{
-	if (allocated_size_files == 0) {
-		allocated_size_files = BLOCK_SIZE;
-		files = malloc(BLOCK_SIZE * sizeof(struct file_list_data *));
-	} else {
-		/* Double the size. */
-		allocated_size_files *= 2;
-		files = realloc(files, allocated_size_files * sizeof(struct file_list_data *));
-	}
-}
-
-static void allocate_more_dirs(void)
-{
-	if (allocated_size_dirs == 0) {
-		allocated_size_dirs = BLOCK_SIZE;
-		dirs = malloc(BLOCK_SIZE * sizeof(char *));
-	} else {
-		/* Double the size. */
-		allocated_size_dirs *= 2;
-		dirs = realloc(dirs, allocated_size_dirs * sizeof(char *));
-	}
-}
-
-/* --------------------------------------------------------------------------------------------------------- */
-
-static void add_file_to_list(char *filename, time_t timestamp, size_t filesize)
-{
-	struct file_list_data *fi = malloc(sizeof(struct file_list_data));
-	fi->filename = filename;
-	fi->timestamp = timestamp;
-	fi->filesize = filesize;
-	fi->title = NULL;
-	
-	if (num_files >= allocated_size_files)
-		allocate_more_files();
-	files[num_files++] = fi;
-}
-
-static void add_dir_to_list(char *filename)
-{
-	if (num_dirs >= allocated_size_dirs)
-		allocate_more_dirs();
-	dirs[num_dirs++] = filename;
-}
-
-static int qsort_compare_file(const void *_a, const void *_b)
-{
-	const struct file_list_data *a = *(const struct file_list_data **) _a;
-	const struct file_list_data *b = *(const struct file_list_data **) _b;
-	
-	return strverscmp(a->filename, b->filename);
-}
-
-static int qsort_compare_dir(const void *_a, const void *_b)
-{
-	const char *a = *(const char **) _a;
-	const char *b = *(const char **) _b;
-	
-	/* put "/" and ".." first */
-	if (!strcmp(a, "/"))
-		return -1;
-	else if (!strcmp(b, "/"))
-		return 1;
-	else if (!strcmp(a, ".."))
-		return -1;
-	else if (!strcmp(b, ".."))
-		return 1;
-	else
-		return strverscmp(a, b);
 }
 
 static void read_directory(void)
 {
-	DIR *dir;
-        struct dirent *ent;
-	char *ptr;
-        struct stat st;
+	struct stat st;
 	
-        clear_directory();
+	clear_directory();
 	
-	if (stat(cfg_dir_modules, &st) < 0 || (dir = opendir(cfg_dir_modules)) == NULL) {
+	if (stat(cfg_dir_modules, &st) < 0)
+		directory_mtime = 0;
+	else
+		directory_mtime = st.st_mtime;
+	/* if the stat call failed, this will probably break as well, but
+	at the very least, it'll add an entry for the root directory. */
+	if (dmoz_read(cfg_dir_modules, &flist, &dlist) < 0)
 		perror(cfg_dir_modules);
-		/* add "/" so it's still possible to do something */
-		add_dir_to_list(strdup("/"));
-		return;
-	}
-	
-	directory_mtime = st.st_mtime;
-	
-	while ((ent = readdir(dir)) != NULL) {
-		if (ent->d_name[0] == '.' || ent->d_name[_D_EXACT_NAMLEN(ent) -1] == '~')
-			continue;
-		
-		asprintf(&ptr, "%s/%s", cfg_dir_modules, ent->d_name);
-		if (stat(ptr, &st) < 0) {
-			/* doesn't exist? */
-			perror(ptr);
-		} else if (S_ISDIR(st.st_mode)) {
-			add_dir_to_list(strdup(ent->d_name));
-		} else if (S_ISREG(st.st_mode)) {
-			add_file_to_list(strdup(ent->d_name), st.st_mtime, st.st_size);
-		}
-		free(ptr);
-	}
-
-	closedir(dir);
-	
-	add_dir_to_list(strdup("/"));
-	add_dir_to_list(strdup(".."));
-	
-	qsort(files, num_files, sizeof(struct file_list_data *), qsort_compare_file);
-	qsort(dirs, num_dirs, sizeof(char *), qsort_compare_dir);
 }
 
 /* --------------------------------------------------------------------- */
@@ -349,15 +188,16 @@ static void dir_list_reposition(void)
 static void update_filename_entry(void)
 {
 	if (status.current_page == PAGE_LOAD_MODULE) {
-	        items_loadmodule[2].textentry.firstchar = items_loadmodule[2].textentry.cursor_pos = 0;
+	        widgets_loadmodule[2].textentry.firstchar = widgets_loadmodule[2].textentry.cursor_pos = 0;
 	} else {
-	        items_savemodule[2].textentry.firstchar = items_savemodule[2].textentry.cursor_pos = 0;
+	        widgets_savemodule[2].textentry.firstchar = widgets_savemodule[2].textentry.cursor_pos = 0;
         }
-	if (files)
-	        strncpy(filename_entry, files[current_file]->filename,
-	                NAME_MAX);
-	else
+	if (flist.num_files > 0) {
+	        strncpy(filename_entry, flist.files[current_file]->base, NAME_MAX);
+		filename_entry[NAME_MAX] = 0;
+	} else {
 	        filename_entry[0] = 0;
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -372,7 +212,7 @@ static void search_redraw(void)
         draw_text_len(search_text + search_first_char, 25, 51, 37, 5, 0);
 
         /* draw the cursor if it's on the dir/file list */
-        if (ACTIVE_PAGE.selected_item == 0 || ACTIVE_PAGE.selected_item == 1) {
+        if (ACTIVE_PAGE.selected_widget == 0 || ACTIVE_PAGE.selected_widget == 1) {
                 draw_char(0, 51 + search_text_length - search_first_char, 37, 6, 6);
         }
 }
@@ -389,10 +229,9 @@ static void search_update(void)
 	
         /* go through the file/dir list (whatever one is selected) and
          * find the first entry matching the text */
-        if (*selected_item == 0) {
-                for (n = 0; n < num_files; n++) {
-                        /* FIXME: strncasecmp isn't very portable... */
-                        if (strncasecmp(files[n]->filename, search_text, search_text_length) == 0) {
+        if (*selected_widget == 0) {
+                for (n = 0; n < flist.num_files; n++) {
+                        if (strncasecmp(flist.files[n]->base, search_text, search_text_length) == 0) {
                                 found_something = 1;
                                 current_file = n;
                                 file_list_reposition();
@@ -400,8 +239,8 @@ static void search_update(void)
                         }
                 }
         } else {
-                for (n = 0; n < num_dirs; n++) {
-                        if (strncasecmp(dirs[n], search_text, search_text_length) == 0) {
+                for (n = 0; n < dlist.num_dirs; n++) {
+                        if (strncasecmp(dlist.dirs[n]->base, search_text, search_text_length) == 0) {
                                 found_something = 1;
                                 current_dir = n;
                                 dir_list_reposition();
@@ -451,22 +290,45 @@ static void search_text_clear(void)
 }
 
 /* --------------------------------------------------------------------- */
+
+/* return: 1 = success, 0 = failure
+TODO: provide some sort of feedback if something went wrong. */
+static int change_dir(const char *dir)
+{
+	char *ptr = dmoz_path_normal(dir);
+
+	if (!ptr)
+		return 0;
+
+	strncpy(cfg_dir_modules, ptr, PATH_MAX);
+	cfg_dir_modules[PATH_MAX] = 0;
+	strcpy(dirname_entry, cfg_dir_modules);
+	free(ptr);
+
+	/* probably not all of this is needed everywhere */
+	search_text_clear();
+	read_directory();
+        update_filename_entry();
+	top_file = current_file = top_dir = current_dir = 0;
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
 /* unfortunately, there's not enough room with this layout for labels by
  * the search box and file information. :( */
 
 static void load_module_draw_const(void)
 {
-        SDL_LockSurface(screen);
-        draw_text_unlocked("Filename", 4, 46, 0, 2);
-        draw_text_unlocked("Directory", 3, 47, 0, 2);
-        draw_char_unlocked(0, 51, 37, 0, 6);
-        draw_box_unlocked(2, 12, 47, 44, BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(49, 12, 68, 34, BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(50, 36, 77, 38, BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(50, 39, 77, 44, BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(12, 45, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-        SDL_UnlockSurface(screen);
-
+        draw_text("Filename", 4, 46, 0, 2);
+        draw_text("Directory", 3, 47, 0, 2);
+        draw_char(0, 51, 37, 0, 6);
+        draw_box(2, 12, 47, 44, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(49, 12, 68, 34, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(50, 36, 77, 38, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(50, 39, 77, 44, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(12, 45, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
+	
         draw_fill_chars(51, 37, 76, 37, 0);
         draw_fill_chars(13, 46, 76, 47, 0);
 }
@@ -478,80 +340,45 @@ static void save_module_draw_const(void)
 
 /* --------------------------------------------------------------------- */
 
-static void fill_file_info(struct file_list_data *file)
-{
-        char *ptr;
-        file_info *fi;
-        int ret;
-	
-        asprintf(&ptr, "%s/%s", cfg_dir_modules, file->filename);
-
-	ret = file_info_get(ptr, NULL, &fi);
-        switch (ret) {
-        case FINF_SUCCESS:
-                file->title = fi->title;
-                file->type_name = fi->description;
-                file->color = type_colors[fi->type];
-                file->loadable = !(fi->type == TYPE_OTHER || fi->type == TYPE_SAMPLE);
-                free(fi->extension);
-                free(fi);
-                free(ptr);
-                return;
-	case FINF_UNSUPPORTED:
-		file->type_name = strdup("Unknown module format");
-		break;
-	case FINF_EMPTY:
-		file->type_name = strdup("Empty file");
-		break;
-	case FINF_ERRNO:
-                file->type_name = strdup(strerror(errno));
-                break;
-        default:
-        	log_appendf(4, "file_info_get returned unhandled status (%d)", ret);
-        	file->type_name = strdup("Unknown file error");
-        	break;
-        }
-	
-	file->title = strdup("");
-	file->color = 7;
-	free(ptr);
-}
-
 static void file_list_draw(void)
 {
         int n, pos;
         int fg1, fg2, bg;
         char buf[32];
+        dmoz_file_t *file;
 
         draw_fill_chars(3, 13, 46, 43, 0);
 
-        if (files) {
-                for (n = top_file, pos = 13; n < num_files && pos < 44; n++, pos++) {
-                        if (!files[n]->title)
-                                fill_file_info(files[n]);
+        if (flist.num_files > 0) {
+                for (n = top_file, pos = 13; n < flist.num_files && pos < 44; n++, pos++) {
+                        file = flist.files[n];
 
-                        if (n == current_file && ACTIVE_PAGE.selected_item == 0) {
+                        if ((file->type & TYPE_EXT_DATA_MASK) == 0)
+                                dmoz_fill_ext_data(file);
+
+                        if (n == current_file && ACTIVE_PAGE.selected_widget == 0) {
                                 fg1 = fg2 = 0;
                                 bg = 3;
                         } else {
-                                fg1 = files[n]->color;
-                                fg2 = files[n]->loadable ? 3 : 7;
+                                fg1 = get_type_color(file->type);
+                                fg2 = (file->type & TYPE_MODULE_MASK) ? 3 : 7;
                                 bg = 0;
                         }
 
-                        draw_text_len(files[n]->filename, 18, 3, pos, fg1, bg);
+                        draw_text_len(file->base, 18, 3, pos, fg1, bg);
                         draw_char(168, 21, pos, 2, bg);
-                        draw_text_len(files[n]->title, 25, 22, pos, fg2, bg);
+                        draw_text_len(file->title, 25, 22, pos, fg2, bg);
                 }
 
                 /* info for the current file */
-		draw_text_len(files[current_file]->type_name, 26, 51, 40, 5, 0);
-                sprintf(buf, "%09d", files[current_file]->filesize);
+                file = flist.files[current_file];
+		draw_text_len(file->description, 26, 51, 40, 5, 0);
+                sprintf(buf, "%09d", file->filesize);
                 draw_text_len(buf, 26, 51, 41, 5, 0);
-                draw_text_len(get_date_string(files[current_file]->timestamp, buf), 26, 51, 42, 5, 0);
-                draw_text_len(get_time_string(files[current_file]->timestamp, buf), 26, 51, 43, 5, 0);
+                draw_text_len(get_date_string(file->timestamp, buf), 26, 51, 42, 5, 0);
+                draw_text_len(get_time_string(file->timestamp, buf), 26, 51, 43, 5, 0);
         } else {
-                if (ACTIVE_PAGE.selected_item == 0) {
+                if (ACTIVE_PAGE.selected_widget == 0) {
                         draw_text("No files.", 3, 13, 0, 3);
                         draw_fill_chars(12, 13, 46, 13, 3);
                         draw_char(168, 21, 13, 2, 3);
@@ -563,26 +390,20 @@ static void file_list_draw(void)
                 draw_fill_chars(51, 40, 76, 43, 0);
         }
 
-        if (pos < 44) {
-                SDL_LockSurface(screen);
-                while (pos < 44)
-                        draw_char_unlocked(168, 21, pos++, 2, 0);
-                SDL_UnlockSurface(screen);
-        }
+	while (pos < 44)
+		draw_char(168, 21, pos++, 2, 0);
 	
         /* bleh */
         search_redraw();
 }
 
-static void do_delete_file(void)
+static void do_delete_file(UNUSED void *data)
 {
-	char *ptr;
 	int old_top_file, old_current_file, old_top_dir, old_current_dir;
+	char *ptr = flist.files[current_file]->path;
 	
-	asprintf(&ptr, "%s/%s", cfg_dir_modules, files[current_file]->filename);
 	/* would be neat to send it to the trash can if there is one */
 	unlink(ptr);
-	free(ptr);
 	
 	/* remember the list positions */
 	old_top_file = top_file;
@@ -590,8 +411,8 @@ static void do_delete_file(void)
 	old_top_dir = top_dir;
 	old_current_dir = current_dir;
 	
-	read_directory();
 	search_text_clear();
+	read_directory();
 	
 	/* put the list positions back */
 	top_file = old_top_file;
@@ -599,15 +420,14 @@ static void do_delete_file(void)
 	top_dir = old_top_dir;
 	current_dir = old_current_dir;
 	/* edge case: if this was the last file, move the cursor up */
-	if (current_file >= num_files)
-		current_file = num_files - 1;
+	if (current_file >= flist.num_files)
+		current_file = flist.num_files - 1;
 	file_list_reposition();
 }
 
 static int file_list_handle_key(SDL_keysym * k)
 {
         int new_file = current_file;
-        char *ptr;
 
         switch (k->sym) {
         case SDLK_UP:
@@ -626,21 +446,19 @@ static int file_list_handle_key(SDL_keysym * k)
                 new_file = 0;
                 break;
         case SDLK_END:
-                new_file = num_files - 1;
+                new_file = flist.num_files - 1;
                 break;
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
                 search_text_clear();
-
-                if (!files)
-                        return 1;
-                asprintf(&ptr, "%s/%s", cfg_dir_modules, files[current_file]->filename);
-		handle_file_entered(ptr); /* ... which frees it */
-                return 1;
+		
+		if (flist.num_files > 0) {
+			handle_file_entered(flist.files[current_file]->path);
+		}
+		return 1;
         case SDLK_DELETE:
-                if (!files)
-                        return 1;
-		dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1);
+		if (flist.num_files > 0)
+			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
         case SDLK_BACKSPACE:
                 if (k->mod & KMOD_CTRL)
@@ -652,7 +470,7 @@ static int file_list_handle_key(SDL_keysym * k)
                 return search_text_add_char(k->unicode);
         }
 
-        new_file = CLAMP(new_file, 0, num_files - 1);
+        new_file = CLAMP(new_file, 0, flist.num_files - 1);
         if (new_file != current_file) {
                 current_file = new_file;
                 file_list_reposition();
@@ -671,12 +489,12 @@ static void dir_list_draw(void)
         draw_fill_chars(50, 13, 67, 33, 0);
 
         for (n = top_dir, pos = 13; pos < 34; n++, pos++) {
-                if (n >= num_dirs)
+                if (n >= dlist.num_dirs)
                         break;
-                if (n == current_dir && ACTIVE_PAGE.selected_item == 1)
-                        draw_text_len(dirs[n], 18, 50, pos, 0, 3);
+                if (n == current_dir && ACTIVE_PAGE.selected_widget == 1)
+                        draw_text_len(dlist.dirs[n]->base, 18, 50, pos, 0, 3);
                 else
-                        draw_text_len(dirs[n], 18, 50, pos, 5, 0);
+                        draw_text_len(dlist.dirs[n]->base, 18, 50, pos, 5, 0);
         }
 
         /* bleh */
@@ -686,8 +504,6 @@ static void dir_list_draw(void)
 static int dir_list_handle_key(SDL_keysym * k)
 {
         int new_dir = current_dir;
-        char *ptr;
-        char buf[PATH_MAX + 1];
 
         switch (k->sym) {
         case SDLK_UP:
@@ -706,47 +522,27 @@ static int dir_list_handle_key(SDL_keysym * k)
                 new_dir = 0;
                 break;
         case SDLK_END:
-                new_dir = num_dirs - 1;
+                new_dir = dlist.num_dirs - 1;
                 break;
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
-                search_text_clear();
-
-                if (current_dir == 0) {
-                        ptr = strdup("/");
-                } else {
-                        asprintf(&ptr, "%s/%s", cfg_dir_modules, dirs[current_dir]);
-                }
-                if (realpath(ptr, buf) == NULL) {
-                        perror(ptr);
-                } else {
-                        strcpy(cfg_dir_modules, buf);
-                        strcpy(dirname_entry, buf);
-
-                        read_directory();
-
-                        top_file = current_file = 0;
-                        top_dir = current_dir = 0;
-
-                        update_filename_entry();
-                        if (files)
-                                *selected_item = 0;
-                        status.flags |= NEED_UPDATE;
-                }
-                free(ptr);
+		change_dir(dlist.dirs[current_dir]->path);
+		
+		if (flist.num_files > 0)
+			*selected_widget = 0;
+		status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_BACKSPACE:
-                if (k->mod & KMOD_CTRL) {
+                if (k->mod & KMOD_CTRL)
                         search_text_clear();
-                } else {
+                else
                         search_text_delete_char();
-                }
                 return 1;
         default:
                 return search_text_add_char(k->unicode);
         }
 
-        new_dir = CLAMP(new_dir, 0, num_dirs - 1);
+        new_dir = CLAMP(new_dir, 0, dlist.num_dirs - 1);
         if (new_dir != current_dir) {
                 current_dir = new_dir;
                 dir_list_reposition();
@@ -756,35 +552,32 @@ static int dir_list_handle_key(SDL_keysym * k)
 }
 
 /* --------------------------------------------------------------------- */
+/* these handle when enter is pressed on the file/directory textboxes at the bottom of the screen. */
 
 static void filename_entered(void)
 {
-        char *ptr;
-
+	char *ptr;
+	
         if (filename_entry[0] == '/') {
                 /* hmm... */
-                ptr = strdup(filename_entry);
+                handle_file_entered(filename_entry);
         } else {
-                asprintf(&ptr, "%s/%s", cfg_dir_modules, filename_entry);
+		ptr = dmoz_path_concat(cfg_dir_modules, filename_entry);
+		handle_file_entered(ptr);
+		free(ptr);
         }
-	handle_file_entered(ptr); /* ... which frees it */
 }
 
 /* strangely similar to the dir list's code :) */
 static void dirname_entered(void)
 {
-        char buf[PATH_MAX + 1];
+	if (!change_dir(dirname_entry)) {
+		/* FIXME: need to give some kind of feedback here */
+		return;
+	}
 
-        if (realpath(dirname_entry, buf) == NULL) {
-                perror(dirname_entry);
-        } else {
-                strcpy(cfg_dir_modules, buf);
-                strcpy(dirname_entry, buf);
-                top_file = current_file = top_dir = current_dir = 0;
-                read_directory();
-                *selected_item = files ? 0 : 1;
-                status.flags |= NEED_UPDATE;
-        }
+	*selected_widget = (flist.num_files > 0) ? 0 : 1;
+	status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -793,24 +586,20 @@ static void dirname_entered(void)
 static int update_directory(void)
 {
         struct stat st;
-        
-	/* if we have a list, the directory didn't change,
-	 * and the mtime is the same, we're set */
-	if (files != NULL
+
+	/* if we have a list, the directory didn't change, and the mtime is the same, we're set. */
+	if (dlist.num_dirs > 0 /* gluh */
 	    && (status.flags & DIR_MODULES_CHANGED) == 0
-	    && stat(cfg_dir_modules, &st) == 0 
+	    && stat(cfg_dir_modules, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return 0;
 	}
-	
-        strcpy(dirname_entry, cfg_dir_modules);
-        update_filename_entry();
+
+	change_dir(cfg_dir_modules);
+	/* TODO: what if it failed? */
 
         status.flags &= ~DIR_MODULES_CHANGED;
 
-        read_directory();
-	search_text_clear();
-	
 	return 1;
 }
 
@@ -820,7 +609,7 @@ static void load_module_set_page(void)
 {
 	handle_file_entered = handle_file_entered_L;
         if (update_directory())
-		pages[PAGE_LOAD_MODULE].selected_item = files ? 0 : 1;
+		pages[PAGE_LOAD_MODULE].selected_widget = (flist.num_files > 0) ? 0 : 1;
 }
 
 void load_module_load_page(struct page *page)
@@ -828,20 +617,18 @@ void load_module_load_page(struct page *page)
         page->title = "Load Module (F9)";
         page->draw_const = load_module_draw_const;
         page->set_page = load_module_set_page;
-        page->total_items = 4;
-        page->items = items_loadmodule;
+        page->total_widgets = 4;
+        page->widgets = widgets_loadmodule;
         page->help_index = HELP_GLOBAL;
 	
-	create_other(items_loadmodule + 0, 1, file_list_handle_key, file_list_draw);
-	items_loadmodule[0].next.left = items_loadmodule[0].next.right = 1;
-	create_other(items_loadmodule + 1, 2, dir_list_handle_key, dir_list_draw);
+	create_other(widgets_loadmodule + 0, 1, file_list_handle_key, file_list_draw);
+	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
+	create_other(widgets_loadmodule + 1, 2, dir_list_handle_key, dir_list_draw);
 
-        create_textentry(items_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL,
-                         filename_entry, NAME_MAX);
-	items_loadmodule[2].activate = filename_entered;
-        create_textentry(items_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL,
-                         dirname_entry, PATH_MAX);
-	items_loadmodule[3].activate = dirname_entered;
+        create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
+	widgets_loadmodule[2].activate = filename_entered;
+        create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
+	widgets_loadmodule[3].activate = dirname_entered;
 }
 
 /* --------------------------------------------------------------------- */
@@ -853,7 +640,7 @@ static void save_module_set_page(void)
 	update_directory();
 	/* impulse tracker always resets these; so will i */
 	filename_entry[0] = 0;
-	pages[PAGE_SAVE_MODULE].selected_item = 2;
+	pages[PAGE_SAVE_MODULE].selected_widget = 2;
 }
 
 void save_module_load_page(struct page *page)
@@ -861,17 +648,17 @@ void save_module_load_page(struct page *page)
         page->title = "Save Module (F10)";
         page->draw_const = save_module_draw_const;
         page->set_page = save_module_set_page;
-        page->total_items = 4;
-        page->items = items_savemodule;
+        page->total_widgets = 4;
+        page->widgets = widgets_savemodule;
         page->help_index = HELP_GLOBAL;
-        page->selected_item = 2;
+        page->selected_widget = 2;
 	
-	create_other(items_savemodule + 0, 1, file_list_handle_key, file_list_draw);
-	items_savemodule[0].next.left = items_savemodule[0].next.right = 1;
-	create_other(items_savemodule + 1, 2, dir_list_handle_key, dir_list_draw);
+	create_other(widgets_savemodule + 0, 1, file_list_handle_key, file_list_draw);
+	widgets_savemodule[0].next.left = widgets_savemodule[0].next.right = 1;
+	create_other(widgets_savemodule + 1, 2, dir_list_handle_key, dir_list_draw);
 
-        create_textentry(items_savemodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
-	items_savemodule[2].activate = filename_entered;
-        create_textentry(items_savemodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
-	items_savemodule[3].activate = dirname_entered;
+        create_textentry(widgets_savemodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
+	widgets_savemodule[2].activate = filename_entered;
+        create_textentry(widgets_savemodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
+	widgets_savemodule[3].activate = dirname_entered;
 }

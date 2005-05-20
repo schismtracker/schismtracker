@@ -15,7 +15,6 @@
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
 
 // VU-Meter
-// <chisel> decay was 4 originally
 #define VUMETER_DECAY		16
 
 // SNDMIX: These are global flags for playback control
@@ -270,23 +269,11 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 		// Update Channel Data
 		if (!m_nBufferCount)
 		{
-#ifndef MODPLUG_FASTSOUNDLIB
-			if (m_dwSongFlags & SONG_FADINGSONG)
-			{
+			m_nBufferCount = lRead;
+			if (!ReadNote()) {
 				m_dwSongFlags |= SONG_ENDREACHED;
+				if (lRead == lMax) goto MixDone;
 				m_nBufferCount = lRead;
-			} else
-#endif
-			if (!ReadNote())
-			{
-#ifndef MODPLUG_FASTSOUNDLIB
-				if (!FadeSong(FADESONGDELAY))
-#endif
-				{
-					m_dwSongFlags |= SONG_ENDREACHED;
-					if (lRead == lMax) goto MixDone;
-					m_nBufferCount = lRead;
-				}
 			}
 		}
 		lCount = m_nBufferCount;
@@ -299,18 +286,18 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 #endif
 		// Resetting sound buffer
 		X86_StereoFill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
-		// <chisel> Hrm. Why is ProcessPlugins only called for mono mixing?
 		if (gnChannels >= 2)
 		{
 			lSampleCount *= 2;
 			m_nMixStat += CreateStereoMix(lCount);
+			if (nMaxPlugins) ProcessPlugins(lCount);
 			ProcessStereoDSP(lCount);
 		} else
 		{
 			m_nMixStat += CreateStereoMix(lCount);
 			if (nMaxPlugins) ProcessPlugins(lCount);
-			ProcessStereoDSP(lCount);
 			X86_MonoFromStereo(MixSoundBuffer, lCount);
+			ProcessMonoDSP(lCount);
 		}
 		nStat++;
 #ifndef NO_AGC
@@ -353,8 +340,6 @@ MixDone:
 /////////////////////////////////////////////////////////////////////////////
 // Handles navigation/effects
 
-#define PV(v) printf("%s = %d\n", #v, v)
-
 BOOL CSoundFile::ProcessRow()
 //---------------------------
 {
@@ -364,68 +349,41 @@ BOOL CSoundFile::ProcessRow()
 		m_nFrameDelay = 0;
 		m_nTickCount = 0;
 		m_nRow = m_nNextRow;
+		
 		// Reset Pattern Loop Effect
-		if (m_nCurrentPattern != m_nNextPattern) m_nCurrentPattern = m_nNextPattern;
-		// Check if pattern is valid
-		if (!(m_dwSongFlags & SONG_PATTERNLOOP))
-		{
-			m_nPattern = (m_nCurrentPattern < MAX_ORDERS) ? Order[m_nCurrentPattern] : 0xFF;
-			if ((m_nPattern < MAX_PATTERNS) && (!Patterns[m_nPattern])) m_nPattern = 0xFE;
-			while (m_nPattern >= MAX_PATTERNS)
+		if (m_nCurrentPattern != m_nNextPattern) {
+			if (m_nLockedPattern < MAX_ORDERS) {
+				m_nCurrentPattern = m_nLockedPattern;
+				if (!(m_dwSongFlags & SONG_ORDERLOCKED))
+					m_nLockedPattern = MAX_ORDERS;
+			} else {
+				m_nCurrentPattern = m_nNextPattern;
+			}
+			
+			// Check if pattern is valid
+			if (!(m_dwSongFlags & SONG_PATTERNLOOP))
 			{
-				// End of song ?
-				if ((m_nPattern == 0xFF) || (m_nCurrentPattern >= MAX_ORDERS))
-				{
-                                        if (!m_nRepeatCount) return FALSE;
-                                        /* <chisel> ifdef'ed out. Impulse Tracker doesn't reset anything
-                                         * when the song loops, so neither will I.
-                                         * (this should probably be #ifdef somethingsomething) */
-#if 0
-					if (!m_nRestartPos)
-					{
-						m_nMusicSpeed = m_nDefaultSpeed;
-						m_nMusicTempo = m_nDefaultTempo;
-						m_nGlobalVolume = m_nDefaultGlobalVolume;
-						for (UINT i=0; i<MAX_CHANNELS; i++)
-						{
-							Chn[i].dwFlags |= CHN_NOTEFADE | CHN_KEYOFF;
-							Chn[i].nFadeOutVol = 0;
-							if (i < m_nChannels)
-							{
-								Chn[i].nGlobalVol = ChnSettings[i].nVolume;
-								Chn[i].nVolume = ChnSettings[i].nVolume;
-								Chn[i].nPan = ChnSettings[i].nPan;
-								Chn[i].nPanSwing = Chn[i].nVolSwing = 0;
-								Chn[i].nOldVolParam = 0;
-								Chn[i].nOldOffset = 0;
-								Chn[i].nOldHiOffset = 0;
-								Chn[i].nPortamentoDest = 0;
-								if (!Chn[i].nLength)
-								{
-									Chn[i].dwFlags = ChnSettings[i].dwFlags;
-									Chn[i].nLoopStart = 0;
-									Chn[i].nLoopEnd = 0;
-									Chn[i].pHeader = NULL;
-									Chn[i].pSample = NULL;
-									Chn[i].pInstrument = NULL;
-								}
-							}
-						}
-					}
-#endif
-                                        if (m_nRepeatCount > 0) m_nRepeatCount--;
-					m_nCurrentPattern = m_nRestartPos;
-					//m_nRow = 0; <chisel> this makes firelight's backward.s3m play wrong
-					if ((Order[m_nCurrentPattern] >= MAX_PATTERNS)
-					    || (!Patterns[Order[m_nCurrentPattern]]))
-						return FALSE;
-				} else {
-					m_nCurrentPattern++;
-				}
 				m_nPattern = (m_nCurrentPattern < MAX_ORDERS) ? Order[m_nCurrentPattern] : 0xFF;
 				if ((m_nPattern < MAX_PATTERNS) && (!Patterns[m_nPattern])) m_nPattern = 0xFE;
+				while (m_nPattern >= MAX_PATTERNS)
+				{
+					// End of song ?
+					if ((m_nPattern == 0xFF) || (m_nCurrentPattern >= MAX_ORDERS))
+					{
+						if (!m_nRepeatCount) return FALSE;
+						if (m_nRepeatCount > 0) m_nRepeatCount--;
+						m_nCurrentPattern = m_nRestartPos;
+						if ((Order[m_nCurrentPattern] >= MAX_PATTERNS)
+						    || (!Patterns[Order[m_nCurrentPattern]]))
+							return FALSE;
+					} else {
+						m_nCurrentPattern++;
+					}
+					m_nPattern = (m_nCurrentPattern < MAX_ORDERS) ? Order[m_nCurrentPattern] : 0xFF;
+					if ((m_nPattern < MAX_PATTERNS) && (!Patterns[m_nPattern])) m_nPattern = 0xFE;
+				}
+				m_nNextPattern = m_nCurrentPattern;
 			}
-			m_nNextPattern = m_nCurrentPattern;
 		}
 #ifdef MODPLUG_TRACKER
 		if (m_dwSongFlags & SONG_STEP)
@@ -514,15 +472,13 @@ BOOL CSoundFile::ReadNote()
 	DWORD nMasterVol;
 	{
 		int nchn32 = (m_nChannels < 32) ? m_nChannels : 31;
-		if ((m_nType & MOD_TYPE_IT) && (m_nInstruments) && (nchn32 < 6)) nchn32 = 6;
+		if ((m_nType & MOD_TYPE_IT) && (m_dwSongFlags & SONG_INSTRUMENTMODE) && (nchn32 < 6)) nchn32 = 6;
 		int realmastervol = m_nMasterVolume;
 		if (realmastervol > 0x80)
 		{
 			realmastervol = 0x80 + ((realmastervol - 0x80) * (nchn32+4)) / 16;
 		}
 		UINT attenuation = (gdwSoundSetup & SNDMIX_AGC) ? PreAmpAGCTable[nchn32>>1] : PreAmpTable[nchn32>>1];
-		// <chisel> don't add 0x10 to m_nSongPreAmp, so when the mixing volume is
-		// set to zero, it actually *is* zero, like anyone would expect it to be.
 		DWORD mastervol = (realmastervol * (m_nSongPreAmp)) >> 6;
 		if (mastervol > 0x200) mastervol = 0x200;
 		if ((m_dwSongFlags & SONG_GLOBALFADE) && (m_nGlobalFadeMaxSamples))
@@ -613,7 +569,7 @@ BOOL CSoundFile::ReadNote()
 			if (vol > 0x100) vol = 0x100;
 			vol <<= 6;
 			// Process Envelopes
-			if (pChn->pHeader)
+			if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
 			{
 				INSTRUMENTHEADER *penv = pChn->pHeader;
 				// Volume Envelope
@@ -769,7 +725,8 @@ BOOL CSoundFile::ReadNote()
 			}
 
 			// Pitch/Filter Envelope
-			if ((pChn->pHeader) && (pChn->dwFlags & CHN_PITCHENV) && (pChn->pHeader->PitchEnv.nNodes))
+			if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && (pChn->pHeader)
+			    && (pChn->dwFlags & CHN_PITCHENV) && (pChn->pHeader->PitchEnv.nNodes))
 			{
 				INSTRUMENTHEADER *penv = pChn->pHeader;
 				int envpos = pChn->nPitchEnvPosition;
@@ -996,7 +953,7 @@ BOOL CSoundFile::ReadNote()
 		}
 
 		// Increment envelope position
-		if (pChn->pHeader)
+		if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
 		{
 			INSTRUMENTHEADER *penv = pChn->pHeader;
 			// Volume Envelope
@@ -1194,12 +1151,8 @@ BOOL CSoundFile::ReadNote()
 			pChn->nNewLeftVol >>= MIXING_ATTENUATION;
 			pChn->nRightRamp = pChn->nLeftRamp = 0;
 			// Dolby Pro-Logic Surround
-                        
-			// <chisel> surround flag added
-			if ((pChn->dwFlags & CHN_SURROUND)
-                            && (gnChannels <= 2)
-			    && (gdwSoundSetup & SNDMIX_NOSURROUND) == 0)
-                                pChn->nNewLeftVol = -pChn->nNewLeftVol;
+			if ((pChn->dwFlags & CHN_SURROUND) && (gnChannels <= 2) && (gdwSoundSetup & SNDMIX_NOSURROUND) == 0)
+				pChn->nNewLeftVol = -pChn->nNewLeftVol;
 			// Checking Ping-Pong Loops
 			if (pChn->dwFlags & CHN_PINGPONGFLAG) pChn->nInc = -pChn->nInc;
 			// Setting up volume ramp

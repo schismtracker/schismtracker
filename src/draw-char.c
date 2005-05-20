@@ -21,11 +21,25 @@
 #include "headers.h"
 
 #include "it.h"
+#include "dmoz.h" /* for dmoz_path_concat */
 #include "default-font.h"
 
 #include <SDL.h>
 #include <assert.h>
 #include <errno.h>
+
+/* preprocessor stuff */
+
+#define CHECK_INVERT(tl,br,n) G_STMT_START {\
+	if (status.flags & INVERTED_PALETTE) {\
+		n = tl;\
+		tl = br;\
+		br = n;\
+	}\
+} G_STMT_END
+
+#define CACHE_INDEX(ch, fg, bg) \
+	((((ch) & 0xff) << 8) | ((fg) << 4) | (bg))
 
 /* --------------------------------------------------------------------- */
 /* statics */
@@ -37,10 +51,76 @@ static byte font_normal[2048];
 static byte font_alt[2048];
 static byte font_half_data[1024];
 
+/* 256 characters * 16 foreground colors * 16 background colors = 65536
+Only a couple hundred of these will actually be used... */
+static SDL_Surface *cache_normal[65536] = { NULL };
+static SDL_Surface *cache_alt[65536] = { NULL };
+
 /* --------------------------------------------------------------------- */
 /* globals */
 
-byte *font_data = font_normal;
+byte *font_data = font_normal; /* this only needs to be global for itf */
+static SDL_Surface **charcache = cache_normal;
+
+/* int font_width = 8, font_height = 8; */
+
+/* --------------------------------------------------------------------- */
+/* character cache functions */
+
+static inline void ccache_destroy_index(SDL_Surface **cache, int n)
+{
+	if (cache[n]) {
+		SDL_FreeSurface(cache[n]);
+		cache[n] = NULL;
+	}
+}
+
+/* this should probably lock something */
+void ccache_destroy_char(int ch)
+{
+	int n;
+	
+	ch <<= 8;
+	for (n = 0; n < 256; n++) {
+		ccache_destroy_index(cache_normal, ch | n);
+		ccache_destroy_index(cache_alt, ch | n);
+	}
+}
+
+/* used by the palette editor */
+void ccache_destroy_color(int c)
+{
+	int n, ch, i;
+
+	c &= 0xf; /* just to be safe */
+
+	for (ch = 0; ch < 256; ch++) {
+		for (n = 0; n < 16; n++) {
+			i = CACHE_INDEX(ch, c, n);
+			ccache_destroy_index(cache_normal, i);
+			ccache_destroy_index(cache_alt, i);
+			if (c == n)
+				continue;
+			i = CACHE_INDEX(ch, n, c);
+			ccache_destroy_index(cache_normal, i);
+			ccache_destroy_index(cache_alt, i);
+		}
+	}
+}
+
+static void ccache_destroy_cache(SDL_Surface **cache)
+{
+	int n;
+
+	for (n = 0; n < 65536; n++)
+		ccache_destroy_index(cache, n);
+}
+
+void ccache_destroy(void)
+{
+	ccache_destroy_cache(cache_normal);
+	ccache_destroy_cache(cache_alt);
+}
 
 /* --------------------------------------------------------------------- */
 /* ITF loader */
@@ -81,30 +161,33 @@ static inline void make_half_width_middot(void)
 }
 
 /* just the non-itf chars */
-inline void font_reset_lower(void)
+void font_reset_lower(void)
 {
         memcpy(font_normal, font_default_lower, 1024);
+        ccache_destroy_cache(cache_normal);
 }
 
 /* just the itf chars */
-inline void font_reset_upper(void)
+void font_reset_upper(void)
 {
         memcpy(font_normal + 1024, font_default_upper_itf, 1024);
         make_half_width_middot();
+        ccache_destroy_cache(cache_normal);
 }
 
 /* all together now! */
 void font_reset(void)
 {
-        font_reset_lower();
-        font_reset_upper();
+        memcpy(font_normal, font_default_lower, 1024);
+        memcpy(font_normal + 1024, font_default_upper_itf, 1024);
+        make_half_width_middot();
+        ccache_destroy_cache(cache_normal);
 }
 
 /* or kill the upper chars as well */
 void font_reset_bios(void)
 {
         font_reset_lower();
-
         memcpy(font_normal + 1024, font_default_upper_alt, 1024);
         make_half_width_middot();
 }
@@ -131,16 +214,16 @@ int font_load(const char *filename)
         FILE *fp;
         long pos;
         byte data[4];
-        char font_file[PATH_MAX + 1];
+        char *font_dir, *font_file;
 
-        strncpy(font_file, getenv("HOME") ? : "/", PATH_MAX);
-        strncat(font_file, "/.schism/fonts/", PATH_MAX);
-        strncat(font_file, filename, PATH_MAX);
-        font_file[PATH_MAX] = 0;
+        font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
+        font_file = dmoz_path_concat(font_dir, filename);
+        free(font_dir);
 
         fp = fopen(font_file, "rb");
         if (fp == NULL) {
                 SDL_SetError("%s: %s", font_file, strerror(errno));
+		free(font_file);
                 return -1;
         }
 
@@ -152,15 +235,15 @@ int font_load(const char *filename)
                 fseek(fp, -2, SEEK_CUR);
                 if (fread(data, 2, 1, fp) < 1) {
                         SDL_SetError("%s: %s", font_file,
-                                     feof(fp) ? "Unexpected EOF on read" :
-                                     strerror(errno));
+                                     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
                         fclose(fp);
+			free(font_file);
                         return -1;
                 }
                 if (data[1] != 0x2 || data[0] != 0x12) {
-                        SDL_SetError("%s: Unsupported ITF file version",
-                                     font_file);
+                        SDL_SetError("%s: Unsupported ITF file version", font_file);
                         fclose(fp);
+			free(font_file);
                         return -1;
                 }
                 rewind(fp);
@@ -170,33 +253,38 @@ int font_load(const char *filename)
         } else if (pos == 4096) {
                 rewind(fp);
                 if (squeeze_8x16_font(fp) == 0) {
+			ccache_destroy();
                         make_half_width_middot();
                         fclose(fp);
+			free(font_file);
                         return 0;
                 } else {
                         SDL_SetError("%s: %s", font_file,
-                                     feof(fp) ? "Unexpected EOF on read" :
-                                     strerror(errno));
+                                     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
                         fclose(fp);
+			free(font_file);
                         return -1;
                 }
         } else {
                 SDL_SetError("%s: Invalid font file", font_file);
                 fclose(fp);
+		free(font_file);
                 return -1;
         }
 
         if (fread(font_normal, 2048, 1, fp) != 1) {
                 SDL_SetError("%s: %s", font_file,
-                             feof(fp) ? "Unexpected EOF on read" :
-                             strerror(errno));
+                             feof(fp) ? "Unexpected EOF on read" : strerror(errno));
                 fclose(fp);
+		free(font_file);
                 return -1;
         }
 
+	ccache_destroy();
         make_half_width_middot();
 
         fclose(fp);
+	free(font_file);
         return 0;
 }
 
@@ -204,37 +292,35 @@ int font_save(const char *filename)
 {
         FILE *fp;
         byte ver[2] = { 0x12, 0x2 };
-        char font_file[PATH_MAX + 1];
+        char *font_dir, *font_file;
 
-        /* Hmm... I can't remember why I did this. */
-        if (!filename)
-                return 0;
-
-        strncpy(font_file, getenv("HOME") ? : "/", PATH_MAX);
-        strncat(font_file, "/.schism/fonts/", PATH_MAX);
-        strncat(font_file, filename, PATH_MAX);
-        font_file[PATH_MAX] = 0;
+        font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
+        font_file = dmoz_path_concat(font_dir, filename);
+	free(font_dir);
 
         fp = fopen(font_file, "wb");
         if (fp == NULL) {
                 SDL_SetError("%s: %s", font_file, strerror(errno));
+		free(font_file);
                 return -1;
         }
 
-        if (fwrite(font_normal, 2048, 1, fp) < 1
-            || fwrite(ver, 2, 1, fp) < 1) {
+        if (fwrite(font_normal, 2048, 1, fp) < 1 || fwrite(ver, 2, 1, fp) < 1) {
                 SDL_SetError("%s: %s", font_file, strerror(errno));
                 fclose(fp);
+		free(font_file);
                 return -1;
         }
 
         fclose(fp);
+	free(font_file);
         return 0;
 }
 
 void font_set_bank(int bank)
 {
         font_data = bank ? font_alt : font_normal;
+        charcache = bank ? cache_alt : cache_normal;
 }
 
 void font_init(void)
@@ -246,52 +332,83 @@ void font_init(void)
 	
         memcpy(font_alt, font_default_lower, 1024);
         memcpy(font_alt + 1024, font_default_upper_alt, 1024);
+        ccache_destroy_cache(cache_alt);
 }
 
 /* --------------------------------------------------------------------- */
 
-void draw_char_unlocked(byte c, int x, int y, Uint32 fg, Uint32 bg)
+static inline void ccache_create_char(SDL_Surface *cached, byte c, Uint32 fg, Uint32 bg)
 {
         int pos, scanline, ci = c << 3;
-
-        assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-
-        x <<= 3;
-        y <<= 3;
+	
+	if (SDL_MUSTLOCK(cached))
+		SDL_LockSurface(cached);
         /* GCC unrolls these... I hope :) */
         for (scanline = 0; scanline < 8; scanline++)
                 for (pos = 0; pos < 8; pos++)
-                        putpixel_screen(x + pos, y + scanline,
-                                        (font_data[ci + scanline] &
-                                         (128 >> pos) ? fg : bg));
+                        putpixel(cached, pos, scanline, font_data[ci + scanline] & (128 >> pos) ? fg : bg);
+	if (SDL_MUSTLOCK(cached))
+		SDL_UnlockSurface(cached);
 }
 
-int draw_text_unlocked(const byte * text, int x, int y, Uint32 fg,
-                       Uint32 bg)
+void draw_char(byte c, int x, int y, Uint32 fg, Uint32 bg)
+{
+	int need_draw = 0;
+	int i = CACHE_INDEX(c, fg, bg);
+	SDL_Rect rect;
+	
+        assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+	
+	if (charcache[i] == NULL) {
+		SDL_Surface *tmp = SDL_CreateRGBSurface
+			(SDL_HWSURFACE, 8, 8, screen->format->BitsPerPixel,
+			 screen->format->Rmask, screen->format->Gmask,
+			 screen->format->Bmask, screen->format->Amask);
+		charcache[i] = SDL_DisplayFormat(tmp);
+		SDL_FreeSurface(tmp);
+		need_draw = 1;
+	}
+	
+	rect.x = x << 3;
+	rect.y = y << 3;
+	
+	while (need_draw || SDL_BlitSurface(charcache[i], NULL, screen, &rect) == -2) {
+		need_draw = 0;
+		
+		if (SDL_MUSTLOCK(charcache[i])) {
+			while (SDL_LockSurface(charcache[i]) < 0)
+				SDL_Delay(10);
+		}
+		
+		ccache_create_char(charcache[i], c, fg, bg);
+		
+		if (SDL_MUSTLOCK(charcache[i]))
+			SDL_UnlockSurface(charcache[i]);
+	}
+}
+
+int draw_text(const byte * text, int x, int y, Uint32 fg, Uint32 bg)
 {
         int n = 0;
 
         while (*text) {
-                draw_char_unlocked(*text, x + n, y, fg, bg);
+                draw_char(*text, x + n, y, fg, bg);
                 n++;
                 text++;
         }
-
+	
         return n;
 }
 
-int draw_text_len(const byte * text, int len, int x, int y, Uint32 fg,
-                  Uint32 bg)
+int draw_text_len(const byte * text, int len, int x, int y, Uint32 fg, Uint32 bg)
 {
         int n = 0;
 
-        SDL_LockSurface(screen);
         while (*text && n < len) {
-                draw_char_unlocked(*text, x + n, y, fg, bg);
+                draw_char(*text, x + n, y, fg, bg);
                 n++;
                 text++;
         }
-        SDL_UnlockSurface(screen);
         draw_fill_chars(x + n, y, x + len - 1, y, bg);
         return n;
 }
@@ -299,9 +416,8 @@ int draw_text_len(const byte * text, int len, int x, int y, Uint32 fg,
 /* --------------------------------------------------------------------- */
 /* half-width characters */
 
-void draw_half_width_chars_unlocked(byte c1, byte c2, int x, int y,
-                                    Uint32 fg1, Uint32 bg1, Uint32 fg2,
-                                    Uint32 bg2)
+void draw_half_width_chars(byte c1, byte c2, int x, int y,
+			   Uint32 fg1, Uint32 bg1, Uint32 fg2, Uint32 bg2)
 {
         int pos, half_scanline, ci1 = c1 << 2, ci2 = c2 << 2;
 
@@ -315,33 +431,27 @@ void draw_half_width_chars_unlocked(byte c1, byte c2, int x, int y,
                 ci2 = 184 << 2;
         }
 
+	SDL_LockSurface(screen);
         for (half_scanline = 0; half_scanline < 4; half_scanline++) {
                 int scanline = half_scanline * 2;
                 for (pos = 0; pos < 4; pos++) {
                         /* first character */
-                        putpixel_screen
-                                (x + pos, y + scanline,
-                                 (((font_half_data[ci1 + half_scanline]
-                                    & 0xf0) >> 4) & (8 >> pos))
-                                 ? fg1 : bg1);
-                        putpixel_screen
-                                (x + pos, y + scanline + 1,
-                                 ((font_half_data[ci1 + half_scanline]
-                                   & 0xf) & (8 >> pos))
-                                 ? fg1 : bg1);
+                        putpixel(screen, x + pos, y + scanline,
+				 (((font_half_data[ci1 + half_scanline] & 0xf0) >> 4) & (8 >> pos))
+				 ? fg1 : bg1);
+                        putpixel(screen, x + pos, y + scanline + 1,
+				 ((font_half_data[ci1 + half_scanline] & 0xf) & (8 >> pos))
+				 ? fg1 : bg1);
                         /* second character */
-                        putpixel_screen
-                                (x + pos + 4, y + scanline,
-                                 (((font_half_data[ci2 + half_scanline]
-                                    & 0xf0) >> 4) & (8 >> pos))
-                                 ? fg2 : bg2);
-                        putpixel_screen
-                                (x + pos + 4, y + scanline + 1,
-                                 ((font_half_data[ci2 + half_scanline]
-                                   & 0xf) & (8 >> pos))
-                                 ? fg2 : bg2);
+                        putpixel(screen, x + pos + 4, y + scanline,
+				 (((font_half_data[ci2 + half_scanline] & 0xf0) >> 4) & (8 >> pos))
+				 ? fg2 : bg2);
+                        putpixel(screen, x + pos + 4, y + scanline + 1,
+				 ((font_half_data[ci2 + half_scanline] & 0xf) & (8 >> pos))
+				 ? fg2 : bg2);
                 }
         }
+	SDL_UnlockSurface(screen);
 }
 
 /* --------------------------------------------------------------------- */
@@ -357,37 +467,33 @@ static const byte boxes[4][8] = {
         {142, 144, 147, 149, 143, 148, 145, 146},       /* thick outer */
 };
 
-static inline void _draw_box_internal(int xs, int ys, int xe, int ye,
-                                      Uint32 tl, Uint32 br,
-                                      const byte ch[8])
+static void _draw_box_internal(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br, const byte ch[8])
 {
         int n;
 
 	CHECK_INVERT(tl, br, n);
 
-        draw_char_unlocked(ch[0], xs, ys, tl, 2);       /* TL corner */
-        draw_char_unlocked(ch[1], xe, ys, br, 2);       /* TR corner */
-        draw_char_unlocked(ch[2], xs, ye, br, 2);       /* BL corner */
-        draw_char_unlocked(ch[3], xe, ye, br, 2);       /* BR corner */
+        draw_char(ch[0], xs, ys, tl, 2);       /* TL corner */
+        draw_char(ch[1], xe, ys, br, 2);       /* TR corner */
+        draw_char(ch[2], xs, ye, br, 2);       /* BL corner */
+        draw_char(ch[3], xe, ye, br, 2);       /* BR corner */
 
         for (n = xs + 1; n < xe; n++) {
-                draw_char_unlocked(ch[4], n, ys, tl, 2);        /* top */
-                draw_char_unlocked(ch[5], n, ye, br, 2);        /* bottom */
+                draw_char(ch[4], n, ys, tl, 2);        /* top */
+                draw_char(ch[5], n, ye, br, 2);        /* bottom */
         }
         for (n = ys + 1; n < ye; n++) {
-                draw_char_unlocked(ch[6], xs, n, tl, 2);        /* left */
-                draw_char_unlocked(ch[7], xe, n, br, 2);        /* right */
+                draw_char(ch[6], xs, n, tl, 2);        /* left */
+                draw_char(ch[7], xe, n, br, 2);        /* right */
         }
 }
 
-void draw_thin_inner_box(int xs, int ys, int xe, int ye, Uint32 tl,
-                         Uint32 br)
+void draw_thin_inner_box(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br)
 {
         _draw_box_internal(xs, ys, xe, ye, tl, br, boxes[BOX_THIN_INNER]);
 }
 
-void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl,
-                          Uint32 br)
+void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br)
 {
         /* this one can't use _draw_box_internal because the corner
          * colors are different */
@@ -396,18 +502,18 @@ void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl,
 
 	CHECK_INVERT(tl, br, n);
 
-        draw_char_unlocked(153, xs, ys, tl, 2); /* TL corner */
-        draw_char_unlocked(152, xe, ys, tl, 2); /* TR corner */
-        draw_char_unlocked(151, xs, ye, tl, 2); /* BL corner */
-        draw_char_unlocked(150, xe, ye, br, 2); /* BR corner */
+        draw_char(153, xs, ys, tl, 2); /* TL corner */
+        draw_char(152, xe, ys, tl, 2); /* TR corner */
+        draw_char(151, xs, ye, tl, 2); /* BL corner */
+        draw_char(150, xe, ye, br, 2); /* BR corner */
 
         for (n = xs + 1; n < xe; n++) {
-                draw_char_unlocked(148, n, ys, tl, 2);  /* top */
-                draw_char_unlocked(143, n, ye, br, 2);  /* bottom */
+                draw_char(148, n, ys, tl, 2);  /* top */
+                draw_char(143, n, ye, br, 2);  /* bottom */
         }
         for (n = ys + 1; n < ye; n++) {
-                draw_char_unlocked(146, xs, n, tl, 2);  /* left */
-                draw_char_unlocked(145, xe, n, br, 2);  /* right */
+                draw_char(146, xs, n, tl, 2);  /* left */
+                draw_char(145, xe, n, br, 2);  /* right */
         }
 }
 
@@ -416,8 +522,7 @@ void draw_thin_outer_box(int xs, int ys, int xe, int ye, Uint32 c)
         _draw_box_internal(xs, ys, xe, ye, c, c, boxes[BOX_THIN_OUTER]);
 }
 
-void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye,
-                                  int flags)
+void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int flags)
 {
         const int colors[4][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1} };
         int tl = colors[flags & BOX_SHADE_MASK][0];
@@ -426,19 +531,19 @@ void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye,
 
 	CHECK_INVERT(tl, br, n);
 
-        draw_char_unlocked(128, xs, ys, tl, 2); /* TL corner */
-        draw_char_unlocked(141, xe, ys, 1, 2);  /* TR corner */
-        draw_char_unlocked(140, xs, ye, 1, 2);  /* BL corner */
-        draw_char_unlocked(135, xe, ye, br, 2); /* BR corner */
+        draw_char(128, xs, ys, tl, 2); /* TL corner */
+        draw_char(141, xe, ys, 1, 2);  /* TR corner */
+        draw_char(140, xs, ye, 1, 2);  /* BL corner */
+        draw_char(135, xe, ye, br, 2); /* BR corner */
 
         for (n = xs + 1; n < xe; n++) {
-                draw_char_unlocked(129, n, ys, tl, 2);  /* top */
-                draw_char_unlocked(134, n, ye, br, 2);  /* bottom */
+                draw_char(129, n, ys, tl, 2);  /* top */
+                draw_char(134, n, ye, br, 2);  /* bottom */
         }
 
         for (n = ys + 1; n < ye; n++) {
-                draw_char_unlocked(131, xs, n, tl, 2);  /* left */
-                draw_char_unlocked(132, xe, n, br, 2);  /* right */
+                draw_char(131, xs, n, tl, 2);  /* left */
+                draw_char(132, xe, n, br, 2);  /* right */
         }
 }
 

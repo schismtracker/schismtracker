@@ -24,8 +24,6 @@
 #include "slurp.h"
 #include "config-parser.h"
 
-#include <string>
-
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
@@ -41,7 +39,7 @@ unsigned long max_channels_used = 0;
  * FIXME: get rid of this audio_buffer_ hack -- closing schism while something is playing will cause a
  * segfault in free(); after pointing the buffer to statically allocated memory, it worked. */
 static signed short audio_buffer_[16726];
-signed short *audio_buffer;
+signed short *audio_buffer = audio_buffer_;
 int audio_buffer_size = 0;
 
 struct audio_settings audio_settings;
@@ -66,25 +64,20 @@ static void mp_mix_hook(int *buffer, unsigned long samples, unsigned long channe
 static void audio_callback(void *, Uint8 * stream, int len)
 {
         if (mp->m_dwSongFlags & SONG_ENDREACHED)
-                return;
+		return;
 
         int n = mp->Read(stream, len);
-#ifndef NDEBUG
         if (!n) {
 		song_stop();
-		log_appendf(4, "mp->Read returned zero. why?");
-		set_page(PAGE_LOG);
 		return;
         }
-#endif
+	
         samples_played += n;
-
-	if (n < len) {
-		memmove(audio_buffer, audio_buffer + len - n,
-			(len - n) * sizeof(signed short));
-	}
+	
+	if (n < len)
+		memmove(audio_buffer, audio_buffer + len - n, (len - n) * sizeof(signed short));
 	memcpy(audio_buffer, stream, n * sizeof(signed short));
-
+	
         if (mp->m_nMixChannels > max_channels_used)
 		max_channels_used = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 }
@@ -143,7 +136,7 @@ void song_play_note(int ins, int note, int chan, int useins)
 	c->nROfs = c->nLOfs = 0;
 	c->nCutOff = 0x7f;
 	c->nResonance = 0;
-	if (useins /* && song_is_instrument_mode() */ && mp->Headers[ins]) {
+	if (useins && song_is_instrument_mode() && mp->Headers[ins]) {
 		c->nVolEnvPosition = 0;
 		c->nPanEnvPosition = 0;
 		c->nPitchEnvPosition = 0;
@@ -185,12 +178,50 @@ void song_play_note(int ins, int note, int chan, int useins)
 // this should be called with the audio LOCKED
 static void song_reset_play_state()
 {
-        // this is lousy and wrong, but it sort of works
-        mp->SetCurrentOrder(0);
-
-        mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_STEP);
+#if 1
+	int n;
+	MODCHANNEL *c;
+	
+	for (n = 0, c = mp->Chn; n < MAX_CHANNELS; n++, c++) {
+		c->nLeftVol = c->nNewLeftVol = c->nLeftRamp = c->nLOfs = 0;
+		c->nRightVol = c->nNewRightVol = c->nRightRamp = c->nROfs = 0;
+		c->nFadeOutVol = c->nLength = c->nLoopStart = c->nLoopEnd = 0;
+		c->nNote = c->nNewNote = c->nNewIns = c->nCommand = c->nPeriod = c->nPos = 0;
+		c->nPatternLoop = c->nPatternLoopCount = c->nPortamentoDest = c->nTremorCount = 0;
+		c->pInstrument = NULL;
+		c->pSample = NULL;
+		c->pHeader = NULL;
+		c->nResonance = 0;
+		c->nCutOff = 0x7F;
+		c->nVolume = 256;
+		if (n < MAX_BASECHANNELS) {
+			c->dwFlags = mp->ChnSettings[n].dwFlags;
+			c->nPan = mp->ChnSettings[n].nPan;
+			c->nGlobalVol = mp->ChnSettings[n].nVolume;
+		} else {
+			c->dwFlags = 0;
+			c->nPan = 128;
+			c->nGlobalVol = 64;
+		}
+	}
+	mp->m_nGlobalVolume = mp->m_nDefaultGlobalVolume;
+	mp->m_nMusicTempo = mp->m_nDefaultTempo;
+	mp->m_nTickCount = mp->m_nMusicSpeed = mp->m_nDefaultSpeed;
+	mp->m_nPatternDelay = mp->m_nFrameDelay = 0;
+	
+	mp->m_nCurrentPattern = 255; // hack...
+	mp->m_nNextPattern = 0;
+	mp->m_nRow = mp->m_nNextRow = 0;
+	
+	mp->m_nBufferCount = 0;
+	mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_STEP | SONG_PATTERNLOOP | SONG_ENDREACHED);
+#else
+	// the old way
+	mp->SetCurrentOrder(0);
+	mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_STEP);
+#endif
 	mp->ResetTimestamps();
-        samples_played = 0;
+	samples_played = 0;
 }
 
 void song_start()
@@ -208,12 +239,12 @@ void song_stop()
         SDL_LockAudio();
 
         song_reset_play_state();
-        // modplug doesn't actually have a "stop" mode, but if this is
-        // set, mp->Read just returns.
+        // Modplug doesn't actually have a "stop" mode, but if this is set, mp->Read just returns.
         mp->m_dwSongFlags |= SONG_ENDREACHED;
-
-        mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_STEP);
-
+	
+	mp->gnVUMeter = 0;
+	memset(audio_buffer, 0, audio_buffer_size * sizeof(signed short));
+	
         SDL_UnlockAudio();
 }
 
@@ -233,8 +264,7 @@ void song_start_at_order(int order, int row)
         SDL_LockAudio();
 
         song_reset_play_state();
-        // I would imagine this is *not* the right method here, but it
-        // seems to work.
+        // I would imagine this is *not* the right method here, but it seems to work.
         mp->SetCurrentOrder(order);
         mp->m_nRow = mp->m_nNextRow = row;
         max_channels_used = 0;
@@ -252,8 +282,7 @@ void song_start_at_pattern(int pattern, int row)
         if (mp->Order[n] == pattern) {
                 song_start_at_order(n, row);
                 return;
-        }
-	else {
+	} else {
                 for (n = 0; n < 255; n++) {
                         if (mp->Order[n] == pattern) {
                                 song_start_at_order(n, row);
@@ -406,6 +435,23 @@ void song_set_current_order(int order)
         mp->SetCurrentOrder(order);
 }
 
+// Ctrl-F7
+void song_set_next_order(int order)
+{
+	mp->m_nLockedPattern = order;
+}
+
+// Alt-F11
+int song_toggle_orderlist_locked(void)
+{
+	mp->m_dwSongFlags ^= SONG_ORDERLOCKED;
+	if (mp->m_dwSongFlags & SONG_ORDERLOCKED)
+		mp->m_nLockedPattern = mp->m_nCurrentPattern;
+	else
+		mp->m_nLockedPattern = MAX_ORDERS;
+	return mp->m_dwSongFlags & SONG_ORDERLOCKED;
+}
+
 // ------------------------------------------------------------------------
 // global flags
 
@@ -537,9 +583,14 @@ static inline void song_print_info(SDL_AudioSpec & obtained)
 
 void song_init_audio(void)
 {
-	song_stop();
-	SDL_PauseAudio(1);
-	SDL_CloseAudio();
+	/* Hack around some SDL stupidity: if SDL_CloseAudio() is called *before* the first SDL_OpenAudio(),
+	 * but no audio device is available, it crashes. WTFBBQ?!?! (At any rate, SDL_Init should fail, not
+	 * SDL_OpenAudio, but wtf.) */
+	static int first_init = 1;
+	if (!first_init) {
+		song_stop();
+		SDL_CloseAudio();
+	}
 	
         // set up the sdl audio
         SDL_AudioSpec desired, obtained;
@@ -548,25 +599,26 @@ void song_init_audio(void)
 	desired.channels = audio_settings.channels;
         desired.samples = audio_settings.buffer_size;
         desired.callback = audio_callback;
+	
+	/* This shouldn't die; there should be a "no playback" mode. This won't be easy to implement since
+	 * Modplug's player stuff is done from within the SDL audio callback, and removing the audio device
+	 * obviously means the callback won't be called. */
         if (SDL_OpenAudio(&desired, &obtained) < 0) {
-		// this shouldn't die -- suppose the audio settings are changed at runtime by shift-f5
-		// to something the soundcard doesn't support.
-                fprintf(stderr, "Couldn't initialise audio: %s\n",
-                        SDL_GetError());
+                fprintf(stderr, "Couldn't initialise audio: %s\n", SDL_GetError());
                 exit(1);
         }
+	SDL_PauseAudio(0);
         song_print_info(obtained);
 	
-	audio_buffer_size = obtained.samples;
 	//audio_buffer = (signed short *) calloc(audio_buffer_size, sizeof(signed short));
-	audio_buffer = audio_buffer_;
+	audio_buffer_size = MIN(obtained.samples, sizeof(audio_buffer_));
 	
         // obtained.format & 0xff just happens to be the bit rate ;)
         CSoundFile::SetWaveConfig(obtained.freq, obtained.format & 0xff, obtained.channels);
 
         samples_played = 0;
 	
-	SDL_PauseAudio(0);
+	first_init = 0;
 }
 
 void song_init_modplug(void)
@@ -586,7 +638,7 @@ void song_init_modplug(void)
 	// disable the S91 effect? (this doesn't make anything faster, it
 	// just sounds better with one woofer.)
 	song_set_surround(audio_settings.surround_effect);
-
+	
 	SDL_UnlockAudio();
 }
 
@@ -594,7 +646,7 @@ void song_initialise(void)
 {
 	mp = new CSoundFile;
 	mp->Create(NULL, 0);
-	song_stop();
+	//song_stop(); <- song_new does this
 	song_set_linear_pitch_slides(1);
 	song_new(0);
 	

@@ -37,11 +37,9 @@ static inline void _draw_thumb_bar_internal(int width, int x, int y,
 
         val %= 8;
         draw_fill_chars(x, y, x + n - 1, y, 0);
-        SDL_LockSurface(screen);
-        draw_char_unlocked(thumb_chars[0][val], x + n, y, fg, 0);
+        draw_char(thumb_chars[0][val], x + n, y, fg, 0);
         if (++n < width)
-                draw_char_unlocked(thumb_chars[1][val], x + n, y, fg, 0);
-        SDL_UnlockSurface(screen);
+                draw_char(thumb_chars[1][val], x + n, y, fg, 0);
         if (++n < width)
                 draw_fill_chars(x + n, y, x + width - 1, y, 0);
 }
@@ -91,17 +89,12 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 	if ((val < chunks - 1) || (status.flags & CLASSIC_MODE))
 		peak = color;
 	
-        SDL_LockSurface(screen);
-	
-        draw_char_unlocked(endtext[leftover][0], 3 * val + x + 0, y, peak, 0);
-        draw_char_unlocked(endtext[leftover][1], 3 * val + x + 1, y, peak, 0);
-        draw_char_unlocked(endtext[leftover][2], 3 * val + x + 2, y, peak, 0);
-        while (val) {
-                val--;
-                draw_char_unlocked(176, 3 * val + x + 0, y, color, 0);
-                draw_char_unlocked(179, 3 * val + x + 1, y, color, 0);
-                draw_char_unlocked(182, 3 * val + x + 2, y, color, 0);
+        draw_char(endtext[leftover][0], 3 * val + x + 0, y, peak, 0);
+        draw_char(endtext[leftover][1], 3 * val + x + 1, y, peak, 0);
+        draw_char(endtext[leftover][2], 3 * val + x + 2, y, peak, 0);
+        while (val--) {
+                draw_char(176, 3 * val + x + 0, y, color, 0);
+                draw_char(179, 3 * val + x + 1, y, color, 0);
+                draw_char(182, 3 * val + x + 2, y, color, 0);
         }
-
-        SDL_UnlockSurface(screen);
 }

@@ -289,14 +289,14 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		{
 			UINT j = bswapLE32(*((LPDWORD)(s+0x10)));
 			if (j > MAX_SAMPLE_LENGTH) j = MAX_SAMPLE_LENGTH;
-			if (j < 4) j = 0;
+			if (j < 2) j = 0;
 			Ins[iSmp].nLength = j;
 			j = bswapLE32(*((LPDWORD)(s+0x14)));
 			if (j >= Ins[iSmp].nLength) j = Ins[iSmp].nLength - 1;
 			Ins[iSmp].nLoopStart = j;
 			j = bswapLE32(*((LPDWORD)(s+0x18)));
 			if (j > MAX_SAMPLE_LENGTH) j = MAX_SAMPLE_LENGTH;
-			if (j < 4) j = 0;
+			if (j < 2) j = 0;
 			if (j > Ins[iSmp].nLength) j = Ins[iSmp].nLength;
 			Ins[iSmp].nLoopEnd = j;
 			j = s[0x1C];
@@ -320,8 +320,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 	for (UINT iPat=0; iPat<patnum; iPat++)
 	{
                 UINT nInd = ((DWORD)ptr[nins+iPat]) << 4;
-                // <chisel> if the parapointer is zero, the pattern is blank
-                // (so ignore it)
+                // if the parapointer is zero, the pattern is blank (so ignore it)
                 if (nInd == 0)
                         continue;
                 if (nInd + 0x40 > dwMemLength) continue;
@@ -402,10 +401,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 
 
 #ifndef MODPLUG_NO_FILESAVE
-// <chisel> ifdef around pragma
-#ifdef MSC_VER
 #pragma warning(disable:4100)
-#endif
 
 static BYTE S3MFiller[16] =
 {
@@ -434,8 +430,6 @@ BOOL CSoundFile::SaveS3M(LPCSTR lpszFileName, UINT nPacking)
 	header[0x1B] = 0;
 	header[0x1C] = 0x1A;
 	header[0x1D] = 0x10;
-        // <chisel> the prev. behaviour would lose the orderlist when saving
-        // an s3m with >240 orders
         nbo = (GetNumPatterns());
         if (nbo == 0)
                 nbo = 2;
@@ -443,8 +437,10 @@ BOOL CSoundFile::SaveS3M(LPCSTR lpszFileName, UINT nPacking)
                 nbo++;
         header[0x20] = nbo & 0xFF;
 	header[0x21] = nbo >> 8;
-	nbi = m_nInstruments;
-	if (!nbi) nbi = m_nSamples;
+	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
+		nbi = m_nInstruments;
+	else
+		nbi = m_nSamples;
 	if (nbi > 99) nbi = 99;
 	header[0x22] = nbi & 0xFF;
 	header[0x23] = nbi >> 8;
@@ -579,7 +575,7 @@ BOOL CSoundFile::SaveS3M(LPCSTR lpszFileName, UINT nPacking)
 	for (i=1; i<=nbi; i++)
 	{
 		MODINSTRUMENT *pins = &Ins[i];
-		if (m_nInstruments)
+		if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 		{
 			pins = Ins;
 			if (Headers[i])
@@ -657,9 +653,6 @@ BOOL CSoundFile::SaveS3M(LPCSTR lpszFileName, UINT nPacking)
 	return TRUE;
 }
 
-// <chisel> ifdef around pragma
-#ifdef MSC_VER
-# pragma warning(default:4100)
-#endif
+#pragma warning(default:4100)
 #endif // MODPLUG_NO_FILESAVE
 

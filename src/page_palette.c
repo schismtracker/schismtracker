@@ -27,22 +27,19 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct item items_palette[49];
+static struct widget widgets_palette[49];
 
 static int selected_palette, max_palette = 0;
 
 /* --------------------------------------------------------------------- */
 /*
- * This is actually wrong. For some reason the boxes around the little
- * color swatches are drawn with the top right and bottom left corners
- * in color 3 instead of color 1 like all the other thick boxes have.
- * I'm going to leave it this way, though -- it's far more likely that
- * someone will comment on, say, my completely changing the preset
- * switcher than about the corners having different colors :)
- * 
- * (Another discrepancy: seems that Impulse Tracker draws the thumbbars
- * with a "fake" range of 0-64, because it never gets drawn at the far
- * right. Oh well.) */
+This is actually wrong. For some reason the boxes around the little color swatches are drawn with the top
+right and bottom left corners in color 3 instead of color 1 like all the other thick boxes have. I'm going
+to leave it this way, though -- it's far more likely that someone will comment on, say, my completely
+changing the preset switcher than about the corners having different colors :)
+
+(Another discrepancy: seems that Impulse Tracker draws the thumbbars with a "fake" range of 0-64, because
+it never gets drawn at the far right. Oh well.) */
 
 static void palette_draw_const(void)
 {
@@ -51,33 +48,19 @@ static void palette_draw_const(void)
         draw_text("Predefined Palettes", 57, 25, 0, 2);
 
         for (n = 0; n < 7; n++) {
-                SDL_LockSurface(screen);
-                draw_box_unlocked(2, 13 + (5 * n), 8, 17 + (5 * n),
-                                  BOX_THICK | BOX_INNER | BOX_INSET);
-                draw_box_unlocked(9, 13 + (5 * n), 19, 17 + (5 * n),
-                                  BOX_THICK | BOX_INNER | BOX_INSET);
-                draw_box_unlocked(29, 13 + (5 * n), 35, 17 + (5 * n),
-                                  BOX_THICK | BOX_INNER | BOX_INSET);
-                draw_box_unlocked(36, 13 + (5 * n), 46, 17 + (5 * n),
-                                  BOX_THICK | BOX_INNER | BOX_INSET);
-                SDL_UnlockSurface(screen);
+                draw_box(2, 13 + (5 * n), 8, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
+                draw_box(9, 13 + (5 * n), 19, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
+                draw_box(29, 13 + (5 * n), 35, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
+                draw_box(36, 13 + (5 * n), 46, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
                 draw_fill_chars(3, 14 + (5 * n), 7, 16 + (5 * n), n);
                 draw_fill_chars(30, 14 + (5 * n), 34, 16 + (5 * n), n + 7);
         }
 
-        SDL_LockSurface(screen);
-        draw_box_unlocked(56, 13, 62, 17,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(63, 13, 73, 17,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(56, 18, 62, 22,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(63, 18, 73, 22,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(55, 26, 77, 47,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        SDL_UnlockSurface(screen);
-
+        draw_box(56, 13, 62, 17, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(63, 13, 73, 17, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(56, 18, 62, 22, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(63, 18, 73, 22, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(55, 26, 77, 47, BOX_THICK | BOX_INNER | BOX_INSET);
         draw_fill_chars(57, 14, 61, 16, 14);
         draw_fill_chars(57, 19, 61, 21, 15);
 }
@@ -91,9 +74,9 @@ static void update_thumbbars(void)
         for (n = 0; n < 16; n++) {
 		/* palettes[current_palette_index].colors[n] ?
 		 * or current_palette[n] ? */
-                items_palette[3 * n].thumbbar.value = current_palette[n][0];
-                items_palette[3 * n + 1].thumbbar.value = current_palette[n][1];
-                items_palette[3 * n + 2].thumbbar.value = current_palette[n][2];
+                widgets_palette[3 * n].thumbbar.value = current_palette[n][0];
+                widgets_palette[3 * n + 1].thumbbar.value = current_palette[n][1];
+                widgets_palette[3 * n + 2].thumbbar.value = current_palette[n][2];
         }
 }
 
@@ -101,7 +84,7 @@ static void update_thumbbars(void)
 
 static void palette_list_draw(void)
 {
-        int n, focused = (ACTIVE_PAGE.selected_item == 48);
+        int n, focused = (ACTIVE_PAGE.selected_widget == 48);
 
         draw_fill_chars(56, 27, 76, 46, 0);
         for (n = 0; n < 20 && palettes[n].name[0]; n++) {
@@ -124,18 +107,26 @@ static int palette_list_handle_key_on_list(SDL_keysym * k)
 
         switch (k->sym) {
         case SDLK_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 if (--new_palette < 0) {
                         change_focus_to(47);
                         return 1;
                 }
                 break;
         case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_palette++;
                 break;
         case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_palette = 0;
                 break;
         case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 if (new_palette == 0) {
                         change_focus_to(45);
                         return 1;
@@ -143,13 +134,19 @@ static int palette_list_handle_key_on_list(SDL_keysym * k)
                 new_palette -= 16;
                 break;
         case SDLK_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_palette = max_palette - 1;
                 break;
         case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_palette += 16;
                 break;
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 palette_load_preset(selected_palette);
 		palette_apply();
                 update_thumbbars();
@@ -157,9 +154,13 @@ static int palette_list_handle_key_on_list(SDL_keysym * k)
                 return 1;
         case SDLK_RIGHT:
         case SDLK_TAB:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 change_focus_to(focus_offsets[selected_palette] + 8);
                 return 1;
         case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 change_focus_to(focus_offsets[selected_palette] + 29);
                 return 1;
         default:
@@ -179,8 +180,11 @@ static int palette_list_handle_key_on_list(SDL_keysym * k)
 
 static void palette_list_handle_key(SDL_keysym * k)
 {
-        int n = *selected_item;
+        int n = *selected_widget;
 
+	if (!NO_MODIFIER(k->mod))
+		return;
+	
         switch (k->sym) {
         case SDLK_PAGEUP:
                 n -= 3;
@@ -200,20 +204,24 @@ static void palette_list_handle_key(SDL_keysym * k)
         } else {
                 n = CLAMP(n, 0, 48);
         }
-        if (n != *selected_item)
+        if (n != *selected_widget)
                 change_focus_to(n);
 }
 
 /* --------------------------------------------------------------------- */
+
+/* TODO | update_palette should only change the palette index for the color that's being changed, not all
+   TODO | of them. also, it should call ccache_destroy_color(n) instead of wiping out the whole character
+   TODO | cache whenever a color value is changed. */
 
 static void update_palette(void)
 {
         int n;
 
         for (n = 0; n < 16; n++) {
-                current_palette[n][0] = items_palette[3 * n].thumbbar.value;
-                current_palette[n][1] = items_palette[3 * n + 1].thumbbar.value;
-                current_palette[n][2] = items_palette[3 * n + 2].thumbbar.value;
+                current_palette[n][0] = widgets_palette[3 * n].thumbbar.value;
+                current_palette[n][1] = widgets_palette[3 * n + 1].thumbbar.value;
+                current_palette[n][2] = widgets_palette[3 * n + 2].thumbbar.value;
         }
         palette_apply();
         status.flags |= NEED_UPDATE;
@@ -228,8 +236,8 @@ void palette_load_page(struct page *page)
         page->title = "Palette Configuration (Ctrl-F12)";
         page->draw_const = palette_draw_const;
         page->handle_key = palette_list_handle_key;
-        page->total_items = 49;
-        page->items = items_palette;
+        page->total_widgets = 49;
+        page->widgets = widgets_palette;
         page->help_index = HELP_GLOBAL;
 
         selected_palette = current_palette_index;
@@ -243,19 +251,14 @@ void palette_load_page(struct page *page)
                         tabs[1] = 3 * n - 41;
                         tabs[2] = 3 * n - 40;
                 }
-                create_thumbbar(items_palette + (3 * n), 10 + 27 * (n / 7),
-                                5 * (n % 7) + 14, 9, n ? (3 * n - 1) : 0,
-                                3 * n + 1, tabs[0], update_palette, 0, 63);
-                create_thumbbar(items_palette + (3 * n + 1),
-                                10 + 27 * (n / 7), 5 * (n % 7) + 15, 9,
-                                3 * n, 3 * n + 2, tabs[1], update_palette,
-                                0, 63);
-                create_thumbbar(items_palette + (3 * n + 2),
-                                10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
-                                3 * n + 1, 3 * n + 3, tabs[2],
-                                update_palette, 0, 63);
+                create_thumbbar(widgets_palette + (3 * n), 10 + 27 * (n / 7), 5 * (n % 7) + 14, 9,
+                                n ? (3 * n - 1) : 0, 3 * n + 1, tabs[0], update_palette, 0, 63);
+                create_thumbbar(widgets_palette + (3 * n + 1), 10 + 27 * (n / 7), 5 * (n % 7) + 15, 9,
+                                3 * n, 3 * n + 2, tabs[1], update_palette, 0, 63);
+                create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
+                                3 * n + 1, 3 * n + 3, tabs[2], update_palette, 0, 63);
 	}
 	update_thumbbars();
 	
-	create_other(items_palette + 48, 0, palette_list_handle_key_on_list, palette_list_draw);
+	create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, palette_list_draw);
 }

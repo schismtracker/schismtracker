@@ -19,8 +19,7 @@
  */
 
 /* This is just a collection of some useful functions. None of these use any
-extraneous libraries (i.e. GLib).
-I use this file for several programs, so please don't break it. ;) */
+extraneous libraries (i.e. GLib). */
 
 
 #define NEED_DIRENT
@@ -34,64 +33,39 @@ I use this file for several programs, so please don't break it. ;) */
 
 #include <errno.h>
 
+#if defined(__amigaos4__)
+# define FALLBACK_DIR "." /* ?? */
+#elif defined(WIN32)
+# define FALLBACK_DIR "C:\\"
+#else /* POSIX? */
+# define FALLBACK_DIR "/"
+#endif
+
 /* --------------------------------------------------------------------- */
-/* FORMATTING FUNCTIONS
- * FIXME: format_time/format_date use static buffers == unthreadful */
+/* FORMATTING FUNCTIONS */
 
-/* TODO: custom time format, get rid of the static return buffer */
-const char *format_time(int seconds)
+char *get_date_string(time_t when, char *buf)
 {
-        static char buf[16];
+        struct tm tm, *tmr;
+        char month[16] = "";
 
-        snprintf(buf, 16, "%.2d'%.02d\"", seconds / 60, seconds % 60);
+        /* plugh */
+	tmr = localtime_r(&when, &tm);
+        strftime(month, 16, "%B", tmr);
+        month[15] = 0;
+        snprintf(buf, 27, "%s %d, %d", month, tmr->tm_mday, 1900 + tmr->tm_year);
+	
         return buf;
 }
 
-/* ls-style time/date formatting (including either the time or year) */
-const char *format_date(time_t t)
+char *get_time_string(time_t when, char *buf)
 {
-        static char ret[64];
-        int format_id = 0;
-        time_t now = time(NULL);
-        const char *formats[4] = {
-                "%b %d %H:%M",  /* 0: normal */
-                "%b %d %Y",     /* 1: use_year */
-                "%m-%d %H:%M",  /* 2: non_posix_locale */
-                "%Y-%m-%d",     /* 3: use_year, non_posix_locale */
-        };
+        struct tm tm, *tmr;
 
-        if (t > now || now - t > 15768000)
-                format_id += 1;
-#if 0
-        /* TODO: check for non posix locale... how does ls do this? */
-        if (in_a_non_posix_locale)
-                format_id += 2;
-#endif
-
-        strftime(ret, sizeof(ret), formats[format_id], localtime(&t));
-        return ret;
-}
-
-char *format_size(size_t size, bool power_of_two, const char *base_unit)
-{
-        /* this should be long double, but it makes glibc barf */
-        double dsize = size;
-        int n = -1, divide_by = (power_of_two ? 1024 : 1000);
-        const char *units = "KMGTPEZY";
-        char *buf;
-
-        while (dsize > (divide_by * 1.1) && n < (signed) sizeof(units)) {
-                dsize /= divide_by;
-                n++;
-        }
-
-        if (n == -1)
-                n = asprintf(&buf, "%.0f %s", dsize, base_unit);
-        else
-                n = asprintf(&buf, "%.02f %c%s%s", dsize, units[n],
-                             power_of_two ? "i" : "", base_unit);
-
-        return (n < 0) ? NULL : buf;
+        tmr = localtime_r(&when, &tm);
+        snprintf(buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? : 12,
+		 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
+        return buf;
 }
 
 char *numtostr(int digits, int n, char *buf)
@@ -110,18 +84,15 @@ char *numtostr(int digits, int n, char *buf)
 }
 
 /* --------------------------------------------------------------------- */
-/* STRING HANDLING FUNCTIONS
- * 
- * (yes, string. some of these work with file paths but just as strings.
- * you could give clean_path "////zugzwang/monkeybutt/.././/./pr0n/" and
- * it would happily return "/zugzwang/pr0n".)
- * ... well, not now, because I'm just cheating and using realpath, but
- * that's the general idea. */
+/* STRING HANDLING FUNCTIONS */
 
-/* FIXME: ugh. replace calls to this with glibc's basename()... */
+/* I was intending to get rid of this and use glibc's basename() instead,
+but it doesn't do what I want (i.e. not bother with the string) and thanks
+to the stupid libgen.h basename that's totally different, it'd cause some
+possible portability issues. */
 const char *get_basename(const char *filename)
 {
-        const char *base = strrchr(filename, '/');
+        const char *base = strrchr(filename, DIR_SEPARATOR);
         if (base) {
                 /* skip the slash */
                 base++;
@@ -149,35 +120,27 @@ const char *get_extension(const char *filename)
         return extension;
 }
 
-char *clean_path(const char *path)
-{
-        char buf[PATH_MAX];
-
-        /* FIXME: don't use realpath! */
-        if (realpath(path, buf) == NULL) {
-                return NULL;
-        }
-        return strdup(buf);
-}
-
 char *get_parent_directory(const char *dirname)
 {
-        char *ret, *pos;
-
-        if (!dirname)
-                return NULL;
-
-        ret = clean_path(dirname);
-        if (!ret)
-                return NULL;
-
-        pos = strrchr(ret, '/');
-        if (!pos) {
-                free(ret);
-                return NULL;
-        }
-        pos[1] = 0;
-        return ret;
+	char *ret, *pos;
+	int n;
+	
+	if (!dirname || !dirname[0])
+		return NULL;
+	
+	ret = strdup(dirname);
+	if (!ret)
+		return NULL;
+	n = strlen(ret) - 1;
+	if (ret[n] == DIR_SEPARATOR)
+		ret[n] = 0;
+	pos = strrchr(ret, DIR_SEPARATOR);
+	if (!pos) {
+		free(ret);
+		return NULL;
+	}
+	pos[1] = 0;
+	return ret;
 }
 
 static const char *whitespace = " \t\v\r\n";
@@ -341,7 +304,7 @@ char *pretty_name(const char *filename)
         const char *ptr;
         int len;
 
-        ptr = strrchr(filename, '/');
+        ptr = strrchr(filename, DIR_SEPARATOR);
         ptr = ((ptr && ptr[1]) ? ptr + 1 : filename);
         len = strrchr(ptr, '.') - ptr;
         if (len <= 0) {
@@ -391,11 +354,10 @@ int get_num_lines(const char *text)
 bool make_backup_file(const char *filename)
 {
 	char *b;
-	int e;
+	int e = 0;
 	
-	/* kind of a hack for now, but would be easy to do other things like
-	 * numbered backups (like emacs), rename the extension to .bak (or
-	 * add it if the file doesn't have an extension), etc. */
+	/* kind of a hack for now, but would be easy to do other things like numbered backups (like emacs),
+	rename the extension to .bak (or add it if the file doesn't have an extension), etc. */
 	b = malloc(strlen(filename) + 2);
 	if (!b)
 		return false;
@@ -456,33 +418,24 @@ bool is_directory(const char *filename)
         return S_ISDIR(buf.st_mode);
 }
 
-/* Borrowed from XMMS, and then hacked a lot to get rid of the dependency
- * on GLib and to make the code a bit cleaner.
- *
- * FIXME | (eventually) This doesn't handle errors like it should.
- * FIXME | i.e. malloc needs a check, error from opendir should be somehow
- * FIXME | relayed to the caller, etc.) -- but this doesn't really bother
- * FIXME | me *too* much so I'm leaving it alone :) */
-bool has_subdirectories(const char *dirname)
+/* this function is horrible */
+char *get_home_directory(void)
 {
-        struct dirent *ent;
-        char npath[PATH_MAX];
-        DIR *dir = opendir(dirname);
-
-        if (!dir)
-                return false;
-
-        while ((ent = readdir(dir)) != NULL) {
-                if (ent->d_name[0] == '.')
-                        continue;
-                snprintf(npath, PATH_MAX, "%s/%s", dirname, ent->d_name);
-		npath[PATH_MAX - 1] = 0;
-                if (is_directory(npath)) {
-                        closedir(dir);
-                        return true;
-                }
-        }
-
-        closedir(dir);
-        return false;
+#if defined(__amigaos4__)
+	return strdup("PROGDIR:");
+#else
+	char *ptr, buf[PATH_MAX + 1];
+	
+	/* isn't there some other function that does this in a totally incompatible way on win32? */
+	ptr = getenv("HOME");
+	if (ptr)
+		return strdup(ptr);
+	
+	/* hmm. fall back to the current dir */
+	if (getcwd(buf, PATH_MAX))
+		return strdup(buf);
+	
+	/* still don't have a directory? sheesh. */
+	return strdup(FALLBACK_DIR);
+#endif
 }

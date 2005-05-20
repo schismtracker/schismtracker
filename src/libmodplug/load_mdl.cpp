@@ -77,7 +77,6 @@ void ConvertMDLCommand(MODCOMMAND *m, UINT eff, UINT data)
 		break;
 	case 0x0F:	command = CMD_SPEED; break;
                 
-                // <chisel> deborked the volume slides (sort of)
 	case 0x10:
                 if ((param & 0xF0) != 0xE0) {
                         command = CMD_VOLUMESLIDE;
@@ -228,6 +227,7 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 	pvolenv = ppanenv = ppitchenv = NULL;
 	nvolenv = npanenv = npitchenv = 0;
 	m_nSamples = m_nInstruments = 0;
+	m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	while (dwMemPos+6 < dwMemLength)
 	{
 		block = *((WORD *)(lpStream+dwMemPos));
@@ -248,7 +248,6 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 			if (norders > MAX_ORDERS) norders = MAX_ORDERS;
 			m_nRestartPos = pmib->repeatpos;
 			m_nDefaultGlobalVolume = pmib->globalvol;
-                        // <chisel> annoyance fixed. personal taste only :)
                         if (m_nDefaultGlobalVolume == 255)
                                 m_nDefaultGlobalVolume++;
 			m_nDefaultTempo = pmib->tempo;

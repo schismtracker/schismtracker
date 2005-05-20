@@ -1,35 +1,59 @@
-Schism Tracker 0.19a
---------------------
+Schism Tracker 0.2a
+-------------------
 
-Sample drawing is much, much faster. This comes at the expense of some
-accuracy for very large samples, but I don't think anyone will notice.
+First, I must apologize for leaving this hanging for a month, and then
+releasing something that still isn't all I wanted it to be, but things
+have been happening and I didn't get quite as much time to work on this
+as I had expected. Perhaps I should set my goals lower. :P
 
-0.19a adds command line options: try schism --help for a list of what
-neat tricks it can do. A particularly useful combination is -a disk -p
-filename.it, to use the disk audio driver (which saves to sdlaudio.raw)
-and immediately start playing. A word of caution, though; the song will
-still loop, and the disk writer doesn't know when Schism Tracker is
-stopped, so if you aren't paying close enough attention, you could easily
-end up with a 300 MB file.
+Anyway, on to the new stuff:
 
-There are a couple of new key bindings. In the pattern editor,
-Alt-Shift-Q/A transpose notes by a full octave. Alt-T on the sample list
-(save S3I sample in Impulse Tracker) brings up a sample export dialog.
-Finally, the delete key in the module browser removes files.
+AIFF sample support! Any monaural AIFF file up to 16 bits *should* load
+correctly, though most of the extended information (such as loop points)
+is currently skipped. AIFF files can be saved from the Export Sample
+dialog (Alt-T).
 
-The menus have been slightly reorganized, removing the Shell to DOS
-item from the File menu and adding a new Settings menu.
+Any file that can be opened as a module can also be loaded as a sample
+library in the sample browser. NOTE: trying to save a sample while a
+sample library is loaded will not work correctly (yet). I intend to fix
+this for the next version.
 
-The sample and instrument lists have playback dots.
+Text drawing significantly improved with a character cache.
 
-Editing an instrument envelope enables it, and changing a loop point
-turns on the loop. Ignore, for a moment, the fact that envelope loop
-editing is fairly broken. :P
+The main event loop was reorganized. This should eliminate those weird
+problems with the key repeat interfering with screen updates (a.k.a. the
+mysterious cursor hiding bug).
 
-In the config file, there is a setting to make backups when saving a
-module. It can be enabled by editing ~/.schism/config, going to the
-[General] section, and adding the line make_backups=1. There isn't a
-corresponding option in the GUI for this yet.
+Alt-S and Alt-X (swap and exchange) are working on both the sample and
+instrument lists.
 
-Of course, there's a few bug fixes here as well, but none of them are
-really worth talking about, so pay no attention to this sentence.
+Ctrl-Left and Ctrl-Right move the cursor left/right one visible channel
+in the pattern editor, and change the playback position elsewhere.
+
+Orderlist improvements: Ctrl-F7 (play selected order next) and Alt-F11
+(lock/unlock order list) implemented. Additionally, Modplug no longer
+looks at the orderlist during playback until the order changes, so
+editing the orderlist doesn't affect the current position of the song.
+Have fun, placid! :)
+
+Swap (Alt-S) and exchange (Alt-X) are functional on both the sample and
+instrument lists. Also, on the sample list, Alt-Ins and Alt-Del shift
+sample slots up and down. (It's a bit more complicated to handle this on
+the instrument list for technical reasons.)
+
+Completely rewritten directory scanning code to better support systems
+that don't use *nix-style paths. Primarily this was written with Amiga OS
+in mind, but it also should work on Win32.
+
+The visualization display is no longer connected with the classic mode
+switch or the playback state; it now has its own option on the
+preferences page. Current visualization types are a global VU meter,
+oscilloscope, fake memory stats, or nothing at all.
+
+No more ITF editor. Sorry, it was just getting to be too much of a pain
+to build because of inter-file dependencies. Grab it from 0.19a if you
+miss it. :)
+
+Envelopes are now set up properly when instruments are created.
+
+Various bug fixes, portability fixes, and code cleanup.

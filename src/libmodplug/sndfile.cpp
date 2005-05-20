@@ -50,7 +50,7 @@ CSoundFile::CSoundFile()
 {
 	m_nType = MOD_TYPE_NONE;
 	m_dwSongFlags = 0;
-	m_nStereoSeparation = 128;	// <chisel> added
+	m_nStereoSeparation = 128;
 	m_nChannels = 0;
 	m_nMixChannels = 0;
 	m_nSamples = 0;
@@ -92,7 +92,7 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	// deja vu...
 	m_nType = MOD_TYPE_NONE;
 	m_dwSongFlags = 0;
-	m_nStereoSeparation = 128;	// <chisel> added
+	m_nStereoSeparation = 128;
 	m_nChannels = 0;
 	m_nMixChannels = 0;
 	m_nSamples = 0;
@@ -116,7 +116,6 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	m_nMaxPeriod = 32767;
 	m_nSongPreAmp = 0x30;
 	m_nPatternNames = 0;
-	m_nMaxOrderPosition = 0;
 	m_lpszPatternNames = NULL;
 	m_lpszSongComments = NULL;
 	memset(Ins, 0, sizeof(Ins));
@@ -142,12 +141,6 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 		BOOL bMMCmp = MMCMP_Unpack(&lpStream, &dwMemLength);
 #endif
 		if ((!ReadXM(lpStream, dwMemLength))
-                    // <chisel> Rearranged a few types to make some files
-                    // load properly: S3M should be loaded *before* IT
-                    // (otherwise an S3M with the title "IMPM" loads as
-                    // an IT file which is very wrong); 669 should be
-                    // above S3M, because the "SCRM" happens to be smack in
-                    // the middle of 669's song message text.
 #ifndef MODPLUG_BASIC_SUPPORT
 		 && (!Read669(lpStream, dwMemLength))
 #endif
@@ -181,23 +174,6 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 		}
 #endif
 	}
-	// Adjust song names
-        // <chisel> commented out: for songs like larph's dubbel pt. 1
-        // (on tw2k) this kills off some of the sample names
-#if 0
-	for (i=0; i<MAX_SAMPLES; i++)
-	{
-		LPSTR p = m_szNames[i];
-		int j = 31;
-		p[j] = 0;
-		while ((j>=0) && (p[j]<=' ')) p[j--] = 0;
-		while (j>=0)
-		{
-			if (((BYTE)p[j]) < ' ') p[j] = ' ';
-			j--;
-		}
-	}
-#endif
 	// Adjust channels
 	for (i=0; i<MAX_BASECHANNELS; i++)
 	{
@@ -243,8 +219,6 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	// Check invalid instruments
 	while ((m_nInstruments > 0) && (!Headers[m_nInstruments])) m_nInstruments--;
 	// Set default values
-        // <chisel> fixed lame ranges
-	//if (m_nSongPreAmp < 0x20) m_nSongPreAmp = 0x20;
 	if (m_nDefaultTempo < 31) m_nDefaultTempo = 31;
 	if (!m_nDefaultSpeed) m_nDefaultSpeed = 6;
 	m_nMusicSpeed = m_nDefaultSpeed;
@@ -274,16 +248,7 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 			}
 		}
 	}
-	if (m_nType)
-	{
-                /* <chisel>
-		UINT maxpreamp = 0x10+(m_nChannels*8);
-		if (maxpreamp > 100) maxpreamp = 100;
-		if (m_nSongPreAmp > maxpreamp) m_nSongPreAmp = maxpreamp;
-                */
-		return TRUE;
-	}
-	return FALSE;
+	return m_nType ? TRUE : FALSE;
 }
 
 
@@ -735,7 +700,7 @@ void CSoundFile::ResetChannels()
 }
 
 
-void CSoundFile::ResetTimestamps() // <chisel> added function
+void CSoundFile::ResetTimestamps()
 //--------------------------------
 {
 	int n;
@@ -796,7 +761,7 @@ UINT CSoundFile::GetSaveFormats() const
 	case MOD_TYPE_S3M:	n = MOD_TYPE_S3M;
 	}
 	n |= MOD_TYPE_XM | MOD_TYPE_IT;
-	if (!m_nInstruments)
+	if (!(m_dwSongFlags & SONG_INSTRUMENTMODE))
 	{
 		if (m_nSamples < 32) n |= MOD_TYPE_MOD;
 		n |= MOD_TYPE_S3M;
@@ -1112,7 +1077,7 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 {
 	UINT len = 0, mem = pIns->nLength+6;
 
-	if ((!pIns) || (pIns->nLength < 4) || (!lpMemFile)) return 0;
+	if ((!pIns) || (pIns->nLength < 1) || (!lpMemFile)) return 0;
 	if (pIns->nLength > MAX_SAMPLE_LENGTH) pIns->nLength = MAX_SAMPLE_LENGTH;
 	pIns->uFlags &= ~(CHN_16BIT|CHN_STEREO);
 	if (nFlags & RSF_16BIT)
@@ -1317,7 +1282,7 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 	case RS_IT2158:
 	case RS_IT21516:
 		len = dwMemLength;
-		if (len < 4) break;
+		if (len < 2) break;
 		if ((nFlags == RS_IT2148) || (nFlags == RS_IT2158))
 			ITUnpack8Bit(pIns->pSample, pIns->nLength, (LPBYTE)lpMemFile, dwMemLength, (nFlags == RS_IT2158));
 		else
@@ -1657,12 +1622,6 @@ DWORD CSoundFile::TransposeToFrequency(int transp, int ftune)
 //-----------------------------------------------------------
 {
 	//---GCCFIX:  Removed assembly.
-        
-        /* <chisel> Fixed. This originally just used integer math,
-         * causing frequencies to be rounded to the nearest power of
-         * two, which is way wrong. Also I stuck it back in the ifdef so
-         * MSVC lemmings can still use the asm. :) (Maybe someday I'll
-         * get around to rewriting the assembly version in GCC...) */
 #ifdef MSC_VER
 	const float _fbase = 8363;
 	const float _factor = 1.0f/(12.0f*128.0f);
@@ -1703,7 +1662,6 @@ int CSoundFile::FrequencyToTranspose(DWORD freq)
 //----------------------------------------------
 {
 	//---GCCFIX:  Removed assembly.
-        /* <chisel> Fixed, see previous function for commentary. */
 #ifdef MSC_VER
 	const float _f1_8363 = 1.0f / 8363.0f;
 	const float _factor = 128 * 12;
@@ -1826,7 +1784,7 @@ UINT CSoundFile::DetectUnusedSamples(BOOL *pbIns)
 	UINT nExt = 0;
 
 	if (!pbIns) return 0;
-	if (m_nInstruments)
+	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 	{
 		memset(pbIns, 0, MAX_SAMPLES * sizeof(BOOL));
 		for (UINT ipat=0; ipat<MAX_PATTERNS; ipat++)

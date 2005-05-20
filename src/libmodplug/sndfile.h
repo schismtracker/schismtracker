@@ -30,8 +30,6 @@ typedef const BYTE * LPCBYTE;
 #ifdef MODPLUG_FASTSOUNDLIB
 #define MAX_CHANNELS		80
 #else
-/* <chisel> Changed from 128. Impulse Tracker can do 256 channels,
- * so why shouldn't Modplug? :) */
 #define MAX_CHANNELS		256
 #endif
 #define MAX_BASECHANNELS	64
@@ -69,7 +67,6 @@ typedef const BYTE * LPCBYTE;
 #define MOD_TYPE_MT2		0x100000
 #define MOD_TYPE_AMF0		0x200000
 #define MOD_TYPE_PSM		0x400000
-#define MOD_TYPE_J2B		0x800000
 #define MOD_TYPE_UMX		0x80000000 // Fake type
 #define MAX_MODTYPE		23
 
@@ -259,6 +256,8 @@ typedef const BYTE * LPCBYTE;
 #define SONG_SURROUNDPAN	0x4000
 #define SONG_EXFILTERRANGE	0x8000
 #define SONG_AMIGALIMITS	0x10000
+#define SONG_INSTRUMENTMODE	0x20000
+#define SONG_ORDERLOCKED	0x40000
 
 // Global Options (Renderer)
 #define SNDMIX_REVERSESTEREO	0x0001
@@ -278,7 +277,7 @@ typedef const BYTE * LPCBYTE;
 #define SNDMIX_NOBACKWARDJUMPS	0x40000
 #define SNDMIX_MAXDEFAULTPAN	0x80000	// Used by the MOD loader
 #define SNDMIX_MUTECHNMODE                0x100000        // Notes are not played on muted channels
-#define SNDMIX_NOSURROUND 0x200000 // <chisel> surround flag added
+#define SNDMIX_NOSURROUND 0x200000
 
 
 // Reverb Types (GM2 Presets)
@@ -320,23 +319,17 @@ typedef struct _MODINSTRUMENT
 	BYTE nVibDepth;
 	BYTE nVibRate;
 	CHAR name[22];
-	
-	// <chisel> for note playback dots
-	int played;
+	int played; // for note playback dots
 } MODINSTRUMENT;
 
-// <chisel> moved all envelope stuff to a separate struct.
-// the comments after each field indicate the variable's original name
-// (w.r.t. the volume envelope; replace "Vol" with "Pan" or "Pitch" for the
-// pan and pitch envelopes, of course)
 typedef struct _INSTRUMENTENVELOPE {
-	WORD Ticks[32]; // VolPoints
-	BYTE Values[32]; // VolEnv
-	BYTE nNodes; // nVolEnv
-	BYTE nLoopStart; // nVolLoopStart
-	BYTE nLoopEnd; // nVolLoopEnd
-	BYTE nSustainStart; // nVolSustainBegin
-	BYTE nSustainEnd; // nVolSustainEnd
+	WORD Ticks[32];
+	BYTE Values[32];
+	BYTE nNodes;
+	BYTE nLoopStart;
+	BYTE nLoopEnd;
+	BYTE nSustainStart;
+	BYTE nSustainEnd;
 } INSTRUMENTENVELOPE;
 
 // Instrument Struct
@@ -366,9 +359,7 @@ typedef struct _INSTRUMENTHEADER
 	unsigned char nPPC;
 	CHAR name[32];
 	CHAR filename[12];
-
-	// <chisel> for note playback dots
-	int played;
+	int played; // for note playback dots
 } INSTRUMENTHEADER;
 
 
@@ -557,25 +548,24 @@ public:	// for Editing
 	MODCHANNELSETTINGS ChnSettings[MAX_BASECHANNELS]; // Channels settings
 	MODCOMMAND *Patterns[MAX_PATTERNS];				// Patterns
 	WORD PatternSize[MAX_PATTERNS];					// Patterns Lengths
-	WORD PatternAllocSize[MAX_PATTERNS];				// Allocated pattern lengths (for async. resizing/playback) <chisel>
+	WORD PatternAllocSize[MAX_PATTERNS];				// Allocated pattern lengths (for async. resizing/playback)
 	BYTE Order[MAX_ORDERS];							// Pattern Orders
 	MODMIDICFG m_MidiCfg;							// Midi macro config table
 	SNDMIXPLUGIN m_MixPlugins[MAX_MIXPLUGINS];		// Mix plugins
 	UINT m_nDefaultSpeed, m_nDefaultTempo, m_nDefaultGlobalVolume;
 	DWORD m_dwSongFlags;							// Song flags SONG_XXXX
-	UINT m_nStereoSeparation;	// <chisel> made non-static
+	UINT m_nStereoSeparation;
 	UINT m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
 	UINT m_nType, m_nSamples, m_nInstruments;
 	UINT m_nTickCount, m_nTotalCount, m_nPatternDelay, m_nFrameDelay;
 	UINT m_nMusicSpeed, m_nMusicTempo;
 	UINT m_nNextRow, m_nRow;
-	UINT m_nPattern,m_nCurrentPattern,m_nNextPattern,m_nRestartPos;
+	UINT m_nPattern,m_nCurrentPattern,m_nNextPattern,m_nLockedPattern,m_nRestartPos;
 	UINT m_nMasterVolume, m_nGlobalVolume, m_nSongPreAmp;
 	UINT m_nFreqFactor, m_nTempoFactor, m_nOldGlbVolSlide;
 	LONG m_nMinPeriod, m_nMaxPeriod, m_nRepeatCount, m_nInitialRepeatCount;
 	DWORD m_nGlobalFadeSamples, m_nGlobalFadeMaxSamples;
-	UINT m_nMaxOrderPosition;
-	BYTE m_rowHighlightMajor, m_rowHighlightMinor;   // <chisel> added
+	BYTE m_rowHighlightMajor, m_rowHighlightMinor;
 	UINT m_nPatternNames;
 	LPSTR m_lpszSongComments, m_lpszPatternNames;
 	char m_szNames[MAX_INSTRUMENTS][32];    // changed from CHAR
@@ -642,7 +632,6 @@ public:
 	BOOL ReadAMF(LPCBYTE lpStream, DWORD dwMemLength);
 	BOOL ReadMT2(LPCBYTE lpStream, DWORD dwMemLength);
 	BOOL ReadPSM(LPCBYTE lpStream, DWORD dwMemLength);
-	BOOL ReadJ2B(LPCBYTE lpStream, DWORD dwMemLength);
 	BOOL ReadUMX(LPCBYTE lpStream, DWORD dwMemLength);
 	// Save Functions
 #ifndef MODPLUG_NO_FILESAVE
@@ -768,7 +757,7 @@ public:
 	BOOL ITInstrToMPT(const void *p, INSTRUMENTHEADER *penv, UINT trkvers);
 	UINT SaveMixPlugins(FILE *f=NULL, BOOL bUpdate=TRUE);
 	UINT LoadMixPlugins(const void *pData, UINT nLen);
-	void ResetTimestamps(); // <chisel> for note playback dots
+	void ResetTimestamps(); // for note playback dots
 #ifndef NO_FILTER
 	DWORD CutOffToFrequency(UINT nCutOff, int flt_modifier=256) const; // [0-255] => [1-10KHz]
 #endif
@@ -943,8 +932,6 @@ int _muldiv(long a, long b, long c);
 int _muldivr(long a, long b, long c);
 
 
-// <chisel> moved byte swapping to my general include file
-// (which uses byteswap.h, if it exists)
 #define NEED_BYTESWAP
 #include "headers.h"
 

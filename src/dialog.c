@@ -58,7 +58,7 @@ void dialog_draw(void)
 	int n, d;
 
 	for (d = 0; d < num_dialogs; d++) {
-		n = dialogs[d].total_items;
+		n = dialogs[d].total_widgets;
 
 		/* draw the border and background */
 		draw_box(dialogs[d].x, dialogs[d].y,
@@ -73,10 +73,10 @@ void dialog_draw(void)
 		if (dialogs[d].text)
 			draw_text(dialogs[d].text, dialogs[d].text_x, 27, 0, 2);
 
-		n = dialogs[d].total_items;
+		n = dialogs[d].total_widgets;
 		while (n) {
 			n--;
-			draw_item(dialogs[d].items + n, n == dialogs[d].selected_item);
+			draw_widget(dialogs[d].widgets + n, n == dialogs[d].selected_widget);
 		}
 	}
 }
@@ -94,20 +94,20 @@ void dialog_destroy(void)
 
 	if (dialogs[d].type != DIALOG_CUSTOM) {
 		free(dialogs[d].text);
-		free(dialogs[d].items);
+		free(dialogs[d].widgets);
 	}
 
 	num_dialogs--;
 	if (num_dialogs) {
 		d--;
-		items = dialogs[d].items;
-		selected_item = &(dialogs[d].selected_item);
-		total_items = &(dialogs[d].total_items);
+		widgets = dialogs[d].widgets;
+		selected_widget = &(dialogs[d].selected_widget);
+		total_widgets = &(dialogs[d].total_widgets);
 		status.dialog_type = dialogs[d].type;
 	} else {
-		items = ACTIVE_PAGE.items;
-		selected_item = &(ACTIVE_PAGE.selected_item);
-		total_items = &(ACTIVE_PAGE.total_items);
+		widgets = ACTIVE_PAGE.widgets;
+		selected_widget = &(ACTIVE_PAGE.selected_widget);
+		total_widgets = &(ACTIVE_PAGE.total_widgets);
 		status.dialog_type = DIALOG_NONE;
 	}
 
@@ -123,47 +123,60 @@ void dialog_destroy_all(void)
 /* --------------------------------------------------------------------- */
 /* default callbacks */
 
-void dialog_yes(void)
+void dialog_yes(void *data)
 {
-        void (*action) (void);
+        void (*action) (void *);
 	
 	ENSURE_DIALOG();
-	
+
 	action = dialogs[num_dialogs - 1].action_yes;
 	dialog_destroy();
-	RUN_IF(action);
+	RUN_IF(action, data);
 	status.flags |= NEED_UPDATE;
 }
 
-void dialog_no(void)
+void dialog_no(void *data)
 {
-        void (*action) (void);
+        void (*action) (void *);
 
 	ENSURE_DIALOG();
 
 	action = dialogs[num_dialogs - 1].action_no;
 	dialog_destroy();
-	RUN_IF(action);
+	RUN_IF(action, data);
 	status.flags |= NEED_UPDATE;
 }
 
-void dialog_cancel(void)
+void dialog_cancel(void *data)
 {
-        void (*action) (void);
+        void (*action) (void *);
 
 	ENSURE_DIALOG();
 
 	action = dialogs[num_dialogs - 1].action_cancel;
 	dialog_destroy();
-	RUN_IF(action);
+	RUN_IF(action, data);
 	status.flags |= NEED_UPDATE;
+}
+
+void dialog_yes_NULL(void)
+{
+	dialog_yes(NULL);
+}
+void dialog_no_NULL(void)
+{
+	dialog_no(NULL);
+}
+void dialog_cancel_NULL(void)
+{
+	dialog_cancel(NULL);
 }
 
 /* --------------------------------------------------------------------- */
 
 int dialog_handle_key(SDL_keysym * k)
 {
-	struct dialog *d;
+	struct dialog *d = dialogs + num_dialogs - 1;
 	int yes = 0;
 	
 	ENSURE_DIALOG(0);
@@ -173,7 +186,7 @@ int dialog_handle_key(SDL_keysym * k)
 		switch (status.dialog_type) {
 		case DIALOG_YES_NO:
 		case DIALOG_OK_CANCEL:
-			dialog_yes();
+			dialog_yes(d->data);
 			return 1;
 		default:
 			break;
@@ -182,17 +195,17 @@ int dialog_handle_key(SDL_keysym * k)
 	case SDLK_n:
 		switch (status.dialog_type) {
 		case DIALOG_YES_NO:
-			dialog_no();
+			dialog_no(d->data);
 			return 1;
 		case DIALOG_OK_CANCEL:
-			dialog_cancel();
+			dialog_cancel(d->data);
 			return 1;
 		default:
 			break;
 		}
 		break;
 	case SDLK_ESCAPE:
-		dialog_cancel();
+		dialog_cancel(d->data);
 		return 1;
 	case SDLK_RETURN:
 	case SDLK_KP_ENTER:
@@ -202,11 +215,10 @@ int dialog_handle_key(SDL_keysym * k)
 		break;
 	}
 	
-	d = dialogs + num_dialogs - 1;
 	if (d->handle_key && d->handle_key(k)) {
 		return 1;
 	} else if (yes) {
-		dialog_yes();
+		dialog_yes(d->data);
 		return 1;
 	}
 	return 0;
@@ -232,10 +244,10 @@ static void dialog_create_ok(int textlen)
 	dialogs[d].h = 8;
 	dialogs[d].y = 25;
 
-	dialogs[d].items = malloc(sizeof(struct item));
-	dialogs[d].total_items = 1;
+	dialogs[d].widgets = malloc(sizeof(struct widget));
+	dialogs[d].total_widgets = 1;
 
-	create_button(dialogs[d].items + 0, 36, 30, 6, 0, 0, 0, 0, 0, dialog_yes, "OK", 3);
+	create_button(dialogs[d].widgets + 0, 36, 30, 6, 0, 0, 0, 0, 0, dialog_yes_NULL, "OK", 3);
 }
 
 static void dialog_create_ok_cancel(int textlen)
@@ -255,11 +267,11 @@ static void dialog_create_ok_cancel(int textlen)
 	dialogs[d].h = 8;
 	dialogs[d].y = 25;
 
-	dialogs[d].items = calloc(2, sizeof(struct item));
-	dialogs[d].total_items = 2;
+	dialogs[d].widgets = calloc(2, sizeof(struct widget));
+	dialogs[d].total_widgets = 2;
 
-	create_button(dialogs[d].items + 0, 31, 30, 6, 0, 0, 1, 1, 1, dialog_yes, "OK", 3);
-	create_button(dialogs[d].items + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_cancel, "Cancel", 1);
+	create_button(dialogs[d].widgets + 0, 31, 30, 6, 0, 0, 1, 1, 1, dialog_yes_NULL, "OK", 3);
+	create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_cancel_NULL, "Cancel", 1);
 }
 
 static void dialog_create_yes_no(int textlen)
@@ -277,19 +289,19 @@ static void dialog_create_yes_no(int textlen)
 	dialogs[d].h = 8;
 	dialogs[d].y = 25;
 
-	dialogs[d].items = calloc(2, sizeof(struct item));
-	dialogs[d].total_items = 2;
+	dialogs[d].widgets = calloc(2, sizeof(struct widget));
+	dialogs[d].total_widgets = 2;
 
-	create_button(dialogs[d].items + 0, 30, 30, 7, 0, 0, 1, 1, 1, dialog_yes, "Yes", 3);
-	create_button(dialogs[d].items + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_no, "No", 3);
+	create_button(dialogs[d].widgets + 0, 30, 30, 7, 0, 0, 1, 1, 1, dialog_yes_NULL, "Yes", 3);
+	create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_no_NULL, "No", 3);
 }
 
 /* --------------------------------------------------------------------- */
 /* type can be DIALOG_OK, DIALOG_OK_CANCEL, or DIALOG_YES_NO
- * default_item: 0 = ok/yes, 1 = cancel/no */
+ * default_widget: 0 = ok/yes, 1 = cancel/no */
 
-void dialog_create(int type, const char *text, void (*action_yes) (void),
-		   void (*action_no) (void), int default_item)
+void dialog_create(int type, const char *text, void (*action_yes) (void *data),
+		   void (*action_no) (void *data), int default_widget, void *data)
 {
 	int textlen = strlen(text);
 	int d = num_dialogs;
@@ -301,16 +313,16 @@ void dialog_create(int type, const char *text, void (*action_yes) (void),
 	}
 #endif
 
-	/* FIXME | hmm... a menu should probably be hiding itself when an
-	 * FIXME | item gets selected. */
+	/* FIXME | hmm... a menu should probably be hiding itself when a widget gets selected. */
 	if (status.dialog_type & DIALOG_MENU)
 		menu_hide();
 
 	dialogs[d].text = strdup(text);
+	dialogs[d].data = data;
 	dialogs[d].action_yes = action_yes;
 	dialogs[d].action_no = action_no;
 	dialogs[d].action_cancel = NULL;	/* ??? */
-	dialogs[d].selected_item = default_item;
+	dialogs[d].selected_widget = default_widget;
 	dialogs[d].draw_const = NULL;
 	dialogs[d].handle_key = NULL;
 
@@ -334,9 +346,9 @@ void dialog_create(int type, const char *text, void (*action_yes) (void),
 	}
 
 	dialogs[d].type = type;
-	items = dialogs[d].items;
-	selected_item = &(dialogs[d].selected_item);
-	total_items = &(dialogs[d].total_items);
+	widgets = dialogs[d].widgets;
+	selected_widget = &(dialogs[d].selected_widget);
+	total_widgets = &(dialogs[d].total_widgets);
 
 	num_dialogs++;
 
@@ -347,9 +359,9 @@ void dialog_create(int type, const char *text, void (*action_yes) (void),
 /* --------------------------------------------------------------------- */
 /* this will probably die painfully if two threads try to make custom dialogs at the same time */
 
-struct dialog *dialog_create_custom(int x, int y, int w, int h, struct item *dialog_items,
-				    int dialog_total_items, int dialog_selected_item,
-				    void (*draw_const) (void))
+struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
+				    int dialog_total_widgets, int dialog_selected_widget,
+				    void (*draw_const) (void), void *data)
 {
 	struct dialog *d = dialogs + num_dialogs;
 	num_dialogs++;
@@ -359,21 +371,22 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct item *dia
 	d->y = y;
 	d->w = w;
 	d->h = h;
-	d->items = dialog_items;
-	d->selected_item = dialog_selected_item;
-	d->total_items = dialog_total_items;
+	d->widgets = dialog_widgets;
+	d->selected_widget = dialog_selected_widget;
+	d->total_widgets = dialog_total_widgets;
 	d->draw_const = draw_const;
 	
 	d->text = NULL;
+	d->data = data;
 	d->action_yes = NULL;
 	d->action_no = NULL;
 	d->action_cancel = NULL;
 	d->handle_key = NULL;
 	
 	status.dialog_type = DIALOG_CUSTOM;
-	items = d->items;
-	selected_item = &(d->selected_item);
-	total_items = &(d->total_items);
+	widgets = d->widgets;
+	selected_widget = &(d->selected_widget);
+	total_widgets = &(d->total_widgets);
 	
 	status.flags |= NEED_UPDATE;
 	

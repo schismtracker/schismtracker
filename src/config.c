@@ -26,12 +26,40 @@
 #include <sys/stat.h>
 
 #include "config-parser.h"
+#include "dmoz.h"
 
 /* --------------------------------------------------------------------- */
 /* config settings */
 
-char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1];
-char cfg_font[NAME_MAX + 1];
+char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1],
+	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
+
+/* --------------------------------------------------------------------- */
+
+void cfg_init_dir(void)
+{
+#if defined(__amigaos4__)
+	strcpy(cfg_dir_dotschism, "PROGDIR:");
+#else
+	char *home_dir, *ptr;
+	
+	home_dir = get_home_directory();
+	ptr = dmoz_path_concat(home_dir, ".schism");
+	strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
+	cfg_dir_dotschism[PATH_MAX] = 0;
+	free(home_dir);
+	free(ptr);
+	
+	if (!is_directory(cfg_dir_dotschism)) {
+		printf("Creating directory %s\n", cfg_dir_dotschism);
+		printf("Schism Tracker uses this directory to store your settings.\n");
+		if (mkdir(cfg_dir_dotschism, 0777) != 0) {
+			perror("Error creating directory");
+			fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
+		}
+	}
+#endif
+}
 
 /* --------------------------------------------------------------------- */
 
@@ -73,31 +101,21 @@ static void cfg_save_palette(cfg_file_t *cfg)
 
 void cfg_load(void)
 {
-	char filename[PATH_MAX + 1];
-	const char *home_dir = getenv("HOME") ? : "/";
+	char *ptr;
 	int i;
 	cfg_file_t cfg;
-	
-	strncpy(filename, home_dir, PATH_MAX);
-	strncat(filename, "/.schism", PATH_MAX);
-	if (!is_directory(filename)) {
-		printf("Creating directory ~/.schism where Schism Tracker will store your settings.\n");
-		i = mkdir(filename, 0777);
-		if (i != 0) {
-			perror("Error creating directory");
-			fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
-		}
-	}
-	
-	strncat(filename, "/config", PATH_MAX);
-	filename[PATH_MAX] = 0;
-	cfg_init(&cfg, filename);
+
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+	free(ptr);
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, home_dir);
-	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, home_dir);
-	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, home_dir);
+	
+	ptr = get_home_directory();
+	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, ptr);
+	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, ptr);
+	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, ptr);
+	free(ptr);
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 	
@@ -107,12 +125,6 @@ void cfg_load(void)
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 	
-	i = cfg_get_number(&cfg, "General", "time_display", TIME_PLAY_ELAPSED);
-	/* default to play/elapsed for invalid values */
-	if (i < 0 || i >= TIME_PLAYBACK)
-		i = TIME_PLAY_ELAPSED;
-	status.time_display = i;
-	
 	if (cfg_get_number(&cfg, "General", "classic_mode", 0))
 		status.flags |= CLASSIC_MODE;
 	else
@@ -121,6 +133,18 @@ void cfg_load(void)
 		status.flags |= MAKE_BACKUPS;
 	else
 		status.flags &= ~MAKE_BACKUPS;
+	
+	i = cfg_get_number(&cfg, "General", "time_display", TIME_PLAY_ELAPSED);
+	/* default to play/elapsed for invalid values */
+	if (i < 0 || i >= TIME_PLAYBACK)
+		i = TIME_PLAY_ELAPSED;
+	status.time_display = i;
+	
+	i = cfg_get_number(&cfg, "General", "vis_style", VIS_OSCILLOSCOPE);
+	/* default to oscilloscope for invalid values */
+	if (i < 0 || i >= VIS_SENTINEL)
+		i = VIS_OSCILLOSCOPE;
+	status.vis_style = i;
 	
 	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
 	
@@ -133,14 +157,12 @@ void cfg_load(void)
 
 void cfg_save(void)
 {
-	char filename[PATH_MAX + 1];
+	char *ptr;
 	cfg_file_t cfg;
 
-	strncpy(filename, getenv("HOME") ? : "/", PATH_MAX);
-	strncat(filename, "/.schism/config", PATH_MAX);
-	filename[PATH_MAX] = 0;
-	
-	cfg_init(&cfg, filename);
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+	free(ptr);
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -169,14 +191,12 @@ void cfg_save(void)
 
 void cfg_atexit_save(void)
 {
-	char filename[PATH_MAX + 1];
+	char *ptr;
 	cfg_file_t cfg;
 
-	strncpy(filename, getenv("HOME") ? : "/", PATH_MAX);
-	strncat(filename, "/.schism/config", PATH_MAX);
-	filename[PATH_MAX] = 0;
-	
-	cfg_init(&cfg, filename);
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+	free(ptr);
 	
 	cfg_atexit_save_audio(&cfg);
 	

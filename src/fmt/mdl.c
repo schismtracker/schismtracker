@@ -20,24 +20,19 @@
 
 #define NEED_BYTESWAP
 #include "headers.h"
-
-#include "title.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
 /* MDL is nice, but it's a pain to read the title... */
 
-/* TODO: this is another format with separate artist/title fields... */
-
-bool fmt_mdl_read_info(byte * data, size_t length, file_info * fi);
-bool fmt_mdl_read_info(byte * data, size_t length, file_info * fi)
+bool fmt_mdl_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
-        unsigned int position, block_length;
-        char artist[21], title[33];
+	size_t position, block_length;
+        char buf[33];
 
         /* data[4] = major version number (accept 0 or 1) */
-        if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1
-              && memcmp(data, "DMDL", 4) == 0))
+        if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1 && memcmp(data, "DMDL", 4) == 0))
                 return false;
 
         position = 5;
@@ -48,20 +43,18 @@ bool fmt_mdl_read_info(byte * data, size_t length, file_info * fi)
                         return false;
                 if (memcmp(data + position, "IN", 2) == 0) {
                         /* hey! we have a winner */
-                        memcpy(title, data + position + 6, 32);
-                        memcpy(artist, data + position + 38, 20);
-                        artist[20] = 0;
-                        title[32] = 0;
-                        trim_string(artist);
-                        trim_string(title);
-
-                        fi->description = strdup("Digitrakker");
-                        fi->extension = strdup("mdl");
-                        fi->title = (char *) calloc(56, sizeof(char));
-                        sprintf(fi->title, "%s / %s", artist, title);
-                        fi->type = TYPE_XM;
+			memcpy(buf, data + position + 6, 32);
+			buf[32] = 0;
+			file->title = strdup(buf);
+			memcpy(buf, data + position + 38, 20);
+			buf[20] = 0;
+			file->artist = strdup(buf);
+			
+                        file->description = "Digitrakker";
+                        /*file->extension = strdup("mdl");*/
+                        file->type = TYPE_MODULE_XM;
                         return true;
-                }       /* else... */
+                } /* else... */
                 position += 6 + block_length;
         }
 

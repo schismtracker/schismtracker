@@ -334,6 +334,7 @@ BOOL CSoundFile::ReadAMS2(LPCBYTE lpStream, DWORD dwMemLength)
 	m_nDefaultSpeed = psh->speed;
 	m_nInstruments = psh->instruments;
 	m_nSamples = 0;
+	m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	if (psh->flags & 0x40) m_dwSongFlags |= SONG_LINEARSLIDES;
 	for (UINT nIns=1; nIns<=m_nInstruments; nIns++)
 	{

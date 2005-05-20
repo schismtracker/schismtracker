@@ -37,7 +37,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct item items_message[1];
+static struct widget widgets_message[1];
 
 static int top_line = 0;
 static int cursor_line = 0;
@@ -129,18 +129,15 @@ static int message_add_char(char newchar, int position)
         int len = strlen(message);
 
         if (len == 8000) {
-                dialog_create(DIALOG_OK, "  Song message too long!  ",
-                              NULL, NULL, 0);
+                dialog_create(DIALOG_OK, "  Song message too long!  ", NULL, NULL, 0, NULL);
                 return 0;
         }
         if (position < 0 || position > len) {
-                log_appendf(4, "message_add_char: position=%d, len=%d"
-                            " - shouldn't happen!", position, len);
+                log_appendf(4, "message_add_char: position=%d, len=%d - shouldn't happen!", position, len);
                 return 0;
         }
 
-        memmove(message + position + 1, message + position,
-                len - position);
+        memmove(message + position + 1, message + position, len - position);
         message[len + 1] = 0;
         message[position] = newchar;
         return 1;
@@ -260,7 +257,7 @@ static inline void message_set_editmode(void)
 {
         edit_mode = 1;
         top_line = cursor_line = cursor_char = cursor_pos = 0;
-        items_message[0].other.handle_key = message_handle_key_editmode;
+        widgets_message[0].other.handle_key = message_handle_key_editmode;
 
         status.flags |= NEED_UPDATE;
 }
@@ -268,7 +265,7 @@ static inline void message_set_editmode(void)
 static inline void message_set_viewmode(void)
 {
         edit_mode = 0;
-        items_message[0].other.handle_key = message_handle_key_viewmode;
+        widgets_message[0].other.handle_key = message_handle_key_viewmode;
 
         status.flags |= NEED_UPDATE;
 }
@@ -387,7 +384,7 @@ static void message_delete_line(void)
         status.flags |= NEED_UPDATE;
 }
 
-static void message_clear(void)
+static void message_clear(UNUSED void *data)
 {
         message[0] = 0;
         message_set_viewmode();
@@ -397,8 +394,7 @@ static void message_clear(void)
 
 static void prompt_message_clear(void)
 {
-        dialog_create(DIALOG_OK_CANCEL, "Clear song message?",
-                      message_clear, NULL, 1);
+        dialog_create(DIALOG_OK_CANCEL, "Clear song message?", message_clear, NULL, 1, NULL);
 }
 
 /* --------------------------------------------------------------------- */
@@ -457,21 +453,33 @@ static int message_handle_key_editmode(SDL_keysym * k)
 
         switch (k->sym) {
         case SDLK_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_cursor_line--;
                 break;
         case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_cursor_line++;
                 break;
         case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_cursor_char--;
                 break;
         case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_cursor_char++;
                 break;
         case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_cursor_line -= 35;
                 break;
         case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_cursor_line += 35;
                 break;
         case SDLK_HOME:
@@ -489,12 +497,18 @@ static int message_handle_key_editmode(SDL_keysym * k)
                 }
                 break;
         case SDLK_ESCAPE:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 message_set_viewmode();
                 return 1;
         case SDLK_BACKSPACE:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 message_delete_char();
                 return 1;
         case SDLK_DELETE:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 message_delete_next_char();
                 return 1;
         default:
@@ -551,8 +565,7 @@ static int message_handle_key_editmode(SDL_keysym * k)
         }
 
         message_reposition();
-        cursor_pos =
-                get_absolute_position(message, cursor_line, cursor_char);
+        cursor_pos = get_absolute_position(message, cursor_line, cursor_char);
 
         status.flags |= NEED_UPDATE;
 
@@ -572,7 +585,7 @@ static void song_changed_cb(void)
         int len;
 
         edit_mode = 0;
-        items_message[0].other.handle_key = message_handle_key_viewmode;
+        widgets_message[0].other.handle_key = message_handle_key_viewmode;
         top_line = 0;
         message = song_get_message();
 
@@ -595,9 +608,9 @@ void message_load_page(struct page *page)
         page->title = "Message Editor (Shift-F9)";
         page->draw_const = message_draw_const;
         page->song_changed_cb = song_changed_cb;
-        page->total_items = 1;
-        page->items = items_message;
+        page->total_widgets = 1;
+        page->widgets = widgets_message;
         page->help_index = HELP_MESSAGE_EDITOR;
 
-	create_other(items_message + 0, 0, message_handle_key_viewmode, message_draw);
+	create_other(widgets_message + 0, 0, message_handle_key_viewmode, message_draw);
 }

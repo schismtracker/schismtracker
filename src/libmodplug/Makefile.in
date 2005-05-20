@@ -62,8 +62,8 @@ am_libmodplug_a_OBJECTS = tables.$(OBJEXT) sndmix.$(OBJEXT) \
 	load_mod.$(OBJEXT) load_med.$(OBJEXT) load_mdl.$(OBJEXT) \
 	load_it.$(OBJEXT) load_far.$(OBJEXT) load_dsm.$(OBJEXT) \
 	load_dmf.$(OBJEXT) load_dbm.$(OBJEXT) load_ams.$(OBJEXT) \
-	load_amf.$(OBJEXT) load_669.$(OBJEXT) load_j2b.$(OBJEXT) \
-	load_mt2.$(OBJEXT) load_psm.$(OBJEXT)
+	load_amf.$(OBJEXT) load_669.$(OBJEXT) load_mt2.$(OBJEXT) \
+	load_psm.$(OBJEXT)
 libmodplug_a_OBJECTS = $(am_libmodplug_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -72,18 +72,17 @@ am__depfiles_maybe = depfiles
 @AMDEP_TRUE@	./$(DEPDIR)/load_amf.Po ./$(DEPDIR)/load_ams.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/load_dbm.Po ./$(DEPDIR)/load_dmf.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/load_dsm.Po ./$(DEPDIR)/load_far.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/load_it.Po ./$(DEPDIR)/load_j2b.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/load_mdl.Po ./$(DEPDIR)/load_med.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/load_mod.Po ./$(DEPDIR)/load_mt2.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/load_mtm.Po ./$(DEPDIR)/load_okt.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/load_psm.Po ./$(DEPDIR)/load_ptm.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/load_s3m.Po ./$(DEPDIR)/load_stm.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/load_ult.Po ./$(DEPDIR)/load_umx.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/load_wav.Po ./$(DEPDIR)/load_xm.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/mmcmp.Po ./$(DEPDIR)/snd_dsp.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/snd_flt.Po ./$(DEPDIR)/snd_fx.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/sndfile.Po ./$(DEPDIR)/sndmix.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/tables.Po
+@AMDEP_TRUE@	./$(DEPDIR)/load_it.Po ./$(DEPDIR)/load_mdl.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/load_med.Po ./$(DEPDIR)/load_mod.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/load_mt2.Po ./$(DEPDIR)/load_mtm.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/load_okt.Po ./$(DEPDIR)/load_psm.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/load_ptm.Po ./$(DEPDIR)/load_s3m.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/load_stm.Po ./$(DEPDIR)/load_ult.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/load_umx.Po ./$(DEPDIR)/load_wav.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/load_xm.Po ./$(DEPDIR)/mmcmp.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/snd_dsp.Po ./$(DEPDIR)/snd_flt.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/snd_fx.Po ./$(DEPDIR)/sndfile.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/sndmix.Po ./$(DEPDIR)/tables.Po
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 CXXLD = $(CXX)
@@ -228,7 +227,6 @@ libmodplug_a_SOURCES = tables.cpp          \
                         load_ams.cpp       \
                         load_amf.cpp       \
                         load_669.cpp       \
-                        load_j2b.cpp       \
                         load_mt2.cpp       \
                         load_psm.cpp
 
@@ -292,7 +290,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_dsm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_far.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_it.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_j2b.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_mdl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_med.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_mod.Po@am__quote@

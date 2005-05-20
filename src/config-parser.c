@@ -244,7 +244,7 @@ int cfg_read(cfg_file_t *cfg)
 	if (buf.st_size <= 0)
 		return -1;
 	buf.st_size++;
-	t = slurp(cfg->filename, &buf);
+	t = slurp(cfg->filename, &buf, 0);
 	if (!t)
 		return -1;
 	
@@ -307,6 +307,13 @@ int cfg_write(cfg_file_t *cfg)
 	make_backup_file(cfg->filename);
 	
 	fp = fopen(cfg->filename, "w");
+	if (!fp) {
+		/* FIXME: don't print a message here! */
+		perror(cfg->filename);
+		return -1;
+	}
+	
+	/* I should be checking a lot more return values, but ... meh */
 	
 	for (section = cfg->sections; section; section = section->next) {
 		if (section->comments)

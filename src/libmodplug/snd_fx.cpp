@@ -155,12 +155,7 @@ DWORD CSoundFile::GetLength(BOOL bAdjust, BOOL bTotal)
 				}
 				if (param >= 0x20) nMusicTempo = param; else
 				// Tempo Slide
-                                // <chisel> this is WRONG WRONG WRONG...
-                                // not gonna fix it though, as i just spent
-                                // enough time fixing it once down below...
-                                // besides this is just for the song length
-                                // and everyone ought to know it's just an
-                                // approximation anyway, so who cares? :P
+				// FIXME: this is totally wrong!
 				if ((param & 0xF0) == 0x10)
 				{
 					nMusicTempo += param & 0x0F;
@@ -304,7 +299,7 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	BOOL bInstrumentChanged = FALSE;
 
 	if (instr >= MAX_INSTRUMENTS) return;
-	INSTRUMENTHEADER *penv = Headers[instr];
+	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? Headers[instr] : NULL;
 	MODINSTRUMENT *psmp = &Ins[instr];
 	UINT note = pChn->nNewNote;
 	if ((penv) && (note) && (note <= 128))
@@ -313,7 +308,7 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 		UINT n = penv->Keyboard[note-1];
 		psmp = ((n) && (n < MAX_SAMPLES)) ? &Ins[n] : NULL;
 	} else
-	if (m_nInstruments)
+	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 	{
 		if (note >= 0xFE) return;
 		psmp = NULL;
@@ -338,10 +333,10 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	pChn->nNewIns = 0;
 	if (psmp)
 	{
-		psmp->played = 1; // <chisel>
+		psmp->played = 1;
 		if (penv)
 		{
-			penv->played = 1; // <chisel>
+			penv->played = 1;
 			pChn->nInsVol = (psmp->nGlobalVol * penv->nGlobalVol) >> 6;
 			if (penv->dwFlags & ENV_SETPANNING) pChn->nPan = penv->nPan;
 			pChn->nNNA = penv->nNNA;
@@ -435,7 +430,7 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 	if (note < 1) return;
 	MODCHANNEL * const pChn = &Chn[nChn];
 	MODINSTRUMENT *pins = pChn->pInstrument;
-	INSTRUMENTHEADER *penv = pChn->pHeader;
+	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	if ((penv) && (note <= 0x80))
 	{
 		UINT n = penv->Keyboard[note - 1];
@@ -445,10 +440,8 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 	// Key Off
 	if (note >= 0x80)	// 0xFE or invalid note => key off
 	{
-                // <chisel> added.
-                // technically this is "wrong", as anything besides ^^^,
-                // ===, and a valid note should cause a note fade... (oh
-                // well, it's just a quick hack anyway.)
+                // technically this is "wrong", as anything besides ^^^, ===, and a valid note
+		// should cause a note fade... (oh well, it's just a quick hack anyway.)
                 if (note == 0xFD) {
 			pChn->dwFlags |= CHN_NOTEFADE;
                         return;
@@ -460,7 +453,8 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 		if (note == 0xFE)
 		{
 			pChn->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
-			if ((!(m_nType & MOD_TYPE_IT)) || (m_nInstruments)) pChn->nVolume = 0;
+			if ((!(m_nType & MOD_TYPE_IT)) || (m_dwSongFlags & SONG_INSTRUMENTMODE))
+				pChn->nVolume = 0;
 			pChn->nFadeOutVol = 0;
 		}
 		return;
@@ -590,7 +584,8 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 	if (bManual) pChn->dwFlags &= ~CHN_MUTE;
 	if (((pChn->dwFlags & CHN_MUTE) && (gdwSoundSetup & SNDMIX_MUTECHNMODE))
 	    || ((pChn->pInstrument) && (pChn->pInstrument->uFlags & CHN_MUTE) && (!bManual))
-	    || ((pChn->pHeader) && (pChn->pHeader->dwFlags & ENV_MUTE) && (!bManual)))
+	    || ((m_dwSongFlags & SONG_INSTRUMENTMODE) && (pChn->pHeader)
+	        && (pChn->pHeader->dwFlags & ENV_MUTE) && (!bManual)))
 	{
 		if (!bManual) pChn->nPeriod = 0;
 	}
@@ -633,15 +628,15 @@ UINT CSoundFile::GetNNAChannel(UINT nChn) const
 void CSoundFile::CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut)
 //------------------------------------------------------------------------
 {
-        // <chisel> declaring 'p' here to kill a gcc warning
         MODCHANNEL *p;
 	MODCHANNEL *pChn = &Chn[nChn];
-	INSTRUMENTHEADER *penv = pChn->pHeader, *pHeader;
+	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	INSTRUMENTHEADER *pHeader;
 	signed char *pSample;
 	if (note > 0x80) note = 0;
 	if (note < 1) return;
 	// Always NNA cut - using
-	if ((!(m_nType & (MOD_TYPE_IT|MOD_TYPE_MT2))) || (!m_nInstruments) || (bForceCut))
+	if ((!(m_nType & (MOD_TYPE_IT|MOD_TYPE_MT2))) || (!(m_dwSongFlags & SONG_INSTRUMENTMODE)) || (bForceCut))
 	{
 		if ((m_dwSongFlags & SONG_CPUVERYHIGH)
 		 || (!pChn->nLength) || (pChn->dwFlags & CHN_MUTE)
@@ -668,7 +663,7 @@ void CSoundFile::CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut)
 	pHeader = pChn->pHeader;
 	if ((instr) && (note))
 	{
-		pHeader = Headers[instr];
+		pHeader = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? Headers[instr] : NULL;
 		if (pHeader)
 		{
 			UINT n = 0;
@@ -824,7 +819,7 @@ BOOL CSoundFile::ProcessEffects()
 			}
 			if ((!note) && (instr))
 			{
-				if (m_nInstruments)
+				if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 				{
 					if (pChn->pInstrument) pChn->nVolume = pChn->pInstrument->nVolume;
 					if (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2))
@@ -1032,10 +1027,7 @@ BOOL CSoundFile::ProcessEffects()
 				}
 				SetTempo(param);
 			} else {
-                                // <chisel> tempo slide fix
-                                // this just got set on tick zero...
-                                // look up about five lines ;)
-                                param = pChn->nOldTempo;
+                                param = pChn->nOldTempo; // this just got set on tick zero
                                 
                                 switch (param >> 4) {
                                 case 0:
@@ -1214,7 +1206,7 @@ BOOL CSoundFile::ProcessEffects()
 				pChn->nVolEnvPosition = param;
 				pChn->nPanEnvPosition = param;
 				pChn->nPitchEnvPosition = param;
-				if (pChn->pHeader)
+				if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
 				{
 					INSTRUMENTHEADER *penv = pChn->pHeader;
 					if ((pChn->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes) && (param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1]))
@@ -1827,8 +1819,6 @@ void CSoundFile::ExtendedChannelEffect(MODCHANNEL *pChn, UINT param)
 	////////////////////////////////////////////////////////////
 	// Modplug Extensions
 	// S90: Surround Off
-        // <chisel> moved down with the modplug extensions -- impulse
-        // tracker doesn't do anything for S90
 	case 0x00:	pChn->dwFlags &= ~CHN_SURROUND;	break;
 	// S98: Reverb Off
 	case 0x08:
@@ -2074,7 +2064,7 @@ void CSoundFile::NoteCut(UINT nChn, UINT nTick)
 	if (m_nTickCount == nTick)
 	{
 		MODCHANNEL *pChn = &Chn[nChn];
-		// if (m_nInstruments) KeyOff(pChn); ?
+		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
 		pChn->nVolume = 0;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
 	}
@@ -2088,7 +2078,7 @@ void CSoundFile::KeyOff(UINT nChn)
 	BOOL bKeyOn = (pChn->dwFlags & CHN_KEYOFF) ? FALSE : TRUE;
 	pChn->dwFlags |= CHN_KEYOFF;
 	//if ((!pChn->pHeader) || (!(pChn->dwFlags & CHN_VOLENV)))
-	if ((pChn->pHeader) && (!(pChn->dwFlags & CHN_VOLENV)))
+	if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && (pChn->pHeader) && (!(pChn->dwFlags & CHN_VOLENV)))
 	{
 		pChn->dwFlags |= CHN_NOTEFADE;
 	}
@@ -2113,7 +2103,7 @@ void CSoundFile::KeyOff(UINT nChn)
 			pChn->nLength = psmp->nLength;
 		}
 	}
-	if (pChn->pHeader)
+	if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
 	{
 		INSTRUMENTHEADER *penv = pChn->pHeader;
 		if (((penv->dwFlags & ENV_VOLLOOP) || (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2))) && (penv->nFadeOut))
@@ -2129,30 +2119,8 @@ void CSoundFile::KeyOff(UINT nChn)
 void CSoundFile::SetSpeed(UINT param)
 //-----------------------------------
 {
-	// <chisel> #if 0 around all this stuff. bleh :P
-#if 0
-	UINT max = (m_nType == MOD_TYPE_IT) ? 256 : 128;
-	// Modplug Tracker and Mod-Plugin don't do this check
-#ifndef MODPLUG_TRACKER
-#ifndef MODPLUG_FASTSOUNDLIB
-	// Big Hack!!!
-	if ((!param) || (param >= 0x80) || ((m_nType & (MOD_TYPE_MOD|MOD_TYPE_XM|MOD_TYPE_MT2)) && (param >= 0x1E)))
-	{
-		if (IsSongFinished(m_nCurrentPattern, m_nRow+1))
-		{
-			GlobalFadeSong(1000);
-		}
-	}
-#endif // MODPLUG_FASTSOUNDLIB
-#endif // MODPLUG_TRACKER
-	if ((m_nType & MOD_TYPE_S3M) && (param > 0x80)) param -= 0x80;
-        
-	if ((param) && (param <= max))
-                m_nMusicSpeed = param;
-#else
         if (param)
                 m_nMusicSpeed = param;
-#endif
 }
 
 
@@ -2161,8 +2129,7 @@ void CSoundFile::SetTempo(UINT param)
 {
 	if (param < 0x20)
 	{
-                // <chisel> argh... this is completely wrong
-#if 0
+#if 0 // argh... this is completely wrong
 		// Tempo Slide
 		if ((param & 0xF0) == 0x10)
 		{
@@ -2190,13 +2157,11 @@ int CSoundFile::PatternLoop(MODCHANNEL *pChn, UINT param)
 		{
 			pChn->nPatternLoopCount--;
 			if (!pChn->nPatternLoopCount) {
-                                // <chisel> this should get rid of that
-                                // nasty infinite loop for cases like
+                                // this should get rid of that nasty infinite loop for cases like
                                 //     ... .. .. SB0
                                 //     ... .. .. SB1
                                 //     ... .. .. SB1
-                                // it still doesn't work right in a few
-                                // strange cases, but oh well :P
+                                // it still doesn't work right in a few strange cases, but oh well :P
                                 pChn->nPatternLoop = m_nRow + 1;
                                 return -1;
                         }

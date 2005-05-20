@@ -23,16 +23,16 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "dmoz.h"
 #include "sample-edit.h"
 
 #include <SDL.h>
-#include <assert.h>
 #include <math.h>			/* for pow */
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
 
-static struct item items_samplelist[20];
+static struct widget widgets_samplelist[20];
 static int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
 
 static int top_sample = 1;
@@ -42,7 +42,7 @@ static int sample_list_cursor_pos = 25;	/* the "play" text */
 
 static const SDL_Rect sample_waveform_area = { 440, 208, 176, 32 };
 
-/* shared by all the numentry items */
+/* shared by all the numentry widgets */
 static int sample_numentry_cursor_pos = 0;
 
 /* for the loops */
@@ -121,7 +121,7 @@ static void sample_list_draw_list(void)
 	}
 
 	/* cursor */
-	if (ACTIVE_PAGE.selected_item == 0) {
+	if (ACTIVE_PAGE.selected_widget == 0) {
 		pos = current_sample - top_sample;
 		sample = song_get_sample(current_sample, &name);
 		has_data = (sample->data != NULL);
@@ -129,8 +129,10 @@ static void sample_list_draw_list(void)
 		if (sample_list_cursor_pos == 25) {
 			draw_text("Play", 31, 13 + pos, 0, (has_data ? 3 : 6));
 		} else {
-			draw_char((sample_list_cursor_pos > (signed) strlen(name)
-				   ? 0 : name[sample_list_cursor_pos]),
+			//draw_char(((sample_list_cursor_pos > (signed) strlen(name))
+			//	   ? 0 : name[sample_list_cursor_pos]),
+			//	  sample_list_cursor_pos + 5, 13 + pos, 0, 3);
+			draw_char(name[sample_list_cursor_pos],
 				  sample_list_cursor_pos + 5, 13 + pos, 0, 3);
 		}
 	}
@@ -146,6 +148,7 @@ static void sample_list_predraw_hook(void)
 	char *name;
 	song_sample *sample;
 	int has_data;
+	SDL_Rect rect = sample_waveform_area;
 
 	sample = song_get_sample(current_sample, &name);
 	has_data = (sample->data != NULL);
@@ -153,59 +156,54 @@ static void sample_list_predraw_hook(void)
 	/* set all the values to the current sample */
 
 	/* default volume
-	 * modplug hack here: sample volume has 4x the resolution...
-	 * can't deal with this in song.cc (easily) without changing the
-	 * actual volume of the sample. */
-	items_samplelist[1].thumbbar.value = sample->volume / 4;
+	modplug hack here: sample volume has 4x the resolution...
+	can't deal with this in song.cc (easily) without changing the actual volume of the sample. */
+	widgets_samplelist[1].thumbbar.value = sample->volume / 4;
 
 	/* global volume */
-	items_samplelist[2].thumbbar.value = sample->global_volume;
+	widgets_samplelist[2].thumbbar.value = sample->global_volume;
 
 	/* default pan (another modplug hack) */
-	items_samplelist[3].toggle.state = (sample->flags & SAMP_PANNING);
-	items_samplelist[4].thumbbar.value = sample->panning / 4;
+	widgets_samplelist[3].toggle.state = (sample->flags & SAMP_PANNING);
+	widgets_samplelist[4].thumbbar.value = sample->panning / 4;
 
-	items_samplelist[5].thumbbar.value = sample->vib_speed;
-	items_samplelist[6].thumbbar.value = sample->vib_depth;
-	items_samplelist[7].textentry.text = sample->filename;
-	items_samplelist[8].numentry.value = sample->speed;
+	widgets_samplelist[5].thumbbar.value = sample->vib_speed;
+	widgets_samplelist[6].thumbbar.value = sample->vib_depth;
+	widgets_samplelist[7].textentry.text = sample->filename;
+	widgets_samplelist[8].numentry.value = sample->speed;
 
-	items_samplelist[9].menutoggle.state =
+	widgets_samplelist[9].menutoggle.state =
 		(sample->flags & SAMP_LOOP ? (sample->flags & SAMP_LOOP_PINGPONG ? 2 : 1) : 0);
-	items_samplelist[10].numentry.value = sample->loop_start;
-	items_samplelist[11].numentry.value = sample->loop_end;
-	items_samplelist[12].menutoggle.state =
+	widgets_samplelist[10].numentry.value = sample->loop_start;
+	widgets_samplelist[11].numentry.value = sample->loop_end;
+	widgets_samplelist[12].menutoggle.state =
 		(sample->flags & SAMP_SUSLOOP ? (sample->flags & SAMP_SUSLOOP_PINGPONG ? 2 : 1) : 0);
-	items_samplelist[13].numentry.value = sample->sustain_start;
-	items_samplelist[14].numentry.value = sample->sustain_end;
+	widgets_samplelist[13].numentry.value = sample->sustain_start;
+	widgets_samplelist[14].numentry.value = sample->sustain_end;
 
 	switch (sample->vib_type) {
 	case VIB_SINE:
-		togglebutton_set(items_samplelist, 15, 0);
+		togglebutton_set(widgets_samplelist, 15, 0);
 		break;
 	case VIB_RAMP_UP:
 	case VIB_RAMP_DOWN:
-		togglebutton_set(items_samplelist, 16, 0);
+		togglebutton_set(widgets_samplelist, 16, 0);
 		break;
 	case VIB_SQUARE:
-		togglebutton_set(items_samplelist, 17, 0);
+		togglebutton_set(widgets_samplelist, 17, 0);
 		break;
 	case VIB_RANDOM:
-		togglebutton_set(items_samplelist, 18, 0);
+		togglebutton_set(widgets_samplelist, 18, 0);
 		break;
 	}
 
-	items_samplelist[19].thumbbar.value = ((sample->vib_rate < 64)
-					       ? sample->vib_rate * 4 : 255);
+	widgets_samplelist[19].thumbbar.value = ((sample->vib_rate < 64) ? sample->vib_rate * 4 : 255);
 
-	draw_text_len((has_data ? (sample->flags & SAMP_16_BIT ? "16 bits" : "8 bits")
-		       : "No sample"), 13, 64, 22, 2, 0);
+	draw_text_len((has_data ? (sample->flags & SAMP_16_BIT ? "16 bits" : "8 bits") : "No sample"),
+		      13, 64, 22, 2, 0);
 	draw_text_len(numtostr(0, sample->length, buf), 13, 64, 23, 2, 0);
 
-	{
-		SDL_Rect rect = sample_waveform_area;
-		draw_sample_data(&rect, sample, current_sample);
-	}
+	draw_sample_data(&rect, sample, current_sample);
 }
 
 /* --------------------------------------------------------------------- */
@@ -256,6 +254,68 @@ static void clear_sample_text(void)
 
 /* --------------------------------------------------------------------- */
 
+static struct widget swap_sample_widgets[6];
+static char swap_sample_entry[4] = "";
+
+
+static void do_swap_sample(UNUSED void *data)
+{
+	int n = atoi(swap_sample_entry);
+	
+	if (n < 1 || n > 99)
+		return;
+	song_swap_samples(current_sample, n);
+}
+
+static void swap_sample_draw_const(void)
+{
+	draw_text("Swap sample with:", 32, 25, 0, 2);
+	draw_text("Sample", 35, 27, 0, 2);
+	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+static void swap_sample_dialog(void)
+{
+	struct dialog *dialog;
+	
+	swap_sample_entry[0] = 0;
+	create_textentry(swap_sample_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_sample_entry, 2);
+	create_button(swap_sample_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	dialog = dialog_create_custom(26, 23, 29, 10, swap_sample_widgets, 2, 0, swap_sample_draw_const, NULL);
+	dialog->action_yes = do_swap_sample;
+}
+
+
+static void do_exchange_sample(UNUSED void *data)
+{
+	int n = atoi(swap_sample_entry);
+	
+	if (n < 1 || n > 99)
+		return;
+	song_exchange_samples(current_sample, n);
+}
+
+static void exchange_sample_draw_const(void)
+{
+	draw_text("Exchange sample with:", 30, 25, 0, 2);
+	draw_text("Sample", 35, 27, 0, 2);
+	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+static void exchange_sample_dialog(void)
+{
+	struct dialog *dialog;
+	
+	swap_sample_entry[0] = 0;
+	create_textentry(swap_sample_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_sample_entry, 2);
+	create_button(swap_sample_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	dialog = dialog_create_custom(26, 23, 29, 10, swap_sample_widgets, 2, 0,
+	                              exchange_sample_draw_const, NULL);
+	dialog->action_yes = do_exchange_sample;
+}
+
+/* --------------------------------------------------------------------- */
+
 static int sample_list_handle_key_on_list(SDL_keysym * k)
 {
 	int new_sample = current_sample;
@@ -263,21 +323,33 @@ static int sample_list_handle_key_on_list(SDL_keysym * k)
 
 	switch (k->sym) {
 	case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		new_cursor_pos--;
 		break;
 	case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		new_cursor_pos++;
 		break;
 	case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		new_cursor_pos = 0;
 		break;
 	case SDLK_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		new_cursor_pos = 25;
 		break;
 	case SDLK_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		new_sample--;
 		break;
 	case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		new_sample++;
 		break;
 	case SDLK_PAGEUP:
@@ -361,14 +433,14 @@ static int sample_list_handle_key_on_list(SDL_keysym * k)
  * TODO | of the sample when it destroys it. It'd be nice if the other sample manipulations (quality convert,
  * TODO | loop cut, etc.) did this as well. */
 
-static void do_sign_convert(void)
+static void do_sign_convert(UNUSED void *data)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	sample_sign_convert(sample);
 	clear_cached_waveform(current_sample);
 }
 
-static void do_quality_convert(void)
+static void do_quality_convert(UNUSED void *data)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	song_stop();
@@ -376,7 +448,7 @@ static void do_quality_convert(void)
 	clear_cached_waveform(current_sample);
 }
 
-static void do_quality_toggle(void)
+static void do_quality_toggle(UNUSED void *data)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	song_stop();
@@ -384,13 +456,13 @@ static void do_quality_toggle(void)
 	clear_cached_waveform(current_sample);
 }
 
-static void do_delete_sample(void)
+static void do_delete_sample(UNUSED void *data)
 {
 	song_clear_sample(current_sample);
 	clear_cached_waveform(current_sample);
 }
 
-static void do_post_loop_cut(void)
+static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	signed char *data;
@@ -411,7 +483,7 @@ static void do_post_loop_cut(void)
 	clear_cached_waveform(current_sample);
 }
 
-static void do_pre_loop_cut(void)
+static void do_pre_loop_cut(UNUSED void *bweh)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	signed char *data;
@@ -452,7 +524,7 @@ static void do_pre_loop_cut(void)
 	clear_cached_waveform(current_sample);
 }
 
-static void do_centralise(void)
+static void do_centralise(UNUSED void *data)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	sample_centralise(sample);
@@ -461,11 +533,11 @@ static void do_centralise(void)
 
 /* --------------------------------------------------------------------- */
 
-static struct item sample_amplify_items[3];
+static struct widget sample_amplify_widgets[3];
 
-static void do_amplify(void)
+static void do_amplify(UNUSED void *data)
 {
-	sample_amplify(song_get_sample(current_sample, NULL), sample_amplify_items[0].thumbbar.value);
+	sample_amplify(song_get_sample(current_sample, NULL), sample_amplify_widgets[0].thumbbar.value);
 	clear_cached_waveform(current_sample);
 }
 
@@ -482,49 +554,27 @@ static void sample_amplify_dialog(void)
 
 	percent = MIN(percent, 400);
 
-	create_thumbbar(sample_amplify_items + 0, 13, 30, 51, 0, 1, 1, NULL, 0, 400);
-	sample_amplify_items[0].thumbbar.value = percent;
-	create_button(sample_amplify_items + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes, "OK", 3);
-	create_button(sample_amplify_items + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
+	create_thumbbar(sample_amplify_widgets + 0, 13, 30, 51, 0, 1, 1, NULL, 0, 400);
+	sample_amplify_widgets[0].thumbbar.value = percent;
+	create_button(sample_amplify_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	create_button(sample_amplify_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 
-	dialog = dialog_create_custom(9, 25, 61, 11, sample_amplify_items, 3, 0, sample_amplify_draw_const);
+	dialog = dialog_create_custom(9, 25, 61, 11, sample_amplify_widgets,
+	                              3, 0, sample_amplify_draw_const, NULL);
 	dialog->action_yes = do_amplify;
 }
 
 /* --------------------------------------------------------------------- */
 
-struct sample_format {
-	const char *name;
-	const char *ext;
-	int (*func) (int n, const char *file);
-} formats[] = {
-	{"Impulse Tracker", "its", song_save_sample_its},
-//	{"Raw", "aiff", song_save_sample_raw},
-	{"Sun/NeXT", "au", song_save_sample_au},
-//	{"Raw", "wav", song_save_sample_raw},
-	{"Raw", "raw", song_save_sample_raw},
-//	{"Raw", "mp3", song_save_sample_raw},
-};
-
-enum {
-	SMP_ITS = 0,
-	SMP_AU = 1,
-	SMP_RAW = 2,
-	SMP_SENTINEL = 3,
-};
-
 /* filename can be NULL, in which case the sample filename is used (quick save) */
-static void sample_save(const char *filename, int format)
+static void sample_save(const char *filename, int format_id)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
-	char *ptr;
-
-	assert(format < SMP_SENTINEL);
-
-	asprintf(&ptr, "%s/%s", cfg_dir_samples, filename ? : sample->filename);
+	char *ptr = dmoz_path_concat(cfg_dir_samples, filename ? : sample->filename);
+	
 	/* TODO: ask before overwriting the file */
-	if (formats[format].func(current_sample, ptr))
-		status_text_flash("%s sample saved (sample %d)", formats[format].name, current_sample);
+	if (song_save_sample(current_sample, ptr, format_id))
+		status_text_flash("%s sample saved (sample %d)", sample_save_formats[format_id].name, current_sample);
 	else
 		status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
 	free(ptr);
@@ -532,22 +582,22 @@ static void sample_save(const char *filename, int format)
 
 /* export sample dialog */
 
-static struct item export_sample_items[6];
+static struct widget export_sample_widgets[6];
 static char export_sample_filename[NAME_MAX + 1] = "";
 static char export_sample_options[64] = "fnord";
 static int export_sample_format = 0;
 
-static void do_export_sample(void)
+static void do_export_sample(UNUSED void *data)
 {
 	sample_save(export_sample_filename, export_sample_format);
 }
 
 static void export_sample_list_draw(void)
 {
-        int n, focused = (*selected_item == 3);
-        
+        int n, focused = (*selected_widget == 3);
+
 	draw_fill_chars(53, 24, 56, 31, 0);
-	for (n = 0; n < SMP_SENTINEL; n++) {
+	for (n = 0; n < SSMP_SENTINEL; n++) {
 		int fg = 6, bg = 0;
 		if (focused && n == export_sample_format) {
 			fg = 0;
@@ -555,7 +605,7 @@ static void export_sample_list_draw(void)
 		} else if (n == export_sample_format) {
 			bg = 14;
 		}
-		draw_text_len(formats[n].ext, 4, 53, 24 + n, fg, bg);
+		draw_text_len(sample_save_formats[n].ext, 4, 53, 24 + n, fg, bg);
 	}
 }
 
@@ -565,29 +615,39 @@ static int export_sample_list_handle_key(SDL_keysym * k)
 
         switch (k->sym) {
         case SDLK_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_format--;
                 break;
         case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_format++;
                 break;
         case SDLK_PAGEUP:
         case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 new_format = 0;
                 break;
         case SDLK_PAGEDOWN:
         case SDLK_END:
-                new_format = SMP_SENTINEL - 1;
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+                new_format = SSMP_SENTINEL - 1;
                 break;
         case SDLK_LEFT:
         case SDLK_RIGHT:
         case SDLK_TAB:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
                 return 1;
         default:
                 return 0;
         }
 
-        new_format = CLAMP(new_format, 0, SMP_SENTINEL - 1);
+        new_format = CLAMP(new_format, 0, SSMP_SENTINEL - 1);
         if (new_format != export_sample_format) {
         	/* update the option string */
                 export_sample_format = new_format;
@@ -612,44 +672,48 @@ static void export_sample_draw_const(void)
 
 static void configure_options(void)
 {
-	dialog_create(DIALOG_OK, "This doesn't do anything yet. Stay tuned! :)", NULL, NULL, 0);
+	dialog_create(DIALOG_OK, "This doesn't do anything yet. Stay tuned! :)", NULL, NULL, 0, NULL);
 }
 
 static void export_sample_dialog(void)
 {
+	song_sample *sample = song_get_sample(current_sample, NULL);
 	struct dialog *dialog;
 
-	create_textentry(export_sample_items + 0, 33, 24, 18, 0, 1, 3, NULL, export_sample_filename, NAME_MAX);
-	create_textentry(export_sample_items + 1, 33, 27, 18, 0, 2, 3, NULL, export_sample_options, 256);
-	create_button(export_sample_items + 2, 33, 30, 9, 1, 4, 3, 3, 3, configure_options, "Configure", 1);
-	create_other(export_sample_items + 3, 0, export_sample_list_handle_key, export_sample_list_draw);
-	create_button(export_sample_items + 4, 31, 35, 6, 2, 4, 5, 5, 5, dialog_yes, "OK", 3);
-	create_button(export_sample_items + 5, 42, 35, 6, 3, 5, 4, 4, 4, dialog_cancel, "Cancel", 1);
+	create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL, export_sample_filename, NAME_MAX);
+	create_textentry(export_sample_widgets + 1, 33, 27, 18, 0, 2, 3, NULL, export_sample_options, 256);
+	create_button(export_sample_widgets + 2, 33, 30, 9, 1, 4, 3, 3, 3, configure_options, "Configure", 1);
+	create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, export_sample_list_draw);
+	create_button(export_sample_widgets + 4, 31, 35, 6, 2, 4, 5, 5, 5, dialog_yes_NULL, "OK", 3);
+	create_button(export_sample_widgets + 5, 42, 35, 6, 3, 5, 4, 4, 4, dialog_cancel_NULL, "Cancel", 1);
 	
-	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_items, 6, 0, export_sample_draw_const);
+	strncpy(export_sample_filename, sample->filename, NAME_MAX);
+	export_sample_filename[NAME_MAX] = 0;
+	
+	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 6, 0, export_sample_draw_const, NULL);
 	dialog->action_yes = do_export_sample;
 }
 
 /* --------------------------------------------------------------------- */
 
-static inline void sample_list_handle_alt_key(SDL_keysym * k)
+static void sample_list_handle_alt_key(SDL_keysym * k)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 
 	switch (k->sym) {
 	case SDLK_a:
 		if (sample->data != NULL)
-			dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0);
+			dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
 		return;
 	case SDLK_b:
 		/* this statement is too complicated :P */
 		if (!(sample->data == NULL
 		      || (sample->flags & SAMP_SUSLOOP && sample->loop_start == 0 && sample->sustain_start == 0)
 		      || (sample->loop_start == 0)))
-			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1);
+			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
 		return;
 	case SDLK_d:
-		dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample, NULL, 1);
+		dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample, NULL, 1, NULL);
 		return;
 	case SDLK_g:
 		if (sample->data == NULL)
@@ -658,11 +722,11 @@ static inline void sample_list_handle_alt_key(SDL_keysym * k)
 		break;
 	case SDLK_h:
 		if (sample->data != NULL)
-			dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0);
+			dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
 		return;
 	case SDLK_l:
 		if (sample->data != NULL && (sample->loop_end != 0 || sample->sustain_end != 0))
-			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1);
+			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
 		return;
 	case SDLK_m:
 		if (sample->data != NULL)
@@ -674,16 +738,32 @@ static inline void sample_list_handle_alt_key(SDL_keysym * k)
 	case SDLK_q:
 		if (sample->data != NULL)
 			dialog_create(DIALOG_YES_NO, "Convert sample?",
-				      do_quality_convert, do_quality_toggle, 0);
+				      do_quality_convert, do_quality_toggle, 0, NULL);
 		return;
 	case SDLK_o:
-		sample_save(NULL, SMP_ITS);
+		sample_save(NULL, SSMP_ITS);
+		return;
+	case SDLK_s:
+		swap_sample_dialog();
 		return;
 	case SDLK_t:
 		export_sample_dialog();
 		return;
 	case SDLK_w:
-		sample_save(NULL, SMP_RAW);
+		sample_save(NULL, SSMP_RAW);
+		return;
+	case SDLK_x:
+		exchange_sample_dialog();
+		return;
+	case SDLK_INSERT:
+		song_insert_sample_slot(current_sample);
+		clear_all_cached_waveforms();
+		status.flags |= NEED_UPDATE;
+		return;
+	case SDLK_DELETE:
+		song_remove_sample_slot(current_sample);
+		clear_all_cached_waveforms();
+		status.flags |= NEED_UPDATE;
 		return;
 	default:
 		return;
@@ -695,14 +775,12 @@ static inline void sample_list_handle_alt_key(SDL_keysym * k)
 
 static inline unsigned long calc_halftone(unsigned long hz, int rel)
 {
-	/* You wouldn't believe how long it took for me to figure this out.
-	 * I had to calculate the logarithmic regression of the values that
-	 * Impulse Tracker produced and figure out what the coefficients
-	 * had to do with the number twelve... I don't imagine I'll forget
-	 * this formula now. :)
-	 * (FIXME: integer math and all that. Not that I exactly care, since
-	 * this isn't at all performance-critical, but in principle it'd be
-	 * a good idea.) */
+	/* You wouldn't believe how long it took for me to figure this out. I had to calculate the
+	logarithmic regression of the values that Impulse Tracker produced and figure out what the
+	coefficients had to do with the number twelve... I don't imagine I'll forget this formula
+	now. :)
+	(FIXME: integer math and all that. Not that I exactly care, since this isn't at all
+	performance-critical, but in principle it'd be a good idea.) */
 	return pow(2, rel / 12.0) * hz + 0.5;
 }
 
@@ -793,30 +871,26 @@ static void sample_list_draw_const(void)
 	draw_fill_chars(41, 30, 46, 30, 0);
 	draw_fill_chars(64, 13, 76, 23, 0);
 
-	SDL_LockSurface(screen);
-
-	draw_text_unlocked("Default Volume", 38, 14, 0, 2);
-	draw_text_unlocked("Global Volume", 38, 21, 0, 2);
-	draw_text_unlocked("Default Pan", 39, 28, 0, 2);
-	draw_text_unlocked("Vibrato Speed", 38, 37, 0, 2);
-	draw_text_unlocked("Vibrato Depth", 38, 44, 0, 2);
-	draw_text_unlocked("Filename", 55, 13, 0, 2);
-	draw_text_unlocked("Speed", 58, 14, 0, 2);
-	draw_text_unlocked("Loop", 59, 15, 0, 2);
-	draw_text_unlocked("LoopBeg", 56, 16, 0, 2);
-	draw_text_unlocked("LoopEnd", 56, 17, 0, 2);
-	draw_text_unlocked("SusLoop", 56, 18, 0, 2);
-	draw_text_unlocked("SusLBeg", 56, 19, 0, 2);
-	draw_text_unlocked("SusLEnd", 56, 20, 0, 2);
-	draw_text_unlocked("Quality", 56, 22, 0, 2);
-	draw_text_unlocked("Length", 57, 23, 0, 2);
-	draw_text_unlocked("Vibrato Waveform", 58, 33, 0, 2);
-	draw_text_unlocked("Vibrato Rate", 60, 44, 0, 2);
+	draw_text("Default Volume", 38, 14, 0, 2);
+	draw_text("Global Volume", 38, 21, 0, 2);
+	draw_text("Default Pan", 39, 28, 0, 2);
+	draw_text("Vibrato Speed", 38, 37, 0, 2);
+	draw_text("Vibrato Depth", 38, 44, 0, 2);
+	draw_text("Filename", 55, 13, 0, 2);
+	draw_text("Speed", 58, 14, 0, 2);
+	draw_text("Loop", 59, 15, 0, 2);
+	draw_text("LoopBeg", 56, 16, 0, 2);
+	draw_text("LoopEnd", 56, 17, 0, 2);
+	draw_text("SusLoop", 56, 18, 0, 2);
+	draw_text("SusLBeg", 56, 19, 0, 2);
+	draw_text("SusLEnd", 56, 20, 0, 2);
+	draw_text("Quality", 56, 22, 0, 2);
+	draw_text("Length", 57, 23, 0, 2);
+	draw_text("Vibrato Waveform", 58, 33, 0, 2);
+	draw_text("Vibrato Rate", 60, 44, 0, 2);
 
 	for (n = 0; n < 13; n++)
-		draw_char_unlocked(154, 64 + n, 21, 3, 0);
-
-	SDL_UnlockSurface(screen);
+		draw_char(154, 64 + n, 21, 3, 0);
 }
 
 /* --------------------------------------------------------------------- */
@@ -829,12 +903,12 @@ static void update_sample_loop_flags(void)
 
 	/* these switch statements fall through */
 	sample->flags &= ~(SAMP_LOOP | SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG);
-	switch (items_samplelist[9].menutoggle.state) {
+	switch (widgets_samplelist[9].menutoggle.state) {
 	case 2: sample->flags |= SAMP_LOOP_PINGPONG;
 	case 1: sample->flags |= SAMP_LOOP;
 	}
 
-	switch (items_samplelist[12].menutoggle.state) {
+	switch (widgets_samplelist[12].menutoggle.state) {
 	case 2: sample->flags |= SAMP_SUSLOOP_PINGPONG;
 	case 1: sample->flags |= SAMP_SUSLOOP;
 	}
@@ -863,28 +937,28 @@ static void update_sample_loop_points(void)
 	int flags_changed = 0;
 
 	/* 9 = loop toggle, 10 = loop start, 11 = loop end */
-	if ((unsigned long) items_samplelist[10].numentry.value > sample->length - 1)
-		items_samplelist[10].numentry.value = sample->length - 1;
-	if (items_samplelist[11].numentry.value <= items_samplelist[10].numentry.value) {
-		items_samplelist[9].menutoggle.state = 0;
+	if ((unsigned long) widgets_samplelist[10].numentry.value > sample->length - 1)
+		widgets_samplelist[10].numentry.value = sample->length - 1;
+	if (widgets_samplelist[11].numentry.value <= widgets_samplelist[10].numentry.value) {
+		widgets_samplelist[9].menutoggle.state = 0;
 		flags_changed = 1;
-	} else if ((unsigned long) items_samplelist[11].numentry.value > sample->length) {
-		items_samplelist[11].numentry.value = sample->length;
+	} else if ((unsigned long) widgets_samplelist[11].numentry.value > sample->length) {
+		widgets_samplelist[11].numentry.value = sample->length;
 	}
-	sample->loop_start = items_samplelist[10].numentry.value;
-	sample->loop_end = items_samplelist[11].numentry.value;
+	sample->loop_start = widgets_samplelist[10].numentry.value;
+	sample->loop_end = widgets_samplelist[11].numentry.value;
 
 	/* 12 = sus toggle, 13 = sus start, 14 = sus end */
-	if ((unsigned long) items_samplelist[13].numentry.value > sample->length - 1)
-		items_samplelist[13].numentry.value = sample->length - 1;
-	if (items_samplelist[14].numentry.value <= items_samplelist[13].numentry.value) {
-		items_samplelist[12].menutoggle.state = 0;
+	if ((unsigned long) widgets_samplelist[13].numentry.value > sample->length - 1)
+		widgets_samplelist[13].numentry.value = sample->length - 1;
+	if (widgets_samplelist[14].numentry.value <= widgets_samplelist[13].numentry.value) {
+		widgets_samplelist[12].menutoggle.state = 0;
 		flags_changed = 1;
-	} else if ((unsigned long) items_samplelist[14].numentry.value > sample->length) {
-		items_samplelist[14].numentry.value = sample->length;
+	} else if ((unsigned long) widgets_samplelist[14].numentry.value > sample->length) {
+		widgets_samplelist[14].numentry.value = sample->length;
 	}
-	sample->sustain_start = items_samplelist[13].numentry.value;
-	sample->sustain_end = items_samplelist[14].numentry.value;
+	sample->sustain_start = widgets_samplelist[13].numentry.value;
+	sample->sustain_end = widgets_samplelist[14].numentry.value;
 
 	if (flags_changed)
 		update_sample_loop_flags();
@@ -899,31 +973,31 @@ static void update_values_in_song(void)
 	song_sample *sample = song_get_sample(current_sample, NULL);
 
 	/* a few more modplug hacks here... */
-	sample->volume = items_samplelist[1].thumbbar.value * 4;
-	sample->global_volume = items_samplelist[2].thumbbar.value;
-	if (items_samplelist[3].toggle.state)
+	sample->volume = widgets_samplelist[1].thumbbar.value * 4;
+	sample->global_volume = widgets_samplelist[2].thumbbar.value;
+	if (widgets_samplelist[3].toggle.state)
 		sample->flags |= SAMP_PANNING;
 	else
 		sample->flags &= ~SAMP_PANNING;
-	sample->vib_speed = items_samplelist[5].thumbbar.value;
-	sample->vib_depth = items_samplelist[6].thumbbar.value;
+	sample->vib_speed = widgets_samplelist[5].thumbbar.value;
+	sample->vib_depth = widgets_samplelist[6].thumbbar.value;
 
-	if (items_samplelist[15].togglebutton.state)
+	if (widgets_samplelist[15].togglebutton.state)
 		sample->vib_type = VIB_SINE;
-	else if (items_samplelist[16].togglebutton.state)
+	else if (widgets_samplelist[16].togglebutton.state)
 		sample->vib_type = VIB_RAMP_DOWN;
-	else if (items_samplelist[17].togglebutton.state)
+	else if (widgets_samplelist[17].togglebutton.state)
 		sample->vib_type = VIB_SQUARE;
 	else
 		sample->vib_type = VIB_RANDOM;
-	sample->vib_rate = (items_samplelist[19].thumbbar.value + 3) / 4;
+	sample->vib_rate = (widgets_samplelist[19].thumbbar.value + 3) / 4;
 }
 
 static void update_sample_speed(void)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	
-	sample->speed = items_samplelist[8].numentry.value;
+	sample->speed = widgets_samplelist[8].numentry.value;
 	
 	song_play_note(current_sample, last_note, 0, 0);
 }
@@ -933,9 +1007,9 @@ static void update_panning(void)
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	
 	sample->flags |= SAMP_PANNING;
-	sample->panning = items_samplelist[4].thumbbar.value * 4;
+	sample->panning = widgets_samplelist[4].thumbbar.value * 4;
 	
-	items_samplelist[3].toggle.state = 1;
+	widgets_samplelist[3].toggle.state = 1;
 }
 
 /* --------------------------------------------------------------------- */
@@ -946,43 +1020,43 @@ void sample_list_load_page(struct page *page)
 	page->draw_const = sample_list_draw_const;
 	page->predraw_hook = sample_list_predraw_hook;
 	page->handle_key = sample_list_handle_key;
-	page->total_items = 20;
-	page->items = items_samplelist;
+	page->total_widgets = 20;
+	page->widgets = widgets_samplelist;
 	page->help_index = HELP_SAMPLE_LIST;
 
 	/* 0 = sample list */
-	create_other(items_samplelist + 0, 1, sample_list_handle_key_on_list, sample_list_draw_list);
+	create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list, sample_list_draw_list);
 	/* 1 -> 6 = middle column */
-	create_thumbbar(items_samplelist + 1, 38, 16, 9, 1, 2, 7, update_values_in_song, 0, 64);
-	create_thumbbar(items_samplelist + 2, 38, 23, 9, 1, 3, 7, update_values_in_song, 0, 64);
-	create_toggle(items_samplelist + 3, 38, 30, 2, 4, 0, 7, 7, update_values_in_song);
-	create_thumbbar(items_samplelist + 4, 38, 31, 9, 3, 5, 7, update_panning, 0, 64);
-	create_thumbbar(items_samplelist + 5, 38, 39, 9, 4, 6, 15, update_values_in_song, 0, 64);
-	create_thumbbar(items_samplelist + 6, 38, 46, 9, 5, 6, 19, update_values_in_song, 0, 32);
+	create_thumbbar(widgets_samplelist + 1, 38, 16, 9, 1, 2, 7, update_values_in_song, 0, 64);
+	create_thumbbar(widgets_samplelist + 2, 38, 23, 9, 1, 3, 7, update_values_in_song, 0, 64);
+	create_toggle(widgets_samplelist + 3, 38, 30, 2, 4, 0, 7, 7, update_values_in_song);
+	create_thumbbar(widgets_samplelist + 4, 38, 31, 9, 3, 5, 7, update_panning, 0, 64);
+	create_thumbbar(widgets_samplelist + 5, 38, 39, 9, 4, 6, 15, update_values_in_song, 0, 64);
+	create_thumbbar(widgets_samplelist + 6, 38, 46, 9, 5, 6, 19, update_values_in_song, 0, 32);
 	/* 7 -> 14 = top right box */
-	create_textentry(items_samplelist + 7, 64, 13, 13, 7, 8, 0, NULL, NULL, 12);
-	create_numentry(items_samplelist + 8, 64, 14, 7, 7, 9, 0,
+	create_textentry(widgets_samplelist + 7, 64, 13, 13, 7, 8, 0, NULL, NULL, 12);
+	create_numentry(widgets_samplelist + 8, 64, 14, 7, 7, 9, 0,
 			update_sample_speed, 0, 9999999, &sample_numentry_cursor_pos);
-	create_menutoggle(items_samplelist + 9, 64, 15, 8, 10, 1, 0, 0, update_sample_loop_flags, loop_states);
-	create_numentry(items_samplelist + 10, 64, 16, 7, 9, 11, 0,
+	create_menutoggle(widgets_samplelist + 9, 64, 15, 8, 10, 1, 0, 0, update_sample_loop_flags, loop_states);
+	create_numentry(widgets_samplelist + 10, 64, 16, 7, 9, 11, 0,
 			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	create_numentry(items_samplelist + 11, 64, 17, 7, 10, 12, 0,
+	create_numentry(widgets_samplelist + 11, 64, 17, 7, 10, 12, 0,
 			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	create_menutoggle(items_samplelist + 12, 64, 18, 11, 13, 1, 0, 0,
+	create_menutoggle(widgets_samplelist + 12, 64, 18, 11, 13, 1, 0, 0,
 			  update_sample_loop_flags, loop_states);
-	create_numentry(items_samplelist + 13, 64, 19, 7, 12, 14, 0,
+	create_numentry(widgets_samplelist + 13, 64, 19, 7, 12, 14, 0,
 			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	create_numentry(items_samplelist + 14, 64, 20, 7, 13, 15, 0,
+	create_numentry(widgets_samplelist + 14, 64, 20, 7, 13, 15, 0,
 			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
 	/* 15 -> 18 = vibrato waveforms */
-	create_togglebutton(items_samplelist + 15, 57, 36, 6, 14, 17, 5,
+	create_togglebutton(widgets_samplelist + 15, 57, 36, 6, 14, 17, 5,
 			    16, 16, update_values_in_song, "\xb9\xba", 3, vibrato_waveforms);
-	create_togglebutton(items_samplelist + 16, 67, 36, 6, 14, 18, 15,
+	create_togglebutton(widgets_samplelist + 16, 67, 36, 6, 14, 18, 15,
 			    0, 0, update_values_in_song, "\xbd\xbe", 3, vibrato_waveforms);
-	create_togglebutton(items_samplelist + 17, 57, 39, 6, 15, 19, 5,
+	create_togglebutton(widgets_samplelist + 17, 57, 39, 6, 15, 19, 5,
 			    18, 18, update_values_in_song, "\xbb\xbc", 3, vibrato_waveforms);
-	create_togglebutton(items_samplelist + 18, 67, 39, 6, 16, 19, 17,
+	create_togglebutton(widgets_samplelist + 18, 67, 39, 6, 16, 19, 17,
 			    0, 0, update_values_in_song, "Random", 1, vibrato_waveforms);
 	/* 19 = vibrato rate */
-	create_thumbbar(items_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
+	create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
 }

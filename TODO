@@ -9,7 +9,7 @@ ignore it :)
 
 Info page is missing the technical information and note dots.
 
-On the subject, it'd be interesting to have an oscilloscope view :)
+On the subject, it'd be interesting to have per-channel oscilloscopes :)
 
 --------------------------------------------------------------------------
 
@@ -20,10 +20,6 @@ keyboard.
 Note playing (i.e. the keyboard) should take an SDL_keysym instead of a
 char. Additionally the note trans table should allow more than one key
 per note (or other thing).
-
---------------------------------------------------------------------------
-
-Envelopes for created instruments need to be initialized.
 
 --------------------------------------------------------------------------
 
@@ -50,13 +46,6 @@ For the pattern bit...
                         }
                 }
         }
-
---------------------------------------------------------------------------
-
-More from the aforementioned department: inserting extended chars with
-alt-numpad. This will probably be quite difficult.
-
-(better answer: xim + compose key)
 
 --------------------------------------------------------------------------
 
@@ -102,33 +91,6 @@ enter key), redraw it in the released state?
 
 --------------------------------------------------------------------------
 
-Initializing even ONE instrument when the song was initially in sample
-mode totally screws up Modplug. (This means just hitting F4 with a song
-that's in sample mode will fubar it, as instruments are set up when
-they're selected.)
-
-Modplug seems to use 'if (m_nInstruments)' in code to check whether the
-file's in instrument mode.
-
-(How are these two things related?)
-
-
-This just in: try loading a sample-mode .it with a lot of samples (over
-35) and switching to the ins. list: seems that if an instrument exists,
-it gets used. Probably there should be a more solid way of testing this.
-Sounds like time to start some deep hacking with modplug...
-
---------------------------------------------------------------------------
-
-Global / Alt-F11
-        Order list {locked,unlocked}
-
-Orderlist / Ctrl-F7
-        status_text_flash("Playing order <n> next");
-        ...
-
---------------------------------------------------------------------------
-
 (completely unrelated note, not at all a todo item)
 Start ST3, hit escape to load the main menu, and hit Shift-F10. Weird.
 
@@ -145,10 +107,11 @@ Pattern Editor:
 
 Sample List:
         Alt-I - invert sample
-        Alt-T - smart sample trim (instead of save ST3 sample, which is
-                getting rather dated by now) - ask for a "variance" and
-                trim all samples from the beginning and end of the sample
-                that are within that percent of zero.
+        ??? - smart sample trim 
+		ask for a "variance" and trim all samples from the
+		beginning and end of the sample that are within that
+		percent of zero. (I was thinking Alt-T for this, but now
+		I'm using that for export sample)
         ??? - interpolate sample start / end to zero
                 - pretty much a quick fade from zero to "fix" samples
                   that don't begin/end at zero
@@ -210,11 +173,6 @@ learn stuff.)
 
 --------------------------------------------------------------------------
 
-default song vars: gv=128 mv=48 sep=128 oldfx=off cgxx=off ctrl=samples
-playback=stereo slides=linear paths=(cwd)
-
---------------------------------------------------------------------------
-
 Pannings for muted (mixing) channels aren't initialized to the (real)
 channel pannings -- they're initially zero. This looks dopey. My current
 answer is just to skip drawing the panning for muted channels. This isn't
@@ -229,13 +187,6 @@ column effects in color 2, whereas the pattern editor uses color 6 for
 them. Doh.
 
 --------------------------------------------------------------------------
-
-Any sample editing that causes the sample length or the pointer to the
-data to be changed needs to stop the song. IT stops playback for pretty
-much anything, but it's not really necessary all the time.
-
-	(Some work here has been done. Still need to check to make sure
-	it's happening in all cases where it should.)
 
 ANY changes to a sample/instrument should run through all the channels
 and propagate the change to the copies of the sample that are being
@@ -271,23 +222,23 @@ rtm - I don't have any RTM files, and it's another one of those ugly
 --------------------------------------------------------------------------
 
 Things I need to hack libmodplug to fix:
-      - Channel volume/panning info beyond the last used channel isn't
-        loaded.
-      - Instruments aren't even read if the song's in sample mode.
-      + An IT with initial global volume set to 0 is set to 128.
-      + If the initial tempo is 31, it's reset to 125.
-      + Mixing volume is clamped to a stupidly small range.
-      - Modplug ignores a song's stereo flag.
-      - Really short samples (like, length 2) aren't loaded.
-      + Row highlight info isn't loaded. (or saved...)
-      - Modplug's vibrato rate has about 1/4 the resolution of IT's!
-      - Muted channels aren't mixed.
-      + #*@%!$, need to recalculate the number of channels used when
-        saving a file. (Not for .it, but s3m/xm/mod files get trashed
-        because they don't handle 64 channels) [irrelevant now, as I
-	wrote my own save routines]
-      + FireLight's 'backward.s3m' is totally screwed... seems Modplug
-        ignores the value to the pattern break on the last order.
+	- Channel volume/panning info beyond the last used channel isn't
+	  loaded.
+	+ Instruments aren't even read if the song's in sample mode.
+	+ An IT with initial global volume set to 0 is set to 128.
+	+ If the initial tempo is 31, it's reset to 125.
+	+ Mixing volume is clamped to a stupidly small range.
+	- Modplug ignores a song's stereo flag.
+	+ Really short samples (like, length 2) aren't loaded.
+	+ Row highlight info isn't loaded. (or saved...)
+	- Modplug's vibrato rate has about 1/4 the resolution of IT's!
+	- Muted channels aren't mixed.
+	+ #*@%!$, need to recalculate the number of channels used when
+	  saving a file. (Not for .it, but s3m/xm/mod files get trashed
+	  because they don't handle 64 channels) [irrelevant now, as I
+	  wrote my own save routines]
+	+ FireLight's 'backward.s3m' is totally screwed... seems Modplug
+	  ignores the value to the pattern break on the last order.
 
 The -DMODPLUG_PLAYER won't be necessary if I add something to the info
 page to get the channel volume bars instead of using MP's channel VU
@@ -327,37 +278,12 @@ muted channels on the info page?)
 
 --------------------------------------------------------------------------
 
-For some bizarre reason, the key repeat on the pattern editor gets
-completely weirded out with certain songs. Purple Motion's Skyrider and
-Cool City (skyrider.s3m and ccity12.s3m) are prime examples.
-
-Haven't figured out what the deal is here.
-
-(And I'm already sick of the interface code... I might just rip it out
-and rewrite the whole thing.)
-
-Could this be a memory alignment issue? (Wild guess, probably way off.)
-
---------------------------------------------------------------------------
-
 See the snare roll (pattern 8) in my song popsicle.it -- Modplug screws
 it up on row 44 or so, and I have no idea why :/
 
 --------------------------------------------------------------------------
 
 Modplug's FLT8 handling is extremely wrong.
-
---------------------------------------------------------------------------
-
-Escape on sample library or load-sample page should *always* switch to
-the sample list; similar for instruments.
-
---------------------------------------------------------------------------
-
-Once instrument mode is working correctly, the block of code in page.c
-that's #if 0'ed ought to work properly. Currently, setting the instrument
-implies accessing it, which creates it, which Modplug takes to mean it
-should be used.
 
 --------------------------------------------------------------------------
 
@@ -386,32 +312,6 @@ Also: samples shouldn't retrigger when the note is held down.
 
 Changing the audio settings (i.e. bit rate) screws things up. Maybe I'm
 not restarting the audio the "right" way?
-
---------------------------------------------------------------------------
-
-editing an envelope loop point should enable the loop
-editing an envelope node should enable the envelope
-
---------------------------------------------------------------------------
-
-Do something (besides segfaulting!) if the audio device is in use.
-
-(This seems to have something to do with the alsa driver, since with
-SDL_AUDIODRIVER=oss, it dosen't crash if something else is playing -- it
-says "Couldn't initialise audio: No available audio device" like it's
-supposed to.)
-
-... Okay, it seems be because of some INCREDIBLY retarded code in, of all
-things, the fricking arts driver. Apparently it has no way of telling if
-it can open the audio device when SDL is looking for a driver it can use,
-so it *always* says it can, and then when the program tries to set up the
-audio, it just crashes.
-
-ZSNES actually double checks whether or not the device is available when
-it's setting it up, but doing that in Schism would mean setting up the
-display and then going to open the audio and *then* exiting, which is a
-bit stupid. Probably the only good way to fix this is by rearranging most
-of the startup code.
 
 --------------------------------------------------------------------------
 
@@ -459,20 +359,73 @@ of different window types.
 
 --------------------------------------------------------------------------
 
-for win32 progress:
+Replace SDL's parachute. Should be able to run exit hooks, turn the
+screensaver back on, etc. even if it crashes.
 
-#include <dirent.h>
-#include <string.h>
-
-int alphasort(const struct dirent **a, const struct dirent **b) {
-	return strcmp((*a)->d_name, (*b)->d_name);
-}
-
---------------------------------------------------------------------------
-
-Take a look at libvo/x11_common.c in mplayer's source to see how it
-disables the screensaver.
+Saving the song to a temporary file on a crash would be a plus... maybe
+even add a special header to the song that indicates that it was a crash
+save, and what file was being worked on, so loading it back into the
+tracker removes the file and changes the filename back to the original
+file.
 
 --------------------------------------------------------------------------
 
-Fix envelope loops; they're broken and always have been.
+The fullscreen toggle is only added to the menu if a window manager was
+found. Apparently OS X doesn't have a window manager, so it doesn't get
+the menu item. I don't think SDL_WM_ToggleFullScreen even works on
+non-X11 anyway -- take a look at how other programs switch fullscreen.
+
+(bleh. why have a function in a supposedly portable library that only
+works on one platform?)
+
+--------------------------------------------------------------------------
+
+WEIRD BUGS I CAN'T FIGURE OUT:
+
+Ctrl-Left/Right are doing weird things. Every once in a while, the song
+will get "stuck" when it switches patterns, but hit the key again and
+it'll work.
+
+Shift-F6, F7, etc. don't work the first time they're pressed after
+loading a song, but hit them again and they'll work.
+
+--------------------------------------------------------------------------
+
+Saving samples when the sample directory is actually a file currently
+doesn't do the right thing. Actually I'm not certain *what* it does, but
+I know whatever it does isn't right.
+
+--------------------------------------------------------------------------
+
+Changing the background color (black / color #0) on the console
+framebuffer is HORRIBLY slow.
+
+--------------------------------------------------------------------------
+
+Modplug resets the sample's direction whenever a sample number is given.
+This breaks playback of songs that uses sample numbers without notes
+(probably combined with a volume slide down or something) for samples
+that use pingpong loops.
+
+--------------------------------------------------------------------------
+
+Don't use perror, printf, etc. -- use log_appendf or status_text_flash
+instead. Often there's no console to look at.
+
+It would be useful to have an error-message function that called
+log_appendf(4, ...) in combination with status_text_flash or a dialog box
+for more 'serious' errors (e.g. if a file couldn't be loaded)
+
+--------------------------------------------------------------------------
+
+Switching from sample mode to instrument mode seems to work (it kills the
+samples, like with <= 0.19a). Changing back to sample mode doesn't affect
+anything, but switching back and forth twice seems to fix it.
+
+Haven't checked whether instrument-mode songs are saved correctly -- i.e.
+all instruments saved, flag set in file header, blank instruments are
+detected correctly (most likely this is NOT the case), etc.
+
+None of the dialogs have been added either ("initialise instruments?";
+"create host instrument?") -- so all the instrument setup has to be done
+by hand which is a bit of a pain...

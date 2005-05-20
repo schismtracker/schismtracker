@@ -19,15 +19,20 @@
  */
 
 #include "headers.h"
-
-#include "title.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_rtm_read_info(const byte * data, size_t length, file_info * fi);
-bool fmt_rtm_read_info(UNUSED const byte * data, UNUSED size_t length,
-                       UNUSED file_info * fi)
+bool fmt_imf_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
-        /* FIXME */
-        return false;
+        if (!(length > 64 && memcmp(data + 60, "IM10", 4) == 0))
+                return false;
+
+        file->description = "Imago Orpheus";
+        /*file->extension = strdup("imf");*/
+        file->title = calloc(32, sizeof(char));
+        memcpy(file->title, data, 32);
+        file->title[32] = 0;
+        file->type = TYPE_MODULE_IT;
+        return true;
 }

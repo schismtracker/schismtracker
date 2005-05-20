@@ -228,7 +228,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		}
 		psmp->nLoopStart = loopstart;
 		psmp->nLoopEnd = loopstart + looplen;
-		if (psmp->nLength < 4) psmp->nLength = 0;
+		if (psmp->nLength < 2) psmp->nLength = 0;
 		if (psmp->nLength)
 		{
 			UINT derr = 0;
@@ -303,8 +303,6 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 	m_nMaxPeriod = 3424 << 2;
 	memcpy(m_szNames, lpStream, 20);
 	// Setting channels pan
-	// <chisel> always use full left/right, and change the separation
-	// to make the panning "softer"
 	for (UINT ich=0; ich<m_nChannels; ich++)
 	{
 		ChnSettings[ich].nVolume = 64;
@@ -364,10 +362,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 
 
 #ifndef MODPLUG_NO_FILESAVE
-// <chisel> ifdef around pragma
-#ifdef MSC_VER
 #pragma warning(disable:4100)
-#endif
 
 BOOL CSoundFile::SaveMod(LPCSTR lpszFileName, UINT nPacking)
 //----------------------------------------------------------
@@ -382,7 +377,7 @@ BOOL CSoundFile::SaveMod(LPCSTR lpszFileName, UINT nPacking)
 	if ((f = fopen(lpszFileName, "wb")) == NULL) return FALSE;
 	memset(ord, 0, sizeof(ord));
 	memset(inslen, 0, sizeof(inslen));
-	if (m_nInstruments)
+	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 	{
 		memset(insmap, 0, sizeof(insmap));
 		for (UINT i=1; i<32; i++) if (Headers[i])
@@ -498,8 +493,5 @@ BOOL CSoundFile::SaveMod(LPCSTR lpszFileName, UINT nPacking)
 	return TRUE;
 }
 
-// <chisel> ifdef around pragma
-#ifdef MSC_VER
-# pragma warning(default:4100)
-#endif
+#pragma warning(default:4100)
 #endif // MODPLUG_NO_FILESAVE

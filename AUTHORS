@@ -4,9 +4,9 @@ Based (obviously) on Impulse Tracker by Jeffrey Lim <jeff@lim.com.au>.
 
 Default fonts created with ITF by ZaStaR <zastar@uclink4.berkeley.edu>.
 
-Default palette settings are mostly from Impulse Tracker, except
-Industrial (mine), Kawaii (mine and mml's), Violent (loosely based
-on the like-named FT2 palette), and Why Colors? (FT2).
+Default palette settings are mostly from Impulse Tracker, except Industrial
+(mine), Kawaii (mine and mml's), Violent (loosely based on the like-named
+FT2 palette), and Why Colors? (FT2).
 
 Modplug written by Olivier Lapicque <olivierl@jps.net>, with additional
 programming by Markus Fick <webmaster@mark-f.de> (spline mixing,
@@ -17,3 +17,5 @@ Some (small) portions of code have been borrowed from Cheesetracker,
 written by Juan Linietsky <coding@reduz.com.ar>.
 
 Frag-opt written by Ville Jokela <midianian/att/goth/dott/net/>.
+
+Various Amiga OS fixes by Juha Niemimäki <jniemima@mail.student.oulu.fi>.

@@ -19,8 +19,7 @@
  */
 
 #include "headers.h"
-
-#include "title.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -28,84 +27,69 @@
 
 /* Ugh. */
 static const char *valid_tags[][2] = {
-        /* M.K. must be the first tag! (to test for WOW files) */
-        /* the first 5 descriptions are a bit weird */
-        {"M.K.", "Amiga-NewTracker"},
-        {"M!K!", "Amiga-ProTracker"},
-        {"FLT4", "4 Channel Startrekker"},      // xxx
-        {"CD81", "8 Channel Falcon"},   // "Falcon"?
-        {"FLT8", "8 Channel Startrekker"},      // xxx
+	/* M.K. must be the first tag! (to test for WOW files) */
+	/* the first 5 descriptions are a bit weird */
+	{"M.K.", "Amiga-NewTracker"},
+	{"M!K!", "Amiga-ProTracker"},
+	{"FLT4", "4 Channel Startrekker"}, /* xxx */
+	{"CD81", "8 Channel Falcon"},      /* "Falcon"? */
+	{"FLT8", "8 Channel Startrekker"}, /* xxx */
 
-        /* the rest of the descriptions have " MOD" appended to them */
-        {"8CHN", "8 Channel"},  // what is the difference
-        {"OCTA", "8 Channel"},  // between these two?
-        {"TDZ1", "1 Channel"},
-        {"2CHN", "2 Channel"},
-        {"TDZ2", "2 Channel"},
-        {"TDZ3", "3 Channel"},
-        {"5CHN", "5 Channel"},
-        {"6CHN", "6 Channel"},
-        {"7CHN", "7 Channel"},
-        {"9CHN", "9 Channel"},
-        {"10CH", "10 Channel"},
-        {"11CH", "11 Channel"},
-        {"12CH", "12 Channel"},
-        {"13CH", "13 Channel"},
-        {"14CH", "14 Channel"},
-        {"15CH", "15 Channel"},
-        {"16CH", "16 Channel"},
-        {"18CH", "18 Channel"},
-        {"20CH", "20 Channel"},
-        {"22CH", "22 Channel"},
-        {"24CH", "24 Channel"},
-        {"26CH", "26 Channel"},
-        {"28CH", "28 Channel"},
-        {"30CH", "30 Channel"},
-        {"32CH", "32 Channel"},
-        {NULL, NULL}
+	{"8CHN", "8 Channel MOD"},  /* what is the difference */
+	{"OCTA", "8 Channel MOD"},  /* between these two? */
+	{"TDZ1", "1 Channel MOD"},
+	{"2CHN", "2 Channel MOD"},
+	{"TDZ2", "2 Channel MOD"},
+	{"TDZ3", "3 Channel MOD"},
+	{"5CHN", "5 Channel MOD"},
+	{"6CHN", "6 Channel MOD"},
+	{"7CHN", "7 Channel MOD"},
+	{"9CHN", "9 Channel MOD"},
+	{"10CH", "10 Channel MOD"},
+	{"11CH", "11 Channel MOD"},
+	{"12CH", "12 Channel MOD"},
+	{"13CH", "13 Channel MOD"},
+	{"14CH", "14 Channel MOD"},
+	{"15CH", "15 Channel MOD"},
+	{"16CH", "16 Channel MOD"},
+	{"18CH", "18 Channel MOD"},
+	{"20CH", "20 Channel MOD"},
+	{"22CH", "22 Channel MOD"},
+	{"24CH", "24 Channel MOD"},
+	{"26CH", "26 Channel MOD"},
+	{"28CH", "28 Channel MOD"},
+	{"30CH", "30 Channel MOD"},
+	{"32CH", "32 Channel MOD"},
+	{NULL, NULL}
 };
 
-bool fmt_mod_read_info(const byte * data, size_t length, file_info * fi);
-bool fmt_mod_read_info(const byte * data, size_t length, file_info * fi)
+bool fmt_mod_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
-        char tag[5];
-        int i = 0;
+	char tag[5];
+	int i = 0;
 
-        if (length < 1085)
-                return false;
+	if (length < 1085)
+		return false;
 
-        memcpy(tag, data + 1080, 4);
-        tag[4] = 0;
+	memcpy(tag, data + 1080, 4);
+	tag[4] = 0;
 
-        while (valid_tags[i][0]) {
-                if (strcmp(tag, valid_tags[i][0]) == 0) {
-                        const char *desc_part = valid_tags[i][1];
+	for (i = 0; valid_tags[i][0] != NULL; i++) {
+		if (strcmp(tag, valid_tags[i][0]) == 0) {
+			/* if (i == 0) {
+				Might be a .wow; need to calculate some crap to find out for sure.
+				For now, since I have no wow's, I'm not going to care.
+			} */
 
-                        /* if (i == 0) {
-                         *     might be a .wow; need to calculate some
-                         *     crap to find out for sure. For now, since
-                         *     I have no wow's, I'm not going to care.
-                         * } */
+			file->description = valid_tags[i][1];
+			/*file->extension = strdup("mod");*/
+			file->title = calloc(21, sizeof(char));
+			memcpy(file->title, data, 20);
+			file->title[20] = 0;
+			file->type = TYPE_MODULE_MOD;
+			return true;
+		}
+	}
 
-                        /* the first few have different descriptions */
-                        if (i <= 4) {
-                                fi->description = strdup(desc_part);
-                        } else {
-                                fi->description =
-                                        calloc(strlen(desc_part) + 5,
-                                               sizeof(char));
-                                strcpy(fi->description, desc_part);
-                                strcat(fi->description, " MOD");
-                        }
-                        fi->extension = strdup("mod");
-                        fi->title = calloc(21, sizeof(char));
-                        memcpy(fi->title, data, 20);
-                        fi->title[20] = 0;
-                        fi->type = TYPE_MOD;
-                        return true;
-                }
-                i++;
-        }
-
-        return false;
+	return false;
 }

@@ -241,7 +241,7 @@ void _frag_parse_sopt(FRAG * frag, const char * str)
 void _frag_parse_lopt(FRAG * frag, const char * str)
 {
 	int i, n;
-	const char * tmp;
+	const char * tmp = NULL;
 
 	if (!strncmp(str, "no-", 3))	/* check for "no-" in the arg */
 		for (i = 0; frag->fops[i].type != _FRAG_EOA; i++)

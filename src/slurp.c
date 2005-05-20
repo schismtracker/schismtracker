@@ -39,6 +39,12 @@
 #include <errno.h>
 #include <fcntl.h>
 
+/* The dup's are because fclose closes its file descriptor even if the FILE* was acquired with fdopen, and when
+the control gets back to slurp, it closes the fd (again). It doesn't seem to exist on Amiga OS though, so... */
+#ifdef __amigaos4__
+# define dup(fd) fd
+#endif
+
 /* --------------------------------------------------------------------- */
 
 /* CHUNK is how much memory is allocated at once. Too large a number is a
@@ -103,10 +109,9 @@ static int _slurp_stdio(slurp_t * t, int fd)
         int old_errno;
         FILE *fp;
         size_t got = 0, need, len;
-
+	
         if (t->length == 0) {
-                /* Hrmph. Probably a pipe or something...
-                 * gotta do it the REALLY ugly way. */
+                /* Hrmph. Probably a pipe or something... gotta do it the REALLY ugly way. */
                 return _slurp_stdio_pipe(t, fd);
         }
 
@@ -169,7 +174,7 @@ static int _slurp_mmap(slurp_t * t, int fd)
 
 /* --------------------------------------------------------------------- */
 
-slurp_t *slurp(const char *filename, struct stat * buf)
+slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 {
         slurp_t *t;
         int fd, old_errno;
@@ -193,10 +198,10 @@ slurp_t *slurp(const char *filename, struct stat * buf)
         if (t == NULL)
                 return NULL;
 
-        t->length = (size_t) (buf ? buf->st_size : file_size_fd(fd));
+        t->length = size ? : (size_t) (buf ? buf->st_size : file_size_fd(fd));
         /* TODO: bz2, gz, etc. */
         if (_slurp_mmap(t, fd) || _slurp_stdio(t, fd)) {
-                close(fd);
+		close(fd);
                 return t;
         }
 

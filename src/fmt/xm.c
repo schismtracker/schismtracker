@@ -19,22 +19,20 @@
  */
 
 #include "headers.h"
-
-#include "title.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_xm_read_info(const byte * data, size_t length, file_info * fi);
-bool fmt_xm_read_info(const byte * data, size_t length, file_info * fi)
+bool fmt_xm_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         if (!(length > 38 && memcmp(data, "Extended Module: ", 17) == 0))
                 return false;
 
-        fi->description = strdup("Fast Tracker 2 Module");
-        fi->type = TYPE_XM;
-        fi->extension = strdup("xm");
-        fi->title = calloc(21, sizeof(char));
-        memcpy(fi->title, data + 17, 20);
-        fi->title[20] = 0;
+        file->description = "Fast Tracker 2 Module";
+        file->type = TYPE_MODULE_XM;
+        /*file->extension = strdup("xm");*/
+        file->title = calloc(21, sizeof(char));
+        memcpy(file->title, data + 17, 20);
+        file->title[20] = 0;
         return true;
 }

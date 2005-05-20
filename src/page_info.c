@@ -31,7 +31,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct item items_info[1];
+static struct widget widgets_info[1];
 
 /* nonzero => use velocity bars */
 static int velocity_mode = 0;
@@ -45,19 +45,15 @@ static int instrument_names = 0;
 struct info_window_type {
         void (*draw) (int base, int height, int active, int first_channel);
 
-        /* if this is set, the first row contains actual text
-         * (not just the top part of a box) */
+        /* if this is set, the first row contains actual text (not just the top part of a box) */
         int first_row;
 
-        /* how many channels are shown -- just use 0 for windows that
-         * don't show specific channel info. for windows that put the
-         * channels vertically (i.e. sample names) this should be the
-         * amount to ADD to the height to get the number of channels, so
-         * it should be NEGATIVE. (example: the sample name view uses
-         * the first position for the top of the box and the last
-         * position for the bottom, so it uses -2.) confusing, almost to
-         * the point of being painful, but it works. (ok, i admit, it's
-         * not the most brilliant idea i ever had ;) */
+        /* how many channels are shown -- just use 0 for windows that don't show specific channel info.
+        for windows that put the channels vertically (i.e. sample names) this should be the amount to ADD
+        to the height to get the number of channels, so it should be NEGATIVE. (example: the sample name
+        view uses the first position for the top of the box and the last position for the bottom, so it
+        uses -2.) confusing, almost to the point of being painful, but it works. (ok, i admit, it's not
+        the most brilliant idea i ever had ;) */
         int channels;
 };
 
@@ -82,8 +78,7 @@ static struct info_window windows[MAX_WINDOWS] = {
 /* --------------------------------------------------------------------- */
 /* the various stuff that can be drawn... */
 
-static void info_draw_samples(int base, int height, UNUSED int active,
-                              int first_channel)
+static void info_draw_samples(int base, int height, UNUSED int active, int first_channel)
 {
         int vu, smp, ins, n, pos, fg, c = first_channel;
         char buf[8];
@@ -93,14 +88,9 @@ static void info_draw_samples(int base, int height, UNUSED int active,
         draw_fill_chars(31, base + 1, 61, base + height - 2, 0);
         draw_fill_chars(64, base + 1, 72, base + height - 2, 0);
 
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, 29, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(30, base, 62, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_box_unlocked(63, base, 73, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        SDL_UnlockSurface(screen);
+        draw_box(4, base, 29, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(30, base, 62, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(63, base, 73, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
         /* FIXME: what about standalone sample playback? */
         if (song_get_mode() == MODE_STOPPED) {
@@ -134,35 +124,29 @@ static void info_draw_samples(int base, int height, UNUSED int active,
 
                 /* second box: sample number/name */
                 ins = song_get_instrument_number(channel->instrument);
-                /* figuring out the sample number is an ugly hack...
-                 * considering all the crap that's copied to the channel,
-                 * i'm surprised that the sample and instrument numbers
-                 * aren't in there somewhere... */
+                /* figuring out the sample number is an ugly hack... considering all the crap that's
+                copied to the channel, i'm surprised that the sample and instrument numbers aren't
+                in there somewhere... */
                 if (channel->sample && channel->sample_data)
                         smp = channel->sample - song_get_sample(0, NULL);
                 else
                         smp = 0;
                 if (smp) {
-                        SDL_LockSurface(screen);
-                        draw_text_unlocked(numtostr(2, smp, buf), 31, pos,
-                                           6, 0);
+                        draw_text(numtostr(2, smp, buf), 31, pos, 6, 0);
                         if (ins) {
-                                draw_char_unlocked('/', 33, pos, 6, 0);
-                                draw_text_unlocked(numtostr(2, ins, buf),
-                                                   34, pos, 6, 0);
+                                draw_char('/', 33, pos, 6, 0);
+                                draw_text(numtostr(2, ins, buf), 34, pos, 6, 0);
                                 n = 36;
                         } else {
                                 n = 33;
                         }
                         if (channel->volume == 0)
                                 fg = 4;
-                        else if (channel->
-                                 flags & (CHN_KEYOFF | CHN_NOTEFADE))
+                        else if (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
                                 fg = 7;
                         else
                                 fg = 6;
-                        draw_char_unlocked(':', n++, pos, fg, 0);
-                        SDL_UnlockSurface(screen);
+                        draw_char(':', n++, pos, fg, 0);
                         if (instrument_names && channel->instrument)
                                 ptr = channel->instrument->name;
                         else
@@ -181,8 +165,7 @@ static void info_draw_samples(int base, int height, UNUSED int active,
                 } else if ((channel->final_panning + 3) >> 2 == 64) {
                         draw_text("Right", 68, pos, 2, 0);
                 } else {
-                        draw_thumb_bar(64, pos, 9, 0, 256,
-                                       channel->final_panning, 0);
+                        draw_thumb_bar(64, pos, 9, 0, 256, channel->final_panning, 0);
                 }
 
                 /* finally, do the channel number */
@@ -197,10 +180,8 @@ static void info_draw_samples(int base, int height, UNUSED int active,
         }
 }
 
-/* this function needs to be called with the screen locked! */
-static void _draw_track_view(int base, int height, int first_channel,
-                             int num_channels, int channel_width,
-                             int separator, draw_note_func draw_note)
+static void _draw_track_view(int base, int height, int first_channel, int num_channels,
+			     int channel_width, int separator, draw_note_func draw_note)
 {
         /* way too many variables */
         int current_row = song_get_current_row();
@@ -209,7 +190,7 @@ static void _draw_track_view(int base, int height, int first_channel,
         song_note *note;
         song_note *cur_pattern, *prev_pattern, *next_pattern;
         song_note *pattern; /* points to either {cur,prev,next}_pattern */
-        int cur_pattern_rows, prev_pattern_rows, next_pattern_rows;
+        int cur_pattern_rows = 0, prev_pattern_rows = 0, next_pattern_rows = 0;
         int total_rows; /* same as {cur,prev_next}_pattern_rows */
         int chan_pos, row, row_pos, rows_before, rows_after;
         char buf[4];
@@ -220,8 +201,7 @@ static void _draw_track_view(int base, int height, int first_channel,
         switch (song_get_mode()) {
         case MODE_PATTERN_LOOP:
                 prev_pattern_rows = next_pattern_rows = cur_pattern_rows
-                        = song_get_pattern(song_get_playing_pattern(),
-					   &cur_pattern);
+			= song_get_pattern(song_get_playing_pattern(), &cur_pattern);
                 prev_pattern = next_pattern = cur_pattern;
                 break;
         case MODE_PLAYING:
@@ -233,23 +213,13 @@ static void _draw_track_view(int base, int height, int first_channel,
                         /* TODO: fill the area with blank dots */
                         return;
                 }
-                cur_pattern_rows =
-                        song_get_pattern(orderlist[current_order],
-                                         &cur_pattern);
-                if (current_order > 0
-                    && orderlist[current_order - 1] < 200)
-                        prev_pattern_rows =
-                                song_get_pattern(orderlist
-                                                 [current_order - 1],
-                                                 &prev_pattern);
+                cur_pattern_rows = song_get_pattern(orderlist[current_order], &cur_pattern);
+                if (current_order > 0 && orderlist[current_order - 1] < 200)
+                        prev_pattern_rows = song_get_pattern(orderlist[current_order - 1], &prev_pattern);
                 else
                         prev_pattern = NULL;
-                if (current_order < 255
-                    && orderlist[current_order + 1] < 200)
-                        next_pattern_rows =
-                                song_get_pattern(orderlist
-                                                 [current_order + 1],
-                                                 &next_pattern);
+                if (current_order < 255 && orderlist[current_order + 1] < 200)
+                        next_pattern_rows = song_get_pattern(orderlist[current_order + 1], &next_pattern);
                 else
                         next_pattern = NULL;
                 break;
@@ -275,21 +245,15 @@ static void _draw_track_view(int base, int height, int first_channel,
                         total_rows = prev_pattern_rows;
                         row = total_rows - 1;
                 }
-                draw_text_unlocked(numtostr(3, row, buf), 1, row_pos, 0, 2);
+                draw_text(numtostr(3, row, buf), 1, row_pos, 0, 2);
                 note = pattern + 64 * row + first_channel - 1;
                 for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
-                        draw_note(5 + channel_width * chan_pos, row_pos,
-                                  note, -1, 6, 0);
+                        draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 0);
                         if (separator)
-                                draw_char_unlocked(168,
-                                                   (4 +
-                                                    channel_width *
-                                                    (chan_pos + 1)),
-                                                   row_pos, 2, 0);
+                                draw_char(168, (4 + channel_width * (chan_pos + 1)), row_pos, 2, 0);
                         note++;
                 }
-                draw_note(5 + channel_width * chan_pos, row_pos, note, -1,
-                          6, 0);
+                draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 0);
                 row--;
                 row_pos--;
         }
@@ -298,17 +262,12 @@ static void _draw_track_view(int base, int height, int first_channel,
         pattern = cur_pattern;
         total_rows = cur_pattern_rows;
         row_pos = base + rows_before + 1;
-        draw_text_unlocked(numtostr(3, current_row, buf), 1, row_pos, 0, 2);
+        draw_text(numtostr(3, current_row, buf), 1, row_pos, 0, 2);
         note = pattern + 64 * current_row + first_channel - 1;
         for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
-                draw_note(5 + channel_width * chan_pos, row_pos, note, -1,
-                          6, 14);
+                draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 14);
                 if (separator)
-                        draw_char_unlocked(168,
-                                           (4 +
-                                            channel_width * (chan_pos +
-                                                             1)), row_pos,
-                                           2, 14);
+                        draw_char(168, (4 + channel_width * (chan_pos + 1)), row_pos, 2, 14);
                 note++;
         }
         draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 14);
@@ -326,28 +285,21 @@ static void _draw_track_view(int base, int height, int first_channel,
                         total_rows = next_pattern_rows;
                         row = 0;
                 }
-                draw_text_unlocked(numtostr(3, row, buf), 1, row_pos, 0, 2);
+                draw_text(numtostr(3, row, buf), 1, row_pos, 0, 2);
                 note = pattern + 64 * row + first_channel - 1;
                 for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
-                        draw_note(5 + channel_width * chan_pos, row_pos,
-                                  note, -1, 6, 0);
+                        draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 0);
                         if (separator)
-                                draw_char_unlocked(168,
-                                                   (4 +
-                                                    channel_width *
-                                                    (chan_pos + 1)),
-                                                   row_pos, 2, 0);
+                                draw_char(168, (4 + channel_width * (chan_pos + 1)), row_pos, 2, 0);
                         note++;
                 }
-                draw_note(5 + channel_width * chan_pos, row_pos, note, -1,
-                          6, 0);
+                draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 0);
                 row++;
                 row_pos++;
         }
 }
 
-static void info_draw_track_5(int base, int height, int active,
-                              int first_channel)
+static void info_draw_track_5(int base, int height, int active, int first_channel)
 {
         int chan, chan_pos, fg;
 
@@ -355,161 +307,117 @@ static void info_draw_track_5(int base, int height, int active,
          * supposed to, get rid of the draw_fill_chars here
 	 * (and in all the other info_draw_track_ functions) */
         draw_fill_chars(5, base + 1, 73, base + height - 2, 0);
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, 74, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        for (chan = first_channel, chan_pos = 0; chan_pos < 5;
-             chan++, chan_pos++) {
+	
+        draw_box(4, base, 74, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        for (chan = first_channel, chan_pos = 0; chan_pos < 5; chan++, chan_pos++) {
                 if (song_get_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
-                        fg = (chan ==
-                              selected_channel ? 3 : (active ? 2 : 0));
+                        fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
                 draw_channel_header_13(chan, 5 + 14 * chan_pos, base, fg);
         }
-        _draw_track_view(base, height, first_channel, 5, 13, 1,
-                         draw_note_13);
-        SDL_UnlockSurface(screen);
+        _draw_track_view(base, height, first_channel, 5, 13, 1, draw_note_13);
 }
 
-static void info_draw_track_10(int base, int height, int active,
-                               int first_channel)
+static void info_draw_track_10(int base, int height, int active, int first_channel)
 {
         int chan, chan_pos, fg;
         char buf[4];
 
         draw_fill_chars(5, base + 1, 74, base + height - 2, 0);
 
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, 75, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        for (chan = first_channel, chan_pos = 0; chan_pos < 10;
-             chan++, chan_pos++) {
+        draw_box(4, base, 75, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        for (chan = first_channel, chan_pos = 0; chan_pos < 10; chan++, chan_pos++) {
                 if (song_get_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
-                        fg = (chan ==
-                              selected_channel ? 3 : (active ? 2 : 0));
-                draw_char_unlocked(0, 5 + 7 * chan_pos, base, 1, 1);
-                draw_char_unlocked(0, 5 + 7 * chan_pos + 1, base, 1, 1);
-                draw_text_unlocked(numtostr(2, chan, buf),
-                                   5 + 7 * chan_pos + 2, base, fg, 1);
-                draw_char_unlocked(0, 5 + 7 * chan_pos + 4, base, 1, 1);
-                draw_char_unlocked(0, 5 + 7 * chan_pos + 5, base, 1, 1);
+                        fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
+                draw_char(0, 5 + 7 * chan_pos, base, 1, 1);
+                draw_char(0, 5 + 7 * chan_pos + 1, base, 1, 1);
+                draw_text(numtostr(2, chan, buf), 5 + 7 * chan_pos + 2, base, fg, 1);
+                draw_char(0, 5 + 7 * chan_pos + 4, base, 1, 1);
+                draw_char(0, 5 + 7 * chan_pos + 5, base, 1, 1);
         }
-        _draw_track_view(base, height, first_channel, 10, 7, 0,
-                         draw_note_7);
-        SDL_UnlockSurface(screen);
+        _draw_track_view(base, height, first_channel, 10, 7, 0, draw_note_7);
 }
 
-static void info_draw_track_12(int base, int height, int active,
-                               int first_channel)
+static void info_draw_track_12(int base, int height, int active, int first_channel)
 {
         int chan, chan_pos, fg;
         char buf[4];
 
         draw_fill_chars(5, base + 1, 76, base + height - 2, 0);
 
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, 77, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        for (chan = first_channel, chan_pos = 0; chan_pos < 12;
-             chan++, chan_pos++) {
+        draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        for (chan = first_channel, chan_pos = 0; chan_pos < 12; chan++, chan_pos++) {
                 if (song_get_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
-                        fg = (chan ==
-                              selected_channel ? 3 : (active ? 2 : 0));
-                /* draw_char_unlocked(0, 5 + 6 * chan_pos, base, 1, 1); */
-                draw_char_unlocked(0, 5 + 6 * chan_pos + 1, base, 1, 1);
-                draw_text_unlocked(numtostr(2, chan, buf),
-                                   5 + 6 * chan_pos + 2, base, fg, 1);
-                draw_char_unlocked(0, 5 + 6 * chan_pos + 4, base, 1, 1);
-                /* draw_char_unlocked(0, 5 + 6 * chan_pos + 5, base, 1, 1); */
+                        fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
+                /* draw_char(0, 5 + 6 * chan_pos, base, 1, 1); */
+                draw_char(0, 5 + 6 * chan_pos + 1, base, 1, 1);
+                draw_text(numtostr(2, chan, buf), 5 + 6 * chan_pos + 2, base, fg, 1);
+                draw_char(0, 5 + 6 * chan_pos + 4, base, 1, 1);
+                /* draw_char(0, 5 + 6 * chan_pos + 5, base, 1, 1); */
         }
-        _draw_track_view(base, height, first_channel, 12, 6, 0,
-                         draw_note_6);
-        SDL_UnlockSurface(screen);
+        _draw_track_view(base, height, first_channel, 12, 6, 0, draw_note_6);
 }
 
-static void info_draw_track_18(int base, int height, int active,
-                               int first_channel)
+static void info_draw_track_18(int base, int height, int active, int first_channel)
 {
         int chan, chan_pos, fg;
         char buf[4];
 
         draw_fill_chars(5, base + 1, 75, base + height - 2, 0);
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, 76, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        for (chan = first_channel, chan_pos = 0; chan_pos < 18;
-             chan++, chan_pos++) {
+
+        draw_box(4, base, 76, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        for (chan = first_channel, chan_pos = 0; chan_pos < 18; chan++, chan_pos++) {
                 if (song_get_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
-                        fg = (chan ==
-                              selected_channel ? 3 : (active ? 2 : 0));
-                draw_text_unlocked(numtostr(2, chan, buf),
-                                   5 + 4 * chan_pos + 1, base, fg, 1);
+                        fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
+                draw_text(numtostr(2, chan, buf), 5 + 4 * chan_pos + 1, base, fg, 1);
         }
-        _draw_track_view(base, height, first_channel, 18, 3, 1,
-                         draw_note_3);
-        SDL_UnlockSurface(screen);
+        _draw_track_view(base, height, first_channel, 18, 3, 1, draw_note_3);
 }
 
-static void info_draw_track_24(int base, int height, int active,
-                               int first_channel)
+static void info_draw_track_24(int base, int height, int active, int first_channel)
 {
         int chan, chan_pos, fg;
         char buf[4];
 
         draw_fill_chars(5, base + 1, 76, base + height - 2, 0);
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, 77, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        for (chan = first_channel, chan_pos = 0; chan_pos < 24;
-             chan++, chan_pos++) {
+
+        draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        for (chan = first_channel, chan_pos = 0; chan_pos < 24; chan++, chan_pos++) {
                 if (song_get_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
-                        fg = (chan ==
-                              selected_channel ? 3 : (active ? 2 : 0));
-                draw_text_unlocked(numtostr(2, chan, buf),
-                                   5 + 3 * chan_pos + 1, base, fg, 1);
+                        fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
+                draw_text(numtostr(2, chan, buf), 5 + 3 * chan_pos + 1, base, fg, 1);
         }
-        _draw_track_view(base, height, first_channel, 24, 3, 0,
-                         draw_note_3);
-
-        SDL_UnlockSurface(screen);
+        _draw_track_view(base, height, first_channel, 24, 3, 0, draw_note_3);
 }
 
-static void info_draw_track_36(int base, int height, int active,
-                               int first_channel)
+static void info_draw_track_36(int base, int height, int active, int first_channel)
 {
         int chan, chan_pos, fg;
         char buf[4];
 
         draw_fill_chars(5, base + 1, 76, base + height - 2, 0);
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, 77, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        for (chan = first_channel, chan_pos = 0; chan_pos < 36;
-             chan++, chan_pos++) {
+
+        draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        for (chan = first_channel, chan_pos = 0; chan_pos < 36; chan++, chan_pos++) {
                 if (song_get_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
-                        fg = (chan ==
-                              selected_channel ? 3 : (active ? 2 : 0));
-                draw_text_unlocked(numtostr(2, chan, buf), 5 + 2 * chan_pos,
-                                   base, fg, 1);
+                        fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
+                draw_text(numtostr(2, chan, buf), 5 + 2 * chan_pos, base, fg, 1);
         }
-        _draw_track_view(base, height, first_channel, 36, 2, 0,
-                         draw_note_2);
-        SDL_UnlockSurface(screen);
+        _draw_track_view(base, height, first_channel, 36, 2, 0, draw_note_2);
 }
 
-static void info_draw_track_64(int base, int height, int active,
-                               int first_channel)
+static void info_draw_track_64(int base, int height, int active, int first_channel)
 {
         int chan, chan_pos, fg;
 	/* IT draws nine more blank "channels" on the right */
@@ -518,15 +426,14 @@ static void info_draw_track_64(int base, int height, int active,
 	assert(first_channel == 1);
 	
         draw_fill_chars(5, base + 1, nchan + 4, base + height - 2, 0);
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, nchan + 5, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+
+        draw_box(4, base, nchan + 5, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 64; chan++, chan_pos++) {
                 if (song_get_channel(chan - 1)->flags & CHN_MUTE)
 			fg = (chan == selected_channel ? 14 : 9);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 10 : 8));
-		draw_half_width_chars_unlocked(chan / 10 + '0', chan % 10 + '0',
-					       5 + chan_pos, base, fg, 1, fg, 1);
+		draw_half_width_chars(chan / 10 + '0', chan % 10 + '0', 5 + chan_pos, base, fg, 1, fg, 1);
         }
 	for (; chan_pos < nchan; chan_pos++)
 		draw_char(0, 5 + chan_pos, base, 1, 1);
@@ -536,21 +443,17 @@ static void info_draw_track_64(int base, int height, int active,
 	 * TODO | (would only be useful for this particular case) */
 	/*_draw_track_view(base, height, first_channel, nchan, 1, 0, draw_note_1);*/
 	_draw_track_view(base, height, first_channel, 64, 1, 0, draw_note_1);
-        SDL_UnlockSurface(screen);
 }
 
-static void info_draw_channels(int base, UNUSED int height, int active,
-                               UNUSED int first_channel)
+static void info_draw_channels(int base, UNUSED int height, int active, UNUSED int first_channel)
 {
         char buf[32];
         int fg = (active ? 3 : 0);
 
-        snprintf(buf, 32, "Active Channels: %d (%d)",
-                 song_get_playing_channels(), song_get_max_channels());
+        snprintf(buf, 32, "Active Channels: %d (%d)", song_get_playing_channels(), song_get_max_channels());
         draw_text(buf, 2, base, fg, 2);
 
-        snprintf(buf, 32, "Global Volume: %d",
-                 song_get_current_global_volume());
+        snprintf(buf, 32, "Global Volume: %d", song_get_current_global_volume());
         draw_text(buf, 4, base + 1, fg, 2);
 }
 
@@ -563,11 +466,9 @@ static void info_draw_channels(int base, UNUSED int height, int active,
  * (update 06feb2004: still doesn't work. :P -- think I'll just wait until
  * the Big Overhaul when I replace Modplug with my own player engine) */
 
-static void info_draw_note_dots(int base, int height, int active,
-                                int first_channel)
+static void info_draw_note_dots(int base, int height, int active, int first_channel)
 {
-        /* once this works, most of these variables can be optimized out
-         * (some of them are just used once) */
+        /* once this works, most of these variables can be optimized out (some of them are just used once) */
         int fg, v;
         int c, pos;
         int n;
@@ -581,13 +482,9 @@ static void info_draw_note_dots(int base, int height, int active,
 
         draw_fill_chars(5, base + 1, 77, base + height - 2, 0);
 
-        SDL_LockSurface(screen);
-        draw_box_unlocked(4, base, 78, base + height - 1,
-                          BOX_THICK | BOX_INNER | BOX_INSET);
-        SDL_UnlockSurface(screen);
+        draw_box(4, base, 78, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
-        /* if it's stopped, just draw the channel numbers and a bunch
-         * of dots. */
+        /* if it's stopped, just draw the channel numbers and a bunch of dots. */
 
         n = song_get_mix_state(&channel_list);
         while (n--) {
@@ -605,9 +502,7 @@ static void info_draw_note_dots(int base, int height, int active,
                 if (pos > height - 1)
                         continue;
 
-                fg = ((channel->flags & CHN_MUTE)
-                      ? 1 : ((channel->sample - song_get_sample(0, NULL))
-                             % 4 + 2));
+                fg = (channel->flags & CHN_MUTE) ? 1 : (channel->sample - song_get_sample(0, NULL)) % 4 + 2;
                 /* v = (channel->final_volume + 2047) >> 11; */
 		v = (channel->vu_meter + 31) >> 5;
                 d = dot_field[channel->note - 31][pos];
@@ -616,20 +511,19 @@ static void info_draw_note_dots(int base, int height, int active,
                         dot_field[channel->note - 31][pos] = dn;
         }
 
-        SDL_LockSurface(screen);
         for (c = first_channel, pos = 0; pos < height - 2; pos++, c++) {
                 for (n = 0; n < 73; n++) {
                         d = dot_field[n][pos];
 
                         if (d == 0) {
                                 /* stick a blank dot there */
-				draw_char_unlocked(193, n + 5, pos + base + 1, 2, 0);
+				draw_char(193, n + 5, pos + base + 1, 2, 0);
                                 continue;
                         }
                         fg = d & 0xf;
                         v = d >> 4;
                         /* btw: Impulse Tracker uses char 173 instead of 193. why? */
-                        draw_char_unlocked(v + 193, n + 5, pos + base + 1, fg, 0);
+                        draw_char(v + 193, n + 5, pos + base + 1, fg, 0);
                 }
 
                 if (c == selected_channel) {
@@ -641,7 +535,6 @@ static void info_draw_note_dots(int base, int height, int active,
                 }
                 draw_text(numtostr(2, c, buf), 2, pos + base + 1, fg, 2);
         }
-        SDL_UnlockSurface(screen);
 }
 #endif
 
@@ -777,23 +670,18 @@ void cfg_load_info(cfg_file_t *cfg)
 
 static void info_page_redraw(void)
 {
-        int n, height, pos =
-                (window_types[windows[0].type].first_row ? 13 : 12);
+        int n, height, pos = (window_types[windows[0].type].first_row ? 13 : 12);
 
         for (n = 0; n < num_windows - 1; n++) {
                 height = windows[n].height;
                 if (pos == 12)
                         height++;
-                window_types[windows[n].type].draw(pos, height,
-                                                   (n == selected_window),
-                                                   windows[n].
-                                                   first_channel);
+                window_types[windows[n].type].draw(pos, height, (n == selected_window),
+						   windows[n].first_channel);
                 pos += height;
         }
         /* the last window takes up all the rest of the screen */
-        window_types[windows[n].type].draw(pos, 50 - pos,
-                                           (n == selected_window),
-                                           windows[n].first_channel);
+        window_types[windows[n].type].draw(pos, 50 - pos, (n == selected_window), windows[n].first_channel);
 }
 
 /* --------------------------------------------------------------------- */
@@ -815,15 +703,12 @@ static int info_page_handle_key(SDL_keysym * k)
                 return 1;
         case SDLK_v:
                 velocity_mode = !velocity_mode;
-                status_text_flash("Using %s bars",
-                                  (velocity_mode ? "velocity" : "volume"));
+                status_text_flash("Using %s bars", (velocity_mode ? "velocity" : "volume"));
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_i:
                 instrument_names = !instrument_names;
-                status_text_flash("Using %s names",
-                                  (instrument_names ? "instrument" :
-                                   "sample"));
+                status_text_flash("Using %s names", (instrument_names ? "instrument" : "sample"));
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_r:
@@ -834,11 +719,15 @@ static int info_page_handle_key(SDL_keysym * k)
                 }
                 return 0;
         case SDLK_KP_PLUS:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 if (song_get_mode() == MODE_PLAYING) {
                         song_set_current_order(song_get_current_order() + 1);
                 }
                 return 1;
         case SDLK_KP_MINUS:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 if (song_get_mode() == MODE_PLAYING) {
                         song_set_current_order(song_get_current_order() - 1);
                 }
@@ -854,6 +743,8 @@ static int info_page_handle_key(SDL_keysym * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_SPACE:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 song_toggle_channel_mute(selected_channel - 1);
                 if (selected_channel < 64)
                         selected_channel++;
@@ -861,21 +752,22 @@ static int info_page_handle_key(SDL_keysym * k)
                 break;
         case SDLK_UP:
                 if (k->mod & (KMOD_ALT | KMOD_META)) {
-                        /* make the current window one line shorter, and
-                         * give the line to the next window below it. if
-                         * the window is already as small as it can get
-                         * (3 lines) or if it's the last window, don't do
-                         * anything. */
-                        if (selected_window == num_windows - 1
-                            || windows[selected_window].height == 3) {
+                        /* make the current window one line shorter, and give the line to the next window
+			below it. if the window is already as small as it can get (3 lines) or if it's
+			the last window, don't do anything. */
+                        if (selected_window == num_windows - 1 || windows[selected_window].height == 3) {
                                 return 1;
                         }
                         windows[selected_window].height--;
                         windows[selected_window + 1].height++;
                         break;
                 }
-                /* fall through */
+                if (selected_channel > 1)
+                        selected_channel--;
+                break;
         case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 if (selected_channel > 1)
                         selected_channel--;
                 break;
@@ -894,59 +786,62 @@ static int info_page_handle_key(SDL_keysym * k)
                         windows[selected_window + 1].height--;
                         break;
                 }
-                /* fall through */
+                if (selected_channel < 64)
+                        selected_channel++;
+                break;
         case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 if (selected_channel < 64)
                         selected_channel++;
                 break;
         case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 selected_channel = 1;
                 break;
         case SDLK_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 selected_channel = song_find_last_channel();
                 break;
         case SDLK_INSERT:
-                /* add a new window, unless there's already five (the
-                 * maximum) or if the current window isn't big enough
-                 * to split in half. */
-                if (num_windows == MAX_WINDOWS
-                    || (windows[selected_window].height < 6)) {
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+                /* add a new window, unless there's already five (the maximum)
+		or if the current window isn't big enough to split in half. */
+                if (num_windows == MAX_WINDOWS || (windows[selected_window].height < 6)) {
                         return 1;
                 }
 
                 num_windows++;
 
                 /* shift the windows under the current one down */
-                memmove(windows + selected_window + 1,
-                        windows + selected_window,
-                        ((num_windows - selected_window -
-                          1) * sizeof(*windows)));
+                memmove(windows + selected_window + 1, windows + selected_window,
+                        ((num_windows - selected_window - 1) * sizeof(*windows)));
 
                 /* split the height between the two windows */
                 n = windows[selected_window].height;
                 windows[selected_window].height = n / 2;
                 windows[selected_window + 1].height = n / 2;
                 if ((n & 1) && num_windows != 2) {
-                        /* odd number? compensate. (the selected window
-                         * gets the extra line) */
+                        /* odd number? compensate. (the selected window gets the extra line) */
                         windows[selected_window + 1].height++;
                 }
                 break;
         case SDLK_DELETE:
-                /* delete the current window and give the extra space to
-                 * the next window down. if this is the only window,
-                 * well then don't delete it ;) */
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+                /* delete the current window and give the extra space to the next window down.
+		if this is the only window, well then don't delete it ;) */
                 if (num_windows == 1)
                         return 1;
 
-                n = windows[selected_window].height +
-                        windows[selected_window + 1].height;
+                n = windows[selected_window].height + windows[selected_window + 1].height;
 
                 /* shift the windows under the current one up */
-                memmove(windows + selected_window,
-                        windows + selected_window + 1,
-                        ((num_windows - selected_window -
-                          1) * sizeof(*windows)));
+                memmove(windows + selected_window, windows + selected_window + 1,
+                        ((num_windows - selected_window - 1) * sizeof(*windows)));
 
                 /* fix the current window's height */
                 windows[selected_window].height = n;
@@ -956,6 +851,8 @@ static int info_page_handle_key(SDL_keysym * k)
                         selected_window--;
                 break;
         case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
                 n = windows[selected_window].type;
                 if (n == 0)
                         n = NUM_WINDOW_TYPES;
@@ -963,9 +860,9 @@ static int info_page_handle_key(SDL_keysym * k)
                 windows[selected_window].type = n;
                 break;
         case SDLK_PAGEDOWN:
-                windows[selected_window].type =
-                        ((windows[selected_window].type +
-                          1) % NUM_WINDOW_TYPES);
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+                windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
                 break;
         case SDLK_TAB:
                 if (k->mod & KMOD_SHIFT) {
@@ -973,8 +870,7 @@ static int info_page_handle_key(SDL_keysym * k)
                                 selected_window = num_windows;
                         selected_window--;
                 } else {
-                        selected_window =
-                                ((selected_window + 1) % num_windows);
+                        selected_window = (selected_window + 1) % num_windows;
                 }
                 status.flags |= NEED_UPDATE;
                 return 1;
@@ -1002,9 +898,9 @@ void info_load_page(struct page *page)
 {
         page->title = "Info Page (F5)";
         page->playback_update = info_page_playback_update;
-        page->total_items = 1;
-        page->items = items_info;
+        page->total_widgets = 1;
+        page->widgets = widgets_info;
         page->help_index = HELP_INFO_PAGE;
 
-	create_other(items_info + 0, 0, info_page_handle_key, info_page_redraw);
+	create_other(widgets_info + 0, 0, info_page_handle_key, info_page_redraw);
 }

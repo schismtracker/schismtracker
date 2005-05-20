@@ -31,7 +31,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct item items_log[1];
+static struct widget widgets_log[1];
 
 #define NUM_LINES 33
 static struct log_line lines[NUM_LINES];
@@ -65,11 +65,11 @@ void log_load_page(struct page *page)
 {
         page->title = "Message Log Viewer (Ctrl-F1)";
         page->draw_const = log_draw_const;
-        page->total_items = 1;
-        page->items = items_log;
+        page->total_widgets = 1;
+        page->widgets = widgets_log;
         page->help_index = HELP_GLOBAL;
 
-	create_other(items_log + 0, 1, log_handle_key, log_redraw);
+	create_other(widgets_log + 0, 1, log_handle_key, log_redraw);
 }
 
 /* --------------------------------------------------------------------- */
@@ -87,11 +87,8 @@ inline void log_append(int color, int must_free, const char *text)
         lines[last_line].color = color;
         lines[last_line].must_free = must_free;
 
-        if (status.current_page == PAGE_LOG) {
-                /* FIXME | it'd be nice to blit the area and only draw one
-                 * FIXME | line, instead of redrawing the whole thing. */
+        if (status.current_page == PAGE_LOG)
                 status.flags |= NEED_UPDATE;
-        }
 }
 
 void log_appendf(int color, const char *format, ...)

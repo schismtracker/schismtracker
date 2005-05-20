@@ -29,7 +29,7 @@
 /* --------------------------------------------------------------------- */
 /* helper functions */
 
-static inline void _minmax_8(signed char *data, unsigned long length, signed char *min, signed char *max)
+static void _minmax_8(signed char *data, unsigned long length, signed char *min, signed char *max)
 {
 	unsigned long pos = length;
 	
@@ -44,7 +44,7 @@ static inline void _minmax_8(signed char *data, unsigned long length, signed cha
         }
 }
 
-static inline void _minmax_16(signed short *data, unsigned long length, signed short *min, signed short *max)
+static void _minmax_16(signed short *data, unsigned long length, signed short *min, signed short *max)
 {
 	unsigned long pos = length;
 	
@@ -62,7 +62,7 @@ static inline void _minmax_16(signed short *data, unsigned long length, signed s
 /* --------------------------------------------------------------------- */
 /* sign convert (a.k.a. amiga flip) */
 
-static inline void _sign_convert_8(signed char *data, unsigned long length)
+static void _sign_convert_8(signed char *data, unsigned long length)
 {
         unsigned long pos = length;
 
@@ -72,7 +72,7 @@ static inline void _sign_convert_8(signed char *data, unsigned long length)
         }
 }
 
-static inline void _sign_convert_16(signed short *data, unsigned long length)
+static void _sign_convert_16(signed short *data, unsigned long length)
 {
         unsigned long pos = length;
 
@@ -93,7 +93,7 @@ void sample_sign_convert(song_sample * sample)
 /* --------------------------------------------------------------------- */
 /* i don't think this is being done correctly :/ */
 
-static inline void _reverse_8(signed char *data, unsigned long length)
+static void _reverse_8(signed char *data, unsigned long length)
 {
         signed char tmp;
         unsigned long lpos = 0, rpos = length - 1;
@@ -107,7 +107,7 @@ static inline void _reverse_8(signed char *data, unsigned long length)
         }
 }
 
-static inline void _reverse_16(signed short *data, unsigned long length)
+static void _reverse_16(signed short *data, unsigned long length)
 {
         signed short tmp;
         unsigned long lpos = 0, rpos = length - 1;
@@ -147,7 +147,7 @@ void sample_reverse(song_sample * sample)
  * this is irrelevant, as i haven't gotten to writing the convert stuff
  * yet. (not that it's hard, i just haven't gotten to it.) */
 
-static inline void _quality_convert_8to16(signed char *idata, signed short *odata, unsigned long length)
+static void _quality_convert_8to16(signed char *idata, signed short *odata, unsigned long length)
 {
 	unsigned long pos = length;
 	
@@ -157,7 +157,7 @@ static inline void _quality_convert_8to16(signed char *idata, signed short *odat
 	}
 }
 
-static inline void _quality_convert_16to8(signed short *idata, signed char *odata, unsigned long length)
+static void _quality_convert_16to8(signed short *idata, signed char *odata, unsigned long length)
 {
 	unsigned long pos = length;
 	
@@ -203,7 +203,7 @@ void sample_toggle_quality(song_sample * sample, int convert_data)
 /* --------------------------------------------------------------------- */
 /* centralise (correct dc offset) */
 
-static inline void _centralise_8(signed char *data, unsigned long length)
+static void _centralise_8(signed char *data, unsigned long length)
 {
         unsigned long pos = length;
         signed char min, max;
@@ -222,7 +222,7 @@ static inline void _centralise_8(signed char *data, unsigned long length)
         }
 }
 
-static inline void _centralise_16(signed short *data, unsigned long length)
+static void _centralise_16(signed short *data, unsigned long length)
 {
         unsigned long pos = length;
         signed short min, max;
@@ -260,7 +260,7 @@ void sample_centralise(song_sample * sample)
 /* --------------------------------------------------------------------- */
 /* amplify (or attenuate) */
 
-static inline void _amplify_8(signed char *data, unsigned long length, int percent)
+static void _amplify_8(signed char *data, unsigned long length, int percent)
 {
         unsigned long pos = length;
 	int b;
@@ -272,7 +272,7 @@ static inline void _amplify_8(signed char *data, unsigned long length, int perce
         }
 }
 
-static inline void _amplify_16(signed short *data, unsigned long length, int percent)
+static void _amplify_16(signed short *data, unsigned long length, int percent)
 {
         unsigned long pos = length;
 	int b;
@@ -292,7 +292,7 @@ void sample_amplify(song_sample * sample, int percent)
                 _amplify_8(sample->data, sample->length, percent);
 }
 
-static inline int _get_amplify_8(signed char *data, unsigned long length)
+static int _get_amplify_8(signed char *data, unsigned long length)
 {
 	signed char min, max;
 	_minmax_8(data, length, &min, &max);
@@ -301,7 +301,7 @@ static inline int _get_amplify_8(signed char *data, unsigned long length)
 	return 128 * 100 / MAX(max, -min);
 }
 
-static inline int _get_amplify_16(signed short *data, unsigned long length)
+static int _get_amplify_16(signed short *data, unsigned long length)
 {
 	signed short min, max;
 	_minmax_16(data, length, &min, &max);
@@ -330,7 +330,7 @@ int sample_get_amplify_amount(song_sample *sample)
 /* --------------------------------------------------------------------- */
 /* useful for importing delta-encoded raw data */
 
-static inline void _delta_decode_8(signed char *data, unsigned long length)
+static void _delta_decode_8(signed char *data, unsigned long length)
 {
         unsigned long pos;
         signed char o = 0, n;
@@ -342,7 +342,7 @@ static inline void _delta_decode_8(signed char *data, unsigned long length)
         }
 }
 
-static inline void _delta_decode_16(signed short *data, unsigned long length)
+static void _delta_decode_16(signed short *data, unsigned long length)
 {
         unsigned long pos;
         signed short o = 0, n;
@@ -365,7 +365,7 @@ void sample_delta_decode(song_sample * sample)
 /* --------------------------------------------------------------------- */
 /* surround flipping (probably useless with the S91 effect, but why not) */
 
-static inline void _invert_8(signed char *data, unsigned long length)
+static void _invert_8(signed char *data, unsigned long length)
 {
         unsigned long pos = length;
 
@@ -375,7 +375,7 @@ static inline void _invert_8(signed char *data, unsigned long length)
         }
 }
 
-static inline void _invert_16(signed short *data, unsigned long length)
+static void _invert_16(signed short *data, unsigned long length)
 {
         unsigned long pos = length;
 

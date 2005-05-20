@@ -18,149 +18,78 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* This should ONLY be included from title.c! */
+#ifndef FMT_H
+#define FMT_H
 
-#define FORMAT(t)\
-        file_info *fmt_##t##_read_info\
-                (const byte *data, size_t length, file_info *fi)
+#include "song.h"
+#include "dmoz.h"
+#include "util.h"
 
-FORMAT(669);
-FORMAT(ams);
-FORMAT(dtm);
-FORMAT(f2r);
-FORMAT(far);
-FORMAT(it);
-FORMAT(liq);
-FORMAT(mdl);
-FORMAT(mod);
-FORMAT(mt2);
-FORMAT(mtm);
-FORMAT(ntk);
-FORMAT(rtm);
-FORMAT(s3m);
-FORMAT(stm);
-FORMAT(ult);
-FORMAT(xm);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+typedef bool (*fmt_read_info_func) (dmoz_file_t *file, const byte *data, size_t length);
+typedef bool (*fmt_load_sample_func) (const byte *data, size_t length, song_sample *smp, char *title);
+typedef bool (*fmt_save_sample_func) (FILE *fp, song_sample *smp, char *title);
+
+#define READ_INFO(t) bool fmt_##t##_read_info(dmoz_file_t *file, const byte *data, size_t length)
+#define LOAD_SAMPLE(t) bool fmt_##t##_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+#define SAVE_SAMPLE(t) bool fmt_##t##_save_sample(FILE *fp, song_sample *smp, char *title)
+
+READ_INFO(669);
+READ_INFO(ams);
+READ_INFO(dtm);
+READ_INFO(f2r);
+READ_INFO(far);
+READ_INFO(imf);
+READ_INFO(it);
+READ_INFO(liq);
+READ_INFO(mdl);
+READ_INFO(mod);
+READ_INFO(mt2);
+READ_INFO(mtm);
+READ_INFO(ntk);
+READ_INFO(s3m);
+READ_INFO(stm);
+READ_INFO(ult);
+READ_INFO(xm);
 
 #ifdef USE_NON_TRACKED_TYPES
-FORMAT(sid);
-FORMAT(mp3);
+READ_INFO(sid);
+READ_INFO(mp3);
 # ifdef HAVE_VORBIS
-FORMAT(ogg);
+READ_INFO(ogg);
 # endif
 #endif
 
 #ifdef USE_SAMPLE_TYPES
-FORMAT(its);
-FORMAT(au);
+READ_INFO(aiff);        LOAD_SAMPLE(aiff);      SAVE_SAMPLE(aiff);
+READ_INFO(au);          LOAD_SAMPLE(au);        SAVE_SAMPLE(au);
+READ_INFO(its);         LOAD_SAMPLE(its);       SAVE_SAMPLE(its);
+                        LOAD_SAMPLE(raw);       SAVE_SAMPLE(raw);
 #endif
 
-#undef FORMAT
+#undef READ_INFO
+#undef LOAD_SAMPLE
+#undef SAVE_SAMPLE
 
-/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------------------------------------- */
 
-typedef file_info *(*fmt_read_info_func) (const byte * data, size_t length, file_info * fi);
+/* save the sample's data in little- or big- endian byte order (defined in audio_loadsave.cc)
+should probably return something, but... meh :P */
+void save_sample_data_LE(FILE *fp, song_sample *smp);
+void save_sample_data_BE(FILE *fp, song_sample *smp);
 
-#define FILETYPE(t) fmt_##t##_read_info
+/* shared by the .it, .its, and .iti saving functions */
+void save_its_header(FILE *fp, song_sample *smp, char *title);
 
-/* The type list should be arranged so that the types with the most
- * specific checks are first, and the vaguest ones are down at the
- * bottom. This is to ensure that some lousy type doesn't "steal" files
- * of a different type. For example, if IT came before S3M, any S3M file
- * starting with "IMPM" (which is unlikely, but possible, and in fact
- * quite easy to do) would be picked up by the IT check. In fact,
- * Impulse Tracker itself has this problem.
- * 
- * Also, a format that might need to do a lot of work to tell if a file
- * is of the right type (i.e. the mdl format practically requires
- * reading through the entire file to find the title block) should be
- * down farther on the list for performance purposes.
- * 
- * Don't rearrange the formats that are already here unless you have a
- * VERY good reason to do so. I spent a good 3-4 hours reading all the
- * format specifications, testing files, checking notes, and trying to
- * break the program by giving it weird files, and I'm pretty sure that
- * this ordering won't fail unless you really try doing weird stuff like
- * hacking the files, but then you're just asking for trouble. ;) */
+/* --------------------------------------------------------------------------------------------------------- */
 
-static const fmt_read_info_func types[] = {
-        /* 669 has lots of checks to compensate for a really crappy
-         * 2-byte magic. (it's even a common english word ffs... "if"?!)
-         * still, it's better than stm. the only reason this is first is
-         * because the position of the SCRM magic lies within the 669
-         * message field, and the 669 check is much more complex and
-         * thus more likely to be right ;) */
-        FILETYPE(669),
-
-        /* since so many programs have added noncompatible extensions to
-         * the mod format, there are about 30 strings to compare against
-         * for the magic. also, there are special cases for wow files,
-         * which even share the same magic as plain protracker, but are
-         * quite different; there are some really nasty heuristics to
-         * detect these... ugh, ugh, ugh.
-         * however, it has to be above the formats with the magic at the
-         * beginning... */
-        FILETYPE(mod),
-
-        /* s3m needs to be before a lot of stuff. */
-        FILETYPE(s3m),
-        /* far and s3m have different magic in the same place, so it
-         * doesn't really matter which one goes where. i just have s3m
-         * first as it's a more common format. */
-        FILETYPE(far),
-
-        /* These next formats have their magic at the beginning of the
-         * data, so none of them can possibly conflict with other ones.
-         * I've organized them pretty much in order of popularity. */
-        FILETYPE(xm),
-        /* there's a bit of weirdness with some it files (including
-         * "acid dreams" by legend, a demo song for some version)
-         * requiring two different checks and three memcmp's. however,
-         * since it's so widely used <opinion>'cuz impulse tracker
-         * owns</opinion>, i'm putting it up here anyway. */
-        FILETYPE(it),
-        FILETYPE(mt2),
-        FILETYPE(mtm),
-        FILETYPE(ntk),
-#ifdef USE_NON_TRACKED_TYPES
-        FILETYPE(sid),  /* 6581 0wnz j00! */
-#endif
-        FILETYPE(mdl),
-
-	/* dunno where to put these */
-#ifdef USE_SAMPLE_TYPES
-	FILETYPE(its),
-	FILETYPE(au),
+#ifdef __cplusplus
+}
 #endif
 
-        FILETYPE(ult),
-        FILETYPE(liq),
-        /* i have NEVER seen any of these next four */
-        FILETYPE(ams),
-        FILETYPE(rtm),
-        FILETYPE(f2r),
-        FILETYPE(dtm),  /* not sure about the placement here */
-
-        /* bleh */
-#if defined(USE_NON_TRACKED_TYPES) && defined(HAVE_VORBIS)
-        FILETYPE(ogg),
-#endif
-
-        /* stm seems to have a case insensitive magic string with
-         * several possible values, and only one byte is guaranteed to
-         * be the same in the whole file... yeagh */
-        FILETYPE(stm),
-
-        /* an id3 tag could actually be anywhere in an mp3 file, and
-         * there's no guarantee that it even exists at all. i might move
-         * this up toward the top if i can figure out how to identify an
-         * mp3 more precisely. */
-#ifdef USE_NON_TRACKED_TYPES
-        FILETYPE(mp3),
-#endif
-
-        /* this needs to be at the bottom of the list! */
-        NULL
-};
-
-#undef FILETYPE
+#endif /* ! FMT_H */

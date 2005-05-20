@@ -18,17 +18,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#define NEED_BYTESWAP
 #include "headers.h"
-
-#include "title.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 
-/* Dunno why there's DigiTrekker and DigiTrakker, and why the
- * formats are completely different, but whatever :) */
+/* Dunno why there's DigiTrekker and DigiTrakker, and why
+the formats are completely different, but whatever :) */
 
-bool fmt_dtm_read_info(byte * data, size_t length, file_info * fi);
-bool fmt_dtm_read_info(byte * data, size_t length, file_info * fi)
+bool fmt_dtm_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         unsigned int position, block_length;
 
@@ -39,14 +38,12 @@ bool fmt_dtm_read_info(byte * data, size_t length, file_info * fi)
         position = 0;
         while (memcmp(data + position, "SONG", 4) != 0) {
                 memcpy(&block_length, data + position + 4, 4);
-
+		block_length = bswapLE32(block_length);
+		
                 position += block_length + 8;
                 if (position + 8 > length)
                         return false;
         }
-
-        /* so apparently it's a dtm */
-        fi->title = NULL;
 
         /* "truncate" it to the length of the block */
         length = block_length + position + 8;
@@ -54,24 +51,23 @@ bool fmt_dtm_read_info(byte * data, size_t length, file_info * fi)
         /* now see if it has a title */
         while (position + 8 < length) {
                 memcpy(&block_length, data + position + 4, 4);
+		block_length = bswapLE32(block_length);
+		
                 if (block_length + position > length)
                         return false;
 
                 if (memcmp(data + position, "NAME", 4) == 0) {
                         /* hey! we have a winner */
-                        fi->title =
-                                (char *) calloc(block_length + 1,
-                                                sizeof(char));
-                        memcpy(fi->title, data + position + 8,
-                               block_length);
-                        fi->title[block_length] = 0;
+                        file->title = (char *) calloc(block_length + 1, sizeof(char));
+                        memcpy(file->title, data + position + 8, block_length);
+                        file->title[block_length] = 0;
                         break;
-                }       /* else... */
+                } /* else... */
                 position += 8 + block_length;
         }
 
-        fi->description = strdup("DigiTrekker 3");
-        fi->extension = strdup("dtm");
-        fi->type = TYPE_XM;
+        file->description = "DigiTrekker 3";
+        /*file->extension = strdup("dtm");*/
+        file->type = TYPE_MODULE_XM;
         return true;
 }

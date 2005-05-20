@@ -1,3 +1,218 @@
+Thu May 19 15:28:51 2005  chisel  <schism@chisel.cjb.net>
+
+	* Got rid of some test code here and there, and #if 0'd a couple
+	pieces of code that don't work yet.
+
+
+Sun May 15 12:51:01 2005  chisel  <schism@chisel.cjb.net>
+
+	* Swap/exchange (Alt-S and Alt-X) implemented on the sample and
+	instrument lists.
+
+	* Slot shifting (Alt-Ins and Alt-Del) works on the sample list.
+	Haven't added this on the instrument list yet, since it's a bit
+	more difficult.
+
+
+Sun May  8 14:55:34 2005  chisel  <schism@chisel.cjb.net>
+
+	* Title scanner for Imago Orpheus files.
+
+	* The title reader now has a separate artist field. It isn't used
+	anywhere yet, but some file formats (e.g. Digitrakker) define it.
+
+
+Sat May  7 14:08:30 2005  chisel  <schism@chisel.cjb.net>
+
+	* New configuration option for changing the visualization type.
+
+
+Fri May  6 14:28:27 2005  chisel  <schism@chisel.cjb.net>
+
+	* Support for saving AIFF samples, kind of. It doesn't write
+	instrument data blah blah blah, see below. :)
+
+	* Fixed obscure bug in pattern editor where the screen wouldn't
+	update after hitting the '4' key.
+
+	* Hacked around SDL crash on startup if no audio device could be
+	found. Still can't figure out why it does that, but oh well.
+
+	* If a file is given on the command line, Schism Tracker will
+	change the module directory to the directory the file is in,
+	unless a directory name was also given on the command line.
+
+	* Added autoconf stuff for strcasecmp/strncasecmp.
+
+	* Always destroy the character cache when modifying the palette;
+	otherwise strange things happen on the console.
+
+
+Thu May  5 22:58:34 2005  chisel  <schism@chisel.cjb.net>
+
+	* Discovered volume column vibrato was borked: although files
+	loaded correctly, there was no way to enter it and the value was
+	always changed to H0 on save. Oops.
+
+
+Sun May  1 12:25:52 2005  chisel  <schism@chisel.cjb.net>
+
+	* Moved sample savers to libfmt.
+
+	* Modules can now be loaded as sample libraries.
+
+	* Support for loading AIFF samples, kind of. It doesn't read
+	instrument data blocks for loop points, and I haven't thoroughly
+	tested it yet, but it seems to work.
+
+
+Fri Apr 29 18:17:45 2005  chisel  <schism@chisel.cjb.net>
+
+	* Moved sample loaders to libfmt. Since the ITS loader uses
+	Modplug's ReadSample function to read compressed samples, it
+	needs to be in a C++ file, and link with Modplug. The upshot of
+	that is now there's hopefully a more coherent layout for the
+	format handlers.
+
+	* Incidentally, that breaks the build for the ITF editor (again).
+	This time I just removed the stupid thing. Eventually I'm going
+	to write a better one (when I add support for different font
+	sizes) but for now if you really want the ITF editor, grab 0.19a.
+
+
+Wed Apr 20 00:21:44 2005  chisel  <schism@chisel.cjb.net>
+
+	* Sorted out Modplug changes and removed most of my <chisel> tags
+	and commented-out code.
+
+	* Fixed envelope loop editing. It's not quite the same as Impulse
+	Tracker, but at least it works.
+
+
+Tue Apr 19 01:42:51 2005  chisel  <schism@chisel.cjb.net>
+
+	* Ctrl-F7 (play order next) and Alt-F11 (lock/unlock orderlist)
+	are finally working.
+
+	* Playback still works when there's nothing in the first order.
+
+
+Mon Apr 18 15:04:34 2005  chisel  <schism@chisel.cjb.net>
+
+	* Added replacements for asprintf, vasprintf, and realpath, and
+	autoconf checks for sys/ioctl.h and scandir.
+
+	* Got rid of the help text compression. It only reduced the file
+	size by about 10 kb, and was more trouble than it was worth to
+	compile on some systems.
+
+	* Added a new file 'zero', a single '\0' byte, for building the
+	help text. There's just way too many portability problems with
+	echo, printf, /dev/zero, or whatever else.
+
+	* Various changes for AmigaOS and Win32. (Yes, it builds with the
+	Mingw32 cross compiler, but just barely. I haven't a clue if it
+	actually works.)
+
+	* Should compile warning-free with both --enable-extra-opt and
+	--enable-all-warnings, except for a couple stray warnings in
+	Modplug. (Removed a lot of inline declarations because they
+	weren't doing anything... heh.)
+
+	* Touched up the README.
+
+
+Mon Apr 18 01:04:15 2005  chisel  <schism@chisel.cjb.net>
+
+	* Character cache! Before, the video thread used approximately
+	39% CPU to draw the info page while playing, and it still uses
+	about 17% now. It's not nearly as much of a difference I had
+	anticipated, but at least it didn't *increase* the CPU. :)
+
+
+Sun Apr 17 13:35:16 2005  chisel  <schism@chisel.cjb.net>
+
+	* Got rid of some cruft in util.c. I used to use that file in
+	some other programs, but I've since rewritten those programs in
+	Python (or just don't use them anymore).
+
+	* Added a couple path handling functions to dmoz, and substituted
+	a couple more functions from util.c with them. This unfortunately
+	broke compilation of the ITF editor unless it's built with
+	libfmt.a as well.
+
+	* Started working on character caching. Nothing's actually cached
+	yet, but calls to the cache clearing functions are made where the
+	character data changes (i.e. when changing the font or palette).
+
+	* Finally fixed the weird not-always-updating bug. It just wasn't
+	redrawing the screen all the time for some reason.
+
+
+Sat Apr 16 14:16:11 2005  chisel  <schism@chisel.cjb.net>
+
+	* Added full path field for directories.
+
+	* Export sample dialog (Alt-T) uses the current sample's filename
+	by default.
+
+
+Fri Apr 15 17:58:58 2005  chisel  <schism@chisel.cjb.net>
+
+	* Removed some stuff that was just collecting dust: RTM title
+	reader (stub), Modplug's J2B module loader (stub), and
+	CSoundFile::m_nMaxOrderPosition (never used).
+
+	* Cleaned up code in a few places.
+
+	* Added backspace to move backwards in a menu toggle list.
+
+
+Wed Apr 13 23:15:24 2005  chisel  <schism@chisel.cjb.net>
+
+	* Added a proper instrument mode to Modplug. This fixes several
+	instrument-related problems, the most important being switching
+	to the instrument list if a song is in sample mode no longer
+	kills all the samples.
+
+	* slurp.c: New parameter 'size'.
+
+	* Uprooted the title library and merged in the new directory
+	reading functions (now called "dmoz") in with it.
+
+	* Ctrl-Left/Right in the pattern editor move the cursor a channel
+	left or right if the target channel is on the screen.
+
+	* Escape on the load sample page returns to the sample list.
+
+	* Envelopes are initialized properly when creating an instrument.
+
+
+Wed Apr 13 01:40:26 2005  chisel  <schism@chisel.cjb.net>
+
+	* page_patedit.c: Replaced a bunch of occurrences of the same bit
+	of code that checks for a selection with a new macro,
+	CHECK_SELECTION_EXISTS().
+
+	* Added a 'data' field to dialogs. This helped clean up some
+	code, particularly that dealing with the file overwrite prompt
+	dialog when saving a module.
+
+	* Renamed 'item' to 'widget' everywhere. I can't remember why I
+	didn't call them widgets to begin with...
+
+	* Added stricter key modifier checks to the key handlers.
+
+	* Implemented Ctrl-Left/Right to switch the playing pattern.
+
+	* Hacked Modplug a bit to handle extremely short samples.
+
+
+Mon Apr 11 00:46:28 2005  chisel  <schism@chisel.cjb.net>
+
+	* Started framework for new directory reading functions.
+
+
 Wed Apr  6 15:40:53 2005  chisel  <schism@chisel.cjb.net>
 
 	* Sample export dialog works.
@@ -27,7 +242,7 @@ Thu Mar 31 23:52:32 2005  chisel  <schism@chisel.cjb.net>
 	simply added the parser to the source tree (built as a separate
 	static library). I'll tweak the autoconf stuff later to use an
 	already-installed version if one exists.
-	
+
 	* Some audio-related options are now saved on exit; changing
 	these options will flash a message.
 
@@ -71,12 +286,12 @@ Mon Mar 21 17:58:34 2005  chisel  <schism@chisel.cjb.net>
 	* audio_loadsave.cc: (Hopefully) fixed pattern saving endianness.
 	It was byte swapping the pattern header as 32-bit values, but
 	they're only 16-bit... oops.
-	
+
 	* Changed my e-mail address and website URL everywhere.
-	
+
 	* config-parser.c, include/config-parser.h: Added boilerplate GPL
 	stuff.
-	
+
 	* Added filter cutoff/resonance to instrument page. (Thanks,
 	Manwe!) Not sure how IT handles turning it off, so at the moment
 	once it's enabled it *stays* enabled. Setting cutoff to 127 and
@@ -84,7 +299,7 @@ Mon Mar 21 17:58:34 2005  chisel  <schism@chisel.cjb.net>
 
 	* configure.in: using AS_HELP_STRING to format the help text now.
 	Cool!
-	
+
 	* Tried to make the mixer stuff saner, but utterly failed at it.
 	If anyone with a lot of autoconf experience would like to lend a
 	hand, I'd be forever grateful.
@@ -131,7 +346,7 @@ Sun Feb 13 14:31:35 2005  chisel  <schism@chisel.cjb.net>
 Sat Feb  5 22:27:00 2005  chisel  <schism@chisel.cjb.net>
 
 	* Added Alt-A on instrument list.
-	
+
 	* Added stub --enable-alsa-mixer option. It currently does
 	nothing (which is still somewhat better than trying to open a
 	nonexistent /dev/mixer) but I'll be finishing it as soon as I
@@ -189,7 +404,7 @@ Wed Jan 12 23:24:40 2005  chisel  <schism@chisel.cjb.net>
 Fri Dec 24 02:36:14 2004  chisel  <schism@chisel.cjb.net>
 
 	* Changes made to the palette are saved now.
-	
+
 	* Packing this up for release as version 0.17a, mostly because
 	I'm going away for a week. And yes, I tested it this time. ;)
 
@@ -274,7 +489,7 @@ Mon Dec 13 00:56:20 2004  chisel  <schism@chisel.cjb.net>
 
 	* Got rid of references to <features.h>. I don't remember why I
 	had those in the first place.
-	
+
 	* Stared fiercely at config.c. Didn't do much with it.
 
 
@@ -303,7 +518,7 @@ Fri Dec 10 10:27:03 2004  chisel  <schism@chisel.cjb.net>
 	* Saving a song now updates the filename correctly.
 
 	* Ctrl-S works properly now. (I think.)
-	
+
 	* Killed warning with optimize flags. (It seems like gcc3 is quite
 	a bit different than 2.9x, I'm getting a bunch of "inline failed"
 	warnings. I suppose eventually I'll get around to fixing it, since
@@ -322,13 +537,13 @@ Wed Dec  8 11:23:50 2004  chisel  <schism@chisel.cjb.net>
 
 	* dialog.c: Delay running the action callbacks until after the
 	dialog has been destroyed.
-	
+
 	* page_loadmodule.c: Finally got some semblance of a save page. I
 	don't doubt it still needs a lot of work, but hey, at least now
 	it's possible to give a filename to save instead of having to
 	switch to a shell and 'mv test.it whatever.it', so that's
 	progress.
-	
+
 	* page_instruments.c: I swear I did some stuff last night, but I
 	can't remember what. At least I remembered to save it twice
 	without changing anything to prevent being able to figure out
@@ -362,7 +577,7 @@ Wed Sep  8 16:50:15 2004  chisel  <schism@chisel.cjb.net>
 Tue Aug 10 09:00:51 2004  chisel  <schism@chisel.cjb.net>
 
 	* Surprise! Finally got back to this.
-	
+
 	* Changed the volume sliders on the settings page to control the
 	PCM volume by default. If you want the old (IT-like) behaviour
 	back, the setting is in include/mixer.h.
@@ -473,7 +688,7 @@ Wed Mar  3 09:15:08 2004  chisel  <schism@chisel.cjb.net>
 	making it impossible to change the values. :/
 
 	* Added '-' to the keys that trigger the thumbbar value prompt.
-	
+
 	* Realized that numtostr_* still don't work with negative numbers
 	despite the fact that they now put a negative sign instead of the
 	leftmost digit... bah, they were stupid anyway. :P

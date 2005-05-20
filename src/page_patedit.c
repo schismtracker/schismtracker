@@ -34,14 +34,18 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+#define ROW_IS_MAJOR(r) (row_highlight_major != 0 && (r) % row_highlight_major == 0)
+#define ROW_IS_MINOR(r) (row_highlight_minor != 0 && (r) % row_highlight_minor == 0)
+#define ROW_IS_HIGHLIGHT(r) (ROW_IS_MINOR(r) || ROW_IS_MAJOR(r))
+
 /* this is actually used by pattern-view.c */
 int show_default_volumes = 0;
 
 /* --------------------------------------------------------------------- */
 /* The (way too many) static variables */
 
-/* only one item, but MAN is it complicated :) */
-static struct item items_pattern[1];
+/* only one widget, but MAN is it complicated :) */
+static struct widget widgets_pattern[1];
 
 /* pattern display position */
 static int top_display_channel = 1;		/* one-based */
@@ -63,11 +67,6 @@ static int highlight_current_row = 0;
 static int playback_tracing = 0;	/* scroll lock */
 
 static int panning_mode = 0;		/* for the volume column */
-
-/* Maybe this should be in a header file. */
-#define ROW_IS_MAJOR(r) (row_highlight_major != 0 && (r) % row_highlight_major == 0)
-#define ROW_IS_MINOR(r) (row_highlight_minor != 0 && (r) % row_highlight_minor == 0)
-#define ROW_IS_HIGHLIGHT(r) (ROW_IS_MINOR(r) || ROW_IS_MAJOR(r))
 
 /* these should fix the playback tracing position discrepancy */
 static int playing_row = -1;
@@ -161,23 +160,23 @@ static void pattern_editor_reposition(void);
 /* --------------------------------------------------------------------------------------------------------- */
 /* options dialog */
 
-static struct item options_items[8];
+static struct widget options_widgets[8];
 static int options_link_split[] = { 5, 6, -1 };
-static int options_selected_item = 0;
+static int options_selected_widget = 0;
 
-static void options_close(void)
+static void options_close(UNUSED void *data)
 {
 	int old_size, new_size;
 	
-	options_selected_item = *selected_item;
+	options_selected_widget = *selected_widget;
 	
-	skip_value = options_items[1].thumbbar.value;
-	row_highlight_minor = options_items[2].thumbbar.value;
-	row_highlight_major = options_items[3].thumbbar.value;
-	link_effect_column = !!(options_items[5].togglebutton.state);
+	skip_value = options_widgets[1].thumbbar.value;
+	row_highlight_minor = options_widgets[2].thumbbar.value;
+	row_highlight_major = options_widgets[3].thumbbar.value;
+	link_effect_column = !!(options_widgets[5].togglebutton.state);
 	
 	old_size = song_get_pattern(current_pattern, NULL);
-	new_size = options_items[4].thumbbar.value;
+	new_size = options_widgets[4].thumbbar.value;
 	if (old_size != new_size) {
 		song_pattern_resize(current_pattern, new_size);
 		current_row = MIN(current_row, new_size - 1);
@@ -210,29 +209,25 @@ static void options_close(void)
 
 static void options_draw_const(void)
 {
-	SDL_LockSurface(screen);
+	draw_text("Pattern Editor Options", 28, 19, 0, 2);
+	draw_text("Base octave", 28, 23, 0, 2);
+	draw_text("Cursor step", 28, 26, 0, 2);
+	draw_text("Row hilight minor", 22, 29, 0, 2);
+	draw_text("Row hilight major", 22, 32, 0, 2);
+	draw_text("Number of rows in pattern", 14, 35, 0, 2);
+	draw_text("Command/Value columns", 18, 38, 0, 2);
 	
-	draw_text_unlocked("Pattern Editor Options", 28, 19, 0, 2);
-	draw_text_unlocked("Base octave", 28, 23, 0, 2);
-	draw_text_unlocked("Cursor step", 28, 26, 0, 2);
-	draw_text_unlocked("Row hilight minor", 22, 29, 0, 2);
-	draw_text_unlocked("Row hilight major", 22, 32, 0, 2);
-	draw_text_unlocked("Number of rows in pattern", 14, 35, 0, 2);
-	draw_text_unlocked("Command/Value columns", 18, 38, 0, 2);
-	
-	draw_box_unlocked(39, 22, 42, 24, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_box_unlocked(39, 25, 43, 27, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_box_unlocked(39, 28, 45, 30, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_box_unlocked(39, 31, 57, 33, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_box_unlocked(39, 34, 62, 36, BOX_THIN | BOX_INNER | BOX_INSET);
-	
-	SDL_UnlockSurface(screen);
+	draw_box(39, 22, 42, 24, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(39, 25, 43, 27, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(39, 28, 45, 30, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(39, 31, 57, 33, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(39, 34, 62, 36, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
 static int options_handle_key(SDL_keysym *k)
 {
 	if (NO_MODIFIER(k->mod) && k->sym == SDLK_F2) {
-		dialog_cancel();
+		dialog_cancel(NULL);
 		return 1;
 	}
 	return 0;
@@ -240,7 +235,7 @@ static int options_handle_key(SDL_keysym *k)
 
 static void options_change_base_octave(void)
 {
-	kbd_set_current_octave(options_items[0].thumbbar.value);
+	kbd_set_current_octave(options_widgets[0].thumbbar.value);
 }
 
 /* the base octave is changed directly when the thumbbar is changed.
@@ -249,26 +244,26 @@ void pattern_editor_display_options(void)
 {
 	struct dialog *dialog;
 	
-	create_thumbbar(options_items + 0, 40, 23, 2, 7, 1, 1, options_change_base_octave, 0, 8);
-	create_thumbbar(options_items + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
-	create_thumbbar(options_items + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
-	create_thumbbar(options_items + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
-	create_thumbbar(options_items + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
-	create_togglebutton(options_items + 5, 40, 38, 8, 4, 7, 6, 6, 6,
+	create_thumbbar(options_widgets + 0, 40, 23, 2, 7, 1, 1, options_change_base_octave, 0, 8);
+	create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
+	create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
+	create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
+	create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
+	create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
 			    NULL, "Link", 3, options_link_split);
-	create_togglebutton(options_items + 6, 52, 38, 9, 4, 7, 5, 5, 5,
+	create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
 			    NULL, "Split", 3, options_link_split);
-	create_button(options_items + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes, "Done", 3);
+	create_button(options_widgets + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes_NULL, "Done", 3);
 	
-	options_items[0].thumbbar.value = kbd_get_current_octave();
-	options_items[1].thumbbar.value = skip_value;
-	options_items[2].thumbbar.value = row_highlight_minor;
-	options_items[3].thumbbar.value = row_highlight_major;
-	options_items[4].thumbbar.value = song_get_pattern(current_pattern, NULL);
-	togglebutton_set(options_items, link_effect_column ? 5 : 6, 0);
+	options_widgets[0].thumbbar.value = kbd_get_current_octave();
+	options_widgets[1].thumbbar.value = skip_value;
+	options_widgets[2].thumbbar.value = row_highlight_minor;
+	options_widgets[3].thumbbar.value = row_highlight_major;
+	options_widgets[4].thumbbar.value = song_get_pattern(current_pattern, NULL);
+	togglebutton_set(options_widgets, link_effect_column ? 5 : 6, 0);
 	
-	dialog = dialog_create_custom(10, 18, 60, 26, options_items, 8, options_selected_item,
-				      options_draw_const);
+	dialog = dialog_create_custom(10, 18, 60, 26, options_widgets, 8, options_selected_widget,
+				      options_draw_const, NULL);
 	dialog->action_yes = options_close;
 	dialog->action_cancel = options_close;
 	dialog->handle_key = options_handle_key;
@@ -283,16 +278,16 @@ static void selection_amplify(int percentage);
 /* volume amplify/attenuate and fast volume setup handlers */
 
 /* this is shared by the fast and normal volume dialogs */
-static struct item volume_setup_items[3];
+static struct widget volume_setup_widgets[3];
 
-static void fast_volume_setup_ok(void)
+static void fast_volume_setup_ok(UNUSED void *data)
 {
-	fast_volume_percent = volume_setup_items[0].thumbbar.value;
+	fast_volume_percent = volume_setup_widgets[0].thumbbar.value;
 	fast_volume_mode = 1;
 	status_text_flash("Alt-I / Alt-J fast volume changes enabled");
 }
 
-static void fast_volume_setup_cancel(void)
+static void fast_volume_setup_cancel(UNUSED void *data)
 {
 	status_text_flash("Alt-I / Alt-J fast volume changes not enabled");
 }
@@ -311,16 +306,14 @@ static void fast_volume_toggle(void)
 		fast_volume_mode = 0;
 		status_text_flash("Alt-I / Alt-J fast volume changes disabled");
 	} else {
-		create_thumbbar(volume_setup_items + 0, 33, 30, 11,
-				0, 1, 1, NULL, 10, 90);
-		volume_setup_items[0].thumbbar.value = fast_volume_percent;
-		create_button(volume_setup_items + 1, 31, 33, 6,
-			      0, 1, 2, 2, 2, dialog_yes, "OK", 3);
-		create_button(volume_setup_items + 2, 41, 33, 6,
-			      0, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
+		create_thumbbar(volume_setup_widgets + 0, 33, 30, 11, 0, 1, 1, NULL, 10, 90);
+				
+		volume_setup_widgets[0].thumbbar.value = fast_volume_percent;
+		create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+		create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 		
-		dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_items,
-					      3, 0, fast_volume_setup_draw_const);
+		dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
+					      3, 0, fast_volume_setup_draw_const, NULL);
 		dialog->action_yes = fast_volume_setup_ok;
 		dialog->action_cancel = fast_volume_setup_cancel;
 	}
@@ -345,10 +338,9 @@ static void volume_setup_draw_const(void)
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void volume_amplify_ok(void)
+static void volume_amplify_ok(UNUSED void *data)
 {
-	volume_percent = volume_setup_items[0].thumbbar.value;
-	
+	volume_percent = volume_setup_widgets[0].thumbbar.value;
 	selection_amplify(volume_percent);
 }
 
@@ -356,16 +348,11 @@ static void volume_amplify(void)
 {
 	struct dialog *dialog;
 	
-	create_thumbbar(volume_setup_items + 0, 26, 30, 26,
-			0, 1, 1, NULL, 0, 200);
-	volume_setup_items[0].thumbbar.value = volume_percent;
-	create_button(volume_setup_items + 1, 31, 33, 6,
-			      0, 1, 2, 2, 2, dialog_yes, "OK", 3);
-	create_button(volume_setup_items + 2, 41, 33, 6,
-		      0, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
-	
-	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_items,
-				      3, 0, volume_setup_draw_const);
+	create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 200);
+	volume_setup_widgets[0].thumbbar.value = volume_percent;
+	create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets, 3, 0, volume_setup_draw_const, NULL);
 	dialog->action_yes = volume_amplify_ok;
 }
 
@@ -541,26 +528,32 @@ static void selection_set_sample(void)
 	}
 }
 
+/* CHECK_FOR_SELECTION(optional return value)
+will display an error dialog and cause the function to return if there is no block marked.
+(this dialog should be a column wider, with the extra column on the left side) */
+#define CHECK_FOR_SELECTION(...) G_STMT_START {\
+	if (!SELECTION_EXISTS) {\
+		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0, NULL);\
+		return __VA_ARGS__;\
+	}\
+} G_STMT_END
+
+
 static void selection_swap(void)
 {
 	/* s_note = selection; p_note = position */
 	song_note *pattern, *s_note, *p_note, tmp;
 	int row, chan, num_rows, num_chans, total_rows;
-	
-	/* TODO: make this a macro or something, it's used in a lot of different places */
-	if (!SELECTION_EXISTS) {
-		/* this should be one column wider (with the extra column on the left) */
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
-		return;
-	}
+
+	CHECK_FOR_SELECTION();
 
 	total_rows = song_get_pattern(current_pattern, &pattern);
 	num_rows = selection.last_row - selection.first_row + 1;
 	num_chans = selection.last_channel - selection.first_channel + 1;
 
 	if (current_row + num_rows > total_rows || current_channel + num_chans - 1 > 64) {
-		/* again: one column wider */
-		dialog_create(DIALOG_OK, "Out of pattern range", NULL, NULL, 0);
+		/* should be one column wider (see note for CHECK_SELECTION_EXISTS) */
+		dialog_create(DIALOG_OK, "Out of pattern range", NULL, NULL, 0, NULL);
 		return;
 	}
 
@@ -573,7 +566,7 @@ static void selection_swap(void)
 	    && (MAX(selection.last_row, current_row + num_rows - 1)
 		- MIN(selection.first_row, current_row) + 1) < 2 * num_rows) {
 		/* one column wider; the text should be shifted a column left as well */
-		dialog_create(DIALOG_OK, "Swap blocks overlap", NULL, NULL, 0);
+		dialog_create(DIALOG_OK, "Swap blocks overlap", NULL, NULL, 0, NULL);
 		return;
 	}
 
@@ -593,11 +586,7 @@ static void selection_set_volume(void)
 	int row, chan;
 	song_note *pattern, *note;
 
-	if (!SELECTION_EXISTS) {
-		/* this should be one column wider (see selection_swap) */
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
-		return;
-	}
+	CHECK_FOR_SELECTION();
 	
 	song_get_pattern(current_pattern, &pattern);
 
@@ -619,11 +608,7 @@ static void selection_slide_volume(void)
 	int ve, lve;			/* volume effect */
 	
 	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
-	if (!SELECTION_EXISTS) {
-		/* this should be one column wider (with the extra column on the left) */
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
-		return;
-	}
+	CHECK_FOR_SELECTION();
 	
 	/* can't slide one row */
 	if (selection.first_row == selection.last_row)
@@ -649,16 +634,12 @@ static void selection_slide_volume(void)
 		first = note->volume;
 		last = last_note->volume;
 		
-		/* Note: IT only uses the sample's default volume
-		 * if there is an instrument number *AND* a note.
-		 * I'm just checking the instrument number, as it's
-		 * the minimal information needed to get the default
-		 * volume for the instrument ;)
-		 * 
-		 * Would be nice but way hard to do: if there's a note
-		 * but no sample number, look back in the pattern and
-		 * use the last sample number in that channel (if there
-		 * is one.) */
+		/* Note: IT only uses the sample's default volume if there is an instrument number *AND* a
+		note. I'm just checking the instrument number, as it's the minimal information needed to
+		get the default volume for the instrument.
+		
+		Would be nice but way hard to do: if there's a note but no sample number, look back in the
+		pattern and use the last sample number in that channel (if there is one). */
 		if (ve == VOL_EFFECT_NONE) {
 			if (note->instrument == 0)
 				continue;
@@ -674,8 +655,7 @@ static void selection_slide_volume(void)
 			last = song_get_sample(last_note->instrument, NULL)->volume >> 2;
 		}
 		
-		if (!(ve == lve && (ve == VOL_EFFECT_VOLUME
-				    || ve == VOL_EFFECT_PANNING))) {
+		if (!(ve == lve && (ve == VOL_EFFECT_VOLUME || ve == VOL_EFFECT_PANNING))) {
 			continue;
 		}
 		
@@ -694,11 +674,7 @@ static void selection_wipe_volume(int reckless)
 	int row, chan;
 	song_note *pattern, *note;
 
-	if (!SELECTION_EXISTS) {
-		/* this should be one column wider (see selection_swap) */
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
-		return;
-	}
+	CHECK_FOR_SELECTION();
 	
 	song_get_pattern(current_pattern, &pattern);
 	
@@ -718,11 +694,7 @@ static void selection_amplify(int percentage)
 	int row, chan, volume;
 	song_note *pattern, *note;
 
-	if (!SELECTION_EXISTS) {
-		/* this should be one column wider (see selection_swap) */
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
-		return;
-	}
+	CHECK_FOR_SELECTION();
 
 	song_get_pattern(current_pattern, &pattern);
 
@@ -749,11 +721,7 @@ static void selection_slide_effect(void)
 	int first, last;		/* the effect values */
 	
 	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
-	if (!SELECTION_EXISTS) {
-		/* this should be one column wider (with the extra column on the left) */
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
-		return;
-	}
+	CHECK_FOR_SELECTION();
 	
 	if (selection.first_row == selection.last_row)
 		return;
@@ -780,11 +748,7 @@ static void selection_wipe_effect(void)
 	int row, chan;
 	song_note *pattern, *note;
 
-	if (!SELECTION_EXISTS) {
-		/* this should be one column wider (see selection_swap) */
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
-		return;
-	}
+	CHECK_FOR_SELECTION();
 	
 	song_get_pattern(current_pattern, &pattern);
 
@@ -824,13 +788,11 @@ static void pattern_insert_rows(int what_row, int num_rows, int first_channel, i
 		/* shift the area down */
 		for (row = total_rows - num_rows - 1; row >= what_row; row--) {
 			memmove(pattern + 64 * (row + num_rows) + first_channel - 1,
-				pattern + 64 * row + first_channel - 1,
-				chan_width * sizeof(song_note));
+				pattern + 64 * row + first_channel - 1, chan_width * sizeof(song_note));
 		}
 		/* clear the inserted rows */
 		for (row = what_row; row < what_row + num_rows; row++) {
-			memset(pattern + 64 * row + first_channel - 1,
-			       0, chan_width * sizeof(song_note));
+			memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note));
 		}
 	}
 }
@@ -862,8 +824,7 @@ static void pattern_delete_rows(int what_row, int num_rows, int first_channel, i
 		}
 		/* clear the last rows */
 		for (row = total_rows - num_rows; row < total_rows; row++) {
-			memset(pattern + 64 * row + first_channel - 1,
-			       0, chan_width * sizeof(song_note));
+			memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note));
 		}
 	}
 }
@@ -886,11 +847,7 @@ static void clipboard_copy(void)
 	song_note *pattern;
 	int row;
 
-	if (!SELECTION_EXISTS) {
-		/* this should be one column wider (see selection_swap) */
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0);
-		return;
-	}
+	CHECK_FOR_SELECTION();
 
 	clipboard_free();
 
@@ -919,7 +876,7 @@ static void clipboard_paste_overwrite(void)
 	int row, num_rows, chan_width;
 
 	if (clipboard.data == NULL) {
-		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0);
+		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		return;
 	}
 
@@ -933,8 +890,7 @@ static void clipboard_paste_overwrite(void)
 		chan_width = 64 - current_channel + 1;
 
 	for (row = 0; row < num_rows; row++) {
-		memcpy(pattern + 64 * (current_row + row)
-		       + current_channel - 1,
+		memcpy(pattern + 64 * (current_row + row) + current_channel - 1,
 		       clipboard.data + clipboard.channels * row, chan_width * sizeof(song_note));
 	}
 }
@@ -945,7 +901,7 @@ static void clipboard_paste_insert(void)
 	song_note *pattern;
 
 	if (clipboard.data == NULL) {
-		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0);
+		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		return;
 	}
 
@@ -968,7 +924,7 @@ static void clipboard_paste_mix_notes(void)
 	song_note *pattern, *p_note, *c_note;
 
 	if (clipboard.data == NULL) {
-		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0);
+		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		return;
 	}
 
@@ -990,7 +946,7 @@ static void clipboard_paste_mix_notes(void)
 				p_note[chan] = c_note[chan];
 #else
 			/* Suppose the volume is set, but the volume effect is zero for some reason.
-			 * I'm not sure it'll ever come up, but hey, weird things happen. */
+			I'm not sure it'll ever come up, but hey, weird things happen. */
 			if (p_note[chan].note == 0 && p_note[chan].instrument == 0
 			    && p_note[chan].volume_effect == 0
 			    && p_note[chan].effect == 0 && p_note[chan].parameter == 0) {
@@ -1010,7 +966,7 @@ static void clipboard_paste_mix_fields(void)
 	song_note *pattern, *p_note, *c_note;
 
 	if (clipboard.data == NULL) {
-		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0);
+		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		return;
 	}
 
@@ -1186,8 +1142,7 @@ static void recalculate_visible_area(void)
 	visible_width = 0;
 	for (n = 0; n < 64; n++) {
 		if (track_view_scheme[n] >= NUM_TRACK_VIEWS) {
-			/* shouldn't happen, but might (e.g. if someone was
-			 * messing with the config file) */
+			/* shouldn't happen, but might (e.g. if someone was messing with the config file) */
 			track_view_scheme[n] = last;
 		} else {
 			last = track_view_scheme[n];
@@ -1202,8 +1157,7 @@ static void recalculate_visible_area(void)
 	}
 
 	if (draw_divisions) {
-		/* a division after the last channel
-		 * would look pretty dopey :) */
+		/* a division after the last channel would look pretty dopey :) */
 		visible_width--;
 	}
 	visible_channels = n;
@@ -1238,10 +1192,8 @@ static void pattern_editor_redraw(void)
 	int pattern_is_playing = ((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) != 0
 				  && current_pattern == playing_pattern);
 
-	SDL_LockSurface(screen);
-
 	/* draw the outer box around the whole thing */
-	draw_box_unlocked(4, 14, 5 + visible_width, 47, BOX_THICK | BOX_INNER | BOX_INSET);
+	draw_box(4, 14, 5 + visible_width, 47, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	/* how many rows are there? */
 	total_rows = song_get_pattern(current_pattern, &pattern);
@@ -1256,7 +1208,7 @@ static void pattern_editor_redraw(void)
 			if (chan_pos == 0) {
 				fg = pattern_is_playing && row == playing_row ? 3 : 0;
 				bg = (current_pattern == marked_pattern && row == marked_row) ? 11 : 2;
-				draw_text_unlocked(numtostr(3, row, buf), 1, 15 + row_pos, fg, bg);
+				draw_text(numtostr(3, row, buf), 1, 15 + row_pos, fg, bg);
 			}
 
 			if (is_in_selection(chan, row)) {
@@ -1274,14 +1226,14 @@ static void pattern_editor_redraw(void)
 					bg = 0;
 			}
 
-			track_view->draw_note(chan_drawpos, 15 + row_pos,
-					      note, ((row == current_row && chan == current_channel)
-						     ? current_position : -1), fg, bg);
+			track_view->draw_note(chan_drawpos, 15 + row_pos, note,
+					      ((row == current_row && chan == current_channel)
+					       ? current_position : -1), fg, bg);
 
 			if (draw_divisions && chan_pos < visible_channels - 1) {
 				if (is_in_selection(chan, row))
 					bg = 0;
-				draw_char_unlocked(168, chan_drawpos + track_view->width, 15 + row_pos, 2, bg);
+				draw_char(168, chan_drawpos + track_view->width, 15 + row_pos, 2, bg);
 			}
 
 			/* next row, same channel */
@@ -1290,9 +1242,7 @@ static void pattern_editor_redraw(void)
 
 		chan_drawpos += track_view->width + !!draw_divisions;
 	}
-
-	SDL_UnlockSurface(screen);
-
+	
 	status.flags |= NEED_UPDATE;
 }
 
@@ -1375,7 +1325,7 @@ static int handle_volume(song_note * note, char c, int pos)
 		VOL_EFFECT_FINEVOLUP, VOL_EFFECT_FINEVOLDOWN,
 		VOL_EFFECT_VOLSLIDEUP, VOL_EFFECT_VOLSLIDEDOWN,
 		VOL_EFFECT_PORTADOWN, VOL_EFFECT_PORTAUP,
-		VOL_EFFECT_TONEPORTAMENTO, VOL_EFFECT_VIBRATOSPEED
+		VOL_EFFECT_TONEPORTAMENTO, VOL_EFFECT_VIBRATO
 	};
 
 	if (pos == 0) {
@@ -1418,7 +1368,7 @@ static int handle_volume(song_note * note, char c, int pos)
 	return 1;
 }
 
-/* return 1 => redraw */
+/* return 1 => handled key, 0 => no way */
 static int pattern_editor_insert(char c)
 {
 	int total_rows;
@@ -1440,11 +1390,11 @@ static int pattern_editor_insert(char c)
 			if (cur_note->instrument && cur_note->note > 0 && cur_note->note < 120)
 				song_play_note(cur_note->instrument, cur_note->note, current_channel, 1);
 			advance_cursor();
-			return 0;
+			return 1;
 		} else if (c == note_trans[NOTE_TRANS_PLAY_ROW]) {
 			song_single_step(current_pattern, current_row);
 			advance_cursor();
-			return 0;
+			return 1;
 		} else {
 			n = kbd_get_note(c);
 			if (n < 0)
@@ -1470,8 +1420,7 @@ static int pattern_editor_insert(char c)
 				cur_note->parameter = 0;
 			}
 		} else {
-			/* copy the current sample/instrument
-			 * -- UNLESS the note is empty */
+			/* copy the current sample/instrument -- UNLESS the note is empty */
 			if (mask_fields & MASK_INSTRUMENT) {
 				if (song_is_instrument_mode())
 					cur_note->instrument = instrument_get_current();
@@ -1593,12 +1542,12 @@ static int pattern_editor_insert(char c)
 	case 8:			/* param, low nibble */
 		if (c == ' ') {
 			cur_note->parameter = mask_note.parameter;
-			current_position = 6 + !link_effect_column;
+			current_position = link_effect_column ? 6 : 7;
 			advance_cursor();
 			break;
 		} else if (c == note_trans[NOTE_TRANS_CLEAR]) {
 			cur_note->parameter = mask_note.parameter = 0;
-			current_position = 6 + !link_effect_column;
+			current_position = link_effect_column ? 6 : 7;
 			advance_cursor();
 			break;
 		}
@@ -1611,9 +1560,9 @@ static int pattern_editor_insert(char c)
 		if (current_position == 7) {
 			cur_note->parameter = (n << 4) | (cur_note->parameter & 0xf);
 			current_position++;
-		} else {
+		} else /* current_position == 8 */ {
 			cur_note->parameter = (cur_note->parameter & 0xf0) | n;
-			current_position = 6 + !link_effect_column;
+			current_position = link_effect_column ? 6 : 7;
 			advance_cursor();
 		}
 		mask_note.parameter = cur_note->parameter;
@@ -1698,7 +1647,7 @@ static int pattern_editor_handle_alt_key(SDL_keysym * k)
 		} else if (clipboard.data) {
 			clipboard_free();
 		} else {
-			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0);
+			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		}
 		break;
 	case SDLK_c:
@@ -1837,6 +1786,14 @@ static int pattern_editor_handle_ctrl_key(SDL_keysym * k)
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
 	switch (k->sym) {
+	case SDLK_LEFT:
+		if (current_channel > top_display_channel)
+			current_channel--;
+		return -1;
+	case SDLK_RIGHT:
+		if (current_channel < top_display_channel + visible_channels - 1)
+			current_channel++;
+		return -1;
 	case SDLK_F6:
 		song_loop_pattern(current_pattern, current_row);
 		return 1;
@@ -2042,8 +1999,7 @@ static int pattern_editor_handle_key(SDL_keysym * k)
 				break;
 			}
 
-			/* FIXME | redraw the bottom part of the pattern
-			 * FIXME | that shows the active mask bits */
+			/* FIXME: redraw the bottom part of the pattern that shows the active mask bits */
 			return 1;
 		} else {
 			if (!pattern_editor_insert(c))
@@ -2149,9 +2105,9 @@ void pattern_editor_load_page(struct page *page)
 {
 	page->title = "Pattern Editor (F2)";
 	page->playback_update = pattern_editor_playback_update;
-	page->total_items = 1;
-	page->items = items_pattern;
+	page->total_widgets = 1;
+	page->widgets = widgets_pattern;
 	page->help_index = HELP_PATTERN_EDITOR;
 
-	create_other(items_pattern + 0, 0, pattern_editor_handle_key_cb, pattern_editor_redraw);
+	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, pattern_editor_redraw);
 }

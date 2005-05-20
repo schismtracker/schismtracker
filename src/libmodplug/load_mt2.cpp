@@ -395,6 +395,7 @@ BOOL CSoundFile::ReadMT2(LPCBYTE lpStream, DWORD dwMemLength)
 #endif
 	memset(InstrMap, 0, sizeof(InstrMap));
 	m_nInstruments = (pfh->wInstruments < MAX_INSTRUMENTS) ? pfh->wInstruments : MAX_INSTRUMENTS-1;
+	m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	for (UINT iIns=1; iIns<=255; iIns++)
 	{
 		if (dwMemPos+36 > dwMemLength) return TRUE;
