@@ -185,7 +185,16 @@ static void display_print_info(void)
 #else
 # define SDL_INIT_FLAGS SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE
 #endif
-static unsigned long sdl_videomode_flags = SDL_HWPALETTE | SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_ANYFORMAT;
+static unsigned long sdl_videomode_flags = SDL_HWPALETTE | SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_ANYFORMAT | SDL_ASYNCBLIT;
+
+static void finish_display_init(void)
+{
+	screen = SDL_SetVideoMode(640, get_fb_size(), 8, sdl_videomode_flags);
+	if (!screen) return;
+
+	SDL_ShowCursor(0);
+	display_print_info();
+}
 
 static void display_init(void)
 {
@@ -198,18 +207,32 @@ static void display_init(void)
 		status.flags |= WM_AVAILABLE;
 	display_print_video_info();
 
-	screen = SDL_SetVideoMode(640, get_fb_size(), 8, sdl_videomode_flags);
+	finish_display_init();
+
 	if (!screen) {
 		fprintf(stderr, "%s\n", SDL_GetError());
 		exit(1);
 	}
-	SDL_ShowCursor(0);
-	display_print_info();
 
 	SDL_EnableKeyRepeat(125, 25);
 
 	SDL_WM_SetCaption("Schism Tracker v" VERSION, "Schism Tracker");
 	SDL_EnableUNICODE(1);
+}
+
+void toggle_display_fullscreen(void)
+{
+	SDL_Surface *foo;
+	foo = screen;
+	sdl_videomode_flags ^= SDL_FULLSCREEN;
+	finish_display_init();
+	if (!screen) {
+		screen = foo;
+		sdl_videomode_flags ^= SDL_FULLSCREEN;
+		return; /* failed */
+	}
+	status.flags |= NEED_UPDATE;
+	redraw_screen();
 }
 
 /* --------------------------------------------------------------------- */

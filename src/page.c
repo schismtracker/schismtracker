@@ -54,6 +54,7 @@ static struct {
 } current_time = {0, 0, 0};
 /* *INDENT-ON* */
 
+
 /* return 1 -> the time changed; need to redraw */
 static int check_time(void)
 {
@@ -281,7 +282,7 @@ static int handle_key_global(SDL_keysym * k)
                  * FIXME | pattern data". I'm not exactly sure what that
                  * FIXME | does... */
                 if (k->mod & (KMOD_ALT | KMOD_META)) {
-                        SDL_WM_ToggleFullScreen(screen);
+			toggle_display_fullscreen();
                         return 1;
                 }
                 break;
@@ -442,6 +443,14 @@ static int handle_key_global(SDL_keysym * k)
         		break;
         	}
         	return 1;
+	case SDLK_w:
+		/* Ctrl-W _IS_ in IT, and hands don't leave home row :) */
+                if (k->mod & KMOD_CTRL) {
+                        set_page(PAGE_SAVE_MODULE);
+                } else {
+                        break;
+                }
+                return 1;
         case SDLK_F10:
                 if (NO_MODIFIER(k->mod)) {
                         set_page(PAGE_SAVE_MODULE);

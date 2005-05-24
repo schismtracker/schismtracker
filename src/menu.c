@@ -365,7 +365,7 @@ static void settings_menu_selected_cb(void)
                 set_page(PAGE_PALETTE_EDITOR);
 		return;
 	case 2: /* toggle fullscreen */
-		SDL_WM_ToggleFullScreen(screen);
+		toggle_display_fullscreen();
 		break;
         }
 
