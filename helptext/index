@@ -1,0 +1,9 @@
+global-keys		GLOBAL
+pattern-editor		PATTERN_EDITOR
+sample-list		SAMPLE_LIST
+instrument-list		INSTRUMENT_LIST
+info-page		INFO_PAGE
+message-editor		MESSAGE_EDITOR
+orderlist-pan		ORDERLIST_PANNING
+orderlist-vol		ORDERLIST_VOLUME
+midi-output		MIDI_OUTPUT

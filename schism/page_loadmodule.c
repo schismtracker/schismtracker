@@ -1,0 +1,919 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+ * URL: http://rigelseven.com/schism/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#define NEED_DIRENT
+#define NEED_TIME
+#include "headers.h"
+
+#include "it.h"
+#include "song.h"
+#include "page.h"
+#include "dmoz.h"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <SDL.h>
+#include <fcntl.h>
+#include <ctype.h>
+#include <errno.h>
+
+#include "mplink.h"
+
+#include "diskwriter.h"
+
+/* --------------------------------------------------------------------- */
+/* the locals */
+
+static int modgrep(dmoz_file_t *f);
+
+static struct widget widgets_loadmodule[5];
+static struct widget widgets_savemodule[16];
+
+/* XXX this needs to be kept in sync with diskwriters */
+static int filetype_saves[] = { 4, 5, 6, 7, -1 };
+
+static int top_file = 0, top_dir = 0;
+static int current_file = 0, current_dir = 0;
+static time_t directory_mtime;
+dmoz_filelist_t flist;
+dmoz_dirlist_t dlist;
+
+
+/* filename_entry is updated whenever the selected file is changed. (this differs from impulse tracker, which
+accepts wildcards in the filename box... i'm not doing this partly because filenames could be longer than the
+visible text in the browser, and partly because i just don't want to write that code.)
+
+dirname_entry is copied from the module directory (off the vars page) when this page is loaded, and copied back
+when the directory is changed. in general the two variables will be the same, but editing the text directly
+won't screw up the directory listing or anything. (hitting enter will cause the changed callback, which will
+copy the text from dirname_entry to the actual configured string and update the current directory.)
+
+whew. */
+static char filename_entry[NAME_MAX + 1] = "";
+static char dirname_entry[PATH_MAX + 1] = "";
+
+/* --------------------------------------------------------------------- */
+/* page-dependent stuff (load or save) */
+
+/* there should be a more useful way to determine which page to set. i.e., if there were errors/warnings, show
+the log; otherwise, switch to the blank page (or, for the loader, maybe the previously set page if classic mode
+is off?)
+idea for return codes:
+    0 = couldn't load/save, error dumped to log
+    1 = no warnings or errors were printed.
+    2 = there were warnings, but the song was still loaded/saved. */
+
+static void handle_file_entered_L(char *ptr)
+{
+	dmoz_filelist_t tmp;
+	struct stat sb;
+	dmoz_file_t *f;
+	int r;
+
+/* these shenanagans force the file to take another trip... */
+	if (stat(ptr, &sb) == -1) return;
+
+	memset(&tmp,0,sizeof(tmp));
+	f = dmoz_add_file(&tmp, strdup(ptr), strdup(ptr), &sb, 0);
+	r = modgrep(f);
+	dmoz_free(&tmp, NULL);
+
+	if (r && song_load(ptr)) {
+		/* set_page(PAGE_LOG); */
+		set_page(PAGE_BLANK);
+	}
+}
+
+
+static void do_save_song(void *ptr)
+{
+	int i;
+	const char *typ = NULL;
+	const char *s;
+
+	set_page(PAGE_LOG);
+
+	for (i = 0; diskwriter_drivers[i]; i++) {
+		if (widgets_savemodule[i+5].d.togglebutton.state) {
+			typ = widgets_savemodule[i+5].d.togglebutton.text;
+			break;
+		}
+	}
+	if (!typ) {
+		for (s = (const char *)ptr; *s; s++) {
+			if (*s == '.') {
+				for (i = 0; diskwriter_drivers[i]; i++) {
+					if (strcasecmp(s+1,
+					diskwriter_drivers[i]->name) == 0) {
+						typ = diskwriter_drivers[i]->name;
+					}
+				}
+			}
+		}
+		if (!typ) typ = "IT214";
+	}
+	if (song_save(ptr, typ)) {
+		set_page(PAGE_LOG);
+		/* set_page(PAGE_BLANK); */
+	}
+}
+static void do_save_song_overwrite(void *ptr)
+{
+	struct stat st;
+
+	if (!(status.flags & CLASSIC_MODE)) {
+		do_save_song(ptr);
+		return;
+	}
+
+	if (stat(cfg_dir_modules, &st) == -1
+	|| directory_mtime != st.st_mtime) {
+        	status.flags |= DIR_MODULES_CHANGED;
+	}
+
+	do_save_song(ptr);
+
+	/* this is wrong, sadly... */
+	if (stat(cfg_dir_modules, &st) == 0) {
+		directory_mtime = st.st_mtime;
+	}
+}
+
+static void handle_file_entered_S(char *ptr)
+{
+	struct stat buf;
+	
+	if (stat(ptr, &buf) < 0) {
+		if (errno == ENOENT) {
+			do_save_song(ptr);
+		} else {
+			log_appendf(4, "%s: %s", ptr, strerror(errno));
+		}
+	} else {
+		if (S_ISDIR(buf.st_mode)) {
+			/* TODO: maybe change the current directory in this case? */
+			log_appendf(4, "%s: Is a directory", ptr);
+		} else if (S_ISREG(buf.st_mode)) {
+			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song_overwrite, free, 1, strdup(ptr));
+		} else {
+			/* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
+			dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0, NULL);
+		}
+	}
+}
+
+
+static void (*handle_file_entered)(char *);
+
+/* --------------------------------------------------------------------- */
+
+/* get a color index from a dmoz_file_t 'type' field */
+static inline int get_type_color(int type)
+{
+	/* 7 unknown
+	   3 it
+	   5 s3m
+	   6 xm
+	   2 mod
+	   4 other
+	   7 sample */
+	if (type == TYPE_MODULE_MOD)
+		return 2;
+	if (type == TYPE_MODULE_S3M)
+		return 5;
+	if (type == TYPE_MODULE_XM)
+		return 6;
+	if (type == TYPE_MODULE_IT)
+		return 3;
+	if (type == TYPE_SAMPLE_COMPR)
+		return 4; /* mp3/ogg 'sample'... i think */
+	return 7;
+}
+
+
+static void clear_directory(void)
+{
+	dmoz_free(&flist, &dlist);
+}
+
+static int modgrep(dmoz_file_t *f)
+{
+	if ((f->type & TYPE_EXT_DATA_MASK) == 0)
+		dmoz_fill_ext_data(f);
+	if ((f->type & TYPE_EXT_DATA_MASK) == 0) return 0;
+
+	return (f->type & TYPE_MODULE_MASK ? 1 : 0);
+}
+
+/* --------------------------------------------------------------------- */
+
+static void file_list_reposition(void)
+{
+        if (current_file < top_file)
+                top_file = current_file;
+        else if (current_file > top_file + 30)
+                top_file = current_file - 30;
+}
+
+static void dir_list_reposition(void)
+{
+        if (current_dir < top_dir)
+                top_dir = current_dir;
+        else if (current_dir > top_dir + 20)
+                top_dir = current_dir - 20;
+}
+
+static void read_directory(void)
+{
+	struct stat st;
+	int i;
+	char *tmp;
+
+	if (current_file >= 0 && current_file < flist.num_files
+	&& flist.files[current_file] && flist.files[current_file]->base) {
+	        tmp = strdup(flist.files[current_file]->base);
+	} else {
+		tmp = 0;
+	}
+	
+	clear_directory();
+	
+	if (stat(cfg_dir_modules, &st) < 0)
+		directory_mtime = 0;
+	else
+		directory_mtime = st.st_mtime;
+	/* if the stat call failed, this will probably break as well, but
+	at the very least, it'll add an entry for the root directory. */
+	if (dmoz_read(cfg_dir_modules, &flist, &dlist) < 0)
+		perror(cfg_dir_modules);
+	dmoz_filter_filelist(&flist, modgrep, &current_file, file_list_reposition);
+	if (tmp) {
+		for (i = 0; i < flist.num_files; i++) {
+			if (flist.files && flist.files[i] && flist.files[i]->base
+			&& strcmp(tmp, flist.files[i]->base) == 0) {
+				current_file = i;
+				break;
+			}
+		}
+		(void)free(tmp);
+	}
+}
+
+/* --------------------------------------------------------------------- */
+
+static void update_filename_entry(void)
+{
+	if (status.current_page == PAGE_LOAD_MODULE) {
+	        widgets_loadmodule[2].d.textentry.firstchar = widgets_loadmodule[2].d.textentry.cursor_pos = 0;
+	} else {
+	        widgets_savemodule[2].d.textentry.firstchar = widgets_savemodule[2].d.textentry.cursor_pos = 0;
+        }
+	if (current_file >= 0 && current_file < flist.num_files) {
+	        strncpy(filename_entry, flist.files[current_file]->base, NAME_MAX);
+		filename_entry[NAME_MAX] = 0;
+	} else {
+	        filename_entry[0] = 0;
+	}
+}
+
+/* --------------------------------------------------------------------- */
+
+static char search_text[NAME_MAX + 1] = "";
+static int search_first_char = 0;       /* first visible character */
+static int search_text_length = 0;      /* same as strlen(search_text) */
+
+static void search_redraw(void)
+{
+        draw_fill_chars(51, 37, 76, 37, 0);
+        draw_text_len(search_text + search_first_char, 25, 51, 37, 5, 0);
+
+        /* draw the cursor if it's on the dir/file list */
+        if (ACTIVE_PAGE.selected_widget == 0 || ACTIVE_PAGE.selected_widget == 1) {
+                draw_char(0, 51 + search_text_length - search_first_char, 37, 6, 6);
+        }
+}
+
+static void search_update(void)
+{
+        int found_something = 0;
+        int n;
+
+        if (search_text_length > 25)
+                search_first_char = search_text_length - 25;
+        else
+		search_first_char = 0;
+	
+        /* go through the file/dir list (whatever one is selected) and
+         * find the first entry matching the text */
+        if (*selected_widget == 0) {
+                for (n = 0; n < flist.num_files; n++) {
+                        if (strncasecmp(flist.files[n]->base, search_text, search_text_length) == 0) {
+                                found_something = 1;
+                                current_file = n;
+                                file_list_reposition();
+                                break;
+                        }
+                }
+        } else {
+                for (n = 0; n < dlist.num_dirs; n++) {
+                        if (strncasecmp(dlist.dirs[n]->base, search_text, search_text_length) == 0) {
+                                found_something = 1;
+                                current_dir = n;
+                                dir_list_reposition();
+                                break;
+                        }
+                }
+        }
+
+        status.flags |= NEED_UPDATE;
+}
+
+static int search_text_add_char(char c)
+{
+        if (c < 32)
+                return 0;
+
+        if (search_text_length >= NAME_MAX)
+                return 1;
+
+        search_text[search_text_length++] = c;
+        search_text[search_text_length] = 0;
+        search_update();
+
+        return 1;
+}
+
+static void search_text_delete_char(void)
+{
+        if (search_text_length == 0)
+                return;
+	
+        search_text[--search_text_length] = 0;
+	
+        if (search_text_length > 25)
+                search_first_char = search_text_length - 25;
+        else
+		search_first_char = 0;
+
+        status.flags |= NEED_UPDATE;
+}
+
+static void search_text_clear(void)
+{
+        search_text[0] = search_text_length = search_first_char = 0;
+
+        status.flags |= NEED_UPDATE;
+}
+
+/* --------------------------------------------------------------------- */
+
+/* return: 1 = success, 0 = failure
+TODO: provide some sort of feedback if something went wrong. */
+static int change_dir(const char *dir)
+{
+	char *ptr = dmoz_path_normal(dir);
+
+	if (!ptr)
+		return 0;
+
+	strncpy(cfg_dir_modules, ptr, PATH_MAX);
+	cfg_dir_modules[PATH_MAX] = 0;
+	strcpy(dirname_entry, cfg_dir_modules);
+	free(ptr);
+
+	/* probably not all of this is needed everywhere */
+	search_text_clear();
+	read_directory();
+        update_filename_entry();
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
+/* unfortunately, there's not enough room with this layout for labels by
+ * the search box and file information. :( */
+
+static void load_module_draw_const(void)
+{
+        draw_text("Filename", 4, 46, 0, 2);
+        draw_text("Directory", 3, 47, 0, 2);
+        draw_char(0, 51, 37, 0, 6);
+        draw_box(2, 12, 47, 44, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(49, 12, 68, 34, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(50, 36, 77, 38, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(50, 39, 77, 44, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_box(12, 45, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
+	
+        draw_fill_chars(51, 37, 76, 37, 0);
+        draw_fill_chars(13, 46, 76, 47, 0);
+}
+
+static void save_module_draw_const(void)
+{
+	load_module_draw_const();
+}
+
+/* --------------------------------------------------------------------- */
+
+static void file_list_draw(void)
+{
+        int n, pos;
+        int fg1, fg2, bg;
+        char buf[32];
+        dmoz_file_t *file;
+
+        draw_fill_chars(3, 13, 46, 43, 0);
+
+        if (flist.num_files > 0) {
+		if (top_file < 0) top_file = 0;
+		if (current_file < 0) current_file = 0;
+                for (n = top_file, pos = 13; n < flist.num_files && pos < 44; n++, pos++) {
+                        file = flist.files[n];
+
+                        if ((file->type & TYPE_EXT_DATA_MASK) == 0)
+                                dmoz_fill_ext_data(file);
+
+                        if (n == current_file && ACTIVE_PAGE.selected_widget == 0) {
+                                fg1 = fg2 = 0;
+                                bg = 3;
+                        } else {
+                                fg1 = get_type_color(file->type);
+                                fg2 = (file->type & TYPE_MODULE_MASK) ? 3 : 7;
+                                bg = 0;
+                        }
+
+                        draw_text_len(file->base, 18, 3, pos, fg1, bg);
+                        draw_char(168, 21, pos, 2, bg);
+                        draw_text_len(file->title, 25, 22, pos, fg2, bg);
+                }
+
+                /* info for the current file */
+		if (current_file >= 0 && current_file < flist.num_files) {
+	                file = flist.files[current_file];
+			draw_text_len(file->description ? file->description : "", 26, 51, 40, 5, 0);
+			sprintf(buf, "%09d", file->filesize);
+			draw_text_len(buf, 26, 51, 41, 5, 0);
+			draw_text_len(get_date_string(file->timestamp, buf), 26, 51, 42, 5, 0);
+			draw_text_len(get_time_string(file->timestamp, buf), 26, 51, 43, 5, 0);
+		}
+        } else {
+                if (ACTIVE_PAGE.selected_widget == 0) {
+                        draw_text("No files.", 3, 13, 0, 3);
+                        draw_fill_chars(12, 13, 46, 13, 3);
+                        draw_char(168, 21, 13, 2, 3);
+                        pos = 14;
+                } else {
+                        draw_text("No files.", 3, 13, 7, 0);
+                        pos = 13;
+                }
+                draw_fill_chars(51, 40, 76, 43, 0);
+        }
+
+	while (pos < 44)
+		draw_char(168, 21, pos++, 2, 0);
+	
+        /* bleh */
+        search_redraw();
+}
+
+static void do_delete_file(UNUSED void *data)
+{
+	int old_top_file, old_current_file, old_top_dir, old_current_dir;
+	char *ptr;
+
+	if (current_file < 0 || current_file >= flist.num_files)
+		return;
+
+	ptr = flist.files[current_file]->path;
+	
+	/* would be neat to send it to the trash can if there is one */
+	unlink(ptr);
+	
+	/* remember the list positions */
+	old_top_file = top_file;
+	old_current_file = current_file;
+	old_top_dir = top_dir;
+	old_current_dir = current_dir;
+	
+	search_text_clear();
+	read_directory();
+	
+	/* put the list positions back */
+	top_file = old_top_file;
+	current_file = old_current_file;
+	top_dir = old_top_dir;
+	current_dir = old_current_dir;
+	/* edge case: if this was the last file, move the cursor up */
+	if (current_file >= flist.num_files)
+		current_file = flist.num_files - 1;
+	file_list_reposition();
+}
+
+static int file_list_handle_key(struct key_event * k)
+{
+        int new_file = current_file;
+
+	if (k->mouse) {
+		if (k->x >= 3 && k->x <= 46 && k->y >= 13 && k->y <= 43) {
+			if (k->mouse == MOUSE_CLICK) {
+				new_file = (k->y - 13) + top_file;
+			} else if (k->mouse == MOUSE_SCROLL_UP) {
+				new_file--;
+			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
+				new_file++;
+			}
+		} else {
+			return 0;
+		}
+	}
+
+        switch (k->sym) {
+        case SDLK_UP:
+                new_file--;
+                break;
+        case SDLK_DOWN:
+                new_file++;
+                break;
+        case SDLK_PAGEUP:
+                new_file -= 31;
+                break;
+        case SDLK_PAGEDOWN:
+                new_file += 31;
+                break;
+        case SDLK_HOME:
+                new_file = 0;
+                break;
+        case SDLK_END:
+                new_file = flist.num_files - 1;
+                break;
+        case SDLK_RETURN:
+		if (!k->state) return 1;
+		if (current_file < flist.num_files) {
+			handle_file_entered(flist.files[current_file]->path);
+		}
+                search_text_clear();
+		
+		return 1;
+        case SDLK_DELETE:
+		if (k->state) return 1;
+		if (flist.num_files > 0)
+			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
+		return 1;
+        case SDLK_BACKSPACE:
+		if (k->state) return 1;
+                if (k->mod & KMOD_CTRL)
+                        search_text_clear();
+                else
+                        search_text_delete_char();
+                return 1;
+        default:
+		if (k->mouse == 0) {
+			if (k->state) return 0;
+			return search_text_add_char(k->unicode);
+		}
+        }
+
+	if (k->mouse == MOUSE_CLICK) {
+		if (!k->state) return 0;
+	} else if (k->mouse == MOUSE_DBLCLICK) {
+		if (current_file < flist.num_files) {
+			handle_file_entered(flist.files[current_file]->path);
+		}
+                search_text_clear();
+		return 1;
+	} else {
+		if (k->state) return 1;
+	}
+        new_file = CLAMP(new_file, 0, flist.num_files - 1);
+	if (new_file < 0) new_file = 0;
+        if (new_file != current_file) {
+                current_file = new_file;
+                file_list_reposition();
+                update_filename_entry();
+                status.flags |= NEED_UPDATE;
+        }
+        return 1;
+}
+
+/* --------------------------------------------------------------------- */
+
+static void dir_list_draw(void)
+{
+        int n, pos;
+
+        draw_fill_chars(50, 13, 67, 33, 0);
+
+        for (n = top_dir, pos = 13; pos < 34; n++, pos++) {
+                if (n >= dlist.num_dirs)
+                        break;
+                if (n == current_dir && ACTIVE_PAGE.selected_widget == 1)
+                        draw_text_len(dlist.dirs[n]->base, 18, 50, pos, 0, 3);
+                else
+                        draw_text_len(dlist.dirs[n]->base, 18, 50, pos, 5, 0);
+        }
+
+        /* bleh */
+        search_redraw();
+}
+
+static int dir_list_handle_key(struct key_event * k)
+{
+        int new_dir = current_dir;
+
+	if (k->mouse) {
+		if (k->x >= 50 && k->x <= 67 && k->y >= 13 && k->y <= 33) {
+			if (k->mouse == MOUSE_CLICK) {
+				new_dir = (k->y - 13) + top_dir;
+			} else if (k->mouse == MOUSE_DBLCLICK) {
+				top_file = current_file = 0;
+				change_dir(dlist.dirs[current_dir]->path);
+		
+				if (flist.num_files > 0)
+					*selected_widget = 0;
+				status.flags |= NEED_UPDATE;
+				return 1;
+			} else if (k->mouse == MOUSE_SCROLL_UP) {
+				new_dir--;
+			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
+				new_dir++;
+			}
+		} else {
+			return 0;
+		}
+	}
+
+        switch (k->sym) {
+        case SDLK_UP:
+                new_dir--;
+                break;
+        case SDLK_DOWN:
+                new_dir++;
+                break;
+        case SDLK_PAGEUP:
+                new_dir -= 21;
+                break;
+        case SDLK_PAGEDOWN:
+                new_dir += 21;
+                break;
+        case SDLK_HOME:
+                new_dir = 0;
+                break;
+        case SDLK_END:
+                new_dir = dlist.num_dirs - 1;
+                break;
+        case SDLK_RETURN:
+		if (!k->state) return 0;
+		/* reset */
+		top_file = current_file = 0;
+		change_dir(dlist.dirs[current_dir]->path);
+		
+		if (flist.num_files > 0)
+			*selected_widget = 0;
+		status.flags |= NEED_UPDATE;
+                return 1;
+        case SDLK_BACKSPACE:
+		if (k->state) return 0;
+                if (k->mod & KMOD_CTRL)
+                        search_text_clear();
+                else
+                        search_text_delete_char();
+                return 1;
+        default:
+		if (k->mouse == 0) {
+			if (k->state) return 0;
+	                return search_text_add_char(k->unicode);
+		}
+        }
+
+	if (k->mouse == MOUSE_CLICK) {
+		if (!k->state) return 0;
+	} else {
+		if (k->state) return 0;
+	}
+        new_dir = CLAMP(new_dir, 0, dlist.num_dirs - 1);
+        if (new_dir != current_dir) {
+                current_dir = new_dir;
+                dir_list_reposition();
+                status.flags |= NEED_UPDATE;
+        }
+        return 1;
+}
+
+/* --------------------------------------------------------------------- */
+/* these handle when enter is pressed on the file/directory textboxes at the bottom of the screen. */
+
+static void filename_entered(void)
+{
+	char *ptr;
+	
+        if (filename_entry[0] == '/') {
+                /* hmm... */
+                handle_file_entered(filename_entry);
+        } else {
+		ptr = dmoz_path_concat(cfg_dir_modules, filename_entry);
+		handle_file_entered(ptr);
+		free(ptr);
+        }
+}
+
+/* strangely similar to the dir list's code :) */
+static void dirname_entered(void)
+{
+	if (!change_dir(dirname_entry)) {
+		/* FIXME: need to give some kind of feedback here */
+		return;
+	}
+
+	*selected_widget = (flist.num_files > 0) ? 0 : 1;
+	status.flags |= NEED_UPDATE;
+	/* reset */
+	top_file = current_file = 0;
+}
+
+/* --------------------------------------------------------------------- */
+
+/* used by {load,save}_module_set_page. return 1 => contents changed */
+static int update_directory(void)
+{
+        struct stat st;
+
+	/* if we have a list, the directory didn't change, and the mtime is the same, we're set. */
+	if ((status.flags & DIR_MODULES_CHANGED) == 0
+	    && stat(cfg_dir_modules, &st) == 0
+	    && st.st_mtime == directory_mtime) {
+		return 0;
+	}
+
+	change_dir(cfg_dir_modules);
+	/* TODO: what if it failed? */
+
+        status.flags &= ~DIR_MODULES_CHANGED;
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
+static int _save_cachefree_hack(struct key_event *k)
+{
+	if ((k->sym == SDLK_F10 && NO_MODIFIER(k->mod))
+	|| (k->sym == SDLK_w && (k->mod & KMOD_CTRL))
+	|| (k->sym == SDLK_s && (k->mod & KMOD_CTRL))) {
+		status.flags |= DIR_MODULES_CHANGED;
+	}
+	return 0;
+}
+static int _load_cachefree_hack(struct key_event *k)
+{
+	if ((k->sym == SDLK_F9 && NO_MODIFIER(k->mod))
+	|| (k->sym == SDLK_l && (k->mod & KMOD_CTRL))
+	|| (k->sym == SDLK_r && (k->mod & KMOD_CTRL))) {
+		status.flags |= DIR_MODULES_CHANGED;
+	}
+	return 0;
+}
+
+static void load_module_set_page(void)
+{
+	handle_file_entered = handle_file_entered_L;
+        if (update_directory())
+		pages[PAGE_LOAD_MODULE].selected_widget = (flist.num_files > 0) ? 0 : 1;
+}
+
+void load_module_load_page(struct page *page)
+{
+	clear_directory();
+	top_file = top_dir = 0;
+	current_file = current_dir = 0;
+
+        page->title = "Load Module (F9)";
+        page->draw_const = load_module_draw_const;
+        page->set_page = load_module_set_page;
+        page->total_widgets = 4;
+        page->widgets = widgets_loadmodule;
+        page->help_index = HELP_GLOBAL;
+	page->pre_handle_key = _load_cachefree_hack;
+	
+	create_other(widgets_loadmodule + 0, 1, file_list_handle_key, file_list_draw);
+	widgets_loadmodule[0].x = 3;
+	widgets_loadmodule[0].y = 13;
+	widgets_loadmodule[0].width = 43;
+	widgets_loadmodule[0].height = 30;
+	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
+
+	create_other(widgets_loadmodule + 1, 2, dir_list_handle_key, dir_list_draw);
+	widgets_loadmodule[1].x = 50;
+	widgets_loadmodule[1].y = 13;
+	widgets_loadmodule[1].width = 17;
+	widgets_loadmodule[1].height = 20;
+
+        create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
+	widgets_loadmodule[2].activate = filename_entered;
+        create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
+	widgets_loadmodule[3].activate = dirname_entered;
+}
+
+/* --------------------------------------------------------------------- */
+
+static void save_module_set_page(void)
+{
+	int i;
+
+	widgets_savemodule[4].d.togglebutton.state = 1;
+	for (i = 0; diskwriter_drivers[i]; i++) {
+		widgets_savemodule[5+i].d.togglebutton.state = 0;
+	}
+
+	handle_file_entered = handle_file_entered_S;
+	
+	update_directory();
+	/* impulse tracker always resets these; so will i */
+	filename_entry[0] = 0;
+	pages[PAGE_SAVE_MODULE].selected_widget = 2;
+}
+
+void save_module_load_page(struct page *page)
+{
+	int i, j, k;
+
+	clear_directory();
+	top_file = top_dir = 0;
+	current_file = current_dir = 0;
+
+        page->title = "Save Module (F10)";
+        page->draw_const = save_module_draw_const;
+        page->set_page = save_module_set_page;
+        page->total_widgets = 5;
+        page->widgets = widgets_savemodule;
+        page->help_index = HELP_GLOBAL;
+        page->selected_widget = 2;
+	page->pre_handle_key = _save_cachefree_hack;
+	
+	create_other(widgets_savemodule + 0, 1, file_list_handle_key, file_list_draw);
+	widgets_savemodule[0].next.left = 4;
+	widgets_savemodule[0].next.right = widgets_savemodule[0].next.tab = 1;
+	create_other(widgets_savemodule + 1, 2, dir_list_handle_key, dir_list_draw);
+	widgets_savemodule[1].next.right = widgets_savemodule[1].next.tab = 4;
+	widgets_savemodule[1].next.left = 0;
+
+        create_textentry(widgets_savemodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
+	widgets_savemodule[2].activate = filename_entered;
+        create_textentry(widgets_savemodule + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
+	widgets_savemodule[3].activate = dirname_entered;
+
+	for (i = 0; diskwriter_drivers[i]; i++);
+	page->total_widgets += i;
+
+	i = 0;
+
+	j = i + 1;
+	if (j >= (page->total_widgets-4)) {
+		j = i;
+	}
+	create_togglebutton(&widgets_savemodule[4+i],
+					70, 13, 5,
+					4+i, 4+j,
+					1, 4+i,
+					4+j,
+					NULL,
+					"Auto",
+					1,
+					filetype_saves);
+	widgets_savemodule[4].d.togglebutton.state = 1;
+/* XXX classic mode shouldn't have an auto */
+	i++;
+	for (; diskwriter_drivers[i-1]; i++) {
+		k = i - 1;
+		j = i + 1;
+		if (j >= (page->total_widgets-4)) {
+			j = i;
+		}
+		create_togglebutton(&widgets_savemodule[4+i],
+						70, 13 + (i*3), 5,
+						4+k, 4+j,
+						1, 4+i,
+						(j == i) ? 2 : 4+j,
+						NULL,
+						diskwriter_drivers[i-1]->name,
+			4 - ((strlen(diskwriter_drivers[i-1]->name)+1) / 2),
+						filetype_saves);
+	}
+
+}

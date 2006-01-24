@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=Schism Tracker Font Editor
+Comment=ITF Clone
+Encoding=UTF-8
+Terminal=false
+Exec=schism --font-editor
+Type=Application
+Icon=schism-itf-icon-128.png
+Categories=GNOME;Application;AudioVideo;Audio;Video;
+X-Desktop-File-Install-Version=0.10
