@@ -1,0 +1,45 @@
+|                           ‹†††††††††††††††††††††Š
+|                           „   Instrument List   ‘
+|                           ‰–
+|
+| Instrument List Keys.
+|   Enter           Load new instrument
+|   Ctrl-PgUp/PgDn  Move instrument up/down (when not on list)
+:   Alt-B           Pre-Loop cut envelope
+|   Alt-C           Clear instrument name & filename
+|   Alt-W           Wipe instrument data
+|   Spacebar        Edit instrument name (ESC to exit)
+|
+|   Alt-D           Delete instrument & all related samples
+:   Alt-L           Post-Loop cut envelope
+|   Alt-N           Toggle Multichannel playback
+|   Alt-O           Save current instrument to disk
+|   Alt-P           Copy instrument
+|   Alt-R           Replace current instrument in song
+|   Alt-S           Swap instruments (in song also)
+|   Alt-U           Update pattern data
+|   Alt-X           Exchange instruments (only in Instrument List)
+|
+|   Alt-Ins         Insert instrument slot (updates pattern data)
+|   Alt-Del         Remove instrument slot (updates pattern data)
+|
+|   < >             Decrease/Increase playback channel
+|
+| Note Translation.
+|   Enter           Pickup sample number & default play note
+|   < >             Decrease/Increase sample number
+|
+|   Alt-A           Change all samples
+|   Alt-N           Enter next note
+|   Alt-P           Enter previous note
+|   Alt-Up/Down     Transpose all notes a semitone up/down
+|   Alt-Ins/Del     Insert/Delete a row from the table
+|
+| Envelope Keys.
+|   Enter           Pick up/Drop current node
+|   Insert          Add node
+|   Delete          Delete node
+|   Alt-Arrow Keys  Move node (fast)
+|
+|   Press Spacebar  Play default note
+|   Release Space   Note off command

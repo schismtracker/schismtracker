@@ -1,0 +1,37 @@
+| Global Keys.
+|   F1                Help (Context sensitive!)
+|   Shift-F1          MIDI Screen
+:   Ctrl-F1           System Configuration
+|   F2                Pattern Editor / Pattern Editor Options
+|   F3                Sample List
+|   Ctrl-F3           Sample Library
+|   F4                Instrument List
+|   Ctrl-F4           Instrument Library
+|   F5                Play Information / Play song
+|   Ctrl-F5           Play Song
+|   F6                Play current pattern
+|   Shift-F6          Play song from current Order
+|   F7                Play from mark / current row
+|   F8                Stop Playback
+|   F9                Load Module
+|   Shift-F9          Message Editor
+|   F10               Save Module
+|   F11               Order List and Panning
+| 2*F11               Order List and Channel Volume
+:   Ctrl-F11          Schism Logging
+|   F12               Song Variables & Directory Configuration
+|   Ctrl-F12          Palette Configuration
+|
+|   { }               Decrease/Increase playback speed
+|   [ ]               Decrease/Increase global volume
+|   Alt-F1 -> Alt-F8  Toggle channels 1->8
+|
+!   Ctrl-D            DOS Shell
+|   Ctrl-E            Refresh screen and reset cache identification
+|   Ctrl-I            Reinitialise sound driver
+|   Ctrl-M            Toggle mouse cursor
+|   Ctrl-N            New Song
+!   Ctrl-Q            Quit to DOS
+:   Ctrl-Q            Quit Schism Tracker
+|   Ctrl-S            Save current song
+:   Ctrl-G            Go to order/pattern/row given time

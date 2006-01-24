@@ -1,0 +1,25 @@
+Written by chisel <schism@chisel.cjb.net> <http://rigelseven.com/>.
+
+Large swaths of code by Mrs. Brisby <mrs.brisby@nimh.org> <http://nimh.org/>
+
+Based (obviously) on Impulse Tracker by Jeffrey Lim <jeff@lim.com.au>.
+
+Default fonts created with ITF by ZaStaR <zastar@uclink4.berkeley.edu>.
+
+Default palette settings are mostly from Impulse Tracker, except Industrial
+(chisel), Kawaii (chisel and mml's), Violent (loosely based on the like-named
+FT2 palette), and Why Colors? (FT2). FX2.0 supplied by Virt.
+
+Modplug written by Olivier Lapicque <olivierl@jps.net>, with additional
+programming by Markus Fick <webmaster@mark-f.de> (spline mixing,
+fir-resampler) and Adam Goode <adam@evdebs.org> (endian-ness and char
+fixes).
+
+Some (small) portions of code have been borrowed from Cheesetracker,
+written by Juan Linietsky <coding@reduz.com.ar>.
+
+Frag-opt written by Ville Jokela <midianian/att/goth/dott/net/>.
+
+Various Amiga OS fixes by Juha Niemimäki <jniemima@mail.student.oulu.fi>.
+
+Win32 Mixer by Gargaj/CNS <gargaj@conspiracy.hu>

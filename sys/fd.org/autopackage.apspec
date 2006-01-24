@@ -1,0 +1,54 @@
+# -*-shell-script-*-
+
+[Meta]
+RootName: @nimh.org/schism:CVS
+DisplayName: Schism Tracker
+ShortName: schism
+Maintainer: Mrs. Brisby <mrs.brisby@nimh.org>
+Packager: Mrs. Brisby <mrs.brisby@nimh.org>
+Summary: Schism Tracker is a music editor that matches the look and feel of Impulse Tracker as closely as possible.
+URL: http://www.rigelseven.com/schism/
+License: GNU General Public License, Version 2
+SoftwareVersion: 1.0
+AutopackageTarget: 1.0
+
+[Description]
+Schism Tracker is a music editor in the spirit of Impulse Tracker. Nearly every
+feature of Impulse Tracker is available in exactly the same manner. Improvementshave been extremely careful to avoid disturbing any muscle memory that the user
+might have developed with Impulse Tracker.
+
+[BuildPrepare]
+export CC=apgcc
+export CXX=apg++
+export CFLAGS=-g
+export APBUILD_STATIC=""
+export APBUILD_STATIC_LIBGCC=1
+export MAKEFLAGS=-j3
+mkdir -p linux-x86-build && cd linux-x86-build && prepareBuild --src ..
+
+[BuildUnprepare]
+unprepareBuild
+
+[Imports]
+import <<EOF
+$source_dir/linux-x86-build/schism
+$source_dir/icons/schism-icon-128.png
+$source_dir/icons/schism-itf-icon-128.png
+$source_dir/sys/fd.org/schism.desktop
+$source_dir/sys/fd.org/itf.desktop
+EOF
+
+[Prepare]
+# Dependency checking
+require @libsdl.org/sdl 1.2
+
+[Install]
+# Put your installation script here
+installExe schism
+installIcon schism-icon-128.png schism-itf-icon-128.png >/dev/null 2>&1
+installDesktop "AudioVideo" schism.desktop
+installDesktop "AudioVideo" itf.desktop
+
+[Uninstall]
+# Usually just the following line is enough to uninstall everything
+uninstallFromLog
