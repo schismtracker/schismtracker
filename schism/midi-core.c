@@ -741,6 +741,12 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 		case 6: /* tick */
 			midi_event_tick();
 			break;
+		default:
+			/* something else */
+			midi_event_system((*data & 15), (data[1])
+					| (data[2] << 8)
+					| (data[3] << 16));
+			break;
 		}
 	}
 }
@@ -825,6 +831,22 @@ void midi_event_pitchbend(int channel, int value)
 	e.user.data2 = 0;
 	SDL_PushEvent(&e);
 }
+void midi_event_system(int argv, int param)
+{
+	int *st;
+	SDL_Event e;
+
+	st = mem_alloc(sizeof(int)*4);
+	st[0] = argv;
+	st[1] = param;
+	st[2] = 0;
+	st[3] = 0;
+	e.user.type = SCHISM_EVENT_MIDI;
+	e.user.code = SCHISM_EVENT_MIDI_SYSTEM;
+	e.user.data1 = st;
+	e.user.data2 = 0;
+	SDL_PushEvent(&e);
+}
 void midi_event_tick(void)
 {
 	SDL_Event e;
@@ -851,7 +873,9 @@ void midi_event_sysex(const unsigned char *data, unsigned int len)
 int midi_engine_handle_event(void *ev)
 {
 	struct key_event kk;
-	int *st;
+	char *sysex;
+	int *st, len;
+
 	SDL_Event *e = (SDL_Event *)ev;
 	if (e->type != SCHISM_EVENT_MIDI) return 0;
 
@@ -888,6 +912,20 @@ int midi_engine_handle_event(void *ev)
 		kk.midi_bend = st[0];
 		handle_key(&kk);
 		break;
+	case SCHISM_EVENT_MIDI_CONTROLLER:
+		/* controller events */
+		break;
+	case SCHISM_EVENT_MIDI_SYSTEM:
+		switch (st[0]) {
+		case 0xA: /* MIDI start */
+		case 0xB: /* MIDI continue */
+			break;
+		case 0xC: /* MIDI stop */
+		case 0xF: /* MIDI reset */
+			/* this is helpful when miditracking */
+			song_stop();
+			break;
+		};
 	default:
 		break;
 	}

@@ -126,6 +126,7 @@ void midi_event_aftertouch(int channel, int value);
 void midi_event_pitchbend(int channel, int value);
 void midi_event_tick(void);
 void midi_event_sysex(const unsigned char *data, unsigned int len);
+void midi_event_system(int argv, int param);
 
 /* midi drivers call this when they received an event */
 void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int len);
