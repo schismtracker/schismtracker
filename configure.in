@@ -55,6 +55,9 @@ AC_LIBTOOL_WIN32_DLL
 dnl We're using C
 AC_LANG([C])
 
+dnl check endianness
+AC_C_BIGENDIAN
+
 dnl Check for SDL libs
 AM_PATH_SDL(1.1.8, , AC_MSG_ERROR([*** SDL version >= 1.1.8 not found.]))
 
