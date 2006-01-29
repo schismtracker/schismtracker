@@ -873,8 +873,9 @@ void midi_event_sysex(const unsigned char *data, unsigned int len)
 int midi_engine_handle_event(void *ev)
 {
 	struct key_event kk;
+	unsigned int len;
 	char *sysex;
-	int *st, len;
+	int *st;
 
 	SDL_Event *e = (SDL_Event *)ev;
 	if (e->type != SCHISM_EVENT_MIDI) return 0;
@@ -926,10 +927,16 @@ int midi_engine_handle_event(void *ev)
 			song_stop();
 			break;
 		};
+	case SCHISM_EVENT_MIDI_SYSEX:
+		/* but missing the F0 and the stop byte (F7) */
+		len = *((unsigned int *)e->user.data1);
+		sysex = ((char *)e->user.data1)+sizeof(unsigned int);
+		break;
+
 	default:
 		break;
 	}
-	free(st);
+	free(e->user.data1);
 
 /* blah... */
 
