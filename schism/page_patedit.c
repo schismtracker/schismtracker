@@ -2439,19 +2439,19 @@ static void patedit_record_note(song_note *cur_note, int channel, int row, int n
 	int i;
 
 	status.flags |= SONG_NEEDS_SAVE;
-	if (note == NOTE_OFF) {
+	if (note == 0 || note == NOTE_OFF || note == NOTE_CUT || note == NOTE_FADE) {
 		if (template_mode == 0) {
 			/* no template mode */
-			if (force || !cur_note->note) cur_note->note = NOTE_OFF;
+			if (force || !cur_note->note) cur_note->note = note;
 		} else if (template_mode != 4) {
 			/* this is a really great idea, but not IT-like at all... */
 			for (i = 0; i < clipboard.channels; i++) {
 				if (i+channel > 64) break;
 				if (template_mode == 2) {
 					if (!cur_note->note)
-						cur_note->note = NOTE_OFF;
+						cur_note->note = note;
 				} else {
-					cur_note->note = NOTE_OFF;
+					cur_note->note = note;
 				}
 			}
 		}
@@ -3192,16 +3192,16 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			template_mode++;
 			switch (template_mode) {
 			case 1:
-				status_text_flash("Template, Overwrite");
+				status_text_flash_color(3,"Template, Overwrite");
 				break;
 			case 2:
-				status_text_flash("Template, Mix - Pattern data precedence");
+				status_text_flash_color(3,"Template, Mix - Pattern data precedence");
 				break;
 			case 3:
-				status_text_flash("Template, Mix - Clipboard data precedence");
+				status_text_flash_color(3,"Template, Mix - Clipboard data precedence");
 				break;
 			case 4:
-				status_text_flash("Template, Notes only");
+				status_text_flash_color(3,"Template, Notes only");
 				break;
 			case 5:
 				status_text_flash("");
@@ -3643,7 +3643,19 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SDLK_INSERT:
 		if (k->state) return 0;
 		channel_snap_back = -1;
+#if 0
+		if (template_mode) {
+			n = clipboard.channels;
+			if (n + current_channel > 64) {
+				n = 64 - current_channel;
+			}
+			pattern_insert_rows(current_row, 1, current_channel, n);
+		} else {
+			pattern_insert_rows(current_row, 1, current_channel, 1);
+		}
+#else
 		pattern_insert_rows(current_row, 1, current_channel, 1);
+#endif
 		break;
 	case SDLK_DELETE:
 		if (k->state) return 0;
