@@ -48,6 +48,7 @@ void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16]);
 /* video output routines */
 const char *video_driver_name(void);
 
+void video_mode(int mode);
 void video_init(const char *id);
 void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);

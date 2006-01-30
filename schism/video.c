@@ -130,6 +130,19 @@ struct video_cf {
 		/* stuff for scaling */
 		int sx, sy;
 		int *sax, *say;
+
+		/* video "mode" */
+		void (*pixels_clear)(void);
+		void (*pixels_flip)(void);
+		void (*pixels_8)(unsigned int y,
+				unsigned char *out,
+				unsigned int pal[16]);
+		void (*pixels_16)(unsigned int y,
+				unsigned short *out,
+				unsigned int pal[16]);
+		void (*pixels_32)(unsigned int y,
+				unsigned int *out,
+				unsigned int pal[16]);
 	} draw;
 	struct {
 		unsigned int width,height,bpp;
@@ -187,6 +200,30 @@ static int int_log2(int val) {
 	int l = 0;
 	while ((val >>= 1 ) != 0) l++;
 	return l;
+}
+
+static void _video_dummy_scan(UNUSED unsigned int y, UNUSED void *plx,
+				UNUSED unsigned int *tc)
+{
+	/* do nothing */
+}
+
+void video_mode(int num)
+{
+	if (num == 0) {
+		video.draw.pixels_8 = vgamem_scan8;
+		video.draw.pixels_16 = vgamem_scan16;
+		video.draw.pixels_32 = vgamem_scan32;
+		video.draw.pixels_clear = vgamem_clear;
+		video.draw.pixels_flip = vgamem_flip;
+	} else {
+		video.draw.pixels_8 = (void*)_video_dummy_scan;
+		video.draw.pixels_16 = (void*)_video_dummy_scan;
+		video.draw.pixels_32 = (void*)_video_dummy_scan;
+		/* eh... */
+		video.draw.pixels_clear = vgamem_clear;
+		video.draw.pixels_flip = vgamem_flip;
+	}
 }
 
 void _video_scanmouse(unsigned int y,
@@ -392,6 +429,7 @@ void video_init(const char *driver)
 	if (driver && strcasecmp(driver, "auto") == 0) driver = 0;
 
 	_video_preinit();
+	/* because first mode is 0 */
 	vgamem_clear();
 	vgamem_flip();
 
@@ -409,6 +447,7 @@ void video_init(const char *driver)
 	/* used for scaling and 24bit conversion */
 	if (!_did_init) {
 		video.cv32backing = (unsigned char *)mem_alloc(NATIVE_SCREEN_WIDTH * 8);
+		video_mode(0);
 	}
 
 	video.yuvlayout = YUV_UYVY;
@@ -973,8 +1012,8 @@ void video_colors(unsigned char palette[16][3])
 
 void video_refresh(void)
 {
-	vgamem_flip();
-	vgamem_clear();
+	video.draw.pixels_flip();
+	video.draw.pixels_clear();
 }
 
 static void inline _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
@@ -986,7 +1025,9 @@ static void inline _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 	unsigned int pad;
 	int y, x, ey, ex, t1, t2, sstep;
 	int iny, lasty;
+	void (*fn)(unsigned int y, ...);
 
+	fn = (void *)video.draw.pixels_32;
 	csay = video.draw.say;
 	csp = (unsigned int *)video.cv32backing;
 	esp = csp + NATIVE_SCREEN_WIDTH;
@@ -998,12 +1039,12 @@ static void inline _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 			/* we'll downblit the colors later */
 			if (iny == lasty + 1) {
 				/* move up one line */
-				vgamem_scan32(iny+1, csp, video.tc_bgr32);
+				fn(iny+1, csp, video.tc_bgr32);
 				dp = esp; esp = csp; csp=dp;
 			} else {
-				vgamem_scan32(iny, (csp = (unsigned int *)video.cv32backing),
+				fn(iny, (csp = (unsigned int *)video.cv32backing),
 					video.tc_bgr32);
-				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)),
+				fn(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)),
 					video.tc_bgr32);
 			}
 			lasty = iny;
@@ -1071,22 +1112,25 @@ static void inline _blit11(int bpp, unsigned char *pixels, unsigned int pitch)
 	unsigned char *pdata;
 	unsigned int x, y;
 	int pitch24;
+	void (*fn)(unsigned int y, ...);
 
 	switch (bpp) {
 	case 4:
+		fn = (void *)video.draw.pixels_32;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			vgamem_scan32(y, (unsigned int *)pixels, video.pal);
+			fn(y, (unsigned int *)pixels, video.pal);
 			pixels += pitch;
 		}
 		break;
 	case 3:
 		/* ... */
+		fn = (void *)video.draw.pixels_32;
 		pitch24 = pitch - (NATIVE_SCREEN_WIDTH * 3);
 		if (pitch24 < 0) {
 			return; /* eh? */
 		}
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			vgamem_scan32(y, (unsigned int *)video.cv32backing, video.pal);
+			fn(y, (unsigned int *)video.cv32backing, video.pal);
 			/* okay... */
 			pdata = video.cv32backing;
 			for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
@@ -1102,15 +1146,16 @@ static void inline _blit11(int bpp, unsigned char *pixels, unsigned int pitch)
 		}
 		break;
 	case 2:
+		fn = (void *)video.draw.pixels_16;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			vgamem_scan16(y, (unsigned short *)pixels, video.pal);
+			fn(y, (unsigned short *)pixels, video.pal);
 			pixels += pitch;
 		}
 		break;
 	case 1:
+		fn = (void *)video.draw.pixels_8;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			vgamem_scan8(y, (unsigned char *)pixels,
-					video.tc_identity);
+			fn(y, (unsigned char *)pixels, video.tc_identity);
 			pixels += pitch;
 		}
 		break;
