@@ -1017,6 +1017,8 @@ void set_page(int new_page)
 {
         int prev_page = status.current_page;
 
+	video_mode(0); /* reset video mode */
+
         if (new_page != prev_page)
                 status.previous_page = prev_page;
         status.current_page = new_page;
