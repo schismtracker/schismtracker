@@ -1762,7 +1762,7 @@ static void clipboard_paste_insert(void)
 	pattern_selection_system_hook();
 }
 
-static void clipboard_paste_mix_notes(int xlate)
+static void clipboard_paste_mix_notes(int clip, int xlate)
 {
 	int row, chan, num_rows, chan_width;
 	song_note *pattern, *p_note, *c_note;
@@ -1798,6 +1798,22 @@ static void clipboard_paste_mix_notes(int xlate)
 					p_note[chan].note += xlate;
 					if (p_note[chan].note < 0 || p_note[chan].note > 120)
 						p_note[chan].note = 0;
+				}
+				if (clip) {
+					p_note[chan].instrument = song_get_current_instrument();
+					if (edit_copy_mask & MASK_VOLUME) {
+						p_note[chan].volume_effect = mask_note.volume_effect;
+						p_note[chan].volume = mask_note.volume;
+					} else {
+						p_note[chan].volume_effect = 0;
+						p_note[chan].volume = 0;
+					}
+					if (edit_copy_mask & MASK_EFFECT) {
+						p_note[chan].effect = mask_note.effect;
+					}
+					if (edit_copy_mask & MASK_EFFECTVALUE) {
+						p_note[chan].parameter = mask_note.parameter;
+					}
 				}
 			}
 		}
@@ -2481,7 +2497,7 @@ static void patedit_record_note(song_note *cur_note, int channel, int row, int n
 					clipboard_paste_mix_fields(1, i);
 					break;
 				case 4:
-					clipboard_paste_mix_notes(i);
+					clipboard_paste_mix_notes(1, i);
 					break;
 				};
 			}
@@ -2803,20 +2819,20 @@ static int pattern_editor_insert(struct key_event *k)
 			}
 		} else {
 			/* copy the current sample/instrument -- UNLESS the note is empty */
-			if (edit_copy_mask & MASK_INSTRUMENT) {
+			if (template_mode == 0 && edit_copy_mask & MASK_INSTRUMENT) {
 				if (song_is_instrument_mode())
 					cur_note->instrument = instrument_get_current();
 				else
 					cur_note->instrument = sample_get_current();
 			}
-			if (edit_copy_mask & MASK_VOLUME) {
+			if (template_mode == 0 && edit_copy_mask & MASK_VOLUME) {
 				cur_note->volume_effect = mask_note.volume_effect;
 				cur_note->volume = mask_note.volume;
 			}
-			if (edit_copy_mask & MASK_EFFECT) {
+			if (template_mode == 0 && edit_copy_mask & MASK_EFFECT) {
 				cur_note->effect = mask_note.effect;
 			}
-			if (edit_copy_mask & MASK_EFFECTVALUE) {
+			if (template_mode == 0 && edit_copy_mask & MASK_EFFECTVALUE) {
 				cur_note->parameter = mask_note.parameter;
 			}
 		}
@@ -3106,7 +3122,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		if (status.last_keysym == SDLK_m) {
 			clipboard_paste_mix_fields(0, 0);
 		} else {
-			clipboard_paste_mix_notes(0);
+			clipboard_paste_mix_notes(0, 0);
 		}
 		break;
 	case SDLK_f:
@@ -3643,8 +3659,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SDLK_INSERT:
 		if (k->state) return 0;
 		channel_snap_back = -1;
-#if 0
-		if (template_mode) {
+		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
 			if (n + current_channel > 64) {
 				n = 64 - current_channel;
@@ -3653,14 +3668,19 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			pattern_insert_rows(current_row, 1, current_channel, 1);
 		}
-#else
-		pattern_insert_rows(current_row, 1, current_channel, 1);
-#endif
 		break;
 	case SDLK_DELETE:
 		if (k->state) return 0;
 		channel_snap_back = -1;
-		pattern_delete_rows(current_row, 1, current_channel, 1);
+		if (template_mode && clipboard.rows == 1) {
+			n = clipboard.channels;
+			if (n + current_channel > 64) {
+				n = 64 - current_channel;
+			}
+			pattern_delete_rows(current_row, 1, current_channel, n);
+		} else {
+			pattern_delete_rows(current_row, 1, current_channel, 1);
+		}
 		break;
 	case SDLK_MINUS:
 		if (k->state) return 0;
