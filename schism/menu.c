@@ -260,6 +260,8 @@ static void main_menu_selected_cb(void)
                 break;
         case 8: /* settings menu */
 		if (status.flags & WM_AVAILABLE)
+			settings_menu.num_items = 4;
+		else
 			settings_menu.num_items = 3;
                 set_submenu(&settings_menu);
                 break;
