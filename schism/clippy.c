@@ -148,17 +148,24 @@ static void _synthetic_paste(const char *cbptr)
 {
 	struct key_event kk;
 	kk.mouse = 0;
-	while (cbptr && *cbptr) {
+	for (; cbptr && *cbptr; cbptr++) {
+		/* Win32 will have \r\n, everyone else \n */
+		if (*cbptr == '\r') continue;
+		/* simulate paste */
 		kk.sym = kk.orig_sym = 0;
-		kk.unicode = *cbptr;
+		if (*cbptr == '\n') {
+			/* special attention to newlines */
+			kk.unicode = '\r';
+			kk.sym = SDLK_RETURN;
+		} else {
+			kk.unicode = *cbptr;
+		}
 		kk.mod = 0;
 		kk.is_repeat = 0;
 		kk.state = 0;
 		handle_key(&kk);
 		kk.state = 1;
 		handle_key(&kk);
-
-		cbptr++;
 	}
 }
 
