@@ -113,23 +113,23 @@ AC_STRUCT_TM
 
 dnl -----------------------------------------------------------------------
 
+saved_libs=$LIBS
 alsa=no
 AC_CHECK_LIB(asound, snd_seq_open,[alsa=yes])
+alsadltrick=no
+if test "$alsa" = "yes"
+then if test "$ac_cv_header_sys_soundcard_h" = "yes"
+then alsadltrick=yes
+LIBS=$saved_libs
+fi
+fi
 AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
+AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
 
 x11=no
 AC_CHECK_LIB(X11, XOpenDisplay,[x11=yes])
 AM_CONDITIONAL([USE_X11], [test "$x11" = yes])
 AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
-
-alsadltrick=no
-if test "$alsa" = "yes"
-then if test "$oss" = "yes"
-then alsadltrick=yes
-fi
-fi
-AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
-
 
 AC_ARG_WITH(windres,
 	[  --with-windres=RSC      Name of windres tool (optional)],
