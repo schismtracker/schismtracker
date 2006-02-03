@@ -385,6 +385,48 @@ static void check_update(void)
 	}
 }
 
+static void _synthetic_paste(const char *cbptr)
+{
+	struct key_event kk;
+	int isy = 2;
+	kk.mouse = 0;
+	for (; cbptr && *cbptr; cbptr++) {
+		/* Win32 will have \r\n, everyone else \n */
+		if (*cbptr == '\r') continue;
+		/* simulate paste */
+		kk.sym = kk.orig_sym = 0;
+		if (*cbptr == '\n') {
+			/* special attention to newlines */
+			kk.unicode = '\r';
+			kk.sym = SDLK_RETURN;
+		} else {
+			kk.unicode = *cbptr;
+		}
+		kk.mod = 0;
+		kk.is_repeat = 0;
+		if (cbptr[1])
+			kk.is_synthetic = isy;
+		else
+			kk.is_synthetic = 3;
+		kk.state = 0;
+		handle_key(&kk);
+		kk.state = 1;
+		handle_key(&kk);
+		isy = 1;
+	}
+}
+static void _do_clipboard_paste_op(SDL_Event *e)
+{
+	if (ACTIVE_PAGE.clipboard_paste
+	&& ACTIVE_PAGE.clipboard_paste(e->user.code,
+				e->user.data1)) return;
+	if (ACTIVE_WIDGET.clipboard_paste
+	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
+				e->user.data1)) return;
+	_synthetic_paste((const char *)e->user.data1);
+}
+
+
 static void event_loop(void) NORETURN;
 static void event_loop(void)
 {
@@ -574,6 +616,11 @@ static void event_loop(void)
 				/* this is the sound thread */
 				midi_send_flush();
 				playback_update();
+
+			} else if (event.type == SCHISM_EVENT_PASTE) {
+				/* handle clipboard events */
+				_do_clipboard_paste_op(&event);
+				free(event.user.data1);
 
 			} else if (event.type == SCHISM_EVENT_NATIVE) {
 				/* used by native system scripting */

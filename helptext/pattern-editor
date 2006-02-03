@@ -215,7 +215,6 @@
 |
 |   Alt-C            Copy block into clipboard
 |   Alt-P            Paste data from clipboard  (*)
-:   Ctrl-Shift-V     Paste from system clipboard
 |   Alt-O            Overwrite with data from clipboard   (*)
 |   Alt-M            Mix each row from clipboard with pattern data  (*)
 | 2*Alt-M            Mix each field from clipboard with pattern data

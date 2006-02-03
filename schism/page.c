@@ -337,9 +337,11 @@ static int handle_key_global(struct key_event * k)
 		if (k->mod & KMOD_SHIFT) {
 			if (!k->state) return 1;
 			status.flags |= CLIPPY_PASTE_BUFFER;
+			return 1;
 		} else if (k->mod & KMOD_CTRL) {
 			if (!k->state) return 1;
 			clippy_yank();
+			return 1;
 		}
 		break;
         case SDLK_RETURN:
@@ -349,6 +351,20 @@ static int handle_key_global(struct key_event * k)
                         return 1;
                 }
                 break;
+	case SDLK_c:
+		if ((k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
+			if (!k->state) return 1;
+			clippy_yank();
+			return 1;
+		}
+		break;
+	case SDLK_v:
+		if ((k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
+			if (!k->state) return 1;
+			status.flags |= CLIPPY_PASTE_BUFFER;
+			return 1;
+		}
+		break;
         case SDLK_m:
                 if (k->mod & KMOD_CTRL) {
 			if (k->state) return 1;
