@@ -404,6 +404,7 @@ static void event_loop(void)
 	startdown = 0;
 	status.last_keysym = 0;
 	kk.midi_volume = -1;
+	kk.is_synthetic = 0;
 	kk.midi_bend = 0;
 	kk.midi_note = -1;
 

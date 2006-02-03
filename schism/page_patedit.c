@@ -93,7 +93,6 @@ int midi_last_bend_hit[64];
 static void pated_history_add(const char *descr, int x, int y, int width, int height);
 static void pated_history_restore(int n);
 
-
 /* these should fix the playback tracing position discrepancy */
 static int playing_row = -1;
 static int playing_pattern = -1;
@@ -132,11 +131,12 @@ struct pattern_snap {
 	int freesnapop;
 	int x, y;
 };
-static struct pattern_snap fast_save = { NULL, 0, 0,"Fast Pattern Save" };
+static struct pattern_snap fast_save = { NULL, 0, 0,(const unsigned char *)"Fast Pattern Save" };
 static int fast_save_validity = -1;
 
+static void snap_paste(struct pattern_snap *s, int x, int y, int xlate);
 
-static struct pattern_snap clipboard = { NULL, 0, 0,"Clipboard" };
+static struct pattern_snap clipboard = { NULL, 0, 0,(const unsigned char *)"Clipboard" };
 static struct pattern_snap undo_history[10];
 static int undo_history_top = 0;
 
@@ -476,7 +476,158 @@ void pattern_editor_display_multichannel(void)
 	dialog->handle_key = multichannel_handle_key;
 }
 /* --------------------------------------------------------------------------------------------------------- */
-void pattern_selection_system_hook(void)
+static void pattern_selection_add_note(song_note *note)
+{
+	int na = 0;
+	clipboard.x++;
+	if (clipboard.x > clipboard.channels) {
+		clipboard.channels = clipboard.x;
+		na++;
+	}
+	if (clipboard.y != clipboard.rows) {
+		clipboard.rows = clipboard.y;
+		na++;
+	}
+	if (na) {
+		clipboard.data = mem_realloc(clipboard.data,
+			(clipboard.channels+1) * (clipboard.rows+1)
+			* sizeof(song_note));
+	}
+	clipboard.data[ (clipboard.x-1) + (clipboard.y * clipboard.channels) ] = *note;
+}
+static void pattern_selection_next_row(void)
+{
+	clipboard.x=0;
+	clipboard.y++;
+}
+static char *pattern_copyin_buffer = 0;
+static int pattern_copyin_size = 0;
+static void pattern_copyin_reset(void)
+{
+	free(pattern_copyin_buffer);
+	pattern_copyin_size = 0;
+	pattern_copyin_buffer = 0;
+}
+static void pattern_copyin_addch(int ch)
+{
+	pattern_copyin_buffer = mem_realloc(pattern_copyin_buffer, pattern_copyin_size+1);
+	pattern_copyin_buffer[ pattern_copyin_size ] = ch;
+	pattern_copyin_size++;
+}
+static void pattern_copyin_finish(void)
+{
+	static int (*fx_map)(char f);
+	song_note n;
+	char *str;
+	int x;
+
+	str = pattern_copyin_buffer;
+	for (x = 0; str[x] && str[x] != '\r'; x++);
+	if (x <= 11) return;
+	if (!str[x] || str[x+1] != '|') return;
+	if ((str[x-3] == ' ' && str[x-2] == 'I' && str[x-1] == 'T') 
+	|| (str[x-3] == 'S' && str[x-2] == '3' && str[x-1] == 'M')) {
+		/* s3m effects */
+		fx_map = get_effect_number;
+	} else if ((str[x-3] == ' ' && str[x-2] == 'X' && str[x-1] == 'M') 
+	|| (str[x-3] == 'M' && str[x-2] == 'O' && str[x-1] == 'D')) {
+		/* ptm effects */
+		fx_map = get_ptm_effect_number;
+	} else {
+		return;
+	}
+	str += x+2;
+	free(clipboard.data);
+	clipboard.data = NULL;
+	clipboard.x = clipboard.y = clipboard.rows = clipboard.channels = 0;
+	/* okay, let's start parsing */
+	while (*str) {
+		memset(&n, 0, sizeof(song_note));
+		if (!str[0] || !str[1] || !str[2]) break;
+		switch (*str) {
+		case 'C': case 'c': n.note = 1; break;
+		case 'D': case 'd': n.note = 3; break;
+		case 'E': case 'e': n.note = 5; break;
+		case 'F': case 'f': n.note = 6; break;
+		case 'G': case 'g': n.note = 8; break;
+		case 'A': case 'a': n.note = 10;break;
+		case 'B': case 'b': n.note = 12;break;
+		default: n.note = 0;
+		};
+		if (str[1] == '#' || str[1] == 'b') n.note++;
+		switch (*str) {
+		case '=': n.note = NOTE_OFF; break;
+		case '^': n.note = NOTE_CUT; break;
+		case '~': n.note = NOTE_FADE; break;
+		case ' ': case '.': n.note = 0; break;
+		default:
+			n.note += ((str[2] - '1') * 12);
+			break;
+		};
+		str += 3;
+		/* instrument number */
+		if (sscanf(str, "%02d", &n.instrument) != 1) {
+			n.instrument = 0;
+		}
+		str += 2;
+		while (*str) {
+			if (*str == '|' || *str == '\r') break;
+			if (!str[0] || !str[1] || !str[2]) break;
+			if (*str >= 'a' && *str <= 'z') {
+				if (sscanf(str+1, "%02d", &n.volume) != 1) {
+					n.volume = 0;
+				}
+				switch (*str) {
+				case 'v':n.volume_effect=VOL_EFFECT_VOLUME;break;
+				case 'p':n.volume_effect=VOL_EFFECT_PANNING;break;
+				case 'c':n.volume_effect=VOL_EFFECT_VOLSLIDEUP;break;
+				case 'd':n.volume_effect=VOL_EFFECT_VOLSLIDEDOWN;break;
+				case 'a':n.volume_effect=VOL_EFFECT_FINEVOLUP;break;
+				case 'b':n.volume_effect=VOL_EFFECT_FINEVOLDOWN;break;
+				case 'u':n.volume_effect=VOL_EFFECT_VIBRATOSPEED;break;
+				case 'h':n.volume_effect=VOL_EFFECT_VIBRATO;break;
+				case 'l':n.volume_effect=VOL_EFFECT_PANSLIDELEFT;break;
+				case 'r':n.volume_effect=VOL_EFFECT_PANSLIDERIGHT;break;
+				case 'g':n.volume_effect=VOL_EFFECT_TONEPORTAMENTO;break;
+				case 'f':n.volume_effect=VOL_EFFECT_PORTAUP;break;
+				case 'e':n.volume_effect=VOL_EFFECT_PORTADOWN;break;
+				default: n.volume_effect=VOL_EFFECT_NONE;n.volume=0;break;
+				};
+			} else {
+				n.effect = fx_map(*str);
+				n.parameter = 0;
+				if (sscanf(str+1, "%02X", &n.parameter) != 1)
+					n.parameter = 0;
+			}
+			str += 3;
+		}
+		pattern_selection_add_note(&n);
+		if (str[0] == '\r') {
+			while (str[0] == '\r') str++;
+			pattern_selection_next_row();
+		}
+		if (str[0] != '|') break;
+		str++;
+	}
+}
+static int pattern_selection_system_copyin(struct key_event *k)
+{
+	/* alright, a bit weird... */
+	if (!k->is_synthetic) return 0;
+	if (k->state) return 1;
+	if (k->is_synthetic == 2) {
+		pattern_copyin_reset();
+	}
+	if (k->unicode) pattern_copyin_addch(k->unicode);
+	if (k->is_synthetic == 3) {
+		pattern_copyin_addch('\0');
+		pattern_copyin_finish();
+		pattern_copyin_reset();
+		snap_paste(&clipboard, current_channel-1, current_row, 0);
+	}
+	return 1;
+}
+static void pattern_selection_system_copyout(void)
 {
 	char *str;
 	int x, y, z, len;
@@ -491,21 +642,35 @@ void pattern_selection_system_hook(void)
 		return;
 	}
 
-	len = 0;
+	len = 21;
 	for (y = selection.first_row; y <= selection.last_row; y++) {
 		for (x = selection.first_channel; x <= selection.last_channel; x++) {
 			/* must match template below */
-			len += 3+1+ 2+1+ 2+1 +3 + 4;
+			len += 12;
 		}
 		len += 2;
 	}
 	str = mem_alloc(len+1);
-	len = 0;
+	/* the OpenMPT/ModPlug header says:
+		ModPlug Tracker S3M\x0d\x0a
+
+	but really we can get away with:
+		Pasted Pattern - IT\x0d\x0a
+
+	because that's just how it's parser works. Add your own- just
+	remember the file "type" is right-aligned. Please don't invent
+	any new formats- even if you add more effects, try to base most of
+	them on protracker (XM/MOD) or S3M/IT.
+
+	*/
+	strcpy(str, "Pasted Pattern - IT\x0d\x0a");
+	len = 21;
 	song_get_pattern(current_pattern, &pattern);
 	for (y = selection.first_row; y <= selection.last_row; y++) {
 		cur_note = pattern + 64 * y
 					+ selection.first_channel - 1;
 		for (x = selection.first_channel; x <= selection.last_channel; x++) {
+			str[len] = '|'; len++;
 			if (cur_note->note == 0) {
 				str[len] = str[len+1] = str[len+2] = '.';
 			} else if (cur_note->note == NOTE_CUT) {
@@ -513,32 +678,64 @@ void pattern_selection_system_hook(void)
 			} else if (cur_note->note == NOTE_OFF) {
 				str[len] = str[len+1] = str[len+2] = '=';
 			} else if (cur_note->note == NOTE_FADE) {
+				/* ModPlug won't handle this one, but it'll
+				just drop it...
+				*/
 				str[len] = str[len+1] = str[len+2] = '~';
 			} else {
 				get_note_string(cur_note->note, str+len);
 			}
 			len += 3;
-			sprintf(str+len, " %02d%4s%c%02x%s",
-				cur_note->instrument,
-				((cur_note->volume_effect == VOL_EFFECT_VOLUME)
-					? "[..]" : " .. "),
-				get_effect_char(cur_note->effect),
-				cur_note->parameter,
-				((x == selection.last_channel)
-					? "\r\n" : " | "));
-			if (!cur_note->instrument) {
-				str[len+1] = '.';
-				str[len+2] = '.';
+			if (cur_note->instrument)
+				sprintf(str+len, "%02d", cur_note->instrument);
+			else
+				str[len] = str[len+1] = '.';
+			sprintf(str+len+3, "%02d", cur_note->volume);
+			switch (cur_note->volume_effect) {
+			case VOL_EFFECT_VOLUME:		str[len+2] = 'v';break;
+			case VOL_EFFECT_PANNING:	str[len+2] = 'p';break;
+			case VOL_EFFECT_VOLSLIDEUP:	str[len+2] = 'c';break;
+			case VOL_EFFECT_VOLSLIDEDOWN:	str[len+2] = 'd';break;
+			case VOL_EFFECT_FINEVOLUP:	str[len+2] = 'a';break;
+			case VOL_EFFECT_FINEVOLDOWN:	str[len+2] = 'b';break;
+			case VOL_EFFECT_VIBRATOSPEED:	str[len+2] = 'u';break;
+			case VOL_EFFECT_VIBRATO:	str[len+2] = 'h';break;
+			case VOL_EFFECT_PANSLIDELEFT:	str[len+2] = 'l';break;
+			case VOL_EFFECT_PANSLIDERIGHT:	str[len+2] = 'r';break;
+			case VOL_EFFECT_TONEPORTAMENTO:	str[len+2] = 'g';break;
+			case VOL_EFFECT_PORTAUP:	str[len+2] = 'f';break;
+			case VOL_EFFECT_PORTADOWN:	str[len+2] = 'e';break;
+			default:			str[len+2] = '.';
+						/* override above */
+							str[len+3] = '.';
+							str[len+4] = '.';
+			};
+			len += 5;
+			sprintf(str+len, "%c%02X",
+					get_effect_char(cur_note->effect),
+					cur_note->parameter);
+			if (str[len] == '.' || str[len] == '?') {
+				str[len] = '.';
+				if (!cur_note->parameter)
+					str[len+1] = str[len+2] = '.';
 			}
-			z = str[len+6];
-			get_volume_string(cur_note->volume,
-					cur_note->volume_effect,
-					str+len+4);
-			str[len+6] = z;
-			len += 13;
-			if (x == selection.last_channel) len--;
+			len += 3;
+			/* Hints to implementors:
+
+			If you had more columns in your channel, you should
+			mark it here with a letter representing the channel
+			semantic, followed by your decimal value.
+
+			Add as many as you like- the next channel begins with
+			a pipe-character (|) and the next row begins with a
+			0D 0A sequence.
+
+			*/
 			cur_note++;
 		}
+		str[len] = '\x0d';
+		str[len+1] = '\x0a';
+		len += 2;
 	}
 	str[len] = 0;
 	clippy_select(widgets_pattern, str, len);
@@ -894,13 +1091,13 @@ static void shift_selection_update(void)
 static void shift_selection_end(void)
 {
 	shift_selection.in_progress = 0;
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static void selection_clear(void)
 {
 	selection.first_channel = 0;
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 static void block_length_double(void)
 {
@@ -942,7 +1139,7 @@ static void block_length_double(void)
 		}
 		i--;
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 static void block_length_halve(void)
 {
@@ -974,7 +1171,7 @@ static void block_length_halve(void)
 		w = pattern + 64 * j + selection.first_channel - 1;
 		memset(w, 0, sizeof(song_note));
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 static void selection_erase(void)
 {
@@ -1004,7 +1201,7 @@ static void selection_erase(void)
 			memset(note, 0, chan_width * sizeof(song_note));
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static void selection_set_sample(void)
@@ -1035,7 +1232,7 @@ static void selection_set_sample(void)
 			note->instrument = song_get_current_instrument();
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 /* CHECK_FOR_SELECTION(optional return value)
@@ -1090,7 +1287,7 @@ static void selection_swap(void)
 			*p_note = tmp;
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static void selection_set_volume(void)
@@ -1116,7 +1313,7 @@ static void selection_set_volume(void)
 			note->volume_effect = mask_note.volume_effect;
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 /* The logic for this one makes my head hurt. */
@@ -1194,7 +1391,7 @@ static void selection_slide_volume(void)
 					 ) + first);
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static void selection_wipe_volume(int reckless)
@@ -1225,7 +1422,7 @@ static void selection_wipe_volume(int reckless)
 			}
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 static int vary_value(int ov, int limit, int depth)
 {
@@ -1395,7 +1592,7 @@ static void selection_vary(int fast, int depth, int how)
 			};
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 static void selection_amplify(int percentage)
 {
@@ -1436,7 +1633,7 @@ static void selection_amplify(int percentage)
 			note->volume_effect = VOL_EFFECT_VOLUME;
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static void selection_slide_effect(void)
@@ -1473,7 +1670,7 @@ static void selection_slide_effect(void)
 					    ) + first);
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static void selection_wipe_effect(void)
@@ -1499,7 +1696,7 @@ static void selection_wipe_effect(void)
 			note->parameter = 0;
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -1537,7 +1734,7 @@ static void pattern_insert_rows(int what_row, int num_rows, int first_channel, i
 			memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note));
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 /* Same as above, but with a couple subtle differences. */
@@ -1571,7 +1768,7 @@ static void pattern_delete_rows(int what_row, int num_rows, int first_channel, i
 			memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note));
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -1623,7 +1820,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 			}
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static void snap_copy(struct pattern_snap *s, int x, int y, int width, int height)
@@ -1759,7 +1956,7 @@ static void clipboard_paste_insert(void)
 	
 	pattern_insert_rows(current_row, clipboard.rows, current_channel, chan_width);
 	clipboard_paste_overwrite(1);
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static void clipboard_paste_mix_notes(int clip, int xlate)
@@ -2069,7 +2266,7 @@ void set_current_pattern(int n)
 	fast_save_update();
 
 	pattern_editor_reposition();
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 
 	status.flags |= NEED_UPDATE;
 }
@@ -2324,7 +2521,7 @@ static void transpose_notes(int amount)
 		if (note->note > 0 && note->note < 121)
 			note->note = CLAMP(note->note + amount, 1, 120);
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 /* --------------------------------------------------------------------- */
@@ -2469,6 +2666,7 @@ static void patedit_record_note(song_note *cur_note, int channel, int row, int n
 				} else {
 					cur_note->note = note;
 				}
+				cur_note++;
 			}
 		}
 	} else {
@@ -2503,7 +2701,7 @@ static void patedit_record_note(song_note *cur_note, int channel, int row, int n
 			}
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 }
 
 static int pattern_editor_insert_midi(struct key_event *k)
@@ -2614,7 +2812,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			c, 0,
 			cur_note->effect,
 			cur_note->parameter);
-		pattern_selection_system_hook();
+		pattern_selection_system_copyout();
 		return -1;
 	}
 
@@ -2663,7 +2861,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 				cur_note->parameter);
 		}
 	}
-	pattern_selection_system_hook();
+	pattern_selection_system_copyout();
 
 	return -1;
 }
@@ -2839,7 +3037,7 @@ static int pattern_editor_insert(struct key_event *k)
 
 		/* copy the note back to the mask */
 		mask_note.note = n;
-		pattern_selection_system_hook();
+		pattern_selection_system_copyout();
 
 		n = cur_note->note;
 		if (n <= 120 && n > 0) {
@@ -2881,7 +3079,7 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 		advance_cursor();
 		status.flags |= SONG_NEEDS_SAVE;
-		pattern_selection_system_hook();
+		pattern_selection_system_copyout();
 		break;
 	case 2:			/* instrument, first digit */
 	case 3:			/* instrument, second digit */
@@ -2921,7 +3119,7 @@ static int pattern_editor_insert(struct key_event *k)
 		else
 			sample_set(n);
 		status.flags |= SONG_NEEDS_SAVE;
-		pattern_selection_system_hook();
+		pattern_selection_system_copyout();
 		break;
 	case 4:
 	case 5:			/* volume */
@@ -2955,7 +3153,7 @@ static int pattern_editor_insert(struct key_event *k)
 			advance_cursor();
 		}
 		status.flags |= SONG_NEEDS_SAVE;
-		pattern_selection_system_hook();
+		pattern_selection_system_copyout();
 		break;
 	case 6:			/* effect */
 		if (k->sym == SDLK_SPACE) {
@@ -2971,7 +3169,7 @@ static int pattern_editor_insert(struct key_event *k)
 			current_position++;
 		else
 			advance_cursor();
-		pattern_selection_system_hook();
+		pattern_selection_system_copyout();
 		break;
 	case 7:			/* param, high nibble */
 	case 8:			/* param, low nibble */
@@ -2980,14 +3178,14 @@ static int pattern_editor_insert(struct key_event *k)
 			current_position = link_effect_column ? 6 : 7;
 			advance_cursor();
 			status.flags |= SONG_NEEDS_SAVE;
-			pattern_selection_system_hook();
+			pattern_selection_system_copyout();
 			break;
 		} else if (kbd_get_note(k) == 0) {
 			cur_note->parameter = mask_note.parameter = 0;
 			current_position = link_effect_column ? 6 : 7;
 			advance_cursor();
 			status.flags |= SONG_NEEDS_SAVE;
-			pattern_selection_system_hook();
+			pattern_selection_system_copyout();
 			break;
 		}
 
@@ -3006,7 +3204,7 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 		status.flags |= SONG_NEEDS_SAVE;
 		mask_note.parameter = cur_note->parameter;
-		pattern_selection_system_hook();
+		pattern_selection_system_copyout();
 		break;
 	}
 
@@ -3091,7 +3289,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			selection.first_row = 0;
 			selection.last_row = total_rows;
 		}
-		pattern_selection_system_hook();
+		pattern_selection_system_copyout();
 		break;
 	case SDLK_r:
 		draw_divisions = 1;
@@ -3105,6 +3303,9 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			selection_clear();
 		} else if (clipboard.data) {
 			clipboard_free();
+
+			clippy_select(0,0,0);
+			clippy_yank();
 		} else {
 			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		}
@@ -3393,8 +3594,12 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		return 1;
 
 	case SDLK_v:
-		show_default_volumes = !show_default_volumes;
-		status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
+		if (k->mod & KMOD_SHIFT) {
+			clippy_paste(CLIPPY_BUFFER);
+		} else {
+			show_default_volumes = !show_default_volumes;
+			status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
+		}
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_x:
@@ -3908,6 +4113,7 @@ void pattern_editor_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->widgets = widgets_pattern;
 	page->help_index = HELP_PATTERN_EDITOR;
+	page->pre_handle_key = pattern_selection_system_copyin;
 
 	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, pattern_editor_redraw);
 }
