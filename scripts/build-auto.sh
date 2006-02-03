@@ -6,7 +6,7 @@
 ## make help text
 echo "making include/auto/helptext.h" >&2
 tempfile="include/auto/.helptext.tmp"
-hile read REPLY; do
+while read REPLY; do
 	set $REPLY
 	cat helptext/$1
 	awk 'BEGIN { printf "%c", 0 }' < /dev/null
