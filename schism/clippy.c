@@ -147,6 +147,7 @@ static void _clippy_copy_to_sys(int do_sel)
 static void _synthetic_paste(const char *cbptr)
 {
 	struct key_event kk;
+	int isy = 2;
 	kk.mouse = 0;
 	for (; cbptr && *cbptr; cbptr++) {
 		/* Win32 will have \r\n, everyone else \n */
@@ -162,10 +163,15 @@ static void _synthetic_paste(const char *cbptr)
 		}
 		kk.mod = 0;
 		kk.is_repeat = 0;
+		if (cbptr[1])
+			kk.is_synthetic = isy;
+		else
+			kk.is_synthetic = 3;
 		kk.state = 0;
 		handle_key(&kk);
 		kk.state = 1;
 		handle_key(&kk);
+		isy = 1;
 	}
 }
 
@@ -187,6 +193,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 		sevent = ev->syswm.msg->event.xevent;
 		if (sevent.xselection.requestor == SDL_Window) {
 			lock_display();
+			src = 0;
 			if (XGetWindowProperty(SDL_Display, SDL_Window, atom_sel,
 						0, 9000, False, XA_STRING, &seln_type,
 						&seln_format, &nbytes, &overflow,

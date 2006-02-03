@@ -58,6 +58,7 @@ const char hexdigits[16] = "0123456789ABCDEF";
  *         '!' = volume '#' = modcmdex '$' = keyoff
  *         '%' = xfineportaupdown '&' = setenvposition */
 static const char effects[33] = ".JFEGHLKRXODB!CQATI#SMNVW$UY%P&Z";
+static const char ptm_effects[33] = ".0123456789ABCDRFFTE???GHK?YXPLZ";
 
 /* --------------------------------------------------------------------- */
 
@@ -95,6 +96,15 @@ char get_effect_char(int effect)
                 return '?';
         }
         return effects[effect];
+}
+
+int get_ptm_effect_number(char effect)
+{
+	const char *ptr;
+	if (effect >= 'a' && effect <= 'z') effect -= 32;
+
+        ptr = strchr(ptm_effects, effect);
+        return ptr ? (ptr - effects) : -1;
 }
 
 int get_effect_number(char effect)

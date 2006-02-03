@@ -330,6 +330,7 @@ char *get_note_string_short(int note, char *buf);       /* "c5" or "G4" */
 char *get_volume_string(int volume, int volume_effect, char *buf);
 char get_effect_char(int command);
 int get_effect_number(char effect);
+int get_ptm_effect_number(char effect);
 
 void kbd_init(void);
 void kbd_digitrakker_voodoo(int e);

@@ -883,6 +883,7 @@ int midi_engine_handle_event(void *ev)
 	if (midi_flags & MIDI_DISABLE_RECORD) return 1;
 
 	memset(&kk, 0, sizeof(kk));
+	kk.is_synthetic = 0;
 
 	st = e->user.data1;
 	switch (e->user.code) {
