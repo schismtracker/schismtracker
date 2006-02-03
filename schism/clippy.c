@@ -20,6 +20,7 @@
 
 #include "clippy.h"
 #include "util.h"
+#include "event.h"
 
 #include <string.h>
 
@@ -144,34 +145,15 @@ static void _clippy_copy_to_sys(int do_sel)
 	(void)free(dst);
 }
 
-static void _synthetic_paste(const char *cbptr)
+static void _string_paste(int cb, const char *cbptr)
 {
-	struct key_event kk;
-	int isy = 2;
-	kk.mouse = 0;
-	for (; cbptr && *cbptr; cbptr++) {
-		/* Win32 will have \r\n, everyone else \n */
-		if (*cbptr == '\r') continue;
-		/* simulate paste */
-		kk.sym = kk.orig_sym = 0;
-		if (*cbptr == '\n') {
-			/* special attention to newlines */
-			kk.unicode = '\r';
-			kk.sym = SDLK_RETURN;
-		} else {
-			kk.unicode = *cbptr;
-		}
-		kk.mod = 0;
-		kk.is_repeat = 0;
-		if (cbptr[1])
-			kk.is_synthetic = isy;
-		else
-			kk.is_synthetic = 3;
-		kk.state = 0;
-		handle_key(&kk);
-		kk.state = 1;
-		handle_key(&kk);
-		isy = 1;
+	SDL_Event event;
+	memset(&event, 0, sizeof(SDL_Event));
+	event.user.type = SCHISM_EVENT_PASTE;
+	event.user.data1 = strdup(cbptr); /* current_clipboard... is it safe? */
+	if (!event.user.data1) return; /* eh... */
+	if (SDL_PushEvent(&event) == -1) {
+		free(event.user.data1);
 	}
 }
 
@@ -205,7 +187,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 					_current_clipboard = mem_alloc(nbytes+1);
 					memcpy(_current_clipboard, src, nbytes);
 					_current_clipboard[nbytes] = 0;
-					_synthetic_paste(_current_clipboard);
+					_string_paste(CLIPPY_BUFFER, _current_clipboard);
 					_widget_owner[CLIPPY_BUFFER]
 							= _widget_owner[CLIPPY_SELECT];
 				}
@@ -415,7 +397,7 @@ void clippy_paste(int cb)
 	char *q;
 	q = _internal_clippy_paste(cb);
 	if (!q) return;
-	_synthetic_paste(q);
+	_string_paste(cb, q);
 }
 
 void clippy_select(struct widget *w, char *addr, int len)

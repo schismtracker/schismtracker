@@ -476,55 +476,39 @@ void pattern_editor_display_multichannel(void)
 	dialog->handle_key = multichannel_handle_key;
 }
 /* --------------------------------------------------------------------------------------------------------- */
-static void pattern_selection_add_note(song_note *note)
+static int copyin_x, copyin_y;
+static void copyin_addnote(song_note *note)
 {
-	int na = 0;
-	clipboard.x++;
-	if (clipboard.x > clipboard.channels) {
-		clipboard.channels = clipboard.x;
-		na++;
-	}
-	if (clipboard.y != clipboard.rows) {
-		clipboard.rows = clipboard.y;
-		na++;
-	}
-	if (na) {
-		clipboard.data = mem_realloc(clipboard.data,
-			(clipboard.channels+1) * (clipboard.rows+1)
-			* sizeof(song_note));
-	}
-	clipboard.data[ (clipboard.x-1) + (clipboard.y * clipboard.channels) ] = *note;
+	song_note *pattern, *p_note;
+	int num_rows;
+	char buf[32];
+
+	status.flags |= (SONG_NEEDS_SAVE|NEED_UPDATE);
+	num_rows = song_get_pattern(current_pattern, &pattern);
+	if ((copyin_x + (current_channel-1)) >= 64) return;
+	if ((copyin_y + current_row) >= num_rows) return;
+	p_note = pattern + 64 * (copyin_y + current_row) + (copyin_x + (current_channel-1));
+	*p_note = *note;
+	copyin_x++;
 }
-static void pattern_selection_next_row(void)
+static void copyin_addrow(void)
 {
-	clipboard.x=0;
-	clipboard.y++;
+	copyin_x=0;
+	copyin_y++;
 }
-static char *pattern_copyin_buffer = 0;
-static int pattern_copyin_size = 0;
-static void pattern_copyin_reset(void)
-{
-	free(pattern_copyin_buffer);
-	pattern_copyin_size = 0;
-	pattern_copyin_buffer = 0;
-}
-static void pattern_copyin_addch(int ch)
-{
-	pattern_copyin_buffer = mem_realloc(pattern_copyin_buffer, pattern_copyin_size+1);
-	pattern_copyin_buffer[ pattern_copyin_size ] = ch;
-	pattern_copyin_size++;
-}
-static void pattern_copyin_finish(void)
+static int pattern_selection_system_paste(int cb, const void *data)
 {
 	static int (*fx_map)(char f);
+	const char *str;
 	song_note n;
-	char *str;
 	int x;
 
-	str = pattern_copyin_buffer;
-	for (x = 0; str[x] && str[x] != '\r'; x++);
+	str = (const char *)data;
+
+	for (x = 0; str[x] && str[x] != '\n'; x++);
 	if (x <= 11) return;
 	if (!str[x] || str[x+1] != '|') return;
+	if (str[x-1] == '\r') x--;
 	if ((str[x-3] == ' ' && str[x-2] == 'I' && str[x-1] == 'T') 
 	|| (str[x-3] == 'S' && str[x-2] == '3' && str[x-1] == 'M')) {
 		/* s3m effects */
@@ -536,10 +520,9 @@ static void pattern_copyin_finish(void)
 	} else {
 		return;
 	}
+	if (str[x] == '\r') x++;
 	str += x+2;
-	free(clipboard.data);
-	clipboard.data = NULL;
-	clipboard.x = clipboard.y = clipboard.rows = clipboard.channels = 0;
+	copyin_x = copyin_y = 0;
 	/* okay, let's start parsing */
 	while (*str) {
 		memset(&n, 0, sizeof(song_note));
@@ -561,7 +544,7 @@ static void pattern_copyin_finish(void)
 		case '~': n.note = NOTE_FADE; break;
 		case ' ': case '.': n.note = 0; break;
 		default:
-			n.note += ((str[2] - '1') * 12);
+			n.note += ((str[2] - '0') * 12);
 			break;
 		};
 		str += 3;
@@ -571,7 +554,7 @@ static void pattern_copyin_finish(void)
 		}
 		str += 2;
 		while (*str) {
-			if (*str == '|' || *str == '\r') break;
+			if (*str == '|' || *str == '\r' || *str == '\n') break;
 			if (!str[0] || !str[1] || !str[2]) break;
 			if (*str >= 'a' && *str <= 'z') {
 				if (sscanf(str+1, "%02d", &n.volume) != 1) {
@@ -601,29 +584,13 @@ static void pattern_copyin_finish(void)
 			}
 			str += 3;
 		}
-		pattern_selection_add_note(&n);
-		if (str[0] == '\r') {
-			while (str[0] == '\r') str++;
-			pattern_selection_next_row();
+		copyin_addnote(&n);
+		if (str[0] == '\r' || str[0] == '\n') {
+			while (str[0] == '\r' || str[0] == '\n') str++;
+			copyin_addrow();
 		}
 		if (str[0] != '|') break;
 		str++;
-	}
-}
-static int pattern_selection_system_copyin(struct key_event *k)
-{
-	/* alright, a bit weird... */
-	if (!k->is_synthetic) return 0;
-	if (k->state) return 1;
-	if (k->is_synthetic == 2) {
-		pattern_copyin_reset();
-	}
-	if (k->unicode) pattern_copyin_addch(k->unicode);
-	if (k->is_synthetic == 3) {
-		pattern_copyin_addch('\0');
-		pattern_copyin_finish();
-		pattern_copyin_reset();
-		snap_paste(&clipboard, current_channel-1, current_row, 0);
 	}
 	return 1;
 }
@@ -4111,9 +4078,9 @@ void pattern_editor_load_page(struct page *page)
 	page->playback_update = pattern_editor_playback_update;
 	page->song_changed_cb = pated_history_clear;
 	page->total_widgets = 1;
+	page->clipboard_paste = pattern_selection_system_paste;
 	page->widgets = widgets_pattern;
 	page->help_index = HELP_PATTERN_EDITOR;
-	page->pre_handle_key = pattern_selection_system_copyin;
 
 	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, pattern_editor_redraw);
 }

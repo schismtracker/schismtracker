@@ -220,6 +220,10 @@ struct widget {
 
 	/* called when the enter key is pressed */
         void (*activate) (void);
+
+	/* called by the clipboard manager; really, only "other" widgets
+	should "override" this... */
+	int (*clipboard_paste)(int cb, const void *cptr);
 };
 
 /* this structure keeps all the information needed to draw a page, and a
@@ -255,6 +259,9 @@ struct page {
         /* called when the page is set. this is for reloading the
          * directory in the file browsers. */
         void (*set_page) (void);
+
+	/* called by the clipboard manager */
+	int (*clipboard_paste)(int cb, const void *cptr);
 
         struct widget *widgets;
         int selected_widget;
