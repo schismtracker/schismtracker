@@ -3561,12 +3561,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		return 1;
 
 	case SDLK_v:
-		if (k->mod & KMOD_SHIFT) {
-			clippy_paste(CLIPPY_BUFFER);
-		} else {
-			show_default_volumes = !show_default_volumes;
-			status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
-		}
+		show_default_volumes = !show_default_volumes;
+		status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_x:
