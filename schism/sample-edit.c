@@ -25,7 +25,7 @@
 #include "song.h"
 #include "sample-edit.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
 
 /* --------------------------------------------------------------------- */
 /* helper functions */

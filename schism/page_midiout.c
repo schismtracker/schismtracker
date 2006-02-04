@@ -25,7 +25,8 @@
 #include "midi.h"
 #include "song.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
+
 #include <time.h>
 
 static struct widget widgets_midiout[33];

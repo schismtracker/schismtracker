@@ -20,7 +20,7 @@
 #ifndef _schismevent_h
 #define _schismevent_h
 
-#include <SDL.h>
+#include "sdlmain.h"
 
 #define	SCHISM_EVENT_MIDI		SDL_USEREVENT+1
 #define SCHISM_EVENT_PLAYBACK		SDL_USEREVENT+2

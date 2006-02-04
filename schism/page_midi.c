@@ -24,7 +24,8 @@
 #include "page.h"
 #include "midi.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
+
 #include <time.h>
 
 /* --------------------------------------------------------------------- */

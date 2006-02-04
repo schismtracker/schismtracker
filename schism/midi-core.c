@@ -28,8 +28,7 @@
 #include "midi.h"
 #include "song.h"
 
-#include <SDL.h>
-#include <SDL_thread.h>
+#include "sdlmain.h"
 
 #include "page.h"
 

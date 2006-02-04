@@ -18,8 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <SDL.h>
 #include <ctype.h>
+
+#include "sdlmain.h"
 
 /*
 ** This came from SDL_image's IMG_xpm.c

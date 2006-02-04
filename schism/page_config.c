@@ -26,7 +26,7 @@
 
 #include "mixer.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
 
 #include "diskwriter.h"
 

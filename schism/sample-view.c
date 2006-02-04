@@ -25,7 +25,7 @@
 #include "page.h"
 #include "video.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
 
 /* --------------------------------------------------------------------- */
 /* sample drawing

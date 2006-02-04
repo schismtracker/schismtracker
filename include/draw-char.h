@@ -21,7 +21,7 @@
 #if !defined(DRAW_CHAR_H) && !defined(__cplusplus)
 #define DRAW_CHAR_H
 
-#include <SDL.h>
+#include "sdlmain.h"
 
 /* --------------------------------------------------------------------- */
 
