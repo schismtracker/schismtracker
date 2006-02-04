@@ -23,6 +23,8 @@
 
 #include "headers.h"
 
+#include <ctype.h>
+
 #include "it.h"
 #include "page.h"
 #include "song.h"
@@ -30,9 +32,7 @@
 #include "config-parser.h"
 #include "midi.h"
 
-#include <SDL.h>
-#include <ctype.h>
-
+#include "sdlmain.h"
 #include "clippy.h"
 
 extern void (*shift_release)(void);

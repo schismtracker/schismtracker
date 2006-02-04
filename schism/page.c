@@ -27,7 +27,8 @@
 #include "util.h"
 #include "midi.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
+
 #include <assert.h>
 
 /* --------------------------------------------------------------------- */

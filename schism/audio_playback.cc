@@ -32,8 +32,7 @@
 #include <cerrno>
 #include <cmath>
 
-#include <SDL.h>
-#include <SDL_thread.h>
+#include "sdlmain.h"
 
 #include "midi.h"
 

@@ -26,7 +26,7 @@
 #include "dmoz.h"
 #include "page.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
 #include <string.h>
 
 static const byte itfmap_chars[] = {

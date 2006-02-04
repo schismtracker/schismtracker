@@ -58,7 +58,8 @@ the banks are:
 #include "dmoz.h" /* for dmoz_path_concat */
 #include "auto/default-font.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
+
 #include <assert.h>
 #include <errno.h>
 

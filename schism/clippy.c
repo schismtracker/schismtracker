@@ -28,7 +28,7 @@ static char *_current_selection = 0;
 static char *_current_clipboard = 0;
 static struct widget *_widget_owner[16] = {0};
 
-#include <SDL_syswm.h>
+#include "sdlmain.h"
 
 static int has_sys_clip;
 #if defined(WIN32)

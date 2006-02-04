@@ -26,7 +26,8 @@
 #include "pattern-view.h"
 #include "config-parser.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
+
 #include <assert.h>
 
 /* --------------------------------------------------------------------- */

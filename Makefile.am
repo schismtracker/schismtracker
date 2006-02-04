@@ -164,7 +164,8 @@ $(files_macosx) $(files_alsa) $(files_oss) $(files_win32mm) $(files_x11) \
 $(files_gnu_asprintf) $(files_gnu_vasprintf) $(files_gnu_realpath) \
 $(files_gnu_memcmp) $(files_mmap) $(files_windres)
 
-INCLUDES=-D_GNU_SOURCE -I$(srcdir)/include -I$(srcdir)/modplug -I. \
+INCLUDES=-D_USE_AUTOCONF -D_GNU_SOURCE \
+	-I$(srcdir)/include -I$(srcdir)/modplug -I. \
 	@SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
 	$(cflags_network) $(cflags_x11)
 

@@ -26,7 +26,7 @@
 #include "it.h"
 #include "page.h"
 
-#include <SDL.h>
+#include "sdlmain.h"
 
 /* --------------------------------------------------------------------- */
 

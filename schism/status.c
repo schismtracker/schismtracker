@@ -21,12 +21,13 @@
 #define NEED_TIME
 #include "headers.h"
 
+#include <stdarg.h>
+
 #include "it.h"
 #include "song.h"
 #include "page.h"
 
-#include <SDL.h>
-#include <stdarg.h>
+#include "sdlmain.h"
 
 /* --------------------------------------------------------------------- */
 

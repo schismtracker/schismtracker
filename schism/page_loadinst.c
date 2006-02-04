@@ -30,7 +30,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <SDL.h>
+#include "sdlmain.h"
+
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>

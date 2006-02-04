@@ -21,7 +21,8 @@
 #ifndef IT_H
 #define IT_H
 
-#include <SDL.h>
+#include "sdlmain.h"
+
 #include <stdio.h>
 
 #include <sys/types.h>
