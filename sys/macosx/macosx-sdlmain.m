@@ -210,7 +210,7 @@ static void setApplicationMenu(void)
 	[menuItem setRepresentedObject: @"save_as"];
 	menuItem = [otherMenu addItemWithTitle:@"Message Log"
 				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(1)];
+				keyEquivalent:KEQ_FN(11)];
 	[menuItem setKeyEquivalentModifierMask:NSFunctionKeyMask|NSControlKeyMask];
 	[menuItem setRepresentedObject: @"logviewer"];
 	menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];

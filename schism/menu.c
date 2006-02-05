@@ -89,7 +89,7 @@ static struct menu file_menu = {
                 "New...        (Ctrl-N)",
                 "Save Current  (Ctrl-S)",
                 "Save As...       (F10)",
-                "Message Log  (Ctrl-F1)",
+                "Message Log (Ctrl-F11)",
                 "Quit          (Ctrl-Q)",
         }, selected_item: 0, active_item: -1,
         file_menu_selected_cb
