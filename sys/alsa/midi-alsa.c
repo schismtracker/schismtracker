@@ -31,7 +31,6 @@
 #include <alsa/asoundlib.h>
 #ifdef USE_DLTRICK_ALSA
 /* ... */
-#include <alsa/mixer.h>
 #include <alsa/control.h>
 #endif
 #include <alsa/seq.h>
@@ -115,47 +114,9 @@ if (!_dltrick_##a) abort(); return _dltrick_ ## a c; }
 
 _any_dltrick(size_t,snd_seq_port_info_sizeof,(void),())
 _any_dltrick(size_t,snd_seq_client_info_sizeof,(void),())
-_any_dltrick(size_t,snd_ctl_card_info_sizeof,(void),())
-_any_dltrick(int,snd_ctl_close,(snd_ctl_t*ctl),(ctl))
-_any_dltrick(int,snd_mixer_close,(snd_mixer_t*mm),(mm))
-_any_dltrick(int,snd_mixer_selem_get_playback_volume,
-(snd_mixer_elem_t*e,snd_mixer_selem_channel_id_t ch,long*v),(e,ch,v))
-
-#if SND_LIB_MAJOR == 1 && SND_LIB_MINOR == 0 && SND_LIB_SUBMINOR < 9
-_void_dltrick(void,snd_mixer_selem_get_playback_volume_range,
-(snd_mixer_elem_t*e,long*m,long*v),(e,m,v))
-#else
-_any_dltrick(int,snd_mixer_selem_get_playback_volume_range,
-(snd_mixer_elem_t*e,long*m,long*v),(e,m,v))
-#endif
-
-_any_dltrick(int,snd_mixer_selem_set_playback_volume,
-(snd_mixer_elem_t*e,snd_mixer_selem_channel_id_t ch,long v),(e,ch,v))
-
-_any_dltrick(int,snd_mixer_selem_is_playback_mono,(snd_mixer_elem_t*e),(e))
-_any_dltrick(int,snd_mixer_selem_has_playback_channel,(snd_mixer_elem_t*e,snd_mixer_selem_channel_id_t c),(e,c))
-
-_any_dltrick(int,snd_ctl_card_info,(snd_ctl_t*c,snd_ctl_card_info_t*i),(c,i))
-_any_dltrick(int,snd_ctl_open,(snd_ctl_t**c,const char *name,int mode),(c,name,mode))
-
-_any_dltrick(int,snd_mixer_open,(snd_mixer_t**m,int mode),(m,mode))
-_any_dltrick(int,snd_mixer_attach,(snd_mixer_t*m,const char *name),(m,name))
 
 _any_dltrick(int,snd_seq_control_queue,(snd_seq_t*s,int q,int type, int value, snd_seq_event_t *ev), (s,q,type,value,ev))
 
-_any_dltrick(int,snd_mixer_selem_register,(snd_mixer_t*m,
-	struct snd_mixer_selem_regopt*opt, snd_mixer_class_t **cp),(m,opt,cp))
-
-_any_dltrick(int,snd_mixer_selem_is_active,(snd_mixer_elem_t*e),(e))
-_any_dltrick(int,snd_mixer_selem_has_playback_volume,(snd_mixer_elem_t*e),(e))
-_any_dltrick(int,snd_mixer_selem_has_capture_switch,(snd_mixer_elem_t*e),(e))
-_any_dltrick(int,snd_mixer_selem_has_capture_switch_joined,(snd_mixer_elem_t*e),(e))
-_any_dltrick(int,snd_mixer_selem_has_capture_switch_exclusive,(snd_mixer_elem_t*e),(e))
-
-_any_dltrick(int,snd_mixer_load,(snd_mixer_t*m),(m))
-_any_dltrick(snd_mixer_elem_t*,snd_mixer_first_elem,(snd_mixer_t*m),(m))
-_any_dltrick(snd_mixer_elem_t*,snd_mixer_elem_next,(snd_mixer_elem_t*m),(m))
-_any_dltrick(snd_mixer_elem_type_t,snd_mixer_elem_get_type,(const snd_mixer_elem_t *obj),(obj))
 
 _any_dltrick(long,snd_midi_event_encode,
 (snd_midi_event_t *dev,const unsigned char *buf,long count,snd_seq_event_t *ev),
