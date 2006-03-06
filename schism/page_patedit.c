@@ -2870,7 +2870,7 @@ static int pattern_editor_insert(struct key_event *k)
 			}
 			shift_advance_cursor(k);
 			return 1;
-		} else if (k->sym == SDLK_8) {
+		} else if (k->sym == SDLK_8 && k->orig_sym == SDLK_8) {
 			if (k->state) return 0;
 			song_single_step(current_pattern, current_row);
 			shift_advance_cursor(k);
