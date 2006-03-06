@@ -417,9 +417,7 @@ extern SDL_Surface *xpmdata(char *x[]);
 
 void video_init(const char *driver)
 {
-	static int did_this_1 = 0;
 	static int did_this_2 = 0;
-	static int did_this_3 = 0;
 	const char *gl_ext;
 	SDL_Rect **modes;
 	int i, x, y;
@@ -466,15 +464,7 @@ void video_init(const char *driver)
 #ifdef WIN32
 	if (!driver) {
 		/* alright, let's have some fun. */
-		if (did_this_1) {
-			driver = "sdl"; /* err... */
-		} else if (LoadLibrary("ddraw.dll")) {
-			driver = "ddraw";
-			did_this_1 = 1;
-		} else {
-			driver = "windib";
-			did_this_1 = 1;
-		}
+		driver = "sdlauto"; /* err... */
 	}
 
 	if (!strcasecmp(driver, "windib")) {
@@ -487,19 +477,10 @@ void video_init(const char *driver)
 	}
 #else
 	if (!driver) {
-#ifdef MACOSX
-		if (macosx_did_finderlaunch) {
-			driver = "gl";
-		} else /* fall through */
-#endif
 		if (getenv("DISPLAY")) {
 			driver = "x11";
 		} else {
-#ifdef MACOSX
-			driver = "gl";
-#else
 			driver = "sdlauto";
-#endif
 		}
 	}
 #endif
@@ -519,7 +500,7 @@ void video_init(const char *driver)
 		/* okay.... */
 	}
 
-/* macosx will actually prefer opengl :) */
+/* macosx might actually prefer opengl :) */
 #ifndef MACOSX
 	if (video.desktop.want_type == VIDEO_GL) {
 #define Z(q) my_ ## q = SDL_GL_GetProcAddress( #q ); if (! my_ ## q) { video.desktop.want_type = VIDEO_SURFACE; goto SKIP1; }
