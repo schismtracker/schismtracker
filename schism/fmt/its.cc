@@ -82,6 +82,7 @@ bool fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	memcpy(file->title, data + 20, 25);
 	file->title[25] = 0;
 	file->type = TYPE_SAMPLE_EXTD;
+
 	return true;
 }
 
@@ -175,11 +176,10 @@ bool load_its_sample(const byte *header, const byte *data, size_t length, song_s
 		/* wrong length */
 		return false;
 	}
-
 	// dumb casts :P
 	return mp->ReadSample((MODINSTRUMENT *) smp, format,
 			(LPCSTR) (data + bp),
-			(DWORD) bl);
+			(DWORD) (length - bp));
 }
 
 bool fmt_its_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
