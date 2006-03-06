@@ -669,12 +669,16 @@ void handle_key(struct key_event * k)
         case SDLK_SLASH:
 		if (k->state) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-                kbd_set_current_octave(kbd_get_current_octave() - 1);
+		if (k->orig_sym == SDLK_KP_DIVIDE) {
+	                kbd_set_current_octave(kbd_get_current_octave() - 1);
+		}
                 return;
         case SDLK_ASTERISK:
 		if (k->state) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-                kbd_set_current_octave(kbd_get_current_octave() + 1);
+		if (k->orig_sym == SDLK_KP_MULTIPLY) {
+                	kbd_set_current_octave(kbd_get_current_octave() + 1);
+		}
                 return;
 	case SDLK_LEFTBRACKET:
 		if (k->state) break;
