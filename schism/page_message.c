@@ -679,7 +679,11 @@ static int message_handle_key_editmode(struct key_event * k)
 				if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
 					_delete_selection();
 				}
-				message_insert_char(k->unicode);
+				if (k->mod & (KMOD_SHIFT|KMOD_CAPS)) {
+					message_insert_char(toupper((unsigned int)k->unicode));
+				} else {
+					message_insert_char(k->unicode);
+				}
                         	return 1;
 			}
 			return 0;
