@@ -455,7 +455,8 @@ static void event_loop(void)
 	kk.rx = NATIVE_SCREEN_WIDTH / 80;
 	kk.ry = NATIVE_SCREEN_HEIGHT / 50;
 
-	modkey = 0;
+	modkey = SDL_GetModState();
+	SDL_SetModState(modkey);
 
 	while (SDL_WaitEvent(&event)) {
 
@@ -481,9 +482,20 @@ static void event_loop(void)
 			|| event.key.keysym.sym == SDLK_RSHIFT) {
 				if (shift_release) shift_release();
 			}
+#define _ALTTRACKED_KMOD	(KMOD_NUM|KMOD_CAPS)
 		case SDL_KEYDOWN:
+			switch (event.key.keysym.sym) {
+			case SDLK_NUMLOCK:
+				modkey ^= KMOD_NUM;
+				break;
+			case SDLK_CAPSLOCK:
+				modkey ^= KMOD_CAPS;
+				break;
+			};
 			if (!kk.state) {
-				modkey = event.key.keysym.mod;
+				modkey = (event.key.keysym.mod
+					& ~(_ALTTRACKED_KMOD))
+					| (modkey & _ALTTRACKED_KMOD);
 			}
 			kk.sym = event.key.keysym.sym;
 			kk.mod = modkey;
@@ -509,6 +521,10 @@ static void event_loop(void)
 			show_exit_prompt();
 			break;
 		case SDL_ACTIVEEVENT:
+			/* reset this... */
+			modkey = SDL_GetModState();
+			SDL_SetModState(modkey);
+
 			handle_active_event(&(event.active));
 			break;
 		case SDL_MOUSEMOTION:

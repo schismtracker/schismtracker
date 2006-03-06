@@ -172,6 +172,8 @@ void key_translate(struct key_event *k)
 
 		case SDLK_EQUALS: k->sym = SDLK_PLUS; k->mod &= ~KMOD_SHIFT; break;
 		case SDLK_SEMICOLON: k->sym = SDLK_COLON; k->mod &= ~KMOD_SHIFT; break;
+
+		case SDLK_8: k->sym = SDLK_ASTERISK; k->mod &= ~KMOD_SHIFT; break;
 		};
 	}
 	if (k->mod & KMOD_META) {
@@ -227,7 +229,7 @@ void key_translate(struct key_event *k)
 
 int numeric_key_event(struct key_event *k)
 {
-	switch (k->sym) {
+	switch (k->orig_sym) {
 	case SDLK_0: case SDLK_KP0: return 0;
 	case SDLK_1: case SDLK_KP1: return 1;
 	case SDLK_2: case SDLK_KP2: return 2;
