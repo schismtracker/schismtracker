@@ -51,6 +51,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#if defined(WIN32)
+extern void win32_get_modkey(int*);
+#endif
+
 #ifdef USE_DLTRICK_ALSA
 #include <dlfcn.h>
 void *_dltrick_handle = 0;
@@ -456,6 +460,9 @@ static void event_loop(void)
 	kk.ry = NATIVE_SCREEN_HEIGHT / 50;
 
 	modkey = SDL_GetModState();
+#if defined(WIN32)
+	win32_get_modkey(&modkey);
+#endif
 	SDL_SetModState(modkey);
 
 	while (SDL_WaitEvent(&event)) {
@@ -497,6 +504,9 @@ static void event_loop(void)
 					& ~(_ALTTRACKED_KMOD))
 					| (modkey & _ALTTRACKED_KMOD);
 			}
+#if defined(WIN32)
+			win32_get_modkey(&modkey);
+#endif
 			kk.sym = event.key.keysym.sym;
 			kk.mod = modkey;
 			kk.unicode = event.key.keysym.unicode;
@@ -523,6 +533,9 @@ static void event_loop(void)
 		case SDL_ACTIVEEVENT:
 			/* reset this... */
 			modkey = SDL_GetModState();
+#if defined(WIN32)
+			win32_get_modkey(&modkey);
+#endif
 			SDL_SetModState(modkey);
 
 			handle_active_event(&(event.active));
@@ -532,6 +545,9 @@ static void event_loop(void)
 		case SDL_MOUSEBUTTONUP:
 			if (!kk.state) {
 				modkey = event.key.keysym.mod;
+#if defined(WIN32)
+				win32_get_modkey(&modkey);
+#endif
 			}
 
 			kk.sym = 0;
