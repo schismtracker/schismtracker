@@ -229,6 +229,17 @@ void key_translate(struct key_event *k)
 
 int numeric_key_event(struct key_event *k)
 {
+	if (k->unicode == '0') return 0;
+	if (k->unicode == '1') return 1;
+	if (k->unicode == '2') return 2;
+	if (k->unicode == '3') return 3;
+	if (k->unicode == '4') return 4;
+	if (k->unicode == '5') return 5;
+	if (k->unicode == '6') return 6;
+	if (k->unicode == '7') return 7;
+	if (k->unicode == '8') return 8;
+	if (k->unicode == '9') return 9;
+
 	switch (k->orig_sym) {
 	case SDLK_0: case SDLK_KP0: return 0;
 	case SDLK_1: case SDLK_KP1: return 1;
@@ -375,6 +386,24 @@ void kbd_set_current_octave(int new_octave)
 inline int kbd_char_to_hex(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
+
+	if (k->unicode == '0') return 0;
+	if (k->unicode == '1') return 1;
+	if (k->unicode == '2') return 2;
+	if (k->unicode == '3') return 3;
+	if (k->unicode == '4') return 4;
+	if (k->unicode == '5') return 5;
+	if (k->unicode == '6') return 6;
+	if (k->unicode == '7') return 7;
+	if (k->unicode == '8') return 8;
+	if (k->unicode == '9') return 9;
+	if (k->unicode == 'a' || k->unicode == 'A') return 10;
+	if (k->unicode == 'b' || k->unicode == 'B') return 11;
+	if (k->unicode == 'c' || k->unicode == 'C') return 12;
+	if (k->unicode == 'd' || k->unicode == 'D') return 13;
+	if (k->unicode == 'e' || k->unicode == 'E') return 14;
+	if (k->unicode == 'f' || k->unicode == 'F') return 15;
+
 	switch (k->sym) {
 	case SDLK_KP0: if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_0: return 0;
