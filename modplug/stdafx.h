@@ -31,17 +31,17 @@ typedef signed char CHAR;
 typedef unsigned char UCHAR;
 typedef unsigned char* PUCHAR;
 typedef unsigned short USHORT;
-typedef unsigned long ULONG;
+typedef unsigned int ULONG;
 typedef unsigned int UINT;
 typedef unsigned int DWORD;
-typedef long LONG;
+typedef int LONG;
 typedef unsigned short WORD;
 typedef unsigned char BYTE;
 typedef unsigned char * LPBYTE;
 typedef bool BOOL;
 typedef char * LPSTR;
 typedef void *  LPVOID;
-typedef long * LPLONG;
+typedef int * LPLONG;
 typedef unsigned int * LPDWORD;
 typedef unsigned short * LPWORD;
 typedef const char * LPCSTR;
@@ -50,7 +50,7 @@ typedef void * PVOID;
 typedef void VOID;
 
 
-inline LONG MulDiv (long a, long b, long c)
+inline LONG MulDiv (int a, int b, int c)
 {
   // if (!c) return 0;
   return ((unsigned long long) a * (unsigned long long) b ) / c;

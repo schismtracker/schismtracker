@@ -36,10 +36,10 @@ typedef struct _midiconfig {
 
 /* aka modinstrument */
 typedef struct _song_sample {
-        unsigned long length, loop_start, loop_end;
-        unsigned long sustain_start, sustain_end;
+        unsigned int length, loop_start, loop_end;
+        unsigned int sustain_start, sustain_end;
         signed char *data;
-        unsigned long speed;
+        unsigned int speed;
         short panning;
         short volume;
         short global_volume;
@@ -57,10 +57,10 @@ typedef struct _song_sample {
 
 /* modchannelsettings */
 typedef struct _song_channel {
-        unsigned long panning;
-        unsigned long volume;
-        unsigned long flags;
-        unsigned long mix_plugin;
+        unsigned int panning;
+        unsigned int volume;
+        unsigned int flags;
+        unsigned int mix_plugin;
         char name[20];
 } song_channel;
 
@@ -75,8 +75,8 @@ typedef struct _song_envelope {
 
 /* instrumentheader */
 typedef struct _song_instrument {
-        unsigned long fadeout;
-        unsigned long flags;    // any of the ENV_* flags below
+        unsigned int fadeout;
+        unsigned int flags;    // any of the ENV_* flags below
         unsigned short global_volume;
         unsigned short panning;
         byte sample_map[128], note_map[128];
@@ -110,53 +110,53 @@ typedef struct _song_note {
 /* modchannel (good grief...) */
 typedef struct _song_mix_channel {
         signed char *sample_data;
-        unsigned long sample_pos;
-        unsigned long nPosLo;
-        long nInc;
-        long nRightVol; // these two are the current left/right volumes
-        long nLeftVol;  /* (duh...) - i'm not sure if that's 100% right,
+        unsigned int sample_pos;
+        unsigned int nPosLo;
+        int nInc;
+        int nRightVol; // these two are the current left/right volumes
+        int nLeftVol;  /* (duh...) - i'm not sure if that's 100% right,
                          * though. for one, the max seems to be 680, and
                          * another, they seem to be backward (i.e. left
                          * is right and right is left...) */
-        long nRightRamp;        // maybe these two have something to do
-        long nLeftRamp; // with fadeout or nnas or something? dunno.
-        unsigned long sample_length;    /* not counting beyond the loopend */
-        unsigned long flags;    /* the channel's flags (surround, mute,
+        int nRightRamp;        // maybe these two have something to do
+        int nLeftRamp; // with fadeout or nnas or something? dunno.
+        unsigned int sample_length;    /* not counting beyond the loopend */
+        unsigned int flags;    /* the channel's flags (surround, mute,
                                  * etc.) and the sample's (16-bit, etc.)
                                  * combined together */
-        unsigned long nLoopStart;
-        unsigned long nLoopEnd;
-        long nRampRightVol;
-        long nRampLeftVol;
+        unsigned int nLoopStart;
+        unsigned int nLoopEnd;
+        int nRampRightVol;
+        int nRampLeftVol;
         double nFilter_Y1, nFilter_Y2, nFilter_Y3, nFilter_Y4;
         double nFilter_A0, nFilter_B0, nFilter_B1;
-        long nROfs, nLOfs;
-        long nRampLength;
+        int nROfs, nLOfs;
+        int nRampLength;
 
         /* information not used in the mixer */
         signed char *pSample;   /* same as sample_data, except this isn't
                                  * set to NULL at the end of the sample */
-        long nNewRightVol, nNewLeftVol; // ???
+        int nNewRightVol, nNewLeftVol; // ???
         /* final_volume is what's actually used for mixing (after the
          * global volume, envelopes, etc. are accounted for). same deal
          * for final_panning. */
-        long final_volume;      /* range 0-16384 (?) */
-        long final_panning;     /* range 0-256. */
+        int final_volume;      /* range 0-16384 (?) */
+        int final_panning;     /* range 0-256. */
         /* these are the volumes set by the channel. */
-        long volume, panning;   /* range 0-256 (?) */
-        long nFadeOutVol;       /* ??? */
-        long nPeriod, nC4Speed, sample_freq, nPortamentoDest;
+        int volume, panning;   /* range 0-256 (?) */
+        int nFadeOutVol;       /* ??? */
+        int nPeriod, nC4Speed, sample_freq, nPortamentoDest;
         song_instrument *instrument;    /* NULL if sample mode (?) */
         song_sample *sample;
-        unsigned long nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
-        unsigned long master_channel;   // the channel this note was played in
-        unsigned long vu_meter;
-        long nGlobalVol;        // the channel volume (Mxx)? - range 0-64
-        long nInsVol;   /* instrument volume? sample volume? dunno, one of
+        unsigned int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
+        unsigned int master_channel;   // the channel this note was played in
+        unsigned int vu_meter;
+        int nGlobalVol;        // the channel volume (Mxx)? - range 0-64
+        int nInsVol;   /* instrument volume? sample volume? dunno, one of
                          * those two... (range 0-64) */
-        long nFineTune, nTranspose;
-        long nPortamentoSlide, nAutoVibDepth;
-        unsigned long nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
+        int nFineTune, nTranspose;
+        int nPortamentoSlide, nAutoVibDepth;
+        unsigned int nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
 
         signed short nVolSwing, nPanSwing;
 
@@ -380,9 +380,9 @@ char *song_get_title(void);     // editable
 char *song_get_message(void);   // editable
 
 // returned value = seconds
-unsigned long song_get_length(void);
-unsigned long song_get_length_to(int order, int row);
-void song_get_at_time(unsigned long seconds, int *order, int *row);
+unsigned int song_get_length(void);
+unsigned int song_get_length_to(int order, int row);
+void song_get_at_time(unsigned int seconds, int *order, int *row);
 
 // gee. can't just use malloc/free... no, that would be too simple.
 signed char *song_sample_allocate(int bytes);
@@ -497,7 +497,7 @@ void song_single_step(int pattern, int row);
 enum song_mode song_get_mode(void);
 
 /* the time returned is in seconds */
-unsigned long song_get_current_time(void);
+unsigned int song_get_current_time(void);
 
 int song_get_current_speed(void);
 int song_get_current_tick(void);
@@ -541,7 +541,7 @@ song_mix_channel *song_get_mix_channel(int n);
  * (i.e. the length of the channel_list array). so... to go through each
  * channel that's being mixed:
  * 
- *         unsigned long *channel_list;
+ *         unsigned int *channel_list;
  *         song_mix_channel *channel;
  *         int n = song_get_mix_state(&channel_list);
  *         while (n--) {
@@ -574,7 +574,7 @@ void song_init_instruments(int n); /* -1 for all */
 /* --------------------------------------------------------------------- */
 /* misc. */
 
-unsigned long song_buffer_msec(void);
+unsigned int song_buffer_msec(void);
 
 void song_flip_stereo(void);
 

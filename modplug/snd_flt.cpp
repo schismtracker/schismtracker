@@ -21,7 +21,7 @@
 // pow(a,b) returns a^^b -> 2^^(b.log2(a))
 static float pow(float a, float b)
 {
-	long tmpint;
+	int tmpint;
 	float result;
 	_asm {
 	fld b				// Load b

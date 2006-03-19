@@ -35,8 +35,8 @@ extern char song_filename[]; /* the full path (as given to song_load) */
 extern char song_basename[]; /* everything after the last slash */
 
 /* milliseconds = (samples * 1000) / frequency */
-extern unsigned long samples_played;
+extern unsigned int samples_played;
 
-extern unsigned long max_channels_used;
+extern unsigned int max_channels_used;
 
 #endif /* ! MPLINK_H */

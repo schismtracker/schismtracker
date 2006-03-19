@@ -467,8 +467,8 @@ public:
 	virtual int Release() = 0;
 	virtual void SaveAllParameters() = 0;
 	virtual void RestoreAllParameters() = 0;
-	virtual void Process(float *pOutL, float *pOutR, unsigned long nSamples) = 0;
-	virtual void Init(unsigned long nFreq, int bReset) = 0;
+	virtual void Process(float *pOutL, float *pOutR, unsigned int nSamples) = 0;
+	virtual void Init(unsigned int nFreq, int bReset) = 0;
 	virtual void MidiSend(DWORD dwMidiCode) = 0;
 	virtual void MidiCommand(UINT nMidiCh, UINT nMidiProg, UINT note, UINT vol) = 0;
 };
@@ -532,7 +532,7 @@ typedef struct MODMIDICFG
 } MODMIDICFG, *LPMODMIDICFG;
 
 
-typedef VOID (* LPSNDMIXHOOKPROC)(int *, unsigned long, unsigned long); // buffer, samples, channels
+typedef VOID (* LPSNDMIXHOOKPROC)(int *, unsigned int, unsigned int); // buffer, samples, channels
 
 
 
@@ -586,7 +586,7 @@ public:	// for Editing
 	// chaseback
 	int stop_at_order;
 	int stop_at_row;
-	unsigned long stop_at_time;
+	unsigned int stop_at_time;
 
 public:
 	CSoundFile();
@@ -968,8 +968,8 @@ typedef struct WAVEEXTRAHEADER
 #define MOD2XMFineTune(k)	((int)( (signed char)((k)<<4) ))
 #define XM2MODFineTune(k)	((int)( (k>>4)&0x0f ))
 
-int _muldiv(long a, long b, long c);
-int _muldivr(long a, long b, long c);
+int _muldiv(int a, int b, int c);
+int _muldivr(int a, int b, int c);
 
 
 #define NEED_BYTESWAP

@@ -39,8 +39,8 @@
 static int midi_playing;
 // ------------------------------------------------------------------------
 
-unsigned long samples_played = 0;
-unsigned long max_channels_used = 0;
+unsigned int samples_played = 0;
+unsigned int max_channels_used = 0;
 
 static signed short audio_buffer_[16726];
 
@@ -57,9 +57,9 @@ struct audio_settings audio_settings;
 static void _schism_midi_out_note(int chan, const MODCOMMAND *m);
 static void _schism_midi_out_raw(unsigned char *data, unsigned int len, unsigned int delay);
 
-unsigned long song_buffer_msec(void)
+unsigned int song_buffer_msec(void)
 {
-	unsigned long nm;
+	unsigned int nm;
 	nm = CSoundFile::gdwMixingFreq / audio_buffer_size;
 	return nm;
 }
@@ -716,7 +716,7 @@ enum song_mode song_get_mode()
 }
 
 // returned value is in seconds
-unsigned long song_get_current_time()
+unsigned int song_get_current_time()
 {
         return samples_played / CSoundFile::gdwMixingFreq;
 }

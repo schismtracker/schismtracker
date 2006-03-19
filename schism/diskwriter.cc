@@ -315,7 +315,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 
 	return 1;
 }
-extern unsigned long samples_played; /* mplink */
+extern unsigned int samples_played; /* mplink */
 int diskwriter_sync(void)
 {
 	Uint32 *le32;
