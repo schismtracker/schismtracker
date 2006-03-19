@@ -883,6 +883,7 @@ static void volume_amplify(void)
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* vary depth */
+static int current_vary = -1;
 
 static void vary_setup_draw_const(void)
 {
@@ -890,12 +891,10 @@ static void vary_setup_draw_const(void)
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void vary_amplify_ok(void *data)
+static void vary_amplify_ok(UNUSED void *data)
 {
-	int hack = (int)data;
-
 	vary_depth = volume_setup_widgets[0].d.thumbbar.value;
-	selection_vary(0, vary_depth, hack);
+	selection_vary(0, vary_depth, current_vary);
 }
 
 static void vary_command(int how)
@@ -906,8 +905,9 @@ static void vary_command(int how)
 	volume_setup_widgets[0].d.thumbbar.value = vary_depth;
 	create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets, 3, 0, vary_setup_draw_const, (void*)how);
+	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets, 3, 0, vary_setup_draw_const, (void*)0);
 	dialog->action_yes = vary_amplify_ok;
+	current_vary = how;
 }
 
 static int current_effect(void)
