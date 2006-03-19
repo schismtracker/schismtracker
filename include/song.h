@@ -549,7 +549,7 @@ song_mix_channel *song_get_mix_channel(int n);
  *                 (do something with the channel)
  *         }
  * it's kind of ugly, but it'll do... i hope :) */
-int song_get_mix_state(unsigned long **channel_list);
+int song_get_mix_state(unsigned int **channel_list);
 	
 /* --------------------------------------------------------------------- */
 /* rearranging stuff */
@@ -582,6 +582,10 @@ int song_get_surround(void);
 void song_set_surround(int on);
 
 static const song_note empty_note = { 0, 0, 0, 0, 0, 0 };
+
+/* actually from sndfile.h */
+#define SCHISM_MAX_SAMPLES	200
+#define SCHISM_MAX_INSTRUMENTS	SCHISM_MAX_SAMPLES
 
 /* --------------------------------------------------------------------- */
 

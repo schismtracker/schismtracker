@@ -56,6 +56,22 @@ static const char *loop_states[] = { "Off", "On Forwards", "On Ping Pong", NULL 
 static int last_note = 61;		/* C-5 */
 
 /* woo */
+static int _last_vis_sample(void)
+{
+	int i, j, n;
+
+	n = 99;
+	j = 0;
+	/* 65 is last visible sample on last page */
+	for (i = 65; i <= SCHISM_MAX_SAMPLES; i++) {
+		if (!song_sample_is_empty(i)) {
+			j = i;
+		}
+	}
+	while ((j + 34) > n) n += 34;
+	if (n >= SCHISM_MAX_SAMPLES) n = SCHISM_MAX_SAMPLES;
+	return n;
+}
 static int _is_magic_sample(int no)
 {
 	char *name;
@@ -94,9 +110,9 @@ void sample_set(int n)
 	int new_sample = n;
 
 	if (status.current_page == PAGE_SAMPLE_LIST)
-		new_sample = CLAMP(n, 1, 99);
+		new_sample = CLAMP(n, 1, _last_vis_sample());
 	else
-		new_sample = CLAMP(n, 0, 99);
+		new_sample = CLAMP(n, 0, _last_vis_sample());
 
 	if (current_sample == new_sample)
 		return;
@@ -146,7 +162,7 @@ static void sample_list_draw_list(void)
 		if (sample->played)
 			draw_char(173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 		
-		draw_text(numtostr(2, n, (unsigned char *) buf), 2, 13 + pos, 0, 2);
+		draw_text(num99tostr(n, (unsigned char *) buf), 2, 13 + pos, 0, 2);
 
 		pn = ((unsigned char)name[24]);
 		if (((unsigned char)name[23]) == 0xFF && pn < 200) {
@@ -340,7 +356,7 @@ static void do_swap_sample(UNUSED void *data)
 {
 	int n = atoi(swap_sample_entry);
 	
-	if (n < 1 || n > 99)
+	if (n < 1 || n > _last_vis_sample())
 		return;
 	song_swap_samples(current_sample, n);
 }
@@ -368,7 +384,7 @@ static void do_exchange_sample(UNUSED void *data)
 {
 	int n = atoi(swap_sample_entry);
 	
-	if (n < 1 || n > 99)
+	if (n < 1 || n > _last_vis_sample())
 		return;
 	song_exchange_samples(current_sample, n);
 }
@@ -412,7 +428,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 			top_sample++;
-			if (top_sample > (99-34)) top_sample = (99-34);
+			if (top_sample > (_last_vis_sample()-34))
+				top_sample = (_last_vis_sample()-34);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		} else {
@@ -487,7 +504,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 		case SDLK_PAGEDOWN:
 			if (k->state) return 0;
 			if (k->mod & KMOD_CTRL) {
-				new_sample = 99;
+				new_sample = _last_vis_sample();
 			} else {
 				new_sample += 16;
 			}
@@ -538,7 +555,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 		}
 	}
 	
-	new_sample = CLAMP(new_sample, 1, 99);
+	new_sample = CLAMP(new_sample, 1, _last_vis_sample());
 	new_cursor_pos = CLAMP(new_cursor_pos, 0, 25);
 
 	if (new_sample != current_sample) {
@@ -1104,7 +1121,7 @@ static void sample_list_handle_key(struct key_event * k)
 		return;
 	}
 
-	new_sample = CLAMP(new_sample, 1, 99);
+	new_sample = CLAMP(new_sample, 1, _last_vis_sample());
 
 	if (new_sample != current_sample) {
 		sample_set(new_sample);

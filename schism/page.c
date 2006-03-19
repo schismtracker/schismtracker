@@ -863,7 +863,7 @@ void update_current_instrument(void)
         }
         
         if (n > 0) {
-                draw_text(numtostr(2, n, (unsigned char *) buf), 50, 3, 5, 0);
+                draw_text(num99tostr(n, (unsigned char *) buf), 50, 3, 5, 0);
                 draw_text_len((const unsigned char *)name, 25, 53, 3, 5, 0);
         } else {
                 draw_text((const unsigned char *)"..", 50, 3, 5, 0);
