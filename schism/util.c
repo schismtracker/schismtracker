@@ -104,7 +104,7 @@ unsigned char *get_date_string(time_t when, unsigned char *buf)
 
 	/* note; these aren't thread safe! */
 	tmr = localtime(&when);
-        snprintf(buf, 27, "%s %d, %d", month_str[tmr->tm_mon],
+        snprintf((char *) buf, 27, "%s %d, %d", month_str[tmr->tm_mon],
 				tmr->tm_mday, 1900 + tmr->tm_year);
 	
         return buf;
@@ -116,7 +116,7 @@ unsigned char *get_time_string(time_t when, unsigned char *buf)
 
 	/* note; these aren't thread safe! */
 	tmr = localtime(&when);
-        snprintf(buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? tmr->tm_hour : 12,
+        snprintf((char *) buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? tmr->tm_hour : 12,
 		 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
         return buf;
 }
@@ -128,10 +128,10 @@ unsigned char *numtostr(int digits, int n, unsigned char *buf)
 		
 		digits %= 10;
 		fmt[2] = '0' + digits;
-		snprintf(buf, digits + 1, fmt, n);
+		snprintf((char *) buf, digits + 1, fmt, n);
 		buf[digits] = 0;
 	} else {
-		sprintf(buf, "%d", n);
+		sprintf((char *) buf, "%d", n);
 	}
 	return buf;
 }

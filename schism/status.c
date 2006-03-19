@@ -79,25 +79,25 @@ static inline void draw_song_playing_status(void)
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        pos += draw_text("Playing, Order: ", 2, 9, 0, 2);
-        pos += draw_text(numtostr(0, song_get_current_order(), buf), pos, 9, 3, 2);
+        pos += draw_text((unsigned char *) "Playing, Order: ", 2, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_current_order(), (unsigned char *) buf), pos, 9, 3, 2);
         draw_char('/', pos, 9, 0, 2);
         pos++;
-        pos += draw_text(numtostr(0, song_get_num_orders(), buf), pos, 9, 3, 2);
-        pos += draw_text(", Pattern: ", pos, 9, 0, 2);
-        pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
-        pos += draw_text(", Row: ", pos, 9, 0, 2);
-        pos += draw_text(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);
+        pos += draw_text(numtostr(0, song_get_num_orders(), (unsigned char *) buf), pos, 9, 3, 2);
+        pos += draw_text((unsigned char *) ", Pattern: ", pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, pattern, (unsigned char *) buf), pos, 9, 3, 2);
+        pos += draw_text((unsigned char *) ", Row: ", pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_current_row(), (unsigned char *) buf), pos, 9, 3, 2);
         draw_char('/', pos, 9, 0, 2);
         pos++;
-        pos += draw_text(numtostr(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
+        pos += draw_text(numtostr(0, song_get_pattern(pattern, NULL), (unsigned char *) buf), pos, 9, 3, 2);
         draw_char(',', pos, 9, 0, 2);
         pos++;
         draw_char(0, pos, 9, 0, 2);
         pos++;
-        pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
+        pos += draw_text(numtostr(0, song_get_playing_channels(), (unsigned char *) buf), pos, 9, 3, 2);
 	
-        if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
+        if (draw_text_len((unsigned char *) " Channels", 62 - pos, pos, 9, 0, 2) < 9)
                 draw_char(16, 61, 9, 1, 2);
 }
 
@@ -107,20 +107,20 @@ static inline void draw_pattern_playing_status(void)
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        pos += draw_text("Playing, Pattern: ", 2, 9, 0, 2);
-        pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
-        pos += draw_text(", Row: ", pos, 9, 0, 2);
-        pos += draw_text(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);
+        pos += draw_text((unsigned char *) "Playing, Pattern: ", 2, 9, 0, 2);
+        pos += draw_text(numtostr(0, pattern, (unsigned char *) buf), pos, 9, 3, 2);
+        pos += draw_text((unsigned char *) ", Row: ", pos, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_current_row(), (unsigned char *) buf), pos, 9, 3, 2);
         draw_char('/', pos, 9, 0, 2);
         pos++;
-        pos += draw_text(numtostr(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
+        pos += draw_text(numtostr(0, song_get_pattern(pattern, NULL), (unsigned char *) buf), pos, 9, 3, 2);
         draw_char(',', pos, 9, 0, 2);
         pos++;
         draw_char(0, pos, 9, 0, 2);
         pos++;
-        pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
+        pos += draw_text(numtostr(0, song_get_playing_channels(), (unsigned char *) buf), pos, 9, 3, 2);
 
-        if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
+        if (draw_text_len((unsigned char *) " Channels", 62 - pos, pos, 9, 0, 2) < 9)
                 draw_char(16, 61, 9, 1, 2);
 }
 
@@ -129,9 +129,9 @@ static inline void draw_playing_channels(void)
 	int pos = 2;
 	char buf[16];
 	
-	pos += draw_text("Playing, ", 2, 9, 0, 2);
-	pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
-	draw_text(" Channels", pos, 9, 0, 2);
+	pos += draw_text((unsigned char *) "Playing, ", 2, 9, 0, 2);
+	pos += draw_text(numtostr(0, song_get_playing_channels(), (unsigned char *) buf), pos, 9, 3, 2);
+	draw_text((unsigned char *) " Channels", pos, 9, 0, 2);
 }
 
 void status_text_redraw(void)
@@ -145,7 +145,7 @@ void status_text_redraw(void)
         }
 	
         if (status_text) {
-                draw_text_len(status_text, 60, 2, 9, status_color, 2);
+                draw_text_len((unsigned char *) status_text, 60, 2, 9, status_color, 2);
         } else {
                 switch (song_get_mode()) {
                 case MODE_PLAYING:

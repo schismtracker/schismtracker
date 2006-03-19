@@ -125,7 +125,7 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 			else
 				fg = active ? 1 : 0;
 		}
-		draw_text(numtostr(2, c, buf), 2, pos, fg, 2); /* channel number */
+		draw_text(numtostr(2, c, (unsigned char *) buf), 2, pos, fg, 2); /* channel number */
 
 		sprintf(buf, "%10d", channel->sample_freq);
 		if (channel->sample_freq) {
@@ -140,21 +140,21 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
                         smp = 0;
 
 		if (smp) {
-			draw_text(numtostr(3, smp, buf), 27, pos, 2, 0);
+			draw_text(numtostr(3, smp, (unsigned char *) buf), 27, pos, 2, 0);
 
-			draw_text(numtostr(3, channel->final_volume / 128, buf), 32, pos, 2, 0);
-			draw_text(numtostr(2, channel->volume >> 2, buf), 36, pos, 2, 0);
+			draw_text(numtostr(3, channel->final_volume / 128, (unsigned char *) buf), 32, pos, 2, 0);
+			draw_text(numtostr(2, channel->volume >> 2, (unsigned char *) buf), 36, pos, 2, 0);
 	
-			draw_text(numtostr(2, channel->nGlobalVol, buf), 39, pos, 2, 0);
+			draw_text(numtostr(2, channel->nGlobalVol, (unsigned char *) buf), 39, pos, 2, 0);
 			draw_text(numtostr(2, channel->sample
-				? channel->sample->global_volume : 64, buf),
+				? channel->sample->global_volume : 64, (unsigned char *) buf),
 				42, pos, 2, 0);
-			draw_text(numtostr(2, channel->nInsVol, buf), 45, pos, 2, 0);
+			draw_text(numtostr(2, channel->nInsVol, (unsigned char *) buf), 45, pos, 2, 0);
 
-			draw_text(numtostr(3, channel->nFadeOutVol / 128, buf), 48, pos, 2, 0);
+			draw_text(numtostr(3, channel->nFadeOutVol / 128, (unsigned char *) buf), 48, pos, 2, 0);
 
-			draw_text(numtostr(2, channel->panning >> 2, buf), 52, pos, 2, 0);
-			draw_text(numtostr(2, channel->final_panning >> 2, buf), 55, pos, 2, 0);
+			draw_text(numtostr(2, channel->panning >> 2, (unsigned char *) buf), 52, pos, 2, 0);
+			draw_text(numtostr(2, channel->final_panning >> 2, (unsigned char *) buf), 55, pos, 2, 0);
 		}
 		if (song_is_instrument_mode()) {
 			switch (channel->nNNA) {
@@ -165,7 +165,7 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 			default: ptr = "---"; break;
 			};
 			draw_text((const unsigned char *)ptr, 59,pos,2,0);
-			draw_text(numtostr(3, smplist[smp], buf), 63, pos, 2, 0);
+			draw_text(numtostr(3, smplist[smp], (unsigned char *) buf), 63, pos, 2, 0);
 		}
 
 		draw_char(168, 15, pos, 2, 0);
@@ -214,7 +214,7 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                                         continue;
                                 fg = active ? 1 : 0;
                         }
-                        draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
+                        draw_text(numtostr(2, c, (unsigned char *) buf), 2, pos, fg, 2);
                 }
                 return;
         }
@@ -242,10 +242,10 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                 else
                         smp = 0;
                 if (smp) {
-                        draw_text(numtostr(2, smp, buf), 31, pos, 6, 0);
+                        draw_text(numtostr(2, smp, (unsigned char *) buf), 31, pos, 6, 0);
                         if (ins) {
                                 draw_char('/', 33, pos, 6, 0);
-                                draw_text(numtostr(2, ins, buf), 34, pos, 6, 0);
+                                draw_text(numtostr(2, ins, (unsigned char *) buf), 34, pos, 6, 0);
                                 n = 36;
                         } else {
                                 n = 33;
@@ -288,7 +288,7 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                                 continue;
                         fg = active ? 1 : 0;
                 }
-                draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
+                draw_text(numtostr(2, c, (unsigned char *) buf), 2, pos, fg, 2);
         }
 }
 
@@ -357,7 +357,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
                         total_rows = prev_pattern_rows;
                         row = total_rows - 1;
                 }
-                draw_text(numtostr(3, row, buf), 1, row_pos, 0, 2);
+                draw_text(numtostr(3, row, (unsigned char *) buf), 1, row_pos, 0, 2);
                 note = pattern + 64 * row + first_channel - 1;
                 for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
                         draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 0);
@@ -374,7 +374,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
         pattern = cur_pattern;
         total_rows = cur_pattern_rows;
         row_pos = base + rows_before + 1;
-        draw_text(numtostr(3, current_row, buf), 1, row_pos, 0, 2);
+        draw_text(numtostr(3, current_row, (unsigned char *) buf), 1, row_pos, 0, 2);
         note = pattern + 64 * current_row + first_channel - 1;
         for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
                 draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 14);
@@ -397,7 +397,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
                         total_rows = next_pattern_rows;
                         row = 0;
                 }
-                draw_text(numtostr(3, row, buf), 1, row_pos, 0, 2);
+                draw_text(numtostr(3, row, (unsigned char *) buf), 1, row_pos, 0, 2);
                 note = pattern + 64 * row + first_channel - 1;
                 for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
                         draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 0);
@@ -446,7 +446,7 @@ static void info_draw_track_10(int base, int height, int active, int first_chann
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
                 draw_char(0, 5 + 7 * chan_pos, base, 1, 1);
                 draw_char(0, 5 + 7 * chan_pos + 1, base, 1, 1);
-                draw_text(numtostr(2, chan, buf), 5 + 7 * chan_pos + 2, base, fg, 1);
+                draw_text(numtostr(2, chan, (unsigned char *) buf), 5 + 7 * chan_pos + 2, base, fg, 1);
                 draw_char(0, 5 + 7 * chan_pos + 4, base, 1, 1);
                 draw_char(0, 5 + 7 * chan_pos + 5, base, 1, 1);
         }
@@ -468,7 +468,7 @@ static void info_draw_track_12(int base, int height, int active, int first_chann
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
                 /* draw_char(0, 5 + 6 * chan_pos, base, 1, 1); */
                 draw_char(0, 5 + 6 * chan_pos + 1, base, 1, 1);
-                draw_text(numtostr(2, chan, buf), 5 + 6 * chan_pos + 2, base, fg, 1);
+                draw_text(numtostr(2, chan, (unsigned char *) buf), 5 + 6 * chan_pos + 2, base, fg, 1);
                 draw_char(0, 5 + 6 * chan_pos + 4, base, 1, 1);
                 /* draw_char(0, 5 + 6 * chan_pos + 5, base, 1, 1); */
         }
@@ -488,7 +488,7 @@ static void info_draw_track_18(int base, int height, int active, int first_chann
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
-                draw_text(numtostr(2, chan, buf), 5 + 4 * chan_pos + 1, base, fg, 1);
+                draw_text(numtostr(2, chan, (unsigned char *) buf), 5 + 4 * chan_pos + 1, base, fg, 1);
         }
         _draw_track_view(base, height, first_channel, 18, 3, 1, draw_note_3);
 }
@@ -506,7 +506,7 @@ static void info_draw_track_24(int base, int height, int active, int first_chann
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
-                draw_text(numtostr(2, chan, buf), 5 + 3 * chan_pos + 1, base, fg, 1);
+                draw_text(numtostr(2, chan, (unsigned char *) buf), 5 + 3 * chan_pos + 1, base, fg, 1);
         }
         _draw_track_view(base, height, first_channel, 24, 3, 0, draw_note_3);
 }
@@ -524,7 +524,7 @@ static void info_draw_track_36(int base, int height, int active, int first_chann
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
-                draw_text(numtostr(2, chan, buf), 5 + 2 * chan_pos, base, fg, 1);
+                draw_text(numtostr(2, chan, (unsigned char *) buf), 5 + 2 * chan_pos, base, fg, 1);
         }
         _draw_track_view(base, height, first_channel, 36, 2, 0, draw_note_2);
 }
@@ -643,7 +643,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
                                 continue;
                         fg = active ? 1 : 0;
                 }
-                draw_text(numtostr(2, c, buf), 2, pos + base + 1, fg, 2);
+                draw_text(numtostr(2, c, (unsigned char *) buf), 2, pos + base + 1, fg, 2);
         }
 }
 

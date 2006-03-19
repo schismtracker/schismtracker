@@ -122,13 +122,13 @@ static void video_dialog_draw_const(void)
 		}
 	}
 
-	draw_text("Your video settings have been changed.", 21,19,0,2);
+	draw_text((unsigned char *) "Your video settings have been changed.", 21,19,0,2);
 	sprintf(buf, "In %2d seconds, your changes will be", countdown);
-	draw_text(buf, 23, 21, 0, 2);
-	draw_text("reverted to the last known-good", 21, 22, 0, 2);
-	draw_text("settings.", 21, 23, 0, 2);
-	draw_text("To use the new video mode, and make", 21, 24, 0, 2);
-	draw_text("it default, press select OK below.", 21, 25, 0, 2);
+	draw_text((unsigned char *) buf, 23, 21, 0, 2);
+	draw_text((unsigned char *) "reverted to the last known-good", 21, 22, 0, 2);
+	draw_text((unsigned char *) "settings.", 21, 23, 0, 2);
+	draw_text((unsigned char *) "To use the new video mode, and make", 21, 24, 0, 2);
+	draw_text((unsigned char *) "it default, press select OK below.", 21, 25, 0, 2);
 }
 
 static struct widget video_dialog_widgets[2];
@@ -143,9 +143,9 @@ static void video_change_dialog(void)
 	time(&started);
 	
 	create_button(video_dialog_widgets+0, 28,28,8, 0, 0, 0, 1, 1,
-					video_mode_keep, "OK", 4);
+					(void *) video_mode_keep, "OK", 4);
 	create_button(video_dialog_widgets+1, 42,28,8, 1, 1, 0, 1, 0,
-					video_mode_cancel, "Cancel", 2);
+					(void *) video_mode_cancel, "Cancel", 2);
 	d = dialog_create_custom(20, 17, 40, 14,
 			video_dialog_widgets,
 			2, 1, 
@@ -198,18 +198,18 @@ static void config_draw_const(void)
 {
 	int n;
 
-	draw_text("Channel Limit",4,15, 0, 2);
-	draw_text("Mixing Rate",6,16, 0, 2);
-	draw_text("Sample Size",6,17, 0, 2);
-	draw_text("Output Channels",2,18, 0, 2);
+	draw_text((unsigned char *) "Channel Limit",4,15, 0, 2);
+	draw_text((unsigned char *) "Mixing Rate",6,16, 0, 2);
+	draw_text((unsigned char *) "Sample Size",6,17, 0, 2);
+	draw_text((unsigned char *) "Output Channels",2,18, 0, 2);
 
-	draw_text("Visualization",4,20, 0, 2);
-	draw_text("Classic Mode",5,21, 0, 2);
-	draw_text("b's not #'s",6,22, 0, 2);
-	draw_text("Time Display",5,23, 0, 2);
+	draw_text((unsigned char *) "Visualization",4,20, 0, 2);
+	draw_text((unsigned char *) "Classic Mode",5,21, 0, 2);
+	draw_text((unsigned char *) "b's not #'s",6,22, 0, 2);
+	draw_text((unsigned char *) "Time Display",5,23, 0, 2);
 
-	draw_text("Video Driver:", 2, 26, 0, 2);
-	draw_text("Full Screen:", 38, 26, 0, 2);
+	draw_text((unsigned char *) "Video Driver:", 2, 26, 0, 2);
+	draw_text((unsigned char *) "Full Screen:", 38, 26, 0, 2);
 
 	draw_fill_chars(18, 15, 34, 23, 0);
 	draw_box(17,14,35,24, BOX_THIN | BOX_INNER | BOX_INSET);

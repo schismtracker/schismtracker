@@ -56,7 +56,7 @@ static void log_redraw(void)
         int n;
 
         for (n = 0; n <= last_line; n++)
-                draw_text_len(lines[n].text, 74, 3, 14 + n,
+                draw_text_len((unsigned char *) lines[n].text, 74, 3, 14 + n,
 			      lines[n].color, 0);
 }
 

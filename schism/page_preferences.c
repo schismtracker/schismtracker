@@ -51,35 +51,35 @@ static void preferences_draw_const(void)
 	char buf[80];
         int i;
         
-	draw_text("Master Volume Left", 2, 14, 0, 2);
-	draw_text("Master Volume Right", 2, 15, 0, 2);
+	draw_text((unsigned char *) "Master Volume Left", 2, 14, 0, 2);
+	draw_text((unsigned char *) "Master Volume Right", 2, 15, 0, 2);
         draw_box(21, 13, 27, 16, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	sprintf(buf, "Mixing Mode, Playback Frequency: %dHz", audio_settings.sample_rate);
-	draw_text(buf, 2, 18, 0, 2);
+	draw_text((unsigned char *) buf, 2, 18, 0, 2);
 
 	for (i = 0; interpolation_modes[i]; i++);
 
-	draw_text("Output Equalizer", 2, 21+i*3, 0, 2);
-	draw_text(     "Low Frequency Band", 7, 23+i*3, 0, 2);
-	draw_text( "Med Low Frequency Band", 3, 24+i*3, 0, 2);
-	draw_text("Med High Frequency Band", 2, 25+i*3, 0, 2);
-	draw_text(    "High Frequency Band", 6, 26+i*3, 0, 2);
+	draw_text((unsigned char *) "Output Equalizer", 2, 21+i*3, 0, 2);
+	draw_text((unsigned char *)      "Low Frequency Band", 7, 23+i*3, 0, 2);
+	draw_text((unsigned char *)  "Med Low Frequency Band", 3, 24+i*3, 0, 2);
+	draw_text((unsigned char *) "Med High Frequency Band", 2, 25+i*3, 0, 2);
+	draw_text((unsigned char *)     "High Frequency Band", 6, 26+i*3, 0, 2);
 	
         draw_box(25, 22+i*3, 47, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
         draw_box(52, 22+i*3, 74, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
 
-        draw_text("Oversampling", 57, 25, 0, 2);
-        draw_text("Noise Reduction", 54, 26, 0, 2);
+        draw_text((unsigned char *) "Oversampling", 57, 25, 0, 2);
+        draw_text((unsigned char *) "Noise Reduction", 54, 26, 0, 2);
 
 	draw_fill_chars(73, 24, 77, 26, 0);
 	draw_box(69, 24, 78, 27,  BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_fill_chars(73, 29, 77, 31, 0);
 	draw_box(69, 28, 78, 32,  BOX_THIN | BOX_INNER | BOX_INSET);
 
-        draw_text("XBass", 64, 29, 0, 2);
-        draw_text("Reverb", 63, 30, 0, 2);
-        draw_text("Surround", 61, 31, 0, 2);
+        draw_text((unsigned char *) "XBass", 64, 29, 0, 2);
+        draw_text((unsigned char *) "Reverb", 63, 30, 0, 2);
+        draw_text((unsigned char *) "Surround", 61, 31, 0, 2);
 #if 0
         draw_fill_chars(18, 14, 34, 28, 0); /* left box */
         draw_fill_chars(64, 17, 72, 27, 0); /* right box */
@@ -88,20 +88,20 @@ static void preferences_draw_const(void)
         draw_box(17, 13, 35, 29, BOX_THIN | BOX_INNER | BOX_INSET);
 #if SCHISM_MIXER_CONTROL == SOUND_MIXER_VOLUME
 #else
-	draw_text("   PCM Volume L", 2, 14, 0, 2);
-	draw_text("   PCM Volume R", 2, 15, 0, 2);
+	draw_text((unsigned char *) "   PCM Volume L", 2, 14, 0, 2);
+	draw_text((unsigned char *) "   PCM Volume R", 2, 15, 0, 2);
 #endif
-        draw_text("  Channel Limit", 2, 17, 0, 2);
-        draw_text("    Sample Rate", 2, 18, 0, 2);
-        draw_text("        Quality", 2, 19, 0, 2);
-        draw_text("  Interpolation", 2, 20, 0, 2);
-        draw_text("   Oversampling", 2, 21, 0, 2);
-        draw_text("  HQ Resampling", 2, 22, 0, 2);
-        draw_text("Noise Reduction", 2, 23, 0, 2);
-        draw_text("Surround Effect", 2, 24, 0, 2);
-        draw_text("   Time Display", 2, 26, 0, 2);
-        draw_text("   Classic Mode", 2, 27, 0, 2);
-        draw_text("  Visualization", 2, 28, 0, 2);
+        draw_text((unsigned char *) "  Channel Limit", 2, 17, 0, 2);
+        draw_text((unsigned char *) "    Sample Rate", 2, 18, 0, 2);
+        draw_text((unsigned char *) "        Quality", 2, 19, 0, 2);
+        draw_text((unsigned char *) "  Interpolation", 2, 20, 0, 2);
+        draw_text((unsigned char *) "   Oversampling", 2, 21, 0, 2);
+        draw_text((unsigned char *) "  HQ Resampling", 2, 22, 0, 2);
+        draw_text((unsigned char *) "Noise Reduction", 2, 23, 0, 2);
+        draw_text((unsigned char *) "Surround Effect", 2, 24, 0, 2);
+        draw_text((unsigned char *) "   Time Display", 2, 26, 0, 2);
+        draw_text((unsigned char *) "   Classic Mode", 2, 27, 0, 2);
+        draw_text((unsigned char *) "  Visualization", 2, 28, 0, 2);
         for (n = 18; n < 35; n++) {
                 draw_char(154, n, 16, 3, 0);
                 draw_char(154, n, 25, 3, 0);
@@ -110,27 +110,27 @@ static void preferences_draw_const(void)
         /* right side */
         draw_box(53, 13, 78, 29, BOX_THIN | BOX_INNER | BOX_INSET);
         draw_box(63, 16, 73, 28, BOX_THIN | BOX_INNER | BOX_INSET);
-        draw_text("Modplug DSP Settings", 56, 15, 0, 2);
-        draw_text("   XBass", 55, 17, 0, 2);
-        draw_text("  Amount", 55, 18, 0, 2);
-        draw_text("   Range", 55, 19, 0, 2);
-        draw_text("Surround", 55, 21, 0, 2);
-        draw_text("   Depth", 55, 22, 0, 2);
-        draw_text("   Delay", 55, 23, 0, 2);
-        draw_text("  Reverb", 55, 25, 0, 2);
-        draw_text("   Depth", 55, 26, 0, 2);
-        draw_text("   Delay", 55, 27, 0, 2);
+        draw_text((unsigned char *) "Modplug DSP Settings", 56, 15, 0, 2);
+        draw_text((unsigned char *) "   XBass", 55, 17, 0, 2);
+        draw_text((unsigned char *) "  Amount", 55, 18, 0, 2);
+        draw_text((unsigned char *) "   Range", 55, 19, 0, 2);
+        draw_text((unsigned char *) "Surround", 55, 21, 0, 2);
+        draw_text((unsigned char *) "   Depth", 55, 22, 0, 2);
+        draw_text((unsigned char *) "   Delay", 55, 23, 0, 2);
+        draw_text((unsigned char *) "  Reverb", 55, 25, 0, 2);
+        draw_text((unsigned char *) "   Depth", 55, 26, 0, 2);
+        draw_text((unsigned char *) "   Delay", 55, 27, 0, 2);
         for (n = 64; n < 73; n++) {
                 draw_char(154, n, 20, 3, 0);
                 draw_char(154, n, 24, 3, 0);
         }
 
 	for (n = 1; n < 79; n++) draw_char(154,n, 30, 1,2);
-        draw_text(" Disk Writer Output Settings ", 26, 30, 0, 2);
+        draw_text((unsigned char *) " Disk Writer Output Settings ", 26, 30, 0, 2);
 
-        draw_text("    Sample Rate", 2, 32, 0, 2);
-        draw_text("        Quality", 2, 33, 0, 2);
-        draw_text("Output Channels", 2, 34, 0, 2);
+        draw_text((unsigned char *) "    Sample Rate", 2, 32, 0, 2);
+        draw_text((unsigned char *) "        Quality", 2, 33, 0, 2);
+        draw_text((unsigned char *) "Output Channels", 2, 34, 0, 2);
 
         draw_fill_chars(18, 32, 34, 34, 0);
         draw_box(17, 31, 35, 35, BOX_THIN | BOX_INNER | BOX_INSET);
@@ -140,10 +140,10 @@ static void preferences_draw_const(void)
 #define CORNER_BOTTOM "http://rigelseven.com/schism/"
 #ifndef RELEASE_VERSION
 #define CORNER_BOTTOM2 "http://sourceforge.net/projects/schismtracker/"
-	draw_text(CORNER_BOTTOM2, 78 - strlen(CORNER_BOTTOM2), 48, 1, 2);
-	draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 47, 1, 2);
+	draw_text((unsigned char *) CORNER_BOTTOM2, 78 - strlen(CORNER_BOTTOM2), 48, 1, 2);
+	draw_text((unsigned char *) CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 47, 1, 2);
 #else
-	draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 48, 1, 2);
+	draw_text((unsigned char *) CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 48, 1, 2);
 #endif
 }
 
@@ -274,13 +274,13 @@ static void draw_dsp_dialog_const(void)
 {
 	int len;
 	len = strlen(dsp_dialog_title);
-	draw_text(dsp_dialog_title, 40 - (len/2), 24, 0, 2);
+	draw_text((unsigned char *) dsp_dialog_title, 40 - (len/2), 24, 0, 2);
 
 	len = strlen(dsp_dialog_label1);
-	draw_text(dsp_dialog_label1, 29 - len, 27, 0, 2);
+	draw_text((unsigned char *) dsp_dialog_label1, 29 - len, 27, 0, 2);
 
 	len = strlen(dsp_dialog_label2);
-	draw_text(dsp_dialog_label2, 29 - len, 28, 0, 2);
+	draw_text((unsigned char *) dsp_dialog_label2, 29 - len, 28, 0, 2);
 
         draw_box(29, 26, 55, 29, BOX_THIN | BOX_INNER | BOX_INSET);
 }
@@ -323,16 +323,16 @@ static void show_dsp_dialog(const char *text, int *ov,
 	dsp_dialog_label1 = label1;
 	dsp_dialog_label2 = label2;
 	create_thumbbar(dsp_dialog_widgets+0, 30, 27, 25, 0, 1, 1,
-					dsp_dialog_update, low1, high1);
+					(void *) dsp_dialog_update, low1, high1);
 	create_thumbbar(dsp_dialog_widgets+1, 30, 28, 25, 0, 2, 2,
-					dsp_dialog_update, low1, high1);
+					(void *) dsp_dialog_update, low1, high1);
 	dsp_value0 = ov;
 	dsp_value1 = v1; dsp_dialog_widgets[0].d.thumbbar.value = *v1;
 	dsp_value2 = v2; dsp_dialog_widgets[1].d.thumbbar.value = *v2;
 	create_button(dsp_dialog_widgets+2, 28,31,8, 1, 2, 2, 3, 3,
-					dsp_dialog_ok, "OK", 4);
+					(void *) dsp_dialog_ok, "OK", 4);
 	create_button(dsp_dialog_widgets+3, 42,31,8, 1, 2, 2, 3, 3,
-					dsp_dialog_cancel, "Cancel", 2);
+					(void *) dsp_dialog_cancel, "Cancel", 2);
 	d = dialog_create_custom(20, 22, 40, 12,
 			dsp_dialog_widgets,
 			4, 2,
@@ -467,7 +467,7 @@ void preferences_load_page(struct page *page)
 					change_mixer,
 					ptr,
 					2,
-					&interp_group);
+					(void *) &interp_group);
 		page->total_widgets++;
 	}
 
@@ -498,7 +498,7 @@ void preferences_load_page(struct page *page)
 	create_button(widgets_preferences+i+10,
 			2, 44, 27,
 			i+8, i+10, i+10, i+11, i+11,
-			save_config_now,
+			(void *) save_config_now,
 			"Save Output Configuration", 2);
 
 	create_toggle(widgets_preferences+i+11, /* Oversampling */

@@ -22,6 +22,9 @@
 
 #include "sdlmain.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 /*
 ** This came from SDL_image's IMG_xpm.c
 *

@@ -863,7 +863,7 @@ void update_current_instrument(void)
         }
         
         if (n > 0) {
-                draw_text(numtostr(2, n, buf), 50, 3, 5, 0);
+                draw_text(numtostr(2, n, (unsigned char *) buf), 50, 3, 5, 0);
                 draw_text_len((const unsigned char *)name, 25, 53, 3, 5, 0);
         } else {
                 draw_text((const unsigned char *)"..", 50, 3, 5, 0);
@@ -884,8 +884,8 @@ static void redraw_top_info(void)
         update_current_pattern();
         update_current_row();
 
-        draw_text(numtostr(3, song_get_current_speed(), buf), 50, 4, 5, 0);
-        draw_text(numtostr(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
+        draw_text(numtostr(3, song_get_current_speed(), (unsigned char *) buf), 50, 4, 5, 0);
+        draw_text(numtostr(3, song_get_current_tempo(), (unsigned char *) buf), 54, 4, 5, 0);
         draw_char('0' + kbd_get_current_octave(), 50, 5, 5, 0);
 }
 
@@ -911,7 +911,7 @@ static void vis_oscilloscope(void)
 		draw_sample_data_rect_16(&vis,audio_buffer,audio_buffer_size,
 					audio_output_channels);
 	} else {
-		draw_sample_data_rect_8(&vis,audio_buffer,audio_buffer_size,
+		draw_sample_data_rect_8(&vis,(void *)audio_buffer,audio_buffer_size,
 					audio_output_channels);
 	}
 	song_unlock_audio();
@@ -1013,9 +1013,9 @@ void redraw_screen(void)
 	if (!ACTIVE_PAGE.draw_full) {
 		draw_vis();
 		draw_time();
-		draw_text(numtostr(3, song_get_current_speed(), buf),
+		draw_text(numtostr(3, song_get_current_speed(), (unsigned char *) buf),
 								50, 4, 5, 0);
-		draw_text(numtostr(3, song_get_current_tempo(), buf),
+		draw_text(numtostr(3, song_get_current_tempo(), (unsigned char *) buf),
 								54, 4, 5, 0);
 
 		status_text_redraw();
@@ -1289,13 +1289,13 @@ void show_song_timejump(void)
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	create_button(_timejump_widgets+2, 30, 29, 8,   0, 2, 2, 3, 3, _timejump_ok, "OK", 4);
+	create_button(_timejump_widgets+2, 30, 29, 8,   0, 2, 2, 3, 3, (void *) _timejump_ok, "OK", 4);
 	create_button(_timejump_widgets+3, 42, 29, 8,   1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;
 	d->action_yes = _timejump_ok;
-	d->action_no = dialog_cancel_NULL;
-	d->action_cancel = dialog_cancel_NULL;
+	d->action_no = (void *) dialog_cancel_NULL;
+	d->action_cancel = (void *) dialog_cancel_NULL;
 }
 
 void show_song_length(void)

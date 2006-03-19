@@ -22,6 +22,7 @@
 #include "util.h"
 #include "event.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 static char *_current_selection = 0;

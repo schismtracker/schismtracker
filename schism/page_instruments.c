@@ -565,9 +565,9 @@ static void note_trans_draw(void)
                 if (ins->note_map[n] < 1 || ins->note_map[n] > 120)
                         ins->note_map[n] = n + 1;
 
-                draw_text(get_note_string(n + 1, buf), 32, 16 + pos, 2, bg);
+                draw_text((unsigned char *) get_note_string(n + 1, (char *) buf), 32, 16 + pos, 2, bg);
                 draw_char(168, 35, 16 + pos, 2, bg);
-                draw_text(get_note_string(ins->note_map[n], buf), 36, 16 + pos, 2, bg);
+                draw_text((unsigned char *) get_note_string(ins->note_map[n], (char *) buf), 36, 16 + pos, 2, bg);
                 if (is_selected && n == note_trans_sel_line) {
                         if (note_trans_cursor_pos == 0)
                                 draw_char(buf[0], 36, 16 + pos, 0, 3);
@@ -932,11 +932,11 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 	draw_fill_chars(65, 18, 76, 25, 0);
 	vgamem_fill_reserve(&env_overlay, 3, 0);
 
-        sprintf(buf, "Node %d/%d", current_node, env->nodes);
+        sprintf((char *) buf, "Node %d/%d", current_node, env->nodes);
         draw_text((const unsigned char *)buf, 66, 19, 2, 0);
-        sprintf(buf, "Tick %d", env->ticks[current_node]);
+        sprintf((char *) buf, "Tick %d", env->ticks[current_node]);
         draw_text((const unsigned char *)buf, 66, 21, 2, 0);
-        sprintf(buf, "Value %d", env->values[current_node] - (middle ? 32 : 0));
+        sprintf((char *) buf, "Value %d", env->values[current_node] - (middle ? 32 : 0));
         draw_text((const unsigned char *)buf, 66, 23, 2, 0);
 }
 
@@ -1562,7 +1562,7 @@ static void do_ins_save(void *p)
 static void instrument_save(void)
 {
 	song_instrument *ins = song_get_instrument(current_instrument, NULL);
-	char *ptr = dmoz_path_concat(cfg_dir_instruments, ins->filename);
+	char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, ins->filename);
 	struct stat buf;
 	
 	if (stat(ptr, &buf) == 0) {

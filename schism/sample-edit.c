@@ -516,8 +516,8 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 
 	status.flags |= SONG_NEEDS_SAVE;
 
-	d = song_sample_allocate(newlen*bps);
-	z = sample->data;
+	d = (unsigned char *) song_sample_allocate(newlen*bps);
+	z = (unsigned char *) sample->data;
 
 	sample->speed = (unsigned long)((((double)newlen) * ((double)sample->speed))
 			/ ((double)sample->length));
@@ -527,21 +527,21 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 					: sample->length;
 	if (sample->flags & SAMP_16_BIT) {
 		if (aa) {
-			_resize_16aa(d, newlen, (unsigned short *)sample->data, oldlen);
+			_resize_16aa((signed short *) d, newlen, (short *)sample->data, oldlen);
 		} else {
-			_resize_16(d, newlen, (unsigned short *)sample->data, oldlen);
+			_resize_16((signed short *) d, newlen, (short *)sample->data, oldlen);
 		}
 	} else {
 		if (aa) {
-			_resize_8aa(d, newlen, sample->data, oldlen);
+			_resize_8aa((signed char *) d, newlen, sample->data, oldlen);
 		} else {
-			_resize_8(d, newlen, sample->data, oldlen);
+			_resize_8((signed char *) d, newlen, sample->data, oldlen);
 		}
 	}
 
 	sample->length = newlen;
-	sample->data = d;
-	song_sample_free(z);
+	sample->data = (signed char *) d;
+	song_sample_free((signed char *) z);
 	song_unlock_audio();
 }
 
@@ -576,9 +576,9 @@ void sample_mono_left(song_sample * sample)
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & SAMP_STEREO) {
 		if (sample->flags & SAMP_16_BIT)
-			_mono_lr16((signed short *)sample->data, sample->length*2, 1);
+			_mono_lr16((signed char *)sample->data, sample->length*2, 1);
 		else
-			_mono_lr8((signed short *)sample->data, sample->length*2, 1);
+			_mono_lr8((signed char *)sample->data, sample->length*2, 1);
 		sample->flags &= ~SAMP_STEREO;
 	}
 	song_unlock_audio();
@@ -589,9 +589,9 @@ void sample_mono_right(song_sample * sample)
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & SAMP_STEREO) {
 		if (sample->flags & SAMP_16_BIT)
-			_mono_lr16((signed short *)sample->data, sample->length*2, 0);
+			_mono_lr16((signed char *)sample->data, sample->length*2, 0);
 		else
-			_mono_lr8((signed short *)sample->data, sample->length*2, 0);
+			_mono_lr8((signed char *)sample->data, sample->length*2, 0);
 		sample->flags &= ~SAMP_STEREO;
 	}
 	song_unlock_audio();

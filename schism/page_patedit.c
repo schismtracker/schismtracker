@@ -421,7 +421,7 @@ static void multichannel_draw_const(void)
 	int i;
 
 	for (i = 0; i < 64; i++) {
-		sprintf(sbuf, "Channel %02d", i+1);
+		sprintf((char *) sbuf, "Channel %02d", i+1);
 		draw_text(sbuf,
 			9 + ((i / 16) * 16), /* X */
 			22 + (i % 16),	/* Y */
@@ -819,7 +819,7 @@ static void fast_volume_setup_cancel(UNUSED void *data)
 
 static void fast_volume_setup_draw_const(void)
 {
-	draw_text("Volume Amplification %", 29, 27, 0, 2);
+	draw_text((unsigned char *) "Volume Amplification %", 29, 27, 0, 2);
 	draw_box(32, 29, 44, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
@@ -859,7 +859,7 @@ static void fast_volume_attenuate(void)
 
 static void volume_setup_draw_const(void)
 {
-	draw_text("Volume Amplification %", 29, 27, 0, 2);
+	draw_text((unsigned char *) "Volume Amplification %", 29, 27, 0, 2);
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
@@ -886,7 +886,7 @@ static void volume_amplify(void)
 
 static void vary_setup_draw_const(void)
 {
-	draw_text("Vary depth limit %", 31, 27, 0, 2);
+	draw_text((unsigned char *) "Vary depth limit %", 31, 27, 0, 2);
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
@@ -962,7 +962,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(volume_percent, 100);
 	CFG_GET_PE(fast_volume_percent, 67);
 	CFG_GET_PE(fast_volume_mode, 0);
-	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", s, 65, "a");
+	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", (char *) s, 65, "a");
 	
 	/* "decode" the track view scheme */
 	for (n = 0; n < 64; n++) {
@@ -985,7 +985,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	if (n < 64)
 		memset(track_view_scheme + n, r, 64 - n);
 
-	cfg_get_string(cfg, "Pattern Editor", "channel_multi", s, 65, "");
+	cfg_get_string(cfg, "Pattern Editor", "channel_multi", (char *) s, 65, "");
 	memset(channel_multi, 0, sizeof(channel_multi));
 	channel_multi_base = NULL;
 	for (n = 0; n < 64; n++) {
@@ -1745,7 +1745,7 @@ static void pated_history_clear(void)
 	int i;
 	for (i = 0; i < 10; i++) {
 		if (undo_history[i].freesnapop)
-			free(undo_history[i].snap_op);
+			free((void *) undo_history[i].snap_op);
 		free(undo_history[i].data);
 
 		memset(&undo_history[i],0,sizeof(struct pattern_snap));
@@ -1782,7 +1782,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 			if (chan + x > 64) break; /* defensive */
 			if (p_note[chan].note) {
 				p_note[chan].note += xlate;
-				if (p_note[chan].note < 0 || p_note[chan].note > 120)
+				if (/*p_note[chan].note < 0 || */p_note[chan].note > 120)
 					p_note[chan].note = 0;
 			}
 		}
@@ -1830,7 +1830,7 @@ static void pated_history_add(const char *descr, int x, int y, int width, int he
 	free(undo_history[j].data);
 	snap_copy(&undo_history[j], x, y, width, height);
 	undo_history[j].snap_op = mem_alloc(strlen(descr)+1);
-	strcpy(undo_history[j].snap_op, descr);
+	strcpy((char *) undo_history[j].snap_op, descr);
 	undo_history[j].freesnapop = 1;
 	undo_history_top = j;
 }
@@ -1960,7 +1960,7 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 				p_note[chan] = c_note[chan];
 				if (p_note[chan].note) {
 					p_note[chan].note += xlate;
-					if (p_note[chan].note < 0 || p_note[chan].note > 120)
+					if (/*p_note[chan].note < 0 || */p_note[chan].note > 120)
 						p_note[chan].note = 0;
 				}
 				if (clip) {
@@ -2017,7 +2017,7 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 				if (c_note[chan].note != 0) {
 					p_note[chan].note = c_note[chan].note;
 					if (p_note[chan].note) p_note[chan].note += xlate;
-					if (p_note[chan].note < 0 || p_note[chan].note > 120)
+					if (/*p_note[chan].note < 0 ||*/p_note[chan].note > 120)
 						p_note[chan].note = 0;
 				}
 				if (c_note[chan].instrument != 0)
@@ -2035,7 +2035,7 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 				if (p_note[chan].note == 0) {
 					p_note[chan].note = c_note[chan].note;
 					if (p_note[chan].note) p_note[chan].note += xlate;
-					if (p_note[chan].note < 0 || p_note[chan].note > 120)
+					if (/*p_note[chan].note < 0 || */p_note[chan].note > 120)
 						p_note[chan].note = 0;
 				}
 				if (p_note[chan].instrument == 0)
@@ -4022,8 +4022,8 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	if (k->mod & KMOD_SHIFT)
 		shift_selection_update();
 
-	draw_text(numtostr(3, song_get_num_patterns(), buf), 16, 6, 5, 0);
-	draw_text(numtostr(3, current_row, buf), 12, 7, 5, 0);
+	draw_text(numtostr(3, song_get_num_patterns(), (unsigned char *) buf), 16, 6, 5, 0);
+	draw_text(numtostr(3, current_row, (unsigned char *) buf), 12, 7, 5, 0);
 
 	status.flags |= NEED_UPDATE;
 	return 1;

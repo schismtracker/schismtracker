@@ -196,16 +196,16 @@ static void midi_page_redraw(void)
 	time_t now;
 
 	draw_fill_chars(3, 15, 76, 28, 0);
-	draw_text("Midi ports:", 2, 13, 0, 2);
+	draw_text((unsigned char *) "Midi ports:", 2, 13, 0, 2);
 	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	draw_text(       "Tick quantize", 6, 30, 0, 2);
-	draw_text(      "Base Program 1", 5, 31, 0, 2);
-	draw_text(     "Record Note-Off", 4, 32, 0, 2);
-	draw_text(     "Record Velocity", 4, 33, 0, 2);
-	draw_text(   "Record Aftertouch", 2, 34, 0, 2);
-	draw_text(    "Record using SDx", 3, 35, 0, 2);
-	draw_text(        "Cut note off", 7, 36, 0, 2);
+	draw_text((unsigned char *)        "Tick quantize", 6, 30, 0, 2);
+	draw_text((unsigned char *)       "Base Program 1", 5, 31, 0, 2);
+	draw_text((unsigned char *)      "Record Note-Off", 4, 32, 0, 2);
+	draw_text((unsigned char *)      "Record Velocity", 4, 33, 0, 2);
+	draw_text((unsigned char *)    "Record Aftertouch", 2, 34, 0, 2);
+	draw_text((unsigned char *)     "Record using SDx", 3, 35, 0, 2);
+	draw_text((unsigned char *)         "Cut note off", 7, 36, 0, 2);
 
 	draw_fill_chars(23, 30, 24, 36, 0);
 	draw_box(19,29,25,37, BOX_THIN|BOX_INNER|BOX_INSET);
@@ -218,13 +218,13 @@ static void midi_page_redraw(void)
 	draw_fill_chars(56, 38, 72, 38, 0);
 	draw_box(52,37,73,39, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	draw_text(    "Amplification", 39, 30, 0, 2);
-	draw_text(   "C-5 Note-value", 38, 31, 0, 2);
-	draw_text("Output MIDI pitch", 35, 34, 0, 2);
-	draw_text("Pitch wheel depth", 35, 35, 0, 2);
-	draw_text(  "Embed MIDI data", 37, 38, 0, 2);
+	draw_text((unsigned char *)     "Amplification", 39, 30, 0, 2);
+	draw_text((unsigned char *)    "C-5 Note-value", 38, 31, 0, 2);
+	draw_text((unsigned char *) "Output MIDI pitch", 35, 34, 0, 2);
+	draw_text((unsigned char *) "Pitch wheel depth", 35, 35, 0, 2);
+	draw_text((unsigned char *)   "Embed MIDI data", 37, 38, 0, 2);
 
-	draw_text(    "IP MIDI ports", 39, 41, 0, 2);
+	draw_text((unsigned char *)     "IP MIDI ports", 39, 41, 0, 2);
 	draw_box(52,40,73,42, BOX_THIN|BOX_INNER|BOX_INSET);
 
 	time(&now);
@@ -248,7 +248,7 @@ static void midi_page_redraw(void)
 			fg = 5;
 			bg = 0;
 		}
-		draw_text_len(name, 64, 13, 15+i, 5, 0);
+		draw_text_len((unsigned char *) name, 64, 13, 15+i, 5, 0);
 
 		/* portability: should use difftime */
 		if (status.flags & MIDI_EVENT_CHANGED
@@ -258,24 +258,24 @@ static void midi_page_redraw(void)
 				sprintf(buffer+n, "%02x ", status.last_midi_event[j]);
 				n += 3;
 			}
-			draw_text(buffer, 77 - strlen(buffer), 15+i, 4, 0);
+			draw_text((unsigned char *) buffer, 77 - strlen(buffer), 15+i, 4, 0);
 		}
 
 		switch (p->io) {
 		case 0:
-			draw_text("Disabled ", 3, 15+i, fg, bg);
+			draw_text((unsigned char *) "Disabled ", 3, 15+i, fg, bg);
 			break;
 		case MIDI_INPUT:
-			draw_text("   Input ", 3, 15+i, fg, bg);
+			draw_text((unsigned char *) "   Input ", 3, 15+i, fg, bg);
 			break;
 		case MIDI_OUTPUT:
-			draw_text("  Output ", 3, 15+i, fg, bg);
+			draw_text((unsigned char *) "  Output ", 3, 15+i, fg, bg);
 			break;
 		case MIDI_INPUT|MIDI_OUTPUT:
-			draw_text("  Duplex ", 3, 15+i, fg, bg);
+			draw_text((unsigned char *) "  Duplex ", 3, 15+i, fg, bg);
 			break;
 		default:
-			draw_text(" Enabled ", 3, 15+i, fg, bg);
+			draw_text((unsigned char *) " Enabled ", 3, 15+i, fg, bg);
 			break;
 		};
 	}
