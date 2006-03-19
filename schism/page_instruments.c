@@ -25,6 +25,8 @@
 #include "clippy.h"
 #include "song.h"
 
+#include "dmoz.h"
+
 #include <sys/stat.h>
 
 #include "video.h"

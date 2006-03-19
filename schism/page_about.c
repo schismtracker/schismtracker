@@ -25,6 +25,7 @@
 #include "it.h"
 #include "page.h"
 #include "video.h"
+#include "song.h"
 
 extern SDL_Surface *xpmdata(char *x[]);
 
