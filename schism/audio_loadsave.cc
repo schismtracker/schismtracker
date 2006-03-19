@@ -184,7 +184,7 @@ static void _fix_names(CSoundFile *qq)
 {
         int c, n;
 
-        for (n = 1; n < 100; n++) {
+        for (n = 1; n < MAX_INSTRUMENTS; n++) {
                 for (c = 0; c < 25; c++)
                         if (qq->m_szNames[n][c] == 0)
                                 qq->m_szNames[n][c] = 32;
