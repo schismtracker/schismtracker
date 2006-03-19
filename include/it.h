@@ -337,6 +337,7 @@ void kbd_init(void);
 void kbd_digitrakker_voodoo(int e);
 int kbd_get_effect_number(struct key_event *k);
 int kbd_char_to_hex(struct key_event *k);
+int kbd_char_to_99(struct key_event *k);
 
 int kbd_get_current_octave(void);
 void kbd_set_current_octave(int new_octave);

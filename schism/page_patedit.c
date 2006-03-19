@@ -3069,17 +3069,37 @@ static int pattern_editor_insert(struct key_event *k)
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
-		j = kbd_char_to_hex(k);
-		if (j < 0 || j > 9) return 0;
 
 		if (current_position == 2) {
+			j = kbd_char_to_99(k);
 			n = (j * 10) + (cur_note->instrument % 10);
 			current_position++;
 		} else {
+			j = kbd_char_to_hex(k);
+			if (j < 0 || j > 9) return 0;
+
 			n = ((cur_note->instrument / 10) * 10) + j;
 			current_position--;
 			advance_cursor();
 		}
+
+		/* this is kind of ugly... */
+		if (song_is_instrument_mode()) {
+			j = instrument_get_current();
+			instrument_set(n);
+			if (n != instrument_get_current()) {
+				n = j;
+			}
+			instrument_set(j);
+		} else {
+			j = sample_get_current();
+			sample_set(n);
+			if (n != sample_get_current()) {
+				n = j;
+			}
+			sample_set(j);
+		}
+
 		cur_note->instrument = n;
 		if (song_is_instrument_mode())
 			instrument_set(n);

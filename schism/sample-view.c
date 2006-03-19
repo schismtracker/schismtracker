@@ -150,7 +150,7 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample * samp
 	int c;
 #endif
         song_mix_channel *channel;
-        unsigned long *channel_list;
+        unsigned int *channel_list;
 
         if (song_get_mode() == MODE_STOPPED)
                 return;

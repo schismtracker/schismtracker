@@ -85,6 +85,22 @@ static int last_note = 61;		/* C-5 */
 static void instrument_list_draw_list(void);
 
 /* --------------------------------------------------------------------------------------------------------- */
+static int _last_vis_inst(void)
+{
+	int i, j, n;
+
+	n = 99;
+	j = 0;
+	/* 65 is last visible sample on last page */
+	for (i = 65; i <= SCHISM_MAX_INSTRUMENTS; i++) {
+		if (!song_instrument_is_empty(i)) {
+			j = i;
+		}
+	}
+	while ((j + 34) > n) n += 34;
+	if (n >= SCHISM_MAX_INSTRUMENTS) n = SCHISM_MAX_INSTRUMENTS;
+	return n;
+}
 /* the actual list */
 
 static void instrument_list_reposition(void)
@@ -110,9 +126,9 @@ void instrument_set(int n)
 	song_instrument *ins;
 
         if (page_is_instrument_list(status.current_page)) {
-                new_ins = CLAMP(n, 1, 99);
+                new_ins = CLAMP(n, 1, _last_vis_inst());
         } else {
-                new_ins = CLAMP(n, 0, 99);
+                new_ins = CLAMP(n, 0, _last_vis_inst());
         }
 
         if (current_instrument == new_ins)
@@ -228,7 +244,7 @@ static void do_swap_instrument(UNUSED void *data)
 {
 	int n = atoi(swap_instrument_entry);
 	
-	if (n < 1 || n > 99)
+	if (n < 1 || n > _last_vis_inst())
 		return;
 	song_swap_instruments(current_instrument, n);
 }
@@ -257,7 +273,7 @@ static void do_exchange_instrument(UNUSED void *data)
 {
 	int n = atoi(swap_instrument_entry);
 	
-	if (n < 1 || n > 99)
+	if (n < 1 || n > _last_vis_inst())
 		return;
 	song_exchange_instruments(current_instrument, n);
 }
@@ -315,7 +331,7 @@ static void instrument_list_draw_list(void)
                 if (ins->played)
                 	draw_char(173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 
-                draw_text(numtostr(2, n, buf), 2, 13 + pos, 0, 2);
+                draw_text(num99tostr(n, buf), 2, 13 + pos, 0, 2);
                 if (instrument_cursor_pos < 25) {
                         /* it's in edit mode */
                         if (is_current) {
@@ -373,7 +389,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 			top_instrument++;
-			if (top_instrument > (99-34)) top_instrument = 99-34;
+			if (top_instrument > (_last_vis_inst()-34)) top_instrument = _last_vis_inst()-34;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -401,7 +417,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		case SDLK_PAGEDOWN:
 			if (k->state) return 0;
 			if (k->mod & KMOD_CTRL)
-				new_ins = 99;
+				new_ins = _last_vis_inst();
 			else
 				new_ins += 16;
 			break;
@@ -515,7 +531,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		};
 	}
 
-        new_ins = CLAMP(new_ins, 1, 99);
+        new_ins = CLAMP(new_ins, 1, _last_vis_inst());
         if (new_ins != current_instrument) {
                 instrument_set(new_ins);
                 status.flags |= NEED_UPDATE;
@@ -578,7 +594,7 @@ static void note_trans_draw(void)
                 }
                 draw_char(0, 39, 16 + pos, 2, bg);
                 if (ins->sample_map[n]) {
-                        numtostr(2, ins->sample_map[n], buf);
+                        num99tostr(ins->sample_map[n], buf);
                 } else {
                         buf[0] = buf[1] = 173;
                         buf[2] = 0;
@@ -865,7 +881,7 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 			int env_on, int loop_on, int sustain_on, int env_num)
 {
 	song_mix_channel *channel;
-	unsigned long *channel_list;
+	unsigned int *channel_list;
 	byte buf[16];
 	unsigned long envpos[3];
 	int x, y, n, m, c;

@@ -121,6 +121,18 @@ unsigned char *get_time_string(time_t when, unsigned char *buf)
         return buf;
 }
 
+unsigned char *num99tostr(int n, unsigned char *buf)
+{
+	if (n < 100) {
+		sprintf((char*)buf, "%02d", n);
+	} else {
+		n -= 100;
+		sprintf((char*)buf, "%c%d", 
+			('A' + (n / 10)), (n % 10));
+	}
+	return buf;
+
+}
 unsigned char *numtostr(int digits, int n, unsigned char *buf)
 {
 	if (digits > 0) {

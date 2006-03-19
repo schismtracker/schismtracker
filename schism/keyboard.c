@@ -383,6 +383,39 @@ void kbd_set_current_octave(int new_octave)
         status.flags |= NEED_UPDATE;
 }
 
+inline int kbd_char_to_99(struct key_event *k)
+{
+	if (!NO_CAM_MODS(k->mod)) return -1;
+
+	if (k->unicode == 'a' || k->unicode == 'A') return 10;
+	if (k->unicode == 'b' || k->unicode == 'B') return 11;
+	if (k->unicode == 'c' || k->unicode == 'C') return 12;
+	if (k->unicode == 'd' || k->unicode == 'D') return 13;
+	if (k->unicode == 'e' || k->unicode == 'E') return 14;
+	if (k->unicode == 'f' || k->unicode == 'F') return 15;
+	if (k->unicode == 'g' || k->unicode == 'G') return 16;
+	if (k->unicode == 'h' || k->unicode == 'H') return 17;
+	if (k->unicode == 'i' || k->unicode == 'I') return 18;
+	if (k->unicode == 'j' || k->unicode == 'J') return 19;
+	if (k->unicode == 'k' || k->unicode == 'K') return 20;
+	
+	switch (k->sym) {
+	case SDLK_a: return 10;
+	case SDLK_b: return 11;
+	case SDLK_c: return 12;
+	case SDLK_d: return 13;
+	case SDLK_e: return 14;
+	case SDLK_f: return 15;
+	case SDLK_g: return 16;
+	case SDLK_h: return 17;
+	case SDLK_i: return 18;
+	case SDLK_j: return 19;
+	case SDLK_k: return 20;
+	};
+
+	return kbd_char_to_hex(k);
+
+}
 inline int kbd_char_to_hex(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;

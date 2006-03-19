@@ -125,7 +125,7 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 			else
 				fg = active ? 1 : 0;
 		}
-		draw_text(numtostr(2, c, (unsigned char *) buf), 2, pos, fg, 2); /* channel number */
+		draw_text(num99tostr(c, (unsigned char *) buf), 2, pos, fg, 2); /* channel number */
 
 		sprintf(buf, "%10d", channel->sample_freq);
 		if (channel->sample_freq) {
@@ -242,10 +242,10 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                 else
                         smp = 0;
                 if (smp) {
-                        draw_text(numtostr(2, smp, (unsigned char *) buf), 31, pos, 6, 0);
+                        draw_text(num99tostr(smp, (unsigned char *) buf), 31, pos, 6, 0);
                         if (ins) {
                                 draw_char('/', 33, pos, 6, 0);
-                                draw_text(numtostr(2, ins, (unsigned char *) buf), 34, pos, 6, 0);
+                                draw_text(num99tostr(ins, (unsigned char *) buf), 34, pos, 6, 0);
                                 n = 36;
                         } else {
                                 n = 33;
@@ -583,7 +583,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
         int c, pos;
         int n;
         song_mix_channel *channel;
-        unsigned long *channel_list;
+        unsigned int *channel_list;
         char buf[4];
         byte d, dn;
         /* f#2 -> f#8 = 73 columns */
