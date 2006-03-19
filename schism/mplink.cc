@@ -171,7 +171,7 @@ song_mix_channel *song_get_mix_channel(int n)
         return (song_mix_channel *) mp->Chn + n;
 }
 
-int song_get_mix_state(unsigned long **channel_list)
+int song_get_mix_state(unsigned int **channel_list)
 {
         if (channel_list)
                 *channel_list = mp->ChnMix;

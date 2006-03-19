@@ -81,7 +81,7 @@ static void _convert_to_it(CSoundFile *qq)
 			continue;
 		for (unsigned int row = 0; row < qq->PatternSize[pat]; row++) {
 			for (unsigned int chan = 0; chan < qq->m_nChannels; chan++, note++) {
-				unsigned long command = note->command, param = note->param;
+				unsigned int command = note->command, param = note->param;
 				qq->S3MSaveConvert(&command, &param, true);
 				if (command || param) {
 					note->command = command;
@@ -685,8 +685,8 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
 		for (int chan = 0; chan < 64; chan++, noteptr++) {
 			byte m = 0;	// current mask
 			int vol = -1;
-			unsigned long note = noteptr->note;
-			unsigned long command = noteptr->command, param = noteptr->param;
+			unsigned int note = noteptr->note;
+			unsigned int command = noteptr->command, param = noteptr->param;
 			
 			if (note) {
 				m |= 1;
@@ -806,7 +806,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	while (nsmp >= 0 && _sample_is_empty(nsmp))
 		nsmp--;
 	nsmp++;
-	if (nsmp > 99) nsmp = 99;
+	if (nsmp > 200) nsmp = 200; /* is this okay? */
 	
 	// IT always saves at least one pattern.
 	//npat = 199;
