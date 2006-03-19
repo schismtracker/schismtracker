@@ -50,6 +50,8 @@
 #define _FRAG_BUILDE
 #include <frag-opt.h>
 
+#include "util.h"
+
 /* helper functions */
 inline void	_frag_parse_bare(FRAG * frag);
 void		_frag_parse_sopt(FRAG * frag, const char * str);

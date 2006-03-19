@@ -635,7 +635,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	// ITI files *need* to write 554 bytes due to alignment, but in a song it doesn't matter
 	fp->o(fp, (const unsigned char *)&iti, sizeof(iti));
 	if (iti_file) {
-		byte junk[554 - sizeof(iti)];
+		byte junk[554 - (unsigned int)sizeof(iti)];
 		
 		fp->o(fp, (const unsigned char *)junk, sizeof(junk));
 		unsigned int qp = 554;
