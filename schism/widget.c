@@ -370,7 +370,7 @@ void draw_widget(struct widget *w, int selected)
         switch (w->type) {
         case WIDGET_TOGGLE:
                 draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, 0);
-                draw_text(w->d.toggle.state ? "On" : "Off", w->x, w->y, tfg, tbg);
+                draw_text((unsigned char *) (w->d.toggle.state ? "On" : "Off"), w->x, w->y, tfg, tbg);
                 break;
         case WIDGET_MENUTOGGLE:
                 draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, 0);
@@ -378,27 +378,27 @@ void draw_widget(struct widget *w, int selected)
                 endptr = strchr(ptr, ' ');
                 if (endptr) {
                         n = endptr - ptr;
-                        draw_text_len(ptr, n, w->x, w->y, tfg, tbg);
-                        draw_text(endptr + 1, w->x + n + 1, w->y, 2, 0);
+                        draw_text_len((unsigned char *) ptr, n, w->x, w->y, tfg, tbg);
+                        draw_text((unsigned char *) endptr + 1, w->x + n + 1, w->y, 2, 0);
                 } else {
-                        draw_text(ptr, w->x, w->y, tfg, tbg);
+                        draw_text((unsigned char *) ptr, w->x, w->y, tfg, tbg);
                 }
                 break;
         case WIDGET_BUTTON:
                 draw_box(w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
                          BOX_THIN | BOX_INNER | (
 				w->depressed ? BOX_INSET : BOX_OUTSET));
-                draw_text(w->d.button.text, w->x + w->d.button.padding, w->y, selected ? 3 : 0, 2);
+                draw_text((unsigned char *) w->d.button.text, w->x + w->d.button.padding, w->y, selected ? 3 : 0, 2);
                 break;
         case WIDGET_TOGGLEBUTTON:
                 draw_box(w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
                          BOX_THIN | BOX_INNER |(
 				(w->d.togglebutton.state || w->depressed) ? BOX_INSET : BOX_OUTSET));
-                draw_text(w->d.togglebutton.text, w->x + w->d.togglebutton.padding, w->y, selected ? 3 : 0, 2);
+                draw_text((unsigned char *) w->d.togglebutton.text, w->x + w->d.togglebutton.padding, w->y, selected ? 3 : 0, 2);
                 break;
         case WIDGET_TEXTENTRY:
                 textentry_reposition(w);
-                draw_text_len(w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
+                draw_text_len((unsigned char *) w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
 		if (clippy_owner(CLIPPY_SELECT) == w) {
 			/* wee.... */
 			clen = w->clip_end - w->clip_start;
@@ -433,11 +433,11 @@ void draw_widget(struct widget *w, int selected)
                 break;
         case WIDGET_NUMENTRY:
 		if (w->d.numentry.reverse) {
-			str = numtostr(w->width, w->d.numentry.value, buf);
+			str = (char *) numtostr(w->width, w->d.numentry.value, (unsigned char *) buf);
 			while (*str == '0') str++;
-			draw_text_len("", w->width, w->x, w->y, 2, 0);
+			draw_text_len((unsigned char *) "", w->width, w->x, w->y, 2, 0);
 			if (*str) {
-				draw_text(str, (w->x+w->width) - strlen(str),
+				draw_text((unsigned char *) str, (w->x+w->width) - strlen(str),
 						w->y, 2, 0);
 			}
 	                if (selected) {
@@ -448,7 +448,7 @@ void draw_widget(struct widget *w, int selected)
 			}
 		} else {
 			draw_text_len(numtostr(w->width, w->d.numentry.value,
-					buf),
+					(unsigned char *) buf),
 					w->width, w->x, w->y, 2, 0);
 	                if (selected) {
 				n = *(w->d.numentry.cursor_pos);
@@ -458,32 +458,32 @@ void draw_widget(struct widget *w, int selected)
                 break;
         case WIDGET_THUMBBAR:
 		if (w->d.thumbbar.text_at_min && w->d.thumbbar.min == w->d.thumbbar.value) {
-			draw_text_len(w->d.thumbbar.text_at_min, w->width, w->x, w->y, selected ? 3 : 2, 0);
+			draw_text_len((unsigned char *) w->d.thumbbar.text_at_min, w->width, w->x, w->y, selected ? 3 : 2, 0);
 		} else if (w->d.thumbbar.text_at_max && w->d.thumbbar.max == w->d.thumbbar.value) {
 			/* this will probably do Bad Things if the text is too long */
 			int len = strlen(w->d.thumbbar.text_at_max);
 			int pos = w->x + w->width - len;
 			
 			draw_fill_chars(w->x, w->y, pos - 1, w->y, 0);
-			draw_text_len(w->d.thumbbar.text_at_max, len, pos, w->y, selected ? 3 : 2, 0);
+			draw_text_len((unsigned char *) w->d.thumbbar.text_at_max, len, pos, w->y, selected ? 3 : 2, 0);
 		} else {
 			draw_thumb_bar(w->x, w->y, w->width, w->d.thumbbar.min,
 				       w->d.thumbbar.max, w->d.thumbbar.value, selected);
 		}
-                draw_text(numtostr(3, w->d.thumbbar.value, buf), w->x + w->width + 1, w->y, 1, 2);
+                draw_text(numtostr(3, w->d.thumbbar.value, (unsigned char *) buf), w->x + w->width + 1, w->y, 1, 2);
                 break;
         case WIDGET_PANBAR:
-                numtostr(2, w->d.panbar.channel, buf + 8);
-                draw_text(buf, w->x, w->y, selected ? 3 : 0, 2);
+                numtostr(2, w->d.panbar.channel, (unsigned char *) buf + 8);
+                draw_text((unsigned char *) buf, w->x, w->y, selected ? 3 : 0, 2);
                 if (w->d.panbar.muted) {
-                        draw_text("  Muted  ", w->x + 11, w->y, selected ? 3 : 5, 0);
+                        draw_text((unsigned char *) "  Muted  ", w->x + 11, w->y, selected ? 3 : 5, 0);
                         /* draw_fill_chars(w->x + 21, w->y, w->x + 23, w->y, 2); */
                 } else if (w->d.panbar.surround) {
-                        draw_text("Surround ", w->x + 11, w->y, selected ? 3 : 5, 0);
+                        draw_text((unsigned char *) "Surround ", w->x + 11, w->y, selected ? 3 : 5, 0);
                         /* draw_fill_chars(w->x + 21, w->y, w->x + 23, w->y, 2); */
                 } else {
                         draw_thumb_bar(w->x + 11, w->y, 9, 0, 64, w->d.panbar.value, selected);
-                        draw_text(numtostr(3, w->d.thumbbar.value, buf), w->x + 21, w->y, 1, 2);
+                        draw_text(numtostr(3, w->d.thumbbar.value, (unsigned char *) buf), w->x + 21, w->y, 1, 2);
                 }
                 break;
         case WIDGET_OTHER:

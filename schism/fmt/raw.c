@@ -50,6 +50,6 @@ puts("WARNING LOADING RAW SAMPLE");
 
 bool fmt_raw_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *title)
 {
-	fp->o(fp, smp->data, ((smp->flags & SAMP_16_BIT) ? 2:1)*smp->length);
+	fp->o(fp, (unsigned char *) smp->data, ((smp->flags & SAMP_16_BIT) ? 2:1)*smp->length);
 	return true;
 }

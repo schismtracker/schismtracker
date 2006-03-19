@@ -304,7 +304,7 @@ static int search_text_length = 0;      /* same as strlen(search_text) */
 static void search_redraw(void)
 {
         draw_fill_chars(51, 37, 76, 37, 0);
-        draw_text_len(search_text + search_first_char, 25, 51, 37, 5, 0);
+        draw_text_len((unsigned char *) search_text + search_first_char, 25, 51, 37, 5, 0);
 
         /* draw the cursor if it's on the dir/file list */
         if (ACTIVE_PAGE.selected_widget == 0 || ACTIVE_PAGE.selected_widget == 1) {
@@ -414,8 +414,8 @@ static int change_dir(const char *dir)
 
 static void load_module_draw_const(void)
 {
-        draw_text("Filename", 4, 46, 0, 2);
-        draw_text("Directory", 3, 47, 0, 2);
+        draw_text((unsigned char *) "Filename", 4, 46, 0, 2);
+        draw_text((unsigned char *) "Directory", 3, 47, 0, 2);
         draw_char(0, 51, 37, 0, 6);
         draw_box(2, 12, 47, 44, BOX_THICK | BOX_INNER | BOX_INSET);
         draw_box(49, 12, 68, 34, BOX_THICK | BOX_INNER | BOX_INSET);
@@ -461,28 +461,28 @@ static void file_list_draw(void)
                                 bg = 0;
                         }
 
-                        draw_text_len(file->base, 18, 3, pos, fg1, bg);
+                        draw_text_len((unsigned char *) file->base, 18, 3, pos, fg1, bg);
                         draw_char(168, 21, pos, 2, bg);
-                        draw_text_len(file->title, 25, 22, pos, fg2, bg);
+                        draw_text_len((unsigned char *) file->title, 25, 22, pos, fg2, bg);
                 }
 
                 /* info for the current file */
 		if (current_file >= 0 && current_file < flist.num_files) {
 	                file = flist.files[current_file];
-			draw_text_len(file->description ? file->description : "", 26, 51, 40, 5, 0);
+			draw_text_len((unsigned char *) (file->description ? file->description : ""), 26, 51, 40, 5, 0);
 			sprintf(buf, "%09d", file->filesize);
-			draw_text_len(buf, 26, 51, 41, 5, 0);
-			draw_text_len(get_date_string(file->timestamp, buf), 26, 51, 42, 5, 0);
-			draw_text_len(get_time_string(file->timestamp, buf), 26, 51, 43, 5, 0);
+			draw_text_len((unsigned char *) buf, 26, 51, 41, 5, 0);
+			draw_text_len((unsigned char *) get_date_string(file->timestamp, (unsigned char *) buf), 26, 51, 42, 5, 0);
+			draw_text_len((unsigned char *) get_time_string(file->timestamp, (unsigned char *) buf), 26, 51, 43, 5, 0);
 		}
         } else {
                 if (ACTIVE_PAGE.selected_widget == 0) {
-                        draw_text("No files.", 3, 13, 0, 3);
+                        draw_text((unsigned char *) "No files.", 3, 13, 0, 3);
                         draw_fill_chars(12, 13, 46, 13, 3);
                         draw_char(168, 21, 13, 2, 3);
                         pos = 14;
                 } else {
-                        draw_text("No files.", 3, 13, 7, 0);
+                        draw_text((unsigned char *) "No files.", 3, 13, 7, 0);
                         pos = 13;
                 }
                 draw_fill_chars(51, 40, 76, 43, 0);
@@ -626,9 +626,9 @@ static void dir_list_draw(void)
                 if (n >= dlist.num_dirs)
                         break;
                 if (n == current_dir && ACTIVE_PAGE.selected_widget == 1)
-                        draw_text_len(dlist.dirs[n]->base, 18, 50, pos, 0, 3);
+                        draw_text_len((unsigned char *) dlist.dirs[n]->base, 18, 50, pos, 0, 3);
                 else
-                        draw_text_len(dlist.dirs[n]->base, 18, 50, pos, 5, 0);
+                        draw_text_len((unsigned char *) dlist.dirs[n]->base, 18, 50, pos, 5, 0);
         }
 
         /* bleh */

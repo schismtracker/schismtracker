@@ -21,6 +21,7 @@
 
 #include "mixer.h"
 #include "util.h"
+#include "SDL.h"
 
 static int (*__mixer_get_max_volume)(void) = 0;
 static void (*__mixer_read_volume)(int *left, int *right) = 0;

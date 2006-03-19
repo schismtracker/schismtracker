@@ -68,7 +68,7 @@ int macosx_ibook_fnswitch(int setting)
 	if (kr != KERN_SUCCESS) return -1;
 
 	kr = IOHIDGetParameter(dp, CFSTR(kIOHIDFKeyModeKey), sizeof(res),
-						&res, &dummy);
+						&res, (IOByteCount *) &dummy);
 	if (kr != KERN_SUCCESS) {
 		IOServiceClose(dp);
 		return -1;

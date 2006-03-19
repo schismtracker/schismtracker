@@ -242,7 +242,7 @@ static void message_draw(void)
                          * FIXME | short enough to fit */
                         if (len > LINE_WRAP)
                                 len = LINE_WRAP;
-                        draw_text_len(line, len, 2, 13 + n, fg, 0);
+                        draw_text_len((unsigned char *) line, len, 2, 13 + n, fg, 0);
 			
 			if (clipl > -1) {
 				cp = line - message;
@@ -255,7 +255,7 @@ static void message_draw(void)
 				if (cutc < 0) cutc = 0;
 				if (cutc > (len-skipc)) cutc = (len-skipc);
 				if (cutc > 0 && skipc < len) {
-                        		draw_text_len(line+skipc, cutc, 2+skipc, 13 + n, fg, 8);
+                        		draw_text_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, fg, 8);
 				}
 			}
                 }

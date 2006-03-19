@@ -177,67 +177,67 @@ static void load_sample_draw_const(void)
 	if (current_file >= 0
 	&& current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
-		draw_text_len(f->smp_filename ? f->smp_filename : "", 13, 64,13, 2, 0);
+		draw_text_len((unsigned char *) (f->smp_filename ? f->smp_filename : ""), 13, 64,13, 2, 0);
 
 		sprintf(sbuf, "%07d", f->smp_speed);
-		draw_text_len(sbuf, 13, 64, 14, 2, 0);
+		draw_text_len((unsigned char *) sbuf, 13, 64, 14, 2, 0);
 
 		sprintf(sbuf, "%07d", f->smp_loop_start);
-		draw_text_len(sbuf, 13, 64, 16, 2, 0);
+		draw_text_len((unsigned char *) sbuf, 13, 64, 16, 2, 0);
 		sprintf(sbuf, "%07d", f->smp_loop_end);
-		draw_text_len(sbuf, 13, 64, 17, 2, 0);
+		draw_text_len((unsigned char *) sbuf, 13, 64, 17, 2, 0);
 
 		sprintf(sbuf, "%07d", f->smp_sustain_start);
-		draw_text_len(sbuf, 13, 64, 19, 2, 0);
+		draw_text_len((unsigned char *) sbuf, 13, 64, 19, 2, 0);
 		sprintf(sbuf, "%07d", f->smp_sustain_end);
-		draw_text_len(sbuf, 13, 64, 20, 2, 0);
+		draw_text_len((unsigned char *) sbuf, 13, 64, 20, 2, 0);
 
 		sprintf(sbuf, "%07d", f->smp_length);
-		draw_text_len(sbuf, 13, 64, 22, 2, 0);
+		draw_text_len((unsigned char *) sbuf, 13, 64, 22, 2, 0);
 
 		if (!f->smp_length && !f->smp_filename && !f->smp_flags) {
-			draw_text_len("No sample",13, 64, 21, 2, 0);
+			draw_text_len((unsigned char *) "No sample",13, 64, 21, 2, 0);
 		} else if (f->smp_flags & SAMP_STEREO) {
-			draw_text_len(
+			draw_text_len((unsigned char *)
 				(f->smp_flags & SAMP_16_BIT
 				? "16 bits Stereo" : "8 bits Stereo"),
 			13, 64, 21, 2, 0);
 		} else {
-			draw_text_len(
+			draw_text_len((unsigned char *)
 				(f->smp_flags & SAMP_16_BIT
 				? "16 bits" : "8 bits"),
 			13, 64, 21, 2, 0);
 		}
 
-		draw_text_len(
+		draw_text_len((unsigned char *)
 			(f->smp_flags & SAMP_SUSLOOP
 			? "On" : "Off"),
 		13, 64, 18, 2, 0);
 
 		if (f->smp_flags & SAMP_LOOP_PINGPONG) {
-			draw_text_len("On Ping Pong",
+			draw_text_len((unsigned char *) "On Ping Pong",
 				13, 64, 15, 2, 0);
 		} else if (f->smp_flags & SAMP_LOOP) {
-			draw_text_len("On Forwards",
+			draw_text_len((unsigned char *) "On Forwards",
 				13, 64, 15, 2, 0);
 		} else {
-			draw_text_len("Off",
+			draw_text_len((unsigned char *) "Off",
 				13, 64, 15, 2, 0);
 		}
 	}
 
 	/* these are exactly the same as in page_samples.c, apart from
 	 * 'quality' and 'length' being one line higher */
-	draw_text("Filename", 55, 13, 0, 2);
-	draw_text("Speed", 58, 14, 0, 2);
-	draw_text("Loop", 59, 15, 0, 2);
-	draw_text("LoopBeg", 56, 16, 0, 2);
-	draw_text("LoopEnd", 56, 17, 0, 2);
-	draw_text("SusLoop", 56, 18, 0, 2);
-	draw_text("SusLBeg", 56, 19, 0, 2);
-	draw_text("SusLEnd", 56, 20, 0, 2);
-	draw_text("Quality", 56, 21, 0, 2);
-	draw_text("Length", 57, 22, 0, 2);
+	draw_text((unsigned char *) "Filename", 55, 13, 0, 2);
+	draw_text((unsigned char *) "Speed", 58, 14, 0, 2);
+	draw_text((unsigned char *) "Loop", 59, 15, 0, 2);
+	draw_text((unsigned char *) "LoopBeg", 56, 16, 0, 2);
+	draw_text((unsigned char *) "LoopEnd", 56, 17, 0, 2);
+	draw_text((unsigned char *) "SusLoop", 56, 18, 0, 2);
+	draw_text((unsigned char *) "SusLBeg", 56, 19, 0, 2);
+	draw_text((unsigned char *) "SusLEnd", 56, 20, 0, 2);
+	draw_text((unsigned char *) "Quality", 56, 21, 0, 2);
+	draw_text((unsigned char *) "Length", 57, 22, 0, 2);
 
 	draw_box(51, 24, 77, 29, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_fill_chars(52, 25, 76, 28, 0);
@@ -245,11 +245,11 @@ static void load_sample_draw_const(void)
 	draw_box(51, 30, 77, 42, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	/* these abbreviations are sucky and lame. any suggestions? */
-	draw_text("Def. Vol.", 53, 33, 0, 2);
-	draw_text("Glb. Vol.", 53, 34, 0, 2);
-	draw_text("Vib.Speed", 53, 37, 0, 2);
-	draw_text("Vib.Depth", 53, 38, 0, 2);
-	draw_text("Vib. Rate", 53, 39, 0, 2);
+	draw_text((unsigned char *) "Def. Vol.", 53, 33, 0, 2);
+	draw_text((unsigned char *) "Glb. Vol.", 53, 34, 0, 2);
+	draw_text((unsigned char *) "Vib.Speed", 53, 37, 0, 2);
+	draw_text((unsigned char *) "Vib.Depth", 53, 38, 0, 2);
+	draw_text((unsigned char *) "Vib. Rate", 53, 39, 0, 2);
 
 	draw_box(52, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_fill_chars(53, 44, 76, 47, 0);
@@ -322,11 +322,11 @@ static void file_list_draw(void)
 			fg = get_type_color(file->type);
 			bg = 0;
 		}
-		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
-		draw_text_len(file->title ? file->title : "",
+		draw_text(numtostr(3, n+1, (unsigned char *) buf), 2, pos, 0, 2);
+		draw_text_len((unsigned char *) (file->title ? file->title : ""),
 					25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len(file->base ? file->base : "",
+		draw_text_len((unsigned char *) (file->base ? file->base : ""),
 					18, 32, pos, fg, bg);
 		if (file->base && slash_search_mode > -1) {
 			if (strncasecmp(file->base,slash_search_str,slash_search_mode) == 0) {
@@ -391,7 +391,7 @@ static void stereo_cvt_complete_both(void)
 }
 static void stereo_cvt_dialog(void)
 {
-	draw_text("Loading Stereo Sample", 30, 27, 0, 2);
+	draw_text((unsigned char *) "Loading Stereo Sample", 30, 27, 0, 2);
 }
 
 static void finish_load(int cur)
@@ -425,7 +425,7 @@ Left  Both  Right
 				(status.flags & CLASSIC_MODE) ? 1 : 0,
 				stereo_cvt_dialog,
 				NULL);
-		dd->action_cancel = stereo_cvt_complete_both;
+		dd->action_cancel = (void *) stereo_cvt_complete_both;
 		return;
 	}
 

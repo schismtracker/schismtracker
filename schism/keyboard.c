@@ -281,7 +281,7 @@ char *get_volume_string(int volume, int volume_effect, char *buf)
                 /* Yeah, a bit confusing :)
                  * The display stuff makes the distinction here with
                  * a different color for panning. */
-                numtostr(2, volume, buf);
+                numtostr(2, volume, (unsigned char *) buf);
                 break;
         default:
                 buf[0] = cmd_table[volume_effect];

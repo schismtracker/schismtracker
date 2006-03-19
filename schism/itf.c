@@ -258,7 +258,7 @@ static inline void draw_editbox(void)
 	draw_char(current_char, INNER_X(EDITBOX_X), INNER_Y(EDITBOX_Y), 5, 0);
 
 	sprintf(buf, "%3d $%02X", current_char, current_char);
-	draw_text(buf, INNER_X(EDITBOX_X) + 2, INNER_Y(EDITBOX_Y), 5, 0);
+	draw_text((unsigned char *) buf, INNER_X(EDITBOX_X) + 2, INNER_Y(EDITBOX_Y), 5, 0);
 }
 
 static inline void draw_charmap(void)
@@ -286,7 +286,7 @@ static inline void draw_itfmap(void)
 	byte *ptr;
 
 	if (itfmap_pos < 0 || itfmap_chars[itfmap_pos] != current_char) {
-		ptr = strchr(itfmap_chars, current_char);
+		ptr = (unsigned char *) strchr((char *) itfmap_chars, current_char);
 		if (ptr == NULL)
 			itfmap_pos = -1;
 		else
@@ -372,9 +372,9 @@ static inline void draw_helptext(void)
 	int column;
 
 	for (line = INNER_Y(HELPTEXT_Y); *ptr; line++) {
-		eol = strchr(ptr, '\n');
+		eol = (unsigned char *) strchr((char *) ptr, '\n');
 		if (!eol)
-			eol = strchr(ptr, '\0');
+			eol = (unsigned char *) strchr((char *) ptr, '\0');
 		for (column = INNER_X(HELPTEXT_X); ptr < eol; ptr++, column++)
 			draw_char(*ptr, column, line, 12, 0);
 		ptr++;
@@ -396,15 +396,15 @@ static inline void draw_helptext(void)
 		break;
 	}
 	for (line = INNER_Y(HELPTEXT_Y); *ptr; line++) {
-		eol = strchr(ptr, '\n');
+		eol = (unsigned char *) strchr((char *) ptr, '\n');
 		if (!eol)
-			eol = strchr(ptr, '\0');
+			eol = (unsigned char *) strchr((char *) ptr, '\0');
 		draw_char(168, INNER_X(HELPTEXT_X) + 43, line, 12, 0);
 		for (column = INNER_X(HELPTEXT_X) + 45; ptr < eol; ptr++, column++)
 			draw_char(*ptr, column, line, 12, 0);
 		ptr++;
 	}
-	draw_text("(c) 2003-2005 chisel", 57, 46, 1, 0);
+	draw_text((unsigned char *) "(c) 2003-2005 chisel", 57, 46, 1, 0);
 }
 
 static inline void draw_time(void)
@@ -416,30 +416,30 @@ static inline void draw_time(void)
 	time(&timep);
 	localtime_r(&timep, &local);
 	sprintf(buf, "%.2d:%.2d:%.2d", local.tm_hour, local.tm_min, local.tm_sec);
-	draw_text(buf, 3, 46, 1, 0);
+	draw_text((unsigned char *) buf, 3, 46, 1, 0);
 }
 
 extern unsigned int color_set[16];
 
 static void draw_screen(void)
 {
-	draw_frame("Edit Box", EDITBOX_X, EDITBOX_Y, 9, 11, !!(selected_item == EDITBOX));
+	draw_frame((unsigned char *) "Edit Box", EDITBOX_X, EDITBOX_Y, 9, 11, !!(selected_item == EDITBOX));
 	draw_editbox();
 
-	draw_frame("Current Font", CHARMAP_X, CHARMAP_Y, 16, 16, !!(selected_item == CHARMAP));
+	draw_frame((unsigned char *) "Current Font", CHARMAP_X, CHARMAP_Y, 16, 16, !!(selected_item == CHARMAP));
 	draw_charmap();
 
-	draw_frame("Preview", ITFMAP_X, ITFMAP_Y, 16, 15, !!(selected_item == ITFMAP));
+	draw_frame((unsigned char *) "Preview", ITFMAP_X, ITFMAP_Y, 16, 15, !!(selected_item == ITFMAP));
 	draw_itfmap();
 
 	switch (fontlist_mode) {
 	case MODE_LOAD:
-		draw_frame("Load/Browse", FONTLIST_X, FONTLIST_Y, 9,
+		draw_frame((unsigned char *) "Load/Browse", FONTLIST_X, FONTLIST_Y, 9,
 			   VISIBLE_FONTS, !!(selected_item == FONTLIST));
 		draw_fontlist();
 		break;
 	case MODE_SAVE:
-		draw_frame("Save As...", FONTLIST_X, FONTLIST_Y, 9,
+		draw_frame((unsigned char *) "Save As...", FONTLIST_X, FONTLIST_Y, 9,
 			   VISIBLE_FONTS, !!(selected_item == FONTLIST));
 		draw_fontlist();
 		break;
@@ -447,7 +447,7 @@ static void draw_screen(void)
 		break;
 	}
 
-	draw_frame("Quick Help", HELPTEXT_X, HELPTEXT_Y, 74, 12, -1);
+	draw_frame((unsigned char *) "Quick Help", HELPTEXT_X, HELPTEXT_Y, 74, 12, -1);
 	draw_helptext();
 
 	draw_time();

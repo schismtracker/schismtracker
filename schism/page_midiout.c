@@ -41,32 +41,32 @@ static void midiout_draw_const(void)
 	char buf[4];
 	int i;
 
-	draw_text(    "MIDI Start", 6, 13, 0, 2);
-	draw_text(     "MIDI Stop", 7, 14, 0, 2);
-	draw_text(     "MIDI Tick", 7, 15, 0, 2);
-	draw_text(       "Note On", 9, 16, 0, 2);
-	draw_text(      "Note Off", 8, 17, 0, 2);
-	draw_text( "Change Volume", 3, 18, 0, 2);
-	draw_text(    "Change Pan", 6, 19, 0, 2);
-	draw_text(   "Bank Select", 5, 20, 0, 2);
-	draw_text("Program Change", 2, 21, 0, 2);
+	draw_text((unsigned char *)     "MIDI Start", 6, 13, 0, 2);
+	draw_text((unsigned char *)      "MIDI Stop", 7, 14, 0, 2);
+	draw_text((unsigned char *)      "MIDI Tick", 7, 15, 0, 2);
+	draw_text((unsigned char *)        "Note On", 9, 16, 0, 2);
+	draw_text((unsigned char *)       "Note Off", 8, 17, 0, 2);
+	draw_text((unsigned char *)  "Change Volume", 3, 18, 0, 2);
+	draw_text((unsigned char *)     "Change Pan", 6, 19, 0, 2);
+	draw_text((unsigned char *)    "Bank Select", 5, 20, 0, 2);
+	draw_text((unsigned char *) "Program Change", 2, 21, 0, 2);
 
-	draw_text(   "Macro   SF0", 5, 24, 0, 2);
-	draw_text(   "Setup   SF1", 5, 25, 0, 2);
+	draw_text((unsigned char *)    "Macro   SF0", 5, 24, 0, 2);
+	draw_text((unsigned char *)    "Setup   SF1", 5, 25, 0, 2);
 
 	buf[0] = 'S';
 	buf[1] = 'F';
 	buf[3] = '\0';
 	for (i = 2; i < 10; i++) {
 		buf[2] = i + '0';
-		draw_text(buf, 13, 24+i, 0, 2);
+		draw_text((unsigned char *) buf, 13, 24+i, 0, 2);
 	}
-	draw_text(           "SFA", 13, 34, 0, 2);
-	draw_text(           "SFB", 13, 35, 0, 2);
-	draw_text(           "SFC", 13, 36, 0, 2);
-	draw_text(           "SFD", 13, 37, 0, 2);
-	draw_text(           "SFE", 13, 38, 0, 2);
-	draw_text(           "SFF", 13, 39, 0, 2);
+	draw_text((unsigned char *)            "SFA", 13, 34, 0, 2);
+	draw_text((unsigned char *)            "SFB", 13, 35, 0, 2);
+	draw_text((unsigned char *)            "SFC", 13, 36, 0, 2);
+	draw_text((unsigned char *)            "SFD", 13, 37, 0, 2);
+	draw_text((unsigned char *)            "SFE", 13, 38, 0, 2);
+	draw_text((unsigned char *)            "SFF", 13, 39, 0, 2);
 
 	draw_box(16, 12, 60, 22, BOX_THIN|BOX_INNER|BOX_INSET);
 	draw_box(16, 23, 60, 40, BOX_THIN|BOX_INNER|BOX_INSET);
@@ -74,7 +74,7 @@ static void midiout_draw_const(void)
 
 	for (i = 0; i < 7; i++) {
 		sprintf(buf, "Z%02X", i+zbuf_top+0x80);
-		draw_text(buf, 13, i+42, 0, 2);
+		draw_text((unsigned char *) buf, 13, i+42, 0, 2);
 	}
 }
 static void copyout_zbuf(void)

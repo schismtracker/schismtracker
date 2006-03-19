@@ -71,12 +71,12 @@ static void help_redraw(void)
 		case ':':	/* schism-only (drawn the same) */
                 case '|':	/* normal line */
 		case '!':	/* classic mode only */
-                        draw_text_len(*ptr + 1,
+                        draw_text_len((const unsigned char *) *ptr + 1,
 					strcspn(*ptr + 1, "\015\012"), 2,
 					pos, 6, 0);
                         break;
                 case '#':      /* hidden line */
-                        draw_text_len(*ptr + 1,
+                        draw_text_len((const unsigned char *) *ptr + 1,
 					strcspn(*ptr + 1, "\015\012"), 2,
 					pos, 7, 0);
                         break;

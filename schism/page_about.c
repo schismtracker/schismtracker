@@ -26,6 +26,8 @@
 #include "page.h"
 #include "video.h"
 
+extern SDL_Surface *xpmdata(char *x[]);
+
 static SDL_Surface *it_logo = 0;
 static SDL_Surface *schism_logo = 0;
 
@@ -97,43 +99,43 @@ static void about_draw_const(void)
 	if (status.flags & CLASSIC_MODE) {
 		draw_box(25,25, 56, 30, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
 
-		draw_text("Sound Card Setup", 32, 26, 0, 2);
+		draw_text((unsigned char *) "Sound Card Setup", 32, 26, 0, 2);
 
-		if (strcasecmp(song_audio_driver(), "nosound") == 0) {
-			draw_text("No sound card detected", 29, 28, 0, 2);
+		if (strcasecmp((char *) song_audio_driver(), "nosound") == 0) {
+			draw_text((unsigned char *) "No sound card detected", 29, 28, 0, 2);
 		} else {
-			draw_text("Sound Blaster 16 detected", 26, 28, 0, 2);
-			draw_text("Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
+			draw_text((unsigned char *) "Sound Blaster 16 detected", 26, 28, 0, 2);
+			draw_text((unsigned char *) "Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
 		}
 	} else {
-		draw_text("Schism Tracker is Copyright (C) 2003-2005",
+		draw_text((unsigned char *) "Schism Tracker is Copyright (C) 2003-2005",
 					21,25, 1, 2);
-		draw_text("Written by Storlek, and Mrs. Brisby, and contains code",
+		draw_text((unsigned char *) "Written by Storlek, and Mrs. Brisby, and contains code",
 					12,27, 1, 2);
-		draw_text("written by Olivier Lapicque, Markus Fick, Adam Goode,",
+		draw_text((unsigned char *) "written by Olivier Lapicque, Markus Fick, Adam Goode,",
 					12,28, 1, 2);
-		draw_text("Ville Jokela, Juan Linietsky, Juha Niemimaki, and others",
+		draw_text((unsigned char *) "Ville Jokela, Juan Linietsky, Juha Niemimaki, and others",
 					12,29, 1, 2);
-		draw_text("and is based on Impulse Tracker by Jeffrey Lim.",
+		draw_text((unsigned char *) "and is based on Impulse Tracker by Jeffrey Lim.",
 					12,30, 1, 2);
 
 		if (status.current_page == PAGE_ABOUT) {
-			draw_text("This program is free software; you can redistribute it and/or modify", 1, 1, 6, 0);
-			draw_text("it under the terms of the GNU General Public License as published by", 1, 2, 6, 0);
-			draw_text("the Free Software Foundation; either version 2 of the License, or", 1, 3, 6, 0);
-			draw_text("(at your option) any later version.", 1,4,6,0);
+			draw_text((unsigned char *) "This program is free software; you can redistribute it and/or modify", 1, 1, 6, 0);
+			draw_text((unsigned char *) "it under the terms of the GNU General Public License as published by", 1, 2, 6, 0);
+			draw_text((unsigned char *) "the Free Software Foundation; either version 2 of the License, or", 1, 3, 6, 0);
+			draw_text((unsigned char *) "(at your option) any later version.", 1,4,6,0);
 
-			draw_text("This program is distributed in the hope that it will be useful,", 1,6,6,0);
-			draw_text("but WITHOUT ANY WARRANTY; without even the implied warranty of", 1,7,6,0);
-			draw_text("MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the", 1,8,6,0);
-			draw_text("GNU General Public License for more details.", 1,9,6,0);
+			draw_text((unsigned char *) "This program is distributed in the hope that it will be useful,", 1,6,6,0);
+			draw_text((unsigned char *) "but WITHOUT ANY WARRANTY; without even the implied warranty of", 1,7,6,0);
+			draw_text((unsigned char *) "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the", 1,8,6,0);
+			draw_text((unsigned char *) "GNU General Public License for more details.", 1,9,6,0);
 
-			draw_text("You should have received a copy of the GNU General Public License", 1, 11,6,0);
-			draw_text("along with this program; if not, write to the Free Software", 1,12,6,0);
-			draw_text("Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA", 1,13,6,0);
+			draw_text((unsigned char *) "You should have received a copy of the GNU General Public License", 1, 11,6,0);
+			draw_text((unsigned char *) "along with this program; if not, write to the Free Software", 1,12,6,0);
+			draw_text((unsigned char *) "Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA", 1,13,6,0);
 
 			sprintf(buf, "Using %s on %s", song_audio_driver(), video_driver_name());
-			draw_text(buf, 79 - strlen(buf), 48, 6, 0);
+			draw_text((unsigned char *) buf, 79 - strlen(buf), 48, 6, 0);
 		}
 	}
 	vgamem_fill_reserve(&logo_image, 0, 2);
@@ -182,7 +184,7 @@ void show_about(void)
 			33,32,
 			12,
 			0,0,0,0,0,
-			about_close, "Continue", 3);
+			(void *) about_close, "Continue", 3);
 	d = dialog_create_custom(11,16,
 			58, 19,
 			about_widgets, 1, 0,
