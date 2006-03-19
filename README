@@ -41,8 +41,11 @@
 	more than willing to implement it. I just never used those
 	features myself, so I have no idea how they function.)
 
-	Hit Alt-Enter to switch between fullscreen and a window. As far
-	as I can tell, this only works with the X11 video driver.
+	Hit Ctrl-Alt-Enter to switch between fullscreen and a window. You
+	can also use the configuration page on Ctrl-F1 to select driver
+	settings. This way is usually safer as not all video modes- windowed
+	fullscreen, or drivers, work on all systems. Using Ctrl-F1 is
+	definately recommended.
 
 	For power users: if ~/.schism/startup-hook or ~/.schism/exit-hook
 	are executable, Schism Tracker will run them on startup and exit,
