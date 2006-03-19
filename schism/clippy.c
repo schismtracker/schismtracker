@@ -43,7 +43,9 @@ static void (*lock_display)(void);
 static void (*unlock_display)(void);
 static Atom atom_sel;
 static Atom atom_clip;
+#ifndef USE_X11
 #define USE_X11
+#endif
 static void __noop_v(void){};
 #endif
 
