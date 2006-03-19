@@ -53,7 +53,7 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
         if (note->instrument)
 		num99tostr(note->instrument, instbuf);
 	else
-		strcpy(instbuf, "\xad\xad");
+		strcpy((char*)instbuf, "\xad\xad");
 
 	snprintf((char *) note_text, 16, "%s %s %s %c%02X",
 		note_buf, instbuf, vol_buf,
