@@ -60,7 +60,7 @@ _any_dltrick(int,snd_mixer_close,(snd_mixer_t*mm),(mm))
 _any_dltrick(int,snd_mixer_selem_get_playback_volume,
 (snd_mixer_elem_t*e,snd_mixer_selem_channel_id_t ch,long*v),(e,ch,v))
 #if (SND_LIB_MAJOR == 1 && SND_LIB_MINOR == 0 && SND_LIB_SUBMINOR < 10) || (SND_LIB_MAJOR < 1)
-_void_dltrick(void,snd_mixer_selem_get_playback_volume_range,
+_void_dltrick(snd_mixer_selem_get_playback_volume_range,
 (snd_mixer_elem_t*e,long*m,long*v),(e,m,v))
 #else
 _any_dltrick(int,snd_mixer_selem_get_playback_volume_range,
