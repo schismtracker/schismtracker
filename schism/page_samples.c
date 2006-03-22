@@ -415,7 +415,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	int new_sample = current_sample;
 	int new_cursor_pos = sample_list_cursor_pos;
 	char *name;
-	int i;
+	int i, c;
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 		if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
@@ -546,7 +546,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
 				if (k->state) return 1;
-				int c = unicode_to_ascii(k->unicode);
+				c = unicode_to_ascii(k->unicode);
 				if (c == 0)
 					return 0;
 				return sample_list_add_char(c);
