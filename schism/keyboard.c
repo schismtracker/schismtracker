@@ -405,17 +405,17 @@ inline int kbd_char_to_99(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	if (k->unicode == 'a' || k->unicode == 'A') return 10;
-	if (k->unicode == 'b' || k->unicode == 'B') return 11;
-	if (k->unicode == 'c' || k->unicode == 'C') return 12;
-	if (k->unicode == 'd' || k->unicode == 'D') return 13;
-	if (k->unicode == 'e' || k->unicode == 'E') return 14;
-	if (k->unicode == 'f' || k->unicode == 'F') return 15;
-	if (k->unicode == 'g' || k->unicode == 'G') return 16;
-	if (k->unicode == 'h' || k->unicode == 'H') return 17;
-	if (k->unicode == 'i' || k->unicode == 'I') return 18;
-	if (k->unicode == 'j' || k->unicode == 'J') return 19;
-	if (k->unicode == 'k' || k->unicode == 'K') return 20;
+	if (k->unicode == 'h' || k->unicode == 'H') return 10;
+	if (k->unicode == 'i' || k->unicode == 'I') return 11;
+	if (k->unicode == 'j' || k->unicode == 'J') return 12;
+	if (k->unicode == 'k' || k->unicode == 'K') return 13;
+	if (k->unicode == 'l' || k->unicode == 'L') return 14;
+	if (k->unicode == 'm' || k->unicode == 'M') return 15;
+	if (k->unicode == 'n' || k->unicode == 'N') return 16;
+	if (k->unicode == 'o' || k->unicode == 'O') return 17;
+	if (k->unicode == 'p' || k->unicode == 'P') return 18;
+	if (k->unicode == 'q' || k->unicode == 'Q') return 19;
+	if (k->unicode == 'r' || k->unicode == 'R') return 20;
 	
 	switch (k->sym) {
 	case SDLK_a: return 10;

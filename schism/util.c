@@ -123,12 +123,13 @@ unsigned char *get_time_string(time_t when, unsigned char *buf)
 
 unsigned char *num99tostr(int n, unsigned char *buf)
 {
+	static char *qv="HIJKLMNOPQRS";
 	if (n < 100) {
 		sprintf((char*)buf, "%02d", n);
-	} else {
+	} else if (n <= 200) {
 		n -= 100;
 		sprintf((char*)buf, "%c%d", 
-			('A' + (n / 10)), (n % 10));
+			qv[(n/10)], (n % 10));
 	}
 	return buf;
 
