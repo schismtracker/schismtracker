@@ -41,8 +41,8 @@ the banks are:
 				fg2 is nybble in bits 26-29
 				bg1 is nybble in bits 18-21
 				bg2 is nybble in bits 14-17
-				ch1 is 5 bits; 9-13
-				ch2 is 5 bits: 4-8
+				ch1 is 7 bits; 7-13
+				ch2 is 7 bits: 0-6
 			lower bits are unused
 	0x00000000
 			regular
@@ -119,17 +119,35 @@ static int inline _pack_halfw(int c)
 	case 'f': case 'F': return 15;
 	case 'g': case 'G': return 16;
 	case 'h': case 'H': return 17;
+	case 'i': case 'I': return 18;
+	case 'j': case 'J': return 19;
+	case 'k': case 'K': return 20;
+	case 'l': case 'L': return 21;
+	case 'm': case 'M': return 22;
+	case 'n': case 'N': return 23;
+	case 'o': case 'O': return 24;
+	case 'p': case 'P': return 25;
+	case 'q': case 'Q': return 26;
+	case 'r': case 'R': return 27;
+	case 's': case 'S': return 28;
+	case 't': case 'T': return 29;
+	case 'u': case 'U': return 30;
+	case 'v': case 'V': return 31;
+	case 'w': case 'W': return 32;
+	case 'x': case 'X': return 33;
+	case 'y': case 'Y': return 34;
+	case 'z': case 'Z': return 35;
 
 	/* FT2 nonsense */
-	case '$': return 20;
-	case '<': return 21;
-	case '>': return 22;
+	case '$': return 36;
+	case '<': return 37;
+	case '>': return 38;
 
-	case ' ': return 27;
-	case 0xad: return 28;
-	case 0x5e: return 29;
-	case 0xcd: return 30;
-	case 0x7e: return 31;
+	case ' ': return 39;
+	case 0xad: return 40;
+	case 0x5e: return 41;
+	case 0xcd: return 42;
+	case 0x7e: return 43;
 	default:
 		fprintf(stderr, "FATAL: half-width character %x not mapped\n", c);
 		exit(255);
@@ -137,9 +155,10 @@ static int inline _pack_halfw(int c)
 }
 static int inline _unpack_halfw(int c)
 {
-	static const unsigned char *zmap =
-	(const unsigned char *)"0123456789ABCDEFGH..$<>.... \xad\x5e\xcd\x7e";
-	if (c > 31) return 0; /* eh? */
+	const unsigned char *zmap =
+(const unsigned char *)	"0123456789ABCDEFGHIJKLMNOPQRSTUV"
+			"WXYZ$<> \xad\x5e\xcd\x7e....................";
+	if (c > 63) return 0; /* eh? */
 	return (int)(zmap[c]);
 }
 
@@ -611,8 +630,8 @@ void draw_half_width_chars(byte c1, byte c2, int x, int y,
 		0x40000000
 		| (fg1 << 22) | (fg2 << 26)
 		| (bg1 << 18) | (bg2 << 14)
-		| (_pack_halfw(c1) << 9) 
-		| (_pack_halfw(c2) << 4);
+		| (_pack_halfw(c1) << 7) 
+		| (_pack_halfw(c2));
 }
 /* --------------------------------------------------------------------- */
 /* boxes */

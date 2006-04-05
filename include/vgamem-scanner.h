@@ -38,7 +38,7 @@ void F1(unsigned int ry,
 			/* half-width character */
 			fg = (*bp >> 22) & 15;
 			bg = (*bp >> 18) & 15;
-			dg = hf[ _unpack_halfw((*bp >>9) & 31) << 2];
+			dg = hf[ _unpack_halfw((*bp >> 7) & 127) << 2];
 			if (!(ry & 1)) dg = (dg >> 4);
 			if (x == mx) dg ^= mb[0];
 			else if (x == mx+1) dg ^= mb[1];
@@ -49,7 +49,7 @@ void F1(unsigned int ry,
 			*out++ = tc[(dg & 0x1) ? fg : bg];
 			fg = (*bp >> 26) & 15;
 			bg = (*bp >> 14) & 15;
-			dg = hf[ _unpack_halfw((*bp >> 4) & 31) << 2];
+			dg = hf[ _unpack_halfw((*bp) & 127) << 2];
 			if (!(ry & 1)) dg = (dg >> 4);
 			if (x == mx) dg ^= mb[0];
 			else if (x == mx+1) dg ^= mb[1];
