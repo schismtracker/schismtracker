@@ -26,7 +26,7 @@
 
 /* MDL is nice, but it's a pain to read the title... */
 
-bool fmt_mdl_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_mdl_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	size_t position, block_length;
         char buf[33];

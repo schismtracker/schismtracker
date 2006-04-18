@@ -63,7 +63,7 @@ static const char *valid_tags[][2] = {
 	{NULL, NULL}
 };
 
-bool fmt_mod_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_mod_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	char tag[5];
 	int i = 0;

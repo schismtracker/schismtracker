@@ -42,7 +42,7 @@ struct au_header {
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_au_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_au_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	struct au_header hh;
 	
@@ -84,7 +84,7 @@ bool fmt_au_read_info(dmoz_file_t *file, const byte *data, size_t length)
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_au_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+int fmt_au_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
 {
 	struct au_header au;
 	
@@ -149,7 +149,7 @@ bool fmt_au_load_sample(const byte *data, size_t length, song_sample *smp, char 
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-bool fmt_au_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
+int fmt_au_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 {
 	struct au_header au;
 	unsigned long ln;

@@ -23,7 +23,7 @@
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_ntk_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_ntk_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         if (!(length > 25 && memcmp(data, "TWNNSNG2", 8) == 0))
                 return false;

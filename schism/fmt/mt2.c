@@ -27,7 +27,7 @@
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_mt2_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_mt2_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         if (!(length > 106 && memcmp(data, "MT20", 4) == 0))
                 return false;

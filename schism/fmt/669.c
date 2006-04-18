@@ -34,7 +34,7 @@ struct header_669 {
         byte breaks[128];
 };
 
-bool fmt_669_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_669_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         struct header_669 *header = (struct header_669 *) data;
         unsigned long i;

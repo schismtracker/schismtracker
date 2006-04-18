@@ -374,7 +374,7 @@ int song_instrument_is_empty(int n)
 	return 1;
 }
 
-static bool _sample_is_empty(int n)
+static int _sample_is_empty(int n)
 {
 	n++;
 	

@@ -33,13 +33,13 @@ extern "C" {
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-typedef bool (*fmt_read_info_func) (dmoz_file_t *file, const byte *data, size_t length);
-typedef bool (*fmt_load_sample_func) (const byte *data, size_t length, song_sample *smp, char *title);
-typedef bool (*fmt_save_sample_func) (diskwriter_driver_t *fp, song_sample *smp, char *title);
+typedef int (*fmt_read_info_func) (dmoz_file_t *file, const byte *data, size_t length);
+typedef int (*fmt_load_sample_func) (const byte *data, size_t length, song_sample *smp, char *title);
+typedef int (*fmt_save_sample_func) (diskwriter_driver_t *fp, song_sample *smp, char *title);
 
-#define READ_INFO(t) bool fmt_##t##_read_info(dmoz_file_t *file, const byte *data, size_t length)
-#define LOAD_SAMPLE(t) bool fmt_##t##_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
-#define SAVE_SAMPLE(t) bool fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
+#define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const byte *data, size_t length)
+#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+#define SAVE_SAMPLE(t) int fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 
 READ_INFO(669);
 READ_INFO(ams);
@@ -91,7 +91,7 @@ void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe);
 
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title);
-bool load_its_sample(const byte *header, const byte *data,
+int load_its_sample(const byte *header, const byte *data,
 		size_t length, song_sample *smp, char *title);
 
 /* --------------------------------------------------------------------------------------------------------- */

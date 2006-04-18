@@ -29,7 +29,8 @@
 
 /* I don't like all caps for these 'cuz they don't get highlighted. */
 #ifndef __cplusplus
-typedef enum { false, true } bool;
+#define false (0)
+#define true (!0)
 #endif
 
 /* This is just for the sake of typing 4 chars rather than 13. */
@@ -104,7 +105,7 @@ const char *get_extension(const char *filename);
 char *get_parent_directory(const char *dirname);
 void trim_string(char *s);
 int str_break(const char *s, char c, char **first, char **second);
-char *str_escape(const char *source, bool space_hack);
+char *str_escape(const char *source, int space_hack);
 char *str_unescape(const char *source);
 char *pretty_name(const char *filename);
 int get_num_lines(const char *text);
@@ -112,10 +113,10 @@ char *str_concat(const char *s, ...);
 
 
 /* filesystem */
-bool make_backup_file(const char *filename);
+int make_backup_file(const char *filename);
 long file_size(const char *filename);
 long file_size_fd(int fd);
-bool is_directory(const char *filename);
+int is_directory(const char *filename);
 char *get_home_directory(void); /* should free() the resulting string */
 
 void put_env_var(const char *key, const char *value);
