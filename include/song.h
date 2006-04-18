@@ -207,12 +207,12 @@ extern struct audio_settings audio_settings;
 
 /* for saving samples; see also enum sample_format_ids below */
 
-//typedef bool (*fmt_save_sample_func) (FILE *fp, song_sample *smp, char *title);
+//typedef int (*fmt_save_sample_func) (FILE *fp, song_sample *smp, char *title);
 struct sample_save_format {
 	const char *name;
 	const char *ext;
 	//fmt_save_sample_func *save_func;
-	bool (*save_func) (diskwriter_driver_t *fp,
+	int (*save_func) (diskwriter_driver_t *fp,
 				song_sample *smp, char *title);
 };
 

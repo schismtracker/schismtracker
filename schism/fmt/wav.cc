@@ -28,7 +28,7 @@
 */
 #include "mplink.h"
 
-bool fmt_wav_load_sample(const byte *data, size_t length, song_sample *smp,
+int fmt_wav_load_sample(const byte *data, size_t length, song_sample *smp,
 			UNUSED char *title)
 {
 	static CSoundFile qq;
@@ -84,7 +84,7 @@ bool fmt_wav_load_sample(const byte *data, size_t length, song_sample *smp,
 
 	return true;
 }
-bool fmt_wav_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_wav_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	if (length > 12 && *data == 'R'
 	&& data[1] == 'I'

@@ -29,7 +29,7 @@ I don't know what this data's supposed to be for :) */
 
 /* btw: AMS stands for "Advanced Module System" */
 
-bool fmt_ams_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_ams_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         byte n;
 

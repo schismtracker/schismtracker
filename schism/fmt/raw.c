@@ -27,7 +27,7 @@
 
 /* does IT's raw sample loader use signed or unsigned samples? */
 
-bool fmt_raw_load_sample(const byte *data, size_t length, song_sample *smp, UNUSED char *title)
+int fmt_raw_load_sample(const byte *data, size_t length, song_sample *smp, UNUSED char *title)
 {
 	if (length > 65536) {
 		errno = EFBIG;
@@ -48,7 +48,7 @@ puts("WARNING LOADING RAW SAMPLE");
 	return true;
 }
 
-bool fmt_raw_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *title)
+int fmt_raw_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *title)
 {
 	fp->o(fp, (unsigned char *) smp->data, ((smp->flags & SAMP_16_BIT) ? 2:1)*smp->length);
 	return true;

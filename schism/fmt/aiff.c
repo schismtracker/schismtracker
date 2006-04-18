@@ -31,7 +31,7 @@ static double ConvertFromIeeeExtended(const unsigned char *bytes);
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_aiff_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_aiff_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	size_t position, block_length;
 	/* these are offsets to various chunks of data in the file */
@@ -99,7 +99,7 @@ bool fmt_aiff_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	return true;
 }
 
-bool fmt_aiff_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+int fmt_aiff_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
 {
 	size_t position, block_length;
 	unsigned long byte_length; /* size of the sample data */
@@ -199,7 +199,7 @@ bool fmt_aiff_load_sample(const byte *data, size_t length, song_sample *smp, cha
 	return true;
 }
 
-bool fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
+int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 {
 	short s;
 	unsigned long ul;

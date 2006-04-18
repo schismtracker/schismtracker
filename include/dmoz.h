@@ -21,7 +21,7 @@
 #ifndef DMOZ_H
 #define DMOZ_H
 
-#include "util.h" /* for byte and bool */
+#include "util.h" /* for byte */
 #include "song.h" /* for song_sample */
 
 /* need these for struct stat */

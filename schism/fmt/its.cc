@@ -28,7 +28,7 @@ has the IT sample decompression code... */
 
 /* --------------------------------------------------------------------- */
 /* the ITI info reader is here for no good reason */
-bool fmt_iti_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_iti_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return false;
 	file->description = "Impulse Tracker Instrument";
@@ -39,7 +39,7 @@ bool fmt_iti_read_info(dmoz_file_t *file, const byte *data, size_t length)
 
 	return true;
 }
-bool fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	ITSAMPLESTRUCT *its;
 
@@ -86,7 +86,7 @@ bool fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	return true;
 }
 
-bool load_its_sample(const byte *header, const byte *data, size_t length, song_sample *smp, char *title)
+int load_its_sample(const byte *header, const byte *data, size_t length, song_sample *smp, char *title)
 {
 	ITSAMPLESTRUCT *its = (ITSAMPLESTRUCT *)header;
 	UINT format = RS_PCM8U;
@@ -182,7 +182,7 @@ bool load_its_sample(const byte *header, const byte *data, size_t length, song_s
 			(DWORD) (length - bp));
 }
 
-bool fmt_its_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+int fmt_its_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
 {
 	return load_its_sample(data,data,length,smp,title);
 }
@@ -233,7 +233,7 @@ void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title)
 	fp->o(fp, (const unsigned char *)&its, sizeof(its));
 }
 
-bool fmt_its_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
+int fmt_its_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 {
 	save_its_header(fp, smp, title);
 	save_sample_data_LE(fp, smp, 1);

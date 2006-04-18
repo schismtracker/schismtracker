@@ -124,7 +124,7 @@ static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **ti
 
 /* --------------------------------------------------------------------- */
 
-bool fmt_ogg_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_ogg_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
         OggVorbis_File vf;
         ov_callbacks cb;

@@ -237,7 +237,7 @@ int str_break(const char *s, char c, char **first, char **second)
 
 /* adapted from glib. in addition to the normal c escapes, this also escapes the comment character (#)
  * as \043. if space_hack is true, the first/last character is also escaped if it is a space. */
-char *str_escape(const char *source, bool space_hack)
+char *str_escape(const char *source, int space_hack)
 {
 	const char *p = source;
 	/* Each source byte needs maximally four destination chars (\777) */
@@ -418,7 +418,7 @@ int get_num_lines(const char *text)
 /* --------------------------------------------------------------------- */
 /* FILE INFO FUNCTIONS */
 
-bool make_backup_file(const char *filename)
+int make_backup_file(const char *filename)
 {
 	char *b;
 	int e = 0;
@@ -471,7 +471,7 @@ long file_size_fd(int fd)
 /* --------------------------------------------------------------------- */
 /* FILESYSTEM FUNCTIONS */
 
-bool is_directory(const char *filename)
+int is_directory(const char *filename)
 {
         struct stat buf;
 

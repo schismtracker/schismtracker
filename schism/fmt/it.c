@@ -25,9 +25,9 @@
 
 /* FIXME: MMCMP isn't IT-specific, and I know nothing about it */
 
-bool fmt_it_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_it_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
-        bool mmcmp;
+        int mmcmp;
 
         /* "Bart just said I-M-P! He's made of pee!" */
         if (length > 30 && memcmp(data, "IMPM", 4) == 0) {
