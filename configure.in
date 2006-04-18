@@ -156,15 +156,15 @@ then
 	AM_CONDITIONAL([USE_NETWORK], [test "x" = "x"])
 else
 	AC_CHECK_HEADERS(winsock.h winsock2.h sys/socket.h)
-	if test "x$ac_cv_header_winsock_h" \!= "x"
+	if test "x$ac_cv_header_winsock_h" = "xyes"
 	then	AM_CONDITIONAL([USE_NETWORK], true)
 		SDL_LIBS="$SDL_LIBS -lwsock32"
 		AC_SUBST(SDL_LIBS)
-	else if test "x$ac_cv_header_winsock2_h" \!= "x"
+	else if test "x$ac_cv_header_winsock2_h" = "xyes"
 		then	AM_CONDITIONAL([USE_NETWORK], true)
 			SDL_LIBS="$SDL_LIBS -lws2_32"
 			AC_SUBST(SDL_LIBS)
-		else if test "x$ac_cv_header_sys_socket_h" \!= "x"
+		else if test "x$ac_cv_header_sys_socket_h" = "xyes"
 			then	AM_CONDITIONAL([USE_NETWORK], true)
 				SDL_LIBS="$SDL_LIBS -lsocket"
 				AC_SUBST(SDL_LIBS)
