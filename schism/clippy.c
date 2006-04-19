@@ -78,6 +78,7 @@ static void _clippy_copy_to_sys(int do_sel)
 		dst[j] = '\0';
 	} else {
 		dst = 0;
+		j = 0;
 	}
 #endif
 
@@ -91,7 +92,7 @@ static void _clippy_copy_to_sys(int do_sel)
 			XChangeProperty(SDL_Display,
 				DefaultRootWindow(SDL_Display),
 				XA_CUT_BUFFER1, XA_STRING, 8,
-				PropModeReplace, (unsigned char *)dst, j);
+				PropModeReplace, dst ? (unsigned char *)dst : (unsigned char *)"", j);
 		} else {
 			if (XGetSelectionOwner(SDL_Display, atom_clip) != SDL_Window) {
 				XSetSelectionOwner(SDL_Display, atom_clip, SDL_Window, CurrentTime);
@@ -99,11 +100,11 @@ static void _clippy_copy_to_sys(int do_sel)
 			XChangeProperty(SDL_Display,
 				DefaultRootWindow(SDL_Display),
 				XA_CUT_BUFFER0, XA_STRING, 8,
-				PropModeReplace, (unsigned char *)dst, j);
+				PropModeReplace, dst ? (unsigned char *)dst : (unsigned char *)"", j);
 			XChangeProperty(SDL_Display,
 				DefaultRootWindow(SDL_Display),
 				XA_CUT_BUFFER1, XA_STRING, 8,
-				PropModeReplace, (unsigned char *)dst, j);
+				PropModeReplace, dst ? (unsigned char *)dst : (unsigned char *)"", j);
 		}
 		unlock_display();
 	}
@@ -121,6 +122,7 @@ static void _clippy_copy_to_sys(int do_sel)
 		}
 		(void)CloseClipboard();
 		_hmem = NULL;
+		dst = 0;
 	}
 #elif defined(__QNXNTO__)
 	if (!do_sel) {
@@ -128,12 +130,12 @@ static void _clippy_copy_to_sys(int do_sel)
 		if (!tmp) {
 			cldata=(int*)tmp;
 			*cldata = Ph_CL_TEXT;
-			memcpy(tmp+4, dst, j);
+			if (dst) memcpy(tmp+4, dst, j);
 			clheader.data = tmp;
 #if (NTO_VERSION < 620)
 			if (clheader.length > 65535) clheader.length=65535;
 #endif
-			clheader.length = dstlen + 4;
+			clheader.length = j + 4;
 #if (NTO_VERSION < 620)
 			PhClipboardCopy(inputgroup, 1, &clheader);
 #else
@@ -145,7 +147,7 @@ static void _clippy_copy_to_sys(int do_sel)
 #elif defined(MACOSX)
 	/* XXX TODO */
 #endif
-	(void)free(dst);
+	if (dst) (void)free(dst);
 }
 
 static void _string_paste(int cb, const char *cbptr)
