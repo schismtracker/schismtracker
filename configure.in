@@ -110,6 +110,8 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
+AC_CHECK_LIBM
+AC_SUBST(LIBM)
 
 dnl -----------------------------------------------------------------------
 
