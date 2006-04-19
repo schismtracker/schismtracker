@@ -1102,6 +1102,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 		ins = m->instr;
 		ins_tracker[chan] = ins;
 	}
+	if (ins < 0 || ins >= MAX_CHANNELS) return; /* err...  almost certainly */
 	if (!mp->Headers[ins]) return;
 
 	if (mp->Headers[ins]->nMidiChannel > 16) {
