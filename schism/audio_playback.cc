@@ -1074,7 +1074,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 	int ins, mc, mg, mbl, mbh;
 	int need_note, need_velocity;
 
-	if (!song_is_instrument_mode()) return;
+	if (!mp || !song_is_instrument_mode()) return;
 
 	if (!midi_playing) {
 		mp->ProcessMidiMacro(0,
