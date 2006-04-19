@@ -1194,16 +1194,17 @@ static int _env_handle_mouse(struct key_event *k, song_envelope *env, int *curre
 		if (y < 0) y = 0;
 
 		if (*current_node && env->ticks[ (*current_node)-1 ] >= x) {
-			x = env->ticks[ (*current_node)-1 ];
+			x = env->ticks[ (*current_node)-1 ]+1;
 		}
 		if (*current_node < (env->nodes-1)) {
 			if (env->ticks[ (*current_node)+1 ] <= x) {
-				x = env->ticks[ (*current_node)+1 ];
+				x = env->ticks[ (*current_node)+1 ]-1;
 			}
 		}
 		if (env->ticks[*current_node] == x && env->ticks[*current_node] == y) {
 			return 1;
 		}
+		if (x < 0) x = 0;
 		if (x > envelope_tick_limit) x = envelope_tick_limit;
 		if (x > 9999) x = 9999;
 		if (*current_node) env->ticks[ *current_node ] = x;
