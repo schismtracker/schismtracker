@@ -174,7 +174,7 @@ files_windres=schismres.o
 endif
 
 schism_DEPENDENCIES = $(files_windres)
-schism_LDADD = $(LIBOBJS) $(files_windres) @SDL_LIBS@ -lm
+schism_LDADD = $(LIBOBJS) $(files_windres) @SDL_LIBS@ @LIBM@
 
 if USE_WINDRES
 schismres.o: @srcdir@/sys/win32/schismres.rc
