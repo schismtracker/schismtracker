@@ -232,6 +232,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	if (!fp_ok) {
 		(void)diskwriter_finish();
 		CSoundFile::gpSndMixHook = NULL;
+		status.flags &= ~(DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN);
 		return 0;
 	}
 
@@ -373,7 +374,10 @@ int diskwriter_finish(void)
 	char *zed;
 	int r;
 
-	if (!dw || (!fp && fini_sampno == -1)) return -1; /* no writer running */
+	if (!dw || (!fp && fini_sampno == -1)) {
+		status.flags &= ~(DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN);
+		return -1; /* no writer running */
+	}
 
 	if (fp) {
 		if (fp_ok) fflush(fp);
