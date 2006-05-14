@@ -316,6 +316,9 @@ static void setApplicationMenu(void)
 				keyEquivalent:KEQ_FN(12)];
 	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
 	[menuItem setRepresentedObject: @"palette_page"];
+	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Font Editor"
+				action:@selector(_menu_callback:)];
+	[menuItem setRepresentedObject: @"font_editor"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Toggle Fullscreen"
 				action:@selector(_menu_callback:)
 				keyEquivalent:@"\r"];
