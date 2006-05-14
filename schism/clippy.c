@@ -58,6 +58,7 @@ static void _clippy_copy_to_sys(int do_sel)
 {
 	int i, j;
 	char *dst;
+	char *freeme;
 #if defined(__QNXNTO__)
 	PhClipboardHdr clheader = {Ph_CLIPBOARD_TYPE_TEXT, 0, NULL};
 	char *tmp;
@@ -65,12 +66,18 @@ static void _clippy_copy_to_sys(int do_sel)
 	int status;
 #endif
 
+	freeme = 0;
+	if (!_current_selection) {
+		dst = 0;
+		j = 0;
+	} else
 #if defined(WIN32)
 	j = strlen(_current_selection);
 #else
 	if (has_sys_clip) {
 		/* convert to local */
-		dst = malloc(strlen(_current_selection));
+		freeme = dst = malloc(strlen(_current_selection));
+		if (!dst) return;
 		for (i = j = 0; _current_selection[i]; i++) {
 			dst[j] = _current_selection[i];
 			if (dst[j] != '\r') j++;
@@ -81,10 +88,11 @@ static void _clippy_copy_to_sys(int do_sel)
 		j = 0;
 	}
 #endif
-
 #if defined(USE_X11)
 	if (has_sys_clip) {
 		lock_display();
+		if (!dst) dst = "";
+		if (j < 0) j = 0;
 		if (do_sel) {
 			if (XGetSelectionOwner(SDL_Display, XA_PRIMARY) != SDL_Window) {
 				XSetSelectionOwner(SDL_Display, XA_PRIMARY, SDL_Window, CurrentTime);
@@ -92,7 +100,7 @@ static void _clippy_copy_to_sys(int do_sel)
 			XChangeProperty(SDL_Display,
 				DefaultRootWindow(SDL_Display),
 				XA_CUT_BUFFER1, XA_STRING, 8,
-				PropModeReplace, dst ? (unsigned char *)dst : (unsigned char *)"", j);
+				PropModeReplace, (unsigned char *)dst, j);
 		} else {
 			if (XGetSelectionOwner(SDL_Display, atom_clip) != SDL_Window) {
 				XSetSelectionOwner(SDL_Display, atom_clip, SDL_Window, CurrentTime);
@@ -100,11 +108,11 @@ static void _clippy_copy_to_sys(int do_sel)
 			XChangeProperty(SDL_Display,
 				DefaultRootWindow(SDL_Display),
 				XA_CUT_BUFFER0, XA_STRING, 8,
-				PropModeReplace, dst ? (unsigned char *)dst : (unsigned char *)"", j);
+				PropModeReplace, (unsigned char *)dst, j);
 			XChangeProperty(SDL_Display,
 				DefaultRootWindow(SDL_Display),
 				XA_CUT_BUFFER1, XA_STRING, 8,
-				PropModeReplace, dst ? (unsigned char *)dst : (unsigned char *)"", j);
+				PropModeReplace, (unsigned char *)dst, j);
 		}
 		unlock_display();
 	}
@@ -147,7 +155,7 @@ static void _clippy_copy_to_sys(int do_sel)
 #elif defined(MACOSX)
 	/* XXX TODO */
 #endif
-	if (dst) (void)free(dst);
+	if (freeme) (void)free(freeme);
 }
 
 static void _string_paste(int cb, const char *cbptr)
@@ -223,7 +231,8 @@ static int _x11_clip_filter(const SDL_Event *ev)
 			&nbytes, &overflow, &seln_data) == Success) {
 		if (sevent.xselection.target == req->target) {
 			if (sevent.xselection.target == XA_STRING) {
-				if (seln_data[nbytes-1] == '\0') nbytes--;
+				if (nbytes && seln_data[nbytes-1] == '\0')
+					nbytes--;
 			}
 			XChangeProperty(SDL_Display, req->requestor, req->property,
 				sevent.xselection.target, seln_format, PropModeReplace,
@@ -244,6 +253,7 @@ void clippy_init(void)
 	SDL_SysWMinfo info;
 
 	has_sys_clip = 0;
+	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 	if (SDL_GetWMInfo(&info)) {
 #if defined(USE_X11)
