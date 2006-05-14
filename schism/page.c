@@ -1175,6 +1175,11 @@ static void real_exit_ok(UNUSED void *data)
 {
 	exit(0);
 }
+static void font_exit_ok(UNUSED void *data)
+{
+        dialog_destroy_all();
+	set_page(PAGE_PATTERN_EDITOR);
+}
 static void exit_ok(UNUSED void *data)
 {
 	struct dialog *d;
@@ -1231,6 +1236,10 @@ void show_exit_prompt(void)
         if (status.flags & CLASSIC_MODE) {
                 dialog_create(DIALOG_OK_CANCEL, "Exit Impulse Tracker?",
                               exit_ok, NULL, 0, NULL);
+	} else if (status.current_page == PAGE_FONT_EDIT
+	&& !(status.flags & STARTUP_FONTEDIT)) {
+                dialog_create(DIALOG_OK_CANCEL, "Exit Font Editor?",
+                              font_exit_ok, NULL, 0, NULL);
         } else {
                 dialog_create(DIALOG_OK_CANCEL, "Exit Schism Tracker?",
                               exit_ok, NULL, 0, NULL);

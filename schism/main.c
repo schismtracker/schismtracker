@@ -616,7 +616,7 @@ static void event_loop(void)
 					kk.mouse = MOUSE_CLICK;
 				}
 				if (!(status.dialog_type & DIALOG_MENU)) {
-					if (kk.y <= 9 && !(startup_flags & SF_FONTEDIT)) {
+					if (kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
 						if (kk.state
 						&& kk.mouse_button == MOUSE_BUTTON_RIGHT) {
 							menu_show();
@@ -672,6 +672,8 @@ static void event_loop(void)
 						set_page(PAGE_SAVE_MODULE);
 					} else if (strcasecmp(event.user.data1, "logviewer") == 0) {
 						set_page(PAGE_LOG);
+					} else if (strcasecmp(event.user.data1, "font_editor") == 0) {
+						set_page(PAGE_FONT_EDIT);
 					} else if (strcasecmp(event.user.data1, "load") == 0) {
 						set_page(PAGE_LOAD_MODULE);
 					} else if (strcasecmp(event.user.data1, "help") == 0) {
@@ -877,6 +879,7 @@ int main(int argc, char **argv)
 	}
 
 	if (startup_flags & SF_FONTEDIT) {
+		status.flags |= STARTUP_FONTEDIT;
 		set_page(PAGE_FONT_EDIT);
 
 	} else if (initial_song) {

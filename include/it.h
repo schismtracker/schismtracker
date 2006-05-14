@@ -106,6 +106,9 @@ enum {
 
 	/* poop */
 	DIGITRAKKER_VOODOO = (1 << 19),
+
+	/* fontedit */
+	STARTUP_FONTEDIT = (1 << 20),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
