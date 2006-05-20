@@ -134,10 +134,16 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 			draw_text((const unsigned char *)buf, 16, pos, 2, 0);
 		}
 
+		// again with the hacks...
                 if (channel->sample)
                         smp = channel->sample - song_get_sample(0, NULL);
                 else
                         smp = 0;
+
+		// Bleh
+		if (channel->flags & (CHN_KEYOFF|CHN_NOTEFADE) && channel->sample_length == 0) {
+			smp = 0;
+		}
 
 		if (smp) {
 			draw_text(numtostr(3, smp, (unsigned char *) buf), 27, pos, 2, 0);
@@ -241,6 +247,12 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                         smp = channel->sample - song_get_sample(0, NULL);
                 else
                         smp = 0;
+
+		// this makes ascii-art behave somewhat...
+		if (channel->flags & (CHN_KEYOFF|CHN_NOTEFADE) && channel->sample_length == 0) {
+			smp = ins = 0;
+		}
+
                 if (smp) {
                         draw_text(num99tostr(smp, (unsigned char *) buf), 31, pos, 6, 0);
                         if (ins) {
@@ -262,7 +274,28 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                         else
                                 song_get_sample(smp, &ptr);
                         draw_text_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
-                }
+                } else if (ins && channel->instrument && channel->instrument->midi_channel) {
+			if (channel->instrument->midi_channel) {
+				if (channel->instrument->midi_channel > 16) {
+					draw_text(numtostr(2, ((c-1) % 16)+1, (unsigned char *)buf), 31, pos, 6, 0);
+				} else {
+					draw_text(numtostr(2, channel->instrument->midi_channel,
+							(unsigned char *)buf), 31, pos, 6, 0);
+				}
+				draw_char('/', 33, pos, 6, 0);
+			}
+			draw_text(num99tostr(ins, (unsigned char *) buf), 34, pos, 6, 0);
+			n = 36;
+                        if (channel->volume == 0)
+                                fg = 4;
+                        else if (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
+                                fg = 7;
+                        else
+                                fg = 6;
+                        draw_char(':', n++, pos, fg, 0);
+			ptr = channel->instrument->name;
+                        draw_text_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
+		}
 
                 /* last box: panning. this one's much easier than the
                  * other two, thankfully :) */
