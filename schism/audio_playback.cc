@@ -1210,21 +1210,9 @@ printf("channel = %d note=%d\n",chan,m_note);
 static void _schism_midi_out_raw(unsigned char *data, unsigned int len, unsigned int pos)
 {
 #if 0
-	unsigned int i;
-
-printf("MIDI: ");
-	for (i = 0; i < len; i++) {
-		printf("%02x ", (unsigned int)data[i]);
-	}
-puts("");
-fflush(stdout);
-#endif
-
-#if 0
 	i = (8000*(audio_buffer_size - delay));
 	i /= (CSoundFile::gdwMixingFreq);
 #endif
-
 	if (!_diskwriter_writemidi(data,len,pos)) midi_send_buffer(data,len,pos);
 }
 
