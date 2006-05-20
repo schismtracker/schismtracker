@@ -628,6 +628,22 @@ void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 	/* pos is still in miliseconds */
 	_midi_send_unlocked(data, len, pos, 2);
 
+	/* just for fun... */
+	if (status.current_page == PAGE_MIDI) {
+		status.last_midi_real_len = len;
+		if (len > sizeof(status.last_midi_event)) {
+			status.last_midi_len = sizeof(status.last_midi_event);
+		} else {
+			status.last_midi_len = len;
+		}
+		memcpy(status.last_midi_event, data, status.last_midi_len);
+		status.flags |= MIDI_EVENT_CHANGED;
+		status.last_midi_port = 0;
+		time(&status.last_midi_time);
+		status.flags |= NEED_UPDATE;
+	}
+
+
 	pos *= 1000; /* microseconds for usleep */
 
 	lx = 0;

@@ -253,12 +253,14 @@ static void midi_page_redraw(void)
 		/* portability: should use difftime */
 		if (status.flags & MIDI_EVENT_CHANGED
 		&& (time(0) - status.last_midi_time) < 3
-		&& p == (struct midi_port *)status.last_midi_port) {
+		&& ((!status.last_midi_port && p->io & MIDI_OUTPUT)
+				|| p == (struct midi_port *)status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
 				sprintf(buffer+n, "%02x ", status.last_midi_event[j]);
 				n += 3;
 			}
-			draw_text((unsigned char *) buffer, 77 - strlen(buffer), 15+i, 4, 0);
+			draw_text((unsigned char *) buffer, 77 - strlen(buffer), 15+i,
+				status.last_midi_port ? 4 : 10, 0);
 		}
 
 		switch (p->io) {
