@@ -78,8 +78,8 @@ void about_load_page(struct page *page)
 
 static struct widget about_widgets[1];
 static struct vgamem_overlay logo_image = {
-	24,18,
-	57,23,
+	23,17,
+	58,24,
 };
 
 static void about_close(UNUSED void *data)
@@ -164,9 +164,9 @@ void show_about(void)
 	/* this is currently pretty gross */
 	vgamem_clear_reserve(&logo_image);
 	if (p) {
-#define LOGO_WIDTH 272
-#define LOGO_PITCH 272
-#define LOGO_HEIGHT 40
+#define LOGO_WIDTH 292
+#define LOGO_PITCH 292
+#define LOGO_HEIGHT 50
 		for (y = 0; y < LOGO_HEIGHT; y++) {
 			for (x = 0; x < LOGO_WIDTH; x++) {
 				if (p[x]) {
