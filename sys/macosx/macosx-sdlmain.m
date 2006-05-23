@@ -317,7 +317,8 @@ static void setApplicationMenu(void)
 	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
 	[menuItem setRepresentedObject: @"palette_page"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Font Editor"
-				action:@selector(_menu_callback:)];
+				action:@selector(_menu_callback:)
+				keyEquivalent:@""];
 	[menuItem setRepresentedObject: @"font_editor"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Toggle Fullscreen"
 				action:@selector(_menu_callback:)
