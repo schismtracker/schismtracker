@@ -184,6 +184,7 @@ int macosx_midi_setup(void)
 {
 	struct midi_driver driver;
 
+	memset(&driver,0,sizeof(driver));
 	driver.flags = MIDI_PORT_CAN_SCHEDULE;
 	driver.poll = _macosx_poll;
 	driver.thread = NULL;
