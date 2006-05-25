@@ -225,6 +225,7 @@ void key_translate(struct key_event *k)
 
 		};
 	}
+
 	switch (k->sym) {
 	case SDLK_SLASH: k->unicode = '/'; break;
 	case SDLK_ASTERISK: k->unicode = '*'; break;
@@ -232,16 +233,16 @@ void key_translate(struct key_event *k)
 	case SDLK_PLUS: k->unicode = '+'; break;
 	case SDLK_RETURN: k->unicode = '\r'; break;
 	case SDLK_EQUALS: k->unicode = '='; break;
-	case SDLK_0: k->unicode = '0'; break;
-	case SDLK_1: k->unicode = '1'; break;
-	case SDLK_2: k->unicode = '2'; break;
-	case SDLK_3: k->unicode = '3'; break;
-	case SDLK_4: k->unicode = '4'; break;
-	case SDLK_5: k->unicode = '5'; break;
-	case SDLK_6: k->unicode = '6'; break;
-	case SDLK_7: k->unicode = '7'; break;
-	case SDLK_8: k->unicode = '8'; break;
-	case SDLK_9: k->unicode = '9'; break;
+	case SDLK_0: k->unicode = (k->mod & KMOD_SHIFT) ? ')' : '0'; break;
+	case SDLK_1: k->unicode = (k->mod & KMOD_SHIFT) ? '!' : '1'; break;
+	case SDLK_2: k->unicode = (k->mod & KMOD_SHIFT) ? '@' : '2'; break;
+	case SDLK_3: k->unicode = (k->mod & KMOD_SHIFT) ? '#' : '3'; break;
+	case SDLK_4: k->unicode = (k->mod & KMOD_SHIFT) ? '$' : '4'; break;
+	case SDLK_5: k->unicode = (k->mod & KMOD_SHIFT) ? '%' : '5'; break;
+	case SDLK_6: k->unicode = (k->mod & KMOD_SHIFT) ? '^' : '6'; break;
+	case SDLK_7: k->unicode = (k->mod & KMOD_SHIFT) ? '&' : '7'; break;
+	case SDLK_8: k->unicode = (k->mod & KMOD_SHIFT) ? '*' : '8'; break;
+	case SDLK_9: k->unicode = (k->mod & KMOD_SHIFT) ? '(' : '9'; break;
 	};
 }
 
