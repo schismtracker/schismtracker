@@ -267,6 +267,7 @@ int midi_engine_start(void)
 }
 void midi_engine_reset(void)
 {
+	if (!_connected) return;
 	midi_engine_stop();
 	_midi_engine_connect();
 }

@@ -858,11 +858,11 @@ int main(int argc, char **argv)
 	display_init();
 	palette_apply();
 	font_init();
+	midi_engine_start();
 	song_init_audio(audio_driver);
 	song_init_modplug();
 
 	mixer_setup();
-	midi_engine_start();
 
 	setup_help_text_pointers();
 	load_pages();
