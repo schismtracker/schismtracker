@@ -508,4 +508,20 @@ void macosx_clippy_put(const char *buf)
 	[pb declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
 	[pb setString:contents forType:NSStringPboardType];
 }
-
+unsigned key_repeat_rate(void)
+{
+	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+	int ktt = [defaults integerForKey:@"KeyRepeat"];
+	// ktt is in 1/60th of a second?
+	if (!ktt || ktt < 0) ktt = 4; // eh?
+	ktt = (ktt * 1000) / 60;
+	return (unsigned)ktt;
+}
+unsigned key_repeat_delay(void)
+{
+	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+	int ktt = [defaults integerForKey:@"InitialKeyRepeat"];
+	if (!ktt || ktt < 0) ktt = 35;
+	ktt = (ktt * 1000) / 60;
+	return (unsigned)ktt;
+}

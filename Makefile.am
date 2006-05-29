@@ -3,9 +3,13 @@ EXTRA_DIST = COPYING.frag-opt include/*.h include/auto/*.h scripts/* \
 	helptext/* font/* icons/*
 bin_PROGRAMS = schism
 
+if USE_MACOSX
+# don't bother trying to do macsox+x11 at the same time...
+else
 if USE_X11
-files_x11 = sys/x11/xscreensaver.c
+files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c
 cflags_x11 = -DUSE_X11
+endif
 endif
 
 if USE_ALSA

@@ -78,6 +78,13 @@ static const char *video_driver = 0;
 static const char *audio_driver = 0;
 static int did_fullscreen = 0;
 
+/* wee... */
+#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
+unsigned key_repeat_rate(void);
+unsigned key_repeat_delay(void);
+#endif
+
+
 /* ugly hack... */
 void (*shift_release)(void) = NULL;
 
@@ -163,9 +170,12 @@ static void display_init(void)
 #if 0
 	SDL_EnableKeyRepeat(125, 25);
 #endif
+#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
+	SDL_EnableKeyRepeat(key_repeat_delay(), key_repeat_rate());
+#else
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY,
 			SDL_DEFAULT_REPEAT_INTERVAL);
-
+#endif
 
 #ifdef RELEASE_VERSION
 	SDL_WM_SetCaption("Schism Tracker v" VERSION, "Schism Tracker");
@@ -278,8 +288,9 @@ static void parse_options(int argc, char **argv)
 		{O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
 		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
 		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
-		/* FIXME: #if HAVE_X11? */
+#ifdef USE_X11
 		{O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
+#endif
 		{O_FULLSCREEN, 'f', "fullscreen", FRAG_NEG, NULL, "start in fullscreen mode"},
 		{O_PLAY, 'p', "play", FRAG_NEG, NULL, "start playing after loading song on command line"},
 		{O_FONTEDIT, 0, "font-editor", FRAG_NEG, NULL, "start in font-editor (itf)"},
