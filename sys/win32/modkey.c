@@ -34,3 +34,23 @@ void win32_get_modkey(int *mk)
 		| ((ks[VK_CAPITAL]&1) ? KMOD_CAPS : 0);
 }
 
+/* more windows key stuff... */
+unsigned key_repeat_rate(void)
+{
+	int delay;
+
+	if (!SystemParametersInfo(SPI_GETKEYBOARDDELAY, 0, &delay, 0)) return 0;
+	switch (delay) {
+	case 0: return 250;
+	case 1: return 500;
+	case 2: return 750;
+	};
+	return 1000;
+}
+unsigned key_repeat_delay(void)
+{
+	DWORD spd;
+	if (!SystemParametersInfo(SPI_GETKEYBOARDSPEED, 0, &spd, 0)) return 0;
+	if (!spd) return 1;
+	return spd;
+}
