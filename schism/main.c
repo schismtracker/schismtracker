@@ -736,7 +736,8 @@ static void event_loop(void)
 			}
 			break;
 		}
-		if (startdown && (now - startdown) > 1) {
+		if (status.dialog_type == DIALOG_NONE
+		&& startdown && (now - startdown) > 1) {
 			menu_show();
 			startdown = 0;
 			downtrip = 1;
