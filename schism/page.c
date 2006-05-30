@@ -314,18 +314,121 @@ void save_song_or_save_as(void)
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* This is an ugly monster. */
+static int _mp_active;
+static struct widget _mpw[1];
+static void (*_mp_setv)(int v) = 0;
+static void (*_mp_setv_noplay)(int v) = 0;
+static const char *_mp_text;
+static int _mp_text_x, _mp_text_y;
+static void _mp_draw(void)
+{
+	draw_text((const unsigned char *)_mp_text, _mp_text_x, _mp_text_y,0,2);
+	draw_char(':', _mp_text_x+strlen(_mp_text), _mp_text_y,0,2);
+	draw_box(_mp_text_x, _mp_text_y+1, _mp_text_x+14, _mp_text_y+3, BOX_THIN | BOX_INNER | BOX_INSET);
+}
+static void _mp_change(void)
+{
+	if (_mp_setv) _mp_setv(_mpw[0].d.thumbbar.value);
+	if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+		if (_mp_setv_noplay)
+			_mp_setv_noplay(_mpw[0].d.thumbbar.value);
+	}
+}
+static void _mp_finish(UNUSED void *ign)
+{
+	_mp_active = 0;
+}
+static void minipop_slide(int cv, const char *name,
+			int minv, int maxv,
+			void (*setv)(int v),
+			void (*setv_noplay)(int v),
+			int midx, int midy)
+{
+	/* sweet jesus! */
+	struct dialog *d;
+
+	_mp_active = 1;
+	_mp_text = name;
+	_mp_text_x = midx-9;
+	_mp_text_y = midy-2; 
+	_mp_setv = setv;
+	_mp_setv_noplay = setv_noplay;
+	create_thumbbar(_mpw, midx-8, midy, 13, 0, 0, 0, _mp_change,
+				minv, maxv);
+	if (cv < minv) cv = minv;
+	else if (cv > maxv) cv = maxv;
+	_mpw[0].d.thumbbar.value = cv;
+	_mpw[0].depressed = 1;
+	d = dialog_create_custom(midx - 10, midy - 3,  20, 6, 
+			_mpw, 1, 0, _mp_draw, 0);
+			
+			
+}
 
 /* returns 1 if the key was handled */
 static int handle_key_global(struct key_event * k)
 {
 	int i;
 
-	if ((!(status.flags & CLASSIC_MODE)) && !k->state && k->mouse == MOUSE_CLICK
-	&& k->x >= 63 && k->x <= 77 && k->y >= 6 && k->y <= 7) {
-		status.vis_style ++;
-		if (status.vis_style ==VIS_SENTINEL) status.vis_style = VIS_OFF;
+	if (_mp_active && (k->mouse == MOUSE_CLICK && k->state)) {
 		status.flags |= NEED_UPDATE;
+		dialog_destroy();
+		_mp_active = 0;
+		// eat it...
 		return 1;
+	}
+	if ((!_mp_active) && (!k->state) && k->mouse == MOUSE_CLICK) {
+		if ((!(status.flags & CLASSIC_MODE)) 
+		&& k->x >= 63 && k->x <= 77 && k->y >= 6 && k->y <= 7) {
+			status.vis_style++;
+			if (status.vis_style == VIS_SENTINEL)
+				status.vis_style = VIS_OFF;
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		if (k->y == 5 && k->x == 50) {
+			minipop_slide(kbd_get_current_octave(),
+				"Octave", 0, 8, kbd_set_current_octave, 0,
+				50, 5);
+			return 1;
+		} else if (k->y == 4 && k->x >= 50 && k->x <= 52) {
+			minipop_slide(song_get_current_speed(),
+				"Speed", 1, 255, song_set_current_speed,
+						song_set_initial_speed,
+				51, 4);
+			return 1;
+		} else if (k->y == 4 && k->x >= 54 && k->x <= 56) {
+			minipop_slide(song_get_current_tempo(),
+				"Tempo", 32, 255, song_set_initial_tempo, 0,
+				55, 4);
+			return 1;
+		} else if (k->y == 3 && k->x >= 50 && k-> x <= 77) {
+			/* todo; inst/sample */
+		} else if (k->y == 7 && k->x >= 11 && k->x <= 17) {
+			minipop_slide(get_current_row(),
+				"Row",
+				0,
+				song_get_rows_in_pattern(get_current_pattern()),
+				set_current_row, 0,
+				14, 7);
+			return 1;
+		} else if (k->y == 6 && k->x >= 11 && k->x <= 17) {
+			minipop_slide(get_current_pattern(),
+				"Pattern", 0,
+				song_get_num_patterns(),
+				set_current_pattern, 0, 14, 6);
+			return 1;
+		} else if (k->y == 5 && k->x >= 11 && k->x <= 17) {
+			minipop_slide(song_get_current_order(),
+				"Order", 0,
+				song_get_num_orders(),
+				set_current_order, 0, 14, 5);
+			return 1;
+		} else if (k->y == 4 && k->x >= 11 && k->x <= 28) {
+			/* todo; file name */
+		} else if (k->y == 3 && k->x >= 11 && k->x <= 35) {
+			/* todo; song name */
+		}
 	}
 
 	/* shortcut */
@@ -1008,8 +1111,6 @@ void redraw_screen(void)
 		redraw_top_info();
 	}
 
-        draw_page();
-
 	if (!ACTIVE_PAGE.draw_full) {
 		draw_vis();
 		draw_time();
@@ -1020,6 +1121,9 @@ void redraw_screen(void)
 
 		status_text_redraw();
 	}
+
+        draw_page();
+
 }
 
 /* important :) */
