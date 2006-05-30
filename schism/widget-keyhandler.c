@@ -220,7 +220,7 @@ int widget_handle_key(struct key_event * k)
 				wx = (widget->width - 16) * k->rx;
 			} else {
 				n = k->fx - (widget->x * k->rx);
-				wx = widget->width * k->rx;
+				wx = (widget->width-1) * k->rx;
 			}
 			if (n < 0) n = 0;
 			else if (n >= wx) n = wx;
