@@ -690,8 +690,35 @@ void song_start_at_pattern(int pattern, int row)
 // Actually this is wrong; single step shouldn't stop playing. Instead, it should *add* the notes in the row
 // to the mixed data. Additionally, it should process tick-N effects -- e.g. if there's an Exx, a single-step
 // on the row should slide the note down.
-void song_single_step(int pattern, int row)
+void song_single_step(int patno, int row)
 {
+	int total_rows;
+	int i, vol;
+	song_note *pattern, *cur_note;
+
+	total_rows = song_get_pattern(patno, &pattern);
+	if (!pattern || row >= total_rows) return;
+
+	cur_note = pattern + 64 * row;
+	for (i = 0; i < 64; i++, cur_note++) {
+		if (cur_note->instrument && cur_note->note > 0 && cur_note->note < 120) {
+			if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
+				vol = song_get_instrument_default_volume(
+							cur_note->instrument,
+							cur_note->instrument);
+			} else {
+				vol = cur_note->volume;
+			}
+			song_keyrecord(cur_note->instrument,
+				cur_note->instrument,
+				cur_note->note,
+				vol,
+				i, 0,
+				cur_note->effect,
+				cur_note->parameter);
+		}
+	}
+#if 0
         max_channels_used = 0;
 
 	mp->m_nTickCount = 0;
@@ -699,6 +726,7 @@ void song_single_step(int pattern, int row)
         mp->m_dwSongFlags |= SONG_STEP | SONG_PATTERNLOOP;
 	mp->LoopPattern(pattern);
 	mp->m_nNextRow = row;
+#endif
 }
 
 // ------------------------------------------------------------------------
