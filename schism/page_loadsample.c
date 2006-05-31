@@ -364,7 +364,7 @@ static void stereo_cvt_complete_left(void)
 	song_sample *smp;
 	smp = song_get_sample(cur, NULL);
 	sample_mono_left(smp);
-	dialog_destroy();
+	dialog_destroy_all();
 	finish_load(cur);
 }
 static void stereo_cvt_complete_right(void)
@@ -373,13 +373,13 @@ static void stereo_cvt_complete_right(void)
 	song_sample *smp;
 	smp = song_get_sample(cur, NULL);
 	sample_mono_right(smp);
-	dialog_destroy();
+	dialog_destroy_all();
 	finish_load(cur);
 }
 static void stereo_cvt_complete_both(void)
 {
 	int cur = sample_get_current();
-	dialog_destroy();
+	dialog_destroy_all();
 	memused_songchanged();
 	if (song_instrument_is_empty(cur)
 	&& song_is_instrument_mode()) {
@@ -393,6 +393,25 @@ static void stereo_cvt_dialog(void)
 {
 	draw_text((unsigned char *) "Loading Stereo Sample", 30, 27, 0, 2);
 }
+static int stereo_cvt_hk(struct key_event *k)
+{
+	if (k->sym == SDLK_l) {
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state) stereo_cvt_complete_left();
+		return 1;
+	}
+	if (k->sym == SDLK_r) {
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state) stereo_cvt_complete_right();
+		return 1;
+	}
+	if (k->sym == SDLK_s || k->sym == SDLK_b) {
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state) stereo_cvt_complete_both();
+		return 1;
+	}
+	return 0;
+}
 
 static void finish_load(int cur)
 {
@@ -404,8 +423,8 @@ static void finish_load(int cur)
 /* Loading Stereo Sample
 Left  Both  Right
 */
-		static struct widget stereo_cvt_widgets[3];
 		struct dialog *dd;
+		static struct widget stereo_cvt_widgets[4];
 		create_button(stereo_cvt_widgets+0, 27, 30, 6,
 				0, 0, 0,    (status.flags & CLASSIC_MODE) ? 2 : 1,
 					(status.flags & CLASSIC_MODE) ? 2 : 1,
@@ -426,6 +445,7 @@ Left  Both  Right
 				stereo_cvt_dialog,
 				NULL);
 		dd->action_cancel = (void *) stereo_cvt_complete_both;
+		dd->handle_key = stereo_cvt_hk;
 		return;
 	}
 
