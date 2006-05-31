@@ -314,7 +314,7 @@ void save_song_or_save_as(void)
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* This is an ugly monster. */
-static int _mp_active;
+static int _mp_active = 0;
 static struct widget _mpw[1];
 static void (*_mp_setv)(int v) = 0;
 static void (*_mp_setv_noplay)(int v) = 0;
@@ -322,9 +322,34 @@ static const char *_mp_text;
 static int _mp_text_x, _mp_text_y;
 static void _mp_draw(void)
 {
-	draw_text((const unsigned char *)_mp_text, _mp_text_x, _mp_text_y,0,2);
-	draw_char(':', _mp_text_x+strlen(_mp_text), _mp_text_y,0,2);
-	draw_box(_mp_text_x, _mp_text_y+1, _mp_text_x+14, _mp_text_y+3, BOX_THIN | BOX_INNER | BOX_INSET);
+	char *name;
+	int n, i;
+
+	if (_mp_text[0] == '!') { // inst
+		n = instrument_get_current();
+		if (!n) name = "(No Instrument)";
+		else {
+			song_get_instrument(n, &name);
+			if (!name || !*name) name = "(No Instrument)";
+		}
+	} else if (_mp_text[0] == '@') { // samp
+                n = sample_get_current();
+		if (!n) name = "(No Sample)";
+		else {
+			song_get_sample(n, &name);
+			if (!name || !*name) name = "(No Sample)";
+		}
+	} else {
+		name = (void*)_mp_text;
+	}
+	i = strlen(name);
+	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x+17, _mp_text_y, 2);
+	draw_text_len((const unsigned char *)name, 17, _mp_text_x, _mp_text_y,0,2);
+	if (i < 17 && name == (void*)_mp_text) {
+		draw_char(':', _mp_text_x+i, _mp_text_y,0,2);
+	}
+	draw_box(_mp_text_x, _mp_text_y+1, _mp_text_x+14, _mp_text_y+3,
+				BOX_THIN | BOX_INNER | BOX_INSET);
 }
 static void _mp_change(void)
 {
@@ -333,10 +358,12 @@ static void _mp_change(void)
 		if (_mp_setv_noplay)
 			_mp_setv_noplay(_mpw[0].d.thumbbar.value);
 	}
+	_mp_active = 2;
 }
 static void _mp_finish(UNUSED void *ign)
 {
 	_mp_active = 0;
+	dialog_destroy_all();
 }
 static void minipop_slide(int cv, const char *name,
 			int minv, int maxv,
@@ -347,7 +374,10 @@ static void minipop_slide(int cv, const char *name,
 	/* sweet jesus! */
 	struct dialog *d;
 
-	_mp_active = 1;
+	if (_mp_active == 1) {
+		_mp_active = 2;
+		return;
+	}
 	_mp_text = name;
 	_mp_text_x = midx-9;
 	_mp_text_y = midy-2; 
@@ -362,17 +392,19 @@ static void minipop_slide(int cv, const char *name,
 	d = dialog_create_custom(midx - 10, midy - 3,  20, 6, 
 			_mpw, 1, 0, _mp_draw, 0);
 			
-			
+	_mp_active = 1;
+	status.flags |= NEED_UPDATE;
 }
 
 /* returns 1 if the key was handled */
 static int handle_key_global(struct key_event * k)
 {
 	int i;
+	int ins_mode;
 
-	if (_mp_active && (k->mouse == MOUSE_CLICK && k->state)) {
+	if (_mp_active == 2 && (k->mouse == MOUSE_CLICK && k->state)) {
 		status.flags |= NEED_UPDATE;
-		dialog_destroy();
+		dialog_destroy_all();
 		_mp_active = 0;
 		// eat it...
 		return 1;
@@ -403,7 +435,30 @@ static int handle_key_global(struct key_event * k)
 				55, 4);
 			return 1;
 		} else if (k->y == 3 && k->x >= 50 && k-> x <= 77) {
-			/* todo; inst/sample */
+		        if (page_is_instrument_list(status.current_page)
+			|| status.current_page == PAGE_SAMPLE_LIST
+			|| (!(status.flags & CLASSIC_MODE)
+			&& (status.current_page == PAGE_ORDERLIST_PANNING
+			|| status.current_page == PAGE_ORDERLIST_VOLUMES)))
+				ins_mode = 0;
+			else
+				ins_mode = song_is_instrument_mode();
+			if (ins_mode) {
+				minipop_slide(instrument_get_current(),
+				"!",
+			status.current_page == PAGE_INSTRUMENT_LIST ? 1 : 0,
+				99, // fixme
+				instrument_set, 0,
+				58, 3);
+			} else {
+				minipop_slide(sample_get_current(),
+				"@",
+			status.current_page == PAGE_SAMPLE_LIST ? 1 : 0,
+				99, // fixme
+				sample_set, 0,
+				58, 3);
+			}
+
 		} else if (k->y == 7 && k->x >= 11 && k->x <= 17) {
 			minipop_slide(get_current_row(),
 				"Row",
@@ -424,10 +479,14 @@ static int handle_key_global(struct key_event * k)
 				song_get_num_orders(),
 				set_current_order, 0, 14, 5);
 			return 1;
-		} else if (k->y == 4 && k->x >= 11 && k->x <= 28) {
-			/* todo; file name */
+		}
+	} else if ((!_mp_active) && k->mouse == MOUSE_DBLCLICK) {
+		if (k->y == 4 && k->x >= 11 && k->x <= 28) {
+			set_page(PAGE_SAVE_MODULE);
+			return 1;
 		} else if (k->y == 3 && k->x >= 11 && k->x <= 35) {
-			/* todo; song name */
+			set_page(PAGE_SONG_VARIABLES);
+			return 1;
 		}
 	}
 
