@@ -842,6 +842,7 @@ static int info_page_handle_key(struct key_event * k)
         case SDLK_g:
 		if (!k->state) return 1;
 
+		set_current_channel(selected_channel);
                 order = song_get_current_order();
                 n = song_get_orderlist()[order];
                 if (n < 200) {

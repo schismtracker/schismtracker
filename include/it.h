@@ -393,6 +393,8 @@ void status_text_flash_color(int co, const char *format, ...)
         __attribute__ ((format(printf, 2, 3)));
 
 
+int get_current_channel(void);
+void set_current_channel(int channel);
 int get_current_row(void);
 void set_current_row(int row);
 int get_current_pattern(void);
