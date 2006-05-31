@@ -1730,6 +1730,7 @@ static void change_subpage(void)
 		togglebutton_set(pages[page].widgets, widget, 0);
                 set_page(page);
                 instrument_list_subpage = page;
+		status.flags |= NEED_UPDATE;
         }
 }
 
