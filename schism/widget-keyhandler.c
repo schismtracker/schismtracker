@@ -177,7 +177,7 @@ static void _backtab(void)
 int widget_handle_key(struct key_event * k)
 {
 	struct widget *widget = &ACTIVE_WIDGET;
-	int n, onw, wx, fmin, fmax;
+	int n, onw, wx, fmin, fmax, pad;
 	enum widget_type current_type = widget->type;
 
 	if (!(status.flags & DISKWRITER_ACTIVE) 
@@ -240,7 +240,18 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		}
 		if (k->mouse) {
-			onw = (k->x < widget->x || k->x >= widget->x+widget->width
+			switch (widget->type) {
+			case WIDGET_BUTTON:
+				pad = widget->d.button.padding+1;
+				break;
+			case WIDGET_TOGGLEBUTTON:
+				pad = widget->d.togglebutton.padding+1;
+				break;
+			default:
+				pad = 0;
+			};
+			onw = (k->x < widget->x
+					|| k->x >= widget->x+widget->width+pad
 					|| k->y != widget->y) ? 0 : 1;
 			n = ((!k->state) && onw) ? 1 : 0;
 			if (widget->depressed != n) status.flags |= NEED_UPDATE;

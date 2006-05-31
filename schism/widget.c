@@ -513,12 +513,22 @@ void change_focus_to(int new_widget_index)
 struct widget *find_widget_xy_ex(int x, int y, int *num)
 {
 	struct widget *w;
-	int i;
+	int i, pad;
 
 	if (!total_widgets)  return 0;
 	for (i = 0; i < *total_widgets; i++) {
 		w = &widgets[i];
-		if (x >= w->x && x < w->x+w->width) {
+		switch (w->type) {
+		case WIDGET_BUTTON:
+			pad = w->d.button.padding+1;
+			break;
+		case WIDGET_TOGGLEBUTTON:
+			pad = w->d.togglebutton.padding+1;
+			break;
+		default:
+			pad = 0;
+		};
+		if (x >= w->x && x < w->x+w->width+pad) {
 			if (y >= w->y && y < w->y+w->height) {
 				if (num) *num=i;
 				return w;
