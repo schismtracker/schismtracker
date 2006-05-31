@@ -59,6 +59,8 @@ static struct {
 } current_time = {0, 0, 0};
 /* *INDENT-ON* */
 
+extern int playback_tracing;	/* scroll lock */
+extern int midi_playback_tracing;
 
 /* return 1 -> the time changed; need to redraw */
 static int check_time(void)
@@ -746,6 +748,12 @@ static int handle_key_global(struct key_event * k)
 				status_text_flash("MIDI Input %s",
 					(midi_flags & MIDI_DISABLE_RECORD)
 					? "Disabled" : "Enabled");
+			}
+			return 1;
+		} else if (NO_MODIFIER(k->mod)) {
+			if (k->state) {
+				midi_playback_tracing = (playback_tracing = !playback_tracing);
+				status_text_flash("Playback tracing %s", (playback_tracing ? "enabled" : "disabled"));
 			}
 			return 1;
 		}

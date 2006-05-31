@@ -2145,6 +2145,16 @@ void update_current_row(void)
 	draw_text(numtostr(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
 }
 
+int get_current_channel(void)
+{
+	return current_channel;
+}
+
+void set_current_channel(int channel)
+{
+	current_channel = CLAMP(channel, 0, 64);
+}
+
 int get_current_row(void)
 {
 	return current_row;
@@ -3923,11 +3933,6 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (k->state) return 0;
 		copy_note_to_mask();
 		return 1;
-	case SDLK_SCROLLOCK:
-		if (k->state) return 0;
-		midi_playback_tracing = (playback_tracing = !playback_tracing);
-		status_text_flash("Playback tracing %s", (playback_tracing ? "enabled" : "disabled"));
-		return 1;
 	default:
 		/* bleah */
 		if (k->mod & KMOD_SHIFT) {
@@ -4101,3 +4106,4 @@ void pattern_editor_load_page(struct page *page)
 
 	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, pattern_editor_redraw);
 }
+
