@@ -3072,6 +3072,7 @@ static int pattern_editor_insert(struct key_event *k)
 
 		if (current_position == 2) {
 			j = kbd_char_to_99(k);
+			if (j < 0) return 0;
 			n = (j * 10) + (cur_note->instrument % 10);
 			current_position++;
 		} else {
