@@ -37,6 +37,13 @@ void win32_get_modkey(int *mk)
 /* more windows key stuff... */
 unsigned key_repeat_rate(void)
 {
+	DWORD spd;
+	if (!SystemParametersInfo(SPI_GETKEYBOARDSPEED, 0, &spd, 0)) return 0;
+	if (!spd) return 1;
+	return spd;
+}
+unsigned key_repeat_delay(void)
+{
 	int delay;
 
 	if (!SystemParametersInfo(SPI_GETKEYBOARDDELAY, 0, &delay, 0)) return 0;
@@ -46,11 +53,4 @@ unsigned key_repeat_rate(void)
 	case 2: return 750;
 	};
 	return 1000;
-}
-unsigned key_repeat_delay(void)
-{
-	DWORD spd;
-	if (!SystemParametersInfo(SPI_GETKEYBOARDSPEED, 0, &spd, 0)) return 0;
-	if (!spd) return 1;
-	return spd;
 }
