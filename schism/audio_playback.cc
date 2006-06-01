@@ -122,6 +122,16 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 // ------------------------------------------------------------------------------------------------------------
 // note playing
 
+static void main_song_mode_changed_cb(void)
+{
+	int n;
+	for (n = 0; n < PAGE_LAST_PAGE; n++) {
+		if (pages[n].song_mode_changed_cb)
+			pages[n].song_mode_changed_cb();
+	}
+}
+
+
 static int current_play_channel = 1;
 static int multichannel_mode = 0;
 
@@ -505,6 +515,7 @@ void song_start_once()
 	mp->m_nRepeatCount = 1;
 
         song_unlock_audio();
+	main_song_mode_changed_cb();
 }
 
 void song_start()
@@ -515,12 +526,14 @@ void song_start()
         max_channels_used = 0;
 
         song_unlock_audio();
+	main_song_mode_changed_cb();
 }
 void song_stop()
 {
 	song_lock_audio();
 	song_stop_unlocked();
 	song_unlock_audio();
+	main_song_mode_changed_cb();
 }
 
 /* for midi translation */
@@ -661,6 +674,7 @@ void song_loop_pattern(int pattern, int row)
         mp->LoopPattern(pattern, row);
 
         song_unlock_audio();
+	main_song_mode_changed_cb();
 }
 
 void song_start_at_order(int order, int row)
@@ -674,6 +688,7 @@ void song_start_at_order(int order, int row)
 		max_channels_used = 0;
 	}
         song_unlock_audio();
+	main_song_mode_changed_cb();
 }
 
 void song_start_at_pattern(int pattern, int row)

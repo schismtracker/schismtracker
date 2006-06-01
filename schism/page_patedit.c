@@ -216,6 +216,7 @@ static byte track_view_scheme[64];
 static int *channel_multi_base = 0;
 static int channel_multi[64];
 static int channel_quick[64];
+static int channel_keyhack[64];
 static int visible_channels, visible_width;
 
 static void recalculate_visible_area(void);
@@ -2864,9 +2865,13 @@ static int pattern_editor_insert(struct key_event *k)
 			if (k->state) return 0;
 			if (cur_note->instrument && cur_note->note > 0 && cur_note->note < 120) {
 				if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
-					vol = song_get_instrument_default_volume(
-								cur_note->instrument,
-								cur_note->instrument);
+					if (edit_copy_mask & MASK_VOLUME && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
+						vol = mask_note.volume;
+					} else {
+						vol = song_get_instrument_default_volume(
+									cur_note->instrument,
+									cur_note->instrument);
+					}
 				} else {
 					vol = cur_note->volume;
 				}
@@ -2915,7 +2920,9 @@ static int pattern_editor_insert(struct key_event *k)
 					i = sample_get_current();
 			}
 
-			if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
+			if (edit_copy_mask & MASK_VOLUME && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
+				vol = mask_note.volume;
+			} else if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
 				vol = song_get_instrument_default_volume(
 								i, i);
 			} else {
@@ -2943,6 +2950,16 @@ static int pattern_editor_insert(struct key_event *k)
 				}
 				if (j == -1) return 1; /* err? */
 				while (j >= 64) j -= 64;
+				if (song_get_mode() & (MODE_PATTERN_LOOP)) {
+					if (n == NOTE_OFF) {
+						if (channel_keyhack[j] > current_row) {
+							channel_keyhack[j] = -1;
+							return 1;
+						}
+					} else {
+						channel_keyhack[j] = current_row;
+					}
+				}
 
 			} else if (k->state) {
 				/* don't bother with keyup events here */
@@ -4085,6 +4102,13 @@ static void pattern_editor_playback_update(void)
 
 /* --------------------------------------------------------------------- */
 
+static void _fix_keyhack(void)
+{
+	int i;
+	for (i = 0; i < 64; i++) {
+		channel_keyhack[i] = -1;
+	}
+}
 void pattern_editor_load_page(struct page *page)
 {
 	int i;
@@ -4095,10 +4119,12 @@ void pattern_editor_load_page(struct page *page)
 	}
 	for (i = 0; i < 64; i++) {
 		channel_quick[i] = 1;
+		channel_keyhack[i] = -1;
 	}
 	page->title = "Pattern Editor (F2)";
 	page->playback_update = pattern_editor_playback_update;
 	page->song_changed_cb = pated_history_clear;
+	page->song_mode_changed_cb = _fix_keyhack;
 	page->total_widgets = 1;
 	page->clipboard_paste = pattern_selection_system_paste;
 	page->widgets = widgets_pattern;

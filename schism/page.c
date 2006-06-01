@@ -1306,7 +1306,6 @@ void load_pages(void)
 
 /* --------------------------------------------------------------------- */
 /* this function's name sucks, but I don't know what else to call it. */
-
 void main_song_changed_cb(void)
 {
         int n;
