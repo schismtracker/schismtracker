@@ -260,6 +260,9 @@ struct page {
          * directory in the file browsers. */
         void (*set_page) (void);
 
+	/* called when the song-mode changes */
+	void (*song_mode_changed_cb) (void);
+
 	/* called by the clipboard manager */
 	int (*clipboard_paste)(int cb, const void *cptr);
 
@@ -338,6 +341,7 @@ enum page_numbers {
 
 	PAGE_CONFIG = (30),
 
+	PAGE_LAST_PAGE = (30),
 /* limit =32 */
 };
 
