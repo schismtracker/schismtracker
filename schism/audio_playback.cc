@@ -327,7 +327,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			mc.vol = vol;
 			mc.command = effect;
 			mc.param = param;
+			song_lock_audio();
 			_schism_midi_out_note(chan, &mc);
+			song_unlock_audio();
 		}
 
 		return chan;
@@ -408,7 +410,9 @@ int song_keyup(int samp, int ins, int note, int chan, int *mm)
 			mc.vol = 0;
 			mc.command = 0;
 			mc.param = 0;
+			song_lock_audio();
 			_schism_midi_out_note(chan, &mc);
+			song_unlock_audio();
 		}
 	} else {
 		if (!mm) {
