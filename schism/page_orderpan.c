@@ -316,20 +316,6 @@ static int orderlist_handle_char(struct key_event *k)
                 song_get_orderlist()[current_order] = ORDER_LAST;
                 orderlist_cursor_pos = 2;
                 break;
-	case SDLK_SPACE:
-		if (k->state) return 1;
-		list = song_get_orderlist();
-		cur_pattern = 0;
-		for (c = current_order - 1; c >= 0; c--) {
-			if (list[c] == ORDER_SKIP || list[c] == ORDER_LAST)
-				continue;
-			cur_pattern = list[c]+1;
-			break;
-		}
-		status.flags |= SONG_NEEDS_SAVE;
-		list[current_order] = cur_pattern;
-		orderlist_cursor_pos = 2;
-		break;
 	default:
 		c = numeric_key_event(k);
 		if (c == -1) return 0;
@@ -531,6 +517,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		return 0;
 
+	case SDLK_SPACE:
         case SDLK_n:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
