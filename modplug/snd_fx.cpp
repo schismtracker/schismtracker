@@ -1908,7 +1908,7 @@ void CSoundFile::MidiSend(unsigned char *data, unsigned int len, UINT nChn, int 
 	MODCHANNEL *pChn = &Chn[nChn];
 	int oldcutoff;
 
-	if (len > 2 && data[0] == 0xF0 && data[1] == 0xF0) {
+	if (len > 2 && data[0] == 0xF0 && data[1] == 0xF0 && (m_dwSongFlags & SONG_INSTRUMENTMODE)) {
 		/* impulse tracker filter control (mfg. 0xF0) */
 		if (len == 5) {
 			switch (data[2]) {
