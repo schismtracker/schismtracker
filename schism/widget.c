@@ -267,7 +267,7 @@ static void textentry_reposition(struct widget *w)
 
 int textentry_add_char(struct widget *w, Uint16 unicode)
 {
-        char c = unicode_to_ascii(unicode);
+        int c = unicode_to_ascii(unicode);
 
         if (c == 0)
                 return 0;
@@ -398,7 +398,7 @@ void draw_widget(struct widget *w, int selected)
                 break;
         case WIDGET_TEXTENTRY:
                 textentry_reposition(w);
-                draw_text_len((unsigned char *) w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
+                draw_text_bios_len((unsigned char *) w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
 		if (clippy_owner(CLIPPY_SELECT) == w) {
 			/* wee.... */
 			clen = w->clip_end - w->clip_start;

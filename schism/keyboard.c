@@ -435,7 +435,7 @@ inline int kbd_char_to_99(struct key_event *k)
 	return kbd_char_to_hex(k);
 
 }
-inline int kbd_char_to_hex(struct key_event *k)
+int kbd_char_to_hex(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
@@ -553,4 +553,68 @@ inline int kbd_get_note(struct key_event *k)
 	};
 	note += (12 * current_octave);
         return CLAMP(note, 1, 120);
+}
+int kbd_get_alnum(struct key_event *k) {
+	switch (k->sym) {
+	case SDLK_a: return (k->mod & KMOD_SHIFT) ? 'A' : 'a';
+	case SDLK_b: return (k->mod & KMOD_SHIFT) ? 'B' : 'b';
+	case SDLK_c: return (k->mod & KMOD_SHIFT) ? 'C' : 'c';
+	case SDLK_d: return (k->mod & KMOD_SHIFT) ? 'D' : 'd';
+	case SDLK_e: return (k->mod & KMOD_SHIFT) ? 'E' : 'e';
+	case SDLK_f: return (k->mod & KMOD_SHIFT) ? 'F' : 'f';
+	case SDLK_g: return (k->mod & KMOD_SHIFT) ? 'G' : 'g';
+	case SDLK_h: return (k->mod & KMOD_SHIFT) ? 'H' : 'h';
+	case SDLK_i: return (k->mod & KMOD_SHIFT) ? 'I' : 'i';
+	case SDLK_j: return (k->mod & KMOD_SHIFT) ? 'J' : 'j';
+	case SDLK_k: return (k->mod & KMOD_SHIFT) ? 'K' : 'k';
+	case SDLK_l: return (k->mod & KMOD_SHIFT) ? 'L' : 'l';
+	case SDLK_m: return (k->mod & KMOD_SHIFT) ? 'M' : 'm';
+	case SDLK_n: return (k->mod & KMOD_SHIFT) ? 'N' : 'n';
+	case SDLK_o: return (k->mod & KMOD_SHIFT) ? 'O' : 'o';
+	case SDLK_p: return (k->mod & KMOD_SHIFT) ? 'P' : 'p';
+	case SDLK_q: return (k->mod & KMOD_SHIFT) ? 'Q' : 'q';
+	case SDLK_r: return (k->mod & KMOD_SHIFT) ? 'R' : 'r';
+	case SDLK_s: return (k->mod & KMOD_SHIFT) ? 'S' : 's';
+	case SDLK_t: return (k->mod & KMOD_SHIFT) ? 'T' : 't';
+	case SDLK_u: return (k->mod & KMOD_SHIFT) ? 'U' : 'u';
+	case SDLK_v: return (k->mod & KMOD_SHIFT) ? 'V' : 'v';
+	case SDLK_w: return (k->mod & KMOD_SHIFT) ? 'W' : 'w';
+	case SDLK_x: return (k->mod & KMOD_SHIFT) ? 'X' : 'x';
+	case SDLK_y: return (k->mod & KMOD_SHIFT) ? 'Y' : 'y';
+	case SDLK_z: return (k->mod & KMOD_SHIFT) ? 'Z' : 'z';
+	case SDLK_0: return (k->mod & KMOD_SHIFT) ? ')' : '0';
+	case SDLK_1: return (k->mod & KMOD_SHIFT) ? '!' : '1';
+	case SDLK_2: return (k->mod & KMOD_SHIFT) ? '@' : '2';
+	case SDLK_3: return (k->mod & KMOD_SHIFT) ? '#' : '3';
+	case SDLK_4: return (k->mod & KMOD_SHIFT) ? '$' : '4';
+	case SDLK_5: return (k->mod & KMOD_SHIFT) ? '%' : '5';
+	case SDLK_6: return (k->mod & KMOD_SHIFT) ? '^' : '6';
+	case SDLK_7: return (k->mod & KMOD_SHIFT) ? '&' : '7';
+	case SDLK_8: return (k->mod & KMOD_SHIFT) ? '*' : '8';
+	case SDLK_9: return (k->mod & KMOD_SHIFT) ? '(' : '9';
+	case SDLK_LEFTBRACKET: return (k->mod & KMOD_SHIFT) ? '{' : '[';
+	case SDLK_RIGHTBRACKET: return (k->mod & KMOD_SHIFT) ? '}' : ']';
+	case SDLK_SEMICOLON: return (k->mod & KMOD_SHIFT) ? ';' : ':';
+	case SDLK_EQUALS: return (k->mod & KMOD_SHIFT) ? '+' : '=';
+	case SDLK_MINUS: return (k->mod & KMOD_SHIFT) ? '_' : '-';
+	case SDLK_BACKQUOTE: return (k->mod & KMOD_SHIFT) ? '~' : '`';
+	case SDLK_COMMA: return (k->mod & KMOD_SHIFT) ? '<' : ',';
+	case SDLK_PERIOD: return (k->mod & KMOD_SHIFT) ? '>' : '.';
+	case SDLK_SLASH: return (k->mod & KMOD_SHIFT) ? '?' : '/';
+	case SDLK_BACKSLASH: return (k->mod & KMOD_SHIFT) ? '|' : '\\';
+	case SDLK_QUOTE: return (k->mod & KMOD_SHIFT) ? '"' : '\'';
+	case SDLK_QUOTEDBL: return '"';
+	case SDLK_GREATER: return '>';
+	case SDLK_LESS: return '<';
+	case SDLK_COLON: return ':';
+	case SDLK_LEFTPAREN: return '(';
+	case SDLK_RIGHTPAREN: return ')';
+	case SDLK_ASTERISK: return '*';
+	case SDLK_AMPERSAND: return '&';
+	case SDLK_DOLLAR: return '$';
+	case SDLK_HASH: return '#';
+	case SDLK_CARET: return '^';
+	case SDLK_UNDERSCORE: return '_';
+	};
+	return 0;
 }

@@ -273,7 +273,7 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                                 ptr = channel->instrument->name;
                         else
                                 song_get_sample(smp, &ptr);
-                        draw_text_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
+                        draw_text_bios_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
                 } else if (ins && channel->instrument && channel->instrument->midi_channel) {
 			if (channel->instrument->midi_channel) {
 				if (channel->instrument->midi_channel > 16) {
@@ -294,7 +294,7 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                                 fg = 6;
                         draw_char(':', n++, pos, fg, 0);
 			ptr = channel->instrument->name;
-                        draw_text_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
+                        draw_text_bios_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
 		}
 
                 /* last box: panning. this one's much easier than the

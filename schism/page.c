@@ -26,6 +26,7 @@
 #include "page.h"
 #include "util.h"
 #include "midi.h"
+#include "charset.h"
 
 #include "sdlmain.h"
 
@@ -346,7 +347,7 @@ static void _mp_draw(void)
 	}
 	i = strlen(name);
 	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x+17, _mp_text_y, 2);
-	draw_text_len((const unsigned char *)name, 17, _mp_text_x, _mp_text_y,0,2);
+	draw_text_bios_len((const unsigned char *)name, 17, _mp_text_x, _mp_text_y,0,2);
 	if (i < 17 && name == (void*)_mp_text) {
 		draw_char(':', _mp_text_x+i, _mp_text_y,0,2);
 	}
@@ -793,6 +794,108 @@ static int handle_key_global(struct key_event * k)
 /* this is the important one */
 void handle_key(struct key_event * k)
 {
+	static int alt_numpad = 0;
+	static int alt_numpad_c = 0;
+	static int cs_unicode = 0;
+	static int cs_unicode_c = 0;
+	static int ca_digraph = 0;
+	struct key_event fake;
+	int c, m;
+
+	/* ctrl+alt -> digraph -> char number */
+	if ((k->mod & KMOD_ALT) && (k->mod & KMOD_CTRL)) {
+		c = kbd_get_alnum(k);
+		if (ca_digraph == 0) {
+			if (c) {
+				if (k->state) ca_digraph = c;
+				cs_unicode = cs_unicode_c = alt_numpad = alt_numpad_c = 0;
+				return;
+			}
+		} else if (ca_digraph > 0 && c) {
+			memset(&fake, 0, sizeof(fake));
+			fake.unicode = char_digraph(ca_digraph, c);
+			if (!fake.unicode) {
+				ca_digraph = -1;
+			} else {
+				fake.is_synthetic = 3;
+				ca_digraph = 0;
+				handle_key(&fake);
+				fake.state=1;
+				handle_key(&fake);
+			}
+			cs_unicode = cs_unicode_c = alt_numpad = alt_numpad_c = 0;
+			return;
+		}
+	} else {
+		ca_digraph = 0;
+	}
+
+	/* ctrl+shift -> unicode character */
+	if ((k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT)) {
+		if (k->state && cs_unicode_c > 0) {
+			memset(&fake, 0, sizeof(fake));
+			fake.unicode = char_unicode_to_cp437(cs_unicode);
+			fake.is_synthetic = 3;
+			handle_key(&fake);
+			fake.state=1;
+			handle_key(&fake);
+			alt_numpad = alt_numpad_c = 0;
+			return;
+		}
+	} else if ((k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
+		if (cs_unicode_c >= 0) {
+			/* bleh... */
+			m = k->mod;
+			k->mod = 0;
+			c = kbd_char_to_hex(k);
+			k->mod = m;
+			if (c == -1) {
+				cs_unicode = cs_unicode_c = -1;
+			} else {
+				if (!k->state) return;
+				cs_unicode *= 16;
+				cs_unicode += c;
+				cs_unicode_c++;
+				return;
+			}
+		}
+	} else {
+		cs_unicode = cs_unicode_c = 0;
+	}
+
+	/* alt+numpad -> char number */
+	if ((k->sym == SDLK_LALT || k->sym == SDLK_RALT || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA)) {
+		if (k->state && alt_numpad_c > 0) {
+			memset(&fake, 0, sizeof(fake));
+			fake.unicode = alt_numpad & 255;
+			fake.is_synthetic = 3;
+			handle_key(&fake);
+			fake.state=1;
+			handle_key(&fake);
+			alt_numpad = alt_numpad_c = 0;
+			return;
+		}
+	} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
+		if (alt_numpad_c >= 0) {
+			m = k->mod;
+			k->mod = 0;
+			c = kbd_char_to_hex(k);
+			k->mod = m;
+			if (c == -1 || c > 9) {
+				alt_numpad = alt_numpad_c = -1;
+			} else {
+				if (!k->state) return;
+				alt_numpad *= 10;
+				alt_numpad += c;
+				alt_numpad_c++;
+				return;
+			}
+		}
+	} else {
+		alt_numpad = alt_numpad_c = 0;
+	}
+
+	/* okay... */
 	if (!(status.flags & DISKWRITER_ACTIVE) && ACTIVE_PAGE.pre_handle_key) {
 		if (ACTIVE_PAGE.pre_handle_key(k)) return;
 	}
@@ -1034,7 +1137,7 @@ void update_current_instrument(void)
         
         if (n > 0) {
                 draw_text(num99tostr(n, (unsigned char *) buf), 50, 3, 5, 0);
-                draw_text_len((const unsigned char *)name, 25, 53, 3, 5, 0);
+                draw_text_bios_len((const unsigned char *)name, 25, 53, 3, 5, 0);
         } else {
                 draw_text((const unsigned char *)"..", 50, 3, 5, 0);
                 draw_text((const unsigned char *)".........................", 53, 3, 5, 0);
@@ -1047,8 +1150,8 @@ static void redraw_top_info(void)
 
         update_current_instrument();
 
-        draw_text_len((const unsigned char *)song_get_basename(), 18, 12, 4, 5, 0);
-        draw_text_len((const unsigned char *)song_get_title(), 25, 12, 3, 5, 0);
+        draw_text_bios_len((const unsigned char *)song_get_basename(), 18, 12, 4, 5, 0);
+        draw_text_bios_len((const unsigned char *)song_get_title(), 25, 12, 3, 5, 0);
 
         update_current_order();
         update_current_pattern();

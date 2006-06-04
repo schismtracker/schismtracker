@@ -177,7 +177,7 @@ static void load_sample_draw_const(void)
 	if (current_file >= 0
 	&& current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
-		draw_text_len((unsigned char *) (f->smp_filename ? f->smp_filename : ""), 13, 64,13, 2, 0);
+		draw_text_bios_len((unsigned char *) (f->smp_filename ? f->smp_filename : ""), 13, 64,13, 2, 0);
 
 		sprintf(sbuf, "%07d", f->smp_speed);
 		draw_text_len((unsigned char *) sbuf, 13, 64, 14, 2, 0);
@@ -323,10 +323,10 @@ static void file_list_draw(void)
 			bg = 0;
 		}
 		draw_text(numtostr(3, n+1, (unsigned char *) buf), 2, pos, 0, 2);
-		draw_text_len((unsigned char *) (file->title ? file->title : ""),
+		draw_text_bios_len((unsigned char *) (file->title ? file->title : ""),
 					25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len((unsigned char *) (file->base ? file->base : ""),
+		draw_text_bios_len((unsigned char *) (file->base ? file->base : ""),
 					18, 32, pos, fg, bg);
 		if (file->base && slash_search_mode > -1) {
 			if (strncasecmp(file->base,slash_search_str,slash_search_mode) == 0) {
