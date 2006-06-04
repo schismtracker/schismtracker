@@ -59,6 +59,7 @@ files_gnu_memcmp=schism/memcmp.c
 endif
 
 schism_SOURCES = schism/page_blank.c \
+schism/charset.c \
 schism/sample-edit.c \
 schism/dmoz.c \
 schism/frag-opt.c \

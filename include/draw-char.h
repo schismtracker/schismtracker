@@ -29,10 +29,12 @@ void draw_char(unsigned int c, int x, int y, Uint32 fg, Uint32 bg);
 
 /* return value is the number of characters drawn */
 int draw_text(const byte * text, int x, int y, Uint32 fg, Uint32 bg);
+int draw_text_bios(const byte * text, int x, int y, Uint32 fg, Uint32 bg);
 
 /* return value is the length of text drawn
  * (so len - return is the number of spaces) */
 int draw_text_len(const byte * text, int len, int x, int y, Uint32 fg, Uint32 bg);
+int draw_text_bios_len(const byte * text, int len, int x, int y, Uint32 fg, Uint32 bg);
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color);
 

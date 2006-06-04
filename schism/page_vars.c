@@ -38,7 +38,7 @@ static int group_slides[] = { 12, 13, -1 };
 
 static inline void update_song_title(void)
 {
-        draw_text_len((unsigned char *) song_get_title(), 25, 12, 3, 5, 0);
+        draw_text_bios_len((unsigned char *) song_get_title(), 25, 12, 3, 5, 0);
         status.flags |= NEED_UPDATE;
 }
 

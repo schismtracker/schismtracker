@@ -185,7 +185,7 @@ void instrument_synchronize_to_sample(void)
 
 /* --------------------------------------------------------------------- */
 
-static int instrument_list_add_char(char c)
+static int instrument_list_add_char(int c)
 {
         char *name;
 
@@ -335,22 +335,22 @@ static void instrument_list_draw_list(void)
                 if (instrument_cursor_pos < 25) {
                         /* it's in edit mode */
                         if (is_current) {
-                                draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 14);
+                                draw_text_bios_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 14);
                                 if (selected) {
                                         draw_char(ins->name[instrument_cursor_pos],
                                                   5 + instrument_cursor_pos,
                                                   13 + pos, 0, 3);
                                 }
                         } else {
-                                draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 0);
+                                draw_text_bios_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 0);
                         }
                 } else {
-                        draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos,
+                        draw_text_bios_len((const unsigned char *)ins->name, 25, 5, 13 + pos,
                                       ((is_current && selected) ? 0 : 6),
                                       (is_current ? (selected ? 3 : 14) : 0));
                 }
 		if (ss == n) {
-			draw_text_len((const unsigned char *)ins->name + cl, (cr-cl)+1,
+			draw_text_bios_len((const unsigned char *)ins->name + cl, (cr-cl)+1,
 					5 + cl, 13 + pos, 
 					(is_current ? 3 : 11), 8);
 		}
@@ -514,12 +514,9 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					return 1;
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0) {
-				char c = unicode_to_ascii(k->unicode);
-				if (c == 0)
-					return 0;
-
+				if (!k->unicode) return 0;
 				if (instrument_cursor_pos < 25) {
-					return instrument_list_add_char(c);
+					return instrument_list_add_char(k->unicode);
 				} else if (k->sym == SDLK_SPACE) {
 					instrument_cursor_pos = 0;
 					status.flags |= NEED_UPDATE;

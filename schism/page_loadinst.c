@@ -240,10 +240,10 @@ static void file_list_draw(void)
 		}
 
 		draw_text(numtostr(3, n, (unsigned char *) buf), 2, pos, 0, 2);
-		draw_text_len((unsigned char *) (file->title ? file->title : ""),
+		draw_text_bios_len((unsigned char *) (file->title ? file->title : ""),
 						25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len((unsigned char *) (file->base ? file->base : ""),
+		draw_text_bios_len((unsigned char *) (file->base ? file->base : ""),
 						18, 32, pos, fg, bg);
 
 		if (file->base && slash_search_mode > -1) {

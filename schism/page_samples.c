@@ -178,9 +178,9 @@ static void sample_list_draw_list(void)
 			draw_text((unsigned char *) "Play", 31, 13 + pos, (has_data ? 6 : 7), (is_selected ? 14 : 0));
 		}
 
-		draw_text_len((unsigned char *) name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
+		draw_text_bios_len((unsigned char *) name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
 		if (ss == n) {
-			draw_text_len((unsigned char *) name + cl, (cr-cl)+1,
+			draw_text_bios_len((unsigned char *) name + cl, (cr-cl)+1,
 					5 + cl, 13 + pos, 
 					3, 8);
 		}
@@ -545,11 +545,9 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 					return 1;
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
+				if (!k->unicode) return 0;
 				if (k->state) return 1;
-				c = unicode_to_ascii(k->unicode);
-				if (c == 0)
-					return 0;
-				return sample_list_add_char(c);
+				return sample_list_add_char(k->unicode);
 			}
 			return 0;
 		}

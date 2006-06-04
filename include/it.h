@@ -245,9 +245,10 @@ void text_add_char(char *text, char c, int *cursor_pos, int max_length);
 void text_delete_char(char *text, int *cursor_pos, int max_length);
 void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 
-static inline char unicode_to_ascii(Uint16 unicode)
+static inline unsigned char unicode_to_ascii(Uint16 unicode)
 {
-        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
+	return unicode & 0xff;
+//        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
 }
 
 /* --------------------------------------------------------------------- */
@@ -347,6 +348,7 @@ void kbd_set_current_octave(int new_octave);
 
 int kbd_get_note(struct key_event *k);
 
+inline int kbd_get_alnum(struct key_event *k);
 
 /* --------------------------------------------------------------------- */
 /* log.c */

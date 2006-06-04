@@ -44,9 +44,15 @@ the banks are:
 				ch1 is 7 bits; 7-13
 				ch2 is 7 bits: 0-6
 			lower bits are unused
+	0x10000080
+			bios font
+			this layout looks surprisingly like a real vga card
+				fg is nybble in bits 8-11
+				bg is nybble in bits 12-15
+				ch is lower byte
 	0x00000000
 			regular
-			this layout looks surprisingly like a real vga card
+			this layout uses the itf font
 				fg is nybble in bits 8-11
 				bg is nybble in bits 12-15
 				ch is lower byte
@@ -591,6 +597,18 @@ int draw_text(const byte * text, int x, int y, Uint32 fg, Uint32 bg)
 	
         return n;
 }
+int draw_text_bios(const byte * text, int x, int y, Uint32 fg, Uint32 bg)
+{
+        int n = 0;
+
+        while (*text) {
+                draw_char(0x10000000|*text, x + n, y, fg, bg);
+                n++;
+                text++;
+        }
+	
+        return n;
+}
 void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
 {
 	unsigned int *mm;
@@ -613,6 +631,18 @@ int draw_text_len(const byte * text, int len, int x, int y, Uint32 fg, Uint32 bg
 
         while (*text && n < len) {
                 draw_char(*text, x + n, y, fg, bg);
+                n++;
+                text++;
+        }
+        draw_fill_chars(x + n, y, x + len - 1, y, bg);
+        return n;
+}
+int draw_text_bios_len(const byte * text, int len, int x, int y, Uint32 fg, Uint32 bg)
+{
+        int n = 0;
+
+        while (*text && n < len) {
+                draw_char(*text|0x10000000, x + n, y, fg, bg);
                 n++;
                 text++;
         }

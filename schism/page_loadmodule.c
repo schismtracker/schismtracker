@@ -304,7 +304,7 @@ static int search_text_length = 0;      /* same as strlen(search_text) */
 static void search_redraw(void)
 {
         draw_fill_chars(51, 37, 76, 37, 0);
-        draw_text_len((unsigned char *) search_text + search_first_char, 25, 51, 37, 5, 0);
+        draw_text_bios_len((unsigned char *) search_text + search_first_char, 25, 51, 37, 5, 0);
 
         /* draw the cursor if it's on the dir/file list */
         if (ACTIVE_PAGE.selected_widget == 0 || ACTIVE_PAGE.selected_widget == 1) {
@@ -461,15 +461,15 @@ static void file_list_draw(void)
                                 bg = 0;
                         }
 
-                        draw_text_len((unsigned char *) file->base, 18, 3, pos, fg1, bg);
+                        draw_text_bios_len((unsigned char *) file->base, 18, 3, pos, fg1, bg);
                         draw_char(168, 21, pos, 2, bg);
-                        draw_text_len((unsigned char *) file->title, 25, 22, pos, fg2, bg);
+                        draw_text_bios_len((unsigned char *) file->title, 25, 22, pos, fg2, bg);
                 }
 
                 /* info for the current file */
 		if (current_file >= 0 && current_file < flist.num_files) {
 	                file = flist.files[current_file];
-			draw_text_len((unsigned char *) (file->description ? file->description : ""), 26, 51, 40, 5, 0);
+			draw_text_bios_len((unsigned char *) (file->description ? file->description : ""), 26, 51, 40, 5, 0);
 			sprintf(buf, "%09d", file->filesize);
 			draw_text_len((unsigned char *) buf, 26, 51, 41, 5, 0);
 			draw_text_len((unsigned char *) get_date_string(file->timestamp, (unsigned char *) buf), 26, 51, 42, 5, 0);
@@ -626,9 +626,9 @@ static void dir_list_draw(void)
                 if (n >= dlist.num_dirs)
                         break;
                 if (n == current_dir && ACTIVE_PAGE.selected_widget == 1)
-                        draw_text_len((unsigned char *) dlist.dirs[n]->base, 18, 50, pos, 0, 3);
+                        draw_text_bios_len((unsigned char *) dlist.dirs[n]->base, 18, 50, pos, 0, 3);
                 else
-                        draw_text_len((unsigned char *) dlist.dirs[n]->base, 18, 50, pos, 5, 0);
+                        draw_text_bios_len((unsigned char *) dlist.dirs[n]->base, 18, 50, pos, 5, 0);
         }
 
         /* bleh */

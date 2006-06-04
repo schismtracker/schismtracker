@@ -6,14 +6,15 @@ void F1(unsigned int ry,
 	unsigned int dg;
 	unsigned char mb[2];
 	unsigned int mx;
-	byte *bf, *hf, *ef;
+	byte *itf, *bios, *hf, *ef;
 	int x, y, fg,bg, c;
 
 	_video_scanmouse(ry, mb, &mx);
 
 	y = ry >> 3;
 	bp = &vgamem_read[y * 80];
-	bf = font_data + (ry & 7);
+	itf = font_data + (ry & 7);
+	bios = ((byte*)font_default_upper_alt) + (ry & 7);
 	hf = font_half_data + ((ry & 7) >> 1);
 	ef = font_extra + (ry & 7);
 
@@ -62,7 +63,11 @@ void F1(unsigned int ry,
 			/* regular character */
 			fg = (*bp & 0x0F00) >> 8;
 			bg = (*bp & 0xF000) >> 12;
-			dg = bf[(*bp & 0xFF)<< 3];
+			if (*bp & 0x10000000 && (*bp & 0x80)) {
+				dg = bios[(*bp & 0x7F)<< 3];
+			} else {
+				dg = itf[(*bp & 0xFF)<< 3];
+			}
 			if (x == mx) dg ^= mb[0];
 			else if (x == mx+1) dg ^= mb[1];
 			if (!(*bp & 0xFF)) fg = 3;
