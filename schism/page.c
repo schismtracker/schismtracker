@@ -634,37 +634,37 @@ static int handle_key_global(struct key_event * k)
                 return 1;
         case SDLK_F5:
                 if (k->mod & KMOD_CTRL) {
-                        if (k->state) song_start();
+                        if (!k->state) song_start();
                 } else if (k->mod & KMOD_SHIFT) {
                         if (k->state) set_page(PAGE_PREFERENCES);
                 } else if (NO_MODIFIER(k->mod)) {
                         if (song_get_mode() == MODE_STOPPED
 			    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
-                                if (k->state) song_start();
-                        if (k->state) set_page(PAGE_INFO);
+                                if (!k->state) song_start();
+                        if (!k->state) set_page(PAGE_INFO);
                 } else {
                         break;
                 }
                 return 1;
         case SDLK_F6:
                 if (k->mod & KMOD_SHIFT) {
-                        if (k->state) song_start_at_order(get_current_order(), 0);
+                        if (!k->state) song_start_at_order(get_current_order(), 0);
                 } else if (NO_MODIFIER(k->mod)) {
-                        if (k->state) song_loop_pattern(get_current_pattern(), 0);
+                        if (!k->state) song_loop_pattern(get_current_pattern(), 0);
                 } else {
                         break;
                 }
                 return 1;
         case SDLK_F7:
                 if (NO_MODIFIER(k->mod)) {
-                        if (k->state) play_song_from_mark();
+                        if (!k->state) play_song_from_mark();
                 } else {
                         break;
                 }
                 return 1;
         case SDLK_F8:
                 if (NO_MODIFIER(k->mod)) {
-                        if (k->state) song_stop();
+                        if (!k->state) song_stop();
                         status.flags |= NEED_UPDATE;
                 } else {
                         break;
