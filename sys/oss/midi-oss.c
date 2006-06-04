@@ -120,11 +120,11 @@ static void _tryopen(int n, char *name, struct midi_provider *_oss_provider)
 	char *ptr;
 
 	if (opened[n+1] != -1) return;
-	opened[n+1] = open(name, O_RDWR|O_NOCTTY);
+	opened[n+1] = open(name, O_RDWR|O_NOCTTY|O_NONBLOCK);
 	if (opened[n+1] == -1) {
-		opened[n+1] = open(name, O_RDONLY|O_NOCTTY);
+		opened[n+1] = open(name, O_RDONLY|O_NOCTTY|O_NONBLOCK);
 		if (opened[n+1] == -1) {
-			opened[n+1] = open(name, O_WRONLY|O_NOCTTY);
+			opened[n+1] = open(name, O_WRONLY|O_NOCTTY|O_NONBLOCK);
 			if (opened[n+1] == -1) return;
 			io = MIDI_OUTPUT;
 		} else {
