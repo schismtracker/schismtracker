@@ -227,12 +227,12 @@ void key_translate(struct key_event *k)
 	}
 
 	switch (k->sym) {
-	case SDLK_SLASH: k->unicode = '/'; break;
+	case SDLK_SLASH: k->unicode = (k->mod & KMOD_SHIFT) ? '?' : '/'; break;
 	case SDLK_ASTERISK: k->unicode = '*'; break;
-	case SDLK_MINUS: k->unicode = '-'; break;
+	case SDLK_MINUS: k->unicode = (k->mod & KMOD_SHIFT) ? '_' : '-'; break;
 	case SDLK_PLUS: k->unicode = '+'; break;
 	case SDLK_RETURN: k->unicode = '\r'; break;
-	case SDLK_EQUALS: k->unicode = '='; break;
+	case SDLK_EQUALS: k->unicode = (k->mod & KMOD_SHIFT) ? '+' : '='; break;
 	case SDLK_0: k->unicode = (k->mod & KMOD_SHIFT) ? ')' : '0'; break;
 	case SDLK_1: k->unicode = (k->mod & KMOD_SHIFT) ? '!' : '1'; break;
 	case SDLK_2: k->unicode = (k->mod & KMOD_SHIFT) ? '@' : '2'; break;
