@@ -1646,7 +1646,7 @@ static void instrument_list_handle_key(struct key_event * k)
 {
         switch (k->sym) {
 	case SDLK_F4:
-		if (!k->state) return;
+		if (k->state) return;
 		if (k->mod & (KMOD_CTRL|KMOD_ALT)) return;
 		if (k->mod & KMOD_SHIFT) {
 			switch (status.current_page) {
