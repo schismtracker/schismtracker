@@ -592,11 +592,11 @@ static int handle_key_global(struct key_event * k)
                 break;
         case SDLK_F1:
                 if (k->mod & KMOD_CTRL) {
-			if (k->state) set_page(PAGE_CONFIG);
+			if (!k->state) set_page(PAGE_CONFIG);
                 } else if (k->mod & KMOD_SHIFT) {
-                        if (k->state) set_page(PAGE_MIDI);
+                        if (!k->state) set_page(PAGE_MIDI);
                 } else if (NO_MODIFIER(k->mod)) {
-                        if (k->state) set_page(PAGE_HELP);
+                        if (!k->state) set_page(PAGE_HELP);
                 } else {
                         break;
                 }
@@ -604,21 +604,21 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F2:
 		if (k->mod & KMOD_CTRL) {
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
-				if (k->state) pattern_editor_length_edit();
+				if (!k->state) pattern_editor_length_edit();
 				return 1;
 			}
 		} else if (NO_MODIFIER(k->mod)) {
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
-				if (k->state) pattern_editor_display_options();
+				if (!k->state) pattern_editor_display_options();
 			} else {
-				if (k->state) set_page(PAGE_PATTERN_EDITOR);
+				if (!k->state) set_page(PAGE_PATTERN_EDITOR);
 			}
                         return 1;
                 }
 		break;
         case SDLK_F3:
                 if (NO_MODIFIER(k->mod)) {
-                        if (k->state) set_page(PAGE_SAMPLE_LIST);
+                        if (!k->state) set_page(PAGE_SAMPLE_LIST);
                 } else {
 			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
                         break;
@@ -627,7 +627,7 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F4:
                 if (NO_MODIFIER(k->mod)) {
 			if (status.current_page == PAGE_INSTRUMENT_LIST) return 0;
-                        if (k->state) set_page(PAGE_INSTRUMENT_LIST);
+                        if (!k->state) set_page(PAGE_INSTRUMENT_LIST);
                 } else {
 			if (k->mod & KMOD_SHIFT) return 0;
 			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_INSTRUMENT);
@@ -674,9 +674,9 @@ static int handle_key_global(struct key_event * k)
                 return 1;
         case SDLK_F9:
                 if (k->mod & KMOD_SHIFT) {
-                        if (k->state) set_page(PAGE_MESSAGE);
+                        if (!k->state) set_page(PAGE_MESSAGE);
                 } else if (NO_MODIFIER(k->mod)) {
-                        if (k->state) set_page(PAGE_LOAD_MODULE);
+                        if (!k->state) set_page(PAGE_LOAD_MODULE);
                 } else {
                         break;
                 }
@@ -706,7 +706,7 @@ static int handle_key_global(struct key_event * k)
                 return 1;
         case SDLK_F10:
                 if (NO_MODIFIER(k->mod)) {
-                        if (k->state) set_page(PAGE_SAVE_MODULE);
+                        if (!k->state) set_page(PAGE_SAVE_MODULE);
                 } else {
                         break;
                 }
@@ -714,19 +714,19 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F11:
                 if (NO_MODIFIER(k->mod)) {
                         if (status.current_page == PAGE_ORDERLIST_PANNING) {
-                                if (k->state) set_page(PAGE_ORDERLIST_VOLUMES);
+                                if (!k->state) set_page(PAGE_ORDERLIST_VOLUMES);
                         } else {
-                                if (k->state) set_page(PAGE_ORDERLIST_PANNING);
+                                if (!k->state) set_page(PAGE_ORDERLIST_PANNING);
                         }
                 } else if (k->mod & KMOD_CTRL) {
-                        if (k->state) {
+                        if (!k->state) {
 				if (status.current_page == PAGE_LOG) {
 					show_about();
 				} else {
 					set_page(PAGE_LOG);
 				}
 			}
-                } else if (k->state && k->mod & KMOD_ALT) {
+                } else if (!k->state && k->mod & KMOD_ALT) {
 			if (song_toggle_orderlist_locked())
 				status_text_flash("Order list locked");
 			else
@@ -737,16 +737,16 @@ static int handle_key_global(struct key_event * k)
                 return 1;
         case SDLK_F12:
                 if (k->mod & KMOD_CTRL) {
-                        if (k->state) set_page(PAGE_PALETTE_EDITOR);
+                        if (!k->state) set_page(PAGE_PALETTE_EDITOR);
                 } else if (NO_MODIFIER(k->mod)) {
-                        if (k->state) set_page(PAGE_SONG_VARIABLES);
+                        if (!k->state) set_page(PAGE_SONG_VARIABLES);
                 } else {
                         break;
                 }
                 return 1;
 	case SDLK_SCROLLOCK:
 		if (k->mod & KMOD_ALT) {
-			if (k->state) {
+			if (!k->state) {
 				midi_flags ^= (MIDI_DISABLE_RECORD);
 				status_text_flash("MIDI Input %s",
 					(midi_flags & MIDI_DISABLE_RECORD)
@@ -754,7 +754,7 @@ static int handle_key_global(struct key_event * k)
 			}
 			return 1;
 		} else if (NO_MODIFIER(k->mod)) {
-			if (k->state) {
+			if (!k->state) {
 				midi_playback_tracing = (playback_tracing = !playback_tracing);
 				status_text_flash("Playback tracing %s", (playback_tracing ? "enabled" : "disabled"));
 			}
