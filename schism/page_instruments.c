@@ -77,6 +77,8 @@ static int envelope_edit_mode = 0;
 static int envelope_mouse_edit = 0;
 static int envelope_tick_limit = 0;
 
+static void set_subpage(int page);
+
 /* playback */
 static int last_note = 61;		/* C-5 */
 
@@ -1643,6 +1645,27 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 static void instrument_list_handle_key(struct key_event * k)
 {
         switch (k->sym) {
+	case SDLK_F4:
+		if (!k->state) return;
+		if (k->mod & (KMOD_CTRL|KMOD_ALT)) return;
+		if (k->mod & KMOD_SHIFT) {
+			switch (status.current_page) {
+			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);return;
+			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);return;
+			case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_PANNING);return;
+			default:
+			case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL);return;
+			};
+		} else {
+			switch (status.current_page) {
+			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);return;
+			case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_PANNING);return;
+			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);return;
+			default:
+			case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL);return;
+			};
+		}
+
 	case SDLK_COMMA:
 	case SDLK_LESS:
 		if (k->state) return;
@@ -1696,6 +1719,22 @@ static void instrument_list_handle_key(struct key_event * k)
 
 /* --------------------------------------------------------------------- */
 
+static void set_subpage(int page)
+{
+	int widget;
+	switch (page) {
+	case PAGE_INSTRUMENT_LIST_GENERAL: widget=1; break;
+	case PAGE_INSTRUMENT_LIST_VOLUME: widget=2; break;
+	case PAGE_INSTRUMENT_LIST_PANNING: widget=3; break;
+	case PAGE_INSTRUMENT_LIST_PITCH: widget=4; break;
+	default: return;
+	};
+	togglebutton_set(pages[page].widgets, widget, 0);
+	set_page(page);
+	instrument_list_subpage = page;
+	status.flags |= NEED_UPDATE;
+}
+
 static void change_subpage(void)
 {
         int widget = ACTIVE_PAGE.selected_widget;
@@ -1721,14 +1760,8 @@ static void change_subpage(void)
                 return;
 #endif
         }
-
-        if (page != status.current_page) {
-                pages[page].selected_widget = widget;
-		togglebutton_set(pages[page].widgets, widget, 0);
-                set_page(page);
-                instrument_list_subpage = page;
-		status.flags |= NEED_UPDATE;
-        }
+	set_subpage(page);
+	pages[page].selected_widget = widget;
 }
 
 /* --------------------------------------------------------------------- */
