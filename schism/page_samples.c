@@ -538,6 +538,13 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				return 1;
 			}
 			return 0;
+		case SDLK_ESCAPE:
+			if (k->mod & KMOD_SHIFT) {
+				if (k->state) return 1;
+				new_cursor_pos = 25;
+				break;
+			}
+			return 0;
 		default:
 			if (k->mod & KMOD_ALT) {
 				if (k->sym == SDLK_c) {
@@ -562,7 +569,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	} else if (new_cursor_pos != sample_list_cursor_pos) {
 		sample_list_cursor_pos = new_cursor_pos;
 	} else {
-		return 0;
+		return 1;
 	}
 	if (k->mouse && k->x != k->sx) {
 		song_get_sample(current_sample, &name);

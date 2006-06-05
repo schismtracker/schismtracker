@@ -471,8 +471,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			return 1;
 		case SDLK_ESCAPE:
-			if (!k->state) return 0;
-			if (instrument_cursor_pos < 25) {
+			if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
+				if (k->state) return 1;
 				instrument_cursor_pos = 25;
 				status.flags |= NEED_UPDATE;
 				return 1;
