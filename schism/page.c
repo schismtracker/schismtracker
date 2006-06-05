@@ -626,8 +626,10 @@ static int handle_key_global(struct key_event * k)
                 return 1;
         case SDLK_F4:
                 if (NO_MODIFIER(k->mod)) {
+			if (status.current_page == PAGE_INSTRUMENT_LIST) return 0;
                         if (k->state) set_page(PAGE_INSTRUMENT_LIST);
                 } else {
+			if (k->mod & KMOD_SHIFT) return 0;
 			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_INSTRUMENT);
                         break;
                 }
