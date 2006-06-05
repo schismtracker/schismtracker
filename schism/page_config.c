@@ -248,7 +248,7 @@ void config_load_page(struct page *page)
 {
 	int i;
 
-	page->title = "Configuration (Ctrl-F1)";
+	page->title = "System Configuration (Ctrl-F1)";
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;
 	page->total_widgets = 14;
