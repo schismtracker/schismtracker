@@ -1101,6 +1101,15 @@ static void sample_list_handle_key(struct key_event * k)
 		if (k->state) return;
 		new_sample++;
 		break;
+	case SDLK_ESCAPE:
+		if (k->mod & KMOD_SHIFT) {
+			if (k->state) return;
+			sample_list_cursor_pos = 25;
+			change_focus_to(0);
+			status.flags |= NEED_UPDATE;
+			return;
+		}
+		return;
 	default:
 		if (k->mod & KMOD_ALT) {
 			if (k->state) return;

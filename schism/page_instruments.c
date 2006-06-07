@@ -1685,6 +1685,15 @@ static void instrument_list_handle_key(struct key_event * k)
 		if (k->state) return;
                 instrument_set(current_instrument + 1);
                 break;
+	case SDLK_ESCAPE:
+		if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
+			if (k->state) return 1;
+			instrument_cursor_pos = 25;
+			change_focus_to(0);
+			status.flags |= NEED_UPDATE;
+			return;
+		}
+		return;
         default:
 		if (k->mod & (KMOD_ALT)) {
 			instrument_list_handle_alt_key(k);
