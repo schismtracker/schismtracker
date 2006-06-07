@@ -119,6 +119,38 @@ RETR:	if (new_order > 255)
 		set_current_pattern(pattern);
 	}
 }
+void orderlist_cheater(void)
+{
+        unsigned char *list = song_get_orderlist();
+	song_note *data;
+	int cp, i, best, first;
+	int rows;
+
+	if (list[current_order] != ORDER_SKIP && list[current_order] != ORDER_LAST) {
+		return;
+	}
+	cp = get_current_pattern();
+	best = first = -1;
+	for (i = 0; i < 199; i++) {
+		if (song_pattern_is_empty(i)) {
+			if (first == -1) first = i;
+			if (best == -1) best = i;
+		} else {
+			best = -1;
+		}
+	}
+	if (best == -1) best = first;
+	if (best == -1) return;
+
+	status_text_flash("Pattern %d copied to pattern %d, order %d", cp, best, current_order);
+
+	data = song_pattern_allocate_copy(cp, &rows);
+	song_pattern_install(best, data, rows);
+	list[current_order] = best;
+	current_order++;
+	status.flags |= SONG_NEEDS_SAVE;
+	status.flags |= NEED_UPDATE;
+}
 
 /* --------------------------------------------------------------------- */
 
@@ -523,6 +555,11 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		return 0;
 
         case SDLK_n:
+		if (k->mod & KMOD_SHIFT) {
+			if (!k->state) return 1;
+			orderlist_cheater();
+			return 1;
+		}
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state) return 1;
