@@ -426,6 +426,7 @@ int song_keyup(int samp, int ins, int note, int chan, int *mm)
 		}
 	} else {
 		if (!mm) {
+			if (multichannel_mode) return -1;
 			mm = big_song_channels;
 		}
 		j = -1;
