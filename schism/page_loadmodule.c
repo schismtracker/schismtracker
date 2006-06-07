@@ -271,11 +271,13 @@ static void read_directory(void)
 			if (flist.files && flist.files[i] && flist.files[i]->base
 			&& strcmp(tmp, flist.files[i]->base) == 0) {
 				current_file = i;
+				file_list_reposition();
 				break;
 			}
 		}
 		(void)free(tmp);
 	}
+	dir_list_reposition();
 }
 
 /* --------------------------------------------------------------------- */
@@ -803,6 +805,8 @@ void load_module_load_page(struct page *page)
 	clear_directory();
 	top_file = top_dir = 0;
 	current_file = current_dir = 0;
+	dir_list_reposition();
+	file_list_reposition();
 
         page->title = "Load Module (F9)";
         page->draw_const = load_module_draw_const;
@@ -857,6 +861,8 @@ void save_module_load_page(struct page *page)
 	clear_directory();
 	top_file = top_dir = 0;
 	current_file = current_dir = 0;
+	dir_list_reposition();
+	file_list_reposition();
 
         page->title = "Save Module (F10)";
         page->draw_const = save_module_draw_const;
