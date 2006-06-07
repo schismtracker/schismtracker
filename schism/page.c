@@ -927,7 +927,7 @@ void handle_key(struct key_event * k)
 		}
 		break;
 	case SDLK_ESCAPE:
-		if (!k->state) return;
+		if (k->state) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		/* TODO | Page key handlers should return true/false depending on if the key was handled
 		   TODO | (same as with other handlers), and the escape key check should go *after* the

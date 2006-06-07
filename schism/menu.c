@@ -435,7 +435,7 @@ int menu_handle_key(struct key_event * k)
 
         switch (k->sym) {
         case SDLK_ESCAPE:
-		if (!k->state) return 1;
+		if (k->state) return 1;
                 current_menu[1] = NULL;
                 if (status.dialog_type == DIALOG_SUBMENU) {
                         status.dialog_type = DIALOG_MAIN_MENU;
