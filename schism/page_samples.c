@@ -283,6 +283,8 @@ static void sample_list_predraw_hook(void)
 		song_keydown(current_sample, -1, need_retrigger, 64, -1, 0);
 		if (!song_is_multichannel_mode()) {
 			last_keyup = need_retrigger;
+		} else {
+			last_keyup = -1;
 		}
 		song_update_playing_sample(current_sample);
 		need_retrigger = -1;
