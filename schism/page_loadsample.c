@@ -439,11 +439,9 @@ Left  Both  Right
 				stereo_cvt_complete_right, "Right", 1);
 
 		dd = dialog_create_custom(24, 25, 33, 8,
-				stereo_cvt_widgets,
-				(status.flags & CLASSIC_MODE) ? 2 : 3,
-				(status.flags & CLASSIC_MODE) ? 1 : 0,
-				stereo_cvt_dialog,
-				NULL);
+				stereo_cvt_widgets, 3,
+				1,
+				stereo_cvt_dialog, NULL);
 		dd->action_cancel = (void *) stereo_cvt_complete_both;
 		dd->handle_key = stereo_cvt_hk;
 		return;
