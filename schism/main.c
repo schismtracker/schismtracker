@@ -270,7 +270,10 @@ enum {
 	O_ARG,
 	O_SDL_AUDIODRIVER,
 	O_SDL_VIDEODRIVER,
+#ifdef USE_X11
 	O_DISPLAY,
+#endif
+	O_CLASSIC_MODE,
 	O_FULLSCREEN,
 	O_FONTEDIT,
 	O_PLAY,
@@ -288,6 +291,7 @@ static void parse_options(int argc, char **argv)
 		{O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
 		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
 		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
+		{O_CLASSIC_MODE, 0, "clasic", FRAG_NEG, NULL, "start schism in classic mode" },
 #ifdef USE_X11
 		{O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
 #endif
@@ -327,9 +331,15 @@ static void parse_options(int argc, char **argv)
 		case O_SDL_VIDEODRIVER:
 			video_driver = strdup(frag->arg);
 			break;
+		case O_CLASSIC_MODE:
+			status.flags &= ~(CLASSIC_MODE);
+			if (frag->type) status.flags |= CLASSIC_MODE;
+			break;
+#ifdef USE_X11
 		case O_DISPLAY:
 			put_env_var("DISPLAY", frag->arg);
 			break;
+#endif
 		case O_FULLSCREEN:
 			did_fullscreen = 1;
 			if (frag->type)

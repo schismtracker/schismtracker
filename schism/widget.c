@@ -299,7 +299,7 @@ int numentry_handle_digit(struct widget *w, struct key_event *k)
         int digits[7] = { 0 };
 	int c;
 
-	c = numeric_key_event(k);
+	c = numeric_key_event(k, 0);
 	if (c == -1) {
 		if (w->d.numentry.handle_unknown_key) {
 			return w->d.numentry.handle_unknown_key(k);

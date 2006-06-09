@@ -95,7 +95,7 @@ static int thumbbar_prompt_value(UNUSED struct widget *widget, struct key_event 
 	if (k->sym == SDLK_MINUS) {
 		c = '-';
 	} else {
-		c = numeric_key_event(k);
+		c = numeric_key_event(k, 0);
 		if (c == -1) return 0;
 		c = asciidigits[c];
 	}

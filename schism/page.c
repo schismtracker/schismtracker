@@ -832,6 +832,7 @@ void handle_key(struct key_event * k)
 		ca_digraph = 0;
 	}
 
+#if 0
 	/* ctrl+shift -> unicode character */
 	if ((k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT)) {
 		if (k->state && cs_unicode_c > 0) {
@@ -864,6 +865,7 @@ void handle_key(struct key_event * k)
 	} else {
 		cs_unicode = cs_unicode_c = 0;
 	}
+#endif
 
 	/* alt+numpad -> char number */
 	if ((k->sym == SDLK_LALT || k->sym == SDLK_RALT || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA)) {
@@ -881,7 +883,7 @@ void handle_key(struct key_event * k)
 		if (alt_numpad_c >= 0) {
 			m = k->mod;
 			k->mod = 0;
-			c = kbd_char_to_hex(k);
+			c = numeric_key_event(k, 1); /* kp only */
 			k->mod = m;
 			if (c == -1 || c > 9) {
 				alt_numpad = alt_numpad_c = -1;
