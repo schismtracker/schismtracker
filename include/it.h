@@ -328,7 +328,7 @@ void font_init(void);
 /* --------------------------------------------------------------------- */
 /* keyboard.c */
 
-int numeric_key_event(struct key_event *k);
+int numeric_key_event(struct key_event *k, int kponly);
 
 char *get_note_string(int note, char *buf);     /* "C-5" or "G#4" */
 char *get_note_string_short(int note, char *buf);       /* "c5" or "G4" */

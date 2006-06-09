@@ -246,18 +246,34 @@ void key_translate(struct key_event *k)
 	};
 }
 
-int numeric_key_event(struct key_event *k)
+int numeric_key_event(struct key_event *k, int kponly)
 {
-	if (k->unicode == '0') return 0;
-	if (k->unicode == '1') return 1;
-	if (k->unicode == '2') return 2;
-	if (k->unicode == '3') return 3;
-	if (k->unicode == '4') return 4;
-	if (k->unicode == '5') return 5;
-	if (k->unicode == '6') return 6;
-	if (k->unicode == '7') return 7;
-	if (k->unicode == '8') return 8;
-	if (k->unicode == '9') return 9;
+	if (kponly) {
+		switch (k->orig_sym) {
+		case SDLK_KP0: return 0;
+		case SDLK_KP1: return 1;
+		case SDLK_KP2: return 2;
+		case SDLK_KP3: return 3;
+		case SDLK_KP4: return 4;
+		case SDLK_KP5: return 5;
+		case SDLK_KP6: return 6;
+		case SDLK_KP7: return 7;
+		case SDLK_KP8: return 8;
+		case SDLK_KP9: return 9;
+		};
+		return -1;
+	}
+
+	if (k->unicode == '0' || k->unicode == ')') return 0;
+	if (k->unicode == '1' || k->unicode == '!') return 1;
+	if (k->unicode == '2' || k->unicode == '@') return 2;
+	if (k->unicode == '3' || k->unicode == '#') return 3;
+	if (k->unicode == '4' || k->unicode == '$') return 4;
+	if (k->unicode == '5' || k->unicode == '%') return 5;
+	if (k->unicode == '6' || k->unicode == '^') return 6;
+	if (k->unicode == '7' || k->unicode == '&') return 7;
+	if (k->unicode == '8' || k->unicode == '*') return 8;
+	if (k->unicode == '9' || k->unicode == '(') return 9;
 
 	switch (k->orig_sym) {
 	case SDLK_0: case SDLK_KP0: return 0;

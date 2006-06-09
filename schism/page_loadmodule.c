@@ -228,6 +228,9 @@ static int modgrep(dmoz_file_t *f)
 
 static void file_list_reposition(void)
 {
+	if (current_file >= flist.num_files)
+		current_file = flist.num_files-1;
+	if (current_file < 0) current_file = 0;
         if (current_file < top_file)
                 top_file = current_file;
         else if (current_file > top_file + 30)
@@ -236,6 +239,9 @@ static void file_list_reposition(void)
 
 static void dir_list_reposition(void)
 {
+	if (current_dir >= dlist.num_dirs)
+		current_dir = dlist.num_dirs-1;
+	if (current_dir < 0) current_dir = 0;
         if (current_dir < top_dir)
                 top_dir = current_dir;
         else if (current_dir > top_dir + 20)

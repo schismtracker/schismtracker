@@ -349,7 +349,7 @@ static int orderlist_handle_char(struct key_event *k)
                 orderlist_cursor_pos = 2;
                 break;
 	default:
-		c = numeric_key_event(k);
+		c = numeric_key_event(k, 0);
 		if (c == -1) return 0;
 		if (k->state) return 1;
 

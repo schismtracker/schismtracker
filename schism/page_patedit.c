@@ -3245,6 +3245,14 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		k->sym = SDLK_F10;
 	}
 
+	n = numeric_key_event(k, 0);
+	if (n > -1 && n <= 9) {
+		if (k->state) return 1;
+		skip_value = k->sym - '0';
+		status_text_flash("Cursor step set to %d", skip_value);
+		return 1;
+	}
+
 	switch (k->sym) {
 	case SDLK_RETURN:
 		if (!k->state) return 1;
@@ -3256,11 +3264,6 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		snap_paste(&fast_save, 0, 0, 0);
 		return 1;
 
-	case '0'...'9':
-		if (!k->state) return 1;
-		skip_value = k->sym - '0';
-		status_text_flash("Cursor step set to %d", skip_value);
-		return 1;
 	case SDLK_b:
 		if (k->state) return 1;
 		if (!SELECTION_EXISTS) {
@@ -3543,11 +3546,11 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	n = numeric_key_event(k);
+	n = numeric_key_event(k, 0);
 	if (n > -1) {
 		if (n < 0 || n >= NUM_TRACK_VIEWS)
 			return 0;
-		if (!k->state) return 1;
+		if (k->state) return 1;
 		if (k->mod & KMOD_SHIFT) {
 			set_view_scheme(n);
 		} else {

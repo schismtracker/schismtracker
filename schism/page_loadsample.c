@@ -94,6 +94,9 @@ static void clear_directory(void)
 }
 static void file_list_reposition(void)
 {
+	if (current_file >= flist.num_files)
+		current_file = flist.num_files-1;
+	if (current_file < 0) current_file = 0;
 	if (current_file < top_file)
 		top_file = current_file;
 	else if (current_file > top_file + 34)
