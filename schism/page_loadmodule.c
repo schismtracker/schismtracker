@@ -823,6 +823,7 @@ void load_module_load_page(struct page *page)
 	page->pre_handle_key = _load_cachefree_hack;
 	
 	create_other(widgets_loadmodule + 0, 1, file_list_handle_key, file_list_draw);
+	widgets_loadmodule[0].accept_text = 1;
 	widgets_loadmodule[0].x = 3;
 	widgets_loadmodule[0].y = 13;
 	widgets_loadmodule[0].width = 43;
@@ -830,6 +831,7 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
 
 	create_other(widgets_loadmodule + 1, 2, dir_list_handle_key, dir_list_draw);
+	widgets_loadmodule[1].accept_text = 1;
 	widgets_loadmodule[1].x = 50;
 	widgets_loadmodule[1].y = 13;
 	widgets_loadmodule[1].width = 17;
@@ -880,9 +882,11 @@ void save_module_load_page(struct page *page)
 	page->pre_handle_key = _save_cachefree_hack;
 	
 	create_other(widgets_savemodule + 0, 1, file_list_handle_key, file_list_draw);
+	widgets_savemodule[0].accept_text = 1;
 	widgets_savemodule[0].next.left = 4;
 	widgets_savemodule[0].next.right = widgets_savemodule[0].next.tab = 1;
 	create_other(widgets_savemodule + 1, 2, dir_list_handle_key, dir_list_draw);
+	widgets_savemodule[1].accept_text = 1;
 	widgets_savemodule[1].next.right = widgets_savemodule[1].next.tab = 4;
 	widgets_savemodule[1].next.left = 0;
 

@@ -812,12 +812,12 @@ void handle_key(struct key_event * k)
 				if (digraph_n >= 2)
 					status_text_flash("Enter digraph:");
 			}
-		} else if ((c=kbd_get_alnum(k)) == 0 || digraph_n < 2) {
+		} else if (!NO_MODIFIER(k->mod) || (c=k->unicode) == 0 || digraph_n < 2) {
 			digraph_n = (k->state) ? 0 : -1;
 		} else if (digraph_n >= 2) {
 			if (!k->state) return;
 			if (!digraph_c) {
-				digraph_c = c; /* from kbg_get_alnum */
+				digraph_c = c;
 				status_text_flash("Enter digraph: %c", c);
 			} else {
 				memset(&fake, 0, sizeof(fake));
@@ -854,9 +854,9 @@ void handle_key(struct key_event * k)
 				} else {
 					status_text_flash("Enter Unicode: U+%04X -> INVALID", cs_unicode);
 				}
-				cs_unicode = 0;
-				cs_unicode_c = 0;
+				cs_unicode = cs_unicode_c = 0;
 				alt_numpad = alt_numpad_c = 0;
+				digraph_n = digraph_c = 0;
 				return;
 			}
 		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
@@ -868,11 +868,13 @@ void handle_key(struct key_event * k)
 				k->mod = m;
 				if (c == -1) {
 					cs_unicode = cs_unicode_c = -1;
+					digraph_n = digraph_c = 0;
 				} else {
 					if (!k->state) return;
 					cs_unicode *= 16;
 					cs_unicode += c;
 					cs_unicode_c++;
+					digraph_n = digraph_c = 0;
 					status_text_flash("Enter Unicode: U+%04X", cs_unicode);
 					return;
 				}
@@ -883,7 +885,7 @@ void handle_key(struct key_event * k)
 	
 		/* alt+numpad -> char number */
 		if ((k->sym == SDLK_LALT || k->sym == SDLK_RALT || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA)) {
-			if (k->state && alt_numpad_c > 0) {
+			if (k->state && alt_numpad_c > 0 && (alt_numpad&255) > 0) {
 				memset(&fake, 0, sizeof(fake));
 				fake.unicode = alt_numpad & 255;
 				if (!(status.flags & CLASSIC_MODE))
@@ -893,6 +895,8 @@ void handle_key(struct key_event * k)
 				fake.state=1;
 				handle_key(&fake);
 				alt_numpad = alt_numpad_c = 0;
+				digraph_n = digraph_c = 0;
+				cs_unicode = cs_unicode_c = 0;
 				return;
 			}
 		} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
