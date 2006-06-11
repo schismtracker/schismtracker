@@ -690,6 +690,7 @@ void load_sample_load_page(struct page *page)
 	page->help_index = HELP_GLOBAL;
 
 	create_other(widgets_loadsample + 0, 0, file_list_handle_key, file_list_draw);
+	widgets_loadsample[0].accept_text = 1;
 }
 
 void library_sample_load_page(struct page *page)
@@ -705,4 +706,5 @@ void library_sample_load_page(struct page *page)
 	page->help_index = HELP_GLOBAL;
 
 	create_other(widgets_loadsample + 0, 0, file_list_handle_key, file_list_draw);
+	widgets_loadsample[0].accept_text = 1;
 }

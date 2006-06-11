@@ -475,6 +475,7 @@ void load_instrument_load_page(struct page *page)
 	page->help_index = HELP_GLOBAL;
 	inst_cwd[0] = 0;
 	create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_draw);
+	widgets_loadinst[0].accept_text = 1;
 }
 void library_instrument_load_page(struct page *page)
 {
@@ -489,4 +490,5 @@ void library_instrument_load_page(struct page *page)
 	page->help_index = HELP_GLOBAL;
 	inst_cwd[0] = 0;
 	create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_draw);
+	widgets_loadinst[0].accept_text = 1;
 }

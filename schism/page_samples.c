@@ -1347,6 +1347,7 @@ void sample_list_load_page(struct page *page)
 
 	/* 0 = sample list */
 	create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list, sample_list_draw_list);
+	widgets_samplelist[0].accept_text = 1;
 	widgets_samplelist[0].x = 5;
 	widgets_samplelist[0].y = 13;
 	widgets_samplelist[0].width = 30;
