@@ -287,7 +287,7 @@ static void options_draw_const(void)
 static int options_handle_key(struct key_event *k)
 {
 	if (NO_MODIFIER(k->mod) && k->sym == SDLK_F2) {
-		if (k->state) dialog_cancel(NULL);
+		if (!k->state) dialog_cancel(NULL);
 		return 1;
 	}
 	return 0;
@@ -1872,7 +1872,7 @@ static void clipboard_copy(void)
 	clippy_yank();
 }
 
-static void clipboard_paste_overwrite(int suppress)
+static void clipboard_paste_overwrite(int suppress, int grow)
 {
 	song_note *pattern;
 	int row, num_rows, chan_width;
@@ -1886,6 +1886,11 @@ static void clipboard_paste_overwrite(int suppress)
 	num_rows -= current_row;
 	if (clipboard.rows < num_rows)
 		num_rows = clipboard.rows;
+
+	if (clipboard.rows > num_rows && grow) {
+		status_text_flash("Resized pattern %d to %d rows", current_pattern, clipboard.rows);
+		song_pattern_resize(current_pattern, clipboard.rows);
+	}
 
 	chan_width = clipboard.channels;
 	if (chan_width + current_channel > 64)
@@ -1923,7 +1928,7 @@ static void clipboard_paste_insert(void)
 		chan_width = 64 - current_channel + 1;
 	
 	pattern_insert_rows(current_row, clipboard.rows, current_channel, chan_width);
-	clipboard_paste_overwrite(1);
+	clipboard_paste_overwrite(1, 0);
 	pattern_selection_system_copyout();
 }
 
@@ -3342,7 +3347,11 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		break;
 	case SDLK_o:
 		if (k->state) return 1;
-		clipboard_paste_overwrite(0);
+		if (status.last_keysym == SDLK_o) {
+			clipboard_paste_overwrite(0, 1);
+		} else {
+			clipboard_paste_overwrite(0, 0);
+		}
 		break;
 	case SDLK_p:
 		if (k->state) return 1;
