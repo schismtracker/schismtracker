@@ -92,7 +92,7 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	}
 	
 	if (n < len) {
-		memmove(audio_buffer, audio_buffer + len - n,
+		memmove(audio_buffer, audio_buffer + n,
 				(len - n) * audio_sample_size);
 	}
 	memcpy(audio_buffer, stream, n * audio_sample_size);
