@@ -118,7 +118,7 @@ static int inline _pack_halfw(int c)
 	case '8': return 8;
 	case '9': return 9;
 	case 'a': case 'A': return 10;
-	case 'b': case 'B': return 11;
+	/* case 'b': */ case 'B': return 11; /* lowercase 'b' used for flat symbol */
 	case 'c': case 'C': return 12;
 	case 'd': case 'D': return 13;
 	case 'e': case 'E': return 14;
@@ -154,6 +154,12 @@ static int inline _pack_halfw(int c)
 	case 0x5e: return 41;
 	case 0xcd: return 42;
 	case 0x7e: return 43;
+        
+        /* Mini-sharps and flats */
+        case '-': return 44;
+        case '#': return 45;
+        case 'b': return 46;
+        
 	default:
 		fprintf(stderr, "FATAL: half-width character %x not mapped\n", c);
 		exit(255);
@@ -163,7 +169,7 @@ static int inline _unpack_halfw(int c)
 {
 	const unsigned char *zmap =
 (const unsigned char *)	"0123456789ABCDEFGHIJKLMNOPQRSTUV"
-			"WXYZ$<> \xad\x5e\xcd\x7e....................";
+			"WXYZ$<> \xad\x5e\xcd\x7e-#b.................";
 	if (c > 63) return 0; /* eh? */
 	return (int)(zmap[c]);
 }
