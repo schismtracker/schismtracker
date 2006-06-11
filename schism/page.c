@@ -798,38 +798,45 @@ void handle_key(struct key_event * k)
 {
 	static int alt_numpad = 0;
 	static int alt_numpad_c = 0;
+	static int digraph_n = 0;
+	static int digraph_c = 0;
 	static int cs_unicode = 0;
 	static int cs_unicode_c = 0;
-	static int ca_digraph = 0;
 	struct key_event fake;
 	int c, m;
 
-	/* ctrl+alt -> digraph -> char number */
-	if ((k->mod & KMOD_ALT) && (k->mod & KMOD_CTRL)) {
-		c = kbd_get_alnum(k);
-		if (ca_digraph == 0) {
-			if (c) {
-				if (k->state) ca_digraph = c;
-				cs_unicode = cs_unicode_c = alt_numpad = alt_numpad_c = 0;
-				return;
-			}
-		} else if (ca_digraph > 0 && c) {
+	if (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL) {
+		if (k->state && digraph_n >= 0) {
+			digraph_n++;
+			if (digraph_n >= 2)
+				status_text_flash("Enter digraph:");
+		}
+	} else if ((c=kbd_get_alnum(k)) == 0 || digraph_n < 2) {
+		digraph_n = (k->state) ? 0 : -1;
+	} else if (digraph_n >= 2) {
+		if (!k->state) return;
+		if (!digraph_c) {
+			digraph_c = c; /* from kbg_get_alnum */
+			status_text_flash("Enter digraph: %c", c);
+		} else {
 			memset(&fake, 0, sizeof(fake));
-			fake.unicode = char_digraph(ca_digraph, c);
-			if (!fake.unicode) {
-				ca_digraph = -1;
+			fake.unicode = char_digraph(digraph_c, c);
+			if (fake.unicode) {
+				status_text_flash("Enter digraph: %c%c -> %c", digraph_c, c, fake.unicode);
 			} else {
+				status_text_flash("Enter digraph: %c%c -> INVALID", digraph_c, c);
+			}
+			digraph_n = digraph_c = 0;
+			if (fake.unicode) {
 				fake.is_synthetic = 3;
-				ca_digraph = 0;
 				handle_key(&fake);
 				fake.state=1;
 				handle_key(&fake);
 			}
-			cs_unicode = cs_unicode_c = alt_numpad = alt_numpad_c = 0;
 			return;
 		}
 	} else {
-		ca_digraph = 0;
+		digraph_n = 0;
 	}
 
 #if 0
