@@ -805,7 +805,7 @@ void handle_key(struct key_event * k)
 	struct key_event fake;
 	int c, m;
 
-	if (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL) {
+	if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
 		if (k->state && digraph_n >= 0) {
 			digraph_n++;
 			if (digraph_n >= 2)
