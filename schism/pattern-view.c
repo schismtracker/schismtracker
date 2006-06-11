@@ -543,14 +543,14 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 {
         byte note_buf[4], ins_buf[3], vol_buf[3];
         int fg1, bg1, fg2, bg2;
+        
+#ifdef USE_LOWERCASE_NOTES
 
         get_note_string_short(note->note, (char *) note_buf);
         if (note->instrument)
                 num99tostr(note->instrument, ins_buf);
         else
                 ins_buf[0] = ins_buf[1] = 173;
-        get_volume_string(note->volume, note->volume_effect, (char *) vol_buf);
-
         /* note & instrument */
         draw_text(note_buf, x, y, 6, bg);
         fg1 = fg2 = (note->instrument ? 10 : 2);
@@ -571,9 +571,57 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
                 bg2 = 3;
                 break;
         }
-        draw_half_width_chars(ins_buf[0], ins_buf[1], x + 2, y, fg1, bg1, fg2, bg2);
 
+#else
+
+        get_note_string (note -> note, (char *) note_buf);
+        
+        if (cursor_pos == 0)
+          draw_char (note_buf [0], x, y, 0, 3);
+        else
+          draw_char (note_buf [0], x, y, fg, bg);
+          
+        bg1 = bg2 = bg;
+        switch (note_buf [0])
+          {
+          case '^':    /* empty notes, note-off and note-cuts */
+          case 0xCD:
+          case 0xAD:
+            if (cursor_pos == 1)
+              draw_char (note_buf [1], x + 1, y, 0, 3);
+            else
+              draw_char (note_buf [1], x + 1, y, fg, bg);
+          break;
+          default:
+            draw_half_width_chars (note_buf [1], note_buf [2], x + 1, y, fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
+          break;
+          }
+        
+#endif
+
+        if (note->instrument)
+                num99tostr(note->instrument, ins_buf);
+        else
+                ins_buf[0] = ins_buf[1] = 173;
+
+        fg1 = fg2 = (note->instrument ? 10 : 2);
+        bg1 = bg2 = bg;
+        switch (cursor_pos)
+          {
+          case 2:
+            fg1 = 0;
+            bg1 = 3;
+          break;
+          case 3:
+            fg2 = 0;
+            bg2 = 3;
+          break;
+          }
+        
+        draw_half_width_chars(ins_buf[0], ins_buf[1], x + 2, y, fg1, bg1, fg2, bg2);
         /* volume */
+        get_volume_string(note->volume, note->volume_effect, (char *) vol_buf);
+        
         switch (note->volume_effect) {
         case VOL_EFFECT_NONE:
                 fg1 = 6;
