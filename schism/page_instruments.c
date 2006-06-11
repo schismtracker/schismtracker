@@ -608,6 +608,36 @@ static void note_trans_draw(void)
         }
 }
 
+void instrument_note_trans_transpose(song_instrument *ins, int dir)
+{
+	int i;
+	for (i = 0; i < 120; i++) {
+		ins->note_map[i] = CLAMP(ins->note_map[i]+dir, 1, 120);
+	}
+}
+void instrument_note_trans_insert(song_instrument *ins, int pos)
+{
+	int i;
+	for (i = 119; i > pos; i--) {
+		ins->note_map[i] = ins->note_map[i-1];
+		ins->sample_map[i] = ins->sample_map[i-1];
+	}
+	if (pos) {
+		ins->note_map[pos] = ins->note_map[pos-1]+1;
+	} else {
+		ins->note_map[0] = 1;
+	}
+}
+void instrument_note_trans_delete(song_instrument *ins, int pos)
+{
+	int i;
+	for (i = pos; i < 120; i++) {
+		ins->note_map[i] = ins->note_map[i+1];
+		ins->sample_map[i] = ins->sample_map[i+1];
+	}
+	ins->note_map[119] = ins->note_map[118]+1;
+}
+
 static int note_trans_handle_alt_key(struct key_event * k)
 {
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
@@ -615,6 +645,32 @@ static int note_trans_handle_alt_key(struct key_event * k)
 	
 	if (k->state) return 0;
 	switch (k->sym) {
+	case SDLK_UP:
+		instrument_note_trans_transpose(ins, 1);
+		break;
+	case SDLK_DOWN:
+		instrument_note_trans_transpose(ins, -1);
+		break;
+	case SDLK_INSERT:
+		instrument_note_trans_insert(ins, note_trans_sel_line);
+		break;
+	case SDLK_DELETE:
+		instrument_note_trans_delete(ins, note_trans_sel_line);
+		break;
+	case SDLK_p:
+		if (!note_trans_sel_line) return 1;
+		n = ins->sample_map[note_trans_sel_line-1];
+		s = ins->sample_map[note_trans_sel_line-1];
+		ins->note_map[note_trans_sel_line] = n;
+		ins->sample_map[note_trans_sel_line] = s;
+		break;
+	case SDLK_n:
+		if (!note_trans_sel_line) return 1;
+		s = ins->sample_map[note_trans_sel_line-1];
+		n = ins->sample_map[note_trans_sel_line-1];
+		ins->note_map[note_trans_sel_line] = n+1;
+		ins->sample_map[note_trans_sel_line] = s;
+		break;
 	case SDLK_a:
 		s = sample_get_current();
 		for (n = 0; n < 120; n++)
