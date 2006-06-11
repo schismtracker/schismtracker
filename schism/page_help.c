@@ -61,6 +61,7 @@ static void help_draw_const(void)
 static void help_redraw(void)
 {
         int n, pos, x;
+	int lp;
         const char **ptr;
 
         draw_fill_chars(2, 13, 77, 44, 0);
@@ -71,13 +72,17 @@ static void help_redraw(void)
 		case ':':	/* schism-only (drawn the same) */
                 case '|':	/* normal line */
 		case '!':	/* classic mode only */
+			lp = strcspn(*ptr+1, "\015\012");
+			if (lp > 76) lp = 76;
                         draw_text_len((const unsigned char *) *ptr + 1,
-					strcspn(*ptr + 1, "\015\012"), 2,
+					lp, 2,
 					pos, 6, 0);
                         break;
                 case '#':      /* hidden line */
+			lp = strcspn(*ptr+1, "\015\012");
+			if (lp > 76) lp = 76;
                         draw_text_len((const unsigned char *) *ptr + 1,
-					strcspn(*ptr + 1, "\015\012"), 2,
+					lp, 2,
 					pos, 7, 0);
                         break;
                 case '%':      /* separator line */
