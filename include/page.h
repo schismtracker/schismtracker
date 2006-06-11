@@ -224,6 +224,10 @@ struct widget {
 	/* called by the clipboard manager; really, only "other" widgets
 	should "override" this... */
 	int (*clipboard_paste)(int cb, const void *cptr);
+
+	/* true if the widget accepts "text"- used for digraphs and unicode
+	and alt+kp entry... */
+	int accept_text;
 };
 
 /* this structure keeps all the information needed to draw a page, and a
