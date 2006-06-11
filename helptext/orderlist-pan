@@ -11,7 +11,7 @@
 |   Tab/Shift-Tab     Move to next window
 |   Ctrl-F7           Play this Order next
 :
-:   Shift-N           Copy current pattern to new pattern, and insert into order list
+:   Shift-N           Copy current pattern to new pattern, and insert order
 :   Ctrl-B            Link (diskwriter) this pattern to the current sample
 :   Ctrl-O            Copy (diskwriter) this pattern to the current sample
 :
