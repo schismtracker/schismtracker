@@ -595,7 +595,7 @@ SKIP1:
 				modes[i]->w, modes[i]->h);
 */
 			if (modes[i]->w < NATIVE_SCREEN_WIDTH) continue;
-			if (modes[i]->h < NATIVE_SCREEN_WIDTH)continue;
+			if (modes[i]->h < NATIVE_SCREEN_HEIGHT)continue;
 			if (x == -1 || y == -1 || modes[i]->w < x || modes[i]->h < y) {
 				x = modes[i]->w;
 				y = modes[i]->h;
