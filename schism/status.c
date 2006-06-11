@@ -145,7 +145,7 @@ void status_text_redraw(void)
         }
 	
         if (status_text) {
-                draw_text_len((unsigned char *) status_text, 60, 2, 9, status_color, 2);
+                draw_text_bios_len((unsigned char *) status_text, 60, 2, 9, status_color, 2);
         } else {
                 switch (song_get_mode()) {
                 case MODE_PLAYING:
