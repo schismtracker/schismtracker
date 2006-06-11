@@ -616,7 +616,7 @@ SKIP1:
 	case VIDEO_GL:
 		video.gl.bilinear = 1;
 	case VIDEO_YUV:
-		if (video.desktop.bpp == 32) break;
+		if (video.desktop.bpp == 32 || video.desktop.bpp == 16) break;
 		/* fall through */
 	case VIDEO_DDRAW:
 #ifdef WIN32
