@@ -38,3 +38,65 @@
 :
 :   Ctrl-Shift-C      Copy to clipboard (also Ctrl-Insert)
 :   Ctrl-Shift-V      Paste from clipboard (also Shift-Insert)
+:
+:   Ctrl, Ctrl        Digraph entry:
+;      C,   -> €
+;      u:   -> 
+;      e'   -> ‚
+;      a>   -> ƒ
+;      a:   -> „
+;      a!   -> …
+;      aa   -> †
+;      c,   -> ‡
+;      e>   -> ˆ
+;      e:   -> ‰
+;      e!   -> Š
+;      i:   -> ‹
+;      i>   -> Œ
+;      i!   -> 
+;      A:   -> Ž
+;      AA   -> 
+;      E'   -> 
+;      ae   -> ‘
+;      AE   -> ’
+;      o>   -> “
+;      o:   -> ”
+;      o!   -> •
+;      u>   -> –
+;      u!   -> —
+;      y:   -> ˜
+;      O:   -> ™
+;      U:   -> š
+;      Ct   -> ›
+;      Pd   -> œ
+;      Ye   -> 
+;      Pt   -> ž
+;      ff   -> Ÿ
+;      a'   ->  
+;      i'   -> ¡
+;      o'   -> ¢
+;      u'   -> £
+;      n?   -> ¤
+;      N?   -> ¥
+;      -a   -> ¦
+;      -o   -> §
+;      ?I   -> ¨
+;      NO   -> ª
+;      12   -> «
+;      14   -> ®
+;      !I   -> ¯
+;      <<   -> °
+;      >>   -> ±
+;      ss   -> á
+;      pi   -> ã
+;      My   -> æ
+;      o/   -> í
+;      O/   -> í
+;      +-   -> ñ
+;      -:   -> ö
+;      DG   -> ø
+;      .M   -> ù
+;      2S   -> ý
+;      nS   -> ü
+;      PI   -> 
+;      SE   -> 
