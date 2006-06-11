@@ -29,6 +29,7 @@ void create_toggle(struct widget *w, int x, int y, int next_up, int next_down,
                    int next_left, int next_right, int next_tab, void (*changed) (void))
 {
         w->type = WIDGET_TOGGLE;
+	w->accept_text = 0;
         w->x = x;
         w->y = y;
         w->width = 3;   /* "Off" */
@@ -55,6 +56,7 @@ void create_menutoggle(struct widget *w, int x, int y, int next_up, int next_dow
         }
 
         w->type = WIDGET_MENUTOGGLE;
+	w->accept_text = 0;
         w->x = x;
         w->y = y;
         w->width = width;
@@ -75,6 +77,7 @@ void create_button(struct widget *w, int x, int y, int width, int next_up, int n
                    int next_right, int next_tab, void (*changed) (void), const char *text, int padding)
 {
         w->type = WIDGET_BUTTON;
+	w->accept_text = 0;
         w->x = x;
         w->y = y;
         w->width = width;
@@ -96,6 +99,7 @@ void create_togglebutton(struct widget *w, int x, int y, int width, int next_up,
                          const char *text, int padding, int *group)
 {
         w->type = WIDGET_TOGGLEBUTTON;
+	w->accept_text = 0;
         w->x = x;
         w->y = y;
         w->width = width;
@@ -117,6 +121,7 @@ void create_textentry(struct widget *w, int x, int y, int width, int next_up, in
                       int next_tab, void (*changed) (void), char *text, int max_length)
 {
         w->type = WIDGET_TEXTENTRY;
+	w->accept_text = 1;
         w->x = x;
         w->y = y;
         w->width = width;
@@ -137,6 +142,7 @@ void create_numentry(struct widget *w, int x, int y, int width, int next_up, int
                      int next_tab, void (*changed) (void), int min, int max, int *cursor_pos)
 {
         w->type = WIDGET_NUMENTRY;
+	w->accept_text = 1;
         w->x = x;
         w->y = y;
         w->width = width;
@@ -158,6 +164,7 @@ void create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int
                      int next_tab, void (*changed) (void), int min, int max)
 {
         w->type = WIDGET_THUMBBAR;
+	w->accept_text = 1;
         w->x = x;
         w->y = y;
         w->width = width;
@@ -179,6 +186,7 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
                    void (*changed) (void), int channel)
 {
         w->type = WIDGET_PANBAR;
+	w->accept_text = 1;
         w->x = x;
         w->y = y;
         w->width = 24;
@@ -197,6 +205,7 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
 void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k), void (*i_redraw) (void))
 {
 	w->type = WIDGET_OTHER;
+	w->accept_text = 0;
 	w->next.up = w->next.down = w->next.left = w->next.right = 0;
 	w->next.tab = next_tab;
 	/* w->changed = NULL; ??? */

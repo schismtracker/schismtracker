@@ -807,4 +807,5 @@ void message_load_page(struct page *page)
         page->help_index = HELP_MESSAGE_EDITOR;
 
 	create_other(widgets_message + 0, 0, message_handle_key_viewmode, message_draw);
+	widgets_message[0].accept_text = 1;
 }

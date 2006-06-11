@@ -2236,6 +2236,7 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	
 	/* 0 = instrument list */
 	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list, instrument_list_draw_list);
+	page_widgets[0].accept_text = 1;
 	page_widgets[0].x = 5;
 	page_widgets[0].y = 13;
 	page_widgets[0].width = 24;
@@ -2266,6 +2267,7 @@ void instrument_list_general_load_page(struct page *page)
 	
         /* 5 = note trans table */
 	create_other(widgets_general + 5, 6, note_trans_handle_key, note_trans_draw);
+	widgets_general[5].accept_text = 1;
 	widgets_general[5].x = 32;
 	widgets_general[5].y = 16;
 	widgets_general[5].width = 9;
@@ -2446,6 +2448,7 @@ void instrument_list_panning_load_page(struct page *page)
 	
 	/* 16 = pitch-pan center */
 	create_other(widgets_panning + 16, 0, pitch_pan_center_handle_key, pitch_pan_center_draw);
+	widgets_general[16].accept_text = 1;
         widgets_panning[16].next.up = 15;
         widgets_panning[16].next.down = 17;
 	

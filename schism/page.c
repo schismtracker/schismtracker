@@ -805,107 +805,123 @@ void handle_key(struct key_event * k)
 	struct key_event fake;
 	int c, m;
 
-	if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
-		if (k->state && digraph_n >= 0) {
-			digraph_n++;
-			if (digraph_n >= 2)
-				status_text_flash("Enter digraph:");
-		}
-	} else if ((c=kbd_get_alnum(k)) == 0 || digraph_n < 2) {
-		digraph_n = (k->state) ? 0 : -1;
-	} else if (digraph_n >= 2) {
-		if (!k->state) return;
-		if (!digraph_c) {
-			digraph_c = c; /* from kbg_get_alnum */
-			status_text_flash("Enter digraph: %c", c);
-		} else {
-			memset(&fake, 0, sizeof(fake));
-			fake.unicode = char_digraph(digraph_c, c);
-			if (fake.unicode) {
-				status_text_flash("Enter digraph: %c%c -> %c", digraph_c, c, fake.unicode);
-			} else {
-				status_text_flash("Enter digraph: %c%c -> INVALID", digraph_c, c);
+	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
+		if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
+			if (k->state && digraph_n >= 0) {
+				digraph_n++;
+				if (digraph_n >= 2)
+					status_text_flash("Enter digraph:");
 			}
-			digraph_n = digraph_c = 0;
-			if (fake.unicode) {
+		} else if ((c=kbd_get_alnum(k)) == 0 || digraph_n < 2) {
+			digraph_n = (k->state) ? 0 : -1;
+		} else if (digraph_n >= 2) {
+			if (!k->state) return;
+			if (!digraph_c) {
+				digraph_c = c; /* from kbg_get_alnum */
+				status_text_flash("Enter digraph: %c", c);
+			} else {
+				memset(&fake, 0, sizeof(fake));
+				fake.unicode = char_digraph(digraph_c, c);
+				if (fake.unicode) {
+					status_text_flash("Enter digraph: %c%c -> %c", digraph_c, c, fake.unicode);
+				} else {
+					status_text_flash("Enter digraph: %c%c -> INVALID", digraph_c, c);
+				}
+				digraph_n = digraph_c = 0;
+				if (fake.unicode) {
+					fake.is_synthetic = 3;
+					handle_key(&fake);
+					fake.state=1;
+					handle_key(&fake);
+				}
+				return;
+			}
+		} else {
+			digraph_n = 0;
+		}
+	
+		/* ctrl+shift -> unicode character */
+		if ((k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT)) {
+			if (k->state && cs_unicode_c > 0) {
+				memset(&fake, 0, sizeof(fake));
+				fake.unicode = char_unicode_to_cp437(cs_unicode);
+				if (fake.unicode) {
+					status_text_flash("Enter Unicode: U+%04X -> %c", cs_unicode, fake.unicode);
+					fake.is_synthetic = 3;
+					handle_key(&fake);
+					fake.state=1;
+					handle_key(&fake);
+				} else {
+					status_text_flash("Enter Unicode: U+%04X -> INVALID", cs_unicode);
+				}
+				cs_unicode = 0;
+				cs_unicode_c = 0;
+				alt_numpad = alt_numpad_c = 0;
+				return;
+			}
+		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
+			if (cs_unicode_c >= 0) {
+				/* bleh... */
+				m = k->mod;
+				k->mod = 0;
+				c = kbd_char_to_hex(k);
+				k->mod = m;
+				if (c == -1) {
+					cs_unicode = cs_unicode_c = -1;
+				} else {
+					if (!k->state) return;
+					cs_unicode *= 16;
+					cs_unicode += c;
+					cs_unicode_c++;
+					status_text_flash("Enter Unicode: U+%04X", cs_unicode);
+					return;
+				}
+			}
+		} else {
+			cs_unicode = cs_unicode_c = 0;
+		}
+	
+		/* alt+numpad -> char number */
+		if ((k->sym == SDLK_LALT || k->sym == SDLK_RALT || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA)) {
+			if (k->state && alt_numpad_c > 0) {
+				memset(&fake, 0, sizeof(fake));
+				fake.unicode = alt_numpad & 255;
+				if (!(status.flags & CLASSIC_MODE))
+					status_text_flash("Enter DOS/ASCII: %d -> %c", fake.unicode, fake.unicode);
 				fake.is_synthetic = 3;
 				handle_key(&fake);
 				fake.state=1;
 				handle_key(&fake);
-			}
-			return;
-		}
-	} else {
-		digraph_n = 0;
-	}
-
-#if 0
-	/* ctrl+shift -> unicode character */
-	if ((k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT)) {
-		if (k->state && cs_unicode_c > 0) {
-			memset(&fake, 0, sizeof(fake));
-			fake.unicode = char_unicode_to_cp437(cs_unicode);
-			fake.is_synthetic = 3;
-			handle_key(&fake);
-			fake.state=1;
-			handle_key(&fake);
-			alt_numpad = alt_numpad_c = 0;
-			return;
-		}
-	} else if ((k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
-		if (cs_unicode_c >= 0) {
-			/* bleh... */
-			m = k->mod;
-			k->mod = 0;
-			c = kbd_char_to_hex(k);
-			k->mod = m;
-			if (c == -1) {
-				cs_unicode = cs_unicode_c = -1;
-			} else {
-				if (!k->state) return;
-				cs_unicode *= 16;
-				cs_unicode += c;
-				cs_unicode_c++;
+				alt_numpad = alt_numpad_c = 0;
 				return;
 			}
+		} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
+			if (alt_numpad_c >= 0) {
+				m = k->mod;
+				k->mod = 0;
+				c = numeric_key_event(k, 1); /* kp only */
+				k->mod = m;
+				if (c == -1 || c > 9) {
+					alt_numpad = alt_numpad_c = -1;
+				} else {
+					if (!k->state) return;
+					alt_numpad *= 10;
+					alt_numpad += c;
+					alt_numpad_c++;
+					if (!(status.flags & CLASSIC_MODE))
+						status_text_flash("Enter DOS/ASCII: %d", alt_numpad);
+					return;
+				}
+			}
+		} else {
+			alt_numpad = alt_numpad_c = 0;
 		}
 	} else {
 		cs_unicode = cs_unicode_c = 0;
-	}
-#endif
-
-	/* alt+numpad -> char number */
-	if ((k->sym == SDLK_LALT || k->sym == SDLK_RALT || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA)) {
-		if (k->state && alt_numpad_c > 0) {
-			memset(&fake, 0, sizeof(fake));
-			fake.unicode = alt_numpad & 255;
-			fake.is_synthetic = 3;
-			handle_key(&fake);
-			fake.state=1;
-			handle_key(&fake);
-			alt_numpad = alt_numpad_c = 0;
-			return;
-		}
-	} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
-		if (alt_numpad_c >= 0) {
-			m = k->mod;
-			k->mod = 0;
-			c = numeric_key_event(k, 1); /* kp only */
-			k->mod = m;
-			if (c == -1 || c > 9) {
-				alt_numpad = alt_numpad_c = -1;
-			} else {
-				if (!k->state) return;
-				alt_numpad *= 10;
-				alt_numpad += c;
-				alt_numpad_c++;
-				return;
-			}
-		}
-	} else {
 		alt_numpad = alt_numpad_c = 0;
+		digraph_n = digraph_c = 0;
 	}
-
+	
 	/* okay... */
 	if (!(status.flags & DISKWRITER_ACTIVE) && ACTIVE_PAGE.pre_handle_key) {
 		if (ACTIVE_PAGE.pre_handle_key(k)) return;

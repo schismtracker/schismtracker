@@ -850,6 +850,7 @@ void orderpan_load_page(struct page *page)
 
         /* 0 = order list */
 	create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
+	widgets_orderpan[0].accept_text = 1;
 	widgets_orderpan[0].x = 6;
 	widgets_orderpan[0].y = 15;
 	widgets_orderpan[0].width = 3;
@@ -881,6 +882,7 @@ void ordervol_load_page(struct page *page)
 
         /* 0 = order list */
 	create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
+	widgets_ordervol[0].accept_text = 1;
 	widgets_ordervol[0].x = 6;
 	widgets_ordervol[0].y = 15;
 	widgets_ordervol[0].width = 3;
