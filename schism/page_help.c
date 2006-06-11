@@ -70,13 +70,20 @@ static void help_redraw(void)
         for (pos = 13, n = top_line; pos < 45; pos++, n++) {
                 switch (**ptr) {
 		case ':':	/* schism-only (drawn the same) */
+		case ';':
                 case '|':	/* normal line */
 		case '!':	/* classic mode only */
 			lp = strcspn(*ptr+1, "\015\012");
 			if (lp > 76) lp = 76;
-                        draw_text_len((const unsigned char *) *ptr + 1,
+			if (**ptr == ';') {
+	                        draw_text_bios_len((const unsigned char *) *ptr + 1,
 					lp, 2,
 					pos, 6, 0);
+			} else {
+	                        draw_text_len((const unsigned char *) *ptr + 1,
+					lp, 2,
+					pos, 6, 0);
+			}
                         break;
                 case '#':      /* hidden line */
 			lp = strcspn(*ptr+1, "\015\012");
@@ -194,7 +201,7 @@ static void help_set_page(void)
                 ptr = help_text_pointers[status.current_help_index];
                 while (local_lines--) {
 			if (status.flags & CLASSIC_MODE) {
-				if (ptr[0] != ':' && ptr[0] != '#')
+				if (ptr[0] != ';' && ptr[0] != ':' && ptr[0] != '#')
 					newline_pointers[cur_line++] = ptr;
 			} else {
 				if (ptr[0] != '!')
@@ -219,7 +226,7 @@ static void help_set_page(void)
         ptr = help_text_pointers[HELP_GLOBAL];
         while (global_lines--) {
 		if (status.flags & CLASSIC_MODE) {
-			if (ptr[0] != ':' && ptr[0] != '#')
+			if (ptr[0] != ';' && ptr[0] != ':' && ptr[0] != '#')
 				newline_pointers[cur_line++] = ptr;
 		} else {
 			if (ptr[0] != '!')
