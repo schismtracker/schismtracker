@@ -77,6 +77,7 @@ static int shutdown_process = 0;
 static const char *video_driver = 0;
 static const char *audio_driver = 0;
 static int did_fullscreen = 0;
+static int did_classic = 0;
 
 /* wee... */
 #if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
@@ -262,6 +263,7 @@ enum {
 	SF_PLAY = 1, /* -p: start playing after loading initial_song */
 	SF_HOOKS = 2, /* --no-hooks: don't run startup/exit scripts */
 	SF_FONTEDIT = 4,
+	SF_CLASSIC = 8,
 };
 static int startup_flags = SF_HOOKS;
 
@@ -291,7 +293,7 @@ static void parse_options(int argc, char **argv)
 		{O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
 		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
 		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
-		{O_CLASSIC_MODE, 0, "clasic", FRAG_NEG, NULL, "start schism in classic mode" },
+		{O_CLASSIC_MODE, 0, "classic", FRAG_NEG, NULL, "start schism in classic mode" },
 #ifdef USE_X11
 		{O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
 #endif
@@ -332,8 +334,11 @@ static void parse_options(int argc, char **argv)
 			video_driver = strdup(frag->arg);
 			break;
 		case O_CLASSIC_MODE:
-			status.flags &= ~(CLASSIC_MODE);
-			if (frag->type) status.flags |= CLASSIC_MODE;
+			if (frag->type)
+				startup_flags |= SF_CLASSIC;
+			else
+				startup_flags &= ~SF_CLASSIC;
+			did_classic = 1;
 			break;
 #ifdef USE_X11
 		case O_DISPLAY:
@@ -867,6 +872,11 @@ int main(int argc, char **argv)
 
 	song_initialise();
 	cfg_load();
+
+	if (did_classic) {
+		status.flags &= ~CLASSIC_MODE;
+		if (startup_flags & SF_CLASSIC) status.flags |= CLASSIC_MODE;
+	}
 
 	if (!video_driver) {
 		video_driver = cfg_video_driver;
