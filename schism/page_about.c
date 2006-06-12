@@ -139,7 +139,9 @@ static void about_draw_const(void)
 			draw_text((unsigned char *) buf, 79 - strlen(buf), 48, 6, 0);
 		}
 	}
-	vgamem_fill_reserve(&logo_image, 0, 2);
+	vgamem_fill_reserve(&logo_image, 
+		(status.flags & CLASSIC_MODE) ? 11 : 0,
+		2);
 }
 
 void show_about(void)
