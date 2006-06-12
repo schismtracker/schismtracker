@@ -3255,7 +3255,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	n = numeric_key_event(k, 0);
 	if (n > -1 && n <= 9) {
 		if (k->state) return 1;
-		skip_value = k->sym - '0';
+		skip_value = n;
 		status_text_flash("Cursor step set to %d", skip_value);
 		return 1;
 	}
