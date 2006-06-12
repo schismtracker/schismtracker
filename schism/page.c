@@ -812,7 +812,9 @@ void handle_key(struct key_event * k)
 				if (digraph_n >= 2)
 					status_text_flash("Enter digraph:");
 			}
-		} else if (!NO_MODIFIER(k->mod) || (c=k->unicode) == 0 || digraph_n < 2) {
+		} else if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
+			/* do nothing */
+		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->unicode) == 0 || digraph_n < 2) {
 			digraph_n = (k->state) ? 0 : -1;
 		} else if (digraph_n >= 2) {
 			if (!k->state) return;
@@ -868,7 +870,6 @@ void handle_key(struct key_event * k)
 				k->mod = m;
 				if (c == -1) {
 					cs_unicode = cs_unicode_c = -1;
-					digraph_n = digraph_c = 0;
 				} else {
 					if (!k->state) return;
 					cs_unicode *= 16;
