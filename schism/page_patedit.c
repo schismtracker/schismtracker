@@ -2943,6 +2943,8 @@ static int pattern_editor_insert(struct key_event *k)
 						n,
 						current_channel-1,
 						channel_multi_base);
+					if (!(midi_flags & MIDI_RECORD_NOTEOFF))
+						return 1;
 					n = NOTE_OFF;
 				} else {
 					j = song_keydown(
