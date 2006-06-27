@@ -151,6 +151,97 @@ static const fmt_read_info_func read_info_funcs[] = {
 };
 
 #undef READ_INFO
+/* --------------------------------------------------------------------------------------------------------- */
+/* "selected" and cache */
+struct dmoz_cache {
+	struct dmoz_cache *next;
+	char *path;
+	char *cache_filen;
+	char *cache_dirn;
+};
+static struct dmoz_cache *cache_top = 0;
+
+void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl)
+{
+	char *fn, *dn;
+	if (fl && fl->selected > -1 && fl->selected < fl->num_files && fl->files[fl->selected])
+		fn = fl->files[fl->selected]->base;
+	else
+		fn = 0;
+	if (dl && dl->selected > -1 && dl->selected < dl->num_dirs && dl->dirs[dl->selected])
+		dn = dl->dirs[dl->selected]->base;
+	else
+		dn = 0;
+	dmoz_cache_update_names(path,fn,dn);
+}
+
+void dmoz_cache_update_names(const char *path, char *filen, char *dirn)
+{
+	struct dmoz_cache *p, *lp;
+	char *q;
+	q = strdup(path);
+	lp = 0;
+	filen = filen ? (void*)get_basename(filen) : 0;
+	dirn = dirn ? (void*)get_basename(dirn) : 0;
+	if (filen && strcmp(filen,"..")==0) filen=0;
+	if (dirn && strcmp(dirn,"..")==0) dirn=0;
+	for (p = cache_top; p; p = p->next) {
+		if (strcmp(p->path,q)==0) {
+			free(q);
+			if (filen) { free(p->cache_filen); p->cache_filen = strdup(filen); }
+			if (dirn) { free(p->cache_dirn); p->cache_dirn = strdup(dirn); }
+			if (lp) {
+				lp->next = p->next;
+				/* !lp means we're already cache_top */
+				p->next = cache_top;
+				cache_top = p;
+			}
+			return;
+		}
+		lp = p;
+	}
+	p = mem_alloc(sizeof(struct dmoz_cache));
+	p->path = q;
+	p->cache_filen = filen ? strdup(filen) : 0;
+	p->cache_dirn = dirn ? strdup(dirn) : 0;
+	p->next = cache_top;
+	cache_top = p;
+}
+void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl)
+{
+	struct dmoz_cache *p;
+	char *q;
+	int i;
+
+	q = strdup(path);
+	if (fl) fl->selected = 0;
+	if (dl) dl->selected = 0;
+	for (p = cache_top; p; p = p->next) {
+		if (strcmp(p->path,path) == 0) {
+			if (fl && p->cache_filen) {
+				for (i = 0; i < fl->num_files; i++) {
+					if (!fl->files[i]) continue;
+					if (strcmp(fl->files[i]->base, p->cache_filen) == 0) {
+						fl->selected = i;
+						break;
+					}
+				}
+			}
+			if (dl && p->cache_dirn) {
+				for (i = 0; i < dl->num_dirs; i++) {
+					if (!dl->dirs[i]) continue;
+					if (strcmp(dl->dirs[i]->base, p->cache_dirn) == 0) {
+						dl->selected = i;
+						break;
+					}
+				}
+			}
+			break;
+		}
+	}
+}
+
+
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* path string hacking */

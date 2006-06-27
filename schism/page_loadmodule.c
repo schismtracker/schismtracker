@@ -52,10 +52,11 @@ static struct widget widgets_savemodule[16];
 static int filetype_saves[] = { 4, 5, 6, 7, -1 };
 
 static int top_file = 0, top_dir = 0;
-static int current_file = 0, current_dir = 0;
 static time_t directory_mtime;
 dmoz_filelist_t flist;
 dmoz_dirlist_t dlist;
+#define current_file flist.selected
+#define current_dir dlist.selected
 
 
 /* filename_entry is updated whenever the selected file is changed. (this differs from impulse tracker, which
@@ -251,16 +252,7 @@ static void dir_list_reposition(void)
 static void read_directory(void)
 {
 	struct stat st;
-	int i;
-	char *tmp;
 
-	if (current_file >= 0 && current_file < flist.num_files
-	&& flist.files[current_file] && flist.files[current_file]->base) {
-	        tmp = strdup(flist.files[current_file]->base);
-	} else {
-		tmp = 0;
-	}
-	
 	clear_directory();
 	
 	if (stat(cfg_dir_modules, &st) < 0)
@@ -272,17 +264,8 @@ static void read_directory(void)
 	if (dmoz_read(cfg_dir_modules, &flist, &dlist) < 0)
 		perror(cfg_dir_modules);
 	dmoz_filter_filelist(&flist, modgrep, &current_file, file_list_reposition);
-	if (tmp) {
-		for (i = 0; i < flist.num_files; i++) {
-			if (flist.files && flist.files[i] && flist.files[i]->base
-			&& strcmp(tmp, flist.files[i]->base) == 0) {
-				current_file = i;
-				file_list_reposition();
-				break;
-			}
-		}
-		(void)free(tmp);
-	}
+	dmoz_cache_lookup(cfg_dir_modules, &flist, &dlist);
+	file_list_reposition();
 	dir_list_reposition();
 }
 
@@ -402,6 +385,8 @@ static int change_dir(const char *dir)
 
 	if (!ptr)
 		return 0;
+
+	dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 
 	strncpy(cfg_dir_modules, ptr, PATH_MAX);
 	cfg_dir_modules[PATH_MAX] = 0;
@@ -576,6 +561,7 @@ static int file_list_handle_key(struct key_event * k)
         case SDLK_RETURN:
 		if (!k->state) return 1;
 		if (current_file < flist.num_files) {
+			dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 			handle_file_entered(flist.files[current_file]->path);
 		}
                 search_text_clear();
@@ -604,6 +590,7 @@ static int file_list_handle_key(struct key_event * k)
 		if (!k->state) return 0;
 	} else if (k->mouse == MOUSE_DBLCLICK) {
 		if (current_file < flist.num_files) {
+			dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 			handle_file_entered(flist.files[current_file]->path);
 		}
                 search_text_clear();

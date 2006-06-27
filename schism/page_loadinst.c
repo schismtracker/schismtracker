@@ -55,10 +55,10 @@ static char inst_cwd[PATH_MAX+1];
 */
 
 static int top_file = 0;
-static int current_file = 0;
 static time_t directory_mtime;
 static int _library_mode = 0;
 static dmoz_filelist_t flist;
+#define current_file flist.selected
 
 static int slash_search_mode = -1;
 static char slash_search_str[PATH_MAX];
@@ -81,7 +81,6 @@ static inline int get_type_color(int type)
 static void clear_directory(void)
 {
 	dmoz_free(&flist, NULL);
-	top_file = current_file = 0;
 }
 
 static int instgrep(dmoz_file_t *f)
@@ -111,15 +110,6 @@ static void file_list_reposition(void)
 static void read_directory(void)
 {
 	struct stat st;
-	char *tmp;
-	int i;
-
-	if (current_file >= 0 && current_file < flist.num_files
-	&& flist.files[current_file] && flist.files[current_file]->base) {
-	        tmp = strdup(flist.files[current_file]->base);
-	} else {
-		tmp = 0;
-	}
 
 	clear_directory();
 	
@@ -134,18 +124,8 @@ static void read_directory(void)
 		perror(inst_cwd);
 
 	dmoz_filter_filelist(&flist,instgrep, &current_file, file_list_reposition);
-
-	if (tmp) {
-		for (i = 0; i < flist.num_files; i++) {
-			if (flist.files && flist.files[i] && flist.files[i]->base
-			&& strcmp(tmp, flist.files[i]->base) == 0) {
-				current_file = i;
-				break;
-			}
-		}
-		(void)free(tmp);
-	}
-
+        dmoz_cache_lookup(inst_cwd, &flist, 0);
+	file_list_reposition();
 }
 
 /* return: 1 = success, 0 = failure
@@ -158,6 +138,8 @@ static int change_dir(const char *dir)
 	if (!ptr)
 		return 0;
 
+        dmoz_cache_update(inst_cwd, &flist, 0);
+
 	if (stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
 		strncpy(cfg_dir_instruments, ptr, PATH_MAX);
 		cfg_dir_instruments[PATH_MAX] = 0;
@@ -168,7 +150,6 @@ static int change_dir(const char *dir)
 	free(ptr);
 	
 	read_directory();
-	top_file = current_file = 0;
 	return 1;
 }
 
@@ -330,6 +311,8 @@ static void handle_enter_key(void)
 	
 	if (current_file < 0 || current_file >= flist.num_files) return;
 	file = flist.files[current_file];
+        dmoz_cache_update(inst_cwd, &flist, 0);
+
 	if (file->type & TYPE_BROWSABLE_MASK) {
 		change_dir(file->path);
 		status.flags |= NEED_UPDATE;
