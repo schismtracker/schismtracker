@@ -145,6 +145,7 @@ void orderlist_cheater(void)
 	status_text_flash("Pattern %d copied to pattern %d, order %d", cp, best, current_order);
 
 	data = song_pattern_allocate_copy(cp, &rows);
+	song_pattern_resize(best, rows);
 	song_pattern_install(best, data, rows);
 	list[current_order] = best;
 	current_order++;
@@ -274,7 +275,9 @@ static void orderlist_reorder(void)
 
 	/* pass two */
 	for (i = 0; i < 200; i++) {
-		if (ol[i] != ORDER_LAST && ol[i] != ORDER_SKIP) ol[i] = i;
+		if (ol[i] != ORDER_LAST && ol[i] != ORDER_SKIP) {
+			ol[i] = i;
+		}
 		song_pattern_install(i, np[i], nplen[i]);
 	}
 	for (i = 200; i < 255; i++) {

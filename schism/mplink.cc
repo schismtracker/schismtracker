@@ -321,6 +321,7 @@ void song_pattern_install(int patno, song_note *n, int rows)
 
 	mp->Patterns[patno] = (MODCOMMAND*)n;
 	mp->PatternAllocSize[patno] = rows;
+	mp->PatternSize[patno] = rows;
 
 	song_unlock_audio();
 }
