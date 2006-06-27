@@ -214,7 +214,7 @@ static void _alsa_send(struct midi_port *p, unsigned char *data, unsigned int le
 	}
 	
 	/* poof! */
-	snd_seq_drain_output(seq);
+	snd_seq_flush_output(seq);
 }
 static int _alsa_start(struct midi_port *p)
 {
