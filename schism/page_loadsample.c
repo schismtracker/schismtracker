@@ -58,9 +58,9 @@ static int need_keyoff = -1;
 */
 
 static int top_file = 0;
-static int current_file = 0;
 static time_t directory_mtime;
 static dmoz_filelist_t flist;
+#define current_file flist.selected
 
 static int slash_search_mode = -1;
 static char slash_search_str[PATH_MAX];
@@ -89,7 +89,6 @@ static int sampgrep(dmoz_file_t *f)
 static void clear_directory(void)
 {
 	dmoz_free(&flist, NULL);
-	top_file = current_file = 0;
 	fake_slot = -1;
 }
 static void file_list_reposition(void)
@@ -107,15 +106,6 @@ static void file_list_reposition(void)
 static void read_directory(void)
 {
 	struct stat st;
-	char *tmp;
-	int i;
-
-	if (current_file >= 0 && current_file < flist.num_files
-	&& flist.files[current_file] && flist.files[current_file]->base) {
-	        tmp = strdup(flist.files[current_file]->base);
-	} else {
-		tmp = 0;
-	}
 
 	clear_directory();
 	
@@ -130,17 +120,8 @@ static void read_directory(void)
 
 	dmoz_filter_filelist(&flist, sampgrep, &current_file,
 				file_list_reposition);
-
-	if (tmp) {
-		for (i = 0; i < flist.num_files; i++) {
-			if (flist.files && flist.files[i] && flist.files[i]->base
-			&& strcmp(tmp, flist.files[i]->base) == 0) {
-				current_file = i;
-				break;
-			}
-		}
-		(void)free(tmp);
-	}
+        dmoz_cache_lookup(cfg_dir_samples, &flist, 0);
+	file_list_reposition();
 }
 
 /* return: 1 = success, 0 = failure
@@ -152,14 +133,14 @@ static int change_dir(const char *dir)
 	if (!ptr)
 		return 0;
 
+        dmoz_cache_update(cfg_dir_samples, &flist, 0);
+
 	/* FIXME: need to make sure it exists, and that it's a directory */
 	strncpy(cfg_dir_samples, ptr, PATH_MAX);
 	cfg_dir_samples[PATH_MAX] = 0;
 	free(ptr);
 	
 	read_directory();
-	top_file = current_file = 0;
-	fake_slot = -1;
 	return 1;
 }
 
@@ -495,6 +476,7 @@ static void handle_enter_key(void)
 	if (current_file < 0 || current_file >= flist.num_files) return;
 
 	file = flist.files[current_file];
+        dmoz_cache_update(cfg_dir_samples, &flist, 0);
 
 	if (file->type & (TYPE_BROWSABLE_MASK|TYPE_INST_MASK)) {
 		change_dir(file->path);

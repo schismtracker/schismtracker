@@ -115,11 +115,15 @@ typedef struct dmoz_dir {
 typedef struct dmoz_filelist {
 	int num_files, alloc_size;
 	dmoz_file_t **files;
+
+	int selected; /* communication with cache */
 } dmoz_filelist_t;
 
 typedef struct dmoz_dirlist {
 	int num_dirs, alloc_size;
 	dmoz_dir_t **dirs;
+
+	int selected; /* communication with cache */
 } dmoz_dirlist_t;
 
 #ifdef __cplusplus
@@ -174,6 +178,12 @@ void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 /* this is called by main to actually do some dmoz work. returns 0 if there is no dmoz work to do...
 */
 int dmoz_worker(void);
+
+/* these update the file selection cache for the various pages */
+void dmoz_cache_update_names(const char *path, char *filen, char *dirn);
+void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
+void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
+
 
 /* this isn't really dmoz-related, but... oh well */
 int rename_file(const char *old, const char *newf);
