@@ -117,7 +117,10 @@ _any_dltrick(size_t,snd_seq_client_info_sizeof,(void),())
 
 _any_dltrick(int,snd_seq_control_queue,(snd_seq_t*s,int q,int type, int value, snd_seq_event_t *ev), (s,q,type,value,ev))
 
-
+_any_dltrick(int,snd_seq_queue_tempo_malloc,(snd_seq_queue_tempo_t**ptr),(ptr))
+_void_dltrick(snd_seq_queue_tempo_set_tempo,(snd_seq_queue_tempo_t *info, unsigned int tempo),(info,tempo))
+_void_dltrick(snd_seq_queue_tempo_set_ppq,(snd_seq_queue_tempo_t *info, int ppq),(info,ppq))
+_any_dltrick(int,snd_seq_set_queue_tempo,(snd_seq_t *handle, int q, snd_seq_queue_tempo_t *tempo),(handle,q,tempo))
 _any_dltrick(long,snd_midi_event_encode,
 (snd_midi_event_t *dev,const unsigned char *buf,long count,snd_seq_event_t *ev),
 (dev,buf,count,ev))
@@ -181,10 +184,6 @@ static void _alsa_send(struct midi_port *p, unsigned char *data, unsigned int le
 	int err;
 	long rr;
 
-
-/* ehh? */
-	snd_seq_start_queue(seq, alsa_queue, NULL);
-
 	ex = (struct alsa_midi *)p->userdata;
 
 	while (len > 0) {
@@ -212,9 +211,7 @@ static void _alsa_send(struct midi_port *p, unsigned char *data, unsigned int le
 		data += rr;
 		len -= rr;
 	}
-	
-	/* poof! */
-	snd_seq_flush_output(seq);
+	snd_seq_drain_output(seq);
 }
 static int _alsa_start(struct midi_port *p)
 {
@@ -422,6 +419,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 }
 int alsa_midi_setup(void)
 {
+	snd_seq_queue_tempo_t *tempo;
 	struct midi_driver driver;
 #ifdef USE_DLTRICK_ALSA
 	if (!dlsym(_dltrick_handle,"snd_seq_open")) return 0;
@@ -439,6 +437,12 @@ int alsa_midi_setup(void)
 	}
 
 	alsa_queue = snd_seq_alloc_queue(seq);
+	snd_seq_queue_tempo_malloc(&tempo);
+	snd_seq_queue_tempo_set_tempo(tempo,480000);
+	snd_seq_queue_tempo_set_ppq(tempo, 480);
+	snd_seq_set_queue_tempo(seq, alsa_queue, tempo);
+	snd_seq_start_queue(seq, alsa_queue, NULL);
+	snd_seq_drain_output(seq);
 
 	if (!midi_provider_register("ALSA", &driver)) return 0;
 	return 1;
