@@ -522,6 +522,16 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 	sample->speed = (unsigned long)((((double)newlen) * ((double)sample->speed))
 			/ ((double)sample->length));
 
+	/* scale loop points */
+	sample->loop_start = (unsigned long)((((double)newlen) * ((double)sample->loop_start))
+			/ ((double)sample->length));
+	sample->loop_end = (unsigned long)((((double)newlen) * ((double)sample->loop_end))
+			/ ((double)sample->length));
+	sample->sustain_start = (unsigned long)((((double)newlen) * ((double)sample->sustain_start))
+			/ ((double)sample->length));
+	sample->sustain_end = (unsigned long)((((double)newlen) * ((double)sample->sustain_end))
+			/ ((double)sample->length));
+
 	if (sample->flags & SAMP_STEREO) newlen *= 2;
 	oldlen = (sample->flags & SAMP_STEREO) ? sample->length * 2
 					: sample->length;
