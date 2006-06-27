@@ -240,6 +240,10 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 		if (effect) {
 			switch (effect) {
+			case CMD_VOLUME:
+				c->nVolume = (param < 64) ? param*4 : 256;
+				c->dwFlags |= CHN_FASTVOLRAMP;
+				break;
 			case CMD_PORTAMENTOUP:
 				mp->PortamentoUp(c, param);
 				break;
@@ -289,6 +293,14 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				c->nCommand = CMD_TREMOR;
 				if (param) c->nTremorParam = param;
 				break;
+			case CMD_GLOBALVOLUME:
+				if (mp->m_nType != MOD_TYPE_IT) param <<= 1;
+				if (param > 128) param = 128;
+				mp->m_nGlobalVolume = param << 1;
+				break;
+			case CMD_GLOBALVOLSLIDE:
+				mp->GlobalVolSlide(param);
+				break;
 			case CMD_PANNING8:
 				c->dwFlags &= ~CHN_SURROUND;
 				c->nPan = param;
@@ -303,12 +315,52 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			case CMD_FINEVIBRATO:
 				mp->FineVibrato(c, param);
 				break;
+			case CMD_MODCMDEX:
+				mp->ExtendedMODCommands(chan, param);
+				break;
+			case CMD_S3MCMDEX:
+				mp->ExtendedS3MCommands(chan, param);
+				break;
+			case CMD_KEYOFF:
+				mp->KeyOff(chan);
+				break;
+			case CMD_XFINEPORTAUPDOWN:
+				switch(param & 0xF0) {
+				case 0x10: mp->ExtraFinePortamentoUp(c, param & 0x0F); break;
+				case 0x20: mp->ExtraFinePortamentoDown(c, param & 0x0F); break;
+				// Modplug XM Extensions
+				case 0x50:
+				case 0x60:
+				case 0x70:
+				case 0x90:
+				case 0xA0: mp->ExtendedS3MCommands(chan, param); break;
+				};
+				break;
+			case CMD_CHANNELVOLUME:
+				if (param <= 64) {
+					c->nGlobalVol = param;
+					c->dwFlags |= CHN_FASTVOLRAMP;
+				}
+				break;
 			case CMD_CHANNELVOLSLIDE:
 				mp->ChannelVolSlide(c, param);
 				break;
 			case CMD_PANBRELLO:
 				mp->Panbrello(c, param);
 				break;
+			case CMD_SETENVPOSITION:
+                                c->nVolEnvPosition = param;
+                                c->nPanEnvPosition = param;
+                                c->nPitchEnvPosition = param;
+                                if ((mp->m_dwSongFlags & SONG_INSTRUMENTMODE) && c->pHeader) {
+                                        INSTRUMENTHEADER *penv = c->pHeader;
+                                        if ((c->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes)
+					&& (param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1])) {
+						c->dwFlags &= ~CHN_PANENV;
+					}
+				}
+				break;
+
 			case CMD_MIDI:
 				if (param < 0x80) {
 					mp->ProcessMidiMacro(chan,
