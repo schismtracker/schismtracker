@@ -264,7 +264,7 @@ static void sample_list_predraw_hook(void)
 		break;
 	}
 
-	widgets_samplelist[19].d.thumbbar.value = ((sample->vib_rate < 64) ? sample->vib_rate * 4 : 255);
+	widgets_samplelist[19].d.thumbbar.value = sample->vib_rate;
 
 	if (sample->flags & SAMP_STEREO) {
 		draw_text_len((unsigned char *) (has_data ? (sample->flags & SAMP_16_BIT ? "16 bits Stereo" : "8 bits Stereo") : "No sample"),
@@ -1312,7 +1312,7 @@ static void update_values_in_song(void)
 		sample->vib_type = VIB_SQUARE;
 	else
 		sample->vib_type = VIB_RANDOM;
-	sample->vib_rate = (widgets_samplelist[19].d.thumbbar.value + 3) / 4;
+	sample->vib_rate = widgets_samplelist[19].d.thumbbar.value;
 }
 
 static void update_sample_speed(void)
@@ -1387,5 +1387,5 @@ void sample_list_load_page(struct page *page)
 	create_togglebutton(widgets_samplelist + 18, 67, 39, 6, 16, 19, 17,
 			    0, 0, update_values_in_song, "Random", 1, vibrato_waveforms);
 	/* 19 = vibrato rate */
-	create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
+	create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 64);
 }
