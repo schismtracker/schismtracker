@@ -468,7 +468,11 @@ int menu_handle_key(struct key_event * k)
                 menu->selected_item = menu->num_items - 1;
                 break;
         case SDLK_RETURN:
-		if (!k->state) return 1;
+		if (!k->state) {
+			menu->active_item = menu->selected_item;
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
                 menu->selected_cb();
                 return 1;
         default:
