@@ -510,6 +510,8 @@ void draw_widget(struct widget *w, int selected)
 void change_focus_to(int new_widget_index)
 {
 	if (*selected_widget != new_widget_index) {
+		if (ACTIVE_WIDGET.depressed) return; /* fail */
+
 	        *selected_widget = new_widget_index;
 
 		if (ACTIVE_WIDGET.type == WIDGET_TEXTENTRY)
