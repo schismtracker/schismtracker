@@ -594,7 +594,7 @@ BOOL CSoundFile::ReadMT2(LPCBYTE lpStream, DWORD dwMemLength)
 							Ins[nSmp].nVibType = pmi->bVibType;
 							Ins[nSmp].nVibSweep = pmi->bVibSweep;
 							Ins[nSmp].nVibDepth = pmi->bVibDepth;
-							Ins[nSmp].nVibRate = pmi->bVibRate;
+							Ins[nSmp].nVibRate = pmi->bVibRate/4;
 						}
 					}
 				}

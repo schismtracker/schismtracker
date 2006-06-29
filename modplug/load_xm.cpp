@@ -493,7 +493,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 			pins->nVibType = xmsh.vibtype;
 			pins->nVibSweep = xmsh.vibsweep;
 			pins->nVibDepth = xmsh.vibdepth;
-			pins->nVibRate = xmsh.vibrate;
+			pins->nVibRate = xmsh.vibrate/4;
 			memcpy(pins->name, xmss.name, 22);
 			pins->name[21] = 0;
 		}
