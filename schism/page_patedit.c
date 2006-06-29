@@ -284,15 +284,6 @@ static void options_draw_const(void)
 	draw_box(39, 34, 62, 36, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static int options_handle_key(struct key_event *k)
-{
-	if (NO_MODIFIER(k->mod) && k->sym == SDLK_F2) {
-		if (!k->state) dialog_cancel(NULL);
-		return 1;
-	}
-	return 0;
-}
-
 static void options_change_base_octave(void)
 {
 	kbd_set_current_octave(options_widgets[0].d.thumbbar.value);
@@ -326,7 +317,6 @@ void pattern_editor_display_options(void)
 				      options_draw_const, NULL);
 	dialog->action_yes = options_close;
 	dialog->action_cancel = options_close;
-	dialog->handle_key = options_handle_key;
 }
 /* --------------------------------------------------------------------------------------------------------- */
 /* pattern length dialog */
