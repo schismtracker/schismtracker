@@ -322,6 +322,7 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 		if (penv->NoteMap[note-1] >= 0xFE) return;
 		UINT n = penv->Keyboard[note-1];
 		psmp = ((n) && (n < MAX_SAMPLES)) ? &Ins[n] : NULL;
+		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	} else
 	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 	{
@@ -451,6 +452,7 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 		UINT n = penv->Keyboard[note - 1];
 		if ((n) && (n < MAX_SAMPLES)) pins = &Ins[n];
 		note = penv->NoteMap[note-1];
+		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	}
 	// Key Off
 	if (note >= 0x80)	// 0xFE or invalid note => key off
