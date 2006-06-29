@@ -618,10 +618,12 @@ static int handle_key_global(struct key_event * k)
 		} else if (NO_MODIFIER(k->mod)) {
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
 				if (!k->state) {
-					if (status.dialog_type != DIALOG_NONE)
+					if (status.dialog_type != DIALOG_NONE) {
 						dialog_destroy_all();
-					else
+						status.flags |= NEED_UPDATE;
+					} else {
 						pattern_editor_display_options();
+					}
 				}
 			} else {
 				if (status.dialog_type != DIALOG_NONE)
@@ -967,7 +969,7 @@ void handle_key(struct key_event * k)
 		alt_numpad = alt_numpad_c = 0;
 		digraph_n = digraph_c = 0;
 	}
-	
+
 	/* okay... */
 	if (!(status.flags & DISKWRITER_ACTIVE) && ACTIVE_PAGE.pre_handle_key) {
 		if (ACTIVE_PAGE.pre_handle_key(k)) return;
@@ -1387,58 +1389,48 @@ void set_page(int new_page)
 
 	video_mode(0); /* reset video mode */
 
-        if (new_page != prev_page)
-                status.previous_page = prev_page;
-        status.current_page = new_page;
+	if (new_page != prev_page)
+		status.previous_page = prev_page;
+	status.current_page = new_page;
+
+	if (new_page != PAGE_HELP)
+		status.current_help_index = ACTIVE_PAGE.help_index;
 	
-        if (new_page != PAGE_HELP)
-                status.current_help_index = ACTIVE_PAGE.help_index;
-	
-        /* synchronize the sample/instrument.
-         * FIXME | this isn't quite right. for instance, in impulse
-         * FIXME | tracker, flipping back and forth between the sample
-         * FIXME | list and instrument list will keep changing the
-         * FIXME | current sample/instrument. */
-        if (status.flags & SAMPLE_CHANGED) {
-                if (song_is_instrument_mode())
-                        instrument_synchronize_to_sample();
-                else
+	/* synchronize the sample/instrument.
+	 * FIXME | this isn't quite right. for instance, in impulse
+	 * FIXME | tracker, flipping back and forth between the sample
+	 * FIXME | list and instrument list will keep changing the
+	 * FIXME | current sample/instrument. */
+	if (status.flags & SAMPLE_CHANGED) {
+		if (song_is_instrument_mode())
+			instrument_synchronize_to_sample();
+		else
 			instrument_set(sample_get_current());
-        } else if (status.flags & INSTRUMENT_CHANGED) {
-                sample_set(instrument_get_current());
-        }
-        status.flags &= ~(SAMPLE_CHANGED | INSTRUMENT_CHANGED);
+	} else if (status.flags & INSTRUMENT_CHANGED) {
+		sample_set(instrument_get_current());
+	}
+	status.flags &= ~(SAMPLE_CHANGED | INSTRUMENT_CHANGED);
 
-        /* bit of ugliness to keep the sample/instrument numbers sane */
-        if (page_is_instrument_list(new_page)
-            && instrument_get_current() < 1)
-                instrument_set(1);
-        else if (new_page == PAGE_SAMPLE_LIST && sample_get_current() < 1)
-                sample_set(1);
+	/* bit of ugliness to keep the sample/instrument numbers sane */
+	if (page_is_instrument_list(new_page) && instrument_get_current() < 1)
+		instrument_set(1);
+	else if (new_page == PAGE_SAMPLE_LIST && sample_get_current() < 1)
+		sample_set(1);
 
-	if (ACTIVE_PAGE.set_page) ACTIVE_PAGE.set_page();
-
-        if (status.dialog_type & DIALOG_MENU) {
-                menu_hide();
-        } else {
-#ifndef NDEBUG
-                if (status.dialog_type != DIALOG_NONE) {
-                        fprintf(stderr,
-                                "set_page invoked with a dialog active:"
-                                " how did this happen?\n");
-                        return;
-                }
-#endif
-		if (new_page == prev_page)
-			return;
-        }
+	if (status.dialog_type & DIALOG_MENU) {
+		menu_hide();
+	} else if (status.dialog_type != DIALOG_NONE) {
+		return;
+	}
 
         /* update the pointers */
         widgets = ACTIVE_PAGE.widgets;
         selected_widget = &(ACTIVE_PAGE.selected_widget);
         total_widgets = &(ACTIVE_PAGE.total_widgets);
 
+	if (ACTIVE_PAGE.set_page) ACTIVE_PAGE.set_page();
         status.flags |= NEED_UPDATE;
+
 }
 
 /* --------------------------------------------------------------------- */

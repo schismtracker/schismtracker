@@ -179,9 +179,11 @@ int widget_handle_key(struct key_event * k)
 	struct widget *widget = &ACTIVE_WIDGET;
 	int n, onw, wx, fmin, fmax, pad;
 	enum widget_type current_type = widget->type;
+	void (*changed)(void);
 
 	if (!(status.flags & DISKWRITER_ACTIVE) 
-			&& current_type == WIDGET_OTHER && widget->d.other.handle_key(k))
+			&& current_type == WIDGET_OTHER
+			&& widget->d.other.handle_key(k))
 		return 1;
 
 	if (!(status.flags & DISKWRITER_ACTIVE) && k->mouse && (status.flags & CLASSIC_MODE)) {
@@ -261,7 +263,9 @@ int widget_handle_key(struct key_event * k)
 			} else if (!onw) return 1;
 		} else {
 			n = (!k->state) ? 1 : 0;
-			if (widget->depressed != n) status.flags |= NEED_UPDATE;
+			if (widget->depressed != n)
+				status.flags |= NEED_UPDATE;
+			else if (k->state) return 1; // swallor
 			widget->depressed = n;
 			if (!k->state) return 1;
 		}
@@ -366,8 +370,9 @@ int widget_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.panbar.muted = !widget->d.panbar.muted;
-			if (widget->changed) widget->changed();
+			changed = widget->changed;
 			change_focus_to(widget->next.down);
+			if (changed) changed();
 			return 1;
 		default:
 			break;
@@ -585,8 +590,9 @@ int widget_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.panbar.muted = !widget->d.panbar.muted;
-			if (widget->changed) widget->changed();
+			changed = widget->changed;
 			change_focus_to(widget->next.down);
+			if (changed) changed();
 			return 1;
 		default:
 			break;
