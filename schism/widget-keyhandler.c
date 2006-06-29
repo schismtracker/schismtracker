@@ -391,18 +391,21 @@ int widget_handle_key(struct key_event * k)
 		return 0;
 	case SDLK_UP:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (widget->depressed) return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		change_focus_to(widget->next.up);
 		return 1;
 	case SDLK_DOWN:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (widget->depressed) return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		change_focus_to(widget->next.down);
 		return 1;
 	case SDLK_TAB:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (widget->depressed) return 0;
 		if (k->mod & KMOD_SHIFT) {
 			_backtab();
 			return 1;
@@ -413,6 +416,7 @@ int widget_handle_key(struct key_event * k)
 		return 1;
 	case SDLK_LEFT:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (widget->depressed) return 0;
 		switch (current_type) {
 		case WIDGET_NUMENTRY:
 			if (!NO_MODIFIER(k->mod))
@@ -461,6 +465,7 @@ int widget_handle_key(struct key_event * k)
 		break;
 	case SDLK_RIGHT:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (widget->depressed) return 0;
 		/* pretty much the same as left, but with a few small
 		 * changes here and there... */
 		switch (current_type) {
