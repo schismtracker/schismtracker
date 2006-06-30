@@ -932,8 +932,14 @@ void song_update_playing_sample(int s_changed)
 				channel->nLoopStart = inst->nLoopStart;
 				channel->nLoopEnd = inst->nLoopEnd;
 			}
-			if (channel->nLength > channel->nLoopEnd) {
-				channel->nLength = channel->nLoopEnd;
+			if (inst->uFlags & (CHN_PINGPONGSUSTAIN|CHN_SUSTAINLOOP|CHN_PINGPONGFLAG|CHN_PINGPONGLOOP|CHN_LOOP)) {
+				if (channel->nLength != channel->nLoopEnd) {
+					channel->nLength = channel->nLoopEnd;
+				}
+			}
+			if (channel->nLength > inst->nLength) {
+				channel->pCurrentSample = inst->pSample;
+				channel->nLength = inst->nLength;
 			}
 
 			channel->dwFlags &= ~(CHN_PINGPONGSUSTAIN
