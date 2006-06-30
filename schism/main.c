@@ -467,6 +467,9 @@ static void event_loop(void)
 	SDLKey last_key;
 	int modkey;
 	time_t startdown;
+#ifdef USE_X11
+	time_t last_ss;
+#endif
 	int downtrip;
 	time_t now;
 	int sawrep;
@@ -491,6 +494,9 @@ static void event_loop(void)
 #endif
 	SDL_SetModState(modkey);
 
+#ifdef USE_X11
+	time(&last_ss);
+#endif
 	while (SDL_WaitEvent(&event)) {
 
 		time(&now);
@@ -770,7 +776,10 @@ static void event_loop(void)
 			switch (song_get_mode()) {
 			case MODE_PLAYING:
 			case MODE_PATTERN_LOOP:
-				xscreensaver_deactivate();
+				if ((now-last_ss) > 14) {
+					last_ss=now;
+					xscreensaver_deactivate();
+				}
 				break;
 			};
 #endif
