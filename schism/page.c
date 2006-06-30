@@ -597,6 +597,8 @@ static int handle_key_global(struct key_event * k)
                 }
                 break;
         case SDLK_F1:
+		if (status.dialog_type != DIALOG_NONE)
+			return 0;
                 if (k->mod & KMOD_CTRL) {
 			if (!k->state) set_page(PAGE_CONFIG);
                 } else if (k->mod & KMOD_SHIFT) {
@@ -664,11 +666,13 @@ static int handle_key_global(struct key_event * k)
                         if (k->state) set_page(PAGE_PREFERENCES);
                 } else if (NO_MODIFIER(k->mod)) {
                         if (song_get_mode() == MODE_STOPPED
-			    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
-                                if (!k->state) song_start();
-			if (status.dialog_type != DIALOG_NONE)
-				return 0;
-                        if (!k->state) set_page(PAGE_INFO);
+			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
+				if (!k->state) song_start();
+                        if (!k->state) {
+				if (status.dialog_type != DIALOG_NONE)
+					return 0;
+				set_page(PAGE_INFO);
+			}
                 } else {
                         break;
                 }
