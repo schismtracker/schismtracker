@@ -1,6 +1,8 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+ * copyright (c) 2005-2006 Mrs. Brisby <mrs.brisby@nimh.org>
+ * URL: http://nimh.org/schism/
  * URL: http://rigelseven.com/schism/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1076,9 +1078,9 @@ void handle_key(struct key_event * k)
 /* Jeffrey, dude, you made this HARD TO DO :) */
 
 #ifdef RELEASE_VERSION
-#define TOP_BANNER_NORMAL "Schism Tracker v" VERSION " Copyright (C) 2003-2005 chisel"
+#define TOP_BANNER_NORMAL "Schism Tracker v" VERSION ""
 #else
-#define TOP_BANNER_NORMAL "Schism Tracker CVS Copyright (C) 2003-2005 chisel"
+#define TOP_BANNER_NORMAL "Schism Tracker CVS"
 #endif
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
 

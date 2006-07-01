@@ -1,6 +1,8 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+ * copyright (c) 2005-2006 Mrs. Brisby <mrs.brisby@nimh.org>
+ * URL: http://nimh.org/schism/
  * URL: http://rigelseven.com/schism/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -109,7 +111,7 @@ static void about_draw_const(void)
 			draw_text((unsigned char *) "Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
 		}
 	} else {
-		draw_text((unsigned char *) "Schism Tracker is Copyright (C) 2003-2005",
+		draw_text((unsigned char *) "Schism Tracker is Copyright (C) 2003-2006",
 					21,25, 1, 2);
 		draw_text((unsigned char *) "Written by Storlek, and Mrs. Brisby, and contains code",
 					12,27, 1, 2);
