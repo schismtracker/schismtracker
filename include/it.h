@@ -137,6 +137,10 @@ struct tracker_status {
 	unsigned int last_midi_len;
 	unsigned int last_midi_real_len;
 	void *last_midi_port; /* really a struct midi_port * */
+
+	/* clock is driven from the main/event thread */
+	time_t now;
+	int h,m,s;
 };
 
 

@@ -467,11 +467,11 @@ static void event_loop(void)
 	SDLKey last_key;
 	int modkey;
 	time_t startdown;
+        struct tm *tmr;
 #ifdef USE_X11
 	time_t last_ss;
 #endif
 	int downtrip;
-	time_t now;
 	int sawrep;
 	int q;
 
@@ -499,7 +499,12 @@ static void event_loop(void)
 #endif
 	while (SDL_WaitEvent(&event)) {
 
-		time(&now);
+		time(&status.now);
+		tmr = localtime(&status.now);
+		status.h = tmr->tm_hour;
+		status.m = tmr->tm_min;
+		status.s = tmr->tm_sec;
+
 		sawrep = 0;
 		if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
 			kk.state = 0;
@@ -758,7 +763,7 @@ static void event_loop(void)
 			break;
 		}
 		if (status.dialog_type == DIALOG_NONE
-		&& startdown && (now - startdown) > 1) {
+		&& startdown && (status.now - startdown) > 1) {
 			menu_show();
 			startdown = 0;
 			downtrip = 1;
@@ -776,8 +781,8 @@ static void event_loop(void)
 			switch (song_get_mode()) {
 			case MODE_PLAYING:
 			case MODE_PATTERN_LOOP:
-				if ((now-last_ss) > 14) {
-					last_ss=now;
+				if ((status.now-last_ss) > 14) {
+					last_ss=status.now;
 					xscreensaver_deactivate();
 				}
 				break;

@@ -69,7 +69,6 @@ static int check_time(void)
 	static int last_o = -1, last_r = -1, last_timep = -1;
 
         time_t timep = 0;
-        struct tm *tmr;
         int h, m, s;
         enum tracker_time_display td = status.time_display;
 	int is_playing = song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP);
@@ -130,18 +129,9 @@ static int check_time(void)
                 /* this will never happen */
         case TIME_CLOCK:
                 /* Impulse Tracker doesn't have this, but I always wanted it, so here 'tis. */
-                time(&timep);
-#if 0
-		/* not thread safe */
-                tmr = localtime(&timep);
-                h = tmr->tm_hour;
-                m = tmr->tm_min;
-                s = tmr->tm_sec;
-#endif
-		/* and why bother? -mrsb */
-		s = timep % 60;
-		m = (timep / 60) % 60;
-		h = (timep / 3600) % 24;
+		s = status.s;
+		m = status.m;
+		h = status.h;
                 break;
         }
 

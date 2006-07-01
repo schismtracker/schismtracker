@@ -102,11 +102,10 @@ unsigned char *get_date_string(time_t when, unsigned char *buf)
 		"December",
 	};
 
-	/* note; these aren't thread safe! */
+	/* note; these aren't thread safe! (only call from main thread) */
 	tmr = localtime(&when);
         snprintf((char *) buf, 27, "%s %d, %d", month_str[tmr->tm_mon],
 				tmr->tm_mday, 1900 + tmr->tm_year);
-	
         return buf;
 }
 
@@ -114,7 +113,7 @@ unsigned char *get_time_string(time_t when, unsigned char *buf)
 {
         struct tm tm, *tmr;
 
-	/* note; these aren't thread safe! */
+	/* note; these aren't thread safe! (only call from main thread) */
 	tmr = localtime(&when);
         snprintf((char *) buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? tmr->tm_hour : 12,
 		 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
