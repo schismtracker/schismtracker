@@ -37,8 +37,8 @@
 :   Ctrl-G            Go to order/pattern/row given time
 :
 : On text widgets.
-:   Alt-C             Copy to clipboard (also Ctrl-Insert)
-:   Alt-V             Paste from clipboard (also Shift-Insert)
+:   Ctrl-C            Copy to clipboard (also Ctrl-Insert)
+:   Ctrl-V            Paste from clipboard (also Shift-Insert)
 :
 :   Ctrl, Ctrl        Digraph entry:
 ;      C,   -> €

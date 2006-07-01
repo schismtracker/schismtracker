@@ -513,7 +513,7 @@ static int handle_key_global(struct key_event * k)
                 break;
 	case SDLK_c:
 		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
-			if (!(k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && (k->mod & KMOD_ALT)) {
+			if ((k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
 				if (k->state) clippy_yank();
 				return 1;
 			}
@@ -522,7 +522,7 @@ static int handle_key_global(struct key_event * k)
 	case SDLK_v:
 	case SDLK_p:
 		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
-			if (!(k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && (k->mod & KMOD_ALT)) {
+			if ((k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
 				if (!k->state) return 1;
 				status.flags |= CLIPPY_PASTE_BUFFER;
 				return 1;
