@@ -492,14 +492,16 @@ static int handle_key_global(struct key_event * k)
          * a dialog's open) */
         switch (k->sym) {
 	case SDLK_INSERT:
-		if (k->mod & KMOD_SHIFT) {
-			if (!k->state) return 1;
-			status.flags |= CLIPPY_PASTE_BUFFER;
-			return 1;
-		} else if (k->mod & KMOD_CTRL) {
-			if (!k->state) return 1;
-			clippy_yank();
-			return 1;
+		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
+			if (k->mod & KMOD_SHIFT) {
+				if (!k->state) return 1;
+				status.flags |= CLIPPY_PASTE_BUFFER;
+				return 1;
+			} else if (k->mod & KMOD_CTRL) {
+				if (!k->state) return 1;
+				clippy_yank();
+				return 1;
+			}
 		}
 		break;
         case SDLK_RETURN:
@@ -510,17 +512,21 @@ static int handle_key_global(struct key_event * k)
                 }
                 break;
 	case SDLK_c:
-		if ((k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
-			if (!k->state) return 1;
-			clippy_yank();
-			return 1;
+		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
+			if (!(k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && (k->mod & KMOD_ALT)) {
+				if (k->state) clippy_yank();
+				return 1;
+			}
 		}
 		break;
 	case SDLK_v:
-		if ((k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
-			if (!k->state) return 1;
-			status.flags |= CLIPPY_PASTE_BUFFER;
-			return 1;
+	case SDLK_p:
+		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
+			if (!(k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && (k->mod & KMOD_ALT)) {
+				if (!k->state) return 1;
+				status.flags |= CLIPPY_PASTE_BUFFER;
+				return 1;
+			}
 		}
 		break;
         case SDLK_m:
