@@ -1,6 +1,8 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+ * copyright (c) 2005-2006 Mrs. Brisby <mrs.brisby@nimh.org>
+ * URL: http://nimh.org/schism/
  * URL: http://rigelseven.com/schism/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -374,11 +376,13 @@ static void parse_options(int argc, char **argv)
 #endif
 		case O_VERSION:
 #ifndef RELEASE_VERSION
-			printf("Schism Tracker CVS - Copyright (C) 2003-2005 chisel\n\n");
-			printf("This is a CVS build of Schism Tracker. This should be a warning.\n\n");
+			puts("Schism Tracker CVS");
+			puts("This is a CVS build of Schism Tracker. This should be a warning.\n");
 #else
-			printf("Schism Tracker v" VERSION " - Copyright (C) 2003-2005 chisel\n\n");
+			puts("Schism Tracker v" VERSION "\n");
 #endif
+			puts("Copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>");
+			puts("Copyright (c) 2005-2006 Mrs. Brisby <mrs.brisby@nimh.org>");
 			printf("This program is free software; you can redistribute it and/or modify\n");
 			printf("it under the terms of the GNU General Public License as published by\n");
 			printf("the Free Software Foundation; either version 2 of the License, or\n");

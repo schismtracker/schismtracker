@@ -1,6 +1,8 @@
 /*
  * ITFedit - an Impulse / Schism Tracker font file editor
  * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
+ * copyright (c) 2005-2006 Mrs. Brisby <mrs.brisby@nimh.org>
+ * URL: http://nimh.org/schism/
  * URL: http://rigelseven.com/schism/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -404,7 +406,9 @@ static inline void draw_helptext(void)
 			draw_char(*ptr, column, line, 12, 0);
 		ptr++;
 	}
-	draw_text((unsigned char *) "(c) 2003-2005 chisel", 57, 46, 1, 0);
+#define M "(c) 2003-2005 chisel, (c) 2005-2006 Mrs. Brisby"
+	draw_text((unsigned char *) M, 78-sizeof(M), 46, 1, 0);
+#undef M
 }
 
 static inline void draw_time(void)
