@@ -410,12 +410,7 @@ static inline void draw_helptext(void)
 static inline void draw_time(void)
 {
 	char buf[16];
-	time_t timep = 0;
-	struct tm local;
-
-	time(&timep);
-	localtime_r(&timep, &local);
-	sprintf(buf, "%.2d:%.2d:%.2d", local.tm_hour, local.tm_min, local.tm_sec);
+	sprintf(buf, "%.2d:%.2d:%.2d", status.h, status.m, status.s);
 	draw_text((unsigned char *) buf, 3, 46, 1, 0);
 }
 
