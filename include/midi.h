@@ -42,6 +42,7 @@ struct midi_driver {
 
 	void (*send)(struct midi_port *d,
 			unsigned char *seq, unsigned int len, unsigned int delay);
+	void (*drain)(struct midi_port *d);
 };
 
 struct midi_provider {
@@ -59,7 +60,7 @@ struct midi_provider {
 			unsigned char *seq, unsigned int len, unsigned int delay);
 	void (*send_later)(struct midi_port *d,
 			unsigned char *seq, unsigned int len, unsigned int delay);
-
+	void (*drain)(struct midi_port *d);
 };
 struct midi_port {
 	int io, iocap;
@@ -76,6 +77,7 @@ struct midi_port {
 			unsigned char *seq, unsigned int len, unsigned int delay);
 	void (*send_later)(struct midi_port *d,
 			unsigned char *seq, unsigned int len, unsigned int delay);
+	void (*drain)(struct midi_port *d);
 
 	struct midi_provider *provider;
 };

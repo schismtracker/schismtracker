@@ -346,8 +346,10 @@ struct midi_provider *midi_provider_register(const char *name,
 	if (driver->flags & MIDI_PORT_CAN_SCHEDULE) {
 		n->send_later = driver->send;
 		n->send_now = NULL;
+		n->drain = driver->drain;
 	} else {
 		n->send_later = NULL;
+		n->drain = NULL;
 		n->send_now = driver->send;
 	}
 
@@ -383,6 +385,7 @@ void *userdata, int free_userdata)
 	p->disable = pv->disable;
 	p->send_later = pv->send_later;
 	p->send_now = pv->send_now;
+	p->drain = pv->drain;
 
 	p->free_userdata = free_userdata;
 	p->userdata = userdata;
@@ -438,10 +441,11 @@ NEXT:	if (!*cursor) {
 	return 1;
 }
 
-static void _midi_send_unlocked(unsigned char *data, unsigned int len, unsigned int delay,
+static int _midi_send_unlocked(unsigned char *data, unsigned int len, unsigned int delay,
 			int from)
 {
 	struct midi_port *ptr;
+	int need_timer = 0;
 #if 0
 	unsigned int i;
 printf("MIDI: ");
@@ -474,9 +478,11 @@ fflush(stdout);
 		while (midi_port_foreach(NULL, &ptr)) {
 			if ((ptr->io & MIDI_OUTPUT)) {
 				if (ptr->send_later) ptr->send_later(ptr, data, len, delay);
+				else if (ptr->send_now) need_timer = 1;
 			}
 		}
 	}
+	return need_timer;
 }
 void midi_send_now(unsigned char *seq, unsigned int len)
 {
@@ -544,13 +550,29 @@ NEXTPACKET:
 void midi_send_flush(void)
 {
 	struct midi_pl *x, *y;
+	struct midi_port *ptr;
 	unsigned int acc;
+	int need_explicit_flush = 0;
 
 	if (!midi_record_mutex || !midi_play_mutex) return;
 
+	ptr = 0;
+	while (midi_port_foreach(NULL, &ptr)) {
+		if ((ptr->io & MIDI_OUTPUT)) {
+			if (ptr->drain) ptr->drain(ptr);
+			else if (ptr->send_now) need_explicit_flush=1;
+		}
+	}
+
+	/* no need for midi sync huzzah; driver does it for us... */
+	if (!need_explicit_flush) return;
+
 	while (!midi_sync_thread && top) {
 		midi_sync_thread = SDL_CreateThread(__out_detatched, top);
-		if (midi_sync_thread) break;
+		if (midi_sync_thread) {
+			log_appendf(3, "Started MIDI sync thread");
+			break;
+		}
 		log_appendf(2, "AAACK: Couldn't start off MIDI, sending ahead");
 
 		SDL_mutexP(midi_record_mutex);
@@ -627,9 +649,6 @@ void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 
 	SDL_mutexP(midi_record_mutex);
 
-	/* pos is still in miliseconds */
-	_midi_send_unlocked(data, len, pos, 2);
-
 	/* just for fun... */
 	if (status.current_page == PAGE_MIDI) {
 		status.last_midi_real_len = len;
@@ -643,6 +662,12 @@ void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 		status.last_midi_port = 0;
 		time(&status.last_midi_time);
 		status.flags |= NEED_UPDATE;
+	}
+
+	/* pos is still in miliseconds */
+	if (!_midi_send_unlocked(data, len, pos, 2)) {
+		/* rock, we don't need a timer... */
+		goto TAIL;
 	}
 
 
