@@ -176,11 +176,16 @@ _any_dltrick(int,snd_seq_open,(snd_seq_t**h,const char *name,int str, int mode),
 _any_dltrick(int,snd_seq_set_client_name,(snd_seq_t*seq,const char *name),(seq,name))
 #endif
 
+static void _alsa_drain(struct midi_port *p)
+{
+	struct alsa_midi *ex;
+	/* not port specific */
+	snd_seq_drain_output(seq);
+}
 static void _alsa_send(struct midi_port *p, unsigned char *data, unsigned int len, unsigned int delay)
 {
 	struct alsa_midi *ex;
 	snd_seq_event_t ev;
-	snd_seq_real_time_t rt;
 	int err;
 	long rr;
 
@@ -193,11 +198,7 @@ static void _alsa_send(struct midi_port *p, unsigned char *data, unsigned int le
 		if (!delay) {
 			snd_seq_ev_set_direct(&ev);
 		} else {
-			rt.tv_sec = 0;
-			/* msec to nsec */
-			rt.tv_nsec = 1000000*delay;
-			snd_seq_ev_schedule_real(&ev,
-						alsa_queue, 1, &rt);
+			snd_seq_ev_schedule_tick(&ev, alsa_queue, 1, delay);
 		}
 
 		/* we handle our own */
@@ -211,7 +212,6 @@ static void _alsa_send(struct midi_port *p, unsigned char *data, unsigned int le
 		data += rr;
 		len -= rr;
 	}
-	snd_seq_drain_output(seq);
 }
 static int _alsa_start(struct midi_port *p)
 {
@@ -415,7 +415,6 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 		if (data->mark) continue;
 		midi_port_unregister(ptr->num);
 	}
-
 }
 int alsa_midi_setup(void)
 {
@@ -430,6 +429,7 @@ int alsa_midi_setup(void)
 	driver.disable = _alsa_stop;
 	driver.send = _alsa_send;
 	driver.flags = MIDI_PORT_CAN_SCHEDULE;
+	driver.drain = _alsa_drain;
 
 	if (snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, 0) < 0
 	|| snd_seq_set_client_name(seq, "Schism Tracker") < 0) {
