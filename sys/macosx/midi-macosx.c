@@ -76,8 +76,16 @@ static void _macosx_send(struct midi_port *p, unsigned char *data,
 			m->x, (MIDITimeStamp)AudioConvertNanosToHostTime(
 			AudioConvertHostTimeToNanos(AudioGetCurrentHostTime()) + (1000000*delay)), /* msec to nsec? */
 			len, data);
-	MIDISend(portOut, m->ep, m->pl);
-	m->x = NULL;
+}
+static void _macosx_drain(struct midi_port *p)
+{
+	struct macosx_midi *m;
+
+	m = (struct macosx_midi *)p->userdata;
+	if (m->x) {
+		MIDISend(portOut, m->ep, m->pl);
+		m->x = NULL;
+	}
 }
 
 /* lifted from portmidi */
@@ -191,6 +199,7 @@ int macosx_midi_setup(void)
 	driver.enable = _macosx_start;
 	driver.disable = _macosx_stop;
 	driver.send = _macosx_send;
+	driver.drain = _macosx_drain;
 
 	if (MIDIClientCreate(CFSTR("Schism Tracker"), NULL, NULL, &client) != noErr) {
 		return;
