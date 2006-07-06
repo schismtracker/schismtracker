@@ -710,7 +710,8 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 {
 	int ret;
 
-	if (file->type & TYPE_EXT_DATA_MASK) {
+	if ((file->type & TYPE_EXT_DATA_MASK)
+	|| (file->type == TYPE_DIRECTORY)) {
 		/* nothing to do */
 		return 1;
 	}
