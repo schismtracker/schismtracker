@@ -24,9 +24,6 @@ extern char *initial_song;
 #import <sys/param.h> /* for MAXPATHLEN */
 #import <unistd.h>
 
-/* Use this flag to determine whether we use CPS (docking) or not */
-#define		SDL_USE_CPS		1
-#ifdef SDL_USE_CPS
 /* Portions of CPS.h */
 typedef struct CPSProcessSerNum
 {
@@ -37,8 +34,6 @@ typedef struct CPSProcessSerNum
 extern OSErr	CPSGetCurrentProcess( CPSProcessSerNum *psn);
 extern OSErr 	CPSEnableForegroundOperation( CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
 extern OSErr	CPSSetFrontProcess( CPSProcessSerNum *psn);
-
-#endif /* SDL_USE_CPS */
 
 static int    gArgc;
 static char  **gArgv;
@@ -369,20 +364,17 @@ static void CustomApplicationMain (argc, argv)
 {
 	NSAutoreleasePool	*pool = [[NSAutoreleasePool alloc] init];
 	SDLMain				*sdlMain;
+	CPSProcessSerNum PSN;
 
 	/* Ensure the application object is initialised */
 	[SDLApplication sharedApplication];
 	
-#ifdef SDL_USE_CPS
-	{
-		CPSProcessSerNum PSN;
-		/* Tell the dock about us */
-		if (!CPSGetCurrentProcess(&PSN))
-			if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
-				if (!CPSSetFrontProcess(&PSN))
-					[SDLApplication sharedApplication];
+	/* Tell the dock about us */
+	if (!CPSGetCurrentProcess(&PSN)) {
+		if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
+			if (!CPSSetFrontProcess(&PSN))
+				[SDLApplication sharedApplication];
 	}
-#endif /* SDL_USE_CPS */
 
 	/* Set up the menubar */
 	[NSApp setMainMenu:[[NSMenu alloc] init]];
