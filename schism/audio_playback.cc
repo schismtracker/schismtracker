@@ -185,18 +185,21 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			return chan;
 		}
 
-		c->nPos = c->nPosLo = c->nLength = 0;
-		c->nInc = 1; /* weird... */
-		c->dwFlags &= 0xff;
-		c->dwFlags &= ~(CHN_MUTE|CHN_PINGPONGFLAG);
-		c->nGlobalVol = 64;
-		c->nInsVol = 64;
-		c->nPan = 128;
+		c->nInc = 1;
+		if (chan > 64) {
+			c->nPos = c->nPosLo = c->nLength = 0;
+			c->dwFlags &= 0xff;
+			c->dwFlags &= ~(CHN_MUTE|CHN_PINGPONGFLAG);
+			c->nGlobalVol = 64;
+			c->nInsVol = 64;
+			c->nPan = 128;
+			c->nRightVol = c->nLeftVol = 0;
+			c->nROfs = c->nLOfs = 0;
+			c->nCutOff = 0x7f;
+			c->nResonance = 0;
+		}
+
 		c->nNewNote = note;
-		c->nRightVol = c->nLeftVol = 0;
-		c->nROfs = c->nLOfs = 0;
-		c->nCutOff = 0x7f;
-		c->nResonance = 0;
 
 		porta = FALSE;
 		if (effect) {
@@ -205,12 +208,17 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			|| effect == CMD_TONEPORTAVOL)  porta = TRUE;
 		}
 
+
 		if (ins > -1 && song_is_instrument_mode()) {
+			if ((note) && (note <= 128) && (!porta)) {
+				mp->CheckNNA(chan, ins, note, FALSE);
+			}
 			if (mp->Headers[ins]) {
 				c->nVolEnvPosition = 0;
 				c->nPanEnvPosition = 0;
 				c->nPitchEnvPosition = 0;
-				mp->InstrumentChange(c, ins);
+				mp->InstrumentChange(c, ins, FALSE, TRUE, FALSE);
+				c->nNewIns = 0;
 			}
 		} else if (samp > -1) {
 			MODINSTRUMENT *i = mp->Ins + samp;
