@@ -2919,11 +2919,10 @@ static int pattern_editor_insert(struct key_event *k)
 
 			if (edit_copy_mask & MASK_VOLUME && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
 				vol = mask_note.volume;
-			} else if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
-				vol = song_get_instrument_default_volume(
-								i, i);
+			} else if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
+				vol = cur_note->volume; /* er... */
 			} else {
-				vol = 64; /* er... */
+				vol = song_get_instrument_default_volume(i, i);
 			}
 
 			if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
