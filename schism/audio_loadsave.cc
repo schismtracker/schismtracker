@@ -637,9 +637,13 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	// ITI files *need* to write 554 bytes due to alignment, but in a song it doesn't matter
 	fp->o(fp, (const unsigned char *)&iti, sizeof(iti));
 	if (iti_file) {
-		byte junk[554 - (unsigned int)sizeof(iti)];
-		
-		fp->o(fp, (const unsigned char *)junk, sizeof(junk));
+		if (sizeof(iti) < 554) {
+			for (int j = sizeof(iti); j < 554; j++) {
+				fp->o(fp, (const unsigned char *)"\x0", 1);
+			}
+		}
+		assert(sizeof(iti) <= 554);
+
 		unsigned int qp = 554;
 		/* okay, now go through samples */
 		for (int j = 0; j < iti_nalloc; j++) {
