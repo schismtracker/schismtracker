@@ -1020,12 +1020,14 @@ BOOL CSoundFile::ReadNote()
 #endif // NO_FILTER
 			}
 
+#if 0
 			if ((m_nType & MOD_TYPE_IT) && (freq < 256))
 			{
 				pChn->nFadeOutVol = 0;
 				pChn->dwFlags |= CHN_NOTEFADE;
 				pChn->nRealVolume = 0;
 			}
+#endif
 			pChn->sample_freq = freq;
 
 			UINT ninc = _muldiv(freq, 0x10000, gdwMixingFreq);
