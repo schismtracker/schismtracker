@@ -800,6 +800,8 @@ BOOL CSoundFile::ProcessEffects()
 	MODCHANNEL *pChn = Chn;
 	for (UINT nChn=0; nChn<m_nChannels; nChn++, pChn++)
 	{
+		pChn->nCommand=0;
+
 		UINT instr = pChn->nRowInstr;
 		UINT volcmd = pChn->nRowVolCmd;
 		UINT vol = pChn->nRowVolume;
@@ -1125,6 +1127,7 @@ BOOL CSoundFile::ProcessEffects()
 				param |= 0x100; // increment retrig count on first row
 			}
 			if (param) pChn->nRetrigParam = (BYTE)(param & 0xFF); else param = pChn->nRetrigParam;
+			pChn->nCommand = CMD_RETRIG;
 			RetrigNote(nChn, param);
 			break;
 

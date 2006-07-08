@@ -185,6 +185,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			return chan;
 		}
 
+		c->nTickStart = mp->m_nTickCount;
+
 		c->nInc = 1;
 		if (chan > 64) {
 			c->nPos = c->nPosLo = c->nLength = 0;
@@ -249,6 +251,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		}
 
 		if (effect) {
+			c->nCommand = 0;
 			switch (effect) {
 			case CMD_VOLUME:
 				c->nVolume = (param < 64) ? param*4 : 256;
@@ -297,6 +300,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			case CMD_RETRIG:
 				if (param) c->nRetrigParam = param & 255;
 				else param = c->nRetrigParam;
+				c->nCommand = CMD_RETRIG;
 				mp->RetrigNote(chan, param);
 				break;
 			case CMD_TREMOR:

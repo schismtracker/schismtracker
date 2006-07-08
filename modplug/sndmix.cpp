@@ -484,9 +484,28 @@ BOOL CSoundFile::ReadNote()
 	// Checking end of row ?
 	if (m_dwSongFlags & SONG_PAUSED)
 	{
-		m_nTickCount = 0;
+		/*m_nTickCount = 0;*/
 		if (!m_nMusicSpeed) m_nMusicSpeed = 6;
 		if (!m_nMusicTempo) m_nMusicTempo = 125;
+		m_nPatternDelay = 0;
+		m_nFrameDelay = 0;
+		m_nTickCount++;
+		m_dwSongFlags |= SONG_FIRSTTICK;
+		if (m_nTickCount) {
+			m_dwSongFlags &= ~SONG_FIRSTTICK;
+		}
+
+		MODCHANNEL *pChn = Chn;
+		for (UINT nChn=0; nChn<m_nChannels; pChn++, nChn++) {
+			/* process any retrigs, arpeggios, and tremors */
+			if ((pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed))
+				pChn->nCommand = 0;
+			if (pChn->nCommand == CMD_RETRIG) RetrigNote(nChn,pChn->nRetrigParam);
+		}
+
+		if (m_nTickCount >= m_nMusicSpeed) {
+			m_nTickCount = 0;
+		}
 	} else
 #endif // MODPLUG_TRACKER
 	{
