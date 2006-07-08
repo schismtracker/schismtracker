@@ -413,6 +413,7 @@ typedef struct _MODCHANNEL
 	UINT nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
 	// 16-bit members
 	signed short nVolSwing, nPanSwing;
+
 	// 8-bit members
 	BYTE nNote, nNNA;
 	BYTE nNewNote, nNewIns, nCommand, nArpeggio;
@@ -433,6 +434,7 @@ typedef struct _MODCHANNEL
 	BYTE nRowCommand, nRowParam;
 	BYTE nLeftVU, nRightVU;
 	BYTE nActiveMacro, nLastInstr;
+	BYTE nTickStart;
 } MODCHANNEL;
 
 
