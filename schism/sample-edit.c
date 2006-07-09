@@ -441,13 +441,15 @@ static void _resize_16(signed short *dst, unsigned long newlen,
 		signed short *src, unsigned int oldlen)
 {
 	unsigned int i;
-	for (i = 0; i < newlen; i++) dst[i] = src[i * ((unsigned long long)oldlen / (unsigned long long)newlen)];
+	for (i = 0; i < newlen; i++)
+		dst[i] = src[(unsigned int)((double)i * ((double)oldlen / (double)newlen))];
 }
 static void _resize_8(signed char *dst, unsigned long newlen,
 		signed char *src, unsigned int oldlen)
 {
 	unsigned int i;
-	for (i = 0; i < newlen; i++) dst[i] = src[i * ((unsigned long long)oldlen / (unsigned long long)newlen)];
+	for (i = 0; i < newlen; i++)
+		dst[i] = src[(unsigned int)((double)i * ((double)oldlen / (double)newlen))];
 }
 static void _resize_8aa(signed char *dst, unsigned long newlen,
 		signed char *src, unsigned int oldlen)
@@ -457,8 +459,8 @@ static void _resize_8aa(signed char *dst, unsigned long newlen,
 	int i, j, cp;
 	int old_pos = -1;
 	for (i = 0; i < oldlen; i++) {
-		cp = (unsigned long long)i * ((unsigned long long)newlen)
-			/ (unsigned long long)oldlen;
+		cp = (int)((double)i * ((double)newlen) / (double)oldlen);
+		if (cp < 0) cp = 0;
 		if (cp > old_pos) {
 			if (old_pos >= 0 && cp >= 0 && cp < newlen) {
 				for (j = 0; j < (cp-old_pos); j++) {
@@ -484,8 +486,8 @@ static void _resize_16aa(signed short *dst, unsigned long newlen,
 	int i, j, cp;
 	int old_pos = -1;
 	for (i = 0; i < oldlen; i++) {
-		cp = (unsigned long long)i * ((unsigned long long)newlen)
-			/ (unsigned long long)oldlen;
+		cp = (int)((double)i * ((double)newlen) / (double)oldlen);
+		if (cp < 0) cp = 0;
 		if (cp > old_pos) {
 			if (old_pos >= 0 && cp >= 0 && cp < newlen) {
 				for (j = 0; j < (cp-old_pos); j++) {
