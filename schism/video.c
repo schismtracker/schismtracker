@@ -420,8 +420,9 @@ void video_init(const char *driver)
 {
 	static int did_this_2 = 0;
 	const char *gl_ext;
+	char *q, *p;
 	SDL_Rect **modes;
-	int i, x, y;
+	int i, j, x, y;
 
 	if (driver && strcasecmp(driver, "auto") == 0) driver = 0;
 
@@ -448,16 +449,17 @@ void video_init(const char *driver)
 	}
 
 	video.yuvlayout = YUV_UYVY;
-	if (getenv("YUVLAYOUT")) {
-		if (strcasecmp(getenv("YUVLAYOUT"), "YUY2") == 0
-		|| strcasecmp(getenv("YUVLAYOUT"), "YUNV") == 0
-		|| strcasecmp(getenv("YUVLAYOUT"), "V422") == 0
-		|| strcasecmp(getenv("YUVLAYOUT"), "YUYV") == 0) {
+	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
+		if (strcasecmp(q, "YUY2") == 0
+		|| strcasecmp(q, "YUNV") == 0
+		|| strcasecmp(q, "V422") == 0
+		|| strcasecmp(q, "YUYV") == 0) {
 			video.yuvlayout = YUV_YUY2;
 		}
 	}
 
-	if (getenv("DOUBLEBUF") && atoi(getenv("DOUBLEBUF")) > 0) {
+	q = getenv("SCHISM_DOUBLE_BUFFER");
+	if (q && (atoi(q) > 0 || strcasecmp(q,"on") == 0 || strcasecmp(q,"yes") == 0)) {
 		video.desktop.doublebuf = 1;
 	}
 
@@ -585,7 +587,11 @@ SKIP1:
 	video.desktop.bpp = video.surface->format->BitsPerPixel;
 
 	video.desktop.want_fixed = 1;
-	if (getenv("VIDEO_NO_FIXED")) video.desktop.want_fixed = 0;
+	q = getenv("SCHISM_VIDEO_ASPECT");
+	if (q && (strcasecmp(q,"nofixed") == 0 || strcasecmp(q,"full")==0
+	|| strcasecmp(q,"fit") == 0 || strcasecmp(q,"wide") == 0
+	|| strcasecmp(q,"no-fixed") == 0))
+		video.desktop.want_fixed = 0;
 
 	modes = SDL_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
 	x = y = -1;
@@ -598,9 +604,14 @@ SKIP1:
 			if (modes[i]->w < NATIVE_SCREEN_WIDTH) continue;
 			if (modes[i]->h < NATIVE_SCREEN_HEIGHT)continue;
 			if (x == -1 || y == -1 || modes[i]->w < x || modes[i]->h < y) {
+				if (modes[i]->w != NATIVE_SCREEN_WIDTH
+				||  modes[i]->h != NATIVE_SCREEN_HEIGHT) {
+					if (x == NATIVE_SCREEN_WIDTH || y == NATIVE_SCREEN_HEIGHT)
+						continue;
+				}
 				x = modes[i]->w;
 				y = modes[i]->h;
-				if (x == NATIVE_SCREEN_WIDTH || y == NATIVE_SCREEN_HEIGHT)
+				if (x == NATIVE_SCREEN_WIDTH && y == NATIVE_SCREEN_HEIGHT)
 					break;
 			}
 		}
@@ -609,6 +620,23 @@ SKIP1:
 		x = 640;
 		y = 480;
 	}
+
+	if ((q = getenv("SCHISM_VIDEO_RESOLUTION"))) {
+		i = j = -1;
+		if (sscanf(q,"%dx%d", &i,&j) == 2 && i >= 10 && j >= 10) {
+			x = i;
+			y = j;
+		}
+	}
+
+	if ((q = getenv("SCHISM_VIDEO_DEPTH"))) {
+		i=atoi(q);
+		if (i == 32) video.desktop.bpp=32;
+		else if (i == 24) video.desktop.bpp=24;
+		else if (i == 16) video.desktop.bpp=16;
+		else if (i == 8) video.desktop.bpp=8;
+	}
+
 	/*log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
 	video.desktop.width = x;
 	video.desktop.height = y;
