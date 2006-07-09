@@ -194,7 +194,7 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 
 static void info_draw_samples(int base, int height, UNUSED int active, int first_channel)
 {
-        int vu, smp, ins, n, pos, fg, c = first_channel;
+        int vu, smp, ins, n, pos, fg, fg2, c = first_channel;
         char buf[8];
         char *ptr;
 
@@ -235,74 +235,74 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
                         vu = channel->final_volume >> 8;
                 else
                         vu = channel->vu_meter >> 2;
-                if (channel->flags & CHN_MUTE)
-                        draw_vu_meter(5, pos, 24, vu, 1, 2);
-                else
-                        draw_vu_meter(5, pos, 24, vu, 5, 4);
+		if (channel->flags & CHN_MUTE) {
+			fg = 1; fg2 = 2;
+		} else {
+			fg = 5; fg2 = 4;
+		}
+		draw_vu_meter(5, pos, 24, vu, fg, fg2);
 
-                /* second box: sample number/name */
-                ins = song_get_instrument_number(channel->instrument);
-                /* figuring out the sample number is an ugly hack... considering all the crap that's
-                copied to the channel, i'm surprised that the sample and instrument numbers aren't
-                in there somewhere... */
-                if (channel->sample)
-                        smp = channel->sample - song_get_sample(0, NULL);
-                else
-                        smp = 0;
+		/* second box: sample number/name */
+		ins = song_get_instrument_number(channel->instrument);
+		/* figuring out the sample number is an ugly hack... considering all the crap that's
+		copied to the channel, i'm surprised that the sample and instrument numbers aren't
+		in there somewhere... */
+		if (channel->sample)
+			smp = channel->sample - song_get_sample(0, NULL);
+		else
+			smp = 0;
 
 		// this makes ascii-art behave somewhat...
 		if (channel->flags & (CHN_KEYOFF|CHN_NOTEFADE) && channel->sample_length == 0) {
 			smp = ins = 0;
 		}
 
-                if (smp) {
-                        draw_text(num99tostr(smp, (unsigned char *) buf), 31, pos, 6, 0);
-                        if (ins) {
-                                draw_char('/', 33, pos, 6, 0);
-                                draw_text(num99tostr(ins, (unsigned char *) buf), 34, pos, 6, 0);
-                                n = 36;
-                        } else {
-                                n = 33;
-                        }
-                        if (channel->volume == 0)
-                                fg = 4;
-                        else if (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
-                                fg = 7;
-                        else
-                                fg = 6;
-                        draw_char(':', n++, pos, fg, 0);
-                        if (instrument_names && channel->instrument)
-                                ptr = channel->instrument->name;
-                        else
-                                song_get_sample(smp, &ptr);
-                        draw_text_bios_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
-                } else if (ins && channel->instrument && channel->instrument->midi_channel) {
-			if (channel->instrument->midi_channel) {
-				if (channel->instrument->midi_channel > 16) {
-					draw_text(numtostr(2, ((c-1) % 16)+1, (unsigned char *)buf), 31, pos, 6, 0);
-				} else {
-					draw_text(numtostr(2, channel->instrument->midi_channel,
-							(unsigned char *)buf), 31, pos, 6, 0);
-				}
+		if (smp) {
+			draw_text(num99tostr(smp, (unsigned char *) buf), 31, pos, 6, 0);
+			if (ins) {
 				draw_char('/', 33, pos, 6, 0);
+				draw_text(num99tostr(ins, (unsigned char *) buf), 34, pos, 6, 0);
+				n = 36;
+			} else {
+				n = 33;
 			}
+			if (channel->volume == 0)
+				fg = 4;
+			else if (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
+				fg = 7;
+			else
+				fg = 6;
+			draw_char(':', n++, pos, fg, 0);
+			if (instrument_names && channel->instrument)
+				ptr = channel->instrument->name;
+			else
+				song_get_sample(smp, &ptr);
+			draw_text_bios_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
+		} else if (ins && channel->instrument && channel->instrument->midi_channel) {
+			if (channel->instrument->midi_channel > 16) {
+				draw_text(numtostr(2, ((c-1) % 16)+1, (unsigned char *)buf), 31, pos, 6, 0);
+			} else {
+				draw_text(numtostr(2, channel->instrument->midi_channel,
+						(unsigned char *)buf), 31, pos, 6, 0);
+			}
+			draw_char('/', 33, pos, 6, 0);
 			draw_text(num99tostr(ins, (unsigned char *) buf), 34, pos, 6, 0);
 			n = 36;
-                        if (channel->volume == 0)
-                                fg = 4;
-                        else if (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
-                                fg = 7;
-                        else
-                                fg = 6;
-                        draw_char(':', n++, pos, fg, 0);
+			if (channel->volume == 0)
+				fg = 4;
+			else if (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
+				fg = 7;
+			else
+				fg = 6;
+			draw_char(':', n++, pos, fg, 0);
 			ptr = channel->instrument->name;
-                        draw_text_bios_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
+			draw_text_bios_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
 		}
 
-                /* last box: panning. this one's much easier than the
-                 * other two, thankfully :) */
+		/* last box: panning. this one's much easier than the
+		 * other two, thankfully :) */
 		if (song_is_stereo()) {
-	                if (!channel->sample) {
+			if (!channel->sample) {
 				/* nothing... */
 			} else if (channel->flags & CHN_SURROUND) {
 				draw_text((const unsigned char *)"Surround", 64, pos, 2, 0);
@@ -315,16 +315,16 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
 			}
 		}
 
-                /* finally, do the channel number */
-                if (c == selected_channel) {
-                        fg = (channel->flags & CHN_MUTE) ? 6 : 3;
-                } else {
-                        if (channel->flags & CHN_MUTE)
-                                continue;
-                        fg = active ? 1 : 0;
-                }
-                draw_text(numtostr(2, c, (unsigned char *) buf), 2, pos, fg, 2);
-        }
+		/* finally, do the channel number */
+		if (c == selected_channel) {
+			fg = (channel->flags & CHN_MUTE) ? 6 : 3;
+		} else {
+			if (channel->flags & CHN_MUTE)
+				continue;
+			fg = active ? 1 : 0;
+		}
+		draw_text(numtostr(2, c, (unsigned char *) buf), 2, pos, fg, 2);
+	}
 }
 
 static void _draw_track_view(int base, int height, int first_channel, int num_channels,
