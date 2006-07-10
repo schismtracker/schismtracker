@@ -179,6 +179,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		song_lock_audio();
 
 		c = mp->Chn + chan;
+
 		if (at) {
 			c->nVolume = (vol << 2);
 			song_unlock_audio();
@@ -186,6 +187,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		}
 
 		c->nTickStart = mp->m_nTickCount;
+		c->nRowNote = note;
+		c->nRowVolume = vol;
+		c->nRowVolCmd = VOLCMD_VOLUME;
 
 		c->nInc = 1;
 		if (chan > 64) {
@@ -212,6 +216,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 
 		if (ins > -1 && song_is_instrument_mode()) {
+			c->nRowInstr = ins;
+
 			if ((note) && (note <= 128) && (!porta)) {
 				mp->CheckNNA(chan, ins, note, FALSE);
 			}
@@ -223,6 +229,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				c->nNewIns = 0;
 			}
 		} else if (samp > -1) {
+			c->nRowInstr = samp;
+
 			MODINSTRUMENT *i = mp->Ins + samp;
 			c->pCurrentSample = i->pSample;
 			c->pHeader = NULL;
@@ -249,144 +257,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nAutoVibDepth = 0;
 			c->nAutoVibPos = 0;
 		}
+		c->nRowCommand = effect;
+		c->nRowParam = param;
 
-		if (effect) {
-			c->nCommand = 0;
-			switch (effect) {
-			case CMD_VOLUME:
-				c->nVolume = (param < 64) ? param*4 : 256;
-				c->dwFlags |= CHN_FASTVOLRAMP;
-				break;
-			case CMD_PORTAMENTOUP:
-				mp->PortamentoUp(c, param);
-				break;
-			case CMD_PORTAMENTODOWN:
-				mp->PortamentoDown(c, param);
-				break;
-			case CMD_VOLUMESLIDE:
-				mp->VolumeSlide(c, param);
-				break;
-			case CMD_TONEPORTAMENTO:
-				mp->TonePortamento(c, param);
-				break;
-			case CMD_TONEPORTAVOL:
-				mp->VolumeSlide(c, param);
-				mp->TonePortamento(c, 0);
-				break;
-			case CMD_VIBRATO:
-				mp->Vibrato(c, param);
-				break;
-			case CMD_VIBRATOVOL:
-				mp->VolumeSlide(c, param);
-				mp->Vibrato(c, 0);
-				break;
-			case CMD_OFFSET:
-				if (param) c->nOldOffset = param;
-				else param = c->nOldOffset;
-				param <<= 8;
-				param |= (unsigned int)(c->nOldHiOffset)<<16;
-				if (porta) c->nPos = param;
-				else c->nPos += param;
-				if (c->nPos >= c->nLength) {
-					c->nPos = c->nLoopStart;
-					if (mp->m_dwSongFlags & SONG_ITOLDEFFECTS && (c->nLength > 4))
-						c->nPos = c->nLength-2;
-				}
-				break;
-			case CMD_ARPEGGIO:
-				c->nCommand = CMD_ARPEGGIO;
-				if (param) c->nArpeggio = param;
-				break;
-			case CMD_RETRIG:
-				if (param) c->nRetrigParam = param & 255;
-				else param = c->nRetrigParam;
-				c->nCommand = CMD_RETRIG;
-				mp->RetrigNote(chan, param);
-				break;
-			case CMD_TREMOR:
-				c->nCommand = CMD_TREMOR;
-				if (param) c->nTremorParam = param;
-				break;
-			case CMD_GLOBALVOLUME:
-				if (mp->m_nType != MOD_TYPE_IT) param <<= 1;
-				if (param > 128) param = 128;
-				mp->m_nGlobalVolume = param << 1;
-				break;
-			case CMD_GLOBALVOLSLIDE:
-				mp->GlobalVolSlide(param);
-				break;
-			case CMD_PANNING8:
-				c->dwFlags &= ~CHN_SURROUND;
-				c->nPan = param;
-				c->dwFlags |= CHN_FASTVOLRAMP;
-				break;
-			case CMD_PANNINGSLIDE:
-				mp->PanningSlide(c, param);
-				break;
-			case CMD_TREMOLO:
-				mp->Tremolo(c, param);
-				break;
-			case CMD_FINEVIBRATO:
-				mp->FineVibrato(c, param);
-				break;
-			case CMD_MODCMDEX:
-				mp->ExtendedMODCommands(chan, param);
-				break;
-			case CMD_S3MCMDEX:
-				mp->ExtendedS3MCommands(chan, param);
-				break;
-			case CMD_KEYOFF:
-				mp->KeyOff(chan);
-				break;
-			case CMD_XFINEPORTAUPDOWN:
-				switch(param & 0xF0) {
-				case 0x10: mp->ExtraFinePortamentoUp(c, param & 0x0F); break;
-				case 0x20: mp->ExtraFinePortamentoDown(c, param & 0x0F); break;
-				// Modplug XM Extensions
-				case 0x50:
-				case 0x60:
-				case 0x70:
-				case 0x90:
-				case 0xA0: mp->ExtendedS3MCommands(chan, param); break;
-				};
-				break;
-			case CMD_CHANNELVOLUME:
-				if (param <= 64) {
-					c->nGlobalVol = param;
-					c->dwFlags |= CHN_FASTVOLRAMP;
-				}
-				break;
-			case CMD_CHANNELVOLSLIDE:
-				mp->ChannelVolSlide(c, param);
-				break;
-			case CMD_PANBRELLO:
-				mp->Panbrello(c, param);
-				break;
-			case CMD_SETENVPOSITION:
-                                c->nVolEnvPosition = param;
-                                c->nPanEnvPosition = param;
-                                c->nPitchEnvPosition = param;
-                                if ((mp->m_dwSongFlags & SONG_INSTRUMENTMODE) && c->pHeader) {
-                                        INSTRUMENTHEADER *penv = c->pHeader;
-                                        if ((c->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes)
-					&& (param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1])) {
-						c->dwFlags &= ~CHN_PANENV;
-					}
-				}
-				break;
-
-			case CMD_MIDI:
-				if (param < 0x80) {
-					mp->ProcessMidiMacro(chan,
-		&mp->m_MidiCfg.szMidiSFXExt[ c->nActiveMacro << 5 ], param, ins > 0 ? ins : 0);
-				} else {
-					mp->ProcessMidiMacro(chan,
-		&mp->m_MidiCfg.szMidiSFXExt[ (param & 0x7f) << 5 ], 0, ins > 0 ? ins : 0);
-				}
-				break;
-			};
-		}
-	
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
 			mp->m_dwSongFlags &= ~SONG_ENDREACHED;
 			mp->m_dwSongFlags |= SONG_PAUSED;

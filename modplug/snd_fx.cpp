@@ -808,11 +808,11 @@ BOOL CSoundFile::ProcessEffects()
 		UINT cmd = pChn->nRowCommand;
 		UINT param = pChn->nRowParam;
 		BOOL bPorta = ((cmd != CMD_TONEPORTAMENTO) && (cmd != CMD_TONEPORTAVOL) && (volcmd != VOLCMD_TONEPORTAMENTO)) ? FALSE : TRUE;
-		UINT nStartTick = 0;
+		UINT nStartTick = pChn->nTickStart;
 
 		pChn->dwFlags &= ~CHN_FASTVOLRAMP;
 		// Process special effects (note delay, pattern delay, pattern loop)
-		if ((cmd == CMD_MODCMDEX) || (cmd == CMD_S3MCMDEX))
+		if (((cmd == CMD_MODCMDEX) || (cmd == CMD_S3MCMDEX)) && !(m_dwSongFlags & SONG_PAUSED))
 		{
 			if ((!param) && (m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT))) param = pChn->nOldCmdEx; else pChn->nOldCmdEx = param;
 			// Note Delay ?
@@ -879,8 +879,8 @@ BOOL CSoundFile::ProcessEffects()
 			// Note Cut/Off => ignore instrument
 			if (note >= 0xFE) instr = 0;
 			if ((note) && (note <= 128)) pChn->nNewNote = note;
-			// New Note Action ?
-			if ((note) && (note <= 128) && (!bPorta))
+			// New Note Action ? (not when paused!!!)
+			if ((note) && (note <= 128) && (!bPorta) && !(m_dwSongFlags & SONG_PAUSED))
 			{
 				CheckNNA(nChn, instr, note, FALSE);
 			}
