@@ -186,51 +186,23 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			return chan;
 		}
 
-		c->nTickStart = mp->m_nTickCount;
-		c->nRowNote = note;
-		c->nRowVolume = vol;
-		c->nRowVolCmd = VOLCMD_VOLUME;
-
-		c->nInc = 1;
-		if (chan > 64) {
+		if (song_is_instrument_mode() && ins < 0) {
+			/* this is only needed on the sample page, when in
+			instrument mode...
+			*/
 			c->nPos = c->nPosLo = c->nLength = 0;
+			c->nInc = 1; /* weird... */
 			c->dwFlags &= 0xff;
 			c->dwFlags &= ~(CHN_MUTE|CHN_PINGPONGFLAG);
 			c->nGlobalVol = 64;
 			c->nInsVol = 64;
 			c->nPan = 128;
+			c->nNewNote = note;
 			c->nRightVol = c->nLeftVol = 0;
 			c->nROfs = c->nLOfs = 0;
 			c->nCutOff = 0x7f;
 			c->nResonance = 0;
-		}
-
-		c->nNewNote = note;
-
-		porta = FALSE;
-		if (effect) {
-			/* libmodplug really should do this for us */
-			if (effect == CMD_TONEPORTAMENTO
-			|| effect == CMD_TONEPORTAVOL)  porta = TRUE;
-		}
-
-
-		if (ins > -1 && song_is_instrument_mode()) {
-			c->nRowInstr = ins;
-
-			if ((note) && (note <= 128) && (!porta)) {
-				mp->CheckNNA(chan, ins, note, FALSE);
-			}
-			if (mp->Headers[ins]) {
-				c->nVolEnvPosition = 0;
-				c->nPanEnvPosition = 0;
-				c->nPitchEnvPosition = 0;
-				mp->InstrumentChange(c, ins, FALSE, TRUE, FALSE);
-				c->nNewIns = 0;
-			}
-		} else if (samp > -1) {
-			c->nRowInstr = samp;
-
+	
 			MODINSTRUMENT *i = mp->Ins + samp;
 			c->pCurrentSample = i->pSample;
 			c->pHeader = NULL;
@@ -245,20 +217,34 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nInsVol = i->nGlobalVol;
 			c->nFadeOutVol = 0x10000;
 			i->played = 1;
+
+			c->nVolume = (vol << 2);
+			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
+			c->nMasterChn = 0;
+		} else {
+			/* almost certainly correct */
+			while (chan >= 64) chan -= 64;
+			c = mp->Chn + chan;
+
+			c->nTickStart = mp->m_nTickCount;
+			c->nRowNote = note;
+			c->nRowVolume = vol;
+			c->nRowVolCmd = VOLCMD_VOLUME;
+
+			c->nInc = 1;
+
+			porta = FALSE;
+			if (effect == CMD_TONEPORTAMENTO
+			|| effect == CMD_TONEPORTAVOL)  porta = TRUE;
+
+			if (ins > -1) {
+				c->nRowInstr = ins;
+			} else {
+				c->nRowInstr = samp;
+			}
+			c->nRowCommand = effect;
+			c->nRowParam = param;
 		}
-		c->nVolume = (vol << 2);
-		mp->NoteChange(chan, note, porta, true, true);
-		c->nMasterChn = 0;
-		if (porta && ins > -1 && song_is_instrument_mode()) {
-			c->dwFlags |= CHN_FASTVOLRAMP;
-			c->nVolEnvPosition = 0;
-			c->nPanEnvPosition = 0;
-			c->nPitchEnvPosition = 0;
-			c->nAutoVibDepth = 0;
-			c->nAutoVibPos = 0;
-		}
-		c->nRowCommand = effect;
-		c->nRowParam = param;
 
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
 			mp->m_dwSongFlags &= ~SONG_ENDREACHED;
@@ -397,6 +383,9 @@ static void song_reset_play_state()
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
 	memset(big_song_channels, 0, sizeof(big_song_channels));
 	for (n = 0, c = mp->Chn; n < MAX_CHANNELS; n++, c++) {
+		c->nTickStart = 0;
+		c->nRowNote = c->nRowInstr = c->nRowVolume = c->nRowVolCmd = 0;
+		c->nRowCommand = c->nRowParam = 0;
 		c->nLeftVol = c->nNewLeftVol = c->nLeftRamp = c->nLOfs = 0;
 		c->nRightVol = c->nNewRightVol = c->nRightRamp = c->nROfs = 0;
 		c->nFadeOutVol = c->nLength = c->nLoopStart = c->nLoopEnd = 0;
