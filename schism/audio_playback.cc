@@ -170,7 +170,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 	int i;
 	MODCHANNEL *c;
 	MODCOMMAND mc;
-	BOOL porta;
 	int eff;
 
 	if (chan > -1 && !mm) {
@@ -186,7 +185,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			return chan;
 		}
 
-		if ((song_is_instrument_mode() || samp == 0) && ins < 0) {
+		if (((i=song_is_instrument_mode()) || samp == 0) && ins < 0) {
 			/* this is only needed on the sample page, when in
 			instrument mode...
 			*/
@@ -222,28 +221,24 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
 			//c->nMasterChn = 0;
 		} else {
-			/* almost certainly correct */
 			while (chan >= 64) chan -= 64;
 			c = mp->Chn + chan;
-
+			c->nNewNote = note;
 			c->nTickStart = mp->m_nTickCount;
 			c->nRowNote = note;
 			c->nRowVolume = vol;
 			c->nRowVolCmd = VOLCMD_VOLUME;
 
-			c->nInc = 1;
-
-			porta = FALSE;
-			if (effect == CMD_TONEPORTAMENTO
-			|| effect == CMD_TONEPORTAVOL)  porta = TRUE;
-
-			if (ins > -1) {
+			if (i) {
 				c->nRowInstr = ins;
 			} else {
 				c->nRowInstr = samp;
 			}
 			c->nRowCommand = effect;
 			c->nRowParam = param;
+			/* we need to do this BEFORE the tick starts so the channel
+			gets moved as necessary */
+			mp->CheckNNA(chan,c->nRowInstr,note,FALSE);
 		}
 
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
