@@ -186,14 +186,12 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			return chan;
 		}
 
-		if (song_is_instrument_mode() && ins < 0) {
+		if ((song_is_instrument_mode() || samp == 0) && ins < 0) {
 			/* this is only needed on the sample page, when in
 			instrument mode...
 			*/
 			c->nPos = c->nPosLo = c->nLength = 0;
 			c->nInc = 1; /* weird... */
-			c->dwFlags &= 0xff;
-			c->dwFlags &= ~(CHN_MUTE|CHN_PINGPONGFLAG);
 			c->nGlobalVol = 64;
 			c->nInsVol = 64;
 			c->nPan = 128;
@@ -202,7 +200,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nROfs = c->nLOfs = 0;
 			c->nCutOff = 0x7f;
 			c->nResonance = 0;
-	
+
 			MODINSTRUMENT *i = mp->Ins + samp;
 			c->pCurrentSample = i->pSample;
 			c->pHeader = NULL;
@@ -212,15 +210,17 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nC4Speed = i->nC4Speed;
 			c->nLoopStart = i->nLoopStart;
 			c->nLoopEnd = i->nLoopEnd;
-			c->dwFlags = i->uFlags & (0xFF & ~CHN_MUTE);
+			c->dwFlags = (i->uFlags & 0xFF);
+			c->dwFlags &= ~(CHN_MUTE|CHN_PINGPONGFLAG);
 			c->nPan = 128; // redundant?
 			c->nInsVol = i->nGlobalVol;
 			c->nFadeOutVol = 0x10000;
 			i->played = 1;
 
+			c->nGlobalVol = 64;
 			c->nVolume = (vol << 2);
 			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
-			c->nMasterChn = 0;
+			//c->nMasterChn = 0;
 		} else {
 			/* almost certainly correct */
 			while (chan >= 64) chan -= 64;
