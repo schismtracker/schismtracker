@@ -119,7 +119,6 @@ void sample_set(int n)
 	if (current_sample == new_sample)
 		return;
 
-	status.flags = (status.flags & ~INSTRUMENT_CHANGED) | SAMPLE_CHANGED;
 	current_sample = new_sample;
 	sample_list_reposition();
 
@@ -1337,6 +1336,40 @@ static void update_panning(void)
 
 /* --------------------------------------------------------------------- */
 
+void sample_synchronize_to_instrument(void)
+{
+        song_instrument *ins;
+	int instnum = instrument_get_current();
+        int n, pos, first;
+
+        ins = song_get_instrument(instnum, NULL);
+	first = 0;
+	for (pos = 0; pos < 120; pos++) {
+		if (first > 0) first = ins->sample_map[pos];
+		if ((ins->sample_map[pos]) == instnum) {
+			sample_set(instnum);
+			return;
+		}
+        }
+	if (first > 0) {
+		sample_set(first);
+	} else {
+		sample_set(instnum);
+	}
+}
+static void _set_from_f4(void)
+{
+	switch (status.previous_page) {
+        case PAGE_INSTRUMENT_LIST_GENERAL:
+        case PAGE_INSTRUMENT_LIST_VOLUME:
+        case PAGE_INSTRUMENT_LIST_PANNING:
+        case PAGE_INSTRUMENT_LIST_PITCH:
+		if (song_is_instrument_mode()) {
+			sample_synchronize_to_instrument();
+			sample_list_reposition();
+		}
+	};
+}
 void sample_list_load_page(struct page *page)
 {
 	vgamem_font_reserve(&sample_image);
@@ -1345,6 +1378,7 @@ void sample_list_load_page(struct page *page)
 	page->draw_const = sample_list_draw_const;
 	page->predraw_hook = sample_list_predraw_hook;
 	page->handle_key = sample_list_handle_key;
+	page->set_page = _set_from_f4;
 	page->total_widgets = 20;
 	page->widgets = widgets_samplelist;
 	page->help_index = HELP_SAMPLE_LIST;
