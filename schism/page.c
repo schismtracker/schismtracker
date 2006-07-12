@@ -1398,27 +1398,6 @@ void set_page(int new_page)
 	if (new_page != PAGE_HELP)
 		status.current_help_index = ACTIVE_PAGE.help_index;
 	
-	/* synchronize the sample/instrument.
-	 * FIXME | this isn't quite right. for instance, in impulse
-	 * FIXME | tracker, flipping back and forth between the sample
-	 * FIXME | list and instrument list will keep changing the
-	 * FIXME | current sample/instrument. */
-	if (status.flags & SAMPLE_CHANGED) {
-		if (song_is_instrument_mode())
-			instrument_synchronize_to_sample();
-		else
-			instrument_set(sample_get_current());
-	} else if (status.flags & INSTRUMENT_CHANGED) {
-		sample_set(instrument_get_current());
-	}
-	status.flags &= ~(SAMPLE_CHANGED | INSTRUMENT_CHANGED);
-
-	/* bit of ugliness to keep the sample/instrument numbers sane */
-	if (page_is_instrument_list(new_page) && instrument_get_current() < 1)
-		instrument_set(1);
-	else if (new_page == PAGE_SAMPLE_LIST && sample_get_current() < 1)
-		sample_set(1);
-
 	if (status.dialog_type & DIALOG_MENU) {
 		menu_hide();
 	} else if (status.dialog_type != DIALOG_NONE) {

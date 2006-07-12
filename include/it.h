@@ -62,8 +62,10 @@ enum {
 
 /* tracker_status flags */
 enum {
-        SAMPLE_CHANGED = (1 << 0),
-        INSTRUMENT_CHANGED = (1 << 1),
+#if 0
+	SAMPLE_CHANGED = (1 << 0),
+	INSTRUMENT_CHANGED = (1 << 1),
+#endif
         DIR_MODULES_CHANGED = (1 << 2),
         DIR_SAMPLES_CHANGED = (1 << 3),
         DIR_INSTRUMENTS_CHANGED = (1 << 4),
