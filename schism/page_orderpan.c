@@ -494,6 +494,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			if (status.flags & CLASSIC_MODE) return 0;
 			if (k->state) return 1;
 			sample_set(sample_get_current()-1);
+			status.flags |= NEED_UPDATE;
 			return 1;
 		}
 		if (!NO_MODIFIER(k->mod))
@@ -506,6 +507,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			if (status.flags & CLASSIC_MODE) return 0;
 			if (k->state) return 1;
 			sample_set(sample_get_current()+1);
+			status.flags |= NEED_UPDATE;
 			return 1;
 		}
 		if (!NO_MODIFIER(k->mod))
@@ -591,6 +593,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
                 if (k->mod & KMOD_ALT) {
 			if (k->state) return 1;
 			orderlist_add_unused_patterns();
+			status.flags |= NEED_UPDATE;
 			return 1;
 		}
                 return 0;
@@ -649,12 +652,14 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (k->state) return 1;
 		sample_set(sample_get_current()-1);
+		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_GREATER:
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (k->state) return 1;
 		sample_set(sample_get_current()+1);
+		status.flags |= NEED_UPDATE;
 		return 1;
         default:
 		if (!k->mouse) {
