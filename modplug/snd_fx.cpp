@@ -1112,9 +1112,9 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Arpeggio
 		case CMD_ARPEGGIO:
+			pChn->nCommand = CMD_ARPEGGIO;
 			if ((m_nTickCount) || (!pChn->nPeriod) || (!pChn->nNote)) break;
 			if ((!param) && (!(m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT)))) break;
-			pChn->nCommand = CMD_ARPEGGIO;
 			if (param) pChn->nArpeggio = param;
 			break;
 
@@ -1133,8 +1133,8 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Tremor
 		case CMD_TREMOR:
-			if (m_nTickCount) break;
 			pChn->nCommand = CMD_TREMOR;
+			if (m_nTickCount) break;
 			if (param) pChn->nTremorParam = param;
 			break;
 
