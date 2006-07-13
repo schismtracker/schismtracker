@@ -2226,13 +2226,17 @@ static void instrument_list_pitch_draw_const(void)
 
 static void _set_from_f3(void)
 {
-	if (status.previous_page == PAGE_SAMPLE_LIST) {
+	switch (status.previous_page) {
+	case PAGE_ORDERLIST_PANNING:
+	case PAGE_ORDERLIST_VOLUMES:
+		if (status.flags & CLASSIC_MODE) return;
+	case PAGE_SAMPLE_LIST:
 		if (song_is_instrument_mode())
 			instrument_synchronize_to_sample();
 		else
 			instrument_set(sample_get_current());
         	instrument_list_reposition();
-	}
+	};
 }
 
 static void _load_page_common(struct page *page, struct widget *page_widgets)

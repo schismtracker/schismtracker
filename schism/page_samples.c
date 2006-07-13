@@ -123,7 +123,8 @@ void sample_set(int n)
 	sample_list_reposition();
 
 	/* update_current_instrument(); */
-	status.flags |= NEED_UPDATE;
+	if (status.current_page == PAGE_SAMPLE_LIST)
+		status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -1359,16 +1360,11 @@ void sample_synchronize_to_instrument(void)
 }
 static void _set_from_f4(void)
 {
-	switch (status.previous_page) {
-        case PAGE_INSTRUMENT_LIST_GENERAL:
-        case PAGE_INSTRUMENT_LIST_VOLUME:
-        case PAGE_INSTRUMENT_LIST_PANNING:
-        case PAGE_INSTRUMENT_LIST_PITCH:
-		if (song_is_instrument_mode()) {
-			sample_synchronize_to_instrument();
-			sample_list_reposition();
-		}
-	};
+	if (song_is_instrument_mode()) {
+		sample_synchronize_to_instrument();
+	}
+	/* might be 0... */
+	sample_list_reposition();
 }
 void sample_list_load_page(struct page *page)
 {
