@@ -3592,10 +3592,12 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SDLK_UP:
 		if (k->state) return 1;
 		set_previous_instrument();
+		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_DOWN:
 		if (k->state) return 1;
 		set_next_instrument();
+		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_PAGEUP:
 		if (k->state) return 1;
@@ -4023,6 +4025,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if ((status.flags & CLASSIC_MODE)
 			|| current_position != 4) {
 				set_previous_instrument();
+				status.flags |= NEED_UPDATE;
 				return 1;
 			}
 			/* fall through */
@@ -4031,6 +4034,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if ((status.flags & CLASSIC_MODE)
 			|| current_position != 4) {
 				set_next_instrument();
+				status.flags |= NEED_UPDATE;
 				return 1;
 			}
 			/* fall through */
