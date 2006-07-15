@@ -1153,6 +1153,10 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			memset(mp->Ins + j, 0, sizeof(mp->Ins[j]));
 			memset(mp->m_szNames + j, 0, sizeof(mp->m_szNames[j]));
 		}
+		/* now clear everything "empty" so we have extra slots */
+		for (int j = 1; j < MAX_SAMPLES; j++) {
+			if (_sample_is_empty(j)) sampmap[j] = 0;
+		}
 	}
 
 	if (libf) { /* file is ignored */
@@ -1160,6 +1164,9 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
        		s = slurp(libf, NULL, 0);
 		int r = xl.Create(s->data, s->length);
 		if (r) {
+			/* 0. convert to IT (in case we want to load samps from an XM) */
+        		_convert_to_it(&xl);
+
 			/* 1. find a place for all the samples */
 			memset(sampmap, 0, sizeof(sampmap));
 			for (int j = 0; j < sizeof(xl.Headers[n]->Keyboard); j++) {
