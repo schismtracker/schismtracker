@@ -312,6 +312,7 @@ static void message_draw(void)
 static inline void message_set_editmode(void)
 {
         edit_mode = 1;
+	widgets_message[0].accept_text = 1;
         top_line = cursor_line = cursor_char = cursor_pos = 0;
         widgets_message[0].d.other.handle_key = message_handle_key_editmode;
 
@@ -321,6 +322,7 @@ static inline void message_set_editmode(void)
 static inline void message_set_viewmode(void)
 {
         edit_mode = 0;
+	widgets_message[0].accept_text = 0;
         widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
 
         status.flags |= NEED_UPDATE;
@@ -770,6 +772,7 @@ static void song_changed_cb(void)
         int len;
 
         edit_mode = 0;
+	widgets_message[0].accept_text = 0;
         widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
         top_line = 0;
         message = (unsigned char *)song_get_message();
@@ -809,5 +812,5 @@ void message_load_page(struct page *page)
         page->help_index = HELP_MESSAGE_EDITOR;
 
 	create_other(widgets_message + 0, 0, message_handle_key_viewmode, message_draw);
-	widgets_message[0].accept_text = 1;
+	widgets_message[0].accept_text = edit_mode;
 }
