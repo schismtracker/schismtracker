@@ -166,7 +166,7 @@ void create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int
                      int next_tab, void (*changed) (void), int min, int max)
 {
         w->type = WIDGET_THUMBBAR;
-	w->accept_text = 1;
+	w->accept_text = 0;
         w->x = x;
         w->y = y;
         w->width = width;
@@ -188,7 +188,7 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
                    void (*changed) (void), int channel)
 {
         w->type = WIDGET_PANBAR;
-	w->accept_text = 1;
+	w->accept_text = 0;
         w->x = x;
         w->y = y;
         w->width = 24;
