@@ -239,6 +239,10 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			/* we need to do this BEFORE the tick starts so the channel
 			gets moved as necessary */
 			mp->CheckNNA(chan,c->nRowInstr,note,FALSE);
+			if (!(mp->m_dwSongFlags & SONG_PAUSED)) {
+				mp->InstrumentChange(c, c->nRowInstr, TRUE, TRUE, TRUE);
+				mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
+			}
 		}
 
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
