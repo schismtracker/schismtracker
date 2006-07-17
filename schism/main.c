@@ -501,14 +501,12 @@ static void event_loop(void)
 #ifdef USE_X11
 	time(&last_ss);
 #endif
+	time(&status.now);
+	tmr = localtime(&status.now);
+	status.h = tmr->tm_hour;
+	status.m = tmr->tm_min;
+	status.s = tmr->tm_sec;
 	while (SDL_WaitEvent(&event)) {
-
-		time(&status.now);
-		tmr = localtime(&status.now);
-		status.h = tmr->tm_hour;
-		status.m = tmr->tm_min;
-		status.s = tmr->tm_sec;
-
 		sawrep = 0;
 		if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
 			kk.state = 0;
@@ -766,19 +764,25 @@ static void event_loop(void)
 			}
 			break;
 		}
-		if (status.dialog_type == DIALOG_NONE
-		&& startdown && (status.now - startdown) > 1) {
-			menu_show();
-			startdown = 0;
-			downtrip = 1;
-		}
-		if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
-			clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-					? CLIPPY_BUFFER : CLIPPY_SELECT);
-			status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
-		}
-
 		if (!SDL_PollEvent(0) || sawrep) {
+			time(&status.now);
+			tmr = localtime(&status.now);
+			status.h = tmr->tm_hour;
+			status.m = tmr->tm_min;
+			status.s = tmr->tm_sec;
+
+			if (status.dialog_type == DIALOG_NONE
+			&& startdown && (status.now - startdown) > 1) {
+				menu_show();
+				startdown = 0;
+				downtrip = 1;
+			}
+			if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
+				clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
+						? CLIPPY_BUFFER : CLIPPY_SELECT);
+				status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
+			}
+
 			check_update();
 
 #ifdef USE_X11
