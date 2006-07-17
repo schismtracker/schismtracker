@@ -428,6 +428,9 @@ BOOL CSoundFile::ProcessRow()
 		MODCOMMAND *m = Patterns[m_nPattern] + m_nRow * m_nChannels;
 		for (UINT nChn=0; nChn<m_nChannels; pChn++, nChn++, m++)
 		{
+			/* skip realtime copyin */
+			if (pChn->nRealtime) continue;
+
 			// this is where we're going to spit out our midi
 			// commands... ALL WE DO is dump raw midi data to
 			// our super-secret "midi buffer"
@@ -500,12 +503,18 @@ BOOL CSoundFile::ReadNote()
 		if (m_nTickCount >= m_nMusicSpeed) {
 			m_nTickCount = 0;
 		}
+	} else
+#endif // MODPLUG_TRACKER
+	{
+		if (!ProcessRow()) return FALSE;
+	}
 
+	{ /* handle realtime closures */
 		MODCHANNEL *pChn = Chn;
 		for (UINT nChn=0; nChn<m_nChannels; pChn++, nChn++) {
 			/* reset end of "row" */
-			if (pChn->nRowNote
-			&& (pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed)) {
+			if (pChn->nRealtime && pChn->nRowNote && (pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed)) {
+				pChn->nRealtime = 0;
 				pChn->nRowNote = 0;
 				pChn->nRowInstr = 0;
 				pChn->nRowVolCmd = 0;
@@ -514,12 +523,8 @@ BOOL CSoundFile::ReadNote()
 				pChn->nRowParam = 0;
 			}
 		}
+	};
 
-	} else
-#endif // MODPLUG_TRACKER
-	{
-		if (!ProcessRow()) return FALSE;
-	}
 	////////////////////////////////////////////////////////////////////////////////////
 	m_nTotalCount++;
 	if (!m_nMusicTempo) return FALSE;

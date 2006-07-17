@@ -184,7 +184,7 @@ typedef struct _song_mix_channel {
         byte nRowCommand, nRowParam;
         byte left_vu, right_vu;
         byte nActiveMacro, nPadding;
-	byte nTickStart;
+	byte nTickStart, nRealtime;
 } song_mix_channel;
 
 /* --------------------------------------------------------------------- */
