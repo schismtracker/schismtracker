@@ -223,6 +223,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		} else {
 			while (chan >= 64) chan -= 64;
 			c = mp->Chn + chan;
+			c->nRealtime = 1;
 			c->nNewNote = note;
 			c->nTickStart = mp->m_nTickCount;
 			c->nRowNote = note;
@@ -236,12 +237,17 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			}
 			c->nRowCommand = effect;
 			c->nRowParam = param;
-			/* we need to do this BEFORE the tick starts so the channel
-			gets moved as necessary */
 			mp->CheckNNA(chan,c->nRowInstr,note,FALSE);
-			if (!(mp->m_dwSongFlags & SONG_PAUSED)) {
-				mp->InstrumentChange(c, c->nRowInstr, TRUE, TRUE, TRUE);
-				mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
+			if (mp->m_dwSongFlags & SONG_PAUSED) {
+				//mp->InstrumentChange(c, c->nRowInstr, TRUE, TRUE, TRUE);
+				//mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
+
+				// do nothing...
+			} else {
+				mp->ProcessEffects();
+				c->nRowNote = 0;
+				c->nRealtime = 0;
+				//c->nTickStart = ((mp->m_nTickCount+1) % (mp->m_nMusicSpeed+1));
 			}
 		}
 
@@ -330,10 +336,10 @@ int song_keyup(int samp, int ins, int note, int chan, int *mm)
 	if (chan > -1 && !mm) {
 		song_lock_audio();
 		c = mp->Chn + chan;
-		if (samp > -1) {
-			mp->NoteChange(chan, NOTE_CUT, false, true, true);
-		} else {
+		if (ins > -1) {
 			mp->NoteChange(chan, NOTE_OFF, false, true, true);
+		} else {
+			mp->NoteChange(chan, NOTE_CUT, false, true, true);
 		}
 		song_unlock_audio();
 
