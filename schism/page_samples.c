@@ -1346,8 +1346,8 @@ void sample_synchronize_to_instrument(void)
         ins = song_get_instrument(instnum, NULL);
 	first = 0;
 	for (pos = 0; pos < 120; pos++) {
-		if (first > 0) first = ins->sample_map[pos];
-		if ((ins->sample_map[pos]) == instnum) {
+		if (first == 0) first = ins->sample_map[pos];
+		if (ins->sample_map[pos] == instnum) {
 			sample_set(instnum);
 			return;
 		}
