@@ -338,6 +338,7 @@ static int orderlist_handle_char(struct key_event *k)
         int c;
         int cur_pattern;
         unsigned char *list;
+	song_note *tmp;
         int n[3] = { 0 };
 
 	switch (k->sym) {
@@ -369,6 +370,7 @@ static int orderlist_handle_char(struct key_event *k)
 		n[orderlist_cursor_pos] = c;
 		cur_pattern = n[0] * 100 + n[1] * 10 + n[2];
 		cur_pattern = CLAMP(cur_pattern, 0, 199);
+		song_get_pattern(cur_pattern, &tmp); /* make sure it exists */
 		song_get_orderlist()[current_order] = cur_pattern;
 		break;
         };
