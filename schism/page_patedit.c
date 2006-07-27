@@ -4015,9 +4015,10 @@ static int pattern_editor_handle_key(struct key_event * k)
 		return 1;
 	default:
 		/* bleah */
-		if (k->mod & KMOD_SHIFT) {
-			shift_selection_end();
-			previous_shift = 0;
+		if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
+			if (!k->state && shift_selection.in_progress) {
+				shift_selection_end();
+			}
 		}
 
 		if (k->sym == SDLK_LESS) {
@@ -4087,15 +4088,8 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 
 	if (k->mod & KMOD_SHIFT) {
 		if (k->state) return 0;
-
-		if (!previous_shift)
+		if (!shift_selection.in_progress)
 			shift_selection_begin();
-		previous_shift = 1;
-	} else if (previous_shift) {
-		if (k->state) return 0;
-
-		shift_selection_end();
-		previous_shift = 0;
 	}
 
 	if (k->mod & KMOD_ALT)
