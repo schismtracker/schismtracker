@@ -1360,6 +1360,16 @@ void sample_synchronize_to_instrument(void)
 }
 static void _set_from_f4(void)
 {
+	switch (status.previous_page) {
+	case PAGE_ORDERLIST_PANNING:
+	case PAGE_ORDERLIST_VOLUMES:
+		if (status.flags & CLASSIC_MODE) break;
+	case PAGE_SAMPLE_LIST:
+	case PAGE_LOAD_SAMPLE:
+	case PAGE_LIBRARY_SAMPLE:
+		return;
+	};
+
 	if (song_is_instrument_mode()) {
 		sample_synchronize_to_instrument();
 	}
