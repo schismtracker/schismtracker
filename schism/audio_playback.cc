@@ -229,6 +229,10 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nRowNote = note;
 			c->nRowVolume = vol;
 			c->nRowVolCmd = VOLCMD_VOLUME;
+			if (c->dwFlags & CHN_MUTE) {
+				c->dwFlags &= ~(CHN_MUTE);
+				c->dwFlags |= CHN_NNAMUTE;
+			}
 
 			if (i) {
 				c->nRowInstr = ins;
