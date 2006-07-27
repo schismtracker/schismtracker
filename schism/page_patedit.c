@@ -3706,11 +3706,17 @@ static int pattern_editor_handle_key(struct key_event * k)
 {
 	int n, nx, v;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
+	static int mute_toggle_hack[64];
 	const struct track_view *track_view;
 	int np, nr, nc;
 	int basex;
 
 	if (k->mouse) {
+		if (k->state) {
+			/* mouseup */
+			memset(mute_toggle_hack, 0, sizeof(mute_toggle_hack));
+		}
+
 		if ((k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) && k->state) {
 			shift_selection_end();
 		}
@@ -3751,8 +3757,11 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if (((n == top_display_channel && shift_selection.in_progress) || k->x >= basex) && ((n == visible_channels && shift_selection.in_progress) || k->x < basex + track_view->width)) {
 				if (!shift_selection.in_progress && (k->y == 14 || k->y == 13)) {
 					if (!k->state) {
-						song_toggle_channel_mute(n-1);
-						status.flags |= NEED_UPDATE;
+						if (!mute_toggle_hack[n-1]) {
+							song_toggle_channel_mute(n-1);
+							status.flags |= NEED_UPDATE;
+							mute_toggle_hack[n-1]=1;
+						}
 					}
 					break;
 				}
@@ -3834,7 +3843,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (nr < 0) nr = 0;
 		current_position = np; current_channel = nc; current_row = nr;
 
-		if (!k->state) {
+		if (!k->state && k->sy > 14) {
 			if (!shift_selection.in_progress) {
 				shift_selection_begin();
 			} else {
