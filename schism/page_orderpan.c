@@ -261,7 +261,7 @@ static void orderlist_reorder(void)
 	song_note *np[256], *src;
 	int nplen[256];
         unsigned char *ol;
-	int i, srclen;
+	int i, j, srclen;
 
 	ol = song_get_orderlist();
 
@@ -276,11 +276,12 @@ static void orderlist_reorder(void)
 	}
 
 	/* pass two */
-	for (i = 0; i < 200; i++) {
+	for (i = j = 0; i < 200; i++) {
+		song_pattern_install(j, np[i], nplen[i]);
 		if (ol[i] != ORDER_LAST && ol[i] != ORDER_SKIP) {
-			ol[i] = i;
+			ol[i] = j;
+			j++;
 		}
-		song_pattern_install(i, np[i], nplen[i]);
 	}
 	for (i = 200; i < 255; i++) {
 		ol[i] = ORDER_LAST;
@@ -831,15 +832,13 @@ static void order_pan_vol_handle_key(struct key_event * k)
 
 static int order_pre_key(struct key_event *k)
 {
-#if 0
-/* this was wrong */
+	/* this was wrong */
 	if (k->sym == SDLK_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state) return 1;
 		song_start_at_order(current_order, 0);
 		return 1;
 	}
-#endif
 	return 0;
 }
 
