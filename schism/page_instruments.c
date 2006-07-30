@@ -2224,21 +2224,6 @@ static void instrument_list_pitch_draw_const(void)
 /* --------------------------------------------------------------------- */
 /* load_page functions */
 
-static void _set_from_f3(void)
-{
-	switch (status.previous_page) {
-	case PAGE_ORDERLIST_PANNING:
-	case PAGE_ORDERLIST_VOLUMES:
-		if (status.flags & CLASSIC_MODE) return;
-	case PAGE_SAMPLE_LIST:
-		if (song_is_instrument_mode())
-			instrument_synchronize_to_sample();
-		else
-			instrument_set(sample_get_current());
-        	instrument_list_reposition();
-	};
-}
-
 static void _load_page_common(struct page *page, struct widget *page_widgets)
 {
 	vgamem_font_reserve(&env_overlay);
@@ -2247,7 +2232,7 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	page->handle_key = instrument_list_handle_key;
 	page->widgets = page_widgets;
 	page->help_index = HELP_INSTRUMENT_LIST;
-	page->set_page = _set_from_f3;
+	page->set_page = instrument_list_reposition;
 	
 	/* the first five widgets are the same for all four pages. */
 	

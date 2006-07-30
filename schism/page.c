@@ -1385,6 +1385,36 @@ void playback_update(void)
 
 /* --------------------------------------------------------------------- */
 
+static void _set_from_f3(void)
+{
+	switch (status.previous_page) {
+	case PAGE_ORDERLIST_PANNING:
+	case PAGE_ORDERLIST_VOLUMES:
+		if (status.flags & CLASSIC_MODE) return;
+	case PAGE_SAMPLE_LIST:
+		if (song_is_instrument_mode())
+			instrument_synchronize_to_sample();
+		else
+			instrument_set(sample_get_current());
+	};
+}
+
+static void _set_from_f4(void)
+{
+	switch (status.previous_page) {
+	case PAGE_ORDERLIST_PANNING:
+	case PAGE_ORDERLIST_VOLUMES:
+		if (status.flags & CLASSIC_MODE) break;
+	case PAGE_SAMPLE_LIST:
+	case PAGE_LOAD_SAMPLE:
+	case PAGE_LIBRARY_SAMPLE:
+		return;
+	};
+
+	if (song_is_instrument_mode()) {
+		sample_synchronize_to_instrument();
+	}
+}
 void set_page(int new_page)
 {
         int prev_page = status.current_page;
@@ -1394,6 +1424,9 @@ void set_page(int new_page)
 	if (new_page != prev_page)
 		status.previous_page = prev_page;
 	status.current_page = new_page;
+
+	_set_from_f3();
+	_set_from_f4();
 
 	if (new_page != PAGE_HELP)
 		status.current_help_index = ACTIVE_PAGE.help_index;

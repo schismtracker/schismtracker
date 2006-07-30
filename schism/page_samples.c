@@ -1374,24 +1374,6 @@ void sample_synchronize_to_instrument(void)
 		sample_set(instnum);
 	}
 }
-static void _set_from_f4(void)
-{
-	switch (status.previous_page) {
-	case PAGE_ORDERLIST_PANNING:
-	case PAGE_ORDERLIST_VOLUMES:
-		if (status.flags & CLASSIC_MODE) break;
-	case PAGE_SAMPLE_LIST:
-	case PAGE_LOAD_SAMPLE:
-	case PAGE_LIBRARY_SAMPLE:
-		return;
-	};
-
-	if (song_is_instrument_mode()) {
-		sample_synchronize_to_instrument();
-	}
-	/* might be 0... */
-	sample_list_reposition();
-}
 void sample_list_load_page(struct page *page)
 {
 	vgamem_font_reserve(&sample_image);
@@ -1400,7 +1382,7 @@ void sample_list_load_page(struct page *page)
 	page->draw_const = sample_list_draw_const;
 	page->predraw_hook = sample_list_predraw_hook;
 	page->handle_key = sample_list_handle_key;
-	page->set_page = _set_from_f4;
+	page->set_page = sample_list_reposition;
 	page->total_widgets = 20;
 	page->widgets = widgets_samplelist;
 	page->help_index = HELP_SAMPLE_LIST;
