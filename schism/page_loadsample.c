@@ -334,8 +334,21 @@ static void file_list_draw(void)
 static void do_create_host(UNUSED void *gn)
 {
 	int cur = sample_get_current();
-	if (song_instrument_is_empty(cur)) 
-		song_init_instruments(cur);
+	int n;
+
+	if (song_instrument_is_empty(cur)) {
+		song_init_instrument_from_sample(cur, cur);
+	} else if (!(status.flags & CLASSIC_MODE)
+	&& song_instrument_is_empty((n=instrument_get_current()))) {
+		song_init_instrument_from_sample(n, cur);
+	} else {
+		n = song_first_unused_instrument();
+		if (n) {
+			song_init_instrument_from_sample(n, cur);
+		} else {
+			status_text_flash("Out of instruments");
+		}
+	}
 	set_page(PAGE_SAMPLE_LIST);
 }
 static void dont_create_host(UNUSED void *gn)
@@ -367,8 +380,7 @@ static void stereo_cvt_complete_both(void)
 	int cur = sample_get_current();
 	dialog_destroy_all();
 	memused_songchanged();
-	if (song_instrument_is_empty(cur)
-	&& song_is_instrument_mode()) {
+	if (!sample_is_used_by_instrument(cur) && song_is_instrument_mode()) {
 		dialog_create(DIALOG_YES_NO, "Create host instrument?",
 			do_create_host, dont_create_host, 0, NULL);
 	} else {
@@ -433,9 +445,7 @@ Left  Both  Right
 		return;
 	}
 
-
-	if (song_instrument_is_empty(cur)
-	&& song_is_instrument_mode()) {
+	if (!sample_is_used_by_instrument(cur) && song_is_instrument_mode()) {
 		dialog_create(DIALOG_YES_NO, "Create host instrument?",
 			do_create_host, dont_create_host, 0, NULL);
 	} else {
