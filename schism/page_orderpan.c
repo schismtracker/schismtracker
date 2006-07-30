@@ -258,33 +258,34 @@ static void orderlist_reorder(void)
 {
 	/* err, I hope this is going to be done correctly...
 	*/
-	song_note *np[256], *src;
+	song_note *np[256];
 	int nplen[256];
         unsigned char *ol;
-	int i, j, srclen;
+	unsigned char mapol[256];
+	int i, j;
 
 	ol = song_get_orderlist();
 
-	/* pass one */
-	for (i = 0; i < 255; i++) {
+	memset(np, 0, sizeof(np));
+	memset(mapol, ORDER_LAST, sizeof(mapol));
+	for (i = j = 0; i < 255; i++) {
 		if (ol[i] == ORDER_LAST || ol[i] == ORDER_SKIP) {
-			np[i] = NULL;
-			nplen[i] = 64;
-		} else {
-			np[i] = song_pattern_allocate_copy(ol[i], &nplen[i]);
+			continue;
 		}
-	}
-
-	/* pass two */
-	for (i = j = 0; i < 200; i++) {
-		song_pattern_install(j, np[i], nplen[i]);
-		if (ol[i] != ORDER_LAST && ol[i] != ORDER_SKIP) {
-			ol[i] = j;
+		if (mapol[ ol[i] ] == ORDER_LAST) {
+			np[j] = song_pattern_allocate_copy(ol[i], &nplen[i]);
+			mapol[ ol[i] ] = j;
 			j++;
 		}
+		/* replace orderlist entry */
+		ol[i] = mapol[ ol[i] ];
 	}
-	for (i = 200; i < 255; i++) {
-		ol[i] = ORDER_LAST;
+	for (i = 0; i < 200; i++) {
+		if (!np[i]) {
+			song_pattern_install(i, 0, 64);
+		} else {
+			song_pattern_install(i, np[i], nplen[i]);
+		}
 	}
 
         status.flags |= NEED_UPDATE;
