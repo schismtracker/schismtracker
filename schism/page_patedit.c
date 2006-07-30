@@ -1129,7 +1129,7 @@ static void block_length_halve(void)
 	}
 	for (; j <= selection.last_row; j++) {
 		w = pattern + 64 * j + selection.first_channel - 1;
-		memset(w, 0, sizeof(song_note));
+		memset(w, 0, sizeof(song_note) * ((selection.last_channel-selection.first_channel)+1));
 	}
 	pattern_selection_system_copyout();
 }
