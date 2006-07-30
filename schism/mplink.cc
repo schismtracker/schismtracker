@@ -706,36 +706,47 @@ static void _adjust_samples_in_instruments(int start, int delta)
 	}
 }
 
+int song_first_unused_instrument(void)
+{
+	int ins;
+	for (ins = 1; ins < MAX_INSTRUMENTS; ins++)
+		if (song_instrument_is_empty(ins)) return ins;
+	return 0;
+}
+
+void song_init_instrument_from_sample(int insn, int samp)
+{
+	if (!song_instrument_is_empty(insn)) return;
+	if (mp->Ins[samp].pSample == NULL) return;
+	(void)song_get_instrument(insn, NULL);
+	INSTRUMENTHEADER *ins = mp->Headers[insn];
+	if (!ins) return; /* eh? */
+
+	memset(ins, 0, sizeof(INSTRUMENTHEADER));
+	ins->nGlobalVol = 64;
+	ins->nPan = 128;
+
+	_init_envelope(&ins->VolEnv, 64);
+	_init_envelope(&ins->PanEnv, 32);
+	_init_envelope(&ins->PitchEnv, 32);
+
+	int i;
+	for (i = 0; i < 128; i++) {
+		ins->Keyboard[i] = samp;
+		ins->NoteMap[i] = i+1;
+	}
+
+	for (i = 0; i < 12; i++)
+		ins->filename[i] = mp->Ins[samp].name[i];
+	for (i = 0; i < 32; i++)
+		ins->name[i] = mp->m_szNames[samp][i];
+}
+
 void song_init_instruments(int qq)
 {
-	int i;
 	for (int n = 1; n < MAX_INSTRUMENTS; n++) {
 		if (qq > -1 && qq != n) continue;
-		if (!song_instrument_is_empty(n)) continue;
-		if (mp->Ins[n].pSample == NULL) continue;
-
-		(void)song_get_instrument(n, NULL); /* init struct */
-		INSTRUMENTHEADER *ins = mp->Headers[n];
-		if (ins == NULL) continue; /* eh... */
-
-		/* fry the rest of the structure */
-		memset(ins, 0, sizeof(INSTRUMENTHEADER));
-		ins->nGlobalVol = 64;
-		ins->nPan = 128;
-
-		_init_envelope(&ins->VolEnv, 64);
-		_init_envelope(&ins->PanEnv, 32);
-		_init_envelope(&ins->PitchEnv, 32);
-
-		for (i = 0; i < 128; i++) {
-			ins->Keyboard[i] = n;
-			ins->NoteMap[i] = i+1;
-		}
-
-		for (i = 0; i < 12; i++)
-			ins->filename[i] = mp->Ins[n].name[i];
-		for (i = 0; i < 32; i++)
-			ins->name[i] = mp->m_szNames[n][i];
+		song_init_instrument_from_sample(n,n);
 	}
 }
 

@@ -573,6 +573,7 @@ void song_wipe_instrument(int n);
 
 int song_instrument_is_empty(int n);
 void song_init_instruments(int n); /* -1 for all */
+void song_init_instrument_from_sample(int ins, int samp);
 
 /* --------------------------------------------------------------------- */
 /* misc. */

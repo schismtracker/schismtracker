@@ -1337,6 +1337,22 @@ static void update_panning(void)
 
 /* --------------------------------------------------------------------- */
 
+int sample_is_used_by_instrument(int samp)
+{
+        song_instrument *ins;
+	int i, j;
+	if (samp < 1) return 0;
+	for (i = 1; i <= SCHISM_MAX_INSTRUMENTS; i++) {
+		ins = song_get_instrument(i,NULL);
+		if (!ins) continue;
+		for (j = 0; j < 120; j++) {
+			if (ins->sample_map[j] == samp)
+				return 1;
+		}
+	}
+	return 0;
+}
+
 void sample_synchronize_to_instrument(void)
 {
         song_instrument *ins;

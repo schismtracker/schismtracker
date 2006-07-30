@@ -373,10 +373,13 @@ void sample_set(int n);
 int instrument_get_current(void);
 void instrument_set(int n);
 void instrument_synchronize_to_sample(void);
+void sample_synchronize_to_instrument(void);
+int sample_is_used_by_instrument(int samp);
 
 /* instrument... sample... whatever */
 
 int song_is_instrument_mode(void);
+int song_first_unused_instrument(void);
 int song_get_current_instrument(void);
 /* these should really be const char */
 char *song_get_instrument_name(int n, char **name);
