@@ -562,6 +562,7 @@ void song_exchange_samples(int a, int b);
 void song_exchange_instruments(int a, int b);
 void song_swap_samples(int a, int b);
 void song_swap_instruments(int a, int b);
+void song_copy_instrument(int src, int dst);
 
 void song_insert_sample_slot(int n);
 void song_remove_sample_slot(int n);

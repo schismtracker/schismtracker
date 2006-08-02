@@ -606,6 +606,18 @@ void song_exchange_samples(int a, int b)
 	song_unlock_audio();
 }
 
+void song_copy_instrument(int src, int dst)
+{
+	if (src == dst) return;
+
+	song_lock_audio();
+	(void)song_get_instrument(dst, NULL);
+	(void)song_get_instrument(src, NULL);
+	*(mp->Headers[dst]) = *(mp->Headers[src]);
+	status.flags |= SONG_NEEDS_SAVE;
+	song_unlock_audio();
+}
+
 void song_exchange_instruments(int a, int b)
 {
 	if (a == b)
