@@ -373,6 +373,7 @@ dw->output_le
 }
 int diskwriter_finish(void)
 {
+	int need_realize = 0;
 	char *zed;
 	int r;
 
@@ -394,6 +395,10 @@ int diskwriter_finish(void)
 
 	if (mbuf) {
 		if (fp_ok && fini_sampno > -1) {
+			need_realize = 1;
+			sample_set(fini_sampno);
+			fini_sampno = sample_get_current();
+
 			/* okay, fixup sample */
 			MODINSTRUMENT *p = &mp->Ins[fini_sampno];
 			zed = mp->m_szNames[ fini_sampno ];
@@ -468,6 +473,7 @@ int diskwriter_finish(void)
 		r = 0;
 	}
 
+	if (need_realize) sample_realize();
 	if (r == 0) return 1;
 	return 0;
 }

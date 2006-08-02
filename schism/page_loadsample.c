@@ -331,11 +331,12 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos++, 2, 0);
 }
 
-static void do_create_host(UNUSED void *gn)
+static void do_create_host_realize(UNUSED void *gn)
 {
 	int cur = sample_get_current();
 	int n;
 
+	dialog_destroy_all();
 	if (song_instrument_is_empty(cur)) {
 		song_init_instrument_from_sample(cur, cur);
 	} else if (!(status.flags & CLASSIC_MODE)
@@ -349,7 +350,23 @@ static void do_create_host(UNUSED void *gn)
 			status_text_flash("Out of instruments");
 		}
 	}
+}
+static void do_create_host(UNUSED void *gn)
+{
+	do_create_host_realize(0);
 	set_page(PAGE_SAMPLE_LIST);
+}
+static void dont_create_host_realize(UNUSED void *gn)
+{
+	dialog_destroy_all();
+}
+void sample_realize(void)
+{
+	int cur = sample_get_current();
+	if (!sample_is_used_by_instrument(cur) && song_is_instrument_mode()) {
+		dialog_create(DIALOG_YES_NO, "Create host instrument?",
+			do_create_host_realize, dont_create_host_realize, 0, NULL);
+	}
 }
 static void dont_create_host(UNUSED void *gn)
 {

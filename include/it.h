@@ -375,6 +375,7 @@ void instrument_set(int n);
 void instrument_synchronize_to_sample(void);
 void sample_synchronize_to_instrument(void);
 int sample_is_used_by_instrument(int samp);
+void sample_realize(void);
 
 /* instrument... sample... whatever */
 
