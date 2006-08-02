@@ -242,7 +242,7 @@ void song_handle_channel_solo(int channel)
                 // set the solo channel:
                 // save each channel's state, then mute it...
                 while (n-- > 0) {
-                        channel_states[n] = song_get_channel(n)->flags & CHN_MUTE;
+                        channel_states[n] = 0;//tct1501 ? song_get_channel(n)->flags & CHN_MUTE;
                         song_set_channel_mute(n, 1);
                 }
                 // ... and then, unmute the current channel
