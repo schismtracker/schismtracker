@@ -334,29 +334,14 @@ int song_keyrecord(int samp, int ins, int note, int vol, int chan, int *mm,
 int song_keyup(int samp, int ins, int note, int chan, int *mm)
 {
 	int i, j;
-	MODCHANNEL *c;
-	MODCOMMAND mc;
 
 	if (chan > -1 && !mm) {
-		song_lock_audio();
-		c = mp->Chn + chan;
 		if (ins > -1) {
-			mp->NoteChange(chan, NOTE_OFF, false, true, true);
+			return song_keydown_ex(samp,ins,NOTE_OFF,
+					-1,chan,mm, 0, 0,0);
 		} else {
-			mp->NoteChange(chan, NOTE_CUT, false, true, true);
-		}
-		song_unlock_audio();
-
-		if (ins > -1) {
-			mc.note = NOTE_OFF;
-			mc.instr = ins;
-			mc.volcmd = 0;
-			mc.vol = 0;
-			mc.command = 0;
-			mc.param = 0;
-			song_lock_audio();
-			_schism_midi_out_note(chan, &mc);
-			song_unlock_audio();
+			return song_keydown_ex(samp,ins,NOTE_CUT,
+					-1,chan,mm, 0, 0,0);
 		}
 	} else {
 		if (!mm) {
