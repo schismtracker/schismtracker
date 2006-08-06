@@ -1462,6 +1462,8 @@ void song_init_modplug(void)
 	CSoundFile::gdwSoundSetup |= SNDMIX_EQ;
 	if (audio_settings.no_ramping)
 		CSoundFile::gdwSoundSetup |= SNDMIX_NORAMPING;
+	else
+		CSoundFile::gdwSoundSetup &= (~SNDMIX_NORAMPING);
 	
 	// disable the S91 effect? (this doesn't make anything faster, it
 	// just sounds better with one woofer.)
