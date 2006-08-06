@@ -323,7 +323,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 int song_keydown(int samp, int ins, int note, int vol, int chan, int *mm)
 {
-	return song_keydown_ex(samp,ins,note,vol,chan,mm,0, 0, 0);
+	return song_keydown_ex(samp,ins,note,vol,chan,mm,0,
+			CMD_PANNING8, 0x80);
 }
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int *mm,
 				int effect, int param)
