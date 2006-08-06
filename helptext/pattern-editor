@@ -141,6 +141,7 @@
 |   . (Period)       Clear field(s)
 |   1                Note cut (^^^)
 |   `                Note off (===) / Panning Toggle
+:   Shift-`          Note fade (¹º¹)
 |   Spacebar         Use last note/instrument/volume/effect/effect value
 |   Caps Lock+Key    Preview note
 |
