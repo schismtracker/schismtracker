@@ -951,6 +951,7 @@ void cfg_load_audio(cfg_file_t *cfg)
 	CFG_GET_M(oversampling, 1);
 	CFG_GET_M(hq_resampling, 1);
 	CFG_GET_M(noise_reduction, 1);
+	CFG_GET_M(no_ramping, 0);
 	CFG_GET_M(surround_effect, 1);
 
 	if (audio_settings.channels != 1 && audio_settings.channels != 2)
@@ -1000,6 +1001,7 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 	CFG_SET_M(oversampling);
 	CFG_SET_M(hq_resampling);
 	CFG_SET_M(noise_reduction);
+	CFG_SET_M(no_ramping);
 	//CFG_SET_M(surround_effect);
 
 }
@@ -1016,6 +1018,7 @@ void cfg_save_audio(cfg_file_t *cfg)
 	CFG_SET_M(oversampling);
 	CFG_SET_M(hq_resampling);
 	CFG_SET_M(noise_reduction);
+	CFG_SET_M(no_ramping);
 	CFG_SET_M(surround_effect);
 
 	CFG_SET_D(xbass);
@@ -1454,9 +1457,11 @@ void song_init_modplug(void)
 				true, //only makes sense... audio_settings.hq_resampling,
 				audio_settings.xbass,
 				audio_settings.noise_reduction,
-				false);
+				false);/*EQ off here... */
         CSoundFile::SetResamplingMode(audio_settings.interpolation_mode);
 	CSoundFile::gdwSoundSetup |= SNDMIX_EQ;
+	if (audio_settings.no_ramping)
+		CSoundFile::gdwSoundSetup |= SNDMIX_NORAMPING;
 	
 	// disable the S91 effect? (this doesn't make anything faster, it
 	// just sounds better with one woofer.)

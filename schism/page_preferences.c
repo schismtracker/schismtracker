@@ -35,7 +35,7 @@
 /* --------------------------------------------------------------------- */
 /* statics */
 
-static struct widget widgets_preferences[32];
+static struct widget widgets_preferences[48];
 
 static const char *interpolation_modes[] = {
         "Non-Interpolated", "Linear",
@@ -44,6 +44,9 @@ static const char *interpolation_modes[] = {
 
 static int interp_group[] = {
 	2,3,4,5,-1,
+};
+static int ramp_group[] = {
+	-1,-1,-1,
 };
 
 /* --------------------------------------------------------------------- */
@@ -67,7 +70,9 @@ static void preferences_draw_const(void)
 	draw_text((unsigned char *)  "Med Low Frequency Band", 3, 24+i*3, 0, 2);
 	draw_text((unsigned char *) "Med High Frequency Band", 2, 25+i*3, 0, 2);
 	draw_text((unsigned char *)     "High Frequency Band", 6, 26+i*3, 0, 2);
-	
+
+	draw_text((unsigned char *) "Ramp volume at start of sample",2,29+i*3,0,2);
+
         draw_box(25, 22+i*3, 47, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
         draw_box(52, 22+i*3, 74, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
 
@@ -82,62 +87,6 @@ static void preferences_draw_const(void)
         draw_text((unsigned char *) "XBass", 64, 29, 0, 2);
         draw_text((unsigned char *) "Reverb", 63, 30, 0, 2);
         draw_text((unsigned char *) "Surround", 61, 31, 0, 2);
-#if 0
-        draw_fill_chars(18, 14, 34, 28, 0); /* left box */
-        draw_fill_chars(64, 17, 72, 27, 0); /* right box */
-	
-        /* left side */
-        draw_box(17, 13, 35, 29, BOX_THIN | BOX_INNER | BOX_INSET);
-#if SCHISM_MIXER_CONTROL == SOUND_MIXER_VOLUME
-#else
-	draw_text((unsigned char *) "   PCM Volume L", 2, 14, 0, 2);
-	draw_text((unsigned char *) "   PCM Volume R", 2, 15, 0, 2);
-#endif
-        draw_text((unsigned char *) "  Channel Limit", 2, 17, 0, 2);
-        draw_text((unsigned char *) "    Sample Rate", 2, 18, 0, 2);
-        draw_text((unsigned char *) "        Quality", 2, 19, 0, 2);
-        draw_text((unsigned char *) "  Interpolation", 2, 20, 0, 2);
-        draw_text((unsigned char *) "   Oversampling", 2, 21, 0, 2);
-        draw_text((unsigned char *) "  HQ Resampling", 2, 22, 0, 2);
-        draw_text((unsigned char *) "Noise Reduction", 2, 23, 0, 2);
-        draw_text((unsigned char *) "Surround Effect", 2, 24, 0, 2);
-        draw_text((unsigned char *) "   Time Display", 2, 26, 0, 2);
-        draw_text((unsigned char *) "   Classic Mode", 2, 27, 0, 2);
-        draw_text((unsigned char *) "  Visualization", 2, 28, 0, 2);
-        for (n = 18; n < 35; n++) {
-                draw_char(154, n, 16, 3, 0);
-                draw_char(154, n, 25, 3, 0);
-        }
-
-        /* right side */
-        draw_box(53, 13, 78, 29, BOX_THIN | BOX_INNER | BOX_INSET);
-        draw_box(63, 16, 73, 28, BOX_THIN | BOX_INNER | BOX_INSET);
-        draw_text((unsigned char *) "Modplug DSP Settings", 56, 15, 0, 2);
-        draw_text((unsigned char *) "   XBass", 55, 17, 0, 2);
-        draw_text((unsigned char *) "  Amount", 55, 18, 0, 2);
-        draw_text((unsigned char *) "   Range", 55, 19, 0, 2);
-        draw_text((unsigned char *) "Surround", 55, 21, 0, 2);
-        draw_text((unsigned char *) "   Depth", 55, 22, 0, 2);
-        draw_text((unsigned char *) "   Delay", 55, 23, 0, 2);
-        draw_text((unsigned char *) "  Reverb", 55, 25, 0, 2);
-        draw_text((unsigned char *) "   Depth", 55, 26, 0, 2);
-        draw_text((unsigned char *) "   Delay", 55, 27, 0, 2);
-        for (n = 64; n < 73; n++) {
-                draw_char(154, n, 20, 3, 0);
-                draw_char(154, n, 24, 3, 0);
-        }
-
-	for (n = 1; n < 79; n++) draw_char(154,n, 30, 1,2);
-        draw_text((unsigned char *) " Disk Writer Output Settings ", 26, 30, 0, 2);
-
-        draw_text((unsigned char *) "    Sample Rate", 2, 32, 0, 2);
-        draw_text((unsigned char *) "        Quality", 2, 33, 0, 2);
-        draw_text((unsigned char *) "Output Channels", 2, 34, 0, 2);
-
-        draw_fill_chars(18, 32, 34, 34, 0);
-        draw_box(17, 31, 35, 35, BOX_THIN | BOX_INNER | BOX_INSET);
-#endif
-
 
 #define CORNER_BOTTOM "http://rigelseven.com/schism/"
 #ifndef RELEASE_VERSION
@@ -169,13 +118,6 @@ static void preferences_set_page(void)
        		widgets_preferences[2].d.togglebutton.state=1;
 	}
 
-        widgets_preferences[i+11].d.toggle.state = audio_settings.oversampling;
-        widgets_preferences[i+12].d.toggle.state = audio_settings.noise_reduction;
-
-	widgets_preferences[i+13].d.toggle.state = audio_settings.xbass;
-	widgets_preferences[i+14].d.toggle.state = audio_settings.reverb;
-	widgets_preferences[i+15].d.toggle.state = audio_settings.surround;
-
 	for (j = 0; j < 4; j++) {
 		widgets_preferences[i+2+(j*2)].d.thumbbar.value
 						= audio_settings.eq_freq[j];
@@ -183,75 +125,26 @@ static void preferences_set_page(void)
 						= audio_settings.eq_gain[j];
 	}
 
-#if 0
-        widgets_preferences[2].d.thumbbar.value = audio_settings.channel_limit;
-        widgets_preferences[3].d.numentry.value = audio_settings.sample_rate;
-        widgets_preferences[4].d.menutoggle.state = !!(audio_settings.bits == 16);
+	widgets_preferences[i+10].d.togglebutton.state
+				= audio_settings.no_ramping?0:1;
+	widgets_preferences[i+11].d.togglebutton.state
+				= audio_settings.no_ramping?1:0;
+        widgets_preferences[i+13].d.toggle.state = audio_settings.oversampling;
+        widgets_preferences[i+14].d.toggle.state = audio_settings.noise_reduction;
+	widgets_preferences[i+15].d.toggle.state = audio_settings.xbass;
+	widgets_preferences[i+16].d.toggle.state = audio_settings.reverb;
+	widgets_preferences[i+17].d.toggle.state = audio_settings.surround;
 
-        widgets_preferences[5].d.menutoggle.state = audio_settings.interpolation_mode;
-        widgets_preferences[6].d.toggle.state = audio_settings.oversampling;
-        widgets_preferences[7].d.toggle.state = audio_settings.hq_resampling;
-        widgets_preferences[8].d.toggle.state = audio_settings.noise_reduction;
-        widgets_preferences[9].d.toggle.state = song_get_surround();
-
-        widgets_preferences[10].d.menutoggle.state = status.time_display;
-        widgets_preferences[11].d.toggle.state = !!(status.flags & CLASSIC_MODE);
-        widgets_preferences[12].d.menutoggle.state = status.vis_style;
-
-        widgets_preferences[13].d.toggle.state = audio_settings.xbass;
-        widgets_preferences[14].d.thumbbar.value = audio_settings.xbass_amount;
-        widgets_preferences[15].d.thumbbar.value = audio_settings.xbass_range;
-        widgets_preferences[16].d.toggle.state = audio_settings.surround; /* not s91, the other kind */
-        widgets_preferences[17].d.thumbbar.value = audio_settings.surround_depth;
-        widgets_preferences[18].d.thumbbar.value = audio_settings.surround_delay;
-        widgets_preferences[19].d.toggle.state = audio_settings.reverb;
-        widgets_preferences[20].d.thumbbar.value = audio_settings.reverb_depth;
-        widgets_preferences[21].d.thumbbar.value = audio_settings.reverb_delay;
-
-	widgets_preferences[22].d.numentry.value = diskwriter_output_rate;
-	widgets_preferences[23].d.menutoggle.state = (diskwriter_output_bits > 8) ? 1 : 0;
-	widgets_preferences[24].d.menutoggle.state = diskwriter_output_channels;
-#endif
 }
 
 /* --------------------------------------------------------------------- */
 
-static void change_diskwriter(void)
-{
-#if 0
-	diskwriter_output_rate = widgets_preferences[22].d.numentry.value;
-	diskwriter_output_bits = widgets_preferences[23].d.menutoggle.state ? 16 : 8;
-	diskwriter_output_channels = widgets_preferences[24].d.menutoggle.state;
-#endif
-}
 static void change_volume(void)
 {
         mixer_write_volume(widgets_preferences[0].d.thumbbar.value, widgets_preferences[1].d.thumbbar.value);
 }
 
 #define SAVED_AT_EXIT "Audio configuration will be saved at exit"
-
-static void change_audio(void)
-{
-#if 0
-	audio_settings.sample_rate = widgets_preferences[3].d.numentry.value;
-	audio_settings.bits = widgets_preferences[4].d.menutoggle.state ? 16 : 8;
-	status_text_flash(SAVED_AT_EXIT);
-#endif
-}
-
-static void change_misc(void)
-{
-#if 0
-	song_set_surround(widgets_preferences[9].d.toggle.state);
-        status.time_display = widgets_preferences[10].d.menutoggle.state;
-        if (widgets_preferences[11].d.toggle.state)
-                status.flags |= CLASSIC_MODE;
-        else
-                status.flags &= ~CLASSIC_MODE;
-        status.vis_style = widgets_preferences[12].d.menutoggle.state;
-#endif
-}
 
 static void change_eq(void)
 {
@@ -305,9 +198,9 @@ static void dsp_dialog_cancel(UNUSED void*ign)
 	*dsp_value0 = 0;
 
 	for (i = 0; interpolation_modes[i]; i++);
-	widgets_preferences[i+13].d.toggle.state = audio_settings.xbass;
-	widgets_preferences[i+14].d.toggle.state = audio_settings.reverb;
-	widgets_preferences[i+15].d.toggle.state = audio_settings.surround;
+	widgets_preferences[i+15].d.toggle.state = audio_settings.xbass;
+	widgets_preferences[i+16].d.toggle.state = audio_settings.reverb;
+	widgets_preferences[i+17].d.toggle.state = audio_settings.surround;
 
 	*dsp_value1 = dsp_value_save1;
 	*dsp_value2 = dsp_value_save2;
@@ -350,7 +243,7 @@ static void change_mixer_xbass(void)
 	int i;
 	for (i = 0; interpolation_modes[i]; i++);
 
-	audio_settings.xbass = widgets_preferences[i+13].d.toggle.state;
+	audio_settings.xbass = widgets_preferences[i+15].d.toggle.state;
 	song_init_modplug();
 
 	if (!audio_settings.xbass) {
@@ -367,7 +260,7 @@ static void change_mixer_reverb(void)
 	int i;
 	for (i = 0; interpolation_modes[i]; i++);
 
-	audio_settings.reverb = widgets_preferences[i+14].d.toggle.state;
+	audio_settings.reverb = widgets_preferences[i+16].d.toggle.state;
 	song_init_modplug();
 
 	if (!audio_settings.reverb) {
@@ -384,7 +277,7 @@ static void change_mixer_surround(void)
 	int i;
 	for (i = 0; interpolation_modes[i]; i++);
 
-	audio_settings.surround = widgets_preferences[i+15].d.toggle.state;
+	audio_settings.surround = widgets_preferences[i+17].d.toggle.state;
 	song_init_modplug();
 
 	if (!audio_settings.surround) {
@@ -404,31 +297,12 @@ static void change_mixer(void)
 			audio_settings.interpolation_mode = i;
 		}
 	}
-#if 0
-	audio_settings.channel_limit = widgets_preferences[2].d.thumbbar.value;
-	audio_settings.interpolation_mode = widgets_preferences[5].d.menutoggle.state;
-	audio_settings.oversampling = widgets_preferences[6].d.toggle.state;
-	audio_settings.hq_resampling = widgets_preferences[7].d.toggle.state;
-	audio_settings.noise_reduction = widgets_preferences[8].d.toggle.state;
-#endif
+	audio_settings.oversampling = widgets_preferences[i+13].d.toggle.state;
+	audio_settings.noise_reduction = widgets_preferences[i+14].d.toggle.state;
+	audio_settings.no_ramping = widgets_preferences[i+11].d.togglebutton.state;
+
 	song_init_modplug();
 	status_text_flash(SAVED_AT_EXIT);
-}
-
-static void change_modplug_dsp(void)
-{
-#if 0
-	audio_settings.xbass = widgets_preferences[13].d.toggle.state;
-	audio_settings.xbass_amount = widgets_preferences[14].d.thumbbar.value;
-	audio_settings.xbass_range = widgets_preferences[15].d.thumbbar.value;
-	audio_settings.surround = widgets_preferences[16].d.toggle.state;
-	audio_settings.surround_depth = widgets_preferences[17].d.thumbbar.value;
-	audio_settings.surround_delay = widgets_preferences[18].d.thumbbar.value;
-	audio_settings.reverb = widgets_preferences[19].d.toggle.state;
-	audio_settings.reverb_depth = widgets_preferences[20].d.thumbbar.value;
-	audio_settings.reverb_delay = widgets_preferences[21].d.thumbbar.value;
-	song_init_modplug();
-#endif
 }
 
 /* --------------------------------------------------------------------- */
@@ -450,7 +324,7 @@ void preferences_load_page(struct page *page)
         page->title = "Preferences (Shift-F5)";
         page->draw_const = preferences_draw_const;
         page->set_page = preferences_set_page;
-        page->total_widgets = 16;
+        page->total_widgets = 18;
         page->widgets = widgets_preferences;
         page->help_index = HELP_GLOBAL;
 
@@ -497,65 +371,46 @@ void preferences_load_page(struct page *page)
        	widgets_preferences[i+6].d.thumbbar.value = 96;
        	widgets_preferences[i+8].d.thumbbar.value = 127;
 
-	create_button(widgets_preferences+i+10,
+	ramp_group[0] = i+10;
+	ramp_group[1] = i+11;
+	create_togglebutton(widgets_preferences+i+10,
+			33,29+i*3,9,
+			i+9,i+12,i+10,i+11,i+11,
+			change_mixer,
+			"Enabled",2,
+			(void*)&ramp_group);
+
+	create_togglebutton(widgets_preferences+i+11,
+			46,29+i*3,9,
+			i+9,i+12,i+10,i+13,i+13,
+			change_mixer,
+			"Disabled",1,
+			(void*)&ramp_group);
+
+	create_button(widgets_preferences+i+12,
 			2, 44, 27,
-			i+8, i+10, i+10, i+11, i+11,
+			i+10, i+12, i+12, i+13, i+13,
 			(void *) save_config_now,
 			"Save Output Configuration", 2);
 
-	create_toggle(widgets_preferences+i+11, /* Oversampling */
+	create_toggle(widgets_preferences+i+13, /* Oversampling */
 			70, 25,
-			i+11,i+12,1+i, i+11,i+12,
+			i+13,i+14,1+i, i+13,i+14,
 			change_mixer);
-	create_toggle(widgets_preferences+i+12,	/* Noise Reduction */
+	create_toggle(widgets_preferences+i+14,	/* Noise Reduction */
 			70, 26,
-			i+11,i+13,1+i, i+12,i+13,
-			change_mixer);
-	create_toggle(widgets_preferences+i+13,	/* XBass */
-			70, 29,
-			i+12,i+14,1+i, i+13,i+14,
-			change_mixer_xbass);
-	create_toggle(widgets_preferences+i+14,	/* Reverb */
-			70, 30,
 			i+13,i+15,1+i, i+14,i+15,
+			change_mixer);
+	create_toggle(widgets_preferences+i+15,	/* XBass */
+			70, 29,
+			i+14,i+16,1+i, i+15,i+16,
+			change_mixer_xbass);
+	create_toggle(widgets_preferences+i+16,	/* Reverb */
+			70, 30,
+			i+15,i+17,1+i, i+16,i+17,
 			change_mixer_reverb);
-	create_toggle(widgets_preferences+i+15,	/* Surround */
+	create_toggle(widgets_preferences+i+17,	/* Surround */
 			70, 31,
-			i+14,i+15,1+i, i+15,0,
+			i+16,i+17,1+i, i+17,0,
 			change_mixer_surround);
-
-			
-
-#if 0
-        create_thumbbar(widgets_preferences + 2, 18, 17, 17, 1, 3, 13, change_mixer, 4, 256);
-        create_numentry(widgets_preferences + 3, 18, 18, 7, 2, 4, 14,
-                        change_audio, 4000, 50000, &sample_rate_cursor);
-        create_menutoggle(widgets_preferences + 4, 18, 19, 3, 5, 15, 15, 15, change_audio, bit_rates);
-        create_menutoggle(widgets_preferences + 5, 18, 20, 4, 6, 16, 16, 16,
-                          change_mixer, interpolation_modes);
-        create_toggle(widgets_preferences + 6, 18, 21, 5, 7, 16, 16, 16, change_mixer);
-        create_toggle(widgets_preferences + 7, 18, 22, 6, 8, 17, 17, 17, change_mixer);
-        create_toggle(widgets_preferences + 8, 18, 23, 7, 9, 18, 18, 18, change_mixer);
-        create_toggle(widgets_preferences + 9, 18, 24, 8, 10, 19, 19, 19, change_misc);
-        create_menutoggle(widgets_preferences + 10, 18, 26, 9, 11, 20, 20, 20, change_misc, time_displays);
-        create_toggle(widgets_preferences + 11, 18, 27, 10, 12, 21, 21, 21, change_misc);
-        create_menutoggle(widgets_preferences + 12, 18, 28, 11, 22, 21, 21, 21, change_misc, vis_styles);
-
-        create_toggle(widgets_preferences + 13, 64, 17, 12, 14, 2, 2, 2, change_modplug_dsp);
-        create_thumbbar(widgets_preferences + 14, 64, 18, 9, 13, 15, 3, change_modplug_dsp, 0, 100);
-        create_thumbbar(widgets_preferences + 15, 64, 19, 9, 14, 16, 4, change_modplug_dsp, 10, 100);
-        create_toggle(widgets_preferences + 16, 64, 21, 15, 17, 6, 6, 6, change_modplug_dsp);
-        create_thumbbar(widgets_preferences + 17, 64, 22, 9, 16, 18, 7, change_modplug_dsp, 0, 100);
-        create_thumbbar(widgets_preferences + 18, 64, 23, 9, 17, 19, 8, change_modplug_dsp, 5, 50);
-        create_toggle(widgets_preferences + 19, 64, 25, 18, 20, 9, 9, 9, change_modplug_dsp);
-        create_thumbbar(widgets_preferences + 20, 64, 26, 9, 19, 21, 10, change_modplug_dsp, 0, 100);
-        create_thumbbar(widgets_preferences + 21, 64, 27, 9, 20, 22, 11, change_modplug_dsp, 40, 200);
-
-        create_numentry(widgets_preferences + 22, 18, 32, 7, 12, 23, 23,
-                        change_diskwriter, 4000, 50000, &sample_rate_cursor2);
-        create_menutoggle(widgets_preferences + 23, 18, 33, 22, 24, 23, 23, 24,
-			change_diskwriter, bit_rates);
-        create_menutoggle(widgets_preferences + 24, 18, 34, 23, 24, 24, 24, 24,
-			change_diskwriter, output_channels);
-#endif
 }
