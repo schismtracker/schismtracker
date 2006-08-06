@@ -203,6 +203,7 @@ struct audio_settings {
 
 	unsigned int eq_freq[4];
 	unsigned int eq_gain[4];
+	int no_ramping;
 };
 
 extern struct audio_settings audio_settings;
