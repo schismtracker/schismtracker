@@ -1173,19 +1173,19 @@ printf("channel = %d note=%d\n",chan,m_note);
 	if (mg > -1 && was_program[mc] != mg) {
 		was_program[mc] = mg;
 		mp->ProcessMidiMacro(chan,
-			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_PROGRAM*32], // noteoff
+			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_PROGRAM*32], // program change
 			mg, 0, 0, ins);
 	}
 	if (need_note > 0) {
 		if (need_velocity == -1) need_velocity = 64; /* eh? */
 		need_velocity = CLAMP(need_velocity*2,0,127);
 		mp->ProcessMidiMacro(chan,
-			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEON*32], // noteoff
+			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEON*32], // noteon
 			0, need_note, need_velocity, ins);
 	} else if (need_velocity > -1 && note_tracker[chan] > 0) {
 		need_velocity = CLAMP(need_velocity*2,0,127);
 		mp->ProcessMidiMacro(chan,
-			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_VOLUME*32], // noteoff
+			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_VOLUME*32], // volume-set
 			need_velocity, note_tracker[chan], need_velocity, ins);
 	}
 
@@ -1196,6 +1196,12 @@ static void _schism_midi_out_raw(unsigned char *data, unsigned int len, unsigned
 	i = (8000*(audio_buffer_size - delay));
 	i /= (CSoundFile::gdwMixingFreq);
 #endif
+#if 0
+	for (int i=0; i < len; i++) {
+		printf("%02x ",data[i]);
+	}puts("");
+#endif
+
 	if (!_diskwriter_writemidi(data,len,pos)) midi_send_buffer(data,len,pos);
 }
 

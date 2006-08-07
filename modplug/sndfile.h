@@ -652,6 +652,7 @@ public:
 	BOOL ReadMT2(LPCBYTE lpStream, DWORD dwMemLength);
 	BOOL ReadPSM(LPCBYTE lpStream, DWORD dwMemLength);
 	BOOL ReadUMX(LPCBYTE lpStream, DWORD dwMemLength);
+	BOOL ReadMID(LPCBYTE lpStream, DWORD dwMemLength);
 	// Save Functions
 #ifndef MODPLUG_NO_FILESAVE
 	UINT WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins, UINT nFlags, UINT nMaxLen=0);
