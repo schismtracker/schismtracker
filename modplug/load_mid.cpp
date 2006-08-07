@@ -23,7 +23,7 @@ UINT gnMidiPatternLen = 128;
 
 typedef struct MIDIFILEHEADER
 {
-	DWORD id;		// "MThd" = 0x6468544D
+	CHAR id[4];		// "MThd" = 0x6468544D
 	DWORD len;		// 6
 	WORD w1;		// 1?
 	WORD wTrks;		// 2?
@@ -33,7 +33,7 @@ typedef struct MIDIFILEHEADER
 
 typedef struct MIDITRACKHEADER
 {
-	DWORD id;	// "MTrk" = 0x6B72544D
+	CHAR id[4];	// "MTrk" = 0x6B72544D
 	DWORD len;
 } MIDITRACKHEADER;
 
@@ -498,18 +498,18 @@ BOOL CSoundFile::ReadMID(const BYTE *lpStream, DWORD dwMemLength)
 	if (gnMidiPatternLen > 256) gnMidiPatternLen = 256;
 	// Detect RMI files
 	if ((dwMemLength > 12)
-	 && (*(DWORD *)(lpStream) == IFFID_RIFF)
-	 && (*(DWORD *)(lpStream+8) == 0x44494D52))
+	 && (memcmp(lpStream, "RIFF",4) == 0)
+	 && (memcmp(lpStream, "RMID",4) == 0))
 	{
 		lpStream += 12;
 		dwMemLength -= 12;
 		while (dwMemLength > 8)
 		{
-			DWORD id = *(DWORD *)lpStream;
+			char *id = (char*)lpStream;
 			DWORD len = *(DWORD *)(lpStream+4);
 			lpStream += 8;
 			dwMemLength -= 8;
-			if ((id == IFFID_data) && (len < dwMemLength))
+			if ((memcmp(id, "data",4) == 0) && (len < dwMemLength))
 			{
 				dwMemLength = len;
 				pmfh = (const MIDIFILEHEADER *)lpStream;
@@ -521,12 +521,12 @@ BOOL CSoundFile::ReadMID(const BYTE *lpStream, DWORD dwMemLength)
 		}
 	}
 	// MIDI File Header
-	if ((dwMemLength < sizeof(MIDIFILEHEADER)+8) || (pmfh->id != 0x6468544D)) return FALSE;
+	if ((dwMemLength < sizeof(MIDIFILEHEADER)+8) || (memcmp(pmfh->id, "MThd",4) != 0)) return FALSE;
 	dwMemPos = 8 + bswapBE32(pmfh->len);
 	if (dwMemPos >= dwMemLength - 8) return FALSE;
 	pmth = (MIDITRACKHEADER *)(lpStream+dwMemPos);
 	tracks = bswapBE16(pmfh->wTrks);
-	if ((pmth->id != 0x6B72544D) || (!tracks)) return FALSE;
+	if ((!tracks) || (memcmp(pmth->id, "MTrk", 4) != 0)) return FALSE;
 	if (tracks > MIDI_MAXTRACKS) tracks = MIDI_MAXTRACKS;
 	// Reading File...
 	m_nType = MOD_TYPE_MID;
@@ -582,7 +582,7 @@ BOOL CSoundFile::ReadMID(const BYTE *lpStream, DWORD dwMemLength)
 		pmth = (MIDITRACKHEADER *)(lpStream+dwMemPos);
 		if (dwMemPos + 8 >= dwMemLength) break;
 		DWORD len = bswapBE32(pmth->len);
-		if ((pmth->id == 0x6B72544D) && (dwMemPos + 8 + len <= dwMemLength))
+		if ((memcmp(pmth->id, "MTrk", 4) == 0) && (dwMemPos + 8 + len <= dwMemLength))
 		{
 			// Initializing midi tracks
 			miditracks[itrk].ptracks = lpStream+dwMemPos+8;
