@@ -110,7 +110,7 @@ WORD CSoundFile::ModSaveCommand(const MODCOMMAND *m, BOOL bXM) const
 	case CMD_PATTERNBREAK:		command = 0x0D; param = ((param / 10) << 4) | (param % 10); break;
 	case CMD_MODCMDEX:			command = 0x0E; break;
 	case CMD_SPEED:				command = 0x0F; if (param > 0x20) param = 0x20; break;
-	case CMD_TEMPO:				if (param > 0x20) { command = 0x0F; break; }
+	case CMD_TEMPO:				if (param > 0x20) { command = 0x0F; break; } return 0;
 	case CMD_GLOBALVOLUME:		command = 'G' - 55; break;
 	case CMD_GLOBALVOLSLIDE:	command = 'H' - 55; break;
 	case CMD_KEYOFF:			command = 'K' - 55; break;
