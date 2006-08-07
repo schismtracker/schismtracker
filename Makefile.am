@@ -86,6 +86,7 @@ schism/fmt/s3m.c \
 schism/fmt/mod.c \
 schism/fmt/far.c \
 schism/fmt/wav.cc \
+schism/fmt/mid.cc \
 schism/fmt/its.cc \
 schism/fmt/imf.c \
 schism/fmt/mtm.c \
@@ -143,6 +144,7 @@ modplug/load_669.cpp \
 modplug/load_stm.cpp \
 modplug/load_far.cpp \
 modplug/load_it.cpp \
+modplug/load_mid.cpp \
 modplug/load_ams.cpp \
 modplug/snd_fx.cpp \
 modplug/load_mod.cpp \

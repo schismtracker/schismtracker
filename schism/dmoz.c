@@ -137,6 +137,7 @@ static const fmt_read_info_func read_info_funcs[] = {
 #if defined(USE_NON_TRACKED_TYPES) && defined(HAVE_VORBIS)
 	READ_INFO(ogg),
 #endif
+	READ_INFO(mid),
 
 	/* STM seems to have a case insensitive magic string with several possible values, and only one byte
 	is guaranteed to be the same in the whole file... yeagh. */

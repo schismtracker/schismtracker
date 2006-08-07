@@ -145,13 +145,10 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 		BOOL bMMCmp = MMCMP_Unpack(&lpStream, &dwMemLength);
 #endif
 		if ((!ReadXM(lpStream, dwMemLength))
-#ifndef MODPLUG_BASIC_SUPPORT
 		 && (!Read669(lpStream, dwMemLength))
-#endif
 		 && (!ReadS3M(lpStream, dwMemLength))
 		 && (!ReadIT(lpStream, dwMemLength))
 		 && (!ReadWav(lpStream, dwMemLength))
-#ifndef MODPLUG_BASIC_SUPPORT
 		 && (!ReadSTM(lpStream, dwMemLength))
 		 && (!ReadMed(lpStream, dwMemLength))
 		 && (!ReadMTM(lpStream, dwMemLength))
@@ -168,7 +165,7 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 		 && (!ReadAMF(lpStream, dwMemLength))
 		 && (!ReadPSM(lpStream, dwMemLength))
 		 && (!ReadMT2(lpStream, dwMemLength))
-#endif // MODPLUG_BASIC_SUPPORT
+		 && (!ReadMID(lpStream, dwMemLength))
 		 && (!ReadMod(lpStream, dwMemLength))) m_nType = MOD_TYPE_NONE;
 #ifdef MMCMP_SUPPORT
 		if (bMMCmp)
@@ -1325,7 +1322,6 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 			ITUnpack16Bit(pIns->pSample, pIns->nLength, (LPBYTE)lpMemFile, dwMemLength, (nFlags == RS_IT21516));
 		break;
 
-#ifndef MODPLUG_BASIC_SUPPORT
 #ifndef MODPLUG_FASTSOUNDLIB
 	// 8-bit interleaved stereo samples
 	case RS_STIPCM8S:
@@ -1537,7 +1533,6 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 
 #endif // MODPLUG_TRACKER
 #endif // !MODPLUG_FASTSOUNDLIB
-#endif // !MODPLUG_BASIC_SUPPORT
 
 	// Default: 8-bit signed PCM data
 	default:
