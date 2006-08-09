@@ -192,9 +192,9 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 	}
 }
 
-static void info_draw_samples(int base, int height, UNUSED int active, int first_channel)
+static void info_draw_samples(int base, int height, int active, int first_channel)
 {
-        int vu, smp, ins, n, pos, fg, fg2, c = first_channel;
+        int inuse,vu, smp, ins, n, pos, fg, fg2, c = first_channel;
         char buf[8];
         char *ptr;
 
@@ -247,14 +247,15 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
 		/* figuring out the sample number is an ugly hack... considering all the crap that's
 		copied to the channel, i'm surprised that the sample and instrument numbers aren't
 		in there somewhere... */
+		inuse=1;
 		if (channel->sample)
 			smp = channel->sample - song_get_sample(0, NULL);
 		else
-			smp = 0;
+			smp = inuse = 0;
 
 		// this makes ascii-art behave somewhat...
 		if (channel->flags & (CHN_KEYOFF|CHN_NOTEFADE) && channel->sample_length == 0) {
-			smp = ins = 0;
+			inuse = smp = ins = 0;
 		}
 
 		if (smp) {
@@ -297,11 +298,13 @@ static void info_draw_samples(int base, int height, UNUSED int active, int first
 			draw_char(':', n++, pos, fg, 0);
 			ptr = channel->instrument->name;
 			draw_text_bios_len((const unsigned char *)ptr, 25, n, pos, 6, 0);
+		} else {
+			inuse = 0;
 		}
 
 		/* last box: panning. this one's much easier than the
 		 * other two, thankfully :) */
-		if (song_is_stereo()) {
+		if (inuse && song_is_stereo()) {
 			if (!channel->sample) {
 				/* nothing... */
 			} else if (channel->flags & CHN_SURROUND) {
