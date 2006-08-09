@@ -185,7 +185,6 @@ int song_get_mix_state(unsigned int **channel_list)
 // (whereas in the pattern editor etc. it's one based)
 
 static int solo_channel = -1;
-static int channel_states[64];  /* nonzero => muted */
 
 void song_set_channel_mute(int channel, int muted)
 {
@@ -224,11 +223,10 @@ void song_handle_channel_solo(int channel)
         if (solo_channel >= 0) {
                 if (channel == solo_channel) {
                         // undo the solo
-                        while (n-- > 0)
-                                song_set_channel_mute(n, channel_states[n]);
-			// always unmute current channel
-                        song_set_channel_mute(channel, 0);
                         solo_channel = -1;
+			n = song_find_last_channel();
+                        while (n-- > 0)
+                                song_set_channel_mute(n, 0);
                 } else {
                         // change the solo channel
                         // mute all channels...
@@ -242,7 +240,6 @@ void song_handle_channel_solo(int channel)
                 // set the solo channel:
                 // save each channel's state, then mute it...
                 while (n-- > 0) {
-                        channel_states[n] = 0;//tct1501 ? song_get_channel(n)->flags & CHN_MUTE;
                         song_set_channel_mute(n, 1);
                 }
                 // ... and then, unmute the current channel
@@ -262,11 +259,9 @@ int song_find_last_channel()
 {
         int n = 64;
 
-        if (solo_channel > 0) {
-                while (channel_states[--n])
-                        if (n == 0)
-                                return 64;
-        } else {
+        if (solo_channel >= 0) {
+		return 64;
+	} else {
                 while (song_get_channel(--n)->flags & CHN_MUTE)
                         if (n == 0)
                                 return 64;
