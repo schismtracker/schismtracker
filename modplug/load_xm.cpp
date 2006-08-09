@@ -628,8 +628,10 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 		if ((Order[i] >= np) && (Order[i] < MAX_PATTERNS)) np = Order[i]+1;
 	}
 	header.patterns = bswapLE16(np);
-	ni = m_nInstruments;
-	if (!ni) ni = m_nSamples;
+	if (m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE))
+		ni = m_nInstruments;
+	else
+		ni = m_nSamples;
 	header.instruments = bswapLE16(ni);
 	header.flags = (m_dwSongFlags & SONG_LINEARSLIDES) ? 0x01 : 0x00;
 	if (m_dwSongFlags & SONG_EXFILTERRANGE) header.flags |= 0x1000;
@@ -728,7 +730,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 		memcpy(xmih.name, m_szNames[i], 22);
 		xmih.type = 0;
 		xmih.samples = 0;
-		if (m_nInstruments)
+		if (m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE))
 		{
 			INSTRUMENTHEADER *penv = Headers[i];
 			if (penv)
