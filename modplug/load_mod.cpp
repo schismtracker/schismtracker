@@ -397,6 +397,8 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 	for (UINT iins=1; iins<=31; iins++)
 	{
 		MODINSTRUMENT *pins = &Ins[insmap[iins]];
+		FrequencyToTranspose(pins);
+
 		memcpy(bTab, m_szNames[iins],22);
 		inslen[iins] = pins->nLength;
 		if (inslen[iins] > 0x1fff0) inslen[iins] = 0x1fff0;
