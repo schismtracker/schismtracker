@@ -973,7 +973,7 @@ static void _save_xm(diskwriter_driver_t *dw)
 }
 static void _save_mod(diskwriter_driver_t *dw)
 {
-	if (!mp->SaveXM(dw, 0)) {
+	if (!mp->SaveMod(dw, 0)) {
 		status_text_flash("Error writing to disk");
 		dw->e(dw);
 	}
