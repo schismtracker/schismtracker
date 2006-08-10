@@ -2334,7 +2334,7 @@ static void pattern_editor_redraw(void)
 	for (chan = top_display_channel, chan_pos = 0; chan_pos < visible_channels; chan++, chan_pos++) {
 		track_view = track_views + track_view_scheme[chan_pos];
 		track_view->draw_channel_header(chan, chan_drawpos, 14,
-						((song_get_channel(chan - 1)->flags & CHN_MUTE) ? 0 : 3));
+						((song_get_mix_channel(chan - 1)->flags & CHN_MUTE) ? 0 : 3));
 
 		note = pattern + 64 * top_display_row + chan - 1;
 		for (row = top_display_row, row_pos = 0; row_pos < 32; row++, row_pos++) {
