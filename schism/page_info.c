@@ -213,7 +213,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
         /* FIXME: what about standalone sample playback? */
         if (song_get_mode() == MODE_STOPPED) {
                 for (pos = base + 1; pos < base + height - 1; pos++, c++) {
-                        song_channel *channel = song_get_channel(c - 1);
+                        song_mix_channel *channel = song_get_mix_channel(c - 1);
 
                         if (c == selected_channel) {
                                 fg = (channel->flags & CHN_MUTE) ? 6 : 3;
@@ -460,7 +460,7 @@ static void info_draw_track_5(int base, int height, int active, int first_channe
 	
         draw_box(4, base, 74, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 5; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (song_get_mix_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -478,7 +478,7 @@ static void info_draw_track_10(int base, int height, int active, int first_chann
 
         draw_box(4, base, 75, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 10; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (song_get_mix_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -500,7 +500,7 @@ static void info_draw_track_12(int base, int height, int active, int first_chann
 
         draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 12; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (song_get_mix_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -522,7 +522,7 @@ static void info_draw_track_18(int base, int height, int active, int first_chann
 
         draw_box(4, base, 76, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 18; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (song_get_mix_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -540,7 +540,7 @@ static void info_draw_track_24(int base, int height, int active, int first_chann
 
         draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 24; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (song_get_mix_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -558,7 +558,7 @@ static void info_draw_track_36(int base, int height, int active, int first_chann
 
         draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 36; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (song_get_mix_channel(chan - 1)->flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -579,7 +579,7 @@ static void info_draw_track_64(int base, int height, int active, int first_chann
 
         draw_box(4, base, nchan + 5, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 64; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (song_get_mix_channel(chan - 1)->flags & CHN_MUTE)
 			fg = (chan == selected_channel ? 14 : 9);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 10 : 8));

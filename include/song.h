@@ -406,7 +406,7 @@ int song_get_instrument_number(song_instrument *ins); // 0 => no instrument; ign
 song_channel *song_get_channel(int n);
 
 // this one should probably be organized somewhere else..... meh
-void song_set_channel_mute(int channel, int muted);
+void song_set_channel_mute(int channel, int muted, int as_default);
 void song_toggle_channel_mute(int channel);
 // if channel is the current soloed channel, undo the solo (reset the
 // channel state); otherwise, save the state and solo the channel.
