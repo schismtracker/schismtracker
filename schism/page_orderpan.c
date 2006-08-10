@@ -273,7 +273,7 @@ static void orderlist_reorder(void)
 			continue;
 		}
 		if (mapol[ ol[i] ] == ORDER_LAST) {
-			np[j] = song_pattern_allocate_copy(ol[i], &nplen[i]);
+			np[j] = song_pattern_allocate_copy(ol[i], &nplen[j]);
 			mapol[ ol[i] ] = j;
 			j++;
 		}
