@@ -93,10 +93,10 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 	memcpy(m_szNames[0], lpStream+17, 20);
 	dwHdrSize = bswapLE32(*((DWORD *)(lpStream+60)));
 	norders = bswapLE16(*((WORD *)(lpStream+64)));
-	if ((!norders) || (norders > MAX_ORDERS)) return FALSE;
+	if (norders > MAX_ORDERS) return FALSE;
 	restartpos = bswapLE16(*((WORD *)(lpStream+66)));
 	channels = bswapLE16(*((WORD *)(lpStream+68)));
-	if ((!channels) || (channels > 64)) return FALSE;
+	if (channels > 64) return FALSE;
 	m_nType = MOD_TYPE_XM;
 	m_nMinPeriod = 27;
 	m_nMaxPeriod = 54784;
@@ -606,7 +606,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 	BYTE xmph[9];
 	int i, np, ni, no;
 
-	if ((!m_nChannels) || (!fp)) return FALSE;
+	if (!fp) return FALSE;
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
 	fp->o(fp, (const unsigned char *)m_szNames[0], 20);
 	s[0] = 0x1A;
