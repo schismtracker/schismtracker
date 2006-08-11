@@ -704,6 +704,10 @@ int song_get_current_speed()
         return mp->m_nMusicSpeed;
 }
 
+void song_set_current_tempo(int new_tempo)
+{
+        mp->m_nMusicTempo = CLAMP(new_tempo, 31, 255);
+}
 int song_get_current_tempo()
 {
         return mp->m_nMusicTempo;
