@@ -1039,14 +1039,18 @@ void handle_key(struct key_event * k)
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
                         	song_set_initial_speed(song_get_current_speed());
 			}
-			return;
+		} else if ((k->mod & KMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
+                        song_set_current_tempo(song_get_current_tempo() - 1);
+                        status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
+			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+                        	song_set_initial_tempo(song_get_current_tempo());
+			}
                 } else if (NO_MODIFIER(k->mod)) {
 			song_set_current_global_volume(song_get_current_global_volume() - 1);
 			status_text_flash("Global volume set to %d", song_get_current_global_volume());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 				song_set_initial_global_volume(song_get_current_global_volume());
 			}
-			return;
 		}
 		return;
 	case SDLK_RIGHTBRACKET:
@@ -1058,14 +1062,18 @@ void handle_key(struct key_event * k)
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
                         	song_set_initial_speed(song_get_current_speed());
 			}
-			return;
+		} else if ((k->mod & KMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
+                        song_set_current_tempo(song_get_current_tempo() + 1);
+                        status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
+			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+                        	song_set_initial_tempo(song_get_current_tempo());
+			}
 		} else if (NO_MODIFIER(k->mod)) {
 			song_set_current_global_volume(song_get_current_global_volume() + 1);
 			status_text_flash("Global volume set to %d", song_get_current_global_volume());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 				song_set_initial_global_volume(song_get_current_global_volume());
 			}
-			return;
 		}
 		return;
         }

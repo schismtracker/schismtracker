@@ -532,6 +532,7 @@ void song_update_playing_sample(int s_changed);
 void song_update_playing_instrument(int i_changed);
 
 void song_set_current_speed(int speed);
+void song_set_current_tempo(int t);
 void song_set_current_global_volume(int volume);
 
 /* this is very different from song_get_channel!
