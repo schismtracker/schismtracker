@@ -1376,7 +1376,7 @@ static void selection_wipe_volume(int reckless)
 	for (row = selection.first_row; row <= selection.last_row; row++) {
 		note = pattern + 64 * row + selection.first_channel - 1;
 		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
-			if (reckless || (note->note == 0 && note->instrument == 0)) {
+			if (reckless || ((note->note == 0 || note->note == NOTE_OFF || note->note == NOTE_CUT || note->note == NOTE_FADE) && note->instrument == 0)) {
 				note->volume = 0;
 				note->volume_effect = VOL_EFFECT_NONE;
 			}
