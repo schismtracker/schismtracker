@@ -490,7 +490,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 0;
 		if (k->state) return 1;
                 new_order = song_get_num_orders();
-                if (song_get_orderlist()[new_order] != ORDER_LAST)
+                if (list[new_order] != ORDER_LAST)
                         new_order++;
                 break;
         case SDLK_UP:
@@ -576,11 +576,36 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state) return 1;
                 orderlist_insert_next();
                 return 1;
+	case SDLK_c:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (status.flags & CLASSIC_MODE) return 0;
+		if (!k->state) return 1;
+		p = get_current_pattern();
+		for (n = current_order+1; n < 256; n++) {
+			if (list[n] == p) {
+				new_order = n;
+				break;
+			}
+		}
+		if (n == 256) {
+			for (n = 0; n < current_order; n++) {
+				if (list[n] == p) {
+					new_order = n;
+					break;
+				}
+			}
+			if (n == current_order) {
+				status_text_flash("Pattern %d not on Order List", p);
+				return 1;
+			}
+		}
+		break;
         case SDLK_g:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (!k->state) return 1;
-                n = song_get_orderlist()[new_order];
+                n = list[new_order];
                 if (n < 200) {
                         set_current_pattern(n);
                         set_page(PAGE_PATTERN_EDITOR);
@@ -604,7 +629,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 	case SDLK_o:
 		if (k->mod & KMOD_CTRL) {
 			if (status.flags & CLASSIC_MODE) return 0;
-			p = song_get_orderlist()[current_order];
+			p = list[current_order];
 			if (p >= 200) return 0;
 			n = sample_get_current();
 			if (n < 1) return 0;
@@ -627,7 +652,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 	case SDLK_b:
 		if (k->mod & KMOD_CTRL) {
 			if (status.flags & CLASSIC_MODE) return 0;
-			p = song_get_orderlist()[current_order];
+			p = list[current_order];
 			if (p >= 200) return 0;
 			if (sample_get_current() < 1) return 0;
 
