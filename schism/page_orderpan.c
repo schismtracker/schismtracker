@@ -784,7 +784,7 @@ void orderpan_recheck_muted_channels(void)
 {
         int n;
         for (n = 0; n < 64; n++)
-                widgets_orderpan[n + 1].d.panbar.muted = !!(song_get_channel(n)->flags & CHN_MUTE);
+                widgets_orderpan[n + 1].d.panbar.muted = !!(song_get_mix_channel(n)->flags & CHN_MUTE);
 
         if (status.current_page == PAGE_ORDERLIST_PANNING)
                 status.flags |= NEED_UPDATE;
