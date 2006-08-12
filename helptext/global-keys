@@ -23,6 +23,7 @@
 |   Ctrl-F12          Palette Configuration
 |
 |   { }               Decrease/Increase playback speed
+:   Ctrl-[ ]          Decrease/Increase playback tempo
 |   [ ]               Decrease/Increase global volume
 |   Alt-F1 -> Alt-F8  Toggle channels 1->8
 |

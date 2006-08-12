@@ -15,5 +15,7 @@
 :   Ctrl-B            Link (diskwriter) this pattern to the current sample
 :   Ctrl-O            Copy (diskwriter) this pattern to the current sample
 :
+:   C                 Continue to next entry in orderlist of current pattern
+:
 :   Alt-Enter         Save orderlist
 :   Alt-Backspace     Swap orderlist with saved orderlist
