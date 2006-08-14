@@ -428,7 +428,7 @@ static void do_copy_sample(UNUSED void *data)
 
 static void copy_sample_draw_const(void)
 {
-	draw_text((unsigned char *) "Copy sample to:", 33, 25, 0, 2);
+	draw_text((unsigned char *) "Copy sample:", 36, 25, 0, 2);
 	draw_text((unsigned char *) "Sample", 35, 27, 0, 2);
 	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
