@@ -1343,6 +1343,8 @@ void CSoundFile::PortamentoUp(MODCHANNEL *pChn, UINT param)
 //---------------------------------------------------------
 {
 	if (param) pChn->nOldPortaUpDown = param; else param = pChn->nOldPortaUpDown;
+	if (m_dwSongFlags & SONG_ITCOMPATMODE) pChn->nPortamentoSlide=param*4;
+	else pChn->nPortamentoDest=0;
 	if ((m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT|MOD_TYPE_STM)) && ((param & 0xF0) >= 0xE0))
 	{
 		if (param & 0x0F)
@@ -1370,6 +1372,8 @@ void CSoundFile::PortamentoDown(MODCHANNEL *pChn, UINT param)
 //-----------------------------------------------------------
 {
 	if (param) pChn->nOldPortaUpDown = param; else param = pChn->nOldPortaUpDown;
+	if (m_dwSongFlags & SONG_ITCOMPATMODE) pChn->nPortamentoSlide=param*4;
+	else pChn->nPortamentoDest=0;
 	if ((m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT|MOD_TYPE_STM)) && ((param & 0xF0) >= 0xE0))
 	{
 		if (param & 0x0F)
