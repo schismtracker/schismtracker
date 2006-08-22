@@ -2260,10 +2260,11 @@ static void set_playback_mark(void)
 
 void play_song_from_mark(void)
 {
-	if (marked_pattern == -1)
-		song_start_at_pattern(current_pattern, current_row);
-	else
+	if (marked_pattern == -1) {
+		song_start_at_order(get_current_order(), current_row);
+	} else {
 		song_start_at_pattern(marked_pattern, marked_row);
+	}
 }
 
 /* --------------------------------------------------------------------- */
