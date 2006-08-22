@@ -39,7 +39,7 @@ static HWND SDL_Window, _hmem;
 #elif defined(__QNXNTO__)
 static unsigned short inputgroup;
 #elif defined(XlibSpecificationRelease)
-static Display *SDL_Display;
+static Display *SDL_Display=0;
 static Window SDL_Window;
 static void (*lock_display)(void);
 static void (*unlock_display)(void);
@@ -91,7 +91,7 @@ static void _clippy_copy_to_sys(int do_sel)
 	}
 #endif
 #if defined(USE_X11)
-	if (has_sys_clip) {
+	if (has_sys_clip && SDL_Display) {
 		lock_display();
 		if (!dst) dst = "";
 		if (j < 0) j = 0;
