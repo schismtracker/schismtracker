@@ -437,17 +437,17 @@ inline int kbd_char_to_99(struct key_event *k)
 	if (k->unicode == 'r' || k->unicode == 'R') return 20;
 	
 	switch (k->sym) {
-	case SDLK_a: return 10;
-	case SDLK_b: return 11;
-	case SDLK_c: return 12;
-	case SDLK_d: return 13;
-	case SDLK_e: return 14;
-	case SDLK_f: return 15;
-	case SDLK_g: return 16;
-	case SDLK_h: return 17;
-	case SDLK_i: return 18;
-	case SDLK_j: return 19;
-	case SDLK_k: return 20;
+	case SDLK_h: return 10;
+	case SDLK_i: return 11;
+	case SDLK_j: return 12;
+	case SDLK_k: return 13;
+	case SDLK_l: return 14;
+	case SDLK_m: return 15;
+	case SDLK_n: return 16;
+	case SDLK_o: return 17;
+	case SDLK_p: return 18;
+	case SDLK_q: return 19;
+	case SDLK_r: return 20;
 	};
 
 	return kbd_char_to_hex(k);
