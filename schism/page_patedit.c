@@ -3525,12 +3525,10 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_F9:
 		if (k->state) return 1;
 		song_toggle_channel_mute(current_channel - 1);
-		orderpan_recheck_muted_channels();
 		break;
 	case SDLK_F10:
 		if (k->state) return 1;
 		song_handle_channel_solo(current_channel - 1);
-		orderpan_recheck_muted_channels();
 		break;
 	default:
 		return 0;
