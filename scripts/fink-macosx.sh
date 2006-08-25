@@ -4,7 +4,7 @@
 
 mkdir -p macosx-ppc-build || exit 1
 cd macosx-ppc-build || exit 1
-CC=gcc-3.3 ../configure --disable-sdltest || exit 1
+../configure --disable-sdltest CC=gcc-3.3 CXX=g++-3.3 || exit 1
 make || exit 1
 
 # transfer template
