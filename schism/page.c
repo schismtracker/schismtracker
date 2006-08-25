@@ -830,7 +830,6 @@ static int handle_key_global(struct key_event * k)
 		if (status.current_page == PAGE_PATTERN_EDITOR) {
 			status.flags |= NEED_UPDATE;
 		}
-		orderpan_recheck_muted_channels();
 		return 1;
 	}
 
