@@ -157,6 +157,11 @@ void cfg_load(void)
 	if (i < 0 || i >= VIS_SENTINEL)
 		i = VIS_OSCILLOSCOPE;
 	status.vis_style = i;
+
+	if (cfg_get_number(&cfg, "Hacks", "digitrakker_voodoo", 0))
+		status.flags |= DIGITRAKKER_VOODOO;
+	else
+		status.flags &= ~DIGITRAKKER_VOODOO;
 	
 	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
 	
@@ -205,10 +210,6 @@ void cfg_save(void)
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-	cfg_set_number(&cfg, "General", "time_display", status.time_display);
-	cfg_set_number(&cfg, "General", "classic_mode", !!(status.flags & CLASSIC_MODE));
-	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
-
 	cfg_save_palette(&cfg);
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -231,6 +232,14 @@ void cfg_atexit_save(void)
 	/* err... */
 	cfg_set_string(&cfg, "Video", "driver", video_driver_name());
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
+
+	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);
+	cfg_set_number(&cfg, "General", "time_display", status.time_display);
+	cfg_set_number(&cfg, "General", "classic_mode", !!(status.flags & CLASSIC_MODE));
+	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
+
+	cfg_set_number(&cfg, "Hacks", "digitrakker_voodoo", !!(status.flags & DIGITRAKKER_VOODOO));
+
 
 	/* hm... most of the time probably nothing's different, so saving the
 	config file here just serves to make the backup useless. maybe add a
