@@ -34,7 +34,7 @@
 
 /* --------------------------------------------------------------------- */
 
-#define SAVED_AT_EXIT "Audio configuration will be saved at exit"
+#define SAVED_AT_EXIT "System configuration will be saved at exit"
 
 static void config_set_page(void);
 
