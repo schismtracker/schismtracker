@@ -247,6 +247,19 @@ static int _x11_clip_filter(const SDL_Event *ev)
 	XSync(SDL_Display, False);
 	return 1;
 }
+
+static int (*orig_xlib_err)(Display *d, XErrorEvent *e) = 0;
+static int handle_xlib_err(Display *d, XErrorEvent *e)
+{
+	/* X_SetSelectionOwner == 22 */
+	if (e->error_code == BadWindow && e->request_code == 22) {
+		/* return 0 here to avoid dying as the result of a nonfatal race condition */
+		return 0;
+	}
+	if (orig_xlib_err) return orig_xlib_err(d,e);
+	return 0;
+}
+
 #endif
 
 
@@ -270,6 +283,8 @@ void clippy_init(void)
 
 			atom_sel = XInternAtom(SDL_Display, "SDL_SELECTION", False);
 			atom_clip = XInternAtom(SDL_Display, "CLIPBOARD", False);
+
+			orig_xlib_err = XSetErrorHandler(handle_xlib_err);
 		}
 		if (!lock_display) lock_display = __noop_v;
 		if (!unlock_display) unlock_display = __noop_v;
