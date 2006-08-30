@@ -497,7 +497,7 @@ void video_init(const char *driver)
 		putenv("SDL_VIDEO_YUV_DIRECT=1");
 		putenv("SDL_VIDEO_YUV_HWACCEL=1");
 		/* leave everything else alone... */
-	} else if (!strcasecmp(driver, "gl")) {
+	} else if (!strcasecmp(driver, "gl") || !strcasecmp(driver, "opengl")) {
 		video.desktop.want_type = VIDEO_GL;
 	} else if (!strcasecmp(driver, "sdlauto") || !strcasecmp(driver,"sdl")) {
 		/* okay.... */
