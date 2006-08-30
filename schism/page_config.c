@@ -241,7 +241,7 @@ static void config_set_page(void)
 	nn = video_driver_name();
 	widgets_config[10].d.togglebutton.state = (strcasecmp(nn,"sdl") == 0);
 	widgets_config[11].d.togglebutton.state = (strcasecmp(nn,"yuv") == 0);
-	widgets_config[12].d.togglebutton.state = (strcasecmp(nn,"gl") == 0);
+	widgets_config[12].d.togglebutton.state = (strcasecmp(nn,"opengl") == 0);
 	widgets_config[13].d.togglebutton.state = (strcasecmp(nn,"directdraw") == 0);
 }
 
