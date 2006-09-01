@@ -4176,6 +4176,43 @@ static void _fix_keyhack(void)
 		channel_keyhack[i] = -1;
 	}
 }
+static int _fix_f7(struct key_event *k)
+{
+	int new_order;
+	unsigned char *ol;
+
+	if (k->sym == SDLK_F7) {
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state) return 1;
+		if (marked_pattern != -1) {
+			song_start_at_pattern(marked_pattern, marked_row);
+			return 1;
+		}
+
+		new_order = get_current_order();
+		ol = song_get_orderlist();
+		while (new_order < 255) {
+			if (ol[new_order] == current_pattern) {
+				set_current_order(new_order);
+				song_start_at_order(new_order, current_row);
+				return 1;
+			}
+			new_order++;
+		}
+		new_order = 0;
+		while (new_order < 255) {
+			if (ol[new_order] == current_pattern) {
+				set_current_order(new_order);
+				song_start_at_order(new_order, current_row);
+				return 1;
+			}
+			new_order++;
+		}
+		song_start_at_pattern(current_pattern, current_row);
+		return 1;
+	}
+	return 0;
+}
 void pattern_editor_load_page(struct page *page)
 {
 	int i;
@@ -4192,6 +4229,7 @@ void pattern_editor_load_page(struct page *page)
 	page->playback_update = pattern_editor_playback_update;
 	page->song_changed_cb = pated_history_clear;
 	page->song_mode_changed_cb = _fix_keyhack;
+	page->pre_handle_key = _fix_f7;
 	page->total_widgets = 1;
 	page->clipboard_paste = pattern_selection_system_paste;
 	page->widgets = widgets_pattern;
