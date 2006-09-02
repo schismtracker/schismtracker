@@ -1,0 +1,24 @@
+This is apparently a frequently asked question.
+
+To build schism, you must build outside of the toplevel source directory.
+I recommend making a build directory for your system like this:
+
+$ cd schism2
+$ mkdir -p build
+$ cd build
+$ ../configure
+$ make
+
+This way, all the object files and "targets" are all in one place. You
+can literally put your build directory anywhere- as long as you run
+configure in that directory.
+
+
+If you don't do this, but instead try something like this:
+
+$ cd schism2
+$ ./configure && make
+
+Then configure will make a build directory like above and build there.
+Makefiles are placed such that they transfer control to that directory.
+
