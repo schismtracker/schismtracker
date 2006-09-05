@@ -1,3 +1,5 @@
 # this is a hack so that ./configure && make will actually work.
-all:
+_default_rule:
 	$(MAKE) -C build
+%::
+	$(MAKE) -C build $@
