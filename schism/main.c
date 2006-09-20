@@ -477,7 +477,10 @@ static void event_loop(void)
 #endif
 	int downtrip;
 	int sawrep;
+	char *debug_s;
 	int q;
+
+	debug_s = getenv("SCHISM_DEBUG");
 
 	downtrip = 0;
 	last_mouse_down = 0;
@@ -550,6 +553,11 @@ static void event_loop(void)
 			kk.mod = modkey;
 			kk.unicode = event.key.keysym.unicode;
 			kk.mouse = 0;
+			if (debug_s && strstr(debug_s, "key")) {
+				log_appendf(12, "[DEBUG] Key%s sym=%d",
+						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
+						event.key.keysym.sym);
+			}
 			key_translate(&kk);
 			if (event.type == SDL_KEYDOWN
 			&& last_key == kk.sym) {
