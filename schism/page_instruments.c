@@ -51,6 +51,21 @@ static struct widget widgets_volume[17];
 static struct widget widgets_panning[19];
 static struct widget widgets_pitch[20];
 
+static struct widget *get_page_widgets(void)
+{
+	switch (instrument_list_subpage) {
+	case PAGE_INSTRUMENT_LIST_GENERAL:
+		return widgets_general;
+	case PAGE_INSTRUMENT_LIST_VOLUME:
+		return widgets_volume;
+	case PAGE_INSTRUMENT_LIST_PANNING:
+		return widgets_panning;
+	case PAGE_INSTRUMENT_LIST_PITCH:
+		return widgets_pitch;
+	};
+	return widgets_general;
+}
+
 static int subpage_switches_group[5] = { 1, 2, 3, 4, -1 };
 static int nna_group[5] = { 6, 7, 8, 9, -1 };
 static int dct_group[5] = { 10, 11, 12, 13, -1 };
@@ -199,6 +214,7 @@ static int instrument_list_add_char(int c)
         if (instrument_cursor_pos == 25)
                 instrument_cursor_pos--;
 
+	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
         status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
         return 1;
@@ -210,6 +226,7 @@ static void instrument_list_delete_char(void)
         song_get_instrument(current_instrument, &name);
         text_delete_char(name, &instrument_cursor_pos, 25);
 
+	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
         status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
 }
@@ -220,6 +237,7 @@ static void instrument_list_delete_next_char(void)
         song_get_instrument(current_instrument, &name);
         text_delete_next_char(name, &instrument_cursor_pos, 25);
 
+	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
         status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
 }
@@ -233,6 +251,7 @@ static void clear_instrument_text(void)
         if (instrument_cursor_pos != 25)
                 instrument_cursor_pos = 0;
 
+	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
         status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
 }
@@ -405,11 +424,17 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if (new_ins == current_instrument) {
 				instrument_cursor_pos = k->x - 5;
                 		status.flags |= NEED_UPDATE;
-				if (instrument_cursor_pos > 25) instrument_cursor_pos = 25;
+				if (instrument_cursor_pos >= 25) {
+					instrument_cursor_pos = 25;
+					get_page_widgets()->accept_text = 0;
+				} else {
+					get_page_widgets()->accept_text = 1;
+				}
 			}
 		} else if (k->mouse == MOUSE_DBLCLICK) {
 			if (instrument_cursor_pos < 25) {
 				instrument_cursor_pos = 25;
+				get_page_widgets()->accept_text = 0;
 			} else {
 				set_page(PAGE_LOAD_INSTRUMENT);
 			}
@@ -461,6 +486,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 0;
 			if (instrument_cursor_pos < 25) {
 				instrument_cursor_pos = 0;
+				get_page_widgets()->accept_text = 1;
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
@@ -470,6 +496,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 0;
 			if (instrument_cursor_pos < 24) {
 				instrument_cursor_pos = 24;
+				get_page_widgets()->accept_text = 1;
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
@@ -479,6 +506,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 0;
 			if (instrument_cursor_pos < 25 && instrument_cursor_pos > 0) {
 				instrument_cursor_pos--;
+				get_page_widgets()->accept_text = 1;
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
@@ -487,8 +515,10 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			if (instrument_cursor_pos == 25) {
+				get_page_widgets()->accept_text = 0;
 				change_focus_to(1);
 			} else if (instrument_cursor_pos < 24) {
+				get_page_widgets()->accept_text = 1;
 				instrument_cursor_pos++;
 				status.flags |= NEED_UPDATE;
 			}
@@ -497,8 +527,10 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if (!k->state) return 0;
 			if (instrument_cursor_pos < 25) {
 				instrument_cursor_pos = 25;
+				get_page_widgets()->accept_text = 0;
 				status.flags |= NEED_UPDATE;
 			} else {
+				get_page_widgets()->accept_text = 1;
 				set_page(PAGE_LOAD_INSTRUMENT);
 			}
 			return 1;
@@ -506,6 +538,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
 				if (k->state) return 1;
 				instrument_cursor_pos = 25;
+				get_page_widgets()->accept_text = 0;
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
@@ -553,6 +586,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					return instrument_list_add_char(k->unicode);
 				} else if (k->sym == SDLK_SPACE) {
 					instrument_cursor_pos = 0;
+					get_page_widgets()->accept_text = 0;
 					status.flags |= NEED_UPDATE;
 					memused_songchanged();
 					return 1;
@@ -815,6 +849,7 @@ static int note_trans_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			sample_set(ins->sample_map[note_trans_sel_line]);
+			get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 			return 1;
 		case SDLK_LESS:
 			if (k->state) return 0;
@@ -1780,6 +1815,7 @@ static void instrument_list_handle_key(struct key_event * k)
 		if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
 			if (k->state) return;
 			instrument_cursor_pos = 25;
+			get_page_widgets()->accept_text = 0;
 			change_focus_to(0);
 			status.flags |= NEED_UPDATE;
 			return;
@@ -2272,7 +2308,7 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	
 	/* 0 = instrument list */
 	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list, instrument_list_draw_list);
-	page_widgets[0].accept_text = 1;
+	page_widgets[0].accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	page_widgets[0].x = 5;
 	page_widgets[0].y = 13;
 	page_widgets[0].width = 24;
@@ -2303,7 +2339,6 @@ void instrument_list_general_load_page(struct page *page)
 	
         /* 5 = note trans table */
 	create_other(widgets_general + 5, 6, note_trans_handle_key, note_trans_draw);
-	widgets_general[5].accept_text = 1;
 	widgets_general[5].x = 32;
 	widgets_general[5].y = 16;
 	widgets_general[5].width = 9;
@@ -2484,7 +2519,6 @@ void instrument_list_panning_load_page(struct page *page)
 	
 	/* 16 = pitch-pan center */
 	create_other(widgets_panning + 16, 0, pitch_pan_center_handle_key, pitch_pan_center_draw);
-	widgets_general[16].accept_text = 1;
         widgets_panning[16].next.up = 15;
         widgets_panning[16].next.down = 17;
 	

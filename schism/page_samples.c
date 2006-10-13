@@ -58,6 +58,15 @@ static const char *loop_states[] = { "Off", "On Forwards", "On Ping Pong", NULL 
 static int last_note = 61;		/* C-5 */
 
 /* woo */
+static int _is_magic_sample(int no);
+static void _fix_accept_text(void)
+{
+	if (_is_magic_sample(current_sample)) {
+		widgets_samplelist[0].accept_text = (sample_list_cursor_pos == 23 ? 0 : 1);
+	} else {
+		widgets_samplelist[0].accept_text = (sample_list_cursor_pos == 25 ? 0 : 1);
+	}
+}
 static int _last_vis_sample(void)
 {
 	int i, j, n;
@@ -304,6 +313,7 @@ static int sample_list_add_char(char c)
 	song_get_sample(current_sample, &name);
 	text_add_char(name, c, &sample_list_cursor_pos, _is_magic_sample(current_sample)
 							? 22 : 25);
+	_fix_accept_text();
 
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
@@ -317,6 +327,7 @@ static void sample_list_delete_char(void)
 	song_get_sample(current_sample, &name);
 	text_delete_char(name, &sample_list_cursor_pos, _is_magic_sample(current_sample)
 							? 23 : 25);
+	_fix_accept_text();
 
 	status.flags |= SONG_NEEDS_SAVE;
 	status.flags |= NEED_UPDATE;
@@ -329,6 +340,7 @@ static void sample_list_delete_next_char(void)
 	song_get_sample(current_sample, &name);
 	text_delete_next_char(name, &sample_list_cursor_pos, _is_magic_sample(current_sample)
 							? 23 : 25);
+	_fix_accept_text();
 
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
@@ -345,6 +357,7 @@ static void clear_sample_text(void)
 		memset(name, 0, 26);
 	}
 	sample_list_cursor_pos = 0;
+	_fix_accept_text();
 
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
@@ -605,6 +618,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 		sample_list_reposition();
 	} else if (new_cursor_pos != sample_list_cursor_pos) {
 		sample_list_cursor_pos = new_cursor_pos;
+		_fix_accept_text();
 	} else {
 		return 1;
 	}
@@ -1145,6 +1159,7 @@ static void sample_list_handle_key(struct key_event * k)
 		if (k->mod & KMOD_SHIFT) {
 			if (k->state) return;
 			sample_list_cursor_pos = 25;
+			_fix_accept_text();
 			change_focus_to(0);
 			status.flags |= NEED_UPDATE;
 			return;
@@ -1425,7 +1440,8 @@ void sample_list_load_page(struct page *page)
 
 	/* 0 = sample list */
 	create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list, sample_list_draw_list);
-	widgets_samplelist[0].accept_text = 1;
+	_fix_accept_text();
+
 	widgets_samplelist[0].x = 5;
 	widgets_samplelist[0].y = 13;
 	widgets_samplelist[0].width = 30;
