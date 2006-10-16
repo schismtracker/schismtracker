@@ -168,14 +168,14 @@ void key_translate(struct key_event *k)
 	k->orig_sym = k->sym;
 	if (k->mod & KMOD_SHIFT) {
 		switch (k->sym) {
-		case SDLK_COMMA: k->sym = SDLK_LESS; k->mod &= ~KMOD_SHIFT; break;
-		case SDLK_PERIOD: k->sym = SDLK_GREATER; k->mod &= ~KMOD_SHIFT; break;
-		case SDLK_4: k->sym = SDLK_DOLLAR; k->mod &= ~KMOD_SHIFT; break;
+		case SDLK_COMMA: k->sym = SDLK_LESS; break;
+		case SDLK_PERIOD: k->sym = SDLK_GREATER; break;
+		case SDLK_4: k->sym = SDLK_DOLLAR; break;
 
-		case SDLK_EQUALS: k->sym = SDLK_PLUS; k->mod &= ~KMOD_SHIFT; break;
-		case SDLK_SEMICOLON: k->sym = SDLK_COLON; k->mod &= ~KMOD_SHIFT; break;
+		case SDLK_EQUALS: k->sym = SDLK_PLUS; break;
+		case SDLK_SEMICOLON: k->sym = SDLK_COLON; break;
 
-		case SDLK_8: k->sym = SDLK_ASTERISK; k->mod &= ~KMOD_SHIFT; break;
+		case SDLK_8: k->sym = SDLK_ASTERISK; break;
 		};
 	}
 	if (k->mod & KMOD_META) {
