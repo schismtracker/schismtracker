@@ -689,7 +689,6 @@ void CSoundFile::SetCurrentOrder(UINT nPos)
 	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_CPUVERYHIGH|SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
 }
 
-
 void CSoundFile::ResetChannels()
 //------------------------------
 {
@@ -1805,6 +1804,32 @@ BOOL CSoundFile::GetPatternName(UINT nPat, LPSTR lpszName, UINT cbSize) const
 	}
 	return FALSE;
 }
+
+UINT CSoundFile::GetHighestUsedChannel()
+//------------------------------
+{
+	UINT highchan = 0;
+
+	for (UINT ipat=0; ipat<MAX_PATTERNS; ipat++)
+	{
+		MODCOMMAND *p = Patterns[ipat];
+		if (p)
+		{
+			UINT jmax = PatternSize[ipat] * m_nChannels;
+			for (UINT j=0; j<jmax; j++, p++)
+			{
+				if ((p->note) && (p->note <= 120))
+				{
+					if ((j % m_nChannels) > highchan)
+						highchan = j % m_nChannels;
+				}
+			}
+		}
+	}
+
+	return highchan;
+}
+
 
 
 #ifndef MODPLUG_FASTSOUNDLIB

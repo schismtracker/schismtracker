@@ -597,6 +597,7 @@ public:
 public:
 	BOOL Create(LPCBYTE lpStream, DWORD dwMemLength=0);
 	BOOL Destroy();
+	UINT GetHighestUsedChannel();
 	UINT GetType() const { return m_nType; }
 	UINT GetNumChannels() const;
 	UINT GetLogicalChannels() const { return m_nChannels; }

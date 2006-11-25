@@ -416,6 +416,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 {
 	BYTE header[0x60];
 	UINT nbo,nbi,nbp,i;
+	UINT chanlim;
 	WORD patptr[128];
 	WORD insptr[128];
 	BYTE buffer[5*1024];
@@ -460,9 +461,15 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 	header[0x32] = m_nDefaultTempo;
 	header[0x33] = ((m_nSongPreAmp < 0x20) ? 0x20 : m_nSongPreAmp) | 0x80;	// Stereo
 	header[0x35] = 0xFC;
+
+	chanlim = GetHighestUsedChannel();
+	if (chanlim < 4) chanlim = 4;
+	if (chanlim > 32) chanlim = 32;
+
 	for (i=0; i<32; i++)
 	{
-		if (i < m_nChannels)
+/*XXX calculate number of channels (for real) */
+		if (i < chanlim)
 		{
 			UINT tmp = (i & 0x0F) >> 1;
 			header[0x40+i] = (i & 0x10) | ((i & 1) ? 8+tmp : tmp);
@@ -514,7 +521,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 			MODCOMMAND *p = Patterns[i];
 			for (int row=0; row<64; row++) if (row < PatternSize[i])
 			{
-				for (UINT j=0; j < 32 && j<m_nChannels; j++)
+				for (UINT j=0; j < 32 && j<chanlim; j++)
 				{
 					UINT b = j;
 					MODCOMMAND *m = &p[row*m_nChannels+j];
