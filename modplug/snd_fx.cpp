@@ -814,7 +814,7 @@ BOOL CSoundFile::ProcessEffects()
 
 		pChn->dwFlags &= ~CHN_FASTVOLRAMP;
 		// Process special effects (note delay, pattern delay, pattern loop)
-		if (((cmd == CMD_MODCMDEX) || (cmd == CMD_S3MCMDEX)) && !(m_dwSongFlags & SONG_PAUSED))
+		if (((cmd == CMD_MODCMDEX) || (cmd == CMD_S3MCMDEX)))
 		{
 			if ((!param) && (m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT))) param = pChn->nOldCmdEx; else pChn->nOldCmdEx = param;
 			// Note Delay ?
@@ -882,7 +882,7 @@ BOOL CSoundFile::ProcessEffects()
 			if (note >= 0xFE) instr = 0;
 			if ((note) && (note <= 128)) pChn->nNewNote = note;
 			// New Note Action ? (not when paused!!!)
-			if ((note) && (note <= 128) && (!bPorta) && !(m_dwSongFlags & SONG_PAUSED))
+			if ((note) && (note <= 128) && (!bPorta))
 			{
 				CheckNNA(nChn, instr, note, FALSE);
 			}
