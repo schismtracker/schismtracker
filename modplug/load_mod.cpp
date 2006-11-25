@@ -372,8 +372,12 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 	UINT inslen[32];
 	BYTE bTab[32];
 	BYTE ord[128];
+	UINT chanlim;
 
 	if ((!m_nChannels) || (!fp)) return FALSE;
+	chanlim  = GetHighestUsedChannel();
+	if (chanlim < 4) chanlim = 4;
+
 	memset(ord, 0, sizeof(ord));
 	memset(inslen, 0, sizeof(inslen));
 	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
@@ -433,21 +437,22 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 	if (norders) memcpy(ord, Order, norders);
 	fp->o(fp, (const unsigned char *)ord, 128);
 	// Writing signature
-	if (m_nChannels == 4)
+	if (chanlim == 4)
 		lstrcpy((LPSTR)&bTab, "M.K.");
 	else
-		wsprintf((LPSTR)&bTab, "%luCHN", m_nChannels);
+		wsprintf((LPSTR)&bTab, "%luCHN", chanlim);
 	fp->o(fp, (const unsigned char *)bTab, 4);
 	// Writing patterns
 	for (UINT ipat=0; ipat<nbp; ipat++) if (Patterns[ipat])
 	{
 		BYTE s[64*4];
-		MODCOMMAND *m = Patterns[ipat];
+		MODCOMMAND *pm = Patterns[ipat];
 		for (UINT i=0; i<64; i++) if (i < PatternSize[ipat])
 		{
 			LPBYTE p=s;
-			for (UINT c=0; c<m_nChannels; c++,p+=4,m++)
+			for (UINT c=0; c<chanlim; c++,p+=4)
 			{
+				MODCOMMAND *m = &pm[ i * m_nChannels + c];
 				UINT param = ModSaveCommand(m, FALSE);
 				UINT command = param >> 8;
 				param &= 0xFF;
@@ -467,11 +472,11 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 				p[2] = ((instr & 0x0F) << 4) | (command & 0x0F);
 				p[3] = param;
 			}
-			fp->o(fp, (const unsigned char *)s, m_nChannels*4);
+			fp->o(fp, (const unsigned char *)s, chanlim*4);
 		} else
 		{
-			memset(s, 0, m_nChannels*4);
-			fp->o(fp, (const unsigned char *)s, m_nChannels*4);
+			memset(s, 0, chanlim*4);
+			fp->o(fp, (const unsigned char *)s, chanlim*4);
 		}
 	}
 	// Writing instruments
