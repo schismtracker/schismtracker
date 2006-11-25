@@ -468,7 +468,6 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 
 	for (i=0; i<32; i++)
 	{
-/*XXX calculate number of channels (for real) */
 		if (i < chanlim)
 		{
 			UINT tmp = (i & 0x0F) >> 1;
