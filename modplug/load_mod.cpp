@@ -397,21 +397,22 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 	for (UINT iins=1; iins<=31; iins++)
 	{
 		MODINSTRUMENT *pins = &Ins[insmap[iins]];
+		WORD gg;
 		FrequencyToTranspose(pins);
 
 		memcpy(bTab, m_szNames[iins],22);
 		inslen[iins] = pins->nLength;
 		if (inslen[iins] > 0x1fff0) inslen[iins] = 0x1fff0;
-		bTab[22] = inslen[iins] >> 9;
-		bTab[23] = inslen[iins] >> 1;
+		gg = bswapBE16(inslen[iins] / 2);
+		memcpy(bTab+22, &gg, 2);
 		if (pins->RelativeTone < 0) bTab[24] = 0x08; else
 		if (pins->RelativeTone > 0) bTab[24] = 0x07; else
 		bTab[24] = (BYTE)XM2MODFineTune(pins->nFineTune);
-		bTab[25] = pins->nVolume >> 2;
-		bTab[26] = pins->nLoopStart >> 9;
-		bTab[27] = pins->nLoopStart >> 1;
-		bTab[28] = (pins->nLoopEnd - pins->nLoopStart) >> 9;
-		bTab[29] = (pins->nLoopEnd - pins->nLoopStart) >> 1;
+		bTab[25] = pins->nVolume  / 4;
+		gg = bswapBE16(pins->nLoopStart / 2);
+		memcpy(bTab+26, &gg, 2);
+		gg = bswapBE16((pins->nLoopEnd - pins->nLoopStart)/ 2);
+		memcpy(bTab+28, &gg, 2);
 		fp->o(fp,(const unsigned char *) bTab, 30);
 	}
 	// Writing number of patterns
@@ -461,8 +462,8 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 					period = ProTrackerPeriodTable[period];
 				}
 				UINT instr = (m->instr > 31) ? 0 : m->instr;
-				p[0] = ((period >> 8) & 0x0F) | (instr & 0x10);
-				p[1] = period & 0xFF;
+				p[0] = ((period / 256) & 0x0F) | (instr & 0x10);
+				p[1] = period % 256;
 				p[2] = ((instr & 0x0F) << 4) | (command & 0x0F);
 				p[3] = param;
 			}
