@@ -521,6 +521,7 @@ BOOL CSoundFile::ReadNote()
 				pChn->nRowVolume = 0;
 				pChn->nRowCommand = 0;
 				pChn->nRowParam = 0;
+				pChn->nTickStart = 0;
 			}
 		}
 	};
