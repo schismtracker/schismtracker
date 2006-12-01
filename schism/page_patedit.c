@@ -4004,7 +4004,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			};
 		}
 
-		if (k->mod & KMOD_SHIFT)
+		if ((k->mod & KMOD_SHIFT) && k->orig_sym == SDLK_PLUS)
 			set_current_pattern(current_pattern + 4);
 		else
 			set_current_pattern(current_pattern + 1);
@@ -4029,7 +4029,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			}
 		}
 
-		if (k->sym == SDLK_LESS) {
+		if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
 			if (k->state) return 0;
 			if ((status.flags & CLASSIC_MODE)
 			|| current_position != 4) {
@@ -4038,7 +4038,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 				return 1;
 			}
 			/* fall through */
-		} else if (k->sym == SDLK_GREATER) {
+		} else if (k->sym == SDLK_GREATER || k->sym == SDLK_QUOTE || k->sym == SDLK_QUOTEDBL) {
 			if (k->state) return 0;
 			if ((status.flags & CLASSIC_MODE)
 			|| current_position != 4) {

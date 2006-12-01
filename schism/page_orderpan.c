@@ -677,6 +677,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
                 return 0;
 	case SDLK_LESS:
+	case SDLK_SEMICOLON:
+	case SDLK_COLON:
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (k->state) return 1;
@@ -684,6 +686,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_GREATER:
+	case SDLK_QUOTE:
+	case SDLK_QUOTEDBL:
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (k->state) return 1;
