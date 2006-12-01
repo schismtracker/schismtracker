@@ -1616,7 +1616,7 @@ static int _timejump_keyh(struct key_event *k)
 			return 1;
 		}
 	}
-	if (k->sym == SDLK_COLON) {
+	if (k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
 		if (k->state) {
 			if (*selected_widget == 0) {
 				change_focus_to(1);

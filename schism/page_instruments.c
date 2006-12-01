@@ -852,10 +852,14 @@ static int note_trans_handle_key(struct key_event * k)
 			get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 			return 1;
 		case SDLK_LESS:
+		case SDLK_SEMICOLON:
+		case SDLK_COLON:
 			if (k->state) return 0;
 			sample_set(sample_get_current() - 1);
 			return 1;
 		case SDLK_GREATER:
+		case SDLK_QUOTE:
+		case SDLK_QUOTEDBL:
 			if (k->state) return 0;
 			sample_set(sample_get_current() + 1);
 			return 1;
