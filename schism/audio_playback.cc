@@ -699,7 +699,9 @@ int song_get_current_speed()
 
 void song_set_current_tempo(int new_tempo)
 {
+	song_lock_audio();
         mp->m_nMusicTempo = CLAMP(new_tempo, 31, 255);
+	song_unlock_audio();
 }
 int song_get_current_tempo()
 {
@@ -740,8 +742,10 @@ void song_get_vu_meter(int *left, int *right)
 {
 	// FIXME: hack independent left/right vu meters into modplug
 	// ... better yet, finish writing my own player :P
+	song_lock_audio();
 	*left = mp->gnVUMeter;
 	*right = mp->gnVUMeter;
+	song_unlock_audio();
 }
 
 void song_update_playing_instrument(int i_changed)
@@ -835,6 +839,7 @@ void song_get_playing_samples(int samples[])
 	
 	memset(samples, 0, 100 * sizeof(int));
 	
+	song_lock_audio();
 	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 	while (n--) {
 		channel = mp->Chn + mp->ChnMix[n];
@@ -847,6 +852,7 @@ void song_get_playing_samples(int samples[])
 			// (when does this happen?)
 		}
 	}
+	song_unlock_audio();
 }
 
 void song_get_playing_instruments(int instruments[])
@@ -855,6 +861,7 @@ void song_get_playing_instruments(int instruments[])
 	
 	memset(instruments, 0, 100 * sizeof(int));
 	
+	song_lock_audio();
 	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 	while (n--) {
 		channel = mp->Chn + mp->ChnMix[n];
@@ -863,6 +870,7 @@ void song_get_playing_instruments(int instruments[])
 			instruments[ins] = 1;
 		}
 	}
+	song_unlock_audio();
 }
 
 // ------------------------------------------------------------------------
@@ -873,7 +881,9 @@ void song_set_current_speed(int speed)
         if (speed < 1 || speed > 255)
                 return;
 
+	song_lock_audio();
         mp->m_nMusicSpeed = speed;
+	song_unlock_audio();
 }
 
 void song_set_current_global_volume(int volume)
@@ -881,18 +891,24 @@ void song_set_current_global_volume(int volume)
         if (volume < 0 || volume > 128)
                 return;
 
+	song_lock_audio();
         mp->m_nGlobalVolume = volume * 2;
+	song_unlock_audio();
 }
 
 void song_set_current_order(int order)
 {
+	song_lock_audio();
         mp->SetCurrentOrder(order);
+	song_unlock_audio();
 }
 
 // Ctrl-F7
 void song_set_next_order(int order)
 {
+	song_lock_audio();
 	mp->m_nLockedPattern = order;
+	song_unlock_audio();
 }
 
 // Alt-F11
