@@ -411,6 +411,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 	} else {
 		ResetMidiCfg();
 	}
+#if 0
 	// Read pattern names: "PNAM"
 	if ((dwMemPos + 8 < dwMemLength) && (bswapLE32(*((DWORD *)(lpStream+dwMemPos))) == 0x4d414e50))
 	{
@@ -427,8 +428,10 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 			dwMemPos += len;
 		}
 	}
+#endif
 	// 4-channels minimum
 	m_nChannels = 4;
+#if 0
 	// Read channel names: "CNAM"
 	if ((dwMemPos + 8 < dwMemLength) && (bswapLE32(*((DWORD *)(lpStream+dwMemPos))) == 0x4d414e43))
 	{
@@ -451,6 +454,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 	{
 		dwMemPos += LoadMixPlugins(lpStream+dwMemPos, dwMemLength-dwMemPos);
 	}
+#endif
 	// Checking for unused channels
 	UINT npatterns = pifh.patnum;
 	if (npatterns > MAX_PATTERNS) npatterns = MAX_PATTERNS;
