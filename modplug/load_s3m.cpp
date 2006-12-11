@@ -387,8 +387,11 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 	// Reading samples
 	for (UINT iRaw=1; iRaw<=insnum; iRaw++) if ((Ins[iRaw].nLength) && (insfile[iRaw]))
 	{
-		UINT flags = (psfh.version == 1) ? RS_PCM8S : RS_PCM8U;
-		if (insflags[iRaw-1] & 4) flags += 5;
+		UINT flags;
+		if (insflags[iRaw-1] & 4)
+			flags = (psfh.version == 1) ? RS_PCM16S : RS_PCM16U;
+		else
+			flags = (psfh.version == 1) ? RS_PCM8S : RS_PCM8U;
 		if (insflags[iRaw-1] & 2) flags |= RSF_STEREO;
 		if (inspack[iRaw-1] == 4) flags = RS_ADPCM4;
 		dwMemPos = insfile[iRaw];
