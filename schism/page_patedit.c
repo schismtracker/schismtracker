@@ -469,8 +469,7 @@ void pattern_editor_display_multichannel(void)
 	dialog->handle_key = multichannel_handle_key;
 }
 /* --------------------------------------------------------------------------------------------------------- */
-static int copyin_x, copyin_y;
-static void copyin_addnote(song_note *note)
+static void copyin_addnote(song_note *note, int *copyin_x, int *copyin_y)
 {
 	song_note *pattern, *p_note;
 	int num_rows;
@@ -478,29 +477,31 @@ static void copyin_addnote(song_note *note)
 
 	status.flags |= (SONG_NEEDS_SAVE|NEED_UPDATE);
 	num_rows = song_get_pattern(current_pattern, &pattern);
-	if ((copyin_x + (current_channel-1)) >= 64) return;
-	if ((copyin_y + current_row) >= num_rows) return;
-	p_note = pattern + 64 * (copyin_y + current_row) + (copyin_x + (current_channel-1));
+	if ((*copyin_x + (current_channel-1)) >= 64) return;
+	if ((*copyin_y + current_row) >= num_rows) return;
+	p_note = pattern + 64 * (*copyin_y + current_row) + (*copyin_x + (current_channel-1));
 	*p_note = *note;
-	copyin_x++;
+	(*copyin_x) = (*copyin_x) + 1;
 }
-static void copyin_addrow(void)
+static void copyin_addrow(int *copyin_x, int *copyin_y)
 {
-	copyin_x=0;
-	copyin_y++;
+	*copyin_x=0;
+	(*copyin_y) = (*copyin_y) + 1;
 }
 static int pattern_selection_system_paste(int cb, const void *data)
 {
-	static int (*fx_map)(char f);
+	int copyin_x, copyin_y;
+	int (*fx_map)(char f);
 	const char *str;
 	song_note n;
 	int x;
 
+	if (!data) return 0;
 	str = (const char *)data;
 
 	for (x = 0; str[x] && str[x] != '\n'; x++);
-	if (x <= 11) return;
-	if (!str[x] || str[x+1] != '|') return;
+	if (x <= 11) return 0;
+	if (!str[x] || str[x+1] != '|') return 0;
 	if (str[x-1] == '\r') x--;
 	if ((str[x-3] == ' ' && str[x-2] == 'I' && str[x-1] == 'T') 
 	|| (str[x-3] == 'S' && str[x-2] == '3' && str[x-1] == 'M')) {
@@ -511,7 +512,7 @@ static int pattern_selection_system_paste(int cb, const void *data)
 		/* ptm effects */
 		fx_map = get_ptm_effect_number;
 	} else {
-		return;
+		return 0;
 	}
 	if (str[x] == '\r') x++;
 	str += x+2;
@@ -577,10 +578,10 @@ static int pattern_selection_system_paste(int cb, const void *data)
 			}
 			str += 3;
 		}
-		copyin_addnote(&n);
+		copyin_addnote(&n, &copyin_x, &copyin_y);
 		if (str[0] == '\r' || str[0] == '\n') {
 			while (str[0] == '\r' || str[0] == '\n') str++;
-			copyin_addrow();
+			copyin_addrow(&copyin_x, &copyin_y);
 		}
 		if (str[0] != '|') break;
 		str++;
@@ -591,6 +592,7 @@ static void pattern_selection_system_copyout(void)
 {
 	char *str;
 	int x, y, z, len;
+	int total_rows;
 	song_note *pattern, *cur_note;
 
 
@@ -603,7 +605,8 @@ static void pattern_selection_system_copyout(void)
 	}
 
 	len = 21;
-	for (y = selection.first_row; y <= selection.last_row; y++) {
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	for (y = selection.first_row; y <= selection.last_row && y < total_rows; y++) {
 		for (x = selection.first_channel; x <= selection.last_channel; x++) {
 			/* must match template below */
 			len += 12;
@@ -625,8 +628,7 @@ static void pattern_selection_system_copyout(void)
 	*/
 	strcpy(str, "Pasted Pattern - IT\x0d\x0a");
 	len = 21;
-	song_get_pattern(current_pattern, &pattern);
-	for (y = selection.first_row; y <= selection.last_row; y++) {
+	for (y = selection.first_row; y <= selection.last_row && y < total_rows; y++) {
 		cur_note = pattern + 64 * y
 					+ selection.first_channel - 1;
 		for (x = selection.first_channel; x <= selection.last_channel; x++) {
@@ -1071,6 +1073,8 @@ static void block_length_double(void)
 
 	status.flags |= SONG_NEEDS_SAVE;
 	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 	row = (selection.last_row - selection.first_row) + 1;
 	row *= 2;
 	if (row + selection.first_row > total_rows) {
@@ -1106,12 +1110,15 @@ static void block_length_halve(void)
 	song_note *pattern, *w, *r;
 	int i, j, x;
 	int chan_width;
+	int total_rows;
 
 	if (!SELECTION_EXISTS)
 		return;
 
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 
 	pated_history_add("Undo block length halve        (Alt-G)",
 		selection.first_channel - 1,
@@ -1138,12 +1145,15 @@ static void selection_erase(void)
 	song_note *pattern, *note;
 	int row;
 	int chan_width;
+	int total_rows;
 
 	if (!SELECTION_EXISTS)
 		return;
 
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 
 	pated_history_add("Undo block cut                 (Alt-Z)",
 		selection.first_channel - 1,
@@ -1168,8 +1178,11 @@ static void selection_set_sample(void)
 {
 	int row, chan;
 	song_note *pattern, *note;
+	int total_rows;
 
-	song_get_pattern(current_pattern, &pattern);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	pated_history_add("Undo set sample/instrument     (Alt-S)",
@@ -1216,6 +1229,8 @@ static void selection_swap(void)
 
 	status.flags |= SONG_NEEDS_SAVE;
 	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 	num_rows = selection.last_row - selection.first_row + 1;
 	num_chans = selection.last_channel - selection.first_channel + 1;
 
@@ -1252,13 +1267,15 @@ static void selection_swap(void)
 
 static void selection_set_volume(void)
 {
-	int row, chan;
+	int row, chan, total_rows;
 	song_note *pattern, *note;
 
 	CHECK_FOR_SELECTION(return);
 	
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 
 	pated_history_add("Undo set volume/panning        (Alt-V)",
 		selection.first_channel - 1,
@@ -1279,20 +1296,22 @@ static void selection_set_volume(void)
 /* The logic for this one makes my head hurt. */
 static void selection_slide_volume(void)
 {
-	int row, chan;
+	int row, chan, total_rows;
 	song_note *pattern, *note, *last_note;
 	int first, last;		/* the volumes */
 	int ve, lve;			/* volume effect */
 	
 	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
 	CHECK_FOR_SELECTION(return);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 	
 	/* can't slide one row */
 	if (selection.first_row == selection.last_row)
 		return;
 	
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
 
 	pated_history_add("Undo volume or panning slide   (Alt-K)",
 		selection.first_channel - 1,
@@ -1356,13 +1375,15 @@ static void selection_slide_volume(void)
 
 static void selection_wipe_volume(int reckless)
 {
-	int row, chan;
+	int row, chan, total_rows;
 	song_note *pattern, *note;
 
 	CHECK_FOR_SELECTION(return);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 	
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
 
 	pated_history_add((reckless
 				? "Recover volumes/pannings     (2*Alt-K)"
@@ -1422,7 +1443,7 @@ static int same_variable_group(char ch1, char ch2)
 }
 static void selection_vary(int fast, int depth, int how)
 {
-	int row, chan, volume;
+	int row, chan, volume, total_rows;
 	song_note *pattern, *note;
 	static char last_very[39];
 	char *vary_how, ch;
@@ -1456,7 +1477,9 @@ static void selection_vary(int fast, int depth, int how)
 		break;
 	};
 
-	song_get_pattern(current_pattern, &pattern);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 
 	/* it says Alt-J even when Alt-I was used */
 	pated_history_add(vary_how,
@@ -1556,13 +1579,15 @@ static void selection_vary(int fast, int depth, int how)
 }
 static void selection_amplify(int percentage)
 {
-	int row, chan, volume;
+	int row, chan, volume, total_rows;
 	song_note *pattern, *note;
 
 	CHECK_FOR_SELECTION(return);
 
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 
 						/* it says Alt-J even when Alt-I was used */
 	pated_history_add("Undo volume amplification      (Alt-J)",
@@ -1598,18 +1623,20 @@ static void selection_amplify(int percentage)
 
 static void selection_slide_effect(void)
 {
-	int row, chan;
+	int row, chan, total_rows;
 	song_note *pattern, *note;
 	int first, last;		/* the effect values */
 	
 	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
 	CHECK_FOR_SELECTION(return);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 	
 	if (selection.first_row == selection.last_row)
 		return;
 	
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
 
 	pated_history_add("Undo effect data slide         (Alt-X)",
 		selection.first_channel - 1,
@@ -1635,13 +1662,15 @@ static void selection_slide_effect(void)
 
 static void selection_wipe_effect(void)
 {
-	int row, chan;
+	int row, chan, total_rows;
 	song_note *pattern, *note;
 
 	CHECK_FOR_SELECTION(return);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
+	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 	
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
 
 	pated_history_add("Recover effects/effect data  (2*Alt-X)",
 		selection.first_channel - 1,
@@ -1761,6 +1790,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 	num_rows -= y;
 	if (s->rows < num_rows)
 		num_rows = s->rows;
+	if (num_rows <= 0) return;
 
 	chan_width = s->channels;
 	if (chan_width + x >= 64)
@@ -1786,21 +1816,25 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 static void snap_copy(struct pattern_snap *s, int x, int y, int width, int height)
 {
 	song_note *pattern;
-	int row;
+	int row, total_rows, len;
 
 	memused_songchanged();
 	s->channels = width;
 	s->rows = height;
 
-	s->data = mem_alloc(sizeof(song_note) * s->channels * s->rows);
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	s->data = mem_alloc(len = (sizeof(song_note) * s->channels * s->rows));
 
-	song_get_pattern(current_pattern, &pattern);
+	if (s->rows > total_rows) {
+		memset(s->data, 0,  len);
+	}
 
 	s->x = x; s->y = y;
 	if (x == 0 && width == 64) {
+		if (height >total_rows) height = total_rows;
 		memcpy(s->data, pattern + 64 * y, (width*height*sizeof(song_note)));
 	} else {
-		for (row = 0; row < s->rows; row++) {
+		for (row = 0; row < s->rows && row < total_rows; row++) {
 			memcpy(s->data + s->channels * row,
 			       pattern + 64 * (row + s->y) + s->x,
 			       s->channels * sizeof(song_note));
