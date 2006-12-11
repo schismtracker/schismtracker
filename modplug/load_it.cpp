@@ -136,9 +136,9 @@ BOOL CSoundFile::ITInstrToMPT(const void *p, INSTRUMENTHEADER *penv, UINT trkver
 			penv->PitchEnv.Values[ev] = pis->pitchenv.data[ev*3] + 32;
 			penv->PitchEnv.Ticks[ev] = (pis->pitchenv.data[ev*3+2] << 8) | (pis->pitchenv.data[ev*3+1]);
 		}
-		penv->nNNA = pis->nna;
-		penv->nDCT = pis->dct;
-		penv->nDNA = pis->dca;
+		penv->nNNA = pis->nna % 4;
+		penv->nDCT = pis->dct % 4;
+		penv->nDNA = pis->dca % 3;
 		penv->nPPS = pis->pps;
 		penv->nPPC = pis->ppc;
 		penv->nIFC = pis->ifc;

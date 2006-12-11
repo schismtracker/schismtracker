@@ -1911,9 +1911,9 @@ static void instrument_list_general_predraw_hook(void)
 {
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
 	
-	togglebutton_set(widgets_general, 6 + ins->nna, 0);
-	togglebutton_set(widgets_general, 10 + ins->dct, 0);
-	togglebutton_set(widgets_general, 14 + ins->dca, 0);
+	togglebutton_set(widgets_general, 6 + (ins->nna % 4), 0);
+	togglebutton_set(widgets_general, 10 + (ins->dct % 4), 0);
+	togglebutton_set(widgets_general, 14 + (ins->dca % 3), 0);
 	
         widgets_general[17].d.textentry.text = ins->filename;
 }
