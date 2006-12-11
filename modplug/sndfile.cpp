@@ -1203,7 +1203,8 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 			short int *pSample = (short int *)pIns->pSample;
 			for (UINT j=0; j<len; j+=2)
 			{
-			        *pSample++ = bswapLE16(*pSample);
+			        *pSample = bswapLE16(*pSample);
+				pSample++;
 			}
 		}
 		break;
@@ -1227,12 +1228,15 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 
 	// 6: 16-bit unsigned PCM data
 	case RS_PCM16U:
-		{
+	        {
 			len = pIns->nLength * 2;
-			if (len > dwMemLength) break;
+			if (len <= dwMemLength) memcpy(pIns->pSample, lpMemFile, len);
 			short int *pSample = (short int *)pIns->pSample;
-			short int *pSrc = (short int *)lpMemFile;
-			for (UINT j=0; j<len; j+=2) *pSample++ = bswapLE16(*(pSrc++)) - 0x8000;
+			for (UINT j=0; j<len; j+=2)
+			{
+			        *pSample = bswapLE16(*pSample) - 0x8000;
+				pSample++;
+			}
 		}
 		break;
 
