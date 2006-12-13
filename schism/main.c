@@ -848,6 +848,7 @@ static void schism_shutdown(void)
 #ifdef MACOSX
 	if (ibook_helper != -1) macosx_ibook_fnswitch(ibook_helper);
 #endif
+	if (shutdown_process & 16) video_shutdown();
 
 /*
 If this is the atexit() handler, why are we calling SDL_Quit?
@@ -961,6 +962,10 @@ int main(int argc, char **argv)
 		set_page(PAGE_ABOUT);
 		show_about();
 	}
+
+#if !defined(WIN32)
+	(void)nice(1);
+#endif
 	
 	event_loop(); /* never returns */
 }
