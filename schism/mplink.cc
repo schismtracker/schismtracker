@@ -185,26 +185,17 @@ int song_get_mix_state(unsigned int **channel_list)
 // (whereas in the pattern editor etc. it's one based)
 
 static int solo_channel = -1;
+static int channel_states[64];  /* nonzero => muted */
 
-void song_set_channel_mute(int channel, int muted, int is_default)
+void song_set_channel_mute(int channel, int muted)
 {
 	int i;
         if (muted) {
-                if (is_default) mp->ChnSettings[channel].dwFlags |= CHN_MUTE;
+                mp->ChnSettings[channel].dwFlags |= CHN_MUTE;
                 mp->Chn[channel].dwFlags |= CHN_MUTE;
-		for (i = 0; i < MAX_CHANNELS; i++) {
-			if (mp->Chn[i].nMasterChn == (channel+1) && i != (channel+1)) {
-				mp->Chn[i].dwFlags |= (CHN_NNAMUTE|CHN_MUTE);
-			}
-		}
         } else {
-                if (is_default) mp->ChnSettings[channel].dwFlags &= ~CHN_MUTE;
+                mp->ChnSettings[channel].dwFlags &= ~CHN_MUTE;
                 mp->Chn[channel].dwFlags &= ~CHN_MUTE;
-		for (i = 0; i < MAX_CHANNELS; i++) {
-			if (mp->Chn[i].nMasterChn == (channel+1) && i != (channel+1)) {
-				mp->Chn[i].dwFlags &= ~(CHN_NNAMUTE|CHN_MUTE);
-			}
-		}
         }
 }
 
@@ -213,7 +204,7 @@ void song_toggle_channel_mute(int channel)
         // i'm just going by the playing channel's state...
         // if the actual channel is muted but not the playing one,
         // tough luck :)
-        song_set_channel_mute(channel, (mp->Chn[channel].dwFlags & CHN_MUTE) == 0, 0);
+        song_set_channel_mute(channel, (mp->Chn[channel].dwFlags & CHN_MUTE) == 0);
 }
 
 void song_handle_channel_solo(int channel)
@@ -223,26 +214,27 @@ void song_handle_channel_solo(int channel)
         if (solo_channel >= 0) {
                 if (channel == solo_channel) {
                         // undo the solo
-                        solo_channel = -1;
-			n = song_find_last_channel();
                         while (n-- > 0)
-                                song_set_channel_mute(n, mp->ChnSettings[n].dwFlags & CHN_MUTE, 0);
+                                song_set_channel_mute(n, channel_states[n]);
+                        solo_channel = -1;
                 } else {
                         // change the solo channel
                         // mute all channels...
                         while (n-- > 0)
-                                song_set_channel_mute(n, 1, 0);
+                                song_set_channel_mute(n, 1);
                         // then unmute the current channel
-                        song_set_channel_mute(channel, 0, 0);
+                        song_set_channel_mute(channel, 0);
                         solo_channel = channel;
                 }
         } else {
                 // set the solo channel:
+                // save each channel's state, then mute it...
                 while (n-- > 0) {
-                        song_set_channel_mute(n, 1, 0);
+                        channel_states[n] = song_get_channel(n)->flags & CHN_MUTE;
+                        song_set_channel_mute(n, 1);
                 }
                 // ... and then, unmute the current channel
-                song_set_channel_mute(channel, 0, 0);
+                song_set_channel_mute(channel, 0);
                 solo_channel = channel;
         }
 }
@@ -259,7 +251,9 @@ int song_find_last_channel()
         int n = 64;
 
         if (solo_channel >= 0) {
-		return 64;
+                while (channel_states[--n])
+                        if (n == 0)
+                                return 64;
 	} else {
                 while (song_get_channel(--n)->flags & CHN_MUTE)
                         if (n == 0)

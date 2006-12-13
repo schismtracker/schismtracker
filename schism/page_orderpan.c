@@ -794,7 +794,7 @@ static void orderpan_update_values_in_song(void)
                 else
                         chn->flags &= ~CHN_SURROUND;
 
-                song_set_channel_mute(n, widgets_orderpan[n + 1].d.panbar.muted, 1);
+                song_set_channel_mute(n, widgets_orderpan[n + 1].d.panbar.muted);
         }
 }
 
@@ -813,7 +813,7 @@ void orderpan_recheck_muted_channels(void)
 {
         int n;
         for (n = 0; n < 64; n++)
-                widgets_orderpan[n + 1].d.panbar.muted = !!(song_get_mix_channel(n)->flags & CHN_MUTE);
+                widgets_orderpan[n + 1].d.panbar.muted = !!(song_get_channel(n)->flags & CHN_MUTE);
 
         if (status.current_page == PAGE_ORDERLIST_PANNING)
                 status.flags |= NEED_UPDATE;
