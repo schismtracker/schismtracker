@@ -226,9 +226,10 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c = mp->Chn + chan;
 			c->nRealtime = 1;
 			if (mp->m_dwSongFlags & (SONG_ENDREACHED|SONG_PAUSED)) {
-				mp->m_nTickCount = 0;
+				mp->m_nTickCount = c->nTickStart = 0;
+			} else {
+				c->nTickStart = (mp->m_nTickCount+1) % mp->m_nMusicSpeed;
 			}
-			c->nTickStart = mp->m_nTickCount;
 			c->nRowNote = note;
 			c->nNewNote = note;
 			c->nRowVolume = vol;
