@@ -386,7 +386,7 @@ static void song_reset_play_state()
 		c->nCutOff = 0x7F;
 		c->nVolume = 256;
 		if (n < MAX_BASECHANNELS) {
-			c->dwFlags = (mp->ChnSettings[n].dwFlags & ~CHN_MUTE) | (c->dwFlags & CHN_MUTE);
+			c->dwFlags = mp->ChnSettings[n].dwFlags;
 			c->nPan = mp->ChnSettings[n].nPan;
 			c->nGlobalVol = mp->ChnSettings[n].nVolume;
 		} else {
