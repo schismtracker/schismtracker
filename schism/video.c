@@ -129,19 +129,6 @@ struct video_cf {
 		/* stuff for scaling */
 		int sx, sy;
 		int *sax, *say;
-
-		/* video "mode" */
-		void (*pixels_clear)(void);
-		void (*pixels_flip)(void);
-		void (*pixels_8)(unsigned int y,
-				unsigned char *out,
-				unsigned int pal[16]);
-		void (*pixels_16)(unsigned int y,
-				unsigned short *out,
-				unsigned int pal[16]);
-		void (*pixels_32)(unsigned int y,
-				unsigned int *out,
-				unsigned int pal[16]);
 	} draw;
 	struct {
 		unsigned int width,height,bpp;
@@ -179,6 +166,9 @@ struct video_cf {
 	int yuvlayout;
 #define YUV_UYVY	0x59565955
 #define YUV_YUY2	0x32595559
+#define YUV_YV12	0x32315659
+#define YUV_IYUV	0x56555949
+#define YUV_YVYU	0x55595659
 	SDL_Rect clip;
 	SDL_Surface * surface;
 	SDL_Overlay * overlay;
@@ -190,6 +180,10 @@ struct video_cf {
 		int visible;
 	} mouse;
 
+	unsigned int yuv_y[16];
+	unsigned int yuv_u[16];
+	unsigned int yuv_v[16];
+
 	unsigned int pal[16];
 
 	unsigned int tc_bgr32[16];
@@ -199,30 +193,6 @@ static int int_log2(int val) {
 	int l = 0;
 	while ((val >>= 1 ) != 0) l++;
 	return l;
-}
-
-static void _video_dummy_scan(UNUSED unsigned int y, UNUSED void *plx,
-				UNUSED unsigned int *tc)
-{
-	/* do nothing */
-}
-
-void video_mode(int num)
-{
-	if (num == 0) {
-		video.draw.pixels_8 = vgamem_scan8;
-		video.draw.pixels_16 = vgamem_scan16;
-		video.draw.pixels_32 = vgamem_scan32;
-		video.draw.pixels_clear = vgamem_clear;
-		video.draw.pixels_flip = vgamem_flip;
-	} else {
-		video.draw.pixels_8 = (void*)_video_dummy_scan;
-		video.draw.pixels_16 = (void*)_video_dummy_scan;
-		video.draw.pixels_32 = (void*)_video_dummy_scan;
-		/* eh... */
-		video.draw.pixels_clear = vgamem_clear;
-		video.draw.pixels_flip = vgamem_flip;
-	}
 }
 
 void _video_scanmouse(unsigned int y,
@@ -353,10 +323,16 @@ void video_report(void)
 		} else {
 			log_append(2,0, " Using video overlay");
 		}
-		if (video.yuvlayout == YUV_UYVY) {
-			log_append(5,0, " Display format: UYVY");
+		if (video.yuvlayout == YUV_YV12) {
+			log_append(5,0, " Display format: YV12 (planar)");
+		} else if (video.yuvlayout == YUV_IYUV) {
+			log_append(5,0, " Display format: IYUV (planar)");
+		} else if (video.yuvlayout == YUV_YVYU) {
+			log_append(5,0, " Display format: YVYU (packed)");
+		} else if (video.yuvlayout == YUV_UYVY) {
+			log_append(5,0, " Display format: UYVY (packed)");
 		} else if (video.yuvlayout == YUV_YUY2) {
-			log_append(5,0, " Display format: YUY2");
+			log_append(5,0, " Display format: YUY2 (packed)");
 		}
 		break;
 	case VIDEO_GL:
@@ -392,6 +368,13 @@ static void _video_preinit(void)
 int video_is_fullscreen(void)
 {
 	return video.desktop.fullscreen;
+}
+void video_shutdown(void)
+{
+	if (video.desktop.fullscreen) {
+		video.desktop.fullscreen = 0;
+		video_resize(0,0);
+	}
 }
 void video_fullscreen(int tri)
 {
@@ -445,7 +428,6 @@ void video_init(const char *driver)
 	/* used for scaling and 24bit conversion */
 	if (!_did_init) {
 		video.cv32backing = (unsigned char *)mem_alloc(NATIVE_SCREEN_WIDTH * 8);
-		video_mode(0);
 	}
 
 	video.yuvlayout = YUV_UYVY;
@@ -455,6 +437,15 @@ void video_init(const char *driver)
 		|| strcasecmp(q, "V422") == 0
 		|| strcasecmp(q, "YUYV") == 0) {
 			video.yuvlayout = YUV_YUY2;
+		} else if (strcasecmp(q, "YVYU") == 0) {
+			video.yuvlayout = YUV_YVYU;
+#if 0
+		/* these work... */
+		} else if (strcasecmp(q, "YV12") == 0) {
+			video.yuvlayout = YUV_YV12;
+		} else if (strcasecmp(q, "IYUV") == 0) {
+			video.yuvlayout = YUV_IYUV;
+#endif
 		}
 	}
 
@@ -755,7 +746,6 @@ void video_resize(unsigned int width, unsigned int height)
 	int x, y, csx, csy;
 	unsigned int gt;
 	int texsize;
-	int bpp;
 
 	if (!height) height = NATIVE_SCREEN_HEIGHT;
 	if (!width) width = NATIVE_SCREEN_WIDTH;
@@ -784,7 +774,6 @@ void video_resize(unsigned int width, unsigned int height)
 				video.surface->format->Rmask,
 				video.surface->format->Gmask,
 				video.surface->format->Bmask,0);
-		bpp = video.surface->format->BytesPerPixel;
 		if (video.ddblit.surface
 		&& ((video.ddblit.surface->flags & SDL_HWSURFACE) == SDL_HWSURFACE)) {
 			video.desktop.type = VIDEO_DDRAW;
@@ -797,7 +786,6 @@ RETRYSURF:	/* use SDL surfaces */
 		video.draw.autoscale = 0;
 		_setup_surface(width, height, 0);
 		video.desktop.type = VIDEO_SURFACE;
-		bpp = video.surface->format->BytesPerPixel;
 		break;
 
 	case VIDEO_YUV:
@@ -806,11 +794,29 @@ RETRYSURF:	/* use SDL surfaces */
 			video.overlay = 0;
 		}
 		_setup_surface(width, height, 0);
-		if (video.yuvlayout == YUV_UYVY) {
+		if (video.yuvlayout == YUV_YV12) {
+			video.overlay = SDL_CreateYUVOverlay(
+					NATIVE_SCREEN_WIDTH*2,
+					NATIVE_SCREEN_HEIGHT,
+					SDL_YV12_OVERLAY,
+					video.surface);
+		} else if (video.yuvlayout == YUV_IYUV) {
+			video.overlay = SDL_CreateYUVOverlay(
+					NATIVE_SCREEN_WIDTH*2,
+					NATIVE_SCREEN_HEIGHT,
+					SDL_IYUV_OVERLAY,
+					video.surface);
+		} else if (video.yuvlayout == YUV_UYVY) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH*2,
 					NATIVE_SCREEN_HEIGHT,
 					SDL_UYVY_OVERLAY,
+					video.surface);
+		} else if (video.yuvlayout == YUV_YVYU) {
+			video.overlay = SDL_CreateYUVOverlay(
+					NATIVE_SCREEN_WIDTH*2,
+					NATIVE_SCREEN_HEIGHT,
+					SDL_YVYU_OVERLAY,
 					video.surface);
 		} else if (video.yuvlayout == YUV_YUY2) {
 			video.overlay = SDL_CreateYUVOverlay(
@@ -826,15 +832,32 @@ RETRYSURF:	/* use SDL surfaces */
 			/* can't get an overlay */
 			goto RETRYSURF;
 		}
+		switch (video.overlay->planes) {
+		case 3:
+		case 1:
+			break;
+		default:
+			/* can't get a recognized planes */
+			SDL_FreeYUVOverlay(video.overlay);
+			video.overlay = 0;
+			goto RETRYSURF;
+		};
 		video.desktop.type = VIDEO_YUV;
-		bpp = 4;
 		break;
 	case VIDEO_GL:
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+#if SDL_VERSION_ATLEAST(1,2,11)
+		SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
+#endif
 		_setup_surface(width, height, SDL_OPENGL);
 		if (video.surface->format->BitsPerPixel < 15) {
 			goto RETRYSURF;
 		}
+		/* grumble... */
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+#if SDL_VERSION_ATLEAST(1,2,11)
+		SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
+#endif
 		my_glViewport(video.clip.x, video.clip.y,
 			video.clip.w, video.clip.h);
 		texsize = 2 << int_log2(NATIVE_SCREEN_WIDTH);
@@ -907,7 +930,6 @@ RETRYSURF:	/* use SDL surfaces */
 		my_glEnd();
 		my_glEndList();
 		video.desktop.type = VIDEO_GL;
-		bpp = 4;
 		break;
 	};
 	if (!video.draw.autoscale && (video.clip.w != NATIVE_SCREEN_WIDTH
@@ -981,6 +1003,24 @@ void video_colors(unsigned char palette[16][3])
 			v =  (23372*((palette[i][0])-(y)) >> 15) + 128;
 
 			switch (video.yuvlayout) {
+			/* planar modes */
+			case YUV_YV12:
+			case YUV_IYUV:
+				/* this is fake; we simply record the infomration here */
+				video.yuv_y[i] = y | (y<<8);
+				video.yuv_u[i] = u;
+				video.yuv_v[i] = v;
+				break;
+
+			/* packed modes */
+			case YUV_YVYU:
+				/* y0 v0 y1 u0 */
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+				video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
+#else
+				video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
+#endif
+				break;
 			case YUV_UYVY:
 				/* u0 y0 v0 y1 */
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
@@ -1020,8 +1060,8 @@ void video_colors(unsigned char palette[16][3])
 
 void video_refresh(void)
 {
-	video.draw.pixels_flip();
-	video.draw.pixels_clear();
+	vgamem_flip();
+	vgamem_clear();
 }
 
 static void inline _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
@@ -1033,9 +1073,7 @@ static void inline _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 	unsigned int pad;
 	int y, x, ey, ex, t1, t2, sstep;
 	int iny, lasty;
-	void (*fn)(unsigned int y, ...);
 
-	fn = (void *)video.draw.pixels_32;
 	csay = video.draw.say;
 	csp = (unsigned int *)video.cv32backing;
 	esp = csp + NATIVE_SCREEN_WIDTH;
@@ -1047,12 +1085,12 @@ static void inline _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 			/* we'll downblit the colors later */
 			if (iny == lasty + 1) {
 				/* move up one line */
-				fn(iny+1, csp, video.tc_bgr32);
+				vgamem_scan32(iny+1, csp, video.tc_bgr32);
 				dp = esp; esp = csp; csp=dp;
 			} else {
-				fn(iny, (csp = (unsigned int *)video.cv32backing),
+				vgamem_scan32(iny, (csp = (unsigned int *)video.cv32backing),
 					video.tc_bgr32);
-				fn(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)),
+				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)),
 					video.tc_bgr32);
 			}
 			lasty = iny;
@@ -1115,7 +1153,8 @@ static void inline _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 		iny += (*csay >> 16);
 	}
 }
-static void inline _blit11(int bpp, unsigned char *pixels, unsigned int pitch)
+static void inline _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
+			unsigned int *tpal, unsigned int *ipal)
 {
 	unsigned char *pdata;
 	unsigned int x, y;
@@ -1124,21 +1163,21 @@ static void inline _blit11(int bpp, unsigned char *pixels, unsigned int pitch)
 
 	switch (bpp) {
 	case 4:
-		fn = (void *)video.draw.pixels_32;
+		fn = (void *)vgamem_scan32;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			fn(y, (unsigned int *)pixels, video.pal);
+			fn(y, (unsigned int *)pixels, tpal);
 			pixels += pitch;
 		}
 		break;
 	case 3:
 		/* ... */
-		fn = (void *)video.draw.pixels_32;
+		fn = (void *)vgamem_scan32;
 		pitch24 = pitch - (NATIVE_SCREEN_WIDTH * 3);
 		if (pitch24 < 0) {
 			return; /* eh? */
 		}
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			fn(y, (unsigned int *)video.cv32backing, video.pal);
+			fn(y, (unsigned int *)video.cv32backing, tpal);
 			/* okay... */
 			pdata = video.cv32backing;
 			for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
@@ -1154,22 +1193,47 @@ static void inline _blit11(int bpp, unsigned char *pixels, unsigned int pitch)
 		}
 		break;
 	case 2:
-		fn = (void *)video.draw.pixels_16;
+		fn = (void *)vgamem_scan16;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			fn(y, (unsigned short *)pixels, video.pal);
+			fn(y, (unsigned short *)pixels, tpal);
 			pixels += pitch;
 		}
 		break;
 	case 1:
-		fn = (void *)video.draw.pixels_8;
+		fn = (void *)vgamem_scan8;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			fn(y, (unsigned char *)pixels, video.tc_identity);
+			fn(y, (unsigned char *)pixels, ipal);
 			pixels += pitch;
 		}
 		break;
 	};
 }
 
+static void _video_blit_planar(void) {
+	SDL_LockYUVOverlay(video.overlay);
+	vgamem_lock();
+
+	/* XXX for some reason, this doesn't work yet... */
+	switch (video.yuvlayout) {
+	case YUV_YV12:
+		/* Y+V+U */
+		_blit11(2, video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y, video.yuv_y);
+		_blit11(1, video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v, video.yuv_v);
+		_blit11(1, video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u, video.yuv_u);
+		break;
+	case YUV_IYUV:
+		/* Y+U+V */
+		_blit11(2, video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y, video.yuv_y);
+		_blit11(1, video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v, video.yuv_u);
+		_blit11(1, video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u, video.yuv_v);
+		break;
+	};
+
+	vgamem_unlock();
+
+	SDL_UnlockYUVOverlay(video.overlay);
+	SDL_DisplayYUVOverlay(video.overlay, &video.clip);
+}
 
 void video_blit(void)
 {
@@ -1191,6 +1255,11 @@ void video_blit(void)
 		pitch = video.surface->pitch;
 		break;
 	case VIDEO_YUV:
+		if (video.overlay->planes == 3) {
+			_video_blit_planar();
+			return;
+		}
+			
 		SDL_LockYUVOverlay(video.overlay);
 		pixels = (unsigned char *)*(video.overlay->pixels);
 		pitch = *(video.overlay->pitches);
@@ -1220,7 +1289,7 @@ void video_blit(void)
 	vgamem_lock();
 	if (video.draw.autoscale || (!video.draw.sx && !video.draw.sy)) {
 		/* scaling is provided by the hardware, or isn't necessary */
-		_blit11(bpp, pixels, pitch);
+		_blit11(bpp, pixels, pitch, video.pal, video.tc_identity);
 	} else {
 		_blit1n(bpp, pixels, pitch);
 	}
