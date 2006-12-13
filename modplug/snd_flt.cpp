@@ -68,17 +68,17 @@ void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modif
 //if (freq) fs = (double)freq;
 	fx = (m_dwSongFlags & SONG_EXFILTERRANGE) ? 21.0 : 22.0;
 
-	double cutoff = pChn->nCutOff * (flt_modifier+256)
+	double cutoff = pChn->nCutOff * (flt_modifier+191)
 				/ (double)512.0f;
 
-	double inv_angle = (fs * pow(0.5, 0.25 + cutoff/fx)) / (PI*256.0);
+	double inv_angle = (fs * pow(0.5, 0.25 + cutoff/fx)) / (PI*255.0);
 				
 //	double inv_angle = pow(2.0,(127.0-cutoff)/fx)-0.93;
 
 	if (!inv_angle) return; /* avoid FPE */
 	double rr = pChn->nResonance;
 //	double loss = pow(10.0f, -((double)rr / 256.0f));
-	double loss = exp(rr * (-LOG10*1.2/128.0));/* tried 256.0 */
+	double loss = exp(rr * (-LOG10/192.0));/* tried 256.0 */
 				
 	if (m_dwSongFlags & SONG_EXFILTERRANGE) {
 		loss *= (double)2.0;
