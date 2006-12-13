@@ -465,7 +465,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 	header[0x33] = ((m_nSongPreAmp < 0x20) ? 0x20 : m_nSongPreAmp) | 0x80;	// Stereo
 	header[0x35] = 0xFC;
 
-	chanlim = GetHighestUsedChannel();
+	chanlim = GetHighestUsedChannel()+1;
 	if (chanlim < 4) chanlim = 4;
 	if (chanlim > 32) chanlim = 32;
 
