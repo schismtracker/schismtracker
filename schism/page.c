@@ -1093,7 +1093,8 @@ void handle_key(struct key_event * k)
 #ifdef RELEASE_VERSION
 #define TOP_BANNER_NORMAL "Schism Tracker v" VERSION ""
 #else
-#define TOP_BANNER_NORMAL "Schism Tracker CVS"
+#include "auto/build-version.h"
+#define TOP_BANNER_NORMAL "Schism Tracker build " BUILD_VERSION
 #endif
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
 
