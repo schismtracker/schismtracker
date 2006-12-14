@@ -60,6 +60,37 @@ static void _convert_to_it(CSoundFile *qq)
         unsigned long n;
         MODINSTRUMENT *s;
 
+	for (n = 1; n <= qq->m_nInstruments; n++) {
+		INSTRUMENTHEADER *i = mp->Headers[n];
+		if (i->VolEnv.nNodes < 1) {
+			i->VolEnv.Ticks[0] = 0;
+			i->VolEnv.Values[0] = 64;
+		}
+		if (i->VolEnv.nNodes < 2) {
+			i->VolEnv.nNodes = 2;
+			i->VolEnv.Ticks[1] = 100;
+			i->VolEnv.Values[1] = i->VolEnv.Values[0];
+		}
+		if (i->PanEnv.nNodes < 1) {
+			i->PanEnv.Ticks[0] = 0;
+			i->PanEnv.Values[0] = 32;
+		}
+		if (i->PanEnv.nNodes < 2) {
+			i->PanEnv.nNodes = 2;
+			i->PanEnv.Ticks[1] = 100;
+			i->PanEnv.Values[1] = i->PanEnv.Values[0];
+		}
+		if (i->PitchEnv.nNodes < 1) {
+			i->PitchEnv.Ticks[0] = 0;
+			i->PitchEnv.Values[0] = 32;
+		}
+		if (i->PitchEnv.nNodes < 2) {
+			i->PitchEnv.nNodes = 2;
+			i->PitchEnv.Ticks[1] = 100;
+			i->PitchEnv.Values[1] = i->PitchEnv.Values[0];
+		}
+	}
+
         if (qq->m_nType & MOD_TYPE_IT)
                 return;
 
