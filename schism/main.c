@@ -183,7 +183,8 @@ static void display_init(void)
 #ifdef RELEASE_VERSION
 	SDL_WM_SetCaption("Schism Tracker v" VERSION, "Schism Tracker");
 #else
-	SDL_WM_SetCaption("Schism Tracker CVS", "Schism Tracker");
+#include "auto/build-version.h"
+	SDL_WM_SetCaption("Schism Tracker build " BUILD_VERSION, "Schism Tracker");
 #endif
 	SDL_EnableUNICODE(1);
 }
