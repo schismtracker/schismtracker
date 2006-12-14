@@ -406,9 +406,8 @@ static void song_reset_play_state()
 				| SNDMIX_NOMIXING
 				| SNDMIX_DIRECTTODISK);
 
-	// set master volume to be closer to IT's volume
 	mp->InitializeDSP(TRUE);
-	mp->SetMasterVolume(0x150,1);
+	mp->SetMasterVolume(0x100,1);
 
 	mp->m_nCurrentPattern = 255; // hack...
 	mp->m_nNextPattern = 0;
