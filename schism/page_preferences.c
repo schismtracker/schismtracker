@@ -32,6 +32,8 @@
 
 #include "diskwriter.h"
 
+#define VOLUME_SCALE	31
+
 /* --------------------------------------------------------------------- */
 /* statics */
 
@@ -103,7 +105,10 @@ static void preferences_draw_const(void)
 static void preferences_set_page(void)
 {
 	int i, j;
-        mixer_read_volume(&(widgets_preferences[0].d.thumbbar.value), &(widgets_preferences[1].d.thumbbar.value));
+	int lim = mixer_get_max_volume();
+        mixer_read_volume(&i, &j);
+	widgets_preferences[0].d.thumbbar.value = i * VOLUME_SCALE / lim;
+	widgets_preferences[1].d.thumbbar.value = j * VOLUME_SCALE / lim;
 
 	for (i = j = 0; interpolation_modes[i]; i++) {
 		if (i == audio_settings.interpolation_mode) {
@@ -141,7 +146,10 @@ static void preferences_set_page(void)
 
 static void change_volume(void)
 {
-        mixer_write_volume(widgets_preferences[0].d.thumbbar.value, widgets_preferences[1].d.thumbbar.value);
+	int lim = mixer_get_max_volume();
+        mixer_write_volume(
+		widgets_preferences[0].d.thumbbar.value * lim / VOLUME_SCALE,
+		widgets_preferences[1].d.thumbbar.value * lim / VOLUME_SCALE);
 }
 
 #define SAVED_AT_EXIT "Audio configuration will be saved at exit"
@@ -316,7 +324,6 @@ static void save_config_now(UNUSED void *ign)
 
 void preferences_load_page(struct page *page)
 {
-        int max = mixer_get_max_volume();
 	char buf[64];
 	char *ptr;
 	int i, j, n;
@@ -329,8 +336,8 @@ void preferences_load_page(struct page *page)
         page->help_index = HELP_GLOBAL;
 
 
-        create_thumbbar(widgets_preferences + 0, 22, 14, 5, 0, 1, 1, change_volume, 0, max);
-        create_thumbbar(widgets_preferences + 1, 22, 15, 5, 0, 2, 2, change_volume, 0, max);
+        create_thumbbar(widgets_preferences + 0, 22, 14, 5, 0, 1, 1, change_volume, 0, VOLUME_SCALE);
+        create_thumbbar(widgets_preferences + 1, 22, 15, 5, 0, 2, 2, change_volume, 0, VOLUME_SCALE);
 
 	for (n = 0; interpolation_modes[n]; n++);
 	for (i = 0; interpolation_modes[i]; i++) {
