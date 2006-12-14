@@ -408,7 +408,7 @@ static void song_reset_play_state()
 
 	// set master volume to be closer to IT's volume
 	mp->InitializeDSP(TRUE);
-	mp->SetMasterVolume(0x200,1);
+	mp->SetMasterVolume(0x150,1);
 
 	mp->m_nCurrentPattern = 255; // hack...
 	mp->m_nNextPattern = 0;
@@ -1473,12 +1473,15 @@ void song_init_modplug(void)
         CSoundFile::SetReverbParameters(audio_settings.reverb_depth, audio_settings.reverb_delay);
 	// the last param is the equalizer, which apparently isn't functional
         CSoundFile::SetWaveConfigEx(audio_settings.surround,
-				!(audio_settings.oversampling),
+				false,
 				audio_settings.reverb,
 				true, //only makes sense... audio_settings.hq_resampling,
 				audio_settings.xbass,
 				audio_settings.noise_reduction,
 				false);/*EQ off here... */
+	if (audio_settings.oversampling) {
+		/* not intuitive XXX */
+	}
         CSoundFile::SetResamplingMode(audio_settings.interpolation_mode);
 	CSoundFile::gdwSoundSetup |= SNDMIX_EQ;
 	if (audio_settings.no_ramping)

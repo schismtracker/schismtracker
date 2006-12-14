@@ -479,7 +479,7 @@ BOOL CSoundFile::SetWaveConfigEx(BOOL bSurround,BOOL bNoOverSampling,BOOL bRever
 {
 	DWORD d = gdwSoundSetup & ~(SNDMIX_SURROUND | SNDMIX_NORESAMPLING | SNDMIX_REVERB | SNDMIX_HQRESAMPLER | SNDMIX_MEGABASS | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
 	if (bSurround) d |= SNDMIX_SURROUND;
-	if (bNoOverSampling) d |= SNDMIX_NORESAMPLING;
+//	if (bNoOverSampling) d |= SNDMIX_NORESAMPLING;
 	if (bReverb) d |= SNDMIX_REVERB;
 	if (hqido) d |= SNDMIX_HQRESAMPLER;
 	if (bMegaBass) d |= SNDMIX_MEGABASS;
