@@ -56,6 +56,16 @@
 #define APIENTRYP APIENTRY *
 #endif
 
+#ifdef USE_X11
+/*
+#include <X11/extensions/Xvlib.h>
+
+static void xv_autoselect(void)
+{
+}
+*/
+#endif
+
 extern int macosx_did_finderlaunch;
 
 #define NVIDIA_PixelDataRange	1
@@ -164,6 +174,8 @@ struct video_cf {
 	} ddblit;
 #endif
 	int yuvlayout;
+#define YUV_YV12_TV	0x00100000
+#define YUV_IYUV_TV	0x00200000
 #define YUV_UYVY	0x59565955
 #define YUV_YUY2	0x32595559
 #define YUV_YV12	0x32315659
@@ -174,6 +186,8 @@ struct video_cf {
 	SDL_Overlay * overlay;
 	/* to convert 32-bit color to 24-bit color */
 	unsigned char *cv32backing;
+	/* for tv mode */
+	unsigned char *cv8backing;
 	struct {
 		unsigned int x;
 		unsigned int y;
@@ -327,6 +341,10 @@ void video_report(void)
 			log_append(5,0, " Display format: YV12 (planar)");
 		} else if (video.yuvlayout == YUV_IYUV) {
 			log_append(5,0, " Display format: IYUV (planar)");
+		} else if (video.yuvlayout == YUV_YV12_TV) {
+			log_append(5,0, " Display format: YV12 (planar+tv)");
+		} else if (video.yuvlayout == YUV_IYUV_TV) {
+			log_append(5,0, " Display format: IYUV (planar+tv)");
 		} else if (video.yuvlayout == YUV_YVYU) {
 			log_append(5,0, " Display format: YVYU (packed)");
 		} else if (video.yuvlayout == YUV_UYVY) {
@@ -428,9 +446,14 @@ void video_init(const char *driver)
 	/* used for scaling and 24bit conversion */
 	if (!_did_init) {
 		video.cv32backing = (unsigned char *)mem_alloc(NATIVE_SCREEN_WIDTH * 8);
+		video.cv8backing = (unsigned char *)mem_alloc(NATIVE_SCREEN_WIDTH);
 	}
 
 	video.yuvlayout = YUV_UYVY;
+#ifdef USE_X11
+	/* get xv info */
+	/*xv_autoselect();*/
+#endif
 	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
 		if (strcasecmp(q, "YUY2") == 0
 		|| strcasecmp(q, "YUNV") == 0
@@ -439,13 +462,14 @@ void video_init(const char *driver)
 			video.yuvlayout = YUV_YUY2;
 		} else if (strcasecmp(q, "YVYU") == 0) {
 			video.yuvlayout = YUV_YVYU;
-#if 0
-		/* these work... */
 		} else if (strcasecmp(q, "YV12") == 0) {
 			video.yuvlayout = YUV_YV12;
 		} else if (strcasecmp(q, "IYUV") == 0) {
 			video.yuvlayout = YUV_IYUV;
-#endif
+		} else if (strcasecmp(q, "YV12/2") == 0) {
+			video.yuvlayout = YUV_YV12_TV;
+		} else if (strcasecmp(q, "IYUV/2") == 0) {
+			video.yuvlayout = YUV_IYUV_TV;
 		}
 	}
 
@@ -794,16 +818,28 @@ RETRYSURF:	/* use SDL surfaces */
 			video.overlay = 0;
 		}
 		_setup_surface(width, height, 0);
-		if (video.yuvlayout == YUV_YV12) {
+		if (video.yuvlayout == YUV_YV12_TV) {
+			video.overlay = SDL_CreateYUVOverlay(
+					NATIVE_SCREEN_WIDTH,
+					NATIVE_SCREEN_HEIGHT,
+					SDL_YV12_OVERLAY,
+					video.surface);
+		} else if (video.yuvlayout == YUV_IYUV_TV) {
+			video.overlay = SDL_CreateYUVOverlay(
+					NATIVE_SCREEN_WIDTH,
+					NATIVE_SCREEN_HEIGHT,
+					SDL_IYUV_OVERLAY,
+					video.surface);
+		} else if (video.yuvlayout == YUV_YV12) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH*2,
-					NATIVE_SCREEN_HEIGHT,
+					NATIVE_SCREEN_HEIGHT*2,
 					SDL_YV12_OVERLAY,
 					video.surface);
 		} else if (video.yuvlayout == YUV_IYUV) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH*2,
-					NATIVE_SCREEN_HEIGHT,
+					NATIVE_SCREEN_HEIGHT*2,
 					SDL_IYUV_OVERLAY,
 					video.surface);
 		} else if (video.yuvlayout == YUV_UYVY) {
@@ -1007,9 +1043,17 @@ void video_colors(unsigned char palette[16][3])
 			case YUV_YV12:
 			case YUV_IYUV:
 				/* this is fake; we simply record the infomration here */
-				video.yuv_y[i] = y | (y<<8);
+				video.yuv_y[i] = y|(y<<8);
 				video.yuv_u[i] = u;
 				video.yuv_v[i] = v;
+				break;
+
+			/* tv planar modes */
+			case YUV_YV12_TV:
+			case YUV_IYUV_TV:
+				video.yuv_y[i] = y;
+				video.yuv_u[i] = (u / 2) + (v / 2);
+				video.yuv_v[i] = (u / 2) + (v / 2);
 				break;
 
 			/* packed modes */
@@ -1153,31 +1197,69 @@ static void inline _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 		iny += (*csay >> 16);
 	}
 }
+static void inline _blitii(unsigned char *pixels, unsigned int pitch,
+			unsigned int *tpal)
+{
+	/* okay, interlaced schedular */
+	int y;
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		vgamem_scan8(y, (unsigned char *)pixels, tpal);
+		*pixels = y;
+		pixels += pitch;
+	}
+
+}
+static void inline _blitYY(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+{
+	int y;
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		vgamem_scan16(y, (unsigned short *)pixels, tpal);
+		memcpy(pixels+pitch,pixels,pitch);
+		pixels += pitch;
+		pixels += pitch;
+	}
+}
+static void inline _blitUV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+{
+	int y;
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		vgamem_scan8(y, (unsigned char *)pixels, tpal);
+		pixels += pitch;
+	}
+}
+static void inline _blitTV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+{
+	int y, x;
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
+		vgamem_scan8(y, (unsigned char *)video.cv8backing, tpal);
+		for (x = 0; x < NATIVE_SCREEN_WIDTH; x += 2) {
+			*pixels++ = video.cv8backing[x];
+		}
+	}
+}
+
 static void inline _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 			unsigned int *tpal, unsigned int *ipal)
 {
 	unsigned char *pdata;
 	unsigned int x, y;
 	int pitch24;
-	void (*fn)(unsigned int y, ...);
 
 	switch (bpp) {
 	case 4:
-		fn = (void *)vgamem_scan32;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			fn(y, (unsigned int *)pixels, tpal);
+			vgamem_scan32(y, (unsigned int *)pixels, tpal);
 			pixels += pitch;
 		}
 		break;
 	case 3:
 		/* ... */
-		fn = (void *)vgamem_scan32;
 		pitch24 = pitch - (NATIVE_SCREEN_WIDTH * 3);
 		if (pitch24 < 0) {
 			return; /* eh? */
 		}
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			fn(y, (unsigned int *)video.cv32backing, tpal);
+			vgamem_scan32(y,(unsigned int*)video.cv32backing,tpal);
 			/* okay... */
 			pdata = video.cv32backing;
 			for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
@@ -1193,16 +1275,14 @@ static void inline _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 		}
 		break;
 	case 2:
-		fn = (void *)vgamem_scan16;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			fn(y, (unsigned short *)pixels, tpal);
+			vgamem_scan16(y, (unsigned short *)pixels, tpal);
 			pixels += pitch;
 		}
 		break;
 	case 1:
-		fn = (void *)vgamem_scan8;
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			fn(y, (unsigned char *)pixels, ipal);
+			vgamem_scan8(y, (unsigned char *)pixels, ipal);
 			pixels += pitch;
 		}
 		break;
@@ -1213,19 +1293,31 @@ static void _video_blit_planar(void) {
 	SDL_LockYUVOverlay(video.overlay);
 	vgamem_lock();
 
-	/* XXX for some reason, this doesn't work yet... */
 	switch (video.yuvlayout) {
+	case YUV_YV12_TV:
+		/* halfwidth Y+V+U */
+		_blitUV(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
+		_blitTV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
+		_blitTV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
+		break;
+	case YUV_IYUV_TV:
+		/* halfwidth Y+U+V */
+		_blitUV(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
+		_blitTV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);
+		_blitTV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_v);
+		break;
+
 	case YUV_YV12:
 		/* Y+V+U */
-		_blit11(2, video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y, video.yuv_y);
-		_blit11(1, video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v, video.yuv_v);
-		_blit11(1, video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u, video.yuv_u);
+		_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
+		_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
+		_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
 		break;
 	case YUV_IYUV:
 		/* Y+U+V */
-		_blit11(2, video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y, video.yuv_y);
-		_blit11(1, video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v, video.yuv_u);
-		_blit11(1, video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u, video.yuv_v);
+		_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
+		_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);
+		_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_v);
 		break;
 	};
 
