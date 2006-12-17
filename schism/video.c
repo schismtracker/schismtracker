@@ -1053,9 +1053,10 @@ void video_colors(unsigned char palette[16][3])
 			/* tv planar modes */
 			case YUV_YV12_TV:
 			case YUV_IYUV_TV:
+				/* _blitTV */
 				video.yuv_y[i] = y;
-				video.yuv_u[i] = (u / 2) + (v / 2);
-				video.yuv_v[i] = (u / 2) + (v / 2);
+				video.yuv_u[i] = (u >> 4) & 0xF;
+				video.yuv_v[i] = (v >> 4) & 0xF;
 				break;
 
 			/* packed modes */
@@ -1235,7 +1236,8 @@ static void inline _blitTV(unsigned char *pixels, unsigned int pitch, unsigned i
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
 		vgamem_scan8(y, (unsigned char *)video.cv8backing, tpal);
 		for (x = 0; x < NATIVE_SCREEN_WIDTH; x += 2) {
-			*pixels++ = video.cv8backing[x];
+			*pixels++ = video.cv8backing[x+1]
+				| (video.cv8backing[x] << 4);
 		}
 	}
 }
