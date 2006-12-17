@@ -103,7 +103,7 @@ dnl Headers, typedef crap, et al.
 AC_HEADER_STDC
 AC_HEADER_DIRENT
 AC_HEADER_TIME
-AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/soundcard.h X11/Xlib.h X11/extensions/XKB.h)
+AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/soundcard.h)
 AM_CONDITIONAL([USE_OSS], [test "$ac_cv_header_sys_soundcard_h" = yes])
 
 AC_C_CONST
@@ -129,23 +129,34 @@ fi
 AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
 AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
 
-x11=no
-AC_CHECK_LIB(X11, XOpenDisplay,[x11=yes])
-if test "$ac_cv_header_X11_Xlib_h" = "yes"
-then x11="yes"
-fi
-AC_CHECK_LIB(Xxf86misc, XF86MiscGetKbdSettings)
-AM_CONDITIONAL([USE_X11], [test "$x11" = yes])
-AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
-if test "$ac_cv_lib_Xxf86misc_XF86MiscGetKbdSettings" = "yes"
-then 
-	AC_CHECK_HEADERS(X11/extensions/xf86misc.h)
-	if test "$ac_cv_header_X11_extensions_xf86misc_h" = "yes"
+AC_PATH_X()
+if test "$no_x" = "yes"
+then
+	# no X11
+	AM_CONDITIONAL([USE_X11], [false])
+else
+	AM_CONDITIONAL([USE_X11], [true])
+	AC_PATH_XTRA()
+	
+	LIBS="$LIBS $X_LIBS"
+	AC_SUBST(LIBS)
+
+	AC_CHECK_HEADERS(X11/Xlib.h X11/extensions/XKB.h)
+	AC_CHECK_LIB(Xxf86misc, XF86MiscGetKbdSettings)
+	if test "$ac_cv_lib_Xxf86misc_XF86MiscGetKbdSettings" = "yes"
 	then 
-		SDL_LIBS="$SDL_LIBS -lXxf86misc"
-		AC_SUBST(SDL_LIBS)
+		AC_CHECK_HEADERS(X11/extensions/xf86misc.h,,,[[
+#include <X11/Xlib.h>
+		]])
+		if test "$ac_cv_header_X11_extensions_xf86misc_h" = "yes"
+		then 
+			SDL_LIBS="$SDL_LIBS -lXxf86misc"
+			AC_SUBST(SDL_LIBS)
+		fi
 	fi
 fi
+
+
 AC_ARG_WITH(windres,
 	[  --with-windres=RSC      Name of windres tool (optional)],
 	windres="$withval", windres="")
