@@ -56,16 +56,6 @@
 #define APIENTRYP APIENTRY *
 #endif
 
-#ifdef USE_X11
-/*
-#include <X11/extensions/Xvlib.h>
-
-static void xv_autoselect(void)
-{
-}
-*/
-#endif
-
 extern int macosx_did_finderlaunch;
 
 #define NVIDIA_PixelDataRange	1
@@ -174,13 +164,6 @@ struct video_cf {
 	} ddblit;
 #endif
 	int yuvlayout;
-#define YUV_YV12_TV	0x00100000
-#define YUV_IYUV_TV	0x00200000
-#define YUV_UYVY	0x59565955
-#define YUV_YUY2	0x32595559
-#define YUV_YV12	0x32315659
-#define YUV_IYUV	0x56555949
-#define YUV_YVYU	0x55595659
 	SDL_Rect clip;
 	SDL_Surface * surface;
 	SDL_Overlay * overlay;
@@ -337,19 +320,19 @@ void video_report(void)
 		} else {
 			log_append(2,0, " Using video overlay");
 		}
-		if (video.yuvlayout == YUV_YV12) {
+		if (video.yuvlayout == VIDEO_YUV_YV12) {
 			log_append(5,0, " Display format: YV12 (planar)");
-		} else if (video.yuvlayout == YUV_IYUV) {
+		} else if (video.yuvlayout == VIDEO_YUV_IYUV) {
 			log_append(5,0, " Display format: IYUV (planar)");
-		} else if (video.yuvlayout == YUV_YV12_TV) {
+		} else if (video.yuvlayout == VIDEO_YUV_YV12_TV) {
 			log_append(5,0, " Display format: YV12 (planar+tv)");
-		} else if (video.yuvlayout == YUV_IYUV_TV) {
+		} else if (video.yuvlayout == VIDEO_YUV_IYUV_TV) {
 			log_append(5,0, " Display format: IYUV (planar+tv)");
-		} else if (video.yuvlayout == YUV_YVYU) {
+		} else if (video.yuvlayout == VIDEO_YUV_YVYU) {
 			log_append(5,0, " Display format: YVYU (packed)");
-		} else if (video.yuvlayout == YUV_UYVY) {
+		} else if (video.yuvlayout == VIDEO_YUV_UYVY) {
 			log_append(5,0, " Display format: UYVY (packed)");
-		} else if (video.yuvlayout == YUV_YUY2) {
+		} else if (video.yuvlayout == VIDEO_YUV_YUY2) {
 			log_append(5,0, " Display format: YUY2 (packed)");
 		}
 		break;
@@ -449,27 +432,23 @@ void video_init(const char *driver)
 		video.cv8backing = (unsigned char *)mem_alloc(NATIVE_SCREEN_WIDTH);
 	}
 
-	video.yuvlayout = YUV_UYVY;
-#ifdef USE_X11
-	/* get xv info */
-	/*xv_autoselect();*/
-#endif
+	video.yuvlayout = 0;
 	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
 		if (strcasecmp(q, "YUY2") == 0
 		|| strcasecmp(q, "YUNV") == 0
 		|| strcasecmp(q, "V422") == 0
 		|| strcasecmp(q, "YUYV") == 0) {
-			video.yuvlayout = YUV_YUY2;
+			video.yuvlayout = VIDEO_YUV_YUY2;
 		} else if (strcasecmp(q, "YVYU") == 0) {
-			video.yuvlayout = YUV_YVYU;
+			video.yuvlayout = VIDEO_YUV_YVYU;
 		} else if (strcasecmp(q, "YV12") == 0) {
-			video.yuvlayout = YUV_YV12;
+			video.yuvlayout = VIDEO_YUV_YV12;
 		} else if (strcasecmp(q, "IYUV") == 0) {
-			video.yuvlayout = YUV_IYUV;
+			video.yuvlayout = VIDEO_YUV_IYUV;
 		} else if (strcasecmp(q, "YV12/2") == 0) {
-			video.yuvlayout = YUV_YV12_TV;
+			video.yuvlayout = VIDEO_YUV_YV12_TV;
 		} else if (strcasecmp(q, "IYUV/2") == 0) {
-			video.yuvlayout = YUV_IYUV_TV;
+			video.yuvlayout = VIDEO_YUV_IYUV_TV;
 		}
 	}
 
@@ -502,12 +481,18 @@ void video_init(const char *driver)
 		}
 	}
 #endif
-	if (!strcasecmp(driver, "x11")) {
+#ifdef USE_X11
+	/* get xv info */
+	if (!video.yuvlayout) video.yuvlayout = xv_yuvlayout();
+#else
+	if (!video.yuvlayout) video.yuvlayout = VIDEO_YUV_YUY2;
+#endif
+	if (video.yuvlayout && !strcasecmp(driver, "x11")) {
 		video.desktop.want_type = VIDEO_YUV;
 		putenv("SDL_VIDEO_YUV_DIRECT=1");
 		putenv("SDL_VIDEO_YUV_HWACCEL=1");
 		putenv("SDL_VIDEODRIVER=x11");
-	} else if (!strcasecmp(driver, "yuv")) {
+	} else if (video.yuvlayout && !strcasecmp(driver, "yuv")) {
 		video.desktop.want_type = VIDEO_YUV;
 		putenv("SDL_VIDEO_YUV_DIRECT=1");
 		putenv("SDL_VIDEO_YUV_HWACCEL=1");
@@ -820,43 +805,43 @@ RETRYSURF:	/* use SDL surfaces */
 			video.overlay = 0;
 		}
 		_setup_surface(width, height, 0);
-		if (video.yuvlayout == YUV_YV12_TV) {
+		if (video.yuvlayout == VIDEO_YUV_YV12_TV) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH,
 					NATIVE_SCREEN_HEIGHT,
 					SDL_YV12_OVERLAY,
 					video.surface);
-		} else if (video.yuvlayout == YUV_IYUV_TV) {
+		} else if (video.yuvlayout == VIDEO_YUV_IYUV_TV) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH,
 					NATIVE_SCREEN_HEIGHT,
 					SDL_IYUV_OVERLAY,
 					video.surface);
-		} else if (video.yuvlayout == YUV_YV12) {
+		} else if (video.yuvlayout == VIDEO_YUV_YV12) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH*2,
 					NATIVE_SCREEN_HEIGHT*2,
 					SDL_YV12_OVERLAY,
 					video.surface);
-		} else if (video.yuvlayout == YUV_IYUV) {
+		} else if (video.yuvlayout == VIDEO_YUV_IYUV) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH*2,
 					NATIVE_SCREEN_HEIGHT*2,
 					SDL_IYUV_OVERLAY,
 					video.surface);
-		} else if (video.yuvlayout == YUV_UYVY) {
+		} else if (video.yuvlayout == VIDEO_YUV_UYVY) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH*2,
 					NATIVE_SCREEN_HEIGHT,
 					SDL_UYVY_OVERLAY,
 					video.surface);
-		} else if (video.yuvlayout == YUV_YVYU) {
+		} else if (video.yuvlayout == VIDEO_YUV_YVYU) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH*2,
 					NATIVE_SCREEN_HEIGHT,
 					SDL_YVYU_OVERLAY,
 					video.surface);
-		} else if (video.yuvlayout == YUV_YUY2) {
+		} else if (video.yuvlayout == VIDEO_YUV_YUY2) {
 			video.overlay = SDL_CreateYUVOverlay(
 					NATIVE_SCREEN_WIDTH*2,
 					NATIVE_SCREEN_HEIGHT,
@@ -1042,8 +1027,8 @@ void video_colors(unsigned char palette[16][3])
 
 			switch (video.yuvlayout) {
 			/* planar modes */
-			case YUV_YV12:
-			case YUV_IYUV:
+			case VIDEO_YUV_YV12:
+			case VIDEO_YUV_IYUV:
 				/* this is fake; we simply record the infomration here */
 				video.yuv_y[i] = y|(y<<8);
 				video.yuv_u[i] = u;
@@ -1051,8 +1036,8 @@ void video_colors(unsigned char palette[16][3])
 				break;
 
 			/* tv planar modes */
-			case YUV_YV12_TV:
-			case YUV_IYUV_TV:
+			case VIDEO_YUV_YV12_TV:
+			case VIDEO_YUV_IYUV_TV:
 				/* _blitTV */
 				video.yuv_y[i] = y;
 				video.yuv_u[i] = (u >> 4) & 0xF;
@@ -1060,7 +1045,7 @@ void video_colors(unsigned char palette[16][3])
 				break;
 
 			/* packed modes */
-			case YUV_YVYU:
+			case VIDEO_YUV_YVYU:
 				/* y0 v0 y1 u0 */
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 				video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
@@ -1068,7 +1053,7 @@ void video_colors(unsigned char palette[16][3])
 				video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
 #endif
 				break;
-			case YUV_UYVY:
+			case VIDEO_YUV_UYVY:
 				/* u0 y0 v0 y1 */
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 				video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
@@ -1076,7 +1061,7 @@ void video_colors(unsigned char palette[16][3])
 				video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
 #endif
 				break;
-			case YUV_YUY2:
+			case VIDEO_YUV_YUY2:
 				/* y0 u0 y1 v0 */
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 				video.pal[i] = v | (y << 8) | (u << 16) | (y << 24);
@@ -1298,26 +1283,26 @@ static void _video_blit_planar(void) {
 	vgamem_lock();
 
 	switch (video.yuvlayout) {
-	case YUV_YV12_TV:
+	case VIDEO_YUV_YV12_TV:
 		/* halfwidth Y+V+U */
 		_blitUV(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
 		_blitTV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
 		_blitTV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
 		break;
-	case YUV_IYUV_TV:
+	case VIDEO_YUV_IYUV_TV:
 		/* halfwidth Y+U+V */
 		_blitUV(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
 		_blitTV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);
 		_blitTV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_v);
 		break;
 
-	case YUV_YV12:
+	case VIDEO_YUV_YV12:
 		/* Y+V+U */
 		_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
 		_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
 		_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
 		break;
-	case YUV_IYUV:
+	case VIDEO_YUV_IYUV:
 		/* Y+U+V */
 		_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
 		_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);

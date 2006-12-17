@@ -134,6 +134,7 @@ if test "$no_x" = "yes"
 then
 	# no X11
 	AM_CONDITIONAL([USE_X11], [false])
+	AM_CONDITIONAL([USE_XV], [false])
 else
 	AM_CONDITIONAL([USE_X11], [true])
 	AC_PATH_XTRA()
@@ -153,6 +154,23 @@ else
 			SDL_LIBS="$SDL_LIBS -lXxf86misc"
 			AC_SUBST(SDL_LIBS)
 		fi
+	fi
+	AC_CHECK_LIB(Xv, XvQueryExtension)
+	if test "$ac_cv_lib_Xv_XvQueryExtension" = "yes"
+	then
+		AC_CHECK_HEADERS(X11/extensions/Xvlib.h,,,[[
+#include <X11/Xlib.h>
+		]])
+		if test "$ac_cv_header_X11_extensions_xvlib_h" = "yes"
+		then 
+			SDL_LIBS="$SDL_LIBS -lXv"
+			AC_SUBST(SDL_LIBS)
+			AM_CONDITIONAL([USE_XV], [true])
+		else
+			AM_CONDITIONAL([USE_XV], [false])
+		fi
+	else
+		AM_CONDITIONAL([USE_XV], [false])
 	fi
 fi
 
