@@ -439,6 +439,8 @@ void video_init(const char *driver)
 		|| strcasecmp(q, "V422") == 0
 		|| strcasecmp(q, "YUYV") == 0) {
 			video.yuvlayout = VIDEO_YUV_YUY2;
+		} else if (strcasecmp(q, "UYVY") == 0) {
+			video.yuvlayout = VIDEO_YUV_UYVY;
 		} else if (strcasecmp(q, "YVYU") == 0) {
 			video.yuvlayout = VIDEO_YUV_YVYU;
 		} else if (strcasecmp(q, "YV12") == 0) {
