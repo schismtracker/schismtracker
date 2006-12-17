@@ -7,7 +7,7 @@ if USE_MACOSX
 # don't bother trying to do macsox+x11 at the same time...
 else
 if USE_X11
-files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c
+files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c sys/x11/xv.c
 cflags_x11 = -DUSE_X11
 endif
 endif
