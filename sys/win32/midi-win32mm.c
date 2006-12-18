@@ -97,7 +97,7 @@ static void _win32mm_send_xp(struct midi_port *p, unsigned char *data,
 	_win32mm_sysex(&m->obuf, data, len);
 	m->obuf->dwUser = (DWORD_PTR)m->out;
 	if (XP_timeSetEvent(delay, 0, _win32mm_xp_output, (DWORD_PTR)m->obuf,
-			TIME_ONESHOT | TIME_CALLBACK_FUNCTION) == NULL) {
+			TIME_ONESHOT | TIME_CALLBACK_FUNCTION) != MMSYSERR_NOERROR) {
 		/* slow... */
 		if (midiOutPrepareHeader(m->out, m->obuf, sizeof(MIDIHDR)) == MMSYSERR_NOERROR) {
 			(void)midiOutLongMsg(m->out, m->obuf, sizeof(MIDIHDR));
