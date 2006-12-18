@@ -1684,13 +1684,13 @@ DWORD Convert32To16(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LPLONG lpMin,
 }
 //---GCCFIX: Asm replaced with C function
 // 24-bit audio not supported.
-DWORD Convert32To24(LPVOID, int, DWORD, LPLONG, LPLONG)
+DWORD Convert32To24(LPVOID lp32, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
 {
 	return 0;
 }
 //---GCCFIX: Asm replaced with C function
 // 32-bit audio not supported
-DWORD Convert32To32(LPVOID, int, DWORD, LPLONG, LPLONG)
+DWORD Convert32To32(LPVOID lp32, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
 {
 	return 0;
 }
