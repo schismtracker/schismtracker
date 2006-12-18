@@ -19,6 +19,8 @@
  */
 #include "headers.h"
 
+#include "sdlmain.h"
+
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -31,8 +33,6 @@
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
 #include <X11/XKBlib.h>
 #endif
-
-#include "sdlmain.h"
 
 static int virgin = 1;
 static unsigned int delay, rate;
