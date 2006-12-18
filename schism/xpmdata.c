@@ -83,7 +83,7 @@ static int string_equal(const char *a, const char *b, int n)
  * convert colour spec to RGB (in 0xrrggbb format).
  * return 1 if successful.
  */
-static int color_to_rgb(char *spec, int speclen, Uint32 *rgb)
+static int color_to_rgb(const char *spec, int speclen, Uint32 *rgb)
 {
 	/* poor man's rgb.txt */
 	static struct { const char *name; Uint32 rgb; } known[] = {
@@ -189,12 +189,12 @@ static struct color_hash *create_colorhash(int maxnum)
 static int add_colorhash(struct color_hash *hash,
                          char *key, int cpp, Uint32 color)
 {
-	int pos = hash_key(key, cpp, hash->size);
+	int h = hash_key(key, cpp, hash->size);
 	struct hash_entry *e = hash->next_free++;
 	e->color = color;
 	e->key = key;
-	e->next = hash->table[pos];
-	hash->table[pos] = e;
+	e->next = hash->table[h];
+	hash->table[h] = e;
 	return 1;
 }
 
@@ -233,15 +233,15 @@ SDL_Surface *xpmdata(const char *data[])
 	struct color_hash *colors = NULL;
 	SDL_Color *im_colors = NULL;
 	char *keystrings = NULL, *nextkey;
-	char *line;
-	char ***xpmlines = NULL;
+	const char *line;
+	const char ***xpmlines = NULL;
 #define get_next_line(q,l) *(*xpmlines)++
 	int pixels_len;
 	int error;
 
 	error = 0;
 
-	xpmlines = (char ***) &data;
+	xpmlines = (const char ***) &data;
 
 	line = get_next_line(xpmlines, 0);
 	if(!line) goto done;
@@ -293,7 +293,7 @@ SDL_Surface *xpmdata(const char *data[])
 		goto done;
 	}
 	for(n = 0; n < ncolors; ++n) {
-		char *p;
+		const char *p;
 		line = get_next_line(xpmlines, 0);
 		if(!line)
 			goto done;
@@ -303,7 +303,7 @@ SDL_Surface *xpmdata(const char *data[])
 		/* parse a colour definition */
 		for(;;) {
 			char nametype;
-			char *colname;
+			const char *colname;
 			Uint32 rgb, pixel;
 
 			SKIPSPACE(p);
