@@ -61,17 +61,17 @@ static int _get_fd(int pb, int isout)
 	fd = socket(PF_INET, SOCK_DGRAM, 0);
 	if (fd == -1) return -1;
 
-	opt = 1; setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+	opt = 1; setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(int));
 
 	/* don't loop back what we generate */
 	opt = !isout;
-	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void*)&opt, sizeof(opt)) < 0) {
 		(void)close(fd);
 		return -1;
 	}
 
 	opt = 31;
-	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&opt, sizeof(opt)) < 0) {
 		(void)close(fd);
 		return -1;
 	}
@@ -79,13 +79,13 @@ static int _get_fd(int pb, int isout)
 	memset(&mreq, 0, sizeof(mreq));
 	ipcopy = (unsigned char *)&mreq.imr_multiaddr;
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
-	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) < 0) {
 		(void)close(fd);
 		return -1;
 	}
 
 	opt = 1;
-	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void*)&opt, sizeof(opt)) < 0) {
 		(void)close(fd);
 		return -1;
 	}
