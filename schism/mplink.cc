@@ -189,7 +189,6 @@ static int channel_states[64];  /* nonzero => muted */
 
 void song_set_channel_mute(int channel, int muted)
 {
-	int i;
         if (muted) {
                 mp->ChnSettings[channel].dwFlags |= CHN_MUTE;
                 mp->Chn[channel].dwFlags |= CHN_MUTE;
@@ -550,15 +549,6 @@ void song_set_instrument_mode(int value)
 	}
 }
 
-char *song_get_instrument_name(int n, char **name)
-{
-        if (song_is_instrument_mode())
-                song_get_instrument(n, name);
-        else
-                song_get_sample(n, name);
-        return *name;
-}
-
 int song_get_current_instrument()
 {
         return (song_is_instrument_mode() ? instrument_get_current() : sample_get_current());
@@ -837,7 +827,8 @@ void song_wipe_instrument(int n)
 }
 void song_delete_instrument(int n)
 {
-	int i, j;
+	unsigned long i;
+	int j;
 	if (!mp->Headers[n]) return;
 	song_lock_audio();
 	for (i = 0; i < sizeof(mp->Headers[n]->Keyboard); i++) {

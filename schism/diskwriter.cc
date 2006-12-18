@@ -43,7 +43,15 @@ I don't actually know why times3 seems to make linked samples sound pretty close
 It might not work with all songs- just the ones I'm playing with. But this'll do
 for now...
 
+
+Sounds about right. I multiplied modplug's output by three ... somewhere ...
+to get it sounding closer to Impulse Tracker's mixing volume.
+Anyway, this doesn't seem to be used anywhere so I'm commenting it out.
+
+/storlek
+
 */
+#if 0
 static void _dw_times_3(int *buffer, unsigned long samples, unsigned long channels)
 {
 	unsigned long i;
@@ -51,7 +59,7 @@ static void _dw_times_3(int *buffer, unsigned long samples, unsigned long channe
 		buffer[i] = buffer[i] * 3;
 	}
 }
-
+#endif
 
 
 static unsigned char diskbuf[32768];
@@ -73,17 +81,19 @@ static char *dw_rename_from = NULL;
 static char *dw_rename_to = NULL;
 
 /* disk writer */
+/* Nice comment, but WTF do these functions do? */
 static void _wl(diskwriter_driver_t *x, off_t pos)
 {
 	if (!fp) {
 		fp_ok = 0;
 		return;
 	}
-	(void)fseek(fp,pos,SEEK_SET);
-	if (ferror(fp)) fp_ok = 0;
+	fseek(fp, pos, SEEK_SET);
+	if (ferror(fp))
+		fp_ok = 0;
 	x->pos = pos;
 }
-static void _we(diskwriter_driver_t *x)
+static void _we(UNUSED diskwriter_driver_t *x)
 {
 	fp_ok = 0;
 }

@@ -29,6 +29,8 @@
 #include "clippy.h"
 
 #include "song.h"
+#include "mixer.h"
+#include "midi.h"
 #include "dmoz.h"
 #include "frag-opt.h"
 
@@ -53,8 +55,18 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+/* FIXME: don't declare functions here -- this stuff goes in .h files :P */
 #if defined(WIN32)
 extern void win32_get_modkey(int*);
+#endif
+#if defined(MACOSX)
+int macosx_ibook_fnswitch(int setting);
+#endif
+
+/* wee... */
+#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
+unsigned key_repeat_rate(void);
+unsigned key_repeat_delay(void);
 #endif
 
 #ifdef USE_DLTRICK_ALSA
@@ -80,13 +92,6 @@ static const char *video_driver = 0;
 static const char *audio_driver = 0;
 static int did_fullscreen = 0;
 static int did_classic = 0;
-
-/* wee... */
-#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
-unsigned key_repeat_rate(void);
-unsigned key_repeat_delay(void);
-#endif
-
 
 /* ugly hack... */
 void (*shift_release)(void) = NULL;
@@ -132,8 +137,6 @@ static void restore_font(void)
 
 static void display_print_info(void)
 {
-	char buf[256];
-
 	log_append(2, 0, "Video initialised");
 	log_append(2, 0, "\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81");
 	video_report();
@@ -469,7 +472,7 @@ static void event_loop(void)
 	SDL_Event event;
 	struct key_event kk;
 	Uint32 last_mouse_down, ticker;
-	SDLKey last_key;
+	SDLKey last_key = 0;
 	int modkey;
 	time_t startdown;
         struct tm *tmr;
@@ -540,6 +543,8 @@ static void event_loop(void)
 				break;
 			case SDLK_CAPSLOCK:
 				modkey ^= KMOD_CAPS;
+				break;
+			default:
 				break;
 			};
 			if (!kk.state) {

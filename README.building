@@ -1,3 +1,11 @@
+As I've said dozens of times, simply renaming the built program will fix
+these issues painlessly. This is what I've done, but I'm having trouble
+building it because auto* is crap. :P
+
+-- Storlek 2006.12.17
+
+
+
 This is apparently a frequently asked question.
 
 To build schism, you must build outside of the toplevel source directory.

@@ -36,24 +36,24 @@ echo "making include/auto/schismico.h" >&2
 pngtopnm -alpha < icons/schism-icon-32.png >.a.tmp || exit 1
 pngtopnm < icons/schism-icon-32.png >.b.tmp || exit 1
 ppmtoxpm -hexonly -name _schism_icon_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
-rm -f .a.tmp .b.tmp
-mv .c.tmp include/auto/schismico.h
+sed 's/char/const char/' < .c.tmp > include/auto/schismico.h
+rm -f .a.tmp .b.tmp .c.tmp
 
 ## make schism logo
 echo "making include/auto/logoschism.h" >&2
 pngtopnm -alpha < icons/schism_logo.png > .a.tmp || exit 1
 pngtopnm < icons/schism_logo.png > .b.tmp || exit 1
 ppmtoxpm -hexonly -name _logo_schism_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
-rm -f .a.tmp .b.tmp
-mv .c.tmp include/auto/logoschism.h
+sed 's/char/const char/' < .c.tmp > include/auto/logoschism.h
+rm -f .a.tmp .b.tmp .c.tmp
 
 ## make IT logo
 echo "making include/auto/logoit.h" >&2
 pngtopnm -alpha < icons/it_logo.png > .a.tmp || exit 1
 pngtopnm < icons/it_logo.png > .b.tmp || exit 1
 ppmtoxpm -hexonly -name _logo_it_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
-rm -f .a.tmp .b.tmp || exit 1
-mv .c.tmp include/auto/logoit.h
+sed 's/char/const char/' < .c.tmp > include/auto/logoit.h
+rm -f .a.tmp .b.tmp .c.tmp || exit 1
 
 ## make default (builtin) font
 echo "making include/auto/default-font.h" >&2

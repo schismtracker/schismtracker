@@ -1,6 +1,10 @@
 #ifndef __sdlmain_header
 #define __sdlmain_header
 
+/* Hack to get the build to shut up about SDL trampling on names. */
+#define index qwwqwqqw
+#define access ddsdsd
+
 /* just a fancy way to get SDL headers */
 
 #ifndef _USE_AUTOCONF
@@ -35,5 +39,9 @@
 #include <SDL_opengl.h>
 #endif
 #endif
+
+/* complement to above hack */
+#undef index
+#undef access
 
 #endif

@@ -126,7 +126,7 @@ int fmt_aiff_load_sample(const byte *data, size_t length, song_sample *smp, char
 		block_length = bswapBE32(block_length);
 		if (comm_chunk == 0 && memcmp(data + position, "COMM", 4) == 0) {
 			if (block_length != 18) {
-				printf("aiff: weird %d-byte COMM chunk; bailing", block_length);
+				printf("aiff: weird %ld-byte COMM chunk; bailing", block_length);
 				return false;
 			}
 			comm_chunk = position;
@@ -260,7 +260,7 @@ int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 	
 	/* fix the length in the file header */
 	ul = fp->pos - 8;
-	bswapBE32(ul);
+	ul = bswapBE32(ul);
 	fp->l(fp, 4);
 	fp->o(fp, (const unsigned char *)&ul, 4);
 	

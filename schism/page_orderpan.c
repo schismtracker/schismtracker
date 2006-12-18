@@ -121,7 +121,7 @@ RETR:	if (new_order > 255)
 		set_current_pattern(pattern);
 	}
 }
-void orderlist_cheater(void)
+static void orderlist_cheater(void)
 {
         unsigned char *list = song_get_orderlist();
 	song_note *data;
@@ -339,7 +339,7 @@ static int orderlist_handle_char(struct key_event *k)
 {
         int c;
         int cur_pattern;
-        unsigned char *list;
+        //unsigned char *list;
 	song_note *tmp;
         int n[3] = { 0 };
 

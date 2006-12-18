@@ -36,6 +36,7 @@
 /* rastops for envelope */
 static struct vgamem_overlay env_overlay = {
 	32, 18, 65, 25,
+	0, 0, 0, 0, 0, 0
 };
 
 /* --------------------------------------------------------------------- */
@@ -358,7 +359,7 @@ static void instrument_list_draw_list(void)
         song_instrument *ins;
         int selected = (ACTIVE_PAGE.selected_widget == 0);
         int is_current;
-	int ss, cl, cr;
+	int ss, cl = 0, cr = 0;
         int is_playing[100];
         byte buf[4];
 	
@@ -674,14 +675,15 @@ static void note_trans_draw(void)
         }
 }
 
-void instrument_note_trans_transpose(song_instrument *ins, int dir)
+static void instrument_note_trans_transpose(song_instrument *ins, int dir)
 {
 	int i;
 	for (i = 0; i < 120; i++) {
 		ins->note_map[i] = CLAMP(ins->note_map[i]+dir, 1, 120);
 	}
 }
-void instrument_note_trans_insert(song_instrument *ins, int pos)
+
+static void instrument_note_trans_insert(song_instrument *ins, int pos)
 {
 	int i;
 	for (i = 119; i > pos; i--) {
@@ -694,7 +696,8 @@ void instrument_note_trans_insert(song_instrument *ins, int pos)
 		ins->note_map[0] = 1;
 	}
 }
-void instrument_note_trans_delete(song_instrument *ins, int pos)
+
+static void instrument_note_trans_delete(song_instrument *ins, int pos)
 {
 	int i;
 	for (i = pos; i < 120; i++) {
@@ -1010,7 +1013,7 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 	unsigned int *channel_list;
 	byte buf[16];
 	unsigned long envpos[3];
-	int x, y, n, m, c;
+	int x, y, n, m;
 	int last_x = 0, last_y = 0;
 	int max_ticks = 50;
 	
@@ -1340,7 +1343,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope *env, int *curre
 	} else {
 		int n;
 		int dist, dx, dy;
-		int best_dist;
+		int best_dist = 0;
 		int best_dist_node;
 
 		best_dist_node = -1;

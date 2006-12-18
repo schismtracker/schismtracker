@@ -23,6 +23,7 @@
 #ifndef MIXER_H
 #define MIXER_H
 
+void mixer_setup(void);
 int mixer_get_max_volume(void);
 void mixer_read_volume(int *left, int *right);
 void mixer_write_volume(int left, int right);

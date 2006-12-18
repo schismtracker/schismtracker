@@ -167,10 +167,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				int chan, int *mm, int at,
 				int effect, int param)
 {
-	int i;
+	int ins_mode, n;
 	MODCHANNEL *c;
 	MODCOMMAND mc;
-	int eff;
 
 	if (chan > -1 && !mm) {
 		if (ins < 0 && samp < 0) return chan;
@@ -185,7 +184,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			return chan;
 		}
 
-		if (((i=song_is_instrument_mode()) || samp == 0) && ins < 0) {
+		ins_mode = song_is_instrument_mode();
+		if ((ins_mode || samp == 0) && ins < 0) {
 			/* this is only needed on the sample page, when in
 			instrument mode...
 			*/
@@ -239,11 +239,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				c->dwFlags |= CHN_NNAMUTE;
 			}
 
-			if (i) {
-				c->nRowInstr = ins;
-			} else {
-				c->nRowInstr = samp;
-			}
+			c->nRowInstr = ins_mode ? ins : samp;
 			c->nRowCommand = effect;
 			c->nRowParam = param;
 			mp->CheckNNA(chan,c->nRowInstr,note,FALSE);
@@ -275,28 +271,28 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 	if (mm) {
 		if (chan < 0) chan = 0;
-		for (i = chan; i < 64; i++) {
-			if (mm[i] == ((note << 1)|1)) {
+		for (n = chan; n < 64; n++) {
+			if (mm[n] == ((note << 1)|1)) {
 				return song_keydown_ex(samp, ins, note,
-						vol, 64+i,  0, at,
+						vol, 64+n,  0, at,
 						effect, param);
 			}
-			if (mm[i] != 1) continue;
-			mm[i] = 1 | (note << 1);
+			if (mm[n] != 1) continue;
+			mm[n] = 1 | (note << 1);
 			return song_keydown_ex(samp, ins,
-						note, vol, 64+i,  0, at,
+						note, vol, 64+n,  0, at,
 						effect, param);
 		}
-		for (i = 0; i < chan; i++) {
-			if (mm[i] == ((note << 1)|1)) {
+		for (n = 0; n < chan; n++) {
+			if (mm[n] == ((note << 1)|1)) {
 				return song_keydown_ex(samp, ins, note,
-						vol, 64+i,  0, at,
+						vol, 64+n,  0, at,
 						effect, param);
 			}
-			if (mm[i] != 1) continue;
-			mm[i] = 1 | (note << 1);
+			if (mm[n] != 1) continue;
+			mm[n] = 1 | (note << 1);
 			return song_keydown_ex(samp, ins, note,
-						vol, 64+i,  0, at,
+						vol, 64+n,  0, at,
 						effect, param);
 		}
 		/* put it back into range as necessary */
@@ -305,8 +301,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 	} else {
 		if (multichannel_mode) song_change_current_play_channel(1,1);
 
-		for (i = 0; i < 64; i++)
-			big_song_channels[i] |= 1;
+		for (n = 0; n < 64; n++)
+			big_song_channels[n] |= 1;
 
 		return song_keydown_ex(samp, ins, note, vol,
 					current_play_channel-1,
@@ -529,7 +525,7 @@ static int mp_chaseback(int order, int row)
 	k = 0;
 	for (j = order-1; j >= 0 && lim != 0; j--) {
 		if (mp->Order[j] >= MAX_PATTERNS) continue;
-		int size = mp->PatternSize[ mp->Order[order] ];
+		unsigned long size = mp->PatternSize[ mp->Order[order] ];
 		if (lim >= size) {
 			lim -= size;
 		} else {
@@ -573,7 +569,7 @@ printf("stop_at_order = %u v. %u  and row = %u v. %u\n",
 	CSoundFile::_midi_out_note = _schism_midi_out_note;
 	CSoundFile::_midi_out_raw = _schism_midi_out_raw;
 
-	return (order == mp->m_nCurrentPattern) ? 1 : 0;
+	return (order == (signed) mp->m_nCurrentPattern) ? 1 : 0;
 }
 
 
@@ -1086,7 +1082,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 	chan %= 64;
 
 	if (!m) {
-		if (last_row_number != mp->m_nRow) return;
+		if (last_row_number != (signed) mp->m_nRow) return;
 		m = last_row[chan];
 	} else {
 		last_row[chan] = m;
@@ -1285,6 +1281,7 @@ static int nosound_thread(UNUSED void *ign)
 		song_unlock_audio();
 		SDL_Delay(200);
 	}
+	return 0; /* shrug... */
 }
 
 static void song_print_info_top(const char *d)
@@ -1311,7 +1308,6 @@ void song_init_audio(const char *driver)
 	 * SDL_OpenAudio, but wtf.) */
 	static int first_init = 1;
 	unsigned int need_samples;
-	char *pp;
 
 	if (!first_init) {
 		song_stop();

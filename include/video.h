@@ -39,6 +39,7 @@ void vgamem_unlock(void);
 void vgamem_flip(void);
 void vgamem_font_reserve(struct vgamem_overlay *n);
 void vgamem_fill_reserve(struct vgamem_overlay *n, int fg, int bg);
+void vgamem_clear_reserve(struct vgamem_overlay *n);
 void vgamem_font_putpixel(struct vgamem_overlay *n, int x, int y);
 void vgamem_font_clearpixel(struct vgamem_overlay *n, int x, int y);
 void vgamem_font_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye);
@@ -52,6 +53,8 @@ const char *video_driver_name(void);
 
 void video_init(const char *id);
 void video_shutdown(void);
+void video_report(void);
+void video_refresh(void);
 void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int tri);
@@ -60,7 +63,11 @@ void video_translate(unsigned int vx, unsigned int vy,
 void video_blit(void);
 void video_mousecursor(int z);
 
+void video_scanmouse(unsigned int y, unsigned char *mousebox, unsigned int *x);
+
 int video_is_fullscreen(void);
+
+SDL_Surface *xpmdata(const char *xpmdata[]);
 
 #define VIDEO_YUV_UYVY	0x59565955
 #define VIDEO_YUV_YUY2	0x32595559

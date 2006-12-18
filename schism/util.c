@@ -29,6 +29,7 @@ extraneous libraries (i.e. GLib). */
 #include "headers.h"
 
 #include "util.h"
+#include "dmoz.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -88,7 +89,7 @@ void *mem_realloc(void *orig, size_t amount)
 
 unsigned char *get_date_string(time_t when, unsigned char *buf)
 {
-        struct tm *tmr;
+        struct tm tm, *tmr;
 	const char *month_str[12] = {
 		"January",
 		"February",
@@ -104,8 +105,9 @@ unsigned char *get_date_string(time_t when, unsigned char *buf)
 		"December",
 	};
 
-	/* note; these aren't thread safe! (only call from main thread) */
-	tmr = localtime(&when);
+	/* DO NOT change this back to localtime(). If some backward platform
+	doesn't have localtime_r, it needs to be implemented separately. */
+	tmr = localtime_r(&when, &tm);
         snprintf((char *) buf, 27, "%s %d, %d", month_str[tmr->tm_mon],
 				tmr->tm_mday, 1900 + tmr->tm_year);
         return buf;
@@ -115,8 +117,7 @@ unsigned char *get_time_string(time_t when, unsigned char *buf)
 {
         struct tm tm, *tmr;
 
-	/* note; these aren't thread safe! (only call from main thread) */
-	tmr = localtime(&when);
+	tmr = localtime_r(&when, &tm);
         snprintf((char *) buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? tmr->tm_hour : 12,
 		 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
         return buf;
@@ -124,7 +125,7 @@ unsigned char *get_time_string(time_t when, unsigned char *buf)
 
 unsigned char *num99tostr(int n, unsigned char *buf)
 {
-	static char *qv="HIJKLMNOPQRS";
+	static const char *qv = "HIJKLMNOPQRS";
 	if (n < 100) {
 		sprintf((char*)buf, "%02d", n);
 	} else if (n <= 200) {

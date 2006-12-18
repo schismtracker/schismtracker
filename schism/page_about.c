@@ -29,8 +29,6 @@
 #include "video.h"
 #include "song.h"
 
-extern SDL_Surface *xpmdata(char *x[]);
-
 static SDL_Surface *it_logo = 0;
 static SDL_Surface *schism_logo = 0;
 
@@ -59,6 +57,8 @@ static int _fixup_ignore_globals(struct key_event *k)
 	case SDLK_ESCAPE:
 		/* use default handler */
 		return 0;
+	default:
+		break;
 	};
 	/* this way, we can't pull up help here */
 	return 1;
@@ -80,8 +80,9 @@ void about_load_page(struct page *page)
 
 static struct widget about_widgets[1];
 static struct vgamem_overlay logo_image = {
-	23,17,
-	58,24,
+	23, 17,
+	58, 24,
+	0, 0, 0, 0, 0, 0,
 };
 
 static void about_close(UNUSED void *data)

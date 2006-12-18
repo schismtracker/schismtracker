@@ -33,7 +33,8 @@ int fmt_wav_load_sample(const byte *data, size_t length, song_sample *smp,
 {
 	static CSoundFile qq;
 	unsigned char *pl, *pr, *oo;
-	int mm, nm, i;
+	int mm, nm;
+	unsigned long i;
 
 	if (!qq.ReadWav(data, length)) return false;
 	if (qq.m_nSamples != 1 && qq.m_nSamples != 2) {
@@ -49,10 +50,10 @@ int fmt_wav_load_sample(const byte *data, size_t length, song_sample *smp,
 	smp->panning = 0;
 	smp->flags &= ~SAMP_PANNING;
 
-	mm=1;
+	mm = 1;
 	if (qq.Ins[1].uFlags & CHN_16BIT) mm++;
 	if (qq.m_nSamples == 2) {
-		nm=1;
+		nm = 1;
 		if (qq.Ins[2].uFlags & CHN_16BIT) nm++;
 		if (nm != nm) return false;
 		mm += nm;
@@ -62,9 +63,9 @@ int fmt_wav_load_sample(const byte *data, size_t length, song_sample *smp,
 	if (qq.m_nSamples == 2) {
 		smp->flags |= CHN_STEREO;
 		/* okay, we need to weave in the stereoness */
-		pl = (unsigned char *)qq.Ins[1].pSample;
-		pr = (unsigned char *)qq.Ins[2].pSample;
-		oo = (unsigned char *)smp->data;
+		pl = (unsigned char *) qq.Ins[1].pSample;
+		pr = (unsigned char *) qq.Ins[2].pSample;
+		oo = (unsigned char *) smp->data;
 		if (mm == 4) {
 			for (i = 0; i < smp->length; i++) {
 				*oo = *pl; oo++; pl++;
@@ -84,6 +85,7 @@ int fmt_wav_load_sample(const byte *data, size_t length, song_sample *smp,
 
 	return true;
 }
+
 int fmt_wav_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	if (length > 12 && *data == 'R'

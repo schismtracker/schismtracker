@@ -335,7 +335,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 		// Perform clipping + VU-Meter
 		lpBuffer += pCvt(lpBuffer, MixSoundBuffer, lTotalSampleCount, &nVUMeterMin, &nVUMeterMax);
 		// Buffer ready
-Tail:		lRead -= lCount;
+		lRead -= lCount;
 		m_nBufferCount -= lCount;
 	}
 MixDone:
@@ -539,7 +539,7 @@ BOOL CSoundFile::ReadNote()
 
 	// chaseback hoo hah
 	if (stop_at_order > -1 && stop_at_row > -1) {
-		if (stop_at_order <= m_nCurrentPattern && stop_at_row <= m_nRow) {
+		if (stop_at_order <= (signed) m_nCurrentPattern && stop_at_row <= (signed) m_nRow) {
 			return FALSE;
 		}
 	}
@@ -817,7 +817,7 @@ BOOL CSoundFile::ReadNote()
 			}
 
 			// Pitch/Filter Envelope
-			int envpitch;
+			int envpitch = 0;
 			if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && (pChn->pHeader)
 			    && (pChn->dwFlags & CHN_PITCHENV) && (pChn->pHeader->PitchEnv.nNodes))
 			{

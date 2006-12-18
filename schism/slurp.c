@@ -43,12 +43,13 @@ the control gets back to slurp, it closes the fd (again). It doesn't seem to exi
 # define dup(fd) fd
 #endif
 
-#ifdef WIN32
-extern int slurp_win32(slurp_t *useme, const char *filename, size_t st);
-#endif
-
-#if HAVE_MMAP
-extern int slurp_mmap(slurp_t *useme, const char *filename, size_t st);
+/* I hate this... */
+#ifndef O_BINARY
+# ifdef O_RAW
+#  define O_BINARY O_RAW
+# else
+#  define O_BINARY 0
+# endif
 #endif
 
 static void _slurp_stdio_closure(slurp_t *t)
@@ -189,13 +190,10 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
         /* TODO | add a third param for flags, and make this optional.
          * TODO | (along with decompression once that gets written) */
 
-
         if (strcmp(filename, "-") == 0) {
-		if (_slurp_stdio(t, STDIN_FILENO)) {
-			close(fd);
+		if (_slurp_stdio(t, STDIN_FILENO))
 			return t;
-	        }
-		(void)free(t);
+		free(t);
 		return 0;
         }
 
@@ -205,30 +203,24 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 
 #ifdef WIN32
 	switch (slurp_win32(t, filename, size)) {
-	case 0: (void)free(t); return NULL;
+	case 0: free(t); return NULL;
 	case 1: return t;
 	};
 #endif
 		
 #if HAVE_MMAP
 	switch (slurp_mmap(t, filename, size)) {
-	case 0: (void)free(t); return NULL;
+	case 0: free(t); return NULL;
 	case 1: return t;
 	};
 #endif
 
         /* TODO | add a third param for flags, and make this optional.
          * TODO | (along with decompression once that gets written) */
-	fd = open(filename, O_RDONLY
-/* I hate this... */
-#if defined(O_BINARY)
-| O_BINARY
-#elif defined(O_RAW)
-| O_RAW
-#endif
-);
+	fd = open(filename, O_RDONLY | O_BINARY);
+
 	if (fd < 0) {
-		(void)free(t);
+		free(t);
 		return NULL;
 	}
 

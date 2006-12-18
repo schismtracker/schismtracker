@@ -144,7 +144,7 @@ struct tracker_status {
 
 	/* clock is driven from the main/event thread */
 	time_t now;
-	int h,m,s;
+	int h, m, s;
 };
 
 
@@ -382,8 +382,6 @@ void sample_realize(void);
 int song_is_instrument_mode(void);
 int song_first_unused_instrument(void);
 int song_get_current_instrument(void);
-/* these should really be const char */
-char *song_get_instrument_name(int n, char **name);
 
 static inline void set_previous_instrument(void)
 {
@@ -442,6 +440,7 @@ unsigned int memused_history(void);
 /* clears the memory lookup cache */
 void memused_songchanged(void);
 
+void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
 
 /* --------------------------------------------------------------------- */
 

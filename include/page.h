@@ -378,6 +378,9 @@ void log_load_page(struct page *page);
 void load_sample_load_page(struct page *page);
 void load_instrument_load_page(struct page *page);
 void about_load_page(struct page *page);
+void library_sample_load_page(struct page *page);
+void library_instrument_load_page(struct page *page);
+void config_load_page(struct page *page);
 
 /* --------------------------------------------------------------------- */
 

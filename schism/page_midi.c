@@ -194,7 +194,8 @@ static void midi_page_redraw(void)
 	struct midi_port *p;
 	const char *name;
 	char buffer[64];
-	int i, j, n, ct, fg, bg;
+	int i, n, ct, fg, bg;
+	unsigned long j;
 	time_t now;
 
 	draw_fill_chars(3, 15, 76, 28, 0);
@@ -237,13 +238,14 @@ static void midi_page_redraw(void)
 
 	ct = midi_engine_port_count();
 	for (i = 0; i < 13; i++) {
-		draw_char(168, 12, 15+i, 2, 0);
+		draw_char(168, 12, i + 15, 2, 0);
 
-		if (top_midi_port + i >= ct) continue; /* err */
+		if (top_midi_port + i >= ct)
+			continue; /* err */
 
-		p = midi_engine_port(i+top_midi_port, &name);
-		if (current_port == top_midi_port+i
-				&& ACTIVE_WIDGET.type == WIDGET_OTHER) {
+		p = midi_engine_port(top_midi_port + i, &name);
+		if (current_port == top_midi_port + i
+		    && ACTIVE_WIDGET.type == WIDGET_OTHER) {
 			fg = 0;
 			bg = 3;
 		} else {
@@ -254,11 +256,11 @@ static void midi_page_redraw(void)
 
 		/* portability: should use difftime */
 		if (status.flags & MIDI_EVENT_CHANGED
-		&& (time(0) - status.last_midi_time) < 3
-		&& ((!status.last_midi_port && p->io & MIDI_OUTPUT)
-				|| p == (struct midi_port *)status.last_midi_port)) {
+		    && (time(NULL) - status.last_midi_time) < 3
+		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
+		    || p == (struct midi_port *) status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
-				sprintf(buffer+n, "%02x ", status.last_midi_event[j]);
+				sprintf(buffer + n, "%02x ", status.last_midi_event[j]);
 				n += 3;
 			}
 			draw_text((unsigned char *) buffer, 77 - strlen(buffer), 15+i,

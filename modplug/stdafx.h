@@ -75,7 +75,7 @@ inline signed char * GlobalAllocPtr(unsigned int, size_t size)
   return p;
 }
 
-inline void ProcessPlugins(int n) {}
+inline void ProcessPlugins(int) {}
 
 #define GlobalFreePtr(p) free((void *)(p))
 

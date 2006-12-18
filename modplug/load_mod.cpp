@@ -363,7 +363,10 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 
 
 #ifndef MODPLUG_NO_FILESAVE
+
+#ifdef MSC_VER
 #pragma warning(disable:4100)
+#endif
 
 BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 //----------------------------------------------------------
@@ -440,7 +443,7 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 	if (chanlim == 4)
 		lstrcpy((LPSTR)&bTab, "M.K.");
 	else
-		wsprintf((LPSTR)&bTab, "%luCHN", chanlim);
+		wsprintf((LPSTR)&bTab, "%uCHN", chanlim);
 	fp->o(fp, (const unsigned char *)bTab, 4);
 	// Writing patterns
 	for (UINT ipat=0; ipat<nbp; ipat++) if (Patterns[ipat])
@@ -499,5 +502,8 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 	return TRUE;
 }
 
+#ifdef MSC_VER
 #pragma warning(default:4100)
+#endif
+
 #endif // MODPLUG_NO_FILESAVE

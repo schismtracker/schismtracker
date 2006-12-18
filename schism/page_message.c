@@ -27,12 +27,14 @@
  * other program and attaching it to the song with something like
  * ZaStaR's ITTXT utility (hmm, maybe I should rewrite that, too ^_^) so
  * I'm not *really* concerned about the fact that this code completely
- * sucks. Just remember, this ain't VI. */
+ * sucks. Just remember, this ain't Xcode. */
 
 #include "headers.h"
 
 #include "song.h"
 #include "clippy.h"
+
+#include <ctype.h>
 
 /* --------------------------------------------------------------------- */
 

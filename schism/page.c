@@ -29,6 +29,7 @@
 #include "util.h"
 #include "midi.h"
 #include "charset.h"
+#include "clippy.h"
 
 #include "sdlmain.h"
 
@@ -45,7 +46,7 @@ struct tracker_status status = {
 	IS_FOCUSED | IS_VISIBLE,
 	TIME_PLAY_ELAPSED,
 	VIS_VU_METER,
-	0,
+	0, 0, "", 0, 0, NULL, 0, 0, 0, 0
 };
 
 struct page pages[32];
@@ -309,6 +310,7 @@ void save_song_or_save_as(void)
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* This is an ugly monster. */
+/* Jesus, you're right. WTF is all this? I'm lost. :/ -storlek */
 static int _mp_active = 0;
 static struct widget _mpw[1];
 static void (*_mp_setv)(int v) = 0;
@@ -317,34 +319,38 @@ static const char *_mp_text;
 static int _mp_text_x, _mp_text_y;
 static void _mp_draw(void)
 {
+	/* TODO: make this const. there's no reason we should need to edit the
+	name here. the only problem is there's no function to get a const ptr
+	to a sample/instrument name, so instead, for now there's a horrible
+	cast to strip the const off the default text. This needs to go away. */
 	char *name;
 	int n, i;
 
-	if (_mp_text[0] == '!') { // inst
+	if (_mp_text[0] == '!') {
+		/* inst */
 		n = instrument_get_current();
-		if (!n) name = "(No Instrument)";
-		else {
+		if (n)
 			song_get_instrument(n, &name);
-			if (!name || !*name) name = "(No Instrument)";
-		}
-	} else if (_mp_text[0] == '@') { // samp
+		if (n == 0 || name == NULL || name[0] == '\0')
+			name = (char *) "(No Instrument)";
+	} else if (_mp_text[0] == '@') {
+		/* samp */
                 n = sample_get_current();
-		if (!n) name = "(No Sample)";
-		else {
+		if (n)
 			song_get_sample(n, &name);
-			if (!name || !*name) name = "(No Sample)";
-		}
+		if (n == 0 || name == NULL || name[0] == '\0')
+			name = (char *) "(No Sample)";
 	} else {
-		name = (void*)_mp_text;
+		name = (void *) _mp_text;
 	}
 	i = strlen(name);
-	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x+17, _mp_text_y, 2);
-	draw_text_bios_len((const unsigned char *)name, 17, _mp_text_x, _mp_text_y,0,2);
-	if (i < 17 && name == (void*)_mp_text) {
-		draw_char(':', _mp_text_x+i, _mp_text_y,0,2);
+	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, 2);
+	draw_text_bios_len((const unsigned char *) name, 17, _mp_text_x, _mp_text_y, 0, 2);
+	if (i < 17 && name == (void *) _mp_text) {
+		draw_char(':', _mp_text_x + i, _mp_text_y, 0, 2);
 	}
-	draw_box(_mp_text_x, _mp_text_y+1, _mp_text_x+14, _mp_text_y+3,
-				BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(_mp_text_x, _mp_text_y + 1, _mp_text_x + 14, _mp_text_y + 3,
+		 BOX_THIN | BOX_INNER | BOX_INSET);
 }
 static void _mp_change(void)
 {
@@ -355,11 +361,18 @@ static void _mp_change(void)
 	}
 	_mp_active = 2;
 }
+
+/*
+this isn't used anywhere...?
+	-storlek
+
 static void _mp_finish(UNUSED void *ign)
 {
 	_mp_active = 0;
 	dialog_destroy_all();
 }
+*/
+
 static void minipop_slide(int cv, const char *name,
 			int minv, int maxv,
 			void (*setv)(int v),
@@ -1075,6 +1088,8 @@ void handle_key(struct key_event * k)
 			}
 		}
 		return;
+	default:
+		break;
         }
 
         /* and if we STILL didn't handle the key, pass it to the page.
@@ -1258,6 +1273,7 @@ static void vis_oscilloscope(void)
 	static int _virgin = 1;
 	static struct vgamem_overlay vis = {
 		63, 6, 77, 7,
+		0, 0, 0, 0, 0, 0
 	};
 	if (_virgin) {
 		vgamem_font_reserve(&vis);
@@ -1579,6 +1595,8 @@ int song_load(const char *filename)
                               real_load_ok, free, 1, tmp);
 		/* hack to make cancel default */
 		d->selected_widget = 1;
+		/* um... */
+		return 0;
 	} else {
 		return song_load_unchecked(filename);
 	}

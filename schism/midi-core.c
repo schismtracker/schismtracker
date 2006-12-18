@@ -510,7 +510,7 @@ static SDL_Thread *midi_sync_thread = 0;
 
 static struct midi_pl *ready = 0;
 
-static int __out_detatched(void *xtop)
+static int __out_detatched(UNUSED void *xtop)
 {
 	struct midi_pl *x, *y;
 
@@ -549,7 +549,7 @@ NEXTPACKET:
 
 void midi_send_flush(void)
 {
-	struct midi_pl *x, *y;
+	struct midi_pl *x;
 	struct midi_port *ptr;
 	unsigned int acc;
 	int need_explicit_flush = 0;
@@ -793,13 +793,13 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	}
 }
 
-void midi_event_note(enum midi_note status, int channel, int note, int velocity)
+void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity)
 {
 	int *st;
 	SDL_Event e;
 
 	st = mem_alloc(sizeof(int)*4);
-	st[0] = status;
+	st[0] = mnstatus;
 	st[1] = channel;
 	st[2] = note;
 	st[3] = velocity;

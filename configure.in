@@ -20,12 +20,12 @@ dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_INIT
 
-if test -d schism; then
-	mkdir -p build && cd build && exec ../configure $@
-	echo "You cannot ./configure from here, try something like this:" >&2
-	echo "	mkdir build && cd build && ../configure && make" >&2
-	exit 1
-fi
+#if test -d schism; then
+#	mkdir -p build && cd build && exec ../configure $@
+#	echo "You cannot ./configure from here, try something like this:" >&2
+#	echo "	mkdir build && cd build && ../configure && make" >&2
+#	exit 1
+#fi
 
 
 AC_CONFIG_SRCDIR([schism/main.c])
@@ -36,7 +36,8 @@ machtype="$target_cpu"
 
 dnl when changing the version, also change the CWTV in audio_loadsave.cc
 dnl (TODO: come up with some way to do it automatically)
-AM_INIT_AUTOMAKE(schism, 1.0)
+dnl Ack, 1.0? I gotta be honest, we're nowhere near there yet.
+AM_INIT_AUTOMAKE(schismtracker, 0.5)
 AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------------------------------
@@ -63,7 +64,7 @@ dnl Check for SDL libs
 AM_PATH_SDL(1.1.8, , AC_MSG_ERROR([*** SDL version >= 1.1.8 not found.]))
 
 enable_sdlstatic=no
-AC_ARG_ENABLE(static-sdl, [  --enable-static-sdl       Link SDL statically], enable_sdlstatic=yes,enable_sdlstatic=no)
+AC_ARG_ENABLE(static-sdl, [  --enable-static-sdl     Link SDL statically], enable_sdlstatic=yes,enable_sdlstatic=no)
 if test "x$enable_sdlstatic" = "xyes"; then
 	if test "x$SDL_CONFIG" = "xno"; then
 		echo "*** SDL_CONFIG explicitly set to 'no' but you asked for static-sdl"
@@ -245,12 +246,23 @@ AC_ARG_ENABLE(all-warnings,
               ADD_WARN=$enableval,
               ADD_WARN=no)
 
+AC_ARG_ENABLE(ludicrous-mode,
+              AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings and treat as errors]),
+              ADD_LUDICROUS=$enableval,
+              ADD_LUDICROUS=no)
+
 if test x$ADD_OPT \!= xno; then
 	ADD_OPT="-g0 -s -O3 -ffast-math -fomit-frame-pointer -fno-exceptions"
 	ADD_OPT="$ADD_OPT -funroll-loops -frerun-cse-after-loop -fno-ident"
 	ADD_OPT="$ADD_OPT -fno-strength-reduce"
 	CFLAGS="$CFLAGS $ADD_OPT"
 	CXXFLAGS="$CXXFLAGS $ADD_OPT -fno-rtti -fno-enforce-eh-specs"
+fi
+
+if test x$ADD_LUDICROUS \!= xno; then
+        ADD_WARN=yes
+        CFLAGS="$CFLAGS -Werror"
+        CXXFLAGS="$CXXFLAGS -Werror"
 fi
 
 if test x$ADD_WARN \!= xno; then
@@ -260,7 +272,6 @@ if test x$ADD_WARN \!= xno; then
         CFLAGS="$CFLAGS -Wmissing-declarations -Wnested-externs"
         CXXFLAGS="$CXXFLAGS $ADD_WARN"
 fi
-
 
 dnl - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

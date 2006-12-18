@@ -93,7 +93,7 @@ DWORD CSoundFile::GetLength(BOOL bAdjust, BOOL bTotal)
 		}
 		/* muahahaha */
 		if (stop_at_order > -1 && stop_at_row > -1) {
-			if (stop_at_order <= nCurrentPattern && stop_at_row <= nRow)
+			if (stop_at_order <= (signed) nCurrentPattern && stop_at_row <= (signed) nRow)
 				goto EndMod;
 			if (stop_at_time > 0) {
 				/* stupid api decision */
@@ -2565,7 +2565,8 @@ UINT CSoundFile::GetNoteFromPeriod(UINT period) const
 	}
 }
 
-UINT CSoundFile::GetLinearPeriodFromNote(UINT note, int nFineTune, UINT nC4Speed) const
+// this last param was nC4Speed
+UINT CSoundFile::GetLinearPeriodFromNote(UINT note, int nFineTune, UINT) const
 {
 	if ((!note) || (note > 0xF0)) return 0;
 	if (m_nType & (MOD_TYPE_IT|MOD_TYPE_S3M|MOD_TYPE_STM|MOD_TYPE_MDL|MOD_TYPE_ULT|MOD_TYPE_WAV
