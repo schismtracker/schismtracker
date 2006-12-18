@@ -3,7 +3,8 @@
 AUTOMAKE_OPTIONS = gnu dist-bzip2
 EXTRA_DIST = COPYING.frag-opt include/*.h include/auto/*.h scripts/* \
 	helptext/* font/* icons/*
-bin_PROGRAMS = schismtracker
+bin_PROGRAMS = schism
+LIBOBJS=
 
 if USE_MACOSX
 # don't bother trying to do macsox+x11 at the same time...
@@ -64,7 +65,7 @@ if NEED_GNU_MEMCMP
 files_gnu_memcmp=schism/memcmp.c
 endif
 
-schismtracker_SOURCES = schism/page_blank.c \
+schism_SOURCES = schism/page_blank.c \
 schism/charset.c \
 schism/sample-edit.c \
 schism/dmoz.c \
@@ -186,8 +187,8 @@ if USE_WINDRES
 files_windres=schismres.o
 endif
 
-schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32mm) $(files_windres) \
+schism_DEPENDENCIES = $(files_windres)
+schism_LDADD = $(lib_asound) $(lib_win32mm) $(files_windres) \
 	@SDL_LIBS@ @LIBM@
 
 if USE_WINDRES
