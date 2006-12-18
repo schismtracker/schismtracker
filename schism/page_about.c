@@ -158,6 +158,7 @@ void show_about(void)
 		vgamem_font_reserve(&logo_image);
 		it_logo = xpmdata(_logo_it_xpm);
 		schism_logo = xpmdata(_logo_schism_xpm);
+		didit=1;
 	}
 
 	if (status.flags & CLASSIC_MODE) {
