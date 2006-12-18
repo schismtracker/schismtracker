@@ -155,7 +155,7 @@ else
 		]])
 		if test "$ac_cv_header_X11_extensions_xf86misc_h" = "yes"
 		then 
-			SDL_LIBS="$SDL_LIBS -lXxf86misc"
+			SDL_LIBS="$SDL_LIBS -lXxf86misc -lXext"
 			AC_SUBST(SDL_LIBS)
 		fi
 	fi
@@ -167,7 +167,7 @@ else
 		]])
 		if test "$ac_cv_header_X11_extensions_xvlib_h" = "yes"
 		then 
-			SDL_LIBS="$SDL_LIBS -lXv"
+			SDL_LIBS="$SDL_LIBS -lXv -lXext"
 			AC_SUBST(SDL_LIBS)
 			AM_CONDITIONAL([USE_XV], [true])
 		else
