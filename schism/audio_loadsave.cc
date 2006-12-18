@@ -62,6 +62,7 @@ static void _convert_to_it(CSoundFile *qq)
 
 	for (n = 1; n <= qq->m_nInstruments; n++) {
 		INSTRUMENTHEADER *i = mp->Headers[n];
+		if (!i) continue;
 		if (i->VolEnv.nNodes < 1) {
 			i->VolEnv.Ticks[0] = 0;
 			i->VolEnv.Values[0] = 64;
