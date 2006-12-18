@@ -18,12 +18,6 @@ feature of Impulse Tracker is available in exactly the same manner. Improvements
 might have developed with Impulse Tracker.
 
 [BuildPrepare]
-export CC=apgcc
-export CXX=apg++
-export CFLAGS=-g
-export APBUILD_STATIC=""
-export APBUILD_STATIC_LIBGCC=1
-export MAKEFLAGS=-j3
 mkdir -p linux-x86-build && cd linux-x86-build && prepareBuild --src ..
 
 [BuildUnprepare]
