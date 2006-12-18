@@ -45,8 +45,8 @@ UINT gEqLinearToDB[33] =
 };
 
 
-static REAL f2ic = (REAL)(1 << 28);
-static REAL i2fc = (REAL)(1.0 / (1 << 28));
+//static REAL f2ic = (REAL)(1 << 28);
+//static REAL i2fc = (REAL)(1.0 / (1 << 28));
 
 static EQBANDSTRUCT gEQ[MAX_EQ_BANDS*2] =
 {

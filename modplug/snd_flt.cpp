@@ -51,7 +51,7 @@ static float pow(float a, float b)
 
 #define PI	((double)3.14159265358979323846)
 // Simple 2-poles resonant filter
-void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modifier, int freq) const
+void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modifier, int) const
 //----------------------------------------------------------------------------------------
 {
 	float fs = (float)gdwMixingFreq;

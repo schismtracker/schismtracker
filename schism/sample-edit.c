@@ -437,6 +437,7 @@ static void _invert_16(signed short *data, unsigned long length)
         }
 }
 
+/* why is newlen unsigned long, but oldlen is unsigned int? just curious. */
 static void _resize_16(signed short *dst, unsigned long newlen,
 		signed short *src, unsigned int oldlen)
 {
@@ -456,14 +457,16 @@ static void _resize_8aa(signed char *dst, unsigned long newlen,
 {
 	int avg_acc = 0;
 	int avg_count = 0;
-	int i, j, cp;
+	unsigned long i, j;
+	/* what is cp? should it be unsigned? -storlek */
+	int cp;
 	int old_pos = -1;
 	for (i = 0; i < oldlen; i++) {
 		cp = (int)((double)i * ((double)newlen) / (double)oldlen);
 		if (cp < 0) cp = 0;
 		if (cp > old_pos) {
-			if (old_pos >= 0 && cp >= 0 && cp < newlen) {
-				for (j = 0; j < (cp-old_pos); j++) {
+			if (old_pos >= 0 && cp >= 0 && (unsigned long) cp < newlen) {
+				for (j = 0; j < (unsigned long) (cp - old_pos); j++) {
 					dst[old_pos+j] = avg_acc/avg_count;
 				}
 			}
@@ -485,11 +488,12 @@ static void _resize_16aa(signed short *dst, unsigned long newlen,
 	int avg_count = 0;
 	int i, j, cp;
 	int old_pos = -1;
-	for (i = 0; i < oldlen; i++) {
+	for (i = 0; (unsigned int) i < oldlen; i++) {
+		/* cast-o-matic! */
 		cp = (int)((double)i * ((double)newlen) / (double)oldlen);
 		if (cp < 0) cp = 0;
 		if (cp > old_pos) {
-			if (old_pos >= 0 && cp >= 0 && cp < newlen) {
+			if (old_pos >= 0 && cp >= 0 && (unsigned long) cp < newlen) {
 				for (j = 0; j < (cp-old_pos); j++) {
 					dst[old_pos+j] = avg_acc/avg_count;
 				}

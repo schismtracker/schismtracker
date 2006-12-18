@@ -37,7 +37,7 @@ static unsigned int dg_progress = 0;
 
 static void _diskwriter_draw_const(void)
 {
-	int i, x;
+	int x;
 
 	if (status.flags & DISKWRITER_ACTIVE_PATTERN) {
 		draw_text((const unsigned char *)"Updating sample...", 30, 27, 0, 2);
@@ -47,7 +47,7 @@ static void _diskwriter_draw_const(void)
 	}
 	draw_fill_chars(24,30,55,30,0);
 
-	x = (int)((((float)dg_progress) / 100.0)*64.0);
+	x = (int)(((double)dg_progress / 100.0) * 64.0);
 	draw_vu_meter(24, 30, 32, x, 4, 4);
 	draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }

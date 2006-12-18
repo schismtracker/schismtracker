@@ -133,17 +133,25 @@ struct pattern_snap {
 	int freesnapop;
 	int x, y;
 };
-static struct pattern_snap fast_save = { NULL, 0, 0,(const unsigned char *)"Fast Pattern Save" };
-static int fast_save_validity = -1;
+static struct pattern_snap fast_save = {
+	NULL, 0, 0,
+	(const unsigned char *) "Fast Pattern Save",
+	0, 0, 0
+};
+/* static int fast_save_validity = -1; */
 
 static void snap_paste(struct pattern_snap *s, int x, int y, int xlate);
 
-static struct pattern_snap clipboard = { NULL, 0, 0,(const unsigned char *)"Clipboard" };
+static struct pattern_snap clipboard = {
+	NULL, 0, 0,
+	(const unsigned char *) "Clipboard",
+	0, 0, 0
+};
 static struct pattern_snap undo_history[10];
 static int undo_history_top = 0;
 
 /* this function is stupid, it doesn't belong here */
-void _memused_get_pattern_saved(unsigned int *a, unsigned int *b)
+void memused_get_pattern_saved(unsigned int *a, unsigned int *b)
 {
 	int i;
 	if (b) {
@@ -357,7 +365,6 @@ static void length_edit_cancel(UNUSED void *data)
 void pattern_editor_length_edit(void)
 {
 	struct dialog *dialog;
-	int i;
 
 	create_thumbbar(length_edit_widgets + 0, 34, 24, 22, 0, 1, 1, NULL, 32, 200);
 	length_edit_widgets[0].d.thumbbar.value = song_get_pattern(current_pattern, 0);
@@ -434,7 +441,8 @@ static void mp_advance_channel(void)
 {
 	change_focus_to(ACTIVE_WIDGET.next.tab);
 }
-void pattern_editor_display_multichannel(void)
+
+static void pattern_editor_display_multichannel(void)
 {
 	struct dialog *dialog;
 	int i;
@@ -473,7 +481,6 @@ static void copyin_addnote(song_note *note, int *copyin_x, int *copyin_y)
 {
 	song_note *pattern, *p_note;
 	int num_rows;
-	char buf[32];
 
 	status.flags |= (SONG_NEEDS_SAVE|NEED_UPDATE);
 	num_rows = song_get_pattern(current_pattern, &pattern);
@@ -488,13 +495,13 @@ static void copyin_addrow(int *copyin_x, int *copyin_y)
 	*copyin_x=0;
 	(*copyin_y) = (*copyin_y) + 1;
 }
-static int pattern_selection_system_paste(int cb, const void *data)
+static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 {
 	int copyin_x, copyin_y;
 	int (*fx_map)(char f);
 	const char *str;
 	song_note n;
-	int x;
+	int x, scantmp;
 
 	if (!data) return 0;
 	str = (const char *)data;
@@ -543,17 +550,19 @@ static int pattern_selection_system_paste(int cb, const void *data)
 		};
 		str += 3;
 		/* instrument number */
-		if (sscanf(str, "%02d", &n.instrument) != 1) {
+		if (sscanf(str, "%02d", &scantmp) == 1)
+			n.instrument = scantmp;
+		else
 			n.instrument = 0;
-		}
 		str += 2;
 		while (*str) {
 			if (*str == '|' || *str == '\r' || *str == '\n') break;
 			if (!str[0] || !str[1] || !str[2]) break;
 			if (*str >= 'a' && *str <= 'z') {
-				if (sscanf(str+1, "%02d", &n.volume) != 1) {
+				if (sscanf(str+1, "%02d", &scantmp) == 1)
+					n.volume = scantmp;
+				else
 					n.volume = 0;
-				}
 				switch (*str) {
 				case 'v':n.volume_effect=VOL_EFFECT_VOLUME;break;
 				case 'p':n.volume_effect=VOL_EFFECT_PANNING;break;
@@ -572,8 +581,9 @@ static int pattern_selection_system_paste(int cb, const void *data)
 				};
 			} else {
 				n.effect = fx_map(*str);
-				n.parameter = 0;
-				if (sscanf(str+1, "%02X", &n.parameter) != 1)
+				if (sscanf(str+1, "%02X", &scantmp) == 1)
+					n.parameter = scantmp;
+				else
 					n.parameter = 0;
 			}
 			str += 3;
@@ -591,7 +601,7 @@ static int pattern_selection_system_paste(int cb, const void *data)
 static void pattern_selection_system_copyout(void)
 {
 	char *str;
-	int x, y, z, len;
+	int x, y, len;
 	int total_rows;
 	song_note *pattern, *cur_note;
 
@@ -771,12 +781,14 @@ static int history_handle_key(struct key_event *k)
 		dialog_cancel(NULL);
 		status.flags |= NEED_UPDATE;
 		return 1;
+	default:
+		break;
 	};
 
 	return 0;
 }
 
-void pattern_editor_display_history(void)
+static void pattern_editor_display_history(void)
 {
 	struct dialog *dialog;
 	
@@ -1066,7 +1078,6 @@ static void block_length_double(void)
 	song_note *pattern, *w, *r;
 	int i, j, x, row;
 	int total_rows;
-	int chan_width;
 
 	if (!SELECTION_EXISTS)
 		return;
@@ -1109,7 +1120,6 @@ static void block_length_halve(void)
 {
 	song_note *pattern, *w, *r;
 	int i, j, x;
-	int chan_width;
 	int total_rows;
 
 	if (!SELECTION_EXISTS)
@@ -1443,10 +1453,11 @@ static int same_variable_group(char ch1, char ch2)
 }
 static void selection_vary(int fast, int depth, int how)
 {
-	int row, chan, volume, total_rows;
+	int row, chan, total_rows;
 	song_note *pattern, *note;
-	static char last_very[39];
-	char *vary_how, ch;
+	static char last_vary[39];
+	const char *vary_how;
+	char ch;
 
 	/* don't ever vary these things */
 	if (how == '?' || how == '.'
@@ -1469,11 +1480,11 @@ static void selection_vary(int fast, int depth, int how)
 		if (fast) status_text_flash("Fast panning vary");
 		break;
 	default:
-		sprintf(last_very, "%-28s  (Ctrl-K)",
+		sprintf(last_vary, "%-28s  (Ctrl-K)",
 			"Undo Xxx effect-value vary");
-		last_very[5] = common_variable_group(how);
-		if (fast) status_text_flash("Fast %-21s", last_very+5);
-		vary_how = last_very;
+		last_vary[5] = common_variable_group(how);
+		if (fast) status_text_flash("Fast %-21s", last_vary+5);
+		vary_how = last_vary;
 		break;
 	};
 
@@ -1515,7 +1526,7 @@ static void selection_vary(int fast, int depth, int how)
 			case 'W':
 				if ((note->parameter & 15) == 15) continue;
 				if ((note->parameter & 0xF0) == (0xF0))continue;
-				if (note->parameter & 15 == 0) {
+				if ((note->parameter & 15) == 0) {
 					note->parameter = (1+(vary_value(
 							note->parameter>>4,
 							15, depth))) << 4;
@@ -1901,7 +1912,7 @@ static void clipboard_copy(void)
 static void clipboard_paste_overwrite(int suppress, int grow)
 {
 	song_note *pattern;
-	int row, num_rows, chan_width;
+	int num_rows, chan_width;
 
 	if (clipboard.data == NULL) {
 		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
@@ -2225,6 +2236,8 @@ static void fix_pb_trace(void)
 			break;
 		case MODE_PATTERN_LOOP:
 			song_loop_pattern(current_pattern, 0);
+			break;
+		default:
 			break;
 		};
 	}
@@ -2650,13 +2663,16 @@ static int handle_volume(song_note * note, struct key_event *k, int pos)
 	return 1;
 }
 
-static int is_note_empty(song_note *p)
+#if 0
+static int note_is_empty(song_note *p)
 {
 	if (!p->note && p->volume_effect == VOL_EFFECT_NONE && !p->effect && !p->parameter)
 		return 1;
 	return 0;
 }
-static void patedit_record_note(song_note *cur_note, int channel, int row, int note, int force)
+#endif
+
+static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row, int note, int force)
 {
 	song_note *q;
 	int i;
@@ -2716,8 +2732,8 @@ static void patedit_record_note(song_note *cur_note, int channel, int row, int n
 
 static int pattern_editor_insert_midi(struct key_event *k)
 {
-	song_note *pattern, *cur_note;
-	int n, v, c, pd, spd, tk;
+	song_note *pattern, *cur_note = NULL;
+	int n, v = 0, c = 0, pd, spd, tk;
 	int *px;
 
 	status.flags |= SONG_NEEDS_SAVE;
@@ -2881,7 +2897,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 static int pattern_editor_insert(struct key_event *k)
 {
 	int total_rows;
-	int i, j, n, hit, vol;
+	int i, j, n, vol;
 	song_note *pattern, *cur_note;
 	int eff, param;
 
@@ -3501,7 +3517,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 				status_text_flash_color(3,"Template, Notes only");
 				break;
 			case 5:
-				status_text_flash("");
+				/* Erf. Apparently "" causes a gcc warning */
+				status_text_flash(" ");
 				template_mode = 0;
 				break;
 			};
@@ -3742,7 +3759,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 	static int mute_toggle_hack[64];
 	const struct track_view *track_view;
 	int np, nr, nc;
-	int basex;
+	unsigned int basex;
 
 	if (k->mouse) {
 		if (k->state) {
@@ -4015,6 +4032,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 				prev_order_pattern();
 				fix_pb_trace();
 				return 1;
+			default:
+				break;
 			};
 		}
 
@@ -4035,6 +4054,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 				next_order_pattern();
 				fix_pb_trace();
 				return 1;
+			default:
+				break;
 			};
 		}
 

@@ -28,6 +28,7 @@
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
+#include "sample-edit.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>

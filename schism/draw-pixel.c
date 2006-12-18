@@ -45,7 +45,6 @@ byte current_palette[16][3];
 palette_apply() automatically, so do that as well) */
 int current_palette_index;
 
-static Uint32 palette_lookup[16] = { 0 };
 
 void palette_apply(void)
 {

@@ -35,7 +35,8 @@
 /* --------------------------------------------------------------------- */
 /* static in my attic */
 static struct vgamem_overlay sample_image = {
-	55,26,76,29
+	55,26,76,29,
+	0, 0, 0, 0, 0, 0
 };
 
 static struct widget widgets_samplelist[20];
@@ -146,7 +147,7 @@ static void sample_list_draw_list(void)
 	song_sample *sample;
 	int has_data, is_selected;
 	char buf[64];
-	int ss, cl, cr;
+	int ss, cl = 0, cr = 0;
 	int is_playing[100];
 
 	if (clippy_owner(CLIPPY_SELECT) == widgets_samplelist) {
@@ -465,7 +466,6 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	int new_sample = current_sample;
 	int new_cursor_pos = sample_list_cursor_pos;
 	char *name;
-	int i, c;
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 		if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
@@ -1306,8 +1306,8 @@ static void update_sample_loop_points(void)
 	} else if ((unsigned long) widgets_samplelist[11].d.numentry.value > sample->length) {
 		widgets_samplelist[11].d.numentry.value = sample->length;
 	}
-	if (sample->loop_start != widgets_samplelist[10].d.numentry.value
-	|| sample->loop_end != widgets_samplelist[11].d.numentry.value) {
+	if (sample->loop_start != (unsigned long) widgets_samplelist[10].d.numentry.value
+	|| sample->loop_end != (unsigned long) widgets_samplelist[11].d.numentry.value) {
 		flags_changed = 1;
 	}
 	sample->loop_start = widgets_samplelist[10].d.numentry.value;
@@ -1322,8 +1322,8 @@ static void update_sample_loop_points(void)
 	} else if ((unsigned long) widgets_samplelist[14].d.numentry.value > sample->length) {
 		widgets_samplelist[14].d.numentry.value = sample->length;
 	}
-	if (sample->sustain_start != widgets_samplelist[13].d.numentry.value
-	|| sample->sustain_end != widgets_samplelist[14].d.numentry.value) {
+	if (sample->sustain_start != (unsigned long) widgets_samplelist[13].d.numentry.value
+	|| sample->sustain_end != (unsigned long) widgets_samplelist[14].d.numentry.value) {
 		flags_changed = 1;
 	}
 	sample->sustain_start = widgets_samplelist[13].d.numentry.value;
@@ -1408,7 +1408,7 @@ void sample_synchronize_to_instrument(void)
 {
         song_instrument *ins;
 	int instnum = instrument_get_current();
-        int n, pos, first;
+        int pos, first;
 
         ins = song_get_instrument(instnum, NULL);
 	first = 0;

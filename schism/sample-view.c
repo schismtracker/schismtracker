@@ -35,8 +35,9 @@ there are only two changes between 8- and 16-bit samples:
 - the type of 'data'
 - the amount to divide (note though, this number is used twice!) */
 
+/* do we need 'channels' here? */
 static void _draw_sample_data_8(struct vgamem_overlay *r,
-	signed char *data, unsigned long length, unsigned int channels) // 8/16
+	signed char *data, unsigned long length, UNUSED unsigned int channels) // 8/16
 {
 	unsigned long pos;
 	int level, xs, ys, xe, ye, step;
@@ -58,8 +59,9 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 	}
 }
 
+/* again, do we need 'channels'? */
 static void _draw_sample_data_16(struct vgamem_overlay *r,
-	 signed short *data, unsigned long length, unsigned int channels)
+	 signed short *data, unsigned long length, UNUSED unsigned int channels)
 {
 	unsigned long pos;
 	int level, xs, ys, xe, ye, step;
@@ -193,11 +195,10 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample * samp
 /* --------------------------------------------------------------------- */
 /* meat! */
 
-/* use sample #0 for the sample library */
-void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, int n)
+/* use sample #0 for the sample library
+what was n for? can we get rid of it? */
+void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int n)
 {
-	int need_draw = 0;
-	
 	vgamem_clear_reserve(r);
         if (!sample->length) {
 		vgamem_fill_reserve(r, 13, 0);

@@ -216,9 +216,11 @@ static void dsp_dialog_cancel(UNUSED void*ign)
 	dsp_dialog_update(0);
 	status.flags |= NEED_UPDATE;
 }
+
+/* do we need these unused parameters? */
 static void show_dsp_dialog(const char *text, int *ov,
 		const char *label1, int low1, int high1, int *v1,
-		const char *label2, int low2, int high2, int *v2)
+		const char *label2, UNUSED int low2, UNUSED int high2, int *v2)
 {
 	struct dialog *d;
 

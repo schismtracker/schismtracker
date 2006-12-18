@@ -609,13 +609,13 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	}
 	for (int j = 0; j < 120; j++) {
 		if (iti_file) {
-			int n = i->Keyboard[j];
-			if (n > 0 && n < 255 && iti_map[n] == -1) {
-				iti_map[n] = iti_nalloc;
-				iti_invmap[iti_nalloc] = n;
+			int o = i->Keyboard[j];
+			if (o > 0 && o < 255 && iti_map[o] == -1) {
+				iti_map[o] = iti_nalloc;
+				iti_invmap[iti_nalloc] = o;
 				iti_nalloc++;
 			}
-			iti.keyboard[2 * j + 1] = n;
+			iti.keyboard[2 * j + 1] = o;
 		} else {
 			iti.keyboard[2 * j + 1] = i->Keyboard[j];
 		}
@@ -678,24 +678,24 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 		unsigned int qp = 554;
 		/* okay, now go through samples */
 		for (int j = 0; j < iti_nalloc; j++) {
-			int n = iti_invmap[ j ];
+			int o = iti_invmap[ j ];
 
-			iti_map[n] = qp;
+			iti_map[o] = qp;
 			qp += 80; /* header is 80 bytes */
 			save_its_header(fp,
-				(song_sample *) mp->Ins + n,
-				mp->m_szNames[n]);
+				(song_sample *) mp->Ins + o,
+				mp->m_szNames[o]);
 		}
 		for (int j = 0; j < iti_nalloc; j++) {
 			unsigned int op, tmp;
 
-			int n = iti_invmap[ j ];
+			int o = iti_invmap[ j ];
 
-			MODINSTRUMENT *smp = mp->Ins + n;
+			MODINSTRUMENT *smp = mp->Ins + o;
 
 			op = fp->pos;
 			tmp = bswapLE32(op);
-			fp->l(fp, iti_map[n]+0x48);
+			fp->l(fp, iti_map[o]+0x48);
 			fp->o(fp, (const unsigned char *)&tmp, 4);
 			fp->l(fp, op);
 			save_sample_data_LE(fp, (song_sample *)smp, 1);
@@ -1066,21 +1066,14 @@ NULL,
 
 int song_save(const char *file, const char *qt)
 {
-        const char *base = get_basename(file);
+        //const char *base = get_basename(file);
 	int i;
 
 	// ugly #3
 	mp->m_rowHighlightMajor = row_highlight_major;
 	mp->m_rowHighlightMinor = row_highlight_minor;
 
-	/* FIXME | need to do something more clever here, to make sure things don't get horribly broken
-	   FIXME | if the save failed: preferably, nothing should be overwritten until the file has been
-	   FIXME | written to disk completely, and at that point back up the old file (if backups are on)
-	   FIXME | and dump the saved file in its place.... at the very least, if the save failed and it
-	   FIXME | broke the original file, it would be nice to restore the backup. (while this might mean
-	   FIXME | losing an existing backup, at least it won't screw up the file it's trying to save to
-	   FIXME | in the process)
-	   FIXME | ... or at least trim this text down, it's clumsy and longwinded :P */
+	/* I SEE YOUR SCHWARTZ IS AS BIG AS MINE */
 	if (status.flags & MAKE_BACKUPS)
 		make_backup_file(file);
 
@@ -1163,15 +1156,15 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	memset(sampmap, 0, sizeof(sampmap));
 	if (mp->Headers[target]) {
 		/* init... */
-		for (int j = 0; j < sizeof(mp->Headers[target]->Keyboard); j++) {
+		for (unsigned long j = 0; j < sizeof(mp->Headers[target]->Keyboard); j++) {
 			int x = mp->Headers[target]->Keyboard[j];
 			sampmap[x] = 1;
 		}
 		/* mark... */
-		for (int q = 0; q < MAX_INSTRUMENTS; q++) {
-			if (q == target) continue;
+		for (unsigned long q = 0; q < MAX_INSTRUMENTS; q++) {
+			if ((int) q == target) continue;
 			if (!mp->Headers[q]) continue;
-			for (int j = 0; j < sizeof(mp->Headers[target]->Keyboard); j++) {
+			for (unsigned long j = 0; j < sizeof(mp->Headers[target]->Keyboard); j++) {
 				int x = mp->Headers[q]->Keyboard[j];
 				sampmap[x] = 0;
 			}
@@ -1200,14 +1193,14 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 			/* 1. find a place for all the samples */
 			memset(sampmap, 0, sizeof(sampmap));
-			for (int j = 0; j < sizeof(xl.Headers[n]->Keyboard); j++) {
+			for (unsigned long j = 0; j < sizeof(xl.Headers[n]->Keyboard); j++) {
 				int x = xl.Headers[n]->Keyboard[j];
 				if (!sampmap[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
 						for (int k = 0; k < MAX_SAMPLES; k++) {
 							if (mp->Ins[k].nLength) continue;
 							sampmap[x] = k;
-							song_sample *smp = (song_sample *)song_get_sample(k, NULL);
+							//song_sample *smp = (song_sample *)song_get_sample(k, NULL);
 
 							for (int c = 0; c < 25; c++) {
 								if (xl.m_szNames[x][c] == 0)
@@ -1228,7 +1221,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			xl.Headers[n] = 0; /* dangle */
 
 			/* and rewrite! */
-			for (int k = 0; k < sizeof(mp->Headers[target]->Keyboard); k++) {
+			for (unsigned long k = 0; k < sizeof(mp->Headers[target]->Keyboard); k++) {
 				mp->Headers[target]->Keyboard[k] = sampmap[
 						mp->Headers[target]->Keyboard[k]
 				];
@@ -1589,7 +1582,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 			file->sampsize = 0;
 			file->filesize = 0;
 			file->instnum = n;
-			for (int j = 0; j < sizeof(library.Headers[n]->Keyboard); j++) {
+			for (unsigned long j = 0; j < sizeof(library.Headers[n]->Keyboard); j++) {
 				int x = library.Headers[n]->Keyboard[j];
 				if (!count[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {

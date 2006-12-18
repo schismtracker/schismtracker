@@ -49,7 +49,7 @@ unsigned int memused_patterns(void)
 	}
 	return p_cached = q;
 }
-extern void _memused_get_pattern_saved(unsigned int *a, unsigned int *b);
+
 unsigned int memused_clipboard(void)
 {
 	unsigned int q = 0;
@@ -58,7 +58,7 @@ unsigned int memused_clipboard(void)
 	if (_cache_ok & 2) return c_cached;
 	_cache_ok |= 2;
 
-	_memused_get_pattern_saved(&q, 0);
+	memused_get_pattern_saved(&q, 0);
 	c_cached = q*256;
 	return c_cached;
 }
@@ -68,7 +68,7 @@ unsigned int memused_history(void)
 	unsigned int q = 0;
 	if (_cache_ok & 4) return h_cached;
 	_cache_ok |= 4;
-	_memused_get_pattern_saved(0, &q);
+	memused_get_pattern_saved(0, &q);
 	return h_cached = (q * 256);
 }
 unsigned int memused_samples(void)

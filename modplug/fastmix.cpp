@@ -1593,7 +1593,6 @@ static float i2fc = (float)(1.0 / (1 << 28));
 VOID CSoundFile::StereoMixToFloat(const int *pSrc, float *pOut1, float *pOut2, UINT nCount)
 //-----------------------------------------------------------------------------------------
 {
-	double tmp;
 	for (UINT i = 0; i < nCount; i++) {
 		*pOut1++ = *pSrc * i2fc; /*!*/
 		pSrc++;
@@ -1619,7 +1618,6 @@ VOID CSoundFile::FloatToStereoMix(const float *pIn1, const float *pIn2, int *pOu
 VOID CSoundFile::MonoMixToFloat(const int *pSrc, float *pOut, UINT nCount)
 //------------------------------------------------------------------------
 {
-	double tmp;
 	for (UINT i = 0; i < nCount; i++) {
 		*pOut++ = *pSrc * i2fc; /*!*/
 		pSrc++;
@@ -1686,13 +1684,13 @@ DWORD Convert32To16(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LPLONG lpMin,
 }
 //---GCCFIX: Asm replaced with C function
 // 24-bit audio not supported.
-DWORD Convert32To24(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
+DWORD Convert32To24(LPVOID, int, DWORD, LPLONG, LPLONG)
 {
 	return 0;
 }
 //---GCCFIX: Asm replaced with C function
 // 32-bit audio not supported
-DWORD Convert32To32(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
+DWORD Convert32To32(LPVOID, int, DWORD, LPLONG, LPLONG)
 {
 	return 0;
 }
@@ -1711,7 +1709,7 @@ void InitMixBuffer(int *pBuffer, UINT nSamples)
 //---GCCFIX: Asm replaced with C function
 void InterleaveFrontRear(int *pFrontBuf, int *pRearBuf, DWORD nSamples)
 {
-	DWORD i;
+	DWORD i=0;
 
 	pRearBuf[i] = pFrontBuf[1];
 	for (i = 1; i < nSamples; i++) {

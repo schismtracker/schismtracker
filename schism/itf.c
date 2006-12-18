@@ -831,7 +831,7 @@ static void handle_mouse(struct key_event * k)
 }
 
 
-int fontedit_handle_key(struct key_event * k)
+static int fontedit_handle_key(struct key_event * k)
 {
 	int n, ci = current_char << 3;
 	byte *ptr = font_data + ci;
@@ -861,6 +861,8 @@ int fontedit_handle_key(struct key_event * k)
 		palette_apply();
 		status.flags |= NEED_UPDATE;
 		return 1;
+	default:
+		break;
 	};
 
 	switch (k->sym) {
@@ -1066,6 +1068,8 @@ static int fontedit_key_hack(struct key_event *k)
 			handle_key_fontlist(k);
 			return 1;
 		}
+	default:
+		break;
 	};
 	return 0;
 }

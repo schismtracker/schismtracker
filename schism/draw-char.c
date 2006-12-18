@@ -106,7 +106,7 @@ byte *font_data = font_normal; /* this only needs to be global for itf */
 
 /* --------------------------------------------------------------------- */
 /* half-width characters */
-static int inline _pack_halfw(int c)
+static inline int _pack_halfw(int c)
 {
 	switch (c) {
 	case '0': return 0;
@@ -167,13 +167,14 @@ static int inline _pack_halfw(int c)
 		exit(255);
 	};
 }
-static int inline _unpack_halfw(int c)
+static inline int _unpack_halfw(int c)
 {
-	const unsigned char *zmap =
-(const unsigned char *)	"0123456789ABCDEFGHIJKLMNOPQRSTUV"
-			"WXYZ$<> \xad\x5e\xcd\x7e-#b.................";
-	if (c > 63) return 0; /* eh? */
-	return (int)(zmap[c]);
+	const unsigned char *zmap = (const unsigned char *)
+		"0123456789ABCDEFGHIJKLMNOPQRSTUV"
+		"WXYZ$<> \xad\x5e\xcd\x7e-#b.................";
+	if (c > 63)
+		return 0; /* eh? */
+	return (int) zmap[c];
 }
 
 /* --------------------------------------------------------------------- */
@@ -447,7 +448,7 @@ void vgamem_font_reserve(struct vgamem_overlay *n)
 }
 void vgamem_fill_reserve(struct vgamem_overlay *n, int fg, int bg)
 {
-	int x, y;
+	unsigned int x, y;
 	unsigned int c;
 
 	c = n->chars;
@@ -462,12 +463,12 @@ void vgamem_clear_reserve(struct vgamem_overlay *n)
 {
 	memset(font_extra+n->base, 0, n->size);
 }
-void inline vgamem_font_putpixel(struct vgamem_overlay *n, int x, int y)
+inline void vgamem_font_putpixel(struct vgamem_overlay *n, int x, int y)
 {
 	if (x < 0 || y < 0 || x >= n->width || y >= n->height) return;
 	font_extra[ n->base+(((((y/8)*n->pitch)+(x/8)) << 3) + (y&7)) ] |= (128 >> (x&7));
 }
-void inline vgamem_font_clearpixel(struct vgamem_overlay *n, int x, int y)
+inline void vgamem_font_clearpixel(struct vgamem_overlay *n, int x, int y)
 {
 	if (x < 0 || y < 0 || x >= n->width || y >= n->height) return;
 	font_extra[ n->base+(((((y/8)*n->pitch)+(x/8)) << 3) + (y&7)) ] &= ~(128 >> (x&7));

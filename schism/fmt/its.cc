@@ -51,7 +51,7 @@ int fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	file->smp_flags = 0;
 
 	if (its->flags & 2) {
-		file->smp_flags | SAMP_16_BIT;
+		file->smp_flags |= SAMP_16_BIT;
 	}
 	if (its->flags & 16) {
 		file->smp_flags |= SAMP_LOOP;

@@ -1,15 +1,15 @@
 /* should be included inside draw-char.c */
-void F1(unsigned int ry,
-		unsigned SIZE *out, unsigned int tc[16])
+void F1(unsigned int ry, unsigned SIZE *out, unsigned int tc[16])
 {
 	unsigned int *bp;
 	unsigned int dg;
 	unsigned char mb[2];
 	unsigned int mx;
 	byte *itf, *bios, *hf, *ef;
-	int x, y, fg,bg, c;
+	unsigned int x, y;
+	int fg, bg;
 
-	_video_scanmouse(ry, mb, &mx);
+	video_scanmouse(ry, mb, &mx);
 
 	y = ry >> 3;
 	bp = &vgamem_read[y * 80];
@@ -24,8 +24,10 @@ void F1(unsigned int ry,
 			fg = (*bp >> 23) & 7;
 			bg = (*bp >> 27) & 7;
 			dg = ef[(*bp & 0xFFFF)<< 3];
-			if (x == mx) dg ^= mb[0];
-			else if (x == mx+1) dg ^= mb[1];
+			if (x == mx)
+				dg ^= mb[0];
+			else if (x == mx+1)
+				dg ^= mb[1];
 			*out++ = tc[(dg & 0x80) ? fg : bg];
 			*out++ = tc[(dg & 0x40) ? fg : bg];
 			*out++ = tc[(dg & 0x20) ? fg : bg];
@@ -40,9 +42,12 @@ void F1(unsigned int ry,
 			fg = (*bp >> 22) & 15;
 			bg = (*bp >> 18) & 15;
 			dg = hf[ _unpack_halfw((*bp >> 7) & 127) << 2];
-			if (!(ry & 1)) dg = (dg >> 4);
-			if (x == mx) dg ^= mb[0];
-			else if (x == mx+1) dg ^= mb[1];
+			if (!(ry & 1))
+				dg = (dg >> 4);
+			if (x == mx)
+				dg ^= mb[0];
+			else if (x == mx+1)
+				dg ^= mb[1];
 
 			*out++ = tc[(dg & 0x8) ? fg : bg];
 			*out++ = tc[(dg & 0x4) ? fg : bg];
@@ -51,9 +56,12 @@ void F1(unsigned int ry,
 			fg = (*bp >> 26) & 15;
 			bg = (*bp >> 14) & 15;
 			dg = hf[ _unpack_halfw((*bp) & 127) << 2];
-			if (!(ry & 1)) dg = (dg >> 4);
-			if (x == mx) dg ^= mb[0];
-			else if (x == mx+1) dg ^= mb[1];
+			if (!(ry & 1))
+				dg = (dg >> 4);
+			if (x == mx)
+				dg ^= mb[0];
+			else if (x == mx+1)
+				dg ^= mb[1];
 
 			*out++ = tc[(dg & 0x8) ? fg : bg];
 			*out++ = tc[(dg & 0x4) ? fg : bg];
@@ -68,9 +76,12 @@ void F1(unsigned int ry,
 			} else {
 				dg = itf[(*bp & 0xFF)<< 3];
 			}
-			if (x == mx) dg ^= mb[0];
-			else if (x == mx+1) dg ^= mb[1];
-			if (!(*bp & 0xFF)) fg = 3;
+			if (x == mx)
+				dg ^= mb[0];
+			else if (x == mx+1)
+				dg ^= mb[1];
+			if (!(*bp & 0xFF))
+				fg = 3;
 			*out++ = tc[(dg & 0x80) ? fg : bg];
 			*out++ = tc[(dg & 0x40) ? fg : bg];
 			*out++ = tc[(dg & 0x20) ? fg : bg];

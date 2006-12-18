@@ -52,7 +52,6 @@ static const char *output_channels[] = {
 };
 
 static int sample_rate_cursor = 0;
-static int sample_rate_cursor2 = 0;
 
 static const char *bit_rates[] = { "8 Bit", "16 Bit", //"24 Bit", "32 Bit",
 			NULL };
@@ -248,8 +247,6 @@ static void config_set_page(void)
 /* --------------------------------------------------------------------- */
 void config_load_page(struct page *page)
 {
-	int i;
-
 	page->title = "System Configuration (Ctrl-F1)";
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;

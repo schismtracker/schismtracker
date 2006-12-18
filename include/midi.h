@@ -123,7 +123,7 @@ enum midi_note {
 	MIDI_NOTEON,
 	MIDI_KEYPRESS,
 };
-void midi_event_note(enum midi_note status, int channel, int note, int velocity);
+void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity);
 void midi_event_controller(int channel, int param, int value);
 void midi_event_program(int channel, int value);
 void midi_event_aftertouch(int channel, int value);
@@ -134,6 +134,25 @@ void midi_event_system(int argv, int param);
 
 /* midi drivers call this when they received an event */
 void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int len);
+
+
+#ifdef USE_NETWORK
+int ip_midi_setup(void);
+#endif
+#ifdef USE_OSS
+int oss_midi_setup(void);
+#endif
+#ifdef USE_ALSA
+int alsa_midi_setup(void);
+#endif
+#ifdef USE_WIN32MM
+int win32mm_midi_setup(void);
+#endif
+#ifdef MACOSX
+int macosx_midi_setup(void);
+#endif
+
+
 
 #define MIDI_TICK_QUANTIZE	0x00000001
 #define MIDI_BASE_PROGRAM1	0x00000002

@@ -239,7 +239,7 @@ static void _ip_poll(struct midi_provider *p)
 	static int last_buildout = 0;
 	struct midi_port *ptr;
 	char *buffer;
-	int i;
+	int i = 0;
 
 	if (real_num_ports < last_buildout) {
 		ptr = 0;

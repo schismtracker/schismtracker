@@ -1,7 +1,9 @@
-AUTOMAKE_OPTIONS = gnu dist-bzip2 no-dist-gzip
+# automake (1.6.3) whined about no-dist-gzip for me
+# /storlek
+AUTOMAKE_OPTIONS = gnu dist-bzip2
 EXTRA_DIST = COPYING.frag-opt include/*.h include/auto/*.h scripts/* \
 	helptext/* font/* icons/*
-bin_PROGRAMS = schism
+bin_PROGRAMS = schismtracker
 
 if USE_MACOSX
 # don't bother trying to do macsox+x11 at the same time...
@@ -18,7 +20,10 @@ if USE_ALSA_DLTRICK
 cflags_alsa=-DUSE_ALSA -DUSE_DLTRICK_ALSA
 else
 cflags_alsa=-DUSE_ALSA
-LIBOBJS+=-lasound
+# automake complained about LIBOBJS too
+#   /storlek
+#LIBOBJS+=-lasound
+lib_asound=-lasound
 endif
 endif
 
@@ -34,7 +39,8 @@ endif
 if USE_WIN32MM
 files_win32mm = sys/win32/modkey.c sys/win32/slurp-win32.c sys/win32/mixer-win32mm.c sys/win32/midi-win32mm.c
 cflags_win32mm=-DUSE_WIN32MM
-LIBOBJS+=-lwinmm
+#LIBOBJS+=-lwinmm
+lib_win32mm=-lwinmm
 endif
 
 if USE_MACOSX
@@ -58,7 +64,7 @@ if NEED_GNU_MEMCMP
 files_gnu_memcmp=schism/memcmp.c
 endif
 
-schism_SOURCES = schism/page_blank.c \
+schismtracker_SOURCES = schism/page_blank.c \
 schism/charset.c \
 schism/sample-edit.c \
 schism/dmoz.c \
@@ -180,8 +186,9 @@ if USE_WINDRES
 files_windres=schismres.o
 endif
 
-schism_DEPENDENCIES = $(files_windres)
-schism_LDADD = $(LIBOBJS) $(files_windres) @SDL_LIBS@ @LIBM@
+schismtracker_DEPENDENCIES = $(files_windres)
+schismtracker_LDADD = $(lib_asound) $(lib_win32mm) $(files_windres) \
+	@SDL_LIBS@ @LIBM@
 
 if USE_WINDRES
 schismres.o: @srcdir@/sys/win32/schismres.rc

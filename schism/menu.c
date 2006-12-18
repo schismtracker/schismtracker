@@ -57,7 +57,7 @@ static void settings_menu_selected_cb(void);
 /* --------------------------------------------------------------------- */
 
 struct menu {
-        int x, y, w;
+        unsigned int x, y, w;
         const char *title;
         int num_items;  /* meh... */
         const char *items[14];  /* writing **items doesn't work here :( */
@@ -392,7 +392,7 @@ static void settings_menu_selected_cb(void)
 /* --------------------------------------------------------------------- */
 
 /* As long as there's a menu active, this function will return true. */
-int menu_handle_key(struct key_event * k)
+int menu_handle_key(struct key_event *k)
 {
         struct menu *menu;
 	int n, h;
@@ -406,8 +406,8 @@ int menu_handle_key(struct key_event * k)
 	if (k->mouse) {
 		if (k->mouse == MOUSE_CLICK) {
 			h = menu->num_items * 3;
-			if (k->x >= 2+menu->x && k->x <= 5+menu->x+menu->w
-			&& k->y >= 4+menu->y && k->y <= 4+menu->y+h) {
+			if (k->x >= menu->x + 2 && k->x <= menu->x + menu->w + 5
+			    && k->y >= menu->y + 4 && k->y <= menu->y + h + 4) {
 				n = ((k->y - 4) - menu->y) / 3;
 				if (n >= 0 && n < menu->num_items) {
 	                        	menu->selected_item = n;

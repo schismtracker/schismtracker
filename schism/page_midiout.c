@@ -159,12 +159,14 @@ static int pre_handle_key(struct key_event *k)
 			status.flags |= NEED_UPDATE;
 			copyin_zbuf();
 			return 1;
+		default:
+			break;
 		};
 	}
 	return 0;
 }
 
-void midiout_set_page(void)
+static void midiout_set_page(void)
 {
 	copyin_zbuf();
 }

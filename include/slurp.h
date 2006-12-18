@@ -59,6 +59,15 @@ slurp_t *slurp(const char *filename, struct stat *buf, size_t size);
 
 void unslurp(slurp_t * t);
 
+#ifdef WIN32
+int slurp_win32(slurp_t *useme, const char *filename, size_t st);
+#endif
+
+#if HAVE_MMAP
+int slurp_mmap(slurp_t *useme, const char *filename, size_t st);
+#endif
+
+
 #ifdef __cplusplus
 }
 #endif

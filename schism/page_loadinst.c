@@ -253,11 +253,11 @@ static void file_list_draw(void)
 			draw_text((unsigned char *) "          ", 51, pos, fg, bg);
 		}
 		if (file->filesize > 1048576) {
-			sprintf(sbuf, "%um", file->filesize / 1048576);
+			sprintf(sbuf, "%lum", file->filesize / 1048576);
 		} else if (file->filesize > 1024) {
-			sprintf(sbuf, "%uk", file->filesize / 1024);
+			sprintf(sbuf, "%luk", file->filesize / 1024);
 		} else if (file->filesize > 0) {
-			sprintf(sbuf, "%u", file->filesize);
+			sprintf(sbuf, "%lu", file->filesize);
 		} else {
 			*sbuf = 0;
 		}

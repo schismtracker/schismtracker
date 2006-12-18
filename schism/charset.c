@@ -29,7 +29,7 @@
 
 int char_digraph(int k1, int k2)
 {
-	int c;
+	//int c;
 #define DG(ax) ((k1==ax[0] && k2 == ax[1])||(k2==ax[0] && k1==ax[1]))
 	if (DG("NB")) return '#';
 	if (DG("DO")) return '$';
@@ -257,4 +257,5 @@ int char_unicode_to_cp437(unsigned int c)
 	case 0x00B2: return 253;// SUPERSCRIPT TWO
 	case 0x220E: return 254;// QED
 	};
+	return c;
 }

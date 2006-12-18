@@ -729,7 +729,10 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 
 #ifndef MODPLUG_NO_FILESAVE
 //#define SAVEITTIMESTAMP
+
+#ifdef MSC_VER
 #pragma warning(disable:4100)
+#endif
 
 #if 0
 BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
@@ -1232,7 +1235,10 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 }
 #endif
 
+#ifdef MSC_VER
 #pragma warning(default:4100)
+#endif
+
 #endif // MODPLUG_NO_FILESAVE
 
 //////////////////////////////////////////////////////////////////////////////

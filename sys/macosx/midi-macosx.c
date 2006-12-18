@@ -51,7 +51,7 @@ static void readProc(const MIDIPacketList *np, UNUSED void *rc, void *crc)
 	struct midi_port *p;
 	struct macosx_midi *m;
 	MIDIPacket *x;
-	int i;
+	unsigned long i;
 
 	p = (struct midi_port *)crc;
 	m = (struct macosx_midi *)p->userdata;
@@ -202,13 +202,13 @@ int macosx_midi_setup(void)
 	driver.drain = _macosx_drain;
 
 	if (MIDIClientCreate(CFSTR("Schism Tracker"), NULL, NULL, &client) != noErr) {
-		return;
+		return 0;
 	}
 	if (MIDIInputPortCreate(client, CFSTR("Input port"), readProc, NULL, &portIn) != noErr) {
-		return;
+		return 0;
 	}
 	if (MIDIOutputPortCreate(client, CFSTR("Output port"), &portOut) != noErr) {
-		return;
+		return 0;
 	}
 
 	if (!midi_provider_register("Mac OS X", &driver)) return 0;

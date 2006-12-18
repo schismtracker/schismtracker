@@ -56,7 +56,7 @@ extern const char *macosx_clippy_get(void);
 extern void macosx_clippy_put(const char *buf);
 #endif
 
-static void _clippy_copy_to_sys(int do_sel)
+static void _clippy_copy_to_sys(UNUSED int do_sel)
 {
 	int i, j;
 	char *dst;
@@ -151,16 +151,19 @@ static void _clippy_copy_to_sys(int do_sel)
 #else
 			PhClipboardWrite(inputgroup, 1, &clheader);
 #endif
-			(void)free(tmp);
+			free(tmp);
 		}
 	}
 #elif defined(MACOSX)
 	/* XXX TODO */
+	/* when implementing this, get rid of the UNUSED for do_sel */
 #endif
-	if (freeme) (void)free(freeme);
+	if (freeme)
+		free(freeme);
 }
 
-static void _string_paste(int cb, const char *cbptr)
+/* TODO: is the first parameter ever going to be used, or can we kill it? */
+static void _string_paste(UNUSED int cb, const char *cbptr)
 {
 	SDL_Event event;
 	memset(&event, 0, sizeof(SDL_Event));

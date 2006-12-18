@@ -474,7 +474,7 @@ BOOL CSoundFile::SetSurroundParameters(UINT nDepth, UINT nDelay)
 	return TRUE;
 }
 
-BOOL CSoundFile::SetWaveConfigEx(BOOL bSurround,BOOL bNoOverSampling,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ)
+BOOL CSoundFile::SetWaveConfigEx(BOOL bSurround,BOOL /*bNoOverSampling*/,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ)
 //----------------------------------------------------------------------------------------------------------------------------
 {
 	DWORD d = gdwSoundSetup & ~(SNDMIX_SURROUND | SNDMIX_NORESAMPLING | SNDMIX_REVERB | SNDMIX_HQRESAMPLER | SNDMIX_MEGABASS | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);

@@ -23,6 +23,7 @@
 #include <ctype.h>
 
 #include "sdlmain.h"
+#include "video.h" /* for declaration of xpmdata */
 
 #include <stdlib.h>
 #include <string.h>
@@ -85,7 +86,7 @@ static int string_equal(const char *a, const char *b, int n)
 static int color_to_rgb(char *spec, int speclen, Uint32 *rgb)
 {
 	/* poor man's rgb.txt */
-	static struct { char *name; Uint32 rgb; } known[] = {
+	static struct { const char *name; Uint32 rgb; } known[] = {
 		{"none",  0xffffffff},
 		{"black", 0x00000000},
 		{"white", 0x00ffffff},
@@ -188,12 +189,12 @@ static struct color_hash *create_colorhash(int maxnum)
 static int add_colorhash(struct color_hash *hash,
                          char *key, int cpp, Uint32 color)
 {
-	int index = hash_key(key, cpp, hash->size);
+	int pos = hash_key(key, cpp, hash->size);
 	struct hash_entry *e = hash->next_free++;
 	e->color = color;
 	e->key = key;
-	e->next = hash->table[index];
-	hash->table[index] = e;
+	e->next = hash->table[pos];
+	hash->table[pos] = e;
 	return 1;
 }
 
@@ -221,10 +222,10 @@ static void free_colorhash(struct color_hash *hash)
 }
 
 
-SDL_Surface *xpmdata(const char *xpmdata[])
+SDL_Surface *xpmdata(const char *data[])
 {
 	SDL_Surface *image = NULL;
-	int index;
+	int n;
 	int x, y;
 	int w, h, ncolors, cpp;
 	int indexed;
@@ -240,7 +241,7 @@ SDL_Surface *xpmdata(const char *xpmdata[])
 
 	error = 0;
 
-	xpmlines = (char ***)&xpmdata;
+	xpmlines = (char ***) &data;
 
 	line = get_next_line(xpmlines, 0);
 	if(!line) goto done;
@@ -291,7 +292,7 @@ SDL_Surface *xpmdata(const char *xpmdata[])
 		error = 2;
 		goto done;
 	}
-	for(index = 0; index < ncolors; ++index ) {
+	for(n = 0; n < ncolors; ++n) {
 		char *p;
 		line = get_next_line(xpmlines, 0);
 		if(!line)
@@ -323,11 +324,11 @@ SDL_Surface *xpmdata(const char *xpmdata[])
 
 			memcpy(nextkey, line, cpp);
 			if(indexed) {
-				SDL_Color *c = im_colors + index;
+				SDL_Color *c = im_colors + n;
 				c->r = rgb >> 16;
 				c->g = rgb >> 8;
 				c->b = rgb;
-				pixel = index;
+				pixel = n;
 			} else
 				pixel = rgb;
 			add_colorhash(colors, nextkey, cpp, pixel);

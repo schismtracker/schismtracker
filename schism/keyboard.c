@@ -176,6 +176,8 @@ void key_translate(struct key_event *k)
 		case SDLK_SEMICOLON: k->sym = SDLK_COLON; break;
 
 		case SDLK_8: k->sym = SDLK_ASTERISK; break;
+		default:
+			break;
 		};
 	}
 	if (k->mod & KMOD_META) {
@@ -201,6 +203,8 @@ void key_translate(struct key_event *k)
 		case SDLK_KP_PLUS: k->sym = SDLK_PLUS; k->mod &= ~KMOD_NUM; break;
 		case SDLK_KP_ENTER: k->sym = SDLK_RETURN; k->mod &= ~KMOD_NUM; break;
 		case SDLK_KP_EQUALS: k->sym = SDLK_EQUALS; k->mod &= ~KMOD_NUM; break;
+		default:
+			break;
 		};
 	} else {
 		switch (k->sym) {
@@ -225,6 +229,8 @@ void key_translate(struct key_event *k)
 		case SDLK_KP_ENTER: k->sym = SDLK_RETURN; break;
 		case SDLK_KP_EQUALS: k->sym = SDLK_EQUALS; break;
 
+		default:
+			break;
 		};
 	}
 
@@ -245,6 +251,8 @@ void key_translate(struct key_event *k)
 	case SDLK_7: k->unicode = (k->mod & KMOD_SHIFT) ? '&' : '7'; break;
 	case SDLK_8: k->unicode = (k->mod & KMOD_SHIFT) ? '*' : '8'; break;
 	case SDLK_9: k->unicode = (k->mod & KMOD_SHIFT) ? '(' : '9'; break;
+	default:
+		break;
 	};
 }
 
@@ -262,6 +270,8 @@ int numeric_key_event(struct key_event *k, int kponly)
 		case SDLK_KP7: return 7;
 		case SDLK_KP8: return 8;
 		case SDLK_KP9: return 9;
+		default:
+			break;
 		};
 		return -1;
 	}
@@ -288,6 +298,8 @@ int numeric_key_event(struct key_event *k, int kponly)
 	case SDLK_7: case SDLK_KP7: return 7;
 	case SDLK_8: case SDLK_KP8: return 8;
 	case SDLK_9: case SDLK_KP9: return 9;
+	default:
+		break;
 	};
 	return -1;
 }
@@ -448,6 +460,8 @@ inline int kbd_char_to_99(struct key_event *k)
 	case SDLK_p: return 18;
 	case SDLK_q: return 19;
 	case SDLK_r: return 20;
+	default:
+		break;
 	};
 
 	return kbd_char_to_hex(k);
@@ -633,6 +647,8 @@ int kbd_get_alnum(struct key_event *k) {
 	case SDLK_HASH: return '#';
 	case SDLK_CARET: return '^';
 	case SDLK_UNDERSCORE: return '_';
+	default:
+		break;
 	};
 	return 0;
 }

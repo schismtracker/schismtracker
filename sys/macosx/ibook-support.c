@@ -37,16 +37,17 @@
 #define kIOHIDFKeyModeKey    "HIDFKeyMode"
 #endif
 
+int macosx_ibook_fnswitch(int setting); /* FIXME: ugliness */
 int macosx_ibook_fnswitch(int setting)
 {
 	kern_return_t kr;
 	mach_port_t mp;
 	io_service_t so;
-	io_name_t sn;
+	/*io_name_t sn;*/
 	io_connect_t dp;
 	io_iterator_t it;
 	CFDictionaryRef classToMatch;
-	CFNumberRef	fnMode;
+	/*CFNumberRef	fnMode;*/
 	unsigned int res, dummy;
 
 	kr = IOMasterPort(bootstrap_port, &mp);

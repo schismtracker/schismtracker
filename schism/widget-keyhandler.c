@@ -184,11 +184,12 @@ int widget_handle_key(struct key_event * k)
 	void (*changed)(void);
 
 	if (!(status.flags & DISKWRITER_ACTIVE) 
-			&& current_type == WIDGET_OTHER
-			&& widget->d.other.handle_key(k))
+	    && (current_type == WIDGET_OTHER)
+	    && widget->d.other.handle_key(k))
 		return 1;
 
-	if (!(status.flags & DISKWRITER_ACTIVE) && k->mouse && (status.flags & CLASSIC_MODE)) {
+	if (!(status.flags & DISKWRITER_ACTIVE) && k->mouse
+            && (status.flags & CLASSIC_MODE)) {
 		switch(current_type) {
 		case WIDGET_NUMENTRY:
 			if (k->mouse_button == MOUSE_BUTTON_LEFT) {
@@ -199,11 +200,13 @@ int widget_handle_key(struct key_event * k)
 				k->mouse = 0;
 			}
 			break;
+		default:
+			break;
 		};
 	}
 
 	if (k->mouse == MOUSE_CLICK
-	|| (k->mouse == 0 && k->sym == SDLK_RETURN)) {
+	    || (k->mouse == 0 && k->sym == SDLK_RETURN)) {
 		if (k->mouse && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
 			if (!k->state) return 1;
@@ -254,9 +257,9 @@ int widget_handle_key(struct key_event * k)
 			default:
 				pad = 0;
 			};
-			onw = (k->x < widget->x
-					|| k->x >= widget->x+widget->width+pad
-					|| k->y != widget->y) ? 0 : 1;
+			onw = ((signed) k->x < widget->x
+			       || (signed) k->x >= widget->x + widget->width + pad
+			       || (signed) k->y != widget->y) ? 0 : 1;
 			n = ((!k->state) && onw) ? 1 : 0;
 			if (widget->depressed != n) status.flags |= NEED_UPDATE;
 			widget->depressed = n;
@@ -278,6 +281,8 @@ int widget_handle_key(struct key_event * k)
 			case WIDGET_BUTTON:
 			case WIDGET_TOGGLEBUTTON:
 				if (k->on_target && widget->activate) widget->activate();
+			default:
+				break;
 			};
 		} else if (current_type != WIDGET_OTHER) {
 			if (widget->activate) widget->activate();
@@ -288,24 +293,21 @@ int widget_handle_key(struct key_event * k)
 			break;
 		case WIDGET_TEXTENTRY:
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
-			if (k->mouse == MOUSE_CLICK
-			&& (k->on_target || k->state && widget == clippy_owner(CLIPPY_SELECT))) {
+			/* LOL WOW THIS SUCKS */
+			if ((k->mouse == MOUSE_CLICK)
+			    && (k->on_target
+				|| (k->state
+				    && widget == clippy_owner(CLIPPY_SELECT)))) {
 				/* position cursor */
 				n = k->x - widget->x;
-				if (n < 0)
-					n = 0;
-				else if (n >= widget->width)
-					n = widget->width-1;
+				n = CLAMP(n, 0, widget->width - 1);
 				wx = k->sx - widget->x;
-				if (wx < 0)
-					wx = 0;
-				else if (wx >= widget->width)
-					wx = widget->width-1;
+				wx = CLAMP(wx, 0, widget->width - 1);
 				widget->d.textentry.cursor_pos = n+widget->d.textentry.firstchar;
 				wx  = wx+widget->d.textentry.firstchar;
-				if (widget->d.textentry.cursor_pos >= strlen(widget->d.textentry.text))
+				if (widget->d.textentry.cursor_pos >= (signed) strlen(widget->d.textentry.text))
 					widget->d.textentry.cursor_pos = strlen(widget->d.textentry.text);
-				if (wx >= strlen(widget->d.textentry.text))
+				if (wx >= (signed) strlen(widget->d.textentry.text))
 					wx = strlen(widget->d.textentry.text);
 				if (k->sx != k->x || k->sy != k->y) {
 					widget->clip_start = wx;
@@ -483,7 +485,7 @@ int widget_handle_key(struct key_event * k)
 					widget->clip_end = widget->clip_start + 1;
 				}
 				widget->clip_end++;
-				if (widget->clip_end > strlen(widget->d.textentry.text))
+				if (widget->clip_end > (signed) strlen(widget->d.textentry.text))
 					widget->clip_end = strlen(widget->d.textentry.text);
 				textentry_select(widget);
 			} else if (!NO_MODIFIER(k->mod)) {
