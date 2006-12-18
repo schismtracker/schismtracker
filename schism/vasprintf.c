@@ -88,7 +88,7 @@ static int int_vasprintf(char **result, const char *format, va_list *args)
 			}
 		}
 	}
-	*result = mem_alloc (total_width);
+	*result = (char*)mem_alloc (total_width);
 	return vsprintf (*result, format, *args);
 }
 
