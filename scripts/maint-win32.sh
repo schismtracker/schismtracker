@@ -6,4 +6,5 @@ SDL_CONFIG=/usr/local/bin/i386-mingw32-sdl-config LIBS=-lSDLmain ../configure --
 
 cp /usr/local/i386-mingw32/bin/SDL.dll . || exit 1
 cp ../COPYING COPYING.txt || exit 1
-zip "Schism Tracker.zip" schism.exe SDL.dll COPYING.txt || exit 1
+cp ../sys/win32/schism.bat . || exit 1
+zip "Schism Tracker.zip" schismtracker.exe schism.bat SDL.dll COPYING.txt || exit 1

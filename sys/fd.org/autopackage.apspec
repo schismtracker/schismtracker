@@ -1,7 +1,7 @@
 # -*-shell-script-*-
 
 [Meta]
-RootName: @nimh.org/schism:CVS
+RootName: @nimh.org/schism:1.0
 DisplayName: Schism Tracker
 ShortName: schism
 Maintainer: Mrs. Brisby <mrs.brisby@nimh.org>
@@ -25,7 +25,7 @@ unprepareBuild
 
 [Imports]
 import <<EOF
-$source_dir/linux-x86-build/schism
+$source_dir/linux-x86-build/schismtracker
 $source_dir/icons/schism-icon-128.png
 $source_dir/icons/schism-itf-icon-128.png
 $source_dir/sys/fd.org/schism.desktop
@@ -38,7 +38,7 @@ require @libsdl.org/sdl 1.2
 
 [Install]
 # Put your installation script here
-installExe schism
+installExe schismtracker
 installIcon schism-icon-128.png schism-itf-icon-128.png >/dev/null 2>&1
 installDesktop "AudioVideo" schism.desktop
 installDesktop "AudioVideo" itf.desktop

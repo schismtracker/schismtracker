@@ -5,8 +5,8 @@ Name=Schism Tracker
 Comment=Impulse Tracker Clone
 Encoding=UTF-8
 Terminal=false
-TryExec=schism
-Exec=schism %f
+TryExec=schismtracker
+Exec=schismtracker %f
 Type=Application
 Icon=schism-icon-128.png
 Categories=GNOME;Application;AudioVideo;Audio;Video;
@@ -15,4 +15,4 @@ X-Desktop-File-Install-Version=0.10
 
 [Desktop Action Play]
 Name=Schism Tracker (play song)
-Exec=schism -p %f
+Exec=schismtracker -p %f
