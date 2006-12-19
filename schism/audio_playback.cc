@@ -1324,6 +1324,7 @@ RETRY:	using_driver = driver;
 
 	if (!strcasecmp(driver, "nil")
 	|| !strcasecmp(driver, "null")
+	|| !strcmp(driver, "/dev/null")
 	|| !strcasecmp(driver, "none")
 	|| !strcasecmp(driver, "nosound")
 	|| !strcasecmp(driver, "silence")
@@ -1365,9 +1366,21 @@ RETRY:	using_driver = driver;
 		song_print_info_top("nosound");
 	} else {
 	        static SDL_AudioSpec desired, obtained;
+		int need_name = 1;
 
-		/* unknown audio driver- use SDL */
-		if (strcasecmp(driver, "sdlauto")) {
+		if (*driver == '/') {
+			if (strncmp(driver, "/dev/", 5) == 0) {
+				put_env_var("SDL_PATH_DSP", driver);
+				put_env_var("AUDIODEV", driver);
+			} else {
+				put_env_var("SDL_AUDIODRIVER", "disk");
+				put_env_var("SDL_DISKAUDIOFILE", driver);
+			}
+
+			strncpy(driver_name, driver, sizeof(driver_name)-2);
+			need_name = 0;
+		} else if (strcasecmp(driver, "sdlauto")) {
+			/* unknown audio driver- use SDL */
 			put_env_var("SDL_AUDIODRIVER", driver);
 		}
 
@@ -1406,8 +1419,9 @@ RETRY:	using_driver = driver;
 
 		CSoundFile::gpSndMixHook = NULL;
 
-		song_print_info_top(SDL_AudioDriverName(driver_name,
-					sizeof(driver_name)));
+		if (need_name) SDL_AudioDriverName(driver_name, sizeof(driver_name));
+
+		song_print_info_top(driver_name);
 		log_appendf(5, " %d Hz, %d bit, %s", obtained.freq,
 			obtained.format & 0xff,
 			obtained.channels == 1 ? "mono" : "stereo");
