@@ -61,17 +61,6 @@ static void _key_info_setup(void)
 		memset(&info, 0, sizeof(info));
 	}
 
-#ifdef HAVE_X11_EXTENSIONS_XF86MISC_H
-	if (XF86MiscQueryExtension(dpy, &a, &b)) {
-		XF86MiscGetKbdSettings(dpy, &kbdsettings);
-		delay = kbdsettings.delay;
-		rate = kbdsettings.rate;
-		if (info.info.x11.unlock_func)
-			info.info.x11.unlock_func();
-		return;
-	}
-#endif
-
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
 	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
 		if (info.info.x11.unlock_func)
@@ -79,6 +68,20 @@ static void _key_info_setup(void)
 		return;
 	}
 #endif
+
+#ifdef HAVE_X11_EXTENSIONS_XF86MISC_H
+	if (XF86MiscQueryExtension(dpy, &a, &b)) {
+		XF86MiscGetKbdSettings(dpy, &kbdsettings);
+		if (kbdsettings.delay > -1 && kbdsettings.rate > -1) {
+			delay = kbdsettings.delay;
+			rate = kbdsettings.rate;
+			if (info.info.x11.unlock_func)
+				info.info.x11.unlock_func();
+			return;
+		}
+	}
+#endif
+
 	/* eh... */
 	delay = 125;
 	rate = 30;
