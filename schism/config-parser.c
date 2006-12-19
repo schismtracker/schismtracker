@@ -51,6 +51,7 @@ static struct cfg_section *_get_section(cfg_file_t *cfg, const char *section_nam
 	}
 	if (add) {
 		section = calloc(1, sizeof(struct cfg_section));
+		section->omit = 0;
 		section->name = strdup(section_name);
 		if (prev) {
 			section->next = prev->next;
@@ -134,6 +135,7 @@ static int _parse_section(cfg_file_t *cfg, char *line, struct cfg_section **cur_
 	memmove(line, line + 1, strlen(line));
 	line[strlen(line) - 1] = 0;
 	*cur_section = _get_section(cfg, line, 1);
+	(*cur_section)->omit = 0;
 	if (comments) {
 		if ((*cur_section)->comments) {
 			/* glue them together */
@@ -320,10 +322,12 @@ int cfg_write(cfg_file_t *cfg)
 	for (section = cfg->sections; section; section = section->next) {
 		if (section->comments)
 			fprintf(fp, "%s", section->comments);
+		if (section->omit) fputc('#', fp);
 		fprintf(fp, "[%s]\n", section->name);
 		for (key = section->keys; key; key = key->next) {
 			if (key->comments)
 				fprintf(fp, "%s", key->comments);
+			if (section->omit) fputc('#', fp);
 			/* TODO | if no keys in a section have defined values,
 			 * TODO | comment out the section header as well. (this
 			 * TODO | might be difficult since it's already been
@@ -398,6 +402,8 @@ void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_n
 	if (section_name == NULL || key_name == NULL)
 		return;
 	section = _get_section(cfg, section_name, 1);
+	section->omit = 0;
+
 	key = _get_key(section, key_name, 1);
 	if (key->value)
 		free(key->value);
@@ -415,6 +421,8 @@ void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_n
 	if (section_name == NULL || key_name == NULL)
 		return;
 	section = _get_section(cfg, section_name, 1);
+	section->omit = 0;
+
 	key = _get_key(section, key_name, 1);
 	if (key->value)
 		free(key->value);

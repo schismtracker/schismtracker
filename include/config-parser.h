@@ -44,6 +44,7 @@ struct cfg_section {
 	char *name; /* the text between the brackets, whitespace trimmed */
 	struct cfg_key *keys; /* NULL if section is empty */
 	char *comments; /* any comments preceding this section, or NULL if none */
+	int omit; /* don't include in output (delete this section) */
 };
 
 struct cfg_file {

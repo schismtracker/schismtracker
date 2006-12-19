@@ -35,6 +35,24 @@
 
 #include "it.h"
 
+#include "dmoz.h"
+
+#include <ctype.h>
+
+static int _connected = 0;
+/* midi_mutex is locked by the main thread,
+midi_port_mutex is for the port thread(s),
+and midi_record_mutex is by the event/sound thread
+*/
+static SDL_mutex *midi_mutex = 0;
+static SDL_mutex *midi_port_mutex = 0;
+static SDL_mutex *midi_record_mutex = 0;
+static SDL_mutex *midi_play_mutex = 0;
+static SDL_cond *midi_play_cond = 0;
+
+static struct midi_provider *port_providers = 0;
+
+
 /* time shit */
 #ifdef WIN32
 #include <windows.h>
@@ -100,6 +118,56 @@ int midi_c5note = 60;
 
 #define CFG_GET_MI(v,d) midi_ ## v = cfg_get_number(cfg, "MIDI", #v, d)
 #define CFG_GET_MS(v,b,l,d) cfg_get_string(cfg, "MIDI", #v, b,l, d)
+
+static void _cfg_load_midi_part_locked(struct midi_port *q)
+{
+	struct cfg_section *c;
+	struct midi_provider *p;
+	cfg_file_t cfg;
+	const char *sn;
+	char *ptr, *ss, *sp;
+	int i, j;
+
+	ss = (char*)q->name;
+	if (!ss) return;
+	while (isspace(((unsigned int)*ss))) ss++;
+	if (!*ss) return;
+
+	sp = (q->provider) ? (char*)q->provider->name : 0;
+	if (sp) {
+		while (isspace(((unsigned int)*sp))) sp++;
+		if (!*sp) sp = 0;
+	}
+	if (sp) i = strlen(sp); else i = 0;
+	j = strlen(ss);
+	if (j > i) i = j;
+	ptr = mem_alloc(i+1);
+
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+
+	/* look for MIDI port sections */
+	for (c = cfg.sections; c; c = c->next) {
+		j = -1;
+		(void)sscanf(c->name, "MIDI Port %d", &j);
+		if (j < 1) continue;
+		sn = cfg_get_string(&cfg, c->name, "name", ptr, i, 0);
+		if (!sn) continue;
+		if (strcasecmp(ss, sn) != 0) continue;
+		sn = cfg_get_string(&cfg, c->name, "provider", ptr, i, 0);
+		if (sn && sp && strcasecmp(sp, sn) != 0) continue;
+		/* okay found port */
+		if ((q->iocap & MIDI_INPUT) && cfg_get_number(&cfg, c->name, "input", 0)) {
+			q->io |= MIDI_INPUT;
+		}
+		if ((q->iocap & MIDI_OUTPUT) && cfg_get_number(&cfg, c->name, "output", 0)) {
+			q->io |= MIDI_OUTPUT;
+		}
+		if (q->io && q->enable) q->enable(q);
+	}
+}
+
+
 void cfg_load_midi(cfg_file_t *cfg)
 {
         midi_config *md;
@@ -139,15 +207,17 @@ void cfg_load_midi(cfg_file_t *cfg)
 		cfg_get_string(cfg, "MIDI", buf, md->midi_zxx+(i*32),32, buf2);
 	}
 	song_unlock_audio();
-
 }
 #define CFG_SET_MI(v) cfg_set_number(cfg, "MIDI", #v, midi_ ## v)
 #define CFG_SET_MS(v,b,d) cfg_get_string(cfg, "MIDI", #v, b, d)
 void cfg_save_midi(cfg_file_t *cfg)
 {
+	struct cfg_section *c;
+	struct midi_provider *p;
+	struct midi_port *q;
         midi_config *md;
-	char buf[16];
-	int i;
+	char buf[32], *ss;
+	int i, j;
 
 	CFG_SET_MI(flags);
 	CFG_SET_MI(pitch_depth);
@@ -174,21 +244,43 @@ void cfg_save_midi(cfg_file_t *cfg)
 		cfg_set_string(cfg, "MIDI", buf, md->midi_zxx+(i*32));
 	}
 	song_unlock_audio();
+
+	/* write out only enabled midi ports */
+	i = 1;
+	SDL_mutexP(midi_mutex);
+	for (p = port_providers; p; p = p->next) {
+		while (midi_port_foreach(p, &q)) {
+			ss = (char*)q->name;
+			if (!ss) continue;
+			while (isspace(((unsigned int)*ss))) ss++;
+			if (!*ss) continue;
+			if (!q->io) continue;
+
+			sprintf(buf, "MIDI Port %d", i); i++;
+			cfg_set_string(cfg, buf, "name", ss);
+			ss = (char*)p->name;
+			if (ss) {
+				while (isspace(((unsigned int)*ss))) ss++;
+				if (*ss) {
+					cfg_set_string(cfg, buf, "provider", ss);
+				}
+			}
+			cfg_set_number(cfg, buf, "input", q->io & MIDI_INPUT ? 1 : 0);
+			cfg_set_number(cfg, buf, "output", q->io & MIDI_OUTPUT ? 1 : 0);
+		}
+	}
+	SDL_mutexV(midi_mutex);
+
+	/* delete other MIDI port sections */
+	for (c = cfg->sections; c; c = c->next) {
+		j = -1;
+		(void)sscanf(c->name, "MIDI Port %d", &j);
+		if (j < i) continue;
+		c->omit = 1;
+	}
+
 }
 
-
-static int _connected = 0;
-/* midi_mutex is locked by the main thread,
-midi_port_mutex is for the port thread(s),
-and midi_record_mutex is by the event/sound thread
-*/
-static SDL_mutex *midi_mutex = 0;
-static SDL_mutex *midi_port_mutex = 0;
-static SDL_mutex *midi_record_mutex = 0;
-static SDL_mutex *midi_play_mutex = 0;
-static SDL_cond *midi_play_cond = 0;
-
-static struct midi_provider *port_providers = 0;
 
 static void _midi_engine_connect(void)
 {
@@ -396,6 +488,7 @@ void *userdata, int free_userdata)
 			port_top[i] = p;
 			p->num = i;
 			port_count++;
+			_cfg_load_midi_part_locked(p);
 			return i;
 		}
 	}
@@ -414,6 +507,10 @@ void *userdata, int free_userdata)
 	port_top = pt;
 	p->num = port_count;
 	port_count++;
+
+	/* finally, and just before unlocking, load any configuration for it... */
+	_cfg_load_midi_part_locked(p);
+
 	SDL_mutexV(midi_port_mutex);
 	return p->num;
 }
