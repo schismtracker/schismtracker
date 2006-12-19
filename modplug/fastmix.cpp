@@ -1683,16 +1683,54 @@ DWORD Convert32To16(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LPLONG lpMin,
 	return lSampleCount * 2;
 }
 //---GCCFIX: Asm replaced with C function
-// 24-bit audio not supported.
-DWORD Convert32To24(LPVOID lp32, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
+// 24-bit might not work...
+DWORD Convert32To24(LPVOID lp24, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
 {
-	return 0;
+	/* the inventor of 24bit anything should be shot */
+	int vumin = *lpMin, vumax = *lpMax;
+	unsigned char *p = (unsigned char *)lp24;
+	for (UINT i=0; i<lSampleCount; i++)
+	{
+		int n = pBuffer[i];
+		if (n < MIXING_CLIPMIN)
+			n = MIXING_CLIPMIN;
+		else if (n > MIXING_CLIPMAX)
+			n = MIXING_CLIPMAX;
+		if (n < vumin)
+			vumin = n;
+		else if (n > vumax)
+			vumax = n;
+		n = n >> (8-MIXING_ATTENUATION);	// 24-bit signed
+		/* err, assume same endian */
+		memcpy(p, &n, 3);
+		p += 3;
+	}
+	*lpMin = vumin;
+	*lpMax = vumax;
+	return lSampleCount * 2;
 }
 //---GCCFIX: Asm replaced with C function
-// 32-bit audio not supported
+// 32-bit might not work...
 DWORD Convert32To32(LPVOID lp32, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
 {
-	return 0;
+	int vumin = *lpMin, vumax = *lpMax;
+	signed int *p = (signed int *)lp32;
+	for (UINT i=0; i<lSampleCount; i++)
+	{
+		int n = pBuffer[i];
+		if (n < MIXING_CLIPMIN)
+			n = MIXING_CLIPMIN;
+		else if (n > MIXING_CLIPMAX)
+			n = MIXING_CLIPMAX;
+		if (n < vumin)
+			vumin = n;
+		else if (n > vumax)
+			vumax = n;
+		p[i] = (n >> MIXING_ATTENUATION);	// 32-bit signed
+	}
+	*lpMin = vumin;
+	*lpMax = vumax;
+	return lSampleCount * 2;
 }
 //---GCCFIX: Asm replaced with C function
 // Will fill in later.
@@ -1700,11 +1738,6 @@ void InitMixBuffer(int *pBuffer, UINT nSamples)
 {
 	memset(pBuffer, 0, nSamples * sizeof(int));
 }
-
-
-
-
-
 
 //---GCCFIX: Asm replaced with C function
 void InterleaveFrontRear(int *pFrontBuf, int *pRearBuf, DWORD nSamples)
