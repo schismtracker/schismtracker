@@ -886,7 +886,7 @@ int main(int argc, char **argv)
 		&& dlsym(_alsaless_sdl_hack, "ALSA_bootstrap")) {
 			if (dlsym(_dltrick_handle,"snd_ctl_open")
 			|| dlsym(_dltrick_handle,"snd_pcm_open")) {
-				audio_driver = "alsa";
+				if (!audio_driver) audio_driver = "alsa";
 			}
 		}
 	}
