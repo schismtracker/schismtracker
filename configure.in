@@ -51,9 +51,6 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_RANLIB
 
-dnl enable win32 dll libtool support
-AC_LIBTOOL_WIN32_DLL
-
 dnl We're using C
 AC_LANG([C])
 
