@@ -972,6 +972,8 @@ int main(int argc, char **argv)
 #if !defined(WIN32)
 	(void)nice(1);
 #endif
+	/* poll once */
+	midi_engine_poll_ports();
 	
 	event_loop(); /* never returns */
 }
