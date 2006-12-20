@@ -1,32 +1,29 @@
-#!/bin/bash
-set -e
-# I haven't tried all versions, but I know that these work
-# on macosx I got them from fink
-# they were available on my FC4 machine
-# they're probably available to you.
-
-# added hackery for darwinports current versions /storlek
-
+#!/bin/sh
 unset GREP
-
-function getver() {
+unset GREP_OPTIONS
+unset FGREP
+unset FGREP_OPTIONS
+getver() {
 	a="$1"
 	shift
 	for v in "$@"; do
-		if "$a" --version | fgrep "$v"; then
-			echo $a
-			return
-		elif "$a"-"$v" --version | fgrep "$v"; then
+		if "$a"-"$v" --version 2>/dev/null | fgrep "$v" >/dev/null 2>/dev/null; then
+			echo "echo '$a-$v' >&2"
 			echo "$a"-"$v"
-			return 0
+			return
 		fi
 	done
-	return 1
+	if "$a" --version 2>/dev/null | fgrep "$v" >/dev/null 2>/dev/null; then
+		echo "echo '$a-$v' >&2"
+		echo "$a"
+		return
+	fi
+	echo "echo '-- require $a-$v' >&2"
+	echo "exit 1"
 }
-
-aclocal=`getver aclocal 1.9`			|| exit 1
-automake=`getver automake 1.9`			|| exit 1
-autoheader=`getver autoheader 2.60 2.59`	|| exit 1
-autoconf=`getver autoconf 2.60 2.59`		|| exit 1
-
-$aclocal && $automake -a && $autoheader && $autoconf
+(
+getver aclocal 1.9
+getver automake 1.9
+getver autoheader 2.60 2.59
+getver autoconf 2.60 2.59
+) | exec sh
