@@ -20,7 +20,7 @@ getver() {
 		return
 	fi
 	for v in "$@"; do
-		elif "$a"-"$v" --version | fgrep "$v" >/dev/null; then
+		if "$a"-"$v" --version | fgrep "$v" >/dev/null; then
 			echo "$a"-"$v"
 			echo "'$a"-"$v' => $a version $v" 1>&2
 			return
