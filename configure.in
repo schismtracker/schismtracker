@@ -20,14 +20,6 @@ dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_INIT
 
-#if test -d schism; then
-#	mkdir -p build && cd build && exec ../configure $@
-#	echo "You cannot ./configure from here, try something like this:" >&2
-#	echo "	mkdir build && cd build && ../configure && make" >&2
-#	exit 1
-#fi
-
-
 AC_CONFIG_SRCDIR([schism/main.c])
 
 dnl We'll need machine type later
