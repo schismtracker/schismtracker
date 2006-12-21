@@ -36,8 +36,9 @@
 
 static struct widget widgets_log[1];
 
-#define NUM_LINES 33
+#define NUM_LINES 1000
 static struct log_line lines[NUM_LINES];
+static int top_line = 0;
 static int last_line = -1;
 
 /* --------------------------------------------------------------------- */
@@ -48,18 +49,58 @@ static void log_draw_const(void)
         draw_fill_chars(2, 13, 77, 47, 0);
 }
 
-static int log_handle_key(UNUSED struct key_event * k)
+static int log_handle_key(struct key_event * k)
 {
-        return 0;
+	switch (k->sym) {
+	case SDLK_UP:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state) return 1;
+		top_line--;
+		break;
+	case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state) return 1;
+		top_line -= 15;
+		break;
+	case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state) return 1;
+		top_line++;
+		break;
+	case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state) return 1;
+		top_line += 15;
+		break;
+	default:
+		if (!k->state) {
+			if (k->mouse == MOUSE_SCROLL_UP) {
+				top_line--;
+				break;
+			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
+				top_line++;
+				break;
+			}
+		}
+			
+		return 0;
+	};
+	top_line = CLAMP(top_line, 0, (last_line-33));
+	if (top_line < 0) top_line = 0;
+	status.flags |= NEED_UPDATE;
+        return 1;
 }
 
 static void log_redraw(void)
 {
-        int n;
+        int n, i;
 
-        for (n = 0; n <= last_line; n++)
-                draw_text_len((unsigned char *) lines[n].text, 74, 3, 14 + n,
-			      lines[n].color, 0);
+	i = top_line;
+        for (n = 0; n <= last_line && n < 33; n++, i++) {
+		if (!lines[i].text) continue;
+                draw_text_len((unsigned char *) lines[i].text, 74, 3, 14 + n,
+			      lines[i].color, 0);
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -89,6 +130,7 @@ inline void log_append(int color, int must_free, const char *text)
         lines[last_line].text = text;
         lines[last_line].color = color;
         lines[last_line].must_free = must_free;
+	top_line = CLAMP(last_line - 32, 0, NUM_LINES-32);
 
         if (status.current_page == PAGE_LOG)
                 status.flags |= NEED_UPDATE;
