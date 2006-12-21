@@ -1109,6 +1109,7 @@ static void sample_list_handle_key(struct key_event * k)
 
 	switch (k->sym) {
 	case SDLK_SPACE:
+		if (k->state) return;
 		if (selected_widget && *selected_widget == 0) {
 			need_retrigger = last_note;
 			status.flags |= NEED_UPDATE;
