@@ -180,7 +180,7 @@ void key_translate(struct key_event *k)
 		};
 	}
 	if (k->mod & KMOD_META) {
-		k->mod |= KMOD_ALT;
+		k->mod |= (status.flags & META_IS_CTRL) ? KMOD_CTRL : KMOD_ALT;
 		k->mod &= ~KMOD_META;
 	}
 	if (k->mod & KMOD_NUM) {

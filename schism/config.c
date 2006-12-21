@@ -175,6 +175,10 @@ void cfg_load(void)
 	else
 		status.flags &= ~ACCIDENTALS_AS_FLATS;
 #endif
+	if (cfg_get_number(&cfg, "General", "meta_is_ctrl", 0))
+		status.flags |= META_IS_CTRL;
+	else
+		status.flags &= ~META_IS_CTRL;
 	
 	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
 	
@@ -252,6 +256,7 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
 
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
+	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 
 
 	/* hm... most of the time probably nothing's different, so saving the
