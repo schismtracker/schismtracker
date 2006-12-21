@@ -162,10 +162,19 @@ void cfg_load(void)
 		i = VIS_OSCILLOSCOPE;
 	status.vis_style = i;
 
+#if 0
+	/* We don't need a whole separate section just for this.
+	(TODO: strip out the whole [Hacks] section somehow if it existed) */
 	if (cfg_get_number(&cfg, "Hacks", "digitrakker_voodoo", 0))
 		status.flags |= DIGITRAKKER_VOODOO;
 	else
 		status.flags &= ~DIGITRAKKER_VOODOO;
+#else
+	if (cfg_get_number(&cfg, "General", "accidentals_as_flats", 0))
+		status.flags |= ACCIDENTALS_AS_FLATS;
+	else
+		status.flags &= ~ACCIDENTALS_AS_FLATS;
+#endif
 	
 	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
 	
@@ -242,7 +251,7 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "classic_mode", !!(status.flags & CLASSIC_MODE));
 	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
 
-	cfg_set_number(&cfg, "Hacks", "digitrakker_voodoo", !!(status.flags & DIGITRAKKER_VOODOO));
+	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
 
 
 	/* hm... most of the time probably nothing's different, so saving the

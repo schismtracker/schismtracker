@@ -34,6 +34,10 @@
 #include <X11/XKBlib.h>
 #endif
 
+/* FIXME: don't put declarations in c files... */
+unsigned key_repeat_rate(void);
+unsigned key_repeat_delay(void);
+
 static int virgin = 1;
 static unsigned int delay, rate;
 
@@ -96,6 +100,7 @@ unsigned key_repeat_rate(void)
 {
 	_key_info_setup(); return rate;
 }
+
 unsigned key_repeat_delay(void)
 {
 	_key_info_setup(); return delay;

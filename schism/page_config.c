@@ -47,6 +47,10 @@ static const char *vis_styles[] = {
 	"Off", "Memory Stats", "Oscilloscope", "VU Meter", NULL
 };
 
+static const char *sharp_flat[] = {
+	"Sharps (#)", "Flats (b)", NULL
+};
+
 static const char *output_channels[] = {
         "Monaural", "Stereo", "Dolby/Surround", NULL
 };
@@ -79,7 +83,7 @@ static void change_ui_settings(void)
 	} else {
 		status.flags &= ~CLASSIC_MODE;
 	}
-	kbd_digitrakker_voodoo(widgets_config[6].d.toggle.state);
+	kbd_sharp_flat_toggle(widgets_config[6].d.menutoggle.state);
 	status.flags |= NEED_UPDATE;
 	status_text_flash(SAVED_AT_EXIT);
 }
@@ -206,7 +210,7 @@ static void config_draw_const(void)
 
 	draw_text((unsigned char *) "Visualization",4,20, 0, 2);
 	draw_text((unsigned char *) "Classic Mode",5,21, 0, 2);
-	draw_text((unsigned char *) "b's not #'s",6,22, 0, 2);
+	draw_text((unsigned char *) "Accidentals",6,22, 0, 2);
 	draw_text((unsigned char *) "Time Display",5,23, 0, 2);
 
 	draw_text((unsigned char *) "Video Driver:", 2, 26, 0, 2);
@@ -231,7 +235,7 @@ static void config_set_page(void)
 
 	widgets_config[4].d.menutoggle.state = status.vis_style;
 	widgets_config[5].d.toggle.state = !!(status.flags & CLASSIC_MODE);
-	widgets_config[6].d.toggle.state = !!(status.flags & DIGITRAKKER_VOODOO);
+	widgets_config[6].d.menutoggle.state = !!(status.flags & ACCIDENTALS_AS_FLATS);
 	widgets_config[7].d.menutoggle.state = status.time_display;
 
 	widgets_config[8].d.togglebutton.state = video_is_fullscreen();
@@ -284,10 +288,11 @@ void config_load_page(struct page *page)
 			18, 21,
 			4,6,5,5,6,
 			change_ui_settings);
-	create_toggle(widgets_config+6,
+	create_menutoggle(widgets_config+6,
 			18, 22,
 			5,7,6,6,7,
-			change_ui_settings);
+			change_ui_settings,
+			sharp_flat);
 	create_menutoggle(widgets_config+7,
 			18, 23,
 			6,10,7,7,10,

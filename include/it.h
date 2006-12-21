@@ -109,7 +109,7 @@ enum {
 	MIDI_EVENT_CHANGED = (1 << 18),
 
 	/* poop */
-	DIGITRAKKER_VOODOO = (1 << 19),
+	ACCIDENTALS_AS_FLATS = (1 << 19),
 
 	/* fontedit */
 	STARTUP_FONTEDIT = (1 << 20),
@@ -346,7 +346,7 @@ int get_effect_number(char effect);
 int get_ptm_effect_number(char effect);
 
 void kbd_init(void);
-void kbd_digitrakker_voodoo(int e);
+void kbd_sharp_flat_toggle(int e);
 int kbd_get_effect_number(struct key_event *k);
 int kbd_char_to_hex(struct key_event *k);
 int kbd_char_to_99(struct key_event *k);

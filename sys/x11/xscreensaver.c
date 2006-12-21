@@ -40,6 +40,9 @@
 
 #include <time.h>
 
+/* FIXME: put this in some header somewhere */
+void xscreensaver_deactivate(void);
+
 static XErrorHandler old_handler = 0;
 static int BadWindow_ehandler(Display *dpy, XErrorEvent *error)
 {
@@ -128,7 +131,6 @@ void xscreensaver_deactivate(void)
 		int format;
 		unsigned long nitems, bytesafter;
 		char *v = 0;
-		int status;
 
 		XSync(dpy, False);
 		old_handler = XSetErrorHandler(BadWindow_ehandler);

@@ -69,6 +69,10 @@ int video_is_fullscreen(void);
 
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
+#if USE_X11
+unsigned int xv_yuvlayout(void);
+#endif
+
 #define VIDEO_YUV_UYVY	0x59565955
 #define VIDEO_YUV_YUY2	0x32595559
 #define VIDEO_YUV_YV12	0x32315659

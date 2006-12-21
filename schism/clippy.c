@@ -90,7 +90,7 @@ static void _clippy_copy_to_sys(int do_sel)
 #if defined(USE_X11)
 	if (has_sys_clip) {
 		lock_display();
-		if (!dst) dst = "";
+		if (!dst) dst = (char *) ""; /* blah */
 		if (j < 0) j = 0;
 		if (do_sel) {
 			if (XGetSelectionOwner(SDL_Display, XA_PRIMARY) != SDL_Window) {
@@ -305,7 +305,6 @@ static char *_internal_clippy_paste(int cb)
 #if defined(USE_X11)
 	Window owner;
 	int getme;
-	SDL_Event *ev;
 #elif defined(WIN32)
 	char *tmp, *src;
 	int clen;
