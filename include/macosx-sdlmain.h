@@ -5,7 +5,9 @@
     Feel free to customize this file to suit your needs
 */
 
+#define Cursor AppleCursor
 #import <Cocoa/Cocoa.h>
+#undef Cursor
 
 @interface SDLMain : NSObject
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename;

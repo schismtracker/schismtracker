@@ -56,7 +56,9 @@ static void _key_info_setup(void)
 			info.info.x11.lock_func();
 		dpy = info.info.x11.display;
 	} else {
-		/* grr... */
+		dpy = 0;
+	}
+	if (!dpy) {
 		dpy = XOpenDisplay(0);
 		memset(&info, 0, sizeof(info));
 	}

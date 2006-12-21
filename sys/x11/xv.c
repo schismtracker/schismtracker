@@ -47,11 +47,11 @@ unsigned int xv_yuvlayout(void)
 	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 	if (SDL_GetWMInfo(&info)) {
-		if (info.info.x11.lock_func)
-			info.info.x11.lock_func();
 		dpy = info.info.x11.display;
 	} else {
-		/* grr... */
+		dpy = 0;
+	}
+	if (!dpy) {
 		dpy = XOpenDisplay(0);
 		memset(&info, 0, sizeof(info));
 	}
