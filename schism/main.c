@@ -22,6 +22,10 @@
 
 /* This is the first thing I *ever* did with SDL. :) */
 
+/* Warning: spaghetti follows.... it just kind of ended up this way.
+   In other news, TODO: clean this mess on a rainy day.
+   and yes, that in fact rhymed :P */
+
 #include "headers.h"
 
 #include "event.h"
@@ -141,7 +145,6 @@ static void display_print_info(void)
 	log_append(2, 0, "\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81");
 	video_report();
 	log_append(0, 0, "");
-	log_append(0, 0, "");
 }
 
 /* If we're not not debugging, don't not dump core. (Have I ever mentioned
@@ -170,9 +173,6 @@ static void display_init(void)
 	clippy_init();
 
 	display_print_info();
-#if 0
-	display_print_video_info();
-#endif
 #if 0
 	SDL_EnableKeyRepeat(125, 25);
 #endif
@@ -259,6 +259,10 @@ static void run_exit_hook(void)
 char *initial_song = NULL;
 #else
 static char *initial_song = NULL;
+#endif
+
+#ifdef MACOSX
+static int ibook_helper = -1;
 #endif
 
 /* initial module directory */
@@ -696,7 +700,6 @@ static void event_loop(void)
 			break;
 		default:
 			if (event.type == SCHISM_EVENT_MIDI) {
-				/* this function is a misnomer, but whatever :P */
 				midi_engine_handle_event((void*)&event);
 			} else if (event.type == SCHISM_EVENT_PLAYBACK) {
 				/* this is the sound thread */
@@ -717,6 +720,7 @@ static void event_loop(void)
 					}
 					break;
 				case SCHISM_EVENT_NATIVE_SCRIPT:
+					/* TODO: hash the string's value and do a switch() on it */
 					if (strcasecmp(event.user.data1, "new") == 0) {
 						new_song_dialog();
 					} else if (strcasecmp(event.user.data1, "save") == 0) {
@@ -836,14 +840,14 @@ static void event_loop(void)
 			/* let dmoz build directory lists, etc
 			as long as there's no user-event going on...
 			*/
-			while (dmoz_worker() && !SDL_PollEvent(0)) ;
+			while (dmoz_worker() && !SDL_PollEvent(0)) {
+			}
 		}
 	}
 	exit(0); /* atexit :) */
 }
-#ifdef MACOSX
-static int ibook_helper = -1;
-#endif
+
+
 static void schism_shutdown(void)
 {
 #if ENABLE_HOOKS
@@ -858,8 +862,37 @@ static void schism_shutdown(void)
 
 /*
 If this is the atexit() handler, why are we calling SDL_Quit?
-	if (shutdown_process & 16) SDL_Quit();
+Simple, SDL's documentation says always call SDL_Quit. :) In fact, in the examples they recommend writing
+atexit(SDL_Quit) directly after SDL_Init. I'm not sure exactly why, but I don't see a reason *not* to do it...
+    / Storlek
 */
+	if (shutdown_process & 16) SDL_Quit();
+}
+
+static void dump_misc_about_text(void)
+{
+	const char *text[] = {
+		"Schism Tracker is Copyright (C) 2003-2007 Storlek and Mrs. Brisby.",
+		/* --------------------------------------------------------------------- */
+		"Contains additional code by Olivier Lapicque, Markus Fick, Adam Goode,",
+		"Ville Joleka, Juan Linietsky, Juha Niemimaki, and others.",
+		"Based on Impulse Tracker which is Copyright (C) 1995-1998 Jeffrey Lim.",
+		"",
+		"This program is free software; you can redistribute it and/or modify it",
+		"under the terms of the GNU General Public License as published by the",
+		"Free Software Foundation; either version 2 of the License, or (at your",
+		"option) any later version.",
+		"",
+		"You should have received a copy of the GNU General Public License along",
+		"with this program; if not, write to the Free Software Foundation, Inc.,",
+		"59 Temple Place, Suite 330, Boston, MA 02111-1307  USA",
+		"",
+		NULL
+	};
+	int n;
+	
+	for (n = 0; text[n]; n++)
+		log_append(6, 0, text[n]);
 }
 
 int main(int argc, char **argv) NORETURN;
@@ -871,7 +904,7 @@ int main(int argc, char **argv)
 	video_fullscreen(0);
 
 	srand(time(0));
-	parse_options(argc, argv);
+	parse_options(argc, argv); /* shouldn't this be like, first? */
 
 #ifdef USE_DLTRICK_ALSA
 	_dltrick_handle = dlopen("libasound.so.2", RTLD_NOW);
@@ -899,7 +932,7 @@ int main(int argc, char **argv)
 		run_startup_hook();
 		shutdown_process |= 1;
 	}
- #endif
+#endif
 #ifdef MACOSX
 	ibook_helper = macosx_ibook_fnswitch(1);
 #endif
@@ -936,6 +969,8 @@ int main(int argc, char **argv)
 	setup_help_text_pointers();
 	load_pages();
 	main_song_changed_cb();
+	
+	dump_misc_about_text();
 
 	shutdown_process |= 8;
 
@@ -950,7 +985,6 @@ int main(int argc, char **argv)
 	if (startup_flags & SF_FONTEDIT) {
 		status.flags |= STARTUP_FONTEDIT;
 		set_page(PAGE_FONT_EDIT);
-
 	} else if (initial_song) {
 		if (song_load_unchecked(initial_song)) {
 			if (startup_flags & SF_PLAY) {

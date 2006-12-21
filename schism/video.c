@@ -404,7 +404,7 @@ void video_fullscreen(int tri)
 		} else {
 			video_resize(0, 0);
 		}
-		video_report();
+		/* video_report(); - this should be done in main, not here */
 	}
 }
 
