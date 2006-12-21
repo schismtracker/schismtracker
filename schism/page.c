@@ -809,7 +809,9 @@ static int handle_key_global(struct key_event * k)
 					? "Disabled" : "Enabled");
 			}
 			return 1;
-		} else if (NO_MODIFIER(k->mod)) {
+		} else {
+			/* os x steals plain scroll lock for brightness,
+			 * so catch ctrl+scroll lock here as well */
 			if (!k->state) {
 				midi_playback_tracing = (playback_tracing = !playback_tracing);
 				status_text_flash("Playback tracing %s", (playback_tracing ? "enabled" : "disabled"));
