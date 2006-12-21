@@ -20,25 +20,38 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "auto/logoit.h"
-#include "auto/logoschism.h"
-
 #include "headers.h"
 #include "it.h"
 #include "page.h"
 #include "video.h"
 #include "song.h"
 
+/* Eventual TODO: draw the pattern data in the Schism logo in a different color than the words */
+#include "auto/logoit.h"
+#include "auto/logoschism.h"
+
+#define LOGO_WIDTH 292
+#define LOGO_PITCH 292
+#define LOGO_HEIGHT 50
+
+
 static SDL_Surface *it_logo = 0;
 static SDL_Surface *schism_logo = 0;
 
 static struct widget widgets_about[1];
+
+static struct vgamem_overlay logo_image = {
+	23, 17,
+	58, 24,
+	0, 0, 0, 0, 0, 0,
+};
 
 
 static int about_page_handle_key(UNUSED struct key_event *k)
 {
 	return 0;
 }
+
 static void about_page_redraw(void)
 {
 	draw_fill_chars(0,0,79,49,0);
@@ -63,6 +76,7 @@ static int _fixup_ignore_globals(struct key_event *k)
 	/* this way, we can't pull up help here */
 	return 1;
 }
+
 static void _draw_full(void)
 {
 }
@@ -75,15 +89,8 @@ void about_load_page(struct page *page)
 	page->pre_handle_key = _fixup_ignore_globals;
 	page->help_index = HELP_GLOBAL;
 	page->draw_full = _draw_full;
-	create_other(widgets_about+0, 0, about_page_handle_key, about_page_redraw);
+	create_other(widgets_about + 0, 0, about_page_handle_key, about_page_redraw);
 }
-
-static struct widget about_widgets[1];
-static struct vgamem_overlay logo_image = {
-	23, 17,
-	58, 24,
-	0, 0, 0, 0, 0, 0,
-};
 
 static void about_close(UNUSED void *data)
 {
@@ -93,7 +100,7 @@ static void about_close(UNUSED void *data)
 }
 static void about_draw_const(void)
 {
-	static char buf[80];
+	char buf[81];
 
 	if (status.current_page == PAGE_ABOUT) {
 		/* redraw outer part */
@@ -112,35 +119,14 @@ static void about_draw_const(void)
 			draw_text((unsigned char *) "Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
 		}
 	} else {
-		draw_text((unsigned char *) "Schism Tracker is Copyright (C) 2003-2006",
-					21,25, 1, 2);
-		draw_text((unsigned char *) "Written by Storlek, and Mrs. Brisby, and contains code",
-					12,27, 1, 2);
-		draw_text((unsigned char *) "written by Olivier Lapicque, Markus Fick, Adam Goode,",
-					12,28, 1, 2);
-		draw_text((unsigned char *) "Ville Jokela, Juan Linietsky, Juha Niemimaki, and others",
-					12,29, 1, 2);
-		draw_text((unsigned char *) "and is based on Impulse Tracker by Jeffrey Lim.",
-					12,30, 1, 2);
-
-		if (status.current_page == PAGE_ABOUT) {
-			draw_text((unsigned char *) "This program is free software; you can redistribute it and/or modify", 1, 1, 6, 0);
-			draw_text((unsigned char *) "it under the terms of the GNU General Public License as published by", 1, 2, 6, 0);
-			draw_text((unsigned char *) "the Free Software Foundation; either version 2 of the License, or", 1, 3, 6, 0);
-			draw_text((unsigned char *) "(at your option) any later version.", 1,4,6,0);
-
-			draw_text((unsigned char *) "This program is distributed in the hope that it will be useful,", 1,6,6,0);
-			draw_text((unsigned char *) "but WITHOUT ANY WARRANTY; without even the implied warranty of", 1,7,6,0);
-			draw_text((unsigned char *) "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the", 1,8,6,0);
-			draw_text((unsigned char *) "GNU General Public License for more details.", 1,9,6,0);
-
-			draw_text((unsigned char *) "You should have received a copy of the GNU General Public License", 1, 11,6,0);
-			draw_text((unsigned char *) "along with this program; if not, write to the Free Software", 1,12,6,0);
-			draw_text((unsigned char *) "Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA", 1,13,6,0);
-
-			sprintf(buf, "Using %s on %s", song_audio_driver(), video_driver_name());
-			draw_text((unsigned char *) buf, 79 - strlen(buf), 48, 6, 0);
-		}
+		snprintf(buf, 80, "Using %s on %s", song_audio_driver(), video_driver_name());
+		buf[80] = 0;
+		draw_text((unsigned char *) buf, (80 - strlen(buf)) / 2, 25, 0, 2);
+		/* build date? */
+		draw_text((unsigned char *) "Copyright (C) 2003-2007 Storlek and Mrs. Brisby", 15, 27, 1, 2);
+		draw_text((unsigned char *) "Based on Impulse Tracker by Jeffrey Lim aka Pulse", 15, 28, 1, 2);
+		/* XXX if we allow key remapping, need to reflect the *real* log viewer key here */
+		draw_text((unsigned char *) "Press Ctrl-F11 for copyright and full credits", 15, 29, 1, 2);
 	}
 	vgamem_fill_reserve(&logo_image, 
 		(status.flags & CLASSIC_MODE) ? 11 : 0,
@@ -170,9 +156,6 @@ void show_about(void)
 	/* this is currently pretty gross */
 	vgamem_clear_reserve(&logo_image);
 	if (p) {
-#define LOGO_WIDTH 292
-#define LOGO_PITCH 292
-#define LOGO_HEIGHT 50
 		for (y = 0; y < LOGO_HEIGHT; y++) {
 			for (x = 0; x < LOGO_WIDTH; x++) {
 				if (p[x]) {
@@ -187,14 +170,14 @@ void show_about(void)
 		}
 	}
 
-	create_button(about_widgets+0,
+	create_button(widgets_about + 0,
 			33,32,
 			12,
 			0,0,0,0,0,
 			(void *) about_close, "Continue", 3);
 	d = dialog_create_custom(11,16,
 			58, 19,
-			about_widgets, 1, 0,
+			widgets_about, 1, 0,
 			about_draw_const, NULL);
 	d->action_yes = about_close;
 	d->action_no = about_close;
