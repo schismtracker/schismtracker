@@ -254,42 +254,6 @@ static void orderlist_insert_next(void)
         status.flags |= NEED_UPDATE;
 }
 
-static void orderlist_reorder(void)
-{
-	/* err, I hope this is going to be done correctly...
-	*/
-	song_note *np[256];
-	int nplen[256];
-        unsigned char *ol;
-	unsigned char mapol[256];
-	int i, j;
-
-	ol = song_get_orderlist();
-
-	memset(np, 0, sizeof(np));
-	memset(mapol, ORDER_LAST, sizeof(mapol));
-	for (i = j = 0; i < 255; i++) {
-		if (ol[i] == ORDER_LAST || ol[i] == ORDER_SKIP) {
-			continue;
-		}
-		if (mapol[ ol[i] ] == ORDER_LAST) {
-			np[j] = song_pattern_allocate_copy(ol[i], &nplen[j]);
-			mapol[ ol[i] ] = j;
-			j++;
-		}
-		/* replace orderlist entry */
-		ol[i] = mapol[ ol[i] ];
-	}
-	for (i = 0; i < 200; i++) {
-		if (!np[i]) {
-			song_pattern_install(i, 0, 64);
-		} else {
-			song_pattern_install(i, np[i], nplen[i]);
-		}
-	}
-
-        status.flags |= NEED_UPDATE;
-}
 static void orderlist_add_unused_patterns(void)
 {
 	/* n0 = the first free order
@@ -333,6 +297,45 @@ static void orderlist_add_unused_patterns(void)
 			status_text_flash("%d unused patterns found", n - n0);
 		}
 	}
+}
+
+static void orderlist_reorder(void)
+{
+	/* err, I hope this is going to be done correctly...
+	*/
+	song_note *np[256];
+	int nplen[256];
+        unsigned char *ol;
+	unsigned char mapol[256];
+	int i, j;
+
+	orderlist_add_unused_patterns();
+
+	ol = song_get_orderlist();
+
+	memset(np, 0, sizeof(np));
+	memset(mapol, ORDER_LAST, sizeof(mapol));
+	for (i = j = 0; i < 255; i++) {
+		if (ol[i] == ORDER_LAST || ol[i] == ORDER_SKIP) {
+			continue;
+		}
+		if (mapol[ ol[i] ] == ORDER_LAST) {
+			np[j] = song_pattern_allocate_copy(ol[i], &nplen[j]);
+			mapol[ ol[i] ] = j;
+			j++;
+		}
+		/* replace orderlist entry */
+		ol[i] = mapol[ ol[i] ];
+	}
+	for (i = 0; i < 200; i++) {
+		if (!np[i]) {
+			song_pattern_install(i, 0, 64);
+		} else {
+			song_pattern_install(i, np[i], nplen[i]);
+		}
+	}
+
+        status.flags |= NEED_UPDATE;
 }
 
 static int orderlist_handle_char(struct key_event *k)
