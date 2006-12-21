@@ -180,8 +180,13 @@ void key_translate(struct key_event *k)
 		};
 	}
 	if (k->mod & KMOD_META) {
-		k->mod |= (status.flags & META_IS_CTRL) ? KMOD_CTRL : KMOD_ALT;
-		k->mod &= ~KMOD_META;
+		k->mod = ((k->mod & ~KMOD_META)
+			  | ((status.flags & META_IS_CTRL)
+			     ? KMOD_CTRL : KMOD_ALT));
+	}
+	if ((k->mod & KMOD_MODE) && (status.flags & ALTGR_IS_ALT)) {
+		/* Treat AltGr as Alt (delt) */
+		k->mod = ((k->mod & ~KMOD_MODE) | KMOD_ALT);
 	}
 	if (k->mod & KMOD_NUM) {
 		switch (k->sym) {
@@ -540,6 +545,7 @@ inline int kbd_get_note(struct key_event *k)
 	switch (k->sym) {
 	case SDLK_BACKQUOTE:
 		if (k->mod & KMOD_SHIFT) return NOTE_FADE;
+	case SDLK_HASH: /* for delt */
 		return NOTE_OFF;
 	case SDLK_KP1:
 		if (!(k->mod & KMOD_NUM)) return -1;

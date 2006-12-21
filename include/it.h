@@ -114,8 +114,9 @@ enum {
 	/* fontedit */
 	STARTUP_FONTEDIT = (1 << 20),
 
-	/* use meta as ctrl? (alt if unset) */
+	/* key hacks -- should go away when keyboard redefinition is possible */
 	META_IS_CTRL = (1 << 21),
+	ALTGR_IS_ALT = (1 << 22),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
