@@ -113,6 +113,9 @@ enum {
 
 	/* fontedit */
 	STARTUP_FONTEDIT = (1 << 20),
+
+	/* use meta as ctrl? (alt if unset) */
+	META_IS_CTRL = (1 << 21),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
