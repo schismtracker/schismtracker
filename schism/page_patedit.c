@@ -53,6 +53,8 @@ int show_default_volumes = 0;
 
 int midi_start_record = 0;
 
+/* FIXME: what does this mean? i need an enum!
+   DIE, UNEXPLAINED HARDCODED NUMBERS, DIE! */
 static int template_mode = 0;
 
 /* only one widget, but MAN is it complicated :) */
@@ -2772,7 +2774,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			current_channel-1, px);
 		while (c >= 64) c -= 64;
 
-		/* don't record noteoffs for no good eason... */
+		/* don't record noteoffs for no good reason... */
 		if (!(midi_flags & MIDI_RECORD_NOTEOFF)
 		|| !(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
 		|| !playback_tracing)
@@ -3619,7 +3621,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SDLK_d:
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (k->state) return 1;
-		kbd_digitrakker_voodoo(-1);
+		kbd_sharp_flat_toggle(-1);
 		return 1;
 	case SDLK_LEFT:
 		if (k->state) return 1;

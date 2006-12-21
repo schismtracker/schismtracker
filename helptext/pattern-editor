@@ -177,7 +177,7 @@
 |   Ctrl-H           Toggle current row hilight
 |   Ctrl-V           Toggle default volume display
 |
-:   Ctrl-D           Toggle DigiTrakker voodoo (# -> b)
+:   Ctrl-D           Toggle accidental display as sharp/flat (# -> b)
 :
 |   Ctrl-F2          Set pattern length
 |

@@ -66,6 +66,9 @@ extern void win32_get_modkey(int*);
 #if defined(MACOSX)
 int macosx_ibook_fnswitch(int setting);
 #endif
+#if defined(USE_X11)
+void xscreensaver_deactivate(void);
+#endif
 
 /* wee... */
 #if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
@@ -812,7 +815,9 @@ static void event_loop(void)
 					xscreensaver_deactivate();
 				}
 				break;
-			};
+			default:
+				break;
+			}
 #endif
 
 			while ((q=diskwriter_sync()) == 1 && !SDL_PollEvent(0))

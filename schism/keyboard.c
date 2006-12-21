@@ -69,22 +69,21 @@ void kbd_init(void)
 	note_names = note_names_up;
 	note_names_short = note_names_short_up;
 }
-void kbd_digitrakker_voodoo(int e)
+void kbd_sharp_flat_toggle(int e)
 {
-	if (e == -1) {
-		if (note_names == note_names_up) {
-			kbd_digitrakker_voodoo(1);
-		} else {
-			kbd_digitrakker_voodoo(0);
-		}
-	} else if (e == 1) {
-		status.flags |= DIGITRAKKER_VOODOO;
-		status_text_flash("DigiTrakker voodoo enabled");
+	switch (e) {
+	case -1:
+		kbd_sharp_flat_toggle(!!(note_names == note_names_up));
+		break;
+	case 1:
+		status.flags |= ACCIDENTALS_AS_FLATS;
+		status_text_flash("Displaying accidentals as flats (b)");
 		note_names = note_names_down;
 		note_names_short = note_names_short_down;
-	} else if (e == 0) {
-		status.flags &= ~DIGITRAKKER_VOODOO;
-		status_text_flash("DigiTrakker voodoo disabled");
+		break;
+	default: /* case 0... */
+		status.flags &= ~ACCIDENTALS_AS_FLATS;
+		status_text_flash("Displaying accidentals as sharps (#)");
 		note_names = note_names_up;
 		note_names_short = note_names_short_up;
 	}

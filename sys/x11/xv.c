@@ -41,7 +41,8 @@ unsigned int xv_yuvlayout(void)
 	unsigned int resc;
 	int numImages;
 	int i, j, k, nscreens;
-	int w, h, best;
+	unsigned int w, h;
+	int best;
 
 	resc = 0;
 	memset(&info, 0, sizeof(info));
@@ -64,10 +65,10 @@ unsigned int xv_yuvlayout(void)
 	w = h = 0;
 	for (i = 0; i < nscreens; i++) {
 		XvQueryAdaptors(dpy, RootWindow(dpy, i), &nadaptors, &ainfo);
-		for (j = 0; j < nadaptors; j++) {
+		for (j = 0; j < (signed) nadaptors; j++) {
 			XvQueryEncodings(dpy, ainfo[j].base_id, &nencode, &encodings);
 			best = -1;
-			for (k = 0; k < nencode; k++) {
+			for (k = 0; k < (signed) nencode; k++) {
 				if(strcmp(encodings[k].name, "XV_IMAGE"))
 					continue;
                                 if (encodings[k].width > w || encodings[k].height > h) {
