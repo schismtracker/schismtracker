@@ -24,7 +24,9 @@
 
 #ifdef USE_X11
 #undef DISABLE_X11
+#ifndef __unix__
 #define __unix__
+#endif
 #endif
 
 #ifdef _SDL_BY_PATH
