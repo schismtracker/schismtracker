@@ -22,6 +22,11 @@
 
 #endif
 
+#ifdef USE_X11
+#undef DISABLE_X11
+#define __unix__
+#endif
+
 #ifdef _SDL_BY_PATH
 #include <SDL/SDL.h>
 #include <SDL/SDL_thread.h>

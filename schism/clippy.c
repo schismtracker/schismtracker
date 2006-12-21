@@ -29,14 +29,6 @@
 
 #include "sdlmain.h"
 
-/* FIXME: this DEFINITELY should not be here
-we should allow building on os x with OR without x11 support, because the two
-aren't mutually exclusive. */
-#if MACOSX
-#undef USE_X11
-#endif
-
-
 static char *_current_selection = 0;
 static char *_current_clipboard = 0;
 static struct widget *_widget_owner[16] = {0};
@@ -46,16 +38,13 @@ static int has_sys_clip;
 static HWND SDL_Window, _hmem;
 #elif defined(__QNXNTO__)
 static unsigned short inputgroup;
-#elif defined(XlibSpecificationRelease) && !defined(MACOSX) /* !!!FIXME!!! */
+#elif defined(USE_X11)
 static Display *SDL_Display=0;
 static Window SDL_Window;
 static void (*lock_display)(void);
 static void (*unlock_display)(void);
 static Atom atom_sel;
 static Atom atom_clip;
-#ifndef USE_X11
-#define USE_X11
-#endif
 static void __noop_v(void){};
 #endif
 
@@ -64,7 +53,7 @@ extern const char *macosx_clippy_get(void);
 extern void macosx_clippy_put(const char *buf);
 #endif
 
-static void _clippy_copy_to_sys(UNUSED int do_sel)
+static void _clippy_copy_to_sys(int do_sel)
 {
 	int i, j;
 	char *dst;
@@ -99,7 +88,7 @@ static void _clippy_copy_to_sys(UNUSED int do_sel)
 	}
 #endif
 #if defined(USE_X11)
-	if (has_sys_clip && SDL_Display) {
+	if (has_sys_clip) {
 		lock_display();
 		if (!dst) dst = "";
 		if (j < 0) j = 0;
@@ -163,8 +152,7 @@ static void _clippy_copy_to_sys(UNUSED int do_sel)
 		}
 	}
 #elif defined(MACOSX)
-	/* XXX TODO */
-	/* when implementing this, get rid of the UNUSED for do_sel */
+	if (!do_sel) macosx_clippy_put(_current_clipboard);
 #endif
 	if (freeme)
 		free(freeme);
@@ -313,7 +301,8 @@ static char *_internal_clippy_paste(int cb)
 {
 #if defined(MACOSX)
 	char *src;
-#elif defined(USE_X11)
+#endif
+#if defined(USE_X11)
 	Window owner;
 	int getme;
 	SDL_Event *ev;
@@ -481,10 +470,6 @@ void clippy_yank(void)
 
 	if (_current_selection && strlen(_current_selection) > 0) {
 		status_text_flash("Copied to selection buffer");
-#ifdef MACOSX
-		macosx_clippy_put(_current_clipboard);
-#else
 		_clippy_copy_to_sys(0);
-#endif
 	}
 }
