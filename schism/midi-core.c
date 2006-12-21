@@ -122,7 +122,7 @@ int midi_c5note = 60;
 static void _cfg_load_midi_part_locked(struct midi_port *q)
 {
 	struct cfg_section *c;
-	struct midi_provider *p;
+	/*struct midi_provider *p;*/
 	cfg_file_t cfg;
 	const char *sn;
 	char *ptr, *ss, *sp;

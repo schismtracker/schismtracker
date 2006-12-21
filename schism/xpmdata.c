@@ -20,13 +20,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <ctype.h>
+#include "headers.h"
 
 #include "sdlmain.h"
 #include "video.h" /* for declaration of xpmdata */
-
-#include <stdlib.h>
-#include <string.h>
 
 /*
 ** This came from SDL_image's IMG_xpm.c

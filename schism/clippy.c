@@ -20,25 +20,33 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "headers.h" /* always include this one first, kthx */
+
 #include "clippy.h"
-#include "util.h"
 #include "event.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include "util.h"
+
+#include "sdlmain.h"
+
+/* FIXME: this DEFINITELY should not be here
+we should allow building on os x with OR without x11 support, because the two
+aren't mutually exclusive. */
+#if MACOSX
+#undef USE_X11
+#endif
+
 
 static char *_current_selection = 0;
 static char *_current_clipboard = 0;
 static struct widget *_widget_owner[16] = {0};
-
-#include "sdlmain.h"
 
 static int has_sys_clip;
 #if defined(WIN32)
 static HWND SDL_Window, _hmem;
 #elif defined(__QNXNTO__)
 static unsigned short inputgroup;
-#elif defined(XlibSpecificationRelease)
+#elif defined(XlibSpecificationRelease) && !defined(MACOSX) /* !!!FIXME!!! */
 static Display *SDL_Display=0;
 static Window SDL_Window;
 static void (*lock_display)(void);
@@ -186,7 +194,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 	unsigned long nbytes;
 	unsigned long overflow;
 	unsigned char *seln_data;
-	char *src, *tmp;
+	char *src;
 
 	if (ev->type != SDL_SYSWMEVENT) return 1;
 	if (ev->syswm.msg->event.xevent.type == SelectionNotify) {
@@ -417,7 +425,7 @@ static char *_internal_clippy_paste(int cb)
 			free(_current_clipboard);
 		}
 		_current_clipboard = src;
-		if (!src) return "";
+		if (!src) return (char *) ""; /* FIXME: de-const-ing is bad */
 		return _current_clipboard;
 	}
 #else
