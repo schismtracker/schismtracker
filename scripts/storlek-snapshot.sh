@@ -2,7 +2,7 @@
 cd ..
 
 tmpf="/tmp/schism-cvs-snapshot.tar.bz2"
-tar -jcf "$tmpf" -X - <<EOF || exit 1
+tar -jcf "$tmpf" -X - schism2 <<EOF || exit 1
 autom4te.cache
 CVS
 .??*
