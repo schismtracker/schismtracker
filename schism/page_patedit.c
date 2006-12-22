@@ -301,6 +301,23 @@ static void options_change_base_octave(void)
 	kbd_set_current_octave(options_widgets[0].d.thumbbar.value);
 }
 
+static int options_handle_key(struct key_event *k)
+{
+	if (!NO_MODIFIER(k->mod))
+		return 0;
+	switch (k->sym) {
+	case SDLK_h: /* row Highlight major/minor */
+		*selected_widget = (*selected_widget == 2) ? 3 : 2;
+		return 1;
+	case SDLK_r: /* number of Rows */
+		*selected_widget = 4;
+		return 1;
+	default:
+		break;
+	}
+	return 0;
+}
+
 /* the base octave is changed directly when the thumbbar is changed.
  * anything else can wait until the dialog is closed. */
 void pattern_editor_display_options(void)
@@ -327,6 +344,7 @@ void pattern_editor_display_options(void)
 	
 	dialog = dialog_create_custom(10, 18, 60, 26, options_widgets, 8, options_selected_widget,
 				      options_draw_const, NULL);
+	dialog->handle_key = options_handle_key;
 	dialog->action_yes = options_close;
 	dialog->action_cancel = options_close;
 }
