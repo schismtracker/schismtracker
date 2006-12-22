@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>schism</string>
+	<string>schismtracker</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -85,7 +85,7 @@
 		</dict>
 	</array>
 	<key>CFBundleGetInfoString</key>
-	<string>Schism Tracker Copyright 2005 chisel</string>
+	<string>Schism Tracker Copyright 2003-2007 Storlek</string>
 	<key>CFBundleIconFile</key>
 	<string>appIcon.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -101,7 +101,7 @@
 	<key>CFBundleSignature</key>
 	<string>Schm</string>
 	<key>CFBundleVersion</key>
-	<string>1.0</string>
+	<string>0.5</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
