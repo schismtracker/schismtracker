@@ -1,9 +1,91 @@
-# automake (1.6.3) whined about no-dist-gzip for me
-# /storlek
-AUTOMAKE_OPTIONS = gnu dist-bzip2
-EXTRA_DIST = COPYING.frag-opt include/*.h include/auto/*.h scripts/* \
-	helptext/* font/* icons/*
+AUTOMAKE_OPTIONS = gnu dist-bzip2 no-dist-gzip
+
+helptexts = \
+	helptext/index			\
+	helptext/global-keys		\
+	helptext/info-page		\
+	helptext/instrument-list	\
+	helptext/message-editor		\
+	helptext/midi-output		\
+	helptext/orderlist-pan		\
+	helptext/orderlist-vol		\
+	helptext/pattern-editor		\
+	helptext/sample-list
+fonts = \
+	font/default-lower.fnt		\
+	font/default-upper-alt.fnt	\
+	font/default-upper-itf.fnt	\
+	font/half-width.fnt
+icons = \
+	icons/appIcon.icns		\
+	icons/it_logo.png		\
+	icons/moduleIcon.icns		\
+	icons/schism-file-128.png	\
+	icons/schism-icon-128.png	\
+	icons/schism-icon-16.png	\
+	icons/schism-icon-192.png	\
+	icons/schism-icon-22.png	\
+	icons/schism-icon-24.png	\
+	icons/schism-icon-32.png	\
+	icons/schism-icon-36.png	\
+	icons/schism-icon-48.png	\
+	icons/schism-icon-64.png	\
+	icons/schism-icon-72.png	\
+	icons/schism-icon-96.png	\
+	icons/schism-icon.svg		\
+	icons/schism_logo.png		\
+	icons/schismres.ico
+
+EXTRA_DIST = \
+	COPYING.frag-opt		\
+	COPYING.libmodplug		\
+	$(helptexts)			\
+	$(fonts)			\
+	$(icons)
+
 bin_PROGRAMS = schismtracker
+
+## whatever
+noinst_SCRIPTS = scripts/*
+
+noinst_HEADERS = \
+	include/auto/build-version.h	\
+	include/auto/default-font.h	\
+	include/auto/helpenum.h		\
+	include/auto/helptext.h		\
+	include/auto/logoit.h		\
+	include/auto/logoschism.h	\
+	include/auto/schismico.h	\
+	include/acc.h			\
+	include/charset.h		\
+	include/clippy.h		\
+	include/config-parser.h		\
+	include/diskwriter.h		\
+	include/dmoz.h			\
+	include/draw-char.h		\
+	include/event.h			\
+	include/fmt.h			\
+	include/frag-opt.h		\
+	include/headers.h		\
+	include/it.h			\
+	include/macosx-sdlmain.h	\
+	include/midi.h			\
+	include/mixer.h			\
+	include/mplink.h		\
+	include/page.h			\
+	include/palettes.h		\
+	include/pattern-view.h		\
+	include/sample-edit.h		\
+	include/sdlmain.h		\
+	include/slurp.h			\
+	include/song.h			\
+	include/util.h			\
+	include/vgamem-scanner.h	\
+	include/video.h			\
+	modplug/it_defs.h		\
+	modplug/sndfile.h		\
+	modplug/stdafx.h
+
 LIBOBJS=
 
 if USE_X11
@@ -70,120 +152,130 @@ if NEED_GNU_MEMCMP
 files_gnu_memcmp=schism/memcmp.c
 endif
 
-schismtracker_SOURCES = schism/page_blank.c \
-schism/charset.c \
-schism/sample-edit.c \
-schism/dmoz.c \
-schism/frag-opt.c \
-schism/page_info.c \
-schism/page.c \
-schism/page_palette.c \
-schism/page_instruments.c \
-schism/page_log.c \
-schism/page_about.c \
-schism/pattern-view.c \
-schism/xpmdata.c \
-schism/menu.c \
-schism/mixer-core.c \
-schism/diskwriter.cc \
-schism/page_loadinst.c \
-schism/mplink.cc \
-schism/clippy.c \
-schism/page_loadmodule.c \
-schism/page_vars.c \
-schism/fmt/raw.c \
-schism/fmt/liq.c \
-schism/fmt/f2r.c \
-schism/fmt/s3m.c \
-schism/fmt/mod.c \
-schism/fmt/far.c \
-schism/fmt/wav.cc \
-schism/fmt/mid.cc \
-schism/fmt/its.cc \
-schism/fmt/imf.c \
-schism/fmt/mtm.c \
-schism/fmt/ult.c \
-schism/fmt/ams.c \
-schism/fmt/it.c \
-schism/fmt/stm.c \
-schism/fmt/mdl.c \
-schism/fmt/669.c \
-schism/fmt/au.c \
-schism/fmt/xm.c \
-schism/fmt/mt2.c \
-schism/fmt/ntk.c \
-schism/fmt/dtm.c \
-schism/fmt/aiff.c \
-schism/util.c \
-schism/page_midi.c \
-schism/diskwriter_dialog.c \
-schism/draw-char.c \
-schism/helptext.c \
-schism/page_help.c \
-schism/slurp.c \
-schism/widget-keyhandler.c \
-schism/main.c \
-schism/page_midiout.c \
-schism/page_message.c \
-schism/page_loadsample.c \
-schism/dialog.c \
-schism/page_preferences.c \
-schism/widget.c \
-schism/config.c \
-schism/status.c \
-schism/video.c \
-schism/sample-view.c \
-schism/page_patedit.c \
-schism/page_config.c \
-schism/draw-pixel.c \
-schism/keyboard.c \
-schism/page_samples.c \
-schism/itf.c \
-schism/page_orderpan.c \
-schism/midi-core.c \
-schism/midi-ip.c \
-schism/audio_playback.cc \
-schism/config-parser.c \
-schism/audio_loadsave.cc \
-schism/draw-misc.c \
-schism/fakemem.c \
-modplug/load_xm.cpp \
-modplug/load_psm.cpp \
-modplug/load_s3m.cpp \
-modplug/tables.cpp \
-modplug/load_ult.cpp \
-modplug/load_669.cpp \
-modplug/load_stm.cpp \
-modplug/load_far.cpp \
-modplug/load_it.cpp \
-modplug/load_mid.cpp \
-modplug/load_ams.cpp \
-modplug/snd_fx.cpp \
-modplug/load_mod.cpp \
-modplug/snd_flt.cpp \
-modplug/load_wav.cpp \
-modplug/load_dsm.cpp \
-modplug/load_umx.cpp \
-modplug/snd_dsp.cpp \
-modplug/load_mt2.cpp \
-modplug/snd_eq.cpp \
-modplug/load_amf.cpp \
-modplug/load_dmf.cpp \
-modplug/sndfile.cpp \
-modplug/load_okt.cpp \
-modplug/load_mtm.cpp \
-modplug/load_med.cpp \
-modplug/load_dbm.cpp \
-modplug/sndmix.cpp \
-modplug/load_mdl.cpp \
-modplug/load_ptm.cpp \
-modplug/mmcmp.cpp \
-modplug/fastmix.cpp \
-$(files_macosx) $(files_alsa) $(files_oss) $(files_win32mm) $(files_x11) \
-$(files_gnu_asprintf) $(files_gnu_vasprintf) $(files_gnu_realpath) \
-$(files_gnu_memcmp) $(files_mmap) $(files_windres)
+## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
+schismtracker_SOURCES = \
+	schism/page_blank.c		\
+	schism/charset.c		\
+	schism/sample-edit.c		\
+	schism/dmoz.c			\
+	schism/frag-opt.c		\
+	schism/page_info.c		\
+	schism/page.c			\
+	schism/page_palette.c		\
+	schism/page_instruments.c	\
+	schism/page_log.c		\
+	schism/page_about.c		\
+	schism/pattern-view.c		\
+	schism/xpmdata.c		\
+	schism/menu.c			\
+	schism/mixer-core.c		\
+	schism/diskwriter.cc		\
+	schism/page_loadinst.c		\
+	schism/mplink.cc		\
+	schism/clippy.c			\
+	schism/page_loadmodule.c	\
+	schism/page_vars.c		\
+	schism/fmt/raw.c		\
+	schism/fmt/liq.c		\
+	schism/fmt/f2r.c		\
+	schism/fmt/s3m.c		\
+	schism/fmt/mod.c		\
+	schism/fmt/far.c		\
+	schism/fmt/wav.cc		\
+	schism/fmt/mid.cc		\
+	schism/fmt/its.cc		\
+	schism/fmt/imf.c		\
+	schism/fmt/mtm.c		\
+	schism/fmt/ult.c		\
+	schism/fmt/ams.c		\
+	schism/fmt/it.c			\
+	schism/fmt/stm.c		\
+	schism/fmt/mdl.c		\
+	schism/fmt/669.c		\
+	schism/fmt/au.c			\
+	schism/fmt/xm.c			\
+	schism/fmt/mt2.c		\
+	schism/fmt/ntk.c		\
+	schism/fmt/dtm.c		\
+	schism/fmt/aiff.c		\
+	schism/util.c			\
+	schism/page_midi.c		\
+	schism/diskwriter_dialog.c	\
+	schism/draw-char.c		\
+	schism/helptext.c		\
+	schism/page_help.c		\
+	schism/slurp.c			\
+	schism/widget-keyhandler.c	\
+	schism/main.c			\
+	schism/page_midiout.c		\
+	schism/page_message.c		\
+	schism/page_loadsample.c	\
+	schism/dialog.c			\
+	schism/page_preferences.c	\
+	schism/widget.c			\
+	schism/config.c			\
+	schism/status.c			\
+	schism/video.c			\
+	schism/sample-view.c		\
+	schism/page_patedit.c		\
+	schism/page_config.c		\
+	schism/draw-pixel.c		\
+	schism/keyboard.c		\
+	schism/page_samples.c		\
+	schism/itf.c			\
+	schism/page_orderpan.c		\
+	schism/midi-core.c		\
+	schism/midi-ip.c		\
+	schism/audio_playback.cc	\
+	schism/config-parser.c		\
+	schism/audio_loadsave.cc	\
+	schism/draw-misc.c		\
+	schism/fakemem.c		\
+	modplug/load_xm.cpp		\
+	modplug/load_psm.cpp		\
+	modplug/load_s3m.cpp		\
+	modplug/tables.cpp		\
+	modplug/load_ult.cpp		\
+	modplug/load_669.cpp		\
+	modplug/load_stm.cpp		\
+	modplug/load_far.cpp		\
+	modplug/load_it.cpp		\
+	modplug/load_mid.cpp		\
+	modplug/load_ams.cpp		\
+	modplug/snd_fx.cpp		\
+	modplug/load_mod.cpp		\
+	modplug/snd_flt.cpp		\
+	modplug/load_wav.cpp		\
+	modplug/load_dsm.cpp		\
+	modplug/load_umx.cpp		\
+	modplug/snd_dsp.cpp		\
+	modplug/load_mt2.cpp		\
+	modplug/snd_eq.cpp		\
+	modplug/load_amf.cpp		\
+	modplug/load_dmf.cpp		\
+	modplug/sndfile.cpp		\
+	modplug/load_okt.cpp		\
+	modplug/load_mtm.cpp		\
+	modplug/load_med.cpp		\
+	modplug/load_dbm.cpp		\
+	modplug/sndmix.cpp		\
+	modplug/load_mdl.cpp		\
+	modplug/load_ptm.cpp		\
+	modplug/mmcmp.cpp		\
+	modplug/fastmix.cpp		\
+	$(files_macosx)			\
+	$(files_alsa)			\
+	$(files_oss)			\
+	$(files_win32mm)		\
+	$(files_x11)			\
+	$(files_gnu_asprintf)		\
+	$(files_gnu_vasprintf)		\
+	$(files_gnu_realpath)		\
+	$(files_gnu_memcmp)		\
+	$(files_mmap)			\
+	$(files_windres)
 
-INCLUDES=-D_USE_AUTOCONF -D_GNU_SOURCE \
+INCLUDES = -D_USE_AUTOCONF -D_GNU_SOURCE \
 	-I$(srcdir)/include -I$(srcdir)/modplug -I. \
 	@SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
 	$(cflags_network) $(cflags_x11)
