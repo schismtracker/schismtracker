@@ -370,6 +370,11 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 				    void (*draw_const) (void), void *data)
 {
 	struct dialog *d = dialogs + num_dialogs;
+
+	/* FIXME | see dialog_create */
+	if (status.dialog_type & DIALOG_MENU)
+		menu_hide();
+
 	num_dialogs++;
 	
 	d->type = DIALOG_CUSTOM;
