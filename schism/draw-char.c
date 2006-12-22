@@ -114,7 +114,10 @@ byte *font_data = font_normal; /* this only needs to be global for itf */
 /* wth? i don't get this... the half width table isn't linear anymore?
    schism dies with "half width char ba not mapped" when i try inserting a
    note fade, but i have no idea what this code does so i'm not touching it.
-	/storlek */
+	/storlek
+   update: fixed note fade bug elsewise. just don't draw it with the whacked-
+   looking sinewave chars and it'll be fine, but i still wanna know how this
+   code works, so i'm leaving these useless comments in here :) */
 static inline int _pack_halfw(int c)
 {
 	switch (c) {
