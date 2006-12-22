@@ -371,10 +371,15 @@ char *get_note_string(int note, char *buf)
                 buf[0] = buf[1] = buf[2] = 205;
                 break;
         case NOTE_FADE:
-		/* this is sure to look "out of place" to anyone */
+		/* this is sure to look "out of place" to anyone
+		   ... yeah, no kidding. /storlek */
+#if 0
                 buf[0] = 185;
 		buf[1] = 186;
 		buf[2] = 185;
+#else
+		buf[0] = buf[1] = buf[2] = 126;
+#endif
                 break;
         default:
                 note--;
