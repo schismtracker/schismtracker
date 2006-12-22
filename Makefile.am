@@ -46,7 +46,8 @@ EXTRA_DIST = \
 bin_PROGRAMS = schismtracker
 
 ## whatever
-noinst_SCRIPTS = scripts/*
+## this broke my build scripts. I'm putting it back -mrsb
+#noinst_SCRIPTS = scripts/*
 
 noinst_HEADERS = \
 	include/auto/build-version.h	\
