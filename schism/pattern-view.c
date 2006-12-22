@@ -587,6 +587,7 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
         switch (note_buf [0])
           {
           case '^':    /* empty notes, note-off and note-cuts */
+	  case '~':
           case 0xCD:
           case 0xAD:
             if (cursor_pos == 1)
