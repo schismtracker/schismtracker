@@ -39,6 +39,15 @@ cflags_win32mm=-DUSE_WIN32MM
 #LIBOBJS+=-lwinmm
 lib_win32mm=-lwinmm
 endif
+if USE_WINDRES
+# Hope this works, I can't test it -storlek
+# If not, try uncommetning the next line --
+#lib_windres=schismres.o
+# and then add $(lib_windres) under schismtracker_LDADD below
+%.o: %.rc
+	$(WINDRES) -I@srcdir@ -i $< -o $@
+files_windres=sys/win32/schismres.rc
+endif
 
 if USE_MACOSX
 files_macosx=sys/macosx/macosx-sdlmain.m sys/macosx/ibook-support.c sys/macosx/midi-macosx.c
@@ -179,17 +188,17 @@ INCLUDES=-D_USE_AUTOCONF -D_GNU_SOURCE \
 	@SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
 	$(cflags_network) $(cflags_x11)
 
-if USE_WINDRES
-files_windres=schismres.o
-endif
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32mm) $(files_windres) \
+schismtracker_LDADD = $(lib_asound) $(lib_win32mm) \
 	@SDL_LIBS@ @LIBM@
 
-if USE_WINDRES
-schismres.o: @srcdir@/sys/win32/schismres.rc
-	$(WINDRES) -I@srcdir@ -i $< -o $@
-endif
-
-
+## cvs snapshot distribution
+## package it under directory "schism-cvs-snapshot/"
+## total hack, but worksforme -storlek
+snapdir = schism-cvs-snapshot
+snapshot: distdir
+	mv $(distdir) $(snapdir)
+	tardir=$(snapdir) && $(am__tar) | bzip2 -9 -c >$(snapdir).tar.bz2
+	mv $(snapdir) $(distdir)
+	$(am__remove_distdir)
