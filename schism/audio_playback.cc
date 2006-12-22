@@ -391,6 +391,9 @@ static void song_reset_play_state()
 			c->nPan = 128;
 			c->nGlobalVol = 64;
 		}
+
+		/* reset VU meters */
+		c->nRealVolume = c->nVUMeter = 0;
 	}
 	mp->m_nGlobalVolume = mp->m_nDefaultGlobalVolume;
 	mp->m_nMusicTempo = mp->m_nDefaultTempo;
