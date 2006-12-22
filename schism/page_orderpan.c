@@ -82,17 +82,11 @@ void prev_order_pattern(void)
         int new_order = current_order - 1;
         int pattern;
 
-RETR:	if (new_order < 0)
+	/* Reverted to 0.2a code. Need to rewrite ORDER_SKIP skipping. */
+	if (new_order < 0)
 		new_order = 0;
 
 	pattern = song_get_orderlist()[new_order];
-
-	if ((!(status.flags & CLASSIC_MODE)) && pattern == ORDER_SKIP) {
-		current_order = new_order;
-		new_order--;
-		goto RETR;
-	}
-
 	if (pattern < 200) {
 		current_order = new_order;
 		orderlist_reposition();
@@ -105,16 +99,11 @@ void next_order_pattern(void)
         int new_order = current_order + 1;
         int pattern;
 
-RETR:	if (new_order > 255)
+	/* Reverted to 0.2a code. Need to rewrite ORDER_SKIP skipping. */
+	if (new_order > 255)
 		new_order = 255;
 
 	pattern = song_get_orderlist()[new_order];
-	if (pattern == ORDER_SKIP) {
-		current_order = new_order;
-		new_order++;
-		goto RETR;
-	}
-
 	if (pattern < 200) {
 		current_order = new_order;
 		orderlist_reposition();
