@@ -294,3 +294,4 @@ snapshot: distdir
 	tardir=$(snapdir) && $(am__tar) | bzip2 -9 -c >$(snapdir).tar.bz2
 	mv $(snapdir) $(distdir)
 	$(am__remove_distdir)
+	test "$(USER)" == storlek && scp $(snapdir).tar.bz2 pair:public_html/schism/dl
