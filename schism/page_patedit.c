@@ -303,19 +303,23 @@ static void options_change_base_octave(void)
 
 static int options_handle_key(struct key_event *k)
 {
+	int s = 0;
+
 	if (!NO_MODIFIER(k->mod))
 		return 0;
 	switch (k->sym) {
 	case SDLK_h: /* row Highlight major/minor */
-		*selected_widget = (*selected_widget == 2) ? 3 : 2;
-		return 1;
-	case SDLK_r: /* number of Rows */
-		*selected_widget = 4;
-		return 1;
-	default:
+		s = (*selected_widget == 2) ? 3 : 2;
 		break;
+	case SDLK_r: /* number of Rows */
+		s = 4;
+		break;
+	default:
+		return 0;
 	}
-	return 0;
+	*selected_widget = s;
+	status.flags |= NEED_UPDATE;
+	return 1;
 }
 
 /* the base octave is changed directly when the thumbbar is changed.
