@@ -1437,6 +1437,10 @@ void video_mousecursor(int vis)
 	if (vis == -1) {
 		/* toggle */
 		video.mouse.visible = !video.mouse.visible;
+		/* maybe this shouldn't happen in classic mode?
+		   does anyone care? */
+		status_text_flash("Mouse cursor %s",
+				  video.mouse.visible ? "enabled" : "disabled");
 	} else if (vis == 0 || vis == 1) {
 		video.mouse.visible = vis;
 	}
@@ -1447,8 +1451,6 @@ void video_mousecursor(int vis)
 	} else {
 		SDL_ShowCursor(SDL_DISABLE);
 	}
-	/* maybe this shouldn't happen in classic mode? does anyone care? */
-	status_text_flash("Mouse cursor %s", video.mouse.visible ? "enabled" : "disabled");
 }
 
 void video_translate(unsigned int vx, unsigned int vy,
