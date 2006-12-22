@@ -49,6 +49,7 @@ the banks are:
 	0x10000080
 			bios font
 			this layout looks surprisingly like a real vga card
+			(mostly because it was ripped from one ;)
 				fg is nybble in bits 8-11
 				bg is nybble in bits 12-15
 				ch is lower byte
@@ -76,11 +77,14 @@ the banks are:
 
 /* preprocessor stuff */
 
-#define CHECK_INVERT(tl,br,n) do { if (status.flags & INVERTED_PALETTE) {\
-		n = tl;\
-		tl = br;\
-		br = n;\
-	} } while(0) \
+#define CHECK_INVERT(tl,br,n) \
+do {						\
+	if (status.flags & INVERTED_PALETTE) {	\
+		n = tl;				\
+		tl = br;			\
+		br = n;				\
+	}					\
+} while(0)
 
 
 /* --------------------------------------------------------------------- */
@@ -106,6 +110,11 @@ byte *font_data = font_normal; /* this only needs to be global for itf */
 
 /* --------------------------------------------------------------------- */
 /* half-width characters */
+
+/* wth? i don't get this... the half width table isn't linear anymore?
+   schism dies with "half width char ba not mapped" when i try inserting a
+   note fade, but i have no idea what this code does so i'm not touching it.
+	/storlek */
 static inline int _pack_halfw(int c)
 {
 	switch (c) {

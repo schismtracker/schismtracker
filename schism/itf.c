@@ -406,7 +406,7 @@ static inline void draw_helptext(void)
 			draw_char(*ptr, column, line, 12, 0);
 		ptr++;
 	}
-#define M "(c) 2003-2005 chisel, (c) 2005-2006 Mrs. Brisby"
+#define M "(c) 2003-2007 Storlek and Mrs. Brisby"
 	draw_text((unsigned char *) M, 78-sizeof(M), 46, 1, 0);
 #undef M
 }

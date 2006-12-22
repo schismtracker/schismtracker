@@ -2394,6 +2394,7 @@ static void pattern_editor_redraw(void)
 	const struct track_view *track_view;
 	int total_rows;
 	int i, j, fg, bg;
+	int mc = (status.flags & INVERTED_PALETTE) ? 1 : 3; /* mask color */
 	int pattern_is_playing = ((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) != 0
 				  && current_pattern == playing_pattern);
 
@@ -2495,35 +2496,35 @@ static void pattern_editor_redraw(void)
 				if (edit_pos_to_copy_mask[current_position] == i) {
 					if (edit_copy_mask & (1 << i)) {
 						for (j = 0; j < cl[i]; j++) {
-							draw_char(171, chan_drawpos + cp[i] + j, 47, 3, 2);
+							draw_char(171, chan_drawpos + cp[i] + j, 47, mc, 2);
 						}
 					} else {
 						for (j = 0; j < cl[i]; j++) {
-							draw_char(169, chan_drawpos + cp[i] + j, 47, 3, 2);
+							draw_char(169, chan_drawpos + cp[i] + j, 47, mc, 2);
 						}
 					}
 				} else if (current_position == 0) {
 					if (edit_copy_mask & (1 << i)) {
 						for (j = 0; j < cl[i]; j++) {
-							draw_char(169, chan_drawpos + cp[i] + j, 47, 3, 2);
+							draw_char(169, chan_drawpos + cp[i] + j, 47, mc, 2);
 						}
 					}
 				} else if (edit_copy_mask & (1 << i)) {
 					for (j = 0; j < cl[i]; j++) {
-						draw_char(170, chan_drawpos + cp[i] + j, 47, 3, 2);
+						draw_char(170, chan_drawpos + cp[i] + j, 47, mc, 2);
 					}
 				}
 			}
 		}
 		if (channel_multi[chan-1]) {
 			if (track_view_scheme[chan_pos] == 0) {
-				draw_char(172, chan_drawpos + 3, 47, 3, 2);
+				draw_char(172, chan_drawpos + 3, 47, mc, 2);
 			} else if (track_view_scheme[chan_pos] < 3) {
-				draw_char(172, chan_drawpos + 2, 47, 3, 2);
+				draw_char(172, chan_drawpos + 2, 47, mc, 2);
 			} else if (track_view_scheme[chan_pos] == 3) {
-				draw_char(172, chan_drawpos + 1, 47, 3, 2);
+				draw_char(172, chan_drawpos + 1, 47, mc, 2);
 			} else if (current_position < 2) {
-				draw_char(172, chan_drawpos, 47, 3, 2);
+				draw_char(172, chan_drawpos, 47, mc, 2);
 			}
 		}
 
