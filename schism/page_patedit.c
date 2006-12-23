@@ -242,11 +242,11 @@ static struct widget options_widgets[8];
 static int options_link_split[] = { 5, 6, -1 };
 static int options_selected_widget = 0;
 
-static void options_close(UNUSED void *data)
+static void options_close(void *data)
 {
 	int old_size, new_size;
 	
-	options_selected_widget = *selected_widget;
+	options_selected_widget = ((struct dialog *) data)->selected_widget;
 	
 	skip_value = options_widgets[1].d.thumbbar.value;
 	row_highlight_minor = options_widgets[2].d.thumbbar.value;
@@ -261,22 +261,6 @@ static void options_close(UNUSED void *data)
 		current_row = MIN(current_row, new_size - 1);
 		pattern_editor_reposition();
 	}
-}
-
-static struct widget template_error_widgets[1];
-static void template_error_draw(void)
-{
- 	draw_text((const unsigned char *)"Template Error", 33, 25, 0, 2);
- 	draw_text((const unsigned char *)"No note in the top left position", 23, 27, 0, 2);
- 	draw_text((const unsigned char *)"of the clipboard on which to", 25, 28, 0, 2);
- 	draw_text((const unsigned char *)"base translations.", 31, 29, 0, 2);
-/*
-         Template Error
-No note in the top left position
-  of the clipboard on which to
-       base translations.
-*/
-
 }
 
 static void options_draw_const(void)
@@ -301,44 +285,26 @@ static void options_change_base_octave(void)
 	kbd_set_current_octave(options_widgets[0].d.thumbbar.value);
 }
 
-static int options_handle_key(struct key_event *k)
-{
-	int s = 0;
-
-	if (!NO_MODIFIER(k->mod))
-		return 0;
-	switch (k->sym) {
-	case SDLK_h: /* row Highlight major/minor */
-		s = (*selected_widget == 2) ? 3 : 2;
-		break;
-	case SDLK_r: /* number of Rows */
-		s = 4;
-		break;
-	default:
-		return 0;
-	}
-	*selected_widget = s;
-	status.flags |= NEED_UPDATE;
-	return 1;
-}
-
 /* the base octave is changed directly when the thumbbar is changed.
  * anything else can wait until the dialog is closed. */
 void pattern_editor_display_options(void)
 {
 	struct dialog *dialog;
 	
-	create_thumbbar(options_widgets + 0, 40, 23, 2, 7, 1, 1, options_change_base_octave, 0, 8);
-	create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
-	create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
-	create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
-	create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
-	create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
-			    NULL, "Link", 3, options_link_split);
-	create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
-			    NULL, "Split", 3, options_link_split);
-	create_button(options_widgets + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes_NULL, "Done", 3);
-	
+	if (options_widgets[0].width == 0) {
+		/* haven't built it yet */
+		create_thumbbar(options_widgets + 0, 40, 23, 2, 7, 1, 1, options_change_base_octave, 0, 8);
+		create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
+		create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
+		create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
+		create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
+		create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
+				    NULL, "Link", 3, options_link_split);
+		create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
+				    NULL, "Split", 3, options_link_split);
+		create_button(options_widgets + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes_NULL, "Done", 3);
+	}
+
 	options_widgets[0].d.thumbbar.value = kbd_get_current_octave();
 	options_widgets[1].d.thumbbar.value = skip_value;
 	options_widgets[2].d.thumbbar.value = row_highlight_minor;
@@ -348,10 +314,21 @@ void pattern_editor_display_options(void)
 	
 	dialog = dialog_create_custom(10, 18, 60, 26, options_widgets, 8, options_selected_widget,
 				      options_draw_const, NULL);
-	dialog->handle_key = options_handle_key;
 	dialog->action_yes = options_close;
 	dialog->action_cancel = options_close;
+	dialog->data = dialog;
 }
+
+
+static struct widget template_error_widgets[1];
+static void template_error_draw(void)
+{
+ 	draw_text((const unsigned char *)"Template Error", 33, 25, 0, 2);
+ 	draw_text((const unsigned char *)"No note in the top left position", 23, 27, 0, 2);
+ 	draw_text((const unsigned char *)"of the clipboard on which to", 25, 28, 0, 2);
+ 	draw_text((const unsigned char *)"base translations.", 31, 29, 0, 2);
+}
+
 /* --------------------------------------------------------------------------------------------------------- */
 /* pattern length dialog */
 static struct widget length_edit_widgets[4];
