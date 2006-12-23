@@ -89,8 +89,9 @@ static void handle_file_entered_L(char *ptr)
 {
 	dmoz_filelist_t tmp;
 	struct stat sb;
+	const char *s;
 	dmoz_file_t *f;
-	int r;
+	int r, i;
 
 /* these shenanagans force the file to take another trip... */
 	if (stat(ptr, &sb) == -1) return;
@@ -101,11 +102,28 @@ static void handle_file_entered_L(char *ptr)
 	dmoz_free(&tmp, NULL);
 
 	if (r && song_load(ptr)) {
+		r = 4;
+		for (s = (const char *)ptr; *s; s++) {
+			if (*s == '.') {
+				for (i = 0; diskwriter_drivers[i]; i++) {
+					if (strcasecmp(s+1,
+					diskwriter_drivers[i]->name) == 0) {
+						r = i+5;
+						break;
+					}
+				}
+			}
+		}
+		widgets_savemodule[4].d.togglebutton.state = 0;
+		for (i = 0; diskwriter_drivers[i]; i++) {
+			widgets_savemodule[5+i].d.togglebutton.state = 0;
+		}
+		widgets_savemodule[r].d.togglebutton.state = 1;
+
 		/* set_page(PAGE_LOG); */
 		set_page(PAGE_BLANK);
 	}
 }
-
 
 static void do_save_song(void *ptr)
 {
@@ -121,24 +139,21 @@ static void do_save_song(void *ptr)
 			break;
 		}
 	}
-	if (!typ) {
-		for (s = (const char *)ptr; *s; s++) {
-			if (*s == '.') {
-				for (i = 0; diskwriter_drivers[i]; i++) {
-					if (strcasecmp(s+1,
-					diskwriter_drivers[i]->name) == 0) {
-						typ = diskwriter_drivers[i]->name;
-					}
-				}
-			}
-		}
-		if (!typ) typ = "IT214";
-	}
 	if (song_save(ptr, typ)) {
 		set_page(PAGE_LOG);
 		/* set_page(PAGE_BLANK); */
 	}
 }
+void save_song_or_save_as(void)
+{
+	const char *f = song_get_filename();
+	if (f && *f) {
+		do_save_song((void*)f);
+	} else {
+		set_page(PAGE_SAVE_MODULE);
+	}
+}
+
 static void do_save_song_overwrite(void *ptr)
 {
 	struct stat st;
@@ -837,11 +852,6 @@ void load_module_load_page(struct page *page)
 static void save_module_set_page(void)
 {
 	int i;
-
-	widgets_savemodule[4].d.togglebutton.state = 1;
-	for (i = 0; diskwriter_drivers[i]; i++) {
-		widgets_savemodule[5+i].d.togglebutton.state = 0;
-	}
 
 	handle_file_entered = handle_file_entered_S;
 	

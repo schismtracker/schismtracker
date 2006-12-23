@@ -1068,9 +1068,23 @@ NULL,
 int song_save(const char *file, const char *qt)
 {
         //const char *base = get_basename(file);
+	const char *s = 0;
 	int i;
 
-	// ugly #3
+	if (!qt) {
+		for (s = (const char *)file; *s; s++) {
+			if (*s != '.') continue;
+			for (i = 0; diskwriter_drivers[i]; i++) {
+				if (strcasecmp(s+1,
+				diskwriter_drivers[i]->name) == 0) {
+					qt = diskwriter_drivers[i]->name;
+				}
+				break;
+			}
+		}
+	}
+
+	if (!qt) qt = "IT214";
 	mp->m_rowHighlightMajor = row_highlight_major;
 	mp->m_rowHighlightMinor = row_highlight_minor;
 
@@ -1086,7 +1100,7 @@ int song_save(const char *file, const char *qt)
 			strerror(errno));
 			return 0;
 		}
-		if (strcmp(qt, "IT214") == 0) {
+		if (strcmp(qt, "WAV") != 0) {
 			status.flags &= ~SONG_NEEDS_SAVE;
 			if (strcasecmp(song_filename, file))
 				song_set_filename(file);
