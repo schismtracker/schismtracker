@@ -161,6 +161,8 @@ void status_text_redraw(void)
 				draw_playing_channels();
 				break;
 			}
+		default:
+			break;
                 }
         }
 }

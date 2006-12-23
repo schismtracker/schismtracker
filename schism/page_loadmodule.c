@@ -129,7 +129,7 @@ static void do_save_song(void *ptr)
 {
 	int i;
 	const char *typ = NULL;
-	const char *s;
+	/*const char *s;*/
 
 	set_page(PAGE_LOG);
 
@@ -851,8 +851,6 @@ void load_module_load_page(struct page *page)
 
 static void save_module_set_page(void)
 {
-	int i;
-
 	handle_file_entered = handle_file_entered_S;
 	
 	update_directory();
