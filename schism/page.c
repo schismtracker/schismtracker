@@ -1105,16 +1105,6 @@ void handle_key(struct key_event * k)
 }
 
 /* --------------------------------------------------------------------- */
-/* Jeffrey, dude, you made this HARD TO DO :) */
-
-#ifdef RELEASE_VERSION
-#define TOP_BANNER_NORMAL "Schism Tracker v" VERSION ""
-#else
-#include "auto/build-version.h"
-#define TOP_BANNER_NORMAL "Schism Tracker build " BUILD_VERSION
-#endif
-#define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
-
 static void draw_top_info_const(void)
 {
         int n, tl, br;
@@ -1127,13 +1117,8 @@ static void draw_top_info_const(void)
 		br = 3;
 	}
 
-        /* gcc optimizes out the strlen's here :) */
-        if (status.flags & CLASSIC_MODE) {
-		draw_text((const unsigned char *)TOP_BANNER_CLASSIC, (80 - strlen(TOP_BANNER_CLASSIC)) / 2, 1, 0, 2);
-        } else {
-                draw_text((const unsigned char *)TOP_BANNER_NORMAL, (80 - strlen(TOP_BANNER_NORMAL)) / 2, 1, 0, 2);
-        }
-
+	draw_text((const unsigned char *)schism_banner(),
+					(80 - strlen(schism_banner())) / 2, 1, 0, 2);
         draw_text((const unsigned char *)"Song Name", 2, 3, 0, 2);
         draw_text((const unsigned char *)"File Name", 2, 4, 0, 2);
         draw_text((const unsigned char *)"Order", 6, 5, 0, 2);
