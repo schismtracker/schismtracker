@@ -292,23 +292,6 @@ void new_song_dialog(void)
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
-
-void save_song_or_save_as(void)
-{
-	const char *f = song_get_filename();
-	
-	if (f[0]) {
-		if (song_save(f, "IT214")) { /*quicklynow! */
-			set_page(PAGE_BLANK);
-		} else {
-			set_page(PAGE_LOG);
-		}
-	} else {
-		set_page(PAGE_SAVE_MODULE);
-	}
-}
-
-/* --------------------------------------------------------------------------------------------------------- */
 /* This is an ugly monster. */
 /* Jesus, you're right. WTF is all this? I'm lost. :/ -storlek */
 static int _mp_active = 0;
