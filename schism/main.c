@@ -387,12 +387,11 @@ static void parse_options(int argc, char **argv)
 #else
 			puts("Schism Tracker v" VERSION "\n");
 #endif
-			puts("Copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>");
-			puts("Copyright (c) 2005-2006 Mrs. Brisby <mrs.brisby@nimh.org>");
-			printf("This program is free software; you can redistribute it and/or modify\n");
-			printf("it under the terms of the GNU General Public License as published by\n");
-			printf("the Free Software Foundation; either version 2 of the License, or\n");
-			printf("(at your option) any later version.\n");
+			printf("Copyright (c) 2003-2007 Storlek and Mrs. Brisby\n"
+			       "This program is free software; you can redistribute it and/or modify\n"
+			       "it under the terms of the GNU General Public License as published by\n"
+			       "the Free Software Foundation; either version 2 of the License, or\n"
+			       "(at your option) any later version.\n");
 			frag_free(frag);
 			exit(0);
 		case O_HELP:
