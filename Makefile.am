@@ -39,6 +39,7 @@ icons = \
 EXTRA_DIST = \
 	COPYING.frag-opt		\
 	COPYING.libmodplug		\
+	include/auto/README		\
 	$(helptexts)			\
 	$(fonts)			\
 	$(icons)
