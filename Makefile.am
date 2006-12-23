@@ -233,6 +233,7 @@ schismtracker_SOURCES = \
 	schism/audio_loadsave.cc	\
 	schism/draw-misc.c		\
 	schism/fakemem.c		\
+	schism/version.c		\
 	modplug/load_xm.cpp		\
 	modplug/load_psm.cpp		\
 	modplug/load_s3m.cpp		\
