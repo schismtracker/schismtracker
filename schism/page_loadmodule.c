@@ -542,20 +542,6 @@ static int file_list_handle_key(struct key_event * k)
 {
         int new_file = current_file;
 
-	if (k->mouse) {
-		if (k->x >= 3 && k->x <= 46 && k->y >= 13 && k->y <= 43) {
-			if (k->mouse == MOUSE_CLICK) {
-				new_file = (k->y - 13) + top_file;
-			} else if (k->mouse == MOUSE_SCROLL_UP) {
-				new_file--;
-			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-				new_file++;
-			}
-		} else {
-			return 0;
-		}
-	}
-
         switch (k->sym) {
         case SDLK_UP:
                 new_file--;
@@ -603,18 +589,42 @@ static int file_list_handle_key(struct key_event * k)
 		}
         }
 
-	if (k->mouse == MOUSE_CLICK) {
-		if (!k->state) return 0;
-	} else if (k->mouse == MOUSE_DBLCLICK) {
+	if (k->mouse && !(k->x >=3 && k->x <= 46 && k->y >= 13 && k->y <= 43))
+		return 0;
+	switch (k->mouse) {
+	case MOUSE_CLICK:
+		if (!k->state)
+			return 0;
+		new_file = (k->y - 13) + top_file;
+		break;
+	case MOUSE_DBLCLICK:
 		if (current_file < flist.num_files) {
 			dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 			handle_file_entered(flist.files[current_file]->path);
 		}
                 search_text_clear();
 		return 1;
-	} else {
-		if (k->state) return 1;
+	case MOUSE_SCROLL_UP:
+	case MOUSE_SCROLL_DOWN:
+		if (!k->state)
+			return 0;
+		top_file += (k->mouse == MOUSE_SCROLL_UP) ? -3 : 3;
+		/* don't allow scrolling down past either end.
+		   this can't be CLAMP'd because the first check might scroll
+		   too far back if the list is small.
+		   (hrm, should add a BOTTOM_FILE macro or something) */
+		if (top_file > flist.num_files - 31)
+			top_file = flist.num_files - 31;
+		if (top_file < 0)
+			top_file = 0;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	default:
+		/* hmm? */
+		if (k->state)
+			return 1;
 	}
+
         new_file = CLAMP(new_file, 0, flist.num_files - 1);
 	if (new_file < 0) new_file = 0;
         if (new_file != current_file) {
