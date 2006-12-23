@@ -69,6 +69,8 @@ normal dialog_yes handler -- it needs to destroy the prompt dialog first so that
 points to whatever thumbbar actually triggered the dialog box. */
 static void thumbbar_prompt_update(void)
 {
+	/* FIXME: what does IT do with invalid data?
+	   entering "ack" is currently interpreted as zero, which is probably wrong */
 	int n = atoi(thumbbar_prompt_buf);
 
 	dialog_destroy();
@@ -88,13 +90,15 @@ static void thumbbar_prompt_draw_const(void)
 	draw_fill_chars(44, 26, 47, 26, 0);
 }
 
-static int thumbbar_prompt_value(UNUSED struct widget *widget, struct key_event *k)
+static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 {
 	int c;
 	const char *asciidigits = "0123456789";
 	struct dialog *dialog;
 	
 	if (k->sym == SDLK_MINUS) {
+		if (widget->d.thumbbar.min >= 0)
+			return 0;
 		c = '-';
 	} else {
 		c = numeric_key_event(k, 0);
