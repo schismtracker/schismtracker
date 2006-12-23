@@ -161,11 +161,6 @@ void status_text_redraw(void)
 				draw_playing_channels();
 				break;
 			}
-			/* else... fall through */
-		default:
-			/* clear the status area? (not necessary, as every redraw clears the whole screen)
-			draw_fill_chars(2, 9, 62, 9, 2); */
-                        break;
                 }
         }
 }
