@@ -70,9 +70,13 @@ static int _fixup_ignore_globals(struct key_event *k)
 	case SDLK_ESCAPE:
 		/* use default handler */
 		return 0;
+	case SDLK_F1...SDLK_F5:
+	case SDLK_F9...SDLK_F12:
+		dialog_destroy();
+		return 0;
 	default:
 		break;
-	};
+	}
 	/* this way, we can't pull up help here */
 	return 1;
 }

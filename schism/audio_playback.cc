@@ -418,6 +418,7 @@ static void song_reset_play_state()
 	mp->stop_at_order = -1;
 	mp->stop_at_row = -1;
 	mp->ResetTimestamps();
+	mp->ResetMidiCfg();
 	samples_played = 0;
 }
 
