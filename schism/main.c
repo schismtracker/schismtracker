@@ -186,12 +186,7 @@ static void display_init(void)
 			SDL_DEFAULT_REPEAT_INTERVAL);
 #endif
 
-#ifdef RELEASE_VERSION
-	SDL_WM_SetCaption("Schism Tracker v" VERSION, "Schism Tracker");
-#else
-#include "auto/build-version.h"
-	SDL_WM_SetCaption("Schism Tracker build " BUILD_VERSION, "Schism Tracker");
-#endif
+	SDL_WM_SetCaption(schism_banner(), "Schism Tracker");
 	SDL_EnableUNICODE(1);
 }
 
@@ -878,7 +873,7 @@ static void dump_misc_about_text(void)
 {
 	const char *text[] = {
 		"Schism Tracker is Copyright (C) 2003-2007 Storlek and Mrs. Brisby.",
-		/* --------------------------------------------------------------------- */
+		"",
 		"Contains additional code by Olivier Lapicque, Markus Fick, Adam Goode,",
 		"Ville Joleka, Juan Linietsky, Juha Niemimaki, and others.",
 		"Based on Impulse Tracker which is Copyright (C) 1995-1998 Jeffrey Lim.",
@@ -896,8 +891,12 @@ static void dump_misc_about_text(void)
 	};
 	int n;
 	
+	log_append(3, 0, schism_banner());
+	log_nl();
+
 	for (n = 0; text[n]; n++)
 		log_append(6, 0, text[n]);
+	log_nl();
 }
 
 int main(int argc, char **argv) NORETURN;
@@ -945,6 +944,8 @@ int main(int argc, char **argv)
 	save_font();
 	shutdown_process |= 2;
 
+	dump_misc_about_text();
+
 	song_initialise();
 	cfg_load();
 
@@ -975,8 +976,6 @@ int main(int argc, char **argv)
 	load_pages();
 	main_song_changed_cb();
 	
-	dump_misc_about_text();
-
 	shutdown_process |= 8;
 
 	if (initial_song && !initial_dir)
