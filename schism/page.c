@@ -1596,6 +1596,7 @@ int song_load(const char *filename)
 			"Current module not saved. Proceed?",
                               real_load_ok, free, 1, tmp);
 		/* hack to make cancel default */
+		/* that's not a hack, that's just how you do it :) -storlek */
 		d->selected_widget = 1;
 		/* um... */
 		return 0;
@@ -1603,6 +1604,7 @@ int song_load(const char *filename)
 		return song_load_unchecked(filename);
 	}
 }
+
 void show_exit_prompt(void)
 {
         /* since this can be called with a dialog already active (on sdl
@@ -1610,16 +1612,17 @@ void show_exit_prompt(void)
          * instance) it needs to get rid of any other open dialogs.
          * (dialog_create takes care of closing menus.) */
         dialog_destroy_all();
-
-        if (status.flags & CLASSIC_MODE) {
-                dialog_create(DIALOG_OK_CANCEL, "Exit Impulse Tracker?",
-                              exit_ok, NULL, 0, NULL);
-	} else if (status.current_page == PAGE_FONT_EDIT
-	&& !(status.flags & STARTUP_FONTEDIT)) {
+	
+	if (status.current_page == PAGE_FONT_EDIT) {
+		/* maybe if we didn't start with the font editor, just exit
+		   without prompting */
                 dialog_create(DIALOG_OK_CANCEL, "Exit Font Editor?",
                               font_exit_ok, NULL, 0, NULL);
-        } else {
-                dialog_create(DIALOG_OK_CANCEL, "Exit Schism Tracker?",
+	} else {
+                dialog_create(DIALOG_OK_CANCEL,
+			      ((status.flags & CLASSIC_MODE)
+			       ? "Exit Impulse Tracker?"
+			       : "Exit Schism Tracker?"),
                               exit_ok, NULL, 0, NULL);
         }
 }
