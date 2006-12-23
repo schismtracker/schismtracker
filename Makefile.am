@@ -288,11 +288,15 @@ schismtracker_DEPENDENCIES = $(files_windres)
 schismtracker_LDADD = $(lib_asound) $(lib_win32mm) \
 	@SDL_LIBS@ @LIBM@
 
+## this needs cvs2cl.pl, blarg
+ChangeLog:
+	cvs2cl.pl
+
 ## cvs snapshot distribution
 ## package it under directory "schism-cvs-snapshot/"
 ## total hack, but worksforme -storlek
 snapdir = schism-cvs-snapshot
-snapshot: distdir
+snapshot: ChangeLog distdir
 	mv $(distdir) $(snapdir)
 	tardir=$(snapdir) && $(am__tar) | bzip2 -9 -c >$(snapdir).tar.bz2
 	mv $(snapdir) $(distdir)
