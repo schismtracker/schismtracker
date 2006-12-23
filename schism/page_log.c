@@ -135,7 +135,10 @@ inline void log_append(int color, int must_free, const char *text)
         if (status.current_page == PAGE_LOG)
                 status.flags |= NEED_UPDATE;
 }
-
+inline void log_nl(void)
+{
+	log_append(0,0,"");
+}
 void log_appendf(int color, const char *format, ...)
 {
         char *ptr;
