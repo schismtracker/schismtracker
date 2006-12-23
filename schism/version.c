@@ -27,6 +27,28 @@
 #include "sdlmain.h"
 
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
+#define TOP_BANNER_NORMAL "Schism Tracker v" VERSION
+#define TOP_BANNER_CVS "Schism Tracker CVS built on Y___-m_-d_ H_:M_"
+
+/*
+Ok, here's a thought... what if we kept the old top banner that just had "CVS"
+instead of a version number, and instead displayed the build date in, say, the
+about box? We could also chuck the whole string in the log page for CVS builds.
+I don't suppose it'd hurt anything, and it would provide potentially useful
+information.
+
+Oh and also, would -DBUILD_DATE=`date` or something work? That'd be interesting
+for "real" builds as well... and it would also serve as a sort of indicator to
+how well a particular package maintainer is keeping up with the version... kind
+of in the same mindset as 0-day-warez :)
+
+Note there'd be a difference between the CVS source date and the *build* date,
+so both would be applicable -- that is, always show what date it was built, but
+dump the uglified dollar-sign revision string to the log page for CVS builds as
+well. Then we'd be able to determine pretty much everything about what version
+someone is using -- including whether they pulled from CVS themselves and built
+it, or downloaded a prebuilt package, etc.
+*/
 
 #ifndef RELEASE_VERSION
 #include "auto/build-version.h"
@@ -35,36 +57,51 @@ static char banner[80] = { 0 };
 
 const char *schism_banner(void)
 {
+#ifndef RELEASE_VERSION
+	char *ptr;
+#endif
 	if (status.flags & CLASSIC_MODE) return TOP_BANNER_CLASSIC;
 #ifdef RELEASE_VERSION
-	return "Schism Tracker v" VERSION "";
+	return TOP_BANNER_NORMAL;
 #else
 	/* this code is for CVS builds... but nobody will notice */
-	if (*banner) return banner;
-#define M "Schism Tracker CVS built at "
-	strcpy(banner, M "XXXX-XX-XX XX:XX:XX");
-#define T (sizeof(M)-1)
-	banner[T+0] = BUILD_VERSION[7];
-	banner[T+1] = BUILD_VERSION[8];
-	banner[T+2] = BUILD_VERSION[9];
-	banner[T+3] = BUILD_VERSION[10];
-	/* XXX fixme in the year 10,000 :) */
-	banner[T+5] = BUILD_VERSION[12];
-	banner[T+6] = BUILD_VERSION[13];
-	/* Date */
-	banner[T+8] = BUILD_VERSION[15];
-	banner[T+9] = BUILD_VERSION[16];
-	/* Hours */
-	banner[T+11]= BUILD_VERSION[18];
-	banner[T+12]= BUILD_VERSION[19];
-	/* Minutes */
-	banner[T+14]= BUILD_VERSION[21];
-	banner[T+15]= BUILD_VERSION[22];
-	/* Seconds */
-	banner[T+17]= BUILD_VERSION[24];
-	banner[T+18]= BUILD_VERSION[25];
+	if (banner[0] == 0) {
+		strcpy(banner, TOP_BANNER_CVS);
 
-	banner[T+19] = '\0';
+		/* fix in the year 10,000 :) */
+		if ((ptr = strstr(banner, "Y___")) != NULL) {
+			/* Year */
+			ptr[0] = BUILD_VERSION[7];
+			ptr[1] = BUILD_VERSION[8];
+			ptr[2] = BUILD_VERSION[9];
+			ptr[3] = BUILD_VERSION[10];
+		}
+		if ((ptr = strstr(banner, "m_")) != NULL) {
+			/* Month */
+			ptr[0] = BUILD_VERSION[12];
+			ptr[1] = BUILD_VERSION[13];
+		}
+		if ((ptr = strstr(banner, "d_")) != NULL) {
+			/* Day */
+			ptr[0] = BUILD_VERSION[15];
+			ptr[1] = BUILD_VERSION[16];
+		}
+		if ((ptr = strstr(banner, "H_")) != NULL) {
+			/* Hour */
+			ptr[0] = BUILD_VERSION[18];
+			ptr[1] = BUILD_VERSION[19];
+		}
+		if ((ptr = strstr(banner, "M_")) != NULL) {
+			/* Minute */
+			ptr[0] = BUILD_VERSION[21];
+			ptr[1] = BUILD_VERSION[22];
+		}
+		if ((ptr = strstr(banner, "S_")) != NULL) {
+			/* Second */
+			ptr[0] = BUILD_VERSION[24];
+			ptr[1] = BUILD_VERSION[25];
+		}
+	}
 	return banner;
 #endif
 }
