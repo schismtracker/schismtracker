@@ -365,6 +365,7 @@ inline int kbd_get_alnum(struct key_event *k);
 /* --------------------------------------------------------------------- */
 /* log.c */
 
+void log_nl(void);
 void log_append(int color, int must_free, const char *text);
 void log_appendf(int color, const char *format, ...)
         __attribute__ ((format(printf, 2, 3)));
@@ -445,6 +446,9 @@ unsigned int memused_history(void);
 void memused_songchanged(void);
 
 void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
+
+/* :) */
+const char *schism_banner(void);
 
 /* --------------------------------------------------------------------- */
 
