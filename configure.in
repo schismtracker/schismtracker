@@ -82,7 +82,7 @@ fi
 
 dnl Functions
 AC_FUNC_STRFTIME
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp asprintf vasprintf realpath memcmp mmap socket)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp asprintf vasprintf realpath memcmp mmap socket nice)
 AM_CONDITIONAL([NEED_GNU_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
 AM_CONDITIONAL([NEED_GNU_VASPRINTF], [test "$ac_cv_func_vasprintf" = "no"])
 AM_CONDITIONAL([NEED_GNU_REALPATH], [test "$ac_cv_func_realpath" = "no"])
