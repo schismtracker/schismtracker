@@ -1177,20 +1177,15 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 		{
 			len = pIns->nLength * 2;
 			if (len > dwMemLength) break;
-			short int *pSample = (short int *)pIns->pSample;
-			short int *p = (short int *)lpMemFile;
+			short *pSample = (short *)pIns->pSample;
+			short *p = (short *)lpMemFile;
 			unsigned short tmp;
-			volatile short int *tmp2;
 			int delta16 = 0;
 			for (UINT j=0; j<len; j+=2)
 			{
-				tmp = *((unsigned short *)p);
-				p++;
-
-				tmp = bswapLE16(tmp);
-				tmp2 = (volatile signed short*)&tmp;
-				delta16 += (*tmp2);
-				*pSample++ = (short int)delta16;
+				tmp = *((unsigned short *)p++);
+				delta16 += bswapLE16(tmp);
+				*pSample++ = (short) delta16;
 			}
 		}
 		break;
