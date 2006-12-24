@@ -59,8 +59,8 @@ BOOL CSoundFile::ReadMTM(LPCBYTE lpStream, DWORD dwMemLength)
 	 || (!pmh->lastpattern) || (pmh->lastpattern > MAX_PATTERNS)) return FALSE;
 	strncpy(m_szNames[0], pmh->songname, 20);
 	m_szNames[0][20] = 0;
-	if (dwMemPos + 37*pmh->numsamples + 128 + 192*pmh->numtracks
-	 + 64 * (pmh->lastpattern+1) + pmh->commentsize >= dwMemLength) return FALSE;
+	if (dwMemPos + 37*pmh->numsamples + 128 + 192*bswapLE16(pmh->numtracks)
+	 + 64 * (pmh->lastpattern+1) + bswapLE16(pmh->commentsize) >= dwMemLength) return FALSE;
 	m_nType = MOD_TYPE_MTM;
 	m_nSamples = pmh->numsamples;
 	m_nChannels = pmh->numchannels;
@@ -72,12 +72,12 @@ BOOL CSoundFile::ReadMTM(LPCBYTE lpStream, DWORD dwMemLength)
 		m_szNames[i][22] = 0;
 		Ins[i].nVolume = pms->volume << 2;
 		Ins[i].nGlobalVol = 64;
-		DWORD len = pms->length;
+		DWORD len = bswapLE32(pms->length);
 		if ((len > 4) && (len <= MAX_SAMPLE_LENGTH))
 		{
 			Ins[i].nLength = len;
-			Ins[i].nLoopStart = pms->reppos;
-			Ins[i].nLoopEnd = pms->repend;
+			Ins[i].nLoopStart = bswapLE32(pms->reppos);
+			Ins[i].nLoopEnd = bswapLE32(pms->repend);
 			if (Ins[i].nLoopEnd > Ins[i].nLength) Ins[i].nLoopEnd = Ins[i].nLength;
 			if (Ins[i].nLoopStart + 4 >= Ins[i].nLoopEnd) Ins[i].nLoopStart = Ins[i].nLoopEnd = 0;
 			if (Ins[i].nLoopEnd) Ins[i].uFlags |= CHN_LOOP;
@@ -104,14 +104,14 @@ BOOL CSoundFile::ReadMTM(LPCBYTE lpStream, DWORD dwMemLength)
 	dwMemPos += 128;
 	// Reading Patterns
 	LPCBYTE pTracks = lpStream + dwMemPos;
-	dwMemPos += 192 * pmh->numtracks;
+	dwMemPos += 192 * bswapLE16(pmh->numtracks);
 	LPWORD pSeq = (LPWORD)(lpStream + dwMemPos);
 	for (UINT pat=0; pat<=pmh->lastpattern; pat++)
 	{
 		PatternSize[pat] = 64;
 		PatternAllocSize[pat] = 64;
 		if ((Patterns[pat] = AllocatePattern(64, m_nChannels)) == NULL) break;
-		for (UINT n=0; n<32; n++) if ((pSeq[n]) && (pSeq[n] <= pmh->numtracks) && (n < m_nChannels))
+		for (UINT n=0; n<32; n++) if ((pSeq[n]) && (pSeq[n] <= bswapLE16(pmh->numtracks)) && (n < m_nChannels))
 		{
 			LPCBYTE p = pTracks + 192 * (pSeq[n]-1);
 			MODCOMMAND *m = Patterns[pat] + n;
@@ -133,9 +133,9 @@ BOOL CSoundFile::ReadMTM(LPCBYTE lpStream, DWORD dwMemLength)
 		pSeq += 32;
 	}
 	dwMemPos += 64*(pmh->lastpattern+1);
-	if ((pmh->commentsize) && (dwMemPos + pmh->commentsize < dwMemLength))
+	if (bswapLE16(pmh->commentsize) && (dwMemPos + bswapLE16(pmh->commentsize) < dwMemLength))
 	{
-		UINT n = pmh->commentsize;
+		UINT n = bswapLE16(pmh->commentsize);
 		m_lpszSongComments = new char[n+1];
 		if (m_lpszSongComments)
 		{
@@ -150,7 +150,7 @@ BOOL CSoundFile::ReadMTM(LPCBYTE lpStream, DWORD dwMemLength)
 			}
 		}
 	}
-	dwMemPos += pmh->commentsize;
+	dwMemPos += bswapLE16(pmh->commentsize);
 	// Reading Samples
 	for (UINT ismp=1; ismp<=m_nSamples; ismp++)
 	{

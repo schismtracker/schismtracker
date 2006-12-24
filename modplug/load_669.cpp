@@ -92,7 +92,7 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	m_lpszSongComments[74] = '\015';
 	m_lpszSongComments[75] = '\012';
 	memcpy(m_lpszSongComments + 76, pfh->songmessage + 72, 36);
-	m_lpszSongComments[113] = 0;
+	m_lpszSongComments[112] = 0;
 	// Reading Orders
 	memcpy(Order, pfh->orders, 128);
 	m_nRestartPos = pfh->restartpos;

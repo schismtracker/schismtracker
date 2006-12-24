@@ -217,7 +217,7 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 	UINT nvolenv, npanenv, npitchenv;
 
 	if ((!lpStream) || (dwMemLength < 1024)) return FALSE;
-	if ((pmsh->id != 0x4C444D44) || ((pmsh->version & 0xF0) > 0x10)) return FALSE;
+	if ((bswapLE32(pmsh->id) != 0x4C444D44) || ((pmsh->version & 0xF0) > 0x10)) return FALSE;
 	memset(patterntracks, 0, sizeof(patterntracks));
 	memset(smpinfo, 0, sizeof(smpinfo));
 	memset(insvolenv, 0, sizeof(insvolenv));
@@ -232,6 +232,8 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 	{
 		block = *((WORD *)(lpStream+dwMemPos));
 		blocklen = *((DWORD *)(lpStream+dwMemPos+2));
+		block = bswapLE16(block);
+		blocklen = bswapLE32(blocklen);
 		dwMemPos += 6;
 		if (dwMemPos + blocklen > dwMemLength)
 		{
@@ -244,9 +246,9 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 		case 0x4E49:
 			pmib = (MDLINFOBLOCK *)(lpStream+dwMemPos);
 			memcpy(m_szNames[0], pmib->songname, 32);
-			norders = pmib->norders;
+			norders = bswapLE16(pmib->norders);
 			if (norders > MAX_ORDERS) norders = MAX_ORDERS;
-			m_nRestartPos = pmib->repeatpos;
+			m_nRestartPos = bswapLE16(pmib->repeatpos);
 			m_nDefaultGlobalVolume = pmib->globalvol;
                         if (m_nDefaultGlobalVolume == 255)
                                 m_nDefaultGlobalVolume++;
@@ -293,7 +295,7 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 				dwPos += 18 + 2*pmpd->channels;
 				for (j=0; j<pmpd->channels; j++)
 				{
-					patterntracks[i*32+j] = pmpd->data[j];
+					patterntracks[i*32+j] = bswapLE16(pmpd->data[j]);
 				}
 			}
 			break;
@@ -301,6 +303,7 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 		case 0x5254:
 			if (dwTrackPos) break;
 			ntracks = *((WORD *)(lpStream+dwMemPos));
+			ntracks = bswapLE16(ntracks);
 			dwTrackPos = dwMemPos+2;
 			break;
 		// II: Instruments
@@ -392,9 +395,13 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 				memcpy(m_szNames[nins], lpStream+dwPos+1, 32);
 				memcpy(pins->name, lpStream+dwPos+33, 8);
 				pins->nC4Speed = *((DWORD *)(lpStream+dwPos+41));
+				pins->nC4Speed = bswapLE32(pins->nC4Speed);
 				pins->nLength = *((DWORD *)(lpStream+dwPos+45));
+				pins->nLength = bswapLE32(pins->nLength);
 				pins->nLoopStart = *((DWORD *)(lpStream+dwPos+49));
+				pins->nLoopStart = bswapLE32(pins->nLoopStart);
 				pins->nLoopEnd = pins->nLoopStart + *((DWORD *)(lpStream+dwPos+53));
+				pins->nLoopEnd = bswapLE32(pins->nLoopEnd);
 				if (pins->nLoopEnd > pins->nLoopStart) pins->uFlags |= CHN_LOOP;
 				pins->nGlobalVol = 64;
 				if (lpStream[dwPos+58] & 0x01)
@@ -421,6 +428,7 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 				} else
 				{
 					DWORD dwLen = *((DWORD *)(lpStream+dwPos));
+					dwLen = bswapLE32(dwLen);
 					dwPos += 4;
 					if ((dwPos+dwLen <= dwMemLength) && (dwLen > 4))
 					{
