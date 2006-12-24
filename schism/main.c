@@ -307,13 +307,13 @@ static void parse_options(int argc, char **argv)
 		{O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
 		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
 		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
-		{O_CLASSIC_MODE, 0, "classic", FRAG_NEG, NULL, "start schism in classic mode" },
+		{O_CLASSIC_MODE, 0, "classic", FRAG_NEG, NULL, "start Schism Tracker in \"classic\" mode" },
 #ifdef USE_X11
 		{O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
 #endif
 		{O_FULLSCREEN, 'f', "fullscreen", FRAG_NEG, NULL, "start in fullscreen mode"},
 		{O_PLAY, 'p', "play", FRAG_NEG, NULL, "start playing after loading song on command line"},
-		{O_FONTEDIT, 0, "font-editor", FRAG_NEG, NULL, "start in font-editor (itf)"},
+		{O_FONTEDIT, 0, "font-editor", FRAG_NEG, NULL, "start in font editor (itf)"},
 #if ENABLE_HOOKS
 		{O_HOOKS, 0, "hooks", FRAG_NEG, NULL, "run startup/exit hooks (default: enabled)"},
 #endif
@@ -331,7 +331,6 @@ static void parse_options(int argc, char **argv)
 	while (frag_parse(frag)) {
 		switch (frag->id) {
 		case O_ARG:
-			printf("[%s]\n", frag->arg);
 			if (is_directory(frag->arg)) {
 				initial_dir = dmoz_path_normal(frag->arg);
 				if (!initial_dir)
