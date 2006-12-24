@@ -31,6 +31,7 @@
 #include "event.h"
 
 #include "clippy.h"
+#include "diskwriter.h"
 
 #include "song.h"
 #include "mixer.h"
@@ -59,6 +60,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#ifdef USE_DLTRICK_ALSA
+#include <dlfcn.h>
+void *_dltrick_handle = 0;
+static void *_alsaless_sdl_hack = 0;
+#endif
+
 /* FIXME: don't declare functions here -- this stuff goes in .h files :P */
 #if defined(WIN32)
 extern void win32_get_modkey(int*);
@@ -76,12 +83,6 @@ unsigned key_repeat_rate(void);
 unsigned key_repeat_delay(void);
 #endif
 
-#ifdef USE_DLTRICK_ALSA
-#include <dlfcn.h>
-void *_dltrick_handle = 0;
-static void *_alsaless_sdl_hack = 0;
-#endif
-
 #if !defined(WIN32) && !defined(__amigaos4__)
 # define ENABLE_HOOKS 1
 #endif
@@ -89,12 +90,17 @@ static void *_alsaless_sdl_hack = 0;
 #define NATIVE_SCREEN_WIDTH	640
 #define NATIVE_SCREEN_HEIGHT	400
 
-#include "diskwriter.h"
-
-
 /* --------------------------------------------------------------------- */
 /* globals */
+
+enum {
+	EXIT_HOOK = 1,
+	EXIT_CONSOLEFONT = 2,
+	EXIT_SAVECFG = 4,
+	EXIT_SDLQUIT = 16,
+};
 static int shutdown_process = 0;
+
 static const char *video_driver = 0;
 static const char *audio_driver = 0;
 static int did_fullscreen = 0;
@@ -165,7 +171,7 @@ static void display_init(void)
 		fprintf(stderr, "init test %s\n", SDL_GetError());
 		exit(1);
 	}
-	shutdown_process |= 16;
+	shutdown_process |= EXIT_SDLQUIT;
 
 	video_init(video_driver);
 
@@ -186,7 +192,7 @@ static void display_init(void)
 			SDL_DEFAULT_REPEAT_INTERVAL);
 #endif
 
-	SDL_WM_SetCaption(schism_banner(), "Schism Tracker");
+	//SDL_WM_SetCaption(schism_banner(), "Schism Tracker");
 	SDL_EnableUNICODE(1);
 }
 
@@ -325,6 +331,7 @@ static void parse_options(int argc, char **argv)
 	while (frag_parse(frag)) {
 		switch (frag->id) {
 		case O_ARG:
+			printf("[%s]\n", frag->arg);
 			if (is_directory(frag->arg)) {
 				initial_dir = dmoz_path_normal(frag->arg);
 				if (!initial_dir)
@@ -355,10 +362,7 @@ static void parse_options(int argc, char **argv)
 #endif
 		case O_FULLSCREEN:
 			did_fullscreen = 1;
-			if (frag->type)
-				video_fullscreen(1);
-			else
-				video_fullscreen(0);
+			video_fullscreen(!!frag->type);
 			break;
 		case O_PLAY:
 			if (frag->type)
@@ -383,7 +387,7 @@ static void parse_options(int argc, char **argv)
 		case O_VERSION:
 #ifndef RELEASE_VERSION
 			puts("Schism Tracker CVS");
-			puts("This is a CVS build of Schism Tracker. This should be a warning.\n");
+			//puts("This is a CVS build of Schism Tracker. This should be a warning.\n");
 #else
 			puts("Schism Tracker v" VERSION "\n");
 #endif
@@ -411,14 +415,21 @@ static void parse_options(int argc, char **argv)
 
 static void check_update(void)
 {
-	if (status.flags & NEED_UPDATE) {
+	static unsigned long next = 0;
+
+	/* is there any reason why we'd want to redraw
+	   the screen when it's not even visible? */
+	if (status.flags & (NEED_UPDATE | IS_VISIBLE)
+	    == (NEED_UPDATE | IS_VISIBLE)) {
+		status.flags &= ~(NEED_UPDATE | SOFTWARE_MOUSE_MOVED);
+		if (!(status.flags & IS_FOCUSED)) {
+			if (SDL_GetTicks() < next)
+				return;
+			next = SDL_GetTicks() + 300;
+		}
 		redraw_screen();
 		video_refresh();
-
-		if (status.flags & IS_VISIBLE) {
-			video_blit();
-		}
-		status.flags &= ~(NEED_UPDATE|SOFTWARE_MOUSE_MOVED);
+		video_blit();
 	} else if (status.flags & SOFTWARE_MOUSE_MOVED) {
 		video_blit();
 		status.flags &= ~(SOFTWARE_MOUSE_MOVED);
@@ -850,22 +861,30 @@ static void event_loop(void)
 static void schism_shutdown(void)
 {
 #if ENABLE_HOOKS
-	if (shutdown_process & 1) run_exit_hook();
+	if (shutdown_process & EXIT_HOOK)
+		run_exit_hook();
 #endif
-	if (shutdown_process & 2) restore_font();
-	if (shutdown_process & 4) cfg_atexit_save();
+	if (shutdown_process & EXIT_CONSOLEFONT)
+		restore_font();
+	if (shutdown_process & EXIT_SAVECFG)
+		cfg_atexit_save();
 #ifdef MACOSX
-	if (ibook_helper != -1) macosx_ibook_fnswitch(ibook_helper);
+	if (ibook_helper != -1)
+		macosx_ibook_fnswitch(ibook_helper);
 #endif
-	if (shutdown_process & 16) video_shutdown();
+	if (shutdown_process & EXIT_SDLQUIT) {
+		video_shutdown();
+		/*
+		If this is the atexit() handler, why are we calling SDL_Quit?
 
-/*
-If this is the atexit() handler, why are we calling SDL_Quit?
-Simple, SDL's documentation says always call SDL_Quit. :) In fact, in the examples they recommend writing
-atexit(SDL_Quit) directly after SDL_Init. I'm not sure exactly why, but I don't see a reason *not* to do it...
-    / Storlek
-*/
-	if (shutdown_process & 16) SDL_Quit();
+		Simple, SDL's documentation says always call SDL_Quit. :) In
+		fact, in the examples they recommend writing atexit(SDL_Quit)
+		directly after SDL_Init. I'm not sure exactly why, but I don't
+		see a reason *not* to do it...
+			/ Storlek
+		*/
+		SDL_Quit();
+	}
 }
 
 static void dump_misc_about_text(void)
@@ -933,7 +952,7 @@ int main(int argc, char **argv)
 #if ENABLE_HOOKS
 	if (startup_flags & SF_HOOKS) {
 		run_startup_hook();
-		shutdown_process |= 1;
+		shutdown_process |= EXIT_HOOK;
 	}
 #endif
 #ifdef MACOSX
@@ -941,7 +960,7 @@ int main(int argc, char **argv)
 #endif
 
 	save_font();
-	shutdown_process |= 2;
+	shutdown_process |= EXIT_CONSOLEFONT;
 
 	dump_misc_about_text();
 
@@ -961,7 +980,7 @@ int main(int argc, char **argv)
 		video_fullscreen(cfg_video_fullscreen);
 	}
 
-	shutdown_process |= 4;
+	shutdown_process |= EXIT_SAVECFG;
 	display_init();
 	palette_apply();
 	font_init();
@@ -975,7 +994,7 @@ int main(int argc, char **argv)
 	load_pages();
 	main_song_changed_cb();
 	
-	shutdown_process |= 8;
+	/* shutdown_process |= 8; -- wtf is this? */
 
 	if (initial_song && !initial_dir)
 		initial_dir = get_parent_directory(initial_song);
@@ -1007,7 +1026,7 @@ int main(int argc, char **argv)
 	}
 
 #if !defined(WIN32)
-	(void)nice(1);
+	nice(1);
 #endif
 	/* poll once */
 	midi_engine_poll_ports();
