@@ -1024,7 +1024,7 @@ int main(int argc, char **argv)
 		show_about();
 	}
 
-#if !defined(WIN32)
+#if HAVE_NICE
 	nice(1);
 #endif
 	/* poll once */
