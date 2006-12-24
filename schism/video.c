@@ -425,7 +425,7 @@ void video_init(const char *driver)
 
 	for (i = 0; i < 16; i++) video.tc_identity[i] = i;
 
-	SDL_WM_SetCaption("Schism Tracker CVS", "Schism Tracker");
+	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
 	SDL_WM_SetIcon(xpmdata(_schism_icon_xpm), NULL);
