@@ -4136,7 +4136,10 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	int ret;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	/* this is fun; if we're playback tracing, hold shift to "pause the current position" */
+#if 0
+	/* this is fun; if we're playback tracing, hold shift to "pause the current position"
+	 * erm... why? you could just turn tracing off with scroll lock and
+	   accomplish the same effect. -storlek */
 	if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
 		if (k->state) {
 			if (tracing_was_playing) {
@@ -4150,6 +4153,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 			song_single_step(current_pattern, current_row);
 		}
 	}
+#endif
 
 	if (k->mod & KMOD_SHIFT) {
 		if (k->state) return 0;
