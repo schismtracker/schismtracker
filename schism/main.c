@@ -419,7 +419,7 @@ static void check_update(void)
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
-	if (status.flags & (NEED_UPDATE | IS_VISIBLE)
+	if ((status.flags & (NEED_UPDATE | IS_VISIBLE))
 	    == (NEED_UPDATE | IS_VISIBLE)) {
 		status.flags &= ~(NEED_UPDATE | SOFTWARE_MOUSE_MOVED);
 		if (!(status.flags & IS_FOCUSED)) {
