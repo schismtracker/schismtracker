@@ -84,12 +84,10 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 	int chunks = (width / 3);
 	int maxval = width * 8 / 3;
 	
-	val = val * width / 24; /* reduced from (val * maxval / 64) */
-	
+	/* reduced from (val * maxval / 64) */
+	val = CLAMP((val*width/24), 0, (maxval-1));
         if (!val)
                 return;
-	if (val == maxval)
-		val--;
 	
         leftover = val & 7;
         val >>= 3;
