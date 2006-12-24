@@ -126,6 +126,22 @@ static void _convert_to_it(CSoundFile *qq)
 		}
 	}
 
+	switch (qq->m_nType) {
+	case MOD_TYPE_XM:
+		song_set_compatible_gxx(1);
+		song_set_old_effects(1);
+		break;
+	case MOD_TYPE_MOD:
+		song_set_compatible_gxx(1);
+		break;
+	case MOD_TYPE_S3M:
+		song_set_old_effects(1);
+		break;
+	// TODO: other file types
+	default:
+		break;
+	}
+
         qq->m_nType = MOD_TYPE_IT;
 }
 
