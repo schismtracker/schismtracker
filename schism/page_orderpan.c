@@ -79,37 +79,42 @@ int get_current_order(void)
 
 void prev_order_pattern(void)
 {
-        int new_order = current_order - 1;
-        int pattern;
-
-	/* Reverted to 0.2a code. Need to rewrite ORDER_SKIP skipping. */
-	if (new_order < 0)
-		new_order = 0;
-
-	pattern = song_get_orderlist()[new_order];
-	if (pattern < 200) {
+        int new_order = current_order;
+	unsigned char *list = song_get_orderlist();
+	
+	do {
+		if (--new_order < 0) {
+			new_order = 0;
+			break;
+		}
+	} while (!(status.flags & CLASSIC_MODE) && list[new_order] == ORDER_SKIP);
+	
+	if (list[new_order] < 200) {
 		current_order = new_order;
 		orderlist_reposition();
-		set_current_pattern(pattern);
+		set_current_pattern(list[new_order]);
 	}
 }
 
 void next_order_pattern(void)
 {
-        int new_order = current_order + 1;
-        int pattern;
+        int new_order = current_order;
+	unsigned char *list = song_get_orderlist();
 
-	/* Reverted to 0.2a code. Need to rewrite ORDER_SKIP skipping. */
-	if (new_order > 255)
-		new_order = 255;
-
-	pattern = song_get_orderlist()[new_order];
-	if (pattern < 200) {
+	do {
+		if (++new_order > 255) {
+			new_order = 255;
+			break;
+		}
+	} while (!(status.flags & CLASSIC_MODE) && list[new_order] == ORDER_SKIP);
+	
+	if (list[new_order] < 200) {
 		current_order = new_order;
 		orderlist_reposition();
-		set_current_pattern(pattern);
+		set_current_pattern(list[new_order]);
 	}
 }
+
 static void orderlist_cheater(void)
 {
         unsigned char *list = song_get_orderlist();
