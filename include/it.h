@@ -222,7 +222,9 @@ extern int show_default_volumes;	/* pattern-view.c */
 /* settings (config.c) */
 
 extern char cfg_video_driver[];
+/* TODO: consolidate these into cfg_video_flags */
 extern int cfg_video_fullscreen;
+extern int cfg_video_mousecursor;
 
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
 extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */

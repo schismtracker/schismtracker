@@ -62,6 +62,7 @@ void video_translate(unsigned int vx, unsigned int vy,
 			unsigned int *x, unsigned int *y);
 void video_blit(void);
 void video_mousecursor(int z);
+int video_mousecursor_visible(void);
 
 void video_scanmouse(unsigned int y, unsigned char *mousebox, unsigned int *x);
 
