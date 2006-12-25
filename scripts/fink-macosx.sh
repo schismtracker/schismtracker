@@ -14,7 +14,7 @@ find "root/Schism Tracker.app" -path '*/CVS/*' -or -path '*/CVS' -print0 | xargs
 
 mkdir -p "root/Schism Tracker.app/Contents/MacOS" || exit 1
 
-cp schism "root/Schism Tracker.app/Contents/MacOS/schism" || exit 1
+cp schismtracker "root/Schism Tracker.app/Contents/MacOS/schismtracker" || exit 1
 cp /sw/lib/libSDL-1.2.0.dylib "root/Schism Tracker.app/Contents/MacOS/sdl.dylib" || exit 1
 install_name_tool -change /sw/lib/libSDL-1.2.0.dylib @executable_path/sdl.dylib "root/Schism Tracker.app/Contents/MacOS/schism" || exit 1
 
