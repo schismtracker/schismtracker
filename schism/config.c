@@ -23,6 +23,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "video.h" /* shouldn't need this */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,6 +38,7 @@ char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instr
 	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
 char cfg_video_driver[65];
 int cfg_video_fullscreen = 0;
+int cfg_video_mousecursor = 1;
 
 /* --------------------------------------------------------------------- */
 
@@ -121,6 +123,7 @@ void cfg_load(void)
 
 	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
+	cfg_video_mousecursor = !!cfg_get_number(&cfg, "Video", "mouse_cursor", 1); /* blah disgustingcakes */
 	
 	ptr = get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, ptr);
@@ -250,9 +253,11 @@ void cfg_atexit_save(void)
 	
 	cfg_atexit_save_audio(&cfg);
 
-	/* err... */
+	/* TODO: move these config options to video.c, this is lame :) */
 	cfg_set_string(&cfg, "Video", "driver", video_driver_name());
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
+	cfg_set_number(&cfg, "Video", "mouse_cursor", !!(video_mousecursor_visible()));
+	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);
 	cfg_set_number(&cfg, "General", "time_display", status.time_display);
@@ -262,7 +267,6 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
-	cfg_set_number(&cfg, "General", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 
 
 	/* hm... most of the time probably nothing's different, so saving the
