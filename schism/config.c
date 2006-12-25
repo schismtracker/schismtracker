@@ -179,7 +179,7 @@ void cfg_load(void)
 		status.flags |= ALTGR_IS_ALT;
 	else
 		status.flags &= ~ALTGR_IS_ALT;
-	if (cfg_get_number(&cfg, "General", "lazy_redraw", 1))
+	if (cfg_get_number(&cfg, "General", "lazy_redraw", 0))
 		status.flags |= LAZY_REDRAW;
 	else
 		status.flags &= ~LAZY_REDRAW;
