@@ -45,7 +45,7 @@
 	can also use the configuration page on Ctrl-F1 to select driver
 	settings. This way is usually safer as not all video modes- windowed
 	fullscreen, or drivers, work on all systems. Using Ctrl-F1 is
-	definately recommended.
+	definitely recommended.
 
 	For power users: if ~/.schism/startup-hook or ~/.schism/exit-hook
 	are executable, Schism Tracker will run them on startup and exit,
@@ -71,14 +71,14 @@
 
 // The bottom.
 
-	Copyright (c) 2003-2005 chisel. All rights reversed. See the file
-	COPYING in the distribution for license details.
+	Copyright (c) 2003-2007 Storlek and Mrs. Brisby. All rights reversed.
+	See the file COPYING in the distribution for license details.
 
 	Contact me for any reason, business or pleasure, rain or shine:
 
 	Website: http://rigelseven.com/schism/
 	Forum:   http://rigelseven.com/cgi-bin/yabb/YaBB.pl?board=schism
-	E-mail:  schism@chisel.cjb.net (no binary attachments, please)
+	E-mail:  schism@rigelseven.com (no binary attachments, please)
         Snail:   Haha... if you really want to, e-mail me first.
 
 This is the last line.
