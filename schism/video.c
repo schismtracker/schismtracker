@@ -118,9 +118,6 @@ struct private_hwdata {
 };
 #endif
 
-static struct video_cf video;
-
-
 struct video_cf {
 	struct {
 		unsigned int width;
@@ -188,6 +185,8 @@ struct video_cf {
 	unsigned int tc_bgr32[16];
 	unsigned int tc_identity[16];
 };
+static struct video_cf video;
+
 static int int_log2(int val) {
 	int l = 0;
 	while ((val >>= 1 ) != 0) l++;
@@ -1430,6 +1429,12 @@ void video_blit(void)
 		SDL_GL_SwapBuffers();
 		break;
 	};
+}
+
+/* FIXME: ugh */
+int video_mousecursor_visible(void)
+{
+	return video.mouse.visible;
 }
 
 void video_mousecursor(int vis)

@@ -987,6 +987,8 @@ int main(int argc, char **argv)
 	song_init_audio(audio_driver);
 	song_init_modplug();
 
+	video_mousecursor(cfg_video_mousecursor); /* blah */
+
 	mixer_setup();
 
 	setup_help_text_pointers();
