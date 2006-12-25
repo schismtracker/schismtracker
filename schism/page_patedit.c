@@ -1817,7 +1817,11 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 			if (chan + x > 64) break; /* defensive */
 			if (p_note[chan].note) {
 				p_note[chan].note += xlate;
-				if (/*p_note[chan].note < 0 || */p_note[chan].note > 120)
+				/* XXX check the code in transpose_notes. does that do what we want here?
+				   if so, could we make a macro out of it? (note this same if statement is
+				   also used a few more times below; search this file for 250) */
+				if (/*p_note[chan].note < 0 || */p_note[chan].note > 120
+				    && p_note[chan].note < 250)
 					p_note[chan].note = 0;
 			}
 		}
@@ -2004,7 +2008,8 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 				p_note[chan] = c_note[chan];
 				if (p_note[chan].note) {
 					p_note[chan].note += xlate;
-					if (/*p_note[chan].note < 0 || */p_note[chan].note > 120)
+					if (/*p_note[chan].note < 0 || */p_note[chan].note > 120
+					    && p_note[chan].note < 250)
 						p_note[chan].note = 0;
 				}
 				if (clip) {
@@ -2057,11 +2062,12 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 		for (chan = 0; chan < chan_width; chan++) {
 			/* Ick. There ought to be a "conditional move" operator. */
 			if (prec) {
-				/* clipboard precidence */
+				/* clipboard precedence */
 				if (c_note[chan].note != 0) {
 					p_note[chan].note = c_note[chan].note;
 					if (p_note[chan].note) p_note[chan].note += xlate;
-					if (/*p_note[chan].note < 0 ||*/p_note[chan].note > 120)
+					if (/*p_note[chan].note < 0 ||*/p_note[chan].note > 120
+					    && p_note[chan].note < 250)
 						p_note[chan].note = 0;
 				}
 				if (c_note[chan].instrument != 0)
@@ -2079,7 +2085,8 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 				if (p_note[chan].note == 0) {
 					p_note[chan].note = c_note[chan].note;
 					if (p_note[chan].note) p_note[chan].note += xlate;
-					if (/*p_note[chan].note < 0 || */p_note[chan].note > 120)
+					if (/*p_note[chan].note < 0 || */p_note[chan].note > 120
+					    && p_note[chan].note < 250)
 						p_note[chan].note = 0;
 				}
 				if (p_note[chan].instrument == 0)
@@ -2955,7 +2962,6 @@ static int pattern_editor_insert(struct key_event *k)
 			} else {
 				vol = -1;
 			}
-
 			/* if n == 0, don't care */
 		} else {
 			n = kbd_get_note(k);
