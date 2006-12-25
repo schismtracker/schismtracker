@@ -120,11 +120,7 @@ void cfg_load(void)
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
-	if (cfg_get_number(&cfg, "Video", "fullscreen", 0)) {
-		cfg_video_fullscreen = 1;
-	} else {
-		cfg_video_fullscreen = 0;
-	}
+	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	
 	ptr = get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, ptr);
@@ -183,6 +179,10 @@ void cfg_load(void)
 		status.flags |= ALTGR_IS_ALT;
 	else
 		status.flags &= ~ALTGR_IS_ALT;
+	if (cfg_get_number(&cfg, "General", "lazy_redraw", 1))
+		status.flags |= LAZY_REDRAW;
+	else
+		status.flags &= ~LAZY_REDRAW;
 	
 	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
 	
@@ -262,6 +262,7 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
+	cfg_set_number(&cfg, "General", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 
 
 	/* hm... most of the time probably nothing's different, so saving the

@@ -421,7 +421,7 @@ static void check_update(void)
 	if ((status.flags & (NEED_UPDATE | IS_VISIBLE))
 	    == (NEED_UPDATE | IS_VISIBLE)) {
 		status.flags &= ~(NEED_UPDATE | SOFTWARE_MOUSE_MOVED);
-		if (!(status.flags & IS_FOCUSED)) {
+		if ((status.flags & (IS_FOCUSED | LAZY_REDRAW)) == LAZY_REDRAW) {
 			if (SDL_GetTicks() < next)
 				return;
 			next = SDL_GetTicks() + 300;
