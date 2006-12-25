@@ -65,19 +65,22 @@ if test "x$enable_sdlstatic" = "xyes"; then
 	fi
 fi
 
-dnl CoreMIDI (MacosX)
+dnl CoreMIDI (Mac OS X)
 AC_MSG_CHECKING(for CoreAudio/CoreMIDI Framework)
 if echo "$SDL_LIBS" | grep -- -framework >/dev/null 2>&1; then
 	AC_MSG_RESULT(found)
+	dnl frameworks aren't part of sdl... should be a separate variable
 	SDL_LIBS="$SDL_LIBS -framework CoreAudio -framework CoreMIDI -framework IOKit -framework OpenGL"
 	AC_SUBST(SDL_LIBS)
 
 	AM_CONDITIONAL([USE_MACOSX], true)
 	AM_CONDITIONAL([am__fastdepOBJC], true)
+	macosx=yes
 else
 	AC_MSG_RESULT(not found)
 	AM_CONDITIONAL([USE_MACOSX], false)
 	AM_CONDITIONAL([am__fastdepOBJC], false)
+	macosx=no
 fi
 
 dnl Functions
@@ -119,15 +122,21 @@ fi
 AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
 AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
 
-AC_PATH_X()
+dnl should probably have some AC_MSG_CHECKING here, buh meh
+if test "x$macosx" = "xyes"; then
+	if test "x$with_x" = "x"; then
+		AC_MSG_NOTICE([X11 disabled by default on Mac OS X; use --with-x to enable])
+		with_x=no
+	fi
+fi
+AC_PATH_XTRA()
 if test "$no_x" = "yes"
 then
-	# no X11
+	dnl no X11
 	AM_CONDITIONAL([USE_X11], [false])
 	AM_CONDITIONAL([USE_XV], [false])
 else
 	AM_CONDITIONAL([USE_X11], [true])
-	AC_PATH_XTRA()
 
 	SDL_LIBS="$SDL_LIBS -lX11 -lXext"
 	AC_SUBST(SDL_LIBS)
