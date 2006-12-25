@@ -909,13 +909,11 @@ static int info_page_handle_key(struct key_event * k)
 		if (k->mod & KMOD_ALT) {
 			song_toggle_stereo();
 			status_text_flash("Stereo %s", song_is_stereo()
-							? "Enabled" : "Disabled");
-			status.flags |= NEED_UPDATE;
-			return 1;
+					  ? "Enabled" : "Disabled");
+		} else {
+			song_handle_channel_solo(selected_channel - 1);
+			orderpan_recheck_muted_channels();
 		}
-
-                song_handle_channel_solo(selected_channel - 1);
-                orderpan_recheck_muted_channels();
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_SPACE:

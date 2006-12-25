@@ -1491,7 +1491,7 @@ void main_song_changed_cb(void)
                 n = 0;
         set_current_pattern(n);
         set_current_row(0);
-        song_clear_solo_channel();
+	song_save_channel_states();
 
         for (n = ARRAY_SIZE(pages) - 1; n >= 0; n--) {
 		if (pages[n].song_changed_cb)

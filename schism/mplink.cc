@@ -185,9 +185,28 @@ int song_get_mix_state(unsigned int **channel_list)
 // (whereas in the pattern editor etc. it's one based)
 
 static int solo_channel = -1;
-static int channel_states[64];  /* nonzero => muted */
+static int channel_states[64];  // saved ("real") mute settings; nonzero = muted
 
-void song_set_channel_mute(int channel, int muted)
+void song_save_channel_states(void)
+{
+	int n = 64;
+	
+	while (n-- > 0)
+		channel_states[n] = mp->Chn[n].dwFlags & CHN_MUTE;
+}
+
+// I don't think this is useful besides undoing a channel solo (a few lines
+// below), but I'm making it extern anyway for symmetry.
+inline void song_restore_channel_states(void)
+{
+	int n = 64;
+	
+	while (n-- > 0)
+		song_set_channel_mute(n, channel_states[n]);
+	solo_channel = -1;
+}
+
+inline void song_set_channel_mute(int channel, int muted)
 {
         if (muted) {
                 mp->ChnSettings[channel].dwFlags |= CHN_MUTE;
@@ -198,49 +217,38 @@ void song_set_channel_mute(int channel, int muted)
         }
 }
 
+// disgusting hack to get the orderpan page channel muting to "stick"... we need to maek the callback system a
+// bit more fine-grained, so changing one thing on a page doesn't trigger the callback for EVERY widget. then
+// we can get rid of this and make the orderpan page just do a normal song_set_channel_mute and save the state.
+// (or wait, how does IT handle soloing channels and then fiddling with the orderpan page?)
+void song_set_sticky_channel_mute(int channel, int muted)
+{
+	// exclamation points!!
+	if (!muted != !(mp->Chn[channel].dwFlags & CHN_MUTE)) {
+		song_set_channel_mute(channel, muted);
+		song_save_channel_states();
+	}
+}
+
 void song_toggle_channel_mute(int channel)
 {
         // i'm just going by the playing channel's state...
         // if the actual channel is muted but not the playing one,
         // tough luck :)
-        song_set_channel_mute(channel, (mp->Chn[channel].dwFlags & CHN_MUTE) == 0);
+	song_set_channel_mute(channel, (mp->Chn[channel].dwFlags & CHN_MUTE) == 0);
 }
 
 void song_handle_channel_solo(int channel)
 {
-        int n = 64;
-
-        if (solo_channel >= 0) {
-                if (channel == solo_channel) {
-                        // undo the solo
-                        while (n-- > 0)
-                                song_set_channel_mute(n, channel_states[n]);
-                        solo_channel = -1;
-                } else {
-                        // change the solo channel
-                        // mute all channels...
-                        while (n-- > 0)
-                                song_set_channel_mute(n, 1);
-                        // then unmute the current channel
-                        song_set_channel_mute(channel, 0);
-                        solo_channel = channel;
-                }
-        } else {
-                // set the solo channel:
-                // save each channel's state, then mute it...
-                while (n-- > 0) {
-                        channel_states[n] = song_get_channel(n)->flags & CHN_MUTE;
-                        song_set_channel_mute(n, 1);
-                }
-                // ... and then, unmute the current channel
-                song_set_channel_mute(channel, 0);
-                solo_channel = channel;
-        }
-}
-
-void song_clear_solo_channel()
-{
-        solo_channel = -1;
+	int n = 64;
+	
+	if (channel == solo_channel) {
+		song_restore_channel_states();
+	} else {
+		while (n-- > 0)
+			song_set_channel_mute(n, n != channel);
+		solo_channel = channel;
+	}
 }
 
 // returned channel number is ONE-based
@@ -248,16 +256,10 @@ void song_clear_solo_channel()
 int song_find_last_channel()
 {
         int n = 64;
-
-        if (solo_channel >= 0) {
-                while (channel_states[--n])
-                        if (n == 0)
-                                return 64;
-	} else {
-                while (song_get_channel(--n)->flags & CHN_MUTE)
-                        if (n == 0)
-                                return 64;
-        }
+	
+	while (channel_states[--n])
+		if (n == 0)
+			return 64;
         return n + 1;
 }
 
@@ -788,6 +790,7 @@ void song_remove_sample_slot(int n)
 	song_unlock_audio();
 }
 
+/* FIXME 99? what about the extended slots? */
 void song_insert_instrument_slot(int n)
 {
 	int i;
@@ -801,6 +804,9 @@ void song_insert_instrument_slot(int n)
 	song_unlock_audio();
 }
 
+/* FIXME Impulse Tracker doesn't care if you used an instrument or not; it'll
+   happily delete it and shift the next instrument into its place regardless.
+   should we replicate this behavior in CLASSIC_MODE or call it an IT bug? */
 void song_remove_instrument_slot(int n)
 {
 	int i;
@@ -815,7 +821,7 @@ void song_remove_instrument_slot(int n)
 
 void song_wipe_instrument(int n)
 {
-/* wee .... */
+	/* wee .... */
 	if (song_instrument_is_empty(n)) return;
 	if (!mp->Headers[n]) return;
 
@@ -825,6 +831,7 @@ void song_wipe_instrument(int n)
 	mp->Headers[n] = NULL;
 	song_unlock_audio();
 }
+
 void song_delete_instrument(int n)
 {
 	unsigned long i;

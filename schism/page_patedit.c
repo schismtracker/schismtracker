@@ -2390,8 +2390,14 @@ static void pattern_editor_redraw(void)
 
 	for (chan = top_display_channel, chan_pos = 0; chan_pos < visible_channels; chan++, chan_pos++) {
 		track_view = track_views + track_view_scheme[chan_pos];
+		/* maybe i'm retarded but the pattern editor should be dealing
+		   with the same concept of "channel" as the rest of the
+		   interface. the mixing channels really could be any arbitrary
+		   number -- modplug just happens to reserve the first 64 for
+		   "real" channels. i'd rather pm not replicate this cruft and
+		   more or less hide the mixer from the interface... */
 		track_view->draw_channel_header(chan, chan_drawpos, 14,
-						((song_get_mix_channel(chan - 1)->flags & CHN_MUTE) ? 0 : 3));
+						((song_get_channel(chan - 1)->flags & CHN_MUTE) ? 0 : 3));
 
 		note = pattern + 64 * top_display_row + chan - 1;
 		for (row = top_display_row, row_pos = 0; row_pos < 32; row++, row_pos++) {
@@ -3760,11 +3766,11 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	return 0;
 }
 
+static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 static int pattern_editor_handle_key(struct key_event * k)
 {
 	int n, nx, v;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
-	static int mute_toggle_hack[64];
 	const struct track_view *track_view;
 	int np, nr, nc;
 	unsigned int basex;
