@@ -345,8 +345,7 @@ void song_new(int flags)
 		}
 	}
 
-	//mp->m_nType = MOD_TYPE_IT;
-	//mp->m_nChannels = 64;
+	mp->m_nChannels = 64;
 	_convert_to_it(mp);
 
 	mp->SetRepeatCount(-1);
