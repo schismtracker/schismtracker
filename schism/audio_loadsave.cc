@@ -289,7 +289,8 @@ void song_new(int flags)
         song_lock_audio();
 
 	song_stop_unlocked();
-	
+
+	status.flags &= ~PLAIN_TEXTEDIT;
 	if ((flags & KEEP_PATTERNS) == 0) {
 		song_set_filename(NULL);
 		
@@ -374,7 +375,7 @@ int song_load_unchecked(const char *file)
                 log_appendf(4, "%s: %s", base, strerror(errno));
                 return 0;
         }
-	
+
         CSoundFile *newsong = new CSoundFile();
 	int r = newsong->Create(s->data, s->length);
 	if (r) {
@@ -396,9 +397,26 @@ int song_load_unchecked(const char *file)
 
                 main_song_changed_cb();
 		status.flags &= ~SONG_NEEDS_SAVE;
+		status.flags &= ~PLAIN_TEXTEDIT;
+	
+	} else if (status.flags & STARTUP_TEXTEDIT) {
+		song_new(~0);
+		song_set_filename(file);
+
+		if (mp->m_lpszSongComments)
+			delete mp->m_lpszSongComments;
+		mp->m_lpszSongComments = new char[s->length+1];
+		memcpy(mp->m_lpszSongComments, s->data, s->length);
+		mp->m_lpszSongComments[s->length] = '\0';
+
+		status.flags &= ~SONG_NEEDS_SAVE;
+		status.flags |= PLAIN_TEXTEDIT;
+		r = 1;
+		
         } else {
                 // awwww, nerts!
                 log_appendf(4, "%s: Unrecognised file type", base);
+		status.flags &= ~PLAIN_TEXTEDIT;
                 delete newsong;
         }
 	
@@ -1020,6 +1038,20 @@ static void _save_xm(diskwriter_driver_t *dw)
 		dw->e(dw);
 	}
 }
+static void _save_txt(diskwriter_driver_t *fp)
+{
+	const char *s = (const char *)song_get_message();
+	for (int i = 0; s[i]; i++) {
+		if (s[i] == '\r' && s[i+1] == '\n') {
+			continue;
+
+		} else if (s[i] == '\r') {
+			fp->o(fp, (const unsigned char *)"\n", 1);
+		} else {
+			fp->o(fp, ((const unsigned char *)s)+i, 1);
+		}
+	}
+}
 static void _save_mod(diskwriter_driver_t *dw)
 {
 	if (!mp->SaveMod(dw, 0)) {
@@ -1075,6 +1107,18 @@ NULL,
 0,0,0,0,
 0,
 };
+diskwriter_driver_t txtwriter = {
+"TXT",
+_save_txt,
+NULL,
+NULL,
+NULL,
+NULL,NULL,NULL,
+NULL,
+NULL,
+0,0,0,0,
+0,
+};
 /* ------------------------------------------------------------------------- */
 
 
@@ -1101,7 +1145,24 @@ int song_save(const char *file, const char *qt)
 		}
 	}
 
-	if (!qt) qt = "IT214";
+	if (!qt) {
+		if (status.flags & PLAIN_TEXTEDIT) {
+			/* okay, the "default" for textedit is plain-text */
+			if (!diskwriter_start(file, &txtwriter)) {
+				log_appendf(4, "Cannot start diskwriter: %s",
+				strerror(errno));
+				return 0;
+			}
+			log_appendf(2, "Starting up diskwriter");
+			return 1;
+		}
+
+		qt = "IT214";
+	}
+	if (status.flags & PLAIN_TEXTEDIT) {
+		log_appendf(3, "Warning: saving plain text as module");
+	}
+
 	mp->m_rowHighlightMajor = row_highlight_major;
 	mp->m_rowHighlightMinor = row_highlight_minor;
 
