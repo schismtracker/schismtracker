@@ -119,6 +119,10 @@ enum {
 	ALTGR_IS_ALT = (1 << 22),
 
 	LAZY_REDRAW = (1 << 23),
+
+	/* text-editor */
+	STARTUP_TEXTEDIT = (1 << 24),
+	PLAIN_TEXTEDIT = (1 << 25),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
