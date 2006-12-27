@@ -26,9 +26,6 @@ dnl We'll need machine type later
 AC_CANONICAL_TARGET([])
 machtype="$target_cpu"
 
-dnl when changing the version, also change the CWTV in audio_loadsave.cc
-dnl (TODO: come up with some way to do it automatically)
-dnl Ack, 1.0? I gotta be honest, we're nowhere near there yet.
 AM_INIT_AUTOMAKE(schismtracker, 0.5)
 AM_CONFIG_HEADER(config.h)
 
