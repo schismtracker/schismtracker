@@ -13,13 +13,13 @@ unset FGREP_OPTIONS
 
 getver() {
 	a="$1"
-	v="$2"
-	shift
-	if "$a" --version | fgrep "$v" >/dev/null; then
-		echo "$a"
-		echo "'$a' => $a version $v" 1>&2
-		return
-	fi
+	for v in "$@"; do
+		if "$a" --version | fgrep "$v" >/dev/null; then
+			echo "$a"
+			echo "'$a' => $a version $v" 1>&2
+			return
+		fi
+	done
 	for v in "$@"; do
 		if "$a"-"$v" --version | fgrep "$v" >/dev/null; then
 			echo "$a"-"$v"
