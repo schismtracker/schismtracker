@@ -58,7 +58,6 @@ noinst_HEADERS = \
 	include/auto/logoit.h		\
 	include/auto/logoschism.h	\
 	include/auto/schismico.h	\
-	include/acc.h			\
 	include/charset.h		\
 	include/clippy.h		\
 	include/config-parser.h		\
