@@ -20,6 +20,7 @@
 
 #include "headers.h"
 
+#include "it.h"
 #include "midi.h"
 
 #include "mixer.h"
@@ -36,8 +37,6 @@
 #include <alsa/seq.h>
 
 static snd_seq_t *seq;
-static int port_count;
-static snd_seq_addr_t *ports;
 static int local_port = -1;
 
 #define MIDI_BUFSIZE	65536
@@ -132,17 +131,17 @@ _any_dltrick(int,snd_seq_free_event,
 (snd_seq_event_t *ev),
 (ev))
 _any_dltrick(int,snd_seq_connect_from,
-(snd_seq_t*seq,int my_port,int src_client, int src_port),
-(seq,my_port,src_client,src_port))
+(snd_seq_t*seeq,int my_port,int src_client, int src_port),
+(seeq,my_port,src_client,src_port))
 _any_dltrick(int,snd_seq_connect_to,
-(snd_seq_t*seq,int my_port,int dest_client,int dest_port),
-(seq,my_port,dest_client,dest_port))
+(snd_seq_t*seeq,int my_port,int dest_client,int dest_port),
+(seeq,my_port,dest_client,dest_port))
 _any_dltrick(int,snd_seq_disconnect_from,
-(snd_seq_t*seq,int my_port,int src_client, int src_port),
-(seq,my_port,src_client,src_port))
+(snd_seq_t*seeq,int my_port,int src_client, int src_port),
+(seeq,my_port,src_client,src_port))
 _any_dltrick(int,snd_seq_disconnect_to,
-(snd_seq_t*seq,int my_port,int dest_client,int dest_port),
-(seq,my_port,dest_client,dest_port))
+(snd_seq_t*seeq,int my_port,int dest_client,int dest_port),
+(seeq,my_port,dest_client,dest_port))
 _any_dltrick(const char *,snd_strerror,(int errnum),(errnum))
 _any_dltrick(int,snd_seq_poll_descriptors_count,(snd_seq_t*h,short e),(h,e))
 _any_dltrick(int,snd_seq_poll_descriptors,(snd_seq_t*h,struct pollfd*pfds,unsigned int space, short e),(h,pfds,space,e))
@@ -173,12 +172,11 @@ _any_dltrick(const char *,snd_seq_client_info_get_name,(snd_seq_client_info_t*in
 _any_dltrick(const char *,snd_seq_port_info_get_name,(const snd_seq_port_info_t*inf),(inf))
 _any_dltrick(int,snd_seq_open,(snd_seq_t**h,const char *name,int str, int mode),
 (h,name,str,mode))
-_any_dltrick(int,snd_seq_set_client_name,(snd_seq_t*seq,const char *name),(seq,name))
+_any_dltrick(int,snd_seq_set_client_name,(snd_seq_t*seeq,const char *name),(seeq,name))
 #endif
 
-static void _alsa_drain(struct midi_port *p)
+static void _alsa_drain(struct midi_port *p UNUSED)
 {
-	struct alsa_midi *ex;
 	/* not port specific */
 	snd_seq_drain_output(seq);
 }
@@ -186,7 +184,6 @@ static void _alsa_send(struct midi_port *p, unsigned char *data, unsigned int le
 {
 	struct alsa_midi *ex;
 	snd_seq_event_t ev;
-	int err;
 	long rr;
 
 	ex = (struct alsa_midi *)p->userdata;
@@ -218,6 +215,7 @@ static int _alsa_start(struct midi_port *p)
 	struct alsa_midi *data;
 	int err;
 
+	err = 0;
 	data = (struct alsa_midi *)p->userdata;
 	if (p->io & MIDI_INPUT) {
 		err = snd_seq_connect_from(seq, 0, data->c, data->p);
@@ -236,6 +234,7 @@ static int _alsa_stop(struct midi_port *p)
 	struct alsa_midi *data;
 	int err;
 
+	err = 0;
 	data = (struct alsa_midi *)p->userdata;
 	if (p->io & MIDI_OUTPUT) {
 		err = snd_seq_disconnect_to(seq, 0, data->c, data->p);

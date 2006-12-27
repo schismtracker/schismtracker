@@ -111,10 +111,12 @@ static int _oss_thread(struct midi_provider *p)
 			}
 		}
 	}
+	/* stupid gcc */
+	return 0;
 }
 
 
-static void _tryopen(int n, char *name, struct midi_provider *_oss_provider)
+static void _tryopen(int n, const char *name, struct midi_provider *_oss_provider)
 {
 	int io;
 	char *ptr;
@@ -141,7 +143,6 @@ static void _tryopen(int n, char *name, struct midi_provider *_oss_provider)
 
 static void _oss_poll(struct midi_provider *_oss_provider)
 {
-	struct midi_port *ptr;
 	char sbuf[64];
 	int i;
 

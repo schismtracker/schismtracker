@@ -480,7 +480,7 @@ static void file_list_draw(void)
 		if (current_file >= 0 && current_file < flist.num_files) {
 	                file = flist.files[current_file];
 			draw_text_len((unsigned char *) (file->description ? file->description : ""), 26, 51, 40, 5, 0);
-			sprintf(buf, "%09lu", file->filesize);
+			sprintf(buf, "%09lu", (long)file->filesize);
 			draw_text_len((unsigned char *) buf, 26, 51, 41, 5, 0);
 			draw_text_len((unsigned char *) get_date_string(file->timestamp, (unsigned char *) buf), 26, 51, 42, 5, 0);
 			draw_text_len((unsigned char *) get_time_string(file->timestamp, (unsigned char *) buf), 26, 51, 43, 5, 0);

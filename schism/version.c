@@ -50,20 +50,19 @@ someone is using -- including whether they pulled from CVS themselves and built
 it, or downloaded a prebuilt package, etc.
 */
 
-#ifndef RELEASE_VERSION
 #include "auto/build-version.h"
 static char banner[80] = { 0 };
-#endif
 
 const char *schism_banner(void)
 {
-#ifndef RELEASE_VERSION
 	char *ptr;
-#endif
 	if (status.flags & CLASSIC_MODE) return TOP_BANNER_CLASSIC;
-#ifdef RELEASE_VERSION
-	return TOP_BANNER_NORMAL;
-#else
+
+	if (!(VERSION[0] == 'C' && VERSION[1] == 'V' && VERSION[2] == 'S' && !VERSION[3])) {
+		return TOP_BANNER_NORMAL;
+	
+	}
+
 	/* this code is for CVS builds... but nobody will notice */
 	if (banner[0] == 0) {
 		strcpy(banner, TOP_BANNER_CVS);
@@ -103,7 +102,6 @@ const char *schism_banner(void)
 		}
 	}
 	return banner;
-#endif
 }
 
 

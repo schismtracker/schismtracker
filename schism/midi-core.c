@@ -248,6 +248,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 	/* write out only enabled midi ports */
 	i = 1;
 	SDL_mutexP(midi_mutex);
+	q = 0;
 	for (p = port_providers; p; p = p->next) {
 		while (midi_port_foreach(p, &q)) {
 			ss = (char*)q->name;
@@ -625,23 +626,25 @@ STARTFRAME:
 		x = y = (struct midi_pl *)ready;
 	} while (!x);
 	ready = 0; /* sanity check */
-NEXTPACKET:
-	SDL_mutexP(midi_record_mutex);
-	_midi_send_unlocked(x->buffer, x->len, 0, 1);
-	SDL_mutexV(midi_record_mutex);
-
-	if (!x->next) {
-		/* remove them all */
+	for (;;) {
 		SDL_mutexP(midi_record_mutex);
-		x->next = top_free;
-		top_free = y;
+		_midi_send_unlocked(x->buffer, x->len, 0, 1);
 		SDL_mutexV(midi_record_mutex);
-		goto STARTFRAME;
+
+		if (!x->next) {
+			/* remove them all */
+			SDL_mutexP(midi_record_mutex);
+			x->next = top_free;
+			top_free = y;
+			SDL_mutexV(midi_record_mutex);
+			goto STARTFRAME;
+		}
+		x = x->next;
+		if (x->rpos) SLEEP_FUNC(x->rpos);
 	}
-	x = x->next;
-	if (x->rpos) SLEEP_FUNC(x->rpos);
-	goto NEXTPACKET;
-	/* there is no corrosponding mutexV here! */
+	/* this is dead code because gcc is brain damaged and storlek
+	thinks gcc knows better than me. */
+	return 0;
 }
 
 void midi_send_flush(void)
