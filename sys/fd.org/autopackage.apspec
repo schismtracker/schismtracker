@@ -10,7 +10,7 @@ Summary: Schism Tracker is a music editor that matches the look and feel of Impu
 URL: http://www.rigelseven.com/schism/
 License: GNU General Public License, Version 2
 SoftwareVersion: 0.5
-AutopackageTarget: 0.5
+AutopackageTarget: 1.0
 
 [Description]
 Schism Tracker is a music editor in the spirit of Impulse Tracker. Nearly every
