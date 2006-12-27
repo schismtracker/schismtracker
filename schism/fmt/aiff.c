@@ -126,7 +126,7 @@ int fmt_aiff_load_sample(const byte *data, size_t length, song_sample *smp, char
 		block_length = bswapBE32(block_length);
 		if (comm_chunk == 0 && memcmp(data + position, "COMM", 4) == 0) {
 			if (block_length != 18) {
-				printf("aiff: weird %ld-byte COMM chunk; bailing", block_length);
+				printf("aiff: weird %ld-byte COMM chunk; bailing", (long)block_length);
 				return false;
 			}
 			comm_chunk = position;

@@ -18,7 +18,7 @@ feature of Impulse Tracker is available in exactly the same manner. Improvements
 might have developed with Impulse Tracker.
 
 [BuildPrepare]
-mkdir -p linux-x86-build && cd linux-x86-build && prepareBuild --src ..
+mkdir -p linux-x86-build && cd linux-x86-build && prepareBuild --src .. $EXTRA_ARGS
 
 [BuildUnprepare]
 unprepareBuild

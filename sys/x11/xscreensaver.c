@@ -130,7 +130,7 @@ void xscreensaver_deactivate(void)
 		Atom type;
 		int format;
 		unsigned long nitems, bytesafter;
-		char *v = 0;
+		unsigned char *v = 0;
 
 		XSync(dpy, False);
 		old_handler = XSetErrorHandler(BadWindow_ehandler);

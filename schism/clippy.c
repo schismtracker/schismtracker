@@ -182,7 +182,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 	unsigned long nbytes;
 	unsigned long overflow;
 	unsigned char *seln_data;
-	char *src;
+	unsigned char *src;
 
 	if (ev->type != SDL_SYSWMEVENT) return 1;
 	if (ev->syswm.msg->event.xevent.type == SelectionNotify) {
@@ -191,15 +191,18 @@ static int _x11_clip_filter(const SDL_Event *ev)
 			lock_display();
 			src = 0;
 			if (XGetWindowProperty(SDL_Display, SDL_Window, atom_sel,
-						0, 9000, False, XA_STRING, &seln_type,
-						&seln_format, &nbytes, &overflow,
+						0, 9000, False, XA_STRING,
+						(Atom *)&seln_type,
+						(int *)&seln_format,
+						(unsigned long *)&nbytes,
+						(unsigned long *)&overflow,
 						(unsigned char **)&src) == Success) {
 				if (seln_type == XA_STRING) {
 					if (_current_selection != _current_clipboard) {
 						free(_current_clipboard);
 					}
 					_current_clipboard = mem_alloc(nbytes+1);
-					memcpy(_current_clipboard, src, nbytes);
+					memcpy(_current_clipboard, (char*)src, nbytes);
 					_current_clipboard[nbytes] = 0;
 					_string_paste(CLIPPY_BUFFER, _current_clipboard);
 					_widget_owner[CLIPPY_BUFFER]

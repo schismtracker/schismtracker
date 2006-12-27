@@ -27,7 +27,7 @@
 #include <alsa/asoundlib.h>
 #include <alsa/mixer.h>
 
-static char *alsa_card_id = "default";
+static const char *alsa_card_id = "default";
 
 /* --------------------------------------------------------------------- */
 #ifdef USE_DLTRICK_ALSA
@@ -155,7 +155,6 @@ static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
 	snd_mixer_t *mix;
 	snd_ctl_t *ctl_handle;
 	snd_ctl_card_info_t *hw_info;
-	int err;
 
 	snd_ctl_card_info_alloca(&hw_info);
 	if (snd_ctl_open(&ctl_handle, alsa_card_id, 0) < 0) return;
@@ -204,18 +203,20 @@ static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
 	
 }
 
+int alsa_mixer_get_max_volume(void);
 int alsa_mixer_get_max_volume(void)
 {
-	int a,b;
 	return 0xFF;
 }
 
+void alsa_mixer_read_volume(int *left, int *right);
 void alsa_mixer_read_volume(int *left, int *right)
 {
 	*left = *right = 0;
 	_alsa_doit(_alsa_read, left, right);
 }
 
+void alsa_mixer_write_volume(int left, int right);
 void alsa_mixer_write_volume(int left, int right)
 {
 	_alsa_doit(_alsa_write, &left, &right);

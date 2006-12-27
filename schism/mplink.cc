@@ -195,17 +195,6 @@ void song_save_channel_states(void)
 		channel_states[n] = mp->Chn[n].dwFlags & CHN_MUTE;
 }
 
-// I don't think this is useful besides undoing a channel solo (a few lines
-// below), but I'm making it extern anyway for symmetry.
-inline void song_restore_channel_states(void)
-{
-	int n = 64;
-	
-	while (n-- > 0)
-		song_set_channel_mute(n, channel_states[n]);
-	solo_channel = -1;
-}
-
 inline void song_set_channel_mute(int channel, int muted)
 {
         if (muted) {
@@ -215,6 +204,17 @@ inline void song_set_channel_mute(int channel, int muted)
                 mp->ChnSettings[channel].dwFlags &= ~CHN_MUTE;
                 mp->Chn[channel].dwFlags &= ~CHN_MUTE;
         }
+}
+
+// I don't think this is useful besides undoing a channel solo (a few lines
+// below), but I'm making it extern anyway for symmetry.
+inline void song_restore_channel_states(void)
+{
+	int n = 64;
+	
+	while (n-- > 0)
+		song_set_channel_mute(n, channel_states[n]);
+	solo_channel = -1;
 }
 
 // disgusting hack to get the orderpan page channel muting to "stick"... we need to maek the callback system a

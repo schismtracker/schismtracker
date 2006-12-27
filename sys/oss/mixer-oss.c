@@ -68,11 +68,13 @@ static int open_mixer_device(void)
 
 /* --------------------------------------------------------------------- */
 
+int oss_mixer_get_max_volume(void);
 int oss_mixer_get_max_volume(void)
 {
 	return VOLUME_MAX;
 }
 
+void oss_mixer_read_volume(int *left, int *right);
 void oss_mixer_read_volume(int *left, int *right)
 {
         int fd;
@@ -96,6 +98,7 @@ void oss_mixer_read_volume(int *left, int *right)
         close(fd);
 }
 
+void oss_mixer_write_volume(int left, int right);
 void oss_mixer_write_volume(int left, int right)
 {
         int fd;

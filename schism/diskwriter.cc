@@ -118,7 +118,7 @@ static void _mw(diskwriter_driver_t *x, const unsigned char *buf, unsigned int l
 	if (!len) return;
 	if (!fp_ok) return;
 
-	if (x->pos + len >= mbuf_size) {
+	if (x->pos + (int)len >= (int)mbuf_size) {
 		tmp = (char*)realloc(mbuf, nl = (x->pos + len + 65536));
 		if (!tmp) {
 			(void)free(mbuf);
@@ -133,7 +133,7 @@ static void _mw(diskwriter_driver_t *x, const unsigned char *buf, unsigned int l
 	}
 	memcpy(mbuf+x->pos, buf, len);
 	x->pos += len;
-	if (x->pos >= mbuf_len) {
+	if (x->pos >= (int)mbuf_len) {
 		mbuf_len = x->pos;
 	}
 }
