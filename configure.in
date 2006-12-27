@@ -49,6 +49,8 @@ AC_C_BIGENDIAN
 dnl Check for SDL libs
 AM_PATH_SDL(1.1.8, , AC_MSG_ERROR([*** SDL version >= 1.1.8 not found.]))
 
+AC_ARG_ENABLE(release,    [  --enable-release        This is a release build], AC_DEFINE([RELEASE_VERSION],[],[Release-build]))
+
 enable_sdlstatic=no
 AC_ARG_ENABLE(static-sdl, [  --enable-static-sdl     Link SDL statically], enable_sdlstatic=yes,enable_sdlstatic=no)
 if test "x$enable_sdlstatic" = "xyes"; then
