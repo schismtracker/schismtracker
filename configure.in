@@ -26,7 +26,7 @@ dnl We'll need machine type later
 AC_CANONICAL_TARGET([])
 machtype="$target_cpu"
 
-AM_INIT_AUTOMAKE(schismtracker, 0.5)
+AM_INIT_AUTOMAKE(schismtracker, 0.5rc1)
 AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------------------------------
