@@ -6,7 +6,7 @@ mm=`cat "$HOME/.my-macosx"`
 	--cvs-exclude --exclude="*-build" --exclude="schism-*.x86.package" \
 	-v -z -r -e ssh schism2 "$mm:.")
 
-ssh "$mm" 'cd schism2; PATH="/sw/bin:$PATH"; export PATH; sh scripts/fink-macosx.sh' || exit 1
+ssh "$mm" 'cd schism2; PATH="/sw/bin:$PATH"; export PATH; sh scripts/fink-macosx.sh'" $@" || exit 1
 
 mkdir -p macosx-ppc-build
 rsync -v -z -r -e ssh "$mm:schism2/macosx-ppc-build/./" macosx-ppc-build/.
