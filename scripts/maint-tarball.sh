@@ -5,6 +5,7 @@ find schism2/ \
 	\! -path '*/autom4te.cache/*' \
 	\! -path '*/*-build/*' \
 	\! -path '*/CVS/*' \
+	\! -path '.#*' \
 	\! -name 'CVS' \
 	\! -name '*-build' \
 	\! -name '.*.sw[opqrstuvwxyz]' \
