@@ -1,7 +1,7 @@
 # -*-shell-script-*-
 
 [Meta]
-RootName: @nimh.org/schism:1.0
+RootName: @nimh.org/schism:0.5
 DisplayName: Schism Tracker
 ShortName: schism
 Maintainer: Mrs. Brisby <mrs.brisby@nimh.org>
@@ -9,8 +9,8 @@ Packager: Mrs. Brisby <mrs.brisby@nimh.org>
 Summary: Schism Tracker is a music editor that matches the look and feel of Impulse Tracker as closely as possible.
 URL: http://www.rigelseven.com/schism/
 License: GNU General Public License, Version 2
-SoftwareVersion: 1.0
-AutopackageTarget: 1.0
+SoftwareVersion: 0.5
+AutopackageTarget: 0.5
 
 [Description]
 Schism Tracker is a music editor in the spirit of Impulse Tracker. Nearly every
