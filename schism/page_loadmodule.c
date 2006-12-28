@@ -89,11 +89,11 @@ static void handle_file_entered_L(char *ptr)
 {
 	dmoz_filelist_t tmp;
 	struct stat sb;
-	const char *s;
+	const char *ext;
 	dmoz_file_t *f;
 	int r, i;
 
-/* these shenanagans force the file to take another trip... */
+	/* these shenanagans force the file to take another trip... */
 	if (stat(ptr, &sb) == -1) return;
 
 	memset(&tmp,0,sizeof(tmp));
@@ -102,18 +102,23 @@ static void handle_file_entered_L(char *ptr)
 	dmoz_free(&tmp, NULL);
 
 	if (r && song_load(ptr)) {
-		r = 4;
-		for (s = (const char *)ptr; *s; s++) {
-			if (*s == '.') {
-				for (i = 0; diskwriter_drivers[i]; i++) {
-					if (strcasecmp(s+1,
-					diskwriter_drivers[i]->name) == 0) {
-						r = i+5;
-						break;
-					}
+		r = 4; /* what? */
+		
+		ext = get_extension(ptr);
+		if (ext[0]) {
+			for (i = 0; diskwriter_drivers[i]; i++) {
+				if (strcasecmp(ext, diskwriter_drivers[i]->extension) == 0) {
+					/* ugh :) offset to the button for the file type on the save module
+					   page is (position in diskwriter driver array) + 5
+					   (TODO: maybe always use auto type? that way the button won't
+					   override the filename so you can e.g. save an xm as .it without
+					   having to switch the type first) */
+					r = i + 5;
+					break;
 				}
 			}
 		}
+		/* ew, didn't i write some function to toggle one button on and the rest off?! */
 		widgets_savemodule[4].d.togglebutton.state = 0;
 		for (i = 0; diskwriter_drivers[i]; i++) {
 			widgets_savemodule[5+i].d.togglebutton.state = 0;
@@ -129,7 +134,6 @@ static void do_save_song(void *ptr)
 {
 	int i;
 	const char *typ = NULL;
-	/*const char *s;*/
 
 	set_page(PAGE_LOG);
 
@@ -144,6 +148,7 @@ static void do_save_song(void *ptr)
 		/* set_page(PAGE_BLANK); */
 	}
 }
+
 void save_song_or_save_as(void)
 {
 	const char *f = song_get_filename();
@@ -902,8 +907,9 @@ void save_module_load_page(struct page *page)
         create_textentry(widgets_savemodule + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_savemodule[3].activate = dirname_entered;
 
-	for (i = 0; diskwriter_drivers[i]; i++);
-	page->total_widgets += i;
+	for (i = 0; diskwriter_drivers[i]; i++, page->total_widgets++) {
+		/* nerf */
+	}
 
 	i = 0;
 
@@ -911,17 +917,10 @@ void save_module_load_page(struct page *page)
 	if (j >= (page->total_widgets-4)) {
 		j = i;
 	}
-	create_togglebutton(&widgets_savemodule[4+i],
-					70, 13, 5,
-					4+i, 4+j,
-					1, 4+i,
-					4+j,
-					NULL,
-					"Auto",
-					1,
-					filetype_saves);
+	create_togglebutton(&widgets_savemodule[4+i], 70, 13, 5, 4 + i, 4 + j, 1, 0, 2,
+			    NULL, " Auto", 1, filetype_saves);
 	widgets_savemodule[4].d.togglebutton.state = 1;
-/* XXX classic mode shouldn't have an auto */
+	/* XXX classic mode shouldn't have an auto */
 	i++;
 	for (; diskwriter_drivers[i-1]; i++) {
 		k = i - 1;
@@ -929,15 +928,10 @@ void save_module_load_page(struct page *page)
 		if (j >= (page->total_widgets-4)) {
 			j = i;
 		}
-		create_togglebutton(&widgets_savemodule[4+i],
-						70, 13 + (i*3), 5,
-						4+k, 4+j,
-						1, 4+i,
-						(j == i) ? 2 : 4+j,
-						NULL,
-						diskwriter_drivers[i-1]->name,
-			4 - ((strlen(diskwriter_drivers[i-1]->name)+1) / 2),
-						filetype_saves);
+		/* FIXME: down key for last diskwriter driver should focus the filename entry,
+			  and left/right should at least try to keep the cursor around the same place */
+		create_togglebutton(&widgets_savemodule[4+i], 70, 13 + (i*3), 5, 4 + k, 4 + j, 1, 0, 2,
+				    NULL, diskwriter_drivers[i-1]->name,
+				    4 - ((strlen(diskwriter_drivers[i-1]->name)+1) / 2), filetype_saves);
 	}
-
 }

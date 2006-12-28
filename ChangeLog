@@ -1,1 +1,2034 @@
-This sentence no verb.
+2006-12-26 20:50  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-26 11:35  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-26 11:35  nimh
+
+	* include/it.h, schism/audio_loadsave.cc, schism/main.c,
+	  schism/page.c, schism/page_message.c: introduce --text-editor
+	  (makes editing helptext files slightly easier)
+
+2006-12-26 10:09  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-25 14:47  storlek
+
+	* include/: it.h, video.h: blah includecakes
+
+2006-12-25 14:42  storlek
+
+	* schism/: config.c, main.c, video.c: save mouse cursor visibility
+	  in config
+
+2006-12-25 14:07  storlek
+
+	* helptext/pattern-editor, include/auto/helptext.h: changing three
+	  bytes
+
+2006-12-25 13:50  storlek
+
+	* configure.in: X11 disabled by default on OS X; use --with-x to
+	  enable
+
+2006-12-25 12:40  storlek
+
+	* README, include/song.h, schism/mplink.cc, schism/page.c,
+	  schism/page_info.c, schism/page_orderpan.c,
+	  schism/page_patedit.c: han solo
+
+2006-12-25 09:39  storlek
+
+	* schism/config.c: stop being so lazy
+
+2006-12-25 00:35  storlek
+
+	* schism/page_patedit.c: fixed bug with alt-m dropping note
+	  cut/off/fade
+
+2006-12-24 23:27  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-24 23:21  nimh
+
+	* scripts/fink-macosx.sh: install_name_tool fix
+
+2006-12-24 23:06  storlek
+
+	* include/it.h, schism/config.c, schism/main.c: lazy_redraw option
+
+2006-12-24 22:50  storlek
+
+	* scripts/: fink-macosx.sh, maint-win32.sh: package fixes?
+
+2006-12-24 22:46  storlek
+
+	* schism/audio_loadsave.cc: fix so new songs play (whoops, forgot
+	  to check in earlier)
+
+2006-12-24 12:02  storlek
+
+	* configure.in, schism/main.c: only be nice on some systems
+
+2006-12-24 10:03  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-24 09:48  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-24 09:41  nimh
+
+	* schism/draw-misc.c: guard assertion
+
+2006-12-24 03:57  storlek
+
+	* include/frag-opt.h, schism/frag-opt.c, schism/main.c,
+	  sys/macosx/macosx-sdlmain.m: frag-opt updated
+
+2006-12-24 03:09  storlek
+
+	* modplug/: load_669.cpp, load_mdl.cpp, load_mtm.cpp: partial
+	  endian fixes
+
+2006-12-24 00:51  storlek
+
+	* schism/main.c: made it better
+
+2006-12-24 00:29  storlek
+
+	* schism/: main.c, video.c: readded lazy drawing when not focused,
+	  and also made some code cleanliness sorta changes nobody cares
+	  about, but which i'll mention here anyway.
+
+2006-12-23 23:17  storlek
+
+	* schism/page_patedit.c: i'm a curmudgeon :P
+
+2006-12-23 23:07  storlek
+
+	* schism/page_orderpan.c: ctrl-+/- with +++ orders, respecting
+	  CLASSIC_MODE, now works as expected without crashing on edge
+	  cases, and it doesn't use goto either
+
+2006-12-23 22:35  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-23 22:01  storlek
+
+	* modplug/sndfile.cpp: 16-bit samples in xm files load properly on
+	  ppc; needs retesting on x86
+
+2006-12-23 21:16  storlek
+
+	* schism/audio_loadsave.cc: LOL WOW... should have better playback
+	  for xm, s3m, and mod files now
+
+2006-12-23 14:31  storlek
+
+	* schism/: audio_loadsave.cc, audio_playback.cc, main.c,
+	  page_about.c, page_samples.c: lampshade
+
+2006-12-23 13:16  storlek
+
+	* schism/page_loadmodule.c: some mouse wheel fixes
+
+2006-12-23 12:49  storlek
+
+	* schism/version.c: woo parsing! also added a big long note
+
+2006-12-23 12:11  storlek
+
+	* schism/widget-keyhandler.c: minus in thumbbars only triggers
+	  numeric input if minimum value is negative
+
+2006-12-23 11:53  storlek
+
+	* Makefile.am, schism/page_loadmodule.c, schism/status.c: fixed
+	  warnings
+
+2006-12-23 10:39  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-23 10:37  nimh
+
+	* schism/: audio_loadsave.cc, page.c, page_loadmodule.c: remember
+	  file save name and type
+
+2006-12-23 10:36  nimh
+
+	* scripts/maint-changelog.sh: my lowly changelog script
+
+2006-12-23 09:44  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-23 09:44  nimh
+
+	* include/it.h: introduce api
+
+2006-12-23 09:44  nimh
+
+	* Makefile.am: add version file
+
+2006-12-23 09:43  nimh
+
+	* schism/status.c: dead code removal
+
+2006-12-23 09:43  nimh
+
+	* schism/page.c: use banner
+
+2006-12-23 09:43  nimh
+
+	* schism/main.c: use banner; move text earlier in log, add newlines
+
+2006-12-23 09:42  nimh
+
+	* schism/version.c: banner generator (isolated)
+
+2006-12-23 09:42  nimh
+
+	* schism/page_log.c: api addition
+
+2006-12-22 22:28  storlek
+
+	* Makefile.am, include/auto/README: new file
+
+2006-12-22 22:10  storlek
+
+	* schism/: page.c, page_patedit.c: pattern editor options CORRECTLY
+	  remembers active widget now
+
+2006-12-22 15:52  nimh
+
+	* Makefile.am: revert change that ate my build scripts make no
+	  longer works
+
+2006-12-22 15:17  storlek
+
+	* schism/dialog.c: song_new weirdness with menu fixed
+
+2006-12-22 14:49  storlek
+
+	* schism/: draw-char.c, pattern-view.c: oh no, not hans brix!
+
+2006-12-22 14:38  storlek
+
+	* schism/: draw-char.c, itf.c, keyboard.c, page_patedit.c: pattern
+	  mask indicators work with inverted palettes; note fade text
+	  changed back to ~~~
+
+2006-12-22 12:43  storlek
+
+	* schism/page_patedit.c: ... that was 'h', not 'n'. anyway,
+	  redrawing would be nice.
+
+2006-12-22 12:37  storlek
+
+	* schism/page_patedit.c: 'r' and 'n' in pattern editor options
+
+2006-12-22 01:03  storlek
+
+	* schism/video.c, sys/macosx/Schism
+	  Tracker.app/Contents/Info.plist: don't talk about the mouse on
+	  focus; random tinkering with the app bundle
+
+2006-12-21 23:02  storlek
+
+	* Makefile.am: i'm lazy
+
+2006-12-21 21:52  storlek
+
+	* Makefile.am: make dist works, includes everything it needs, and
+	  doesn't include stuff it doesn't need
+
+2006-12-21 21:24  storlek
+
+	* Makefile.am, scripts/storlek-snapshot.sh: hmm. why use some dodgy
+	  random script when make already knows what it's doing?
+
+2006-12-21 20:55  storlek
+
+	* scripts/storlek-snapshot.sh: further proof that storlek can't
+	  write shell scripts
+
+2006-12-21 20:39  storlek
+
+	* scripts/storlek-snapshot.sh: spork
+
+2006-12-21 20:07  storlek
+
+	* schism/page_orderpan.c: reverted to 0.2a behavior for orderlist
+	  +++ skipping; will rewrite later
+
+2006-12-21 19:47  storlek
+
+	* schism/audio_playback.cc: vu meter state cleared on song_stop
+
+2006-12-21 18:35  storlek
+
+	* autogen.sh: autoheader before automake = no complaints
+
+2006-12-21 13:51  storlek
+
+	* helptext/orderlist-pan, helptext/orderlist-vol,
+	  include/auto/helptext.h, schism/page_orderpan.c: add unused
+	  patterns before rearranging orderlist, to avoid killing patterns
+
+2006-12-21 13:34  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-21 06:24  storlek
+
+	* include/it.h, schism/config.c, schism/keyboard.c, schism/video.c:
+	  more keyboard changes; feedback on mouse cursor show/hide
+
+2006-12-21 03:26  storlek
+
+	* include/it.h, schism/config.c, schism/keyboard.c: switch for meta
+	  key to act like alt or ctrl (mostly for macs) - there's no gui
+	  option, just hack the config file
+
+2006-12-21 03:19  storlek
+
+	* helptext/pattern-editor, include/it.h, include/video.h,
+	  schism/clippy.c, schism/config.c, schism/keyboard.c,
+	  schism/main.c, schism/page_config.c, schism/page_patedit.c,
+	  sys/x11/xkb.c, sys/x11/xscreensaver.c, sys/x11/xv.c: renamed
+	  "digitrakker voodoo" to something more sensible; more warning
+	  fixes
+
+2006-12-21 00:23  storlek
+
+	* schism/page.c: allow ctrl+scroll lock (for os x)
+
+2006-12-21 00:21  nimh
+
+	* include/sdlmain.h: stupid monkey
+
+2006-12-21 00:18  nimh
+
+	* Makefile.am, include/macosx-sdlmain.h, include/sdlmain.h,
+	  schism/clippy.c, sys/x11/xkb.c, sys/x11/xscreensaver.c,
+	  sys/x11/xv.c: theoretically support mixing macosx and x11...
+
+2006-12-20 23:36  nimh
+
+	* schism/page_samples.c: no double trigger on space
+
+2006-12-20 23:23  nimh
+
+	* schism/page_log.c: scrolling on log viewer
+
+2006-12-20 21:29  storlek
+
+	* schism/: main.c, page_about.c, video.c: cleaned up title screen;
+	  pollute log viewer instead
+
+2006-12-20 19:55  storlek
+
+	* schism/: clippy.c, midi-core.c, xpmdata.c: ugly fixes for os x
+	  friendliness
+
+2006-12-20 18:02  storlek
+
+	* autogen.sh: wow, i fail at sh
+
+2006-12-19 22:57  storlek
+
+	* autogen.sh: try again, i suck
+
+2006-12-19 22:56  storlek
+
+	* autogen.sh: milk
+
+2006-12-19 22:32  nimh
+
+	* autogen.sh: wee, it works
+
+2006-12-19 22:23  storlek
+
+	* autogen.sh: serious shell script hacking to allow different
+	  versions of autotools
+
+2006-12-19 21:53  nimh
+
+	* README.building, configure.in: removing junk
+
+2006-12-19 21:52  nimh
+
+	* schism/Makefile: storlek is lazy
+
+2006-12-19 21:48  storlek
+
+	* Makefile: Die Makefile, Die! (That's German for "The Makefile,
+	  The")
+
+2006-12-19 15:44  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-19 15:44  nimh
+
+	* sys/x11/xkb.c: fix xkb repeat rate test/check
+
+2006-12-19 08:56  nimh
+
+	* modplug/fastmix.cpp: introduce 24bit and 32bit mixing functions
+
+2006-12-18 23:06  nimh
+
+	* include/config-parser.h, schism/config-parser.c, schism/main.c,
+	  schism/midi-core.c: save/restore midi configuration in config
+	  file, also support deleting sections in config file...
+
+2006-12-18 22:29  nimh
+
+	* schism/audio_playback.cc: allow -a /dev/dsp1
+
+2006-12-18 22:24  nimh
+
+	* schism/main.c: shouldnt override
+
+2006-12-18 21:47  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-18 21:47  nimh
+
+	* Makefile.am, autogen.sh, scripts/maint-win32.sh,
+	  sys/fd.org/autopackage.apspec, sys/fd.org/itf.desktop,
+	  sys/fd.org/schism.desktop, sys/win32/schism.bat: okay, rename
+	  schism -> schismtracker
+
+2006-12-18 21:24  nimh
+
+	* configure.in: we dont make win32 dlls...
+
+2006-12-18 16:54  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-18 16:54  nimh
+
+	* schism/midi-ip.c: void* these for win32
+
+2006-12-18 16:54  nimh
+
+	* schism/vasprintf.c: cast mem_alloc
+
+2006-12-18 16:54  nimh
+
+	* sys/win32/midi-win32mm.c: MMRESULT type bug
+
+2006-12-18 10:24  nimh
+
+	* Makefile.am: binary needs top be called "schism" because deps
+	  require it (for now)
+
+2006-12-18 10:24  nimh
+
+	* configure.in: autopackage is brain-damaged for lib order; fixing
+	  it here for now
+
+2006-12-18 10:23  nimh
+
+	* schism/audio_loadsave.cc: null check in fix-it
+
+2006-12-18 10:23  nimh
+
+	* schism/page_about.c: guard against leaking when visiting page
+	  about
+
+2006-12-18 10:22  nimh
+
+	* schism/xpmdata.c: const fixes (esp. for nx machines)
+
+2006-12-18 10:20  nimh
+
+	* sys/fd.org/autopackage.apspec: noise
+
+2006-12-18 10:20  nimh
+
+	* sys/x11/: xkb.c, xscreensaver.c: index remapping messed with x
+	  headers; fixing
+
+2006-12-18 10:19  nimh
+
+	* modplug/fastmix.cpp: fix protos so C++ can find these
+
+2006-12-18 10:18  nimh
+
+	* include/auto/: helptext.h, logoit.h, logoschism.h, schismico.h:
+	  rebuild auto
+
+2006-12-18 02:08  storlek
+
+	* AUTHORS.cvs, ChangeLog, Makefile.am, README.building,
+	  configure.in, include/it.h, include/midi.h, include/mixer.h,
+	  include/page.h, include/sdlmain.h, include/slurp.h,
+	  include/vgamem-scanner.h, include/video.h,
+	  include/auto/helptext.h, include/auto/logoit.h,
+	  include/auto/logoschism.h, include/auto/schismico.h,
+	  modplug/fastmix.cpp, modplug/load_it.cpp, modplug/load_mod.cpp,
+	  modplug/load_s3m.cpp, modplug/snd_dsp.cpp, modplug/snd_eq.cpp,
+	  modplug/snd_flt.cpp, modplug/snd_fx.cpp, modplug/sndfile.cpp,
+	  modplug/sndmix.cpp, modplug/stdafx.h, schism/audio_loadsave.cc,
+	  schism/audio_playback.cc, schism/charset.c, schism/clippy.c,
+	  schism/diskwriter.cc, schism/diskwriter_dialog.c,
+	  schism/draw-char.c, schism/draw-pixel.c, schism/fakemem.c,
+	  schism/itf.c, schism/keyboard.c, schism/main.c, schism/menu.c,
+	  schism/midi-core.c, schism/midi-ip.c, schism/mplink.cc,
+	  schism/page.c, schism/page_about.c, schism/page_config.c,
+	  schism/page_info.c, schism/page_instruments.c,
+	  schism/page_loadinst.c, schism/page_loadmodule.c,
+	  schism/page_loadsample.c, schism/page_message.c,
+	  schism/page_midi.c, schism/page_midiout.c,
+	  schism/page_orderpan.c, schism/page_patedit.c,
+	  schism/page_preferences.c, schism/page_samples.c,
+	  schism/sample-edit.c, schism/sample-view.c, schism/slurp.c,
+	  schism/util.c, schism/video.c, schism/widget-keyhandler.c,
+	  schism/xpmdata.c, schism/fmt/aiff.c, schism/fmt/its.cc,
+	  schism/fmt/wav.cc, scripts/build-auto.sh,
+	  sys/macosx/ibook-support.c, sys/macosx/midi-macosx.c: added
+	  --enable-ridiculous-mode to turn on all compiler warnings AND
+	  -Werror; renamed binary to schismtracker (rather than schism,
+	  which conflicts with the source directory); fixed oodles of
+	  warnings
+
+2006-12-17 10:44  nimh
+
+	* schism/video.c: forgot uyvy
+
+2006-12-17 00:18  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-17 00:18  nimh
+
+	* scripts/: maint-win32.sh, fink-macosx.sh: without-x
+
+2006-12-17 00:05  nimh
+
+	* configure.in: fix x11 linking
+
+2006-12-16 23:40  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-16 23:37  nimh
+
+	* include/video.h, schism/video.c, sys/x11/xv.c, Makefile.am,
+	  configure.in: add support for xvimage detection
+
+2006-12-16 22:47  nimh
+
+	* configure.in: fix build using x11 headers for sdl 1.2.11
+	  (official)
+
+2006-12-16 22:42  nimh
+
+	* schism/video.c: corrected half-width modes
+
+2006-12-16 13:12  nimh
+
+	* schism/diskwriter.cc: fsync
+
+2006-12-15 17:47  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-15 17:37  nimh
+
+	* schism/video.c: allow 24bpp to use yuv (cross fingers)
+
+2006-12-15 17:34  nimh
+
+	* schism/video.c: force half-width yuv
+
+2006-12-13 22:46  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-13 22:46  nimh
+
+	* scripts/maint-all.sh: touch build on each build
+
+2006-12-13 22:45  nimh
+
+	* schism/: main.c, page.c: include build version
+
+2006-12-13 22:42  nimh
+
+	* include/auto/build-version.h: Loaded into CVS
+
+2006-12-13 22:38  nimh
+
+	* include/auto/: build-version.h: Loaded into CVS
+
+2006-12-13 22:31  nimh
+
+	* schism/page_preferences.c: use a useful (volume) scale; 256 is
+	  too big. 31 is what IT used...
+
+2006-12-13 22:12  nimh
+
+	* schism/audio_playback.cc: go back to 0x100 volume (not as loud)
+
+2006-12-13 22:08  nimh
+
+	* modplug/snd_flt.cpp: revert filtering code
+
+2006-12-13 22:07  nimh
+
+	* schism/audio_playback.cc, modplug/snd_dsp.cpp: disable
+	  oversampling option; its wrong (for modplug!) anyway
+
+2006-12-13 20:33  nimh
+
+	* schism/audio_loadsave.cc: fixup instruments with broken envelopes
+
+2006-12-12 23:31  nimh
+
+	* schism/audio_playback.cc: (re)fix echo
+
+2006-12-12 23:14  nimh
+
+	* include/song.h, schism/audio_playback.cc, schism/mplink.cc,
+	  schism/page_info.c, schism/page_orderpan.c: revert mute to
+	  0.2a-like behavior.
+
+2006-12-12 23:13  nimh
+
+	* schism/page.c: unnecessary
+
+2006-12-12 23:13  nimh
+
+	* schism/main.c: workaround sdl fullscreen mouse lock bug on xrandr
+	  and x11; also lower priority of ui thread on unix/macosx(?)
+
+2006-12-12 23:12  nimh
+
+	* modplug/snd_flt.cpp: playing with filters
+
+2006-12-12 23:11  nimh
+
+	* modplug/load_s3m.cpp: whoops
+
+2006-12-12 23:11  nimh
+
+	* include/video.h, schism/video.c: workaround sdl fullscreen mouse
+	  lock bug on xrandr and x11
+
+2006-12-11 11:38  nimh
+
+	* modplug/sndfile.cpp: less clever
+
+2006-12-11 11:37  nimh
+
+	* modplug/load_s3m.cpp: no magics
+
+2006-12-11 11:21  nimh
+
+	* modplug/load_it.cpp, schism/page_instruments.c: silently fix some
+	  corrupt instruments
+
+2006-12-11 11:18  nimh
+
+	* schism/page_patedit.c: additional protections
+
+2006-12-08 19:42  nimh
+
+	* schism/audio_playback.cc: fix lag issue when switching orders
+	  during playback
+
+2006-12-08 19:38  nimh
+
+	* modplug/load_it.cpp: dead code removal
+
+2006-12-03 12:36  nimh
+
+	* schism/page.c: minipop + 1
+
+2006-12-01 10:24  nimh
+
+	* schism/: page.c, page_instruments.c, page_orderpan.c,
+	  page_patedit.c: colon, quote, doublequote, and semicolon fixes;
+
+2006-11-25 21:02  nimh
+
+	* modplug/sndmix.cpp: tickstart=0
+
+2006-11-25 16:32  nimh
+
+	* modplug/snd_fx.cpp, schism/audio_playback.cc: attempt to fix sync
+	  bug
+
+2006-11-25 14:46  nimh
+
+	* modplug/load_mod.cpp: use highest used channel
+
+2006-11-25 14:45  nimh
+
+	* modplug/load_s3m.cpp: remove junk
+
+2006-11-25 14:19  nimh
+
+	* modplug/: load_s3m.cpp, sndfile.cpp, sndfile.h: maybe channel
+	  limit fixes
+
+2006-11-25 14:19  nimh
+
+	* modplug/load_mod.cpp: maybe endian fixes
+
+2006-10-16 11:07  nimh
+
+	* schism/keyboard.c: fix cs-4
+
+2006-10-13 19:05  nimh
+
+	* schism/: page_instruments.c, page_samples.c: make ctrl-p (paste
+	  wookie) work more reliably for f3/f4 lists
+
+2006-09-20 07:25  nimh
+
+	* schism/main.c: introduce key/debug flag
+
+2006-09-05 08:16  nimh
+
+	* Makefile, configure.in: fix ./configure ane make for real
+
+2006-09-02 12:02  nimh
+
+	* README.building: build instructions
+
+2006-09-02 12:00  nimh
+
+	* configure.in: whoops use -p
+
+2006-09-02 11:59  nimh
+
+	* Makefile, configure.in: make ./configure && make possible for
+	  people who dont read the instructions
+
+2006-08-31 20:35  nimh
+
+	* schism/page_patedit.c: fix f7 on f2
+
+2006-08-30 18:56  nimh
+
+	* schism/clippy.c: ignore 22+badwindow problems; they should be
+	  harmless
+
+2006-08-29 20:55  nimh
+
+	* schism/page_config.c: driver is "opengl" not "gl"
+
+2006-08-29 20:54  nimh
+
+	* schism/video.c: whoops, transition
+
+2006-08-27 10:02  nimh
+
+	* schism/config.c: move config on macosx per storlek
+
+2006-08-26 09:37  nimh
+
+	* schism/config.c: set more config vars from c-f1
+
+2006-08-26 09:37  nimh
+
+	* schism/page_config.c: text change
+
+2006-08-25 16:35  nimh
+
+	* scripts/fink-macosx.sh: CXX
+
+2006-08-25 00:20  nimh
+
+	* schism/: audio_playback.cc, page.c, page_patedit.c: fixing mute
+	  (i think)
+
+2006-08-24 08:46  nimh
+
+	* schism/keyboard.c: fix 99 syms
+
+2006-08-21 22:37  nimh
+
+	* schism/clippy.c: extra display check
+
+2006-08-21 22:32  nimh
+
+	* scripts/fink-macosx.sh: lets try gcc33 for a while
+
+2006-08-21 22:31  nimh
+
+	* schism/: page_orderpan.c, page_patedit.c: try f7 changes
+
+2006-08-16 21:33  nimh
+
+	* modplug/snd_fx.cpp: try to fix gxx/exx/fxx in modplug
+
+2006-08-14 14:11  nimh
+
+	* schism/page_samples.c: fix text
+
+2006-08-11 20:15  nimh
+
+	* include/auto/helptext.h: post update
+
+2006-08-11 20:15  nimh
+
+	* helptext/: global-keys, orderlist-pan, orderlist-vol,
+	  sample-list: post information about new keys
+
+2006-08-11 20:11  nimh
+
+	* schism/page_samples.c: copy sample support
+
+2006-08-11 19:59  nimh
+
+	* schism/page_orderpan.c: continue (c) key on order list
+
+2006-08-11 19:52  nimh
+
+	* schism/audio_playback.cc, schism/page.c, include/song.h: ctrl
+	  brackets for realtime tempo adjustment
+
+2006-08-11 19:39  nimh
+
+	* schism/page_patedit.c: wipe volume affects
+	  notecut,noteoff,notefade like null
+
+2006-08-10 21:35  nimh
+
+	* schism/page_orderpan.c: copy using mix channels
+
+2006-08-09 22:44  nimh
+
+	* include/song.h, schism/audio_playback.cc, schism/mplink.cc,
+	  schism/page_info.c, schism/page_orderpan.c,
+	  schism/page_patedit.c: separate mute settings
+
+2006-08-09 22:32  nimh
+
+	* schism/page_orderpan.c: whoops i when i meant j
+
+2006-08-09 22:24  nimh
+
+	* modplug/load_xm.cpp: fix loading/saving xm modules with zero
+	  orders
+
+2006-08-08 23:13  nimh
+
+	* modplug/load_mod.cpp: adjust finetine like xm
+
+2006-08-08 23:13  nimh
+
+	* schism/mplink.cc: dont reset all channels when solo toggling
+
+2006-08-08 23:13  nimh
+
+	* schism/audio_loadsave.cc: use mod saver when told (even though it
+	  doesnt work)
+
+2006-08-08 23:12  nimh
+
+	* schism/page_info.c: hide panning when note become inactive
+
+2006-08-08 22:46  nimh
+
+	* modplug/load_xm.cpp: fix saving sample-only songs
+
+2006-08-07 19:14  nimh
+
+	* modplug/load_mod.cpp: tempo slides arent allowed in modfiles
+
+2006-08-07 07:55  nimh
+
+	* modplug/load_mid.cpp: fix endian issues (i think)
+
+2006-08-06 21:55  nimh
+
+	* modplug/load_mid.cpp, modplug/sndfile.cpp, modplug/sndfile.h,
+	  schism/fmt/mid.cc, schism/audio_playback.cc, schism/dmoz.c,
+	  include/fmt.h, Makefile.am: adding midi file loader
+
+2006-08-06 11:26  nimh
+
+	* schism/audio_playback.cc: keydown sets panning to middle
+
+2006-08-06 11:19  nimh
+
+	* include/auto/helptext.h: update
+
+2006-08-06 11:17  nimh
+
+	* helptext/pattern-editor: document note-fade
+
+2006-08-06 10:51  nimh
+
+	* schism/audio_playback.cc: remove ramp
+
+2006-08-05 23:39  nimh
+
+	* schism/audio_playback.cc, schism/page_preferences.c,
+	  include/song.h: expose volume ramping flag, hook up noise
+	  reduction
+
+2006-08-05 13:23  nimh
+
+	* schism/audio_playback.cc: push keyup through keyjam code
+
+2006-08-05 13:09  nimh
+
+	* schism/mplink.cc: fix resize of null pattern
+
+2006-08-01 21:10  nimh
+
+	* schism/mplink.cc: solo is more naive for now..
+
+2006-08-01 21:04  nimh
+
+	* include/it.h, schism/diskwriter.cc, schism/page_loadsample.c:
+	  create host after diskwriter-to-sample
+
+2006-08-01 20:49  nimh
+
+	* include/song.h, schism/mplink.cc, schism/page_instruments.c: copy
+	  instrument
+
+2006-07-30 18:37  nimh
+
+	* schism/: page.c, page_instruments.c, page_samples.c: try to fix
+	  f3/f4 bugs
+
+2006-07-30 10:22  nimh
+
+	* include/it.h, include/song.h, schism/mplink.cc,
+	  schism/page_loadsample.c, schism/page_samples.c: do host
+	  instrument inits a little smarter
+
+2006-07-30 09:52  nimh
+
+	* schism/page_patedit.c: fix alt-g zapping at bottom
+
+2006-07-30 09:46  nimh
+
+	* schism/page_orderpan.c: fix reorder orderlist
+
+2006-07-27 20:58  nimh
+
+	* schism/page_orderpan.c: why am i turning this back on?
+
+2006-07-27 19:32  nimh
+
+	* schism/audio_playback.cc: use nna mute so mute doesnt affect
+	  keyjam
+
+2006-07-27 19:30  nimh
+
+	* schism/page_patedit.c: improve channel mute with mouse
+
+2006-07-26 22:47  nimh
+
+	* schism/page_samples.c: fix sample switch f3 load etc
+
+2006-07-26 22:47  nimh
+
+	* schism/page_patedit.c: try to clean up/fix shift selections
+
+2006-07-24 10:22  nimh
+
+	* schism/page_orderpan.c: pattern entry should force existance
+
+2006-07-22 14:47  nimh
+
+	* schism/page_samples.c: fix f2->f3 transition
+
+2006-07-16 20:25  nimh
+
+	* include/song.h, modplug/snd_fx.cpp, modplug/sndfile.h,
+	  modplug/sndmix.cpp, schism/audio_playback.cc: fix keyjam delay,
+	  nna during playback tracing
+
+2006-07-16 20:23  nimh
+
+	* schism/main.c: spend less time looking at the clock
+
+2006-07-16 16:56  nimh
+
+	* schism/audio_playback.cc: added mode to handle when song is not
+	  paused
+
+2006-07-14 23:52  nimh
+
+	* schism/page_orderpan.c: orderlist doesnt accept text
+
+2006-07-14 23:52  nimh
+
+	* schism/widget.c: thumbbars dont really accept text
+
+2006-07-14 23:52  nimh
+
+	* schism/page_message.c: message editor is sensitive to accept_text
+
+2006-07-14 23:45  nimh
+
+	* schism/audio_loadsave.cc: fix loading inst from xm module
+
+2006-07-13 08:16  nimh
+
+	* modplug/snd_fx.cpp: fix tremor and arpeggio commands
+
+2006-07-13 07:48  nimh
+
+	* schism/page_patedit.c: improve screen updates
+
+2006-07-12 20:27  nimh
+
+	* schism/: page_instruments.c, page_orderpan.c, page_samples.c:
+	  improve sample/inst sync; fix updates on orderlist page
+
+2006-07-12 19:01  nimh
+
+	* include/it.h, schism/page.c, schism/page_instruments.c,
+	  schism/page_samples.c: try fix sample/inst sync when bouncing
+	  between f3 and f4
+
+2006-07-11 19:51  nimh
+
+	* schism/audio_playback.cc: fix nna since samp fix
+
+2006-07-11 19:22  nimh
+
+	* schism/audio_playback.cc: fix keyjam on sample loader page
+
+2006-07-10 20:57  nimh
+
+	* schism/audio_playback.cc: fix sync problem and sample playback
+	  page when in inst mode
+
+2006-07-09 21:56  nimh
+
+	* modplug/snd_fx.cpp, modplug/sndmix.cpp, schism/audio_playback.cc:
+	  try fixing keyjammed effects more
+
+2006-07-09 10:35  nimh
+
+	* schism/page_info.c: cleanup
+
+2006-07-09 09:04  nimh
+
+	* schism/video.c: environment variables change/ability to fix video
+	  mode if os is wrong
+
+2006-07-09 08:43  nimh
+
+	* schism/sample-edit.c: fix alt-f and alt-e underflow problems
+
+2006-07-08 17:57  nimh
+
+	* modplug/: load_it.cpp, sndmix.cpp: relax speed requirements
+
+2006-07-08 11:07  nimh
+
+	* modplug/snd_fx.cpp, modplug/sndfile.h, modplug/sndmix.cpp,
+	  schism/audio_playback.cc, include/song.h: fix some other effects
+
+2006-07-07 18:16  nimh
+
+	* schism/audio_playback.cc: fix nna on keyrecord
+
+2006-07-07 18:15  nimh
+
+	* schism/page_patedit.c: fix def volume check
+
+2006-07-07 17:55  nimh
+
+	* schism/audio_loadsave.cc: probably a bug...
+
+2006-07-07 17:55  nimh
+
+	* include/headers.h, configure.in, modplug/stdafx.h: headers fixups
+
+2006-07-06 19:49  nimh
+
+	* sys/macosx/midi-macosx.c: use drain interface
+
+2006-07-06 19:37  nimh
+
+	* sys/macosx/macosx-sdlmain.m: removing cps comments
+
+2006-07-06 19:19  nimh
+
+	* schism/dmoz.c: dont get info from dirs (may fix bug elsewhere)
+
+2006-07-06 19:18  nimh
+
+	* sys/alsa/midi-alsa.c: use drain (alsa midi out sounds awesome)
+
+2006-07-06 19:18  nimh
+
+	* include/midi.h, schism/midi-core.c: add drain callback
+
+2006-07-06 19:17  nimh
+
+	* schism/audio_playback.cc: dont play muted channels on step
+
+2006-07-01 14:36  nimh
+
+	* helptext/global-keys, include/auto/helptext.h, schism/page.c:
+	  change clipboard keys (whoops)
+
+2006-07-01 13:56  nimh
+
+	* helptext/global-keys, include/auto/helptext.h, schism/page.c:
+	  change clipboard keys
+
+2006-07-01 13:45  nimh
+
+	* include/acc.h, include/charset.h, include/clippy.h,
+	  include/config-parser.h, include/diskwriter.h, include/dmoz.h,
+	  include/draw-char.h, include/event.h, include/fmt.h,
+	  include/headers.h, include/it.h, include/midi.h, include/mixer.h,
+	  include/mplink.h, include/page.h, include/palettes.h,
+	  include/pattern-view.h, include/sample-edit.h, include/slurp.h,
+	  include/song.h, include/util.h, include/video.h,
+	  schism/audio_loadsave.cc, schism/audio_playback.cc,
+	  schism/charset.c, schism/clippy.c, schism/config-parser.c,
+	  schism/config.c, schism/dialog.c, schism/diskwriter.cc,
+	  schism/diskwriter_dialog.c, schism/dmoz.c, schism/draw-char.c,
+	  schism/draw-misc.c, schism/draw-pixel.c, schism/fakemem.c,
+	  schism/helptext.c, schism/itf.c, schism/keyboard.c,
+	  schism/main.c, schism/menu.c, schism/midi-core.c,
+	  schism/midi-ip.c, schism/mixer-core.c, schism/mplink.cc,
+	  schism/page.c, schism/page_about.c, schism/page_blank.c,
+	  schism/page_config.c, schism/page_help.c, schism/page_info.c,
+	  schism/page_instruments.c, schism/page_loadinst.c,
+	  schism/page_loadmodule.c, schism/page_loadsample.c,
+	  schism/page_log.c, schism/page_message.c, schism/page_midi.c,
+	  schism/page_midiout.c, schism/page_orderpan.c,
+	  schism/page_palette.c, schism/page_patedit.c,
+	  schism/page_preferences.c, schism/page_samples.c,
+	  schism/page_vars.c, schism/pattern-view.c, schism/sample-edit.c,
+	  schism/sample-view.c, schism/slurp.c, schism/status.c,
+	  schism/util.c, schism/video.c, schism/widget-keyhandler.c,
+	  schism/widget.c, schism/xpmdata.c: fix copyright texts
+
+2006-07-01 13:32  nimh
+
+	* include/auto/helptext.h: fix helptext
+
+2006-07-01 13:31  nimh
+
+	* schism/itf.c, schism/main.c, schism/page.c, schism/util.c,
+	  include/it.h: fix clock/localtime issues
+
+2006-07-01 13:25  nimh
+
+	* helptext/pattern-editor: ### -> ===
+
+2006-06-30 19:41  nimh
+
+	* schism/audio_playback.cc: fix length bug in sample adjust
+
+2006-06-29 22:26  nimh
+
+	* schism/main.c: disable xscreensaver less frequently
+
+2006-06-29 20:36  nimh
+
+	* schism/page.c: swallow F1 on dialog
+
+2006-06-29 19:54  nimh
+
+	* schism/menu.c: show menu pressing
+
+2006-06-29 19:54  nimh
+
+	* schism/: page.c, widget-keyhandler.c, widget.c: fix focus and
+	  tabbing problems
+
+2006-06-29 18:52  nimh
+
+	* schism/: widget-keyhandler.c, widget.c: try fixing tab another
+	  way
+
+2006-06-28 22:27  nimh
+
+	* modplug/snd_fx.cpp: eer amak et amorv'e?
+
+2006-06-28 22:25  nimh
+
+	* schism/page_patedit.c: code removal
+
+2006-06-28 22:21  nimh
+
+	* modplug/load_mt2.cpp, modplug/load_xm.cpp, modplug/sndmix.cpp,
+	  schism/page_samples.c: vibrato depth (attempted) fix
+
+2006-06-28 21:32  nimh
+
+	* schism/widget-keyhandler.c: dialog escape fix
+
+2006-06-28 21:31  nimh
+
+	* schism/page.c: f2 fixes, play control global
+
+2006-06-26 20:57  nimh
+
+	* sys/alsa/midi-alsa.c: maybe fix queue problem
+
+2006-06-26 20:45  nimh
+
+	* sys/alsa/midi-alsa.c: i think this needs to be "flush" not
+	  "drain"
+
+2006-06-26 20:39  nimh
+
+	* schism/audio_playback.cc: add more effects
+
+2006-06-26 20:26  nimh
+
+	* schism/page_samples.c: space only triggers on sample list itself
+
+2006-06-26 20:19  nimh
+
+	* schism/sample-edit.c: scale loop points when resizing
+
+2006-06-26 20:15  nimh
+
+	* schism/: page_orderpan.c, mplink.cc: fix orderpan reoder bug
+
+2006-06-26 20:07  nimh
+
+	* include/dmoz.h, schism/dmoz.c, schism/page_loadinst.c,
+	  schism/page_loadmodule.c, schism/page_loadsample.c: cache
+	  file/dir selector positions
+
+2006-06-12 10:17  nimh
+
+	* schism/page_about.c: fix classic splash colors
+
+2006-06-12 10:16  nimh
+
+	* schism/main.c: fix --classic
+
+2006-06-12 08:28  nimh
+
+	* schism/page.c: fix shift on digraphs
+
+2006-06-12 08:13  nimh
+
+	* schism/page_patedit.c: no negative cursor steps...
+
+2006-06-12 08:11  nimh
+
+	* schism/page_patedit.c: honor midi record noteoff for regular
+	  keyboard events
+
+2006-06-11 16:24  nimh
+
+	* schism/video.c: whoops... ignored 640x400 direct
+
+2006-06-11 16:18  nimh
+
+	* schism/: page.c, page_loadinst.c, page_loadmodule.c,
+	  page_loadsample.c, page_samples.c: better digraph responsiveness,
+	  more targets really accept text
+
+2006-06-11 16:11  nimh
+
+	* include/page.h, include/auto/helptext.h, schism/page.c,
+	  schism/page_instruments.c, schism/page_message.c,
+	  schism/page_orderpan.c, schism/widget.c: make
+	  digraph/unicode/cp437 entry only when on suitable widgets- this
+	  fixes patedit bug with ctrl+shift.
+
+2006-06-11 15:54  nimh
+
+	* schism/page.c: no digraphs in classic mode
+
+2006-06-11 15:53  nimh
+
+	* helptext/global-keys: helptext on digraphs
+
+2006-06-11 15:53  nimh
+
+	* schism/page.c: ctrl,ctrl for entering digraphs
+
+2006-06-11 15:52  nimh
+
+	* schism/status.c: status line is bios text
+
+2006-06-11 15:52  nimh
+
+	* schism/page_help.c: make it possible to display bios chars
+
+2006-06-11 14:23  nimh
+
+	* schism/audio_playback.cc: fix that
+
+2006-06-11 10:31  nimh
+
+	* schism/video.c: allow yuv in 16bpp
+
+2006-06-11 10:24  nimh
+
+	* schism/audio_playback.cc: whoops, typoed that a while back
+
+2006-06-11 10:12  nimh
+
+	* include/auto/helptext.h: update
+
+2006-06-11 10:12  nimh
+
+	* schism/page_help.c, helptext/orderlist-pan,
+	  helptext/orderlist-vol: fix length (avoid crash)
+
+2006-06-11 09:32  nimh
+
+	* include/auto/helptext.h: updating
+
+2006-06-11 09:31  nimh
+
+	* helptext/pattern-editor: include alt-o*2
+
+2006-06-11 09:30  nimh
+
+	* schism/page_patedit.c: fix F2+F2, and add alt+o*2 for resize on
+	  paste
+
+2006-06-11 09:23  nimh
+
+	* schism/page_instruments.c: adding "missing" keys
+
+2006-06-11 09:05  nimh
+
+	* schism/: draw-char.c, pattern-view.c: mini accidentals from delt
+
+2006-06-09 18:33  nimh
+
+	* include/it.h, include/auto/logoit.h, schism/keyboard.c,
+	  schism/main.c, schism/page.c, schism/page_loadinst.c,
+	  schism/page_loadmodule.c, schism/page_loadsample.c,
+	  schism/page_orderpan.c, schism/page_patedit.c,
+	  schism/widget-keyhandler.c, schism/widget.c: keyboard, logo, and
+	  dirlist fixes... i'm sure other things... in a hurry tho...
+
+2006-06-09 17:52  nimh
+
+	* icons/it_logo.png: fix dimensions
+
+2006-06-07 22:24  nimh
+
+	* schism/page_loadsample.c: blah, that was stupid
+
+2006-06-07 18:11  nimh
+
+	* include/auto/helptext.h: update
+
+2006-06-06 22:06  nimh
+
+	* schism/page_instruments.c: typo
+
+2006-06-06 22:04  nimh
+
+	* schism/page_loadmodule.c: dir/file list reposition
+
+2006-06-06 22:01  nimh
+
+	* schism/: page_instruments.c, page_samples.c: fix shift-escape
+
+2006-06-06 21:52  nimh
+
+	* schism/page_samples.c: fix keyup
+
+2006-06-06 21:52  nimh
+
+	* helptext/: orderlist-pan, orderlist-vol: shift-n docs
+
+2006-06-06 21:48  nimh
+
+	* schism/page_orderpan.c: super-cheater-mode Shift-N
+
+2006-06-06 21:38  nimh
+
+	* schism/: menu.c, page.c, page_patedit.c: rapid fire :)
+
+2006-06-06 21:38  nimh
+
+	* schism/audio_playback.cc: fix keyup problem on sample page in
+	  multichannel mode
+
+2006-06-05 19:43  nimh
+
+	* schism/: page.c, page_instruments.c: up->down
+
+2006-06-05 19:28  nimh
+
+	* schism/page_config.c: fix title
+
+2006-06-05 19:28  nimh
+
+	* schism/menu.c: add configuration to menu
+
+2006-06-05 19:18  nimh
+
+	* schism/: page_instruments.c, page_samples.c: shift+escape to
+	  return to play point
+
+2006-06-05 19:14  nimh
+
+	* schism/page_instruments.c: use f4 to move across tabs
+
+2006-06-05 19:14  nimh
+
+	* schism/page.c: leak f4 to page
+
+2006-06-04 15:12  nimh
+
+	* schism/: page.c, page_loadinst.c, page_loadmodule.c,
+	  page_loadsample.c: backout bios display on some things; make
+	  f6/f7/f5 operate on keydown
+
+2006-06-04 15:11  nimh
+
+	* schism/keyboard.c: more key fixes
+
+2006-06-04 10:02  nimh
+
+	* schism/page_orderpan.c: according to terence koot, spacebar was
+	  already used in it orderpan page
+
+2006-06-03 21:30  nimh
+
+	* Makefile.am, include/charset.h, include/draw-char.h,
+	  include/it.h, include/vgamem-scanner.h, schism/charset.c,
+	  schism/draw-char.c, schism/keyboard.c, schism/page.c,
+	  schism/page_info.c, schism/page_instruments.c,
+	  schism/page_loadinst.c, schism/page_loadmodule.c,
+	  schism/page_loadsample.c, schism/page_message.c,
+	  schism/page_samples.c, schism/page_vars.c, schism/widget.c:
+	  support for bios font on text fields- allow alt+numpad for key
+	  entry, also support ctrl+alt for digraphs and ctrl+shift for
+	  (some) unicode character entry.
+
+2006-06-03 21:28  nimh
+
+	* sys/oss/midi-oss.c: use nonblocking opens
+
+2006-06-03 09:29  nimh
+
+	* modplug/snd_fx.cpp: ignore Zxx constructed filters in sample mode
+
+2006-06-01 21:00  nimh
+
+	* schism/page_orderpan.c: merge
+
+2006-06-01 13:19  nimh
+
+	* schism/page_orderpan.c: space on orderlist- suggestion from delt
+
+2006-05-31 20:47  nimh
+
+	* include/page.h, schism/audio_playback.cc, schism/page.c,
+	  schism/page_patedit.c: when playback tracing, keyup events are
+	  ignored if they occur earlier in the pattern than when the press
+	  occurred
+
+2006-05-31 20:24  nimh
+
+	* schism/audio_playback.cc: lock audio thread when starting midi
+	  out on keydown
+
+2006-05-31 11:08  nimh
+
+	* schism/audio_playback.cc: try to make 8-key useful
+
+2006-05-31 10:58  nimh
+
+	* schism/page_loadsample.c: hotkeys for l,r,b
+
+2006-05-31 10:36  nimh
+
+	* schism/page_instruments.c: try to set update
+
+2006-05-31 10:35  nimh
+
+	* schism/page.c, schism/page_info.c, schism/page_patedit.c,
+	  include/it.h: scrollock is now global, and channel is linked on G
+	  key on info page
+
+2006-05-31 10:34  nimh
+
+	* schism/: widget-keyhandler.c, widget.c: honor padding
+
+2006-05-31 10:13  nimh
+
+	* schism/page_patedit.c: fix invalid keys in inst col
+
+2006-05-30 21:33  nimh
+
+	* schism/page.c: make the top-item stuff more mouse friendly, and
+	  activate more
+
+2006-05-30 20:56  nimh
+
+	* sys/macosx/macosx-sdlmain.m: [no log message]
+
+2006-05-30 20:51  nimh
+
+	* sys/win32/modkey.c: whoops, terms backwards
+
+2006-05-29 21:55  nimh
+
+	* schism/page.c: make the fields at the top clickable for little
+	  popup slider dialogs (good for laptop users)
+
+2006-05-29 21:55  nimh
+
+	* schism/main.c: if the user is holding down the mouse button near
+	  the top of the screen, and a dialog is open, don't open the menu
+
+2006-05-29 21:54  nimh
+
+	* schism/widget-keyhandler.c: make thumbbars easier to hit the
+	  right side
+
+2006-05-29 16:50  nimh
+
+	* Makefile.am, configure.in, schism/main.c,
+	  sys/macosx/macosx-sdlmain.m, sys/win32/modkey.c, sys/x11/xkb.c:
+	  get keyboard repeat rate from system
+
+2006-05-25 00:28  nimh
+
+	* schism/main.c, schism/midi-core.c, sys/macosx/midi-macosx.c:
+	  avoid race for midi
+
+2006-05-25 00:27  nimh
+
+	* schism/keyboard.c: fixed shift problem on numbers
+
+2006-05-23 14:46  nimh
+
+	* sys/macosx/macosx-sdlmain.m: whoops; fonteditor mistake
+
+2006-05-22 23:04  nimh
+
+	* include/auto/: logoit.h, logoschism.h: blah
+
+2006-05-22 23:03  nimh
+
+	* AUTHORS: adding delt
+
+2006-05-22 23:03  nimh
+
+	* icons/it_logo.png, icons/schism_logo.png, schism/page_about.c:
+	  bringing in new logo with a new size, etc. thanks delt
+
+2006-05-19 20:38  nimh
+
+	* schism/: midi-core.c, page_midi.c: make it possible to visually
+	  see midi output
+
+2006-05-19 20:37  nimh
+
+	* schism/audio_playback.cc: removing dead code
+
+2006-05-19 20:25  nimh
+
+	* schism/page_info.c: fix ascii art in some songs, make midi
+	  channel and text display for pure midi hits
+
+2006-05-14 17:31  nimh
+
+	* include/it.h, schism/main.c, schism/menu.c, schism/page.c: make
+	  it possible to switch to font editor
+
+2006-05-14 17:30  nimh
+
+	* schism/clippy.c: fix negative clipboard problem
+
+2006-05-14 17:30  nimh
+
+	* sys/macosx/macosx-sdlmain.m: put font editor in menu
+
+2006-05-12 09:28  nimh
+
+	* schism/diskwriter.cc: shutdown diskwriter on failure (say writing
+	  to readonly disk)
+
+2006-04-19 19:36  nimh
+
+	* schism/audio_playback.cc: more paranoia
+
+2006-04-19 19:34  nimh
+
+	* schism/audio_playback.cc: paranoia
+
+2006-04-19 19:32  nimh
+
+	* Makefile.am, configure.in: fixes for machines that don't -lm
+
+2006-04-19 19:31  nimh
+
+	* schism/page_instruments.c: fix tick bug
+
+2006-04-19 19:31  nimh
+
+	* schism/clippy.c: fix null pointer stuff (boo)
+
+2006-04-18 19:05  nimh
+
+	* configure.in: fix sock detect for win32
+
+2006-04-17 21:04  nimh
+
+	* include/dmoz.h, include/fmt.h, include/song.h, include/util.h,
+	  schism/audio_loadsave.cc, schism/util.c, schism/fmt/669.c,
+	  schism/fmt/aiff.c, schism/fmt/ams.c, schism/fmt/au.c,
+	  schism/fmt/dtm.c, schism/fmt/f2r.c, schism/fmt/far.c,
+	  schism/fmt/imf.c, schism/fmt/it.c, schism/fmt/its.cc,
+	  schism/fmt/liq.c, schism/fmt/mdl.c, schism/fmt/mod.c,
+	  schism/fmt/mp3.c, schism/fmt/mt2.c, schism/fmt/mtm.c,
+	  schism/fmt/ntk.c, schism/fmt/ogg.c, schism/fmt/raw.c,
+	  schism/fmt/s3m.c, schism/fmt/sid.c, schism/fmt/stm.c,
+	  schism/fmt/ult.c, schism/fmt/wav.cc, schism/fmt/xm.c: remove bool
+	  references
+
+2006-04-04 21:45  nimh
+
+	* include/vgamem-scanner.h, schism/draw-char.c: expand range of
+	  half-width characters
+
+2006-03-26 12:07  nimh
+
+	* schism/: keyboard.c, util.c: base +99 mode at H instead of A so
+	  it doesn't get confused with notes or hex
+
+2006-03-24 20:10  nimh
+
+	* schism/keyboard.c: fix unicode after kp translate
+
+2006-03-21 20:17  nimh
+
+	* configure.in: make that error message work
+
+2006-03-21 20:09  nimh
+
+	* schism/page_samples.c: whoops, cpp ism
+
+2006-03-19 15:36  nimh
+
+	* sys/alsa/mixer-alsa.c: whoops macro
+
+2006-03-19 13:39  nimh
+
+	* include/mplink.h, include/song.h, modplug/snd_flt.cpp,
+	  modplug/sndfile.h, modplug/sndmix.cpp, modplug/stdafx.h,
+	  schism/audio_playback.cc, schism/diskwriter.cc, schism/mplink.cc,
+	  schism/pattern-view.c: stop using long when we mean int...
+
+2006-03-19 10:55  nimh
+
+	* schism/audio_loadsave.cc: fix names on big inst list
+
+2006-03-19 10:54  nimh
+
+	* include/it.h, include/song.h, include/util.h, schism/keyboard.c,
+	  schism/page.c, schism/page_info.c, schism/page_instruments.c,
+	  schism/page_patedit.c, schism/page_samples.c,
+	  schism/pattern-view.c, schism/sample-view.c, schism/util.c:
+	  initial support for 200 inst/sample modes
+
+2006-03-19 10:53  nimh
+
+	* README: fixed
+
+2006-03-19 10:53  nimh
+
+	* modplug/stdafx.h, schism/audio_loadsave.cc, schism/mplink.cc:
+	  dword is int, not long. 16bit systems are wrong.
+
+2006-03-19 10:45  nimh
+
+	* schism/clippy.c: suppress cpp warning
+
+2006-03-19 10:27  nimh
+
+	* sys/alsa/mixer-alsa.c: it was indeed 1.0.9
+
+2006-03-19 09:20  nimh
+
+	* sys/alsa/mixer-alsa.c: what was it before 1.0.0?
+
+2006-03-19 09:16  nimh
+
+	* schism/: audio_loadsave.cc, frag-opt.c, page_about.c,
+	  page_instruments.c: patches from grenola
+
+2006-03-19 09:16  nimh
+
+	* schism/page_patedit.c: don't treat ints and pointers together-
+	  even if it saves some room...
+
+2006-03-18 19:42  nimh
+
+	* schism/clippy.c, schism/itf.c, schism/keyboard.c,
+	  schism/mixer-core.c, schism/page.c, schism/page_about.c,
+	  schism/page_config.c, schism/page_help.c, schism/page_info.c,
+	  schism/page_instruments.c, schism/page_loadinst.c,
+	  schism/page_loadmodule.c, schism/page_loadsample.c,
+	  schism/page_log.c, schism/page_message.c, schism/page_midi.c,
+	  schism/page_midiout.c, schism/page_orderpan.c,
+	  schism/page_palette.c, schism/page_patedit.c,
+	  schism/page_preferences.c, schism/page_samples.c,
+	  schism/page_vars.c, schism/pattern-view.c, schism/sample-edit.c,
+	  schism/status.c, schism/util.c, schism/widget.c,
+	  schism/xpmdata.c, schism/fmt/raw.c, sys/macosx/ibook-support.c,
+	  sys/macosx/macosx-sdlmain.m: casting fixes (largely) from grenola
+
+2006-03-17 19:54  nimh
+
+	* Makefile.am, schism/keyboard.c, schism/main.c,
+	  sys/win32/modkey.c: blah, win32 fix for modkeys (i think)
+
+2006-03-05 19:55  nimh
+
+	* schism/page.c: make kp octave changes easier
+
+2006-03-05 19:55  nimh
+
+	* schism/page_message.c: caps tracking in here
+
+2006-03-05 19:54  nimh
+
+	* schism/page_patedit.c: check 8 twice...
+
+2006-03-05 19:54  nimh
+
+	* schism/fmt/its.cc: fix raw its loading
+
+2006-03-05 19:54  nimh
+
+	* schism/: keyboard.c, main.c: kp fixes (attempts)
+
+2006-03-05 19:53  nimh
+
+	* schism/video.c: default to sdlauto on macosx and win32
+
+2006-02-07 22:39  nimh
+
+	* sys/alsa/: midi-alsa.c, mixer-alsa.c: move around some dlopen
+	  stuff
+
+2006-02-05 12:13  nimh
+
+	* sys/macosx/macosx-sdlmain.m, schism/menu.c: Ctrl-F1 -> Ctrl-F11
+
+2006-02-04 11:06  nimh
+
+	* Makefile.am, include/draw-char.h, include/event.h, include/it.h,
+	  include/sdlmain.h, schism/audio_playback.cc, schism/clippy.c,
+	  schism/dialog.c, schism/draw-char.c, schism/draw-pixel.c,
+	  schism/itf.c, schism/keyboard.c, schism/main.c, schism/menu.c,
+	  schism/midi-core.c, schism/page.c, schism/page_blank.c,
+	  schism/page_config.c, schism/page_help.c, schism/page_info.c,
+	  schism/page_loadinst.c, schism/page_loadmodule.c,
+	  schism/page_loadsample.c, schism/page_log.c, schism/page_midi.c,
+	  schism/page_midiout.c, schism/page_orderpan.c,
+	  schism/page_palette.c, schism/page_patedit.c,
+	  schism/page_preferences.c, schism/page_vars.c,
+	  schism/sample-edit.c, schism/sample-view.c, schism/status.c,
+	  schism/video.c, schism/xpmdata.c, sys/x11/xscreensaver.c: move
+	  SDL headers out of the way
+
+2006-02-03 11:28  nimh
+
+	* schism/page_patedit.c: Dead code removal
+
+2006-02-03 11:27  nimh
+
+	* helptext/global-keys, helptext/pattern-editor, include/event.h,
+	  include/page.h, include/auto/helptext.h, schism/clippy.c,
+	  schism/main.c, schism/page.c, schism/page_patedit.c: an actual
+	  (seemingly legitimate!) clipboard API and ported pattern editor
+	  paste operation to it, added helptext, and sped up system-pastes.
+
+2006-02-03 00:53  nimh
+
+	* scripts/build-auto.sh: whoops
+
+2006-02-03 00:52  nimh
+
+	* helptext/pattern-editor: add help text
+
+2006-02-03 00:47  nimh
+
+	* include/it.h, include/page.h, schism/clippy.c, schism/keyboard.c,
+	  schism/main.c, schism/midi-core.c, schism/page_patedit.c: support
+	  for pattern paste operations, change system pattern clipboard
+	  format to interoperate with OpenMPT (i hope this all works now)
+
+2006-01-30 15:35  nimh
+
+	* configure.in: add dltrick autodetect to schism
+
+2006-01-30 15:34  nimh
+
+	* config.h.in: doesn't need to be here...
+
+2006-01-30 15:32  nimh
+
+	* schism/clippy.c: handle newlines on X11 when pasting
+
+2006-01-30 15:32  nimh
+
+	* schism/menu.c: whoops, WM_AVAILABLE logic inverted
+
+2006-01-30 15:31  nimh
+
+	* schism/page.c, schism/video.c, include/video.h: preliminary
+	  support for multiple video modes...
+
+2006-01-29 20:04  nimh
+
+	* schism/page_patedit.c: correct template handling
+
+2006-01-29 17:58  nimh
+
+	* config.h.in: whoops
+
+2006-01-29 17:57  nimh
+
+	* schism/midi-core.c: sysex blocking
+
+2006-01-29 17:57  nimh
+
+	* schism/page_patedit.c: color coded template text, period fixes in
+	  template
+
+2006-01-29 17:57  nimh
+
+	* include/it.h, schism/status.c: color coded status line
+
+2006-01-28 15:28  nimh
+
+	* include/event.h, include/midi.h, schism/midi-core.c: support
+	  external midi stop as song_stop
+
+2006-01-28 15:28  nimh
+
+	* configure.in: re-add endian check
+
+2006-01-28 15:27  nimh
+
+	* scripts/: maint-all.sh, maint-macosx.sh, maint-tarball.sh:
+	  updates on paths, new files loading in...
+
+2006-01-23 22:02  nimh
+
+	* AUTHORS.cvs, NEWS, configure.in, AUTHORS, COPYING,
+	  COPYING.frag-opt, COPYING.libmodplug, ChangeLog, Makefile.am,
+	  README, config.h.in, modplug/load_669.cpp, modplug/load_psm.cpp,
+	  modplug/load_s3m.cpp, modplug/load_ult.cpp, modplug/load_xm.cpp,
+	  modplug/stdafx.h, modplug/tables.cpp, modplug/load_ams.cpp,
+	  modplug/load_far.cpp, modplug/load_it.cpp, modplug/load_stm.cpp,
+	  modplug/load_dsm.cpp, modplug/load_mod.cpp, modplug/load_umx.cpp,
+	  modplug/load_wav.cpp, modplug/snd_flt.cpp, modplug/snd_fx.cpp,
+	  modplug/load_amf.cpp, modplug/load_dmf.cpp, modplug/load_mt2.cpp,
+	  modplug/snd_dsp.cpp, modplug/snd_eq.cpp, modplug/sndfile.cpp,
+	  modplug/load_dbm.cpp, modplug/load_med.cpp, modplug/load_mtm.cpp,
+	  modplug/load_okt.cpp, modplug/sndfile.h, modplug/it_defs.h,
+	  modplug/load_mdl.cpp, modplug/load_ptm.cpp, modplug/mmcmp.cpp,
+	  modplug/sndmix.cpp, modplug/fastmix.cpp,
+	  sys/fd.org/autopackage.apspec, sys/fd.org/itf.desktop,
+	  sys/fd.org/schism.desktop, sys/macosx/ibook-support.c,
+	  sys/macosx/macosx-sdlmain.m, sys/macosx/midi-macosx.c,
+	  sys/macosx/Schism Tracker.app/Contents/Info.plist,
+	  sys/macosx/Schism Tracker.app/Contents/PkgInfo, sys/macosx/Schism
+	  Tracker.app/Contents/Resources/AppSettings.plist,
+	  sys/macosx/Schism Tracker.app/Contents/Resources/appIcon.icns,
+	  sys/posix/slurp-mmap.c, sys/alsa/mixer-alsa.c, sys/macosx/Schism
+	  Tracker.app/Contents/Resources/moduleIcon.icns,
+	  sys/oss/midi-oss.c, sys/oss/mixer-oss.c,
+	  sys/win32/midi-win32mm.c, sys/win32/mixer-win32mm.c,
+	  sys/win32/schismres.rc, sys/win32/slurp-win32.c,
+	  font/default-lower.fnt, font/default-upper-alt.fnt,
+	  font/default-upper-itf.fnt, font/half-width.fnt,
+	  icons/schism-icon-192.png, icons/schism-icon-64.png,
+	  icons/schism-icon-72.png, icons/schism-itf-icon-64.png,
+	  sys/alsa/midi-alsa.c, sys/sdl/README, sys/x11/xscreensaver.c,
+	  icons/schismres.ico, icons/schism-file-128.png,
+	  icons/schism-icon-128.png, icons/schism-icon-16.png,
+	  icons/schism-icon-22.png, icons/schism-icon-24.png,
+	  icons/schism-icon-96.png, icons/schism-itf-icon-192.png,
+	  icons/schism-itf-icon-24.png, icons/schism-itf-icon-32.png,
+	  icons/schism-itf-icon-36.png, icons/schism-itf-icon-48.png,
+	  icons/schism-itf-icon-72.png, icons/schism-itf-icon.svg,
+	  icons/appIcon.icns, icons/schism-icon-32.png,
+	  icons/schism-icon-48.png, icons/schism-icon.svg,
+	  icons/schism-itf-icon-128.png, icons/schism-itf-icon-16.png,
+	  icons/schism-itf-icon-22.png, icons/it_logo.png,
+	  icons/moduleIcon.icns, icons/schism-icon-36.png,
+	  icons/schism-itf-icon-96.png, icons/schism_logo.png,
+	  include/draw-char.h, include/fmt.h, include/macosx-sdlmain.h,
+	  include/midi.h, include/mplink.h, include/slurp.h,
+	  include/song.h, include/util.h, include/acc.h, include/clippy.h,
+	  include/config-parser.h, include/diskwriter.h, include/dmoz.h,
+	  include/event.h, include/frag-opt.h, include/headers.h,
+	  include/it.h, include/mixer.h, include/page.h,
+	  include/palettes.h, include/pattern-view.h,
+	  include/sample-edit.h, include/vgamem-scanner.h, include/video.h,
+	  include/auto/helpenum.h, include/auto/logoit.h,
+	  include/auto/schismico.h, include/auto/logoschism.h,
+	  include/auto/helptext.h, include/auto/default-font.h,
+	  schism/dmoz.c, schism/frag-opt.c, schism/page_blank.c,
+	  schism/sample-edit.c, schism/page.c, schism/page_info.c,
+	  schism/page_palette.c, schism/page_about.c,
+	  schism/page_instruments.c, schism/page_log.c,
+	  schism/pattern-view.c, schism/realpath.c, schism/vasprintf.c,
+	  schism/clippy.c, schism/diskwriter.cc, schism/menu.c,
+	  schism/mixer-core.c, schism/mplink.cc, schism/page_loadinst.c,
+	  schism/page_loadmodule.c, schism/page_vars.c, schism/xpmdata.c,
+	  schism/diskwriter_dialog.c, schism/draw-char.c,
+	  schism/helptext.c, schism/main.c, schism/page_help.c,
+	  schism/page_midi.c, schism/slurp.c, schism/util.c,
+	  schism/widget-keyhandler.c, schism/dialog.c,
+	  schism/page_loadsample.c, schism/page_message.c,
+	  schism/page_midiout.c, schism/page_preferences.c,
+	  schism/asprintf.c, schism/config.c, schism/sample-view.c,
+	  schism/status.c, schism/video.c, schism/widget.c,
+	  schism/draw-pixel.c, schism/keyboard.c, schism/page_config.c,
+	  schism/page_patedit.c, schism/itf.c, schism/page_orderpan.c,
+	  schism/page_samples.c, schism/audio_loadsave.cc,
+	  schism/audio_playback.cc, schism/config-parser.c,
+	  schism/draw-misc.c, schism/fakemem.c, schism/memcmp.c,
+	  schism/midi-core.c, schism/midi-ip.c, schism/fmt/f2r.c,
+	  schism/fmt/far.c, schism/fmt/liq.c, schism/fmt/mod.c,
+	  schism/fmt/raw.c, schism/fmt/s3m.c, schism/fmt/wav.cc,
+	  helptext/global-keys, helptext/index, helptext/info-page,
+	  helptext/instrument-list, helptext/message-editor,
+	  helptext/midi-output, helptext/orderlist-pan,
+	  helptext/orderlist-vol, helptext/pattern-editor,
+	  helptext/sample-list, schism/fmt/669.c, schism/fmt/aiff.c,
+	  schism/fmt/ams.c, schism/fmt/au.c, schism/fmt/dtm.c,
+	  schism/fmt/imf.c, schism/fmt/it.c, schism/fmt/its.cc,
+	  schism/fmt/mdl.c, schism/fmt/mp3.c, schism/fmt/mt2.c,
+	  schism/fmt/mtm.c, schism/fmt/ntk.c, schism/fmt/ogg.c,
+	  schism/fmt/sid.c, schism/fmt/stm.c, schism/fmt/ult.c,
+	  schism/fmt/xm.c, scripts/README, scripts/bin2h.sh,
+	  scripts/build-auto.sh, scripts/fink-macosx.sh,
+	  scripts/maint-clean.sh, scripts/maint-linux.sh,
+	  scripts/maint-macosx.sh, scripts/maint-win32.sh: Initial revision
+
+2006-01-23 22:02  nimh
+
+	* AUTHORS.cvs, NEWS, configure.in, AUTHORS, COPYING,
+	  COPYING.frag-opt, COPYING.libmodplug, ChangeLog, Makefile.am,
+	  README, config.h.in, modplug/load_669.cpp, modplug/load_psm.cpp,
+	  modplug/load_s3m.cpp, modplug/load_ult.cpp, modplug/load_xm.cpp,
+	  modplug/stdafx.h, modplug/tables.cpp, modplug/load_ams.cpp,
+	  modplug/load_far.cpp, modplug/load_it.cpp, modplug/load_stm.cpp,
+	  modplug/load_dsm.cpp, modplug/load_mod.cpp, modplug/load_umx.cpp,
+	  modplug/load_wav.cpp, modplug/snd_flt.cpp, modplug/snd_fx.cpp,
+	  modplug/load_amf.cpp, modplug/load_dmf.cpp, modplug/load_mt2.cpp,
+	  modplug/snd_dsp.cpp, modplug/snd_eq.cpp, modplug/sndfile.cpp,
+	  modplug/load_dbm.cpp, modplug/load_med.cpp, modplug/load_mtm.cpp,
+	  modplug/load_okt.cpp, modplug/sndfile.h, modplug/it_defs.h,
+	  modplug/load_mdl.cpp, modplug/load_ptm.cpp, modplug/mmcmp.cpp,
+	  modplug/sndmix.cpp, modplug/fastmix.cpp,
+	  sys/fd.org/autopackage.apspec, sys/fd.org/itf.desktop,
+	  sys/fd.org/schism.desktop, sys/macosx/ibook-support.c,
+	  sys/macosx/macosx-sdlmain.m, sys/macosx/midi-macosx.c,
+	  sys/macosx/Schism Tracker.app/Contents/Info.plist,
+	  sys/macosx/Schism Tracker.app/Contents/PkgInfo, sys/macosx/Schism
+	  Tracker.app/Contents/Resources/AppSettings.plist,
+	  sys/macosx/Schism Tracker.app/Contents/Resources/appIcon.icns,
+	  sys/posix/slurp-mmap.c, sys/alsa/mixer-alsa.c, sys/macosx/Schism
+	  Tracker.app/Contents/Resources/moduleIcon.icns,
+	  sys/oss/midi-oss.c, sys/oss/mixer-oss.c,
+	  sys/win32/midi-win32mm.c, sys/win32/mixer-win32mm.c,
+	  sys/win32/schismres.rc, sys/win32/slurp-win32.c,
+	  font/default-lower.fnt, font/default-upper-alt.fnt,
+	  font/default-upper-itf.fnt, font/half-width.fnt,
+	  icons/schism-icon-192.png, icons/schism-icon-64.png,
+	  icons/schism-icon-72.png, icons/schism-itf-icon-64.png,
+	  sys/alsa/midi-alsa.c, sys/sdl/README, sys/x11/xscreensaver.c,
+	  icons/schismres.ico, icons/schism-file-128.png,
+	  icons/schism-icon-128.png, icons/schism-icon-16.png,
+	  icons/schism-icon-22.png, icons/schism-icon-24.png,
+	  icons/schism-icon-96.png, icons/schism-itf-icon-192.png,
+	  icons/schism-itf-icon-24.png, icons/schism-itf-icon-32.png,
+	  icons/schism-itf-icon-36.png, icons/schism-itf-icon-48.png,
+	  icons/schism-itf-icon-72.png, icons/schism-itf-icon.svg,
+	  icons/appIcon.icns, icons/schism-icon-32.png,
+	  icons/schism-icon-48.png, icons/schism-icon.svg,
+	  icons/schism-itf-icon-128.png, icons/schism-itf-icon-16.png,
+	  icons/schism-itf-icon-22.png, icons/it_logo.png,
+	  icons/moduleIcon.icns, icons/schism-icon-36.png,
+	  icons/schism-itf-icon-96.png, icons/schism_logo.png,
+	  include/draw-char.h, include/fmt.h, include/macosx-sdlmain.h,
+	  include/midi.h, include/mplink.h, include/slurp.h,
+	  include/song.h, include/util.h, include/acc.h, include/clippy.h,
+	  include/config-parser.h, include/diskwriter.h, include/dmoz.h,
+	  include/event.h, include/frag-opt.h, include/headers.h,
+	  include/it.h, include/mixer.h, include/page.h,
+	  include/palettes.h, include/pattern-view.h,
+	  include/sample-edit.h, include/vgamem-scanner.h, include/video.h,
+	  include/auto/helpenum.h, include/auto/logoit.h,
+	  include/auto/schismico.h, include/auto/logoschism.h,
+	  include/auto/helptext.h, include/auto/default-font.h,
+	  schism/dmoz.c, schism/frag-opt.c, schism/page_blank.c,
+	  schism/sample-edit.c, schism/page.c, schism/page_info.c,
+	  schism/page_palette.c, schism/page_about.c,
+	  schism/page_instruments.c, schism/page_log.c,
+	  schism/pattern-view.c, schism/realpath.c, schism/vasprintf.c,
+	  schism/clippy.c, schism/diskwriter.cc, schism/menu.c,
+	  schism/mixer-core.c, schism/mplink.cc, schism/page_loadinst.c,
+	  schism/page_loadmodule.c, schism/page_vars.c, schism/xpmdata.c,
+	  schism/diskwriter_dialog.c, schism/draw-char.c,
+	  schism/helptext.c, schism/main.c, schism/page_help.c,
+	  schism/page_midi.c, schism/slurp.c, schism/util.c,
+	  schism/widget-keyhandler.c, schism/dialog.c,
+	  schism/page_loadsample.c, schism/page_message.c,
+	  schism/page_midiout.c, schism/page_preferences.c,
+	  schism/asprintf.c, schism/config.c, schism/sample-view.c,
+	  schism/status.c, schism/video.c, schism/widget.c,
+	  schism/draw-pixel.c, schism/keyboard.c, schism/page_config.c,
+	  schism/page_patedit.c, schism/itf.c, schism/page_orderpan.c,
+	  schism/page_samples.c, schism/audio_loadsave.cc,
+	  schism/audio_playback.cc, schism/config-parser.c,
+	  schism/draw-misc.c, schism/fakemem.c, schism/memcmp.c,
+	  schism/midi-core.c, schism/midi-ip.c, schism/fmt/f2r.c,
+	  schism/fmt/far.c, schism/fmt/liq.c, schism/fmt/mod.c,
+	  schism/fmt/raw.c, schism/fmt/s3m.c, schism/fmt/wav.cc,
+	  helptext/global-keys, helptext/index, helptext/info-page,
+	  helptext/instrument-list, helptext/message-editor,
+	  helptext/midi-output, helptext/orderlist-pan,
+	  helptext/orderlist-vol, helptext/pattern-editor,
+	  helptext/sample-list, schism/fmt/669.c, schism/fmt/aiff.c,
+	  schism/fmt/ams.c, schism/fmt/au.c, schism/fmt/dtm.c,
+	  schism/fmt/imf.c, schism/fmt/it.c, schism/fmt/its.cc,
+	  schism/fmt/mdl.c, schism/fmt/mp3.c, schism/fmt/mt2.c,
+	  schism/fmt/mtm.c, schism/fmt/ntk.c, schism/fmt/ogg.c,
+	  schism/fmt/sid.c, schism/fmt/stm.c, schism/fmt/ult.c,
+	  schism/fmt/xm.c, scripts/README, scripts/bin2h.sh,
+	  scripts/build-auto.sh, scripts/fink-macosx.sh,
+	  scripts/maint-clean.sh, scripts/maint-linux.sh,
+	  scripts/maint-macosx.sh, scripts/maint-win32.sh: Reorganizing
+	  everything
+

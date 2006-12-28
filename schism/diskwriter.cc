@@ -181,18 +181,10 @@ int diskwriter_start_nodriver(diskwriter_driver_t *f)
 }
 
 extern "C" {
-static diskwriter_driver_t _samplewriter = {
-	"Sample",
-	NULL,
-	NULL,
-	NULL, /* no midi data */
-	NULL,
-	NULL,NULL,NULL,
-	NULL,
-	NULL,
-	44100,16,2,1,
-	0,
-};
+	static diskwriter_driver_t _samplewriter = {
+		"Sample", "blah", NULL, NULL, NULL /* no midi data */,
+		NULL, NULL, NULL, NULL, NULL, NULL, 44100, 16, 2, 1, 0,
+	};
 };
 
 int diskwriter_writeout_sample(int sampno, int patno, int dobind)
@@ -502,8 +494,8 @@ int _diskwriter_writemidi(unsigned char *data, unsigned int len, unsigned int de
 
 
 extern "C" {
-extern unsigned int diskwriter_output_rate, diskwriter_output_bits,
-			diskwriter_output_channels;
+//extern unsigned int diskwriter_output_rate, diskwriter_output_bits,
+//			diskwriter_output_channels;
 extern diskwriter_driver_t wavewriter;
 extern diskwriter_driver_t it214writer;
 extern diskwriter_driver_t s3mwriter;
