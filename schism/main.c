@@ -393,13 +393,8 @@ static void parse_options(int argc, char **argv)
 			break;
 #endif
 		case O_VERSION:
-#ifndef RELEASE_VERSION
-			puts("Schism Tracker CVS");
-			//puts("This is a CVS build of Schism Tracker. This should be a warning.\n");
-#else
-			puts("Schism Tracker v" VERSION "\n");
-#endif
-			printf("Copyright (c) 2003-2007 Storlek and Mrs. Brisby\n"
+			puts(schism_banner());
+			printf("\nCopyright (c) 2003-2007 Storlek and Mrs. Brisby\n"
 			       "This program is free software; you can redistribute it and/or modify\n"
 			       "it under the terms of the GNU General Public License as published by\n"
 			       "the Free Software Foundation; either version 2 of the License, or\n"
