@@ -31,6 +31,7 @@ extern "C" {
 typedef struct diskwriter_driver diskwriter_driver_t;
 struct diskwriter_driver {
 	const char *name; /* this REALLY needs to be short (3 characters) */
+	const char *extension; /* no dot */
 
 	/* supplied by driver
 		p is called before anything else (optional)
@@ -39,6 +40,8 @@ struct diskwriter_driver {
 		g receives midi events
 
 		x is called at the end (optional)
+
+		these functions definitely need better names /storlek
 	*/
 	void (*p)(diskwriter_driver_t *x);
 	void (*m)(diskwriter_driver_t *x, unsigned char *buf, unsigned int len);

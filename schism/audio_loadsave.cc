@@ -549,6 +549,11 @@ void save_sample_data_LE(diskwriter_driver_t *fp, song_sample *smp, int noe)
 }
 
 /* same as above, except the other way around */
+/* the one thing cheese did that was pretty nifty was the disk read/write operations had separate big-endian
+   and little-endian operations...
+   we could probably do something like that, say fp->o and fp->O for bigendian
+   but 'O' looks too much like zero, so maybe rename 'em to w/W ... and have r/R to read whatever endianness
+   anyway, just a thought. /storlek */
 void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe)
 {
 	unsigned int len;
@@ -973,8 +978,10 @@ static void _save_it(diskwriter_driver_t *fp)
 	zero = 0; fp->o(fp, (const unsigned char *)&zero, 2);
 
 	// here comes MIDI configuration
+	// here comes MIDI configuration
+	// right down MIDI configuration lane
 	if (midi_flags & MIDI_EMBED_DATA) {
-//printf("attempting to embed %d bytes\n", sizeof(mp->m_MidiCfg));
+		//printf("attempting to embed %d bytes\n", sizeof(mp->m_MidiCfg));
 		fp->o(fp, (const unsigned char *)&mp->m_MidiCfg, sizeof(mp->m_MidiCfg));
 	}
 
@@ -1059,98 +1066,44 @@ static void _save_mod(diskwriter_driver_t *dw)
 		dw->e(dw);
 	}
 }
+
 diskwriter_driver_t it214writer = {
-"IT214",
-_save_it,
-NULL,
-NULL,
-NULL,
-NULL,NULL,NULL,
-NULL,
-NULL,
-0,0,0,0,
-0,
+	"IT214", "it", _save_it, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t s3mwriter = {
-"S3M",
-_save_s3m,
-NULL,
-NULL,
-NULL,
-NULL,NULL,NULL,
-NULL,
-NULL,
-0,0,0,0,
-0,
+	"S3M", "s3m", _save_s3m, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t xmwriter = {
-"XM",
-_save_xm,
-NULL,
-NULL,
-NULL,
-NULL,NULL,NULL,
-NULL,
-NULL,
-0,0,0,0,
-0,
+	"XM", "xm", _save_xm, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t modwriter = {
-"MOD",
-_save_mod,
-NULL,
-NULL,
-NULL,
-NULL,NULL,NULL,
-NULL,
-NULL,
-0,0,0,0,
-0,
+	"MOD", "mod", _save_mod, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t txtwriter = {
-"TXT",
-_save_txt,
-NULL,
-NULL,
-NULL,
-NULL,NULL,NULL,
-NULL,
-NULL,
-0,0,0,0,
-0,
+	"TXT", "txt", _save_txt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
-/* ------------------------------------------------------------------------- */
-
-
-
 
 /* ------------------------------------------------------------------------- */
 
 int song_save(const char *file, const char *qt)
 {
-        //const char *base = get_basename(file);
-	const char *s = 0;
+	const char *ext;
 	int i;
-
+	
 	if (!qt) {
-		for (s = (const char *)file; *s; s++) {
-			if (*s != '.') continue;
-			for (i = 0; diskwriter_drivers[i]; i++) {
-				if (strcasecmp(s+1,
-				diskwriter_drivers[i]->name) == 0) {
-					qt = diskwriter_drivers[i]->name;
-				}
+		ext = get_extension(file);
+		for (i = 0; diskwriter_drivers[i]; i++) {
+			if (strcasecmp(ext, diskwriter_drivers[i]->extension) == 0) {
+				qt = diskwriter_drivers[i]->name;
 				break;
 			}
 		}
 	}
-
-	if (!qt) {
+	if (!qt) { /* still? damn */
 		if (status.flags & PLAIN_TEXTEDIT) {
 			/* okay, the "default" for textedit is plain-text */
 			if (!diskwriter_start(file, &txtwriter)) {
-				log_appendf(4, "Cannot start diskwriter: %s",
-				strerror(errno));
+				log_appendf(4, "Cannot start diskwriter: %s", strerror(errno));
 				return 0;
 			}
 			log_appendf(2, "Starting up diskwriter");
