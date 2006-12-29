@@ -869,6 +869,11 @@ static int order_pre_key(struct key_event *k)
 	return 0;
 }
 
+static void order_pan_set_page(void)
+{
+	orderpan_recheck_muted_channels();
+}
+
 /* --------------------------------------------------------------------- */
 
 void orderpan_load_page(struct page *page)
@@ -882,6 +887,7 @@ void orderpan_load_page(struct page *page)
         page->playback_update = order_pan_vol_playback_update;
 	page->pre_handle_key = order_pre_key;
         page->handle_key = order_pan_vol_handle_key;
+	page->set_page = order_pan_set_page;
         page->total_widgets = 65;
         page->widgets = widgets_orderpan;
         page->help_index = HELP_ORDERLIST_PANNING;
