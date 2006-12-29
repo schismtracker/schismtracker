@@ -791,7 +791,7 @@ static void orderpan_update_values_in_song(void)
                 else
                         chn->flags &= ~CHN_SURROUND;
 
-		song_set_sticky_channel_mute(n, widgets_orderpan[n + 1].d.panbar.muted);
+		song_set_channel_mute(n, widgets_orderpan[n + 1].d.panbar.muted);
         }
 }
 

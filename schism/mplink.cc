@@ -184,18 +184,22 @@ int song_get_mix_state(unsigned int **channel_list)
 // For all of these, channel is ZERO BASED.
 // (whereas in the pattern editor etc. it's one based)
 
-static int solo_channel = -1;
 static int channel_states[64];  // saved ("real") mute settings; nonzero = muted
+
+static inline void _save_state(int channel)
+{
+	channel_states[channel] = mp->Chn[channel].dwFlags & CHN_MUTE;
+}
 
 void song_save_channel_states(void)
 {
 	int n = 64;
 	
 	while (n-- > 0)
-		channel_states[n] = mp->Chn[n].dwFlags & CHN_MUTE;
+		_save_state(n);
 }
 
-inline void song_set_channel_mute(int channel, int muted)
+void song_set_channel_mute(int channel, int muted)
 {
         if (muted) {
                 mp->ChnSettings[channel].dwFlags |= CHN_MUTE;
@@ -203,6 +207,7 @@ inline void song_set_channel_mute(int channel, int muted)
         } else {
                 mp->ChnSettings[channel].dwFlags &= ~CHN_MUTE;
                 mp->Chn[channel].dwFlags &= ~CHN_MUTE;
+		_save_state(channel);
         }
 }
 
@@ -214,20 +219,6 @@ inline void song_restore_channel_states(void)
 	
 	while (n-- > 0)
 		song_set_channel_mute(n, channel_states[n]);
-	solo_channel = -1;
-}
-
-// disgusting hack to get the orderpan page channel muting to "stick"... we need to maek the callback system a
-// bit more fine-grained, so changing one thing on a page doesn't trigger the callback for EVERY widget. then
-// we can get rid of this and make the orderpan page just do a normal song_set_channel_mute and save the state.
-// (or wait, how does IT handle soloing channels and then fiddling with the orderpan page?)
-void song_set_sticky_channel_mute(int channel, int muted)
-{
-	// exclamation points!!
-	if (!muted != !(mp->Chn[channel].dwFlags & CHN_MUTE)) {
-		song_set_channel_mute(channel, muted);
-		song_save_channel_states();
-	}
 }
 
 void song_toggle_channel_mute(int channel)
@@ -238,16 +229,29 @@ void song_toggle_channel_mute(int channel)
 	song_set_channel_mute(channel, (mp->Chn[channel].dwFlags & CHN_MUTE) == 0);
 }
 
+static int _soloed(int channel) {
+	int n = 64;
+	// if this channel is muted, it obviously isn't soloed
+	if (mp->Chn[channel].dwFlags & CHN_MUTE)
+		return 0;
+	while (n-- > 0) {
+		if (n == channel)
+			continue;
+		if (!(mp->Chn[n].dwFlags & CHN_MUTE))
+			return 0;
+	}
+	return 1;
+}
+
 void song_handle_channel_solo(int channel)
 {
 	int n = 64;
 	
-	if (channel == solo_channel) {
+	if (_soloed(channel)) {
 		song_restore_channel_states();
 	} else {
 		while (n-- > 0)
 			song_set_channel_mute(n, n != channel);
-		solo_channel = channel;
 	}
 }
 
@@ -569,7 +573,7 @@ unsigned int song_sample_get_c5speed(int n)
 void song_sample_set_c5speed(int n, unsigned int spd)
 {
 	song_sample *smp;
-	smp = song_get_sample(n,0 );
+	smp = song_get_sample(n, 0);
 	if (smp) smp->speed = spd;
 }
 
