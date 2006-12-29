@@ -207,8 +207,9 @@ void song_set_channel_mute(int channel, int muted)
         } else {
                 mp->ChnSettings[channel].dwFlags &= ~CHN_MUTE;
                 mp->Chn[channel].dwFlags &= ~CHN_MUTE;
-		_save_state(channel);
         }
+	/* for true IT-compat, only do this when unmuting */
+	_save_state(channel);
 }
 
 // I don't think this is useful besides undoing a channel solo (a few lines
