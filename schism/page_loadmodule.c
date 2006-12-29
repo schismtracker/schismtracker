@@ -50,8 +50,9 @@ static int modgrep(dmoz_file_t *f);
 static struct widget widgets_loadmodule[5];
 static struct widget widgets_savemodule[16];
 
-/* XXX this needs to be kept in sync with diskwriters */
-static int filetype_saves[] = { 4, 5, 6, 7, -1 };
+/* XXX this needs to be kept in sync with diskwriters
+   (FIXME: it shouldn't have to! build it when the savemodule page is built or something, idk -storlek) */
+static int filetype_saves[] = { 4, 5, 6, 7, 8, 9, -1 };
 
 static int top_file = 0, top_dir = 0;
 static time_t directory_mtime;
@@ -118,12 +119,7 @@ static void handle_file_entered_L(char *ptr)
 				}
 			}
 		}
-		/* ew, didn't i write some function to toggle one button on and the rest off?! */
-		widgets_savemodule[4].d.togglebutton.state = 0;
-		for (i = 0; diskwriter_drivers[i]; i++) {
-			widgets_savemodule[5+i].d.togglebutton.state = 0;
-		}
-		widgets_savemodule[r].d.togglebutton.state = 1;
+		togglebutton_set(widgets_savemodule, r, 0);
 
 		/* set_page(PAGE_LOG); */
 		set_page(PAGE_BLANK);
