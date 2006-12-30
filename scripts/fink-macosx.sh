@@ -20,6 +20,9 @@ install_name_tool -change /sw/lib/libSDL-1.2.0.dylib @executable_path/sdl.dylib 
 
 # okay, next!
 cp ../COPYING root/COPYING.txt || exit 1
+cp ../README root/README.txt || exit 1
+cp ../NEWS root/NEWS.txt || exit 1
+cp ../ChangeLog root/ChangeLog.txt || exit 1
 
 cd root
 hdiutil create -srcfolder . "../Schism Tracker.dmg" -ov -volname 'Schism Tracker CVS'
