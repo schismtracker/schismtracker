@@ -21,8 +21,8 @@ void F1(unsigned int ry, unsigned SIZE *out, unsigned int tc[16])
 	for (x = 0; x < 80; x++, bp++) {
 		if (*bp & 0x80000000) {
 			/* extra character */
-			fg = (*bp >> 23) & 7;
-			bg = (*bp >> 27) & 7;
+			fg = (*bp >> 23) & 15;
+			bg = (*bp >> 27) & 15;
 			dg = ef[(*bp & 0xFFFF)<< 3];
 			if (x == mx)
 				dg ^= mb[0];
