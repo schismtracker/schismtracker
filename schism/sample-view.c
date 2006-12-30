@@ -29,6 +29,11 @@
 
 #include "sdlmain.h"
 
+#define SAMPLE_DATA_COLOR 13 /* Sample data */
+#define SAMPLE_LOOP_COLOR 3 /* Sample loop marks */
+#define SAMPLE_MARK_COLOR 6 /* Play mark color */
+#define SAMPLE_BGMARK_COLOR 7 /* Play mark color after note fade / NNA */
+
 /* --------------------------------------------------------------------- */
 /* sample drawing
 there are only two changes between 8- and 16-bit samples:
@@ -90,7 +95,7 @@ static void _draw_sample_loop(struct vgamem_overlay *r, song_sample * sample)
 {
         int loopstart, loopend, y;
 #if 0
-        int c = ((status.flags & CLASSIC_MODE) ? 13 : 3);
+        int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_LOOP_COLOR : SAMPLE_DATA_COLOR);
 #endif
 
         if (!(sample->flags & SAMP_LOOP))
@@ -120,7 +125,7 @@ static void _draw_sample_susloop(struct vgamem_overlay *r, song_sample * sample)
 {
         int loopstart, loopend, y;
 #if 0
-        int c = ((status.flags & CLASSIC_MODE) ? 13 : 3);
+        int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_LOOP_COLOR : SAMPLE_DATA_COLOR);
 #endif
 
         if (!(sample->flags & SAMP_SUSLOOP))
@@ -168,7 +173,7 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample * samp
                         continue;
 		if (!channel->final_volume) continue;
 #if 0
-		c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? 7 : 6;
+		c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? SAMPLE_BGMARK_COLOR : SAMPLE_MARK_COLOR;
 #endif
                 x = channel->sample_pos * (r->width - 1) / sample->length;
                 if (x >= r->width) {
@@ -201,7 +206,7 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int 
 {
 	vgamem_clear_reserve(r);
         if (!sample->length) {
-		vgamem_fill_reserve(r, 13, 0);
+		vgamem_fill_reserve(r, SAMPLE_DATA_COLOR, 0);
 		return;
 	}
 	
@@ -218,7 +223,7 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int 
                 _draw_sample_play_marks(r, sample);
         _draw_sample_loop(r, sample);
         _draw_sample_susloop(r, sample);
-	vgamem_fill_reserve(r, 13, 0);
+	vgamem_fill_reserve(r, SAMPLE_DATA_COLOR, 0);
 }
 
 /* For the oscilloscope view thing.
@@ -227,11 +232,11 @@ void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data, int 
 {
 	vgamem_clear_reserve(r);
 	_draw_sample_data_16(r, data, length, channels);
-	vgamem_fill_reserve(r, 13, 0);
+	vgamem_fill_reserve(r, SAMPLE_DATA_COLOR, 0);
 }
 void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int length, unsigned int channels)
 {
 	vgamem_clear_reserve(r);
 	_draw_sample_data_8(r, data, length, channels);
-	vgamem_fill_reserve(r, 13, 0);
+	vgamem_fill_reserve(r, SAMPLE_DATA_COLOR, 0);
 }
