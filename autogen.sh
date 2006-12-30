@@ -13,6 +13,7 @@ unset FGREP_OPTIONS
 
 getver() {
 	a="$1"
+	shift
 	for v in "$@"; do
 		if "$a" --version | fgrep "$v" >/dev/null; then
 			echo "$a"
