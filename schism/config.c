@@ -50,7 +50,9 @@ void cfg_init_dir(void)
 	char *home_dir, *ptr;
 	
 	home_dir = get_home_directory();
-#if defined(MACOSX)
+#if defined(WIN32)
+	ptr = dmoz_path_concat(home_dir, "Schism Tracker");
+#elif defined(MACOSX)
 	ptr = dmoz_path_concat(home_dir, "Library/Application Support/Schism Tracker");
 #else
 	ptr = dmoz_path_concat(home_dir, ".schism");

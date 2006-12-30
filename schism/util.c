@@ -495,8 +495,8 @@ char *get_home_directory(void)
 	
 	ptr = getenv("HOME");
 #ifdef WIN32
-	if (!ptr) /* let $HOME override %USERPROFILE% on win32... */
-		ptr = getenv("USERPROFILE");
+	if (!ptr) /* let $HOME override %APPDATA% on win32... */
+		ptr = getenv("APPDATA");
 #endif
 	if (ptr)
 		return strdup(ptr);
