@@ -30,6 +30,10 @@ $source_dir/icons/schism-icon-128.png
 $source_dir/icons/schism-itf-icon-128.png
 $source_dir/sys/fd.org/schism.desktop
 $source_dir/sys/fd.org/itf.desktop
+$source_dir/NEWS
+$source_dir/README
+$source_dir/COPYING
+$source_dir/ChangeLog
 EOF
 
 [Prepare]
@@ -42,6 +46,10 @@ installExe schismtracker
 installIcon schism-icon-128.png schism-itf-icon-128.png >/dev/null 2>&1
 installDesktop "AudioVideo" schism.desktop
 installDesktop "AudioVideo" itf.desktop
+installData NEWS
+installData README
+installData COPYING
+installData ChangeLog
 
 [Uninstall]
 # Usually just the following line is enough to uninstall everything
