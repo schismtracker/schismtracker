@@ -486,6 +486,7 @@ static void event_loop(void)
 {
 	SDL_Event event;
 	struct key_event kk;
+	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	Uint32 last_mouse_down, ticker;
 	SDLKey last_key = 0;
 	int modkey;
@@ -671,8 +672,8 @@ static void event_loop(void)
 				}
 				if (kk.state) {
 					ticker = SDL_GetTicks();
-					if (kk.sx == kk.x
-					&& kk.sy == kk.y
+					if (lx == kk.x
+					&& ly == kk.y
 					&& (ticker - last_mouse_down) < 300) {
 						last_mouse_down = 0;
 						kk.mouse = MOUSE_DBLCLICK;
@@ -680,6 +681,8 @@ static void event_loop(void)
 						last_mouse_down = ticker;
 						kk.mouse = MOUSE_CLICK;
 					}
+					lx = kk.x;
+					ly = kk.y;
 				} else {
 					kk.mouse = MOUSE_CLICK;
 				}

@@ -404,7 +404,7 @@ int menu_handle_key(struct key_event *k)
 		? current_menu[1] : current_menu[0]);
 
 	if (k->mouse) {
-		if (k->mouse == MOUSE_CLICK) {
+		if (k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) {
 			h = menu->num_items * 3;
 			if (k->x >= menu->x + 2 && k->x <= menu->x + menu->w + 5
 			    && k->y >= menu->y + 4 && k->y <= menu->y + h + 4) {
