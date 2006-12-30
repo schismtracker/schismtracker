@@ -58,9 +58,13 @@ const char *schism_banner(void)
 	char *ptr;
 	if (status.flags & CLASSIC_MODE) return TOP_BANNER_CLASSIC;
 
-	if (!(VERSION[0] == 'C' && VERSION[1] == 'V' && VERSION[2] == 'S' && !VERSION[3])) {
+	/* letter & ~32 => lowercase
+	   this mangles digits, but we don't need to care */
+	if (!((VERSION[0] & ~32) == 'C'
+	      && (VERSION[1] & ~32) == 'V'
+	      && (VERSION[2] & ~32) == 'S'
+	      && VERSION[3] == 0)) {
 		return TOP_BANNER_NORMAL;
-	
 	}
 
 	/* this code is for CVS builds... but nobody will notice */
@@ -103,5 +107,3 @@ const char *schism_banner(void)
 	}
 	return banner;
 }
-
-
