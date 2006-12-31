@@ -1,0 +1,12 @@
+This document describes a rough set of goals for each release.
+It doesn't mean the given feature/fix will appear in that
+version, just a rough idea of when developers should give it
+attention.
+
+0.5
+	?
+
+0.6
+	custom keybinding
+	update video code to support more colors in overlay
+
