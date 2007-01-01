@@ -501,7 +501,8 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 		BYTE chnpan[32];
 		for (i=0; i<32; i++)
 		{
-			chnpan[i] = 0x20 | (ChnSettings[i].nPan >> 4);
+			UINT nPan = ((ChnSettings[i].nPan+7) < 0xF0) ? ChnSettings[i].nPan+7 : 0xF0;
+			chnpan[i] = (i<chanlim) ? 0x20 | (nPan >> 4) : 0x08;
 		}
 		fp->o(fp, (const unsigned char *)chnpan, 0x20);
 	}
