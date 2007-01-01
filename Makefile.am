@@ -133,7 +133,7 @@ files_windres=sys/win32/schismres.rc
 endif
 
 if USE_MACOSX
-files_macosx=sys/macosx/macosx-sdlmain.m sys/macosx/ibook-support.c sys/macosx/midi-macosx.c
+files_macosx=sys/macosx/macosx-sdlmain.m sys/macosx/ibook-support.c sys/macosx/midi-macosx.c sys/macosx/mixer-macosx.c
 endif
 
 if USE_NETWORK

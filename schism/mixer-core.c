@@ -41,6 +41,12 @@ extern void oss_mixer_read_volume(int *, int *);
 extern void oss_mixer_write_volume(int, int);
 #endif
 
+#ifdef MACOSX
+extern int macosx_mixer_get_max_volume(void);
+extern void macosx_mixer_read_volume(int *, int *);
+extern void macosx_mixer_write_volume(int, int);
+#endif
+
 #ifdef USE_WIN32MM
 extern int win32mm_mixer_get_max_volume(void);
 extern void win32mm_mixer_read_volume(int *, int *);
@@ -66,6 +72,13 @@ void mixer_setup(void)
 		__mixer_get_max_volume = oss_mixer_get_max_volume;
 		__mixer_read_volume = oss_mixer_read_volume;
 		__mixer_write_volume = oss_mixer_write_volume;
+	}
+#endif
+#ifdef MACOSX
+	if ((!drv && !__mixer_get_max_volume) || (drv && (!strcmp(drv, "coreaudio") || !strcmp(drv, "macosx")) )) {
+		__mixer_get_max_volume = macosx_mixer_get_max_volume;
+		__mixer_read_volume = macosx_mixer_read_volume;
+		__mixer_write_volume = macosx_mixer_write_volume;
 	}
 #endif
 #ifdef USE_WIN32MM
