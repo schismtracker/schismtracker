@@ -1,0 +1,109 @@
+[brackets] after an item indicate who brought it up. please only delete stuff
+from here after verifying with the bug reporter that it's been fixed :)
+
+===============================================================================
+
+check against impulse tracker: do f5/f6/f7 work with a dialog open? [storlek]
+
+multichannel mode needs implemented [delt]
+
+"graphics" are all in the wrong colors [storlek]
+	- startup logo should be color 11 (currently is 0)
+	- instrument envelopes should be color 12 (currently is 3)
+	- sample data should be color 13 (currently is 5)
+
+get rid of those environment variables -- make command line options [storlek]
+
+midi output is broken [delt]
+
+resonant filters aren't quite perfect (i'll try to fix this myself) [delt]
+
+windows version crashes constantly (thanks a lot bill) [delt]
+
+single char options for frag-opt are broken... i'm stumped [storlek]
+	(this has always been the case; seems like a frag-opt endian bug)
+
+always add or modify the extension of the file being saved (or not?) [storlek]
+
+the save function should be a part of fmt, not in audio_loadsave [storlek]
+
+mouse doesn't work on save module page [storlek]
+	*** fix this the Right Way: make a new "list" widget type that mostly
+	draws itself (since most lists are so radically different, there's not
+	one standard way to draw them all) but has a couple of convenient
+	functions to reposition so the cursor is visible, and also handle
+	up/down/pgup/pgdn/home/end/click/wheel smartly
+
+make f7 smarter [delt]
+
+clicking those popup-thumbbars (mousebar?) shouldn't immediately change the
+value unless it's being dragged. it's too easy to clumsily click the wrong
+place and break the song that's playing. [storlek]
+
+click in vis/time area should cycle the vis or time display mode [storlek]
+
+spectrum analyzer visualization (lol wishlist) [storlek]
+
+check timestamps in load/save module page... "19:36pm"? blah [storlek]
+
+entering data in the pattern editor with shift selects the row [storlek]
+
+note preview (caps lock + note) in pattern editor [storlek]
+
+fake numlock needs to be *on* for macs by default [storlek]
+
+never did finish the sample export (alt-t) dialog [storlek]
+
+font editor should be a page like anything else [storlek]
+
+make some keys more logical... [storlek]
+
+	log viewer could go on shift-f10, since the message editor is shift-f9
+	and they're kinda-sorta-similar-ish
+
+	font editor should be ctrl-f11, as the palette editor is ctrl-f12...
+	that way the "look and feel" settings are next to each other
+
+	ctrl-f1 should show the keyboard status like in impulse tracker (which
+	would be fairly useful if we're going to do custom keymappings)
+
+	global settings which are currently on ctrl-f1 should go on shift-f12
+	instead - similar stuff as the f12 screen, but less commonly used
+
+	song message: alt-z = clear, alt-p = paste, alt-c = copy, alt-o =
+	overwrite message with clipboard data... (hmm. what about alt-c to
+	clear the message? will this key be missed? does anyone care if we
+	can copy the message to the system clipboard, anyway?)
+
+	get rid of that ctrl-p hack! add middle-click paste if it's that
+	important to dump random clipboard data to random widgets.
+
+mtm and mdl loaders are half-broken on big-endian systems (don't load patterns) (will fix these myself) [storlek]
+
+mt2/far/ult/other obscure loaders are fully broken (whatever...) [storlek]
+
+cspeeds aren't being reset to 8363 for empty samples!!1 [storlek]
+	... maybe ignore this until we demodplugify?
+
+space on pattern editor should play the notes it inserts [storlek]
+
+tab ordering on some pages [storlek]
+
+system clipboard needs work [storlek]
+	doesn't always include all channels
+	doesn't always copy (?) - flash feedback when system clipboard set
+	when pasting, ask whether to use system or schism clipboard
+		(and only ask once for the same clipboard data)
+
+update copyright info [storlek]
+	copyright (c) 2003-2007 Storlek and Mrs. Brisby <schism@rigelseven.com>
+	URL: http://rigelseven.com/schism/
+
+desperately need to document my coding style and stuff so i can stop rewriting
+other people's code :P [storlek]
+
+desperately need documentation in general for the program - what's different
+from impulse tracker? new keys? what's unimplemented or differently implemented
+that might cause problems? how do you do <insert action here>? (something like
+the "for windows users" section in the mac os x help would be a good place to
+start in writing this) [storlek]
