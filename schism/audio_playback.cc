@@ -1016,23 +1016,13 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 	CFG_SET_M(hq_resampling);
 	CFG_SET_M(noise_reduction);
 	CFG_SET_M(no_ramping);
-	//CFG_SET_M(surround_effect);
-
 }
 
 void cfg_save_audio(cfg_file_t *cfg)
 {
-	CFG_SET_A(sample_rate);
-	CFG_SET_A(bits);
-	CFG_SET_A(channels);
-	CFG_SET_A(buffer_size);
-	
-	CFG_SET_M(channel_limit);
-	CFG_SET_M(interpolation_mode);
-	CFG_SET_M(oversampling);
-	CFG_SET_M(hq_resampling);
-	CFG_SET_M(noise_reduction);
-	CFG_SET_M(no_ramping);
+	cfg_atexit_save_audio(cfg);
+
+	// Say, what happened to the switch for this in the gui?
 	CFG_SET_M(surround_effect);
 
 	CFG_SET_D(xbass);
@@ -1048,6 +1038,13 @@ void cfg_save_audio(cfg_file_t *cfg)
 	cfg_set_number(cfg, "Diskwriter", "rate", diskwriter_output_rate);
 	cfg_set_number(cfg, "Diskwriter", "bits", diskwriter_output_bits);
 	cfg_set_number(cfg, "Diskwriter", "channels", diskwriter_output_channels);
+
+	// hmmm....
+	//     [Equalizer]
+	//     low_band=freq/gain
+	//     med_low_band=freq/gain
+	//     etc.
+	// would be a cleaner way of storing this
 
 	cfg_set_number(cfg, "EQ Low Band", "freq", audio_settings.eq_freq[0]);
 	cfg_set_number(cfg, "EQ Med Low Band", "freq", audio_settings.eq_freq[1]);
