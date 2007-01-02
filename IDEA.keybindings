@@ -1,4 +1,3 @@
-
 There are two kinds of keybindings worth talking about;
 one translates the raw scancodes (r->vk) as reported by X11, or Win32, or etc
 into (wk,uk) that represent the logical concept for the location of the key [wk]
@@ -137,3 +136,95 @@ extra= can also point to a layout file.
 
 schism --keys-editor ?
 
+
+=== === ===
+
+
+Erm... mrsbrisby, you're trying too hard :P
+
+For the sake of simplicity (and sanity), why not just have a scancode/function
+mapping table with a section for each page? We don't need a runtime interpreter
+just to handle what key does what, that's overkill :)
+
+In order to implement the way I've been conjuring up we'd pretty much have to
+run through all the switch statements, move all of the key modifier checks to
+separate branches in the switch statement (rather than a case SDLK_F5: plus an
+if statement to inspect modifiers), and write a big fat enum for every possible
+function. It'd have a little bitwise trickery for self_insert keybindings, say
+KB_SELF_INSERT = 0x80000000, and for something that handles text we'd have:
+
+	default:
+		if (keycode & KB_SELF_INSERT) {
+			character = keycode & ~KB_SELF_INSERT;
+			/* then insert the character or whatever */
+		}
+
+The keymap file would be fairly similar to Impulse Tracker's, except instead of
+a binary file it's text (because a text file is much easier to edit) --
+
+	0 97 0x80000061
+	1 97 0x80000041
+	0 282 0x40000001
+	3 282 0x40000006
+
+... and so forth, for every possible function. This could be split per page,
+so that the 'post-loop trim' function on the sample editor can be bound to a
+different key than 'select channel' in the pattern editor.
+
+I'm taking a cue from the Enlightenment window manager here -- the input file
+is C preprocessor input. (or possibly something else, but it'd be a good idea
+to use a fairly common tool for the parsing, and not something dumb like M4...
+or TASM ;) That way it's easy for keymap authors to write new mappings without
+having to look up all the keycodes. Files where the first (non-whitespace)
+character is not a digit would be piped automatically through the preprocessor
+(if it exists, of course -- Schism can't *require* an existing cpp to run for
+obvious reasons). The input file would be much more readable; the input for the
+above keymap data might look like:
+
+	/* Modifiers Keycode KB_value */
+	KM_NONE SDLK_a (KB_SELF_INSERT|'a') /* 'a' with no modifier => 'a' */
+	KM_SHIFT_OR_CAPS SDLK_a (KB_SELF_INSERT|'A') /* with shift => 'A' */
+	KM_NONE SDLK_F1 (KB_SET_PAGE|PAGE_HELP)
+	KM_SHIFT SDLK_F1 (KB_SET_PAGE|PAGE_MIDI)
+
+(except we'd need some way to do the bitwise math, since cpp doesn't do it and
+the output shouldn't need any clever parsing)
+
+For the sake of parsing Impulse Tracker keymaps more easily I think we should
+go with its way of handling modifier keys, which is what those KM_ constants
+are. SDLK_blah would be defined in keymap.h, basically taken from SDL_keysym.h.
+
+Two difficulties with using cpp here:
+	- we'd need to rewrite the enums in SDL_keysym.h, all the PAGE_
+	  constants, and every key modifier with #define rather than an enum
+	  (which, in addition to being redundant, is against my personally
+	  preferred style of using enums for any grouping of related constants)
+	- cpp doesn't do math
+
+Maybe Perl? Python? Just as long as it's somewhat "normal" :)
+
+At any rate, I don't see why there would be any need to have conditionals in a
+key layout. That's exactly why we'd be making multiple keymaps in the first
+place, so that different OS and key layout combinations could have different
+keys. I'd like to keep things as simple as possible and leave the meta key as
+is -- up to the user, not the key layout; that way, it would be more consistent
+if someone's switching back and forth between keymaps for some reason.
+
+
+The one problem that mapping keys (in any way, not just like this) has is what
+to do with keymappings when one key can have more than one possible function.
+This is the case if trying to map the Dvorak layout on the pattern editor,
+since its top row looks like
+
+	Q W E R T Y U I O P <- US keymap
+	' , . P Y F G C R L <- Dvorak
+
+Your first thought might be "well, that's simple, map apostrophe to C, comma to
+D, period to E, and so forth" -- but that doesn't take into consideration what
+to do with the "clear" key, which is ordinarily period. Should that be remapped
+to where period physically is on a US keyboard (which, in Dvorak, is 'v')? That
+doesn't work because in the effect column you still want to be able to insert a
+'v' somehow. Doing it differently for one field than for another is entirely
+confusing, so that won't work either.
+
+Anyway, enough about my personal problems with my crazy keyboard layout.
