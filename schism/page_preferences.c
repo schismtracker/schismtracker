@@ -196,7 +196,6 @@ static void dsp_dialog_update(UNUSED void*ign)
 static void dsp_dialog_ok(UNUSED void *ign)
 {
 	dialog_destroy();
-	status_text_flash(SAVED_AT_EXIT);
 	status.flags |= NEED_UPDATE;
 }
 static void dsp_dialog_cancel(UNUSED void*ign)
@@ -257,7 +256,6 @@ static void change_mixer_xbass(void)
 	song_init_modplug();
 
 	if (!audio_settings.xbass) {
-		status_text_flash(SAVED_AT_EXIT);
 		return;
 	}
 
@@ -274,7 +272,6 @@ static void change_mixer_reverb(void)
 	song_init_modplug();
 
 	if (!audio_settings.reverb) {
-		status_text_flash(SAVED_AT_EXIT);
 		return;
 	}
 
@@ -291,7 +288,6 @@ static void change_mixer_surround(void)
 	song_init_modplug();
 
 	if (!audio_settings.surround) {
-		status_text_flash(SAVED_AT_EXIT);
 		return;
 	}
 
@@ -319,7 +315,7 @@ static void change_mixer(void)
 static void save_config_now(UNUSED void *ign)
 {
 	/* TODO */
-	cfg_midipage_save();
+	cfg_midipage_save(); /* what is this doing here? */
 	cfg_atexit_save();
 	status_text_flash("Configuration saved");
 }
