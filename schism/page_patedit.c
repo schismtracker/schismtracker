@@ -482,38 +482,9 @@ static void pattern_editor_display_multichannel(void)
 
 /* This probably doesn't belong here, but whatever */
 
-/* old version 
-
-int multichannel_get_next (int cur_channel)
-	{
-        if (channel_multi [cur_channel - 1] & 1)
-        	{
-                int i, new_channel = 0;
-                char shit [255];
-                
-                for (i = cur_channel + 1; (i > 64 && !new_channel); i++)
-                        if (channel_multi [i - 1] & 1)
-                        	new_channel = i;
-                for (i = 1; (i > cur_channel - 1 && !new_channel); i++)
-                        if (channel_multi [i - 1] & 1)
-                        	new_channel = i;
-        	sprintf (shit, "multichannel_get_next: cur_channel = %d, new_channel = %d",
-                		(int) cur_channel,
-                                (int) new_channel);
-                status_text_flash (shit);
-                return new_channel ? new_channel : cur_channel;
-                }
-        else
-        	status_text_flash ("multichannel_get_next missed");
-        return cur_channel;
-        }
-        
-*/
-
-
-int multichannel_get_next (int cur_channel)
+static int multichannel_get_next (int cur_channel)
 {
-	int i, new_channel = 0;
+	int i;
         
         /* stub * / return cur_channel; */
 
@@ -535,24 +506,24 @@ int multichannel_get_next (int cur_channel)
 	return i + 1; /* make it one-based again */
 }
 
-int multichannel_get_previous (int cur_channel)
-	{
+static int multichannel_get_previous (int cur_channel)
+{
         int i, new_channel = 0;
         
         cur_channel--; /* once again, .... */
         i = cur_channel;
         
         if (channel_multi [cur_channel] & 1)
-        	{
+	{
                 do
-                	{
+		{
                         i = i ? --i: 63; /* loop backwards this time */
                         if (channel_multi [i] & 1)
                         	break;
                         } while (i != cur_channel);
-                }
+	}
         return i + 1;
-        }
+}
         
 
 /* --------------------------------------------------------------------------------------------------------- */
