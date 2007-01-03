@@ -514,8 +514,11 @@ int multichannel_get_next (int cur_channel)
 int multichannel_get_next (int cur_channel)
 {
 	int i, new_channel = 0;
+        
+        /* stub * / return cur_channel; */
 
 	cur_channel--; /* make it zero-based. oh look, it's a hammer. */
+        i = cur_channel;
 	
 	if (channel_multi[cur_channel] & 1) {
 		/* we're in a multichan-enabled channel, so look for the next one */
@@ -528,19 +531,27 @@ int multichannel_get_next (int cur_channel)
 		/* at this point we've either broken the loop because the channel i is multichan,
 		   or the condition failed because we're back where we started */
 	}
-        status_text_flash ("Newly selected channel is %d", (int) i + 1);
+        /* status_text_flash ("Newly selected channel is %d", (int) i + 1); */
 	return i + 1; /* make it one-based again */
 }
 
 int multichannel_get_previous (int cur_channel)
 	{
-        if (channel_multi [cur_channel - 1] & 1)
+        int i, new_channel = 0;
+        
+        cur_channel--; /* once again, .... */
+        i = cur_channel;
+        
+        if (channel_multi [cur_channel] & 1)
         	{
-                int i, new_channel = 0;
-         	status_text_flash ("multichannel_get_previous");
-                return new_channel;
+                do
+                	{
+                        i = i ? --i: 63; /* loop backwards this time */
+                        if (channel_multi [i] & 1)
+                        	break;
+                        } while (i != cur_channel);
                 }
-        return cur_channel;
+        return i + 1;
         }
         
 
