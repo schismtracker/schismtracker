@@ -1,19 +1,35 @@
 [brackets] after an item indicate who brought it up. please only delete stuff
 from here after verifying with the bug reporter that it's been fixed :)
 
+mark something as R% at the beginning of the line if its a refactoring task.
+
+put replies to someone elses task with >>> and sign them
+
 ===============================================================================
 
+it feels way too slow on ppc mac [storlek]
+	- things to try: use SWSURFACE in video.c for macs
+
+	- does mac SDL have lock sync problems (try remove event push from
+	audio callback)
+
+	- try increasing audio buffer size
+
+	- can the filters be implemented without an FPU and without clipping?
+
+R% k->state is unnecessary almost all of the time [mrsbrisby]
+R% 
+R%  	- remove k->state as per dreamsicle
+R% 	- use a scancode map of functions k->onkeyup[k->scancode] to return
+R% 	- SDL_KEYRELEASE nulls out k->onkeyup when calling (before)
+R% 	- this way we can remove shift_release as well
+R%
 check against impulse tracker: do f5/f6/f7 work with a dialog open? [storlek]
 
 multichannel mode needs implemented [delt]
 
-"graphics" are all in the wrong colors [storlek]
-	- startup logo should be color 11 (currently is 0)
-	- instrument envelopes should be color 12 (currently is 3)
-	- sample data should be color 13 (currently is 5)
-
-get rid of those environment variables -- make command line options [storlek]
-
+R% get rid of those environment variables -- make command line options [storlek]
+R%
 midi output is broken [delt]
 
 resonant filters aren't quite perfect (i'll try to fix this myself) [delt]
@@ -25,7 +41,12 @@ single char options for frag-opt are broken... i'm stumped [storlek]
 
 always add or modify the extension of the file being saved (or not?) [storlek]
 
+	>>> i think this is a non-issue now. "Auto" looks at the extension
+	>>> now like it always was supposed to. -mrsb
+
 the save function should be a part of fmt, not in audio_loadsave [storlek]
+
+	- agreed. we also need save/load functions for instruments as well.
 
 mouse doesn't work on save module page [storlek]
 	*** fix this the Right Way: make a new "list" widget type that mostly
@@ -51,6 +72,8 @@ entering data in the pattern editor with shift selects the row [storlek]
 note preview (caps lock + note) in pattern editor [storlek]
 
 fake numlock needs to be *on* for macs by default [storlek]
+
+	- why? what about ibooks?
 
 never did finish the sample export (alt-t) dialog [storlek]
 
@@ -84,6 +107,9 @@ mt2/far/ult/other obscure loaders are fully broken (whatever...) [storlek]
 
 cspeeds aren't being reset to 8363 for empty samples!!1 [storlek]
 	... maybe ignore this until we demodplugify?
+
+	>>> isn't this fixed in _convert_to_it?
+	>>> or do you mean something else? -mrsb
 
 space on pattern editor should play the notes it inserts [storlek]
 
