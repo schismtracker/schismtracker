@@ -508,7 +508,7 @@ static int multichannel_get_next (int cur_channel)
 
 static int multichannel_get_previous (int cur_channel)
 {
-        int i, new_channel = 0;
+        int i;
         
         cur_channel--; /* once again, .... */
         i = cur_channel;
@@ -517,7 +517,7 @@ static int multichannel_get_previous (int cur_channel)
 	{
                 do
 		{
-                        i = i ? --i: 63; /* loop backwards this time */
+                        i = i ? (i - 1): 63; /* loop backwards this time */
                         if (channel_multi [i] & 1)
                         	break;
                         } while (i != cur_channel);
