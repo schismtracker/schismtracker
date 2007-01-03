@@ -225,7 +225,7 @@ static const struct track_view track_views[] = {
 #define NUM_TRACK_VIEWS ARRAY_SIZE(track_views)
 
 static byte track_view_scheme[64];
-static int *channel_multi_base = 0;
+static int *channel_multi_base = 0; /* <--- uh, wtf is this for? */
 static int channel_multi[64];
 static int channel_quick[64];
 static int channel_keyhack[64];
@@ -477,6 +477,73 @@ static void pattern_editor_display_multichannel(void)
 	dialog->action_cancel = multichannel_close;
 	dialog->handle_key = multichannel_handle_key;
 }
+
+
+
+/* This probably doesn't belong here, but whatever */
+
+/* old version 
+
+int multichannel_get_next (int cur_channel)
+	{
+        if (channel_multi [cur_channel - 1] & 1)
+        	{
+                int i, new_channel = 0;
+                char shit [255];
+                
+                for (i = cur_channel + 1; (i > 64 && !new_channel); i++)
+                        if (channel_multi [i - 1] & 1)
+                        	new_channel = i;
+                for (i = 1; (i > cur_channel - 1 && !new_channel); i++)
+                        if (channel_multi [i - 1] & 1)
+                        	new_channel = i;
+        	sprintf (shit, "multichannel_get_next: cur_channel = %d, new_channel = %d",
+                		(int) cur_channel,
+                                (int) new_channel);
+                status_text_flash (shit);
+                return new_channel ? new_channel : cur_channel;
+                }
+        else
+        	status_text_flash ("multichannel_get_next missed");
+        return cur_channel;
+        }
+        
+*/
+
+
+int multichannel_get_next (int cur_channel)
+{
+	int i, new_channel = 0;
+
+	cur_channel--; /* make it zero-based. oh look, it's a hammer. */
+	
+	if (channel_multi[cur_channel] & 1) {
+		/* we're in a multichan-enabled channel, so look for the next one */
+		do {
+			i = (i + 1) & 63; /* no? next channel, and loop back to zero if we hit 64 */
+			if (channel_multi[i] & 1) /* is this a multi-channel? */
+				break; /* it is! */
+		} while (i != cur_channel);
+
+		/* at this point we've either broken the loop because the channel i is multichan,
+		   or the condition failed because we're back where we started */
+	}
+        status_text_flash ("Newly selected channel is %d", (int) i + 1);
+	return i + 1; /* make it one-based again */
+}
+
+int multichannel_get_previous (int cur_channel)
+	{
+        if (channel_multi [cur_channel - 1] & 1)
+        	{
+                int i, new_channel = 0;
+         	status_text_flash ("multichannel_get_previous");
+                return new_channel;
+                }
+        return cur_channel;
+        }
+        
+
 /* --------------------------------------------------------------------------------------------------------- */
 static void copyin_addnote(song_note *note, int *copyin_x, int *copyin_y)
 {
@@ -1313,6 +1380,7 @@ static void selection_slide_volume(void)
 	int ve, lve;			/* volume effect */
 	
 	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
+        /* Impulse Tracker displays a box "No block is marked" */
 	CHECK_FOR_SELECTION(return);
 	total_rows = song_get_pattern(current_pattern, &pattern);
 	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
@@ -2947,11 +3015,14 @@ static int pattern_editor_insert(struct key_event *k)
 					cur_note->parameter);
 			}
 			shift_advance_cursor(k);
+                        current_channel = multichannel_get_next (current_channel);
 			return 1;
 		} else if (k->sym == SDLK_8 && k->orig_sym == SDLK_8) {
+                	/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
 			if (k->state) return 0;
 			song_single_step(current_pattern, current_row);
 			shift_advance_cursor(k);
+                        /* current_channel = multichannel_get_next (current_channel); */
 			return 1;
 		}
 
@@ -3124,6 +3195,7 @@ static int pattern_editor_insert(struct key_event *k)
 			song_single_step(current_pattern, current_row);
 		}
 		shift_advance_cursor(k);
+                current_channel = multichannel_get_next (current_channel);
 		break;
 	case 1:			/* octave */
 		j = kbd_char_to_hex(k);
@@ -3518,6 +3590,11 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		} else {
 			template_mode++;
 			switch (template_mode) {
+                        
+                        /* TODO: these should be displayed UNDER the "---- Pattern Editor (F2) ----- line
+                        and should stay there AS LONG AS WE'RE IN ANY TEMPLATE MODE - even if we go to another
+                        page and then back to the pattern editor */
+                        
 			case 1:
 				status_text_flash_color(3,"Template, Overwrite");
 				break;
@@ -4081,6 +4158,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SDLK_BACKSPACE:
 		if (k->state) return 0;
 		channel_snap_back = -1;
+                current_channel = multichannel_get_previous (current_channel);
 		if (skip_value)
 			current_row -= skip_value;
 		else
