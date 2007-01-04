@@ -51,7 +51,7 @@ unsigned char *message = NULL;
 int edit_mode = 0;
 
 /* nonzero => message should use the alternate font */
-int message_extfont = 1;
+static int message_extfont = 1;
 
 /* This is a bit weird... Impulse Tracker usually wraps at 74, but if
  * the line doesn't have any spaces in it (like in a solid line of
@@ -223,8 +223,6 @@ static void message_draw(void)
 
         draw_fill_chars(2, 13, 77, 47, 0);
 
-        if (message_extfont)
-                font_set_bank(1);
 	if (clippy_owner(CLIPPY_SELECT) == widgets_message) {
 		clipl = widgets_message[0].clip_start;
 		clipr = widgets_message[0].clip_end;
@@ -246,7 +244,10 @@ static void message_draw(void)
                          * FIXME | short enough to fit */
                         if (len > LINE_WRAP)
                                 len = LINE_WRAP;
-                        draw_text_bios_len((unsigned char *) line, len, 2, 13 + n, fg, 0);
+			if (message_extfont)
+                        	draw_text_bios_len((unsigned char *) line, len, 2, 13 + n, fg, 0);
+			else
+                        	draw_text_len((unsigned char *) line, len, 2, 13 + n, fg, 0);
 			
 			if (clipl > -1) {
 				cp = line - message;
@@ -259,15 +260,15 @@ static void message_draw(void)
 				if (cutc < 0) cutc = 0;
 				if (cutc > (len-skipc)) cutc = (len-skipc);
 				if (cutc > 0 && skipc < len) {
-                        		draw_text_bios_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, fg, 8);
+					if (message_extfont)
+	                        		draw_text_bios_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, fg, 8);
+					else
+	                        		draw_text_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, fg, 8);
 				}
 			}
                 }
                 if (edit_mode) {
-                        font_set_bank(0);
                         draw_char(20, 2 + len, 13 + n, 1, 0);
-                        if (message_extfont)
-                                font_set_bank(1);
                 }
                 prevline = line;
                 len = get_nth_line(prevline, 1, &line);
@@ -276,13 +277,10 @@ static void message_draw(void)
         if (edit_mode && len < 0) {
                 /* end of the message */
                 len = get_nth_line(prevline, 0, &line);
-                font_set_bank(0);
                 /* FIXME: see above */
                 if (len > LINE_WRAP)
                         len = LINE_WRAP;
                 draw_char(20, 2 + len, 13 + n - 1, 2, 0);
-                if (message_extfont)
-                        font_set_bank(1);
         }
 
         if (edit_mode) {
@@ -296,16 +294,12 @@ static void message_draw(void)
                         cursor_char = LINE_WRAP + 1;
 
                 if (cursor_char >= len) {
-                        font_set_bank(0);
                         draw_char(20, 2 + cursor_char,
                                   13 + (cursor_line - top_line), 0, 3);
                 } else {
                         draw_char(line[cursor_char], 2 + cursor_char,
                                   13 + (cursor_line - top_line), 8, 3);
-                        font_set_bank(0);
                 }
-        } else {
-                font_set_bank(0);
         }
 }
 

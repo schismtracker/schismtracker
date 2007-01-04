@@ -335,11 +335,6 @@ void palette_load_preset(int palette_index);
 /* mostly for the itf editor */
 int font_save(const char *filename);
 
-/* if bank = 0, set the normal font; if bank = 1, set the alternate font
- * (which uses default glyphs for chars > 127) i'm not too sure about
- * this function. i might change it. */
-void font_set_bank(int bank);
-
 void font_reset_lower(void);    /* ascii chars (0-127) */
 void font_reset_upper(void);    /* itf chars (128-255) */
 void font_reset(void);  /* everything (0-255) */

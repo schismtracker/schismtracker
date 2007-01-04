@@ -400,11 +400,6 @@ int font_save(const char *filename)
         return 0;
 }
 
-void font_set_bank(int bank)
-{
-        font_data = bank ? font_alt : font_normal;
-}
-
 void font_init(void)
 {
 	memcpy(font_half_data, font_half_width, 1024);
