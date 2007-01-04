@@ -5,7 +5,7 @@ void F1(unsigned int ry, unsigned SIZE *out, unsigned int tc[16])
 	unsigned int dg;
 	unsigned char mb[2];
 	unsigned int mx;
-	byte *itf, *bios, *hf, *ef;
+	byte *itf, *bios, *bioslow, *hf, *ef;
 	unsigned int x, y;
 	int fg, bg;
 
@@ -15,6 +15,7 @@ void F1(unsigned int ry, unsigned SIZE *out, unsigned int tc[16])
 	bp = &vgamem_read[y * 80];
 	itf = font_data + (ry & 7);
 	bios = ((byte*)font_default_upper_alt) + (ry & 7);
+	bioslow = ((byte*)font_default_lower) + (ry & 7);
 	hf = font_half_data + ((ry & 7) >> 1);
 	ef = font_extra + (ry & 7);
 
@@ -73,6 +74,8 @@ void F1(unsigned int ry, unsigned SIZE *out, unsigned int tc[16])
 			bg = (*bp & 0xF000) >> 12;
 			if (*bp & 0x10000000 && (*bp & 0x80)) {
 				dg = bios[(*bp & 0x7F)<< 3];
+			} else if (*bp & 0x10000000) {
+				dg = bioslow[(*bp & 0x7F)<< 3];
 			} else {
 				dg = itf[(*bp & 0xFF)<< 3];
 			}
