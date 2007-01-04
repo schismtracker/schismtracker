@@ -60,7 +60,12 @@ enum {
         DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),	/* 1000 1000 */
 };
 
-/* tracker_status flags */
+/* tracker_status flags
+   eventual TODO: split this into two sections or something so we don't run
+   out of bits to toggle... and while we're at it, namespace them with
+   CFG_ (for the configuration stuff -- bits that are accessible through the
+   interface in some way) and uh, something else for the internal status flags
+   like IS_VISIBLE or whatever */
 enum {
 #if 0
 	SAMPLE_CHANGED = (1 << 0),
@@ -123,6 +128,9 @@ enum {
 	/* text-editor */
 	STARTUP_TEXTEDIT = (1 << 24),
 	PLAIN_TEXTEDIT = (1 << 25),
+
+	/* Devi Ever's hack */
+	CRAYOLA_MODE = (1 << 26),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
