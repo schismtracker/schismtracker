@@ -1019,6 +1019,12 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(volume_percent, 100);
 	CFG_GET_PE(fast_volume_percent, 67);
 	CFG_GET_PE(fast_volume_mode, 0);
+	
+	if (cfg_get_number(cfg, "Pattern Editor", "crayola_mode", 0))
+		status.flags |= CRAYOLA_MODE;
+	else
+		status.flags &= ~CRAYOLA_MODE;
+
 	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", (char *) s, 65, "a");
 	
 	/* "decode" the track view scheme */
@@ -2461,7 +2467,10 @@ static void pattern_editor_redraw(void)
 				fg = 3;
 				bg = (ROW_IS_HIGHLIGHT(row) ? 9 : 8);
 			} else {
-				fg = 6;
+				fg = ((status.flags & (CRAYOLA_MODE | CLASSIC_MODE)) == CRAYOLA_MODE)
+					? ((note->instrument + 3) % 4 + 3)
+					: 6;
+
 				if (highlight_current_row && row == current_row)
 					bg = 1;
 				else if (ROW_IS_MAJOR(row))
