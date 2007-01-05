@@ -271,7 +271,6 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
-	cfg_set_number(&cfg, "General", "crayola_mode", !!(status.flags & CRAYOLA_MODE));
 
 
 	/* hm... most of the time probably nothing's different, so saving the
