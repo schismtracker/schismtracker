@@ -176,3 +176,10 @@ of the envelope upon hitting insert [tct1501]
 maybe we should move the midi settings to ~/.schism/midi-config or something
 as it's fairly lengthy. IT doesn't save it with the rest of the config, and
 only wrote midi.cfg when the "save" button was explicitly pressed. [storlek]
+
+directory list in the load/save module page saves the cursor position, but not
+the list position -- so the selected directory ends up at the bottom of the
+list. confusing.
+additionally, how about keeping the cursor on the directory list? having to
+tab over again every time the dir changes is tedious with a large hierarchy
+(especially if some directories have files and others don't) [storlek]
