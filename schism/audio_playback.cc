@@ -124,6 +124,8 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 // ------------------------------------------------------------------------------------------------------------
 // note playing
 
+/* this should be in page.c; the audio handling code doesn't need to know what
+   a page is, much less be talking to them */
 static void main_song_mode_changed_cb(void)
 {
 	int n;

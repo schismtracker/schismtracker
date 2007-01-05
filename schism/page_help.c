@@ -78,13 +78,9 @@ static void help_redraw(void)
 			lp = strcspn(*ptr+1, "\015\012");
 			if (lp > 76) lp = 76;
 			if (**ptr == ';') {
-	                        draw_text_bios_len((const unsigned char *) *ptr + 1,
-					lp, 2,
-					pos, 6, 0);
+	                        draw_text_bios_len((const unsigned char *) *ptr + 1, lp, 2, pos, 6, 0);
 			} else {
-	                        draw_text_len((const unsigned char *) *ptr + 1,
-					lp, 2,
-					pos, 6, 0);
+	                        draw_text_len((const unsigned char *) *ptr + 1, lp, 2, pos, 6, 0);
 			}
                         break;
                 case '#':      /* hidden line */

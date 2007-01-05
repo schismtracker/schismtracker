@@ -409,7 +409,7 @@ void draw_widget(struct widget *w, int selected)
                 break;
         case WIDGET_TEXTENTRY:
                 textentry_reposition(w);
-                draw_text_bios_len((unsigned char *) w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
+                draw_text_len((unsigned char *) w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
 		if (clippy_owner(CLIPPY_SELECT) == w) {
 			/* wee.... */
 			clen = w->clip_end - w->clip_start;

@@ -190,11 +190,9 @@ static void sample_list_draw_list(void)
 			draw_text((unsigned char *) "Play", 31, 13 + pos, (has_data ? 6 : 7), (is_selected ? 14 : 0));
 		}
 
-		draw_text_bios_len((unsigned char *) name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
+		draw_text_len((unsigned char *) name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
 		if (ss == n) {
-			draw_text_bios_len((unsigned char *) name + cl, (cr-cl)+1,
-					5 + cl, 13 + pos, 
-					3, 8);
+			draw_text_len((unsigned char *) name + cl, (cr-cl)+1, 5 + cl, 13 + pos, 3, 8);
 		}
 	}
 
