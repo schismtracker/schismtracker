@@ -1077,7 +1077,7 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 	}
 	
 	draw_fill_chars(65, 18, 76, 25, 0);
-	vgamem_fill_reserve(&env_overlay, 3, 0);
+	vgamem_fill_reserve(&env_overlay, 12, 0);
 
         sprintf((char *) buf, "Node %d/%d", current_node, env->nodes);
         draw_text((const unsigned char *)buf, 66, 19, 2, 0);
