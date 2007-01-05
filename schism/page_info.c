@@ -279,7 +279,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 				ptr = channel->instrument->name;
 			else
 				song_get_sample(smp, &ptr);
-			draw_text_bios_len((const unsigned char *) ptr, 25, n, pos, 6, 0);
+			draw_text_len((const unsigned char *) ptr, 25, n, pos, 6, 0);
 		} else if (ins && channel->instrument && channel->instrument->midi_channel) {
 			if (channel->instrument->midi_channel > 16) {
 				draw_text(numtostr(2, ((c-1) % 16)+1, (unsigned char *)buf), 31, pos, 6, 0);
@@ -298,7 +298,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 				fg = 6;
 			draw_char(':', n++, pos, fg, 0);
 			ptr = channel->instrument->name;
-			draw_text_bios_len((const unsigned char *) ptr, 25, n, pos, 6, 0);
+			draw_text_len((const unsigned char *) ptr, 25, n, pos, 6, 0);
 		} else {
 			inuse = 0;
 		}

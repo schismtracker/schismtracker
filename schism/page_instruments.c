@@ -389,22 +389,22 @@ static void instrument_list_draw_list(void)
                 if (instrument_cursor_pos < 25) {
                         /* it's in edit mode */
                         if (is_current) {
-                                draw_text_bios_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 14);
+                                draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 14);
                                 if (selected) {
                                         draw_char(ins->name[instrument_cursor_pos],
                                                   5 + instrument_cursor_pos,
                                                   13 + pos, 0, 3);
                                 }
                         } else {
-                                draw_text_bios_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 0);
+                                draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 0);
                         }
                 } else {
-                        draw_text_bios_len((const unsigned char *)ins->name, 25, 5, 13 + pos,
+                        draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos,
                                       ((is_current && selected) ? 0 : 6),
                                       (is_current ? (selected ? 3 : 14) : 0));
                 }
 		if (ss == n) {
-			draw_text_bios_len((const unsigned char *)ins->name + cl, (cr-cl)+1,
+			draw_text_len((const unsigned char *)ins->name + cl, (cr-cl)+1,
 					5 + cl, 13 + pos, 
 					(is_current ? 3 : 11), 8);
 		}

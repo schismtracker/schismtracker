@@ -328,7 +328,7 @@ static void _mp_draw(void)
 	}
 	i = strlen(name);
 	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, 2);
-	draw_text_bios_len((const unsigned char *) name, 17, _mp_text_x, _mp_text_y, 0, 2);
+	draw_text_len((const unsigned char *) name, 17, _mp_text_x, _mp_text_y, 0, 2);
 	if (i < 17 && name == (void *) _mp_text) {
 		draw_char(':', _mp_text_x + i, _mp_text_y, 0, 2);
 	}
@@ -1219,7 +1219,7 @@ void update_current_instrument(void)
         
         if (n > 0) {
                 draw_text(num99tostr(n, (unsigned char *) buf), 50, 3, 5, 0);
-                draw_text_bios_len((const unsigned char *)name, 25, 53, 3, 5, 0);
+                draw_text_len((const unsigned char *)name, 25, 53, 3, 5, 0);
         } else {
                 draw_text((const unsigned char *)"..", 50, 3, 5, 0);
                 draw_text((const unsigned char *)".........................", 53, 3, 5, 0);
@@ -1232,8 +1232,8 @@ static void redraw_top_info(void)
 
         update_current_instrument();
 
-        draw_text_bios_len((const unsigned char *)song_get_basename(), 18, 12, 4, 5, 0);
-        draw_text_bios_len((const unsigned char *)song_get_title(), 25, 12, 3, 5, 0);
+        draw_text_len((const unsigned char *)song_get_basename(), 18, 12, 4, 5, 0);
+        draw_text_len((const unsigned char *)song_get_title(), 25, 12, 3, 5, 0);
 
         update_current_order();
         update_current_pattern();
