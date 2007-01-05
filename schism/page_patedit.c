@@ -994,6 +994,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(volume_percent);
 	CFG_SET_PE(fast_volume_percent);
 	CFG_SET_PE(fast_volume_mode);
+	cfg_set_number(cfg, "Pattern Editor", "crayola_mode", !!(status.flags & CRAYOLA_MODE));
 	for (n = 0; n < 64; n++)
 		s[n] = track_view_scheme[n] + 'a';
 	s[64] = 0;
