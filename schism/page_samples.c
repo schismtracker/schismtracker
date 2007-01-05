@@ -777,107 +777,59 @@ static void sample_amplify_dialog(void)
 /* --------------------------------------------------------------------- */
 
 /* filename can be NULL, in which case the sample filename is used (quick save) */
-struct sample_save_hunk {
+struct sample_save_data {
 	char *path;
+	/* char *options? */
 	int format_id;
 };
-static void abort_save_sample(void *ptr)
+
+static void save_sample_free_data(void *ptr)
 {
-	struct sample_save_hunk *foo = (struct sample_save_hunk *)ptr;
-	free(foo->path);
-	free(foo);
+	struct sample_save_data *data = (struct sample_save_data *) ptr;
+	if (data->path)
+		free(data->path);
+	free(data);
 }
+
 static void do_save_sample(void *ptr)
 {
-	struct sample_save_hunk *foo = (struct sample_save_hunk *)ptr;
-	if (song_save_sample(current_sample, foo->path, foo->format_id))
-		status_text_flash("%s sample saved (sample %d)",
-			sample_save_formats[foo->format_id].name,
-			current_sample);
-	else
-		status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
-	abort_save_sample(ptr); /* deftly named :) */
+	struct sample_save_data *data = (struct sample_save_data *) ptr;
 	
+	if (song_save_sample(current_sample, data->path, data->format_id)) {
+		status_text_flash("%s sample saved (sample %d)",
+				  sample_save_formats[data->format_id].name, current_sample);
+	} else {
+		status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
+	}
+	save_sample_free_data(ptr);
 }
+
 static void sample_save(const char *filename, int format_id)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
-	char *ptr = dmoz_path_concat(cfg_dir_samples, filename
-					? filename
-					: sample->filename);
-	struct sample_save_hunk *poop;
+	char *ptr = dmoz_path_concat(cfg_dir_samples, filename ? : sample->filename);
+	struct sample_save_data *data = mem_alloc(sizeof(struct sample_save_data));
 	struct stat buf;
+	
+	data->path = ptr;
+	data->format_id = format_id;
 
 	if (filename && *filename && stat(ptr, &buf) == 0) {
-		if (S_ISDIR(buf.st_mode)) {
-#if 0
-			dialog_create(DIALOG_OK, "Already exists, but not a regular file", NULL, NULL, 0, NULL);
-#endif
-			status_text_flash("%s is a directory", 
-					filename ? filename : sample->filename);
-
-		} else if (S_ISREG(buf.st_mode)) {
-			poop = mem_alloc(sizeof(struct sample_save_hunk));
-			poop->path = ptr;
-			poop->format_id = format_id;
-			dialog_create(DIALOG_OK_CANCEL,
-					"Overwrite file?", do_save_sample,
-					abort_save_sample, 1, poop);
+		if (S_ISREG(buf.st_mode)) {
+			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
+				      do_save_sample, save_sample_free_data, 1, data);
+			/* callback will free it */
+		} else if (S_ISDIR(buf.st_mode)) {
+			status_text_flash("%s is a directory", filename);
+			save_sample_free_data(data);
 		} else {
-#if 0
-			dialog_create(DIALOG_OK, "Already exists, but not a regular file", NULL, NULL, 0, NULL);
-#endif
-			status_text_flash("%s is not a regular file", 
-					filename ? filename : sample->filename);
+			status_text_flash("%s is not a regular file", filename);
+			save_sample_free_data(data);
 		}
-	} else if (song_save_sample(current_sample, ptr, format_id))
-		status_text_flash("%s sample saved (sample %d)", sample_save_formats[format_id].name, current_sample);
-	else
-		status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
-	free(ptr);
-}
-/* resize sample dialog */
-static struct widget resize_sample_widgets[2];
-static int resize_sample_cursor;
-static void resize_sample_cancel(UNUSED void *data)
-{
-	dialog_destroy();
-}
-static void do_resize_sample_aa(UNUSED void *data)
-{
-	song_sample *sample = song_get_sample(current_sample, NULL);
-	unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
-	sample_resize(sample, newlen, 1);
-}
-static void do_resize_sample(UNUSED void *data)
-{
-	song_sample *sample = song_get_sample(current_sample, NULL);
-	unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
-	sample_resize(sample, newlen, 0);
-}
-static void resize_sample_draw_const(void)
-{
-	draw_text((unsigned char *) "Resize Sample", 34, 24, 3, 2);
-	draw_text((unsigned char *) "New Length", 31, 27, 0, 2);
-	draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-}
-static void resize_sample_dialog(int aa)
-{
-	song_sample *sample = song_get_sample(current_sample, NULL);
-	struct dialog *dialog;
-
-	resize_sample_cursor = 0;
-	create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
-	resize_sample_widgets[0].d.numentry.value = sample->length;
-	create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, (void *) resize_sample_cancel, "Cancel", 1);
-	dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0, resize_sample_draw_const, NULL);
-	if (aa) {
-		dialog->action_yes = do_resize_sample_aa;
 	} else {
-		dialog->action_yes = do_resize_sample;
+		do_save_sample(data);
 	}
 }
-
 
 /* export sample dialog */
 
@@ -997,6 +949,49 @@ static void export_sample_dialog(void)
 	
 	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 6, 0, export_sample_draw_const, NULL);
 	dialog->action_yes = do_export_sample;
+}
+
+
+/* resize sample dialog */
+static struct widget resize_sample_widgets[2];
+static int resize_sample_cursor;
+static void resize_sample_cancel(UNUSED void *data)
+{
+	dialog_destroy();
+}
+static void do_resize_sample_aa(UNUSED void *data)
+{
+	song_sample *sample = song_get_sample(current_sample, NULL);
+	unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
+	sample_resize(sample, newlen, 1);
+}
+static void do_resize_sample(UNUSED void *data)
+{
+	song_sample *sample = song_get_sample(current_sample, NULL);
+	unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
+	sample_resize(sample, newlen, 0);
+}
+static void resize_sample_draw_const(void)
+{
+	draw_text((unsigned char *) "Resize Sample", 34, 24, 3, 2);
+	draw_text((unsigned char *) "New Length", 31, 27, 0, 2);
+	draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+static void resize_sample_dialog(int aa)
+{
+	song_sample *sample = song_get_sample(current_sample, NULL);
+	struct dialog *dialog;
+	
+	resize_sample_cursor = 0;
+	create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
+	resize_sample_widgets[0].d.numentry.value = sample->length;
+	create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, (void *) resize_sample_cancel, "Cancel", 1);
+	dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0, resize_sample_draw_const, NULL);
+	if (aa) {
+		dialog->action_yes = do_resize_sample_aa;
+	} else {
+		dialog->action_yes = do_resize_sample;
+	}
 }
 
 /* --------------------------------------------------------------------- */
