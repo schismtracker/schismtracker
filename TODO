@@ -172,3 +172,7 @@ without any effort at all! [storlek]
 
 when the last node of an envelope is selected, create a new node 2x the length
 of the envelope upon hitting insert [tct1501]
+
+maybe we should move the midi settings to ~/.schism/midi-config or something
+as it's fairly lengthy. IT doesn't save it with the rest of the config, and
+only wrote midi.cfg when the "save" button was explicitly pressed. [storlek]
