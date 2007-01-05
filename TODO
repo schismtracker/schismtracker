@@ -183,3 +183,10 @@ list. confusing.
 additionally, how about keeping the cursor on the directory list? having to
 tab over again every time the dir changes is tedious with a large hierarchy
 (especially if some directories have files and others don't) [storlek]
+
+hmm. i just discovered that f4-f4... page flipping thing. interesting, but
+maybe the focus should move to the toggle button for the page? or try to keep
+it in sorta the same position it was in before.
+maybe if it's on the list itself, or any of the page toggles, keep it in the
+same place, otherwise, switch the focus to the active toggle button on the new
+page. [storlek]
