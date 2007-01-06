@@ -10,20 +10,20 @@ maybe this'd be better if we wikified it? lol :)
 
 ===============================================================================
 
-arghbbq font stuff [storlek]
-	- never use the bios font anywhere except the message editor
-	- use the bios font by default in the message editor
-	- switch between the bios font to the custom font with ctrl-t
+multichan playing on sample list is fubar'd [storlek]
+
+Zxx filters aren't working in sample mode anymore. AGAIN. this bug has already
+appeared once already and got fixed, now it's back. [storlek]
 
 it feels way too slow on ppc mac [storlek]
 	- things to try: use SWSURFACE in video.c for macs
-
 	- does mac SDL have lock sync problems (try remove event push from
-	audio callback)
-
+	  audio callback)
+		does nothing -s
 	- try increasing audio buffer size
-
 	- can the filters be implemented without an FPU and without clipping?
+
+		idk how to do that stuff, video.c is a labyrinth /storlek
 
 R% k->state is unnecessary almost all of the time [mrsbrisby]
 R% 
