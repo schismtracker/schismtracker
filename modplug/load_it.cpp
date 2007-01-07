@@ -240,7 +240,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 				pins->nVibType = autovibit2xm[pis.vit & 7];
 				pins->nVibRate = pis.vis;
 				pins->nVibDepth = pis.vid & 0x7F;
-				pins->nVibSweep = (pis.vir + 3) / 4;
+				pins->nVibSweep = pis.vir;
 				if ((pis.samplepointer) && (pis.samplepointer < dwMemLength) && (pis.length))
 				{
 					pins->nLength = pis.length;
@@ -384,7 +384,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 	for (UINT i = 0; i < pifh.ordnum; i++) {
 		if (Order[i] >= pifh.patnum && Order[i] < MAX_PATTERNS) {
 			pifh.patnum = Order[i];
-			for (UINT j = patpossize; j < (pifh.patnum>>2); j++)
+			for (UINT j = patpossize; j < (unsigned)(pifh.patnum>>2); j++)
 				patpos[j] = 0;
 			patpossize = pifh.patnum;
 		}
@@ -557,7 +557,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 			pins->nVibType = autovibit2xm[pis.vit & 7];
 			pins->nVibRate = pis.vis;
 			pins->nVibDepth = pis.vid & 0x7F;
-			pins->nVibSweep = (pis.vir + 3) / 4;
+			pins->nVibSweep = pis.vir;
 			if ((pis.samplepointer) && (pis.samplepointer < dwMemLength) && (pis.length))
 			{
 				pins->nLength = pis.length;
