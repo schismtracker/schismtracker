@@ -4,13 +4,6 @@ version, just a rough idea of when developers should give it
 attention.
 
 0.5
-	fix vibrato bug
-		Hxy in which x == rate, y == depth, and speed is how long to wait before the note starts vibrating
-		no thats wrong
-
-		 so, "rate" determines how fast vibrato kicks in when you start a note (it kicks in gradually)
- s/when/after/
-
 	shift-f5 is audio driver config
 		- remove the oversampling/noise reduction/surround/xbass/reverb
 		settings.
