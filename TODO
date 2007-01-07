@@ -189,3 +189,7 @@ it in sorta the same position it was in before.
 maybe if it's on the list itself, or any of the page toggles, keep it in the
 same place, otherwise, switch the focus to the active toggle button on the new
 page. [storlek]
+
+There is no 'enforce Amiga limits' option in IT (Which was in ST3) so
+pitches of notes exceeding the Amiga limit will not be suitably played. [pulse]
+
