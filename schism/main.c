@@ -538,6 +538,26 @@ static void event_loop(void)
 		} else if (event.type == SDL_KEYUP || event.type == SDL_MOUSEBUTTONUP) {
 			kk.state = 1;
 		}
+		if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+			if (event.key.keysym.sym == 0) {
+				kk.mouse = 0;
+				kk.unicode = 0;
+				kk.is_repeat = 0;
+				switch (event.key.keysym.scancode) {
+				case 234:
+					kk.sym = SDLK_LEFT;
+					kk.mod = KMOD_CTRL;
+					handle_key(&kk);
+					continue;
+				case 233:
+					kk.sym = SDLK_RIGHT;
+					kk.mod = KMOD_CTRL;
+					handle_key(&kk);
+					continue;
+				};
+			}
+		
+		}
 		switch (event.type) {
 		case SDL_SYSWMEVENT:
 			/* todo... */
@@ -578,9 +598,10 @@ static void event_loop(void)
 			kk.unicode = event.key.keysym.unicode;
 			kk.mouse = 0;
 			if (debug_s && strstr(debug_s, "key")) {
-				log_appendf(12, "[DEBUG] Key%s sym=%d",
+				log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
 						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
-						event.key.keysym.sym);
+						event.key.keysym.sym,
+						event.key.keysym.scancode);
 			}
 			key_translate(&kk);
 			if (event.type == SDL_KEYDOWN
