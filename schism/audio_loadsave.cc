@@ -875,12 +875,12 @@ static void _save_it(diskwriter_driver_t *fp)
 		nord--;
 	nord += 2;
 	
-	nins = 98;
+	nins = 198;
 	while (nins >= 0 && song_instrument_is_empty(nins-1))
 		nins--;
 	nins++;
 	
-	nsmp = 98;
+	nsmp = 198;
 	while (nsmp >= 0 && _sample_is_empty(nsmp))
 		nsmp--;
 	nsmp++;
