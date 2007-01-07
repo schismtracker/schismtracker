@@ -325,8 +325,8 @@ int font_load(const char *filename)
 			free(font_file);
                         return -1;
                 }
-                if (data[1] != 0x2 || data[0] != 0x12) {
-                        SDL_SetError("%s: Unsupported ITF file version", font_file);
+                if (data[1] != 0x2 || (data[0] != 0x12 && data[0] != 9)) {
+                        SDL_SetError("%s: Unsupported ITF file version %02x.%20x", font_file, data[1], data[0]);
                         fclose(fp);
 			free(font_file);
                         return -1;
