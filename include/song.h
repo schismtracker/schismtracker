@@ -589,8 +589,6 @@ void song_flip_stereo(void);
 int song_get_surround(void);
 void song_set_surround(int on);
 
-static const song_note empty_note = { 0, 0, 0, 0, 0, 0 };
-
 /* actually from sndfile.h */
 #define SCHISM_MAX_SAMPLES	200
 #define SCHISM_MAX_INSTRUMENTS	SCHISM_MAX_SAMPLES

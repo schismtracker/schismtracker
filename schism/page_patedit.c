@@ -2033,6 +2033,8 @@ static void clipboard_paste_insert(void)
 
 static void clipboard_paste_mix_notes(int clip, int xlate)
 {
+	static song_note empty_note = { 0, 0, 0, 0, 0, 0 };
+
 	int row, chan, num_rows, chan_width;
 	song_note *pattern, *p_note, *c_note;
 

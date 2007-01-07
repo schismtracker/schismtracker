@@ -52,7 +52,7 @@ static int *state = 0;
 static int _get_fd(int pb, int isout)
 {
 	struct ip_mreq mreq;
-	struct sockaddr_in sin;
+	struct sockaddr_in asin;
 	unsigned char *ipcopy;
 	int fd, opt;
 #if !defined(PF_INET) && defined(AF_INET)
@@ -90,15 +90,15 @@ static int _get_fd(int pb, int isout)
 		return -1;
 	}
 
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	ipcopy = (unsigned char *)&sin.sin_addr;
+	memset(&asin, 0, sizeof(asin));
+	asin.sin_family = AF_INET;
+	ipcopy = (unsigned char *)&asin.sin_addr;
 	if (!isout) {
 		/* all 0s is inaddr_any; but this is for listening */
 		ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
-		sin.sin_port = htons(MIDI_IP_BASE+pb);
+		asin.sin_port = htons(MIDI_IP_BASE+pb);
 	}
-	if (bind(fd, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
+	if (bind(fd, (struct sockaddr *)&asin, sizeof(asin)) < 0) {
 		(void)close(fd);
 		return -1;
 	}
@@ -148,12 +148,12 @@ static void _readin(struct midi_provider *p, int en, int fd)
 {
 	struct midi_port *ptr, *src;
 	static unsigned char buffer[65536];
-	static struct sockaddr_in sin;
-	unsigned slen = sizeof(sin);
+	static struct sockaddr_in asin;
+	unsigned slen = sizeof(asin);
 	int r;
 
 	r = recvfrom(fd, buffer, sizeof(buffer), 0,
-		(struct sockaddr *)&sin, &slen);
+		(struct sockaddr *)&asin, &slen);
 	if (r > 0) {
 		ptr = src = 0;
 		while (midi_port_foreach(p, &ptr)) {
@@ -210,7 +210,7 @@ static int _ip_stop(struct midi_port *p)
 static void _ip_send(struct midi_port *p, unsigned char *data, unsigned int len,
 				UNUSED unsigned int delay)
 {
-	struct sockaddr_in sin;
+	struct sockaddr_in asin;
 	unsigned char *ipcopy;
 	int n = ((int*)p->userdata) - port_fd;
 	int ss;
@@ -218,16 +218,16 @@ static void _ip_send(struct midi_port *p, unsigned char *data, unsigned int len,
 	if (len == 0) return;
 	if (!(state[n] & 2)) return; /* blah... */
 
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	ipcopy = (unsigned char *)&sin.sin_addr.s_addr;
+	memset(&asin, 0, sizeof(asin));
+	asin.sin_family = AF_INET;
+	ipcopy = (unsigned char *)&asin.sin_addr.s_addr;
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
-	sin.sin_port = htons(MIDI_IP_BASE+n);
+	asin.sin_port = htons(MIDI_IP_BASE+n);
 
 	while (len) {
 		ss = (len > MAX_DGRAM_SIZE) ?  MAX_DGRAM_SIZE : len;
 		if (sendto(out_fd, data, ss, 0,
-				(struct sockaddr *)&sin,sizeof(sin)) < 0) {
+				(struct sockaddr *)&asin,sizeof(asin)) < 0) {
 			state[n] &= (~2); /* turn off output */
 		}
 		len -= ss;

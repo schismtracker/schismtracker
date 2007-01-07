@@ -25,6 +25,8 @@
 #include "sdlmain.h"
 #include "video.h" /* for declaration of xpmdata */
 
+#include <ctype.h>
+
 /*
 ** This came from SDL_image's IMG_xpm.c
 *
