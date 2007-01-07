@@ -201,3 +201,7 @@ pitches of notes exceeding the Amiga limit will not be suitably played. [pulse]
 	exporting in some archaic file format that nobody ought to be using
 	anymore in the first place.
 		/storlek
+	maybe, it seems that the total complexity of such a beast
+	that isn't implemented limits notes to between C-3 and B#5
+	i do not think (however) such an option belongs in any part of schsm UI
+		-mrsb
