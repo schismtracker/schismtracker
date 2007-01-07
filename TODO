@@ -17,9 +17,8 @@ appeared once already and got fixed, now it's back. [storlek]
 
 it feels way too slow on ppc mac [storlek]
 	- things to try: use SWSURFACE in video.c for macs
-	- does mac SDL have lock sync problems (try remove event push from
-	  audio callback)
-		does nothing -s
+		>>> see the SDL_HWSURFACE  in schism/video.c ?
+		>>> try replacing them with SDL_SWSURFACE :)
 	- try increasing audio buffer size
 	- can the filters be implemented without an FPU and without clipping?
 
