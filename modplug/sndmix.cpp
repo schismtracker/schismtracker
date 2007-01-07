@@ -949,14 +949,13 @@ BOOL CSoundFile::ReadNote()
 				MODINSTRUMENT *pins = pChn->pInstrument;
 				/* this isn't correct, but its better... */
 
-				if (pins->nVibSweep == 0)
-					pChn->nAutoVibDepth = 0;
-
-				pChn->nAutoVibDepth += pins->nVibDepth << 7;
-				if ((pChn->nAutoVibDepth >> 7) > pins->nVibDepth)
-					pChn->nAutoVibDepth = pins->nVibDepth << 7;
-				if (m_dwSongFlags & SONG_ITOLDEFFECTS)
-					pChn->nAutoVibDepth *= 2;
+				if (pins->nVibSweep == 0) {
+					pChn->nAutoVibDepth = pins->nVibDepth << 8;
+				} else {
+					pChn->nAutoVibDepth += pins->nVibSweep;
+					if ((pChn->nAutoVibDepth >> 8) > pins->nVibDepth)
+						pChn->nAutoVibDepth = pins->nVibDepth << 8;
+				}
 #if 0
 				if (pins->nVibSweep == 0)
 				{
@@ -996,6 +995,10 @@ BOOL CSoundFile::ReadNote()
 					val = ft2VibratoTable[pChn->nAutoVibPos & 255];
 				}
 				int n =	((val * pChn->nAutoVibDepth) >> 8);
+				// is this right? -mrsb
+				if (!(m_dwSongFlags & SONG_ITOLDEFFECTS))
+					n >>= 1;
+
 				if (m_nType & MOD_TYPE_IT)
 				{
 					int df1, df2;
