@@ -1475,5 +1475,5 @@ void sample_list_load_page(struct page *page)
 	create_togglebutton(widgets_samplelist + 18, 67, 39, 6, 16, 19, 17,
 			    0, 0, update_values_in_song, "Random", 1, vibrato_waveforms);
 	/* 19 = vibrato rate */
-	create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 64);
+	create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
 }
