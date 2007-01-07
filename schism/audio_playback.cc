@@ -1114,13 +1114,13 @@ printf("channel = %d note=%d\n",chan,m_note);
 	if (m->command == CMD_S3MCMDEX) {
 		switch (m->param & 0x80) {
 		case 0xC0: /* note cut */
-			if (tc == (m->param & 15)) {
+			if (tc == (((unsigned)m->param) & 15)) {
 				m_note = NOTE_CUT;
 			} else if (tc != 0) return;
 			break;
 
 		case 0xD0: /* note delay */
-			if (tc != (m->param & 15)) return;
+			if (tc != (((unsigned)m->param) & 15)) return;
 			break;
 		default:
 			if (tc != 0) return;
