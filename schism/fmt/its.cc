@@ -143,7 +143,7 @@ int load_its_sample(const byte *header, const byte *data, size_t length, song_sa
 	
 	int vibs[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM};
 	smp->vib_type = vibs[its->vit & 3];
-	smp->vib_rate = (its->vir + 3) / 4;
+	smp->vib_rate = its->vir;
 	smp->vib_depth = its->vid;
 	smp->vib_speed = its->vis;
 	
@@ -225,7 +225,7 @@ void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title)
 	its.susloopend = bswapLE32(smp->sustain_end);
 	//its.samplepointer = 42; - this will be filled in later
 	its.vis = smp->vib_speed;
-	its.vir = (smp->vib_rate < 64) ? (smp->vib_rate * 4) : 255;
+	its.vir = smp->vib_rate;
 	its.vid = smp->vib_depth;
 	//its.vit = smp->vib_type; <- Modplug uses different numbers for this. :/
 	its.vit = 0;

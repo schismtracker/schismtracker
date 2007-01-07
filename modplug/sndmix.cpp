@@ -947,6 +947,17 @@ BOOL CSoundFile::ReadNote()
 			if ((pChn->pInstrument) && (pChn->pInstrument->nVibDepth))
 			{
 				MODINSTRUMENT *pins = pChn->pInstrument;
+				/* this isn't correct, but its better... */
+
+				if (pins->nVibSweep == 0)
+					pChn->nAutoVibDepth = 0;
+
+				pChn->nAutoVibDepth += pins->nVibDepth << 7;
+				if ((pChn->nAutoVibDepth >> 7) > pins->nVibDepth)
+					pChn->nAutoVibDepth = pins->nVibDepth << 7;
+				if (m_dwSongFlags & SONG_ITOLDEFFECTS)
+					pChn->nAutoVibDepth *= 2;
+#if 0
 				if (pins->nVibSweep == 0)
 				{
 					pChn->nAutoVibDepth = pins->nVibDepth << 8;
@@ -954,7 +965,7 @@ BOOL CSoundFile::ReadNote()
 				{
 					if (m_nType & MOD_TYPE_IT)
 					{
-						pChn->nAutoVibDepth += pins->nVibSweep << 3;
+						pChn->nAutoVibDepth += pins->nVibSweep;
 					} else
 					if (!(pChn->dwFlags & CHN_KEYOFF))
 					{
@@ -963,6 +974,7 @@ BOOL CSoundFile::ReadNote()
 					if ((pChn->nAutoVibDepth >> 8) > pins->nVibDepth)
 						pChn->nAutoVibDepth = pins->nVibDepth << 8;
 				}
+#endif
 				pChn->nAutoVibPos += ((int)pins->nVibRate);
 				int val;
 				switch(pins->nVibType)
