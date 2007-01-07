@@ -1189,7 +1189,7 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 		itss.vit = autovibxm2it[psmp->nVibType & 7];
 		itss.vis = psmp->nVibRate;
 		itss.vid = psmp->nVibDepth;
-		itss.vir = (psmp->nVibSweep < 64) ? psmp->nVibSweep * 4 : 255;
+		itss.vir = psmp->nVibSweep;
 		if (psmp->uFlags & CHN_PANNING) itss.dfp |= 0x80;
 		if ((psmp->pSample) && (psmp->nLength)) itss.cvt = 0x01;
 		UINT flags = RS_PCM8S;
