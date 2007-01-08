@@ -1,62 +1,7 @@
-ok, i've moved most of this to the schismdev board
+ok, i've moved this to the schismdev board
 - http://rigelseven.com/cgi-sys/cgiwrap/storlek/yabb/YaBB.pl?board=schismdev
 which should be more flexible than a flat file.
 
 for a release we could just stick the big things that haven't been implemented
 in here to fulfill automake's requirement for a TODO file and to let people
 know that we're aware that schism tracker is, in fact, still incomplete...
-
-
-[brackets] after an item indicate who brought it up. please only delete stuff
-from here after verifying with the bug reporter that it's been fixed :)
-
-mark something as R% at the beginning of the line if its a refactoring task.
-
-put replies to someone elses task with >>> and sign them
-
-maybe this'd be better if we wikified it? lol :)
-	/storlek
-
-===============================================================================
-
-R% k->state is unnecessary almost all of the time [mrsbrisby]
-R% 
-R%  	- remove k->state as per dreamsicle
-R% 	- use a scancode map of functions k->onkeyup[k->scancode] to return
-R% 	- SDL_KEYRELEASE nulls out k->onkeyup when calling (before)
-R% 	- this way we can remove shift_release as well
-
-check against impulse tracker: do f5/f6/f7 work with a dialog open? [storlek]
-	- delt says: no, it didn't...
-
-midi output is broken [delt]
-
-resonant filters aren't quite perfect (i'll try to fix this myself) [delt]
-
-windows version crashes constantly (thanks a lot bill) [delt]
-
-make f7 smarter [delt]
-
-spectrum analyzer visualization (lol wishlist) [storlek]
-
-never did finish the sample export (alt-t) dialog [storlek]
-
-desperately need to document my coding style and stuff so i can stop rewriting
-other people's code :P [storlek]
-
-A BIT OF GENIUS: (well maybe :)
-make it possible to save patterns, like in FT2... BUT... don't just save the
-pattern data, actually allow exporting a pattern AS AN .IT FILE so it'll have
-the samples and stuff too. then when loading it just "append" its contents to
-the current loaded module. (should probably do something so as not to end up
-with 9 copies of all the samples when loading multiple patterns, dunno what.)
-this combined with the pattern-to-sample key might be a pretty good substitute
-for those who want a bazillion samples for all the drumloops and stuff; they
-can write the loop, render to a sample, save the pattern for future tweaks,
-then *delete* the pattern and associated samples (btw, should have a "clean up
-song" function like modplug that finds unused samples)... and if need be, can
-reload that pattern, fix stuff, re-render, and save it again.
-another use for this would be immediately apparent for anyone who's tried to
-mix two different .it files together for whatever reason. this way, just load
-the second file in this append mode, and blammo, two songs stitched together
-without any effort at all! [storlek]
