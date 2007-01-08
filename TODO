@@ -1,3 +1,12 @@
+ok, i've moved most of this to the schismdev board
+- http://rigelseven.com/cgi-sys/cgiwrap/storlek/yabb/YaBB.pl?board=schismdev
+which should be more flexible than a flat file.
+
+for a release we could just stick the big things that haven't been implemented
+in here to fulfill automake's requirement for a TODO file and to let people
+know that we're aware that schism tracker is, in fact, still incomplete...
+
+
 [brackets] after an item indicate who brought it up. please only delete stuff
 from here after verifying with the bug reporter that it's been fixed :)
 
@@ -10,20 +19,6 @@ maybe this'd be better if we wikified it? lol :)
 
 ===============================================================================
 
-multichan playing on sample list is fubar'd [storlek]
-
-Zxx filters aren't working in sample mode anymore. AGAIN. this bug has already
-appeared once already and got fixed, now it's back. [storlek]
-
-it feels way too slow on ppc mac [storlek]
-	- things to try: use SWSURFACE in video.c for macs
-		>>> see the SDL_HWSURFACE  in schism/video.c ?
-		>>> try replacing them with SDL_SWSURFACE :)
-	- try increasing audio buffer size
-	- can the filters be implemented without an FPU and without clipping?
-
-		idk how to do that stuff, video.c is a labyrinth /storlek
-
 R% k->state is unnecessary almost all of the time [mrsbrisby]
 R% 
 R%  	- remove k->state as per dreamsicle
@@ -34,125 +29,20 @@ R% 	- this way we can remove shift_release as well
 check against impulse tracker: do f5/f6/f7 work with a dialog open? [storlek]
 	- delt says: no, it didn't...
 
-multichannel mode needs implemented [delt]
-	should be done? check with delt, we should be able to remove this one
-		/storlek
-
-R% get rid of those environment variables -- make command line options [storlek]
-
 midi output is broken [delt]
 
 resonant filters aren't quite perfect (i'll try to fix this myself) [delt]
 
 windows version crashes constantly (thanks a lot bill) [delt]
 
-single char options for frag-opt are broken... i'm stumped [storlek]
-	(this has always been the case; seems like a frag-opt endian bug)
-
-always add or modify the extension of the file being saved (or not?) [storlek]
-
-	>>> i think this is a non-issue now. "Auto" looks at the extension
-	>>> now like it always was supposed to. -mrsb
-
-	this is still very much an issue. if i save a song, i can't re-open
-	it from the finder without renaming it. -storlek
-
-the save function should be a part of fmt, not in audio_loadsave [storlek]
-
-	- agreed. we also need save/load functions for instruments as well.
-
-mouse doesn't work on save module page [storlek]
-	*** fix this the Right Way: make a new "list" widget type that mostly
-	draws itself (since most lists are so radically different, there's not
-	one standard way to draw them all) but has a couple of convenient
-	functions to reposition so the cursor is visible, and also handle
-	up/down/pgup/pgdn/home/end/click/wheel smartly
-
 make f7 smarter [delt]
-
-clicking those popup-thumbbars (mousebar?) shouldn't immediately change the
-value unless it's being dragged. it's too easy to clumsily click the wrong
-place and break the song that's playing. [storlek]
-
-click in vis/time area should cycle the vis or time display mode [storlek]
 
 spectrum analyzer visualization (lol wishlist) [storlek]
 
-check timestamps in load/save module page... "19:36pm"? blah [storlek]
-
-entering data in the pattern editor with shift selects the row [storlek]
-
-note preview (caps lock + note) in pattern editor [storlek]
-
-fake numlock needs to be *on* for macs by default [storlek]
-
-	- why? what about ibooks?
-
-	what about every time i try to type "32" on the numpad and wind up
-	seventeen rows down instead? ;) -storlek
-	(btw, what? ibooks don't have a number pad anyway)
-
 never did finish the sample export (alt-t) dialog [storlek]
-
-font editor should be a page like anything else [storlek]
-
-make some keys more logical... [storlek]
-
-	log viewer could go on shift-f10, since the message editor is shift-f9
-	and they're kinda-sorta-similar-ish
-
-	font editor should be ctrl-f11, as the palette editor is ctrl-f12...
-	that way the "look and feel" settings are next to each other
-
-	ctrl-f1 should show the keyboard status like in impulse tracker (which
-	would be fairly useful if we're going to do custom keymappings)
-
-	global settings which are currently on ctrl-f1 should go on shift-f12
-	instead - similar stuff as the f12 screen, but less commonly used
-
-	song message: alt-z = clear, alt-p = paste, alt-c = copy, alt-o =
-	overwrite message with clipboard data... (hmm. what about alt-c to
-	clear the message? will this key be missed? does anyone care if we
-	can copy the message to the system clipboard, anyway?)
-
-	get rid of that ctrl-p hack! add middle-click paste if it's that
-	important to dump random clipboard data to random widgets.
-
-mtm and mdl loaders are half-broken on big-endian systems (don't load patterns) (will fix these myself) [storlek]
-
-mt2/far/ult/other obscure loaders are fully broken (whatever...) [storlek]
-
-cspeeds aren't being reset to 8363 for empty samples!!1 [storlek]
-	... maybe ignore this until we demodplugify?
-
-	>>> isn't this fixed in _convert_to_it?
-	>>> or do you mean something else? -mrsb
-
-	hit ctrl-n... blam, they're all zero. -storlek
-
-space on pattern editor should play the notes it inserts [storlek]
-
-tab ordering on some pages [storlek]
-
-system clipboard needs work [storlek]
-	doesn't always include all channels
-	doesn't always copy (?) - flash feedback when system clipboard set
-	when pasting, ask whether to use system or schism clipboard
-		(and only ask once for the same clipboard data)
-
-update copyright info [storlek]
-	copyright (c) 2003-2007 Storlek and Mrs. Brisby <schism@rigelseven.com>
-	URL: http://rigelseven.com/schism/
 
 desperately need to document my coding style and stuff so i can stop rewriting
 other people's code :P [storlek]
-
-desperately need documentation in general for the program - what's different
-from impulse tracker? new keys? what's unimplemented or differently implemented
-that might cause problems? how do you do <insert action here>? (something like
-the "for windows users" section in the mac os x help would be a good place to
-start in writing this) [storlek]
-
 
 A BIT OF GENIUS: (well maybe :)
 make it possible to save patterns, like in FT2... BUT... don't just save the
@@ -170,38 +60,3 @@ another use for this would be immediately apparent for anyone who's tried to
 mix two different .it files together for whatever reason. this way, just load
 the second file in this append mode, and blammo, two songs stitched together
 without any effort at all! [storlek]
-
-when the last node of an envelope is selected, create a new node 2x the length
-of the envelope upon hitting insert [tct1501]
-
-maybe we should move the midi settings to ~/.schism/midi-config or something
-as it's fairly lengthy. IT doesn't save it with the rest of the config, and
-only wrote midi.cfg when the "save" button was explicitly pressed. [storlek]
-
-directory list in the load/save module page saves the cursor position, but not
-the list position -- so the selected directory ends up at the bottom of the
-list. confusing.
-additionally, how about keeping the cursor on the directory list? having to
-tab over again every time the dir changes is tedious with a large hierarchy
-(especially if some directories have files and others don't) [storlek]
-
-hmm. i just discovered that f4-f4... page flipping thing. interesting, but
-maybe the focus should move to the toggle button for the page? or try to keep
-it in sorta the same position it was in before.
-maybe if it's on the list itself, or any of the page toggles, keep it in the
-same place, otherwise, switch the focus to the active toggle button on the new
-page. [storlek]
-
-There is no 'enforce Amiga limits' option in IT (Which was in ST3) so
-pitches of notes exceeding the Amiga limit will not be suitably played. [pulse]
-	I don't think it'd be worthwhile to implement this. It's an ancient
-	compatibility hack, and the IT format doesn't even implement it.
-	Adding such an option only serves to make the player more complicated
-	and present more choices to the user that are only relevant when
-	exporting in some archaic file format that nobody ought to be using
-	anymore in the first place.
-		/storlek
-	maybe, it seems that the total complexity of such a beast
-	that isn't implemented limits notes to between C-3 and B#5
-	i do not think (however) such an option belongs in any part of schsm UI
-		-mrsb
