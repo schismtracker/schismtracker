@@ -82,9 +82,6 @@ int macosx_did_finderlaunch;
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename
 {
-#if 0 /* This doesn't seem to be necessary at all, and it breaks the normal
-	 command line handling (like being able to drag-and-drop directories
-	 to browse them) */
 	SDL_Event e;
 	const char *po;
 
@@ -104,7 +101,6 @@ int macosx_did_finderlaunch;
 	} else {
 		return NO;
 	}
-#endif
 }
 
 /* other interesting ones:
