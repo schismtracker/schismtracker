@@ -187,7 +187,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		}
 
 		ins_mode = song_is_instrument_mode();
-		if ((ins_mode || samp == 0) && ins < 0) {
+		if (ins < 0) {
 			/* this is only needed on the sample page, when in
 			instrument mode...
 			*/
@@ -212,7 +212,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nLoopStart = i->nLoopStart;
 			c->nLoopEnd = i->nLoopEnd;
 			c->dwFlags = (i->uFlags & 0xFF);
-			c->dwFlags &= ~(CHN_MUTE|CHN_PINGPONGFLAG);
+			if (c->dwFlags & CHN_MUTE) {
+				c->dwFlags &= ~(CHN_MUTE);
+				c->dwFlags |= CHN_NNAMUTE;
+			}
+			c->dwFlags &= ~(CHN_PINGPONGFLAG);
 			c->nPan = 128; // redundant?
 			c->nInsVol = i->nGlobalVol;
 			c->nFadeOutVol = 0x10000;
@@ -240,6 +244,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				c->dwFlags &= ~(CHN_MUTE);
 				c->dwFlags |= CHN_NNAMUTE;
 			}
+			c->dwFlags &= ~(CHN_PINGPONGFLAG);
 
 			c->nRowInstr = ins_mode ? ins : samp;
 			c->nRowCommand = effect;
