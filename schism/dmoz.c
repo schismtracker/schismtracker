@@ -742,6 +742,31 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 	file->title = strdup("");
 	return 0;
 }
+int rename_file_nodestroy(const char *old, const char *newf)
+{
+/* XXX does __amigaos4__ have a special need for this? */
+#ifdef WIN32
+	if (!MoveFile(old,newf)) {
+		switch (GetLastError()) {
+		case ERROR_ALREADY_EXISTS:
+		case ERROR_FILE_EXISTS:
+			return -1;
+		};
+		return 0;
+	}
+	return 0;
+#else
+	if (link(old,newf) == -1) {
+		if (errno == EEXIST) return -1;
+		return 0;
+	}
+	if (unlink(old) == -1) {
+		/* well, this should never happen... */
+		log_appendf(3, "link() succeeded, but unlink() failed. something is very wrong");
+	}
+	return 1;
+#endif
+}
 int rename_file(const char *old, const char *newf)
 {
 #ifdef WIN32
