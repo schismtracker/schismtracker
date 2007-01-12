@@ -189,6 +189,14 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 
 /* this isn't really dmoz-related, but... oh well */
 int rename_file(const char *old, const char *newf);
+int rename_file_nodestroy(const char *old, const char *newf);
+/* rename_file() and rename_file_nodestry() both rename files,
+   but rename_file() destroys newf if it exists (and it can),
+   whereas rename_file_nodestroy() does not. return values are:
+	-1 newf exists
+	 0 os/related error
+	 1 successful rename
+*/
 
 #ifdef __cplusplus
 }
