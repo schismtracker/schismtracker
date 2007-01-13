@@ -607,6 +607,25 @@ void song_start_at_order(int order, int row)
 
         song_reset_play_state();
 	if (!mp_chaseback(order, row)) {
+		while (order < MAX_ORDERS) {
+			switch (mp->Order[order]) {
+			case ORDER_SKIP:
+				order++;
+				row = 0;
+				continue;
+
+			case ORDER_LAST:
+				order = 0;
+				row = 0;
+				continue;
+			};
+			break;
+		}
+		if (order == MAX_ORDERS) {
+			order = 0;
+			row = 0;
+		}
+
 		mp->SetCurrentOrder(order);
 		mp->m_nRow = mp->m_nNextRow = row;
 		max_channels_used = 0;
