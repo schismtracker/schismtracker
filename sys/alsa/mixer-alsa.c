@@ -108,10 +108,13 @@ static void _alsa_write(snd_mixer_elem_t *em, int *l, int *r, long min, long ran
 	} else {
 		_alsa_writeout(em, SND_MIXER_SCHN_FRONT_LEFT, al, mr);
 		_alsa_writeout(em, SND_MIXER_SCHN_FRONT_RIGHT, ar, mr);
+#if 0
+/* this was probably wrong */
 		_alsa_writeout(em, SND_MIXER_SCHN_FRONT_CENTER, md, mr);
 		_alsa_writeout(em, SND_MIXER_SCHN_REAR_LEFT, al, mr);
 		_alsa_writeout(em, SND_MIXER_SCHN_REAR_RIGHT, ar, mr);
 		_alsa_writeout(em, SND_MIXER_SCHN_WOOFER, md, mr);
+#endif
 	}
 }
 static void _alsa_readin(snd_mixer_elem_t *em, snd_mixer_selem_channel_id_t d,
@@ -139,12 +142,15 @@ static void _alsa_read(snd_mixer_elem_t *em, int *l, int *r, long min, long rang
 	} else {
 		_alsa_readin(em, SND_MIXER_SCHN_FRONT_LEFT, l, min, range);
 		_alsa_readin(em, SND_MIXER_SCHN_FRONT_RIGHT, r, min, range);
+#if 0
+/* this was probably wrong */
 		_alsa_readin(em, SND_MIXER_SCHN_REAR_LEFT, l, min, range);
 		_alsa_readin(em, SND_MIXER_SCHN_REAR_RIGHT, r, min, range);
 		_alsa_readin(em, SND_MIXER_SCHN_FRONT_CENTER, l, min, range);
 		_alsa_readin(em, SND_MIXER_SCHN_FRONT_CENTER, r, min, range);
 		_alsa_readin(em, SND_MIXER_SCHN_WOOFER, l, min, range);
 		_alsa_readin(em, SND_MIXER_SCHN_WOOFER, r, min, range);
+#endif
 	}
 }
 static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
