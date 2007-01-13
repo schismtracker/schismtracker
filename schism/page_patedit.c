@@ -2372,13 +2372,44 @@ static void set_playback_mark(void)
 	}
 }
 
-void play_song_from_mark(void)
+void play_song_from_mark_orderpan(void)
 {
 	if (marked_pattern == -1) {
 		song_start_at_order(get_current_order(), current_row);
 	} else {
 		song_start_at_pattern(marked_pattern, marked_row);
 	}
+}
+void play_song_from_mark(void)
+{
+	int new_order;
+	unsigned char *ol;
+
+	if (marked_pattern != -1) {
+		song_start_at_pattern(marked_pattern, marked_row);
+		return;
+	}
+
+	new_order = get_current_order();
+	ol = song_get_orderlist();
+	while (new_order < 255) {
+		if (ol[new_order] == current_pattern) {
+			set_current_order(new_order);
+			song_start_at_order(new_order, current_row);
+			return;
+		}
+		new_order++;
+	}
+	new_order = 0;
+	while (new_order < 255) {
+		if (ol[new_order] == current_pattern) {
+			set_current_order(new_order);
+			song_start_at_order(new_order, current_row);
+			return;
+		}
+		new_order++;
+	}
+	song_start_at_pattern(current_pattern, current_row);
 }
 
 /* --------------------------------------------------------------------- */
@@ -4323,37 +4354,10 @@ static void _fix_keyhack(void)
 }
 static int _fix_f7(struct key_event *k)
 {
-	int new_order;
-	unsigned char *ol;
-
 	if (k->sym == SDLK_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state) return 1;
-		if (marked_pattern != -1) {
-			song_start_at_pattern(marked_pattern, marked_row);
-			return 1;
-		}
-
-		new_order = get_current_order();
-		ol = song_get_orderlist();
-		while (new_order < 255) {
-			if (ol[new_order] == current_pattern) {
-				set_current_order(new_order);
-				song_start_at_order(new_order, current_row);
-				return 1;
-			}
-			new_order++;
-		}
-		new_order = 0;
-		while (new_order < 255) {
-			if (ol[new_order] == current_pattern) {
-				set_current_order(new_order);
-				song_start_at_order(new_order, current_row);
-				return 1;
-			}
-			new_order++;
-		}
-		song_start_at_pattern(current_pattern, current_row);
+		play_song_from_mark();
 		return 1;
 	}
 	return 0;

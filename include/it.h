@@ -427,8 +427,9 @@ int get_current_row(void);
 void set_current_row(int row);
 int get_current_pattern(void);
 void set_current_pattern(int pattern);
-/* This is the F7 key handler: it starts at the marked position if there
+/* This is the F7 key handlers: it starts at the marked position if there
  * is one, or the current position if not. */
+void play_song_from_mark_orderpan(void);
 void play_song_from_mark(void);
 
 int get_current_order(void);

@@ -863,7 +863,7 @@ static int order_pre_key(struct key_event *k)
 	if (k->sym == SDLK_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state) return 1;
-		play_song_from_mark();
+		play_song_from_mark_orderpan();
 		return 1;
 	}
 	return 0;
