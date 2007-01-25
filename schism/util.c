@@ -118,7 +118,7 @@ unsigned char *get_time_string(time_t when, unsigned char *buf)
         struct tm tm, *tmr;
 
 	tmr = localtime_r(&when, &tm);
-        snprintf((char *) buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? tmr->tm_hour : 12,
+        snprintf((char *) buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? : 12,
 		 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
         return buf;
 }
