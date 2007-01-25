@@ -1,3 +1,412 @@
+2007-01-24 19:56  nimh
+
+	* include/auto/build-version.h: Build
+
+2007-01-24 19:55  nimh
+
+	* schism/page_samples.c: maybe fix post/pre loop cut problems
+
+2007-01-21 21:30  nimh
+
+	* include/auto/build-version.h: Build
+
+2007-01-12 20:20  nimh
+
+	* include/auto/build-version.h: Build
+
+2007-01-12 20:19  nimh
+
+	* schism/audio_playback.cc: lets fix +++ and --- pattern start
+
+2007-01-12 20:19  nimh
+
+	* include/it.h, schism/page_orderpan.c, schism/page_patedit.c: lets
+	  fix f7!
+
+2007-01-12 20:19  nimh
+
+	* sys/alsa/mixer-alsa.c: stereo only please
+
+2007-01-12 08:27  nimh
+
+	* include/dmoz.h, schism/dmoz.c: introduce non-destructive rename
+	  op
+
+2007-01-09 21:43  nimh
+
+	* include/auto/build-version.h: Build
+
+2007-01-09 21:42  nimh
+
+	* schism/audio_playback.cc: fix sample-mode song sample keyjam
+	  getting stuck (if that makes any sense)
+
+2007-01-08 20:39  nimh
+
+	* include/auto/build-version.h: Build
+
+2007-01-08 04:24  storlek
+
+	* sys/macosx/macosx-sdlmain.m: mac os x can't do things the *nix
+	  way, can it? no, it has to have its own special way of handling
+	  filename args
+
+2007-01-08 00:32  storlek
+
+	* modplug/snd_fx.cpp: Zxx in sample mode
+
+2007-01-07 22:33  storlek
+
+	* AGENDA, TODO: migrated a bunch of stuff to the schismdev board
+
+2007-01-07 22:11  storlek
+
+	* TODO: migrate like ducks
+
+2007-01-07 16:15  nimh
+
+	* TODO: moo
+
+2007-01-07 16:06  storlek
+
+	* TODO: word word rant word word word
+
+2007-01-07 15:17  nimh
+
+	* AGENDA: moo
+
+2007-01-07 15:08  nimh
+
+	* TODO: pulse item :)
+
+2007-01-07 11:34  nimh
+
+	* schism/main.c: support forward/back buttons on keyboard (e.g. ms
+	  natural 4k, or thinkpad page buttons)
+
+2007-01-07 11:09  nimh
+
+	* schism/audio_loadsave.cc: make saving 200smp/ins files possible
+	  (i think)
+
+2007-01-07 11:06  nimh
+
+	* schism/draw-char.c: i have some itfs like this...
+
+2007-01-07 10:51  nimh
+
+	* modplug/load_it.cpp: dont confuse anyone with this
+
+2007-01-07 10:51  nimh
+
+	* modplug/sndmix.cpp: whoops
+
+2007-01-07 10:40  nimh
+
+	* modplug/sndmix.cpp, schism/fmt/its.cc: better vibrato
+
+2007-01-06 21:22  nimh
+
+	* TODO: ...
+
+2007-01-06 21:00  nimh
+
+	* AGENDA: bleh
+
+2007-01-06 20:59  nimh
+
+	* schism/page_samples.c: display fixup
+
+2007-01-06 20:59  nimh
+
+	* include/song.h, schism/audio_playback.cc, schism/midi-ip.c,
+	  schism/page_patedit.c, schism/xpmdata.c: ludicrious...
+
+2007-01-06 20:58  nimh
+
+	* modplug/: load_it.cpp, sndmix.cpp: start of vibrato fixes
+	  (getting input values right)
+
+2007-01-06 13:30  storlek
+
+	* TODO: added a couple words
+
+2007-01-05 11:55  storlek
+
+	* TODO: lol
+
+2007-01-05 11:46  storlek
+
+	* TODO: load/save module pages annoy me :)
+
+2007-01-05 04:01  storlek
+
+	* AUTHORS, include/palettes.h: palette "violent" replaced with
+	  "purple motion" (from imago orpheus)
+
+2007-01-05 03:45  storlek
+
+	* schism/: config.c, page_patedit.c: oops. let's save the crayola
+	  mode in the right place
+
+2007-01-05 03:20  storlek
+
+	* TODO: midi note
+
+2007-01-05 03:10  storlek
+
+	* schism/config.c: nerr
+
+2007-01-05 02:33  storlek
+
+	* schism/: audio_playback.cc, page.c, page_help.c, page_info.c,
+	  page_instruments.c, page_samples.c, page_vars.c, status.c,
+	  widget.c: no bios font
+
+2007-01-05 02:01  storlek
+
+	* schism/page_instruments.c: fixed envelope color
+
+2007-01-05 01:58  storlek
+
+	* TODO: notes
+
+2007-01-05 01:11  storlek
+
+	* include/palettes.h: new ancient palette
+
+2007-01-05 00:49  storlek
+
+	* schism/page_samples.c: double free in sample export dialog
+
+2007-01-03 22:01  nimh
+
+	* include/auto/build-version.h: Build
+
+2007-01-03 21:51  nimh
+
+	* include/vgamem-scanner.h: use default lower for bios
+
+2007-01-03 21:21  nimh
+
+	* schism/draw-char.c: remove dead code
+
+2007-01-03 21:20  nimh
+
+	* schism/page_message.c: fix ctrl-t
+
+2007-01-03 21:14  nimh
+
+	* include/it.h, schism/draw-char.c, schism/page_message.c: remove
+	  unused header
+
+2007-01-03 20:34  storlek
+
+	* include/it.h, schism/page_patedit.c: crayola mode
+
+2007-01-03 18:37  storlek
+
+	* schism/page_patedit.c: undefined? bah
+
+2007-01-03 18:35  storlek
+
+	* schism/page_patedit.c: poutine
+
+2007-01-03 17:49  delt_1024480
+
+	* schism/page_patedit.c: Added functions multichannel_get_next()
+	  and multichannel_get_previous() [delt]
+
+2007-01-03 17:03  storlek
+
+	* schism/page_patedit.c: delt
+
+2007-01-03 08:43  nimh
+
+	* TODO: added stuff/removed stuff
+
+2007-01-02 11:10  storlek
+
+	* TODO: crackhead idea
+
+2007-01-02 11:06  storlek
+
+	* schism/: audio_playback.cc, config.c, page_preferences.c: config
+	  settings fix
+
+2007-01-01 23:57  nimh
+
+	* IDEA.keybindings: vk->kb
+
+2007-01-01 21:45  storlek
+
+	* IDEA.keybindings, TODO: notes; no code
+
+2007-01-01 13:49  nimh
+
+	* include/auto/build-version.h: Build
+
+2007-01-01 13:44  nimh
+
+	* Makefile.am, schism/mixer-core.c, sys/macosx/mixer-macosx.c:
+	  macosx mixer support
+
+2007-01-01 11:07  nimh
+
+	* modplug/load_s3m.cpp: fix saving pan bug
+
+2006-12-31 15:51  nimh
+
+	* IDEA.keybindings: moo
+
+2006-12-31 13:31  nimh
+
+	* AGENDA: [no log message]
+
+2006-12-31 03:07  storlek
+
+	* AUTHORS: nothing
+
+2006-12-30 17:54  storlek
+
+	* configure.in, schism/main.c, schism/version.c: not a release
+	  version anymore
+
+2006-12-30 17:38  storlek
+
+	* autogen.sh: aclocal version aclocal?
+
+2006-12-30 00:13  storlek
+
+	* AUTHORS, AUTHORS.cvs, schism/config.c, schism/main.c,
+	  schism/menu.c, schism/util.c: ToastyX patches
+
+2006-12-29 20:50  nimh
+
+	* scripts/fink-macosx.sh, scripts/maint-win32.sh,
+	  sys/fd.org/autopackage.apspec: [no log message]
+
+2006-12-29 20:25  storlek
+
+	* schism/sample-view.c: constants
+
+2006-12-29 20:23  nimh
+
+	* include/vgamem-scanner.h: whoops; 4 bits, not 3 for colors
+
+2006-12-29 00:59  storlek
+
+	* schism/page_orderpan.c: fix to keep orderpan page synced with
+	  mute status
+
+2006-12-29 00:54  storlek
+
+	* schism/page_loadmodule.c: togglebuttons fixed
+
+2006-12-28 23:15  storlek
+
+	* schism/mplink.cc: that was stupid
+
+2006-12-28 23:04  storlek
+
+	* schism/mplink.cc: be slightly less annoying
+
+2006-12-28 20:46  storlek
+
+	* include/song.h, schism/mplink.cc, schism/page_orderpan.c: muting
+	  crapola
+
+2006-12-27 22:43  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-27 22:43  nimh
+
+	* README.maint-notes: [no log message]
+
+2006-12-27 22:42  nimh
+
+	* schism/main.c: version
+
+2006-12-27 22:42  nimh
+
+	* sys/macosx/Schism Tracker.app/Contents/Info.plist: 0.5rc1
+
+2006-12-27 22:37  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-27 22:36  storlek
+
+	* ChangeLog, README, include/diskwriter.h,
+	  schism/audio_loadsave.cc, schism/diskwriter.cc,
+	  schism/page_loadmodule.c, schism/fmt/wav.cc: AUTOCAKES
+
+2006-12-26 22:23  nimh
+
+	* configure.in: 0.5rc1
+
+2006-12-26 22:15  nimh
+
+	* scripts/: maint-release.sh, maint-tarball.sh, maint-upload.sh,
+	  maint-win32-fast.sh: mu
+
+2006-12-26 22:11  nimh
+
+	* sys/fd.org/autopackage.apspec: fixme
+
+2006-12-26 21:58  nimh
+
+	* include/auto/build-version.h: Build
+
+2006-12-26 21:55  nimh
+
+	* configure.in, modplug/sndfile.h, schism/clippy.c,
+	  schism/diskwriter.cc, schism/frag-opt.c, schism/midi-core.c,
+	  schism/mplink.cc, schism/page_loadinst.c,
+	  schism/page_loadmodule.c, schism/version.c, schism/fmt/aiff.c,
+	  scripts/maint-all.sh, sys/alsa/midi-alsa.c,
+	  sys/alsa/mixer-alsa.c, sys/fd.org/autopackage.apspec,
+	  sys/oss/midi-oss.c, sys/oss/mixer-oss.c, sys/x11/xscreensaver.c:
+	  gcc complaint
+
+2006-12-26 21:29  nimh
+
+	* Makefile.am: [no log message]
+
+2006-12-26 21:28  nimh
+
+	* scripts/: fink-macosx.sh, maint-linux.sh, maint-macosx.sh,
+	  maint-win32.sh: make it possible to pass down commands
+
+2006-12-26 21:27  storlek
+
+	* NEWS: NEWS!
+
+2006-12-26 21:24  nimh
+
+	* configure.in: make a configure flag for making a release
+
+2006-12-26 21:24  nimh
+
+	* autogen.sh: i dont have 2.60 on my system
+
+2006-12-26 21:08  nimh
+
+	* configure.in: okay, here we go...
+
+2006-12-26 21:06  nimh
+
+	* sys/fd.org/autopackage.apspec: moving to 0.5
+
+2006-12-26 21:06  nimh
+
+	* configure.in: [no log message]
+
+2006-12-26 20:53  nimh
+
+	* include/acc.h: [no log message]
+
 2006-12-26 20:50  nimh
 
 	* include/auto/build-version.h: Build
