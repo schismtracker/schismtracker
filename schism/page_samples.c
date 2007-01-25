@@ -677,7 +677,9 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	signed char *data;
-	unsigned long pos = MAX(sample->loop_end, sample->sustain_end);
+	unsigned long pos = ((sample->flags & SAMP_SUSLOOP)
+			     ? MAX(sample->loop_end, sample->sustain_end)
+			     : sample->loop_end);
 	int bytes = pos * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
 			* ((sample->flags & SAMP_STEREO) ? 2 : 1);
 
@@ -685,12 +687,16 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 		return;
 
 	song_stop();
+	song_lock_audio();
+	if (sample->loop_end > pos) sample->loop_end = pos;
+	if (sample->sustain_end > pos) sample->sustain_end = pos;
 
 	data = song_sample_allocate(bytes);
 	memcpy(data, sample->data, bytes);
 	song_sample_free(sample->data);
 	sample->data = data;
 	sample->length = pos;
+	song_unlock_audio();
 }
 
 static void do_pre_loop_cut(UNUSED void *bweh)
@@ -710,6 +716,7 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 	
 	song_stop();
 	
+	song_lock_audio();
 	data = song_sample_allocate(bytes);
 	memcpy(data, sample->data + start_byte, bytes);
 	song_sample_free(sample->data);
@@ -732,6 +739,7 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 		sample->sustain_end -= pos;
 	else
 		sample->sustain_end = 0;
+	song_unlock_audio();
 }
 
 static void do_centralise(UNUSED void *data)
