@@ -646,6 +646,7 @@ static void dir_list_draw(void)
         draw_fill_chars(50, 13, 67, 33, 0);
 
         for (n = top_dir, pos = 13; pos < 34; n++, pos++) {
+		if (n < 0) continue; /* er... */
                 if (n >= dlist.num_dirs)
                         break;
                 if (n == current_dir && ACTIVE_PAGE.selected_widget == 1)
@@ -707,7 +708,8 @@ static int dir_list_handle_key(struct key_event * k)
 		if (!k->state) return 0;
 		/* reset */
 		top_file = current_file = 0;
-		change_dir(dlist.dirs[current_dir]->path);
+		if (current_dir >= 0 && current_dir < dlist.num_dirs)
+			change_dir(dlist.dirs[current_dir]->path);
 		
 		if (flist.num_files > 0)
 			*selected_widget = 0;
