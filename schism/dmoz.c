@@ -582,7 +582,9 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 
 #else /* assume POSIX */
 	dmoz_add_file_or_dir(flist, dlist, strdup("/"), strdup("/"), NULL, -1024);
-	/* home directory? */
+	/* home directory?
+	dmoz_add_file_or_dir(flist, dlist, get_home_directory(), strdup("~ Home directory"), NULL, 1024);
+	*/
 #endif /* platform */
 	
 	ptr = get_parent_directory(path);
@@ -652,7 +654,7 @@ int dmoz_read_ex(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist
 			err = errno;
 	} else {
 		/* opendir failed? that's unpossible! */
-		err = errno;
+		err = 0;
 	}
 
 	/* more directories! */
