@@ -881,6 +881,7 @@ void save_module_load_page(struct page *page)
 	current_file = current_dir = 0;
 	dir_list_reposition();
 	file_list_reposition();
+	read_directory();
 
         page->title = "Save Module (F10)";
         page->draw_const = save_module_draw_const;
