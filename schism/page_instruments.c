@@ -2529,7 +2529,7 @@ static int _fixup_mouse_instpage_volume(struct key_event *k)
 	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol, ENV_VOLUME);
 	}
-	return 0;
+	return instrument_list_pre_handle_key(k);
 }
 
 void instrument_list_volume_load_page(struct page *page)
@@ -2595,7 +2595,7 @@ static int _fixup_mouse_instpage_panning(struct key_event *k)
 	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan, ENV_PANNING);
 	}
-	return 0;
+	return instrument_list_pre_handle_key(k);
 }
 void instrument_list_panning_load_page(struct page *page)
 {
@@ -2669,7 +2669,7 @@ static int _fixup_mouse_instpage_pitch(struct key_event *k)
 	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch, ENV_PITCH);
 	}
-	return 0;
+	return instrument_list_pre_handle_key(k);
 }
 void instrument_list_pitch_load_page(struct page *page)
 {
