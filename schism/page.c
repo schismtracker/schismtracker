@@ -1414,6 +1414,7 @@ static void _set_from_f4(void)
 	case PAGE_SAMPLE_LIST:
 	case PAGE_LOAD_SAMPLE:
 	case PAGE_LIBRARY_SAMPLE:
+	case PAGE_PATTERN_EDITOR:
 		return;
 	};
 
