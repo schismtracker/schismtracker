@@ -100,6 +100,87 @@ static void set_subpage(int page);
 /* playback */
 static int last_note = 61;		/* C-5 */
 
+/* strange saved envelopes */
+static song_envelope saved_env[10] = {0};
+static unsigned int flags[10]={0};
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+static void save_envelope(int slot, song_envelope *e, unsigned int sec)
+{
+	song_instrument *ins;
+
+	slot = ((unsigned)slot)%10;
+
+	ins = song_get_instrument(current_instrument, NULL);
+	memcpy(&saved_env[slot], e, sizeof(song_envelope));
+
+	switch (sec) {
+	case ENV_VOLUME:
+		flags[slot] = ins->flags & (ENV_VOLUME|ENV_VOLSUSTAIN|ENV_VOLLOOP|ENV_VOLCARRY);
+		break;
+	case ENV_PANNING:
+		flags[slot] = 
+			((ins->flags & ENV_PANNING) ? ENV_VOLUME : 0)
+		|	((ins->flags & ENV_PANSUSTAIN) ? ENV_VOLSUSTAIN : 0)
+		|	((ins->flags & ENV_PANLOOP) ? ENV_VOLLOOP : 0)
+		|	((ins->flags & ENV_PANCARRY) ? ENV_VOLCARRY : 0)
+		|	(ins->flags & ENV_SETPANNING);
+		break;
+	case ENV_PITCH:
+		flags[slot] = 
+			((ins->flags & ENV_PITCH) ? ENV_VOLUME : 0)
+		|	((ins->flags & ENV_PITCHSUSTAIN) ? ENV_VOLSUSTAIN : 0)
+		|	((ins->flags & ENV_PITCHLOOP) ? ENV_VOLLOOP : 0)
+		|	((ins->flags & ENV_PITCHCARRY) ? ENV_VOLCARRY : 0)
+		|	(ins->flags & ENV_FILTER);
+		break;
+	};
+}
+static void restore_envelope(int slot, song_envelope *e, unsigned int sec)
+{
+	song_instrument *ins;
+
+	song_lock_audio();
+
+	slot = ((unsigned)slot)%10;
+
+	ins = song_get_instrument(current_instrument, NULL);
+	memcpy(e, &saved_env[slot], sizeof(song_envelope));
+
+	switch (sec) {
+	case ENV_VOLUME:
+		ins->flags &= ~(ENV_VOLUME|ENV_VOLSUSTAIN|ENV_VOLLOOP|ENV_VOLCARRY);
+		ins->flags |= (flags[slot] & (ENV_VOLUME|ENV_VOLSUSTAIN|ENV_VOLLOOP|ENV_VOLCARRY));
+		break;
+
+	case ENV_PANNING:
+		ins->flags &= ~(ENV_PANNING|ENV_PANSUSTAIN|ENV_PANLOOP|ENV_PANCARRY|ENV_SETPANNING);
+		if (flags[slot] & ENV_VOLUME) ins->flags |= ENV_PANNING;
+		if (flags[slot] & ENV_VOLSUSTAIN) ins->flags |= ENV_PANSUSTAIN;
+		if (flags[slot] & ENV_VOLLOOP) ins->flags |= ENV_PANLOOP;
+		if (flags[slot] & ENV_VOLCARRY) ins->flags |= ENV_PANCARRY;
+		ins->flags |= (flags[slot] & ENV_SETPANNING);
+		break;
+
+	case ENV_PITCH:
+		ins->flags &= ~(ENV_PITCH|ENV_PITCHSUSTAIN|ENV_PITCHLOOP|ENV_PITCHCARRY|ENV_FILTER);
+		if (flags[slot] & ENV_VOLUME) ins->flags |= ENV_PITCH;
+		if (flags[slot] & ENV_VOLSUSTAIN) ins->flags |= ENV_PITCHSUSTAIN;
+		if (flags[slot] & ENV_VOLLOOP) ins->flags |= ENV_PITCHLOOP;
+		if (flags[slot] & ENV_VOLCARRY) ins->flags |= ENV_PITCHCARRY;
+		ins->flags |= (flags[slot] & ENV_FILTER);
+		break;
+
+	};
+
+	song_unlock_audio();
+
+	status.flags |= SONG_NEEDS_SAVE;
+}
+
+
+
 /* --------------------------------------------------------------------------------------------------------- */
 
 static void instrument_list_draw_list(void);
@@ -1192,9 +1273,10 @@ static void do_post_loop_cut(void *ign)
 /* the return value here is actually a bitmask:
 r & 1 => the key was handled
 r & 2 => the envelope changed (i.e., it should be enabled) */
-static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int *current_node)
+static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int *current_node, unsigned int sec)
 {
 	int new_node = *current_node;
+	int n;
 	
         switch (k->sym) {
         case SDLK_UP:
@@ -1263,6 +1345,19 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int
 		return 0;
 
         default:
+		if (!k->state) return 0;
+		n = numeric_key_event(k, 0);
+		if (n > -1) {
+			if (k->mod & KMOD_ALT) {
+				save_envelope(n, env, sec);
+				status_text_flash("Envelope copied into slot %d", n);
+			} else {
+				restore_envelope(n, env, sec);
+				if (!(status.flags & CLASSIC_MODE))
+					status_text_flash("Copied envelope from slot %d", n);
+			}
+			return 1;
+		}
                 return 0;
         }
 	
@@ -1599,7 +1694,7 @@ static int volume_envelope_handle_key(struct key_event * k)
 	if (envelope_edit_mode)
 		r = _env_handle_key_editmode(k, &ins->vol_env, &current_node_vol);
 	else
-		r = _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol);
+		r = _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol, ENV_VOLUME);
 	if (r & 2) {
 		r ^= 2;
 		ins->flags |= ENV_VOLUME;
@@ -1620,7 +1715,7 @@ static int panning_envelope_handle_key(struct key_event * k)
 	if (envelope_edit_mode)
 		r = _env_handle_key_editmode(k, &ins->pan_env, &current_node_pan);
 	else
-		r = _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan);
+		r = _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan, ENV_PANNING);
 	if (r & 2) {
 		r ^= 2;
 		ins->flags |= ENV_PANNING;
@@ -1640,7 +1735,7 @@ static int pitch_envelope_handle_key(struct key_event * k)
 	if (envelope_edit_mode)
 		r = _env_handle_key_editmode(k, &ins->pitch_env, &current_node_pitch);
 	else
-		r = _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch);
+		r = _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch, ENV_PITCH);
 	if (r & 2) {
 		r ^= 2;
 		ins->flags |= ENV_PITCH;
@@ -1775,30 +1870,45 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 	status.flags |= NEED_UPDATE;
 }
 
-static void instrument_list_handle_key(struct key_event * k)
+static int instrument_list_pre_handle_key(struct key_event * k)
 {
-        switch (k->sym) {
+	int csamp;
+
+	switch (k->sym) {
 	case SDLK_F4:
-		if (k->state) return;
-		if (k->mod & (KMOD_CTRL|KMOD_ALT)) return;
+		if (k->mod & (KMOD_CTRL|KMOD_ALT)) return 0;
+		if (k->state) return 1;
+		
+		csamp = sample_get_current();
+		if (song_is_instrument_mode()) {
+			sample_synchronize_to_instrument();
+		}
+		if (csamp != sample_get_current()) return 0;
+
 		if (k->mod & KMOD_SHIFT) {
 			switch (status.current_page) {
-			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);return;
-			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);return;
-			case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_PANNING);return;
+			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);break;
+			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);break;
+			case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_PANNING);break;
 			default:
-			case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL);return;
+			case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL);break;
 			};
 		} else {
 			switch (status.current_page) {
-			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);return;
-			case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_PANNING);return;
-			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);return;
+			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);break;
+			case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_PANNING);break;
+			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);break;
 			default:
-			case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL);return;
+			case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL);break;
 			};
 		}
-
+		return 1;
+	};
+	return 0;
+}
+static void instrument_list_handle_key(struct key_event * k)
+{
+        switch (k->sym) {
 	case SDLK_COMMA:
 	case SDLK_LESS:
 		if (k->state) return;
@@ -2303,9 +2413,20 @@ static void instrument_list_pitch_draw_const(void)
 
 static void _load_page_common(struct page *page, struct widget *page_widgets)
 {
+	int i;
+
+	memset(saved_env, 0, sizeof(saved_env));
+	for (i = 0; i < 10; i++) {
+		saved_env[i].nodes = 2;
+		saved_env[i].ticks[0] = 0;
+		saved_env[i].ticks[1] = 100;
+		saved_env[i].values[0] = 32;
+		saved_env[i].values[1] = 32;
+	}
 	vgamem_font_reserve(&env_overlay);
 
 	page->title = "Instrument List (F4)";
+	page->pre_handle_key = instrument_list_pre_handle_key;
 	page->handle_key = instrument_list_handle_key;
 	page->widgets = page_widgets;
 	page->help_index = HELP_INSTRUMENT_LIST;
@@ -2406,7 +2527,7 @@ static int _fixup_mouse_instpage_volume(struct key_event *k)
 		}
 	}
 	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
-		return _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol);
+		return _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol, ENV_VOLUME);
 	}
 	return 0;
 }
@@ -2472,7 +2593,7 @@ static int _fixup_mouse_instpage_panning(struct key_event *k)
 		}
 	}
 	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
-		return _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan);
+		return _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan, ENV_PANNING);
 	}
 	return 0;
 }
@@ -2546,7 +2667,7 @@ static int _fixup_mouse_instpage_pitch(struct key_event *k)
 		}
 	}
 	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
-		return _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch);
+		return _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch, ENV_PITCH);
 	}
 	return 0;
 }
