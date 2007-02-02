@@ -4175,7 +4175,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			};
 		}
 
-		if ((k->mod & KMOD_SHIFT) && k->orig_sym == SDLK_PLUS)
+		if ((k->mod & KMOD_SHIFT) && k->orig_sym == SDLK_KP_PLUS)
 			set_current_pattern(current_pattern + 4);
 		else
 			set_current_pattern(current_pattern + 1);
