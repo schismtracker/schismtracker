@@ -849,15 +849,20 @@ static int info_page_handle_key(struct key_event * k)
 		if (!k->state) return 1;
 
 		set_current_channel(selected_channel);
-                order = song_get_current_order();
-                n = song_get_orderlist()[order];
-                if (n < 200) {
-                        set_current_order(order);
-                        set_current_pattern(n);
-                        set_current_row(song_get_current_row());
-                        set_page(PAGE_PATTERN_EDITOR);
-                }
-                return 1;
+		order = song_get_current_order();
+
+		if (song_get_mode() == MODE_PLAYING) {
+			n = song_get_orderlist()[order];
+		} else {
+			n = song_get_playing_pattern();
+		}
+		if (n < 200) {
+			set_current_order(order);
+			set_current_pattern(n);
+			set_current_row(song_get_current_row());
+			set_page(PAGE_PATTERN_EDITOR);
+		}
+               return 1;
         case SDLK_v:
 		if (k->state) return 1;
 
