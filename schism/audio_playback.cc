@@ -250,6 +250,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nRowCommand = effect;
 			c->nRowParam = param;
 			mp->CheckNNA(chan,c->nRowInstr,note,FALSE);
+			c->nVolume = (vol << 2);
 			mp->ProcessEffects();
 		}
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
