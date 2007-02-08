@@ -846,7 +846,7 @@ void song_delete_instrument(int n)
 		j = mp->Headers[n]->Keyboard[i];
 		mp->DestroySample(j);
 		memset(mp->Ins+j, 0, sizeof(MODINSTRUMENT));
-		memset(mp->m_szNames[j], 0, 32);
+		if (j) memset(mp->m_szNames[j], 0, 32);
 	}
 	song_unlock_audio();
 	song_wipe_instrument(n);
