@@ -3019,7 +3019,7 @@ static int pattern_editor_insert(struct key_event *k)
 	case 0:			/* note */
 		if (k->sym == SDLK_4) {
 			if (k->state) return 0;
-			if (cur_note->instrument && cur_note->note > 0 && cur_note->note < 120) {
+			if (cur_note->instrument && cur_note->note > 0) {/* && cur_note->note < 120) {*/
 				if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
 					if (edit_copy_mask & MASK_VOLUME && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
 						vol = mask_note.volume;
