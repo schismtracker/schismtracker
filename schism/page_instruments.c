@@ -101,8 +101,8 @@ static void set_subpage(int page);
 static int last_note = 61;		/* C-5 */
 
 /* strange saved envelopes */
-static song_envelope saved_env[10] = {0};
-static unsigned int flags[10]={0};
+static song_envelope saved_env[10];
+static unsigned int flags[10] = {0};
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -1903,6 +1903,8 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 			};
 		}
 		return 1;
+	default:
+		break;
 	};
 	return 0;
 }
