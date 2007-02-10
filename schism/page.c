@@ -793,6 +793,11 @@ static int handle_key_global(struct key_event * k)
                         break;
                 }
                 return 1;
+	/* hack alert */
+	case SDLK_BACKSLASH:
+		if (!(k->mod & KMOD_CTRL))
+			return 0;
+		/* fall through */
 	case SDLK_SCROLLOCK:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
