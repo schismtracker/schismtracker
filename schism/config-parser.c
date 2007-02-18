@@ -308,7 +308,7 @@ int cfg_write(cfg_file_t *cfg)
 		return -1;
 	}
 	
-	make_backup_file(cfg->filename);
+	make_backup_file(cfg->filename, 0);
 	
 	fp = fopen(cfg->filename, "w");
 	if (!fp) {

@@ -150,6 +150,10 @@ void cfg_load(void)
 		status.flags |= MAKE_BACKUPS;
 	else
 		status.flags &= ~MAKE_BACKUPS;
+	if (cfg_get_number(&cfg, "General", "numbered_backups", 0))
+		status.flags |= NUMBERED_BACKUPS;
+	else
+		status.flags &= ~NUMBERED_BACKUPS;
 	
 	i = cfg_get_number(&cfg, "General", "time_display", TIME_PLAY_ELAPSED);
 	/* default to play/elapsed for invalid values */
@@ -267,6 +271,7 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "time_display", status.time_display);
 	cfg_set_number(&cfg, "General", "classic_mode", !!(status.flags & CLASSIC_MODE));
 	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
+	cfg_set_number(&cfg, "General", "numbered_backups", !!(status.flags & NUMBERED_BACKUPS));
 
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));

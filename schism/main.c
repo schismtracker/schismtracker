@@ -827,14 +827,14 @@ static void event_loop(void)
 			status.s = tmr->tm_sec;
 
 			if (status.dialog_type == DIALOG_NONE
-			&& startdown && (status.now - startdown) > 1) {
+			    && startdown && (status.now - startdown) > 1) {
 				menu_show();
 				startdown = 0;
 				downtrip = 1;
 			}
 			if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
 				clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-						? CLIPPY_BUFFER : CLIPPY_SELECT);
+					     ? CLIPPY_BUFFER : CLIPPY_SELECT);
 				status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
 			}
 
@@ -854,33 +854,34 @@ static void event_loop(void)
 			}
 #endif
 
-			while ((q=diskwriter_sync()) == 1 && !SDL_PollEvent(0))
+			while ((q = diskwriter_sync()) == DW_SYNC_MORE && !SDL_PollEvent(0))
 				check_update();
 
-			if (q == -1) {
+			if (q == DW_SYNC_ERROR) {
 				log_appendf(4, "Error running diskwriter: %s", strerror(errno));
-				(void)diskwriter_finish();
-			} else if (q == 0) {
+				diskwriter_finish();
+			} else if (q == DW_SYNC_DONE) {
 				switch (diskwriter_finish()) {
-				case -1: /* wasn't running */	
+				case DW_NOT_RUNNING:
+					/* FIXME: WHY DO WE NEED THIS?
+					if the diskwriter isn't running, this whole mess of code shouldn't either */
 					break;
-				case 0:
+				case DW_ERROR:
 					log_appendf(4, "Error shutting down diskwriter: %s", strerror(errno));
 					break;
-				case 1:
+				case DW_OK:
 					log_appendf(2, "Diskwriter completed successfully");
 #ifdef ENABLE_HOOKS
 					run_diskwriter_complete_hook();
 #endif
-	
-				};
+				}
 			}
 
 			/* let dmoz build directory lists, etc
 			as long as there's no user-event going on...
 			*/
-			while (dmoz_worker() && !SDL_PollEvent(0)) {
-			}
+			while (dmoz_worker() && !SDL_PollEvent(0))
+				/* nothing */;
 		}
 	}
 	exit(0); /* atexit :) */

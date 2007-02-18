@@ -1102,7 +1102,7 @@ int song_save(const char *file, const char *qt)
 	if (!qt) { /* still? damn */
 		if (status.flags & PLAIN_TEXTEDIT) {
 			/* okay, the "default" for textedit is plain-text */
-			if (!diskwriter_start(file, &txtwriter)) {
+			if (diskwriter_start(file, &txtwriter) != DW_OK) {
 				log_appendf(4, "Cannot start diskwriter: %s", strerror(errno));
 				return 0;
 			}
@@ -1121,12 +1121,12 @@ int song_save(const char *file, const char *qt)
 
 	/* I SEE YOUR SCHWARTZ IS AS BIG AS MINE */
 	if (status.flags & MAKE_BACKUPS)
-		make_backup_file(file);
+		make_backup_file(file, status.flags & NUMBERED_BACKUPS);
 
 	for (i = 0; diskwriter_drivers[i]; i++) {
 		if (strcmp(qt, diskwriter_drivers[i]->name) != 0)
 			continue;
-		if (!diskwriter_start(file, diskwriter_drivers[i])) {
+		if (diskwriter_start(file, diskwriter_drivers[i]) != DW_OK) {
 			log_appendf(4, "Cannot start diskwriter: %s",
 			strerror(errno));
 			return 0;
@@ -1541,7 +1541,7 @@ int song_save_sample(int n, const char *file, int format_id)
 
 	int ret = sample_save_formats[format_id].save_func(&fp,
 				(song_sample *) smp, mp->m_szNames[n]);
-	if (!diskwriter_finish()) {
+	if (diskwriter_finish() == DW_ERROR) {
 		log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
 		return 0;
 	}
@@ -1572,7 +1572,7 @@ int song_save_instrument(int n, const char *file)
 		return 0;
 	}
 	_save_it_instrument(n-1 /* grr.... */, &fp, 1);
-	if (!diskwriter_finish()) {
+	if (diskwriter_finish() == DW_ERROR) {
 		log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
 		return 0;
 	}
