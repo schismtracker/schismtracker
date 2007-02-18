@@ -29,7 +29,7 @@ int fmt_imf_read_info(dmoz_file_t *file, const byte *data, size_t length)
                 return false;
 
         file->description = "Imago Orpheus";
-        /*file->extension = strdup("imf");*/
+        /*file->extension = str_dup("imf");*/
         file->title = calloc(32, sizeof(char));
         memcpy(file->title, data, 32);
         file->title[32] = 0;

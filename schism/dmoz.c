@@ -182,7 +182,7 @@ void dmoz_cache_update_names(const char *path, char *filen, char *dirn)
 {
 	struct dmoz_cache *p, *lp;
 	char *q;
-	q = strdup(path);
+	q = str_dup(path);
 	lp = 0;
 	filen = filen ? (void*)get_basename(filen) : 0;
 	dirn = dirn ? (void*)get_basename(dirn) : 0;
@@ -191,8 +191,8 @@ void dmoz_cache_update_names(const char *path, char *filen, char *dirn)
 	for (p = cache_top; p; p = p->next) {
 		if (strcmp(p->path,q)==0) {
 			free(q);
-			if (filen) { free(p->cache_filen); p->cache_filen = strdup(filen); }
-			if (dirn) { free(p->cache_dirn); p->cache_dirn = strdup(dirn); }
+			if (filen) { free(p->cache_filen); p->cache_filen = str_dup(filen); }
+			if (dirn) { free(p->cache_dirn); p->cache_dirn = str_dup(dirn); }
 			if (lp) {
 				lp->next = p->next;
 				/* !lp means we're already cache_top */
@@ -205,8 +205,8 @@ void dmoz_cache_update_names(const char *path, char *filen, char *dirn)
 	}
 	p = mem_alloc(sizeof(struct dmoz_cache));
 	p->path = q;
-	p->cache_filen = filen ? strdup(filen) : 0;
-	p->cache_dirn = dirn ? strdup(dirn) : 0;
+	p->cache_filen = filen ? str_dup(filen) : 0;
+	p->cache_dirn = dirn ? str_dup(dirn) : 0;
 	p->next = cache_top;
 	cache_top = p;
 }
@@ -216,7 +216,7 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 	char *q;
 	int i;
 
-	q = strdup(path);
+	q = str_dup(path);
 	if (fl) fl->selected = 0;
 	if (dl) dl->selected = 0;
 	for (p = cache_top; p; p = p->next) {
@@ -453,7 +453,7 @@ dmoz_file_t *dmoz_add_file(dmoz_filelist_t *flist, char *path, char *base, struc
 		file->type = TYPE_DIRECTORY;
 		/* have to fill everything in for directories */
 		file->description = DESCR_DIRECTORY;
-		file->title = strdup(TITLE_DIRECTORY);
+		file->title = str_dup(TITLE_DIRECTORY);
 	} else if (S_ISREG(st->st_mode)) {
 		file->type = TYPE_FILE_MASK; /* really ought to have a separate TYPE_UNCHECKED_FILE... */
 	} else {
@@ -552,7 +552,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 					 *	pString[i] = pTemp[i + 1]; */
 					memcpy(pString, pTemp + 1, pTemp[0]);
 					pString[pTemp[0]] = '\0';
-					dmoz_add_file_or_dir(flist, dlist, pString, strdup(pString),
+					dmoz_add_file_or_dir(flist, dlist, pString, str_dup(pString),
 							     NULL, order++);
 				}
 			}
@@ -572,8 +572,8 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 	while (x && i < 26) {
 		if (x & 1) {
 			sbuf[0] = i + 'A';
-			dmoz_add_file_or_dir(flist, dlist, strdup(sbuf),
-						strdup(sbuf), NULL, -(1024-i));
+			dmoz_add_file_or_dir(flist, dlist, str_dup(sbuf),
+						str_dup(sbuf), NULL, -(1024-i));
 		}
 		x >>= 1;
 		i++;
@@ -581,15 +581,15 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 	em = SetErrorMode(em);
 
 #else /* assume POSIX */
-	dmoz_add_file_or_dir(flist, dlist, strdup("/"), strdup("/"), NULL, -1024);
+	dmoz_add_file_or_dir(flist, dlist, str_dup("/"), str_dup("/"), NULL, -1024);
 	/* home directory?
-	dmoz_add_file_or_dir(flist, dlist, get_home_directory(), strdup("~ Home directory"), NULL, 1024);
+	dmoz_add_file_or_dir(flist, dlist, get_home_directory(), str_dup("~ Home directory"), NULL, 1024);
 	*/
 #endif /* platform */
 	
 	ptr = get_parent_directory(path);
 	if (ptr)
-		dmoz_add_file_or_dir(flist, dlist, ptr, strdup(".."), NULL, -10);
+		dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(".."), NULL, -10);
 }
 
 int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
@@ -641,9 +641,9 @@ int dmoz_read_ex(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist
 				continue; /* better luck next time */
 			}
 			if (S_ISDIR(st.st_mode))
-				dmoz_add_file_or_dir(flist, dlist, ptr, strdup(ent->d_name), &st, 0);
+				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(ent->d_name), &st, 0);
 			else if (S_ISREG(st.st_mode))
-				dmoz_add_file(flist, ptr, strdup(ent->d_name), &st, 1);
+				dmoz_add_file(flist, ptr, str_dup(ent->d_name), &st, 1);
 			else
 				free(ptr);
 		}
@@ -699,7 +699,7 @@ static int file_info_get(dmoz_file_t *file)
 			if (file->artist)
 				trim_string(file->artist);
 			if (file->title == NULL)
-				file->title = strdup(""); /* or the basename? */
+				file->title = str_dup(""); /* or the basename? */
 			trim_string(file->title);
 			break;
 		}
@@ -731,7 +731,7 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 	case FINF_ERRNO:
 		/* It would be nice to use the error string for the description, but there doesn't seem to be
 		any easy/portable way to do that without dynamically allocating it (since strerror might
-		return a static buffer), and strdup'ing EVERY description is kind of a waste of memory. */
+		return a static buffer), and str_dup'ing EVERY description is kind of a waste of memory. */
 		perror(file->base);
 		file->description = "File error";
 		break;
@@ -741,7 +741,7 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 		break;
 	}
 	file->type = TYPE_UNKNOWN;
-	file->title = strdup("");
+	file->title = str_dup("");
 	return 0;
 }
 

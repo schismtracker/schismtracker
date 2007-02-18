@@ -31,7 +31,7 @@ int fmt_far_read_info(dmoz_file_t *file, const byte *data, size_t length)
                 return false;
 
         file->description = "Farandole Module";
-        /*file->extension = strdup("far");*/
+        /*file->extension = str_dup("far");*/
         file->title = calloc(41, sizeof(char));
         memcpy(file->title, data + 4, 40);
         file->title[40] = 0;

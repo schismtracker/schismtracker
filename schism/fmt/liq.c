@@ -31,13 +31,13 @@ int fmt_liq_read_info(dmoz_file_t *file, const byte *data, size_t length)
                 return false;
 
         file->description = "Liquid Tracker";
-        /*file->extension = strdup("liq");*/
+        /*file->extension = str_dup("liq");*/
         memcpy(buf, data + 44, 20);
 	buf[20] = 0;
-	file->artist = strdup(buf);
+	file->artist = str_dup(buf);
         memcpy(buf, data + 14, 30);
         buf[30] = 0;
-	file->title = strdup(buf);
+	file->title = str_dup(buf);
         file->type = TYPE_MODULE_S3M;
 
         return true;

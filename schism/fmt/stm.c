@@ -35,7 +35,7 @@ int fmt_stm_read_info(dmoz_file_t *file, const byte *data, size_t length)
         /* I used to check whether it was a 'song' or 'module' and set the description
         accordingly, but it's fairly pointless information :) */
         file->description = "Scream Tracker 2";
-        /*file->extension = strdup("stm");*/
+        /*file->extension = str_dup("stm");*/
         file->type = TYPE_MODULE_MOD;
         file->title = calloc(21, sizeof(char));
         memcpy(file->title, data, 20);

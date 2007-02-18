@@ -45,13 +45,13 @@ int fmt_mdl_read_info(dmoz_file_t *file, const byte *data, size_t length)
                         /* hey! we have a winner */
 			memcpy(buf, data + position + 6, 32);
 			buf[32] = 0;
-			file->title = strdup(buf);
+			file->title = str_dup(buf);
 			memcpy(buf, data + position + 38, 20);
 			buf[20] = 0;
-			file->artist = strdup(buf);
+			file->artist = str_dup(buf);
 			
                         file->description = "Digitrakker";
-                        /*file->extension = strdup("mdl");*/
+                        /*file->extension = str_dup("mdl");*/
                         file->type = TYPE_MODULE_XM;
                         return true;
                 } /* else... */

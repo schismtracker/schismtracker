@@ -179,7 +179,7 @@ static void load_fontlist(void)
 	dmoz_filter_filelist(&flist, fontgrep, &cur_font, fontlist_reposition);
 	while (dmoz_worker());
 
-	dmoz_add_file(&flist, p, strdup("font.cfg"), &st, -1024);
+	dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -1024);
 	/* p is freed by dmoz_free */
 }
 

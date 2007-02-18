@@ -52,14 +52,14 @@ int fmt_sid_read_info(dmoz_file_t *file, const byte *data, size_t length);
 
 	memcpy(buf, data + 22, 32);
 	buf[32] = 0;
-	file->title = strdup(buf);
+	file->title = str_dup(buf);
 	memcpy(buf, data + 54, 32);
 	buf[32] = 0;
-	file->artist = strdup(buf);
+	file->artist = str_dup(buf);
 	/* memcpy(buf, data + 86, 32); - copyright... */
 
         file->description = "Commodore 64 SID";
-        /*file->extension = strdup("sid");*/
+        /*file->extension = str_dup("sid");*/
         file->type = TYPE_SAMPLE_COMPR; /* FIXME: not even close. */
         return true;
 }

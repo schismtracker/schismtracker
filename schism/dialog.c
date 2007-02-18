@@ -322,7 +322,7 @@ struct dialog *dialog_create(int type, const char *text, void (*action_yes) (voi
 	if (status.dialog_type & DIALOG_MENU)
 		menu_hide();
 
-	dialogs[d].text = strdup(text);
+	dialogs[d].text = str_dup(text);
 	dialogs[d].data = data;
 	dialogs[d].action_yes = action_yes;
 	dialogs[d].action_no = action_no;

@@ -52,7 +52,7 @@ static struct cfg_section *_get_section(cfg_file_t *cfg, const char *section_nam
 	if (add) {
 		section = calloc(1, sizeof(struct cfg_section));
 		section->omit = 0;
-		section->name = strdup(section_name);
+		section->name = str_dup(section_name);
 		if (prev) {
 			section->next = prev->next;
 			prev->next = section;
@@ -78,7 +78,7 @@ static struct cfg_key *_get_key(struct cfg_section *section, const char *key_nam
 	}
 	if (add) {
 		key = calloc(1, sizeof(struct cfg_key));
-		key->name = strdup(key_name);
+		key->name = str_dup(key_name);
 		if (prev) {
 			key->next = prev->next;
 			prev->next = key;
@@ -408,7 +408,7 @@ void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_n
 	if (key->value)
 		free(key->value);
 	if (value)
-		key->value = strdup(value);
+		key->value = str_dup(value);
 	else
 		key->value = NULL;
 }
@@ -432,7 +432,7 @@ void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_n
 int cfg_init(cfg_file_t *cfg, const char *filename)
 {
 	memset(cfg, 0, sizeof(*cfg));
-	cfg->filename = strdup(filename);
+	cfg->filename = str_dup(filename);
 	cfg->sections = NULL;
 	
 	return cfg_read(cfg);

@@ -33,7 +33,7 @@ int fmt_mt2_read_info(dmoz_file_t *file, const byte *data, size_t length)
                 return false;
 
         file->description = "MadTracker 2 Module";
-        /*file->extension = strdup("mt2");*/
+        /*file->extension = str_dup("mt2");*/
         file->title = calloc(65, sizeof(char));
         memcpy(file->title, data + 42, 64);
         file->title[64] = 0;

@@ -59,6 +59,17 @@ void ms_sleep(unsigned int ms)
 #endif
 }
 
+char *str_dup(const char *s)
+{
+	char *q;
+	q = strdup(s);
+	if (!q) {
+		/* throw out of memory exception */
+		perror("strdup");
+		exit(255);
+	}
+	return q;
+}
 
 void *mem_alloc(size_t amount)
 {
@@ -196,7 +207,7 @@ char *get_parent_directory(const char *dirname)
 	if (!dirname || !dirname[0])
 		return NULL;
 	
-	ret = strdup(dirname);
+	ret = str_dup(dirname);
 	if (!ret)
 		return NULL;
 	n = strlen(ret) - 1;
@@ -233,7 +244,7 @@ int str_break(const char *s, char c, char **first, char **second)
 	*first = mem_alloc(p - s + 1);
 	strncpy(*first, s, p - s);
 	(*first)[p - s] = 0;
-	*second = strdup(p + 1);
+	*second = str_dup(p + 1);
 	return 1;
 }
 
@@ -377,7 +388,7 @@ char *pretty_name(const char *filename)
         ptr = ((ptr && ptr[1]) ? ptr + 1 : filename);
         len = strrchr(ptr, '.') - ptr;
         if (len <= 0) {
-                ret = strdup(ptr);
+                ret = str_dup(ptr);
         } else {
                 ret = calloc(len + 1, sizeof(char));
                 strncpy(ret, ptr, len);
@@ -502,7 +513,7 @@ int is_directory(const char *filename)
 char *get_home_directory(void)
 {
 #if defined(__amigaos4__)
-	return strdup("PROGDIR:");
+	return str_dup("PROGDIR:");
 #else
 	char *ptr, buf[PATH_MAX + 1];
 	
@@ -512,14 +523,14 @@ char *get_home_directory(void)
 		ptr = getenv("APPDATA");
 #endif
 	if (ptr)
-		return strdup(ptr);
+		return str_dup(ptr);
 	
 	/* hmm. fall back to the current dir */
 	if (getcwd(buf, PATH_MAX))
-		return strdup(buf);
+		return str_dup(buf);
 	
 	/* still don't have a directory? sheesh. */
-	return strdup(FALLBACK_DIR);
+	return str_dup(FALLBACK_DIR);
 #endif
 }
 

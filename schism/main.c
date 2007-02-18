@@ -345,10 +345,10 @@ static void parse_options(int argc, char **argv)
 			}
 			break;
 		case O_SDL_AUDIODRIVER:
-			audio_driver = strdup(frag->arg);
+			audio_driver = str_dup(frag->arg);
 			break;
 		case O_SDL_VIDEODRIVER:
-			video_driver = strdup(frag->arg);
+			video_driver = str_dup(frag->arg);
 			break;
 		case O_CLASSIC_MODE:
 			if (frag->type)

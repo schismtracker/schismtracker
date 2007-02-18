@@ -432,7 +432,7 @@ struct midi_provider *midi_provider_register(const char *name,
 	if (!midi_mutex) return 0;
 
 	n = mem_alloc(sizeof(struct midi_provider));
-	n->name = (char *)strdup(name);
+	n->name = (char *)str_dup(name);
 	n->poll = driver->poll;
 	n->enable = driver->enable;
 	n->disable = driver->disable;
@@ -473,7 +473,7 @@ void *userdata, int free_userdata)
 	p = mem_alloc(sizeof(struct midi_port));
 	p->io = 0;
 	p->iocap = inout;
-	p->name = (char*)strdup(name);
+	p->name = (char*)str_dup(name);
 	p->enable = pv->enable;
 	p->disable = pv->disable;
 	p->send_later = pv->send_later;

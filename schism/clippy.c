@@ -164,7 +164,7 @@ static void _string_paste(UNUSED int cb, const char *cbptr)
 	SDL_Event event;
 	memset(&event, 0, sizeof(SDL_Event));
 	event.user.type = SCHISM_EVENT_PASTE;
-	event.user.data1 = strdup(cbptr); /* current_clipboard... is it safe? */
+	event.user.data1 = str_dup(cbptr); /* current_clipboard... is it safe? */
 	if (!event.user.data1) return; /* eh... */
 	if (SDL_PushEvent(&event) == -1) {
 		free(event.user.data1);
@@ -411,7 +411,7 @@ static char *_internal_clippy_paste(int cb)
 	if (cb == CLIPPY_SELECT) return _current_selection;
 #ifdef MACOSX
 	if (cb == CLIPPY_BUFFER) {
-		src = strdup(macosx_clippy_get());
+		src = str_dup(macosx_clippy_get());
 		if (_current_clipboard != _current_selection) {
 			free(_current_clipboard);
 		}

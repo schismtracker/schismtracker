@@ -277,10 +277,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 	}
 
 	/* ERR: should write to temporary */
-	/* wtf. let's not use strdup or anything here. /storlek
-	dw_rename_to = (char *)mem_alloc(strlen(file)+1);
-	strcpy(dw_rename_to, file);*/
-	dw_rename_to = strdup(file);
+	dw_rename_to = str_dup(file);
 
 	str = (char*)mem_alloc(strlen(file)+16);
 	strcpy(str, file);

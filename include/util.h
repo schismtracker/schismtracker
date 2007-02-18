@@ -93,6 +93,7 @@ extern "C" {
 extern void *mem_alloc(size_t);
 extern void *mem_realloc(void *,size_t);
 extern void mem_free(void *);
+extern char *str_dup(const char *);
 
 /* formatting */
 /* for get_{time,date}_string, buf should be (at least) 27 chars; anything past that isn't used. */

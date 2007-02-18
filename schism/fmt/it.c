@@ -45,7 +45,7 @@ int fmt_it_read_info(dmoz_file_t *file, const byte *data, size_t length)
                 return false;
         }
 
-        /*file->extension = strdup("it");*/
+        /*file->extension = str_dup("it");*/
         file->title = calloc(26, sizeof(char));
         memcpy(file->title, data + (mmcmp ? 136 : 4), 25);
         file->title[25] = 0;
