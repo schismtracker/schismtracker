@@ -420,19 +420,32 @@ int get_num_lines(const char *text)
 /* --------------------------------------------------------------------- */
 /* FILE INFO FUNCTIONS */
 
-int make_backup_file(const char *filename)
+int make_backup_file(const char *filename, int numbered)
 {
-	char *b;
-	int e = 0;
+	char *buf;
+	int e = 0, n, ret;
+	int maxlen = strlen(filename) + 16; /* plenty of room to breathe */
 	
-	/* kind of a hack for now, but would be easy to do other things like numbered backups (like emacs),
-	rename the extension to .bak (or add it if the file doesn't have an extension), etc. */
-	b = mem_alloc(strlen(filename) + 2);
-	strcpy(b, filename);
-	strcat(b, "~");
-	if (!rename_file(filename, b))
-		e = errno;
-	free(b);
+	buf = mem_alloc(maxlen);
+	if (numbered) {
+		/* If some crazy person needs more than 65536 backup files,
+		   they probably have more serious issues to tend to. */
+		n = 1;
+		do {
+			snprintf(buf, maxlen, "%s.%d~", filename, n++);
+			ret = rename_file(filename, buf, 0);
+		} while (ret == DMOZ_RENAME_EXISTS && n < 65536);
+		if (ret == 0)
+			e = errno;
+		else if (ret == -1)
+			e = EEXIST;
+	} else {
+		strcpy(buf, filename);
+		strcat(buf, "~");
+		if (!rename_file(filename, buf, 1))
+			e = errno;
+	}
+	free(buf);
 	
 	if (e) {
 		errno = e;

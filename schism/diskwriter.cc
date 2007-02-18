@@ -150,7 +150,8 @@ static void _ml(diskwriter_driver_t *x, off_t pos)
 
 int diskwriter_start_nodriver(diskwriter_driver_t *f)
 {
-	if (fp) return 0;
+	if (fp)
+		return DW_ERROR;
 
 	if (dw == NULL) {
 		if (f->m || f->g) {
@@ -166,7 +167,7 @@ int diskwriter_start_nodriver(diskwriter_driver_t *f)
 
 		if (dw->s) {
 			dw->s(dw);
-			return 1;
+			return DW_OK;
 		}
 	}
 
@@ -177,7 +178,7 @@ int diskwriter_start_nodriver(diskwriter_driver_t *f)
 	}
 
 	status.flags |= DISKWRITER_ACTIVE;
-	return 1;
+	return DW_OK;
 }
 
 extern "C" {
@@ -189,7 +190,7 @@ extern "C" {
 
 int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 {
-	if (sampno < 0 || sampno >= MAX_SAMPLES) return 0;
+	if (sampno < 0 || sampno >= MAX_SAMPLES) return DW_ERROR;
 
 	song_stop_audio();
 	song_stop();
@@ -234,10 +235,10 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	dw->l = _ml;
 
 	if (!fp_ok) {
-		(void)diskwriter_finish();
+		diskwriter_finish();
 		CSoundFile::gpSndMixHook = NULL;
 		status.flags &= ~(DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN);
-		return 0;
+		return DW_ERROR;
 	}
 
 	log_appendf(2, "Writing to sample %d", sampno);
@@ -245,7 +246,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	fini_bindme = dobind;
 	fini_patno = patno;
 
-	return 1;
+	return DW_OK;
 }
 
 int diskwriter_writeout(const char *file, diskwriter_driver_t *f)
@@ -264,19 +265,22 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 
 	put_env_var("DISKWRITER_FILE", file);
 
-	if (!diskwriter_start_nodriver(f)) return 0;
+	if (diskwriter_start_nodriver(f) != DW_OK)
+		return DW_ERROR;
 
 	if (dw->m || dw->g) {
 //		CSoundFile::SetWaveConfigEx();
 		song_start_once();
 		CSoundFile::SetWaveConfig(dw->rate, dw->bits,
-						diskwriter_output_channels, 1);
+					  diskwriter_output_channels, 1);
 		CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	}
 
 	/* ERR: should write to temporary */
+	/* wtf. let's not use strdup or anything here. /storlek
 	dw_rename_to = (char *)mem_alloc(strlen(file)+1);
-	strcpy(dw_rename_to, file);
+	strcpy(dw_rename_to, file);*/
+	dw_rename_to = strdup(file);
 
 	str = (char*)mem_alloc(strlen(file)+16);
 	strcpy(str, file);
@@ -291,14 +295,14 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 		if (fd == -1 && errno == EEXIST) continue;
 		fp = fopen(str, "wb");
 		if (!fp) {
-			(void)unlink(str);
-			(void)free(str);
-			(void)free(dw_rename_to);
+			unlink(str);
+			free(str);
+			free(dw_rename_to);
 			dw_rename_from = dw_rename_to = NULL;
-			(void)diskwriter_finish();
-			return 0;
+			diskwriter_finish();
+			return DW_ERROR;
 		}
-		(void)close(fd);
+		close(fd);
 		break; /* got file! */
 	}
 
@@ -308,18 +312,20 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 	dw->e = _we;
 	dw->l = _wl;
 
-	if (dw->p) dw->p(dw);
+	if (dw->p)
+		dw->p(dw);
 
 	if (!fp_ok) {
-		(void)diskwriter_finish();
-		return 0;
+		diskwriter_finish();
+		return DW_ERROR;
 	}
 
 	log_appendf(2, "Opening %s for writing", str);
 	status.flags |= DISKWRITER_ACTIVE;
 
-	return 1;
+	return DW_OK;
 }
+
 extern unsigned int samples_played; /* mplink */
 int diskwriter_sync(void)
 {
@@ -327,12 +333,14 @@ int diskwriter_sync(void)
 	Uint16 *le16;
 	int n, i;
 
-	if (!dw || (!fp && fini_sampno == -1)) return 0; /* no writer running */
-	if (!fp_ok) return -1;
+	if (!dw || (!fp && fini_sampno == -1))
+		return DW_SYNC_DONE; /* no writer running */
+	if (!fp_ok)
+		return DW_SYNC_ERROR;
 	if (!dw->m && !dw->g) {
-		if (dw->x) dw->x(dw);
-		if (!fp_ok) return -1;
-		return 0;
+		if (dw->x)
+			dw->x(dw);
+		return fp_ok ? DW_SYNC_DONE : DW_SYNC_ERROR;
 	}
 
 	n = (int)(((double)song_get_current_time() * 100.0) / current_song_len);
@@ -363,16 +371,19 @@ dw->output_le
 	}
 	n *= (dw->bits / 8);
 
-	if (dw->m) dw->m(dw, diskbuf, n);
+	if (dw->m)
+		dw->m(dw, diskbuf, n);
 
-	if (!fp_ok) return -1;
+	if (!fp_ok)
+		return DW_SYNC_ERROR;
 	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
-		if (dw->x) dw->x(dw);
-		if (!fp_ok) return -1;
-		return 0;
+		if (dw->x)
+			dw->x(dw);
+		return fp_ok ? DW_SYNC_DONE : DW_SYNC_ERROR;
 	}
-	return 1;
+	return DW_SYNC_MORE;
 }
+
 int diskwriter_finish(void)
 {
 	int need_realize = 0;
@@ -381,24 +392,28 @@ int diskwriter_finish(void)
 
 	if (!dw || (!fp && fini_sampno == -1)) {
 		status.flags &= ~(DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN);
-		return -1; /* no writer running */
+		return DW_NOT_RUNNING; /* no writer running */
 	}
 
 	if (fp) {
 		if (fp_ok) fflush(fp);
-		if (ferror(fp)) fp_ok = 0;
+		if (ferror(fp))
+			fp_ok = 0;
 #ifdef WIN32
-		if (_commit(fileno(fp)) == -1) fp_ok = 0;
+		if (_commit(fileno(fp)) == -1)
+			fp_ok = 0;
 #else
-		if (fsync(fileno(fp)) == -1) fp_ok = 0;
+		if (fsync(fileno(fp)) == -1)
+			fp_ok = 0;
 #endif
-		fclose(fp); fp = NULL;
+		fclose(fp);
+		fp = NULL;
 	}
 
-	if (dw->m || dw->g) {
+	if (dw->m || dw->g)
 		song_stop();
-	}
-	status.flags &= ~(DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN);
+
+	status.flags &= ~(DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN);
 
 	if (mbuf) {
 		if (fp_ok && fini_sampno > -1) {
@@ -446,7 +461,7 @@ int diskwriter_finish(void)
 				zed[24] = ((unsigned char)fini_patno);
 			}
 		}
-		(void)free(mbuf);
+		free(mbuf);
 		mbuf = NULL;
 		mbuf_size = 0;
 		mbuf_len = 0;
@@ -465,31 +480,31 @@ int diskwriter_finish(void)
 
 	if (dw_rename_from && dw_rename_to) {
 		if (fp_ok) {
-			if (!rename_file(dw_rename_from, dw_rename_to))
-				r = -1;
-			else
-				r = 0;
-			(void)unlink(dw_rename_from);
+			r = (rename_file(dw_rename_from, dw_rename_to, 1) == DMOZ_RENAME_OK)
+				? DW_OK
+				: DW_ERROR;
+			unlink(dw_rename_from);
 		} else {
-			r = -1;
+			r = DW_ERROR;
 		}
 		free(dw_rename_from);
 		free(dw_rename_to);
 		dw_rename_from = dw_rename_to = NULL;
 	} else {
-		r = 0;
+		r = DW_OK;
 	}
 
 	if (need_realize) sample_realize();
-	if (r == 0) return 1;
-	return 0;
+	return r;
 }
 
 int _diskwriter_writemidi(unsigned char *data, unsigned int len, unsigned int delay)
 {
-	if (!dw || !fp) return 0;
-	if (dw->g) dw->g(dw,data,len, delay);
-	return 1;
+	if (!dw || !fp)
+		return DW_ERROR;
+	if (dw->g)
+		dw->g(dw,data,len, delay);
+	return DW_OK;
 }
 
 

@@ -744,33 +744,43 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 	file->title = strdup("");
 	return 0;
 }
-int rename_file_nodestroy(const char *old, const char *newf)
+
+
+/* FIXME: merge these -- there's a lot of unnecessary duplicate code here */
+
+static int _rename_nodestroy(const char *old, const char *newf)
 {
 /* XXX does __amigaos4__ have a special need for this? */
 #ifdef WIN32
+	/* is this code not finished? it never returns success */
 	if (!MoveFile(old,newf)) {
 		switch (GetLastError()) {
 		case ERROR_ALREADY_EXISTS:
 		case ERROR_FILE_EXISTS:
-			return -1;
+			return DMOZ_RENAME_EXISTS;
 		};
-		return 0;
+		return DMOZ_RENAME_ERRNO;
 	}
-	return 0;
+	return DMOZ_RENAME_ERRNO;
 #else
 	if (link(old,newf) == -1) {
-		if (errno == EEXIST) return -1;
-		return 0;
+		return (errno == EEXIST)
+			? DMOZ_RENAME_EXISTS
+			: DMOZ_RENAME_ERRNO;
 	}
 	if (unlink(old) == -1) {
 		/* well, this should never happen... */
+		/* Prove it, then we can remove this check. /Storlek */
 		log_appendf(3, "link() succeeded, but unlink() failed. something is very wrong");
 	}
-	return 1;
+	return DMOZ_RENAME_OK;
 #endif
 }
-int rename_file(const char *old, const char *newf)
+
+int rename_file(const char *old, const char *newf, int clobber)
 {
+	if (!clobber)
+		return _rename_nodestroy(old, newf);
 #ifdef WIN32
 	if (!MoveFile(old,newf)) {
 		switch (GetLastError()) {
