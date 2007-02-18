@@ -769,8 +769,12 @@ static int _rename_nodestroy(const char *old, const char *newf)
 			: DMOZ_RENAME_ERRNO;
 	}
 	if (unlink(old) == -1) {
-		/* well, this should never happen... */
-		/* Prove it, then we can remove this check. /Storlek */
+		/* This can occur when people are using a system with
+		broken link() semantics, or if the user can create files
+		that he cannot remove. these systems are decidedly not POSIX.1
+		but they may try to compile schism, and we won't know they
+		are broken unless we warn them.
+		*/
 		log_appendf(3, "link() succeeded, but unlink() failed. something is very wrong");
 	}
 	return DMOZ_RENAME_OK;
