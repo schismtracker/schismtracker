@@ -1119,10 +1119,6 @@ int song_save(const char *file, const char *qt)
 	mp->m_rowHighlightMajor = row_highlight_major;
 	mp->m_rowHighlightMinor = row_highlight_minor;
 
-	/* I SEE YOUR SCHWARTZ IS AS BIG AS MINE */
-	if (status.flags & MAKE_BACKUPS)
-		make_backup_file(file, status.flags & NUMBERED_BACKUPS);
-
 	for (i = 0; diskwriter_drivers[i]; i++) {
 		if (strcmp(qt, diskwriter_drivers[i]->name) != 0)
 			continue;
