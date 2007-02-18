@@ -29,7 +29,7 @@ int fmt_mtm_read_info(dmoz_file_t *file, const byte *data, size_t length)
                 return false;
 
         file->description = "MultiTracker Module";
-        /*file->extension = strdup("mtm");*/
+        /*file->extension = str_dup("mtm");*/
         file->title = calloc(21, sizeof(char));
         memcpy(file->title, data + 4, 20);
         file->title[20] = 0;

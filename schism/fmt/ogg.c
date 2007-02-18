@@ -100,7 +100,7 @@ static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **ti
         int n = -1;
 
         while (*ptr) {
-                key = strdup(*ptr);
+                key = str_dup(*ptr);
                 value = strchr(key, '=');
                 if (value == NULL) {
                         /* buh? */
@@ -109,7 +109,7 @@ static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **ti
                 }
                 /* hack? where? */
                 *value = 0;
-                value = strdup(value + 1);
+                value = str_dup(value + 1);
 		
                 if (strcmp(key, "artist") == 0)
                         *artist_ptr = value;
@@ -146,7 +146,7 @@ int fmt_ogg_read_info(dmoz_file_t *file, const byte *data, size_t length)
 
         get_title_from_ogg(&vf, &file->artist, &file->title);
         file->description = "Ogg Vorbis";
-        /*file->extension = strdup("ogg");*/
+        /*file->extension = str_dup("ogg");*/
         file->type = TYPE_SAMPLE_COMPR;
 
         ov_clear(&vf);

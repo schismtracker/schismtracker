@@ -67,7 +67,7 @@ int fmt_dtm_read_info(dmoz_file_t *file, const byte *data, size_t length)
         }
 
         file->description = "DigiTrekker 3";
-        /*file->extension = strdup("dtm");*/
+        /*file->extension = str_dup("dtm");*/
         file->type = TYPE_MODULE_XM;
         return true;
 }

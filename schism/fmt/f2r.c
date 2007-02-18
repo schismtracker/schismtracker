@@ -31,7 +31,7 @@ int fmt_f2r_read_info(dmoz_file_t *file, const byte *data, size_t length)
                 return false;
 
         file->description = "Farandole 2 (linear)";
-        /*file->extension = strdup("f2r");*/
+        /*file->extension = str_dup("f2r");*/
         file->title = calloc(41, sizeof(char));
         memcpy(file->title, data + 6, 40);
         file->title[40] = 0;

@@ -78,7 +78,7 @@ int fmt_mp3_read_info(dmoz_file_t *file, const byte *data, size_t length)
         thing. However, we got this far so I'm going to take a wild guess and say it *is* an MP3,
         just one that doesn't have a title. */
 
-        /*file->extension = strdup("mp3");*/
+        /*file->extension = str_dup("mp3");*/
         /*file->description = calloc(22, sizeof(char));*/
         /*snprintf(file->description, 22, "MPEG Layer 3, ID3 v%d", version);*/
         file->description = "MPEG Layer 3";

@@ -68,7 +68,7 @@ int fmt_669_read_info(dmoz_file_t *file, const byte *data, size_t length)
         file->title[36] = 0;
 
         file->description = desc;
-        /*file->extension = strdup("669");*/
+        /*file->extension = str_dup("669");*/
         file->type = TYPE_MODULE_S3M;
 
         return true;

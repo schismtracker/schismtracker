@@ -1255,7 +1255,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 							}
 
 							song_copy_sample(k, (song_sample *)&xl.Ins[x],
-								strdup(xl.m_szNames[x]));
+								str_dup(xl.m_szNames[x]));
 							break;
 						}
 					}
@@ -1619,8 +1619,8 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 			if (! library.Headers[n]) continue;
 
 			dmoz_file_t *file = dmoz_add_file(flist,
-				strdup(path), strdup(base), NULL, n);
-			file->title = strdup((char*)library.Headers[n]->name);
+				str_dup(path), str_dup(base), NULL, n);
+			file->title = str_dup((char*)library.Headers[n]->name);
 
 			int count[sizeof(library.Headers[n]->Keyboard)];
 			memset(count, 0, sizeof(count));
@@ -1673,14 +1673,14 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 						library.m_szNames[n][c] = 32;
 					library.m_szNames[n][25] = 0;
 				}
-				dmoz_file_t *file = dmoz_add_file(flist, strdup(path), strdup(base), NULL, n);
+				dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 				file->type = TYPE_SAMPLE_EXTD;
 				file->description = "Fishcakes"; // FIXME - what does IT say?
 				// don't screw this up...
 				if (((unsigned char)library.m_szNames[n][23]) == 0xFF) {
 					library.m_szNames[n][23] = ' ';
 				}
-				file->title = strdup(library.m_szNames[n]);
+				file->title = str_dup(library.m_szNames[n]);
 				file->sample = (song_sample *) library.Ins + n;
 			}
 		}

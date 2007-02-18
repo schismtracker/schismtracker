@@ -98,7 +98,7 @@ static void handle_file_entered_L(char *ptr)
 	if (stat(ptr, &sb) == -1) return;
 
 	memset(&tmp,0,sizeof(tmp));
-	f = dmoz_add_file(&tmp, strdup(ptr), strdup(ptr), &sb, 0);
+	f = dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
 	r = modgrep(f);
 	dmoz_free(&tmp, NULL);
 
@@ -192,7 +192,7 @@ static void handle_file_entered_S(char *ptr)
 			/* TODO: maybe change the current directory in this case? */
 			log_appendf(4, "%s: Is a directory", ptr);
 		} else if (S_ISREG(buf.st_mode)) {
-			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song_overwrite, free, 1, strdup(ptr));
+			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song_overwrite, free, 1, str_dup(ptr));
 		} else {
 			/* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
 			dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0, NULL);

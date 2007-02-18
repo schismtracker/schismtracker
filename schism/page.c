@@ -1575,7 +1575,7 @@ int song_load(const char *filename)
         dialog_destroy_all();
 
 	if (status.flags & SONG_NEEDS_SAVE) {
-		tmp = strdup(filename);
+		tmp = str_dup(filename);
 		assert(tmp);
 
                 d = dialog_create(DIALOG_OK_CANCEL,

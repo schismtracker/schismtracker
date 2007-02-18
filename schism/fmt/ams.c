@@ -40,7 +40,7 @@ int fmt_ams_read_info(dmoz_file_t *file, const byte *data, size_t length)
         if (n > 30)
                 n = 30;
         file->description = "Velvet Studio";
-        /*file->extension = strdup("ams");*/
+        /*file->extension = str_dup("ams");*/
         file->title = calloc(n + 1, sizeof(char));
         memcpy(file->title, data + 8, n);
         file->title[n] = 0;
