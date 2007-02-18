@@ -476,6 +476,11 @@ int diskwriter_finish(void)
 	diskwriter_dialog_finished();
 
 	if (dw_rename_from && dw_rename_to) {
+		/* I SEE YOUR SCHWARTZ IS AS BIG AS MINE */
+		if (status.flags & MAKE_BACKUPS)
+			make_backup_file(dw_rename_to,
+					status.flags & NUMBERED_BACKUPS);
+
 		if (fp_ok) {
 			r = (rename_file(dw_rename_from, dw_rename_to, 1) == DMOZ_RENAME_OK)
 				? DW_OK
