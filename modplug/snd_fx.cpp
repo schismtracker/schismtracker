@@ -1225,12 +1225,35 @@ BOOL CSoundFile::ProcessEffects()
 			{
 				pChn->nGlobalVol = param;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
+				for (UINT i=m_nChannels; i<MAX_CHANNELS; i++)
+				{
+					MODCHANNEL *c = &Chn[i];
+					if (c->nMasterChn == nChn) {
+						c->nGlobalVol = param;
+						c->dwFlags |= CHN_FASTVOLRAMP;
+					}
+				}
 			}
 			break;
 
 		// Channel volume slide
 		case CMD_CHANNELVOLSLIDE:
-			ChannelVolSlide(pChn, param);
+			{
+				int saw_self = 0;
+
+				for (UINT i=m_nChannels; i<MAX_CHANNELS; i++)
+				{
+					MODCHANNEL *c = &Chn[i];
+					if (c->nMasterChn == nChn) {
+						if (c == pChn) saw_self = 1;
+						ChannelVolSlide(c, param);
+					}
+				}
+				if (!saw_self) {
+					ChannelVolSlide(pChn, param);
+				}
+			}
+			
 			break;
 
 		// Panbrello (IT)
