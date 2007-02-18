@@ -75,14 +75,18 @@ struct diskwriter_driver {
 	off_t pos;
 };
 
+enum {
+	DW_OK = 1,
+	DW_ERROR = 0,
+	DW_NOT_RUNNING = -1,
+
+	DW_SYNC_DONE = 0,
+	DW_SYNC_ERROR = -1,
+	DW_SYNC_MORE = 1,
+};
+
 /* starts up the diskwriter.
-
-if f is null, this returns 0
-
-returns 1 if the diskwriter starts up ok.
-returns 0 if file cannot be written to, if "f" doesn't make any sense,
-or if the diskwriter were already started
-*/
+return values: DW_OK, DW_ERROR */
 int diskwriter_start(const char *file, diskwriter_driver_t *f);
 
 /* kindler, gentler, (and most importantly) simpler version (can't call sync) */
@@ -92,21 +96,13 @@ int diskwriter_writeout(const char *file, diskwriter_driver_t *f);
 int diskwriter_writeout_sample(int sampno, int patno, int bindme);
 
 /* this synchronizes with the diskwriter.
-
-returns 1 if the diskwriter has more work to do.
-returns 0 if its all done.
-returns -1 if there was an error
-
-*/
+return: DW_SYNC_*, self explanatory */
 int diskwriter_sync(void);
 
-/* this terminates the diskwriter. if called BEFORE diskwriter_sync()
-returned 0 this will delete any temporary files created. otherwise this commits
-them.
-
-returns 1 if the file was successfully written, etc.
-returns 0 otherwise (including if called to abort diskwriting)
-*/
+/* Terminate the diskwriter.
+	If called BEFORE diskwriter_sync() returns DW_OK, this will delete any
+	temporary files created; otherwise, it will commit them.
+return: DW_OK or DW_ERROR */
 int diskwriter_finish(void);
 
 /* ------------------------------------------------------------------------- */
