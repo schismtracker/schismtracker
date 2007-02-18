@@ -116,7 +116,7 @@ char *str_concat(const char *s, ...);
 
 
 /* filesystem */
-int make_backup_file(const char *filename);
+int make_backup_file(const char *filename, int numbered);
 long file_size(const char *filename);
 long file_size_fd(int fd);
 int is_directory(const char *filename);

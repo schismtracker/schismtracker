@@ -67,33 +67,32 @@ enum {
    interface in some way) and uh, something else for the internal status flags
    like IS_VISIBLE or whatever */
 enum {
-#if 0
-	SAMPLE_CHANGED = (1 << 0),
-	INSTRUMENT_CHANGED = (1 << 1),
-#endif
+        /* if this flag is set, the screen will be redrawn */
+        NEED_UPDATE = (1 << 0),
+
+	/* is the current palette "backwards"? (used to make the borders look right) */
+	INVERTED_PALETTE = (1 << 1),
+
         DIR_MODULES_CHANGED = (1 << 2),
         DIR_SAMPLES_CHANGED = (1 << 3),
         DIR_INSTRUMENTS_CHANGED = (1 << 4),
 
-        /* if this flag is set, the screen will be redrawn */
-        NEED_UPDATE = (1 << 5),
-
         /* these refer to the window's state.
          * (they're rather useless on the console ;) */
-        IS_FOCUSED = (1 << 6),
-        IS_VISIBLE = (1 << 7),
-        WM_AVAILABLE = (1 << 8),
+        IS_FOCUSED = (1 << 5),
+        IS_VISIBLE = (1 << 6),
+        WM_AVAILABLE = (1 << 7),
 
         /* if this is set, some stuff behaves differently
          * (grep the source files for what stuff ;) */
-        CLASSIC_MODE = (1 << 9),
+        CLASSIC_MODE = (1 << 8),
 	
 	/* make a backup file (song.it~) when saving a module? */
-	MAKE_BACKUPS = (1 << 10),
-	
-	/* is the current palette "backwards"? (used to make the borders look right) */
-	INVERTED_PALETTE = (1 << 11),
+	MAKE_BACKUPS = (1 << 9),
+	NUMBERED_BACKUPS = (1 << 10), /* song.it.3~ */
 
+	LAZY_REDRAW = (1 << 11),
+	
 	/* this is here if anything is "changed" and we need to whine to
 	the user if they quit */
 	SONG_NEEDS_SAVE = (1 << 12),
@@ -123,14 +122,12 @@ enum {
 	META_IS_CTRL = (1 << 21),
 	ALTGR_IS_ALT = (1 << 22),
 
-	LAZY_REDRAW = (1 << 23),
-
 	/* text-editor */
-	STARTUP_TEXTEDIT = (1 << 24),
-	PLAIN_TEXTEDIT = (1 << 25),
+	STARTUP_TEXTEDIT = (1 << 23),
+	PLAIN_TEXTEDIT = (1 << 24),
 
 	/* Devi Ever's hack */
-	CRAYOLA_MODE = (1 << 26),
+	CRAYOLA_MODE = (1 << 25),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
