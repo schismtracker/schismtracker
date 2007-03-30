@@ -166,7 +166,14 @@ else
 			AC_SUBST(SDL_LIBS)
 			AM_CONDITIONAL([USE_XV], [true])
 		else
-			AM_CONDITIONAL([USE_XV], [false])
+			if test "$ac_cv_header_X11_extensions_Xvlib_h" = "yes"
+			then
+				SDL_LIBS="$SDL_LIBS -lXv -lXext"
+				AC_SUBST(SDL_LIBS)
+				AM_CONDITIONAL([USE_XV], [true])
+			else
+				AM_CONDITIONAL([USE_XV], [false])
+			fi
 		fi
 	else
 		AM_CONDITIONAL([USE_XV], [false])
