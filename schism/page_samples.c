@@ -277,10 +277,10 @@ static void sample_list_predraw_hook(void)
 	widgets_samplelist[19].d.thumbbar.value = sample->vib_rate;
 
 	if (sample->flags & SAMP_STEREO) {
-		draw_text_len((unsigned char *) (has_data ? (sample->flags & SAMP_16_BIT ? "16 bits Stereo" : "8 bits Stereo") : "No sample"),
+		draw_text_len((unsigned char *) (has_data ? (sample->flags & SAMP_16_BIT ? "16 bit Stereo" : "8 bit Stereo") : "No sample"),
 		      13, 64, 22, 2, 0);
 	} else {
-		draw_text_len((unsigned char *) (has_data ? (sample->flags & SAMP_16_BIT ? "16 bits" : "8 bits") : "No sample"),
+		draw_text_len((unsigned char *) (has_data ? (sample->flags & SAMP_16_BIT ? "16 bit" : "8 bit") : "No sample"),
 		      13, 64, 22, 2, 0);
 	}
 	draw_text_len(numtostr(0, sample->length, (unsigned char *) buf), 13, 64, 23, 2, 0);
