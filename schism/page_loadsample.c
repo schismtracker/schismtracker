@@ -187,12 +187,12 @@ static void load_sample_draw_const(void)
 		} else if (f->smp_flags & SAMP_STEREO) {
 			draw_text_len((unsigned char *)
 				(f->smp_flags & SAMP_16_BIT
-				? "16 bits Stereo" : "8 bits Stereo"),
+				? "16 bit Stereo" : "8 bit Stereo"),
 			13, 64, 21, 2, 0);
 		} else {
 			draw_text_len((unsigned char *)
 				(f->smp_flags & SAMP_16_BIT
-				? "16 bits" : "8 bits"),
+				? "16 bit" : "8 bit"),
 			13, 64, 21, 2, 0);
 		}
 
