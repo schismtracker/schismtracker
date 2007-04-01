@@ -793,12 +793,12 @@ int rename_file(const char *old, const char *newf, int clobber)
 			break;
 		default:
 			/* eh... */
-			return 0;
+			return DMOZ_RENAME_ERRNO;
 		};
 
 		if (MoveFileEx(old,newf,MOVEFILE_REPLACE_EXISTING)) {
 			/* yay */
-			return 1;
+			return DMOZ_RENAME_OK;
 		}
 		/* this sometimes work with win95 and novell shares */
 		chmod(newf,0777);
@@ -809,24 +809,24 @@ int rename_file(const char *old, const char *newf, int clobber)
 
 		if (MoveFile(old, newf)) {
 			/* err.. yay! */
-			return 1;
+			return DMOZ_RENAME_OK;
 		}
 		/* okay, let's try again */
 		if (!DeleteFileA(newf)) {
 			/* no chance! */
-			return 0;
+			return DMOZ_RENAME_ERRNO;
 		}
 		if (MoveFile(old, newf)) {
 			/* .... */
-			return 1;
+			return DMOZ_RENAME_OK;
 		}
 		/* alright, thems the breaks. win95 eats your files,
 		and not a damn thing I can do about it.
 		*/
-		return 0;
+		return DMOZ_RENAME_ERRNO;
 	}
 #else
-	if (rename(old,newf) == -1) return 0;
+	if (rename(old,newf) == -1) return DMOZ_RENAME_ERRNO;
 #endif
-	return 1;
+	return DMOZ_RENAME_OK;
 }
