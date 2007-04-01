@@ -446,14 +446,14 @@ int make_backup_file(const char *filename, int numbered)
 			snprintf(buf, maxlen, "%s.%d~", filename, n++);
 			ret = rename_file(filename, buf, 0);
 		} while (ret == DMOZ_RENAME_EXISTS && n < 65536);
-		if (ret == 0)
+		if (ret == DMOZ_RENAME_ERRNO)
 			e = errno;
-		else if (ret == -1)
+		else if (ret != DMOZ_RENAME_OK)
 			e = EEXIST;
 	} else {
 		strcpy(buf, filename);
 		strcat(buf, "~");
-		if (!rename_file(filename, buf, 1))
+		if (rename_file(filename, buf, 1) == DMOZ_RENAME_ERRNO)
 			e = errno;
 	}
 	free(buf);
