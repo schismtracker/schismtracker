@@ -984,6 +984,16 @@ static int note_trans_handle_key(struct key_event * k)
 					new_line++;
 					break;
 				}
+                                
+				if (k -> sym == SDLK_PERIOD || k -> sym == SDLK_DELETE)
+                                	{
+					ins->sample_map[note_trans_sel_line] = 0;
+					new_line += (k -> sym == SDLK_PERIOD) ? 1 : 0;
+					break;
+					}
+                                if (k -> sym == SDLK_COMMA)
+                                	break;
+                                        
 				c = kbd_char_to_hex(k);
 				if (c < 0 || c > 9) return 0;
 				n = ins->sample_map[note_trans_sel_line];
