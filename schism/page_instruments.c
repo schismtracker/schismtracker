@@ -842,8 +842,9 @@ static int note_trans_handle_key(struct key_event * k)
         int prev_pos = note_trans_cursor_pos;
         int new_pos = prev_pos;
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
-        char c;
-        int n;
+        /* char c; */
+        char *digit_string = "0123456789HIJKLMNOPQR";
+        int c, i, n;
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 		if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
@@ -974,7 +975,8 @@ static int note_trans_handle_key(struct key_event * k)
 				new_line++;
 				break;
                                 
-                                /* TODO: Make it possible to enter H to R letters for expanded sample slots.  -delt. */
+                                /* Made it possible to enter H to R letters
+                                on 1st digit for expanded sample slots.  -delt. */
                                 
 			case 2:        /* instrument, first digit */
 			case 3:        /* instrument, second digit */
@@ -994,17 +996,22 @@ static int note_trans_handle_key(struct key_event * k)
                                 if (k -> sym == SDLK_COMMA)
                                 	break;
                                         
-				c = kbd_char_to_hex(k);
-				if (c < 0 || c > 9) return 0;
+				/* c = kbd_char_to_hex(k); */
+                                c = 0; k -> unicode = toupper (k -> unicode);
+                                while (c < 21 && k -> unicode != digit_string [c])
+                                	c++;
 				n = ins->sample_map[note_trans_sel_line];
 				if (note_trans_cursor_pos == 2) {
+					if (c < 0 || c > 20) return 0;
 					n = (c * 10) + (n % 10);
 					new_pos++;
 				} else {
+					if (c < 0 || c > 9) return 0;
 					n = ((n / 10) * 10) + c;
 					new_pos--;
 					new_line++;
 				}
+                                if (n > 200) n = 200;
 				ins->sample_map[note_trans_sel_line] = n;
 				sample_set(n);
 				break;
