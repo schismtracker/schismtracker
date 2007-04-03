@@ -973,6 +973,9 @@ static int note_trans_handle_key(struct key_event * k)
 				ins->note_map[note_trans_sel_line] = n;
 				new_line++;
 				break;
+                                
+                                /* TODO: Make it possible to enter H to R letters for expanded sample slots.  -delt. */
+                                
 			case 2:        /* instrument, first digit */
 			case 3:        /* instrument, second digit */
 				if (k->sym == SDLK_SPACE) {
