@@ -80,6 +80,7 @@ void diskwriter_dialog_progress(unsigned int perc)
 	}
 
 	dg_progress = perc;
+	status.flags |= NEED_UPDATE;
 }
 void diskwriter_dialog_finished(void)
 {
@@ -90,4 +91,5 @@ void diskwriter_dialog_finished(void)
 		dialog_destroy_all(); /* poop */
 	}
 	dg_progress = 100;
+	status.flags |= NEED_UPDATE;
 }
