@@ -540,9 +540,10 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 	sample->sustain_end = (unsigned long)((((double)newlen) * ((double)sample->sustain_end))
 			/ ((double)sample->length));
 
-	if (sample->flags & SAMP_STEREO) newlen *= 2;
-	oldlen = (sample->flags & SAMP_STEREO) ? sample->length * 2
-					: sample->length;
+	oldlen = sample->length;
+	sample->length = newlen;
+	if (sample->flags & SAMP_STEREO) { newlen *= 2; oldlen *= 2; }
+
 	if (sample->flags & SAMP_16_BIT) {
 		if (aa) {
 			_resize_16aa((signed short *) d, newlen, (short *)sample->data, oldlen);
@@ -557,7 +558,6 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 		}
 	}
 
-	sample->length = newlen;
 	sample->data = (signed char *) d;
 	song_sample_free((signed char *) z);
 	song_unlock_audio();
