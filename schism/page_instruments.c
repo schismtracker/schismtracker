@@ -843,8 +843,8 @@ static int note_trans_handle_key(struct key_event * k)
         int new_pos = prev_pos;
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
         /* char c; */
-        char *digit_string = "0123456789HIJKLMNOPQR";
-        int c, i, n;
+        const char *digit_string = "0123456789HIJKLMNOPQR";
+        int c, n;
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 		if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
@@ -998,7 +998,7 @@ static int note_trans_handle_key(struct key_event * k)
                                         
 				/* c = kbd_char_to_hex(k); */
                                 c = 0; k -> unicode = toupper (k -> unicode);
-                                while (c < 21 && k -> unicode != digit_string [c])
+                                while (c < 21 && k->unicode != digit_string[c])
                                 	c++;
 				n = ins->sample_map[note_trans_sel_line];
 				if (note_trans_cursor_pos == 2) {
