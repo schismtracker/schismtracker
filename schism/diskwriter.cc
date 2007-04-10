@@ -62,6 +62,11 @@ static void _dw_times_3(int *buffer, unsigned long samples, unsigned long channe
 #endif
 
 
+/* this buffer is used for diskwriting; stdio seems to use a much
+ * smaller buffer which is PAINFULLY SLOW on devices with -o sync
+ */
+static char dwbuf[65536];
+
 static unsigned char diskbuf[32768];
 static diskwriter_driver_t *dw = NULL;
 static FILE *fp = NULL;
@@ -300,6 +305,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 			return DW_ERROR;
 		}
 		close(fd);
+		setvbuf(fp, dwbuf, _IOFBF, sizeof(dwbuf));
 		break; /* got file! */
 	}
 
