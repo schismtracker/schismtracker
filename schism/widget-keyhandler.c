@@ -96,6 +96,10 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 	const char *asciidigits = "0123456789";
 	struct dialog *dialog;
 	
+	if (!NO_MODIFIER(k->mod)) {
+		/* annoying */
+		return 0;
+	}
 	if (k->sym == SDLK_MINUS) {
 		if (widget->d.thumbbar.min >= 0)
 			return 0;
