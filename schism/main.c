@@ -880,7 +880,7 @@ static void event_loop(void)
 			/* let dmoz build directory lists, etc
 			as long as there's no user-event going on...
 			*/
-			while (dmoz_worker() && !SDL_PollEvent(0))
+			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(0))
 				/* nothing */;
 		}
 	}
