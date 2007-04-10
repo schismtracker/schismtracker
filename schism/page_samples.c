@@ -1054,9 +1054,14 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		song_toggle_multichannel_mode();
 		return;
 	case SDLK_q:
-		if (sample->data != NULL)
-			dialog_create(DIALOG_YES_NO, "Convert sample?",
+		if (sample->data != NULL) {
+			if (sample->flags & SAMP_STEREO) {
+				do_quality_convert();
+			} else {
+				dialog_create(DIALOG_YES_NO, "Convert sample?",
 				      do_quality_convert, do_quality_toggle, 0, NULL);
+			}
+		}
 		return;
 	case SDLK_o:
 		sample_save(NULL, SSMP_ITS);
