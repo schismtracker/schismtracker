@@ -263,7 +263,7 @@ char *str_escape(const char *source, int space_hack)
 			*q++ = '0';
 			*q++ = '4';
 			*q++ = '0';
-			*p++;
+			p++;
 		}
 	}
 	
