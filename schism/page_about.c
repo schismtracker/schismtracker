@@ -34,7 +34,7 @@
 #define LOGO_PITCH 292
 #define LOGO_HEIGHT 50
 
-
+static int fake_driver = 0;
 static SDL_Surface *it_logo = 0;
 static SDL_Surface *schism_logo = 0;
 
@@ -119,8 +119,16 @@ static void about_draw_const(void)
 		if (strcasecmp((char *) song_audio_driver(), "nosound") == 0) {
 			draw_text((unsigned char *) "No sound card detected", 29, 28, 0, 2);
 		} else {
-			draw_text((unsigned char *) "Sound Blaster 16 detected", 26, 28, 0, 2);
-			draw_text((unsigned char *) "Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
+			switch (fake_driver) {
+			case 0:
+				draw_text((unsigned char *) "Sound Blaster 16 detected", 26, 28, 0, 2);
+				draw_text((unsigned char *) "Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
+				break;
+			case 1:
+				draw_text((unsigned char *) "Gravis UltraSound detected", 26, 28, 0, 2);
+				draw_text((unsigned char *) "Port 240h, IRQ 5, 1024k RAM", 26, 29, 0, 2);
+				break;
+			};
 		}
 	} else {
 		snprintf(buf, 80, "Using %s on %s", song_audio_driver(), video_driver_name());
@@ -144,6 +152,8 @@ void show_about(void)
 	unsigned char *p;
 	int x, y;
 	
+	fake_driver = (rand() & 3) ? 0 : 1;
+
 	if (!didit) {
 		vgamem_font_reserve(&logo_image);
 		it_logo = xpmdata(_logo_it_xpm);
