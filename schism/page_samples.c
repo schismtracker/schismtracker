@@ -1056,7 +1056,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 	case SDLK_q:
 		if (sample->data != NULL) {
 			if (sample->flags & SAMP_STEREO) {
-				do_quality_convert();
+				do_quality_convert(0);
 			} else {
 				dialog_create(DIALOG_YES_NO, "Convert sample?",
 				      do_quality_convert, do_quality_toggle, 0, NULL);
