@@ -209,13 +209,13 @@ static void _quality_convert_16to8(signed short *idata, signed char *odata, unsi
 
 void sample_toggle_quality(song_sample * sample, int convert_data)
 {
+	signed char *odata;
+		
 	song_lock_audio();
 	sample->flags ^= SAMP_16_BIT;
 	
 	status.flags |= SONG_NEEDS_SAVE;
         if (convert_data) {
-		signed char *odata;
-		
 		if (sample->flags & SAMP_16_BIT) {
 			odata = song_sample_allocate(2 * sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
 			_quality_convert_8to16(sample->data, (signed short *) odata, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
