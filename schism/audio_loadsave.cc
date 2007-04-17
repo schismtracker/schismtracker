@@ -903,7 +903,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	hdr.smpnum = bswapLE16(nsmp);
 	hdr.patnum = bswapLE16(npat);
 	// No one else seems to be using the cwtv's tracker id number, so I'm gonna take 1. :)
-	hdr.cwtv = bswapLE16(0x1020); // cwtv 0xtxyy = tracker id t, version x.yy
+	hdr.cwtv = bswapLE16(0x1050); // cwtv 0xtxyy = tracker id t, version x.yy
 	// compat:
 	//     really simple IT files = 1.00 (when?)
 	//     "normal" = 2.00

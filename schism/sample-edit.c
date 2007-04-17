@@ -518,6 +518,9 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 	if (!newlen) return;
 	if (!sample->data || !sample->length) return;
 
+	/* resizing samples while they're playing keeps crashing things.
+	so here's my "fix": stop the song. --plusminus */
+	song_stop();
 	song_lock_audio();
 	bps = (((sample->flags & SAMP_STEREO) ? 2 : 1)
 		* ((sample->flags & SAMP_16_BIT) ? 2 : 1));
