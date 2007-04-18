@@ -117,11 +117,13 @@ static void _clippy_copy_to_sys(int do_sel)
 	}
 #elif defined(WIN32)
 	if (!do_sel && OpenClipboard(SDL_Window)) {
-		_hmem = GlobalAlloc((GMEM_MOVEABLE|GMEM_DDESHARE), j);
+		_hmem = GlobalAlloc((GMEM_MOVEABLE|GMEM_DDESHARE), j+1);
 		if (_hmem) {
 			dst = (char *)GlobalLock(_hmem);
 			if (dst) {
+				/* this seems wrong, but msdn does this */
 				memcpy(dst, _current_selection, j);
+				dst[j] = '\0'; 
 				GlobalUnlock(_hmem);
 				EmptyClipboard();
 				SetClipboardData(CF_TEXT, _hmem);
