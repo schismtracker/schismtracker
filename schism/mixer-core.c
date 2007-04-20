@@ -94,7 +94,7 @@ void mixer_setup(void)
 int mixer_get_max_volume(void)
 {
 	if (__mixer_get_max_volume) return __mixer_get_max_volume();
-	return 0;
+	return 1; /* Can't return 0, that breaks things. */
 }
 void mixer_read_volume(int *left, int *right)
 {
