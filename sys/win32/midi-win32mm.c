@@ -97,40 +97,40 @@ static void _win32mm_send(struct midi_port *p, unsigned char *data,
 
 
 
-static CALLBACK PASCAL void _win32mm_xp_output(UNUSED UINT uTimerID,
+
+struct curry {
+	struct midi_port *p;
+	unsigned char *d;
+	unsigned int len;
+};
+
+
+static CALLBACK void _win32mm_xp_output(UNUSED UINT uTimerID,
 			UNUSED UINT uMsg,
 			DWORD_PTR dwUser,
 			DWORD_PTR dw1,
 			DWORD_PTR dw2)
 {
-	LPMIDIHDR data;
-	HMIDIOUT out;
-
-	data = (LPMIDIHDR)dwUser;
-	out = (HMIDIOUT)data->dwUser;
-	(void)midiOutLongMsg(out, data, sizeof(MIDIHDR));
+	struct curry *c;
+	c = (struct curry *)dwUser;
+	_win32mm_send(c->p, c->d, c->len, 0);
+	free(c);
 }
 static void _win32mm_send_xp(struct midi_port *p, unsigned char *buf,
 		unsigned int len, unsigned int delay)
 {
-#if 0
 	/* version for windows XP */
-	struct win32mm_midi *m;
+	struct curry *c;
 
 	if (!delay) _win32mm_send(p,buf,len,0);
 	if (len == 0) return;
 
-	_win32mm_sysex(&m->obuf, buf, len);
-	if (!m->obuf) return;
-
-	if (midiOutPrepareHeader(m->out, m->obuf, sizeof(MIDIHDR)) == MMSYSERR_NOERROR) {
-		/* XXX this crashes? */
-		m->obuf->dwUser = (DWORD)m->out;
-		XP_timeSetEvent(delay, mm_period,
-					_win32mm_xp_output, (DWORD_PTR)m->obuf,
+	c = mem_alloc(sizeof(struct curry) + len);
+	c->p = p;
+	c->d = ((unsigned char*)c)+sizeof(struct curry);
+	c->len = len;
+	XP_timeSetEvent(delay, mm_period, _win32mm_xp_output, (DWORD_PTR)c,
 					TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
-	}
-#endif
 }
 
 static CALLBACK void  _win32mm_inputcb(HMIDIIN in, UINT wmsg, DWORD inst,
