@@ -44,9 +44,9 @@ void vgamem_font_putpixel(struct vgamem_overlay *n, int x, int y);
 void vgamem_font_clearpixel(struct vgamem_overlay *n, int x, int y);
 void vgamem_font_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye);
 
-void vgamem_scan32(unsigned int y,unsigned int *out,unsigned int tc[16]);
-void vgamem_scan16(unsigned int y,unsigned short *out,unsigned int tc[16]);
-void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16]);
+void vgamem_scan32(unsigned int y,unsigned int *out,unsigned int tc[16], unsigned int mouse_line[80]);
+void vgamem_scan16(unsigned int y,unsigned short *out,unsigned int tc[16], unsigned int mouse_line[80]);
+void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16], unsigned int mouse_line[80]);
 
 /* video output routines */
 const char *video_driver_name(void);
@@ -63,8 +63,6 @@ void video_translate(unsigned int vx, unsigned int vy,
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);
-
-void video_scanmouse(unsigned int y, unsigned char *mousebox, unsigned int *x);
 
 int video_is_fullscreen(void);
 
