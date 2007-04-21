@@ -477,6 +477,27 @@ void song_stop_unlocked()
 	if (!mp) return;
 
 	if (midi_playing) {
+		unsigned char moff[4];
+
+		/* shut off everything; not IT like, but less annoying */
+		for (int chan = 0; chan < 64; chan++) {
+			if (note_tracker[chan] != 0) {
+				for (int j = 0; j < 16; j++) {
+					mp->ProcessMidiMacro(chan,
+						&mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
+						0, note_tracker[chan], 0, j);
+				}
+				moff[0] = 0x80 + chan;
+				moff[1] = note_tracker[chan];
+				mp->MidiSend((unsigned char *)moff, 2);
+			}
+		}
+		for (int j = 0; j < 16; j++) {
+			moff[0] = 0xe0 + j;
+			moff[1] = 0;
+			mp->MidiSend((unsigned char *)moff, 2);
+		}
+
 		// send all notes off
 #define _MIDI_PANIC	"\xb0\x78\0\xb0\x79\0\xb0\x7b\0"
 		mp->MidiSend((unsigned char *)_MIDI_PANIC,
