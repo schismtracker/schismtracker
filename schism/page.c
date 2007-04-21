@@ -542,6 +542,24 @@ static int handle_key_global(struct key_event * k)
                 }
                 break;
 #endif
+	case SDLK_i:
+		/* reset audio stuff? */
+                if (k->mod & KMOD_CTRL) {
+			if (k->state) return 1;
+			if (status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN)) {
+				/* never allowed */
+				return 1;
+			}
+                        song_stop();
+			song_init_audio(0);
+			if (status.flags & CLASSIC_MODE)
+				status_text_flash("Sound Blaster 16 reinitialised");
+			else
+				status_text_flash("Audio output reinitialised");
+                        status.flags |= NEED_UPDATE;
+                        return 1;
+		}
+		break;
         case SDLK_e:
                 /* This should reset everything display-related. */
                 if (k->mod & KMOD_CTRL) {
