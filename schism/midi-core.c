@@ -623,7 +623,7 @@ struct qent {
 static struct qent *qq = 0;
 static int ms10s, qlen;
 
-void midi_queue_alloc(int audio_buffer_size, int channels, int samples_per_second)
+void midi_queue_alloc(int my_audio_buffer_size, int channels, int samples_per_second)
 {
 	if (qq) {
 		free(qq);
@@ -637,16 +637,16 @@ void midi_queue_alloc(int audio_buffer_size, int channels, int samples_per_secon
 	if ((ms10s % 80) != 0) ms10s += (80 - (ms10s % 80));
 	ms10s /= 80;
 
-	if (ms10s > audio_buffer_size) {
+	if (ms10s > my_audio_buffer_size) {
 		/* okay, there's not even 10msec of audio data; midi queueing will be impossible */
 		qlen = 0;
 		return;
 	}
 
-	if ((audio_buffer_size % ms10s) != 0) {
-		audio_buffer_size += (ms10s - (audio_buffer_size % ms10s));
+	if ((my_audio_buffer_size % ms10s) != 0) {
+		my_audio_buffer_size += (ms10s - (my_audio_buffer_size % ms10s));
 	}
-	qlen = audio_buffer_size / ms10s;
+	qlen = my_audio_buffer_size / ms10s;
 	/* now qlen is the number of msec in digital output buffer */
 
 	qq = malloc(qlen * sizeof(struct qent));
@@ -693,7 +693,6 @@ void midi_send_flush(void)
 {
 	struct midi_port *ptr;
 	int need_explicit_flush = 0;
-	int i;
 
 	if (!midi_record_mutex || !midi_play_mutex) return;
 
@@ -751,7 +750,7 @@ void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 		/* grr, we need a timer */
 
 		/* calculate pos in buffer */
-		assert(pos > 0 && pos < qlen);
+		assert(((unsigned)pos) < ((unsigned)qlen));
 
 		if ((len + qq[pos].used) > sizeof(qq[pos].b)) {
 			len = sizeof(qq[pos].b) - qq[pos].used;
