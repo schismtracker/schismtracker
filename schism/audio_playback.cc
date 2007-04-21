@@ -59,13 +59,6 @@ struct audio_settings audio_settings;
 static void _schism_midi_out_note(int chan, const MODCOMMAND *m);
 static void _schism_midi_out_raw(unsigned char *data, unsigned int len, unsigned int delay);
 
-unsigned int song_buffer_msec(void)
-{
-	unsigned int nm;
-	nm = CSoundFile::gdwMixingFreq / audio_buffer_size;
-	return nm;
-}
-
 // ------------------------------------------------------------------------
 // playback
 
@@ -1519,6 +1512,7 @@ void song_init_eq(int do_reset)
 	mp->SetEQGains(pg, 4, pf, do_reset ? TRUE : FALSE);
 }
 
+
 void song_init_modplug(void)
 {
 	song_lock_audio();
@@ -1550,6 +1544,9 @@ void song_init_modplug(void)
 	// disable the S91 effect? (this doesn't make anything faster, it
 	// just sounds better with one woofer.)
 	song_set_surround(audio_settings.surround_effect);
+
+	// update midi queue configuration
+	midi_queue_alloc(audio_buffer_size, audio_sample_size, CSoundFile::gdwMixingFreq) ;
 	
 	song_unlock_audio();
 }
