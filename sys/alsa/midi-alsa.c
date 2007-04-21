@@ -417,8 +417,9 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 }
 int alsa_midi_setup(void)
 {
-	snd_seq_queue_tempo_t *tempo;
-	struct midi_driver driver;
+	static snd_seq_queue_tempo_t *tempo;
+	static struct midi_driver driver;
+
 #ifdef USE_DLTRICK_ALSA
 	if (!dlsym(_dltrick_handle,"snd_seq_open")) return 0;
 #endif
