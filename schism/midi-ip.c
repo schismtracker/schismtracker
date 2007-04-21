@@ -229,6 +229,7 @@ static void _ip_send(struct midi_port *p, unsigned char *data, unsigned int len,
 		if (sendto(out_fd, data, ss, 0,
 				(struct sockaddr *)&asin,sizeof(asin)) < 0) {
 			state[n] &= (~2); /* turn off output */
+			break;
 		}
 		len -= ss;
 		data += ss;
@@ -263,6 +264,8 @@ int ip_midi_setup(void)
 	struct midi_driver driver;
 #ifdef WIN32
 	WSADATA ignored;
+
+	memset(&ignored, 0, sizeof(ignored));
 	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
 		WSACleanup(); /* ? */
 		return 0;
