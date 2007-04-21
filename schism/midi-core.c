@@ -442,8 +442,8 @@ struct midi_provider *midi_provider_register(const char *name,
 		n->drain = driver->drain;
 	} else {
 		n->send_later = NULL;
-		n->drain = NULL;
 		n->send_now = driver->send;
+		n->drain = NULL;
 	}
 
 	SDL_mutexP(midi_mutex);
@@ -558,8 +558,10 @@ fflush(stdout);
 		ptr = 0;
 		while (midi_port_foreach(NULL, &ptr)) {
 			if ((ptr->io & MIDI_OUTPUT)) {
-				if (ptr->send_now) ptr->send_now(ptr, data, len, 0);
-				else if (ptr->send_later) ptr->send_later(ptr, data, len, 0);
+				if (ptr->send_now)
+					ptr->send_now(ptr, data, len, 0);
+				else if (ptr->send_later)
+					ptr->send_later(ptr, data, len, 0);
 			}
 		}
 	} else if (from == 1) {
@@ -567,7 +569,8 @@ fflush(stdout);
 		ptr = 0;
 		while (midi_port_foreach(NULL, &ptr)) {
 			if ((ptr->io & MIDI_OUTPUT)) {
-				if (ptr->send_now) ptr->send_now(ptr, data, len, 0);
+				if (ptr->send_now)
+					ptr->send_now(ptr, data, len, 0);
 			}
 		}
 	} else {
@@ -575,8 +578,10 @@ fflush(stdout);
 		ptr = 0;
 		while (midi_port_foreach(NULL, &ptr)) {
 			if ((ptr->io & MIDI_OUTPUT)) {
-				if (ptr->send_later) ptr->send_later(ptr, data, len, delay);
-				else if (ptr->send_now) need_timer = 1;
+				if (ptr->send_later)
+					ptr->send_later(ptr, data, len, delay);
+				else if (ptr->send_now)
+					need_timer = 1;
 			}
 		}
 	}
