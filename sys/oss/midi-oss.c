@@ -157,7 +157,7 @@ static void _oss_poll(struct midi_provider *_oss_provider)
 }
 int oss_midi_setup(void)
 {
-	struct midi_driver driver;
+	static struct midi_driver driver;
 	int i;
 
 	driver.flags = 0;

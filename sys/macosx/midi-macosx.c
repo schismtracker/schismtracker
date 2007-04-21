@@ -190,7 +190,7 @@ static void _macosx_poll(struct midi_provider *p)
 
 int macosx_midi_setup(void)
 {
-	struct midi_driver driver;
+	static struct midi_driver driver;
 
 	memset(&driver,0,sizeof(driver));
 	driver.flags = MIDI_PORT_CAN_SCHEDULE;
