@@ -38,6 +38,7 @@
 #include "dmoz.h"
 
 #include <ctype.h>
+#include <assert.h>
 
 static int _connected = 0;
 /* midi_mutex is locked by the main thread,
@@ -598,24 +599,70 @@ void midi_send_now(unsigned char *seq, unsigned int len)
 
 /*----------------------------------------------------------------------------------*/
 
-struct midi_pl {
-	unsigned int pos;
-	unsigned char buffer[4096];
-	unsigned int len;
-	struct midi_pl *next;
-	/* used by timer */
-	unsigned long rpos;
+/* okay, our local queue is a little confusing,
+ * but it works on the premise that the people who need it (oss)
+ * also have systems with high-speed context switches.
+ *
+ * this sucks for freebsd/386 users as they've got a high-latency
+ * audio system (oss) and slow context switches (x86). someone should
+ * port alsa to freebsd. maybe someone else will solve this problem,
+ * or maybe the computers that are slow enough to matter simply won't
+ * be bothered.
+ *
+ * midi, that is, real midi, is 31250bps. that's 3125 bits per msec,
+ * or 391 bytes per msec. i use a fixed buffer here because access needs
+ * to be fast, and attempting to handle more will simply help people
+ * using software/only setups.
+ *
+ * really, software-only midi, without kernel assistance sucks.
+ */
+struct qent {
+	int used;
+	unsigned char b[391];
 };
+static struct qent *qq = 0;
+static int ms10s, qlen;
 
-static struct midi_pl *top = 0;
-static struct midi_pl *top_free = 0;
-static SDL_Thread *midi_sync_thread = 0;
-
-static struct midi_pl *ready = 0;
-
-static int __out_detatched(UNUSED void *xtop)
+void midi_queue_alloc(int audio_buffer_size, int channels, int samples_per_second)
 {
-	struct midi_pl *x, *y;
+	if (qq) {
+		free(qq);
+		qq=0;
+	}
+
+	/* how long is the audio buffer in 10 msec?
+	 * well, (channels*samples_per_second)/80 is the number of bytes per msec
+	 */
+	ms10s = channels * samples_per_second;
+	if ((ms10s % 80) != 0) ms10s += (80 - (ms10s % 80));
+	ms10s /= 80;
+
+	if (ms10s > audio_buffer_size) {
+		/* okay, there's not even 10msec of audio data; midi queueing will be impossible */
+		qlen = 0;
+		return;
+	}
+
+	if ((audio_buffer_size % ms10s) != 0) {
+		audio_buffer_size += (ms10s - (audio_buffer_size % ms10s));
+	}
+	qlen = audio_buffer_size / ms10s;
+	/* now qlen is the number of msec in digital output buffer */
+
+	qq = malloc(qlen * sizeof(struct qent));
+	if (!qq) {
+		/* memory allocation failed. something else is bound to die real soon now */
+		return;
+	}
+	/* zero it out */
+	memset(qq, 0, sizeof(struct qent)*qlen);
+}
+
+static SDL_Thread *midi_queue_thread = 0;
+
+static int _midi_queue_run(UNUSED void *xtop)
+{
+	int i;
 
 #ifdef WIN32
 	__win32_pick_usleep();
@@ -625,28 +672,18 @@ static int __out_detatched(UNUSED void *xtop)
 #endif
 
 	SDL_mutexP(midi_play_mutex);
-STARTFRAME:
-	do {
-		SDL_CondWait(midi_play_cond, midi_play_mutex);
-		x = y = (struct midi_pl *)ready;
-	} while (!x);
-	ready = 0; /* sanity check */
 	for (;;) {
-		SDL_mutexP(midi_record_mutex);
-		_midi_send_unlocked(x->buffer, x->len, 0, 1);
-		SDL_mutexV(midi_record_mutex);
+		SDL_CondWait(midi_play_cond, midi_play_mutex);
 
-		if (!x->next) {
-			/* remove them all */
+		for (i = 0; i < qlen; i++) {
 			SDL_mutexP(midi_record_mutex);
-			x->next = top_free;
-			top_free = y;
+			_midi_send_unlocked(qq[i].b, qq[i].used, 0, 1);
 			SDL_mutexV(midi_record_mutex);
-			goto STARTFRAME;
+			SLEEP_FUNC(10000); /* 10msec */
+			qq[i].used = 0;
 		}
-		x = x->next;
-		if (x->rpos) SLEEP_FUNC(x->rpos);
 	}
+
 	/* this is dead code because gcc is brain damaged and storlek
 	thinks gcc knows better than me. */
 	return 0;
@@ -654,10 +691,9 @@ STARTFRAME:
 
 void midi_send_flush(void)
 {
-	struct midi_pl *x;
 	struct midi_port *ptr;
-	unsigned int acc;
 	int need_explicit_flush = 0;
+	int i;
 
 	if (!midi_record_mutex || !midi_play_mutex) return;
 
@@ -672,83 +708,24 @@ void midi_send_flush(void)
 	/* no need for midi sync huzzah; driver does it for us... */
 	if (!need_explicit_flush) return;
 
-	while (!midi_sync_thread && top) {
-		midi_sync_thread = SDL_CreateThread(__out_detatched, top);
-		if (midi_sync_thread) {
-			log_appendf(3, "Started MIDI sync thread");
-			break;
-		}
-		log_appendf(2, "AAACK: Couldn't start off MIDI, sending ahead");
-
-		SDL_mutexP(midi_record_mutex);
-		_midi_send_unlocked(top->buffer, top->len, 0, 1);
-		x = top->next;
-		top->next = top_free;
-		top_free = top;
-		top = x;
-		SDL_mutexV(midi_record_mutex);
-	}
-	if (!top) return;
-
-	SDL_mutexP(midi_record_mutex);
-	/* calculate relative */
-	acc = 0;
-	for (x = top; x; x = x->next) {
-		x->rpos = x->pos - acc;
-		acc = x->pos;
-	}
-
-	x = top;
-	top = 0;
-	SDL_mutexV(midi_record_mutex);
-
-	if (x) {
-		SDL_mutexP(midi_play_mutex);
-		ready = x;
-		SDL_CondSignal(midi_play_cond);
-		SDL_mutexV(midi_play_mutex);
-	}
-}
-static void __add_pl(struct midi_pl *x, unsigned char *data, unsigned int len)
-{
-	struct midi_pl *q;
-	int dr;
-
-#if 0
-printf("adding %u bytes\n",len);
-#endif
-RECURSE:
-	if (len + x->len < sizeof(x->buffer)) {
-		memcpy(x->buffer + x->len, data, len);
-		x->len += len;
-		return;
-	}
-
-	memcpy(x->buffer + x->len, data, dr = (sizeof(x->buffer) - x->len));
-	len -= dr;
-
-	if (len > 0) {
-		/* overflow */
-		if (top_free) {
-			q = top_free;
-			top_free = top_free->next;
+	if (!midi_queue_thread) {
+		midi_queue_thread = SDL_CreateThread(_midi_queue_run, 0);
+		if (midi_queue_thread) {
+			log_appendf(3, "Started MIDI queue thread");
 		} else {
-			q = mem_alloc(sizeof(struct midi_pl));
+			log_appendf(2, "AAACK: Couldn't start off MIDI thread; things are likely going to go boom!");
 		}
-		q->pos = x->pos;
-		q->len = 0;
-		q->next = x->next;
-		x->next = q;
-		x = q;
-		goto RECURSE;	
 	}
+
+	SDL_mutexP(midi_play_mutex);
+	SDL_CondSignal(midi_play_cond);
+	SDL_mutexV(midi_play_mutex);
 }
 
 void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 {
-	struct midi_pl *x, *lx, *y;
-
-	pos /= song_buffer_msec();
+	/* pos is in bytes, find out the msec pointer */
+	pos /= ms10s;
 
 	if (!midi_record_mutex) return;
 
@@ -770,42 +747,21 @@ void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 	}
 
 	/* pos is still in miliseconds */
-	if (!_midi_send_unlocked(data, len, pos, 2)) {
-		/* rock, we don't need a timer... */
-		goto TAIL;
-	}
+	if (_midi_send_unlocked(data, len, pos, 2)) {
+		/* grr, we need a timer */
 
+		/* calculate pos in buffer */
+		assert(pos > 0 && pos < qlen);
 
-	pos *= 1000; /* microseconds for usleep */
-
-	lx = 0;
-	x = top;
-	while (x) {
-		if (x->pos == pos) {
-			__add_pl(x, data, len);
-			goto TAIL;
+		if ((len + qq[pos].used) > sizeof(qq[pos].b)) {
+			len = sizeof(qq[pos].b) - qq[pos].used;
+			/* okay, we're going to lose data here */
 		}
-		if (x->pos > pos) break; /* but after lx */
-		lx = x;
-		x = x->next;
+		memcpy(qq[pos].b+qq[pos].used, data, len);
+		qq[pos].used += len;
 	}
-	if (top_free) {
-		y = top_free;
-		top_free = top_free->next;
-	} else {
-		y = mem_alloc(sizeof(struct midi_pl));
-	}
-	y->next = x;
-	if (lx) {
-		lx->next = y;
-	} else {
-		/* then x = top */
-		top = y;
-	}
-	y->pos = pos;
-	y->len = 0;
-	__add_pl(y, data, len);
-TAIL:	SDL_mutexV(midi_record_mutex);
+
+	SDL_mutexV(midi_record_mutex);
 }
 
 /*----------------------------------------------------------------------------------*/
