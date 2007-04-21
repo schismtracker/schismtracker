@@ -193,25 +193,6 @@ static int int_log2(int val) {
 	return l;
 }
 
-/* used in vgamem-scanner.h */
-void video_scanmouse(unsigned int y, unsigned char *mousebox, unsigned int *x)
-{
-	unsigned int z, v;
-
-	if (!video.mouse.visible
-	    || !(status.flags & IS_FOCUSED)
-	    || y < video.mouse.y
-	    || y >= video.mouse.y+MOUSE_HEIGHT) {
-		*x = 255;
-		return;
-	}
-	*x = (video.mouse.x / 8);
-	v = (video.mouse.x % 8);
-	z = _mouse_pointer[ y - video.mouse.y ];
-	mousebox[0] = z >> v;
-	mousebox[1] = (z << (8-v)) & 0xff;
-}
-
 #ifdef MACOSX
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
@@ -1105,6 +1086,24 @@ void video_refresh(void)
 	vgamem_clear();
 }
 
+static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80])
+{
+	unsigned int z;
+
+	memset(mouseline, 0, 80*sizeof(unsigned int));
+	if (!video.mouse.visible
+	    || !(status.flags & IS_FOCUSED)
+	    || y < video.mouse.y
+	    || y >= video.mouse.y+MOUSE_HEIGHT) {
+		return;
+	}
+
+	z = _mouse_pointer[ y - video.mouse.y ];
+	mouseline[x] = z >> v;
+	if (x < 79) mouseline[x+1] = (z << (8-v)) & 0xff;
+}
+
+
 static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 {
 	unsigned int *csp, *esp, *dp;
@@ -1113,7 +1112,12 @@ static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 	unsigned int outr, outg, outb;
 	unsigned int pad;
 	int y, x, ey, ex, t1, t2, sstep;
+	unsigned int mouseline[80];
+	unsigned int mouseline_x, mouseline_v;
 	int iny, lasty;
+
+	mouseline_x = (video.mouse.x / 8);
+	mouseline_v = (video.mouse.x % 8);
 
 	csay = video.draw.say;
 	csp = (unsigned int *)video.cv32backing;
@@ -1123,16 +1127,18 @@ static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 	pad = pitch - (video.clip.w * bpp);
 	for (y = 0; y < video.clip.h; y++) {
 		if (iny != lasty) {
+			make_mouseline(mouseline_x, mouseline_v, iny, mouseline);
+
 			/* we'll downblit the colors later */
 			if (iny == lasty + 1) {
 				/* move up one line */
-				vgamem_scan32(iny+1, csp, video.tc_bgr32);
+				vgamem_scan32(iny+1, csp, video.tc_bgr32, mouseline);
 				dp = esp; esp = csp; csp=dp;
 			} else {
 				vgamem_scan32(iny, (csp = (unsigned int *)video.cv32backing),
-					video.tc_bgr32);
+					video.tc_bgr32, mouseline);
 				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)),
-					video.tc_bgr32);
+					video.tc_bgr32, mouseline);
 			}
 			lasty = iny;
 		}
@@ -1194,23 +1200,17 @@ static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 		iny += (*csay >> 16);
 	}
 }
-static inline void _blitii(unsigned char *pixels, unsigned int pitch,
-			unsigned int *tpal)
-{
-	/* okay, interlaced schedular */
-	int y;
-	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		vgamem_scan8(y, (unsigned char *)pixels, tpal);
-		*pixels = y;
-		pixels += pitch;
-	}
-
-}
 static inline void _blitYY(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
+	unsigned int mouseline_x = (video.mouse.x / 8);
+	unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned int mouseline[80];
 	int y;
+
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		vgamem_scan16(y, (unsigned short *)pixels, tpal);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline);
+
+		vgamem_scan16(y, (unsigned short *)pixels, tpal, mouseline);
 		memcpy(pixels+pitch,pixels,pitch);
 		pixels += pitch;
 		pixels += pitch;
@@ -1218,17 +1218,25 @@ static inline void _blitYY(unsigned char *pixels, unsigned int pitch, unsigned i
 }
 static inline void _blitUV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
+	unsigned int mouseline_x = (video.mouse.x / 8);
+	unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned int mouseline[80];
 	int y;
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		vgamem_scan8(y, (unsigned char *)pixels, tpal);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline);
+		vgamem_scan8(y, (unsigned char *)pixels, tpal, mouseline);
 		pixels += pitch;
 	}
 }
 static inline void _blitTV(unsigned char *pixels, UNUSED unsigned int pitch, unsigned int *tpal)
 {
+	unsigned int mouseline_x = (video.mouse.x / 8);
+	unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned int mouseline[80];
 	int y, x;
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
-		vgamem_scan8(y, (unsigned char *)video.cv8backing, tpal);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline);
+		vgamem_scan8(y, (unsigned char *)video.cv8backing, tpal, mouseline);
 		for (x = 0; x < NATIVE_SCREEN_WIDTH; x += 2) {
 			*pixels++ = video.cv8backing[x+1]
 				| (video.cv8backing[x] << 4);
@@ -1239,6 +1247,9 @@ static inline void _blitTV(unsigned char *pixels, UNUSED unsigned int pitch, uns
 static inline void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 			unsigned int *tpal, unsigned int *ipal)
 {
+	unsigned int mouseline_x = (video.mouse.x / 8);
+	unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned int mouseline[80];
 	unsigned char *pdata;
 	unsigned int x, y;
 	int pitch24;
@@ -1246,7 +1257,8 @@ static inline void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 	switch (bpp) {
 	case 4:
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			vgamem_scan32(y, (unsigned int *)pixels, tpal);
+			make_mouseline(mouseline_x, mouseline_v, y, mouseline);
+			vgamem_scan32(y, (unsigned int *)pixels, tpal, mouseline);
 			pixels += pitch;
 		}
 		break;
@@ -1257,7 +1269,8 @@ static inline void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 			return; /* eh? */
 		}
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			vgamem_scan32(y,(unsigned int*)video.cv32backing,tpal);
+			make_mouseline(mouseline_x, mouseline_v, y, mouseline);
+			vgamem_scan32(y,(unsigned int*)video.cv32backing,tpal, mouseline);
 			/* okay... */
 			pdata = video.cv32backing;
 			for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
@@ -1274,13 +1287,15 @@ static inline void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 		break;
 	case 2:
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			vgamem_scan16(y, (unsigned short *)pixels, tpal);
+			make_mouseline(mouseline_x, mouseline_v, y, mouseline);
+			vgamem_scan16(y, (unsigned short *)pixels, tpal, mouseline);
 			pixels += pitch;
 		}
 		break;
 	case 1:
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-			vgamem_scan8(y, (unsigned char *)pixels, ipal);
+			make_mouseline(mouseline_x, mouseline_v, y, mouseline);
+			vgamem_scan8(y, (unsigned char *)pixels, ipal, mouseline);
 			pixels += pitch;
 		}
 		break;
