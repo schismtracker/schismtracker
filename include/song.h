@@ -582,7 +582,8 @@ void song_init_instrument_from_sample(int ins, int samp);
 /* --------------------------------------------------------------------- */
 /* misc. */
 
-unsigned int song_buffer_msec(void);
+/* called by audio system when buffer stuff change */
+void midi_queue_alloc(int audio_buffer_size, int channels, int samples_per_second);
 
 void song_flip_stereo(void);
 
