@@ -33,6 +33,7 @@ typedef struct CPSProcessSerNum
 
 extern OSErr	CPSGetCurrentProcess( CPSProcessSerNum *psn);
 extern OSErr 	CPSEnableForegroundOperation( CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
+extern OSErr 	CPSSetProcessName ( ProcessSerialNumber *psn, char *processname);
 extern OSErr	CPSSetFrontProcess( CPSProcessSerNum *psn);
 
 static int    gArgc;
@@ -372,6 +373,9 @@ static void CustomApplicationMain (argc, argv)
 	
 	/* Tell the dock about us */
 	if (!CPSGetCurrentProcess(&PSN)) {
+		if (!macosx_did_finderlaunch) {
+			CPSSetProcessName(&PSN,"Schism Tracker");
+		}
 		if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
 			if (!CPSSetFrontProcess(&PSN))
 				[SDLApplication sharedApplication];
