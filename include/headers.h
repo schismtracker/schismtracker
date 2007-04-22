@@ -127,6 +127,11 @@ char *strchr(), *strrchr();
 # endif
 #endif
 
+#ifdef REALLY_BIG_ENDIAN
+#ifndef WORDS_BIGENDIAN
+#define WORDS_BIGENDIAN 1
+#endif
+#endif
 
 #ifdef NEED_BYTESWAP
 # if HAVE_BYTESWAP_H

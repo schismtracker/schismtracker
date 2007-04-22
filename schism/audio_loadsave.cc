@@ -33,10 +33,15 @@
 #include "midi.h"
 #include "diskwriter.h"
 
+#ifdef MACOSX
+#include <errno.h>
+#include <assert.h>
+#else
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
 #include <cassert>
+#endif
 
 #include <limits.h>
 
