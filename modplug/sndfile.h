@@ -973,8 +973,18 @@ typedef struct WAVEEXTRAHEADER
 #define MOD2XMFineTune(k)	((int)( (signed char)((k)<<4) ))
 #define XM2MODFineTune(k)	((int)( (k>>4)&0x0f ))
 
-int _muldiv(int a, int b, int c);
-int _muldivr(int a, int b, int c);
+// Return (a*b)/c - no divide error
+static inline int _muldiv(int a, int b, int c)
+{
+	return ((unsigned long long) a * (unsigned long long) b ) / c;
+}
+
+
+// Return (a*b+c/2)/c - no divide error
+static inline int _muldivr(int a, int b, int c)
+{
+	return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
+}
 
 
 #define NEED_BYTESWAP
