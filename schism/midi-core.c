@@ -621,7 +621,7 @@ struct qent {
 	unsigned char b[391];
 };
 static struct qent *qq = 0;
-static int ms10s, qlen;
+static int midims, ms10s, qlen;
 
 void midi_queue_alloc(int my_audio_buffer_size, int channels, int samples_per_second)
 {
@@ -633,9 +633,10 @@ void midi_queue_alloc(int my_audio_buffer_size, int channels, int samples_per_se
 	/* how long is the audio buffer in 10 msec?
 	 * well, (channels*samples_per_second)/80 is the number of bytes per msec
 	 */
-	ms10s = channels * samples_per_second;
-	if ((ms10s % 80) != 0) ms10s += (80 - (ms10s % 80));
-	ms10s /= 80;
+	midims = channels * samples_per_second;
+	if ((midims % 80) != 0) midims += (80 - (midims % 80));
+	ms10s = midims / 80;
+	midims /= 8;
 
 	if (ms10s > my_audio_buffer_size) {
 		/* okay, there's not even 10msec of audio data; midi queueing will be impossible */
@@ -723,9 +724,6 @@ void midi_send_flush(void)
 
 void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 {
-	/* pos is in bytes, find out the msec pointer */
-	pos /= ms10s;
-
 	if (!midi_record_mutex) return;
 
 	SDL_mutexP(midi_record_mutex);
@@ -746,10 +744,11 @@ void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 	}
 
 	/* pos is still in miliseconds */
-	if (_midi_send_unlocked(data, len, pos, 2)) {
+	if (_midi_send_unlocked(data, len, pos/midims, 2)) {
 		/* grr, we need a timer */
 
 		/* calculate pos in buffer */
+		pos /= ms10s;
 		assert(((unsigned)pos) < ((unsigned)qlen));
 
 		if ((len + qq[pos].used) > sizeof(qq[pos].b)) {
