@@ -29,10 +29,12 @@
 #include "diskwriter.h"
 #include "event.h"
 
+#ifndef MACOSX
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
 #include <cmath>
+#endif
 
 #include "sdlmain.h"
 

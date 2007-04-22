@@ -23,9 +23,11 @@
 #include "mplink.h"
 #include "slurp.h"
 
+#ifndef MACOSX
 #include <cstdio>
 #include <cstring>
 #include <cmath>
+#endif
 
 // ------------------------------------------------------------------------
 // variables
