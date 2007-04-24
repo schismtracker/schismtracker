@@ -1548,7 +1548,7 @@ void song_init_modplug(void)
 	song_set_surround(audio_settings.surround_effect);
 
 	// update midi queue configuration
-	midi_queue_alloc(audio_buffer_size, audio_sample_size, CSoundFile::gdwMixingFreq) ;
+	midi_queue_alloc(buffer_size, audio_sample_size, CSoundFile::gdwMixingFreq) ;
 	
 	song_unlock_audio();
 }
