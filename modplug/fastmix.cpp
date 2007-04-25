@@ -1487,11 +1487,11 @@ UINT CSoundFile::CreateStereoMix(int count)
 		{
 			// use hq-fir mixer?
 			if( (gdwSoundSetup & (SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE)) == (SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE) )
-				nFlags += MIXNDX_FIRSRC;
+				nFlags |= MIXNDX_FIRSRC;
 			else if( (gdwSoundSetup & SNDMIX_HQRESAMPLER))
-				nFlags += MIXNDX_SPLINESRC;
+				nFlags |= MIXNDX_SPLINESRC;
 			else
-				nFlags += MIXNDX_LINEARSRC; // use
+				nFlags |= MIXNDX_LINEARSRC; // use
 		}
 		if ((nFlags < 0x40) && (pChannel->nLeftVol == pChannel->nRightVol)
 		 && ((!pChannel->nRampLength) || (pChannel->nLeftRamp == pChannel->nRightRamp)))
