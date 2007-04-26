@@ -33,7 +33,7 @@ typedef struct CPSProcessSerNum
 
 extern OSErr	CPSGetCurrentProcess( CPSProcessSerNum *psn);
 extern OSErr 	CPSEnableForegroundOperation( CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
-extern OSErr 	CPSSetProcessName ( CPSProcessSerialNumber *psn, char *processname);
+extern OSErr 	CPSSetProcessName ( CPSProcessSerNum *psn, char *processname);
 extern OSErr	CPSSetFrontProcess( CPSProcessSerNum *psn);
 
 static int    gArgc;
