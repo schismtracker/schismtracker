@@ -500,7 +500,19 @@ static void event_loop(void)
 	int downtrip;
 	int sawrep;
 	char *debug_s;
+	int fix_numlock_key;
 	int q;
+
+	if (status.fix_numlock_key == -2) {
+#ifdef MACOSX
+		/* do i have to detect ibook */
+		fix_numlock_key = 1;
+#else
+		fix_numlock_key = -1;
+#endif
+	} else {
+		fix_numlock_key = status.fix_numlock_key;
+	}
 
 	debug_s = getenv("SCHISM_DEBUG");
 
@@ -594,6 +606,10 @@ static void event_loop(void)
 			win32_get_modkey(&modkey);
 #endif
 			kk.sym = event.key.keysym.sym;
+			switch (fix_numlock_key) {
+			case 0: modkey &= ~KMOD_NUM; break;
+			case 1: modkey |= KMOD_NUM; break;
+			};
 			kk.mod = modkey;
 			kk.unicode = event.key.keysym.unicode;
 			kk.mouse = 0;
