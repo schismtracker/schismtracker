@@ -132,6 +132,8 @@ void cfg_load(void)
 	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, ptr);
 	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, ptr);
 	free(ptr);
+
+	status.fix_numlock_key = cfg_get_number(&cfg, "General", "fix_numlock_key", -2);
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 	
@@ -276,6 +278,9 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
+	if (status.fix_numlock_key != -2) {
+		cfg_set_number(&cfg, "General", "fix_numlock_key", status.fix_numlock_key);
+	}
 
 
 	/* hm... most of the time probably nothing's different, so saving the

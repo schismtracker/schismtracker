@@ -160,6 +160,14 @@ struct tracker_status {
 	/* clock is driven from the main/event thread */
 	time_t now;
 	int h, m, s;
+
+	/* fix the numlock key to...
+	 * 		0 = off
+	 * 		1 = on
+	 * 		-1 = don't fix it
+	 * 		-2 = don't fix it (except on macs that aren't ibooks)
+	 */
+	int fix_numlock_key;
 };
 
 
