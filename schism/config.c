@@ -113,6 +113,7 @@ static void cfg_save_palette(cfg_file_t *cfg)
 
 void cfg_load(void)
 {
+	char buf[4];
 	char *ptr;
 	int i;
 	cfg_file_t cfg;
@@ -133,7 +134,15 @@ void cfg_load(void)
 	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, ptr);
 	free(ptr);
 
-	status.fix_numlock_key = cfg_get_number(&cfg, "General", "fix_numlock_key", -2);
+	ptr = (void*)cfg_get_string(&cfg, "General", "numlock_setting", buf, sizeof(buf), 0);
+	if (!ptr)
+		status.fix_numlock_setting = NUMLOCK_GUESS;
+	else if ((*ptr == 'o' || *ptr == 'O') && (ptr[1] == 'n' || ptr[1] == 'N'))
+		status.fix_numlock_setting = NUMLOCK_ALWAYS_ON;
+	else if ((*ptr == 'o' || *ptr == 'O') && (ptr[1] == 'f' || ptr[1] == 'F'))
+		status.fix_numlock_setting = NUMLOCK_ALWAYS_OFF;
+	else
+		status.fix_numlock_setting = NUMLOCK_HONOR;
 	
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 	
@@ -278,10 +287,20 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
-	if (status.fix_numlock_key != -2) {
-		cfg_set_number(&cfg, "General", "fix_numlock_key", status.fix_numlock_key);
-	}
-
+	switch (status.fix_numlock_setting) {
+	case NUMLOCK_ALWAYS_ON:
+		cfg_set_string(&cfg, "General", "numlock_setting", "on");
+		break;
+	case NUMLOCK_ALWAYS_OFF:
+		cfg_set_string(&cfg, "General", "numlock_setting", "off");
+		break;
+	case NUMLOCK_HONOR:
+		cfg_set_string(&cfg, "General", "numlock_setting", "system");
+		break;
+	case NUMLOCK_GUESS:
+		/* leave empty */
+		break;
+	};
 
 	/* hm... most of the time probably nothing's different, so saving the
 	config file here just serves to make the backup useless. maybe add a

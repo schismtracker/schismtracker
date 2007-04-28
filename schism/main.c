@@ -503,15 +503,15 @@ static void event_loop(void)
 	int fix_numlock_key;
 	int q;
 
-	if (status.fix_numlock_key == -2) {
+	if (status.fix_numlock_setting == NUMLOCK_GUESS) {
 #ifdef MACOSX
 		/* do i have to detect ibook */
-		fix_numlock_key = 1;
+		fix_numlock_key = NUMLOCK_ALWAYS_ON;
 #else
-		fix_numlock_key = -1;
+		fix_numlock_key = NUMLOCK_HONOR;
 #endif
 	} else {
-		fix_numlock_key = status.fix_numlock_key;
+		fix_numlock_key = status.fix_numlock_setting;
 	}
 
 	debug_s = getenv("SCHISM_DEBUG");
@@ -607,8 +607,8 @@ static void event_loop(void)
 #endif
 			kk.sym = event.key.keysym.sym;
 			switch (fix_numlock_key) {
-			case 0: modkey &= ~KMOD_NUM; break;
-			case 1: modkey |= KMOD_NUM; break;
+			case NUMLOCK_ALWAYS_OFF: modkey &= ~KMOD_NUM; break;
+			case NUMLOCK_ALWAYS_ON: modkey |= KMOD_NUM; break;
 			};
 			kk.mod = modkey;
 			kk.unicode = event.key.keysym.unicode;

@@ -167,7 +167,11 @@ struct tracker_status {
 	 * 		-1 = don't fix it
 	 * 		-2 = don't fix it (except on macs that aren't ibooks)
 	 */
-	int fix_numlock_key;
+	int fix_numlock_setting;
+#define NUMLOCK_ALWAYS_OFF	0
+#define NUMLOCK_ALWAYS_ON	1
+#define NUMLOCK_HONOR		-1
+#define NUMLOCK_GUESS		-2
 };
 
 
