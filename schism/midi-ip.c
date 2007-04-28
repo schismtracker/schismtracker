@@ -261,7 +261,7 @@ static void _ip_poll(struct midi_provider *p)
 
 int ip_midi_setup(void)
 {
-	struct midi_driver driver;
+	static struct midi_driver driver;
 #ifdef WIN32
 	WSADATA ignored;
 
