@@ -46,7 +46,7 @@ struct tracker_status status = {
 	IS_FOCUSED | IS_VISIBLE,
 	TIME_PLAY_ELAPSED,
 	VIS_VU_METER,
-	0, 0, "", 0, 0, NULL, 0, 0, 0, 0
+	0, 0, "", 0, 0, NULL, 0, 0, 0, 0, 0
 };
 
 struct page pages[32];
