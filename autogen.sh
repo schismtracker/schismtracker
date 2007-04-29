@@ -32,6 +32,6 @@ getver() {
 
 aclocal=`getver aclocal 1.9`
 automake=`getver automake 1.9`
-autoheader=`getver autoheader 2.60 2.59`
-autoconf=`getver autoconf 2.60 2.59`
+autoheader=`getver autoheader 2.61 2.60 2.59`
+autoconf=`getver autoconf 2.61 2.60 2.59`
 $aclocal && $autoheader && $automake -a && $autoconf
