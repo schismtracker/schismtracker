@@ -1001,7 +1001,11 @@ void cfg_load_audio(cfg_file_t *cfg)
 	CFG_GET_A(sample_rate, 44100);
 	CFG_GET_A(bits, 16);
 	CFG_GET_A(channels, 2);
-	CFG_GET_A(buffer_size, 2048); // 1024 works better for keyjazz, but it's more processor intensive
+#ifdef WIN32
+	CFG_GET_A(buffer_size, 2048);
+#else
+	CFG_GET_A(buffer_size, 1024);
+#endif
 	
 	CFG_GET_M(channel_limit, 64);
 	CFG_GET_M(interpolation_mode, SRCMODE_LINEAR);
