@@ -206,3 +206,6 @@ char *realpath(const char *path, char *resolved_path);
 # define localtime_r(a,b) localtime(a) /* FIXME: not thread safe and stuff */
 # define setenv(a,b,c) /* stupid windows */
 #endif
+
+#define INT_SHAPED_PTR(v)		((int)(((void*)(v))))
+#define PTR_SHAPED_INT(i)		((void*)i)

@@ -148,7 +148,7 @@ static void _readin(struct midi_provider *p, int en, int fd)
 	if (r > 0) {
 		ptr = src = 0;
 		while (midi_port_foreach(p, &ptr)) {
-			int n = (int)ptr->userdata;
+			int n = INT_SHAPED_PTR(ptr->userdata);
 			if (n == en) src = ptr;
 		}
 		midi_received_cb(src, buffer, r);
@@ -246,7 +246,7 @@ static int _ip_thread(struct midi_provider *p)
 
 static int _ip_start(struct midi_port *p)
 {
-	int n = (int)p->userdata;
+	int n = INT_SHAPED_PTR(p->userdata);
 	SDL_mutexP(blocker);
 	if (p->io & MIDI_INPUT)
 		state[n] |= 1;
@@ -258,7 +258,7 @@ static int _ip_start(struct midi_port *p)
 }
 static int _ip_stop(struct midi_port *p)
 {
-	int n = (int)p->userdata;
+	int n = INT_SHAPED_PTR(p->userdata);
 	SDL_mutexP(blocker);
 	if (p->io & MIDI_INPUT)
 		state[n] &= (~1);
@@ -274,7 +274,7 @@ static void _ip_send(struct midi_port *p, unsigned char *data, unsigned int len,
 {
 	struct sockaddr_in asin;
 	unsigned char *ipcopy;
-	int n = (int)p->userdata;
+	int n = INT_SHAPED_PTR(p->userdata);
 	int ss;
 
 	if (len == 0) return;
@@ -310,7 +310,7 @@ static void _ip_poll(struct midi_provider *p)
 	if (m < last_buildout) {
 		ptr = 0;
 		while (midi_port_foreach(p, &ptr)) {
-			i = (int)ptr->userdata;
+			i = INT_SHAPED_PTR(ptr->userdata);
 			if (i >= m) midi_port_unregister(ptr->num);
 		}
 		last_buildout = m;
@@ -323,7 +323,7 @@ static void _ip_poll(struct midi_provider *p)
 				exit(255);
 			}
 			midi_port_register(p, MIDI_INPUT | MIDI_OUTPUT, buffer,
-					(void*)i, 0);
+					PTR_SHAPED_INT(i), 0);
 		}
 		last_buildout = m;
 	}

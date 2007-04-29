@@ -47,8 +47,7 @@ static int opened[MAX_MIDI_PORTS];
 static void _oss_send(struct midi_port *p, unsigned char *data, unsigned int len, UNUSED unsigned int delay)
 {
 	int fd, r, n;
-	if (!p->userdata) return;
-	fd = opened[ n = (*(int*)p->userdata) ];
+	fd = opened[ n = INT_SHAPED_PTR(p->userdata) ];
 	if (fd < 0) return;
 	while (len > 0) {
 		r = write(fd, data, len);
@@ -57,7 +56,7 @@ static void _oss_send(struct midi_port *p, unsigned char *data, unsigned int len
 			/* err, can't happen? */
 			(void)close(opened[n]);
 			opened[n] = -1;
-			p->userdata = 0;
+			p->userdata = PTR_SHAPED_INT(-1);
 			p->io = 0; /* failure! */
 			return;
 		}
@@ -81,8 +80,7 @@ static int _oss_thread(struct midi_provider *p)
 		ptr = 0;
 		j = 0;
 		while (midi_port_foreach(p, &ptr)) {
-			if (!ptr->userdata) continue;
-			i = *(int *)ptr->userdata;
+			i = INT_SHAPED_PTR(ptr->userdata);
 			if (i == -1) continue; /* err... */
 			if (!(ptr->io & MIDI_INPUT)) continue;
 			pfd[j].fd = i;
@@ -102,8 +100,7 @@ static int _oss_thread(struct midi_provider *p)
 			if (r > 0) {
 				ptr = src = 0;
 				while (midi_port_foreach(p, &ptr)) {
-					if (!ptr->userdata) continue;
-					if (*(int *)ptr->userdata == pfd[i].fd) {
+					if (INT_SHAPED_PTR(ptr->userdata) == pfd[i].fd) {
 						src = ptr;
 					}
 				}
@@ -138,7 +135,7 @@ static void _tryopen(int n, const char *name, struct midi_provider *_oss_provide
 
 	ptr = 0;
 	asprintf(&ptr, " %-16s (OSS)", name);
-	midi_port_register(_oss_provider, io, ptr, (void*)&opened[n+1], 0);
+	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT(n+1), 0);
 }
 
 static void _oss_poll(struct midi_provider *_oss_provider)
