@@ -384,7 +384,7 @@ BOOL CSoundFile::ReadAMS2(LPCBYTE lpStream, DWORD dwMemLength)
 			penv->VolEnv.nSustainStart = penv->VolEnv.nSustainEnd = volenv->sustain;
 			penv->VolEnv.nLoopStart = volenv->loopbegin;
 			penv->VolEnv.nLoopEnd = volenv->loopend;
-			for (UINT i=0; i<penv->VolEnv.nNodes; i++)
+			for (int i=0; i<penv->VolEnv.nNodes; i++)
 			{
 				penv->VolEnv.Values[i] = (BYTE)((volenv->info[i*3+2] & 0x7F) >> 1);
 				pos += volenv->info[i*3] + ((volenv->info[i*3+1] & 1) << 8);

@@ -221,7 +221,7 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 					penv->VolEnv.nLoopStart = peh->loopbegin;
 					penv->VolEnv.nLoopEnd = peh->loopend;
 					penv->VolEnv.nSustainStart = penv->VolEnv.nSustainEnd = peh->sustain1;
-					for (UINT i=0; i<penv->VolEnv.nNodes; i++)
+					for (int i=0; i<penv->VolEnv.nNodes; i++)
 					{
 						penv->VolEnv.Ticks[i] = bswapBE16(peh->volenv[i*2]);
 						penv->VolEnv.Values[i] = (BYTE)bswapBE16(peh->volenv[i*2+1]);

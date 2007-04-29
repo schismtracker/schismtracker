@@ -981,7 +981,7 @@ BOOL CSoundFile::ReadNote()
 				// Volume Loop ?
 				if (penv->dwFlags & ENV_VOLLOOP)
 				{
-					UINT volloopend = penv->VolEnv.Ticks[penv->VolEnv.nLoopEnd];
+					int volloopend = penv->VolEnv.Ticks[penv->VolEnv.nLoopEnd];
 					if (m_nType != MOD_TYPE_XM) volloopend++;
 					if (pChn->nVolEnvPosition == volloopend)
 					{
@@ -997,7 +997,7 @@ BOOL CSoundFile::ReadNote()
 				// Volume Sustain ?
 				if ((penv->dwFlags & ENV_VOLSUSTAIN) && (!(pChn->dwFlags & CHN_KEYOFF)))
 				{
-					if (pChn->nVolEnvPosition == (UINT)penv->VolEnv.Ticks[penv->VolEnv.nSustainEnd]+1)
+					if (pChn->nVolEnvPosition == (int)penv->VolEnv.Ticks[penv->VolEnv.nSustainEnd]+1)
 						pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nSustainStart];
 				} else
 				// End of Envelope ?
@@ -1020,13 +1020,13 @@ BOOL CSoundFile::ReadNote()
 				pChn->nPanEnvPosition++;
 				if (penv->dwFlags & ENV_PANLOOP)
 				{
-					UINT panloopend = penv->PanEnv.Ticks[penv->PanEnv.nLoopEnd];
+					int panloopend = penv->PanEnv.Ticks[penv->PanEnv.nLoopEnd];
 					if (m_nType != MOD_TYPE_XM) panloopend++;
 					if (pChn->nPanEnvPosition == panloopend)
 						pChn->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nLoopStart];
 				}
 				// Panning Sustain ?
-				if ((penv->dwFlags & ENV_PANSUSTAIN) && (pChn->nPanEnvPosition == (UINT)penv->PanEnv.Ticks[penv->PanEnv.nSustainEnd]+1)
+				if ((penv->dwFlags & ENV_PANSUSTAIN) && (pChn->nPanEnvPosition == (int)penv->PanEnv.Ticks[penv->PanEnv.nSustainEnd]+1)
 				 && (!(pChn->dwFlags & CHN_KEYOFF)))
 				{
 					// Panning sustained
@@ -1051,7 +1051,7 @@ BOOL CSoundFile::ReadNote()
 				// Pitch Sustain ?
 				if ((penv->dwFlags & ENV_PITCHSUSTAIN) && (!(pChn->dwFlags & CHN_KEYOFF)))
 				{
-					if (pChn->nPitchEnvPosition == (UINT)penv->PitchEnv.Ticks[penv->PitchEnv.nSustainEnd]+1)
+					if (pChn->nPitchEnvPosition == (int)penv->PitchEnv.Ticks[penv->PitchEnv.nSustainEnd]+1)
 						pChn->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nSustainStart];
 				} else
 				{

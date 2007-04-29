@@ -632,7 +632,7 @@ UINT CSoundFile::GetNNAChannel(UINT nChn)
 	// All channels are used: check for lowest volume
 	UINT result = 0;
 	DWORD vol = 64*65536;	// 25%
-	DWORD envpos = 0xFFFFFF;
+	int envpos = 0xFFFFFF;
 	const MODCHANNEL *pj = &Chn[m_nChannels];
 	for (UINT j=m_nChannels; j<MAX_CHANNELS; j++, pj++)
 	{
@@ -1271,7 +1271,7 @@ BOOL CSoundFile::ProcessEffects()
 				if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
 				{
 					INSTRUMENTHEADER *penv = pChn->pHeader;
-					if ((pChn->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes) && (param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1]))
+					if ((pChn->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes) && ((int)param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1]))
 					{
 						pChn->dwFlags &= ~CHN_PANENV;
 					}

@@ -68,11 +68,11 @@ typedef struct _song_channel {
 
 /* instrumentenvelope */
 typedef struct _song_envelope {
-	unsigned short ticks[32];
+	int ticks[32];
 	byte values[32];
-	byte nodes;
-	byte loop_start, loop_end;
-	byte sustain_start, sustain_end;
+	int nodes;
+	int loop_start, loop_end;
+	int sustain_start, sustain_end;
 } song_envelope;
 
 /* instrumentheader */
@@ -150,7 +150,7 @@ typedef struct _song_mix_channel {
         int nPeriod, nC4Speed, sample_freq, nPortamentoDest;
         song_instrument *instrument;    /* NULL if sample mode (?) */
         song_sample *sample;
-        unsigned int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
+        int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
         unsigned int master_channel;   // the channel this note was played in
         unsigned int vu_meter;
         int nGlobalVol;        // the channel volume (Mxx)? - range 0-64
