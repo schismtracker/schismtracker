@@ -462,7 +462,7 @@ BOOL CSoundFile::ReadMT2(LPCBYTE lpStream, DWORD dwMemLength)
 				for (UINT iEnv=0; iEnv<4; iEnv++) if (pehdr[iEnv])
 				{
 					MT2ENVELOPE *pme = pehdr[iEnv];
-					WORD *pEnvPoints = NULL;
+					int *pEnvPoints = NULL;
 					BYTE *pEnvData = NULL;
 				#ifdef MT2DEBUG
 					Log("  Env %d.%d @%04X: %d points\n", iIns, iEnv, (UINT)(((BYTE *)pme)-lpStream), pme->nPoints);

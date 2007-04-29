@@ -332,14 +332,15 @@ typedef struct _MODINSTRUMENT
 } MODINSTRUMENT;
 
 typedef struct _INSTRUMENTENVELOPE {
-	WORD Ticks[32];
+	int Ticks[32];
 	BYTE Values[32];
-	BYTE nNodes;
-	BYTE nLoopStart;
-	BYTE nLoopEnd;
-	BYTE nSustainStart;
-	BYTE nSustainEnd;
+	int nNodes;
+	int nLoopStart;
+	int nLoopEnd;
+	int nSustainStart;
+	int nSustainEnd;
 } INSTRUMENTENVELOPE;
+
 
 // Instrument Struct
 typedef struct _INSTRUMENTHEADER
@@ -405,7 +406,7 @@ typedef struct _MODCHANNEL
 	LONG nPeriod, nC4Speed, sample_freq, nPortamentoDest;
 	INSTRUMENTHEADER *pHeader;
 	MODINSTRUMENT *pInstrument;
-	DWORD nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
+	int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
 	DWORD nMasterChn, nVUMeter;
 	LONG nGlobalVol, nInsVol;
 	LONG nFineTune, nTranspose;

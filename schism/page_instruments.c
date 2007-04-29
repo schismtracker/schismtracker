@@ -1646,8 +1646,8 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope *env, int
 	}
 	new_value = CLAMP(new_value, 0, 64);
 	
-	if (new_value != env->values[new_node]) {
-		env->values[*current_node] = new_value;
+	if (new_value != (int)env->values[new_node]) {
+		env->values[*current_node] = (unsigned int)new_value;
 		status.flags |= SONG_NEEDS_SAVE;
 		status.flags |= NEED_UPDATE;
 		return 1;
