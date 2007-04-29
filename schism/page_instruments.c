@@ -258,7 +258,7 @@ void instrument_synchronize_to_sample(void)
          * has the sample in its sample_map, change to that instrument. */
         ins = song_get_instrument(sample, NULL);
         for (pos = 0; pos < 120; pos++) {
-                if ((ins->sample_map[pos]) == sample) {
+                if ((int)(ins->sample_map[pos]) == sample) {
                         instrument_set(sample);
                         return;
                 }
@@ -271,7 +271,7 @@ void instrument_synchronize_to_sample(void)
                         continue;
                 ins = song_get_instrument(n, NULL);
                 for (pos = 0; pos < 120; pos++) {
-                        if ((ins->sample_map[pos]) == sample) {
+                        if ((int)(ins->sample_map[pos]) == sample) {
                                 instrument_set(n);
                                 return;
                         }
@@ -1793,8 +1793,9 @@ static int pitch_pan_center_handle_key(struct key_event *k)
 		}
 		return 0;
 	}
-	if (ppc != ins->pitch_pan_center && ppc >= 0 && ppc < 120) {
-		ins->pitch_pan_center = ppc;
+	if ((unsigned int)ppc != ins->pitch_pan_center
+	&& ppc >= 0 && ppc < 120) {
+		ins->pitch_pan_center = (unsigned int)ppc;
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;
@@ -2242,8 +2243,8 @@ static void instrument_list_panning_update_values(void)
                   ins->flags |= ENV_PANSUSTAIN);
 
 	n = widgets_panning[15].d.thumbbar.value << 2;
-	if (ins->panning != n) {
-		ins->panning = n;
+	if (ins->panning != (unsigned int)n) {
+		ins->panning = (unsigned int)n;
 		ins->flags |= ENV_SETPANNING;
 	}
 	/* (widgets_panning[16] is the pitch-pan center) */

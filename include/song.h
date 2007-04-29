@@ -79,20 +79,20 @@ typedef struct _song_envelope {
 typedef struct _song_instrument {
         unsigned int fadeout;
         unsigned int flags;    // any of the ENV_* flags below
-        unsigned short global_volume;
-        unsigned short panning;
-        byte sample_map[128], note_map[128];
+        unsigned int global_volume;
+        unsigned int panning;
+        unsigned int sample_map[128], note_map[128];
 	song_envelope vol_env, pan_env, pitch_env;
-        byte nna, dct, dca;
-        byte pan_swing, volume_swing;
-        byte filter_cutoff;
-        byte filter_resonance;
-        unsigned short midi_bank;
-        byte midi_program;
-        byte midi_channel;
-        byte midi_drum_key;
-        signed char pitch_pan_separation;
-        byte pitch_pan_center;
+        unsigned int nna, dct, dca;
+        unsigned int pan_swing, volume_swing;
+        unsigned int filter_cutoff;
+        unsigned int filter_resonance;
+        unsigned int midi_bank;
+        unsigned int midi_program;
+        unsigned int midi_channel;
+        unsigned int midi_drum_key;
+        int pitch_pan_separation;
+        unsigned int pitch_pan_center;
         char name[32];
         char filename[12];
 	
