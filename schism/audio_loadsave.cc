@@ -1161,6 +1161,11 @@ static fmt_load_sample_func load_sample_funcs[] = {
 	NULL,
 };
 
+static fmt_load_instrument_func load_instrument_funcs[] = {
+	fmt_iti_load_instrument,
+	NULL,
+};
+
 
 void song_clear_sample(int n)
 {
@@ -1196,6 +1201,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 {
 	slurp_t *s;
 	int sampmap[MAX_SAMPLES];
+	int r, x;
 
 	song_lock_audio();
 
@@ -1204,7 +1210,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	if (mp->Headers[target]) {
 		/* init... */
 		for (unsigned long j = 0; j < sizeof(mp->Headers[target]->Keyboard); j++) {
-			int x = mp->Headers[target]->Keyboard[j];
+			x = mp->Headers[target]->Keyboard[j];
 			sampmap[x] = 1;
 		}
 		/* mark... */
@@ -1212,7 +1218,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			if ((int) q == target) continue;
 			if (!mp->Headers[q]) continue;
 			for (unsigned long j = 0; j < sizeof(mp->Headers[target]->Keyboard); j++) {
-				int x = mp->Headers[q]->Keyboard[j];
+				x = mp->Headers[q]->Keyboard[j];
 				sampmap[x] = 0;
 			}
 		}
@@ -1233,7 +1239,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	if (libf) { /* file is ignored */
 		CSoundFile xl;
        		s = slurp(libf, NULL, 0);
-		int r = xl.Create(s->data, s->length);
+		r = xl.Create(s->data, s->length);
 		if (r) {
 			/* 0. convert to IT (in case we want to load samps from an XM) */
         		_convert_to_it(&xl);
@@ -1241,7 +1247,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			/* 1. find a place for all the samples */
 			memset(sampmap, 0, sizeof(sampmap));
 			for (unsigned long j = 0; j < sizeof(xl.Headers[n]->Keyboard); j++) {
-				int x = xl.Headers[n]->Keyboard[j];
+				x = xl.Headers[n]->Keyboard[j];
 				if (!sampmap[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
 						for (int k = 0; k < MAX_SAMPLES; k++) {
@@ -1291,149 +1297,22 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	}
 	/* okay, load an ITI file */
 	s = slurp(file, NULL, 0);
-	if (s->length >= 554 && memcmp(s->data, "IMPI", 4) == 0) {
-		/* IT instrument file format */
-		ITINSTRUMENT iti;
-
-		memcpy(&iti, s->data, sizeof(iti));
-
-		/* this makes us an instrument if it doesn't exist */
-		INSTRUMENTHEADER *i = (INSTRUMENTHEADER *)song_get_instrument(target, NULL);
-
-		strncpy((char *)i->filename, (char *)iti.filename, 12);
-		i->nNNA = iti.nna;
-		i->nDCT = iti.dct;
-		i->nDNA = iti.dca;
-		i->nFadeOut = (bswapLE16(iti.fadeout) << 5);
-		i->nPPS = iti.pps;
-		i->nPPC = iti.ppc;
-		i->nGlobalVol = iti.gbv >> 1;
-		i->nPan = (iti.dfp & 0x7F) << 2;
-		if (i->nPan > 256) i->nPan = 128;
-		i->dwFlags = 0;
-		if (iti.dfp & 0x80) i->dwFlags = ENV_SETPANNING;
-		i->nVolSwing = iti.rv;
-		i->nPanSwing = iti.rp;
-
-		strncpy((char *)i->name, (char *)iti.name, 25);
-		i->name[25] = 0;
-		i->nIFC = iti.ifc;
-		i->nIFR = iti.ifr;
-		i->nMidiChannel = iti.mch;
-		i->nMidiProgram = iti.mpr;
-		i->wMidiBank = bswapLE16(iti.mbank);
-	
-		static int need_inst[MAX_SAMPLES];
-		static int expect_samples = 0;
-
-		for (int j = 0; j < MAX_SAMPLES; j++) {
-			need_inst[j] = -1;
-		}
-
-		int basex = 1;
-		for (int j = 0; j < 120; j++) {
-			int nm = iti.keyboard[2*j + 1];
-			if (need_inst[nm] != -1) {
-				/* already allocated */
-				nm = need_inst[nm];
-
-			} else if (nm > 0 && nm < MAX_SAMPLES) {
-				int x;
-				for (x = basex; x < MAX_SAMPLES; x++) {
-					if (mp->Ins[x].pSample) continue;
-					break;
-				}
-				if (x == MAX_SAMPLES) {
-					/* err... */
-					status_text_flash("Too many samples");
-					nm = 0;
-				} else {
-					need_inst[nm] = x;
-					nm = x;
-					basex = x + 1;
-					expect_samples++;
-				}
-			}
-			i->Keyboard[j] = nm;
-			i->NoteMap[j] = iti.keyboard[2 * j]+1;
-		}
-		if (iti.volenv.flags & 1) i->dwFlags |= ENV_VOLUME;
-		if (iti.volenv.flags & 2) i->dwFlags |= ENV_VOLLOOP;
-		if (iti.volenv.flags & 4) i->dwFlags |= ENV_VOLSUSTAIN;
-		if (iti.volenv.flags & 8) i->dwFlags |= ENV_VOLCARRY;
-		i->VolEnv.nNodes = iti.volenv.num;
-		i->VolEnv.nLoopStart = iti.volenv.lpb;
-		i->VolEnv.nLoopEnd = iti.volenv.lpe;
-		i->VolEnv.nSustainStart = iti.volenv.slb;
-		i->VolEnv.nSustainEnd = iti.volenv.sle;
-		if (iti.panenv.flags & 1) i->dwFlags |= ENV_PANNING;
-		if (iti.panenv.flags & 2) i->dwFlags |= ENV_PANLOOP;
-		if (iti.panenv.flags & 4) i->dwFlags |= ENV_PANSUSTAIN;
-		if (iti.panenv.flags & 8) i->dwFlags |= ENV_PANCARRY;
-		i->PanEnv.nNodes = iti.panenv.num;
-		i->PanEnv.nLoopStart = iti.panenv.lpb;
-		i->PanEnv.nLoopEnd = iti.panenv.lpe;
-		i->PanEnv.nSustainStart = iti.panenv.slb;
-		i->PanEnv.nSustainEnd = iti.panenv.sle;
-		if (iti.pitchenv.flags & 1) i->dwFlags |= ENV_PITCH;
-		if (iti.pitchenv.flags & 2) i->dwFlags |= ENV_PITCHLOOP;
-		if (iti.pitchenv.flags & 4) i->dwFlags |= ENV_PITCHSUSTAIN;
-		if (iti.pitchenv.flags & 8) i->dwFlags |= ENV_PITCHCARRY;
-		if (iti.pitchenv.flags & 0x80) i->dwFlags |= ENV_FILTER;
-		i->PitchEnv.nNodes = iti.pitchenv.num;
-		i->PitchEnv.nLoopStart = iti.pitchenv.lpb;
-		i->PitchEnv.nLoopEnd = iti.pitchenv.lpe;
-		i->PitchEnv.nSustainStart = iti.pitchenv.slb;
-		i->PitchEnv.nSustainEnd = iti.pitchenv.sle;
-
-		for (int j = 0; j < 25; j++) {
-			i->VolEnv.Values[j] = iti.volenv.data[3 * j];
-			i->VolEnv.Ticks[j] = iti.volenv.data[3 * j + 1]
-				| (iti.volenv.data[3 * j + 2] << 8);
-
-			i->PanEnv.Values[j] = iti.panenv.data[3 * j] + 32;
-			i->PanEnv.Ticks[j] = iti.panenv.data[3 * j + 1]
-				| (iti.panenv.data[3 * j + 2] << 8);
-
-			i->PitchEnv.Values[j] = iti.pitchenv.data[3 * j] + 32;
-			i->PitchEnv.Ticks[j] = iti.pitchenv.data[3 * j + 1]
-				| (iti.pitchenv.data[3 * j + 2] << 8);
-		}
-		/* okay, on to samples */
-
-		unsigned int q = 554;
-		char *np;
-		song_sample *smp;
-		int x = 1;
-		for (int j = 0; j < expect_samples; j++) {
-			for (; x < MAX_SAMPLES; x++) {
-				if (need_inst[x] == -1) continue;
-				break;
-			}
-			if (x == MAX_SAMPLES) break; /* eh ... */
-
-			smp = song_get_sample(need_inst[x], &np);
-			if (!smp) break;
-			if (!load_its_sample(s->data+q, s->data, s->length, smp, np)) {
-				status_text_flash("Could not load sample %d from ITI file", j);
-				unslurp(s);
-				song_unlock_audio();
-				return 0;
-			}
-			q += 80; /* length if ITS header */
-			x++;
-		}
-		unslurp(s);
+        if (s == 0) {
+                log_appendf(4, "%s: %s", file, strerror(errno));
 		song_unlock_audio();
-		return 1;
+                return 0;
+        }
+
+	r = 0;
+	for (x = 0; load_instrument_funcs[x]; x++) {
+		r = load_instrument_funcs[x](s->data, s->length, target);
+		if (r) break;
 	}
 
-	/* either: not a (understood) instrument, or an empty instrument */
-#if 0
-	status_text_flash("NOT DONE YET");
-#endif
+	unslurp(s);
 	song_unlock_audio();
-	return 0;
+
+	return r;
 }
 
 int song_load_instrument(int n, const char *file)
@@ -1604,6 +1483,9 @@ CSoundFile library;
 
 int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
 {
+	unsigned long j;
+	int x;
+
 	library.Destroy();
 	
         slurp_t *s = slurp(path, NULL, 0);
@@ -1629,8 +1511,8 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 			file->sampsize = 0;
 			file->filesize = 0;
 			file->instnum = n;
-			for (unsigned long j = 0; j < sizeof(library.Headers[n]->Keyboard); j++) {
-				int x = library.Headers[n]->Keyboard[j];
+			for (j = 0; j < sizeof(library.Headers[n]->Keyboard); j++) {
+				x = library.Headers[n]->Keyboard[j];
 				if (!count[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
 						file->filesize += library.Ins[x].nLength;

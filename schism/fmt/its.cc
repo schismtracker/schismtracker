@@ -27,18 +27,6 @@ has the IT sample decompression code... */
 #include "it_defs.h"
 
 /* --------------------------------------------------------------------- */
-/* the ITI info reader is here for no good reason */
-int fmt_iti_read_info(dmoz_file_t *file, const byte *data, size_t length)
-{
-	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return false;
-	file->description = "Impulse Tracker Instrument";
-	file->title = (char *)calloc(26,sizeof(char *));
-	memcpy(file->title, data+32, 25);
-	file->title[25] = 0;
-	file->type = TYPE_INST_ITI;
-
-	return true;
-}
 int fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
 	ITSAMPLESTRUCT *its;

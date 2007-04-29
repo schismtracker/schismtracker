@@ -185,6 +185,7 @@ schismtracker_SOURCES = \
 	schism/fmt/wav.cc		\
 	schism/fmt/mid.cc		\
 	schism/fmt/its.cc		\
+	schism/fmt/iti.c		\
 	schism/fmt/imf.c		\
 	schism/fmt/mtm.c		\
 	schism/fmt/ult.c		\
