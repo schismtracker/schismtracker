@@ -38,10 +38,12 @@ extern "C" {
 typedef int (*fmt_read_info_func) (dmoz_file_t *file, const byte *data, size_t length);
 typedef int (*fmt_load_sample_func) (const byte *data, size_t length, song_sample *smp, char *title);
 typedef int (*fmt_save_sample_func) (diskwriter_driver_t *fp, song_sample *smp, char *title);
+typedef int (*fmt_load_instrument_func) (const byte *data, size_t length, int slot);
 
 #define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const byte *data, size_t length)
 #define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
 #define SAVE_SAMPLE(t) int fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
+#define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const byte *data, size_t length, int slot)
 
 READ_INFO(669);
 READ_INFO(ams);
@@ -69,7 +71,7 @@ READ_INFO(ogg);
 # endif
 #endif
 
-READ_INFO(iti);
+READ_INFO(iti);		LOAD_INSTRUMENT(iti);
 
 READ_INFO(aiff);        LOAD_SAMPLE(aiff);      SAVE_SAMPLE(aiff);
 READ_INFO(au);          LOAD_SAMPLE(au);        SAVE_SAMPLE(au);
@@ -81,6 +83,7 @@ READ_INFO(mid);
 #undef READ_INFO
 #undef LOAD_SAMPLE
 #undef SAVE_SAMPLE
+#undef LOAD_INSTRUMENT
 
 /* --------------------------------------------------------------------------------------------------------- */
 
