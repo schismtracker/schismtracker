@@ -722,7 +722,7 @@ void CSoundFile::CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut)
 			{
 			// Note
 			case DCT_NOTE:
-				if ((note) && (p->nNote == note) && (pHeader == p->pHeader)) bOk = TRUE;
+				if ((note) && ((int)p->nNote == note) && (pHeader == p->pHeader)) bOk = TRUE;
 				break;
 			// Sample
 			case DCT_SAMPLE:

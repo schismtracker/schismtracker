@@ -412,29 +412,31 @@ typedef struct _MODCHANNEL
 	LONG nPortamentoSlide, nAutoVibDepth;
 	UINT nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
 	// 16-bit members
-	signed short nVolSwing, nPanSwing;
+	int nVolSwing, nPanSwing;
 
-	// 8-bit members
-	BYTE nNote, nNNA;
-	BYTE nNewNote, nNewIns, nCommand, nArpeggio;
-	BYTE nOldVolumeSlide, nOldFineVolUpDown;
-	BYTE nOldPortaUpDown, nOldFinePortaUpDown;
-	BYTE nOldPanSlide, nOldChnVolSlide;
-	BYTE nVibratoType, nVibratoSpeed, nVibratoDepth;
-	BYTE nTremoloType, nTremoloSpeed, nTremoloDepth;
-	BYTE nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
-	BYTE nOldCmdEx, nOldVolParam, nOldTempo;
-	BYTE nOldOffset, nOldHiOffset;
-	BYTE nCutOff, nResonance;
-	BYTE nRetrigCount, nRetrigParam;
-	BYTE nTremorCount, nTremorParam;
-	BYTE nPatternLoop, nPatternLoopCount;
-	BYTE nRowNote, nRowInstr;
-	BYTE nRowVolCmd, nRowVolume;
-	BYTE nRowCommand, nRowParam;
-	BYTE nLeftVU, nRightVU;
-	BYTE nActiveMacro, nLastInstr;
-	BYTE nTickStart, nRealtime;
+	// formally 8-bit members
+	unsigned int nNote, nNNA;
+	unsigned int nNewNote, nNewIns, nCommand, nArpeggio;
+	unsigned int nOldVolumeSlide, nOldFineVolUpDown;
+	unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
+	unsigned int nOldPanSlide, nOldChnVolSlide;
+	unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
+	unsigned int nTremoloType, nTremoloSpeed, nTremoloDepth;
+	unsigned int nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
+	unsigned int nOldCmdEx, nOldVolParam, nOldTempo;
+	unsigned int nOldOffset, nOldHiOffset;
+	unsigned int nCutOff, nResonance;
+	unsigned int nRetrigCount, nRetrigParam;
+	unsigned int nTremorCount, nTremorParam;
+	unsigned int nPatternLoop, nPatternLoopCount;
+	unsigned int nRowNote, nRowInstr;
+	unsigned int nRowVolCmd, nRowVolume;
+	unsigned int nRowCommand, nRowParam;
+	unsigned int nLeftVU, nRightVU;
+	unsigned int nActiveMacro, nLastInstr;
+	unsigned int nTickStart;
+	unsigned int nRealtime;
+	BYTE stupid_gcc_workaround;
 } MODCHANNEL;
 
 

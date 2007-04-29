@@ -160,31 +160,33 @@ typedef struct _song_mix_channel {
         int nPortamentoSlide, nAutoVibDepth;
         unsigned int nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
 
-        signed short nVolSwing, nPanSwing;
+        int nVolSwing, nPanSwing;
 
-        byte note;      // the note that's playing
-        byte nNNA;
-        byte nNewNote;  // nfi... seems the same as nNote
-        byte nNewIns;   // nfi, always seems to be zero
-        byte nCommand, nArpeggio;
-        byte nOldVolumeSlide, nOldFineVolUpDown;
-        byte nOldPortaUpDown, nOldFinePortaUpDown;
-        byte nOldPanSlide, nOldChnVolSlide;
-        byte nVibratoType, nVibratoSpeed, nVibratoDepth;
-        byte nTremoloType, nTremoloSpeed, nTremoloDepth;
-        byte nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
-        byte nOldCmdEx, nOldVolParam, nOldTempo;
-        byte nOldOffset, nOldHiOffset;
-        byte nCutOff, nResonance;
-        byte nRetrigCount, nRetrigParam;
-        byte nTremorCount, nTremorParam;
-        byte nPatternLoop, nPatternLoopCount;
-        byte nRowNote, nRowInstr;
-        byte nRowVolCmd, nRowVolume;
-        byte nRowCommand, nRowParam;
-        byte left_vu, right_vu;
-        byte nActiveMacro, nPadding;
-	byte nTickStart, nRealtime;
+        unsigned int note;      // the note that's playing
+        unsigned int nNNA;
+        unsigned int nNewNote;  // nfi... seems the same as nNote
+        unsigned int nNewIns;   // nfi, always seems to be zero
+        unsigned int nCommand, nArpeggio;
+        unsigned int nOldVolumeSlide, nOldFineVolUpDown;
+        unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
+        unsigned int nOldPanSlide, nOldChnVolSlide;
+        unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
+        unsigned int nTremoloType, nTremoloSpeed, nTremoloDepth;
+        unsigned int nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
+        unsigned int nOldCmdEx, nOldVolParam, nOldTempo;
+        unsigned int nOldOffset, nOldHiOffset;
+        unsigned int nCutOff, nResonance;
+        unsigned int nRetrigCount, nRetrigParam;
+        unsigned int nTremorCount, nTremorParam;
+        unsigned int nPatternLoop, nPatternLoopCount;
+        unsigned int nRowNote, nRowInstr;
+        unsigned int nRowVolCmd, nRowVolume;
+        unsigned int nRowCommand, nRowParam;
+        unsigned int left_vu, right_vu;
+        unsigned int nActiveMacro, nPadding;
+	unsigned int nTickStart;
+	unsigned int nRealtime;
+	byte stupid_gcc_workaround;
 } song_mix_channel;
 
 /* --------------------------------------------------------------------- */
