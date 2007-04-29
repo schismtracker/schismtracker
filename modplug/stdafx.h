@@ -39,7 +39,9 @@ typedef int LONG;
 typedef unsigned short WORD;
 typedef unsigned char BYTE;
 typedef unsigned char * LPBYTE;
+#ifdef __cplusplus
 typedef bool BOOL;
+#endif
 typedef char * LPSTR;
 typedef void *  LPVOID;
 typedef int * LPLONG;
@@ -51,12 +53,6 @@ typedef void * PVOID;
 typedef void VOID;
 
 
-inline LONG MulDiv (int a, int b, int c)
-{
-  // if (!c) return 0;
-  return ((unsigned long long) a * (unsigned long long) b ) / c;
-}
-
 #define NO_AGC
 #define LPCTSTR LPCSTR
 #define lstrcpyn strncpy
@@ -67,6 +63,7 @@ inline LONG MulDiv (int a, int b, int c)
 
 #define  GHND   0
 
+#ifdef __cplusplus
 inline signed char * GlobalAllocPtr(unsigned int, size_t size)
 {
   signed char * p = (signed char *) malloc(size);
@@ -81,6 +78,7 @@ inline void ProcessPlugins(int) {}
 
 #define strnicmp(a,b,c)		strncasecmp(a,b,c)
 #define wsprintf			sprintf
+#endif
 
 #ifndef FALSE
 #define FALSE	false
