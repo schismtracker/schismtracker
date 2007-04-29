@@ -1406,7 +1406,7 @@ int sample_is_used_by_instrument(int samp)
 		ins = song_get_instrument(i,NULL);
 		if (!ins) continue;
 		for (j = 0; j < 120; j++) {
-			if (ins->sample_map[j] == samp)
+			if (ins->sample_map[j] == (unsigned int)samp)
 				return 1;
 		}
 	}
@@ -1423,7 +1423,7 @@ void sample_synchronize_to_instrument(void)
 	first = 0;
 	for (pos = 0; pos < 120; pos++) {
 		if (first == 0) first = ins->sample_map[pos];
-		if (ins->sample_map[pos] == instnum) {
+		if (ins->sample_map[pos] == (unsigned int)instnum) {
 			sample_set(instnum);
 			return;
 		}

@@ -656,10 +656,10 @@ void song_swap_samples(int a, int b)
 				continue;
 			// sizeof(ins->Keyboard)...
 			for (int s = 0; s < 128; s++) {
-				if (ins->Keyboard[s] == a)
-					ins->Keyboard[s] = b;
-				else if (ins->Keyboard[s] == b)
-					ins->Keyboard[s] = a;
+				if (ins->Keyboard[s] == (unsigned int)a)
+					ins->Keyboard[s] = (unsigned int)b;
+				else if (ins->Keyboard[s] == (unsigned int)b)
+					ins->Keyboard[s] = (unsigned int)a;
 			}
 		}
 	} else {
@@ -704,8 +704,8 @@ static void _adjust_samples_in_instruments(int start, int delta)
 			continue;
 		// sizeof...
 		for (int s = 0; s < 128; s++) {
-			if (ins->Keyboard[s] >= start)
-				ins->Keyboard[s] = CLAMP(ins->Keyboard[s] + delta, 0, MAX_SAMPLES - 1);
+			if (ins->Keyboard[s] >= (unsigned int)start)
+				ins->Keyboard[s] = (unsigned int)CLAMP(((int)ins->Keyboard[s]) + delta, 0, MAX_SAMPLES - 1);
 		}
 	}
 }
