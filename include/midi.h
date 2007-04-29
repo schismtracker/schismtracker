@@ -168,7 +168,7 @@ int macosx_midi_setup(void);
 extern int midi_flags, midi_pitch_depth, midi_amplification, midi_c5note;
 
 /* only available with networks */
-int ip_midi_setports(int n);
+void ip_midi_setports(int n);
 int ip_midi_getports(void);
 
 #ifdef __cplusplus

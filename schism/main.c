@@ -754,6 +754,10 @@ static void event_loop(void)
 		default:
 			if (event.type == SCHISM_EVENT_MIDI) {
 				midi_engine_handle_event((void*)&event);
+			} else if (event.type == SCHISM_EVENT_UPDATE_IPMIDI) {
+				status.flags |= (NEED_UPDATE);
+				midi_engine_poll_ports();
+
 			} else if (event.type == SCHISM_EVENT_PLAYBACK) {
 				/* this is the sound thread */
 				midi_send_flush();

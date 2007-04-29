@@ -22,6 +22,8 @@
 #include "midi.h"
 
 #include "util.h"
+#include "sdlmain.h"
+#include "event.h"
 
 #ifdef USE_NETWORK
 
@@ -33,6 +35,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/select.h>
+#include <fcntl.h>
 #endif
 
 #include <errno.h>
@@ -41,13 +44,32 @@
 #define MIDI_IP_BASE	21928
 #define MAX_DGRAM_SIZE	1280
 
+static int wakeup[2];
 static int real_num_ports = 0;
 static int num_ports = 0;
 static int out_fd = -1;
 static int *port_fd = 0;
 static int *state = 0;
+static SDL_mutex *blocker = 0;
 
-
+static void do_wake_main(void)
+{
+	/* send at end */
+	SDL_Event e;
+	e.user.type = SCHISM_EVENT_UPDATE_IPMIDI;
+	e.user.code = 0;
+	e.user.data1 = 0;
+	e.user.data2 = 0;
+	SDL_PushEvent(&e);
+}
+static void do_wake_midi(void)
+{
+#ifdef WIN32
+	/* anyone want to suggest how this is done? XXX */
+#else
+	(void)write(wakeup[1], "\x1", 1);
+#endif
+}
 
 static int _get_fd(int pb, int isout)
 {
@@ -55,6 +77,7 @@ static int _get_fd(int pb, int isout)
 	struct sockaddr_in asin;
 	unsigned char *ipcopy;
 	int fd, opt;
+
 #if !defined(PF_INET) && defined(AF_INET)
 #define PF_INET AF_INET
 #endif
@@ -105,45 +128,13 @@ static int _get_fd(int pb, int isout)
 
 	return fd;
 }
-int ip_midi_setports(int n)
+void ip_midi_setports(int n)
 {
-	int *tmp, i;
-
-	if (n > -1) {
-		if (n > num_ports) {
-			tmp = (int *)realloc(port_fd, n * sizeof(int));
-			if (!tmp) return real_num_ports;
-			port_fd = tmp; /* err... */
-
-			tmp = (int *)realloc(state, n * sizeof(int));
-			if (!tmp) return real_num_ports;
-			state = tmp;
-
-			for (i = num_ports; i < n; i++) {
-				state[i] = 0;
-				if ((port_fd[i] = _get_fd(i,0)) == -1) {
-					while (i >= num_ports) {
-						(void)close(tmp[i]);
-						i--;
-					}
-					return real_num_ports;
-				}
-			}
-			real_num_ports = num_ports = n;
-
-			return n;
-		} else if (n < num_ports) {
-			for (i = n; i < real_num_ports; i++) {
-				(void)close(port_fd[i]);
-				port_fd[i] = -1;
-			}
-			real_num_ports = n;
-			return n;
-		}
-	}
-	return real_num_ports;
+	SDL_mutexP(blocker);
+	num_ports = n;
+	SDL_mutexV(blocker);
+	do_wake_midi();
 }
-
 static void _readin(struct midi_provider *p, int en, int fd)
 {
 	struct midi_port *ptr, *src;
@@ -157,7 +148,7 @@ static void _readin(struct midi_provider *p, int en, int fd)
 	if (r > 0) {
 		ptr = src = 0;
 		while (midi_port_foreach(p, &ptr)) {
-			int n = ((int*)ptr->userdata) - port_fd;
+			int n = (int)ptr->userdata;
 			if (n == en) src = ptr;
 		}
 		midi_received_cb(src, buffer, r);
@@ -165,20 +156,85 @@ static void _readin(struct midi_provider *p, int en, int fd)
 }
 static int _ip_thread(struct midi_provider *p)
 {
+	static unsigned char buffer[4096];
+#ifdef WIN32
+	struct timeval tv;
+#endif
 	fd_set rfds;
+	int *tmp2, *tmp;
 	int i, m;
 
 	for (;;) {
+		SDL_mutexP(blocker);
+		m = (volatile int)num_ports;
+		if (m > real_num_ports) {
+			/* need more ports */
+			tmp = (int *)malloc(2 * (m * sizeof(int)));
+			if (tmp) {
+				tmp2 = tmp + m;
+				for (i = 0; i < real_num_ports; i++) {
+					tmp[i] = port_fd[i];
+					tmp2[i] = state[i];
+				}
+				free(port_fd);
+
+				port_fd = tmp;
+				state = tmp2;
+
+				for (i = real_num_ports; i < m; i++) {
+					state[i] = 0;
+					if ((port_fd[i] = _get_fd(i,0)) == -1) {
+						m = i+1;
+						break;
+					}
+				}
+				real_num_ports = num_ports = m;
+			}
+			SDL_mutexV(blocker);
+			do_wake_main();
+
+		} else if (m < real_num_ports) {
+			for (i = m; i < real_num_ports; i++) {
+				(void)close(port_fd[i]);
+				port_fd[i] = -1;
+			}
+			real_num_ports = num_ports = m;
+
+			SDL_mutexV(blocker);
+			do_wake_main();
+		} else {
+			SDL_mutexV(blocker);
+		}
+
 		FD_ZERO(&rfds);
 		m = 0;
 		for (i = 0; i < real_num_ports; i++) {
 			FD_SET(port_fd[i], &rfds);
 			if (port_fd[i] > m) m = port_fd[i];
 		}
+
+#ifdef WIN32
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
+#else
+		FD_SET(wakeup[0], &rfds);
+		if (wakeup[0] > m) m = wakeup[0];
+#endif
 		do {
-			i = select(m+1, &rfds, 0, 0, 0);
+			i = select(m+1, &rfds, 0, 0, 
+#ifdef WIN32
+				&tv
+#else
+				(struct timeval *)0
+#endif
+				);
 		} while (i == -1 && errno == EINTR);
 
+#ifndef WIN32
+		if (FD_ISSET(wakeup[0], &rfds)) {
+			(void)read(wakeup[0], buffer, sizeof(buffer));
+		}
+#endif
 		for (i = 0; i < real_num_ports; i++) {
 			if (FD_ISSET(port_fd[i], &rfds)) {
 				if (state[i] & 1) _readin(p, i, port_fd[i]);
@@ -190,20 +246,26 @@ static int _ip_thread(struct midi_provider *p)
 
 static int _ip_start(struct midi_port *p)
 {
-	int n = ((int*)p->userdata) - port_fd;
+	int n = (int)p->userdata;
+	SDL_mutexP(blocker);
 	if (p->io & MIDI_INPUT)
 		state[n] |= 1;
 	if (p->io & MIDI_OUTPUT)
 		state[n] |= 2;
+	SDL_mutexV(blocker);
+	do_wake_midi();
 	return 1;
 }
 static int _ip_stop(struct midi_port *p)
 {
-	int n = ((int*)p->userdata) - port_fd;
+	int n = (int)p->userdata;
+	SDL_mutexP(blocker);
 	if (p->io & MIDI_INPUT)
 		state[n] &= (~1);
 	if (p->io & MIDI_OUTPUT)
 		state[n] &= (~2);
+	SDL_mutexV(blocker);
+	do_wake_midi();
 	return 1;
 }
 
@@ -212,7 +274,7 @@ static void _ip_send(struct midi_port *p, unsigned char *data, unsigned int len,
 {
 	struct sockaddr_in asin;
 	unsigned char *ipcopy;
-	int n = ((int*)p->userdata) - port_fd;
+	int n = (int)p->userdata;
 	int ss;
 
 	if (len == 0) return;
@@ -241,41 +303,62 @@ static void _ip_poll(struct midi_provider *p)
 	struct midi_port *ptr;
 	char *buffer;
 	int i = 0;
+	int m;
 
-	if (real_num_ports < last_buildout) {
+	SDL_mutexP(blocker);
+	m = (volatile int)real_num_ports;
+	if (m < last_buildout) {
 		ptr = 0;
 		while (midi_port_foreach(p, &ptr)) {
-			i = ((int*)ptr->userdata) - port_fd;
-			if (i >= real_num_ports) midi_port_unregister(ptr->num);
+			i = (int)ptr->userdata;
+			if (i >= m) midi_port_unregister(ptr->num);
 		}
-	} else {
-		for (i = last_buildout; i < real_num_ports; i++) {
+		last_buildout = m;
+	} else if (m > last_buildout) {
+		for (i = last_buildout; i < m; i++) {
 			buffer = 0;
 			asprintf(&buffer, " Multicast/IP MIDI %u", i+1);
 			midi_port_register(p, MIDI_INPUT | MIDI_OUTPUT, buffer,
-					&port_fd[i], 0);
+					(void*)i, 0);
 		}
+		last_buildout = m;
 	}
-	last_buildout = i;
+	SDL_mutexV(blocker);
 }
 
 int ip_midi_setup(void)
 {
 	static struct midi_driver driver;
 #ifdef WIN32
-	WSADATA ignored;
+	static WSADATA ignored;
+#endif
 
+	blocker = SDL_CreateMutex();
+	if (!blocker) {
+		return 0;
+	}
+
+#ifndef WIN32
+	if (pipe(wakeup) == -1) {
+		return 0;
+	}
+	(void)fcntl(wakeup[0], F_SETFL, fcntl(wakeup[0], F_GETFL, 0) | O_NONBLOCK);
+	(void)fcntl(wakeup[1], F_SETFL, fcntl(wakeup[1], F_GETFL, 0) | O_NONBLOCK);
+#endif
+
+#ifdef WIN32
 	memset(&ignored, 0, sizeof(ignored));
 	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
 		WSACleanup(); /* ? */
 		return 0;
 	}
 #endif
+
 	if (out_fd == -1) {
 		out_fd = _get_fd(-1, 1);
 	}
 
-	if (ip_midi_setports(DEFAULT_IP_PORT_COUNT) != DEFAULT_IP_PORT_COUNT) return 0;
+	ip_midi_setports(DEFAULT_IP_PORT_COUNT);
 
 	driver.flags = 0;
 	driver.poll = _ip_poll;
@@ -290,11 +373,17 @@ int ip_midi_setup(void)
 
 #else
 
-int ip_midi_setports(int n)
+void ip_midi_setports(int n)
 {
-	return 0;
 }
 
 #endif
 
-int ip_midi_getports(void) { return ip_midi_setports(-1); }
+int ip_midi_getports(void) {
+	int tmp;
+
+	SDL_mutexP(blocker);
+	tmp = (volatile int)real_num_ports;
+	SDL_mutexV(blocker);
+	return tmp;
+}
