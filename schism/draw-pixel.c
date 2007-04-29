@@ -28,13 +28,6 @@
 #include "sdlmain.h"
 
 
-#ifndef ABS
-# define ABS(x) ((x) < 0 ? -(x) : (x))
-#endif
-#ifndef SGN
-# define SGN(x) ((x) < 0 ? -1 : 1)      /* hey, what about zero? */
-#endif
-
 /* --------------------------------------------------------------------- */
 /* palette */
 
