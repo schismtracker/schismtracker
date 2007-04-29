@@ -855,7 +855,7 @@ BOOL CSoundFile::ReadNote()
 					pChn->nAutoVibDepth = pins->nVibDepth << 8;
 				} else {
 					pChn->nAutoVibDepth += pins->nVibSweep;
-					if ((pChn->nAutoVibDepth >> 8) > pins->nVibDepth)
+					if ((pChn->nAutoVibDepth >> 8) > (int)pins->nVibDepth)
 						pChn->nAutoVibDepth = pins->nVibDepth << 8;
 				}
 #if 0

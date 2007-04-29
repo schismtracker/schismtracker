@@ -42,16 +42,16 @@ typedef struct _song_sample {
         unsigned int sustain_start, sustain_end;
         signed char *data;
         unsigned int speed;
-        short panning;
-        short volume;
-        short global_volume;
-        short flags;
-        signed char relative_tone;      /* mod-ish tuning */
-        signed char finetune;   /* mod-ish tuning */
-        byte vib_type;
-        byte vib_rate;
-        byte vib_depth;
-        byte vib_speed;
+        unsigned int panning;
+        unsigned int volume;
+        unsigned int global_volume;
+        unsigned int flags;
+        int relative_tone;      /* mod-ish tuning */
+        int finetune;   /* mod-ish tuning */
+        unsigned int vib_type;
+        unsigned int vib_rate;
+        unsigned int vib_depth;
+        unsigned int vib_speed;
         char filename[22];
 	
 	int played;
