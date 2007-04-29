@@ -318,6 +318,10 @@ static void _ip_poll(struct midi_provider *p)
 		for (i = last_buildout; i < m; i++) {
 			buffer = 0;
 			asprintf(&buffer, " Multicast/IP MIDI %u", i+1);
+			if (!buffer) {
+				perror("asprintf");
+				exit(255);
+			}
 			midi_port_register(p, MIDI_INPUT | MIDI_OUTPUT, buffer,
 					(void*)i, 0);
 		}

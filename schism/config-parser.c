@@ -114,6 +114,10 @@ static size_t _parse_comments(const char *s, char **comments)
 		if (*comments) {
 			/* already have some comments -- add to them */
 			asprintf(&tmp, "%s%s", *comments, new_comments);
+			if (!tmp) {
+				perror("asprintf");
+				exit(255);
+			}
 			free(*comments);
 			free(new_comments);
 			*comments = tmp;
@@ -140,6 +144,10 @@ static int _parse_section(cfg_file_t *cfg, char *line, struct cfg_section **cur_
 		if ((*cur_section)->comments) {
 			/* glue them together */
 			asprintf(&tmp, "%s\n%s", comments, (*cur_section)->comments);
+			if (!tmp) {
+				perror("asprintf");
+				exit(255);
+			}
 			free((*cur_section)->comments);
 			free(comments);
 			(*cur_section)->comments = tmp;
@@ -185,6 +193,10 @@ static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_se
 		if (key->comments) {
 			/* glue them together */
 			asprintf(&tmp, "%s\n%s", comments, key->comments);
+			if (!tmp) {
+				perror("asprintf");
+				exit(255);
+			}
 			free(key->comments);
 			free(comments);
 			key->comments = tmp;
@@ -272,10 +284,18 @@ int cfg_read(cfg_file_t *cfg)
 				/* broken line: add it as a comment. */
 				if (comments) {
 					asprintf(&tmp, "%s# %s\n", comments, line);
+					if (!tmp) {
+						perror("asprintf");
+						exit(255);
+					}
 					free(comments);
 					comments = tmp;
 				} else {
 					asprintf(&comments, "# %s\n", line);
+					if (!comments) {
+						perror("asprintf");
+						exit(255);
+					}
 				}
 			}
 			free(line);
@@ -427,6 +447,10 @@ void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_n
 	if (key->value)
 		free(key->value);
 	asprintf(&key->value, "%d", value);
+	if (!key->value) {
+		perror("asprintf");
+		exit(255);
+	}
 }
 
 int cfg_init(cfg_file_t *cfg, const char *filename)
