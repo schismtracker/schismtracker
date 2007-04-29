@@ -317,16 +317,16 @@ typedef struct _MODINSTRUMENT
 	UINT nSustainStart, nSustainEnd;
 	signed char *pSample;
 	UINT nC4Speed;
-	WORD nPan;
-	WORD nVolume;
-	WORD nGlobalVol;
-	WORD uFlags;
-	signed char RelativeTone;
-	signed char nFineTune;
-	BYTE nVibType;
-	BYTE nVibSweep;
-	BYTE nVibDepth;
-	BYTE nVibRate;
+	UINT nPan;
+	UINT nVolume;
+	UINT nGlobalVol;
+	UINT uFlags;
+	int RelativeTone;
+	int nFineTune;
+	UINT nVibType;
+	UINT nVibSweep;
+	UINT nVibDepth;
+	UINT nVibRate;
 	CHAR name[22];
 	int played; // for note playback dots
 } MODINSTRUMENT;
