@@ -124,10 +124,6 @@ struct video_cf {
 		unsigned int height;
 
 		int autoscale;
-
-		/* stuff for scaling */
-		int sx, sy;
-		int *sax, *say;
 	} draw;
 	struct {
 		unsigned int width,height,bpp;
@@ -945,38 +941,6 @@ RETRYSURF:	/* use SDL surfaces */
 		video.desktop.type = VIDEO_GL;
 		break;
 	};
-	if (!video.draw.autoscale && (video.clip.w != NATIVE_SCREEN_WIDTH
-				|| video.clip.h != NATIVE_SCREEN_HEIGHT)) {
-		if (video.draw.sax) free(video.draw.sax);
-		if (video.draw.say) free(video.draw.say);
-		video.draw.sax = (int*)mem_alloc((video.clip.w+1)*sizeof(int));
-		video.draw.say = (int*)mem_alloc((video.clip.h+1)*sizeof(int));
-		video.draw.sx = (int)(65536.0*(float)(NATIVE_SCREEN_WIDTH-1)
-				/ (video.clip.w));
-		video.draw.sy = (int)(65536.0*(float)(NATIVE_SCREEN_HEIGHT-1)
-				/ (video.clip.h));
-		
-		/* precalculate increments */
-		csx = 0;
-		csax = video.draw.sax;
-		for (x = 0; x <= video.clip.w; x++) {
-			*csax = csx;
-			csax++;
-			csx &= 65535;
-			csx += video.draw.sx;
-		}
-		csy = 0;
-		csay = video.draw.say;
-		for (y = 0; y <= video.clip.h; y++) {
-			*csay = csy;
-			csay++;
-			csy &= 65535;
-			csy += video.draw.sy;
-		}
-
-	} else {
-		video.draw.sx = video.draw.sy = 0;
-	}
 
 	status.flags |= (NEED_UPDATE);
 }
@@ -1104,14 +1068,21 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 }
 
 
+#define FIXED_BITS 8
+#define FIXED_MASK ((1 << FIXED_BITS) - 1)
+#define ONE_HALF_FIXED (1 << (FIXED_BITS - 1))
+#define INT2FIXED(x) ((x) << FIXED_BITS)
+#define FIXED2INT(x) ((x) >> FIXED_BITS)
+#define FRAC(x) ((x) & FIXED_MASK)
+
 static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 {
 	unsigned int *csp, *esp, *dp;
-	int *csay, *csax;
-	unsigned int *c00, *c01, *c10, *c11;
+	unsigned int c00, c01, c10, c11;
 	unsigned int outr, outg, outb;
 	unsigned int pad;
-	int y, x, ey, ex, t1, t2, sstep;
+	int fixedx, fixedy, scalex, scaley;
+	unsigned int y, x,ey,ex,t1,t2,sstep;
 	unsigned int mouseline[80];
 	unsigned int mouseline_x, mouseline_v;
 	int iny, lasty;
@@ -1119,13 +1090,15 @@ static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 	mouseline_x = (video.mouse.x / 8);
 	mouseline_v = (video.mouse.x % 8);
 
-	csay = video.draw.say;
 	csp = (unsigned int *)video.cv32backing;
 	esp = csp + NATIVE_SCREEN_WIDTH;
 	lasty = -2;
 	iny = 0;
 	pad = pitch - (video.clip.w * bpp);
-	for (y = 0; y < video.clip.h; y++) {
+	scalex = INT2FIXED(NATIVE_SCREEN_WIDTH-1) / video.clip.w;
+	scaley = INT2FIXED(NATIVE_SCREEN_HEIGHT-1) / video.clip.h;
+	for (y = 0, fixedy = 0; (y < video.clip.h); y++, fixedy += scaley) {
+		iny = FIXED2INT(fixedy);
 		if (iny != lasty) {
 			make_mouseline(mouseline_x, mouseline_v, iny, mouseline);
 
@@ -1142,49 +1115,81 @@ static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 			}
 			lasty = iny;
 		}
-		c00 = csp;
-		c01 = csp; c01++;
-		c10 = esp;
-		c11 = esp; c11++;
-		csax = video.draw.sax;
-		for (x = 0; x < video.clip.w; x++) {
-			ex = (*csax & 65535);
-			ey = (*csay & 65535);
+		for (x = 0, fixedx = 0; x < video.clip.w; x++, fixedx += scalex) {
+			ex = FRAC(fixedx);
+			ey = FRAC(fixedy);
+
+			c00 = csp[FIXED2INT(fixedx)];
+			c01 = csp[FIXED2INT(fixedx) + 1];
+			c10 = esp[FIXED2INT(fixedx)];
+			c11 = esp[FIXED2INT(fixedx) + 1];
+
+#if FIXED_BITS <= 8
+			/* When there are enough bits between blue and
+			 * red, do the RB channels together
+			 * See http://www.virtualdub.org/blog/pivot/entry.php?id=117
+			 * for a quick explanation */
+#define REDBLUE(Q) ((Q) & 0x00FF00FF)
+#define GREEN(Q) ((Q) & 0x0000FF00)
+			t1 = REDBLUE((((REDBLUE(c01)-REDBLUE(c00))*ex) >> FIXED_BITS)+REDBLUE(c00));
+			t2 = REDBLUE((((REDBLUE(c11)-REDBLUE(c10))*ex) >> FIXED_BITS)+REDBLUE(c10));
+			outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+
+			t1 = GREEN((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00));
+			t2 = GREEN((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10));
+			outg = (((((t2-t1)*ey) >> FIXED_BITS) + t1) >> 8) & 0xFF;
+			
+			outr = (outb >> 16) & 0xFF;
+			outb &= 0xFF;
+#undef REDBLUE
+#undef GREEN
+#else
 #define BLUE(Q) (Q & 255)
 #define GREEN(Q) ((Q >> 8) & 255)
 #define RED(Q) ((Q >> 16) & 255)
-			t1 = ((((BLUE(*c01)-BLUE(*c00))*ex) >> 16)+BLUE(*c00)) & 255;
-			t2 = ((((BLUE(*c11)-BLUE(*c10))*ex) >> 16)+BLUE(*c10)) & 255;
-			outb = (((t2-t1)*ey) >> 16) + t1;
+			t1 = ((((BLUE(c01)-BLUE(c00))*ex) >> FIXED_BITS)+BLUE(c00)) & 0xFF;
+			t2 = ((((BLUE(c11)-BLUE(c10))*ex) >> FIXED_BITS)+BLUE(c10)) & 0xFF;
+			outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
 			
-			t1 = ((((GREEN(*c01)-GREEN(*c00))*ex) >> 16)+GREEN(*c00)) & 255;
-			t2 = ((((GREEN(*c11)-GREEN(*c10))*ex) >> 16)+GREEN(*c10)) & 255;
-			outg = (((t2-t1)*ey) >> 16) + t1;
+			t1 = ((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00)) & 0xFF;
+			t2 = ((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10)) & 0xFF;
+			outg = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
 
-			t1 = ((((RED(*c01)-RED(*c00))*ex) >> 16)+RED(*c00)) & 255;
-			t2 = ((((RED(*c11)-RED(*c10))*ex) >> 16)+RED(*c10)) & 255;
-			outr = (((t2-t1)*ey) >> 16) + t1;
+			t1 = ((((RED(c01)-RED(c00))*ex) >> FIXED_BITS)+RED(c00)) & 0xFF;
+			t2 = ((((RED(c11)-RED(c10))*ex) >> FIXED_BITS)+RED(c10)) & 0xFF;
+			outr = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
 #undef RED
 #undef GREEN
 #undef BLUE
-			csax++;	
-			sstep = (*csax >> 16);
-			c00 += sstep;
-			c01 += sstep;
-			c10 += sstep;
-			c11 += sstep;
-
+#endif
 			/* write output "pixel" */
 			switch (bpp) {
 			case 4:
+				/* inline MapRGB */
+				(*(unsigned int *)pixels) = 0xFF000000 | (outr << 16) | (outg << 8) | outb;
+				break;
 			case 3:
-				(*(unsigned int *)pixels) = SDL_MapRGB(
-					video.surface->format, outr, outg, outb);
+				/* inline MapRGB */
+				(*(unsigned int *)pixels) = (outr << 16) | (outg << 8) | outb;
 				break;
 			case 2:
-				/* err... */
-				(*(unsigned short *)pixels) = SDL_MapRGB(
-					video.surface->format, outr, outg, outb);
+				/* inline MapRGB if possible */
+				if (video.surface->format->palette) {
+					/* err... */
+					(*(unsigned short *)pixels) = SDL_MapRGB(
+						video.surface->format, outr, outg, outb);
+				} else if (video.surface->format->Gloss == 2) {
+					/* RGB565 */
+					(*(unsigned short *)pixels) = ((outr << 8) & 0xF800) |
+						((outg << 3) & 0x07E0) |
+						(outb >> 3);
+				} else {
+					/* RGB555 */
+					(*(unsigned short *)pixels) = 0x8000 |
+						((outr << 7) & 0x7C00) |
+						((outg << 2) & 0x03E0) |
+						(outb >> 3);
+				}
 				break;
 			case 1:
 				/* er... */
@@ -1195,9 +1200,6 @@ static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 			pixels += bpp;
 		}
 		pixels += pad;
-		csay++;
-		/* move y position on source */
-		iny += (*csay >> 16);
 	}
 }
 static inline void _blitYY(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
@@ -1392,7 +1394,7 @@ void video_blit(void)
 	};
 
 	vgamem_lock();
-	if (video.draw.autoscale || (!video.draw.sx && !video.draw.sy)) {
+	if (video.draw.autoscale || (video.clip.w == NATIVE_SCREEN_WIDTH && video.clip.h == NATIVE_SCREEN_HEIGHT)) {
 		/* scaling is provided by the hardware, or isn't necessary */
 		_blit11(bpp, pixels, pitch, video.pal, video.tc_identity);
 	} else {
