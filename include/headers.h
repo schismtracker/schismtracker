@@ -209,3 +209,4 @@ char *realpath(const char *path, char *resolved_path);
 
 #define INT_SHAPED_PTR(v)		((int)(((void*)(v))))
 #define PTR_SHAPED_INT(i)		((void*)i)
+
