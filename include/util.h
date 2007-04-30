@@ -56,6 +56,12 @@ typedef unsigned char byte;
 #endif
 
 #ifdef __GNUC__
+#ifndef LIKELY
+#define LIKELY(x) __builtin_expect(!!(x),1)
+#endif
+#ifndef UNLIKELY
+#define UNLIKELY(x) __builtin_expect(!!(x),0)
+#endif
 #ifndef UNUSED
 # define UNUSED __attribute__((unused))
 #endif
@@ -68,6 +74,12 @@ typedef unsigned char byte;
 #endif
 #ifndef NORETURN
 # define NORETURN
+#endif
+#ifndef LIKELY
+#define LIKELY(x)
+#endif
+#ifndef UNLIKELY
+#define UNLIKELY(x)
 #endif
 #endif
 
@@ -90,10 +102,15 @@ extern "C" {
 #endif
 
 /* memory */
+#ifdef __GNUC__
+extern __attribute__ ((malloc)) void *mem_alloc(size_t);
+extern __attribute__ ((malloc)) char *str_dup(const char *);
+#else
 extern void *mem_alloc(size_t);
+extern char *str_dup(const char *);
+#endif
 extern void *mem_realloc(void *,size_t);
 extern void mem_free(void *);
-extern char *str_dup(const char *);
 
 /* formatting */
 /* for get_{time,date}_string, buf should be (at least) 27 chars; anything past that isn't used. */
