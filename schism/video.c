@@ -739,9 +739,6 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 void video_resize(unsigned int width, unsigned int height)
 {
 	GLfloat tex_width, tex_height;
-	int *csax, *csay;
-	int x, y, csx, csy;
-	/*unsigned int gt;*/
 	int texsize;
 
 	if (!height) height = NATIVE_SCREEN_HEIGHT;
@@ -1082,7 +1079,7 @@ static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 	unsigned int outr, outg, outb;
 	unsigned int pad;
 	int fixedx, fixedy, scalex, scaley;
-	unsigned int y, x,ey,ex,t1,t2,sstep;
+	unsigned int y, x,ey,ex,t1,t2;
 	unsigned int mouseline[80];
 	unsigned int mouseline_x, mouseline_v;
 	int iny, lasty;
