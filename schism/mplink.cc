@@ -130,7 +130,7 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
         if (!mp->Headers[n]) {
                 mp->Headers[n] = new INSTRUMENTHEADER;
 		memset(mp->Headers[n], 0, sizeof(INSTRUMENTHEADER));
-		mp->Headers[n]->nGlobalVol = 64;
+		mp->Headers[n]->nGlobalVol = 128;
 		mp->Headers[n]->nPan = 128;
 
 		_init_envelope(&mp->Headers[n]->VolEnv, 64);
@@ -727,7 +727,7 @@ void song_init_instrument_from_sample(int insn, int samp)
 	if (!ins) return; /* eh? */
 
 	memset(ins, 0, sizeof(INSTRUMENTHEADER));
-	ins->nGlobalVol = 64;
+	ins->nGlobalVol = 128;
 	ins->nPan = 128;
 
 	_init_envelope(&ins->VolEnv, 64);

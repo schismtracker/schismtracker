@@ -627,7 +627,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	iti.fadeout = bswapLE16(i->nFadeOut >> 5);
 	iti.pps = i->nPPS;
 	iti.ppc = i->nPPC;
-	iti.gbv = i->nGlobalVol * 2;
+	iti.gbv = i->nGlobalVol;
 	iti.dfp = i->nPan / 4;
 	if (!(i->dwFlags & ENV_SETPANNING))
 		iti.dfp |= 0x80;

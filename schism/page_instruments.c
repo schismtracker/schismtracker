@@ -2082,7 +2082,7 @@ static void instrument_list_volume_predraw_hook(void)
         widgets_volume[13].d.numentry.value = ins->vol_env.sustain_end;
 
         /* mp hack: shifting values all over the place here, ugh */
-        widgets_volume[14].d.thumbbar.value = ins->global_volume << 1;
+        widgets_volume[14].d.thumbbar.value = ins->global_volume;
         widgets_volume[15].d.thumbbar.value = ins->fadeout >> 5;
         widgets_volume[16].d.thumbbar.value = ins->volume_swing;
 }
@@ -2208,7 +2208,7 @@ static void instrument_list_volume_update_values(void)
                   ins->flags |= ENV_VOLSUSTAIN);
 
         /* more ugly shifts */
-        ins->global_volume = widgets_volume[14].d.thumbbar.value >> 1;
+        ins->global_volume = widgets_volume[14].d.thumbbar.value;
         ins->fadeout = widgets_volume[15].d.thumbbar.value << 5;
         ins->volume_swing = widgets_volume[16].d.thumbbar.value;
 

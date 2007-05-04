@@ -410,7 +410,7 @@ BOOL CSoundFile::ReadMT2(LPCBYTE lpStream, DWORD dwMemLength)
 			{
 				memset(penv, 0, sizeof(INSTRUMENTHEADER));
 				memcpy(penv->name, pmi->szName, 32);
-				penv->nGlobalVol = 64;
+				penv->nGlobalVol = 128;
 				penv->nPan = 128;
 				for (UINT i=0; i<120; i++)
 				{
