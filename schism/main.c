@@ -606,10 +606,18 @@ static void event_loop(void)
 			win32_get_modkey(&modkey);
 #endif
 			kk.sym = event.key.keysym.sym;
-			switch (fix_numlock_key) {
-			case NUMLOCK_ALWAYS_OFF: modkey &= ~KMOD_NUM; break;
-			case NUMLOCK_ALWAYS_ON: modkey |= KMOD_NUM; break;
-			};
+			if (modkey & KMOD_SHIFT) {
+				/* reverse this when shift is pressed */
+				switch (fix_numlock_key) {
+				case NUMLOCK_ALWAYS_ON: modkey &= ~KMOD_NUM; break;
+				case NUMLOCK_ALWAYS_OFF: modkey |= KMOD_NUM; break;
+				};
+			} else {
+				switch (fix_numlock_key) {
+				case NUMLOCK_ALWAYS_OFF: modkey &= ~KMOD_NUM; break;
+				case NUMLOCK_ALWAYS_ON: modkey |= KMOD_NUM; break;
+				};
+			}
 			kk.mod = modkey;
 			kk.unicode = event.key.keysym.unicode;
 			kk.mouse = 0;
