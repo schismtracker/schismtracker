@@ -503,16 +503,7 @@ static void event_loop(void)
 	int fix_numlock_key;
 	int q;
 
-	if (status.fix_numlock_setting == NUMLOCK_GUESS) {
-#ifdef MACOSX
-		/* do i have to detect ibook */
-		fix_numlock_key = NUMLOCK_ALWAYS_ON;
-#else
-		fix_numlock_key = NUMLOCK_HONOR;
-#endif
-	} else {
-		fix_numlock_key = status.fix_numlock_setting;
-	}
+	fix_numlock_key = status.fix_numlock_setting;
 
 	debug_s = getenv("SCHISM_DEBUG");
 
@@ -606,18 +597,28 @@ static void event_loop(void)
 			win32_get_modkey(&modkey);
 #endif
 			kk.sym = event.key.keysym.sym;
-			if (modkey & KMOD_SHIFT) {
-				/* reverse this when shift is pressed */
-				switch (fix_numlock_key) {
-				case NUMLOCK_ALWAYS_ON: modkey &= ~KMOD_NUM; break;
-				case NUMLOCK_ALWAYS_OFF: modkey |= KMOD_NUM; break;
-				};
-			} else {
-				switch (fix_numlock_key) {
-				case NUMLOCK_ALWAYS_OFF: modkey &= ~KMOD_NUM; break;
-				case NUMLOCK_ALWAYS_ON: modkey |= KMOD_NUM; break;
-				};
-			}
+
+			switch (fix_numlock_key) {
+			case NUMLOCK_GUESS:
+#ifdef MACOSX
+				if (ibook_helper != -1) {
+					if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
+						/* text is more likely? */
+						modkey |= KMOD_NUM;
+					} else {
+						modkey &= ~KMOD_NUM;
+					}
+				} /* otherwise honor it */
+#else
+				/* do nothing */
+#endif
+				break;
+
+			/* other choices... */
+			case NUMLOCK_ALWAYS_OFF: modkey &= ~KMOD_NUM; break;
+			case NUMLOCK_ALWAYS_ON: modkey |= KMOD_NUM; break;
+			};
+
 			kk.mod = modkey;
 			kk.unicode = event.key.keysym.unicode;
 			kk.mouse = 0;
