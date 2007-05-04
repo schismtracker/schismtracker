@@ -213,7 +213,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			}
 			c->dwFlags &= ~(CHN_PINGPONGFLAG);
 			c->nPan = 128; // redundant?
-			c->nInsVol = i->nGlobalVol;
+			c->nInsVol = i->nGlobalVol>>1;
 			c->nFadeOutVol = 0x10000;
 			i->played = 1;
 

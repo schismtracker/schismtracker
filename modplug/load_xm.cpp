@@ -404,7 +404,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 		penv->PanEnv.nLoopEnd = xmsh.ploope;
 		if (penv->PanEnv.nLoopEnd >= 12) penv->PanEnv.nLoopEnd = 0;
 		if (penv->PanEnv.nLoopStart >= penv->PanEnv.nLoopEnd) penv->dwFlags &= ~ENV_PANLOOP;
-		penv->nGlobalVol = 64;
+		penv->nGlobalVol = 128;
 		for (UINT ienv=0; ienv<12; ienv++)
 		{
 			penv->VolEnv.Ticks[ienv] = (WORD)xmsh.venv[ienv*2];

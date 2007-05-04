@@ -43,7 +43,7 @@ BOOL CSoundFile::ITInstrToMPT(const void *p, INSTRUMENTHEADER *penv, UINT trkver
 		memcpy(penv->name, pis->name, 26);
 		memcpy(penv->filename, pis->filename, 12);
 		penv->nFadeOut = bswapLE16(pis->fadeout) << 6;
-		penv->nGlobalVol = 64;
+		penv->nGlobalVol = 128;
 		for (UINT j=0; j<120; j++)
 		{
 			UINT note = pis->keyboard[j*2];
@@ -81,8 +81,8 @@ BOOL CSoundFile::ITInstrToMPT(const void *p, INSTRUMENTHEADER *penv, UINT trkver
 		penv->nMidiChannel = pis->mch;
 		penv->wMidiBank = bswapLE16(pis->mbank);
 		penv->nFadeOut = bswapLE16(pis->fadeout) << 5;
-		penv->nGlobalVol = pis->gbv >> 1;
-		if (penv->nGlobalVol > 64) penv->nGlobalVol = 64;
+		penv->nGlobalVol = pis->gbv;
+		if (penv->nGlobalVol > 128) penv->nGlobalVol = 128;
 		for (UINT j=0; j<120; j++)
 		{
 			UINT note = pis->keyboard[j*2];
@@ -908,7 +908,7 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 			iti.fadeout = penv->nFadeOut >> 5;
 			iti.pps = penv->nPPS;
 			iti.ppc = penv->nPPC;
-			iti.gbv = (BYTE)(penv->nGlobalVol << 1);
+			iti.gbv = (BYTE)penv->nGlobalVol;
 			iti.dfp = (BYTE)penv->nPan >> 2;
 			if (!(penv->dwFlags & ENV_SETPANNING)) iti.dfp |= 0x80;
 			iti.rv = penv->nVolSwing;

@@ -158,7 +158,7 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 				}
 				Headers[iIns+1] = penv;
 				penv->nFadeOut = 1024;	// ???
-				penv->nGlobalVol = 64;
+				penv->nGlobalVol = 128;
 				penv->nPan = bswapBE16(pih->panning);
 				if ((penv->nPan) && (penv->nPan < 256))
 					penv->dwFlags = ENV_SETPANNING;

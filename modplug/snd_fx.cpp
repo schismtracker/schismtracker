@@ -353,7 +353,7 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 		if (penv)
 		{
 			penv->played = 1;
-			pChn->nInsVol = (psmp->nGlobalVol * penv->nGlobalVol) >> 6;
+			pChn->nInsVol = (psmp->nGlobalVol * penv->nGlobalVol) >> 7;
 			if (penv->dwFlags & ENV_SETPANNING) pChn->nPan = penv->nPan;
 			pChn->nNNA = penv->nNNA;
 		} else
