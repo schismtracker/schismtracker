@@ -844,11 +844,13 @@ void song_delete_instrument(int n)
 	int j;
 	if (!mp->Headers[n]) return;
 	song_lock_audio();
-	for (i = 0; i < sizeof(mp->Headers[n]->Keyboard); i++) {
+	for (i = 0; i < 128; i++) {
 		j = mp->Headers[n]->Keyboard[i];
 		mp->DestroySample(j);
-		memset(mp->Ins+j, 0, sizeof(MODINSTRUMENT));
-		if (j) memset(mp->m_szNames[j], 0, 32);
+		if (j) {
+			memset(mp->Ins+j, 0, sizeof(MODINSTRUMENT));
+			memset(mp->m_szNames[j], 0, 32);
+		}
 	}
 	song_unlock_audio();
 	song_wipe_instrument(n);
