@@ -1209,7 +1209,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	memset(sampmap, 0, sizeof(sampmap));
 	if (mp->Headers[target]) {
 		/* init... */
-		for (unsigned long j = 0; j < sizeof(mp->Headers[target]->Keyboard); j++) {
+		for (unsigned long j = 0; j < 128; j++) {
 			x = mp->Headers[target]->Keyboard[j];
 			sampmap[x] = 1;
 		}
@@ -1217,7 +1217,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		for (unsigned long q = 0; q < MAX_INSTRUMENTS; q++) {
 			if ((int) q == target) continue;
 			if (!mp->Headers[q]) continue;
-			for (unsigned long j = 0; j < sizeof(mp->Headers[target]->Keyboard); j++) {
+			for (unsigned long j = 0; j < 128; j++) {
 				x = mp->Headers[q]->Keyboard[j];
 				sampmap[x] = 0;
 			}
@@ -1246,7 +1246,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 			/* 1. find a place for all the samples */
 			memset(sampmap, 0, sizeof(sampmap));
-			for (unsigned long j = 0; j < sizeof(xl.Headers[n]->Keyboard); j++) {
+			for (unsigned long j = 0; j < 128; j++) {
 				x = xl.Headers[n]->Keyboard[j];
 				if (!sampmap[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
@@ -1274,7 +1274,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			xl.Headers[n] = 0; /* dangle */
 
 			/* and rewrite! */
-			for (unsigned long k = 0; k < sizeof(mp->Headers[target]->Keyboard); k++) {
+			for (unsigned long k = 0; k < 128; k++) {
 				mp->Headers[target]->Keyboard[k] = sampmap[
 						mp->Headers[target]->Keyboard[k]
 				];
@@ -1505,13 +1505,13 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 				str_dup(path), str_dup(base), NULL, n);
 			file->title = str_dup((char*)library.Headers[n]->name);
 
-			int count[sizeof(library.Headers[n]->Keyboard)];
+			int count[128];
 			memset(count, 0, sizeof(count));
 	
 			file->sampsize = 0;
 			file->filesize = 0;
 			file->instnum = n;
-			for (j = 0; j < sizeof(library.Headers[n]->Keyboard); j++) {
+			for (j = 0; j < 128; j++) {
 				x = library.Headers[n]->Keyboard[j];
 				if (!count[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
