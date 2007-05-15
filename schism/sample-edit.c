@@ -577,17 +577,17 @@ void sample_invert(song_sample * sample)
 	song_unlock_audio();
 }
 
-static void _mono_lr16(signed char *data, unsigned long length, int shift)
+static void _mono_lr16(signed short *data, unsigned long length, int shift)
 {
 	unsigned long i, j;
-	if (shift) memmove(data, data+shift+shift, (length-shift)-shift);
+	if (shift) memmove(data, data+shift, 2*(length-(shift * sizeof(short))));
 	for (j = 0, i = 1; j < length; j++, i += 2)
 		data[j] = data[i];
 }
 static void _mono_lr8(signed char *data, unsigned long length, int shift)
 {
 	unsigned long i, j;
-	if (shift) memmove(data, data+shift, length-shift);
+	if (shift) memmove(data, data+shift, 2*(length-shift));
 	for (j = 0, i = 1; j < length; j++, i += 2)
 		data[j] = data[i];
 }
@@ -597,9 +597,9 @@ void sample_mono_left(song_sample * sample)
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & SAMP_STEREO) {
 		if (sample->flags & SAMP_16_BIT)
-			_mono_lr16((signed char *)sample->data, sample->length*2, 1);
+			_mono_lr16((signed short *)sample->data, sample->length, 1);
 		else
-			_mono_lr8((signed char *)sample->data, sample->length*2, 1);
+			_mono_lr8((signed char *)sample->data, sample->length, 1);
 		sample->flags &= ~SAMP_STEREO;
 	}
 	song_unlock_audio();
@@ -610,9 +610,9 @@ void sample_mono_right(song_sample * sample)
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & SAMP_STEREO) {
 		if (sample->flags & SAMP_16_BIT)
-			_mono_lr16((signed char *)sample->data, sample->length*2, 0);
+			_mono_lr16((signed short *)sample->data, sample->length, 0);
 		else
-			_mono_lr8((signed char *)sample->data, sample->length*2, 0);
+			_mono_lr8((signed char *)sample->data, sample->length, 0);
 		sample->flags &= ~SAMP_STEREO;
 	}
 	song_unlock_audio();
