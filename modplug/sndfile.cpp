@@ -194,19 +194,8 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 		if (pins->pSample)
 		{
 			if (pins->nLoopEnd > pins->nLength) pins->nLoopEnd = pins->nLength;
-			if (pins->nLoopStart + 3 >= pins->nLoopEnd)
-			{
-				pins->nLoopStart = 0;
-				pins->nLoopEnd = 0;
-			}
 			if (pins->nSustainEnd > pins->nLength) pins->nSustainEnd = pins->nLength;
-			if (pins->nSustainStart + 3 >= pins->nSustainEnd)
-			{
-				pins->nSustainStart = 0;
-				pins->nSustainEnd = 0;
-			}
-		} else
-		{
+		} else {
 			pins->nLength = 0;
 			pins->nLoopStart = 0;
 			pins->nLoopEnd = 0;
