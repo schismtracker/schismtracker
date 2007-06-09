@@ -1093,7 +1093,20 @@ diskwriter_driver_t txtwriter = {
 int song_save(const char *file, const char *qt)
 {
 	const char *ext;
-	int i;
+	int i, nsmp, nins;
+
+
+	// fix m_nSamples and m_nInstruments
+	nsmp = 198;
+	while (nsmp >= 0 && _sample_is_empty(nsmp))
+		nsmp--;
+
+	nins = 198;
+	while (nins >= 0 && song_instrument_is_empty(nins-1))
+		nins--;
+	nins++;
+	mp->m_nSamples = nsmp;
+	mp->m_nInstruments = nins;
 	
 	if (!qt) {
 		ext = get_extension(file);
