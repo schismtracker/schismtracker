@@ -576,7 +576,11 @@ static void event_loop(void)
 			|| event.key.keysym.sym == SDLK_RSHIFT) {
 				if (shift_release) shift_release();
 			}
+#if defined(WIN32)
 #define _ALTTRACKED_KMOD	(KMOD_NUM|KMOD_CAPS)
+#else
+#define _ALTTRACKED_KMOD	0
+#endif
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
 			case SDLK_NUMLOCK:
