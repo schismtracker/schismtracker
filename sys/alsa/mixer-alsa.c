@@ -47,6 +47,15 @@ if (!_dltrick_##a) abort(); _dltrick_ ## a c; }
 r a b { if (!_dltrick_##a) _dltrick_##a = dlsym(_dltrick_handle, #a); \
 if (!_dltrick_##a) abort(); return _dltrick_ ## a c; }
 
+_any_dltrick(snd_mixer_elem_t*, snd_mixer_find_selem,
+(snd_mixer_t*e,const snd_mixer_selem_id_t*sid),(e,sid))
+
+_void_dltrick(snd_mixer_selem_id_set_index,
+(snd_mixer_selem_id_t*obj,unsigned int val),(obj,val))
+
+_void_dltrick(snd_mixer_selem_id_set_name,
+(snd_mixer_selem_id_t*obj,const char *val),(obj,val))
+
 _any_dltrick(int,snd_mixer_selem_set_playback_volume,
 (snd_mixer_elem_t*e,snd_mixer_selem_channel_id_t ch,long v),(e,ch,v))
 
@@ -100,10 +109,11 @@ static void _alsa_write(snd_mixer_elem_t *em, int *l, int *r, long min, long ran
 	al = ((*l) * 255 / range) + min;
 	ar = ((*r) * 255 / range) + min;
 
-	md = ((al) + (ar)) / 2;
 	mr = min+range;
 
 	if (snd_mixer_selem_is_playback_mono(em)) {
+		md = ((al) + (ar)) / 2;
+
 		_alsa_writeout(em, SND_MIXER_SCHN_MONO, md, mr);
 	} else {
 		_alsa_writeout(em, SND_MIXER_SCHN_FRONT_LEFT, al, mr);
@@ -161,8 +171,13 @@ static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
 	snd_mixer_t *mix;
 	snd_ctl_t *ctl_handle;
 	snd_ctl_card_info_t *hw_info;
+	snd_mixer_selem_id_t *sid;
 
 	snd_ctl_card_info_alloca(&hw_info);
+	snd_mixer_selem_id_alloca(&sid);
+	snd_mixer_selem_id_set_index(sid, 0);
+	snd_mixer_selem_id_set_name(sid, "PCM");
+
 	if (snd_ctl_open(&ctl_handle, alsa_card_id, 0) < 0) return;
 	if (snd_ctl_card_info(ctl_handle, hw_info) < 0) {
 		snd_ctl_close(ctl_handle);
@@ -183,26 +198,19 @@ static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
 			snd_mixer_close(mix);
 			return;
 		}
-		for (em = snd_mixer_first_elem(mix); em;
-						em = snd_mixer_elem_next(em)) {
-			if (snd_mixer_elem_get_type(em) !=
-						SND_MIXER_ELEM_SIMPLE)
-				continue;
-			if (!snd_mixer_selem_is_active(em)) continue;
-			if (!snd_mixer_selem_has_playback_volume(em))
-				continue;
-			if (!snd_mixer_selem_has_playback_volume(em))
-				continue;
-			if (snd_mixer_selem_has_capture_switch_exclusive(em))
-				continue;
-			if (snd_mixer_selem_has_capture_switch_joined(em))
-				continue;
-
+		em = snd_mixer_find_selem(mix, sid);
+		if (!em) {
+			/* no PCM? use Master */
+			snd_mixer_selem_id_set_index(sid, 0);
+			snd_mixer_selem_id_set_name(sid, "Master");
+			em = snd_mixer_find_selem(mix, sid);
+		}
+		if (em) {
 			ml = mr = 0;
 			snd_mixer_selem_get_playback_volume_range(em, &ml, &mr);
-			if (ml == mr) continue;
-
-			busy(em, l, r, ml, mr - ml);
+			if (ml != mr) {
+				busy(em, l, r, ml, mr - ml);
+			}
 		}
 		snd_mixer_close(mix);
 	}
