@@ -247,6 +247,16 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			mp->CheckNNA(chan,c->nRowInstr,note,FALSE);
 			c->nVolume = (vol << 2);
 			mp->ProcessEffects();
+
+			/* these special cases are to handle the 4 key */
+			if (note == NOTE_CUT) {
+				mp->NoteCut(chan, mp->m_nTickCount);
+			} else if (note == NOTE_OFF) {
+				mp->KeyOff(chan);
+			} else if (note >= 120) {
+				c->dwFlags |= CHN_NOTEFADE;
+			}
+
 		}
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
 			mp->m_dwSongFlags &= ~SONG_ENDREACHED;
