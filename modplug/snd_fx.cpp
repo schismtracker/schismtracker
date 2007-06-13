@@ -1008,6 +1008,14 @@ BOOL CSoundFile::ProcessEffects()
 			{
 				pChn->nVolume = (param < 64) ? param*4 : 256;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
+				for (UINT i=m_nChannels; i<MAX_CHANNELS; i++)
+				{
+					MODCHANNEL *c = &Chn[i];
+					if (c->nMasterChn == nChn) {
+						c->nVolume = pChn->nVolume;
+						c->dwFlags |= CHN_FASTVOLRAMP;
+					}
+				}
 			}
 			break;
 
