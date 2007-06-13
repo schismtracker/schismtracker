@@ -200,6 +200,16 @@ void song_save_channel_states(void)
 	while (n-- > 0)
 		_save_state(n);
 }
+static inline void _fix_mutes_like(int chan)
+{
+	int i;
+	for (i = 0; i < MAX_CHANNELS; i++) {
+		if (i == chan) continue;
+		if (((int)mp->Chn[i].nMasterChn) != chan) continue;
+		mp->Chn[i].dwFlags = (mp->Chn[i].dwFlags & (~(CHN_MUTE)))
+				| (mp->Chn[chan].dwFlags &   (CHN_MUTE));
+	}
+}
 
 void song_set_channel_mute(int channel, int muted)
 {
@@ -211,6 +221,7 @@ void song_set_channel_mute(int channel, int muted)
                 mp->Chn[channel].dwFlags &= ~CHN_MUTE;
 		_save_state(channel);
         }
+	_fix_mutes_like(channel);
 }
 
 // I don't think this is useful besides undoing a channel solo (a few lines
