@@ -2230,8 +2230,14 @@ void CSoundFile::RetrigNote(UINT nChn, UINT param)
 	if (m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT))
 	{
 		if (!nRetrigSpeed) nRetrigSpeed = 1;
-		if ((nRetrigCount) && (!(nRetrigCount % nRetrigSpeed))) bDoRetrig = TRUE;
-		nRetrigCount++;
+		if (nRetrigCount >= nRetrigSpeed)
+		{
+			bDoRetrig = TRUE;
+			nRetrigCount = 0;
+		} else
+		{
+			nRetrigCount++;
+		}
 	} else
 	{
 		UINT realspeed = nRetrigSpeed;
