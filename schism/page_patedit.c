@@ -3205,6 +3205,9 @@ static int pattern_editor_insert(struct key_event *k)
 			if (vol == -1) {
 				vol = song_get_instrument_default_volume(i, i);
 			}
+			if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
+				vol = cur_note->volume;
+			}
 
 			if (tracing_was_playing) {
 				song_single_step(current_pattern, current_row);
