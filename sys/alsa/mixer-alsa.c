@@ -176,7 +176,7 @@ static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
 	snd_ctl_card_info_alloca(&hw_info);
 	snd_mixer_selem_id_alloca(&sid);
 	snd_mixer_selem_id_set_index(sid, 0);
-	snd_mixer_selem_id_set_name(sid, "PCM");
+	snd_mixer_selem_id_set_name(sid, "Default");
 
 	if (snd_ctl_open(&ctl_handle, alsa_card_id, 0) < 0) return;
 	if (snd_ctl_card_info(ctl_handle, hw_info) < 0) {
@@ -199,12 +199,6 @@ static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
 			return;
 		}
 		em = snd_mixer_find_selem(mix, sid);
-		if (!em) {
-			/* no PCM? use Master */
-			snd_mixer_selem_id_set_index(sid, 0);
-			snd_mixer_selem_id_set_name(sid, "Master");
-			em = snd_mixer_find_selem(mix, sid);
-		}
 		if (em) {
 			ml = mr = 0;
 			snd_mixer_selem_get_playback_volume_range(em, &ml, &mr);
