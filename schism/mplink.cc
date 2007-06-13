@@ -205,7 +205,7 @@ static inline void _fix_mutes_like(int chan)
 	int i;
 	for (i = 0; i < MAX_CHANNELS; i++) {
 		if (i == chan) continue;
-		if (((int)mp->Chn[i].nMasterChn) != chan) continue;
+		if (((int)mp->Chn[i].nMasterChn) != (chan+1)) continue;
 		mp->Chn[i].dwFlags = (mp->Chn[i].dwFlags & (~(CHN_MUTE)))
 				| (mp->Chn[chan].dwFlags &   (CHN_MUTE));
 	}
