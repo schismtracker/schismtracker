@@ -1011,7 +1011,7 @@ BOOL CSoundFile::ProcessEffects()
 				for (UINT i=m_nChannels; i<MAX_CHANNELS; i++)
 				{
 					MODCHANNEL *c = &Chn[i];
-					if (c->nMasterChn == nChn) {
+					if (c->nMasterChn == (nChn+1)) {
 						c->nVolume = pChn->nVolume;
 						c->dwFlags |= CHN_FASTVOLRAMP;
 					}
@@ -1236,7 +1236,7 @@ BOOL CSoundFile::ProcessEffects()
 				for (UINT i=m_nChannels; i<MAX_CHANNELS; i++)
 				{
 					MODCHANNEL *c = &Chn[i];
-					if (c->nMasterChn == nChn) {
+					if (c->nMasterChn == (nChn+1)) {
 						c->nGlobalVol = param;
 						c->dwFlags |= CHN_FASTVOLRAMP;
 					}
@@ -1252,7 +1252,7 @@ BOOL CSoundFile::ProcessEffects()
 				for (UINT i=m_nChannels; i<MAX_CHANNELS; i++)
 				{
 					MODCHANNEL *c = &Chn[i];
-					if (c->nMasterChn == nChn) {
+					if (c->nMasterChn == (nChn+1)) {
 						if (c == pChn) saw_self = 1;
 						ChannelVolSlide(c, param);
 					}
