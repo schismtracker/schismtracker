@@ -35,7 +35,7 @@ mv "$tempfile" "include/auto/helpenum.h" || exit 1
 echo "making include/auto/schismico.h" >&2
 pngtopnm -alpha < icons/schism-icon-32.png >.a.tmp || exit 1
 pngtopnm < icons/schism-icon-32.png >.b.tmp || exit 1
-ppmtoxpm -hexonly -name _schism_icon_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
+ppmtoxpm -rgb /dev/null -name _schism_icon_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
 sed 's/char/const char/' < .c.tmp > include/auto/schismico.h
 rm -f .a.tmp .b.tmp .c.tmp
 
@@ -43,7 +43,7 @@ rm -f .a.tmp .b.tmp .c.tmp
 echo "making include/auto/logoschism.h" >&2
 pngtopnm -alpha < icons/schism_logo.png > .a.tmp || exit 1
 pngtopnm < icons/schism_logo.png > .b.tmp || exit 1
-ppmtoxpm -hexonly -name _logo_schism_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
+ppmtoxpm -rgb /dev/null -name _logo_schism_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
 sed 's/char/const char/' < .c.tmp > include/auto/logoschism.h
 rm -f .a.tmp .b.tmp .c.tmp
 
@@ -51,7 +51,7 @@ rm -f .a.tmp .b.tmp .c.tmp
 echo "making include/auto/logoit.h" >&2
 pngtopnm -alpha < icons/it_logo.png > .a.tmp || exit 1
 pngtopnm < icons/it_logo.png > .b.tmp || exit 1
-ppmtoxpm -hexonly -name _logo_it_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
+ppmtoxpm -rgb /dev/null -name _logo_it_xpm -alphamask .a.tmp < .b.tmp > .c.tmp || exit 1
 sed 's/char/const char/' < .c.tmp > include/auto/logoit.h
 rm -f .a.tmp .b.tmp .c.tmp || exit 1
 
