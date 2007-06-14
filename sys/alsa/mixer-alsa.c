@@ -64,6 +64,7 @@ _any_dltrick(int,snd_mixer_selem_has_playback_channel,(snd_mixer_elem_t*e,snd_mi
 
 _any_dltrick(int,snd_ctl_card_info,(snd_ctl_t*c,snd_ctl_card_info_t*i),(c,i))
 _any_dltrick(size_t,snd_ctl_card_info_sizeof,(void),())
+_any_dltrick(size_t,snd_mixer_selem_id_sizeof,(void),())
 
 _any_dltrick(int,snd_mixer_close,(snd_mixer_t*mm),(mm))
 _any_dltrick(int,snd_mixer_selem_get_playback_volume,
@@ -142,7 +143,7 @@ static void _alsa_readin(snd_mixer_elem_t *em, snd_mixer_selem_channel_id_t d,
 	}
 	
 }
-static void _alsa_config(snd_mixer_elem_t *em, int *l, int *r, long min, long range)
+static void _alsa_config(UNUSED snd_mixer_elem_t *em, UNUSED int *l, UNUSED int *r, UNUSED long min, long range)
 {
 	current_alsa_range = range;
 }
