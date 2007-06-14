@@ -177,8 +177,6 @@
 |   Ctrl-H           Toggle current row hilight
 |   Ctrl-V           Toggle default volume display
 |
-:   Ctrl-D           Toggle accidental display as sharp/flat (# -> b)
-:
 |   Ctrl-F2          Set pattern length
 |
 |  Track View Functions.
@@ -240,6 +238,6 @@
 |   Alt-F9           Toggle current channel
 |   Alt-F10          Solo current channel
 |
-|   Scroll Lock      Toggle playback tracing
+|   Scroll Lock      Toggle playback tracing (also Ctrl-\)
 |   Ctrl-Z           Change MIDI playback trigger
 |   Alt-Scroll Lock  Toggle MIDI input
