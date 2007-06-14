@@ -3735,11 +3735,6 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 
 
 	switch (k->sym) {
-	case SDLK_d:
-		if (status.flags & CLASSIC_MODE) return 0;
-		if (k->state) return 1;
-		kbd_sharp_flat_toggle(-1);
-		return 1;
 	case SDLK_LEFT:
 		if (k->state) return 1;
 		if (current_channel > top_display_channel)
