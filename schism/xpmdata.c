@@ -237,6 +237,7 @@ SDL_Surface *xpmdata(const char *data[])
 #define get_next_line(q,l) *(*xpmlines)++
 	int pixels_len;
 	int error;
+	int usedn;
 
 	error = 0;
 
@@ -291,6 +292,7 @@ SDL_Surface *xpmdata(const char *data[])
 		error = 2;
 		goto done;
 	}
+	usedn = 1;
 	for(n = 0; n < ncolors; ++n) {
 		const char *p;
 		line = get_next_line(xpmlines, 0);
@@ -304,6 +306,8 @@ SDL_Surface *xpmdata(const char *data[])
 			char nametype;
 			const char *colname;
 			Uint32 rgb, pixel;
+			SDL_Color *c;
+			int m;
 
 			SKIPSPACE(p);
 			if(!*p) {
@@ -321,13 +325,21 @@ SDL_Surface *xpmdata(const char *data[])
 			if(!color_to_rgb(colname, p - colname, &rgb))
 				continue;
 
+
 			memcpy(nextkey, line, cpp);
 			if(indexed) {
-				SDL_Color *c = im_colors + n;
+				/* arrange for None to be color 0 */
+				if (usedn && (rgb == 0xffffffff)) {
+					m = 0;
+					usedn = 0;
+				} else {
+					m = n+usedn;
+				}
+				c = im_colors + m;
 				c->r = rgb >> 16;
 				c->g = rgb >> 8;
 				c->b = rgb;
-				pixel = n;
+				pixel = m;
 			} else
 				pixel = rgb;
 			add_colorhash(colors, nextkey, cpp, pixel);
