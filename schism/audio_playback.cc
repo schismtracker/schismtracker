@@ -693,22 +693,20 @@ void song_single_step(int patno, int row)
 	for (i = 0; i < 64; i++, cur_note++) {
 		cx = song_get_mix_channel(i);
 		if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
-		if (cur_note->instrument && cur_note->note > 0 && cur_note->note < 120) {
-			if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
-				vol = song_get_instrument_default_volume(
-							cur_note->instrument,
-							cur_note->instrument);
-			} else {
-				vol = cur_note->volume;
-			}
-			song_keyrecord(cur_note->instrument,
-				cur_note->instrument,
-				cur_note->note,
-				vol,
-				i, 0,
-				cur_note->effect,
-				cur_note->parameter);
+		if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
+			vol = song_get_instrument_default_volume(
+						cur_note->instrument,
+						cur_note->instrument);
+		} else {
+			vol = cur_note->volume;
 		}
+		song_keyrecord(cur_note->instrument,
+			cur_note->instrument,
+			cur_note->note,
+			vol,
+			i, 0,
+			cur_note->effect,
+			cur_note->parameter);
 	}
 #if 0
         max_channels_used = 0;

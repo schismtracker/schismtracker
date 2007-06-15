@@ -3019,26 +3019,24 @@ static int pattern_editor_insert(struct key_event *k)
 	case 0:			/* note */
 		if (k->sym == SDLK_4) {
 			if (k->state) return 0;
-			if ((cur_note->instrument && cur_note->note > 0) || (cur_note->note >= 120)) {
-				if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
-					if (edit_copy_mask & MASK_VOLUME && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
-						vol = mask_note.volume;
-					} else {
-						vol = song_get_instrument_default_volume(
-									cur_note->instrument,
-									cur_note->instrument);
-					}
+			if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
+				if (edit_copy_mask & MASK_VOLUME && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
+					vol = mask_note.volume;
 				} else {
-					vol = cur_note->volume;
+					vol = song_get_instrument_default_volume(
+								cur_note->instrument,
+								cur_note->instrument);
 				}
-				song_keyrecord(cur_note->instrument,
-					cur_note->instrument,
-					cur_note->note,
-					vol,
-					current_channel-1, 0,
-					cur_note->effect,
-					cur_note->parameter);
+			} else {
+				vol = cur_note->volume;
 			}
+			song_keyrecord(cur_note->instrument,
+				cur_note->instrument,
+				cur_note->note,
+				vol,
+				current_channel-1, 0,
+				cur_note->effect,
+				cur_note->parameter);
 			shift_advance_cursor(k);
                         current_channel = multichannel_get_next (current_channel);
 			return 1;
