@@ -887,24 +887,27 @@ void handle_key(struct key_event * k)
 			if (k->state && digraph_n >= 0) {
 				digraph_n++;
 				if (digraph_n >= 2)
-					status_text_flash("Enter digraph:");
+					status_text_flash_bios("Enter digraph:");
 			}
 		} else if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
 			/* do nothing */
 		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->unicode) == 0 || digraph_n < 2) {
-			digraph_n = (k->state) ? 0 : -1;
+			if (!k->state && !k->mouse) {
+				if (digraph_n > 0) status_text_flash(" ");
+				digraph_n = 0;
+			}
 		} else if (digraph_n >= 2) {
-			if (!k->state) return;
+			if (k->state) return;
 			if (!digraph_c) {
 				digraph_c = c;
-				status_text_flash("Enter digraph: %c", c);
+				status_text_flash_bios("Enter digraph: %c", c);
 			} else {
 				memset(&fake, 0, sizeof(fake));
 				fake.unicode = char_digraph(digraph_c, c);
 				if (fake.unicode) {
-					status_text_flash("Enter digraph: %c%c -> %c", digraph_c, c, fake.unicode);
+					status_text_flash_bios("Enter digraph: %c%c -> %c", digraph_c, c, fake.unicode);
 				} else {
-					status_text_flash("Enter digraph: %c%c -> INVALID", digraph_c, c);
+					status_text_flash_bios("Enter digraph: %c%c -> INVALID", digraph_c, c);
 				}
 				digraph_n = digraph_c = 0;
 				if (fake.unicode) {
@@ -913,9 +916,10 @@ void handle_key(struct key_event * k)
 					fake.state=1;
 					handle_key(&fake);
 				}
-				return;
 			}
+			return;
 		} else {
+			if (digraph_n > 0) status_text_flash(" ");
 			digraph_n = 0;
 		}
 	
@@ -925,13 +929,13 @@ void handle_key(struct key_event * k)
 				memset(&fake, 0, sizeof(fake));
 				fake.unicode = char_unicode_to_cp437(cs_unicode);
 				if (fake.unicode) {
-					status_text_flash("Enter Unicode: U+%04X -> %c", cs_unicode, fake.unicode);
+					status_text_flash_bios("Enter Unicode: U+%04X -> %c", cs_unicode, fake.unicode);
 					fake.is_synthetic = 3;
 					handle_key(&fake);
 					fake.state=1;
 					handle_key(&fake);
 				} else {
-					status_text_flash("Enter Unicode: U+%04X -> INVALID", cs_unicode);
+					status_text_flash_bios("Enter Unicode: U+%04X -> INVALID", cs_unicode);
 				}
 				cs_unicode = cs_unicode_c = 0;
 				alt_numpad = alt_numpad_c = 0;
@@ -953,7 +957,7 @@ void handle_key(struct key_event * k)
 					cs_unicode += c;
 					cs_unicode_c++;
 					digraph_n = digraph_c = 0;
-					status_text_flash("Enter Unicode: U+%04X", cs_unicode);
+					status_text_flash_bios("Enter Unicode: U+%04X", cs_unicode);
 					return;
 				}
 			}
@@ -967,7 +971,7 @@ void handle_key(struct key_event * k)
 				memset(&fake, 0, sizeof(fake));
 				fake.unicode = alt_numpad & 255;
 				if (!(status.flags & CLASSIC_MODE))
-					status_text_flash("Enter DOS/ASCII: %d -> %c", fake.unicode, fake.unicode);
+					status_text_flash_bios("Enter DOS/ASCII: %d -> %c", fake.unicode, fake.unicode);
 				fake.is_synthetic = 3;
 				handle_key(&fake);
 				fake.state=1;
@@ -991,7 +995,7 @@ void handle_key(struct key_event * k)
 					alt_numpad += c;
 					alt_numpad_c++;
 					if (!(status.flags & CLASSIC_MODE))
-						status_text_flash("Enter DOS/ASCII: %d", alt_numpad);
+						status_text_flash_bios("Enter DOS/ASCII: %d", alt_numpad);
 					return;
 				}
 			}
