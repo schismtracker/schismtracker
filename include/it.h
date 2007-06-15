@@ -426,6 +426,8 @@ static inline void set_next_instrument(void)
 
 void status_text_flash(const char *format, ...)
         __attribute__ ((format(printf, 1, 2)));
+void status_text_flash_bios(const char *format, ...)
+        __attribute__ ((format(printf, 1, 2)));
 void status_text_flash_color(int co, const char *format, ...)
         __attribute__ ((format(printf, 2, 3)));
 

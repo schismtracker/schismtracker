@@ -56,6 +56,23 @@ void status_text_flash(const char *format, ...)
         status.flags |= NEED_UPDATE;
 }
 
+void status_text_flash_bios(const char *format, ...)
+{
+        va_list ap;
+	
+	text_timeout = SDL_GetTicks() + 1000;
+	
+        if (status_text)
+                free(status_text);
+	
+	status_color = 16; /* color & 16 is for bios font */
+        va_start(ap, format);
+        vasprintf(&status_text, format, ap);
+        va_end(ap);
+
+        status.flags |= NEED_UPDATE;
+}
+
 void status_text_flash_color(int co, const char *format, ...)
 {
         va_list ap;
@@ -147,7 +164,12 @@ void status_text_redraw(void)
         }
 	
         if (status_text) {
-                draw_text_len((unsigned char *) status_text, 60, 2, 9, status_color, 2);
+		/* color & 16 is for bios font */
+		if (status_color & 16) {
+	                draw_text_bios_len((unsigned char *) status_text, 60, 2, 9, status_color & 15, 2);
+		} else {
+	                draw_text_len((unsigned char *) status_text, 60, 2, 9, status_color & 15, 2);
+		}
         } else {
                 switch (song_get_mode()) {
                 case MODE_PLAYING:
