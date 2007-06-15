@@ -172,7 +172,7 @@ void show_about(void)
 	if (p) {
 		for (y = 0; y < LOGO_HEIGHT; y++) {
 			for (x = 0; x < LOGO_WIDTH; x++) {
-				if (p[x]) {
+				if (!p[x]) {
 					vgamem_font_clearpixel(&logo_image, x+2, y+6);
 				} else {
 					vgamem_font_putpixel(&logo_image, x+2, y+6);
