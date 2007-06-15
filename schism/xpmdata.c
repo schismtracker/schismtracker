@@ -335,6 +335,7 @@ SDL_Surface *xpmdata(const char *data[])
 				} else {
 					m = n+usedn;
 				}
+
 				c = im_colors + m;
 				c->r = rgb >> 16;
 				c->g = rgb >> 8;
