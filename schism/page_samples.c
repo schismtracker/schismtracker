@@ -36,7 +36,7 @@
 /* static in my attic */
 static struct vgamem_overlay sample_image = {
 	55,26,76,29,
-	0, 0, 0, 0, 0, 0
+	0, 0, 0, 0,
 };
 
 static struct widget widgets_samplelist[20];
@@ -1436,7 +1436,7 @@ void sample_synchronize_to_instrument(void)
 }
 void sample_list_load_page(struct page *page)
 {
-	vgamem_font_reserve(&sample_image);
+	vgamem_ovl_alloc(&sample_image);
 
 	page->title = "Sample List (F3)";
 	page->draw_const = sample_list_draw_const;

@@ -1282,10 +1282,10 @@ static void vis_oscilloscope(void)
 	static int _virgin = 1;
 	static struct vgamem_overlay vis = {
 		63, 6, 77, 7,
-		0, 0, 0, 0, 0, 0
+		0, 0, 0, 0,
 	};
 	if (_virgin) {
-		vgamem_font_reserve(&vis);
+		vgamem_ovl_alloc(&vis);
 		_virgin = 0;
 	}
 	_draw_vis_box();
