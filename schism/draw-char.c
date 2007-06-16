@@ -26,15 +26,10 @@ this simulates a fictional vga-like card that supports three banks of characters
 a packed display of 4000 32-bit words.
 
 the banks are:
-	0x80000000	font_extra
-			the layout of this is "allocated" on demand as a convenience to
-			the rest of schism. it supports 65536 "characters" within this
-			bank that are not treated as part of a font- i.e. should not be
-			considered editable with itf. presently, we're using about 1100.
-			the packing format of the field is:
-				fg is nybble in bits 23-26 (zero based)
-				bg is nybble in bits 27-30
-				ch is the lower 2 bytes
+	0x80000000	new overlay
+
+			the layout is relative to the scanline position: it gets pixel
+			values from "ovl" which is [640*400]
 
 	0x40000000	half-width font
 			the layout of this is based on a special bank of 4bit wide fonts.
@@ -46,6 +41,7 @@ the banks are:
 				ch1 is 7 bits; 7-13
 				ch2 is 7 bits: 0-6
 			lower bits are unused
+
 	0x10000080
 			bios font
 			this layout looks surprisingly like a real vga card
@@ -96,10 +92,6 @@ static byte font_normal[2048];
  * (other than recompiling, of course) */
 static byte font_alt[2048];
 static byte font_half_data[1024];
-
-/* this font chunk is allocated for bitmaps */
-static int font_extra_top = 0;
-static byte *font_extra = 0;
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -417,6 +409,8 @@ void font_init(void)
 static unsigned int vgamem[4000];
 static unsigned int vgamem_read[4000];
 
+static unsigned char ovl[640*400]; /* 256K */
+
 void vgamem_flip(void)
 {
 	memcpy(vgamem_read, vgamem, sizeof(vgamem));
@@ -433,72 +427,77 @@ void vgamem_clear(void)
 	memset(vgamem,0,sizeof(vgamem));
 }
 
-void vgamem_font_reserve(struct vgamem_overlay *n)
+void vgamem_ovl_alloc(struct vgamem_overlay *n)
 {
-	int w = (n->x2 - n->x1)+1;
-	int h = (n->y2 - n->y1)+1;
-	int len;
-
-	if (w < 0) w*=-1;
-	if (h < 0) w*=-1;
-
-	len = (w*h*8);
-	font_extra = mem_realloc(font_extra, font_extra_top + len);
-	memset(font_extra+font_extra_top, 0, len);
-	n->pitch = w;
-	n->width = w*8;
-	n->height = h*8;
-	n->size = len;
-	n->chars = (font_extra_top / 8);
-	n->base = font_extra_top;
-	font_extra_top += len;
+	n->q = &ovl[ (n->x1*8) + (n->y1 * 5120) ];
+	n->width = 8 * ((n->x2 - n->x1) + 1);
+	n->height = 8 * ((n->y2 - n->y1) + 1);
+	n->skip = (640 - n->width);
 }
-void vgamem_fill_reserve(struct vgamem_overlay *n, int fg, int bg)
+void vgamem_ovl_apply(struct vgamem_overlay *n)
 {
 	unsigned int x, y;
-	unsigned int c;
 
-	c = n->chars;
 	for (y = n->y1; y <= n->y2; y++) {
-		for (x = n->x1; x <= n->x2; x++, c++) {
-			vgamem[x + (y*80)] = c | (fg << 23) | (bg << 27)
-				| 0x80000000;
+		for (x = n->x1; x <= n->x2; x++) {
+			vgamem[x + (y*80)] = 0x80000000;
 		}
 	}
 }
-void vgamem_clear_reserve(struct vgamem_overlay *n)
-{
-	memset(font_extra+n->base, 0, n->size);
-}
-inline void vgamem_font_putpixel(struct vgamem_overlay *n, int x, int y)
-{
-	if (x < 0 || y < 0 || x >= n->width || y >= n->height) return;
-	font_extra[ n->base+(((((y/8)*n->pitch)+(x/8)) << 3) + (y&7)) ] |= (128 >> (x&7));
-}
-inline void vgamem_font_clearpixel(struct vgamem_overlay *n, int x, int y)
-{
-	if (x < 0 || y < 0 || x >= n->width || y >= n->height) return;
-	font_extra[ n->base+(((((y/8)*n->pitch)+(x/8)) << 3) + (y&7)) ] &= ~(128 >> (x&7));
-}
 
-static inline void _draw_line_v(struct vgamem_overlay *n, int x,
-		int ys, int ye)
+void vgamem_ovl_clear(struct vgamem_overlay *n, int color)
 {
+	int i, j;
+	unsigned char *q = n->q;
+	for (j = 0; j < n->height; j++) {
+		for (i = 0; i < n->width; i++) {
+			*q = color;
+			q++;
+		}
+		q += n->skip;
+	}
+}
+void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color)
+{
+	n->q[ (640*y) + x ] = color;
+}
+static inline void _draw_line_v(struct vgamem_overlay *n, int x,
+		int ys, int ye, int color)
+{
+	unsigned char *q = n->q + x;
 	int y;
+
 	if (ys < ye) {
-		for (y = ys; y <= ye; y++) vgamem_font_putpixel(n,x,y);
+		q += (ys * 640);
+		for (y = ys; y <= ye; y++) {
+			*q = color;
+			q += 640;
+		}
 	} else {
-		for (y = ye; y <= ys; y++) vgamem_font_putpixel(n,x,y);
+		q += (ye * 640);
+		for (y = ye; y <= ys; y++) {
+			*q = color;
+			q += 640;
+		}
 	}
 }
 static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
-		int xe, int y)
+		int xe, int y, int color)
 {
+	unsigned char *q = n->q + (y * 640);
 	int x;
 	if (xs < xe) {
-		for (x = xs; x <= xe; x++) vgamem_font_putpixel(n,x,y);
+		q += xs;
+		for (x = xs; x <= xe; x++) {
+			*q = color;
+			q++;
+		}
 	} else {
-		for (x = xe; x <= xs; x++) vgamem_font_putpixel(n,x,y);
+		q += xe;
+		for (x = xe; x <= xs; x++) {
+			*q = color;
+			q++;
+		}
 	}
 }
 #ifndef ABS
@@ -508,20 +507,20 @@ static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
 # define SGN(x) ((x) < 0 ? -1 : 1)      /* hey, what about zero? */
 #endif
 
-void vgamem_font_drawline(struct vgamem_overlay *n, int xs,
-	int ys, int xe, int ye)
+void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
+	int ys, int xe, int ye, int color)
 {
         int d, x, y, ax, ay, sx, sy, dx, dy;
 
         dx = xe - xs;
         if (dx == 0) {
-                _draw_line_v(n, xs, ys, ye);
+                _draw_line_v(n, xs, ys, ye, color);
                 return;
         }
 
         dy = ye - ys;
         if (dy == 0) {
-                _draw_line_h(n, xs, xe, ys);
+                _draw_line_h(n, xs, xe, ys, color);
                 return;
         }
 
@@ -536,9 +535,8 @@ void vgamem_font_drawline(struct vgamem_overlay *n, int xs,
                 /* x dominant */
                 d = ay - (ax >> 1);
                 for (;;) {
-                        vgamem_font_putpixel(n, x, y);
-                        if (x == xe)
-                                return;
+                        vgamem_ovl_drawpixel(n, x, y, color);
+                        if (x == xe) break;
                         if (d >= 0) {
                                 y += sy;
                                 d -= ax;
@@ -550,9 +548,8 @@ void vgamem_font_drawline(struct vgamem_overlay *n, int xs,
                 /* y dominant */
                 d = ax - (ay >> 1);
                 for (;;) {
-                        vgamem_font_putpixel(n, x, y);
-                        if (y == ye)
-                                return;
+                        vgamem_ovl_drawpixel(n, x, y, color);
+                        if (y == ye) break;
                         if (d >= 0) {
                                 x += sx;
                                 d -= ay;

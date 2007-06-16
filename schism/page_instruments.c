@@ -36,7 +36,7 @@
 /* rastops for envelope */
 static struct vgamem_overlay env_overlay = {
 	32, 18, 65, 25,
-	0, 0, 0, 0, 0, 0
+	0, 0, 0, 0
 };
 
 /* --------------------------------------------------------------------- */
@@ -1039,70 +1039,65 @@ static void _env_draw_axes(int middle)
 {
 	int n, y = middle ? 31 : 62;
         for (n = 0; n < 64; n += 2)
-		vgamem_font_putpixel(&env_overlay, 3, n);
+		vgamem_ovl_drawpixel(&env_overlay, 3, n, 12);
         for (n = 0; n < 256; n += 2)
-                vgamem_font_putpixel(&env_overlay, 1 + n, y);
+                vgamem_ovl_drawpixel(&env_overlay, 1 + n, y, 12);
 }
 
 static void _env_draw_node(int x, int y, int on)
 {
-#if 0
-	/* FIXME: the lines draw over the nodes. This doesn't matter unless the color is different. */
 	int c = (status.flags & CLASSIC_MODE) ? 12 : 5;
-#endif
 
-	vgamem_font_putpixel(&env_overlay, x - 1, y - 1);
-	vgamem_font_putpixel(&env_overlay, x - 1, y);
-	vgamem_font_putpixel(&env_overlay, x - 1, y + 1);
+	vgamem_ovl_drawpixel(&env_overlay, x - 1, y - 1, c);
+	vgamem_ovl_drawpixel(&env_overlay, x - 1, y, c);
+	vgamem_ovl_drawpixel(&env_overlay, x - 1, y + 1, c);
 
-	vgamem_font_putpixel(&env_overlay, x, y - 1);
-	vgamem_font_putpixel(&env_overlay, x, y);
-	vgamem_font_putpixel(&env_overlay, x, y + 1);
+	vgamem_ovl_drawpixel(&env_overlay, x, y - 1, c);
+	vgamem_ovl_drawpixel(&env_overlay, x, y, c);
+	vgamem_ovl_drawpixel(&env_overlay, x, y + 1, c);
 
-	vgamem_font_putpixel(&env_overlay, x + 1, y - 1);
-	vgamem_font_putpixel(&env_overlay, x + 1, y);
-	vgamem_font_putpixel(&env_overlay, x + 1, y + 1);
+	vgamem_ovl_drawpixel(&env_overlay, x + 1, y - 1,c);
+	vgamem_ovl_drawpixel(&env_overlay, x + 1, y,c);
+	vgamem_ovl_drawpixel(&env_overlay, x + 1, y + 1,c);
 
 	if (on) {
-		vgamem_font_putpixel(&env_overlay, x - 3, y - 1);
-		vgamem_font_putpixel(&env_overlay, x - 3, y);
-		vgamem_font_putpixel(&env_overlay, x - 3, y + 1);
+		vgamem_ovl_drawpixel(&env_overlay, x - 3, y - 1,c);
+		vgamem_ovl_drawpixel(&env_overlay, x - 3, y,c);
+		vgamem_ovl_drawpixel(&env_overlay, x - 3, y + 1,c);
 
-		vgamem_font_putpixel(&env_overlay, x + 3, y - 1);
-		vgamem_font_putpixel(&env_overlay, x + 3, y);
-		vgamem_font_putpixel(&env_overlay, x + 3, y + 1);
+		vgamem_ovl_drawpixel(&env_overlay, x + 3, y - 1,c);
+		vgamem_ovl_drawpixel(&env_overlay, x + 3, y,c);
+		vgamem_ovl_drawpixel(&env_overlay, x + 3, y + 1,c);
 	}
 }
 
 static void _env_draw_loop(int xs, int xe, int sustain)
 {
 	int y = 0;
-#if 0
 	int c = (status.flags & CLASSIC_MODE) ? 12 : 3;
-#endif
 	
 	if (sustain) {
 		while (y < 62) {
 			/* unrolled once */
-			vgamem_font_putpixel(&env_overlay, xs, y);
-			vgamem_font_putpixel(&env_overlay, xe, y); y++;
-			vgamem_font_clearpixel(&env_overlay, xs, y);
-			vgamem_font_clearpixel(&env_overlay, xe, y); y++;
-			vgamem_font_putpixel(&env_overlay, xs, y);
-			vgamem_font_putpixel(&env_overlay, xe, y); y++;
-			vgamem_font_clearpixel(&env_overlay, xs, y);
-			vgamem_font_clearpixel(&env_overlay, xe, y); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
 		}
 	} else {
 		while (y < 62) {
-			vgamem_font_clearpixel(&env_overlay, xs, y);
-			vgamem_font_clearpixel(&env_overlay, xe, y); y++;
-			vgamem_font_putpixel(&env_overlay, xs, y);
-			vgamem_font_putpixel(&env_overlay, xe, y); y++;			
-			vgamem_font_putpixel(&env_overlay, xs, y);
-			vgamem_font_putpixel(&env_overlay, xe, y); y++;
-			vgamem_font_clearpixel(&env_overlay, xs, y);
-			vgamem_font_clearpixel(&env_overlay, xe, y); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;			
+			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
 		}
 	}
 }
@@ -1114,14 +1109,14 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 	unsigned int *channel_list;
 	byte buf[16];
 	unsigned long envpos[3];
-	int x, y, n, m;
+	int x, y, n, m, c;
 	int last_x = 0, last_y = 0;
 	int max_ticks = 50;
 	
 	while (env->ticks[env->nodes - 1] >= max_ticks)
 		max_ticks *= 2;
 	
-	vgamem_clear_reserve(&env_overlay);
+	vgamem_ovl_clear(&env_overlay, 0);
 	
 	/* draw the axis lines */
 	_env_draw_axes(middle);
@@ -1141,7 +1136,8 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 		_env_draw_node(x, y, n == current_node);
 		
 		if (last_x)
-			vgamem_font_drawline(&env_overlay, last_x, last_y, x, y);
+			vgamem_ovl_drawline(&env_overlay,
+				last_x, last_y, x, y, 12);
 		
 		last_x = x;
 		last_y = y;
@@ -1169,16 +1165,14 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 
 			x = 4 + (envpos[env_num] * (last_x-4) / max_ticks);
 			if (x > last_x) x = last_x;
-#if 0
 			c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? 8 : 6;
-#endif
 			for (y = 0; y < 62; y++)
-				vgamem_font_putpixel(&env_overlay, x, y);
+				vgamem_ovl_drawpixel(&env_overlay, x, y, c);
 		}
 	}
 	
 	draw_fill_chars(65, 18, 76, 25, 0);
-	vgamem_fill_reserve(&env_overlay, 12, 0);
+	vgamem_ovl_apply(&env_overlay);
 
         sprintf((char *) buf, "Node %d/%d", current_node, env->nodes);
         draw_text((const unsigned char *)buf, 66, 19, 2, 0);
@@ -2446,7 +2440,7 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 		saved_env[i].values[0] = 32;
 		saved_env[i].values[1] = 32;
 	}
-	vgamem_font_reserve(&env_overlay);
+	vgamem_ovl_alloc(&env_overlay);
 
 	page->title = "Instrument List (F4)";
 	page->pre_handle_key = instrument_list_pre_handle_key;

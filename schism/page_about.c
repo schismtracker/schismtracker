@@ -43,7 +43,7 @@ static struct widget widgets_about[1];
 static struct vgamem_overlay logo_image = {
 	23, 17,
 	58, 24,
-	0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0,
 };
 
 
@@ -140,9 +140,7 @@ static void about_draw_const(void)
 		/* XXX if we allow key remapping, need to reflect the *real* log viewer key here */
 		draw_text((unsigned char *) "Press Ctrl-F11 for copyright and full credits", 15, 29, 1, 2);
 	}
-	vgamem_fill_reserve(&logo_image, 
-		(status.flags & CLASSIC_MODE) ? 11 : 0,
-		2);
+	vgamem_ovl_apply(&logo_image);
 }
 
 void show_about(void)
@@ -155,7 +153,7 @@ void show_about(void)
 	fake_driver = (rand() & 3) ? 0 : 1;
 
 	if (!didit) {
-		vgamem_font_reserve(&logo_image);
+		vgamem_ovl_alloc(&logo_image);
 		it_logo = xpmdata(_logo_it_xpm);
 		schism_logo = xpmdata(_logo_schism_xpm);
 		didit=1;
@@ -168,18 +166,17 @@ void show_about(void)
 	}
 
 	/* this is currently pretty gross */
-	vgamem_clear_reserve(&logo_image);
+	vgamem_ovl_clear(&logo_image, 2);
 	if (p) {
+		int c = (status.flags & CLASSIC_MODE) ? 11 : 0;
 		for (y = 0; y < LOGO_HEIGHT; y++) {
 			for (x = 0; x < LOGO_WIDTH; x++) {
-				if (!p[x]) {
-					vgamem_font_clearpixel(&logo_image, x+2, y+6);
-				} else {
-					vgamem_font_putpixel(&logo_image, x+2, y+6);
+				if (p[x]) {
+					vgamem_ovl_drawpixel(&logo_image, x+2, y+6, c);
 				}
 			}
-			vgamem_font_clearpixel(&logo_image, x, y+6);
-			vgamem_font_clearpixel(&logo_image, x+1, y+6);
+			vgamem_ovl_drawpixel(&logo_image, x, y+6, 2);
+			vgamem_ovl_drawpixel(&logo_image, x+1, y+6, 2);
 			p += LOGO_PITCH;
 		}
 	}
