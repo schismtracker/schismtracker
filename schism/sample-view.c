@@ -46,44 +46,61 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 {
 	unsigned long pos;
 	int level, xs, ys, xe, ye, step;
+	int nh, cc, np;
 
-	level = data[0] * r->height / (SCHAR_MAX - SCHAR_MIN + 1); // 8/16
-	xs = 0;
-	ys = (r->height / 2 - 1) - level;
-	step = MAX(1, length / (r->width << 8));
-	
-	for (pos = 0; pos < length; pos += step) {
-		level = data[pos] * r->height / (SCHAR_MAX - SCHAR_MIN + 1); // 8/16
-		xe = pos * r->width / length;
-		ye = (r->height / 2 - 1) - level;
-		if (xs == ys && xe == ye)
-			continue;
-		vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
-		xs = xe;
-	        ys = ye;
+	nh = r->height / channels;
+	np = nh / 2;
+
+	length /= channels;
+
+	for (cc = 1; cc <= channels; cc++) {
+		level = (data[cc] * nh) / (SCHAR_MAX - SCHAR_MIN + 1);
+		xs = 0;
+		ys = (np - 1) - level;
+		step = MAX(1, length / (r->width << 8));
+		for (pos = cc; pos < length; pos += step) {
+			level = (data[pos*cc] * nh) / (SCHAR_MAX - SCHAR_MIN + 1);
+			xe = pos * r->width / length;
+			ye = (np - 1) - level;
+			if (xs == ys && xe == ye)
+				continue;
+			vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
+			xs = xe;
+		        ys = ye;
+		}
+		np += nh;
 	}
 }
 
 /* again, do we need 'channels'? */
 static void _draw_sample_data_16(struct vgamem_overlay *r,
-	 signed short *data, unsigned long length, UNUSED unsigned int channels)
+	 signed short *data, unsigned long length, unsigned int channels)
 {
 	unsigned long pos;
 	int level, xs, ys, xe, ye, step;
+	int nh, cc, np;
 
-	level = (data[0] * r->height) / (SHRT_MAX - SHRT_MIN + 1);
-	xs = 0;
-	ys = (r->height / 2 - 1) - level;
-	step = MAX(1, length / (r->width << 8));
-	for (pos = 0; pos < length; pos += step) {
-		level = (data[pos] * r->height) / (SHRT_MAX - SHRT_MIN + 1);
-		xe = pos * r->width / length;
-		ye = (r->height / 2 - 1) - level;
-		if (xs == ys && xe == ye)
-			continue;
-		vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
-		xs = xe;
-	        ys = ye;
+	nh = r->height / channels;
+	np = nh / 2;
+
+	length /= channels;
+
+	for (cc = 1; cc <= channels; cc++) {
+		level = (data[cc] * nh) / (SHRT_MAX - SHRT_MIN + 1);
+		xs = 0;
+		ys = (np - 1) - level;
+		step = MAX(1, length / (r->width << 8));
+		for (pos = cc; pos < length; pos += step) {
+			level = (data[pos*cc] * nh) / (SHRT_MAX - SHRT_MIN + 1);
+			xe = pos * r->width / length;
+			ye = (np - 1) - level;
+			if (xs == ys && xe == ye)
+				continue;
+			vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
+			xs = xe;
+		        ys = ye;
+		}
+		np += nh;
 	}
 }
 
