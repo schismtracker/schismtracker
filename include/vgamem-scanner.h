@@ -3,33 +3,29 @@ void F1(unsigned int ry, unsigned SIZE *out, unsigned int tc[16], unsigned int m
 {
 	unsigned int *bp;
 	unsigned int dg;
-	byte *itf, *bios, *bioslow, *hf, *ef;
+	unsigned char *q;
+	byte *itf, *bios, *bioslow, *hf;
 	unsigned int x, y;
 	int fg, bg;
 
+	q = ovl + (ry * 640);
 	y = ry >> 3;
 	bp = &vgamem_read[y * 80];
 	itf = font_data + (ry & 7);
 	bios = ((byte*)font_default_upper_alt) + (ry & 7);
 	bioslow = ((byte*)font_default_lower) + (ry & 7);
 	hf = font_half_data + ((ry & 7) >> 1);
-	ef = font_extra + (ry & 7);
 
-	for (x = 0; x < 80; x++, bp++) {
+	for (x = 0; x < 80; x++, bp++, q += 8) {
 		if (*bp & 0x80000000) {
-			/* extra character */
-			fg = (*bp >> 23) & 15;
-			bg = (*bp >> 27) & 15;
-			dg = ef[(*bp & 0xFFFF)<< 3];
-			dg ^= mouseline[x];
-			*out++ = tc[(dg & 0x80) ? fg : bg];
-			*out++ = tc[(dg & 0x40) ? fg : bg];
-			*out++ = tc[(dg & 0x20) ? fg : bg];
-			*out++ = tc[(dg & 0x10) ? fg : bg];
-			*out++ = tc[(dg & 0x8) ? fg : bg];
-			*out++ = tc[(dg & 0x4) ? fg : bg];
-			*out++ = tc[(dg & 0x2) ? fg : bg];
-			*out++ = tc[(dg & 0x1) ? fg : bg];
+			*out++ = tc[ (q[0]^((mouseline[x] & 0x80)?15:0)) & 15 ];
+			*out++ = tc[ (q[1]^((mouseline[x] & 0x40)?15:0)) & 15 ];
+			*out++ = tc[ (q[2]^((mouseline[x] & 0x20)?15:0)) & 15 ];
+			*out++ = tc[ (q[3]^((mouseline[x] & 0x10)?15:0)) & 15 ];
+			*out++ = tc[ (q[4]^((mouseline[x] & 0x08)?15:0)) & 15 ];
+			*out++ = tc[ (q[5]^((mouseline[x] & 0x04)?15:0)) & 15 ];
+			*out++ = tc[ (q[6]^((mouseline[x] & 0x02)?15:0)) & 15 ];
+			*out++ = tc[ (q[7]^((mouseline[x] & 0x01)?15:0)) & 15 ];
 
 		} else if (*bp & 0x40000000) {
 			/* half-width character */
