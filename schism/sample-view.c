@@ -42,7 +42,7 @@ there are only two changes between 8- and 16-bit samples:
 
 /* do we need 'channels' here? */
 static void _draw_sample_data_8(struct vgamem_overlay *r,
-	signed char *data, unsigned long length, UNUSED unsigned int channels) // 8/16
+	signed char *data, unsigned long length, int channels) // 8/16
 {
 	unsigned long pos;
 	int level, xs, ys, xe, ye, step;
@@ -74,7 +74,7 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 
 /* again, do we need 'channels'? */
 static void _draw_sample_data_16(struct vgamem_overlay *r,
-	 signed short *data, unsigned long length, unsigned int channels)
+	 signed short *data, unsigned long length, int channels)
 {
 	unsigned long pos;
 	int level, xs, ys, xe, ye, step;
