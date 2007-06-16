@@ -29,20 +29,24 @@ void vgamem_clear(void);
 
 struct vgamem_overlay {
 	unsigned int x1, y1, x2, y2; /* in character cells... */
-	unsigned int pitch, size;	/* in bytes */
-	unsigned int chars, base;
+
+	unsigned char *q;		/* points inside ovl */
+	unsigned int skip;
+
 	int width, height; /* in pixels; signed to avoid bugs elsewhere */
 };
 
 void vgamem_lock(void);
 void vgamem_unlock(void);
 void vgamem_flip(void);
-void vgamem_font_reserve(struct vgamem_overlay *n);
-void vgamem_fill_reserve(struct vgamem_overlay *n, int fg, int bg);
-void vgamem_clear_reserve(struct vgamem_overlay *n);
-void vgamem_font_putpixel(struct vgamem_overlay *n, int x, int y);
-void vgamem_font_clearpixel(struct vgamem_overlay *n, int x, int y);
-void vgamem_font_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye);
+
+void vgamem_ovl_alloc(struct vgamem_overlay *n);
+void vgamem_ovl_apply(struct vgamem_overlay *n);
+
+void vgamem_ovl_clear(struct vgamem_overlay *n, int color);
+void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
+void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
+
 
 void vgamem_scan32(unsigned int y,unsigned int *out,unsigned int tc[16], unsigned int mouse_line[80]);
 void vgamem_scan16(unsigned int y,unsigned short *out,unsigned int tc[16], unsigned int mouse_line[80]);
