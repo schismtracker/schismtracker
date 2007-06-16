@@ -812,6 +812,7 @@ static int handle_key_global(struct key_event * k)
                 }
                 return 1;
 	/* hack alert */
+	case SDLK_f:
 	case SDLK_BACKSLASH:
 		if (!(k->mod & KMOD_CTRL))
 			return 0;
