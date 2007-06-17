@@ -728,11 +728,11 @@ static void click_chn_is_x(int x, UNUSED int y, int nc, int fc)
 		break;
 	};
 }
-static void click_chn_is_y_nohead(UNUSED int x, int y, int nc, int fc)
+static void click_chn_is_y_nohead(UNUSED int x, int y, UNUSED int nc, int fc)
 {
 	selected_channel = CLAMP(y+fc, 1, 64);
 }
-static void click_chn_is_y(UNUSED int x, int y, int nc, int fc)
+static void click_chn_is_y(UNUSED int x, int y, UNUSED int nc, int fc)
 {
 	if (!y) return;
 	selected_channel = CLAMP((y+fc)-1, 1, 64);
@@ -791,7 +791,7 @@ static void _fix_channels(int n)
 static int info_handle_click(int x, int y)
 {
 	int n;
-	if (n < 13) return 0; /* NA */
+	if (y < 13) return 0; /* NA */
 	y -= 13;
         for (n = 0; n < num_windows; n++) {
 		if (y < windows[n].height) {
