@@ -24,6 +24,11 @@
 
 #include <math.h>
 
+#define NATIVE_SCREEN_WIDTH     640
+#define NATIVE_SCREEN_HEIGHT    400
+#define FUDGE_256_TO_WIDTH	4
+#define SCOPE_ROWS	32
+
 void vis_init(void);
 void vis_work_16s(short *in, int inlen);
 void vis_work_16m(short *in, int inlen);
@@ -127,13 +132,29 @@ static void _vis_data_work(short output[FFT_OUTPUT_SIZE],
 	output[0] /= 4;
 	output[(FFT_OUTPUT_SIZE-1)] /= 4;
 }
+static int _logscale(int j) {
+	if (j >= 0x4000) return 15;
+	else if (j >= 0x2000) return 14;
+	else if (j >= 0x1000) return 13;
+	else if (j >= 0x0800) return 12;
+	else if (j >= 0x0400) return 11;
+	else if (j >= 0x0200) return 10;
+	else if (j >= 0x0100) return 9;
+	else if (j >= 0x0080) return 8;
+	else if (j >= 0x0040) return 7;
+	else if (j >= 0x0020) return 6;
+	else if (j >= 0x0010) return 5;
+	else if (j >= 0x0008) return 4;
+	else if (j >= 0x0004) return 3;
+	else if (j >= 0x0002) return 2;
+	else if (j >= 0x0001) return 1;
+	return 0;
+}
 static unsigned char *_dobits(unsigned char *q,
 			short d[FFT_OUTPUT_SIZE], int m, int y)
 {
 	int i, j, c;
-	const int cbits[] = {
-		3,11,12,6,2,1,7,14,15
-	};
+	const int cbits[] = { 0,7,1,2,6,12,11,3,3 };
 	for (i = 0; i < FFT_OUTPUT_SIZE; i++) {
 		/* eh... */
 		j = d[i];
@@ -142,24 +163,10 @@ static unsigned char *_dobits(unsigned char *q,
 		else
 			j <<= depth;
 
-		if (j >= 0x8000) c = cbits[0];
-		else if (j & 0x4000) c = cbits[0];
-		else if (j & 0x2000) c = cbits[1];
-		else if (j & 0x1000) c = cbits[1];
-		else if (j & 0x0800) c = cbits[2];
-		else if (j & 0x0400) c = cbits[2];
-		else if (j & 0x0200) c = cbits[3];
-		else if (j & 0x0100) c = cbits[3];
-		else if (j & 0x0080) c = cbits[4];
-		else if (j & 0x0040) c = cbits[4];
-		else if (j & 0x0020) c = cbits[5];
-		else if (j & 0x0010) c = cbits[5];
-		else if (j & 0x0008) c = cbits[6];
-		else if (j & 0x0004) c = cbits[6];
-		else c = 0;
+		c = cbits[ (_logscale(j)+1)>>1 ];
 		*q = c; q += y;
 		if (m) { *q = c; q += y; }
-		if ((i % 4) == 0) {
+		if ((i % FUDGE_256_TO_WIDTH) == 0) {
 			/* each band is 2.50 px wide;
 			 * output display is 640 px
 			 */
@@ -172,13 +179,16 @@ static unsigned char *_dobits(unsigned char *q,
 static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 {
 	unsigned char *q;
-	int i;
+	int i, j;
 
 	vgamem_lock();
 
 	/* move up by one pixel */
-	memcpy(ovl.q, ovl.q+640, (640*399));
-	q = ovl.q + (640*399);
+	memcpy(ovl.q, ovl.q+NATIVE_SCREEN_WIDTH,
+			(NATIVE_SCREEN_WIDTH*
+				((NATIVE_SCREEN_HEIGHT-1)-SCOPE_ROWS)));
+	q = ovl.q + (NATIVE_SCREEN_WIDTH*
+			((NATIVE_SCREEN_HEIGHT-1)-SCOPE_ROWS));
 
 	if (mono) {
 		for (i = 0; i < FFT_OUTPUT_SIZE; i++)
@@ -188,6 +198,32 @@ static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 		_dobits(q+320, f[0], 0, -1);
 		_dobits(q+320, f[1], 0, 1);
 	}
+
+	/* draw the scope at the bottom */
+	q = ovl.q + (NATIVE_SCREEN_WIDTH*(NATIVE_SCREEN_HEIGHT-SCOPE_ROWS));
+	i = SCOPE_ROWS*NATIVE_SCREEN_WIDTH;
+	memset(q,0,i);
+	for (i = j = 0; i < FFT_OUTPUT_SIZE; i++) {
+		vgamem_ovl_drawline(&ovl,
+			j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[0][i]<<1)),
+			j, NATIVE_SCREEN_HEIGHT, 5);
+		j++;
+		if ((i % FUDGE_256_TO_WIDTH) == 0) {
+			vgamem_ovl_drawline(&ovl,
+				j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[0][i]<<1)),
+				j, NATIVE_SCREEN_HEIGHT, 5);
+			j++;
+			vgamem_ovl_drawline(&ovl,
+				j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[1][i]<<1)),
+				j, NATIVE_SCREEN_HEIGHT, 5);
+			j++;
+		}
+		vgamem_ovl_drawline(&ovl,
+			j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[1][i]<<1)),
+			j, NATIVE_SCREEN_HEIGHT, 5);
+		j++;
+	}
+
 	vgamem_unlock();
 }
 
