@@ -205,21 +205,21 @@ static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 	memset(q,0,i);
 	for (i = j = 0; i < FFT_OUTPUT_SIZE; i++) {
 		vgamem_ovl_drawline(&ovl,
-			j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[0][i]<<1)),
+			j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[0][i])),
 			j, NATIVE_SCREEN_HEIGHT, 5);
 		j++;
 		if ((i % FUDGE_256_TO_WIDTH) == 0) {
 			vgamem_ovl_drawline(&ovl,
-				j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[0][i]<<1)),
+				j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[0][i])),
 				j, NATIVE_SCREEN_HEIGHT, 5);
 			j++;
 			vgamem_ovl_drawline(&ovl,
-				j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[1][i]<<1)),
+				j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[1][i])),
 				j, NATIVE_SCREEN_HEIGHT, 5);
 			j++;
 		}
 		vgamem_ovl_drawline(&ovl,
-			j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[1][i]<<1)),
+			j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[1][i])),
 			j, NATIVE_SCREEN_HEIGHT, 5);
 		j++;
 	}
