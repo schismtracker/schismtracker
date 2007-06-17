@@ -53,13 +53,13 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 
 	length /= channels;
 
-	for (cc = 1; cc <= channels; cc++) {
+	for (cc = 0; cc < channels; cc++) {
 		level = (data[cc] * nh) / (SCHAR_MAX - SCHAR_MIN + 1);
 		xs = 0;
 		ys = (np - 1) - level;
 		step = MAX(1, length / (r->width << 8));
-		for (pos = cc; pos < length; pos += step) {
-			level = (data[pos*cc] * nh) / (SCHAR_MAX - SCHAR_MIN + 1);
+		for (pos = channels+cc; pos < length; pos += step) {
+			level = (data[(pos*2)+cc] * nh) / (SCHAR_MAX - SCHAR_MIN + 1);
 			xe = pos * r->width / length;
 			ye = (np - 1) - level;
 			if (xs == ys && xe == ye)
@@ -85,13 +85,14 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 
 	length /= channels;
 
-	for (cc = 1; cc <= channels; cc++) {
+	for (cc = 0; cc < channels; cc++) {
 		level = (data[cc] * nh) / (SHRT_MAX - SHRT_MIN + 1);
 		xs = 0;
 		ys = (np - 1) - level;
 		step = MAX(1, length / (r->width << 8));
-		for (pos = cc; pos < length; pos += step) {
-			level = (data[pos*cc] * nh) / (SHRT_MAX - SHRT_MIN + 1);
+		for (pos = channels+cc; pos < length; pos += step) {
+			level = (data[(pos*2)+cc] * nh)
+					/ (SHRT_MAX - SHRT_MIN + 1);
 			xe = pos * r->width / length;
 			ye = (np - 1) - level;
 			if (xs == ys && xe == ye)
