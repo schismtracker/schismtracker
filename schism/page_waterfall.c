@@ -23,7 +23,12 @@
 #include "page.h"
 
 #include <math.h>
-#include <assert.h>
+
+void vis_init(void);
+void vis_work_16s(short *in, int inlen);
+void vis_work_16m(short *in, int inlen);
+void vis_work_8s(char *in, int inlen);
+void vis_work_8m(char *in, int inlen);
 
 /* variables :) */
 static int mono = 0;
@@ -80,13 +85,12 @@ static void _vis_data_work(short output[FFT_OUTPUT_SIZE],
 	float fr, fi;
 	float tr, ti;
 	float out;
-	int y1;
+	int yp;
 
 	/* fft */
 	float *rp = state_real;
 	float *ip = state_imag;
 	for (n = 0; n < FFT_BUFFER_SIZE; n++) {
-		assert(bit_reverse[n] >= 0 && bit_reverse[n] < FFT_BUFFER_SIZE);
 		*rp++ = input[ bit_reverse[n] ];
 		*ip++ = 0;
 	}
@@ -94,17 +98,14 @@ static void _vis_data_work(short output[FFT_OUTPUT_SIZE],
 	ff = FFT_OUTPUT_SIZE;
 	for (n = FFT_BUFFER_SIZE_LOG; n != 0; n--) {
 		for (k = 0; k != ex; k++) {
-			assert((k*ff) >= 0 && (k*ff) <= FFT_OUTPUT_SIZE);
 			fr = precos[k * ff];
 			fi = presin[k * ff];
 			for (y = k; y < FFT_BUFFER_SIZE; y += ex << 1) {
-				y1 = y + ex;
-				assert(y >= 0 && y < FFT_BUFFER_SIZE);
-				assert(y1 >= 0 && y1 < FFT_BUFFER_SIZE);
-				tr = fr * state_real[y1] - fi * state_imag[y1];
-				ti = fr * state_imag[y1] + fi * state_real[y1];
-				state_real[y1] = state_real[y] - tr;
-				state_imag[y1] = state_imag[y] - ti;
+				yp = y + ex;
+				tr = fr * state_real[yp] - fi * state_imag[yp];
+				ti = fr * state_imag[yp] + fi * state_real[yp];
+				state_real[yp] = state_real[y] - tr;
+				state_imag[yp] = state_imag[y] - ti;
 				state_real[y] += tr;
 				state_imag[y] += ti;
 			}
@@ -264,17 +265,28 @@ static void draw_screen(void)
 
 static int waterfall_handle_key(struct key_event *k)
 {
-	if (k->state) return 0;
 	switch (k->sym) {
 	case SDLK_s:
-	case SDLK_m: mono = !mono; break;
+	case SDLK_m:
+		if (k->state) return 1;
+		mono = !mono;
+		break;
 
-	case SDLK_LEFT: depth--; break;
-	case SDLK_RIGHT: depth++; break;
+	case SDLK_LEFT:
+		if (k->state) return 1;
+		depth--;
+		break;
+	case SDLK_RIGHT:
+		if (k->state) return 1;
+		depth++;
+		break;
+
+	default:
+		return 0;
 	};
 
 	depth = CLAMP(depth, -5, 5);
-	return 0;
+	return 1;
 }
 
 
