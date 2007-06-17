@@ -55,7 +55,9 @@ unsigned int xv_yuvlayout(void)
 	if (!dpy) {
 		dpy = XOpenDisplay(0);
 		memset(&info, 0, sizeof(info));
+		if (!dpy) return 0;
 	}
+	ver=rev=reqB=eventB=errorB=0;
 	if ((Success != XvQueryExtension(dpy, &ver, &rev, &reqB, &eventB, &errorB))) {
 		/* no XV support */
 		return 0;
