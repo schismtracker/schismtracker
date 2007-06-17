@@ -531,7 +531,6 @@ void song_stop_unlocked()
         // Modplug doesn't actually have a "stop" mode, but if this is set, mp->Read just returns.
         mp->m_dwSongFlags |= SONG_ENDREACHED;
 	
-	mp->gnVUMeter = 0;
 	mp->gnVULeft = 0;
 	mp->gnVURight = 0;
 	memset(audio_buffer, 0, audio_buffer_size * audio_sample_size);
@@ -791,11 +790,9 @@ int song_get_max_channels()
 
 void song_get_vu_meter(int *left, int *right)
 {
-	// FIXME: hack independent left/right vu meters into modplug
-	// ... better yet, finish writing my own player :P
 	song_lock_audio();
-	*left = mp->gnVUMeter;
-	*right = mp->gnVUMeter;
+	*left = mp->gnVULeft;
+	*right = mp->gnVURight;
 	song_unlock_audio();
 }
 
