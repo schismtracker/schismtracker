@@ -729,7 +729,7 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 #ifdef MACOSX
 				SDL_SWSURFACE |
 #else
-				SDL_HWSURFACE |
+	(video.desktop.type == VIDEO_SURFACE ? SDL_SWSURFACE : SDL_HWSURFACE) |
 #endif
 				sdlflags | SDL_FULLSCREEN);
 					
@@ -738,7 +738,7 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 #ifdef MACOSX
 					SDL_SWSURFACE |
 #else
-					SDL_HWSURFACE |
+	(video.desktop.type == VIDEO_SURFACE ? SDL_SWSURFACE : SDL_HWSURFACE) |
 #endif
 					sdlflags);
 	}
