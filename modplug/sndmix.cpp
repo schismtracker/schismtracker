@@ -1060,7 +1060,7 @@ BOOL CSoundFile::ReadNote()
 				}
 			}
 		}
-#ifdef MODPLUG_PLAYER
+#if 0
 		// Limit CPU -> > 80% -> don't ramp
 		if ((gnCPUUsage >= 80) && (!pChn->nRealVolume))
 		{
@@ -1071,10 +1071,8 @@ BOOL CSoundFile::ReadNote()
 		pChn->dwFlags &= ~CHN_VOLUMERAMP;
 		if ((pChn->nRealVolume) || (pChn->nLeftVol) || (pChn->nRightVol))
 			pChn->dwFlags |= CHN_VOLUMERAMP;
-#ifdef MODPLUG_PLAYER
 		// Decrease VU-Meter
 		if (pChn->nVUMeter > VUMETER_DECAY)	pChn->nVUMeter -= VUMETER_DECAY; else pChn->nVUMeter = 0;
-#endif // MODPLUG_PLAYER
 #ifdef ENABLE_STEREOVU
 		if (pChn->nLeftVU > VUMETER_DECAY) pChn->nLeftVU -= VUMETER_DECAY; else pChn->nLeftVU = 0;
 		if (pChn->nRightVU > VUMETER_DECAY) pChn->nRightVU -= VUMETER_DECAY; else pChn->nRightVU = 0;
@@ -1086,13 +1084,11 @@ BOOL CSoundFile::ReadNote()
 		if (pChn->pCurrentSample)
 		{
 			// Update VU-Meter (nRealVolume is 14-bit)
-#ifdef MODPLUG_PLAYER
 			UINT vutmp = pChn->nRealVolume >> (14 - 8);
 			if (vutmp > 0xFF) vutmp = 0xFF;
 			if (pChn->nVUMeter >= 0x100) pChn->nVUMeter = vutmp;
 			vutmp >>= 1;
 			if (pChn->nVUMeter < vutmp)	pChn->nVUMeter = vutmp;
-#endif // MODPLUG_PLAYER
 #ifdef ENABLE_STEREOVU
 			UINT vul = (pChn->nRealVolume * pChn->nRealPan) >> 14;
 			if (vul > 127) vul = 127;
