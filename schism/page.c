@@ -1564,8 +1564,12 @@ static void real_exit_ok(UNUSED void *data)
 }
 static void font_exit_ok(UNUSED void *data)
 {
-        dialog_destroy_all();
-	set_page(PAGE_PATTERN_EDITOR);
+	if (status.flags & STARTUP_FONTEDIT) {
+		exit(0);
+	} else {
+	        dialog_destroy_all();
+		set_page(PAGE_PATTERN_EDITOR);
+	}
 }
 static void exit_ok(UNUSED void *data)
 {
