@@ -981,9 +981,12 @@ static void dump_misc_about_text(void)
 	log_nl();
 }
 
+extern void vis_init(void);
+
 int main(int argc, char **argv) NORETURN;
 int main(int argc, char **argv)
 {
+	vis_init();
 	atexit(schism_shutdown);
 
 	kbd_init();

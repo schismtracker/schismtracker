@@ -346,8 +346,9 @@ enum page_numbers {
 	PAGE_ABOUT = (29),
 
 	PAGE_CONFIG = (30),
+	PAGE_WATERFALL = (31),
 
-	PAGE_LAST_PAGE = (30),
+	PAGE_LAST_PAGE = (31),
 /* limit =32 */
 };
 
@@ -381,6 +382,7 @@ void about_load_page(struct page *page);
 void library_sample_load_page(struct page *page);
 void library_instrument_load_page(struct page *page);
 void config_load_page(struct page *page);
+void waterfall_load_page(struct page *page);
 
 /* --------------------------------------------------------------------- */
 

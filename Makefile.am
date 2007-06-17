@@ -226,6 +226,7 @@ schismtracker_SOURCES = \
 	schism/page_samples.c		\
 	schism/itf.c			\
 	schism/page_orderpan.c		\
+	schism/page_waterfall.c		\
 	schism/midi-core.c		\
 	schism/midi-ip.c		\
 	schism/audio_playback.cc	\

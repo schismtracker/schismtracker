@@ -66,6 +66,10 @@ static void _schism_midi_out_raw(unsigned char *data, unsigned int len, unsigned
 
 extern "C" {
 	extern int midi_bend_hit[64], midi_last_bend_hit[64];
+	extern void vis_work_16s(short *in, int inlen);
+	extern void vis_work_16m(short *in, int inlen);
+	extern void vis_work_8s(char *in, int inlen);
+	extern void vis_work_8m(char *in, int inlen);
 };
 // this gets called from sdl
 static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
@@ -101,6 +105,19 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 		n *= audio_output_channels;
 		for (i = 0; i < n; i++) {
 			stream[i] ^= 128;
+		}
+		if (status.current_page == PAGE_WATERFALL) {
+			if (audio_output_channels == 2) {
+				vis_work_8s((char*)stream, n/2);
+			} else {
+				vis_work_8m((char*)stream, n);
+			}
+		}
+	} else if (status.current_page == PAGE_WATERFALL) {
+		if (audio_output_channels == 2) {
+			vis_work_16s((short*)stream, n);
+		} else {
+			vis_work_16m((short*)stream, n);
 		}
 	}
 	
