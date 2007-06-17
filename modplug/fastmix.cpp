@@ -1638,9 +1638,8 @@ VOID CSoundFile::FloatToMonoMix(const float *pIn, int *pOut, UINT nCount)
 // Clip and convert to 8 bit
 //---GCCFIX: Asm replaced with C function
 // The C version was written by Rani Assaf <rani@magic.metawire.com>, I believe
-DWORD Convert32To8(LPVOID lp8, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
+DWORD Convert32To8(LPVOID lp8, int *pBuffer, DWORD lSampleCount, LONG mins[2], LONG maxs[2])
 {
-	int vumin = *lpMin, vumax = *lpMax;
 	unsigned char *p = (unsigned char *)lp8;
 	for (UINT i=0; i<lSampleCount; i++)
 	{
@@ -1649,21 +1648,18 @@ DWORD Convert32To8(LPVOID lp8, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, L
 			n = MIXING_CLIPMIN;
 		else if (n > MIXING_CLIPMAX)
 			n = MIXING_CLIPMAX;
-		if (n < vumin)
-			vumin = n;
-		else if (n > vumax)
-			vumax = n;
+		if (n < mins[i&1])
+			mins[i&1]= n;
+		else if (n > maxs[i&1])
+			maxs[i&1] = n;
 		p[i] = (n >> (24-MIXING_ATTENUATION)) ^ 0x80;	// 8-bit unsigned
 	}
-	*lpMin = vumin;
-	*lpMax = vumax;
 	return lSampleCount;
 }
 //---GCCFIX: Asm replaced with C function
 // The C version was written by Rani Assaf <rani@magic.metawire.com>, I believe
-DWORD Convert32To16(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
+DWORD Convert32To16(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LONG mins[2], LONG maxs[2])
 {
-	int vumin = *lpMin, vumax = *lpMax;
 	signed short *p = (signed short *)lp16;
 	for (UINT i=0; i<lSampleCount; i++)
 	{
@@ -1672,22 +1668,19 @@ DWORD Convert32To16(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LPLONG lpMin,
 			n = MIXING_CLIPMIN;
 		else if (n > MIXING_CLIPMAX)
 			n = MIXING_CLIPMAX;
-		if (n < vumin)
-			vumin = n;
-		else if (n > vumax)
-			vumax = n;
+		if (n < mins[i&1])
+			mins[i&1]= n;
+		else if (n > maxs[i&1])
+			maxs[i&1] = n;
 		p[i] = n >> (16-MIXING_ATTENUATION);	// 16-bit signed
 	}
-	*lpMin = vumin;
-	*lpMax = vumax;
 	return lSampleCount * 2;
 }
 //---GCCFIX: Asm replaced with C function
 // 24-bit might not work...
-DWORD Convert32To24(LPVOID lp24, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
+DWORD Convert32To24(LPVOID lp24, int *pBuffer, DWORD lSampleCount, LONG mins[2], LONG maxs[2])
 {
 	/* the inventor of 24bit anything should be shot */
-	int vumin = *lpMin, vumax = *lpMax;
 	unsigned char *p = (unsigned char *)lp24;
 	for (UINT i=0; i<lSampleCount; i++)
 	{
@@ -1696,24 +1689,21 @@ DWORD Convert32To24(LPVOID lp24, int *pBuffer, DWORD lSampleCount, LPLONG lpMin,
 			n = MIXING_CLIPMIN;
 		else if (n > MIXING_CLIPMAX)
 			n = MIXING_CLIPMAX;
-		if (n < vumin)
-			vumin = n;
-		else if (n > vumax)
-			vumax = n;
+		if (n < mins[i&1])
+			mins[i&1]= n;
+		else if (n > maxs[i&1])
+			maxs[i&1] = n;
 		n = n >> (8-MIXING_ATTENUATION);	// 24-bit signed
 		/* err, assume same endian */
 		memcpy(p, &n, 3);
 		p += 3;
 	}
-	*lpMin = vumin;
-	*lpMax = vumax;
 	return lSampleCount * 2;
 }
 //---GCCFIX: Asm replaced with C function
 // 32-bit might not work...
-DWORD Convert32To32(LPVOID lp32, int *pBuffer, DWORD lSampleCount, LPLONG lpMin, LPLONG lpMax)
+DWORD Convert32To32(LPVOID lp32, int *pBuffer, DWORD lSampleCount, LONG mins[2], LONG maxs[2])
 {
-	int vumin = *lpMin, vumax = *lpMax;
 	signed int *p = (signed int *)lp32;
 	for (UINT i=0; i<lSampleCount; i++)
 	{
@@ -1722,14 +1712,12 @@ DWORD Convert32To32(LPVOID lp32, int *pBuffer, DWORD lSampleCount, LPLONG lpMin,
 			n = MIXING_CLIPMIN;
 		else if (n > MIXING_CLIPMAX)
 			n = MIXING_CLIPMAX;
-		if (n < vumin)
-			vumin = n;
-		else if (n > vumax)
-			vumax = n;
+		if (n < mins[i&1])
+			mins[i&1]= n;
+		else if (n > maxs[i&1])
+			maxs[i&1] = n;
 		p[i] = (n >> MIXING_ATTENUATION);	// 32-bit signed
 	}
-	*lpMin = vumin;
-	*lpMax = vumax;
 	return lSampleCount * 2;
 }
 //---GCCFIX: Asm replaced with C function

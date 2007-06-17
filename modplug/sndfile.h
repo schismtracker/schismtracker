@@ -553,7 +553,7 @@ public:	// Static Members
 	static UINT m_nMaxMixChannels;
 	static LONG m_nStreamVolume;
 	static DWORD gdwSysInfo, gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
-	static UINT gnAGC, gnVolumeRampSamples, gnVUMeter, gnCPUUsage;
+	static UINT gnAGC, gnVolumeRampSamples, gnCPUUsage;
 	static UINT gnVULeft, gnVURight;
 	static LPSNDMIXHOOKPROC gpSndMixHook;
 	static PMIXPLUGINCREATEPROC gpMixPluginCreateProc;

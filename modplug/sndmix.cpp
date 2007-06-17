@@ -7,9 +7,6 @@
 #include "stdafx.h"
 #include "sndfile.h"
 
-#ifdef MODPLUG_TRACKER
-#define ENABLE_STEREOVU
-#endif
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
@@ -29,7 +26,6 @@ DWORD CSoundFile::gnBitsPerSample = 16;
 // Mixing data initialized in
 UINT CSoundFile::gnAGC = AGC_UNITY;
 UINT CSoundFile::gnVolumeRampSamples = 64;
-UINT CSoundFile::gnVUMeter = 0;
 UINT CSoundFile::gnVULeft = 0;
 UINT CSoundFile::gnVURight = 0;
 UINT CSoundFile::gnCPUUsage = 0;
@@ -43,10 +39,10 @@ int gbInitPlugins = 0;
 
 typedef DWORD (MPPASMCALL * LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
 
-extern DWORD MPPASMCALL Convert32To8(LPVOID lpBuffer, int *, DWORD nSamples, LPLONG, LPLONG);
-extern DWORD MPPASMCALL Convert32To16(LPVOID lpBuffer, int *, DWORD nSamples, LPLONG, LPLONG);
-extern DWORD MPPASMCALL Convert32To24(LPVOID lpBuffer, int *, DWORD nSamples, LPLONG, LPLONG);
-extern DWORD MPPASMCALL Convert32To32(LPVOID lpBuffer, int *, DWORD nSamples, LPLONG, LPLONG);
+extern DWORD MPPASMCALL Convert32To8(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
+extern DWORD MPPASMCALL Convert32To16(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
+extern DWORD MPPASMCALL Convert32To24(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
+extern DWORD MPPASMCALL Convert32To32(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
 extern UINT MPPASMCALL AGC(int *pBuffer, UINT nSamples, UINT nAGC);
 extern VOID MPPASMCALL Dither(int *pBuffer, UINT nSamples, UINT nBits);
 extern VOID MPPASMCALL InterleaveFrontRear(int *pFrontBuf, int *pRearBuf, DWORD nSamples);
@@ -98,7 +94,6 @@ BOOL CSoundFile::InitPlayer(BOOL bReset)
 	gnRvbROfsVol = gnRvbLOfsVol = 0;
 	if (bReset)
 	{
-		gnVUMeter = 0;
 		gnVULeft = 0;
 		gnVURight = 0;
 		gnCPUUsage = 0;
@@ -152,14 +147,20 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 {
 	LPBYTE lpBuffer = (LPBYTE)lpDestBuffer;
 	LPCONVERTPROC pCvt = Convert32To8;
+	LONG vu_min[2];
+	LONG vu_max[2];
 	UINT lRead, lMax, lSampleSize, lCount, lSampleCount, nStat=0;
-	LONG nVUMeterMin = 0x7FFFFFFF, nVUMeterMax = -0x7FFFFFFF;
 	UINT nMaxPlugins;
 
+	vu_min[0] = vu_min[1] = 0x7FFFFFFF;
+	vu_max[0] = vu_max[1] = -0x7FFFFFFF;
+
+#if 0
 	{
 		nMaxPlugins = MAX_MIXPLUGINS;
 		while ((nMaxPlugins > 0) && (!m_MixPlugins[nMaxPlugins-1].pMixPlugin)) nMaxPlugins--;
 	}
+#endif
 	m_nMixStat = 0;
 	lSampleSize = gnChannels;
 	if (gnBitsPerSample == 16) { lSampleSize *= 2; pCvt = Convert32To16; }
@@ -198,12 +199,16 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 		{
 			lSampleCount *= 2;
 			m_nMixStat += CreateStereoMix(lCount);
+#if 0
 			if (nMaxPlugins) ProcessPlugins(lCount);
+#endif
 			ProcessStereoDSP(lCount);
 		} else
 		{
 			m_nMixStat += CreateStereoMix(lCount);
+#if 0
 			if (nMaxPlugins) ProcessPlugins(lCount);
+#endif
 			MonoFromStereo(MixSoundBuffer, lCount);
 			ProcessMonoDSP(lCount);
 		}
@@ -235,7 +240,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 			gpSndMixHook(MixSoundBuffer, lTotalSampleCount, gnChannels);
 		}
 		// Perform clipping + VU-Meter
-		lpBuffer += pCvt(lpBuffer, MixSoundBuffer, lTotalSampleCount, &nVUMeterMin, &nVUMeterMax);
+		lpBuffer += pCvt(lpBuffer, MixSoundBuffer, lTotalSampleCount, vu_min, vu_max);
 		// Buffer ready
 		lRead -= lCount;
 		m_nBufferCount -= lCount;
@@ -243,10 +248,16 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 MixDone:
 	if (lRead) memset(lpBuffer, (gnBitsPerSample == 8) ? 0x80 : 0, lRead * lSampleSize);
 	// VU-Meter
-	nVUMeterMin >>= (24-MIXING_ATTENUATION);
-	nVUMeterMax >>= (24-MIXING_ATTENUATION);
-	if (nVUMeterMax < nVUMeterMin) nVUMeterMax = nVUMeterMin;
-	if ((gnVUMeter = (UINT)(nVUMeterMax - nVUMeterMin)) > 0xFF) gnVUMeter = 0xFF;
+	vu_min[0] >>= (24-MIXING_ATTENUATION);
+	vu_min[1] >>= (24-MIXING_ATTENUATION);
+	vu_max[0] >>= (24-MIXING_ATTENUATION);
+	vu_max[1] >>= (24-MIXING_ATTENUATION);
+	if (vu_max[0] < vu_min[0]) vu_max[0] = vu_min[0];
+	if (vu_max[1] < vu_min[1]) vu_max[1] = vu_min[1];
+	if ((gnVULeft = (UINT)(vu_max[0] - vu_min[0])) > 0xFF)
+		gnVULeft = 0xFF;
+	if ((gnVURight = (UINT)(vu_max[1] - vu_min[1])) > 0xFF)
+		gnVURight = 0xFF;
 	if (nStat) { m_nMixStat += nStat-1; m_nMixStat /= nStat; }
 	return lMax - lRead;
 }
@@ -496,10 +507,7 @@ BOOL CSoundFile::ReadNote()
 		// Check for unused channel
 		if ((nChn >= m_nChannels) && (!pChn->nLength))
 		{
-			pChn->nVUMeter = 0;
-#ifdef ENABLE_STEREOVU
 			pChn->nLeftVU = pChn->nRightVU = 0;
-#endif
 			continue;
 		}
 		// Reset channel data
@@ -1073,10 +1081,8 @@ BOOL CSoundFile::ReadNote()
 			pChn->dwFlags |= CHN_VOLUMERAMP;
 		// Decrease VU-Meter
 		if (pChn->nVUMeter > VUMETER_DECAY)	pChn->nVUMeter -= VUMETER_DECAY; else pChn->nVUMeter = 0;
-#ifdef ENABLE_STEREOVU
 		if (pChn->nLeftVU > VUMETER_DECAY) pChn->nLeftVU -= VUMETER_DECAY; else pChn->nLeftVU = 0;
 		if (pChn->nRightVU > VUMETER_DECAY) pChn->nRightVU -= VUMETER_DECAY; else pChn->nRightVU = 0;
-#endif
 		// Check for too big nInc
 		if (((pChn->nInc >> 16) + 1) >= (LONG)(pChn->nLoopEnd - pChn->nLoopStart)) pChn->dwFlags &= ~CHN_LOOP;
 		pChn->nNewRightVol = pChn->nNewLeftVol = 0;
@@ -1089,7 +1095,6 @@ BOOL CSoundFile::ReadNote()
 			if (pChn->nVUMeter >= 0x100) pChn->nVUMeter = vutmp;
 			vutmp >>= 1;
 			if (pChn->nVUMeter < vutmp)	pChn->nVUMeter = vutmp;
-#ifdef ENABLE_STEREOVU
 			UINT vul = (pChn->nRealVolume * pChn->nRealPan) >> 14;
 			if (vul > 127) vul = 127;
 			if (pChn->nLeftVU > 127) pChn->nLeftVU = (BYTE)vul;
@@ -1100,7 +1105,6 @@ BOOL CSoundFile::ReadNote()
 			if (pChn->nRightVU > 127) pChn->nRightVU = (BYTE)vur;
 			vur >>= 1;
 			if (pChn->nRightVU < vur) pChn->nRightVU = (BYTE)vur;
-#endif
 #ifdef MODPLUG_TRACKER
 			UINT kChnMasterVol = (pChn->dwFlags & CHN_EXTRALOUD) ? 0x100 : nMasterVol;
 #else
@@ -1220,11 +1224,9 @@ BOOL CSoundFile::ReadNote()
 			}
 		} else
 		{
-#ifdef ENABLE_STEREOVU
 			// Note change but no sample
 			if (pChn->nLeftVU > 128) pChn->nLeftVU = 0;
 			if (pChn->nRightVU > 128) pChn->nRightVU = 0;
-#endif
 			if (pChn->nVUMeter > 0xFF) pChn->nVUMeter = 0;
 			pChn->nLeftVol = pChn->nRightVol = 0;
 			pChn->nLength = 0;
