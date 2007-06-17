@@ -803,7 +803,9 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
-                if (k->mod & KMOD_CTRL) {
+		if ((k->mod & KMOD_ALT) && status.current_page == PAGE_INFO) {
+                        if (!k->state) set_page(PAGE_WATERFALL);
+                } else if (k->mod & KMOD_CTRL) {
                         if (!k->state) set_page(PAGE_PALETTE_EDITOR);
                 } else if (NO_MODIFIER(k->mod)) {
                         if (!k->state) set_page(PAGE_SONG_VARIABLES);
@@ -1513,6 +1515,7 @@ void load_pages(void)
         library_sample_load_page(pages + PAGE_LIBRARY_SAMPLE);
         load_instrument_load_page(pages + PAGE_LOAD_INSTRUMENT);
         library_instrument_load_page(pages + PAGE_LIBRARY_INSTRUMENT);
+	waterfall_load_page(pages + PAGE_WATERFALL);
 	about_load_page(pages+PAGE_ABOUT);
         config_load_page(pages + PAGE_CONFIG);
 
