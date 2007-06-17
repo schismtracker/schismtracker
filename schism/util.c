@@ -319,12 +319,36 @@ char *str_escape(const char *source, int space_hack)
 	return dest;
 }
 
+static int hexn(int ch)
+{
+	switch(ch) {
+	case 'a': case 'A': return 10;
+	case 'b': case 'B': return 11;
+	case 'c': case 'C': return 12;
+	case 'd': case 'D': return 13;
+	case 'e': case 'E': return 14;
+	case 'f': case 'F': return 15;
+	case '0': return 0;
+	case '1': return 1;
+	case '2': return 2;
+	case '3': return 3;
+	case '4': return 4;
+	case '5': return 5;
+	case '6': return 6;
+	case '7': return 7;
+	case '8': return 8;
+	case '9': return 9;
+	default: return -1;
+	};
+}
+
 /* opposite of str_escape. (this is glib's 'compress' function renamed more clearly)
 TODO: it'd be nice to handle \xNN as well... */
 char *str_unescape(const char *source)
 {
 	const char *p = source;
 	const char *octal;
+	int hexa, hexb;
 	char *dest = calloc(strlen(source) + 1, sizeof(char));
 	char *q = dest;
 	
@@ -364,6 +388,21 @@ char *str_unescape(const char *source)
 			case 'v':
 				*q++ = '\v';
 				break;
+			case 'x':
+				if (q[1] && q[2]) {
+					hexa = hexn(q[1]);
+					if (hexa > -1) {
+						hexb = hexn(q[2]);
+						if (hexb > -1) {
+							*q++ = (hexa << 4)
+								| hexb;
+							break;
+						}
+						/* fall through */
+					}
+					/* fall through */
+				}
+				/* fall through */
 			default:		/* Also handles \" and \\ */
 				*q++ = *p;
 				break;
