@@ -76,15 +76,16 @@ void xscreensaver_deactivate(void)
 
 	if (!setup) {
 		setup = 1;
-		useit = 1;
 		SDL_GetWMInfo(&info);
 		dpy = info.info.x11.display;
 		if (!dpy) {
 			dpy = XOpenDisplay(0);
+			if (!dpy) return;
 			memset(&info, 0, sizeof(info));
 			info.info.x11.display = dpy;
 		}
 
+		useit = 1;
 		if (info.info.x11.lock_func) info.info.x11.lock_func();
 		XA_SCREENSAVER = XInternAtom(dpy, "SCREENSAVER", False);
 		XA_SCREENSAVER_VERSION = XInternAtom(dpy,

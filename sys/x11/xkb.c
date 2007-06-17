@@ -64,6 +64,7 @@ static void _key_info_setup(void)
 	}
 	if (!dpy) {
 		dpy = XOpenDisplay(0);
+		if (!dpy) return;
 		memset(&info, 0, sizeof(info));
 	}
 
