@@ -724,11 +724,21 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 		sdlflags |= SDL_FULLSCREEN;
 		sdlflags &=~SDL_RESIZABLE;
 		video.surface = SDL_SetVideoMode(w, h, bpp,
-				sdlflags | SDL_FULLSCREEN | SDL_HWSURFACE);
+#ifdef MACOSX
+				SDL_SWSURFACE |
+#else
+				SDL_HWSURFACE |
+#endif
+				sdlflags | SDL_FULLSCREEN);
 					
 	} else {
 		video.surface = SDL_SetVideoMode(w, h, bpp,
-					sdlflags | SDL_HWSURFACE);
+#ifdef MACOSX
+					SDL_SWSURFACE |
+#else
+					SDL_HWSURFACE |
+#endif
+					sdlflags);
 	}
 	if (!video.surface) {
 		perror("SDL_SetVideoMode");
@@ -852,6 +862,12 @@ RETRYSURF:	/* use SDL surfaces */
 		break;
 	case VIDEO_GL:
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
+		SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE, 0);
 #if SDL_VERSION_ATLEAST(1,2,11)
 		SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
 #endif
@@ -861,6 +877,12 @@ RETRYSURF:	/* use SDL surfaces */
 		}
 		/* grumble... */
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
+		SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 0);
+		SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE, 0);
 #if SDL_VERSION_ATLEAST(1,2,11)
 		SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
 #endif
