@@ -48,8 +48,8 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 	int level, xs, ys, xe, ye, step;
 	int nh, cc, np;
 
-	nh = r->height / channels;
-	np = nh / 2;
+	nh = (r->height / channels);
+	np = r->height - (nh / 2);
 
 	length /= channels;
 
@@ -68,7 +68,7 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 			xs = xe;
 		        ys = ye;
 		}
-		np += nh;
+		np -= nh;
 	}
 }
 
@@ -80,8 +80,8 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 	int level, xs, ys, xe, ye, step;
 	int nh, cc, np;
 
-	nh = r->height / channels;
-	np = nh / 2;
+	nh = (r->height / channels);
+	np = r->height - (nh / 2);
 
 	length /= channels;
 
@@ -100,7 +100,7 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 			xs = xe;
 		        ys = ye;
 		}
-		np += nh;
+		np -= nh;
 	}
 }
 
