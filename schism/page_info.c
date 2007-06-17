@@ -47,6 +47,7 @@ static int instrument_names = 0;
 
 struct info_window_type {
         void (*draw) (int base, int height, int active, int first_channel);
+	void (*click) (int x, int y, int num_vis_channel, int first_channel);
 
         /* if this is set, the first row contains actual text (not just the top part of a box) */
         int first_row;
@@ -685,13 +686,69 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
                 draw_text(numtostr(2, c, (unsigned char *) buf), 2, pos + base + 1, fg, 2);
         }
 }
+/* --------------------------------------------------------------------- */
+/* click receivers */
+static void click_chn_x(int x, int w, int skip, int fc)
+{
+	while (x > 0 && fc <= 64) {
+		if (x < w) {
+			selected_channel = CLAMP(fc, 1, 64);
+			return;
+		}
+		fc++;
+		x -= w;
+		x -= skip;
+	}
+}
+static void click_chn_is_x(int x, UNUSED int y, int nc, int fc)
+{
+	if (x < 5) return;
+	x -= 4;
+	switch (nc) {
+	case 5:
+		click_chn_x(x, 13, 1, fc);
+		break;
+	case 10:
+		click_chn_x(x, 7, 0, fc);
+		break;
+	case 12:
+		click_chn_x(x, 6, 0, fc);
+		break;
+	case 18:
+		click_chn_x(x, 3, 1, fc);
+		break;
+	case 24:
+		click_chn_x(x, 3, 0, fc);
+		break;
+	case 36:
+		click_chn_x(x, 2, 0, fc);
+		break;
+	case 64:
+		click_chn_x(x, 1, 0, fc);
+		break;
+	};
+}
+static void click_chn_is_y_nohead(UNUSED int x, int y, int nc, int fc)
+{
+	selected_channel = CLAMP(y+fc, 1, 64);
+}
+static void click_chn_is_y(UNUSED int x, int y, int nc, int fc)
+{
+	if (!y) return;
+	selected_channel = CLAMP((y+fc)-1, 1, 64);
+}
+static void click_chn_nil(UNUSED int x, UNUSED int y,
+		UNUSED int nc, UNUSED int fc)
+{
+	/* do nothing */
+}
 
 /* --------------------------------------------------------------------- */
 /* declarations of the window types */
 
-#define TRACK_VIEW(n) {info_draw_track_##n, 1, n}
+#define TRACK_VIEW(n) {info_draw_track_##n, click_chn_is_x, 1, n}
 static const struct info_window_type window_types[] = {
-        {info_draw_samples, 0, -2},
+        {info_draw_samples, click_chn_is_y_nohead, 0, -2},
         TRACK_VIEW(5),
         TRACK_VIEW(10),
         TRACK_VIEW(12),
@@ -699,9 +756,9 @@ static const struct info_window_type window_types[] = {
         TRACK_VIEW(24),
         TRACK_VIEW(36),
         TRACK_VIEW(64),
-        {info_draw_channels, 1, 0},
-        {info_draw_note_dots, 0, -2},
-	{info_draw_technical, 1, -3},
+        {info_draw_channels, click_chn_nil, 1, 0},
+        {info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
+	{info_draw_technical, click_chn_is_y, 1, -3},
 };
 #undef TRACK_VIEW
 
@@ -729,6 +786,25 @@ static void _fix_channels(int n)
 	else if (selected_channel >= (w->first_channel + channels))
 		w->first_channel = selected_channel - channels + 1;
 	w->first_channel = CLAMP(w->first_channel, 1, 65 - channels);
+}
+
+static int info_handle_click(int x, int y)
+{
+	int n;
+	if (n < 13) return 0; /* NA */
+	y -= 13;
+        for (n = 0; n < num_windows; n++) {
+		if (y < windows[n].height) {
+			window_types[windows[n].type].click(
+				x, y,
+
+				window_types[windows[n].type].channels,
+				windows[n].first_channel);
+			return 1;
+		}
+		y -= windows[n].height;
+	}
+	return 0;
 }
 
 static void recalculate_windows(void)
@@ -835,7 +911,31 @@ static void info_page_redraw(void)
 
 static int info_page_handle_key(struct key_event * k)
 {
-        int n, order;
+        int n, p, order;
+
+	if (k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) {
+		p = selected_channel;
+		n = info_handle_click(k->x, k->y);
+		if (k->mouse == MOUSE_DBLCLICK) {
+			if (p == selected_channel) {
+				set_current_channel(selected_channel);
+				order = song_get_current_order();
+
+				if (song_get_mode() == MODE_PLAYING) {
+					n = song_get_orderlist()[order];
+				} else {
+					n = song_get_playing_pattern();
+				}
+				if (n < 200) {
+					set_current_order(order);
+					set_current_pattern(n);
+					set_current_row(song_get_current_row());
+					set_page(PAGE_PATTERN_EDITOR);
+				}
+			}
+		}
+		return n;
+	}
 
 	/* hack to render this useful :) */
 	if (k->orig_sym == SDLK_KP9) {
