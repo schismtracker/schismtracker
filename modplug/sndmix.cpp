@@ -150,7 +150,9 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 	LONG vu_min[2];
 	LONG vu_max[2];
 	UINT lRead, lMax, lSampleSize, lCount, lSampleCount, nStat=0;
+#if 0
 	UINT nMaxPlugins;
+#endif
 
 	vu_min[0] = vu_min[1] = 0x7FFFFFFF;
 	vu_max[0] = vu_max[1] = -0x7FFFFFFF;
