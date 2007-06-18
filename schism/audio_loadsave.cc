@@ -1263,7 +1263,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 				x = xl.Headers[n]->Keyboard[j];
 				if (!sampmap[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
-						for (int k = 0; k < MAX_SAMPLES; k++) {
+						for (int k = 1; k < MAX_SAMPLES; k++) {
 							if (mp->Ins[k].nLength) continue;
 							sampmap[x] = k;
 							//song_sample *smp = (song_sample *)song_get_sample(k, NULL);

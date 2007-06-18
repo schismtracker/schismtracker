@@ -85,21 +85,24 @@ int fmt_iti_load_instrument(const byte *data, size_t length, int slot)
 	g->midi_program = iti.mpr;
 	g->midi_bank = bswapLE16(iti.mbank);
 	
-	for (j = 0; j < SCHISM_MAX_SAMPLES; j++) need_inst[j] = -1;
+	memset(need_inst, 0, sizeof(need_inst));
 
 	basex = 1;
 	for (j = 0; j < 120; j++) {
 		nm = iti.keyboard[2*j + 1];
-		if (need_inst[nm] != -1) {
+		if (!nm || nm >= SCHISM_MAX_SAMPLES) {
+			/* leave it alone */
+			nm = 0;
+		} else if (need_inst[nm]) {
 			/* already allocated */
 			nm = need_inst[nm];
 
-		} else if (nm > 0 && nm < SCHISM_MAX_SAMPLES) {
+		} else {
 			for (x = basex; x < SCHISM_MAX_SAMPLES; x++) {
-				if (!song_sample_is_empty(x)) continue;
+				if (!song_sample_is_empty(x-1)) continue;
 				break;
 			}
-			if (x == SCHISM_MAX_SAMPLES) {
+			if (x >= SCHISM_MAX_SAMPLES) {
 				/* err... */
 				status_text_flash("Too many samples");
 				nm = 0;
