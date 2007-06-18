@@ -24,6 +24,14 @@
 #include "headers.h"
 #include "it.h"
 
+/* bugs
+ * ... in sdl. not in this file :)
+ *
+ *  - take special care to call SDL_SetVideoMode _exactly_ once
+ *    when on a console (video.desktop.fb_hacks)
+ *
+ */
+
 #if HAVE_SYS_KD_H
 # include <sys/kd.h>
 #endif
