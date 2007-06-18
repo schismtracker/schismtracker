@@ -569,6 +569,50 @@ SKIP1:
 #endif
 	}
 
+	video.desktop.no_fullscreen = 0;
+	
+	x = y = -1;
+	if ((q = getenv("SCHISM_VIDEO_RESOLUTION"))) {
+		i = j = -1;
+		if (sscanf(q,"%dx%d", &i,&j) == 2 && i >= 10 && j >= 10) {
+			x = i;
+			y = j;
+		}
+	}
+#if HAVE_LINUX_FB_H
+	if (!getenv("DISPLAY")) {
+		struct fb_var_screeninfo s;
+		int fb = -1;
+		if (getenv("SDL_FBDEV")) {
+			fb = open(getenv("SDL_FBDEV"), O_RDONLY);
+		}
+		if (fb == -1)
+			fb = open("/dev/fb0", O_RDONLY);
+		if (fb > -1) {
+			if (ioctl(fb, FBIOGET_VSCREENINFO, &s) < 0) {
+				perror("ioctl FBIOGET_VSCREENINFO");
+			} else {
+				if (x < 0 || y < 0) {
+					x = s.xres;
+					if (x < NATIVE_SCREEN_WIDTH)
+						x = NATIVE_SCREEN_WIDTH;
+					y = s.yres;
+				}
+				video.desktop.bpp = s.bits_per_pixel;
+				video.desktop.no_fullscreen = 1;
+				video.desktop.doublebuf = 1;
+				video.desktop.fullscreen = 0;
+				video.desktop.swsurface = 0;
+				video.surface = SDL_SetVideoMode(x,y,
+						video.desktop.bpp,
+						SDL_HWSURFACE
+						| SDL_DOUBLEBUF
+						| SDL_ASYNCBLIT);
+			}
+			(void)close(fb);
+		}
+	}
+#endif
 	if (!video.surface) {
 		/* if we already got one... */
 		video.surface = SDL_SetVideoMode(640,400,0,SDL_RESIZABLE);
@@ -586,40 +630,29 @@ SKIP1:
 	|| strcasecmp(q,"no-fixed") == 0))
 		video.desktop.want_fixed = 0;
 
-	modes = SDL_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
-	x = y = -1;
-	if (modes != (SDL_Rect**)0 && modes != (SDL_Rect**)-1) {
-		for (i = 0; modes[i]; i++) {
-/*
-			log_appendf(2, "Host-acceptable video mode: %dx%d",
-				modes[i]->w, modes[i]->h);
-*/
-			if (modes[i]->w < NATIVE_SCREEN_WIDTH) continue;
-			if (modes[i]->h < NATIVE_SCREEN_HEIGHT)continue;
-			if (x == -1 || y == -1 || modes[i]->w < x || modes[i]->h < y) {
-				if (modes[i]->w != NATIVE_SCREEN_WIDTH
-				||  modes[i]->h != NATIVE_SCREEN_HEIGHT) {
-					if (x == NATIVE_SCREEN_WIDTH || y == NATIVE_SCREEN_HEIGHT)
-						continue;
+	if (x < 0 || y < 0) {
+		modes = SDL_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
+		if (modes != (SDL_Rect**)0 && modes != (SDL_Rect**)-1) {
+			for (i = 0; modes[i]; i++) {
+				if (modes[i]->w < NATIVE_SCREEN_WIDTH) continue;
+				if (modes[i]->h < NATIVE_SCREEN_HEIGHT)continue;
+				if (x == -1 || y == -1 || modes[i]->w < x || modes[i]->h < y) {
+					if (modes[i]->w != NATIVE_SCREEN_WIDTH
+					||  modes[i]->h != NATIVE_SCREEN_HEIGHT) {
+						if (x == NATIVE_SCREEN_WIDTH || y == NATIVE_SCREEN_HEIGHT)
+							continue;
+					}
+					x = modes[i]->w;
+					y = modes[i]->h;
+					if (x == NATIVE_SCREEN_WIDTH && y == NATIVE_SCREEN_HEIGHT)
+						break;
 				}
-				x = modes[i]->w;
-				y = modes[i]->h;
-				if (x == NATIVE_SCREEN_WIDTH && y == NATIVE_SCREEN_HEIGHT)
-					break;
 			}
 		}
 	}
 	if (x < 0 || y < 0) {
 		x = 640;
 		y = 480;
-	}
-
-	if ((q = getenv("SCHISM_VIDEO_RESOLUTION"))) {
-		i = j = -1;
-		if (sscanf(q,"%dx%d", &i,&j) == 2 && i >= 10 && j >= 10) {
-			x = i;
-			y = j;
-		}
 	}
 
 	if ((q = getenv("SCHISM_VIDEO_DEPTH"))) {
@@ -633,7 +666,6 @@ SKIP1:
 	/*log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
 	video.desktop.width = x;
 	video.desktop.height = y;
-	video.desktop.no_fullscreen = 0;
 
 	switch (video.desktop.want_type) {
 	case VIDEO_YUV:
@@ -665,35 +697,6 @@ SKIP1:
 	case VIDEO_SURFACE:
 		/* no scaling when using the SDL surfaces directly */
 		video.desktop.swsurface = 1;
-#if HAVE_LINUX_FB_H
-		if (!getenv("DISPLAY")) {
-			struct fb_var_screeninfo s;
-			int fb = -1;
-			if (getenv("SDL_FBDEV")) {
-				fb = open(getenv("SDL_FBDEV"), O_RDONLY);
-			}
-			if (fb == -1)
-				fb = open("/dev/fb0", O_RDONLY);
-			if (fb > -1) {
-				if (ioctl(fb, FBIOGET_VSCREENINFO, &s) < 0) {
-					perror("ioctl FBIOGET_VSCREENINFO");
-				} else {
-					x = s.xres;
-					if (x < NATIVE_SCREEN_WIDTH)
-						x = NATIVE_SCREEN_WIDTH;
-					y = s.yres;
-					video.desktop.width = x;
-					video.desktop.height = y;
-					video.desktop.bpp = s.bits_per_pixel;
-					video.desktop.no_fullscreen = 1;
-					video.desktop.doublebuf = 1;
-					video.desktop.fullscreen = 0;
-					video.desktop.swsurface = 0;
-				}
-				(void)close(fb);
-			}
-		}
-#endif
 		video.desktop.want_type = VIDEO_SURFACE;
 		break;
 	};
