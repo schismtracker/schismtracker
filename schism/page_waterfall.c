@@ -225,6 +225,7 @@ static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 	}
 
 	vgamem_unlock();
+	status.flags |= NEED_UPDATE;
 }
 
 void vis_work_16s(short *in, int inlen)
@@ -234,14 +235,19 @@ void vis_work_16s(short *in, int inlen)
 	short f[2][FFT_OUTPUT_SIZE];
 	int i, j, k;
 
-	for (i = 0; i < FFT_BUFFER_SIZE;) {
-		for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-			dl[i] = in[j]; j++;
-			dr[i] = in[j]; j++;
+	if (!inlen) {
+		memset(f[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(f[1], 0, FFT_OUTPUT_SIZE*2);
+	} else {
+		for (i = 0; i < FFT_BUFFER_SIZE;) {
+			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
+				dl[i] = in[j]; j++;
+				dr[i] = in[j]; j++;
+			}
 		}
+		_vis_data_work(f[0], dl);
+		_vis_data_work(f[1], dr);
 	}
-	_vis_data_work(f[0], dl);
-	_vis_data_work(f[1], dr);
 	_vis_process(f);
 }
 void vis_work_16m(short *in, int inlen)
@@ -250,13 +256,18 @@ void vis_work_16m(short *in, int inlen)
 	short f[2][FFT_OUTPUT_SIZE];
 	int i, k;
 
-	for (i = 0; i < FFT_BUFFER_SIZE;) {
-		for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-			d[i] = in[k];
+	if (!inlen) {
+		memset(f[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(f[1], 0, FFT_OUTPUT_SIZE*2);
+	} else {
+		for (i = 0; i < FFT_BUFFER_SIZE;) {
+			for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
+				d[i] = in[k];
+			}
 		}
+		_vis_data_work(f[0], d);
+		memcpy(f[1], f[0], FFT_OUTPUT_SIZE * 2);
 	}
-	_vis_data_work(f[0], d);
-	memcpy(f[1], f[0], FFT_OUTPUT_SIZE * 2);
 	_vis_process(f);
 }
 
@@ -267,14 +278,19 @@ void vis_work_8s(char *in, int inlen)
 	short f[2][FFT_OUTPUT_SIZE];
 	int i, j, k;
 
-	for (i = 0; i < FFT_BUFFER_SIZE;) {
-		for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-			dl[i] = ((short)in[j]) * 256; j++;
-			dr[i] = ((short)in[j]) * 256; j++;
+	if (!inlen) {
+		memset(f[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(f[1], 0, FFT_OUTPUT_SIZE*2);
+	} else {
+		for (i = 0; i < FFT_BUFFER_SIZE;) {
+			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
+				dl[i] = ((short)in[j]) * 256; j++;
+				dr[i] = ((short)in[j]) * 256; j++;
+			}
 		}
+		_vis_data_work(f[0], dl);
+		_vis_data_work(f[1], dr);
 	}
-	_vis_data_work(f[0], dl);
-	_vis_data_work(f[1], dr);
 	_vis_process(f);
 }
 void vis_work_8m(char *in, int inlen)
@@ -283,13 +299,18 @@ void vis_work_8m(char *in, int inlen)
 	short f[2][FFT_OUTPUT_SIZE];
 	int i, k;
 
-	for (i = 0; i < FFT_BUFFER_SIZE;) {
-		for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-			d[i] = ((short)in[k]) * 256;
+	if (!inlen) {
+		memset(f[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(f[1], 0, FFT_OUTPUT_SIZE*2);
+	} else {
+		for (i = 0; i < FFT_BUFFER_SIZE;) {
+			for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
+				d[i] = ((short)in[k]) * 256;
+			}
 		}
+		_vis_data_work(f[0], d);
+		memcpy(f[1], f[0], FFT_OUTPUT_SIZE * 2);
 	}
-	_vis_data_work(f[0], d);
-	memcpy(f[1], f[0], FFT_OUTPUT_SIZE * 2);
 	_vis_process(f);
 }
 

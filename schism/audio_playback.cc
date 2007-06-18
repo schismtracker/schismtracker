@@ -77,8 +77,9 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	int i, n;
 
 	if (!stream || !len || !mp) {
+		vis_work_8m(0,0);
 		song_stop_unlocked();
-		return;
+		goto POST_EVENT;
 	}
 
         if (mp->m_dwSongFlags & SONG_ENDREACHED) {
@@ -86,8 +87,9 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	} else {
         	n = mp->Read(stream, len);
 	        if (!n) {
+			vis_work_8m(0,0);
 			song_stop_unlocked();
-			return;
+			goto POST_EVENT;
 		}
 		samples_played += n;
 	}
@@ -123,7 +125,7 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	
 	if (mp->m_nMixChannels > max_channels_used)
 		max_channels_used = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
-
+POST_EVENT:
 	/* send at end */
 	SDL_Event e;
 	e.user.type = SCHISM_EVENT_PLAYBACK;
