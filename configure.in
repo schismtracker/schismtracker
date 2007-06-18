@@ -239,19 +239,29 @@ dnl (This ought to be above AC_PROG_CC, but that causes configure to fail
 dnl when all the insane warnings are are enabled.)
 
 AC_ARG_ENABLE(extra-opt,
-	      AS_HELP_STRING([--enable-extra-opt], [Add extra optimizations (egcs/GCC >= 2.95 only)]),
-              ADD_OPT=$enableval,
-              ADD_OPT=no)
+	AS_HELP_STRING([--enable-extra-opt], [Add extra optimizations (egcs/GCC >= 2.95 only)]),
+	ADD_OPT=$enableval,
+	ADD_OPT=no)
 
 AC_ARG_ENABLE(all-warnings,
-	      AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings (GCC)]),
-              ADD_WARN=$enableval,
-              ADD_WARN=no)
+	AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings (GCC)]),
+	ADD_WARN=$enableval,
+	ADD_WARN=no)
+
+AC_ARG_ENABLE(debug,
+	AS_HELP_STRING([--enable-debug], [Enable debug flags])
+	ADD_DEBUG=$enableval,
+	ADD_DEBUG=no)
+
+AC_ARG_ENABLE(profiling,
+	AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down)])
+	ADD_PROFILING=$enableval,
+	ADD_PROFILING=no)
 
 AC_ARG_ENABLE(ludicrous-mode,
-              AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings and treat as errors]),
-              ADD_LUDICROUS=$enableval,
-              ADD_LUDICROUS=no)
+	AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings and treat as errors]),
+	ADD_LUDICROUS=$enableval,
+	ADD_LUDICROUS=no)
 
 if test x$ADD_OPT \!= xno; then
 	ADD_OPT="-g0 -s -O3 -ffast-math -fomit-frame-pointer -fno-exceptions"
@@ -273,6 +283,21 @@ if test x$ADD_WARN \!= xno; then
         CFLAGS="$CFLAGS $ADD_WARN -Wstrict-prototypes -Wmissing-prototypes"
         CFLAGS="$CFLAGS -Wmissing-declarations -Wnested-externs"
         CXXFLAGS="$CXXFLAGS $ADD_WARN"
+fi
+
+if test x$ADD_DEBUG \!= xno; then
+        CFLAGS="$CFLAGS -g"
+        CXXFLAGS="$CXXFLAGS -g"
+	OBJCFLAGS="$OBJCFLAGS -g"
+	SDL_LIBS="$SDL_LIBS -g"
+	AC_SUBST(SDL_LIBS)
+fi
+if test x$ADD_PROFILING \!= xno; then
+        CFLAGS="$CFLAGS -g -pg"
+        CXXFLAGS="$CXXFLAGS -g -pg"
+	OBJCFLAGS="$OBJCFLAGS -g -pg"
+	SDL_LIBS="$SDL_LIBS -g -pg"
+	AC_SUBST(SDL_LIBS)
 fi
 
 dnl - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
