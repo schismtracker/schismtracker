@@ -132,24 +132,6 @@ static void _vis_data_work(short output[FFT_OUTPUT_SIZE],
 	output[0] /= 4;
 	output[(FFT_OUTPUT_SIZE-1)] /= 4;
 }
-static int _logscale(int j) {
-	if (j >= 0x4000) return 15;
-	else if (j >= 0x2000) return 14;
-	else if (j >= 0x1000) return 13;
-	else if (j >= 0x0800) return 12;
-	else if (j >= 0x0400) return 11;
-	else if (j >= 0x0200) return 10;
-	else if (j >= 0x0100) return 9;
-	else if (j >= 0x0080) return 8;
-	else if (j >= 0x0040) return 7;
-	else if (j >= 0x0020) return 6;
-	else if (j >= 0x0010) return 5;
-	else if (j >= 0x0008) return 4;
-	else if (j >= 0x0004) return 3;
-	else if (j >= 0x0002) return 2;
-	else if (j >= 0x0001) return 1;
-	return 0;
-}
 static unsigned char *_dobits(unsigned char *q,
 			short d[FFT_OUTPUT_SIZE], int m, int y)
 {
