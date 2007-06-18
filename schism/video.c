@@ -747,21 +747,19 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 
 	if (video.desktop.fb_hacks && video.surface) {
 		/* the original one will be _just fine_ */
-	} else if (video.desktop.fullscreen) {
-		sdlflags |= SDL_FULLSCREEN;
-		sdlflags &=~SDL_RESIZABLE;
-		video.surface = SDL_SetVideoMode(w, h,
-			video.desktop.bpp,
-			(video.desktop.swsurface
-				? SDL_SWSURFACE : SDL_HWSURFACE)
-				| sdlflags | SDL_FULLSCREEN);
-					
 	} else {
+		if (video.desktop.fullscreen) {
+			sdlflags &=~SDL_RESIZABLE;
+			sdlflags |= SDL_FULLSCREEN;
+		} else {
+			sdlflags &=~SDL_FULLSCREEN;
+			sdlflags |= SDL_RESIZABLE;
+		}
+		sdlflags |= (video.desktop.swsurface
+				? SDL_SWSURFACE
+				: SDL_HWSURFACE);
 		video.surface = SDL_SetVideoMode(w, h,
-			video.desktop.bpp,
-			(video.desktop.swsurface
-				? SDL_SWSURFACE : SDL_HWSURFACE)
-				| sdlflags);
+			video.desktop.bpp, sdlflags);
 	}
 	if (!video.surface) {
 		perror("SDL_SetVideoMode");
