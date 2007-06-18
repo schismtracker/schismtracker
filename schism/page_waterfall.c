@@ -37,7 +37,7 @@ void vis_work_8m(char *in, int inlen);
 
 /* variables :) */
 static int mono = 0;
-static int depth = 4;
+static int gain = -5;
 
 /* get the _whole_ display */
 static struct vgamem_overlay ovl = { 0, 0, 79, 49,
@@ -124,7 +124,7 @@ static void _vis_data_work(short output[FFT_OUTPUT_SIZE],
 	ip = state_imag; ip++;
 	for (n = 0; n < FFT_OUTPUT_SIZE; n++) {
 		out = ((*rp) * (*rp)) + ((*ip) * (*ip));
-		output[n] = ((int)sqrt(out)) >> 8;
+		output[n] = ((int)sqrt(out));
 		rp++;ip++;
 	}
 
@@ -154,15 +154,16 @@ static unsigned char *_dobits(unsigned char *q,
 			short d[FFT_OUTPUT_SIZE], int m, int y)
 {
 	int i, j, c;
+
 	for (i = 0; i < FFT_OUTPUT_SIZE; i++) {
 		/* eh... */
 		j = d[i];
-		if (depth < 0)
-			j >>= -depth;
+		if (gain < 0)
+			j >>= -gain;
 		else
-			j <<= depth;
+			j <<= gain;
 
-		c = 128 + (j>>(_logscale(j)>>2));
+		c = 128 + j;
 		if (c > 255) c = 255;
 		*q = c; q += y;
 		if (m) { *q = c; q += y; }
@@ -205,21 +206,21 @@ static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 	memset(q,0,i);
 	for (i = j = 0; i < FFT_OUTPUT_SIZE; i++) {
 		vgamem_ovl_drawline(&ovl,
-			j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[0][i])),
+			j, NATIVE_SCREEN_HEIGHT-(f[0][i]>>8),
 			j, NATIVE_SCREEN_HEIGHT, 5);
 		j++;
 		if ((i % FUDGE_256_TO_WIDTH) == 0) {
 			vgamem_ovl_drawline(&ovl,
-				j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[0][i])),
+				j, NATIVE_SCREEN_HEIGHT-(f[0][i]>>8),
 				j, NATIVE_SCREEN_HEIGHT, 5);
 			j++;
 			vgamem_ovl_drawline(&ovl,
-				j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[1][i])),
+				j, NATIVE_SCREEN_HEIGHT-(f[1][i]>>8),
 				j, NATIVE_SCREEN_HEIGHT, 5);
 			j++;
 		}
 		vgamem_ovl_drawline(&ovl,
-			j, NATIVE_SCREEN_HEIGHT-(2*_logscale(f[1][i])),
+			j, NATIVE_SCREEN_HEIGHT-(f[1][i]>>8),
 			j, NATIVE_SCREEN_HEIGHT, 5);
 		j++;
 	}
@@ -331,18 +332,18 @@ static int waterfall_handle_key(struct key_event *k)
 
 	case SDLK_LEFT:
 		if (k->state) return 1;
-		depth--;
+		gain--;
 		break;
 	case SDLK_RIGHT:
 		if (k->state) return 1;
-		depth++;
+		gain++;
 		break;
 
 	default:
 		return 0;
 	};
 
-	depth = CLAMP(depth, 0, 10);
+	gain = CLAMP(gain, -8, 8);
 	return 1;
 }
 
