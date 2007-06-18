@@ -130,7 +130,7 @@ struct video_cf {
 		int want_fixed;
 
 		int swsurface;
-		int no_fullscreen;
+		int fb_hacks;
 		int fullscreen;
 		int doublebuf;
 		int want_type;
@@ -340,7 +340,7 @@ void video_report(void)
 					video.surface->format->BitsPerPixel);
 		break;
 	};
-	if (video.desktop.fullscreen || video.desktop.no_fullscreen) {
+	if (video.desktop.fullscreen || video.desktop.fb_hacks) {
 		log_appendf(2," at %dx%d", video.desktop.width, video.desktop.height);
 	}
 }
@@ -369,7 +369,7 @@ void video_fullscreen(int tri)
 {
 	_video_preinit();
 
-	if (tri == 0 || video.desktop.no_fullscreen) {
+	if (tri == 0 || video.desktop.fb_hacks) {
 		video.desktop.fullscreen = 0;
 
 	} else if (tri == 1) {
@@ -569,7 +569,7 @@ SKIP1:
 #endif
 	}
 
-	video.desktop.no_fullscreen = 0;
+	video.desktop.fb_hacks = 0;
 	
 	x = y = -1;
 	if ((q = getenv("SCHISM_VIDEO_RESOLUTION"))) {
@@ -599,7 +599,7 @@ SKIP1:
 					y = s.yres;
 				}
 				video.desktop.bpp = s.bits_per_pixel;
-				video.desktop.no_fullscreen = 1;
+				video.desktop.fb_hacks = 1;
 				video.desktop.doublebuf = 1;
 				video.desktop.fullscreen = 0;
 				video.desktop.swsurface = 0;
@@ -745,7 +745,9 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 		video.clip.h = h;
 	}
 
-	if (video.desktop.fullscreen) {
+	if (video.desktop.fb_hacks && video.surface) {
+		/* the original one will be _just fine_ */
+	} else if (video.desktop.fullscreen) {
 		sdlflags |= SDL_FULLSCREEN;
 		sdlflags &=~SDL_RESIZABLE;
 		video.surface = SDL_SetVideoMode(w, h,
