@@ -37,7 +37,7 @@ void vis_work_8m(char *in, int inlen);
 
 /* variables :) */
 static int mono = 0;
-static int depth = 1;
+static int depth = 4;
 
 /* get the _whole_ display */
 static struct vgamem_overlay ovl = { 0, 0, 79, 49,
@@ -154,7 +154,6 @@ static unsigned char *_dobits(unsigned char *q,
 			short d[FFT_OUTPUT_SIZE], int m, int y)
 {
 	int i, j, c;
-	const int cbits[] = { 0,7,1,2,6,12,11,3,3 };
 	for (i = 0; i < FFT_OUTPUT_SIZE; i++) {
 		/* eh... */
 		j = d[i];
@@ -163,7 +162,8 @@ static unsigned char *_dobits(unsigned char *q,
 		else
 			j <<= depth;
 
-		c = cbits[ (_logscale(j)+1)>>1 ];
+		c = 128 + (j>>(_logscale(j)>>2));
+		if (c > 255) c = 255;
 		*q = c; q += y;
 		if (m) { *q = c; q += y; }
 		if ((i % FUDGE_256_TO_WIDTH) == 0) {
@@ -342,7 +342,7 @@ static int waterfall_handle_key(struct key_event *k)
 		return 0;
 	};
 
-	depth = CLAMP(depth, -5, 5);
+	depth = CLAMP(depth, 0, 10);
 	return 1;
 }
 
