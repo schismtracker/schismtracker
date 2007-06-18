@@ -809,6 +809,11 @@ void video_resize(unsigned int width, unsigned int height)
 	case VIDEO_SURFACE:
 RETRYSURF:	/* use SDL surfaces */
 		video.draw.autoscale = 0;
+		if (video.desktop.fb_hacks
+		&& (video.desktop.width != NATIVE_SCREEN_WIDTH
+			|| video.desktop.height != NATIVE_SCREEN_HEIGHT)) {
+			video.draw.autoscale = 1;
+		}
 		_setup_surface(width, height, 0);
 		video.desktop.type = VIDEO_SURFACE;
 		break;
