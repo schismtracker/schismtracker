@@ -18,14 +18,14 @@ void F1(unsigned int ry, unsigned SIZE *out, unsigned int tc[16], unsigned int m
 
 	for (x = 0; x < 80; x++, bp++, q += 8) {
 		if (*bp & 0x80000000) {
-			*out++ = tc[ (q[0]^((mouseline[x] & 0x80)?15:0)) & 15 ];
-			*out++ = tc[ (q[1]^((mouseline[x] & 0x40)?15:0)) & 15 ];
-			*out++ = tc[ (q[2]^((mouseline[x] & 0x20)?15:0)) & 15 ];
-			*out++ = tc[ (q[3]^((mouseline[x] & 0x10)?15:0)) & 15 ];
-			*out++ = tc[ (q[4]^((mouseline[x] & 0x08)?15:0)) & 15 ];
-			*out++ = tc[ (q[5]^((mouseline[x] & 0x04)?15:0)) & 15 ];
-			*out++ = tc[ (q[6]^((mouseline[x] & 0x02)?15:0)) & 15 ];
-			*out++ = tc[ (q[7]^((mouseline[x] & 0x01)?15:0)) & 15 ];
+			*out++ = tc[ (q[0]^((mouseline[x] & 0x80)?15:0)) & 255];
+			*out++ = tc[ (q[1]^((mouseline[x] & 0x40)?15:0)) & 255];
+			*out++ = tc[ (q[2]^((mouseline[x] & 0x20)?15:0)) & 255];
+			*out++ = tc[ (q[3]^((mouseline[x] & 0x10)?15:0)) & 255];
+			*out++ = tc[ (q[4]^((mouseline[x] & 0x08)?15:0)) & 255];
+			*out++ = tc[ (q[5]^((mouseline[x] & 0x04)?15:0)) & 255];
+			*out++ = tc[ (q[6]^((mouseline[x] & 0x02)?15:0)) & 255];
+			*out++ = tc[ (q[7]^((mouseline[x] & 0x01)?15:0)) & 255];
 
 		} else if (*bp & 0x40000000) {
 			/* half-width character */

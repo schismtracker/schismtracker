@@ -182,14 +182,14 @@ struct video_cf {
 		int visible;
 	} mouse;
 
-	unsigned int yuv_y[16];
-	unsigned int yuv_u[16];
-	unsigned int yuv_v[16];
+	unsigned int yuv_y[256];
+	unsigned int yuv_u[256];
+	unsigned int yuv_v[256];
 
-	unsigned int pal[16];
+	unsigned int pal[256];
 
-	unsigned int tc_bgr32[16];
-	unsigned int tc_identity[16];
+	unsigned int tc_bgr32[256];
+	unsigned int tc_identity[256];
 };
 static struct video_cf video;
 
@@ -411,7 +411,8 @@ void video_init(const char *driver)
 	vgamem_clear();
 	vgamem_flip();
 
-	for (i = 0; i < 16; i++) video.tc_identity[i] = i;
+	/* this is temporary */
+	for (i = 0; i < 256; i++) video.tc_identity[i] = i & 15;
 
 	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef MACOSX
@@ -997,15 +998,95 @@ RETRYSURF:	/* use SDL surfaces */
 
 	status.flags |= (NEED_UPDATE);
 }
+static void _make_yuv(unsigned int *y, unsigned int *u, unsigned int *v,
+						int rgb[3])
+{
+	*y =  ( 9797*(rgb[0]) + 19237*(rgb[1])
+				+  3734*(rgb[2]) ) >> 15;
+	*u =  (18492*((rgb[2])-(*y)) >> 15) + 128;
+	*v =  (23372*((rgb[0])-(*y)) >> 15) + 128;
+}
+static void _yuv_pal(int i, int rgb[3])
+{
+	unsigned int y,u,v;
+	_make_yuv(&y, &u, &v, rgb);
+	switch (video.yuvlayout) {
+	/* planar modes */
+	case VIDEO_YUV_YV12:
+	case VIDEO_YUV_IYUV:
+		/* this is fake; we simply record the infomration here */
+		video.yuv_y[i] = y|(y<<8);
+		video.yuv_u[i] = u;
+		video.yuv_v[i] = v;
+		break;
+
+	/* tv planar modes */
+	case VIDEO_YUV_YV12_TV:
+	case VIDEO_YUV_IYUV_TV:
+		/* _blitTV */
+		video.yuv_y[i] = y;
+		video.yuv_u[i] = (u >> 4) & 0xF;
+		video.yuv_v[i] = (v >> 4) & 0xF;
+		break;
+
+	/* packed modes */
+	case VIDEO_YUV_YVYU:
+		/* y0 v0 y1 u0 */
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+		video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
+#else
+		video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
+#endif
+		break;
+	case VIDEO_YUV_UYVY:
+		/* u0 y0 v0 y1 */
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+		video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
+#else
+		video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
+#endif
+		break;
+	case VIDEO_YUV_YUY2:
+		/* y0 u0 y1 v0 */
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+		video.pal[i] = v | (y << 8) | (u << 16) | (y << 24);
+#else
+		video.pal[i] = y | (u << 8) | (y << 16) | (v << 24);
+#endif
+		break;
+	};
+}
+static void _sdl_pal(int i, int rgb[3])
+{
+	video.pal[i] = SDL_MapRGB(video.surface->format,
+			rgb[0], rgb[1], rgb[2]);
+}
+static void _bgr32_pal(int i, int rgb[3])
+{
+	video.tc_bgr32[i] = rgb[2] |
+			(rgb[1] << 8) |
+			(rgb[0] << 16) | (255 << 24);
+}
+static void _gl_pal(int i, int rgb[3])
+{
+	video.pal[i] = rgb[2] |
+			(rgb[1] << 8) |
+			(rgb[0] << 16) | (255 << 24);
+}
 void video_colors(unsigned char palette[16][3])
 {
 	static SDL_Color imap[16];
-	unsigned int y,u,v;
-	int i;
+	void (*fun)(int i,int rgb[3]);
+	const int lastmap[] = { 0,1,2,3,5 };
+	int rgb[3], i, j, p;
 
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
 		if (video.surface->format->BytesPerPixel == 1) {
+			const int depthmap[] = { 0, 15,14,7,
+						8, 8, 9, 12,
+						6, 1, 2, 2,
+						10, 3, 11, 11 };
 			/* okay, indexed color */
 			for (i = 0; i < 16; i++) {
 				video.pal[i] = i;
@@ -1013,87 +1094,46 @@ void video_colors(unsigned char palette[16][3])
 				imap[i].g = palette[i][1];
 				imap[i].b = palette[i][2];
 			}
+			for (i = 128; i < 256; i++) {
+				video.pal[i] = depthmap[(i>>4)];
+			}
 			SDL_SetColors(video.surface, imap, 0, 16);
 			return;
 		}
 		/* fall through */
 	case VIDEO_DDRAW:
-		for (i = 0; i < 16; i++) {
-			video.pal[i] = SDL_MapRGB(video.surface->format,
-						palette[i][0],
-						palette[i][1],
-						palette[i][2]);
-		}
+		fun = _sdl_pal;
 		break;
 	case VIDEO_YUV:
-		for (i = 0; i < 16; i++) {
-			y =  ( 9797*(palette[i][0]) + 19237*(palette[i][1])
-						+  3734*(palette[i][2]) ) >> 15;
-			u =  (18492*((palette[i][2])-(y)) >> 15) + 128;
-			v =  (23372*((palette[i][0])-(y)) >> 15) + 128;
-
-			switch (video.yuvlayout) {
-			/* planar modes */
-			case VIDEO_YUV_YV12:
-			case VIDEO_YUV_IYUV:
-				/* this is fake; we simply record the infomration here */
-				video.yuv_y[i] = y|(y<<8);
-				video.yuv_u[i] = u;
-				video.yuv_v[i] = v;
-				break;
-
-			/* tv planar modes */
-			case VIDEO_YUV_YV12_TV:
-			case VIDEO_YUV_IYUV_TV:
-				/* _blitTV */
-				video.yuv_y[i] = y;
-				video.yuv_u[i] = (u >> 4) & 0xF;
-				video.yuv_v[i] = (v >> 4) & 0xF;
-				break;
-
-			/* packed modes */
-			case VIDEO_YUV_YVYU:
-				/* y0 v0 y1 u0 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-				video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
-#else
-				video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
-#endif
-				break;
-			case VIDEO_YUV_UYVY:
-				/* u0 y0 v0 y1 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-				video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
-#else
-				video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
-#endif
-				break;
-			case VIDEO_YUV_YUY2:
-				/* y0 u0 y1 v0 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-				video.pal[i] = v | (y << 8) | (u << 16) | (y << 24);
-#else
-				video.pal[i] = y | (u << 8) | (y << 16) | (v << 24);
-#endif
-				break;
-			};
-		}
+		fun = _yuv_pal;
 		break;
 	case VIDEO_GL:
-		/* BGRA */
-		for (i = 0; i < 16; i++) {
-			video.pal[i] = palette[i][2] |
-				(palette[i][1] << 8) |
-				(palette[i][0] << 16) | (255 << 24);
-		}
+		fun = _gl_pal;
 		break;
+	default:
+		/* eh? */
+		return;
 	};
-
-	/* BGR; for scaling */
+	/* make our "base" space */
 	for (i = 0; i < 16; i++) {
-		video.tc_bgr32[i] = palette[i][2] |
-			(palette[i][1] << 8) |
-			(palette[i][0] << 16) | (255 << 24);
+		rgb[0]=palette[i][0];
+		rgb[1]=palette[i][1];
+		rgb[2]=palette[i][2];
+		fun(i, rgb);
+		_bgr32_pal(i, rgb);
+	}
+	/* make our "gradient" space */
+	for (i = 128; i < 256; i++) {
+		j = i - 128;
+		p = lastmap[(j>>5)];
+		rgb[0] = (int)palette[p][0] +
+			(((int)(palette[p+1][0] - palette[p][0]) * (j&31)) /32);
+		rgb[1] = (int)palette[p][1] +
+			(((int)(palette[p+1][1] - palette[p][1]) * (j&31)) /32);
+		rgb[2] = (int)palette[p][2] +
+			(((int)(palette[p+1][2] - palette[p][2]) * (j&31)) /32);
+		fun(i, rgb);
+		_bgr32_pal(i, rgb);
 	}
 }
 
@@ -1300,7 +1340,7 @@ static inline void _blitTV(unsigned char *pixels, UNUSED unsigned int pitch, uns
 }
 
 static inline void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
-			unsigned int *tpal, unsigned int *ipal)
+			unsigned int *tpal)
 {
 	unsigned int mouseline_x = (video.mouse.x / 8);
 	unsigned int mouseline_v = (video.mouse.x % 8);
@@ -1350,7 +1390,7 @@ static inline void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 	case 1:
 		for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
 			make_mouseline(mouseline_x, mouseline_v, y, mouseline);
-			vgamem_scan8(y, (unsigned char *)pixels, ipal, mouseline);
+			vgamem_scan8(y, (unsigned char *)pixels, tpal, mouseline);
 			pixels += pitch;
 		}
 		break;
@@ -1449,7 +1489,7 @@ void video_blit(void)
 	vgamem_lock();
 	if (video.draw.autoscale || (video.clip.w == NATIVE_SCREEN_WIDTH && video.clip.h == NATIVE_SCREEN_HEIGHT)) {
 		/* scaling is provided by the hardware, or isn't necessary */
-		_blit11(bpp, pixels, pitch, video.pal, video.tc_identity);
+		_blit11(bpp, pixels, pitch, video.pal);
 	} else {
 		_blit1n(bpp, pixels, pitch);
 	}
