@@ -129,6 +129,8 @@ struct video_cf {
 		unsigned int width,height,bpp;
 		int want_fixed;
 
+		int swsurface;
+		int no_fullscreen;
 		int fullscreen;
 		int doublebuf;
 		int want_type;
@@ -338,7 +340,7 @@ void video_report(void)
 					video.surface->format->BitsPerPixel);
 		break;
 	};
-	if (video.desktop.fullscreen) {
+	if (video.desktop.fullscreen || video.desktop.no_fullscreen) {
 		log_appendf(2," at %dx%d", video.desktop.width, video.desktop.height);
 	}
 }
@@ -367,10 +369,12 @@ void video_fullscreen(int tri)
 {
 	_video_preinit();
 
-	if (tri == 1) {
-		video.desktop.fullscreen = 1;
-	} else if (tri == 0) {
+	if (tri == 0 || video.desktop.no_fullscreen) {
 		video.desktop.fullscreen = 0;
+
+	} else if (tri == 1) {
+		video.desktop.fullscreen = 1;
+
 	} else if (tri < 0) {
 		video.desktop.fullscreen = video.desktop.fullscreen ? 0 : 1;
 	}
@@ -629,12 +633,23 @@ SKIP1:
 	/*log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
 	video.desktop.width = x;
 	video.desktop.height = y;
+	video.desktop.no_fullscreen = 0;
 
 	switch (video.desktop.want_type) {
 	case VIDEO_YUV:
+#ifdef MACOSX
+	video.desktop.swsurface = 1;
+#else
+	video.desktop.swsurface = 0;
+#endif
 		break;
 
 	case VIDEO_GL:
+#ifdef MACOSX
+	video.desktop.swsurface = 1;
+#else
+	video.desktop.swsurface = 0;
+#endif
 		video.gl.bilinear = 1;
 		if (video.desktop.bpp == 32 || video.desktop.bpp == 16) break;
 		/* fall through */
@@ -649,6 +664,7 @@ SKIP1:
 		/* fall through */
 	case VIDEO_SURFACE:
 		/* no scaling when using the SDL surfaces directly */
+		video.desktop.swsurface = 1;
 #if HAVE_LINUX_FB_H
 		if (!getenv("DISPLAY")) {
 			struct fb_var_screeninfo s;
@@ -666,8 +682,13 @@ SKIP1:
 					if (x < NATIVE_SCREEN_WIDTH)
 						x = NATIVE_SCREEN_WIDTH;
 					y = s.yres;
+					video.desktop.width = x;
+					video.desktop.height = y;
 					video.desktop.bpp = s.bits_per_pixel;
-					video.desktop.fullscreen = 1;
+					video.desktop.no_fullscreen = 1;
+					video.desktop.doublebuf = 1;
+					video.desktop.fullscreen = 0;
+					video.desktop.swsurface = 0;
 				}
 				(void)close(fb);
 			}
@@ -693,10 +714,8 @@ SKIP1:
 }
 static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int sdlflags)
 {
-	unsigned int bpp;
-
-	bpp = video.desktop.bpp;
-	if (video.desktop.doublebuf) sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
+	if (video.desktop.doublebuf)
+		sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
 	if (video.desktop.fullscreen) {
 		w = video.desktop.width;
 		h = video.desktop.height;
@@ -726,22 +745,18 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 	if (video.desktop.fullscreen) {
 		sdlflags |= SDL_FULLSCREEN;
 		sdlflags &=~SDL_RESIZABLE;
-		video.surface = SDL_SetVideoMode(w, h, bpp,
-#ifdef MACOSX
-				SDL_SWSURFACE |
-#else
-	(video.desktop.type == VIDEO_SURFACE ? SDL_SWSURFACE : SDL_HWSURFACE) |
-#endif
-				sdlflags | SDL_FULLSCREEN);
+		video.surface = SDL_SetVideoMode(w, h,
+			video.desktop.bpp,
+			(video.desktop.swsurface
+				? SDL_SWSURFACE : SDL_HWSURFACE)
+				| sdlflags | SDL_FULLSCREEN);
 					
 	} else {
-		video.surface = SDL_SetVideoMode(w, h, bpp,
-#ifdef MACOSX
-					SDL_SWSURFACE |
-#else
-	(video.desktop.type == VIDEO_SURFACE ? SDL_SWSURFACE : SDL_HWSURFACE) |
-#endif
-					sdlflags);
+		video.surface = SDL_SetVideoMode(w, h,
+			video.desktop.bpp,
+			(video.desktop.swsurface
+				? SDL_SWSURFACE : SDL_HWSURFACE)
+				| sdlflags);
 	}
 	if (!video.surface) {
 		perror("SDL_SetVideoMode");
