@@ -638,17 +638,17 @@ SKIP1:
 	switch (video.desktop.want_type) {
 	case VIDEO_YUV:
 #ifdef MACOSX
-	video.desktop.swsurface = 1;
+		video.desktop.swsurface = 1;
 #else
-	video.desktop.swsurface = 0;
+		video.desktop.swsurface = 0;
 #endif
 		break;
 
 	case VIDEO_GL:
 #ifdef MACOSX
-	video.desktop.swsurface = 1;
+		video.desktop.swsurface = 1;
 #else
-	video.desktop.swsurface = 0;
+		video.desktop.swsurface = 0;
 #endif
 		video.gl.bilinear = 1;
 		if (video.desktop.bpp == 32 || video.desktop.bpp == 16) break;
