@@ -238,6 +238,7 @@
 |   Alt-F9           Toggle current channel
 |   Alt-F10          Solo current channel
 |
-|   Scroll Lock      Toggle playback tracing (also Ctrl-F)
+|   Scroll Lock      Toggle playback tracing
+:   Scroll Lock      Toggle playback tracing (also Ctrl-F)
 |   Ctrl-Z           Change MIDI playback trigger
 |   Alt-Scroll Lock  Toggle MIDI input
