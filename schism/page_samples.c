@@ -288,9 +288,13 @@ static void sample_list_predraw_hook(void)
 	draw_sample_data(&sample_image, sample, current_sample);
 
 	if (need_retrigger > -1) {
-		if (last_keyup > -1) song_keyup(current_sample, -1, last_keyup, -1, 0);
-		song_keyup(current_sample, -1, need_retrigger, -1, 0);
-		song_keydown(current_sample, -1, need_retrigger, 64, -1, 0);
+		if (last_keyup > -1)
+			song_keyup(current_sample, -1, last_keyup,
+						KEYDOWN_CHAN_CURRENT, 0);
+		song_keyup(current_sample, -1, need_retrigger,
+						KEYDOWN_CHAN_CURRENT, 0);
+		song_keydown(current_sample, -1, need_retrigger, 64,
+						KEYDOWN_CHAN_CURRENT, 0);
 		if (!song_is_multichannel_mode()) {
 			last_keyup = need_retrigger;
 		} else {

@@ -484,8 +484,11 @@ const char *song_audio_driver(void);
 void song_toggle_multichannel_mode(void);
 int song_is_multichannel_mode(void);
 void song_change_current_play_channel(int relative, int wraparound);
+int song_get_current_play_channel(void);
 
 /* these return the selected channel */
+#define KEYDOWN_CHAN_JAM	-1
+#define KEYDOWN_CHAN_CURRENT	-2
 int song_keydown(int s,int ins, int n, int v, int c, int *mm);
 int song_keyrecord(int s,int ins, int n, int v, int c, int *mm,
 						int effect, int param);
