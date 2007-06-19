@@ -55,6 +55,8 @@ void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16], unsigne
 /* video output routines */
 const char *video_driver_name(void);
 
+void video_screenshot(void);
+
 void video_init(const char *id);
 void video_shutdown(void);
 void video_report(void);

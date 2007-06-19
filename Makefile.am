@@ -201,6 +201,7 @@ schismtracker_SOURCES = \
 	schism/fmt/dtm.c		\
 	schism/fmt/aiff.c		\
 	schism/util.c			\
+	schism/pngw.c			\
 	schism/page_midi.c		\
 	schism/diskwriter_dialog.c	\
 	schism/draw-char.c		\
