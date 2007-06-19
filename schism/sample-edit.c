@@ -87,6 +87,7 @@ static void _sign_convert_16(signed short *data, unsigned long length)
 
 void sample_sign_convert(song_sample * sample)
 {
+	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -144,6 +145,7 @@ void sample_reverse(song_sample * sample)
 {
         unsigned long tmp;
 
+	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 
@@ -201,6 +203,7 @@ void sample_toggle_quality(song_sample * sample, int convert_data)
 {
 	signed char *odata;
 		
+	song_stop();
 	song_lock_audio();
 	sample->flags ^= SAMP_16_BIT;
 	
@@ -284,6 +287,7 @@ static void _centralise_16(signed short *data, unsigned long length)
 
 void sample_centralise(song_sample * sample)
 {
+	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -322,6 +326,7 @@ static void _amplify_16(signed short *data, unsigned long length, int percent)
 
 void sample_amplify(song_sample * sample, int percent)
 {
+	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -358,11 +363,7 @@ int sample_get_amplify_amount(song_sample *sample)
 	else
 		percent = _get_amplify_8(sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
 	
-	if (percent < 100) {
-		/* shouldn't happen */
-		printf("sample_get_amplify_amount: percent < 100. why?\n");
-		percent = 100;
-	}
+	if (percent < 100) percent = 100;
 	return percent;
 }
 
@@ -395,6 +396,7 @@ static void _delta_decode_16(signed short *data, unsigned long length)
 
 void sample_delta_decode(song_sample * sample)
 {
+	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -558,6 +560,7 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 
 void sample_invert(song_sample * sample)
 {
+	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -583,6 +586,7 @@ static void _mono_lr8(signed char *data, unsigned long length, int shift)
 }
 void sample_mono_left(song_sample * sample)
 {
+	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & SAMP_STEREO) {
@@ -596,6 +600,7 @@ void sample_mono_left(song_sample * sample)
 }
 void sample_mono_right(song_sample * sample)
 {
+	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & SAMP_STEREO) {
