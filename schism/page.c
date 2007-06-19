@@ -884,6 +884,15 @@ void handle_key(struct key_event * k)
 	struct key_event fake;
 	int c, m;
 
+	if (k->sym == SDLK_PRINT
+	|| (k->sym == SDLK_p && !(k->mod & KMOD_SHIFT)
+	&& (k->mod & KMOD_CTRL) && (k->mod && KMOD_ALT))) {
+		if (k->state) {
+			video_screenshot();
+		}
+		return;
+	}
+
 	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
 		if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
 			if (k->state && digraph_n >= 0) {

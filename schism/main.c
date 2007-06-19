@@ -547,6 +547,11 @@ static void event_loop(void)
 				kk.unicode = 0;
 				kk.is_repeat = 0;
 				switch (event.key.keysym.scancode) {
+				case 106: /* mac F16 key */
+					kk.sym = SDLK_PRINT;
+					kk.mod = KMOD_CTRL;
+					handle_key(&kk);
+					continue;
 				case 234:
 					kk.sym = SDLK_LEFT;
 					kk.mod = KMOD_CTRL;

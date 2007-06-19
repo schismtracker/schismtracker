@@ -295,6 +295,13 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 		sprintf(pq, "%x", i);
 		fd = open(str, O_CREAT|O_EXCL|O_RDWR, 0666);
 		if (fd == -1 && errno == EEXIST) continue;
+		if (fd == -1) {
+			free(str);
+			free(dw_rename_to);
+			dw_rename_from = dw_rename_to = NULL;
+			diskwriter_finish();
+			return DW_ERROR;
+		}
 		fp = fopen(str, "wb");
 		if (!fp) {
 			unlink(str);

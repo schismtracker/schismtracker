@@ -23,6 +23,7 @@
 
 #include "headers.h"
 #include "it.h"
+#include "pngw.h"
 
 /* bugs
  * ... in sdl. not in this file :)
@@ -47,6 +48,8 @@
 /* for memcpy */
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
 
 #include "sdlmain.h"
 
@@ -189,7 +192,6 @@ struct video_cf {
 	unsigned int pal[256];
 
 	unsigned int tc_bgr32[256];
-	unsigned int tc_identity[256];
 };
 static struct video_cf video;
 
@@ -410,9 +412,6 @@ void video_init(const char *driver)
 	/* because first mode is 0 */
 	vgamem_clear();
 	vgamem_flip();
-
-	/* this is temporary */
-	for (i = 0; i < 256; i++) video.tc_identity[i] = i & 15;
 
 	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef MACOSX
@@ -1093,9 +1092,29 @@ void video_colors(unsigned char palette[16][3])
 				imap[i].r = palette[i][0];
 				imap[i].g = palette[i][1];
 				imap[i].b = palette[i][2];
+
+				rgb[0]=palette[i][0];
+				rgb[1]=palette[i][1];
+				rgb[2]=palette[i][2];
+				_bgr32_pal(i, rgb);
+
 			}
 			for (i = 128; i < 256; i++) {
 				video.pal[i] = depthmap[(i>>4)];
+			}
+			for (i = 128; i < 256; i++) {
+				j = i - 128;
+				p = lastmap[(j>>5)];
+				rgb[0] = (int)palette[p][0] +
+					(((int)(palette[p+1][0]
+					- palette[p][0]) * (j&31)) /32);
+				rgb[1] = (int)palette[p][1] +
+					(((int)(palette[p+1][1]
+					- palette[p][1]) * (j&31)) /32);
+				rgb[2] = (int)palette[p][2] +
+					(((int)(palette[p+1][2]
+					- palette[p][2]) * (j&31)) /32);
+				_bgr32_pal(i, rgb);
 			}
 			SDL_SetColors(video.surface, imap, 0, 16);
 			return;
@@ -1593,3 +1612,101 @@ void video_translate(unsigned int vx, unsigned int vy,
 	if (x) *x = vx;
 	if (y) *y = vy;
 }
+
+
+/* here we go... */
+struct _ss_data {
+	int x, y;
+
+	unsigned char scanline[NATIVE_SCREEN_WIDTH];
+	unsigned int mouseline[80];
+	unsigned int tc_identity[256];
+
+	FILE *fp;
+};
+static void _ss_output(struct pngw_arg *o, const void *data, int len)
+{
+	struct _ss_data *d = (void *)o->extra_user_data;
+	fwrite(data, len, 1, d->fp);
+}
+static int _ss_next_pixel(struct pngw_arg *o)
+{
+	struct _ss_data *d = (void *)o->extra_user_data;
+
+	if (d->x == NATIVE_SCREEN_WIDTH) {
+		d->x = 0;
+		d->y++;
+
+		vgamem_scan8(d->y, d->scanline, d->tc_identity, d->mouseline);
+	}
+	
+	d->x++;
+	return (int)d->scanline[ d->x - 1 ];
+}
+
+void video_screenshot(void)
+{
+	struct _ss_data data;
+	struct pngw_arg pa;
+	char dwbuf[65536];
+	char fname[64];
+	int i, fd, fp_ok;
+
+	data.x = NATIVE_SCREEN_WIDTH;
+	data.y = -1;
+	memset(data.mouseline, 0, 80*sizeof(unsigned int));
+	for (i = 0; i < 256; i++) data.tc_identity[i] = i;
+	for (i = 0;; i++) {
+		sprintf(fname, "Screenshot-%d.png", i);
+		fd = open(fname, O_CREAT|O_EXCL|O_RDWR, 0666);
+		if (fd == -1 && errno == EEXIST) continue;
+		if (fd == -1) {
+			log_appendf(4, "Cannot open %s for writing: %s",fname,
+					strerror(errno));
+			return;
+		}
+		data.fp = fopen(fname, "w");
+		if (!data.fp) {
+			log_appendf(4, "Cannot open %s for writing: %s",fname,
+					strerror(errno));
+			return;
+		}
+		close(fd);
+		setvbuf(data.fp, dwbuf, _IOFBF, sizeof(dwbuf));
+		break;
+	}
+
+	pa.width = NATIVE_SCREEN_WIDTH;
+	pa.height = NATIVE_SCREEN_HEIGHT;
+	pa.pal_size = 256;
+	pa.pal = video.tc_bgr32;
+	pa.output = _ss_output;
+	pa.read_pixel = _ss_next_pixel;
+	pa.extra_user_data = (void*)&data;
+
+	vgamem_lock();
+	pngw(&pa);
+	vgamem_unlock();
+	fp_ok = 1;
+	if (ferror(data.fp)) fp_ok = 0;
+#ifdef WIN32
+	if (_commit(fileno(data.fp)) == -1)
+		fp_ok = 0;
+#else
+	if (fsync(fileno(data.fp)) == -1)
+		fp_ok = 0;
+#endif
+	if (ferror(data.fp)) fp_ok = 0;
+	if (fclose(data.fp) == EOF) fp_ok = 0;
+	if (!fp_ok) {
+		unlink(fname);
+		log_appendf(4, "Cannot write to %s: %s",fname,
+				strerror(errno));
+	} else {
+		sprintf(dwbuf, "Wrote screenshot: %s",fname);
+		log_appendf(2, dwbuf);
+		status_text_flash(dwbuf);
+	}
+
+}
+
