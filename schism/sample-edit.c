@@ -126,47 +126,37 @@ static void _reverse_16(signed short *data, unsigned long length)
                 rpos--;
         }
 }
-
-static void _rstereo_8(signed char *data, unsigned long length)
+static void _reverse_32(signed int *data, unsigned long length)
 {
-	unsigned long i;
-	signed char tmp;
+        signed int tmp;
+        unsigned long lpos = 0, rpos = length - 1;
 
-	length <<= 1;
-	for (i = 0; i < length; i += 2) {
-		tmp = data[i];
-		data[i] = data[i+1];
-		data[i+1] = tmp;
-	}
+        while (lpos < rpos) {
+                tmp = data[lpos];
+                data[lpos] = data[rpos];
+                data[rpos] = tmp;
+                lpos++;
+                rpos--;
+        }
 }
-static void _rstereo_16(signed short *data, unsigned long length)
-{
-	unsigned long i;
-	signed short tmp;
 
-	length <<= 1;
-	for (i = 0; i < length; i += 2) {
-		tmp = data[i];
-		data[i] = data[i+1];
-		data[i+1] = tmp;
-	}
-}
 void sample_reverse(song_sample * sample)
 {
         unsigned long tmp;
 
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
-        if (sample->flags & SAMP_16_BIT)
-                _reverse_16((signed short *) sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
-        else
-                _reverse_8(sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
 
 	if (sample->flags & SAMP_STEREO) {
         	if (sample->flags & SAMP_16_BIT)
-			_rstereo_16((signed short *)sample->data, sample->length);
+			_reverse_32((signed int *)sample->data, sample->length/2);
 		else
-			_rstereo_8(sample->data, sample->length);
+			_reverse_16((signed short *) sample->data, sample->length/2);
+	} else {
+        	if (sample->flags & SAMP_16_BIT)
+			_reverse_16((signed short *) sample->data, sample->length);
+		else
+			_reverse_8(sample->data, sample->length);
 	}
 
         tmp = sample->length - sample->loop_start;
