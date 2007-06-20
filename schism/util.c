@@ -589,6 +589,33 @@ char *str_concat(const char *s, ...)
 
 }
 
+void unset_env_var(const char *key)
+{
+#ifdef HAVE_UNSETENV
+	(void)unsetenv(key);
+#else
+	/* assume POSIX-style semantics */
+	extern char **environ;
+	int i, j;
+
+	/* may leak memory */
+	if (!environ) return;
+	for (i = 0; environ[i]; i++) {
+		for (j = 0; environ[i][j] != '='
+				&& environ[i][j] && key[j]; j++)
+			if (key[j] != environ[i][j]) break;
+		if (key[j] == '\0' && environ[i][j] == '=') {
+			/* remove this entry */
+			for (j = i+1; environ[j]; j++) {
+				environ[j-1] = environ[j];
+			}
+			environ[j-1] = 0;
+			return;
+		}
+	}
+#endif
+}
+
 void put_env_var(const char *key, const char *value)
 {
 	char *x;
