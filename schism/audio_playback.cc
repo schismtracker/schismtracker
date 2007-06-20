@@ -192,7 +192,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 	MODCOMMAND mc;
 
 	if (chan == KEYDOWN_CHAN_CURRENT) {
-		chan = current_play_channel;
+		chan = current_play_channel-1;
 		if (multichannel_mode) song_change_current_play_channel(1,1);
 	}
 	if (chan > -1 && !mm) {
@@ -367,7 +367,7 @@ int song_keyup(int samp, int ins, int note, int chan, int *mm)
 	int i, j;
 
 	if (chan == KEYDOWN_CHAN_CURRENT)
-		chan = current_play_channel;
+		chan = current_play_channel-1;
 	if (chan > -1 && !mm) {
 		if (ins > -1) {
 			return song_keydown_ex(samp,ins,NOTE_OFF,
