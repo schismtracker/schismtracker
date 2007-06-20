@@ -493,11 +493,31 @@ void video_init(const char *driver)
 		putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
 		putenv((char *) "SDL_VIDEO_YUV_HWACCEL=1");
 		putenv((char *) "SDL_VIDEODRIVER=x11");
+#ifdef USE_X11
+	} else if (!strcasecmp(driver, "dga")) {
+		putenv((char *) "SDL_VIDEODRIVER=dga");
+		video.desktop.want_type = VIDEO_SURFACE;
+	} else if (!strcasecmp(driver, "directfb")) {
+		putenv((char *) "SDL_VIDEODRIVER=directfb");
+		video.desktop.want_type = VIDEO_SURFACE;
+#endif
+
+	} else if (!strcasecmp(driver, "aalib")) {
+		/* SDL needs to have been built this way... */
+		putenv((char *) "SDL_VIDEODRIVER=aalib");
+		video.desktop.want_type = VIDEO_SURFACE;
+
 	} else if (video.yuvlayout && !strcasecmp(driver, "yuv")) {
 		video.desktop.want_type = VIDEO_YUV;
 		putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
 		putenv((char *) "SDL_VIDEO_YUV_HWACCEL=1");
 		/* leave everything else alone... */
+	} else if (!strcasecmp(driver, "dummy")
+	|| !strcasecmp(driver, "null")
+	|| !strcasecmp(driver, "none")) {
+		putenv((char *) "SDL_VIDEODRIVER=dummy");
+		video.desktop.want_type = VIDEO_SURFACE;
+
 	} else if (!strcasecmp(driver, "gl") || !strcasecmp(driver, "opengl")) {
 		video.desktop.want_type = VIDEO_GL;
 	} else if (!strcasecmp(driver, "sdlauto") || !strcasecmp(driver,"sdl")) {
