@@ -285,9 +285,14 @@ static int startup_flags = SF_HOOKS;
 /* frag_option ids */
 enum {
 	O_ARG,
-	O_DEBUG,
 	O_SDL_AUDIODRIVER,
 	O_SDL_VIDEODRIVER,
+	O_VIDEO_YUVLAYOUT,
+	O_VIDEO_RESOLUTION,
+	O_VIDEO_ASPECT,
+	O_VIDEO_GLPATH,
+	O_VIDEO_DEPTH,
+	O_VIDEO_FBDEV,
 #ifdef USE_X11
 	O_DISPLAY,
 #endif
@@ -299,6 +304,7 @@ enum {
 #if ENABLE_HOOKS
 	O_HOOKS,
 #endif
+	O_DEBUG,
 	O_VERSION,
 	O_HELP,
 };
@@ -308,9 +314,25 @@ static void parse_options(int argc, char **argv)
 	FRAG *frag;
 	frag_option opts[] = {
 		{O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
-		{O_DEBUG, 0, "debug", FRAG_ARG, "OPS", "Enable some debugging flags (separate with comma)"},
 		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
 		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
+
+		{O_VIDEO_YUVLAYOUT, 0, "video-yuvlaout", FRAG_ARG, "LAYOUT", "Specify YUV layout (if schism doesnt detect)" },
+		{O_VIDEO_RESOLUTION,0, "video-size", FRAG_ARG, "WIDTHxHEIGHT", "Specify default window size" },
+		{O_VIDEO_ASPECT,0, "video-stretch", FRAG_ARG, NULL, "Unfix the aspect ratio" },
+		{O_VIDEO_GLPATH,0,"video-gl-path", FRAG_ARG,
+#if defined(WIN32)
+"/path/to/opengl.dll"
+#elif defined(MACOSX)
+"/path/to/opengl.dylib"
+#else
+"/path/to/opengl.so"
+#endif
+				, "Specify path of OpenGL library"},
+		{O_VIDEO_DEPTH,0,"video-depth",FRAG_ARG, "DEPTH", "Specify display depth in bits"},
+#if HAVE_SYS_KD_H
+		{O_VIDEO_FBDEV,0,"video-fb-device", FRAG_ARG,"/dev/fb0","Specify path to framebuffer"},
+#endif
 		{O_CLASSIC_MODE, 0, "classic", FRAG_NEG, NULL, "start Schism Tracker in \"classic\" mode" },
 #ifdef USE_X11
 		{O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
@@ -322,6 +344,7 @@ static void parse_options(int argc, char **argv)
 #if ENABLE_HOOKS
 		{O_HOOKS, 0, "hooks", FRAG_NEG, NULL, "run startup/exit hooks (default: enabled)"},
 #endif
+		{O_DEBUG, 0, "debug", FRAG_ARG, "OPS", "Enable some debugging flags (separate with comma)"},
 		{O_VERSION, 0, "version", 0, NULL, "display version information"},
 		{O_HELP, 'h', "help", 0, NULL, "print this stuff"},
 		{FRAG_END_ARRAY}
@@ -351,6 +374,28 @@ static void parse_options(int argc, char **argv)
 			break;
 		case O_SDL_VIDEODRIVER:
 			video_driver = str_dup(frag->arg);
+			break;
+
+		case O_VIDEO_YUVLAYOUT:
+			put_env_var("SCHISM_YUVLAYOUT", frag->arg);
+			break;
+		case O_VIDEO_RESOLUTION:
+			put_env_var("SCHISM_VIDEO_RESOLUTION", frag->arg);
+			break;
+		case O_VIDEO_ASPECT:
+			if (frag->type)
+				put_env_var("SCHISM_VIDEO_ASPECT", "full");
+			else
+				put_env_var("SCHISM_VIDEO_ASPECT", "fixed");
+			break;
+		case O_VIDEO_GLPATH:
+			put_env_var("SDL_VIDEO_GL_DRIVER", frag->arg);
+			break;
+		case O_VIDEO_DEPTH:
+			put_env_var("SCHISM_VIDEO_DEPTH", frag->arg);
+			break;
+		case O_VIDEO_FBDEV:
+			put_env_var("SDL_FBDEV", frag->arg);
 			break;
 		case O_CLASSIC_MODE:
 			if (frag->type)
