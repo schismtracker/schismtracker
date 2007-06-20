@@ -57,7 +57,8 @@ const char *video_driver_name(void);
 
 void video_screenshot(void);
 
-void video_init(const char *id);
+void video_setup(const char *driver);
+void video_startup(void);
 void video_shutdown(void);
 void video_report(void);
 void video_refresh(void);

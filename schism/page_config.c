@@ -103,7 +103,10 @@ static void video_mode_keep(UNUSED void*ign)
 static void video_mode_cancel(UNUSED void*ign)
 {
 	dialog_destroy();
-	if (video_revert_driver) video_init(video_revert_driver);
+	if (video_revert_driver) {
+		video_setup(video_revert_driver);
+		video_startup();
+	}
 	video_fullscreen(video_revert_fs);
 	palette_apply();
 	font_init();
@@ -189,8 +192,10 @@ static void change_video_settings(void)
 	}
 
 	video_change_dialog();
-	if (strcasecmp(new_video_driver, video_driver_name()))
-		video_init(new_video_driver);
+	if (strcasecmp(new_video_driver, video_driver_name())) {
+		video_setup(new_video_driver);
+		video_startup();
+	}
 	if (new_fs_flag != video_is_fullscreen())
 		video_fullscreen(new_fs_flag);
 	palette_apply();
