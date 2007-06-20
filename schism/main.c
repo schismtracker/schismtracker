@@ -285,6 +285,7 @@ static int startup_flags = SF_HOOKS;
 /* frag_option ids */
 enum {
 	O_ARG,
+	O_DEBUG,
 	O_SDL_AUDIODRIVER,
 	O_SDL_VIDEODRIVER,
 #ifdef USE_X11
@@ -307,6 +308,7 @@ static void parse_options(int argc, char **argv)
 	FRAG *frag;
 	frag_option opts[] = {
 		{O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
+		{O_DEBUG, 0, "debug", FRAG_ARG, "OPS", "Enable some debugging flags (separate with comma)"},
 		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
 		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
 		{O_CLASSIC_MODE, 0, "classic", FRAG_NEG, NULL, "start Schism Tracker in \"classic\" mode" },
@@ -356,6 +358,10 @@ static void parse_options(int argc, char **argv)
 			else
 				startup_flags &= ~SF_CLASSIC;
 			did_classic = 1;
+			break;
+
+		case O_DEBUG:
+			put_env_var("SCHISM_DEBUG", frag->arg);
 			break;
 #ifdef USE_X11
 		case O_DISPLAY:
