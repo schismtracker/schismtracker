@@ -113,6 +113,7 @@ static void cfg_save_palette(cfg_file_t *cfg)
 
 void cfg_load(void)
 {
+	static char _buf_video_aspect[65];
 	char buf[4];
 	char *ptr;
 	int i;
@@ -127,6 +128,9 @@ void cfg_load(void)
 	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	cfg_video_mousecursor = !!cfg_get_number(&cfg, "Video", "mouse_cursor", 1); /* blah disgustingcakes */
+	ptr = (void*)cfg_get_string(&cfg, "Video",
+				"aspect",_buf_video_aspect,64,"");
+	if (ptr && *ptr) put_env_var("SCHISM_VIDEO_ASPECT", ptr);
 	
 	ptr = get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, ptr);
