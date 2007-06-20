@@ -249,12 +249,12 @@ AC_ARG_ENABLE(all-warnings,
 	ADD_WARN=no)
 
 AC_ARG_ENABLE(debug,
-	AS_HELP_STRING([--enable-debug], [Enable debug flags])
+	AS_HELP_STRING([--enable-debug], [Enable debug flags]),
 	ADD_DEBUG=$enableval,
 	ADD_DEBUG=no)
 
 AC_ARG_ENABLE(profiling,
-	AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down)])
+	AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down)]),
 	ADD_PROFILING=$enableval,
 	ADD_PROFILING=no)
 
