@@ -140,6 +140,7 @@ int is_directory(const char *filename);
 char *get_home_directory(void); /* should free() the resulting string */
 
 void put_env_var(const char *key, const char *value);
+void unset_env_var(const char *key);
 
 /* integer sqrt (very fast; 32 bits limited) */
 unsigned int i_sqrt(unsigned int r);
