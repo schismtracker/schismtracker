@@ -450,8 +450,8 @@ void video_init(const char *driver)
 		}
 	}
 
-	q = getenv("SCHISM_DOUBLE_BUFFER");
-	if (q && (atoi(q) > 0 || strcasecmp(q,"on") == 0 || strcasecmp(q,"yes") == 0)) {
+	q = getenv("SCHISM_DEBUG");
+	if (q && strstr(q,"doublebuf")) {
 		video.desktop.doublebuf = 1;
 	}
 
