@@ -173,7 +173,7 @@ static void display_init(void)
 	}
 	shutdown_process |= EXIT_SDLQUIT;
 
-	video_init(video_driver);
+	video_startup();
 
 	if (SDL_GetVideoInfo()->wm_available) {
 		status.flags |= WM_AVAILABLE;
@@ -1102,6 +1102,7 @@ int main(int argc, char **argv)
 	if (!did_fullscreen) {
 		video_fullscreen(cfg_video_fullscreen);
 	}
+	video_setup(video_driver);
 
 	shutdown_process |= EXIT_SAVECFG;
 	display_init();

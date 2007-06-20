@@ -44,6 +44,9 @@
 #if HAVE_SYS_IOCTL_H
 # include <sys/ioctl.h>
 #endif
+#if HAVE_SIGNAL_H
+#include <signal.h>
+#endif
 
 /* for memcpy */
 #include <string.h>
@@ -360,8 +363,11 @@ static void _video_preinit(void)
 {
 	if (!_did_preinit) {
 		memset(&video, 0, sizeof(video));
+		video.cv32backing = (void*)mem_alloc(NATIVE_SCREEN_WIDTH * 8);
+		video.cv8backing = (void*)mem_alloc(NATIVE_SCREEN_WIDTH);
 		_did_preinit = 1;
 	}
+
 }
 
 int video_is_fullscreen(void)
@@ -398,35 +404,18 @@ void video_fullscreen(int tri)
 	}
 }
 
-void video_init(const char *driver)
+void video_setup(const char *driver)
 {
-	UNUSED static int did_this_2 = 0;
-	const char *gl_ext;
-	char *q; /* , *p; */
-	SDL_Rect **modes;
-	int i, j, x, y;
+	char *q;
+	/* _SOME_ drivers can be switched to, but not all of them... */
 
 	if (driver && strcasecmp(driver, "auto") == 0) driver = 0;
 
 	_video_preinit();
-	/* because first mode is 0 */
-	vgamem_clear();
-	vgamem_flip();
 
-	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
-#ifndef MACOSX
-/* apple/macs use a bundle; this overrides their nice pretty icon */
-	SDL_WM_SetIcon(xpmdata(_schism_icon_xpm), NULL);
-#endif
 	video.draw.width = NATIVE_SCREEN_WIDTH;
 	video.draw.height = NATIVE_SCREEN_HEIGHT;
 	video.mouse.visible = 1;
-
-	/* used for scaling and 24bit conversion */
-	if (!_did_init) {
-		video.cv32backing = (unsigned char *)mem_alloc(NATIVE_SCREEN_WIDTH * 8);
-		video.cv8backing = (unsigned char *)mem_alloc(NATIVE_SCREEN_WIDTH);
-	}
 
 	video.yuvlayout = 0;
 	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
@@ -479,6 +468,8 @@ void video_init(const char *driver)
 		}
 	}
 #endif
+
+	video.desktop.fb_hacks = 0;
 #ifdef USE_X11
 	/* get xv info */
 	if (!video.yuvlayout) video.yuvlayout = xv_yuvlayout();
@@ -501,11 +492,29 @@ void video_init(const char *driver)
 		putenv((char *) "SDL_VIDEODRIVER=directfb");
 		video.desktop.want_type = VIDEO_SURFACE;
 #endif
+#if HAVE_LINUX_FB_H
+	} else if (!strcasecmp(driver, "fbcon")
+	|| !strcasecmp(driver, "linuxfb")
+	|| !strcasecmp(driver, "fb")) {
+		unset_env_var("DISPLAY");
+		putenv((char *) "SDL_VIDEODRIVER=fbcon");
+		video.desktop.want_type = VIDEO_SURFACE;
 
-	} else if (!strcasecmp(driver, "aalib")) {
+	} else if (strncmp(driver, "/dev/fb", 7) == 0) {
+		unset_env_var("DISPLAY");
+		putenv((char *) "SDL_VIDEODRIVER=fbcon");
+		put_env_var("SDL_FBDEV", driver);
+		video.desktop.want_type = VIDEO_SURFACE;
+
+#endif
+
+	} else if (!strcasecmp(driver, "aalib")
+	|| !strcasecmp(driver, "aa")) {
 		/* SDL needs to have been built this way... */
+		unset_env_var("DISPLAY");
 		putenv((char *) "SDL_VIDEODRIVER=aalib");
 		video.desktop.want_type = VIDEO_SURFACE;
+		video.desktop.fb_hacks = 1;
 
 	} else if (video.yuvlayout && !strcasecmp(driver, "yuv")) {
 		video.desktop.want_type = VIDEO_YUV;
@@ -515,16 +524,41 @@ void video_init(const char *driver)
 	} else if (!strcasecmp(driver, "dummy")
 	|| !strcasecmp(driver, "null")
 	|| !strcasecmp(driver, "none")) {
+
+		unset_env_var("DISPLAY");
 		putenv((char *) "SDL_VIDEODRIVER=dummy");
 		video.desktop.want_type = VIDEO_SURFACE;
+		video.desktop.fb_hacks = 1;
+#if HAVE_SIGNAL_H
+		signal(SIGINT, SIG_DFL);
+#endif
 
 	} else if (!strcasecmp(driver, "gl") || !strcasecmp(driver, "opengl")) {
 		video.desktop.want_type = VIDEO_GL;
-	} else if (!strcasecmp(driver, "sdlauto") || !strcasecmp(driver,"sdl")) {
-		/* okay.... */
+	} else if (!strcasecmp(driver, "sdlauto")
+	|| !strcasecmp(driver,"sdl")) {
+		video.desktop.want_type = VIDEO_SURFACE;
 	}
+}
 
-/* macosx might actually prefer opengl :) */
+void video_startup(void)
+{
+	UNUSED static int did_this_2 = 0;
+	const char *gl_ext;
+	char *q;
+	SDL_Rect **modes;
+	int i, j, x, y;
+
+	/* because first mode is 0 */
+	vgamem_clear();
+	vgamem_flip();
+
+	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
+#ifndef MACOSX
+/* apple/macs use a bundle; this overrides their nice pretty icon */
+	SDL_WM_SetIcon(xpmdata(_schism_icon_xpm), NULL);
+#endif
+
 #ifndef MACOSX
 	if (video.desktop.want_type == VIDEO_GL) {
 #define Z(q) my_ ## q = SDL_GL_GetProcAddress( #q ); if (! my_ ## q) { video.desktop.want_type = VIDEO_SURFACE; goto SKIP1; }
@@ -597,8 +631,6 @@ SKIP1:
 #endif
 	}
 
-	video.desktop.fb_hacks = 0;
-	
 	x = y = -1;
 	if ((q = getenv("SCHISM_VIDEO_RESOLUTION"))) {
 		i = j = -1;
@@ -608,7 +640,7 @@ SKIP1:
 		}
 	}
 #if HAVE_LINUX_FB_H
-	if (!getenv("DISPLAY")) {
+	if (!getenv("DISPLAY") && !video.desktop.fb_hacks) {
 		struct fb_var_screeninfo s;
 		int fb = -1;
 		if (getenv("SDL_FBDEV")) {
@@ -626,6 +658,7 @@ SKIP1:
 						x = NATIVE_SCREEN_WIDTH;
 					y = s.yres;
 				}
+				putenv((char *) "SDL_VIDEODRIVER=fbcon");
 				video.desktop.bpp = s.bits_per_pixel;
 				video.desktop.fb_hacks = 1;
 				video.desktop.doublebuf = 1;
