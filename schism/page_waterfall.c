@@ -159,10 +159,16 @@ static unsigned char *_dobits(unsigned char *q,
 	}
 	return q;
 }
+static void _drawslice(int x, int h)
+{
+	vgamem_ovl_drawline(&ovl,
+		x, NATIVE_SCREEN_HEIGHT-((h>>10) & (SCOPE_ROWS-1)),
+		x, NATIVE_SCREEN_HEIGHT, 5);
+}
 static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 {
 	unsigned char *q;
-	int i, j;
+	int i, j, k;
 
 	vgamem_lock();
 
@@ -186,25 +192,38 @@ static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 	q = ovl.q + (NATIVE_SCREEN_WIDTH*(NATIVE_SCREEN_HEIGHT-SCOPE_ROWS));
 	i = SCOPE_ROWS*NATIVE_SCREEN_WIDTH;
 	memset(q,0,i);
-	for (i = j = 0; i < FFT_OUTPUT_SIZE; i++) {
-		vgamem_ovl_drawline(&ovl,
-			j, NATIVE_SCREEN_HEIGHT-(f[0][i]>>8),
-			j, NATIVE_SCREEN_HEIGHT, 5);
-		j++;
-		if ((i % FUDGE_256_TO_WIDTH) == 0) {
-			vgamem_ovl_drawline(&ovl,
-				j, NATIVE_SCREEN_HEIGHT-(f[0][i]>>8),
-				j, NATIVE_SCREEN_HEIGHT, 5);
+	if (mono) {
+		for (i = j = 0; i < FFT_OUTPUT_SIZE; i++) {
+			_drawslice(j, f[0][i]);
 			j++;
-			vgamem_ovl_drawline(&ovl,
-				j, NATIVE_SCREEN_HEIGHT-(f[1][i]>>8),
-				j, NATIVE_SCREEN_HEIGHT, 5);
+			if ((i % FUDGE_256_TO_WIDTH) == 0) {
+				_drawslice(j, f[0][i]);
+				j++;
+				_drawslice(j, f[1][i]);
+				j++;
+			}
+			_drawslice(j, f[1][i]);
 			j++;
 		}
-		vgamem_ovl_drawline(&ovl,
-			j, NATIVE_SCREEN_HEIGHT-(f[1][i]>>8),
-			j, NATIVE_SCREEN_HEIGHT, 5);
-		j++;
+	} else {
+		j = 0;
+		k = NATIVE_SCREEN_WIDTH/2;
+		for (i = 0; i < FFT_OUTPUT_SIZE; i++) {
+			_drawslice(k-j, f[0][i]);
+			_drawslice(k+j, f[1][i]);
+			j++;
+			_drawslice(k-j, f[0][i]);
+			_drawslice(k+j, f[1][i]);
+			j++;
+			if ((i % FUDGE_256_TO_WIDTH) == 0) {
+				_drawslice(k-j, f[0][i]);
+				_drawslice(k+j, f[1][i]);
+				j++;
+				_drawslice(k-j, f[0][i]);
+				_drawslice(k+j, f[1][i]);
+				j++;
+			}
+		}
 	}
 
 	vgamem_unlock();
