@@ -568,8 +568,9 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 					// Volume Swing
 					if (penv->nVolSwing)
 					{
-						int d = ((LONG)penv->nVolSwing*(LONG)((rand() & 0xFF) - 0x7F)) / 128;
-						pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/128);
+						/* this was wrong */
+						int d = ((LONG)penv->nVolSwing*(LONG)((rand() & 0xFF) - 0x7F)) / 256;
+						pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
 					}
 					// Pan Swing
 					if (penv->nPanSwing)
