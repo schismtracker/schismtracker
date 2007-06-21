@@ -83,7 +83,7 @@ void vis_init(void)
 }
 
 /* samples should already be averaged */
-static void _vis_data_work(short output[FFT_OUTPUT_SIZE],
+static inline void _vis_data_work(short output[FFT_OUTPUT_SIZE],
 			short input[FFT_BUFFER_SIZE])
 {
 	unsigned int n, k, y;
@@ -133,7 +133,7 @@ static void _vis_data_work(short output[FFT_OUTPUT_SIZE],
 	output[0] /= 4;
 	output[(FFT_OUTPUT_SIZE-1)] /= 4;
 }
-static unsigned char *_dobits(unsigned char *q,
+static inline unsigned char *_dobits(unsigned char *q,
 			short d[FFT_OUTPUT_SIZE], int m, int y)
 {
 	int i, j, c;
@@ -160,7 +160,7 @@ static unsigned char *_dobits(unsigned char *q,
 	}
 	return q;
 }
-static void _drawslice(int x, int h)
+static inline void _drawslice(int x, int h)
 {
 	vgamem_ovl_drawline(&ovl,
 		x, NATIVE_SCREEN_HEIGHT-((h>>10) & (SCOPE_ROWS-1)),
