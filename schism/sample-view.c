@@ -61,14 +61,16 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 		if (ys >= r->height) ys = r->height;
 		step = MAX(1, length / r->width);
 		for (pos = channels+cc; pos < length; pos += step) {
-			level = (data[(pos*channels)+cc] * nh) / (SCHAR_MAX - SCHAR_MIN + 1);
+			level = (data[(pos*channels)+cc] * nh)
+					/ (SCHAR_MAX - SCHAR_MIN + 1);
 			xe = pos * r->width / length;
 			ye = (np - 1) - level;
 			if (xe < 0) xe = 0;
 			if (xe >= r->width) xe = r->width;
 			if (ye < 0) ye = 0;
 			if (ye >= r->height) ye = r->height;
-			vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
+			vgamem_ovl_drawline(r, xs, ys, xe, ye,
+					SAMPLE_DATA_COLOR);
 			xs = xe;
 		        ys = ye;
 		}
@@ -105,7 +107,8 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 			if (xe >= r->width) xe = r->width;
 			if (ye < 0) ye = 0;
 			if (ye >= r->height) ye = r->height;
-			vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
+			vgamem_ovl_drawline(r, xs, ys, xe, ye,
+					SAMPLE_DATA_COLOR);
 			xs = xe;
 		        ys = ye;
 		}
