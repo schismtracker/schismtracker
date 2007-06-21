@@ -37,7 +37,7 @@
 |   Ctrl-S            Save current song
 :   Ctrl-G            Go to order/pattern/row given time
 :
-:   PrintScreen       Take a screenshot (also Ctrl-Alt-P)
+:   PrintScreen       Take a screenshot (also Ctrl-Alt-D)
 :
 : On text widgets.
 :   Ctrl-C            Copy to clipboard (also Ctrl-Insert)
