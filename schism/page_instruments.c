@@ -2601,7 +2601,7 @@ void instrument_list_volume_load_page(struct page *page)
         create_thumbbar(widgets_volume + 14, 54, 42, 17, 13, 15, 0,
                         instrument_list_volume_update_values, 0, 128);
         create_thumbbar(widgets_volume + 15, 54, 43, 17, 14, 16, 0,
-                        instrument_list_volume_update_values, 0, 128);
+                        instrument_list_volume_update_values, 0, 256);
         create_thumbbar(widgets_volume + 16, 54, 46, 17, 15, 16, 0,
                         instrument_list_volume_update_values, 0, 100);
 }
