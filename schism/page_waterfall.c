@@ -160,11 +160,11 @@ static inline unsigned char *_dobits(unsigned char *q,
 	}
 	return q;
 }
-static inline void _drawslice(int x, int h)
+static inline void _drawslice(int x, int h, int c)
 {
 	vgamem_ovl_drawline(&ovl,
 		x, NATIVE_SCREEN_HEIGHT-((h>>10) & (SCOPE_ROWS-1)),
-		x, NATIVE_SCREEN_HEIGHT, 5);
+		x, NATIVE_SCREEN_HEIGHT, c);
 }
 static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 {
@@ -195,35 +195,35 @@ static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 	memset(q,0,i);
 	if (mono) {
 		for (i = j = 0; i < FFT_OUTPUT_SIZE; i++) {
-			_drawslice(j, f[0][i]);
+			_drawslice(j, f[0][i],5);
 			j++;
 			if ((i % FUDGE_256_TO_WIDTH) == 0) {
-				_drawslice(j, f[0][i]);
+				_drawslice(j, f[0][i],5);
 				j++;
-				_drawslice(j, f[1][i]);
+				_drawslice(j, f[1][i],5);
 				j++;
 			}
-			_drawslice(j, f[1][i]);
+			_drawslice(j, f[1][i],5);
 			j++;
 		}
 	} else {
 		j = 0;
 		k = NATIVE_SCREEN_WIDTH/2;
 		for (i = 0; i < FFT_OUTPUT_SIZE; i++) {
-			_drawslice(k-j, f[0][i]);
-			_drawslice(k+j, f[1][i]);
-			j++;
-			_drawslice(k-j, f[0][i]);
-			_drawslice(k+j, f[1][i]);
+			_drawslice(k-j, f[0][i],5);
+			_drawslice(k+j, f[1][i],5);
 			j++;
 			if ((i % FUDGE_256_TO_WIDTH) == 0) {
-				_drawslice(k-j, f[0][i]);
-				_drawslice(k+j, f[1][i]);
+				_drawslice(k-j, f[0][i],5);
+				_drawslice(k+j, f[1][i],5);
 				j++;
-				_drawslice(k-j, f[0][i]);
-				_drawslice(k+j, f[1][i]);
+				_drawslice(k-j, f[0][i],5);
+				_drawslice(k+j, f[1][i],5);
 				j++;
 			}
+			_drawslice(k-j, f[0][i],5);
+			_drawslice(k+j, f[1][i],5);
+			j++;
 		}
 	}
 
