@@ -885,7 +885,7 @@ void handle_key(struct key_event * k)
 	int c, m;
 
 	if (k->sym == SDLK_PRINT
-	|| (k->sym == SDLK_p && !(k->mod & KMOD_SHIFT)
+	|| (k->sym == SDLK_d && !(k->mod & KMOD_SHIFT)
 	&& (k->mod & KMOD_CTRL) && (k->mod && KMOD_ALT))) {
 		if (k->state) {
 			video_screenshot();

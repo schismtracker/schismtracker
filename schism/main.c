@@ -750,6 +750,14 @@ static void event_loop(void)
 				kk.sy = kk.y;
 			}
 			if (startdown) startdown = 0;
+			if (event.type != SDL_MOUSEMOTION &&
+					debug_s && strstr(debug_s, "mouse")) {
+				log_appendf(12, "[DEBUG] Mouse%s button=%d x=%d y=%d",
+					(event.type == SDL_MOUSEBUTTONDOWN) ? "Down" : "Up",
+						event.button.button,
+						event.button.x,
+						event.button.y);
+			}
 
 			switch (event.button.button) {
 #ifdef SDL_BUTTON_WHEELUP
