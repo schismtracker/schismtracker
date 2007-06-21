@@ -1166,6 +1166,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 	if (!m) {
 		if (last_row_number != (signed) mp->m_nRow) return;
 		m = last_row[chan];
+		if (!m) return;
 	} else {
 		last_row[chan] = m;
 		last_row_number = mp->m_nRow;
