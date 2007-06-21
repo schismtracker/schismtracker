@@ -21,6 +21,7 @@
 #include "headers.h"
 #include "it.h"
 #include "page.h"
+#include "song.h"
 
 #include <math.h>
 
@@ -324,22 +325,79 @@ static void draw_screen(void)
 
 static int waterfall_handle_key(struct key_event *k)
 {
+	int n, order;
+
 	switch (k->sym) {
-	case SDLK_s:
+        case SDLK_s:
+		if (k->mod & KMOD_ALT) {
+			if (k->state) return 1;
+	
+			song_toggle_stereo();
+                	status.flags |= NEED_UPDATE;
+	                return 1;
+		}
+		/* fall through */
 	case SDLK_m:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
 		if (k->state) return 1;
 		mono = !mono;
 		break;
-
 	case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		if (k->state) return 1;
 		gain--;
 		break;
 	case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		if (k->state) return 1;
 		gain++;
 		break;
+        case SDLK_g:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (!k->state) return 1;
 
+		order = song_get_current_order();
+		if (song_get_mode() == MODE_PLAYING) {
+			n = song_get_orderlist()[order];
+		} else {
+			n = song_get_playing_pattern();
+		}
+		if (n < 200) {
+			set_current_order(order);
+			set_current_pattern(n);
+			set_current_row(song_get_current_row());
+			set_page(PAGE_PATTERN_EDITOR);
+		}
+               return 1;
+        case SDLK_r:
+                if (k->mod & KMOD_ALT) {
+			if (k->state) return 1;
+
+                        song_flip_stereo();
+                        return 1;
+                }
+                return 0;
+        case SDLK_PLUS:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (k->state) return 1;
+                if (song_get_mode() == MODE_PLAYING) {
+                        song_set_current_order(song_get_current_order() + 1);
+                }
+                return 1;
+        case SDLK_MINUS:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (k->state) return 1;
+                if (song_get_mode() == MODE_PLAYING) {
+                        song_set_current_order(song_get_current_order() - 1);
+                }
+                return 1;
 	default:
 		return 0;
 	};
