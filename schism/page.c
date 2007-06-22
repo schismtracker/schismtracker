@@ -894,7 +894,10 @@ void handle_key(struct key_event * k)
 	}
 
 	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
-		if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
+		if (digraph_n == -1 && k->state) {
+			digraph_n = 0;
+
+		} else if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
 			if (k->state && digraph_n >= 0) {
 				digraph_n++;
 				if (digraph_n >= 2)
@@ -905,7 +908,7 @@ void handle_key(struct key_event * k)
 		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->unicode) == 0 || digraph_n < 2) {
 			if (!k->state && !k->mouse) {
 				if (digraph_n > 0) status_text_flash(" ");
-				digraph_n = 0;
+				digraph_n = -1;
 			}
 		} else if (digraph_n >= 2) {
 			if (k->state) return;
