@@ -683,7 +683,6 @@ void CSoundFile::CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut)
 		p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
 		p->nMasterChn = nChn+1;
 		p->nCommand = 0;
-		p->nRealtime = 0;
 		// Cut the note
 		p->nFadeOutVol = 0;
 		p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
@@ -773,7 +772,6 @@ void CSoundFile::CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut)
 			*p = *pChn;
 			p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
 			p->nMasterChn = nChn+1;
-			p->nRealtime = 0;
 			p->nCommand = 0;
 			// Key Off the note
 			switch(pChn->nNNA)
