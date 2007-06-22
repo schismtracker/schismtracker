@@ -245,22 +245,29 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			i->played = 1;
 
 			c->nGlobalVol = 64;
-			c->nVolume = (vol << 2);
+			if (vol > -1) c->nVolume = (vol << 2);
 			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
 			//c->nMasterChn = 0;
 
 		} else {
 			while (chan >= 64) chan -= 64;
+
 			c = mp->Chn + chan;
-			c->nRealtime = 1;
-			if (mp->m_dwSongFlags & (SONG_ENDREACHED|SONG_PAUSED)) {
-				mp->m_nTickCount = c->nTickStart = 0;
-			} else {
-				c->nTickStart = (mp->m_nTickCount+1) % mp->m_nMusicSpeed;
+			if (c->nRealtime) {
+				/* process the previous note */
+				/* (audio thread isn't there yet) */
+				mp->NoteChange(chan, c->nRowNote,
+							FALSE, TRUE, TRUE);
+				mp->ProcessEffects();
+				mp->CheckNNA(chan, ins_mode ? ins : samp, note,
+						FALSE);
 			}
+
+			c->nRealtime = 1;
+			c->nTickStart = (mp->m_nTickCount+1)
+						% mp->m_nMusicSpeed;
 			c->nRowNote = note;
-			c->nNewNote = note;
-			c->nRowVolume = vol;
+			if (vol > -1) c->nRowVolume = vol;
 			c->nRowVolCmd = VOLCMD_VOLUME;
 			if (c->dwFlags & CHN_MUTE) {
 				c->dwFlags &= ~(CHN_MUTE);
@@ -271,19 +278,18 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nRowInstr = ins_mode ? ins : samp;
 			c->nRowCommand = effect;
 			c->nRowParam = param;
-			mp->CheckNNA(chan,c->nRowInstr,note,FALSE);
-			c->nVolume = (vol << 2);
-			mp->ProcessEffects();
+
+			if (vol > -1) c->nVolume = (vol << 2);
 
 			/* these special cases are to handle the 4 key */
 			if (note == NOTE_CUT) {
 				mp->NoteCut(chan, mp->m_nTickCount);
 			} else if (note == NOTE_OFF) {
+				mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
 				mp->KeyOff(chan);
 			} else if (note >= 120) {
 				c->dwFlags |= CHN_NOTEFADE;
 			}
-
 		}
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
 			mp->m_dwSongFlags &= ~SONG_ENDREACHED;

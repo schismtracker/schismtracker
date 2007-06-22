@@ -398,7 +398,6 @@ BOOL CSoundFile::ProcessRow()
 BOOL CSoundFile::ReadNote()
 //-------------------------
 {
-#ifdef MODPLUG_TRACKER
 	// Checking end of row ?
 	if (m_dwSongFlags & SONG_PAUSED)
 	{
@@ -418,8 +417,8 @@ BOOL CSoundFile::ReadNote()
 		if (m_nTickCount >= m_nMusicSpeed) {
 			m_nTickCount = 0;
 		}
+		if (!ProcessEffects()) return FALSE;
 	} else
-#endif // MODPLUG_TRACKER
 	{
 		if (!ProcessRow()) return FALSE;
 	}
@@ -432,6 +431,7 @@ BOOL CSoundFile::ReadNote()
 				pChn->nRealtime = 0;
 				pChn->nRowNote = 0;
 				pChn->nRowInstr = 0;
+				//pChn->nMaster
 				pChn->nRowVolCmd = 0;
 				pChn->nRowVolume = 0;
 				pChn->nRowCommand = 0;
