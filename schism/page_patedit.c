@@ -3087,14 +3087,14 @@ static int pattern_editor_insert(struct key_event *k)
 			if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
 						&& playback_tracing) {
 				if (k->state) {
+					if (!(midi_flags & MIDI_RECORD_NOTEOFF))
+						return 1;
 					j = song_keyup(
 						i,
 						i,
 						n,
 						current_channel-1,
 						channel_multi_base);
-					if (!(midi_flags & MIDI_RECORD_NOTEOFF))
-						return 1;
 					n = NOTE_OFF;
 				} else {
 					j = song_keydown(
