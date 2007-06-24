@@ -3019,14 +3019,9 @@ static int pattern_editor_insert(struct key_event *k)
 	case 0:			/* note */
 		if (k->sym == SDLK_4) {
 			if (k->state) return 0;
+			
 			if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
-				if (edit_copy_mask & MASK_VOLUME && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
-					vol = mask_note.volume;
-				} else {
-					vol = song_get_instrument_default_volume(
-								cur_note->instrument,
-								cur_note->instrument);
-				}
+				vol = -1;
 			} else {
 				vol = cur_note->volume;
 			}
