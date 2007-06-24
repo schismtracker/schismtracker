@@ -570,7 +570,7 @@ void song_set_instrument_mode(int value)
 			for (j = 0; j < 128; j++) {
 				if (mp->Headers[i]->NoteMap[j] < 1
 				|| mp->Headers[i]->NoteMap[j] > 120)
-					mp->Headers[i]->NoteMap[j] = j;
+					mp->Headers[i]->NoteMap[j] = j+1;
 			}
 		}
 	} else if (!value && oldvalue) {

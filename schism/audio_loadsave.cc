@@ -98,7 +98,7 @@ static void _convert_to_it(CSoundFile *qq)
 		/* is this right? */
 		for (p = 0; p < 128; p++) {
 			if (i->NoteMap[p] < 1 || i->NoteMap[p] > 120)
-				i->NoteMap[p] = p;
+				i->NoteMap[p] = p+1;
 		}
 	}
 
