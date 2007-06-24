@@ -213,6 +213,15 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			/* this is only needed on the sample page, when in
 			instrument mode...
 			*/
+			if (c->nLength && note < 0x80) {
+				/* doesn't quite seem fair otherwise */
+				mp->NoteChange(chan, c->nRowNote,
+							FALSE, TRUE, FALSE);
+				mp->ProcessEffects();
+				mp->CheckNNA(chan, ins_mode
+						? ins : samp, note,
+						FALSE);
+			}
 			c->nPos = c->nPosLo = c->nLength = 0;
 			c->nInc = 1; /* weird... */
 			c->nGlobalVol = 64;
@@ -226,10 +235,12 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 			MODINSTRUMENT *i = mp->Ins + samp;
 			c->pCurrentSample = i->pSample;
+			c->pSample = i->pSample;
 			c->pHeader = NULL;
 			c->pInstrument = i;
-			c->pSample = i->pSample;
 			c->nFineTune = i->nFineTune;
+			c->nLength = i->nLength;
+			c->nTranspose = i->RelativeTone;
 			c->nC4Speed = i->nC4Speed;
 			c->nLoopStart = i->nLoopStart;
 			c->nLoopEnd = i->nLoopEnd;
@@ -247,19 +258,20 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nGlobalVol = 64;
 			if (vol > -1) c->nVolume = (vol << 2);
 			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
-			//c->nMasterChn = 0;
+			c->nMasterChn = 0;
 
 		} else {
 			while (chan >= 64) chan -= 64;
 
 			c = mp->Chn + chan;
-			if (c->nRealtime && note < 0x80) {
+			if (c->nLength && note < 0x80) {
 				/* process the previous note */
 				/* (audio thread isn't there yet) */
 				mp->NoteChange(chan, c->nRowNote,
 							FALSE, TRUE, FALSE);
 				mp->ProcessEffects();
-				mp->CheckNNA(chan, ins_mode ? ins : samp, note,
+				mp->CheckNNA(chan, ins_mode
+						? ins : samp, note,
 						FALSE);
 			}
 
