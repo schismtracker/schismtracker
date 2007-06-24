@@ -213,7 +213,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			/* this is only needed on the sample page, when in
 			instrument mode...
 			*/
-			if (c->nLength && note < 0x80) {
+			if (c->nLength && note && note < 0x80) {
 				/* doesn't quite seem fair otherwise */
 				mp->NoteChange(chan, c->nRowNote,
 							FALSE, TRUE, FALSE);
@@ -264,7 +264,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			while (chan >= 64) chan -= 64;
 
 			c = mp->Chn + chan;
-			if (c->nLength && note < 0x80) {
+			if (c->nLength && note && note < 0x80) {
 				/* process the previous note */
 				/* (audio thread isn't there yet) */
 				mp->NoteChange(chan, c->nRowNote,
@@ -275,7 +275,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 						FALSE);
 			}
 
-			c->nRealtime = 1;
+			if (mp->m_dwSongFlags & (SONG_ENDREACHED|SONG_PAUSED)) {
+				c->nRealtime = 1;
+			}
 			c->nTickStart = (mp->m_nTickCount+1)
 						% mp->m_nMusicSpeed;
 			c->nRowNote = note;
