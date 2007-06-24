@@ -62,7 +62,7 @@ byte row_highlight_major = 16, row_highlight_minor = 4;
 
 static void _convert_to_it(CSoundFile *qq)
 {
-        unsigned long n;
+        unsigned long n, p;
         MODINSTRUMENT *s;
 
 	for (n = 1; n <= qq->m_nInstruments; n++) {
@@ -94,6 +94,11 @@ static void _convert_to_it(CSoundFile *qq)
 			i->PitchEnv.nNodes = 2;
 			i->PitchEnv.Ticks[1] = 100;
 			i->PitchEnv.Values[1] = i->PitchEnv.Values[0];
+		}
+		/* is this right? */
+		for (p = 0; p < 128; p++) {
+			if (i->NoteMap[p] < 1 || i->NoteMap[p] > 120)
+				i->NoteMap[p] = p;
 		}
 	}
 

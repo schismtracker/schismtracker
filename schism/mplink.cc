@@ -560,9 +560,19 @@ int song_is_instrument_mode()
 void song_set_instrument_mode(int value)
 {
 	int oldvalue = song_is_instrument_mode();
+	int i, j;
 	
 	if (value && !oldvalue) {
 		mp->m_dwSongFlags |= SONG_INSTRUMENTMODE;
+		for (i = 0; i < MAX_INSTRUMENTS; i++) {
+			if (!mp->Headers[i]) continue;
+			/* fix wiped notes */
+			for (j = 0; j < 128; j++) {
+				if (mp->Headers[i]->NoteMap[j] < 1
+				|| mp->Headers[i]->NoteMap[j] > 120)
+					mp->Headers[i]->NoteMap[j] = j;
+			}
+		}
 	} else if (!value && oldvalue) {
 		mp->m_dwSongFlags &= ~SONG_INSTRUMENTMODE;
 	}

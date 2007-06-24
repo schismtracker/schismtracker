@@ -59,7 +59,7 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 		ys = (np - 1) - level;
 		if (ys < 0) ys = 0;
 		if (ys >= r->height) ys = r->height;
-		step = MAX(1, length / r->width);
+		step = MAX(1, (length / r->width) >> 8);
 		for (pos = channels+cc; pos < length; pos += step) {
 			level = (data[(pos*channels)+cc] * nh)
 					/ (SCHAR_MAX - SCHAR_MIN + 1);
@@ -97,7 +97,7 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 		ys = (np - 1) - level;
 		if (ys < 0) ys = 0;
 		if (ys >= r->height) ys = r->height;
-		step = MAX(1, length / r->width);
+		step = MAX(1, (length / r->width) >> 8);
 		for (pos = channels+cc; (pos+cc) < length; pos += step) {
 			level = (data[(pos*channels)+cc] * nh)
 					/ (SHRT_MAX - SHRT_MIN + 1);
