@@ -991,9 +991,13 @@ void song_set_current_global_volume(int volume)
 
 void song_set_current_order(int order)
 {
-	song_lock_audio();
-        mp->SetCurrentOrder(order);
-	song_unlock_audio();
+	if (song_get_mode() == MODE_PLAYING) {
+                song_start_at_order(order,0);
+	} else {
+		song_lock_audio();
+        	mp->SetCurrentOrder(order);
+		song_unlock_audio();
+	}
 }
 
 // Ctrl-F7
