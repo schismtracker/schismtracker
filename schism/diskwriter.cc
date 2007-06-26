@@ -533,7 +533,7 @@ extern diskwriter_driver_t xmwriter;
 extern diskwriter_driver_t modwriter;
 };
 
-unsigned int diskwriter_output_rate = 48000;
+unsigned int diskwriter_output_rate = 44100;
 unsigned int diskwriter_output_bits = 16;
 unsigned int diskwriter_output_channels = 2;
 diskwriter_driver_t *diskwriter_drivers[] = {
