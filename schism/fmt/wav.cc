@@ -102,7 +102,7 @@ int fmt_wav_read_info(dmoz_file_t *file, const byte *data, size_t length)
 		q = bswapLE32(q);
 		if (q == (length-8)) {
 			file->description = "IBM/Microsoft RIFF Audio";
-			file->type = TYPE_SAMPLE_EXTD;
+			file->type = TYPE_SAMPLE_PLAIN;
 			file->smp_flags = 0;
 			if (data[22] >= 2) {
 				file->smp_flags |= SAMP_STEREO;
