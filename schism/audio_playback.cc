@@ -1086,7 +1086,7 @@ void cfg_load_audio(cfg_file_t *cfg)
 	CFG_GET_D(reverb, 0);
 	CFG_GET_D(reverb_depth, 30);
 	CFG_GET_D(reverb_delay, 100);
-	diskwriter_output_rate = cfg_get_number(cfg, "Diskwriter", "rate", 48000);
+	diskwriter_output_rate = cfg_get_number(cfg, "Diskwriter", "rate", 44100);
 	diskwriter_output_bits = cfg_get_number(cfg, "Diskwriter", "bits", 16);
 	diskwriter_output_channels = cfg_get_number(cfg, "Diskwriter", "channels", 2);
 
