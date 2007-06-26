@@ -178,15 +178,13 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 		UINT lTotalSampleCount;
 		if (!m_nBufferCount)
 		{
-			if (!(m_dwSongFlags & SONG_PATTERNLOOP)
-					|| !(gdwSoundSetup & SNDMIX_DIRECTTODISK))
+			if (!(gdwSoundSetup & SNDMIX_DIRECTTODISK))
 				m_nBufferCount = lRead;
 			if (!ReadNote()) {
 				m_dwSongFlags |= SONG_ENDREACHED;
 				if (stop_at_order > -1) return 0; /* faster */
 				if (lRead == lMax) goto MixDone;
-				if (!(m_dwSongFlags & SONG_PATTERNLOOP)
-						|| !(gdwSoundSetup & SNDMIX_DIRECTTODISK))
+				if (!(gdwSoundSetup & SNDMIX_DIRECTTODISK))
 					m_nBufferCount = lRead;
 			}
 			if (!m_nBufferCount) goto MixDone;
