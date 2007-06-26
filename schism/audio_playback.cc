@@ -1427,6 +1427,7 @@ RETRY:	using_driver = driver;
 
 	if (!strcasecmp(driver, "nil")
 	|| !strcasecmp(driver, "null")
+	|| !strcasecmp(driver, "nul")
 	|| !strcmp(driver, "/dev/null")
 	|| !strcasecmp(driver, "none")
 	|| !strcasecmp(driver, "nosound")
