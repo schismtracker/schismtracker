@@ -694,6 +694,8 @@ static int file_info_get(dmoz_file_t *file)
 		return FINF_ERRNO;
 	file->artist = NULL;
 	file->title = NULL;
+	file->smp_defvol = 64;
+	file->smp_gblvol = 64;
 	for (func = read_info_funcs; *func; func++) {
 		if ((*func) (file, t->data, t->length)) {
 			if (file->artist)

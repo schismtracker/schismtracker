@@ -1577,6 +1577,18 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 				dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 				file->type = TYPE_SAMPLE_EXTD;
 				file->description = "Fishcakes"; // FIXME - what does IT say?
+				file->smp_speed = library.Ins[n].nC4Speed;
+				file->smp_loop_start = library.Ins[n].nLoopStart;
+				file->smp_loop_end = library.Ins[n].nLoopEnd;
+				file->smp_sustain_start = library.Ins[n].nSustainStart;
+				file->smp_sustain_end = library.Ins[n].nSustainEnd;
+				file->smp_length = library.Ins[n].nLength;
+				file->smp_flags = library.Ins[n].uFlags;
+				file->smp_defvol = library.Ins[n].nVolume>>2;
+				file->smp_gblvol = library.Ins[n].nGlobalVol;
+				file->smp_vibrato_speed = library.Ins[n].nVibRate;
+				file->smp_vibrato_depth = library.Ins[n].nVibDepth;
+				file->smp_vibrato_rate = library.Ins[n].nVibSweep;
 				// don't screw this up...
 				if (((unsigned char)library.m_szNames[n][23]) == 0xFF) {
 					library.m_szNames[n][23] = ' ';

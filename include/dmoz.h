@@ -106,6 +106,12 @@ struct dmoz_file {
 	unsigned int smp_sustain_end;
 	unsigned int smp_length;
 	unsigned int smp_flags;
+
+	unsigned int smp_defvol;
+	unsigned int smp_gblvol;
+	unsigned int smp_vibrato_speed;
+	unsigned int smp_vibrato_depth;
+	unsigned int smp_vibrato_rate;
 };
 
 typedef struct dmoz_dir {

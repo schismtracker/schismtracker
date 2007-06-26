@@ -55,6 +55,12 @@ int fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	if (its->dfp & 128) file->smp_flags |= SAMP_PANNING;
 	if (its->flags & 4) file->smp_flags |= SAMP_STEREO;
 
+	file->smp_defvol = its->vol;
+	file->smp_gblvol = its->gvl;
+	file->smp_vibrato_speed = its->vis;
+	file->smp_vibrato_depth = its->vid & 0x7f;
+	file->smp_vibrato_rate = its->vir;
+
 	file->smp_loop_start = bswapLE32(its->loopbegin);
 	file->smp_loop_end = bswapLE32(its->loopend);
 	file->smp_speed = bswapLE32(its->C5Speed);

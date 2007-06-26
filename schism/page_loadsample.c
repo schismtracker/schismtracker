@@ -41,12 +41,30 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* the locals */
+static struct vgamem_overlay sample_image = {
+	52,25,76,28,
+	0, 0, 0, 0,
+};
+
+static char current_filename[PATH_MAX];
+static int sample_speed_pos = 0;
+static int sample_loop_beg = 0;
+static int sample_loop_end = 0;
+static int sample_susloop_beg = 0;
+static int sample_susloop_end = 0;
+
 
 static int _library_mode = 0;
-static struct widget widgets_loadsample[1];
+static struct widget widgets_loadsample[15];
+static int fake_slot_changed = 0;
+static int will_move_to = -1;
 static int fake_slot = -1;
 static int need_trigger = -1;
 static int need_keyoff = -1;
+static const char *loop_states[] = {
+		"Off", "On Forwards", "On Ping Pong", NULL };
+
+static void handle_preload(void);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -93,9 +111,12 @@ static void clear_directory(void)
 {
 	dmoz_free(&flist, NULL);
 	fake_slot = -1;
+	fake_slot_changed = 0;
 }
 static void file_list_reposition(void)
 {
+	dmoz_file_t *f;
+
 	if (current_file >= flist.num_files)
 		current_file = flist.num_files-1;
 	if (current_file < 0) current_file = 0;
@@ -103,6 +124,58 @@ static void file_list_reposition(void)
 		top_file = current_file;
 	else if (current_file > top_file + 34)
 		top_file = current_file - 34;
+	if (current_file >= 0 && current_file < flist.num_files) {
+		f = flist.files[current_file];
+
+		if (f && f->smp_filename) {
+			strncpy(current_filename, f->smp_filename,
+					PATH_MAX-1);
+		} else if (f && f->base) {
+			strncpy(current_filename, f->base,
+					PATH_MAX-1);
+		} else {
+			current_filename[0] = '\0';
+		}
+		widgets_loadsample[1].d.textentry.firstchar = 0;
+		widgets_loadsample[1].d.textentry.cursor_pos =
+				strlen(current_filename);
+
+		widgets_loadsample[2].d.numentry.value = f ? f->smp_speed : 0;
+
+		if (f && f->smp_flags & SAMP_LOOP_PINGPONG) {
+			widgets_loadsample[3].d.menutoggle.state = 2;
+		} else if (f && f->smp_flags & SAMP_LOOP) {
+			widgets_loadsample[3].d.menutoggle.state = 1;
+		} else {
+			widgets_loadsample[3].d.menutoggle.state = 0;
+		}
+
+		widgets_loadsample[4].d.numentry.value = f ? f->smp_loop_start : 0;
+		widgets_loadsample[5].d.numentry.value = f ? f->smp_loop_end : 0;
+
+		if (f && f->smp_flags & SAMP_SUSLOOP_PINGPONG) {
+			widgets_loadsample[6].d.menutoggle.state = 2;
+		} else if (f && f->smp_flags & SAMP_SUSLOOP) {
+			widgets_loadsample[6].d.menutoggle.state = 1;
+		} else {
+			widgets_loadsample[6].d.menutoggle.state = 0;
+		}
+		
+		widgets_loadsample[7].d.numentry.value = f ? f->smp_sustain_start : 0;
+		widgets_loadsample[8].d.numentry.value = f ? f->smp_sustain_end : 0;
+		widgets_loadsample[9].d.thumbbar.value = f ? f->smp_defvol : 64;
+		widgets_loadsample[10].d.thumbbar.value = f ? f->smp_gblvol : 64;
+		widgets_loadsample[11].d.thumbbar.value = f ? f->smp_vibrato_speed : 0;
+		widgets_loadsample[12].d.thumbbar.value = f ? f->smp_vibrato_depth : 0;
+		widgets_loadsample[13].d.thumbbar.value = f ? f->smp_vibrato_rate : 0;
+		if (f) {
+			/* autoload some files */
+			if (TYPE_SAMPLE_EXTD == (f->type & TYPE_SAMPLE_EXTD)
+			&& f->filesize < 0x4000000
+			&& f->smp_length < 0x1000000)
+				handle_preload();
+		}
+	}
 }
 
 
@@ -157,27 +230,26 @@ static void load_sample_draw_const(void)
 
 	draw_box(5, 12, 50, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_fill_chars(6, 13, 49, 47, 0);
+
+	draw_fill_chars(64, 13, 77, 22, 0);
+	draw_box(62, 32, 72, 35, BOX_THICK | BOX_INNER | BOX_INSET);
+	draw_box(62, 36, 72, 40, BOX_THICK | BOX_INNER | BOX_INSET);
 	
 	draw_box(63, 12, 77, 23, BOX_THICK | BOX_INNER | BOX_INSET);
+
+	draw_box(51, 24, 77, 29, BOX_THICK | BOX_INNER | BOX_INSET);
+	draw_fill_chars(52, 25, 76, 28, 0);
+
+	draw_box(51, 30, 77, 42, BOX_THIN | BOX_INNER | BOX_INSET);
+
+	draw_fill_chars(59, 44, 76, 47, 0);
+	draw_box(58, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
+
 	filled = 0;
 	f = 0;
 	if (current_file >= 0
 	&& current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
-		draw_text_len((unsigned char *) (f->smp_filename ? f->smp_filename : ""), 13, 64,13, 2, 0);
-
-		sprintf(sbuf, "%07d", f->smp_speed);
-		draw_text_len((unsigned char *) sbuf, 13, 64, 14, 2, 0);
-
-		sprintf(sbuf, "%07d", f->smp_loop_start);
-		draw_text_len((unsigned char *) sbuf, 13, 64, 16, 2, 0);
-		sprintf(sbuf, "%07d", f->smp_loop_end);
-		draw_text_len((unsigned char *) sbuf, 13, 64, 17, 2, 0);
-
-		sprintf(sbuf, "%07d", f->smp_sustain_start);
-		draw_text_len((unsigned char *) sbuf, 13, 64, 19, 2, 0);
-		sprintf(sbuf, "%07d", f->smp_sustain_end);
-		draw_text_len((unsigned char *) sbuf, 13, 64, 20, 2, 0);
 
 		sprintf(sbuf, "%07d", f->smp_length);
 		draw_text_len((unsigned char *) sbuf, 13, 64, 22, 2, 0);
@@ -195,22 +267,28 @@ static void load_sample_draw_const(void)
 				? "16 bit" : "8 bit"),
 			13, 64, 21, 2, 0);
 		}
-
-		draw_text_len((unsigned char *)
-			(f->smp_flags & SAMP_SUSLOOP
-			? "On" : "Off"),
-		13, 64, 18, 2, 0);
-
-		if (f->smp_flags & SAMP_LOOP_PINGPONG) {
-			draw_text_len((unsigned char *) "On Ping Pong",
-				13, 64, 15, 2, 0);
-		} else if (f->smp_flags & SAMP_LOOP) {
-			draw_text_len((unsigned char *) "On Forwards",
-				13, 64, 15, 2, 0);
+		if (f->description) {
+			draw_text_len((unsigned char *)f->description,
+					18,
+					59, 44, 5, 0);
 		} else {
-			draw_text_len((unsigned char *) "Off",
-				13, 64, 15, 2, 0);
+			switch (f->type) {
+			case TYPE_DIRECTORY:
+				draw_text((unsigned char *)"Directory",
+						59, 44, 5, 0);
+				break;
+			default:
+				draw_text((unsigned char *)"Unknown format",
+						59, 44, 5, 0);
+				break;
+			};
 		}
+		sprintf(sbuf, "%07d", f->filesize);
+		draw_text((unsigned char *)sbuf, 59, 45, 5,0);
+		get_date_string(f->timestamp, (unsigned char *)sbuf);
+		draw_text((unsigned char *)sbuf, 59, 46, 5,0);
+		get_time_string(f->timestamp, (unsigned char *)sbuf);
+		draw_text((unsigned char *)sbuf, 59, 47, 5,0);
 	}
 
 	/* these are exactly the same as in page_samples.c, apart from
@@ -226,11 +304,6 @@ static void load_sample_draw_const(void)
 	draw_text((unsigned char *) "Quality", 56, 21, 0, 2);
 	draw_text((unsigned char *) "Length", 57, 22, 0, 2);
 
-	draw_box(51, 24, 77, 29, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(52, 25, 76, 28, 0);
-
-	draw_box(51, 30, 77, 42, BOX_THIN | BOX_INNER | BOX_INSET);
-
 	/* these abbreviations are sucky and lame. any suggestions? */
 	draw_text((unsigned char *) "Def. Vol.", 53, 33, 0, 2);
 	draw_text((unsigned char *) "Glb. Vol.", 53, 34, 0, 2);
@@ -238,9 +311,14 @@ static void load_sample_draw_const(void)
 	draw_text((unsigned char *) "Vib.Depth", 53, 38, 0, 2);
 	draw_text((unsigned char *) "Vib. Rate", 53, 39, 0, 2);
 
-	draw_box(52, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(53, 44, 76, 47, 0);
+	draw_text((unsigned char *) "Format", 52, 44, 0, 2);
+	draw_text((unsigned char *) "Size", 54, 45, 0, 2);
+	draw_text((unsigned char *) "Date", 54, 46, 0, 2);
+	draw_text((unsigned char *) "Time", 54, 47, 0, 2);
 
+	if (fake_slot > -1) {
+		vgamem_ovl_apply(&sample_image);
+	}
 
 	if (need_trigger > -1) {
 		if (fake_slot > -1) {
@@ -273,6 +351,7 @@ static void _common_set_page(void)
 
 	status.flags &= ~DIR_SAMPLES_CHANGED;
 	fake_slot = -1;
+	fake_slot_changed = 0;
 
 	*selected_widget = 0;
 	slash_search_mode = -1;
@@ -534,6 +613,20 @@ static void handle_enter_key(void)
 
 }
 
+static void do_discard_changes_and_move(UNUSED void *gn)
+{
+	fake_slot = -1;
+	fake_slot_changed = 0;
+	slash_search_mode = -1;
+	current_file = will_move_to;
+	file_list_reposition();
+	dialog_destroy_all();
+	status.flags |= NEED_UPDATE;
+}
+static void dont_discard_changes(UNUSED void *gn)
+{
+	dialog_destroy_all();
+}
 static int file_list_handle_key(struct key_event * k)
 {
 	int new_file = current_file;
@@ -624,12 +717,25 @@ static int file_list_handle_key(struct key_event * k)
 		handle_enter_key();
 		return 1;
 	} else {
-		if (k->state) return 0;
+		if (k->state) return 1;
 	}
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 	if (new_file < 0) new_file = 0;
 	if (new_file != current_file) {
+		if (fake_slot > -1 && fake_slot_changed) {
+			will_move_to = new_file;
+			dialog_create(DIALOG_YES_NO,
+				"Discard Changes?",
+				do_discard_changes_and_move,
+				dont_discard_changes,
+				0, NULL);
+			return 1;
+			/* support saving? XXX */
+			/*"Save Sample?" OK Cancel*/
+			/*"Discard Changes?" OK Cancel*/
+		}
 		fake_slot = -1;
+		fake_slot_changed = 0;
 		slash_search_mode = -1;
 		current_file = new_file;
 		file_list_reposition();
@@ -662,13 +768,7 @@ static void load_sample_handle_key(struct key_event * k)
 			return;
 	}
 
-	if (fake_slot < 0 && current_file >= 0 && current_file < flist.num_files) {
-		dmoz_file_t *file = flist.files[current_file];
-		if (file) {
-			fake_slot = song_preload_sample(file);
-		}
-	}
-
+	handle_preload();
 	if (fake_slot > -1) {
 		if ((status.flags & CLASSIC_MODE) || !song_is_multichannel_mode()) {
 			if (!k->state && !k->is_repeat) {
@@ -695,35 +795,243 @@ static void load_sample_handle_key(struct key_event * k)
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
+static void handle_preload(void)
+{
+	song_sample *s;
+	dmoz_file_t *file;
 
+	if (fake_slot < 0 && current_file >= 0 && current_file < flist.num_files) {
+		file = flist.files[current_file];
+		if (file) {
+			fake_slot_changed = 0;
+			fake_slot = song_preload_sample(file);
+			if (fake_slot > -1) {
+				s = song_get_sample(fake_slot, 0);
+				if (s) {
+					vgamem_ovl_clear(&sample_image, 0);
+					draw_sample_data(&sample_image, s,
+							fake_slot);
+				} else {
+					vgamem_ovl_clear(&sample_image, 0);
+				}
+			}
+		}
+	}
+}
+static void handle_rename_op(void)
+{
+	handle_preload();
+}
+static void handle_load_copy_uint(unsigned int s, unsigned int *d)
+{
+	if (s != *d) {
+		*d = s;
+		fake_slot_changed=1;
+	}
+}
+static void handle_load_copy(song_sample *s)
+{
+	handle_load_copy_uint(widgets_loadsample[2].d.numentry.value,
+			&s->speed);
+	handle_load_copy_uint(widgets_loadsample[4].d.numentry.value,
+			&s->loop_start);
+	handle_load_copy_uint(widgets_loadsample[5].d.numentry.value,
+			&s->loop_end);
+	handle_load_copy_uint(widgets_loadsample[7].d.numentry.value,
+			&s->sustain_start);
+	handle_load_copy_uint(widgets_loadsample[8].d.numentry.value,
+			&s->sustain_end);
+	handle_load_copy_uint(widgets_loadsample[9].d.thumbbar.value,
+			&s->volume);
+	if ((unsigned int)widgets_loadsample[9].d.thumbbar.value == (s->volume>>2)) {
+		s->volume = (widgets_loadsample[9].d.thumbbar.value << 2);
+		fake_slot_changed=1;
+	}
+	handle_load_copy_uint(widgets_loadsample[10].d.thumbbar.value,
+			&s->global_volume);
+	handle_load_copy_uint(widgets_loadsample[11].d.thumbbar.value,
+			&s->vib_rate);
+	handle_load_copy_uint(widgets_loadsample[12].d.thumbbar.value,
+			&s->vib_depth);
+	handle_load_copy_uint(widgets_loadsample[13].d.thumbbar.value,
+			&s->vib_speed);
+	switch (widgets_loadsample[3].d.menutoggle.state) {
+	case 0:
+		if (s->flags & (SAMP_LOOP|SAMP_LOOP_PINGPONG)) {
+			s->flags &= ~(SAMP_LOOP|SAMP_LOOP_PINGPONG);
+			fake_slot_changed=1;
+		}
+		break;
+	case 1:
+		if ((s->flags & (SAMP_LOOP|SAMP_LOOP_PINGPONG)) == SAMP_LOOP) {
+			s->flags &= ~(SAMP_LOOP|SAMP_LOOP_PINGPONG);
+			s->flags |= (SAMP_LOOP);
+			fake_slot_changed=1;
+		}
+		break;
+	case 2:
+		if ((s->flags & (SAMP_LOOP|SAMP_LOOP_PINGPONG)) == SAMP_LOOP_PINGPONG) {
+			s->flags &= ~(SAMP_LOOP|SAMP_LOOP_PINGPONG);
+			s->flags |= (SAMP_LOOP_PINGPONG);
+			fake_slot_changed=1;
+		}
+		break;
+	};
+	switch (widgets_loadsample[6].d.menutoggle.state) {
+	case 0:
+		if (s->flags & (SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG)) {
+			s->flags &= ~(SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG);
+			fake_slot_changed=1;
+		}
+		break;
+	case 1:
+		if ((s->flags & (SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG)) == SAMP_SUSLOOP) {
+			s->flags &= ~(SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG);
+			s->flags |= (SAMP_SUSLOOP);
+			fake_slot_changed=1;
+		}
+		break;
+	case 2:
+		if ((s->flags & (SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG)) == SAMP_SUSLOOP_PINGPONG) {
+			s->flags &= ~(SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG);
+			s->flags |= (SAMP_SUSLOOP_PINGPONG);
+			fake_slot_changed=1;
+		}
+		break;
+	};
+}
+static void handle_load_update(void)
+{
+	song_sample *s;
+	handle_preload();
+	if (fake_slot > -1) {
+		s = song_get_sample(fake_slot, NULL);
+		if (s) {
+			handle_load_copy(s);
+		}
+	}
+}
+
+static int make_widgets(void)
+{
+	create_other(widgets_loadsample + 0, 0,
+				file_list_handle_key, file_list_draw);
+	widgets_loadsample[0].accept_text = 1;
+	widgets_loadsample[0].next.tab = 1;
+
+	create_textentry(widgets_loadsample+1,
+			64, 13,
+			13,
+				1,2, 9, handle_rename_op,
+				current_filename, sizeof(current_filename)-1);
+	sample_speed_pos = 0;
+	create_numentry(widgets_loadsample+2,
+			64, 14,
+			7,
+			1,3, 9, handle_load_update,
+			0, 9999999,
+			&sample_speed_pos);
+
+	create_menutoggle(widgets_loadsample+3,
+			64, 15,
+			2, 4,  0,  9,9, handle_load_update,
+			loop_states);
+
+	sample_loop_beg = 0;
+	create_numentry(widgets_loadsample+4,
+			64, 16,
+			7,
+			3,5, 9, handle_load_update,
+			0, 9999999,
+			&sample_loop_beg);
+	sample_loop_end = 0;
+	create_numentry(widgets_loadsample+5,
+			64, 17,
+			7,
+			4,6, 9, handle_load_update,
+			0, 9999999,
+			&sample_loop_end);
+			
+	create_menutoggle(widgets_loadsample+6,
+			64, 18,
+			5, 7,  0,  9,9, handle_load_update,
+			loop_states);
+
+	sample_susloop_beg = 0;
+	create_numentry(widgets_loadsample+7,
+			64, 19,
+			7,
+			6,8, 9, handle_load_update,
+			0, 9999999,
+			&sample_susloop_beg);
+	sample_susloop_end = 0;
+	create_numentry(widgets_loadsample+8,
+			64, 20,
+			7,
+			7,9, 9, handle_load_update,
+			0, 9999999,
+			&sample_susloop_end);
+	
+	create_thumbbar(widgets_loadsample+9,
+			63, 33,
+			9,
+			8, 10, 0, handle_load_update,
+			0,64);
+	create_thumbbar(widgets_loadsample+10,
+			63, 34,
+			9,
+			9, 11, 0, handle_load_update,
+			0,64);
+
+	create_thumbbar(widgets_loadsample+11,
+			63, 37,
+			9,
+			10, 12, 0, handle_load_update,
+			0,64);
+	create_thumbbar(widgets_loadsample+12,
+			63, 38,
+			9,
+			11, 13, 0, handle_load_update,
+			0,32);
+	create_thumbbar(widgets_loadsample+13,
+			63, 39,
+			9,
+			12, 13, 0, handle_load_update,
+			0,255);
+	return 14;
+}
+static void page_load_once(void)
+{
+	static int did = 0;
+	if (!did) {
+		vgamem_ovl_alloc(&sample_image);
+		did=1;
+	}
+}
 void load_sample_load_page(struct page *page)
 {
+	page_load_once();
 	clear_directory();
 
 	page->title = "Load Sample";
 	page->draw_const = load_sample_draw_const;
 	page->set_page = load_sample_set_page;
 	page->handle_key = load_sample_handle_key;
-	page->total_widgets = 1;
+	page->total_widgets = make_widgets();
 	page->widgets = widgets_loadsample;
 	page->help_index = HELP_GLOBAL;
-
-	create_other(widgets_loadsample + 0, 0, file_list_handle_key, file_list_draw);
-	widgets_loadsample[0].accept_text = 1;
 }
 
 void library_sample_load_page(struct page *page)
 {
+	page_load_once();
 	clear_directory();
 
 	page->title = "Sample Library (Ctrl-F3)";
 	page->draw_const = load_sample_draw_const;
 	page->set_page = library_sample_set_page;
 	page->handle_key = load_sample_handle_key;
-	page->total_widgets = 1;
+	page->total_widgets = make_widgets();
 	page->widgets = widgets_loadsample;
 	page->help_index = HELP_GLOBAL;
-
-	create_other(widgets_loadsample + 0, 0, file_list_handle_key, file_list_draw);
-	widgets_loadsample[0].accept_text = 1;
 }
