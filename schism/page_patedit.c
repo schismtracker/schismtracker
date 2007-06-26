@@ -3909,7 +3909,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (current_row < 0) current_row = 0;
 		if (current_row >= total_rows) current_row = total_rows;
 		np = current_position; nc = current_channel; nr = current_row;
-		for (n = top_display_channel, nx = 0; n <= visible_channels; n++, nx++) {
+		for (n = top_display_channel, nx = 0; nx <= visible_channels; n++, nx++) {
 			track_view = track_views+track_view_scheme[nx];
 			if (((n == top_display_channel && shift_selection.in_progress) || k->x >= basex) && ((n == visible_channels && shift_selection.in_progress) || k->x < basex + track_view->width)) {
 				if (!shift_selection.in_progress && (k->y == 14 || k->y == 13)) {
