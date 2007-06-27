@@ -345,16 +345,11 @@ static void _mp_change(void)
 	_mp_active = 2;
 }
 
-/*
-this isn't used anywhere...?
-	-storlek
-
 static void _mp_finish(UNUSED void *ign)
 {
 	_mp_active = 0;
 	dialog_destroy_all();
 }
-*/
 
 static void minipop_slide(int cv, const char *name,
 			int minv, int maxv,
@@ -483,7 +478,10 @@ static int handle_key_global(struct key_event * k)
 	}
 
 	/* shortcut */
-	if (k->mouse) return 0;
+	if (k->mouse) {
+		_mp_finish(NULL);
+		return 0;
+	}
 
         /* first, check the truly global keys (the ones that still work if
          * a dialog's open) */
@@ -493,9 +491,11 @@ static int handle_key_global(struct key_event * k)
 			if (k->mod & KMOD_SHIFT) {
 				if (!k->state) return 1;
 				status.flags |= CLIPPY_PASTE_BUFFER;
+				_mp_finish(NULL);
 				return 1;
 			} else if (k->mod & KMOD_CTRL) {
 				if (!k->state) return 1;
+				_mp_finish(NULL);
 				clippy_yank();
 				return 1;
 			}
@@ -512,6 +512,7 @@ static int handle_key_global(struct key_event * k)
 		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
 			if ((k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
 				if (k->state) clippy_yank();
+				_mp_finish(NULL);
 				return 1;
 			}
 		}
@@ -522,6 +523,7 @@ static int handle_key_global(struct key_event * k)
 			if ((k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
 				if (!k->state) return 1;
 				status.flags |= CLIPPY_PASTE_BUFFER;
+				_mp_finish(NULL);
 				return 1;
 			}
 		}
@@ -581,6 +583,7 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
 			if (k->state) show_exit_prompt();
                         return 1;
                 }
@@ -589,6 +592,7 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
 			if (k->state) new_song_dialog();
 			return 1;
 		}
@@ -597,6 +601,7 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
 			if (k->state) show_song_timejump();
 			return 1;
 		}
@@ -605,6 +610,7 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
                 if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
                         if (k->state) show_song_length();
                         return 1;
                 }
@@ -614,11 +620,14 @@ static int handle_key_global(struct key_event * k)
 			return 0;
                 if (k->mod & KMOD_CTRL) {
 			if (status.flags & PLAIN_TEXTEDIT) return 0;
+			_mp_finish(NULL);
 			if (!k->state) set_page(PAGE_CONFIG);
                 } else if (k->mod & KMOD_SHIFT) {
 			if (status.flags & PLAIN_TEXTEDIT) return 0;
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_MIDI);
                 } else if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_HELP);
                 } else {
                         break;
@@ -627,6 +636,7 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F2:
 		if (k->mod & KMOD_CTRL) {
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
+				_mp_finish(NULL);
 				if (!k->state) pattern_editor_length_edit();
 				return 1;
 			}
@@ -639,6 +649,7 @@ static int handle_key_global(struct key_event * k)
 						dialog_destroy_all();
 						status.flags |= NEED_UPDATE;
 					} else {
+						_mp_finish(NULL);
 						pattern_editor_display_options();
 					}
 				}
@@ -646,6 +657,7 @@ static int handle_key_global(struct key_event * k)
 				if (status.flags & PLAIN_TEXTEDIT) return 0;
 				if (status.dialog_type != DIALOG_NONE)
 					return 0;
+				_mp_finish(NULL);
 				if (!k->state) set_page(PAGE_PATTERN_EDITOR);
 			}
                         return 1;
@@ -656,8 +668,10 @@ static int handle_key_global(struct key_event * k)
 			return 0;
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
                 if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_SAMPLE_LIST);
                 } else {
+			_mp_finish(NULL);
 			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
                         break;
                 }
@@ -668,9 +682,11 @@ static int handle_key_global(struct key_event * k)
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
                 if (NO_MODIFIER(k->mod)) {
 			if (status.current_page == PAGE_INSTRUMENT_LIST) return 0;
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_INSTRUMENT_LIST);
                 } else {
 			if (k->mod & KMOD_SHIFT) return 0;
+			_mp_finish(NULL);
 			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_INSTRUMENT);
                         break;
                 }
@@ -678,18 +694,22 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F5:
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
                 if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
                         if (!k->state) song_start();
                 } else if (k->mod & KMOD_SHIFT) {
 			if (status.dialog_type != DIALOG_NONE)
 				return 0;
+			_mp_finish(NULL);
                         if (k->state) set_page(PAGE_PREFERENCES);
                 } else if (NO_MODIFIER(k->mod)) {
                         if (song_get_mode() == MODE_STOPPED
 			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
+				_mp_finish(NULL);
 				if (!k->state) song_start();
                         if (!k->state) {
 				if (status.dialog_type != DIALOG_NONE)
 					return 0;
+				_mp_finish(NULL);
 				set_page(PAGE_INFO);
 			}
                 } else {
@@ -699,8 +719,10 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F6:
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
                 if (k->mod & KMOD_SHIFT) {
+			_mp_finish(NULL);
                         if (!k->state) song_start_at_order(get_current_order(), 0);
                 } else if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (!k->state) song_loop_pattern(get_current_pattern(), 0);
                 } else {
                         break;
@@ -709,6 +731,7 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F7:
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
                 if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (!k->state) play_song_from_mark();
                 } else {
                         break;
@@ -717,6 +740,7 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F8:
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
                 if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (!k->state) song_stop();
                         status.flags |= NEED_UPDATE;
                 } else {
@@ -727,8 +751,10 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
                 if (k->mod & KMOD_SHIFT) {
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_MESSAGE);
                 } else if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_LOAD_MODULE);
                 } else {
                         break;
@@ -739,6 +765,7 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
                 if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
                         if (k->state) set_page(PAGE_LOAD_MODULE);
                 } else {
                         break;
@@ -748,6 +775,7 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
         	if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
 			if (k->state) save_song_or_save_as();
         	} else {
         		break;
@@ -758,6 +786,7 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
                 if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
                         if (k->state) set_page(PAGE_SAVE_MODULE);
                 } else {
                         break;
@@ -767,6 +796,7 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
                 if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_SAVE_MODULE);
                 } else {
                         break;
@@ -777,6 +807,7 @@ static int handle_key_global(struct key_event * k)
 			return 0;
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
                 if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (status.current_page == PAGE_ORDERLIST_PANNING) {
                                 if (!k->state) set_page(PAGE_ORDERLIST_VOLUMES);
                         } else {
@@ -784,6 +815,7 @@ static int handle_key_global(struct key_event * k)
                         }
                 } else if (k->mod & KMOD_CTRL) {
                         if (!k->state) {
+				_mp_finish(NULL);
 				if (status.current_page == PAGE_LOG) {
 					show_about();
 				} else {
@@ -791,6 +823,7 @@ static int handle_key_global(struct key_event * k)
 				}
 			}
                 } else if (!k->state && k->mod & KMOD_ALT) {
+			_mp_finish(NULL);
 			if (song_toggle_orderlist_locked())
 				status_text_flash("Order list locked");
 			else
@@ -804,10 +837,13 @@ static int handle_key_global(struct key_event * k)
 			return 0;
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
 		if ((k->mod & KMOD_ALT) && status.current_page == PAGE_INFO) {
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_WATERFALL);
                 } else if (k->mod & KMOD_CTRL) {
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_PALETTE_EDITOR);
                 } else if (NO_MODIFIER(k->mod)) {
+			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_SONG_VARIABLES);
                 } else {
                         break;
@@ -821,6 +857,7 @@ static int handle_key_global(struct key_event * k)
 	case SDLK_SCROLLOCK:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
+		_mp_finish(NULL);
 		if (k->mod & KMOD_ALT) {
 			if (!k->state) {
 				midi_flags ^= (MIDI_DISABLE_RECORD);
@@ -1037,6 +1074,7 @@ void handle_key(struct key_event * k)
 		if (k->state) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
+			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING)
 				song_set_current_order(song_get_current_order() - 1);
 			return;
@@ -1046,6 +1084,7 @@ void handle_key(struct key_event * k)
 		if (k->state) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
+			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING)
 				song_set_current_order(song_get_current_order() + 1);
 			return;
@@ -1062,6 +1101,10 @@ void handle_key(struct key_event * k)
 		    && status.current_page != PAGE_LOAD_SAMPLE
 		    && status.current_page != PAGE_LOAD_INSTRUMENT) {
 			if (k->state) return;
+			if (_mp_active) {
+				_mp_finish(NULL);
+				return;
+			}
 			menu_show();
 			return;
 		}
