@@ -347,8 +347,10 @@ static void _mp_change(void)
 
 static void _mp_finish(UNUSED void *ign)
 {
-	_mp_active = 0;
-	dialog_destroy_all();
+	if (_mp_active) {
+		dialog_destroy_all();
+		_mp_active = 0;
+	}
 }
 
 static void minipop_slide(int cv, const char *name,
