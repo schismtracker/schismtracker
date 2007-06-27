@@ -1135,6 +1135,7 @@ BOOL CSoundFile::ProcessEffects()
 				if (!(param & 0x0F)) param |= pChn->nRetrigParam & 0x0F;
 				param |= 0x100; // increment retrig count on first row
 			}
+			if (pChn->nRowNote && !m_nTickCount) pChn->nRetrigCount = 0;
 			if (param) pChn->nRetrigParam = (BYTE)(param & 0xFF); else param = pChn->nRetrigParam;
 			pChn->nCommand = CMD_RETRIG;
 			RetrigNote(nChn, param);
