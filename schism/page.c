@@ -703,9 +703,10 @@ static int handle_key_global(struct key_event * k)
                         if (k->state) set_page(PAGE_PREFERENCES);
                 } else if (NO_MODIFIER(k->mod)) {
                         if (song_get_mode() == MODE_STOPPED
-			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
+			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)) {
 				_mp_finish(NULL);
 				if (!k->state) song_start();
+			}
                         if (!k->state) {
 				if (status.dialog_type != DIALOG_NONE)
 					return 0;
