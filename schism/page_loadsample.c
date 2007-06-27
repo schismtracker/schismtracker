@@ -225,6 +225,7 @@ static int change_dir(const char *dir)
 static void load_sample_draw_const(void)
 {
 	dmoz_file_t *f;
+	song_sample *s;
 	char sbuf[64];
 	int filled;
 
@@ -317,6 +318,14 @@ static void load_sample_draw_const(void)
 	draw_text((unsigned char *) "Time", 54, 47, 0, 2);
 
 	if (fake_slot > -1) {
+		s = song_get_sample(fake_slot, 0);
+		if (s) {
+			vgamem_ovl_clear(&sample_image, 0);
+			draw_sample_data(&sample_image, s,
+					fake_slot);
+		} else {
+			vgamem_ovl_clear(&sample_image, 0);
+		}
 		vgamem_ovl_apply(&sample_image);
 	}
 
@@ -797,7 +806,6 @@ static void load_sample_handle_key(struct key_event * k)
 /* --------------------------------------------------------------------------------------------------------- */
 static void handle_preload(void)
 {
-	song_sample *s;
 	dmoz_file_t *file;
 
 	if (fake_slot < 0 && current_file >= 0 && current_file < flist.num_files) {
@@ -805,16 +813,6 @@ static void handle_preload(void)
 		if (file) {
 			fake_slot_changed = 0;
 			fake_slot = song_preload_sample(file);
-			if (fake_slot > -1) {
-				s = song_get_sample(fake_slot, 0);
-				if (s) {
-					vgamem_ovl_clear(&sample_image, 0);
-					draw_sample_data(&sample_image, s,
-							fake_slot);
-				} else {
-					vgamem_ovl_clear(&sample_image, 0);
-				}
-			}
 		}
 	}
 }
@@ -908,6 +906,7 @@ static void handle_load_update(void)
 		s = song_get_sample(fake_slot, NULL);
 		if (s) {
 			handle_load_copy(s);
+			song_update_playing_sample(fake_slot);
 		}
 	}
 }
