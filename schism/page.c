@@ -481,7 +481,6 @@ static int handle_key_global(struct key_event * k)
 
 	/* shortcut */
 	if (k->mouse) {
-		_mp_finish(NULL);
 		return 0;
 	}
 
