@@ -2983,9 +2983,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			if (cur_note->volume_effect == VOL_EFFECT_VOLUME)
 				v = cur_note->volume;
 			else
-				v = song_get_instrument_default_volume(
-						cur_note->instrument,
-						cur_note->instrument);
+				v = -1;
 			song_keyrecord(cur_note->instrument,
 				cur_note->instrument,
 				cur_note->note,
@@ -3020,10 +3018,10 @@ static int pattern_editor_insert(struct key_event *k)
 		if (k->sym == SDLK_4) {
 			if (k->state) return 0;
 			
-			if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
-				vol = -1;
-			} else {
+			if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
 				vol = cur_note->volume;
+			} else {
+				vol = -1;
 			}
 			song_keyrecord(cur_note->instrument,
 				cur_note->instrument,
@@ -3071,12 +3069,13 @@ static int pattern_editor_insert(struct key_event *k)
 					i = sample_get_current();
 			}
 
-			if (edit_copy_mask & MASK_VOLUME && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
+			if ((edit_copy_mask & MASK_VOLUME)
+			&& mask_note.volume_effect == VOL_EFFECT_VOLUME) {
 				vol = mask_note.volume;
 			} else if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
-				vol = cur_note->volume; /* er... */
+				vol = cur_note->volume;
 			} else {
-				vol = song_get_instrument_default_volume(i, i);
+				vol = -1;
 			}
 
 			if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
@@ -3084,22 +3083,21 @@ static int pattern_editor_insert(struct key_event *k)
 				if (k->state) {
 					if (!(midi_flags & MIDI_RECORD_NOTEOFF))
 						return 1;
-					j = song_keyup(
-						i,
-						i,
-						n,
-						current_channel-1,
-						channel_multi_base);
-					n = NOTE_OFF;
-				} else {
-					j = song_keydown(
-						-1,
-						-1,
-						n,
-						vol,
-						current_channel-1,
-						channel_multi_base);
 				}
+				j = song_keyup(
+					i,
+					i,
+					n,
+					current_channel-1,
+					channel_multi_base);
+				if (k->state) n = NOTE_OFF;
+				j = song_keydown(
+					i,
+					i,
+					n,
+					vol,
+					current_channel-1,
+					channel_multi_base);
 				if (j == -1) return 1; /* err? */
 				while (j >= 64) j -= 64;
 				if (song_get_mode() & (MODE_PATTERN_LOOP)) {
@@ -3194,9 +3192,6 @@ static int pattern_editor_insert(struct key_event *k)
 					i = instrument_get_current();
 				else
 					i = sample_get_current();
-			}
-			if (vol == -1) {
-				vol = song_get_instrument_default_volume(i, i);
 			}
 			if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
 				vol = cur_note->volume;

@@ -264,7 +264,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			while (chan >= 64) chan -= 64;
 
 			c = mp->Chn + chan;
-			if ((c->pSample || c->nRealtime) && note < 0x80) {
+			if ((c->pSample || c->nRealtime) && note < 0x80
+			&& (mp->m_dwSongFlags & (SONG_ENDREACHED|SONG_PAUSED))) {
 				/* process the previous note */
 				/* (audio thread isn't there yet) */
 				mp->NoteChange(chan, c->nRowNote,
@@ -273,11 +274,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				mp->CheckNNA(chan, ins_mode
 						? ins : samp, note,
 						FALSE);
+
 			}
 
-			if (mp->m_dwSongFlags & (SONG_ENDREACHED|SONG_PAUSED)) {
-				c->nRealtime = 1;
-			}
+			c->nRealtime = 1;
+
 			c->nTickStart = (mp->m_nTickCount+1)
 						% mp->m_nMusicSpeed;
 			c->nRowNote = note;
@@ -738,9 +739,7 @@ void song_single_step(int patno, int row)
 		cx = song_get_mix_channel(i);
 		if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
 		if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
-			vol = song_get_instrument_default_volume(
-						cur_note->instrument,
-						cur_note->instrument);
+			vol = -1;
 		} else {
 			vol = cur_note->volume;
 		}
