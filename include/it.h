@@ -236,6 +236,7 @@ extern const char *note_trans;  /* keyboard.c */
 
 
 extern char *help_text_pointers[HELP_NUM_ITEMS];
+extern int help_text_lastpos[HELP_NUM_ITEMS];
 
 extern int show_default_volumes;	/* pattern-view.c */
 

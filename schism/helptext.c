@@ -28,6 +28,7 @@
 /* --------------------------------------------------------------------- */
 
 char *help_text_pointers[HELP_NUM_ITEMS] = { NULL };
+int help_text_lastpos[HELP_NUM_ITEMS] = {0};
 
 void setup_help_text_pointers(void)
 {
@@ -35,6 +36,7 @@ void setup_help_text_pointers(void)
         char *ptr = (char*)help_text;
 	
         for (n = 0; n < HELP_NUM_ITEMS; n++) {
+		help_text_lastpos[n] = 0;
                 help_text_pointers[n] = ptr;
                 ptr = strchr(ptr, 0) + 1;
         }

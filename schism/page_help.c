@@ -161,6 +161,7 @@ static int help_handle_key(struct key_event * k)
         new_line = CLAMP(new_line, 0, num_lines - 32);
         if (new_line != top_line) {
                 top_line = new_line;
+        	help_text_lastpos[status.current_help_index] = top_line;
                 status.flags |= NEED_UPDATE;
         }
 
@@ -177,7 +178,7 @@ static void help_set_page(void)
         int have_local_help = (status.current_help_index != HELP_GLOBAL);
 
 	change_focus_to(1);
-        top_line = 0;
+        top_line = help_text_lastpos[status.current_help_index];
 
         /* how many lines? */
         global_lines = get_num_lines(help_text_pointers[HELP_GLOBAL]);
