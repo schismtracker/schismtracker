@@ -424,7 +424,6 @@ int song_get_pattern(int n, song_note ** buf);  // return 0 -> error
 byte *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
-int song_get_instrument_default_volume(int ins, int sam);
 
 int song_get_num_orders(void);
 int song_get_num_patterns(void);

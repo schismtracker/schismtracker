@@ -143,14 +143,6 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
         return (song_instrument *) mp->Headers[n];
 }
 
-int song_get_instrument_default_volume(UNUSED int ins, UNUSED int sam)
-{
-	if (song_is_instrument_mode()) return 64;
-	if (sam == -1) return 64;
-// todo (but not really all that soon)
-	return 64;
-}
-
 // this is a fairly gross way to do what should be such a simple thing
 int song_get_instrument_number(song_instrument *inst)
 {
