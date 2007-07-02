@@ -77,7 +77,9 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	int i, n;
 
 	if (!stream || !len || !mp) {
-		vis_work_8m(0,0);
+		if (status.current_page == PAGE_WATERFALL) {
+			vis_work_8m(0,0);
+		}
 		song_stop_unlocked();
 		goto POST_EVENT;
 	}
@@ -87,7 +89,9 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	} else {
         	n = mp->Read(stream, len);
 	        if (!n) {
-			vis_work_8m(0,0);
+			if (status.current_page == PAGE_WATERFALL) {
+				vis_work_8m(0,0);
+			}
 			song_stop_unlocked();
 			goto POST_EVENT;
 		}
