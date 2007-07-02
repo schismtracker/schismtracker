@@ -372,7 +372,7 @@ void draw_widget(struct widget *w, int selected)
         char buf[16] = "Channel 42";
         const char *ptr, *endptr;       /* for the menutoggle */
 	char *str;
-        int n, i, clen, coff;
+        int n, i, j, clen, coff;
         int tfg = selected ? 0 : 2;
         int tbg = selected ? 3 : 0;
 	int drew_cursor = 0;
@@ -451,7 +451,33 @@ void draw_widget(struct widget *w, int selected)
 				draw_text((unsigned char *) str, (w->x+w->width) - strlen(str),
 						w->y, 2, 0);
 			}
-	                if (selected) {
+			j = strlen(str);
+			if (clippy_owner(CLIPPY_SELECT) == w) {
+				clen = w->clip_end - w->clip_start;
+				if (clen < 0) {
+					clen *= -1;
+					coff = w->clip_end;
+				} else {
+					coff = w->clip_start;
+				}
+				for (i = 0; i < clen; i++) {
+					n = coff + i;
+					if (n < 0) continue;
+					if (n >= w->width) break;
+					if (n >= j) break;
+					if (selected && (coff+i) == *w->d.numentry.cursor_pos) {
+						fg = 9;
+						bg = 3;
+						drew_cursor = 1;
+					} else {
+						fg = 3;
+						bg = 8;
+					}
+					draw_char(str[n],
+						((w->x+w->width)-j) + n, w->y, fg, bg);
+				}
+			}
+	                if (selected && !drew_cursor) {
 				while (str[0] && str[1]) str++;
 				if (!str[0]) str[0] = ' ';
 				draw_char(str[0], w->x + (w->width-1),
@@ -461,11 +487,34 @@ void draw_widget(struct widget *w, int selected)
 			draw_text_len(numtostr(w->width, w->d.numentry.value,
 					(unsigned char *) buf),
 					w->width, w->x, w->y, 2, 0);
-	                if (selected) {
+			if (clippy_owner(CLIPPY_SELECT) == w) {
+				clen = w->clip_end - w->clip_start;
+				if (clen < 0) {
+					clen *= -1;
+					coff = w->clip_end;
+				} else {
+					coff = w->clip_start;
+				}
+				for (i = 0; i < clen; i++) {
+					n = coff + i;
+					if (n < 0) continue;
+					if (n >= w->width) break;
+					if (selected && (coff+i) == *w->d.numentry.cursor_pos) {
+						fg = 9;
+						bg = 3;
+						drew_cursor = 1;
+					} else {
+						fg = 3;
+						bg = 8;
+					}
+					draw_char(buf[n], w->x + n, w->y, fg, bg);
+				}
+			}
+	                if (selected && !drew_cursor) {
 				n = *(w->d.numentry.cursor_pos);
 				draw_char(buf[n], w->x + n, w->y, 0, 3);
 			}
-		}
+                }
                 break;
         case WIDGET_THUMBBAR:
 		if (w->d.thumbbar.text_at_min && w->d.thumbbar.min == w->d.thumbbar.value) {

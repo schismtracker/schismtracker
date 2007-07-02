@@ -37,6 +37,16 @@ static void numentry_move_cursor(struct widget *widget, int n)
 	*(widget->d.numentry.cursor_pos) = n;
 	status.flags |= NEED_UPDATE;
 }
+static void numentry_select(struct widget *w)
+{
+	char buffer[64];
+	sprintf(buffer, "%d", w->d.numentry.value);
+	if (w->clip_end < w->clip_start) {
+		clippy_select(w, buffer + w->clip_end, w->clip_start-w->clip_end);
+	} else {
+		clippy_select(w, buffer + w->clip_start, w->clip_end-w->clip_start);
+	}
+}
 static void textentry_select(struct widget *w)
 {
 	if (w->clip_end < w->clip_start) {
@@ -271,7 +281,8 @@ int widget_handle_key(struct key_event * k)
 			n = ((!k->state) && onw) ? 1 : 0;
 			if (widget->depressed != n) status.flags |= NEED_UPDATE;
 			widget->depressed = n;
-			if (current_type != WIDGET_TEXTENTRY) {
+			if (current_type != WIDGET_TEXTENTRY
+			&&  current_type != WIDGET_NUMENTRY) {
 				if (!k->state || !onw) return 1;
 			} else if (!onw) return 1;
 		} else {
@@ -321,13 +332,42 @@ int widget_handle_key(struct key_event * k)
 					widget->clip_start = wx;
 					widget->clip_end = widget->d.textentry.cursor_pos;
 					textentry_select(widget);
-					status.flags |= NEED_UPDATE;
+				} else if (k->state) {
+					clippy_select(0,0,0);
 				}
+				status.flags |= NEED_UPDATE;
 			}
 
 			/* for a text entry, the only thing enter does is run the activate callback.
 			thus, if no activate callback is defined, the key wasn't handled */
 			return (widget->activate != NULL);
+
+		case WIDGET_NUMENTRY:
+			if (status.flags & DISKWRITER_ACTIVE) return 0;
+			if ((k->mouse == MOUSE_CLICK)
+			    && (k->on_target
+				|| (k->state
+				    && widget == clippy_owner(CLIPPY_SELECT)))) {
+				/* position cursor */
+				n = k->x - widget->x;
+				n = CLAMP(n, 0, widget->width - 1);
+				wx = k->sx - widget->x;
+				wx = CLAMP(wx, 0, widget->width - 1);
+				if (n >= widget->width)
+					n = widget->width-1;
+				*widget->d.numentry.cursor_pos = n;
+				if (k->sx != k->x || k->sy != k->y) {
+					widget->clip_start = wx;
+					widget->clip_end = n;
+					numentry_select(widget);
+				} else if (k->state) {
+					clippy_select(0,0,0);
+				}
+				status.flags |= NEED_UPDATE;
+			}
+
+			break;
+
 		case WIDGET_TOGGLEBUTTON:
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
 			if (widget->d.togglebutton.group) {
@@ -432,8 +472,19 @@ int widget_handle_key(struct key_event * k)
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
 		case WIDGET_NUMENTRY:
-			if (!NO_MODIFIER(k->mod))
+			if (k->mod & KMOD_SHIFT) {
+				if (clippy_owner(CLIPPY_SELECT) != widget) {
+					widget->clip_start = *widget->d.numentry.cursor_pos;
+					widget->clip_end = widget->clip_start-1;
+				}
+				widget->clip_end--;
+				if (widget->clip_end < 0) widget->clip_end = 0;
+				numentry_select(widget);
+			} else if (!NO_MODIFIER(k->mod)) {
 				return 0;
+			} else {
+				clippy_select(0,0,0);
+			}
 			numentry_move_cursor(widget, -1);
 			return 1;
 		case WIDGET_TEXTENTRY:
@@ -482,8 +533,20 @@ int widget_handle_key(struct key_event * k)
 		 * changes here and there... */
 		switch (current_type) {
 		case WIDGET_NUMENTRY:
-			if (!NO_MODIFIER(k->mod))
+			if (k->mod & KMOD_SHIFT) {
+				if (clippy_owner(CLIPPY_SELECT) != widget) {
+					widget->clip_start = *widget->d.numentry.cursor_pos;
+					widget->clip_end = widget->clip_start + 1;
+				}
+				widget->clip_end++;
+				if (widget->clip_end >= widget->width)
+					widget->clip_end = widget->width-1;
+				numentry_select(widget);
+			} else if (!NO_MODIFIER(k->mod)) {
 				return 0;
+			} else {
+				clippy_select(0,0,0);
+			}
 			numentry_move_cursor(widget, 1);
 			return 1;
 		case WIDGET_TEXTENTRY:
