@@ -1050,6 +1050,8 @@ extern void vis_init(void);
 int main(int argc, char **argv) NORETURN;
 int main(int argc, char **argv)
 {
+	setup_help_text_pointers();
+
 	vis_init();
 	atexit(schism_shutdown);
 
@@ -1124,7 +1126,6 @@ int main(int argc, char **argv)
 
 	mixer_setup();
 
-	setup_help_text_pointers();
 	load_pages();
 	main_song_changed_cb();
 	
