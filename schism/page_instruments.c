@@ -685,6 +685,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		memused_songchanged();
         }
 
+	clippy_select(0,0,0);
 	if (k->mouse && k->x != k->sx) {
 		song_get_instrument(current_instrument, &name);
 		widgets_general[0].clip_start = (k->sx - 5) + (current_instrument*25);

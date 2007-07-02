@@ -694,6 +694,9 @@ static int message_handle_key_editmode(struct key_event * k)
 	                return 0;
 
 		if (k->state) return 1;
+		if (!doing_drag) {
+			clippy_select(0,0,0);
+		}
         }
 
         if (new_cursor_line != cursor_line) {

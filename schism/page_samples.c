@@ -614,6 +614,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	
 	new_sample = CLAMP(new_sample, 1, _last_vis_sample());
 	new_cursor_pos = CLAMP(new_cursor_pos, 0, 25);
+	clippy_select(0,0,0);
 
 	if (new_sample != current_sample) {
 		sample_set(new_sample);
@@ -621,8 +622,6 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	} else if (new_cursor_pos != sample_list_cursor_pos) {
 		sample_list_cursor_pos = new_cursor_pos;
 		_fix_accept_text();
-	} else {
-		return 1;
 	}
 	if (k->mouse && k->x != k->sx) {
 		song_get_sample(current_sample, &name);
