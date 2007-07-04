@@ -513,74 +513,6 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 			if (dwMemPos >= dwMemLength) break;
 		}
 	}
-	// Read song comments: "TEXT"
-	if ((dwMemPos + 8 < dwMemLength) && (bswapLE32(*((DWORD *)(lpStream+dwMemPos))) == 0x74786574))
-	{
-		UINT len = *((DWORD *)(lpStream+dwMemPos+4));
-		dwMemPos += 8;
-		if ((dwMemPos + len <= dwMemLength) && (len < 16384))
-		{
-			m_lpszSongComments = new char[len+1];
-			if (m_lpszSongComments)
-			{
-				memcpy(m_lpszSongComments, lpStream+dwMemPos, len);
-				m_lpszSongComments[len] = 0;
-			}
-			dwMemPos += len;
-		}
-	}
-	// Read midi config: "MIDI"
-	if ((dwMemPos + 8 < dwMemLength) && (bswapLE32(*((DWORD *)(lpStream+dwMemPos))) == 0x4944494D))
-	{
-		UINT len = *((DWORD *)(lpStream+dwMemPos+4));
-		dwMemPos += 8;
-		if (len == sizeof(MODMIDICFG)) {
-			memcpy(&m_MidiCfg, lpStream+dwMemPos, len);
-			m_dwSongFlags |= SONG_EMBEDMIDICFG;
-		} else {
-			ResetMidiCfg();
-		}
-	} else {
-		ResetMidiCfg();
-	}
-	// Read pattern names: "PNAM"
-	if ((dwMemPos + 8 < dwMemLength) && (bswapLE32(*((DWORD *)(lpStream+dwMemPos))) == 0x4d414e50))
-	{
-		UINT len = *((DWORD *)(lpStream+dwMemPos+4));
-		dwMemPos += 8;
-		if ((dwMemPos + len <= dwMemLength) && (len <= MAX_PATTERNS*MAX_PATTERNNAME) && (len >= MAX_PATTERNNAME))
-		{
-			m_lpszPatternNames = new char[len];
-
-			if (m_lpszPatternNames)
-			{
-				m_nPatternNames = len / MAX_PATTERNNAME;
-				memcpy(m_lpszPatternNames, lpStream+dwMemPos, len);
-			}
-			dwMemPos += len;
-		}
-	}
-	// Read channel names: "CNAM"
-	if ((dwMemPos + 8 < dwMemLength) && (bswapLE32(*((DWORD *)(lpStream+dwMemPos))) == 0x4d414e43))
-	{
-		UINT len = *((DWORD *)(lpStream+dwMemPos+4));
-		dwMemPos += 8;
-		if ((dwMemPos + len <= dwMemLength) && (len <= MAX_BASECHANNELS*MAX_CHANNELNAME))
-		{
-			UINT n = len / MAX_CHANNELNAME;
-			for (UINT i=0; i<n; i++)
-			{
-				memcpy(ChnSettings[i].szName, (lpStream+dwMemPos+i*MAX_CHANNELNAME), MAX_CHANNELNAME);
-				ChnSettings[i].szName[MAX_CHANNELNAME-1] = 0;
-			}
-			dwMemPos += len;
-		}
-	}
-	// Read mix plugins information
-	if (dwMemPos + 8 < dwMemLength)
-	{
-		dwMemPos += LoadMixPlugins(lpStream+dwMemPos, dwMemLength-dwMemPos);
-	}
 	/* set these to default */
 	for (UINT in=0; in<m_nChannels; in++)
 	{
@@ -605,8 +537,13 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 	BYTE smptable[32];
 	BYTE xmph[9];
 	int i, np, ni, no;
+	UINT chanlim;
 
 	if (!fp) return FALSE;
+
+	chanlim = GetHighestUsedChannel();
+	if (chanlim < 4) chanlim = 4;
+
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
 	fp->o(fp, (const unsigned char *)m_szNames[0], 20);
 	s[0] = 0x1A;
@@ -618,7 +555,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 	memset(&header, 0, sizeof(header));
 	header.size = bswapLE32(sizeof(XMFILEHEADER));
 	header.restartpos = bswapLE16(m_nRestartPos);
-	header.channels = bswapLE16(m_nChannels);
+	header.channels = bswapLE16(chanlim);
 	np = 0;
 	no = 0;
 	for (i=0; i<MAX_ORDERS; i++)
@@ -644,15 +581,25 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 	// Writing patterns
 	for (i=0; i<np; i++) if (Patterns[i])
 	{
-		MODCOMMAND *p = Patterns[i];
+		MODCOMMAND *pm = Patterns[i];
 		UINT len = 0;
 
 		memset(&xmph, 0, sizeof(xmph));
 		xmph[0] = 9;
 		xmph[5] = (BYTE)(PatternSize[i] & 0xFF);
 		xmph[6] = (BYTE)(PatternSize[i] >> 8);
-		for (UINT j=m_nChannels*PatternSize[i]; j; j--,p++)
+
+		UINT row = 0;
+		UINT col = 0;
+		for (UINT j=chanlim*PatternSize[i]; j; j--)
 		{
+			MODCOMMAND *p = &pm[col + row*m_nChannels];
+			col++;
+			if (col >= chanlim) {
+				col=0;
+				row++;
+			}
+
 			UINT note = p->note;
 			UINT param = ModSaveCommand(p, TRUE);
 			UINT command = param >> 8;
@@ -866,57 +813,6 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 				if ((flags[ismpd] == RS_ADPCM4) && (xmih.samples>1)) CanPackSample((char*)pins->pSample, pins->nLength, nPacking);
 #endif // NO_PACKING
 				WriteSample(fp, pins, flags[ismpd]);
-			}
-		}
-	}
-	// Writing song comments
-	if ((m_lpszSongComments) && (m_lpszSongComments[0]))
-	{
-		DWORD d = 0x74786574;
-		fp->o(fp, (const unsigned char *)&d, 4);
-		d = strlen(m_lpszSongComments);
-		fp->o(fp, (const unsigned char *)&d, 4);
-		fp->o(fp, (const unsigned char *)m_lpszSongComments, d);
-	}
-	// Writing midi cfg
-	if (m_dwSongFlags & SONG_EMBEDMIDICFG)
-	{
-		DWORD d = 0x4944494D;
-		fp->o(fp, (const unsigned char *)&d, 4);
-		d = sizeof(MODMIDICFG);
-		fp->o(fp, (const unsigned char *)&d, 4);
-		fp->o(fp, (const unsigned char *)&m_MidiCfg, sizeof(MODMIDICFG));
-	}
-	// Writing Pattern Names
-	if ((m_nPatternNames) && (m_lpszPatternNames))
-	{
-		DWORD dwLen = m_nPatternNames * MAX_PATTERNNAME;
-		while ((dwLen >= MAX_PATTERNNAME) && (!m_lpszPatternNames[dwLen-MAX_PATTERNNAME])) dwLen -= MAX_PATTERNNAME;
-		if (dwLen >= MAX_PATTERNNAME)
-		{
-			DWORD d = 0x4d414e50;
-			fp->o(fp, (const unsigned char *)&d, 4);
-			fp->o(fp, (const unsigned char *)&dwLen, 4);
-			fp->o(fp, (const unsigned char *)m_lpszPatternNames, dwLen);
-		}
-	}
-	// Writing Channel Names
-	{
-		UINT nChnNames = 0;
-		for (UINT inam=0; inam<m_nChannels; inam++)
-		{
-			if (ChnSettings[inam].szName[0]) nChnNames = inam+1;
-		}
-		// Do it!
-		if (nChnNames)
-		{
-			DWORD dwLen = nChnNames * MAX_CHANNELNAME;
-			DWORD d = 0x4d414e43;
-			fp->o(fp, (const unsigned char *)&d, 4);
-			fp->o(fp, (const unsigned char *)&dwLen, 4);
-			for (UINT inam=0; inam<nChnNames; inam++)
-			{
-				fp->o(fp, (const unsigned char *)ChnSettings[inam].szName, MAX_CHANNELNAME);
 			}
 		}
 	}
