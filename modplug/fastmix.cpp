@@ -102,7 +102,7 @@ CzCUBICSPLINE::CzCUBICSPLINE( )
 	for(_LIi=0;_LIi<_LLen;_LIi++)
 	{	float _LCm1, _LC0, _LC1, _LC2;
 		float _LX		= ((float)_LIi)*_LFlen;
-		int _LSum,_LIdx	= _LIi<<2;
+		int _LIdx	= _LIi<<2;
 		_LCm1			= (float)floor( 0.5 + _LScale * (-0.5*_LX*_LX*_LX + 1.0 * _LX*_LX - 0.5 * _LX       ) );
 		_LC0			= (float)floor( 0.5 + _LScale * ( 1.5*_LX*_LX*_LX - 2.5 * _LX*_LX             + 1.0 ) );
 		_LC1			= (float)floor( 0.5 + _LScale * (-1.5*_LX*_LX*_LX + 2.0 * _LX*_LX + 0.5 * _LX       ) );
@@ -112,7 +112,7 @@ CzCUBICSPLINE::CzCUBICSPLINE( )
 		lut[_LIdx+2]	= (signed short)( (_LC1  < -_LScale) ? -_LScale : ((_LC1  > _LScale) ? _LScale : _LC1 ) );
 		lut[_LIdx+3]	= (signed short)( (_LC2  < -_LScale) ? -_LScale : ((_LC2  > _LScale) ? _LScale : _LC2 ) );
 #ifdef SPLINE_CLAMPFORUNITY
-		_LSum			= lut[_LIdx+0]+lut[_LIdx+1]+lut[_LIdx+2]+lut[_LIdx+3];
+		int _LSum		= lut[_LIdx+0]+lut[_LIdx+1]+lut[_LIdx+2]+lut[_LIdx+3];
 		if( _LSum != SPLINE_QUANTSCALE )
 		{	int _LMax = _LIdx;
 			if( lut[_LIdx+1]>lut[_LMax] ) _LMax = _LIdx+1;

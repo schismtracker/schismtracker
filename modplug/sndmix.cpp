@@ -473,18 +473,13 @@ BOOL CSoundFile::ReadNote()
 		if (nchn32 < 1) nchn32 = 1;
 		if (nchn32 > 31) nchn32 = 31;
 
-#if 0
-		int nchn32 = (m_nChannels < 32) ? m_nChannels : 31;
-		if ((m_nType & MOD_TYPE_IT) && (m_dwSongFlags & SONG_INSTRUMENTMODE) && (nchn32 < 6)) nchn32 = 6;
-#endif
-
 		int realmastervol = m_nMasterVolume;
 		if (realmastervol > 0x80)
 		{
 			realmastervol = 0x80 + ((realmastervol - 0x80) * (nchn32+4)) / 16;
 		}
 
-		DWORD mastervol = (realmastervol * (m_nSongPreAmp)) >> 6;
+		DWORD mastervol = (realmastervol * (m_nSongPreAmp)) >> 8;
 //		if (mastervol > 0x200) mastervol = 0x200;
 		if ((m_dwSongFlags & SONG_GLOBALFADE) && (m_nGlobalFadeMaxSamples))
 		{
@@ -961,7 +956,7 @@ BOOL CSoundFile::ReadNote()
 			if (pChn && pChn->pHeader && pChn->pHeader->dwFlags & ENV_FILTER)
 			{
 #ifndef NO_FILTER
-				SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE, envpitch, freq);
+				SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE, envpitch);
 #endif // NO_FILTER
 			}
 
