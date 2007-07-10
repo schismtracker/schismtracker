@@ -1718,7 +1718,7 @@ void video_screenshot(void)
 					strerror(errno));
 			return;
 		}
-		data.fp = fopen(fname, "w");
+		data.fp = fopen(fname, "wb");
 		if (!data.fp) {
 			log_appendf(4, "Cannot open %s for writing: %s",fname,
 					strerror(errno));
