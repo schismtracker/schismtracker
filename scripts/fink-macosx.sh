@@ -31,3 +31,4 @@ cp ../ChangeLog root/ChangeLog.txt || exit 1
 
 cd root
 hdiutil create -srcfolder . "../Schism Tracker.dmg" -ov -volname 'Schism Tracker CVS'
+hdiutil internet-enable -yes "../Schism Tracker.dmg"
