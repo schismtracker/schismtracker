@@ -442,6 +442,7 @@ static void song_reset_play_state()
 		c->pInstrument = NULL;
 		c->pSample = NULL;
 		c->pHeader = NULL;
+		c->nRealtime = 0;
 		c->nResonance = 0;
 		c->nCutOff = 0x7F;
 		c->nVolume = 256;
