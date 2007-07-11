@@ -148,6 +148,9 @@ unsigned int i_sqrt(unsigned int r);
 /* sleep in msec */
 void ms_sleep(unsigned int m);
 
+/* runs a hook */
+int run_hook(const char *dir, const char *name, const char *maybe_arg);
+
 #ifdef __cplusplus
 }
 #endif
