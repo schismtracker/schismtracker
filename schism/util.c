@@ -48,6 +48,7 @@ extraneous libraries (i.e. GLib). */
 
 #ifdef WIN32
 #include <windows.h>
+#include <process.h>
 #endif
 
 void ms_sleep(unsigned int ms)
@@ -640,4 +641,42 @@ unsigned int i_sqrt(unsigned int r)
 		}
 	}
 	return(c);
+}
+
+int run_hook(const char *dir, const char *name, const char *maybe_arg)
+{
+#ifdef WIN32
+	char buf[PATH_MAX];
+	int r;
+	if (!GetCurrentDirectory(PATH_MAX-1,buf)) return 0;
+	if (chdir(dir) == -1) return 0;
+	r = _spawnl(_P_WAIT, name, name, maybe_arg);
+	(void)SetCurrentDirectory(buf);
+	(void)chdir(buf);
+	if (r == 0) return 1;
+	return 0;
+#else
+	extern char **environ;
+
+	char *tmp;
+	char *argv[3];
+	int st;
+
+	switch (fork()) {
+	case -1: return 0;
+	case 0:
+		if (chdir(dir) == -1) exit(255);
+		tmp = malloc(strlen(name)+4);
+		if (!tmp) exit(255);
+		sprintf(tmp, "./%s", name);
+		argv[0] = tmp;
+		argv[1] = maybe_arg;
+		argv[2] = 0;
+		execve(tmp, argv, environ);
+		exit(255);
+	};
+	while (wait(&st) == -1);
+	if (WIFEXITED(st) && WEXITSTATUS(st) == 0) return 1;
+	return 0;
+#endif
 }

@@ -233,25 +233,16 @@ static void handle_active_event(SDL_ActiveEvent * a)
 #if ENABLE_HOOKS
 static void run_startup_hook(void)
 {
-	char *ptr = dmoz_path_concat(cfg_dir_dotschism, "startup-hook");
-	if (access(ptr, X_OK) == 0)
-		system(ptr);
-	free(ptr);
+	run_hook(cfg_dir_dotschism,"startup-hook",0);
 }
 static void run_diskwriter_complete_hook(void)
 {
-	char *ptr = dmoz_path_concat(cfg_dir_dotschism, "diskwriter-hook");
-	if (access(ptr, X_OK) == 0)
-		system(ptr);
-	free(ptr);
+	run_hook(cfg_dir_dotschism,"diskwriter-hook",0);
 }
 
 static void run_exit_hook(void)
 {
-	char *ptr = dmoz_path_concat(cfg_dir_dotschism, "exit-hook");
-	if (access(ptr, X_OK) == 0)
-		system(ptr);
-	free(ptr);
+	run_hook(cfg_dir_dotschism,"exit-hook",0);
 }
 #endif
 
