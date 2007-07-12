@@ -41,7 +41,7 @@ there are only two changes between 8- and 16-bit samples:
 - the amount to divide (note though, this number is used twice!) */
 
 /* do we need 'channels' here? */
-static void _draw_sample_data_8(struct vgamem_overlay *r,
+static void _draw_sample_data_8(int boost, struct vgamem_overlay *r,
 	signed char *data, unsigned long length, int channels) // 8/16
 {
 	unsigned long pos;
@@ -54,14 +54,14 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 	length /= channels;
 
 	for (cc = 0; cc < channels; cc++) {
-		level = (data[cc] * nh) / (SCHAR_MAX - SCHAR_MIN + 1);
+		level = (data[cc] * nh * boost) / (SCHAR_MAX - SCHAR_MIN + 1);
 		xs = 0;
 		ys = (np - 1) - level;
 		if (ys < 0) ys = 0;
 		if (ys >= r->height) ys = r->height;
 		step = MAX(1, (length / r->width) >> 8);
 		for (pos = channels+cc; pos < length; pos += step) {
-			level = (data[(pos*channels)+cc] * nh)
+			level = (data[(pos*channels)+cc] * nh * boost)
 					/ (SCHAR_MAX - SCHAR_MIN + 1);
 			xe = pos * r->width / length;
 			ye = (np - 1) - level;
@@ -79,7 +79,7 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 }
 
 /* again, do we need 'channels'? */
-static void _draw_sample_data_16(struct vgamem_overlay *r,
+static void _draw_sample_data_16(int boost, struct vgamem_overlay *r,
 	 signed short *data, unsigned long length, int channels)
 {
 	unsigned long pos;
@@ -92,14 +92,14 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 	length /= channels;
 
 	for (cc = 0; cc < channels; cc++) {
-		level = (data[cc] * nh) / (SHRT_MAX - SHRT_MIN + 1);
+		level = (data[cc] * nh * boost) / (SHRT_MAX - SHRT_MIN + 1);
 		xs = 0;
 		ys = (np - 1) - level;
 		if (ys < 0) ys = 0;
 		if (ys >= r->height) ys = r->height;
 		step = MAX(1, (length / r->width) >> 8);
 		for (pos = channels+cc; (pos+cc) < length; pos += step) {
-			level = (data[(pos*channels)+cc] * nh)
+			level = (data[(pos*channels)+cc] * nh * boost)
 					/ (SHRT_MAX - SHRT_MIN + 1);
 			xe = pos * r->width / length;
 			ye = (np - 1) - level;
@@ -236,11 +236,11 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int 
 	
 	/* do the actual drawing */
 	if (sample->flags & SAMP_16_BIT)
-		_draw_sample_data_16(r, (signed short *) sample->data,
+		_draw_sample_data_16(1, r, (signed short *) sample->data,
                                              sample->length,
 				sample->flags & SAMP_STEREO ? 2 : 1);
 	else
-		_draw_sample_data_8(r, sample->data, sample->length,
+		_draw_sample_data_8(1, r, sample->data, sample->length,
 				sample->flags & SAMP_STEREO ? 2 : 1);
 
         if ((status.flags & CLASSIC_MODE) == 0)
@@ -253,12 +253,12 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int 
 void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data, int length, unsigned int channels)
 {
 	vgamem_ovl_clear(r, 0);
-	_draw_sample_data_16(r, data, length, channels);
+	_draw_sample_data_16(16, r, data, length, channels);
 	vgamem_ovl_apply(r);
 }
 void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int length, unsigned int channels)
 {
 	vgamem_ovl_clear(r, 0);
-	_draw_sample_data_8(r, data, length, channels);
+	_draw_sample_data_8(16, r, data, length, channels);
 	vgamem_ovl_apply(r);
 }
