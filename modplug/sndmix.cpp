@@ -253,10 +253,10 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 MixDone:
 	if (lRead) memset(lpBuffer, (gnBitsPerSample == 8) ? 0x80 : 0, lRead * lSampleSize);
 	// VU-Meter
-	vu_min[0] >>= (24-MIXING_ATTENUATION);
-	vu_min[1] >>= (24-MIXING_ATTENUATION);
-	vu_max[0] >>= (24-MIXING_ATTENUATION);
-	vu_max[1] >>= (24-MIXING_ATTENUATION);
+	vu_min[0] >>= 18;
+	vu_min[1] >>= 18;
+	vu_max[0] >>= 18;
+	vu_max[1] >>= 18;
 	if (vu_max[0] < vu_min[0]) vu_max[0] = vu_min[0];
 	if (vu_max[1] < vu_min[1]) vu_max[1] = vu_min[1];
 	if ((gnVULeft = (UINT)(vu_max[0] - vu_min[0])) > 0xFF)
