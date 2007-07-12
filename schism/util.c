@@ -52,8 +52,9 @@ extraneous libraries (i.e. GLib). */
 #else
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <unistd.h>
 #endif
+
+extern char **environ;
 
 void ms_sleep(unsigned int ms)
 {
