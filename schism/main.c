@@ -894,6 +894,8 @@ static void event_loop(void)
 						set_page(PAGE_LIBRARY_INSTRUMENT);
 					} else if (strcasecmp(event.user.data1, "preferences") == 0) {
 						set_page(PAGE_PREFERENCES);
+					} else if (strcasecmp(event.user.data1, "system_config") == 0) {
+						set_page(PAGE_CONFIG);
 					} else if (strcasecmp(event.user.data1, "midi_config") == 0) {
 						set_page(PAGE_MIDI);
 					} else if (strcasecmp(event.user.data1, "palette_page") == 0) {
