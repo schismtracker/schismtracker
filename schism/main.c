@@ -83,7 +83,7 @@ unsigned key_repeat_rate(void);
 unsigned key_repeat_delay(void);
 #endif
 
-#if !defined(WIN32) && !defined(__amigaos4__)
+#if !defined(__amigaos4__)
 # define ENABLE_HOOKS 1
 #endif
 
