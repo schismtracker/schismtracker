@@ -561,6 +561,14 @@ char *get_home_directory(void)
 #ifdef WIN32
 	if (!ptr) /* let $HOME override %APPDATA% on win32... */
 		ptr = getenv("APPDATA");
+	if (!ptr) {
+		/* WINE doesn't set %APPDATA% */
+		ptr = getenv("USERPROFILE");
+		if (ptr) {
+			snprintf(buf, PATH_MAX, "%s/Application Data", ptr);
+			ptr = buf;
+		}
+	}
 #endif
 	if (ptr)
 		return str_dup(ptr);
@@ -646,11 +654,14 @@ unsigned int i_sqrt(unsigned int r)
 int run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #ifdef WIN32
-	char buf[PATH_MAX];
+	char buf[PATH_MAX], *ptr;
 	int r;
+
 	if (!GetCurrentDirectory(PATH_MAX-1,buf)) return 0;
 	if (chdir(dir) == -1) return 0;
-	r = _spawnl(_P_WAIT, name, name, maybe_arg);
+	ptr = getenv("COMSPEC");
+	if (!ptr) ptr = "command.com";
+	r = _spawnlp(_P_WAIT, ptr, ptr, "/c", name, maybe_arg, 0);
 	(void)SetCurrentDirectory(buf);
 	(void)chdir(buf);
 	if (r == 0) return 1;
