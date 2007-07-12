@@ -49,6 +49,10 @@ extraneous libraries (i.e. GLib). */
 #ifdef WIN32
 #include <windows.h>
 #include <process.h>
+#else
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 void ms_sleep(unsigned int ms)
@@ -604,7 +608,6 @@ void unset_env_var(const char *key)
 	(void)unsetenv(key);
 #else
 	/* assume POSIX-style semantics */
-	extern char **environ;
 	int i, j;
 
 	/* may leak memory */
@@ -667,8 +670,6 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	if (r == 0) return 1;
 	return 0;
 #else
-	extern char **environ;
-
 	char *tmp;
 	char *argv[3];
 	int st;
@@ -681,7 +682,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 		if (!tmp) exit(255);
 		sprintf(tmp, "./%s", name);
 		argv[0] = tmp;
-		argv[1] = maybe_arg;
+		argv[1] = (void*)maybe_arg;
 		argv[2] = 0;
 		execve(tmp, argv, environ);
 		exit(255);
