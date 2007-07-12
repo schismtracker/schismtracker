@@ -317,10 +317,16 @@ static void setApplicationMenu(void)
 				action:@selector(_menu_callback:)
 				keyEquivalent:@""];
 	[menuItem setRepresentedObject: @"font_editor"];
+	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"System Configuration"
+				action:@selector(_menu_callback:)
+				keyEquivalent:KEQ_FN(1)];
+	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
+	[menuItem setRepresentedObject: @"system_config"];
+
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Toggle Fullscreen"
 				action:@selector(_menu_callback:)
 				keyEquivalent:@"\r"];
-	[menuItem setKeyEquivalentModifierMask:(NSControlKeyMask|NSOptionKeyMask)];
+	[menuItem setKeyEquivalentModifierMask:(NSControlKeyMask|NSAlternateKeyMask)];
 	[menuItem setRepresentedObject: @"fullscreen"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
