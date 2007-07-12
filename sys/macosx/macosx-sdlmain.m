@@ -320,7 +320,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Toggle Fullscreen"
 				action:@selector(_menu_callback:)
 				keyEquivalent:@"\r"];
-	[menuItem setKeyEquivalentModifierMask:(NSControlKeyMask|NSCommandKeyMask)];
+	[menuItem setKeyEquivalentModifierMask:(NSControlKeyMask|NSOptionKeyMask)];
 	[menuItem setRepresentedObject: @"fullscreen"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
