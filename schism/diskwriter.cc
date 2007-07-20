@@ -35,33 +35,6 @@
 #include <fcntl.h>
 #include <errno.h>
 
-/*
-
-This is a hack:
-
-I don't actually know why times3 seems to make linked samples sound pretty close;
-It might not work with all songs- just the ones I'm playing with. But this'll do
-for now...
-
-
-Sounds about right. I multiplied modplug's output by three ... somewhere ...
-to get it sounding closer to Impulse Tracker's mixing volume.
-Anyway, this doesn't seem to be used anywhere so I'm commenting it out.
-
-/storlek
-
-*/
-#if 0
-static void _dw_times_3(int *buffer, unsigned long samples, unsigned long channels)
-{
-	unsigned long i;
-	for (i = 0; i < samples*channels; i++) {
-		buffer[i] = buffer[i] * 3;
-	}
-}
-#endif
-
-
 /* this buffer is used for diskwriting; stdio seems to use a much
  * smaller buffer which is PAINFULLY SLOW on devices with -o sync
  */
