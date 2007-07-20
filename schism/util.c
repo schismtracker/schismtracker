@@ -678,15 +678,15 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	switch (fork()) {
 	case -1: return 0;
 	case 0:
-		if (chdir(dir) == -1) exit(255);
+		if (chdir(dir) == -1) _exit(255);
 		tmp = malloc(strlen(name)+4);
-		if (!tmp) exit(255);
+		if (!tmp) _exit(255);
 		sprintf(tmp, "./%s", name);
 		argv[0] = tmp;
 		argv[1] = (void*)maybe_arg;
 		argv[2] = 0;
 		execve(tmp, argv, environ);
-		exit(255);
+		_exit(255);
 	};
 	while (wait(&st) == -1);
 	if (WIFEXITED(st) && WEXITSTATUS(st) == 0) return 1;
