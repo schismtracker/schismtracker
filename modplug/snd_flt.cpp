@@ -93,12 +93,10 @@ void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modif
 	int cutoff = pChn->nCutOff * 2;
 	cutoff *= (flt_modifier+256) / 2;
 	cutoff /= 256;
-	cutoff &= 0xFF;
+	if (cutoff>=255) cutoff=255;
 
-	int resonance = pChn->nResonance*2;
-	resonance *= (flt_modifier+256) / 2;
-	resonance /= 256;
-	resonance &= 0xFF;
+	int resonance = pChn->nResonance;
+	if (resonance>=255) resonance=255;
 
         float fc = (float)filter_cutoff[cutoff];
         float fs = (float)gdwMixingFreq;
@@ -106,7 +104,7 @@ void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modif
         float d2, d, e;
 
         fc *= 3.14159265358979 * 2 / fs;
-        d2 = ((float)dmpfac[resonance]) / 32768;
+        d2 = ((float)dmpfac[resonance]) / 65536.0;
         d = (1.0 - d2) * fc;
 
         if (d > 2.0)
