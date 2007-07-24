@@ -136,6 +136,11 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
 		_init_envelope(&mp->Headers[n]->VolEnv, 64);
 		_init_envelope(&mp->Headers[n]->PanEnv, 32);
 		_init_envelope(&mp->Headers[n]->PitchEnv, 32);
+
+		int i;
+		for (i = 0; i < 128; i++) {
+			mp->Headers[n]->NoteMap[i] = i+1;
+		}
         }
 	
         if (name_ptr)
