@@ -609,23 +609,7 @@ void unset_env_var(const char *key)
 	(void)unsetenv(key);
 #else
 	/* assume POSIX-style semantics */
-	int i, j;
-
-	/* may leak memory */
-	if (!environ) return;
-	for (i = 0; environ[i]; i++) {
-		for (j = 0; environ[i][j] != '='
-				&& environ[i][j] && key[j]; j++)
-			if (key[j] != environ[i][j]) break;
-		if (key[j] == '\0' && environ[i][j] == '=') {
-			/* remove this entry */
-			for (j = i+1; environ[j]; j++) {
-				environ[j-1] = environ[j];
-			}
-			environ[j-1] = 0;
-			return;
-		}
-	}
+	(void)putenv(key);
 #endif
 }
 
