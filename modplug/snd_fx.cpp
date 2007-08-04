@@ -2240,9 +2240,8 @@ void CSoundFile::RetrigNote(UINT nChn, UINT param)
 				nRetrigCount++;
 			}
 		} else {
+			if ((nRetrigCount) && (!(nRetrigCount % nRetrigSpeed))) bDoRetrig = TRUE;
 			nRetrigCount++;
-			if ((nRetrigCount) && (!(nRetrigCount % nRetrigSpeed)))
-				bDoRetrig = TRUE;
 		}
 	} else {
 		UINT realspeed = nRetrigSpeed;
