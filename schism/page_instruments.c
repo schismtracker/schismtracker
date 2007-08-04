@@ -52,6 +52,9 @@ static struct widget widgets_volume[17];
 static struct widget widgets_panning[19];
 static struct widget widgets_pitch[20];
 
+static int note_sample_mask = 1;    /* toggled when pressing "," on the note table's sample field
+                                       more of a boolean than a bit mask  -delt. */
+
 static struct widget *get_page_widgets(void)
 {
 	switch (instrument_list_subpage) {
@@ -755,6 +758,39 @@ static void note_trans_draw(void)
                                 draw_char(buf[1], 41, 16 + pos, 0, 3);
                 }
         }
+
+        /* draw the little mask thingy at the bottom. Could optimize this....  -delt. */
+        if (is_selected)
+        { /* argh, ugly indentation.... */
+                switch (note_trans_cursor_pos)
+                {
+                        case 0:
+                        	draw_char (171, 36, 48, 3, 2);
+                        	draw_char (171, 37, 48, 3, 2);
+                        	draw_char (169, 38, 48, 3, 2);
+                                if (note_sample_mask)
+                                	{
+                        		draw_char (169, 40, 48, 3, 2);
+                        		draw_char (169, 41, 48, 3, 2);
+                                        }
+                        	break;
+                                
+                        case 1:
+                        	draw_char (169, 38, 48, 3, 2);
+                                if (note_sample_mask)
+                                	{
+                        		draw_char (170, 40, 48, 3, 2);
+                        		draw_char (170, 41, 48, 3, 2);
+                                        }
+                        break;
+                        
+                        case 2:
+                        case 3:
+                        	draw_char (note_sample_mask ? 171 : 169, 40, 48, 3, 2);
+                        	draw_char (note_sample_mask ? 171 : 169, 41, 48, 3, 2);
+                        break;
+		}
+	}
 }
 
 static void instrument_note_trans_transpose(song_instrument *ins, int dir)
@@ -877,6 +913,8 @@ static int note_trans_handle_key(struct key_event * k)
 		switch (k->sym) {
 		case SDLK_UP:
 			if (k->state) return 0;
+                        if (k->mod & KMOD_CTRL)
+                        	sample_set (sample_get_current () - 1);
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			if (--new_line < 0) {
@@ -886,6 +924,8 @@ static int note_trans_handle_key(struct key_event * k)
 			break;
 		case SDLK_DOWN:
 			if (k->state) return 0;
+                        if (k->mod & KMOD_CTRL)
+                        	sample_set (sample_get_current () + 1);
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_line++;
@@ -964,7 +1004,8 @@ static int note_trans_handle_key(struct key_event * k)
 				if (n <= 0 || n > 120)
 					return 0;
 				ins->note_map[note_trans_sel_line] = n;
-				ins->sample_map[note_trans_sel_line] = sample_get_current();
+                                if (note_sample_mask)
+					ins->sample_map[note_trans_sel_line] = sample_get_current();
 				new_line++;
 				break;
 			case 1:        /* octave */
@@ -995,7 +1036,8 @@ static int note_trans_handle_key(struct key_event * k)
 					break;
 					}
                                 if (k -> sym == SDLK_COMMA)
-                                	break;
+                                	note_sample_mask = note_sample_mask ? 0 : 1;
+                                        break;
                                         
 				/* c = kbd_char_to_hex(k); */
                                 c = 0; k -> unicode = toupper (k -> unicode);
