@@ -1135,9 +1135,11 @@ BOOL CSoundFile::ProcessEffects()
 				if (!(param & 0x0F)) param |= pChn->nRetrigParam & 0x0F;
 				param |= 0x100; // increment retrig count on first row
 			}
-			if (pChn->nRowNote && !m_nTickCount) pChn->nRetrigCount = 0;
+			// various bits of retriggery commented out here & below, reverting to old method...
+			// -Storlek 04aug07
+			// if (pChn->nRowNote && !m_nTickCount) pChn->nRetrigCount = 0;
 			if (param) pChn->nRetrigParam = (BYTE)(param & 0xFF); else param = pChn->nRetrigParam;
-			pChn->nCommand = CMD_RETRIG;
+			// pChn->nCommand = CMD_RETRIG;
 			RetrigNote(nChn, param);
 			break;
 
@@ -2230,16 +2232,19 @@ void CSoundFile::RetrigNote(UINT nChn, UINT param)
 	if (m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT))
 	{
 		if (!nRetrigSpeed) nRetrigSpeed = 1;
-		if (nRetrigCount >= nRetrigSpeed)
-		{
-			bDoRetrig = TRUE;
-			nRetrigCount = 0;
-		} else
-		{
+		if (m_nMusicSpeed < nRetrigSpeed) {
+			if (nRetrigCount >= nRetrigSpeed) {
+				bDoRetrig = TRUE;
+				nRetrigCount = 0;
+			} else {
+				nRetrigCount++;
+			}
+		} else {
 			nRetrigCount++;
+			if ((nRetrigCount) && (!(nRetrigCount % nRetrigSpeed)))
+				bDoRetrig = TRUE;
 		}
-	} else
-	{
+	} else {
 		UINT realspeed = nRetrigSpeed;
 		if ((param & 0x100) && (pChn->nRowVolCmd == VOLCMD_VOLUME) && (pChn->nRowParam & 0xF0)) realspeed++;
 		if ((m_nTickCount) || (param & 0x100))
