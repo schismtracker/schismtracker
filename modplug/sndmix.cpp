@@ -327,8 +327,14 @@ BOOL CSoundFile::ProcessRow()
 			m_dwSongFlags |= SONG_PAUSED;
 		}
 #endif // MODPLUG_TRACKER
+		if (!PatternSize[m_nPattern] || !Patterns[m_nPattern]) {
+			/* okay, this is wrong. allocate the pattern _NOW_ */
+			Patterns[m_nPattern] = AllocatePattern(64,64);
+			PatternSize[m_nPattern] = 64;
+			PatternAllocSize[m_nPattern] = 64;
+		}
 		// Weird stuff?
-		if ((m_nPattern >= MAX_PATTERNS) || (!Patterns[m_nPattern])) return FALSE;
+		if (m_nPattern >= MAX_PATTERNS) return FALSE;
 		// Should never happen
 		// ... sure it should: suppose there's a C70 effect before a 64-row pattern.
 		// It's in fact very easy to make this happen ;)
