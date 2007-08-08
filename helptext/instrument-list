@@ -34,6 +34,7 @@
 |   Alt-P           Enter previous note
 |   Alt-Up/Down     Transpose all notes a semitone up/down
 |   Alt-Ins/Del     Insert/Delete a row from the table
+:   , (Comma)       Toggle edit mask for current field
 |
 | Envelope Keys.
 |   Enter           Pick up/Drop current node
