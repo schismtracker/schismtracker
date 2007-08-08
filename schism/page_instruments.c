@@ -1025,12 +1025,12 @@ static int note_trans_handle_key(struct key_event * k)
 					break;
 				}
                                 
-				if (k->sym == SDLK_PERIOD || k->sym == SDLK_DELETE) {
+				if ((k->sym == SDLK_PERIOD && NO_MODIFIER(k->mod)) || k->sym == SDLK_DELETE) {
 					ins->sample_map[note_trans_sel_line] = 0;
 					new_line += (k->sym == SDLK_PERIOD) ? 1 : 0;
 					break;
 				}
-				if (k->sym == SDLK_COMMA) {
+				if (k->sym == SDLK_COMMA && NO_MODIFIER(k->mod)) {
 					note_sample_mask = note_sample_mask ? 0 : 1;
                                         break;
 				}
@@ -1970,11 +1970,19 @@ static void instrument_list_handle_key(struct key_event * k)
 {
         switch (k->sym) {
 	case SDLK_COMMA:
+		if (NO_MODIFIER(k->mod)) {
+	        	if (!(status.flags & CLASSIC_MODE)
+			&& ACTIVE_PAGE.selected_widget == 5) return;
+		}
 	case SDLK_LESS:
 		if (k->state) return;
 		song_change_current_play_channel(-1, 0);
 		return;
 	case SDLK_PERIOD:
+		if (NO_MODIFIER(k->mod)) {
+	        	if (!(status.flags & CLASSIC_MODE)
+			&& ACTIVE_PAGE.selected_widget == 5) return;
+		}
 	case SDLK_GREATER:
 		if (k->state) return;
 		song_change_current_play_channel(1, 0);
