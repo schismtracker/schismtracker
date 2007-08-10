@@ -1987,8 +1987,13 @@ static void clipboard_paste_overwrite(int suppress, int grow)
 		num_rows = clipboard.rows;
 
 	if (clipboard.rows > num_rows && grow) {
-		status_text_flash("Resized pattern %d to %d rows", current_pattern, clipboard.rows);
-		song_pattern_resize(current_pattern, clipboard.rows);
+		if (current_row+clipboard.rows > 200) {
+			status_text_flash("Resized pattern %d, but clipped to 200 rows", current_pattern, clipboard.rows);
+			song_pattern_resize(current_pattern, 200);
+		} else {
+			status_text_flash("Resized pattern %d to %d rows", current_pattern, current_row+clipboard.rows);
+			song_pattern_resize(current_pattern, current_row+clipboard.rows);
+		}
 	}
 
 	chan_width = clipboard.channels;
