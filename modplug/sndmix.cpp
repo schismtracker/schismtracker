@@ -485,7 +485,7 @@ BOOL CSoundFile::ReadNote()
 			realmastervol = 0x80 + ((realmastervol - 0x80) * (nchn32+4)) / 16;
 		}
 
-		DWORD mastervol = (realmastervol * (m_nSongPreAmp)) >> 8;
+		DWORD mastervol = (realmastervol * (m_nSongPreAmp)) >> 6;
 //		if (mastervol > 0x200) mastervol = 0x200;
 		if ((m_dwSongFlags & SONG_GLOBALFADE) && (m_nGlobalFadeMaxSamples))
 		{
