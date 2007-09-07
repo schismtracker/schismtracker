@@ -148,8 +148,8 @@ CzCUBICSPLINE sspline;
 // quantizer scale of window coefs
 #define WFIR_QUANTBITS		15
 #define WFIR_QUANTSCALE		(1L<<WFIR_QUANTBITS)
-#define WFIR_8SHIFT			(WFIR_QUANTBITS-8)
-#define WFIR_16BITSHIFT		(WFIR_QUANTBITS)
+#define WFIR_8SHIFT			(WFIR_QUANTBITS-7)
+#define WFIR_16BITSHIFT		(WFIR_QUANTBITS+1)
 // log2(number)-1 of precalculated taps range is [4..12]
 #define WFIR_FRACBITS		10
 #define WFIR_LUTLEN			((1L<<(WFIR_FRACBITS+1))+1)
@@ -168,7 +168,7 @@ CzCUBICSPLINE sspline;
 #define WFIR_BLACKMAN4T92	5
 #define WFIR_BLACKMAN4T74	6
 #define WFIR_KAISER4T		7
-#define WFIR_TYPE		WFIR_BLACKMANEXACT
+#define WFIR_TYPE		WFIR_KAISER4T
 // wfir help
 #ifndef M_zPI
 #define M_zPI		3.1415926535897932384626433832795
