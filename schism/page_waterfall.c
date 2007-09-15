@@ -30,6 +30,16 @@
 #define FUDGE_256_TO_WIDTH	4
 #define SCOPE_ROWS	32
 
+
+/* consts */
+#define FFT_BUFFER_SIZE_LOG	9
+#define FFT_BUFFER_SIZE		512 /*(1 << FFT_BUFFER_SIZE_LOG)*/
+#define FFT_OUTPUT_SIZE		256 /* FFT_BUFFER_SIZE/2 */
+#define PI      ((double)3.14159265358979323846)
+
+short current_fft_data[2][FFT_OUTPUT_SIZE];
+
+
 void vis_init(void);
 void vis_work_16s(short *in, int inlen);
 void vis_work_16m(short *in, int inlen);
@@ -43,12 +53,6 @@ static int gain = -5;
 /* get the _whole_ display */
 static struct vgamem_overlay ovl = { 0, 0, 79, 49,
 					0,0,0,0 };
-
-/* consts */
-#define FFT_BUFFER_SIZE_LOG	9
-#define FFT_BUFFER_SIZE		512 /*(1 << FFT_BUFFER_SIZE_LOG)*/
-#define FFT_OUTPUT_SIZE		256 /* FFT_BUFFER_SIZE/2 */
-#define PI      ((double)3.14159265358979323846)
 
 /* tables */
 static unsigned int bit_reverse[FFT_BUFFER_SIZE];
@@ -166,7 +170,7 @@ static inline void _drawslice(int x, int h, int c)
 		x, NATIVE_SCREEN_HEIGHT-((h>>10) & (SCOPE_ROWS-1)),
 		x, NATIVE_SCREEN_HEIGHT, c);
 }
-static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
+static void _vis_process(void)
 {
 	unsigned char *q;
 	int i, j, k;
@@ -182,11 +186,12 @@ static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 
 	if (mono) {
 		for (i = 0; i < FFT_OUTPUT_SIZE; i++)
-			f[0][i] = (f[0][i] + f[1][i]) / 2;
-		_dobits(q, f[0], 1, 1);
+			current_fft_data[0][i] = (current_fft_data[0][i]
+					+ current_fft_data[1][i]) / 2;
+		_dobits(q, current_fft_data[0], 1, 1);
 	} else {
-		_dobits(q+320, f[0], 0, -1);
-		_dobits(q+320, f[1], 0, 1);
+		_dobits(q+320, current_fft_data[0], 0, -1);
+		_dobits(q+320, current_fft_data[1], 0, 1);
 	}
 
 	/* draw the scope at the bottom */
@@ -195,34 +200,34 @@ static void _vis_process(short f[2][FFT_OUTPUT_SIZE])
 	memset(q,0,i);
 	if (mono) {
 		for (i = j = 0; i < FFT_OUTPUT_SIZE; i++) {
-			_drawslice(j, f[0][i],5);
+			_drawslice(j, current_fft_data[0][i],5);
 			j++;
 			if ((i % FUDGE_256_TO_WIDTH) == 0) {
-				_drawslice(j, f[0][i],5);
+				_drawslice(j, current_fft_data[0][i],5);
 				j++;
-				_drawslice(j, f[1][i],5);
+				_drawslice(j, current_fft_data[1][i],5);
 				j++;
 			}
-			_drawslice(j, f[1][i],5);
+			_drawslice(j, current_fft_data[1][i],5);
 			j++;
 		}
 	} else {
 		j = 0;
 		k = NATIVE_SCREEN_WIDTH/2;
 		for (i = 0; i < FFT_OUTPUT_SIZE; i++) {
-			_drawslice(k-j, f[0][i],5);
-			_drawslice(k+j, f[1][i],5);
+			_drawslice(k-j, current_fft_data[0][i],5);
+			_drawslice(k+j, current_fft_data[1][i],5);
 			j++;
 			if ((i % FUDGE_256_TO_WIDTH) == 0) {
-				_drawslice(k-j, f[0][i],5);
-				_drawslice(k+j, f[1][i],5);
+				_drawslice(k-j, current_fft_data[0][i],5);
+				_drawslice(k+j, current_fft_data[1][i],5);
 				j++;
-				_drawslice(k-j, f[0][i],5);
-				_drawslice(k+j, f[1][i],5);
+				_drawslice(k-j, current_fft_data[0][i],5);
+				_drawslice(k+j, current_fft_data[1][i],5);
 				j++;
 			}
-			_drawslice(k-j, f[0][i],5);
-			_drawslice(k+j, f[1][i],5);
+			_drawslice(k-j, current_fft_data[0][i],5);
+			_drawslice(k+j, current_fft_data[1][i],5);
 			j++;
 		}
 	}
@@ -235,12 +240,11 @@ void vis_work_16s(short *in, int inlen)
 {
 	short dl[FFT_BUFFER_SIZE];
 	short dr[FFT_BUFFER_SIZE];
-	short f[2][FFT_OUTPUT_SIZE];
 	int i, j, k;
 
 	if (!inlen) {
-		memset(f[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(f[1], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
 	} else {
 		for (i = 0; i < FFT_BUFFER_SIZE;) {
 			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
@@ -248,42 +252,40 @@ void vis_work_16s(short *in, int inlen)
 				dr[i] = in[j]; j++;
 			}
 		}
-		_vis_data_work(f[0], dl);
-		_vis_data_work(f[1], dr);
+		_vis_data_work(current_fft_data[0], dl);
+		_vis_data_work(current_fft_data[1], dr);
 	}
-	_vis_process(f);
+	if (status.current_page == PAGE_WATERFALL) _vis_process();
 }
 void vis_work_16m(short *in, int inlen)
 {
 	short d[FFT_BUFFER_SIZE];
-	short f[2][FFT_OUTPUT_SIZE];
 	int i, k;
 
 	if (!inlen) {
-		memset(f[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(f[1], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
 	} else {
 		for (i = 0; i < FFT_BUFFER_SIZE;) {
 			for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
 				d[i] = in[k];
 			}
 		}
-		_vis_data_work(f[0], d);
-		memcpy(f[1], f[0], FFT_OUTPUT_SIZE * 2);
+		_vis_data_work(current_fft_data[0], d);
+		memcpy(current_fft_data[1], current_fft_data[0], FFT_OUTPUT_SIZE * 2);
 	}
-	_vis_process(f);
+	if (status.current_page == PAGE_WATERFALL) _vis_process();
 }
 
 void vis_work_8s(char *in, int inlen)
 {
 	short dl[FFT_BUFFER_SIZE];
 	short dr[FFT_BUFFER_SIZE];
-	short f[2][FFT_OUTPUT_SIZE];
 	int i, j, k;
 
 	if (!inlen) {
-		memset(f[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(f[1], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
 	} else {
 		for (i = 0; i < FFT_BUFFER_SIZE;) {
 			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
@@ -291,30 +293,30 @@ void vis_work_8s(char *in, int inlen)
 				dr[i] = ((short)in[j]) * 256; j++;
 			}
 		}
-		_vis_data_work(f[0], dl);
-		_vis_data_work(f[1], dr);
+		_vis_data_work(current_fft_data[0], dl);
+		_vis_data_work(current_fft_data[1], dr);
 	}
-	_vis_process(f);
+	if (status.current_page == PAGE_WATERFALL) _vis_process();
 }
 void vis_work_8m(char *in, int inlen)
 {
 	short d[FFT_BUFFER_SIZE];
-	short f[2][FFT_OUTPUT_SIZE];
 	int i, k;
 
 	if (!inlen) {
-		memset(f[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(f[1], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
 	} else {
 		for (i = 0; i < FFT_BUFFER_SIZE;) {
 			for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
 				d[i] = ((short)in[k]) * 256;
 			}
 		}
-		_vis_data_work(f[0], d);
-		memcpy(f[1], f[0], FFT_OUTPUT_SIZE * 2);
+		_vis_data_work(current_fft_data[0], d);
+		memcpy(current_fft_data[1],
+				 current_fft_data[0], FFT_OUTPUT_SIZE * 2);
 	}
-	_vis_process(f);
+	if (status.current_page == PAGE_WATERFALL) _vis_process();
 }
 
 static void draw_screen(void)

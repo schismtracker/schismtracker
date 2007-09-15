@@ -1336,25 +1336,62 @@ static void _draw_vis_box(void)
 	draw_fill_chars(63, 6, 77, 7, 0);
 }
 
-static void vis_oscilloscope(void)
+static int _vis_virgin = 1;
+static struct vgamem_overlay vis_overlay = {
+	63, 6, 77, 7,
+	0, 0, 0, 0,
+};
+
+extern short current_fft_data[2][256];
+static void vis_fft(void)
 {
-	static int _virgin = 1;
-	static struct vgamem_overlay vis = {
-		63, 6, 77, 7,
-		0, 0, 0, 0,
-	};
-	if (_virgin) {
-		vgamem_ovl_alloc(&vis);
-		_virgin = 0;
+	int i,j, y;
+
+	if (_vis_virgin) {
+		vgamem_ovl_alloc(&vis_overlay);
+		_vis_virgin = 0;
 	}
 	_draw_vis_box();
 	song_lock_audio();
-	if (audio_output_bits == 16) {
-		draw_sample_data_rect_16(&vis,audio_buffer,audio_buffer_size,
-					audio_output_channels);
+
+	vgamem_ovl_clear(&vis_overlay,0);
+	j=1;
+	for (i = 0; i < 120; i++) {
+		y = (
+				((current_fft_data[0][j] >> 4)
+				* (current_fft_data[1][j] >> 4)) >> 19);
+		if (y > 0)
+			vgamem_ovl_drawline(&vis_overlay,i,15-y,i,15,5);
+		j++;
+	}
+	vgamem_ovl_apply(&vis_overlay);
+
+	song_unlock_audio();
+}
+static void vis_oscilloscope(void)
+{
+	if (_vis_virgin) {
+		vgamem_ovl_alloc(&vis_overlay);
+		_vis_virgin = 0;
+	}
+	_draw_vis_box();
+	song_lock_audio();
+	if (status.vis_style == VIS_MONOSCOPE) {
+		if (audio_output_bits == 16) {
+			draw_sample_data_rect_16(&vis_overlay,audio_buffer,
+					audio_buffer_size,
+					1,2);
+		} else {
+			draw_sample_data_rect_8(&vis_overlay,(void*)audio_buffer,
+					audio_buffer_size,
+					1,2);
+		}
+	} else if (audio_output_bits == 16) {
+		draw_sample_data_rect_16(&vis_overlay,audio_buffer,audio_buffer_size,
+					audio_output_channels,1);
 	} else {
-		draw_sample_data_rect_8(&vis,(void *)audio_buffer,audio_buffer_size,
-					audio_output_channels);
+		draw_sample_data_rect_8(&vis_overlay,(void *)audio_buffer,audio_buffer_size,
+					audio_output_channels,1);
 	}
 	song_unlock_audio();
 }
@@ -1417,10 +1454,14 @@ static inline void draw_vis(void)
 		vis_fakemem();
 		break;
 	case VIS_OSCILLOSCOPE:
+	case VIS_MONOSCOPE:
 		vis_oscilloscope();
 		break;
 	case VIS_VU_METER:
 		vis_vu_meter();
+		break;
+	case VIS_FFT:
+		vis_fft();
 		break;
 	default:
 	case VIS_OFF:
