@@ -34,6 +34,7 @@
 #include "sdlmain.h"
 
 #include <assert.h>
+#include <math.h>
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -1355,15 +1356,26 @@ static void vis_fft(void)
 	song_lock_audio();
 
 	vgamem_ovl_clear(&vis_overlay,0);
-	j=1;
+	j=19;
 	for (i = 0; i < 120; i++) {
-		y = (
-				((current_fft_data[0][j] >> 4)
-				* (current_fft_data[1][j] >> 4)) >> 19);
-		if (y > 0)
-			vgamem_ovl_drawline(&vis_overlay,i,15-y,i,15,5);
+		y = log(
+				((current_fft_data[0][j] >> 3)
+				* (current_fft_data[1][j] >> 3)));
 		j++;
+		y *= log(
+				((current_fft_data[0][j] >> 3)
+				* (current_fft_data[1][j] >> 3)));
+		if (i != 62 && i != 31 && i != 93) j++;
+		y >>= 4;
+		if (y > 15) y = 15;
+		if (y > 0) {
+			vgamem_ovl_drawline(&vis_overlay,i,15-y,i,15,5);
+			if (y > 5)
+				vgamem_ovl_drawpixel(&vis_overlay,i,15-y,3);
+			vgamem_ovl_drawpixel(&vis_overlay,i,16-y,3);
+		}
 	}
+	/* j == 256 */
 	vgamem_ovl_apply(&vis_overlay);
 
 	song_unlock_audio();
