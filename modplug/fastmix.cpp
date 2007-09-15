@@ -102,7 +102,7 @@ CzCUBICSPLINE::CzCUBICSPLINE( )
 	for(_LIi=0;_LIi<_LLen;_LIi++)
 	{	float _LCm1, _LC0, _LC1, _LC2;
 		float _LX		= ((float)_LIi)*_LFlen;
-		int _LIdx	= _LIi<<2;
+		int _LSum,_LIdx	= _LIi<<2;
 		_LCm1			= (float)floor( 0.5 + _LScale * (-0.5*_LX*_LX*_LX + 1.0 * _LX*_LX - 0.5 * _LX       ) );
 		_LC0			= (float)floor( 0.5 + _LScale * ( 1.5*_LX*_LX*_LX - 2.5 * _LX*_LX             + 1.0 ) );
 		_LC1			= (float)floor( 0.5 + _LScale * (-1.5*_LX*_LX*_LX + 2.0 * _LX*_LX + 0.5 * _LX       ) );
@@ -112,7 +112,7 @@ CzCUBICSPLINE::CzCUBICSPLINE( )
 		lut[_LIdx+2]	= (signed short)( (_LC1  < -_LScale) ? -_LScale : ((_LC1  > _LScale) ? _LScale : _LC1 ) );
 		lut[_LIdx+3]	= (signed short)( (_LC2  < -_LScale) ? -_LScale : ((_LC2  > _LScale) ? _LScale : _LC2 ) );
 #ifdef SPLINE_CLAMPFORUNITY
-		int _LSum		= lut[_LIdx+0]+lut[_LIdx+1]+lut[_LIdx+2]+lut[_LIdx+3];
+		_LSum			= lut[_LIdx+0]+lut[_LIdx+1]+lut[_LIdx+2]+lut[_LIdx+3];
 		if( _LSum != SPLINE_QUANTSCALE )
 		{	int _LMax = _LIdx;
 			if( lut[_LIdx+1]>lut[_LMax] ) _LMax = _LIdx+1;
@@ -148,8 +148,8 @@ CzCUBICSPLINE sspline;
 // quantizer scale of window coefs
 #define WFIR_QUANTBITS		15
 #define WFIR_QUANTSCALE		(1L<<WFIR_QUANTBITS)
-#define WFIR_8SHIFT			(WFIR_QUANTBITS-7)
-#define WFIR_16BITSHIFT		(WFIR_QUANTBITS+1)
+#define WFIR_8SHIFT			(WFIR_QUANTBITS-8)
+#define WFIR_16BITSHIFT		(WFIR_QUANTBITS)
 // log2(number)-1 of precalculated taps range is [4..12]
 #define WFIR_FRACBITS		10
 #define WFIR_LUTLEN			((1L<<(WFIR_FRACBITS+1))+1)
@@ -168,7 +168,7 @@ CzCUBICSPLINE sspline;
 #define WFIR_BLACKMAN4T92	5
 #define WFIR_BLACKMAN4T74	6
 #define WFIR_KAISER4T		7
-#define WFIR_TYPE		WFIR_KAISER4T
+#define WFIR_TYPE		WFIR_BLACKMANEXACT
 // wfir help
 #ifndef M_zPI
 #define M_zPI		3.1415926535897932384626433832795
