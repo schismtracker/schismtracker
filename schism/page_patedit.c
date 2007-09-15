@@ -3443,7 +3443,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_d:
 		if (k->state) return 1;
 		if (status.last_keysym == SDLK_d) {
-			if (total_rows - current_row > block_double_size)
+			if (total_rows - (current_row - 1) > block_double_size)
 				block_double_size <<= 1;
 		} else {
 			block_double_size = row_highlight_major;
