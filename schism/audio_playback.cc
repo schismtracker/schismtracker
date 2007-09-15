@@ -77,7 +77,8 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	int i, n;
 
 	if (!stream || !len || !mp) {
-		if (status.current_page == PAGE_WATERFALL) {
+		if (status.current_page == PAGE_WATERFALL
+		|| status.vis_style == VIS_FFT) {
 			vis_work_8m(0,0);
 		}
 		song_stop_unlocked();
@@ -89,7 +90,8 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	} else {
         	n = mp->Read(stream, len);
 	        if (!n) {
-			if (status.current_page == PAGE_WATERFALL) {
+			if (status.current_page == PAGE_WATERFALL
+			|| status.vis_style == VIS_FFT) {
 				vis_work_8m(0,0);
 			}
 			song_stop_unlocked();
@@ -112,14 +114,16 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 		for (i = 0; i < n; i++) {
 			stream[i] ^= 128;
 		}
-		if (status.current_page == PAGE_WATERFALL) {
+		if (status.current_page == PAGE_WATERFALL
+		|| status.vis_style == VIS_FFT) {
 			if (audio_output_channels == 2) {
 				vis_work_8s((char*)stream, n/2);
 			} else {
 				vis_work_8m((char*)stream, n);
 			}
 		}
-	} else if (status.current_page == PAGE_WATERFALL) {
+	} else if (status.current_page == PAGE_WATERFALL
+				|| status.vis_style == VIS_FFT) {
 		if (audio_output_channels == 2) {
 			vis_work_16s((short*)stream, n);
 		} else {

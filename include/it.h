@@ -138,7 +138,7 @@ enum tracker_time_display {
 
 /* what should go in the little box on the top right? */
 enum tracker_vis_style {
-	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_SENTINEL
+	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
 };
 
 struct tracker_status {
@@ -305,8 +305,8 @@ void draw_sample_data(struct vgamem_overlay *r, struct _song_sample *sample, int
 /* this works like draw_sample_data, just without having to allocate a
  * song_sample structure, and without caching the waveform.
  * mostly it's just for the oscilloscope view. */
-void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data, int length, unsigned int channels);
-void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int length, unsigned int channels);
+void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data, int length, unsigned int channels, int fakemono);
+void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int length, unsigned int channels, int fakemono);
 
 /* these are in audio_playback.cc */
 extern signed short *audio_buffer;

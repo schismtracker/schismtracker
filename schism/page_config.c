@@ -44,7 +44,7 @@ static const char *time_displays[] = {
         "Off", "Play / Elapsed", "Play / Clock", "Play / Off", "Elapsed", "Clock", "Absolute", NULL
 };
 static const char *vis_styles[] = {
-	"Off", "Memory Stats", "Oscilloscope", "VU Meter", NULL
+	"Off", "Memory Stats", "Oscilloscope", "VU Meter", "Monoscope", "Spectrum", NULL
 };
 
 static const char *sharp_flat[] = {
