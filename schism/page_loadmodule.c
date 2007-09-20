@@ -130,8 +130,12 @@ static void do_save_song(void *ptr)
 {
 	int i;
 	const char *typ = NULL;
+	const char *f;
 
-	set_page(PAGE_LOG);
+	if (ptr == NULL)
+		f = (void*)song_get_filename();
+	else
+		f = (const char *)ptr;
 
 	for (i = 0; diskwriter_drivers[i]; i++) {
 		if (widgets_savemodule[i+5].d.togglebutton.state) {
@@ -139,9 +143,16 @@ static void do_save_song(void *ptr)
 			break;
 		}
 	}
-	if (song_save(ptr, typ)) {
+
+	if (ptr == NULL && strcmp(typ,"WAV") == 0) {
+		set_page(PAGE_SAVE_MODULE);
+	} else {
 		set_page(PAGE_LOG);
-		/* set_page(PAGE_BLANK); */
+
+		if (song_save(f, typ)) {
+			set_page(PAGE_LOG);
+			/* set_page(PAGE_BLANK); */
+		}
 	}
 }
 
@@ -149,7 +160,7 @@ void save_song_or_save_as(void)
 {
 	const char *f = song_get_filename();
 	if (f && *f) {
-		do_save_song((void*)f);
+		do_save_song(NULL);
 	} else {
 		set_page(PAGE_SAVE_MODULE);
 	}

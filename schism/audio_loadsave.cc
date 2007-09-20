@@ -1150,7 +1150,7 @@ int song_save(const char *file, const char *qt)
 			strerror(errno));
 			return 0;
 		}
-		if (strcmp(qt, "WAV") != 0) {
+		if (strcmp(diskwriter_drivers[i]->name, "WAV") != 0) {
 			status.flags &= ~SONG_NEEDS_SAVE;
 			if (strcasecmp(song_filename, file))
 				song_set_filename(file);
