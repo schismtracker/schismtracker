@@ -609,10 +609,21 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 	em = SetErrorMode(em);
 
 #else /* assume POSIX */
+	char *home, *desktop;
+	struct stat sb;
+
+	home = get_home_directory();
+
 	dmoz_add_file_or_dir(flist, dlist, str_dup("/"), str_dup("/"), NULL, -1024);
-	/* home directory?
-	dmoz_add_file_or_dir(flist, dlist, get_home_directory(), str_dup("~ Home directory"), NULL, 1024);
-	*/
+	dmoz_add_file_or_dir(flist, dlist, home, str_dup("[Home directory]"), NULL, 1023);
+	desktop=0;
+	asprintf(&desktop, "%s/Desktop/.", home);
+	if (desktop && stat(desktop, &sb) != -1) {
+		dmoz_add_file_or_dir(flist, dlist, desktop, str_dup("[Desktop]"), NULL, 1024);
+	} else {
+		free(desktop);
+	}
+
 #endif /* platform */
 	
 	ptr = get_parent_directory(path);
