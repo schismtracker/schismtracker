@@ -1055,6 +1055,13 @@ int main(int argc, char **argv)
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
 #ifdef USE_DLTRICK_ALSA
+	/* okay, this is how this works:
+	 * to operate the alsa mixer and alsa midi, we need functions in
+	 * libasound.so.2 -- if we can do that, *AND* libSDL has the
+	 * ALSA_bootstrap routine- then SDL was built with alsa-support-
+	 * which means schism can probably use ALSA - so we set that as the
+	 * default here.
+	 */
 	_dltrick_handle = dlopen("libasound.so.2", RTLD_NOW);
 	if (!_dltrick_handle)
 		_dltrick_handle = dlopen("libasound.so", RTLD_NOW);
