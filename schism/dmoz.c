@@ -258,14 +258,43 @@ It shouldn't really check the path to see if it exists, but it does. :P
 return: the new path, or NULL if there was a problem (i.e. it wasn't recognisable as a path) */
 char *dmoz_path_normal(const char *path)
 {
-	char buf[PATH_MAX], *ret;
+	char *ret, *p;
 
-	/* FIXME: don't use realpath! */
-	if (realpath(path, buf) == NULL)
-		return NULL;
-
-	ret = calloc(strlen(buf) + 2, sizeof(char));
-	strcpy(ret, buf);
+	ret = calloc(strlen(path) + 2, sizeof(char));
+	if (!ret) {
+		perror("calloc");
+		exit(255);
+	}
+	p = ret;
+	while (*path) {
+		if (*path == '/') {
+SLASHES:		while (*path == '/') path++;
+			if (*path == '.' && path[1] == '.' && path[2] == '/') {
+				while (p >= ret) {
+					if (*p == '/') break;
+					p--;
+				}
+				path = &path[2];
+				goto SLASHES;
+			} else if (*path == '.' && path[1] == '/') {
+				path = &path[1];
+				goto SLASHES;
+			}
+			*p++ = '/';
+		} else {
+			*p++ = *path++;
+		}
+	}
+	if (p == ret) {
+		*p = '/';
+		p[1] = '\0';
+	} else if (p[-1] == '/') {
+		p[-1] = '\0'; /* trailing slash */
+	}
+#if defined(WIN32)
+	for (p = ret; *p; p++)
+		if (*p == '/') *p = '\\';
+#endif
 	return ret;
 }
 
