@@ -43,7 +43,14 @@ int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
 
 	fd = open(filename, O_RDONLY);
 	if (fd == -1) return 0;
-	addr = mmap(0, st, PROT_READ, MAP_SHARED, fd, 0);
+	addr = mmap(0, st, PROT_READ, MAP_SHARED
+#if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
+		| MAP_POPULATE | MAP_NONBLOCK
+#endif
+#if defined(MAP_NORESERVE)
+		| MAP_NORESERVE
+#endif
+		, fd, 0);
 	if (!addr || addr == ((void*)-1)) {
 		(void)close(fd);
 		return -1;
