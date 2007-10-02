@@ -609,11 +609,10 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 	em = SetErrorMode(em);
 
 #else /* assume POSIX */
-	char *home;
-
-	home = get_home_directory();
+/*	char *home;
+	home = get_home_directory();*/
 	dmoz_add_file_or_dir(flist, dlist, str_dup("/"), str_dup("/"), NULL, -1024);
-	dmoz_add_file_or_dir(flist, dlist, home, str_dup("~"), NULL, -5);
+/*	dmoz_add_file_or_dir(flist, dlist, home, str_dup("~"), NULL, -5); */
 
 #endif /* platform */
 	
