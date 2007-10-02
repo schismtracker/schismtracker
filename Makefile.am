@@ -146,9 +146,6 @@ endif
 if NEED_GNU_VASPRINTF
 files_gnu_vasprintf=schism/vasprintf.c
 endif
-if NEED_GNU_REALPATH
-files_gnu_realpath=schism/realpath.c
-endif
 if NEED_GNU_MEMCMP
 files_gnu_memcmp=schism/memcmp.c
 endif
@@ -275,7 +272,6 @@ schismtracker_SOURCES = \
 	$(files_x11)			\
 	$(files_gnu_asprintf)		\
 	$(files_gnu_vasprintf)		\
-	$(files_gnu_realpath)		\
 	$(files_gnu_memcmp)		\
 	$(files_mmap)			\
 	$(files_windres)
