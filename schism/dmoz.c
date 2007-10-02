@@ -254,8 +254,7 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 	- switch slashes to backslashes for MS systems ("c:/winnt" => "c:\\winnt")
 	- condense multiple slashes into one ("/sheep//goat" => "/sheep/goat")
 	- remove any trailing slashes
-It shouldn't really check the path to see if it exists, but it does. :P
-return: the new path, or NULL if there was a problem (i.e. it wasn't recognisable as a path) */
+*/
 char *dmoz_path_normal(const char *path)
 {
 	char *ret, *p;
