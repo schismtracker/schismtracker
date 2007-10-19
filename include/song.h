@@ -114,6 +114,7 @@ typedef struct _song_mix_channel {
         signed char *sample_data;
         unsigned int sample_pos;
         unsigned int nPosLo;
+	unsigned int topnote_offset;
         int nInc;
         int nRightVol; // these two are the current left/right volumes
         int nLeftVol;  /* (duh...) - i'm not sure if that's 100% right,
@@ -187,6 +188,7 @@ typedef struct _song_mix_channel {
 	unsigned int nTickStart;
 	unsigned int nRealtime;
 	byte stupid_gcc_workaround;
+
 } song_mix_channel;
 
 /* --------------------------------------------------------------------- */

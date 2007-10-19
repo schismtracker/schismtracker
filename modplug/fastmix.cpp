@@ -1551,6 +1551,10 @@ UINT CSoundFile::CreateStereoMix(int count)
 		} else
 		// Do mixing
 		{
+			if (pChannel->nLength) {
+				pChannel->topnote_offset = ((pChannel->nPos << 16) | pChannel->nPosLo) % pChannel->nLength;
+			}
+
 			// Choose function for mixing
 			LPMIXINTERFACE pMixFunc;
 			pMixFunc = (pChannel->nRampLength) ? pMixFuncTable[nFlags|MIXNDX_RAMP] : pMixFuncTable[nFlags];

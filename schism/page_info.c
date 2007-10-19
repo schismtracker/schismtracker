@@ -131,10 +131,12 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 		}
 		draw_text(num99tostr(c, (unsigned char *) buf), 2, pos, fg, 2); /* channel number */
 
-		sprintf(buf, "%10d", mixchan->sample_freq);
 		if (mixchan->sample_freq) {
+			sprintf(buf, "%10d", mixchan->sample_freq);
 			draw_text((const unsigned char *)buf, 5, pos, 2, 0);
-			sprintf(buf, "%10d", mixchan->sample_pos);
+		}
+		if (mixchan->sample_freq | mixchan->topnote_offset) {
+			sprintf(buf, "%10d", mixchan->topnote_offset);
 			draw_text((const unsigned char *)buf, 16, pos, 2, 0);
 		}
 
