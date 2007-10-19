@@ -380,6 +380,7 @@ typedef struct _MODCHANNEL
 	signed char * pCurrentSample;
 	DWORD nPos;
 	DWORD nPosLo;	// actually 16-bit
+	unsigned int topnote_offset;
 	LONG nInc;		// 16.16
 	LONG nRightVol;
 	LONG nLeftVol;
@@ -438,6 +439,7 @@ typedef struct _MODCHANNEL
 	unsigned int nTickStart;
 	unsigned int nRealtime;
 	BYTE stupid_gcc_workaround;
+
 } MODCHANNEL;
 
 
