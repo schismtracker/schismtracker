@@ -193,6 +193,14 @@ void show_about(void)
 	d->action_yes = about_close;
 	d->action_no = about_close;
 	d->action_cancel = about_close;
+
+	/* okay, in just a moment, we're going to the module page.
+	 * if your modules dir is large enough, this causes an annoying pause.
+	 * to defeat this, we start scanning *NOW*. this makes startup "feel"
+	 * faster.
+	 */
+	status.flags |= DIR_MODULES_CHANGED;
+	pages[PAGE_LOAD_MODULE].set_page();
 }
 
 
