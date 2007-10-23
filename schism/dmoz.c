@@ -816,6 +816,10 @@ static int _rename_nodestroy(const char *old, const char *newf)
 #endif
 }
 
+#ifdef WIN32
+extern void win32_filecreated_callback(const char *filename);
+#endif
+
 int rename_file(const char *old, const char *newf, int clobber)
 {
 #ifdef WIN32
@@ -850,6 +854,7 @@ int rename_file(const char *old, const char *newf, int clobber)
 
 		if (MoveFile(old, newf)) {
 			/* err.. yay! */
+			win32_filecreated_callback(newf);
 			SetErrorMode(em);
 			return DMOZ_RENAME_OK;
 		}
@@ -861,6 +866,7 @@ int rename_file(const char *old, const char *newf, int clobber)
 		}
 		if (MoveFile(old, newf)) {
 			/* .... */
+			win32_filecreated_callback(newf);
 			SetErrorMode(em);
 			return DMOZ_RENAME_OK;
 		}
@@ -870,6 +876,7 @@ int rename_file(const char *old, const char *newf, int clobber)
 		SetErrorMode(em);
 		return DMOZ_RENAME_ERRNO;
 	}
+	win32_filecreated_callback(newf);
 #else
 	if (rename(old,newf) == -1) return DMOZ_RENAME_ERRNO;
 #endif

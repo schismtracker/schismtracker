@@ -117,7 +117,7 @@ files_mmap = sys/posix/slurp-mmap.c
 endif
 
 if USE_WIN32MM
-files_win32mm = sys/win32/modkey.c sys/win32/slurp-win32.c sys/win32/mixer-win32mm.c sys/win32/midi-win32mm.c
+files_win32mm = sys/win32/modkey.c sys/win32/slurp-win32.c sys/win32/mixer-win32mm.c sys/win32/midi-win32mm.c sys/win32/filetype.c
 cflags_win32mm=-DUSE_WIN32MM
 #LIBOBJS+=-lwinmm
 lib_win32mm=-lwinmm

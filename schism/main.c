@@ -1040,9 +1040,18 @@ static void dump_misc_about_text(void)
 
 extern void vis_init(void);
 
+#if defined(WIN32)
+extern void win32_filetype_setup(const char *argv0);
+#endif
+
+
 int main(int argc, char **argv) NORETURN;
 int main(int argc, char **argv)
 {
+#if defined(WIN32)
+	win32_filetype_setup(argv[0]);
+#endif
+
 	setup_help_text_pointers();
 
 	vis_init();
