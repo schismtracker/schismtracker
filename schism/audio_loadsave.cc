@@ -1089,6 +1089,9 @@ diskwriter_driver_t xmwriter = {
 diskwriter_driver_t modwriter = {
 	"MOD", "mod", _save_mod, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
+diskwriter_driver_t midiwriter = {
+	"MIDI", "mid", fmt_mid_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
+};
 diskwriter_driver_t txtwriter = {
 	"TXT", "txt", _save_txt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
