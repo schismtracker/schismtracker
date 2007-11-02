@@ -44,6 +44,7 @@ typedef int (*fmt_load_instrument_func) (const byte *data, size_t length, int sl
 #define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
 #define SAVE_SAMPLE(t) int fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 #define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const byte *data, size_t length, int slot)
+#define SAVE_SONG(t) void fmt_##t##_save_song(diskwriter_driver_t *fp)
 
 READ_INFO(669);
 READ_INFO(ams);
@@ -71,18 +72,20 @@ READ_INFO(ogg);
 # endif
 #endif
 
-READ_INFO(iti);		LOAD_INSTRUMENT(iti);
+READ_INFO(iti);  LOAD_INSTRUMENT(iti);
 
-READ_INFO(aiff);        LOAD_SAMPLE(aiff);      SAVE_SAMPLE(aiff);
-READ_INFO(au);          LOAD_SAMPLE(au);        SAVE_SAMPLE(au);
-READ_INFO(its);         LOAD_SAMPLE(its);       SAVE_SAMPLE(its);
-                        LOAD_SAMPLE(raw);       SAVE_SAMPLE(raw);
-READ_INFO(wav);		LOAD_SAMPLE(wav);
-READ_INFO(mid);
+READ_INFO(aiff); LOAD_SAMPLE(aiff);    SAVE_SAMPLE(aiff);
+READ_INFO(au);   LOAD_SAMPLE(au);      SAVE_SAMPLE(au);
+READ_INFO(its);  LOAD_SAMPLE(its);     SAVE_SAMPLE(its);
+                 LOAD_SAMPLE(raw);     SAVE_SAMPLE(raw);
+READ_INFO(wav);	 LOAD_SAMPLE(wav);
+READ_INFO(mid);						   SAVE_SONG(mid);
+
 
 #undef READ_INFO
 #undef LOAD_SAMPLE
 #undef SAVE_SAMPLE
+#undef SAVE_SONG
 #undef LOAD_INSTRUMENT
 
 /* --------------------------------------------------------------------------------------------------------- */

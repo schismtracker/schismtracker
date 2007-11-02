@@ -505,6 +505,7 @@ extern diskwriter_driver_t it214writer;
 extern diskwriter_driver_t s3mwriter;
 extern diskwriter_driver_t xmwriter;
 extern diskwriter_driver_t modwriter;
+extern diskwriter_driver_t midiwriter;
 };
 
 unsigned int diskwriter_output_rate = 44100;
@@ -516,6 +517,7 @@ diskwriter_driver_t *diskwriter_drivers[] = {
 	&s3mwriter,
 	&modwriter,
 	&wavewriter,
+	&midiwriter,
 	NULL,
 };
 
