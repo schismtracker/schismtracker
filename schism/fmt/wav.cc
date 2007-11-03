@@ -187,7 +187,7 @@ static void _wavout_data(diskwriter_driver_t *x,unsigned char *buf,
 
 extern "C" {
 diskwriter_driver_t wavewriter = {
-"WAV","wav",
+"WAV","wav",1,
 _wavout_header,
 _wavout_data,
 NULL, /* no midi data */

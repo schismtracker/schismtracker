@@ -161,7 +161,7 @@ int diskwriter_start_nodriver(diskwriter_driver_t *f)
 
 extern "C" {
 	static diskwriter_driver_t _samplewriter = {
-		"Sample", "blah", NULL, NULL, NULL /* no midi data */,
+		"Sample", "blah", 1, NULL, NULL, NULL /* no midi data */,
 		NULL, NULL, NULL, NULL, NULL, NULL, 44100, 16, 2, 1, 0,
 	};
 };

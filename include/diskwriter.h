@@ -32,6 +32,7 @@ typedef struct diskwriter_driver diskwriter_driver_t;
 struct diskwriter_driver {
 	const char *name; /* this REALLY needs to be short (3 characters) */
 	const char *extension; /* no dot */
+	int export_only;
 
 	/* supplied by driver
 		p is called before anything else (optional)

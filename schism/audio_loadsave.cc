@@ -1078,22 +1078,22 @@ static void _save_mod(diskwriter_driver_t *dw)
 }
 
 diskwriter_driver_t it214writer = {
-	"IT214", "it", _save_it, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
+	"IT214", "it", 0, _save_it, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t s3mwriter = {
-	"S3M", "s3m", _save_s3m, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
+	"S3M", "s3m", 0, _save_s3m, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t xmwriter = {
-	"XM", "xm", _save_xm, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
+	"XM", "xm", 0, _save_xm, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t modwriter = {
-	"MOD", "mod", _save_mod, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
+	"MOD", "mod", 0, _save_mod, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t midiwriter = {
-	"MIDI", "mid", fmt_mid_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
+	"MIDI", "mid", 1, fmt_mid_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t txtwriter = {
-	"TXT", "txt", _save_txt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
+	"TXT", "txt", -1, _save_txt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 
 /* ------------------------------------------------------------------------- */
@@ -1153,7 +1153,7 @@ int song_save(const char *file, const char *qt)
 			strerror(errno));
 			return 0;
 		}
-		if (strcmp(diskwriter_drivers[i]->name, "WAV") != 0) {
+		if (! diskwriter_drivers[i]->export_only) {
 			status.flags &= ~SONG_NEEDS_SAVE;
 			if (strcasecmp(song_filename, file))
 				song_set_filename(file);
