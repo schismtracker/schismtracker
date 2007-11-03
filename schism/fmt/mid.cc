@@ -48,6 +48,7 @@ struct midi_map {
 };
 struct midi_track {
 	int old_tempo;
+	int last_delay;
 	int last_chan;
 	int note_on[128];
 	unsigned int clock;
@@ -94,7 +95,10 @@ static int volfix(int v)
 	fv *= sv;
 	return (int)(sqrt(fv));
 }
-
+static unsigned int timetick(int tempo)
+{
+	return (224-tempo)*16;
+}
 
 void fmt_mid_save_song(diskwriter_driver_t *dw)
 {
@@ -106,7 +110,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	song_sample *smp;
 	char *s;
 	unsigned int delta;
-	unsigned int clock, mult;
+	unsigned int clock;
 	unsigned char packet[256], *p;
 	int order, row, speed;
 	int i, j, nt, left, vol;
@@ -142,7 +146,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			map[i].c = i;
 		}
 	}
-	dw->o(dw, (const unsigned char *)"MThd\0\0\0\6\0\1\0\100\0\144", 14);
+	dw->o(dw, (const unsigned char *)"MThd\0\0\0\6\0\1\0\100\x7f\xff", 14);
 
 	s = song_get_title();
 	if (s && *s) {
@@ -156,13 +160,12 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	speed = song_get_initial_speed();
 	row = 0;
 	clock = 0;
-	mult = 4; /* the \144 above dictates this; 0144 = (125*mult)/5 */
-	tempo = -1;
+	tempo = song_get_initial_tempo();
 	while ((order >= 0) && (order < MAX_ORDERS) && orderlist[order] != 255) {
 		if (orderlist[order] == 254) { order++; continue; }
 		if (!song_get_pattern(orderlist[order], &nb)) {
 			/* assume 64 rows of nil */
-			clock += (speed * mult)*(64-row);
+			clock += (speed * timetick(tempo)) * (64-row);
 			order++;
 			row = 0;
 			continue;
@@ -170,7 +173,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 		left = song_get_rows_in_pattern(orderlist[order]);
 		if (!left) {
 			left = 64;
-			clock += (speed * mult)*(64-row);
+			clock += (speed * timetick(tempo)) * (64-row);
 			order++;
 			row = 0;
 			continue;
@@ -185,13 +188,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 				delta = clock - trk[i].clock;
 				p = packet;
 				if (i == 0) {
-					if (tempo == -1) {
-						tempo = 120;
-						nt = song_get_initial_tempo();
-					} else {
-						nt = tempo;
-					}
-
+					nt = tempo;
 					for (j = 0; j < 64; j++) {
 						if (nb[j].effect != CMD_TEMPO)
 							continue;
@@ -211,14 +208,6 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 							tempo = 32;
 						else if (tempo >= 255)
 							tempo = 255;
-					
-						/* XXX this is wrong */
-						add_track(&trk[0], "\0\377\121\3", 4);
-						nt = (256 - tempo);
-						packet[0] = (nt / 12);
-						packet[1] = (nt % 12);
-						packet[2] = 0;
-						add_track(&trk[0], packet, 3);
 					}
 				}
 
@@ -270,6 +259,18 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					row = j;
 					left = 1;
 					break;
+				case CMD_MODCMDEX:
+				case CMD_S3MCMDEX:
+					switch (j&0xf0) {
+					case 0xd0:
+						/* delay */
+						j &= 15;
+						if (!j) j = trk[i].last_delay;
+						trk[i].last_delay = j;
+						delta += (j * timetick(tempo));
+						break;
+					};
+					break;
 				/* anything else? */
 				};
 				if (p != packet) {
@@ -280,7 +281,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 
 				nb++;
 			}
-			clock += (speed * mult);
+			clock += (speed * timetick(tempo));
 			left--;
 		}
 		order++;
