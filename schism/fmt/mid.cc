@@ -49,6 +49,7 @@ struct midi_map {
 struct midi_track {
 	int old_tempo;
 	int last_delay;
+	int last_cut;
 	int last_chan;
 	int note_on[128];
 	unsigned int clock;
@@ -97,7 +98,7 @@ static int volfix(int v)
 }
 static unsigned int timetick(int tempo)
 {
-	return (224-tempo)*16;
+	return (224-tempo)*14;
 }
 
 void fmt_mid_save_song(diskwriter_driver_t *dw)
@@ -114,6 +115,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	unsigned char packet[256], *p;
 	int order, row, speed;
 	int i, j, nt, left, vol;
+	int need_cut;
 	int tempo;
 
 	memset(map, 0, sizeof(map));
@@ -186,6 +188,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 		while (left > 0) {
 			for (i = 0; i < 64; i++) {
 				delta = clock - trk[i].clock;
+
 				p = packet;
 				if (i == 0) {
 					nt = tempo;
@@ -211,6 +214,15 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					}
 				}
 
+				for (j = 0; j < 64; j++) {
+					if (nb[j].effect == CMD_MODCMDEX || nb[j].effect == CMD_S3MCMDEX) {
+						if ((nb[j].parameter & 0xF0) == 0xe0) {
+							delta += (nb[j].parameter & 15) * timetick(tempo);
+						}
+					}
+				}
+
+
 				if (nb->instrument
 				&& trk[i].last_chan != nb->instrument) {
 					m = &map[nb->instrument];
@@ -233,6 +245,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						*p = j; p++;
 						*p = 0; p++;
 						*p = 0; p++;
+						trk[i].note_on[j] = 0;
 					}
 				}
 				if (nb->note && nb->note <= 120 && m->c) {
@@ -251,6 +264,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					*p = 0; p++;
 				}
 				j = nb->parameter;
+				need_cut = 0;
 				switch (nb->effect) {
 				case CMD_SPEED:
 					if (j && j < 32) speed = j;
@@ -262,6 +276,12 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 				case CMD_MODCMDEX:
 				case CMD_S3MCMDEX:
 					switch (j&0xf0) {
+					case 0xc0:
+						/* cut */
+						j &= 15;
+						if (!j) j = trk[i].last_cut;
+						need_cut = trk[i].last_cut = j;
+						break;
 					case 0xd0:
 						/* delay */
 						j &= 15;
@@ -277,6 +297,25 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					add_track_len(&trk[i], delta);
 					add_track(&trk[i], packet,(p-packet)-1);
 					trk[i].clock = clock;
+				}
+				if (need_cut) {
+					/* ugh, notecut is tricky */
+					delta = need_cut * timetick(tempo);
+					p = packet;
+					for (j = 0; j < 128; j++) {
+						if (!trk[i].note_on[j])
+							continue;
+						/* keyoff */
+						*p = 0x90|(trk[i].note_on[j]-1);
+						p++;
+						*p = j; p++;
+						*p = 0; p++;
+						*p = 0; p++;
+						trk[i].note_on[j] = 0;
+					}
+					add_track_len(&trk[i], delta);
+					add_track(&trk[i], packet,(p-packet)-1);
+					trk[i].clock += delta;
 				}
 
 				nb++;
