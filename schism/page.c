@@ -50,7 +50,7 @@ struct tracker_status status = {
 	0, 0, "", 0, 0, NULL, 0, 0, 0, 0, 0
 };
 
-struct page pages[32];
+struct page pages[48];
 
 struct widget *widgets = NULL;
 int *selected_widget = NULL;
@@ -798,11 +798,14 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F10:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-                if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_SAVE_MODULE);
+                if (k->mod & KMOD_ALT) break;
+                if (k->mod & KMOD_CTRL) break;
+
+		_mp_finish(NULL);
+                if (k->mod & KMOD_SHIFT) {
+			if (!k->state) set_page(PAGE_EXPORT_MODULE);
                 } else {
-                        break;
+			if (!k->state) set_page(PAGE_SAVE_MODULE);
                 }
                 return 1;
         case SDLK_F11:
@@ -845,6 +848,10 @@ static int handle_key_global(struct key_event * k)
                 } else if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_PALETTE_EDITOR);
+                } else if (k->mod & KMOD_SHIFT) {
+			_mp_finish(NULL);
+			if (!k->state) set_page(PAGE_FONT_EDIT);
+
                 } else if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
                         if (!k->state) set_page(PAGE_SONG_VARIABLES);
@@ -1614,7 +1621,7 @@ void load_pages(void)
         midiout_load_page(pages + PAGE_MIDI_OUTPUT);
 	fontedit_load_page(pages + PAGE_FONT_EDIT);
         load_module_load_page(pages + PAGE_LOAD_MODULE);
-        save_module_load_page(pages + PAGE_SAVE_MODULE);
+        save_module_load_page(pages + PAGE_SAVE_MODULE, 0);
         orderpan_load_page(pages + PAGE_ORDERLIST_PANNING);
         ordervol_load_page(pages + PAGE_ORDERLIST_VOLUMES);
         song_vars_load_page(pages + PAGE_SONG_VARIABLES);
@@ -1628,6 +1635,7 @@ void load_pages(void)
 	waterfall_load_page(pages + PAGE_WATERFALL);
 	about_load_page(pages+PAGE_ABOUT);
         config_load_page(pages + PAGE_CONFIG);
+	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
 
         widgets = pages[PAGE_BLANK].widgets;
         selected_widget = &(pages[PAGE_BLANK].selected_widget);

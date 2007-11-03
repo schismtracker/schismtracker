@@ -48,7 +48,9 @@
 static int modgrep(dmoz_file_t *f);
 
 static struct widget widgets_loadmodule[5];
+static struct widget widgets_exportmodule[16];
 static struct widget widgets_savemodule[16];
+static struct widget *widgets_exportsave;
 
 /* XXX this needs to be kept in sync with diskwriters
    (FIXME: it shouldn't have to! build it when the savemodule page is built or something, idk -storlek) */
@@ -96,6 +98,11 @@ static void handle_file_entered_L(char *ptr)
 
 	/* these shenanagans force the file to take another trip... */
 	if (stat(ptr, &sb) == -1) return;
+	if (status.current_page == PAGE_EXPORT_MODULE) {
+		widgets_exportsave = widgets_exportmodule;
+	} else {
+		widgets_exportsave = widgets_savemodule;
+	}
 
 	memset(&tmp,0,sizeof(tmp));
 	f = dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
@@ -119,28 +126,65 @@ static void handle_file_entered_L(char *ptr)
 				}
 			}
 		}
-		togglebutton_set(widgets_savemodule, r, 0);
+		togglebutton_set(widgets_exportsave, r, 0);
 
 		/* set_page(PAGE_LOG); */
 		set_page(PAGE_BLANK);
 	}
 }
+static void do_save_song(void *ptr);
 
+static void do_save_song_exportok(void *ptr)
+{
+	set_page(PAGE_EXPORT_MODULE);
+	do_save_song(ptr);
+}
+static void do_exportonly_check(void *ptr)
+{
+	dialog_create(DIALOG_OK_CANCEL, "Cannot save song, export?",
+		do_save_song_exportok, free, 1, ptr);
+	
+}
 static void do_save_song(void *ptr)
 {
-	int i;
+	int i, n;
 	const char *typ = NULL;
-	const char *f;
+	const char *f, *qt;
 
 	if (ptr == NULL)
 		f = (void*)song_get_filename();
 	else
 		f = (const char *)ptr;
 
-	for (i = 0; diskwriter_drivers[i]; i++) {
-		if (widgets_savemodule[i+5].d.togglebutton.state) {
-			typ = widgets_savemodule[i+5].d.togglebutton.text;
+	if (status.current_page == PAGE_EXPORT_MODULE) {
+		widgets_exportsave = widgets_exportmodule;
+	} else {
+		widgets_exportsave = widgets_savemodule;
+	}
+
+	for (i = n = 0; diskwriter_drivers[i]; i++) {
+		if (diskwriter_drivers[i]->export_only
+		!= (status.current_page == PAGE_EXPORT_MODULE ? 1 : 0)) {
+			continue;
+		}
+		if (widgets_exportsave[n+5].d.togglebutton.state) {
+			typ = widgets_exportsave[n+5].d.togglebutton.text;
 			break;
+		}
+		n++;
+	}
+	if (!typ) {
+		qt = strrchr(f, '.');
+		if (qt && status.current_page != PAGE_EXPORT_MODULE) {
+			qt++;
+			for (i = 0; diskwriter_drivers[i]; i++) {
+				if (strcasecmp(qt, diskwriter_drivers[i]->extension) != 0)
+					continue;
+				if (!diskwriter_drivers[i]->export_only)
+					continue;
+				do_exportonly_check(ptr);
+				return;
+			}
 		}
 	}
 
@@ -304,6 +348,8 @@ static void update_filename_entry(void)
 {
 	if (status.current_page == PAGE_LOAD_MODULE) {
 	        widgets_loadmodule[2].d.textentry.firstchar = widgets_loadmodule[2].d.textentry.cursor_pos = 0;
+	} else if (status.current_page == PAGE_EXPORT_MODULE) {
+	        widgets_exportmodule[2].d.textentry.firstchar = widgets_exportmodule[2].d.textentry.cursor_pos = 0;
 	} else {
 	        widgets_savemodule[2].d.textentry.firstchar = widgets_savemodule[2].d.textentry.cursor_pos = 0;
         }
@@ -883,10 +929,20 @@ static void save_module_set_page(void)
 	pages[PAGE_SAVE_MODULE].selected_widget = 2;
 }
 
-void save_module_load_page(struct page *page)
+void save_module_load_page(struct page *page, int do_export)
 {
-	int i, j, k;
+	int i, j, k, n;
 
+	if (do_export) {
+        	page->title = "Export Module (Shift-F10)";
+        	page->widgets = widgets_exportmodule;
+	} else {
+        	page->title = "Save Module (F10)";
+        	page->widgets = widgets_savemodule;
+	}
+	widgets_exportsave = page->widgets;
+
+	/* preload */
 	clear_directory();
 	top_file = top_dir = 0;
 	current_file = current_dir = 0;
@@ -894,31 +950,30 @@ void save_module_load_page(struct page *page)
 	file_list_reposition();
 	read_directory();
 
-        page->title = "Save Module (F10)";
         page->draw_const = save_module_draw_const;
         page->set_page = save_module_set_page;
         page->total_widgets = 5;
-        page->widgets = widgets_savemodule;
         page->help_index = HELP_GLOBAL;
         page->selected_widget = 2;
 	page->pre_handle_key = _save_cachefree_hack;
 	
-	create_other(widgets_savemodule + 0, 1, file_list_handle_key, file_list_draw);
-	widgets_savemodule[0].accept_text = 1;
-	widgets_savemodule[0].next.left = 4;
-	widgets_savemodule[0].next.right = widgets_savemodule[0].next.tab = 1;
-	create_other(widgets_savemodule + 1, 2, dir_list_handle_key, dir_list_draw);
-	widgets_savemodule[1].accept_text = 1;
-	widgets_savemodule[1].next.right = widgets_savemodule[1].next.tab = 4;
-	widgets_savemodule[1].next.left = 0;
+	create_other(widgets_exportsave + 0, 1, file_list_handle_key, file_list_draw);
+	widgets_exportsave[0].accept_text = 1;
+	widgets_exportsave[0].next.left = 4;
+	widgets_exportsave[0].next.right = widgets_exportsave[0].next.tab = 1;
+	create_other(widgets_exportsave + 1, 2, dir_list_handle_key, dir_list_draw);
+	widgets_exportsave[1].accept_text = 1;
+	widgets_exportsave[1].next.right = widgets_exportsave[1].next.tab = 4;
+	widgets_exportsave[1].next.left = 0;
 
-        create_textentry(widgets_savemodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
-	widgets_savemodule[2].activate = filename_entered;
-        create_textentry(widgets_savemodule + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
-	widgets_savemodule[3].activate = dirname_entered;
+        create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
+	widgets_exportsave[2].activate = filename_entered;
+        create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
+	widgets_exportsave[3].activate = dirname_entered;
 
 	for (i = 0; diskwriter_drivers[i]; i++, page->total_widgets++) {
-		/* nerf */
+		if (diskwriter_drivers[i]->export_only != do_export)
+			page->total_widgets--;
 	}
 
 	i = 0;
@@ -927,21 +982,26 @@ void save_module_load_page(struct page *page)
 	if (j >= (page->total_widgets-4)) {
 		j = i;
 	}
-	create_togglebutton(&widgets_savemodule[4+i], 70, 13, 5, 4 + i, 4 + j, 1, 0, 2,
+	create_togglebutton(&widgets_exportsave[4+i], 70, 13, 5, 4 + i, 4 + j, 1, 0, 2,
 			    NULL, " Auto", 1, filetype_saves);
-	widgets_savemodule[4].d.togglebutton.state = 1;
+	widgets_exportsave[4].d.togglebutton.state = 1;
 	/* XXX classic mode shouldn't have an auto */
 	i++;
+	n = i;
 	for (; diskwriter_drivers[i-1]; i++) {
-		k = i - 1;
-		j = i + 1;
+		if (diskwriter_drivers[i-1]->export_only != do_export) {
+			continue;
+		}
+		k = n - 1;
+		j = n + 1;
 		if (j >= (page->total_widgets-4)) {
-			j = i;
+			j = n;
 		}
 		/* FIXME: down key for last diskwriter driver should focus the filename entry,
 			  and left/right should at least try to keep the cursor around the same place */
-		create_togglebutton(&widgets_savemodule[4+i], 70, 13 + (i*3), 5, 4 + k, 4 + j, 1, 0, 2,
+		create_togglebutton(&widgets_exportsave[4+n], 70, 13 + (n*3), 5, 4 + k, 4 + j, 1, 0, 2,
 				    NULL, diskwriter_drivers[i-1]->name,
 				    4 - ((strlen(diskwriter_drivers[i-1]->name)+1) / 2), filetype_saves);
+		n++;
 	}
 }

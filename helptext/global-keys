@@ -16,11 +16,13 @@
 |   F9                Load Module
 |   Shift-F9          Message Editor
 |   F10               Save Module
+:   Shift-F10         Export Module (to WAV, MIDI)
 |   F11               Order List and Panning
 | 2*F11               Order List and Channel Volume
 :   Ctrl-F11          Schism Logging
 |   F12               Song Variables & Directory Configuration
 |   Ctrl-F12          Palette Configuration
+:   Shift-F12         Font Editor
 |
 |   { }               Decrease/Increase playback speed
 :   Ctrl-[ ]          Decrease/Increase playback tempo

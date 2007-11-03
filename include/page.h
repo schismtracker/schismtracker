@@ -348,8 +348,10 @@ enum page_numbers {
 	PAGE_CONFIG = (30),
 	PAGE_WATERFALL = (31),
 
-	PAGE_LAST_PAGE = (31),
-/* limit =32 */
+        PAGE_EXPORT_MODULE = (32),
+
+	PAGE_LAST_PAGE = (32),
+/* limit =48 */
 };
 
 /* --------------------------------------------------------------------- */
@@ -369,7 +371,7 @@ void midiout_load_page(struct page *page);
 void fontedit_load_page(struct page *page);
 void preferences_load_page(struct page *page);
 void load_module_load_page(struct page *page);
-void save_module_load_page(struct page *page);
+void save_module_load_page(struct page *page, int do_export);
 void orderpan_load_page(struct page *page);
 void ordervol_load_page(struct page *page);
 void song_vars_load_page(struct page *page);
