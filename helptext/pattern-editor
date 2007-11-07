@@ -148,7 +148,9 @@
 |   Enter            Get default note/instrument/volume/effect
 |   < or Ctrl-Up     Decrease instrument
 |   > or Ctrl-Down   Increase instrument
-|   Grey /,*         Decrease/Increase octave
+!   Grey /,*         Decrease/Increase octave
+:   Grey /           Decrease octave (also Alt-Home)
+:   Grey *           Increase octave (also Alt-End)
 |   , (Comma)        Toggle edit mask for current field
 |
 |   Ins/Del          Insert/Delete a row to/from current channel
@@ -238,7 +240,7 @@
 |   Alt-F9           Toggle current channel
 |   Alt-F10          Solo current channel
 |
-|   Scroll Lock      Toggle playback tracing
+!   Scroll Lock      Toggle playback tracing
 :   Scroll Lock      Toggle playback tracing (also Ctrl-F)
 |   Ctrl-Z           Change MIDI playback trigger
 |   Alt-Scroll Lock  Toggle MIDI input
