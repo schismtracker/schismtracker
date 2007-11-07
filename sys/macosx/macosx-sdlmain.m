@@ -209,6 +209,11 @@ static void setApplicationMenu(void)
 				keyEquivalent:KEQ_FN(10)];
 	[menuItem setKeyEquivalentModifierMask:0];
 	[menuItem setRepresentedObject: @"save_as"];
+	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Export..."
+				action:@selector(_menu_callback:)
+				keyEquivalent:KEQ_FN(10)];
+	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+	[menuItem setRepresentedObject: @"export_song"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Message Log"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(11)];

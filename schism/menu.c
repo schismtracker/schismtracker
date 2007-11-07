@@ -86,11 +86,12 @@ static struct menu main_menu = {
 
 static struct menu file_menu = {
         x: 25, y: 13, w: 22, title: "File Menu",
-        num_items: 6, {
+        num_items: 7, {
                 "Load...           (F9)",
                 "New...        (Ctrl-N)",
                 "Save Current  (Ctrl-S)",
                 "Save As...       (F10)",
+                "Export...  (Shift-F10)",
                 "Message Log (Ctrl-F11)",
                 "Quit          (Ctrl-Q)",
         }, selected_item: 0, active_item: -1,
@@ -290,10 +291,14 @@ static void file_menu_selected_cb(void)
 	case 3: /* save as... */
 		set_page(PAGE_SAVE_MODULE);
 		break;
-	case 4: /* message log */
+	case 4:
+		/* export ... */
+		set_page(PAGE_EXPORT_MODULE);
+		break;
+	case 5: /* message log */
 		set_page(PAGE_LOG);
 		break;
-        case 5: /* quit */
+        case 6: /* quit */
                 show_exit_prompt();
                 break;
         }
