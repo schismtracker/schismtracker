@@ -573,6 +573,18 @@ static int handle_key_global(struct key_event * k)
                         return 1;
                 }
                 break;
+	case SDLK_HOME:
+		if (!(k->mod & KMOD_ALT)) break;
+		if (status.flags & DISKWRITER_ACTIVE) break;
+		if (k->state) return 0;
+		kbd_set_current_octave(kbd_get_current_octave() - 1);
+                return 1;
+	case SDLK_END:
+		if (!(k->mod & KMOD_ALT)) break;
+		if (status.flags & DISKWRITER_ACTIVE) break;
+		if (k->state) return 0;
+		kbd_set_current_octave(kbd_get_current_octave() + 1);
+		return 1;
         default:
                 break;
         }
@@ -1179,6 +1191,7 @@ void handle_key(struct key_event * k)
 			}
 		}
 		return;
+
 	default:
 		break;
         }
