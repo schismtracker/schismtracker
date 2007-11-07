@@ -852,6 +852,8 @@ static void event_loop(void)
 						save_song_or_save_as();
 					} else if (strcasecmp(event.user.data1, "save_as") == 0) {
 						set_page(PAGE_SAVE_MODULE);
+					} else if (strcasecmp(event.user.data1, "export_song") == 0) {
+						set_page(PAGE_EXPORT_MODULE);
 					} else if (strcasecmp(event.user.data1, "logviewer") == 0) {
 						set_page(PAGE_LOG);
 					} else if (strcasecmp(event.user.data1, "font_editor") == 0) {
