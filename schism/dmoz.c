@@ -417,6 +417,7 @@ int dmoz_worker(void)
 	if (current_dmoz_file >= current_dmoz_filelist->num_files) {
 		current_dmoz_filelist = 0;
 		current_dmoz_filter = 0;
+		if (dmoz_worker_onmove) dmoz_worker_onmove();
 		return 0;
 	}
 
@@ -425,6 +426,7 @@ int dmoz_worker(void)
 			current_dmoz_filelist->num_files--;
 			current_dmoz_filelist = 0;
 			current_dmoz_filter = 0;
+			if (dmoz_worker_onmove) dmoz_worker_onmove();
 			return 0;
 		}
 
