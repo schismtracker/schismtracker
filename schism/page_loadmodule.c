@@ -309,6 +309,7 @@ static void file_list_reposition(void)
                 top_file = current_file;
         else if (current_file > top_file + 30)
                 top_file = current_file - 30;
+        status.flags |= NEED_UPDATE;
 }
 
 static void dir_list_reposition(void)
@@ -320,6 +321,7 @@ static void dir_list_reposition(void)
                 top_dir = current_dir;
         else if (current_dir > top_dir + 20)
                 top_dir = current_dir - 20;
+        status.flags |= NEED_UPDATE;
 }
 
 static void read_directory(void)
