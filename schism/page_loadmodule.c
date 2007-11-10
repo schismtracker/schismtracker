@@ -188,7 +188,7 @@ static void do_save_song(void *ptr)
 		}
 	}
 
-	if (ptr == NULL && strcmp(typ,"WAV") == 0) {
+	if (f == NULL || (typ && strcmp(typ,"WAV") == 0)) {
 		set_page(PAGE_SAVE_MODULE);
 	} else {
 		set_page(PAGE_LOG);
