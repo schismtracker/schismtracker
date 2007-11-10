@@ -103,23 +103,30 @@ static void data(struct midi_track *t, const void *z, int zlen)
 	add_track(t, z, zlen);
 	t->msec = 0;
 }
-static void flush(struct midi_track *t)
-{
-puts("fljush");
-	data(t,"\0\0",1);
-}
 static void pad(struct midi_track *t,int frame, int tempo, int row)
 {
 	int msec;
 
-	/*
-	 * msec = (((24*tempo)*frame)*row)/60000
-	 */
 	msec = (frame*row*60000) / (tempo * 24);
-	if ((t->msec+msec) < msec)  {
+	/*
+	 * overflow checking here aside, this checks for a very
+	 * pathological case where we have a delay in a channel that
+	 * lasts for more than three days. in fact, this code *was* tested
+	 *
+	 * the midi spec doesn't cope with this, but if i make a corrupt file,
+	 * even by accident, people will be very unhappy, so I put a
+	 * garbage comment- players *must* deal with this, so this can be used
+	 * to make extra long delays...
+	 */
+	if (((t->msec+msec) < msec) || ((t->msec+msec)>0x0FFFFFFF))  {
 		/* overflow; flush some nonsense to keep the clocks going */
-		puts("overflow");
-		flush(t);
+#define DELAY_MSG "This is a long delay"
+		add_track_len(t, t->msec);
+		add_track(t, "\377\1", 2);
+		add_track_len(t, sizeof(DELAY_MSG)-1);
+		add_track(t, DELAY_MSG, sizeof(DELAY_MSG)-1);
+		t->msec = 0;
+#undef DELAY_MSG
 	}
 	t->msec += msec;
 }
