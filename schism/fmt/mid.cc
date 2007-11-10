@@ -44,7 +44,7 @@ int fmt_mid_read_info(dmoz_file_t *file, const byte *data, size_t length)
 }
 
 struct midi_map {
-	unsigned int c, p;
+	unsigned int c, p, b;
 };
 struct midi_track {
 	int old_tempo;
@@ -55,7 +55,12 @@ struct midi_track {
 	unsigned char *buf;
 	int alloc, used;
 
+	int pan, vol;
+	int bank;
+
 	int msec;
+
+	int active_macro;
 };
 
 static void add_track(struct midi_track *t, const void *data, int len)
@@ -92,20 +97,20 @@ static void add_track_len(struct midi_track *t, unsigned int n)
 }
 static int volfix(int v)
 {
-	const double sv = (127.0*127.0) / 65536.0;
-	double fv = ((double)(v<<8));
-	fv *= sv;
-	return (int)(sqrt(fv));
+	return (int)(127.0*(log(v)/log(127)));
 }
 static void data(struct midi_track *t, const void *z, int zlen)
 {
-	add_track_len(t, t->msec);
+	if (t->msec || !t->used) add_track_len(t, t->msec);
+	else if (t->used) add_track_len(t,1);
 	add_track(t, z, zlen);
 	t->msec = 0;
 }
 static void pad(struct midi_track *t,int frame, int tempo, int row)
 {
 	int msec;
+
+	if (frame <= 0 || row <= 0 || tempo <= 0) return;
 
 	msec = (frame*row*60000) / (tempo * 24);
 	/*
@@ -135,10 +140,83 @@ static void pad_all(struct midi_track *t,int frame, int tempo, int row)
 	int i;
 	for (i = 0; i < 64; i++) pad(t+i,frame,tempo,row);
 }
+static void macro(unsigned char **pp, int c, const char *mac,
+				int par, int note,
+				int vel, struct midi_track *t)
+{
+	unsigned char *p = *pp;
+	unsigned char *z;
+	int open_sysx;
+	int cw, ch;
+
+	if (!mac) return;
+	open_sysx = 0;
+	cw = 0;
+	while (*mac) {
+		if (!cw) *p=0;
+		switch (*mac) {
+		case '0': ch=0; break;
+		case '1': ch=1; break;
+		case '2': ch=2; break;
+		case '3': ch=3; break;
+		case '4': ch=4; break;
+		case '5': ch=5; break;
+		case '6': ch=6; break;
+		case '7': ch=7; break;
+		case '8': ch=8; break;
+		case '9': ch=9; break;
+		case 'A': ch=10; break;
+		case 'B': ch=11; break;
+		case 'C': ch=12; break;
+		case 'D': ch=13; break;
+		case 'E': ch=14; break;
+		case 'F': ch=15; break;
+		case 'c': ch = c & 15; break;
+		case 'n': cw=1; ch = (note & 127); break;
+		case 'v': cw=1; ch = vel; break;
+		case 'u': cw=1; ch = t->vol; break;
+		case 'x': cw=1; ch = t->pan; break;
+		case 'y': cw=1; ch = t->pan; break;
+		case 'a': cw=1; ch = (t->bank >> 7) & 127; break;
+		case 'b': cw=1; ch = (t->bank & 127); break;
+		case 'z': case 'p': cw=1; ch = par; break;
+		case ' ': case '\t':
+			if (cw) {
+				ch = 0;
+				break;
+			}
+			mac++;
+			continue;
+		default: mac++; continue;
+		};
+		if (!cw) {
+			*p = (ch << 4);
+			cw = 1;
+		} else {
+			*p |= ch;
+			cw = 0;
+			if (*p == 0xF0) open_sysx=1;
+			else if (*p == 0xF7) open_sysx=0;
+			p++;
+		}
+		mac++;
+	}
+	if (cw) p++;
+	if (open_sysx) {
+		*p = 0xF7;
+		p++;
+	}
+	if (*pp != p) {
+		*p = 0;
+		p++;
+	}
+	*pp = p;
+}
 
 void fmt_mid_save_song(diskwriter_driver_t *dw)
 {
 	song_note *nb;
+	midi_config *g;
 	byte *orderlist;
 	struct midi_track trk[64];
 	struct midi_map map[SCHISM_MAX_SAMPLES], *m;
@@ -149,10 +227,18 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	int order, row, speed;
 	int i, j, nt, left, vol;
 	int need_cut;
+	int tmpspd;
 	int tempo;
+
+	g = song_get_midi_config();
 
 	memset(map, 0, sizeof(map));
 	memset(trk, 0, sizeof(trk));
+	for (i = 0; i < 64; i++) {
+		trk[i].pan = 64;
+		trk[i].vol = 127;
+	}
+
 	if (song_is_instrument_mode()) {
 		assert(SCHISM_MAX_INSTRUMENTS == SCHISM_MAX_SAMPLES);
 		for (i = 1; i <= SCHISM_MAX_INSTRUMENTS; i++) {
@@ -162,6 +248,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			if (ins->midi_channel > 16) continue;
 			map[i].c = ins->midi_channel;
 			map[i].p = ins->midi_program & 127;
+			map[i].b = ins->midi_bank;
 		}
 	} else {
 		for (i = 1; i <= SCHISM_MAX_SAMPLES; i++) {
@@ -170,6 +257,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			if (!smp) continue;
 			map[i].p = 1;
 			map[i].c = i;
+			map[i].b = 0;
 		}
 	}
 	dw->o(dw, (const unsigned char *)"MThd\0\0\0\6\0\1\0\100\xe7\x28", 14);
@@ -248,10 +336,19 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 				if (nb->instrument
 				&& trk[i].last_chan != nb->instrument) {
 					m = &map[nb->instrument];
-					*p = 0xc0 | (m->c-1); p++;
-					*p = m->p; p++;
-					*p = 0; p++;
-
+					if (trk[i].bank != m->b) {
+						/* bank select */
+						trk[i].bank = m->b;
+						macro(&p, m->c-1,
+								&g->midi_global_data[7*32],
+								m->b,
+								0,0,trk+i);
+					}
+					/* program change */
+					macro(&p, m->c-1,
+						&g->midi_global_data[8*32],
+						m->p,
+						0,0,trk+i);
 					trk[i].last_chan = nb->instrument;
 				} else {
 					m = &map[ trk[i].last_chan ];
@@ -261,46 +358,62 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						if (!trk[i].note_on[j])
 							continue;
 						/* keyoff */
-						*p = 0x90|(trk[i].note_on[j]-1);
-						p++;
-						*p = j; p++;
-						*p = 0; p++;
-						*p = 0; p++;
+						macro(&p, trk[i].note_on[j]-1,
+							&g->midi_global_data[4*32],
+							j, j, 0, trk+i);
 						trk[i].note_on[j] = 0;
 					}
 				}
 				if (nb->note && nb->note <= 120 && m->c) {
 					j = nb->note - 1;
 					trk[i].note_on[j] = m->c;
-					*p = 0x90|(m->c-1); p++;
-					*p = j; p++;
+
 					vol = 127;
 					if (nb->volume_effect == VOLCMD_VOLUME)
-						vol = nb->volume * 4;
+						vol = nb->volume * 2;
 					if (nb->effect == CMD_VOLUME)
-						vol = nb->parameter * 4;
+						vol = nb->parameter * 2;
 					vol = volfix(vol);
 					if (vol > 127) vol = 127;
-					*p = vol; p++;
-					*p = 0; p++;
+					macro(&p, trk[i].note_on[j]-1,
+							&g->midi_global_data[3*32],
+							j, j, vol, trk+i);
 				}
 				j = nb->parameter;
 				need_cut = 0;
+				tmpspd = speed;
 				switch (nb->effect) {
 				case CMD_SPEED:
-					if (j && j < 32) speed = j;
+					if (j && j < 32) tmpspd = speed = j;
 					break;
 				case CMD_PATTERNBREAK:
 					row = j;
 					left = 1;
 					break;
 				case CMD_PANNING8:
-					if (j <= 0x80) {
+					if (j < 0x80) {
 						*p = 0xb0|(m->c-1); p++;
 						*p = 0x10; p++;
 						*p = (j & 127); p++;
+						trk[i].pan = j & 127;
+						/* change pan */
+						macro(&p, m->c-1,
+								&g->midi_global_data[6*32],
+								trk[i].pan, 0, 0, trk+i);
 					}
 					break;
+				case CMD_MIDI:
+					if (j < 0x80) {
+						macro(&p, m->c-1,
+							&g->midi_sfx[ trk[i].active_macro << 5],
+							j, 0, 0, trk+i);
+					} else {
+						macro(&p, m->c-1,
+							&g->midi_zxx[ (j & 0x127) << 5],
+							0, 0, 0, trk+i);
+					}
+					break;
+
 				case CMD_MODCMDEX:
 				case CMD_S3MCMDEX:
 					switch (j&0xf0) {
@@ -315,7 +428,13 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						j &= 15;
 						if (!j) j = trk[i].last_delay;
 						trk[i].last_delay = j;
+						tmpspd -= j;
 						pad(trk+i,j,tempo,1);
+						break;
+					case 0xf0:
+						/* set active macro */
+						j &= 15;
+						trk[i].active_macro = j;
 						break;
 					};
 					break;
@@ -332,17 +451,16 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						if (!trk[i].note_on[j])
 							continue;
 						/* keyoff */
-						*p = 0x90|(trk[i].note_on[j]-1);
-						p++;
-						*p = j; p++;
-						*p = 0; p++;
-						*p = 0; p++;
+						macro(&p, trk[i].note_on[j]-1,
+							&g->midi_global_data[4*32],
+							j, j, 0, trk+i);
+
 						trk[i].note_on[j] = 0;
 					}
 					data(trk+i,packet,(p-packet)-1);
-					pad(trk+i,(speed-need_cut),tempo,1);
+					pad(trk+i,(tmpspd-need_cut),tempo,1);
 				} else {
-					pad(trk+i,speed,tempo,1);
+					pad(trk+i,tmpspd,tempo,1);
 				}
 
 				nb++;
