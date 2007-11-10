@@ -35,6 +35,15 @@ typedef struct _midiconfig {
 	char midi_sfx[16*32];
 	char midi_zxx[128*32];
 } midi_config;
+#define MIDI_GCF_START		(0*32)
+#define MIDI_GCF_STOP		(1*32)
+#define MIDI_GCF_TICK		(2*32)
+#define MIDI_GCF_NOTEON		(3*32)
+#define MIDI_GCF_NOTEOFF	(4*32)
+#define MIDI_GCF_VOLUME		(5*32)
+#define MIDI_GCF_PAN		(6*32)
+#define MIDI_GCF_BANKCHANGE	(7*32)
+#define MIDI_GCF_PROGRAMCHANGE	(8*32)
 
 /* aka modinstrument */
 typedef struct _song_sample {
