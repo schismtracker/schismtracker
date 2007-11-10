@@ -198,6 +198,7 @@ static void do_save_song(void *ptr)
 			/* set_page(PAGE_BLANK); */
 		}
 	}
+	free(ptr);
 }
 
 void save_song_or_save_as(void)
@@ -238,7 +239,7 @@ static void handle_file_entered_S(char *ptr)
 	
 	if (stat(ptr, &buf) < 0) {
 		if (errno == ENOENT) {
-			do_save_song(ptr);
+			do_save_song(str_dup(ptr));
 		} else {
 			log_appendf(4, "%s: %s", ptr, strerror(errno));
 		}
