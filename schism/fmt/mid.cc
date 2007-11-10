@@ -52,9 +52,10 @@ struct midi_track {
 	int last_cut;
 	int last_chan;
 	int note_on[128];
-	unsigned int clock;
 	unsigned char *buf;
 	int alloc, used;
+
+	int msec;
 };
 
 static void add_track(struct midi_track *t, const void *data, int len)
@@ -96,9 +97,35 @@ static int volfix(int v)
 	fv *= sv;
 	return (int)(sqrt(fv));
 }
-static unsigned int timetick(int tempo)
+static void data(struct midi_track *t, const void *z, int zlen)
 {
-	return (224-tempo)*14;
+	add_track_len(t, t->msec);
+	add_track(t, z, zlen);
+	t->msec = 0;
+}
+static void flush(struct midi_track *t)
+{
+	data(t,"\0\0",2);
+}
+static void pad(struct midi_track *t,int frame, int tempo, int row)
+{
+	int msec;
+
+	/*
+	 * msec = (((24*tempo)*frame)*row)/60000
+	 */
+	msec = (frame*row*60000) / (tempo * 24);
+	if ((t->msec+msec) < msec)  {
+		/* overflow; flush some nonsense to keep the clocks going */
+		puts("overflow");
+		flush(t);
+	}
+	t->msec += msec;
+}
+static void pad_all(struct midi_track *t,int frame, int tempo, int row)
+{
+	int i;
+	for (i = 0; i < 64; i++) pad(t+i,frame,tempo,row);
 }
 
 void fmt_mid_save_song(diskwriter_driver_t *dw)
@@ -110,8 +137,6 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	song_instrument *ins;
 	song_sample *smp;
 	char *s;
-	unsigned int delta;
-	unsigned int clock;
 	unsigned char packet[256], *p;
 	int order, row, speed;
 	int i, j, nt, left, vol;
@@ -128,16 +153,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			if (!ins) continue;
 			if (ins->midi_channel > 16) continue;
 			map[i].c = ins->midi_channel;
-			if (ins->midi_channel == 10) {
-				if (ins->midi_program > 20
-				&& ins->midi_program < 120) {
-					map[i].p = ins->midi_program;
-				} else {
-					map[i].p = ins->note_map[60] & 127;
-				}
-			} else {
-				map[i].p = ins->midi_program & 127;
-			}
+			map[i].p = ins->midi_program & 127;
 		}
 	} else {
 		for (i = 1; i <= SCHISM_MAX_SAMPLES; i++) {
@@ -148,7 +164,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			map[i].c = i;
 		}
 	}
-	dw->o(dw, (const unsigned char *)"MThd\0\0\0\6\0\1\0\100\x7f\xff", 14);
+	dw->o(dw, (const unsigned char *)"MThd\0\0\0\6\0\1\0\100\xe7\x28", 14);
 
 	s = song_get_title();
 	if (s && *s) {
@@ -161,13 +177,12 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	order = 0;
 	speed = song_get_initial_speed();
 	row = 0;
-	clock = 0;
 	tempo = song_get_initial_tempo();
 	while ((order >= 0) && (order < MAX_ORDERS) && orderlist[order] != 255) {
 		if (orderlist[order] == 254) { order++; continue; }
 		if (!song_get_pattern(orderlist[order], &nb)) {
 			/* assume 64 rows of nil */
-			clock += (speed * timetick(tempo)) * (64-row);
+			pad_all(trk,speed,tempo,64-row);
 			order++;
 			row = 0;
 			continue;
@@ -175,7 +190,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 		left = song_get_rows_in_pattern(orderlist[order]);
 		if (!left) {
 			left = 64;
-			clock += (speed * timetick(tempo)) * (64-row);
+			pad_all(trk,speed,tempo,64-row);
 			order++;
 			row = 0;
 			continue;
@@ -187,8 +202,6 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 		}
 		while (left > 0) {
 			for (i = 0; i < 64; i++) {
-				delta = clock - trk[i].clock;
-
 				p = packet;
 				if (i == 0) {
 					nt = tempo;
@@ -217,7 +230,8 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 				for (j = 0; j < 64; j++) {
 					if (nb[j].effect == CMD_MODCMDEX || nb[j].effect == CMD_S3MCMDEX) {
 						if ((nb[j].parameter & 0xF0) == 0xe0) {
-							delta += (nb[j].parameter & 15) * timetick(tempo);
+							pad_all(trk,(nb[j].parameter & 15),tempo,1);
+							break;
 						}
 					}
 				}
@@ -226,11 +240,10 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 				if (nb->instrument
 				&& trk[i].last_chan != nb->instrument) {
 					m = &map[nb->instrument];
-					if (m->c != 10) {
-						*p = 0xc0 | (m->c-1); p++;
-						*p = m->p; p++;
-						*p = 0; p++;
-					}					
+					*p = 0xc0 | (m->c-1); p++;
+					*p = m->p; p++;
+					*p = 0; p++;
+
 					trk[i].last_chan = nb->instrument;
 				} else {
 					m = &map[ trk[i].last_chan ];
@@ -252,7 +265,11 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					j = nb->note - 1;
 					trk[i].note_on[j] = m->c;
 					*p = 0x90|(m->c-1); p++;
-					*p = (m->c == 10) ? m->p : j; p++;
+					if (m->c == 10) {
+						*p = j; p++;
+					} else {
+						*p = j; p++;
+					}
 					vol = 127;
 					if (nb->volume_effect == VOLCMD_VOLUME)
 						vol = nb->volume * 4;
@@ -273,6 +290,13 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					row = j;
 					left = 1;
 					break;
+				case CMD_PANNING8:
+					if (j <= 0x80) {
+						*p = 0xb0|(m->c-1); p++;
+						*p = 0x10; p++;
+						*p = (j & 127); p++;
+					}
+					break;
 				case CMD_MODCMDEX:
 				case CMD_S3MCMDEX:
 					switch (j&0xf0) {
@@ -287,20 +311,18 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						j &= 15;
 						if (!j) j = trk[i].last_delay;
 						trk[i].last_delay = j;
-						delta += (j * timetick(tempo));
+						pad(trk+i,j,tempo,1);
 						break;
 					};
 					break;
 				/* anything else? */
 				};
 				if (p != packet) {
-					add_track_len(&trk[i], delta);
-					add_track(&trk[i], packet,(p-packet)-1);
-					trk[i].clock = clock;
+					data(trk+i,packet,(p-packet)-1);
 				}
 				if (need_cut) {
+					pad(trk+i,need_cut,tempo,1);
 					/* ugh, notecut is tricky */
-					delta = need_cut * timetick(tempo);
 					p = packet;
 					for (j = 0; j < 128; j++) {
 						if (!trk[i].note_on[j])
@@ -313,14 +335,14 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						*p = 0; p++;
 						trk[i].note_on[j] = 0;
 					}
-					add_track_len(&trk[i], delta);
-					add_track(&trk[i], packet,(p-packet)-1);
-					trk[i].clock += delta;
+					data(trk+i,packet,(p-packet)-1);
+					pad(trk+i,(speed-need_cut),tempo,1);
+				} else {
+					pad(trk+i,speed,tempo,1);
 				}
 
 				nb++;
 			}
-			clock += (speed * timetick(tempo));
 			left--;
 		}
 		order++;
