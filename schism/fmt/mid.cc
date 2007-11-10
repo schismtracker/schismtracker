@@ -105,7 +105,8 @@ static void data(struct midi_track *t, const void *z, int zlen)
 }
 static void flush(struct midi_track *t)
 {
-	data(t,"\0\0",2);
+puts("fljush");
+	data(t,"\0\0",1);
 }
 static void pad(struct midi_track *t,int frame, int tempo, int row)
 {
@@ -265,11 +266,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					j = nb->note - 1;
 					trk[i].note_on[j] = m->c;
 					*p = 0x90|(m->c-1); p++;
-					if (m->c == 10) {
-						*p = j; p++;
-					} else {
-						*p = j; p++;
-					}
+					*p = j; p++;
 					vol = 127;
 					if (nb->volume_effect == VOLCMD_VOLUME)
 						vol = nb->volume * 4;
@@ -348,7 +345,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 		order++;
 	}
 	for (i = 0; i < 64; i++) {
-		add_track(&trk[i], "\x00\xff\x2f\x00", 4);
+		data(&trk[i], "\xff\x2f\x00", 3);
 		packet[0] = (trk[i].used >> 24) & 255;
 		packet[1] = (trk[i].used >> 16) & 255;
 		packet[2] = (trk[i].used >> 8) & 255;
