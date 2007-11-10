@@ -43,8 +43,11 @@ int fmt_mid_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	return true;
 }
 
+/* midiwriter */
+#define GCF(z) &g->midi_global_data[z]
 struct midi_map {
 	unsigned int c, p, b;
+	int nna;
 };
 struct midi_track {
 	int old_tempo;
@@ -112,7 +115,7 @@ static void pad(struct midi_track *t,int frame, int tempo, int row)
 
 	if (frame <= 0 || row <= 0 || tempo <= 0) return;
 
-	msec = (frame*row*60000) / (tempo * 24);
+	msec = (frame*row*2400) / (tempo);
 	/*
 	 * overflow checking here aside, this checks for a very
 	 * pathological case where we have a delay in a channel that
@@ -212,6 +215,51 @@ static void macro(unsigned char **pp, int c, const char *mac,
 	}
 	*pp = p;
 }
+static void keyvol(midi_config *g, unsigned char **pp, struct midi_track *t, int vol)
+{
+	int j;
+	vol = volfix(vol);
+	if (vol > 127) vol = 127;
+	for (j = 0; j < 128; j++) {
+		if (!t->note_on[j]) continue;
+		(*pp)[0] = 0xb0|(t->note_on[j]-1);
+		(*pp)[1] = 0x07;
+		(*pp)[2] = vol;
+		(*pp)[3] = 0;
+		(*pp) = (*pp) + 4;
+		macro(pp, t->note_on[j]-1,
+				GCF(MIDI_GCF_VOLUME), vol, j, vol, t);
+	}
+}
+static void keyoff(midi_config *g, unsigned char **pp, struct midi_track *t)
+{
+	int j;
+	for (j = 0; j < 128; j++) {
+		if (!t->note_on[j]) continue;
+			
+		/* keyoff */
+		macro(pp, t->note_on[j]-1,
+				GCF(MIDI_GCF_NOTEOFF), j, j, 0, t);
+				
+		t->note_on[j] = 0;
+	}
+}
+static void settempo(struct midi_track *t, int tempo)
+{
+	unsigned char d[6];
+
+	/* ((tempo * 0.4) * 100000) / 96 -> microseconds per quarter */
+	tempo *= 400000;
+	tempo /= 96;
+
+	d[0] = 0xff;
+	d[1] = 0x51;
+	d[2] = 0x03;
+	d[3] = (tempo & 0xFF0000) >> 16;
+	d[4] = (tempo & 0xFF00) >> 8;
+	d[5] = (tempo & 0xFF);
+	data(t,d,6);
+}
 
 void fmt_mid_save_song(diskwriter_driver_t *dw)
 {
@@ -249,6 +297,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			map[i].c = ins->midi_channel;
 			map[i].p = ins->midi_program & 127;
 			map[i].b = ins->midi_bank;
+			map[i].nna = ins->nna;
 		}
 	} else {
 		for (i = 1; i <= SCHISM_MAX_SAMPLES; i++) {
@@ -258,6 +307,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			map[i].p = 1;
 			map[i].c = i;
 			map[i].b = 0;
+			map[i].nna = NNA_NOTECUT;
 		}
 	}
 	dw->o(dw, (const unsigned char *)"MThd\0\0\0\6\0\1\0\100\xe7\x28", 14);
@@ -274,6 +324,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	speed = song_get_initial_speed();
 	row = 0;
 	tempo = song_get_initial_tempo();
+	settempo(&trk[0], tempo);
 	while ((order >= 0) && (order < MAX_ORDERS) && orderlist[order] != 255) {
 		if (orderlist[order] == 254) { order++; continue; }
 		if (!song_get_pattern(orderlist[order], &nb)) {
@@ -320,11 +371,13 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 							tempo = 32;
 						else if (tempo >= 255)
 							tempo = 255;
+						settempo(&trk[0], tempo);
 					}
 				}
 
 				for (j = 0; j < 64; j++) {
-					if (nb[j].effect == CMD_MODCMDEX || nb[j].effect == CMD_S3MCMDEX) {
+					if (nb[j].effect == CMD_MODCMDEX
+					|| nb[j].effect == CMD_S3MCMDEX) {
 						if ((nb[j].parameter & 0xF0) == 0xe0) {
 							pad_all(trk,(nb[j].parameter & 15),tempo,1);
 							break;
@@ -340,31 +393,32 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						/* bank select */
 						trk[i].bank = m->b;
 						macro(&p, m->c-1,
-								&g->midi_global_data[7*32],
+								GCF(MIDI_GCF_BANKCHANGE),
 								m->b,
 								0,0,trk+i);
 					}
 					/* program change */
 					macro(&p, m->c-1,
-						&g->midi_global_data[8*32],
-						m->p,
-						0,0,trk+i);
+							GCF(MIDI_GCF_PROGRAMCHANGE),
+							m->p,
+							0,0,trk+i);
 					trk[i].last_chan = nb->instrument;
 				} else {
 					m = &map[ trk[i].last_chan ];
 				}
-				if (nb->note && m->c) {
-					for (j = 0; j < 128; j++) {
-						if (!trk[i].note_on[j])
-							continue;
-						/* keyoff */
-						macro(&p, trk[i].note_on[j]-1,
-							&g->midi_global_data[4*32],
-							j, j, 0, trk+i);
-						trk[i].note_on[j] = 0;
-					}
-				}
-				if (nb->note && nb->note <= 120 && m->c) {
+				if (nb->note == NOTE_CUT) {
+					keyvol(g,&p, trk+i, 0);
+					keyoff(g,&p, trk+i);
+
+				} else if (nb->note > 120) {
+					keyoff(g,&p, trk+i);
+
+				} else if (nb->note && nb->note <= 120 && m->c) {
+					if (m->nna == NNA_NOTECUT)
+						keyvol(g,&p, trk+i, 0);
+					if (m->nna != NNA_CONTINUE)
+						keyoff(g,&p, trk+i);
+
 					j = nb->note - 1;
 					trk[i].note_on[j] = m->c;
 
@@ -373,11 +427,17 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						vol = nb->volume * 2;
 					if (nb->effect == CMD_VOLUME)
 						vol = nb->parameter * 2;
-					vol = volfix(vol);
 					if (vol > 127) vol = 127;
 					macro(&p, trk[i].note_on[j]-1,
-							&g->midi_global_data[3*32],
+							GCF(MIDI_GCF_NOTEON),
 							j, j, vol, trk+i);
+					keyvol(g,&p, trk+i, vol);
+				} else if (nb->effect == CMD_VOLUME) {
+					vol = nb->parameter * 2;
+					keyvol(g,&p, trk+i, vol);
+				} else if (nb->volume_effect == VOLCMD_VOLUME) {
+					vol = nb->volume * 2;
+					keyvol(g,&p, trk+i, vol);
 				}
 				j = nb->parameter;
 				need_cut = 0;
@@ -398,8 +458,8 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						trk[i].pan = j & 127;
 						/* change pan */
 						macro(&p, m->c-1,
-								&g->midi_global_data[6*32],
-								trk[i].pan, 0, 0, trk+i);
+							GCF(MIDI_GCF_PAN),
+							trk[i].pan, 0, 0, trk+i);
 					}
 					break;
 				case CMD_MIDI:
@@ -447,16 +507,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					pad(trk+i,need_cut,tempo,1);
 					/* ugh, notecut is tricky */
 					p = packet;
-					for (j = 0; j < 128; j++) {
-						if (!trk[i].note_on[j])
-							continue;
-						/* keyoff */
-						macro(&p, trk[i].note_on[j]-1,
-							&g->midi_global_data[4*32],
-							j, j, 0, trk+i);
-
-						trk[i].note_on[j] = 0;
-					}
+					keyoff(g,&p, trk+i);
 					data(trk+i,packet,(p-packet)-1);
 					pad(trk+i,(tmpspd-need_cut),tempo,1);
 				} else {
