@@ -13,7 +13,7 @@
 #include "stdafx.h"
 #include "sndfile.h"
 
-#define PSM_LOG
+//#define PSM_LOG
 
 #define PSM_ID_NEW	0x204d5350
 #define PSM_ID_OLD	0xfe4d5350
@@ -325,11 +325,46 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 				switch(command & 0x3F)
 				{
 				// 01: fine volslide up
-				case 0x01:	command = CMD_VOLUMESLIDE; param |= 0x0f; if (param == 15) param=31; break;
+				case 0x01:
+#if PSM_LOG
+					printf("fvup command pat=%d row=%d ch=%d   %02x %02x\n",
+							nPat,
+								row,1+ch,
+								command, param);
+#endif
+					if (!sp->volcmd) {
+						sp->volcmd = VOLCMD_FINEVOLUP;
+						sp->vol = (param >> 1) & 0xF;
+						command = CMD_PORTAMENTOUP;
+						param>>=4; param |= 0xf0;
+						if (param == 240) param=241;
+					} else {
+						command = CMD_VOLUMESLIDE;
+						param |= 0x0f;
+						if (param == 15) param=31;
+					}
+					break;
 				// 02: volslide up
 				case 0x02:	command = CMD_VOLUMESLIDE; param>>=1; param<<=4; break;
 				// 03: fine volslide down
-				case 0x03:	command = CMD_VOLUMESLIDE; param>>=4; param |= 0xf0; if (param == 240) param=241; break;
+				case 0x03:	
+#if PSM_LOG
+					printf("fvdown command pat=%d row=%d ch=%d   %02x %02x\n",
+							nPat,
+								row,1+ch,
+								command, param);
+#endif
+					if (!sp->volcmd) {
+						sp->volcmd = VOLCMD_FINEVOLDOWN;
+						sp->vol = (param >> 2) & 0xF;
+						if (!sp->vol) sp->vol = 1;
+						command = CMD_PORTAMENTODOWN;
+					} else {
+						command = CMD_VOLUMESLIDE;
+					}
+					param>>=4; param |= 0xf0;
+					if (param == 240) param=241;
+					break;
 				// 04: volslide down
 				case 0x04:	command = CMD_VOLUMESLIDE; param>>=1; break;
 				// 0C: portamento up
