@@ -332,6 +332,7 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 								row,1+ch,
 								command, param);
 #endif
+#if 0
 					if (!sp->volcmd) {
 						sp->volcmd = VOLCMD_FINEVOLUP;
 						sp->vol = (param >> 1) & 0xF;
@@ -339,10 +340,10 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 						param>>=4; param |= 0xf0;
 						if (param == 240) param=241;
 					} else {
-						command = CMD_VOLUMESLIDE;
-						param |= 0x0f;
-						if (param == 15) param=31;
-					}
+#endif
+					command = CMD_VOLUMESLIDE;
+					param |= 0x0f;
+					if (param == 15) param=31;
 					break;
 				// 02: volslide up
 				case 0x02:	command = CMD_VOLUMESLIDE; param>>=1; param<<=4; break;
@@ -354,14 +355,15 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 								row,1+ch,
 								command, param);
 #endif
+#if 0
 					if (!sp->volcmd) {
 						sp->volcmd = VOLCMD_FINEVOLDOWN;
 						sp->vol = (param >> 2) & 0xF;
 						if (!sp->vol) sp->vol = 1;
 						command = CMD_PORTAMENTODOWN;
-					} else {
-						command = CMD_VOLUMESLIDE;
 					}
+#endif
+					command = CMD_VOLUMESLIDE;
 					param>>=4; param |= 0xf0;
 					if (param == 240) param=241;
 					break;
