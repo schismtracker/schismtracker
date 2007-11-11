@@ -59,7 +59,7 @@ struct midi_track {
 	int alloc, used;
 
 	int pan, vol;
-	int bank;
+	unsigned int bank;
 
 	int msec;
 
@@ -148,7 +148,6 @@ static void macro(unsigned char **pp, int c, const char *mac,
 				int vel, struct midi_track *t)
 {
 	unsigned char *p = *pp;
-	unsigned char *z;
 	int open_sysx;
 	int cw, ch;
 
