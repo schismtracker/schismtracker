@@ -111,6 +111,7 @@ static const fmt_read_info_func read_info_funcs[] = {
 	version 2.08) requiring two different checks and three memcmp's. However, since it's so widely used
 	<opinion>'cuz Impulse Tracker owns</opinion>, I'm putting it up here anyway. */
 	READ_INFO(it),
+	READ_INFO(psm),
 	READ_INFO(mt2),
 	READ_INFO(mtm),
 	READ_INFO(ntk),
