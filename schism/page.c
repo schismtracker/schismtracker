@@ -388,7 +388,7 @@ static void minipop_slide(int cv, const char *name,
 /* returns 1 if the key was handled */
 static int handle_key_global(struct key_event * k)
 {
-	int i;
+	int i, j;
 	int ins_mode;
 
 	if (_mp_active == 2 && (k->mouse == MOUSE_CLICK && k->state)) {
@@ -483,6 +483,24 @@ static int handle_key_global(struct key_event * k)
 	/* shortcut */
 	if (k->mouse) {
 		return 0;
+	}
+
+	if (status.flags & CAPS_PRESSED) {
+		j = kbd_get_note(k);
+		if (song_is_instrument_mode()) {
+			i = instrument_get_current();
+		} else {
+			i = sample_get_current();
+		}
+		if (j <= 0 || j > 120 || i < 1) {
+			/* do nothing, falling through */
+		} else if (k->state) {
+			song_keyup(i,i,j,KEYDOWN_CHAN_CURRENT,0);
+			return 1;
+		} else {
+			song_keydown(i,i,j,64,KEYDOWN_CHAN_CURRENT,0);
+			return 1;
+		}
 	}
 
         /* first, check the truly global keys (the ones that still work if
