@@ -634,6 +634,11 @@ static void event_loop(void)
 				modkey ^= KMOD_NUM;
 				break;
 			case SDLK_CAPSLOCK:
+				if (event.type == SDL_KEYDOWN) {
+					status.flags |= CAPS_PRESSED;
+				} else {
+					status.flags &= ~CAPS_PRESSED;
+				}
 				modkey ^= KMOD_CAPS;
 				break;
 			default:
