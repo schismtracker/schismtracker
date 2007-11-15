@@ -128,6 +128,9 @@ enum {
 
 	/* Devi Ever's hack */
 	CRAYOLA_MODE = (1 << 25),
+
+	/* holding caps */
+	CAPS_PRESSED = (1 << 26),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
