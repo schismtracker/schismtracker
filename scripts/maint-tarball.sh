@@ -7,6 +7,7 @@ find schism2/ \
 	\! -path '*/CVS/*' \
 	\! -path '.#*' \
 	\! -name 'CVS' \
+	\! -name 'Screenshot-*.png' \
 	\! -name '*-build' \
 	\! -name '.*.sw[opqrstuvwxyz]' \
 	\! -name '*.tgz' \
