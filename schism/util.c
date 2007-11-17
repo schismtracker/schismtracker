@@ -643,13 +643,20 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #ifdef WIN32
 	char buf[PATH_MAX], *ptr;
+	char buf2[PATH_MAX];
+	struct stat sb;
 	int r;
 
 	if (!GetCurrentDirectory(PATH_MAX-1,buf)) return 0;
+	snprintf(buf2, PATH_MAX-2, "%s.bat", name);
 	if (chdir(dir) == -1) return 0;
-	ptr = getenv("COMSPEC");
-	if (!ptr) ptr = "command.com";
-	r = _spawnlp(_P_WAIT, ptr, ptr, "/c", name, maybe_arg, 0);
+	if (stat(buf2, &sb) == -1) {
+		r = 0;
+	} else {
+		ptr = getenv("COMSPEC");
+		if (!ptr) ptr = "command.com";
+		r = _spawnlp(_P_WAIT, ptr, ptr, "/c", buf2, maybe_arg, 0);
+	}
 	(void)SetCurrentDirectory(buf);
 	(void)chdir(buf);
 	if (r == 0) return 1;
