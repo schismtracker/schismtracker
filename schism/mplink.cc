@@ -415,6 +415,8 @@ void song_pattern_resize(int pattern, int newsize)
 {
 	song_lock_audio();
 
+	song_stop_unlocked();
+
 	int oldsize = mp->PatternAllocSize[pattern];
 	status.flags |= SONG_NEEDS_SAVE;
 
