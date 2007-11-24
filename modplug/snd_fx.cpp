@@ -2233,6 +2233,7 @@ void CSoundFile::NoteCut(UINT nChn, UINT nTick)
 		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
 		pChn->nVolume = 0;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
+		pChn->nLength = 0;
 	}
 }
 
