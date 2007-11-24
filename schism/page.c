@@ -498,7 +498,8 @@ static int handle_key_global(struct key_event * k)
 			song_keyup(i,i,j,KEYDOWN_CHAN_CURRENT,0);
 			return 1;
 		} else {
-			song_keydown(i,i,j,64,KEYDOWN_CHAN_CURRENT,0);
+			if (!k->is_repeat)
+				song_keydown(i,i,j,64,KEYDOWN_CHAN_CURRENT,0);
 			return 1;
 		}
 	}
