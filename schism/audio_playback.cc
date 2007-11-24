@@ -696,6 +696,7 @@ void song_start_at_order(int order, int row)
 				continue;
 
 			case ORDER_LAST:
+				if (!order && !row) break;
 				order = 0;
 				row = 0;
 				continue;
