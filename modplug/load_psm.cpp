@@ -108,6 +108,7 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 		UINT pan = (((iChPan & 3) == 1) || ((iChPan&3)==2)) ? 0xC0 : 0x40;
 		ChnSettings[iChPan].nPan = pan;
 	}
+	m_szNames[0][0]=0;
 	while (dwMemPos+8 < dwMemLength)
 	{
 		PSMCHUNK *pchunk = (PSMCHUNK *)(lpStream+dwMemPos);
