@@ -542,12 +542,22 @@ int kbd_char_to_hex(struct key_event *k)
  *         and for you people who might say 'hey, IT doesn't do that':
  *         yes it does. read the documentation. it's not in the editor,
  *         but it's in the player. */
+extern int key_scancode_lookup(int k);
 inline int kbd_get_note(struct key_event *k)
 {
         int note;
+	int kc;
 
 	if (!NO_CAM_MODS(k->mod)) return -1;
-	switch (k->sym) {
+
+#if defined(WIN32) || defined(MACOSX) || defined(USE_X11)
+	kc = key_scancode_lookup(k->scancode);
+	if (kc == -1) kc = k->sym;
+#else
+	kc = k->sym;
+#endif
+
+	switch (kc) {
 	case SDLK_BACKQUOTE:
 		if (k->mod & KMOD_SHIFT) return NOTE_FADE;
 	case SDLK_HASH: /* for delt */

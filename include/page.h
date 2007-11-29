@@ -39,6 +39,7 @@ struct key_event {
 	SDLKey sym, orig_sym;
 	SDLMod mod;
 	Uint16 unicode;
+	int scancode;
 
 	int state; /* 0 for down, 1 for up/release */
 	int mouse; /* 0 for none, 1 for click, 2 for scrollup, 3 for down */

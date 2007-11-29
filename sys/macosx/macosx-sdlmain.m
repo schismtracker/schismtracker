@@ -533,3 +533,57 @@ unsigned key_repeat_delay(void)
 	ktt = (ktt * 1000) / 60;
 	return (unsigned)ktt;
 }
+int key_scancode_lookup(int k)
+{
+	switch (k) {
+	case 0x32: /* QZ_BACKQUOTE */ return SDLK_BACKQUOTE;
+	case 0x12: /* QZ_1 */ return SDLK_1;
+	case 0x13: /* QZ_2 */ return SDLK_2;
+	case 0x14: /* QZ_3 */ return SDLK_3;
+	case 0x15: /* QZ_4 */ return SDLK_4;
+	case 0x17: /* QZ_5 */ return SDLK_5;
+	case 0x16: /* QZ_6 */ return SDLK_6;
+	case 0x1A: /* QZ_7 */ return SDLK_7;
+	case 0x1C: /* QZ_8 */ return SDLK_8;
+	case 0x19: /* QZ_9 */ return SDLK_9;
+	case 0x1D: /* QZ_0 */ return SDLK_0;
+	case 0x1B: /* QZ_MINUS */ return SDLK_MINUS;
+	case 0x18: /* QZ_EQUALS */ return SDLK_EQUALS;
+	case 0x0C: /* QZ_q */ return SDLK_q;
+	case 0x0D: /* QZ_w */ return SDLK_w;
+	case 0x0E: /* QZ_e */ return SDLK_e;
+	case 0x0F: /* QZ_r */ return SDLK_r;
+	case 0x11: /* QZ_t */ return SDLK_t;
+	case 0x10: /* QZ_y */ return SDLK_y;
+	case 0x20: /* QZ_u */ return SDLK_u;
+	case 0x22: /* QZ_i */ return SDLK_i;
+	case 0x1F: /* QZ_o */ return SDLK_o;
+	case 0x23: /* QZ_p */ return SDLK_p;
+	case 0x21: /* QZ_[ */ return SDLK_LEFTBRACKET;
+	case 0x1E: /* QZ_] */ return SDLK_RIGHTBRACKET;
+	case 0x2A: /* QZ_backslash */ return SDLK_BACKSLASH;
+	case 0x00: /* QZ_a */ return SDLK_a;
+	case 0x01: /* QZ_s */ return SDLK_s;
+	case 0x02: /* QZ_d */ return SDLK_d;
+	case 0x03: /* QZ_f */ return SDLK_f;
+	case 0x05: /* QZ_g */ return SDLK_g;
+	case 0x04: /* QZ_h */ return SDLK_h;
+	case 0x26: /* QZ_j */ return SDLK_j;
+	case 0x28: /* QZ_k */ return SDLK_k;
+	case 0x25: /* QZ_l */ return SDLK_l;
+	case 0x29: /* QZ_; */ return SDLK_SEMICOLON;
+	case 0x27: /* QZ_quote */ return SDLK_QUOTE;
+	case 0x06: /* QZ_z */ return SDLK_z;
+	case 0x07: /* QZ_x */ return SDLK_x;
+	case 0x08: /* QZ_c */ return SDLK_c;
+	case 0x09: /* QZ_v */ return SDLK_v;
+	case 0x0B: /* QZ_b */ return SDLK_b;
+	case 0x2D: /* QZ_n */ return SDLK_n;
+	case 0x2E: /* QZ_m */ return SDLK_m;
+	case 0x2B: /* QZ_, */ return SDLK_COMMA;
+	case 0x2F: /* QZ_. */ return SDLK_PERIOD;
+	case 0x2C: /* QZ_slash */ return SDLK_SLASH;
+	case 0x31: /* QZ_space */ return SDLK_SPACE;
+	default: return -1;
+	};
+}
