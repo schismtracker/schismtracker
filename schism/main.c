@@ -492,6 +492,7 @@ static void _synthetic_paste(const char *cbptr)
 		/* Win32 will have \r\n, everyone else \n */
 		if (*cbptr == '\r') continue;
 		/* simulate paste */
+		kk.scancode = -1;
 		kk.sym = kk.orig_sym = 0;
 		if (*cbptr == '\n') {
 			/* special attention to newlines */
@@ -653,6 +654,7 @@ static void event_loop(void)
 			win32_get_modkey(&modkey);
 #endif
 			kk.sym = event.key.keysym.sym;
+			kk.scancode = event.key.keysym.scancode;
 
 			switch (fix_numlock_key) {
 			case NUMLOCK_GUESS:
