@@ -119,6 +119,8 @@ static void _key_info_setup(void)
 	unscan_db[ XKeysymToKeycode(dpy, XK_bracketright) & 255 ] = SDLK_RIGHTBRACKET;
 	unscan_db[ XKeysymToKeycode(dpy, XK_asciitilde) & 255 ] = SDLK_BACKQUOTE;
 	unscan_db[ XKeysymToKeycode(dpy, XK_grave) & 255 ] = SDLK_BACKQUOTE;
+	unscan_db[ XKeysymToKeycode(dpy, XK_section) & 255 ] = SDLK_BACKQUOTE;
+	unscan_db[ XKeysymToKeycode(dpy, XK_onehalf) & 255 ] = SDLK_BACKQUOTE;
 	unscan_db[ XKeysymToKeycode(dpy, XK_comma) & 255 ] = SDLK_COMMA;
 	unscan_db[ XKeysymToKeycode(dpy, XK_period) & 255 ] = SDLK_PERIOD;
 	unscan_db[ XKeysymToKeycode(dpy, XK_greater) & 255 ] = SDLK_PERIOD;
