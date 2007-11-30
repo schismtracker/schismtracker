@@ -238,6 +238,18 @@ void key_translate(struct key_event *k)
 		};
 	}
 
+	if (k->sym == k->orig_sym) {
+		switch (k->sym) {
+		case SDLK_RETURN: k->unicode = '\r'; break;
+		default:
+			if (k->is_synthetic != 3) {
+				/* "un" unicode it */
+				k->unicode = char_unicode_to_cp437(k->unicode); 
+			}
+		};
+		return;
+	}
+
 	switch (k->sym) {
 	case SDLK_SLASH: k->unicode = (k->mod & KMOD_SHIFT) ? '?' : '/'; break;
 	case SDLK_ASTERISK: k->unicode = '*'; break;
