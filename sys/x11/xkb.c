@@ -50,6 +50,14 @@ static void _key_info_setup(void)
 	int a, b;
 	XF86MiscKbdSettings kbdsettings;
 #endif
+#ifdef HAVE_X11_EXTENSIONS_XKB_H
+	XkbDescPtr kb;
+	unsigned int dummy_int;
+	XkbComponentNamesRec rec;
+	XkbComponentNamesRec rec_back[16];
+	XkbComponentListPtr cur;
+	KeySym sym;
+#endif
 	int i;
 	Display *dpy;
 	SDL_SysWMinfo info;
@@ -72,59 +80,30 @@ static void _key_info_setup(void)
 		memset(&info, 0, sizeof(info));
 	}
 
+#ifdef HAVE_X11_EXTENSIONS_XKB_H
+	dummy_int = 1;
+	cur = XkbListComponents(dpy, XkbUseCoreKbd, rec_back, &dummy_int);
+	rec.keymap = cur->keymaps ? cur->keymaps->name : "";
+	rec.keycodes = cur->keycodes ? cur->keycodes->name : "";
+	rec.types = cur->types ? cur->types->name : "";
+	rec.compat = cur->compat ? cur->compat->name : "";
+	rec.symbols = "+us(basic)";
+	rec.geometry = cur->geometry ? cur->geometry->name : "";
+	kb = XkbGetKeyboardByName(dpy, XkbUseCoreKbd, &rec,
+			XkbGBN_AllComponentsMask, XkbGBN_AllComponentsMask, False);
+	for (i = 0; i < 256; i++) {
+		if (XkbTranslateKeyCode(kb, i, 0, &dummy_int, &sym)) {
+			unscan_db[i] = sym;
+		} else {
+			unscan_db[i] = -1;
+		}
+	}
+#else
 	/* all the keys you're likely to use */
 	for (i = 0; i < 256; i++) {
-		unscan_db[ XKeysymToKeycode(dpy, i) & 255 ] = i;
+		unscan_db[i]=-1;
 	}
-	/* in case these are different... */
-	unscan_db[ XKeysymToKeycode(dpy, XK_0) & 255 ] = SDLK_0;
-	unscan_db[ XKeysymToKeycode(dpy, XK_1) & 255 ] = SDLK_1;
-	unscan_db[ XKeysymToKeycode(dpy, XK_2) & 255 ] = SDLK_2;
-	unscan_db[ XKeysymToKeycode(dpy, XK_3) & 255 ] = SDLK_3;
-	unscan_db[ XKeysymToKeycode(dpy, XK_4) & 255 ] = SDLK_4;
-	unscan_db[ XKeysymToKeycode(dpy, XK_5) & 255 ] = SDLK_5;
-	unscan_db[ XKeysymToKeycode(dpy, XK_6) & 255 ] = SDLK_6;
-	unscan_db[ XKeysymToKeycode(dpy, XK_7) & 255 ] = SDLK_7;
-	unscan_db[ XKeysymToKeycode(dpy, XK_8) & 255 ] = SDLK_8;
-	unscan_db[ XKeysymToKeycode(dpy, XK_9) & 255 ] = SDLK_9;
-	unscan_db[ XKeysymToKeycode(dpy, XK_q) & 255 ] = SDLK_q;
-	unscan_db[ XKeysymToKeycode(dpy, XK_w) & 255 ] = SDLK_w;
-	unscan_db[ XKeysymToKeycode(dpy, XK_e) & 255 ] = SDLK_e;
-	unscan_db[ XKeysymToKeycode(dpy, XK_r) & 255 ] = SDLK_r;
-	unscan_db[ XKeysymToKeycode(dpy, XK_t) & 255 ] = SDLK_t;
-	unscan_db[ XKeysymToKeycode(dpy, XK_y) & 255 ] = SDLK_y;
-	unscan_db[ XKeysymToKeycode(dpy, XK_u) & 255 ] = SDLK_u;
-	unscan_db[ XKeysymToKeycode(dpy, XK_i) & 255 ] = SDLK_i;
-	unscan_db[ XKeysymToKeycode(dpy, XK_o) & 255 ] = SDLK_o;
-	unscan_db[ XKeysymToKeycode(dpy, XK_p) & 255 ] = SDLK_p;
-	unscan_db[ XKeysymToKeycode(dpy, XK_a) & 255 ] = SDLK_a;
-	unscan_db[ XKeysymToKeycode(dpy, XK_s) & 255 ] = SDLK_s;
-	unscan_db[ XKeysymToKeycode(dpy, XK_d) & 255 ] = SDLK_d;
-	unscan_db[ XKeysymToKeycode(dpy, XK_f) & 255 ] = SDLK_f;
-	unscan_db[ XKeysymToKeycode(dpy, XK_g) & 255 ] = SDLK_g;
-	unscan_db[ XKeysymToKeycode(dpy, XK_h) & 255 ] = SDLK_h;
-	unscan_db[ XKeysymToKeycode(dpy, XK_j) & 255 ] = SDLK_j;
-	unscan_db[ XKeysymToKeycode(dpy, XK_k) & 255 ] = SDLK_k;
-	unscan_db[ XKeysymToKeycode(dpy, XK_l) & 255 ] = SDLK_l;
-	unscan_db[ XKeysymToKeycode(dpy, XK_z) & 255 ] = SDLK_z;
-	unscan_db[ XKeysymToKeycode(dpy, XK_x) & 255 ] = SDLK_x;
-	unscan_db[ XKeysymToKeycode(dpy, XK_c) & 255 ] = SDLK_c;
-	unscan_db[ XKeysymToKeycode(dpy, XK_v) & 255 ] = SDLK_v;
-	unscan_db[ XKeysymToKeycode(dpy, XK_b) & 255 ] = SDLK_b;
-	unscan_db[ XKeysymToKeycode(dpy, XK_n) & 255 ] = SDLK_n;
-	unscan_db[ XKeysymToKeycode(dpy, XK_m) & 255 ] = SDLK_m;
-	unscan_db[ XKeysymToKeycode(dpy, XK_braceleft) & 255 ] = SDLK_LEFTBRACKET;
-	unscan_db[ XKeysymToKeycode(dpy, XK_braceright) & 255 ] = SDLK_RIGHTBRACKET;
-	unscan_db[ XKeysymToKeycode(dpy, XK_bracketleft) & 255 ] = SDLK_LEFTBRACKET;
-	unscan_db[ XKeysymToKeycode(dpy, XK_bracketright) & 255 ] = SDLK_RIGHTBRACKET;
-	unscan_db[ XKeysymToKeycode(dpy, XK_asciitilde) & 255 ] = SDLK_BACKQUOTE;
-	unscan_db[ XKeysymToKeycode(dpy, XK_grave) & 255 ] = SDLK_BACKQUOTE;
-	unscan_db[ XKeysymToKeycode(dpy, XK_section) & 255 ] = SDLK_BACKQUOTE;
-	unscan_db[ XKeysymToKeycode(dpy, XK_onehalf) & 255 ] = SDLK_BACKQUOTE;
-	unscan_db[ XKeysymToKeycode(dpy, XK_comma) & 255 ] = SDLK_COMMA;
-	unscan_db[ XKeysymToKeycode(dpy, XK_period) & 255 ] = SDLK_PERIOD;
-	unscan_db[ XKeysymToKeycode(dpy, XK_greater) & 255 ] = SDLK_PERIOD;
-	unscan_db[ XKeysymToKeycode(dpy, XK_less) & 255 ] = SDLK_PERIOD;
+#endif
 
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
 	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
