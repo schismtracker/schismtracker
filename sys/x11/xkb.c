@@ -42,7 +42,10 @@ int key_scancode_lookup(int k);
 
 static int virgin = 1;
 static unsigned int delay, rate;
-static int unscan_db[256];
+
+#ifdef HAVE_X11_EXTENSIONS_XKB_H
+static XkbDescPtr us_kb_map;
+#endif
 
 static void _key_info_setup(void)
 {
@@ -51,12 +54,8 @@ static void _key_info_setup(void)
 	XF86MiscKbdSettings kbdsettings;
 #endif
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
-	XkbDescPtr kb;
 	unsigned int dummy_int;
 	XkbComponentNamesRec rec;
-	XkbComponentNamesRec rec_back[16];
-	XkbComponentListPtr cur;
-	KeySym sym;
 #endif
 	int i;
 	Display *dpy;
@@ -81,29 +80,23 @@ static void _key_info_setup(void)
 	}
 
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
-	dummy_int = 1;
-	cur = XkbListComponents(dpy, XkbUseCoreKbd, rec_back, &dummy_int);
-	rec.keymap = cur->keymaps ? cur->keymaps->name : "";
-	rec.keycodes = cur->keycodes ? cur->keycodes->name : "";
-	rec.types = cur->types ? cur->types->name : "";
-	rec.compat = cur->compat ? cur->compat->name : "";
+	dummy_int = 16;
+	rec.keymap = "";
+	rec.keycodes = "";
+	rec.types = "";
+	rec.compat = "";
 	rec.symbols = "+us(basic)";
-	rec.geometry = cur->geometry ? cur->geometry->name : "";
-	kb = XkbGetKeyboardByName(dpy, XkbUseCoreKbd, &rec,
+	rec.geometry = "";
+	us_kb_map = XkbGetKeyboardByName(dpy, XkbUseCoreKbd, &rec,
 			XkbGBN_AllComponentsMask, XkbGBN_AllComponentsMask, False);
-	for (i = 0; i < 256; i++) {
-		if (XkbTranslateKeyCode(kb, i, 0, &dummy_int, &sym)) {
-			unscan_db[i] = sym;
-		} else {
-			unscan_db[i] = -1;
-		}
-	}
 #else
-	/* all the keys you're likely to use */
-	for (i = 0; i < 256; i++) {
-		unscan_db[i]=-1;
-	}
+	us_kb_map = NULL;
 #endif
+	if (us_kb_map == NULL) {
+		log_appendf(3, "Warning: XKB support missing or broken; keymap might be off");
+	} else {
+		log_appendf(3, "Note: XKB will be used to override scancodes");
+	}
 
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
 	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
@@ -146,5 +139,12 @@ unsigned key_repeat_delay(void)
 
 int key_scancode_lookup(int k)
 {
-	return unscan_db[k&255];
+	static unsigned int d;
+	KeySym sym;
+
+	if (us_kb_map != NULL &&
+			XkbTranslateKeyCode(us_kb_map, k, 0, &d, &sym)) {
+		return sym;
+	}
+	return -1;
 }
