@@ -54,7 +54,6 @@ static void _key_info_setup(void)
 	XF86MiscKbdSettings kbdsettings;
 #endif
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
-	unsigned int dummy_int;
 	XkbComponentNamesRec rec;
 #endif
 	int i;
@@ -80,7 +79,6 @@ static void _key_info_setup(void)
 	}
 
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
-	dummy_int = 16;
 	rec.keymap = "";
 	rec.keycodes = "";
 	rec.types = "";
