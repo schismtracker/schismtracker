@@ -535,7 +535,7 @@ unsigned key_repeat_delay(void)
 }
 int key_scancode_lookup(int k)
 {
-	switch (k) {
+	switch (k & 127) {
 	case 0x32: /* QZ_BACKQUOTE */ return SDLK_BACKQUOTE;
 	case 0x12: /* QZ_1 */ return SDLK_1;
 	case 0x13: /* QZ_2 */ return SDLK_2;
