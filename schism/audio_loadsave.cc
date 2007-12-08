@@ -143,8 +143,10 @@ static void _convert_to_it(CSoundFile *qq)
 		break;
 	case MOD_TYPE_MOD:
 		song_set_compatible_gxx(1);
+		song_set_old_effects(1);
 		break;
 	case MOD_TYPE_S3M:
+		song_set_compatible_gxx(0);
 		song_set_old_effects(1);
 		break;
 	// TODO: other file types
