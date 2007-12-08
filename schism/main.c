@@ -112,7 +112,7 @@ void (*shift_release)(void) = NULL;
 /* --------------------------------------------------------------------- */
 /* stuff SDL should already be doing but isn't */
 
-#if HAVE_SYS_KD_H
+#if defined(GIO_FONT) && defined(PIO_FONT) && HAVE_SYS_KD_H
 static byte console_font[512 * 32];
 static int font_saved = 0;
 static void save_font(void)
