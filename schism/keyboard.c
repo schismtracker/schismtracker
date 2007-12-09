@@ -25,6 +25,7 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "charset.h"
 
 #include "sdlmain.h"
 #include <ctype.h>
