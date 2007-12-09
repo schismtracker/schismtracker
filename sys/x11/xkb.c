@@ -20,6 +20,7 @@
 #include "headers.h"
 
 #include "sdlmain.h"
+#include "it.h"
 
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
@@ -56,7 +57,6 @@ static void _key_info_setup(void)
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
 	XkbComponentNamesRec rec;
 #endif
-	int i;
 	Display *dpy;
 	SDL_SysWMinfo info;
 
@@ -79,12 +79,12 @@ static void _key_info_setup(void)
 	}
 
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
-	rec.keymap = "";
-	rec.keycodes = "";
-	rec.types = "";
-	rec.compat = "";
-	rec.symbols = "+us(basic)";
-	rec.geometry = "";
+	rec.keymap = (void*)"";
+	rec.keycodes = (void*)"";
+	rec.types = (void*)"";
+	rec.compat = (void*)"";
+	rec.symbols = (void*)"+us(basic)";
+	rec.geometry = (void*)"";
 	us_kb_map = XkbGetKeyboardByName(dpy, XkbUseCoreKbd, &rec,
 			XkbGBN_AllComponentsMask, XkbGBN_AllComponentsMask, False);
 #else
