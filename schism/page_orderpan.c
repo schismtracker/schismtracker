@@ -303,6 +303,8 @@ static void orderlist_reorder(void)
 	unsigned char mapol[256];
 	int i, j;
 
+	song_lock_audio();
+
 	orderlist_add_unused_patterns();
 
 	ol = song_get_orderlist();
@@ -330,6 +332,10 @@ static void orderlist_reorder(void)
 	}
 
         status.flags |= NEED_UPDATE;
+
+	song_stop_unlocked();
+
+	song_unlock_audio();
 }
 
 static int orderlist_handle_char(struct key_event *k)
