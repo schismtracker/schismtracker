@@ -94,6 +94,7 @@ int midi_bend_hit[64];
 int midi_last_bend_hit[64];
 
 /* blah; other forwards */
+static void pated_save(const char *descr);
 static void pated_history_add(const char *descr, int x, int y, int width, int height);
 static void pated_history_restore(int n);
 
@@ -1922,6 +1923,13 @@ static void pated_history_restore(int n)
 
 }
 
+static void pated_save(const char *descr)
+{
+	int total_rows;
+
+	total_rows = song_get_pattern(current_pattern, NULL);
+	pated_history_add(descr,0,0,64,total_rows);
+}
 static void pated_history_add(const char *descr, int x, int y, int width, int height)
 {
 	int j;
@@ -2019,9 +2027,7 @@ static void clipboard_paste_insert(void)
 
 	total_rows = song_get_pattern(current_pattern, &pattern);
 
-	/* it's easier this way... */
-	pated_history_add("Undo paste data                (Alt-P)",
-				0,0,64,total_rows);
+	pated_save("Undo paste data                (Alt-P)");
 
 	num_rows = total_rows - current_row;
 	if (clipboard.rows < num_rows)
@@ -2356,7 +2362,7 @@ void set_current_pattern(int n)
 
 	/* save pattern */
 	sprintf(undostr, "Pattern %d", current_pattern);
-	pated_history_add(undostr, 0,0,64,total_rows);
+	pated_save(undostr);
 	fast_save_update();
 
 	pattern_editor_reposition();
@@ -3679,10 +3685,12 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		return -1;
 	case SDLK_INSERT:
 		if (k->state) return 1;
+		pated_save("Remove inserted row(s)    (Alt-Insert)");
 		pattern_insert_rows(current_row, 1, 1, 64);
 		break;
 	case SDLK_DELETE:
 		if (k->state) return 1;
+		pated_save("Replace deleted row(s)    (Alt-Delete)");
 		pattern_delete_rows(current_row, 1, 1, 64);
 		break;
 	case SDLK_F9:
