@@ -370,11 +370,17 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 fg = 0;
                 bg = 3;
                 break;
-        case 1:
+        case 1: /* Mini-accidentals on 2-col. view */
+                get_note_string(note->note, (char *) buf);
+                draw_char(buf[0], x, y, 6, bg);
+                draw_half_width_chars(buf[1], buf[2], x + 1, y, 0, 3, 0, 3);
+                return;
+                /*
                 get_note_string_short(note->note, (char *) buf);
                 draw_char(buf[0], x, y, 6, bg);
                 draw_char(buf[1], x + 1, y, 0, 3);
                 return;
+                */
         case 2:
         case 3:
                 cursor_pos -= 2;
@@ -406,8 +412,13 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         }
 
         if (note->note) {
+                get_note_string(note->note, (char *) buf);
+                draw_char(buf[0], x, y, fg, bg);
+                draw_half_width_chars(buf[1], buf[2], x + 1, y, fg, bg, fg, bg);
+                /*
                 get_note_string_short(note->note, (char *) buf);
                 draw_text(buf, x, y, fg, bg);
+                */
         } else if (note->instrument) {
                 num99tostr(note->instrument, buf);
                 draw_text(buf, x, y, fg, bg);
