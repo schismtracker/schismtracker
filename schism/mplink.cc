@@ -415,10 +415,10 @@ void song_pattern_resize(int pattern, int newsize)
 {
 	song_lock_audio();
 
-	song_stop_unlocked();
-
 	int oldsize = mp->PatternAllocSize[pattern];
 	status.flags |= SONG_NEEDS_SAVE;
+
+	if (oldsize > newsize) song_stop_unlocked();
 
 	if (!mp->Patterns[pattern] && newsize != 64) {
 		mp->Patterns[pattern] = CSoundFile::AllocatePattern(newsize, 64);
