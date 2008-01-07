@@ -485,7 +485,8 @@ static int handle_key_global(struct key_event * k)
 		return 0;
 	}
 
-	if (status.flags & CAPS_PRESSED) {
+	if ((status.flags & CAPS_PRESSED)
+	&& (status.current_page == PAGE_PATTERN_EDITOR)) {
 		j = kbd_get_note(k);
 		if (song_is_instrument_mode()) {
 			i = instrument_get_current();
