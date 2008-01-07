@@ -20,6 +20,7 @@
 
 #include "headers.h"
 #include "sdlmain.h"
+#include "it.h"
 
 #include <windows.h>
 
@@ -28,6 +29,12 @@ void win32_get_modkey(int *mk)
 {
 	BYTE ks[256];
 	if (GetKeyboardState(ks) == 0) return;
+
+	if (ks[VK_CAPITAL] & 128) {
+		status.flags |= CAPS_PRESSED;
+	} else {
+		status.flags &= ~CAPS_PRESSED;
+	}
 
 	(*mk) = ((*mk) & ~(KMOD_NUM|KMOD_CAPS))
 		| ((ks[VK_NUMLOCK]&1) ? KMOD_NUM : 0)
