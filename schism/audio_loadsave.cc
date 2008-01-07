@@ -1546,7 +1546,9 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 			}
 
 			file->type = TYPE_INST_ITI;
-			file->description = "Fishcakes"; // FIXME - what does IT say?
+			file->description = "Fishcakes";
+			// IT doesn't support this, despite it being useful.
+			// Simply "unrecognized"
 		}
         } else {
                 // awwww, nerts!
