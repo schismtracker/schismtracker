@@ -135,7 +135,7 @@ static void about_draw_const(void)
 		buf[80] = 0;
 		draw_text((unsigned char *) buf, (80 - strlen(buf)) / 2, 25, 0, 2);
 		/* build date? */
-		draw_text((unsigned char *) "Copyright (C) 2003-2007 Storlek and Mrs. Brisby", 15, 27, 1, 2);
+		draw_text((unsigned char *) "Copyright (C) 2003-2008 Storlek and Mrs. Brisby", 15, 27, 1, 2);
 		draw_text((unsigned char *) "Based on Impulse Tracker by Jeffrey Lim aka Pulse", 15, 28, 1, 2);
 		/* XXX if we allow key remapping, need to reflect the *real* log viewer key here */
 		draw_text((unsigned char *) "Press Ctrl-F11 for copyright and full credits", 15, 29, 1, 2);

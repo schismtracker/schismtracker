@@ -438,7 +438,7 @@ static void parse_options(int argc, char **argv)
 			puts(schism_banner());
 			/* FIXME: this text is repeated a couple times in the
 			   code. Maybe we could put it in version.c as well? */
-			printf("\nCopyright (c) 2003-2007 Storlek and Mrs. Brisby\n"
+			printf("\nCopyright (c) 2003-2008 Storlek and Mrs. Brisby\n"
 			       "This program is free software; you can redistribute it and/or modify\n"
 			       "it under the terms of the GNU General Public License as published by\n"
 			       "the Free Software Foundation; either version 2 of the License, or\n"
@@ -1020,7 +1020,7 @@ static void dump_misc_about_text(void)
 {
 	/* FIXME: see above for similar text */
 	const char *text[] = {
-		"Schism Tracker is Copyright (C) 2003-2007 Storlek and Mrs. Brisby.",
+		"Schism Tracker is Copyright (C) 2003-2008 Storlek and Mrs. Brisby.",
 		"",
 		"Contains additional code by Olivier Lapicque, Markus Fick, Adam Goode,",
 		"Ville Joleka, Juan Linietsky, Juha Niemimaki, and others.",
