@@ -3,8 +3,8 @@
 # I use fink for SDL and stuff, and I don't have (regular) access to XCode
 mm=`cat "$HOME/.my-macosx"`
 (cd ..; rsync \
-	--cvs-exclude --exclude="*-build" --exclude="schism-*.x86.package" \
-	-v -z -r -e ssh schism2 "$mm:.")
+ --cvs-exclude --exclude="*-build" --exclude="schism-*.x86.package" --exclude="*.tgz" \
+ -v -z -r -e ssh schism2 "$mm:.")
 
 ssh "$mm" 'cd schism2; PATH="/sw/bin:$PATH"; export PATH; sh scripts/fink-macosx.sh'" $@" || exit 1
 
