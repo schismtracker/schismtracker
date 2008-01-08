@@ -73,6 +73,8 @@ READ_INFO(ogg);
 #endif
 
 READ_INFO(iti);  LOAD_INSTRUMENT(iti);
+READ_INFO(xi);   LOAD_INSTRUMENT(xi);
+READ_INFO(pat);  LOAD_INSTRUMENT(pat);
 
 READ_INFO(aiff); LOAD_SAMPLE(aiff);    SAVE_SAMPLE(aiff);
 READ_INFO(au);   LOAD_SAMPLE(au);      SAVE_SAMPLE(au);

@@ -120,6 +120,8 @@ static const fmt_read_info_func read_info_funcs[] = {
 #endif
 	READ_INFO(mdl),
 
+	READ_INFO(xi),
+
 	READ_INFO(iti),
 	READ_INFO(its),
 	READ_INFO(au),
@@ -139,6 +141,7 @@ static const fmt_read_info_func read_info_funcs[] = {
 	READ_INFO(ogg),
 #endif
 	READ_INFO(mid),
+	READ_INFO(pat),
 
 	/* STM seems to have a case insensitive magic string with several possible values, and only one byte
 	is guaranteed to be the same in the whole file... yeagh. */

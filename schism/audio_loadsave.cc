@@ -1186,6 +1186,8 @@ static fmt_load_sample_func load_sample_funcs[] = {
 
 static fmt_load_instrument_func load_instrument_funcs[] = {
 	fmt_iti_load_instrument,
+	fmt_xi_load_instrument,
+	fmt_pat_load_instrument,
 	NULL,
 };
 
