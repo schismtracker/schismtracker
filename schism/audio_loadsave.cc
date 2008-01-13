@@ -668,7 +668,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 				iti_invmap[iti_nalloc] = o;
 				iti_nalloc++;
 			}
-			iti.keyboard[2 * j + 1] = o;
+			iti.keyboard[2 * j + 1] = iti_map[o]+1;
 		} else {
 			iti.keyboard[2 * j + 1] = i->Keyboard[j];
 		}
