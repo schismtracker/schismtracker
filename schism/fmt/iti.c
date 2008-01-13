@@ -161,22 +161,14 @@ int fmt_iti_load_instrument(const byte *data, size_t length, int slot)
 
 	/* okay, on to samples */
 	q = 554;
-	x = 1;
 	for (j = 0; j < expect_samples; j++) {
-		for (; x < SCHISM_MAX_SAMPLES; x++) {
-			if (need_inst[x] == -1) continue;
-			break;
-		}
-		if (x == SCHISM_MAX_SAMPLES) break; /* eh ... */
-
-		smp = song_get_sample(need_inst[x], &np);
+		smp = song_get_sample(need_inst[j+1], &np);
 		if (!smp) break;
 		if (!load_its_sample(data+q, data, length, smp, np)) {
 			status_text_flash("Could not load sample %d from ITI file", j);
 			return false;
 		}
 		q += 80; /* length if ITS header */
-		x++;
 	}
 	return true;
 }
