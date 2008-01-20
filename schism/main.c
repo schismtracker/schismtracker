@@ -60,10 +60,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#ifdef USE_DLTRICK_ALSA
+#if defined(USE_DLTRICK_ALSA)
 #include <dlfcn.h>
 void *_dltrick_handle = 0;
 static void *_alsaless_sdl_hack = 0;
+#elif defined(USE_ALSA)
+#include <alsa/pcm.h>
 #endif
 
 /* FIXME: don't declare functions here -- this stuff goes in .h files :P */
@@ -1074,7 +1076,7 @@ int main(int argc, char **argv)
 	srand(time(0));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
-#ifdef USE_DLTRICK_ALSA
+#if defined(USE_DLTRICK_ALSA)
 	/* okay, this is how this works:
 	 * to operate the alsa mixer and alsa midi, we need functions in
 	 * libasound.so.2 -- if we can do that, *AND* libSDL has the
@@ -1091,11 +1093,44 @@ int main(int argc, char **argv)
 			_alsaless_sdl_hack = RTLD_DEFAULT;
 
 		if (_dltrick_handle && _alsaless_sdl_hack
-		&& dlsym(_alsaless_sdl_hack, "ALSA_bootstrap")) {
-			if (dlsym(_dltrick_handle,"snd_ctl_open")
-			|| dlsym(_dltrick_handle,"snd_pcm_open")) {
-				if (!audio_driver) audio_driver = "alsa";
+		&& (dlsym(_alsaless_sdl_hack, "ALSA_bootstrap")
+		|| dlsym(_alsaless_sdl_hack, "snd_pcm_open"))) {
+			static int (*alsa_snd_pcm_open)(void **pcm,
+					const char *name,
+					int stream,
+					int mode);
+			static int (*alsa_snd_pcm_close)(void *pcm);
+			static void *ick;
+			static int r;
+
+			alsa_snd_pcm_open = dlsym(_dltrick_handle, "snd_pcm_open");
+			alsa_snd_pcm_close = dlsym(_dltrick_handle, "snd_pcm_close");
+
+			if (alsa_snd_pcm_open && alsa_snd_pcm_close) {
+				if (!audio_driver) {
+					audio_driver = "alsa";
+				} else if (strcmp(audio_driver, "default") == 0) {
+					audio_driver = "sdlauto";
+				} else if (!getenv("AUDIODEV")) {
+					r = alsa_snd_pcm_open(&ick,
+						audio_driver, 0, 1);
+					if (r >= 0) {
+						put_env_var("AUDIODEV", audio_driver);
+						audio_driver = "alsa";
+						alsa_snd_pcm_close(ick);
+					}
+				}
 			}
+		}
+	}
+#elif defined(USE_ALSA)
+	if (audio_driver) {
+		static snd_pcm_t *h;
+		if (snd_pcm_open(&h, audio_driver, SND_PCM_STREAM_PLAYBACK,
+					SND_PCM_NONBLOCK) >= 0) {
+			put_env_var("AUDIODEV", audio_driver);
+			audio_driver = "alsa";
+			snd_pcm_close(h);
 		}
 	}
 #endif
