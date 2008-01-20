@@ -1134,7 +1134,23 @@ int main(int argc, char **argv)
 		}
 	}
 #endif
-	
+	if (audio_driver) {
+		char *p;
+		char *q = strchr(audio_driver,'=');
+		
+		if (q) {
+			p = strdup(q);
+			if (!p) {
+				perror("strdup");
+				exit(255);
+			}
+			q = p + (q - audio_driver);
+			*q = '\0';
+			put_env_var("AUDIODEV", q+1);
+			audio_driver = p;
+		}
+	}
+
 	cfg_init_dir();
 
 #if ENABLE_HOOKS
