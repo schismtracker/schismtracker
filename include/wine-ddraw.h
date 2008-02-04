@@ -1,6 +1,5 @@
 /* this was hacked up slightly to build outside of the rest of wine
  * it works well enough to build schism.
- * copy into your mingw/include dir
  */
 
 /*

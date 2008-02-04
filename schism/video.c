@@ -125,7 +125,7 @@ static const unsigned int _mouse_pointer[] = {
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <ddraw.h>
+#include "wine-ddraw.h"
 struct private_hwdata {
 	LPDIRECTDRAWSURFACE3 dd_surface;
 	LPDIRECTDRAWSURFACE3 dd_writebuf;
