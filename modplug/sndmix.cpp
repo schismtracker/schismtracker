@@ -90,6 +90,7 @@ BOOL CSoundFile::InitPlayer(BOOL bReset)
 	if (gdwMixingFreq > MAX_SAMPLE_RATE) gdwMixingFreq = MAX_SAMPLE_RATE;
 	gnVolumeRampSamples = (gdwMixingFreq * VOLUMERAMPLEN) / 100000;
 	if (gnVolumeRampSamples < 8) gnVolumeRampSamples = 8;
+	if (gdwSoundSetup & SNDMIX_NORAMPING) gnVolumeRampSamples=2;
 	gnDryROfsVol = gnDryLOfsVol = 0;
 	gnRvbROfsVol = gnRvbLOfsVol = 0;
 	if (bReset)
