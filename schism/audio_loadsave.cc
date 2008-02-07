@@ -1242,7 +1242,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		for (unsigned int q = 0; q < MAX_INSTRUMENTS; q++) {
 			if ((int) q == target) continue;
 			if (!mp->Headers[q]) continue;
-			for (unsigned int j = 0; j < 128; j++) {
+			for (unsigned long j = 0; j < 128; j++) {
 				x = mp->Headers[q]->Keyboard[j];
 				sampmap[x] = 0;
 			}
