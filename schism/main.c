@@ -685,8 +685,8 @@ static void event_loop(void)
 			if (debug_s && strstr(debug_s, "key")) {
 				log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
 						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
-						event.key.keysym.sym,
-						event.key.keysym.scancode);
+						(int)event.key.keysym.sym,
+						(int)event.key.keysym.scancode);
 			}
 			key_translate(&kk);
 			if (event.type == SDL_KEYDOWN
@@ -754,9 +754,9 @@ static void event_loop(void)
 					debug_s && strstr(debug_s, "mouse")) {
 				log_appendf(12, "[DEBUG] Mouse%s button=%d x=%d y=%d",
 					(event.type == SDL_MOUSEBUTTONDOWN) ? "Down" : "Up",
-						event.button.button,
-						event.button.x,
-						event.button.y);
+						(int)event.button.button,
+						(int)event.button.x,
+						(int)event.button.y);
 			}
 
 			switch (event.button.button) {
