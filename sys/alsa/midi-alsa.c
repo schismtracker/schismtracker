@@ -175,6 +175,10 @@ _any_dltrick(int,snd_seq_open,(snd_seq_t**h,const char *name,int str, int mode),
 _any_dltrick(int,snd_seq_set_client_name,(snd_seq_t*seeq,const char *name),(seeq,name))
 #endif
 
+/* see mixer-alsa.c */
+#undef assert
+#define assert(x)
+
 static void _alsa_drain(struct midi_port *p UNUSED)
 {
 	/* not port specific */

@@ -135,7 +135,7 @@ static void _tryopen(int n, const char *name, struct midi_provider *_oss_provide
 
 	ptr = 0;
 	asprintf(&ptr, " %-16s (OSS)", name);
-	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT(n+1), 0);
+	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT((long)n+1), 0);
 }
 
 static void _oss_poll(struct midi_provider *_oss_provider)
