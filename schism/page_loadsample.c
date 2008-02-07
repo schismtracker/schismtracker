@@ -284,7 +284,7 @@ static void load_sample_draw_const(void)
 				break;
 			};
 		}
-		sprintf(sbuf, "%07ld", f->filesize);
+		sprintf(sbuf, "%07ld", (long)f->filesize);
 		draw_text((unsigned char *)sbuf, 59, 45, 5,0);
 		get_date_string(f->timestamp, (unsigned char *)sbuf);
 		draw_text((unsigned char *)sbuf, 59, 46, 5,0);
