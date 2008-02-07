@@ -644,6 +644,7 @@ int dmoz_read_ex(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist
 	struct stat st;
 	int pathlen, namlen, err = 0;
 
+	if (!path || !*path) path="/";
 	dir = opendir(path);
 	if (dir) {
 		pathlen = strlen(path);
