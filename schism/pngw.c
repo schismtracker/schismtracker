@@ -26,21 +26,21 @@
 #define H5 "\010\3\0\0\0"
 #define Z3 (H5+2)
 
-static void _make_crc32_tab(unsigned long *crc32_tab)
+static void _make_crc32_tab(unsigned int *crc32_tab)
 {
 	int n, k;
-	unsigned long c, p;
+	unsigned int c, p;
 
 	p = 0xedb88320L;
 	for (n = 0; n < 256; n++) {
-		c = (unsigned long)n;
+		c = (unsigned int)n;
 		for (k = 0; k < 8; k++)
 			c = (c & 1) ? p ^ (c >> 1) : (c >> 1);
 		crc32_tab[n] = c;
 	}
 }
 
-static void out_crc(unsigned long *crc32_tab,
+static void out_crc(unsigned int *crc32_tab,
 			unsigned int *crc, struct pngw_arg *p,
 			const void *data, int len)
 {
@@ -69,7 +69,7 @@ void pngw(struct pngw_arg *p)
 	unsigned int crc;
 	int data_size;
 	int check;
-	unsigned long crc32_tab[256]; /*alloca*/
+	unsigned int crc32_tab[256]; /*alloca*/
 #define NEWCHUNK(n,z)	{check=(n);make_u32be(check);crc=0xffffffff; \
 			p->output(p,u32,4); out_crc(crc32_tab,&crc,p,z,4); }
 #define OUT(a,b)	{out_crc(crc32_tab,&crc,p,(const void*)a,b);check-=b;}
