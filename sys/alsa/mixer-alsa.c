@@ -94,6 +94,11 @@ _any_dltrick(snd_mixer_elem_t*,snd_mixer_elem_next,(snd_mixer_elem_t*m),(m))
 _any_dltrick(snd_mixer_elem_type_t,snd_mixer_elem_get_type,(const snd_mixer_elem_t *obj),(obj))
 #endif
 
+/* alsa is paranoid, so snd_mixer_selem_id_alloca does an assert(&sid), which
+ * of course will never fail, so gcc complains. this shuts that warning up. */
+#undef assert
+#define assert(x)
+
 /* this _could_ change */
 static int current_alsa_range = 255;
 
