@@ -302,8 +302,8 @@ static void _ip_poll(struct midi_provider *p)
 	static int last_buildout = 0;
 	struct midi_port *ptr;
 	char *buffer;
-	int i = 0;
-	int m;
+	long i = 0;
+	long m;
 
 	SDL_mutexP(blocker);
 	m = (volatile int)real_num_ports;
@@ -317,7 +317,7 @@ static void _ip_poll(struct midi_provider *p)
 	} else if (m > last_buildout) {
 		for (i = last_buildout; i < m; i++) {
 			buffer = 0;
-			asprintf(&buffer, " Multicast/IP MIDI %u", i+1);
+			asprintf(&buffer, " Multicast/IP MIDI %lu", i+1);
 			if (!buffer) {
 				perror("asprintf");
 				exit(255);
