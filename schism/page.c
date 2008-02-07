@@ -1064,7 +1064,7 @@ void handle_key(struct key_event * k)
 				memset(&fake, 0, sizeof(fake));
 				fake.unicode = alt_numpad & 255;
 				if (!(status.flags & CLASSIC_MODE))
-					status_text_flash_bios("Enter DOS/ASCII: %d -> %c", fake.unicode, fake.unicode);
+					status_text_flash_bios("Enter DOS/ASCII: %d -> %c", (int)fake.unicode, (int)fake.unicode);
 				fake.is_synthetic = 3;
 				handle_key(&fake);
 				fake.state=1;
@@ -1088,7 +1088,7 @@ void handle_key(struct key_event * k)
 					alt_numpad += c;
 					alt_numpad_c++;
 					if (!(status.flags & CLASSIC_MODE))
-						status_text_flash_bios("Enter DOS/ASCII: %d", alt_numpad);
+						status_text_flash_bios("Enter DOS/ASCII: %d", (int)alt_numpad);
 					return;
 				}
 			}
@@ -1479,17 +1479,18 @@ static void vis_fakemem(void)
 		conv >>= 10;
 		ems >>= 10;
 	
-		sprintf(buf, "FreeMem %dk", conv);
+		sprintf(buf, "FreeMem %uk", conv);
 		draw_text((const unsigned char *)buf, 63, 6, 0, 2);
-		sprintf(buf, "FreeEMS %dk", ems);
+		sprintf(buf, "FreeEMS %uk", ems);
 		draw_text((const unsigned char *)buf, 63, 7, 0, 2);
 	} else {
-		sprintf(buf, "   Song %dk",
-			(memused_patterns()
-			+memused_instruments()
-			+memused_songmessage()) >> 10);
+		sprintf(buf, "   Song %uk",
+				(unsigned)(
+					(memused_patterns()
+					 +memused_instruments()
+					 +memused_songmessage()) >> 10));
 		draw_text((const unsigned char *)buf, 63, 6, 0, 2);
-		sprintf(buf, "Samples %dk", memused_samples() >> 10);
+		sprintf(buf, "Samples %uk", (unsigned)(memused_samples() >> 10));
 		draw_text((const unsigned char *)buf, 63, 7, 0, 2);
 	}
 }
