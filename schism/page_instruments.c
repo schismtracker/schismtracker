@@ -1147,7 +1147,7 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 	song_mix_channel *channel;
 	unsigned int *channel_list;
 	byte buf[16];
-	unsigned long envpos[3];
+	unsigned int envpos[3];
 	int x, y, n, m, c;
 	int last_x = 0, last_y = 0;
 	int max_ticks = 50;
@@ -1217,7 +1217,7 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
         draw_text((const unsigned char *)buf, 66, 19, 2, 0);
         sprintf((char *) buf, "Tick %d", env->ticks[current_node]);
         draw_text((const unsigned char *)buf, 66, 21, 2, 0);
-        sprintf((char *) buf, "Value %d", env->values[current_node] - (middle ? 32 : 0));
+        sprintf((char *) buf, "Value %d", (int)(env->values[current_node] - (middle ? 32 : 0)));
         draw_text((const unsigned char *)buf, 66, 23, 2, 0);
 }
 
@@ -1441,7 +1441,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope *env, int *curre
 					if (*current_node == i) continue;
 					if (env->ticks[ *current_node ] == env->ticks[i]
 					&& env->values[ *current_node ] == env->values[i]) {
-						status_text_flash("Removed node %d", *current_node);
+						status_text_flash("Removed node %d", (int)(*current_node));
 						status.flags |= SONG_NEEDS_SAVE;
 
 						*current_node = _env_node_remove(env, *current_node);

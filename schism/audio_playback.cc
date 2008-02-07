@@ -1535,9 +1535,10 @@ RETRY:	using_driver = driver;
 
 		song_print_info_top(driver_name);
 		log_appendf(5, " %d Hz, %d bit, %s", obtained.freq,
-			obtained.format & 0xff,
+			(int)(obtained.format & 0xff),
 			obtained.channels == 1 ? "mono" : "stereo");
-		log_appendf(5, " Buffer size: %d samples", obtained.samples);
+		log_appendf(5, " Buffer size: %d samples",
+				(int)obtained.samples);
         }
 
 	audio_buffer_size = need_samples;
