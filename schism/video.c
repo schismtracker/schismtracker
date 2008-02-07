@@ -345,12 +345,12 @@ void video_report(void)
 		}
 #endif
 		log_appendf(5, " Display format: %d bits/pixel",
-					video.surface->format->BitsPerPixel);
+					(int)video.surface->format->BitsPerPixel);
 		break;
 	case VIDEO_DDRAW:
 		log_append(2,0, " Using DirectDraw interface");
 		log_appendf(5, " Display format: %d bits/pixel",
-					video.surface->format->BitsPerPixel);
+					(int)video.surface->format->BitsPerPixel);
 		break;
 	};
 	if (video.desktop.fullscreen || video.desktop.fb_hacks) {
