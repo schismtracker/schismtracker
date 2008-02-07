@@ -62,7 +62,7 @@ byte row_highlight_major = 16, row_highlight_minor = 4;
 
 static void _convert_to_it(CSoundFile *qq)
 {
-        unsigned long n, p;
+        unsigned int n, p;
         MODINSTRUMENT *s;
 
 	for (n = 1; n <= qq->m_nInstruments; n++) {
@@ -1234,15 +1234,15 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	memset(sampmap, 0, sizeof(sampmap));
 	if (mp->Headers[target]) {
 		/* init... */
-		for (unsigned long j = 0; j < 128; j++) {
+		for (unsigned int j = 0; j < 128; j++) {
 			x = mp->Headers[target]->Keyboard[j];
 			sampmap[x] = 1;
 		}
 		/* mark... */
-		for (unsigned long q = 0; q < MAX_INSTRUMENTS; q++) {
+		for (unsigned int q = 0; q < MAX_INSTRUMENTS; q++) {
 			if ((int) q == target) continue;
 			if (!mp->Headers[q]) continue;
-			for (unsigned long j = 0; j < 128; j++) {
+			for (unsigned int j = 0; j < 128; j++) {
 				x = mp->Headers[q]->Keyboard[j];
 				sampmap[x] = 0;
 			}
@@ -1271,7 +1271,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 			/* 1. find a place for all the samples */
 			memset(sampmap, 0, sizeof(sampmap));
-			for (unsigned long j = 0; j < 128; j++) {
+			for (unsigned int j = 0; j < 128; j++) {
 				x = xl.Headers[n]->Keyboard[j];
 				if (!sampmap[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
@@ -1299,7 +1299,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			xl.Headers[n] = 0; /* dangle */
 
 			/* and rewrite! */
-			for (unsigned long k = 0; k < 128; k++) {
+			for (unsigned int k = 0; k < 128; k++) {
 				mp->Headers[target]->Keyboard[k] = sampmap[
 						mp->Headers[target]->Keyboard[k]
 				];
@@ -1508,7 +1508,7 @@ CSoundFile library;
 
 int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
 {
-	unsigned long j;
+	unsigned int j;
 	int x;
 
 	library.Destroy();
