@@ -127,7 +127,7 @@ if USE_WINDRES
 # If not, try uncommetning the next line --
 #lib_windres=schismres.o
 # and then add $(lib_windres) under schismtracker_LDADD below
-%.o: %.rc
+.o: .rc
 	$(WINDRES) -I@srcdir@ -i $< -o $@
 files_windres=sys/win32/schismres.rc
 endif
