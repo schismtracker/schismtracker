@@ -33,7 +33,7 @@ static struct widget _diskwriter_widgets[1];
 static struct dialog *dg = NULL;
 static int dg_init = 0;
 
-static unsigned int dg_progress = 0;
+static int dg_progress = 0;
 
 static void _diskwriter_draw_const(void)
 {
