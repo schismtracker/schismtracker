@@ -94,6 +94,10 @@ files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c sys/x11/xv.c
 cflags_x11 = -DUSE_X11
 endif
 
+if USE_ZLIB
+cflags_zlib = -DUSE_ZLIB
+endif
+
 if USE_ALSA
 files_alsa = sys/alsa/mixer-alsa.c sys/alsa/midi-alsa.c
 if USE_ALSA_DLTRICK
@@ -282,7 +286,7 @@ schismtracker_SOURCES = \
 INCLUDES = -D_USE_AUTOCONF -D_GNU_SOURCE \
 	-I$(srcdir)/include -I$(srcdir)/modplug -I. \
 	@SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
-	$(cflags_network) $(cflags_x11)
+	$(cflags_network) $(cflags_x11) $(cflags_zlib)
 
 
 schismtracker_DEPENDENCIES = $(files_windres)
