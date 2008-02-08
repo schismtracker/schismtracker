@@ -37,9 +37,9 @@ static unsigned int dg_progress = 0;
 
 static void _diskwriter_draw_const(void)
 {
-	int x;
-
-	if (status.flags & DISKWRITER_ACTIVE_PATTERN) {
+	if (dg_progress >= 63) {
+		draw_text((const unsigned char *)"Finishing up...", 32, 27, 0, 2);
+	} else if (status.flags & DISKWRITER_ACTIVE_PATTERN) {
 		draw_text((const unsigned char *)"Updating sample...", 30, 27, 0, 2);
 		draw_text((const unsigned char *)"Please wait...", 34, 33, 0, 2); /* no cancel button */
 	} else {
@@ -47,8 +47,7 @@ static void _diskwriter_draw_const(void)
 	}
 	draw_fill_chars(24,30,55,30,0);
 
-	x = (int)(((double)dg_progress / 100.0) * 64.0);
-	draw_vu_meter(24, 30, 32, x, 4, 4);
+	draw_vu_meter(24, 30, 32, dg_progress, 4, 4);
 	draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 static void _diskwriter_cancel(UNUSED void*ignored)
@@ -61,6 +60,10 @@ static void _diskwriter_cancel(UNUSED void*ignored)
 }
 void diskwriter_dialog_progress(unsigned int perc)
 {
+	int x;
+
+	x = (int)(((double)perc / 100.0) * 64.0);
+
 	if (dg_init == 0) {
 		dg_init = 1;
 		create_button(_diskwriter_widgets+0, 36, 33, 6,
@@ -77,9 +80,11 @@ void diskwriter_dialog_progress(unsigned int perc)
 			dg->action_yes = _diskwriter_cancel;
 			dg->action_cancel = _diskwriter_cancel;
 		}
+	} else if (dg_progress == x) {
+		return;
 	}
 
-	dg_progress = perc;
+	dg_progress = x;
 	status.flags |= NEED_UPDATE;
 }
 void diskwriter_dialog_finished(void)
@@ -90,6 +95,6 @@ void diskwriter_dialog_finished(void)
 			dialog_cancel_NULL();
 		dialog_destroy_all(); /* poop */
 	}
-	dg_progress = 100;
+	dg_progress = 64;
 	status.flags |= NEED_UPDATE;
 }
