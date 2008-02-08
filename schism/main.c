@@ -474,7 +474,11 @@ static void check_update(void)
 		if ((status.flags & (IS_FOCUSED | LAZY_REDRAW)) == LAZY_REDRAW) {
 			if (SDL_GetTicks() < next)
 				return;
-			next = SDL_GetTicks() + 300;
+			next = SDL_GetTicks() + 500;
+		} else if (status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN)) {
+			if (SDL_GetTicks() < next)
+				return;
+			next = SDL_GetTicks() + 100;
 		}
 		redraw_screen();
 		video_refresh();
@@ -838,7 +842,9 @@ static void event_loop(void)
 			} else if (event.type == SCHISM_EVENT_PLAYBACK) {
 				/* this is the sound thread */
 				midi_send_flush();
-				playback_update();
+				if (!(status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN))) {
+					playback_update();
+				}
 
 			} else if (event.type == SCHISM_EVENT_PASTE) {
 				/* handle clipboard events */
@@ -955,8 +961,9 @@ static void event_loop(void)
 			}
 #endif
 
-			while ((q = diskwriter_sync()) == DW_SYNC_MORE && !SDL_PollEvent(0))
+			while ((q = diskwriter_sync()) == DW_SYNC_MORE && !SDL_PollEvent(0)) {
 				check_update();
+			}
 
 			if (q == DW_SYNC_ERROR) {
 				log_appendf(4, "Error running diskwriter: %s", strerror(errno));
