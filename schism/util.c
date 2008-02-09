@@ -525,20 +525,6 @@ long file_size(const char *filename)
         return buf.st_size;
 }
 
-long file_size_fd(int fd)
-{
-        struct stat buf;
-
-        if (fstat(fd, &buf) == -1) {
-                return EOF;
-        }
-        if (S_ISDIR(buf.st_mode)) {
-                errno = EISDIR;
-                return EOF;
-        }
-        return buf.st_size;
-}
-
 /* --------------------------------------------------------------------- */
 /* FILESYSTEM FUNCTIONS */
 
