@@ -928,7 +928,7 @@ void song_update_playing_sample(int s_changed)
 					| CHN_PINGPONGFLAG
 					| CHN_SUSTAINLOOP
 					| CHN_LOOP);
-			channel->nGlobalVol = inst->nGlobalVol;
+			channel->nInsVol = inst->nGlobalVol;
 		}
 	}
 	song_unlock_audio();
