@@ -32,8 +32,7 @@ if ($now eq $wn) {
 $h{wpSave} = "Save page";
 $h{wpSummary} = "Automatic update: $now";
 $h{wpTextbox1} = $now;
-use Data::Dumper;
-print Dumper(\%h)."\n";
+delete $h{search};
 $r = $ua->post('http://sovietrussia.org/mediawiki/index.php?title=Template:CVSVersionDate&action=submit', \%h);
 die $r->as_string() unless ($r->is_success());
 print "Updated sovietrussia.org\n";
