@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 use LWP::UserAgent;
-my $ua = LWP::UserAgent->new();
+my $ua = LWP::UserAgent->new(cookie_jar => {});
 push @{ $ua->requests_redirectable }, 'POST'; # apparently mediawiki didn't read RFC 2616
 
 my $r = $ua->get('http://sovietrussia.org/mediawiki/index.php?title=Template:CVSVersionDate&action=edit');
@@ -8,10 +8,15 @@ my $r = $ua->get('http://sovietrussia.org/mediawiki/index.php?title=Template:CVS
 die "$@" unless ($r->is_success());
 my $x = $r->content();
 my %h;
+foreach my $y ($x =~ m#<input(?:[^>]*?)type=(?:"text"|'text'|text)\s*(?:[^>]*)>#gis) {
+	my $k = ($y =~ /name\s*=\s*(?:'([^']*)'|"([^"]*)"|(\S+))/si) ? ($1 || $2 || $3) : next;
+	my $v = ($y =~ /value\s*=\s*(?:'([^']*)'|"([^"]*)"|(\S+))/si) ? ($1 || $2 || $3) : next;
+	$h{$k}=$v||'';
+}
 foreach my $y ($x =~ m#<input(?:[^>]*?)type=(?:"hidden"|'hidden'|hidden)\s*(?:[^>]*)>#gis) {
-	my $k = ($y =~ /name=(?:'([^']*)'|"([^"]*)"|(\S+))/i) ? ($1 || $2 || $3) : next;
-	my $v = ($y =~ /value=(?:'([^']*)'|"([^"]*)"|(\S+))/i) ? ($1 || $2 || $3) : next;
-	$h{$k}=$v;
+	my $k = ($y =~ /name\s*=\s*(?:'([^']*)'|"([^"]*)"|(\S+))/si) ? ($1 || $2 || $3) : next;
+	my $v = ($y =~ /value\s*=\s*(?:'([^']*)'|"([^"]*)"|(\S+))/si) ? ($1 || $2 || $3) : next;
+	$h{$k}=$v||'';
 }
 my $wn=join("",($x=~m#<textarea(?:[^>]*?)name=(?:'wpTextbox1'|"wpTextbox1"|wpTextbox1)[^>]*>([^<]*)<#sgi));
 $wn =~ s/^\s+//s;$wn =~ s/\s+$//s;
@@ -27,6 +32,8 @@ if ($now eq $wn) {
 $h{wpSave} = "Save page";
 $h{wpSummary} = "Automatic update: $now";
 $h{wpTextbox1} = $now;
+use Data::Dumper;
+print Dumper(\%h)."\n";
 $r = $ua->post('http://sovietrussia.org/mediawiki/index.php?title=Template:CVSVersionDate&action=submit', \%h);
 die $r->as_string() unless ($r->is_success());
 print "Updated sovietrussia.org\n";
