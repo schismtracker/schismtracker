@@ -181,6 +181,7 @@ struct tracker_status {
 struct log_line {
         int color;
         const char *text;
+	int bios_font;
 	/* Set this flag if the text should be free'd when it is scrolled offscreen.
 	DON'T set it if the text is going to be modified after it is added to the log (e.g. for displaying
 	status information for module loaders like IT); in that case, change the text pointer to some
@@ -391,6 +392,7 @@ inline int kbd_get_alnum(struct key_event *k);
 
 void log_nl(void);
 void log_append(int color, int must_free, const char *text);
+void log_append2(int bios_font, int color, int must_free, const char *text);
 void log_appendf(int color, const char *format, ...)
         __attribute__ ((format(printf, 2, 3)));
 
