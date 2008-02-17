@@ -1032,7 +1032,7 @@ static void dump_misc_about_text(void)
 		"Schism Tracker is Copyright (C) 2003-2008 Storlek and Mrs. Brisby.",
 		"",
 		"Contains additional code by Olivier Lapicque, Markus Fick, Adam Goode,",
-		"Ville Joleka, Juan Linietsky, Juha Niemimaki, and others.",
+		"Ville Jokela, Juan Linietsky, Juha Niemimaki, and others.",
 		"Based on Impulse Tracker which is Copyright (C) 1995-1998 Jeffrey Lim.",
 		"",
 		"This program is free software; you can redistribute it and/or modify it",
