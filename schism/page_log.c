@@ -98,8 +98,15 @@ static void log_redraw(void)
 	i = top_line;
         for (n = 0; n <= last_line && n < 33; n++, i++) {
 		if (!lines[i].text) continue;
-                draw_text_len((unsigned char *) lines[i].text, 74, 3, 14 + n,
-			      lines[i].color, 0);
+		if (lines[i].bios_font) {
+			draw_text_bios_len((unsigned char *) lines[i].text,
+					74, 3, 14 + n,
+					lines[i].color, 0);
+		} else {
+			draw_text_len((unsigned char *) lines[i].text,
+					74, 3, 14 + n,
+					lines[i].color, 0);
+		}
 	}
 }
 
@@ -118,7 +125,7 @@ void log_load_page(struct page *page)
 
 /* --------------------------------------------------------------------- */
 
-inline void log_append(int color, int must_free, const char *text)
+inline void log_append2(int bios_font, int color, int must_free, const char *text)
 {
         if (last_line < NUM_LINES - 1) {
                 last_line++;
@@ -130,10 +137,15 @@ inline void log_append(int color, int must_free, const char *text)
         lines[last_line].text = text;
         lines[last_line].color = color;
         lines[last_line].must_free = must_free;
+        lines[last_line].bios_font = bios_font;
 	top_line = CLAMP(last_line - 32, 0, NUM_LINES-32);
 
         if (status.current_page == PAGE_LOG)
                 status.flags |= NEED_UPDATE;
+}
+inline void log_append(int color, int must_free, const char *text)
+{
+	log_append2(0, color, must_free, text);
 }
 inline void log_nl(void)
 {
