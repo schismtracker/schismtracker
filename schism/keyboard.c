@@ -258,6 +258,7 @@ void key_translate(struct key_event *k)
 	case SDLK_PLUS: k->unicode = '+'; break;
 	case SDLK_RETURN: k->unicode = '\r'; break;
 	case SDLK_EQUALS: k->unicode = (k->mod & KMOD_SHIFT) ? '+' : '='; break;
+	case SDLK_PERIOD: k->unicode = (k->mod & KMOD_SHIFT) ? '>' : '.'; break;
 	case SDLK_0: k->unicode = (k->mod & KMOD_SHIFT) ? ')' : '0'; break;
 	case SDLK_1: k->unicode = (k->mod & KMOD_SHIFT) ? '!' : '1'; break;
 	case SDLK_2: k->unicode = (k->mod & KMOD_SHIFT) ? '@' : '2'; break;
@@ -563,13 +564,21 @@ inline int kbd_get_note(struct key_event *k)
 
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
+	if (k->orig_sym == SDLK_KP_PERIOD && k->sym == SDLK_PERIOD) {
+		/* lots of systems map an outside scancode for these;
+		 * we may need to simply ignore scancodes > 256
+		 * but i want a narrow change for this for now
+		 * until it is certain we need more...
+		 */
+		return 0;
+	}
+
 #if defined(WIN32) || defined(MACOSX) || defined(USE_X11)
 	kc = key_scancode_lookup(k->scancode);
 	if (kc == -1) kc = k->sym;
 #else
 	kc = k->sym;
 #endif
-
 	switch (kc) {
 	case SDLK_BACKQUOTE:
 		if (k->mod & KMOD_SHIFT) return NOTE_FADE;
