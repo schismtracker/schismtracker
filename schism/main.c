@@ -693,6 +693,14 @@ static void event_loop(void)
 						(int)event.key.keysym.scancode);
 			}
 			key_translate(&kk);
+			if (debug_s && strstr(debug_s, "translate")
+					&& kk.orig_sym != kk.sym) {
+				log_appendf(12, "[DEBUG] Translate Key%s sym=%d scancode=%d -> %d (%c)",
+						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
+						(int)event.key.keysym.sym,
+						(int)event.key.keysym.scancode,
+						kk.sym, kk.unicode);
+			}
 			if (event.type == SDL_KEYDOWN
 			&& last_key == kk.sym) {
 				sawrep = kk.is_repeat = 1;
