@@ -208,6 +208,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 		song_lock_audio();
 
+		while (chan >= 64) chan -= 64;
 		c = mp->Chn + chan;
 
 		if (at) {
@@ -253,10 +254,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nLoopStart = i->nLoopStart;
 			c->nLoopEnd = i->nLoopEnd;
 			c->dwFlags = (i->uFlags & 0xFF);
-			if (c->dwFlags & CHN_MUTE) {
-				c->dwFlags &= ~(CHN_MUTE);
-				c->dwFlags |= CHN_NNAMUTE;
-			}
 			c->dwFlags &= ~(CHN_PINGPONGFLAG);
 			c->nPan = 128; // redundant?
 			c->nInsVol = i->nGlobalVol;
@@ -266,11 +263,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nGlobalVol = 64;
 			if (vol > -1) c->nVolume = (vol << 2);
 			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
-			c->nMasterChn = 0;
+			c->nMasterChn = chan % 64;
 
+			c->dwFlags |= (mp->ChnSettings[ chan % MAX_BASECHANNELS ].dwFlags & CHN_MUTE);
+			song_set_channel_mute(chan, (c->dwFlags & CHN_MUTE));
 		} else {
-			while (chan >= 64) chan -= 64;
-
 			c = mp->Chn + chan;
 			if ((c->pSample || c->nRealtime) && note < 0x80
 			&& (mp->m_dwSongFlags & (SONG_ENDREACHED|SONG_PAUSED))) {
@@ -299,15 +296,13 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				c->nRowVolume = 0;
 			}
 
-			if (c->dwFlags & CHN_MUTE) {
-				c->dwFlags &= ~(CHN_MUTE);
-				c->dwFlags |= CHN_NNAMUTE;
-			}
 			c->dwFlags &= ~(CHN_PINGPONGFLAG);
 
 			c->nRowInstr = ins_mode ? ins : samp;
 			c->nRowCommand = effect;
 			c->nRowParam = param;
+			c->dwFlags |= (mp->ChnSettings[ chan % MAX_BASECHANNELS ].dwFlags & CHN_MUTE);
+			song_set_channel_mute(chan, (c->dwFlags & CHN_MUTE));
 
 		}
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
@@ -317,7 +312,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 	
 		song_unlock_audio();
 		/* put it back into range as necessary */
-		while (chan > 64) chan -= 64;
 
 		if (ins > -1) {
 			mc.note = note;
