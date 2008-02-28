@@ -643,7 +643,8 @@ static int file_list_handle_key(struct key_event * k)
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
 	if (!(status.flags & CLASSIC_MODE) && k->sym == SDLK_n && (k->mod & KMOD_ALT)) {
-		song_toggle_multichannel_mode();
+		if (k->state)
+			song_toggle_multichannel_mode();
 		return 1;
 	}
 
