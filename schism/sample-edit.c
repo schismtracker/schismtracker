@@ -151,9 +151,9 @@ void sample_reverse(song_sample * sample)
 
 	if (sample->flags & SAMP_STEREO) {
         	if (sample->flags & SAMP_16_BIT)
-			_reverse_32((signed int *)sample->data, sample->length/2);
+			_reverse_32((signed int *)sample->data, sample->length);
 		else
-			_reverse_16((signed short *) sample->data, sample->length/2);
+			_reverse_16((signed short *) sample->data, sample->length);
 	} else {
         	if (sample->flags & SAMP_16_BIT)
 			_reverse_16((signed short *) sample->data, sample->length);
