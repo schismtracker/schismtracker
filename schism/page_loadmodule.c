@@ -188,15 +188,11 @@ static void do_save_song(void *ptr)
 		}
 	}
 
-	if (f == NULL || (typ && strcmp(typ,"WAV") == 0)) {
-		set_page(PAGE_SAVE_MODULE);
-	} else {
-		set_page(PAGE_LOG);
+	set_page(PAGE_LOG);
 
-		if (song_save(f, typ)) {
-			set_page(PAGE_LOG);
-			/* set_page(PAGE_BLANK); */
-		}
+	if (song_save(f, typ)) {
+		set_page(PAGE_LOG);
+		/* set_page(PAGE_BLANK); */
 	}
 	free(ptr);
 }
