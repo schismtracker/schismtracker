@@ -162,12 +162,15 @@ void sample_reverse(song_sample * sample)
 	}
 
         tmp = sample->length - sample->loop_start;
+	if (sample->length < sample->loop_start) tmp = 0;
         sample->loop_start = sample->length - sample->loop_end;
         sample->loop_end = tmp;
 
         tmp = sample->length - sample->sustain_start;
+	if (sample->length < sample->sustain_start) tmp = 0;
         sample->sustain_start = sample->length - sample->sustain_end;
         sample->sustain_end = tmp;
+
 	song_unlock_audio();
 }
 
