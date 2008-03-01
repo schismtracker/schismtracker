@@ -257,7 +257,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nC4Speed = i->nC4Speed;
 			c->nLoopStart = i->nLoopStart;
 			c->nLoopEnd = i->nLoopEnd;
-			c->dwFlags = (i->uFlags & 0xFF);
+			c->dwFlags = (i->uFlags & 0xFF)|(c->dwFlags & CHN_MUTE);
 			if (c->dwFlags & CHN_MUTE) {
 				c->dwFlags &= ~(CHN_MUTE);
 				c->dwFlags |= CHN_NNAMUTE;
