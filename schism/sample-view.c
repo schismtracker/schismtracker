@@ -237,10 +237,11 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int 
 	/* do the actual drawing */
 	if (sample->flags & SAMP_16_BIT)
 		_draw_sample_data_16(1, r, (signed short *) sample->data,
-                                             sample->length,
+                                             sample->length * (sample->flags & SAMP_STEREO ? 2 : 1),
 				sample->flags & SAMP_STEREO ? 2 : 1, 1);
 	else
-		_draw_sample_data_8(1, r, sample->data, sample->length,
+		_draw_sample_data_8(1, r, sample->data,
+                                             sample->length * (sample->flags & SAMP_STEREO ? 2 : 1),
 				sample->flags & SAMP_STEREO ? 2 : 1, 1);
 
         if ((status.flags & CLASSIC_MODE) == 0)
