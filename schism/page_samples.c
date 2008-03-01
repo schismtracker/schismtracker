@@ -679,12 +679,9 @@ static void do_delete_sample(UNUSED void *data)
 static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
-	signed char *data;
 	unsigned long pos = ((sample->flags & SAMP_SUSLOOP)
 			     ? MAX(sample->loop_end, sample->sustain_end)
 			     : sample->loop_end);
-	int bytes = pos * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
-			* ((sample->flags & SAMP_STEREO) ? 2 : 1);
 
 	if (pos == sample->length)
 		return;
@@ -694,10 +691,6 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 	if (sample->loop_end > pos) sample->loop_end = pos;
 	if (sample->sustain_end > pos) sample->sustain_end = pos;
 
-	data = song_sample_allocate(bytes);
-	memcpy(data, sample->data, bytes);
-	song_sample_free(sample->data);
-	sample->data = data;
 	sample->length = pos;
 	song_unlock_audio();
 }
@@ -709,9 +702,9 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 	unsigned long pos = ((sample->flags & SAMP_SUSLOOP)
 			     ? MIN(sample->loop_start, sample->sustain_start)
 			     : sample->loop_start);
-	int start_byte = pos * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
+	unsigned long start_byte = pos * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
 				* ((sample->flags & SAMP_STEREO) ? 2 : 1);
-	int bytes = (sample->length - pos) * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
+	unsigned long  bytes = (sample->length - pos) * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
 				* ((sample->flags & SAMP_STEREO) ? 2 : 1);
 	
 	if (pos == 0)
