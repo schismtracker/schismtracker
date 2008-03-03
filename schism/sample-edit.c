@@ -288,7 +288,6 @@ static void _centralise_16(signed short *data, unsigned long length)
 
 void sample_centralise(song_sample * sample)
 {
-	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -327,7 +326,6 @@ static void _amplify_16(signed short *data, unsigned long length, int percent)
 
 void sample_amplify(song_sample * sample, int percent)
 {
-	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -397,7 +395,6 @@ static void _delta_decode_16(signed short *data, unsigned long length)
 
 void sample_delta_decode(song_sample * sample)
 {
-	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -561,7 +558,6 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 
 void sample_invert(song_sample * sample)
 {
-	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -587,7 +583,6 @@ static void _mono_lr8(signed char *data, unsigned long length, int shift)
 }
 void sample_mono_left(song_sample * sample)
 {
-	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & SAMP_STEREO) {
@@ -601,7 +596,6 @@ void sample_mono_left(song_sample * sample)
 }
 void sample_mono_right(song_sample * sample)
 {
-	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & SAMP_STEREO) {
