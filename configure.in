@@ -287,8 +287,8 @@ fi
 
 if test x$ADD_LUDICROUS \!= xno; then
         ADD_WARN=yes
-        CFLAGS="$CFLAGS -Werror"
-        CXXFLAGS="$CXXFLAGS -Werror"
+        CFLAGS="$CFLAGS -Werror -D_FORTIFY_SOURCE=2"
+        CXXFLAGS="$CXXFLAGS -Werror -D_FORTIFY_SOURCE=2"
 fi
 
 if test x$ADD_WARN \!= xno; then
