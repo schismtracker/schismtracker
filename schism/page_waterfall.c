@@ -432,6 +432,28 @@ static int waterfall_handle_key(struct key_event *k)
                         song_set_current_order(song_get_current_order() - 1);
                 }
                 return 1;
+	case SDLK_COMMA:
+	case SDLK_LESS:
+	case SDLK_SEMICOLON:
+	case SDLK_COLON:
+		if (k->state) return 1;
+		if (song_is_instrument_mode()) {
+			instrument_set(instrument_get_current() - 1);
+		} else {
+			sample_set(sample_get_current() - 1);
+		}
+		return 1;
+	case SDLK_PERIOD:
+	case SDLK_GREATER:
+	case SDLK_QUOTE:
+	case SDLK_QUOTEDBL:
+		if (k->state) return 1;
+		if (song_is_instrument_mode()) {
+			instrument_set(instrument_get_current() + 1);
+		} else {
+			sample_set(sample_get_current() + 1);
+		}
+		return 1;
 	default:
 		return 0;
 	};
