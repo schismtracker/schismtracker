@@ -82,7 +82,7 @@ static void _ww(diskwriter_driver_t *x, const unsigned char *buf, unsigned int l
 		fp_ok = 0;
 		return;
 	}
-	(void)fwrite(buf, len, 1, fp);
+	if (fwrite(buf, len, 1, fp) != 1) fp_ok = 0;
 	if (ferror(fp)) fp_ok = 0;
 	x->pos = ftell(fp);
 }
