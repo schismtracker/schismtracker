@@ -67,7 +67,9 @@ static void do_wake_midi(void)
 #ifdef WIN32
 	/* anyone want to suggest how this is done? XXX */
 #else
-	(void)write(wakeup[1], "\x1", 1);
+	if (write(wakeup[1], "\x1", 1) == 1) {
+		/* fortify is stupid */
+	}
 #endif
 }
 
@@ -232,7 +234,9 @@ static int _ip_thread(struct midi_provider *p)
 
 #ifndef WIN32
 		if (FD_ISSET(wakeup[0], &rfds)) {
-			(void)read(wakeup[0], buffer, sizeof(buffer));
+			if (read(wakeup[0], buffer, sizeof(buffer)) == -1) {
+				/* fortify is stupid */
+			}
 		}
 #endif
 		for (i = 0; i < real_num_ports; i++) {
@@ -317,7 +321,10 @@ static void _ip_poll(struct midi_provider *p)
 	} else if (m > last_buildout) {
 		for (i = last_buildout; i < m; i++) {
 			buffer = 0;
-			asprintf(&buffer, " Multicast/IP MIDI %lu", i+1);
+			if (asprintf(&buffer, " Multicast/IP MIDI %lu", i+1) == -1) {
+				perror("asprintf");
+				exit(255);
+			}
 			if (!buffer) {
 				perror("asprintf");
 				exit(255);
