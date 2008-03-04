@@ -191,10 +191,6 @@ int asprintf(char **strp, const char *fmt, ...);
 int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
 
-#ifndef HAVE_REALPATH
-char *realpath(const char *path, char *resolved_path);
-#endif
-
 #ifdef __cplusplus
 }
 #endif
