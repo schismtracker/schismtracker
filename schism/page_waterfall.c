@@ -166,9 +166,12 @@ static inline unsigned char *_dobits(unsigned char *q,
 }
 static inline void _drawslice(int x, int h, int c)
 {
+	int y;
+
+	y = ((h>>10) & (SCOPE_ROWS-1))+1;
 	vgamem_ovl_drawline(&ovl,
-		x, NATIVE_SCREEN_HEIGHT-((h>>10) & (SCOPE_ROWS-1)),
-		x, NATIVE_SCREEN_HEIGHT, c);
+		x, (NATIVE_SCREEN_HEIGHT-y),
+		x, (NATIVE_SCREEN_HEIGHT-1), c);
 }
 static void _vis_process(void)
 {
