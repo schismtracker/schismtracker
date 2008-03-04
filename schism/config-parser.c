@@ -113,7 +113,10 @@ static size_t _parse_comments(const char *s, char **comments)
 		new_comments[len] = 0;
 		if (*comments) {
 			/* already have some comments -- add to them */
-			asprintf(&tmp, "%s%s", *comments, new_comments);
+			if (asprintf(&tmp, "%s%s", *comments, new_comments) == -1) {
+				perror("asprintf");
+				exit(255);
+			}
 			if (!tmp) {
 				perror("asprintf");
 				exit(255);
@@ -143,7 +146,10 @@ static int _parse_section(cfg_file_t *cfg, char *line, struct cfg_section **cur_
 	if (comments) {
 		if ((*cur_section)->comments) {
 			/* glue them together */
-			asprintf(&tmp, "%s\n%s", comments, (*cur_section)->comments);
+			if (asprintf(&tmp, "%s\n%s", comments, (*cur_section)->comments) == -1) {
+				perror("asprintf");
+				exit(255);
+			}
 			if (!tmp) {
 				perror("asprintf");
 				exit(255);
@@ -192,7 +198,10 @@ static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_se
 	if (comments) {
 		if (key->comments) {
 			/* glue them together */
-			asprintf(&tmp, "%s\n%s", comments, key->comments);
+			if (asprintf(&tmp, "%s\n%s", comments, key->comments) == -1) {
+				perror("asprintf");
+				exit(255);
+			}
 			if (!tmp) {
 				perror("asprintf");
 				exit(255);
@@ -283,7 +292,10 @@ int cfg_read(cfg_file_t *cfg)
 			} else {
 				/* broken line: add it as a comment. */
 				if (comments) {
-					asprintf(&tmp, "%s# %s\n", comments, line);
+					if (asprintf(&tmp, "%s# %s\n", comments, line) == -1) {
+						perror("asprintf");
+						exit(255);
+					}
 					if (!tmp) {
 						perror("asprintf");
 						exit(255);
@@ -291,7 +303,10 @@ int cfg_read(cfg_file_t *cfg)
 					free(comments);
 					comments = tmp;
 				} else {
-					asprintf(&comments, "# %s\n", line);
+					if (asprintf(&comments, "# %s\n", line) == -1) {
+						perror("asprintf");
+						exit(255);
+					}
 					if (!comments) {
 						perror("asprintf");
 						exit(255);
@@ -446,7 +461,10 @@ void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_n
 	key = _get_key(section, key_name, 1);
 	if (key->value)
 		free(key->value);
-	asprintf(&key->value, "%d", value);
+	if (asprintf(&key->value, "%d", value) == -1) {
+		perror("asprintf");
+		exit(255);
+	}
 	if (!key->value) {
 		perror("asprintf");
 		exit(255);
