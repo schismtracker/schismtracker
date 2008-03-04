@@ -1128,14 +1128,6 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 	CFG_SET_M(hq_resampling);
 	CFG_SET_M(noise_reduction);
 	CFG_SET_M(no_ramping);
-}
-
-void cfg_save_audio(cfg_file_t *cfg)
-{
-	cfg_atexit_save_audio(cfg);
-
-	// Say, what happened to the switch for this in the gui?
-	CFG_SET_M(surround_effect);
 
 	CFG_SET_D(xbass);
 	CFG_SET_D(xbass_amount);
@@ -1147,9 +1139,8 @@ void cfg_save_audio(cfg_file_t *cfg)
 	CFG_SET_D(reverb_depth);
 	CFG_SET_D(reverb_delay);
 
-	cfg_set_number(cfg, "Diskwriter", "rate", diskwriter_output_rate);
-	cfg_set_number(cfg, "Diskwriter", "bits", diskwriter_output_bits);
-	cfg_set_number(cfg, "Diskwriter", "channels", diskwriter_output_channels);
+	// Say, what happened to the switch for this in the gui?
+	CFG_SET_M(surround_effect);
 
 	// hmmm....
 	//     [Equalizer]
@@ -1167,6 +1158,16 @@ void cfg_save_audio(cfg_file_t *cfg)
 	cfg_set_number(cfg, "EQ Med Low Band", "gain", audio_settings.eq_gain[1]);
 	cfg_set_number(cfg, "EQ Med High Band", "gain", audio_settings.eq_gain[2]);
 	cfg_set_number(cfg, "EQ High Band", "gain", audio_settings.eq_gain[3]);
+}
+
+void cfg_save_audio(cfg_file_t *cfg)
+{
+	cfg_atexit_save_audio(cfg);
+
+	cfg_set_number(cfg, "Diskwriter", "rate", diskwriter_output_rate);
+	cfg_set_number(cfg, "Diskwriter", "bits", diskwriter_output_bits);
+	cfg_set_number(cfg, "Diskwriter", "channels", diskwriter_output_channels);
+
 }
 
 // ------------------------------------------------------------------------------------------------------------
