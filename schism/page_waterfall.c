@@ -327,7 +327,35 @@ static void draw_screen(void)
 
 static int waterfall_handle_key(struct key_event *k)
 {
-	int n, order;
+	int n, v, order, ii;
+
+	if (NO_MODIFIER(k->mod)) {
+		if (k->midi_note > -1) {
+			n = k->midi_note;
+			if (k->midi_volume > -1) {
+				v = k->midi_volume / 2;
+			} else {
+				v = 64;
+			}
+		} else {
+			v = 64;
+			n = kbd_get_note(k);
+		}
+		if (n > 0 && n <= 120) {
+			if (song_is_instrument_mode()) {
+				ii = instrument_get_current();
+			} else {
+				ii = sample_get_current();
+			}
+			if (k->state) {
+				song_keyup(-1, ii, n, KEYDOWN_CHAN_CURRENT, 0);
+				status.last_keysym = 0;
+			} else if (!k->is_repeat) {
+				song_keydown(-1, ii, n, v, KEYDOWN_CHAN_CURRENT, 0);
+			}
+			return 1;
+		}
+	}
 
 	switch (k->sym) {
         case SDLK_s:
@@ -338,14 +366,14 @@ static int waterfall_handle_key(struct key_event *k)
                 	status.flags |= NEED_UPDATE;
 	                return 1;
 		}
-		/* fall through */
+		return 0;
 	case SDLK_m:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-
-		if (k->state) return 1;
-		mono = !mono;
-		break;
+		if (k->mod & KMOD_ALT) {
+			if (k->state) return 1;
+			mono = !mono;
+			return 1;
+		}
+		return 0;
 	case SDLK_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
@@ -359,23 +387,24 @@ static int waterfall_handle_key(struct key_event *k)
 		gain++;
 		break;
         case SDLK_g:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (!k->state) return 1;
+		if (k->mod & KMOD_ALT) {
+			if (!k->state) return 1;
 
-		order = song_get_current_order();
-		if (song_get_mode() == MODE_PLAYING) {
-			n = song_get_orderlist()[order];
-		} else {
-			n = song_get_playing_pattern();
+			order = song_get_current_order();
+			if (song_get_mode() == MODE_PLAYING) {
+				n = song_get_orderlist()[order];
+			} else {
+				n = song_get_playing_pattern();
+			}
+			if (n < 200) {
+				set_current_order(order);
+				set_current_pattern(n);
+				set_current_row(song_get_current_row());
+				set_page(PAGE_PATTERN_EDITOR);
+			}
+			return 1;
 		}
-		if (n < 200) {
-			set_current_order(order);
-			set_current_pattern(n);
-			set_current_row(song_get_current_row());
-			set_page(PAGE_PATTERN_EDITOR);
-		}
-               return 1;
+		return 0;
         case SDLK_r:
                 if (k->mod & KMOD_ALT) {
 			if (k->state) return 1;
