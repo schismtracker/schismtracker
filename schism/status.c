@@ -50,7 +50,7 @@ void status_text_flash(const char *format, ...)
 	
 	status_color = 0;
         va_start(ap, format);
-        vasprintf(&status_text, format, ap);
+        if (vasprintf(&status_text, format, ap) == -1) abort();
         va_end(ap);
 
         status.flags |= NEED_UPDATE;
@@ -67,7 +67,7 @@ void status_text_flash_bios(const char *format, ...)
 	
 	status_color = 16; /* color & 16 is for bios font */
         va_start(ap, format);
-        vasprintf(&status_text, format, ap);
+        if (vasprintf(&status_text, format, ap) == -1) abort();
         va_end(ap);
 
         status.flags |= NEED_UPDATE;
@@ -84,7 +84,7 @@ void status_text_flash_color(int co, const char *format, ...)
 	
 	status_color = co;
         va_start(ap, format);
-        vasprintf(&status_text, format, ap);
+        if (vasprintf(&status_text, format, ap) == -1) abort();
         va_end(ap);
 
         status.flags |= NEED_UPDATE;

@@ -405,8 +405,12 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 				continue;
 			}
 
-			asprintf(&buffer, "%3d:%-3d %-20.20s %s",
-					c, p, ctext, ptext);
+			if (asprintf(&buffer, "%3d:%-3d %-20.20s %s",
+					c, p, ctext, ptext) == -1) {
+				free(data);
+				continue;
+			}
+		
 			midi_port_register(_alsa_provider, io, buffer, data, 1);
 		}
 	}

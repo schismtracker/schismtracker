@@ -157,7 +157,10 @@ void log_appendf(int color, const char *format, ...)
         va_list ap;
 
         va_start(ap, format);
-        vasprintf(&ptr, format, ap);
+        if (vasprintf(&ptr, format, ap) == -1) {
+		perror("asprintf");
+		exit(255);
+	}
         va_end(ap);
 
 	if (!ptr) {
