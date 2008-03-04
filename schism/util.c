@@ -540,6 +540,16 @@ int is_directory(const char *filename)
         return S_ISDIR(buf.st_mode);
 }
 
+char *get_current_directory(void)
+{
+	char buf[PATH_MAX + 1];
+
+	/* hmm. fall back to the current dir */
+	if (getcwd(buf, PATH_MAX))
+		return str_dup(buf);
+	return str_dup(".");
+}
+
 /* this function is horrible */
 char *get_home_directory(void)
 {

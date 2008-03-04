@@ -137,6 +137,7 @@ int make_backup_file(const char *filename, int numbered);
 long file_size(const char *filename);
 int is_directory(const char *filename);
 char *get_home_directory(void); /* should free() the resulting string */
+char *get_current_directory(void); /* should free() the resulting string */
 
 void put_env_var(const char *key, const char *value);
 void unset_env_var(const char *key);

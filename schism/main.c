@@ -1217,8 +1217,12 @@ int main(int argc, char **argv)
 	
 	/* shutdown_process |= 8; -- wtf is this? */
 
-	if (initial_song && !initial_dir)
+	if (initial_song && !initial_dir) {
 		initial_dir = get_parent_directory(initial_song);
+		if (!initial_dir) {
+			initial_dir = get_current_directory();
+		}
+	}
 	if (initial_dir) {
 		strncpy(cfg_dir_modules, initial_dir, PATH_MAX);
 		cfg_dir_modules[PATH_MAX] = 0;
