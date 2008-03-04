@@ -1259,7 +1259,8 @@ int main(int argc, char **argv)
 	}
 
 #if HAVE_NICE
-	(void)nice(1);
+	if (nice(1) == -1) {
+	}
 #endif
 	/* poll once */
 	midi_engine_poll_ports();

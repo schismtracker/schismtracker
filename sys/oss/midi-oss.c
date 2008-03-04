@@ -134,7 +134,9 @@ static void _tryopen(int n, const char *name, struct midi_provider *_oss_provide
 	}
 
 	ptr = 0;
-	asprintf(&ptr, " %-16s (OSS)", name);
+	if (asprintf(&ptr, " %-16s (OSS)", name) == -1) {
+		return;
+	}
 	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT((long)n+1), 0);
 }
 
