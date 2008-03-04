@@ -1178,6 +1178,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 	unsigned char buf[4];
 	int ins, mc, mg, mbl, mbh;
 	int need_note, need_velocity;
+	MODCHANNEL *c;
 
 	if (!mp || !song_is_instrument_mode()) return;
 
@@ -1191,6 +1192,8 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 	if (chan < 0) {
 		return;
 	}
+
+	c = &mp->Chn[chan];
 
 	chan %= 64;
 
@@ -1222,7 +1225,9 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 #if 0
 printf("channel = %d note=%d\n",chan,m_note);
 #endif
-	if (m->command == CMD_S3MCMDEX) {
+	if (c->nRealtime) {
+		/* goggles */
+	} else if (m->command == CMD_S3MCMDEX) {
 		switch (m->param & 0x80) {
 		case 0xC0: /* note cut */
 			if (tc == (((unsigned)m->param) & 15)) {
