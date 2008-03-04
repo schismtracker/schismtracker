@@ -1437,6 +1437,7 @@ void ITUnpack16Bit(signed char *pSample, DWORD dwLen, LPBYTE lpMemFile, DWORD dw
 }
 
 
+#if 0
 UINT CSoundFile::SaveMixPlugins(FILE *f, BOOL bUpdate)
 //----------------------------------------------------
 {
@@ -1502,6 +1503,7 @@ UINT CSoundFile::SaveMixPlugins(FILE *f, BOOL bUpdate)
 	}
 	return nTotalSize;
 }
+#endif
 
 
 UINT CSoundFile::LoadMixPlugins(const void *pData, UINT nLen)
