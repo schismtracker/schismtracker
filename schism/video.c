@@ -1676,11 +1676,14 @@ struct _ss_data {
 	unsigned int tc_identity[256];
 
 	FILE *fp;
+	int fp_ok;
 };
 static void _ss_output(struct pngw_arg *o, const void *data, int len)
 {
 	struct _ss_data *d = (void *)o->extra_user_data;
-	fwrite(data, len, 1, d->fp);
+	if (fwrite(data, len, 1, d->fp) != 1) {
+		d->fp_ok = 0;
+	}
 }
 static int _ss_next_pixel(struct pngw_arg *o)
 {
@@ -1735,12 +1738,13 @@ void video_screenshot(void)
 	pa.pal = video.tc_bgr32;
 	pa.output = _ss_output;
 	pa.read_pixel = _ss_next_pixel;
+	data.fp_ok = 0;
 	pa.extra_user_data = (void*)&data;
 
 	vgamem_lock();
 	pngw(&pa);
 	vgamem_unlock();
-	fp_ok = 1;
+	fp_ok = data.fp_ok;
 	if (ferror(data.fp)) fp_ok = 0;
 #ifdef WIN32
 	if (_commit(fileno(data.fp)) == -1)
