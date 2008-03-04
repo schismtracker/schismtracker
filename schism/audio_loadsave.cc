@@ -452,6 +452,10 @@ int song_instrument_is_empty(int n)
 		if (mp->Headers[n]->Keyboard[i] != 0)
 			return 0;
 	}
+	if (mp->Headers[n]->wMidiBank
+	||mp->Headers[n]->nMidiProgram
+	||mp->Headers[n]->nMidiChannel
+	||mp->Headers[n]->nMidiDrumKey) return 0;
 	return 1;
 }
 
@@ -1242,7 +1246,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		for (unsigned int q = 0; q < MAX_INSTRUMENTS; q++) {
 			if ((int) q == target) continue;
 			if (!mp->Headers[q]) continue;
-			for (unsigned long j = 0; j < 128; j++) {
+			for (unsigned int j = 0; j < 128; j++) {
 				x = mp->Headers[q]->Keyboard[j];
 				sampmap[x] = 0;
 			}
