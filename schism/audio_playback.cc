@@ -482,6 +482,7 @@ static void song_reset_play_state()
 	mp->m_nCurrentPattern = 255; // hack...
 	mp->m_nNextPattern = 0;
 	mp->m_nRow = mp->m_nNextRow = 0;
+	mp->m_nInitialRepeatCount = -1;
 	mp->m_nRepeatCount = -1;
 	mp->m_nBufferCount = 0;
 	mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_STEP | SONG_PATTERNLOOP | SONG_ENDREACHED);
@@ -499,6 +500,7 @@ void song_start_once()
         song_reset_play_state();
 	CSoundFile::gdwSoundSetup |= SNDMIX_NOBACKWARDJUMPS;
         max_channels_used = 0;
+	mp->m_nInitialRepeatCount = 0;
 	mp->m_nRepeatCount = 1;
 
         song_unlock_audio();
@@ -635,7 +637,8 @@ static int mp_chaseback(int order, int row)
 
 	CSoundFile::gdwSoundSetup |= SNDMIX_NOBACKWARDJUMPS
 				| SNDMIX_NOMIXING;
-	mp->m_nRepeatCount = 1;
+	mp->m_nRepeatCount = 0;
+	mp->m_nInitialRepeatCount = 1;
 
 	mp->stop_at_order = j;
 	mp->stop_at_row = k;
@@ -659,6 +662,7 @@ printf("stop_at_order = %u v. %u  and row = %u v. %u\n",
 				| SNDMIX_DIRECTTODISK
 				| SNDMIX_NOMIXING);
 	mp->m_nRepeatCount = -1;
+	mp->m_nInitialRepeatCount = -1;
 	
 	CSoundFile::_midi_out_note = _schism_midi_out_note;
 	CSoundFile::_midi_out_raw = _schism_midi_out_raw;
