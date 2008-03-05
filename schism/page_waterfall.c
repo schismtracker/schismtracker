@@ -344,7 +344,7 @@ static int waterfall_handle_key(struct key_event *k)
 			v = 64;
 			n = kbd_get_note(k);
 		}
-		if (n > 0 && n <= 120) {
+		if (n > -1) {
 			if (song_is_instrument_mode()) {
 				ii = instrument_get_current();
 			} else {
