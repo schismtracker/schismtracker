@@ -432,8 +432,6 @@ static int waterfall_handle_key(struct key_event *k)
                         song_set_current_order(song_get_current_order() - 1);
                 }
                 return 1;
-	case SDLK_COMMA:
-	case SDLK_LESS:
 	case SDLK_SEMICOLON:
 	case SDLK_COLON:
 		if (k->state) return 1;
@@ -443,8 +441,6 @@ static int waterfall_handle_key(struct key_event *k)
 			sample_set(sample_get_current() - 1);
 		}
 		return 1;
-	case SDLK_PERIOD:
-	case SDLK_GREATER:
 	case SDLK_QUOTE:
 	case SDLK_QUOTEDBL:
 		if (k->state) return 1;
@@ -453,6 +449,16 @@ static int waterfall_handle_key(struct key_event *k)
 		} else {
 			sample_set(sample_get_current() + 1);
 		}
+		return 1;
+	case SDLK_COMMA:
+	case SDLK_LESS:
+		if (k->state) return 1;
+		song_change_current_play_channel(-1, 0);
+		return 1;
+	case SDLK_PERIOD:
+	case SDLK_GREATER:
+		if (k->state) return 1;
+		song_change_current_play_channel(1, 0);
 		return 1;
 	default:
 		return 0;
