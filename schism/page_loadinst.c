@@ -339,6 +339,34 @@ static void handle_enter_key(void)
 	/* TODO */
 }
 
+static void do_delete_file(UNUSED void *data)
+{
+	int old_top_file, old_current_file;
+	char *ptr;
+
+	if (current_file < 0 || current_file >= flist.num_files)
+		return;
+
+	ptr = flist.files[current_file]->path;
+	
+	/* would be neat to send it to the trash can if there is one */
+	unlink(ptr);
+	
+	/* remember the list positions */
+	old_top_file = top_file;
+	old_current_file = current_file;
+	
+	read_directory();
+	
+	/* put the list positions back */
+	top_file = old_top_file;
+	current_file = old_current_file;
+	/* edge case: if this was the last file, move the cursor up */
+	if (current_file >= flist.num_files)
+		current_file = flist.num_files - 1;
+	file_list_reposition();
+}
+
 static int file_list_handle_key(struct key_event * k)
 {
 	int new_file = current_file;
@@ -402,6 +430,11 @@ static int file_list_handle_key(struct key_event * k)
 	case SDLK_RETURN:
 		if (!k->state) return 0;
 		handle_enter_key();
+		return 1;
+	case SDLK_DELETE:
+		if (k->state) return 1;
+		if (flist.num_files > 0)
+			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
 	case SDLK_ESCAPE:
 		if (k->state && NO_MODIFIER(k->mod))
