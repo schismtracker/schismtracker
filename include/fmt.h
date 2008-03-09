@@ -80,7 +80,7 @@ READ_INFO(aiff); LOAD_SAMPLE(aiff);    SAVE_SAMPLE(aiff);
 READ_INFO(au);   LOAD_SAMPLE(au);      SAVE_SAMPLE(au);
 READ_INFO(its);  LOAD_SAMPLE(its);     SAVE_SAMPLE(its);
                  LOAD_SAMPLE(raw);     SAVE_SAMPLE(raw);
-READ_INFO(wav);	 LOAD_SAMPLE(wav);
+READ_INFO(wav);	 LOAD_SAMPLE(wav);     SAVE_SAMPLE(wav);
 READ_INFO(psm);
 READ_INFO(mid);						   SAVE_SONG(mid);
 

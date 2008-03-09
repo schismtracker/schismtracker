@@ -128,6 +128,8 @@ int fmt_wav_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	}
 	return false;
 }
+
+
 /* ... wavewriter :) */
 static void _wavout_header(diskwriter_driver_t *x)
 {
@@ -199,3 +201,54 @@ NULL,
 0 /* pos */
 };
 };
+
+/* --------------------------------------------------------------------------------- */
+
+int fmt_wav_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *title)
+{
+	fp->rate = smp->speed;
+	fp->channels = (smp->flags & SAMP_STEREO) ? 2 : 1;
+	fp->bits = (smp->flags & SAMP_16_BIT) ? 16 : 8;
+	_wavout_header(fp);
+#if WORDS_BIGENDIAN
+	if (fp->bits == 8) {
+		/* no swapping required */
+		_wavout_data(fp, (unsigned char *)smp->data,
+				smp->length * fp->channels);
+	} else {
+#define BUFS	4096
+		unsigned short buffer[BUFS];
+		unsigned short *q, *p, *end;
+		unsigned int length;
+
+		q = (unsigned short *)smp->data;
+		length = smp->length;
+		end = &buffer[BUFS-2];
+		p = buffer;
+		while (length > 0) {
+			if (p >= end) {
+				_wavout_data(fp, (unsigned char *)buffer,
+						((char*)p)-((char*)buffer));
+				p = buffer;
+			}
+			*p = bswap_16(*q);
+			q++; p++;
+			if (smp->flags & SAMP_STEREO) {
+				*p = bswap_16(*q);
+				q++; p++;
+			}
+			length--;
+		}
+		if (p != buffer) {
+			_wavout_data(fp, (unsigned char *)buffer, ((char*)p)-((char*)buffer));
+		}
+	}
+#else
+	_wavout_data(fp, (unsigned char*)smp->data,
+			smp->length * (fp->bits / 8) * fp->channels);
+#endif
+	_wavout_tail(fp);
+	return true;
+}
+
+
