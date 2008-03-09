@@ -256,8 +256,43 @@ int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 	ul = bswapBE32(0);
 	fp->o(fp, (const unsigned char *)&ul, 4);
 	fp->o(fp, (const unsigned char *)&ul, 4);
+
+#if !WORDS_BIGENDIAN
+	if (fp->bits == 8) {
+		/* no swapping required */
+		fp->o(fp, (const unsigned char *)smp->data, smp->length * bps);
+	} else {
+#define BUFS	4096
+		unsigned short buffer[BUFS];
+		unsigned short *q, *p, *end;
+		unsigned int length;
+
+		q = (unsigned short *)smp->data;
+		length = smp->length;
+		end = &buffer[BUFS-2];
+		p = buffer;
+		while (length > 0) {
+			if (p >= end) {
+				fp->o(fp, (unsigned char *)buffer,
+						((char*)p)-((char*)buffer));
+				p = buffer;
+			}
+			*p = bswap_16(*q);
+			q++; p++;
+			if (smp->flags & SAMP_STEREO) {
+				*p = bswap_16(*q);
+				q++; p++;
+			}
+			length--;
+		}
+		if (p != buffer) {
+			fp->o(fp, (unsigned char *)buffer, ((char*)p)-((char*)buffer));
+		}
+	}
+#else
 	fp->o(fp, (const unsigned char *)smp->data, smp->length * bps);
-	
+#endif
+
 	/* fix the length in the file header */
 	ul = fp->pos - 8;
 	ul = bswapBE32(ul);
