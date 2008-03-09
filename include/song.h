@@ -351,8 +351,9 @@ enum sample_save_format_ids {
 	SSMP_ITS = 0,
 	SSMP_AIFF = 1,
 	SSMP_AU = 2,
-	SSMP_RAW = 3,
-	SSMP_SENTINEL = 4,
+	SSMP_WAV = 3,
+	SSMP_RAW = 4,
+	SSMP_SENTINEL = 5,
 };
 
 /* --------------------------------------------------------------------- */

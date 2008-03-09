@@ -1423,6 +1423,7 @@ struct sample_save_format sample_save_formats[] = {
 	{"Impulse Tracker", "its", fmt_its_save_sample},
 	{"Audio IFF", "aiff", fmt_aiff_save_sample},
 	{"Sun/NeXT", "au", fmt_au_save_sample},
+	{"IBM/Microsoft WAV", "wav", fmt_wav_save_sample},
 	{"Raw", "raw", fmt_raw_save_sample},
 };
 
