@@ -91,7 +91,7 @@ void CSoundFile::S3MConvert(MODCOMMAND *m, BOOL bIT) const
 	case 'S':	command = CMD_S3MCMDEX; break;
 	case 'T':	command = CMD_TEMPO; break;
 	case 'U':	command = CMD_FINEVIBRATO; break;
-	case 'V':	command = CMD_GLOBALVOLUME; break;
+	case 'V':	command = CMD_GLOBALVOLUME; param *= 2; break;
 	case 'W':	command = CMD_GLOBALVOLSLIDE; break;
 	case 'X':	command = CMD_PANNING8; break;
 	case 'Y':	command = CMD_PANBRELLO; break;
@@ -131,7 +131,7 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 	case CMD_S3MCMDEX:			command = 'S'; break;
 	case CMD_TEMPO:				command = 'T'; break;
 	case CMD_FINEVIBRATO:		command = 'U'; break;
-	case CMD_GLOBALVOLUME:		command = 'V'; break;
+	case CMD_GLOBALVOLUME:		command = 'V'; param >>= 1;break;
 	case CMD_GLOBALVOLSLIDE:	command = 'W'; break;
 	case CMD_PANNING8:			
 		command = 'X';
