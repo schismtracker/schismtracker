@@ -33,7 +33,9 @@ $h{wpSave} = "Save page";
 $h{wpSummary} = "Automatic update: $now";
 $h{wpTextbox1} = $now;
 delete $h{search};
-$r = $ua->post('http://sovietrussia.org/mediawiki/index.php?title=Template:CVSVersionDate&action=submit', \%h);
+my $url = URI->new_abs('/mediawiki/index.php?title=Template:CVSVersionDate&action=submit',
+		$r->base);
+$r = $ua->post($url, \%h);
 die $r->as_string() unless ($r->is_success());
-print "Updated sovietrussia.org\n";
+print "Updated " . $url->host . "\n";
 exit 0;
