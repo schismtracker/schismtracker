@@ -1330,7 +1330,6 @@ BOOL CSoundFile::ProcessEffects()
 			if (nPosJump < 0) nPosJump = m_nCurrentPattern+1;
 			if (nBreakRow < 0) nBreakRow = 0;
 			// Modplug Tracker & ModPlugin allow backward jumps
-		#ifndef MODPLUG_FASTSOUNDLIB
 			if ((nPosJump < (int)m_nCurrentPattern)
 			 || ((nPosJump == (int)m_nCurrentPattern) && (nBreakRow <= (int)m_nRow)))
 			{
@@ -1341,18 +1340,15 @@ BOOL CSoundFile::ProcessEffects()
 						if (m_nRepeatCount > 0) m_nRepeatCount--;
 					} else
 					{
-					#ifdef MODPLUG_TRACKER
 						if (gdwSoundSetup & SNDMIX_NOBACKWARDJUMPS)
-					#endif
-						// Backward jump disabled
-						bNoLoop = TRUE;
+							// Backward jump disabled
+							bNoLoop = TRUE;
 						//reset repeat count incase there are multiple loops.
 						//(i.e. Unreal tracks)
 						m_nRepeatCount = m_nInitialRepeatCount;
 					}
 				}
 			}
-		#endif	// MODPLUG_FASTSOUNDLIB
 			if (((!bNoLoop) && (nPosJump < MAX_ORDERS))
 			 && ((nPosJump != (int)m_nCurrentPattern) || (nBreakRow != (int)m_nRow)))
 			{
