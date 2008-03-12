@@ -9,6 +9,6 @@ cp ../COPYING COPYING.txt || exit 1
 cp ../README README.txt || exit 1
 cp ../NEWS NEWS.txt || exit 1
 cp ../ChangeLog ChangeLog.txt || exit 1
-cp ../sys/win32/schism.bat . || exit 1
-rm -f "Schism Tracker.zip"
-zip "Schism Tracker.zip" schismtracker.exe schism.bat SDL.dll COPYING.txt README.txt NEWS.txt ChangeLog.txt || exit 1
+cp ../sys/win32/schism.nsis . || exit 1
+cp ../icons/schismres.ico schism.ico || exit 1
+makensis schism.nsis || exit 1
