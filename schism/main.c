@@ -701,8 +701,7 @@ static void event_loop(void)
 						(int)event.key.keysym.scancode,
 						kk.sym, kk.unicode);
 			}
-			if (event.type == SDL_KEYDOWN
-			&& last_key == kk.sym) {
+			if (event.type == SDL_KEYDOWN && last_key == kk.sym) {
 				sawrep = kk.is_repeat = 1;
 			} else {
 				kk.is_repeat = 0;
@@ -934,7 +933,7 @@ static void event_loop(void)
 			}
 			break;
 		}
-		if (!SDL_PollEvent(0) || sawrep) {
+		if (sawrep || !SDL_PollEvent(0)) {
 			time(&status.now);
 			tmr = localtime(&status.now);
 			status.h = tmr->tm_hour;
@@ -999,6 +998,7 @@ static void event_loop(void)
 			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(0))
 				/* nothing */;
 		}
+		SDL_Delay(1);
 	}
 	exit(0); /* atexit :) */
 }
