@@ -39,7 +39,7 @@
 typedef struct _slurp_struct slurp_t;
 struct _slurp_struct {
         size_t length;
-        const byte *data;
+        byte *data;
 	int extra;
 	void *bextra;
 	void (*closure)(slurp_t *);
