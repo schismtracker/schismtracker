@@ -391,6 +391,9 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 		penv->VolEnv.nNodes = xmsh.vnum;
 		if (!xmsh.vnum) penv->dwFlags &= ~ENV_VOLUME;
 		if (!xmsh.pnum) penv->dwFlags &= ~ENV_PANNING;
+		if (!(penv->dwFlags & ENV_VOLUME) && !penv->nFadeOut) {
+			penv->nFadeOut = 8192;
+		}
 		penv->PanEnv.nNodes = xmsh.pnum;
 		penv->VolEnv.nSustainStart = penv->VolEnv.nSustainEnd = xmsh.vsustain;
 		if (xmsh.vsustain >= 12) penv->dwFlags &= ~ENV_VOLSUSTAIN;
