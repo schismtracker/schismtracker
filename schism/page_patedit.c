@@ -4343,6 +4343,87 @@ static void pattern_editor_playback_update(void)
 }
 
 /* --------------------------------------------------------------------- */
+int pattern_max_channels(int patno)
+{
+	song_note *pattern;
+	song_instrument *pi;
+	song_channel *pc;
+	song_sample *ps;
+	int total_rows;
+	int x, n, inst, samp;
+	int mlim;
+
+	mlim = -1;
+	total_rows = song_get_pattern(patno, &pattern);
+	while (total_rows > 0) {
+		for (n = 0; n < 64; n++) {
+#define MLIM_HIT \
+do { if (mlim == -1) mlim = n; else return 2; } while(0)
+
+			pc = song_get_channel(n);
+			if (!pc || (pc->flags & CHN_MUTE)) {
+				pattern++;
+				continue;
+			}
+
+			if (pc->flags & CHN_SURROUND)
+				return 2;
+
+			if (pattern->note) {
+				if (pc->panning != 128) MLIM_HIT;
+			}
+
+			switch (pattern->volume_effect) {
+			case VOL_EFFECT_PANNING:
+			case VOL_EFFECT_PANSLIDELEFT:
+			case VOL_EFFECT_PANSLIDERIGHT:
+				if (pattern->volume) MLIM_HIT;
+			};
+			switch (get_effect_char(pattern->effect)) {
+			case 'X':
+			case 'Y':
+			case 'P':
+				MLIM_HIT;
+			case 'S':
+				if (pattern->parameter == 0x91)
+					return 2;
+
+				if (pattern->parameter >= 0x80
+				&& pattern->parameter < 0x90)
+					MLIM_HIT;
+			};
+
+			x = pattern->note;
+			inst = pattern->instrument;
+			pattern++;
+			if (inst == 0) continue;
+
+			if (song_is_instrument_mode()) {
+				pi = song_get_instrument(inst, NULL);
+				if (!pi) continue;
+
+				samp = pi->sample_map[x & 127];
+				if (samp == 0) continue;
+				if (pi->flags & ENV_PANNING) return 2;
+				if (pi->flags & ENV_SETPANNING) MLIM_HIT;
+				if (pi->pan_swing > 0) return 2;
+				if (pi->pitch_pan_separation != 0) return 2;
+			} else {
+				samp = inst;
+			}
+
+			ps = song_get_sample(samp, NULL);
+			if (!ps) continue;
+
+			if (ps->flags & SAMP_PANNING) MLIM_HIT;
+		}
+		total_rows--;
+	}
+	/* still here? i guess it's mono! */
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
 
 static void _fix_keyhack(void)
 {
