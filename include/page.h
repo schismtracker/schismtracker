@@ -27,6 +27,10 @@
 #ifndef PAGE_H
 #define PAGE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* there's no good place for this */
 #define MOUSE_BUTTON_LEFT	1
 #define MOUSE_BUTTON_MIDDLE	2
@@ -460,6 +464,7 @@ void update_current_row(void);
 void update_current_pattern(void);
 void pattern_editor_display_options(void);
 void pattern_editor_length_edit(void);
+int pattern_max_channels(int patno);
 
 /* page_orderpan.c */
 void update_current_order(void);
@@ -529,5 +534,9 @@ void dialog_destroy_all(void);
 struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
 				    int dialog_total_widgets, int dialog_selected_widget,
 				    void (*draw_const) (void), void *data);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif /* ! PAGE_H */
