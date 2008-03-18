@@ -750,7 +750,10 @@ static void orderpan_draw_const(void)
 static void ordervol_draw_const(void)
 {
         int n;
-        char buf[16] = "Channel 42";
+        char buf[16];
+	int fg;
+
+	strcpy(buf, "Channel 42");
 
         order_pan_vol_draw_const();
 
@@ -758,11 +761,25 @@ static void ordervol_draw_const(void)
         draw_text((unsigned char *) " Volumes ", 65, 14, 0, 3);
 
         for (n = 1; n <= 32; n++) {
+		fg = 0;
+		if (!(status.flags & CLASSIC_MODE)) {
+			if (ACTIVE_PAGE.selected_widget == n) {
+				fg = 3;
+			}
+		}
+
                 numtostr(2, n, (unsigned char *) buf + 8);
-                draw_text((unsigned char *) buf, 20, 14 + n, 0, 2);
-		
+                draw_text((unsigned char *) buf, 20, 14 + n, fg, 2);
+
+		fg = 0;
+		if (!(status.flags & CLASSIC_MODE)) {
+			if (ACTIVE_PAGE.selected_widget == n+32) {
+				fg = 3;
+			}
+		}
+
                 numtostr(2, n + 32, (unsigned char *) buf + 8);
-                draw_text((unsigned char *) buf, 54, 14 + n, 0, 2);
+                draw_text((unsigned char *) buf, 54, 14 + n, fg, 2);
         }
 }
 
