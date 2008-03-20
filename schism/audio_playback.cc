@@ -139,7 +139,7 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 		max_channels_used = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 POST_EVENT:
 	audio_writeout_count++;
-	if (audio_writeout_count >= audio_buffers_per_second) {
+	if (audio_writeout_count > audio_buffers_per_second) {
 		audio_writeout_count = 0;
 	} else if (waspat == mp->m_nCurrentPattern && wasrow == mp->m_nRow
 			&& !midi_need_flush()) {
