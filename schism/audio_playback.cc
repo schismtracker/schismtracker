@@ -1646,7 +1646,7 @@ void song_init_modplug(void)
 	midi_queue_alloc(audio_buffer_size, audio_sample_size, CSoundFile::gdwMixingFreq) ;
 
 	// timelimit the playback_update() calls when midi isn't actively going on
-	audio_buffers_per_second = (CSoundFile::gdwMixingFreq / (audio_buffer_size * audio_sample_size));
+	audio_buffers_per_second = (CSoundFile::gdwMixingFreq / (audio_buffer_size * 8 * audio_sample_size));
 	if (audio_buffers_per_second > 1) audio_buffers_per_second--;
 	
 	song_unlock_audio();
