@@ -690,6 +690,30 @@ static int _midi_queue_run(UNUSED void *xtop)
 	return 0;
 }
 
+int midi_need_flush(void)
+{
+	struct midi_port *ptr;
+	int need_explicit_flush = 0;
+	int i;
+
+	if (!midi_record_mutex || !midi_play_mutex) return 0;
+
+	ptr = 0;
+
+	while (midi_port_foreach(NULL, &ptr)) {
+		if ((ptr->io & MIDI_OUTPUT)) {
+			if (!ptr->drain && ptr->send_now)
+				need_explicit_flush = 1;
+		}
+	}
+	if (!need_explicit_flush) return 0;
+
+	for (i = 0; i < qlen; i++) {
+		if (qq[i].used) return 1;
+	}
+
+	return 0;
+}
 void midi_send_flush(void)
 {
 	struct midi_port *ptr;

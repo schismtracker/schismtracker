@@ -965,7 +965,6 @@ static void event_loop(void)
 #endif
 				break;
 			default:
-				SDL_Delay(1);
 				break;
 			};
 
