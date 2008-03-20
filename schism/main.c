@@ -954,19 +954,20 @@ static void event_loop(void)
 
 			check_update();
 
-#ifdef USE_X11
 			switch (song_get_mode()) {
 			case MODE_PLAYING:
 			case MODE_PATTERN_LOOP:
+#ifdef USE_X11
 				if ((status.now-last_ss) > 14) {
 					last_ss=status.now;
 					xscreensaver_deactivate();
 				}
+#endif
 				break;
 			default:
+				SDL_Delay(1);
 				break;
-			}
-#endif
+			};
 
 			while ((q = diskwriter_sync()) == DW_SYNC_MORE && !SDL_PollEvent(0)) {
 				check_update();
@@ -998,7 +999,6 @@ static void event_loop(void)
 			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(0))
 				/* nothing */;
 		}
-		SDL_Delay(1);
 	}
 	exit(0); /* atexit :) */
 }
