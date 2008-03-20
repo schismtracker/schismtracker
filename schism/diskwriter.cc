@@ -185,7 +185,8 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	else dw->bits = 16;
 	if (dw->channels > 2) dw->channels = 2;
 
-	if (pattern_max_channels(patno) == 1) dw->channels = 1;
+	if (mp->m_dwSongFlags & SONG_NOSTEREO) dw->channels = 1;
+	else if (pattern_max_channels(patno) == 1) dw->channels = 1;
 
 	dw->m = (void(*)(diskwriter_driver_t*,unsigned char *,unsigned int))_mw;
 
@@ -251,15 +252,19 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 		return DW_ERROR;
 
 	nchan = diskwriter_output_channels;
-	ol = song_get_orderlist();
-	lim = 1;
-	for (i = 0; i < 256; i++) {
-		if (ol[i] == ORDER_SKIP) continue;
-		if (ol[i] == ORDER_LAST) break;
-		lim = pattern_max_channels(ol[i]);
-		if (lim > 1) break;
+	if (mp->m_dwSongFlags & SONG_NOSTEREO) {
+		nchan = 1;
+	} else {
+		ol = song_get_orderlist();
+		lim = 1;
+		for (i = 0; i < 256; i++) {
+			if (ol[i] == ORDER_SKIP) continue;
+			if (ol[i] == ORDER_LAST) break;
+			lim = pattern_max_channels(ol[i]);
+			if (lim > 1) break;
+		}
+		if (lim == 1) nchan = 1; /* mono is possible */
 	}
-	if (lim == 1) nchan = 1; /* mono is possible */
 
 	if (dw->m || dw->g) {
 //		CSoundFile::SetWaveConfigEx();
@@ -267,6 +272,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 		CSoundFile::SetWaveConfig(dw->rate, dw->bits, nchan, 1);
 		CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	}
+	dw->channels = nchan;
 
 	/* ERR: should write to temporary */
 	dw_rename_to = str_dup(file);
