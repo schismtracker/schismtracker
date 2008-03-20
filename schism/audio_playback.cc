@@ -55,6 +55,8 @@ unsigned int audio_output_channels = 2;
 unsigned int audio_output_bits = 16;
 
 static unsigned int audio_sample_size;
+static int audio_buffers_per_second = 0;
+static int audio_writeout_count = 0;
 
 struct audio_settings audio_settings;
 
@@ -74,6 +76,8 @@ extern "C" {
 // this gets called from sdl
 static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 {
+	unsigned int wasrow = mp->m_nRow;
+	unsigned int waspat = mp->m_nCurrentPattern;
 	int i, n;
 
 	if (!stream || !len || !mp) {
@@ -134,6 +138,15 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	if (mp->m_nMixChannels > max_channels_used)
 		max_channels_used = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 POST_EVENT:
+	audio_writeout_count++;
+	if (audio_writeout_count >= audio_buffers_per_second) {
+		audio_writeout_count = 0;
+	} else if (waspat == mp->m_nCurrentPattern && wasrow == mp->m_nRow
+			&& !midi_need_flush()) {
+		/* skip it */
+		return;
+	}
+	
 	/* send at end */
 	SDL_Event e;
 	e.user.type = SCHISM_EVENT_PLAYBACK;
@@ -1631,6 +1644,10 @@ void song_init_modplug(void)
 
 	// update midi queue configuration
 	midi_queue_alloc(audio_buffer_size, audio_sample_size, CSoundFile::gdwMixingFreq) ;
+
+	// timelimit the playback_update() calls when midi isn't actively going on
+	audio_buffers_per_second = (CSoundFile::gdwMixingFreq / (audio_buffer_size * audio_sample_size));
+	if (audio_buffers_per_second > 1) audio_buffers_per_second--;
 	
 	song_unlock_audio();
 }

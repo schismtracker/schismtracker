@@ -96,6 +96,9 @@ void midi_send_now(unsigned char *seq, unsigned int len);
 void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos);
 void midi_send_flush(void);
 
+/* used by the audio thread */
+int midi_need_flush(void);
+
 /* from the SDL event mechanism (x is really SDL_Event) */
 int midi_engine_handle_event(void *x);
 
