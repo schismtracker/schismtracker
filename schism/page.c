@@ -98,10 +98,10 @@ static int check_time(void)
                 h = m = s = 0;
                 break;
         case TIME_PLAYBACK:
-                h = (m = (s = song_get_current_time()) / 60) / 24;
+                h = (m = (s = song_get_current_time()) / 60) / 60;
                 break;
         case TIME_ELAPSED:
-                h = (m = (s = SDL_GetTicks() / 1000) / 60) / 24;
+                h = (m = (s = SDL_GetTicks() / 1000) / 60) / 60;
                 break;
 	case TIME_ABSOLUTE:
 		/* absolute time shows the time of the current cursor
