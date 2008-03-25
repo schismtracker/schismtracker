@@ -486,8 +486,14 @@ void draw_widget(struct widget *w, int selected)
 						w->y, 0, 3);
 			}
 		} else {
-			draw_text_len(numtostr(w->width, w->d.numentry.value,
-					(unsigned char *) buf),
+			if (w->d.numentry.min < 0 || w->d.numentry.max < 0) {
+				numtostr_signed(w->width, w->d.numentry.value,
+							(unsigned char *) buf);
+			} else {
+				numtostr(w->width, w->d.numentry.value,
+							(unsigned char *) buf);
+			}
+			draw_text_len((unsigned char *) buf,
 					w->width, w->x, w->y, 2, 0);
 			if (clippy_owner(CLIPPY_SELECT) == w) {
 				clen = w->clip_end - w->clip_start;
@@ -532,7 +538,13 @@ void draw_widget(struct widget *w, int selected)
 			draw_thumb_bar(w->x, w->y, w->width, w->d.thumbbar.min,
 				       w->d.thumbbar.max, w->d.thumbbar.value, selected);
 		}
-                draw_text(numtostr(3, w->d.thumbbar.value, (unsigned char *) buf), w->x + w->width + 1, w->y, 1, 2);
+		if (w->d.thumbbar.min < 0 || w->d.thumbbar.max < 0) {
+			numtostr_signed(3, w->d.thumbbar.value, (unsigned char *) buf);
+		} else {
+			numtostr(3, w->d.thumbbar.value, (unsigned char *) buf);
+		}
+		draw_text((unsigned char *)buf,
+				w->x + w->width + 1, w->y, 1, 2);
                 break;
         case WIDGET_PANBAR:
                 numtostr(2, w->d.panbar.channel, (unsigned char *) buf + 8);
