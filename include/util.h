@@ -117,6 +117,7 @@ extern void mem_free(void *);
 unsigned char *get_date_string(time_t when, unsigned char *buf);
 unsigned char *get_time_string(time_t when, unsigned char *buf);
 unsigned char *numtostr(int digits, unsigned int n, unsigned char *buf);
+unsigned char *numtostr_signed(int digits, int n, unsigned char *buf);
 unsigned char *num99tostr(int n, unsigned char *buf);
 
 /* string handling */

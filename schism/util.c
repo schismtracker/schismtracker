@@ -167,6 +167,20 @@ unsigned char *numtostr(int digits, unsigned int n, unsigned char *buf)
 	}
 	return buf;
 }
+unsigned char *numtostr_signed(int digits, int n, unsigned char *buf)
+{
+	if (digits > 0) {
+		char fmt[] = "%03d";
+		
+		digits %= 10;
+		fmt[2] = '0' + digits;
+		snprintf((char *) buf, digits + 1, fmt, n);
+		buf[digits] = 0;
+	} else {
+		sprintf((char *) buf, "%d", n);
+	}
+	return buf;
+}
 
 /* --------------------------------------------------------------------- */
 /* STRING HANDLING FUNCTIONS */
