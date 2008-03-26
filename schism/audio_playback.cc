@@ -1323,7 +1323,9 @@ printf("channel = %d note=%d\n",chan,m_note);
 			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_PROGRAM*32], // program change
 			mg, 0, 0, ins);
 	}
-	if (need_note > 0) {
+	if (c->dwFlags & CHN_MUTE) {
+		/* don't send noteon events when muted */
+	} else if (need_note > 0) {
 		if (need_velocity == -1) need_velocity = 64; /* eh? */
 		need_velocity = CLAMP(need_velocity*2,0,127);
 		mp->ProcessMidiMacro(chan,
