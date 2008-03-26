@@ -604,6 +604,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 			}
 
 			UINT note = p->note;
+
 			UINT param = ModSaveCommand(p, TRUE);
 			UINT command = param >> 8;
 			param &= 0xFF;
@@ -611,6 +612,15 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 			if ((note <= 12) || (note > 96+12)) note = 0; else
 			note -= 12;
 			UINT vol = 0;
+
+			if (p->instr && m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE)) {
+					
+				INSTRUMENTHEADER *penv = Headers[p->instr];
+				if (penv) {
+					note = penv->NoteMap[note+12]-12;
+				}
+			}
+
 
 			if (p->volcmd)
 			{
@@ -711,13 +721,13 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 				xmsh.psustain = (BYTE)penv->PanEnv.nSustainStart;
 				xmsh.ploops = (BYTE)penv->PanEnv.nLoopStart;
 				xmsh.ploope = (BYTE)penv->PanEnv.nLoopEnd;
-				for (UINT j=0; j<96; j++) if (penv->Keyboard[j+12])
+				for (UINT j=0; j<96; j++) if (penv->Keyboard[j])
 				{
 					UINT k;
-					for (k=0; k<xmih.samples; k++)	if (smptable[k] == penv->Keyboard[j+12]) break;
+					for (k=0; k<xmih.samples; k++)	if (smptable[k] == penv->Keyboard[j]) break;
 					if (k == xmih.samples)
 					{
-						smptable[xmih.samples++] = penv->Keyboard[j+12];
+						smptable[xmih.samples++] = penv->Keyboard[j];
 					}
 					if (xmih.samples >= 32) break;
 					xmsh.snum[j] = k;
