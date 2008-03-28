@@ -369,6 +369,17 @@ static void _video_preinit(void)
 	}
 
 }
+static int best_resolution(int w, int h)
+{
+	if ((w == NATIVE_SCREEN_WIDTH || w == (2*NATIVE_SCREEN_WIDTH)
+	|| w == (3*NATIVE_SCREEN_WIDTH) || w == (4*NATIVE_SCREEN_WIDTH))
+	&&
+	(h == NATIVE_SCREEN_HEIGHT || h == (2*NATIVE_SCREEN_HEIGHT)
+	|| h == (3*NATIVE_SCREEN_HEIGHT) || h == (4*NATIVE_SCREEN_HEIGHT))) {
+		return 1;
+	}
+	return 0;
+}
 
 int video_is_fullscreen(void)
 {
@@ -684,13 +695,6 @@ SKIP1:
 	}
 	video.desktop.bpp = video.surface->format->BitsPerPixel;
 
-	video.desktop.want_fixed = 1;
-	q = getenv("SCHISM_VIDEO_ASPECT");
-	if (q && (strcasecmp(q,"nofixed") == 0 || strcasecmp(q,"full")==0
-	|| strcasecmp(q,"fit") == 0 || strcasecmp(q,"wide") == 0
-	|| strcasecmp(q,"no-fixed") == 0))
-		video.desktop.want_fixed = 0;
-
 	if (x < 0 || y < 0) {
 		modes = SDL_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
 		if (modes != (SDL_Rect**)0 && modes != (SDL_Rect**)-1) {
@@ -705,7 +709,7 @@ SKIP1:
 					}
 					x = modes[i]->w;
 					y = modes[i]->h;
-					if (x == NATIVE_SCREEN_WIDTH && y == NATIVE_SCREEN_HEIGHT)
+					if (best_resolution(x,y))
 						break;
 				}
 			}
@@ -715,6 +719,13 @@ SKIP1:
 		x = 640;
 		y = 480;
 	}
+
+	video.desktop.want_fixed = -1;
+	q = getenv("SCHISM_VIDEO_ASPECT");
+	if (q && (strcasecmp(q,"nofixed") == 0 || strcasecmp(q,"full")==0
+	|| strcasecmp(q,"fit") == 0 || strcasecmp(q,"wide") == 0
+	|| strcasecmp(q,"no-fixed") == 0))
+		video.desktop.want_fixed = 0;
 
 	if ((q = getenv("SCHISM_VIDEO_DEPTH"))) {
 		i=atoi(q);
@@ -778,6 +789,8 @@ SKIP1:
 }
 static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int sdlflags)
 {
+	int want_fixed = video.desktop.want_fixed;
+
 	if (video.desktop.doublebuf)
 		sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
 	if (video.desktop.fullscreen) {
@@ -787,7 +800,11 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 		sdlflags |= SDL_RESIZABLE;
 	}
 
-	if (video.desktop.want_fixed) {
+	if (want_fixed == -1 && best_resolution(w,h)) {
+		want_fixed = 0;
+	}
+
+	if (want_fixed) {
 		double ratio_w = (double)w / (double)NATIVE_SCREEN_WIDTH;
 		double ratio_h = (double)h / (double)NATIVE_SCREEN_HEIGHT;
 		if (ratio_w < ratio_h) {
