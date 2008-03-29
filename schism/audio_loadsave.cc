@@ -661,6 +661,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	static int iti_invmap[255];
 	static int iti_nalloc = 0;
 
+	iti_nalloc = 0;
 	for (int j = 0; j < 255; j++) {
 		iti_map[j] = -1;
 	}
