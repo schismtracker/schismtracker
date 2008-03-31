@@ -182,7 +182,7 @@ static void _draw_menu(struct menu *menu)
         draw_text((const unsigned char *)menu->title, menu->x + 6, menu->y + 2, 3, 2);
 }
 
-inline void menu_draw(void)
+void menu_draw(void)
 {
         ENSURE_MENU(return);
 
@@ -193,7 +193,7 @@ inline void menu_draw(void)
 
 /* --------------------------------------------------------------------- */
 
-inline void menu_show(void)
+void menu_show(void)
 {
         status.dialog_type = DIALOG_MAIN_MENU;
         current_menu[0] = &main_menu;
@@ -201,7 +201,7 @@ inline void menu_show(void)
         status.flags |= NEED_UPDATE;
 }
 
-inline void menu_hide(void)
+void menu_hide(void)
 {
         ENSURE_MENU(return);
 
@@ -222,7 +222,7 @@ inline void menu_hide(void)
 
 /* --------------------------------------------------------------------- */
 
-static inline void set_submenu(struct menu *menu)
+static void set_submenu(struct menu *menu)
 {
         ENSURE_MENU(return);
 

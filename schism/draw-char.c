@@ -271,7 +271,7 @@ void font_reset_char(int ch)
 
 /* --------------------------------------------------------------------- */
 
-static inline int squeeze_8x16_font(FILE * fp)
+static int squeeze_8x16_font(FILE * fp)
 {
         byte data_8x16[4096];
         int n;
