@@ -4414,7 +4414,7 @@ do { if (mlim == -1) mlim = n; else return 2; } while(0)
 
 			ps = song_get_sample(samp, NULL);
 			if (!ps) continue;
-
+			if (ps->flags & SAMP_STEREO) return 2;
 			if (ps->flags & SAMP_PANNING) MLIM_HIT;
 		}
 		total_rows--;
