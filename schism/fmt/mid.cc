@@ -105,17 +105,18 @@ static int volfix(int v)
 static void data(struct midi_track *t, const void *z, int zlen)
 {
 	if (t->msec || !t->used) add_track_len(t, t->msec);
-	else if (t->used) add_track_len(t,1);
 	add_track(t, z, zlen);
 	t->msec = 0;
 }
 static void pad(struct midi_track *t,int frame, int tempo, int row)
 {
 	int msec;
+	int fpm;
 
 	if (frame <= 0 || row <= 0 || tempo <= 0) return;
 
-	msec = (frame*row*2400) / (tempo);
+	msec = (frame * row * 5000) / tempo;
+
 	/*
 	 * overflow checking here aside, this checks for a very
 	 * pathological case where we have a delay in a channel that
@@ -243,23 +244,6 @@ static void keyoff(midi_config *g, unsigned char **pp, struct midi_track *t)
 		t->note_on[j] = 0;
 	}
 }
-static void settempo(struct midi_track *t, int tempo)
-{
-	unsigned char d[6];
-
-	/* ((tempo * 0.4) * 100000) / 96 -> microseconds per quarter */
-	tempo *= 400000;
-	tempo /= 96;
-
-	d[0] = 0xff;
-	d[1] = 0x51;
-	d[2] = 0x03;
-	d[3] = (tempo & 0xFF0000) >> 16;
-	d[4] = (tempo & 0xFF00) >> 8;
-	d[5] = (tempo & 0xFF);
-	data(t,d,6);
-}
-
 void fmt_mid_save_song(diskwriter_driver_t *dw)
 {
 	song_note *nb;
@@ -273,8 +257,9 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	unsigned char packet[256], *p;
 	int order, row, speed;
 	int i, j, nt, left, vol;
+	int row_pad;
 	int need_cut;
-	int tmpspd;
+	int note_length;
 	int tempo;
 
 	g = song_get_midi_config();
@@ -316,74 +301,59 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 		add_track(&trk[0], "\0\377\1", 3);
 		add_track_len(&trk[0], i=strlen(s));
 		add_track(&trk[0], s, i);
+		/* put the 0msec marker back on */
+		add_track_len(&trk[0], 0);
 	}
+
 	orderlist = song_get_orderlist();
 	
 	order = 0;
 	speed = song_get_initial_speed();
 	row = 0;
 	tempo = song_get_initial_tempo();
-	settempo(&trk[0], tempo);
-	while ((order >= 0) && (order < MAX_ORDERS) && orderlist[order] != 255) {
+	while (order >= 0 && order < MAX_ORDERS && orderlist[order] != 255) {
 		if (orderlist[order] == 254) { order++; continue; }
-		if (!song_get_pattern(orderlist[order], &nb)) {
+		if (!song_get_pattern(orderlist[order], &nb)
+		|| !(left = song_get_rows_in_pattern(orderlist[order]))) {
 			/* assume 64 rows of nil */
-			pad_all(trk,speed,tempo,64-row);
-			order++;
-			row = 0;
-			continue;
-		}
-		left = song_get_rows_in_pattern(orderlist[order]);
-		if (!left) {
-			left = 64;
-			pad_all(trk,speed,tempo,64-row);
+			pad_all(trk, speed, tempo, 64 - row);
 			order++;
 			row = 0;
 			continue;
 		}
 		if (row > 0) {
+			/* move to position */
 			left -= row;
 			nb += (64 * row);
 			row = 0;
 		}
-		while (left > 0) {
+
+		while (left >= 0) {
+			/* scan for tempo/speed changes and row-delay */
+			nt = tempo;
+			row_pad = 0;
+			for (j = 0; j < 64; j++) {
+				switch (nb[j].effect) {
+				case CMD_SPEED:
+					speed = nb[j].parameter;
+					break;
+				case CMD_TEMPO:
+					nt = nb[j].parameter;
+					if (!nt) nt = trk[j].old_tempo;
+					trk[j].old_tempo = nt;
+					break;
+				case CMD_MODCMDEX:
+				case CMD_S3MCMDEX:
+					if ((nb[j].parameter & 0xF0) == 0xe0) {
+						pad_all(trk,(nb[j].parameter & 15),
+								tempo,1);
+					}
+					break;
+				};
+			}
+
 			for (i = 0; i < 64; i++) {
 				p = packet;
-				if (i == 0) {
-					nt = tempo;
-					for (j = 0; j < 64; j++) {
-						if (nb[j].effect != CMD_TEMPO)
-							continue;
-						nt = nb[j].parameter;
-						if (!nt) nt = trk[j].old_tempo;
-						trk[j].old_tempo = nt;
-					}
-					if (nt != tempo) {
-						if (nt >= 0x20) {
-							tempo = nt;
-						} else if (nt >= 0x10) {
-							tempo += (nt & 15);
-						} else {
-							tempo -= (nt & 15);
-						}
-						if (tempo < 32)
-							tempo = 32;
-						else if (tempo >= 255)
-							tempo = 255;
-						settempo(&trk[0], tempo);
-					}
-				}
-
-				for (j = 0; j < 64; j++) {
-					if (nb[j].effect == CMD_MODCMDEX
-					|| nb[j].effect == CMD_S3MCMDEX) {
-						if ((nb[j].parameter & 0xF0) == 0xe0) {
-							pad_all(trk,(nb[j].parameter & 15),tempo,1);
-							break;
-						}
-					}
-				}
-
 
 				if (nb->instrument
 				&& trk[i].last_chan != nb->instrument) {
@@ -440,11 +410,8 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 				}
 				j = nb->parameter;
 				need_cut = 0;
-				tmpspd = speed;
+				note_length = speed;
 				switch (nb->effect) {
-				case CMD_SPEED:
-					if (j && j < 32) tmpspd = speed = j;
-					break;
 				case CMD_PATTERNBREAK:
 					row = j;
 					left = 1;
@@ -487,7 +454,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 						j &= 15;
 						if (!j) j = trk[i].last_delay;
 						trk[i].last_delay = j;
-						tmpspd -= j;
+						note_length -= j;
 						pad(trk+i,j,tempo,1);
 						break;
 					case 0xf0:
@@ -499,21 +466,36 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					break;
 				/* anything else? */
 				};
+
 				if (p != packet) {
 					data(trk+i,packet,(p-packet)-1);
 				}
-				if (need_cut) {
+
+				if (need_cut && need_cut < speed) {
 					pad(trk+i,need_cut,tempo,1);
 					/* ugh, notecut is tricky */
 					p = packet;
 					keyoff(g,&p, trk+i);
 					data(trk+i,packet,(p-packet)-1);
-					pad(trk+i,(tmpspd-need_cut),tempo,1);
+					pad(trk+i,(note_length-need_cut),tempo,1);
 				} else {
-					pad(trk+i,tmpspd,tempo,1);
+					pad(trk+i,note_length,tempo,1);
 				}
 
 				nb++;
+			}
+			if (nt != tempo) {
+				if (nt >= 0x20) {
+					tempo = nt;
+				} else if (nt >= 0x10) {
+					tempo += (nt & 15);
+				} else {
+					tempo -= (nt & 15);
+				}
+				if (tempo < 32)
+					tempo = 32;
+				else if (tempo >= 255)
+					tempo = 255;
 			}
 			left--;
 		}
