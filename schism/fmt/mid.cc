@@ -414,7 +414,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 				switch (nb->effect) {
 				case CMD_PATTERNBREAK:
 					row = j;
-					left = 1;
+					left = 0;
 					break;
 				case CMD_PANNING8:
 					if (j < 0x80) {
