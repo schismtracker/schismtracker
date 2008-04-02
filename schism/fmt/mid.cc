@@ -487,10 +487,13 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			if (nt != tempo) {
 				if (nt >= 0x20) {
 					tempo = nt;
-				} else if (nt >= 0x10) {
-					tempo += (nt & 15);
+				} else if (nt == 0x10) {
+					/* no op */
+
+				} else if (nt > 0x10) {
+					tempo += (speed-1) * (nt & 15);
 				} else {
-					tempo -= (nt & 15);
+					tempo -= (speed-1) * (nt & 15);
 				}
 				if (tempo < 32)
 					tempo = 32;
