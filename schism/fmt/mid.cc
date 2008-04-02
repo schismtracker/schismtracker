@@ -115,7 +115,7 @@ static void pad(struct midi_track *t,int frame, int tempo, int row)
 
 	if (frame <= 0 || row <= 0 || tempo <= 0) return;
 
-	msec = (frame * row * 5000) / tempo;
+	msec = (frame * row * 480) / tempo;
 
 	/*
 	 * overflow checking here aside, this checks for a very
@@ -294,7 +294,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			map[i].nna = NNA_NOTECUT;
 		}
 	}
-	dw->o(dw, (const unsigned char *)"MThd\0\0\0\6\0\1\0\100\xe7\x28", 14);
+	dw->o(dw, (const unsigned char *)"MThd\0\0\0\6\0\1\0\100\x00\x60", 14);
 
 	s = song_get_title();
 	if (s && *s) {
