@@ -50,6 +50,7 @@ struct midi_map {
 	int nna;
 };
 struct midi_track {
+	int muted;
 	int old_tempo;
 	int last_delay;
 	int last_cut;
@@ -104,6 +105,7 @@ static int volfix(int v)
 }
 static void data(struct midi_track *t, const void *z, int zlen)
 {
+	if (zlen < 0) return;
 	if (t->msec || !t->used) add_track_len(t, t->msec);
 	add_track(t, z, zlen);
 	t->msec = 0;
@@ -252,6 +254,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	struct midi_track trk[64];
 	struct midi_map map[SCHISM_MAX_SAMPLES], *m;
 	song_instrument *ins;
+	song_channel *chan;
 	song_sample *smp;
 	char *s;
 	unsigned char packet[256], *p;
@@ -267,8 +270,12 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 	memset(map, 0, sizeof(map));
 	memset(trk, 0, sizeof(trk));
 	for (i = 0; i < 64; i++) {
-		trk[i].pan = 64;
-		trk[i].vol = 127;
+		chan = song_get_channel(i);
+		trk[i].pan = (chan->panning / 2);
+		if (trk[i].pan > 127) trk[i].pan = 127;
+		trk[i].vol = chan->volume;
+		trk[i].muted = (chan->flags & CHN_MUTE) ? 1 : 0;
+		if (chan->flags & CHN_SURROUND) trk[i].pan = 64;
 	}
 
 	if (song_is_instrument_mode()) {
@@ -303,6 +310,13 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 		add_track(&trk[0], s, i);
 		/* put the 0msec marker back on */
 		add_track_len(&trk[0], 0);
+	}
+
+	/* set initial values */
+	for (i = 0; i < 64; i++) {
+		p = packet;
+		macro(&p, 0, GCF(MIDI_GCF_PAN), trk[i].pan, 0, 0, trk+i);
+		data(trk+i,packet,(p-packet)-1);
 	}
 
 	orderlist = song_get_orderlist();
@@ -375,7 +389,9 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 				} else {
 					m = &map[ trk[i].last_chan ];
 				}
-				if (nb->note == NOTE_CUT) {
+				if (trk[i].muted) {
+					/* nothing interesting here */
+				} else if (nb->note == NOTE_CUT) {
 					keyvol(g,&p, trk+i, 0);
 					keyoff(g,&p, trk+i);
 
