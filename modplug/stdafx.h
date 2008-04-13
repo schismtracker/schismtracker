@@ -64,16 +64,9 @@ typedef void VOID;
 #define  GHND   0
 
 #ifdef __cplusplus
-static inline signed char * GlobalAllocPtr(unsigned int, size_t size)
-{
-  signed char * p = (signed char *) malloc(size);
 
-  if (p != NULL) memset(p, 0, size);
-  return p;
-}
-
-static inline void ProcessPlugins(int) {}
-
+#define GlobalAllocPtr(ign,size) calloc(1,size)
+#define ProcessPlugins(z) /* noop */
 #define GlobalFreePtr(p) free((void *)(p))
 
 #define strnicmp(a,b,c)		strncasecmp(a,b,c)
