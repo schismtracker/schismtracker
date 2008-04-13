@@ -113,7 +113,6 @@ static void data(struct midi_track *t, const void *z, int zlen)
 static void pad(struct midi_track *t,int frame, int tempo, int row)
 {
 	int msec;
-	int fpm;
 
 	if (frame <= 0 || row <= 0 || tempo <= 0) return;
 

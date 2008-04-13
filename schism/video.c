@@ -1257,7 +1257,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 #define FIXED2INT(x) ((x) >> FIXED_BITS)
 #define FRAC(x) ((x) & FIXED_MASK)
 
-static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
+static void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 {
 	unsigned int *csp, *esp, *dp;
 	unsigned int c00, c01, c10, c11;
@@ -1384,7 +1384,7 @@ static inline void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 		pixels += pad;
 	}
 }
-static inline void _blitYY(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+static void _blitYY(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
 	unsigned int mouseline_x = (video.mouse.x / 8);
 	unsigned int mouseline_v = (video.mouse.x % 8);
@@ -1400,7 +1400,7 @@ static inline void _blitYY(unsigned char *pixels, unsigned int pitch, unsigned i
 		pixels += pitch;
 	}
 }
-static inline void _blitUV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+static void _blitUV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
 	unsigned int mouseline_x = (video.mouse.x / 8);
 	unsigned int mouseline_v = (video.mouse.x % 8);
@@ -1412,7 +1412,7 @@ static inline void _blitUV(unsigned char *pixels, unsigned int pitch, unsigned i
 		pixels += pitch;
 	}
 }
-static inline void _blitTV(unsigned char *pixels, UNUSED unsigned int pitch, unsigned int *tpal)
+static void _blitTV(unsigned char *pixels, UNUSED unsigned int pitch, unsigned int *tpal)
 {
 	unsigned int mouseline_x = (video.mouse.x / 8);
 	unsigned int mouseline_v = (video.mouse.x % 8);
@@ -1428,7 +1428,7 @@ static inline void _blitTV(unsigned char *pixels, UNUSED unsigned int pitch, uns
 	}
 }
 
-static inline void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
+static void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 			unsigned int *tpal)
 {
 	unsigned int mouseline_x = (video.mouse.x / 8);
