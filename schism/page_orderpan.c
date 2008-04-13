@@ -61,7 +61,7 @@ void update_current_order(void)
 }
 
 
-inline void set_current_order(int order)
+void set_current_order(int order)
 {
         current_order = CLAMP(order, 0, 255);
         orderlist_reposition();

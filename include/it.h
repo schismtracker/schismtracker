@@ -414,21 +414,8 @@ int song_is_instrument_mode(void);
 int song_first_unused_instrument(void);
 int song_get_current_instrument(void);
 
-static inline void set_previous_instrument(void)
-{
-        if (song_is_instrument_mode())
-                instrument_set(instrument_get_current() - 1);
-        else
-                sample_set(sample_get_current() - 1);
-}
-
-static inline void set_next_instrument(void)
-{
-        if (song_is_instrument_mode())
-                instrument_set(instrument_get_current() + 1);
-        else
-                sample_set(sample_get_current() + 1);
-}
+void set_previous_instrument(void);
+void set_next_instrument(void);
 
 void status_text_flash(const char *format, ...)
         __attribute__ ((format(printf, 1, 2)));

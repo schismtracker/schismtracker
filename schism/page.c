@@ -1868,3 +1868,22 @@ void show_song_length(void)
 
         dialog_create(DIALOG_OK, buf, NULL, NULL, 0, NULL);
 }
+
+/* FIXME this is an illogical place to put this but whatever, i just want
+to get the frigging thing to build */
+void set_previous_instrument(void)
+{
+	if (song_is_instrument_mode())
+		instrument_set(instrument_get_current() - 1);
+	else
+		sample_set(sample_get_current() - 1);
+}
+
+void set_next_instrument(void)
+{
+	if (song_is_instrument_mode())
+		instrument_set(instrument_get_current() + 1);
+	else
+		sample_set(sample_get_current() + 1);
+}
+

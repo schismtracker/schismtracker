@@ -64,7 +64,7 @@ typedef void VOID;
 #define  GHND   0
 
 #ifdef __cplusplus
-inline signed char * GlobalAllocPtr(unsigned int, size_t size)
+/*inline*/ signed char * GlobalAllocPtr(unsigned int, size_t size)
 {
   signed char * p = (signed char *) malloc(size);
 
