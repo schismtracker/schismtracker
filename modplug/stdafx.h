@@ -64,7 +64,7 @@ typedef void VOID;
 #define  GHND   0
 
 #ifdef __cplusplus
-/*inline*/ signed char * GlobalAllocPtr(unsigned int, size_t size)
+static inline signed char * GlobalAllocPtr(unsigned int, size_t size)
 {
   signed char * p = (signed char *) malloc(size);
 
@@ -72,7 +72,7 @@ typedef void VOID;
   return p;
 }
 
-inline void ProcessPlugins(int) {}
+static inline void ProcessPlugins(int) {}
 
 #define GlobalFreePtr(p) free((void *)(p))
 
