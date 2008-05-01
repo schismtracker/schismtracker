@@ -1027,7 +1027,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	else
 		status.flags &= ~CRAYOLA_MODE;
 
-	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", (char *) s, 65, "a");
+	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", (char *) s, 64, "a");
 	
 	/* "decode" the track view scheme */
 	for (n = 0; n < 64; n++) {
