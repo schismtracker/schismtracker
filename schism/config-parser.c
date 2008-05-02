@@ -399,7 +399,7 @@ const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char
 	}
 	if (value && r) {
 		strncpy(value, r, len);
-		value[len] = 0;
+		value[len-1] = 0;
 	}
 	return r;
 }
