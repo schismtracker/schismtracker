@@ -398,8 +398,8 @@ const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char
 			r = key->value;
 	}
 	if (value && r) {
-		strncpy(value, r, len-1);
-		value[len-1] = 0;
+		strncpy(value, r, len);
+		value[len] = 0;
 	}
 	return r;
 }
