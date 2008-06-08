@@ -1863,8 +1863,10 @@ void show_song_length(void)
         char buf[64];   /* this is way enough space ;) */
         unsigned long length = song_get_length();
 
-        snprintf(buf, 64, "Total song time: %3ld:%02ld:%02ld",
-                 length / 3600, (length / 60) % 60, length % 60);
+        snprintf(buf, 64, "Total song time: %3u:%02u:%02u",
+                (unsigned int)(length / 3600),
+		(unsigned int)((length / 60) % 60),
+		(unsigned int)(length % 60));
 
         dialog_create(DIALOG_OK, buf, NULL, NULL, 0, NULL);
 }

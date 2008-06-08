@@ -626,8 +626,8 @@ public:
 	UINT GetInstrumentName(UINT nInstr,LPSTR s=NULL) const;
 	UINT GetMusicSpeed() const { return m_nMusicSpeed; }
 	UINT GetMusicTempo() const { return m_nMusicTempo; }
-	DWORD GetLength(BOOL bAdjust, BOOL bTotal=FALSE);
-	DWORD GetSongTime() { return GetLength(FALSE, TRUE); }
+	unsigned int GetLength(BOOL bAdjust, BOOL bTotal=FALSE);
+	unsigned int GetSongTime() { return GetLength(FALSE, TRUE); }
 	void SetRepeatCount(int n) { m_nRepeatCount = n; m_nInitialRepeatCount = n; }
 	int GetRepeatCount() const { return m_nRepeatCount; }
 	BOOL IsPaused() const {	return (m_dwSongFlags & SONG_PAUSED) ? TRUE : FALSE; }
