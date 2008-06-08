@@ -31,7 +31,7 @@ extern short int ModRandomTable[64];
 ////////////////////////////////////////////////////////////
 // Length
 
-DWORD CSoundFile::GetLength(BOOL bAdjust, BOOL bTotal)
+unsigned int CSoundFile::GetLength(BOOL bAdjust, BOOL bTotal)
 //----------------------------------------------------
 {
 	UINT dwElapsedTime=0, nRow=0, nCurrentPattern=0, nNextPattern=0, nPattern=Order[0];
@@ -301,6 +301,7 @@ EndMod:
 			}
 		}
 	}
+printf("time=%lu\n",dwElapsedTime);
 	return (dwElapsedTime+500) / 1000;
 }
 
