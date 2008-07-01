@@ -87,14 +87,14 @@ static void _key_info_setup(void)
 	rec.geometry = (void*)"";
 	us_kb_map = XkbGetKeyboardByName(dpy, XkbUseCoreKbd, &rec,
 			XkbGBN_AllComponentsMask, XkbGBN_AllComponentsMask, False);
-#else
-	us_kb_map = NULL;
-#endif
 	if (us_kb_map == NULL) {
-		log_appendf(3, "Warning: XKB support missing or broken; keymap might be off");
+		log_appendf(3, "Warning: XKB support missing or broken; keyjamming might not work right");
 	} else {
 		log_appendf(3, "Note: XKB will be used to override scancodes");
 	}
+#else
+	log_appendf(3, "Warning: XKB support not compiled in; keyjamming might not work right");
+#endif
 
 #ifdef HAVE_X11_EXTENSIONS_XKB_H
 	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
@@ -135,6 +135,7 @@ unsigned key_repeat_delay(void)
 	_key_info_setup(); return delay;
 }
 
+#ifdef HAVE_X11_EXTENSIONS_XKB_H
 int key_scancode_lookup(int k)
 {
 	static unsigned int d;
@@ -146,3 +147,9 @@ int key_scancode_lookup(int k)
 	}
 	return -1;
 }
+#else
+int key_scancode_lookup(UNUSED int k)
+{
+	return -1;
+}
+#endif
