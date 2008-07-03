@@ -155,7 +155,7 @@ else
 	LIBS="$LIBS $X_LIBS"
 	AC_SUBST(LIBS)
 
-	AC_CHECK_HEADERS(X11/Xlib.h X11/extensions/XKB.h)
+	AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h X11/extensions/XKB.h)
 	AC_CHECK_LIB(Xxf86misc, XF86MiscGetKbdSettings,,,-lX11 -lXext)
 	if test "$ac_cv_lib_Xxf86misc_XF86MiscGetKbdSettings" = "yes"
 	then 
