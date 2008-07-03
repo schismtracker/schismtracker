@@ -31,8 +31,13 @@
 #ifdef HAVE_X11_EXTENSIONS_XF86MISC_H
 #  include <X11/extensions/xf86misc.h>
 #endif
-#ifdef HAVE_X11_EXTENSIONS_XKB_H
+
+#if defined(HAVE_X11_XKBLIB_H)
 #include <X11/XKBlib.h>
+#define USE_XKB
+#elif defined(HAVE_X11_EXTENSIONS_XKB_H)
+#include <X11/XKBlib.h>
+#define USE_XKB
 #endif
 
 /* FIXME: don't put declarations in c files... */
@@ -44,7 +49,7 @@ int key_scancode_lookup(int k);
 static int virgin = 1;
 static unsigned int delay, rate;
 
-#ifdef HAVE_X11_EXTENSIONS_XKB_H
+#ifdef USE_XKB
 static XkbDescPtr us_kb_map;
 #endif
 
@@ -54,7 +59,7 @@ static void _key_info_setup(void)
 	int a, b;
 	XF86MiscKbdSettings kbdsettings;
 #endif
-#ifdef HAVE_X11_EXTENSIONS_XKB_H
+#ifdef USE_XKB
 	XkbComponentNamesRec rec;
 #endif
 	Display *dpy;
@@ -78,7 +83,7 @@ static void _key_info_setup(void)
 		memset(&info, 0, sizeof(info));
 	}
 
-#ifdef HAVE_X11_EXTENSIONS_XKB_H
+#ifdef USE_XKB
 	rec.keymap = (void*)"";
 	rec.keycodes = (void*)"";
 	rec.types = (void*)"";
@@ -96,7 +101,7 @@ static void _key_info_setup(void)
 	log_appendf(3, "Warning: XKB support not compiled in; keyjamming might not work right");
 #endif
 
-#ifdef HAVE_X11_EXTENSIONS_XKB_H
+#ifdef USE_XKB
 	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
 		if (info.info.x11.unlock_func)
 			info.info.x11.unlock_func();
@@ -135,7 +140,7 @@ unsigned key_repeat_delay(void)
 	_key_info_setup(); return delay;
 }
 
-#ifdef HAVE_X11_EXTENSIONS_XKB_H
+#ifdef USE_XKB
 int key_scancode_lookup(int k)
 {
 	static unsigned int d;
