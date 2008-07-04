@@ -34,4 +34,4 @@ aclocal=`getver aclocal 1.10 1.9`
 automake=`getver automake 1.10 1.9`
 autoheader=`getver autoheader 2.61 2.60 2.59`
 autoconf=`getver autoconf 2.61 2.60 2.59`
-$aclocal && $autoheader && $automake -a && $autoconf
+$aclocal && $autoheader && $automake -a -c -f && $autoconf
