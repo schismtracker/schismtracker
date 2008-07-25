@@ -44,7 +44,13 @@ static void midi_output_config(void)
 }
 static void update_ip_ports(void)
 {
-	ip_midi_setports(widgets_midi[15].d.thumbbar.value);
+	if (widgets_midi[15].d.thumbbar.value > 0 && (status.flags & NO_NETWORK)) {
+		status_text_flash("Networking is disabled");
+		widgets_midi[15].d.thumbbar.value = 0;
+	} else {
+		ip_midi_setports(widgets_midi[15].d.thumbbar.value);
+	}
+
 	last_midi_poll = 0;
 	status.flags |= NEED_UPDATE;
 }

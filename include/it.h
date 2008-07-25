@@ -131,6 +131,8 @@ enum {
 
 	/* holding caps */
 	CAPS_PRESSED = (1 << 26),
+
+	NO_NETWORK = (1 << 27),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */

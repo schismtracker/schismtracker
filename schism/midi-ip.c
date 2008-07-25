@@ -21,6 +21,7 @@
 #include "headers.h"
 #include "midi.h"
 
+#include "it.h"
 #include "util.h"
 #include "sdlmain.h"
 #include "event.h"
@@ -132,6 +133,9 @@ static int _get_fd(int pb, int isout)
 }
 void ip_midi_setports(int n)
 {
+	if (out_fd == -1) return;
+	if (status.flags & NO_NETWORK) return;
+
 	SDL_mutexP(blocker);
 	num_ports = n;
 	SDL_mutexV(blocker);
@@ -340,9 +344,8 @@ static void _ip_poll(struct midi_provider *p)
 int ip_midi_setup(void)
 {
 	static struct midi_driver driver;
-#ifdef WIN32
-	static WSADATA ignored;
-#endif
+
+	if (status.flags & NO_NETWORK) return 0;
 
 	blocker = SDL_CreateMutex();
 	if (!blocker) {
@@ -357,16 +360,9 @@ int ip_midi_setup(void)
 	(void)fcntl(wakeup[1], F_SETFL, fcntl(wakeup[1], F_GETFL, 0) | O_NONBLOCK);
 #endif
 
-#ifdef WIN32
-	memset(&ignored, 0, sizeof(ignored));
-	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
-		WSACleanup(); /* ? */
-		return 0;
-	}
-#endif
-
 	if (out_fd == -1) {
 		out_fd = _get_fd(-1, 1);
+		if (out_fd == -1) return 0;
 	}
 
 	ip_midi_setports(DEFAULT_IP_PORT_COUNT);
@@ -392,6 +388,9 @@ void ip_midi_setports(int n)
 
 int ip_midi_getports(void) {
 	int tmp;
+
+	if (out_fd == -1) return 0;
+	if (status.flags & NO_NETWORK) return 0;
 
 	SDL_mutexP(blocker);
 	tmp = (volatile int)real_num_ports;

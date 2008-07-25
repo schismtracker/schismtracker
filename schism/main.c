@@ -272,8 +272,9 @@ enum {
 	SF_FONTEDIT = 4,
 	SF_CLASSIC = 8,
 	SF_TEXTEDIT = 16,
+	SF_NETWORK = 32,
 };
-static int startup_flags = SF_HOOKS;
+static int startup_flags = SF_HOOKS | SF_NETWORK;
 
 /* frag_option ids */
 enum {
@@ -286,6 +287,7 @@ enum {
 	O_VIDEO_GLPATH,
 	O_VIDEO_DEPTH,
 	O_VIDEO_FBDEV,
+	O_NETWORK,
 #ifdef USE_X11
 	O_DISPLAY,
 #endif
@@ -326,6 +328,7 @@ static void parse_options(int argc, char **argv)
 #if HAVE_SYS_KD_H
 		{O_VIDEO_FBDEV,0,"video-fb-device", FRAG_ARG,"/dev/fb0","Specify path to framebuffer"},
 #endif
+		{O_NETWORK, 0, "network", FRAG_NEG, NULL, "use networking (default)" },
 		{O_CLASSIC_MODE, 0, "classic", FRAG_NEG, NULL, "start Schism Tracker in \"classic\" mode" },
 #ifdef USE_X11
 		{O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
@@ -389,6 +392,12 @@ static void parse_options(int argc, char **argv)
 			break;
 		case O_VIDEO_FBDEV:
 			put_env_var("SDL_FBDEV", frag->arg);
+			break;
+		case O_NETWORK:
+			if (frag->type)
+				startup_flags |= SF_NETWORK;
+			else
+				startup_flags &= ~SF_NETWORK;
 			break;
 		case O_CLASSIC_MODE:
 			if (frag->type)
@@ -1074,7 +1083,15 @@ int main(int argc, char **argv) NORETURN;
 int main(int argc, char **argv)
 {
 #if defined(WIN32)
+        static WSADATA ignored;
+
 	win32_setup_keymap();
+
+        memset(&ignored, 0, sizeof(ignored));
+        if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
+                WSACleanup(); /* ? */
+		status.flags |= NO_NETWORK;
+        }
 #endif
 
 	setup_help_text_pointers();
@@ -1196,6 +1213,10 @@ int main(int argc, char **argv)
 		video_fullscreen(cfg_video_fullscreen);
 	}
 	video_setup(video_driver);
+
+	if (!(startup_flags & SF_NETWORK)) {
+		status.flags |= NO_NETWORK;
+	}
 
 	shutdown_process |= EXIT_SAVECFG;
 	display_init();
