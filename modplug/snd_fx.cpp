@@ -301,7 +301,6 @@ EndMod:
 			}
 		}
 	}
-printf("time=%lu\n",dwElapsedTime);
 	return (dwElapsedTime+500) / 1000;
 }
 
