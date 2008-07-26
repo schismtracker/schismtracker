@@ -1,6 +1,2 @@
-ok, i've moved this to the schismdev board http://rigelseven.com/scdev/
-which should be more flexible than a flat file.
-
-for a release we could just stick the big things that haven't been implemented
-in here to fulfill automake's requirement for a TODO file and to let people
-know that we're aware that schism tracker is, in fact, still incomplete...
+See http://eval.sovietrussia.org/wiki/Schism:TODO if you're actually
+interested
