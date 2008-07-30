@@ -95,7 +95,9 @@ int midi_last_bend_hit[64];
 
 /* blah; other forwards */
 static void pated_save(const char *descr);
+static void pated_history_add2(int groupedf, const char *descr, int x, int y, int width, int height);
 static void pated_history_add(const char *descr, int x, int y, int width, int height);
+static void pated_history_add_grouped(const char *descr, int x, int y, int width, int height);
 static void pated_history_restore(int n);
 
 /* these should fix the playback tracing position discrepancy */
@@ -135,11 +137,12 @@ struct pattern_snap {
 	const unsigned char *snap_op;
 	int freesnapop;
 	int x, y;
+	int patternno;
 };
 static struct pattern_snap fast_save = {
 	NULL, 0, 0,
 	(const unsigned char *) "Fast Pattern Save",
-	0, 0, 0
+	0, 0, 0, -1
 };
 /* static int fast_save_validity = -1; */
 
@@ -148,7 +151,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate);
 static struct pattern_snap clipboard = {
 	NULL, 0, 0,
 	(const unsigned char *) "Clipboard",
-	0, 0, 0
+	0, 0, 0, -1
 };
 static struct pattern_snap undo_history[10];
 static int undo_history_top = 0;
@@ -1150,7 +1153,7 @@ static void block_length_double(void)
 		row = (total_rows - selection.first_row) + 1;
 	}
 
-	pated_history_add("Undo block length double       (Alt-G)",
+	pated_history_add("Undo block length double       (Alt-F)",
 		selection.first_channel - 1,
 		selection.first_row,
 		(selection.last_channel - selection.first_channel) + 1,
@@ -1551,7 +1554,6 @@ static void selection_vary(int fast, int depth, int how)
 	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
 	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 
-	/* it says Alt-J even when Alt-I was used */
 	pated_history_add(vary_how,
 		selection.first_channel - 1,
 		selection.first_row,
@@ -1659,7 +1661,7 @@ static void selection_amplify(int percentage)
 	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
 	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
 
-						/* it says Alt-J even when Alt-I was used */
+	/* it says Alt-J even when Alt-I was used */
 	pated_history_add("Undo volume amplification      (Alt-J)",
 		selection.first_channel - 1,
 		selection.first_row,
@@ -1932,15 +1934,38 @@ static void pated_save(const char *descr)
 }
 static void pated_history_add(const char *descr, int x, int y, int width, int height)
 {
+	pated_history_add2(0, descr, x, y, width, height);
+}
+static void pated_history_add_grouped(const char *descr, int x, int y, int width, int height)
+{
+	pated_history_add2(1, descr, x, y, width, height);
+}
+static void pated_history_add2(int groupedf, const char *descr, int x, int y, int width, int height)
+{
 	int j;
 
-	j = (undo_history_top + 1) % 10;
-	free(undo_history[j].data);
-	snap_copy(&undo_history[j], x, y, width, height);
-	undo_history[j].snap_op = mem_alloc(strlen(descr)+1);
-	strcpy((char *) undo_history[j].snap_op, descr);
-	undo_history[j].freesnapop = 1;
-	undo_history_top = j;
+	j = undo_history_top;
+	if (groupedf
+	&& undo_history[j].patternno == current_pattern
+	&& undo_history[j].x == x && undo_history[j].y == y
+	&& undo_history[j].channels == width
+	&& undo_history[j].rows == height
+	&& undo_history[j].freesnapop
+	&& undo_history[j].snap_op
+	&& strcmp(undo_history[j].snap_op, descr) == 0) {
+
+		/* do nothing; use the previous bit of history */
+		
+	} else {
+		j = (undo_history_top + 1) % 10;
+		free(undo_history[j].data);
+		snap_copy(&undo_history[j], x, y, width, height);
+		undo_history[j].snap_op = mem_alloc(strlen(descr)+1);
+		strcpy((char *) undo_history[j].snap_op, descr);
+		undo_history[j].freesnapop = 1;
+		undo_history[j].patternno = current_pattern;
+		undo_history_top = j;
+	}
 }
 static void fast_save_update(void)
 {
@@ -2009,7 +2034,7 @@ static void clipboard_paste_overwrite(int suppress, int grow)
 		chan_width = 64 - current_channel + 1;
 
 	if (!suppress) {
-		pated_history_add("Replace overwritten data       (Alt-O)",
+		pated_history_add_grouped("Replace overwritten data       (Alt-O)",
 					current_channel-1, current_row,
 					chan_width, num_rows);
 	}
@@ -2066,7 +2091,7 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 
 
 /* note that IT doesn't do this for "fields" either... */
-	pated_history_add("Replace mixed data             (Alt-M)",
+	pated_history_add_grouped("Replace mixed data             (Alt-M)",
 				current_channel-1, current_row,
 				chan_width, num_rows);
 
@@ -2639,7 +2664,7 @@ static void transpose_notes(int amount)
 	status.flags |= SONG_NEEDS_SAVE;
 	song_get_pattern(current_pattern, &pattern);
 
-	pated_history_add(((amount > 0)
+	pated_history_add_grouped(((amount > 0)
 				? "Undo transposition up          (Alt-Q)"
 				: "Undo transposition down        (Alt-A)"
 			),
