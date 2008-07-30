@@ -605,6 +605,15 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 
 			UINT note = p->note;
 
+			if (p->instr && m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE)) {
+					
+				INSTRUMENTHEADER *penv = Headers[p->instr];
+				if (penv) {
+					note = penv->NoteMap[note]-1;
+				}
+			}
+
+
 			UINT param = ModSaveCommand(p, TRUE);
 			UINT command = param >> 8;
 			param &= 0xFF;
@@ -612,14 +621,6 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 			if ((note <= 12) || (note > 96+12)) note = 0; else
 			note -= 12;
 			UINT vol = 0;
-
-			if (p->instr && m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE)) {
-					
-				INSTRUMENTHEADER *penv = Headers[p->instr];
-				if (penv) {
-					note = penv->NoteMap[note+12]-12;
-				}
-			}
 
 
 			if (p->volcmd)
