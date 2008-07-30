@@ -75,7 +75,7 @@ static void _clippy_copy_to_sys(int do_sel)
 #else
 	if (has_sys_clip) {
 		/* convert to local */
-		freeme = dst = malloc(strlen(_current_selection));
+		freeme = dst = malloc(strlen(_current_selection)+4);
 		if (!dst) return;
 		for (i = j = 0; _current_selection[i]; i++) {
 			dst[j] = _current_selection[i];
