@@ -60,6 +60,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#ifdef WIN32
+#include <windows.h>
+#include <ws2tcpip.h>
+#endif
+
 #if defined(USE_DLTRICK_ALSA)
 #include <dlfcn.h>
 void *_dltrick_handle = 0;
