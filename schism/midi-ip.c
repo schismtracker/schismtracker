@@ -92,12 +92,18 @@ static int _get_fd(int pb, int isout)
 	/* don't loop back what we generate */
 	opt = !isout;
 	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void*)&opt, sizeof(opt)) < 0) {
+#ifdef WIN32
+		(void)closesocket(fd);
+#endif
 		(void)close(fd);
 		return -1;
 	}
 
 	opt = 31;
 	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&opt, sizeof(opt)) < 0) {
+#ifdef WIN32
+		(void)closesocket(fd);
+#endif
 		(void)close(fd);
 		return -1;
 	}
@@ -106,12 +112,18 @@ static int _get_fd(int pb, int isout)
 	ipcopy = (unsigned char *)&mreq.imr_multiaddr;
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
 	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) < 0) {
+#ifdef WIN32
+		(void)closesocket(fd);
+#endif
 		(void)close(fd);
 		return -1;
 	}
 
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void*)&opt, sizeof(opt)) < 0) {
+#ifdef WIN32
+		(void)closesocket(fd);
+#endif
 		(void)close(fd);
 		return -1;
 	}
@@ -125,6 +137,9 @@ static int _get_fd(int pb, int isout)
 		asin.sin_port = htons(MIDI_IP_BASE+pb);
 	}
 	if (bind(fd, (struct sockaddr *)&asin, sizeof(asin)) < 0) {
+#ifdef WIN32
+		(void)closesocket(fd);
+#endif
 		(void)close(fd);
 		return -1;
 	}
@@ -201,6 +216,9 @@ static int _ip_thread(struct midi_provider *p)
 
 		} else if (m < real_num_ports) {
 			for (i = m; i < real_num_ports; i++) {
+#ifdef WIN32
+				(void)closesocket(port_fd[i]);
+#endif
 				(void)close(port_fd[i]);
 				port_fd[i] = -1;
 			}
