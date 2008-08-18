@@ -380,6 +380,7 @@ int song_load_instrument_ex(int n, const char *file, const char *libf, int nx);
 int song_save_instrument(int n, const char *file);
 
 midi_config *song_get_midi_config(void);
+midi_config *song_get_default_midi_config(void);
 
 void song_sample_set_c5speed(int n, unsigned int c5);
 int song_sample_is_empty(int n);

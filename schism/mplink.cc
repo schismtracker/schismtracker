@@ -51,6 +51,9 @@ char *song_get_message()
 midi_config *song_get_midi_config(void) {
 	return (midi_config *)&mp->m_MidiCfg;
 }
+midi_config *song_get_default_midi_config(void) {
+	return (midi_config *)&mp->m_MidiCfgDefault;
+}
 
 // returned value is in seconds
 unsigned int song_get_length()
