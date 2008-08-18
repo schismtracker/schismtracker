@@ -1676,7 +1676,7 @@ DWORD Convert32To16(LPVOID lp16, int *pBuffer, DWORD lSampleCount, LONG mins[2],
 			mins[i&1]= n;
 		else if (n > maxs[i&1])
 			maxs[i&1] = n;
-		p[i] = n >> (16-MIXING_ATTENUATION);	// 16-bit signed
+		p[i] = n >> (15-MIXING_ATTENUATION);	// 16-bit signed
 	}
 	return lSampleCount * 2;
 }
