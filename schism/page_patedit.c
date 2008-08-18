@@ -1952,7 +1952,7 @@ static void pated_history_add2(int groupedf, const char *descr, int x, int y, in
 	&& undo_history[j].rows == height
 	&& undo_history[j].freesnapop
 	&& undo_history[j].snap_op
-	&& strcmp(undo_history[j].snap_op, descr) == 0) {
+	&& strcmp((char*)undo_history[j].snap_op, (char*)descr) == 0) {
 
 		/* do nothing; use the previous bit of history */
 		
