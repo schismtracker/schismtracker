@@ -171,7 +171,7 @@ static void _cfg_load_midi_part_locked(struct midi_port *q)
 
 void cfg_load_midi(cfg_file_t *cfg)
 {
-        midi_config *md;
+        midi_config *md, *mc;
 	char buf[16], buf2[32];
 	int i;
 
@@ -183,7 +183,7 @@ void cfg_load_midi(cfg_file_t *cfg)
 	CFG_GET_MI(c5note, 60);
 
         song_lock_audio();
-        md = song_get_midi_config();
+        md = song_get_default_midi_config();
 	cfg_get_string(cfg,"MIDI","start", md->midi_global_data+(0*32),32, "FF");
 	cfg_get_string(cfg,"MIDI","stop", md->midi_global_data+(1*32),32, "FC");
 	cfg_get_string(cfg,"MIDI","tick", md->midi_global_data+(2*32),32, "");
@@ -198,6 +198,7 @@ void cfg_load_midi(cfg_file_t *cfg)
 		cfg_get_string(cfg, "MIDI", buf, md->midi_sfx+(i*32),32, 
 				i == 0 ? "F0F000z" : "");
 	}
+
 	for (i = 0; i < 0x7f; i++) {
 		sprintf(buf, "Z%02x", i + 0x80);
 		if (i < 16) {
@@ -207,6 +208,11 @@ void cfg_load_midi(cfg_file_t *cfg)
 		}
 		cfg_get_string(cfg, "MIDI", buf, md->midi_zxx+(i*32),32, buf2);
 	}
+
+        mc = song_get_midi_config();
+	memcpy(mc, md, sizeof(midi_config));
+
+
 	song_unlock_audio();
 }
 #define CFG_SET_MI(v) cfg_set_number(cfg, "MIDI", #v, midi_ ## v)
@@ -216,7 +222,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 	struct cfg_section *c;
 	struct midi_provider *p;
 	struct midi_port *q;
-        midi_config *md;
+        midi_config *md, *mc;
 	char buf[32], *ss;
 	int i, j;
 
@@ -226,7 +232,12 @@ void cfg_save_midi(cfg_file_t *cfg)
 	CFG_SET_MI(c5note);
 
         song_lock_audio();
-        md = song_get_midi_config();
+        md = song_get_default_midi_config();
+
+	/* overwrite default */
+        mc = song_get_midi_config();
+	memcpy(md, mc, sizeof(midi_config));
+
 	cfg_set_string(cfg,"MIDI","start", md->midi_global_data+(0*32));
 	cfg_set_string(cfg,"MIDI","stop", md->midi_global_data+(1*32));
 	cfg_set_string(cfg,"MIDI","tick", md->midi_global_data+(2*32));
