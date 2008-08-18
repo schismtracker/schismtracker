@@ -212,11 +212,27 @@ static int message_wrap_line(unsigned char *bol_ptr)
 }
 
 /* --------------------------------------------------------------------- */
+static void text(unsigned char *line, int len, int n)
+{
+	unsigned int ch;
+        int fg = (message_extfont ? 12 : 6);
+	int  i;
+
+	for (i = 0; line[i] && i < len; i++) {
+		ch = line[i];
+
+		if (ch == ' ') {
+			draw_char(' ', 2+i, 13+n, 3,0);
+		} else {
+			if (message_extfont) ch |= 0x10000000;
+			draw_char(ch, 2+i, 13+n, fg, 0);
+		}
+	}
+}
 
 static void message_draw(void)
 {
         unsigned char *line, *prevline = message;
-        int fg = (message_extfont ? 12 : 6);
         int len = get_nth_line(message, top_line, &line);
         int n, cp, clipl, clipr;
 	int skipc, cutc;
@@ -244,11 +260,8 @@ static void message_draw(void)
                          * FIXME | short enough to fit */
                         if (len > LINE_WRAP)
                                 len = LINE_WRAP;
-			if (message_extfont)
-                        	draw_text_bios_len((unsigned char *) line, len, 2, 13 + n, fg, 0);
-			else
-                        	draw_text_len((unsigned char *) line, len, 2, 13 + n, fg, 0);
-			
+			text(line, len, n);
+
 			if (clipl > -1) {
 				cp = line - message;
 				skipc = clipl - cp;
@@ -261,9 +274,9 @@ static void message_draw(void)
 				if (cutc > (len-skipc)) cutc = (len-skipc);
 				if (cutc > 0 && skipc < len) {
 					if (message_extfont)
-	                        		draw_text_bios_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, fg, 8);
+	                        		draw_text_bios_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, 6, 8);
 					else
-	                        		draw_text_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, fg, 8);
+	                        		draw_text_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, 6, 8);
 				}
 			}
                 }
