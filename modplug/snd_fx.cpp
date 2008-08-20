@@ -1440,7 +1440,7 @@ void CSoundFile::FinePortamentoUp(MODCHANNEL *pChn, UINT param)
 			{
 				pChn->nPeriod -= (int)(param * 4);
 			}
-			if (pChn->nPeriod < 1) pChn->nPeriod = 1;
+			if (pChn->nPeriod < m_nMinPeriod) pChn->nPeriod = m_nMinPeriod;
 		}
 	}
 }
@@ -1464,7 +1464,7 @@ void CSoundFile::FinePortamentoDown(MODCHANNEL *pChn, UINT param)
 			{
 				pChn->nPeriod += (int)(param * 4);
 			}
-			if (pChn->nPeriod > 0xFFFF) pChn->nPeriod = 0xFFFF;
+			if (pChn->nPeriod > m_nMaxPeriod) pChn->nPeriod = m_nMaxPeriod;
 		}
 	}
 }
@@ -1488,7 +1488,7 @@ void CSoundFile::ExtraFinePortamentoUp(MODCHANNEL *pChn, UINT param)
 			{
 				pChn->nPeriod -= (int)(param);
 			}
-			if (pChn->nPeriod < 1) pChn->nPeriod = 1;
+			if (pChn->nPeriod < m_nMinPeriod) pChn->nPeriod = m_nMinPeriod;
 		}
 	}
 }
@@ -1512,7 +1512,7 @@ void CSoundFile::ExtraFinePortamentoDown(MODCHANNEL *pChn, UINT param)
 			{
 				pChn->nPeriod += (int)(param);
 			}
-			if (pChn->nPeriod > 0xFFFF) pChn->nPeriod = 0xFFFF;
+			if (pChn->nPeriod > m_nMaxPeriod) pChn->nPeriod = m_nMaxPeriod;
 		}
 	}
 }
@@ -1763,13 +1763,13 @@ void CSoundFile::ExtendedMODCommands(UINT nChn, UINT param)
 	case 0x40:	pChn->nVibratoType = param & 0x07; break;
 	// E5x: Set FineTune
 	case 0x50:	if (m_nTickCount) break;
-				pChn->nC4Speed = S3MFineTuneTable[param];
-				if (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2))
-					pChn->nFineTune = param*2;
-				else
-					pChn->nFineTune = MOD2XMFineTune(param);
-				if (pChn->nPeriod) pChn->nPeriod = GetPeriodFromNote(pChn->nNote, pChn->nFineTune, pChn->nC4Speed);
-				break;
+			pChn->nC4Speed = S3MFineTuneTable[param];
+			if (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2))
+				pChn->nFineTune = param*2;
+			else
+				pChn->nFineTune = MOD2XMFineTune(param);
+			if (pChn->nPeriod) pChn->nPeriod = GetPeriodFromNote(pChn->nNote, pChn->nFineTune, pChn->nC4Speed);
+			break;
 	// E6x: Pattern Loop
 	// E7x: Set Tremolo WaveForm
 	case 0x70:	pChn->nTremoloType = param & 0x07; break;
@@ -2208,15 +2208,8 @@ void CSoundFile::DoFreqSlide(MODCHANNEL *pChn, LONG nFreqSlide)
 	{
 		pChn->nPeriod += nFreqSlide;
 	}
-	if (pChn->nPeriod < 1)
-	{
-		pChn->nPeriod = 1;
-		if (m_nType & MOD_TYPE_IT)
-		{
-			pChn->dwFlags |= CHN_NOTEFADE;
-			pChn->nFadeOutVol = 0;
-		}
-	}
+	if (pChn->nPeriod < m_nMinPeriod) pChn->nPeriod = m_nMinPeriod;
+	else if (pChn->nPeriod > m_nMaxPeriod) pChn->nPeriod = m_nMaxPeriod;
 }
 
 
@@ -2535,6 +2528,7 @@ UINT CSoundFile::GetLinearPeriodFromNote(UINT note, int nFineTune, UINT) const
 UINT CSoundFile::GetPeriodFromNote(UINT note, int nFineTune, UINT nC4Speed) const
 //-------------------------------------------------------------------------------
 {
+	LONG l;
 	if ((!note) || (note > 0xF0)) return 0;
 	if (m_nType & (MOD_TYPE_IT|MOD_TYPE_S3M|MOD_TYPE_STM|MOD_TYPE_MDL|MOD_TYPE_ULT|MOD_TYPE_WAV
 				|MOD_TYPE_FAR|MOD_TYPE_DMF|MOD_TYPE_PTM|MOD_TYPE_AMS|MOD_TYPE_DBM|MOD_TYPE_AMF|MOD_TYPE_PSM))
@@ -2542,11 +2536,11 @@ UINT CSoundFile::GetPeriodFromNote(UINT note, int nFineTune, UINT nC4Speed) cons
 		note--;
 		if (m_dwSongFlags & SONG_LINEARSLIDES)
 		{
-			return (FreqS3MTable[note % 12] << 5) >> (note / 12);
+			l = (FreqS3MTable[note % 12] << 5) >> (note / 12);
 		} else
 		{
 			if (!nC4Speed) nC4Speed = 8363;
-			return _muldiv(8363, (FreqS3MTable[note % 12] << 5), nC4Speed << (note / 12));
+			l = _muldiv(8363, (FreqS3MTable[note % 12] << 5), nC4Speed << (note / 12));
 		}
 	} else
 	if (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2))
@@ -2555,9 +2549,7 @@ UINT CSoundFile::GetPeriodFromNote(UINT note, int nFineTune, UINT nC4Speed) cons
 		note -= 13;
 		if (m_dwSongFlags & SONG_LINEARSLIDES)
 		{
-			LONG l = ((120 - note) << 6) - (nFineTune / 2);
-			if (l < 1) l = 1;
-			return (UINT)l;
+			l = ((120 - note) << 6) - (nFineTune / 2);
 		} else
 		{
 			int finetune = nFineTune;
@@ -2580,17 +2572,20 @@ UINT CSoundFile::GetPeriodFromNote(UINT note, int nFineTune, UINT nC4Speed) cons
 			rfine = finetune & 0x0F;
 			per1 *= 16-rfine;
 			per2 *= rfine;
-			return ((per1 + per2) << 1) >> roct;
+			l = ((per1 + per2) << 1) >> roct;
 		}
 	} else
 	{
 		note--;
 		nFineTune = XM2MODFineTune(nFineTune);
 		if ((nFineTune) || (note < 36) || (note >= 36+6*12))
-			return (ProTrackerTunedPeriods[nFineTune*12 + note % 12] << 5) >> (note / 12);
+			l = (ProTrackerTunedPeriods[nFineTune*12 + note % 12] << 5) >> (note / 12);
 		else
-			return (ProTrackerPeriodTable[note-36] << 2);
+			l = (ProTrackerPeriodTable[note-36] << 2);
 	}
+	if (l < m_nMinPeriod) l = m_nMinPeriod;
+	if (l > m_nMaxPeriod) l = m_nMaxPeriod;
+	return l;
 }
 
 
