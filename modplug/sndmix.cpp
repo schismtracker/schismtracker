@@ -943,17 +943,10 @@ BOOL CSoundFile::ReadNote()
 			// Final Period
 			if (period <= m_nMinPeriod)
 			{
-				if (m_nType & MOD_TYPE_S3M) pChn->nLength = 0;
 				period = m_nMinPeriod;
-			}
+			} else
 			if (period > m_nMaxPeriod)
 			{
-				if ((m_nType & MOD_TYPE_IT) || (period >= 0x100000))
-				{
-					pChn->nFadeOutVol = 0;
-					pChn->dwFlags |= CHN_NOTEFADE;
-					pChn->nRealVolume = 0;
-				}
 				period = m_nMaxPeriod;
 				nPeriodFrac = 0;
 			}
