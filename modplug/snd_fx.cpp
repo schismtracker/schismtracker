@@ -2135,6 +2135,8 @@ void CSoundFile::RetrigNote(UINT nChn, UINT param)
 			} else {
 				nRetrigCount++;
 			}
+		} else if (m_nMusicSpeed == nRetrigSpeed) {
+			bDoRetrig=FALSE;
 		} else {
 			if ((nRetrigCount) && (!(nRetrigCount % nRetrigSpeed))) bDoRetrig = TRUE;
 			nRetrigCount++;
@@ -2179,7 +2181,6 @@ void CSoundFile::RetrigNote(UINT nChn, UINT param)
 		}
 		NoteChange(nChn, nNote, FALSE, bResetEnv);
 		if ((m_nType & MOD_TYPE_IT) && (!pChn->nRowNote) && (nOldPeriod)) pChn->nPeriod = nOldPeriod;
-		if (!(m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT))) nRetrigCount = 0;
 	}
 	pChn->nRetrigCount = (BYTE)nRetrigCount;
 }
