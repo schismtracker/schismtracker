@@ -682,6 +682,7 @@ public:
 	// backhooks :)
 	static void (*_midi_out_note)(int chan, const MODCOMMAND *m);
 	static void (*_midi_out_raw)(unsigned char *,unsigned int, unsigned int);
+	static void (*_multi_out_raw)(int chan, int *buf, int len);
 
 public:
 	// Real-time sound functions

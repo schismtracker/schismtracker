@@ -90,6 +90,9 @@ enum {
 return values: DW_OK, DW_ERROR */
 int diskwriter_start(const char *file, diskwriter_driver_t *f);
 
+/* multiout */
+int diskwriter_multiout(const char *dir, diskwriter_driver_t *f);
+
 /* kindler, gentler, (and most importantly) simpler version (can't call sync) */
 int diskwriter_writeout(const char *file, diskwriter_driver_t *f);
 

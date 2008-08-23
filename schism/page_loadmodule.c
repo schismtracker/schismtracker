@@ -207,6 +207,20 @@ void save_song_or_save_as(void)
 	}
 }
 
+extern diskwriter_driver_t wavewriter;
+static void do_multiwrite(void *ptr)
+{
+	const char *f;
+
+	if (ptr == NULL)
+		f = (void*)song_get_filename();
+	else
+		f = (const char *)ptr;
+
+	/* FIXME: support other writers? */
+	diskwriter_multiout(f, &wavewriter);
+}
+
 static void do_save_song_overwrite(void *ptr)
 {
 	struct stat st;
@@ -241,8 +255,13 @@ static void handle_file_entered_S(char *ptr)
 		}
 	} else {
 		if (S_ISDIR(buf.st_mode)) {
-			/* TODO: maybe change the current directory in this case? */
-			log_appendf(4, "%s: Is a directory", ptr);
+			if (status.current_page == PAGE_EXPORT_MODULE) {
+				dialog_create(DIALOG_OK_CANCEL, "Multi-out?", do_multiwrite, free, 1, str_dup(ptr));
+			} else {
+				/* TODO: maybe change the current directory in this case? */
+				log_appendf(4, "%s: Is a directory", ptr);
+			}
+
 		} else if (S_ISREG(buf.st_mode)) {
 			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song_overwrite, free, 1, str_dup(ptr));
 		} else {

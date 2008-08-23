@@ -9,6 +9,9 @@
 #include "sndfile.h"
 #include <math.h>
 
+void (*CSoundFile::_multi_out_raw)(int chan, int *buf, int len) = NULL;
+
+
 // Front Mix Buffer (Also room for interleaved rear mix)
 int MixSoundBuffer[MIXBUFFERSIZE*4];
 
@@ -20,6 +23,8 @@ extern UINT gnReverbSend;
 
 int MixRearBuffer[MIXBUFFERSIZE*2];
 float MixFloatBuffer[MIXBUFFERSIZE*2];
+
+int MultiSoundBuffer[64][MIXBUFFERSIZE*4];
 
 
 extern LONG gnDryROfsVol;
@@ -1463,11 +1468,15 @@ UINT CSoundFile::CreateStereoMix(int count)
 	if (!count) return 0;
 	if (gnChannels > 2) InitMixBuffer(MixRearBuffer, count*2);
 	nchused = nchmixed = 0;
+	if (CSoundFile::_multi_out_raw) {
+		memset(MultiSoundBuffer,0,sizeof(MultiSoundBuffer));
+	}
 	for (UINT nChn=0; nChn<m_nMixChannels; nChn++)
 	{
 		const LPMIXINTERFACE *pMixFuncTable;
 		MODCHANNEL * const pChannel = &Chn[ChnMix[nChn]];
 		UINT nFlags, nMasterCh;
+		UINT nrampsamples;
 		LONG nSmpCount;
 		int nsamples;
 		int *pbuffer;
@@ -1514,10 +1523,13 @@ UINT CSoundFile::CreateStereoMix(int count)
 #else
 		pbuffer = MixSoundBuffer;
 #endif
+		if (CSoundFile::_multi_out_raw) {
+			pbuffer = MultiSoundBuffer[nMasterCh];
+		}
 		nchused++;
 		////////////////////////////////////////////////////
 	SampleLooping:
-		UINT nrampsamples = nsamples;
+		nrampsamples = nsamples;
 		if (pChannel->nRampLength > 0)
 		{
 			if ((LONG)nrampsamples > pChannel->nRampLength) nrampsamples = pChannel->nRampLength;
@@ -1561,6 +1573,7 @@ UINT CSoundFile::CreateStereoMix(int count)
 			int *pbufmax = pbuffer + (nSmpCount*2);
 			pChannel->nROfs = - *(pbufmax-2);
 			pChannel->nLOfs = - *(pbufmax-1);
+
 			pMixFunc(pChannel, pbuffer, pbufmax);
 			pChannel->nROfs += *(pbufmax-2);
 			pChannel->nLOfs += *(pbufmax-1);
@@ -1588,6 +1601,12 @@ UINT CSoundFile::CreateStereoMix(int count)
 		if (nsamples > 0) goto SampleLooping;
 		nchmixed += naddmix;
 	}
+	if (CSoundFile::_multi_out_raw) {
+		for (UINT n = 1; n < 64; n++) {
+			CSoundFile::_multi_out_raw(n, MultiSoundBuffer[n], count*2);
+		}
+	}
+
 	return nchused;
 }
 
