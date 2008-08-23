@@ -184,6 +184,7 @@ void cfg_load_midi(cfg_file_t *cfg)
 
         song_lock_audio();
         md = song_get_default_midi_config();
+        md = song_get_default_midi_config();
 	cfg_get_string(cfg,"MIDI","start", md->midi_global_data+(0*32),32, "FF");
 	cfg_get_string(cfg,"MIDI","stop", md->midi_global_data+(1*32),32, "FC");
 	cfg_get_string(cfg,"MIDI","tick", md->midi_global_data+(2*32),32, "");

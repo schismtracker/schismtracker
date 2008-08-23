@@ -596,7 +596,7 @@ public:	// for Editing
 	int stop_at_row;
 	unsigned int stop_at_time;
 
-	MODMIDICFG m_MidiCfgDefault;							// Midi macro config table
+	static MODMIDICFG m_MidiCfgDefault;							// Midi macro config table
 public:
 	CSoundFile();
 	~CSoundFile();

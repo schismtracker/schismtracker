@@ -342,10 +342,12 @@ void CSoundFile::FreeSample(LPVOID p)
 //////////////////////////////////////////////////////////////////////////
 // Misc functions
 
+MODMIDICFG CSoundFile::m_MidiCfgDefault;
+
 void CSoundFile::ResetMidiCfg()
 //-----------------------------
 {
-	memcpy(&m_MidiCfg, &m_MidiCfgDefault, sizeof(m_MidiCfg));
+	memcpy(&m_MidiCfg, &CSoundFile::m_MidiCfgDefault, sizeof(m_MidiCfg));
 }
 
 
