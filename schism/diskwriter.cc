@@ -40,9 +40,20 @@
  */
 static char dwbuf[65536];
 
+typedef DWORD (MPPASMCALL * LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
+extern DWORD MPPASMCALL Convert32To8(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
+extern DWORD MPPASMCALL Convert32To16(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
+extern DWORD MPPASMCALL Convert32To24(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
+extern DWORD MPPASMCALL Convert32To32(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
+extern VOID MonoFromStereo(int *pMixBuf, UINT nSamples);
+
+
+static LPCONVERTPROC dw_multi_pCvt = Convert32To8;
+
 static unsigned char diskbuf[32768];
 static diskwriter_driver_t *dw = NULL;
 static FILE *fp = NULL;
+static FILE *multi_fp[64] = {NULL};
 
 static unsigned char *mbuf = NULL;
 static off_t mbuf_size = 0;
@@ -57,6 +68,39 @@ static unsigned long current_song_len;
 
 static char *dw_rename_from = NULL;
 static char *dw_rename_to = NULL;
+
+
+static int swab_buf(int n)
+{
+	Uint32 *le32;
+	Uint16 *le16;
+	int i;
+
+	n *= dw->channels;
+	if (dw->bits > 8 && !mbuf &&
+#if WORDS_BIGENDIAN
+dw->output_le
+#else
+!dw->output_le
+#endif
+	) {
+		if (dw->bits <= 16) {
+			le16 = (Uint16*)diskbuf;
+			for (i = 0; i < n; i++, le16++) {
+				(*le16) = bswap_16((*le16));
+			}
+		} else if (dw->bits <= 32) {
+			le32 = (Uint32*)diskbuf;
+			for (i = 0; i < n; i++, le32++) {
+				(*le32) = bswap_32((*le32));
+			}
+		}
+	}
+	n *= (dw->bits / 8);
+
+	return n;
+}
+
 
 /* disk writer */
 /* Nice comment, but WTF do these functions do? */
@@ -238,20 +282,12 @@ int diskwriter_writeout(const char *file, diskwriter_driver_t *f)
 	return diskwriter_start(file, f);
 }
 
-int diskwriter_start(const char *file, diskwriter_driver_t *f)
+static void chan_detect_setup(void)
 {
-	char *str;
-	char *pq;
-	int i, fd;
-	int nchan, lim;
+	int nchan = diskwriter_output_channels;
+	int lim, i;
 	byte *ol;
 
-	put_env_var("DISKWRITER_FILE", file);
-
-	if (diskwriter_start_nodriver(f) != DW_OK)
-		return DW_ERROR;
-
-	nchan = diskwriter_output_channels;
 	if (mp->m_dwSongFlags & SONG_NOSTEREO) {
 		nchan = 1;
 	} else {
@@ -273,6 +309,99 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 		CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	}
 	dw->channels = nchan;
+}
+
+static void multi_out_helper(int chan, int *buf, int len)
+{
+	/* mp->_multi_out_raw = multi_out_helper; */
+
+	LONG vu_min[2] = { 0x7fffffff, 0x7fffffff };
+	LONG vu_max[2] = {-0x7fffffff,-0x7fffffff };
+
+	dw_multi_pCvt(diskbuf, buf, len, vu_min, vu_max);
+	len /= (4 - (dw->bits / 8));
+
+	if (dw->channels == 1) {
+		MonoFromStereo((int *)diskbuf, len);
+		len /= 2;
+	}
+
+	len = swab_buf(len);
+	if (dw->m) {
+		fp = multi_fp[chan];
+		dw->pos = ftell(fp);
+		dw->m(dw, diskbuf, len);
+	}
+}
+
+int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
+{
+	char *str;
+	int i;
+
+	put_env_var("DISKWRITER_DIR", dir);
+	str = (char*)mem_alloc(strlen(dir)+64);
+	if (!str) return DW_ERROR;
+	memset(multi_fp, 0, sizeof(multi_fp));
+
+	if (diskwriter_start_nodriver(f) != DW_OK)
+		return DW_ERROR;
+
+	dw->o = _ww;
+	dw->e = _we;
+	dw->l = _wl;
+	fp_ok = 1;
+	dw_rename_from = NULL;
+	dw_rename_to = NULL;
+
+	chan_detect_setup();
+	for (i = 1; i < 64; i++) {
+		sprintf(str, "%s%cmulti-%02d.%s",
+			dir, DIR_SEPARATOR, i,
+			f->extension);
+		fp = multi_fp[i] = fopen(str, "wb");
+		if (!multi_fp[i]) {
+			fp = NULL;
+			for (; i >= 1; i--) fclose(multi_fp[i]);
+			memset(multi_fp, 0, sizeof(multi_fp));
+			diskwriter_finish();
+			return DW_ERROR;
+		}
+		if (dw->p) dw->p(dw);
+	}
+
+	if (dw->bits == 8) {
+		dw_multi_pCvt = Convert32To8;
+	} else if (dw->bits == 16) {
+		dw_multi_pCvt = Convert32To16;
+	} else if (dw->bits == 24) {
+		dw_multi_pCvt = Convert32To24;
+	} else if (dw->bits == 32) {
+		dw_multi_pCvt = Convert32To32;
+	} else {
+		diskwriter_finish();
+		return DW_ERROR;
+	}
+	mp->_multi_out_raw = multi_out_helper;
+
+	log_appendf(2, "Multi-out diskwriting into %s/*.%s", dir,
+			dw->extension);
+	status.flags |= DISKWRITER_ACTIVE;
+
+	return DW_OK;
+}
+int diskwriter_start(const char *file, diskwriter_driver_t *f)
+{
+	char *str;
+	char *pq;
+	int i, fd;
+
+	put_env_var("DISKWRITER_FILE", file);
+
+	if (diskwriter_start_nodriver(f) != DW_OK)
+		return DW_ERROR;
+
+	chan_detect_setup();
 
 	/* ERR: should write to temporary */
 	dw_rename_to = str_dup(file);
@@ -332,17 +461,30 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 extern unsigned int samples_played; /* mplink */
 int diskwriter_sync(void)
 {
-	Uint32 *le32;
-	Uint16 *le16;
-	int n, i;
+	int n;
 
-	if (!dw || (!fp && fini_sampno == -1))
-		return DW_SYNC_DONE; /* no writer running */
+	if (dw && mp->_multi_out_raw) {
+		/* we're up */
+		if (!dw) return DW_SYNC_DONE;
+	} else {
+		if (!dw || (!fp && fini_sampno == -1))
+			return DW_SYNC_DONE; /* no writer running */
+	}
 	if (!fp_ok)
 		return DW_SYNC_ERROR;
 	if (!dw->m && !dw->g) {
-		if (dw->x)
+		if (!dw->x) {
+			/* do nothing */
+		} else if (mp->_multi_out_raw) {
+			for (n = 1; n < 64; n++) {
+				if (!multi_fp[n]) continue;
+				fp = multi_fp[n];
+				dw->pos = ftell(fp);
+				dw->x(dw);
+			}
+		} else {
 			dw->x(dw);
+		}
 		return fp_ok ? DW_SYNC_DONE : DW_SYNC_ERROR;
 	}
 
@@ -352,36 +494,30 @@ int diskwriter_sync(void)
 	// add status dialog
 	n = mp->Read(diskbuf, sizeof(diskbuf));
 	samples_played += n;
-	n *= dw->channels;
-	if (dw->bits > 8 && !mbuf &&
-#if WORDS_BIGENDIAN
-dw->output_le
-#else
-!dw->output_le
-#endif
-	) {
-		if (dw->bits <= 16) {
-			le16 = (Uint16*)diskbuf;
-			for (i = 0; i < n; i++, le16++) {
-				(*le16) = bswap_16((*le16));
-			}
-		} else if (dw->bits <= 32) {
-			le32 = (Uint32*)diskbuf;
-			for (i = 0; i < n; i++, le32++) {
-				(*le32) = bswap_32((*le32));
-			}
-		}
-	}
-	n *= (dw->bits / 8);
 
-	if (dw->m)
+	if (mp->_multi_out_raw) {
+		/* okay, it's happening elsewhere */
+
+	} else if (dw->m) {
+		n = swab_buf(n);
 		dw->m(dw, diskbuf, n);
+	}
 
 	if (!fp_ok)
 		return DW_SYNC_ERROR;
 	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
-		if (dw->x)
+		if (!dw->x) {
+			/* do nothing */
+		} else if (mp->_multi_out_raw) {
+			for (n = 1; n < 64; n++) {
+				if (!multi_fp[n]) continue;
+				fp = multi_fp[n];
+				dw->pos = ftell(fp);
+				dw->x(dw);
+			}
+		} else {
 			dw->x(dw);
+		}
 		return fp_ok ? DW_SYNC_DONE : DW_SYNC_ERROR;
 	}
 	return DW_SYNC_MORE;
@@ -398,7 +534,14 @@ int diskwriter_finish(void)
 		return DW_NOT_RUNNING; /* no writer running */
 	}
 
-	if (fp) {
+	if (mp->_multi_out_raw) {
+		for (r = 1; r < 64; r++) {
+			if (!multi_fp[r]) continue;
+			if (fclose(multi_fp[r]) != 0) fp_ok = 0;
+		}
+		fp = NULL;
+
+	} else if (fp) {
 		if (fp_ok) fflush(fp);
 		if (ferror(fp))
 			fp_ok = 0;
@@ -477,6 +620,7 @@ int diskwriter_finish(void)
 	if (dw->m || dw->g) {
 		song_init_audio(0);
 	}
+	mp->_multi_out_raw = NULL;
 
 	dw = NULL; /* all done! */
 	diskwriter_dialog_finished();
