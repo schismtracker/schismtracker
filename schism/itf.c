@@ -1,7 +1,7 @@
 /*
  * ITFedit - an Impulse / Schism Tracker font file editor
  * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
- * copyright (c) 2005-2006 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
  * URL: http://nimh.org/schism/
  * URL: http://rigelseven.com/schism/
  *
