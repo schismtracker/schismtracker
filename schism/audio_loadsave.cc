@@ -1210,6 +1210,8 @@ void song_clear_sample(int n)
 
 void song_copy_sample(int n, song_sample *src, char *srcname)
 {
+	void *tmp;
+
 	if (n > 0) {
 		strncpy(mp->m_szNames[n], srcname, 25);
 		mp->m_szNames[n][25] = 0;
@@ -1217,11 +1219,6 @@ void song_copy_sample(int n, song_sample *src, char *srcname)
 	
 	memcpy(mp->Ins + n, src, sizeof(MODINSTRUMENT));
 
-	if (mp->Ins[n].pSample) {
-		CSoundFile::FreeSample(mp->Ins[n].pSample);
-		mp->Ins[n].pSample = NULL;
-	}
-	
 	if (src->data) {
 		unsigned long bytelength = src->length;
 		if (src->flags & SAMP_16_BIT)
@@ -1363,10 +1360,14 @@ int song_preload_sample(void *pf)
 #define FAKE_SLOT 0
 	if (file->sample) {
 		song_sample *smp = song_get_sample(FAKE_SLOT, NULL);	
-		song_copy_sample(FAKE_SLOT, file->sample, file->title);
+		void *tmp;
+
 		song_lock_audio();
+		tmp = smp->data;
+		song_copy_sample(FAKE_SLOT, file->sample, file->title);
 		strncpy(smp->filename, file->base, 12);
 		smp->filename[12] = 0;
+		if (tmp) CSoundFile::FreeSample(tmp);
 		song_unlock_audio();
 		return FAKE_SLOT;
 	}
