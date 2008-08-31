@@ -1027,11 +1027,16 @@ static void schism_shutdown(void)
 		restore_font();
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
+
 #ifdef MACOSX
 	if (ibook_helper != -1)
 		macosx_ibook_fnswitch(ibook_helper);
 #endif
 	if (shutdown_process & EXIT_SDLQUIT) {
+		song_lock_audio();
+		song_stop_unlocked();
+		song_unlock_audio();
+
 		video_shutdown();
 		/*
 		If this is the atexit() handler, why are we calling SDL_Quit?
