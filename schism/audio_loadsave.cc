@@ -1216,6 +1216,11 @@ void song_copy_sample(int n, song_sample *src, char *srcname)
 	}
 	
 	memcpy(mp->Ins + n, src, sizeof(MODINSTRUMENT));
+
+	if (mp->Ins[n].pSample) {
+		CSoundFile::FreeSample(mp->Ins[n].pSample);
+		mp->Ins[n].pSample = NULL;
+	}
 	
 	if (src->data) {
 		unsigned long bytelength = src->length;
