@@ -1286,7 +1286,7 @@ printf("channel = %d note=%d\n",chan,m_note);
 		need_velocity = vol_tracker[chan];
 
 	} else if (m->note) {
-		if (note_tracker[chan] != 0 && note_tracker[chan] != m_note) {
+		if (note_tracker[chan] != 0) {
 			mp->ProcessMidiMacro(chan,
 				&mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
 				0, note_tracker[chan], 0, ins);
