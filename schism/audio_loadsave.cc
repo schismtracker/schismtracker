@@ -1210,8 +1210,6 @@ void song_clear_sample(int n)
 
 void song_copy_sample(int n, song_sample *src, char *srcname)
 {
-	void *tmp;
-
 	if (n > 0) {
 		strncpy(mp->m_szNames[n], srcname, 25);
 		mp->m_szNames[n][25] = 0;
