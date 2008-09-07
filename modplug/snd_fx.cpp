@@ -7,6 +7,8 @@
 #include "stdafx.h"
 #include "sndfile.h"
 
+#include "snd_fm.h"
+
 #ifdef MSC_VER
 #pragma warning(disable:4244)
 #endif
@@ -402,11 +404,11 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	{
 		if (m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT)) return;
 		pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE);
-		pChn->dwFlags = (pChn->dwFlags & (0xFFFFFF00 | CHN_PINGPONGFLAG)) | (psmp->uFlags);
+		pChn->dwFlags = (pChn->dwFlags & (0xDFFFFF00 | CHN_PINGPONGFLAG)) | (psmp->uFlags);
 	} else
 	{
 		pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE|CHN_VOLENV|CHN_PANENV|CHN_PITCHENV);
-		pChn->dwFlags = (pChn->dwFlags & 0xFFFFFF00) | (psmp->uFlags);
+		pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (psmp->uFlags);
 		if (penv)
 		{
 			if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
@@ -423,6 +425,7 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	}
 	pChn->pInstrument = psmp;
 	pChn->nLength = psmp->nLength;
+	// adlib instruments always have a nonzero length to ensure they aren't optimized away
 	pChn->nLoopStart = psmp->nLoopStart;
 	pChn->nLoopEnd = psmp->nLoopEnd;
 	pChn->nC4Speed = psmp->nC4Speed;
@@ -436,7 +439,11 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 		pChn->dwFlags |= CHN_LOOP;
 		if (pChn->dwFlags & CHN_PINGPONGSUSTAIN) pChn->dwFlags |= CHN_PINGPONGLOOP;
 	}
-	if ((pChn->dwFlags & CHN_LOOP) && (pChn->nLoopEnd < pChn->nLength)) pChn->nLength = pChn->nLoopEnd;
+	if ((pChn->dwFlags & CHN_LOOP) && (pChn->nLoopEnd < pChn->nLength))
+	    pChn->nLength = pChn->nLoopEnd;
+	/*fprintf(stderr, "length set as %d (from %d), ch flags %X smp flags %X\n",
+	    (int)pChn->nLength,
+	    (int)psmp->nLength, pChn->dwFlags, psmp->uFlags);*/
 }
 
 
@@ -499,7 +506,7 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 			pChn->nLength = pins->nLength;
 			pChn->nLoopEnd = pins->nLength;
 			pChn->nLoopStart = 0;
-			pChn->dwFlags = (pChn->dwFlags & 0xFFFFFF00) | (pins->uFlags);
+			pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (pins->uFlags);
 			if (pChn->dwFlags & CHN_SUSTAINLOOP)
 			{
 				pChn->nLoopStart = pins->nSustainStart;
@@ -878,6 +885,7 @@ BOOL CSoundFile::ProcessEffects()
 			// Invalid Instrument ?
 			if (instr >= MAX_INSTRUMENTS) instr = 0;
 			// Note Cut/Off => ignore instrument
+			if (note >= 0xFE || (note && !bPorta)) OPL_NoteOff(nChn);
 			if (note >= 0xFE) instr = 0;
 			if ((note) && (note <= 128)) pChn->nNewNote = note;
 			// New Note Action ? (not when paused!!!)
@@ -890,6 +898,7 @@ BOOL CSoundFile::ProcessEffects()
 			{
 				MODINSTRUMENT *psmp = pChn->pInstrument;
 				InstrumentChange(pChn, instr, bPorta, TRUE);
+				OPL_Patch(nChn, Ins[instr].AdlibBytes);
 				pChn->nNewIns = 0;
 				// Special IT case: portamento+note causes sample change -> ignore portamento
 				if ((m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT))
@@ -904,8 +913,10 @@ BOOL CSoundFile::ProcessEffects()
 				if ((!instr) && (pChn->nNewIns) && (note < 0x80))
 				{
 					InstrumentChange(pChn, pChn->nNewIns, bPorta, FALSE, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);
+					OPL_Patch(nChn, Ins[pChn->nNewIns].AdlibBytes);
 					pChn->nNewIns = 0;
 				}
+				if(note >= 0x80) OPL_NoteOff(nChn);
 				NoteChange(nChn, note, bPorta, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);
 				if ((bPorta) && (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) && (instr))
 				{

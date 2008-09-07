@@ -62,8 +62,8 @@ typedef struct _song_sample {
         unsigned int vib_depth;
         unsigned int vib_speed;
         char filename[22];
-	
 	int played;
+        unsigned char AdlibBytes[12];
 } song_sample;
 
 /* modchannelsettings */
@@ -248,6 +248,7 @@ enum {
         SAMP_PANNING = (0x20),
         SAMP_STEREO         = (0x40),
         //SAMP_PINGPONGFLAG   = (0x80), -- what is this?
+        SAMP_ADLIB   = (0x20000000) // indicates an Adlib sample
 };
 
 // channel flags

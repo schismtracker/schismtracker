@@ -1085,6 +1085,8 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 //------------------------------------------------------------------------------------------------
 {
 	UINT len = 0, mem = pIns->nLength+6;
+	
+	if (pIns->uFlags & CHN_ADLIB) return 0; // no sample data
 
 	if ((!pIns) || (pIns->nLength < 1) || (!lpMemFile)) return 0;
 	if (pIns->nLength > MAX_SAMPLE_LENGTH) pIns->nLength = MAX_SAMPLE_LENGTH;

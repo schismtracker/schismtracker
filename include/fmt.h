@@ -75,6 +75,7 @@ READ_INFO(ogg);
 READ_INFO(iti);  LOAD_INSTRUMENT(iti);
 READ_INFO(xi);   LOAD_INSTRUMENT(xi);
 READ_INFO(pat);  LOAD_INSTRUMENT(pat);
+                 LOAD_INSTRUMENT(scri);
 
 READ_INFO(aiff); LOAD_SAMPLE(aiff);    SAVE_SAMPLE(aiff);
 READ_INFO(au);   LOAD_SAMPLE(au);      SAVE_SAMPLE(au);
@@ -83,7 +84,7 @@ READ_INFO(its);  LOAD_SAMPLE(its);     SAVE_SAMPLE(its);
 READ_INFO(wav);	 LOAD_SAMPLE(wav);     SAVE_SAMPLE(wav);
 READ_INFO(psm);
 READ_INFO(mid);						   SAVE_SONG(mid);
-
+READ_INFO(scri); LOAD_SAMPLE(scri);
 
 #undef READ_INFO
 #undef LOAD_SAMPLE

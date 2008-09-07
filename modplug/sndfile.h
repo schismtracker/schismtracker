@@ -110,6 +110,8 @@ typedef const BYTE * LPCBYTE;
 #define CHN_NOREVERB		0x8000000
 // used to turn off mute but have it reset later
 #define CHN_NNAMUTE		0x10000000
+// Another sample flag...
+#define CHN_ADLIB               0x20000000 /* OPL mode */
 
 
 #define ENV_VOLUME              0x0001
@@ -329,6 +331,9 @@ typedef struct _MODINSTRUMENT
 	UINT nVibRate;
 	CHAR name[22];
 	int played; // for note playback dots
+
+	// This must be 12-bytes to work around a bug in some gcc4.2s
+	unsigned char AdlibBytes[12];
 } MODINSTRUMENT;
 
 typedef struct _INSTRUMENTENVELOPE {

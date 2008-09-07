@@ -6,7 +6,7 @@
 
 #include "stdafx.h"
 #include "sndfile.h"
-
+#include "snd_fm.h"
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
@@ -102,6 +102,10 @@ BOOL CSoundFile::InitPlayer(BOOL bReset)
 	gbInitPlugins = (bReset) ? 3 : 1;
 	InitializeDSP(bReset);
 	InitializeEQ(bReset);
+	
+	Fmdrv_Init(gdwMixingFreq);
+	OPL_Reset();
+	
 	return TRUE;
 }
 
@@ -506,6 +510,9 @@ BOOL CSoundFile::ReadNote()
 	MODCHANNEL *pChn = Chn;
 	for (UINT nChn=0; nChn<MAX_CHANNELS; nChn++,pChn++)
 	{
+	    if(nChn == 0 || nChn == 1)
+	    /*fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
+	        (int)nChn, pChn->nPeriod, pChn->nPos, pChn->nLength, pChn->dwFlags);*/
 		if ((pChn->dwFlags & CHN_NOTEFADE) && (!(pChn->nFadeOutVol|pChn->nRightVol|pChn->nLeftVol)))
 		{
 			pChn->nLength = 0;
@@ -527,6 +534,7 @@ BOOL CSoundFile::ReadNote()
 		// Calc Frequency
 		if ((pChn->nPeriod)	&& (pChn->nLength))
 		{
+
 			int vol = pChn->nVolume + pChn->nVolSwing;
 
 			if (vol < 0) vol = 0;
@@ -951,6 +959,13 @@ BOOL CSoundFile::ReadNote()
 				nPeriodFrac = 0;
 			}
 			UINT freq = GetFreqFromPeriod(period, pChn->nC4Speed, nPeriodFrac);
+			
+			if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
+			{
+    			OPL_NoteOn(nChn, freq*2/3); // for some reason, scaling by 1.5 is needed.
+    			// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
+                OPL_Touch(nChn, (vol * pChn->nInsVol * 63 / (1<<20)));
+            }
 
 			// Filter Envelope: controls cutoff frequency
 			if (pChn && pChn->pHeader && pChn->pHeader->dwFlags & ENV_FILTER)
