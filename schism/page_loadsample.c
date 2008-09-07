@@ -325,8 +325,8 @@ static void load_sample_draw_const(void)
 					fake_slot);
 		} else {
 			vgamem_ovl_clear(&sample_image, 0);
+		    vgamem_ovl_apply(&sample_image);
 		}
-		vgamem_ovl_apply(&sample_image);
 	}
 
 	if (need_trigger > -1) {
@@ -600,7 +600,8 @@ static void handle_enter_key(void)
 	file = flist.files[current_file];
         dmoz_cache_update(cfg_dir_samples, &flist, 0);
 
-	if (file->type & (TYPE_BROWSABLE_MASK|TYPE_INST_MASK)) {
+	if ((file->type & (TYPE_BROWSABLE_MASK|TYPE_INST_MASK))
+	&& !(file->type & TYPE_SAMPLE_MASK)) {
 		change_dir(file->path);
 		status.flags |= NEED_UPDATE;
 	} else if (file->sample) {

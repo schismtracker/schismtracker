@@ -18,6 +18,11 @@ programming by Markus Fick <webmaster@mark-f.de> (spline mixing,
 fir-resampler) and Adam Goode <adam@evdebs.org> (endian-ness and char
 fixes).
 
+Joel Yliluoma (Bisqwit) implemented MidiS3M support, Adlib S3M-files support,
+loading ST3 samples.
+
+fmopl (OPL2-emulator used in Dosbox and MAME) was written by Jarek Burczynski
+
 Some (small) portions of code have been borrowed from Cheesetracker,
 written by Juan Linietsky <coding@reduz.com.ar>.
 

@@ -41,6 +41,8 @@
 
 #include "midi.h"
 
+#include "snd_fm.h"
+
 static int midi_playing;
 // ------------------------------------------------------------------------
 
@@ -271,7 +273,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nC4Speed = i->nC4Speed;
 			c->nLoopStart = i->nLoopStart;
 			c->nLoopEnd = i->nLoopEnd;
-			c->dwFlags = (i->uFlags & 0xFF)|(c->dwFlags & CHN_MUTE);
+			c->dwFlags = (i->uFlags & 0x200000FF)|(c->dwFlags & CHN_MUTE);
 			if (c->dwFlags & CHN_MUTE) {
 				c->dwFlags &= ~(CHN_MUTE);
 				c->dwFlags |= CHN_NNAMUTE;
@@ -286,6 +288,12 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			if (vol > -1) c->nVolume = (vol << 2);
 			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
 			c->nMasterChn = chan % 64;
+			
+			if(c->dwFlags & CHN_ADLIB)
+			{
+			    OPL_NoteOff(chan);
+    			OPL_Patch(chan, i->AdlibBytes);
+    		}
 		} else {
 			while (chan >= 64) chan -= 64;
 
@@ -587,6 +595,8 @@ void song_stop_unlocked()
 
 		midi_playing = 0;
 	}
+	
+	OPL_Reset(); /* Also stop all OPL sounds */
 
 	memset(last_row,0,sizeof(last_row));
 	last_row_number = -1;

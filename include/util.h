@@ -68,9 +68,15 @@ typedef unsigned char byte;
 #ifndef NORETURN
 # define NORETURN __attribute__((noreturn))
 #endif
+#ifndef PACKED
+# define PACKED __attribute__((packed))
+#endif
 #else
 #ifndef UNUSED
 # define UNUSED
+#endif
+#ifndef PACKED
+# define PACKED
 #endif
 #ifndef NORETURN
 # define NORETURN

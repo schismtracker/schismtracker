@@ -7,6 +7,7 @@
 
 #include "stdafx.h"
 #include "sndfile.h"
+#include "snd_fm.h"
 #include <math.h>
 
 void (*CSoundFile::_multi_out_raw)(int chan, int *buf, int len) = NULL;
@@ -1359,6 +1360,8 @@ static LONG MPPFASTCALL GetSampleCount(MODCHANNEL *pChn, LONG nSamples)
 	LONG nLoopStart = (pChn->dwFlags & CHN_LOOP) ? pChn->nLoopStart : 0;
 	LONG nInc = pChn->nInc;
 
+    if(pChn->dwFlags & CHN_ADLIB) return 1;
+    
 	if ((nSamples <= 0) || (!nInc) || (!pChn->nLength)) return 0;
 	// Under zero ?
 	if ((LONG)pChn->nPos < nLoopStart)
@@ -1550,7 +1553,7 @@ UINT CSoundFile::CreateStereoMix(int count)
 			continue;
 		}
 		// Should we mix this channel ?
-		UINT naddmix;
+		UINT naddmix = 0;
 		if (((nchmixed >= m_nMaxMixChannels) && (!(gdwSoundSetup & SNDMIX_DIRECTTODISK)))
 		 || ((!pChannel->nRampLength) && (!(pChannel->nLeftVol|pChannel->nRightVol))))
 		{
@@ -1559,7 +1562,6 @@ UINT CSoundFile::CreateStereoMix(int count)
 			pChannel->nPos += (delta >> 16);
 			pChannel->nROfs = pChannel->nLOfs = 0;
 			pbuffer += nSmpCount*2;
-			naddmix = 0;
 		} else
 		// Do mixing
 		{
@@ -1567,18 +1569,21 @@ UINT CSoundFile::CreateStereoMix(int count)
 				pChannel->topnote_offset = ((pChannel->nPos << 16) | pChannel->nPosLo) % pChannel->nLength;
 			}
 
-			// Choose function for mixing
-			LPMIXINTERFACE pMixFunc;
-			pMixFunc = (pChannel->nRampLength) ? pMixFuncTable[nFlags|MIXNDX_RAMP] : pMixFuncTable[nFlags];
-			int *pbufmax = pbuffer + (nSmpCount*2);
-			pChannel->nROfs = - *(pbufmax-2);
-			pChannel->nLOfs = - *(pbufmax-1);
+			if (!(pChannel->dwFlags & CHN_ADLIB))
+			{
+				// Choose function for mixing
+				LPMIXINTERFACE pMixFunc;
+				pMixFunc = (pChannel->nRampLength) ? pMixFuncTable[nFlags|MIXNDX_RAMP] : pMixFuncTable[nFlags];
+				int *pbufmax = pbuffer + (nSmpCount*2);
+				pChannel->nROfs = - *(pbufmax-2);
+				pChannel->nLOfs = - *(pbufmax-1);
 
-			pMixFunc(pChannel, pbuffer, pbufmax);
-			pChannel->nROfs += *(pbufmax-2);
-			pChannel->nLOfs += *(pbufmax-1);
-			pbuffer = pbufmax;
-			naddmix = 1;
+				pMixFunc(pChannel, pbuffer, pbufmax);
+				pChannel->nROfs += *(pbufmax-2);
+				pChannel->nLOfs += *(pbufmax-1);
+				pbuffer = pbufmax;
+				naddmix = 1;
+			}
 
 		}
 		nsamples -= nSmpCount;
@@ -1606,6 +1611,8 @@ UINT CSoundFile::CreateStereoMix(int count)
 			CSoundFile::_multi_out_raw(n, MultiSoundBuffer[n], count*2);
 		}
 	}
+	
+	Fmdrv_MixTo(MixSoundBuffer, count);
 
 	return nchused;
 }

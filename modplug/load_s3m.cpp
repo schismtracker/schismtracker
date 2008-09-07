@@ -5,8 +5,11 @@
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
 
+#include <cctype>
+
 #include "stdafx.h"
 #include "sndfile.h"
+#include "midi.h"
 
 //#pragma warning(disable:4244)
 
@@ -181,6 +184,68 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 	*pprm = param;
 }
 
+static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32])
+{
+//    fprintf(stderr, "Name(%s)\n", name);
+    
+    if(name[0] == 'G') // GM=General MIDI
+    {
+        bool is_percussion = false;
+        if(name[1] == 'M') {}
+        else if(name[1] == 'P') is_percussion = true;
+        else return false;
+        char*s = name+2;
+        int GM = 0;      // midi program
+        int ft = 0;      // finetuning
+        int scale = 63;  // automatic volume scaling
+        int autoSDx = 0; // automatic randomized SDx effect
+        int bank = 0;    // midi bank
+        while(std::isdigit(*s)) GM = GM*10 + (*s++)-'0';
+        for(;;)
+        {
+            int sign=0;
+            if(*s == '-') sign=1;
+            if(sign || *s=='+')
+            {
+                for(ft=0; std::isdigit(*++s); ft=ft*10+(*s-'0'));
+                if(sign)ft=-ft;
+                continue;
+            }
+            if(*s=='/')
+            {
+                for(scale=0; std::isdigit(*++s); scale=scale*10+(*s-'0'));
+                continue;
+            }
+            if(*s=='&')
+            {
+                for(autoSDx=0; std::isdigit(*++s); autoSDx=autoSDx*10+(*s-'0'));
+                if(autoSDx > 15) autoSDx &= 15;
+                continue;
+            }
+            if(*s=='%')
+            {
+                for(bank=0; std::isdigit(*++s); bank=bank*10+(*s-'0'));
+                continue;
+            }
+            break;
+        }
+        // wMidiBank, nMidiProgram, nMidiChannel, nMidiDrumKey
+        Header.wMidiBank = bank;
+        if(is_percussion)
+            { Header.nMidiDrumKey = GM-1;
+              Header.nMidiChannel = 10; }
+        else
+            { Header.nMidiProgram = GM-1;
+              Header.nMidiChannel = 1 + (iSmp%9); }
+        
+        /* TODO: Apply ft, apply scale, apply autoSDx,
+         * FIXME: Channel note changes don't affect MIDI notes
+         */
+        strncpy((char*)Header.name, (const char*)name, 32);
+        return true;
+    }
+    return false;
+}
 
 BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 //---------------------------------------------------------------
@@ -285,6 +350,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		inspack[iSmp-1] = s[0x1E];
 		s[0x4C] = 0;
 		lstrcpy(m_szNames[iSmp], (LPCSTR)&s[0x30]);
+		
 		if ((s[0]==1) && (s[0x4E]=='R') && (s[0x4F]=='S'))
 		{
 			UINT j = bswapLE32(*((LPDWORD)(s+0x10)));
@@ -315,6 +381,57 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 				Ins[iSmp].nLoopStart = Ins[iSmp].nLoopEnd = 0;
 			Ins[iSmp].nPan = 0x80;
 		}
+		/* TODO: Add support for the following configurations:
+		 *
+		 * s[0] == 3: adlib bd     (4C..4F = "SCRI") \
+		 * s[0] == 4: adlib snare  (4C..4F = "SCRI")  \
+		 * s[0] == 5: adlib tom    (4C..4F = "SCRI")   > incredibly rarely used, though!
+		 * s[0] == 6: adlib cymbal (4C..4F = "SCRI")  /  -Bisqwit
+		 * s[0] == 7: adlib hihat  (4C..4F = "SCRI") /
+		 */
+		if ((s[0]==2) && (s[0x4E]=='R') && (s[0x4F]=='I' || s[0x4F]=='S'))
+		{
+            memcpy(Ins[iSmp].AdlibBytes, s+0x10, 11);
+
+		    UINT j = s[0x1C];
+			if (j > 64) j = 64;
+			Ins[iSmp].nVolume = j << 2;
+			Ins[iSmp].nGlobalVol = 64;
+			j = bswapLE32(*((LPDWORD)(s+0x20)));
+			if (!j) j = 8363;
+			Ins[iSmp].nC4Speed = j;
+			Ins[iSmp].nPan = 0x80;
+			Ins[iSmp].uFlags |= CHN_ADLIB;
+			Ins[iSmp].uFlags &= ~(CHN_LOOP | CHN_16BIT);
+			Ins[iSmp].nLength = 1;
+			// Because most of the code in modplug requires
+			// the presence of pSample when nLength is given,
+			// we use this dummy sample buffer. It will never
+			// be digitized, so its value does not matter.
+			// -Bisqwit
+			//
+			// However, schism is also a song *editor*, and
+			// sepcial care must be taken to not make this wrong
+			// -mrsb
+			Ins[iSmp].pSample = AllocateSample(1);
+		}
+		
+		Headers[iSmp] = new INSTRUMENTHEADER;
+		memset(Headers[iSmp], 0, sizeof(INSTRUMENTHEADER));
+		
+		Headers[iSmp]->nNNA = NNA_NOTEOFF;
+		Headers[iSmp]->nDNA = DNA_NOTEOFF;
+		Headers[iSmp]->nDCT = DCT_INSTRUMENT;
+		Headers[iSmp]->dwFlags = Ins[iSmp].uFlags;
+		if(MidiS3M_Read(*Headers[iSmp], iSmp, m_szNames[iSmp]))
+		    m_dwSongFlags |= SONG_INSTRUMENTMODE;
+		else
+		{
+		    delete Headers[iSmp];
+		    Headers[iSmp] = 0;
+		}
+		
+		//fprintf(stderr, "loaded uflags = %X, length = %d\n", Ins[iSmp].uFlags, Ins[iSmp].nLength);
 	}
 	// Reading patterns
 	for (UINT iPat=0; iPat<patnum; iPat++)
@@ -328,8 +445,10 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		nInd += 2;
 		PatternSize[iPat] = 64;
 		PatternAllocSize[iPat] = 64;
-		if ((!len) || (nInd + len > dwMemLength - 6)
+		if (len < 2 || (nInd + (len-2) > dwMemLength)
 		 || ((Patterns[iPat] = AllocatePattern(64, m_nChannels)) == NULL)) continue;
+		// ^Bisqwit- Fixed S3M loading. Would cause patterns
+		// become missing when samples are not used (Adlib songs).
 		LPBYTE src = (LPBYTE)(lpStream+nInd);
 		// Unpacking pattern
 		MODCOMMAND *p = Patterns[iPat];
@@ -397,6 +516,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		dwMemPos = insfile[iRaw];
 		dwMemPos += ReadSample(&Ins[iRaw], flags, (LPSTR)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
+	
 	m_nMinPeriod = 64;
 	m_nMaxPeriod = 32767;
 	if (psfh.flags & 0x10) m_dwSongFlags |= SONG_AMIGALIMITS;
@@ -623,6 +743,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 #ifndef NO_PACKING
 			if (nPacking)
 			{
+			    /* NOTE: Packed samples are not supported by ST32 */
 				if ((!(pins->uFlags & (CHN_16BIT|CHN_STEREO)))
 				 && (CanPackSample((char *)pins->pSample, pins->nLength, nPacking)))
 				{

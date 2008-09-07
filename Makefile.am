@@ -187,6 +187,7 @@ schismtracker_SOURCES = \
 	schism/fmt/mid.cc		\
 	schism/fmt/its.cc		\
 	schism/fmt/psm.cc		\
+	schism/fmt/scri.cc		\
 	schism/fmt/iti.c		\
 	schism/fmt/xi.c			\
 	schism/fmt/pat.c		\
@@ -272,6 +273,9 @@ schismtracker_SOURCES = \
 	modplug/load_ptm.cpp		\
 	modplug/mmcmp.cpp		\
 	modplug/fastmix.cpp		\
+	modplug/fmopl.c			\
+	modplug/fmopl.h			\
+	modplug/snd_fm.cpp		\
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\
@@ -283,10 +287,13 @@ schismtracker_SOURCES = \
 	$(files_mmap)			\
 	$(files_windres)
 
+cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
+
 INCLUDES = -D_USE_AUTOCONF -D_GNU_SOURCE \
 	-I$(srcdir)/include -I$(srcdir)/modplug -I. \
 	@SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
-	$(cflags_network) $(cflags_x11) $(cflags_zlib)
+	$(cflags_network) $(cflags_x11) $(cflags_zlib) \
+	$(cflags_fmopl)
 
 
 schismtracker_DEPENDENCIES = $(files_windres)

@@ -124,6 +124,7 @@ static const fmt_read_info_func read_info_funcs[] = {
 
 	READ_INFO(iti),
 	READ_INFO(its),
+	READ_INFO(scri),
 	READ_INFO(au),
 	READ_INFO(aiff),
 
