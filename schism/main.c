@@ -63,6 +63,8 @@
 #ifdef WIN32
 #include <windows.h>
 #include <ws2tcpip.h>
+#else
+#include <signal.h>
 #endif
 
 #if defined(USE_DLTRICK_ALSA)
@@ -1235,6 +1237,12 @@ int main(int argc, char **argv)
 	midi_engine_start();
 	song_init_audio(audio_driver);
 	song_init_modplug();
+
+#ifndef WIN32
+	signal(SIGINT, exit);
+	signal(SIGQUIT, exit);
+	signal(SIGTERM, exit);
+#endif
 
 	video_mousecursor(cfg_video_mousecursor); /* blah */
 
