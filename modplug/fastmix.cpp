@@ -1607,12 +1607,15 @@ UINT CSoundFile::CreateStereoMix(int count)
 		nchmixed += naddmix;
 	}
 	if (CSoundFile::_multi_out_raw) {
+		/* mix all adlib onto track one */
+		Fmdrv_MixTo(MultiSoundBuffer[1], count);
+
 		for (UINT n = 1; n < 64; n++) {
 			CSoundFile::_multi_out_raw(n, MultiSoundBuffer[n], count*2);
 		}
+	} else {
+		Fmdrv_MixTo(MixSoundBuffer, count);
 	}
-	
-	Fmdrv_MixTo(MixSoundBuffer, count);
 
 	return nchused;
 }
