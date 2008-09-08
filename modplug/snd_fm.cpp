@@ -61,6 +61,7 @@ void Fmdrv_MixTo(int* target, int count)
     for(int a=0; a<count; ++a)
     {
         target[a*2] += buf[a]*2000;
+        target[(a*2)+1] += buf[a]*2000;
     }
 }
 
