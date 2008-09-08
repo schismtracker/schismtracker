@@ -1398,15 +1398,15 @@ static void vis_fft(void)
 	vgamem_ovl_clear(&vis_overlay,0);
 	j=19;
 	for (i = 0; i < 120; i++) {
-		y = log(
-				((current_fft_data[0][j] >> 3)
-				* (current_fft_data[1][j] >> 3)));
+		y = current_fft_data[0][j];
+		y += current_fft_data[1][j];
+		y >>= 1;
 		j++;
-		y *= log(
-				((current_fft_data[0][j] >> 3)
-				* (current_fft_data[1][j] >> 3)));
+		y = current_fft_data[0][j];
+		y += current_fft_data[1][j];
+		y >>= 1;
 		if (i != 62 && i != 31 && i != 93) j++;
-		y >>= 4;
+		y >>= 9;
 		if (y > 15) y = 15;
 		if (y > 0) {
 			vgamem_ovl_drawline(&vis_overlay,i,15-y,i,15,5);
