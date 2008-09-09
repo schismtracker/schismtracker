@@ -1,6 +1,8 @@
 #!/bin/sh
 cd ..
 find schism2/ \
+	\! -name '.git' \
+	\! -path '*/.git/*' \
 	\! -name 'autom4te.cache' \
 	\! -path '*/autom4te.cache/*' \
 	\! -path '*/*-build/*' \
