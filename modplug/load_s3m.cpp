@@ -5,8 +5,6 @@
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
 
-#include <cctype>
-
 #include "stdafx.h"
 #include "sndfile.h"
 #include "midi.h"
@@ -14,6 +12,13 @@
 //#pragma warning(disable:4244)
 
 extern WORD S3MFineTuneTable[16];
+
+
+static int isdigit_safe(int n)
+{
+        if (n >= '0' && n <= '9') return 1;
+        return 0;
+}
 
 //////////////////////////////////////////////////////
 // ScreamTracker S3M file support
@@ -200,31 +205,31 @@ static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32])
         int scale = 63;  // automatic volume scaling
         int autoSDx = 0; // automatic randomized SDx effect
         int bank = 0;    // midi bank
-        while(std::isdigit(*s)) GM = GM*10 + (*s++)-'0';
+        while(isdigit_safe(*s)) GM = GM*10 + (*s++)-'0';
         for(;;)
         {
             int sign=0;
             if(*s == '-') sign=1;
             if(sign || *s=='+')
             {
-                for(ft=0; std::isdigit(*++s); ft=ft*10+(*s-'0'));
+                for(ft=0; isdigit_safe(*++s); ft=ft*10+(*s-'0'));
                 if(sign)ft=-ft;
                 continue;
             }
             if(*s=='/')
             {
-                for(scale=0; std::isdigit(*++s); scale=scale*10+(*s-'0'));
+                for(scale=0; isdigit_safe(*++s); scale=scale*10+(*s-'0'));
                 continue;
             }
             if(*s=='&')
             {
-                for(autoSDx=0; std::isdigit(*++s); autoSDx=autoSDx*10+(*s-'0'));
+                for(autoSDx=0; isdigit_safe(*++s); autoSDx=autoSDx*10+(*s-'0'));
                 if(autoSDx > 15) autoSDx &= 15;
                 continue;
             }
             if(*s=='%')
             {
-                for(bank=0; std::isdigit(*++s); bank=bank*10+(*s-'0'));
+                for(bank=0; isdigit_safe(*++s); bank=bank*10+(*s-'0'));
                 continue;
             }
             break;
