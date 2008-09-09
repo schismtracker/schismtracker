@@ -846,7 +846,14 @@ BOOL CSoundFile::ProcessEffects()
 		}
 
 		// Handles note/instrument/volume changes
-		if (m_nTickCount == nStartTick) // can be delayed by a note delay effect
+		//
+		// this can be delayed by a note delay effect, but ITEXE has a bug here where
+		// SEx retriggers any row with an SDy in it "x" times at frame "y"
+		// this bug doesn't affect the S6x command
+		//
+		// Scream Tracker has a similar bug (which we don't simulate here)
+		// whereby SD0 and SC0 are ignored
+		if (((m_nTickCount - m_nFrameDelay) % m_nMusicSpeed) == nStartTick)
 		{
 			UINT note = pChn->nRowNote;
 			if (instr) pChn->nNewIns = instr;
