@@ -53,7 +53,7 @@ void Fmdrv_MixTo(int* target, int count)
 
 	if (buf_size != count*2) {
 		free(buf);
-		buf = (short*)malloc(count*2);
+		buf = (short*)malloc(buf_size = (count*2));
 		if (!buf) abort();
 	}
     
