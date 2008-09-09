@@ -1,6 +1,8 @@
 #!/bin/sh
+HERE=`pwd`
+HERE=`basename "$HERE"`
 cd ..
-find schism2/ \
+find "$HERE" \
 	\! -name '.git' \
 	\! -path '*/.git/*' \
 	\! -name 'autom4te.cache' \
@@ -14,5 +16,5 @@ find schism2/ \
 	\! -name '.*.sw[opqrstuvwxyz]' \
 	\! -name '*.tgz' \
 	-print0 \
-| cpio -o -0 -H ustar | gzip -9 > schism2/cvs-snapshot.tgz
+| cpio -o -0 -H ustar | gzip -9 > "$HERE/cvs-snapshot.tgz"
 
