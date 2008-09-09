@@ -3,8 +3,8 @@ extern "C" {
 }
 #include "snd_fm.h"
 
-#include <alloca.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 #define OPLNew(x,r)  YM3812Init(1, (x),(r))
@@ -46,9 +46,17 @@ void Fmdrv_Init(int mixfreq)
 
 void Fmdrv_MixTo(int* target, int count)
 {
+	static short *buf = 0;
+	static int buf_size = 0;
+
     if(!fm_active) return;
+
+	if (buf_size != count*2) {
+		free(buf);
+		buf = (short*)malloc(count*2);
+		if (!buf) abort();
+	}
     
-    short* buf = (short*)alloca(count*2);
     memset(buf, 0, count*2);
     OPLUpdateOne(opl, buf, count);
     
