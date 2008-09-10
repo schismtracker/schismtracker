@@ -4,6 +4,7 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>,
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
+#define NEED_BYTESWAP
 
 //////////////////////////////////////////////
 // PTM PolyTracker module loader            //

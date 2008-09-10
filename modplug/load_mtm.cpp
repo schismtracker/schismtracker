@@ -3,6 +3,7 @@
  *
  * Authors: Olivier Lapicque <olivierl@jps.net>
 */
+#define NEED_BYTESWAP
 
 #include "stdafx.h"
 #include "sndfile.h"

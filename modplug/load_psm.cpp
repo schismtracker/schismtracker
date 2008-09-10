@@ -3,7 +3,7 @@
  *
  * Authors: Olivier Lapicque <olivierl@jps.net>
 */
-
+#define NEED_BYTESWAP
 
 ///////////////////////////////////////////////////
 //
