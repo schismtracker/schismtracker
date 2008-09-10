@@ -50,6 +50,7 @@ extern VOID MonoFromStereo(int *pMixBuf, UINT nSamples);
 
 
 static LPCONVERTPROC dw_multi_pCvt = Convert32To8;
+static int multi_downmix = 0;
 
 static unsigned char diskbuf[32768];
 static diskwriter_driver_t *dw = NULL;
@@ -283,7 +284,15 @@ int diskwriter_writeout(const char *file, diskwriter_driver_t *f)
 	return diskwriter_start(file, f);
 }
 
-static void chan_detect_setup(void)
+static void chan_setup(int rate, int nchan)
+{
+	if (dw->m || dw->g) {
+		song_start_once();
+		CSoundFile::SetWaveConfig(rate, dw->bits, nchan, 1);
+		CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
+	}
+}
+static int chan_detect(void)
 {
 	int nchan = diskwriter_output_channels;
 	int lim, i;
@@ -303,13 +312,7 @@ static void chan_detect_setup(void)
 		if (lim == 1) nchan = 1; /* mono is possible */
 	}
 
-	if (dw->m || dw->g) {
-//		CSoundFile::SetWaveConfigEx();
-		song_start_once();
-		CSoundFile::SetWaveConfig(dw->rate, dw->bits, nchan, 1);
-		CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
-	}
-	dw->channels = nchan;
+	return dw->channels = nchan;
 }
 
 static void multi_out_helper(int chan, int *buf, int len)
@@ -319,13 +322,13 @@ static void multi_out_helper(int chan, int *buf, int len)
 	LONG vu_min[2] = { 0x7fffffff, 0x7fffffff };
 	LONG vu_max[2] = {-0x7fffffff,-0x7fffffff };
 
+	if (multi_downmix) {
+		len *= 2;
+		MonoFromStereo((int *)diskbuf, len);
+	}
+
 	dw_multi_pCvt(diskbuf, buf, len, vu_min, vu_max);
 	len /= (4 - (dw->bits / 8));
-
-	if (dw->channels == 1) {
-		MonoFromStereo((int *)diskbuf, len);
-		len /= 2;
-	}
 
 	len = swab_buf(len);
 	if (dw->m) {
@@ -355,7 +358,14 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 	dw_rename_from = NULL;
 	dw_rename_to = NULL;
 
-	chan_detect_setup();
+	multi_downmix = 0;
+	if (chan_detect() == 1) {
+		multi_downmix = 1;
+		chan_setup(dw->rate/2,2);
+	} else {
+		chan_setup(dw->rate,2);
+	}
+
 	for (i = 1; i < 64; i++) {
 		sprintf(str, "%s%cmulti-%02d.%s",
 			dir, DIR_SEPARATOR, i,
@@ -402,7 +412,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 	if (diskwriter_start_nodriver(f) != DW_OK)
 		return DW_ERROR;
 
-	chan_detect_setup();
+	chan_setup(dw->rate,chan_detect());
 
 	/* ERR: should write to temporary */
 	dw_rename_to = str_dup(file);
