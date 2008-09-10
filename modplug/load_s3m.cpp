@@ -4,6 +4,9 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>,
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
+#define NEED_BYTESWAP
+
+#include "headers.h"
 
 #include "stdafx.h"
 #include "sndfile.h"
@@ -12,13 +15,6 @@
 //#pragma warning(disable:4244)
 
 extern WORD S3MFineTuneTable[16];
-
-
-static int isdigit_safe(int n)
-{
-        if (n >= '0' && n <= '9') return 1;
-        return 0;
-}
 
 //////////////////////////////////////////////////////
 // ScreamTracker S3M file support

@@ -20,6 +20,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef __headers_h
+#define __headers_h
 /* This is probably overkill, but it's consistent this way. */
 
 #ifdef HAVE_CONFIG_H
@@ -209,3 +211,10 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 #define INT_SHAPED_PTR(v)		((intptr_t)(((void*)(v))))
 #define PTR_SHAPED_INT(i)		((void*)i)
 
+static inline int isdigit_safe(int n)
+{
+	if (n >= '0' && n <= '9') return 1;
+	return 0;
+}
+
+#endif

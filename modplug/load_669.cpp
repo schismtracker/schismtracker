@@ -4,6 +4,7 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>,
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
+#define NEED_BYTESWAP
 
 ////////////////////////////////////////////////////////////
 // 669 Composer / UNIS 669 module loader

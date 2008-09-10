@@ -28,12 +28,6 @@ has the IT sample decompression code... */
 #include "mplink.h"
 #include "it_defs.h"
 
-static int isdigit_safe(int n)
-{
-	if (n >= '0' && n <= '9') return 1;
-	return 0;
-}
-
 struct scri_header
 {
     //00
