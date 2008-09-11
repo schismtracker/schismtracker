@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "sndfile.h"
 #include "snd_fm.h"
+#include "snd_gm.h"
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
@@ -105,6 +106,7 @@ BOOL CSoundFile::InitPlayer(BOOL bReset)
 	
 	Fmdrv_Init(gdwMixingFreq);
 	OPL_Reset();
+	GM_Reset();
 	
 	return TRUE;
 }
@@ -510,8 +512,8 @@ BOOL CSoundFile::ReadNote()
 	MODCHANNEL *pChn = Chn;
 	for (UINT nChn=0; nChn<MAX_CHANNELS; nChn++,pChn++)
 	{
-	    if(nChn == 0 || nChn == 1)
-	    /*fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
+	    /*if(nChn == 0 || nChn == 1)
+	    fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
 	        (int)nChn, pChn->nPeriod, pChn->nPos, pChn->nLength, pChn->dwFlags);*/
 		if ((pChn->dwFlags & CHN_NOTEFADE) && (!(pChn->nFadeOutVol|pChn->nRightVol|pChn->nLeftVol)))
 		{
@@ -960,7 +962,14 @@ BOOL CSoundFile::ReadNote()
 			}
 			UINT freq = GetFreqFromPeriod(period, pChn->nC4Speed, nPeriodFrac);
 			
-			if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
+            if(!(pChn->dwFlags & CHN_NOTEFADE)
+            && (m_dwSongFlags & SONG_INSTRUMENTMODE)
+            && (pChn->pHeader)
+            && (pChn->pHeader->nMidiChannel > 0))
+            {
+                GM_SetFreqAndVol(nChn, freq, (vol * pChn->nInsVol * 63 / (1<<20)));
+            }
+            else if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
 			{
     			OPL_NoteOn(nChn, freq*2/3); // for some reason, scaling by 1.5 is needed.
     			// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
@@ -1131,6 +1140,12 @@ BOOL CSoundFile::ReadNote()
 				int pan = ((int)pChn->nRealPan) - 128;
 				pan *= (int)m_nStereoSeparation;
 				pan /= 128;
+
+                if((m_dwSongFlags & SONG_INSTRUMENTMODE)
+                && (pChn->pHeader)
+                && (pChn->pHeader->nMidiChannel > 0))
+    				GM_Pan(nChn, pan);
+
 				pan += 128;
 
 				if (pan < 0) pan = 0;
