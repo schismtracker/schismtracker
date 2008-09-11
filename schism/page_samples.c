@@ -40,7 +40,7 @@ static struct vgamem_overlay sample_image = {
 };
 
 static struct widget widgets_samplelist[20];
-static int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
+static const int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
 
 static int top_sample = 1;
 static int current_sample = 1;
@@ -53,7 +53,7 @@ static int sample_list_cursor_pos = 25;	/* the "play" text */
 static int sample_numentry_cursor_pos = 0;
 
 /* for the loops */
-static const char *loop_states[] = { "Off", "On Forwards", "On Ping Pong", NULL };
+static const char *const loop_states[] = { "Off", "On Forwards", "On Ping Pong", NULL };
 
 /* playback */
 static int last_note = 61;		/* C-5 */
@@ -778,6 +778,191 @@ static void sample_amplify_dialog(void)
 
 /* --------------------------------------------------------------------- */
 
+static struct widget sample_adlibconfig_widgets[28];
+
+/* namespace adlibconfig { */
+
+typedef enum adlibconfig_wtypes { N/*number*/,
+					  B/*boolean/toggle*/
+					  } adlibconfig_wtypes;
+static const struct {
+	int x,y; 
+	adlibconfig_wtypes type;
+	int byteno, firstbit, nbits;
+} adlibconfig_widgets[] =
+{
+	39,3, B, 10,0,1, // add. synth
+	39,4, N, 10,1,3, // mod. feedback
+	
+	26,7, N, 5,4,4,  // carrier attack
+	26,8, N, 5,0,4,  // carrier decay
+	26,9, N, 7,4,-4, // carrier sustain (0=maximum, 15=minimum)
+	26,10,N, 7,0,4,  // carrier release
+	26,11,B, 1,5,1,  // carrier sustain flag
+	26,12,N, 3,0,-6, // carrier volume (0=maximum, 63=minimum)
+
+	30,7, N, 4,4,4,  // modulator attack
+	30,8, N, 4,0,4,  // modulator decay
+	30,9, N, 6,4,-4, // modulator sustain (0=maximum, 15=minimum)
+	30,10,N, 6,0,4,  // modulator release
+	30,11,B, 0,5,1,  // modulator sustain flag
+	30,12,N, 2,0,-6, // modulator volume (0=maximum, 63=minimum)
+	
+	58,7, B, 1,4,1,  // carrier scale envelope flag
+	58,8, N, 3,6,2,  // carrier level scaling (This is actually reversed bits...)
+	58,9, N, 1,0,4,  // carrier frequency multiplier
+	58,10,N, 9,0,2,  // carrier wave select
+	58,11,B, 1,6,1,  // carrier pitch vibrato
+	58,12,B, 1,7,1,  // carrier volume vibrato
+	
+	62,7, B, 0,4,1,  // modulator scale envelope flag
+	62,8, N, 2,6,2,  // modulator level scaling (This is actually reversed bits...)
+	62,9, N, 0,0,4,  // modulator frequency multiplier
+	62,10,N, 8,0,2,  // modulator wave select
+	62,11,B, 0,6,1,  // modulator pitch vibrato
+	62,12,B, 0,7,1,  // modulator volume vibrato
+};
+const int nadlibconfig_widgets = sizeof(adlibconfig_widgets)/sizeof(*adlibconfig_widgets);
+
+/* } end namespace */
+
+static void do_adlibconfig(UNUSED void *data)
+{
+}
+
+static void adlibconfig_refresh(void)
+{
+    song_sample* sample = song_get_sample(current_sample, NULL);
+
+	draw_sample_data(&sample_image, sample, current_sample);
+
+    int a;
+    for(a=0; a<nadlibconfig_widgets; ++a)
+    {
+        unsigned srcvalue = 0;
+        unsigned maskvalue = 0xFFFF;
+        
+        unsigned nbits_real = adlibconfig_widgets[a].nbits < 0 ? -adlibconfig_widgets[a].nbits : adlibconfig_widgets[a].nbits;
+        unsigned minvalue = 0, maxvalue = (1 << nbits_real)-1;
+
+        switch(adlibconfig_widgets[a].type)
+        {
+            case B:
+                srcvalue = sample_adlibconfig_widgets[a].d.toggle.state;
+                break;
+            case N:
+                srcvalue = sample_adlibconfig_widgets[a].d.numentry.value;
+                break;
+        }
+        
+        if(adlibconfig_widgets[a].nbits < 0)
+            srcvalue = maxvalue-srcvalue; // reverse the semantics
+
+        srcvalue  &= maxvalue; srcvalue  <<= adlibconfig_widgets[a].firstbit;
+        maskvalue &= maxvalue; maskvalue <<= adlibconfig_widgets[a].firstbit;
+        
+        sample->AdlibBytes[adlibconfig_widgets[a].byteno] =
+         (sample->AdlibBytes[adlibconfig_widgets[a].byteno] &~ maskvalue) | srcvalue;
+    }
+}
+
+static void sample_adlibconfig_draw_const(void)
+{
+    static const struct { int x,y; const char* label; } labels[] =
+    { { 19, 1, "Adlib Melodic Instrument Parameters" },
+      { 19, 3, "Additive Synthesis:" },
+      { 18, 4, "Modulation Feedback:" },
+      { 26, 6, "Car Mod" },
+      { 19, 7, "Attack" },
+      { 20, 8, "Decay" },
+      { 18, 9, "Sustain" },
+      { 18,10, "Release" },
+      { 12,11, "Sustain Sound" },
+      { 19,12, "Volume" },
+      
+      { 58, 6, "Car Mod" },
+      { 43, 7, "Scale Envelope" },
+      { 44, 8, "Level Scaling" },
+      { 37, 9, "Frequency Multiplier" },
+      { 46,10, "Wave Select" },
+      { 44,11, "Pitch Vibrato" },
+      { 43,12, "Volume Vibrato" }
+    };
+    
+    int a;
+
+    draw_fill_chars(25,6+30, 32,13+30, 0);
+    draw_box(25,6+30, 28,13+30, BOX_THIN | BOX_INNER | BOX_INSET);
+    draw_box(29,6+30, 32,13+30, BOX_THIN | BOX_INNER | BOX_INSET);
+
+    draw_fill_chars(57,6+30, 64,13+30, 0);
+    draw_box(57,6+30, 60,13+30, BOX_THIN | BOX_INNER | BOX_INSET);
+    draw_box(61,6+30, 64,13+30, BOX_THIN | BOX_INNER | BOX_INSET);
+
+    for(a=0; a<sizeof(labels)/sizeof(*labels); ++a)
+    {
+        int a1 = a?0:3, a2=2;
+        draw_text((unsigned char *) labels[a].label,
+                  labels[a].x, labels[a].y+30, a1, a2);
+    }
+    
+}
+        
+static void sample_adlibconfig_dialog(void)
+{
+    struct dialog* dialog;
+    song_sample* sample = song_get_sample(current_sample, NULL);
+    
+    static int cursor_placeholders[sizeof(adlibconfig_widgets)/sizeof(*adlibconfig_widgets)] = {0};
+    static const char* const bool_opts[3] = {"n","y", NULL};
+    
+    int a;
+    for(a=0; a<nadlibconfig_widgets; ++a)
+    {
+        unsigned srcvalue = sample->AdlibBytes[adlibconfig_widgets[a].byteno];
+        unsigned nbits_real = adlibconfig_widgets[a].nbits < 0 ? -adlibconfig_widgets[a].nbits : adlibconfig_widgets[a].nbits;
+        unsigned minvalue = 0, maxvalue = (1 << nbits_real)-1;
+        srcvalue >>= adlibconfig_widgets[a].firstbit;
+        srcvalue &= maxvalue;
+        if(adlibconfig_widgets[a].nbits < 0) srcvalue = maxvalue-srcvalue; // reverse the semantics
+        
+        switch(adlibconfig_widgets[a].type)
+        {
+            case B:
+                create_menutoggle(sample_adlibconfig_widgets+a,
+                                adlibconfig_widgets[a].x,
+                                adlibconfig_widgets[a].y+30,
+                                a>0 ? a-1 : 0,
+                                a+1<nadlibconfig_widgets ? a+1 : a,
+                                a,a,a,
+                                adlibconfig_refresh, bool_opts);
+                sample_adlibconfig_widgets[a].d.menutoggle.state = srcvalue;
+                sample_adlibconfig_widgets[a].d.menutoggle.activation_keys = "ny";
+                break;
+            case N:
+                create_numentry(sample_adlibconfig_widgets+a,
+                                adlibconfig_widgets[a].x,
+                                adlibconfig_widgets[a].y+30,
+                                nbits_real<4 ? 1 : 2,
+                                a>0 ? a-1 : 0,
+                                a+1<nadlibconfig_widgets ? a+1 : a,
+                                a,
+                                adlibconfig_refresh,
+                                minvalue, maxvalue,
+                                &cursor_placeholders[a]);
+                sample_adlibconfig_widgets[a].d.numentry.value = srcvalue;
+                break;
+        }
+    }
+    
+    dialog = dialog_create_custom(9, 30, 61, 15, sample_adlibconfig_widgets,
+                                  nadlibconfig_widgets, 0,
+                                  sample_adlibconfig_draw_const, NULL);
+    //dialog->action_yes = do_adlibconfig;
+}
+
+/* --------------------------------------------------------------------- */
+
 /* filename can be NULL, in which case the sample filename is used (quick save) */
 struct sample_save_data {
 	char *path;
@@ -1043,7 +1228,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
 		return;
 	case SDLK_m:
-		if (sample->data != NULL)
+		if (sample->data != NULL && !(sample->flags & SAMP_ADLIB))
 			sample_amplify_dialog();
 		return;
 	case SDLK_n:
@@ -1077,6 +1262,10 @@ static void sample_list_handle_alt_key(struct key_event * k)
 	case SDLK_x:
 		exchange_sample_dialog();
 		return;
+	case SDLK_z:
+	    if(sample->data != NULL && (sample->flags & SAMP_ADLIB))
+	        sample_adlibconfig_dialog();
+	    return;
 	case SDLK_INSERT:
 		song_insert_sample_slot(current_sample);
 		status.flags |= NEED_UPDATE;
