@@ -413,7 +413,11 @@ UINT CSoundFile::MapMidiInstrument(DWORD dwBankProgram, UINT nChannel, UINT nNot
 	penv->wMidiBank = nBank;
 	penv->nMidiProgram = nProgram;
 	penv->nMidiChannel = nChannel;
-	if (nChannel == MIDI_DRUMCHANNEL) penv->nMidiDrumKey = nNote;
+	if (nChannel == MIDI_DRUMCHANNEL)
+	{
+	    penv->nMidiDrumKey = nNote;
+	    penv->nMidiProgram = nNote + 128;
+	}
 	penv->nGlobalVol = 128;
 	penv->nFadeOut = 1024;
 	penv->nPan = 128;
@@ -451,6 +455,9 @@ UINT CSoundFile::MapMidiInstrument(DWORD dwBankProgram, UINT nChannel, UINT nNot
 	Ins[m_nSamples].nPan = 128;
 	Ins[m_nSamples].nVolume = 256;
 	Ins[m_nSamples].nGlobalVol = 64;
+	Ins[m_nSamples].pSample = AllocateSample(1);
+	Ins[m_nSamples].uFlags &= ~(CHN_LOOP | CHN_16BIT);
+	Ins[m_nSamples].nLength = 1;
 	if (nChannel != MIDI_DRUMCHANNEL)
 	{
 		// GM Midi Name
