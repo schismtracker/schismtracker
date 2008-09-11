@@ -30,6 +30,8 @@
 
 #include "sdlmain.h"
 
+#include "snd_gm.h"
+
 #include "diskwriter.h"
 
 /* --------------------------------------------------------------------- */
@@ -40,28 +42,32 @@ static void config_set_page(void);
 
 static struct widget widgets_config[32];
 
-static const char *time_displays[] = {
+static const char *const time_displays[] = {
         "Off", "Play / Elapsed", "Play / Clock", "Play / Off", "Elapsed", "Clock", "Absolute", NULL
 };
-static const char *vis_styles[] = {
+static const char *const vis_styles[] = {
 	"Off", "Memory Stats", "Oscilloscope", "VU Meter", "Monoscope", "Spectrum", NULL
 };
 
-static const char *sharp_flat[] = {
+static const char *const sharp_flat[] = {
 	"Sharps (#)", "Flats (b)", NULL
 };
 
-static const char *output_channels[] = {
+static const char *const output_channels[] = {
         "Monaural", "Stereo", "Dolby/Surround", NULL
 };
 
 static int sample_rate_cursor = 0;
 
-static const char *bit_rates[] = { "8 Bit", "16 Bit", //"24 Bit", "32 Bit",
+static const char *const bit_rates[] = { "8 Bit", "16 Bit", //"24 Bit", "32 Bit",
 			NULL };
 
-static int video_fs_group[] = { 8, 9, -1 };
-static int video_group[] = { 10, 11, 12, 13, -1 };
+static const char *const midi_modes[] = {
+        "IT semantics", "Tracker semantics", NULL
+};
+
+static const int video_fs_group[] = { 9, 10, -1 };
+static int video_group[] = { 11, 12, 13, 14, -1 };
 
 static void change_mixer_limits(void)
 {
@@ -84,6 +90,14 @@ static void change_ui_settings(void)
 		status.flags &= ~CLASSIC_MODE;
 	}
 	kbd_sharp_flat_toggle(widgets_config[6].d.menutoggle.state);
+
+	GM_Reset();
+	if (widgets_config[8].d.toggle.state) {
+		status.flags |= MIDI_LIKE_TRACKER;
+	} else {
+		status.flags &= ~MIDI_LIKE_TRACKER;
+	}
+	
 	status.flags |= NEED_UPDATE;
 	status_text_flash(SAVED_AT_EXIT);
 }
@@ -168,19 +182,19 @@ static void change_video_settings(void)
 	const char *new_video_driver;
 	int new_fs_flag;
 
-	if (widgets_config[10].d.togglebutton.state) {
+	if (widgets_config[11].d.togglebutton.state) {
 		new_video_driver = "sdl";
-	} else if (widgets_config[11].d.togglebutton.state) {
-		new_video_driver = "yuv";
 	} else if (widgets_config[12].d.togglebutton.state) {
-		new_video_driver = "gl";
+		new_video_driver = "yuv";
 	} else if (widgets_config[13].d.togglebutton.state) {
+		new_video_driver = "gl";
+	} else if (widgets_config[14].d.togglebutton.state) {
 		new_video_driver = "directdraw";;
 	} else {
 		new_video_driver = "sdl";
 	}
 
-	if (widgets_config[8].d.togglebutton.state) {
+	if (widgets_config[9].d.togglebutton.state) {
 		new_fs_flag = 1;
 	} else {
 		new_fs_flag = 0;
@@ -218,14 +232,17 @@ static void config_draw_const(void)
 	draw_text((unsigned char *) "Accidentals",6,22, 0, 2);
 	draw_text((unsigned char *) "Time Display",5,23, 0, 2);
 
-	draw_text((unsigned char *) "Video Driver:", 2, 26, 0, 2);
-	draw_text((unsigned char *) "Full Screen:", 38, 26, 0, 2);
+	draw_text((unsigned char *) "MIDI mode", 8,25, 0, 2);
 
-	draw_fill_chars(18, 15, 34, 23, 0);
-	draw_box(17,14,35,24, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_text((unsigned char *) "Video Driver:", 2, 28, 0, 2);
+	draw_text((unsigned char *) "Full Screen:", 38, 28, 0, 2);
+
+	draw_fill_chars(18, 15, 34, 25, 0);
+	draw_box(17,14,35,26, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	for (n = 18; n < 35; n++) {
 		draw_char(154, n, 19, 3, 0);
+		draw_char(154, n, 24, 3, 0);
 	}
 
 }
@@ -243,14 +260,16 @@ static void config_set_page(void)
 	widgets_config[6].d.menutoggle.state = !!(status.flags & ACCIDENTALS_AS_FLATS);
 	widgets_config[7].d.menutoggle.state = status.time_display;
 
-	widgets_config[8].d.togglebutton.state = video_is_fullscreen();
-	widgets_config[9].d.togglebutton.state = !video_is_fullscreen();
+	widgets_config[8].d.toggle.state = !!(status.flags & MIDI_LIKE_TRACKER);
+
+	widgets_config[9].d.togglebutton.state = video_is_fullscreen();
+	widgets_config[10].d.togglebutton.state = !video_is_fullscreen();
 
 	nn = video_driver_name();
-	widgets_config[10].d.togglebutton.state = (strcasecmp(nn,"sdl") == 0);
-	widgets_config[11].d.togglebutton.state = (strcasecmp(nn,"yuv") == 0);
-	widgets_config[12].d.togglebutton.state = (strcasecmp(nn,"opengl") == 0);
-	widgets_config[13].d.togglebutton.state = (strcasecmp(nn,"directdraw") == 0);
+	widgets_config[11].d.togglebutton.state = (strcasecmp(nn,"sdl") == 0);
+	widgets_config[12].d.togglebutton.state = (strcasecmp(nn,"yuv") == 0);
+	widgets_config[13].d.togglebutton.state = (strcasecmp(nn,"opengl") == 0);
+	widgets_config[14].d.togglebutton.state = (strcasecmp(nn,"directdraw") == 0);
 }
 
 /* --------------------------------------------------------------------- */
@@ -259,7 +278,7 @@ void config_load_page(struct page *page)
 	page->title = "System Configuration (Ctrl-F1)";
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;
-	page->total_widgets = 14;
+	page->total_widgets = 15;
 	page->widgets = widgets_config;
 	page->help_index = HELP_GLOBAL;
 	
@@ -283,7 +302,7 @@ void config_load_page(struct page *page)
 			2,4,3,3,4,
 			change_mixer_limits,
 			output_channels);
-
+    ////
 	create_menutoggle(widgets_config+4,
 			18, 20,
 			3,5,4,4,5,
@@ -300,56 +319,62 @@ void config_load_page(struct page *page)
 			sharp_flat);
 	create_menutoggle(widgets_config+7,
 			18, 23,
-			6,10,7,7,10,
+			6,8,7,7,8,
 			change_ui_settings,
 			time_displays);
-
-	create_togglebutton(widgets_config+8,
-			44, 28, 5,
-			7,8,10,9,9,
+    ////
+	create_menutoggle(widgets_config+8,
+			18, 25,
+			7,11,8,8,11,
+			change_ui_settings,
+			midi_modes);
+    ////
+	create_togglebutton(widgets_config+9,
+			44, 30, 5,
+			8,9,11,10,10,
 			change_video_settings,
 			"Yes",
 			2, video_fs_group);
-	create_togglebutton(widgets_config+9,
-			54, 28, 5,
-			9,9,8,9,0,
+	create_togglebutton(widgets_config+10,
+			54, 30, 5,
+			10,10,9,10,0,
 			change_video_settings,
 			"No",
 			2, video_fs_group);
-
-	create_togglebutton(widgets_config+10,
-			6, 28, 26,
-			7,11,10,8,11,
+    ////
+	create_togglebutton(widgets_config+11,
+			6, 30, 26,
+			8,12,11,9,12,
 			change_video_settings,
 			"SDL Video Surface",
 			2, video_group);
 
-	create_togglebutton(widgets_config+11,
-			6, 31, 26,
-			10,12,11,8,12,
+	create_togglebutton(widgets_config+12,
+			6, 33, 26,
+			11,13,12,9,13,
 			change_video_settings,
 			"YUV Video Overlay",
 			2, video_group);
 
-	create_togglebutton(widgets_config+12,
-			6, 34, 26,
-			11,13,12,8,13,
+	create_togglebutton(widgets_config+13,
+			6, 36, 26,
+			12,14,13,9,14,
 			change_video_settings,
 			"OpenGL Graphic Context",
 			2, video_group);
 
-	create_togglebutton(widgets_config+13,
-			6, 37, 26,
-			12,13,13,8,8,
+	create_togglebutton(widgets_config+14,
+			6, 39, 26,
+			13,14,14,9,9,
 			change_video_settings,
 			"DirectDraw Surface",
 			2, video_group);
 #ifndef WIN32
 	/* patch ddraw out */
 	video_group[3] = -1;
-	widgets_config[13].d.togglebutton.state = 0;
-	widgets_config[12].next.down = 12;
-	widgets_config[12].next.tab = 8;
+	widgets_config[14].d.togglebutton.state = 0;
+	widgets_config[13].next.down = 13;
+	widgets_config[13].next.tab = 9;
 	page->total_widgets--;
 #endif
 

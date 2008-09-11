@@ -207,6 +207,11 @@ void cfg_load(void)
 		status.flags |= LAZY_REDRAW;
 	else
 		status.flags &= ~LAZY_REDRAW;
+
+	if (cfg_get_number(&cfg, "General", "midi_like_tracker", 0))
+		status.flags |= MIDI_LIKE_TRACKER;
+	else
+		status.flags &= ~MIDI_LIKE_TRACKER;
 	
 	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
 	
@@ -291,6 +296,8 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
+
+	cfg_set_number(&cfg, "General", "midi_like_tracker", !!(status.flags & MIDI_LIKE_TRACKER));
 	switch (status.fix_numlock_setting) {
 	case NUMLOCK_ALWAYS_ON:
 		cfg_set_string(&cfg, "General", "numlock_setting", "on");

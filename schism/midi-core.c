@@ -551,7 +551,7 @@ NEXT:	if (!*cursor) {
 	return 1;
 }
 
-static int _midi_send_unlocked(unsigned char *data, unsigned int len, unsigned int delay,
+static int _midi_send_unlocked(const unsigned char *data, unsigned int len, unsigned int delay,
 			int from)
 {
 	struct midi_port *ptr;
@@ -599,7 +599,7 @@ fflush(stdout);
 	}
 	return need_timer;
 }
-void midi_send_now(unsigned char *seq, unsigned int len)
+void midi_send_now(const unsigned char *seq, unsigned int len)
 {
 	if (!midi_record_mutex) return;
 
@@ -757,7 +757,7 @@ void midi_send_flush(void)
 	SDL_mutexV(midi_play_mutex);
 }
 
-void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
+void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int pos)
 {
 	if (!midi_record_mutex) return;
 
@@ -779,7 +779,7 @@ void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos)
 	}
 
 	/* pos is still in miliseconds */
-	if (_midi_send_unlocked(data, len, pos/midims, 2)) {
+	if (midims != 0 && _midi_send_unlocked(data, len, pos/midims, 2)) {
 		/* grr, we need a timer */
 
 		/* calculate pos in buffer */

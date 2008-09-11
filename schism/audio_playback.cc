@@ -42,6 +42,7 @@
 #include "midi.h"
 
 #include "snd_fm.h"
+#include "snd_gm.h"
 
 static int midi_playing;
 // ------------------------------------------------------------------------
@@ -64,7 +65,7 @@ static int audio_writeout_count = 0;
 struct audio_settings audio_settings;
 
 static void _schism_midi_out_note(int chan, const MODCOMMAND *m);
-static void _schism_midi_out_raw(unsigned char *data, unsigned int len, unsigned int delay);
+static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int delay);
 
 // ------------------------------------------------------------------------
 // playback
@@ -235,6 +236,26 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		}
 
 		ins_mode = song_is_instrument_mode();
+		
+		/*fprintf(stderr, "ins_mode(%d)ins(%d)samp(%d)note(%d)chan(%d)\n",
+		    ins_mode, ins, samp, note, chan);*/
+		
+		if (samp >= 0 && (c->dwFlags & CHN_ADLIB))
+		{
+			MODINSTRUMENT *i = mp->Ins + samp;
+    	    OPL_NoteOff(chan);
+    		OPL_Patch(chan, i->AdlibBytes);
+		}
+		if (ins >= 0 && (status.flags & MIDI_LIKE_TRACKER))
+		{
+    		INSTRUMENTHEADER* i = mp->Headers[ins];
+    		if(i && i->nMidiChannel)
+    		{
+        		GM_KeyOff(chan);
+	        	GM_DPatch(chan, i->nMidiProgram, i->wMidiBank);
+		    }
+		}
+
 		if (ins < 0) {
 			/* this is only needed on the sample page, when in
 			instrument mode...
@@ -288,12 +309,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			if (vol > -1) c->nVolume = (vol << 2);
 			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
 			c->nMasterChn = chan % 64;
-			
-			if(c->dwFlags & CHN_ADLIB)
-			{
-			    OPL_NoteOff(chan);
-    			OPL_Patch(chan, i->AdlibBytes);
-    		}
 		} else {
 			while (chan >= 64) chan -= 64;
 
@@ -335,6 +350,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nRowCommand = effect;
 			c->nRowParam = param;
 		}
+		
 		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
 			mp->m_dwSongFlags &= ~SONG_ENDREACHED;
 			mp->m_dwSongFlags |= SONG_PAUSED;
@@ -344,7 +360,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		/* put it back into range as necessary */
 		while (chan > 64) chan -= 64;
 
-		if (ins > -1) {
+		if(!(status.flags & MIDI_LIKE_TRACKER) && ins > -1) {
 			mc.note = note;
 			mc.instr = ins;
 			mc.volcmd = VOLCMD_VOLUME;
@@ -597,6 +613,7 @@ void song_stop_unlocked()
 	}
 	
 	OPL_Reset(); /* Also stop all OPL sounds */
+	GM_Reset();
 
 	memset(last_row,0,sizeof(last_row));
 	last_row_number = -1;
@@ -1211,7 +1228,12 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 	int need_note, need_velocity;
 	MODCHANNEL *c;
 
-	if (!mp || !song_is_instrument_mode()) return;
+	if (!mp || !song_is_instrument_mode() || (status.flags & MIDI_LIKE_TRACKER)) return;
+
+    /*if(m)
+    fprintf(stderr, "midi_out_note called (ch %d)note(%d)instr(%d)volcmd(%02X)cmd(%02X)vol(%02X)p(%02X)\n",
+        chan, m->note, m->instr, m->volcmd, m->command, m->vol, m->param);
+    else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
 
 	if (!midi_playing) {
 		mp->ProcessMidiMacro(0,
@@ -1352,7 +1374,7 @@ printf("channel = %d note=%d\n",chan,m_note);
 	}
 
 }
-static void _schism_midi_out_raw(unsigned char *data, unsigned int len, unsigned int pos)
+static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int pos)
 {
 #if 0
 	i = (8000*(audio_buffer_size - delay));
