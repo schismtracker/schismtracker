@@ -551,6 +551,8 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 static void event_loop(void) NORETURN;
 static void event_loop(void)
 {
+	static int currently_grabbed_hack = SDL_GRAB_OFF;
+
 	SDL_Event event;
 	struct key_event kk;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
@@ -566,6 +568,7 @@ static void event_loop(void)
 	int sawrep;
 	char *debug_s;
 	int fix_numlock_key;
+	int grab_check;
 	int q;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -580,6 +583,8 @@ static void event_loop(void)
 	kk.is_synthetic = 0;
 	kk.midi_bend = 0;
 	kk.midi_note = -1;
+
+	grab_check = 0;
 
 	/* X/Y resolution */
 	kk.rx = NATIVE_SCREEN_WIDTH / 80;
@@ -677,6 +682,37 @@ static void event_loop(void)
 #endif
 			kk.sym = event.key.keysym.sym;
 			kk.scancode = event.key.keysym.scancode;
+
+			q = 0;
+			switch (event.key.keysym.sym) {
+			case SDLK_RCTRL: case SDLK_LCTRL:
+				if (modkey & (KMOD_ALT|KMOD_META)) q = 1;
+				break;
+			case SDLK_RALT: case SDLK_LALT:
+			case SDLK_RMETA: case SDLK_LMETA:
+				if (modkey & KMOD_CTRL) q = 1;
+				break;
+			};
+			if (q && event.type == SDL_KEYDOWN) {
+				grab_check = 1;
+			} else if (event.type == SDL_KEYUP && grab_check) {
+				q = SDL_WM_GrabInput(SDL_GRAB_QUERY);
+				if (q == SDL_GRAB_QUERY) {
+					q = currently_grabbed_hack;
+				}
+				q = (q != SDL_GRAB_ON
+						? SDL_GRAB_ON
+						: SDL_GRAB_OFF);
+				SDL_WM_GrabInput(currently_grabbed_hack = q);
+				if (q == SDL_GRAB_ON) {
+					status_text_flash("Mouse and keyboard grabbed, press Ctrl+Alt to release");
+				} else {
+					status_text_flash("Mouse and keyboard released");
+				}
+				grab_check = 0;
+			} else {
+				grab_check = 0;
+			}
 
 			switch (fix_numlock_key) {
 			case NUMLOCK_GUESS:
