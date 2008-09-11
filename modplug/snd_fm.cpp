@@ -15,10 +15,10 @@ extern "C" {
 static const int oplbase = 0x388;
 
 // OPL info
-int opl=-1, oplretval=0, oplregno=0;
-int fm_active=0;
+static int opl=-1, oplretval=0, oplregno=0;
+static int fm_active=0;
 
-void Fmdrv_Outportb(unsigned port, unsigned value)
+static void Fmdrv_Outportb(unsigned port, unsigned value)
 {
     if(opl < 0 || ((int)port) < oplbase || ((int)port) >= oplbase+4) return;
     unsigned ind = port-oplbase;
@@ -31,7 +31,7 @@ void Fmdrv_Outportb(unsigned port, unsigned value)
     else oplregno = value;
 }
 
-unsigned char Fmdrv_Inportb(unsigned port)
+static unsigned char Fmdrv_Inportb(unsigned port)
 {
     return (((int)port) >= oplbase && ((int)port) < oplbase+4) ? oplretval : 0;
 }
@@ -51,10 +51,10 @@ void Fmdrv_MixTo(int* target, int count)
 
     if(!fm_active) return;
 
-	if (buf_size != count*2) {
-		free(buf);
-		buf = (short*)malloc(buf_size = (count*2));
-		if (!buf) abort();
+	if (buf_size != count*2)
+	{
+		delete[] buf;
+		buf = new short[buf_size = count];
 	}
     
     memset(buf, 0, count*2);
@@ -68,8 +68,8 @@ void Fmdrv_MixTo(int* target, int count)
     
     for(int a=0; a<count; ++a)
     {
-        target[a*2] += buf[a]*2000;
-        target[(a*2)+1] += buf[a]*2000;
+        target[a*2+0] += buf[a]*2000;
+        target[a*2+1] += buf[a]*2000;
     }
 }
 
@@ -83,7 +83,7 @@ static int SetBase(int c)
     return c%9;
 }
 
-void OPL_Byte(unsigned char Index, unsigned char Data)
+static void OPL_Byte(unsigned char Index, unsigned char Data)
 {
     //register int a;
     Fmdrv_Outportb(oplbase, Index);  //for(a=0; a<6;  a++)Fmdrv_Inportb(oplbase);
@@ -295,28 +295,4 @@ int OPL_Detect(void)
 void OPL_Close(void)
 {
     OPL_Reset();
-}
-
-void OPL_DPatch(int ch, const unsigned char *D, unsigned char GM, unsigned char bank)
-{
-    if(ch >= 18) return;
-    GM = GM;
-    bank = bank;
-    OPL_Patch(ch, Dtab[ch] = D);
-}
-
-void OPL_DTouch(int ch, unsigned char vol, unsigned char adlvol)
-{
-    if(ch >= 18) return;
-    if(!Dtab[ch])return;
-    vol = vol;
-    OPL_Touch(ch, Dtab[ch], adlvol);
-}
-
-void OPL_DNoteOn(int ch, unsigned char note, int hz, unsigned char vol, unsigned char adlvol)
-{
-    if(ch >= 18) return;
-    note = note;
-    OPL_NoteOn(ch, hz);
-    OPL_DTouch(ch, vol, adlvol);
 }
