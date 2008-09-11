@@ -41,7 +41,7 @@ struct midi_driver {
 	int (*disable)(struct midi_port *d);
 
 	void (*send)(struct midi_port *d,
-			unsigned char *seq, unsigned int len, unsigned int delay);
+			const unsigned char *seq, unsigned int len, unsigned int delay);
 	void (*drain)(struct midi_port *d);
 };
 
@@ -57,9 +57,9 @@ struct midi_provider {
 	int (*disable)(struct midi_port *d);
 
 	void (*send_now)(struct midi_port *d,
-			unsigned char *seq, unsigned int len, unsigned int delay);
+			const unsigned char *seq, unsigned int len, unsigned int delay);
 	void (*send_later)(struct midi_port *d,
-			unsigned char *seq, unsigned int len, unsigned int delay);
+			const unsigned char *seq, unsigned int len, unsigned int delay);
 	void (*drain)(struct midi_port *d);
 };
 struct midi_port {
@@ -74,9 +74,9 @@ struct midi_port {
 	int (*enable)(struct midi_port *d);
 	int (*disable)(struct midi_port *d);
 	void (*send_now)(struct midi_port *d,
-			unsigned char *seq, unsigned int len, unsigned int delay);
+			const unsigned char *seq, unsigned int len, unsigned int delay);
 	void (*send_later)(struct midi_port *d,
-			unsigned char *seq, unsigned int len, unsigned int delay);
+			const unsigned char *seq, unsigned int len, unsigned int delay);
 	void (*drain)(struct midi_port *d);
 
 	struct midi_provider *provider;
@@ -90,10 +90,10 @@ void midi_engine_stop(void);
 void midi_engine_poll_ports(void);
 
 /* some parts of schism call this; it means "immediately" */
-void midi_send_now(unsigned char *seq, unsigned int len);
+void midi_send_now(const unsigned char *seq, unsigned int len);
 
 /* ... but the player calls this */
-void midi_send_buffer(unsigned char *data, unsigned int len, unsigned int pos);
+void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int pos);
 void midi_send_flush(void);
 
 /* used by the audio thread */

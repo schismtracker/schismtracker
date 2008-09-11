@@ -295,7 +295,7 @@ static int _ip_stop(struct midi_port *p)
 	return 1;
 }
 
-static void _ip_send(struct midi_port *p, unsigned char *data, unsigned int len,
+static void _ip_send(struct midi_port *p, const unsigned char *data, unsigned int len,
 				UNUSED unsigned int delay)
 {
 	struct sockaddr_in asin;

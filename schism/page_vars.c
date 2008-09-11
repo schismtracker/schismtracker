@@ -32,9 +32,9 @@
 /* static variables */
 
 static struct widget widgets_vars[18];
-static int group_control[] = { 8, 9, -1 };
-static int group_playback[] = { 10, 11, -1 };
-static int group_slides[] = { 12, 13, -1 };
+static const int group_control[] = { 8, 9, -1 };
+static const int group_playback[] = { 10, 11, -1 };
+static const int group_slides[] = { 12, 13, -1 };
 
 /* --------------------------------------------------------------------- */
 

@@ -54,7 +54,7 @@ static struct widget *widgets_exportsave;
 
 /* XXX this needs to be kept in sync with diskwriters
    (FIXME: it shouldn't have to! build it when the savemodule page is built or something, idk -storlek) */
-static int filetype_saves[] = { 4, 5, 6, 7, 8, 9, -1 };
+static const int filetype_saves[] = { 4, 5, 6, 7, 8, 9, -1 };
 
 static int top_file = 0, top_dir = 0;
 static time_t directory_mtime;

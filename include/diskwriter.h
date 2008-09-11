@@ -45,8 +45,8 @@ struct diskwriter_driver {
 		these functions definitely need better names /storlek
 	*/
 	void (*p)(diskwriter_driver_t *x);
-	void (*m)(diskwriter_driver_t *x, unsigned char *buf, unsigned int len);
-	void (*g)(diskwriter_driver_t *x, unsigned char *buf, unsigned int len, unsigned int delay);
+	void (*m)(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len);
+	void (*g)(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len, unsigned int delay);
 	void (*x)(diskwriter_driver_t *x);
 
 	/* supplied by diskwriter (write function) */
@@ -114,7 +114,7 @@ int diskwriter_finish(void);
 extern diskwriter_driver_t *diskwriter_drivers[];
 
 /* this call is used by audio/loadsave to send midi data */
-int _diskwriter_writemidi(unsigned char *data, unsigned int len,
+int _diskwriter_writemidi(const unsigned char *data, unsigned int len,
 						unsigned int delay);
 
 /* these are used inbetween diskwriter interfaces */

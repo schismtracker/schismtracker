@@ -72,12 +72,12 @@ static struct widget *get_page_widgets(void)
 	return widgets_general;
 }
 
-static int subpage_switches_group[5] = { 1, 2, 3, 4, -1 };
-static int nna_group[5] = { 6, 7, 8, 9, -1 };
-static int dct_group[5] = { 10, 11, 12, 13, -1 };
-static int dca_group[4] = { 14, 15, 16, -1 };
+static const int subpage_switches_group[5] = { 1, 2, 3, 4, -1 };
+static const int nna_group[5] = { 6, 7, 8, 9, -1 };
+static const int dct_group[5] = { 10, 11, 12, 13, -1 };
+static const int dca_group[4] = { 14, 15, 16, -1 };
 
-static const char *pitch_envelope_states[] = { "Off", "On Pitch", "On Filter", NULL };
+static const char *const pitch_envelope_states[] = { "Off", "On Pitch", "On Filter", NULL };
 
 static int top_instrument = 1;
 static int current_instrument = 1;

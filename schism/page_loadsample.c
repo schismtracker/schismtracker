@@ -61,7 +61,7 @@ static int will_move_to = -1;
 static int fake_slot = -1;
 static int need_trigger = -1;
 static int need_keyoff = -1;
-static const char *loop_states[] = {
+static const char *const loop_states[] = {
 		"Off", "On Forwards", "On Ping Pong", NULL };
 
 static void handle_preload(void);

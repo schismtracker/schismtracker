@@ -183,7 +183,7 @@ static void _wavout_tail(diskwriter_driver_t *x)
 	le[3] = (tt >> 24) & 255;
 	x->o(x, le, 4);
 }
-static void _wavout_data(diskwriter_driver_t *x,unsigned char *buf,
+static void _wavout_data(diskwriter_driver_t *x,const unsigned char *buf,
 				unsigned int len)
 {
 	x->o(x, buf, len);

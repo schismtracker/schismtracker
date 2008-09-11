@@ -243,7 +243,7 @@ static void pattern_editor_reposition(void);
 /* options dialog */
 
 static struct widget options_widgets[8];
-static int options_link_split[] = { 5, 6, -1 };
+static const int options_link_split[] = { 5, 6, -1 };
 static int options_selected_widget = 0;
 
 static void options_close(void *data)
