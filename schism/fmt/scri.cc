@@ -199,8 +199,9 @@ static bool MidiS3M_Read(
         // wMidiBank, nMidiProgram, nMidiChannel, nMidiDrumKey
         g->midi_bank = bank;
         if(is_percussion)
-            { g->midi_drum_key = GM-1;
-              g->midi_channel = 10; }
+            { g->midi_drum_key = GM;
+              g->midi_channel = 10; 
+              g->midi_program = 128+(GM);}
         else
             { g->midi_program = GM-1;
               g->midi_channel = 1 + (slot%9); }

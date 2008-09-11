@@ -274,8 +274,8 @@ schismtracker_SOURCES = \
 	modplug/mmcmp.cpp		\
 	modplug/fastmix.cpp		\
 	modplug/fmopl.c			\
-	modplug/fmopl.h			\
 	modplug/snd_fm.cpp		\
+	modplug/snd_gm.cpp		\
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\

@@ -118,6 +118,8 @@ else
 	AM_CONDITIONAL([USE_ZLIB], [false])
 fi
 
+AC_CHECK_FUNCS(log2)
+
 dnl -----------------------------------------------------------------------
 
 saved_libs=$LIBS
