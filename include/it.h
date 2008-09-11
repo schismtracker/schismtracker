@@ -133,6 +133,9 @@ enum {
 	CAPS_PRESSED = (1 << 26),
 
 	NO_NETWORK = (1 << 27),
+	
+	/* Play MIDI events using the same semantics as tracker samples */
+	MIDI_LIKE_TRACKER = (1 << 28)
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
