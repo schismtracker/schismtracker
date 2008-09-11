@@ -40,6 +40,7 @@
 :   Ctrl-G            Go to order/pattern/row given time
 :
 :   PrintScreen       Take a screenshot (also Ctrl-Alt-D)
+:   Ctrl+Alt          Toggle mouse/keyboard grab
 :
 : On text widgets.
 :   Ctrl-C            Copy to clipboard (also Ctrl-Insert)
