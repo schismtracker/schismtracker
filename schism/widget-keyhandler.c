@@ -783,6 +783,10 @@ int widget_handle_key(struct key_event * k)
 
 	/* if we're here, that mess didn't completely handle the key (gosh...) so now here's another mess. */
 	switch (current_type) {
+	case WIDGET_MENUTOGGLE:
+	        if (menutoggle_handle_key(widget, k))
+	                return 1;
+	        break;
 	case WIDGET_NUMENTRY:
 		if (numentry_handle_digit(widget, k))
 			return 1;
