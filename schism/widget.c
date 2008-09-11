@@ -74,6 +74,7 @@ void create_menutoggle(struct widget *w, int x, int y, int next_up, int next_dow
         w->d.menutoggle.choices = choices;
         w->d.menutoggle.num_choices = n;
         w->activate = NULL;
+        w->d.menutoggle.activation_keys = NULL;
 }
 
 void create_button(struct widget *w, int x, int y, int width, int next_up, int next_down, int next_left,
@@ -290,6 +291,24 @@ int textentry_add_char(struct widget *w, Uint16 unicode)
         status.flags |= NEED_UPDATE;
 
         return 1;
+}
+
+int menutoggle_handle_key(struct widget *w, struct key_event *k)
+{
+        if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0)
+           && w->d.menutoggle.activation_keys)
+        {
+            const char* m = w->d.menutoggle.activation_keys;
+            const char* p = strchr(m, (char)k->unicode);
+            if(p)
+            {
+                w->d.menutoggle.state = p - m;
+                if(w->changed) w->changed();
+                status.flags |= NEED_UPDATE;
+                return 1;
+            }
+        }
+        return 0;
 }
 
 /* --------------------------------------------------------------------- */
