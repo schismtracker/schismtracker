@@ -185,7 +185,7 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 	*pprm = param;
 }
 
-static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32])
+static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32], int& scale)
 {
 //    fprintf(stderr, "Name(%s)\n", name);
     
@@ -198,7 +198,7 @@ static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32])
         char*s = name+2;
         int GM = 0;      // midi program
         int ft = 0;      // finetuning
-        int scale = 63;  // automatic volume scaling
+        /**/scale = 63;  // automatic volume scaling
         int autoSDx = 0; // automatic randomized SDx effect
         int bank = 0;    // midi bank
         while(isdigit_safe(*s)) GM = GM*10 + (*s++)-'0';
@@ -233,16 +233,23 @@ static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32])
         // wMidiBank, nMidiProgram, nMidiChannel, nMidiDrumKey
         Header.wMidiBank = bank;
         if(is_percussion)
-            { Header.nMidiDrumKey = GM-1;
-              Header.nMidiChannel = 10; }
+            { Header.nMidiDrumKey = GM;
+              Header.nMidiChannel = 10;
+              Header.nMidiProgram = 128+(GM); }
         else
             { Header.nMidiProgram = GM-1;
               Header.nMidiChannel = 1 + (iSmp%9); }
         
-        /* TODO: Apply ft, apply scale, apply autoSDx,
+        /* TODO: Apply scale, apply autoSDx,
          * FIXME: Channel note changes don't affect MIDI notes
          */
         strncpy((char*)Header.name, (const char*)name, 32);
+
+		for(unsigned a=0; a<128; ++a)
+		{
+			Header.Keyboard[a] = iSmp;
+			Header.NoteMap[a] = a+1+ft;
+		}
         return true;
     }
     return false;
@@ -424,8 +431,12 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		Headers[iSmp]->nDNA = DNA_NOTEOFF;
 		Headers[iSmp]->nDCT = DCT_INSTRUMENT;
 		Headers[iSmp]->dwFlags = Ins[iSmp].uFlags;
-		if(MidiS3M_Read(*Headers[iSmp], iSmp, m_szNames[iSmp]))
+		int scale;
+		if(MidiS3M_Read(*Headers[iSmp], iSmp, m_szNames[iSmp], scale))
+		{
 		    m_dwSongFlags |= SONG_INSTRUMENTMODE;
+    		Headers[iSmp]->nGlobalVol = scale*Ins[iSmp].nVolume/(2*63);
+		}
 		else
 		{
 		    delete Headers[iSmp];
@@ -564,6 +575,11 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
                 nbo++;
         header[0x20] = nbo & 0xFF;
 	header[0x21] = nbo >> 8;
+	
+	/* FIXME: For some reason, after each save,
+	 * one instrument is dropped from the sample list.
+	 */
+	
 	nbi = m_nSamples;
 	if (nbi > 99) nbi = 99;
 	header[0x22] = nbi & 0xFF;
@@ -728,18 +744,26 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 		memcpy(insex[i-1].scrs, "SCRS", 4);
 		insex[i-1].hmem = (BYTE)((DWORD)ofs >> 20);
 		insex[i-1].memseg = bswapLE16((WORD)((DWORD)ofs >> 4));
-		if (pins->pSample)
+
+		insex[i-1].vol = pins->nVolume / 4;
+		if (pins->nC4Speed)
+			insex[i-1].finetune = bswapLE32(pins->nC4Speed);
+		else
+			insex[i-1].finetune = bswapLE32(TransposeToFrequency(pins->RelativeTone, pins->nFineTune));
+
+		if (pins->uFlags & CHN_ADLIB)
+		{
+		    insex[i-1].type = 2;
+		    memcpy(&insex[i-1].length, pins->AdlibBytes, 12);
+		    // AdlibBytes occupies length, loopbegin and loopend
+		}
+		else if (pins->pSample)
 		{
 			insex[i-1].type = 1;
 			insex[i-1].length = bswapLE32(pins->nLength);
 			insex[i-1].loopbegin = bswapLE32(pins->nLoopStart);
 			insex[i-1].loopend = bswapLE32(pins->nLoopEnd);
-			insex[i-1].vol = pins->nVolume / 4;
 			insex[i-1].flags = (pins->uFlags & CHN_LOOP) ? 1 : 0;
-			if (pins->nC4Speed)
-				insex[i-1].finetune = bswapLE32(pins->nC4Speed);
-			else
-				insex[i-1].finetune = bswapLE32(TransposeToFrequency(pins->RelativeTone, pins->nFineTune));
 			UINT flags = RS_PCM8U;
 #ifndef NO_PACKING
 			if (nPacking)
