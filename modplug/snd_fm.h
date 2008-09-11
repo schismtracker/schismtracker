@@ -1,16 +1,9 @@
 #ifndef _BqtModplugSndFm
 #define _BqtModplugSndFm
 
-extern int opl;
-
-void Fmdrv_Outportb(unsigned port, unsigned value);
-unsigned char Fmdrv_Inportb(unsigned port);
-
 void Fmdrv_Init(int mixfreq);
-
 void Fmdrv_MixTo(int* buf, int count);
 
-void OPL_Byte(unsigned char Index, unsigned char Data);
 void OPL_NoteOff(int c);
 void OPL_NoteOn(int c, int Hertz); // also for pitch bending
 void OPL_Touch(int c, unsigned Vol);
@@ -20,9 +13,6 @@ void OPL_Patch(int c, const unsigned char *D);
 void OPL_Reset(void);
 int OPL_Detect(void);
 void OPL_Close(void);
-void OPL_DPatch(int ch, const unsigned char *D, unsigned char GM, unsigned char bank);
-void OPL_DTouch(int ch, unsigned char vol, unsigned char adlvol);
-void OPL_DNoteOn(int ch, unsigned char note, int hz, unsigned char vol, unsigned char adlvol);
 
 /*************/
 
