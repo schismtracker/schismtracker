@@ -8,6 +8,7 @@
 #include "sndfile.h"
 
 #include "snd_fm.h"
+#include "snd_gm.h"
 
 #ifdef MSC_VER
 #pragma warning(disable:4244)
@@ -892,7 +893,7 @@ BOOL CSoundFile::ProcessEffects()
 			// Invalid Instrument ?
 			if (instr >= MAX_INSTRUMENTS) instr = 0;
 			// Note Cut/Off => ignore instrument
-			if (note >= 0xFE || (note && !bPorta)) OPL_NoteOff(nChn);
+			if (note >= 0xFE || (note && !bPorta)) { OPL_NoteOff(nChn); GM_KeyOff(nChn); }
 			if (note >= 0xFE) instr = 0;
 			if ((note) && (note <= 128)) pChn->nNewNote = note;
 			// New Note Action ? (not when paused!!!)
@@ -906,6 +907,10 @@ BOOL CSoundFile::ProcessEffects()
 				MODINSTRUMENT *psmp = pChn->pInstrument;
 				InstrumentChange(pChn, instr, bPorta, TRUE);
 				OPL_Patch(nChn, Ins[instr].AdlibBytes);
+				if((m_dwSongFlags & SONG_INSTRUMENTMODE)
+				&& Headers[instr])
+					GM_DPatch(nChn, Headers[instr]->nMidiProgram, Headers[instr]->wMidiBank);
+				
 				pChn->nNewIns = 0;
 				// Special IT case: portamento+note causes sample change -> ignore portamento
 				if ((m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT))
@@ -921,9 +926,11 @@ BOOL CSoundFile::ProcessEffects()
 				{
 					InstrumentChange(pChn, pChn->nNewIns, bPorta, FALSE, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);
 					OPL_Patch(nChn, Ins[pChn->nNewIns].AdlibBytes);
+					if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Headers[pChn->nNewIns])
+    					GM_DPatch(nChn, Headers[pChn->nNewIns]->nMidiProgram, Headers[pChn->nNewIns]->wMidiBank);
 					pChn->nNewIns = 0;
 				}
-				if(note >= 0x80) OPL_NoteOff(nChn);
+				if(note >= 0x80) { OPL_NoteOff(nChn); GM_KeyOff(nChn); }
 				NoteChange(nChn, note, bPorta, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);
 				if ((bPorta) && (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) && (instr))
 				{
@@ -1961,7 +1968,7 @@ void CSoundFile::ExtendedChannelEffect(MODCHANNEL *pChn, UINT param)
 }
 
 // this is all brisby
-void CSoundFile::MidiSend(unsigned char *data, unsigned int len, UINT nChn, int fake)
+void CSoundFile::MidiSend(const unsigned char *data, unsigned int len, UINT nChn, int fake)
 {
 	MODCHANNEL *pChn = &Chn[nChn];
 	int oldcutoff;
