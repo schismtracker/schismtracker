@@ -93,8 +93,9 @@ struct widget_toggle {
 /* space -> state changed; cb triggered */
 struct widget_menutoggle {
         int state;      /* 0, 1, ..., num_choices - 1, num_choices */
-        const char **choices;
+        const char *const *choices;
         int num_choices;
+        const char *activation_keys;
 };
 
 /* enter -> cb triggered */
@@ -108,7 +109,7 @@ struct widget_togglebutton {
         const char *text;
         int padding;
         int state;      /* 0 = off, 1 = on */
-        int *group;
+        const int *group;
 };
 
 /* backspace -> truncated; changed cb triggered
@@ -399,7 +400,7 @@ void create_toggle(struct widget *w, int x, int y, int next_up,
 void create_menutoggle(struct widget *w, int x, int y, int next_up,
                        int next_down, int next_left, int next_right,
                        int next_tab, void (*changed) (void),
-                       const char **choices);
+                       const char *const *choices);
 void create_button(struct widget *w, int x, int y, int width, int next_up,
                    int next_down, int next_left, int next_right,
                    int next_tab, void (*changed) (void), const char *text,
@@ -408,7 +409,7 @@ void create_togglebutton(struct widget *w, int x, int y, int width,
                          int next_up, int next_down, int next_left,
                          int next_right, int next_tab,
                          void (*changed) (void), const char *text,
-                         int padding, int *group);
+                         int padding, const int *group);
 void create_textentry(struct widget *w, int x, int y, int width, int next_up,
                       int next_down, int next_tab, void (*changed) (void),
 		      char *text, int max_length);

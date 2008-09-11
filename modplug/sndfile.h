@@ -686,7 +686,7 @@ public:
 public:
 	// backhooks :)
 	static void (*_midi_out_note)(int chan, const MODCOMMAND *m);
-	static void (*_midi_out_raw)(unsigned char *,unsigned int, unsigned int);
+	static void (*_midi_out_raw)(const unsigned char *,unsigned int, unsigned int);
 	static void (*_multi_out_raw)(int chan, int *buf, int len);
 
 public:
@@ -777,7 +777,7 @@ public:
 	void ExtendedMODCommands(UINT nChn, UINT param);
 	void ExtendedS3MCommands(UINT nChn, UINT param);
 	void ExtendedChannelEffect(MODCHANNEL *, UINT param);
-	void MidiSend(unsigned char *data, unsigned int len, UINT nChn=0, int fake = 0);
+	void MidiSend(const unsigned char *data, unsigned int len, UINT nChn=0, int fake = 0);
 	void ProcessMidiMacro(UINT nChn, LPCSTR pszMidiMacro, UINT param=0,
 			UINT note=0, UINT velocity=0, UINT use_instr=0);
 	void SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modifier=256,int freq=0) const;

@@ -44,7 +44,7 @@
 static int opened[MAX_MIDI_PORTS];
 
 
-static void _oss_send(struct midi_port *p, unsigned char *data, unsigned int len, UNUSED unsigned int delay)
+static void _oss_send(struct midi_port *p, const unsigned char *data, unsigned int len, UNUSED unsigned int delay)
 {
 	int fd, r, n;
 	fd = opened[ n = INT_SHAPED_PTR(p->userdata) ];

@@ -44,10 +44,10 @@ static const char *interpolation_modes[] = {
 	"Cubic Spline", "8-Tap FIR Filter", NULL
 };
 
-static int interp_group[] = {
+static const int interp_group[] = {
 	2,3,4,5,-1,
 };
-static int ramp_group[] = {
+static int ramp_group[] = { /* not const because it is modified */
 	-1,-1,-1,
 };
 
@@ -348,7 +348,7 @@ void preferences_load_page(struct page *page)
 					change_mixer,
 					ptr,
 					2,
-					(void *) &interp_group);
+					interp_group);
 		page->total_widgets++;
 	}
 
@@ -383,14 +383,14 @@ void preferences_load_page(struct page *page)
 			i+9,i+12,i+10,i+11,i+11,
 			change_mixer,
 			"Enabled",2,
-			(void*)&ramp_group);
+			ramp_group);
 
 	create_togglebutton(widgets_preferences+i+11,
 			46,29+i*3,9,
 			i+9,i+12,i+10,i+13,i+13,
 			change_mixer,
 			"Disabled",1,
-			(void*)&ramp_group);
+			ramp_group);
 
 	create_button(widgets_preferences+i+12,
 			2, 44, 27,

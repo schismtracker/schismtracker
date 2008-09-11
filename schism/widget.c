@@ -47,9 +47,10 @@ void create_toggle(struct widget *w, int x, int y, int next_up, int next_down,
 }
 
 void create_menutoggle(struct widget *w, int x, int y, int next_up, int next_down, int next_left,
-                       int next_right, int next_tab, void (*changed) (void), const char **choices)
+                       int next_right, int next_tab, void (*changed) (void), const char *const *choices)
 {
         int n, width = 0, len;
+        typedef struct widget_menutoggle wt;
 
         for (n = 0; choices[n]; n++) {
                 len = strlen(choices[n]);
@@ -98,7 +99,7 @@ void create_button(struct widget *w, int x, int y, int width, int next_up, int n
 
 void create_togglebutton(struct widget *w, int x, int y, int width, int next_up, int next_down,
                          int next_left, int next_right, int next_tab, void (*changed) (void),
-                         const char *text, int padding, int *group)
+                         const char *text, int padding, const int *group)
 {
         w->type = WIDGET_TOGGLEBUTTON;
 	w->accept_text = 0;

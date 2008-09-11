@@ -45,7 +45,7 @@ UINT CSoundFile::m_nProLogicDepth = 12;
 UINT CSoundFile::m_nProLogicDelay = 20;
 
 void (*CSoundFile::_midi_out_note)(int chan, const MODCOMMAND *m) = NULL;
-void (*CSoundFile::_midi_out_raw)(unsigned char *,unsigned int, unsigned int) = NULL;
+void (*CSoundFile::_midi_out_raw)(const unsigned char *,unsigned int, unsigned int) = NULL;
 
 ////////////////////////////////////////////////////////////////////
 // DSP Effects internal state

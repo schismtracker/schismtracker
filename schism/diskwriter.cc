@@ -234,7 +234,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	if (mp->m_dwSongFlags & SONG_NOSTEREO) dw->channels = 1;
 	else if (pattern_max_channels(patno) == 1) dw->channels = 1;
 
-	dw->m = (void(*)(diskwriter_driver_t*,unsigned char *,unsigned int))_mw;
+	dw->m = (void(*)(diskwriter_driver_t*,const unsigned char *,unsigned int))_mw;
 
 	if (patno >= 0) {
 		song_start_once();
@@ -661,7 +661,7 @@ int diskwriter_finish(void)
 	return r;
 }
 
-int _diskwriter_writemidi(unsigned char *data, unsigned int len, unsigned int delay)
+int _diskwriter_writemidi(const unsigned char *data, unsigned int len, unsigned int delay)
 {
 	if (!dw || !fp)
 		return DW_ERROR;

@@ -184,7 +184,7 @@ static void _alsa_drain(struct midi_port *p UNUSED)
 	/* not port specific */
 	snd_seq_drain_output(seq);
 }
-static void _alsa_send(struct midi_port *p, unsigned char *data, unsigned int len, unsigned int delay)
+static void _alsa_send(struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay)
 {
 	struct alsa_midi *ex;
 	snd_seq_event_t ev;

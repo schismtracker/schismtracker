@@ -233,7 +233,7 @@ inline int page_is_instrument_list(int page)
 /* --------------------------------------------------------------------------------------------------------- */
 
 static struct widget new_song_widgets[10] = {};
-static int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
+static const int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
 
 static void new_song_ok(UNUSED void *data)
 {
