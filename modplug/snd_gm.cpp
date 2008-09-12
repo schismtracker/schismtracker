@@ -179,29 +179,10 @@ public:
         KnowNothing();
     }
     
-    void SetVolume(int c, unsigned newvol)
-    {
-        if(volume == newvol) return;
-        MPU_Ctrl(c, 7, volume=newvol);
-    }
-    
-    void SetPatchAndBank(int c, int p, int b)
-    {
-        if(b != bank)  MPU_Ctrl(c, 0, bank=b);
-        if(p != patch) MPU_Patch(c, patch=p);
-    }
-    
-    void SetPitchBend(int c, int value)
-    {
-        if(value == bend) return;
-        MPU_Bend(c, bend = value);
-    }
-    
-    void SetPan(int c, int value)
-    {
-        if(value == pan) return;
-		MPU_Ctrl(c, 10, (unsigned char)((pan=value)+128) / 2);
-    }
+    void SetVolume(int c, unsigned newvol);
+    void SetPatchAndBank(int c, int p, int b);
+    void SetPitchBend(int c, int value);
+    void SetPan(int c, int value);
     
     void KnowNothing()
     {
@@ -213,6 +194,30 @@ public:
     }
     bool KnowSomething() const { return patch != 255; }
 };
+
+void MIDIstateInfo::SetVolume(int c, unsigned newvol)
+{
+    if(volume == newvol) return;
+    MPU_Ctrl(c, 7, volume=newvol);
+}
+
+void MIDIstateInfo::SetPatchAndBank(int c, int p, int b)
+{
+    if(b != bank)  MPU_Ctrl(c, 0, bank=b);
+    if(p != patch) MPU_Patch(c, patch=p);
+}
+
+void MIDIstateInfo::SetPitchBend(int c, int value)
+{
+    if(value == bend) return;
+    MPU_Bend(c, bend = value);
+}
+
+void MIDIstateInfo::SetPan(int c, int value)
+{
+    if(value == pan) return;
+    MPU_Ctrl(c, 10, (unsigned char)((pan=value)+128) / 2);
+}
 
 /* This helps reduce the MIDI traffic, also does some encapsulation */
 static MIDIstateInfo MIDIchans[16];
@@ -385,7 +390,7 @@ void GM_Reset(void)
     for(a=0; a<16; a++)
     {
         MPU_Ctrl(a, 0x7B, 0);   // turn off all notes
-        MPU_Ctrl(a, 10,   0);   // reset pan position
+        MIDIchans[a].SetPan(a, 0);           // reset pan position
         MIDIchans[a].SetVolume(a, 127);      // set channel volume
         MIDIchans[a].SetPitchBend(a, PitchBendCenter);// reset pitch bends
         MIDIchans[a].KnowNothing();
