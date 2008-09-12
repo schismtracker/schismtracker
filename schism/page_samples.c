@@ -828,6 +828,15 @@ const int nadlibconfig_widgets = sizeof(adlibconfig_widgets)/sizeof(*adlibconfig
 
 static void do_adlibconfig(UNUSED void *data)
 {
+	song_sample *sample = song_get_sample(current_sample, NULL);
+	if (!sample->data) {
+		sample->data = song_sample_allocate(1);
+		sample->length = 1;
+	}
+	if (!(sample->flags & SAMP_ADLIB)) {
+		sample->flags |= SAMP_ADLIB;
+		status_text_flash("Created adlib sample");
+	}
 }
 
 static void adlibconfig_refresh(void)
@@ -908,7 +917,7 @@ static void sample_adlibconfig_draw_const(void)
     
 }
         
-static void sample_adlibconfig_dialog(void)
+static void sample_adlibconfig_dialog(UNUSED void *ign)
 {
     struct dialog* dialog;
     song_sample* sample = song_get_sample(current_sample, NULL);
@@ -958,7 +967,7 @@ static void sample_adlibconfig_dialog(void)
     dialog = dialog_create_custom(9, 30, 61, 15, sample_adlibconfig_widgets,
                                   nadlibconfig_widgets, 0,
                                   sample_adlibconfig_draw_const, NULL);
-    //dialog->action_yes = do_adlibconfig;
+    dialog->action_yes = do_adlibconfig;
 }
 
 /* --------------------------------------------------------------------- */
@@ -1263,9 +1272,13 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		exchange_sample_dialog();
 		return;
 	case SDLK_z:
-	    if(sample->data != NULL && (sample->flags & SAMP_ADLIB))
-	        sample_adlibconfig_dialog();
-	    return;
+		if (sample->data == NULL || (sample->flags & SAMP_ADLIB))
+			sample_adlibconfig_dialog(NULL);
+		else
+			dialog_create(DIALOG_OK_CANCEL, "This will replace this sample",
+				      sample_adlibconfig_dialog,
+				      dialog_cancel, 1, NULL);
+		return;
 	case SDLK_INSERT:
 		song_insert_sample_slot(current_sample);
 		status.flags |= NEED_UPDATE;
