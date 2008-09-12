@@ -1,3 +1,3 @@
 /* this file must be checked in before each proper build.
 */
-#define BUILD_VERSION "$Date: 2008/09/10 21:37:31 $"
+#define BUILD_VERSION "$Date: 2008/09/10 21:41:20 $"
