@@ -27,6 +27,7 @@
 |   Alt-T        Save current sample to disk (Export Format)
 |   Alt-W        Save current sample to disk (RAW Format)
 |   Alt-X        Exchange sample (only in Sample List)
+:   Alt-Z        Edit/create ADLIB (FM) sample
 |
 |   Alt-Ins      Insert sample slot (updates pattern data)
 |   Alt-Del      Remove sample slot (updates pattern data)
