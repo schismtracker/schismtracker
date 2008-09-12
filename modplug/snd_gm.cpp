@@ -105,7 +105,7 @@ static void MPU_NoteOff(int c, int k, int v)
 {
     if(!(status.flags & MIDI_LIKE_TRACKER)) return;
     
-    if(RunningStatus == 0x90+c)
+    if(((unsigned char)RunningStatus) == 0x90+c)
     {
         // send a zero-velocity keyoff instead for optimization
         MPU_NoteOn(c, k, 0);
@@ -247,7 +247,7 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key)
     memset(bad_channels, 0, sizeof(bad_channels));
     memset(used_channels, 0, sizeof(used_channels));
     
-    for(int a=0; a<MAXCHN; ++a)
+    for(unsigned int a=0; a<MAXCHN; ++a)
     {
         if(S3Mchans[a].IsActive() && !S3Mchans[a].IsPercussion())
         {
@@ -280,19 +280,19 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key)
 
 void GM_Patch(int c, unsigned char p)
 {
-    if(c < 0 || c >= MAXCHN) return;
+    if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
 	S3Mchans[c].patch = p; // No actual data is sent.
 }
 
 void GM_Bank(int c, unsigned char b)
 {
-    if(c < 0 || c >= MAXCHN) return;
+    if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
     S3Mchans[c].bank = b; // No actual data is sent yet.
 }
 
 void GM_Touch(int c, unsigned char Vol)
 {
-    if(c < 0 || c >= MAXCHN) return;
+    if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
 	/* This function must only be called when
 	 * a key has been played on the channel. */
 	if(!S3Mchans[c].IsActive()) return;
@@ -303,7 +303,7 @@ void GM_Touch(int c, unsigned char Vol)
 
 void GM_KeyOn(int c, unsigned char key, unsigned char Vol)
 {
-    if(c < 0 || c >= MAXCHN) return;
+    if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
     GM_KeyOff(c); // Ensure the previous key on this channel is off.
     
     if(S3Mchans[c].IsActive()) return; // be sure the channel is deactivated.
@@ -339,7 +339,7 @@ void GM_KeyOn(int c, unsigned char key, unsigned char Vol)
 
 void GM_KeyOff(int c)
 {
-    if(c < 0 || c >= MAXCHN) return;
+    if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
     if(!S3Mchans[c].IsActive()) return; // nothing to do
 
     //fprintf(stderr, "GM_KeyOff(%d)\n", c);
@@ -356,7 +356,7 @@ void GM_KeyOff(int c)
 
 void GM_Bend(int c, unsigned Count)
 {
-    if(c < 0 || c >= MAXCHN) return;
+    if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
     /* I hope nobody tries to bend hi-hat or something like that :-) */
     /* 1998-10-03 01:50 Apparently that can happen too...
        For example in the last pattern of urq.mod there's
@@ -375,7 +375,7 @@ void GM_Bend(int c, unsigned Count)
 
 void GM_Reset(void)
 {
-	int a;
+	unsigned int a;
     //fprintf(stderr, "GM_Reset\n");
 	for(a=0; a<MAXCHN; a++)
 	{
@@ -395,14 +395,14 @@ void GM_Reset(void)
 void GM_DPatch(int ch, unsigned char GM, unsigned char bank)
 {
     //fprintf(stderr, "GM_DPatch(%d, %02X @ %d)\n", ch, GM, bank);
-    if(ch < 0 || ch >= MAXCHN) return;
+    if(ch < 0 || ((unsigned int)ch) >= MAXCHN) return;
 	GM_Bank(ch, bank);
 	GM_Patch(ch, GM);
 }
 void GM_Pan(int c, signed char val)
 {
     //fprintf(stderr, "GM_Pan(%d,%d)\n", c,val);
-    if(c < 0 || c >= MAXCHN) return;
+    if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
 	S3Mchans[c].pan = val;
 	
 	// If a note is playing, effect immediately.
@@ -423,7 +423,7 @@ static double log2(double d)
 void GM_SetFreqAndVol(int c, int Hertz, int Vol) // for keyons and pitch bending  alike
 {
     //fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,Vol);
-    if(c < 0 || c >= MAXCHN) return;
+    if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
     
     
     /*

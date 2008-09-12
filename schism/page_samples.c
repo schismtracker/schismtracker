@@ -889,7 +889,7 @@ static void sample_adlibconfig_draw_const(void)
       { 43,12, "Volume Vibrato" }
     };
     
-    int a;
+    unsigned int a;
 
     draw_fill_chars(25,6+30, 32,13+30, 0);
     draw_box(25,6+30, 28,13+30, BOX_THIN | BOX_INNER | BOX_INSET);
