@@ -837,6 +837,9 @@ static void do_adlibconfig(UNUSED void *data)
 		sample->flags |= SAMP_ADLIB;
 		status_text_flash("Created adlib sample");
 	}
+	sample->flags &= ~(SAMP_LOOP | SAMP_16_BIT | SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG | SAMP_STEREO);
+	sample->loop_start = 0;
+	sample->loop_end   = 0;
 }
 
 static void adlibconfig_refresh(void)
