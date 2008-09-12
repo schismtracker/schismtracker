@@ -791,36 +791,36 @@ static const struct {
 	int byteno, firstbit, nbits;
 } adlibconfig_widgets[] =
 {
-	39,3, B, 10,0,1, // add. synth
-	39,4, N, 10,1,3, // mod. feedback
+	{ 39,3, B, 10,0,1 }, // add. synth
+	{ 39,4, N, 10,1,3 }, // mod. feedback
 	
-	26,7, N, 5,4,4,  // carrier attack
-	26,8, N, 5,0,4,  // carrier decay
-	26,9, N, 7,4,-4, // carrier sustain (0=maximum, 15=minimum)
-	26,10,N, 7,0,4,  // carrier release
-	26,11,B, 1,5,1,  // carrier sustain flag
-	26,12,N, 3,0,-6, // carrier volume (0=maximum, 63=minimum)
+	{ 26,7, N, 5,4,4 },  // carrier attack
+	{ 26,8, N, 5,0,4 },  // carrier decay
+	{ 26,9, N, 7,4,-4 }, // carrier sustain (0=maximum, 15=minimum)
+	{ 26,10,N, 7,0,4 },  // carrier release
+	{ 26,11,B, 1,5,1 },  // carrier sustain flag
+	{ 26,12,N, 3,0,-6 }, // carrier volume (0=maximum, 63=minimum)
 
-	30,7, N, 4,4,4,  // modulator attack
-	30,8, N, 4,0,4,  // modulator decay
-	30,9, N, 6,4,-4, // modulator sustain (0=maximum, 15=minimum)
-	30,10,N, 6,0,4,  // modulator release
-	30,11,B, 0,5,1,  // modulator sustain flag
-	30,12,N, 2,0,-6, // modulator volume (0=maximum, 63=minimum)
+	{ 30,7, N, 4,4,4 },  // modulator attack
+	{ 30,8, N, 4,0,4 },  // modulator decay
+	{ 30,9, N, 6,4,-4 }, // modulator sustain (0=maximum, 15=minimum)
+	{ 30,10,N, 6,0,4 },  // modulator release
+	{ 30,11,B, 0,5,1 },  // modulator sustain flag
+	{ 30,12,N, 2,0,-6 }, // modulator volume (0=maximum, 63=minimum)
 	
-	58,7, B, 1,4,1,  // carrier scale envelope flag
-	58,8, N, 3,6,2,  // carrier level scaling (This is actually reversed bits...)
-	58,9, N, 1,0,4,  // carrier frequency multiplier
-	58,10,N, 9,0,2,  // carrier wave select
-	58,11,B, 1,6,1,  // carrier pitch vibrato
-	58,12,B, 1,7,1,  // carrier volume vibrato
+	{ 58,7, B, 1,4,1 },  // carrier scale envelope flag
+	{ 58,8, N, 3,6,2 },  // carrier level scaling (This is actually reversed bits...)
+	{ 58,9, N, 1,0,4 },  // carrier frequency multiplier
+	{ 58,10,N, 9,0,2 },  // carrier wave select
+	{ 58,11,B, 1,6,1 },  // carrier pitch vibrato
+	{ 58,12,B, 1,7,1 },  // carrier volume vibrato
 	
-	62,7, B, 0,4,1,  // modulator scale envelope flag
-	62,8, N, 2,6,2,  // modulator level scaling (This is actually reversed bits...)
-	62,9, N, 0,0,4,  // modulator frequency multiplier
-	62,10,N, 8,0,2,  // modulator wave select
-	62,11,B, 0,6,1,  // modulator pitch vibrato
-	62,12,B, 0,7,1,  // modulator volume vibrato
+	{ 62,7, B, 0,4,1 },  // modulator scale envelope flag
+	{ 62,8, N, 2,6,2 },  // modulator level scaling (This is actually reversed bits...)
+	{ 62,9, N, 0,0,4 },  // modulator frequency multiplier
+	{ 62,10,N, 8,0,2 },  // modulator wave select
+	{ 62,11,B, 0,6,1 },  // modulator pitch vibrato
+	{ 62,12,B, 0,7,1 },  // modulator volume vibrato
 };
 const int nadlibconfig_widgets = sizeof(adlibconfig_widgets)/sizeof(*adlibconfig_widgets);
 
