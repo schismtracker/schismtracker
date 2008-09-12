@@ -843,7 +843,7 @@ static void adlibconfig_refresh(void)
         unsigned maskvalue = 0xFFFF;
         
         unsigned nbits_real = adlibconfig_widgets[a].nbits < 0 ? -adlibconfig_widgets[a].nbits : adlibconfig_widgets[a].nbits;
-        unsigned minvalue = 0, maxvalue = (1 << nbits_real)-1;
+        unsigned maxvalue = (1 << nbits_real)-1;
 
         switch(adlibconfig_widgets[a].type)
         {
