@@ -64,3 +64,7 @@ sh scripts/bin2h.sh -n font_default_upper_itf font/default-upper-itf.fnt >> $tem
 sh scripts/bin2h.sh -n font_default_upper_alt font/default-upper-alt.fnt >> $tempfile || exit 1
 sh scripts/bin2h.sh -n font_half_width font/half-width.fnt >> $tempfile || exit 1
 mv $tempfile include/auto/default-font.h
+
+if [ -d .git ]; then
+	git-commit -m 'Build' include/auto/*.h
+fi
