@@ -24,10 +24,12 @@ static void Fmdrv_Outportb(unsigned port, unsigned value)
     unsigned ind = port-oplbase;
     OPLWrite(opl, ind, value);
     if(ind & 1)
+    {
         if(oplregno == 4)
+        {
             if(value == 0x80) oplretval = 0x02;
             else if(value == 0x21) oplretval = 0xC0;
-        else {}
+    }   }
     else oplregno = value;
 }
 

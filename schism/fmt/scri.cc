@@ -174,24 +174,24 @@ static bool MidiS3M_Read(
             if(*s == '-') sign=1;
             if(sign || *s=='+')
             {
-                for(ft=0; isdigit_safe(*++s); ft=ft*10+(*s-'0'));
+                for(ft=0; isdigit_safe(*++s); ft=ft*10+(*s-'0')) {}
                 if(sign)ft=-ft;
                 continue;
             }
             if(*s=='/')
             {
-                for(scale=0; isdigit_safe(*++s); scale=scale*10+(*s-'0'));
+                for(scale=0; isdigit_safe(*++s); scale=scale*10+(*s-'0')) {}
                 continue;
             }
             if(*s=='&')
             {
-                for(autoSDx=0; isdigit_safe(*++s); autoSDx=autoSDx*10+(*s-'0'));
+                for(autoSDx=0; isdigit_safe(*++s); autoSDx=autoSDx*10+(*s-'0')) {}
                 if(autoSDx > 15) autoSDx &= 15;
                 continue;
             }
             if(*s=='%')
             {
-                for(bank=0; isdigit_safe(*++s); bank=bank*10+(*s-'0'));
+                for(bank=0; isdigit_safe(*++s); bank=bank*10+(*s-'0')) {}
                 continue;
             }
             break;
