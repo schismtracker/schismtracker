@@ -8,5 +8,5 @@ else
 	date -r .git/refs/heads/master \
 		+'#define BUILD_VERSION "$Date: %Y/%m/%d %H:%M:%S $"' 
 	mv include/auto/build-version.h.tmp include/auto/build-version.h
-	git commit -m 'Build' include/auto/build-version.h
+	git commit -m 'Build' include/auto/build-version.h >&2
 fi
