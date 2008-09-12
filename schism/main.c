@@ -692,6 +692,8 @@ static void event_loop(void)
 			case SDLK_RMETA: case SDLK_LMETA:
 				if (modkey & KMOD_CTRL) q = 1;
 				break;
+			default:
+				break;
 			};
 			if (q && event.type == SDL_KEYDOWN) {
 				grab_check = 1;
