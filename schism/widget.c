@@ -369,8 +369,8 @@ int numentry_handle_digit(struct widget *w, struct key_event *k)
 
 void togglebutton_set(struct widget *p_widgets, int widget, int do_callback)
 {
+        const int *group = p_widgets[widget].d.togglebutton.group;
         int i;
-        int *group = p_widgets[widget].d.togglebutton.group;
 
 	if (!group) return; /* assert */
 
