@@ -587,7 +587,7 @@ INLINE int limit( int val, int max, int min ) {
 
 
 /* status set and IRQ handling */
-INLINE void OPL_STATUS_SET(FM_OPL *OPL,int flag)
+/*INLINE*/static void OPL_STATUS_SET(FM_OPL *OPL,int flag)
 {
 	/* set status flag */
 	OPL->status |= flag;
@@ -603,7 +603,7 @@ INLINE void OPL_STATUS_SET(FM_OPL *OPL,int flag)
 }
 
 /* status reset and IRQ handling */
-INLINE void OPL_STATUS_RESET(FM_OPL *OPL,int flag)
+/*INLINE*/static void OPL_STATUS_RESET(FM_OPL *OPL,int flag)
 {
 	/* reset status flag */
 	OPL->status &=~flag;
@@ -1272,7 +1272,7 @@ INLINE void FM_KEYOFF(OPL_SLOT *SLOT, UINT32 key_clr)
 }
 
 /* update phase increment counter of operator (also update the EG rates if necessary) */
-INLINE void CALC_FCSLOT(OPL_CH *CH,OPL_SLOT *SLOT)
+/*INLINE*/static void CALC_FCSLOT(OPL_CH *CH,OPL_SLOT *SLOT)
 {
 	int ksr;
 
