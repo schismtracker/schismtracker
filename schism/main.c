@@ -584,6 +584,9 @@ static void event_loop(void)
 	kk.midi_bend = 0;
 	kk.midi_note = -1;
 
+	/* silence valgrind */
+	kk.state = 0;
+
 	grab_check = 0;
 
 	/* X/Y resolution */
