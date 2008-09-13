@@ -261,7 +261,7 @@ BOOL CSoundFile::Destroy()
 	}
 	if (m_lpszSongComments)
 	{
-		delete m_lpszSongComments;
+		delete[] m_lpszSongComments;
 		m_lpszSongComments = NULL;
 	}
 	for (i=1; i<MAX_SAMPLES; i++)
