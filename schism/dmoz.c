@@ -677,6 +677,7 @@ int dmoz_read_ex(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist
 				free(ptr);
 				continue; /* better luck next time */
 			}
+			if (st.st_mtime < 0) st.st_mtime = 0;
 			if (S_ISDIR(st.st_mode))
 				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(ent->d_name), &st, 0);
 			else if (S_ISREG(st.st_mode))
