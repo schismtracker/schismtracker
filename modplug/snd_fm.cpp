@@ -94,7 +94,6 @@ static void OPL_Byte(unsigned char Index, unsigned char Data)
 
 void OPL_NoteOff(int c)
 {
-//fprintf(stderr, "OPL_NoteOff(%d)\n", c);
     c = SetBase(c);
     if(c<9)
     {
