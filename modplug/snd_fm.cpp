@@ -148,7 +148,7 @@ void OPL_NoteOn(int c, int Hertz)
 
 void OPL_Touch(int c, unsigned Vol)
 {
-    OPL_Touch(c, Dtab[c], Vol);
+    if (c < 18) OPL_Touch(c, Dtab[c], Vol);
 }
 
 void OPL_Touch(int c, const unsigned char *D, unsigned Vol)
