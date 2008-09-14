@@ -323,7 +323,11 @@ static void multi_out_helper(int chan, int *buf, int len)
 	LONG vu_min[2] = { 0x7fffffff, 0x7fffffff };
 	LONG vu_max[2] = {-0x7fffffff,-0x7fffffff };
 
-	dw->channels = multi_mono[chan] ? 1 : 2;
+	if (!multi_fp[chan]) return;
+
+	/* skip */
+	if (dw->channels != (multi_mono[chan-1] ? 1 : 2)) return;
+
 	if (dw->channels == 1) {
 		len *= 2;
 		MonoFromStereo((int *)diskbuf, len);
@@ -378,7 +382,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 			diskwriter_finish();
 			return DW_ERROR;
 		}
-		dw->channels = multi_mono[i] ? 1 : 2;
+		dw->channels = multi_mono[i-1] ? 1 : 2;
 		if (dw->p) dw->p(dw);
 	}
 
@@ -394,7 +398,11 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 		diskwriter_finish();
 		return DW_ERROR;
 	}
+
+	dw->channels = 2;
 	mp->_multi_out_raw = multi_out_helper;
+
+	current_song_len *= 2; /* two passes */
 
 	log_appendf(2, "Multi-out diskwriting into %s/*.%s", dir,
 			dw->extension);
@@ -501,6 +509,7 @@ int diskwriter_sync(void)
 	}
 
 	n = (int)(((double)song_get_current_time() * 100.0) / current_song_len);
+	if (mp->_multi_out_raw && dw->channels == 1) n += 50;
 	diskwriter_dialog_progress(n);
 
 	// add status dialog
@@ -518,6 +527,14 @@ int diskwriter_sync(void)
 	if (!fp_ok)
 		return DW_SYNC_ERROR;
 	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
+		if (mp->_multi_out_raw && dw->channels == 2) {
+			/* pass 2 */
+			chan_setup(dw->rate/2, 1);
+			dw->channels = 1;
+			return DW_SYNC_MORE;
+		}
+
+
 		if (!dw->x) {
 			/* do nothing */
 		} else if (mp->_multi_out_raw) {
