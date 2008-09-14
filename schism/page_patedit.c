@@ -1918,6 +1918,32 @@ static void snap_copy(struct pattern_snap *s, int x, int y, int width, int heigh
 	}
 }
 
+static int snap_honor_mute(struct pattern_snap *s, int base_channel)
+{
+	int i,j;
+	song_note *n;
+	int mute[64];
+	int did_any;
+
+	for (i = 0; i < s->channels; i++) {
+		mute[i] = (song_get_channel(i+base_channel)->flags & CHN_MUTE);
+	}
+
+	n = s->data;
+	did_any = 0;
+	for (j = 0; j < s->rows; j++) {
+		for (i = 0; i < s->channels; i++) {
+			if (mute[i]) {
+				memset(n, 0, sizeof(song_note));
+				did_any = 1;
+			}
+			n++;
+		}
+	}
+
+	return did_any;
+}
+
 static void pated_history_restore(int n)
 {
 	if (n < 0 || n > 9) return;
@@ -1988,8 +2014,10 @@ static void clipboard_free(void)
 
 /* clipboard_copy is fundementally the same as selection_erase
  * except it uses memcpy instead of memset :) */
-static void clipboard_copy(void)
+static void clipboard_copy(int honor_mute)
 {
+	int flag;
+
 	CHECK_FOR_SELECTION(return);
 
 	clipboard_free();
@@ -2000,8 +2028,17 @@ static void clipboard_copy(void)
 		(selection.last_channel - selection.first_channel) + 1,
 		(selection.last_row - selection.first_row) + 1);
 
+	flag = 0;
+	if (honor_mute) {
+		flag = snap_honor_mute(&clipboard, selection.first_channel-1);
+	}
+
 	/* transfer to system where appropriate */
 	clippy_yank();
+
+	if (flag) {
+		status_text_flash("Selection honors current mute settings");
+	}
 }
 
 static void clipboard_paste_overwrite(int suppress, int grow)
@@ -3525,7 +3562,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		break;
 	case SDLK_c:
 		if (k->state) return 1;
-		clipboard_copy();
+		clipboard_copy(0);
 		break;
 	case SDLK_o:
 		if (k->state) return 1;
@@ -3584,7 +3621,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		break;
 	case SDLK_z:
 		if (k->state) return 1;
-		clipboard_copy();
+		clipboard_copy(0);
 		selection_erase();
 		break;
 	case SDLK_y:
@@ -4050,6 +4087,12 @@ static int pattern_editor_handle_key(struct key_event * k)
 	}
 
 	switch (k->sym) {
+	case SDLK_l:
+		if (status.flags & CLASSIC_MODE) return 0;
+		if (k->state) return 1;
+		clipboard_copy(1);
+		break;
+
 	case SDLK_UP:
 		if (k->state) return 0;
 		channel_snap_back = -1;

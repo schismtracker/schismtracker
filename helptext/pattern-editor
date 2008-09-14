@@ -215,6 +215,7 @@
 | 2*Alt-X            Wipe all effect data  (*)
 |
 |   Alt-C            Copy block into clipboard
+:   Shift-L          Copy block to clipboard honoring current mute-settings
 |   Alt-P            Paste data from clipboard  (*)
 |   Alt-O            Overwrite with data from clipboard   (*)
 : 2*Alt-O            Grow pattern to clipboard length
