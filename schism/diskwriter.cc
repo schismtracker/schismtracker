@@ -364,20 +364,20 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 	dw_rename_from = NULL;
 	dw_rename_to = NULL;
 
-	if (chan_detect() == 1) {
-		chan_setup(dw->rate/2,2);
-	} else {
-		chan_setup(dw->rate,2);
-	}
+	chan_detect();
+	chan_setup(dw->rate,2);
 
 	for (i = 1; i < 64; i++) {
+		multi_fp[i] = 0;
+		if (song_get_channel(i-1)->flags & CHN_MUTE) continue;
+
 		sprintf(str, "%s%cmulti-%02d.%s",
 			dir, DIR_SEPARATOR, i,
 			f->extension);
 		fp = multi_fp[i] = fopen(str, "wb");
 		if (!multi_fp[i]) {
 			fp = NULL;
-			for (; i >= 1; i--) fclose(multi_fp[i]);
+			for (; i >= 1; i--) if (multi_fp[i]) fclose(multi_fp[i]);
 			memset(multi_fp, 0, sizeof(multi_fp));
 			diskwriter_finish();
 			return DW_ERROR;
