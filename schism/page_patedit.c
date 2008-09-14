@@ -4419,16 +4419,17 @@ int pattern_max_channels(int patno, int opt_bits[64])
 	song_sample *ps;
 	int total_rows;
 	int x, n, inst, samp;
+	int count[64];
 	int mlim;
+
+	for (n = 0; n < 64; n++) count[n] = 0;
 
 	mlim = -1;
 	total_rows = song_get_pattern(patno, &pattern);
 	while (total_rows > 0) {
 		for (n = 0; n < 64; n++) {
-#define MSTEREO_HIT \
-do { if (opt_bits) opt_bits[n] = 0; return 2; } while(0)
-#define MLIM_HIT \
-do { if (mlim == -1) mlim = n; else MSTEREO_HIT; } while(0)
+#define MSTEREO_HIT (count[n]=255)
+#define MLIM_HIT (count[n]++)
 
 			pc = song_get_channel(n);
 			if (!pc || (pc->flags & CHN_MUTE)) {
@@ -4453,6 +4454,7 @@ do { if (mlim == -1) mlim = n; else MSTEREO_HIT; } while(0)
 			case 'Y':
 			case 'P':
 				MLIM_HIT;
+				break;
 			case 'S':
 				if (pattern->parameter == 0x91)
 					MSTEREO_HIT;
@@ -4488,10 +4490,19 @@ do { if (mlim == -1) mlim = n; else MSTEREO_HIT; } while(0)
 		}
 		total_rows--;
 	}
-	/* still here? i guess it's mono! */
 #undef MLIM_HIT
 #undef MSTEREO_HIT
-	return 1;
+	x = 0;
+	for (n = 0; n < 64; n++) {
+		switch (count[n]) {
+		case 0: break;
+		default:
+			if (opt_bits) opt_bits[n] = 0;
+		case 1: x++;
+		};
+	}
+	if (x < 2) return 1;
+	return 2;
 }
 
 /* --------------------------------------------------------------------- */
