@@ -50,12 +50,12 @@ extern VOID MonoFromStereo(int *pMixBuf, UINT nSamples);
 
 
 static LPCONVERTPROC dw_multi_pCvt = Convert32To8;
-static int multi_downmix = 0;
 
 static unsigned char diskbuf[32768];
 static diskwriter_driver_t *dw = NULL;
 static FILE *fp = NULL;
 static FILE *multi_fp[64] = {NULL};
+static int multi_mono[64] = {0};
 
 static unsigned char *mbuf = NULL;
 static off_t mbuf_size = 0;
@@ -232,7 +232,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	if (dw->channels > 2) dw->channels = 2;
 
 	if (mp->m_dwSongFlags & SONG_NOSTEREO) dw->channels = 1;
-	else if (pattern_max_channels(patno) == 1) dw->channels = 1;
+	else if (pattern_max_channels(patno, multi_mono) == 1) dw->channels = 1;
 
 	dw->m = (void(*)(diskwriter_driver_t*,const unsigned char *,unsigned int))_mw;
 
@@ -298,6 +298,7 @@ static int chan_detect(void)
 	int lim, i;
 	byte *ol;
 
+	for (i = 0; i < 64; i++) multi_mono[i] = 1;
 	if (mp->m_dwSongFlags & SONG_NOSTEREO) {
 		nchan = 1;
 	} else {
@@ -306,7 +307,7 @@ static int chan_detect(void)
 		for (i = 0; i < 256; i++) {
 			if (ol[i] == ORDER_SKIP) continue;
 			if (ol[i] == ORDER_LAST) break;
-			lim = pattern_max_channels(ol[i]);
+			lim = pattern_max_channels(ol[i], multi_mono);
 			if (lim > 1) break;
 		}
 		if (lim == 1) nchan = 1; /* mono is possible */
@@ -322,7 +323,8 @@ static void multi_out_helper(int chan, int *buf, int len)
 	LONG vu_min[2] = { 0x7fffffff, 0x7fffffff };
 	LONG vu_max[2] = {-0x7fffffff,-0x7fffffff };
 
-	if (multi_downmix) {
+	dw->channels = multi_mono[chan] ? 1 : 2;
+	if (dw->channels == 1) {
 		len *= 2;
 		MonoFromStereo((int *)diskbuf, len);
 	}
@@ -358,9 +360,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 	dw_rename_from = NULL;
 	dw_rename_to = NULL;
 
-	multi_downmix = 0;
 	if (chan_detect() == 1) {
-		multi_downmix = 1;
 		chan_setup(dw->rate/2,2);
 	} else {
 		chan_setup(dw->rate,2);
@@ -378,6 +378,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 			diskwriter_finish();
 			return DW_ERROR;
 		}
+		dw->channels = multi_mono[i] ? 1 : 2;
 		if (dw->p) dw->p(dw);
 	}
 
