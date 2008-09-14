@@ -4368,7 +4368,7 @@ static void pattern_editor_playback_update(void)
 }
 
 /* --------------------------------------------------------------------- */
-int pattern_max_channels(int patno)
+int pattern_max_channels(int patno, int opt_bits[64])
 {
 	song_note *pattern;
 	song_instrument *pi;
@@ -4382,8 +4382,10 @@ int pattern_max_channels(int patno)
 	total_rows = song_get_pattern(patno, &pattern);
 	while (total_rows > 0) {
 		for (n = 0; n < 64; n++) {
+#define MSTEREO_HIT \
+do { if (opt_bits) opt_bits[n] = 0; return 2; } while(0)
 #define MLIM_HIT \
-do { if (mlim == -1) mlim = n; else return 2; } while(0)
+do { if (mlim == -1) mlim = n; else MSTEREO_HIT; } while(0)
 
 			pc = song_get_channel(n);
 			if (!pc || (pc->flags & CHN_MUTE)) {
@@ -4391,8 +4393,7 @@ do { if (mlim == -1) mlim = n; else return 2; } while(0)
 				continue;
 			}
 
-			if (pc->flags & CHN_SURROUND)
-				return 2;
+			if (pc->flags & CHN_SURROUND) MSTEREO_HIT;
 
 			if (pattern->note) {
 				if (pc->panning != 128) MLIM_HIT;
@@ -4411,7 +4412,7 @@ do { if (mlim == -1) mlim = n; else return 2; } while(0)
 				MLIM_HIT;
 			case 'S':
 				if (pattern->parameter == 0x91)
-					return 2;
+					MSTEREO_HIT;
 
 				if (pattern->parameter >= 0x80
 				&& pattern->parameter < 0x90)
@@ -4429,22 +4430,24 @@ do { if (mlim == -1) mlim = n; else return 2; } while(0)
 
 				samp = pi->sample_map[x & 127];
 				if (samp == 0) continue;
-				if (pi->flags & ENV_PANNING) return 2;
+				if (pi->flags & ENV_PANNING) MSTEREO_HIT;
 				if (pi->flags & ENV_SETPANNING) MLIM_HIT;
-				if (pi->pan_swing > 0) return 2;
-				if (pi->pitch_pan_separation != 0) return 2;
+				if (pi->pan_swing > 0) MSTEREO_HIT;
+				if (pi->pitch_pan_separation != 0) MSTEREO_HIT;
 			} else {
 				samp = inst;
 			}
 
 			ps = song_get_sample(samp, NULL);
 			if (!ps) continue;
-			if (ps->flags & SAMP_STEREO) return 2;
+			if (ps->flags & SAMP_STEREO) MSTEREO_HIT;
 			if (ps->flags & SAMP_PANNING) MLIM_HIT;
 		}
 		total_rows--;
 	}
 	/* still here? i guess it's mono! */
+#undef MLIM_HIT
+#undef MSTEREO_HIT
 	return 1;
 }
 

@@ -467,7 +467,7 @@ void update_current_row(void);
 void update_current_pattern(void);
 void pattern_editor_display_options(void);
 void pattern_editor_length_edit(void);
-int pattern_max_channels(int patno);
+int pattern_max_channels(int patno, int opt_bits[64]);
 
 /* page_orderpan.c */
 void update_current_order(void);
