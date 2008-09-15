@@ -500,12 +500,12 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
 		if(bend < 0) bend = 0;
 		if(bend > 0x3FFF) bend = 0x3FFF;
 		
-		if(Vol < 0) Vol = 0;
-		if(Vol > 127) Vol = 127;
-		
 		GM_Bend(c, bend);
     }
     
+    if(Vol < 0) Vol = 0;
+	if(Vol > 127) Vol = 127;
+		
     //if(!new_note)
     GM_Touch(c, Vol);
 }
