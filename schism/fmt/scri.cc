@@ -28,11 +28,11 @@ has the IT sample decompression code... */
 #include "mplink.h"
 #include "it_defs.h"
 
-struct scri_header
+struct scri_header /* Note: This struct must match the disk layout struct */
 {
     //00
     unsigned char type;
-    char          dosfn[11];
+    char          dosfn[12];
     unsigned char memseg[3];
     //10
     unsigned int  length;  // 32 bits
@@ -53,18 +53,29 @@ struct scri_header
     //4C
     char samplesig[4]; /* SCRS or SCRI */
     //50
-} PACKED;
+}/* PACKED*/;
+/* PACKED attribute removed because GCC complains of an unnecessary
+ * attribute (on ia32) when configured in ludicrous mode.
+ */
 
 static int load_scri_sample(const byte *data, size_t length, song_sample *smp, char *title,
                             bool load_sample_data = true)
 {
     const scri_header* header = (const scri_header*)data;
+    /*
+    fprintf(stderr, "%X-%X-%X-%X-%X\n",
+        (((char*)&(header->type     ))-((char*)&(header->type))),
+        (((char*)&(header->length   ))-((char*)&(header->type))),
+        (((char*)&(header->c2spd    ))-((char*)&(header->type))),
+        (((char*)&(header->samplename))-((char*)&(header->type))),
+        (((char*)&(header->samplesig))-((char*)&(header->type)))
+       );
     
-    /*fprintf(stderr, "Considering %d byte sample (%.4s), %d\n",
+    fprintf(stderr, "Considering %d byte sample (%.4s), %d\n",
         (int)length,
         header->samplesig,
-        header->length);*/
-    
+        header->length);
+    */
     if(length < 0x50) return false; // too small
     if(strncmp(header->samplesig, "SCRS", 4) != 0
     && strncmp(header->samplesig, "SCRI", 4) != 0)
