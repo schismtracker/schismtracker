@@ -426,10 +426,17 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	}
 	pChn->pInstrument = psmp;
 	pChn->nLength = psmp->nLength;
-	// adlib instruments always have a nonzero length to ensure they aren't optimized away
 	pChn->nLoopStart = psmp->nLoopStart;
 	pChn->nLoopEnd = psmp->nLoopEnd;
 	pChn->nC4Speed = psmp->nC4Speed;
+	
+	/* In MIDI mode, ignore the C4speed */
+	if(penv && penv->nMidiChannel)
+	{
+	    pChn->nC4Speed = 8363;
+	    pChn->nLength  = 1;
+	}
+	
 	pChn->pSample = psmp->pSample;
 	pChn->nTranspose = psmp->RelativeTone;
 	pChn->nFineTune = psmp->nFineTune;
@@ -698,6 +705,7 @@ void CSoundFile::CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut)
 		pChn->nLength = pChn->nPos = pChn->nPosLo = 0;
 		pChn->nROfs = pChn->nLOfs = 0;
 		pChn->nLeftVol = pChn->nRightVol = 0;
+		OPL_NoteOff(nChn); GM_KeyOff(nChn);
 		return;
 	}
 	if (instr >= MAX_INSTRUMENTS) instr = 0;
@@ -893,7 +901,12 @@ BOOL CSoundFile::ProcessEffects()
 			// Invalid Instrument ?
 			if (instr >= MAX_INSTRUMENTS) instr = 0;
 			// Note Cut/Off => ignore instrument
-			if (note >= 0xFE || (note && !bPorta)) { OPL_NoteOff(nChn); GM_KeyOff(nChn); }
+			if (note >= 0xFE || (note && !bPorta))
+			{
+			    /* This is required when the instrument changes (KeyOff is not called) */
+			    /* Possibly a better bugfix could be devised. --Bisqwit */
+			    OPL_NoteOff(nChn); GM_KeyOff(nChn);
+			}
 			if (note >= 0xFE) instr = 0;
 			if ((note) && (note <= 128)) pChn->nNewNote = note;
 			// New Note Action ? (not when paused!!!)
@@ -907,6 +920,7 @@ BOOL CSoundFile::ProcessEffects()
 				MODINSTRUMENT *psmp = pChn->pInstrument;
 				InstrumentChange(pChn, instr, bPorta, TRUE);
 				OPL_Patch(nChn, Ins[instr].AdlibBytes);
+				
 				if((m_dwSongFlags & SONG_INSTRUMENTMODE)
 				&& Headers[instr])
 					GM_DPatch(nChn, Headers[instr]->nMidiProgram, Headers[instr]->wMidiBank);
@@ -930,7 +944,6 @@ BOOL CSoundFile::ProcessEffects()
     					GM_DPatch(nChn, Headers[pChn->nNewIns]->nMidiProgram, Headers[pChn->nNewIns]->wMidiBank);
 					pChn->nNewIns = 0;
 				}
-				if(note >= 0x80) { OPL_NoteOff(nChn); GM_KeyOff(nChn); }
 				NoteChange(nChn, note, bPorta, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);
 				if ((bPorta) && (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) && (instr))
 				{
@@ -2249,6 +2262,8 @@ void CSoundFile::NoteCut(UINT nChn, UINT nTick)
 		pChn->nVolume = 0;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
 		pChn->nLength = 0;
+		
+		OPL_NoteOff(nChn); GM_KeyOff(nChn);
 	}
 }
 
@@ -2258,6 +2273,24 @@ void CSoundFile::KeyOff(UINT nChn)
 {
 	MODCHANNEL *pChn = &Chn[nChn];
 	BOOL bKeyOn = (pChn->dwFlags & CHN_KEYOFF) ? FALSE : TRUE;
+
+	/*fprintf(stderr, "KeyOff[%d] [ch%u]: flags=0x%X\n",
+		m_nTickCount, (unsigned)nChn, pChn->dwFlags);*/
+	OPL_NoteOff(nChn);
+	GM_KeyOff(nChn);
+
+	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	
+	/*if ((pChn->dwFlags & CHN_ADLIB)
+	||  (penv && penv->nMidiChannel))
+	{
+		// When in AdLib / MIDI mode, end the sample
+		pChn->dwFlags |= CHN_FASTVOLRAMP;
+		pChn->nLength = 0;
+		pChn->nPos    = 0;
+		return;
+	}*/
+
 	pChn->dwFlags |= CHN_KEYOFF;
 	//if ((!pChn->pHeader) || (!(pChn->dwFlags & CHN_VOLENV)))
 	if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && (pChn->pHeader) && (!(pChn->dwFlags & CHN_VOLENV)))
@@ -2285,9 +2318,8 @@ void CSoundFile::KeyOff(UINT nChn)
 			pChn->nLength = psmp->nLength;
 		}
 	}
-	if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
+	if (penv)
 	{
-		INSTRUMENTHEADER *penv = pChn->pHeader;
 		if (((penv->dwFlags & ENV_VOLLOOP) || (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2))) && (penv->nFadeOut))
 			pChn->dwFlags |= CHN_NOTEFADE;
 	}
