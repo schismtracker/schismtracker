@@ -862,7 +862,8 @@ BOOL CSoundFile::ProcessEffects()
 		//
 		// Scream Tracker has a similar bug (which we don't simulate here)
 		// whereby SD0 and SC0 are ignored
-		if (((m_nTickCount - m_nFrameDelay) % m_nMusicSpeed) == nStartTick)
+		if (((m_nTickCount - m_nFrameDelay) % m_nMusicSpeed) == nStartTick
+		&& (nStartTick > 0 || m_nTickCount == 0))
 		{
 			UINT note = pChn->nRowNote;
 			if (instr) pChn->nNewIns = instr;
