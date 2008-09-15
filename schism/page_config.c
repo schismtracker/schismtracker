@@ -91,7 +91,7 @@ static void change_ui_settings(void)
 	}
 	kbd_sharp_flat_toggle(widgets_config[6].d.menutoggle.state);
 
-	GM_Reset();
+	GM_Reset(0);
 	if (widgets_config[8].d.toggle.state) {
 		status.flags |= MIDI_LIKE_TRACKER;
 	} else {

@@ -333,7 +333,7 @@ static void orderlist_reorder(void)
 
         status.flags |= NEED_UPDATE;
 
-	song_stop_unlocked();
+	song_stop_unlocked(0);
 
 	song_unlock_audio();
 }

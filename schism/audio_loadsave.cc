@@ -302,7 +302,7 @@ void song_new(int flags)
 	
         song_lock_audio();
 
-	song_stop_unlocked();
+	song_stop_unlocked(0);
 
 	status.flags &= ~PLAIN_TEXTEDIT;
 	if ((flags & KEEP_PATTERNS) == 0) {
@@ -401,7 +401,7 @@ int song_load_unchecked(const char *file)
                 mp = newsong;
 		mp->SetRepeatCount(-1);
                 fix_song();
-		song_stop_unlocked();
+		song_stop_unlocked(0);
 
                 song_unlock_audio();
 

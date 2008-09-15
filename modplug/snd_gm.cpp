@@ -427,7 +427,7 @@ void GM_Bend(int c, unsigned Count)
     }
 }
 
-void GM_Reset(void)
+void GM_Reset(int quitting)
 {
 	unsigned int a;
     //fprintf(stderr, "GM_Reset\n");
@@ -440,6 +440,14 @@ void GM_Reset(void)
     // How many semitones fit in the full 0x4000 bending range?
     // We scale the number by 128, because the RPN allows for finetuning.
     int n_semitones_times_128 = 128 * 0x4000 / semitone_bend_depth;
+    if(quitting)
+    {
+        // When quitting, we reprogram the pitch bend sensitivity into
+        // the range of 1 semitone (TiMiDity++'s default, which is
+        // probably a default on other devices as well), instead of
+        // what we preferred for IT playback.
+        n_semitones_times_128 = 128;
+    }
 
     for(a=0; a<16; a++)
     {

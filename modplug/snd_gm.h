@@ -13,7 +13,7 @@ void GM_Touch(int c, unsigned char Vol);
 void GM_KeyOn(int c, unsigned char key, unsigned char Vol);
 void GM_KeyOff(int c);
 void GM_Bend(int c, unsigned Count);
-void GM_Reset(void);
+void GM_Reset(int quitting); // 0=settings that work for us, 1=normal settings
 
 void GM_Pan(int ch, signed char val); // param: -128..+127
 
