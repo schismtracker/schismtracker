@@ -81,20 +81,32 @@ About the controllers... In AWE32 they are:
        - http://www.philrees.co.uk/nrpnq.htm
 */
 
+//#define GM_DEBUG
+
 static unsigned RunningStatus = 0;
+#ifdef GM_DEBUG
+static bool resetting = false;
+#endif
 static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
 {
     if(!nbytes) return;
     if((buf[0] & 0x80) && buf[0] == RunningStatus)
         { ++buf; --nbytes; }
     else
+    {
+#ifndef GM_DEBUG
         RunningStatus = buf[0];
-#if 0
-    char Buf[2048],*t=Buf;
-    t += sprintf(t, "Sending:");
-    for(unsigned n=0; n<nbytes; ++n)
-        t += sprintf(t, " %02X", buf[n]);
-    fprintf(stderr, "%s\n", Buf);
+#endif
+    }
+#ifdef GM_DEBUG
+    if(!resetting)
+    {
+        char Buf[2048],*t=Buf;
+        t += sprintf(t, "Sending:");
+        for(unsigned n=0; n<nbytes; ++n)
+            t += sprintf(t, " %02X", buf[n]);
+        fprintf(stderr, "%s\n", Buf);
+    }
 #endif
     mp->MidiSend(buf, nbytes, c, 0);
 }
@@ -362,6 +374,10 @@ void GM_KeyOn(int c, unsigned char key, unsigned char Vol)
     
     if(S3Mchans[c].IsActive()) return; // be sure the channel is deactivated.
     
+#ifdef GM_DEBUG
+    fprintf(stderr, "GM_KeyOn(%d, %d,%d)\n", c, key,Vol);
+#endif
+    
     if(S3Mchans[c].IsPercussion())
     {
         // Percussion always uses channel 9. Key (pitch) is ignored.
@@ -396,7 +412,9 @@ void GM_KeyOff(int c)
     if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
     if(!S3Mchans[c].IsActive()) return; // nothing to do
 
-    //fprintf(stderr, "GM_KeyOff(%d)\n", c);
+#ifdef GM_DEBUG
+    fprintf(stderr, "GM_KeyOff(%d)\n", c);
+#endif
     
     int mc = S3Mchans[c].chan;
     MPU_NoteOff(mc,
@@ -429,6 +447,9 @@ void GM_Bend(int c, unsigned Count)
 
 void GM_Reset(int quitting)
 {
+#ifdef GM_DEBUG
+    resetting=true;
+#endif
 	unsigned int a;
     //fprintf(stderr, "GM_Reset\n");
 	for(a=0; a<MAXCHN; a++)
@@ -439,7 +460,7 @@ void GM_Reset(int quitting)
 
     // How many semitones fit in the full 0x4000 bending range?
     // We scale the number by 128, because the RPN allows for finetuning.
-    int n_semitones_times_128 = 128 * 0x4000 / semitone_bend_depth;
+    int n_semitones_times_128 = 128 * 0x2000 / semitone_bend_depth;
     if(quitting)
     {
         // When quitting, we reprogram the pitch bend sensitivity into
@@ -464,11 +485,17 @@ void GM_Reset(int quitting)
                           n_semitones_times_128 % 128);
         MPU_ResetPN(a);
 	}
+#ifdef GM_DEBUG
+	resetting=false;
+	fprintf(stderr, "-------------- GM_Reset completed ---------------\n");
+#endif
 }
 
 void GM_DPatch(int ch, unsigned char GM, unsigned char bank)
 {
-    //fprintf(stderr, "GM_DPatch(%d, %02X @ %d)\n", ch, GM, bank);
+#ifdef GM_DEBUG
+    fprintf(stderr, "GM_DPatch(%d, %02X @ %d)\n", ch, GM, bank);
+#endif
     if(ch < 0 || ((unsigned int)ch) >= MAXCHN) return;
 	GM_Bank(ch, bank);
 	GM_Patch(ch, GM);
@@ -496,7 +523,9 @@ static double log2(double d)
 
 void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
 {
-    //fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,Vol);
+#ifdef GM_DEBUG
+    fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,Vol);
+#endif
     if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
     
     
@@ -562,8 +591,8 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
 		// and in fact, gives a lot of variation, we reduce the bending
 		// precision to 100 cents. This is accurate enough for almost
 		// all purposes, but will significantly reduce the bend event load.
-		const int bend_artificial_inaccuracy = semitone_bend_depth / 100;
-		bend = (bend / bend_artificial_inaccuracy) * bend_artificial_inaccuracy;
+		//const int bend_artificial_inaccuracy = semitone_bend_depth / 100;
+		//bend = (bend / bend_artificial_inaccuracy) * bend_artificial_inaccuracy;
 		
 		// Clamp the bending value so that we won't break the protocol
 		if(bend < 0) bend = 0;
