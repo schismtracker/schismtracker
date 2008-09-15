@@ -319,7 +319,7 @@ static void parse_options(int argc, char **argv)
 		{O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
 		{O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
 
-		{O_VIDEO_YUVLAYOUT, 0, "video-yuvlaout", FRAG_ARG, "LAYOUT", "Specify YUV layout (if schism doesnt detect)" },
+		{O_VIDEO_YUVLAYOUT, 0, "video-yuvlayout", FRAG_ARG, "LAYOUT", "Specify YUV layout (if schism doesnt detect)" },
 		{O_VIDEO_RESOLUTION,0, "video-size", FRAG_ARG, "WIDTHxHEIGHT", "Specify default window size" },
 		{O_VIDEO_ASPECT,0, "video-stretch", FRAG_ARG, NULL, "Unfix the aspect ratio" },
 		{O_VIDEO_GLPATH,0,"video-gl-path", FRAG_ARG,
