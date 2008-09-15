@@ -1,0 +1,40 @@
+|                             ‹†††††††††††††††††Š
+|                             „   Sample List   ‘
+|                             ‰–
+|
+| Sample List Keys.
+|   Enter        Load new sample
+|   Tab          Move between options
+|   PgUp/PgDn    Move up/down (when not on list)
+|
+|   Alt-A        Convert Signed to/from Unsigned samples
+|   Alt-B        Pre-Loop cut sample
+|   Alt-C        Clear Sample Name & Filename (Used in Sample Name window)
+|   Alt-D        Delete Sample
+|   Alt-E        Resize Sample (with interpolation)
+|   Alt-F        Resize Sample (without interpolation)
+|   Alt-G        Reverse Sample
+|   Alt-H        Centralise Sample
+:   Alt-I        Invert Sample
+|   Alt-L        Post-Loop cut sample
+|   Alt-M        Sample amplifier
+|   Alt-N        Toggle Multichannel playback
+|   Alt-O        Save current sample to disk (IT Format)
+:   Alt-P        Copy sample
+|   Alt-Q        Toggle sample quality
+|   Alt-R        Replace current sample in song
+|   Alt-S        Swap sample (in song also)
+|   Alt-T        Save current sample to disk (Export Format)
+|   Alt-W        Save current sample to disk (RAW Format)
+|   Alt-X        Exchange sample (only in Sample List)
+:   Alt-Z        Edit/create ADLIB (FM) sample
+|
+|   Alt-Ins      Insert sample slot (updates pattern data)
+|   Alt-Del      Remove sample slot (updates pattern data)
+|
+|   < >          Decrease/Increase playback channel
+|
+|   Alt-Grey +   Increase C-5 Frequency by 1 octave
+|   Alt-Grey -   Decrease C-5 Frequency by 1 octave
+|   Ctrl-Grey +  Increase C-5 Frequency by 1 semitone
+|   Ctrl-Grey -  Decrease C-5 Frequency by 1 semitone
