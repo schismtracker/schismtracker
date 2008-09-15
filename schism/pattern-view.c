@@ -33,10 +33,8 @@
 
 void draw_channel_header_13(int chan, int x, int y, int fg)
 {
-        byte buf[16] = " Channel 42 ";
-
-        buf[9] = '0' + chan / 10;
-        buf[10] = '0' + chan % 10;
+        char buf[16];
+        sprintf(buf, " Channel %02d ", chan);
         draw_text(buf, x, y, fg, 1);
 }
 
@@ -44,20 +42,20 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
                   int bg)
 {
         int cursor_pos_map[9] = { 0, 2, 4, 5, 7, 8, 10, 11, 12 };
-        byte note_text[16], note_buf[4], vol_buf[4];
-	byte instbuf[4];
+        char note_text[16], note_buf[4], vol_buf[4];
+	char instbuf[4];
 
-        get_note_string(note->note, (char *) note_buf);
-        get_volume_string(note->volume, note->volume_effect, (char *) vol_buf);
+        get_note_string(note->note, note_buf);
+        get_volume_string(note->volume, note->volume_effect, vol_buf);
 
         /* come to think of it, maybe the instrument text should be
          * created the same way as the volume. */
         if (note->instrument)
 		num99tostr(note->instrument, instbuf);
 	else
-		strcpy((char*)instbuf, "\xad\xad");
+		strcpy(instbuf, "\xad\xad");
 
-	snprintf((char *) note_text, 16, "%s %s %s %c%02X",
+	snprintf(note_text, 16, "%s %s %s %c%02X",
 		note_buf, instbuf, vol_buf,
 		get_effect_char(note->effect), note->parameter);
 
@@ -88,27 +86,26 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
 
 void draw_channel_header_10(int chan, int x, int y, int fg)
 {
-        byte buf[16] = "Channel 42";
-
-        buf[8] = '0' + chan / 10;
-        buf[9] = '0' + chan % 10;
+        char buf[16];
+        sprintf(buf, "Channel %02d", chan);
         draw_text(buf, x, y, fg, 1);
 }
 
 void draw_note_10(int x, int y, song_note * note, int cursor_pos,
                   UNUSED int fg, int bg)
 {
-        byte c, note_buf[4], ins_buf[3], vol_buf[3], effect_buf[4];
+        byte c;
+        char note_buf[4], ins_buf[3], vol_buf[3], effect_buf[4];
 
-        get_note_string(note->note, (char *) note_buf);
+        get_note_string(note->note, note_buf);
         if (note->instrument) {
                 num99tostr(note->instrument, ins_buf);
         } else {
                 ins_buf[0] = ins_buf[1] = 173;
                 ins_buf[2] = 0;
         }
-        get_volume_string(note->volume, note->volume_effect, (char *) vol_buf);
-        sprintf((char *) effect_buf, "%c%02X", get_effect_char(note->effect),
+        get_volume_string(note->volume, note->volume_effect, vol_buf);
+        sprintf(effect_buf, "%c%02X", get_effect_char(note->effect),
                 note->parameter);
 
         draw_text(note_buf, x, y, 6, bg);
@@ -141,25 +138,23 @@ void draw_note_10(int x, int y, song_note * note, int cursor_pos,
 
 void draw_channel_header_7(int chan, int x, int y, int fg)
 {
-        byte buf[8] = "Chnl 42";
-
-        buf[5] = '0' + chan / 10;
-        buf[6] = '0' + chan % 10;
+        char buf[8];
+        sprintf(buf, "Chnl %02d", chan);
         draw_text(buf, x, y, fg, 1);
 }
 
 void draw_note_7(int x, int y, song_note * note, int cursor_pos,
                  UNUSED int fg, int bg)
 {
-        byte note_buf[4], ins_buf[3], vol_buf[3];
+        char note_buf[4], ins_buf[3], vol_buf[3];
         int fg1, bg1, fg2, bg2;
 
-        get_note_string(note->note, (char *) note_buf);
+        get_note_string(note->note, note_buf);
         if (note->instrument)
                 num99tostr(note->instrument, ins_buf);
         else
                 ins_buf[0] = ins_buf[1] = 173;
-        get_volume_string(note->volume, note->volume_effect, (char *) vol_buf);
+        get_volume_string(note->volume, note->volume_effect, vol_buf);
 
         /* note & instrument */
         draw_text(note_buf, x, y, 6, bg);
@@ -245,14 +240,13 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
 
 void draw_channel_header_3(int chan, int x, int y, int fg)
 {
-        byte buf[4] = { ' ', '0' + chan / 10, '0' + chan % 10, '\0' };
-
+        char buf[4] = { ' ', '0' + chan / 10, '0' + chan % 10, '\0' };
         draw_text(buf, x, y, fg, 1);
 }
 
 void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 {
-        byte buf[4];
+        char buf[4];
 
         switch (cursor_pos) {
         case 0:
@@ -260,7 +254,7 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 bg = 3;
                 break;
         case 1:
-                get_note_string(note->note, (char *) buf);
+                get_note_string(note->note, buf);
                 draw_text(buf, x, y, 6, bg);
                 draw_char(buf[2], x + 2, y, 0, 3);
                 return;
@@ -281,7 +275,7 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         case 5:
                 cursor_pos -= 3;
                 buf[0] = ' ';
-                get_volume_string(note->volume, note->volume_effect, (char *) buf + 1);
+                get_volume_string(note->volume, note->volume_effect, buf + 1);
                 draw_text(buf, x, y, ((note->volume_effect == VOL_EFFECT_PANNING) ? 1 : 6), bg);
                 draw_char(buf[cursor_pos], x + cursor_pos, y, 0, 3);
                 return;
@@ -289,7 +283,7 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         case 7:
         case 8:
                 cursor_pos -= 6;
-                sprintf((char *) buf, "%c%02X", get_effect_char(note->effect), note->parameter);
+                sprintf(buf, "%c%02X", get_effect_char(note->effect), note->parameter);
                 draw_text(buf, x, y, 2, bg);
                 draw_char(buf[cursor_pos], x + cursor_pos, y, 0, 3);
                 return;
@@ -300,7 +294,7 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         }
 
         if (note->note) {
-                get_note_string(note->note, (char *) buf);
+                get_note_string(note->note, buf);
                 draw_text(buf, x, y, fg, bg);
         } else if (note->instrument) {
                 buf[0] = ' ';
@@ -310,12 +304,12 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 if (cursor_pos != 0 && note->volume_effect == VOL_EFFECT_PANNING)
                         fg = 1;
                 buf[0] = ' ';
-                get_volume_string(note->volume, note->volume_effect, (char *) buf + 1);
+                get_volume_string(note->volume, note->volume_effect, buf + 1);
                 draw_text(buf, x, y, fg, bg);
         } else if (note->effect || note->parameter) {
                 if (cursor_pos != 0)
                         fg = 2;
-                sprintf((char *) buf, "%c%02X", get_effect_char(note->effect), note->parameter);
+                sprintf(buf, "%c%02X", get_effect_char(note->effect), note->parameter);
                 draw_text(buf, x, y, fg, bg);
         } else {
                 buf[0] = buf[1] = buf[2] = 173;
@@ -329,8 +323,7 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_channel_header_2(int chan, int x, int y, int fg)
 {
-        byte buf[4] = { '0' + chan / 10, '0' + chan % 10, 0 };
-
+        char buf[4] = { '0' + chan / 10, '0' + chan % 10, 0 };
         draw_text(buf, x, y, fg, 1);
 }
 
@@ -363,7 +356,7 @@ static void draw_effect_2(int x, int y, song_note * note, int cursor_pos, int bg
 
 void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 {
-        byte buf[4];
+        char buf[4];
 
         switch (cursor_pos) {
         case 0:
@@ -371,12 +364,12 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 bg = 3;
                 break;
         case 1: /* Mini-accidentals on 2-col. view */
-                get_note_string(note->note, (char *) buf);
+                get_note_string(note->note, buf);
                 draw_char(buf[0], x, y, 6, bg);
                 draw_half_width_chars(buf[1], buf[2], x + 1, y, 0, 3, 0, 3);
                 return;
                 /*
-                get_note_string_short(note->note, (char *) buf);
+                get_note_string_short(note->note, buf);
                 draw_char(buf[0], x, y, 6, bg);
                 draw_char(buf[1], x + 1, y, 0, 3);
                 return;
@@ -396,7 +389,7 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         case 4:
         case 5:
                 cursor_pos -= 4;
-                get_volume_string(note->volume, note->volume_effect, (char *) buf);
+                get_volume_string(note->volume, note->volume_effect, buf);
                 draw_text(buf, x, y, ((note->volume_effect == VOL_EFFECT_PANNING) ? 1 : 6), bg);
                 draw_char(buf[cursor_pos], x + cursor_pos, y, 0, 3);
                 return;
@@ -412,11 +405,11 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         }
 
         if (note->note) {
-                get_note_string(note->note, (char *) buf);
+                get_note_string(note->note, buf);
                 draw_char(buf[0], x, y, fg, bg);
                 draw_half_width_chars(buf[1], buf[2], x + 1, y, fg, bg, fg, bg);
                 /*
-                get_note_string_short(note->note, (char *) buf);
+                get_note_string_short(note->note, buf);
                 draw_text(buf, x, y, fg, bg);
                 */
         } else if (note->instrument) {
@@ -425,7 +418,7 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         } else if (note->volume_effect) {
                 if (cursor_pos != 0 && note->volume_effect == VOL_EFFECT_PANNING)
                         fg = 1;
-                get_volume_string(note->volume, note->volume_effect, (char *) buf);
+                get_volume_string(note->volume, note->volume_effect, buf);
                 draw_text(buf, x, y, fg, bg);
         } else if (note->effect || note->parameter) {
                 draw_effect_2(x, y, note, cursor_pos, bg);
@@ -477,20 +470,20 @@ static void draw_effect_1(int x, int y, song_note * note, int cursor_pos, int fg
 
 void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 {
-        byte buf[4];
+        char buf[4];
 
         switch (cursor_pos) {
         case 0:
                 fg = 0;
                 bg = 3;
                 if (note->note > 0 && note->note <= 120) {
-                        get_note_string_short(note->note, (char *) buf);
+                        get_note_string_short(note->note, buf);
                         draw_half_width_chars(buf[0], buf[1], x, y, fg, bg, fg, bg);
                         return;
                 }
                 break;
         case 1:
-                get_note_string_short(note->note, (char *) buf);
+                get_note_string_short(note->note, buf);
 		draw_half_width_chars(buf[0], buf[1], x, y, fg, bg, 0, 3);
                 return;
         case 2:
@@ -508,7 +501,7 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         case 4:
         case 5:
                 cursor_pos -= 4;
-                get_volume_string(note->volume, note->volume_effect, (char *) buf);
+                get_volume_string(note->volume, note->volume_effect, buf);
                 fg = note->volume_effect == VOL_EFFECT_PANNING ? 1 : 2;
                 if (cursor_pos == 0)
                         draw_half_width_chars(buf[0], buf[1], x, y, 0, 3, fg, bg);
@@ -523,7 +516,7 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         }
 
         if (note->note) {
-                get_note_string_short(note->note, (char *) buf);
+                get_note_string_short(note->note, buf);
                 draw_char(buf[0], x, y, fg, bg);
         } else if (note->instrument) {
                 num99tostr(note->instrument, buf);
@@ -531,7 +524,7 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         } else if (note->volume_effect) {
                 if (cursor_pos != 0)
                         fg = (note->volume_effect == VOL_EFFECT_PANNING) ? 1 : 2;
-                get_volume_string(note->volume, note->volume_effect, (char *) buf);
+                get_volume_string(note->volume, note->volume_effect, buf);
                 draw_half_width_chars(buf[0], buf[1], x, y, fg, bg, fg, bg);
         } else if (note->effect || note->parameter) {
                 draw_effect_1(x, y, note, cursor_pos, fg, bg);
@@ -545,21 +538,19 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_channel_header_6(int chan, int x, int y, int fg)
 {
-        byte buf[8] = "Chnl42";
-
-        buf[4] = '0' + chan / 10;
-        buf[5] = '0' + chan % 10;
+        char buf[8];
+        sprintf(buf, "Chnl%02d", chan);
         draw_text(buf, x, y, fg, 1);
 }
 
 void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, int bg)
 {
-        byte note_buf[4], ins_buf[3], vol_buf[3];
+        char note_buf[4], ins_buf[3], vol_buf[3];
         int fg1, bg1, fg2, bg2;
         
 #ifdef USE_LOWERCASE_NOTES
 
-        get_note_string_short(note->note, (char *) note_buf);
+        get_note_string_short(note->note, note_buf);
         if (note->instrument)
                 num99tostr(note->instrument, ins_buf);
         else
@@ -587,7 +578,7 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 
 #else
 
-        get_note_string (note -> note, (char *) note_buf);
+        get_note_string (note -> note, note_buf);
         
         if (cursor_pos == 0)
           draw_char (note_buf [0], x, y, 0, 3);
@@ -595,7 +586,7 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
           draw_char (note_buf [0], x, y, fg, bg);
           
         bg1 = bg2 = bg;
-        switch (note_buf [0])
+        switch ( (unsigned char) note_buf [0])
           {
           case '^':    /* empty notes, note-off and note-cuts */
 	  case '~':
@@ -634,7 +625,7 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
         
         draw_half_width_chars(ins_buf[0], ins_buf[1], x + 2, y, fg1, bg1, fg2, bg2);
         /* volume */
-        get_volume_string(note->volume, note->volume_effect, (char *) vol_buf);
+        get_volume_string(note->volume, note->volume_effect, vol_buf);
         
         switch (note->volume_effect) {
         case VOL_EFFECT_NONE:

@@ -38,12 +38,12 @@ static int dg_progress = 0;
 static void _diskwriter_draw_const(void)
 {
 	if (dg_progress >= 63) {
-		draw_text((const unsigned char *)"Finishing up...", 32, 27, 0, 2);
+		draw_text("Finishing up...", 32, 27, 0, 2);
 	} else if (status.flags & DISKWRITER_ACTIVE_PATTERN) {
-		draw_text((const unsigned char *)"Updating sample...", 30, 27, 0, 2);
-		draw_text((const unsigned char *)"Please wait...", 34, 33, 0, 2); /* no cancel button */
+		draw_text("Updating sample...", 30, 27, 0, 2);
+		draw_text("Please wait...", 34, 33, 0, 2); /* no cancel button */
 	} else {
-		draw_text((const unsigned char *)"Writing song to disk...", 28, 27, 0, 2);
+		draw_text("Writing song to disk...", 28, 27, 0, 2);
 	}
 	draw_fill_chars(24,30,55,30,0);
 

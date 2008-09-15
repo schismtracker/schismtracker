@@ -174,12 +174,12 @@ static void sample_list_draw_list(void)
 		if (sample->played)
 			draw_char(173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 		
-		draw_text(num99tostr(n, (unsigned char *) buf), 2, 13 + pos, 0, 2);
+		draw_text(num99tostr(n, buf), 2, 13 + pos, 0, 2);
 
 		pn = ((unsigned char)name[24]);
 		if (((unsigned char)name[23]) == 0xFF && pn < 200) {
 			nl = 23;
-			draw_text(numtostr(3, (int)pn, (unsigned char *) buf), 32, 13 + pos, 0, 2);
+			draw_text(numtostr(3, (int)pn, buf), 32, 13 + pos, 0, 2);
 			draw_char('P', 28, 13+pos, 3, 2);
 			draw_char('a', 29, 13+pos, 3, 2);
 			draw_char('t', 30, 13+pos, 3, 2);
@@ -187,12 +187,12 @@ static void sample_list_draw_list(void)
 		} else {
 			nl = 25;
 			draw_char(168, 30, 13 + pos, 2, (is_selected ? 14 : 0));
-			draw_text((unsigned char *) "Play", 31, 13 + pos, (has_data ? 6 : 7), (is_selected ? 14 : 0));
+			draw_text("Play", 31, 13 + pos, (has_data ? 6 : 7), (is_selected ? 14 : 0));
 		}
 
-		draw_text_len((unsigned char *) name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
+		draw_text_len(name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
 		if (ss == n) {
-			draw_text_len((unsigned char *) name + cl, (cr-cl)+1, 5 + cl, 13 + pos, 3, 8);
+			draw_text_len(name + cl, (cr-cl)+1, 5 + cl, 13 + pos, 3, 8);
 		}
 	}
 
@@ -205,7 +205,7 @@ static void sample_list_draw_list(void)
 		if (pos < 0 || pos > 34) {
 			/* err... */
 		} else if (sample_list_cursor_pos == 25) {
-			draw_text((unsigned char *) "Play", 31, 13 + pos, 0, (has_data ? 3 : 6));
+			draw_text("Play", 31, 13 + pos, 0, (has_data ? 3 : 6));
 		} else {
 			//draw_char(((sample_list_cursor_pos > (signed) strlen(name))
 			//	   ? 0 : name[sample_list_cursor_pos]),
@@ -277,13 +277,13 @@ static void sample_list_predraw_hook(void)
 	widgets_samplelist[19].d.thumbbar.value = sample->vib_rate;
 
 	if (sample->flags & SAMP_STEREO) {
-		draw_text_len((unsigned char *) (has_data ? (sample->flags & SAMP_16_BIT ? "16 bit Stereo" : "8 bit Stereo") : "No sample"),
+		draw_text_len((has_data ? (sample->flags & SAMP_16_BIT ? "16 bit Stereo" : "8 bit Stereo") : "No sample"),
 		      13, 64, 22, 2, 0);
 	} else {
-		draw_text_len((unsigned char *) (has_data ? (sample->flags & SAMP_16_BIT ? "16 bit" : "8 bit") : "No sample"),
+		draw_text_len((has_data ? (sample->flags & SAMP_16_BIT ? "16 bit" : "8 bit") : "No sample"),
 		      13, 64, 22, 2, 0);
 	}
-	draw_text_len(numtostr(0, sample->length, (unsigned char *) buf), 13, 64, 23, 2, 0);
+	draw_text_len(numtostr(0, sample->length, buf), 13, 64, 23, 2, 0);
 
 	draw_sample_data(&sample_image, sample, current_sample);
 
@@ -383,8 +383,8 @@ static void do_swap_sample(UNUSED void *data)
 
 static void swap_sample_draw_const(void)
 {
-	draw_text((unsigned char *) "Swap sample with:", 32, 25, 0, 2);
-	draw_text((unsigned char *) "Sample", 35, 27, 0, 2);
+	draw_text("Swap sample with:", 32, 25, 0, 2);
+	draw_text("Sample", 35, 27, 0, 2);
 	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
@@ -411,8 +411,8 @@ static void do_exchange_sample(UNUSED void *data)
 
 static void exchange_sample_draw_const(void)
 {
-	draw_text((unsigned char *) "Exchange sample with:", 30, 25, 0, 2);
-	draw_text((unsigned char *) "Sample", 35, 27, 0, 2);
+	draw_text("Exchange sample with:", 30, 25, 0, 2);
+	draw_text("Sample", 35, 27, 0, 2);
 	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
@@ -444,8 +444,8 @@ static void do_copy_sample(UNUSED void *data)
 
 static void copy_sample_draw_const(void)
 {
-	draw_text((unsigned char *) "Copy sample:", 36, 25, 0, 2);
-	draw_text((unsigned char *) "Sample", 35, 27, 0, 2);
+	draw_text("Copy sample:", 36, 25, 0, 2);
+	draw_text("Sample", 35, 27, 0, 2);
 	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
@@ -755,7 +755,7 @@ static void do_amplify(UNUSED void *data)
 
 static void sample_amplify_draw_const(void)
 {
-	draw_text((unsigned char *) "Sample Amplification %", 29, 27, 0, 2);
+	draw_text("Sample Amplification %", 29, 27, 0, 2);
 	draw_box(12, 29, 64, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
@@ -914,7 +914,7 @@ static void sample_adlibconfig_draw_const(void)
     for(a=0; a<sizeof(labels)/sizeof(*labels); ++a)
     {
         int a1 = a?0:3, a2=2;
-        draw_text((unsigned char *) labels[a].label,
+        draw_text(labels[a].label,
                   labels[a].x, labels[a].y+30, a1, a2);
     }
     
@@ -1055,7 +1055,7 @@ static void export_sample_list_draw(void)
 		} else if (n == export_sample_format) {
 			bg = 14;
 		}
-		draw_text_len((unsigned char *) sample_save_formats[n].ext, 4, 53, 24 + n, fg, bg);
+		draw_text_len(sample_save_formats[n].ext, 4, 53, 24 + n, fg, bg);
 	}
 }
 
@@ -1115,12 +1115,12 @@ static int export_sample_list_handle_key(struct key_event * k)
 
 static void export_sample_draw_const(void)
 {
-	draw_text((unsigned char *) "Export Sample", 34, 21, 0, 2);
+	draw_text("Export Sample", 34, 21, 0, 2);
 
-	draw_text((unsigned char *) "Filename", 24, 24, 0, 2);
+	draw_text("Filename", 24, 24, 0, 2);
 	draw_box(32, 23, 51, 25, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	draw_text((unsigned char *) "Options", 25, 27, 0, 2);
+	draw_text("Options", 25, 27, 0, 2);
 	draw_box(32, 26, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(52, 23, 57, 32, BOX_THICK | BOX_INNER | BOX_INSET);
@@ -1172,8 +1172,8 @@ static void do_resize_sample(UNUSED void *data)
 }
 static void resize_sample_draw_const(void)
 {
-	draw_text((unsigned char *) "Resize Sample", 34, 24, 3, 2);
-	draw_text((unsigned char *) "New Length", 31, 27, 0, 2);
+	draw_text("Resize Sample", 34, 24, 3, 2);
+	draw_text("New Length", 31, 27, 0, 2);
 	draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 static void resize_sample_dialog(int aa)
@@ -1437,23 +1437,23 @@ static void sample_list_draw_const(void)
 	draw_fill_chars(41, 30, 46, 30, 0);
 	draw_fill_chars(64, 13, 76, 23, 0);
 
-	draw_text((unsigned char *) "Default Volume", 38, 14, 0, 2);
-	draw_text((unsigned char *) "Global Volume", 38, 21, 0, 2);
-	draw_text((unsigned char *) "Default Pan", 39, 28, 0, 2);
-	draw_text((unsigned char *) "Vibrato Speed", 38, 37, 0, 2);
-	draw_text((unsigned char *) "Vibrato Depth", 38, 44, 0, 2);
-	draw_text((unsigned char *) "Filename", 55, 13, 0, 2);
-	draw_text((unsigned char *) "Speed", 58, 14, 0, 2);
-	draw_text((unsigned char *) "Loop", 59, 15, 0, 2);
-	draw_text((unsigned char *) "LoopBeg", 56, 16, 0, 2);
-	draw_text((unsigned char *) "LoopEnd", 56, 17, 0, 2);
-	draw_text((unsigned char *) "SusLoop", 56, 18, 0, 2);
-	draw_text((unsigned char *) "SusLBeg", 56, 19, 0, 2);
-	draw_text((unsigned char *) "SusLEnd", 56, 20, 0, 2);
-	draw_text((unsigned char *) "Quality", 56, 22, 0, 2);
-	draw_text((unsigned char *) "Length", 57, 23, 0, 2);
-	draw_text((unsigned char *) "Vibrato Waveform", 58, 33, 0, 2);
-	draw_text((unsigned char *) "Vibrato Rate", 60, 44, 0, 2);
+	draw_text("Default Volume", 38, 14, 0, 2);
+	draw_text("Global Volume", 38, 21, 0, 2);
+	draw_text("Default Pan", 39, 28, 0, 2);
+	draw_text("Vibrato Speed", 38, 37, 0, 2);
+	draw_text("Vibrato Depth", 38, 44, 0, 2);
+	draw_text("Filename", 55, 13, 0, 2);
+	draw_text("Speed", 58, 14, 0, 2);
+	draw_text("Loop", 59, 15, 0, 2);
+	draw_text("LoopBeg", 56, 16, 0, 2);
+	draw_text("LoopEnd", 56, 17, 0, 2);
+	draw_text("SusLoop", 56, 18, 0, 2);
+	draw_text("SusLBeg", 56, 19, 0, 2);
+	draw_text("SusLEnd", 56, 20, 0, 2);
+	draw_text("Quality", 56, 22, 0, 2);
+	draw_text("Length", 57, 23, 0, 2);
+	draw_text("Vibrato Waveform", 58, 33, 0, 2);
+	draw_text("Vibrato Rate", 60, 44, 0, 2);
 
 	for (n = 0; n < 13; n++)
 		draw_char(154, 64 + n, 21, 3, 0);
