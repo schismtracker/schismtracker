@@ -360,8 +360,8 @@ static void do_swap_instrument(UNUSED void *data)
 
 static void swap_instrument_draw_const(void)
 {
-	draw_text((const unsigned char *)"Swap instrument with:", 29, 25, 0, 2);
-	draw_text((const unsigned char *)"Instrument", 31, 27, 0, 2);
+	draw_text("Swap instrument with:", 29, 25, 0, 2);
+	draw_text("Instrument", 31, 27, 0, 2);
 	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
@@ -389,8 +389,8 @@ static void do_exchange_instrument(UNUSED void *data)
 
 static void exchange_instrument_draw_const(void)
 {
-	draw_text((const unsigned char *)"Exchange instrument with:", 28, 25, 0, 2);
-	draw_text((const unsigned char *)"Instrument", 31, 27, 0, 2);
+	draw_text("Exchange instrument with:", 28, 25, 0, 2);
+	draw_text("Instrument", 31, 27, 0, 2);
 	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
@@ -419,8 +419,8 @@ static void do_copy_instrument(UNUSED void *data)
 
 static void copy_instrument_draw_const(void)
 {
-	draw_text((const unsigned char *)"Copy instrument:", 31, 25, 0, 2);
-	draw_text((const unsigned char *)"Instrument", 31, 27, 0, 2);
+	draw_text("Copy instrument:", 31, 25, 0, 2);
+	draw_text("Instrument", 31, 27, 0, 2);
 	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
@@ -447,7 +447,7 @@ static void instrument_list_draw_list(void)
         int is_current;
 	int ss, cl = 0, cr = 0;
         int is_playing[100];
-        byte buf[4];
+        char buf[4];
 	
 	if (clippy_owner(CLIPPY_SELECT) == widgets_general) {
 		cl = widgets_general[0].clip_start % 25;
@@ -475,22 +475,22 @@ static void instrument_list_draw_list(void)
                 if (instrument_cursor_pos < 25) {
                         /* it's in edit mode */
                         if (is_current) {
-                                draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 14);
+                                draw_text_len(ins->name, 25, 5, 13 + pos, 6, 14);
                                 if (selected) {
                                         draw_char(ins->name[instrument_cursor_pos],
                                                   5 + instrument_cursor_pos,
                                                   13 + pos, 0, 3);
                                 }
                         } else {
-                                draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos, 6, 0);
+                                draw_text_len(ins->name, 25, 5, 13 + pos, 6, 0);
                         }
                 } else {
-                        draw_text_len((const unsigned char *)ins->name, 25, 5, 13 + pos,
+                        draw_text_len(ins->name, 25, 5, 13 + pos,
                                       ((is_current && selected) ? 0 : 6),
                                       (is_current ? (selected ? 3 : 14) : 0));
                 }
 		if (ss == n) {
-			draw_text_len((const unsigned char *)ins->name + cl, (cr-cl)+1,
+			draw_text_len(ins->name + cl, (cr-cl)+1,
 					5 + cl, 13 + pos, 
 					(is_current ? 3 : 11), 8);
 		}
@@ -727,7 +727,7 @@ static void note_trans_draw(void)
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
         int bg, sel_bg = (is_selected ? 14 : 0);
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
-        byte buf[4];
+        char buf[4];
 
         for (pos = 0, n = note_trans_top_line; pos < 32; pos++, n++) {
                 bg = ((n == note_trans_sel_line) ? sel_bg : 0);
@@ -736,9 +736,9 @@ static void note_trans_draw(void)
                 if (ins->note_map[n] < 1 || ins->note_map[n] > 120)
                         ins->note_map[n] = n + 1;
 
-                draw_text((unsigned char *) get_note_string(n + 1, (char *) buf), 32, 16 + pos, 2, bg);
+                draw_text(get_note_string(n + 1, buf), 32, 16 + pos, 2, bg);
                 draw_char(168, 35, 16 + pos, 2, bg);
-                draw_text((unsigned char *) get_note_string(ins->note_map[n], (char *) buf), 36, 16 + pos, 2, bg);
+                draw_text(get_note_string(ins->note_map[n], buf), 36, 16 + pos, 2, bg);
                 if (is_selected && n == note_trans_sel_line) {
                         if (note_trans_cursor_pos == 0)
                                 draw_char(buf[0], 36, 16 + pos, 0, 3);
@@ -752,7 +752,7 @@ static void note_trans_draw(void)
                         buf[0] = buf[1] = 173;
                         buf[2] = 0;
                 }
-                draw_text((const unsigned char *)buf, 40, 16 + pos, 2, bg);
+                draw_text(buf, 40, 16 + pos, 2, bg);
                 if (is_selected && n == note_trans_sel_line) {
                         if (note_trans_cursor_pos == 2)
                                 draw_char(buf[0], 40, 16 + pos, 0, 3);
@@ -1146,7 +1146,7 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 {
 	song_mix_channel *channel;
 	unsigned int *channel_list;
-	byte buf[16];
+	char buf[16];
 	unsigned int envpos[3];
 	int x, y, n, m, c;
 	int last_x = 0, last_y = 0;
@@ -1213,12 +1213,12 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 	draw_fill_chars(65, 18, 76, 25, 0);
 	vgamem_ovl_apply(&env_overlay);
 
-        sprintf((char *) buf, "Node %d/%d", current_node, env->nodes);
-        draw_text((const unsigned char *)buf, 66, 19, 2, 0);
-        sprintf((char *) buf, "Tick %d", env->ticks[current_node]);
-        draw_text((const unsigned char *)buf, 66, 21, 2, 0);
-        sprintf((char *) buf, "Value %d", (int)(env->values[current_node] - (middle ? 32 : 0)));
-        draw_text((const unsigned char *)buf, 66, 23, 2, 0);
+        sprintf(buf, "Node %d/%d", current_node, env->nodes);
+        draw_text(buf, 66, 19, 2, 0);
+        sprintf(buf, "Tick %d", env->ticks[current_node]);
+        draw_text(buf, 66, 21, 2, 0);
+        sprintf(buf, "Value %d", (int)(env->values[current_node] - (middle ? 32 : 0)));
+        draw_text(buf, 66, 23, 2, 0);
 }
 
 /* return: the new current node */
@@ -1700,10 +1700,10 @@ static void _draw_env_label(const char *env_name, int is_selected)
 {
 	int pos = 33;
 	
-	pos += draw_text((const unsigned char *)env_name, pos, 16, is_selected ? 3 : 0, 2);
-	pos += draw_text((const unsigned char *)" Envelope", pos, 16, is_selected ? 3 : 0, 2);
+	pos += draw_text(env_name, pos, 16, is_selected ? 3 : 0, 2);
+	pos += draw_text(" Envelope", pos, 16, is_selected ? 3 : 0, 2);
 	if (envelope_edit_mode || envelope_mouse_edit)
-		draw_text((const unsigned char *)" (Edit)", pos, 16, is_selected ? 3 : 0, 2);
+		draw_text(" (Edit)", pos, 16, is_selected ? 3 : 0, 2);
 }
 
 static void volume_envelope_draw(void)
@@ -1844,7 +1844,7 @@ static void pitch_pan_center_draw(void)
         int selected = (ACTIVE_PAGE.selected_widget == 16);
 	song_instrument *ins = song_get_instrument(current_instrument, NULL);
 	
-	draw_text((const unsigned char *)get_note_string(ins->pitch_pan_center + 1, buf), 54, 45, selected ? 3 : 2, 0);
+	draw_text(get_note_string(ins->pitch_pan_center + 1, buf), 54, 45, selected ? 3 : 2, 0);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -2367,14 +2367,14 @@ static void instrument_list_general_draw_const(void)
         /* Kind of a hack, and not really useful, but... :) */
         if (status.flags & CLASSIC_MODE) {
                 draw_box(55, 46, 73, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-                draw_text((const unsigned char *)"    ", 69, 47, 1, 0);
+                draw_text("    ", 69, 47, 1, 0);
         } else {
                 draw_box(55, 46, 69, 48, BOX_THICK | BOX_INNER | BOX_INSET);
         }
 
-        draw_text((const unsigned char *)"New Note Action", 54, 17, 0, 2);
-        draw_text((const unsigned char *)"Duplicate Check Type & Action", 47, 32, 0, 2);
-        draw_text((const unsigned char *)"Filename", 47, 47, 0, 2);
+        draw_text("New Note Action", 54, 17, 0, 2);
+        draw_text("Duplicate Check Type & Action", 47, 32, 0, 2);
+        draw_text("Filename", 47, 47, 0, 2);
 
         for (n = 0; n < 35; n++) {
                 draw_char(134, 44 + n, 15, 0, 2);
@@ -2398,17 +2398,17 @@ static void instrument_list_volume_draw_const(void)
         draw_box(53, 41, 71, 44, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(53, 45, 71, 47, BOX_THICK | BOX_INNER | BOX_INSET);
 
-        draw_text((const unsigned char *)"Volume Envelope", 38, 28, 0, 2);
-        draw_text((const unsigned char *)"Carry", 48, 29, 0, 2);
-        draw_text((const unsigned char *)"Envelope Loop", 40, 32, 0, 2);
-        draw_text((const unsigned char *)"Loop Begin", 43, 33, 0, 2);
-        draw_text((const unsigned char *)"Loop End", 45, 34, 0, 2);
-        draw_text((const unsigned char *)"Sustain Loop", 41, 37, 0, 2);
-        draw_text((const unsigned char *)"SusLoop Begin", 40, 38, 0, 2);
-        draw_text((const unsigned char *)"SusLoop End", 42, 39, 0, 2);
-        draw_text((const unsigned char *)"Global Volume", 40, 42, 0, 2);
-        draw_text((const unsigned char *)"Fadeout", 46, 43, 0, 2);
-        draw_text((const unsigned char *)"Volume Swing %", 39, 46, 0, 2);
+        draw_text("Volume Envelope", 38, 28, 0, 2);
+        draw_text("Carry", 48, 29, 0, 2);
+        draw_text("Envelope Loop", 40, 32, 0, 2);
+        draw_text("Loop Begin", 43, 33, 0, 2);
+        draw_text("Loop End", 45, 34, 0, 2);
+        draw_text("Sustain Loop", 41, 37, 0, 2);
+        draw_text("SusLoop Begin", 40, 38, 0, 2);
+        draw_text("SusLoop End", 42, 39, 0, 2);
+        draw_text("Global Volume", 40, 42, 0, 2);
+        draw_text("Fadeout", 46, 43, 0, 2);
+        draw_text("Volume Swing %", 39, 46, 0, 2);
 }
 
 static void instrument_list_panning_draw_const(void)
@@ -2426,26 +2426,26 @@ static void instrument_list_panning_draw_const(void)
         draw_box(53, 36, 63, 40, BOX_THICK | BOX_INNER | BOX_INSET);
         draw_box(53, 41, 63, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
-        draw_text((const unsigned char *)"Panning Envelope", 37, 28, 0, 2);
-        draw_text((const unsigned char *)"Carry", 48, 29, 0, 2);
-        draw_text((const unsigned char *)"Envelope Loop", 40, 32, 0, 2);
-        draw_text((const unsigned char *)"Loop Begin", 43, 33, 0, 2);
-        draw_text((const unsigned char *)"Loop End", 45, 34, 0, 2);
-        draw_text((const unsigned char *)"Sustain Loop", 41, 37, 0, 2);
-        draw_text((const unsigned char *)"SusLoop Begin", 40, 38, 0, 2);
-        draw_text((const unsigned char *)"SusLoop End", 42, 39, 0, 2);
-        draw_text((const unsigned char *)"Default Pan", 42, 42, 0, 2);
-        draw_text((const unsigned char *)"Pan Value", 44, 43, 0, 2);
-	draw_text((const unsigned char *)"Pitch-Pan Center", 37, 45, 0, 2);
-	draw_text((const unsigned char *)"Pitch-Pan Separation", 33, 46, 0, 2);
+        draw_text("Panning Envelope", 37, 28, 0, 2);
+        draw_text("Carry", 48, 29, 0, 2);
+        draw_text("Envelope Loop", 40, 32, 0, 2);
+        draw_text("Loop Begin", 43, 33, 0, 2);
+        draw_text("Loop End", 45, 34, 0, 2);
+        draw_text("Sustain Loop", 41, 37, 0, 2);
+        draw_text("SusLoop Begin", 40, 38, 0, 2);
+        draw_text("SusLoop End", 42, 39, 0, 2);
+        draw_text("Default Pan", 42, 42, 0, 2);
+        draw_text("Pan Value", 44, 43, 0, 2);
+	draw_text("Pitch-Pan Center", 37, 45, 0, 2);
+	draw_text("Pitch-Pan Separation", 33, 46, 0, 2);
 	if (status.flags & CLASSIC_MODE) {
 		/* Hmm. The 's' in swing isn't capitalised. ;) */
-		draw_text((const unsigned char *)"Pan swing", 44, 47, 0, 2);
+		draw_text("Pan swing", 44, 47, 0, 2);
 	} else {
-		draw_text((const unsigned char *)"Pan Swing", 44, 47, 0, 2);
+		draw_text("Pan Swing", 44, 47, 0, 2);
 	}
 
-	draw_text((const unsigned char *)"\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a", 54, 44, 2, 0);
+	draw_text("\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a", 54, 44, 2, 0);
 }
 
 static void instrument_list_pitch_draw_const(void)
@@ -2462,20 +2462,20 @@ static void instrument_list_pitch_draw_const(void)
         draw_box(53, 36, 63, 40, BOX_THICK | BOX_INNER | BOX_INSET);
         draw_box(53, 41, 71, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 	
-	draw_text((const unsigned char *)"Frequency Envelope", 35, 28, 0, 2);
-	draw_text((const unsigned char *)"Carry", 48, 29, 0, 2);
-        draw_text((const unsigned char *)"Envelope Loop", 40, 32, 0, 2);
-        draw_text((const unsigned char *)"Loop Begin", 43, 33, 0, 2);
-        draw_text((const unsigned char *)"Loop End", 45, 34, 0, 2);
-        draw_text((const unsigned char *)"Sustain Loop", 41, 37, 0, 2);
-        draw_text((const unsigned char *)"SusLoop Begin", 40, 38, 0, 2);
-        draw_text((const unsigned char *)"SusLoop End", 42, 39, 0, 2);
-	draw_text((const unsigned char *)"Default Cutoff", 36, 42, 0, 2);
-	draw_text((const unsigned char *)"Default Resonance", 36, 43, 0, 2);
-	draw_text((const unsigned char *)"MIDI Channel", 36, 44, 0, 2);
-	draw_text((const unsigned char *)"MIDI Program", 36, 45, 0, 2);
-	draw_text((const unsigned char *)"MIDI Bank Low", 36, 46, 0, 2);
-	draw_text((const unsigned char *)"MIDI Bank High", 36, 47, 0, 2);
+	draw_text("Frequency Envelope", 35, 28, 0, 2);
+	draw_text("Carry", 48, 29, 0, 2);
+        draw_text("Envelope Loop", 40, 32, 0, 2);
+        draw_text("Loop Begin", 43, 33, 0, 2);
+        draw_text("Loop End", 45, 34, 0, 2);
+        draw_text("Sustain Loop", 41, 37, 0, 2);
+        draw_text("SusLoop Begin", 40, 38, 0, 2);
+        draw_text("SusLoop End", 42, 39, 0, 2);
+	draw_text("Default Cutoff", 36, 42, 0, 2);
+	draw_text("Default Resonance", 36, 43, 0, 2);
+	draw_text("MIDI Channel", 36, 44, 0, 2);
+	draw_text("MIDI Program", 36, 45, 0, 2);
+	draw_text("MIDI Bank Low", 36, 46, 0, 2);
+	draw_text("MIDI Bank High", 36, 47, 0, 2);
 }
 
 /* --------------------------------------------------------------------- */

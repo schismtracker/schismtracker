@@ -47,7 +47,7 @@ static void palette_draw_const(void)
 {
         int n;
 
-        draw_text((unsigned char *) "Predefined Palettes", 57, 25, 0, 2);
+        draw_text("Predefined Palettes", 57, 25, 0, 2);
 
         for (n = 0; n < 7; n++) {
                 draw_box(2, 13 + (5 * n), 8, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
@@ -100,7 +100,7 @@ static void palette_list_draw(void)
 		bg = 14;
 	}
 
-	draw_text_len((unsigned char *) "User Defined", 21, 56, 27, fg, bg);
+	draw_text_len("User Defined", 21, 56, 27, fg, bg);
         for (n = 0; n < 19 && palettes[n].name[0]; n++) {
 		fg = 6;
 		bg = 0;
@@ -110,7 +110,7 @@ static void palette_list_draw(void)
                 } else if (n == selected_palette) {
                         bg = 14;
                 }
-                draw_text_len((unsigned char *) palettes[n].name, 21, 56, 28 + n, fg, bg);
+                draw_text_len(palettes[n].name, 21, 56, 28 + n, fg, bg);
         }
         max_palette = n;
 }

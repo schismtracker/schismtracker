@@ -56,8 +56,8 @@ void update_current_order(void)
 {
         char buf[4];
 
-        draw_text(numtostr(3, current_order, (unsigned char *) buf), 12, 5, 5, 0);
-        draw_text(numtostr(3, song_get_num_orders(), (unsigned char *) buf), 16, 5, 5, 0);
+        draw_text(numtostr(3, current_order, buf), 12, 5, 5, 0);
+        draw_text(numtostr(3, song_get_num_orders(), buf), 16, 5, 5, 0);
 }
 
 
@@ -163,7 +163,7 @@ static void get_pattern_string(unsigned char pattern, char *buf)
                 buf[3] = 0;
                 break;
         default:
-                numtostr(3, pattern, (unsigned char *) buf);
+                numtostr(3, pattern, buf);
                 break;
         }
 }
@@ -177,9 +177,9 @@ static void orderlist_draw(void)
 
         /* draw the list */
         for (pos = 0, n = top_order; pos < 32; pos++, n++) {
-                draw_text(numtostr(3, n, (unsigned char *) buf), 2, 15 + pos, (n == playing_order ? 3 : 0), 2);
+                draw_text(numtostr(3, n, buf), 2, 15 + pos, (n == playing_order ? 3 : 0), 2);
                 get_pattern_string(list[n], buf);
-                draw_text((unsigned char *) buf, 6, 15 + pos, 2, 0);
+                draw_text(buf, 6, 15 + pos, 2, 0);
         }
 
         /* draw the cursor */
@@ -743,8 +743,8 @@ static void order_pan_vol_draw_const(void)
 static void orderpan_draw_const(void)
 {
         order_pan_vol_draw_const();
-        draw_text((unsigned char *) "L   M   R", 31, 14, 0, 3);
-        draw_text((unsigned char *) "L   M   R", 65, 14, 0, 3);
+        draw_text("L   M   R", 31, 14, 0, 3);
+        draw_text("L   M   R", 65, 14, 0, 3);
 }
 
 static void ordervol_draw_const(void)
@@ -757,8 +757,8 @@ static void ordervol_draw_const(void)
 
         order_pan_vol_draw_const();
 
-        draw_text((unsigned char *) " Volumes ", 31, 14, 0, 3);
-        draw_text((unsigned char *) " Volumes ", 65, 14, 0, 3);
+        draw_text(" Volumes ", 31, 14, 0, 3);
+        draw_text(" Volumes ", 65, 14, 0, 3);
 
         for (n = 1; n <= 32; n++) {
 		fg = 0;
@@ -768,8 +768,8 @@ static void ordervol_draw_const(void)
 			}
 		}
 
-                numtostr(2, n, (unsigned char *) buf + 8);
-                draw_text((unsigned char *) buf, 20, 14 + n, fg, 2);
+                numtostr(2, n, buf + 8);
+                draw_text(buf, 20, 14 + n, fg, 2);
 
 		fg = 0;
 		if (!(status.flags & CLASSIC_MODE)) {
@@ -778,8 +778,8 @@ static void ordervol_draw_const(void)
 			}
 		}
 
-                numtostr(2, n + 32, (unsigned char *) buf + 8);
-                draw_text((unsigned char *) buf, 54, 14 + n, fg, 2);
+                numtostr(2, n + 32, buf + 8);
+                draw_text(buf, 54, 14 + n, fg, 2);
         }
 }
 

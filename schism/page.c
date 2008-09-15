@@ -161,7 +161,7 @@ static inline void draw_time(void)
          * who on earth leaves a tracker running for 41 days? */
         sprintf(buf, "%3d:%02d:%02d", current_time.h % 1000,
                 current_time.m % 60, current_time.s % 60);
-        draw_text((const unsigned char *)buf, 69, 9, 0, 2);
+        draw_text(buf, 69, 9, 0, 2);
 }
 
 /* --------------------------------------------------------------------- */
@@ -176,7 +176,7 @@ static void draw_page_title(void)
                 for (x = 1; x < tpos - 1; x++)
                         draw_char(154, x, 11, 1, 2);
                 draw_char(0, tpos - 1, 11, 1, 2);
-                draw_text((const unsigned char *)ACTIVE_PAGE.title, tpos, 11, 0, 2);
+                draw_text(ACTIVE_PAGE.title, tpos, 11, 0, 2);
                 draw_char(0, tpos + tlen, 11, 1, 2);
                 for (x = tpos + tlen + 1; x < 79; x++)
                         draw_char(154, x, 11, 1, 2);
@@ -251,11 +251,11 @@ static void new_song_ok(UNUSED void *data)
 
 static void new_song_draw_const(void)
 {
-	draw_text((const unsigned char *)"New Song", 36, 21, 3, 2);
-	draw_text((const unsigned char *)"Patterns", 26, 24, 0, 2);
-	draw_text((const unsigned char *)"Samples", 27, 27, 0, 2);
-	draw_text((const unsigned char *)"Instruments", 23, 30, 0, 2);
-	draw_text((const unsigned char *)"Order List", 24, 33, 0, 2);
+	draw_text("New Song", 36, 21, 3, 2);
+	draw_text("Patterns", 26, 24, 0, 2);
+	draw_text("Samples", 27, 27, 0, 2);
+	draw_text("Instruments", 23, 30, 0, 2);
+	draw_text("Order List", 24, 33, 0, 2);
 }
 
 void new_song_dialog(void)
@@ -329,7 +329,7 @@ static void _mp_draw(void)
 	}
 	i = strlen(name);
 	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, 2);
-	draw_text_len((const unsigned char *) name, 17, _mp_text_x, _mp_text_y, 0, 2);
+	draw_text_len( name, 17, _mp_text_x, _mp_text_y, 0, 2);
 	if (i < 17 && name == (void *) _mp_text) {
 		draw_char(':', _mp_text_x + i, _mp_text_y, 0, 2);
 	}
@@ -1239,19 +1239,19 @@ static void draw_top_info_const(void)
 		br = 3;
 	}
 
-	draw_text((const unsigned char *)schism_banner(),
+	draw_text(schism_banner(),
 					(80 - strlen(schism_banner())) / 2, 1, 0, 2);
-        draw_text((const unsigned char *)"Song Name", 2, 3, 0, 2);
-        draw_text((const unsigned char *)"File Name", 2, 4, 0, 2);
-        draw_text((const unsigned char *)"Order", 6, 5, 0, 2);
-        draw_text((const unsigned char *)"Pattern", 4, 6, 0, 2);
-        draw_text((const unsigned char *)"Row", 8, 7, 0, 2);
+        draw_text("Song Name", 2, 3, 0, 2);
+        draw_text("File Name", 2, 4, 0, 2);
+        draw_text("Order", 6, 5, 0, 2);
+        draw_text("Pattern", 4, 6, 0, 2);
+        draw_text("Row", 8, 7, 0, 2);
 
-        draw_text((const unsigned char *)"Speed/Tempo", 38, 4, 0, 2);
-        draw_text((const unsigned char *)"Octave", 43, 5, 0, 2);
+        draw_text("Speed/Tempo", 38, 4, 0, 2);
+        draw_text("Octave", 43, 5, 0, 2);
 
-        draw_text((const unsigned char *)"F1...Help       F9.....Load", 21, 6, 0, 2);
-        draw_text((const unsigned char *)"ESC..Main Menu  F5/F8..Play / Stop", 21, 7, 0, 2);
+        draw_text("F1...Help       F9.....Load", 21, 6, 0, 2);
+        draw_text("ESC..Main Menu  F5/F8..Play / Stop", 21, 7, 0, 2);
 
         /* the neat-looking (but incredibly ugly to draw) borders */
         draw_char(128, 30, 4, br, 2);
@@ -1309,7 +1309,7 @@ static void draw_top_info_const(void)
                 draw_char(129, 58 + n, 4, br, 2);
         }
 
-        draw_text((const unsigned char *)"Time", 63, 9, 0, 2);
+        draw_text("Time", 63, 9, 0, 2);
         draw_char('/', 15, 5, 1, 0);
         draw_char('/', 15, 6, 1, 0);
         draw_char('/', 15, 7, 1, 0);
@@ -1335,21 +1335,21 @@ void update_current_instrument(void)
                 ins_mode = song_is_instrument_mode();
 
         if (ins_mode) {
-                draw_text((const unsigned char *)"Instrument", 39, 3, 0, 2);
+                draw_text("Instrument", 39, 3, 0, 2);
                 n = instrument_get_current();
 		song_get_instrument(n, &name);
         } else {
-                draw_text((const unsigned char *)"    Sample", 39, 3, 0, 2);
+                draw_text("    Sample", 39, 3, 0, 2);
                 n = sample_get_current();
 		song_get_sample(n, &name);
         }
         
         if (n > 0) {
-                draw_text(num99tostr(n, (unsigned char *) buf), 50, 3, 5, 0);
-                draw_text_len((const unsigned char *)name, 25, 53, 3, 5, 0);
+                draw_text(num99tostr(n, buf), 50, 3, 5, 0);
+                draw_text_len(name, 25, 53, 3, 5, 0);
         } else {
-                draw_text((const unsigned char *)"..", 50, 3, 5, 0);
-                draw_text((const unsigned char *)".........................", 53, 3, 5, 0);
+                draw_text("..", 50, 3, 5, 0);
+                draw_text(".........................", 53, 3, 5, 0);
         }
 }
 
@@ -1359,15 +1359,15 @@ static void redraw_top_info(void)
 
         update_current_instrument();
 
-        draw_text_len((const unsigned char *)song_get_basename(), 18, 12, 4, 5, 0);
-        draw_text_len((const unsigned char *)song_get_title(), 25, 12, 3, 5, 0);
+        draw_text_len(song_get_basename(), 18, 12, 4, 5, 0);
+        draw_text_len(song_get_title(), 25, 12, 3, 5, 0);
 
         update_current_order();
         update_current_pattern();
         update_current_row();
 
-        draw_text(numtostr(3, song_get_current_speed(), (unsigned char *) buf), 50, 4, 5, 0);
-        draw_text(numtostr(3, song_get_current_tempo(), (unsigned char *) buf), 54, 4, 5, 0);
+        draw_text(numtostr(3, song_get_current_speed(), buf), 50, 4, 5, 0);
+        draw_text(numtostr(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
         draw_char('0' + kbd_get_current_octave(), 50, 5, 5, 0);
 }
 
@@ -1480,18 +1480,18 @@ static void vis_fakemem(void)
 		ems >>= 10;
 	
 		sprintf(buf, "FreeMem %uk", conv);
-		draw_text((const unsigned char *)buf, 63, 6, 0, 2);
+		draw_text(buf, 63, 6, 0, 2);
 		sprintf(buf, "FreeEMS %uk", ems);
-		draw_text((const unsigned char *)buf, 63, 7, 0, 2);
+		draw_text(buf, 63, 7, 0, 2);
 	} else {
 		sprintf(buf, "   Song %uk",
 				(unsigned)(
 					(memused_patterns()
 					 +memused_instruments()
 					 +memused_songmessage()) >> 10));
-		draw_text((const unsigned char *)buf, 63, 6, 0, 2);
+		draw_text(buf, 63, 6, 0, 2);
 		sprintf(buf, "Samples %uk", (unsigned)(memused_samples() >> 10));
-		draw_text((const unsigned char *)buf, 63, 7, 0, 2);
+		draw_text(buf, 63, 7, 0, 2);
 	}
 }
 
@@ -1547,9 +1547,9 @@ void redraw_screen(void)
 	if (!ACTIVE_PAGE.draw_full) {
 		draw_vis();
 		draw_time();
-		draw_text(numtostr(3, song_get_current_speed(), (unsigned char *) buf),
+		draw_text(numtostr(3, song_get_current_speed(), buf),
 								50, 4, 5, 0);
-		draw_text(numtostr(3, song_get_current_tempo(), (unsigned char *) buf),
+		draw_text(numtostr(3, song_get_current_tempo(), buf),
 								54, 4, 5, 0);
 
 		status_text_redraw();
@@ -1820,7 +1820,7 @@ static int _timejump_keyh(struct key_event *k)
 }
 static void _timejump_draw(void)
 {
-	draw_text((const unsigned char *)"Jump to time:", 30, 26, 0, 2);
+	draw_text("Jump to time:", 30, 26, 0, 2);
 
 	draw_char(':', 46, 26, 3, 0);
 	draw_box(43, 25, 49, 27, BOX_THIN | BOX_INNER | BOX_INSET);

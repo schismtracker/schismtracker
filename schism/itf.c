@@ -192,10 +192,10 @@ static byte clipboard[8] = { 0 };
 
 /* if this is nonzero, the screen will be redrawn. none of the functions
  * except main should call draw_anything -- set this instead. */
-static void draw_frame(const byte * name, int x, int y, int inner_width, int inner_height, int active)
+static void draw_frame(const char* name, int x, int y, int inner_width, int inner_height, int active)
 {
 	int n, c;
-	int len = strlen((char*)name);
+	int len = strlen(name);
 
 	if (len > inner_width + 2)
 		len = inner_width + 2;
@@ -260,7 +260,7 @@ static inline void draw_editbox(void)
 	draw_char(current_char, INNER_X(EDITBOX_X), INNER_Y(EDITBOX_Y), 5, 0);
 
 	sprintf(buf, "%3d $%02X", current_char, current_char);
-	draw_text((unsigned char *) buf, INNER_X(EDITBOX_X) + 2, INNER_Y(EDITBOX_Y), 5, 0);
+	draw_text(buf, INNER_X(EDITBOX_X) + 2, INNER_Y(EDITBOX_Y), 5, 0);
 }
 
 static inline void draw_charmap(void)
@@ -407,7 +407,7 @@ static inline void draw_helptext(void)
 		ptr++;
 	}
 #define M "(c) 2003-2008 Storlek and Mrs. Brisby"
-	draw_text((unsigned char *) M, 78-sizeof(M), 46, 1, 0);
+	draw_text(M, 78-sizeof(M), 46, 1, 0);
 #undef M
 }
 
@@ -415,30 +415,30 @@ static inline void draw_time(void)
 {
 	char buf[16];
 	sprintf(buf, "%.2d:%.2d:%.2d", status.h, status.m, status.s);
-	draw_text((unsigned char *) buf, 3, 46, 1, 0);
+	draw_text(buf, 3, 46, 1, 0);
 }
 
 extern unsigned int color_set[16];
 
 static void draw_screen(void)
 {
-	draw_frame((unsigned char *) "Edit Box", EDITBOX_X, EDITBOX_Y, 9, 11, !!(selected_item == EDITBOX));
+	draw_frame("Edit Box", EDITBOX_X, EDITBOX_Y, 9, 11, !!(selected_item == EDITBOX));
 	draw_editbox();
 
-	draw_frame((unsigned char *) "Current Font", CHARMAP_X, CHARMAP_Y, 16, 16, !!(selected_item == CHARMAP));
+	draw_frame("Current Font", CHARMAP_X, CHARMAP_Y, 16, 16, !!(selected_item == CHARMAP));
 	draw_charmap();
 
-	draw_frame((unsigned char *) "Preview", ITFMAP_X, ITFMAP_Y, 16, 15, !!(selected_item == ITFMAP));
+	draw_frame("Preview", ITFMAP_X, ITFMAP_Y, 16, 15, !!(selected_item == ITFMAP));
 	draw_itfmap();
 
 	switch (fontlist_mode) {
 	case MODE_LOAD:
-		draw_frame((unsigned char *) "Load/Browse", FONTLIST_X, FONTLIST_Y, 9,
+		draw_frame("Load/Browse", FONTLIST_X, FONTLIST_Y, 9,
 			   VISIBLE_FONTS, !!(selected_item == FONTLIST));
 		draw_fontlist();
 		break;
 	case MODE_SAVE:
-		draw_frame((unsigned char *) "Save As...", FONTLIST_X, FONTLIST_Y, 9,
+		draw_frame("Save As...", FONTLIST_X, FONTLIST_Y, 9,
 			   VISIBLE_FONTS, !!(selected_item == FONTLIST));
 		draw_fontlist();
 		break;
@@ -446,7 +446,7 @@ static void draw_screen(void)
 		break;
 	}
 
-	draw_frame((unsigned char *) "Quick Help", HELPTEXT_X, HELPTEXT_Y, 74, 12, -1);
+	draw_frame("Quick Help", HELPTEXT_X, HELPTEXT_Y, 74, 12, -1);
 	draw_helptext();
 
 	draw_time();

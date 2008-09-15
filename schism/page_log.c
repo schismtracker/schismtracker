@@ -99,11 +99,11 @@ static void log_redraw(void)
         for (n = 0; n <= last_line && n < 33; n++, i++) {
 		if (!lines[i].text) continue;
 		if (lines[i].bios_font) {
-			draw_text_bios_len((unsigned char *) lines[i].text,
+			draw_text_bios_len(lines[i].text,
 					74, 3, 14 + n,
 					lines[i].color, 0);
 		} else {
-			draw_text_len((unsigned char *) lines[i].text,
+			draw_text_len(lines[i].text,
 					74, 3, 14 + n,
 					lines[i].color, 0);
 		}

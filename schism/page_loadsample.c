@@ -253,69 +253,69 @@ static void load_sample_draw_const(void)
 		f = flist.files[current_file];
 
 		sprintf(sbuf, "%07d", f->smp_length);
-		draw_text_len((unsigned char *) sbuf, 13, 64, 22, 2, 0);
+		draw_text_len(sbuf, 13, 64, 22, 2, 0);
 
 		if (!f->smp_length && !f->smp_filename && !f->smp_flags) {
-			draw_text_len((unsigned char *) "No sample",13, 64, 21, 2, 0);
+			draw_text_len("No sample",13, 64, 21, 2, 0);
 		} else if (f->smp_flags & SAMP_STEREO) {
-			draw_text_len((unsigned char *)
+			draw_text_len(
 				(f->smp_flags & SAMP_16_BIT
 				? "16 bit Stereo" : "8 bit Stereo"),
 			13, 64, 21, 2, 0);
 		} else {
-			draw_text_len((unsigned char *)
+			draw_text_len(
 				(f->smp_flags & SAMP_16_BIT
 				? "16 bit" : "8 bit"),
 			13, 64, 21, 2, 0);
 		}
 		if (f->description) {
-			draw_text_len((unsigned char *)f->description,
+			draw_text_len(f->description,
 					18,
 					59, 44, 5, 0);
 		} else {
 			switch (f->type) {
 			case TYPE_DIRECTORY:
-				draw_text((unsigned char *)"Directory",
+				draw_text("Directory",
 						59, 44, 5, 0);
 				break;
 			default:
-				draw_text((unsigned char *)"Unknown format",
+				draw_text("Unknown format",
 						59, 44, 5, 0);
 				break;
 			};
 		}
 		sprintf(sbuf, "%07ld", (long)f->filesize);
-		draw_text((unsigned char *)sbuf, 59, 45, 5,0);
-		get_date_string(f->timestamp, (unsigned char *)sbuf);
-		draw_text((unsigned char *)sbuf, 59, 46, 5,0);
-		get_time_string(f->timestamp, (unsigned char *)sbuf);
-		draw_text((unsigned char *)sbuf, 59, 47, 5,0);
+		draw_text(sbuf, 59, 45, 5,0);
+		get_date_string(f->timestamp, sbuf);
+		draw_text(sbuf, 59, 46, 5,0);
+		get_time_string(f->timestamp, sbuf);
+		draw_text(sbuf, 59, 47, 5,0);
 	}
 
 	/* these are exactly the same as in page_samples.c, apart from
 	 * 'quality' and 'length' being one line higher */
-	draw_text((unsigned char *) "Filename", 55, 13, 0, 2);
-	draw_text((unsigned char *) "Speed", 58, 14, 0, 2);
-	draw_text((unsigned char *) "Loop", 59, 15, 0, 2);
-	draw_text((unsigned char *) "LoopBeg", 56, 16, 0, 2);
-	draw_text((unsigned char *) "LoopEnd", 56, 17, 0, 2);
-	draw_text((unsigned char *) "SusLoop", 56, 18, 0, 2);
-	draw_text((unsigned char *) "SusLBeg", 56, 19, 0, 2);
-	draw_text((unsigned char *) "SusLEnd", 56, 20, 0, 2);
-	draw_text((unsigned char *) "Quality", 56, 21, 0, 2);
-	draw_text((unsigned char *) "Length", 57, 22, 0, 2);
+	draw_text("Filename", 55, 13, 0, 2);
+	draw_text("Speed", 58, 14, 0, 2);
+	draw_text("Loop", 59, 15, 0, 2);
+	draw_text("LoopBeg", 56, 16, 0, 2);
+	draw_text("LoopEnd", 56, 17, 0, 2);
+	draw_text("SusLoop", 56, 18, 0, 2);
+	draw_text("SusLBeg", 56, 19, 0, 2);
+	draw_text("SusLEnd", 56, 20, 0, 2);
+	draw_text("Quality", 56, 21, 0, 2);
+	draw_text("Length", 57, 22, 0, 2);
 
 	/* these abbreviations are sucky and lame. any suggestions? */
-	draw_text((unsigned char *) "Def. Vol.", 53, 33, 0, 2);
-	draw_text((unsigned char *) "Glb. Vol.", 53, 34, 0, 2);
-	draw_text((unsigned char *) "Vib.Speed", 53, 37, 0, 2);
-	draw_text((unsigned char *) "Vib.Depth", 53, 38, 0, 2);
-	draw_text((unsigned char *) "Vib. Rate", 53, 39, 0, 2);
+	draw_text("Def. Vol.", 53, 33, 0, 2);
+	draw_text("Glb. Vol.", 53, 34, 0, 2);
+	draw_text("Vib.Speed", 53, 37, 0, 2);
+	draw_text("Vib.Depth", 53, 38, 0, 2);
+	draw_text("Vib. Rate", 53, 39, 0, 2);
 
-	draw_text((unsigned char *) "Format", 52, 44, 0, 2);
-	draw_text((unsigned char *) "Size", 54, 45, 0, 2);
-	draw_text((unsigned char *) "Date", 54, 46, 0, 2);
-	draw_text((unsigned char *) "Time", 54, 47, 0, 2);
+	draw_text("Format", 52, 44, 0, 2);
+	draw_text("Size", 54, 45, 0, 2);
+	draw_text("Date", 54, 46, 0, 2);
+	draw_text("Time", 54, 47, 0, 2);
 
 	if (fake_slot > -1) {
 		s = song_get_sample(fake_slot, 0);
@@ -401,11 +401,11 @@ static void file_list_draw(void)
 			fg = get_type_color(file->type);
 			bg = 0;
 		}
-		draw_text(numtostr(3, n+1, (unsigned char *) buf), 2, pos, 0, 2);
-		draw_text_len((unsigned char *) (file->title ? file->title : ""),
+		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
+		draw_text_len((file->title ? file->title : ""),
 					25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len((unsigned char *) (file->base ? file->base : ""),
+		draw_text_len((file->base ? file->base : ""),
 					18, 32, pos, fg, bg);
 		if (file->base && slash_search_mode > -1) {
 			if (strncasecmp(file->base,slash_search_str,slash_search_mode) == 0) {
@@ -499,7 +499,7 @@ static void stereo_cvt_complete_both(void)
 }
 static void stereo_cvt_dialog(void)
 {
-	draw_text((unsigned char *) "Loading Stereo Sample", 30, 27, 0, 2);
+	draw_text("Loading Stereo Sample", 30, 27, 0, 2);
 }
 static int stereo_cvt_hk(struct key_event *k)
 {
