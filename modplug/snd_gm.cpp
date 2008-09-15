@@ -425,7 +425,7 @@ static double log2(double d)
 }
 #endif
 
-void GM_SetFreqAndVol(int c, int Hertz, int Vol) // for keyons and pitch bending  alike
+void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
 {
     //fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,Vol);
     if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
@@ -460,6 +460,8 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol) // for keyons and pitch bending
     */
     double midinote = 69 + 12.0 * log2(Hertz/440.0);
     
+    // Reduce by a couple of octaves... Apparently the hertz
+    // value that comes from SchismTracker is upscaled by some 2^5.
     midinote -= 12*5;
 
     int note = S3Mchans[c].note; // what's playing on the channel right now?
@@ -469,7 +471,14 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol) // for keyons and pitch bending
     {
         // If the note is not active, activate it first.
         // Choose the nearest note to Hertz.
+        
         note = (int)(midinote + 0.5);
+
+        // If we are expecting a bend exclusively in either direction,
+        // prepare to utilize the full extent of available pitch bending.
+        if(bend_mode == MIDI_BEND_DOWN) note += (int)(0x2000 / semitone_bend_depth);
+        if(bend_mode == MIDI_BEND_UP)   note -= (int)(0x2000 / semitone_bend_depth);
+        
         if(note < 1) note = 1;
         if(note > 127) note = 127;
         GM_KeyOn(c, note, Vol);
