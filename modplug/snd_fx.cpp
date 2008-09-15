@@ -2249,6 +2249,8 @@ void CSoundFile::NoteCut(UINT nChn, UINT nTick)
 		pChn->nVolume = 0;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
 		pChn->nLength = 0;
+		
+		OPL_NoteOff(nChn); GM_KeyOff(nChn);
 	}
 }
 
