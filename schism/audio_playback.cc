@@ -89,7 +89,7 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 		|| status.vis_style == VIS_FFT) {
 			vis_work_8m(0,0);
 		}
-		song_stop_unlocked();
+		song_stop_unlocked(0);
 		goto POST_EVENT;
 	}
 
@@ -102,7 +102,7 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 			|| status.vis_style == VIS_FFT) {
 				vis_work_8m(0,0);
 			}
-			song_stop_unlocked();
+			song_stop_unlocked(0);
 			goto POST_EVENT;
 		}
 		samples_played += n;
@@ -558,7 +558,7 @@ void song_start()
 void song_stop()
 {
 	song_lock_audio();
-	song_stop_unlocked();
+	song_stop_unlocked(0);
 	song_unlock_audio();
 	main_song_mode_changed_cb();
 }
@@ -574,7 +574,7 @@ static int was_bankhi[16];
 static const MODCOMMAND *last_row[64];
 static int last_row_number = -1;
 
-void song_stop_unlocked()
+void song_stop_unlocked(int quitting)
 {
 	if (!mp) return;
 
@@ -613,7 +613,7 @@ void song_stop_unlocked()
 	}
 	
 	OPL_Reset(); /* Also stop all OPL sounds */
-	GM_Reset();
+	GM_Reset(quitting);
 
 	memset(last_row,0,sizeof(last_row));
 	last_row_number = -1;

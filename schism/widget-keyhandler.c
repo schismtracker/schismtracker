@@ -95,7 +95,7 @@ static void thumbbar_prompt_update(void)
 
 static void thumbbar_prompt_draw_const(void)
 {
-	draw_text((const unsigned char *)"Enter Value", 32, 26, 3, 2);
+	draw_text("Enter Value", 32, 26, 3, 2);
 	draw_box(43, 25, 48, 27, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_fill_chars(44, 26, 47, 26, 0);
 }

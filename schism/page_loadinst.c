@@ -225,11 +225,11 @@ static void file_list_draw(void)
 			bg = 0;
 		}
 
-		draw_text(numtostr(3, n, (unsigned char *) buf), 2, pos, 0, 2);
-		draw_text_len((unsigned char *) (file->title ? file->title : ""),
+		draw_text(numtostr(3, n, buf), 2, pos, 0, 2);
+		draw_text_len((file->title ? file->title : ""),
 						25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len((unsigned char *) (file->base ? file->base : ""),
+		draw_text_len((file->base ? file->base : ""),
 						18, 32, pos, fg, bg);
 
 		if (file->base && slash_search_mode > -1) {
@@ -244,13 +244,13 @@ static void file_list_draw(void)
 
 		if (file->sampsize > 1) {
 			sprintf(sbuf, "%u Samples", file->sampsize);
-			draw_text_len((unsigned char *) sbuf, 10, 51, pos, fg, bg);
+			draw_text_len(sbuf, 10, 51, pos, fg, bg);
 		} else if (file->sampsize == 1) {
-			draw_text((unsigned char *) "1 Sample  ", 51, pos, fg, bg);
+			draw_text("1 Sample  ", 51, pos, fg, bg);
 		} else if (file->type & TYPE_MODULE_MASK) {
-			draw_text((unsigned char *) "\x9a\x9a""Module\x9a\x9a", 51, pos, fg, bg);
+			draw_text("\x9a\x9a""Module\x9a\x9a", 51, pos, fg, bg);
 		} else {
-			draw_text((unsigned char *) "          ", 51, pos, fg, bg);
+			draw_text("          ", 51, pos, fg, bg);
 		}
 		if (file->filesize > 1048576) {
 			sprintf(sbuf, "%lum", (unsigned long)(file->filesize / 1048576));
@@ -261,7 +261,7 @@ static void file_list_draw(void)
 		} else {
 			*sbuf = 0;
 		}
-		draw_text_len((unsigned char *) sbuf, 6, 62, pos, fg, bg);
+		draw_text_len(sbuf, 6, 62, pos, fg, bg);
 	}
 	
 	/* draw the info for the current file (or directory...) */

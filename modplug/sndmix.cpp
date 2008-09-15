@@ -106,7 +106,7 @@ BOOL CSoundFile::InitPlayer(BOOL bReset)
 	
 	Fmdrv_Init(gdwMixingFreq);
 	OPL_Reset();
-	GM_Reset();
+	GM_Reset(0);
 	
 	return TRUE;
 }
@@ -967,7 +967,13 @@ BOOL CSoundFile::ReadNote()
             && (pChn->pHeader)
             && (pChn->pHeader->nMidiChannel > 0))
             {
-                GM_SetFreqAndVol(nChn, freq, (vol * pChn->nInsVol * 63 / (1<<20)));
+                MidiBendMode BendMode = MIDI_BEND_NORMAL;
+                /* TODO: If we're expecting a large bend exclusively
+                 * in either direction, update BendMode to indicate so.
+                 * This can be used to extend the range of MIDI pitch bending.
+                 */
+                GM_SetFreqAndVol(nChn, freq, (vol * pChn->nInsVol * 63 / (1<<20)),
+                                 BendMode);
             }
             else if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
 			{

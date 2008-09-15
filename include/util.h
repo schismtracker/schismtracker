@@ -120,11 +120,11 @@ extern void mem_free(void *);
 
 /* formatting */
 /* for get_{time,date}_string, buf should be (at least) 27 chars; anything past that isn't used. */
-unsigned char *get_date_string(time_t when, unsigned char *buf);
-unsigned char *get_time_string(time_t when, unsigned char *buf);
-unsigned char *numtostr(int digits, unsigned int n, unsigned char *buf);
-unsigned char *numtostr_signed(int digits, int n, unsigned char *buf);
-unsigned char *num99tostr(int n, unsigned char *buf);
+char *get_date_string(time_t when, char *buf);
+char *get_time_string(time_t when, char *buf);
+char *numtostr(int digits, unsigned int n, char *buf);
+char *numtostr_signed(int digits, int n, char *buf);
+char *num99tostr(int n, char *buf);
 
 /* string handling */
 const char *get_basename(const char *filename);

@@ -1077,7 +1077,7 @@ static void schism_shutdown(void)
 #endif
 	if (shutdown_process & EXIT_SDLQUIT) {
 		song_lock_audio();
-		song_stop_unlocked();
+		song_stop_unlocked(1);
 		song_unlock_audio();
 
 		video_shutdown();

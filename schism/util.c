@@ -104,7 +104,7 @@ void *mem_realloc(void *orig, size_t amount)
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
 
-unsigned char *get_date_string(time_t when, unsigned char *buf)
+char *get_date_string(time_t when, char *buf)
 {
         struct tm tm, *tmr;
 	const char *month_str[12] = {
@@ -125,59 +125,59 @@ unsigned char *get_date_string(time_t when, unsigned char *buf)
 	/* DO NOT change this back to localtime(). If some backward platform
 	doesn't have localtime_r, it needs to be implemented separately. */
 	tmr = localtime_r(&when, &tm);
-        snprintf((char *) buf, 27, "%s %d, %d", month_str[tmr->tm_mon],
+        snprintf(buf, 27, "%s %d, %d", month_str[tmr->tm_mon],
 				tmr->tm_mday, 1900 + tmr->tm_year);
         return buf;
 }
 
-unsigned char *get_time_string(time_t when, unsigned char *buf)
+char *get_time_string(time_t when, char *buf)
 {
         struct tm tm, *tmr;
 
 	tmr = localtime_r(&when, &tm);
-        snprintf((char *) buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? : 12,
+        snprintf(buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? : 12,
 		 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
         return buf;
 }
 
-unsigned char *num99tostr(int n, unsigned char *buf)
+char *num99tostr(int n, char *buf)
 {
 	static const char *qv = "HIJKLMNOPQRS";
 	if (n < 100) {
-		sprintf((char*)buf, "%02d", n);
+		sprintf(buf, "%02d", n);
 	} else if (n <= 200) {
 		n -= 100;
-		sprintf((char*)buf, "%c%d", 
+		sprintf(buf, "%c%d", 
 			qv[(n/10)], (n % 10));
 	}
 	return buf;
 
 }
-unsigned char *numtostr(int digits, unsigned int n, unsigned char *buf)
+char *numtostr(int digits, unsigned int n, char *buf)
 {
 	if (digits > 0) {
 		char fmt[] = "%03u";
 		
 		digits %= 10;
 		fmt[2] = '0' + digits;
-		snprintf((char *) buf, digits + 1, fmt, n);
+		snprintf(buf, digits + 1, fmt, n);
 		buf[digits] = 0;
 	} else {
-		sprintf((char *) buf, "%u", n);
+		sprintf(buf, "%u", n);
 	}
 	return buf;
 }
-unsigned char *numtostr_signed(int digits, int n, unsigned char *buf)
+char *numtostr_signed(int digits, int n, char *buf)
 {
 	if (digits > 0) {
 		char fmt[] = "%03d";
 		
 		digits %= 10;
 		fmt[2] = '0' + digits;
-		snprintf((char *) buf, digits + 1, fmt, n);
+		snprintf(buf, digits + 1, fmt, n);
 		buf[digits] = 0;
 	} else {
-		sprintf((char *) buf, "%d", n);
+		sprintf(buf, "%d", n);
 	}
 	return buf;
 }
@@ -605,7 +605,7 @@ char *str_concat(const char *s, ...)
 	
 	va_start(ap,s);
 	while (s) {
-		out = (char*)mem_realloc(out, (len += strlen(s)+1));
+		out = (char *)mem_realloc(out, (len += strlen(s)+1));
 		strcat(out, s);
 		s = va_arg(ap, const char *);
 	}

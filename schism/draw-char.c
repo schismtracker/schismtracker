@@ -592,13 +592,19 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 #undef SIZE
 #undef BPP
 
-void draw_char(unsigned int c, int x, int y, Uint32 fg, Uint32 bg)
+static void draw_char_bios(unsigned char c, int x, int y, Uint32 fg, Uint32 bg)
 {
-        assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-	vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12);
+    assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+    vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12) | 0x10000000;
 }
 
-int draw_text(const byte * text, int x, int y, Uint32 fg, Uint32 bg)
+void draw_char(unsigned char c, int x, int y, Uint32 fg, Uint32 bg)
+{
+    assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+    vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12);
+}
+
+int draw_text(const char * text, int x, int y, Uint32 fg, Uint32 bg)
 {
         int n = 0;
 
@@ -610,12 +616,12 @@ int draw_text(const byte * text, int x, int y, Uint32 fg, Uint32 bg)
 	
         return n;
 }
-int draw_text_bios(const byte * text, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_bios(const char * text, int x, int y, Uint32 fg, Uint32 bg)
 {
         int n = 0;
 
         while (*text) {
-                draw_char(0x10000000|*text, x + n, y, fg, bg);
+                draw_char_bios(*text, x + n, y, fg, bg);
                 n++;
                 text++;
         }
@@ -638,7 +644,7 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
 	} while (ye >= 0);
 }
 
-int draw_text_len(const byte * text, int len, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_len(const char * text, int len, int x, int y, Uint32 fg, Uint32 bg)
 {
         int n = 0;
 
@@ -650,12 +656,12 @@ int draw_text_len(const byte * text, int len, int x, int y, Uint32 fg, Uint32 bg
         draw_fill_chars(x + n, y, x + len - 1, y, bg);
         return n;
 }
-int draw_text_bios_len(const byte * text, int len, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_bios_len(const char * text, int len, int x, int y, Uint32 fg, Uint32 bg)
 {
         int n = 0;
 
         while (*text && n < len) {
-                draw_char(*text|0x10000000, x + n, y, fg, bg);
+                draw_char_bios(*text, x + n, y, fg, bg);
                 n++;
                 text++;
         }

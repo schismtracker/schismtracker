@@ -17,6 +17,13 @@ static const unsigned MAXCHN = 256;
 static const bool LinearMidiVol = true;
 static const unsigned PitchBendCenter = 0x2000;
 
+// The range of bending equivalent to 1 semitone.
+// 0x2000 is the value used in TiMiDity++.
+// In this module, we prefer a full range of octave, to support a reasonable
+// range of pitch-bends used in tracker modules, and we reprogram the MIDI
+// synthesizer to support that range. So we specify it as such:
+static const int semitone_bend_depth = 0x2000/12; // one octave in either direction
+
 /* GENERAL MIDI (GM) COMMANDS:
 8x       1000xxxx     nn vv         Note off (key is released)
                                     nn=note number
@@ -50,10 +57,28 @@ About the controllers... In AWE32 they are:
     1=Modulation Wheel(Vibrato)10=Pan Position      64=Sustain Pedal
     6=Data Entry MSB           38=Data Entry LSB    91=Effects Depth(Reverb)
   120=All Sound Off           123=All Notes Off     93=Chorus Depth
-  100=reg'd param # LSB       101=reg'd param # LSB
-   98=!reg'd param # LSB       99=!reg'd param # LSB
+  100=RPN # LSB       101=RPN # MSB
+   98=NRPN # LSB       99=NRPN # MSB
 
     1=Vibrato, 121=reset vibrato,bend
+    
+    To set RPNs (registered parameters):
+      control 101 <- param number MSB
+      control 100 <- param number LSB
+      control   6 <- value number MSB
+     <control  38 <- value number LSB> optional
+    For NRPNs, the procedure is the same, but you use 98,99 instead of 100,101.
+       
+       param 0 = pitch bend sensitivity
+       param 1 = finetuning
+       param 2 = coarse tuning
+       param 3 = tuning program select
+       param 4 = tuning bank select
+       param 0x4080 = reset (value omitted)
+
+    References:
+       - SoundBlaster AWE32 documentation
+       - http://www.philrees.co.uk/nrpnq.htm
 */
 
 static unsigned RunningStatus = 0;
@@ -116,7 +141,31 @@ static void MPU_NoteOff(int c, int k, int v)
         MPU_SendCommand(buf, 3, c);
     }
 }
-
+static void MPU_SendPN(int ch,
+                       unsigned portindex,
+                       unsigned param, unsigned valuehi, unsigned valuelo=0)
+{
+    MPU_Ctrl(ch, portindex+1, param>>7);
+    MPU_Ctrl(ch, portindex+0, param & 0x80);
+    if(param != 0x4080)
+    {
+        MPU_Ctrl(ch, 6, valuehi);
+        if(valuelo) MPU_Ctrl(ch, 38, valuelo);
+    }
+}
+static void MPU_SendNRPN(int ch, unsigned param, unsigned valuehi, unsigned valuelo=0) UNUSED;
+static void MPU_SendNRPN(int ch, unsigned param, unsigned valuehi, unsigned valuelo)
+{
+    MPU_SendPN(ch, 98, param, valuehi, valuelo);
+}
+static void MPU_SendRPN(int ch, unsigned param, unsigned valuehi, unsigned valuelo=0)
+{
+    MPU_SendPN(ch, 100, param, valuehi, valuelo);
+}
+static void MPU_ResetPN(int ch)
+{
+    MPU_SendRPN(ch, 0x4080, 0);
+}
 
 static const unsigned char GMVol[64] = /* This converts Adlib volume into MIDI volume */
 {
@@ -378,7 +427,7 @@ void GM_Bend(int c, unsigned Count)
     }
 }
 
-void GM_Reset(void)
+void GM_Reset(int quitting)
 {
 	unsigned int a;
     //fprintf(stderr, "GM_Reset\n");
@@ -387,13 +436,33 @@ void GM_Reset(void)
 	    GM_KeyOff(a);
 	    S3Mchans[a].patch = S3Mchans[a].bank = S3Mchans[a].pan = 0;
 	}
+
+    // How many semitones fit in the full 0x4000 bending range?
+    // We scale the number by 128, because the RPN allows for finetuning.
+    int n_semitones_times_128 = 128 * 0x4000 / semitone_bend_depth;
+    if(quitting)
+    {
+        // When quitting, we reprogram the pitch bend sensitivity into
+        // the range of 1 semitone (TiMiDity++'s default, which is
+        // probably a default on other devices as well), instead of
+        // what we preferred for IT playback.
+        n_semitones_times_128 = 128;
+    }
+
     for(a=0; a<16; a++)
     {
-        MPU_Ctrl(a, 0x7B, 0);   // turn off all notes
+        MPU_Ctrl(a, 120,  0);   // turn off all sounds
+        MPU_Ctrl(a, 123,  0);   // turn off all notes
+        MPU_Ctrl(a, 121, 0);    // reset vibrato, bend
         MIDIchans[a].SetPan(a, 0);           // reset pan position
         MIDIchans[a].SetVolume(a, 127);      // set channel volume
         MIDIchans[a].SetPitchBend(a, PitchBendCenter);// reset pitch bends
         MIDIchans[a].KnowNothing();
+        
+        // Reprogram the pitch bending sensitivity to our desired depth.
+        MPU_SendRPN(a, 0, n_semitones_times_128 / 128,
+                          n_semitones_times_128 % 128);
+        MPU_ResetPN(a);
 	}
 }
 
@@ -425,7 +494,7 @@ static double log2(double d)
 }
 #endif
 
-void GM_SetFreqAndVol(int c, int Hertz, int Vol) // for keyons and pitch bending  alike
+void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
 {
     //fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,Vol);
     if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
@@ -460,6 +529,8 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol) // for keyons and pitch bending
     */
     double midinote = 69 + 12.0 * log2(Hertz/440.0);
     
+    // Reduce by a couple of octaves... Apparently the hertz
+    // value that comes from SchismTracker is upscaled by some 2^5.
     midinote -= 12*5;
 
     int note = S3Mchans[c].note; // what's playing on the channel right now?
@@ -469,7 +540,14 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol) // for keyons and pitch bending
     {
         // If the note is not active, activate it first.
         // Choose the nearest note to Hertz.
+        
         note = (int)(midinote + 0.5);
+
+        // If we are expecting a bend exclusively in either direction,
+        // prepare to utilize the full extent of available pitch bending.
+        if(bend_mode == MIDI_BEND_DOWN) note += (int)(0x2000 / semitone_bend_depth);
+        if(bend_mode == MIDI_BEND_UP)   note -= (int)(0x2000 / semitone_bend_depth);
+        
         if(note < 1) note = 1;
         if(note > 127) note = 127;
         GM_KeyOn(c, note, Vol);
@@ -477,26 +555,26 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol) // for keyons and pitch bending
     
     if(!S3Mchans[c].IsPercussion()) // give us a break, don't bend percussive instruments
     {
-		const int semitone_bend_depth = 0x2000; // The range of bending equivalent to 1 semitone
-		
 		double notediff = midinote-note; // The difference is our bend value
 		int bend = (int)(notediff * semitone_bend_depth) + PitchBendCenter;
 		
-		bend = (bend / 82) * 82;
 		// Because the log2 calculation does not always give pure notes,
 		// and in fact, gives a lot of variation, we reduce the bending
 		// precision to 100 cents. This is accurate enough for almost
 		// all purposes, but will significantly reduce the bend event load.
-				
+		const int bend_artificial_inaccuracy = semitone_bend_depth / 100;
+		bend = (bend / bend_artificial_inaccuracy) * bend_artificial_inaccuracy;
+		
+		// Clamp the bending value so that we won't break the protocol
 		if(bend < 0) bend = 0;
 		if(bend > 0x3FFF) bend = 0x3FFF;
-		
-		if(Vol < 0) Vol = 0;
-		if(Vol > 127) Vol = 127;
 		
 		GM_Bend(c, bend);
     }
     
+    if(Vol < 0) Vol = 0;
+	if(Vol > 127) Vol = 127;
+		
     //if(!new_note)
     GM_Touch(c, Vol);
 }

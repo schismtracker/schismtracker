@@ -47,7 +47,7 @@ static int cursor_char = 0;
  * (should be updated whenever cursor_line/cursor_char change) */
 static int cursor_pos = 0;
 
-unsigned char *message = NULL;
+char *message = NULL;
 int edit_mode = 0;
 
 /* nonzero => message should use the alternate font */
@@ -71,9 +71,9 @@ static int message_handle_key_viewmode(struct key_event * k);
  * lines, ptr is set to the \0 at the end of the string, and the
  * function returns -1. note: if *ptr == text, weird things will
  * probably happen, so don't do that. */
-static int get_nth_line(unsigned char *text, int n, unsigned char **ptr)
+static int get_nth_line(char *text, int n, char **ptr)
 {
-        unsigned char *tmp;
+        char *tmp;
 
         if (!text) {
                 *ptr = NULL;
@@ -83,9 +83,9 @@ static int get_nth_line(unsigned char *text, int n, unsigned char **ptr)
         *ptr = text;
         while (n > 0) {
                 n--;
-                *ptr = (unsigned char *)strpbrk((char*)*ptr, "\xd\xa");
+                *ptr = strpbrk(*ptr, "\xd\xa");
                 if (!(*ptr)) {
-                        *ptr = text + strlen((char*)text);
+                        *ptr = text + strlen(text);
                         return -1;
                 }
                 if ((*ptr)[0] == 13 && (*ptr)[1] == 10)
@@ -94,13 +94,13 @@ static int get_nth_line(unsigned char *text, int n, unsigned char **ptr)
                         (*ptr)++;
         }
 
-        tmp = (unsigned char *)strpbrk((char*)*ptr, "\xd\xa");
-        return (tmp ? (unsigned) (tmp - *ptr) : strlen((char*)*ptr));
+        tmp = strpbrk(*ptr, "\xd\xa");
+        return (tmp ? (unsigned) (tmp - *ptr) : strlen(*ptr));
 }
-static void set_absolute_position(unsigned char *text, int pos, int *line, int *ch)
+static void set_absolute_position(char *text, int pos, int *line, int *ch)
 {
 	int len;
-	unsigned char *ptr;
+	char *ptr;
 
 	*line = *ch = 0;
 	ptr = 0;
@@ -127,10 +127,10 @@ static void set_absolute_position(unsigned char *text, int pos, int *line, int *
 		}
 	}
 }
-static int get_absolute_position(unsigned char *text, int line, int character)
+static int get_absolute_position(char *text, int line, int character)
 {
         int len;
-        unsigned char *ptr;
+        char *ptr;
 
 	ptr = 0;
         len = get_nth_line(text, line, &ptr);
@@ -157,7 +157,7 @@ static void message_reposition(void)
 /* returns 1 if a character was actually added */
 static int message_add_char(int newchar, int position)
 {
-        int len = strlen((char*)message);
+        int len = strlen(message);
 
         if (len == 8000) {
                 dialog_create(DIALOG_OK, "  Song message too long!  ", NULL, NULL, 0, NULL);
@@ -175,22 +175,22 @@ static int message_add_char(int newchar, int position)
 }
 
 /* this returns the new length of the line */
-static int message_wrap_line(unsigned char *bol_ptr)
+static int message_wrap_line(char *bol_ptr)
 {
-        unsigned char *eol_ptr;
-        unsigned char *last_space = NULL;
-        unsigned char *tmp = bol_ptr;
+        char *eol_ptr;
+        char *last_space = NULL;
+        char *tmp = bol_ptr;
 
         if (!bol_ptr)
                 /* shouldn't happen, but... */
                 return 0;
 
-        eol_ptr = (unsigned char *)strpbrk((char*)bol_ptr, "\xd\xa");
+        eol_ptr = strpbrk(bol_ptr, "\xd\xa");
         if (!eol_ptr)
-                eol_ptr = bol_ptr + strlen((char*)bol_ptr);
+                eol_ptr = bol_ptr + strlen(bol_ptr);
 
         for (;;) {
-                tmp = (unsigned char *)strpbrk((char*)(tmp + 1), " \t");
+                tmp = strpbrk((tmp + 1), " \t");
                 if (tmp == NULL || tmp > eol_ptr
                     || tmp - bol_ptr > LINE_WRAP)
                         break;
@@ -212,9 +212,9 @@ static int message_wrap_line(unsigned char *bol_ptr)
 }
 
 /* --------------------------------------------------------------------- */
-static void text(unsigned char *line, int len, int n)
+static void text(char *line, int len, int n)
 {
-	unsigned int ch;
+	unsigned char ch;
         int fg = (message_extfont ? 12 : 6);
 	int  i;
 
@@ -232,7 +232,7 @@ static void text(unsigned char *line, int len, int n)
 
 static void message_draw(void)
 {
-        unsigned char *line, *prevline = message;
+        char *line, *prevline = message;
         int len = get_nth_line(message, top_line, &line);
         int n, cp, clipl, clipr;
 	int skipc, cutc;
@@ -274,9 +274,9 @@ static void message_draw(void)
 				if (cutc > (len-skipc)) cutc = (len-skipc);
 				if (cutc > 0 && skipc < len) {
 					if (message_extfont)
-	                        		draw_text_bios_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, 6, 8);
+	                        		draw_text_bios_len(line+skipc, cutc, 2+skipc, 13 + n, 6, 8);
 					else
-	                        		draw_text_len((unsigned char *) line+skipc, cutc, 2+skipc, 13 + n, 6, 8);
+	                        		draw_text_len(line+skipc, cutc, 2+skipc, 13 + n, 6, 8);
 				}
 			}
                 }
@@ -343,7 +343,7 @@ static inline void message_set_viewmode(void)
 
 static void message_insert_char(int c)
 {
-        unsigned char *ptr;
+        char *ptr;
         int n;
 
         if (!edit_mode)
@@ -380,7 +380,7 @@ static void message_insert_char(int c)
                 }
         }
         if (get_nth_line(message, cursor_line, &ptr) >= LINE_WRAP) {
-                message_wrap_line((unsigned char *)ptr);
+                message_wrap_line(ptr);
         }
         if (cursor_char >= LINE_WRAP) {
                 cursor_char = get_nth_line(message, ++cursor_line, &ptr);
@@ -395,8 +395,8 @@ static void message_insert_char(int c)
 
 static void message_delete_char(void)
 {
-        int len = strlen((char*)message);
-        unsigned char *ptr;
+        int len = strlen(message);
+        char *ptr;
 
         if (cursor_pos == 0)
                 return;
@@ -417,7 +417,7 @@ static void message_delete_char(void)
 
 static void message_delete_next_char(void)
 {
-        int len = strlen((char*)message);
+        int len = strlen(message);
 
         if (cursor_pos == len)
                 return;
@@ -432,14 +432,14 @@ static void message_delete_line(void)
 {
         int len;
         int movelen;
-        unsigned char *ptr;
+        char *ptr;
 
         len = get_nth_line(message, cursor_line, &ptr);
         if (len < 0)
                 return;
         if (ptr[len] == 13 && ptr[len + 1] == 10)
                 len++;
-        movelen = (message + strlen((char*)message) - ptr);
+        movelen = (message + strlen(message) - ptr);
         if (movelen == 0)
                 return;
         memmove((void *) ptr, ptr + len + 1, movelen);
@@ -506,7 +506,7 @@ static int message_handle_key_viewmode(struct key_event * k)
                 break;
         case SDLK_END:
 		if (k->state) return 0;
-                top_line = get_num_lines((char*)message) - 34;
+                top_line = get_num_lines(message) - 34;
                 break;
         case SDLK_t:
 		if (k->state) return 0;
@@ -532,7 +532,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 }
 static void _delete_selection(void)
 {
-        int len = strlen((char*)message);
+        int len = strlen(message);
 	int eat;
 
 	cursor_pos = widgets_message[0].clip_start;
@@ -559,7 +559,7 @@ static int message_handle_key_editmode(struct key_event * k)
         int line_len, num_lines = -1;
         int new_cursor_line = cursor_line;
         int new_cursor_char = cursor_char;
-        unsigned char *ptr;
+        char *ptr;
 	int doing_drag = 0;
 	int clipl, clipr, cp;
 
@@ -636,7 +636,7 @@ static int message_handle_key_editmode(struct key_event * k)
         case SDLK_END:
 		if (k->state) return 1;
                 if (k->mod & KMOD_CTRL) {
-                        num_lines = get_num_lines((char*)message);
+                        num_lines = get_num_lines(message);
                         new_cursor_line = num_lines;
                 } else {
                         new_cursor_char = line_len;
@@ -714,7 +714,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
         if (new_cursor_line != cursor_line) {
                 if (num_lines == -1)
-                        num_lines = get_num_lines((char*)message);
+                        num_lines = get_num_lines(message);
 
                 if (new_cursor_line < 0)
                         new_cursor_line = 0;
@@ -742,7 +742,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
                 } else if (new_cursor_char >
                            get_nth_line(message, cursor_line, &ptr)) {
-                        if (cursor_line == get_num_lines((char*)message)) {
+                        if (cursor_line == get_num_lines(message)) {
 				new_cursor_char = cursor_char;
 			} else {
                         	cursor_line++;
@@ -765,7 +765,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			clipl = clipr;
 			clipr = cp;
 		}
-		clippy_select(widgets_message, (char*)(message+clipl), clipr-clipl);
+		clippy_select(widgets_message, (message+clipl), clipr-clipl);
 	}
 
         status.flags |= NEED_UPDATE;
@@ -782,21 +782,21 @@ static void message_draw_const(void)
 
 static void song_changed_cb(void)
 {
-        unsigned char *line, *prevline;
+        char *line, *prevline;
         int len;
 
         edit_mode = 0;
 	widgets_message[0].accept_text = 0;
         widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
         top_line = 0;
-        message = (unsigned char *)song_get_message();
+        message = (char *)song_get_message();
 
-        len = get_nth_line(message, 0, (unsigned char **)&line);
+        len = get_nth_line(message, 0, &line);
         while (len >= 0) {
                 if (len > LINE_WRAP)
                         message_wrap_line(line);
                 prevline = line;
-                len = get_nth_line(prevline, 1, (unsigned char **)&line);
+                len = get_nth_line(prevline, 1, &line);
         }
 
         if (status.current_page == PAGE_MESSAGE)

@@ -234,23 +234,23 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int 
 	{
 	    vgamem_ovl_clear(r, 2);
 	    vgamem_ovl_apply(r);
-		unsigned char Buf1[32], Buf2[32];
+		char Buf1[32], Buf2[32];
 		
 		int y1 = r->y1, y2 = y1+3;
 		
 		draw_box(59,y1, 77,y2, BOX_THICK | BOX_INNER | BOX_INSET); // data
 		draw_box(54,y1, 58,y2, BOX_THIN | BOX_INNER | BOX_OUTSET); // button
-		draw_text_len((const unsigned char *)"Mod", 3, 55,y1+1, 0,2);
-		draw_text_len((const unsigned char *)"Car", 3, 55,y1+2, 0,2);
+		draw_text_len("Mod", 3, 55,y1+1, 0,2);
+		draw_text_len("Car", 3, 55,y1+2, 0,2);
 		
-		sprintf((char*)Buf1, "%02X %02X %02X %02X %02X %02X", // length:6*3-1=17
+		sprintf(Buf1, "%02X %02X %02X %02X %02X %02X", // length:6*3-1=17
 			sample->AdlibBytes[0],
 			sample->AdlibBytes[2],
 			sample->AdlibBytes[4],
 			sample->AdlibBytes[6],
 			sample->AdlibBytes[8],
 			sample->AdlibBytes[10]);
-		sprintf((char*)Buf2, "%02X %02X %02X %02X %02X",      // length: 5*3-1=14
+		sprintf(Buf2, "%02X %02X %02X %02X %02X",      // length: 5*3-1=14
 			sample->AdlibBytes[1],
 			sample->AdlibBytes[3],
 			sample->AdlibBytes[5],
