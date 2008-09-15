@@ -737,11 +737,34 @@ BOOL CSoundFile::ReadNote()
 				}
 			}
 
-			if (m_dwSongFlags & SONG_AMIGALIMITS)
+			/*if (m_dwSongFlags & SONG_AMIGALIMITS)
 			{
 				if (period < 113*4) period = 113*4;
 				if (period > 856*4) period = 856*4;
 			}
+			- According to Storlek, this code should never even be executed,
+			  so I went ahead and disabled it, because it's causing me troubles
+			  in MIDI playback of modules that enable that flag.
+		       -Bisqwit
+		     
+0011#schism.Bisqwit Well, this code in sndmix.cpp honors that flag.
+0011#schism.Bisqwit So it does matter.
+0011#schism.Storlek uhhhh
+0012#schism.Storlek that should only be happening if it's not in IT mode
+0012#schism.Storlek which we _always_ enable
+0012#schism.Storlek if not, that's a bug
+0012#schism.Storlek regardless
+0012#schism.Bisqwit Huh?
+0013#schism.Storlek modplug always runs in impulse tracker mode
+0013#schism.Storlek period
+0013#schism.Storlek even when playing s3m, mod, xm, whatever
+0013#schism.Bisqwit YOu're saying that most of the code in ReadNote() is actually not supposed to be executed, but never documented that way?
+0013#schism.Storlek yes
+0013#schism.Bisqwit ...
+0013#schism.Storlek because to this date all the developers already knew that
+0013#schism.Storlek and now that's the case again
+0013#schism.Bisqwit Nothing in the code says that!
+			*/
 
 			// Pitch/Filter Envelope
 			int envpitch = 0;
