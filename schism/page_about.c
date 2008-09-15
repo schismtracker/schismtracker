@@ -114,31 +114,31 @@ static void about_draw_const(void)
 	if (status.flags & CLASSIC_MODE) {
 		draw_box(25,25, 56, 30, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
 
-		draw_text((unsigned char *) "Sound Card Setup", 32, 26, 0, 2);
+		draw_text("Sound Card Setup", 32, 26, 0, 2);
 
 		if (strcasecmp((char *) song_audio_driver(), "nosound") == 0) {
-			draw_text((unsigned char *) "No sound card detected", 29, 28, 0, 2);
+			draw_text("No sound card detected", 29, 28, 0, 2);
 		} else {
 			switch (fake_driver) {
 			case 0:
-				draw_text((unsigned char *) "Sound Blaster 16 detected", 26, 28, 0, 2);
-				draw_text((unsigned char *) "Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
+				draw_text("Sound Blaster 16 detected", 26, 28, 0, 2);
+				draw_text("Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
 				break;
 			case 1:
-				draw_text((unsigned char *) "Gravis UltraSound detected", 26, 28, 0, 2);
-				draw_text((unsigned char *) "Port 240h, IRQ 5, 1024k RAM", 26, 29, 0, 2);
+				draw_text("Gravis UltraSound detected", 26, 28, 0, 2);
+				draw_text("Port 240h, IRQ 5, 1024k RAM", 26, 29, 0, 2);
 				break;
 			};
 		}
 	} else {
 		snprintf(buf, 80, "Using %s on %s", song_audio_driver(), video_driver_name());
 		buf[80] = 0;
-		draw_text((unsigned char *) buf, (80 - strlen(buf)) / 2, 25, 0, 2);
+		draw_text(buf, (80 - strlen(buf)) / 2, 25, 0, 2);
 		/* build date? */
-		draw_text((unsigned char *) "Copyright (C) 2003-2008 Storlek and Mrs. Brisby", 15, 27, 1, 2);
-		draw_text((unsigned char *) "Based on Impulse Tracker by Jeffrey Lim aka Pulse", 15, 28, 1, 2);
+		draw_text("Copyright (C) 2003-2008 Storlek and Mrs. Brisby", 15, 27, 1, 2);
+		draw_text("Based on Impulse Tracker by Jeffrey Lim aka Pulse", 15, 28, 1, 2);
 		/* XXX if we allow key remapping, need to reflect the *real* log viewer key here */
-		draw_text((unsigned char *) "Press Ctrl-F11 for copyright and full credits", 15, 29, 1, 2);
+		draw_text("Press Ctrl-F11 for copyright and full credits", 15, 29, 1, 2);
 	}
 	vgamem_ovl_apply(&logo_image);
 }

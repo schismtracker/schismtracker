@@ -144,13 +144,13 @@ static void video_dialog_draw_const(void)
 		}
 	}
 
-	draw_text((unsigned char *) "Your video settings have been changed.", 21,19,0,2);
+	draw_text("Your video settings have been changed.", 21,19,0,2);
 	sprintf(buf, "In %2d seconds, your changes will be", countdown);
-	draw_text((unsigned char *) buf, 23, 21, 0, 2);
-	draw_text((unsigned char *) "reverted to the last known-good", 21, 22, 0, 2);
-	draw_text((unsigned char *) "settings.", 21, 23, 0, 2);
-	draw_text((unsigned char *) "To use the new video mode, and make", 21, 24, 0, 2);
-	draw_text((unsigned char *) "it default, press select OK below.", 21, 25, 0, 2);
+	draw_text(buf, 23, 21, 0, 2);
+	draw_text("reverted to the last known-good", 21, 22, 0, 2);
+	draw_text("settings.", 21, 23, 0, 2);
+	draw_text("To use the new video mode, and make", 21, 24, 0, 2);
+	draw_text("it default, press select OK below.", 21, 25, 0, 2);
 }
 
 static struct widget video_dialog_widgets[2];
@@ -222,20 +222,20 @@ static void config_draw_const(void)
 {
 	int n;
 
-	draw_text((unsigned char *) "Channel Limit",4,15, 0, 2);
-	draw_text((unsigned char *) "Mixing Rate",6,16, 0, 2);
-	draw_text((unsigned char *) "Sample Size",6,17, 0, 2);
-	draw_text((unsigned char *) "Output Channels",2,18, 0, 2);
+	draw_text("Channel Limit",4,15, 0, 2);
+	draw_text("Mixing Rate",6,16, 0, 2);
+	draw_text("Sample Size",6,17, 0, 2);
+	draw_text("Output Channels",2,18, 0, 2);
 
-	draw_text((unsigned char *) "Visualization",4,20, 0, 2);
-	draw_text((unsigned char *) "Classic Mode",5,21, 0, 2);
-	draw_text((unsigned char *) "Accidentals",6,22, 0, 2);
-	draw_text((unsigned char *) "Time Display",5,23, 0, 2);
+	draw_text("Visualization",4,20, 0, 2);
+	draw_text("Classic Mode",5,21, 0, 2);
+	draw_text("Accidentals",6,22, 0, 2);
+	draw_text("Time Display",5,23, 0, 2);
 
-	draw_text((unsigned char *) "MIDI mode", 8,25, 0, 2);
+	draw_text("MIDI mode", 8,25, 0, 2);
 
-	draw_text((unsigned char *) "Video Driver:", 2, 28, 0, 2);
-	draw_text((unsigned char *) "Full Screen:", 38, 28, 0, 2);
+	draw_text("Video Driver:", 2, 28, 0, 2);
+	draw_text("Full Screen:", 38, 28, 0, 2);
 
 	draw_fill_chars(18, 15, 34, 25, 0);
 	draw_box(17,14,35,26, BOX_THIN | BOX_INNER | BOX_INSET);

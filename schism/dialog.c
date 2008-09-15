@@ -72,7 +72,7 @@ void dialog_draw(void)
 		if (dialogs[d].draw_const) dialogs[d].draw_const();
 
 		if (dialogs[d].text)
-			draw_text((const unsigned char *)dialogs[d].text, dialogs[d].text_x, 27, 0, 2);
+			draw_text(dialogs[d].text, dialogs[d].text_x, 27, 0, 2);
 
 		n = dialogs[d].total_widgets;
 		while (n) {

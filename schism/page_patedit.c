@@ -134,14 +134,14 @@ struct pattern_snap {
         int rows;
 
 	/* used by undo/history only */
-	const unsigned char *snap_op;
+	const char *snap_op;
 	int freesnapop;
 	int x, y;
 	int patternno;
 };
 static struct pattern_snap fast_save = {
 	NULL, 0, 0,
-	(const unsigned char *) "Fast Pattern Save",
+	 "Fast Pattern Save",
 	0, 0, 0, -1
 };
 /* static int fast_save_validity = -1; */
@@ -150,7 +150,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate);
 
 static struct pattern_snap clipboard = {
 	NULL, 0, 0,
-	(const unsigned char *) "Clipboard",
+	 "Clipboard",
 	0, 0, 0, -1
 };
 static struct pattern_snap undo_history[10];
@@ -269,13 +269,13 @@ static void options_close(void *data)
 
 static void options_draw_const(void)
 {
-	draw_text((const unsigned char *)"Pattern Editor Options", 28, 19, 0, 2);
-	draw_text((const unsigned char *)"Base octave", 28, 23, 0, 2);
-	draw_text((const unsigned char *)"Cursor step", 28, 26, 0, 2);
-	draw_text((const unsigned char *)"Row hilight minor", 22, 29, 0, 2);
-	draw_text((const unsigned char *)"Row hilight major", 22, 32, 0, 2);
-	draw_text((const unsigned char *)"Number of rows in pattern", 14, 35, 0, 2);
-	draw_text((const unsigned char *)"Command/Value columns", 18, 38, 0, 2);
+	draw_text("Pattern Editor Options", 28, 19, 0, 2);
+	draw_text("Base octave", 28, 23, 0, 2);
+	draw_text("Cursor step", 28, 26, 0, 2);
+	draw_text("Row hilight minor", 22, 29, 0, 2);
+	draw_text("Row hilight major", 22, 32, 0, 2);
+	draw_text("Number of rows in pattern", 14, 35, 0, 2);
+	draw_text("Command/Value columns", 18, 38, 0, 2);
 	
 	draw_box(39, 22, 42, 24, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(39, 25, 43, 27, BOX_THIN | BOX_INNER | BOX_INSET);
@@ -327,10 +327,10 @@ void pattern_editor_display_options(void)
 static struct widget template_error_widgets[1];
 static void template_error_draw(void)
 {
- 	draw_text((const unsigned char *)"Template Error", 33, 25, 0, 2);
- 	draw_text((const unsigned char *)"No note in the top left position", 23, 27, 0, 2);
- 	draw_text((const unsigned char *)"of the clipboard on which to", 25, 28, 0, 2);
- 	draw_text((const unsigned char *)"base translations.", 31, 29, 0, 2);
+ 	draw_text("Template Error", 33, 25, 0, 2);
+ 	draw_text("No note in the top left position", 23, 27, 0, 2);
+ 	draw_text("of the clipboard on which to", 25, 28, 0, 2);
+ 	draw_text("base translations.", 31, 29, 0, 2);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -341,10 +341,10 @@ static void length_edit_draw_const(void)
 	draw_box(33,23,56,25, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(33,26,60,29, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_text((const unsigned char *)"Set Pattern Length", 31, 21, 0, 2);
-	draw_text((const unsigned char *)"Pattern Length", 19, 24, 0, 2);
-	draw_text((const unsigned char *)"Start Pattern", 20, 27, 0, 2);
-	draw_text((const unsigned char *)"End Pattern", 22, 28, 0, 2);
+	draw_text("Set Pattern Length", 31, 21, 0, 2);
+	draw_text("Pattern Length", 19, 24, 0, 2);
+	draw_text("Start Pattern", 20, 27, 0, 2);
+	draw_text("End Pattern", 22, 28, 0, 2);
 }
 static void length_edit_close(UNUSED void *data)
 {
@@ -422,11 +422,11 @@ static int multichannel_handle_key(struct key_event *k)
 }
 static void multichannel_draw_const(void)
 {
-	unsigned char sbuf[16];
+	char sbuf[16];
 	int i;
 
 	for (i = 0; i < 64; i++) {
-		sprintf((char *) sbuf, "Channel %02d", i+1);
+		sprintf(sbuf, "Channel %02d", i+1);
 		draw_text(sbuf,
 			9 + ((i / 16) * 16), /* X */
 			22 + (i % 16),	/* Y */
@@ -440,7 +440,7 @@ static void multichannel_draw_const(void)
 			38,
 			BOX_THIN|BOX_INNER|BOX_INSET);
 	}
-	draw_text((const unsigned char *)"Multichannel Selection", 28, 19, 3, 2);
+	draw_text("Multichannel Selection", 28, 19, 3, 2);
 }
 static void mp_advance_channel(void)
 {
@@ -777,7 +777,7 @@ static void history_draw_const(void)
 {
 	int i, j;
 	int fg, bg;
-	draw_text((const unsigned char *)"Undo", 38, 22, 3, 2);
+	draw_text("Undo", 38, 22, 3, 2);
 	draw_box(19,23,60,34, BOX_THIN | BOX_INNER | BOX_INSET);
 	j = undo_history_top;
 	for (i = 0; i < 10; i++) {
@@ -880,7 +880,7 @@ static void fast_volume_setup_cancel(UNUSED void *data)
 
 static void fast_volume_setup_draw_const(void)
 {
-	draw_text((unsigned char *) "Volume Amplification %", 29, 27, 0, 2);
+	draw_text("Volume Amplification %", 29, 27, 0, 2);
 	draw_box(32, 29, 44, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
@@ -920,7 +920,7 @@ static void fast_volume_attenuate(void)
 
 static void volume_setup_draw_const(void)
 {
-	draw_text((unsigned char *) "Volume Amplification %", 29, 27, 0, 2);
+	draw_text("Volume Amplification %", 29, 27, 0, 2);
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
@@ -948,7 +948,7 @@ static int current_vary = -1;
 
 static void vary_setup_draw_const(void)
 {
-	draw_text((unsigned char *) "Vary depth limit %", 31, 27, 0, 2);
+	draw_text("Vary depth limit %", 31, 27, 0, 2);
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
@@ -1843,7 +1843,7 @@ static void pated_history_clear(void)
 		free(undo_history[i].data);
 
 		memset(&undo_history[i],0,sizeof(struct pattern_snap));
-		undo_history[i].snap_op = (const unsigned char *)"Empty";
+		undo_history[i].snap_op = "Empty";
 		undo_history[i].freesnapop = 0;
 	}
 }
@@ -2322,7 +2322,7 @@ static void shift_advance_cursor(struct key_event *k)
 
 void update_current_row(void)
 {
-	byte buf[4];
+	char buf[4];
 
 	draw_text(numtostr(3, current_row, buf), 12, 7, 5, 0);
 	draw_text(numtostr(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
@@ -2356,7 +2356,7 @@ void set_current_row(int row)
 
 void update_current_pattern(void)
 {
-	byte buf[4];
+	char buf[4];
 
 	draw_text(numtostr(3, current_pattern, buf), 12, 6, 5, 0);
 	draw_text(numtostr(3, song_get_num_patterns(), buf), 16, 6, 5, 0);
@@ -2536,7 +2536,7 @@ static void pattern_editor_redraw(void)
 {
 	int chan, chan_pos, chan_drawpos = 5;
 	int row, row_pos;
-	byte buf[4];
+	char buf[4];
 	song_note *pattern, *note;
 	const struct track_view *track_view;
 	int total_rows;
@@ -4375,8 +4375,8 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	if (k->mod & KMOD_SHIFT)
 		shift_selection_update();
 
-	draw_text(numtostr(3, song_get_num_patterns(), (unsigned char *) buf), 16, 6, 5, 0);
-	draw_text(numtostr(3, current_row, (unsigned char *) buf), 12, 7, 5, 0);
+	draw_text(numtostr(3, song_get_num_patterns(), buf), 16, 6, 5, 0);
+	draw_text(numtostr(3, current_row, buf), 12, 7, 5, 0);
 
 	status.flags |= NEED_UPDATE;
 	return 1;
@@ -4529,7 +4529,7 @@ void pattern_editor_load_page(struct page *page)
 	int i;
 	for (i = 0; i < 10; i++) {
 		memset(&undo_history[i],0,sizeof(struct pattern_snap));
-		undo_history[i].snap_op = (const unsigned char *)"Empty";
+		undo_history[i].snap_op = "Empty";
 		undo_history[i].freesnapop = 0;
 	}
 	for (i = 0; i < 64; i++) {

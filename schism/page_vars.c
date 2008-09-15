@@ -40,7 +40,7 @@ static const int group_slides[] = { 12, 13, -1 };
 
 static inline void update_song_title(void)
 {
-        draw_text_len((unsigned char *) song_get_title(), 25, 12, 3, 5, 0);
+        draw_text_len(song_get_title(), 25, 12, 3, 5, 0);
         status.flags |= NEED_UPDATE;
 }
 
@@ -57,22 +57,22 @@ static void song_vars_draw_const(void)
 
         draw_fill_chars(20, 26, 33, 27, 0);
 
-        draw_text((unsigned char *) "Song Variables", 33, 13, 3, 2);
-        draw_text((unsigned char *) "Song Name", 7, 16, 0, 2);
-        draw_text((unsigned char *) "Initial Tempo", 3, 19, 0, 2);
-        draw_text((unsigned char *) "Initial Speed", 3, 20, 0, 2);
-        draw_text((unsigned char *) "Global Volume", 3, 23, 0, 2);
-        draw_text((unsigned char *) "Mixing Volume", 3, 24, 0, 2);
-        draw_text((unsigned char *) "Separation", 6, 25, 0, 2);
-        draw_text((unsigned char *) "Old Effects", 5, 26, 0, 2);
-        draw_text((unsigned char *) "Compatible Gxx", 2, 27, 0, 2);
-        draw_text((unsigned char *) "Control", 9, 30, 0, 2);
-        draw_text((unsigned char *) "Playback", 8, 33, 0, 2);
-        draw_text((unsigned char *) "Pitch Slides", 4, 36, 0, 2);
-        draw_text((unsigned char *) "Directories", 34, 40, 3, 2);
-        draw_text((unsigned char *) "Module", 6, 42, 0, 2);
-        draw_text((unsigned char *) "Sample", 6, 43, 0, 2);
-        draw_text((unsigned char *) "Instrument", 2, 44, 0, 2);
+        draw_text("Song Variables", 33, 13, 3, 2);
+        draw_text("Song Name", 7, 16, 0, 2);
+        draw_text("Initial Tempo", 3, 19, 0, 2);
+        draw_text("Initial Speed", 3, 20, 0, 2);
+        draw_text("Global Volume", 3, 23, 0, 2);
+        draw_text("Mixing Volume", 3, 24, 0, 2);
+        draw_text("Separation", 6, 25, 0, 2);
+        draw_text("Old Effects", 5, 26, 0, 2);
+        draw_text("Compatible Gxx", 2, 27, 0, 2);
+        draw_text("Control", 9, 30, 0, 2);
+        draw_text("Playback", 8, 33, 0, 2);
+        draw_text("Pitch Slides", 4, 36, 0, 2);
+        draw_text("Directories", 34, 40, 3, 2);
+        draw_text("Module", 6, 42, 0, 2);
+        draw_text("Sample", 6, 43, 0, 2);
+        draw_text("Instrument", 2, 44, 0, 2);
 
         for (n = 1; n < 79; n++)
                 draw_char(129, n, 39, 1, 2);
