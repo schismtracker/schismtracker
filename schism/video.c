@@ -489,7 +489,7 @@ void video_setup(const char *driver)
 #endif
 	if ((video.yuvlayout != (int)VIDEO_YUV_YV12_TV
 	&&   video.yuvlayout != (int)VIDEO_YUV_IYUV_TV
-	&&   video.yuvlayout)
+	&&   video.yuvlayout && 0) /* don't do this until we figure out how to make it better */
 			 && !strcasecmp(driver, "x11")) {
 		video.desktop.want_type = VIDEO_YUV;
 		putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
