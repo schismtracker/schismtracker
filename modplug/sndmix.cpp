@@ -106,7 +106,7 @@ BOOL CSoundFile::InitPlayer(BOOL bReset)
 	
 	Fmdrv_Init(gdwMixingFreq);
 	OPL_Reset();
-	GM_Reset();
+	GM_Reset(0);
 	
 	return TRUE;
 }
