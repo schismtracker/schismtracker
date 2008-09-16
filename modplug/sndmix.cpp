@@ -15,6 +15,11 @@
 // VU-Meter
 #define VUMETER_DECAY		16
 
+#ifndef MIDISlideFIX
+ #define MIDISlideFIX 1
+ /* Changes midi volumes between 1..11 to be 11 - needed on SB AWE32 */
+#endif
+
 // SNDMIX: These are global flags for playback control
 LONG CSoundFile::m_nStreamVolume = 0x8000;
 UINT CSoundFile::m_nMaxMixChannels = 32;
@@ -995,8 +1000,32 @@ BOOL CSoundFile::ReadNote()
                  * in either direction, update BendMode to indicate so.
                  * This can be used to extend the range of MIDI pitch bending.
                  */
-                GM_SetFreqAndVol(nChn, freq, (vol * pChn->nInsVol * 63 / (1<<20)),
-                                 BendMode);
+                int volume = (vol * pChn->nInsVol * 63 / (1<<20));
+                if(pChn->dwFlags & CHN_ADLIB)
+                {
+                    /* This converts Adlib volume into MIDI volume */
+					static const unsigned char GMVol[64] =
+					{
+					#if MIDISlideFIX
+						/*00*/0x00,0x0B,0x0B,0x0B, 0x0B,0x0B,0x0B,0x0B,
+						/*08*/0x0B,0x0B,0x0B,0x0B, 0x0B,0x0B,0x0B,0x0B,
+						/*16*/0x0B,0x0B,0x0B,0x0C, 0x0D,0x0F,0x10,0x11,
+					#else
+						/*00*/0x00,0x01,0x01,0x01, 0x01,0x01,0x01,0x02,
+						/*08*/0x02,0x03,0x04,0x04, 0x05,0x06,0x07,0x08,
+						/*16*/0x09,0x0A,0x0B,0x0C, 0x0D,0x0F,0x10,0x11,
+					#endif
+						/*24*/0x13,0x15,0x16,0x18, 0x1A,0x1C,0x1E,0x1F,
+						/*32*/0x22,0x24,0x26,0x28, 0x2A,0x2D,0x2F,0x31,
+						/*40*/0x34,0x37,0x39,0x3C, 0x3F,0x42,0x45,0x47,
+						/*48*/0x4B,0x4E,0x51,0x54, 0x57,0x5B,0x5E,0x61,
+						/*56*/0x64,0x69,0x6C,0x70, 0x74,0x78,0x7C,0x7F
+					};
+                    /* Convert the AdLib volume into linear volume */
+                    volume = GMVol[volume<0 ? 0 : volume>63 ? 63 : volume];
+                    volume /= 12;
+                }
+                GM_SetFreqAndVol(nChn, freq, volume, BendMode);
             }
             else if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
 			{
