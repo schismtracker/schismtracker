@@ -832,6 +832,11 @@ public:
 	static void FreePattern(LPVOID pat);
 	static void FreeSample(LPVOID p);
 	static UINT Normalize24BitBuffer(LPBYTE pbuffer, UINT cbsizebytes, DWORD lmax24, DWORD dwByteInc);
+
+private:
+    /* CSoundFile is a sentinel, prevent copying to avoid memory leaks */
+    CSoundFile(const CSoundFile&);
+    void operator=(const CSoundFile&);
 };
 
 
