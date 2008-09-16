@@ -1,0 +1,36 @@
+Schism Tracker 0.5rc1 - new features and stuff
+
+There are also other, maybe less significant features that didn't make it onto
+this list. Be surprised.
+
+
+-1. LOADS of fixes
+00. practically every impulse tracker feature is functional
+01. proper instrument loader, including in-module
+02. async load sample/module pages (display as it scans)
+03. more player fixes (e.g. Jxx, Gxx)
+04. video replacement with resizable window (YUV overlay, GL, DirectDraw)
+05. mouse support
+06. system clipboard integration
+07. diskwriter (wav)
+08. pattern-in-sample rendering
+09. better system integration (system clipboard, os x menubar, thinkpad and ibook support)
+0A. much faster loading on win32
+0B. midi support (input, and preliminary output)
+0C. mod/s3m/xm saving
+0D. better file format support -- namely xi files
+0E. shift-keyboard chording in pattern editor
+0F. proper "keyjazz" mode
+10. fast volume commands (attenuate, amplify)
+11. new feature: fast XXX vary (volume, effect, etc.)
+12. digraph entry (for non-US characters)
+13. absolute time display and jump to time
+14. more modes on info page
+15. template mode mixing implementation (on pattern editor)
+16. "real" fake memory visualization
+17. cafepress store (lol spam)
+18. --font-editor and --text-editor
+19. edit xm files (sort of)
+1A. type-ahead find on sample/instrument library (/search)
+1B. crash-resistant file saving
+1C. about screen and new logo
