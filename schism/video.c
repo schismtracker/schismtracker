@@ -1070,10 +1070,23 @@ RETRYSURF:	/* use SDL surfaces */
 static void _make_yuv(unsigned int *y, unsigned int *u, unsigned int *v,
 						int rgb[3])
 {
-	*y =  ( 9797*(rgb[0]) + 19237*(rgb[1])
-				+  3734*(rgb[2]) ) >> 15;
-	*u =  (18492*((rgb[2])-(*y)) >> 15) + 128;
-	*v =  (23372*((rgb[0])-(*y)) >> 15) + 128;
+	double red, green, blue, yy, cr, cb, ry, ru, rv;
+	int r = rgb[0];
+	int g = rgb[1];
+	int b = rgb[2];
+
+	red = (double)r / 255.0;
+	green = (double)g / 255.0;
+	blue = (double)b / 255.0;
+	yy = 0.299 * red + 0.587 * green + 0.114 * blue;
+	cb = blue - yy;
+	cr = red - yy;
+	ry = 16.0 + 219.0 * yy;
+	ru = 128.0 + 126.0 * cb;
+	rv = 128.0 + 160.0 * cr;
+	*y = (Uint8) ry;
+	*u = (Uint8) ru;
+	*v = (Uint8) rv;
 }
 static void _yuv_pal(int i, int rgb[3])
 {
