@@ -335,7 +335,26 @@ void video_report(void)
 		case VIDEO_YUV_YUY2:
 			log_append(5,0, " Display format: YUY2 (packed)");
 			break;
-		}
+		case VIDEO_YUV_RGBA:
+			log_append(5,0, " Display format: RGBA (packed)");
+			break;
+		case VIDEO_YUV_RGBT:
+			log_append(5,0, " Display format: RGBT (packed)");
+			break;
+		case VIDEO_YUV_RGB565:
+			log_append(5,0, " Display format: RGB565 (packed)");
+			break;
+		case VIDEO_YUV_RGB24:
+			log_append(5,0, " Display format: RGB24 (packed)");
+			break;
+		case VIDEO_YUV_RGB32:
+			log_append(5,0, " Display format: RGB32 (packed)");
+			break;
+		default:
+			log_appendf(5," Display format: %x",
+					video.yuvlayout);
+			break;
+		};
 		break;
 	case VIDEO_GL:
 		log_append(2,0, " Using OpenGL interface");
@@ -428,7 +447,7 @@ void video_setup(const char *driver)
 	video.draw.height = NATIVE_SCREEN_HEIGHT;
 	video.mouse.visible = 1;
 
-	video.yuvlayout = 0;
+	video.yuvlayout = -1;
 	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
 		if (strcasecmp(q, "YUY2") == 0
 		|| strcasecmp(q, "YUNV") == 0
@@ -447,6 +466,18 @@ void video_setup(const char *driver)
 			video.yuvlayout = VIDEO_YUV_YV12_TV;
 		} else if (strcasecmp(q, "IYUV/2") == 0) {
 			video.yuvlayout = VIDEO_YUV_IYUV_TV;
+		} else if (strcasecmp(q, "RGBA") == 0) {
+			video.yuvlayout = VIDEO_YUV_RGBA;
+		} else if (strcasecmp(q, "RGBT") == 0) {
+			video.yuvlayout = VIDEO_YUV_RGBT;
+		} else if (strcasecmp(q, "RGB565") == 0 || strcasecmp(q, "RGB2") == 0) {
+			video.yuvlayout = VIDEO_YUV_RGB565;
+		} else if (strcasecmp(q, "RGB24") == 0) {
+			video.yuvlayout = VIDEO_YUV_RGB24;
+		} else if (strcasecmp(q, "RGB32") == 0 || strcasecmp(q, "RGB") == 0) {
+			video.yuvlayout = VIDEO_YUV_RGB32;
+		} else if (sscanf(q, "%x", &video.yuvlayout) != 1) {
+			video.yuvlayout = -1;
 		}
 	}
 
@@ -483,13 +514,13 @@ void video_setup(const char *driver)
 	video.desktop.fb_hacks = 0;
 #ifdef USE_X11
 	/* get xv info */
-	if (!video.yuvlayout) video.yuvlayout = xv_yuvlayout();
+	if (video.yuvlayout == -1) video.yuvlayout = xv_yuvlayout();
 #else
-	if (!video.yuvlayout) video.yuvlayout = VIDEO_YUV_YUY2;
+	if (video.yuvlayout == -1) video.yuvlayout = VIDEO_YUV_YUY2;
 #endif
 	if ((video.yuvlayout != (int)VIDEO_YUV_YV12_TV
 	&&   video.yuvlayout != (int)VIDEO_YUV_IYUV_TV
-	&&   video.yuvlayout && 0) /* don't do this until we figure out how to make it better */
+	&&   video.yuvlayout != -1 && 0) /* don't do this until we figure out how to make it better */
 			 && !strcasecmp(driver, "x11")) {
 		video.desktop.want_type = VIDEO_YUV;
 		putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
@@ -944,6 +975,27 @@ RETRYSURF:	/* use SDL surfaces */
 				 NATIVE_SCREEN_HEIGHT,
 				 SDL_YUY2_OVERLAY, video.surface);
 			break;
+		case VIDEO_YUV_RGBA:
+		case VIDEO_YUV_RGB32:
+			video.overlay = SDL_CreateYUVOverlay
+				(4*NATIVE_SCREEN_WIDTH,
+				 NATIVE_SCREEN_HEIGHT,
+				 video.yuvlayout, video.surface);
+			break;
+		case VIDEO_YUV_RGB24:
+			video.overlay = SDL_CreateYUVOverlay
+				(3*NATIVE_SCREEN_WIDTH,
+				 NATIVE_SCREEN_HEIGHT,
+				 video.yuvlayout, video.surface);
+			break;
+		case VIDEO_YUV_RGBT:
+		case VIDEO_YUV_RGB565:
+			video.overlay = SDL_CreateYUVOverlay
+				(2*NATIVE_SCREEN_WIDTH,
+				 NATIVE_SCREEN_HEIGHT,
+				 video.yuvlayout, video.surface);
+			break;
+
 		default:
 			/* unknown layout */
 			goto RETRYSURF;
@@ -1070,10 +1122,23 @@ RETRYSURF:	/* use SDL surfaces */
 static void _make_yuv(unsigned int *y, unsigned int *u, unsigned int *v,
 						int rgb[3])
 {
-	*y =  ( 9797*(rgb[0]) + 19237*(rgb[1])
-				+  3734*(rgb[2]) ) >> 15;
-	*u =  (18492*((rgb[2])-(*y)) >> 15) + 128;
-	*v =  (23372*((rgb[0])-(*y)) >> 15) + 128;
+	double red, green, blue, yy, cr, cb, ry, ru, rv;
+	int r = rgb[0];
+	int g = rgb[1];
+	int b = rgb[2];
+
+	red = (double)r / 255.0;
+	green = (double)g / 255.0;
+	blue = (double)b / 255.0;
+	yy = 0.299 * red + 0.587 * green + 0.114 * blue;
+	cb = blue - yy;
+	cr = red - yy;
+	ry = 16.0 + 219.0 * yy;
+	ru = 128.0 + 126.0 * cb;
+	rv = 128.0 + 160.0 * cr;
+	*y = (Uint8) ry;
+	*u = (Uint8) ru;
+	*v = (Uint8) rv;
 }
 static void _yuv_pal(int i, int rgb[3])
 {
@@ -1122,6 +1187,29 @@ static void _yuv_pal(int i, int rgb[3])
 #else
 		video.pal[i] = y | (u << 8) | (y << 16) | (v << 24);
 #endif
+		break;
+	case VIDEO_YUV_RGBA:
+	case VIDEO_YUV_RGB32:
+		video.pal[i] = rgb[2] |
+			(rgb[1] << 8) |
+			(rgb[0] << 16) | (255 << 24);
+		break;
+	case VIDEO_YUV_RGB24:
+		video.pal[i] = rgb[2] |
+			(rgb[1] << 8) |
+			(rgb[0] << 16);
+		break;
+	case VIDEO_YUV_RGBT:
+		video.pal[i] =
+			((rgb[0] <<  8) & 0x7c00)
+		|	((rgb[1] <<  3) & 0x3e0)
+		|	((rgb[2] >>  2) & 0x1f);
+		break;
+	case VIDEO_YUV_RGB565:
+		video.pal[i] =
+			((rgb[0] <<  9) & 0xf800)
+		|	((rgb[1] <<  4) & 0x7e0)
+		|	((rgb[2] >>  2) & 0x1f);
 		break;
 	};
 }
@@ -1552,7 +1640,13 @@ void video_blit(void)
 		SDL_LockYUVOverlay(video.overlay);
 		pixels = (unsigned char *)*(video.overlay->pixels);
 		pitch = *(video.overlay->pitches);
-		bpp = 4;
+		switch (video.yuvlayout) {
+		case VIDEO_YUV_RGBT:   bpp = 2; break;
+		case VIDEO_YUV_RGB565: bpp = 2; break;
+		case VIDEO_YUV_RGB24:  bpp = 3; break;
+		default:
+			bpp = 4;
+		};
 		break;
 	case VIDEO_GL:
 		pixels = (unsigned char *)video.gl.framebuf;
