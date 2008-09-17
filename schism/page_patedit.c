@@ -134,14 +134,14 @@ struct pattern_snap {
         int rows;
 
 	/* used by undo/history only */
-	const char *snap_op;
+	char *snap_op;
 	int freesnapop;
 	int x, y;
 	int patternno;
 };
 static struct pattern_snap fast_save = {
 	NULL, 0, 0,
-	 "Fast Pattern Save",
+	(char*)"Fast Pattern Save",
 	0, 0, 0, -1
 };
 /* static int fast_save_validity = -1; */
@@ -150,7 +150,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate);
 
 static struct pattern_snap clipboard = {
 	NULL, 0, 0,
-	 "Clipboard",
+	(char*)"Clipboard",
 	0, 0, 0, -1
 };
 static struct pattern_snap undo_history[10];
@@ -1843,7 +1843,7 @@ static void pated_history_clear(void)
 		free(undo_history[i].data);
 
 		memset(&undo_history[i],0,sizeof(struct pattern_snap));
-		undo_history[i].snap_op = "Empty";
+		undo_history[i].snap_op = (char*)"Empty";
 		undo_history[i].freesnapop = 0;
 	}
 }
@@ -1987,7 +1987,7 @@ static void pated_history_add2(int groupedf, const char *descr, int x, int y, in
 		free(undo_history[j].data);
 		snap_copy(&undo_history[j], x, y, width, height);
 		undo_history[j].snap_op = mem_alloc(strlen(descr)+1);
-		strcpy((char *) undo_history[j].snap_op, descr);
+		strcpy( undo_history[j].snap_op, descr);
 		undo_history[j].freesnapop = 1;
 		undo_history[j].patternno = current_pattern;
 		undo_history_top = j;
@@ -4529,7 +4529,7 @@ void pattern_editor_load_page(struct page *page)
 	int i;
 	for (i = 0; i < 10; i++) {
 		memset(&undo_history[i],0,sizeof(struct pattern_snap));
-		undo_history[i].snap_op = "Empty";
+		undo_history[i].snap_op = (char*)"Empty";
 		undo_history[i].freesnapop = 0;
 	}
 	for (i = 0; i < 64; i++) {
