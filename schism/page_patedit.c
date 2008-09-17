@@ -53,9 +53,15 @@ int show_default_volumes = 0;
 
 int midi_start_record = 0;
 
-/* FIXME: what does this mean? i need an enum!
-   DIE, UNEXPLAINED HARDCODED NUMBERS, DIE! */
-static int template_mode = 0;
+enum TemplateMode {
+    NoTemplateMode=0,
+    TemplateOverwrite,
+    TemplateMixPatternPrecedence,
+    TemplateMixClipboardPrecedence,
+    TemplateNotesOnly
+};
+
+static enum TemplateMode template_mode = NoTemplateMode;
 
 /* only one widget, but MAN is it complicated :) */
 static struct widget widgets_pattern[1];
@@ -134,14 +140,14 @@ struct pattern_snap {
         int rows;
 
 	/* used by undo/history only */
-	char *snap_op;
-	int freesnapop;
+	const char *snap_op;
+	int snap_op_allocated;
 	int x, y;
 	int patternno;
 };
 static struct pattern_snap fast_save = {
 	NULL, 0, 0,
-	(char*)"Fast Pattern Save",
+	"Fast Pattern Save",
 	0, 0, 0, -1
 };
 /* static int fast_save_validity = -1; */
@@ -150,7 +156,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate);
 
 static struct pattern_snap clipboard = {
 	NULL, 0, 0,
-	(char*)"Clipboard",
+	"Clipboard",
 	0, 0, 0, -1
 };
 static struct pattern_snap undo_history[10];
@@ -1838,13 +1844,13 @@ static void pated_history_clear(void)
 {
 	int i;
 	for (i = 0; i < 10; i++) {
-		if (undo_history[i].freesnapop)
+		if (undo_history[i].snap_op_allocated)
 			free((void *) undo_history[i].snap_op);
 		free(undo_history[i].data);
 
 		memset(&undo_history[i],0,sizeof(struct pattern_snap));
-		undo_history[i].snap_op = (char*)"Empty";
-		undo_history[i].freesnapop = 0;
+		undo_history[i].snap_op = "Empty";
+		undo_history[i].snap_op_allocated = 0;
 	}
 }
 static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
@@ -1976,19 +1982,21 @@ static void pated_history_add2(int groupedf, const char *descr, int x, int y, in
 	&& undo_history[j].x == x && undo_history[j].y == y
 	&& undo_history[j].channels == width
 	&& undo_history[j].rows == height
-	&& undo_history[j].freesnapop
+	&& undo_history[j].snap_op_allocated
 	&& undo_history[j].snap_op
-	&& strcmp((char*)undo_history[j].snap_op, (char*)descr) == 0) {
+	&& strcmp(undo_history[j].snap_op, descr) == 0) {
 
 		/* do nothing; use the previous bit of history */
 		
 	} else {
+		char* new_snap_op = mem_alloc(strlen(descr)+1);
+		strcpy( new_snap_op, descr);
+		
 		j = (undo_history_top + 1) % 10;
 		free(undo_history[j].data);
 		snap_copy(&undo_history[j], x, y, width, height);
-		undo_history[j].snap_op = mem_alloc(strlen(descr)+1);
-		strcpy( undo_history[j].snap_op, descr);
-		undo_history[j].freesnapop = 1;
+		undo_history[j].snap_op = new_snap_op;
+		undo_history[j].snap_op_allocated = 1;
 		undo_history[j].patternno = current_pattern;
 		undo_history_top = j;
 	}
@@ -2860,14 +2868,14 @@ static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row
 
 	status.flags |= SONG_NEEDS_SAVE;
 	if (note == 0 || note == NOTE_OFF || note == NOTE_CUT || note == NOTE_FADE) {
-		if (template_mode == 0) {
+		if (template_mode == NoTemplateMode) {
 			/* no template mode */
 			if (force || !cur_note->note) cur_note->note = note;
-		} else if (template_mode != 4) {
+		} else if (template_mode != TemplateNotesOnly) {
 			/* this is a really great idea, but not IT-like at all... */
 			for (i = 0; i < clipboard.channels; i++) {
 				if (i+channel > 64) break;
-				if (template_mode == 2) {
+				if (template_mode == TemplateMixPatternPrecedence) {
 					if (!cur_note->note)
 						cur_note->note = note;
 				} else {
@@ -2877,7 +2885,7 @@ static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row
 			}
 		}
 	} else {
-		if (template_mode == 0) {
+		if (template_mode == NoTemplateMode) {
 			cur_note->note = note;
 		} else {
 			q = clipboard.data;
@@ -2892,18 +2900,19 @@ static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row
 				i = note - q->note;
 
 				switch (template_mode) {
-				case 1:
+				case TemplateOverwrite:
 					snap_paste(&clipboard, current_channel-1, current_row, i);
 					break;
-				case 2:
+				case TemplateMixPatternPrecedence:
 					clipboard_paste_mix_fields(0, i);
 					break;
-				case 3:
+				case TemplateMixClipboardPrecedence:
 					clipboard_paste_mix_fields(1, i);
 					break;
-				case 4:
+				case TemplateNotesOnly:
 					clipboard_paste_mix_notes(1, i);
 					break;
+				case NoTemplateMode: break;
 				};
 			}
 		}
@@ -2988,7 +2997,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 
 		patedit_record_note(cur_note, c+1, current_row, n,0);
 
-		if (!template_mode) {
+		if (template_mode == NoTemplateMode) {
 			if (k->midi_channel > 0) {
 				cur_note->instrument = k->midi_channel;
 			} else {
@@ -3234,20 +3243,20 @@ static int pattern_editor_insert(struct key_event *k)
 			}
 		} else {
 			/* copy the current sample/instrument -- UNLESS the note is empty */
-			if (template_mode == 0 && edit_copy_mask & MASK_INSTRUMENT) {
+			if (template_mode == NoTemplateMode && edit_copy_mask & MASK_INSTRUMENT) {
 				if (song_is_instrument_mode())
 					cur_note->instrument = instrument_get_current();
 				else
 					cur_note->instrument = sample_get_current();
 			}
-			if (template_mode == 0 && edit_copy_mask & MASK_VOLUME) {
+			if (template_mode == NoTemplateMode && edit_copy_mask & MASK_VOLUME) {
 				cur_note->volume_effect = mask_note.volume_effect;
 				cur_note->volume = mask_note.volume;
 			}
-			if (template_mode == 0 && edit_copy_mask & MASK_EFFECT) {
+			if (template_mode == NoTemplateMode && edit_copy_mask & MASK_EFFECT) {
 				cur_note->effect = mask_note.effect;
 			}
-			if (template_mode == 0 && edit_copy_mask & MASK_EFFECTVALUE) {
+			if (template_mode == NoTemplateMode && edit_copy_mask & MASK_EFFECTVALUE) {
 				cur_note->parameter = mask_note.parameter;
 			}
 		}
@@ -3677,29 +3686,32 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		if (fast_volume_mode) {
 			fast_volume_amplify();
 		} else {
-			template_mode++;
 			switch (template_mode) {
                         
                         /* TODO: these should be displayed UNDER the "---- Pattern Editor (F2) ----- line
                         and should stay there AS LONG AS WE'RE IN ANY TEMPLATE MODE - even if we go to another
                         page and then back to the pattern editor */
                         
-			case 1:
+			case NoTemplateMode:
+			    template_mode = TemplateOverwrite;
 				status_text_flash_color(3,"Template, Overwrite");
 				break;
-			case 2:
+			case TemplateOverwrite:
+			    template_mode = TemplateMixPatternPrecedence;
 				status_text_flash_color(3,"Template, Mix - Pattern data precedence");
 				break;
-			case 3:
+			case TemplateMixPatternPrecedence:
+			    template_mode = TemplateMixClipboardPrecedence;
 				status_text_flash_color(3,"Template, Mix - Clipboard data precedence");
 				break;
-			case 4:
+			case TemplateMixClipboardPrecedence:
+			    template_mode = TemplateNotesOnly;
 				status_text_flash_color(3,"Template, Notes only");
 				break;
-			case 5:
+			case TemplateNotesOnly:
+			    template_mode = NoTemplateMode;
 				/* Erf. Apparently "" causes a gcc warning */
 				status_text_flash(" ");
-				template_mode = 0;
 				break;
 			};
 		}
@@ -4529,8 +4541,8 @@ void pattern_editor_load_page(struct page *page)
 	int i;
 	for (i = 0; i < 10; i++) {
 		memset(&undo_history[i],0,sizeof(struct pattern_snap));
-		undo_history[i].snap_op = (char*)"Empty";
-		undo_history[i].freesnapop = 0;
+		undo_history[i].snap_op = "Empty";
+		undo_history[i].snap_op_allocated = 0;
 	}
 	for (i = 0; i < 64; i++) {
 		channel_quick[i] = 1;
