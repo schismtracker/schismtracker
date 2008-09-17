@@ -48,25 +48,35 @@ static signed char UnpackTable[MAX_PACK_TABLES][16] =
 // CSoundFile
 
 CSoundFile::CSoundFile()
+    : Chn(), ChnMix(), Ins(), Headers(),
+      ChnSettings(), Patterns(), PatternSize(),
+      PatternAllocSize(), Order(),
+      m_MidiCfg(), m_MixPlugins(),
+      m_nDefaultSpeed(),
+      m_nDefaultTempo(),
+      m_nDefaultGlobalVolume(),
+      m_dwSongFlags(0),
+      m_nStereoSeparation(128),
+      m_nChannels(), m_nMixChannels(0), m_nMixStat(), m_nBufferCount(),
+      m_nType(MOD_TYPE_NONE),
+      m_nSamples(0), m_nInstruments(0),
+      m_nTickCount(), m_nTotalCount(), m_nPatternDelay(), m_nFrameDelay(),
+      m_nMusicSpeed(), m_nMusicTempo(),
+      m_nNextRow(), m_nRow(),
+      m_nPattern(), m_nCurrentPattern(), m_nNextPattern(),
+      m_nLockedPattern(), m_nRestartPos(),
+      m_nMasterVolume(), m_nGlobalVolume(128), m_nSongPreAmp(),
+      m_nFreqFactor(128), m_nTempoFactor(128), m_nOldGlbVolSlide(),
+      m_nMinPeriod(0x20), m_nMaxPeriod(0x7FFF),
+      m_nRepeatCount(0), m_nInitialRepeatCount(),
+      m_nGlobalFadeSamples(), m_nGlobalFadeMaxSamples(),
+      m_rowHighlightMajor(16), m_rowHighlightMinor(4),
+      m_nPatternNames(0),
+      m_lpszSongComments(NULL), m_lpszPatternNames(NULL),
+      m_szNames(), CompressionTable(),
+      stop_at_order(), stop_at_row(), stop_at_time()
 //----------------------
 {
-	m_nType = MOD_TYPE_NONE;
-	m_dwSongFlags = 0;
-	m_nStereoSeparation = 128;
-	m_nChannels = 0;
-	m_nMixChannels = 0;
-	m_nSamples = 0;
-	m_nInstruments = 0;
-	m_nPatternNames = 0;
-	m_lpszPatternNames = NULL;
-	m_lpszSongComments = NULL;
-	m_nFreqFactor = m_nTempoFactor = 128;
-	m_nMasterVolume = 128;
-	m_nMinPeriod = 0x20;
-	m_nMaxPeriod = 0x7FFF;
-	m_nRepeatCount = 0;
-	m_rowHighlightMajor = 16;
-	m_rowHighlightMinor = 4;
 	memset(Chn, 0, sizeof(Chn));
 	memset(ChnMix, 0, sizeof(ChnMix));
 	memset(Ins, 0, sizeof(Ins));
