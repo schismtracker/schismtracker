@@ -44,7 +44,7 @@ unsigned int xv_yuvlayout(void)
 	unsigned int w, h;
 	int best;
 
-	resc = 0;
+	resc = -1;
 	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 	if (SDL_GetWMInfo(&info)) {
@@ -116,7 +116,7 @@ unsigned int xv_yuvlayout(void)
 	}
 	return resc;
 #else
-	return 0;
+	return -1;
 #endif
 }
 
