@@ -1982,7 +1982,6 @@ static void pated_history_add2(int groupedf, const char *descr, int x, int y, in
 	&& undo_history[j].x == x && undo_history[j].y == y
 	&& undo_history[j].channels == width
 	&& undo_history[j].rows == height
-	&& undo_history[j].snap_op_allocated
 	&& undo_history[j].snap_op
 	&& strcmp(undo_history[j].snap_op, descr) == 0) {
 
