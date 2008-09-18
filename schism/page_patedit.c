@@ -1988,13 +1988,10 @@ static void pated_history_add2(int groupedf, const char *descr, int x, int y, in
 		/* do nothing; use the previous bit of history */
 		
 	} else {
-		char* new_snap_op = mem_alloc(strlen(descr)+1);
-		strcpy( new_snap_op, descr);
-		
 		j = (undo_history_top + 1) % 10;
 		free(undo_history[j].data);
 		snap_copy(&undo_history[j], x, y, width, height);
-		undo_history[j].snap_op = new_snap_op;
+		undo_history[j].snap_op = strdup(descr);
 		undo_history[j].snap_op_allocated = 1;
 		undo_history[j].patternno = current_pattern;
 		undo_history_top = j;
