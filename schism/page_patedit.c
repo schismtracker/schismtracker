@@ -1991,7 +1991,7 @@ static void pated_history_add2(int groupedf, const char *descr, int x, int y, in
 		j = (undo_history_top + 1) % 10;
 		free(undo_history[j].data);
 		snap_copy(&undo_history[j], x, y, width, height);
-		undo_history[j].snap_op = strdup(descr);
+		undo_history[j].snap_op = str_dup(descr);
 		undo_history[j].snap_op_allocated = 1;
 		undo_history[j].patternno = current_pattern;
 		undo_history_top = j;
