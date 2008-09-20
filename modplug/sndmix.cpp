@@ -1023,7 +1023,7 @@ BOOL CSoundFile::ReadNote()
 					};
                     /* Convert the AdLib volume into linear volume */
                     volume = GMVol[volume<0 ? 0 : volume>63 ? 63 : volume];
-                    volume /= 12;
+                    volume /= 2;
                 }
                 GM_SetFreqAndVol(nChn, freq, volume, BendMode);
             }
