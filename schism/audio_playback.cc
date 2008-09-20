@@ -541,6 +541,7 @@ void song_start_once()
 	mp->m_nInitialRepeatCount = 0;
 	mp->m_nRepeatCount = 1;
 
+	GM_SendSongStartCode();
         song_unlock_audio();
 	main_song_mode_changed_cb();
 }
@@ -552,6 +553,7 @@ void song_start()
         song_reset_play_state();
         max_channels_used = 0;
 
+	GM_SendSongStartCode();
         song_unlock_audio();
 	main_song_mode_changed_cb();
 }
@@ -614,6 +616,7 @@ void song_stop_unlocked(int quitting)
 	
 	OPL_Reset(); /* Also stop all OPL sounds */
 	GM_Reset(quitting);
+	GM_SendSongStopCode();
 
 	memset(last_row,0,sizeof(last_row));
 	last_row_number = -1;
@@ -726,6 +729,8 @@ void song_loop_pattern(int pattern, int row)
 
         max_channels_used = 0;
         mp->LoopPattern(pattern, row);
+        
+        GM_SendSongStartCode();
 
         song_unlock_audio();
 	main_song_mode_changed_cb();
@@ -761,6 +766,8 @@ void song_start_at_order(int order, int row)
 		mp->m_nRow = mp->m_nNextRow = row;
 		max_channels_used = 0;
 	}
+	GM_SendSongStartCode();
+	/* TODO: GM_SendSongPositionCode(calculate the number of 1/16 notes) */
         song_unlock_audio();
 	main_song_mode_changed_cb();
 }

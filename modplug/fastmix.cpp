@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "sndfile.h"
 #include "snd_fm.h"
+#include "snd_gm.h"
 #include <math.h>
 
 void (*CSoundFile::_multi_out_raw)(int chan, int *buf, int len) = NULL;
@@ -1619,6 +1620,9 @@ UINT CSoundFile::CreateStereoMix(int count)
 		if (nsamples > 0) goto SampleLooping;
 		nchmixed += naddmix;
 	}
+	
+	GM_IncrementSongCounter(count);
+	
 	if (CSoundFile::_multi_out_raw) {
 		/* mix all adlib onto track one */
 		Fmdrv_MixTo(MultiSoundBuffer[1], count);
