@@ -613,6 +613,7 @@ int diskwriter_finish(void)
 			p->pSample = song_sample_allocate(mbuf_len);
 			memcpy(p->pSample, mbuf, mbuf_len);
 			p->nC4Speed = dw->rate;
+			p->uFlags &= ~SAMP_ADLIB;
 			if (dw->bits >= 16) {
 				p->uFlags |= SAMP_16_BIT;
 				mbuf_len /= 2;
