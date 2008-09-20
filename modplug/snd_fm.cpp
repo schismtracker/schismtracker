@@ -3,6 +3,8 @@ extern "C" {
 }
 #include "snd_fm.h"
 
+#define MAX_CHANNELS 256 /* Must match the setting in sndfile.h */
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -77,8 +79,8 @@ void Fmdrv_MixTo(int* target, int count)
 
 /***************************************/
 static const char PortBases[9] = {0,1,2, 8,9,10, 16,17,18};
-static signed char Pans[18];
-static const unsigned char *Dtab[18];
+static signed char Pans[MAX_CHANNELS];
+static const unsigned char *Dtab[MAX_CHANNELS];
 
 static int SetBase(int c)
 {
@@ -147,15 +149,15 @@ void OPL_NoteOn(int c, int Hertz)
 
 void OPL_Touch(int c, unsigned Vol)
 {
-    if (c < 18) OPL_Touch(c, Dtab[c], Vol);
+    if (c < MAX_CHANNELS) OPL_Touch(c, Dtab[c], Vol);
 }
 
 void OPL_Touch(int c, const unsigned char *D, unsigned Vol)
 {
     if(!D) return;
     
-//fprintf(stderr, "OPL_Touch(%d, %02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
-//    c, D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
+//fprintf(stderr, "OPL_Touch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
+//    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
     
     Dtab[c] = D;
     //Vol = Vol * (D[8]>>2) / 63;
@@ -225,8 +227,8 @@ void OPL_Pan(int c, signed char val)
  
 void OPL_Patch(int c, const unsigned char *D)
 {
-//fprintf(stderr, "OPL_Patch(%d, %02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X)\n",
-//    c, D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10]);
+//fprintf(stderr, "OPL_Patch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X)\n",
+//    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10]);
     Dtab[c] = D;
 
     c = SetBase(c);
