@@ -3,7 +3,7 @@ extern "C" {
 }
 #include "snd_fm.h"
 
-#define MAX_CHANNELS 256 /* Must match the setting in sndfile.h */
+#define MAX_CHANNELS 256 /* Must not be less than the setting in sndfile.h */
 
 #include <string.h>
 #include <stdlib.h>
