@@ -32,6 +32,13 @@ void GM_Pan(int ch, signed char val); // param: -128..+127
 typedef enum { MIDI_BEND_NORMAL, MIDI_BEND_DOWN, MIDI_BEND_UP } MidiBendMode;
 void GM_SetFreqAndVol(int channel, int Hertz, int Vol, MidiBendMode bend_mode);
 
+void GM_SendSongStartCode(void);
+void GM_SendSongStopCode(void);
+void GM_SendSongContinueCode(void);
+void GM_SendSongTickCode(void);
+void GM_SendSongPositionCode(unsigned note16pos);
+void GM_IncrementSongCounter(int count);
+
 #ifdef __cplusplus
 }
 #endif

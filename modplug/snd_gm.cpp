@@ -582,3 +582,47 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
     //if(!new_note)
     GM_Touch(c, Vol);
 }
+
+static double LastSongCounter = 0.0;
+
+void GM_SendSongStartCode()    { unsigned char c = 0xFA; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
+void GM_SendSongStopCode()     { unsigned char c = 0xFC; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
+void GM_SendSongContinueCode() { unsigned char c = 0xFB; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
+void GM_SendSongTickCode()     { unsigned char c = 0xF8; MPU_SendCommand(&c, 1, 0); }
+void GM_SendSongPositionCode(unsigned note16pos)
+{
+    unsigned char buf[3] = { 0xF2, note16pos&127, (note16pos>>7)&127 };
+    MPU_SendCommand(buf, 3, 0);
+    LastSongCounter = 0;
+}
+void GM_IncrementSongCounter(int count)
+{
+    /* We assume that each pattern row corresponds to a 1/4 note.
+     *
+     * We also know that:
+     *                  5 * cmdA * mixingrate   
+     * Length of row is --------------------- samples
+     *                         2 * cmdT
+     *
+     * where cmdA = last CMD_SPEED = m_nMusicSpeed
+     *   and cmdT = last CMD_TEMPO = m_nMusicTempo
+     */
+    int RowLengthInSamplesHi = 5 * mp->m_nMusicSpeed * mp->GetSampleRate();
+    int RowLengthInSamplesLo = 2 * mp->m_nMusicTempo;
+    
+    double NumberOfSamplesPer32thNote =
+        RowLengthInSamplesHi*8 / (double)RowLengthInSamplesLo;
+    
+    /* TODO: Use fraction arithmetics instead (note: cmdA, cmdT may change any time) */
+    
+    LastSongCounter += count / NumberOfSamplesPer32thNote;
+    
+    int n_32thNotes = (int)LastSongCounter;
+    if(n_32thNotes)
+    {
+        for(int a=0; a<n_32thNotes; ++a)
+            GM_SendSongTickCode();
+        
+        LastSongCounter -= n_32thNotes;
+    }
+}
