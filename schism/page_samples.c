@@ -828,6 +828,8 @@ const int nadlibconfig_widgets = sizeof(adlibconfig_widgets)/sizeof(*adlibconfig
 
 static void do_adlibconfig(UNUSED void *data)
 {
+	//page->help_index = HELP_SAMPLE_LIST;
+	
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	if (!sample->data) {
 		sample->data = song_sample_allocate(1);
@@ -928,6 +930,10 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
     static int cursor_placeholders[sizeof(adlibconfig_widgets)/sizeof(*adlibconfig_widgets)] = {0};
     static const char* const bool_opts[3] = {"n","y", NULL};
     
+	//page->help_index = HELP_ADLIB_SAMPLES;
+	// Eh, what page? Where am I supposed to get a reference to page?
+	// How do I make this work? -Bisqwit
+	
     int a;
     for(a=0; a<nadlibconfig_widgets; ++a)
     {
