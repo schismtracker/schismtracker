@@ -7,3 +7,4 @@ message-editor		MESSAGE_EDITOR
 orderlist-pan		ORDERLIST_PANNING
 orderlist-vol		ORDERLIST_VOLUME
 midi-output		MIDI_OUTPUT
+adlib-sample		ADLIB_SAMPLE
