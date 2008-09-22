@@ -297,7 +297,7 @@ fi
 
 if test x$ADD_LUDICROUS \!= xno; then
         ADD_WARN=yes
-        CFLAGS="$CFLAGS  -Werror -D_FORTIFY_SOURCE=2"
+        CFLAGS="$CFLAGS  -Werror -Wno-inline -D_FORTIFY_SOURCE=2"
         CXXFLAGS="$CXXFLAGS -Weffc++ -Wno-aggregate-return -Wno-inline -Werror -D_FORTIFY_SOURCE=2"
         # In C++, the following mad warnings are disabled:
         #
