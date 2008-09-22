@@ -574,19 +574,20 @@ void draw_widget(struct widget *w, int selected)
                         char label   = set ? w->d.bitset.bits_on[n]
                                            : w->d.bitset.bits_off[n];
                         int is_focused = selected && n == *w->d.bitset.cursor_pos;
+                        /* In textentries, cursor=0,3; normal=2,0 */
                         static const char fg_selection[4] =
                         {
-                                0, /* not focus, not set */
-                                0, /* not focus, is  set */
-                                2, /* has focus, not set */
-                                3  /* has focus, is  set */
+                                2, /* not cursor, not set */
+                                3, /* not cursor, is  set */
+                                0, /* has cursor, not set */
+                                0  /* has cursor, is  set */
                         };
                         static const char bg_selection[4] =
                         {
-                                2, /* not focus, not set */
-                                3, /* not focus, is  set */
-                                3, /* has focus, not set */
-                                2  /* has focus, is  set */
+                                0, /* not cursor, not set */
+                                0, /* not cursor, is  set */
+                                3, /* has cursor, not set */
+                                2  /* has cursor, is  set */
                         }
                         int fg = fg_selection[set + is_focused*2],
                             bg = bg_selection[set + is_focused*2];
