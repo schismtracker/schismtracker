@@ -588,9 +588,9 @@ void draw_widget(struct widget *w, int selected)
                                 0, /* not cursor, is  set */
                                 3, /* has cursor, not set */
                                 2  /* has cursor, is  set */
-                        }
-                        int fg = fg_selection[set + is_focused*2],
-                            bg = bg_selection[set + is_focused*2];
+                        };
+                        fg = fg_selection[set + is_focused*2];
+                        bg = bg_selection[set + is_focused*2];
                         draw_char(label, w->x + n, w->y, fg, bg);
                 }
                 break;
