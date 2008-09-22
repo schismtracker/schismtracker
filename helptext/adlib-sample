@@ -6,6 +6,7 @@
 | YM3812 chip, that used to exist in most soundcards, especially Sound Blaster
 | compatibles, in the 1990s. In SchismTracker, AdLib support is provided through
 | emulation.
+|
 | AdLib allows for producing impressive music while using very little storage,
 | because all instruments are synthesized by the hardware, instead of being
 | stored as PCM data like other tracker samples are. The synthesis method used
