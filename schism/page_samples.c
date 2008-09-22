@@ -39,6 +39,8 @@ static struct vgamem_overlay sample_image = {
 	0, 0, 0, 0,
 };
 
+static int dialog_f1_hack = 0;
+
 static struct widget widgets_samplelist[20];
 static const int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
 
@@ -48,6 +50,8 @@ static int need_retrigger = -1;
 static int last_keyup = -1;
 
 static int sample_list_cursor_pos = 25;	/* the "play" text */
+
+static void sample_adlibconfig_dialog(UNUSED void *ign);
 
 /* shared by all the numentry widgets */
 static int sample_numentry_cursor_pos = 0;
@@ -101,7 +105,11 @@ static int _is_magic_sample(int no)
 
 static void sample_list_reposition(void)
 {
-	if (current_sample < top_sample) {
+	if (dialog_f1_hack) {
+		sample_adlibconfig_dialog(0);
+		dialog_f1_hack = 0;
+
+	} else if (current_sample < top_sample) {
 		top_sample = current_sample;
 		if (top_sample < 1)
 			top_sample = 1;
@@ -921,6 +929,19 @@ static void sample_adlibconfig_draw_const(void)
     }
     
 }
+
+static int do_adlib_handlekey(struct key_event *kk)
+{
+	if (kk->sym == SDLK_F1) {
+		if (!kk->state) return 1;
+		status.current_help_index = HELP_ADLIB_SAMPLE;
+		dialog_f1_hack = 1;
+		dialog_destroy_all();
+		set_page(PAGE_HELP);
+		return 1;
+	}
+	return 0;
+}
         
 static void sample_adlibconfig_dialog(UNUSED void *ign)
 {
@@ -977,6 +998,7 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
                                   nadlibconfig_widgets, 0,
                                   sample_adlibconfig_draw_const, NULL);
     dialog->action_yes = do_adlibconfig;
+    dialog->handle_key = do_adlib_handlekey;
 }
 
 /* --------------------------------------------------------------------- */
