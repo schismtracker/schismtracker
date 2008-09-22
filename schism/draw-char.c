@@ -779,3 +779,30 @@ void draw_thick_outer_box(int xs, int ys, int xe, int ye, Uint32 c)
 {
         _draw_box_internal(xs, ys, xe, ye, c, c, boxes[BOX_THICK_OUTER]);
 }
+
+void draw_box(int xs, int ys, int xe, int ye, int flags)
+{
+        const int colors[4][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1} };
+        int tl = colors[flags & BOX_SHADE_MASK][0];
+        int br = colors[flags & BOX_SHADE_MASK][1];
+
+        switch (flags & (BOX_TYPE_MASK | BOX_THICKNESS_MASK)) {
+        case BOX_THIN | BOX_INNER:
+                draw_thin_inner_box(xs, ys, xe, ye, tl, br);
+                break;
+        case BOX_THICK | BOX_INNER:
+                draw_thick_inner_box(xs, ys, xe, ye, tl, br);
+                break;
+        case BOX_THIN | BOX_OUTER:
+                draw_thin_outer_box(xs, ys, xe, ye, tl);
+                break;
+        case BOX_THICK | BOX_OUTER:
+                draw_thick_outer_box(xs, ys, xe, ye, tl);
+                break;
+        case BOX_THIN | BOX_CORNER:
+        case BOX_THICK | BOX_CORNER:
+                draw_thin_outer_cornered_box(xs, ys, xe, ye, flags & BOX_SHADE_MASK);
+                break;
+        }
+}
+
