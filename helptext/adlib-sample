@@ -39,7 +39,7 @@
 |                1/2, 1..10, 10, 12, 12, 15 and 15.
 |
 |         Waveform
-|                Three possible waveforms exist for each channel:
+|                Four possible waveforms exist for each channel:
 |                 0 = sinewave                 _     _
 |                                             / \   / \
 |                                                \_/   \_/
