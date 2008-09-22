@@ -924,7 +924,7 @@ BOOL CSoundFile::ProcessEffects()
 				
 				if((m_dwSongFlags & SONG_INSTRUMENTMODE)
 				&& Headers[instr])
-					GM_DPatch(nChn, Headers[instr]->nMidiProgram, Headers[instr]->wMidiBank);
+					GM_DPatch(nChn, Headers[instr]->nMidiProgram, Headers[instr]->wMidiBank, Headers[instr]->nMidiChannel);
 				
 				pChn->nNewIns = 0;
 				// Special IT case: portamento+note causes sample change -> ignore portamento
@@ -942,7 +942,7 @@ BOOL CSoundFile::ProcessEffects()
 					InstrumentChange(pChn, pChn->nNewIns, bPorta, FALSE, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);
 					OPL_Patch(nChn, Ins[pChn->nNewIns].AdlibBytes);
 					if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Headers[pChn->nNewIns])
-    					GM_DPatch(nChn, Headers[pChn->nNewIns]->nMidiProgram, Headers[pChn->nNewIns]->wMidiBank);
+						GM_DPatch(nChn, Headers[pChn->nNewIns]->nMidiProgram, Headers[pChn->nNewIns]->wMidiBank, Headers[pChn->nNewIns]->nMidiChannel);
 					pChn->nNewIns = 0;
 				}
 				NoteChange(nChn, note, bPorta, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);

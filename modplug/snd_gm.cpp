@@ -12,6 +12,13 @@ static const unsigned MAXCHN = 256;
 static const bool LinearMidiVol = true;
 static const unsigned PitchBendCenter = 0x2000;
 
+static const enum
+{
+    AlwaysHonor, /* Always use nMidiChannel in instruments */
+    TryHonor,    /* Use nMidiChannel in instruments when it is free */
+    Ignore       /* Ignore nMidiChannel in instruments */
+} PreferredChannelHandlingMode = TryHonor;
+
 // The range of bending equivalent to 1 semitone.
 // 0x2000 is the value used in TiMiDity++.
 // In this module, we prefer a full range of octave, to support a reasonable
@@ -187,11 +194,13 @@ public:
     signed char pan;
     // Which MIDI channel was allocated for this channel. -1 = none
     signed char chan;
+    // Which MIDI channel was preferred
+    signed char pref_chn;
 public:
     bool IsActive()     const { return note && chan >= 0; }
     bool IsPercussion() const { return patch & 0x80; }
     
-    S3MchannelInfo() : note(0),patch(0),bank(0),pan(0),chan(-1) { }
+    S3MchannelInfo() : note(0),patch(0),bank(0),pan(0),chan(-1),pref_chn(-1) { }
 };
 
 /* This maps S3M concepts into MIDI concepts */
@@ -265,7 +274,7 @@ static unsigned char GM_Volume(unsigned char Vol) // Converts the volume
 	return Vol>=63 ? 127 : 128*Vol/64;
 }
 
-static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key)
+static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pref_chn)
 {
     /* Returns a MIDI channel number on
      * which this key can be played safely.
@@ -282,6 +291,12 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key)
      * Channel with biggest score is selected.
      *
      */
+    if(PreferredChannelHandlingMode == AlwaysHonor
+    && pref_chn >= 0 && pref_chn <= 15)
+    {
+        return pref_chn;
+    }
+
     bool bad_channels[16] = {};  // channels having the same key playing
     bool used_channels[16] = {}; // channels having something playing
     
@@ -304,12 +319,19 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key)
     {
         if(mc == 9) continue; // percussion channel is never chosen for melody.
         int score = 0;
-        if(MIDIchans[mc].KnowSomething())
+        if(PreferredChannelHandlingMode == Ignore && MIDIchans[mc].KnowSomething())
         {
             if(MIDIchans[mc].patch != patch) score -= 4; // different patch
             if(MIDIchans[mc].bank  !=  bank) score -= 6; // different bank
         }
-        if(c == mc) score += 1;                      // same channel number
+        if(PreferredChannelHandlingMode == TryHonor)
+        {
+            if(pref_chn == mc) score += 1;           // same channel number
+        }
+        else
+        {
+            if(c == mc) score += 1;                  // same channel number
+        }
         if(bad_channels[mc]) score -= 9;             // has same key on
         if(!used_channels[mc]) score += 2;           // channel is unused
         //fprintf(stderr, "score %d for channel %d\n", score, mc);
@@ -319,10 +341,11 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key)
     return best_mc;
 }
 
-void GM_Patch(int c, unsigned char p)
+void GM_Patch(int c, unsigned char p, int pref_chn)
 {
     if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
-	S3Mchans[c].patch = p; // No actual data is sent.
+	S3Mchans[c].patch    = p; // No actual data is sent.
+	S3Mchans[c].pref_chn = pref_chn;
 }
 
 void GM_Bank(int c, unsigned char b)
@@ -371,7 +394,7 @@ void GM_KeyOn(int c, unsigned char key, unsigned char Vol)
         // Note: If you need to transpone the key, do it before allocating the channel.
         
         int mc = S3Mchans[c].chan =
-            GM_AllocateMelodyChannel(c, S3Mchans[c].patch, S3Mchans[c].bank, key);
+            GM_AllocateMelodyChannel(c, S3Mchans[c].patch, S3Mchans[c].bank, key, S3Mchans[c].pref_chn);
 
         MIDIchans[mc].SetPatchAndBank(mc, S3Mchans[c].patch, S3Mchans[c].bank);
         MIDIchans[mc].SetVolume(mc, GM_Volume(Vol));
@@ -466,14 +489,14 @@ void GM_Reset(int quitting)
 #endif
 }
 
-void GM_DPatch(int ch, unsigned char GM, unsigned char bank)
+void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn)
 {
 #ifdef GM_DEBUG
     fprintf(stderr, "GM_DPatch(%d, %02X @ %d)\n", ch, GM, bank);
 #endif
     if(ch < 0 || ((unsigned int)ch) >= MAXCHN) return;
 	GM_Bank(ch, bank);
-	GM_Patch(ch, GM);
+	GM_Patch(ch, GM, pref_chn);
 }
 void GM_Pan(int c, signed char val)
 {

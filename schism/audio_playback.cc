@@ -252,7 +252,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
     		if(i && i->nMidiChannel)
     		{
         		GM_KeyOff(chan);
-	        	GM_DPatch(chan, i->nMidiProgram, i->wMidiBank);
+				GM_DPatch(chan, i->nMidiProgram, i->wMidiBank, i->nMidiChannel);
 		    }
 		}
 
