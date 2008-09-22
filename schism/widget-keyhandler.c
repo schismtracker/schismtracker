@@ -68,7 +68,7 @@ static void textentry_move_cursor(struct widget *widget, int n)
 }
 static void bitset_move_cursor(struct widget *widget, int n)
 {
-	n += widget->d.bitset.cursor_pos;
+	n += *widget->d.bitset.cursor_pos;
 	n = CLAMP(n, 0, widget->d.bitset.nbits-1);
 	if (*widget->d.bitset.cursor_pos == n)
 		return;

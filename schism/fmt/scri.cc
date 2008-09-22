@@ -161,8 +161,7 @@ int fmt_scri_load_sample(const byte *data, size_t length, song_sample *smp, char
 
 static bool MidiS3M_Read(
     song_instrument* g,
-    const char* name,
-    int slot)
+    const char* name)
 {
     fprintf(stderr, "Name(%s)\n", name);
     
@@ -251,12 +250,12 @@ int fmt_scri_load_instrument(const byte *data, size_t length, int slot)
 	}
 	g->global_volume = smp->global_volume;
 	
-	g->midi_bank     = 0;
-	g->midi_program  = 0;
-	g->midi_channel  = 0;
-	g->midi_drum_key = 0;
+	g->midi_bank          = 0;
+	g->midi_program       = 0;
+	g->midi_channel_mask  = 0;
+	g->midi_drum_key      = 0;
 	
-	MidiS3M_Read(g, np, slot);
+	MidiS3M_Read(g, np);
 	
 	return true;
 }
