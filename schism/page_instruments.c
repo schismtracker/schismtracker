@@ -2202,7 +2202,7 @@ static void instrument_list_pitch_predraw_hook(void)
 	
 	/* printf("ins%02d: ch%04d pgm%04d bank%06d drum%04d\n", current_instrument,
 		ins->midi_channel, ins->midi_program, ins->midi_bank, ins->midi_drum_key); */
-	widgets_pitch[16].d.bitset.value = ins->midi_channel_mask;
+	widgets_pitch[16].d.bitset.value           = ins->midi_channel_mask;
 	widgets_pitch[17].d.thumbbar.value = (signed char) ins->midi_program;
 	widgets_pitch[18].d.thumbbar.value = (signed char) (ins->midi_bank & 0xff);
 	widgets_pitch[19].d.thumbbar.value = (signed char) (ins->midi_bank >> 8);
@@ -2797,10 +2797,13 @@ void instrument_list_pitch_load_page(struct page *page)
 	create_bitset(widgets_pitch + 16, 54, 44, 17, 15, 17, 0,
 			instrument_list_pitch_update_values,
 			17,
-			"123456789P123456M",
-			".........p......m",
+			" 1 2 3 4 5 6 7 8 9P\0""111213141516M\0",
+			".\0.\0.\0.\0.\0.\0.\0.\0.\0p\0.\0.\0.\0.\0.\0.\0m\0",
 			&midi_channel_selection_cursor_position
 			);
+	widgets_pitch[16].d.bitset.activation_keys =
+	        "123456789pabcdefm";
+
 	create_thumbbar(widgets_pitch + 17, 54, 45, 17, 16, 18, 0,
 			instrument_list_pitch_update_values, -1, 127);
 	create_thumbbar(widgets_pitch + 18, 54, 46, 17, 17, 19, 0,
