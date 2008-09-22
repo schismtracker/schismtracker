@@ -249,10 +249,10 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		if (ins >= 0 && (status.flags & MIDI_LIKE_TRACKER))
 		{
     		INSTRUMENTHEADER* i = mp->Headers[ins];
-    		if(i && i->nMidiChannel)
+			if(i && i->nMidiChannelMask)
     		{
         		GM_KeyOff(chan);
-				GM_DPatch(chan, i->nMidiProgram, i->wMidiBank, i->nMidiChannel);
+				GM_DPatch(chan, i->nMidiProgram, i->wMidiBank, i->nMidiChannelMask);
 		    }
 		}
 
@@ -1275,10 +1275,11 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 		return; /* err...  almost certainly */
 	if (!mp->Headers[ins]) return;
 
-	if (mp->Headers[ins]->nMidiChannel > 16) {
+	if (mp->Headers[ins]->nMidiChannelMask >= 0x10000) {
 		mc = chan % 16;
 	} else {
-		mc = mp->Headers[ins]->nMidiChannel;
+		mc = 0;
+		while(!(mp->Headers[ins]->nMidiChannelMask & (1 << mc))) ++mc;
 	}
 
 	m_note = m->note;

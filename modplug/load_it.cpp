@@ -79,7 +79,9 @@ BOOL CSoundFile::ITInstrToMPT(const void *p, INSTRUMENTHEADER *penv, UINT trkver
 		memcpy(penv->name, pis->name, 26);
 		memcpy(penv->filename, pis->filename, 12);
 		penv->nMidiProgram = pis->mpr;
-		penv->nMidiChannel = pis->mch;
+		penv->nMidiChannelMask = pis->mch > 16 ? (0x10000 + pis->mch)
+		                       : pis->mch == 0 ? (0)
+		                       :                 (1 << (pis->mch-1));
 		penv->wMidiBank = bswapLE16(pis->mbank);
 		penv->nFadeOut = bswapLE16(pis->fadeout) << 5;
 		penv->nGlobalVol = pis->gbv;
@@ -902,7 +904,17 @@ BOOL CSoundFile::SaveIT(LPCSTR lpszFileName, UINT nPacking)
 			memcpy(iti.name, penv->name, 26);
 			iti.mbank = penv->wMidiBank;
 			iti.mpr = penv->nMidiProgram;
-			iti.mch = penv->nMidiChannel;
+			iti.mch = 0;
+			if(penv->nMidiChannelMask >= 0x10000)
+			{
+			    iti.mch = penv->nMidiChannelMask - 0x10000;
+			    if(iti.mch <= 16) iti.mch = 16;
+			}
+			else if(penv->nMidiChannelMask & 0xFFFF)
+			{
+			    iti.mch = 1;
+			    while(!(penv->nMidiChannelMask & (1 << (iti.mch-1)))) ++iti.mch;
+			}
 			iti.nna = penv->nNNA;
 			iti.dct = penv->nDCT;
 			iti.dca = penv->nDNA;
