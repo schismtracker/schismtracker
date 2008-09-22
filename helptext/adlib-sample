@@ -1,0 +1,104 @@
+|                             ãÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜä
+|                             Ñ  AdLib samples  ë
+|                             âèèèèèèèèèèèèèèèèèñ
+|
+| AdLib synthesis is a method of music creation originally provided by Yamaha's
+| YM3812 chip, that used to exist in most soundcards, especially Sound Blaster
+| compatibles, in the 1990s. In SchismTracker, AdLib support is provided through
+| emulation.
+| AdLib allows for producing impressive music while using very little storage,
+| because all instruments are synthesized by the hardware, instead of being
+| stored as PCM data like other tracker samples are. The synthesis method used
+| in AdLib is frequency modulation, hence it is also called FM synthesis.
+|
+| AdLib consists of 9 melodic channels, each of which has the following
+| properties, most of which can be changed on the sample editing screen:
+|
+|   Frequency, Octave, Note On/off
+|                These properties are automatically managed
+|                by SchismTracker when the music plays, and
+|                are not part of the sample editor.
+|
+|   Synthesis mode (Additive synthesis)
+|                Whether the sample is synthesized using FM, or whether
+|                the two operators' outputs are simply summed together.
+|
+|   Feedback level
+|                This property allows the modulator to modulate its own output.
+|                High levels of feedback are usually used to create percussive
+|                instruments.
+|
+|   Two oscillators (called "operators"), one called "Modulator" and
+|   the other called "Carrier", each having the following properties:
+|
+|         Frequency multiplier
+|                Specifies the value by which the frequency produced by
+|                the individual oscillator is multiplied. Though the values
+|                displayed in the sample editor are indicated as 0..15,
+|                the actual values they correspond to are
+|                1/2, 1..10, 10, 12, 12, 15 and 15.
+|
+|         Waveform
+|                Three possible waveforms exist for each channel:
+|                 0 = sinewave                 _     _
+|                                             / \   / \
+|                                                \_/   \_/
+|                 1 = half sinewave            _     _
+|                                             / \__ / \___
+|                 
+|                 2 = polarized sinewave       _  _  _  _ 
+|                                             / \/ \/ \/ \                     
+|                 
+|                 3 = half polarized sinewave  .  .  .  .   
+|                                             /|_/|_/|_/|_
+|         Volume(0-63)
+|                 The volume level of this operator. The volume levels
+|                 are logarithmic, so a reduction of 8 in volume corresponds
+|                 to approximately half quieter signal.
+|
+|         Attack, decay, sustain, release
+|                 These properties control the volume envelope of the instrument.
+|                 Attack = how quickly the volume reaches the maximum level
+|                          when the instrument is triggered
+|                 Decay  = at which rate the volume decays immediately
+|                          after the attack phase
+|                 Sustain = at which rate the volume decays while it is
+|                           still keyed on (this number only affects if
+|                           the Sustain sound flag is set)
+|                 Release = at which rate the volume decays after the
+|                           instrument is no longer keyed on
+|
+|         Volume Vibrato (Tremolo)
+|                 Automatic volume vibrato for the instrument on/off
+|
+|         Pitch Vibrato
+|                 Automatic pitch vibrato for the instrument on/off
+|
+|         Envelope scaling per key
+|                 If this property is set, then the envelope rates are
+|                 scaled according to the key that is played: lower pitches
+|                 decay slower, and higher pitches decay faster. This is
+|                 useful for e.g. piano type instruments.
+|
+|         Volume scaling per key
+|                 Similarly as envelope scaling, this property controls
+|                 the rate on which the volume level is scaled by the
+|                 pitch that is played.
+|
+|   The combined outcome of all these settings for both the Operator
+|   and the Carrier determines how the sample will sound.
+|
+|   If you want to create a new AdLib sample from scratch, use an empty
+|   sample slot, and press Alt-Z. Set attack=15, decay=2, sustain=7 for
+|   both operators, and experiment from there changing each property
+|   as you like.
+|
+|   IMPORTANT NOTE: AdLib instruments can currently only be
+|   loaded from / saved to S3M files! They are not supported
+|   by any other format supported by SchismTracker, and thus,
+|   if you save your AdLib module in e.g. IT format, the AdLib
+|   instruments will be lost.
+|
+|   References:
+|       - Wikipedia article at http://en.wikipedia.org/wiki/Yamaha_YM3812
+|       - OPL2 emulator by Tatsuyuki Satoh and Jarek Burczynski
