@@ -456,7 +456,7 @@ int song_instrument_is_empty(int n)
 	}
 	if (mp->Headers[n]->wMidiBank
 	||mp->Headers[n]->nMidiProgram
-	||mp->Headers[n]->nMidiChannel
+	||mp->Headers[n]->nMidiChannelMask
 	||mp->Headers[n]->nMidiDrumKey) return 0;
 	return 1;
 }
@@ -655,7 +655,17 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	iti.name[25] = 0;
 	iti.ifc = i->nIFC;
 	iti.ifr = i->nIFR;
-	iti.mch = i->nMidiChannel;
+	iti.mch = 0;
+	if(i->nMidiChannelMask >= 0x10000)
+	{
+	    iti.mch = i->nMidiChannelMask - 0x10000;
+	    if(iti.mch <= 16) iti.mch = 16;
+	}
+	else if(i->nMidiChannelMask & 0xFFFF)
+	{
+	    iti.mch = 1;
+	    while(!(i->nMidiChannelMask & (1 << (iti.mch-1)))) ++iti.mch;
+	}
 	iti.mpr = i->nMidiProgram;
 	iti.mbank = bswapLE16(i->wMidiBank);
 

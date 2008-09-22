@@ -70,7 +70,7 @@ enum widget_type {
         WIDGET_TOGGLE, WIDGET_MENUTOGGLE,
         WIDGET_BUTTON, WIDGET_TOGGLEBUTTON,
         WIDGET_TEXTENTRY,
-        WIDGET_NUMENTRY, WIDGET_THUMBBAR, WIDGET_PANBAR,
+        WIDGET_NUMENTRY, WIDGET_THUMBBAR, WIDGET_BITSET, WIDGET_PANBAR,
         /* this last one is for anything that doesn't fit some standard
         type, like the sample list, envelope editor, etc.; a widget of
         this type is just a placeholder so page.c knows there's
@@ -159,6 +159,16 @@ struct widget_thumbbar {
 	const char *text_at_min, *text_at_max;
 };
 
+struct widget_bitset {
+        /* A widget for controlling individual bits */
+        int nbits;
+        int value;
+        int *cursor_pos;
+        const char* bits_on;
+        const char* bits_off;
+};
+
+
 /* special case of the thumbbar; range goes from 0 to 64. if mute is
  * set, the bar is replaced with the word "muted"; if surround is set,
  * it's replaced with the word "surround". some keys: L/M/R set the
@@ -208,6 +218,7 @@ union _widget_data_union {
 	struct widget_thumbbar thumbbar;
 	struct widget_panbar panbar;
 	struct widget_other other;
+	struct widget_bitset bitset;
 };
 struct widget {
         enum widget_type type;
@@ -419,6 +430,10 @@ void create_numentry(struct widget *w, int x, int y, int width, int next_up,
 void create_thumbbar(struct widget *w, int x, int y, int width, int next_up,
                      int next_down, int next_tab, void (*changed) (void),
                      int min, int max);
+void create_bitset(struct widget *w, int x, int y, int width, int next_up,
+                   int next_down, int next_tab, void (*changed) (void),
+                   int nbits, const char* bits_on, const char* bits_off,
+                   int *cursor_pos);
 void create_panbar(struct widget *w, int x, int y, int next_up,
                    int next_down, int next_tab, void (*changed) (void),
                    int channel);

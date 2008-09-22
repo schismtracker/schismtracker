@@ -1545,7 +1545,7 @@ UINT CSoundFile::CreateStereoMix(int count)
 		 * artificial KeyOffs)
 		 */
 		if (!(pChannel->dwFlags & CHN_ADLIB)
-		&&  !(penv && penv->nMidiChannel))
+		&&  !(penv && penv->nMidiChannelMask))
 		{
        		nSmpCount = GetSampleCount(pChannel, nrampsamples);
     	}
@@ -1583,7 +1583,7 @@ UINT CSoundFile::CreateStereoMix(int count)
 
 			/* Mix the stream, unless we're in AdLib or MIDI mode */
 			if (!(pChannel->dwFlags & CHN_ADLIB)
-			&&  !(penv && penv->nMidiChannel))
+			&&  !(penv && penv->nMidiChannelMask))
 			{
 				// Choose function for mixing
 				LPMIXINTERFACE pMixFunc;

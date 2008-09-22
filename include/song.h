@@ -98,7 +98,7 @@ typedef struct _song_instrument {
         unsigned int filter_resonance;
         unsigned int midi_bank;
         unsigned int midi_program;
-        unsigned int midi_channel;
+        unsigned int midi_channel_mask;
         unsigned int midi_drum_key;
         int pitch_pan_separation;
         unsigned int pitch_pan_center;

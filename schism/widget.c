@@ -178,11 +178,34 @@ void create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int
         w->next.down = next_down;
         w->next.tab = next_tab;
         w->changed = changed;
-        w->d.numentry.reverse = 0;
         w->d.thumbbar.min = min;
         w->d.thumbbar.max = max;
 	w->d.thumbbar.text_at_min = NULL;
 	w->d.thumbbar.text_at_max = NULL;
+        w->activate = NULL;
+}
+
+void create_bitset(struct widget *w, int x, int y, int width, int next_up, int next_down,
+                   int next_tab, void (*changed) (void),
+                   int nbits, const char* bits_on, const char* bits_off,
+                   int *cursor_pos)
+{
+        w->type = WIDGET_BITSET;
+	w->accept_text = 0;
+        w->x = x;
+        w->y = y;
+        w->width = width;
+	w->depressed = 0;
+	w->height = 1;
+        w->next.up = next_up;
+        w->next.down = next_down;
+        w->next.tab = next_tab;
+        w->changed = changed;
+        w->d.numentry.reverse = 0;
+        w->d.bitset.nbits = nbits;
+        w->d.bitset.bits_on = bits_on;
+        w->d.bitset.bits_off = bits_off;
+        w->d.bitset.cursor_pos = cursor_pos;
         w->activate = NULL;
 }
 
@@ -542,6 +565,32 @@ void draw_widget(struct widget *w, int selected)
 				n = *(w->d.numentry.cursor_pos);
 				draw_char(buf[n], w->x + n, w->y, 0, 3);
 			}
+                }
+                break;
+        case WIDGET_BITSET:
+                for(n = 0; n < w->d.bitset.nbits; ++n)
+                {
+                        int set = !!(w->d.bitset.value & (1 << n));
+                        char label   = set ? w->d.bitset.bits_on[n]
+                                           : w->d.bitset.bits_off[n];
+                        int is_focused = selected && n == *w->d.bitset.cursor_pos;
+                        static const char fg_selection[4] =
+                        {
+                                0, /* not focus, not set */
+                                0, /* not focus, is  set */
+                                2, /* has focus, not set */
+                                3  /* has focus, is  set */
+                        };
+                        static const char bg_selection[4] =
+                        {
+                                2, /* not focus, not set */
+                                3, /* not focus, is  set */
+                                3, /* has focus, not set */
+                                2  /* has focus, is  set */
+                        }
+                        int fg = fg_selection[set + is_focused*2],
+                            bg = bg_selection[set + is_focused*2];
+                        draw_char(label, w->x + n, w->y, fg, bg);
                 }
                 break;
         case WIDGET_THUMBBAR:
