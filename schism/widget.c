@@ -300,7 +300,7 @@ int menutoggle_handle_key(struct widget *w, struct key_event *k)
         {
             const char* m = w->d.menutoggle.activation_keys;
             const char* p = strchr(m, (char)k->unicode);
-            if(p)
+            if(p && *p)
             {
                 w->d.menutoggle.state = p - m;
                 if(w->changed) w->changed();
