@@ -211,11 +211,12 @@ static bool MidiS3M_Read(
         g->midi_bank = bank;
         if(is_percussion)
             { g->midi_drum_key = GM;
-              g->midi_channel = 10; 
+              g->midi_channel_mask = 1 << 9;
               g->midi_program = 128+(GM);}
         else
             { g->midi_program = GM-1;
-              g->midi_channel = 1 + (slot%9); }
+              g->midi_channel_mask = 0xFFFF &~ (1 << 9); // any channel except percussion
+            }
         
         /* TODO: Apply ft, apply scale, apply autoSDx,
          * FIXME: Channel note changes don't affect MIDI notes

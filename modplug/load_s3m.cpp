@@ -241,7 +241,7 @@ static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32], int&
               Header.nMidiChannelMask = 0xFFFF &~ (1 << 9); // any channel except percussion
             }
         
-        /* TODO: Apply scale, apply autoSDx,
+        /* TODO: Apply autoSDx,
          * FIXME: Channel note changes don't affect MIDI notes
          */
         strncpy((char*)Header.name, (const char*)name, 32);
