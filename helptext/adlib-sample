@@ -2,14 +2,16 @@
 |                             Ñ  AdLib samples  ë
 |                             âèèèèèèèèèèèèèèèèèñ
 |
-| AdLib synthesis is a method of music creation originally provided by Yamaha's
-| YM3812 chip, that used to exist in most soundcards, especially Sound Blaster
-| compatibles, in the 1990s. In SchismTracker, AdLib support is provided through
-| emulation.
-| AdLib allows for producing impressive music while using very little storage,
-| because all instruments are synthesized by the hardware, instead of being
-| stored as PCM data like other tracker samples are. The synthesis method used
-| in AdLib is frequency modulation, hence it is also called FM synthesis.
+| AdLib synthesis is a method of music creation originally provided by
+| Yamaha's YM3812 chip, that used to exist in most soundcards, especially
+| Sound Blaster compatibles, in the 1990s. In SchismTracker, AdLib support
+| is provided through emulation.
+|
+| AdLib allows for producing impressive music while using very little
+| storage, because all instruments are synthesized by the hardware, instead
+| of being stored as PCM data like other tracker samples are. The synthesis
+| method used in AdLib is frequency modulation, hence it is also called FM
+| synthesis.
 |
 | AdLib consists of 9 melodic channels, each of which has the following
 | properties, most of which can be changed on the sample editing screen:
@@ -24,18 +26,18 @@
 |                the two operators' outputs are simply summed together.
 |
 |   Feedback level
-|                This property allows the modulator to modulate its own output.
-|                High levels of feedback are usually used to create percussive
-|                instruments.
+|                This property allows the modulator to modulate its own
+|                output. High levels of feedback are usually used to
+|                create percussive instruments.
 |
 |   Two oscillators (called "operators"), one called "Modulator" and
 |   the other called "Carrier", each having the following properties:
 |
 |         Frequency multiplier
 |                Specifies the value by which the frequency produced by
-|                the individual oscillator is multiplied. Though the values
-|                displayed in the sample editor are indicated as 0..15,
-|                the actual values they correspond to are
+|                the individual oscillator is multiplied. Though the
+|                values displayed in the sample editor are indicated
+|                as 0..15, the actual values they correspond to are
 |                1/2, 1..10, 10, 12, 12, 15 and 15.
 |
 |         Waveform
@@ -53,11 +55,13 @@
 |                                             /|_/|_/|_/|_
 |         Volume(0-63)
 |                 The volume level of this operator. The volume levels
-|                 are logarithmic, so a reduction of 8 in volume corresponds
-|                 to approximately half quieter signal.
+|                 are logarithmic, so a reduction of 8 in volume
+|                 corresponds to approximately half quieter signal.
 |
 |         Attack, decay, sustain, release
-|                 These properties control the volume envelope of the instrument.
+|                 These properties control the volume envelope of the
+|                 instrument.
+|
 |                 Attack = how quickly the volume reaches the maximum level
 |                          when the instrument is triggered
 |                 Decay  = at which rate the volume decays immediately
