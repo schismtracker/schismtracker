@@ -334,6 +334,25 @@ int menutoggle_handle_key(struct widget *w, struct key_event *k)
         return 0;
 }
 
+int bitset_handle_key(struct widget *w, struct key_event *k)
+{
+        if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0)
+           && w->d.bitset.activation_keys)
+        {
+            const char* m = w->d.bitset.activation_keys;
+            const char* p = strchr(m, (char)k->unicode);
+            if(p && *p)
+            {
+                int bit_index = p-m;
+                w->d.bitset.value ^= (1 << bit_index);
+                if(w->changed) w->changed();
+                status.flags |= NEED_UPDATE;
+                return 1;
+            }
+        }
+        return 0;
+}
+
 /* --------------------------------------------------------------------- */
 /* numeric entries */
 
@@ -571,8 +590,10 @@ void draw_widget(struct widget *w, int selected)
                 for(n = 0; n < w->d.bitset.nbits; ++n)
                 {
                         int set = !!(w->d.bitset.value & (1 << n));
-                        char label   = set ? w->d.bitset.bits_on[n]
-                                           : w->d.bitset.bits_off[n];
+                        char label_c1   = set ? w->d.bitset.bits_on[n*2+0]
+                                              : w->d.bitset.bits_off[n*2+0];
+                        char label_c2   = set ? w->d.bitset.bits_on[n*2+1]
+                                              : w->d.bitset.bits_off[n*2+1];
                         int is_focused = selected && n == *w->d.bitset.cursor_pos;
                         /* In textentries, cursor=0,3; normal=2,0 */
                         static const char fg_selection[4] =
@@ -586,12 +607,15 @@ void draw_widget(struct widget *w, int selected)
                         {
                                 0, /* not cursor, not set */
                                 0, /* not cursor, is  set */
-                                3, /* has cursor, not set */
-                                2  /* has cursor, is  set */
+                                2, /* has cursor, not set */
+                                3  /* has cursor, is  set */
                         };
                         fg = fg_selection[set + is_focused*2];
                         bg = bg_selection[set + is_focused*2];
-                        draw_char(label, w->x + n, w->y, fg, bg);
+                        if(label_c2)
+                              draw_half_width_chars(label_c1, label_c2, w->x + n, w->y, fg, bg, fg, bg);
+                        else
+                              draw_char(label_c1, w->x + n, w->y, fg, bg);
                 }
                 break;
         case WIDGET_THUMBBAR:

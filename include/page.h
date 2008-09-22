@@ -166,6 +166,7 @@ struct widget_bitset {
         int *cursor_pos;
         const char* bits_on;
         const char* bits_off;
+        const char* activation_keys;
 };
 
 
@@ -446,6 +447,7 @@ int textentry_add_char(struct widget *widget, Uint16 unicode);
 void numentry_change_value(struct widget *widget, int new_value);
 int numentry_handle_digit(struct widget *widget, struct key_event *k);
 int menutoggle_handle_key(struct widget *widget, struct key_event *k);
+int bitset_handle_key(struct widget *widget, struct key_event *k);
 
 struct widget *find_widget_xy(int x, int y);
 struct widget *find_widget_xy_ex(int x, int y, int *num);

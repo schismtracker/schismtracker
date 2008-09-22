@@ -811,6 +811,10 @@ int widget_handle_key(struct key_event * k)
 	        if (menutoggle_handle_key(widget, k))
 	                return 1;
 	        break;
+	case WIDGET_BITSET:
+	        if (bitset_handle_key(widget, k))
+	                return 1;
+	        break;
 	case WIDGET_NUMENTRY:
 		if (numentry_handle_digit(widget, k))
 			return 1;
