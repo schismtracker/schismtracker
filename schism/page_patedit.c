@@ -495,7 +495,7 @@ static void pattern_editor_display_multichannel(void)
 static int multichannel_get_next (int cur_channel)
 {
 	int i;
-        
+
         /* stub * / return cur_channel; */
 
 	cur_channel--; /* make it zero-based. oh look, it's a hammer. */
@@ -519,10 +519,10 @@ static int multichannel_get_next (int cur_channel)
 static int multichannel_get_previous (int cur_channel)
 {
         int i;
-        
+
         cur_channel--; /* once again, .... */
         i = cur_channel;
-        
+
         if (channel_multi [cur_channel] & 1)
 	{
                 do
@@ -534,7 +534,7 @@ static int multichannel_get_previous (int cur_channel)
 	}
         return i + 1;
 }
-        
+
 
 /* --------------------------------------------------------------------------------------------------------- */
 static void copyin_addnote(song_note *note, int *copyin_x, int *copyin_y)
@@ -3683,11 +3683,11 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			fast_volume_amplify();
 		} else {
 			switch (template_mode) {
-                        
+
                         /* TODO: these should be displayed UNDER the "---- Pattern Editor (F2) ----- line
                         and should stay there AS LONG AS WE'RE IN ANY TEMPLATE MODE - even if we go to another
                         page and then back to the pattern editor */
-                        
+
 			case NoTemplateMode:
 			    template_mode = TemplateOverwrite;
 				status_text_flash_color(3,"Template, Overwrite");

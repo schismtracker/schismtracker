@@ -478,7 +478,7 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 			pChn->dwFlags |= CHN_NOTEFADE;
                         return;
                 }
-                
+
 		// Key Off
 		KeyOff(nChn);
 		// Note Cut
@@ -1112,7 +1112,7 @@ BOOL CSoundFile::ProcessEffects()
 				SetTempo(param);
 			} else {
                                 param = pChn->nOldTempo; // this just got set on tick zero
-                                
+
                                 switch (param >> 4) {
                                 case 0:
                                         m_nMusicTempo -= param & 0xf;

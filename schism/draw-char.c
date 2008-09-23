@@ -160,12 +160,12 @@ static inline int _pack_halfw(int c)
 	case 0x5e: return 41;
 	case 0xcd: return 42;
 	case 0x7e: return 43;
-        
+
         /* Mini-sharps and flats */
         case '-': return 44;
         case '#': return 45;
         case 'b': return 46;
-        
+
 	default:
 		fprintf(stderr, "FATAL: half-width character %x not mapped\n", c);
 		exit(255);
