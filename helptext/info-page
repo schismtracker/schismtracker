@@ -1,0 +1,23 @@
+|                               ‹†††††††††††††Š
+|                               „  Info Page  ‘
+|                               ‰–
+|
+| Insert            Add a new window
+| Delete            Delete current window
+| Tab/Shift-Tab     Move between windows
+| Up/Dn/Left/Right  Move highlighted channel
+| PgUp/PgDn         Change window type
+| Alt-Up/Down       Move window base up/down
+|
+| V                 Toggle between volume/velocity bars
+| I                 Toggle between sample/instrument names
+|
+| Q                 Mute/Unmute current channel
+| S                 Solo current channel
+|
+| Grey +, Grey -    Move forwards/backwards one pattern in song
+|
+| Alt-S             Toggle Stereo playback
+| Alt-R             Reverse output channels
+|
+| G                 Goto pattern currently playing
