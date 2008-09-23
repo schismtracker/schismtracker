@@ -13,6 +13,7 @@ extern "C" {
 #define OPLResetChip YM3812ResetChip
 #define OPLWrite     YM3812Write
 #define OPLUpdateOne YM3812UpdateOne
+#define OPLClose     YM3812Shutdown
 
 static const int oplbase = 0x388;
 
@@ -42,7 +43,11 @@ static unsigned char Fmdrv_Inportb(unsigned port)
 
 void Fmdrv_Init(int mixfreq)
 {
-    if(opl!=-1) return;
+	if(opl!=-1)
+	{
+		OPLClose();
+		opl=-1;
+	}
 	opl = OPLNew(1789772*2, mixfreq);
 	OPLResetChip(opl);
 	OPL_Detect();
