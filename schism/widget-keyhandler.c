@@ -66,6 +66,15 @@ static void textentry_move_cursor(struct widget *widget, int n)
 	widget->d.textentry.cursor_pos = n;
 	status.flags |= NEED_UPDATE;
 }
+static void bitset_move_cursor(struct widget *widget, int n)
+{
+	n += *widget->d.bitset.cursor_pos;
+	n = CLAMP(n, 0, widget->d.bitset.nbits-1);
+	if (*widget->d.bitset.cursor_pos == n)
+		return;
+	*widget->d.bitset.cursor_pos = n;
+	status.flags |= NEED_UPDATE;
+}
 
 /* --------------------------------------------------------------------- */
 /* thumbbar value prompt */
@@ -471,6 +480,10 @@ int widget_handle_key(struct key_event * k)
 	case SDLK_LEFT:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
+		case WIDGET_BITSET:
+		    if (NO_MODIFIER(k->mod))
+		        bitset_move_cursor(widget, -1);
+		    break;
 		case WIDGET_NUMENTRY:
 			if (k->mod & KMOD_SHIFT) {
 				if (clippy_owner(CLIPPY_SELECT) != widget) {
@@ -532,6 +545,10 @@ int widget_handle_key(struct key_event * k)
 		/* pretty much the same as left, but with a few small
 		 * changes here and there... */
 		switch (current_type) {
+		case WIDGET_BITSET:
+		    if (NO_MODIFIER(k->mod))
+		        bitset_move_cursor(widget, 1);
+		    break;
 		case WIDGET_NUMENTRY:
 			if (k->mod & KMOD_SHIFT) {
 				if (clippy_owner(CLIPPY_SELECT) != widget) {
@@ -647,6 +664,13 @@ int widget_handle_key(struct key_event * k)
 	case SDLK_SPACE:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
+		case WIDGET_BITSET:
+		    if (!NO_MODIFIER(k->mod))
+		        return 0;
+		    widget->d.bitset.value ^= (1 << *widget->d.bitset.cursor_pos);
+			if (widget->changed) widget->changed();
+		    status.flags |= NEED_UPDATE;
+		    return 1;
 		case WIDGET_TOGGLE:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
@@ -785,6 +809,10 @@ int widget_handle_key(struct key_event * k)
 	switch (current_type) {
 	case WIDGET_MENUTOGGLE:
 	        if (menutoggle_handle_key(widget, k))
+	                return 1;
+	        break;
+	case WIDGET_BITSET:
+	        if (bitset_handle_key(widget, k))
 	                return 1;
 	        break;
 	case WIDGET_NUMENTRY:

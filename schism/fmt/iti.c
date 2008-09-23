@@ -82,7 +82,9 @@ int fmt_iti_load_instrument(const byte *data, size_t length, int slot)
 	g->name[25] = 0;
 	g->filter_cutoff = iti.ifc;
 	g->filter_resonance = iti.ifr;
-	g->midi_channel = iti.mch;
+	g->midi_channel_mask = iti.mch > 16 ? (0x10000 + iti.mch)
+	                     : iti.mch == 0 ? (0)
+	                     :                (1 << (iti.mch-1));
 	g->midi_program = iti.mpr;
 	g->midi_bank = bswapLE16(iti.mbank);
 	

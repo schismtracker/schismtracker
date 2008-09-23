@@ -283,12 +283,13 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			else
 				song_get_sample(smp, &ptr);
 			draw_text_len( ptr, 25, n, pos, 6, 0);
-		} else if (ins && channel->instrument && channel->instrument->midi_channel) {
-			if (channel->instrument->midi_channel > 16) {
+		} else if (ins && channel->instrument && channel->instrument->midi_channel_mask) {
+			if (channel->instrument->midi_channel_mask >= 0x10000) {
 				draw_text(numtostr(2, ((c-1) % 16)+1, buf), 31, pos, 6, 0);
 			} else {
-				draw_text(numtostr(2, channel->instrument->midi_channel,
-						buf), 31, pos, 6, 0);
+				int ch = 0;
+				while(!(channel->instrument->midi_channel_mask & (1 << ch))) ++ch;
+				draw_text(numtostr(2, ch, buf), 31, pos, 6, 0);
 			}
 			draw_char('/', 33, pos, 6, 0);
 			draw_text(num99tostr(ins, buf), 34, pos, 6, 0);

@@ -284,8 +284,11 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 			if (song_instrument_is_empty(i)) continue;
 			ins = song_get_instrument(i,NULL);
 			if (!ins) continue;
-			if (ins->midi_channel > 16) continue;
-			map[i].c = ins->midi_channel;
+			if (ins->midi_channel_mask >= 0x10000) continue;
+			map[i].c = 0;
+			if (ins->midi_channel_mask)
+				while (!(ins->midi_channel_mask & (1 << map[i].c)))
+					++map[i].c;
 			map[i].p = ins->midi_program & 127;
 			map[i].b = ins->midi_bank;
 			map[i].nna = ins->nna;

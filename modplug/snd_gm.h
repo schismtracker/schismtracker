@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-void GM_Patch(int c, unsigned char p);
-void GM_DPatch(int ch, unsigned char GM, unsigned char bank);
+void GM_Patch(int c, unsigned char p, int pref_chn_mask);
+void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask);
 
 void GM_Bank(int c, unsigned char b);
 void GM_Touch(int c, unsigned char Vol);

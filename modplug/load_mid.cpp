@@ -412,7 +412,7 @@ UINT CSoundFile::MapMidiInstrument(DWORD dwBankProgram, UINT nChannel, UINT nNot
 	Headers[m_nInstruments] = penv;
 	penv->wMidiBank = nBank;
 	penv->nMidiProgram = nProgram;
-	penv->nMidiChannel = nChannel;
+	penv->nMidiChannelMask = 1 << (nChannel-1);
 	if (nChannel == MIDI_DRUMCHANNEL)
 	{
 	    penv->nMidiDrumKey = nNote;

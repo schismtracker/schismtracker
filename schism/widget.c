@@ -178,11 +178,34 @@ void create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int
         w->next.down = next_down;
         w->next.tab = next_tab;
         w->changed = changed;
-        w->d.numentry.reverse = 0;
         w->d.thumbbar.min = min;
         w->d.thumbbar.max = max;
 	w->d.thumbbar.text_at_min = NULL;
 	w->d.thumbbar.text_at_max = NULL;
+        w->activate = NULL;
+}
+
+void create_bitset(struct widget *w, int x, int y, int width, int next_up, int next_down,
+                   int next_tab, void (*changed) (void),
+                   int nbits, const char* bits_on, const char* bits_off,
+                   int *cursor_pos)
+{
+        w->type = WIDGET_BITSET;
+	w->accept_text = 0;
+        w->x = x;
+        w->y = y;
+        w->width = width;
+	w->depressed = 0;
+	w->height = 1;
+        w->next.up = next_up;
+        w->next.down = next_down;
+        w->next.tab = next_tab;
+        w->changed = changed;
+        w->d.numentry.reverse = 0;
+        w->d.bitset.nbits = nbits;
+        w->d.bitset.bits_on = bits_on;
+        w->d.bitset.bits_off = bits_off;
+        w->d.bitset.cursor_pos = cursor_pos;
         w->activate = NULL;
 }
 
@@ -303,6 +326,25 @@ int menutoggle_handle_key(struct widget *w, struct key_event *k)
             if(p && *p)
             {
                 w->d.menutoggle.state = p - m;
+                if(w->changed) w->changed();
+                status.flags |= NEED_UPDATE;
+                return 1;
+            }
+        }
+        return 0;
+}
+
+int bitset_handle_key(struct widget *w, struct key_event *k)
+{
+        if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0)
+           && w->d.bitset.activation_keys)
+        {
+            const char* m = w->d.bitset.activation_keys;
+            const char* p = strchr(m, (char)k->unicode);
+            if(p && *p)
+            {
+                int bit_index = p-m;
+                w->d.bitset.value ^= (1 << bit_index);
                 if(w->changed) w->changed();
                 status.flags |= NEED_UPDATE;
                 return 1;
@@ -542,6 +584,38 @@ void draw_widget(struct widget *w, int selected)
 				n = *(w->d.numentry.cursor_pos);
 				draw_char(buf[n], w->x + n, w->y, 0, 3);
 			}
+                }
+                break;
+        case WIDGET_BITSET:
+                for(n = 0; n < w->d.bitset.nbits; ++n)
+                {
+                        int set = !!(w->d.bitset.value & (1 << n));
+                        char label_c1   = set ? w->d.bitset.bits_on[n*2+0]
+                                              : w->d.bitset.bits_off[n*2+0];
+                        char label_c2   = set ? w->d.bitset.bits_on[n*2+1]
+                                              : w->d.bitset.bits_off[n*2+1];
+                        int is_focused = selected && n == *w->d.bitset.cursor_pos;
+                        /* In textentries, cursor=0,3; normal=2,0 */
+                        static const char fg_selection[4] =
+                        {
+                                2, /* not cursor, not set */
+                                3, /* not cursor, is  set */
+                                0, /* has cursor, not set */
+                                0  /* has cursor, is  set */
+                        };
+                        static const char bg_selection[4] =
+                        {
+                                0, /* not cursor, not set */
+                                0, /* not cursor, is  set */
+                                2, /* has cursor, not set */
+                                3  /* has cursor, is  set */
+                        };
+                        fg = fg_selection[set + is_focused*2];
+                        bg = bg_selection[set + is_focused*2];
+                        if(label_c2)
+                              draw_half_width_chars(label_c1, label_c2, w->x + n, w->y, fg, bg, fg, bg);
+                        else
+                              draw_char(label_c1, w->x + n, w->y, fg, bg);
                 }
                 break;
         case WIDGET_THUMBBAR:
