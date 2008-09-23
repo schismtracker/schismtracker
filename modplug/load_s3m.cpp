@@ -415,13 +415,9 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 			Ins[iSmp].nLength = 1;
 			// Because most of the code in modplug requires
 			// the presence of pSample when nLength is given,
-			// we use this dummy sample buffer. It will never
-			// be digitized, so its value does not matter.
-			// -Bisqwit
-			//
-			// However, schism is also a song *editor*, and
-			// sepcial care must be taken to not make this wrong
-			// -mrsb
+			// we must have an at least 1-byte sample to make
+			// it work. The actual contents of the sample don't
+			// matter, since it will never be digitized. -Bisqwit
 			Ins[iSmp].pSample = AllocateSample(1);
 		}
 		
