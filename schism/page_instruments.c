@@ -1012,10 +1012,10 @@ static int note_trans_handle_key(struct key_event * k)
 				ins->note_map[note_trans_sel_line] = n;
 				new_line++;
 				break;
-                                
+
                                 /* Made it possible to enter H to R letters
                                 on 1st digit for expanded sample slots.  -delt. */
-                                
+
 			case 2:        /* instrument, first digit */
 			case 3:        /* instrument, second digit */
 				if (k->sym == SDLK_SPACE) {
@@ -1024,7 +1024,7 @@ static int note_trans_handle_key(struct key_event * k)
 					new_line++;
 					break;
 				}
-                                
+
 				if ((k->sym == SDLK_PERIOD && NO_MODIFIER(k->mod)) || k->sym == SDLK_DELETE) {
 					ins->sample_map[note_trans_sel_line] = 0;
 					new_line += (k->sym == SDLK_PERIOD) ? 1 : 0;
@@ -1034,7 +1034,7 @@ static int note_trans_handle_key(struct key_event * k)
 					note_sample_mask = note_sample_mask ? 0 : 1;
                                         break;
 				}
-                                        
+
 				/* c = kbd_char_to_hex(k); */
                                 c = 0; k->unicode = toupper(k->unicode);
                                 while (c < 21 && k->unicode != digit_string[c])
@@ -2321,7 +2321,7 @@ static void instrument_list_pitch_update_values(void)
 		ins->flags |= ENV_PITCHLOOP;
 	if (widgets_pitch[11].d.toggle.state)
 		ins->flags |= ENV_PITCHSUSTAIN;
-        
+
         CHECK_SET(ins->pitch_env.loop_start, widgets_pitch[9].d.numentry.value,
                   ins->flags |= ENV_PITCHLOOP);
         CHECK_SET(ins->pitch_env.loop_end, widgets_pitch[10].d.numentry.value,

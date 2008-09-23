@@ -65,16 +65,16 @@ void Fmdrv_MixTo(int* target, int count)
 		delete[] buf;
 		buf = new short[buf_size = count];
 	}
-    
+
     memset(buf, 0, count*2);
     OPLUpdateOne(opl, buf, count);
-    
+
     /*
     static int counter=0;
     for(int a=0; a<count; ++a)
         buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
     */
-    
+
     for(int a=0; a<count; ++a)
     {
         target[a*2+0] += buf[a]*2000;
@@ -122,7 +122,7 @@ void OPL_NoteOn(int c, int Hertz)
 
     c = SetBase(c);
     if(c >= 9)return;
-    
+
     fm_active=1;
 
 #if 1
@@ -143,7 +143,7 @@ void OPL_NoteOn(int c, int Hertz)
      |           | On  |                 | most sig. |
      +-----+-----+-----+-----+-----+-----+-----+-----+
 */
-  
+
     /* Ok - 1.1.1999/Bisqwit */
     OPL_Byte(0xA0+c, Hertz&255);  //F-Number low 8 bits
     OPL_Byte(0xB0+c, 0x20        //Key on
@@ -160,10 +160,10 @@ void OPL_Touch(int c, unsigned Vol)
 void OPL_Touch(int c, const unsigned char *D, unsigned Vol)
 {
     if(!D) return;
-    
+
 //fprintf(stderr, "OPL_Touch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
 //    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
-    
+
     Dtab[c] = D;
     //Vol = Vol * (D[8]>>2) / 63;
 
@@ -191,7 +191,7 @@ void OPL_Touch(int c, const unsigned char *D, unsigned Vol)
                      softest.  Don't ask me why.
 */
     #if 1
-    
+
     /* Ok - 1.1.1999/Bisqwit */
     OPL_Byte(KSL_LEVEL+  Ope, (D[2]&KSL_MASK) |
     /*  (63 - ((63-(D[2]&63)) * Vol / 63) )
@@ -202,13 +202,13 @@ void OPL_Touch(int c, const unsigned char *D, unsigned Vol)
     */  (63 + (D[3]&63) * Vol / 63 - Vol)
     );
     /* Molemmat tekevt saman, tarkistettu assembleria myten.
-    
+
        The later one is clearly shorter, though   
        it has two extra (not needed) instructions.
     */
-    
+
     #else
-    
+
     int level = (D[2]&63) - (Vol*72-8);
     if(level<0)level=0;  
     if(level>63)level=63;
@@ -220,7 +220,7 @@ void OPL_Touch(int c, const unsigned char *D, unsigned Vol)
     if(level>63)level=63;
 
     OPL_Byte(KSL_LEVEL+3+Ope, (D[3]&KSL_MASK) | level);
-    
+
     #endif
 }
 
@@ -229,7 +229,7 @@ void OPL_Pan(int c, signed char val)
     Pans[c] = val;
     /* Doesn't happen immediately! */
 }
- 
+
 void OPL_Patch(int c, const unsigned char *D)
 {
 //fprintf(stderr, "OPL_Patch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X)\n",
@@ -240,7 +240,7 @@ void OPL_Patch(int c, const unsigned char *D)
     if(c >= 9)return;
 
     int Ope = PortBases[c];
-    
+
     OPL_Byte(AM_VIB+           Ope, D[0]);
     OPL_Byte(ATTACK_DECAY+     Ope, D[4]);
     OPL_Byte(SUSTAIN_RELEASE+  Ope, D[6]);
@@ -259,7 +259,7 @@ void OPL_Patch(int c, const unsigned char *D)
                 : (VOICE_TO_LEFT | VOICE_TO_RIGHT)
             ));
 }
- 
+
 void OPL_Reset(void)
 {
 //fprintf(stderr, "OPL_Reset\n");
@@ -269,7 +269,7 @@ void OPL_Reset(void)
         OPL_Byte(a, 0); 
 
     OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
-    
+
     fm_active=0;
 }
 
@@ -282,21 +282,21 @@ int OPL_Detect(void)
 
     /* Reset the IRQ of the FM chip */
     OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
-    
+
     unsigned char ST1 = Fmdrv_Inportb(oplbase); /* Status register */
 
     OPL_Byte(TIMER1_REGISTER, 255);
     OPL_Byte(TIMER_CONTROL_REGISTER, TIMER2_MASK | TIMER1_START);
-    
+
     /*_asm xor cx,cx;P1:_asm loop P1*/
     unsigned char ST2 = Fmdrv_Inportb(oplbase);
-    
+
     OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK); 
     OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
     int OPLMode = (ST2&0xE0)==0xC0 && !(ST1&0xE0);
     if(!OPLMode)return -1;
-    
-    
+
+
     return 0;
 }
 

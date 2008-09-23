@@ -348,7 +348,7 @@ enum page_numbers {
         PAGE_INSTRUMENT_LIST_VOLUME = (18),
         PAGE_INSTRUMENT_LIST_PANNING = (19),
         PAGE_INSTRUMENT_LIST_PITCH = (20),
-        
+
         PAGE_LOAD_SAMPLE = (21),
         PAGE_SAMPLE_BROWSER = (22),
         PAGE_LOAD_INSTRUMENT = (23),

@@ -863,7 +863,7 @@ static void adlibconfig_refresh(void)
     {
         unsigned srcvalue = 0;
         unsigned maskvalue = 0xFFFF;
-        
+
         unsigned nbits_real = adlibconfig_widgets[a].nbits < 0 ? -adlibconfig_widgets[a].nbits : adlibconfig_widgets[a].nbits;
         unsigned maxvalue = (1 << nbits_real)-1;
 
@@ -876,13 +876,13 @@ static void adlibconfig_refresh(void)
                 srcvalue = sample_adlibconfig_widgets[a].d.numentry.value;
                 break;
         }
-        
+
         if(adlibconfig_widgets[a].nbits < 0)
             srcvalue = maxvalue-srcvalue; // reverse the semantics
 
         srcvalue  &= maxvalue; srcvalue  <<= adlibconfig_widgets[a].firstbit;
         maskvalue &= maxvalue; maskvalue <<= adlibconfig_widgets[a].firstbit;
-        
+
         sample->AdlibBytes[adlibconfig_widgets[a].byteno] =
          (sample->AdlibBytes[adlibconfig_widgets[a].byteno] &~ maskvalue) | srcvalue;
     }
@@ -901,7 +901,7 @@ static void sample_adlibconfig_draw_const(void)
       { 18,10, "Release" },
       { 12,11, "Sustain Sound" },
       { 19,12, "Volume" },
-      
+
       { 58, 6, "Car Mod" },
       { 43, 7, "Scale Envelope" },
       { 44, 8, "Level Scaling" },
@@ -910,7 +910,7 @@ static void sample_adlibconfig_draw_const(void)
       { 44,11, "Pitch Vibrato" },
       { 43,12, "Volume Vibrato" }
     };
-    
+
     unsigned int a;
 
     draw_fill_chars(25,6+30, 32,13+30, 0);
@@ -927,7 +927,7 @@ static void sample_adlibconfig_draw_const(void)
         draw_text(labels[a].label,
                   labels[a].x, labels[a].y+30, a1, a2);
     }
-    
+
 }
 
 static int do_adlib_handlekey(struct key_event *kk)
@@ -942,15 +942,15 @@ static int do_adlib_handlekey(struct key_event *kk)
 	}
 	return 0;
 }
-        
+
 static void sample_adlibconfig_dialog(UNUSED void *ign)
 {
     struct dialog* dialog;
     song_sample* sample = song_get_sample(current_sample, NULL);
-    
+
     static int cursor_placeholders[sizeof(adlibconfig_widgets)/sizeof(*adlibconfig_widgets)] = {0};
     static const char* const bool_opts[3] = {"n","y", NULL};
-    
+
 	//page->help_index = HELP_ADLIB_SAMPLES;
 	// Eh, what page? Where am I supposed to get a reference to page?
 	// How do I make this work? -Bisqwit
@@ -964,7 +964,7 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
         srcvalue >>= adlibconfig_widgets[a].firstbit;
         srcvalue &= maxvalue;
         if(adlibconfig_widgets[a].nbits < 0) srcvalue = maxvalue-srcvalue; // reverse the semantics
-        
+
         switch(adlibconfig_widgets[a].type)
         {
             case B:
@@ -993,7 +993,7 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
                 break;
         }
     }
-    
+
     dialog = dialog_create_custom(9, 30, 61, 15, sample_adlibconfig_widgets,
                                   nadlibconfig_widgets, 0,
                                   sample_adlibconfig_draw_const, NULL);

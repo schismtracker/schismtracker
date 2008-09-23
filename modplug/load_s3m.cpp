@@ -188,7 +188,7 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32], int& scale)
 {
 //    fprintf(stderr, "Name(%s)\n", name);
-    
+
     if(name[0] == 'G') // GM=General MIDI
     {
         bool is_percussion = false;
@@ -240,7 +240,7 @@ static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32], int&
             { Header.nMidiProgram = GM-1;
               Header.nMidiChannelMask = 0xFFFF &~ (1 << 9); // any channel except percussion
             }
-        
+
         /* TODO: Apply autoSDx,
          * FIXME: Channel note changes don't affect MIDI notes
          */

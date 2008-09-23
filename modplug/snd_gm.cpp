@@ -63,14 +63,14 @@ About the controllers... In AWE32 they are:
    98=NRPN # LSB       99=NRPN # MSB
 
     1=Vibrato, 121=reset vibrato,bend
-    
+
     To set RPNs (registered parameters):
       control 101 <- param number MSB
       control 100 <- param number LSB
       control   6 <- value number MSB
      <control  38 <- value number LSB> optional
     For NRPNs, the procedure is the same, but you use 98,99 instead of 100,101.
-       
+
        param 0 = pitch bend sensitivity
        param 1 = finetuning
        param 2 = coarse tuning
@@ -115,35 +115,35 @@ static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
 static void MPU_Ctrl(int c, int i, int v)
 {
     if(!(status.flags & MIDI_LIKE_TRACKER)) return;
-    
+
     unsigned char buf[3] = {0xB0+c,i,v};
     MPU_SendCommand(buf, 3, c);
 }
 static void MPU_Patch(int c, int p)
 {
     if(!(status.flags & MIDI_LIKE_TRACKER)) return;
-    
+
     unsigned char buf[2] = {0xC0+c, p};
     MPU_SendCommand(buf, 2, c);
 }
 static void MPU_Bend(int c, int w)
 {
     if(!(status.flags & MIDI_LIKE_TRACKER)) return;
-    
+
     unsigned char buf[3] = {0xE0+c, w&127, w>>7};
     MPU_SendCommand(buf, 3, c);
 }
 static void MPU_NoteOn(int c, int k, int v)
 {
     if(!(status.flags & MIDI_LIKE_TRACKER)) return;
-    
+
     unsigned char buf[3] = {0x90+c, k, v};
     MPU_SendCommand(buf, 3, c);
 }
 static void MPU_NoteOff(int c, int k, int v)
 {
     if(!(status.flags & MIDI_LIKE_TRACKER)) return;
-    
+
     if(((unsigned char)RunningStatus) == 0x90+c)
     {
         // send a zero-velocity keyoff instead for optimization
@@ -199,7 +199,7 @@ public:
 public:
     bool IsActive()     const { return note && chan >= 0; }
     bool IsPercussion() const { return patch & 0x80; }
-    
+
     S3MchannelInfo() : note(0),patch(0),bank(0),pan(0),chan(-1),pref_chn_mask(-1) { }
 };
 
@@ -224,12 +224,12 @@ public:
     {
         KnowNothing();
     }
-    
+
     void SetVolume(int c, unsigned newvol);
     void SetPatchAndBank(int c, int p, int b);
     void SetPitchBend(int c, int value);
     void SetPan(int c, int value);
-    
+
     void KnowNothing()
     {
         volume = 255;
@@ -293,10 +293,10 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pre
      */
     bool bad_channels[16] = {};  // channels having the same key playing
     bool used_channels[16] = {}; // channels having something playing
-    
+
     memset(bad_channels, 0, sizeof(bad_channels));
     memset(used_channels, 0, sizeof(used_channels));
-    
+
     for(unsigned int a=0; a<MAXCHN; ++a)
     {
         if(S3Mchans[a].IsActive() && !S3Mchans[a].IsPercussion())
@@ -373,13 +373,13 @@ void GM_KeyOn(int c, unsigned char key, unsigned char Vol)
 {
     if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
     GM_KeyOff(c); // Ensure the previous key on this channel is off.
-    
+
     if(S3Mchans[c].IsActive()) return; // be sure the channel is deactivated.
-    
+
 #ifdef GM_DEBUG
     fprintf(stderr, "GM_KeyOn(%d, %d,%d)\n", c, key,Vol);
 #endif
-    
+
     if(S3Mchans[c].IsPercussion())
     {
         // Percussion always uses channel 9. Key (pitch) is ignored.
@@ -396,7 +396,7 @@ void GM_KeyOn(int c, unsigned char key, unsigned char Vol)
     {
         // Allocate a MIDI channel for this key.
         // Note: If you need to transpone the key, do it before allocating the channel.
-        
+
         int mc = S3Mchans[c].chan =
             GM_AllocateMelodyChannel(c, S3Mchans[c].patch, S3Mchans[c].bank, key, S3Mchans[c].pref_chn_mask);
 
@@ -417,7 +417,7 @@ void GM_KeyOff(int c)
 #ifdef GM_DEBUG
     fprintf(stderr, "GM_KeyOff(%d)\n", c);
 #endif
-    
+
     int mc = S3Mchans[c].chan;
     MPU_NoteOff(mc,
                 S3Mchans[c].note,
@@ -481,7 +481,7 @@ void GM_Reset(int quitting)
         MIDIchans[a].SetVolume(a, 127);      // set channel volume
         MIDIchans[a].SetPitchBend(a, PitchBendCenter);// reset pitch bends
         MIDIchans[a].KnowNothing();
-        
+
         // Reprogram the pitch bending sensitivity to our desired depth.
         MPU_SendRPN(a, 0, n_semitones_times_128 / 128,
                           n_semitones_times_128 % 128);
@@ -529,16 +529,16 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
     fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,Vol);
 #endif
     if(c < 0 || ((unsigned int)c) >= MAXCHN) return;
-    
-    
+
+
     /*
         Figure out the note and bending corresponding to this Hertz reading.
-        
+
         TiMiDity++ calculates its frequencies this way (equal temperament):
           freq(0<=i<128) := 440 * pow(2.0, (i - 69) / 12.0)
           bend_fine(0<=i<256) := pow(2.0, i/12.0/256)
           bend_coarse(0<=i<128) := pow(2.0, i/12.0)
-        
+
         I suppose we can do the mathematical route.  -Bisqwit
                hertz = 440*pow(2, (midinote-69)/12)
              Maxima gives us (solve+expand):
@@ -559,31 +559,31 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
                we work here with, that's hardly an issue.)
     */
     double midinote = 69 + 12.0 * log2(Hertz/440.0);
-    
+
     // Reduce by a couple of octaves... Apparently the hertz
     // value that comes from SchismTracker is upscaled by some 2^5.
     midinote -= 12*5;
 
     int note = S3Mchans[c].note; // what's playing on the channel right now?
-    
+
     bool new_note = !S3Mchans[c].IsActive();
     if(new_note)
     {
         // If the note is not active, activate it first.
         // Choose the nearest note to Hertz.
-        
+
         note = (int)(midinote + 0.5);
 
         // If we are expecting a bend exclusively in either direction,
         // prepare to utilize the full extent of available pitch bending.
         if(bend_mode == MIDI_BEND_DOWN) note += (int)(0x2000 / semitone_bend_depth);
         if(bend_mode == MIDI_BEND_UP)   note -= (int)(0x2000 / semitone_bend_depth);
-        
+
         if(note < 1) note = 1;
         if(note > 127) note = 127;
         GM_KeyOn(c, note, Vol);
     }
-    
+
     if(!S3Mchans[c].IsPercussion()) // give us a break, don't bend percussive instruments
     {
 		double notediff = midinote-note; // The difference is our bend value
@@ -602,7 +602,7 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
 		
 		GM_Bend(c, bend);
     }
-    
+
     if(Vol < 0) Vol = 0;
 	if(Vol > 127) Vol = 127;
 		
@@ -636,20 +636,20 @@ void GM_IncrementSongCounter(int count)
      */
     int RowLengthInSamplesHi = 5 * mp->m_nMusicSpeed * mp->GetSampleRate();
     int RowLengthInSamplesLo = 2 * mp->m_nMusicTempo;
-    
+
     double NumberOfSamplesPer32thNote =
         RowLengthInSamplesHi*8 / (double)RowLengthInSamplesLo;
-    
+
     /* TODO: Use fraction arithmetics instead (note: cmdA, cmdT may change any time) */
-    
+
     LastSongCounter += count / NumberOfSamplesPer32thNote;
-    
+
     int n_32thNotes = (int)LastSongCounter;
     if(n_32thNotes)
     {
         for(int a=0; a<n_32thNotes; ++a)
             GM_SendSongTickCode();
-        
+
         LastSongCounter -= n_32thNotes;
     }
 }
