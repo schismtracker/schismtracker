@@ -431,7 +431,7 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	pChn->nC4Speed = psmp->nC4Speed;
 	
 	/* In MIDI mode, ignore the C4speed */
-	if(penv && penv->nMidiChannel)
+	if(penv && penv->nMidiChannelMask)
 	{
 	    pChn->nC4Speed = 8363;
 	    pChn->nLength  = 1;
@@ -924,7 +924,7 @@ BOOL CSoundFile::ProcessEffects()
 				
 				if((m_dwSongFlags & SONG_INSTRUMENTMODE)
 				&& Headers[instr])
-					GM_DPatch(nChn, Headers[instr]->nMidiProgram, Headers[instr]->wMidiBank);
+					GM_DPatch(nChn, Headers[instr]->nMidiProgram, Headers[instr]->wMidiBank, Headers[instr]->nMidiChannelMask);
 				
 				pChn->nNewIns = 0;
 				// Special IT case: portamento+note causes sample change -> ignore portamento
@@ -942,7 +942,7 @@ BOOL CSoundFile::ProcessEffects()
 					InstrumentChange(pChn, pChn->nNewIns, bPorta, FALSE, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);
 					OPL_Patch(nChn, Ins[pChn->nNewIns].AdlibBytes);
 					if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Headers[pChn->nNewIns])
-    					GM_DPatch(nChn, Headers[pChn->nNewIns]->nMidiProgram, Headers[pChn->nNewIns]->wMidiBank);
+						GM_DPatch(nChn, Headers[pChn->nNewIns]->nMidiProgram, Headers[pChn->nNewIns]->wMidiBank, Headers[pChn->nNewIns]->nMidiChannelMask);
 					pChn->nNewIns = 0;
 				}
 				NoteChange(nChn, note, bPorta, (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? FALSE : TRUE);
@@ -2055,15 +2055,16 @@ void CSoundFile::ProcessMidiMacro(UINT nChn, LPCSTR pszMidiMacro, UINT param,
 	int i, j, x;
 
 	saw_c = 0;
-	if (!penv || penv->nMidiChannel == 0) {
+	if (!penv || penv->nMidiChannelMask == 0) {
 		/* okay, there _IS_ no real midi channel. forget this for now... */
 		mc = 15;
 		fake = 1;
 
-	} else if (penv->nMidiChannel > 16) {
+	} else if (penv->nMidiChannelMask >= 0x10000) {
 		mc = (nChn-1) % 16;
 	} else {
-		mc = (penv->nMidiChannel-1);
+		mc = 0;
+		while(!(penv->nMidiChannelMask & (1 << mc))) ++mc;
 	}
 
 	for (i = j = x = 0, cx =0; i <= 32 && pszMidiMacro[i]; i++) {
@@ -2283,7 +2284,7 @@ void CSoundFile::KeyOff(UINT nChn)
 	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	
 	/*if ((pChn->dwFlags & CHN_ADLIB)
-	||  (penv && penv->nMidiChannel))
+	||  (penv && penv->nMidiChannelMask))
 	{
 		// When in AdLib / MIDI mode, end the sample
 		pChn->dwFlags |= CHN_FASTVOLRAMP;

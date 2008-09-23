@@ -249,7 +249,7 @@ void instrument_set(int n)
 	current_node_vol = ins->vol_env.nodes ? CLAMP(current_node_vol, 0, ins->vol_env.nodes - 1) : 0;
 	current_node_pan = ins->pan_env.nodes ? CLAMP(current_node_vol, 0, ins->pan_env.nodes - 1) : 0;
 	current_node_pitch = ins->pitch_env.nodes ? CLAMP(current_node_vol, 0, ins->pan_env.nodes - 1) : 0;
-	
+
         status.flags |= NEED_UPDATE;
 }
 
@@ -2202,7 +2202,7 @@ static void instrument_list_pitch_predraw_hook(void)
 	
 	/* printf("ins%02d: ch%04d pgm%04d bank%06d drum%04d\n", current_instrument,
 		ins->midi_channel, ins->midi_program, ins->midi_bank, ins->midi_drum_key); */
-	widgets_pitch[16].d.thumbbar.value = ins->midi_channel;
+	widgets_pitch[16].d.bitset.value           = ins->midi_channel_mask;
 	widgets_pitch[17].d.thumbbar.value = (signed char) ins->midi_program;
 	widgets_pitch[18].d.thumbbar.value = (signed char) (ins->midi_bank & 0xff);
 	widgets_pitch[19].d.thumbbar.value = (signed char) (ins->midi_bank >> 8);
@@ -2340,7 +2340,7 @@ static void instrument_list_pitch_update_values(void)
 	} else {
 		ins->filter_resonance = 0x7f;
 	}
-	ins->midi_channel = widgets_pitch[16].d.thumbbar.value;
+	ins->midi_channel_mask = widgets_pitch[16].d.bitset.value;
 	ins->midi_program = widgets_pitch[17].d.thumbbar.value;
 	ins->midi_bank = ((widgets_pitch[19].d.thumbbar.value << 8)
 			  | (widgets_pitch[18].d.thumbbar.value & 0xff));
@@ -2472,7 +2472,7 @@ static void instrument_list_pitch_draw_const(void)
         draw_text("SusLoop End", 42, 39, 0, 2);
 	draw_text("Default Cutoff", 36, 42, 0, 2);
 	draw_text("Default Resonance", 36, 43, 0, 2);
-	draw_text("MIDI Channel", 36, 44, 0, 2);
+	draw_text("MIDI Channels", 36, 44, 0, 2);
 	draw_text("MIDI Program", 36, 45, 0, 2);
 	draw_text("MIDI Bank Low", 36, 46, 0, 2);
 	draw_text("MIDI Bank High", 36, 47, 0, 2);
@@ -2743,6 +2743,8 @@ static int _fixup_mouse_instpage_pitch(struct key_event *k)
 }
 void instrument_list_pitch_load_page(struct page *page)
 {
+	static int midi_channel_selection_cursor_position = 0;
+
 	_load_page_common(page, widgets_pitch);
 	
 	page->pre_handle_key = _fixup_mouse_instpage_pitch;
@@ -2792,16 +2794,22 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[15].d.thumbbar.text_at_min = "Off";
 	
 	/* 16-19 = midi crap */
-	create_thumbbar(widgets_pitch + 16, 54, 44, 17, 15, 17, 0,
-			instrument_list_pitch_update_values, 0, 17);
+	create_bitset(widgets_pitch + 16, 54, 44, 17, 15, 17, 0,
+			instrument_list_pitch_update_values,
+			17,
+			" 1 2 3 4 5 6 7 8 9P\0""111213141516M\0",
+			".\0.\0.\0.\0.\0.\0.\0.\0.\0p\0.\0.\0.\0.\0.\0.\0m\0",
+			&midi_channel_selection_cursor_position
+			);
+	widgets_pitch[16].d.bitset.activation_keys =
+	        "123456789pabcdefm";
+
 	create_thumbbar(widgets_pitch + 17, 54, 45, 17, 16, 18, 0,
 			instrument_list_pitch_update_values, -1, 127);
 	create_thumbbar(widgets_pitch + 18, 54, 46, 17, 17, 19, 0,
 			instrument_list_pitch_update_values, -1, 127);
 	create_thumbbar(widgets_pitch + 19, 54, 47, 17, 18, 19, 0,
 			instrument_list_pitch_update_values, -1, 127);
-	widgets_pitch[16].d.thumbbar.text_at_min = "Off";
-	widgets_pitch[16].d.thumbbar.text_at_max = "Mapped";
 	widgets_pitch[17].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[18].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[19].d.thumbbar.text_at_min = "Off";
