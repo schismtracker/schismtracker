@@ -729,7 +729,7 @@ void song_loop_pattern(int pattern, int row)
 
         max_channels_used = 0;
         mp->LoopPattern(pattern, row);
-        
+
         GM_SendSongStartCode();
 
         song_unlock_audio();

@@ -57,7 +57,7 @@ static void preferences_draw_const(void)
 {
 	char buf[80];
         int i;
-        
+
 	draw_text("Master Volume Left", 2, 14, 0, 2);
 	draw_text("Master Volume Right", 2, 15, 0, 2);
         draw_box(21, 13, 27, 16, BOX_THIN | BOX_INNER | BOX_INSET);
