@@ -156,7 +156,7 @@ static inline void draw_time(void)
 	
         if (status.time_display == TIME_OFF || (status.time_display == TIME_PLAY_OFF && !is_playing))
                 return;
-        
+
         /* this allows for 999 hours... that's like... 41 days...
          * who on earth leaves a tracker running for 41 days? */
         sprintf(buf, "%3d:%02d:%02d", current_time.h % 1000,
@@ -1343,7 +1343,7 @@ void update_current_instrument(void)
                 n = sample_get_current();
 		song_get_sample(n, &name);
         }
-        
+
         if (n > 0) {
                 draw_text(num99tostr(n, buf), 50, 3, 5, 0);
                 draw_text_len(name, 25, 53, 3, 5, 0);

@@ -369,7 +369,7 @@ void song_new(int flags)
 	mp->ResetMidiCfg();
 
         song_unlock_audio();
-        
+
 	// ugly #1
 	row_highlight_major = mp->m_rowHighlightMajor;
 	row_highlight_minor = mp->m_rowHighlightMinor;
@@ -380,7 +380,7 @@ void song_new(int flags)
 int song_load_unchecked(const char *file)
 {
         const char *base = get_basename(file);
-        
+
 	// IT stops the song even if the new song can't be loaded
 	song_stop();
 	

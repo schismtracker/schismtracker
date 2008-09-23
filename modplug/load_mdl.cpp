@@ -77,7 +77,7 @@ void ConvertMDLCommand(MODCOMMAND *m, UINT eff, UINT data)
 		}
 		break;
 	case 0x0F:	command = CMD_SPEED; break;
-                
+
 	case 0x10:
                 if ((param & 0xF0) != 0xE0) {
                         command = CMD_VOLUMESLIDE;
@@ -101,7 +101,7 @@ void ConvertMDLCommand(MODCOMMAND *m, UINT eff, UINT data)
                         }
                 }
                 break;
-                
+
 	case 0x30:	command = CMD_RETRIG; break;
 	case 0x40:	command = CMD_TREMOLO; break;
 	case 0x50:	command = CMD_TREMOR; break;

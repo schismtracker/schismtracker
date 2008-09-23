@@ -188,7 +188,7 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32], int& scale)
 {
 //    fprintf(stderr, "Name(%s)\n", name);
-    
+
     if(name[0] == 'G') // GM=General MIDI
     {
         bool is_percussion = false;
@@ -240,7 +240,6 @@ static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32], int&
             { Header.nMidiProgram = GM-1;
               Header.nMidiChannelMask = 0xFFFF &~ (1 << 9); // any channel except percussion
             }
-        
         /* TODO: Apply autoSDx,
          * FIXME: Channel note changes don't affect MIDI notes
          */
@@ -415,13 +414,9 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 			Ins[iSmp].nLength = 1;
 			// Because most of the code in modplug requires
 			// the presence of pSample when nLength is given,
-			// we use this dummy sample buffer. It will never
-			// be digitized, so its value does not matter.
-			// -Bisqwit
-			//
-			// However, schism is also a song *editor*, and
-			// sepcial care must be taken to not make this wrong
-			// -mrsb
+			// we must have an at least 1-byte sample to make
+			// it work. The actual contents of the sample don't
+			// matter, since it will never be digitized. -Bisqwit
 			Ins[iSmp].pSample = AllocateSample(1);
 		}
 		
