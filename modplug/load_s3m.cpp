@@ -234,13 +234,14 @@ static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32], int&
         Header.wMidiBank = bank;
         if(is_percussion)
             { Header.nMidiDrumKey = GM;
-              Header.nMidiChannel = 10;
+              Header.nMidiChannelMask = 1 << 9;
               Header.nMidiProgram = 128+(GM); }
         else
             { Header.nMidiProgram = GM-1;
-              Header.nMidiChannel = 1 + (iSmp%9); }
+              Header.nMidiChannelMask = 0xFFFF &~ (1 << 9); // any channel except percussion
+            }
         
-        /* TODO: Apply scale, apply autoSDx,
+        /* TODO: Apply autoSDx,
          * FIXME: Channel note changes don't affect MIDI notes
          */
         strncpy((char*)Header.name, (const char*)name, 32);

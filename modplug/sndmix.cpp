@@ -993,7 +993,7 @@ BOOL CSoundFile::ReadNote()
             if(!(pChn->dwFlags & CHN_NOTEFADE)
             && (m_dwSongFlags & SONG_INSTRUMENTMODE)
             && (pChn->pHeader)
-            && (pChn->pHeader->nMidiChannel > 0))
+            && (pChn->pHeader->nMidiChannelMask > 0))
             {
                 MidiBendMode BendMode = MIDI_BEND_NORMAL;
                 /* TODO: If we're expecting a large bend exclusively
@@ -1201,7 +1201,7 @@ BOOL CSoundFile::ReadNote()
 
                 if((m_dwSongFlags & SONG_INSTRUMENTMODE)
                 && (pChn->pHeader)
-                && (pChn->pHeader->nMidiChannel > 0))
+                && (pChn->pHeader->nMidiChannelMask > 0))
     				GM_Pan(nChn, pan);
 
 				pan += 128;

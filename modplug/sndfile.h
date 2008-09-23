@@ -368,7 +368,7 @@ typedef struct _INSTRUMENTHEADER
 	unsigned int nIFR;
 	unsigned int wMidiBank;
 	unsigned int nMidiProgram;
-	unsigned int nMidiChannel;
+	unsigned int nMidiChannelMask;
 	unsigned int nMidiDrumKey;
 	int nPPS;
 	unsigned int nPPC;
