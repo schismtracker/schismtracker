@@ -699,8 +699,14 @@ static void event_loop(void)
 				break;
 			};
 			if (q && event.type == SDL_KEYDOWN) {
-				grab_check = 1;
-			} else if (event.type == SDL_KEYUP && grab_check) {
+				grab_check = (status.flags & IS_FOCUSED)
+					&&   (status.flags & IS_VISIBLE);
+				time(&startdown);
+			} else if (event.type == SDL_KEYUP && grab_check
+			&& (status.flags & IS_FOCUSED)
+			&&   (status.flags & IS_VISIBLE)
+			&& ((time(0)-startdown)<=2)) {
+
 				q = SDL_WM_GrabInput(SDL_GRAB_QUERY);
 				if (q == SDL_GRAB_QUERY) {
 					q = currently_grabbed_hack;
@@ -715,8 +721,10 @@ static void event_loop(void)
 					status_text_flash("Mouse and keyboard released");
 				}
 				grab_check = 0;
+				startdown = 0;
 			} else {
 				grab_check = 0;
+				startdown = 0;
 			}
 
 			switch (fix_numlock_key) {
