@@ -1025,11 +1025,15 @@ BOOL CSoundFile::ReadNote()
                     volume = GMVol[volume<0 ? 0 : volume>63 ? 63 : volume];
                     volume /= 2;
                 }
-                GM_SetFreqAndVol(nChn, freq, volume, BendMode);
+                GM_SetFreqAndVol(nChn, freq, volume, BendMode,
+                                 pChn->dwFlags & CHN_KEYOFF);
             }
             else if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
 			{
-    			OPL_NoteOn(nChn, freq*2/3); // for some reason, scaling by 1.5 is needed.
+			    // For some reason, scaling by about (2*3)/(8200/8300) is needed
+			    // to get a frequency that matches with ST3.
+			    int oplfreq = freq*164/249;
+    			OPL_HertzTouch(nChn, oplfreq, pChn->dwFlags & CHN_KEYOFF);
     			// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
                 OPL_Touch(nChn, (vol * pChn->nInsVol * 63 / (1<<20)));
             }
