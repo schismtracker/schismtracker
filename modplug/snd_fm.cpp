@@ -15,6 +15,15 @@ extern "C" {
 #define OPLUpdateOne YM3812UpdateOne
 #define OPLClose     YM3812Shutdown
 
+/*
+The documentation in this file regarding the output ports,
+including the comment "Don't ask me why", are attributed
+to Jeffrey S. Lee's article:
+  Programming the AdLib/Sound Blaster
+           FM Music Chips
+     Version 2.0 (24 Feb 1992)
+*/
+
 static const int oplbase = 0x388;
 
 // OPL info
@@ -85,7 +94,7 @@ void Fmdrv_MixTo(int* target, int count)
 /***************************************/
 static const char PortBases[9] = {0,1,2, 8,9,10, 16,17,18};
 static signed char Pans[MAX_CHANNELS];
-static const unsigned char *Dtab[MAX_CHANNELS];
+static const unsigned char *Dtab[MAX_CHANNELS] = { 0 };
 
 static int SetBase(int c)
 {
@@ -113,7 +122,7 @@ void OPL_NoteOff(int c)
 
 /* OPL_NoteOn changes the frequency on specified
    channel and guarantees the key is on. (Doesn't
-   retrig, just turns the note on and sets freq.) 
+   retrig, just turns the note on and sets freq.)
    If keyoff is nonzero, doesn't even set the note on.
    Could be used for pitch bending also. */
 void OPL_HertzTouch(int c, int Hertz, int keyoff)
@@ -185,44 +194,46 @@ void OPL_Touch(int c, const unsigned char *D, unsigned Vol)
                      rises:
                           00   -  no change
                           10   -  1.5 dB/8ve
-                          01   -  3 dB/8ve  
-                          11   -  6 dB/8ve  
+                          01   -  3 dB/8ve
+                          11   -  6 dB/8ve
           bits 5-0 - controls the total output level of the operator.
-                     all bits CLEAR is loudest; all bits SET is the  
+                     all bits CLEAR is loudest; all bits SET is the
                      softest.  Don't ask me why.
 */
-    #if 1
-
-    /* Ok - 1.1.1999/Bisqwit */
     OPL_Byte(KSL_LEVEL+  Ope, (D[2]&KSL_MASK) |
-    /*  (63 - ((63-(D[2]&63)) * Vol / 63) )
-    */  (63 + (D[2]&63) * Vol / 63 - Vol)
+    //  (63 + (D[2]&63) * Vol / 63 - Vol)        - old formula
+    //  (63 - ((63-(D[2]&63)) * Vol     ) / 63)  - older formula
+    //  (63 - ((63-(D[2]&63)) * Vol + 32) / 64)  - revised formula, like ST3
+        ((int(D[2]&63)-63)*Vol + 63*64-32)/64 // - optimized revised formula
     );
     OPL_Byte(KSL_LEVEL+3+Ope, (D[3]&KSL_MASK) |
-    /*  (63 - ((63-(D[3]&63)) * Vol / 63) )
-    */  (63 + (D[3]&63) * Vol / 63 - Vol)
+        ((int(D[3]&63)-63)*Vol + 63*64-32)/64
     );
-    /* Molemmat tekevt saman, tarkistettu assembleria myten.
-
-       The later one is clearly shorter, though   
-       it has two extra (not needed) instructions.
-    */
-
-    #else
-
-    int level = (D[2]&63) - (Vol*72-8);
-    if(level<0)level=0;  
-    if(level>63)level=63;
-
-    OPL_Byte(KSL_LEVEL+  Ope, (D[2]&KSL_MASK) | level);
-
-    level = (D[3]&63) - (Vol*72-8);
-    if(level<0)level=0;  
-    if(level>63)level=63;
-
-    OPL_Byte(KSL_LEVEL+3+Ope, (D[3]&KSL_MASK) | level);
-
-    #endif
+    /* 2008-09-27 Bisqwit:
+     * Did tests in ST3: The value poked
+     * to 0x43, minus from 63, is:
+     *
+     *  OplVol 63  47  31
+     * SmpVol
+     *  64     63  47  31
+     *  32     32  24  15
+     *  16     16  12   8
+     *
+     * This seems to clearly indicate that the value
+     * poked is calculated with 63 - round(oplvol*smpvol/64.0).
+     *
+     * Also, from the documentation we can deduce that
+     * the maximum volume to be set is 47.25 dB and that
+     * each increase by 1 corresponds to 0.75 dB.
+     *
+     * Since we know that 3 dB is equivalent to a doubling
+     * of the volume, we can deduce that an increase or
+     * decrease by 4 will double / halve the volume.
+     *
+     * However, the real value is 8, at least that's how fmopl.c
+     * works... I guess the documentation above is wrong, or I
+     * misinterpreted it.
+     */
 }
 
 void OPL_Pan(int c, signed char val)
@@ -253,7 +264,7 @@ void OPL_Patch(int c, const unsigned char *D)
     OPL_Byte(WAVE_SELECT+    3+Ope, D[9]&3);// 6 high bits used elsewhere
 
     /* Panning... */
-    OPL_Byte(FEEDBACK_CONNECTION+c, 
+    OPL_Byte(FEEDBACK_CONNECTION+c,
         (D[10] & ~STEREO_BITS)
             | (Pans[c]<-32 ? VOICE_TO_LEFT
                 : Pans[c]>32 ? VOICE_TO_RIGHT
@@ -267,7 +278,10 @@ void OPL_Reset(void)
     int a;
 
     for(a=0; a<244; a++)
-        OPL_Byte(a, 0); 
+        OPL_Byte(a, 0);
+
+    for(a=0; a<MAX_CHANNELS; ++a)
+        Dtab[a] = 0;
 
     OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
 
@@ -292,7 +306,7 @@ int OPL_Detect(void)
     /*_asm xor cx,cx;P1:_asm loop P1*/
     unsigned char ST2 = Fmdrv_Inportb(oplbase);
 
-    OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK); 
+    OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
     OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
     int OPLMode = (ST2&0xE0)==0xC0 && !(ST1&0xE0);
     if(!OPLMode)return -1;
