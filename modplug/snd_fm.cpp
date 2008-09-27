@@ -85,7 +85,7 @@ void Fmdrv_MixTo(int* target, int count)
 /***************************************/
 static const char PortBases[9] = {0,1,2, 8,9,10, 16,17,18};
 static signed char Pans[MAX_CHANNELS];
-static const unsigned char *Dtab[MAX_CHANNELS];
+static const unsigned char *Dtab[MAX_CHANNELS] = { 0 };
 
 static int SetBase(int c)
 {
@@ -268,6 +268,9 @@ void OPL_Reset(void)
 
     for(a=0; a<244; a++)
         OPL_Byte(a, 0); 
+    
+    for(a=0; a<MAX_CHANNELS; ++a)
+        Dtab[a] = 0;
 
     OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
 
