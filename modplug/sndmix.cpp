@@ -9,16 +9,13 @@
 #include "snd_fm.h"
 #include "snd_gm.h"
 
+#include <algorithm>
+
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
 
 // VU-Meter
 #define VUMETER_DECAY		16
-
-#ifndef MIDISlideFIX
- #define MIDISlideFIX 1
- /* Changes midi volumes between 1..11 to be 11 - needed on SB AWE32 */
-#endif
 
 // SNDMIX: These are global flags for playback control
 LONG CSoundFile::m_nStreamVolume = 0x8000;
@@ -1000,30 +997,59 @@ BOOL CSoundFile::ReadNote()
                  * in either direction, update BendMode to indicate so.
                  * This can be used to extend the range of MIDI pitch bending.
                  */
-                int volume = (vol * pChn->nInsVol * 63 / (1<<20));
-                if(pChn->dwFlags & CHN_ADLIB)
+                
+                // Vol maximum is 64*64 here. (4096)
+                int volume = vol;
+                if((pChn->dwFlags & CHN_ADLIB) && volume > 0)
                 {
-                    /* This converts Adlib volume into MIDI volume */
-					static const unsigned char GMVol[64] =
-					{
-					#if MIDISlideFIX
-						/*00*/0x00,0x0B,0x0B,0x0B, 0x0B,0x0B,0x0B,0x0B,
-						/*08*/0x0B,0x0B,0x0B,0x0B, 0x0B,0x0B,0x0B,0x0B,
-						/*16*/0x0B,0x0B,0x0B,0x0C, 0x0D,0x0F,0x10,0x11,
-					#else
-						/*00*/0x00,0x01,0x01,0x01, 0x01,0x01,0x01,0x02,
-						/*08*/0x02,0x03,0x04,0x04, 0x05,0x06,0x07,0x08,
-						/*16*/0x09,0x0A,0x0B,0x0C, 0x0D,0x0F,0x10,0x11,
-					#endif
-						/*24*/0x13,0x15,0x16,0x18, 0x1A,0x1C,0x1E,0x1F,
-						/*32*/0x22,0x24,0x26,0x28, 0x2A,0x2D,0x2F,0x31,
-						/*40*/0x34,0x37,0x39,0x3C, 0x3F,0x42,0x45,0x47,
-						/*48*/0x4B,0x4E,0x51,0x54, 0x57,0x5B,0x5E,0x61,
-						/*56*/0x64,0x69,0x6C,0x70, 0x74,0x78,0x7C,0x7F
-					};
-                    /* Convert the AdLib volume into linear volume */
-                    volume = GMVol[volume<0 ? 0 : volume>63 ? 63 : volume];
-                    volume /= 2;
+                    // The volume we have here is in range 0..(63*255) (0..16065)
+                    // We should keep that range, but convert it into a logarithmic
+                    // one such that a change of 256*8 (2048) corresponds to a halving
+                    // of the volume.
+                    //   logvolume = 2^(linvolume / (4096/8)) * (4096/64)
+                    // However, because the resolution of MIDI volumes
+                    // is merely 128 units, we can use a lookup table.
+                    //
+                    // In this table, each value signifies the minimum value
+                    // that volume must be in order for the result to be
+                    // that table index.
+                    static const unsigned short GMvolTransition[128] =
+                    {
+                        0, 2031, 4039, 5214, 6048, 6694, 7222, 7669,
+                     8056, 8397, 8702, 8978, 9230, 9462, 9677, 9877,
+                    10064,10239,10405,10562,10710,10852,10986,11115,
+                    11239,11357,11470,11580,11685,11787,11885,11980,
+                    12072,12161,12248,12332,12413,12493,12570,12645,
+                    12718,12790,12860,12928,12995,13060,13123,13186,
+                    13247,13306,13365,13422,13479,13534,13588,13641,
+                    13693,13745,13795,13844,13893,13941,13988,14034,
+                    14080,14125,14169,14213,14256,14298,14340,14381,
+                    14421,14461,14501,14540,14578,14616,14653,14690,
+                    14727,14763,14798,14833,14868,14902,14936,14970,
+                    15003,15035,15068,15100,15131,15163,15194,15224,
+                    15255,15285,15315,15344,15373,15402,15430,15459,
+                    15487,15514,15542,15569,15596,15623,15649,15675,
+                    15701,15727,15753,15778,15803,15828,15853,15877,
+                    15901,15925,15949,15973,15996,16020,16043,16065,
+                    };
+                    // We use binary search to find the right slot
+                    // with at most 7 comparisons. The comparisons
+                    // will likely be inlined to this spot, due to
+                    // how STL works.
+                    const unsigned short* GMvolptr =
+                        std::lower_bound(GMvolTransition,
+                                         GMvolTransition+128,
+                                         (unsigned short)volume);
+                    
+                    // This gives a value in the range 0..127.
+                    //int o = volume;
+                    volume = (GMvolptr - GMvolTransition) * pChn->nInsVol / 64;
+                    //fprintf(stderr, "%d -> %d[%d]\n", o, volume, pChn->nInsVol);
+                }
+                else
+                {
+                    // This gives a value in the range 0..127.
+                    volume = volume * pChn->nInsVol / 8192;
                 }
                 GM_SetFreqAndVol(nChn, freq, volume, BendMode,
                                  pChn->dwFlags & CHN_KEYOFF);
