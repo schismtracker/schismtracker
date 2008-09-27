@@ -349,6 +349,12 @@ static int orderlist_handle_char(struct key_event *k)
 	switch (k->sym) {
 	case SDLK_PLUS:
 		if (k->state) return 1;
+		if (k->orig_sym == SDLK_KP_PLUS) {
+			if (song_get_mode() != MODE_PLAYING) return 1;
+                        song_set_current_order(song_get_current_order() + 1);
+			return 1;
+		}
+
 		status.flags |= SONG_NEEDS_SAVE;
                 song_get_orderlist()[current_order] = ORDER_SKIP;
                 orderlist_cursor_pos = 2;
@@ -356,6 +362,11 @@ static int orderlist_handle_char(struct key_event *k)
 	case SDLK_PERIOD:
 	case SDLK_MINUS:
 		if (k->state) return 1;
+		if (k->orig_sym == SDLK_KP_MINUS) {
+			if (song_get_mode() != MODE_PLAYING) return 1;
+                        song_set_current_order(song_get_current_order() - 1);
+			return 1;
+		}
 		status.flags |= SONG_NEEDS_SAVE;
                 song_get_orderlist()[current_order] = ORDER_LAST;
                 orderlist_cursor_pos = 2;
