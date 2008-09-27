@@ -626,14 +626,12 @@ static void event_loop(void)
 					handle_key(&kk);
 					continue;
 				case 234:
-					kk.sym = SDLK_LEFT;
-					kk.mod = KMOD_CTRL;
-					handle_key(&kk);
+					if (kk.state)
+						song_set_current_order(song_get_current_order() - 1);
 					continue;
 				case 233:
-					kk.sym = SDLK_RIGHT;
-					kk.mod = KMOD_CTRL;
-					handle_key(&kk);
+					if (kk.state)
+						song_set_current_order(song_get_current_order() + 1);
 					continue;
 				};
 			}
