@@ -269,8 +269,8 @@ static MIDIstateInfo MIDIchans[16];
 
 static unsigned char GM_Volume(unsigned char Vol) // Converts the volume
 {
-    /* Converts volume in range 0..63 to range 0..127 with clamping */
-	return Vol>=63 ? 127 : 128*Vol/64;
+    /* Converts volume in range 0..127 to range 0..127 with clamping */
+	return Vol>=127 ? 127 : Vol;
 }
 
 static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pref_chn_mask)
@@ -279,7 +279,7 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pre
      * which this key can be played safely.
      *
      * Things that matter:
-     * 
+     *
      *  -4      The channel has a different patch selected
      *  -6      The channel has a different bank selected
      *  -9      The channel already has the same key
@@ -626,7 +626,7 @@ void GM_IncrementSongCounter(int count)
     /* We assume that each pattern row corresponds to a 1/4 note.
      *
      * We also know that:
-     *                  5 * cmdA * mixingrate   
+     *                  5 * cmdA * mixingrate
      * Length of row is --------------------- samples
      *                         2 * cmdT
      *
