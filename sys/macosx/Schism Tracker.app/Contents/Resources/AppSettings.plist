@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EncryptAndChecksum</key>
+	<false/>
+	<key>IsDroppable</key>
+	<true/>
+	<key>OutputType</key>
+	<string>None</string>
+	<key>RemainRunningAfterCompletion</key>
+	<false/>
+	<key>RequiresAdminPrivileges</key>
+	<false/>
+	<key>ScriptInterpreter</key>
+	<string>/bin/sh</string>
+</dict>
+</plist>
