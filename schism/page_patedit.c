@@ -704,16 +704,16 @@ static void pattern_selection_system_copyout(void)
 		for (x = selection.first_channel; x <= selection.last_channel; x++) {
 			str[len] = '|'; len++;
 			if (cur_note->note == 0) {
-				str[len] = str[len+1] = str[len+2] = '.';
+				str[len] = str[len+1] = str[len+2] = '.'; /* ... */
 			} else if (cur_note->note == NOTE_CUT) {
-				str[len] = str[len+1] = str[len+2] = '^';
+				str[len] = str[len+1] = str[len+2] = '^'; /* ^^^ */
 			} else if (cur_note->note == NOTE_OFF) {
-				str[len] = str[len+1] = str[len+2] = '=';
+				str[len] = str[len+1] = str[len+2] = '='; /* === */
 			} else if (cur_note->note == NOTE_FADE) {
 				/* ModPlug won't handle this one, but it'll
 				just drop it...
 				*/
-				str[len] = str[len+1] = str[len+2] = '~';
+				str[len] = str[len+1] = str[len+2] = '~'; /* ~~~ */
 			} else {
 				get_note_string(cur_note->note, str+len);
 			}
