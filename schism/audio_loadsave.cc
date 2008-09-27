@@ -232,7 +232,7 @@ static void _resize_message(void)
                 int len = strlen(mp->m_lpszSongComments) + 1;
                 memcpy(tmp, mp->m_lpszSongComments, MIN(8000, len));
                 tmp[8000] = 0;
-                delete mp->m_lpszSongComments;
+                delete[] mp->m_lpszSongComments;
         }
         mp->m_lpszSongComments = tmp;
 }
