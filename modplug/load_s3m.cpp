@@ -401,7 +401,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		{
             memcpy(Ins[iSmp].AdlibBytes, s+0x10, 11);
 
-		    UINT j = s[0x1C];
+			int j = s[0x1C];
 			if (j > 64) j = 64;
 			Ins[iSmp].nVolume = j << 2;
 			Ins[iSmp].nGlobalVol = 64;
@@ -431,7 +431,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		if(MidiS3M_Read(*Headers[iSmp], iSmp, m_szNames[iSmp], scale))
 		{
 		    m_dwSongFlags |= SONG_INSTRUMENTMODE;
-    		Headers[iSmp]->nGlobalVol = scale*Ins[iSmp].nVolume/(2*63);
+    		Headers[iSmp]->nGlobalVol = scale*128/63;
 		}
 		else
 		{
