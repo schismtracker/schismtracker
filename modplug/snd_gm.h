@@ -9,8 +9,8 @@ void GM_Patch(int c, unsigned char p, int pref_chn_mask);
 void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask);
 
 void GM_Bank(int c, unsigned char b);
-void GM_Touch(int c, unsigned char Vol);
-void GM_KeyOn(int c, unsigned char key, unsigned char Vol);
+void GM_Touch(int c, unsigned char Vol); // range 0..127
+void GM_KeyOn(int c, unsigned char key, unsigned char Vol); // vol range 0..127
 void GM_KeyOff(int c);
 void GM_Bend(int c, unsigned Count);
 void GM_Reset(int quitting); // 0=settings that work for us, 1=normal settings
@@ -21,7 +21,7 @@ void GM_Pan(int ch, signed char val); // param: -128..+127
 // It handles keyons, touches and pitch bending.
 //   channel   = IT channel on which the event happens
 //   Hertz     = The hertz value for this note at the present moment
-//   Vol       = The volume for this note at this present moment
+//   Vol       = The volume for this note at this present moment (0..127)
 //   bend_mode = This parameter can provide a hint for the tone calculator
 //               for deciding the note to play. If it is to be expected that
 //               a large bend up will follow, it may be a good idea to start
