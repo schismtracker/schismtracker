@@ -479,6 +479,15 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 						m->note = src[j++];
 						if (m->note < 0xF0) m->note = (m->note & 0x0F) + 12*(m->note >> 4) + 13;
 						else if (m->note == 0xFF) m->note = 0;
+						else if (m->note == 0xFE)
+						{   
+						    // S3M's ^^^.
+						    // When used with Adlib, works like NOTE_OFF.
+						    // When used with samples, works like NOTE_CUT.
+						    // However, it is almost never used with anything
+						    // other than AdLib, so we assume it always means NOTE_OFF.
+						    m->note = 0xFF; // Convert into NOTE_OFF
+						}
 						m->instr = src[j++];
 					}
 					if (b & 0x40)
@@ -682,10 +691,35 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 
 
 					if ((note) || (inst)) b |= 0x20;
-					if (!note) note = 0xFF; else
-					if (note >= 0xFE) note = 0xFE; else
-					if (note < 13) note = 0; else note -= 13;
-					if (note < 0xFE) note = (note % 12) + ((note / 12) << 4);
+					switch(note)
+					{
+					    case 0: // no note
+					        note = 0xFF; break;
+					    case 0xFF: // NOTE_OFF ('===')
+					    case 0xFE: // NOTE_CUT ('^^^')
+					    case 0xFD: // NOTE_FADE ('~~~)
+					        note = 0xFE; // Create ^^^
+					        // From S3M official documentation:
+					        // 254=key off (used with adlib, with samples stops smp)
+					        // 
+					        // In fact, with AdLib S3M, notecut does not even exist.
+					        // The "SCx" opcode is a complete NOP in adlib.
+					        // There are only two ways to cut a note:
+					        // set volume to 0, or use keyoff.
+					        // With digital S3M, notecut is accomplished by ^^^.
+					        // So is notefade (except it doesn't fade),
+					        // and noteoff (except there are no volume
+					        // envelopes, so it cuts immediately).
+					        break;
+					    case 1: case 2: case 3: case 4: case 5: case 6:
+					    case 7: case 8: case 9: case 10:case 11:case 12:
+					        note = 0; break; // too low
+					    default:
+					        note -= 13;
+					        // Convert into S3M format
+					        note = (note % 12) + ((note / 12) << 4);
+					        break;
+					}
 					if (command == CMD_VOLUME)
 					{
 						command = 0;

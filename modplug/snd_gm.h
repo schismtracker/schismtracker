@@ -26,11 +26,12 @@ void GM_Pan(int ch, signed char val); // param: -128..+127
 //               for deciding the note to play. If it is to be expected that
 //               a large bend up will follow, it may be a good idea to start
 //               from a low bend to utilize the maximum bending scale.
+//   keyoff    = if nonzero, don't keyon
 //
 // Note that vibrato etc. are emulated by issuing multiple SetFreqAndVol
 // commands; they are not translated into MIDI vibrato operator calls.
 typedef enum { MIDI_BEND_NORMAL, MIDI_BEND_DOWN, MIDI_BEND_UP } MidiBendMode;
-void GM_SetFreqAndVol(int channel, int Hertz, int Vol, MidiBendMode bend_mode);
+void GM_SetFreqAndVol(int channel, int Hertz, int Vol, MidiBendMode bend_mode, int keyoff);
 
 void GM_SendSongStartCode(void);
 void GM_SendSongStopCode(void);

@@ -113,9 +113,10 @@ void OPL_NoteOff(int c)
 
 /* OPL_NoteOn changes the frequency on specified
    channel and guarantees the key is on. (Doesn't
-   retrig, just turns the note on and sets freq.) */
-/* Could be used for pitch bending also. */
-void OPL_NoteOn(int c, int Hertz)
+   retrig, just turns the note on and sets freq.) 
+   If keyoff is nonzero, doesn't even set the note on.
+   Could be used for pitch bending also. */
+void OPL_HertzTouch(int c, int Hertz, int keyoff)
 {
 //fprintf(stderr, "OPL_NoteOn(%d,%d)\n", c, Hertz);
     int Oct;
@@ -146,8 +147,8 @@ void OPL_NoteOn(int c, int Hertz)
 
     /* Ok - 1.1.1999/Bisqwit */
     OPL_Byte(0xA0+c, Hertz&255);  //F-Number low 8 bits
-    OPL_Byte(0xB0+c, 0x20        //Key on
-                      | ((Hertz>>8)&3) //F-number high 2 bits
+    OPL_Byte(0xB0+c, (keyoff ? 0 : 0x20) //Key on
+                      | ((Hertz>>8)&3)   //F-number high 2 bits
                       | ((Oct&7)<<2)
           );
 }

@@ -705,7 +705,8 @@ void CSoundFile::CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut)
 		pChn->nLength = pChn->nPos = pChn->nPosLo = 0;
 		pChn->nROfs = pChn->nLOfs = 0;
 		pChn->nLeftVol = pChn->nRightVol = 0;
-		OPL_NoteOff(nChn); GM_KeyOff(nChn);
+		OPL_NoteOff(nChn); OPL_Touch(nChn, 0);
+		GM_KeyOff(nChn); GM_Touch(nChn, 0);
 		return;
 	}
 	if (instr >= MAX_INSTRUMENTS) instr = 0;
@@ -906,7 +907,8 @@ BOOL CSoundFile::ProcessEffects()
 			{
 			    /* This is required when the instrument changes (KeyOff is not called) */
 			    /* Possibly a better bugfix could be devised. --Bisqwit */
-			    OPL_NoteOff(nChn); GM_KeyOff(nChn);
+			    OPL_NoteOff(nChn); OPL_Touch(nChn, 0);
+			    GM_KeyOff(nChn); GM_Touch(nChn, 0);
 			}
 			if (note >= 0xFE) instr = 0;
 			if ((note) && (note <= 128)) pChn->nNewNote = note;
@@ -2265,7 +2267,8 @@ void CSoundFile::NoteCut(UINT nChn, UINT nTick)
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
 		pChn->nLength = 0;
 		
-		OPL_NoteOff(nChn); GM_KeyOff(nChn);
+		OPL_NoteOff(nChn); OPL_Touch(nChn, 0);
+		GM_KeyOff(nChn); GM_Touch(nChn, 0);
 	}
 }
 

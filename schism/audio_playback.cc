@@ -1279,7 +1279,9 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 		mc = chan % 16;
 	} else {
 		mc = 0;
-		while(!(mp->Headers[ins]->nMidiChannelMask & (1 << mc))) ++mc;
+		if(mp->Headers[ins]->nMidiChannelMask > 0)
+			while(!(mp->Headers[ins]->nMidiChannelMask & (1 << mc)))
+				++mc;
 	}
 
 	m_note = m->note;
