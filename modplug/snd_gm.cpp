@@ -522,7 +522,7 @@ static double log2(double d)
 }
 #endif
 
-void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
+void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode, int keyoff)
 {
 #ifdef GM_DEBUG
     fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,Vol);
@@ -566,7 +566,7 @@ void GM_SetFreqAndVol(int c, int Hertz, int Vol, MidiBendMode bend_mode)
     int note = S3Mchans[c].note; // what's playing on the channel right now?
 
     bool new_note = !S3Mchans[c].IsActive();
-    if(new_note)
+    if(new_note && !keyoff)
     {
         // If the note is not active, activate it first.
         // Choose the nearest note to Hertz.
