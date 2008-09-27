@@ -81,13 +81,16 @@ void prev_order_pattern(void)
 {
         int new_order = current_order;
 	unsigned char *list = song_get_orderlist();
+	int last_pattern = list[new_order];
 	
 	do {
 		if (--new_order < 0) {
 			new_order = 0;
 			break;
 		}
-	} while (!(status.flags & CLASSIC_MODE) && list[new_order] == ORDER_SKIP);
+	} while (!(status.flags & CLASSIC_MODE)
+			&& last_pattern == list[new_order]
+			&&  list[new_order] == ORDER_SKIP);
 	
 	if (list[new_order] < 200) {
 		current_order = new_order;
@@ -100,13 +103,16 @@ void next_order_pattern(void)
 {
         int new_order = current_order;
 	unsigned char *list = song_get_orderlist();
+	int last_pattern = list[new_order];
 
 	do {
 		if (++new_order > 255) {
 			new_order = 255;
 			break;
 		}
-	} while (!(status.flags & CLASSIC_MODE) && list[new_order] == ORDER_SKIP);
+	} while (!(status.flags & CLASSIC_MODE)
+			&& last_pattern == list[new_order]
+			&&  list[new_order] == ORDER_SKIP);
 	
 	if (list[new_order] < 200) {
 		current_order = new_order;
