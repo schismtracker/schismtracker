@@ -896,6 +896,26 @@ static void _save_it(diskwriter_driver_t *fp)
 	unsigned int extra;
 	unsigned short zero;
 
+	feature_check_instruments("IT", 99,
+			ENV_SETPANNING
+			|ENV_VOLUME|ENV_VOLSUSTAIN|ENV_VOLLOOP|ENV_VOLCARRY
+			|ENV_PANNING|ENV_PANSUSTAIN|ENV_PANLOOP|ENV_PANCARRY
+			|ENV_PITCH|ENV_PITCHSUSTAIN|ENV_PITCHLOOP|ENV_PITCHCARRY
+			|ENV_FILTER);
+
+	feature_check_samples("IT", 99,
+			SAMP_16_BIT
+			| SAMP_LOOP | SAMP_LOOP_PINGPONG
+			| SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG
+			| SAMP_PANNING
+			| SAMP_STEREO);
+
+	feature_check_notes("IT",
+			0, 255,
+			0, 255, 
+			".ABCDEFGHvp",
+			".ABCDEFGHIJKLMNOPQRSTUVWXYZ`1~");
+
 	extra = 2;
 	
 	// IT always saves at least two orders.
@@ -1062,6 +1082,14 @@ static void _save_it(diskwriter_driver_t *fp)
 }
 static void _save_s3m(diskwriter_driver_t *dw)
 {
+	feature_check_instruments("S3M", 0, 0);
+	feature_check_samples("S3M", 99, SAMP_LOOP | SAMP_ADLIB);
+	feature_check_notes("S3M",
+			0, 96,
+			0, 255, 
+			".v",
+			".ABCDEFGHIJKLOQRSTUV1`");
+
 	if (!mp->SaveS3M(dw, 0)) {
 		status_text_flash("Error writing to disk");
 		dw->e(dw);
@@ -1069,6 +1097,18 @@ static void _save_s3m(diskwriter_driver_t *dw)
 }
 static void _save_xm(diskwriter_driver_t *dw)
 {
+	feature_check_instruments("XM", 99, 
+			ENV_VOLUME | ENV_VOLSUSTAIN | ENV_VOLLOOP
+			| ENV_PANNING | ENV_PANSUSTAIN | ENV_PANLOOP);
+	feature_check_samples("XM", 99,
+			SAMP_STEREO | SAMP_16_BIT
+			| SAMP_LOOP | SAMP_LOOP_PINGPONG);
+	feature_check_notes("XM",
+			0, 96,
+			0, 255, 
+			".vpABCDEFGH$<>",
+			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&");
+
 	if (!mp->SaveXM(dw, 0)) {
 		status_text_flash("Error writing to disk");
 		dw->e(dw);
@@ -1090,6 +1130,14 @@ static void _save_txt(diskwriter_driver_t *fp)
 }
 static void _save_mod(diskwriter_driver_t *dw)
 {
+	feature_check_instruments("MOD", 0,  0);
+	feature_check_samples("MOD", 31, SAMP_LOOP);
+	feature_check_notes("MOD",
+			12, 96,
+			0, 31, 
+			".",
+			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&");
+
 	if (!mp->SaveMod(dw, 0)) {
 		status_text_flash("Error writing to disk");
 		dw->e(dw);

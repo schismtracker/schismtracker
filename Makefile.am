@@ -229,6 +229,7 @@ schismtracker_SOURCES = \
 	schism/page_config.c		\
 	schism/draw-pixel.c		\
 	schism/keyboard.c		\
+	schism/features.c		\
 	schism/page_samples.c		\
 	schism/itf.c			\
 	schism/page_orderpan.c		\

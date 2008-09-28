@@ -468,6 +468,15 @@ void memused_songchanged(void);
 
 void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
 
+void feature_check_instruments(const char *fmt,
+		int limit, unsigned int flags_mask);
+void feature_check_samples(const char *fmt, int limit, unsigned int flags_mask);
+void feature_check_notes(const char *fmt,
+		int min_note, int max_note,
+		int min_inst,int max_inst,
+		const char *volcmd, const char *fxcmd);
+
+
 /* :) */
 const char *schism_banner(void);
 
