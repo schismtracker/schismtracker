@@ -458,24 +458,45 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
                 if (nInd + 0x40 > dwMemLength) continue;
 		WORD len = bswapLE16(*((WORD *)(lpStream+nInd)));
 		nInd += 2;
-		PatternSize[iPat] = 64;
-		PatternAllocSize[iPat] = 64;
-		if (len < 2 || (nInd + (len-2) > dwMemLength)
-		 || ((Patterns[iPat] = AllocatePattern(64, m_nChannels)) == NULL)) continue;
-		// ^Bisqwit- Fixed S3M loading. Would cause patterns
-		// become missing when samples are not used (Adlib songs).
+		
 		LPBYTE src = (LPBYTE)(lpStream+nInd);
+		
+		if(len < 2 || (nInd + (len-2) > dwMemLength)) continue;
+		len -= 2;
+		
+		/* Figure out how many rows this pattern has (normal is 64, but we never know) */
+		PatternSize[iPat] = 0;
+		for(UINT j=0; j<len; )
+		{
+			BYTE b = src[j++];
+			if(!b)
+				++PatternSize[iPat];
+			else
+			{
+				if(b&0x20) j+=2;
+				if(b&0x40) j+=1;
+				if(b&0x80) j+=2;
+			}
+		}
+		
+		PatternAllocSize[iPat] = PatternSize[iPat];
+		
+		if(PatternSize[iPat] != 64)
+			fprintf(stderr, "Warning: Pattern %u has %u rows\n", iPat, PatternSize[iPat]);
+		
+		if ((Patterns[iPat] = AllocatePattern(PatternSize[iPat], m_nChannels)) == NULL)
+		{
+			continue;
+		}
+		
 		// Unpacking pattern
 		MODCOMMAND *p = Patterns[iPat];
-		UINT row = 0;
-		UINT j = 0;
-		
-		while (j < len)
+		for (UINT row=0, j=0; j < len; )
 		{
 			BYTE b = src[j++];
 			if (!b)
 			{
-				if (++row >= 64) break;
+				if (++row >= PatternSize[iPat]) break;
 			} else
 			{
 				UINT chn = b & 0x1F;
@@ -524,10 +545,9 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 				} else
 				{
 					if (b & 0x20) j += 2;
-					if (b & 0x40) j++;
+					if (b & 0x40) j += 1;
 					if (b & 0x80) j += 2;
 				}
-				if (j >= len) break;
 			}
 		}
 	}
@@ -546,7 +566,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		for(unsigned pat=0; pat<patnum; ++pat)
 		{
 			if(!Patterns[pat]) continue;
-			for(unsigned row=0; row<64; ++row)
+			for(unsigned row=0; row<PatternSize[pat]; ++row)
 				for(unsigned chn=0; chn<m_nChannels && chn<32; ++chn)
 				{
 					MODCOMMAND& m = Patterns[pat][row*m_nChannels+chn];
@@ -694,7 +714,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 	header[0x25] = nbp >> 8;
 	if (m_dwSongFlags & SONG_FASTVOLSLIDES) header[0x26] |= 0x40;
 	if ((m_nMaxPeriod < 20000) || (m_dwSongFlags & SONG_AMIGALIMITS)) header[0x26] |= 0x10;
-	header[0x28] = 0x20;
+	header[0x28] = 0x20; // ST3.20 = 0x1320
 	header[0x29] = 0x13;
 	header[0x2A] = 0x02; // Version = 1 => Signed samples
 	header[0x2B] = 0x00;
@@ -765,7 +785,10 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 		{
 			len = 2;
 			MODCOMMAND *p = Patterns[i];
-			for (int row=0; row<64; row++) if (row < PatternSize[i])
+			if(PatternSize[i] != 64)
+				fprintf(stderr, "Warning: Pattern %u has %u rows\n", i, PatternSize[i]);
+			
+			for (int row=0; row<PatternSize[i]; row++)
 			{
 				for (UINT j=0; j < 32 && j<chanlim; j++)
 				{
@@ -800,7 +823,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 					        note = 0xFE; // Create ^^^
 					        // From S3M official documentation:
 					        // 254=key off (used with adlib, with samples stops smp)
-					        // 
+					        //
 					        // In fact, with AdLib S3M, notecut does not even exist.
 					        // The "SCx" opcode is a complete NOP in adlib.
 					        // There are only two ways to cut a note:
