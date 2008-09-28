@@ -672,9 +672,6 @@ public:
 	BOOL SaveXM(diskwriter_driver_t *f, UINT nPacking=0);
 	BOOL SaveS3M(diskwriter_driver_t *f, UINT nPacking=0);
 	BOOL SaveMod(diskwriter_driver_t *f, UINT nPacking=0);
-#if 0
-	BOOL SaveIT(LPCSTR lpszFileName, UINT nPacking=0);
-#endif
 #endif // MODPLUG_NO_FILESAVE
 	// MOD Convert function
 	UINT GetBestSaveFormat() const;
