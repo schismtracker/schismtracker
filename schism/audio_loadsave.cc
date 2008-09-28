@@ -914,7 +914,7 @@ static void _save_it(diskwriter_driver_t *fp)
 			0, 255,
 			0, 255, 
 			".ABCDEFGHvp",
-			".ABCDEFGHIJKLMNOPQRSTUVWXYZ`1~");
+			".ABCDEFGHIJKLMNOPQRSTUVWXYZ`1~"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
 
 	extra = 2;
 	
@@ -1088,7 +1088,7 @@ static void _save_s3m(diskwriter_driver_t *dw)
 			0, 96,
 			0, 255, 
 			".v",
-			".ABCDEFGHIJKLOQRSTUV1`");
+			".ABCDEFGHIJKLOQRSTUV1`"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
 
 	if (!mp->SaveS3M(dw, 0)) {
 		status_text_flash("Error writing to disk");
@@ -1107,7 +1107,7 @@ static void _save_xm(diskwriter_driver_t *dw)
 			0, 96,
 			0, 255, 
 			".vpABCDEFGH$<>",
-			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&");
+			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
 
 	if (!mp->SaveXM(dw, 0)) {
 		status_text_flash("Error writing to disk");
@@ -1136,7 +1136,7 @@ static void _save_mod(diskwriter_driver_t *dw)
 			12, 96,
 			0, 31, 
 			".",
-			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&");
+			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
 
 	if (!mp->SaveMod(dw, 0)) {
 		status_text_flash("Error writing to disk");
