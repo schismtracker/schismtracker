@@ -348,6 +348,9 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 	if (!m_nChannels) return TRUE;
 	// Reading instrument headers
 	memset(insfile, 0, sizeof(insfile));
+	
+	bool has_adlib_samples = false;
+	
 	for (UINT iSmp=1; iSmp<=insnum; iSmp++)
 	{
 		UINT nInd = ((DWORD)ptr[iSmp-1])*16;
@@ -418,6 +421,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 			// it work. The actual contents of the sample don't
 			// matter, since it will never be digitized. -Bisqwit
 			Ins[iSmp].pSample = AllocateSample(1);
+			has_adlib_samples = true;
 		}
 		
 		Headers[iSmp] = new INSTRUMENTHEADER;
@@ -431,7 +435,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		if(MidiS3M_Read(*Headers[iSmp], iSmp, m_szNames[iSmp], scale))
 		{
 		    m_dwSongFlags |= SONG_INSTRUMENTMODE;
-    		Headers[iSmp]->nGlobalVol = scale*128/63;
+			Headers[iSmp]->nGlobalVol = scale*128/63;
 		}
 		else
 		{
@@ -441,6 +445,9 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		
 		//fprintf(stderr, "loaded uflags = %X, length = %d\n", Ins[iSmp].uFlags, Ins[iSmp].nLength);
 	}
+	
+	bool has_noteoff_commands = false;
+	
 	// Reading patterns
 	for (UINT iPat=0; iPat<patnum; iPat++)
 	{
@@ -451,23 +458,45 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
                 if (nInd + 0x40 > dwMemLength) continue;
 		WORD len = bswapLE16(*((WORD *)(lpStream+nInd)));
 		nInd += 2;
-		PatternSize[iPat] = 64;
-		PatternAllocSize[iPat] = 64;
-		if (len < 2 || (nInd + (len-2) > dwMemLength)
-		 || ((Patterns[iPat] = AllocatePattern(64, m_nChannels)) == NULL)) continue;
-		// ^Bisqwit- Fixed S3M loading. Would cause patterns
-		// become missing when samples are not used (Adlib songs).
+		
 		LPBYTE src = (LPBYTE)(lpStream+nInd);
+		
+		if(len < 2 || (nInd + (len-2) > dwMemLength)) continue;
+		len -= 2;
+		
+		/* Figure out how many rows this pattern has (normal is 64, but we never know) */
+		PatternSize[iPat] = 0;
+		for(UINT j=0; j<len; )
+		{
+			BYTE b = src[j++];
+			if(!b)
+				++PatternSize[iPat];
+			else
+			{
+				if(b&0x20) j+=2;
+				if(b&0x40) j+=1;
+				if(b&0x80) j+=2;
+			}
+		}
+		
+		PatternAllocSize[iPat] = PatternSize[iPat];
+		
+		if(PatternSize[iPat] != 64)
+			fprintf(stderr, "Warning: Pattern %u has %u rows\n", iPat, PatternSize[iPat]);
+		
+		if ((Patterns[iPat] = AllocatePattern(PatternSize[iPat], m_nChannels)) == NULL)
+		{
+			continue;
+		}
+		
 		// Unpacking pattern
 		MODCOMMAND *p = Patterns[iPat];
-		UINT row = 0;
-		UINT j = 0;
-		while (j < len)
+		for (UINT row=0, j=0; j < len; )
 		{
 			BYTE b = src[j++];
 			if (!b)
 			{
-				if (++row >= 64) break;
+				if (++row >= PatternSize[iPat]) break;
 			} else
 			{
 				UINT chn = b & 0x1F;
@@ -480,13 +509,16 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 						if (m->note < 0xF0) m->note = (m->note & 0x0F) + 12*(m->note >> 4) + 13;
 						else if (m->note == 0xFF) m->note = 0;
 						else if (m->note == 0xFE)
-						{   
-						    // S3M's ^^^.
-						    // When used with Adlib, works like NOTE_OFF.
-						    // When used with samples, works like NOTE_CUT.
-						    // However, it is almost never used with anything
-						    // other than AdLib, so we assume it always means NOTE_OFF.
-						    m->note = 0xFF; // Convert into NOTE_OFF
+						{
+							// S3M's ^^^.
+							// When used with Adlib samples, works like NOTE_OFF.
+							// When used with digital samples, works like NOTE_CUT.
+							/* From S3M official documentation:
+							  byte 0 - Note; hi=oct, lo=note, 255=empty note,
+							           254=key off (used with adlib, with samples stops smp)
+							*/
+							has_noteoff_commands = true;
+							m->note = 0xFE; // assume NOTE_CUT
 						}
 						m->instr = src[j++];
 					}
@@ -513,13 +545,99 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 				} else
 				{
 					if (b & 0x20) j += 2;
-					if (b & 0x40) j++;
+					if (b & 0x40) j += 1;
 					if (b & 0x80) j += 2;
 				}
-				if (j >= len) break;
 			}
 		}
 	}
+	
+	if(has_adlib_samples && has_noteoff_commands)
+	{
+		/* If the song contains 254-bytes, and it contained adlib samples,
+		 * parse through the song once to see when the 254 is applied to
+		 * adlib samples. Those 254s should be changed into ===s.
+		 * They were produced as ^^^ earlier.
+		 */
+		unsigned LastInstrNo[32] = {0};
+		
+		/* First, check all patterns, so we won't miss patterns & rows
+		 * that aren't part of the song */
+		for(unsigned pat=0; pat<patnum; ++pat)
+		{
+			if(!Patterns[pat]) continue;
+			for(unsigned row=0; row<PatternSize[pat]; ++row)
+				for(unsigned chn=0; chn<m_nChannels && chn<32; ++chn)
+				{
+					MODCOMMAND& m = Patterns[pat][row*m_nChannels+chn];
+					if(m.instr) LastInstrNo[chn] = m.instr;
+					if(m.note == 0xFE || m.note == 0xFF) // NOTE_CUT or NOTE_OFF
+					{
+						unsigned ins = LastInstrNo[chn];
+						if(ins >= 1 && ins <= insnum
+						&& (Ins[ins].uFlags & CHN_ADLIB))
+						{
+							m.note = 0xFF; // Change into NOTE_OFF
+						}
+						else
+							m.note = 0xFE; // Change into NOTE_CUT
+					}
+				}
+		}
+		
+		/* Then, run through orders to get the correct ordering for the rows */
+		unsigned ord=0, row=0;
+		bool* visited = new bool[MAX_ORDERS*256];
+		for(;;)
+		{
+			unsigned pat = Order[ord];
+			if(pat == 0xFE) { ++ord; continue; }
+			if(pat == 0xFF) break;
+			if(pat >= patnum || !Patterns[pat] || row >= PatternSize[pat])
+			    { row=0; ++ord; continue; }
+
+			if(visited[ord*256+row]) break;
+			visited[ord*256+row]=true;
+
+			int nextrow=row+1, nextord=ord, patbreak=0;
+			for(unsigned chn=0; chn<m_nChannels && chn<32; ++chn)
+			{
+				MODCOMMAND& m = Patterns[pat][row*m_nChannels+chn];
+				if(m.instr) LastInstrNo[chn] = m.instr;
+				if(m.command == CMD_PATTERNBREAK) { nextrow=m.param; if(!patbreak) patbreak=1; }
+				if(m.command == CMD_POSITIONJUMP) { nextord=m.param; if(!patbreak) nextrow=0; patbreak=2; }
+				if(m.note == 0xFE || m.note == 0xFF) // NOTE_CUT or NOTE_OFF
+				{
+					unsigned ins = LastInstrNo[chn];
+					if(ins >= 1 && ins <= insnum
+					&& (Ins[ins].uFlags & CHN_ADLIB))
+					{
+						m.note = 0xFF; // Change into NOTE_OFF
+					}
+					else
+						m.note = 0xFE; // Change into NOTE_CUT
+				}
+			}
+			if(patbreak==1) nextord=ord+1;
+			ord=nextord; row=nextrow;
+		}
+		delete[] visited;
+		/* Note: This can still fail, if you have the following setup:
+		 *
+		 * Pattern 0:  C-5 01 C00 (01 is a AME)
+		 * Pattern 1:  C-5 02 C00 (02 is a SMP)
+		 * Pattern 2:  254 .. C00
+		 *
+		 * Orders: 00 02 01 02 ...
+		 *
+		 * In this setup, 254 should mean === the first time around,
+		 * and ^^^ the second time around. Our parser puts ^^^ here,
+		 * because SMP was the last one encountered. However, this
+		 * example is very contrived and unlikely to appear in any
+		 * production S3M in the world. --Bisqwit
+		 */
+	}
+		
 	// Reading samples
 	for (UINT iRaw=1; iRaw<=insnum; iRaw++) if ((Ins[iRaw].nLength) && (insfile[iRaw]))
 	{
@@ -596,7 +714,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 	header[0x25] = nbp >> 8;
 	if (m_dwSongFlags & SONG_FASTVOLSLIDES) header[0x26] |= 0x40;
 	if ((m_nMaxPeriod < 20000) || (m_dwSongFlags & SONG_AMIGALIMITS)) header[0x26] |= 0x10;
-	header[0x28] = 0x20;
+	header[0x28] = 0x20; // ST3.20 = 0x1320
 	header[0x29] = 0x13;
 	header[0x2A] = 0x02; // Version = 1 => Signed samples
 	header[0x2B] = 0x00;
@@ -667,7 +785,10 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 		{
 			len = 2;
 			MODCOMMAND *p = Patterns[i];
-			for (int row=0; row<64; row++) if (row < PatternSize[i])
+			if(PatternSize[i] != 64)
+				fprintf(stderr, "Warning: Pattern %u has %u rows\n", i, PatternSize[i]);
+			
+			for (int row=0; row<PatternSize[i]; row++)
 			{
 				for (UINT j=0; j < 32 && j<chanlim; j++)
 				{
@@ -698,10 +819,11 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 					    case 0xFF: // NOTE_OFF ('===')
 					    case 0xFE: // NOTE_CUT ('^^^')
 					    case 0xFD: // NOTE_FADE ('~~~)
+					    {
 					        note = 0xFE; // Create ^^^
 					        // From S3M official documentation:
 					        // 254=key off (used with adlib, with samples stops smp)
-					        // 
+					        //
 					        // In fact, with AdLib S3M, notecut does not even exist.
 					        // The "SCx" opcode is a complete NOP in adlib.
 					        // There are only two ways to cut a note:
@@ -711,6 +833,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 					        // and noteoff (except there are no volume
 					        // envelopes, so it cuts immediately).
 					        break;
+					    }
 					    case 1: case 2: case 3: case 4: case 5: case 6:
 					    case 7: case 8: case 9: case 10:case 11:case 12:
 					        note = 0; break; // too low
