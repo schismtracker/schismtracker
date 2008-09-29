@@ -125,7 +125,7 @@ static int midi_page_handle_key(struct key_event * k)
 	} else if (k->mouse) {
 		if (k->x >= 3 && k->x <= 11 && k->y >= 15 && k->y <= 27) {
 			if (k->mouse == MOUSE_DBLCLICK) {
-				if (k->state) return 0;
+				if (!k->state) return 0;
 				toggle_port();
 				return 1;
 			}
