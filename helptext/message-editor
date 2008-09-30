@@ -1,0 +1,10 @@
+|                             ‹††††††††††††††††††Š
+|                             „  Message Editor  ‘
+|                             ‰–
+|
+| Enter / ESC     Edit message / finished editing
+: Ctrl-T          Toggle extended ASCII font
+|
+| Editing Keys.
+|   Ctrl-Y        Delete line
+|   Alt-C         Clear message
