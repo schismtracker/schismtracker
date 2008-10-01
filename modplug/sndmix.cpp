@@ -9,7 +9,9 @@
 #include "snd_fm.h"
 #include "snd_gm.h"
 
+#ifndef MACOSX
 #include <algorithm>
+#endif
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
@@ -1032,6 +1034,20 @@ BOOL CSoundFile::ReadNote()
                     15701,15727,15753,15778,15803,15828,15853,15877,
                     15901,15925,15949,15973,15996,16020,16043,16065,
                     };
+
+                    //int o = volume;
+#ifdef MACOSX
+		    /* MacOSX has broken STL support on older versions
+		     * here we're trying to be helpful
+		     */
+		    for (int i = 1; i < 128; i++) {
+                    	if (GMvolTransition[i] < volume) continue;
+			volume = GMvolTransition[i-1];
+			break;
+		    }
+                    volume *= pChn->nInsVol / 64;
+#else
+
                     // We use binary search to find the right slot
                     // with at most 7 comparisons. The comparisons
                     // will likely be inlined to this spot, due to
@@ -1042,8 +1058,8 @@ BOOL CSoundFile::ReadNote()
                                          (unsigned short)volume);
                     
                     // This gives a value in the range 0..127.
-                    //int o = volume;
                     volume = (GMvolptr - GMvolTransition) * pChn->nInsVol / 64;
+#endif
                     //fprintf(stderr, "%d -> %d[%d]\n", o, volume, pChn->nInsVol);
                 }
                 else
