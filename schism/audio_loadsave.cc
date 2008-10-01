@@ -126,11 +126,18 @@ static void _convert_to_it(CSoundFile *qq)
 		for (unsigned int row = 0; row < qq->PatternSize[pat]; row++) {
 			for (unsigned int chan = 0; chan < qq->m_nChannels; chan++, note++) {
 				unsigned int command = note->command, param = note->param;
-				qq->S3MSaveConvert(&command, &param, true);
-				if (command || param) {
-					note->command = command;
-					note->param = param;
-					qq->S3MConvert(note, true);
+				if (command == CMD_VOLUME && !(note->volcmd)) {
+					note->vol = note->param + 0x10;
+					note->volcmd = VOLCMD_VOLUME;
+					note->command = 0;
+					note->param= 0;
+				} else {
+					qq->S3MSaveConvert(&command, &param, true);
+					if (command || param) {
+						note->command = command;
+						note->param = param;
+						qq->S3MConvert(note, true);
+					}
 				}
 			}
 		}
