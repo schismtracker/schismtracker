@@ -1034,9 +1034,30 @@ static void do_save_sample(void *ptr)
 static void sample_save(const char *filename, int format_id)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
-	char *ptr = dmoz_path_concat(cfg_dir_samples, filename ? : sample->filename);
-	struct sample_save_data *data = mem_alloc(sizeof(struct sample_save_data));
+	char *ptr, *q;
+	struct sample_save_data *data;
 	struct stat buf;
+	int tmp;
+
+	if (stat(cfg_dir_samples, &buf) == -1) {
+		status_text_flash("Sample directory \"%s\" unreachable", filename);
+		return;
+	}
+
+	data = mem_alloc(sizeof(struct sample_save_data));
+	if (!S_ISDIR(buf.st_mode)) {
+		/* directory browsing */
+		q = strrchr(cfg_dir_samples, DIR_SEPARATOR);
+		if (q) {
+			tmp = q[1];
+			q[1] = '\0';
+		}
+	} else {
+		q = NULL;
+	}
+
+	ptr = dmoz_path_concat(cfg_dir_samples, filename ? : sample->filename);
+	if (q) q[1] = tmp;
 	
 	data->path = ptr;
 	data->format_id = format_id;
