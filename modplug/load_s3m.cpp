@@ -877,8 +877,8 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 				if (len > sizeof(buffer) - 20) break;
 			}
 		}
-		buffer[0] = (len - 2) & 0xFF;
-		buffer[1] = (len - 2) >> 8;
+		buffer[0] = (len) & 0xFF;
+		buffer[1] = (len) >> 8;
 		len = (len+15) & (~0x0F);
 		
 		fp->o(fp, (const unsigned char *)buffer, len);
