@@ -699,11 +699,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
         header[0x20] = nbo & 0xFF;
 	header[0x21] = nbo >> 8;
 	
-	/* FIXME: For some reason, after each save,
-	 * one instrument is dropped from the sample list.
-	 */
-	
-	nbi = m_nSamples;
+	nbi = m_nSamples+1;
 	if (nbi > 99) nbi = 99;
 	header[0x22] = nbi & 0xFF;
 	header[0x23] = nbi >> 8;
