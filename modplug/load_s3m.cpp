@@ -680,7 +680,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 	UINT chanlim;
 	WORD patptr[128];
 	WORD insptr[128];
-	BYTE buffer[5*1024];
+	BYTE buffer[8+20*1024];
 	S3MSAMPLESTRUCT insex[128];
 
 	if ((!m_nChannels) || (!fp)) return FALSE;
