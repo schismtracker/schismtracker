@@ -1044,6 +1044,7 @@ static void sample_save(const char *filename, int format_id)
 		return;
 	}
 
+	tmp=0;
 	data = mem_alloc(sizeof(struct sample_save_data));
 	if (!S_ISDIR(buf.st_mode)) {
 		/* directory browsing */
