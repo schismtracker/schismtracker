@@ -145,6 +145,8 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
                         smp = mixchan->sample - song_get_sample(0, NULL);
                 else
                         smp = 0;
+                if(smp < 0 || smp >= 240) /* MAX_SAMPLES */
+                        smp = 0;
 
 		// Bleh
 		if (mixchan->flags & (CHN_KEYOFF|CHN_NOTEFADE) && mixchan->sample_length == 0) {
@@ -256,6 +258,8 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			smp = channel->sample - song_get_sample(0, NULL);
 		else
 			smp = inuse = 0;
+		if(smp < 0 || smp >= 240) /* MAX_SAMPLES */
+			smp = inuse = 0; /* This sample is not in the sample array */
 
 		// this makes ascii-art behave somewhat...
 		if (channel->flags & (CHN_KEYOFF|CHN_NOTEFADE) && channel->sample_length == 0) {
@@ -281,7 +285,15 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			if (instrument_names && channel->instrument)
 				ptr = channel->instrument->name;
 			else
+			{
 				song_get_sample(smp, &ptr);
+				if(!ptr
+				&& instrument_names
+				&& channel->instrument) /* No sample? Fallback to instrument */
+					ptr = channel->instrument->name;
+			}
+			if(!ptr) ptr = (char*)"?"; /* Couldn't find the sample */
+			
 			draw_text_len( ptr, 25, n, pos, 6, 0);
 		} else if (ins && channel->instrument && channel->instrument->midi_channel_mask) {
 			if (channel->instrument->midi_channel_mask >= 0x10000) {

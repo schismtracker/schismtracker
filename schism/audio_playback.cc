@@ -1003,7 +1003,7 @@ void song_get_playing_samples(int samples[])
 		channel = mp->Chn + mp->ChnMix[n];
 		if (channel->pInstrument && channel->pCurrentSample) {
 			int s = channel->pInstrument - mp->Ins;
-			if (s < 100) // bleh!
+			if (s >= 0 && s < 240) /* MAX_SAMPLES */
 				samples[s]++;
 		} else {
 			// no sample.
