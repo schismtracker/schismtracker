@@ -70,7 +70,7 @@ static int load_scri_sample(const byte *data, size_t length, song_sample *smp, c
         (((char*)&(header->samplename))-((char*)&(header->type))),
         (((char*)&(header->samplesig))-((char*)&(header->type)))
        );
-    
+
     fprintf(stderr, "Considering %d byte sample (%.4s), %d\n",
         (int)length,
         header->samplesig,
@@ -80,13 +80,13 @@ static int load_scri_sample(const byte *data, size_t length, song_sample *smp, c
     if(strncmp(header->samplesig, "SCRS", 4) != 0
     && strncmp(header->samplesig, "SCRI", 4) != 0)
         return false; // It should be either SCRS or SCRI.
-    
+
     size_t samp_length   = bswapLE32(header->length);
     int bytes_per_sample =
         header->type == 1
             ? ((header->flags & 2) ? 2 : 1)
             : 0; // no sample data
-    
+
     if(length < 0x50 + smp->length * bytes_per_sample) return false;
 
     smp->length        = samp_length;
@@ -99,31 +99,33 @@ static int load_scri_sample(const byte *data, size_t length, song_sample *smp, c
     if(header->flags & 1)  smp->flags |= SAMP_LOOP;
     if(header->flags & 2)  smp->flags |= SAMP_STEREO;
     if(header->flags & 4)  smp->flags |= SAMP_16_BIT;
-    
+
     if(header->type == 2)
     {
         smp->flags |= SAMP_ADLIB;
         smp->flags &= ~(SAMP_LOOP|SAMP_16_BIT);
-        
+
         memcpy(smp->AdlibBytes, &header->length, 11);
 
         smp->length  = 1;
         smp->loop_start = 0;
         smp->loop_end = 0;
+
+        smp->data = mp->AllocateSample(1);
     }
 
     int format = (smp->flags & SAMP_16_BIT) ? RS_PCM16S : RS_PCM8U;
-    
+
     if(load_sample_data)
     {
 		mp->ReadSample((MODINSTRUMENT *) smp, format,
 				(LPCSTR) (data + 0x50),
 				(DWORD) (length - 0x50));
     }
-    
+
     strncpy(smp->filename, header->dosfn,      11);
     strncpy(title,         header->samplename, 28);
-    
+
     return true;
 }
 
@@ -134,7 +136,7 @@ int fmt_scri_read_info(dmoz_file_t *file, const byte *data, size_t length)
     char title[32] = "";
     if(!load_scri_sample(data, length, smp, title))
         return false;
-    
+
     file->smp_length = smp->length;
     file->smp_flags  = smp->flags;
     file->smp_defvol = smp->volume;
@@ -161,10 +163,11 @@ int fmt_scri_load_sample(const byte *data, size_t length, song_sample *smp, char
 
 static bool MidiS3M_Read(
     song_instrument* g,
-    const char* name)
+    const char* name,
+    int& ft)
 {
-    fprintf(stderr, "Name(%s)\n", name);
-    
+    //fprintf(stderr, "Name(%s)\n", name);
+
     if(name[0] == 'G') // GM=General MIDI
     {
         bool is_percussion = false;
@@ -173,7 +176,7 @@ static bool MidiS3M_Read(
         else return false;
         const char*s = name+2;
         int GM = 0;      // midi program
-        int ft = 0;      // finetuning
+        ft = 0;          // finetuning
         int scale = 63;  // automatic volume scaling
         int autoSDx = 0; // automatic randomized SDx effect
         int bank = 0;    // midi bank
@@ -216,7 +219,7 @@ static bool MidiS3M_Read(
             { g->midi_program = GM-1;
               g->midi_channel_mask = 0xFFFF &~ (1 << 9); // any channel except percussion
             }
-        
+
         /* TODO: Apply ft, apply scale, apply autoSDx,
          * FIXME: Channel note changes don't affect MIDI notes
          */
@@ -231,31 +234,33 @@ int fmt_scri_load_instrument(const byte *data, size_t length, int slot)
     if(length < 0x50) return false;
 
 	song_instrument* g = song_get_instrument(slot, NULL);
-	
+
 	char* np;
 	song_sample* smp = song_get_sample(slot, &np);
-	
+
 	if(!load_scri_sample(data, length, smp, np))
 	{
 	    return false;
 	}
-	
+
 	strncpy(g->name,     np,            25);
 	strncpy(g->filename, smp->filename, 11);
 
-	for(int n=0; n<128; ++n)
-	{
-	    g->note_map[n]   = n;
-	    g->sample_map[n] = slot;
-	}
-	g->global_volume = smp->global_volume;
-	
+	int ft = 0;
+	g->global_volume = smp->global_volume*2;
+
 	g->midi_bank          = 0;
 	g->midi_program       = 0;
 	g->midi_channel_mask  = 0;
 	g->midi_drum_key      = 0;
-	
-	MidiS3M_Read(g, np);
-	
+
+	MidiS3M_Read(g, np, ft);
+
+	for(int n=0; n<128; ++n)
+	{
+	    g->note_map[n]   = n+1+ft;
+	    g->sample_map[n] = slot;
+	}
+
 	return true;
 }
