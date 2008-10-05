@@ -311,6 +311,36 @@ EndMod:
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Effects
 
+void CSoundFile::TranslateKeyboard(INSTRUMENTHEADER* penv, UINT note, MODINSTRUMENT*& psmp)
+{
+    UINT n = penv->Keyboard[note-1];
+	if ((n) && (n < MAX_SAMPLES)) psmp = &Ins[n];
+	if (!n)
+	{
+	    static MODINSTRUMENT dummyinstrument =
+	    {
+	        1,/*len*/
+	        0,0, 0,0,
+	        dummyinstrument.name, /*data*/
+	        8363, 0x80,
+	        255,64,
+	        CHN_ADLIB,
+	        0,0,
+	        0,0,0,0,
+	        "",
+	        0,
+	        {
+	            /* Piano AdLib sample... doesn't really
+	             * matter, it should be never accessed anyway.
+	             */
+	            0x01,0x01, 0x8f,0x06, 0xf2,0xf2,
+	            0xf4,0xf7, 0x00,0x00, 0x08,0x00
+	        }
+	    };
+	    psmp = &dummyinstrument;
+	}
+}
+
 void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOOL bUpdVol, BOOL bResetEnv)
 //--------------------------------------------------------------------------------------------------------
 {
@@ -323,8 +353,8 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	if ((penv) && (note) && (note <= 128))
 	{
 		if (penv->NoteMap[note-1] >= 0xFE) return;
-		UINT n = penv->Keyboard[note-1];
-		psmp = ((n) && (n < MAX_SAMPLES)) ? &Ins[n] : NULL;
+		psmp = NULL;
+		TranslateKeyboard(penv, note, psmp);
 		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	} else
 	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
@@ -454,7 +484,6 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	    (int)psmp->nLength, pChn->dwFlags, psmp->uFlags);*/
 }
 
-
 void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BOOL bManual)
 //-----------------------------------------------------------------------------------------
 {
@@ -464,8 +493,7 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	if ((penv) && (note <= 0x80))
 	{
-		UINT n = penv->Keyboard[note - 1];
-		if ((n) && (n < MAX_SAMPLES)) pins = &Ins[n];
+		TranslateKeyboard(penv, note, pins);
 		note = penv->NoteMap[note-1];
 		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	}

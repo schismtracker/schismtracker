@@ -750,6 +750,7 @@ public:
 	void CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut);
 	void NoteChange(UINT nChn, int note, BOOL bPorta=FALSE, BOOL bResetEnv=TRUE, BOOL bManual=FALSE);
 	void InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta=FALSE,BOOL bUpdVol=TRUE,BOOL bResetEnv=TRUE);
+	void TranslateKeyboard(INSTRUMENTHEADER* penv, UINT note, MODINSTRUMENT*& psmp);
 	// Channel Effects
 	void PortamentoUp(MODCHANNEL *pChn, UINT param);
 	void PortamentoDown(MODCHANNEL *pChn, UINT param);

@@ -198,7 +198,12 @@ public:
     int pref_chn_mask;
 public:
     bool IsActive()     const { return note && chan >= 0; }
-    bool IsPercussion() const { return patch & 0x80; }
+    bool IsPercussion() const
+    {
+        if(patch & 0x80) return true; // definitely percussion
+        if(pref_chn_mask & (1 << 9)) return true; // to be played on P channel, so it's percussion
+        return false;
+    }
     S3MchannelInfo() : note(0),patch(0),bank(0),pan(0),chan(-1),pref_chn_mask(-1) { }
 };
 
@@ -381,8 +386,10 @@ void GM_KeyOn(int c, unsigned char key, unsigned char Vol)
 
     if(S3Mchans[c].IsPercussion())
     {
-        // Percussion always uses channel 9. Key (pitch) is ignored.
-        int percu = S3Mchans[c].patch - 128;
+        // Percussion always uses channel 9.
+        int percu = key;
+        if(S3Mchans[c].patch & 0x80) percu = S3Mchans[c].patch - 128;
+        
         int mc = S3Mchans[c].chan = 9;
 		MIDIchans[mc].SetPan(mc, S3Mchans[c].pan);
 		MIDIchans[mc].SetVolume(mc, GM_Volume(Vol));
