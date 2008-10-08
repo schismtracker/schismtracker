@@ -1590,6 +1590,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 	unsigned int j;
 	int x;
 
+	for (x = 0; x < 64; x++) { song_keyup(0,-1,NOTE_CUT,x,NULL);song_keyup(-1,0,NOTE_CUT,x,NULL); };
 	library.Destroy();
 	
         slurp_t *s = slurp(path, NULL, 0);
@@ -1643,6 +1644,9 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 
 int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
 {
+	int x;
+
+	for (x = 0; x < 64; x++) { song_keyup(0,-1,NOTE_CUT,x,NULL);song_keyup(-1,0,NOTE_CUT,x,NULL); };
 	library.Destroy();
 	
         slurp_t *s = slurp(path, NULL, 0);
