@@ -324,7 +324,7 @@ void CSoundFile::TranslateKeyboard(INSTRUMENTHEADER* penv, UINT note, MODINSTRUM
 	        dummyinstrument.name, /*data*/
 	        8363, 0x80,
 	        255,64,
-	        CHN_ADLIB,
+	        0x00, /* flags*/  //CHN_ADLIB,
 	        0,0,
 	        0,0,0,0,
 	        "",
