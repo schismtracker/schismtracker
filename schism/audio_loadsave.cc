@@ -57,6 +57,17 @@ char song_basename[NAME_MAX + 1];
 byte row_highlight_major = 16, row_highlight_minor = 4;
 
 // ------------------------------------------------------------------------
+// quiet a sample when loading
+static void _squelch_sample(int n)
+{
+	int x;
+
+	for (x = 0; x < 64; x++) {
+		song_keyup(n,-1,NOTE_CUT,x,NULL);
+		song_keyup(-1,n,NOTE_CUT,x,NULL);
+	}
+}
+
 // functions to "fix" the song for editing.
 // these are all called by fix_song after a file is loaded.
 
@@ -1423,6 +1434,7 @@ int song_preload_sample(void *pf)
 	dmoz_file_t *file = (dmoz_file_t*)pf;
 	// 0 is our "hidden sample"
 #define FAKE_SLOT 0
+	_squelch_sample(FAKE_SLOT);
 	if (file->sample) {
 		song_sample *smp = song_get_sample(FAKE_SLOT, NULL);	
 		void *tmp;
@@ -1456,6 +1468,7 @@ int song_load_sample(int n, const char *file)
 
 	// set some default stuff
 	song_lock_audio();
+	_squelch_sample(n);
 	memset(&smp, 0, sizeof(smp));
 	strncpy(title, base, 25);
 
@@ -1584,13 +1597,12 @@ CSoundFile library;
 
 
 // TODO: stat the file?
-
 int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
 {
 	unsigned int j;
 	int x;
 
-	for (x = 0; x < 64; x++) { song_keyup(0,-1,NOTE_CUT,x,NULL);song_keyup(-1,0,NOTE_CUT,x,NULL); };
+	_squelch_sample(0);
 	library.Destroy();
 	
         slurp_t *s = slurp(path, NULL, 0);
@@ -1644,9 +1656,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 
 int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
 {
-	int x;
-
-	for (x = 0; x < 64; x++) { song_keyup(0,-1,NOTE_CUT,x,NULL);song_keyup(-1,0,NOTE_CUT,x,NULL); };
+	_squelch_sample(0);
 	library.Destroy();
 	
         slurp_t *s = slurp(path, NULL, 0);
