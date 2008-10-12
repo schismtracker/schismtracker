@@ -1537,8 +1537,6 @@ UINT CSoundFile::CreateStereoMix(int count)
 			if ((LONG)nrampsamples > pChannel->nRampLength) nrampsamples = pChannel->nRampLength;
 		}
 		
-		INSTRUMENTHEADER *penv =
-			(m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChannel->pHeader  : NULL;
 		nSmpCount = 1;
 		/* Figure out the number of remaining samples,
 		 * unless we're in AdLib or MIDI mode (to prevent
