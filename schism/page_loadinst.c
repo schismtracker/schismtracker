@@ -375,6 +375,7 @@ static int file_list_handle_key(struct key_event * k)
 
 	if (k->mouse) {
 		if (k->x >= 6 && k->x <= 67 && k->y >= 13 && k->y <= 47) {
+			slash_search_mode = -1;
 			if (k->mouse == MOUSE_SCROLL_UP) {
 				new_file--;
 			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
@@ -411,32 +412,41 @@ static int file_list_handle_key(struct key_event * k)
 	switch (k->sym) {
 	case SDLK_UP:
 		new_file--;
+		slash_search_mode = -1;
 		break;
 	case SDLK_DOWN:
 		new_file++;
+		slash_search_mode = -1;
 		break;
 	case SDLK_PAGEUP:
 		new_file -= 35;
+		slash_search_mode = -1;
 		break;
 	case SDLK_PAGEDOWN:
 		new_file += 35;
+		slash_search_mode = -1;
 		break;
 	case SDLK_HOME:
 		new_file = 0;
+		slash_search_mode = -1;
 		break;
 	case SDLK_END:
 		new_file = flist.num_files - 1;
+		slash_search_mode = -1;
 		break;
 	case SDLK_RETURN:
 		if (!k->state) return 0;
 		handle_enter_key();
+		slash_search_mode = -1;
 		return 1;
 	case SDLK_DELETE:
 		if (k->state) return 1;
+		slash_search_mode = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
 	case SDLK_ESCAPE:
+		slash_search_mode = -1;
 		if (k->state && NO_MODIFIER(k->mod))
 			set_page(PAGE_INSTRUMENT_LIST);
 		return 1;
