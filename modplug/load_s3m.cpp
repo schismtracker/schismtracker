@@ -11,6 +11,7 @@
 #include "stdafx.h"
 #include "sndfile.h"
 #include "midi.h"
+#include "it.h"
 
 //#pragma warning(disable:4244)
 
@@ -482,8 +483,8 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		PatternAllocSize[iPat] = PatternSize[iPat];
 		
 		if(PatternSize[iPat] != 64)
-			fprintf(stderr, "Warning: Pattern %u has %u rows\n", iPat, PatternSize[iPat]);
-		
+			log_appendf(4, "Warning: Pattern %u has %u rows", iPat, PatternSize[iPat]);
+
 		if ((Patterns[iPat] = AllocatePattern(PatternSize[iPat], m_nChannels)) == NULL)
 		{
 			continue;
@@ -782,7 +783,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 			len = 2;
 			MODCOMMAND *p = Patterns[i];
 			if(PatternSize[i] != 64)
-				fprintf(stderr, "Warning: Pattern %u has %u rows\n", i, PatternSize[i]);
+				log_appendf(4, "Warning: Pattern %u has %u rows", i, PatternSize[i]);
 			
 			for (int row=0; row<PatternSize[i]; row++)
 			{
