@@ -3078,12 +3078,13 @@ static int pattern_editor_insert_midi(struct key_event *k)
 
 
 /* return 1 => handled key, 0 => no way */
+extern int key_scancode_lookup(int k);
 static int pattern_editor_insert(struct key_event *k)
 {
 	int total_rows;
 	int i, j, n, vol;
 	song_note *pattern, *cur_note;
-	int eff, param;
+	int eff, param, kc;
 
 	total_rows = song_get_pattern(current_pattern, &pattern);
 	/* keydown events are handled here for multichannel */
@@ -3381,7 +3382,13 @@ static int pattern_editor_insert(struct key_event *k)
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
-		if (k->sym == SDLK_BACKQUOTE) {
+#if defined(WIN32) || defined(MACOSX) || defined(USE_X11)
+		kc = key_scancode_lookup(k->scancode);
+		if (kc == -1) kc = k->sym;
+#else
+		kc = k->sym;
+#endif
+		if (kc == SDLK_BACKQUOTE) {
 			panning_mode = !panning_mode;
 			status_text_flash("%s control set", (panning_mode ? "Panning" : "Volume"));
 			return 0;
