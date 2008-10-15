@@ -4374,6 +4374,8 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 			if (k->state) return 0;
 			if (!shift_selection.in_progress)
 				shift_selection_begin();
+		default:
+			break;
 		};
 	}
 
