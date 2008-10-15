@@ -4275,6 +4275,15 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (k->state) return 0;
 		copy_note_to_mask();
 		return 1;
+	case SDLK_6:
+		if (k->mod & KMOD_SHIFT) {
+			if (k->state) return 0;
+			if (current_channel > 1) current_channel--;
+			current_position = 0;
+			song_toggle_channel_mute(current_channel-1);
+			return 1;
+		}
+		/* fall through */
 	default:
 		/* bleah */
 		if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
