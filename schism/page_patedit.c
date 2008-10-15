@@ -4353,9 +4353,19 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 #endif
 
 	if (k->mod & KMOD_SHIFT) {
-		if (k->state) return 0;
-		if (!shift_selection.in_progress)
-			shift_selection_begin();
+		switch (k->sym) {
+		case SDLK_LEFT:
+		case SDLK_RIGHT:
+		case SDLK_UP:
+		case SDLK_DOWN:
+		case SDLK_HOME:
+		case SDLK_END:
+		case SDLK_PAGEUP:
+		case SDLK_PAGEDOWN:
+			if (k->state) return 0;
+			if (!shift_selection.in_progress)
+				shift_selection_begin();
+		};
 	}
 
 	if (k->mod & KMOD_ALT)
