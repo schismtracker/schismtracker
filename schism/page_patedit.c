@@ -4276,7 +4276,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		copy_note_to_mask();
 		return 1;
 	case SDLK_6:
-		if (k->mod & KMOD_SHIFT) {
+		if ((status.flags & CLASSIC_MODE) && (k->mod & KMOD_SHIFT)) {
 			if (k->state) return 0;
 			if (current_channel > 1) current_channel--;
 			current_position = 0;
@@ -4532,6 +4532,8 @@ int pattern_max_channels(int patno, int opt_bits[64])
 	for (n = 0; n < 64; n++) {
 		switch (count[n]) {
 		case 0: break;
+		case 255:
+			x++;
 		default:
 			if (opt_bits) opt_bits[n] = 0;
 		case 1: x++;
