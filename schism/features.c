@@ -96,6 +96,8 @@ void feature_check_samples(const char *fmt, int limit, unsigned int flags_mask)
 				}
 			}
 		}
+		if (s->global_volume != 64) s->flags |= SAMP_GLOBALVOL;
+
 		m = (s->flags & ~(flags_mask));
 		if (!m) continue;
 		m &= (~did_mask);
@@ -121,6 +123,9 @@ void feature_check_samples(const char *fmt, int limit, unsigned int flags_mask)
 		}
 		if (m & (SAMP_ADLIB)) {
 			log_appendf(4, "Warning: %s doesn't support AdLib (YM3812) samples", fmt);
+		}
+		if (m & (SAMP_GLOBALVOL)) {
+			log_appendf(4, "Warning: %s doesn't support a global volume", fmt);
 		}
 	}
 }
