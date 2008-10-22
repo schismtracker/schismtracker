@@ -247,7 +247,11 @@ enum {
         SAMP_SUSLOOP_PINGPONG = (0x10),
         SAMP_PANNING = (0x20),
         SAMP_STEREO         = (0x40),
-        //SAMP_PINGPONGFLAG   = (0x80), -- what is this?
+
+	/* used for features */
+	SAMP_GLOBALVOL	= (0x10000),
+
+	/* high flags */
         SAMP_ADLIB   = (0x20000000) // indicates an Adlib sample
 };
 

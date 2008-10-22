@@ -926,6 +926,7 @@ static void _save_it(diskwriter_driver_t *fp)
 			| SAMP_LOOP | SAMP_LOOP_PINGPONG
 			| SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG
 			| SAMP_PANNING
+			| SAMP_GLOBALVOL
 			| SAMP_STEREO);
 
 	feature_check_notes("IT",
