@@ -251,7 +251,12 @@ static void pattern_editor_reposition(void);
 static struct widget options_widgets[8];
 static const int options_link_split[] = { 5, 6, -1 };
 static int options_selected_widget = 0;
+static int options_last_octave = 0;
 
+static void options_close_cancel(UNUSED void *data)
+{
+	kbd_set_current_octave(options_last_octave);
+}
 static void options_close(void *data)
 {
 	int old_size, new_size;
@@ -315,7 +320,8 @@ void pattern_editor_display_options(void)
 		create_button(options_widgets + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes_NULL, "Done", 3);
 	}
 
-	options_widgets[0].d.thumbbar.value = kbd_get_current_octave();
+	options_last_octave = kbd_get_current_octave();
+	options_widgets[0].d.thumbbar.value = options_last_octave;
 	options_widgets[1].d.thumbbar.value = skip_value;
 	options_widgets[2].d.thumbbar.value = row_highlight_minor;
 	options_widgets[3].d.thumbbar.value = row_highlight_major;
@@ -325,7 +331,11 @@ void pattern_editor_display_options(void)
 	dialog = dialog_create_custom(10, 18, 60, 26, options_widgets, 8, options_selected_widget,
 				      options_draw_const, NULL);
 	dialog->action_yes = options_close;
-	dialog->action_cancel = options_close;
+	if (status.flags & CLASSIC_MODE) {
+		dialog->action_cancel = options_close;
+	} else {
+		dialog->action_cancel = options_close_cancel;
+	}
 	dialog->data = dialog;
 }
 
