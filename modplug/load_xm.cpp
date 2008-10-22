@@ -599,7 +599,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 		{
 			MODCOMMAND *p = &pm[col + row*m_nChannels];
 			col++;
-			if (col >= chanlim) {
+			if (col > chanlim) {
 				col=0;
 				row++;
 			}
