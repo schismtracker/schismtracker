@@ -1881,14 +1881,11 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 		if (!xlate) continue;
 		for (chan = 0; chan < chan_width; chan++) {
 			if (chan + x > 64) break; /* defensive */
-			if (p_note[chan].note) {
+			if (VALIDNOTE(p_note[chan].note)) {
 				p_note[chan].note += xlate;
-				/* XXX check the code in transpose_notes. does that do what we want here?
-				   if so, could we make a macro out of it? (note this same if statement is
-				   also used a few more times below; search this file for 250) */
-				if (/*p_note[chan].note < 0 || */p_note[chan].note > 120
-				    && p_note[chan].note < 250)
+				if (!(VALIDNOTE(p_note[chan].note))) {
 					p_note[chan].note = 0;
+				}
 			}
 		}
 	}
@@ -2142,11 +2139,11 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 		for (chan = 0; chan < chan_width; chan++) {
 			if (memcmp(p_note + chan, &empty_note, sizeof(song_note)) == 0) {
 				p_note[chan] = c_note[chan];
-				if (p_note[chan].note) {
+				if (VALIDNOTE(p_note[chan].note)) {
 					p_note[chan].note += xlate;
-					if (/*p_note[chan].note < 0 || */p_note[chan].note > 120
-					    && p_note[chan].note < 250)
+					if (!VALIDNOTE(p_note[chan].note)) {
 						p_note[chan].note = 0;
+					}
 				}
 				if (clip) {
 					p_note[chan].instrument = song_get_current_instrument();
@@ -2201,10 +2198,12 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 				/* clipboard precedence */
 				if (c_note[chan].note != 0) {
 					p_note[chan].note = c_note[chan].note;
-					if (p_note[chan].note) p_note[chan].note += xlate;
-					if (/*p_note[chan].note < 0 ||*/p_note[chan].note > 120
-					    && p_note[chan].note < 250)
-						p_note[chan].note = 0;
+					if (VALIDNOTE(p_note[chan].note)) {
+						p_note[chan].note += xlate;
+						if (!VALIDNOTE(p_note[chan].note)) {
+							p_note[chan].note = 0;
+						}
+					}
 				}
 				if (c_note[chan].instrument != 0)
 					p_note[chan].instrument = c_note[chan].instrument;
@@ -2220,10 +2219,12 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 			} else {
 				if (p_note[chan].note == 0) {
 					p_note[chan].note = c_note[chan].note;
-					if (p_note[chan].note) p_note[chan].note += xlate;
-					if (/*p_note[chan].note < 0 || */p_note[chan].note > 120
-					    && p_note[chan].note < 250)
-						p_note[chan].note = 0;
+					if (VALIDNOTE(p_note[chan].note)) {
+						p_note[chan].note += xlate;
+						if (!VALIDNOTE(p_note[chan].note)) {
+							p_note[chan].note = 0;
+						}
+					}
 				}
 				if (p_note[chan].instrument == 0)
 					p_note[chan].instrument = c_note[chan].instrument;
