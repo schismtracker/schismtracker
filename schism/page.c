@@ -680,7 +680,7 @@ static int handle_key_global(struct key_event * k)
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
 				if (!k->state) {
 					if (status.dialog_type != DIALOG_NONE) {
-						dialog_destroy_all();
+						dialog_yes_NULL();
 						status.flags |= NEED_UPDATE;
 					} else {
 						_mp_finish(NULL);
