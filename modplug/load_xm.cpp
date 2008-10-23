@@ -545,7 +545,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 
 	if (!fp) return FALSE;
 
-	chanlim = GetHighestUsedChannel();
+	chanlim = GetHighestUsedChannel()+1;
 	if (chanlim < 4) chanlim = 4;
 
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
@@ -599,7 +599,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 		{
 			MODCOMMAND *p = &pm[col + row*m_nChannels];
 			col++;
-			if (col > chanlim) {
+			if (col >= chanlim) {
 				col=0;
 				row++;
 			}
