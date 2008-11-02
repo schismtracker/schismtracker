@@ -309,7 +309,6 @@ enum {
         NOTE_CUT = (254),       // '^^^' 
         NOTE_OFF = (255),       // '==='
 };
-#define VALIDNOTE(n)	(((n) < 120) || ((n) > 250))
 
 enum {
         VIB_SINE = (0),

@@ -1863,6 +1863,15 @@ static void pated_history_clear(void)
 		undo_history[i].snap_op_allocated = 0;
 	}
 }
+static void set_note_note(song_note *n, int a, int b)
+{
+	if (a > 0 && a < 250) {
+		a += b;
+		if (a <= 0 || a >= 250) a = 0;
+	}
+	n->note = a;
+}
+
 static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 {
 	song_note *pattern, *p_note;
@@ -1891,12 +1900,9 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 		if (!xlate) continue;
 		for (chan = 0; chan < chan_width; chan++) {
 			if (chan + x > 64) break; /* defensive */
-			if (VALIDNOTE(p_note[chan].note)) {
-				p_note[chan].note += xlate;
-				if (!(VALIDNOTE(p_note[chan].note))) {
-					p_note[chan].note = 0;
-				}
-			}
+			set_note_note(p_note+chan,
+					p_note[chan].note,
+					xlate);
 		}
 	}
 	pattern_selection_system_copyout();
@@ -2148,13 +2154,11 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 	for (row = 0; row < num_rows; row++) {
 		for (chan = 0; chan < chan_width; chan++) {
 			if (memcmp(p_note + chan, &empty_note, sizeof(song_note)) == 0) {
+
 				p_note[chan] = c_note[chan];
-				if (VALIDNOTE(p_note[chan].note)) {
-					p_note[chan].note += xlate;
-					if (!VALIDNOTE(p_note[chan].note)) {
-						p_note[chan].note = 0;
-					}
-				}
+				set_note_note(p_note+chan,
+						c_note[chan].note,
+						xlate);
 				if (clip) {
 					p_note[chan].instrument = song_get_current_instrument();
 					if (edit_copy_mask & MASK_VOLUME) {
@@ -2207,13 +2211,9 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 			if (prec) {
 				/* clipboard precedence */
 				if (c_note[chan].note != 0) {
-					p_note[chan].note = c_note[chan].note;
-					if (VALIDNOTE(p_note[chan].note)) {
-						p_note[chan].note += xlate;
-						if (!VALIDNOTE(p_note[chan].note)) {
-							p_note[chan].note = 0;
-						}
-					}
+					set_note_note(p_note+chan,
+							c_note[chan].note,
+							xlate);
 				}
 				if (c_note[chan].instrument != 0)
 					p_note[chan].instrument = c_note[chan].instrument;
@@ -2228,13 +2228,9 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 					p_note[chan].parameter = c_note[chan].parameter;
 			} else {
 				if (p_note[chan].note == 0) {
-					p_note[chan].note = c_note[chan].note;
-					if (VALIDNOTE(p_note[chan].note)) {
-						p_note[chan].note += xlate;
-						if (!VALIDNOTE(p_note[chan].note)) {
-							p_note[chan].note = 0;
-						}
-					}
+					set_note_note(p_note+chan,
+							c_note[chan].note,
+							xlate);
 				}
 				if (p_note[chan].instrument == 0)
 					p_note[chan].instrument = c_note[chan].instrument;
