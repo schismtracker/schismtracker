@@ -1871,9 +1871,8 @@ void video_screenshot(void)
 		log_appendf(4, "Cannot write to %s: %s",fname,
 				strerror(errno));
 	} else {
-		sprintf(dwbuf, "Wrote screenshot: %s",fname);
-		log_appendf(2, dwbuf);
-		status_text_flash(dwbuf);
+		log_appendf(2, "Wrote screenshot: %s",fname);
+		status_text_flash("Wrote screenshot: %s",fname);
 	}
 
 }
