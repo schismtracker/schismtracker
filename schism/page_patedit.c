@@ -3952,6 +3952,49 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 }
 
 static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
+static int pattern_editor_handle_key_default(struct key_event * k)
+{
+	/* bleah */
+	if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
+		if (!k->state && shift_selection.in_progress) {
+			shift_selection_end();
+		}
+	}
+
+	if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
+		if (k->state) return 0;
+		if ((status.flags & CLASSIC_MODE)
+				|| current_position != 4) {
+			set_previous_instrument();
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		/* fall through */
+	} else if (k->sym == SDLK_GREATER || k->sym == SDLK_QUOTE || k->sym == SDLK_QUOTEDBL) {
+		if (k->state) return 0;
+		if ((status.flags & CLASSIC_MODE)
+				|| current_position != 4) {
+			set_next_instrument();
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		/* fall through */
+	} else if (k->sym == SDLK_COMMA) {
+		if (k->state) return 0;
+		if (current_position > 1) {
+			edit_copy_mask ^= (1 << edit_pos_to_copy_mask[current_position]);
+			status.flags |= NEED_UPDATE;
+		}
+		return 1;
+	}
+	if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)
+			&& playback_tracing && k->is_repeat)
+		return 0;
+
+	if (!pattern_editor_insert(k))
+		return 0;
+	return -1;
+}
 static int pattern_editor_handle_key(struct key_event * k)
 {
 	int n, nx, v;
@@ -4109,12 +4152,6 @@ static int pattern_editor_handle_key(struct key_event * k)
 	}
 
 	switch (k->sym) {
-	case SDLK_l:
-		if (status.flags & CLASSIC_MODE) return 0;
-		if (k->state) return 1;
-		clipboard_copy(1);
-		break;
-
 	case SDLK_UP:
 		if (k->state) return 0;
 		channel_snap_back = -1;
@@ -4290,48 +4327,18 @@ static int pattern_editor_handle_key(struct key_event * k)
 			song_toggle_channel_mute(current_channel-1);
 			return 1;
 		}
-		/* fall through */
+		return pattern_editor_handle_key_default(k);
+	case SDLK_l:
+		if (k->mod & KMOD_SHIFT) {
+			if (status.flags & CLASSIC_MODE) return 0;
+			if (k->state) return 1;
+			clipboard_copy(1);
+			break;
+		}
+		return pattern_editor_handle_key_default(k);
+
 	default:
-		/* bleah */
-		if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
-			if (!k->state && shift_selection.in_progress) {
-				shift_selection_end();
-			}
-		}
-
-		if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
-			if (k->state) return 0;
-			if ((status.flags & CLASSIC_MODE)
-			|| current_position != 4) {
-				set_previous_instrument();
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			/* fall through */
-		} else if (k->sym == SDLK_GREATER || k->sym == SDLK_QUOTE || k->sym == SDLK_QUOTEDBL) {
-			if (k->state) return 0;
-			if ((status.flags & CLASSIC_MODE)
-			|| current_position != 4) {
-				set_next_instrument();
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			/* fall through */
-		} else if (k->sym == SDLK_COMMA) {
-			if (k->state) return 0;
-			if (current_position > 1) {
-				edit_copy_mask ^= (1 << edit_pos_to_copy_mask[current_position]);
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
-		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)
-		&& playback_tracing && k->is_repeat)
-			return 0;
-
-		if (!pattern_editor_insert(k))
-			return 0;
-		return -1;
+		return pattern_editor_handle_key_default(k);
 	}
 
 	status.flags |= NEED_UPDATE;
