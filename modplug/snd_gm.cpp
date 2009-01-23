@@ -92,24 +92,6 @@ static bool resetting = false;
 static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
 {
     if(!nbytes) return;
-    if((buf[0] & 0x80) && buf[0] == RunningStatus)
-        { ++buf; --nbytes; }
-    else
-    {
-#ifndef GM_DEBUG
-        RunningStatus = buf[0];
-#endif
-    }
-#ifdef GM_DEBUG
-    if(!resetting)
-    {
-        char Buf[2048],*t=Buf;
-        t += sprintf(t, "Sending:");
-        for(unsigned n=0; n<nbytes; ++n)
-            t += sprintf(t, " %02X", buf[n]);
-        fprintf(stderr, "%s\n", Buf);
-    }
-#endif
     mp->MidiSend(buf, nbytes, c, 0);
 }
 static void MPU_Ctrl(int c, int i, int v)
