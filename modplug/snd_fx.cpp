@@ -1072,7 +1072,7 @@ BOOL CSoundFile::ProcessEffects()
 		{
 		// Set Volume
 		case CMD_VOLUME:
-			if (!m_nTickCount)
+			if ((pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed)) break;
 			{
 				pChn->nVolume = (param < 64) ? param*4 : 256;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
@@ -1160,7 +1160,7 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Set Offset
 		case CMD_OFFSET:
-			if (m_nTickCount) break;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
 			if (param) pChn->nOldOffset = param; else param = pChn->nOldOffset;
 			param <<= 8;
 			param |= (UINT)(pChn->nOldHiOffset) << 16;
@@ -1191,7 +1191,8 @@ BOOL CSoundFile::ProcessEffects()
 		// Arpeggio
 		case CMD_ARPEGGIO:
 			pChn->nCommand = CMD_ARPEGGIO;
-			if ((m_nTickCount) || (!pChn->nPeriod) || (!pChn->nNote)) break;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			if ((!pChn->nPeriod) || (!pChn->nNote)) break;
 			if ((!param) && (!(m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT)))) break;
 			if (param) pChn->nArpeggio = param;
 			break;
@@ -1215,13 +1216,13 @@ BOOL CSoundFile::ProcessEffects()
 		// Tremor
 		case CMD_TREMOR:
 			pChn->nCommand = CMD_TREMOR;
-			if (m_nTickCount) break;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
 			if (param) pChn->nTremorParam = param;
 			break;
 
 		// Set Global Volume
 		case CMD_GLOBALVOLUME:
-			if (m_nTickCount) break;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
 			if (m_nType != MOD_TYPE_IT) param <<= 1;
 			if (param > 128) param = 128;
 			m_nGlobalVolume = param << 1;
@@ -1234,7 +1235,7 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Set 8-bit Panning
 		case CMD_PANNING8:
-			if (m_nTickCount) break;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
 			if (!(m_dwSongFlags & SONG_SURROUNDPAN)) pChn->dwFlags &= ~CHN_SURROUND;
 			if (m_nType & (MOD_TYPE_IT|MOD_TYPE_XM|MOD_TYPE_MT2))
 			{
@@ -1279,7 +1280,8 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Key Off
 		case CMD_KEYOFF:
-			if (!m_nTickCount) KeyOff(nChn);
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			KeyOff(nChn);
 			break;
 
 		// Extra-fine porta up/down
@@ -1299,7 +1301,7 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Set Channel Global Volume
 		case CMD_CHANNELVOLUME:
-			if (m_nTickCount) break;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
 			if (param <= 64)
 			{
 				pChn->nGlobalVol = param;
@@ -1342,7 +1344,7 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Set Envelope Position
 		case CMD_SETENVPOSITION:
-			if (!m_nTickCount)
+			if ((pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed))
 			{
 				pChn->nVolEnvPosition = param;
 				pChn->nPanEnvPosition = param;
@@ -1370,7 +1372,7 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Midi Controller
 		case CMD_MIDI:
-			if (m_nTickCount) break;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
 			if (param < 0x80)
 			{
 				ProcessMidiMacro(nChn, &m_MidiCfg.szMidiSFXExt[pChn->nActiveMacro << 5], param);
@@ -1831,7 +1833,7 @@ void CSoundFile::ExtendedMODCommands(UINT nChn, UINT param)
 	// E4x: Set Vibrato WaveForm
 	case 0x40:	pChn->nVibratoType = param & 0x07; break;
 	// E5x: Set FineTune
-	case 0x50:	if (m_nTickCount) break;
+	case 0x50:	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
 			pChn->nC4Speed = S3MFineTuneTable[param];
 			if (m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2))
 				pChn->nFineTune = param*2;
@@ -1843,7 +1845,9 @@ void CSoundFile::ExtendedMODCommands(UINT nChn, UINT param)
 	// E7x: Set Tremolo WaveForm
 	case 0x70:	pChn->nTremoloType = param & 0x07; break;
 	// E8x: Set 4-bit Panning
-	case 0x80:	if (!m_nTickCount) { pChn->nPan = (param << 4) + 8; pChn->dwFlags |= CHN_FASTVOLRAMP; } break;
+	case 0x80:	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			pChn->nPan = (param << 4) + 8; pChn->dwFlags |= CHN_FASTVOLRAMP;
+			break;
 	// E9x: Retrig
 	case 0x90:	RetrigNote(nChn, param); break;
 	// EAx: Fine Volume Up
@@ -1872,10 +1876,10 @@ void CSoundFile::ExtendedS3MCommands(UINT nChn, UINT param)
 	// S1x: Set Glissando Control
 	case 0x10:	pChn->dwFlags &= ~CHN_GLISSANDO; if (param) pChn->dwFlags |= CHN_GLISSANDO; break;
 	// S2x: Set FineTune
-	case 0x20:	if (m_nTickCount) break;
-				pChn->nC4Speed = S3MFineTuneTable[param & 0x0F];
-				pChn->nFineTune = MOD2XMFineTune(param);
-				if (pChn->nPeriod) pChn->nPeriod = GetPeriodFromNote(pChn->nNote, pChn->nFineTune, pChn->nC4Speed);
+	case 0x20:	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			pChn->nC4Speed = S3MFineTuneTable[param & 0x0F];
+			pChn->nFineTune = MOD2XMFineTune(param);
+			if (pChn->nPeriod) pChn->nPeriod = GetPeriodFromNote(pChn->nNote, pChn->nFineTune, pChn->nC4Speed);
 				break;
 	// S3x: Set Vibrato WaveForm
 	case 0x30:	pChn->nVibratoType = param & 0x07; break;
@@ -1886,64 +1890,62 @@ void CSoundFile::ExtendedS3MCommands(UINT nChn, UINT param)
 	// S6x: Pattern Delay for x frames
 	case 0x60:	m_nFrameDelay = param; break;
 	// S7x: Envelope Control
-	case 0x70:	if (m_nTickCount) break;
-				switch(param)
+	case 0x70:	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			switch(param)
+			{
+			case 0:
+			case 1:
+			case 2:
 				{
-				case 0:
-				case 1:
-				case 2:
+					MODCHANNEL *bkp = &Chn[m_nChannels];
+					for (UINT i=m_nChannels; i<MAX_CHANNELS; i++, bkp++)
 					{
-						MODCHANNEL *bkp = &Chn[m_nChannels];
-						for (UINT i=m_nChannels; i<MAX_CHANNELS; i++, bkp++)
+						if (bkp->nMasterChn == nChn+1)
 						{
-							if (bkp->nMasterChn == nChn+1)
-							{
-								if (param == 1) KeyOff(i); else
-								if (param == 2) bkp->dwFlags |= CHN_NOTEFADE; else
-									{ bkp->dwFlags |= CHN_NOTEFADE; bkp->nFadeOutVol = 0; }
-							}
+							if (param == 1) KeyOff(i); else
+							if (param == 2) bkp->dwFlags |= CHN_NOTEFADE; else
+								{ bkp->dwFlags |= CHN_NOTEFADE; bkp->nFadeOutVol = 0; }
 						}
 					}
-					break;
-				case 3:		pChn->nNNA = NNA_NOTECUT; break;
-				case 4:		pChn->nNNA = NNA_CONTINUE; break;
-				case 5:		pChn->nNNA = NNA_NOTEOFF; break;
-				case 6:		pChn->nNNA = NNA_NOTEFADE; break;
-				case 7:		pChn->dwFlags &= ~CHN_VOLENV; break;
-				case 8:		pChn->dwFlags |= CHN_VOLENV; break;
-				case 9:		pChn->dwFlags &= ~CHN_PANENV; break;
-				case 10:	pChn->dwFlags |= CHN_PANENV; break;
-				case 11:	pChn->dwFlags &= ~CHN_PITCHENV; break;
-				case 12:	pChn->dwFlags |= CHN_PITCHENV; break;
 				}
 				break;
+			case 3:		pChn->nNNA = NNA_NOTECUT; break;
+			case 4:		pChn->nNNA = NNA_CONTINUE; break;
+			case 5:		pChn->nNNA = NNA_NOTEOFF; break;
+			case 6:		pChn->nNNA = NNA_NOTEFADE; break;
+			case 7:		pChn->dwFlags &= ~CHN_VOLENV; break;
+			case 8:		pChn->dwFlags |= CHN_VOLENV; break;
+			case 9:		pChn->dwFlags &= ~CHN_PANENV; break;
+			case 10:	pChn->dwFlags |= CHN_PANENV; break;
+			case 11:	pChn->dwFlags &= ~CHN_PITCHENV; break;
+			case 12:	pChn->dwFlags |= CHN_PITCHENV; break;
+			}
+			break;
 	// S8x: Set 4-bit Panning
 	case 0x80:
 			pChn->dwFlags &= ~CHN_SURROUND;
-			if (!m_nTickCount) {
-				pChn->nPan = (param << 4) + 8;
-				pChn->dwFlags |= CHN_FASTVOLRAMP;
-			}
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			pChn->nPan = (param << 4) + 8;
+			pChn->dwFlags |= CHN_FASTVOLRAMP;
 			break;
 	// S9x: Set Surround
 	case 0x90:	ExtendedChannelEffect(pChn, param & 0x0F); break;
 	// SAx: Set 64k Offset
-	case 0xA0:	if (!m_nTickCount)
+	case 0xA0:	
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			if (m_nType & MOD_TYPE_S3M) {
+				pChn->nPan = ((param ^ 8) << 4) + 8;
+				pChn->dwFlags &= ~CHN_SURROUND;
+				pChn->dwFlags |= CHN_FASTVOLRAMP;
+			} else {
+				pChn->nOldHiOffset = param;
+				if ((pChn->nRowNote) && (pChn->nRowNote < 0x80))
 				{
-					if (m_nType & MOD_TYPE_S3M) {
-						pChn->nPan = ((param ^ 8) << 4) + 8;
-						pChn->dwFlags &= ~CHN_SURROUND;
-						pChn->dwFlags |= CHN_FASTVOLRAMP;
-					} else {
-						pChn->nOldHiOffset = param;
-						if ((pChn->nRowNote) && (pChn->nRowNote < 0x80))
-						{
-							DWORD pos = param << 16;
-							if (pos < pChn->nLength) pChn->nPos = pos;
-						}
-					}
+					DWORD pos = param << 16;
+					if (pos < pChn->nLength) pChn->nPos = pos;
 				}
-				break;
+			}
+			break;
 	// SBx: Pattern Loop
 	// SCx: Note Cut
 	case 0xC0:	NoteCut(nChn, param); break;
@@ -1960,7 +1962,7 @@ void CSoundFile::ExtendedChannelEffect(MODCHANNEL *pChn, UINT param)
 //------------------------------------------------------------------
 {
 	// S9x and X9x commands (S3M/XM/IT only)
-	if (m_nTickCount) return;
+	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) return;
 	switch(param & 0x0F)
 	{
         // S91: Surround On
