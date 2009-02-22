@@ -1537,18 +1537,15 @@ UINT CSoundFile::CreateStereoMix(int count)
 			if ((LONG)nrampsamples > pChannel->nRampLength) nrampsamples = pChannel->nRampLength;
 		}
 		
-		INSTRUMENTHEADER *penv =
-			(m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChannel->pHeader  : NULL;
 		nSmpCount = 1;
 		/* Figure out the number of remaining samples,
 		 * unless we're in AdLib or MIDI mode (to prevent
 		 * artificial KeyOffs)
 		 */
-		if (!(pChannel->dwFlags & CHN_ADLIB)
-		&&  !(penv && penv->nMidiChannelMask))
+		if (!(pChannel->dwFlags & CHN_ADLIB))
 		{
-       		nSmpCount = GetSampleCount(pChannel, nrampsamples);
-    	}
+			nSmpCount = GetSampleCount(pChannel, nrampsamples);
+		}
 		if (nSmpCount <= 0)
 		{
 			// Stopping the channel
@@ -1581,9 +1578,8 @@ UINT CSoundFile::CreateStereoMix(int count)
 				pChannel->topnote_offset = ((pChannel->nPos << 16) | pChannel->nPosLo) % pChannel->nLength;
 			}
 
-			/* Mix the stream, unless we're in AdLib or MIDI mode */
-			if (!(pChannel->dwFlags & CHN_ADLIB)
-			&&  !(penv && penv->nMidiChannelMask))
+			/* Mix the stream, unless we're in AdLib mode */
+			if (!(pChannel->dwFlags & CHN_ADLIB))
 			{
 				// Choose function for mixing
 				LPMIXINTERFACE pMixFunc;
