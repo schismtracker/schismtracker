@@ -460,13 +460,6 @@ void CSoundFile::InstrumentChange(MODCHANNEL *pChn, UINT instr, BOOL bPorta, BOO
 	pChn->nLoopEnd = psmp->nLoopEnd;
 	pChn->nC4Speed = psmp->nC4Speed;
 	
-	/* In MIDI mode, ignore the C4speed */
-	if(penv && penv->nMidiChannelMask)
-	{
-	    pChn->nC4Speed = 8363;
-	    pChn->nLength  = 1;
-	}
-	
 	pChn->pSample = psmp->pSample;
 	pChn->nTranspose = psmp->RelativeTone;
 	pChn->nFineTune = psmp->nFineTune;
