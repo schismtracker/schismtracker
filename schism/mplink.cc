@@ -862,6 +862,14 @@ void song_wipe_instrument(int n)
 	song_unlock_audio();
 }
 
+void song_delete_sample(int n)
+{
+	song_lock_audio();
+	mp->DestroySample(n);
+	memset(mp->Ins+n, 0, sizeof(MODINSTRUMENT));
+	memset(mp->m_szNames[n], 0, 32);
+	song_unlock_audio();
+}
 void song_delete_instrument(int n)
 {
 	unsigned long i;
