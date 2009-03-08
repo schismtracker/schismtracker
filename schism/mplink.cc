@@ -596,6 +596,11 @@ unsigned int song_sample_get_c5speed(int n)
 	return smp->speed;
 }
 
+void song_sample_set_c5speed_finetune(int n, int relnote, int finetune)
+{
+	song_sample_set_c5speed(n,
+		CSoundFile::TransposeToFrequency(relnote, finetune));
+}
 void song_sample_set_c5speed(int n, unsigned int spd)
 {
 	song_sample *smp;
