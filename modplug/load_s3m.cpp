@@ -465,26 +465,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		if(len < 2 || (nInd + (len-2) > dwMemLength)) continue;
 		len -= 2;
 		
-		/* Figure out how many rows this pattern has (normal is 64, but we never know) */
-		PatternSize[iPat] = 0;
-		for(UINT j=0; j<len; )
-		{
-			BYTE b = src[j++];
-			if(!b)
-				++PatternSize[iPat];
-			else
-			{
-				if(b&0x20) j+=2;
-				if(b&0x40) j+=1;
-				if(b&0x80) j+=2;
-			}
-		}
-		
-		PatternAllocSize[iPat] = PatternSize[iPat];
-		
-		if(PatternSize[iPat] != 64)
-			log_appendf(4, "Warning: Pattern %u has %u rows", iPat, PatternSize[iPat]);
-
+		PatternAllocSize[iPat] = PatternSize[iPat] = 64;
 		if ((Patterns[iPat] = AllocatePattern(PatternSize[iPat], m_nChannels)) == NULL)
 		{
 			continue;
@@ -497,7 +478,11 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 			BYTE b = src[j++];
 			if (!b)
 			{
-				if (++row >= PatternSize[iPat]) break;
+				if (++row >= PatternSize[iPat]) {
+					if (j != len)
+						log_appendf(4, "Warning: Pattern %u is too long (has %u extra bytes)", iPat, len-j);
+					break;
+				}
 			} else
 			{
 				UINT chn = b & 0x1F;
@@ -782,10 +767,13 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 		{
 			len = 2;
 			MODCOMMAND *p = Patterns[i];
-			if(PatternSize[i] != 64)
-				log_appendf(4, "Warning: Pattern %u has %u rows", i, PatternSize[i]);
+			if(PatternSize[i] < 64)
+				log_appendf(4, "Warning: Pattern %u has %u rows, padding", i, PatternSize[i]);
+			else if (PatternSize[i] > 64)
+				log_appendf(4, "Warning: Pattern %u has %u rows, truncating", i, PatternSize[i]);
 			
-			for (int row=0; row<PatternSize[i]; row++)
+			int row;
+			for (row=0; row<PatternSize[i] && row < 64; row++)
 			{
 				for (UINT j=0; j < 32 && j<chanlim; j++)
 				{
@@ -874,6 +862,12 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 						if (len > sizeof(buffer) - 20) break;
 					}
 				}
+				buffer[len++] = 0;
+				if (len > sizeof(buffer) - 20) break;
+			}
+			/* pad to 64 rows */
+			for (; row<64; row++)
+			{
 				buffer[len++] = 0;
 				if (len > sizeof(buffer) - 20) break;
 			}
