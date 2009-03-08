@@ -596,6 +596,7 @@ void song_remove_instrument_slot(int n);
 
 void song_delete_instrument(int n);
 void song_wipe_instrument(int n);
+void song_delete_sample(int n);
 
 int song_instrument_is_empty(int n);
 void song_init_instruments(int n); /* -1 for all */

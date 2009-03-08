@@ -93,6 +93,17 @@ READ_INFO(scri); LOAD_SAMPLE(scri);
 #undef LOAD_INSTRUMENT
 
 /* --------------------------------------------------------------------------------------------------------- */
+struct instrumentloader {
+	song_instrument *inst;
+	int sample_map[SCHISM_MAX_SAMPLES];
+	int basex, slot, expect_samples;
+};
+song_instrument *instrument_loader_init(struct instrumentloader *ii, int slot);
+int instrument_loader_abort(struct instrumentloader *ii);
+int instrument_loader_sample(struct instrumentloader *ii, int slot);
+
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 /* save the sample's data in little- or big- endian byte order (defined in audio_loadsave.cc)
 

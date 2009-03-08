@@ -1,7 +1,7 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
- * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2005-2009 Mrs. Brisby <mrs.brisby@nimh.org>
  * URL: http://rigelseven.com/schism/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -49,19 +49,18 @@ int fmt_iti_read_info(dmoz_file_t *file, const byte *data, size_t length)
 int fmt_iti_load_instrument(const byte *data, size_t length, int slot)
 {
 	ITINSTRUMENT iti;
+	struct instrumentloader ii;
 	song_instrument *g;
-	int need_inst[SCHISM_MAX_SAMPLES];
-	int expect_samples = 0;
-	int x, j, basex, nm;
 	unsigned int q;
 	char *np;
 	song_sample *smp;
+	int j;
 
 	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return false;
 
 	memcpy(&iti, data, sizeof(iti));
 
-	g = song_get_instrument(slot, NULL);
+	g = instrument_loader_init(&ii, slot);
 	strncpy((char *)g->filename, (char *)iti.filename, 12);
 
 	g->nna = iti.nna;
@@ -87,36 +86,9 @@ int fmt_iti_load_instrument(const byte *data, size_t length, int slot)
 	                     :                (1 << (iti.mch-1));
 	g->midi_program = iti.mpr;
 	g->midi_bank = bswapLE16(iti.mbank);
-	
-	memset(need_inst, 0, sizeof(need_inst));
 
-	basex = 1;
 	for (j = 0; j < 120; j++) {
-		nm = iti.keyboard[2*j + 1];
-		if (!nm || nm >= SCHISM_MAX_SAMPLES) {
-			/* leave it alone */
-			nm = 0;
-		} else if (need_inst[nm]) {
-			/* already allocated */
-			nm = need_inst[nm];
-
-		} else {
-			for (x = basex; x < SCHISM_MAX_SAMPLES; x++) {
-				if (!song_sample_is_empty(x-1)) continue;
-				break;
-			}
-			if (x >= SCHISM_MAX_SAMPLES) {
-				/* err... */
-				status_text_flash("Too many samples");
-				nm = 0;
-			} else {
-				need_inst[nm] = x;
-				nm = x;
-				basex = x + 1;
-				expect_samples++;
-			}
-		}
-		g->sample_map[j] = nm;
+		g->sample_map[j] = instrument_loader_sample(&ii, iti.keyboard[2*j + 1]);
 		g->note_map[j] = iti.keyboard[2 * j]+1;
 	}
 	if (iti.volenv.flags & 1) g->flags |= ENV_VOLUME;
@@ -164,12 +136,12 @@ int fmt_iti_load_instrument(const byte *data, size_t length, int slot)
 
 	/* okay, on to samples */
 	q = 554;
-	for (j = 0; j < expect_samples; j++) {
-		smp = song_get_sample(need_inst[j+1], &np);
+	for (j = 0; j < ii.expect_samples; j++) {
+		smp = song_get_sample(ii.sample_map[j+1], &np);
 		if (!smp) break;
 		if (!load_its_sample(data+q, data, length, smp, np)) {
 			status_text_flash("Could not load sample %d from ITI file", j);
-			return false;
+			return instrument_loader_abort(&ii);
 		}
 		q += 80; /* length if ITS header */
 	}
