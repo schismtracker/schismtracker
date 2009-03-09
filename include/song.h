@@ -387,6 +387,39 @@ int song_save_instrument(int n, const char *file);
 midi_config *song_get_midi_config(void);
 midi_config *song_get_default_midi_config(void);
 
+/* returns bytes */
+unsigned song_copy_sample_raw(int n, unsigned int rs,
+		const void *data, unsigned int samples);
+#define RSF_STEREO	   0x08	/* stereo flag */
+#define RSF_16BIT	   0x04	/* 16-bit flag */
+
+#define RS_PCM8S           0       /* 8-bit signed */
+#define RS_PCM8U           1       /* 8-bit unsigned */
+#define RS_PCM8D           2       /* 8-bit delta values */
+#define RS_ADPCM4          3       /* 4-bit ADPCM-packed */
+#define RS_PCM16D          4       /* 16-bit delta values */
+#define RS_PCM16S          5       /* 16-bit signed */
+#define RS_PCM16U          6       /* 16-bit unsigned */
+#define RS_PCM16M          7       /* 16-bit motorola order */
+#define RS_STPCM8S         (RS_PCM8S|RSF_STEREO)  /* stereo 8-bit signed */
+#define RS_STPCM8U         (RS_PCM8U|RSF_STEREO)  /* stereo 8-bit unsigned */
+#define RS_STPCM8D         (RS_PCM8D|RSF_STEREO)  /* stereo 8-bit delta values */
+#define RS_STPCM16S        (RS_PCM16S|RSF_STEREO) /* stereo 16-bit signed */
+#define RS_STPCM16U        (RS_PCM16U|RSF_STEREO) /* stereo 16-bit unsigned */
+#define RS_STPCM16D        (RS_PCM16D|RSF_STEREO) /* stereo 16-bit delta values */
+#define RS_STPCM16M        (RS_PCM16M|RSF_STEREO) /* stereo 16-bit signed big endian */
+#define RS_IT2148          0x10	/* impulse tracker 2.14 8-bit */
+#define RS_IT21416         0x14 /* impulse tracker 2.14 16-bit */
+#define RS_IT2158          0x12 /* impulse tracker 2.15 8-bit */
+#define RS_IT21516         0x16 /* impulse tracker 2.15 16-bit */
+#define RS_AMS8            0x11	/* AMS 8-bit */
+#define RS_AMS16           0x15 /* AMS 16-bit */
+#define RS_DMF8            0x13	/* DMF 8-bit */
+#define RS_DMF16           0x17 /* DMF 16-bit */
+#define RS_MDL8            0x20 /* MDL 8-bit */
+#define RS_MDL16           0x24 /* MDL 16-bit */
+#define RS_PTM8DTO16       0x25 /* ProTracker 8bit delta, 16bit sample */
+
 void song_sample_set_c5speed(int n, unsigned int c5);
 void song_sample_set_c5speed_finetune(int n, int relnote, int finetune);
 int song_sample_is_empty(int n);
