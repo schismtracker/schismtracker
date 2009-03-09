@@ -892,3 +892,8 @@ void song_delete_instrument(int n)
 	song_unlock_audio();
 	song_wipe_instrument(n);
 }
+unsigned song_copy_sample_raw(int n, unsigned int rs, const void *data, unsigned int samples)
+{
+	return mp->ReadSample(mp->Ins+n, rs, (const char *)data, samples);
+}
+
