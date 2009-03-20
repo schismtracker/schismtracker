@@ -40,10 +40,11 @@ int fmt_xi_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	if (length <= 86) return false;
 	if (memcmp(data, "Extended Instrument: ", 21) != 0) return false;
 	if (data[43] != 26) return false;
-	if (data[42] != 0) return false;
 	if (memcmp(data+44, "FastTracker v", 13) != 0) return false;
 	file->description = "FastTracker Instrument";
-	file->title = strdup(((char*)data)+21);
+	file->title = mem_alloc(24);
+	memcpy(file->title, ((char*)data)+21, 22);
+	file->title[22]='\0';
 	file->type = TYPE_INST_XI;
 	return true;
 }
