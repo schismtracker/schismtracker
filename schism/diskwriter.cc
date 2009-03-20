@@ -481,6 +481,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 extern unsigned int samples_played; /* mplink */
 int diskwriter_sync(void)
 {
+	unsigned int ct;
 	int n;
 
 	if (dw && mp->_multi_out_raw) {
@@ -508,11 +509,22 @@ int diskwriter_sync(void)
 		return fp_ok ? DW_SYNC_DONE : DW_SYNC_ERROR;
 	}
 
-	n = (int)(((double)song_get_current_time() * 100.0) / current_song_len);
+	ct = song_get_current_time();
+	n = (int)(((double)ct * 100.0) / current_song_len);
 	if (mp->_multi_out_raw && dw->channels == 1) n += 50;
 	diskwriter_dialog_progress(n);
 
-	// add status dialog
+	// estimate bytes remaining
+	n = (dw->rate * dw->channels * dw->bits) / 8;
+	n = (current_song_len - ct) * n;
+	if (n > (sizeof(diskbuf)*2)) {
+		// go big
+		n = sizeof(diskbuf);
+	} else {
+		// smallest possible fragment; near end
+		n = (dw->bits * dw->channels) / 8;
+	}
+
 	n = mp->Read(diskbuf, sizeof(diskbuf));
 	samples_played += n;
 
