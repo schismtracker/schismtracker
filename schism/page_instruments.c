@@ -1401,6 +1401,8 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int
 
         default:
 		if (!k->state) return 0;
+		if (k->orig_sym == SDLK_KP_MULTIPLY) return 0;
+
 		n = numeric_key_event(k, 0);
 		if (n > -1) {
 			if (k->mod & KMOD_ALT) {
