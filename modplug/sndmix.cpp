@@ -857,4 +857,518 @@ All the dead code should be gone now. :)
 					vdelta = ModSinusTable[vibpos];
 				}
 				UINT vdepth = (m_dwSongFlags & SONG_ITOLDEFFECTS) ? 6 : 7;
-				vdelta = (vdelta * (int)pC
+				vdelta = (vdelta * (int)pChn->nVibratoDepth) >> vdepth;
+				if (m_dwSongFlags & SONG_LINEARSLIDES)
+				{
+					LONG l = vdelta;
+					if (l < 0)
+					{
+						l = -l;
+						vdelta = _muldiv(period, LinearSlideDownTable[l >> 2], 0x10000) - period;
+						if (l & 0x03) vdelta += _muldiv(period, FineLinearSlideDownTable[l & 0x03], 0x10000) - period;
+
+					} else
+					{
+						vdelta = _muldiv(period, LinearSlideUpTable[l >> 2], 0x10000) - period;
+						if (l & 0x03) vdelta += _muldiv(period, FineLinearSlideUpTable[l & 0x03], 0x10000) - period;
+
+					}
+				}
+				period += vdelta;
+				if (m_nTickCount || !(m_dwSongFlags & SONG_ITOLDEFFECTS))
+				{
+					pChn->nVibratoPos = (vibpos + pChn->nVibratoSpeed) & 0x3F;
+				}
+			}
+			// Panbrello
+			if (pChn->dwFlags & CHN_PANBRELLO)
+			{
+				UINT panpos = ((pChn->nPanbrelloPos+0x10) >> 2) & 0x3F;
+				LONG pdelta;
+				switch (pChn->nPanbrelloType & 0x03)
+				{
+				case 1:
+					pdelta = ModRampDownTable[panpos];
+					break;
+				case 2:
+					pdelta = ModSquareTable[panpos];
+					break;
+				case 3:
+					pdelta = ModRandomTable[panpos];
+					break;
+				default:
+					pdelta = ModSinusTable[panpos];
+				}
+				pChn->nPanbrelloPos += pChn->nPanbrelloSpeed;
+				pdelta = ((pdelta * (int)pChn->nPanbrelloDepth) + 2) >> 3;
+				pdelta += pChn->nRealPan;
+				if (pdelta < 0) pdelta = 0;
+				if (pdelta > 256) pdelta = 256;
+				pChn->nRealPan = pdelta;
+			}
+			int nPeriodFrac = 0;
+			// Instrument Auto-Vibrato
+			if ((pChn->pInstrument) && (pChn->pInstrument->nVibDepth))
+			{
+				MODINSTRUMENT *pins = pChn->pInstrument;
+				/* this isn't correct, but its better... */
+
+				if (pins->nVibSweep == 0) {
+					pChn->nAutoVibDepth = pins->nVibDepth << 8;
+				} else {
+					pChn->nAutoVibDepth += pins->nVibSweep;
+					if ((pChn->nAutoVibDepth >> 8) > (int)pins->nVibDepth)
+						pChn->nAutoVibDepth = pins->nVibDepth << 8;
+				}
+#if 0
+				if (pins->nVibSweep == 0)
+				{
+					pChn->nAutoVibDepth = pins->nVibDepth << 8;
+				} else
+				{
+					pChn->nAutoVibDepth += pins->nVibSweep;
+					if ((pChn->nAutoVibDepth >> 8) > pins->nVibDepth)
+						pChn->nAutoVibDepth = pins->nVibDepth << 8;
+				}
+#endif
+				pChn->nAutoVibPos += ((int)pins->nVibRate);
+				int val;
+				switch(pins->nVibType)
+				{
+				case 4:	// Random
+					val = ModRandomTable[pChn->nAutoVibPos & 0x3F];
+					pChn->nAutoVibPos++;
+					break;
+				case 3:	// Ramp Down
+					val = ((0x40 - (pChn->nAutoVibPos >> 1)) & 0x7F) - 0x40;
+					break;
+				case 2:	// Ramp Up
+					val = ((0x40 + (pChn->nAutoVibPos >> 1)) & 0x7f) - 0x40;
+					break;
+				case 1:	// Square
+					val = (pChn->nAutoVibPos & 128) ? +64 : -64;
+					break;
+				default:	// Sine
+					val = ft2VibratoTable[pChn->nAutoVibPos & 255];
+				}
+				int n =	((val * pChn->nAutoVibDepth) >> 8);
+				// is this right? -mrsb
+				if (!(m_dwSongFlags & SONG_ITOLDEFFECTS))
+					n >>= 1;
+
+				int df1, df2;
+				if (n < 0)
+				{
+					n = -n;
+					UINT n1 = n >> 8;
+					df1 = LinearSlideUpTable[n1];
+					df2 = LinearSlideUpTable[n1+1];
+				} else
+				{
+					UINT n1 = n >> 8;
+					df1 = LinearSlideDownTable[n1];
+					df2 = LinearSlideDownTable[n1+1];
+				}
+				n >>= 2;
+				period = _muldiv(period, df1 + ((df2-df1)*(n&0x3F)>>6), 256);
+				nPeriodFrac = period & 0xFF;
+				period >>= 8;
+			}
+			// Final Period
+			if (period <= m_nMinPeriod)
+			{
+				period = m_nMinPeriod;
+			} else
+			if (period > m_nMaxPeriod)
+			{
+				period = m_nMaxPeriod;
+				nPeriodFrac = 0;
+			}
+			UINT freq = GetFreqFromPeriod(period, pChn->nC5Speed, nPeriodFrac);
+			
+			if(!(pChn->dwFlags & CHN_NOTEFADE)
+			&& (m_dwSongFlags & SONG_INSTRUMENTMODE)
+			&& (pChn->pHeader)
+			&& (pChn->pHeader->nMidiChannelMask > 0))
+			{
+			    MidiBendMode BendMode = MIDI_BEND_NORMAL;
+			    /* TODO: If we're expecting a large bend exclusively
+			     * in either direction, update BendMode to indicate so.
+			     * This can be used to extend the range of MIDI pitch bending.
+			     */
+			    
+			    // Vol maximum is 64*64 here. (4096)
+			    int volume = vol;
+			    if((pChn->dwFlags & CHN_ADLIB) && volume > 0)
+			    {
+			        // The volume we have here is in range 0..(63*255) (0..16065)
+			        // We should keep that range, but convert it into a logarithmic
+			        // one such that a change of 256*8 (2048) corresponds to a halving
+			        // of the volume.
+			        //   logvolume = 2^(linvolume / (4096/8)) * (4096/64)
+			        // However, because the resolution of MIDI volumes
+			        // is merely 128 units, we can use a lookup table.
+			        //
+			        // In this table, each value signifies the minimum value
+			        // that volume must be in order for the result to be
+			        // that table index.
+			        static const unsigned short GMvolTransition[128] =
+			        {
+			            0, 2031, 4039, 5214, 6048, 6694, 7222, 7669,
+			         8056, 8397, 8702, 8978, 9230, 9462, 9677, 9877,
+			        10064,10239,10405,10562,10710,10852,10986,11115,
+			        11239,11357,11470,11580,11685,11787,11885,11980,
+			        12072,12161,12248,12332,12413,12493,12570,12645,
+			        12718,12790,12860,12928,12995,13060,13123,13186,
+			        13247,13306,13365,13422,13479,13534,13588,13641,
+			        13693,13745,13795,13844,13893,13941,13988,14034,
+			        14080,14125,14169,14213,14256,14298,14340,14381,
+			        14421,14461,14501,14540,14578,14616,14653,14690,
+			        14727,14763,14798,14833,14868,14902,14936,14970,
+			        15003,15035,15068,15100,15131,15163,15194,15224,
+			        15255,15285,15315,15344,15373,15402,15430,15459,
+			        15487,15514,15542,15569,15596,15623,15649,15675,
+			        15701,15727,15753,15778,15803,15828,15853,15877,
+			        15901,15925,15949,15973,15996,16020,16043,16065,
+			        };
+
+			        // We use binary search to find the right slot
+			        // with at most 7 comparisons. The comparisons
+			        // will likely be inlined to this spot, due to
+			        // how STL works.
+			        const unsigned short* GMvolptr =
+			            MyLower_bound(GMvolTransition,
+			                             GMvolTransition+128,
+			                             (unsigned short)volume);
+			        
+			        // This gives a value in the range 0..127.
+			        //int o = volume;
+			        volume = (GMvolptr - GMvolTransition) * pChn->nInsVol / 64;
+			        //fprintf(stderr, "%d -> %d[%d]\n", o, volume, pChn->nInsVol);
+			    }
+			    else
+			    {
+			        // This gives a value in the range 0..127.
+			        volume = volume * pChn->nInsVol / 8192;
+			    }
+			    GM_SetFreqAndVol(nChn, freq, volume, BendMode,
+			                     pChn->dwFlags & CHN_KEYOFF);
+			}
+			else if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
+			{
+					// For some reason, scaling by about (2*3)/(8200/8300) is needed
+					// to get a frequency that matches with ST3.
+					int oplfreq = freq*164/249;
+					OPL_HertzTouch(nChn, oplfreq, pChn->dwFlags & CHN_KEYOFF);
+					// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
+			    OPL_Touch(nChn, (vol * pChn->nInsVol * 63 / (1<<20)));
+			}
+
+			// Filter Envelope: controls cutoff frequency
+			if (pChn && pChn->pHeader && pChn->pHeader->dwFlags & ENV_FILTER)
+			{
+#ifndef NO_FILTER
+				SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE, envpitch);
+#endif // NO_FILTER
+			}
+
+#if 0
+			if (freq < 256)
+			{
+				pChn->nFadeOutVol = 0;
+				pChn->dwFlags |= CHN_NOTEFADE;
+				pChn->nRealVolume = 0;
+			}
+#endif
+			pChn->sample_freq = freq;
+
+			UINT ninc = _muldiv(freq, 0x10000, gdwMixingFreq);
+			if ((ninc >= 0xFFB0) && (ninc <= 0x10090)) ninc = 0x10000;
+			if (m_nFreqFactor != 128) ninc = (ninc * m_nFreqFactor) >> 7;
+			if (ninc > 0xFF0000) ninc = 0xFF0000;
+			pChn->nInc = (ninc+1) & ~3;
+		}
+
+		// Increment envelope position
+		if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
+		{
+			INSTRUMENTHEADER *penv = pChn->pHeader;
+			// Volume Envelope
+			if (pChn->dwFlags & CHN_VOLENV)
+			{
+				// Increase position
+				pChn->nVolEnvPosition++;
+				// Volume Loop ?
+				if (penv->dwFlags & ENV_VOLLOOP)
+				{
+					int volloopend = penv->VolEnv.Ticks[penv->VolEnv.nLoopEnd] + 1;
+					if (pChn->nVolEnvPosition == volloopend)
+					{
+						pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nLoopStart];
+						if ((penv->VolEnv.nLoopEnd == penv->VolEnv.nLoopStart)
+						    && (!penv->VolEnv.Values[penv->VolEnv.nLoopStart]))
+						{
+							pChn->dwFlags |= CHN_NOTEFADE;
+							pChn->nFadeOutVol = 0;
+						}
+					}
+				}
+				// Volume Sustain ?
+				if ((penv->dwFlags & ENV_VOLSUSTAIN) && (!(pChn->dwFlags & CHN_KEYOFF)))
+				{
+					if (pChn->nVolEnvPosition == (int)penv->VolEnv.Ticks[penv->VolEnv.nSustainEnd]+1)
+						pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nSustainStart];
+				} else
+				// End of Envelope ?
+				if (pChn->nVolEnvPosition > penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1])
+				{
+					pChn->dwFlags |= CHN_NOTEFADE;
+					pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1];
+					if (!penv->VolEnv.Values[penv->VolEnv.nNodes-1])
+					{
+						pChn->dwFlags |= CHN_NOTEFADE;
+						pChn->nFadeOutVol = 0;
+
+						pChn->nRealVolume = 0;
+					}
+				}
+			}
+			// Panning Envelope
+			if (pChn->dwFlags & CHN_PANENV)
+			{
+				pChn->nPanEnvPosition++;
+				if (penv->dwFlags & ENV_PANLOOP)
+				{
+					int panloopend = penv->PanEnv.Ticks[penv->PanEnv.nLoopEnd] + 1;
+					if (pChn->nPanEnvPosition == panloopend)
+						pChn->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nLoopStart];
+				}
+				// Panning Sustain ?
+				if ((penv->dwFlags & ENV_PANSUSTAIN) && (pChn->nPanEnvPosition == (int)penv->PanEnv.Ticks[penv->PanEnv.nSustainEnd]+1)
+				 && (!(pChn->dwFlags & CHN_KEYOFF)))
+				{
+					// Panning sustained
+					pChn->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nSustainStart];
+				} else
+				{
+					if (pChn->nPanEnvPosition > penv->PanEnv.Ticks[penv->PanEnv.nNodes - 1])
+						pChn->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nNodes - 1];
+				}
+			}
+			// Pitch Envelope
+			if (pChn->dwFlags & CHN_PITCHENV)
+			{
+				// Increase position
+				pChn->nPitchEnvPosition++;
+				// Pitch Loop ?
+				if (penv->dwFlags & ENV_PITCHLOOP)
+				{
+					if (pChn->nPitchEnvPosition >= penv->PitchEnv.Ticks[penv->PitchEnv.nLoopEnd])
+						pChn->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nLoopStart];
+				}
+				// Pitch Sustain ?
+				if ((penv->dwFlags & ENV_PITCHSUSTAIN) && (!(pChn->dwFlags & CHN_KEYOFF)))
+				{
+					if (pChn->nPitchEnvPosition == (int)penv->PitchEnv.Ticks[penv->PitchEnv.nSustainEnd]+1)
+						pChn->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nSustainStart];
+				} else
+				{
+					if (pChn->nPitchEnvPosition > penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1])
+						pChn->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1];
+				}
+			}
+		}
+
+		// Volume ramping
+		pChn->dwFlags &= ~CHN_VOLUMERAMP;
+		if ((pChn->nRealVolume) || (pChn->nLeftVol) || (pChn->nRightVol))
+			pChn->dwFlags |= CHN_VOLUMERAMP;
+
+		if (pChn->strike) pChn->strike--;
+		// Check for too big nInc
+		if (((pChn->nInc >> 16) + 1) >= (LONG)(pChn->nLoopEnd - pChn->nLoopStart)) pChn->dwFlags &= ~CHN_LOOP;
+		pChn->nNewRightVol = pChn->nNewLeftVol = 0;
+		pChn->pCurrentSample = ((pChn->pSample) && (pChn->nLength) && (pChn->nInc)) ? pChn->pSample : NULL;
+		if (pChn->pCurrentSample)
+		{
+			// Update VU-Meter (nRealVolume is 14-bit)
+			UINT vutmp = pChn->nRealVolume >> (14 - 8);
+			if (vutmp > 0xFF) vutmp = 0xFF;
+			if (pChn->dwFlags & CHN_ADLIB) {
+				// fake VU decay (intentionally similar to ST3)
+				if (pChn->nVUMeter > VUMETER_DECAY)
+					pChn->nVUMeter -= VUMETER_DECAY;
+				else
+					pChn->nVUMeter = 0;
+				if (pChn->nVUMeter >= 0x100)
+					pChn->nVUMeter = vutmp;
+			} else if (vutmp) {
+				// can't fake the funk
+				if (pChn->dwFlags & CHN_16BIT) {
+					const unsigned short *p = (unsigned short *)(pChn->pCurrentSample + pChn->nPos);
+					if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos;
+					vutmp *= ((*p) & 0x7fff) >> 8;
+				} else {
+					const unsigned char *p = (unsigned char *)(pChn->pCurrentSample + pChn->nPos);
+					if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos;
+					vutmp *= ((*p) & 0x7f);
+				}
+				vutmp >>= 7; // 0..255
+				if (vutmp)
+					pChn->nVUMeter = vutmp;
+			} else {
+				pChn->nVUMeter = 0;
+			}
+
+			// Adjusting volumes
+			if (gnChannels >= 2)
+			{
+				int pan = ((int)pChn->nRealPan) - 128;
+				pan *= (int)m_nStereoSeparation;
+				pan /= 128;
+
+				if((m_dwSongFlags & SONG_INSTRUMENTMODE)
+						&& (pChn->pHeader)
+						&& (pChn->pHeader->nMidiChannelMask > 0))
+	    				GM_Pan(nChn, pan);
+
+				pan += 128;
+
+				if (pan < 0) pan = 0;
+				if (pan > 256) pan = 256;
+				if (gdwSoundSetup & SNDMIX_REVERSESTEREO) pan = 256 - pan;
+				if (m_dwSongFlags & SONG_NOSTEREO) pan = 128;
+				LONG realvol = (pChn->nRealVolume * nMasterVol) >> (8-1);
+				if (gdwSoundSetup & SNDMIX_SOFTPANNING)
+				{
+					if (pan < 128)
+					{
+						pChn->nNewLeftVol = (realvol * pan) >> 8;
+						pChn->nNewRightVol = (realvol * 128) >> 8;
+					} else
+					{
+						pChn->nNewLeftVol = (realvol * 128) >> 8;
+						pChn->nNewRightVol = (realvol * (256 - pan)) >> 8;
+					}
+				} else
+				{
+					pChn->nNewLeftVol = (realvol * pan) >> 8;
+					pChn->nNewRightVol = (realvol * (256 - pan)) >> 8;
+				}
+			} else
+			{
+				pChn->nNewRightVol = (pChn->nRealVolume * nMasterVol) >> 8;
+				pChn->nNewLeftVol = pChn->nNewRightVol;
+			}
+			// Clipping volumes
+			if (pChn->nNewRightVol > 0xFFFF) pChn->nNewRightVol = 0xFFFF;
+			if (pChn->nNewLeftVol > 0xFFFF) pChn->nNewLeftVol = 0xFFFF;
+			// Check IDO
+			if (gdwSoundSetup & SNDMIX_NORESAMPLING)
+			{
+				pChn->dwFlags &= ~(CHN_HQSRC);
+				pChn->dwFlags |= CHN_NOIDO;
+			} else
+			{
+				pChn->dwFlags &= ~(CHN_NOIDO|CHN_HQSRC);
+				if( pChn->nInc == 0x10000 )
+				{	pChn->dwFlags |= CHN_NOIDO;
+				}
+				else
+				{	if( ((gdwSoundSetup & SNDMIX_HQRESAMPLER) == 0) && ((gdwSoundSetup & SNDMIX_ULTRAHQSRCMODE) == 0) )
+					{	if (pChn->nInc >= 0xFF00) pChn->dwFlags |= CHN_NOIDO;
+					}
+				}
+			}
+			pChn->nNewRightVol >>= MIXING_ATTENUATION;
+			pChn->nNewLeftVol >>= MIXING_ATTENUATION;
+			pChn->nRightRamp = pChn->nLeftRamp = 0;
+			// Dolby Pro-Logic Surround
+			if ((pChn->dwFlags & CHN_SURROUND) && (gnChannels <= 2) && (gdwSoundSetup & SNDMIX_NOSURROUND) == 0)
+				pChn->nNewLeftVol = -pChn->nNewLeftVol;
+			// Checking Ping-Pong Loops
+			if (pChn->dwFlags & CHN_PINGPONGFLAG) pChn->nInc = -pChn->nInc;
+			// Setting up volume ramp
+			if (!(gdwSoundSetup & SNDMIX_NORAMPING)
+			 && (pChn->dwFlags & CHN_VOLUMERAMP)
+			 && ((pChn->nRightVol != pChn->nNewRightVol)
+			  || (pChn->nLeftVol != pChn->nNewLeftVol)))
+			{
+				LONG nRampLength = gnVolumeRampSamples;
+				LONG nRightDelta = ((pChn->nNewRightVol - pChn->nRightVol) << VOLUMERAMPPRECISION);
+				LONG nLeftDelta = ((pChn->nNewLeftVol - pChn->nLeftVol) << VOLUMERAMPPRECISION);
+
+				if (gdwSoundSetup & SNDMIX_HQRESAMPLER)
+				{
+					if ((pChn->nRightVol|pChn->nLeftVol) && (pChn->nNewRightVol|pChn->nNewLeftVol) && (!(pChn->dwFlags & CHN_FASTVOLRAMP)))
+					{
+						nRampLength = m_nBufferCount;
+						if (nRampLength > (1 << (VOLUMERAMPPRECISION-1))) nRampLength = (1 << (VOLUMERAMPPRECISION-1));
+						if (nRampLength < (LONG)gnVolumeRampSamples) nRampLength = gnVolumeRampSamples;
+					}
+				}
+				pChn->nRightRamp = nRightDelta / nRampLength;
+				pChn->nLeftRamp = nLeftDelta / nRampLength;
+				pChn->nRightVol = pChn->nNewRightVol - ((pChn->nRightRamp * nRampLength) >> VOLUMERAMPPRECISION);
+				pChn->nLeftVol = pChn->nNewLeftVol - ((pChn->nLeftRamp * nRampLength) >> VOLUMERAMPPRECISION);
+				if (pChn->nRightRamp|pChn->nLeftRamp)
+				{
+					pChn->nRampLength = nRampLength;
+				} else
+				{
+					pChn->dwFlags &= ~CHN_VOLUMERAMP;
+					pChn->nRightVol = pChn->nNewRightVol;
+					pChn->nLeftVol = pChn->nNewLeftVol;
+				}
+			} else
+			{
+				pChn->dwFlags &= ~CHN_VOLUMERAMP;
+				pChn->nRightVol = pChn->nNewRightVol;
+				pChn->nLeftVol = pChn->nNewLeftVol;
+			}
+			pChn->nRampRightVol = pChn->nRightVol << VOLUMERAMPPRECISION;
+			pChn->nRampLeftVol = pChn->nLeftVol << VOLUMERAMPPRECISION;
+			// Adding the channel in the channel list
+			if (!(pChn->dwFlags & CHN_MUTE)) {
+				ChnMix[m_nMixChannels++] = nChn;
+				if (m_nMixChannels >= MAX_CHANNELS) break;
+			}
+		} else
+		{
+			// Note change but no sample
+			if (pChn->nVUMeter > 0xFF) pChn->nVUMeter = 0;
+			pChn->nLeftVol = pChn->nRightVol = 0;
+			pChn->nLength = 0;
+		}
+	}
+	// Checking Max Mix Channels reached: ordering by volume
+	if ((m_nMixChannels >= m_nMaxMixChannels) && (!(gdwSoundSetup & SNDMIX_DIRECTTODISK)))
+	{
+		for (UINT i=0; i<m_nMixChannels; i++)
+		{
+			UINT j=i;
+			while ((j+1<m_nMixChannels) && (Chn[ChnMix[j]].nRealVolume < Chn[ChnMix[j+1]].nRealVolume))
+			{
+				UINT n = ChnMix[j];
+				ChnMix[j] = ChnMix[j+1];
+				ChnMix[j+1] = n;
+				j++;
+			}
+		}
+	}
+	if (m_dwSongFlags & SONG_GLOBALFADE)
+	{
+		if (!m_nGlobalFadeSamples)
+		{
+			m_dwSongFlags |= SONG_ENDREACHED;
+			return FALSE;
+		}
+		if (m_nGlobalFadeSamples > m_nBufferCount)
+			m_nGlobalFadeSamples -= m_nBufferCount;
+		else
+			m_nGlobalFadeSamples = 0;
+	}
+	return TRUE;
+}
+
+
