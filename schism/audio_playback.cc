@@ -288,10 +288,10 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->pSample = i->pSample;
 			c->pHeader = NULL;
 			c->pInstrument = i;
-			c->nFineTune = i->nFineTune;
+			//c->nFineTune = i->nFineTune;
 			c->nLength = i->nLength;
-			c->nTranspose = i->RelativeTone;
-			c->nC4Speed = i->nC4Speed;
+			//c->nTranspose = i->RelativeTone;
+			c->nC5Speed = i->nC5Speed;
 			c->nLoopStart = i->nLoopStart;
 			c->nLoopEnd = i->nLoopEnd;
 			c->dwFlags = (i->uFlags & 0x200000FF)|(c->dwFlags & CHN_MUTE);
@@ -995,7 +995,7 @@ void song_get_playing_samples(int samples[])
 {
 	MODCHANNEL *channel;
 	
-	memset(samples, 0, 100 * sizeof(int));
+	memset(samples, 0, SCHISM_MAX_SAMPLES * sizeof(int));
 	
 	song_lock_audio();
 	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
@@ -1003,8 +1003,9 @@ void song_get_playing_samples(int samples[])
 		channel = mp->Chn + mp->ChnMix[n];
 		if (channel->pInstrument && channel->pCurrentSample) {
 			int s = channel->pInstrument - mp->Ins;
-			if (s >= 0 && s < 240) /* MAX_SAMPLES */
-				samples[s]++;
+			if (s >= 0 && s < SCHISM_MAX_SAMPLES) {
+				samples[s] = MAX(samples[s], 1 + channel->strike);
+			}
 		} else {
 			// no sample.
 			// (when does this happen?)
@@ -1017,15 +1018,15 @@ void song_get_playing_instruments(int instruments[])
 {
 	MODCHANNEL *channel;
 	
-	memset(instruments, 0, 100 * sizeof(int));
+	memset(instruments, 0, SCHISM_MAX_INSTRUMENTS * sizeof(int));
 	
 	song_lock_audio();
 	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 	while (n--) {
 		channel = mp->Chn + mp->ChnMix[n];
 		int ins = song_get_instrument_number((song_instrument *) channel->pHeader);
-		if (ins > 0 && ins < 100) {
-			instruments[ins] = 1;
+		if (ins > 0 && ins < SCHISM_MAX_INSTRUMENTS) {
+			instruments[ins] = MAX(instruments[ins], 1 + channel->strike);
 		}
 	}
 	song_unlock_audio();

@@ -72,10 +72,10 @@ BOOL CSoundFile::ReadAMS(LPCBYTE lpStream, DWORD dwMemLength)
 		pins->nLoopEnd = psh->loopend;
 		pins->nGlobalVol = 64;
 		pins->nVolume = psh->volume << 1;
-		pins->nC4Speed = psh->samplerate;
+		pins->nC5Speed = psh->samplerate;
 		pins->nPan = (psh->finetune_and_pan & 0xF0);
 		if (pins->nPan < 0x80) pins->nPan += 0x10;
-		pins->nFineTune = MOD2XMFineTune(psh->finetune_and_pan & 0x0F);
+		//pins->nFineTune = MOD2XMFineTune(psh->finetune_and_pan & 0x0F);
 		pins->uFlags = (psh->infobyte & 0x80) ? CHN_16BIT : 0;
 		if ((pins->nLoopEnd <= pins->nLength) && (pins->nLoopStart+4 <= pins->nLoopEnd)) pins->uFlags |= CHN_LOOP;
 		pkinf[nSmp] = psh->infobyte;
@@ -415,8 +415,8 @@ BOOL CSoundFile::ReadAMS2(LPCBYTE lpStream, DWORD dwMemLength)
 				psmp->nLength = pams->length;
 				psmp->nLoopStart = pams->loopstart;
 				psmp->nLoopEnd = pams->loopend;
-				psmp->nC4Speed = pams->c4speed;
-				psmp->RelativeTone = pams->transpose;
+				psmp->nC5Speed = pams->c4speed;
+				//psmp->RelativeTone = pams->transpose;
 				psmp->nVolume = pams->volume / 2;
 				packedsamples[smpmap[ismp]] = pams->flags;
 				if (pams->flags & 0x04) psmp->uFlags |= CHN_16BIT;

@@ -517,7 +517,7 @@ int diskwriter_sync(void)
 	// estimate bytes remaining
 	n = (dw->rate * dw->channels * dw->bits) / 8;
 	n = (current_song_len - ct) * n;
-	if (n > (sizeof(diskbuf)*2)) {
+	if (n > (signed) (sizeof(diskbuf)*2)) {
 		// go big
 		n = sizeof(diskbuf);
 	} else {
@@ -624,7 +624,7 @@ int diskwriter_finish(void)
 			}
 			p->pSample = song_sample_allocate(mbuf_len);
 			memcpy(p->pSample, mbuf, mbuf_len);
-			p->nC4Speed = dw->rate;
+			p->nC5Speed = dw->rate;
 			p->uFlags &= ~SAMP_ADLIB;
 			if (dw->bits >= 16) {
 				p->uFlags |= SAMP_16_BIT;

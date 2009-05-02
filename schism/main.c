@@ -361,6 +361,7 @@ static void parse_options(int argc, char **argv)
 	
 	while (frag_parse(frag)) {
 		switch (frag->id) {
+		/* FIXME: make absolute paths here if at all possible */
 		case O_ARG:
 			if (is_directory(frag->arg)) {
 				initial_dir = dmoz_path_normal(frag->arg);
@@ -1152,6 +1153,8 @@ int main(int argc, char **argv)
 		status.flags |= NO_NETWORK;
         }
 #endif
+	/* FIXME: make a config option for this, and stop abusing frickin' environment variables! */
+	put_env_var("SCHISM_VIDEO_ASPECT", "full");
 
 	setup_help_text_pointers();
 

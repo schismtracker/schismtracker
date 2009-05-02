@@ -123,8 +123,7 @@ static void _draw_sample_data_16(int boost, struct vgamem_overlay *r,
 static void _draw_sample_loop(struct vgamem_overlay *r, song_sample * sample)
 {
         int loopstart, loopend, y;
-        int c = ((status.flags & CLASSIC_MODE)
-		? SAMPLE_LOOP_COLOR : SAMPLE_DATA_COLOR);
+        int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
 
         if (!(sample->flags & SAMP_LOOP))
                 return;
@@ -134,26 +133,17 @@ static void _draw_sample_loop(struct vgamem_overlay *r, song_sample * sample)
 	
 	y = 0;
 	do {
-		vgamem_ovl_drawpixel(r,loopstart,y,0);
-		vgamem_ovl_drawpixel(r,loopend,y,0);
-		y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, c);
-		vgamem_ovl_drawpixel(r, loopend, y, c);
-		y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, c);
-		vgamem_ovl_drawpixel(r, loopend, y, c);
-		y++;
-		vgamem_ovl_drawpixel(r,loopstart,y, 0);
-		vgamem_ovl_drawpixel(r,loopend,y, 0);
-		y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, 0); vgamem_ovl_drawpixel(r, loopend, y, 0); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, c); vgamem_ovl_drawpixel(r, loopend, y, c); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, c); vgamem_ovl_drawpixel(r, loopend, y, c); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, 0); vgamem_ovl_drawpixel(r, loopend, y, 0); y++;
         } while (y < r->height);
 }
 
 static void _draw_sample_susloop(struct vgamem_overlay *r, song_sample * sample)
 {
         int loopstart, loopend, y;
-        int c = ((status.flags & CLASSIC_MODE)
-		? SAMPLE_LOOP_COLOR : SAMPLE_DATA_COLOR);
+        int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
 
         if (!(sample->flags & SAMP_SUSLOOP))
                 return;
@@ -163,18 +153,10 @@ static void _draw_sample_susloop(struct vgamem_overlay *r, song_sample * sample)
 
 	y = 0;
 	do {
-		vgamem_ovl_drawpixel(r,loopstart,y,0);
-		vgamem_ovl_drawpixel(r,loopend,y,0);
-		y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, c);
-		vgamem_ovl_drawpixel(r, loopend, y, c);
-		y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, c);
-		vgamem_ovl_drawpixel(r, loopend, y, c);
-		y++;
-		vgamem_ovl_drawpixel(r,loopstart,y, 0);
-		vgamem_ovl_drawpixel(r,loopend,y, 0);
-		y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, c); vgamem_ovl_drawpixel(r, loopend, y, c); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, 0); vgamem_ovl_drawpixel(r, loopend, y, 0); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, c); vgamem_ovl_drawpixel(r, loopend, y, c); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, 0); vgamem_ovl_drawpixel(r, loopend, y, 0); y++;
 	} while (y < r->height);
 }
 
@@ -197,8 +179,7 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample * samp
                 if (channel->sample_data != sample->data)
                         continue;
 		if (!channel->final_volume) continue;
-		c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
-				? SAMPLE_BGMARK_COLOR : SAMPLE_MARK_COLOR;
+		c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? SAMPLE_BGMARK_COLOR : SAMPLE_MARK_COLOR;
                 x = channel->sample_pos * (r->width - 1) / sample->length;
                 if (x >= r->width) {
                         /* this does, in fact, happen :( */
@@ -207,14 +188,14 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample * samp
                 y = 0;
                 do {
                         /* unrolled 8 times */
-			vgamem_ovl_drawpixel(r,x,y++,c);
-			vgamem_ovl_drawpixel(r,x,y++,c);
-			vgamem_ovl_drawpixel(r,x,y++,c);
-			vgamem_ovl_drawpixel(r,x,y++,c);
-			vgamem_ovl_drawpixel(r,x,y++,c);
-			vgamem_ovl_drawpixel(r,x,y++,c);
-			vgamem_ovl_drawpixel(r,x,y++,c);
-			vgamem_ovl_drawpixel(r,x,y++,c);
+			vgamem_ovl_drawpixel(r, x, y++, c);
+			vgamem_ovl_drawpixel(r, x, y++, c);
+			vgamem_ovl_drawpixel(r, x, y++, c);
+			vgamem_ovl_drawpixel(r, x, y++, c);
+			vgamem_ovl_drawpixel(r, x, y++, c);
+			vgamem_ovl_drawpixel(r, x, y++, c);
+			vgamem_ovl_drawpixel(r, x, y++, c);
+			vgamem_ovl_drawpixel(r, x, y++, c);
                 } while (y < r->height);
         }
 	
@@ -295,3 +276,4 @@ void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int le
 	_draw_sample_data_8(16, r, data, length, channels, fakemono);
 	vgamem_ovl_apply(r);
 }
+

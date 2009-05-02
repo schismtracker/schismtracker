@@ -195,7 +195,12 @@ void cfg_load(void)
 	else
 		status.flags &= ~ACCIDENTALS_AS_FLATS;
 #endif
-	if (cfg_get_number(&cfg, "General", "meta_is_ctrl", 0))
+#ifdef MACOSX
+# define DEFAULT_META 1
+#else
+# define DEFAULT_META 0
+#endif
+	if (cfg_get_number(&cfg, "General", "meta_is_ctrl", DEFAULT_META))
 		status.flags |= META_IS_CTRL;
 	else
 		status.flags &= ~META_IS_CTRL;
@@ -246,23 +251,14 @@ void cfg_save(void)
 	cfg_init(&cfg, ptr);
 	free(ptr);
 
-	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
 	cfg_set_string(&cfg, "Directories", "modules", cfg_dir_modules);
 	cfg_set_string(&cfg, "Directories", "samples", cfg_dir_samples);
 	cfg_set_string(&cfg, "Directories", "instruments", cfg_dir_instruments);
 
-	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
 	cfg_save_info(&cfg);
 	cfg_save_patedit(&cfg);
 	cfg_save_audio(&cfg);
-	
-	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
 	cfg_save_palette(&cfg);
-	
-	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 	cfg_write(&cfg);
 	cfg_free(&cfg);
@@ -298,6 +294,12 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
 
 	cfg_set_number(&cfg, "General", "midi_like_tracker", !!(status.flags & MIDI_LIKE_TRACKER));
+	/* Say, whose bright idea was it to make this a string setting?
+	The config file is human editable but that's mostly for developer convenience and debugging
+	purposes. These sorts of things really really need to be options in the GUI so that people
+	don't HAVE to touch the settings. Then we can just use an enum (and we *could* in theory
+	include comments to the config by default listing what the numbers are, but that shouldn't
+	be necessary in most cases. */
 	switch (status.fix_numlock_setting) {
 	case NUMLOCK_ALWAYS_ON:
 		cfg_set_string(&cfg, "General", "numlock_setting", "on");
@@ -321,3 +323,4 @@ void cfg_atexit_save(void)
 	cfg_write(&cfg);
 	cfg_free(&cfg);
 }
+

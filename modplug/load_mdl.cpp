@@ -395,8 +395,8 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 				MODINSTRUMENT *pins = &Ins[nins];
 				memcpy(m_szNames[nins], lpStream+dwPos+1, 32);
 				memcpy(pins->name, lpStream+dwPos+33, 8);
-				pins->nC4Speed = *((DWORD *)(lpStream+dwPos+41));
-				pins->nC4Speed = bswapLE32(pins->nC4Speed);
+				pins->nC5Speed = *((DWORD *)(lpStream+dwPos+41));
+				pins->nC5Speed = bswapLE32(pins->nC5Speed);
 				pins->nLength = *((DWORD *)(lpStream+dwPos+45));
 				pins->nLength = bswapLE32(pins->nLength);
 				pins->nLoopStart = *((DWORD *)(lpStream+dwPos+49));

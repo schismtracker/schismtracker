@@ -385,7 +385,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 			j = bswapLE32(*((LPDWORD)(s+0x20)));
 			if (!j) j = 8363;
 			if (j < 1024) j = 1024;
-			Ins[iSmp].nC4Speed = j;
+			Ins[iSmp].nC5Speed = j;
 			insfile[iSmp] = ((DWORD)bswapLE16(*((LPWORD)(s+0x0E)))) << 4;
 			insfile[iSmp] += ((DWORD)(BYTE)s[0x0D]) << 20;
 			if (insfile[iSmp] > dwMemLength) insfile[iSmp] &= 0xFFFF;
@@ -411,7 +411,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 			Ins[iSmp].nGlobalVol = 64;
 			j = bswapLE32(*((LPDWORD)(s+0x20)));
 			if (!j) j = 8363;
-			Ins[iSmp].nC4Speed = j;
+			Ins[iSmp].nC5Speed = j;
 			Ins[iSmp].nPan = 0x80;
 			Ins[iSmp].uFlags |= CHN_ADLIB;
 			Ins[iSmp].uFlags &= ~(CHN_LOOP | CHN_16BIT);
@@ -640,7 +640,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 	
 	m_nMinPeriod = 64;
 	m_nMaxPeriod = 32767;
-	if (psfh.flags & 0x10) m_dwSongFlags |= SONG_AMIGALIMITS;
+	//if (psfh.flags & 0x10) m_dwSongFlags |= SONG_AMIGALIMITS;
 	return TRUE;
 }
 
@@ -658,7 +658,7 @@ static BYTE S3MFiller[16] =
 };
 
 
-BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
+BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT)
 //----------------------------------------------------------
 {
 	BYTE header[0x60];
@@ -695,7 +695,10 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 	header[0x24] = nbp & 0xFF;
 	header[0x25] = nbp >> 8;
 	if (m_dwSongFlags & SONG_FASTVOLSLIDES) header[0x26] |= 0x40;
-	if ((m_nMaxPeriod < 20000) || (m_dwSongFlags & SONG_AMIGALIMITS)) header[0x26] |= 0x10;
+	//if ((m_nMaxPeriod < 20000) || (m_dwSongFlags & SONG_AMIGALIMITS)) header[0x26] |= 0x10;
+	// FIXME FIXME FIXME no we are NOT scream tracker. stop lying.
+	// FIXME FIXME FIXME need to look in the ST3 and IT tech docs
+	// FIXME FIXME FIXME and figure out what we can put here.
 	header[0x28] = 0x20; // ST3.20 = 0x1320
 	header[0x29] = 0x13;
 	header[0x2A] = 0x02; // Version = 1 => Signed samples
@@ -890,10 +893,7 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 		insex[i-1].memseg = bswapLE16((WORD)((DWORD)ofs >> 4));
 
 		insex[i-1].vol = pins->nVolume / 4;
-		if (pins->nC4Speed)
-			insex[i-1].finetune = bswapLE32(pins->nC4Speed);
-		else
-			insex[i-1].finetune = bswapLE32(TransposeToFrequency(pins->RelativeTone, pins->nFineTune));
+		insex[i-1].finetune = bswapLE32(pins->nC5Speed);
 
 		if (pins->uFlags & CHN_ADLIB)
 		{
@@ -909,29 +909,15 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT nPacking)
 			insex[i-1].loopend = bswapLE32(pins->nLoopEnd);
 			insex[i-1].flags = (pins->uFlags & CHN_LOOP) ? 1 : 0;
 			UINT flags = RS_PCM8U;
-#ifndef NO_PACKING
-			if (nPacking)
+			if (pins->uFlags & CHN_16BIT)
 			{
-			    /* NOTE: Packed samples are not supported by ST32 */
-				if ((!(pins->uFlags & (CHN_16BIT|CHN_STEREO)))
-				 && (CanPackSample((char *)pins->pSample, pins->nLength, nPacking)))
-				{
-					insex[i-1].pack = 4;
-					flags = RS_ADPCM4;
-				}
-			} else
-#endif // NO_PACKING
+				insex[i-1].flags |= 4;
+				flags = RS_PCM16U;
+			}
+			if (pins->uFlags & CHN_STEREO)
 			{
-				if (pins->uFlags & CHN_16BIT)
-				{
-					insex[i-1].flags |= 4;
-					flags = RS_PCM16U;
-				}
-				if (pins->uFlags & CHN_STEREO)
-				{
-					insex[i-1].flags |= 2;
-					flags = (pins->uFlags & CHN_16BIT) ? RS_STPCM16U : RS_STPCM8U;
-				}
+				insex[i-1].flags |= 2;
+				flags = (pins->uFlags & CHN_16BIT) ? RS_STPCM16U : RS_STPCM8U;
 			}
 			DWORD len = WriteSample(fp, pins, flags);
 			if (len & 0x0F)

@@ -53,15 +53,23 @@ int show_default_volumes = 0;
 
 int midi_start_record = 0;
 
-enum TemplateMode {
-    NoTemplateMode=0,
-    TemplateOverwrite,
-    TemplateMixPatternPrecedence,
-    TemplateMixClipboardPrecedence,
-    TemplateNotesOnly
+enum {
+    TEMPLATE_OFF = 0,
+    TEMPLATE_OVERWRITE,
+    TEMPLATE_MIX_PATTERN_PRECEDENCE,
+    TEMPLATE_MIX_CLIPBOARD_PRECEDENCE,
+    TEMPLATE_NOTES_ONLY,
+    TEMPLATE_MODE_MAX,
 };
+static int template_mode = TEMPLATE_OFF;
 
-static enum TemplateMode template_mode = NoTemplateMode;
+static const char *template_mode_names[] = {
+	" ", /* apparently "" causes a gcc warning (wtf) */
+	"Template, Overwrite",
+	"Template, Mix - Pattern data precedence",
+	"Template, Mix - Clipboard data precedence",
+	"Template, Notes only",
+};
 
 /* only one widget, but MAN is it complicated :) */
 static struct widget widgets_pattern[1];
@@ -210,6 +218,16 @@ static int block_double_size;
  * numbers start with one. (same deal for last_channel, but i'm only
  * caring about one of them to be efficient.) */
 #define SELECTION_EXISTS (selection.first_channel)
+
+/* CHECK_FOR_SELECTION(optional return value)
+will display an error dialog and cause the function to return if there is no block marked.
+(The spaces around the text are to make it line up the same as Impulse Tracker) */
+#define CHECK_FOR_SELECTION(q) do {\
+	if (!SELECTION_EXISTS) {\
+		dialog_create(DIALOG_OK, "    No block is marked    ", NULL, NULL, 0, NULL);\
+		q;\
+	}\
+} while(0)
 
 /* --------------------------------------------------------------------- */
 /* this is for the multiple track views stuff. */
@@ -395,14 +413,7 @@ void pattern_editor_length_edit(void)
 		= length_edit_widgets[2].d.thumbbar.value
 		= current_pattern;
 
-	create_button(length_edit_widgets + 3,
-			35,31,8,
-			2,
-			3,
-			3,
-			3,
-			0,
-			dialog_yes_NULL, "OK", 4);
+	create_button(length_edit_widgets + 3, 35, 31, 8, 2, 3, 3, 3, 0, dialog_yes_NULL, "OK", 4);
 
 	dialog = dialog_create_custom(15, 19, 51, 15, length_edit_widgets, 4, 0,
 				      length_edit_draw_const, NULL);
@@ -482,14 +493,7 @@ static void pattern_editor_display_multichannel(void)
 			mp_advance_channel);
 		multichannel_widgets[i].d.toggle.state = channel_multi[i] & 1;
 	}
-	create_button(multichannel_widgets+64,
-			35,40,8,
-			15,
-			0,
-			63,
-			15,
-			0,
-			dialog_yes_NULL, "OK", 4);
+	create_button(multichannel_widgets + 64, 35, 40, 8, 15, 0, 63, 15, 0, dialog_yes_NULL, "OK", 4);
 
 	dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, 65, 0,
 				      multichannel_draw_const, NULL);
@@ -608,6 +612,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 		case 'B': case 'b': n.note = 12;break;
 		default: n.note = 0;
 		};
+		/* XXX shouldn't this be note-- for flat? */
 		if (str[1] == '#' || str[1] == 'b') n.note++;
 		switch (*str) {
 		case '=': n.note = NOTE_OFF; break;
@@ -946,15 +951,26 @@ static void volume_amplify_ok(UNUSED void *data)
 	selection_amplify(volume_percent);
 }
 
+static int volume_amplify_jj(struct key_event *k)
+{
+	if (!k->state && (k->mod & KMOD_ALT) && (k->sym == SDLK_j)) {
+		dialog_yes(NULL);
+		return 1;
+	}
+	return 0;
+}
+
 static void volume_amplify(void)
 {
 	struct dialog *dialog;
 	
+	CHECK_FOR_SELECTION(return);
 	create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 200);
 	volume_setup_widgets[0].d.thumbbar.value = volume_percent;
 	create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets, 3, 0, volume_setup_draw_const, NULL);
+	dialog->handle_key = volume_amplify_jj;
 	dialog->action_yes = volume_amplify_ok;
 }
 
@@ -1150,83 +1166,90 @@ static void selection_clear(void)
 	selection.first_channel = 0;
 	pattern_selection_system_copyout();
 }
+
+
+/* Block double/halve functions rewritten 20090428 - now more IT-like than it was, but still not
+sure if it's quite right. In particular, I get the feeling that IT does something "special" on
+repeated invocations, like extending the range or something. */
+
 static void block_length_double(void)
 {
-	song_note *pattern, *w, *r;
-	int i, j, x, row;
-	int total_rows;
+	song_note *pattern, *srow, *drow;
+	int sel_rows, total_rows;
+	int width, height, offset;
 
 	if (!SELECTION_EXISTS)
 		return;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
-	row = (selection.last_row - selection.first_row) + 1;
-	row *= 2;
-	if (row + selection.first_row > total_rows) {
-		row = (total_rows - selection.first_row) + 1;
-	}
+
+	if (selection.last_row >= total_rows)
+		selection.last_row = total_rows - 1;
+	if (selection.first_row > selection.last_row)
+		selection.first_row = selection.last_row;
+
+	sel_rows = selection.last_row - selection.first_row + 1;
+	offset = selection.first_channel - 1;
+	height = MIN(sel_rows * 2, total_rows);
+	width = selection.last_channel - offset;
+	srow = pattern + 64 * selection.last_row;
+	drow = pattern + 64 * (height - 1);
 
 	pated_history_add("Undo block length double       (Alt-F)",
-		selection.first_channel - 1,
-		selection.first_row,
-		(selection.last_channel - selection.first_channel) + 1,
-		row);
+		offset, selection.first_row, width, height);
 
-	row = (selection.last_row - selection.first_row) + 1;
-	for (i = selection.last_row - 1; i > selection.first_row;) {
-		j = ((i - selection.first_row) / 2) + selection.first_row;
-		w = pattern + 64 * i + selection.first_channel - 1;
-		r = pattern + 64 * j + selection.first_channel - 1;
-
-		for (x = selection.first_channel; x <= selection.last_channel; x++, r++, w++) {
-			memcpy(w, r, sizeof(song_note));
-		}
-		i--;
-		w = pattern + 64 * i + selection.first_channel - 1;
-		for (x = selection.first_channel; x <= selection.last_channel; x++, w++) {
-			memset(w, 0, sizeof(song_note));
-		}
-		i--;
+	while (drow > srow) {
+		memset(drow + offset, 0, width * sizeof(song_note));
+		drow -= 64;
+		memcpy(drow + offset, srow + offset, width * sizeof(song_note));
+		drow -= 64;
+		srow -= 64;
 	}
+
 	pattern_selection_system_copyout();
 }
+
 static void block_length_halve(void)
 {
-	song_note *pattern, *w, *r;
-	int i, j, x;
-	int total_rows;
+	song_note *pattern, *srow, *drow;
+	int sel_rows, total_rows, row;
+	int width, height, offset;
 
 	if (!SELECTION_EXISTS)
 		return;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
+
+	if (selection.last_row >= total_rows)
+		selection.last_row = total_rows - 1;
+	if (selection.first_row > selection.last_row)
+		selection.first_row = selection.last_row;
+
+	sel_rows = selection.last_row - selection.first_row + 1;
+	offset = selection.first_channel - 1;
+	width = selection.last_channel - offset;
+	height = MIN(sel_rows * 2, total_rows);
+	srow = drow = pattern + 64 * selection.first_row;
 
 	pated_history_add("Undo block length halve        (Alt-G)",
-		selection.first_channel - 1,
-		selection.first_row,
-		(selection.last_channel - selection.first_channel) + 1,
-		(selection.last_row - selection.first_row) + 1);
+		offset, selection.first_row, width, height);
 
-	j = selection.first_row + 1;
-	for (i = selection.first_row + 2; i <= selection.last_row; i += 2, j++) {
-		w = pattern + 64 * j + selection.first_channel - 1;
-		r = pattern + 64 * i + selection.first_channel - 1;
-		for (x = selection.first_channel; x <= selection.last_channel; x++, r++, w++) {
-			memcpy(w, r, sizeof(song_note));
-		}
+	for (row = 0; row < height / 2; row++) {
+		memcpy(drow + offset, srow + offset, width * sizeof(song_note));
+		srow += 64 * 2;
+		drow += 64;
 	}
-	for (; j <= selection.last_row; j++) {
-		w = pattern + 64 * j + selection.first_channel - 1;
-		memset(w, 0, sizeof(song_note) * ((selection.last_channel-selection.first_channel)+1));
+	for (; row < height; row++) {
+		memset(drow + offset, 0, width * sizeof(song_note));
+		drow += 64;
 	}
+
 	pattern_selection_system_copyout();
 }
+
+
 static void selection_erase(void)
 {
 	song_note *pattern, *note;
@@ -1294,16 +1317,6 @@ static void selection_set_sample(void)
 	}
 	pattern_selection_system_copyout();
 }
-
-/* CHECK_FOR_SELECTION(optional return value)
-will display an error dialog and cause the function to return if there is no block marked.
-(this dialog should be a column wider, with the extra column on the left side) */
-#define CHECK_FOR_SELECTION(q) do {\
-	if (!SELECTION_EXISTS) {\
-		dialog_create(DIALOG_OK, "No block is marked", NULL, NULL, 0, NULL);\
-		q;\
-	}\
-} while(0)
 
 
 static void selection_swap(void)
@@ -1670,8 +1683,9 @@ static void selection_amplify(int percentage)
 	int row, chan, volume, total_rows;
 	song_note *pattern, *note;
 
-	CHECK_FOR_SELECTION(return);
-
+	if (!SELECTION_EXISTS)
+		return;
+	
 	status.flags |= SONG_NEEDS_SAVE;
 	total_rows = song_get_pattern(current_pattern, &pattern);
 	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
@@ -2556,6 +2570,11 @@ static void pattern_editor_redraw(void)
 	int pattern_is_playing = ((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) != 0
 				  && current_pattern == playing_pattern);
 
+	if (template_mode) {
+		// TODO: double check the exact position for this
+		draw_text_len(template_mode_names[template_mode], 60, 2, 12, 3, 2);
+	}
+
 	/* draw the outer box around the whole thing */
 	draw_box(4, 14, 5 + visible_width, 47, BOX_THICK | BOX_INNER | BOX_INSET);
 
@@ -2612,6 +2631,7 @@ static void pattern_editor_redraw(void)
 			/* next row, same channel */
 			note += 64;
 		}
+		/* what the christ is going on here? this shit should be handled by the track view */
 		if (chan == current_channel) {
 			int cp[5], cl[5];
 
@@ -2722,13 +2742,12 @@ static void transpose_notes(int amount)
 		(selection.last_row - selection.first_row) + 1);
 
 	if (SELECTION_EXISTS) {
-		/* FIXME: are these loops backwards for a reason? if so, should put a comment here... */
-		for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
-			note = pattern + 64 * selection.first_row + chan - 1;
-			for (row = selection.first_row; row <= selection.last_row; row++) {
+		for (row = selection.first_row; row <= selection.last_row; row++) {
+			note = pattern + 64 * row + selection.first_channel - 1;
+			for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
 				if (note->note > 0 && note->note < 121)
 					note->note = CLAMP(note->note + amount, 1, 120);
-				note += 64;
+				note++;
 			}
 		}
 	} else {
@@ -2871,14 +2890,14 @@ static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row
 
 	status.flags |= SONG_NEEDS_SAVE;
 	if (note == 0 || note == NOTE_OFF || note == NOTE_CUT || note == NOTE_FADE) {
-		if (template_mode == NoTemplateMode) {
+		if (template_mode == TEMPLATE_OFF) {
 			/* no template mode */
 			if (force || !cur_note->note) cur_note->note = note;
-		} else if (template_mode != TemplateNotesOnly) {
+		} else if (template_mode != TEMPLATE_NOTES_ONLY) {
 			/* this is a really great idea, but not IT-like at all... */
 			for (i = 0; i < clipboard.channels; i++) {
 				if (i+channel > 64) break;
-				if (template_mode == TemplateMixPatternPrecedence) {
+				if (template_mode == TEMPLATE_MIX_PATTERN_PRECEDENCE) {
 					if (!cur_note->note)
 						cur_note->note = note;
 				} else {
@@ -2888,9 +2907,7 @@ static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row
 			}
 		}
 	} else {
-		if (template_mode == NoTemplateMode) {
-			cur_note->note = note;
-		} else {
+		if (template_mode) {
 			q = clipboard.data;
 			if (clipboard.channels < 1 || clipboard.rows < 1 || !clipboard.data) {
 				dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
@@ -2903,21 +2920,22 @@ static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row
 				i = note - q->note;
 
 				switch (template_mode) {
-				case TemplateOverwrite:
+				case TEMPLATE_OVERWRITE:
 					snap_paste(&clipboard, current_channel-1, current_row, i);
 					break;
-				case TemplateMixPatternPrecedence:
+				case TEMPLATE_MIX_PATTERN_PRECEDENCE:
 					clipboard_paste_mix_fields(0, i);
 					break;
-				case TemplateMixClipboardPrecedence:
+				case TEMPLATE_MIX_CLIPBOARD_PRECEDENCE:
 					clipboard_paste_mix_fields(1, i);
 					break;
-				case TemplateNotesOnly:
+				case TEMPLATE_NOTES_ONLY:
 					clipboard_paste_mix_notes(1, i);
 					break;
-				case NoTemplateMode: break;
 				};
 			}
+		} else {
+			cur_note->note = note;
 		}
 	}
 	pattern_selection_system_copyout();
@@ -2932,8 +2950,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	status.flags |= SONG_NEEDS_SAVE;
 	song_get_pattern(current_pattern, &pattern);
 
-	if (midi_start_record && 
-	!(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))) {
+	if (midi_start_record && !(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))) {
 		switch (midi_start_record) {
 		case 1: /* pattern loop */
 			song_loop_pattern(current_pattern, current_row);
@@ -2954,7 +2971,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		/* nada */
 	} else if (k->state) {
 		if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
-						&& playback_tracing) {
+			&& playback_tracing) {
 			px = channel_multi_base;
 		} else {
 			px = channel_quick;
@@ -2984,7 +3001,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			v = 0;
 		}
 		if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
-						&& playback_tracing) {
+				&& playback_tracing) {
 			px = channel_multi_base;
 		} else {
 			px = channel_quick;
@@ -3000,7 +3017,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 
 		patedit_record_note(cur_note, c+1, current_row, n,0);
 
-		if (template_mode == NoTemplateMode) {
+		if (!template_mode) {
 			if (k->midi_channel > 0) {
 				cur_note->instrument = k->midi_channel;
 			} else {
@@ -3247,21 +3264,23 @@ static int pattern_editor_insert(struct key_event *k)
 			}
 		} else {
 			/* copy the current sample/instrument -- UNLESS the note is empty */
-			if (template_mode == NoTemplateMode && edit_copy_mask & MASK_INSTRUMENT) {
-				if (song_is_instrument_mode())
-					cur_note->instrument = instrument_get_current();
-				else
-					cur_note->instrument = sample_get_current();
-			}
-			if (template_mode == NoTemplateMode && edit_copy_mask & MASK_VOLUME) {
-				cur_note->volume_effect = mask_note.volume_effect;
-				cur_note->volume = mask_note.volume;
-			}
-			if (template_mode == NoTemplateMode && edit_copy_mask & MASK_EFFECT) {
-				cur_note->effect = mask_note.effect;
-			}
-			if (template_mode == NoTemplateMode && edit_copy_mask & MASK_EFFECTVALUE) {
-				cur_note->parameter = mask_note.parameter;
+			if (!template_mode) {
+				if (edit_copy_mask & MASK_INSTRUMENT) {
+					if (song_is_instrument_mode())
+						cur_note->instrument = instrument_get_current();
+					else
+						cur_note->instrument = sample_get_current();
+				}
+				if (edit_copy_mask & MASK_VOLUME) {
+					cur_note->volume_effect = mask_note.volume_effect;
+					cur_note->volume = mask_note.volume;
+				}
+				if (edit_copy_mask & MASK_EFFECT) {
+					cur_note->effect = mask_note.effect;
+				}
+				if (edit_copy_mask & MASK_EFFECTVALUE) {
+					cur_note->parameter = mask_note.parameter;
+				}
 			}
 		}
 
@@ -3286,12 +3305,7 @@ static int pattern_editor_insert(struct key_event *k)
 			if (tracing_was_playing) {
 				song_single_step(current_pattern, current_row);
 			} else {
-				song_keyrecord(i, i,
-						n, vol,
-						j,
-						NULL,
-						cur_note->effect,
-						cur_note->parameter);
+				song_keyrecord(i, i, n, vol, j, NULL, cur_note->effect, cur_note->parameter);
 			}
 		} else if (tracing_was_playing) {
 			song_single_step(current_pattern, current_row);
@@ -3693,46 +3707,17 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		break;
 	case SDLK_i:
 		if (k->state) return 1;
-		if (fast_volume_mode) {
+		if (fast_volume_mode)
 			fast_volume_amplify();
-		} else {
-			switch (template_mode) {
-
-                        /* TODO: these should be displayed UNDER the "---- Pattern Editor (F2) ----- line
-                        and should stay there AS LONG AS WE'RE IN ANY TEMPLATE MODE - even if we go to another
-                        page and then back to the pattern editor */
-
-			case NoTemplateMode:
-			    template_mode = TemplateOverwrite;
-				status_text_flash_color(3,"Template, Overwrite");
-				break;
-			case TemplateOverwrite:
-			    template_mode = TemplateMixPatternPrecedence;
-				status_text_flash_color(3,"Template, Mix - Pattern data precedence");
-				break;
-			case TemplateMixPatternPrecedence:
-			    template_mode = TemplateMixClipboardPrecedence;
-				status_text_flash_color(3,"Template, Mix - Clipboard data precedence");
-				break;
-			case TemplateMixClipboardPrecedence:
-			    template_mode = TemplateNotesOnly;
-				status_text_flash_color(3,"Template, Notes only");
-				break;
-			case TemplateNotesOnly:
-			    template_mode = NoTemplateMode;
-				/* Erf. Apparently "" causes a gcc warning */
-				status_text_flash(" ");
-				break;
-			};
-		}
+		else
+			template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
 		break;
 	case SDLK_j:
 		if (k->state) return 1;
-		if (fast_volume_mode) {
+		if (fast_volume_mode)
 			fast_volume_attenuate();
-		} else {
+		else
 			volume_amplify();
-		}
 		break;
 	case SDLK_t:
 		if (k->state) return 1;
@@ -4046,7 +4031,10 @@ static int pattern_editor_handle_key(struct key_event * k)
 		np = current_position; nc = current_channel; nr = current_row;
 		for (n = top_display_channel, nx = 0; nx <= visible_channels; n++, nx++) {
 			track_view = track_views+track_view_scheme[nx];
-			if (((n == top_display_channel && shift_selection.in_progress) || k->x >= basex) && ((n == visible_channels && shift_selection.in_progress) || k->x < basex + track_view->width)) {
+			if (((n == top_display_channel && shift_selection.in_progress)
+			     || k->x >= basex)
+			    && ((n == visible_channels && shift_selection.in_progress)
+			        || k->x < basex + track_view->width)) {
 				if (!shift_selection.in_progress && (k->y == 14 || k->y == 13)) {
 					if (!k->state) {
 						if (!mute_toggle_hack[n-1]) {

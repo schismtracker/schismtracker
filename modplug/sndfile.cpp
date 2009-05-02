@@ -26,24 +26,6 @@ extern void ITUnpack8Bit(signed char *pSample, DWORD dwLen, LPBYTE lpMemFile, DW
 extern void ITUnpack16Bit(signed char *pSample, DWORD dwLen, LPBYTE lpMemFile, DWORD dwMemLength, BOOL b215);
 
 
-#define MAX_PACK_TABLES		3
-
-
-// Compression table
-static signed char UnpackTable[MAX_PACK_TABLES][16] =
-//--------------------------------------------
-{
-	// CPU-generated dynamic table
-	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-	// u-Law table
-	{0, 1, 2, 4, 8, 16, 32, 64,
-	-1, -2, -4, -8, -16, -32, -48, -64},
-	// Linear table
-	{0, 1, 2, 3, 5, 7, 12, 19,
-	-1, -2, -3, -5, -7, -12, -19, -31}
-};
-
-
 //////////////////////////////////////////////////////////
 // CSoundFile
 
@@ -601,7 +583,7 @@ void CSoundFile::SetCurrentPos(UINT nPos)
 		m_nMusicSpeed = m_nDefaultSpeed;
 		m_nMusicTempo = m_nDefaultTempo;
 	}
-	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_CPUVERYHIGH|SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
+	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
 	for (nPattern = 0; nPattern < MAX_ORDERS; nPattern++)
 	{
 		UINT ord = Order[nPattern];
@@ -681,17 +663,17 @@ void CSoundFile::SetCurrentOrder(UINT nPos)
 		m_nPatternDelay = 0;
 		m_nFrameDelay = 0;
 	}
-	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_CPUVERYHIGH|SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
+	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
 }
 
 void CSoundFile::ResetChannels()
 //------------------------------
 {
-	m_dwSongFlags &= ~(SONG_CPUVERYHIGH|SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
+	m_dwSongFlags &= ~(SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
 	m_nBufferCount = 0;
 	for (UINT i=0; i<MAX_CHANNELS; i++)
 	{
-		Chn[i].nROfs = Chn[i].nLOfs = 0;
+		Chn[i].nROfs = Chn[i].nLOfs = Chn[i].strike = 0;
 	}
 }
 
@@ -736,12 +718,6 @@ UINT CSoundFile::GetBestSaveFormat() const
 {
 	if ((!m_nSamples) || (!m_nChannels)) return MOD_TYPE_NONE;
 	if (!m_nType) return MOD_TYPE_NONE;
-	if (m_nType & (MOD_TYPE_MOD|MOD_TYPE_OKT))
-		return MOD_TYPE_MOD;
-	if (m_nType & (MOD_TYPE_S3M|MOD_TYPE_STM|MOD_TYPE_ULT|MOD_TYPE_FAR|MOD_TYPE_PTM))
-		return MOD_TYPE_S3M;
-	if (m_nType & (MOD_TYPE_XM|MOD_TYPE_MED|MOD_TYPE_MTM|MOD_TYPE_MT2))
-		return MOD_TYPE_XM;
 	return MOD_TYPE_IT;
 }
 
@@ -749,20 +725,8 @@ UINT CSoundFile::GetBestSaveFormat() const
 UINT CSoundFile::GetSaveFormats() const
 //-------------------------------------
 {
-	UINT n = 0;
 	if ((!m_nSamples) || (!m_nChannels) || (m_nType == MOD_TYPE_NONE)) return 0;
-	switch(m_nType)
-	{
-	case MOD_TYPE_MOD:	n = MOD_TYPE_MOD;
-	case MOD_TYPE_S3M:	n = MOD_TYPE_S3M;
-	}
-	n |= MOD_TYPE_XM | MOD_TYPE_IT;
-	if (!(m_dwSongFlags & SONG_INSTRUMENTMODE))
-	{
-		if (m_nSamples < 32) n |= MOD_TYPE_MOD;
-		n |= MOD_TYPE_S3M;
-	}
-	return n;
+	return MOD_TYPE_IT; // asjdkfjalsdfwhatever
 }
 
 
@@ -794,66 +758,6 @@ UINT CSoundFile::GetInstrumentName(UINT nInstr,LPSTR s) const
 }
 
 
-#ifndef NO_PACKING
-UINT CSoundFile::PackSample(int &sample, int next)
-//------------------------------------------------
-{
-	UINT i = 0;
-	int delta = next - sample;
-	if (delta >= 0)
-	{
-		for (i=0; i<7; i++) if (delta <= (int)CompressionTable[i+1]) break;
-	} else
-	{
-		for (i=8; i<15; i++) if (delta >= (int)CompressionTable[i+1]) break;
-	}
-	sample += (int)CompressionTable[i];
-	return i;
-}
-
-
-BOOL CSoundFile::CanPackSample(LPSTR pSample, UINT nLen, UINT nPacking, BYTE *result)
-//-----------------------------------------------------------------------------------
-{
-	int pos, old, oldpos, besttable = 0;
-	DWORD dwErr, dwTotal, dwResult;
-	int i,j;
-
-	if (result) *result = 0;
-	if ((!pSample) || (nLen < 1024)) return FALSE;
-	// Try packing with different tables
-	dwResult = 0;
-	for (j=1; j<MAX_PACK_TABLES; j++)
-	{
-		memcpy(CompressionTable, UnpackTable[j], 16);
-		dwErr = 0;
-		dwTotal = 1;
-		old = pos = oldpos = 0;
-		for (i=0; i<(int)nLen; i++)
-		{
-			int s = (int)pSample[i];
-			PackSample(pos, s);
-			dwErr += abs(pos - oldpos);
-			dwTotal += abs(s - old);
-			old = s;
-			oldpos = pos;
-		}
-		dwErr = _muldiv(dwErr, 100, dwTotal);
-		if (dwErr >= dwResult)
-		{
-			dwResult = dwErr;
-			besttable = j;
-		}
-	}
-	memcpy(CompressionTable, UnpackTable[besttable], 16);
-	if (result)
-	{
-		if (dwResult > 100) *result	= 100; else *result = (BYTE)dwResult;
-	}
-	return (dwResult >= nPacking) ? TRUE : FALSE;
-}
-#endif // NO_PACKING
-
 #ifndef MODPLUG_NO_FILESAVE
 
 UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
@@ -869,35 +773,6 @@ UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 	if ((!pSample) || (f == NULL) || (!nLen)) return 0;
 	switch(nFlags)
 	{
-#ifndef NO_PACKING
-	// 3: 4-bit ADPCM data
-	case RS_ADPCM4:
-		{
-			int pos;
-			len = (nLen + 1) / 2;
-			f->o(f, (const unsigned char *)CompressionTable, 16);
-			bufcount = 0;
-			pos = 0;
-			for (UINT j=0; j<len; j++)
-			{
-				BYTE b;
-				// Sample #1
-				b = PackSample(pos, (int)pSample[j*2]);
-				// Sample #2
-				b |= PackSample(pos, (int)pSample[j*2+1]) << 4;
-				buffer[bufcount++] = (signed char)b;
-				if (bufcount >= sizeof(buffer))
-				{
-					f->o(f, (const unsigned char *)buffer, bufcount);
-					bufcount = 0;
-				}
-			}
-			if (bufcount) f->o(f, (const unsigned char *)buffer, bufcount);
-			len += 16;
-		}
-		break;
-#endif // NO_PACKING
-
 	// 16-bit samples
 	case RS_PCM16U:
 	case RS_PCM16D:
@@ -1561,6 +1436,12 @@ void CSoundFile::AdjustSampleLoop(MODINSTRUMENT *pIns)
 		pIns->nLoopStart = pIns->nLoopEnd = 0;
 		pIns->uFlags &= ~CHN_LOOP;
 	}
+	
+	// let's see how much trouble this gets us into.
+	// I don't really like the idea of trampling on the sample data, plus it eliminates the annoyingness
+	// of this function checking m_nType (which does not make sense in the first place)
+	// -- Storlek 20090423
+#if 0	
 	UINT len = pIns->nLength;
 	if (pIns->uFlags & CHN_16BIT)
 	{
@@ -1577,7 +1458,7 @@ void CSoundFile::AdjustSampleLoop(MODINSTRUMENT *pIns)
 		if ((pIns->uFlags & (CHN_LOOP|CHN_PINGPONGLOOP|CHN_STEREO)) == CHN_LOOP)
 		{
 			// Fix bad loops
-			if ((pIns->nLoopEnd+3 >= pIns->nLength) || (m_nType & MOD_TYPE_S3M))
+			if (pIns->nLoopEnd+3 >= pIns->nLength)
 			{
 				pSample[pIns->nLoopEnd] = pSample[pIns->nLoopStart];
 				pSample[pIns->nLoopEnd+1] = pSample[pIns->nLoopStart+1];
@@ -1616,6 +1497,7 @@ void CSoundFile::AdjustSampleLoop(MODINSTRUMENT *pIns)
 				}
 			}
 		}
+*/
 #endif
 		// Adjust end of sample
 		if (pIns->uFlags & CHN_STEREO)
@@ -1638,6 +1520,7 @@ void CSoundFile::AdjustSampleLoop(MODINSTRUMENT *pIns)
 			}
 		}
 	}
+#endif
 }
 
 
@@ -1707,54 +1590,6 @@ int CSoundFile::FrequencyToTranspose(DWORD freq)
 #else
 	return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
 #endif
-}
-
-
-void CSoundFile::FrequencyToTranspose(MODINSTRUMENT *psmp)
-//--------------------------------------------------------
-{
-	int f2t = FrequencyToTranspose(psmp->nC4Speed);
-	int transp = f2t >> 7;
-	int ftune = f2t & 0x7F;
-	if (ftune > 80)
-	{
-		transp++;
-		ftune -= 128;
-	}
-	if (transp > 127) transp = 127;
-	if (transp < -127) transp = -127;
-	psmp->RelativeTone = transp;
-	psmp->nFineTune = ftune;
-}
-
-
-void CSoundFile::CheckCPUUsage(UINT nCPU)
-//---------------------------------------
-{
-	if (nCPU > 100) nCPU = 100;
-	gnCPUUsage = nCPU;
-	if (nCPU < 90)
-	{
-		m_dwSongFlags &= ~SONG_CPUVERYHIGH;
-	} else
-	if ((m_dwSongFlags & SONG_CPUVERYHIGH) && (nCPU >= 94))
-	{
-		UINT i=MAX_CHANNELS;
-		while (i >= 8)
-		{
-			i--;
-			if (Chn[i].nLength)
-			{
-				Chn[i].nLength = Chn[i].nPos = 0;
-				nCPU -= 2;
-				if (nCPU < 94) break;
-			}
-		}
-	} else
-	if (nCPU > 90)
-	{
-		m_dwSongFlags |= SONG_CPUVERYHIGH;
-	}
 }
 
 

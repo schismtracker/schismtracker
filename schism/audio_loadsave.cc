@@ -74,7 +74,7 @@ static void _squelch_sample(int n)
 static void _convert_to_it(CSoundFile *qq)
 {
         unsigned int n, p;
-        MODINSTRUMENT *s;
+        //MODINSTRUMENT *s;
 
 	for (n = 1; n <= qq->m_nInstruments; n++) {
 		INSTRUMENTHEADER *i = mp->Headers[n];
@@ -115,20 +115,6 @@ static void _convert_to_it(CSoundFile *qq)
 
         if (qq->m_nType & MOD_TYPE_IT)
                 return;
-
-        s = qq->Ins + 1;
-        for (n = 1; n <= qq->m_nSamples; n++, s++) {
-                if (s->nC4Speed == 0) {
-                        s->nC4Speed = CSoundFile::TransposeToFrequency
-                                (s->RelativeTone, s->nFineTune);
-                }
-        }
-        for (; n < MAX_SAMPLES; n++, s++) {
-                // clear all the other samples
-                s->nC4Speed = 8363;
-                s->nVolume = 256;
-                s->nGlobalVol = 64;
-        }
 
 	for (int pat = 0; pat < MAX_PATTERNS; pat++) {
 		MODCOMMAND *note = qq->Patterns[pat];
@@ -1680,7 +1666,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 				dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 				file->type = TYPE_SAMPLE_EXTD;
 				file->description = "Fishcakes"; // FIXME - what does IT say?
-				file->smp_speed = library.Ins[n].nC4Speed;
+				file->smp_speed = library.Ins[n].nC5Speed;
 				file->smp_loop_start = library.Ins[n].nLoopStart;
 				file->smp_loop_end = library.Ins[n].nLoopEnd;
 				file->smp_sustain_start = library.Ins[n].nSustainStart;

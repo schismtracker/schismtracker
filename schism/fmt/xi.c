@@ -52,7 +52,7 @@ int fmt_xi_read_info(dmoz_file_t *file, const byte *data, size_t length)
 
 int fmt_xi_load_instrument(const byte *data, size_t length, int slot)
 {
-	XMINSTRUMENTHEADER xi;
+	//XMINSTRUMENTHEADER xi;
 	XMSAMPLEHEADER xmsh;
 	XMSAMPLESTRUCT xmss;
         struct instrumentloader ii;
@@ -61,7 +61,7 @@ int fmt_xi_load_instrument(const byte *data, size_t length, int slot)
 	unsigned int nsamples, rs;
 	unsigned int samplesize;
 	unsigned int ptr;
-	int k, j, n;
+	unsigned int k, j, n;
 
 	if (length <= 302) return false;
 	if (memcmp(data, "Extended Instrument: ", 21) != 0) return false;
@@ -116,7 +116,8 @@ int fmt_xi_load_instrument(const byte *data, size_t length, int slot)
 		if (xmss.looplen > xmss.samplen) xmss.looplen = xmss.samplen;
 		if (!xmss.looplen) xmss.type &= ~3;
 
-		smp = song_get_sample((n=instrument_loader_sample(&ii, k+1)), NULL);
+		n = instrument_loader_sample(&ii, k + 1);
+		smp = song_get_sample(n, NULL);
 		smp->flags = 0;
 		memcpy(smp->filename, xmss.name, 22);
 		smp->filename[21] = '\0';

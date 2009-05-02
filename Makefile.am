@@ -305,14 +305,3 @@ schismtracker_LDADD = $(lib_asound) $(lib_win32mm) \
 ## this needs cvs2cl.pl, blarg
 ChangeLog:
 	cvs2cl.pl
-
-## cvs snapshot distribution
-## package it under directory "schism-cvs-snapshot/"
-## total hack, but worksforme -storlek
-snapdir = schism-cvs-snapshot
-snapshot: ChangeLog distdir
-	mv $(distdir) $(snapdir)
-	tardir=$(snapdir) && $(am__tar) | bzip2 -9 -c >$(snapdir).tar.bz2
-	mv $(snapdir) $(distdir)
-	$(am__remove_distdir)
-	test "$(USER)" == storlek && scp $(snapdir).tar.bz2 pair:public_html/schism/dl

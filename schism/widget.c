@@ -50,7 +50,6 @@ void create_menutoggle(struct widget *w, int x, int y, int next_up, int next_dow
                        int next_right, int next_tab, void (*changed) (void), const char *const *choices)
 {
         int n, width = 0, len;
-        typedef struct widget_menutoggle wt;
 
         for (n = 0; choices[n]; n++) {
                 len = strlen(choices[n]);

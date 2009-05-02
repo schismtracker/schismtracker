@@ -101,18 +101,18 @@ static void palette_list_draw(void)
 	}
 
 	draw_text_len("User Defined", 21, 56, 27, fg, bg);
-        for (n = 0; n < 19 && palettes[n].name[0]; n++) {
+	for (n = 0; n < 19 && palettes[n].name[0]; n++) {
 		fg = 6;
 		bg = 0;
-                if (focused && n == selected_palette) {
-                        fg = 0;
-                        bg = 3;
-                } else if (n == selected_palette) {
-                        bg = 14;
-                }
-                draw_text_len(palettes[n].name, 21, 56, 28 + n, fg, bg);
-        }
-        max_palette = n;
+	        if (focused && n == selected_palette) {
+	                fg = 0;
+	                bg = 3;
+	        } else if (n == selected_palette) {
+	                bg = 14;
+	        }
+	        draw_text_len(palettes[n].name, 21, 56, 28 + n, fg, bg);
+	}
+	max_palette = n;
 }
 
 static int palette_list_handle_key_on_list(struct key_event * k)
@@ -308,3 +308,4 @@ void palette_load_page(struct page *page)
 	widgets_palette[48].width = 20;
 	widgets_palette[48].height = 19;
 }
+

@@ -236,8 +236,7 @@ BOOL CSoundFile::ReadFAR(const BYTE *lpStream, DWORD dwMemLength)
 		pins->nLength = pfs->length;
 		pins->nLoopStart = pfs->reppos;
 		pins->nLoopEnd = pfs->repend;
-		pins->nFineTune = 0;
-		pins->nC4Speed = 8363*2;
+		pins->nC5Speed = 8363*2;
 		pins->nGlobalVol = 64;
 		pins->nVolume = pfs->volume << 4;
 		pins->uFlags = 0;

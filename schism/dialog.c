@@ -182,44 +182,44 @@ int dialog_handle_key(struct key_event * k)
 {
 	struct dialog *d = dialogs + num_dialogs - 1;
 	int yes = 0;
-
-	if (!k->state) return 0;
 	
 	ENSURE_DIALOG(return 0);
 
-	switch (k->sym) {
-	case SDLK_y:
-		switch (status.dialog_type) {
-		case DIALOG_YES_NO:
-		case DIALOG_OK_CANCEL:
-			dialog_yes(d->data);
-			return 1;
-		default:
+	if (k->state) {
+		switch (k->sym) {
+		case SDLK_y:
+			switch (status.dialog_type) {
+			case DIALOG_YES_NO:
+			case DIALOG_OK_CANCEL:
+				dialog_yes(d->data);
+				return 1;
+			default:
+				break;
+			}
 			break;
-		}
-		break;
-	case SDLK_n:
-		switch (status.dialog_type) {
-		case DIALOG_YES_NO:
-			dialog_no(d->data);
-			return 1;
-		case DIALOG_OK_CANCEL:
+		case SDLK_n:
+			switch (status.dialog_type) {
+			case DIALOG_YES_NO:
+				dialog_no(d->data);
+				return 1;
+			case DIALOG_OK_CANCEL:
+				dialog_cancel(d->data);
+				return 1;
+			default:
+				break;
+			}
+			break;
+		case SDLK_ESCAPE:
 			dialog_cancel(d->data);
 			return 1;
+		case SDLK_RETURN:
+			yes = 1;
+			break;
 		default:
 			break;
 		}
-		break;
-	case SDLK_ESCAPE:
-		dialog_cancel(d->data);
-		return 1;
-	case SDLK_RETURN:
-		yes = 1;
-		break;
-	default:
-		break;
 	}
-	
+
 	if (d->handle_key && d->handle_key(k)) {
 		return 1;
 	} else if (yes) {

@@ -110,7 +110,7 @@ BOOL CSoundFile::ReadPTM(const BYTE *lpStream, DWORD dwMemLength)
 		pins->nGlobalVol = 64;
 		pins->nPan = 128;
 		pins->nVolume = psmp->volume << 2;
-		pins->nC4Speed = bswapLE16(psmp->nC4Spd) << 1;
+		pins->nC5Speed = bswapLE16(psmp->nC4Spd) << 1;
 		pins->uFlags = 0;
 		if ((psmp->sampletype & 3) == 1)
 		{

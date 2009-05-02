@@ -446,7 +446,7 @@ static void instrument_list_draw_list(void)
         int selected = (ACTIVE_PAGE.selected_widget == 0);
         int is_current;
 	int ss, cl = 0, cr = 0;
-        int is_playing[100];
+        int is_playing[SCHISM_MAX_INSTRUMENTS];
         char buf[4];
 	
 	if (clippy_owner(CLIPPY_SELECT) == widgets_general) {
@@ -469,7 +469,7 @@ static void instrument_list_draw_list(void)
                 is_current = (n == current_instrument);
 
                 if (ins->played)
-                	draw_char(173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
+                	draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 
                 draw_text(num99tostr(n, buf), 2, 13 + pos, 0, 2);
                 if (instrument_cursor_pos < 25) {
@@ -761,7 +761,9 @@ static void note_trans_draw(void)
                 }
         }
 
-        /* draw the little mask thingy at the bottom. Could optimize this....  -delt. */
+        /* draw the little mask thingy at the bottom. Could optimize this....  -delt.
+           Sure can! This could share the same track-view functions that the
+           pattern editor ought to be using. -Storlek */
         if (is_selected && !(status.flags & CLASSIC_MODE)) {
 		switch (note_trans_cursor_pos) {
 		case 0:
@@ -876,7 +878,7 @@ static int note_trans_handle_key(struct key_event * k)
         int new_pos = prev_pos;
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
         /* char c; */
-        const char *digit_string = "0123456789HIJKLMNOPQR";
+        const char *digit_string = "0123456789HIJKLMNOPQR"; /* FIXME this string should not be here */
         int c, n;
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
@@ -1203,8 +1205,11 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 			envpos[2] = channel->nPitchEnvPosition;
 
 			x = 4 + (envpos[env_num] * (last_x-4) / max_ticks);
-			if (x > last_x) x = last_x;
-			c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? 8 : 6;
+			if (x > last_x)
+				x = last_x;
+			c =  (status.flags & CLASSIC_MODE)
+				? 12
+				: ((channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? 8 : 6);
 			for (y = 0; y < 62; y++)
 				vgamem_ovl_drawpixel(&env_overlay, x, y, c);
 		}
@@ -1228,7 +1233,6 @@ static int _env_node_add(song_envelope *env, int current_node, int override_tick
 
 	status.flags |= SONG_NEEDS_SAVE;
 	
-	/* is 24 the right number here, or 25? */
 	if (env->nodes > 24 || current_node == env->nodes - 1)
 		return current_node;
 	
@@ -1237,11 +1241,7 @@ static int _env_node_add(song_envelope *env, int current_node, int override_tick
 	if (override_tick > -1 && override_value > -1) {
 		newtick = override_tick;
 		newvalue = override_value;
-
 	} else if (newtick == env->ticks[current_node] || newtick == env->ticks[current_node + 1]) {
-		/* If the current node is at (for example) tick 30, and the next node is at tick 32,
-		 * is there any chance of a rounding error that would make newtick 30 instead of 31?
-		 * ("Is there a chance the track could bend?") */
 		printf("Not enough room!\n");
 		return current_node;
 	}
@@ -1401,14 +1401,13 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int
 
         default:
 		if (!k->state) return 0;
-		if (k->orig_sym == SDLK_KP_MULTIPLY) return 0;
 
 		n = numeric_key_event(k, 0);
 		if (n > -1) {
 			if (k->mod & KMOD_ALT) {
 				save_envelope(n, env, sec);
 				status_text_flash("Envelope copied into slot %d", n);
-			} else {
+			} else if (k->mod & KMOD_CTRL) {
 				restore_envelope(n, env, sec);
 				if (!(status.flags & CLASSIC_MODE))
 					status_text_flash("Copied envelope from slot %d", n);
@@ -1947,19 +1946,19 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 
 		if (k->mod & KMOD_SHIFT) {
 			switch (status.current_page) {
-			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);break;
-			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);break;
-			case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_PANNING);break;
 			default:
-			case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL);break;
+			case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
+			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);  break;
+			case PAGE_INSTRUMENT_LIST_PITCH:   set_subpage(PAGE_INSTRUMENT_LIST_PANNING); break;
+			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);   break;
 			};
 		} else {
 			switch (status.current_page) {
-			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);break;
-			case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_PANNING);break;
-			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);break;
 			default:
-			case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL);break;
+			case PAGE_INSTRUMENT_LIST_PITCH:   set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
+			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);  break;
+			case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_PANNING); break;
+			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);   break;
 			};
 		}
 		return 1;
@@ -2046,47 +2045,34 @@ static void instrument_list_handle_key(struct key_event * k)
 
 static void set_subpage(int page)
 {
-	int widget;
+        int widget = ACTIVE_PAGE.selected_widget;
+	int b = 1;
 	switch (page) {
-	case PAGE_INSTRUMENT_LIST_GENERAL: widget=1; break;
-	case PAGE_INSTRUMENT_LIST_VOLUME: widget=2; break;
-	case PAGE_INSTRUMENT_LIST_PANNING: widget=3; break;
-	case PAGE_INSTRUMENT_LIST_PITCH: widget=4; break;
+	case PAGE_INSTRUMENT_LIST_GENERAL: b = 1; break;
+	case PAGE_INSTRUMENT_LIST_VOLUME:  b = 2; break;
+	case PAGE_INSTRUMENT_LIST_PANNING: b = 3; break;
+	case PAGE_INSTRUMENT_LIST_PITCH:   b = 4; break;
 	default: return;
 	};
-	togglebutton_set(pages[page].widgets, widget, 0);
+	togglebutton_set(pages[page].widgets, b, 0);
 	set_page(page);
+	if (widget >= ACTIVE_PAGE.total_widgets)
+		widget = ACTIVE_PAGE.total_widgets - 1;
+	ACTIVE_PAGE.selected_widget = widget;
 	instrument_list_subpage = page;
 	status.flags |= NEED_UPDATE;
 }
 
 static void change_subpage(void)
 {
-        int widget = ACTIVE_PAGE.selected_widget;
-        int page = status.current_page;
-
-        switch (widget) {
-        case 1:
-                page = PAGE_INSTRUMENT_LIST_GENERAL;
-                break;
-        case 2:
-                page = PAGE_INSTRUMENT_LIST_VOLUME;
-                break;
-        case 3:
-                page = PAGE_INSTRUMENT_LIST_PANNING;
-                break;
-        case 4:
-		page = PAGE_INSTRUMENT_LIST_PITCH;
-                break;
-#ifndef NDEBUG
-        default:
-		fprintf(stderr, "change_subpage: wtf, how did I get here?\n");
-		abort();
-                return;
-#endif
-        }
-	set_subpage(page);
-	pages[page].selected_widget = widget;
+	int widget = ACTIVE_PAGE.selected_widget;
+	int p[] = {
+		PAGE_INSTRUMENT_LIST_GENERAL,
+		PAGE_INSTRUMENT_LIST_VOLUME,
+		PAGE_INSTRUMENT_LIST_PANNING,
+		PAGE_INSTRUMENT_LIST_PITCH,
+	};
+	set_subpage(p[CLAMP(widget - 1, 0, 3)]);
 }
 
 /* --------------------------------------------------------------------- */
@@ -2816,3 +2802,4 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[18].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[19].d.thumbbar.text_at_min = "Off";
 }
+
