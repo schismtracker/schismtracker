@@ -1,9 +1,9 @@
 /*
- * slurp - General-purpose file reader
- * copyright (c) 2003-2005 chisel <storlek@chisel.cjb.net>
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
- * URL: http://nimh.org/schism/
- * URL: http://rigelseven.com/
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * URL: http://schismtracker.org/
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +70,7 @@ static void _slurp_stdio_closure(slurp_t *t)
  * ...
  * <mml> but, on another system with a different block size, 64 blocks may still be efficient, but 64k
  *       might not be 64 blocks
- * (so maybe this should grab the block size from stat() insetad...) */
+ * (so maybe this should grab the block size from stat() instead...) */
 #define CHUNK 65536
 
 static int _slurp_stdio_pipe(slurp_t * t, int fd)

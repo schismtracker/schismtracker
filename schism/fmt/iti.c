@@ -1,8 +1,9 @@
 /*
  * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
- * copyright (c) 2005-2009 Mrs. Brisby <mrs.brisby@nimh.org>
- * URL: http://rigelseven.com/schism/
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * URL: http://schismtracker.org/
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
