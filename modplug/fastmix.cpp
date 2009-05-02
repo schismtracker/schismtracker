@@ -977,8 +977,6 @@ END_RAMPMIX_INTERFACE()
 //////////////////////////////////////////////////////
 // Resonant Filter Mix
 
-#ifndef NO_FILTER
-
 // Mono Filter Mix
 BEGIN_MIX_FLT_INTERFACE(FilterMono8BitMix)
 	SNDMIX_BEGINSAMPLELOOP8
@@ -1208,44 +1206,6 @@ BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitFirFilterRampMix)
 	SNDMIX_RAMPSTEREOVOL
 END_RAMPMIX_STFLT_INTERFACE()
 
-
-#else
-// Mono
-#define FilterMono8BitMix					Mono8BitMix
-#define FilterMono16BitMix					Mono16BitMix
-#define FilterMono8BitLinearMix				Mono8BitLinearMix
-#define FilterMono16BitLinearMix			Mono16BitLinearMix
-#define FilterMono8BitSplineMix				Mono8BitSplineMix
-#define FilterMono16BitSplineMix			Mono16BitSplineMix
-#define FilterMono8BitFirFilterMix			Mono8BitFirFilterMix
-#define FilterMono16BitFirFilterMix			Mono16BitFirFilterMix
-#define FilterMono8BitRampMix				Mono8BitRampMix
-#define FilterMono16BitRampMix				Mono16BitRampMix
-#define FilterMono8BitLinearRampMix			Mono8BitLinearRampMix
-#define FilterMono16BitLinearRampMix		Mono16BitLinearRampMix
-#define FilterMono8BitSplineRampMix			Mono8BitSplineRampMix
-#define FilterMono16BitSplineRampMix		Mono16BitSplineRampMix
-#define FilterMono8BitFirFilterRampMix		Mono8BitFirFilterRampMix
-#define FilterMono16BitFirFilterRampMix		Mono16BitFirFilterRampMix
-// Stereo
-#define FilterStereo8BitMix					Stereo8BitMix
-#define FilterStereo16BitMix				Stereo16BitMix
-#define FilterStereo8BitLinearMix			Stereo8BitLinearMix
-#define FilterStereo16BitLinearMix			Stereo16BitLinearMix
-#define FilterStereo8BitSplineMix			Stereo8BitSplineMix
-#define FilterStereo16BitSplineMix			Stereo16BitSplineMix
-#define FilterStereo8BitFirFilterMix		Stereo8BitFirFilterMix
-#define FilterStereo16BitFirFilterMix		Stereo16BitFirFilterMix
-#define FilterStereo8BitRampMix				Stereo8BitRampMix
-#define FilterStereo16BitRampMix			Stereo16BitRampMix
-#define FilterStereo8BitLinearRampMix		Stereo8BitLinearRampMix
-#define FilterStereo16BitLinearRampMix		Stereo16BitLinearRampMix
-#define FilterStereo8BitSplineRampMix		Stereo8BitSplineRampMix
-#define FilterStereo16BitSplineRampMix		Stereo16BitSplineRampMix
-#define FilterStereo8BitFirFilterRampMix	Stereo8BitFirFilterRampMix
-#define FilterStereo16BitFirFilterRampMix	Stereo16BitFirFilterRampMix
-
-#endif
 
 /////////////////////////////////////////////////////////////////////////////////////
 //
@@ -1490,9 +1450,7 @@ UINT CSoundFile::CreateStereoMix(int count)
 		nFlags = 0;
 		if (pChannel->dwFlags & CHN_16BIT) nFlags |= MIXNDX_16BIT;
 		if (pChannel->dwFlags & CHN_STEREO) nFlags |= MIXNDX_STEREO;
-	#ifndef NO_FILTER
 		if (pChannel->dwFlags & CHN_FILTER) nFlags |= MIXNDX_FILTER;
-	#endif
 		if (!(pChannel->dwFlags & CHN_NOIDO)
 		&& !(gdwSoundSetup & SNDMIX_NORESAMPLING))
 		{

@@ -593,9 +593,7 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 		{
 			pChn->nVolSwing = pChn->nPanSwing = 0;
 		}
-#ifndef NO_FILTER
 		if ((pChn->nCutOff < 0x7F) && (bFlt)) SetupChannelFilter(pChn, TRUE);
-#endif // NO_FILTER
 	}
 	// Special case for MPT
 	if (bManual) pChn->dwFlags &= ~CHN_MUTE;
@@ -1846,7 +1844,6 @@ void CSoundFile::MidiSend(const unsigned char *data, unsigned int len, UINT nChn
 			case 0x00: /* set cutoff */
 				oldcutoff = pChn->nCutOff;
 				if (data[3] < 0x80) pChn->nCutOff = data[3];
-#ifndef NO_FILTER
 				oldcutoff -= pChn->nCutOff;
 
 				if (oldcutoff < 0) oldcutoff = -oldcutoff;
@@ -1855,13 +1852,10 @@ void CSoundFile::MidiSend(const unsigned char *data, unsigned int len, UINT nChn
 				|| (!(pChn->nLeftVol|pChn->nRightVol)))
 					SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER)
 							? FALSE : TRUE);
-#endif // NO_FILTER
 				break;
 			case 0x01: /* set resonance */
 				if (data[3] < 0x80) pChn->nResonance = data[3];
-#ifndef NO_FILTER
 				SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE);
-#endif // NO_FILTER
 				break;
 			};
 		}
