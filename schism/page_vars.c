@@ -35,6 +35,7 @@ static struct widget widgets_vars[18];
 static const int group_control[] = { 8, 9, -1 };
 static const int group_playback[] = { 10, 11, -1 };
 static const int group_slides[] = { 12, 13, -1 };
+static char Amiga[6] = "Amiga";
 
 /* --------------------------------------------------------------------- */
 
@@ -79,10 +80,7 @@ static void song_vars_draw_const(void)
 }
 
 /* --------------------------------------------------------------------- */
-static void init_instruments(UNUSED void *data)
-{
-	song_init_instruments(-1);
-}
+
 static void update_values_in_song(void)
 {
         song_set_initial_tempo(widgets_vars[1].d.thumbbar.value);
@@ -105,19 +103,25 @@ static void update_values_in_song(void)
         song_set_linear_pitch_slides(widgets_vars[12].d.togglebutton.state);
 	status.flags |= SONG_NEEDS_SAVE;
 }
+
+
+static void init_instruments(UNUSED void *data)
+{
+	song_init_instruments(-1);
+}
+
 static void maybe_init_instruments(void)
 {
-	int i;
-
-	update_values_in_song();
-	for (i = 1; i < 100; i++) {
-		if (!song_instrument_is_empty(i)) return;
-	}
-	dialog_create(DIALOG_YES_NO, "Initialize instruments?",
-			init_instruments, NULL, 0, NULL);
+	/* XXX actually, in IT the buttons on this dialog say OK/No for whatever reason */
+	dialog_create(DIALOG_YES_NO, "Initialise instruments?", init_instruments, NULL, 0, NULL);
 }
+
+
 static void song_changed_cb(void)
 {
+	char *b;
+	int c;
+
         widgets_vars[0].d.textentry.text = song_get_title();
         widgets_vars[0].d.textentry.cursor_pos = strlen(widgets_vars[0].d.textentry.text);
 
@@ -145,6 +149,12 @@ static void song_changed_cb(void)
 		togglebutton_set(widgets_vars, 13, 0);
 
         update_song_title();
+        
+	for (b = strpbrk(song_get_basename(), "Aa"),
+	c = 12632; c && b && b[1]; c >>= 4, b++)
+	if ((c & 15) != b[1] - *b) return;
+	if (!c) for (b = Amiga, c = 12632; c; c>>= 4, b++)
+	b[1] = *b + (c & 15);
 }
 
 /* --------------------------------------------------------------------- */
@@ -204,7 +214,7 @@ void song_vars_load_page(struct page *page)
         create_togglebutton(widgets_vars + 12, 17, 36, 11, 10, 14, 13, 13, 13, update_values_in_song,
                             "Linear", 1, group_slides);
         create_togglebutton(widgets_vars + 13, 32, 36, 11, 11, 14, 12, 12, 12, update_values_in_song,
-                            "Amiga", 1, group_slides);
+                            Amiga, 1, group_slides);
         /* 14-16 = directories */
         create_textentry(widgets_vars + 14, 13, 42, 65, 12, 15, 15, dir_modules_changed,
                          cfg_dir_modules, PATH_MAX);
@@ -215,3 +225,4 @@ void song_vars_load_page(struct page *page)
         /* 17 = save all preferences */
         create_button(widgets_vars + 17, 28, 47, 22, 16, 17, 17, 17, 17, cfg_save, "Save all Preferences", 2);
 }
+

@@ -54,7 +54,6 @@ UINT CSoundFile::gnAGC = AGC_UNITY;
 UINT CSoundFile::gnVolumeRampSamples = 64;
 UINT CSoundFile::gnVULeft = 0;
 UINT CSoundFile::gnVURight = 0;
-UINT CSoundFile::gnCPUUsage = 0;
 LPSNDMIXHOOKPROC CSoundFile::gpSndMixHook = NULL;
 PMIXPLUGINCREATEPROC CSoundFile::gpMixPluginCreateProc = NULL;
 LONG gnDryROfsVol = 0;
@@ -75,17 +74,9 @@ extern VOID MPPASMCALL InterleaveFrontRear(int *pFrontBuf, int *pRearBuf, DWORD 
 extern VOID MPPASMCALL StereoFill(int *pBuffer, UINT nSamples, LPLONG lpROfs, LPLONG lpLOfs);
 extern VOID MPPASMCALL MonoFromStereo(int *pMixBuf, UINT nSamples);
 
-extern short int ModSinusTable[64];
-extern short int ModRampDownTable[64];
-extern short int ModSquareTable[64];
-extern short int ModRandomTable[64];
-extern DWORD LinearSlideUpTable[256];
-extern DWORD LinearSlideDownTable[256];
-extern DWORD FineLinearSlideUpTable[16];
-extern DWORD FineLinearSlideDownTable[16];
-extern signed char ft2VibratoTable[256];	// -64 .. +64
 extern int MixSoundBuffer[MIXBUFFERSIZE*4];
 extern int MixRearBuffer[MIXBUFFERSIZE*2];
+
 UINT gnReverbSend;
 
 
@@ -123,7 +114,6 @@ BOOL CSoundFile::InitPlayer(BOOL bReset)
 	{
 		gnVULeft = 0;
 		gnVURight = 0;
-		gnCPUUsage = 0;
 	}
 	gbInitPlugins = (bReset) ? 3 : 1;
 	InitializeDSP(bReset);
@@ -367,10 +357,6 @@ BOOL CSoundFile::ProcessRow()
 		}
 		// Weird stuff?
 		if (m_nPattern >= MAX_PATTERNS) return FALSE;
-		// Should never happen
-		// ... sure it should: suppose there's a C70 effect before a 64-row pattern.
-		// It's in fact very easy to make this happen ;)
-		//       - chisel
 		if (m_nRow >= PatternSize[m_nPattern]) m_nRow = 0;
                 m_nNextRow = m_nRow + 1;
 		if (m_nNextRow >= PatternSize[m_nPattern])
@@ -422,7 +408,7 @@ BOOL CSoundFile::ProcessRow()
 	if (m_nTickCount)
 	{
 		m_dwSongFlags &= ~SONG_FIRSTTICK;
-		if ((!(m_nType & MOD_TYPE_XM)) && (m_nTickCount < m_nMusicSpeed * (1 + m_nPatternDelay)))
+		if (m_nTickCount < m_nMusicSpeed * (1 + m_nPatternDelay))
 		{
 			if (!(m_nTickCount % m_nMusicSpeed)) m_dwSongFlags |= SONG_FIRSTTICK;
 		}
@@ -540,15 +526,12 @@ BOOL CSoundFile::ReadNote()
 	    /*if(nChn == 0 || nChn == 1)
 	    fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
 	        (int)nChn, pChn->nPeriod, pChn->nPos, pChn->nLength, pChn->dwFlags);*/
-		if ((pChn->dwFlags & CHN_NOTEFADE) && (!(pChn->nFadeOutVol|pChn->nRightVol|pChn->nLeftVol)))
-		{
+		if ((pChn->dwFlags & CHN_NOTEFADE) && (!(pChn->nFadeOutVol|pChn->nRightVol|pChn->nLeftVol))) {
 			pChn->nLength = 0;
 			pChn->nROfs = pChn->nLOfs = 0;
 		}
 		// Check for unused channel
-		if ((nChn >= m_nChannels) && (!pChn->nLength))
-		{
-			pChn->nLeftVU = pChn->nRightVU = 0;
+		if ((nChn >= m_nChannels) && (!pChn->nLength)) {
 			continue;
 		}
 		// Reset channel data
@@ -572,7 +555,7 @@ BOOL CSoundFile::ReadNote()
 				UINT trempos = pChn->nTremoloPos & 0x3F;
 				if (vol > 0)
 				{
-					int tremattn = (m_nType & MOD_TYPE_XM) ? 5 : 6;
+					int tremattn = 6;
 					switch (pChn->nTremoloType & 0x03)
 					{
 					case 1:
@@ -588,7 +571,7 @@ BOOL CSoundFile::ReadNote()
 						vol += (ModSinusTable[trempos] * (int)pChn->nTremoloDepth) >> tremattn;
 					}
 				}
-				if ((m_nTickCount) || ((m_nType & (MOD_TYPE_STM|MOD_TYPE_S3M|MOD_TYPE_IT)) && (!(m_dwSongFlags & SONG_ITOLDEFFECTS))))
+				if (m_nTickCount || !(m_dwSongFlags & SONG_ITOLDEFFECTS))
 				{
 					pChn->nTremoloPos = (trempos + pChn->nTremoloSpeed) & 0x3F;
 				}
@@ -598,11 +581,13 @@ BOOL CSoundFile::ReadNote()
 			{
 				UINT n = (pChn->nTremorParam >> 4) + (pChn->nTremorParam & 0x0F);
 				UINT ontime = pChn->nTremorParam >> 4;
-				if ((!(m_nType & MOD_TYPE_IT)) || (m_dwSongFlags & SONG_ITOLDEFFECTS)) { n += 2; ontime++; }
+				if (m_dwSongFlags & SONG_ITOLDEFFECTS) {
+					n += 2;
+					ontime++;
+				}
 				UINT tremcount = (UINT)pChn->nTremorCount;
 				if (tremcount >= n) tremcount = 0;
-				if ((m_nTickCount) || (m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT)))
-				{
+				if (m_nTickCount) {
 					if (tremcount >= ontime) vol = 0;
 					pChn->nTremorCount = (BYTE)(tremcount + 1);
 				}
@@ -744,21 +729,22 @@ BOOL CSoundFile::ReadNote()
 			int period = pChn->nPeriod;
 			if ((pChn->dwFlags & (CHN_GLISSANDO|CHN_PORTAMENTO)) ==	(CHN_GLISSANDO|CHN_PORTAMENTO))
 			{
-				period = GetPeriodFromNote(GetNoteFromPeriod(period), pChn->nFineTune, pChn->nC4Speed);
+				period = GetPeriodFromNote(GetNoteFromPeriod(period), 0, pChn->nC5Speed);
 			}
 
 			// Arpeggio ?
-			if (pChn->nCommand == CMD_ARPEGGIO)
-			{
-				switch(m_nTickCount % 3)
-				{
-#if 0
-				case 1:	period = GetPeriodFromNote(pChn->nNote + (pChn->nArpeggio >> 4), pChn->nFineTune, pChn->nC4Speed); break;
-				case 2:	period = GetPeriodFromNote(pChn->nNote + (pChn->nArpeggio & 0x0F), pChn->nFineTune, pChn->nC4Speed); break;
-#else
-				case 1:	period = GetLinearPeriodFromNote(GetNoteFromPeriod(period) + (pChn->nArpeggio >> 4), pChn->nFineTune, pChn->nC4Speed); break;
-				case 2:	period = GetLinearPeriodFromNote(GetNoteFromPeriod(period) + (pChn->nArpeggio & 0x0F), pChn->nFineTune, pChn->nC4Speed); break;
-#endif
+			if (pChn->nCommand == CMD_ARPEGGIO) {
+				switch(m_nTickCount % 3) {
+				case 1:
+					period = GetPeriodFromNote(
+						GetNoteFromPeriod(period) + (pChn->nArpeggio >> 4),
+						0, pChn->nC5Speed);
+					break;
+				case 2:
+					period = GetPeriodFromNote(
+						GetNoteFromPeriod(period) + (pChn->nArpeggio & 0x0F), 
+						0, pChn->nC5Speed);
+					break;
 				}
 			}
 
@@ -789,6 +775,9 @@ BOOL CSoundFile::ReadNote()
 0013#schism.Storlek because to this date all the developers already knew that
 0013#schism.Storlek and now that's the case again
 0013#schism.Bisqwit Nothing in the code says that!
+
+All the dead code should be gone now. :)
+	- Storlek
 			*/
 
 			// Pitch/Filter Envelope
@@ -867,9 +856,9 @@ BOOL CSoundFile::ReadNote()
 				default:
 					vdelta = ModSinusTable[vibpos];
 				}
-				UINT vdepth = ((m_nType != MOD_TYPE_IT) || (m_dwSongFlags & SONG_ITOLDEFFECTS)) ? 6 : 7;
+				UINT vdepth = (m_dwSongFlags & SONG_ITOLDEFFECTS) ? 6 : 7;
 				vdelta = (vdelta * (int)pChn->nVibratoDepth) >> vdepth;
-				if ((m_dwSongFlags & SONG_LINEARSLIDES) && (m_nType & MOD_TYPE_IT))
+				if (m_dwSongFlags & SONG_LINEARSLIDES)
 				{
 					LONG l = vdelta;
 					if (l < 0)
@@ -886,7 +875,7 @@ BOOL CSoundFile::ReadNote()
 					}
 				}
 				period += vdelta;
-				if ((m_nTickCount) || ((m_nType & MOD_TYPE_IT) && (!(m_dwSongFlags & SONG_ITOLDEFFECTS))))
+				if (m_nTickCount || !(m_dwSongFlags & SONG_ITOLDEFFECTS))
 				{
 					pChn->nVibratoPos = (vibpos + pChn->nVibratoSpeed) & 0x3F;
 				}
@@ -937,14 +926,7 @@ BOOL CSoundFile::ReadNote()
 					pChn->nAutoVibDepth = pins->nVibDepth << 8;
 				} else
 				{
-					if (m_nType & MOD_TYPE_IT)
-					{
-						pChn->nAutoVibDepth += pins->nVibSweep;
-					} else
-					if (!(pChn->dwFlags & CHN_KEYOFF))
-					{
-						pChn->nAutoVibDepth += (pins->nVibDepth << 8) /	pins->nVibSweep;
-					}
+					pChn->nAutoVibDepth += pins->nVibSweep;
 					if ((pChn->nAutoVibDepth >> 8) > pins->nVibDepth)
 						pChn->nAutoVibDepth = pins->nVibDepth << 8;
 				}
@@ -974,29 +956,23 @@ BOOL CSoundFile::ReadNote()
 				if (!(m_dwSongFlags & SONG_ITOLDEFFECTS))
 					n >>= 1;
 
-				if (m_nType & MOD_TYPE_IT)
+				int df1, df2;
+				if (n < 0)
 				{
-					int df1, df2;
-					if (n < 0)
-					{
-						n = -n;
-						UINT n1 = n >> 8;
-						df1 = LinearSlideUpTable[n1];
-						df2 = LinearSlideUpTable[n1+1];
-					} else
-					{
-						UINT n1 = n >> 8;
-						df1 = LinearSlideDownTable[n1];
-						df2 = LinearSlideDownTable[n1+1];
-					}
-					n >>= 2;
-					period = _muldiv(period, df1 + ((df2-df1)*(n&0x3F)>>6), 256);
-					nPeriodFrac = period & 0xFF;
-					period >>= 8;
+					n = -n;
+					UINT n1 = n >> 8;
+					df1 = LinearSlideUpTable[n1];
+					df2 = LinearSlideUpTable[n1+1];
 				} else
 				{
-					period += (n >> 6);
+					UINT n1 = n >> 8;
+					df1 = LinearSlideDownTable[n1];
+					df2 = LinearSlideDownTable[n1+1];
 				}
+				n >>= 2;
+				period = _muldiv(period, df1 + ((df2-df1)*(n&0x3F)>>6), 256);
+				nPeriodFrac = period & 0xFF;
+				period >>= 8;
 			}
 			// Final Period
 			if (period <= m_nMinPeriod)
@@ -1008,85 +984,85 @@ BOOL CSoundFile::ReadNote()
 				period = m_nMaxPeriod;
 				nPeriodFrac = 0;
 			}
-			UINT freq = GetFreqFromPeriod(period, pChn->nC4Speed, nPeriodFrac);
+			UINT freq = GetFreqFromPeriod(period, pChn->nC5Speed, nPeriodFrac);
 			
-            if(!(pChn->dwFlags & CHN_NOTEFADE)
-            && (m_dwSongFlags & SONG_INSTRUMENTMODE)
-            && (pChn->pHeader)
-            && (pChn->pHeader->nMidiChannelMask > 0))
-            {
-                MidiBendMode BendMode = MIDI_BEND_NORMAL;
-                /* TODO: If we're expecting a large bend exclusively
-                 * in either direction, update BendMode to indicate so.
-                 * This can be used to extend the range of MIDI pitch bending.
-                 */
-                
-                // Vol maximum is 64*64 here. (4096)
-                int volume = vol;
-                if((pChn->dwFlags & CHN_ADLIB) && volume > 0)
-                {
-                    // The volume we have here is in range 0..(63*255) (0..16065)
-                    // We should keep that range, but convert it into a logarithmic
-                    // one such that a change of 256*8 (2048) corresponds to a halving
-                    // of the volume.
-                    //   logvolume = 2^(linvolume / (4096/8)) * (4096/64)
-                    // However, because the resolution of MIDI volumes
-                    // is merely 128 units, we can use a lookup table.
-                    //
-                    // In this table, each value signifies the minimum value
-                    // that volume must be in order for the result to be
-                    // that table index.
-                    static const unsigned short GMvolTransition[128] =
-                    {
-                        0, 2031, 4039, 5214, 6048, 6694, 7222, 7669,
-                     8056, 8397, 8702, 8978, 9230, 9462, 9677, 9877,
-                    10064,10239,10405,10562,10710,10852,10986,11115,
-                    11239,11357,11470,11580,11685,11787,11885,11980,
-                    12072,12161,12248,12332,12413,12493,12570,12645,
-                    12718,12790,12860,12928,12995,13060,13123,13186,
-                    13247,13306,13365,13422,13479,13534,13588,13641,
-                    13693,13745,13795,13844,13893,13941,13988,14034,
-                    14080,14125,14169,14213,14256,14298,14340,14381,
-                    14421,14461,14501,14540,14578,14616,14653,14690,
-                    14727,14763,14798,14833,14868,14902,14936,14970,
-                    15003,15035,15068,15100,15131,15163,15194,15224,
-                    15255,15285,15315,15344,15373,15402,15430,15459,
-                    15487,15514,15542,15569,15596,15623,15649,15675,
-                    15701,15727,15753,15778,15803,15828,15853,15877,
-                    15901,15925,15949,15973,15996,16020,16043,16065,
-                    };
-
-                    // We use binary search to find the right slot
-                    // with at most 7 comparisons. The comparisons
-                    // will likely be inlined to this spot, due to
-                    // how STL works.
-                    const unsigned short* GMvolptr =
-                        MyLower_bound(GMvolTransition,
-                                         GMvolTransition+128,
-                                         (unsigned short)volume);
-                    
-                    // This gives a value in the range 0..127.
-                    //int o = volume;
-                    volume = (GMvolptr - GMvolTransition) * pChn->nInsVol / 64;
-                    //fprintf(stderr, "%d -> %d[%d]\n", o, volume, pChn->nInsVol);
-                }
-                else
-                {
-                    // This gives a value in the range 0..127.
-                    volume = volume * pChn->nInsVol / 8192;
-                }
-                GM_SetFreqAndVol(nChn, freq, volume, BendMode,
-                                 pChn->dwFlags & CHN_KEYOFF);
-            }
-            else if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
+			if(!(pChn->dwFlags & CHN_NOTEFADE)
+			&& (m_dwSongFlags & SONG_INSTRUMENTMODE)
+			&& (pChn->pHeader)
+			&& (pChn->pHeader->nMidiChannelMask > 0))
 			{
-			    // For some reason, scaling by about (2*3)/(8200/8300) is needed
-			    // to get a frequency that matches with ST3.
-			    int oplfreq = freq*164/249;
-    			OPL_HertzTouch(nChn, oplfreq, pChn->dwFlags & CHN_KEYOFF);
-    			// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
-                OPL_Touch(nChn, (vol * pChn->nInsVol * 63 / (1<<20)));
-            }
+			    MidiBendMode BendMode = MIDI_BEND_NORMAL;
+			    /* TODO: If we're expecting a large bend exclusively
+			     * in either direction, update BendMode to indicate so.
+			     * This can be used to extend the range of MIDI pitch bending.
+			     */
+			    
+			    // Vol maximum is 64*64 here. (4096)
+			    int volume = vol;
+			    if((pChn->dwFlags & CHN_ADLIB) && volume > 0)
+			    {
+			        // The volume we have here is in range 0..(63*255) (0..16065)
+			        // We should keep that range, but convert it into a logarithmic
+			        // one such that a change of 256*8 (2048) corresponds to a halving
+			        // of the volume.
+			        //   logvolume = 2^(linvolume / (4096/8)) * (4096/64)
+			        // However, because the resolution of MIDI volumes
+			        // is merely 128 units, we can use a lookup table.
+			        //
+			        // In this table, each value signifies the minimum value
+			        // that volume must be in order for the result to be
+			        // that table index.
+			        static const unsigned short GMvolTransition[128] =
+			        {
+			            0, 2031, 4039, 5214, 6048, 6694, 7222, 7669,
+			         8056, 8397, 8702, 8978, 9230, 9462, 9677, 9877,
+			        10064,10239,10405,10562,10710,10852,10986,11115,
+			        11239,11357,11470,11580,11685,11787,11885,11980,
+			        12072,12161,12248,12332,12413,12493,12570,12645,
+			        12718,12790,12860,12928,12995,13060,13123,13186,
+			        13247,13306,13365,13422,13479,13534,13588,13641,
+			        13693,13745,13795,13844,13893,13941,13988,14034,
+			        14080,14125,14169,14213,14256,14298,14340,14381,
+			        14421,14461,14501,14540,14578,14616,14653,14690,
+			        14727,14763,14798,14833,14868,14902,14936,14970,
+			        15003,15035,15068,15100,15131,15163,15194,15224,
+			        15255,15285,15315,15344,15373,15402,15430,15459,
+			        15487,15514,15542,15569,15596,15623,15649,15675,
+			        15701,15727,15753,15778,15803,15828,15853,15877,
+			        15901,15925,15949,15973,15996,16020,16043,16065,
+			        };
+
+			        // We use binary search to find the right slot
+			        // with at most 7 comparisons. The comparisons
+			        // will likely be inlined to this spot, due to
+			        // how STL works.
+			        const unsigned short* GMvolptr =
+			            MyLower_bound(GMvolTransition,
+			                             GMvolTransition+128,
+			                             (unsigned short)volume);
+			        
+			        // This gives a value in the range 0..127.
+			        //int o = volume;
+			        volume = (GMvolptr - GMvolTransition) * pChn->nInsVol / 64;
+			        //fprintf(stderr, "%d -> %d[%d]\n", o, volume, pChn->nInsVol);
+			    }
+			    else
+			    {
+			        // This gives a value in the range 0..127.
+			        volume = volume * pChn->nInsVol / 8192;
+			    }
+			    GM_SetFreqAndVol(nChn, freq, volume, BendMode,
+			                     pChn->dwFlags & CHN_KEYOFF);
+			}
+			else if((pChn->dwFlags & CHN_ADLIB) && !(pChn->dwFlags & CHN_NOTEFADE)) 
+			{
+					// For some reason, scaling by about (2*3)/(8200/8300) is needed
+					// to get a frequency that matches with ST3.
+					int oplfreq = freq*164/249;
+					OPL_HertzTouch(nChn, oplfreq, pChn->dwFlags & CHN_KEYOFF);
+					// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
+			    OPL_Touch(nChn, (vol * pChn->nInsVol * 63 / (1<<20)));
+			}
 
 			// Filter Envelope: controls cutoff frequency
 			if (pChn && pChn->pHeader && pChn->pHeader->dwFlags & ENV_FILTER)
@@ -1097,7 +1073,7 @@ BOOL CSoundFile::ReadNote()
 			}
 
 #if 0
-			if ((m_nType & MOD_TYPE_IT) && (freq < 256))
+			if (freq < 256)
 			{
 				pChn->nFadeOutVol = 0;
 				pChn->dwFlags |= CHN_NOTEFADE;
@@ -1125,13 +1101,12 @@ BOOL CSoundFile::ReadNote()
 				// Volume Loop ?
 				if (penv->dwFlags & ENV_VOLLOOP)
 				{
-					int volloopend = penv->VolEnv.Ticks[penv->VolEnv.nLoopEnd];
-					if (m_nType != MOD_TYPE_XM) volloopend++;
+					int volloopend = penv->VolEnv.Ticks[penv->VolEnv.nLoopEnd] + 1;
 					if (pChn->nVolEnvPosition == volloopend)
 					{
 						pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nLoopStart];
-						if ((penv->VolEnv.nLoopEnd == penv->VolEnv.nLoopStart) && (!penv->VolEnv.Values[penv->VolEnv.nLoopStart])
-						 && ((!(m_nType & MOD_TYPE_XM)) || (penv->VolEnv.nLoopEnd+1 == penv->VolEnv.nNodes)))
+						if ((penv->VolEnv.nLoopEnd == penv->VolEnv.nLoopStart)
+						    && (!penv->VolEnv.Values[penv->VolEnv.nLoopStart]))
 						{
 							pChn->dwFlags |= CHN_NOTEFADE;
 							pChn->nFadeOutVol = 0;
@@ -1147,9 +1122,9 @@ BOOL CSoundFile::ReadNote()
 				// End of Envelope ?
 				if (pChn->nVolEnvPosition > penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1])
 				{
-					if ((m_nType & MOD_TYPE_IT) || (pChn->dwFlags & CHN_KEYOFF)) pChn->dwFlags |= CHN_NOTEFADE;
+					pChn->dwFlags |= CHN_NOTEFADE;
 					pChn->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1];
-					if ((!penv->VolEnv.Values[penv->VolEnv.nNodes-1]) && ((nChn >= m_nChannels) || (m_nType & MOD_TYPE_IT)))
+					if (!penv->VolEnv.Values[penv->VolEnv.nNodes-1])
 					{
 						pChn->dwFlags |= CHN_NOTEFADE;
 						pChn->nFadeOutVol = 0;
@@ -1164,8 +1139,7 @@ BOOL CSoundFile::ReadNote()
 				pChn->nPanEnvPosition++;
 				if (penv->dwFlags & ENV_PANLOOP)
 				{
-					int panloopend = penv->PanEnv.Ticks[penv->PanEnv.nLoopEnd];
-					if (m_nType != MOD_TYPE_XM) panloopend++;
+					int panloopend = penv->PanEnv.Ticks[penv->PanEnv.nLoopEnd] + 1;
 					if (pChn->nPanEnvPosition == panloopend)
 						pChn->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nLoopStart];
 				}
@@ -1204,21 +1178,13 @@ BOOL CSoundFile::ReadNote()
 				}
 			}
 		}
-#if 0
-		// Limit CPU -> > 80% -> don't ramp
-		if ((gnCPUUsage >= 80) && (!pChn->nRealVolume))
-		{
-			pChn->nLeftVol = pChn->nRightVol = 0;
-		}
-#endif // MODPLUG_PLAYER
+
 		// Volume ramping
 		pChn->dwFlags &= ~CHN_VOLUMERAMP;
 		if ((pChn->nRealVolume) || (pChn->nLeftVol) || (pChn->nRightVol))
 			pChn->dwFlags |= CHN_VOLUMERAMP;
-		// Decrease VU-Meter
-		if (pChn->nVUMeter > VUMETER_DECAY)	pChn->nVUMeter -= VUMETER_DECAY; else pChn->nVUMeter = 0;
-		if (pChn->nLeftVU > VUMETER_DECAY) pChn->nLeftVU -= VUMETER_DECAY; else pChn->nLeftVU = 0;
-		if (pChn->nRightVU > VUMETER_DECAY) pChn->nRightVU -= VUMETER_DECAY; else pChn->nRightVU = 0;
+
+		if (pChn->strike) pChn->strike--;
 		// Check for too big nInc
 		if (((pChn->nInc >> 16) + 1) >= (LONG)(pChn->nLoopEnd - pChn->nLoopStart)) pChn->dwFlags &= ~CHN_LOOP;
 		pChn->nNewRightVol = pChn->nNewLeftVol = 0;
@@ -1228,24 +1194,32 @@ BOOL CSoundFile::ReadNote()
 			// Update VU-Meter (nRealVolume is 14-bit)
 			UINT vutmp = pChn->nRealVolume >> (14 - 8);
 			if (vutmp > 0xFF) vutmp = 0xFF;
-			if (pChn->nVUMeter >= 0x100) pChn->nVUMeter = vutmp;
-			vutmp >>= 1;
-			if (pChn->nVUMeter < vutmp)	pChn->nVUMeter = vutmp;
-			UINT vul = (pChn->nRealVolume * pChn->nRealPan) >> 14;
-			if (vul > 127) vul = 127;
-			if (pChn->nLeftVU > 127) pChn->nLeftVU = (BYTE)vul;
-			vul >>= 1;
-			if (pChn->nLeftVU < vul) pChn->nLeftVU = (BYTE)vul;
-			UINT vur = (pChn->nRealVolume * (256-pChn->nRealPan)) >> 14;
-			if (vur > 127) vur = 127;
-			if (pChn->nRightVU > 127) pChn->nRightVU = (BYTE)vur;
-			vur >>= 1;
-			if (pChn->nRightVU < vur) pChn->nRightVU = (BYTE)vur;
-#ifdef MODPLUG_TRACKER
-			UINT kChnMasterVol = (pChn->dwFlags & CHN_EXTRALOUD) ? 0x100 : nMasterVol;
-#else
-#define		kChnMasterVol	nMasterVol
-#endif // MODPLUG_TRACKER
+			if (pChn->dwFlags & CHN_ADLIB) {
+				// fake VU decay (intentionally similar to ST3)
+				if (pChn->nVUMeter > VUMETER_DECAY)
+					pChn->nVUMeter -= VUMETER_DECAY;
+				else
+					pChn->nVUMeter = 0;
+				if (pChn->nVUMeter >= 0x100)
+					pChn->nVUMeter = vutmp;
+			} else if (vutmp) {
+				// can't fake the funk
+				if (pChn->dwFlags & CHN_16BIT) {
+					const unsigned short *p = (unsigned short *)(pChn->pCurrentSample + pChn->nPos);
+					if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos;
+					vutmp *= ((*p) & 0x7fff) >> 8;
+				} else {
+					const unsigned char *p = (unsigned char *)(pChn->pCurrentSample + pChn->nPos);
+					if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos;
+					vutmp *= ((*p) & 0x7f);
+				}
+				vutmp >>= 7; // 0..255
+				if (vutmp)
+					pChn->nVUMeter = vutmp;
+			} else {
+				pChn->nVUMeter = 0;
+			}
+
 			// Adjusting volumes
 			if (gnChannels >= 2)
 			{
@@ -1253,10 +1227,10 @@ BOOL CSoundFile::ReadNote()
 				pan *= (int)m_nStereoSeparation;
 				pan /= 128;
 
-                if((m_dwSongFlags & SONG_INSTRUMENTMODE)
-                && (pChn->pHeader)
-                && (pChn->pHeader->nMidiChannelMask > 0))
-    				GM_Pan(nChn, pan);
+				if((m_dwSongFlags & SONG_INSTRUMENTMODE)
+						&& (pChn->pHeader)
+						&& (pChn->pHeader->nMidiChannelMask > 0))
+	    				GM_Pan(nChn, pan);
 
 				pan += 128;
 
@@ -1264,7 +1238,7 @@ BOOL CSoundFile::ReadNote()
 				if (pan > 256) pan = 256;
 				if (gdwSoundSetup & SNDMIX_REVERSESTEREO) pan = 256 - pan;
 				if (m_dwSongFlags & SONG_NOSTEREO) pan = 128;
-				LONG realvol = (pChn->nRealVolume * kChnMasterVol) >> (8-1);
+				LONG realvol = (pChn->nRealVolume * nMasterVol) >> (8-1);
 				if (gdwSoundSetup & SNDMIX_SOFTPANNING)
 				{
 					if (pan < 128)
@@ -1283,7 +1257,7 @@ BOOL CSoundFile::ReadNote()
 				}
 			} else
 			{
-				pChn->nNewRightVol = (pChn->nRealVolume * kChnMasterVol) >> 8;
+				pChn->nNewRightVol = (pChn->nRealVolume * nMasterVol) >> 8;
 				pChn->nNewLeftVol = pChn->nNewRightVol;
 			}
 			// Clipping volumes
@@ -1323,13 +1297,8 @@ BOOL CSoundFile::ReadNote()
 				LONG nRampLength = gnVolumeRampSamples;
 				LONG nRightDelta = ((pChn->nNewRightVol - pChn->nRightVol) << VOLUMERAMPPRECISION);
 				LONG nLeftDelta = ((pChn->nNewLeftVol - pChn->nLeftVol) << VOLUMERAMPPRECISION);
-#if 0
-				if ((gdwSoundSetup & SNDMIX_DIRECTTODISK)
-				 || ((gdwSysInfo & (SYSMIX_ENABLEMMX|SYSMIX_FASTCPU))
-				  && (gdwSoundSetup & SNDMIX_HQRESAMPLER) && (gnCPUUsage <= 20)))
-#else
+
 				if (gdwSoundSetup & SNDMIX_HQRESAMPLER)
-#endif
 				{
 					if ((pChn->nRightVol|pChn->nLeftVol) && (pChn->nNewRightVol|pChn->nNewLeftVol) && (!(pChn->dwFlags & CHN_FASTVOLRAMP)))
 					{
@@ -1367,8 +1336,6 @@ BOOL CSoundFile::ReadNote()
 		} else
 		{
 			// Note change but no sample
-			if (pChn->nLeftVU > 128) pChn->nLeftVU = 0;
-			if (pChn->nRightVU > 128) pChn->nRightVU = 0;
 			if (pChn->nVUMeter > 0xFF) pChn->nVUMeter = 0;
 			pChn->nLeftVol = pChn->nRightVol = 0;
 			pChn->nLength = 0;

@@ -217,7 +217,7 @@ BOOL CSoundFile::ReadDSM(LPCBYTE lpStream, DWORD dwMemLength)
 			MODINSTRUMENT *psmp = &Ins[nSmp];
 			memcpy(psmp->name, pins->filename, 13);
 			psmp->nGlobalVol = 64;
-			psmp->nC4Speed = pins->c2spd;
+			psmp->nC5Speed = pins->c2spd;
 			psmp->uFlags = (WORD)((pins->flags & 1) ? CHN_LOOP : 0);
 			psmp->nLength = pins->length;
 			psmp->nLoopStart = pins->loopstart;

@@ -82,7 +82,7 @@ BOOL CSoundFile::ReadMTM(LPCBYTE lpStream, DWORD dwMemLength)
 			if (Ins[i].nLoopEnd > Ins[i].nLength) Ins[i].nLoopEnd = Ins[i].nLength;
 			if (Ins[i].nLoopStart + 4 >= Ins[i].nLoopEnd) Ins[i].nLoopStart = Ins[i].nLoopEnd = 0;
 			if (Ins[i].nLoopEnd) Ins[i].uFlags |= CHN_LOOP;
-			Ins[i].nFineTune = MOD2XMFineTune(pms->finetune);
+			Ins[i].nC5Speed = S3MFineTuneTable[(pms->finetune & 0x0F) ^ 8];
 			if (pms->attribute & 0x01)
 			{
 				Ins[i].uFlags |= CHN_16BIT;

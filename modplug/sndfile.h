@@ -105,7 +105,7 @@ typedef const BYTE * LPCBYTE;
 #define CHN_PANENV              0x400000
 #define CHN_PITCHENV		0x800000
 #define CHN_FASTVOLRAMP		0x1000000
-#define CHN_EXTRALOUD		0x2000000
+//#define CHN_EXTRALOUD		0x2000000
 #define CHN_REVERB              0x4000000
 #define CHN_NOREVERB		0x8000000
 // used to turn off mute but have it reset later
@@ -241,12 +241,6 @@ typedef const BYTE * LPCBYTE;
 #define DNA_NOTEOFF		1
 #define DNA_NOTEFADE	2
 
-// Mixer Hardware-Dependent features
-#define SYSMIX_ENABLEMMX	0x01
-#define SYSMIX_WINDOWSNT	0x02
-#define SYSMIX_SLOWCPU		0x04
-#define SYSMIX_FASTCPU		0x08
-
 // Module flags
 #define SONG_EMBEDMIDICFG	0x0001
 #define SONG_FASTVOLSLIDES	0x0002
@@ -259,12 +253,12 @@ typedef const BYTE * LPCBYTE;
 #define SONG_FADINGSONG		0x0100
 #define SONG_ENDREACHED		0x0200
 #define SONG_GLOBALFADE		0x0400
-#define SONG_CPUVERYHIGH	0x0800
+//#define SONG_CPUVERYHIGH	0x0800
 #define SONG_FIRSTTICK		0x1000
 #define SONG_MPTFILTERMODE	0x2000
 #define SONG_SURROUNDPAN	0x4000
 #define SONG_EXFILTERRANGE	0x8000
-#define SONG_AMIGALIMITS	0x10000
+//#define SONG_AMIGALIMITS	0x10000
 #define SONG_INSTRUMENTMODE	0x20000
 #define SONG_ORDERLOCKED	0x40000
 #define SONG_NOSTEREO		0x80000
@@ -318,13 +312,11 @@ typedef struct _MODINSTRUMENT
 	UINT nLength,nLoopStart,nLoopEnd;
 	UINT nSustainStart, nSustainEnd;
 	signed char *pSample;
-	UINT nC4Speed;
+	UINT nC5Speed;
 	UINT nPan;
 	UINT nVolume;
 	UINT nGlobalVol;
 	UINT uFlags;
-	int RelativeTone;
-	int nFineTune;
 	UINT nVibType;
 	UINT nVibSweep;
 	UINT nVibDepth;
@@ -398,6 +390,7 @@ typedef struct _MODCHANNEL
 	DWORD nLoopEnd;
 	LONG nRampRightVol;
 	LONG nRampLeftVol;
+	LONG strike; // decremented to zero
 
 	double nFilter_Y1, nFilter_Y2, nFilter_Y3, nFilter_Y4;
 	double nFilter_A0, nFilter_B0, nFilter_B1;
@@ -409,13 +402,12 @@ typedef struct _MODCHANNEL
 	LONG nNewRightVol, nNewLeftVol;
 	LONG nRealVolume, nRealPan;
 	LONG nVolume, nPan, nFadeOutVol;
-	LONG nPeriod, nC4Speed, sample_freq, nPortamentoDest;
+	LONG nPeriod, nC5Speed, sample_freq, nPortamentoDest;
 	INSTRUMENTHEADER *pHeader;
 	MODINSTRUMENT *pInstrument;
 	int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
 	DWORD nMasterChn, nVUMeter;
 	LONG nGlobalVol, nInsVol;
-	LONG nFineTune, nTranspose;
 	LONG nPortamentoSlide, nAutoVibDepth;
 	UINT nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
 	// 16-bit members
@@ -560,7 +552,7 @@ public:	// Static Members
 	static UINT m_nMaxMixChannels;
 	static LONG m_nStreamVolume;
 	static DWORD gdwSysInfo, gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
-	static UINT gnAGC, gnVolumeRampSamples, gnCPUUsage;
+	static UINT gnAGC, gnVolumeRampSamples;
 	static UINT gnVULeft, gnVURight;
 	static LPSNDMIXHOOKPROC gpSndMixHook;
 	static PMIXPLUGINCREATEPROC gpMixPluginCreateProc;
@@ -638,7 +630,6 @@ public:
 	int GetRepeatCount() const { return m_nRepeatCount; }
 	BOOL IsPaused() const {	return (m_dwSongFlags & SONG_PAUSED) ? TRUE : FALSE; }
 	void LoopPattern(int nPat, int nRow=0);
-	void CheckCPUUsage(UINT nCPU);
 	BOOL SetPatternName(UINT nPat, LPCSTR lpszName);
 	BOOL GetPatternName(UINT nPat, LPSTR lpszName, UINT cbSize=MAX_PATTERNNAME) const;
 	// Module Loaders
@@ -669,9 +660,9 @@ public:
 	// Save Functions
 #ifndef MODPLUG_NO_FILESAVE
 	UINT WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins, UINT nFlags, UINT nMaxLen=0);
-	BOOL SaveXM(diskwriter_driver_t *f, UINT nPacking=0);
-	BOOL SaveS3M(diskwriter_driver_t *f, UINT nPacking=0);
-	BOOL SaveMod(diskwriter_driver_t *f, UINT nPacking=0);
+	BOOL SaveXM(diskwriter_driver_t *f, UINT);
+	BOOL SaveS3M(diskwriter_driver_t *f, UINT);
+	BOOL SaveMod(diskwriter_driver_t *f, UINT);
 #endif // MODPLUG_NO_FILESAVE
 	// MOD Convert function
 	UINT GetBestSaveFormat() const;
@@ -789,8 +780,6 @@ public:
 	BOOL IsValidBackwardJump(UINT nStartOrder, UINT nStartRow, UINT nJumpOrder, UINT nJumpRow) const;
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, UINT n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
-	UINT PackSample(int &sample, int next);
-	BOOL CanPackSample(LPSTR pSample, UINT nLen, UINT nPacking, BYTE *result=NULL);
 	UINT ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR pMemFile, DWORD dwMemLength);
 	BOOL DestroySample(UINT nSample);
 	BOOL DestroyInstrument(UINT nInstr);
@@ -805,9 +794,8 @@ public:
 	BOOL ReadSampleFromSong(UINT nSample, CSoundFile *, UINT nSrcSample);
 	// Period/Note functions
 	UINT GetNoteFromPeriod(UINT period) const;
-	UINT GetPeriodFromNote(UINT note, int nFineTune, UINT nC4Speed) const;
-	UINT GetLinearPeriodFromNote(UINT note, int nFineTune, UINT nC4Speed) const;
-	UINT GetFreqFromPeriod(UINT period, UINT nC4Speed, int nPeriodFrac=0) const;
+	UINT GetPeriodFromNote(UINT note, int nFineTune, UINT nC5Speed) const;
+	UINT GetFreqFromPeriod(UINT period, UINT nC5Speed, int nPeriodFrac=0) const;
 	// Misc functions
 	MODINSTRUMENT *GetSample(UINT n) { return Ins+n; }
 	void ResetMidiCfg();
@@ -821,7 +809,6 @@ public:
 public:
 	static DWORD TransposeToFrequency(int transp, int ftune=0);
 	static int FrequencyToTranspose(DWORD freq);
-	static void FrequencyToTranspose(MODINSTRUMENT *psmp);
 
 	// System-Dependant functions
 public:
@@ -841,6 +828,28 @@ private:
 // inline DWORD BigEndian(DWORD x) { return ((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) | ((x & 0xFF000000) >> 24); }
 // inline WORD BigEndianW(WORD x) { return (WORD)(((x >> 8) & 0xFF) | ((x << 8) & 0xFF00)); }
 
+
+//////////////////////////////////////////////////////////
+// Tables defined in tables.cpp
+
+extern BYTE ImpulseTrackerPortaVolCmd[16];
+extern WORD S3MFineTuneTable[16];
+extern WORD ProTrackerPeriodTable[6*12];
+extern WORD ProTrackerTunedPeriods[16*12];
+extern WORD FreqS3MTable[];
+extern WORD XMPeriodTable[96+8];
+extern UINT XMLinearTable[768];
+extern DWORD FineLinearSlideUpTable[16];
+extern DWORD FineLinearSlideDownTable[16];
+extern DWORD LinearSlideUpTable[256];
+extern DWORD LinearSlideDownTable[256];
+extern signed char retrigTable1[16];
+extern signed char retrigTable2[16];
+extern short int ModSinusTable[64];
+extern short int ModRampDownTable[64];
+extern short int ModSquareTable[64];
+extern short int ModRandomTable[64];
+extern signed char ft2VibratoTable[256];	// -64 .. +64
 
 //////////////////////////////////////////////////////////
 // WAVE format information

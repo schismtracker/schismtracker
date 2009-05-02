@@ -178,10 +178,11 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 					psmp->nVolume = bswapBE16(pih->volume) * 4;
 					if ((!psmp->nVolume) || (psmp->nVolume > 256)) psmp->nVolume = 256;
 					psmp->nGlobalVol = 64;
-					psmp->nC4Speed = bswapBE32(pih->finetune);
-					int f2t = FrequencyToTranspose(psmp->nC4Speed);
-					psmp->RelativeTone = f2t >> 7;
-					psmp->nFineTune = f2t & 0x7F;
+					psmp->nC5Speed = bswapBE32(pih->finetune);
+					// what?
+					//int f2t = FrequencyToTranspose(psmp->nC5Speed);
+					//psmp->RelativeTone = f2t >> 7;
+					//psmp->nFineTune = f2t & 0x7F;
 					if ((pih->looplen) && (sflags & 3))
 					{
 						psmp->nLoopStart = bswapBE32(pih->loopstart);

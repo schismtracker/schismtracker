@@ -435,8 +435,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 				flags[ins] = RS_ADPCM4;
 				samplesize[ins] = (samplesize[ins]+1)/2 + 16;
 			}
-			pins->nFineTune = xmss.finetune;
-			pins->RelativeTone = (int)xmss.relnote;
+			pins->nC5Speed = TransposeToFrequency((int)xmss.relnote, xmss.finetune);
 			pins->nPan = xmss.pan;
 			pins->uFlags |= CHN_PANNING;
 			pins->nVibType = xmsh.vibtype;
@@ -475,7 +474,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 
 #ifndef MODPLUG_NO_FILESAVE
 
-BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
+BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 //---------------------------------------------------------
 {
 	BYTE s[64*64*5];
@@ -496,7 +495,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
 	fp->o(fp, (const unsigned char *)m_szNames[0], 20);
 	s[0] = 0x1A;
-	lstrcpy((LPSTR)&s[1], (nPacking) ? "MOD Plugin packed   " : "FastTracker v2.00   ");
+	lstrcpy((LPSTR)&s[1], "FastTracker v2.00   ");
 	s[21] = 0x04;
 	s[22] = 0x01;
 	fp->o(fp, (const unsigned char *)s, 23);
@@ -711,28 +710,27 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 			if (smptable[ins]) memcpy(xmss.name, m_szNames[smptable[ins]], 22);
 			pins = &Ins[smptable[ins]];
 			/* convert IT information to FineTune */
-			FrequencyToTranspose(pins);
+			int f2t = FrequencyToTranspose(pins->nC5Speed);
+			int transp = f2t >> 7;
+			int ftune = f2t & 0x7F;
+			if (ftune > 80)
+			{
+				transp++;
+				ftune -= 128;
+			}
+			if (transp > 127) transp = 127;
+			if (transp < -127) transp = -127;
+
 
 			xmss.samplen = pins->nLength;
 			xmss.loopstart = pins->nLoopStart;
 			xmss.looplen = pins->nLoopEnd - pins->nLoopStart;
 			xmss.vol = pins->nVolume / 4;
 
-			xmss.finetune = (char)pins->nFineTune;
+			xmss.finetune = (char)ftune;
 			xmss.type = 0;
 			if (pins->uFlags & CHN_LOOP) xmss.type = (pins->uFlags & CHN_PINGPONGLOOP) ? 2 : 1;
 			flags[ins] = RS_PCM8D;
-#ifndef NO_PACKING
-			if (nPacking)
-			{
-				if ((!(pins->uFlags & (CHN_16BIT|CHN_STEREO)))
-				 && (CanPackSample((char*)pins->pSample, pins->nLength, nPacking)))
-				{
-					flags[ins] = RS_ADPCM4;
-					xmss.res = 0xAD;
-				}
-			} else
-#endif
 			{
 				if (pins->uFlags & CHN_16BIT)
 				{
@@ -758,7 +756,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 				/* set panning to support default */
 				xmss.pan = 128;
 			}
-			xmss.relnote = (signed char)pins->RelativeTone;
+			xmss.relnote = (signed char)transp;
 			xmss.samplen = bswapLE32(xmss.samplen);
 			xmss.loopstart = bswapLE32(xmss.loopstart);
 			xmss.looplen = bswapLE32(xmss.looplen);
@@ -769,9 +767,6 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 			pins = &Ins[smptable[ismpd]];
 			if (pins->pSample)
 			{
-#ifndef NO_PACKING
-				if ((flags[ismpd] == RS_ADPCM4) && (xmih.samples>1)) CanPackSample((char*)pins->pSample, pins->nLength, nPacking);
-#endif // NO_PACKING
 				WriteSample(fp, pins, flags[ismpd]);
 			}
 		}
@@ -780,3 +775,4 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT nPacking)
 }
 
 #endif // MODPLUG_NO_FILESAVE
+

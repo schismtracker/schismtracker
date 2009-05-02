@@ -55,8 +55,6 @@ typedef struct _song_sample {
         unsigned int volume;
         unsigned int global_volume;
         unsigned int flags;
-        int relative_tone;      /* mod-ish tuning */
-        int finetune;   /* mod-ish tuning */
         unsigned int vib_type;
         unsigned int vib_rate;
         unsigned int vib_depth;
@@ -140,6 +138,7 @@ typedef struct _song_mix_channel {
         unsigned int nLoopEnd;
         int nRampRightVol;
         int nRampLeftVol;
+        int strike;
         double nFilter_Y1, nFilter_Y2, nFilter_Y3, nFilter_Y4;
         double nFilter_A0, nFilter_B0, nFilter_B1;
         int nROfs, nLOfs;
@@ -157,7 +156,7 @@ typedef struct _song_mix_channel {
         /* these are the volumes set by the channel. */
         int volume, panning;   /* range 0-256 (?) */
         int nFadeOutVol;       /* ??? */
-        int nPeriod, nC4Speed, sample_freq, nPortamentoDest;
+        int nPeriod, nC5Speed, sample_freq, nPortamentoDest;
         song_instrument *instrument;    /* NULL if sample mode (?) */
         song_sample *sample;
         int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
@@ -166,7 +165,6 @@ typedef struct _song_mix_channel {
         int nGlobalVol;        // the channel volume (Mxx)? - range 0-64
         int nInsVol;   /* instrument volume? sample volume? dunno, one of
                          * those two... (range 0-64) */
-        int nFineTune, nTranspose;
         int nPortamentoSlide, nAutoVibDepth;
         unsigned int nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
 
@@ -274,7 +272,7 @@ enum {
         CHN_PANENV = (0x400000),
         CHN_PITCHENV = (0x800000),
         CHN_FASTVOLRAMP = (0x1000000),
-        CHN_EXTRALOUD = (0x2000000),
+        //CHN_EXTRALOUD = (0x2000000),
         CHN_REVERB = (0x4000000),
         CHN_NOREVERB = (0x8000000),
 };

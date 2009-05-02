@@ -124,7 +124,7 @@ BOOL CSoundFile::ReadWav(const BYTE *lpStream, DWORD dwMemLength)
 		pcmd[nChn].note = pcmd[0].note;
 		pcmd[nChn].instr = (BYTE)(nChn+1);
 		pins->nLength = len;
-		pins->nC4Speed = pfmt.freqHz;
+		pins->nC5Speed = pfmt.freqHz;
 		pins->nVolume = 256;
 		pins->nPan = 128;
 		pins->nGlobalVol = 64;

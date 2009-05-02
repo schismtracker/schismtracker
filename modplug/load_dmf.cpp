@@ -402,7 +402,7 @@ BOOL CSoundFile::ReadDMF(const BYTE *lpStream, DWORD dwMemLength)
 						psmp->nLength = psh->len;
 						psmp->nLoopStart = psh->loopstart;
 						psmp->nLoopEnd = psh->loopend;
-						psmp->nC4Speed = psh->c3speed;
+						psmp->nC5Speed = psh->c3speed;
 						psmp->nGlobalVol = 64;
 						psmp->nVolume = (psh->volume) ? ((WORD)psh->volume)+1 : (WORD)256;
 						psmp->uFlags = (psh->flags & 2) ? CHN_16BIT : 0;

@@ -152,7 +152,7 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 				samplemap[m_nSamples-1] = (BYTE)m_nSamples;
 				// Init sample
 				pins->nGlobalVol = 0x40;
-				pins->nC4Speed = bswapLE32(psmp->samplerate);
+				pins->nC5Speed = bswapLE32(psmp->samplerate);
 				pins->nLength = bswapLE32(psmp->length);
 				pins->nLoopStart = bswapLE32(psmp->loopstart);
 				pins->nLoopEnd = bswapLE32(psmp->loopend);

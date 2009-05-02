@@ -552,12 +552,23 @@ BOOL CSoundFile::ReadMT2(LPCBYTE lpStream, DWORD dwMemLength)
 				psmp->nVolume = (pms->wVolume >> 7);
 				psmp->nPan = (pms->nPan == 0x80) ? 128 : (pms->nPan^0x80);
 				psmp->nLength = pms->dwLength;
-				psmp->nC4Speed = pms->dwFrequency;
 				psmp->nLoopStart = pms->dwLoopStart;
 				psmp->nLoopEnd = pms->dwLoopEnd;
-				FrequencyToTranspose(psmp);
-				psmp->RelativeTone -= pms->nBaseNote - 49;
-				psmp->nC4Speed = TransposeToFrequency(psmp->RelativeTone, psmp->nFineTune);
+
+				// this code is stupid
+				int f2t = FrequencyToTranspose(pms->dwFrequency);
+				int transp = f2t >> 7;
+				int ftune = f2t & 0x7F;
+				if (ftune > 80)
+				{
+					transp++;
+					ftune -= 128;
+				}
+				if (transp > 127) transp = 127;
+				if (transp < -127) transp = -127;
+				transp -= pms->nBaseNote - 49;
+				psmp->nC5Speed = TransposeToFrequency(transp, ftune);
+
 				if (pms->nQuality == 2) { psmp->uFlags |= CHN_16BIT; psmp->nLength >>= 1; }
 				if (pms->nChannels == 2) { psmp->nLength >>= 1; }
 				if (pms->nLoop == 1) psmp->uFlags |= CHN_LOOP;

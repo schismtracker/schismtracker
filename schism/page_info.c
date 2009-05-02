@@ -83,9 +83,8 @@ static struct info_window windows[MAX_WINDOWS] = {
 /* the various stuff that can be drawn... */
 static void info_draw_technical(int base, int height, UNUSED int active, int first_channel)
 {
-	int smplist[100];
+	int smplist[SCHISM_MAX_SAMPLES];
 	int smp, pos, fg, c = first_channel;
-	/*song_sample *z;*/
 	char buf[16];
 	const char *ptr;
 
@@ -107,14 +106,16 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 	draw_text("Position",17, base, 2,1);
 	draw_text("Smp",27, base, 2,1); /* number */
 
-	draw_text("FVI",32, base, 2,1);	/* final volume (0-128 i think) */
-	draw_text("VI",36, base, 2,1);  /* volume immediate? instrument? */
-	draw_text("CV",39, base, 2,1);  /* channel volume */
-	draw_text("SV",42, base, 2,1);  /* sample/set volume? (global volume from sample?) */
-	draw_text("VE",45, base, 2,1);  /* volume end? (target volume?) */
-	draw_text("Fde",48, base, 2,1); /* fade 0-512 ; so int val /2 */
-	draw_text("Pn",52, base, 2,1);  /* panning now */
-	draw_text("PE",55, base, 2,1);  /* target pan (pan end?) */
+	/* FIXME - these aren't all quite correct.
+	   (Someone clearly didn't read IT.TXT carefully enough. Who implemented this? ;) */
+	draw_text("FVl", 32, base, 2, 1); /* final volume       0-128 */
+	draw_text("Vl",  36, base, 2, 1); /* volume             0-64  */
+	draw_text("CV",  39, base, 2, 1); /* channel volume     0-64  */
+	draw_text("SV",  42, base, 2, 1); /* sample volume      0-64  */
+	draw_text("VE",  45, base, 2, 1); /* volume envelope    0-64  */
+	draw_text("Fde", 48, base, 2, 1); /* fadeout component  0-512 ; so int val /2 */
+	draw_text("Pn",  52, base, 2, 1); /* panning            0-64 or 'Su' */
+	draw_text("PE",  55, base, 2, 1); /* panning envelope   0-32 [?] */
 
 
 	for (pos = base + 1; pos < base + height - 1; pos++, c++) {
@@ -145,7 +146,7 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
                         smp = mixchan->sample - song_get_sample(0, NULL);
                 else
                         smp = 0;
-                if(smp < 0 || smp >= 240) /* MAX_SAMPLES */
+                if(smp < 0 || smp >= SCHISM_MAX_SAMPLES)
                         smp = 0;
 
 		// Bleh
@@ -167,7 +168,10 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 
 			draw_text(numtostr(3, mixchan->nFadeOutVol / 128, buf), 48, pos, 2, 0);
 
-			draw_text(numtostr(2, mixchan->panning >> 2, buf), 52, pos, 2, 0);
+			if (mixchan->flags & CHN_SURROUND)
+				draw_text("Su", 52, pos, 2, 0);
+			else
+				draw_text(numtostr(2, mixchan->panning >> 2, buf), 52, pos, 2, 0);
 			draw_text(numtostr(2, mixchan->final_panning >> 2, buf), 55, pos, 2, 0);
 		}
 		if (song_is_instrument_mode()) {
@@ -200,7 +204,7 @@ static void info_draw_technical(int base, int height, UNUSED int active, int fir
 
 static void info_draw_samples(int base, int height, int active, int first_channel)
 {
-        int inuse,vu, smp, ins, n, pos, fg, fg2, c = first_channel;
+        int inuse, vu, smp, ins, n, pos, fg, fg2, c = first_channel;
         char buf[8];
         char *ptr;
 
@@ -236,6 +240,18 @@ static void info_draw_samples(int base, int height, int active, int first_channe
         for (pos = base + 1; pos < base + height - 1; pos++, c++) {
                 song_mix_channel *channel = song_get_mix_channel(c - 1);
 
+		/* always draw the channel number */
+		if (c == selected_channel)
+			fg = (channel->flags & CHN_MUTE) ? 6 : 3;
+		else if (channel->flags & CHN_MUTE)
+			fg = 2; /* same as bg */
+		else
+			fg = active ? 1 : 0;
+		draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
+
+		if (!channel->sample_data)
+			continue;
+
                 /* first box: vu meter */
                 if (velocity_mode)
                         vu = channel->final_volume >> 8;
@@ -258,13 +274,14 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			smp = channel->sample - song_get_sample(0, NULL);
 		else
 			smp = inuse = 0;
-		if(smp < 0 || smp >= 240) /* MAX_SAMPLES */
+		if(smp < 0 || smp >= SCHISM_MAX_SAMPLES)
 			smp = inuse = 0; /* This sample is not in the sample array */
-
+#if 0
 		// this makes ascii-art behave somewhat...
 		if (channel->flags & (CHN_KEYOFF|CHN_NOTEFADE) && channel->sample_length == 0) {
 			inuse = smp = ins = 0;
 		}
+#endif
 
 		if (smp) {
 			draw_text(num99tostr(smp, buf), 31, pos, 6, 0);
@@ -334,16 +351,6 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 				draw_thumb_bar(64, pos, 9, 0, 256, channel->final_panning, 0);
 			}
 		}
-
-		/* finally, do the channel number */
-		if (c == selected_channel) {
-			fg = (channel->flags & CHN_MUTE) ? 6 : 3;
-		} else {
-			if (channel->flags & CHN_MUTE)
-				continue;
-			fg = active ? 1 : 0;
-		}
-		draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
 	}
 }
 

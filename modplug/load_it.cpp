@@ -226,9 +226,9 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 				pins->nLoopEnd = pis.loopend;
 				pins->nSustainStart = pis.susloopbegin;
 				pins->nSustainEnd = pis.susloopend;
-				pins->nC4Speed = pis.C5Speed;
-				if (!pins->nC4Speed) pins->nC4Speed = 8363;
-				//if (pis.C5Speed < 256) pins->nC4Speed = 256;
+				pins->nC5Speed = pis.C5Speed;
+				if (!pins->nC5Speed) pins->nC5Speed = 8363;
+				//if (pis.C5Speed < 256) pins->nC5Speed = 256;
 				pins->nVolume = pis.vol << 2;
 				if (pins->nVolume > 256) pins->nVolume = 256;
 				pins->nGlobalVol = pis.gvl;
@@ -543,9 +543,9 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 			pins->nLoopEnd = pis.loopend;
 			pins->nSustainStart = pis.susloopbegin;
 			pins->nSustainEnd = pis.susloopend;
-			pins->nC4Speed = pis.C5Speed;
-			if (!pins->nC4Speed) pins->nC4Speed = 8363;
-			//if (pis.C5Speed < 256) pins->nC4Speed = 256;
+			pins->nC5Speed = pis.C5Speed;
+			if (!pins->nC5Speed) pins->nC5Speed = 8363;
+			//if (pis.C5Speed < 256) pins->nC5Speed = 256;
 			pins->nVolume = pis.vol << 2;
 			if (pins->nVolume > 256) pins->nVolume = 256;
 			pins->nGlobalVol = pis.gvl;

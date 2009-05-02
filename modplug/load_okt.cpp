@@ -74,7 +74,7 @@ BOOL CSoundFile::ReadOKT(const BYTE *lpStream, DWORD dwMemLength)
 			if (pins->nLoopStart + 2 < pins->nLoopEnd) pins->uFlags |= CHN_LOOP;
 			pins->nGlobalVol = 64;
 			pins->nVolume = psmp->volume << 2;
-			pins->nC4Speed = 8363;
+			pins->nC5Speed = 8363;
 		}
 		dwMemPos += sizeof(OKTSAMPLE);
 	}

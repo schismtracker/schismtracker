@@ -197,7 +197,7 @@ BOOL CSoundFile::ReadAMF(LPCBYTE lpStream, DWORD dwMemLength)
 		{
 			MODINSTRUMENT *psmp = &Ins[iSmp+1];
 			memcpy(m_szNames[iSmp+1], lpStream+dwMemPos, 22);
-			psmp->nFineTune = MOD2XMFineTune(lpStream[dwMemPos+22]);
+			psmp->nC5Speed = S3MFineTuneTable[(lpStream[dwMemPos+22] & 0x0F) ^ 8];
 			psmp->nVolume = lpStream[dwMemPos+23];
 			psmp->nGlobalVol = 64;
 			if (psmp->nVolume > 0x40) psmp->nVolume = 0x40;
@@ -336,7 +336,7 @@ BOOL CSoundFile::ReadAMF(LPCBYTE lpStream, DWORD dwMemLength)
 		memcpy(m_szNames[iIns+1], psh->samplename, 32);
 		memcpy(pins->name, psh->filename, 13);
 		pins->nLength = bswapLE32(psh->length);
-		pins->nC4Speed = bswapLE16(psh->c2spd);
+		pins->nC5Speed = bswapLE16(psh->c2spd);
 		pins->nGlobalVol = 64;
 		pins->nVolume = psh->volume * 4;
 		if (pfh->version >= 11)

@@ -132,16 +132,16 @@ static struct menu instrument_menu = {
 };
 
 static struct menu settings_menu = {
-        x: 22, y: 25, w: 30, title: "Settings Menu",
+        x: 22, y: 25, w: 34, title: "Settings Menu",
 	/* num_items is fiddled with when the menu is loaded (if there's no window manager,
 	the toggle fullscreen item doesn't appear) */
-        num_items: 5, {
-                "Preferences         (Shift-F5)",
-                "MIDI Configuration  (Shift-F1)",
-		"System Configuration (Ctrl-F1)",
-                "Palette Editor      (Ctrl-F12)",
-		"Font Editor                   ",
-                "Toggle Fullscreen(Ctrl-Alt-CR)",
+        num_items: 6, {
+                "Preferences             (Shift-F5)",
+                "MIDI Configuration      (Shift-F1)",
+		"System Configuration     (Ctrl-F1)",
+                "Palette Editor          (Ctrl-F12)",
+		"Font Editor            (Shift-F12)",
+                "Toggle Fullscreen (Ctrl-Alt-Enter)",
         }, selected_item: 0, active_item: -1,
         settings_menu_selected_cb
 };
@@ -264,10 +264,11 @@ static void main_menu_selected_cb(void)
                 set_page(PAGE_MESSAGE);
                 break;
         case 8: /* settings menu */
+        	/* fudge the menu to show/hide the fullscreen toggle as appropriate */
 		if (status.flags & WM_AVAILABLE)
-			settings_menu.num_items = 5;
+			settings_menu.num_items = 6;
 		else
-			settings_menu.num_items = 4;
+			settings_menu.num_items = 5;
                 set_submenu(&settings_menu);
                 break;
         case 9: /* help! */

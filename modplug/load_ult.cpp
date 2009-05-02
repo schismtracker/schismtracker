@@ -93,10 +93,10 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 		pins->nLength = pus->sizeend - pus->sizestart;
 		pins->nVolume = pus->volume;
 		pins->nGlobalVol = 64;
-		pins->nC4Speed = 8363;
+		pins->nC5Speed = 8363;
 		if (pmh->id[14] >= '4')
 		{
-			pins->nC4Speed = pus->finetune;
+			pins->nC5Speed = pus->finetune;
 		}
 		if (pus->flags & ULT_LOOP) pins->uFlags |= CHN_LOOP;
 		if (pus->flags & ULT_BIDI) pins->uFlags |= CHN_PINGPONGLOOP;

@@ -156,7 +156,7 @@ static void sample_list_draw_list(void)
 	int has_data, is_selected;
 	char buf[64];
 	int ss, cl = 0, cr = 0;
-	int is_playing[100];
+	int is_playing[SCHISM_MAX_SAMPLES];
 
 	if (clippy_owner(CLIPPY_SELECT) == widgets_samplelist) {
 		cl = widgets_samplelist[0].clip_start % 25;
@@ -180,7 +180,7 @@ static void sample_list_draw_list(void)
 		has_data = (sample->data != NULL);
 		
 		if (sample->played)
-			draw_char(173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
+			draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 		
 		draw_text(num99tostr(n, buf), 2, 13 + pos, 0, 2);
 
@@ -1741,3 +1741,4 @@ void sample_list_load_page(struct page *page)
 	/* 19 = vibrato rate */
 	create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
 }
+

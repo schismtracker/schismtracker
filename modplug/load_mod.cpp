@@ -12,6 +12,7 @@
 //#pragma warning(disable:4244)
 
 extern WORD ProTrackerPeriodTable[6*12];
+extern WORD S3MFineTuneTable[16];
 
 //////////////////////////////////////////////////////////
 // ProTracker / NoiseTracker MOD/NST file support
@@ -214,7 +215,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		psmp->uFlags = 0;
 		psmp->nLength = bswapBE16(pms->length)*2;
 		dwTotalSampleLen += psmp->nLength;
-		psmp->nFineTune = MOD2XMFineTune(pms->finetune & 0x0F);
+		psmp->nC5Speed = S3MFineTuneTable[(pms->finetune & 0x0F) ^ 8]; // FIXME probably wrong; double-check
 		psmp->nVolume = 4*pms->volume;
 		if (psmp->nVolume > 256) { psmp->nVolume = 256; nErr++; }
 		psmp->nGlobalVol = 64;
@@ -363,7 +364,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 #pragma warning(disable:4100)
 #endif
 
-BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
+BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 //----------------------------------------------------------
 {
 	BYTE insmap[32];
@@ -400,16 +401,26 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 	{
 		MODINSTRUMENT *pins = &Ins[insmap[iins]];
 		WORD gg;
-		FrequencyToTranspose(pins);
+
+		int f2t = FrequencyToTranspose(pins->nC5Speed);
+		int transp = f2t >> 7;
+		int ftune = f2t & 0x7F;
+		if (ftune > 80)
+		{
+			transp++;
+			ftune -= 128;
+		}
+		if (transp > 127) transp = 127;
+		if (transp < -127) transp = -127;
 
 		memcpy(bTab, m_szNames[iins],22);
 		inslen[iins] = pins->nLength;
 		if (inslen[iins] > 0x1fff0) inslen[iins] = 0x1fff0;
 		gg = bswapBE16(inslen[iins] / 2);
 		memcpy(bTab+22, &gg, 2);
-		if (pins->RelativeTone < 0) bTab[24] = 0x08; else
-		if (pins->RelativeTone > 0) bTab[24] = 0x07; else
-		bTab[24] = (BYTE)XM2MODFineTune(pins->nFineTune);
+		if (transp < 0) bTab[24] = 0x08; else
+		if (transp > 0) bTab[24] = 0x07; else
+		bTab[24] = (BYTE)XM2MODFineTune(ftune);
 		bTab[25] = pins->nVolume  / 4;
 		gg = bswapBE16(pins->nLoopStart / 2);
 		memcpy(bTab+26, &gg, 2);
@@ -482,16 +493,6 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT nPacking)
 	{
 		MODINSTRUMENT *pins = &Ins[insmap[ismpd]];
 		UINT flags = RS_PCM8S;
-#ifndef NO_PACKING
-		if (!(pins->uFlags & (CHN_16BIT|CHN_STEREO)))
-		{
-			if ((nPacking) && (CanPackSample((char *)pins->pSample, inslen[ismpd], nPacking)))
-			{
-				fp->o(fp, (const unsigned char *)"ADPCM", 5);
-				flags = RS_ADPCM4;
-			}
-		}
-#endif
 		WriteSample(fp, pins, flags, inslen[ismpd]);
 	}
 	return TRUE;
