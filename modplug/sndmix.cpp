@@ -1067,19 +1067,9 @@ All the dead code should be gone now. :)
 			// Filter Envelope: controls cutoff frequency
 			if (pChn && pChn->pHeader && pChn->pHeader->dwFlags & ENV_FILTER)
 			{
-#ifndef NO_FILTER
 				SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE, envpitch);
-#endif // NO_FILTER
 			}
 
-#if 0
-			if (freq < 256)
-			{
-				pChn->nFadeOutVol = 0;
-				pChn->dwFlags |= CHN_NOTEFADE;
-				pChn->nRealVolume = 0;
-			}
-#endif
 			pChn->sample_freq = freq;
 
 			UINT ninc = _muldiv(freq, 0x10000, gdwMixingFreq);

@@ -10,8 +10,6 @@
 // AWE32: cutoff = reg[0-255] * 31.25 + 100 -> [100Hz-8060Hz]
 // EMU10K1 docs: cutoff = reg[0-127]*62+100
 
-#ifndef NO_FILTER
-
 static int filter_cutoff[] = {
      130,  132,  134,  136,  138,  140,  142,  144,
      146,  148,  151,  153,  155,  157,  160,  162,
@@ -82,10 +80,6 @@ int dmpfac[] = {
 };
 
 
-#include <math.h>
-
-
-#define PI	((double)3.14159265358979323846)
 // Simple 2-poles resonant filter
 void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modifier, int) const
 //----------------------------------------------------------------------------------------
@@ -127,4 +121,4 @@ void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modif
 	}
 	pChn->dwFlags |= CHN_FILTER;
 }
-#endif // NO_FILTER
+
