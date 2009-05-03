@@ -423,19 +423,15 @@ UINT CSoundFile::GetRawSongComments(LPSTR s, UINT len, UINT linesize)
 }
 
 
-BOOL CSoundFile::SetWaveConfig(UINT nRate,UINT nBits,UINT nChannels,BOOL bMMX)
+BOOL CSoundFile::SetWaveConfig(UINT nRate,UINT nBits,UINT nChannels)
 //----------------------------------------------------------------------------
 {
-	BOOL bReset = FALSE;
-	DWORD d = gdwSoundSetup & ~SNDMIX_ENABLEMMX;
-	if (bMMX) d |= SNDMIX_ENABLEMMX;
-	if ((gdwMixingFreq != nRate) || (gnBitsPerSample != nBits) || (gnChannels != nChannels) || (d != gdwSoundSetup)) bReset = TRUE;
+	BOOL bReset = ((gdwMixingFreq != nRate) || (gnBitsPerSample != nBits) || (gnChannels != nChannels));
 	gnChannels = nChannels;
-	gdwSoundSetup = d;
 	gdwMixingFreq = nRate;
 	gnBitsPerSample = nBits;
 	InitPlayer(bReset);
-//printf("Rate=%u Bits=%u Channels=%u MMX=%u\n",gdwMixingFreq,gnBitsPerSample,gnChannels,bMMX);
+//printf("Rate=%u Bits=%u Channels=%u\n",gdwMixingFreq,gnBitsPerSample,gnChannels);
 	return TRUE;
 }
 
@@ -758,8 +754,6 @@ UINT CSoundFile::GetInstrumentName(UINT nInstr,LPSTR s) const
 }
 
 
-#ifndef MODPLUG_NO_FILESAVE
-
 UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 				UINT nFlags, UINT nMaxLen)
 //-----------------------------------------------------------------------------------
@@ -953,8 +947,6 @@ UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 	}
 	return len;
 }
-
-#endif // MODPLUG_NO_FILESAVE
 
 
 // Flags:
@@ -1192,7 +1184,6 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 			ITUnpack16Bit(pIns->pSample, pIns->nLength, (LPBYTE)lpMemFile, dwMemLength, (nFlags == RS_IT21516));
 		break;
 
-#ifndef MODPLUG_FASTSOUNDLIB
 	// 8-bit interleaved stereo samples
 	case RS_STIPCM8S:
 	case RS_STIPCM8U:
@@ -1322,7 +1313,6 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 		}
 		break;
 
-#ifdef MODPLUG_TRACKER
 	// PCM 24-bit signed -> load sample, and normalize it to 16-bit
 	case RS_PCM24S:
 	case RS_PCM32S:
@@ -1402,9 +1392,6 @@ UINT CSoundFile::ReadSample(MODINSTRUMENT *pIns, UINT nFlags, LPCSTR lpMemFile, 
 		}
 		break;
 
-#endif // MODPLUG_TRACKER
-#endif // !MODPLUG_FASTSOUNDLIB
-
 	// Default: 8-bit signed PCM data
 	default:
 		len = pIns->nLength;
@@ -1470,7 +1457,6 @@ void CSoundFile::AdjustSampleLoop(MODINSTRUMENT *pIns)
 	} else
 	{
 		signed char *pSample = pIns->pSample;
-#ifndef MODPLUG_FASTSOUNDLIB
 		// Crappy samples (except chiptunes) ?
 		if ((pIns->nLength > 0x100) && (m_nType & (MOD_TYPE_MOD|MOD_TYPE_S3M))
 		 && (!(pIns->uFlags & CHN_STEREO)))
@@ -1498,7 +1484,7 @@ void CSoundFile::AdjustSampleLoop(MODINSTRUMENT *pIns)
 			}
 		}
 */
-#endif
+
 		// Adjust end of sample
 		if (pIns->uFlags & CHN_STEREO)
 		{
@@ -1664,8 +1650,6 @@ UINT CSoundFile::GetHighestUsedChannel()
 
 
 
-#ifndef MODPLUG_FASTSOUNDLIB
-
 UINT CSoundFile::DetectUnusedSamples(BOOL *pbIns)
 //-----------------------------------------------
 {
@@ -1756,5 +1740,4 @@ BOOL CSoundFile::DestroySample(UINT nSample)
 	return TRUE;
 }
 
-#endif // MODPLUG_FASTSOUNDLIB
 

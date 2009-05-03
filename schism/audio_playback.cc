@@ -1520,7 +1520,7 @@ RETRY:	using_driver = driver;
 		strcpy(driver_name, "nosound");
 
 		/* don't change this without looking at nosound_thread() */
-		CSoundFile::SetWaveConfig(11025, 8, 2, 0);
+		CSoundFile::SetWaveConfig(11025, 8, 2);
 		need_samples = 4410 * 2;
 		audio_output_channels = 2;
 		audio_output_bits = 8;
@@ -1598,7 +1598,7 @@ RETRY:	using_driver = driver;
 		/* format&255 is SDL specific... need bits */
 		CSoundFile::SetWaveConfig(obtained.freq,
 			obtained.format & 255,
-			obtained.channels, 1);
+			obtained.channels);
 		audio_output_channels = obtained.channels;
 		audio_output_bits = obtained.format & 255;
 		audio_sample_size = audio_output_channels * (audio_output_bits/8);
@@ -1718,3 +1718,4 @@ void song_initialise(void)
 	// hmm.
 	CSoundFile::gdwSoundSetup |= SNDMIX_MUTECHNMODE;
 }
+

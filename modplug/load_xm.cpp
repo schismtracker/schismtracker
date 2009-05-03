@@ -280,7 +280,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 				alreadymapped:
 					n--;
 				}
-#ifndef MODPLUG_FASTSOUNDLIB
+
 				// Damn! more than 200 samples: look for duplicates
 				if (!n)
 				{
@@ -314,7 +314,6 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 						}
 					}
 				}
-#endif // MODPLUG_FASTSOUNDLIB
 			}
 			if (newsamples < n) newsamples = n;
 			samplemap[nmap] = n;
@@ -471,8 +470,6 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 	return TRUE;
 }
 
-
-#ifndef MODPLUG_NO_FILESAVE
 
 BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 //---------------------------------------------------------
@@ -773,6 +770,4 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 	}
 	return TRUE;
 }
-
-#endif // MODPLUG_NO_FILESAVE
 

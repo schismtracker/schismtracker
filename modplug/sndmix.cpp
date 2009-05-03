@@ -342,13 +342,11 @@ BOOL CSoundFile::ProcessRow()
 				if (!m_nRepeatCount) return FALSE;
 			}
 		}
-#ifdef MODPLUG_TRACKER
 		if (m_dwSongFlags & SONG_STEP)
 		{
 			m_dwSongFlags &= ~SONG_STEP;
 			m_dwSongFlags |= SONG_PAUSED;
 		}
-#endif // MODPLUG_TRACKER
 		if (!PatternSize[m_nPattern] || !Patterns[m_nPattern]) {
 			/* okay, this is wrong. allocate the pattern _NOW_ */
 			Patterns[m_nPattern] = AllocatePattern(64,64);
@@ -472,12 +470,10 @@ BOOL CSoundFile::ReadNote()
 	m_nTotalCount++;
 	if (!m_nMusicTempo) return FALSE;
 	m_nBufferCount = (gdwMixingFreq * 5 * m_nTempoFactor) / (m_nMusicTempo << 8);
-#ifdef MODPLUG_TRACKER
 	if (m_dwSongFlags & SONG_PAUSED)
 	{
-		m_nBufferCount = gdwMixingFreq / 64; // 1/64 seconds
+		m_nBufferCount = gdwMixingFreq / 64; // 1/64 seconds (XXX - why?)
 	}
-#endif
 
 	// chaseback hoo hah
 	if (stop_at_order > -1 && stop_at_row > -1) {

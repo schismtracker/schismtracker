@@ -350,15 +350,9 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 			dwErrCheck++;
 		}
 	}
-#ifdef MODPLUG_TRACKER
-	return TRUE;
-#else
-	return (dwErrCheck) ? TRUE : FALSE;
-#endif
+	return (dwErrCheck) ? TRUE : FALSE; // MPT always returns TRUE here
 }
 
-
-#ifndef MODPLUG_NO_FILESAVE
 
 #ifdef MSC_VER
 #pragma warning(disable:4100)
@@ -502,4 +496,3 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 #pragma warning(default:4100)
 #endif
 
-#endif // MODPLUG_NO_FILESAVE

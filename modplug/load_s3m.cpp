@@ -645,8 +645,6 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 }
 
 
-#ifndef MODPLUG_NO_FILESAVE
-
 #ifdef MSC_VER
 #pragma warning(disable:4100)
 #endif
@@ -941,6 +939,4 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT)
 #ifdef MSC_VER
 #pragma warning(default:4100)
 #endif
-
-#endif // MODPLUG_NO_FILESAVE
 
