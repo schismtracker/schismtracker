@@ -1103,7 +1103,7 @@ static void dump_misc_about_text(void)
 {
 	int n;
 
-	log_append(3, 0, schism_banner());
+	log_append2(1, 3, 0, schism_banner());
 	log_nl();
 	for (n = 0; ver_copyright_credits[n]; n++)
 		log_append2(1, 6, 0, ver_copyright_credits[n]);
