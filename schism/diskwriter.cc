@@ -46,7 +46,7 @@ extern DWORD MPPASMCALL Convert32To8(LPVOID lpBuffer, int *, DWORD nSamples, LON
 extern DWORD MPPASMCALL Convert32To16(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
 extern DWORD MPPASMCALL Convert32To24(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
 extern DWORD MPPASMCALL Convert32To32(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern VOID MonoFromStereo(int *pMixBuf, UINT nSamples);
+extern void mono_from_stereo(int *, unsigned int);
 
 
 static LPCONVERTPROC dw_multi_pCvt = Convert32To8;
@@ -331,7 +331,7 @@ static void multi_out_helper(int chan, int *buf, int len)
 
 	if (dw->channels == 1) {
 		len *= 2;
-		MonoFromStereo((int *)diskbuf, len);
+		mono_from_stereo((int *)diskbuf, len);
 	}
 
 	dw_multi_pCvt(diskbuf, buf, len, vu_min, vu_max);

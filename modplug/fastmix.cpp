@@ -50,8 +50,8 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 
 // number of bits used to scale spline coefs
 #define SPLINE_QUANTBITS        14
-#define SPLINE_QUANTSCALE       (1L<<SPLINE_QUANTBITS)
-#define SPLINE_8SHIFT           (SPLINE_QUANTBITS-8)
+#define SPLINE_QUANTSCALE       (1L << SPLINE_QUANTBITS)
+#define SPLINE_8SHIFT           (SPLINE_QUANTBITS - 8)
 #define SPLINE_16SHIFT          (SPLINE_QUANTBITS)
 
 // forces coefsset to unity gain
@@ -64,17 +64,17 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 
 // quantizer scale of window coefs
 #define WFIR_QUANTBITS          15
-#define WFIR_QUANTSCALE         (1L<<WFIR_QUANTBITS)
-#define WFIR_8SHIFT                     (WFIR_QUANTBITS-8)
+#define WFIR_QUANTSCALE         (1L << WFIR_QUANTBITS)
+#define WFIR_8SHIFT             (WFIR_QUANTBITS - 8)
 #define WFIR_16BITSHIFT         (WFIR_QUANTBITS)
 
 // log2(number)-1 of precalculated taps range is [4..12]
 #define WFIR_FRACBITS           10
-#define WFIR_LUTLEN                     ((1L<<(WFIR_FRACBITS+1))+1)
+#define WFIR_LUTLEN             ((1L << (WFIR_FRACBITS + 1)) + 1)
 
 // number of samples in window
 #define WFIR_LOG2WIDTH          3
-#define WFIR_WIDTH                      (1L<<WFIR_LOG2WIDTH)
+#define WFIR_WIDTH              (1L << WFIR_LOG2WIDTH)
 #define WFIR_SMPSPERWING        ((WFIR_WIDTH-1)>>1)
 // cutoff (1.0 == pi/2)
 #define WFIR_CUTOFF             0.90f
@@ -98,13 +98,9 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 #include "precomp_lut.h"
 
 
-
-
 // ----------------------------------------------------------------------------
 // MIXING MACROS
 // ----------------------------------------------------------------------------
-/////////////////////////////////////////////////////
-// Mixing Macros
 
 #define SNDMIX_BEGINSAMPLELOOP8 \
         register MODCHANNEL * const pChn = pChannel; \
@@ -218,108 +214,107 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 // Stereo
 
 // No interpolation
-#define SNDMIX_GETSTEREOVOL8NOIDO\
-    int vol_l = p[(nPos>>16)*2] << 8;\
-    int vol_r = p[(nPos>>16)*2+1] << 8;
+#define SNDMIX_GETSTEREOVOL8NOIDO \
+    int vol_l = p[(nPos >> 16) * 2    ] << 8; \
+    int vol_r = p[(nPos >> 16) * 2 + 1] << 8;
 
-#define SNDMIX_GETSTEREOVOL16NOIDO\
-    int vol_l = p[(nPos>>16)*2];\
-    int vol_r = p[(nPos>>16)*2+1];
+#define SNDMIX_GETSTEREOVOL16NOIDO \
+    int vol_l = p[(nPos >> 16) * 2    ]; \
+    int vol_r = p[(nPos >> 16) * 2 + 1];
 
 
 // Linear Interpolation
-#define SNDMIX_GETSTEREOVOL8LINEAR\
-    int poshi    = nPos >> 16;\
-    int poslo    = (nPos >> 8) & 0xFF;\
-    int srcvol_l = p[poshi*2];\
-    int vol_l    = (srcvol_l<<8) + ((int)(poslo * (p[poshi*2+2] - srcvol_l)));\
-    int srcvol_r = p[poshi*2+1];\
-    int vol_r    = (srcvol_r<<8) + ((int)(poslo * (p[poshi*2+3] - srcvol_r)));
+#define SNDMIX_GETSTEREOVOL8LINEAR \
+    int poshi    = nPos >> 16; \
+    int poslo    = (nPos >> 8) & 0xFF; \
+    int srcvol_l = p[poshi * 2]; \
+    int vol_l    = (srcvol_l << 8) + ((int)(poslo * (p[poshi * 2 + 2] - srcvol_l))); \
+    int srcvol_r = p[poshi * 2 + 1]; \
+    int vol_r    = (srcvol_r << 8) + ((int)(poslo * (p[poshi * 2 + 3] - srcvol_r)));
 
 
-#define SNDMIX_GETSTEREOVOL16LINEAR\
-    int poshi    = nPos >> 16;\
-    int poslo    = (nPos >> 8) & 0xFF;\
-    int srcvol_l = p[poshi*2];\
-    int vol_l    = srcvol_l + ((int)(poslo * (p[poshi*2+2] - srcvol_l)) >> 8);\
-    int srcvol_r = p[poshi*2+1];\
-    int vol_r    = srcvol_r + ((int)(poslo * (p[poshi*2+3] - srcvol_r)) >> 8);\
+#define SNDMIX_GETSTEREOVOL16LINEAR \
+    int poshi    = nPos >> 16; \
+    int poslo    = (nPos >> 8) & 0xFF; \
+    int srcvol_l = p[poshi * 2]; \
+    int vol_l    = srcvol_l + ((int)(poslo * (p[poshi * 2 + 2] - srcvol_l)) >> 8);\
+    int srcvol_r = p[poshi * 2 + 1];\
+    int vol_r    = srcvol_r + ((int)(poslo * (p[poshi * 2 + 3] - srcvol_r)) >> 8);\
 
 
 // Spline Interpolation
 #define SNDMIX_GETSTEREOVOL8SPLINE \
     int poshi   = nPos >> 16; \
     int poslo   = (nPos >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
-    int vol_l   = (cubic_spline_lut[poslo  ]*(int)p[(poshi-1)*2  ] + \
-                   cubic_spline_lut[poslo+1]*(int)p[(poshi  )*2  ] + \
-                   cubic_spline_lut[poslo+2]*(int)p[(poshi+1)*2  ] + \
-                   cubic_spline_lut[poslo+3]*(int)p[(poshi+2)*2  ]) >> SPLINE_8SHIFT; \
-    int vol_r   = (cubic_spline_lut[poslo  ]*(int)p[(poshi-1)*2+1] + \
-                   cubic_spline_lut[poslo+1]*(int)p[(poshi  )*2+1] + \
-                   cubic_spline_lut[poslo+2]*(int)p[(poshi+1)*2+1] + \
-                   cubic_spline_lut[poslo+3]*(int)p[(poshi+2)*2+1]) >> SPLINE_8SHIFT;
+    int vol_l   = (cubic_spline_lut[poslo    ] * (int)p[(poshi - 1) * 2   ] + \
+                   cubic_spline_lut[poslo + 1] * (int)p[(poshi    ) * 2   ] + \
+                   cubic_spline_lut[poslo + 2] * (int)p[(poshi + 1) * 2   ] + \
+                   cubic_spline_lut[poslo + 3] * (int)p[(poshi + 2) * 2   ]) >> SPLINE_8SHIFT; \
+    int vol_r   = (cubic_spline_lut[poslo    ] * (int)p[(poshi - 1) * 2 + 1] + \
+                   cubic_spline_lut[poslo + 1] * (int)p[(poshi    ) * 2 + 1] + \
+                   cubic_spline_lut[poslo + 2] * (int)p[(poshi + 1) * 2 + 1] + \
+                   cubic_spline_lut[poslo + 3] * (int)p[(poshi + 2) * 2 + 1]) >> SPLINE_8SHIFT;
 
 #define SNDMIX_GETSTEREOVOL16SPLINE \
     int poshi   = nPos >> 16; \
     int poslo   = (nPos >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
-    int vol_l   = (cubic_spline_lut[poslo  ]*(int)p[(poshi-1)*2  ] + \
-                   cubic_spline_lut[poslo+1]*(int)p[(poshi  )*2  ] + \
-                   cubic_spline_lut[poslo+2]*(int)p[(poshi+1)*2  ] + \
-                   cubic_spline_lut[poslo+3]*(int)p[(poshi+2)*2  ]) >> SPLINE_16SHIFT; \
-    int vol_r   = (cubic_spline_lut[poslo  ]*(int)p[(poshi-1)*2+1] + \
-                   cubic_spline_lut[poslo+1]*(int)p[(poshi  )*2+1] + \
-                   cubic_spline_lut[poslo+2]*(int)p[(poshi+1)*2+1] + \
-                   cubic_spline_lut[poslo+3]*(int)p[(poshi+2)*2+1]) >> SPLINE_16SHIFT;
+    int vol_l   = (cubic_spline_lut[poslo    ] * (int)p[(poshi - 1) * 2    ] + \
+                   cubic_spline_lut[poslo + 1] * (int)p[(poshi    ) * 2    ] + \
+                   cubic_spline_lut[poslo + 2] * (int)p[(poshi + 1) * 2    ] + \
+                   cubic_spline_lut[poslo + 3] * (int)p[(poshi + 2) * 2    ]) >> SPLINE_16SHIFT; \
+    int vol_r   = (cubic_spline_lut[poslo    ] * (int)p[(poshi - 1) * 2 + 1] + \
+                   cubic_spline_lut[poslo + 1] * (int)p[(poshi    ) * 2 + 1] + \
+                   cubic_spline_lut[poslo + 2] * (int)p[(poshi + 1) * 2 + 1] + \
+                   cubic_spline_lut[poslo + 3] * (int)p[(poshi + 2) * 2 + 1]) >> SPLINE_16SHIFT;
 
 // fir interpolation
 #define SNDMIX_GETSTEREOVOL8FIRFILTER \
     int poshi   = nPos >> 16;\
     int poslo   = (nPos & 0xFFFF);\
-    int firidx  = ((poslo+WFIR_FRACHALVE)>>WFIR_FRACSHIFT) & WFIR_FRACMASK; \
-    int vol_l   = (windowed_fir_lut[firidx+0]*(int)p[(poshi+1-4)*2  ]);   \
-        vol_l  += (windowed_fir_lut[firidx+1]*(int)p[(poshi+2-4)*2  ]);   \
-        vol_l  += (windowed_fir_lut[firidx+2]*(int)p[(poshi+3-4)*2  ]);   \
-        vol_l  += (windowed_fir_lut[firidx+3]*(int)p[(poshi+4-4)*2  ]);   \
-        vol_l  += (windowed_fir_lut[firidx+4]*(int)p[(poshi+5-4)*2  ]);   \
-        vol_l  += (windowed_fir_lut[firidx+5]*(int)p[(poshi+6-4)*2  ]);   \
-        vol_l  += (windowed_fir_lut[firidx+6]*(int)p[(poshi+7-4)*2  ]);   \
-        vol_l  += (windowed_fir_lut[firidx+7]*(int)p[(poshi+8-4)*2  ]);   \
+    int firidx  = ((poslo + WFIR_FRACHALVE) >> WFIR_FRACSHIFT) & WFIR_FRACMASK; \
+    int vol_l   = (windowed_fir_lut[firidx + 0] * (int)p[(poshi + 1 - 4) * 2]); \
+        vol_l  += (windowed_fir_lut[firidx + 1] * (int)p[(poshi + 2 - 4) * 2]); \
+        vol_l  += (windowed_fir_lut[firidx + 2] * (int)p[(poshi + 3 - 4) * 2]); \
+        vol_l  += (windowed_fir_lut[firidx + 3] * (int)p[(poshi + 4 - 4) * 2]); \
+        vol_l  += (windowed_fir_lut[firidx + 4] * (int)p[(poshi + 5 - 4) * 2]); \
+        vol_l  += (windowed_fir_lut[firidx + 5] * (int)p[(poshi + 6 - 4) * 2]); \
+        vol_l  += (windowed_fir_lut[firidx + 6] * (int)p[(poshi + 7 - 4) * 2]); \
+        vol_l  += (windowed_fir_lut[firidx + 7] * (int)p[(poshi + 8 - 4) * 2]); \
         vol_l >>= WFIR_8SHIFT; \
-    int vol_r   = (windowed_fir_lut[firidx+0]*(int)p[(poshi+1-4)*2+1]);   \
-        vol_r  += (windowed_fir_lut[firidx+1]*(int)p[(poshi+2-4)*2+1]);   \
-        vol_r  += (windowed_fir_lut[firidx+2]*(int)p[(poshi+3-4)*2+1]);   \
-        vol_r  += (windowed_fir_lut[firidx+3]*(int)p[(poshi+4-4)*2+1]);   \
-        vol_r  += (windowed_fir_lut[firidx+4]*(int)p[(poshi+5-4)*2+1]);   \
-        vol_r  += (windowed_fir_lut[firidx+5]*(int)p[(poshi+6-4)*2+1]);   \
-        vol_r  += (windowed_fir_lut[firidx+6]*(int)p[(poshi+7-4)*2+1]);   \
-        vol_r  += (windowed_fir_lut[firidx+7]*(int)p[(poshi+8-4)*2+1]);   \
+    int vol_r   = (windowed_fir_lut[firidx + 0] * (int)p[(poshi + 1 - 4) * 2 + 1]); \
+        vol_r  += (windowed_fir_lut[firidx + 1] * (int)p[(poshi + 2 - 4) * 2 + 1]); \
+        vol_r  += (windowed_fir_lut[firidx + 2] * (int)p[(poshi + 3 - 4) * 2 + 1]); \
+        vol_r  += (windowed_fir_lut[firidx + 3] * (int)p[(poshi + 4 - 4) * 2 + 1]); \
+        vol_r  += (windowed_fir_lut[firidx + 4] * (int)p[(poshi + 5 - 4) * 2 + 1]); \
+        vol_r  += (windowed_fir_lut[firidx + 5] * (int)p[(poshi + 6 - 4) * 2 + 1]); \
+        vol_r  += (windowed_fir_lut[firidx + 6] * (int)p[(poshi + 7 - 4) * 2 + 1]); \
+        vol_r  += (windowed_fir_lut[firidx + 7] * (int)p[(poshi + 8 - 4) * 2 + 1]); \
         vol_r >>= WFIR_8SHIFT;
 
 #define SNDMIX_GETSTEREOVOL16FIRFILTER \
     int poshi   = nPos >> 16;\
     int poslo   = (nPos & 0xFFFF);\
-    int firidx  = ((poslo+WFIR_FRACHALVE)>>WFIR_FRACSHIFT) & WFIR_FRACMASK; \
-    int vol1_l  = (windowed_fir_lut[firidx+0]*(int)p[(poshi+1-4)*2  ]);   \
-        vol1_l += (windowed_fir_lut[firidx+1]*(int)p[(poshi+2-4)*2  ]);   \
-        vol1_l += (windowed_fir_lut[firidx+2]*(int)p[(poshi+3-4)*2  ]);   \
-        vol1_l += (windowed_fir_lut[firidx+3]*(int)p[(poshi+4-4)*2  ]);   \
-   int vol2_l  = (windowed_fir_lut[firidx+4]*(int)p[(poshi+5-4)*2  ]);    \
-       vol2_l += (windowed_fir_lut[firidx+5]*(int)p[(poshi+6-4)*2  ]);    \
-       vol2_l += (windowed_fir_lut[firidx+6]*(int)p[(poshi+7-4)*2  ]);    \
-       vol2_l += (windowed_fir_lut[firidx+7]*(int)p[(poshi+8-4)*2  ]);    \
-   int vol_l   = ((vol1_l>>1)+(vol2_l>>1)) >> (WFIR_16BITSHIFT-1); \
-   int vol1_r  = (windowed_fir_lut[firidx+0]*(int)p[(poshi+1-4)*2+1]);    \
-       vol1_r += (windowed_fir_lut[firidx+1]*(int)p[(poshi+2-4)*2+1]);    \
-       vol1_r += (windowed_fir_lut[firidx+2]*(int)p[(poshi+3-4)*2+1]);    \
-       vol1_r += (windowed_fir_lut[firidx+3]*(int)p[(poshi+4-4)*2+1]);    \
-   int vol2_r  = (windowed_fir_lut[firidx+4]*(int)p[(poshi+5-4)*2+1]);    \
-       vol2_r += (windowed_fir_lut[firidx+5]*(int)p[(poshi+6-4)*2+1]);    \
-       vol2_r += (windowed_fir_lut[firidx+6]*(int)p[(poshi+7-4)*2+1]);    \
-       vol2_r += (windowed_fir_lut[firidx+7]*(int)p[(poshi+8-4)*2+1]);    \
-   int vol_r   = ((vol1_r>>1)+(vol2_r>>1)) >> (WFIR_16BITSHIFT-1);
+    int firidx  = ((poslo + WFIR_FRACHALVE) >> WFIR_FRACSHIFT) & WFIR_FRACMASK; \
+    int vol1_l  = (windowed_fir_lut[firidx + 0] * (int)p[(poshi + 1 - 4) * 2]); \
+        vol1_l += (windowed_fir_lut[firidx + 1] * (int)p[(poshi + 2 - 4) * 2]); \
+        vol1_l += (windowed_fir_lut[firidx + 2] * (int)p[(poshi + 3 - 4) * 2]); \
+        vol1_l += (windowed_fir_lut[firidx + 3] * (int)p[(poshi + 4 - 4) * 2]); \
+    int vol2_l  = (windowed_fir_lut[firidx + 4] * (int)p[(poshi + 5 - 4) * 2]); \
+        vol2_l += (windowed_fir_lut[firidx + 5] * (int)p[(poshi + 6 - 4) * 2]); \
+        vol2_l += (windowed_fir_lut[firidx + 6] * (int)p[(poshi + 7 - 4) * 2]); \
+        vol2_l += (windowed_fir_lut[firidx + 7] * (int)p[(poshi + 8 - 4) * 2]); \
+    int vol_l   = ((vol1_l >> 1) + (vol2_l >> 1)) >> (WFIR_16BITSHIFT - 1); \
+    int vol1_r  = (windowed_fir_lut[firidx + 0] * (int)p[(poshi + 1 - 4) * 2 + 1]);    \
+        vol1_r += (windowed_fir_lut[firidx + 1] * (int)p[(poshi + 2 - 4) * 2 + 1]);    \
+        vol1_r += (windowed_fir_lut[firidx + 2] * (int)p[(poshi + 3 - 4) * 2 + 1]);    \
+        vol1_r += (windowed_fir_lut[firidx + 3] * (int)p[(poshi + 4 - 4) * 2 + 1]);    \
+    int vol2_r  = (windowed_fir_lut[firidx + 4] * (int)p[(poshi + 5 - 4) * 2 + 1]);    \
+        vol2_r += (windowed_fir_lut[firidx + 5] * (int)p[(poshi + 6 - 4) * 2 + 1]);    \
+        vol2_r += (windowed_fir_lut[firidx + 6] * (int)p[(poshi + 7 - 4) * 2 + 1]);    \
+        vol2_r += (windowed_fir_lut[firidx + 7] * (int)p[(poshi + 8 - 4) * 2 + 1]);    \
+    int vol_r   = ((vol1_r >> 1) + (vol2_r >> 1)) >> (WFIR_16BITSHIFT - 1);
 
 
-/////////////////////////////////////////////////////////////////////////////
 
 #define SNDMIX_STOREMONOVOL \
     pvol[0] += vol * pChn->nRightVol; \
@@ -389,18 +384,18 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 
 // Stereo
 #define MIX_BEGIN_STEREO_FILTER \
-    double fy1 = pChannel->nFilter_Y1;\
-    double fy2 = pChannel->nFilter_Y2;\
-    double fy3 = pChannel->nFilter_Y3;\
-    double fy4 = pChannel->nFilter_Y4;\
+    double fy1 = pChannel->nFilter_Y1; \
+    double fy2 = pChannel->nFilter_Y2; \
+    double fy3 = pChannel->nFilter_Y3; \
+    double fy4 = pChannel->nFilter_Y4; \
     double ta, tb;
 
 
 #define MIX_END_STEREO_FILTER \
-    pChannel->nFilter_Y1 = fy1;\
-    pChannel->nFilter_Y2 = fy2;\
-    pChannel->nFilter_Y3 = fy3;\
-    pChannel->nFilter_Y4 = fy4;\
+    pChannel->nFilter_Y1 = fy1; \
+    pChannel->nFilter_Y2 = fy2; \
+    pChannel->nFilter_Y3 = fy3; \
+    pChannel->nFilter_Y4 = fy4; \
 
 
 #define SNDMIX_PROCESSSTEREOFILTER \
@@ -634,6 +629,7 @@ END_RAMPMIX_INTERFACE()
 
 //////////////////////////////////////////////////////
 // Fast mono mix for leftvol=rightvol (1 less imul)
+
 BEGIN_MIX_INTERFACE(FastMono8BitMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8NOIDO 
@@ -1573,7 +1569,6 @@ void CSoundFile::FloatToMonoMix(const float *pIn, int *pOut, unsigned int nCount
 /* XXX [ben] May 3rd, 2009: mins/max were LONG and are now int
  */ 
 
-
 // Clip and convert to 8 bit
 //---GCCFIX: Asm replaced with C function
 // The C version was written by Rani Assaf <rani@magic.metawire.com>, I believe
@@ -1678,26 +1673,18 @@ void InitMixBuffer(int *buffer, unsigned int samples)
 }
 
 
-//---GCCFIX: Asm replaced with C function
-void InterleaveFrontRear(int *pFrontBuf, int *pRearBuf, unsigned int nSamples)
+void interleave_front_rear(int *front, int *rear, unsigned int samples)
 {
-    unsigned int i = 0;
-
-    pRearBuf[i] = pFrontBuf[1];
-
-    for (i = 1; i < nSamples; i++) {
-        pRearBuf[i] = pFrontBuf[(i * 2) + 1];
-        pFrontBuf[i] = pFrontBuf[i * 2];
+    for (unsigned int i = 0; i < samples; i++) {
+        rear[i]  = front[(i * 2) + 1];
+        front[i] = front[i * 2];
     }
 }
 
 
-//---GCCFIX: Asm replaced with C function
-void MonoFromStereo(int *mix_buf, unsigned int samples)
+void mono_from_stereo(int *mix_buf, unsigned int samples)
 {
-    unsigned int j;
-
-    for (unsigned int i = 0; i < samples; i++) {
+    for (unsigned int j, i = 0; i < samples; i++) {
         j = i << 1;
         mix_buf[i] = (mix_buf[j] + mix_buf[j + 1]) >> 1;
     }
@@ -1709,7 +1696,7 @@ void MonoFromStereo(int *mix_buf, unsigned int samples)
 #define OFSDECAYMASK     0xFF
 
 // XXX [ben] profs/plofs were void*
-void StereoFill(int *buffer, unsigned int samples, int* profs, int *plofs)
+void stereo_fill(int *buffer, unsigned int samples, int* profs, int *plofs)
 {
     int rofs = *profs;
     int lofs = *plofs;
