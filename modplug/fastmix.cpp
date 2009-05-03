@@ -142,20 +142,22 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 #define SNDMIX_GETMONOVOL16NOIDO \
     int vol = p[nPos >> 16];
 
+
 // Linear Interpolation
 #define SNDMIX_GETMONOVOL8LINEAR \
-    int poshi = nPos >> 16; \
-    int poslo = (nPos >> 8) & 0xFF; \
-    int srcvol = p[poshi]; \
+    int poshi   = nPos >> 16; \
+    int poslo   = (nPos >> 8) & 0xFF; \
+    int srcvol  = p[poshi]; \
     int destvol = p[poshi+1]; \
-    int vol = (srcvol<<8) + ((int)(poslo * (destvol - srcvol)));
+    int vol     = (srcvol<<8) + ((int)(poslo * (destvol - srcvol)));
 
 #define SNDMIX_GETMONOVOL16LINEAR \
-    int poshi = nPos >> 16; \
-    int poslo = (nPos >> 8) & 0xFF; \
-    int srcvol = p[poshi]; \
+    int poshi   = nPos >> 16; \
+    int poslo   = (nPos >> 8) & 0xFF; \
+    int srcvol  = p[poshi]; \
     int destvol = p[poshi + 1]; \
-    int vol = srcvol + ((int)(poslo * (destvol - srcvol)) >> 8);
+    int vol     = srcvol + ((int)(poslo * (destvol - srcvol)) >> 8);
+
 
 // spline interpolation (2 guard bits should be enough???)
 #define SPLINE_FRACSHIFT ((16 - SPLINE_FRACBITS) - 2)
@@ -184,18 +186,18 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 #define WFIR_FRACHALVE  (1L<<(16-(WFIR_FRACBITS+2)))
 
 #define SNDMIX_GETMONOVOL8FIRFILTER \
-        int poshi  = nPos >> 16;\
-        int poslo  = (nPos & 0xFFFF);\
-        int firidx = ((poslo+WFIR_FRACHALVE)>>WFIR_FRACSHIFT) & WFIR_FRACMASK; \
-        int vol    = (windowed_fir_lut[firidx+0]*(int)p[poshi+1-4]);    \
-            vol   += (windowed_fir_lut[firidx+1]*(int)p[poshi+2-4]);    \
-            vol   += (windowed_fir_lut[firidx+2]*(int)p[poshi+3-4]);    \
-            vol   += (windowed_fir_lut[firidx+3]*(int)p[poshi+4-4]);    \
-            vol   += (windowed_fir_lut[firidx+4]*(int)p[poshi+5-4]);    \
-            vol   += (windowed_fir_lut[firidx+5]*(int)p[poshi+6-4]);    \
-            vol   += (windowed_fir_lut[firidx+6]*(int)p[poshi+7-4]);    \
-            vol   += (windowed_fir_lut[firidx+7]*(int)p[poshi+8-4]);    \
-            vol  >>= WFIR_8SHIFT;
+    int poshi  = nPos >> 16;\
+    int poslo  = (nPos & 0xFFFF);\
+    int firidx = ((poslo + WFIR_FRACHALVE) >> WFIR_FRACSHIFT) & WFIR_FRACMASK; \
+    int vol    = (windowed_fir_lut[firidx + 0] * (int)p[poshi + 1 - 4]); \
+        vol   += (windowed_fir_lut[firidx + 1] * (int)p[poshi + 2 - 4]); \
+        vol   += (windowed_fir_lut[firidx + 2] * (int)p[poshi + 3 - 4]); \
+        vol   += (windowed_fir_lut[firidx + 3] * (int)p[poshi + 4 - 4]); \
+        vol   += (windowed_fir_lut[firidx + 4] * (int)p[poshi + 5 - 4]); \
+        vol   += (windowed_fir_lut[firidx + 5] * (int)p[poshi + 6 - 4]); \
+        vol   += (windowed_fir_lut[firidx + 6] * (int)p[poshi + 7 - 4]); \
+        vol   += (windowed_fir_lut[firidx + 7] * (int)p[poshi + 8 - 4]); \
+        vol  >>= WFIR_8SHIFT;
 
 #define SNDMIX_GETMONOVOL16FIRFILTER \
     int poshi  = nPos >> 16;\
@@ -211,6 +213,7 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
         vol2  += (windowed_fir_lut[firidx+7]*(int)p[poshi+8-4]);        \
     int vol    = ((vol1>>1)+(vol2>>1)) >> (WFIR_16BITSHIFT-1);
 
+
 /////////////////////////////////////////////////////////////////////////////
 // Stereo
 
@@ -223,22 +226,25 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
     int vol_l = p[(nPos>>16)*2];\
     int vol_r = p[(nPos>>16)*2+1];
 
+
 // Linear Interpolation
 #define SNDMIX_GETSTEREOVOL8LINEAR\
-    int poshi = nPos >> 16;\
-    int poslo = (nPos >> 8) & 0xFF;\
+    int poshi    = nPos >> 16;\
+    int poslo    = (nPos >> 8) & 0xFF;\
     int srcvol_l = p[poshi*2];\
-    int vol_l = (srcvol_l<<8) + ((int)(poslo * (p[poshi*2+2] - srcvol_l)));\
+    int vol_l    = (srcvol_l<<8) + ((int)(poslo * (p[poshi*2+2] - srcvol_l)));\
     int srcvol_r = p[poshi*2+1];\
-    int vol_r = (srcvol_r<<8) + ((int)(poslo * (p[poshi*2+3] - srcvol_r)));
+    int vol_r    = (srcvol_r<<8) + ((int)(poslo * (p[poshi*2+3] - srcvol_r)));
+
 
 #define SNDMIX_GETSTEREOVOL16LINEAR\
-    int poshi = nPos >> 16;\
-    int poslo = (nPos >> 8) & 0xFF;\
+    int poshi    = nPos >> 16;\
+    int poslo    = (nPos >> 8) & 0xFF;\
     int srcvol_l = p[poshi*2];\
-    int vol_l = srcvol_l + ((int)(poslo * (p[poshi*2+2] - srcvol_l)) >> 8);\
+    int vol_l    = srcvol_l + ((int)(poslo * (p[poshi*2+2] - srcvol_l)) >> 8);\
     int srcvol_r = p[poshi*2+1];\
-    int vol_r = srcvol_r + ((int)(poslo * (p[poshi*2+3] - srcvol_r)) >> 8);\
+    int vol_r    = srcvol_r + ((int)(poslo * (p[poshi*2+3] - srcvol_r)) >> 8);\
+
 
 // Spline Interpolation
 #define SNDMIX_GETSTEREOVOL8SPLINE \
@@ -312,63 +318,74 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
        vol2_r += (windowed_fir_lut[firidx+7]*(int)p[(poshi+8-4)*2+1]);    \
    int vol_r   = ((vol1_r>>1)+(vol2_r>>1)) >> (WFIR_16BITSHIFT-1);
 
+
 /////////////////////////////////////////////////////////////////////////////
 
-#define SNDMIX_STOREMONOVOL\
-        pvol[0] += vol * pChn->nRightVol;\
-        pvol[1] += vol * pChn->nLeftVol;\
-        pvol += 2;
-
-#define SNDMIX_STORESTEREOVOL\
-        pvol[0] += vol_l * pChn->nRightVol;\
-        pvol[1] += vol_r * pChn->nLeftVol;\
-        pvol += 2;
-
-#define SNDMIX_STOREFASTMONOVOL\
-        int v = vol * pChn->nRightVol;\
-        pvol[0] += v;\
-        pvol[1] += v;\
-        pvol += 2;
-
-#define SNDMIX_RAMPMONOVOL\
-        nRampLeftVol += pChn->nLeftRamp;\
-        nRampRightVol += pChn->nRightRamp;\
-        pvol[0] += vol * (nRampRightVol >> VOLUMERAMPPRECISION);\
-        pvol[1] += vol * (nRampLeftVol >> VOLUMERAMPPRECISION);\
-        pvol += 2;
-
-#define SNDMIX_RAMPFASTMONOVOL\
-    nRampRightVol += pChn->nRightRamp;\
-    int fastvol = vol * (nRampRightVol >> VOLUMERAMPPRECISION);\
-    pvol[0] += fastvol;\
-    pvol[1] += fastvol;\
+#define SNDMIX_STOREMONOVOL \
+    pvol[0] += vol * pChn->nRightVol; \
+    pvol[1] += vol * pChn->nLeftVol; \
     pvol += 2;
 
-#define SNDMIX_RAMPSTEREOVOL\
-    nRampLeftVol += pChn->nLeftRamp;\
-    nRampRightVol += pChn->nRightRamp;\
-    pvol[0] += vol_l * (nRampRightVol >> VOLUMERAMPPRECISION);\
-    pvol[1] += vol_r * (nRampLeftVol >> VOLUMERAMPPRECISION);\
+
+#define SNDMIX_STORESTEREOVOL \
+    pvol[0] += vol_l * pChn->nRightVol; \
+    pvol[1] += vol_r * pChn->nLeftVol; \
+    pvol += 2;
+
+
+#define SNDMIX_STOREFASTMONOVOL \
+    int v = vol * pChn->nRightVol; \
+    pvol[0] += v; \
+    pvol[1] += v; \
+    pvol += 2;
+
+
+#define SNDMIX_RAMPMONOVOL \
+    nRampLeftVol += pChn->nLeftRamp; \
+    nRampRightVol += pChn->nRightRamp; \
+    pvol[0] += vol * (nRampRightVol >> VOLUMERAMPPRECISION); \
+    pvol[1] += vol * (nRampLeftVol >> VOLUMERAMPPRECISION); \
+    pvol += 2;
+
+
+#define SNDMIX_RAMPFASTMONOVOL \
+    nRampRightVol += pChn->nRightRamp; \
+    int fastvol = vol * (nRampRightVol >> VOLUMERAMPPRECISION); \
+    pvol[0] += fastvol; \
+    pvol[1] += fastvol; \
+    pvol += 2;
+
+
+#define SNDMIX_RAMPSTEREOVOL \
+    nRampLeftVol += pChn->nLeftRamp; \
+    nRampRightVol += pChn->nRightRamp; \
+    pvol[0] += vol_l * (nRampRightVol >> VOLUMERAMPPRECISION); \
+    pvol[1] += vol_r * (nRampLeftVol >> VOLUMERAMPPRECISION); \
     pvol += 2;
 
 
 ///////////////////////////////////////////////////
 // Resonant Filters
 
+
 // Mono
 #define MIX_BEGIN_FILTER \
-    double fy1 = pChannel->nFilter_Y1;\
-    double fy2 = pChannel->nFilter_Y2;\
+    double fy1 = pChannel->nFilter_Y1; \
+    double fy2 = pChannel->nFilter_Y2; \
     double ta;
 
+
 #define MIX_END_FILTER \
-    pChannel->nFilter_Y1 = fy1;\
+    pChannel->nFilter_Y1 = fy1; \
     pChannel->nFilter_Y2 = fy2;
 
+
 #define SNDMIX_PROCESSFILTER \
-    ta = ((double)vol * pChn->nFilter_A0 + fy1 * pChn->nFilter_B0 + fy2 * pChn->nFilter_B1);\
-    fy2 = fy1;\
-    fy1 = ta;vol=(int)ta;
+    ta = ((double)vol * pChn->nFilter_A0 + fy1 * pChn->nFilter_B0 + fy2 * pChn->nFilter_B1); \
+    fy2 = fy1; \
+    fy1 = ta; \
+    vol = (int)ta;
+
 
 // Stereo
 #define MIX_BEGIN_STEREO_FILTER \
@@ -378,23 +395,25 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
     double fy4 = pChannel->nFilter_Y4;\
     double ta, tb;
 
+
 #define MIX_END_STEREO_FILTER \
     pChannel->nFilter_Y1 = fy1;\
     pChannel->nFilter_Y2 = fy2;\
     pChannel->nFilter_Y3 = fy3;\
     pChannel->nFilter_Y4 = fy4;\
 
+
 #define SNDMIX_PROCESSSTEREOFILTER \
-    ta = ((double)vol_l * pChn->nFilter_A0 + fy1 * pChn->nFilter_B0 + fy2 * pChn->nFilter_B1);\
-    tb = ((double)vol_r * pChn->nFilter_A0 + fy3 * pChn->nFilter_B0 + fy4 * pChn->nFilter_B1);\
-    fy2 = fy1; fy1 = ta;vol_l=(int)ta;\
-    fy4 = fy3; fy3 = tb;vol_r=(int)tb;
+    ta = ((double)vol_l * pChn->nFilter_A0 + fy1 * pChn->nFilter_B0 + fy2 * pChn->nFilter_B1); \
+    tb = ((double)vol_r * pChn->nFilter_A0 + fy3 * pChn->nFilter_B0 + fy4 * pChn->nFilter_B1); \
+    fy2 = fy1; fy1 = ta; vol_l = (int) ta; \
+    fy4 = fy3; fy3 = tb; vol_r = (int) tb;
 
 
 //////////////////////////////////////////////////////////
 // Interfaces
 
-typedef VOID(MPPASMCALL * LPMIXINTERFACE) (MODCHANNEL *, int *, int *);
+typedef void(MPPASMCALL * mix_interface_t)(MODCHANNEL *, int *, int *);
 
 
 #define BEGIN_MIX_INTERFACE(func) \
@@ -410,7 +429,7 @@ typedef VOID(MPPASMCALL * LPMIXINTERFACE) (MODCHANNEL *, int *, int *);
 
 // Volume Ramps
 #define BEGIN_RAMPMIX_INTERFACE(func) \
-    BEGIN_MIX_INTERFACE(func)\
+    BEGIN_MIX_INTERFACE(func) \
         long nRampRightVol = pChannel->nRampRightVol; \
         long nRampLeftVol = pChannel->nRampLeftVol;
 
@@ -480,10 +499,10 @@ typedef VOID(MPPASMCALL * LPMIXINTERFACE) (MODCHANNEL *, int *, int *);
 
 
 #define BEGIN_RAMPMIX_STFLT_INTERFACE(func) \
-        BEGIN_MIX_INTERFACE(func) \
-                long nRampRightVol = pChannel->nRampRightVol; \
-                long nRampLeftVol  = pChannel->nRampLeftVol; \
-                MIX_BEGIN_STEREO_FILTER
+    BEGIN_MIX_INTERFACE(func) \
+        long nRampRightVol = pChannel->nRampRightVol; \
+        long nRampLeftVol  = pChannel->nRampLeftVol; \
+        MIX_BEGIN_STEREO_FILTER
 
 
 #define END_RAMPMIX_STFLT_INTERFACE() \
@@ -617,121 +636,200 @@ END_RAMPMIX_INTERFACE()
 // Fast mono mix for leftvol=rightvol (1 less imul)
 BEGIN_MIX_INTERFACE(FastMono8BitMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETMONOVOL8NOIDO SNDMIX_STOREFASTMONOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(FastMono16BitMix)
+    SNDMIX_GETMONOVOL8NOIDO 
+    SNDMIX_STOREFASTMONOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(FastMono16BitMix)
     SNDMIX_BEGINSAMPLELOOP16
-    SNDMIX_GETMONOVOL16NOIDO SNDMIX_STOREFASTMONOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(FastMono8BitLinearMix)
+    SNDMIX_GETMONOVOL16NOIDO 
+    SNDMIX_STOREFASTMONOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(FastMono8BitLinearMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETMONOVOL8LINEAR SNDMIX_STOREFASTMONOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(FastMono16BitLinearMix)
+    SNDMIX_GETMONOVOL8LINEAR 
+    SNDMIX_STOREFASTMONOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(FastMono16BitLinearMix)
     SNDMIX_BEGINSAMPLELOOP16
-    SNDMIX_GETMONOVOL16LINEAR SNDMIX_STOREFASTMONOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(FastMono8BitSplineMix)
+    SNDMIX_GETMONOVOL16LINEAR 
+    SNDMIX_STOREFASTMONOVOL
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(FastMono8BitSplineMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETMONOVOL8SPLINE SNDMIX_STOREFASTMONOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(FastMono16BitSplineMix)
+    SNDMIX_GETMONOVOL8SPLINE
+    SNDMIX_STOREFASTMONOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(FastMono16BitSplineMix)
     SNDMIX_BEGINSAMPLELOOP16
-    SNDMIX_GETMONOVOL16SPLINE SNDMIX_STOREFASTMONOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(FastMono8BitFirFilterMix)
+    SNDMIX_GETMONOVOL16SPLINE 
+    SNDMIX_STOREFASTMONOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(FastMono8BitFirFilterMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETMONOVOL8FIRFILTER SNDMIX_STOREFASTMONOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(FastMono16BitFirFilterMix)
+    SNDMIX_GETMONOVOL8FIRFILTER 
+    SNDMIX_STOREFASTMONOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(FastMono16BitFirFilterMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16FIRFILTER
-    SNDMIX_STOREFASTMONOVOL END_MIX_INTERFACE()
+    SNDMIX_STOREFASTMONOVOL 
+END_MIX_INTERFACE()
+
 
 // Fast Ramps
 BEGIN_FASTRAMPMIX_INTERFACE(FastMono8BitRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8NOIDO
     SNDMIX_RAMPFASTMONOVOL END_FASTRAMPMIX_INTERFACE()
- BEGIN_FASTRAMPMIX_INTERFACE(FastMono16BitRampMix)
+
+BEGIN_FASTRAMPMIX_INTERFACE(FastMono16BitRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16NOIDO
-    SNDMIX_RAMPFASTMONOVOL END_FASTRAMPMIX_INTERFACE()
- BEGIN_FASTRAMPMIX_INTERFACE(FastMono8BitLinearRampMix)
+    SNDMIX_RAMPFASTMONOVOL 
+END_FASTRAMPMIX_INTERFACE()
+
+BEGIN_FASTRAMPMIX_INTERFACE(FastMono8BitLinearRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8LINEAR
-    SNDMIX_RAMPFASTMONOVOL END_FASTRAMPMIX_INTERFACE()
- BEGIN_FASTRAMPMIX_INTERFACE(FastMono16BitLinearRampMix)
+    SNDMIX_RAMPFASTMONOVOL 
+END_FASTRAMPMIX_INTERFACE()
+
+BEGIN_FASTRAMPMIX_INTERFACE(FastMono16BitLinearRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16LINEAR
-    SNDMIX_RAMPFASTMONOVOL END_FASTRAMPMIX_INTERFACE()
- BEGIN_FASTRAMPMIX_INTERFACE(FastMono8BitSplineRampMix)
+    SNDMIX_RAMPFASTMONOVOL 
+END_FASTRAMPMIX_INTERFACE()
+
+BEGIN_FASTRAMPMIX_INTERFACE(FastMono8BitSplineRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8SPLINE
-    SNDMIX_RAMPFASTMONOVOL END_FASTRAMPMIX_INTERFACE()
- BEGIN_FASTRAMPMIX_INTERFACE(FastMono16BitSplineRampMix)
+    SNDMIX_RAMPFASTMONOVOL 
+END_FASTRAMPMIX_INTERFACE()
+
+BEGIN_FASTRAMPMIX_INTERFACE(FastMono16BitSplineRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16SPLINE
-    SNDMIX_RAMPFASTMONOVOL END_FASTRAMPMIX_INTERFACE()
- BEGIN_FASTRAMPMIX_INTERFACE(FastMono8BitFirFilterRampMix)
+    SNDMIX_RAMPFASTMONOVOL 
+END_FASTRAMPMIX_INTERFACE()
+
+BEGIN_FASTRAMPMIX_INTERFACE(FastMono8BitFirFilterRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8FIRFILTER
-    SNDMIX_RAMPFASTMONOVOL END_FASTRAMPMIX_INTERFACE()
- BEGIN_FASTRAMPMIX_INTERFACE(FastMono16BitFirFilterRampMix)
+    SNDMIX_RAMPFASTMONOVOL 
+END_FASTRAMPMIX_INTERFACE()
+
+BEGIN_FASTRAMPMIX_INTERFACE(FastMono16BitFirFilterRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16FIRFILTER
-    SNDMIX_RAMPFASTMONOVOL END_FASTRAMPMIX_INTERFACE()
+    SNDMIX_RAMPFASTMONOVOL 
+END_FASTRAMPMIX_INTERFACE()
+
 
 //////////////////////////////////////////////////////
 // Stereo samples
 BEGIN_MIX_INTERFACE(Stereo8BitMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETSTEREOVOL8NOIDO SNDMIX_STORESTEREOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(Stereo16BitMix)
+    SNDMIX_GETSTEREOVOL8NOIDO 
+    SNDMIX_STORESTEREOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(Stereo16BitMix)
     SNDMIX_BEGINSAMPLELOOP16
-    SNDMIX_GETSTEREOVOL16NOIDO SNDMIX_STORESTEREOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(Stereo8BitLinearMix)
+    SNDMIX_GETSTEREOVOL16NOIDO
+    SNDMIX_STORESTEREOVOL
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(Stereo8BitLinearMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETSTEREOVOL8LINEAR SNDMIX_STORESTEREOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(Stereo16BitLinearMix)
+    SNDMIX_GETSTEREOVOL8LINEAR
+    SNDMIX_STORESTEREOVOL
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(Stereo16BitLinearMix)
     SNDMIX_BEGINSAMPLELOOP16
-    SNDMIX_GETSTEREOVOL16LINEAR SNDMIX_STORESTEREOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(Stereo8BitSplineMix)
+    SNDMIX_GETSTEREOVOL16LINEAR 
+    SNDMIX_STORESTEREOVOL
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(Stereo8BitSplineMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETSTEREOVOL8SPLINE SNDMIX_STORESTEREOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(Stereo16BitSplineMix)
+    SNDMIX_GETSTEREOVOL8SPLINE 
+    SNDMIX_STORESTEREOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(Stereo16BitSplineMix)
     SNDMIX_BEGINSAMPLELOOP16
-    SNDMIX_GETSTEREOVOL16SPLINE SNDMIX_STORESTEREOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(Stereo8BitFirFilterMix)
+    SNDMIX_GETSTEREOVOL16SPLINE 
+    SNDMIX_STORESTEREOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(Stereo8BitFirFilterMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETSTEREOVOL8FIRFILTER SNDMIX_STORESTEREOVOL END_MIX_INTERFACE()
- BEGIN_MIX_INTERFACE(Stereo16BitFirFilterMix)
+    SNDMIX_GETSTEREOVOL8FIRFILTER 
+    SNDMIX_STORESTEREOVOL 
+END_MIX_INTERFACE()
+
+BEGIN_MIX_INTERFACE(Stereo16BitFirFilterMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16FIRFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_INTERFACE()
+    SNDMIX_STORESTEREOVOL 
+END_MIX_INTERFACE()
 
 // Volume Ramps
 BEGIN_RAMPMIX_INTERFACE(Stereo8BitRampMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETSTEREOVOL8NOIDO SNDMIX_RAMPSTEREOVOL END_RAMPMIX_INTERFACE()
- BEGIN_RAMPMIX_INTERFACE(Stereo16BitRampMix)
+    SNDMIX_GETSTEREOVOL8NOIDO 
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_INTERFACE()
+
+BEGIN_RAMPMIX_INTERFACE(Stereo16BitRampMix)
     SNDMIX_BEGINSAMPLELOOP16
-    SNDMIX_GETSTEREOVOL16NOIDO SNDMIX_RAMPSTEREOVOL END_RAMPMIX_INTERFACE()
- BEGIN_RAMPMIX_INTERFACE(Stereo8BitLinearRampMix)
+    SNDMIX_GETSTEREOVOL16NOIDO 
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_INTERFACE()
+
+BEGIN_RAMPMIX_INTERFACE(Stereo8BitLinearRampMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETSTEREOVOL8LINEAR SNDMIX_RAMPSTEREOVOL END_RAMPMIX_INTERFACE()
- BEGIN_RAMPMIX_INTERFACE(Stereo16BitLinearRampMix)
+    SNDMIX_GETSTEREOVOL8LINEAR 
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_INTERFACE()
+
+BEGIN_RAMPMIX_INTERFACE(Stereo16BitLinearRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16LINEAR
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_INTERFACE()
- BEGIN_RAMPMIX_INTERFACE(Stereo8BitSplineRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_INTERFACE()
+
+BEGIN_RAMPMIX_INTERFACE(Stereo8BitSplineRampMix)
     SNDMIX_BEGINSAMPLELOOP8
-    SNDMIX_GETSTEREOVOL8SPLINE SNDMIX_RAMPSTEREOVOL END_RAMPMIX_INTERFACE()
- BEGIN_RAMPMIX_INTERFACE(Stereo16BitSplineRampMix)
+    SNDMIX_GETSTEREOVOL8SPLINE 
+    SNDMIX_RAMPSTEREOVOL
+END_RAMPMIX_INTERFACE()
+
+BEGIN_RAMPMIX_INTERFACE(Stereo16BitSplineRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16SPLINE
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_INTERFACE()
- BEGIN_RAMPMIX_INTERFACE(Stereo8BitFirFilterRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_INTERFACE()
+
+BEGIN_RAMPMIX_INTERFACE(Stereo8BitFirFilterRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8FIRFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_INTERFACE()
- BEGIN_RAMPMIX_INTERFACE(Stereo16BitFirFilterRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_INTERFACE()
+
+BEGIN_RAMPMIX_INTERFACE(Stereo16BitFirFilterRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16FIRFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_INTERFACE()
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_INTERFACE()
 
 
 //////////////////////////////////////////////////////
@@ -740,151 +838,233 @@ BEGIN_RAMPMIX_INTERFACE(Stereo8BitRampMix)
 BEGIN_MIX_FLT_INTERFACE(FilterMono8BitMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8NOIDO
-    SNDMIX_PROCESSFILTER SNDMIX_STOREMONOVOL END_MIX_FLT_INTERFACE()
- BEGIN_MIX_FLT_INTERFACE(FilterMono16BitMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_STOREMONOVOL 
+END_MIX_FLT_INTERFACE()
+
+BEGIN_MIX_FLT_INTERFACE(FilterMono16BitMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16NOIDO
-    SNDMIX_PROCESSFILTER SNDMIX_STOREMONOVOL END_MIX_FLT_INTERFACE()
- BEGIN_MIX_FLT_INTERFACE(FilterMono8BitLinearMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_STOREMONOVOL 
+END_MIX_FLT_INTERFACE()
+
+BEGIN_MIX_FLT_INTERFACE(FilterMono8BitLinearMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8LINEAR
-    SNDMIX_PROCESSFILTER SNDMIX_STOREMONOVOL END_MIX_FLT_INTERFACE()
- BEGIN_MIX_FLT_INTERFACE(FilterMono16BitLinearMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_STOREMONOVOL 
+END_MIX_FLT_INTERFACE()
+
+BEGIN_MIX_FLT_INTERFACE(FilterMono16BitLinearMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16LINEAR
-    SNDMIX_PROCESSFILTER SNDMIX_STOREMONOVOL END_MIX_FLT_INTERFACE()
- BEGIN_MIX_FLT_INTERFACE(FilterMono8BitSplineMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_STOREMONOVOL 
+END_MIX_FLT_INTERFACE()
+
+BEGIN_MIX_FLT_INTERFACE(FilterMono8BitSplineMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8SPLINE
-    SNDMIX_PROCESSFILTER SNDMIX_STOREMONOVOL END_MIX_FLT_INTERFACE()
- BEGIN_MIX_FLT_INTERFACE(FilterMono16BitSplineMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_STOREMONOVOL 
+END_MIX_FLT_INTERFACE()
+
+BEGIN_MIX_FLT_INTERFACE(FilterMono16BitSplineMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16SPLINE
-    SNDMIX_PROCESSFILTER SNDMIX_STOREMONOVOL END_MIX_FLT_INTERFACE()
- BEGIN_MIX_FLT_INTERFACE(FilterMono8BitFirFilterMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_STOREMONOVOL 
+END_MIX_FLT_INTERFACE()
+
+BEGIN_MIX_FLT_INTERFACE(FilterMono8BitFirFilterMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8FIRFILTER
-    SNDMIX_PROCESSFILTER SNDMIX_STOREMONOVOL END_MIX_FLT_INTERFACE()
- BEGIN_MIX_FLT_INTERFACE(FilterMono16BitFirFilterMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_STOREMONOVOL 
+END_MIX_FLT_INTERFACE()
+
+BEGIN_MIX_FLT_INTERFACE(FilterMono16BitFirFilterMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16FIRFILTER
-    SNDMIX_PROCESSFILTER SNDMIX_STOREMONOVOL END_MIX_FLT_INTERFACE()
+    SNDMIX_PROCESSFILTER
+    SNDMIX_STOREMONOVOL
+END_MIX_FLT_INTERFACE()
+
+
 // Filter + Ramp
 BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono8BitRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8NOIDO
-    SNDMIX_PROCESSFILTER SNDMIX_RAMPMONOVOL END_RAMPMIX_FLT_INTERFACE()
- BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono16BitRampMix)
+    SNDMIX_PROCESSFILTER
+    SNDMIX_RAMPMONOVOL 
+END_RAMPMIX_FLT_INTERFACE()
+
+BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono16BitRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16NOIDO
-    SNDMIX_PROCESSFILTER SNDMIX_RAMPMONOVOL END_RAMPMIX_FLT_INTERFACE()
- BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono8BitLinearRampMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_RAMPMONOVOL 
+END_RAMPMIX_FLT_INTERFACE()
+
+BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono8BitLinearRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8LINEAR
-    SNDMIX_PROCESSFILTER SNDMIX_RAMPMONOVOL END_RAMPMIX_FLT_INTERFACE()
- BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono16BitLinearRampMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_RAMPMONOVOL 
+END_RAMPMIX_FLT_INTERFACE()
+
+BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono16BitLinearRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16LINEAR
-    SNDMIX_PROCESSFILTER SNDMIX_RAMPMONOVOL END_RAMPMIX_FLT_INTERFACE()
- BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono8BitSplineRampMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_RAMPMONOVOL 
+END_RAMPMIX_FLT_INTERFACE()
+
+BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono8BitSplineRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8SPLINE
-    SNDMIX_PROCESSFILTER SNDMIX_RAMPMONOVOL END_RAMPMIX_FLT_INTERFACE()
- BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono16BitSplineRampMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_RAMPMONOVOL 
+END_RAMPMIX_FLT_INTERFACE()
+
+BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono16BitSplineRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16SPLINE
-    SNDMIX_PROCESSFILTER SNDMIX_RAMPMONOVOL END_RAMPMIX_FLT_INTERFACE()
- BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono8BitFirFilterRampMix)
+    SNDMIX_PROCESSFILTER 
+    SNDMIX_RAMPMONOVOL 
+END_RAMPMIX_FLT_INTERFACE()
+
+BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono8BitFirFilterRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETMONOVOL8FIRFILTER
-    SNDMIX_PROCESSFILTER SNDMIX_RAMPMONOVOL END_RAMPMIX_FLT_INTERFACE()
- BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono16BitFirFilterRampMix)
+    SNDMIX_PROCESSFILTER
+    SNDMIX_RAMPMONOVOL
+END_RAMPMIX_FLT_INTERFACE()
+
+BEGIN_RAMPMIX_FLT_INTERFACE(FilterMono16BitFirFilterRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETMONOVOL16FIRFILTER
-    SNDMIX_PROCESSFILTER SNDMIX_RAMPMONOVOL END_RAMPMIX_FLT_INTERFACE()
+    SNDMIX_PROCESSFILTER
+    SNDMIX_RAMPMONOVOL
+END_RAMPMIX_FLT_INTERFACE()
+
 
 // Stereo Filter Mix
 BEGIN_MIX_STFLT_INTERFACE(FilterStereo8BitMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8NOIDO
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_STFLT_INTERFACE()
- BEGIN_MIX_STFLT_INTERFACE(FilterStereo16BitMix)
+    SNDMIX_STORESTEREOVOL 
+END_MIX_STFLT_INTERFACE()
+
+BEGIN_MIX_STFLT_INTERFACE(FilterStereo16BitMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16NOIDO
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_STFLT_INTERFACE()
- BEGIN_MIX_STFLT_INTERFACE(FilterStereo8BitLinearMix)
+    SNDMIX_STORESTEREOVOL 
+END_MIX_STFLT_INTERFACE()
+
+BEGIN_MIX_STFLT_INTERFACE(FilterStereo8BitLinearMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8LINEAR
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_STFLT_INTERFACE()
- BEGIN_MIX_STFLT_INTERFACE(FilterStereo16BitLinearMix)
+    SNDMIX_STORESTEREOVOL
+END_MIX_STFLT_INTERFACE()
+
+BEGIN_MIX_STFLT_INTERFACE(FilterStereo16BitLinearMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16LINEAR
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_STFLT_INTERFACE()
- BEGIN_MIX_STFLT_INTERFACE(FilterStereo8BitSplineMix)
+    SNDMIX_STORESTEREOVOL 
+END_MIX_STFLT_INTERFACE()
+
+BEGIN_MIX_STFLT_INTERFACE(FilterStereo8BitSplineMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8SPLINE
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_STFLT_INTERFACE()
- BEGIN_MIX_STFLT_INTERFACE(FilterStereo16BitSplineMix)
+    SNDMIX_STORESTEREOVOL 
+END_MIX_STFLT_INTERFACE()
+
+BEGIN_MIX_STFLT_INTERFACE(FilterStereo16BitSplineMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16SPLINE
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_STFLT_INTERFACE()
- BEGIN_MIX_STFLT_INTERFACE(FilterStereo8BitFirFilterMix)
+    SNDMIX_STORESTEREOVOL
+END_MIX_STFLT_INTERFACE()
+
+BEGIN_MIX_STFLT_INTERFACE(FilterStereo8BitFirFilterMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8FIRFILTER
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_STFLT_INTERFACE()
- BEGIN_MIX_STFLT_INTERFACE(FilterStereo16BitFirFilterMix)
+    SNDMIX_STORESTEREOVOL
+END_MIX_STFLT_INTERFACE()
+
+BEGIN_MIX_STFLT_INTERFACE(FilterStereo16BitFirFilterMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16FIRFILTER
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_STORESTEREOVOL END_MIX_STFLT_INTERFACE()
+    SNDMIX_STORESTEREOVOL 
+END_MIX_STFLT_INTERFACE()
+
+
 // Stereo Filter + Ramp
 BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo8BitRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8NOIDO
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_STFLT_INTERFACE()
- BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_STFLT_INTERFACE()
+
+BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16NOIDO
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_STFLT_INTERFACE()
- BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo8BitLinearRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_STFLT_INTERFACE()
+
+BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo8BitLinearRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8LINEAR
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_STFLT_INTERFACE()
- BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitLinearRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_STFLT_INTERFACE()
+
+BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitLinearRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16LINEAR
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_STFLT_INTERFACE()
- BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo8BitSplineRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_STFLT_INTERFACE()
+
+BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo8BitSplineRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8SPLINE
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_STFLT_INTERFACE()
- BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitSplineRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_STFLT_INTERFACE()
+
+BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitSplineRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16SPLINE
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_STFLT_INTERFACE()
- BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo8BitFirFilterRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_STFLT_INTERFACE()
+
+BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo8BitFirFilterRampMix)
     SNDMIX_BEGINSAMPLELOOP8
     SNDMIX_GETSTEREOVOL8FIRFILTER
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_STFLT_INTERFACE()
- BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitFirFilterRampMix)
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_STFLT_INTERFACE()
+
+BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitFirFilterRampMix)
     SNDMIX_BEGINSAMPLELOOP16
     SNDMIX_GETSTEREOVOL16FIRFILTER
     SNDMIX_PROCESSSTEREOFILTER
-    SNDMIX_RAMPSTEREOVOL END_RAMPMIX_STFLT_INTERFACE()
+    SNDMIX_RAMPSTEREOVOL 
+END_RAMPMIX_STFLT_INTERFACE()
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -906,7 +1086,7 @@ BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo8BitRampMix)
 #define MIXNDX_SPLINESRC    0x20
 #define MIXNDX_FIRSRC       0x30
 
-const LPMIXINTERFACE gpMixFunctionTable[2 * 2 * 16] = {
+const mix_interface_t gpMixFunctionTable[2 * 2 * 16] = {
     // No SRC
     Mono8BitMix, Mono16BitMix, Stereo8BitMix, Stereo16BitMix,
     Mono8BitRampMix, Mono16BitRampMix, Stereo8BitRampMix,
@@ -952,7 +1132,7 @@ const LPMIXINTERFACE gpMixFunctionTable[2 * 2 * 16] = {
 };
 
 
-const LPMIXINTERFACE gpFastMixFunctionTable[2 * 2 * 16] = {
+const mix_interface_t gpFastMixFunctionTable[2 * 2 * 16] = {
     // No SRC
     FastMono8BitMix, FastMono16BitMix, Stereo8BitMix, Stereo16BitMix,
     FastMono8BitRampMix, FastMono16BitRampMix, Stereo8BitRampMix,
@@ -1159,7 +1339,7 @@ uint32_t CSoundFile::CreateStereoMix(int count)
         memset(MultiSoundBuffer, 0, sizeof(MultiSoundBuffer));
     }
     for (uint32_t nChn = 0; nChn < m_nMixChannels; nChn++) {
-        const LPMIXINTERFACE *pMixFuncTable;
+        const mix_interface_t *pMixFuncTable;
         MODCHANNEL *const pChannel = &Chn[ChnMix[nChn]];
         uint32_t nFlags, nMasterCh;
         uint32_t nrampsamples;
@@ -1281,7 +1461,7 @@ uint32_t CSoundFile::CreateStereoMix(int count)
             /* Mix the stream, unless we're in AdLib mode */
             if (!(pChannel->dwFlags & CHN_ADLIB)) {
                 // Choose function for mixing
-                LPMIXINTERFACE pMixFunc;
+                mix_interface_t pMixFunc;
                 pMixFunc =
                     (pChannel->
                      nRampLength) ? pMixFuncTable[nFlags |
