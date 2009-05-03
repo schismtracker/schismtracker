@@ -8,6 +8,7 @@ syntax: glob
 
 .git
 
+*-build
 schismtracker
 
 TAGS

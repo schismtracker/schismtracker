@@ -477,8 +477,12 @@ void feature_check_notes(const char *fmt,
 		const char *volcmd, const char *fxcmd);
 
 
-/* :) */
-const char *schism_banner(void);
+/* various boilerplate defined in version.c */
+extern const char *ver_short_copyright;
+extern const char *ver_short_based_on;
+extern const char *ver_copyright_credits[];
+extern const char *ver_license[];
+extern const char *schism_banner(void); /* depends on CLASSIC_MODE */
 
 /* --------------------------------------------------------------------- */
 
