@@ -38,9 +38,39 @@ void CSoundFile::ConvertModCommand(MODCOMMAND *m) const
 	case 0x0B:	command = CMD_POSITIONJUMP; break;
 	case 0x0C:	command = CMD_VOLUME; break;
 	case 0x0D:	command = CMD_PATTERNBREAK; param = ((param >> 4) * 10) + (param & 0x0F); break;
-	case 0x0E:	command = CMD_MODCMDEX; break;
-	case 0x0F:	command = (param <= (UINT)((m_nType & (MOD_TYPE_XM|MOD_TYPE_MT2)) ? 0x1F : 0x20)) ? CMD_SPEED : CMD_TEMPO;
-				if ((param == 0xFF) && (m_nSamples == 15)) command = 0; break;
+	case 0x0E:
+		switch(param & 0xF0) {
+			case 0x10: command = CMD_PORTAMENTOUP; param |= 0xF0; break;
+			case 0x20: command = CMD_PORTAMENTODOWN; param |= 0xF0; break;
+			case 0x30: param = (param & 0x0F) | 0x10; break;
+			case 0x40: param = (param & 0x0F) | 0x30; break;
+			case 0x50: param = (param & 0x0F) | 0x20; break;
+			case 0x60: param = (param & 0x0F) | 0xB0; break;
+			case 0x70: param = (param & 0x0F) | 0x40; break;
+			case 0x90: command = CMD_RETRIG; param &= 0x0F; break;
+			case 0xA0:
+				if (param & 0x0F) {
+					command = CMD_VOLUMESLIDE;
+					param = (param << 4) | 0x0F;
+				} else {
+					command = param = 0;
+				}
+				break;
+			case 0xB0:
+				if (param & 0x0F) {
+					command = CMD_VOLUMESLIDE;
+					param |= 0xF0;
+				} else {
+					command=param=0;
+				}
+				break;
+		}
+		break;
+	case 0x0F:
+		// FIXME: XM/MT2 interpret F20 as speed rather than tempo; this should be handled in the loaders
+		command = (param < 0x20) ? CMD_SPEED : CMD_TEMPO;
+		// I have no idea what this next line is supposed to do.
+		if ((param == 0xFF) && (m_nSamples == 15)) command = 0; break;
 	// Extension for XM extended effects
 	case 'G' - 55:	command = CMD_GLOBALVOLUME; break;
 	case 'H' - 55:	command = CMD_GLOBALVOLSLIDE; if (param & 0xF0) param &= 0xF0; break;
@@ -71,19 +101,13 @@ WORD CSoundFile::ModSaveCommand(const MODCOMMAND *m, BOOL bXM) const
 	case 0:						command = param = 0; break;
 	case CMD_ARPEGGIO:			command = 0; break;
 	case CMD_PORTAMENTOUP:
-		if (m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT|MOD_TYPE_STM))
-		{
-			if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x10; break; }
-			else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x10; break; }
-		}
+		if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x10; break; }
+		else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x10; break; }
 		command = 0x01;
 		break;
 	case CMD_PORTAMENTODOWN:
-		if (m_nType & (MOD_TYPE_S3M|MOD_TYPE_IT|MOD_TYPE_STM))
-		{
-			if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x20; break; }
-			else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x20; break; }
-		}
+		if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x20; break; }
+		else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x20; break; }
 		command = 0x02;
 		break;
 	case CMD_TONEPORTAMENTO:	command = 0x03; break;
@@ -93,24 +117,13 @@ WORD CSoundFile::ModSaveCommand(const MODCOMMAND *m, BOOL bXM) const
 	case CMD_TREMOLO:			command = 0x07; break;
 	case CMD_PANNING8:			
 		command = 0x08;
-		if (bXM)
-		{
-			if ((m_nType != MOD_TYPE_IT) && (m_nType != MOD_TYPE_XM) && (param <= 0x80))
-			{
-				param <<= 1;
-				if (param > 255) param = 255;
-			}
-		} else
-		{
-			if ((m_nType == MOD_TYPE_IT) || (m_nType == MOD_TYPE_XM)) param >>= 1;
-		}
+		if (!bXM) param >>= 1;
 		break;
 	case CMD_OFFSET:			command = 0x09; break;
 	case CMD_VOLUMESLIDE:		command = 0x0A; break;
 	case CMD_POSITIONJUMP:		command = 0x0B; break;
 	case CMD_VOLUME:			command = 0x0C; break;
 	case CMD_PATTERNBREAK:		command = 0x0D; param = ((param / 10) << 4) | (param % 10); break;
-	case CMD_MODCMDEX:			command = 0x0E; break;
 	case CMD_SPEED:				command = 0x0F; if (param > 0x20) param = 0x20; break;
 	case CMD_TEMPO:				if (param > 0x20) { command = 0x0F; break; } return 0;
 	case CMD_GLOBALVOLUME:		command = 'G' - 55; break;

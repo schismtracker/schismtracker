@@ -140,16 +140,8 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 	case CMD_GLOBALVOLSLIDE:	command = 'W'; break;
 	case CMD_PANNING8:			
 		command = 'X';
-		if ((bIT) && (m_nType != MOD_TYPE_IT) && (m_nType != MOD_TYPE_XM))
-		{
-			if (param == 0xA4) { command = 'S'; param = 0x91; }	else
-			if (param <= 0x80) { param <<= 1; if (param > 255) param = 255; } else
-			command = param = 0;
-		} else
-		if ((!bIT) && ((m_nType == MOD_TYPE_IT) || (m_nType == MOD_TYPE_XM)))
-		{
+		if (!bIT)
 			param >>= 1;
-		}
 		break;
 	case CMD_PANBRELLO:			command = 'Y'; break;
 	case CMD_MIDI:				command = 'Z'; break;
@@ -161,23 +153,6 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 		case 0x90:	command = 'S'; break;
 		default:	command = param = 0;
 		} else command = param = 0;
-		break;
-	case CMD_MODCMDEX:
-		command = 'S';
-		switch(param & 0xF0)
-		{
-		case 0x00:	command = param = 0; break;
-		case 0x10:	command = 'F'; param |= 0xF0; break;
-		case 0x20:	command = 'E'; param |= 0xF0; break;
-		case 0x30:	param = (param & 0x0F) | 0x10; break;
-		case 0x40:	param = (param & 0x0F) | 0x30; break;
-		case 0x50:	param = (param & 0x0F) | 0x20; break;
-		case 0x60:	param = (param & 0x0F) | 0xB0; break;
-		case 0x70:	param = (param & 0x0F) | 0x40; break;
-		case 0x90:	command = 'Q'; param &= 0x0F; break;
-		case 0xA0:	if (param & 0x0F) { command = 'D'; param = (param << 4) | 0x0F; } else command=param=0; break;
-		case 0xB0:	if (param & 0x0F) { command = 'D'; param |= 0xF0; } else command=param=0; break;
-		}
 		break;
 	default:	command = param = 0;
 	}

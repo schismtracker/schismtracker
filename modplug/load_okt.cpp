@@ -161,7 +161,7 @@ BOOL CSoundFile::ReadOKT(const BYTE *lpStream, DWORD dwMemLength)
 					break;
 				// 15: Filter
 				case 15:
-					m->command = CMD_MODCMDEX;
+					m->command = CMD_S3MCMDEX;
 					m->param = param & 0x0F;
 					break;
 				// 25: Position Jump
@@ -174,11 +174,36 @@ BOOL CSoundFile::ReadOKT(const BYTE *lpStream, DWORD dwMemLength)
 					break;
 				// 31: Volume Control
 				case 31:
-					if (param <= 0x40) m->command = CMD_VOLUME; else
-					if (param <= 0x50) { m->command = CMD_VOLUMESLIDE; m->param &= 0x0F; if (!m->param) m->param = 0x0F; } else
-					if (param <= 0x60) { m->command = CMD_VOLUMESLIDE; m->param = (param & 0x0F) << 4; if (!m->param) m->param = 0xF0; } else
-					if (param <= 0x70) { m->command = CMD_MODCMDEX; m->param = 0xB0 | (param & 0x0F); if (!(param & 0x0F)) m->param = 0xBF; } else
-					if (param <= 0x80) { m->command = CMD_MODCMDEX; m->param = 0xA0 | (param & 0x0F); if (!(param & 0x0F)) m->param = 0xAF; }
+					if (param <= 0x40) {
+						// 00-3F -> volume
+						m->volcmd = VOLCMD_VOLUME;
+						m->vol = param;
+						m->param = 0;
+					} else if (param <= 0x50) {
+						// 4x -> D0x
+						m->command = CMD_VOLUMESLIDE;
+						m->param &= 0x0F;
+						if (!m->param)
+							m->param = 0x0F;
+					} else if (param <= 0x60) {
+						// 5x -> Dx0
+						m->command = CMD_VOLUMESLIDE;
+						m->param = (param & 0x0F) << 4;
+						if (!m->param)
+							m->param = 0xF0;
+					} else if (param <= 0x70) {
+						// 6x -> DFx
+						m->command = CMD_VOLUMESLIDE;
+						m->param = 0xF0 | (param & 0x0F);
+						if (!(param & 0x0F))
+							m->param = 0xFE;
+					} else if (param <= 0x80) {
+						// 7x -> DxF
+						m->command = CMD_VOLUMESLIDE;
+						m->param = 0x0F | ((param & 0x0F) << 4);
+						if (!(param & 0xF0))
+							m->param = 0xEF;
+					}
 					break;
 				}
 			}
