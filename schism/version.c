@@ -27,28 +27,7 @@
 #include "sdlmain.h"
 
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
-#define TOP_BANNER_NORMAL "Schism Tracker v" VERSION
-#define TOP_BANNER_CVS "Schism Tracker CVS built on Y___-m_-d_ H_:M_"
-
-/*
-Ok, here's a thought... what if we kept the old top banner that just had "CVS"
-instead of a version number, and instead displayed the build date in, say, the
-about box? We could also chuck the whole string in the log page for CVS builds.
-I don't suppose it'd hurt anything, and it would provide potentially useful
-information.
-
-Oh and also, would -DBUILD_DATE=`date` or something work? That'd be interesting
-for "real" builds as well... and it would also serve as a sort of indicator to
-how well a particular package maintainer is keeping up with the version... kind
-of in the same mindset as 0-day-warez :)
-
-Note there'd be a difference between the CVS source date and the *build* date,
-so both would be applicable -- that is, always show what date it was built, but
-dump the uglified dollar-sign revision string to the log page for CVS builds as
-well. Then we'd be able to determine pretty much everything about what version
-someone is using -- including whether they pulled from CVS themselves and built
-it, or downloaded a prebuilt package, etc.
-*/
+#define TOP_BANNER_NORMAL "Schism Tracker built on Y___-m_-d_ H_:M_"
 
 #include "auto/build-version.h"
 static char banner[80] = { 0 };
@@ -58,18 +37,8 @@ const char *schism_banner(void)
 	char *ptr;
 	if (status.flags & CLASSIC_MODE) return TOP_BANNER_CLASSIC;
 
-	/* letter & ~32 => lowercase
-	   this mangles digits, but we don't need to care */
-	if (!((VERSION[0] & ~32) == 'C'
-	      && (VERSION[1] & ~32) == 'V'
-	      && (VERSION[2] & ~32) == 'S'
-	      && VERSION[3] == 0)) {
-		return TOP_BANNER_NORMAL;
-	}
-
-	/* this code is for CVS builds... but nobody will notice */
 	if (banner[0] == 0) {
-		strcpy(banner, TOP_BANNER_CVS);
+		strcpy(banner, TOP_BANNER_NORMAL);
 
 		/* fix in the year 10,000 :) */
 		if ((ptr = strstr(banner, "Y___")) != NULL) {
@@ -107,3 +76,4 @@ const char *schism_banner(void)
 	}
 	return banner;
 }
+
