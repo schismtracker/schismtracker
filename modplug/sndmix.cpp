@@ -46,9 +46,10 @@ extern DWORD MPPASMCALL Convert32To24(LPVOID lpBuffer, int *, DWORD nSamples, LO
 extern DWORD MPPASMCALL Convert32To32(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
 extern UINT MPPASMCALL AGC(int *pBuffer, UINT nSamples, UINT nAGC);
 extern VOID MPPASMCALL Dither(int *pBuffer, UINT nSamples, UINT nBits);
-extern VOID MPPASMCALL InterleaveFrontRear(int *pFrontBuf, int *pRearBuf, DWORD nSamples);
-extern VOID MPPASMCALL StereoFill(int *pBuffer, UINT nSamples, LPLONG lpROfs, LPLONG lpLOfs);
-extern VOID MPPASMCALL MonoFromStereo(int *pMixBuf, UINT nSamples);
+
+extern void interleave_front_rear(int *, int *, unsigned int);
+extern void mono_from_stereo(int *, unsigned int);
+extern void stereo_fill(int *, unsigned int, int *, int *);
 
 extern int MixSoundBuffer[MIXBUFFERSIZE*4];
 extern int MixRearBuffer[MIXBUFFERSIZE*2];
@@ -249,7 +250,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 #endif
 
 		// Resetting sound buffer
-		StereoFill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
+		stereo_fill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
 		if (gnChannels >= 2)
 		{
 			lSampleCount *= 2;
@@ -264,7 +265,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 #if 0
 			if (nMaxPlugins) ProcessPlugins(lCount);
 #endif
-			MonoFromStereo(MixSoundBuffer, lCount);
+			mono_from_stereo(MixSoundBuffer, lCount);
 			ProcessMonoDSP(lCount);
 		}
 
@@ -286,7 +287,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 		// Multichannel
 		if (gnChannels > 2)
 		{
-			InterleaveFrontRear(MixSoundBuffer, MixRearBuffer, lSampleCount);
+			interleave_front_rear(MixSoundBuffer, MixRearBuffer, lSampleCount);
 			lTotalSampleCount *= 2;
 		}
 		// Hook Function
