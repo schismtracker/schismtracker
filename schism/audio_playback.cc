@@ -1631,9 +1631,6 @@ RETRY:	using_driver = driver;
 
         // barf out some more info on modplug's settings?
 
-        log_append(0, 0, "");
-        log_append(0, 0, "");
-
 	samples_played = 0;
 	
 	first_init = 0;
