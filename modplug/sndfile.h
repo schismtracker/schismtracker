@@ -14,9 +14,6 @@
 #ifndef __SNDFILE_H
 #define __SNDFILE_H
 
-#define MODPLUG_TRACKER	1
-#define MODPLUG_PLAYER	1
-
 #ifdef UNDER_CE
 int _strnicmp(const char *str1,const char *str2, int n);
 #endif
@@ -32,11 +29,7 @@ typedef const BYTE * LPCBYTE;
 #define MAX_PATTERNS		240
 #define MAX_SAMPLES			240
 #define MAX_INSTRUMENTS		MAX_SAMPLES
-#ifdef MODPLUG_FASTSOUNDLIB
-#define MAX_CHANNELS		80
-#else
 #define MAX_CHANNELS		256
-#endif
 #define MAX_BASECHANNELS	64
 #define MAX_ENVPOINTS		32
 #define MIN_PERIOD			0x0020
@@ -277,7 +270,6 @@ typedef const BYTE * LPCBYTE;
 #define SNDMIX_ULTRAHQSRCMODE	0x0400
 // Misc Flags (can safely be turned on or off)
 #define SNDMIX_DIRECTTODISK		0x10000
-#define SNDMIX_ENABLEMMX		0x20000
 #define SNDMIX_NOBACKWARDJUMPS	0x40000
 #define SNDMIX_MAXDEFAULTPAN	0x80000	// Used by the MOD loader
 #define SNDMIX_MUTECHNMODE                0x100000        // Notes are not played on muted channels
@@ -658,12 +650,10 @@ public:
 	BOOL ReadUMX(LPCBYTE lpStream, DWORD dwMemLength);
 	BOOL ReadMID(LPCBYTE lpStream, DWORD dwMemLength);
 	// Save Functions
-#ifndef MODPLUG_NO_FILESAVE
 	UINT WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins, UINT nFlags, UINT nMaxLen=0);
 	BOOL SaveXM(diskwriter_driver_t *f, UINT);
 	BOOL SaveS3M(diskwriter_driver_t *f, UINT);
 	BOOL SaveMod(diskwriter_driver_t *f, UINT);
-#endif // MODPLUG_NO_FILESAVE
 	// MOD Convert function
 	UINT GetBestSaveFormat() const;
 	UINT GetSaveFormats() const;
@@ -691,7 +681,7 @@ public:
 public:
 	// Mixer Config
 	static BOOL InitPlayer(BOOL bReset=FALSE);
-	static BOOL SetWaveConfig(UINT nRate,UINT nBits,UINT nChannels,BOOL bMMX=FALSE);
+	static BOOL SetWaveConfig(UINT nRate,UINT nBits,UINT nChannels);
 	static BOOL SetResamplingMode(UINT nMode); // SRCMODE_XXXX
 	static BOOL IsStereo() { return (gnChannels > 1) ? TRUE : FALSE; }
 	static DWORD GetSampleRate() { return gdwMixingFreq; }

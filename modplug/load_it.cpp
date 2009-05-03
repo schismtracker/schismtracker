@@ -730,19 +730,6 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 }
 
 
-#ifndef MODPLUG_NO_FILESAVE
-//#define SAVEITTIMESTAMP
-
-#ifdef MSC_VER
-#pragma warning(disable:4100)
-#endif
-
-#ifdef MSC_VER
-#pragma warning(default:4100)
-#endif
-
-#endif // MODPLUG_NO_FILESAVE
-
 //////////////////////////////////////////////////////////////////////////////
 // IT 2.14 compression
 
@@ -772,7 +759,6 @@ DWORD ITReadBits(DWORD &bitbuf, UINT &bitnum, LPBYTE &ibuf, CHAR n)
 	return (retval >> (32-i));
 }
 
-#define IT215_SUPPORT
 void ITUnpack8Bit(signed char *pSample, DWORD dwLen, LPBYTE lpMemFile, DWORD dwMemLength, BOOL b215)
 //-------------------------------------------------------------------------------------------
 {
@@ -837,11 +823,7 @@ void ITUnpack8Bit(signed char *pSample, DWORD dwLen, LPBYTE lpMemFile, DWORD dwM
 			wBits += bTemp;
 			bTemp = (BYTE)wBits;
 			bTemp2 += bTemp;
-#ifdef IT215_SUPPORT
 			pDst[dwPos] = (b215) ? bTemp2 : bTemp;
-#else
-			pDst[dwPos] = bTemp;
-#endif
 		SkipByte:
 			dwPos++;
 		Next:
@@ -920,11 +902,7 @@ void ITUnpack16Bit(signed char *pSample, DWORD dwLen, LPBYTE lpMemFile, DWORD dw
 			dwBits += wTemp;
 			wTemp = (signed short)dwBits;
 			wTemp2 += wTemp;
-#ifdef IT215_SUPPORT
 			pDst[dwPos] = (b215) ? wTemp2 : wTemp;
-#else
-			pDst[dwPos] = wTemp;
-#endif
 		SkipByte:
 			dwPos++;
 		Next:

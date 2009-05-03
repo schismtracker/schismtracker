@@ -7,21 +7,11 @@
 #include "stdafx.h"
 #include "sndfile.h"
 
-#ifdef MODPLUG_FASTSOUNDLIB
-#define MODPLUG_NO_REVERB
-#endif
-
 
 // Delayed Surround Filters
-#ifndef MODPLUG_FASTSOUNDLIB
 #define nDolbyHiFltAttn		6
 #define nDolbyHiFltMask		3
 #define DOLBYATTNROUNDUP	31
-#else
-#define nDolbyHiFltAttn		3
-#define nDolbyHiFltMask		3
-#define DOLBYATTNROUNDUP	3
-#endif
 
 // Bass Expansion
 #define XBASS_DELAY			14	// 2.5 ms
@@ -260,9 +250,7 @@ void CSoundFile::ProcessStereoDSP(int count)
 		for (int r=count; r; r--)
 		{
 			int v = (pr[0]+pr[1]+DOLBYATTNROUNDUP) >> (nDolbyHiFltAttn+1);
-#ifndef MODPLUG_FASTSOUNDLIB
 			v *= (int)nDolbyDepth;
-#endif
 			// Low-Pass Filter
 			nDolbyHiFltSum -= DolbyHiFilterBuffer[nDolbyHiFltPos];
 			DolbyHiFilterBuffer[nDolbyHiFltPos] = v;

@@ -226,3 +226,4 @@ void CSoundFile::SetEQGains(const UINT *pGains, UINT nGains, const UINT *pFreqs,
 	}
 	InitializeEQ(bReset);
 }
+

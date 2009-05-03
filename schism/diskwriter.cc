@@ -245,7 +245,8 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 		mp->m_nRepeatCount = 2; /* er... */
 	}
 
-	CSoundFile::SetWaveConfig(dw->rate*=2, dw->bits, dw->channels, 1);
+	// XXX what is this *=2 for?
+	CSoundFile::SetWaveConfig(dw->rate*=2, dw->bits, dw->channels);
 	mp->InitPlayer(1);
 
 	//CSoundFile::gpSndMixHook = _dw_times_3;
@@ -288,7 +289,7 @@ static void chan_setup(int rate, int nchan)
 {
 	if (dw->m || dw->g) {
 		song_start_once();
-		CSoundFile::SetWaveConfig(rate, dw->bits, nchan, 1);
+		CSoundFile::SetWaveConfig(rate, dw->bits, nchan);
 		CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	}
 }
