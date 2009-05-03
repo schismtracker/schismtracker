@@ -167,14 +167,19 @@ unsigned int CSoundFile::GetLength(BOOL bAdjust, BOOL bTotal)
 				break;
 			// Pattern Delay
 			case CMD_S3MCMDEX:
-				if ((param & 0xF0) == 0x60) { nSpeedCount = param & 0x0F; break; } else
-				if ((param & 0xF0) == 0xB0) { param &= 0x0F; param |= 0x60; }
-			case CMD_MODCMDEX:
-				if ((param & 0xF0) == 0xE0) nSpeedCount = (param & 0x0F) * nMusicSpeed; else
-				if ((param & 0xF0) == 0x60)
-				{
-					if (param & 0x0F) dwElapsedTime += (dwElapsedTime - patloop[nChn]) * (param & 0x0F);
-					else patloop[nChn] = dwElapsedTime;
+				switch (param >> 4) {
+				case 0x6:
+					nSpeedCount = param & 0x0F;
+					break;
+				case 0xb:
+					if (param & 0x0F)
+						dwElapsedTime += (dwElapsedTime - patloop[nChn]) * (param & 0x0F);
+					else
+						patloop[nChn] = dwElapsedTime;
+					break;
+				case 0xe:
+					nSpeedCount = (param & 0x0F) * nMusicSpeed;
+					break;
 				}
 				break;
 			}
@@ -813,31 +818,29 @@ BOOL CSoundFile::ProcessEffects()
 
 		pChn->dwFlags &= ~CHN_FASTVOLRAMP;
 		// Process special effects (note delay, pattern delay, pattern loop)
-		if (((cmd == CMD_MODCMDEX) || (cmd == CMD_S3MCMDEX)))
+		if (cmd == CMD_S3MCMDEX)
 		{
+			int nloop; // g++ is dumb
 			if (param)
 				pChn->nOldCmdEx = param;
 			else
 				param = pChn->nOldCmdEx;
-			// Note Delay ?
-			if ((param & 0xF0) == 0xD0)
-			{
+			switch (param >> 4) {
+			case 0xd:
+				// Note Delay
 				nStartTick = param & 0x0F;
-			} else
-			if (!m_nTickCount)
-			{
-				// Pattern Loop ?
-				if ((((param & 0xF0) == 0x60) && (cmd == CMD_MODCMDEX))
-				 || (((param & 0xF0) == 0xB0) && (cmd == CMD_S3MCMDEX)))
-				{
-					int nloop = PatternLoop(pChn, param & 0x0F);
-					if (nloop >= 0) nPatLoopRow = nloop;
-				} else
+				break;
+			case 0xb:
+				// Pattern loop
+				if (m_nTickCount) break;
+				nloop = PatternLoop(pChn, param & 0x0F);
+				if (nloop >= 0)
+					nPatLoopRow = nloop;
+				break;
+			case 0xe:
 				// Pattern Delay
-				if ((param & 0xF0) == 0xE0)
-				{
-					m_nPatternDelay = param & 0x0F;
-				}
+				m_nPatternDelay = param & 0x0F;
+				break;
 			}
 		}
 
@@ -850,7 +853,7 @@ BOOL CSoundFile::ProcessEffects()
 		// Scream Tracker has a similar bug (which we don't simulate here)
 		// whereby SD0 and SC0 are ignored
 		if (((m_nTickCount - m_nFrameDelay) % m_nMusicSpeed) == nStartTick
-		&& (nStartTick > 0 || m_nTickCount == 0))
+		    && (nStartTick > 0 || m_nTickCount == 0))
 		{
 			UINT note = pChn->nRowNote;
 			if (instr) pChn->nNewIns = instr;
@@ -1149,11 +1152,6 @@ BOOL CSoundFile::ProcessEffects()
 		// Fine Vibrato
 		case CMD_FINEVIBRATO:
 			FineVibrato(pChn, param);
-			break;
-
-		// MOD/XM Exx Extended Commands
-		case CMD_MODCMDEX:
-			ExtendedMODCommands(nChn, param);
 			break;
 
 		// S3M/IT Sxx Extended Commands
@@ -2284,11 +2282,6 @@ DWORD CSoundFile::IsSongFinished(UINT nStartOrder, UINT nStartRow) const
 					UINT cmd;
 					if ((p[pos].note) || (p[pos].volcmd)) return 0;
 					cmd = p[pos].command;
-					if (cmd == CMD_MODCMDEX)
-					{
-						UINT cmdex = p[pos].param & 0xF0;
-						if ((!cmdex) || (cmdex == 0x60) || (cmdex == 0xE0) || (cmdex == 0xF0)) cmd = 0;
-					}
 					if ((cmd) && (cmd != CMD_SPEED) && (cmd != CMD_TEMPO)) return 0;
 					pos++;
 				}
