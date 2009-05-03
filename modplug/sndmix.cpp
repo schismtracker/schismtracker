@@ -90,13 +90,13 @@ static const unsigned short GMvolTransition[128] =
 
 // We use binary search to find the right slot
 // with at most 7 comparisons. 
-static int find_volume(unsigned short vol)
+static unsigned int find_volume(unsigned short vol)
 {
 	unsigned int l = 0, r = 128;
 
 	while (l < r) {
 		unsigned int m = l + ((r - l) / 2);
-		unsigned short p = GMvolTransition[p];
+		unsigned short p = GMvolTransition[m];
 
 		if (p < vol)
 			l = m + 1;
