@@ -555,7 +555,7 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 	// Enable Ramping
 	if (!bPorta)
 	{
-		pChn->nVUMeter = 0x100;
+		//pChn->nVUMeter = 0x100;
 		pChn->strike = 4; /* this affects how long the initial hit on the playback marks lasts */
 		pChn->nLeftVU = pChn->nRightVU = 0xFF;
 		pChn->dwFlags &= ~CHN_FILTER;

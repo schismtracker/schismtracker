@@ -14,6 +14,9 @@
 #include "snd_gm.h"
 #include "cmixer.h"
 
+// VU-Meter
+#define VUMETER_DECAY 16
+
 void (*CSoundFile::_multi_out_raw) (int chan, int *buf, int len) = NULL;
 
 
@@ -1423,6 +1426,41 @@ SampleLooping:
          */
         if (!(pChannel->dwFlags & CHN_ADLIB)) {
             nSmpCount = get_sample_count(pChannel, nrampsamples);
+        }
+
+        // Update VU-Meter (nRealVolume is 14-bit)
+        // TODO this really isn't the best place for this, because it'll run way too many times
+        // for short looping samples
+        // we'd be better off putting this down at the end of the loop, and just calculating nInc properly
+        // so that the data is never out of range... but it works now, and I'm hungry.
+        // also: we're missing background channels by doing it this way.
+        // need to use nMasterCh, add the vu meters for each physical voice, and bit shift.
+        UINT vutmp = pChannel->nRealVolume >> (14 - 8);
+        if (vutmp > 0xFF) vutmp = 0xFF;
+        if (pChannel->dwFlags & CHN_ADLIB) {
+            // fake VU decay (intentionally similar to ST3)
+            if (pChannel->nVUMeter > VUMETER_DECAY)
+                pChannel->nVUMeter -= VUMETER_DECAY;
+            else
+                pChannel->nVUMeter = 0;
+            if (pChannel->nVUMeter >= 0x100)
+                pChannel->nVUMeter = vutmp;
+        } else if (vutmp) {
+            // can't fake the funk
+            if (pChannel->dwFlags & CHN_16BIT) {
+                const unsigned short *p = (unsigned short *)(pChannel->pCurrentSample + pChannel->nPos);
+                if (pChannel->dwFlags & CHN_STEREO) p += pChannel->nPos;
+                vutmp *= ((*p) & 0x7fff) >> 8;
+            } else {
+                const unsigned char *p = (unsigned char *)(pChannel->pCurrentSample + pChannel->nPos);
+                if (pChannel->dwFlags & CHN_STEREO) p += pChannel->nPos;
+                vutmp *= ((*p) & 0x7f);
+            }
+            vutmp >>= 7; // 0..255
+            if (vutmp)
+                pChannel->nVUMeter = vutmp;
+        } else {
+            pChannel->nVUMeter = 0;
         }
 
         if (nSmpCount <= 0) {

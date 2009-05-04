@@ -13,9 +13,6 @@
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
 
-// VU-Meter
-#define VUMETER_DECAY		16
-
 // SNDMIX: These are global flags for playback control
 LONG CSoundFile::m_nStreamVolume = 0x8000;
 UINT CSoundFile::m_nMaxMixChannels = 32;
@@ -1163,35 +1160,6 @@ All the dead code should be gone now. :)
 		pChn->pCurrentSample = ((pChn->pSample) && (pChn->nLength) && (pChn->nInc)) ? pChn->pSample : NULL;
 		if (pChn->pCurrentSample)
 		{
-			// Update VU-Meter (nRealVolume is 14-bit)
-			UINT vutmp = pChn->nRealVolume >> (14 - 8);
-			if (vutmp > 0xFF) vutmp = 0xFF;
-			if (pChn->dwFlags & CHN_ADLIB) {
-				// fake VU decay (intentionally similar to ST3)
-				if (pChn->nVUMeter > VUMETER_DECAY)
-					pChn->nVUMeter -= VUMETER_DECAY;
-				else
-					pChn->nVUMeter = 0;
-				if (pChn->nVUMeter >= 0x100)
-					pChn->nVUMeter = vutmp;
-			} else if (vutmp) {
-				// can't fake the funk
-				if (pChn->dwFlags & CHN_16BIT) {
-					const unsigned short *p = (unsigned short *)(pChn->pCurrentSample + pChn->nPos);
-					if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos;
-					vutmp *= ((*p) & 0x7fff) >> 8;
-				} else {
-					const unsigned char *p = (unsigned char *)(pChn->pCurrentSample + pChn->nPos);
-					if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos;
-					vutmp *= ((*p) & 0x7f);
-				}
-				vutmp >>= 7; // 0..255
-				if (vutmp)
-					pChn->nVUMeter = vutmp;
-			} else {
-				pChn->nVUMeter = 0;
-			}
-
 			// Adjusting volumes
 			if (gnChannels >= 2)
 			{
@@ -1308,7 +1276,7 @@ All the dead code should be gone now. :)
 		} else
 		{
 			// Note change but no sample
-			if (pChn->nVUMeter > 0xFF) pChn->nVUMeter = 0;
+			//if (pChn->nVUMeter > 0xFF) pChn->nVUMeter = 0;
 			pChn->nLeftVol = pChn->nRightVol = 0;
 			pChn->nLength = 0;
 		}
