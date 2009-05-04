@@ -1522,49 +1522,6 @@ unsigned int CSoundFile::CreateStereoMix(int count)
     return nchused;
 }
 
-static float f2ic = (float) (1 << 28);
-static float i2fc = (float) (1.0 / (1 << 28));
-
-void CSoundFile::StereoMixToFloat(const int *pSrc, float *pOut1, float *pOut2, unsigned int nCount)
-{
-    for (unsigned int i = 0; i < nCount; i++) {
-        *pOut1++ = *pSrc * i2fc;    /*! */
-        pSrc++;
-
-        *pOut2++ = *pSrc * i2fc;    /*! */
-        pSrc++;
-    }
-}
-
-
-VOID CSoundFile::FloatToStereoMix(const float *pIn1, const float *pIn2,
-                  int *pOut, unsigned int nCount)
-{
-    for (unsigned int i = 0; i < nCount; i++) {
-        *pOut++ = (int) (*pIn1 * f2ic);
-        *pOut++ = (int) (*pIn2 * f2ic);
-        pIn1++;
-        pIn2++;
-    }
-}
-
-
-void CSoundFile::MonoMixToFloat(const int *pSrc, float *pOut, unsigned int nCount)
-{
-    for (unsigned int i = 0; i < nCount; i++) {
-        *pOut++ = *pSrc * i2fc;    /*! */
-        pSrc++;
-    }
-}
-
-
-void CSoundFile::FloatToMonoMix(const float *pIn, int *pOut, unsigned int nCount)
-{
-    for (unsigned int i = 0; i < nCount; i++) {
-        *pOut++ = (int) (*pIn * f2ic);    /*! */
-        pIn++;
-    }
-}
 // ----------------------------------------------------------------------------
 // Automatic Gain Control
 // ----------------------------------------------------------------------------

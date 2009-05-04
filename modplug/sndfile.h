@@ -9,7 +9,7 @@
 # include <config.h>
 #endif
 
-#ifndef C_SOURCE
+#ifdef __cplusplus
 #include "diskwriter.h"
 #endif
 
@@ -458,7 +458,7 @@ typedef struct _MODCOMMAND
 // Mix Plugins
 #define MIXPLUG_MIXREADY			0x01	// Set when cleared
 
-#ifndef C_SOURCE
+#ifdef __cplusplus
 class IMixPlugin
 {
 public:
@@ -498,7 +498,7 @@ typedef struct _SNDMIXPLUGININFO
 	CHAR szLibraryName[64];	// original DLL name
 } SNDMIXPLUGININFO, *PSNDMIXPLUGININFO; // Size should be 128
 
-#ifndef C_SOURCE
+#ifdef __cplusplus
 typedef struct _SNDMIXPLUGIN
 {
 	IMixPlugin *pMixPlugin;
@@ -537,7 +537,7 @@ typedef struct MODMIDICFG
 typedef VOID (* LPSNDMIXHOOKPROC)(int *, unsigned int, unsigned int); // buffer, samples, channels
 
 
-#ifndef C_SOURCE
+#ifdef __cplusplus
 //==============
 class CSoundFile
 //==============
