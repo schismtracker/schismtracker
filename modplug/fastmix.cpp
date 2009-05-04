@@ -512,22 +512,6 @@ typedef void(MPPASMCALL * mix_interface_t)(MODCHANNEL *, int *, int *);
 
 
 /////////////////////////////////////////////////////
-//
-
-extern void StereoMixToFloat(const int *pSrc, float *pOut1, float *pOut2, unsigned int nCount, const float _i2fc);
-extern void FloatToStereoMix(const float *pIn1, const float *pIn2, int *pOut, unsigned int nCount, const float _f2ic);
-extern void MonoMixToFloat(const int *pSrc, float *pOut, unsigned int nCount, const float _i2fc);
-extern void FloatToMonoMix(const float *pIn, int *pOut, unsigned int nCount, const float _f2ic);
-
-void InitMixBuffer(int *pBuffer, unsigned int nSamples);
-void EndChannelOfs(MODCHANNEL * pChannel, int *pBuffer, unsigned int nSamples);
-void StereoFill(int *pBuffer, unsigned int nSamples, long* lpROfs, long* lpLOfs);
-
-void StereoMixToFloat(const int *, float *, float *, unsigned int nCount);
-void FloatToStereoMix(const float *pIn1, const float *pIn2, int *pOut, unsigned int nCount);
-
-
-/////////////////////////////////////////////////////
 // Mono samples functions
 
 BEGIN_MIX_INTERFACE(Mono8BitMix)
@@ -778,6 +762,7 @@ BEGIN_MIX_INTERFACE(Stereo16BitFirFilterMix)
     SNDMIX_GETSTEREOVOL16FIRFILTER
     SNDMIX_STORESTEREOVOL 
 END_MIX_INTERFACE()
+
 
 // Volume Ramps
 BEGIN_RAMPMIX_INTERFACE(Stereo8BitRampMix)
@@ -1063,7 +1048,6 @@ BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitFirFilterRampMix)
 END_RAMPMIX_STFLT_INTERFACE()
 
 
-
 /////////////////////////////////////////////////////////////////////////////////////
 //
 // Mix function tables
@@ -1082,6 +1066,7 @@ END_RAMPMIX_STFLT_INTERFACE()
 #define MIXNDX_LINEARSRC    0x10
 #define MIXNDX_SPLINESRC    0x20
 #define MIXNDX_FIRSRC       0x30
+
 
 // mix_(bits)(m/s)[_filt]_(interp/spline/fir/whatever)[_ramp]
 const mix_interface_t mix_functions[2 * 2 * 16] = {
@@ -1186,9 +1171,8 @@ const mix_interface_t fastmix_functions[2 * 2 * 16] = {
 };
 
 
-/////////////////////////////////////////////////////////////////////////
 
-static long MPPFASTCALL get_sample_count(MODCHANNEL *pChn, long samples)
+static long get_sample_count(MODCHANNEL *pChn, long samples)
 {
     long nLoopStart = (pChn->dwFlags & CHN_LOOP) ? pChn->nLoopStart : 0;
     long nInc = pChn->nInc;
@@ -1336,12 +1320,16 @@ unsigned int CSoundFile::CreateStereoMix(int count)
 
     if (!count)
         return 0;
+
     if (gnChannels > 2)
         init_mix_buffer(MixRearBuffer, count * 2);
+
     nchused = nchmixed = 0;
+
     if (CSoundFile::_multi_out_raw) {
         memset(MultiSoundBuffer, 0, sizeof(MultiSoundBuffer));
     }
+
     for (unsigned int nChn = 0; nChn < m_nMixChannels; nChn++) {
         const mix_interface_t *pMixFuncTable;
         MODCHANNEL *const pChannel = &Chn[ChnMix[nChn]];
@@ -1353,71 +1341,80 @@ unsigned int CSoundFile::CreateStereoMix(int count)
 
         if (!pChannel->pCurrentSample)
             continue;
-        nMasterCh =
-            (ChnMix[nChn] <
-             m_nChannels) ? ChnMix[nChn] +
-            1 : pChannel->nMasterChn;
+
+        nMasterCh = (ChnMix[nChn] < m_nChannels) ? ChnMix[nChn] + 1 : pChannel->nMasterChn;
         pOfsR = &gnDryROfsVol;
         pOfsL = &gnDryLOfsVol;
         nFlags = 0;
+
         if (pChannel->dwFlags & CHN_16BIT)
             nFlags |= MIXNDX_16BIT;
+
         if (pChannel->dwFlags & CHN_STEREO)
             nFlags |= MIXNDX_STEREO;
+
         if (pChannel->dwFlags & CHN_FILTER)
             nFlags |= MIXNDX_FILTER;
-        if (!(pChannel->dwFlags & CHN_NOIDO)
-            && !(gdwSoundSetup & SNDMIX_NORESAMPLING)) {
+
+        if (!(pChannel->dwFlags & CHN_NOIDO) &&
+            !(gdwSoundSetup & SNDMIX_NORESAMPLING)) {
             // use hq-fir mixer?
-            if ((gdwSoundSetup &
-                 (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
-                ==
-                (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
+            if ((gdwSoundSetup & (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
+                == (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
                 nFlags |= MIXNDX_FIRSRC;
             else if ((gdwSoundSetup & SNDMIX_HQRESAMPLER))
                 nFlags |= MIXNDX_SPLINESRC;
             else
                 nFlags |= MIXNDX_LINEARSRC;    // use
         }
-        if ((nFlags < 0x40)
-            && (pChannel->nLeftVol == pChannel->nRightVol)
-            && ((!pChannel->nRampLength)
-            || (pChannel->nLeftRamp ==
-                pChannel->nRightRamp))) {
+
+        if ((nFlags < 0x40) && 
+            (pChannel->nLeftVol == pChannel->nRightVol) && 
+            ((!pChannel->nRampLength) ||
+            (pChannel->nLeftRamp == pChannel->nRightRamp))) {
             pMixFuncTable = fastmix_functions;
-        } else {
+        }
+        else {
             pMixFuncTable = mix_functions;
         }
+
         nsamples = count;
 #ifndef MODPLUG_NO_REVERB
-        pbuffer =
-            (gdwSoundSetup & SNDMIX_REVERB) ? MixReverbBuffer :
-            MixSoundBuffer;
+        pbuffer = (gdwSoundSetup & SNDMIX_REVERB) ? MixReverbBuffer : MixSoundBuffer;
+
         if (pChannel->dwFlags & CHN_NOREVERB)
             pbuffer = MixSoundBuffer;
+
         if (pChannel->dwFlags & CHN_REVERB)
             pbuffer = MixReverbBuffer;
+
         if (pbuffer == MixReverbBuffer) {
             if (!gnReverbSend)
                 memset(MixReverbBuffer, 0, count * 8);
+
             gnReverbSend += count;
         }
 #else
         pbuffer = MixSoundBuffer;
 #endif
+
         if (CSoundFile::_multi_out_raw) {
             pbuffer = MultiSoundBuffer[nMasterCh];
         }
+
         nchused++;
         ////////////////////////////////////////////////////
-          SampleLooping:
+SampleLooping:
+
         nrampsamples = nsamples;
+
         if (pChannel->nRampLength > 0) {
             if ((long) nrampsamples > pChannel->nRampLength)
                 nrampsamples = pChannel->nRampLength;
         }
 
         nSmpCount = 1;
+
         /* Figure out the number of remaining samples,
          * unless we're in AdLib or MIDI mode (to prevent
          * artificial KeyOffs)
@@ -1425,6 +1422,7 @@ unsigned int CSoundFile::CreateStereoMix(int count)
         if (!(pChannel->dwFlags & CHN_ADLIB)) {
             nSmpCount = get_sample_count(pChannel, nrampsamples);
         }
+
         if (nSmpCount <= 0) {
             // Stopping the channel
             pChannel->pCurrentSample = NULL;
@@ -1439,8 +1437,10 @@ unsigned int CSoundFile::CreateStereoMix(int count)
             pChannel->dwFlags &= ~CHN_PINGPONGFLAG;
             continue;
         }
+
         // Should we mix this channel ?
         unsigned int naddmix = 0;
+
         if (((nchmixed >= m_nMaxMixChannels)
              && (!(gdwSoundSetup & SNDMIX_DIRECTTODISK)))
             || ((!pChannel->nRampLength)
@@ -1453,8 +1453,9 @@ unsigned int CSoundFile::CreateStereoMix(int count)
             pChannel->nPos += (delta >> 16);
             pChannel->nROfs = pChannel->nLOfs = 0;
             pbuffer += nSmpCount * 2;
-        } else
-            // Do mixing
+        }
+        // Do mixing
+        else
         {
             if (pChannel->nLength) {
                 pChannel->topnote_offset =
@@ -1481,18 +1482,18 @@ unsigned int CSoundFile::CreateStereoMix(int count)
                 pbuffer = pbufmax;
                 naddmix = 1;
             }
-
         }
+
         nsamples -= nSmpCount;
+
         if (pChannel->nRampLength) {
             pChannel->nRampLength -= nSmpCount;
             if (pChannel->nRampLength <= 0) {
                 pChannel->nRampLength = 0;
-                pChannel->nRightVol =
-                    pChannel->nNewRightVol;
+                pChannel->nRightVol = pChannel->nNewRightVol;
                 pChannel->nLeftVol = pChannel->nNewLeftVol;
-                pChannel->nRightRamp =
-                    pChannel->nLeftRamp = 0;
+                pChannel->nRightRamp = pChannel->nLeftRamp = 0;
+
                 if ((pChannel->dwFlags & CHN_NOTEFADE)
                     && (!(pChannel->nFadeOutVol))) {
                     pChannel->nLength = 0;
@@ -1500,8 +1501,10 @@ unsigned int CSoundFile::CreateStereoMix(int count)
                 }
             }
         }
+
         if (nsamples > 0)
             goto SampleLooping;
+
         nchmixed += naddmix;
     }
 
@@ -1515,12 +1518,14 @@ unsigned int CSoundFile::CreateStereoMix(int count)
             CSoundFile::_multi_out_raw(n, MultiSoundBuffer[n],
                            count * 2);
         }
-    } else {
+    }
+    else {
         Fmdrv_MixTo(MixSoundBuffer, count);
     }
 
     return nchused;
 }
+
 
 // ----------------------------------------------------------------------------
 // Automatic Gain Control
@@ -1566,6 +1571,4 @@ void CSoundFile::ResetAGC()
 }
 
 #endif // NO_AGC
-
-
 
