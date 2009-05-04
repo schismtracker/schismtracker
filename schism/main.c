@@ -162,7 +162,6 @@ static void display_print_info(void)
 	log_append(2, 0, "Video initialised");
 	log_append(2, 0, "\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81");
 	video_report();
-	log_append(0, 0, "");
 }
 
 /* If we're not not debugging, don't not dump core. (Have I ever mentioned
@@ -242,16 +241,16 @@ static void handle_active_event(SDL_ActiveEvent * a)
 #if ENABLE_HOOKS
 static void run_startup_hook(void)
 {
-	run_hook(cfg_dir_dotschism,"startup-hook",0);
+	run_hook(cfg_dir_dotschism, "startup-hook", NULL);
 }
 static void run_diskwriter_complete_hook(void)
 {
-	run_hook(cfg_dir_dotschism,"diskwriter-hook",0);
+	run_hook(cfg_dir_dotschism, "diskwriter-hook", NULL);
 }
 
 static void run_exit_hook(void)
 {
-	run_hook(cfg_dir_dotschism,"exit-hook",0);
+	run_hook(cfg_dir_dotschism, "exit-hook", NULL);
 }
 #endif
 
@@ -311,6 +310,14 @@ enum {
 	O_HELP,
 };
 
+#if defined(WIN32)
+# define OPENGL_PATH "\\path\\to\\opengl.dll"
+#elif defined(MACOSX)
+# define OPENGL_PATH "/path/to/opengl.dylib"
+#else
+# define OPENGL_PATH "/path/to/opengl.so"
+#endif
+
 static void parse_options(int argc, char **argv)
 {
 	FRAG *frag;
@@ -322,15 +329,7 @@ static void parse_options(int argc, char **argv)
 		{O_VIDEO_YUVLAYOUT, 0, "video-yuvlayout", FRAG_ARG, "LAYOUT", "Specify YUV layout (if schism doesnt detect)" },
 		{O_VIDEO_RESOLUTION,0, "video-size", FRAG_ARG, "WIDTHxHEIGHT", "Specify default window size" },
 		{O_VIDEO_ASPECT,0, "video-stretch", FRAG_ARG, NULL, "Unfix the aspect ratio" },
-		{O_VIDEO_GLPATH,0,"video-gl-path", FRAG_ARG,
-#if defined(WIN32)
-"/path/to/opengl.dll"
-#elif defined(MACOSX)
-"/path/to/opengl.dylib"
-#else
-"/path/to/opengl.so"
-#endif
-				, "Specify path of OpenGL library"},
+		{O_VIDEO_GLPATH,0,"video-gl-path", FRAG_ARG, OPENGL_PATH, "Specify path of OpenGL library"},
 		{O_VIDEO_DEPTH,0,"video-depth",FRAG_ARG, "DEPTH", "Specify display depth in bits"},
 #if HAVE_SYS_KD_H
 		{O_VIDEO_FBDEV,0,"video-fb-device", FRAG_ARG,"/dev/fb0","Specify path to framebuffer"},
@@ -352,6 +351,7 @@ static void parse_options(int argc, char **argv)
 		{O_HELP, 'h', "help", 0, NULL, "print this stuff"},
 		{FRAG_END_ARRAY}
 	};
+	int n;
 	
 	frag = frag_init(opts, argc, argv, FRAG_ENABLE_NO_SPACE_SHORT | FRAG_ENABLE_SPACED_LONG);
 	if (!frag) {
@@ -455,13 +455,10 @@ static void parse_options(int argc, char **argv)
 #endif
 		case O_VERSION:
 			puts(schism_banner());
-			/* FIXME: this text is repeated a couple times in the
-			   code. Maybe we could put it in version.c as well? */
-			printf("\nCopyright (c) 2003-2008 Storlek and Mrs. Brisby\n"
-			       "This program is free software; you can redistribute it and/or modify\n"
-			       "it under the terms of the GNU General Public License as published by\n"
-			       "the Free Software Foundation; either version 2 of the License, or\n"
-			       "(at your option) any later version.\n");
+			puts(ver_short_copyright);
+			putchar('\n');
+			for (n = 0; ver_license[n] && ver_license[n][0]; n++)
+				puts(ver_license[n]);
 			frag_free(frag);
 			exit(0);
 		case O_HELP:
@@ -485,14 +482,13 @@ static void check_update(void)
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
-	if ((status.flags & (NEED_UPDATE | IS_VISIBLE))
-	    == (NEED_UPDATE | IS_VISIBLE)) {
+	if ((status.flags & (NEED_UPDATE | IS_VISIBLE)) == (NEED_UPDATE | IS_VISIBLE)) {
 		status.flags &= ~(NEED_UPDATE | SOFTWARE_MOUSE_MOVED);
 		if ((status.flags & (IS_FOCUSED | LAZY_REDRAW)) == LAZY_REDRAW) {
 			if (SDL_GetTicks() < next)
 				return;
 			next = SDL_GetTicks() + 500;
-		} else if (status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN)) {
+		} else if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
 			if (SDL_GetTicks() < next)
 				return;
 			next = SDL_GetTicks() + 100;
@@ -730,7 +726,9 @@ static void event_loop(void)
 			case NUMLOCK_GUESS:
 #ifdef MACOSX
 				if (ibook_helper != -1) {
-					if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
+					if (ACTIVE_PAGE.selected_widget > -1
+					    && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
+					    && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
 						/* text is more likely? */
 						modkey |= KMOD_NUM;
 					} else {
@@ -1103,32 +1101,15 @@ static void schism_shutdown(void)
 
 static void dump_misc_about_text(void)
 {
-	/* FIXME: see above for similar text */
-	const char *text[] = {
-		"Schism Tracker is Copyright (C) 2003-2008 Storlek and Mrs. Brisby.",
-		"",
-		"Contains additional code by Olivier Lapicque, Markus Fick, Adam Goode,",
-		"Ville Jokela, Juan Linietsky, Juha Niemim\x84ki, and others.",
-		"Based on Impulse Tracker which is Copyright (C) 1995-1998 Jeffrey Lim.",
-		"",
-		"This program is free software; you can redistribute it and/or modify it",
-		"under the terms of the GNU General Public License as published by the",
-		"Free Software Foundation; either version 2 of the License, or (at your",
-		"option) any later version.",
-		"",
-		"You should have received a copy of the GNU General Public License along",
-		"with this program; if not, write to the Free Software Foundation, Inc.,",
-		"59 Temple Place, Suite 330, Boston, MA 02111-1307  USA",
-		"",
-		NULL
-	};
 	int n;
-	
-	log_append(3, 0, schism_banner());
-	log_nl();
 
-	for (n = 0; text[n]; n++)
-		log_append2(1, 6, 0, text[n]);
+	log_append2(1, 3, 0, schism_banner());
+	log_nl();
+	for (n = 0; ver_copyright_credits[n]; n++)
+		log_append2(1, 6, 0, ver_copyright_credits[n]);
+	log_nl();
+	for (n = 0; ver_license[n]; n++)
+		log_append2(1, 6, 0, ver_license[n]);
 	log_nl();
 }
 
@@ -1285,8 +1266,11 @@ int main(int argc, char **argv)
 	palette_apply();
 	font_init();
 	midi_engine_start();
+	log_nl();
 	song_init_audio(audio_driver);
 	song_init_modplug();
+	log_nl();
+	log_nl();
 
 #ifndef WIN32
 	signal(SIGINT, exit);
@@ -1357,3 +1341,4 @@ int main(int argc, char **argv)
 	
 	event_loop(); /* never returns */
 }
+

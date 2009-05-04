@@ -91,13 +91,7 @@ static void preferences_draw_const(void)
         draw_text("Surround", 61, 31, 0, 2);
 
 #define CORNER_BOTTOM "http://schismtracker.org/"
-#ifndef RELEASE_VERSION
-#define CORNER_BOTTOM2 "http://sourceforge.net/projects/schismtracker/"
-	draw_text(CORNER_BOTTOM2, 78 - strlen(CORNER_BOTTOM2), 48, 1, 2);
-	draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 47, 1, 2);
-#else
 	draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 48, 1, 2);
-#endif
 }
 
 /* --------------------------------------------------------------------- */

@@ -125,6 +125,13 @@ static void about_draw_const(void)
 				draw_text("Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
 				break;
 			case 1:
+				/* FIXME: The GUS driver displays the memory settings a bit
+				differently from the SB. If we're "supporting" it, we should
+				probably keep the rest of the UI consistent with our choice.
+				(Also: no love for the AWE cards?)
+				
+				Alternately, it would be totally awesome to probe the system
+				for the actual name and parameters of the card in use :) */
 				draw_text("Gravis UltraSound detected", 26, 28, 0, 2);
 				draw_text("Port 240h, IRQ 5, 1024k RAM", 26, 29, 0, 2);
 				break;
@@ -135,8 +142,8 @@ static void about_draw_const(void)
 		buf[80] = 0;
 		draw_text(buf, (80 - strlen(buf)) / 2, 25, 0, 2);
 		/* build date? */
-		draw_text("Copyright (C) 2003-2008 Storlek and Mrs. Brisby", 15, 27, 1, 2);
-		draw_text("Based on Impulse Tracker by Jeffrey Lim aka Pulse", 15, 28, 1, 2);
+		draw_text(ver_short_copyright, 15, 27, 1, 2);
+		draw_text(ver_short_based_on, 15, 28, 1, 2);
 		/* XXX if we allow key remapping, need to reflect the *real* log viewer key here */
 		draw_text("Press Ctrl-F11 for copyright and full credits", 15, 29, 1, 2);
 	}
@@ -202,5 +209,4 @@ void show_about(void)
 	status.flags |= DIR_MODULES_CHANGED;
 	pages[PAGE_LOAD_MODULE].set_page();
 }
-
 
