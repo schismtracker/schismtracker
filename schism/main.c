@@ -1120,7 +1120,6 @@ extern void win32_setup_keymap(void);
 #endif
 
 
-int main(int argc, char **argv) NORETURN;
 int main(int argc, char **argv)
 {
 #if defined(WIN32)
@@ -1339,6 +1338,7 @@ int main(int argc, char **argv)
 	/* poll once */
 	midi_engine_poll_ports();
 	
-	event_loop(); /* never returns */
+	event_loop();
+	return 0; /* blah */
 }
 
