@@ -8,31 +8,7 @@
 #include "sndfile.h"
 #include "snd_fm.h"
 #include "snd_gm.h"
-
-#ifndef MACOSX
-#include <algorithm>
-
-#define MyLower_bound std::lower_bound
-
-#else
-/* MacOSX has broken STL support on older versions
- * here we're trying to be helpful
- */
-template<typename Iterator, typename V>
-Iterator MyLower_bound(Iterator begin, Iterator end, const V& value)
-{
-    while(begin < end)
-    {
-        size_t half = (end-begin) >> 1;
-        Iterator middle = begin + half;
-        if(*middle < value)
-            { begin = middle + 1; }
-        else
-            { end   = middle;     }
-    }
-    return begin;
-}
-#endif
+#include "cmixer.h"
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
@@ -64,20 +40,69 @@ int gbInitPlugins = 0;
 
 typedef DWORD (MPPASMCALL * LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
 
-extern DWORD MPPASMCALL Convert32To8(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To16(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To24(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To32(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
 extern UINT MPPASMCALL AGC(int *pBuffer, UINT nSamples, UINT nAGC);
 extern VOID MPPASMCALL Dither(int *pBuffer, UINT nSamples, UINT nBits);
-extern VOID MPPASMCALL InterleaveFrontRear(int *pFrontBuf, int *pRearBuf, DWORD nSamples);
-extern VOID MPPASMCALL StereoFill(int *pBuffer, UINT nSamples, LPLONG lpROfs, LPLONG lpLOfs);
-extern VOID MPPASMCALL MonoFromStereo(int *pMixBuf, UINT nSamples);
+
+extern void interleave_front_rear(int *, int *, unsigned int);
+extern void mono_from_stereo(int *, unsigned int);
+extern void stereo_fill(int *, unsigned int, int *, int *);
 
 extern int MixSoundBuffer[MIXBUFFERSIZE*4];
 extern int MixRearBuffer[MIXBUFFERSIZE*2];
 
 UINT gnReverbSend;
+
+
+// The volume we have here is in range 0..(63*255) (0..16065)
+// We should keep that range, but convert it into a logarithmic
+// one such that a change of 256*8 (2048) corresponds to a halving
+// of the volume.
+//   logvolume = 2^(linvolume / (4096/8)) * (4096/64)
+// However, because the resolution of MIDI volumes
+// is merely 128 units, we can use a lookup table.
+//
+// In this table, each value signifies the minimum value
+// that volume must be in order for the result to be
+// that table index.
+static const unsigned short GMvolTransition[128] =
+{
+    0, 2031, 4039, 5214, 6048, 6694, 7222, 7669,
+ 8056, 8397, 8702, 8978, 9230, 9462, 9677, 9877,
+10064,10239,10405,10562,10710,10852,10986,11115,
+11239,11357,11470,11580,11685,11787,11885,11980,
+12072,12161,12248,12332,12413,12493,12570,12645,
+12718,12790,12860,12928,12995,13060,13123,13186,
+13247,13306,13365,13422,13479,13534,13588,13641,
+13693,13745,13795,13844,13893,13941,13988,14034,
+14080,14125,14169,14213,14256,14298,14340,14381,
+14421,14461,14501,14540,14578,14616,14653,14690,
+14727,14763,14798,14833,14868,14902,14936,14970,
+15003,15035,15068,15100,15131,15163,15194,15224,
+15255,15285,15315,15344,15373,15402,15430,15459,
+15487,15514,15542,15569,15596,15623,15649,15675,
+15701,15727,15753,15778,15803,15828,15853,15877,
+15901,15925,15949,15973,15996,16020,16043,16065,
+};
+
+
+// We use binary search to find the right slot
+// with at most 7 comparisons. 
+static unsigned int find_volume(unsigned short vol)
+{
+	unsigned int l = 0, r = 128;
+
+	while (l < r) {
+		unsigned int m = l + ((r - l) / 2);
+		unsigned short p = GMvolTransition[m];
+
+		if (p < vol)
+			l = m + 1;
+		else
+			r = m;
+	}  
+
+	return l;
+}
 
 
 // Log tables for pre-amp
@@ -168,7 +193,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 //-------------------------------------------------------
 {
 	LPBYTE lpBuffer = (LPBYTE)lpDestBuffer;
-	LPCONVERTPROC pCvt = Convert32To8;
+	LPCONVERTPROC pCvt = clip_32_to_8;
 	LONG vu_min[2];
 	LONG vu_max[2];
 	UINT lRead, lMax, lSampleSize, lCount, lSampleCount, nStat=0;
@@ -187,9 +212,9 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 #endif
 	m_nMixStat = 0;
 	lSampleSize = gnChannels;
-	if (gnBitsPerSample == 16) { lSampleSize *= 2; pCvt = Convert32To16; }
-	else if (gnBitsPerSample == 24) { lSampleSize *= 3; pCvt = Convert32To24; }
-	else if (gnBitsPerSample == 32) { lSampleSize *= 4; pCvt = Convert32To32; }
+	if (gnBitsPerSample == 16) { lSampleSize *= 2; pCvt = clip_32_to_16; }
+	else if (gnBitsPerSample == 24) { lSampleSize *= 3; pCvt = clip_32_to_24; }
+	else if (gnBitsPerSample == 32) { lSampleSize *= 4; pCvt = clip_32_to_32; }
 	lMax = cbBuffer / lSampleSize;
 	if ((!lMax) || (!lpBuffer) || (!m_nChannels)) return 0;
 	lRead = lMax;
@@ -221,7 +246,8 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 #endif
 
 		// Resetting sound buffer
-		StereoFill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
+		stereo_fill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
+
 		if (gnChannels >= 2)
 		{
 			lSampleCount *= 2;
@@ -236,7 +262,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 #if 0
 			if (nMaxPlugins) ProcessPlugins(lCount);
 #endif
-			MonoFromStereo(MixSoundBuffer, lCount);
+			mono_from_stereo(MixSoundBuffer, lCount);
 			ProcessMonoDSP(lCount);
 		}
 
@@ -258,7 +284,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 		// Multichannel
 		if (gnChannels > 2)
 		{
-			InterleaveFrontRear(MixSoundBuffer, MixRearBuffer, lSampleCount);
+			interleave_front_rear(MixSoundBuffer, MixRearBuffer, lSampleCount);
 			lTotalSampleCount *= 2;
 		}
 		// Hook Function
@@ -997,50 +1023,10 @@ All the dead code should be gone now. :)
 			    int volume = vol;
 			    if((pChn->dwFlags & CHN_ADLIB) && volume > 0)
 			    {
-			        // The volume we have here is in range 0..(63*255) (0..16065)
-			        // We should keep that range, but convert it into a logarithmic
-			        // one such that a change of 256*8 (2048) corresponds to a halving
-			        // of the volume.
-			        //   logvolume = 2^(linvolume / (4096/8)) * (4096/64)
-			        // However, because the resolution of MIDI volumes
-			        // is merely 128 units, we can use a lookup table.
-			        //
-			        // In this table, each value signifies the minimum value
-			        // that volume must be in order for the result to be
-			        // that table index.
-			        static const unsigned short GMvolTransition[128] =
-			        {
-			            0, 2031, 4039, 5214, 6048, 6694, 7222, 7669,
-			         8056, 8397, 8702, 8978, 9230, 9462, 9677, 9877,
-			        10064,10239,10405,10562,10710,10852,10986,11115,
-			        11239,11357,11470,11580,11685,11787,11885,11980,
-			        12072,12161,12248,12332,12413,12493,12570,12645,
-			        12718,12790,12860,12928,12995,13060,13123,13186,
-			        13247,13306,13365,13422,13479,13534,13588,13641,
-			        13693,13745,13795,13844,13893,13941,13988,14034,
-			        14080,14125,14169,14213,14256,14298,14340,14381,
-			        14421,14461,14501,14540,14578,14616,14653,14690,
-			        14727,14763,14798,14833,14868,14902,14936,14970,
-			        15003,15035,15068,15100,15131,15163,15194,15224,
-			        15255,15285,15315,15344,15373,15402,15430,15459,
-			        15487,15514,15542,15569,15596,15623,15649,15675,
-			        15701,15727,15753,15778,15803,15828,15853,15877,
-			        15901,15925,15949,15973,15996,16020,16043,16065,
-			        };
-
-			        // We use binary search to find the right slot
-			        // with at most 7 comparisons. The comparisons
-			        // will likely be inlined to this spot, due to
-			        // how STL works.
-			        const unsigned short* GMvolptr =
-			            MyLower_bound(GMvolTransition,
-			                             GMvolTransition+128,
-			                             (unsigned short)volume);
-			        
 			        // This gives a value in the range 0..127.
-			        //int o = volume;
-			        volume = (GMvolptr - GMvolTransition) * pChn->nInsVol / 64;
-			        //fprintf(stderr, "%d -> %d[%d]\n", o, volume, pChn->nInsVol);
+			        int o = volume;
+			        volume = find_volume((unsigned short) volume) * pChn->nInsVol / 64;
+			        fprintf(stderr, "%d -> %d[%d]\n", o, volume, pChn->nInsVol);
 			    }
 			    else
 			    {

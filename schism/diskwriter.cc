@@ -30,6 +30,8 @@
 #include "mplink.h"
 #include "dmoz.h"
 
+
+#include "cmixer.h"
 #include "diskwriter.h"
 
 #include <stdio.h>
@@ -41,15 +43,9 @@
  */
 static char dwbuf[65536];
 
-typedef DWORD (MPPASMCALL * LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
-extern DWORD MPPASMCALL Convert32To8(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To16(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To24(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To32(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern VOID MonoFromStereo(int *pMixBuf, UINT nSamples);
 
+unsigned int (*dw_multi_pCvt)(void *, int *, unsigned int, int*, int*) = clip_32_to_8;
 
-static LPCONVERTPROC dw_multi_pCvt = Convert32To8;
 
 static unsigned char diskbuf[32768];
 static diskwriter_driver_t *dw = NULL;
@@ -331,7 +327,7 @@ static void multi_out_helper(int chan, int *buf, int len)
 
 	if (dw->channels == 1) {
 		len *= 2;
-		MonoFromStereo((int *)diskbuf, len);
+		mono_from_stereo((int *)diskbuf, len);
 	}
 
 	dw_multi_pCvt(diskbuf, buf, len, vu_min, vu_max);
@@ -388,13 +384,13 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 	}
 
 	if (dw->bits == 8) {
-		dw_multi_pCvt = Convert32To8;
+		dw_multi_pCvt = clip_32_to_8;
 	} else if (dw->bits == 16) {
-		dw_multi_pCvt = Convert32To16;
+		dw_multi_pCvt = clip_32_to_16;
 	} else if (dw->bits == 24) {
-		dw_multi_pCvt = Convert32To24;
+		dw_multi_pCvt = clip_32_to_24;
 	} else if (dw->bits == 32) {
-		dw_multi_pCvt = Convert32To32;
+		dw_multi_pCvt = clip_32_to_32;
 	} else {
 		diskwriter_finish();
 		return DW_ERROR;

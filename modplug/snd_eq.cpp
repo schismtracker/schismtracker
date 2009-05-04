@@ -14,6 +14,7 @@
 */
 #include "stdafx.h"
 #include "sndfile.h"
+#include "cmixer.h"
 #include <math.h>
 
 
@@ -23,10 +24,6 @@
 
 extern REAL MixFloatBuffer[];
 
-extern void StereoMixToFloat(const int *pSrc, float *pOut1, float *pOut2, UINT nCount);
-extern void FloatToStereoMix(const float *pIn1, const float *pIn2, int *pOut, UINT nCount);
-extern void MonoMixToFloat(const int *pSrc, float *pOut, UINT nCount);
-extern void FloatToMonoMix(const float *pIn, int *pOut, UINT nCount);
 
 typedef struct _EQBANDSTRUCT
 {
@@ -83,20 +80,22 @@ void EQFilter(EQBANDSTRUCT *pbs, REAL *pbuffer, UINT nCount)
 void CSoundFile::EQMono(int *pbuffer, UINT nCount)
 //------------------------------------------------
 {
-	MonoMixToFloat(pbuffer, MixFloatBuffer, nCount);
+	mono_mix_to_float(pbuffer, MixFloatBuffer, nCount);
+
 	for (UINT b=0; b<MAX_EQ_BANDS; b++)
 	{
 		if ((gEQ[b].bEnable) && (gEQ[b].Gain != 1.0f))
 			EQFilter(&gEQ[b], MixFloatBuffer, nCount);
 	}
-	FloatToMonoMix(MixFloatBuffer, pbuffer, nCount);
+
+	float_to_mono_mix(MixFloatBuffer, pbuffer, nCount);
 }
 
 void CSoundFile::EQStereo(int *pbuffer, UINT nCount)
 //--------------------------------------------------
 {
-	StereoMixToFloat(pbuffer, MixFloatBuffer, MixFloatBuffer+MIXBUFFERSIZE, nCount);
-		
+	stereo_mix_to_float(pbuffer, MixFloatBuffer, MixFloatBuffer+MIXBUFFERSIZE, nCount);
+
 	for (UINT bl=0; bl<MAX_EQ_BANDS; bl++)
 	{
 		if ((gEQ[bl].bEnable) && (gEQ[bl].Gain != 1.0f))
@@ -108,7 +107,7 @@ void CSoundFile::EQStereo(int *pbuffer, UINT nCount)
 			EQFilter(&gEQ[br], MixFloatBuffer+MIXBUFFERSIZE, nCount);
 	}
 
-	FloatToStereoMix(MixFloatBuffer, MixFloatBuffer+MIXBUFFERSIZE, pbuffer, nCount);
+	float_to_stereo_mix(MixFloatBuffer, MixFloatBuffer+MIXBUFFERSIZE, pbuffer, nCount);
 
 }
 
