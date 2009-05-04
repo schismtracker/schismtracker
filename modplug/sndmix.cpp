@@ -8,7 +8,7 @@
 #include "sndfile.h"
 #include "snd_fm.h"
 #include "snd_gm.h"
-
+#include "cmixer.h"
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
@@ -40,10 +40,6 @@ int gbInitPlugins = 0;
 
 typedef DWORD (MPPASMCALL * LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
 
-extern DWORD MPPASMCALL Convert32To8(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To16(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To24(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
-extern DWORD MPPASMCALL Convert32To32(LPVOID lpBuffer, int *, DWORD nSamples, LONG mins[2], LONG maxs[2]);
 extern UINT MPPASMCALL AGC(int *pBuffer, UINT nSamples, UINT nAGC);
 extern VOID MPPASMCALL Dither(int *pBuffer, UINT nSamples, UINT nBits);
 
@@ -197,7 +193,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 //-------------------------------------------------------
 {
 	LPBYTE lpBuffer = (LPBYTE)lpDestBuffer;
-	LPCONVERTPROC pCvt = Convert32To8;
+	LPCONVERTPROC pCvt = clip_32_to_8;
 	LONG vu_min[2];
 	LONG vu_max[2];
 	UINT lRead, lMax, lSampleSize, lCount, lSampleCount, nStat=0;
@@ -216,9 +212,9 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 #endif
 	m_nMixStat = 0;
 	lSampleSize = gnChannels;
-	if (gnBitsPerSample == 16) { lSampleSize *= 2; pCvt = Convert32To16; }
-	else if (gnBitsPerSample == 24) { lSampleSize *= 3; pCvt = Convert32To24; }
-	else if (gnBitsPerSample == 32) { lSampleSize *= 4; pCvt = Convert32To32; }
+	if (gnBitsPerSample == 16) { lSampleSize *= 2; pCvt = clip_32_to_16; }
+	else if (gnBitsPerSample == 24) { lSampleSize *= 3; pCvt = clip_32_to_24; }
+	else if (gnBitsPerSample == 32) { lSampleSize *= 4; pCvt = clip_32_to_32; }
 	lMax = cbBuffer / lSampleSize;
 	if ((!lMax) || (!lpBuffer) || (!m_nChannels)) return 0;
 	lRead = lMax;
@@ -251,6 +247,7 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 
 		// Resetting sound buffer
 		stereo_fill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
+
 		if (gnChannels >= 2)
 		{
 			lSampleCount *= 2;

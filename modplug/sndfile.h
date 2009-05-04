@@ -9,7 +9,9 @@
 # include <config.h>
 #endif
 
+#ifndef C_SOURCE
 #include "diskwriter.h"
+#endif
 
 #ifndef __SNDFILE_H
 #define __SNDFILE_H
@@ -456,6 +458,7 @@ typedef struct _MODCOMMAND
 // Mix Plugins
 #define MIXPLUG_MIXREADY			0x01	// Set when cleared
 
+#ifndef C_SOURCE
 class IMixPlugin
 {
 public:
@@ -469,7 +472,7 @@ public:
 	virtual void MidiSend(DWORD dwMidiCode) = 0;
 	virtual void MidiCommand(UINT nMidiCh, UINT nMidiProg, UINT note, UINT vol) = 0;
 };
-
+#endif
 
 #define MIXPLUG_INPUTF_MASTEREFFECT		0x01	// Apply to master mix
 #define MIXPLUG_INPUTF_BYPASS			0x02	// Bypass effect
@@ -495,6 +498,7 @@ typedef struct _SNDMIXPLUGININFO
 	CHAR szLibraryName[64];	// original DLL name
 } SNDMIXPLUGININFO, *PSNDMIXPLUGININFO; // Size should be 128
 
+#ifndef C_SOURCE
 typedef struct _SNDMIXPLUGIN
 {
 	IMixPlugin *pMixPlugin;
@@ -505,6 +509,7 @@ typedef struct _SNDMIXPLUGIN
 } SNDMIXPLUGIN, *PSNDMIXPLUGIN;
 
 typedef	BOOL (*PMIXPLUGINCREATEPROC)(PSNDMIXPLUGIN);
+#endif
 
 ////////////////////////////////////////////////////////////////////
 
@@ -532,7 +537,7 @@ typedef struct MODMIDICFG
 typedef VOID (* LPSNDMIXHOOKPROC)(int *, unsigned int, unsigned int); // buffer, samples, channels
 
 
-
+#ifndef C_SOURCE
 //==============
 class CSoundFile
 //==============
@@ -813,7 +818,7 @@ private:
     CSoundFile(const CSoundFile&);
     void operator=(const CSoundFile&);
 };
-
+#endif
 
 // inline DWORD BigEndian(DWORD x) { return ((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) | ((x & 0xFF000000) >> 24); }
 // inline WORD BigEndianW(WORD x) { return (WORD)(((x >> 8) & 0xFF) | ((x << 8) & 0xFF00)); }
