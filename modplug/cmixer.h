@@ -11,6 +11,11 @@ void end_channel_ofs(MODCHANNEL *, int *, unsigned int);
 void interleave_front_rear(int *, int *, unsigned int);
 void mono_from_stereo(int *, unsigned int);
 
+void stereo_mix_to_float(const int *, float *, float *, unsigned int);
+void float_to_stereo_mix(const float *, const float *, int *, unsigned int);
+void mono_mix_to_float(const int *, float *, unsigned int);
+void float_to_mono_mix(const float *, int *, unsigned int);
+
 
 //typedef unsigned int (*convert_clip_t)(void *, int *, unsigned int, int*, int*) __attribute__((cdecl))
 
