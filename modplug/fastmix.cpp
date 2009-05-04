@@ -32,10 +32,10 @@ float MixFloatBuffer[MIXBUFFERSIZE * 2];
 int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
-extern long gnDryROfsVol;
-extern long gnDryLOfsVol;
-extern long gnRvbROfsVol;
-extern long gnRvbLOfsVol;
+extern int gnDryROfsVol;
+extern int gnDryLOfsVol;
+extern int gnRvbROfsVol;
+extern int gnRvbLOfsVol;
 
 // 4x256 taps polyphase FIR resampling filter
 extern short int gFastSinc[];
@@ -415,7 +415,7 @@ typedef void(MPPASMCALL * mix_interface_t)(MODCHANNEL *, int *, int *);
 #define BEGIN_MIX_INTERFACE(func) \
     void MPPASMCALL func(MODCHANNEL *pChannel, int *pbuffer, int *pbufmax) \
     { \
-        long nPos;
+        int nPos;
 
 
 #define END_MIX_INTERFACE() \
@@ -426,8 +426,8 @@ typedef void(MPPASMCALL * mix_interface_t)(MODCHANNEL *, int *, int *);
 // Volume Ramps
 #define BEGIN_RAMPMIX_INTERFACE(func) \
     BEGIN_MIX_INTERFACE(func) \
-        long nRampRightVol = pChannel->nRampRightVol; \
-        long nRampLeftVol = pChannel->nRampLeftVol;
+        int nRampRightVol = pChannel->nRampRightVol; \
+        int nRampLeftVol = pChannel->nRampLeftVol;
 
 
 #define END_RAMPMIX_INTERFACE() \
@@ -441,7 +441,7 @@ typedef void(MPPASMCALL * mix_interface_t)(MODCHANNEL *, int *, int *);
 
 #define BEGIN_FASTRAMPMIX_INTERFACE(func) \
     BEGIN_MIX_INTERFACE(func) \
-        long nRampRightVol = pChannel->nRampRightVol;
+        int nRampRightVol = pChannel->nRampRightVol;
 
 
 #define END_FASTRAMPMIX_INTERFACE() \
@@ -467,8 +467,8 @@ typedef void(MPPASMCALL * mix_interface_t)(MODCHANNEL *, int *, int *);
 
 #define BEGIN_RAMPMIX_FLT_INTERFACE(func) \
     BEGIN_MIX_INTERFACE(func) \
-        long nRampRightVol = pChannel->nRampRightVol; \
-        long nRampLeftVol  = pChannel->nRampLeftVol; \
+        int nRampRightVol = pChannel->nRampRightVol; \
+        int nRampLeftVol  = pChannel->nRampLeftVol; \
         MIX_BEGIN_FILTER
 
 
@@ -496,8 +496,8 @@ typedef void(MPPASMCALL * mix_interface_t)(MODCHANNEL *, int *, int *);
 
 #define BEGIN_RAMPMIX_STFLT_INTERFACE(func) \
     BEGIN_MIX_INTERFACE(func) \
-        long nRampRightVol = pChannel->nRampRightVol; \
-        long nRampLeftVol  = pChannel->nRampLeftVol; \
+        int nRampRightVol = pChannel->nRampRightVol; \
+        int nRampLeftVol  = pChannel->nRampLeftVol; \
         MIX_BEGIN_STEREO_FILTER
 
 
@@ -1172,23 +1172,23 @@ const mix_interface_t fastmix_functions[2 * 2 * 16] = {
 
 
 
-static long get_sample_count(MODCHANNEL *pChn, long samples)
+static int get_sample_count(MODCHANNEL *pChn, int samples)
 {
-    long nLoopStart = (pChn->dwFlags & CHN_LOOP) ? pChn->nLoopStart : 0;
-    long nInc = pChn->nInc;
+    int nLoopStart = (pChn->dwFlags & CHN_LOOP) ? pChn->nLoopStart : 0;
+    int nInc = pChn->nInc;
 
     if (samples <= 0 || !nInc || !pChn->nLength)
         return 0;
 
     // Under zero ?
-    if ((long) pChn->nPos < nLoopStart) {
+    if ((int) pChn->nPos < nLoopStart) {
         if (nInc < 0) {
             // Invert loop for bidi loops
-            long nDelta = ((nLoopStart - pChn->nPos) << 16) - (pChn->nPosLo & 0xFFFF);
+            int nDelta = ((nLoopStart - pChn->nPos) << 16) - (pChn->nPosLo & 0xFFFF);
             pChn->nPos = nLoopStart | (nDelta >> 16);
             pChn->nPosLo = nDelta & 0xFFFF;
 
-            if ((long) pChn->nPos < nLoopStart || 
+            if ((int) pChn->nPos < nLoopStart || 
                 pChn->nPos >= (nLoopStart + pChn->nLength) / 2) {
                 pChn->nPos = nLoopStart;
                 pChn->nPosLo = 0;
@@ -1208,7 +1208,7 @@ static long get_sample_count(MODCHANNEL *pChn, long samples)
         }
         else {
             // We probably didn't hit the loop end yet (first loop), so we do nothing
-            if ((long) pChn->nPos < 0)
+            if ((int) pChn->nPos < 0)
                 pChn->nPos = 0;
         }
     }
@@ -1227,8 +1227,8 @@ static long get_sample_count(MODCHANNEL *pChn, long samples)
 
             pChn->dwFlags |= CHN_PINGPONGFLAG;
             // adjust loop position
-            long nDeltaHi = (pChn->nPos - pChn->nLength);
-            long nDeltaLo = 0x10000 - (pChn->nPosLo & 0xFFFF);
+            int nDeltaHi = (pChn->nPos - pChn->nLength);
+            int nDeltaLo = 0x10000 - (pChn->nPosLo & 0xFFFF);
             pChn->nPos = pChn->nLength - nDeltaHi - (nDeltaLo >> 16);
             pChn->nPosLo = nDeltaLo & 0xFFFF;
 
@@ -1246,12 +1246,12 @@ static long get_sample_count(MODCHANNEL *pChn, long samples)
             // Restart at loop start
             pChn->nPos += nLoopStart - pChn->nLength;
 
-            if ((long) pChn->nPos < nLoopStart)
+            if ((int) pChn->nPos < nLoopStart)
                 pChn->nPos = pChn->nLoopStart;
         }
     }
 
-    long nPos = pChn->nPos;
+    int nPos = pChn->nPos;
 
     // too big increment, and/or too small loop length
     if (nPos < nLoopStart) {
@@ -1259,15 +1259,15 @@ static long get_sample_count(MODCHANNEL *pChn, long samples)
             return 0;
     }
 
-    if (nPos < 0 || nPos >= (long) pChn->nLength)
+    if (nPos < 0 || nPos >= (int) pChn->nLength)
         return 0;
 
-    long nPosLo = (unsigned short) pChn->nPosLo,
+    int nPosLo = (unsigned short) pChn->nPosLo,
          sample_count = samples;
 
     if (nInc < 0) {
-        long nInv = -nInc;
-        long maxsamples = 16384 / ((nInv >> 16) + 1);
+        int nInv = -nInc;
+        int maxsamples = 16384 / ((nInv >> 16) + 1);
 
         if (maxsamples < 2)
             maxsamples = 2;
@@ -1275,19 +1275,19 @@ static long get_sample_count(MODCHANNEL *pChn, long samples)
         if (samples > maxsamples)
             samples = maxsamples;
 
-        long nDeltaHi = (nInv >> 16) * (samples - 1);
-        long nDeltaLo = (nInv & 0xffff) * (samples - 1);
-        long nPosDest = nPos - nDeltaHi + ((nPosLo - nDeltaLo) >> 16);
+        int nDeltaHi = (nInv >> 16) * (samples - 1);
+        int nDeltaLo = (nInv & 0xffff) * (samples - 1);
+        int nPosDest = nPos - nDeltaHi + ((nPosLo - nDeltaLo) >> 16);
 
         if (nPosDest < nLoopStart) {
             sample_count =
-                (unsigned long) (((((long long) nPos -
+                (unsigned int) (((((long long) nPos -
                     nLoopStart) << 16) + nPosLo -
                       1) / nInv) + 1;
         }
     } 
     else {
-        long maxsamples = 16384 / ((nInc >> 16) + 1);
+        int maxsamples = 16384 / ((nInc >> 16) + 1);
 
         if (maxsamples < 2)
             maxsamples = 2;
@@ -1295,12 +1295,12 @@ static long get_sample_count(MODCHANNEL *pChn, long samples)
         if (samples > maxsamples)
             samples = maxsamples;
 
-        long nDeltaHi = (nInc >> 16) * (samples - 1);
-        long nDeltaLo = (nInc & 0xffff) * (samples - 1);
-        long nPosDest = nPos + nDeltaHi + ((nPosLo + nDeltaLo) >> 16);
+        int nDeltaHi = (nInc >> 16) * (samples - 1);
+        int nDeltaLo = (nInc & 0xffff) * (samples - 1);
+        int nPosDest = nPos + nDeltaHi + ((nPosLo + nDeltaLo) >> 16);
 
-        if (nPosDest >= (long) pChn->nLength) {
-            sample_count = (unsigned long) (((((long long) pChn->nLength - nPos) << 16) - nPosLo - 1) / nInc) + 1;
+        if (nPosDest >= (int) pChn->nLength) {
+            sample_count = (unsigned int) (((((long long) pChn->nLength - nPos) << 16) - nPosLo - 1) / nInc) + 1;
         }
     }
 
@@ -1315,7 +1315,7 @@ static long get_sample_count(MODCHANNEL *pChn, long samples)
 
 unsigned int CSoundFile::CreateStereoMix(int count)
 {
-    long* pOfsL, *pOfsR;
+    int* pOfsL, *pOfsR;
     unsigned int nchused, nchmixed;
 
     if (!count)
@@ -1335,7 +1335,7 @@ unsigned int CSoundFile::CreateStereoMix(int count)
         MODCHANNEL *const pChannel = &Chn[ChnMix[nChn]];
         unsigned int nFlags, nMasterCh;
         unsigned int nrampsamples;
-        long nSmpCount;
+        int nSmpCount;
         int nsamples;
         int *pbuffer;
 
@@ -1409,7 +1409,7 @@ SampleLooping:
         nrampsamples = nsamples;
 
         if (pChannel->nRampLength > 0) {
-            if ((long) nrampsamples > pChannel->nRampLength)
+            if ((int) nrampsamples > pChannel->nRampLength)
                 nrampsamples = pChannel->nRampLength;
         }
 
@@ -1446,9 +1446,9 @@ SampleLooping:
             || ((!pChannel->nRampLength)
             && (!(pChannel->nLeftVol | pChannel->nRightVol))))
         {
-            long delta =
-                (pChannel->nInc * (long) nSmpCount) +
-                (long) pChannel->nPosLo;
+            int delta =
+                (pChannel->nInc * (int) nSmpCount) +
+                (int) pChannel->nPosLo;
             pChannel->nPosLo = delta & 0xFFFF;
             pChannel->nPos += (delta >> 16);
             pChannel->nROfs = pChannel->nLOfs = 0;
