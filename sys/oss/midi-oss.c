@@ -140,6 +140,7 @@ static void _tryopen(int n, const char *name, struct midi_provider *_oss_provide
 		return;
 	}
 	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT((long)n+1), 0);
+	free(ptr);
 }
 
 static void _oss_poll(struct midi_provider *_oss_provider)
