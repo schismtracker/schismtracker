@@ -30,7 +30,7 @@ autom4te.cache
 .deps
 Makefile
 Makefile.in
-
+aclocal.m4
 
 
 syntax: regexp
