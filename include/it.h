@@ -390,7 +390,7 @@ void kbd_set_current_octave(int new_octave);
 
 int kbd_get_note(struct key_event *k);
 
-inline int kbd_get_alnum(struct key_event *k);
+int kbd_get_alnum(struct key_event *k);
 
 /* --------------------------------------------------------------------- */
 /* log.c */
