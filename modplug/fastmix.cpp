@@ -12,6 +12,7 @@
 #include "sndfile.h"
 #include "snd_fm.h"
 #include "snd_gm.h"
+#include "cmixer.h"
 
 void (*CSoundFile::_multi_out_raw) (int chan, int *buf, int len) = NULL;
 
@@ -1336,7 +1337,7 @@ unsigned int CSoundFile::CreateStereoMix(int count)
     if (!count)
         return 0;
     if (gnChannels > 2)
-        InitMixBuffer(MixRearBuffer, count * 2);
+        init_mix_buffer(MixRearBuffer, count * 2);
     nchused = nchmixed = 0;
     if (CSoundFile::_multi_out_raw) {
         memset(MultiSoundBuffer, 0, sizeof(MultiSoundBuffer));
@@ -1431,7 +1432,7 @@ unsigned int CSoundFile::CreateStereoMix(int count)
             pChannel->nPos = 0;
             pChannel->nPosLo = 0;
             pChannel->nRampLength = 0;
-            EndChannelOfs(pChannel, pbuffer, nsamples);
+            end_channel_ofs(pChannel, pbuffer, nsamples);
             *pOfsR += pChannel->nROfs;
             *pOfsL += pChannel->nLOfs;
             pChannel->nROfs = pChannel->nLOfs = 0;
@@ -1564,191 +1565,9 @@ void CSoundFile::FloatToMonoMix(const float *pIn, int *pOut, unsigned int nCount
         pIn++;
     }
 }
-
-
-/* XXX [ben] May 3rd, 2009: mins/max were LONG and are now int
- */ 
-
-// Clip and convert to 8 bit
-//---GCCFIX: Asm replaced with C function
-// The C version was written by Rani Assaf <rani@magic.metawire.com>, I believe
-unsigned int Convert32To8(void* lp8, int *pBuffer, unsigned int lSampleCount, int mins[2], int maxs[2])
-{
-    unsigned char *p = (unsigned char *) lp8;
-    for (unsigned int i = 0; i < lSampleCount; i++) {
-        int n = pBuffer[i];
-        if (n < MIXING_CLIPMIN)
-            n = MIXING_CLIPMIN;
-        else if (n > MIXING_CLIPMAX)
-            n = MIXING_CLIPMAX;
-        if (n < mins[i & 1])
-            mins[i & 1] = n;
-        else if (n > maxs[i & 1])
-            maxs[i & 1] = n;
-        p[i] = (n >> (24 - MIXING_ATTENUATION)) ^ 0x80;    // 8-bit unsigned
-    }
-    return lSampleCount;
-}
-
-
-//---GCCFIX: Asm replaced with C function
-// The C version was written by Rani Assaf <rani@magic.metawire.com>, I believe
-unsigned int Convert32To16(void* lp16, int *pBuffer, unsigned int lSampleCount, int mins[2], int maxs[2])
-{
-    signed short *p = (signed short *) lp16;
-    for (unsigned int i = 0; i < lSampleCount; i++) {
-        int n = pBuffer[i];
-        if (n < MIXING_CLIPMIN)
-            n = MIXING_CLIPMIN;
-        else if (n > MIXING_CLIPMAX)
-            n = MIXING_CLIPMAX;
-        if (n < mins[i & 1])
-            mins[i & 1] = n;
-        else if (n > maxs[i & 1])
-            maxs[i & 1] = n;
-        p[i] = n >> (16 - MIXING_ATTENUATION);    // 16-bit signed
-    }
-    return lSampleCount * 2;
-}
-
-
-//---GCCFIX: Asm replaced with C function
-// 24-bit might not work...
-unsigned int Convert32To24(void* lp24, int *pBuffer, unsigned int lSampleCount, int mins[2], int maxs[2])
-{
-    /* the inventor of 24bit anything should be shot */
-    unsigned char *p = (unsigned char *) lp24;
-    for (unsigned int i = 0; i < lSampleCount; i++) {
-        int n = pBuffer[i];
-        if (n < MIXING_CLIPMIN)
-            n = MIXING_CLIPMIN;
-        else if (n > MIXING_CLIPMAX)
-            n = MIXING_CLIPMAX;
-        if (n < mins[i & 1])
-            mins[i & 1] = n;
-        else if (n > maxs[i & 1])
-            maxs[i & 1] = n;
-        n = n >> (8 - MIXING_ATTENUATION);    // 24-bit signed
-        /* err, assume same endian */
-        memcpy(p, &n, 3);
-        p += 3;
-    }
-
-    return lSampleCount * 2;
-}
-
-
-//---GCCFIX: Asm replaced with C function
-// 32-bit might not work...
-unsigned int Convert32To32(void* ptr, int *buffer, unsigned int samples, int mins[2], int maxs[2])
-{
-    signed int *p = (signed int *) ptr;
-
-    for (unsigned int i = 0; i < samples; i++) {
-        int n = buffer[i];
-
-        if (n < MIXING_CLIPMIN)
-            n = MIXING_CLIPMIN;
-        else if (n > MIXING_CLIPMAX)
-            n = MIXING_CLIPMAX;
-
-        if (n < mins[i & 1])
-            mins[i & 1] = n;
-        else if (n > maxs[i & 1])
-            maxs[i & 1] = n;
-
-        // 32-bit signed
-        p[i] = (n >> MIXING_ATTENUATION);
-    }
-
-    return samples * 2;
-}
-
-
-//---GCCFIX: Asm replaced with C function
-// Will fill in later.
-void InitMixBuffer(int *buffer, unsigned int samples)
-{
-    memset(buffer, 0, samples * sizeof(int));
-}
-
-
-void interleave_front_rear(int *front, int *rear, unsigned int samples)
-{
-    for (unsigned int i = 0; i < samples; i++) {
-        rear[i]  = front[(i * 2) + 1];
-        front[i] = front[i * 2];
-    }
-}
-
-
-void mono_from_stereo(int *mix_buf, unsigned int samples)
-{
-    for (unsigned int j, i = 0; i < samples; i++) {
-        j = i << 1;
-        mix_buf[i] = (mix_buf[j] + mix_buf[j + 1]) >> 1;
-    }
-}
-
-
-//---GCCFIX: Asm replaced with C function
-#define OFSDECAYSHIFT    8
-#define OFSDECAYMASK     0xFF
-
-// XXX [ben] profs/plofs were void*
-void stereo_fill(int *buffer, unsigned int samples, int* profs, int *plofs)
-{
-    int rofs = *profs;
-    int lofs = *plofs;
-
-    if (!rofs && !lofs) {
-        InitMixBuffer(buffer, samples * 2);
-        return;
-    }
-
-    for (unsigned int i = 0; i < samples; i++) {
-        int x_r = (rofs + (((-rofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
-        int x_l = (lofs + (((-lofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
-
-        rofs -= x_r;
-        lofs -= x_l;
-        buffer[i * 2 ]    = x_r;
-        buffer[i * 2 + 1] = x_l;
-    }
-
-    *profs = rofs;
-    *plofs = lofs;
-}
-
-
-// ---GCCFIX: Asm replaced with C function
-// Will fill in later.
-void EndChannelOfs(MODCHANNEL * pChannel, int *buffer, unsigned int samples)
-{
-    int rofs = pChannel->nROfs;
-    int lofs = pChannel->nLOfs;
-
-    if (!rofs && !lofs)
-        return;
-
-    for (unsigned int i = 0; i < samples; i++) {
-        int x_r = (rofs + (((-rofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
-        int x_l = (lofs + (((-lofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
-
-        rofs -= x_r;
-        lofs -= x_l;
-        buffer[i * 2]     += x_r;
-        buffer[i * 2 + 1] += x_l;
-    }
-
-    pChannel->nROfs = rofs;
-    pChannel->nLOfs = lofs;
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////
+// ----------------------------------------------------------------------------
 // Automatic Gain Control
-
+// ----------------------------------------------------------------------------
 #ifndef NO_AGC
 
 // Limiter
@@ -1790,4 +1609,6 @@ void CSoundFile::ResetAGC()
 }
 
 #endif // NO_AGC
+
+
 
