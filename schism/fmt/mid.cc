@@ -360,7 +360,6 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					if (!nt) nt = trk[j].old_tempo;
 					trk[j].old_tempo = nt;
 					break;
-				case CMD_MODCMDEX:
 				case CMD_S3MCMDEX:
 					if ((nb[j].parameter & 0xF0) == 0xe0) {
 						pad_all(trk,(nb[j].parameter & 15),
@@ -460,7 +459,6 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					}
 					break;
 
-				case CMD_MODCMDEX:
 				case CMD_S3MCMDEX:
 					switch (j&0xf0) {
 					case 0xc0:

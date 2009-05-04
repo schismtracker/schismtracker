@@ -144,7 +144,6 @@ typedef const BYTE * LPCBYTE;
 #define CMD_SPEED                       16
 #define CMD_TEMPO                       17
 #define CMD_TREMOR                      18
-#define CMD_MODCMDEX			19
 #define CMD_S3MCMDEX			20
 #define CMD_CHANNELVOLUME		21
 #define CMD_CHANNELVOLSLIDE		22

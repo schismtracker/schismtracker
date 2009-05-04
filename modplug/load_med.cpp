@@ -332,37 +332,37 @@ static void MedConvert(MODCOMMAND *p, const MMD0SONGHEADER *pmsh)
 		{
 		// F.F1: Retrig 2x
 		case 0xF1:
-			command = CMD_MODCMDEX;
-			param = 0x93;
+			command = CMD_RETRIG;
+			param = 0x03;
 			break;
 		// F.F2: Note Delay 2x
 		case 0xF2:
-			command = CMD_MODCMDEX;
+			command = CMD_S3MCMDEX;
 			param = 0xD3;
 			break;
 		// F.F3: Retrig 3x
 		case 0xF3:
-			command = CMD_MODCMDEX;
-			param = 0x92;
+			command = CMD_RETRIG;
+			param = 0x02;
 			break;
 		// F.F4: Note Delay 1/3
 		case 0xF4:
-			command = CMD_MODCMDEX;
+			command = CMD_S3MCMDEX;
 			param = 0xD2;
 			break;
 		// F.F5: Note Delay 2/3
 		case 0xF5:
-			command = CMD_MODCMDEX;
+			command = CMD_S3MCMDEX;
 			param = 0xD4;
 			break;
 		// F.F8: Filter Off
 		case 0xF8:
-			command = CMD_MODCMDEX;
+			command = CMD_S3MCMDEX;
 			param = 0x00;
 			break;
 		// F.F9: Filter On
 		case 0xF9:
-			command = CMD_MODCMDEX;
+			command = CMD_S3MCMDEX;
 			param = 0x01;
 			break;
 		// F.FD: Very fast tone-portamento
@@ -377,7 +377,7 @@ static void MedConvert(MODCOMMAND *p, const MMD0SONGHEADER *pmsh)
 			break;
 		// F.FF: Note Cut
 		case 0xFF:
-			command = CMD_MODCMDEX;
+			command = CMD_S3MCMDEX;
 			param = 0xC0;
 			break;
 		default:
@@ -389,15 +389,15 @@ static void MedConvert(MODCOMMAND *p, const MMD0SONGHEADER *pmsh)
 		break;
 	// 11.0x: Fine Slide Up
 	case 0x11:
-		command = CMD_MODCMDEX;
+		command = CMD_PORTAMENTOUP;
 		if (param > 0x0F) param = 0x0F;
-		param |= 0x10;
+		param |= 0xF0;
 		break;
 	// 12.0x: Fine Slide Down
 	case 0x12:
-		command = CMD_MODCMDEX;
+		command = CMD_PORTAMENTODOWN;
 		if (param > 0x0F) param = 0x0F;
-		param |= 0x20;
+		param |= 0xF0;
 		break;
 	// 14.xx: Vibrato
 	case 0x14:
@@ -405,19 +405,19 @@ static void MedConvert(MODCOMMAND *p, const MMD0SONGHEADER *pmsh)
 		break;
 	// 15.xx: FineTune
 	case 0x15:
-		command = CMD_MODCMDEX;
+		command = CMD_S3MCMDEX;
 		param &= 0x0F;
-		param |= 0x50;
+		param |= 0x20;
 		break;
 	// 16.xx: Pattern Loop
 	case 0x16:
-		command = CMD_MODCMDEX;
+		command = CMD_S3MCMDEX;
 		if (param > 0x0F) param = 0x0F;
-		param |= 0x60;
+		param |= 0xB0;
 		break;
 	// 18.xx: Note Cut
 	case 0x18:
-		command = CMD_MODCMDEX;
+		command = CMD_S3MCMDEX;
 		if (param > 0x0F) param = 0x0F;
 		param |= 0xC0;
 		break;
@@ -427,15 +427,15 @@ static void MedConvert(MODCOMMAND *p, const MMD0SONGHEADER *pmsh)
 		break;
 	// 1A.0x: Fine Volume Up
 	case 0x1A:
-		command = CMD_MODCMDEX;
-		if (param > 0x0F) param = 0x0F;
-		param |= 0xA0;
+		command = CMD_VOLUMESLIDE;
+		if (param > 0x0E) param = 0x0E;
+		param = (param << 4) | 0xf;
 		break;
 	// 1B.0x: Fine Volume Down
 	case 0x1B:
-		command = CMD_MODCMDEX;
-		if (param > 0x0F) param = 0x0F;
-		param |= 0xB0;
+		command = CMD_VOLUMESLIDE;
+		if (param > 0x0E) param = 0x0E;
+		param |= 0xF0;
 		break;
 	// 1D.xx: Pattern Break
 	case 0x1D:
@@ -443,7 +443,7 @@ static void MedConvert(MODCOMMAND *p, const MMD0SONGHEADER *pmsh)
 		break;
 	// 1E.0x: Pattern Delay
 	case 0x1E:
-		command = CMD_MODCMDEX;
+		command = CMD_S3MCMDEX;
 		if (param > 0x0F) param = 0x0F;
 		param |= 0xE0;
 		break;
@@ -454,7 +454,7 @@ static void MedConvert(MODCOMMAND *p, const MMD0SONGHEADER *pmsh)
 		break;
 	// 2E.xx: set panning
 	case 0x2E:
-		command = CMD_MODCMDEX;
+		command = CMD_S3MCMDEX;
 		param = ((param + 0x10) & 0xFF) >> 1;
 		if (param > 0x0F) param = 0x0F;
 		param |= 0x80;
