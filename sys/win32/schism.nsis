@@ -1,0 +1,75 @@
+Name "Schism Tracker"
+Caption 'Schism Tracker'
+OutFile 'install.exe'
+InstallDir "$PROGRAMFILES\Schism Tracker"
+LicenseData 'COPYING.txt'
+LicenseBkColor 0xFFFFFF
+ShowInstDetails show
+XpStyle on
+
+Page License
+Page Directory
+Page InstFiles
+
+UninstPage uninstConfirm
+UninstPage instfiles
+
+AutoCloseWindow false
+
+Section
+  SetOutPath $INSTDIR
+  File "schismtracker.exe"
+  File "schism.ico"
+  File "SDL.dll"
+  File "COPYING.txt"
+  File "README.txt"
+  File "NEWS.txt"
+  File "ChangeLog.txt"
+  WriteUninstaller "uninstall.exe"
+
+  WriteRegStr HKCR ".it" "" "Schism Tracker"
+  WriteRegStr HKCR ".s3m" "" "Schism Tracker"
+  WriteRegStr HKCR ".mod" "" "Schism Tracker"
+  WriteRegStr HKCR ".669" "" "Schism Tracker"
+  WriteRegStr HKCR ".amf" "" "Schism Tracker"
+  WriteRegStr HKCR ".ams" "" "Schism Tracker"
+  WriteRegStr HKCR ".dbm" "" "Schism Tracker"
+  WriteRegStr HKCR ".dmf" "" "Schism Tracker"
+  WriteRegStr HKCR ".dsm" "" "Schism Tracker"
+  WriteRegStr HKCR ".far" "" "Schism Tracker"
+  WriteRegStr HKCR ".mdl" "" "Schism Tracker"
+  WriteRegStr HKCR ".med" "" "Schism Tracker"
+  WriteRegStr HKCR ".mt2" "" "Schism Tracker"
+  WriteRegStr HKCR ".mtm" "" "Schism Tracker"
+  WriteRegStr HKCR ".okt" "" "Schism Tracker"
+  WriteRegStr HKCR ".psm" "" "Schism Tracker"
+  WriteRegStr HKCR ".ptm" "" "Schism Tracker"
+  WriteRegStr HKCR ".stm" "" "Schism Tracker"
+  WriteRegStr HKCR ".ult" "" "Schism Tracker"
+  WriteRegStr HKCR ".umx" "" "Schism Tracker"
+  WriteRegStr HKCR ".xm" "" "Schism Tracker"
+
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Schism Tracker" "DisplayName" "Schism Tracker (remove only)"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Schism Tracker" "UninstallString" '"$INSTDIR\uninstall.exe"'
+  WriteRegStr HKCR "Schism Tracker\Shell\open\command\" "" '"$INSTDIR\schismtracker.exe" "%1"'
+  WriteRegStr HKCR "Schism Tracker\DefaultIcon" "" "$INSTDIR\schism.ico"
+
+  CreateDirectory "$SMPROGRAMS\Schism Tracker"
+  CreateShortCut "$SMPROGRAMS\Schism Tracker\Schism Tracker.lnk" "$INSTDIR\schismtracker.exe" "" "$INSTDIR\schism.ico"
+  CreateShortCut "$SMPROGRAMS\Schism Tracker\Schism Font Editor.lnk" "$INSTDIR\schismtracker.exe" "--font-editor" "$INSTDIR\schism.ico"
+  CreateShortCut "$SMPROGRAMS\Schism Tracker\Uninstall Schism Tracker.lnk" "$INSTDIR\uninstall.exe"
+SectionEnd
+
+
+Section "Uninstall"
+  Delete "$INSTDIR\schismtracker.exe"
+  Delete "$INSTDIR\SDL.dll"
+  Delete "$INSTDIR\schism.ico"
+  Delete "$INSTDIR\COPYING.txt"
+  Delete "$INSTDIR\README.txt"
+  Delete "$INSTDIR\NEWS.txt"
+  Delete "$INSTDIR\ChangeLog.txt"
+  Delete "$SMPROGRAMS\Schism Tracker\Schism Tracker.lnk"
+  Delete "$SMPROGRAMS\Schism Tracker\Font Editor.lnk"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Schism Tracker"
+SectionEnd
