@@ -61,29 +61,29 @@
 #pragma pack(push, 1)
 typedef struct
 {
-    unsigned int id_RIFF;          // "RIFF"
-    unsigned int filesize;         // file length-8
+    unsigned int id_RIFF;           // "RIFF"
+    unsigned int filesize;          // file length-8
     unsigned int id_WAVE;
 } WAVEFILEHEADER;
 
 
 typedef struct
 {
-    unsigned int id_fmt;           // "fmt "
-    unsigned int hdrlen;           // 16
-    unsigned short format;            // 1
-    unsigned short channels;          // 1:mono, 2:stereo
-    unsigned int freqHz;           // sampling freq
-    unsigned int bytessec;         // bytes/sec=freqHz*samplesize
-    unsigned short samplesize;        // sizeof(sample)
-    unsigned short bitspersample;     // bits per sample (8/16)
+    unsigned int id_fmt;            // "fmt "
+    unsigned int hdrlen;            // 16
+    unsigned short format;          // 1
+    unsigned short channels;        // 1:mono, 2:stereo
+    unsigned int freqHz;            // sampling freq
+    unsigned int bytessec;          // bytes/sec=freqHz*samplesize
+    unsigned short samplesize;      // sizeof(sample)
+    unsigned short bitspersample;   // bits per sample (8/16)
 } WAVEFORMATHEADER;
 
 
 typedef struct
 {
-    unsigned int id_data;          // "data"
-    unsigned int length;           // length of data
+    unsigned int id_data;           // "data"
+    unsigned int length;            // length of data
 } WAVEDATAHEADER;
 
 #pragma pack(pop)
@@ -125,7 +125,7 @@ static int wav_read_data(const byte *data, size_t len, size_t *offset, WAVEDATAH
 {
     size_t pos = *offset;
 
-    if (!data || !dat || !offset || len < *offset)
+    if (!data || !dat || !offset || len < (pos + sizeof(WAVEDATAHEADER)))
         return false;
 
     while (true) {
@@ -263,64 +263,62 @@ int fmt_wav_read_info(dmoz_file_t *file, const byte *data, size_t length)
 }
 
 
-/* ... wavewriter :) */
+// wavewriter
+//
+// Filesize and data length are updated by _wavout_tail
 static void _wavout_header(diskwriter_driver_t *x)
 {
-        unsigned char le[4];
-        unsigned int sps;
-        x->o(x, (const unsigned char *)"RIFF\1\1\1\1WAVEfmt \x10\0\0\0\1\0", 22);
-        le[0] = x->channels;
-        le[1] = le[2] = le[3] = 0;
-        x->o(x, le, 2);
-        le[0] = x->rate & 255;
-        le[1] = (x->rate >> 8) & 255;
-        le[2] = (x->rate >> 16) & 255;
-        le[3] = (x->rate >> 24) & 255;
-        x->o(x, le, 4);
-        sps = x->rate * x->channels * (x->bits / 8);
-        le[0] = sps & 255;
-        le[1] = (sps >> 8) & 255;
-        le[2] = (sps >> 16) & 255;
-        le[3] = (sps >> 24) & 255;
-        x->o(x, le, 4);
-        sps = (x->bits / 8);
-        le[0] = sps & 255;
-        le[1] = (sps >> 8) & 255;
-        le[2] = le[3] = 0;
-        x->o(x, le, 2);
-        le[0] = x->bits;
-        le[1] = 0;
-        x->o(x, le, 2);
-        x->o(x, (const unsigned char *)"data\1\1\1\1", 8);
+        WAVEFILEHEADER hdr;
+        WAVEFORMATHEADER fmt;
+        WAVEDATAHEADER dat;
+
+        hdr.id_RIFF  = bswapLE32(IFFID_RIFF);
+        hdr.filesize = 0xFFFFFFFF;
+        hdr.id_WAVE  = bswapLE32(IFFID_WAVE);
+        x->o(x, (const byte*)&hdr, sizeof(hdr));
+
+        fmt.id_fmt        = bswapLE32(IFFID_fmt);
+        fmt.hdrlen        = bswapLE32(sizeof(WAVEFORMATHEADER) - 2 * sizeof(unsigned int));
+        fmt.format        = bswapLE16(WAVE_FORMAT_PCM);
+        fmt.channels      = bswapLE16(x->channels);
+        fmt.freqHz        = bswapLE32(x->rate);
+        fmt.bytessec      = bswapLE32(x->rate * x->channels * (x->bits / 8));
+        fmt.samplesize    = bswapLE16(x->bits / 8);
+        fmt.bitspersample = bswapLE16(x->bits);
+
+        x->o(x, (const byte*)&fmt, sizeof(fmt));
+
+        dat.id_data = bswapLE32(IFFID_data);
+        dat.length  = 0xFFFFFFFF;
+        x->o(x, (const byte*)&dat, sizeof(dat));
 }
 
 
 static void _wavout_tail(diskwriter_driver_t *x)
 {
         off_t tt;
-        unsigned char le[4];
+        unsigned int tmp;
 
         tt = x->pos;
-        x->l(x, 4);
-        tt -= 8;
-        le[0] = tt & 255;
-        le[1] = (tt >> 8) & 255;
-        le[2] = (tt >> 16) & 255;
-        le[3] = (tt >> 24) & 255;
-        x->o(x, le, 4);
-        x->l(x, 40);
-        tt -= 36;
-        le[0] = tt & 255;
-        le[1] = (tt >> 8) & 255;
-        le[2] = (tt >> 16) & 255;
-        le[3] = (tt >> 24) & 255;
-        x->o(x, le, 4);
+        tt -= sizeof(WAVEDATAHEADER);
+
+        x->l(x, sizeof(unsigned int));
+        tmp = bswapLE32(tt);
+        x->o(x, (const byte *) &tmp, sizeof(unsigned int));
+
+        tt -= sizeof(unsigned int) + sizeof(WAVEFORMATHEADER) + sizeof(WAVEDATAHEADER);
+        x->l(x, sizeof(WAVEFILEHEADER) + sizeof(WAVEFORMATHEADER) + sizeof(unsigned int));
+        tmp = bswapLE32(tt);
+        x->o(x, (const byte *) &tmp, sizeof(unsigned int));
 }
-static void _wavout_data(diskwriter_driver_t *x,const unsigned char *buf,
-                                unsigned int len)
+
+
+static void _wavout_data(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len)
 {
+        // endianess?
         x->o(x, buf, len);
 }
+
 
 diskwriter_driver_t wavewriter = {
     "WAV", "wav", 1,
@@ -383,5 +381,4 @@ int fmt_wav_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *
         _wavout_tail(fp);
         return true;
 }
-
 
