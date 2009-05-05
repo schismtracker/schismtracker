@@ -618,6 +618,7 @@ BOOL CSoundFile::ReadMed(const BYTE *lpStream, DWORD dwMemLength)
 		pins->nGlobalVol = 64;
 		if (pins->nVolume > 256) pins->nVolume = 256;
 		//pins->RelativeTone = -12 * pmsh->sample[iSHdr].strans; // FIXME
+		pins->nC5Speed = 8363;
 		pins->nPan = 128;
 		if (pins->nLoopEnd) pins->uFlags |= CHN_LOOP;
 	}

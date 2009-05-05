@@ -119,6 +119,8 @@ static const fmt_read_info_func read_info_funcs[] = {
 	READ_INFO(sid),  /* 6581 0wnz j00! */
 #endif
 	READ_INFO(mdl),
+	READ_INFO(med),
+	READ_INFO(okt),
 
 	READ_INFO(xi),
 
