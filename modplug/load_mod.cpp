@@ -39,6 +39,7 @@ void CSoundFile::ConvertModCommand(MODCOMMAND *m) const
 	case 0x0C:	command = CMD_VOLUME; break;
 	case 0x0D:	command = CMD_PATTERNBREAK; param = ((param >> 4) * 10) + (param & 0x0F); break;
 	case 0x0E:
+		command = CMD_S3MCMDEX;
 		switch(param & 0xF0) {
 			case 0x10: command = CMD_PORTAMENTOUP; param |= 0xF0; break;
 			case 0x20: command = CMD_PORTAMENTODOWN; param |= 0xF0; break;
