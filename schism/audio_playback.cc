@@ -843,7 +843,7 @@ void song_single_step(int patno, int row)
 
 enum song_mode song_get_mode()
 {
-        if (mp->m_dwSongFlags & SONG_ENDREACHED)
+        if ((mp->m_dwSongFlags & (SONG_ENDREACHED | SONG_PAUSED)) == (SONG_ENDREACHED | SONG_PAUSED))
                 return MODE_STOPPED;
 	if (mp->m_dwSongFlags & (SONG_STEP | SONG_PAUSED))
 		return MODE_SINGLE_STEP;
