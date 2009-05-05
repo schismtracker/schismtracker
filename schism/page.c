@@ -774,7 +774,9 @@ static int handle_key_global(struct key_event * k)
                 return 1;
         case SDLK_F8:
 		if (status.flags & PLAIN_TEXTEDIT) return 0;
-                if (NO_MODIFIER(k->mod)) {
+		if (k->mod & KMOD_SHIFT) {
+			if (!k->state) song_pause();
+		} else if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
                         if (!k->state) song_stop();
                         status.flags |= NEED_UPDATE;

@@ -556,6 +556,17 @@ void song_start()
         song_unlock_audio();
 	main_song_mode_changed_cb();
 }
+
+void song_pause()
+{
+	song_lock_audio();
+	// Highly unintuitive, but SONG_PAUSED has nothing to do with pause.
+	if (!(mp->m_dwSongFlags & SONG_PAUSED))
+		mp->m_dwSongFlags ^= SONG_ENDREACHED;
+	song_unlock_audio();
+	main_song_mode_changed_cb();
+}
+
 void song_stop()
 {
 	song_lock_audio();
@@ -630,8 +641,8 @@ void song_stop_unlocked(int quitting)
 	playback_tracing = midi_playback_tracing;
 
         song_reset_play_state();
-        // Modplug doesn't actually have a "stop" mode, but if this is set, mp->Read just returns.
-        mp->m_dwSongFlags |= SONG_ENDREACHED;
+        // Modplug doesn't actually have a "stop" mode, but if SONG_ENDREACHED is set, mp->Read just returns.
+        mp->m_dwSongFlags |= SONG_PAUSED | SONG_ENDREACHED;
 	
 	mp->gnVULeft = 0;
 	mp->gnVURight = 0;

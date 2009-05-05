@@ -545,6 +545,7 @@ int song_keyup(int s,int ins, int n, int c, int *mm);
 
 void song_start(void);
 void song_start_once(void);
+void song_pause(void);
 void song_stop(void);
 void song_stop_unlocked(int quitting);
 void song_loop_pattern(int pattern, int row);
