@@ -83,6 +83,7 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 		Ins[nins].nVolume = 256;
 		Ins[nins].nGlobalVol = 64;
 		Ins[nins].nPan = 128;
+		Ins[nins].nC5Speed = 8363;
 	}
 	// Song Message
 	m_lpszSongComments = new char[114];
