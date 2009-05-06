@@ -9,6 +9,7 @@
 
 #include "snd_fm.h"
 #include "snd_gm.h"
+#include "snd_flt.h"
 
 #ifdef MSC_VER
 #pragma warning(disable:4244)
@@ -598,7 +599,9 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 		{
 			pChn->nVolSwing = pChn->nPanSwing = 0;
 		}
-		if ((pChn->nCutOff < 0x7F) && (bFlt)) SetupChannelFilter(pChn, TRUE);
+
+		if ((pChn->nCutOff < 0x7F) && (bFlt))
+			setup_channel_filter(pChn, TRUE, 256, gdwMixingFreq);
 	}
 	// Special case for MPT
 	if (bManual) pChn->dwFlags &= ~CHN_MUTE;
@@ -1848,12 +1851,12 @@ void CSoundFile::MidiSend(const unsigned char *data, unsigned int len, UINT nChn
 				if ((pChn->nVolume > 0) || (oldcutoff < 0x10)
 				 || (!(pChn->dwFlags & CHN_FILTER))
 				|| (!(pChn->nLeftVol|pChn->nRightVol)))
-					SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER)
-							? FALSE : TRUE);
+					setup_channel_filter(pChn, (pChn->dwFlags & CHN_FILTER)
+							? FALSE : TRUE, 256, gdwMixingFreq);
 				break;
 			case 0x01: /* set resonance */
 				if (data[3] < 0x80) pChn->nResonance = data[3];
-				SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE);
+				setup_channel_filter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE, 256, gdwMixingFreq);
 				break;
 			};
 		}

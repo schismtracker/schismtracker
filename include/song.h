@@ -60,7 +60,7 @@ typedef struct _song_sample {
         unsigned int vib_depth;
         unsigned int vib_speed;
         char filename[22];
-	int played;
+        int played;
         unsigned char AdlibBytes[12];
 } song_sample;
 
