@@ -63,6 +63,8 @@ READ_INFO(s3m);
 READ_INFO(stm);
 READ_INFO(ult);
 READ_INFO(xm);
+READ_INFO(okt);
+READ_INFO(med);
 
 #ifdef USE_NON_TRACKED_TYPES
 READ_INFO(sid);
