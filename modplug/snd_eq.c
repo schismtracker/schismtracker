@@ -96,6 +96,7 @@ void eq_mono(int *buffer, unsigned int count)
 }
 
 
+// XXX: I rolled the two loops into one. Make sure this works.
 void eq_stereo(int *buffer, unsigned int count)
 {
         stereo_mix_to_float(buffer, MixFloatBuffer, MixFloatBuffer + MIXBUFFERSIZE, count);
@@ -107,7 +108,7 @@ void eq_stereo(int *buffer, unsigned int count)
                 if (eq[b].enabled && eq[b].gain != 1.0f)
                         eq_filter(&eq[b], MixFloatBuffer, count);
 
-                // Right and
+                // Right band
                 if (eq[br].enabled && eq[br].gain != 1.0f)
                         eq_filter(&eq[br], MixFloatBuffer + MIXBUFFERSIZE, count);
         }
