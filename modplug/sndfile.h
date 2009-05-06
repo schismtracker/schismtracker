@@ -709,10 +709,10 @@ public:
 	
 
 	// wee...
-        static void InitializeEQ(BOOL bReset=TRUE);
-        static void SetEQGains(const UINT *pGains, UINT nBands, const UINT *pFreqs=NULL, BOOL bReset=FALSE);    // 0=-12dB, 32=+12dB
-        /*static*/ void EQStereo(int *pbuffer, UINT nCount);
-        /*static*/ void EQMono(int *pbuffer, UINT nCount);
+        //static void InitializeEQ(BOOL bReset=TRUE);
+        //static void SetEQGains(const UINT *pGains, UINT nBands, const UINT *pFreqs=NULL, BOOL bReset=FALSE);    // 0=-12dB, 32=+12dB
+        ///*static*/ void EQStereo(int *pbuffer, UINT nCount);
+        ///*static*/ void EQMono(int *pbuffer, UINT nCount);
 
 
 	//GCCFIX -- added these functions back in!

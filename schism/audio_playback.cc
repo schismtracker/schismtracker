@@ -23,7 +23,8 @@
 #include "it.h"
 #include "page.h"
 #include "mplink.h"
-#include "modplug/snd_flt.h" // setup_channel_filter
+#include "modplug/snd_flt.h"
+#include "modplug/snd_eq.h"
 #include "slurp.h"
 #include "config-parser.h"
 
@@ -1663,7 +1664,7 @@ void song_init_eq(int do_reset)
 			* (CSoundFile::gdwMixingFreq / 128) / 1024);
 	}
 
-	mp->SetEQGains(pg, 4, pf, do_reset ? TRUE : FALSE);
+	set_eq_gains(pg, 4, pf, do_reset ? TRUE : FALSE, mp->gdwMixingFreq);
 }
 
 

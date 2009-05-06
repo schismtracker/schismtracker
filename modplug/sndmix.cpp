@@ -10,6 +10,7 @@
 #include "snd_gm.h"
 #include "cmixer.h"
 #include "snd_flt.h"
+#include "snd_eq.h"
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
@@ -140,7 +141,7 @@ BOOL CSoundFile::InitPlayer(BOOL bReset)
 	}
 	gbInitPlugins = (bReset) ? 3 : 1;
 	InitializeDSP(bReset);
-	InitializeEQ(bReset);
+	initialize_eq(bReset, gdwMixingFreq);
 	
 	Fmdrv_Init(gdwMixingFreq);
 	OPL_Reset();
@@ -267,9 +268,9 @@ UINT CSoundFile::Read(LPVOID lpDestBuffer, UINT cbBuffer)
 		if (gdwSoundSetup & SNDMIX_EQ)
 		{
 			if (gnChannels >= 2)
-				EQStereo(MixSoundBuffer, lCount);
+				eq_stereo(MixSoundBuffer, lCount);
 			else
-				EQMono(MixSoundBuffer, lCount);
+				eq_mono(MixSoundBuffer, lCount);
 		}
 
 
