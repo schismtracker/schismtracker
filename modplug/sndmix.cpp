@@ -9,6 +9,7 @@
 #include "snd_fm.h"
 #include "snd_gm.h"
 #include "cmixer.h"
+#include "snd_flt.h"
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146	// 1.46ms = 64 samples at 44.1kHz
@@ -1046,7 +1047,7 @@ All the dead code should be gone now. :)
 			// Filter Envelope: controls cutoff frequency
 			if (pChn && pChn->pHeader && pChn->pHeader->dwFlags & ENV_FILTER)
 			{
-				SetupChannelFilter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE, envpitch);
+				setup_channel_filter(pChn, (pChn->dwFlags & CHN_FILTER) ? FALSE : TRUE, envpitch, gdwMixingFreq);
 			}
 
 			pChn->sample_freq = freq;
