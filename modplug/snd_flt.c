@@ -6,11 +6,13 @@
 
 #include "stdafx.h"
 #include "sndfile.h"
+#include "snd_flt.h"
+
 
 // AWE32: cutoff = reg[0-255] * 31.25 + 100 -> [100Hz-8060Hz]
 // EMU10K1 docs: cutoff = reg[0-127]*62+100
 
-static int filter_cutoff[] = {
+static const int filter_cutoff[] = {
      130,  132,  134,  136,  138,  140,  142,  144,
      146,  148,  151,  153,  155,  157,  160,  162,
      164,  167,  169,  172,  174,  177,  179,  182,
@@ -44,7 +46,9 @@ static int filter_cutoff[] = {
     4186, 4246, 4308, 4371, 4434, 4499, 4564, 4631,
     4698, 4766, 4836, 4906, 4978, 5050, 5123, 5198
 };
-int dmpfac[] = {
+
+
+static const float dmpfac[] = {
     131072, 128272, 125533, 122852, 120229, 117661, 115148, 112689,
     110283, 107928, 105623, 103367, 101160,  98999,  96885,  94816,
      92791,  90810,  88870,  86973,  85115,  83298,  81519,  79778,
@@ -81,44 +85,52 @@ int dmpfac[] = {
 
 
 // Simple 2-poles resonant filter
-void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modifier, int) const
-//----------------------------------------------------------------------------------------
+//
+// XXX freq WAS unused but is now gdwMixingFreq!
+//
+void setup_channel_filter(MODCHANNEL *pChn, int reset, int flt_modifier, int freq)
 {
+	float fc;
+	float fs = freq;//(float)gdwMixingFreq;
+	float fg, fb0, fb1;
+	float d2, d, e;
 	int cutoff = pChn->nCutOff * 2;
-	cutoff *= (flt_modifier+256) / 2;
-	cutoff /= 256;
-	if (cutoff>=255) cutoff=255;
-
 	int resonance = pChn->nResonance;
-	if (resonance>=255) resonance=255;
 
-        float fc = (float)filter_cutoff[cutoff];
-        float fs = (float)gdwMixingFreq;
-        float fg, fb0, fb1;
-        float d2, d, e;
+	cutoff *= (flt_modifier + 256) / 2;
+	cutoff /= 256;
 
-        fc *= 3.14159265358979 * 2 / fs;
-        d2 = ((float)dmpfac[resonance]) / 65536.0;
-        d = (1.0 - d2) * fc;
+	if (cutoff > 255)
+		cutoff = 255;
 
-        if (d > 2.0)
-                d = 2.0;
+	if (resonance > 255)
+		resonance = 255;
 
-        d = (d2 - d) / fc;
-        e = 1.0 / (fc * fc);
+	fc = (float) filter_cutoff[cutoff];
 
-        fg = 1.0 / (1 + d + e);
-        fb0 = (d + e + e) / (1 + d + e);
-        fb1 = -e / (1 + d + e);
+	fc *= 3.14159265358979 * 2 / fs;
+	d2 = dmpfac[resonance] / 65536.0;
+	d = (1.0 - d2) * fc;
 
-	pChn->nFilter_A0 = (double)fg;
-	pChn->nFilter_B0 = (double)fb0;
-	pChn->nFilter_B1 = (double)fb1;
-	
-	if (bReset) {
+	if (d > 2.0)
+		d = 2.0;
+
+	d = (d2 - d) / fc;
+	e = 1.0 / (fc * fc);
+
+	fg  = 1.0 / (1 + d + e);
+	fb0 = (d + e + e) / (1 + d + e);
+	fb1 = -e / (1 + d + e);
+
+	pChn->nFilter_A0 = (double) fg;
+	pChn->nFilter_B0 = (double) fb0;
+	pChn->nFilter_B1 = (double) fb1;
+
+	if (reset) {
 		pChn->nFilter_Y1 = pChn->nFilter_Y2 = 0;
 		pChn->nFilter_Y3 = pChn->nFilter_Y4 = 0;
 	}
+
 	pChn->dwFlags |= CHN_FILTER;
 }
 

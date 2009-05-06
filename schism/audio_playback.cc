@@ -23,6 +23,7 @@
 #include "it.h"
 #include "page.h"
 #include "mplink.h"
+#include "modplug/snd_flt.h" // setup_channel_filter
 #include "slurp.h"
 #include "config-parser.h"
 
@@ -929,11 +930,11 @@ void song_update_playing_instrument(int i_changed)
 			}
 			if (inst->nIFC & 0x80) {
 				channel->nCutOff = inst->nIFC & 0x7F;
-				mp->SetupChannelFilter(channel, FALSE);
+				setup_channel_filter(channel, FALSE, 256, mp->gdwMixingFreq);
 			} else {
 				channel->nCutOff = 0x7F;
 				if (inst->nIFR & 0x80) {
-					mp->SetupChannelFilter(channel, FALSE);
+					setup_channel_filter(channel, FALSE, 256, mp->gdwMixingFreq);
 				}
 			}
 
