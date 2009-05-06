@@ -709,10 +709,10 @@ public:
 	
 
 	// wee...
-        static void InitializeEQ(BOOL bReset=TRUE);
-        static void SetEQGains(const UINT *pGains, UINT nBands, const UINT *pFreqs=NULL, BOOL bReset=FALSE);    // 0=-12dB, 32=+12dB
-        /*static*/ void EQStereo(int *pbuffer, UINT nCount);
-        /*static*/ void EQMono(int *pbuffer, UINT nCount);
+        //static void InitializeEQ(BOOL bReset=TRUE);
+        //static void SetEQGains(const UINT *pGains, UINT nBands, const UINT *pFreqs=NULL, BOOL bReset=FALSE);    // 0=-12dB, 32=+12dB
+        ///*static*/ void EQStereo(int *pbuffer, UINT nCount);
+        ///*static*/ void EQMono(int *pbuffer, UINT nCount);
 
 
 	//GCCFIX -- added these functions back in!
@@ -763,7 +763,7 @@ public:
 	void MidiSend(const unsigned char *data, unsigned int len, UINT nChn=0, int fake = 0);
 	void ProcessMidiMacro(UINT nChn, LPCSTR pszMidiMacro, UINT param=0,
 			UINT note=0, UINT velocity=0, UINT use_instr=0);
-	void SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modifier=256,int freq=0) const;
+	//void SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modifier=256,int freq=0) const;
 	// Low-Level effect processing
 	void DoFreqSlide(MODCHANNEL *pChn, LONG nFreqSlide);
 	// Global Effects
