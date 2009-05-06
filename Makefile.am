@@ -183,7 +183,7 @@ schismtracker_SOURCES = \
 	schism/fmt/s3m.c		\
 	schism/fmt/mod.c		\
 	schism/fmt/far.c		\
-	schism/fmt/wav.cc		\
+	schism/fmt/wav.c		\
 	schism/fmt/mid.cc		\
 	schism/fmt/its.cc		\
 	schism/fmt/psm.cc		\
@@ -258,7 +258,7 @@ schismtracker_SOURCES = \
 	modplug/load_ams.cpp		\
 	modplug/snd_fx.cpp		\
 	modplug/load_mod.cpp		\
-	modplug/snd_flt.cpp		\
+	modplug/snd_flt.c		\
 	modplug/load_wav.cpp		\
 	modplug/load_dsm.cpp		\
 	modplug/load_umx.cpp		\

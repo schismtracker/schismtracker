@@ -205,8 +205,8 @@ unsigned int clip_32_to_24(void *ptr, int *buffer, unsigned int samples, int *mi
             n = MIXING_CLIPMIN;
         else if (n > MIXING_CLIPMAX)
             n = MIXING_CLIPMAX;
-        if (n < mins[i & 1])
 
+        if (n < mins[i & 1])
             mins[i & 1] = n;
         else if (n > maxs[i & 1])
             maxs[i & 1] = n;

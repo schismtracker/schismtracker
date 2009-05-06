@@ -1,5 +1,6 @@
 syntax: glob
 
+*.swp
 *.orig
 *.rej
 *~
