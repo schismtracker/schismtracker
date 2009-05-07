@@ -2341,54 +2341,23 @@ BOOL CSoundFile::IsValidBackwardJump(UINT nStartOrder, UINT nStartRow, UINT nJum
 }
 
 
-//////////////////////////////////////////////////////
-// Note/Period/Frequency functions
+
+// here are some famous wrappers from the west side
+
+#include "snd_fx.h"
 
 UINT CSoundFile::GetNoteFromPeriod(UINT period) const
-//---------------------------------------------------
 {
-	if (!period) return 0;
-	for (UINT i=1; i<120; i++)
-	{
-		LONG n = GetPeriodFromNote(i, 0, 8363);
-		if ((n > 0) && (n <= (LONG)period)) return i;
-	}
-	return 120;
+	return get_note_from_period(period, m_dwSongFlags & SONG_LINEARSLIDES, m_nMinPeriod, m_nMaxPeriod);
 }
-
 
 UINT CSoundFile::GetPeriodFromNote(UINT note, int, UINT nC5Speed) const
-//-------------------------------------------------------------------------------
 {
-	LONG l;
-	if ((!note) || (note > 0xF0)) return 0;
-	note--;
-	if (m_dwSongFlags & SONG_LINEARSLIDES)
-	{
-		l = (FreqS3MTable[note % 12] << 5) >> (note / 12);
-	} else
-	{
-		if (!nC5Speed) nC5Speed = 1;
-		l = _muldiv(8363, (FreqS3MTable[note % 12] << 5), nC5Speed << (note / 12));
-	}
-	if (l < m_nMinPeriod) l = m_nMinPeriod;
-	if (l > m_nMaxPeriod) l = m_nMaxPeriod;
-	return l;
+	return get_period_from_note(note, nC5Speed, m_dwSongFlags & SONG_LINEARSLIDES, m_nMinPeriod, m_nMaxPeriod);
 }
-
 
 UINT CSoundFile::GetFreqFromPeriod(UINT period, UINT nC5Speed, int nPeriodFrac) const
-//-----------------------------------------------------------------------------------
 {
-	if (!period) return 0;
-	if (m_dwSongFlags & SONG_LINEARSLIDES)
-	{
-		if (!nC5Speed) nC5Speed = 1;
-		return _muldiv(nC5Speed, 1712L << 8, (period << 8)+nPeriodFrac);
-	} else
-	{
-		return _muldiv(8363, 1712L << 8, (period << 8)+nPeriodFrac);
-	}
+	return get_freq_from_period(period, nC5Speed, nPeriodFrac, m_dwSongFlags & SONG_LINEARSLIDES);
 }
-
 
