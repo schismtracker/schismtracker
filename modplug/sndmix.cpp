@@ -14,7 +14,7 @@
 
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN   146 // 1.46ms = 64 samples at 44.1kHz
-#define CLAMP(a,y,z) (a < y ? y : (a > z ? z : a))
+#define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
 
 // SNDMIX: These are global flags for playback control
 LONG CSoundFile::m_nStreamVolume = 0x8000;
@@ -929,12 +929,10 @@ static inline int rn_arpeggio(CSoundFile *csf, MODCHANNEL *chan, int period)
     switch (csf->m_nTickCount % 3) {
     case 1:
         return csf->GetPeriodFromNote(
-            csf->GetNoteFromPeriod(period) + (chan->nArpeggio >> 4),
-            0, chan->nC5Speed);
+            csf->GetNoteFromPeriod(period) + (chan->nArpeggio >> 4), 0, chan->nC5Speed);
     case 2:
         return csf->GetPeriodFromNote(
-            csf->GetNoteFromPeriod(period) + (chan->nArpeggio & 0x0F), 
-            0, chan->nC5Speed);
+            csf->GetNoteFromPeriod(period) + (chan->nArpeggio & 0x0F), 0, chan->nC5Speed);
     default:
         return period;
     }
@@ -949,7 +947,7 @@ static inline void rn_pitch_filter_envelope(MODCHANNEL *chan, int *nenvpitch, in
     int period = *nperiod;
     int envpitch = *nenvpitch;
 
-    for (unsigned int i=0; i<(unsigned int)(penv->PitchEnv.nNodes-1); i++) {
+    for (unsigned int i = 0; i < (unsigned int)(penv->PitchEnv.nNodes - 1); i++) {
         if (envpos <= penv->PitchEnv.Ticks[i]) {
             pt = i;
             break;
@@ -965,8 +963,8 @@ static inline void rn_pitch_filter_envelope(MODCHANNEL *chan, int *nenvpitch, in
     }
     else if (pt)
     {
-        envpitch = (((int)penv->PitchEnv.Values[pt-1]) - 32) * 8;
-        x1 = penv->PitchEnv.Ticks[pt-1];
+        envpitch = (((int)penv->PitchEnv.Values[pt - 1]) - 32) * 8;
+        x1 = penv->PitchEnv.Ticks[pt - 1];
     }
     else {
         envpitch = 0;
@@ -1089,6 +1087,152 @@ static inline void rn_increment_env_pos(MODCHANNEL *chan)
                 chan->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1];
         }
     }
+}
+
+
+static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, int nMasterVol)
+{
+    // Adjusting volumes
+    if (csf->gnChannels >= 2) {
+        int pan = ((int) chan->nRealPan) - 128;
+        pan *= (int) csf->m_nStereoSeparation;
+        pan /= 128;
+
+        if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) &&
+            chan->pHeader &&
+            chan->pHeader->nMidiChannelMask > 0)
+            GM_Pan(nChn, pan);
+
+        if (csf->m_dwSongFlags & SONG_NOSTEREO) {
+            pan = 128;
+        }
+        else {
+            pan += 128;
+            pan = CLAMP(pan, 0, 256);
+
+            if (csf->gdwSoundSetup & SNDMIX_REVERSESTEREO)
+                pan = 256 - pan;
+        }
+
+        int realvol = (chan->nRealVolume * nMasterVol) >> (8 - 1);
+
+        if (csf->gdwSoundSetup & SNDMIX_SOFTPANNING) {
+            if (pan < 128) {
+                chan->nNewLeftVol  = (realvol * pan) >> 8;
+                chan->nNewRightVol = (realvol * 128) >> 8;
+            }
+            else {
+                chan->nNewLeftVol  = (realvol * 128) >> 8;
+                chan->nNewRightVol = (realvol * (256 - pan)) >> 8;
+            }
+        }
+        else {
+            chan->nNewLeftVol  = (realvol * pan) >> 8;
+            chan->nNewRightVol = (realvol * (256 - pan)) >> 8;
+        }
+    }
+    else {
+        chan->nNewRightVol = (chan->nRealVolume * nMasterVol) >> 8;
+        chan->nNewLeftVol = chan->nNewRightVol;
+    }
+
+    // Clipping volumes
+    if (chan->nNewRightVol > 0xFFFF)
+        chan->nNewRightVol = 0xFFFF;
+
+    if (chan->nNewLeftVol  > 0xFFFF)
+        chan->nNewLeftVol  = 0xFFFF;
+
+    // Check IDO
+    if (csf->gdwSoundSetup & SNDMIX_NORESAMPLING) {
+        chan->dwFlags &= ~(CHN_HQSRC);
+        chan->dwFlags |= CHN_NOIDO;
+    }
+    else {
+        chan->dwFlags &= ~(CHN_NOIDO | CHN_HQSRC);
+
+        if (chan->nInc == 0x10000) {
+            chan->dwFlags |= CHN_NOIDO;
+        }
+        else {
+            if (!(csf->gdwSoundSetup & SNDMIX_HQRESAMPLER) &&
+                !(csf->gdwSoundSetup & SNDMIX_ULTRAHQSRCMODE)) {
+                if (chan->nInc >= 0xFF00)
+                    chan->dwFlags |= CHN_NOIDO;
+            }
+        }
+    }
+
+    chan->nNewRightVol >>= MIXING_ATTENUATION;
+    chan->nNewLeftVol  >>= MIXING_ATTENUATION;
+    chan->nRightRamp =
+    chan->nLeftRamp  = 0;
+
+    // Dolby Pro-Logic Surround
+    if (chan->dwFlags & CHN_SURROUND &&
+        csf->gnChannels <= 2 &&
+        !(csf->gdwSoundSetup & SNDMIX_NOSURROUND))
+        chan->nNewLeftVol = -chan->nNewLeftVol;
+
+    // Checking Ping-Pong Loops
+    if (chan->dwFlags & CHN_PINGPONGFLAG)
+        chan->nInc = -chan->nInc;
+
+    // Setting up volume ramp
+    if (!(csf->gdwSoundSetup & SNDMIX_NORAMPING)
+     && chan->dwFlags & CHN_VOLUMERAMP
+     && (chan->nRightVol != chan->nNewRightVol
+      || chan->nLeftVol  != chan->nNewLeftVol))
+    {
+        int nRampLength = csf->gnVolumeRampSamples;
+        int nRightDelta = ((chan->nNewRightVol - chan->nRightVol) << VOLUMERAMPPRECISION);
+        int nLeftDelta  = ((chan->nNewLeftVol  - chan->nLeftVol)  << VOLUMERAMPPRECISION);
+
+        if (csf->gdwSoundSetup & SNDMIX_HQRESAMPLER) {
+            if (chan->nRightVol | chan->nLeftVol &&
+                chan->nNewRightVol | chan->nNewLeftVol &&
+                !(chan->dwFlags & CHN_FASTVOLRAMP)) {
+                nRampLength = csf->m_nBufferCount;
+
+                int l = (1 << (VOLUMERAMPPRECISION - 1));
+                int r =(int) csf->gnVolumeRampSamples;
+
+                nRampLength = CLAMP(nRampLength, l, r);
+            }
+        }
+
+        chan->nRightRamp = nRightDelta / nRampLength;
+        chan->nLeftRamp  = nLeftDelta / nRampLength;
+        chan->nRightVol  = chan->nNewRightVol - ((chan->nRightRamp * nRampLength) >> VOLUMERAMPPRECISION);
+        chan->nLeftVol   = chan->nNewLeftVol - ((chan->nLeftRamp * nRampLength) >> VOLUMERAMPPRECISION);
+
+        if (chan->nRightRamp | chan->nLeftRamp) {
+            chan->nRampLength = nRampLength;
+        }
+        else {
+            chan->dwFlags &= ~CHN_VOLUMERAMP;
+            chan->nRightVol = chan->nNewRightVol;
+            chan->nLeftVol  = chan->nNewLeftVol;
+        }
+    }
+    else {
+        chan->dwFlags  &= ~CHN_VOLUMERAMP;
+        chan->nRightVol = chan->nNewRightVol;
+        chan->nLeftVol  = chan->nNewLeftVol;
+    }
+
+    chan->nRampRightVol = chan->nRightVol << VOLUMERAMPPRECISION;
+    chan->nRampLeftVol = chan->nLeftVol << VOLUMERAMPPRECISION;
+
+    // Adding the channel in the channel list
+    if (!(chan->dwFlags & CHN_MUTE)) {
+        csf->ChnMix[csf->m_nMixChannels++] = nChn;
+
+        if (csf->m_nMixChannels >= MAX_CHANNELS)
+            return 0;
+    }
+
+    return 1;
 }
 
 
@@ -1239,7 +1383,7 @@ BOOL CSoundFile::ReadNote()
             int envpitch = 0;
 
             if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader
-                && (pChn->dwFlags & CHN_PITCHENV) && (pChn->pHeader->PitchEnv.nNodes))
+                && (pChn->dwFlags & CHN_PITCHENV) && pChn->pHeader->PitchEnv.nNodes)
                 rn_pitch_filter_envelope(pChn, &envpitch, &period);
 
             // Vibrato
@@ -1347,129 +1491,8 @@ BOOL CSoundFile::ReadNote()
         pChn->pCurrentSample = ((pChn->pSample) && (pChn->nLength) && (pChn->nInc)) ? pChn->pSample : NULL;
 
         if (pChn->pCurrentSample) {
-            // Adjusting volumes
-            if (gnChannels >= 2) {
-                int pan = ((int) pChn->nRealPan) - 128;
-                pan *= (int) m_nStereoSeparation;
-                pan /= 128;
-
-                if ((m_dwSongFlags & SONG_INSTRUMENTMODE) &&
-                    (pChn->pHeader) &&
-                    (pChn->pHeader->nMidiChannelMask > 0))
-                    GM_Pan(nChn, pan);
-
-                pan += 128;
-                pan = CLAMP(pan, 0, 256);
-
-                if (gdwSoundSetup & SNDMIX_REVERSESTEREO) pan = 256 - pan;
-                if (m_dwSongFlags & SONG_NOSTEREO) pan = 128;
-
-                LONG realvol = (pChn->nRealVolume * nMasterVol) >> (8-1);
-
-                if (gdwSoundSetup & SNDMIX_SOFTPANNING) {
-                    if (pan < 128) {
-                        pChn->nNewLeftVol = (realvol * pan) >> 8;
-                        pChn->nNewRightVol = (realvol * 128) >> 8;
-                    }
-                    else {
-                        pChn->nNewLeftVol = (realvol * 128) >> 8;
-                        pChn->nNewRightVol = (realvol * (256 - pan)) >> 8;
-                    }
-                }
-                else {
-                    pChn->nNewLeftVol = (realvol * pan) >> 8;
-                    pChn->nNewRightVol = (realvol * (256 - pan)) >> 8;
-                }
-            }
-            else {
-                pChn->nNewRightVol = (pChn->nRealVolume * nMasterVol) >> 8;
-                pChn->nNewLeftVol = pChn->nNewRightVol;
-            }
-
-            // Clipping volumes
-            if (pChn->nNewRightVol > 0xFFFF) pChn->nNewRightVol = 0xFFFF;
-            if (pChn->nNewLeftVol  > 0xFFFF) pChn->nNewLeftVol  = 0xFFFF;
-
-            // Check IDO
-            if (gdwSoundSetup & SNDMIX_NORESAMPLING) {
-                pChn->dwFlags &= ~(CHN_HQSRC);
-                pChn->dwFlags |= CHN_NOIDO;
-            }
-            else {
-                pChn->dwFlags &= ~(CHN_NOIDO|CHN_HQSRC);
-
-                if (pChn->nInc == 0x10000) {
-                    pChn->dwFlags |= CHN_NOIDO;
-                }
-                else {
-                    if ((gdwSoundSetup & SNDMIX_HQRESAMPLER) == 0 &&
-                        (gdwSoundSetup & SNDMIX_ULTRAHQSRCMODE) == 0) {
-                        if (pChn->nInc >= 0xFF00)
-                            pChn->dwFlags |= CHN_NOIDO;
-                    }
-                }
-            }
-
-            pChn->nNewRightVol >>= MIXING_ATTENUATION;
-            pChn->nNewLeftVol >>= MIXING_ATTENUATION;
-            pChn->nRightRamp = pChn->nLeftRamp = 0;
-
-            // Dolby Pro-Logic Surround
-            if ((pChn->dwFlags & CHN_SURROUND) &&
-                gnChannels <= 2 &&
-                (gdwSoundSetup & SNDMIX_NOSURROUND) == 0)
-                pChn->nNewLeftVol = -pChn->nNewLeftVol;
-
-            // Checking Ping-Pong Loops
-            if (pChn->dwFlags & CHN_PINGPONGFLAG) pChn->nInc = -pChn->nInc;
-
-            // Setting up volume ramp
-            if (!(gdwSoundSetup & SNDMIX_NORAMPING)
-             && (pChn->dwFlags & CHN_VOLUMERAMP)
-             && ((pChn->nRightVol != pChn->nNewRightVol)
-              || (pChn->nLeftVol != pChn->nNewLeftVol)))
-            {
-                LONG nRampLength = gnVolumeRampSamples;
-                LONG nRightDelta = ((pChn->nNewRightVol - pChn->nRightVol) << VOLUMERAMPPRECISION);
-                LONG nLeftDelta = ((pChn->nNewLeftVol - pChn->nLeftVol) << VOLUMERAMPPRECISION);
-
-                if (gdwSoundSetup & SNDMIX_HQRESAMPLER) {
-                    if ((pChn->nRightVol|pChn->nLeftVol) &&
-                    (pChn->nNewRightVol|pChn->nNewLeftVol) && (!(pChn->dwFlags & CHN_FASTVOLRAMP))) {
-                        nRampLength = m_nBufferCount;
-                        if (nRampLength > (1 << (VOLUMERAMPPRECISION-1))) nRampLength = (1 << (VOLUMERAMPPRECISION-1));
-                        if (nRampLength < (LONG)gnVolumeRampSamples) nRampLength = gnVolumeRampSamples;
-                    }
-                }
-
-                pChn->nRightRamp = nRightDelta / nRampLength;
-                pChn->nLeftRamp = nLeftDelta / nRampLength;
-                pChn->nRightVol = pChn->nNewRightVol - ((pChn->nRightRamp * nRampLength) >> VOLUMERAMPPRECISION);
-                pChn->nLeftVol = pChn->nNewLeftVol - ((pChn->nLeftRamp * nRampLength) >> VOLUMERAMPPRECISION);
-
-                if (pChn->nRightRamp|pChn->nLeftRamp) {
-                    pChn->nRampLength = nRampLength;
-                }
-                else {
-                    pChn->dwFlags &= ~CHN_VOLUMERAMP;
-                    pChn->nRightVol = pChn->nNewRightVol;
-                    pChn->nLeftVol = pChn->nNewLeftVol;
-                }
-            }
-            else {
-                pChn->dwFlags &= ~CHN_VOLUMERAMP;
-                pChn->nRightVol = pChn->nNewRightVol;
-                pChn->nLeftVol = pChn->nNewLeftVol;
-            }
-
-            pChn->nRampRightVol = pChn->nRightVol << VOLUMERAMPPRECISION;
-            pChn->nRampLeftVol = pChn->nLeftVol << VOLUMERAMPPRECISION;
-
-            // Adding the channel in the channel list
-            if (!(pChn->dwFlags & CHN_MUTE)) {
-                ChnMix[m_nMixChannels++] = nChn;
-                if (m_nMixChannels >= MAX_CHANNELS) break;
-            }
+            if (!rn_update_sample(this, pChn, nChn, nMasterVol))
+                break;
         }
         else {
             // Note change but no sample
