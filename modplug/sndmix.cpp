@@ -124,33 +124,33 @@ const unsigned int PreAmpAGCTable[16] =
 };
 
 
-BOOL CSoundFile::InitPlayer(BOOL bReset)
+int csf_init_player(CSoundFile *csf, int reset)
 {
-    if (m_nMaxMixChannels > MAX_CHANNELS)
-        m_nMaxMixChannels = MAX_CHANNELS;
+    if (csf->m_nMaxMixChannels > MAX_CHANNELS)
+        csf->m_nMaxMixChannels = MAX_CHANNELS;
 
-    gdwMixingFreq = CLAMP(gdwMixingFreq, 4000, MAX_SAMPLE_RATE);
-    gnVolumeRampSamples = (gdwMixingFreq * VOLUMERAMPLEN) / 100000;
+    csf->gdwMixingFreq = CLAMP(csf->gdwMixingFreq, 4000, MAX_SAMPLE_RATE);
+    csf->gnVolumeRampSamples = (csf->gdwMixingFreq * VOLUMERAMPLEN) / 100000;
 
-    if (gnVolumeRampSamples < 8)
-        gnVolumeRampSamples = 8;
+    if (csf->gnVolumeRampSamples < 8)
+        csf->gnVolumeRampSamples = 8;
 
-    if (gdwSoundSetup & SNDMIX_NORAMPING)
-        gnVolumeRampSamples = 2;
+    if (csf->gdwSoundSetup & SNDMIX_NORAMPING)
+        csf->gnVolumeRampSamples = 2;
 
     gnDryROfsVol = gnDryLOfsVol = 0;
     gnRvbROfsVol = gnRvbLOfsVol = 0;
 
-    if (bReset) {
-        gnVULeft = 0;
-        gnVURight = 0;
+    if (reset) {
+        csf->gnVULeft  = 0;
+        csf->gnVURight = 0;
     }
 
-    gbInitPlugins = bReset ? 3 : 1;
-    InitializeDSP(bReset);
-    initialize_eq(bReset, gdwMixingFreq);
+    gbInitPlugins = reset ? 3 : 1;
+    csf->InitializeDSP(reset);
+    initialize_eq(reset, csf->gdwMixingFreq);
     
-    Fmdrv_Init(gdwMixingFreq);
+    Fmdrv_Init(csf->gdwMixingFreq);
     OPL_Reset();
     GM_Reset(0);
     return TRUE;
@@ -773,7 +773,7 @@ static inline void rn_instrument_vibrato(CSoundFile *csf, MODCHANNEL *chan, int 
     case 1: // Square
         val = (chan->nAutoVibPos & 128) ? +64 : -64;
         break;
-    default:    // Sine
+    default: // Sine
         val = ft2VibratoTable[chan->nAutoVibPos & 255];
     }
 
@@ -789,12 +789,12 @@ static inline void rn_instrument_vibrato(CSoundFile *csf, MODCHANNEL *chan, int 
         n = -n;
         unsigned int n1 = n >> 8;
         df1 = LinearSlideUpTable[n1];
-        df2 = LinearSlideUpTable[n1+1];
+        df2 = LinearSlideUpTable[n1 + 1];
     }
     else {
         unsigned int n1 = n >> 8;
         df1 = LinearSlideDownTable[n1];
-        df2 = LinearSlideDownTable[n1+1];
+        df2 = LinearSlideDownTable[n1 + 1];
     }
 
     n >>= 2;

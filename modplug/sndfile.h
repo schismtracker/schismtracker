@@ -537,6 +537,10 @@ typedef VOID (* LPSNDMIXHOOKPROC)(int *, unsigned int, unsigned int); // buffer,
 
 
 #ifdef __cplusplus
+
+
+
+
 //==============
 class CSoundFile
 //==============
@@ -683,50 +687,23 @@ public:
 	VOID ResetTotalTickCount() { m_nTotalCount = 0; }
 
 public:
-	// Mixer Config
-	static BOOL InitPlayer(BOOL bReset=FALSE);
-	static BOOL SetWaveConfig(UINT nRate,UINT nBits,UINT nChannels);
-	static BOOL SetResamplingMode(UINT nMode); // SRCMODE_XXXX
-	static BOOL IsStereo() { return (gnChannels > 1) ? TRUE : FALSE; }
-	static DWORD GetSampleRate() { return gdwMixingFreq; }
-	static DWORD GetBitsPerSample() { return gnBitsPerSample; }
-	static DWORD InitSysInfo();
-	static DWORD GetSysInfo() { return gdwSysInfo; }
+        static BOOL IsStereo() { return (gnChannels > 1) ? TRUE : FALSE; }
+        static DWORD GetSampleRate() { return gdwMixingFreq; }
+        static DWORD GetBitsPerSample() { return gnBitsPerSample; }
+        static DWORD GetSysInfo() { return gdwSysInfo; }
+        DWORD InitSysInfo();
+
 	// AGC
-	static BOOL GetAGC() { return (gdwSoundSetup & SNDMIX_AGC) ? TRUE : FALSE; }
-	static void SetAGC(BOOL b);
-	static void ResetAGC();
-	static void ProcessAGC(int count);
+	BOOL GetAGC() { return (gdwSoundSetup & SNDMIX_AGC) ? TRUE : FALSE; }
+	void SetAGC(BOOL b);
+	void ResetAGC();
+	void ProcessAGC(int count);
 
-	// Floats
-	static VOID StereoMixToFloat(const int *pSrc, float *pOut1, float *pOut2, UINT nCount);
-	static VOID FloatToStereoMix(const float *pIn1, const float *pIn2, int *pOut, UINT nCount);
-	static VOID MonoMixToFloat(const int *pSrc, float *pOut, UINT nCount);
-	static VOID FloatToMonoMix(const float *pIn, int *pOut, UINT nCount);
-	
-	
-	
-	
-
-	// wee...
-        //static void InitializeEQ(BOOL bReset=TRUE);
-        //static void SetEQGains(const UINT *pGains, UINT nBands, const UINT *pFreqs=NULL, BOOL bReset=FALSE);    // 0=-12dB, 32=+12dB
-        ///*static*/ void EQStereo(int *pbuffer, UINT nCount);
-        ///*static*/ void EQMono(int *pbuffer, UINT nCount);
-
-
-	//GCCFIX -- added these functions back in!
-	static BOOL SetWaveConfigEx(BOOL bSurround,BOOL bNoOverSampling,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ);
 	// DSP Effects
-	static void InitializeDSP(BOOL bReset);
-	static void ProcessStereoDSP(int count);
-	static void ProcessMonoDSP(int count);
-	// [Reverb level 0(quiet)-100(loud)], [delay in ms, usually 40-200ms]
-	static BOOL SetReverbParameters(UINT nDepth, UINT nDelay);
-	// [XBass level 0(quiet)-100(loud)], [cutoff in Hz 10-100]
-	static BOOL SetXBassParameters(UINT nDepth, UINT nRange);
-	// [Surround level 0(quiet)-100(heavy)] [delay in ms, usually 5-40ms]
-	static BOOL SetSurroundParameters(UINT nDepth, UINT nDelay);
+	void InitializeDSP(BOOL bReset);
+	void ProcessStereoDSP(int count);
+	void ProcessMonoDSP(int count);
+
 public:
 	BOOL ReadNote();
 	BOOL ProcessRow();
@@ -817,6 +794,22 @@ private:
     CSoundFile(const CSoundFile&);
     void operator=(const CSoundFile&);
 };
+
+int csf_set_wave_config(CSoundFile *csf, UINT nRate,UINT nBits,UINT nChannels);
+int csf_set_wave_config_ex(CSoundFile *csf, BOOL bSurround,BOOL bNoOverSampling,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ);
+
+// Mixer Config
+int csf_init_player(CSoundFile *csf, int reset); // bReset=FALSE
+int csf_set_resampling_mode(CSoundFile *csf, UINT nMode); // SRCMODE_XXXX
+
+// [Reverb level 0(quiet)-100(loud)], [delay in ms, usually 40-200ms]
+int csf_set_reverb_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay);
+
+// [XBass level 0(quiet)-100(loud)], [cutoff in Hz 10-100]
+int csf_set_xbass_parameters(CSoundFile *csf, UINT nDepth, UINT nRange);
+
+// [Surround level 0(quiet)-100(heavy)] [delay in ms, usually 5-40ms]
+int csf_set_surround_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay);
 #endif
 
 // inline DWORD BigEndian(DWORD x) { return ((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) | ((x & 0xFF000000) >> 24); }

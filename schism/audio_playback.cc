@@ -1533,13 +1533,13 @@ RETRY:	using_driver = driver;
 		strcpy(driver_name, "nosound");
 
 		/* don't change this without looking at nosound_thread() */
-		CSoundFile::SetWaveConfig(11025, 8, 2);
+		csf_set_wave_config(mp, 11025, 8, 2);
 		need_samples = 4410 * 2;
 		audio_output_channels = 2;
 		audio_output_bits = 8;
 		audio_sample_size = 2;
 
-		CSoundFile::gpSndMixHook = NULL;
+		mp->gpSndMixHook = NULL;
 
 		audio_buffer = audio_buffer_;
 
@@ -1609,14 +1609,14 @@ RETRY:	using_driver = driver;
 		song_lock_audio();
 
 		/* format&255 is SDL specific... need bits */
-		CSoundFile::SetWaveConfig(obtained.freq,
+		csf_set_wave_config(mp, obtained.freq,
 			obtained.format & 255,
 			obtained.channels);
 		audio_output_channels = obtained.channels;
 		audio_output_bits = obtained.format & 255;
 		audio_sample_size = audio_output_channels * (audio_output_bits/8);
 
-		CSoundFile::gpSndMixHook = NULL;
+		mp->gpSndMixHook = NULL;
 
 		if (need_name) SDL_AudioDriverName(driver_name, sizeof(driver_name));
 
@@ -1675,11 +1675,11 @@ void song_init_modplug(void)
 	CSoundFile::gpSndMixHook = NULL;
 
         CSoundFile::m_nMaxMixChannels = audio_settings.channel_limit;
-        CSoundFile::SetXBassParameters(audio_settings.xbass_amount, audio_settings.xbass_range);
-        CSoundFile::SetSurroundParameters(audio_settings.surround_depth, audio_settings.surround_delay);
-        CSoundFile::SetReverbParameters(audio_settings.reverb_depth, audio_settings.reverb_delay);
+        csf_set_xbass_parameters(mp, audio_settings.xbass_amount, audio_settings.xbass_range);
+        csf_set_surround_parameters(mp, audio_settings.surround_depth, audio_settings.surround_delay);
+        csf_set_reverb_parameters(mp, audio_settings.reverb_depth, audio_settings.reverb_delay);
 	// the last param is the equalizer, which apparently isn't functional
-        CSoundFile::SetWaveConfigEx(audio_settings.surround,
+        csf_set_wave_config_ex(mp, audio_settings.surround,
 				false,
 				audio_settings.reverb,
 				true, //only makes sense... audio_settings.hq_resampling,
@@ -1689,7 +1689,7 @@ void song_init_modplug(void)
 	if (audio_settings.oversampling) {
 		/* not intuitive XXX */
 	}
-        CSoundFile::SetResamplingMode(audio_settings.interpolation_mode);
+        csf_set_resampling_mode(mp, audio_settings.interpolation_mode);
 	CSoundFile::gdwSoundSetup |= SNDMIX_EQ;
 	if (audio_settings.no_ramping)
 		CSoundFile::gdwSoundSetup |= SNDMIX_NORAMPING;

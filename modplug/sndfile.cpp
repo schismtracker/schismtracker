@@ -423,23 +423,23 @@ UINT CSoundFile::GetRawSongComments(LPSTR s, UINT len, UINT linesize)
 }
 
 
-BOOL CSoundFile::SetWaveConfig(UINT nRate,UINT nBits,UINT nChannels)
+int csf_set_wave_config(CSoundFile *csf, UINT nRate,UINT nBits,UINT nChannels)
 //----------------------------------------------------------------------------
 {
-	BOOL bReset = ((gdwMixingFreq != nRate) || (gnBitsPerSample != nBits) || (gnChannels != nChannels));
-	gnChannels = nChannels;
-	gdwMixingFreq = nRate;
-	gnBitsPerSample = nBits;
-	InitPlayer(bReset);
+	BOOL bReset = ((csf->gdwMixingFreq != nRate) || (csf->gnBitsPerSample != nBits) || (csf->gnChannels != nChannels));
+	csf->gnChannels = nChannels;
+	csf->gdwMixingFreq = nRate;
+	csf->gnBitsPerSample = nBits;
+	csf_init_player(csf, bReset);
 //printf("Rate=%u Bits=%u Channels=%u\n",gdwMixingFreq,gnBitsPerSample,gnChannels);
 	return TRUE;
 }
 
 
-BOOL CSoundFile::SetResamplingMode(UINT nMode)
+int csf_set_resampling_mode(CSoundFile *csf, UINT nMode)
 //--------------------------------------------
 {
-	DWORD d = gdwSoundSetup & ~(SNDMIX_NORESAMPLING|SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE);
+	DWORD d = csf->gdwSoundSetup & ~(SNDMIX_NORESAMPLING|SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE);
 	switch(nMode)
 	{
 	case SRCMODE_NEAREST:	d |= SNDMIX_NORESAMPLING; break;
@@ -449,7 +449,7 @@ BOOL CSoundFile::SetResamplingMode(UINT nMode)
 	default:
 		return FALSE;
 	}
-	gdwSoundSetup = d;
+	csf->gdwSoundSetup = d;
 	return TRUE;
 }
 
