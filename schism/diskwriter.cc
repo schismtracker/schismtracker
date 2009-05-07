@@ -522,7 +522,7 @@ int diskwriter_sync(void)
 		n = (dw->bits * dw->channels) / 8;
 	}
 
-	n = mp->Read(diskbuf, sizeof(diskbuf));
+	n = csf_read(mp, diskbuf, sizeof(diskbuf));
 	samples_played += n;
 
 	if (mp->_multi_out_raw) {

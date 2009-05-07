@@ -97,7 +97,7 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
         if (mp->m_dwSongFlags & SONG_ENDREACHED) {
 		n = 0;
 	} else {
-        	n = mp->Read(stream, len);
+        	n = csf_read(mp, stream, len);
 	        if (!n) {
 			if (status.current_page == PAGE_WATERFALL
 			|| status.vis_style == VIS_FFT) {
@@ -699,14 +699,14 @@ static int mp_chaseback(int order, int row)
 	mp->stop_at_order = j;
 	mp->stop_at_row = k;
 
-	while (mp->Read(big_buffer, sizeof(big_buffer)))
+	while (csf_read(mp, big_buffer, sizeof(big_buffer)))
 		/* gcc is retarded */;
 	mp->m_dwSongFlags &= ~SONG_ENDREACHED;
 	CSoundFile::gdwSoundSetup &= ~(SNDMIX_NOMIXING);
 
 	mp->stop_at_order = order;
 	mp->stop_at_row = row;
-	while (mp->Read(big_buffer, sizeof(big_buffer)))
+	while (csf_read(mp, big_buffer, sizeof(big_buffer)))
 		/* gcc is retarded */;
 
 	mp->m_dwSongFlags &= ~SONG_ENDREACHED;
