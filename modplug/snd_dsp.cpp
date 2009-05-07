@@ -418,54 +418,55 @@ void CSoundFile::ProcessMonoDSP(int count)
 // Clean DSP Effects interface
 
 // [Reverb level 0(quiet)-100(loud)], [delay in ms, usually 40-200ms]
-BOOL CSoundFile::SetReverbParameters(UINT nDepth, UINT nDelay)
+int csf_set_reverb_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay)
 //------------------------------------------------------------
 {
 	if (nDepth > 100) nDepth = 100;
 	UINT gain = nDepth / 20;
 	if (gain > 4) gain = 4;
-	m_nReverbDepth = 4 - gain;
+	csf->m_nReverbDepth = 4 - gain;
 	if (nDelay < 40) nDelay = 40;
 	if (nDelay > 250) nDelay = 250;
-	m_nReverbDelay = nDelay;
+	csf->m_nReverbDelay = nDelay;
 	return TRUE;
 }
 
 
 // [XBass level 0(quiet)-100(loud)], [cutoff in Hz 20-100]
-BOOL CSoundFile::SetXBassParameters(UINT nDepth, UINT nRange)
+int csf_set_xbass_parameters(CSoundFile *csf, UINT nDepth, UINT nRange)
 //-----------------------------------------------------------
 {
 	if (nDepth > 100) nDepth = 100;
 	UINT gain = nDepth / 20;
 	if (gain > 4) gain = 4;
-	m_nXBassDepth = 8 - gain;	// filter attenuation 1/256 .. 1/16
+	csf->m_nXBassDepth = 8 - gain;	// filter attenuation 1/256 .. 1/16
 	UINT range = nRange / 5;
 	if (range > 5) range -= 5; else range = 0;
 	if (nRange > 16) nRange = 16;
-	m_nXBassRange = 21 - range;	// filter average on 0.5-1.6ms
+	csf->m_nXBassRange = 21 - range;	// filter average on 0.5-1.6ms
 	return TRUE;
 }
 
 
 // [Surround level 0(quiet)-100(heavy)] [delay in ms, usually 5-50ms]
-BOOL CSoundFile::SetSurroundParameters(UINT nDepth, UINT nDelay)
+int csf_set_surround_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay)
 //--------------------------------------------------------------
 {
 	UINT gain = (nDepth * 16) / 100;
 	if (gain > 16) gain = 16;
 	if (gain < 1) gain = 1;
-	m_nProLogicDepth = gain;
+	csf->m_nProLogicDepth = gain;
 	if (nDelay < 4) nDelay = 4;
 	if (nDelay > 50) nDelay = 50;
-	m_nProLogicDelay = nDelay;
+	csf->m_nProLogicDelay = nDelay;
 	return TRUE;
 }
 
-BOOL CSoundFile::SetWaveConfigEx(BOOL bSurround,BOOL /*bNoOverSampling*/,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ)
+int csf_set_wave_config_ex(CSoundFile *csf, BOOL bSurround,BOOL _/*bNoOverSampling*/,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ)
 //----------------------------------------------------------------------------------------------------------------------------
 {
-	DWORD d = gdwSoundSetup & ~(SNDMIX_SURROUND | SNDMIX_NORESAMPLING | SNDMIX_REVERB | SNDMIX_HQRESAMPLER | SNDMIX_MEGABASS | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
+	DWORD d = csf->gdwSoundSetup & ~(SNDMIX_SURROUND | SNDMIX_NORESAMPLING | SNDMIX_REVERB | SNDMIX_HQRESAMPLER | SNDMIX_MEGABASS | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
+
 	if (bSurround) d |= SNDMIX_SURROUND;
 //	if (bNoOverSampling) d |= SNDMIX_NORESAMPLING;
 	if (bReverb) d |= SNDMIX_REVERB;
@@ -473,7 +474,9 @@ BOOL CSoundFile::SetWaveConfigEx(BOOL bSurround,BOOL /*bNoOverSampling*/,BOOL bR
 	if (bMegaBass) d |= SNDMIX_MEGABASS;
 	if (bNR) d |= SNDMIX_NOISEREDUCTION;
 	if (bEQ) d |= SNDMIX_EQ;
-	gdwSoundSetup = d;
-	InitPlayer(FALSE);
+
+	csf->gdwSoundSetup = d;
+	csf_init_player(csf, FALSE);
 	return TRUE;
 }
+
