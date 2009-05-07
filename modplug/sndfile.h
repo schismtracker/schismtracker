@@ -679,10 +679,7 @@ public:
 	// Real-time sound functions
 	VOID ResetChannels();
 
-	UINT Read(LPVOID lpBuffer, UINT cbBuffer);
 	UINT CreateStereoMix(int count);
-	BOOL FadeSong(UINT msec);
-	BOOL GlobalFadeSong(UINT msec);
 	UINT GetTotalTickCount() const { return m_nTotalCount; }
 	VOID ResetTotalTickCount() { m_nTotalCount = 0; }
 
@@ -705,8 +702,6 @@ public:
 	void ProcessMonoDSP(int count);
 
 public:
-	BOOL ReadNote();
-	BOOL ProcessRow();
 	BOOL ProcessEffects();
 	UINT GetNNAChannel(UINT nChn);
 	void CheckNNA(UINT nChn, UINT instr, int note, BOOL bForceCut);
@@ -810,6 +805,14 @@ int csf_set_xbass_parameters(CSoundFile *csf, UINT nDepth, UINT nRange);
 
 // [Surround level 0(quiet)-100(heavy)] [delay in ms, usually 5-40ms]
 int csf_set_surround_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay);
+
+// sndmix
+int csf_fade_song(CSoundFile *csf, unsigned int msec);
+int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
+unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffer);
+int csf_process_row(CSoundFile *csf);
+int csf_read_note(CSoundFile *csf);
+
 #endif
 
 // inline DWORD BigEndian(DWORD x) { return ((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) | ((x & 0xFF000000) >> 24); }
