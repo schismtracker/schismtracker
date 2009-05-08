@@ -688,11 +688,6 @@ public:
 	void ResetAGC();
 	void ProcessAGC(int count);
 
-	// DSP Effects
-	void InitializeDSP(BOOL bReset);
-	void ProcessStereoDSP(int count);
-	void ProcessMonoDSP(int count);
-
 public:
 	BOOL ProcessEffects();
 	UINT GetNNAChannel(UINT nChn);
@@ -789,6 +784,19 @@ int csf_set_wave_config_ex(CSoundFile *csf, BOOL bSurround,BOOL bNoOverSampling,
 int csf_init_player(CSoundFile *csf, int reset); // bReset=FALSE
 int csf_set_resampling_mode(CSoundFile *csf, UINT nMode); // SRCMODE_XXXX
 
+
+// sndmix
+int csf_fade_song(CSoundFile *csf, unsigned int msec);
+int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
+unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffer);
+int csf_process_row(CSoundFile *csf);
+int csf_read_note(CSoundFile *csf);
+
+// snd_dsp
+void csf_initialize_dsp(CSoundFile *csf, int reset);
+void csf_process_stereo_dsp(CSoundFile *csf, int count);
+void csf_process_mono_dsp(CSoundFile *csf, int count);
+
 // [Reverb level 0(quiet)-100(loud)], [delay in ms, usually 40-200ms]
 int csf_set_reverb_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay);
 
@@ -797,13 +805,6 @@ int csf_set_xbass_parameters(CSoundFile *csf, UINT nDepth, UINT nRange);
 
 // [Surround level 0(quiet)-100(heavy)] [delay in ms, usually 5-40ms]
 int csf_set_surround_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay);
-
-// sndmix
-int csf_fade_song(CSoundFile *csf, unsigned int msec);
-int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
-unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffer);
-int csf_process_row(CSoundFile *csf);
-int csf_read_note(CSoundFile *csf);
 
 #endif
 

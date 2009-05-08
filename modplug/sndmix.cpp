@@ -148,7 +148,7 @@ int csf_init_player(CSoundFile *csf, int reset)
 	}
 
 	gbInitPlugins = reset ? 3 : 1;
-	csf->InitializeDSP(reset);
+	csf_initialize_dsp(csf, reset);
 	initialize_eq(reset, csf->gdwMixingFreq);
 	
 	Fmdrv_Init(csf->gdwMixingFreq);
@@ -292,7 +292,7 @@ unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffe
 #if 0
 			if (nMaxPlugins) ProcessPlugins(lCount);
 #endif
-			csf->ProcessStereoDSP(lCount);
+			csf_process_stereo_dsp(csf, lCount);
 		}
 		else {
 			csf->m_nMixStat += csf->CreateStereoMix(lCount);
@@ -300,7 +300,7 @@ unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffe
 			if (nMaxPlugins) ProcessPlugins(lCount);
 #endif
 			mono_from_stereo(MixSoundBuffer, lCount);
-			csf->ProcessMonoDSP(lCount);
+			csf_process_mono_dsp(csf, lCount);
 		}
 
 		if (csf->gdwSoundSetup & SNDMIX_EQ) {
@@ -1234,9 +1234,8 @@ static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, 
 static inline void rn_gen_key(CSoundFile *csf, MODCHANNEL *chan, const int chan_num, const int freq, const int vol)
 {
 	if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE &&
-		chan->pHeader &&
-		chan->pHeader->nMidiChannelMask > 0) {
-
+	    chan->pHeader &&
+	    chan->pHeader->nMidiChannelMask > 0) {
 		MidiBendMode BendMode = MIDI_BEND_NORMAL;
 		/* TODO: If we're expecting a large bend exclusively
 		 * in either direction, update BendMode to indicate so.
