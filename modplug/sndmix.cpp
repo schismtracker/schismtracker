@@ -560,19 +560,13 @@ static void handle_realtime_closures(CSoundFile *csf)
 static unsigned int master_volume(CSoundFile *csf)
 {
 	//MODCHANNEL *pChn = csf->Chn;
-	int realmastervol = csf->m_nMasterVolume;
+	int realmastervol;
 	int nchn32 = csf->m_nChannels;
-	unsigned int mastervol,
-				 attenuation;
+	unsigned int mastervol, attenuation;
 
-	if (nchn32 < 1)
-		nchn32 = 1;
-	else if (nchn32 > 31)
-		nchn32 = 31;
+	nchn32 = CLAMP(nchn32, 1, 31);
 
-	if (realmastervol > 0x80) {
-		realmastervol = 0x80 + ((realmastervol - 0x80) * (nchn32 + 4)) / 16;
-	}
+	realmastervol = 128 + ((128) * (nchn32 + 4)) / 16;
 
 	mastervol = (realmastervol * (csf->m_nSongPreAmp)) >> 6;
 

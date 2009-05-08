@@ -103,19 +103,14 @@ BOOL CSoundFile::ReadAMS(LPCBYTE lpStream, DWORD dwMemLength)
 		tmp = lpStream[dwMemPos++];
 		dwMemPos += tmp;
 	}
-	// Read Pattern Names
-	m_lpszPatternNames = new char[pfh->patterns * 32];  // changed from CHAR
-	if (!m_lpszPatternNames) return TRUE;
-	m_nPatternNames = pfh->patterns;
-	memset(m_lpszPatternNames, 0, m_nPatternNames * 32);
-	for (UINT pNam=0; pNam < m_nPatternNames; pNam++)
+	// Skip Pattern Names
+	for (UINT pNam=0; pNam < pfh->patterns; pNam++)
 	{
 		if (dwMemPos + 32 >= dwMemLength) return TRUE;
 		tmp = lpStream[dwMemPos++];
-		tmp2 = (tmp < 32) ? tmp : 31;
-		if (tmp2) memcpy(m_lpszPatternNames+pNam*32, lpStream+dwMemPos, tmp2);
 		dwMemPos += tmp;
 	}
+	if (dwMemPos >= dwMemLength) return TRUE;
 	// Read Song Comments
 	tmp = *((WORD *)(lpStream+dwMemPos));
 	dwMemPos += 2;
@@ -444,10 +439,6 @@ BOOL CSoundFile::ReadAMS2(LPCBYTE lpStream, DWORD dwMemLength)
 		for (UINT i=0; i<32; i++)
 		{
 			UINT chnnamlen = lpStream[dwMemPos];
-			if ((chnnamlen) && (chnnamlen < MAX_CHANNELNAME))
-			{
-				memcpy(ChnSettings[i].szName, lpStream+dwMemPos+1, chnnamlen);
-			}
 			dwMemPos += chnnamlen + 1;
 			if (dwMemPos + chnnamlen + 256 >= dwMemLength) return TRUE;
 		}
@@ -481,13 +472,6 @@ BOOL CSoundFile::ReadAMS2(LPCBYTE lpStream, DWORD dwMemLength)
 		dwMemPos += 4;
 		if ((ipat < MAX_PATTERNS) && (packedlen < dwMemLength-dwMemPos) && (numrows >= 8))
 		{
-			if ((patnamlen) && (patnamlen < MAX_PATTERNNAME))
-			{
-				char s[MAX_PATTERNNAME]; // changed from CHAR
-				memcpy(s, lpStream+dwMemPos+3, patnamlen);
-				s[patnamlen] = 0;
-				SetPatternName(ipat, s);
-			}
 			PatternSize[ipat] = numrows;
 			PatternAllocSize[ipat] = numrows;
 			Patterns[ipat] = AllocatePattern(numrows, m_nChannels);

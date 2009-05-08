@@ -31,7 +31,7 @@ the formats are completely different, but whatever :) */
 
 int fmt_dtm_read_info(dmoz_file_t *file, const byte *data, size_t length)
 {
-        unsigned int position, block_length;
+        unsigned int position, block_length = 0;
 
         if (!(length > 8))
                 return false;
@@ -73,3 +73,4 @@ int fmt_dtm_read_info(dmoz_file_t *file, const byte *data, size_t length)
         file->type = TYPE_MODULE_XM;
         return true;
 }
+
