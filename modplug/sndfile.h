@@ -36,8 +36,6 @@ typedef const BYTE * LPCBYTE;
 #define MAX_ENVPOINTS		32
 #define MIN_PERIOD			0x0020
 #define MAX_PERIOD			0xFFFF
-#define MAX_PATTERNNAME		32
-#define MAX_CHANNELNAME		20
 #define MAX_INFONAME		80
 #define MAX_EQ_BANDS		6
 #define MAX_MIXPLUGINS		8
@@ -439,7 +437,6 @@ typedef struct _MODCHANNELSETTINGS
 	UINT nVolume;
 	DWORD dwFlags;
 	UINT nMixPlugin;
-        char szName[MAX_CHANNELNAME];        // changed from CHAR
 } MODCHANNELSETTINGS;
 
 
@@ -578,13 +575,12 @@ public:	// for Editing
 	UINT m_nMusicSpeed, m_nMusicTempo;
 	UINT m_nNextRow, m_nRow;
 	UINT m_nPattern,m_nCurrentPattern,m_nNextPattern,m_nLockedPattern,m_nRestartPos;
-	UINT m_nMasterVolume, m_nGlobalVolume, m_nSongPreAmp;
+	UINT m_nGlobalVolume, m_nSongPreAmp;
 	UINT m_nFreqFactor, m_nTempoFactor, m_nOldGlbVolSlide;
 	LONG m_nMinPeriod, m_nMaxPeriod, m_nRepeatCount, m_nInitialRepeatCount;
 	DWORD m_nGlobalFadeSamples, m_nGlobalFadeMaxSamples;
 	BYTE m_rowHighlightMajor, m_rowHighlightMinor;
-	UINT m_nPatternNames;
-	LPSTR m_lpszSongComments, m_lpszPatternNames;
+	LPSTR m_lpszSongComments;
 	char m_szNames[MAX_INSTRUMENTS][32];    // changed from CHAR
 	CHAR CompressionTable[16];
 
@@ -605,8 +601,6 @@ public:
 	UINT GetType() const { return m_nType; }
 	UINT GetNumChannels() const;
 	UINT GetLogicalChannels() const { return m_nChannels; }
-	BOOL SetMasterVolume(UINT vol, BOOL bAdjustAGC=FALSE);
-	UINT GetMasterVolume() const { return m_nMasterVolume; }
 	UINT GetNumPatterns() const;
 	UINT GetNumInstruments() const;
 	UINT GetNumSamples() const { return m_nSamples; }
@@ -630,8 +624,6 @@ public:
 	int GetRepeatCount() const { return m_nRepeatCount; }
 	BOOL IsPaused() const {	return (m_dwSongFlags & SONG_PAUSED) ? TRUE : FALSE; }
 	void LoopPattern(int nPat, int nRow=0);
-	BOOL SetPatternName(UINT nPat, LPCSTR lpszName);
-	BOOL GetPatternName(UINT nPat, LPSTR lpszName, UINT cbSize=MAX_PATTERNNAME) const;
 	// Module Loaders
 	BOOL ReadXM(LPCBYTE lpStream, DWORD dwMemLength);
 	BOOL ReadS3M(LPCBYTE lpStream, DWORD dwMemLength);
