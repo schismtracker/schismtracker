@@ -102,7 +102,7 @@ static size_t _parse_comments(const char *s, char **comments)
 	do {
 		prev = ptr;
 		ptr += strspn(ptr, " \t\r\n");
-		if (*ptr == '#')
+		if (*ptr == '#' || *ptr == ';')
 			ptr += strcspn(ptr, "\r\n");
 	} while (*ptr && ptr != prev);
 	len = ptr - s;
@@ -279,7 +279,7 @@ int cfg_read(cfg_file_t *cfg)
 		
 		/* look for the end of the line or the next comment, whichever comes first. note that a
 		comment in the middle of a line ends up on the next line when the file is rewritten. */
-		len = strcspn(pos, "#\r\n");
+		len = strcspn(pos, "#;\r\n");
 		if (len) {
 			char *line;
 			line = (char *)mem_alloc(len + 1);
