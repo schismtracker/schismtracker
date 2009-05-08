@@ -81,6 +81,23 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
         }
 }
 
+void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
+	draw_char(171, x     , y, fg, bg);
+	draw_char(171, x +  1, y, fg, bg);
+	draw_char(171, x +  2, y, fg, bg);
+
+	draw_char(169, x +  4, y, fg, bg);
+	draw_char(169, x +  5, y, fg, bg);
+
+	draw_char(169, x +  7, y, fg, bg);
+	draw_char(169, x +  8, y, fg, bg);
+
+	draw_char(169, x + 10, y, fg, bg);
+	draw_char(169, x + 11, y, fg, bg);
+	draw_char(169, x + 12, y, fg, bg);
+}
+
 /* --------------------------------------------------------------------- */
 /* 10-column track view */
 
@@ -131,6 +148,10 @@ void draw_note_10(int x, int y, song_note * note, int cursor_pos,
         }
         /* *INDENT-ON* */
         draw_char(c, x + cursor_pos, y, 0, 3);
+}
+
+void draw_mask_10(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
 }
 
 /* --------------------------------------------------------------------- */
@@ -235,6 +256,10 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
 			      x + 6, y, fg1, bg1, fg2, bg2);
 }
 
+void draw_mask_7(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
+}
+
 /* --------------------------------------------------------------------- */
 /* 3-column track view */
 
@@ -316,6 +341,10 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 buf[3] = 0;
                 draw_text(buf, x, y, fg, bg);
         }
+}
+
+void draw_mask_3(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
 }
 
 /* --------------------------------------------------------------------- */
@@ -428,6 +457,10 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         }
 }
 
+void draw_mask_2(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
+}
+
 /* --------------------------------------------------------------------- */
 /* 1-column track view... useful to look at, not so much to edit.
  * (in fact, impulse tracker doesn't edit with this view) */
@@ -531,6 +564,10 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         } else {
                 draw_char(173, x, y, fg, bg);
         }
+}
+
+void draw_mask_1(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
 }
 
 /* --------------------------------------------------------------------- */
@@ -677,3 +714,8 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 			      hexdigits[note->parameter & 0xf],
 			      x + 5, y, fg1, bg1, fg2, bg2);
 }
+
+void draw_mask_6(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
+}
+
