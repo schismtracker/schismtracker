@@ -119,14 +119,7 @@ static int playing_row = -1;
 static int playing_pattern = -1;
 
 /* the current editing mask (what stuff is copied) */
-#define MASK_NOTE	1 /* immutable */
-#define MASK_INSTRUMENT	2
-#define MASK_VOLUME	4
-#define MASK_EFFECT	8
-#define MASK_EFFECTVALUE	16
 static int edit_copy_mask = MASK_NOTE | MASK_INSTRUMENT | MASK_VOLUME;
-static const int edit_pos_to_copy_mask[9] = { 0,0,1,1,2,2,3,4,4 };
-
 
 /* and the mask note. note that the instrument field actually isn't used */
 static song_note mask_note = { 61, 0, 0, 0, 0, 0 };	/* C-5 */
@@ -236,10 +229,11 @@ struct track_view {
 	int width;
 	draw_channel_header_func draw_channel_header;
 	draw_note_func draw_note;
+	draw_mask_func draw_mask;
 };
 
 static const struct track_view track_views[] = {
-#define TRACK_VIEW(n) {n, draw_channel_header_##n, draw_note_##n}
+#define TRACK_VIEW(n) {n, draw_channel_header_##n, draw_note_##n, draw_mask_##n}
 	TRACK_VIEW(13),			/* 5 channels */
 	TRACK_VIEW(10),			/* 6/7 channels */
 	TRACK_VIEW(7),			/* 9/10 channels */
@@ -2184,8 +2178,6 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 					}
 					if (edit_copy_mask & MASK_EFFECT) {
 						p_note[chan].effect = mask_note.effect;
-					}
-					if (edit_copy_mask & MASK_EFFECTVALUE) {
 						p_note[chan].parameter = mask_note.parameter;
 					}
 				}
@@ -2565,13 +2557,12 @@ static void pattern_editor_redraw(void)
 	song_note *pattern, *note;
 	const struct track_view *track_view;
 	int total_rows;
-	int i, j, fg, bg;
+	int fg, bg;
 	int mc = (status.flags & INVERTED_PALETTE) ? 1 : 3; /* mask color */
 	int pattern_is_playing = ((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) != 0
 				  && current_pattern == playing_pattern);
 
 	if (template_mode) {
-		// TODO: double check the exact position for this
 		draw_text_len(template_mode_names[template_mode], 60, 2, 12, 3, 2);
 	}
 
@@ -2631,78 +2622,10 @@ static void pattern_editor_redraw(void)
 			/* next row, same channel */
 			note += 64;
 		}
-		/* what the christ is going on here? this shit should be handled by the track view */
 		if (chan == current_channel) {
-			int cp[5], cl[5];
-
-			switch (track_view_scheme[chan_pos]) {
-			case 0: /* 5 channel view */
-				cp[0] = 0; cl[0] = 3;
-				cp[1] = 4; cl[1] = 2;
-				cp[2] = 7; cl[2] = 2;
-				cp[3] = 10; cl[3] = 1;
-				cp[4] = 11; cl[4] = 2;
-				break;
-			case 1: /* 6/7 channels */
-				cp[0] = 0; cl[0] = 3;
-				cp[1] = 3; cl[1] = 2;
-				cp[2] = 5; cl[2] = 2;
-				cp[3] = 7; cl[3] = 1;
-				cp[4] = 8; cl[4] = 2;
-				break;
-			case 2: /* 9/10 channels */
-				cp[0] = 0; cl[0] = 3;
-				cp[1] = 3; cl[1] = 1;
-				cp[2] = 4; cl[2] = 1;
-				cp[3] = 5; cl[3] = 1;
-				cp[4] = 6; cl[4] = 1;
-				break;
-			case 3: /* 18/24 channels */
-				cp[0] = 0; cl[0] = 2;
-				cp[1] = 2; cl[1] = 1;
-				cp[2] = 3; cl[2] = 1;
-				cp[3] = 4; cl[3] = 1;
-				cp[4] = 5; cl[4] = 1;
-				break;
-
-			case 4: /* now things get weird: 24/36 channels */
-			case 5: /* now things get weird: 36/64 channels */
-			case 6: /* and wee! */
-				cp[0] = cp[1] = cp[2] = cp[3] = cp[4] = -1;
-				switch (track_view_scheme[chan_pos]) {
-				case 4: cl[0] = cl[1] = cl[2] = cl[3] = cl[4] = 3; break;
-				case 5: cl[0] = cl[1] = cl[2] = cl[3] = cl[4] = 2; break;
-				case 6: cl[0] = cl[1] = cl[2] = cl[3] = cl[4] = 1; break;
-				};
-				cp[ edit_pos_to_copy_mask[current_position] ] = 0;
-				break;
-			};
-			
-			for (i = j = 0; i < 5; i++) {
-				if (cp[i] < 0) continue;
-				if (edit_pos_to_copy_mask[current_position] == i) {
-					if (edit_copy_mask & (1 << i)) {
-						for (j = 0; j < cl[i]; j++) {
-							draw_char(171, chan_drawpos + cp[i] + j, 47, mc, 2);
-						}
-					} else {
-						for (j = 0; j < cl[i]; j++) {
-							draw_char(169, chan_drawpos + cp[i] + j, 47, mc, 2);
-						}
-					}
-				} else if (current_position == 0) {
-					if (edit_copy_mask & (1 << i)) {
-						for (j = 0; j < cl[i]; j++) {
-							draw_char(169, chan_drawpos + cp[i] + j, 47, mc, 2);
-						}
-					}
-				} else if (edit_copy_mask & (1 << i)) {
-					for (j = 0; j < cl[i]; j++) {
-						draw_char(170, chan_drawpos + cp[i] + j, 47, mc, 2);
-					}
-				}
-			}
+			track_view->draw_mask(chan_drawpos, 47, edit_copy_mask, current_position, mc, 2);
 		}
+#if 0
 		if (channel_multi[chan-1]) {
 			if (track_view_scheme[chan_pos] == 0) {
 				draw_char(172, chan_drawpos + 3, 47, mc, 2);
@@ -2714,6 +2637,7 @@ static void pattern_editor_redraw(void)
 				draw_char(172, chan_drawpos, 47, mc, 2);
 			}
 		}
+#endif
 
 		chan_drawpos += track_view->width + !!draw_divisions;
 	}
@@ -3258,8 +3182,6 @@ static int pattern_editor_insert(struct key_event *k)
 			}
 			if (edit_copy_mask & MASK_EFFECT) {
 				cur_note->effect = 0;
-			}
-			if (edit_copy_mask & MASK_EFFECTVALUE) {
 				cur_note->parameter = 0;
 			}
 		} else {
@@ -3277,8 +3199,6 @@ static int pattern_editor_insert(struct key_event *k)
 				}
 				if (edit_copy_mask & MASK_EFFECT) {
 					cur_note->effect = mask_note.effect;
-				}
-				if (edit_copy_mask & MASK_EFFECTVALUE) {
 					cur_note->parameter = mask_note.parameter;
 				}
 			}
@@ -3948,32 +3868,35 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 
 	if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
 		if (k->state) return 0;
-		if ((status.flags & CLASSIC_MODE)
-				|| current_position != 4) {
+		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
 			set_previous_instrument();
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
-		/* fall through */
 	} else if (k->sym == SDLK_GREATER || k->sym == SDLK_QUOTE || k->sym == SDLK_QUOTEDBL) {
 		if (k->state) return 0;
-		if ((status.flags & CLASSIC_MODE)
-				|| current_position != 4) {
+		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
 			set_next_instrument();
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
-		/* fall through */
 	} else if (k->sym == SDLK_COMMA) {
 		if (k->state) return 0;
-		if (current_position > 1) {
-			edit_copy_mask ^= (1 << edit_pos_to_copy_mask[current_position]);
-			status.flags |= NEED_UPDATE;
+		switch (current_position) {
+		case 2: case 3:
+			edit_copy_mask ^= MASK_INSTRUMENT;
+			break;
+		case 4: case 5:
+			edit_copy_mask ^= MASK_VOLUME;
+			break;
+		case 6: case 7: case 8:
+			edit_copy_mask ^= MASK_EFFECT;
+			break;
 		}
+		status.flags |= NEED_UPDATE;
 		return 1;
 	}
-	if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)
-			&& playback_tracing && k->is_repeat)
+	if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing && k->is_repeat)
 		return 0;
 
 	if (!pattern_editor_insert(k))
@@ -4004,7 +3927,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if (k->state) return 0;
 			if (k->mouse == MOUSE_SCROLL_UP) {
 				if (top_display_row > 0) {
-					top_display_row--;
+					top_display_row -= 2;
 					if (current_row > top_display_row + 31)
 						current_row = top_display_row + 31;
 					if (current_row < 0)
@@ -4013,7 +3936,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 				}
 			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 				if (top_display_row + 31 < total_rows) {
-					top_display_row++;
+					top_display_row += 2;
 					if (current_row < top_display_row)
 						current_row = top_display_row;
 					return -1;
