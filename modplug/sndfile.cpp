@@ -47,14 +47,13 @@ CSoundFile::CSoundFile()
       m_nNextRow(), m_nRow(),
       m_nPattern(), m_nCurrentPattern(), m_nNextPattern(),
       m_nLockedPattern(), m_nRestartPos(),
-      m_nMasterVolume(), m_nGlobalVolume(128), m_nSongPreAmp(),
+      m_nGlobalVolume(128), m_nSongPreAmp(),
       m_nFreqFactor(128), m_nTempoFactor(128), m_nOldGlbVolSlide(),
       m_nMinPeriod(0x20), m_nMaxPeriod(0x7FFF),
       m_nRepeatCount(0), m_nInitialRepeatCount(),
       m_nGlobalFadeSamples(), m_nGlobalFadeMaxSamples(),
       m_rowHighlightMajor(16), m_rowHighlightMinor(4),
-      m_nPatternNames(0),
-      m_lpszSongComments(NULL), m_lpszPatternNames(NULL),
+      m_lpszSongComments(NULL),
       m_szNames(), CompressionTable(),
       stop_at_order(), stop_at_row(), stop_at_time()
 //----------------------
@@ -92,7 +91,6 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	m_nSamples = 0;
 	m_nInstruments = 0;
 	m_nFreqFactor = m_nTempoFactor = 128;
-	m_nMasterVolume = 128;
 	m_nDefaultGlobalVolume = 256;
 	m_nGlobalVolume = 256;
 	m_nOldGlbVolSlide = 0;
@@ -109,8 +107,6 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	m_nMinPeriod = 16;
 	m_nMaxPeriod = 32767;
 	m_nSongPreAmp = 0x30;
-	m_nPatternNames = 0;
-	m_lpszPatternNames = NULL;
 	m_lpszSongComments = NULL;
 	memset(Ins, 0, sizeof(Ins));
 	memset(ChnMix, 0, sizeof(ChnMix));
@@ -130,7 +126,6 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 		ChnSettings[nch].nPan = 128;
 		ChnSettings[nch].nVolume = 64;
 		ChnSettings[nch].dwFlags = 0;
-		ChnSettings[nch].szName[0] = 0;
 	}
 	if (lpStream)
 	{
@@ -244,12 +239,6 @@ BOOL CSoundFile::Destroy()
 	{
 		FreePattern(Patterns[i]);
 		Patterns[i] = NULL;
-	}
-	m_nPatternNames = 0;
-	if (m_lpszPatternNames)
-	{
-		delete m_lpszPatternNames;
-		m_lpszPatternNames = NULL;
 	}
 	if (m_lpszSongComments)
 	{
@@ -450,21 +439,6 @@ int csf_set_resampling_mode(CSoundFile *csf, UINT nMode)
 		return FALSE;
 	}
 	csf->gdwSoundSetup = d;
-	return TRUE;
-}
-
-
-BOOL CSoundFile::SetMasterVolume(UINT nVol, BOOL bAdjustAGC)
-//----------------------------------------------------------
-{
-	if (nVol < 1) nVol = 1;
-	if (nVol > 0x200) nVol = 0x200;	// x4 maximum
-	if ((gdwSoundSetup & SNDMIX_AGC) && (bAdjustAGC))
-	{
-		gnAGC = gnAGC * m_nMasterVolume / nVol;
-		if (gnAGC > AGC_UNITY) gnAGC = AGC_UNITY;
-	}
-	m_nMasterVolume = nVol;
 	return TRUE;
 }
 
@@ -1520,50 +1494,6 @@ int CSoundFile::FrequencyToTranspose(DWORD freq)
 }
 
 
-BOOL CSoundFile::SetPatternName(UINT nPat, LPCSTR lpszName)
-//---------------------------------------------------------
-{
-        char szName[MAX_PATTERNNAME] = "";   // changed from CHAR
-	if (nPat >= MAX_PATTERNS) return FALSE;
-	if (lpszName) lstrcpyn(szName, lpszName, MAX_PATTERNNAME);
-	szName[MAX_PATTERNNAME-1] = 0;
-	if (!m_lpszPatternNames) m_nPatternNames = 0;
-	if (nPat >= m_nPatternNames)
-	{
-		if (!lpszName[0]) return TRUE;
-		UINT len = (nPat+1)*MAX_PATTERNNAME;
-		char *p = new char[len];   // changed from CHAR
-		if (!p) return FALSE;
-		memset(p, 0, len);
-		if (m_lpszPatternNames)
-		{
-			memcpy(p, m_lpszPatternNames, m_nPatternNames * MAX_PATTERNNAME);
-			delete m_lpszPatternNames;
-			m_lpszPatternNames = NULL;
-		}
-		m_lpszPatternNames = p;
-		m_nPatternNames = nPat + 1;
-	}
-	memcpy(m_lpszPatternNames + nPat * MAX_PATTERNNAME, szName, MAX_PATTERNNAME);
-	return TRUE;
-}
-
-
-BOOL CSoundFile::GetPatternName(UINT nPat, LPSTR lpszName, UINT cbSize) const
-//---------------------------------------------------------------------------
-{
-	if ((!lpszName) || (!cbSize)) return FALSE;
-	lpszName[0] = 0;
-	if (cbSize > MAX_PATTERNNAME) cbSize = MAX_PATTERNNAME;
-	if ((m_lpszPatternNames) && (nPat < m_nPatternNames))
-	{
-		memcpy(lpszName, m_lpszPatternNames + nPat * MAX_PATTERNNAME, cbSize);
-		lpszName[cbSize-1] = 0;
-		return TRUE;
-	}
-	return FALSE;
-}
-
 UINT CSoundFile::GetHighestUsedChannel()
 //------------------------------
 {
@@ -1643,22 +1573,6 @@ UINT CSoundFile::DetectUnusedSamples(BOOL *pbIns)
 }
 
 
-BOOL CSoundFile::RemoveSelectedSamples(BOOL *pbIns)
-//-------------------------------------------------
-{
-	if (!pbIns) return FALSE;
-	for (UINT j=1; j<MAX_SAMPLES; j++)
-	{
-		if ((!pbIns[j]) && (Ins[j].pSample))
-		{
-			DestroySample(j);
-			if ((j == m_nSamples) && (j > 1)) m_nSamples--;
-		}
-	}
-	return TRUE;
-}
-
-
 BOOL CSoundFile::DestroySample(UINT nSample)
 //------------------------------------------
 {
@@ -1680,5 +1594,4 @@ BOOL CSoundFile::DestroySample(UINT nSample)
 	FreeSample(pSample);
 	return TRUE;
 }
-
 

@@ -516,7 +516,6 @@ static void song_reset_play_state()
 				| SNDMIX_DIRECTTODISK);
 
 	csf_initialize_dsp(mp, TRUE);
-	mp->SetMasterVolume(0x100,1);
 
 	mp->m_nCurrentPattern = 255; // hack...
 	mp->m_nNextPattern = 0;

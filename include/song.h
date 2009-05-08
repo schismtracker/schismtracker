@@ -70,7 +70,6 @@ typedef struct _song_channel {
         unsigned int volume;
         unsigned int flags;
         unsigned int mix_plugin;
-        char name[20];
 } song_channel;
 
 /* instrumentenvelope */
