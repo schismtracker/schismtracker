@@ -81,6 +81,47 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
         }
 }
 
+#define INDICATOR(x) ((mask & (x)) ? 171 : 169) /* '^.' if given mask bit is set, otherwise '^' */
+
+void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
+	char buf[16] = {170, 170, 170, 143, 143, 143, 143, 143, 143, 143, 143, 143, 143, 0};
+
+	if (cursor_pos == 0) {
+		/* draw note with '^.' */
+		buf[0] = buf[1] = buf[2] = 171;
+
+		/* draw other masked fields with '^' */
+		if (mask & MASK_INSTRUMENT)
+			buf[4] = buf[5] = 169;
+		if (mask & MASK_VOLUME)
+			buf[7] = buf[8] = 169;
+		if (mask & MASK_EFFECT)
+			buf[10] = buf[11] = buf[12] = 169;
+	} else {
+		if (mask & MASK_INSTRUMENT)
+			buf[4] = buf[5] = 170;
+		if (mask & MASK_VOLUME)
+			buf[7] = buf[8] = 170;
+		if (mask & MASK_EFFECT)
+			buf[10] = buf[11] = buf[12] = 170;
+		switch (cursor_pos) {
+			case 1: buf[2] = 171; break;
+
+			case 2: buf[4] = INDICATOR(MASK_INSTRUMENT); break;
+			case 3: buf[5] = INDICATOR(MASK_INSTRUMENT); break;
+
+			case 4: buf[7] = INDICATOR(MASK_VOLUME); break;
+			case 5: buf[8] = INDICATOR(MASK_VOLUME); break;
+
+			case 6: buf[10] = INDICATOR(MASK_EFFECT); break;
+			case 7: buf[11] = INDICATOR(MASK_EFFECT); break;
+			case 8: buf[12] = INDICATOR(MASK_EFFECT); break;
+		}
+	}
+	draw_text(buf, x, y, fg, bg);
+}
+
 /* --------------------------------------------------------------------- */
 /* 10-column track view */
 
@@ -131,6 +172,10 @@ void draw_note_10(int x, int y, song_note * note, int cursor_pos,
         }
         /* *INDENT-ON* */
         draw_char(c, x + cursor_pos, y, 0, 3);
+}
+
+void draw_mask_10(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
 }
 
 /* --------------------------------------------------------------------- */
@@ -235,6 +280,10 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
 			      x + 6, y, fg1, bg1, fg2, bg2);
 }
 
+void draw_mask_7(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
+}
+
 /* --------------------------------------------------------------------- */
 /* 3-column track view */
 
@@ -316,6 +365,10 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 buf[3] = 0;
                 draw_text(buf, x, y, fg, bg);
         }
+}
+
+void draw_mask_3(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
 }
 
 /* --------------------------------------------------------------------- */
@@ -428,6 +481,10 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         }
 }
 
+void draw_mask_2(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
+}
+
 /* --------------------------------------------------------------------- */
 /* 1-column track view... useful to look at, not so much to edit.
  * (in fact, impulse tracker doesn't edit with this view) */
@@ -531,6 +588,10 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         } else {
                 draw_char(173, x, y, fg, bg);
         }
+}
+
+void draw_mask_1(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
 }
 
 /* --------------------------------------------------------------------- */
@@ -677,3 +738,8 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 			      hexdigits[note->parameter & 0xf],
 			      x + 5, y, fg1, bg1, fg2, bg2);
 }
+
+void draw_mask_6(int x, int y, int mask, int cursor_pos, int fg, int bg)
+{
+}
+
