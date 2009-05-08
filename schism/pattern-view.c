@@ -81,21 +81,45 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
         }
 }
 
+#define INDICATOR(x) ((mask & (x)) ? 171 : 169) /* '^.' if given mask bit is set, otherwise '^' */
+
 void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	draw_char(171, x     , y, fg, bg);
-	draw_char(171, x +  1, y, fg, bg);
-	draw_char(171, x +  2, y, fg, bg);
+	char buf[16] = {170, 170, 170, 143, 143, 143, 143, 143, 143, 143, 143, 143, 143, 0};
 
-	draw_char(169, x +  4, y, fg, bg);
-	draw_char(169, x +  5, y, fg, bg);
+	if (cursor_pos == 0) {
+		/* draw note with '^.' */
+		buf[0] = buf[1] = buf[2] = 171;
 
-	draw_char(169, x +  7, y, fg, bg);
-	draw_char(169, x +  8, y, fg, bg);
+		/* draw other masked fields with '^' */
+		if (mask & MASK_INSTRUMENT)
+			buf[4] = buf[5] = 169;
+		if (mask & MASK_VOLUME)
+			buf[7] = buf[8] = 169;
+		if (mask & MASK_EFFECT)
+			buf[10] = buf[11] = buf[12] = 169;
+	} else {
+		if (mask & MASK_INSTRUMENT)
+			buf[4] = buf[5] = 170;
+		if (mask & MASK_VOLUME)
+			buf[7] = buf[8] = 170;
+		if (mask & MASK_EFFECT)
+			buf[10] = buf[11] = buf[12] = 170;
+		switch (cursor_pos) {
+			case 1: buf[2] = 171; break;
 
-	draw_char(169, x + 10, y, fg, bg);
-	draw_char(169, x + 11, y, fg, bg);
-	draw_char(169, x + 12, y, fg, bg);
+			case 2: buf[4] = INDICATOR(MASK_INSTRUMENT); break;
+			case 3: buf[5] = INDICATOR(MASK_INSTRUMENT); break;
+
+			case 4: buf[7] = INDICATOR(MASK_VOLUME); break;
+			case 5: buf[8] = INDICATOR(MASK_VOLUME); break;
+
+			case 6: buf[10] = INDICATOR(MASK_EFFECT); break;
+			case 7: buf[11] = INDICATOR(MASK_EFFECT); break;
+			case 8: buf[12] = INDICATOR(MASK_EFFECT); break;
+		}
+	}
+	draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
