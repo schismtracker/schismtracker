@@ -2625,7 +2625,7 @@ static void pattern_editor_redraw(void)
 		if (chan == current_channel) {
 			track_view->draw_mask(chan_drawpos, 47, edit_copy_mask, current_position, mc, 2);
 		}
-#if 0
+		/* blah */
 		if (channel_multi[chan-1]) {
 			if (track_view_scheme[chan_pos] == 0) {
 				draw_char(172, chan_drawpos + 3, 47, mc, 2);
@@ -2637,7 +2637,6 @@ static void pattern_editor_redraw(void)
 				draw_char(172, chan_drawpos, 47, mc, 2);
 			}
 		}
-#endif
 
 		chan_drawpos += track_view->width + !!draw_divisions;
 	}
