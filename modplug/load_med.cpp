@@ -753,11 +753,6 @@ BOOL CSoundFile::ReadMed(const BYTE *lpStream, DWORD dwMemLength)
 						}
 						trktagofs += 8;
 					}
-					if (trknamelen > MAX_CHANNELNAME) trknamelen = MAX_CHANNELNAME;
-					if ((trknameofs) && (trknameofs + trknamelen < dwMemLength))
-					{
-						lstrcpyn(ChnSettings[i].szName, (LPCSTR)(lpStream+trknameofs), MAX_CHANNELNAME);
-					}
 				}
 			}
 		}
@@ -860,15 +855,6 @@ BOOL CSoundFile::ReadMed(const BYTE *lpStream, DWORD dwMemLength)
 				Log("  BLOCKINFO: blockname=0x%04X namelen=%d pagetable=0x%04X &cmdexttable=0x%04X\n",
 					bswapBE32(pbi->blockname), bswapBE32(pbi->blocknamelen), bswapBE32(pbi->pagetable), bswapBE32(pbi->cmdexttable));
 			#endif
-				if ((pbi->blockname) && (pbi->blocknamelen))
-				{
-					DWORD nameofs = bswapBE32(pbi->blockname);
-					UINT namelen = bswapBE32(pbi->blocknamelen);
-					if ((nameofs < dwMemLength) && (nameofs+namelen < dwMemLength))
-					{
-						SetPatternName(iBlk, (LPCSTR)(lpStream+nameofs));
-					}
-				}
 				if (pbi->cmdexttable)
 				{
 					DWORD cmdexttable = bswapBE32(pbi->cmdexttable);

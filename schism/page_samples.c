@@ -1347,7 +1347,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-static inline unsigned long calc_halftone(unsigned long hz, int rel)
+static unsigned long calc_halftone(unsigned long hz, int rel)
 {
 	/* You wouldn't believe how long it took for me to figure this out. I had to calculate the
 	logarithmic regression of the values that Impulse Tracker produced and figure out what the
