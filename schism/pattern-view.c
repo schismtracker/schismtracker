@@ -26,10 +26,33 @@
 #include "song.h"
 #include "pattern-view.h"
 
-/* '^.' if given mask bit is set, otherwise '^' */
-#define INDICATOR(x) ((mask & (x)) ? 171 : 169)
-
 /* this stuff's ugly */
+
+
+/* --------------------------------------------------------------------- */
+/* pattern edit mask indicators */
+
+/*
+atnote  (1)  cursor_pos == 0
+  over  (2)  cursor_pos == pos
+masked  (4)  mask & MASK_whatever
+*/
+static const char mask_chars[] = {
+	143, // 0
+	143, // atnote
+	169, // over
+	169, // over && atnote
+	170, // masked
+	169, // masked && atnote
+	171, // masked && over
+	171, // masked && over && atnote
+};
+#define MASK_CHAR(field, pos, pos2)              \
+	mask_chars                             [ \
+	((cursor_pos == 0)   ? 1 : 0)          | \
+	((cursor_pos == pos) ? 2 : 0)          | \
+	((pos2 && cursor_pos == pos2) ? 2 : 0) | \
+	((mask & field)      ? 4 : 0)          ]
 
 /* --------------------------------------------------------------------- */
 /* 13-column track view */
@@ -86,30 +109,22 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
 
 void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[16] = {170, 170, 170, 143, 143, 143, 143, 143, 143, 143, 143, 143, 143, 0};
-	char c = (cursor_pos > 0) ? 170 : 169;
+	char buf[16] = {143, 143, 143, 143, 143, 143, 143, 143, 143, 143, 143, 143, 143, 0};
 
-	if (mask & MASK_INSTRUMENT)
-		buf[4] = buf[5] = c;
-	if (mask & MASK_VOLUME)
-		buf[7] = buf[8] = c;
-	if (mask & MASK_EFFECT)
-		buf[10] = buf[11] = buf[12] = 169;
+	buf[0] =
+	buf[1] = MASK_CHAR(MASK_NOTE, 0, 0);
+	buf[2] = MASK_CHAR(MASK_NOTE, 0, 1);
 
-	switch (cursor_pos) {
-		case 0: buf[0] = buf[1] = buf[2] = 171; break;
-		case 1: buf[2] = 171; break;
+	buf[4] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
+	buf[5] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
 
-		case 2: buf[4] = INDICATOR(MASK_INSTRUMENT); break;
-		case 3: buf[5] = INDICATOR(MASK_INSTRUMENT); break;
+	buf[7] = MASK_CHAR(MASK_VOLUME, 4, 0);
+	buf[8] = MASK_CHAR(MASK_VOLUME, 5, 0);
 
-		case 4: buf[7] = INDICATOR(MASK_VOLUME); break;
-		case 5: buf[8] = INDICATOR(MASK_VOLUME); break;
+	buf[10] = MASK_CHAR(MASK_EFFECT, 6, 0);
+	buf[11] = MASK_CHAR(MASK_EFFECT, 7, 0);
+	buf[12] = MASK_CHAR(MASK_EFFECT, 8, 0);
 
-		case 6: buf[10] = INDICATOR(MASK_EFFECT); break;
-		case 7: buf[11] = INDICATOR(MASK_EFFECT); break;
-		case 8: buf[12] = INDICATOR(MASK_EFFECT); break;
-	}
 	draw_text(buf, x, y, fg, bg);
 }
 

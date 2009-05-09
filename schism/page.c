@@ -1856,8 +1856,8 @@ void show_song_timejump(void)
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;
 	d->action_yes = _timejump_ok;
-	d->action_no = (void *) dialog_cancel_NULL;
-	d->action_cancel = (void *) dialog_cancel_NULL;
+	d->action_no = (void *) NULL;
+	d->action_cancel = (void *) NULL;
 }
 
 void show_song_length(void)

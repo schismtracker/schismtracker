@@ -530,7 +530,7 @@ int csf_set_surround_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay)
         return TRUE;
 }
 
-int csf_set_wave_config_ex(CSoundFile *csf, BOOL bSurround,BOOL _/*bNoOverSampling*/,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ)
+int csf_set_wave_config_ex(CSoundFile *csf, BOOL bSurround,BOOL /*bNoOverSampling*/,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ)
 //----------------------------------------------------------------------------------------------------------------------------
 {
         DWORD d = csf->gdwSoundSetup & ~(SNDMIX_SURROUND | SNDMIX_NORESAMPLING | SNDMIX_REVERB | SNDMIX_HQRESAMPLER | SNDMIX_MEGABASS | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
