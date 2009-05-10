@@ -671,6 +671,27 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_mask_1(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
+	char c = 143;
+
+	switch (cursor_pos) {
+	case 0: case 1:
+		c = MASK_CHAR(MASK_NOTE, 0, 1);
+		break;
+	case 2: case 3:
+		c = MASK_CHAR(MASK_INSTRUMENT, 2, 3);
+		break;
+	case 4: case 5:
+		c = MASK_CHAR(MASK_VOLUME, 4, 5);
+		break;
+	case 6:
+		c = MASK_CHAR(MASK_EFFECT, 6, 0);
+		break;
+	case 7: case 8:
+		c = MASK_CHAR(MASK_EFFECT, 7, 8);
+		break;
+	};
+
+	draw_char(c, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
