@@ -1416,22 +1416,21 @@ int song_load_instrument(int n, const char *file)
 {
 	return song_load_instrument_ex(n,file,NULL,-1);
 }
+
 int song_preload_sample(void *pf)
 {
 	dmoz_file_t *file = (dmoz_file_t*)pf;
 	// 0 is our "hidden sample"
 #define FAKE_SLOT 0
-	_squelch_sample(FAKE_SLOT);
+	//_squelch_sample(FAKE_SLOT);
 	if (file->sample) {
 		song_sample *smp = song_get_sample(FAKE_SLOT, NULL);	
-		void *tmp;
 
 		song_lock_audio();
-		tmp = smp->data;
+		mp->DestroySample(FAKE_SLOT);
 		song_copy_sample(FAKE_SLOT, file->sample, file->title);
 		strncpy(smp->filename, file->base, 12);
 		smp->filename[12] = 0;
-		if (tmp) CSoundFile::FreeSample(tmp);
 		song_unlock_audio();
 		return FAKE_SLOT;
 	}
@@ -1439,6 +1438,7 @@ int song_preload_sample(void *pf)
 	return FAKE_SLOT;
 #undef FAKE_SLOT
 }
+
 int song_load_sample(int n, const char *file)
 {
 	fmt_load_sample_func *load;
