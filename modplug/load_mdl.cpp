@@ -358,6 +358,10 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 							penv->dwFlags |= ENV_PANNING;
 							inspanenv[nins] = (ps[5] & 0x3F) + 1;
 						}
+						// taken from load_xm.cpp - seems to fix wakingup.mdl
+						if (!(penv->dwFlags & ENV_VOLUME) && !penv->nFadeOut) {
+							penv->nFadeOut = 8192;
+						}
 					}
 				}
 				dwPos += 34 + 14*lpStream[dwPos+1];
