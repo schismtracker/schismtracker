@@ -28,6 +28,32 @@
 
 /* this stuff's ugly */
 
+
+/* --------------------------------------------------------------------- */
+/* pattern edit mask indicators */
+
+/*
+atnote  (1)  cursor_pos == 0
+  over  (2)  cursor_pos == pos
+masked  (4)  mask & MASK_whatever
+*/
+static const char mask_chars[] = {
+	143, // 0
+	143, // atnote
+	169, // over
+	169, // over && atnote
+	170, // masked
+	169, // masked && atnote
+	171, // masked && over
+	171, // masked && over && atnote
+};
+#define MASK_CHAR(field, pos, pos2)              \
+	mask_chars                             [ \
+	((cursor_pos == 0)   ? 1 : 0)          | \
+	((cursor_pos == pos) ? 2 : 0)          | \
+	((pos2 && cursor_pos == pos2) ? 2 : 0) | \
+	((mask & field)      ? 4 : 0)          ]
+
 /* --------------------------------------------------------------------- */
 /* 13-column track view */
 
@@ -81,44 +107,25 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
         }
 }
 
-#define INDICATOR(x) ((mask & (x)) ? 171 : 169) /* '^.' if given mask bit is set, otherwise '^' */
-
 void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[16] = {170, 170, 170, 143, 143, 143, 143, 143, 143, 143, 143, 143, 143, 0};
+	char buf[] = {
+		MASK_CHAR(MASK_NOTE, 0, 0),
+		MASK_CHAR(MASK_NOTE, 0, 0),
+		MASK_CHAR(MASK_NOTE, 0, 1),
+		143,
+		MASK_CHAR(MASK_INSTRUMENT, 2, 0),
+		MASK_CHAR(MASK_INSTRUMENT, 3, 0),
+		143,
+		MASK_CHAR(MASK_VOLUME, 4, 0),
+		MASK_CHAR(MASK_VOLUME, 5, 0),
+		143,
+		MASK_CHAR(MASK_EFFECT, 6, 0),
+		MASK_CHAR(MASK_EFFECT, 7, 0),
+		MASK_CHAR(MASK_EFFECT, 8, 0),
+		0,
+	};
 
-	if (cursor_pos == 0) {
-		/* draw note with '^.' */
-		buf[0] = buf[1] = buf[2] = 171;
-
-		/* draw other masked fields with '^' */
-		if (mask & MASK_INSTRUMENT)
-			buf[4] = buf[5] = 169;
-		if (mask & MASK_VOLUME)
-			buf[7] = buf[8] = 169;
-		if (mask & MASK_EFFECT)
-			buf[10] = buf[11] = buf[12] = 169;
-	} else {
-		if (mask & MASK_INSTRUMENT)
-			buf[4] = buf[5] = 170;
-		if (mask & MASK_VOLUME)
-			buf[7] = buf[8] = 170;
-		if (mask & MASK_EFFECT)
-			buf[10] = buf[11] = buf[12] = 170;
-		switch (cursor_pos) {
-			case 1: buf[2] = 171; break;
-
-			case 2: buf[4] = INDICATOR(MASK_INSTRUMENT); break;
-			case 3: buf[5] = INDICATOR(MASK_INSTRUMENT); break;
-
-			case 4: buf[7] = INDICATOR(MASK_VOLUME); break;
-			case 5: buf[8] = INDICATOR(MASK_VOLUME); break;
-
-			case 6: buf[10] = INDICATOR(MASK_EFFECT); break;
-			case 7: buf[11] = INDICATOR(MASK_EFFECT); break;
-			case 8: buf[12] = INDICATOR(MASK_EFFECT); break;
-		}
-	}
 	draw_text(buf, x, y, fg, bg);
 }
 
@@ -176,6 +183,21 @@ void draw_note_10(int x, int y, song_note * note, int cursor_pos,
 
 void draw_mask_10(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
+	char buf[] = {
+		MASK_CHAR(MASK_NOTE, 0, 0),
+		MASK_CHAR(MASK_NOTE, 0, 0),
+		MASK_CHAR(MASK_NOTE, 0, 1),
+		MASK_CHAR(MASK_INSTRUMENT, 2, 0),
+		MASK_CHAR(MASK_INSTRUMENT, 3, 0),
+		MASK_CHAR(MASK_VOLUME, 4, 0),
+		MASK_CHAR(MASK_VOLUME, 5, 0),
+		MASK_CHAR(MASK_EFFECT, 6, 0),
+		MASK_CHAR(MASK_EFFECT, 7, 0),
+		MASK_CHAR(MASK_EFFECT, 8, 0),
+		0,
+	};
+
+	draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -282,6 +304,18 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
 
 void draw_mask_7(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
+	char buf[] = {
+		MASK_CHAR(MASK_NOTE, 0, 0),
+		MASK_CHAR(MASK_NOTE, 0, 0),
+		MASK_CHAR(MASK_NOTE, 0, 1),
+		MASK_CHAR(MASK_INSTRUMENT, 2, 3),
+		MASK_CHAR(MASK_VOLUME, 4, 5),
+		MASK_CHAR(MASK_EFFECT, 6, 0),
+		MASK_CHAR(MASK_EFFECT, 7, 8),
+		0,
+	};
+
+	draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -369,6 +403,29 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_mask_3(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
+	char buf[] = {143, 143, 143, 0};
+
+	switch (cursor_pos) {
+	case 0: case 1:
+		buf[0] = buf[1] = MASK_CHAR(MASK_NOTE, 0, 0);
+		buf[2] = MASK_CHAR(MASK_NOTE, 0, 1);
+		break;
+	case 2: case 3:
+		buf[1] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
+		buf[2] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
+		break;
+	case 4: case 5:
+		buf[1] = MASK_CHAR(MASK_VOLUME, 4, 0);
+		buf[2] = MASK_CHAR(MASK_VOLUME, 5, 0);
+		break;
+	case 6: case 7: case 8:
+		buf[0] = MASK_CHAR(MASK_EFFECT, 6, 0);
+		buf[1] = MASK_CHAR(MASK_EFFECT, 7, 0);
+		buf[2] = MASK_CHAR(MASK_EFFECT, 8, 0);
+		break;
+	};
+
+	draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -483,6 +540,28 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_mask_2(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
+	char buf[] = {143, 143, 0};
+
+	switch (cursor_pos) {
+	case 0: case 1:
+		buf[0] = MASK_CHAR(MASK_NOTE, 0, 0);
+		buf[1] = MASK_CHAR(MASK_NOTE, 0, 1);
+		break;
+	case 2: case 3:
+		buf[0] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
+		buf[1] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
+		break;
+	case 4: case 5:
+		buf[0] = MASK_CHAR(MASK_VOLUME, 4, 0);
+		buf[1] = MASK_CHAR(MASK_VOLUME, 5, 0);
+		break;
+	case 6: case 7: case 8:
+		buf[0] = MASK_CHAR(MASK_EFFECT, 6, 0);
+		buf[1] = MASK_CHAR(MASK_EFFECT, 7, 8);
+		break;
+	};
+
+	draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -592,6 +671,27 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_mask_1(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
+	char c = 143;
+
+	switch (cursor_pos) {
+	case 0: case 1:
+		c = MASK_CHAR(MASK_NOTE, 0, 1);
+		break;
+	case 2: case 3:
+		c = MASK_CHAR(MASK_INSTRUMENT, 2, 3);
+		break;
+	case 4: case 5:
+		c = MASK_CHAR(MASK_VOLUME, 4, 5);
+		break;
+	case 6:
+		c = MASK_CHAR(MASK_EFFECT, 6, 0);
+		break;
+	case 7: case 8:
+		c = MASK_CHAR(MASK_EFFECT, 7, 8);
+		break;
+	};
+
+	draw_char(c, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -741,5 +841,16 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 
 void draw_mask_6(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
+	char buf[] = {
+		MASK_CHAR(MASK_NOTE, 0, 0),
+		MASK_CHAR(MASK_NOTE, 0, 1),
+		MASK_CHAR(MASK_INSTRUMENT, 2, 3),
+		MASK_CHAR(MASK_VOLUME, 4, 5),
+		MASK_CHAR(MASK_EFFECT, 6, 0),
+		MASK_CHAR(MASK_EFFECT, 7, 8),
+		0,
+	};
+
+	draw_text(buf, x, y, fg, bg);
 }
 
