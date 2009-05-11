@@ -518,6 +518,10 @@ BOOL CSoundFile::ReadMT2(LPCBYTE lpStream, DWORD dwMemLength)
 						}
 					}
 				}
+				// blah
+				if (!(penv->dwFlags & ENV_VOLUME) && penv->nFadeOut < 256) {
+					penv->nFadeOut = 8192;
+				}
 			}
 			dwMemPos += pmi->dwDataLen + 36;
 			if (pfh->wVersion > 0x201) dwMemPos += 4; // ?
