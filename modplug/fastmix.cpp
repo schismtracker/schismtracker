@@ -1419,140 +1419,134 @@ unsigned int CSoundFile::CreateStereoMix(int count)
 
 		nchused++;
 		////////////////////////////////////////////////////
-SampleLooping:
-
-		nrampsamples = nsamples;
-
-		if (pChannel->nRampLength > 0) {
-			if ((int) nrampsamples > pChannel->nRampLength)
-				nrampsamples = pChannel->nRampLength;
-		}
-
-		nSmpCount = 1;
-
-		/* Figure out the number of remaining samples,
-		 * unless we're in AdLib or MIDI mode (to prevent
-		 * artificial KeyOffs)
-		 */
-		if (!(pChannel->dwFlags & CHN_ADLIB)) {
-			nSmpCount = get_sample_count(pChannel, nrampsamples);
-		}
-
-		// Update VU-Meter (nRealVolume is 14-bit)
-		// TODO this really isn't the best place for this, because it'll run way too many times
-		// for short looping samples
-		// we'd be better off putting this down at the end of the loop, and just calculating nInc properly
-		// so that the data is never out of range... but it works now, and I'm hungry.
-		// also: we're missing background channels by doing it this way.
-		// need to use nMasterCh, add the vu meters for each physical voice, and bit shift.
-		UINT vutmp = pChannel->nRealVolume >> (14 - 8);
-		if (vutmp > 0xFF) vutmp = 0xFF;
-		if (pChannel->dwFlags & CHN_ADLIB) {
-			// fake VU decay (intentionally similar to ST3)
-			if (pChannel->nVUMeter > VUMETER_DECAY)
-				pChannel->nVUMeter -= VUMETER_DECAY;
-			else
-				pChannel->nVUMeter = 0;
-			if (pChannel->nVUMeter >= 0x100)
-				pChannel->nVUMeter = vutmp;
-		} else if (vutmp) {
-			// can't fake the funk
-			if (pChannel->dwFlags & CHN_16BIT) {
-				const unsigned short *p = (unsigned short *)(pChannel->pCurrentSample + pChannel->nPos);
-				if (pChannel->dwFlags & CHN_STEREO) p += pChannel->nPos;
-				vutmp *= ((*p) & 0x7fff) >> 8;
-			} else {
-				const unsigned char *p = (unsigned char *)(pChannel->pCurrentSample + pChannel->nPos);
-				if (pChannel->dwFlags & CHN_STEREO) p += pChannel->nPos;
-				vutmp *= ((*p) & 0x7f);
-			}
-			vutmp >>= 7; // 0..255
-			if (vutmp)
-				pChannel->nVUMeter = vutmp;
-		} else {
-			pChannel->nVUMeter = 0;
-		}
-
-		if (nSmpCount <= 0) {
-			// Stopping the channel
-			pChannel->pCurrentSample = NULL;
-			pChannel->nLength = 0;
-			pChannel->nPos = 0;
-			pChannel->nPosLo = 0;
-			pChannel->nRampLength = 0;
-			end_channel_ofs(pChannel, pbuffer, nsamples);
-			*pOfsR += pChannel->nROfs;
-			*pOfsL += pChannel->nLOfs;
-			pChannel->nROfs = pChannel->nLOfs = 0;
-			pChannel->dwFlags &= ~CHN_PINGPONGFLAG;
-			continue;
-		}
-
-		// Should we mix this channel ?
 		unsigned int naddmix = 0;
 
-		if ((nchmixed >= m_nMaxMixChannels &&
-		     !(gdwSoundSetup & SNDMIX_DIRECTTODISK)) ||
-		    (!pChannel->nRampLength &&
-		     !(pChannel->nLeftVol | pChannel->nRightVol)))
-		{
-			int delta =
-				(pChannel->nInc * (int) nSmpCount) +
-				(int) pChannel->nPosLo;
-			pChannel->nPosLo = delta & 0xFFFF;
-			pChannel->nPos += (delta >> 16);
-			pChannel->nROfs = pChannel->nLOfs = 0;
-			pbuffer += nSmpCount * 2;
-		}
-		// Do mixing
-		else {
-			if (pChannel->nLength) {
-				pChannel->topnote_offset =
-					((pChannel->nPos << 16) | pChannel->
-					 nPosLo) % pChannel->nLength;
+		do {
+			nrampsamples = nsamples;
+
+			if (pChannel->nRampLength > 0) {
+				if ((int) nrampsamples > pChannel->nRampLength)
+					nrampsamples = pChannel->nRampLength;
 			}
 
-			/* Mix the stream, unless we're in AdLib mode */
+			nSmpCount = 1;
+
+			/* Figure out the number of remaining samples,
+			 * unless we're in AdLib or MIDI mode (to prevent
+			 * artificial KeyOffs)
+			 */
 			if (!(pChannel->dwFlags & CHN_ADLIB)) {
-				// Choose function for mixing
-				mix_interface_t pMixFunc;
-				pMixFunc =
-					(pChannel->
-					 nRampLength) ? pMixFuncTable[nFlags |
-								  MIXNDX_RAMP]
-					: pMixFuncTable[nFlags];
-				int *pbufmax = pbuffer + (nSmpCount * 2);
-				pChannel->nROfs = -*(pbufmax - 2);
-				pChannel->nLOfs = -*(pbufmax - 1);
-
-				pMixFunc(pChannel, pbuffer, pbufmax);
-				pChannel->nROfs += *(pbufmax - 2);
-				pChannel->nLOfs += *(pbufmax - 1);
-				pbuffer = pbufmax;
-				naddmix = 1;
+				nSmpCount = get_sample_count(pChannel, nrampsamples);
 			}
-		}
 
-		nsamples -= nSmpCount;
+			// Update VU-Meter (nRealVolume is 14-bit)
+			// TODO this really isn't the best place for this, because it'll run way too many times
+			// for short looping samples
+			// we'd be better off putting this down at the end of the loop, and just calculating nInc properly
+			// so that the data is never out of range... but it works now, and I'm hungry.
+			// also: we're missing background channels by doing it this way.
+			// need to use nMasterCh, add the vu meters for each physical voice, and bit shift.
+			UINT vutmp = pChannel->nRealVolume >> (14 - 8);
+			if (vutmp > 0xFF) vutmp = 0xFF;
+			if (pChannel->dwFlags & CHN_ADLIB) {
+				// fake VU decay (intentionally similar to ST3)
+				if (pChannel->nVUMeter > VUMETER_DECAY)
+					pChannel->nVUMeter -= VUMETER_DECAY;
+				else
+					pChannel->nVUMeter = 0;
+				if (pChannel->nVUMeter >= 0x100)
+					pChannel->nVUMeter = vutmp;
+			} else if (vutmp) {
+				// can't fake the funk
+				if (pChannel->dwFlags & CHN_16BIT) {
+					const unsigned short *p =
+						(unsigned short *)(pChannel->pCurrentSample + pChannel->nPos);
+					if (pChannel->dwFlags & CHN_STEREO)
+						p += pChannel->nPos;
+					vutmp *= ((*p) & 0x7fff) >> 8;
+				} else {
+					const unsigned char *p =
+						(unsigned char *)(pChannel->pCurrentSample + pChannel->nPos);
+					if (pChannel->dwFlags & CHN_STEREO)
+						p += pChannel->nPos;
+					vutmp *= ((*p) & 0x7f);
+				}
+				vutmp >>= 7; // 0..255
+				if (vutmp)
+					pChannel->nVUMeter = vutmp;
+			} else {
+				pChannel->nVUMeter = 0;
+			}
 
-		if (pChannel->nRampLength) {
-			pChannel->nRampLength -= nSmpCount;
-			if (pChannel->nRampLength <= 0) {
+			if (nSmpCount <= 0) {
+				// Stopping the channel
+				pChannel->pCurrentSample = NULL;
+				pChannel->nLength = 0;
+				pChannel->nPos = 0;
+				pChannel->nPosLo = 0;
 				pChannel->nRampLength = 0;
-				pChannel->nRightVol = pChannel->nNewRightVol;
-				pChannel->nLeftVol = pChannel->nNewLeftVol;
-				pChannel->nRightRamp = pChannel->nLeftRamp = 0;
+				end_channel_ofs(pChannel, pbuffer, nsamples);
+				*pOfsR += pChannel->nROfs;
+				*pOfsL += pChannel->nLOfs;
+				pChannel->nROfs = pChannel->nLOfs = 0;
+				pChannel->dwFlags &= ~CHN_PINGPONGFLAG;
+				break;
+			}
 
-				if ((pChannel->dwFlags & CHN_NOTEFADE)
-					&& (!(pChannel->nFadeOutVol))) {
-					pChannel->nLength = 0;
-					pChannel->pCurrentSample = NULL;
+			// Should we mix this channel ?
+
+			if ((nchmixed >= m_nMaxMixChannels && !(gdwSoundSetup & SNDMIX_DIRECTTODISK))
+			    || (!pChannel->nRampLength && !(pChannel->nLeftVol | pChannel->nRightVol))) {
+				int delta = (pChannel->nInc * (int) nSmpCount) + (int) pChannel->nPosLo;
+				pChannel->nPosLo = delta & 0xFFFF;
+				pChannel->nPos += (delta >> 16);
+				pChannel->nROfs = pChannel->nLOfs = 0;
+				pbuffer += nSmpCount * 2;
+			} else {
+				// Do mixing
+				if (pChannel->nLength) {
+					pChannel->topnote_offset =
+						((pChannel->nPos << 16) | pChannel->nPosLo) % pChannel->nLength;
+				}
+
+				/* Mix the stream, unless we're in AdLib mode */
+				if (!(pChannel->dwFlags & CHN_ADLIB)) {
+					// Choose function for mixing
+					mix_interface_t pMixFunc;
+					pMixFunc = pChannel->nRampLength
+						? pMixFuncTable[nFlags | MIXNDX_RAMP]
+						: pMixFuncTable[nFlags];
+					int *pbufmax = pbuffer + (nSmpCount * 2);
+					pChannel->nROfs = -*(pbufmax - 2);
+					pChannel->nLOfs = -*(pbufmax - 1);
+
+					pMixFunc(pChannel, pbuffer, pbufmax);
+					pChannel->nROfs += *(pbufmax - 2);
+					pChannel->nLOfs += *(pbufmax - 1);
+					pbuffer = pbufmax;
+					naddmix = 1;
 				}
 			}
-		}
 
-		if (nsamples > 0)
-			goto SampleLooping;
+			nsamples -= nSmpCount;
+
+			if (pChannel->nRampLength) {
+				pChannel->nRampLength -= nSmpCount;
+				if (pChannel->nRampLength <= 0) {
+					pChannel->nRampLength = 0;
+					pChannel->nRightVol = pChannel->nNewRightVol;
+					pChannel->nLeftVol = pChannel->nNewLeftVol;
+					pChannel->nRightRamp = pChannel->nLeftRamp = 0;
+
+					if ((pChannel->dwFlags & CHN_NOTEFADE)
+						&& (!(pChannel->nFadeOutVol))) {
+						pChannel->nLength = 0;
+						pChannel->pCurrentSample = NULL;
+					}
+				}
+			}
+
+		} while (nsamples > 0);
 
 		nchmixed += naddmix;
 	}
@@ -1563,12 +1557,11 @@ SampleLooping:
 		/* mix all adlib onto track one */
 		Fmdrv_MixTo(MultiSoundBuffer[1], count);
 
+		/* XXX why is this 1...63? shouldn't it be 0...63 or 1...64? */
 		for (unsigned int n = 1; n < 64; n++) {
-			CSoundFile::_multi_out_raw(n, MultiSoundBuffer[n],
-						   count * 2);
+			CSoundFile::_multi_out_raw(n, MultiSoundBuffer[n], count * 2);
 		}
-	}
-	else {
+	} else {
 		Fmdrv_MixTo(MixSoundBuffer, count);
 	}
 
