@@ -746,7 +746,6 @@ public:
 	BOOL ReadInstrumentFromSong(UINT nInstr, CSoundFile *, UINT nSrcInstrument);
 	BOOL ReadSampleFromSong(UINT nSample, CSoundFile *, UINT nSrcSample);
 	// Period/Note functions
-	UINT GetNoteFromPeriod(UINT period) const;
 	UINT GetPeriodFromNote(UINT note, int nFineTune, UINT nC5Speed) const;
 	UINT GetFreqFromPeriod(UINT period, UINT nC5Speed, int nPeriodFrac=0) const;
 	// Misc functions

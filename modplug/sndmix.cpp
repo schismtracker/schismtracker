@@ -919,18 +919,24 @@ static inline void rn_process_envelope(MODCHANNEL *chan, int *nvol)
 }
 
 
+#include "snd_fx.h"
 static inline int rn_arpeggio(CSoundFile *csf, MODCHANNEL *chan, int period)
 {
+	int a;
 	switch (csf->m_nTickCount % 3) {
 	case 1:
-		return csf->GetPeriodFromNote(
-			csf->GetNoteFromPeriod(period) + (chan->nArpeggio >> 4), 0, chan->nC5Speed);
+		a = chan->nArpeggio >> 4;
+		break;
 	case 2:
-		return csf->GetPeriodFromNote(
-			csf->GetNoteFromPeriod(period) + (chan->nArpeggio & 0x0F), 0, chan->nC5Speed);
+		a = chan->nArpeggio & 0xf;
+		break;
 	default:
-		return period;
+		a = 0;
 	}
+	if (!a)
+		return period;
+	return get_period_from_note(a + get_note_from_period(period),
+		8363, 0, csf->m_nMinPeriod, csf->m_nMaxPeriod);
 }
 
 
@@ -1409,7 +1415,7 @@ int csf_read_note(CSoundFile *csf)
 			int period = chan->nPeriod;
 
 			if ((chan->dwFlags & (CHN_GLISSANDO|CHN_PORTAMENTO)) == (CHN_GLISSANDO|CHN_PORTAMENTO)) {
-				period = csf->GetPeriodFromNote(csf->GetNoteFromPeriod(period), 0, chan->nC5Speed);
+				period = csf->GetPeriodFromNote(get_note_from_period(period), 0, chan->nC5Speed);
 			}
 
 			// Arpeggio ?
