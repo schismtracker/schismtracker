@@ -286,18 +286,19 @@ void text_delete_next_char(char *text, int *cursor_pos, int max_length)
 static void textentry_reposition(struct widget *w)
 {
 	int len;
-	
-        w->d.textentry.text[w->d.textentry.max_length] = 0;
-	
+
+	w->d.textentry.text[w->d.textentry.max_length] = 0;
+
 	len = strlen(w->d.textentry.text);
-        if (w->d.textentry.cursor_pos > len)
-                w->d.textentry.cursor_pos = len;
-	
-        if (w->d.textentry.cursor_pos > (w->d.textentry.firstchar + w->width - 1)) {
-                w->d.textentry.firstchar = w->d.textentry.cursor_pos - w->width + 1;
-                if (w->d.textentry.firstchar < 0)
-                        w->d.textentry.firstchar = 0;
-        }
+	if (w->d.textentry.cursor_pos < w->d.textentry.firstchar) {
+		w->d.textentry.firstchar = w->d.textentry.cursor_pos;
+	} else if (w->d.textentry.cursor_pos > len) {
+		w->d.textentry.cursor_pos = len;
+	} else if (w->d.textentry.cursor_pos > (w->d.textentry.firstchar + w->width - 1)) {
+		w->d.textentry.firstchar = w->d.textentry.cursor_pos - w->width + 1;
+		if (w->d.textentry.firstchar < 0)
+		        w->d.textentry.firstchar = 0;
+	}
 }
 
 int textentry_add_char(struct widget *w, Uint16 unicode)
