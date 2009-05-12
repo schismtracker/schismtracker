@@ -108,6 +108,7 @@ static void update_values_in_song(void)
 static void init_instruments(UNUSED void *data)
 {
 	song_init_instruments(-1);
+	song_set_instrument_mode(1);
 }
 
 static void maybe_init_instruments(void)
