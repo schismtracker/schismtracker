@@ -8,19 +8,19 @@ static inline int _muldiv(int a, int b, int c)
 
 
 
-int get_note_from_period(int period, int linear, int min_period, int max_period)
+int get_note_from_period(int period)
 {
-        int i, n;
-        if (!period)
-                return 0;
-        for (i = 1; i < 120; i++) {
-                n = get_period_from_note(i, 8363, linear, min_period, max_period);
-                if ((n > 0) && (n <= period))
-                        return i;
-        }
-        return 120;
+	int n;
+	if (!period)
+		return 0;
+	for (n = 0; n <= 120; n++) {
+		/* Essentially, this is just doing a note_to_period(n, 8363), but with less
+		computation since there's no c5speed to deal with. */
+		if (period >= (32 * FreqS3MTable[n % 12] >> (n / 12)))
+			return n + 1;
+	}
+	return 120;
 }
-
 
 int get_period_from_note(int note, unsigned int c5speed,
         int linear, int min_period, int max_period)

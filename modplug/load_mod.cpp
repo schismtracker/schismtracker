@@ -13,6 +13,7 @@
 
 extern WORD ProTrackerPeriodTable[6*12];
 extern WORD S3MFineTuneTable[16];
+extern unsigned short FreqS3MTable[16];
 
 //////////////////////////////////////////////////////////
 // ProTracker / NoiseTracker MOD/NST file support
@@ -335,7 +336,15 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 			{
 				BYTE A0=p[0], A1=p[1], A2=p[2], A3=p[3];
 				UINT n = ((((UINT)A0 & 0x0F) << 8) | (A1));
-				if ((n) && (n != 0xFFF)) m->note = GetNoteFromPeriod(n << 2);
+				if ((n) && (n != 0xFFF)) {
+					m->note = 120; // ?
+					for (int z = 0; z <= 120; z++) {
+						if (n >= (unsigned) (32 * FreqS3MTable[z % 12] >> (z / 12 + 2))) {
+							m->note = z + 1;
+							break;
+						}
+					}
+				}
 				m->instr = ((UINT)A2 >> 4) | (A0 & 0x10);
 				m->command = A2 & 0x0F;
 				m->param = A3;

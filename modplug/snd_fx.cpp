@@ -2346,11 +2346,6 @@ BOOL CSoundFile::IsValidBackwardJump(UINT nStartOrder, UINT nStartRow, UINT nJum
 
 #include "snd_fx.h"
 
-UINT CSoundFile::GetNoteFromPeriod(UINT period) const
-{
-	return get_note_from_period(period, m_dwSongFlags & SONG_LINEARSLIDES, m_nMinPeriod, m_nMaxPeriod);
-}
-
 UINT CSoundFile::GetPeriodFromNote(UINT note, int, UINT nC5Speed) const
 {
 	return get_period_from_note(note, nC5Speed, m_dwSongFlags & SONG_LINEARSLIDES, m_nMinPeriod, m_nMaxPeriod);
