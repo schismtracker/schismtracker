@@ -90,6 +90,9 @@ static int channel_snap_back = -1;
 /* if pressing shift WHILE TRACING the song is paused until we release it */
 static int tracing_was_playing = 0;
 
+static int keyjazz_noteoff = 0; /* issue noteoffs when releasing note */
+static int keyjazz_repeat = 1; /* insert multiple notes on key repeat */
+
 /* this is, of course, what the current pattern is */
 static int current_pattern = 0;
 
@@ -1024,6 +1027,9 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(volume_percent);
 	CFG_SET_PE(fast_volume_percent);
 	CFG_SET_PE(fast_volume_mode);
+	CFG_SET_PE(keyjazz_noteoff);
+	CFG_SET_PE(keyjazz_repeat);
+
 	cfg_set_number(cfg, "Pattern Editor", "crayola_mode", !!(status.flags & CRAYOLA_MODE));
 	for (n = 0; n < 64; n++)
 		s[n] = track_view_scheme[n] + 'a';
@@ -1050,6 +1056,8 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(volume_percent, 100);
 	CFG_GET_PE(fast_volume_percent, 67);
 	CFG_GET_PE(fast_volume_mode, 0);
+	CFG_GET_PE(keyjazz_noteoff, 0);
+	CFG_GET_PE(keyjazz_repeat, 1);
 	
 	if (cfg_get_number(cfg, "Pattern Editor", "crayola_mode", 0))
 		status.flags |= CRAYOLA_MODE;
@@ -3073,7 +3081,7 @@ static int pattern_editor_insert(struct key_event *k)
 		/* TODO: rewrite this more logically */
 		if (k->sym == SDLK_SPACE) {
 			if (k->state) return 0;
-			/* copy mask to note */
+			/* copy mask to note (FIXME: this should play the note, too) */
 			n = mask_note.note;
 			j = current_channel - 1;
 			if (edit_copy_mask & MASK_VOLUME) {
@@ -3110,20 +3118,10 @@ static int pattern_editor_insert(struct key_event *k)
 					if (!(midi_flags & MIDI_RECORD_NOTEOFF))
 						return 1;
 				}
-				j = song_keyup(
-					i,
-					i,
-					n,
-					current_channel-1,
-					channel_multi_base);
-				if (k->state) n = NOTE_OFF;
-				j = song_keydown(
-					i,
-					i,
-					n,
-					vol,
-					current_channel-1,
-					channel_multi_base);
+				j = song_keyup(i, i, n, current_channel - 1, channel_multi_base);
+				if (k->state)
+					n = NOTE_OFF;
+				j = song_keydown(i, i, n, vol, current_channel - 1, channel_multi_base);
 				if (j == -1) return 1; /* err? */
 				while (j >= 64) j -= 64;
 				if (song_get_mode() & (MODE_PATTERN_LOOP)) {
@@ -3136,25 +3134,30 @@ static int pattern_editor_insert(struct key_event *k)
 						channel_keyhack[j] = current_row;
 					}
 				}
-
 			} else if (k->state) {
-				/* don't bother with keyup events here */
+				if (keyjazz_noteoff) {
+					/* coda mode */
+					song_keyup(i, i, n, current_channel - 1,
+						(k->mod & KMOD_SHIFT)
+							? channel_quick
+							: channel_multi_base);
+				}
+
 				if (channel_snap_back > -1) {
 					current_channel = channel_snap_back;
 					channel_snap_back = -1;
 				}
 				return 0;
 			} else {
-				j = song_keydown(
-					-1,
-					-1,
-					n,
-					vol,
-					current_channel-1,
-					(k->mod & KMOD_SHIFT) ? channel_quick
-					:	channel_multi_base);
+				if (k->is_repeat && !keyjazz_repeat)
+					return 1;
+				j = song_keydown(-1, -1, n, vol, current_channel - 1,
+					(k->mod & KMOD_SHIFT)
+						? channel_quick
+						: channel_multi_base);
 				while (j >= 64) j -= 64;
-				if (j == -1) j = current_channel-1;
+				if (j == -1)
+					j = current_channel - 1;
 				if (k->mod & KMOD_SHIFT) {
 					if (channel_snap_back == -1) {
 						channel_snap_back = current_channel;
