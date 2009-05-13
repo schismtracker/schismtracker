@@ -310,8 +310,6 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 	m_nType = MOD_TYPE_MOD;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
-	m_nMinPeriod = 14 << 2;
-	m_nMaxPeriod = 3424 << 2;
 	memcpy(m_szNames, lpStream, 20);
 	// Setting channels pan
 	for (UINT ich=0; ich<m_nChannels; ich++)

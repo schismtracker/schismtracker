@@ -1358,16 +1358,11 @@ void CSoundFile::PortamentoDown(MODCHANNEL *pChn, UINT param)
 	if (param) pChn->nOldPortaUpDown = param; else param = pChn->nOldPortaUpDown;
 	if (m_dwSongFlags & SONG_ITCOMPATMODE) pChn->nPortamentoSlide=param*4;
 	else pChn->nPortamentoDest=0;
-	if ((param & 0xF0) >= 0xE0)
-	{
-		if (param & 0x0F)
-		{
-			if ((param & 0xF0) == 0xF0)
-			{
+	if ((param & 0xF0) >= 0xE0) {
+		if (param & 0x0F) {
+			if ((param & 0xF0) == 0xF0) {
 				FinePortamentoDown(pChn, param & 0x0F);
-			} else
-			if ((param & 0xF0) == 0xE0)
-			{
+			} else if ((param & 0xF0) == 0xE0) {
 				ExtraFinePortamentoDown(pChn, param & 0x0F);
 			}
 		}
@@ -1381,14 +1376,11 @@ void CSoundFile::FinePortamentoUp(MODCHANNEL *pChn, UINT param)
 //-------------------------------------------------------------
 {
 	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
-		if (m_dwSongFlags & SONG_LINEARSLIDES)
-		{
+		if (m_dwSongFlags & SONG_LINEARSLIDES) {
 			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideDownTable[param & 0x0F], 65536);
-		} else
-		{
+		} else {
 			pChn->nPeriod -= (int)(param * 4);
 		}
-		if (pChn->nPeriod < m_nMinPeriod) pChn->nPeriod = m_nMinPeriod;
 	}
 }
 
@@ -1397,14 +1389,11 @@ void CSoundFile::FinePortamentoDown(MODCHANNEL *pChn, UINT param)
 //---------------------------------------------------------------
 {
 	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
-		if (m_dwSongFlags & SONG_LINEARSLIDES)
-		{
+		if (m_dwSongFlags & SONG_LINEARSLIDES) {
 			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideUpTable[param & 0x0F], 65536);
-		} else
-		{
+		} else {
 			pChn->nPeriod += (int)(param * 4);
 		}
-		if (pChn->nPeriod > m_nMaxPeriod) pChn->nPeriod = m_nMaxPeriod;
 	}
 }
 
@@ -1413,14 +1402,11 @@ void CSoundFile::ExtraFinePortamentoUp(MODCHANNEL *pChn, UINT param)
 //------------------------------------------------------------------
 {
 	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
-		if (m_dwSongFlags & SONG_LINEARSLIDES)
-		{
+		if (m_dwSongFlags & SONG_LINEARSLIDES) {
 			pChn->nPeriod = _muldivr(pChn->nPeriod, FineLinearSlideDownTable[param & 0x0F], 65536);
-		} else
-		{
+		} else {
 			pChn->nPeriod -= (int)(param);
 		}
-		if (pChn->nPeriod < m_nMinPeriod) pChn->nPeriod = m_nMinPeriod;
 	}
 }
 
@@ -1429,14 +1415,11 @@ void CSoundFile::ExtraFinePortamentoDown(MODCHANNEL *pChn, UINT param)
 //--------------------------------------------------------------------
 {
 	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
-		if (m_dwSongFlags & SONG_LINEARSLIDES)
-		{
+		if (m_dwSongFlags & SONG_LINEARSLIDES) {
 			pChn->nPeriod = _muldivr(pChn->nPeriod, FineLinearSlideUpTable[param & 0x0F], 65536);
-		} else
-		{
+		} else {
 			pChn->nPeriod += (int)(param);
 		}
-		if (pChn->nPeriod > m_nMaxPeriod) pChn->nPeriod = m_nMaxPeriod;
 	}
 }
 
@@ -2059,34 +2042,27 @@ void CSoundFile::DoFreqSlide(MODCHANNEL *pChn, LONG nFreqSlide)
 {
 	// IT Linear slides
 	if (!pChn->nPeriod) return;
-	if (m_dwSongFlags & SONG_LINEARSLIDES)
-	{
-		if (nFreqSlide < 0)
-		{
+	if (m_dwSongFlags & SONG_LINEARSLIDES) {
+		if (nFreqSlide < 0) {
 			UINT n = (- nFreqSlide) >> 2;
 			if (n > 255) n = 255;
 			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideDownTable[n], 65536);
-		} else
-		{
+		} else {
 			UINT n = (nFreqSlide) >> 2;
 
 			if (n > 255) n = 255;
 			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideUpTable[n], 65536);
 		}
-	} else
-	{
+	} else {
 		pChn->nPeriod += nFreqSlide;
 	}
-	if (pChn->nPeriod < m_nMinPeriod) pChn->nPeriod = m_nMinPeriod;
-	else if (pChn->nPeriod > m_nMaxPeriod) pChn->nPeriod = m_nMaxPeriod;
 }
 
 
 void CSoundFile::NoteCut(UINT nChn, UINT nTick)
 //---------------------------------------------
 {
-	if (m_nTickCount == nTick)
-	{
+	if (m_nTickCount == nTick) {
 		MODCHANNEL *pChn = &Chn[nChn];
 		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
 		pChn->nVolume = 0;
@@ -2348,7 +2324,7 @@ BOOL CSoundFile::IsValidBackwardJump(UINT nStartOrder, UINT nStartRow, UINT nJum
 
 UINT CSoundFile::GetPeriodFromNote(UINT note, int, UINT nC5Speed) const
 {
-	return get_period_from_note(note, nC5Speed, m_dwSongFlags & SONG_LINEARSLIDES, m_nMinPeriod, m_nMaxPeriod);
+	return get_period_from_note(note, nC5Speed, m_dwSongFlags & SONG_LINEARSLIDES);
 }
 
 UINT CSoundFile::GetFreqFromPeriod(UINT period, UINT nC5Speed, int nPeriodFrac) const

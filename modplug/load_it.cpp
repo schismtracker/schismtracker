@@ -724,8 +724,6 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 			ChnSettings[ncu].dwFlags &= ~CHN_MUTE;
 		}
 	}
-	m_nMinPeriod = 8;
-	m_nMaxPeriod = 0xF000;
 	return TRUE;
 }
 

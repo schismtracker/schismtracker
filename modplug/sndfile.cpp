@@ -49,7 +49,6 @@ CSoundFile::CSoundFile()
       m_nLockedPattern(), m_nRestartPos(),
       m_nGlobalVolume(128), m_nSongPreAmp(),
       m_nFreqFactor(128), m_nTempoFactor(128), m_nOldGlbVolSlide(),
-      m_nMinPeriod(0x20), m_nMaxPeriod(0x7FFF),
       m_nRepeatCount(0), m_nInitialRepeatCount(),
       m_rowHighlightMajor(16), m_rowHighlightMinor(4),
       m_lpszSongComments(NULL),
@@ -103,8 +102,6 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	m_nCurrentPattern = 0;
 	m_nNextPattern = 0;
 	m_nRestartPos = 0;
-	m_nMinPeriod = 16;
-	m_nMaxPeriod = 32767;
 	m_nSongPreAmp = 0x30;
 	m_lpszSongComments = NULL;
 	memset(Ins, 0, sizeof(Ins));
@@ -718,14 +715,17 @@ UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 //-----------------------------------------------------------------------------------
 {
 	UINT len = 0, bufcount;
-	signed char buffer[4096];
+	union {
+		signed char s8[4096];
+		signed short s16[2048];
+		unsigned char u8[4096];
+	} buffer;
 	signed char *pSample = (signed char *)pins->pSample;
 	UINT nLen = pins->nLength;
 
 	if ((nMaxLen) && (nLen > nMaxLen)) nLen = nMaxLen;
 	if ((!pSample) || (f == NULL) || (!nLen)) return 0;
-	switch(nFlags)
-	{
+	switch(nFlags) {
 	// 16-bit samples
 	case RS_PCM16U:
 	case RS_PCM16D:
@@ -736,31 +736,27 @@ UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 			len = nLen * 2;
 			bufcount = 0;
 			s_ofs = (nFlags == RS_PCM16U) ? 0x8000 : 0;
-			for (UINT j=0; j<nLen; j++)
-			{
+			for (UINT j=0; j<nLen; j++) {
 				int s_new = *p;
 				p++;
-				if (pins->uFlags & CHN_STEREO)
-				{
+				if (pins->uFlags & CHN_STEREO) {
 					s_new = (s_new + (*p) + 1) >> 1;
 					p++;
 				}
-				if (nFlags == RS_PCM16D)
-				{
-					*((short *)(&buffer[bufcount])) = bswapLE16((short)(s_new - s_old));
+				if (nFlags == RS_PCM16D) {
+					buffer.s16[bufcount / 2] = bswapLE16(s_new - s_old);
 					s_old = s_new;
-				} else
-				{
-					*((short *)(&buffer[bufcount])) = bswapLE16((short)(s_new + s_ofs));
+				} else {
+					buffer.s16[bufcount / 2] = bswapLE16(s_new + s_ofs);
 				}
 				bufcount += 2;
-				if (bufcount >= sizeof(buffer) - 1)
-				{
-					f->o(f, (const unsigned char *)buffer, bufcount);
+				if (bufcount >= sizeof(buffer) - 1) {
+					f->o(f, buffer.u8, bufcount);
 					bufcount = 0;
 				}
 			}
-			if (bufcount) f->o(f, (const unsigned char *)buffer, bufcount);
+			if (bufcount)
+				f->o(f, buffer.u8, bufcount);
 		}
 		break;
 
@@ -771,31 +767,27 @@ UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 	case RS_STPCM8D:
 		{
 			int s_ofs = (nFlags == RS_STPCM8U) ? 0x80 : 0;
-			for (UINT iCh=0; iCh<2; iCh++)
-			{
+			for (UINT iCh=0; iCh<2; iCh++) {
 				signed char *p = pSample + iCh;
 				int s_old = 0;
 
 				bufcount = 0;
-				for (UINT j=0; j<nLen; j++)
-				{
+				for (UINT j=0; j<nLen; j++) {
 					int s_new = *p;
 					p += 2;
-					if (nFlags == RS_STPCM8D)
-					{
-						buffer[bufcount++] = (signed char)(s_new - s_old);
+					if (nFlags == RS_STPCM8D) {
+						buffer.s8[bufcount++] = s_new - s_old;
 						s_old = s_new;
-					} else
-					{
-						buffer[bufcount++] = (signed char)(s_new + s_ofs);
+					} else {
+						buffer.s8[bufcount++] = s_new + s_ofs;
 					}
-					if (bufcount >= sizeof(buffer))
-					{
-						f->o(f, (const unsigned char *)buffer, bufcount);
+					if (bufcount >= sizeof(buffer)) {
+						f->o(f, buffer.u8, bufcount);
 						bufcount = 0;
 					}
 				}
-				if (bufcount) f->o(f, (const unsigned char *)buffer, bufcount);
+				if (bufcount)
+					f->o(f, buffer.u8, bufcount);
 			}
 		}
 		len = nLen * 2;
@@ -807,32 +799,31 @@ UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 	case RS_STPCM16D:
 		{
 			int s_ofs = (nFlags == RS_STPCM16U) ? 0x8000 : 0;
-			for (UINT iCh=0; iCh<2; iCh++)
-			{
+			for (UINT iCh=0; iCh<2; iCh++) {
 				signed short *p = ((signed short *)pSample) + iCh;
 				int s_old = 0;
 
 				bufcount = 0;
-				for (UINT j=0; j<nLen; j++)
-				{
+				for (UINT j=0; j<nLen; j++) {
 					int s_new = *p;
 					p += 2;
 					if (nFlags == RS_STPCM16D)
 					{
-						*((short *)(&buffer[bufcount])) = bswapLE16((short)(s_new - s_old));
+						buffer.s16[bufcount / 2] = bswapLE16(s_new - s_old);
 						s_old = s_new;
 					} else
 					{
-						*((short *)(&buffer[bufcount])) = bswapLE16((short)(s_new + s_ofs));
+						buffer.s16[bufcount / 2] = bswapLE16(s_new + s_ofs);
 					}
 					bufcount += 2;
 					if (bufcount >= sizeof(buffer))
 					{
-						f->o(f, (const unsigned char *)buffer, bufcount);
+						f->o(f, buffer.u8, bufcount);
 						bufcount = 0;
 					}
 				}
-				if (bufcount) f->o(f, (const unsigned char *)buffer, bufcount);
+				if (bufcount)
+					f->o(f, buffer.u8, bufcount);
 			}
 		}
 		len = nLen*4;
@@ -846,17 +837,16 @@ UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 			{
 				signed short *p = (signed short *)pSample;
 				bufcount = 0;
-				for (UINT j=0; j<nLen; j++)
-				{
-					*((short *)(&buffer[bufcount])) = *p;
+				for (UINT j=0; j<nLen; j++) {
+					buffer.s16[bufcount / 2] = *p;
 					bufcount += 2;
-					if (bufcount >= sizeof(buffer))
-					{
-						f->o(f, (const unsigned char *)buffer, bufcount);
+					if (bufcount >= sizeof(buffer)) {
+						f->o(f, buffer.u8, bufcount);
 						bufcount = 0;
 					}
 				}
-				if (bufcount) f->o(f, (const unsigned char *)buffer, bufcount);
+				if (bufcount)
+					f->o(f, buffer.u8, bufcount);
 			};
 		} else {
 			f->o(f, (const unsigned char *)pSample, len);
@@ -878,30 +868,26 @@ UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 			
 			int s_old = 0, s_ofs = (nFlags == RS_PCM8U) ? 0x80 : 0;
 			if (pins->uFlags & CHN_16BIT) p++;
-			for (UINT j=0; j<len; j++)
-			{
+			for (UINT j=0; j<len; j++) {
 				int s_new = (signed char)(*p);
 				p += sinc;
-				if (pins->uFlags & CHN_STEREO)
-				{
+				if (pins->uFlags & CHN_STEREO) {
 					s_new = (s_new + ((int)*p) + 1) >> 1;
 					p += sinc;
 				}
-				if (nFlags == RS_PCM8D)
-				{
-					buffer[bufcount++] = (signed char)(s_new - s_old);
+				if (nFlags == RS_PCM8D) {
+					buffer.s8[bufcount++] = s_new - s_old;
 					s_old = s_new;
-				} else
-				{
-					buffer[bufcount++] = (signed char)(s_new + s_ofs);
+				} else {
+					buffer.s8[bufcount++] = s_new + s_ofs;
 				}
-				if (bufcount >= sizeof(buffer))
-				{
-					f->o(f, (const unsigned char *)buffer, bufcount);
+				if (bufcount >= sizeof(buffer)) {
+					f->o(f, buffer.u8, bufcount);
 					bufcount = 0;
 				}
 			}
-			if (bufcount) f->o(f,(const unsigned char *)buffer,bufcount);
+			if (bufcount)
+				f->o(f, buffer.u8, bufcount);
 		}
 	}
 	return len;

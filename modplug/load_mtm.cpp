@@ -159,8 +159,6 @@ BOOL CSoundFile::ReadMTM(LPCBYTE lpStream, DWORD dwMemLength)
 		dwMemPos += ReadSample(&Ins[ismp], (Ins[ismp].uFlags & CHN_16BIT) ? RS_PCM16U : RS_PCM8U,
 								(LPSTR)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
-	m_nMinPeriod = 64;
-	m_nMaxPeriod = 32767;
 	return TRUE;
 }
 

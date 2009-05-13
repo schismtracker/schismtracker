@@ -72,8 +72,6 @@ BOOL CSoundFile::ReadSTM(const BYTE *lpStream, DWORD dwMemLength)
 	m_nSamples = 31;
 	m_nChannels = 4;
 	m_nInstruments = 0;
-	m_nMinPeriod = 64;
-	m_nMaxPeriod = 0x7FFF;
 	m_nDefaultSpeed = phdr->inittempo >> 4;
 	if (m_nDefaultSpeed < 1) m_nDefaultSpeed = 1;
 	m_nDefaultTempo = 125;

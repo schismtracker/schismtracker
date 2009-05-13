@@ -31,9 +31,7 @@ typedef struct tagFILEHEADER669
 typedef struct tagSAMPLE669
 {
 	BYTE filename[13];
-	BYTE length[4];	// when will somebody think about DWORD align ???
-	BYTE loopstart[4];
-	BYTE loopend[4];
+	unsigned int length, loopstart, loopend;
 } SAMPLE669;
 
 
@@ -58,8 +56,6 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	// That should be enough checking: this must be a 669 module.
 	m_nType = MOD_TYPE_669;
 	m_dwSongFlags |= SONG_LINEARSLIDES;
-	m_nMinPeriod = 28 << 2;
-	m_nMaxPeriod = 1712 << 3;
 	m_nDefaultTempo = 125;
 	m_nDefaultSpeed = 6;
 	m_nChannels = 8;
@@ -68,9 +64,9 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	m_nSamples = pfh->samples;
 	for (UINT nins=1; nins<=m_nSamples; nins++, psmp++)
 	{
-		DWORD len = bswapLE32(*((DWORD *)(&psmp->length)));
-		DWORD loopstart = bswapLE32(*((DWORD *)(&psmp->loopstart)));
-		DWORD loopend = bswapLE32(*((DWORD *)(&psmp->loopend)));
+		DWORD len = bswapLE32(psmp->length);
+		DWORD loopstart = bswapLE32(psmp->loopstart);
+		DWORD loopend = bswapLE32(psmp->loopend);
 		if (len > MAX_SAMPLE_LENGTH) len = MAX_SAMPLE_LENGTH;
 		if ((loopend > len) && (!loopstart)) loopend = 0;
 		if (loopend > len) loopend = len;
