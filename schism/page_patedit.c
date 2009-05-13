@@ -1170,14 +1170,11 @@ static void selection_clear(void)
 }
 
 
-/* Block double/halve functions rewritten 20090428 - now more IT-like than it was, but still not
-sure if it's quite right. In particular, I get the feeling that IT does something "special" on
-repeated invocations, like extending the range or something. */
-
 static void block_length_double(void)
 {
-	song_note *pattern, *srow, *drow;
+	song_note *pattern, *src, *dest;
 	int sel_rows, total_rows;
+	int src_end, dest_end; // = first row that is NOT affected
 	int width, height, offset;
 
 	if (!SELECTION_EXISTS)
@@ -1193,20 +1190,23 @@ static void block_length_double(void)
 
 	sel_rows = selection.last_row - selection.first_row + 1;
 	offset = selection.first_channel - 1;
-	height = MIN(sel_rows * 2, total_rows);
 	width = selection.last_channel - offset;
-	srow = pattern + 64 * selection.last_row;
-	drow = pattern + 64 * (height - 1);
+	dest_end = MIN(selection.first_row + 2 * sel_rows, total_rows);
+	height = dest_end - selection.first_row;
+	src_end = selection.first_row + height / 2;
+
+	src = pattern + 64 * (src_end - 1);
+	dest = pattern + 64 * (dest_end - 1);
 
 	pated_history_add("Undo block length double       (Alt-F)",
 		offset, selection.first_row, width, height);
 
-	while (drow > srow) {
-		memset(drow + offset, 0, width * sizeof(song_note));
-		drow -= 64;
-		memcpy(drow + offset, srow + offset, width * sizeof(song_note));
-		drow -= 64;
-		srow -= 64;
+	while (dest > src) {
+		memset(dest + offset, 0, width * sizeof(song_note));
+		dest -= 64;
+		memcpy(dest + offset, src + offset, width * sizeof(song_note));
+		dest -= 64;
+		src -= 64;
 	}
 
 	pattern_selection_system_copyout();
@@ -1214,7 +1214,7 @@ static void block_length_double(void)
 
 static void block_length_halve(void)
 {
-	song_note *pattern, *srow, *drow;
+	song_note *pattern, *src, *dest;
 	int sel_rows, total_rows, row;
 	int width, height, offset;
 
@@ -1233,19 +1233,15 @@ static void block_length_halve(void)
 	offset = selection.first_channel - 1;
 	width = selection.last_channel - offset;
 	height = MIN(sel_rows * 2, total_rows);
-	srow = drow = pattern + 64 * selection.first_row;
+	src = dest = pattern + 64 * selection.first_row;
 
 	pated_history_add("Undo block length halve        (Alt-G)",
 		offset, selection.first_row, width, height);
 
 	for (row = 0; row < height / 2; row++) {
-		memcpy(drow + offset, srow + offset, width * sizeof(song_note));
-		srow += 64 * 2;
-		drow += 64;
-	}
-	for (; row < height; row++) {
-		memset(drow + offset, 0, width * sizeof(song_note));
-		drow += 64;
+		memcpy(dest + offset, src + offset, width * sizeof(song_note));
+		src += 64 * 2;
+		dest += 64;
 	}
 
 	pattern_selection_system_copyout();
