@@ -1170,6 +1170,8 @@ static void selection_clear(void)
 }
 
 
+// FIXME | this misbehaves if height is an odd number -- e.g. if an odd number
+// FIXME | of rows is selected and 2 * sel_rows overlaps the end of the pattern
 static void block_length_double(void)
 {
 	song_note *pattern, *src, *dest;
@@ -1212,10 +1214,11 @@ static void block_length_double(void)
 	pattern_selection_system_copyout();
 }
 
+// FIXME: this should erase the end of the selection if 2 * sel_rows > total_rows
 static void block_length_halve(void)
 {
 	song_note *pattern, *src, *dest;
-	int sel_rows, total_rows, row;
+	int sel_rows, src_end, total_rows, row;
 	int width, height, offset;
 
 	if (!SELECTION_EXISTS)
@@ -1232,7 +1235,8 @@ static void block_length_halve(void)
 	sel_rows = selection.last_row - selection.first_row + 1;
 	offset = selection.first_channel - 1;
 	width = selection.last_channel - offset;
-	height = MIN(sel_rows * 2, total_rows);
+	src_end = MIN(selection.first_row + 2 * sel_rows, total_rows);
+	height = src_end - selection.first_row;
 	src = dest = pattern + 64 * selection.first_row;
 
 	pated_history_add("Undo block length halve        (Alt-G)",
