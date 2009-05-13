@@ -230,7 +230,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		psmp->uFlags = 0;
 		psmp->nLength = bswapBE16(pms->length)*2;
 		dwTotalSampleLen += psmp->nLength;
-		psmp->nC5Speed = S3MFineTuneTable[(pms->finetune & 0x0F) ^ 8]; // FIXME probably wrong; double-check
+		psmp->nC5Speed = S3MFineTuneTable[(pms->finetune & 0x0F) ^ 8];
 		psmp->nVolume = 4*pms->volume;
 		if (psmp->nVolume > 256) { psmp->nVolume = 256; nErr++; }
 		psmp->nGlobalVol = 64;
