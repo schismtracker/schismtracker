@@ -42,8 +42,16 @@ void CSoundFile::ConvertModCommand(MODCOMMAND *m) const
 	case 0x0E:
 		command = CMD_S3MCMDEX;
 		switch(param & 0xF0) {
-			case 0x10: command = CMD_PORTAMENTOUP; param |= 0xF0; break;
-			case 0x20: command = CMD_PORTAMENTODOWN; param |= 0xF0; break;
+			case 0x10:
+				printf("converting E%02X to F%02X\n", param, param | 0xf0);
+				command = CMD_PORTAMENTOUP;
+				param |= 0xF0;
+				break;
+			case 0x20:
+				printf("converting E%02X to F%02X\n", param, param | 0xf0);
+				command = CMD_PORTAMENTODOWN;
+				param |= 0xF0;
+				break;
 			case 0x30: param = (param & 0x0F) | 0x10; break;
 			case 0x40: param = (param & 0x0F) | 0x30; break;
 			case 0x50: param = (param & 0x0F) | 0x20; break;
