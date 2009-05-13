@@ -44,8 +44,6 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 	channels = bswapLE16(*((WORD *)(lpStream+68)));
 	if (channels > 64) return FALSE;
 	m_nType = MOD_TYPE_XM;
-	m_nMinPeriod = 27;
-	m_nMaxPeriod = 54784;
 	m_nChannels = channels;
 	if (restartpos < norders) m_nRestartPos = restartpos;
 	patterns = bswapLE16(*((WORD *)(lpStream+70)));
@@ -514,6 +512,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 		ni = m_nInstruments;
 	else
 		ni = m_nSamples;
+	ni++; // I don't know
 	header.instruments = bswapLE16(ni);
 	header.flags = (m_dwSongFlags & SONG_LINEARSLIDES) ? 0x01 : 0x00;
 	if (m_dwSongFlags & SONG_EXFILTERRANGE) header.flags |= 0x1000;

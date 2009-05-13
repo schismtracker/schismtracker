@@ -261,8 +261,6 @@ static void fix_song(void)
 {
 	/* poop */
 	mp->m_nLockedPattern = MAX_ORDERS;
-	mp->m_nMinPeriod = 8;
-	mp->m_nMaxPeriod = 0xF000;
 
         _convert_to_it(mp);
         _mute_unused_channels();

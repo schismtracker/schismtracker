@@ -575,7 +575,7 @@ public: // for Editing
 	UINT m_nPattern,m_nCurrentPattern,m_nNextPattern,m_nLockedPattern,m_nRestartPos;
 	UINT m_nGlobalVolume, m_nSongPreAmp;
 	UINT m_nFreqFactor, m_nTempoFactor, m_nOldGlbVolSlide;
-	LONG m_nMinPeriod, m_nMaxPeriod, m_nRepeatCount, m_nInitialRepeatCount;
+	LONG m_nRepeatCount, m_nInitialRepeatCount;
 	BYTE m_rowHighlightMajor, m_rowHighlightMinor;
 	LPSTR m_lpszSongComments;
 	char m_szNames[MAX_INSTRUMENTS][32];    // changed from CHAR

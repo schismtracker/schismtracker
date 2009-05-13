@@ -828,8 +828,7 @@ static inline int rn_arpeggio(CSoundFile *csf, MODCHANNEL *chan, int period)
 	}
 	if (!a)
 		return period;
-	return get_period_from_note(a + get_note_from_period(period),
-		8363, 0, csf->m_nMinPeriod, csf->m_nMaxPeriod);
+	return get_period_from_note(a + get_note_from_period(period), 8363, 0);
 }
 
 
@@ -1289,9 +1288,6 @@ int csf_read_note(CSoundFile *csf)
 				chan->nRealVolume = _muldiv(vol * csf->m_nGlobalVolume, chan->nGlobalVol * chan->nInsVol, 1 << 20);
 			}
 
-			if (chan->nPeriod < csf->m_nMinPeriod)
-				chan->nPeriod = csf->m_nMinPeriod;
-
 			int period = chan->nPeriod;
 
 			if ((chan->dwFlags & (CHN_GLISSANDO|CHN_PORTAMENTO)) == (CHN_GLISSANDO|CHN_PORTAMENTO)) {
@@ -1322,15 +1318,6 @@ int csf_read_note(CSoundFile *csf)
 			// Instrument Auto-Vibrato
 			if (chan->pInstrument && chan->pInstrument->nVibDepth)
 				rn_instrument_vibrato(csf, chan, &period, &nPeriodFrac);
-
-			// Final Period
-			if (period < csf->m_nMinPeriod) {
-				period = csf->m_nMinPeriod;
-			}
-			else if (period > csf->m_nMaxPeriod) {
-				period = csf->m_nMaxPeriod;
-				nPeriodFrac = 0;
-			}
 
 			unsigned int freq = csf->GetFreqFromPeriod(period, chan->nC5Speed, nPeriodFrac);
 			
