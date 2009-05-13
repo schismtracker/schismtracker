@@ -53,7 +53,6 @@ typedef void * PVOID;
 typedef void VOID;
 
 
-#define NO_AGC
 #define LPCTSTR LPCSTR
 #define lstrcpyn strncpy
 #define lstrcpy strcpy

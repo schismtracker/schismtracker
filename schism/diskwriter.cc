@@ -237,7 +237,6 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 
 		/* okay, restrict libmodplug to only play a single pattern */
 		mp->LoopPattern(patno, 0);
-		mp->m_nGlobalFadeMaxSamples = 0;
 		mp->m_nRepeatCount = 2; /* er... */
 	}
 

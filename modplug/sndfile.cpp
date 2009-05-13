@@ -51,7 +51,6 @@ CSoundFile::CSoundFile()
       m_nFreqFactor(128), m_nTempoFactor(128), m_nOldGlbVolSlide(),
       m_nMinPeriod(0x20), m_nMaxPeriod(0x7FFF),
       m_nRepeatCount(0), m_nInitialRepeatCount(),
-      m_nGlobalFadeSamples(), m_nGlobalFadeMaxSamples(),
       m_rowHighlightMajor(16), m_rowHighlightMinor(4),
       m_lpszSongComments(NULL),
       m_szNames(), CompressionTable(),
@@ -443,20 +442,6 @@ int csf_set_resampling_mode(CSoundFile *csf, UINT nMode)
 }
 
 
-void CSoundFile::SetAGC(BOOL b)
-//-----------------------------
-{
-	if (b)
-	{
-		if (!(gdwSoundSetup & SNDMIX_AGC))
-		{
-			gdwSoundSetup |= SNDMIX_AGC;
-			gnAGC = AGC_UNITY;
-		}
-	} else gdwSoundSetup &= ~SNDMIX_AGC;
-}
-
-
 UINT CSoundFile::GetNumPatterns() const
 //-------------------------------------
 {
@@ -553,7 +538,7 @@ void CSoundFile::SetCurrentPos(UINT nPos)
 		m_nMusicSpeed = m_nDefaultSpeed;
 		m_nMusicTempo = m_nDefaultTempo;
 	}
-	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
+	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 	for (nPattern = 0; nPattern < MAX_ORDERS; nPattern++)
 	{
 		UINT ord = Order[nPattern];
@@ -633,13 +618,13 @@ void CSoundFile::SetCurrentOrder(UINT nPos)
 		m_nPatternDelay = 0;
 		m_nFrameDelay = 0;
 	}
-	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
+	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 }
 
 void CSoundFile::ResetChannels()
 //------------------------------
 {
-	m_dwSongFlags &= ~(SONG_FADINGSONG|SONG_ENDREACHED|SONG_GLOBALFADE);
+	m_dwSongFlags &= ~SONG_ENDREACHED;
 	m_nBufferCount = 0;
 	for (UINT i=0; i<MAX_CHANNELS; i++)
 	{

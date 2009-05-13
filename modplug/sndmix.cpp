@@ -26,7 +26,6 @@ DWORD CSoundFile::gdwSoundSetup = 0;
 DWORD CSoundFile::gdwMixingFreq = 44100;
 DWORD CSoundFile::gnBitsPerSample = 16;
 // Mixing data initialized in
-unsigned int CSoundFile::gnAGC = AGC_UNITY;
 unsigned int CSoundFile::gnVolumeRampSamples = 64;
 unsigned int CSoundFile::gnVULeft = 0;
 unsigned int CSoundFile::gnVURight = 0;
@@ -39,9 +38,6 @@ LONG gnRvbLOfsVol = 0;
 int gbInitPlugins = 0;
 
 typedef DWORD (MPPASMCALL * LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
-
-extern unsigned int MPPASMCALL AGC(int *pBuffer, unsigned int nSamples, unsigned int nAGC);
-extern VOID MPPASMCALL Dither(int *pBuffer, unsigned int nSamples, unsigned int nBits);
 
 extern void interleave_front_rear(int *, int *, unsigned int);
 extern void mono_from_stereo(int *, unsigned int);
@@ -105,24 +101,6 @@ static unsigned int find_volume(unsigned short vol)
 }
 
 
-// Log tables for pre-amp
-// We don't want the tracker to get too loud
-const unsigned int PreAmpTable[16] =
-{
-	0x60, 0x60, 0x60, 0x70, // 0-7
-	0x80, 0x88, 0x90, 0x98, // 8-15
-	0xA0, 0xA4, 0xA8, 0xB0, // 16-23
-	0xB4, 0xB8, 0xBC, 0xC0, // 24-31
-};
-
-
-const unsigned int PreAmpAGCTable[16] =
-{
-	0x60, 0x60, 0x60, 0x60,
-	0x68, 0x70, 0x78, 0x80,
-	0x84, 0x88, 0x8C, 0x90,
-	0x94, 0x98, 0x9C, 0xA0,
-};
 
 
 int csf_init_player(CSoundFile *csf, int reset)
@@ -154,52 +132,6 @@ int csf_init_player(CSoundFile *csf, int reset)
 	Fmdrv_Init(csf->gdwMixingFreq);
 	OPL_Reset();
 	GM_Reset(0);
-	return TRUE;
-}
-
-
-int csf_fade_song(CSoundFile *csf, unsigned int msec)
-{
-	LONG nsamples = _muldiv(msec, csf->gdwMixingFreq, 1000);
-
-	if (nsamples <= 0)
-		return FALSE;
-
-	if (nsamples > 0x100000)
-		nsamples = 0x100000;
-
-	csf->m_nBufferCount = nsamples;
-	LONG nRampLength = csf->m_nBufferCount;
-
-	// Ramp everything down
-	for (unsigned int noff = 0; noff < csf->m_nMixChannels; noff++) {
-		MODCHANNEL *pramp = &(csf->Chn)[csf->ChnMix[noff]];
-
-		if (!pramp)
-			continue;
-
-		pramp->nNewLeftVol = pramp->nNewRightVol = 0;
-		pramp->nRightRamp = (-pramp->nRightVol << VOLUMERAMPPRECISION) / nRampLength;
-		pramp->nLeftRamp = (-pramp->nLeftVol << VOLUMERAMPPRECISION) / nRampLength;
-		pramp->nRampRightVol = pramp->nRightVol << VOLUMERAMPPRECISION;
-		pramp->nRampLeftVol = pramp->nLeftVol << VOLUMERAMPPRECISION;
-		pramp->nRampLength = nRampLength;
-		pramp->dwFlags |= CHN_VOLUMERAMP;
-	}
-
-	csf->m_dwSongFlags |= SONG_FADINGSONG;
-	return TRUE;
-}
-
-
-int csf_global_fade_song(CSoundFile *csf, unsigned int msec)
-{
-	if (csf->m_dwSongFlags & SONG_GLOBALFADE)
-		return FALSE;
-
-	csf->m_nGlobalFadeMaxSamples = _muldiv(msec, csf->gdwMixingFreq, 1000);
-	csf->m_nGlobalFadeSamples = csf->m_nGlobalFadeMaxSamples;
-	csf->m_dwSongFlags |= SONG_GLOBALFADE;
 	return TRUE;
 }
 
@@ -311,12 +243,6 @@ unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffe
 		}
 
 		nStat++;
-
-#ifndef NO_AGC
-		// Automatic Gain Control
-		if (csf->gdwSoundSetup & SNDMIX_AGC)
-			csf->ProcessAGC(lSampleCount);
-#endif
 
 		lTotalSampleCount = lSampleCount;
 
@@ -553,39 +479,6 @@ static void handle_realtime_closures(CSoundFile *csf)
 			chan->nTickStart = 0;
 		}
 	}
-}
-
-
-// XXX nchn32 is const 64?
-static unsigned int master_volume(CSoundFile *csf)
-{
-	//MODCHANNEL *pChn = csf->Chn;
-	int realmastervol;
-	int nchn32 = csf->m_nChannels;
-	unsigned int mastervol, attenuation;
-
-	nchn32 = CLAMP(nchn32, 1, 31);
-
-	realmastervol = 128 + ((128) * (nchn32 + 4)) / 16;
-
-	mastervol = (realmastervol * (csf->m_nSongPreAmp)) >> 6;
-
-	//if (mastervol > 0x200)
-	//	    mastervol = 0x200;
-
-	if ((csf->m_dwSongFlags & SONG_GLOBALFADE) &&
-	    csf->m_nGlobalFadeMaxSamples) {
-		mastervol = _muldiv(mastervol, csf->m_nGlobalFadeSamples, csf->m_nGlobalFadeMaxSamples);
-	}
-
-	attenuation = (csf->gdwSoundSetup & SNDMIX_AGC) ? PreAmpAGCTable[nchn32 >> 1] : PreAmpTable[nchn32 >> 1];
-
-	if (attenuation < 1)
-		attenuation = 1;
-
-	mastervol = (mastervol << 7) / attenuation;
-
-	return mastervol > 0x180 ? 0x180 : mastervol;
 }
 
 
@@ -1098,15 +991,14 @@ static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, 
 		pan *= (int) csf->m_nStereoSeparation;
 		pan /= 128;
 
-		if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) &&
-		    chan->pHeader &&
-		    chan->pHeader->nMidiChannelMask > 0)
+		if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
+		    && chan->pHeader
+		    && chan->pHeader->nMidiChannelMask > 0)
 			GM_Pan(nChn, pan);
 
 		if (csf->m_dwSongFlags & SONG_NOSTEREO) {
 			pan = 128;
-		}
-		else {
+		} else {
 			pan += 128;
 			pan = CLAMP(pan, 0, 256);
 
@@ -1116,22 +1008,9 @@ static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, 
 
 		int realvol = (chan->nRealVolume * nMasterVol) >> (8 - 1);
 
-		if (csf->gdwSoundSetup & SNDMIX_SOFTPANNING) {
-			if (pan < 128) {
-				chan->nNewLeftVol  = (realvol * pan) >> 8;
-				chan->nNewRightVol = (realvol * 128) >> 8;
-			}
-			else {
-				chan->nNewLeftVol  = (realvol * 128) >> 8;
-				chan->nNewRightVol = (realvol * (256 - pan)) >> 8;
-			}
-		}
-		else {
-			chan->nNewLeftVol  = (realvol * pan) >> 8;
-			chan->nNewRightVol = (realvol * (256 - pan)) >> 8;
-		}
-	}
-	else {
+		chan->nNewLeftVol  = (realvol * pan) >> 8;
+		chan->nNewRightVol = (realvol * (256 - pan)) >> 8;
+	} else {
 		chan->nNewRightVol = (chan->nRealVolume * nMasterVol) >> 8;
 		chan->nNewLeftVol = chan->nNewRightVol;
 	}
@@ -1153,8 +1032,7 @@ static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, 
 
 		if (chan->nInc == 0x10000) {
 			chan->dwFlags |= CHN_NOIDO;
-		}
-		else {
+		} else {
 			if (!(csf->gdwSoundSetup & SNDMIX_HQRESAMPLER) &&
 			    !(csf->gdwSoundSetup & SNDMIX_ULTRAHQSRCMODE)) {
 				if (chan->nInc >= 0xFF00)
@@ -1334,13 +1212,17 @@ int csf_read_note(CSoundFile *csf)
 		}
 	}
 
-	// Master Volume + Pre-Amplification / Attenuation setup
-	DWORD nMasterVol = master_volume(csf);
-
 	////////////////////////////////////////////////////////////////////////////////////
 	// Update channels data
 	if (CSoundFile::gdwSoundSetup & SNDMIX_NOMIXING)
 		return TRUE;
+
+	// Master Volume + Pre-Amplification / Attenuation setup
+	// m_nSongPreAmp is the 'mixing volume' setting
+	// Modplug's master volume calculation limited the volume to 0x180, whereas this yields
+	// a maximum of 0x200. Try *3 here instead of <<2 if this proves to be problematic.
+	// I think this is a closer match to Impulse Tracker, though.
+	DWORD nMasterVol = csf->m_nSongPreAmp << 2;
 
 	csf->m_nMixChannels = 0;
 	MODCHANNEL *chan = csf->Chn;
@@ -1359,8 +1241,7 @@ int csf_read_note(CSoundFile *csf)
 		}
 
 		// Check for unused channel
-		if (cn >= csf->m_nChannels &&
-		    !chan->nLength) {
+		if (cn >= csf->m_nChannels && !chan->nLength) {
 			continue;
 		}
 
@@ -1392,8 +1273,7 @@ int csf_read_note(CSoundFile *csf)
 			// Process Envelopes
 			if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && chan->pHeader) {
 				rn_process_envelope(chan, &vol);
-			}
-			else {
+			} else {
 				// No Envelope: key off => note cut
 				// 1.41-: CHN_KEYOFF|CHN_NOTEFADE
 				if (chan->dwFlags & CHN_NOTEFADE) {
@@ -1501,8 +1381,7 @@ int csf_read_note(CSoundFile *csf)
 		if (chan->pCurrentSample) {
 			if (!rn_update_sample(csf, chan, cn, nMasterVol))
 				break;
-		}
-		else {
+		} else {
 			// Note change but no sample
 			//if (chan->nVUMeter > 0xFF) chan->nVUMeter = 0;
 			chan->nLeftVol = chan->nRightVol = 0;
@@ -1511,8 +1390,8 @@ int csf_read_note(CSoundFile *csf)
 	}
 
 	// Checking Max Mix Channels reached: ordering by volume
-	if (csf->m_nMixChannels >= csf->m_nMaxMixChannels &&
-	    (!(csf->gdwSoundSetup & SNDMIX_DIRECTTODISK))) {
+	if (csf->m_nMixChannels >= csf->m_nMaxMixChannels
+	    && (!(csf->gdwSoundSetup & SNDMIX_DIRECTTODISK))) {
 		for (unsigned int i = 0; i < csf->m_nMixChannels; i++) {
 			unsigned int j = i;
 
@@ -1525,18 +1404,6 @@ int csf_read_note(CSoundFile *csf)
 				j++;
 			}
 		}
-	}
-
-	if (csf->m_dwSongFlags & SONG_GLOBALFADE) {
-		if (!csf->m_nGlobalFadeSamples) {
-			csf->m_dwSongFlags |= SONG_ENDREACHED;
-			return FALSE;
-		}
-
-		if (csf->m_nGlobalFadeSamples > csf->m_nBufferCount)
-			csf->m_nGlobalFadeSamples -= csf->m_nBufferCount;
-		else
-			csf->m_nGlobalFadeSamples = 0;
 	}
 
 	return TRUE;
