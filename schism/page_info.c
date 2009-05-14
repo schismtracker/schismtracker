@@ -132,15 +132,6 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 		}
 		draw_text(num99tostr(c, buf), 2, pos, fg, 2); /* channel number */
 
-		if (mixchan->sample_freq) {
-			sprintf(buf, "%10d", mixchan->sample_freq);
-			draw_text(buf, 5, pos, 2, 0);
-		}
-		if (mixchan->sample_freq | mixchan->topnote_offset) {
-			sprintf(buf, "%10d", mixchan->topnote_offset);
-			draw_text(buf, 16, pos, 2, 0);
-		}
-
 		// again with the hacks...
                 if (mixchan->sample)
                         smp = mixchan->sample - song_get_sample(0, NULL);
@@ -155,6 +146,15 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 		}
 
 		if (smp) {
+			if (mixchan->sample_freq) {
+				sprintf(buf, "%10d", mixchan->sample_freq);
+				draw_text(buf, 5, pos, 2, 0);
+			}
+			if (mixchan->sample_freq | mixchan->topnote_offset) {
+				sprintf(buf, "%10d", mixchan->topnote_offset);
+				draw_text(buf, 16, pos, 2, 0);
+			}
+
 			draw_text(numtostr(3, smp, buf), 27, pos, 2, 0);
 
 			draw_text(numtostr(3, mixchan->final_volume / 128, buf), 32, pos, 2, 0);
