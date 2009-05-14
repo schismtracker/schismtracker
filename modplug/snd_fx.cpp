@@ -568,6 +568,13 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 			pChn->nVolSwing = pChn->nPanSwing = 0;
 			if (penv)
 			{
+				/* This is done above as well, with the instrument reset, but
+				 * I have a feeling that maybe it should only be here. Tests? */
+				pChn->dwFlags &= ~(CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
+				if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
+				if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
+				if (penv->dwFlags & ENV_PITCH) pChn->dwFlags |= CHN_PITCHENV;
+				
 				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
 				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
 				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;

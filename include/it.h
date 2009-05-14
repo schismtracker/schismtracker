@@ -491,7 +491,9 @@ extern const char *ver_short_copyright;
 extern const char *ver_short_based_on;
 extern const char *ver_copyright_credits[];
 extern const char *ver_license[];
-extern const char *schism_banner(void); /* depends on CLASSIC_MODE */
+
+extern const char *schism_banner(int classic)
+	__attribute__((pure));
 
 /* --------------------------------------------------------------------- */
 

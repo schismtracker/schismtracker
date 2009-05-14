@@ -409,9 +409,7 @@ static inline void draw_helptext(void)
 			draw_char(*ptr, column, line, 12, 0);
 		ptr++;
 	}
-#define M "(c) 2003-2008 Storlek and Mrs. Brisby"
-	draw_text(M, 78-sizeof(M), 46, 1, 0);
-#undef M
+	draw_text(ver_short_copyright, 77 - strlen(ver_short_copyright), 46, 1, 0);
 }
 
 static inline void draw_time(void)

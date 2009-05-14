@@ -64,7 +64,7 @@ enum {
 static int template_mode = TEMPLATE_OFF;
 
 static const char *template_mode_names[] = {
-	" ", /* apparently "" causes a gcc warning (wtf) */
+	"",
 	"Template, Overwrite",
 	"Template, Mix - Pattern data precedence",
 	"Template, Mix - Clipboard data precedence",
@@ -4084,18 +4084,25 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SDLK_LEFT:
 		if (k->state) return 0;
 		channel_snap_back = -1;
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & KMOD_SHIFT) {
 			current_channel--;
-		else
+		} else if (link_effect_column && current_position == 0 && current_channel > 1) {
+			current_channel--;
+			current_position = current_effect() ? 8 : 6;
+		} else {
 			current_position--;
+		}
 		return -1;
 	case SDLK_RIGHT:
 		if (k->state) return 0;
 		channel_snap_back = -1;
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & KMOD_SHIFT) {
 			current_channel++;
-		else
+		} else if (link_effect_column && current_position == 6 && current_channel < 64) {
+			current_position = current_effect() ? 7 : 10;
+		} else {
 			current_position++;
+		}
 		return -1;
 	case SDLK_TAB:
 		if (k->state) return 0;

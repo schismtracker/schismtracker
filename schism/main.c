@@ -198,7 +198,6 @@ static void display_init(void)
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 #endif
 
-	//SDL_WM_SetCaption(schism_banner(), "Schism Tracker");
 	SDL_EnableUNICODE(1);
 }
 
@@ -452,7 +451,7 @@ static void parse_options(int argc, char **argv)
 			break;
 #endif
 		case O_VERSION:
-			puts(schism_banner());
+			puts(schism_banner(0));
 			puts(ver_short_copyright);
 			putchar('\n');
 			for (n = 0; ver_license[n] && ver_license[n][0]; n++)
@@ -1054,7 +1053,7 @@ static void dump_misc_about_text(void)
 {
 	int n;
 
-	log_append2(1, 3, 0, schism_banner());
+	log_append2(1, 3, 0, schism_banner(0));
 	log_nl();
 	for (n = 0; ver_copyright_credits[n]; n++)
 		log_append2(1, 6, 0, ver_copyright_credits[n]);

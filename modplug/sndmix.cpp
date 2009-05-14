@@ -1183,8 +1183,7 @@ int csf_read_note(CSoundFile *csf)
 
 		if (!csf->ProcessEffects())
 			return FALSE;
-	}
-	else {
+	} else {
 		if (!csf_process_row(csf))
 			return FALSE;
 	}
