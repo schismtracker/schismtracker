@@ -56,6 +56,8 @@ struct widget *widgets = NULL;
 int *selected_widget = NULL;
 int *total_widgets = NULL;
 
+static int currently_grabbed = SDL_GRAB_OFF;
+
 /* --------------------------------------------------------------------- */
 
 /* *INDENT-OFF* */
@@ -553,19 +555,25 @@ static int handle_key_global(struct key_event * k)
         case SDLK_m:
                 if (k->mod & KMOD_CTRL) {
 			if (k->state) return 1;
-			video_mousecursor(-1);
+			video_mousecursor(MOUSE_CYCLE_STATE);
                         return 1;
                 }
                 break;
-#if 0
+
         case SDLK_d:
                 if (k->mod & KMOD_CTRL) {
-                        /* should do something...
-                         * minimize? open console? dunno. */
+                	i = SDL_WM_GrabInput(SDL_GRAB_QUERY);
+			if (i == SDL_GRAB_QUERY)
+				i = currently_grabbed;
+			currently_grabbed = i = (i != SDL_GRAB_ON ? SDL_GRAB_ON : SDL_GRAB_OFF);
+			SDL_WM_GrabInput(i);
+			status_text_flash(i
+				? "Mouse and keyboard grabbed, press Ctrl+D to release"
+				: "Mouse and keyboard released");
                         return 1;
                 }
                 break;
-#endif
+
 	case SDLK_i:
 		/* reset audio stuff? */
                 if (k->mod & KMOD_CTRL) {
@@ -577,6 +585,7 @@ static int handle_key_global(struct key_event * k)
                         song_stop();
 			song_init_audio(0);
 			if (status.flags & CLASSIC_MODE)
+				// FIXME: but we spontaneously report a GUS card sometimes...
 				status_text_flash("Sound Blaster 16 reinitialised");
 			else
 				status_text_flash("Audio output reinitialised");
