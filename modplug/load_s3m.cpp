@@ -670,8 +670,8 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT)
 	    STx.yy  = 1xyy
 	    Orpheus = 2xyy
 	    Impulse = 3xyy
-	    So we'll use 4 */
-	reference: http://xmp.cvs.sf.net/viewvc/xmp/xmp2/src/loaders/s3m_load.c?view=markup
+	    So we'll use 4
+	reference: http://xmp.cvs.sf.net/viewvc/xmp/xmp2/src/loaders/s3m_load.c?view=markup */
 	header[0x28] = 0x50; // ST3.20 = 0x1320
 	header[0x29] = 0x40;
 	header[0x2A] = 0x02; // Version = 1 => Signed samples
