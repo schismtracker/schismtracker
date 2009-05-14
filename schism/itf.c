@@ -142,6 +142,8 @@ int top_font = 0, cur_font = 0;
 
 static void fontlist_reposition(void)
 {
+	if (cur_font < 0)
+		cur_font = 0; /* weird! */
 	if (cur_font < top_font)
 		top_font = cur_font;
 	else if (cur_font > top_font + (VISIBLE_FONTS - 1))
@@ -150,36 +152,37 @@ static void fontlist_reposition(void)
 
 static int fontgrep(dmoz_file_t *f)
 {
-	if (f && f->base && strcmp(f->base, "font.cfg") == 0) return 0;
-	if (f->type & TYPE_BROWSABLE_MASK) return 0;
-	return 1;
+	const char *ext;
+
+	if (f->sort_order == -100)
+		return 1; /* this is our font.cfg, at the top of the list */
+	if (f->type & TYPE_BROWSABLE_MASK)
+		return 0; /* we don't care about directories and stuff */
+	ext = get_extension(f->base);
+	return (strcasecmp(ext, "itf") == 0 || strcasecmp(ext, "fnt") == 0);
 }
+
 static void load_fontlist(void)
 {
-	char *q, *p;
+	char *font_dir, *p;
 	struct stat st;
 
 	dmoz_free(&flist, NULL);
 
 	top_font = cur_font = 0;
 
-	q = dmoz_path_concat_len(cfg_dir_dotschism, "fonts",
-				strlen(cfg_dir_dotschism),
-				5);
-	(void)mkdir(q, 0755);
-	p = dmoz_path_concat_len(q, "font.cfg",
-				strlen(q),
-				8);
+	font_dir = dmoz_path_concat_len(cfg_dir_dotschism, "fonts", strlen(cfg_dir_dotschism), 5);
+	mkdir(font_dir, 0755);
+	p = dmoz_path_concat_len(font_dir, "font.cfg", strlen(font_dir), 8);
 	memset(&st, 0, sizeof(st));
-	if (dmoz_read(q, &flist, NULL) < 0) {
-		perror("schism fonts");
-	}
-	(void)free(q);
-	// fart...
-	dmoz_filter_filelist(&flist, fontgrep, &cur_font, fontlist_reposition);
+	dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -100); /* put it on top */
+	if (dmoz_read(font_dir, &flist, NULL) < 0)
+		perror(font_dir);
+	free(font_dir);
+	dmoz_filter_filelist(&flist, fontgrep, &cur_font, NULL);
 	while (dmoz_worker());
+	fontlist_reposition();
 
-	dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -1024);
 	/* p is freed by dmoz_free */
 }
 
@@ -632,14 +635,16 @@ static void handle_key_itfmap(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-static void real_save_default(UNUSED void *ign)
+static void confirm_font_save_ok(void *vf)
 {
-	if (font_save("font.cfg") != 0) {
+	char *f = vf;
+	if (font_save(f) != 0) {
 		fprintf(stderr, "%s\n", SDL_GetError());
 		return;
 	}
 	selected_item = EDITBOX;
 }
+
 static void handle_key_fontlist(struct key_event * k)
 {
 	int new_font = cur_font;
@@ -679,21 +684,13 @@ static void handle_key_fontlist(struct key_event * k)
 			}
 			break;
 		case MODE_SAVE:
-			/* TODO: if cur_font != 0 (which is font.cfg),
-			 * ask before overwriting it */
 			if (cur_font < flist.num_files && flist.files[cur_font]) {
-				if (strcasecmp(flist.files[cur_font]->base,"font.cfg") == 0) {
-					if (status.flags & CLASSIC_MODE) return;
-
-					dialog_create(DIALOG_OK_CANCEL,
-		"Overwriting font.cfg replaces the default font. Proceed?",
-						real_save_default, NULL, 1, NULL);
+				if (strcasecmp(flist.files[cur_font]->base,"font.cfg") != 0) {
+					dialog_create(DIALOG_OK_CANCEL, "Overwrite font file?",
+						confirm_font_save_ok, NULL, 1, flist.files[cur_font]->base);
 					return;
 				}
-				if (font_save(flist.files[cur_font]->base) != 0) {
-					fprintf(stderr, "%s\n", SDL_GetError());
-					return;
-				}
+				confirm_font_save_ok(flist.files[cur_font]->base);
 			}
 			selected_item = EDITBOX;
 			/* fontlist_mode = MODE_OFF; */
