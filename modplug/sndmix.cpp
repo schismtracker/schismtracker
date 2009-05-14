@@ -522,25 +522,23 @@ static inline void rn_tremolo(CSoundFile *csf, MODCHANNEL *chan, int *vol)
 
 static inline void rn_tremor(CSoundFile *csf, MODCHANNEL *chan, int *vol)
 {
-	unsigned int n = (chan->nTremorParam >> 4) + (chan->nTremorParam & 0x0F);
-	unsigned int ontime = chan->nTremorParam >> 4;
-	unsigned int tremcount = (unsigned int) chan->nTremorCount;
+	unsigned int on = chan->nTremorParam >> 4;
+	unsigned int off = chan->nTremorParam & 0x0F;
+	unsigned int tremcount = chan->nTremorCount;
 
 	if (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) {
-		n += 2;
-		ontime++;
+		on++;
+		off++;
 	}
+	if (!on) on = 1;
+	if (!off) off = 1;
 
-	if (tremcount >= n)
+	if (tremcount >= (on + off))
 		tremcount = 0;
+	if (tremcount >= on)
+		*vol = 0;
 
-	if (csf->m_nTickCount) {
-		if (tremcount >= ontime)
-			*vol = 0;
-
-		chan->nTremorCount = (BYTE)(tremcount + 1);
-	}
-
+	chan->nTremorCount = (BYTE)(tremcount + 1);
 	chan->dwFlags |= CHN_FASTVOLRAMP;
 }
 
