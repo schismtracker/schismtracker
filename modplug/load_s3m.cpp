@@ -666,11 +666,14 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT)
 	header[0x25] = nbp >> 8;
 	if (m_dwSongFlags & SONG_FASTVOLSLIDES) header[0x26] |= 0x40;
 	//if ((m_nMaxPeriod < 20000) || (m_dwSongFlags & SONG_AMIGALIMITS)) header[0x26] |= 0x10;
-	// FIXME FIXME FIXME no we are NOT scream tracker. stop lying.
-	// FIXME FIXME FIXME need to look in the ST3 and IT tech docs
-	// FIXME FIXME FIXME and figure out what we can put here.
-	header[0x28] = 0x20; // ST3.20 = 0x1320
-	header[0x29] = 0x13;
+	/* CWT/V identifiers:
+	    STx.yy  = 1xyy
+	    Orpheus = 2xyy
+	    Impulse = 3xyy
+	    So we'll use 4 */
+	reference: http://xmp.cvs.sf.net/viewvc/xmp/xmp2/src/loaders/s3m_load.c?view=markup
+	header[0x28] = 0x50; // ST3.20 = 0x1320
+	header[0x29] = 0x40;
 	header[0x2A] = 0x02; // Version = 1 => Signed samples
 	header[0x2B] = 0x00;
 	header[0x2C] = 'S';
