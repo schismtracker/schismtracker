@@ -81,10 +81,10 @@ static void handle_preload(void);
 static int top_file = 0;
 static time_t directory_mtime;
 static dmoz_filelist_t flist;
-#define current_file flist.selected
+#define current_file (flist.selected)
 
-static int slash_search_mode = -1;
-static char slash_search_str[PATH_MAX];
+static int search_pos = -1;
+static char search_str[PATH_MAX];
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -117,9 +117,8 @@ static void file_list_reposition(void)
 {
 	dmoz_file_t *f;
 
-	if (current_file >= flist.num_files)
-		current_file = flist.num_files-1;
-	if (current_file < 0) current_file = 0;
+	current_file = CLAMP(current_file, 0, flist.num_files - 1);
+	// XXX use CLAMP() here too, I can't brain
 	if (current_file < top_file)
 		top_file = current_file;
 	else if (current_file > top_file + 34)
@@ -171,8 +170,7 @@ static void file_list_reposition(void)
 		if (f) {
 			/* autoload some files */
 			if (TYPE_SAMPLE_EXTD == (f->type & TYPE_SAMPLE_EXTD)
-			&& f->filesize < 0x4000000
-			&& f->smp_length < 0x1000000)
+			    && f->filesize < 0x4000000 && f->smp_length < 0x1000000)
 				handle_preload();
 		}
 	}
@@ -248,8 +246,7 @@ static void load_sample_draw_const(void)
 
 	filled = 0;
 	f = 0;
-	if (current_file >= 0
-	&& current_file < flist.num_files && flist.files[current_file]) {
+	if (current_file >= 0 && current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
 
 		sprintf(sbuf, "%07d", f->smp_length);
@@ -363,7 +360,7 @@ static void _common_set_page(void)
 	fake_slot_changed = 0;
 
 	*selected_widget = 0;
-	slash_search_mode = -1;
+	search_pos = -1;
 }
 
 static void load_sample_set_page(void)
@@ -407,11 +404,11 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos, 2, bg);
 		draw_text_len((file->base ? file->base : ""),
 					18, 32, pos, fg, bg);
-		if (file->base && slash_search_mode > -1) {
-			if (strncasecmp(file->base,slash_search_str,slash_search_mode) == 0) {
-				for (i = 0 ; i < slash_search_mode; i++) {
-					if (tolower(((unsigned)file->base[i]))
-					!= tolower(((unsigned)slash_search_str[i]))) break;
+		if (file->base && search_pos > -1) {
+			if (strncasecmp(file->base,search_str,search_pos) == 0) {
+				for (i = 0 ; i < search_pos; i++) {
+					if (tolower(file->base[i]) != tolower(search_str[i]))
+						break;
 					draw_char(file->base[i], 32+i, pos, 3,1);
 				}
 			}
@@ -568,14 +565,14 @@ static void reposition_at_slash_search(void)
 	dmoz_file_t *f;
 	int i, j, b, bl;
 
-	if (slash_search_mode < 0) return;
+	if (search_pos < 0) return;
 	bl = b = -1;
 	for (i = 0; i < flist.num_files; i++) {
 		f = flist.files[i];
 		if (!f || !f->base) continue;
-		for (j = 0; j < slash_search_mode; j++) {
-			if (tolower(((unsigned)f->base[j]))
-			!= tolower(((unsigned)slash_search_str[j]))) break;
+		for (j = 0; j < search_pos; j++) {
+			if (tolower(f->base[j]) != tolower(search_str[j]))
+				break;
 		}
 		if (bl < j) {
 			bl = j;
@@ -627,16 +624,19 @@ static void do_discard_changes_and_move(UNUSED void *gn)
 {
 	fake_slot = -1;
 	fake_slot_changed = 0;
-	slash_search_mode = -1;
+	search_pos = -1;
 	current_file = will_move_to;
 	file_list_reposition();
 	dialog_destroy_all();
 	status.flags |= NEED_UPDATE;
 }
+
+/* FIXME what? this function shouldn't be needed at all */
 static void dont_discard_changes(UNUSED void *gn)
 {
 	dialog_destroy_all();
 }
+
 static void do_delete_file(UNUSED void *data)
 {
 	int old_top_file, old_current_file;
@@ -664,9 +664,12 @@ static void do_delete_file(UNUSED void *data)
 		current_file = flist.num_files - 1;
 	file_list_reposition();
 }
+
 static int file_list_handle_key(struct key_event * k)
 {
+	dmoz_file_t *f;
 	int new_file = current_file;
+	int c = unicode_to_ascii(k->unicode);
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
@@ -678,88 +681,78 @@ static int file_list_handle_key(struct key_event * k)
 
 	if (k->mouse) {
 		if (k->x >= 6 && k->x <= 49 && k->y >= 13 && k->y <= 47) {
-			slash_search_mode = -1;
+			search_pos = -1;
 			if (k->mouse == MOUSE_SCROLL_UP) {
-				new_file--;
+				new_file -= 2;
 			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-				new_file++;
+				new_file += 2;
 			} else {
 				new_file = top_file + (k->y - 13);
 			}
 		}
-	} else if (slash_search_mode > -1) {
-		int c = unicode_to_ascii(k->unicode);
-		if (k->sym == SDLK_RETURN || k->sym == SDLK_ESCAPE) {
+	}
+	switch (k->sym) {
+	case SDLK_UP:           new_file--; search_pos = -1; break;
+	case SDLK_DOWN:         new_file++; search_pos = -1; break;
+	case SDLK_PAGEUP:       new_file -= 35; search_pos = -1; break;
+	case SDLK_PAGEDOWN:     new_file += 35; search_pos = -1; break;
+	case SDLK_HOME:         new_file = 0; search_pos = -1; break;
+	case SDLK_END:          new_file = flist.num_files - 1; search_pos = -1; break;
+
+	case SDLK_ESCAPE:
+		if (search_pos < 0) {
+			if (k->state && NO_MODIFIER(k->mod))
+				set_page(PAGE_SAMPLE_LIST);
+			return 1;
+		} /* else fall through */
+	case SDLK_RETURN:
+		if (search_pos < 0) {
+			if (!k->state) return 0;
+			handle_enter_key();
+			search_pos = -1;
+		} else {
 			if (!k->state) return 1;
-			slash_search_mode = -1;
+			search_pos = -1;
 			status.flags |= NEED_UPDATE;
 			return 1;
-		} else if (k->sym == SDLK_BACKSPACE) {
+		}
+		return 1;
+	case SDLK_DELETE:
+		if (k->state) return 1;
+		search_pos = -1;
+		if (flist.num_files > 0)
+			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
+		return 1;
+	case SDLK_BACKSPACE:
+		if (search_pos > -1) {
 			if (k->state) return 1;
-			slash_search_mode--;
+			search_pos--;
 			status.flags |= NEED_UPDATE;
 			reposition_at_slash_search();
 			return 1;
-		} else if (c >= 32) {
+		}
+	case SDLK_SLASH:
+		if (search_pos < 0) {
+			if (k->orig_sym == SDLK_SLASH) {
+				if (!k->state) return 0;
+				search_pos = 0;
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
+			return 0;
+		} /* else fall through */
+	default:
+		f = flist.files[current_file];
+		if (c >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
 			if (k->state) return 1;
-			if (slash_search_mode < PATH_MAX) {
-				slash_search_str[ slash_search_mode ] = c;
-				slash_search_mode++;
+			if (search_pos < 0) search_pos = 0;
+			if (search_pos < PATH_MAX) {
+				search_str[search_pos++] = c;
 				reposition_at_slash_search();
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
 		}
-	}
-	switch (k->sym) {
-	case SDLK_UP:
-		new_file--;
-		slash_search_mode = -1;
-		break;
-	case SDLK_DOWN:
-		new_file++;
-		slash_search_mode = -1;
-		break;
-	case SDLK_PAGEUP:
-		new_file -= 35;
-		slash_search_mode = -1;
-		break;
-	case SDLK_PAGEDOWN:
-		new_file += 35;
-		slash_search_mode = -1;
-		break;
-	case SDLK_HOME:
-		new_file = 0;
-		slash_search_mode = -1;
-		break;
-	case SDLK_END:
-		new_file = flist.num_files - 1;
-		slash_search_mode = -1;
-		break;
-	case SDLK_RETURN:
-		if (!k->state) return 0;
-		handle_enter_key();
-		slash_search_mode = -1;
-		return 1;
-	case SDLK_DELETE:
-		if (k->state) return 1;
-		slash_search_mode = -1;
-		if (flist.num_files > 0)
-			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
-		return 1;
-	case SDLK_ESCAPE:
-		if (k->state && NO_MODIFIER(k->mod))
-			set_page(PAGE_SAMPLE_LIST);
-		return 1;
-	case SDLK_SLASH:
-		if (k->orig_sym == SDLK_SLASH) {
-			if (status.flags & CLASSIC_MODE) return 0;
-			if (!k->state) return 0;
-			slash_search_mode = 0;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-	default:
 		if (!k->mouse) return 0;
 	}
 	
@@ -771,8 +764,8 @@ static int file_list_handle_key(struct key_event * k)
 	} else {
 		if (k->state) return 1;
 	}
+
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
-	if (new_file < 0) new_file = 0;
 	if (new_file != current_file) {
 		if (fake_slot > -1 && fake_slot_changed) {
 			will_move_to = new_file;
@@ -788,7 +781,7 @@ static int file_list_handle_key(struct key_event * k)
 		}
 		fake_slot = -1;
 		fake_slot_changed = 0;
-		slash_search_mode = -1;
+		search_pos = -1;
 		current_file = new_file;
 		file_list_reposition();
 		status.flags |= NEED_UPDATE;

@@ -31,17 +31,15 @@
 
 int fmt_raw_load_sample(const byte *data, size_t length, song_sample *smp, UNUSED char *title)
 {
-	if (length > 65536) {
+	/* we'll uphold IT's limit of 4mb */
+	if (length > 4 * 1048576) {
 		errno = EFBIG;
 		return false;
 	}
-puts("WARNING LOADING RAW SAMPLE");
 
 	smp->speed = 8363;
 	smp->volume = 64 * 4;
 	smp->global_volume = 64;
-	
-	/* log_appendf(2, "Loading as raw."); */
 	
 	smp->data = song_sample_allocate(length);
 	memcpy(smp->data, data, length);
