@@ -490,7 +490,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
 	fp->o(fp, (const unsigned char *)m_szNames[0], 20);
 	s[0] = 0x1A;
-	lstrcpy((LPSTR)&s[1], "FastTracker v2.00   ");
+	lstrcpy((LPSTR)&s[1], "Schism Tracker      ");
 	s[21] = 0x04;
 	s[22] = 0x01;
 	fp->o(fp, (const unsigned char *)s, 23);
