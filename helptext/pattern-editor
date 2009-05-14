@@ -111,19 +111,6 @@
 :
 :  General effects.
 :   !xx Set volume                       [Cxx] - ?
-:   #1x Fine pitch slide up by x         [E1x] - FFx
-:   #2x Fine pitch slide down by x       [E2x] - EFx
-:   #3x Set glissando control            [E3x] - S1x (unimplemented)
-:   #4x Set vibrato control              [E4x] - S3x
-:   #5x Set finetune                     [E5x] - S2x (unimplemented)
-:   #6x Set loop begin / loop            [E6x] - SBx
-:   #7x Set tremolo control              [E7x] - S4x
-:   #9x Retrigger note every x ticks     [E9x] - Q0x
-:   #Ax Fine volume slide up by x        [EAx] - DxF
-:   #Bx Fine volume slide down by x      [EBx] - DFx
-:   #Cx Note cut after x ticks           [ECx] - SCx
-:   #Dx Note delay for x ticks           [EDx] - SDx
-:   #Ex Pattern delay for x rows         [EEx] - SEx
 :   $xx Key off                          [Kxx] - ?
 :   %1x Extra fine pitch slide up by x   [X1x] - FEx
 :   %2x Extra fine pitch slide down by x [X2x] - EEx

@@ -38,7 +38,7 @@ char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instr
 	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
 char cfg_video_driver[65];
 int cfg_video_fullscreen = 0;
-int cfg_video_mousecursor = 1;
+int cfg_video_mousecursor = MOUSE_EMULATED;
 
 /* --------------------------------------------------------------------- */
 
@@ -127,7 +127,7 @@ void cfg_load(void)
 
 	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
-	cfg_video_mousecursor = !!cfg_get_number(&cfg, "Video", "mouse_cursor", 1); /* blah disgustingcakes */
+	cfg_video_mousecursor = !!cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	ptr = (void*)cfg_get_string(&cfg, "Video",
 				"aspect",_buf_video_aspect,64,"");
 	if (ptr && *ptr) put_env_var("SCHISM_VIDEO_ASPECT", ptr);
@@ -280,7 +280,7 @@ void cfg_atexit_save(void)
 	says. Very well, I contradict myself. */
 	cfg_set_string(&cfg, "Video", "driver", video_driver_name());
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
-	cfg_set_number(&cfg, "Video", "mouse_cursor", !!(video_mousecursor_visible()));
+	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);

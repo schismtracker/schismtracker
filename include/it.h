@@ -169,17 +169,26 @@ struct tracker_status {
 	time_t now;
 	int h, m, s;
 
-	/* fix the numlock key to...
-	 * 		0 = off
-	 * 		1 = on
-	 * 		-1 = don't fix it
-	 * 		-2 = don't fix it (except on macs that aren't ibooks)
-	 */
 	int fix_numlock_setting;
-#define NUMLOCK_ALWAYS_OFF	0
-#define NUMLOCK_ALWAYS_ON	1
-#define NUMLOCK_HONOR		-1
-#define NUMLOCK_GUESS		-2
+};
+
+/* numlock hackery */
+enum {
+	NUMLOCK_ALWAYS_OFF = 0,
+	NUMLOCK_ALWAYS_ON = 1,
+	NUMLOCK_HONOR = -1, /* don't fix it */
+	NUMLOCK_GUESS = -2, /* don't fix it... except on non-ibook macs */
+};
+
+/* mouse visibility - these are passed to video_mousecursor()
+first three are stored as the physical mouse state */
+enum {
+	MOUSE_DISABLED,
+	MOUSE_EMULATED,
+	MOUSE_SYSTEM,
+
+	MOUSE_CYCLE_STATE,
+	MOUSE_RESET_STATE,
 };
 
 

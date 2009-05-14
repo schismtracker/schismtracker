@@ -190,14 +190,12 @@ static void display_init(void)
 	clippy_init();
 
 	display_print_info();
-#if 0
+#if 1
 	SDL_EnableKeyRepeat(125, 25);
-#endif
-#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
+#elif defined(USE_X11) || defined(WIN32) || defined(MACOSX)
 	SDL_EnableKeyRepeat(key_repeat_delay(), key_repeat_rate());
 #else
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY,
-			SDL_DEFAULT_REPEAT_INTERVAL);
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 #endif
 
 	//SDL_WM_SetCaption(schism_banner(), "Schism Tracker");
@@ -219,7 +217,7 @@ static void handle_active_event(SDL_ActiveEvent * a)
 	if (a->state & SDL_APPACTIVE) {
 		if (a->gain) {
 			status.flags |= (IS_VISIBLE|SOFTWARE_MOUSE_MOVED);
-			video_mousecursor(-2);
+			video_mousecursor(MOUSE_RESET_STATE);
 		} else {
 			status.flags &= ~IS_VISIBLE;
 		}
@@ -228,7 +226,7 @@ static void handle_active_event(SDL_ActiveEvent * a)
 	if (a->state & SDL_APPINPUTFOCUS) {
 		if (a->gain) {
 			status.flags |= IS_FOCUSED;
-			video_mousecursor(-2);
+			video_mousecursor(MOUSE_RESET_STATE);
 		} else {
 			status.flags &= ~IS_FOCUSED;
 			SDL_ShowCursor(SDL_ENABLE);
@@ -548,8 +546,6 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 static void event_loop(void) NORETURN;
 static void event_loop(void)
 {
-	static int currently_grabbed_hack = SDL_GRAB_OFF;
-
 	SDL_Event event;
 	struct key_event kk;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
@@ -565,7 +561,6 @@ static void event_loop(void)
 	int sawrep;
 	char *debug_s;
 	int fix_numlock_key;
-	int grab_check;
 	int q;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -583,8 +578,6 @@ static void event_loop(void)
 
 	/* silence valgrind */
 	kk.state = 0;
-
-	grab_check = 0;
 
 	/* X/Y resolution */
 	kk.rx = NATIVE_SCREEN_WIDTH / 80;
@@ -681,47 +674,6 @@ static void event_loop(void)
 			kk.sym = event.key.keysym.sym;
 			kk.scancode = event.key.keysym.scancode;
 
-			q = 0;
-			switch (event.key.keysym.sym) {
-			case SDLK_RCTRL: case SDLK_LCTRL:
-				if (modkey & (KMOD_ALT|KMOD_META)) q = 1;
-				break;
-			case SDLK_RALT: case SDLK_LALT:
-			case SDLK_RMETA: case SDLK_LMETA:
-				if (modkey & KMOD_CTRL) q = 1;
-				break;
-			default:
-				break;
-			};
-			if (q && event.type == SDL_KEYDOWN) {
-				grab_check = (status.flags & IS_FOCUSED)
-					&&   (status.flags & IS_VISIBLE);
-				time(&startdown);
-			} else if (event.type == SDL_KEYUP && grab_check
-			&& (status.flags & IS_FOCUSED)
-			&&   (status.flags & IS_VISIBLE)
-			&& ((time(0)-startdown)<=2)) {
-
-				q = SDL_WM_GrabInput(SDL_GRAB_QUERY);
-				if (q == SDL_GRAB_QUERY) {
-					q = currently_grabbed_hack;
-				}
-				q = (q != SDL_GRAB_ON
-						? SDL_GRAB_ON
-						: SDL_GRAB_OFF);
-				SDL_WM_GrabInput(currently_grabbed_hack = q);
-				if (q == SDL_GRAB_ON) {
-					status_text_flash("Mouse and keyboard grabbed, press Ctrl+Alt to release");
-				} else {
-					status_text_flash("Mouse and keyboard released");
-				}
-				grab_check = 0;
-				startdown = 0;
-			} else {
-				grab_check = 0;
-				startdown = 0;
-			}
-
 			switch (fix_numlock_key) {
 			case NUMLOCK_GUESS:
 #ifdef MACOSX
@@ -735,14 +687,14 @@ static void event_loop(void)
 						modkey &= ~KMOD_NUM;
 					}
 				} /* otherwise honor it */
-#else
-				/* do nothing */
 #endif
 				break;
-
-			/* other choices... */
-			case NUMLOCK_ALWAYS_OFF: modkey &= ~KMOD_NUM; break;
-			case NUMLOCK_ALWAYS_ON: modkey |= KMOD_NUM; break;
+			case NUMLOCK_ALWAYS_OFF:
+				modkey &= ~KMOD_NUM;
+				break;
+			case NUMLOCK_ALWAYS_ON:
+				modkey |= KMOD_NUM;
+				break;
 			};
 
 			kk.mod = modkey;
@@ -793,6 +745,9 @@ static void event_loop(void)
 		case SDL_MOUSEMOTION:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
+			if (video_mousecursor_visible() == MOUSE_DISABLED)
+				continue;
+
 			if (!kk.state) {
 				modkey = event.key.keysym.mod;
 #if defined(WIN32)
@@ -804,10 +759,7 @@ static void event_loop(void)
 			kk.mod = 0;
 			kk.unicode = 0;
 
-			video_translate(
-				event.button.x,
-				event.button.y,
-				&kk.fx, &kk.fy);
+			video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
 
 			/* character resolution */
 			kk.x = kk.fx / kk.rx;
@@ -823,8 +775,7 @@ static void event_loop(void)
 				kk.sy = kk.y;
 			}
 			if (startdown) startdown = 0;
-			if (event.type != SDL_MOUSEMOTION &&
-					debug_s && strstr(debug_s, "mouse")) {
+			if (event.type != SDL_MOUSEMOTION && debug_s && strstr(debug_s, "mouse")) {
 				log_appendf(12, "[DEBUG] Mouse%s button=%d x=%d y=%d",
 					(event.type == SDL_MOUSEBUTTONDOWN) ? "Down" : "Up",
 						(int)event.button.button,
@@ -833,14 +784,14 @@ static void event_loop(void)
 			}
 
 			switch (event.button.button) {
-#ifdef SDL_BUTTON_WHEELUP
+
+/* Why only one of these would be defined I have no clue.
+Also why these would not be defined, I'm not sure either, but hey. */
+#if defined(SDL_BUTTON_WHEELUP) && defined(SDL_BUTTON_WHEELDOWN)
 			case SDL_BUTTON_WHEELUP:
 				kk.mouse = MOUSE_SCROLL_UP;
 				handle_key(&kk);
 				break;
-#endif
-
-#ifdef SDL_BUTTON_WHEELDOWN
 			case SDL_BUTTON_WHEELDOWN:
 				kk.mouse = MOUSE_SCROLL_DOWN;
 				handle_key(&kk);
@@ -1277,15 +1228,14 @@ int main(int argc, char **argv)
 	signal(SIGTERM, exit);
 #endif
 
-	video_mousecursor(cfg_video_mousecursor); /* blah */
+	video_mousecursor(cfg_video_mousecursor);
+	status_text_flash(" "); /* silence the mouse cursor message */
 
 	mixer_setup();
 
 	load_pages();
 	main_song_changed_cb();
 	
-	/* shutdown_process |= 8; -- wtf is this? */
-
 	if (initial_song && !initial_dir) {
 		initial_dir = get_parent_directory(initial_song);
 		if (!initial_dir) {

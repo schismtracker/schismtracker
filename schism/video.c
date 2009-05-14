@@ -446,7 +446,7 @@ void video_setup(const char *driver)
 
 	video.draw.width = NATIVE_SCREEN_WIDTH;
 	video.draw.height = NATIVE_SCREEN_HEIGHT;
-	video.mouse.visible = 1;
+	video.mouse.visible = MOUSE_EMULATED;
 
 	video.yuvlayout = -1;
 	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
@@ -1329,7 +1329,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	unsigned int z;
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
-	if (!video.mouse.visible
+	if (video.mouse.visible != MOUSE_EMULATED
 	    || !(status.flags & IS_FOCUSED)
 	    || y < video.mouse.y
 	    || y >= video.mouse.y+MOUSE_HEIGHT) {
@@ -1728,7 +1728,6 @@ void video_blit(void)
 	};
 }
 
-/* FIXME: ugh */
 int video_mousecursor_visible(void)
 {
 	return video.mouse.visible;
@@ -1736,23 +1735,28 @@ int video_mousecursor_visible(void)
 
 void video_mousecursor(int vis)
 {
-	if (vis == -1) {
-		/* toggle */
-		video.mouse.visible = !video.mouse.visible;
-		/* maybe this shouldn't happen in classic mode?
-		   does anyone care? */
-		status_text_flash("Mouse cursor %s",
-				  video.mouse.visible ? "enabled" : "disabled");
-	} else if (vis == 0 || vis == 1) {
+	const char *state[] = {
+		"Mouse disabled",
+		"Software mouse cursor enabled",
+		"Hardware mouse cursor enabled",
+	};
+
+	switch (vis) {
+	case MOUSE_CYCLE_STATE:
+		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
+		/* fall through */
+	case MOUSE_DISABLED:
+	case MOUSE_SYSTEM:
+	case MOUSE_EMULATED:
 		video.mouse.visible = vis;
+		status_text_flash(state[video.mouse.visible]);
+	case MOUSE_RESET_STATE:
+		break;
+	default:
+		video.mouse.visible = MOUSE_EMULATED;
 	}
-	if (!video.mouse.visible && !video.desktop.fullscreen) {
-		/* display the system cursor when not fullscreen-
-		even when the mouse cursor is invisible */
-		SDL_ShowCursor(SDL_ENABLE);
-	} else {
-		SDL_ShowCursor(SDL_DISABLE);
-	}
+
+	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
 }
 
 void video_translate(unsigned int vx, unsigned int vy,
