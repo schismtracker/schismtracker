@@ -631,13 +631,8 @@ static void info_draw_channels(int base, UNUSED int height, int active, UNUSED i
         draw_text(buf, 4, base + 1, fg, 2);
 }
 
-/* "Screw you guys, I'm going home."
- * I can't figure this out... it sorta kinda works, but not really.
- * If anyone wants to finish it: it's all yours.
- * 
- * (update 06feb2004: still doesn't work. :P -- think I'll just wait until
- * the Big Overhaul when I replace Modplug with my own player engine) */
 
+/* Yay it works, only took me forever and a day to get it right. */
 static void info_draw_note_dots(int base, int height, int active, int first_channel)
 {
         /* once this works, most of these variables can be optimized out (some of them are just used once) */
@@ -645,6 +640,8 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
         int c, pos;
         int n;
         song_mix_channel *channel;
+        song_mix_channel *channel0 = song_get_mix_channel(0); // XXX hack
+        song_sample *samples = song_get_sample(0, NULL); // XXX hack
         unsigned int *channel_list;
         char buf[4];
         byte d, dn;
@@ -653,30 +650,43 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
         byte dot_field[73][36] = { {0} };
 
         draw_fill_chars(5, base + 1, 77, base + height - 2, 0);
-
         draw_box(4, base, 78, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
-
-        /* if it's stopped, just draw the channel numbers and a bunch of dots. */
 
         n = song_get_mix_state(&channel_list);
         while (n--) {
                 channel = song_get_mix_channel(channel_list[n]);
 
                 /* 31 = f#2, 103 = f#8. (i hope ;) */
-		/* channel->sample or channel->sample_data? */
-                if (!(channel->sample && channel->note >= 31
-                      && channel->note <= 103))
+                if (!(channel->sample && channel->note >= 31 && channel->note <= 103))
                         continue;
                 pos = channel->master_channel;
+                if (!pos)
+                	pos = 1 + (channel - channel0);
                 if (pos < first_channel)
                         continue;
                 pos -= first_channel;
                 if (pos > height - 1)
                         continue;
 
-                fg = (channel->flags & CHN_MUTE) ? 1 : (channel->sample - song_get_sample(0, NULL)) % 4 + 2;
-                /* v = (channel->final_volume + 2047) >> 11; */
-		v = (channel->vu_meter + 31) >> 5;
+		if (channel->sample) {
+			/* yay it's easy */
+			fg = channel->sample - samples;
+		} else {
+			for (fg = 0; fg < SCHISM_MAX_SAMPLES; fg++) {
+				if (channel->sample_data == samples[fg].data)
+					break;
+			}
+			if (fg == SCHISM_MAX_SAMPLES) {
+				/* no luck. oh well */
+				fg = 0;
+			}
+		}
+                fg = (channel->flags & CHN_MUTE) ? 1 : (fg % 4 + 2);
+                
+		if (velocity_mode && !(status.flags & CLASSIC_MODE))
+			v = (channel->final_volume + 2047) >> 11;
+		else
+			v = (channel->vu_meter + 31) >> 5;
                 d = dot_field[channel->note - 31][pos];
                 dn = (v << 4) | fg;
                 if (dn > d)
@@ -708,6 +718,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
                 draw_text(numtostr(2, c, buf), 2, pos + base + 1, fg, 2);
         }
 }
+
 /* --------------------------------------------------------------------- */
 /* click receivers */
 static void click_chn_x(int x, int w, int skip, int fc)
