@@ -65,10 +65,12 @@ const char *ver_license[] = {
 };
 
 
-const char *schism_banner(void)
+const char *schism_banner(int classic)
 {
 	char *ptr;
-	if (status.flags & CLASSIC_MODE) return TOP_BANNER_CLASSIC;
+
+	if (classic)
+		return TOP_BANNER_CLASSIC;
 
 	if (banner[0] == 0) {
 		strcpy(banner, TOP_BANNER_NORMAL);

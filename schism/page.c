@@ -1250,8 +1250,8 @@ static void draw_top_info_const(void)
 		br = 3;
 	}
 
-	draw_text(schism_banner(),
-					(80 - strlen(schism_banner())) / 2, 1, 0, 2);
+	draw_text(schism_banner(status.flags & CLASSIC_MODE),
+		(80 - strlen(schism_banner(status.flags & CLASSIC_MODE))) / 2, 1, 0, 2);
         draw_text("Song Name", 2, 3, 0, 2);
         draw_text("File Name", 2, 4, 0, 2);
         draw_text("Order", 6, 5, 0, 2);
