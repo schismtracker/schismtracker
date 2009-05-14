@@ -81,7 +81,7 @@ static struct info_window windows[MAX_WINDOWS] = {
 
 /* --------------------------------------------------------------------- */
 /* the various stuff that can be drawn... */
-static void info_draw_technical(int base, int height, UNUSED int active, int first_channel)
+static void info_draw_technical(int base, int height, int active, int first_channel)
 {
 	int smplist[SCHISM_MAX_SAMPLES];
 	int smp, pos, fg, c = first_channel;
@@ -791,7 +791,7 @@ static const struct info_window_type window_types[] = {
         TRACK_VIEW(64),
         {info_draw_channels, click_chn_nil, 1, 0},
         {info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
-	{info_draw_technical, click_chn_is_y, 1, -3},
+	{info_draw_technical, click_chn_is_y, 1, -2},
 };
 #undef TRACK_VIEW
 
@@ -810,7 +810,7 @@ static void _fix_channels(int n)
 	if (channels < 0) {
 		channels += w->height;
 		if (n == 0 && !(window_types[w->type].first_row)) {
-			/* crappy hack */
+			/* crappy hack (to squeeze in an extra row on the top window) */
 			channels++;
 		}
 	}
