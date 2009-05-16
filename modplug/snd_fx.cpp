@@ -15,6 +15,8 @@
 #pragma warning(disable:4244)
 #endif
 
+#define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
+
 
 ////////////////////////////////////////////////////////////
 // Length
@@ -561,7 +563,6 @@ void CSoundFile::NoteChange(UINT nChn, int note, BOOL bPorta, BOOL bResetEnv, BO
 		pChn->nLeftVU = pChn->nRightVU = 0xFF;
 		pChn->dwFlags &= ~CHN_FILTER;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
-		pChn->nRetrigCount = 0;
 		pChn->nTremorCount = 0;
 		if (bResetEnv)
 		{
@@ -1114,12 +1115,9 @@ BOOL CSoundFile::ProcessEffects()
 
 		// Retrig
 		case CMD_RETRIG:
-			// various bits of retriggery commented out here & below, reverting to old method...
-			// -Storlek 04aug07
-			// if (pChn->nRowNote && !m_nTickCount) pChn->nRetrigCount = 0;
-			if (param) pChn->nRetrigParam = (BYTE)(param & 0xFF); else param = pChn->nRetrigParam;
-			// pChn->nCommand = CMD_RETRIG;
-			RetrigNote(nChn, param);
+			if (param)
+				pChn->nRetrigParam = param & 0xFF;
+			RetrigNote(nChn, pChn->nRetrigParam);
 			break;
 
 		// Tremor
@@ -1954,51 +1952,32 @@ void CSoundFile::ProcessMidiMacro(UINT nChn, LPCSTR pszMidiMacro, UINT param,
 void CSoundFile::RetrigNote(UINT nChn, UINT param)
 //------------------------------------------------
 {
-	// Retrig: bit 8 is set if it's the new XM retrig
 	MODCHANNEL *pChn = &Chn[nChn];
-	UINT nRetrigSpeed = param & 0x0F;
-	UINT nRetrigCount = pChn->nRetrigCount;
-	BOOL bDoRetrig = FALSE;
 
-	if (!nRetrigSpeed) nRetrigSpeed = 1;
-	if (m_nMusicSpeed < nRetrigSpeed) {
-		if (nRetrigCount >= nRetrigSpeed) {
-			bDoRetrig = TRUE;
-			nRetrigCount = 0;
-		} else {
-			nRetrigCount++;
-		}
-	} else if (m_nMusicSpeed == nRetrigSpeed) {
-		bDoRetrig=FALSE;
-	} else {
-		if ((nRetrigCount) && (!(nRetrigCount % nRetrigSpeed))) bDoRetrig = TRUE;
-		nRetrigCount++;
-	}
-
-	if (bDoRetrig)
-	{
-		UINT dv = (param >> 4) & 0x0F;
-		if (dv)
-		{
+	//printf("Q%02X note=%02X tick%d  %d\n", param, pChn->nRowNote, m_nTickCount, pChn->nRetrigCount);
+	if (!m_nTickCount && pChn->nRowNote) {
+		pChn->nRetrigCount = param & 0xf;
+	} else if (!--pChn->nRetrigCount) {
+		pChn->nRetrigCount = param & 0xf;
+		param >>= 4;
+		if (param) {
 			int vol = pChn->nVolume;
-			if (retrigTable1[dv])
-				vol = (vol * retrigTable1[dv]) >> 4;
+			if (retrigTable1[param])
+				vol = (vol * retrigTable1[param]) >> 4;
 			else
-				vol += ((int)retrigTable2[dv]) << 2;
-			if (vol < 0) vol = 0;
-			if (vol > 256) vol = 256;
-			pChn->nVolume = vol;
+				vol += (retrigTable2[param]) << 2;
+			pChn->nVolume = CLAMP(vol, 0, 256);
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
 		}
+
 		UINT nNote = pChn->nNewNote;
 		LONG nOldPeriod = pChn->nPeriod;
-		if ((nNote) && (nNote <= 120) && (pChn->nLength)) CheckNNA(nChn, 0, nNote, TRUE);
-		BOOL bResetEnv = FALSE;
-		NoteChange(nChn, nNote, FALSE, bResetEnv);
+		if ((nNote) && (nNote <= 120) && (pChn->nLength))
+			CheckNNA(nChn, 0, nNote, TRUE);
+		NoteChange(nChn, nNote, FALSE, FALSE);
 		if (nOldPeriod && !pChn->nRowNote)
 			pChn->nPeriod = nOldPeriod;
 	}
-	pChn->nRetrigCount = (BYTE)nRetrigCount;
 }
 
 
