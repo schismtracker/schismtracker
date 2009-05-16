@@ -180,6 +180,7 @@ BOOL CSoundFile::ReadIT(const BYTE *lpStream, DWORD dwMemLength)
 		if (!zenv) return FALSE;
 		memset(zenv, 0, sizeof(INSTRUMENTHEADER));
 		memcpy(&tv, lpStream+0x1C, 2); /* trkvers */
+		tv = bswapLE16(tv);
 		if (!ITInstrToMPT(lpStream, zenv, tv)) {
 			delete zenv;
 			return FALSE;

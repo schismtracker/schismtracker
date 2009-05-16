@@ -110,8 +110,7 @@ static int check_time(void)
 		position in the pattern editor :) */
 		if (status.current_page == PAGE_PATTERN_EDITOR) {
 			row = get_current_row();
-			order = song_order_for_pattern(get_current_pattern(),
-								-2);
+			order = song_order_for_pattern(get_current_pattern(), -2);
 		} else {
 			order = get_current_order();
 			row = 0;
