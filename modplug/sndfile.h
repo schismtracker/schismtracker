@@ -707,7 +707,6 @@ public:
 	void NoteCut(UINT nChn, UINT nTick);
 	void KeyOff(UINT nChn);
 	int PatternLoop(MODCHANNEL *, UINT param);
-	void ExtendedMODCommands(UINT nChn, UINT param);
 	void ExtendedS3MCommands(UINT nChn, UINT param);
 	void ExtendedChannelEffect(MODCHANNEL *, UINT param);
 	void MidiSend(const unsigned char *data, unsigned int len, UINT nChn=0, int fake = 0);

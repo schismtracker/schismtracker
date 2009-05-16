@@ -911,10 +911,8 @@ int song_get_max_channels()
 
 void song_get_vu_meter(int *left, int *right)
 {
-	song_lock_audio();
 	*left = mp->gnVULeft;
 	*right = mp->gnVURight;
-	song_unlock_audio();
 }
 
 void song_update_playing_instrument(int i_changed)
@@ -1069,7 +1067,7 @@ void song_set_current_global_volume(int volume)
 void song_set_current_order(int order)
 {
 	if (song_get_mode() == MODE_PLAYING) {
-                song_start_at_order(order,0);
+                song_start_at_order(order, 0);
 	} else {
 		song_lock_audio();
         	mp->SetCurrentOrder(order);

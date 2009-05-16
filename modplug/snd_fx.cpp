@@ -1641,48 +1641,6 @@ void CSoundFile::ChannelVolSlide(MODCHANNEL *pChn, UINT param)
 }
 
 
-void CSoundFile::ExtendedMODCommands(UINT nChn, UINT param)
-//---------------------------------------------------------
-{
-	MODCHANNEL *pChn = &Chn[nChn];
-	UINT command = param & 0xF0;
-	param &= 0x0F;
-	switch(command)
-	{
-	// E0x: Set Filter
-	// E1x: Fine Portamento Up
-	case 0x10:	if (param) FinePortamentoUp(pChn, param); break;
-	// E2x: Fine Portamento Down
-	case 0x20:	if (param) FinePortamentoDown(pChn, param); break;
-	// E3x: Set Glissando Control
-	case 0x30:	pChn->dwFlags &= ~CHN_GLISSANDO; if (param) pChn->dwFlags |= CHN_GLISSANDO; break;
-	// E4x: Set Vibrato WaveForm
-	case 0x40:	pChn->nVibratoType = param & 0x07; break;
-	// E5x: Set FineTune (no longer implemented)
-	case 0x50:	break;
-	// E6x: Pattern Loop
-	// E7x: Set Tremolo WaveForm
-	case 0x70:	pChn->nTremoloType = param & 0x07; break;
-	// E8x: Set 4-bit Panning
-	case 0x80:	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			pChn->nPan = (param << 4) + 8; pChn->dwFlags |= CHN_FASTVOLRAMP;
-			break;
-	// E9x: Retrig
-	case 0x90:	RetrigNote(nChn, param); break;
-	// EAx: Fine Volume Up
-	case 0xA0:	if (param) FineVolumeUp(pChn, param); break;
-	// EBx: Fine Volume Down
-	case 0xB0:	if (param) FineVolumeDown(pChn, param); break;
-	// ECx: Note Cut
-	case 0xC0:	NoteCut(nChn, param); break;
-	// EDx: Note Delay
-	// EEx: Pattern Delay
-	// EFx: MOD: Invert Loop, XM: Set Active Midi Macro
-	case 0xF0:	pChn->nActiveMacro = param;	break;
-	}
-}
-
-
 void CSoundFile::ExtendedS3MCommands(UINT nChn, UINT param)
 //---------------------------------------------------------
 {
