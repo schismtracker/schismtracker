@@ -138,9 +138,10 @@ typedef struct dmoz_dirlist {
 extern "C" {
 #endif
 
-/* For any of these, pass NULL for dirs to handle directories and files in the same list. */
-int dmoz_read(const char *path, dmoz_filelist_t *files, dmoz_dirlist_t *dirs);
-int dmoz_read_ex(const char *path, dmoz_filelist_t *files, dmoz_dirlist_t *dirs, int (*next)(const char *,dmoz_filelist_t *,dmoz_dirlist_t *));
+/* For any of these, pass NULL for dirs to handle directories and files in the same list.
+for load_library, provide one of the dmoz_read_whatever_library functions, or NULL. */
+int dmoz_read(const char *path, dmoz_filelist_t *files, dmoz_dirlist_t *dirs,
+	int (*load_library)(const char *,dmoz_filelist_t *,dmoz_dirlist_t *));
 void dmoz_free(dmoz_filelist_t *files, dmoz_dirlist_t *dirs);
 
 /* this function is in audio_loadsave.cc instead of dmoz.c, because of modplugness */

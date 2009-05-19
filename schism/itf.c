@@ -176,7 +176,7 @@ static void load_fontlist(void)
 	p = dmoz_path_concat_len(font_dir, "font.cfg", strlen(font_dir), 8);
 	memset(&st, 0, sizeof(st));
 	dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -100); /* put it on top */
-	if (dmoz_read(font_dir, &flist, NULL) < 0)
+	if (dmoz_read(font_dir, &flist, NULL, NULL) < 0)
 		perror(font_dir);
 	free(font_dir);
 	dmoz_filter_filelist(&flist, fontgrep, &cur_font, NULL);

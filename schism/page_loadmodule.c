@@ -37,6 +37,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
+#include <fnmatch.h>
 
 #include "mplink.h"
 
@@ -120,12 +121,50 @@ TODO: scroller hack on selected filename
 */
 
 #define GLOB_CLASSIC "*.it; *.xm; *.s3m; *.mtm; *.669; *.mod"
-#define GLOB_DEFAULT GLOB_CLASSIC ## "; *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf"
+#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf"
 
 static char filename_entry[PATH_MAX + 1] = "";
 static char dirname_entry[PATH_MAX + 1] = "";
 
 static char **glob_list = NULL;
+
+/* --------------------------------------------------------------------- */
+
+static char **semicolon_split(const char *i)
+{
+	int n = 1;
+	const char *j;
+	char *a, *z, **o, **p;
+
+	if (!i)
+		return NULL;
+	i += strspn(i, "; \t");
+	if (!*i)
+		return NULL;
+
+	/* how many MIGHT we have? */
+	for (j = i; j; j = strchr(j + 1, ';'))
+		n++;
+
+	o = p = calloc(n, sizeof(char *));
+	a = strdup(i);
+
+	do {
+		*p++ = a;
+		z = strchrnul(a, ';');
+		/* trim whitespace */
+		do
+			z--;
+		while (isblank(*z));
+		z++;
+		/* find start of the next one */
+		a = z;
+		a += strspn(a, "; \t");
+		*z = 0;
+	} while (*a);
+
+	return o;
+}
 
 /* --------------------------------------------------------------------- */
 /* page-dependent stuff (load or save) */
@@ -353,12 +392,24 @@ static void clear_directory(void)
 
 static int modgrep(dmoz_file_t *f)
 {
+	int i = 0;
+
 	if ((f->type & TYPE_EXT_DATA_MASK) == 0)
 		dmoz_fill_ext_data(f);
-	return 1;
-	if ((f->type & TYPE_EXT_DATA_MASK) == 0) return 0;
-
-	return (f->type & TYPE_MODULE_MASK ? 1 : 0);
+	if (glob_list) {
+		for (i = 0; glob_list[i]; i++) {
+			/* FIXME: this really is the wrong place for this. dmoz ought to be handling the glob
+			itself when it initally reads the dir; this filter function takes too long and runs
+			asynchronously */
+			if (fnmatch(glob_list[i], f->base, FNM_PERIOD | FNM_CASEFOLD) == 0)
+				return 1;
+		}
+		return 0;
+	} else {
+		/* I guess, just trust dmoz to do it right (even though it doesn't) */
+		if ((f->type & TYPE_EXT_DATA_MASK) == 0) return 0;
+		return (f->type & TYPE_MODULE_MASK ? 1 : 0);
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -399,7 +450,7 @@ static void read_directory(void)
 		directory_mtime = st.st_mtime;
 	/* if the stat call failed, this will probably break as well, but
 	at the very least, it'll add an entry for the root directory. */
-	if (dmoz_read(cfg_dir_modules, &flist, &dlist) < 0)
+	if (dmoz_read(cfg_dir_modules, &flist, &dlist, NULL) < 0)
 		perror(cfg_dir_modules);
 	dmoz_filter_filelist(&flist, modgrep, &current_file, file_list_reposition);
 	dmoz_cache_lookup(cfg_dir_modules, &flist, &dlist);
@@ -412,8 +463,14 @@ static void read_directory(void)
 static void set_glob(void)
 {
 	if (glob_list) {
-		/* FREE WILLY */
+		free(*glob_list);
+		free(glob_list);
 	}
+	glob_list = semicolon_split(filename_entry);
+	/* this is kinda lame. dmoz should have a way to reload the list without rereading the directory.
+	could be done with a "visible" flag, which affects the list's sort order, along with adjusting
+	the file count... */
+	read_directory();
 }
 
 static void reset_glob(void)
@@ -532,7 +589,7 @@ static int change_dir(const char *dir)
 	/* probably not all of this is needed everywhere */
 	search_text_clear();
 	read_directory();
-        update_filename_entry();
+        reset_glob();
 
 	return 1;
 }
@@ -865,16 +922,13 @@ static int dir_list_handle_key(struct key_event * k)
 
 static void filename_entered(void)
 {
-	char *ptr;
-	
-        if (filename_entry[0] == '/') {
-                /* hmm... */
-                handle_file_entered(filename_entry);
-        } else {
-		ptr = dmoz_path_concat(cfg_dir_modules, filename_entry);
+	if (strpbrk(filename_entry, "?*")) {
+		set_glob();
+	} else {
+		char *ptr = dmoz_path_concat(cfg_dir_modules, filename_entry);
 		handle_file_entered(ptr);
 		free(ptr);
-        }
+	}
 }
 
 /* strangely similar to the dir list's code :) */
@@ -985,7 +1039,7 @@ static void save_module_set_page(void)
 	
 	update_directory();
 	/* impulse tracker always resets these; so will i */
-	filename_entry[0] = 0;
+	reset_glob();
 	pages[PAGE_SAVE_MODULE].selected_widget = 2;
 }
 
