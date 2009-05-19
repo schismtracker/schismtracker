@@ -106,10 +106,10 @@ static void handle_file_entered_L(char *ptr)
 
 	memset(&tmp,0,sizeof(tmp));
 	f = dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
-	r = modgrep(f);
+	//r = modgrep(f);
 	dmoz_free(&tmp, NULL);
 
-	if (r && song_load(ptr)) {
+	if (song_load(ptr)) {
 		r = 4; /* what? */
 		
 		ext = get_extension(ptr);
@@ -230,8 +230,7 @@ static void do_save_song_overwrite(void *ptr)
 		return;
 	}
 
-	if (stat(cfg_dir_modules, &st) == -1
-	|| directory_mtime != st.st_mtime) {
+	if (stat(cfg_dir_modules, &st) == -1 || directory_mtime != st.st_mtime) {
         	status.flags |= DIR_MODULES_CHANGED;
 	}
 
@@ -286,17 +285,14 @@ static inline int get_type_color(int type)
 	   2 mod
 	   4 other
 	   7 sample */
-	if (type == TYPE_MODULE_MOD)
-		return 2;
-	if (type == TYPE_MODULE_S3M)
-		return 5;
-	if (type == TYPE_MODULE_XM)
-		return 6;
-	if (type == TYPE_MODULE_IT)
-		return 3;
-	if (type == TYPE_SAMPLE_COMPR)
-		return 4; /* mp3/ogg 'sample'... i think */
-	return 7;
+	switch (type) {
+		case TYPE_MODULE_MOD:   return 2;
+		case TYPE_MODULE_S3M:   return 5;
+		case TYPE_MODULE_XM:    return 6;
+		case TYPE_MODULE_IT:    return 3;
+		case TYPE_SAMPLE_COMPR: return 4; /* mp3/ogg 'sample'... i think */
+		default: return 7;
+	}
 }
 
 
@@ -309,6 +305,7 @@ static int modgrep(dmoz_file_t *f)
 {
 	if ((f->type & TYPE_EXT_DATA_MASK) == 0)
 		dmoz_fill_ext_data(f);
+	return 1;
 	if ((f->type & TYPE_EXT_DATA_MASK) == 0) return 0;
 
 	return (f->type & TYPE_MODULE_MASK ? 1 : 0);
