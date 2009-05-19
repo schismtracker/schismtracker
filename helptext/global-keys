@@ -1,0 +1,61 @@
+| Global Keys.
+|   F1                Help (Context sensitive!)
+|   Shift-F1          MIDI Screen
+:   Ctrl-F1           System Configuration
+|   F2                Pattern Editor / Pattern Editor Options
+|   F3                Sample List
+|   Ctrl-F3           Sample Library
+|   F4                Instrument List
+|   Ctrl-F4           Instrument Library
+|   F5                Play Information / Play song
+|   Ctrl-F5           Play Song
+|   F6                Play current pattern
+|   Shift-F6          Play song from current Order
+|   F7                Play from mark / current row
+|   F8                Stop Playback
+|   F9                Load Module
+|   Shift-F9          Message Editor
+|   F10               Save Module
+:   Shift-F10         Export Module (to WAV, MIDI)
+|   F11               Order List and Panning
+| 2*F11               Order List and Channel Volume
+:   Ctrl-F11          Schism Logging
+|   F12               Song Variables & Directory Configuration
+|   Ctrl-F12          Palette Configuration
+:   Shift-F12         Font Editor
+|
+|   { }               Decrease/Increase playback speed
+:   Ctrl-[ ]          Decrease/Increase playback tempo
+|   [ ]               Decrease/Increase global volume
+|   Alt-F1 -> Alt-F8  Toggle channels 1->8
+|
+!   Ctrl-D            DOS Shell
+:   Ctrl-D            Toggle mouse/keyboard grab
+|   Ctrl-E            Refresh screen and reset cache identification
+|   Ctrl-I            Reinitialise sound driver
+|   Ctrl-M            Toggle mouse cursor
+|   Ctrl-N            New Song
+!   Ctrl-Q            Quit to DOS
+:   Ctrl-Q            Quit Schism Tracker
+|   Ctrl-S            Save current song
+:   Ctrl-G            Go to order/pattern/row given time
+:
+:   PrintScreen       Take a screenshot (also Ctrl-Alt-D)
+:
+: On text widgets.
+:   Ctrl-C            Copy to clipboard (also Ctrl-Insert)
+:   Ctrl-V            Paste from clipboard (also Shift-Insert)
+:
+:   Ctrl, Ctrl        Digraph entry:
+;     C,  ->  €    i>  ->  Œ    y:  ->  ˜    n?  ->  ¤    pi  ->  ã
+;     u:  ->      i!  ->      O:  ->  ™    N?  ->  ¥    My  ->  æ
+;     e'  ->  ‚    A:  ->  Ž    U:  ->  š    -a  ->  ¦    o/  ->  í
+;     a>  ->  ƒ    AA  ->      Ct  ->  ›    -o  ->  §    O/  ->  í
+;     a:  ->  „    E'  ->      Pd  ->  œ    ?I  ->  ¨    +-  ->  ñ
+;     a!  ->  …    ae  ->  ‘    Ye  ->      NO  ->  ª    -:  ->  ö
+;     aa  ->  †    AE  ->  ’    Pt  ->  ž    12  ->  «    DG  ->  ø
+;     c,  ->  ‡    o>  ->  “    ff  ->  Ÿ    14  ->  ®    .M  ->  ù
+;     e>  ->  ˆ    o:  ->  ”    a'  ->       !I  ->  ¯    2S  ->  ý
+;     e:  ->  ‰    o!  ->  •    i'  ->  ¡    <<  ->  °    nS  ->  ü
+;     e!  ->  Š    u>  ->  –    o'  ->  ¢    >>  ->  ±    PI  ->  
+;     i:  ->  ‹    u!  ->  —    u'  ->  £    ss  ->  á    SE  ->  
