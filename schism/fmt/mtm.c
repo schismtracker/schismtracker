@@ -1,4 +1,4 @@
-/*
+de/*
  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
@@ -25,6 +25,7 @@
 #include "it.h" /* for feature_check_blahblah */
 #include "fmt.h"
 #include "song.h"
+#include "tables.h"
 
 #include <stdint.h>
 
@@ -207,8 +208,6 @@ static track_t *link_track(track_t *head, track_t *newtrk)
 	return newtrk;
 }
 
-/* FIXME: desepplify tables so we don't have to have this */
-extern unsigned short S3MFineTuneTable[];
 static int c5speed_to_finetune(int c5speed)
 {
 	int n;

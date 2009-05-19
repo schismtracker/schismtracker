@@ -9,12 +9,6 @@
 #include "stdafx.h"
 #include "sndfile.h"
 
-//#pragma warning(disable:4244)
-
-extern WORD ProTrackerPeriodTable[6*12];
-extern WORD S3MFineTuneTable[16];
-extern unsigned short FreqS3MTable[16];
-
 //////////////////////////////////////////////////////////
 // ProTracker / NoiseTracker MOD/NST file support
 
@@ -375,10 +369,6 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 }
 
 
-#ifdef MSC_VER
-#pragma warning(disable:4100)
-#endif
-
 BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 //----------------------------------------------------------
 {
@@ -512,8 +502,4 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 	}
 	return TRUE;
 }
-
-#ifdef MSC_VER
-#pragma warning(default:4100)
-#endif
 
