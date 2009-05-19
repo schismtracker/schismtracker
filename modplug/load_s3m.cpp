@@ -13,10 +13,6 @@
 #include "midi.h"
 #include "it.h"
 
-//#pragma warning(disable:4244)
-
-extern WORD S3MFineTuneTable[16];
-
 //////////////////////////////////////////////////////
 // ScreamTracker S3M file support
 
@@ -617,10 +613,6 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 }
 
 
-#ifdef MSC_VER
-#pragma warning(disable:4100)
-#endif
-
 static BYTE S3MFiller[16] =
 {
 	0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
@@ -910,8 +902,4 @@ BOOL CSoundFile::SaveS3M(diskwriter_driver_t *fp, UINT)
 	fp->o(fp, (const unsigned char *)insex, 0x50*nbi);
 	return TRUE;
 }
-
-#ifdef MSC_VER
-#pragma warning(default:4100)
-#endif
 

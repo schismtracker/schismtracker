@@ -1075,6 +1075,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	fp->o(fp, (const unsigned char *)para_smp, 4*nsmp);
 	fp->o(fp, (const unsigned char *)para_pat, 4*npat);
 }
+
 static void _save_s3m(diskwriter_driver_t *dw)
 {
 	feature_check_instruments("S3M", 0, 0);
@@ -1090,6 +1091,7 @@ static void _save_s3m(diskwriter_driver_t *dw)
 		dw->e(dw);
 	}
 }
+
 static void _save_xm(diskwriter_driver_t *dw)
 {
 	feature_check_instruments("XM", 99, 
@@ -1109,6 +1111,7 @@ static void _save_xm(diskwriter_driver_t *dw)
 		dw->e(dw);
 	}
 }
+
 static void _save_txt(diskwriter_driver_t *fp)
 {
 	const char *s = (const char *)song_get_message();
@@ -1123,6 +1126,7 @@ static void _save_txt(diskwriter_driver_t *fp)
 		}
 	}
 }
+
 static void _save_mod(diskwriter_driver_t *dw)
 {
 	feature_check_instruments("MOD", 0,  0);
