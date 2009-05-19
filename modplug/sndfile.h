@@ -797,32 +797,6 @@ int csf_set_surround_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay);
 
 #endif
 
-// inline DWORD BigEndian(DWORD x) { return ((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) | ((x & 0xFF000000) >> 24); }
-// inline WORD BigEndianW(WORD x) { return (WORD)(((x >> 8) & 0xFF) | ((x << 8) & 0xFF00)); }
-
-
-//////////////////////////////////////////////////////////
-// Tables defined in tables.cpp
-
-extern BYTE ImpulseTrackerPortaVolCmd[16];
-extern WORD S3MFineTuneTable[16];
-extern WORD ProTrackerPeriodTable[6*12];
-extern WORD ProTrackerTunedPeriods[16*12];
-extern WORD FreqS3MTable[];
-extern WORD XMPeriodTable[96+8];
-extern UINT XMLinearTable[768];
-extern DWORD FineLinearSlideUpTable[16];
-extern DWORD FineLinearSlideDownTable[16];
-extern DWORD LinearSlideUpTable[256];
-extern DWORD LinearSlideDownTable[256];
-extern signed char retrigTable1[16];
-extern signed char retrigTable2[16];
-extern short int ModSinusTable[64];
-extern short int ModRampDownTable[64];
-extern short int ModSquareTable[64];
-extern short int ModRandomTable[64];
-extern signed char ft2VibratoTable[256];        // -64 .. +64
-
 //////////////////////////////////////////////////////////
 // WAVE format information
 
@@ -980,6 +954,9 @@ static inline int _muldivr(int a, int b, int c)
 	return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
 }
 
+
+
+#include "tables.h"
 
 #define NEED_BYTESWAP
 #include "headers.h"
