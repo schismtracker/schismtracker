@@ -261,6 +261,7 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 	- switch slashes to backslashes for MS systems ("c:/winnt" => "c:\\winnt")
 	- condense multiple slashes into one ("/sheep//goat" => "/sheep/goat")
 	- remove any trailing slashes
+FIXME: also try to resolve relative paths based on getcwd(), if possible
 */
 char *dmoz_path_normal(const char *path)
 {
@@ -473,6 +474,12 @@ void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), i
 	dmoz_worker_onmove = fn;
 }
 
+/* TODO:
+- create a one-shot filter that runs all its files at once
+- make these filters not actually drop the files from the list, but instead set the hidden flag
+- add a 'num_unfiltered' variable to the struct that indicates the total number
+*/
+
 /* --------------------------------------------------------------------------------------------------------- */
 /* adding to the lists */
 
@@ -543,7 +550,11 @@ static int qsort_cmp_file(const void *_a, const void *_b)
 {
 	const dmoz_file_t *a = *(const dmoz_file_t **) _a;
 	const dmoz_file_t *b = *(const dmoz_file_t **) _b;
-	
+
+	if ((b->type & TYPE_HIDDEN) && !(a->type & TYPE_HIDDEN))
+		return -1; /* b goes first */
+	if ((a->type & TYPE_HIDDEN) && !(b->type & TYPE_HIDDEN))
+		return 1; /* b goes first */
 	if (a->sort_order < b->sort_order)
 		return -1; /* a goes first */
 	if (b->sort_order < a->sort_order)
@@ -556,14 +567,18 @@ static int qsort_cmp_dir(const void *_a, const void *_b)
 	const dmoz_dir_t *a = *(const dmoz_dir_t **) _a;
 	const dmoz_dir_t *b = *(const dmoz_dir_t **) _b;
 
-	/* Same code as above, but a different structure. Actually, since dmoz_file_t is just a superset of
-	dmoz_dir_t, I could use the same function, but doing so would reduce flexibility, in case I decided
-	to rearrange one of them for some reason. */
 	if (a->sort_order < b->sort_order)
 		return -1; /* a goes first */
 	if (b->sort_order < a->sort_order)
 		return 1; /* b goes first */
 	return strverscmp(a->base, b->base);
+}
+
+void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
+{
+	qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
+	if (dlist)
+		qsort(dlist->dirs, dlist->num_dirs, sizeof(dmoz_dir_t *), qsort_cmp_dir);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -630,16 +645,18 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(".."), NULL, -10);
 }
 
-int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
-{
-	return dmoz_read_ex(path,flist,dlist, dmoz_read_sample_library);
-}
-
 /* --------------------------------------------------------------------------------------------------------- */
+
+#if defined(WIN32)
+# define FAILSAFE_PATH "C:\\" /* hopefully! */
+#else
+# define FAILSAFE_PATH "/"
+#endif
 
 /* on success, this will fill the lists and return 0. if something goes
 wrong, it adds a 'stub' entry for the root directory, and returns -1. */
-int dmoz_read_ex(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist, int (*next)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
+int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
+		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
 {
 	DIR *dir;
 	struct dirent *ent;
@@ -647,7 +664,8 @@ int dmoz_read_ex(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist
 	struct stat st;
 	int pathlen, namlen, err = 0;
 
-	if (!path || !*path) path="/";
+	if (!path || !*path)
+		path = FAILSAFE_PATH;
 	dir = opendir(path);
 	if (dir) {
 		pathlen = strlen(path);
@@ -690,7 +708,7 @@ int dmoz_read_ex(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist
 		closedir(dir);
 	} else if (errno == ENOTDIR) {
 		/* oops, it's a file! -- load it as a library */
-		if (next(path, flist, dlist) != 0)
+		if (load_library && load_library(path, flist, dlist) != 0)
 			err = errno;
 	} else {
 		/* opendir failed? that's unpossible! */
@@ -701,9 +719,7 @@ int dmoz_read_ex(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist
 	add_platform_dirs(path, flist, dlist);
 
 	/* finally... sort it */
-	qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
-	if (dlist)
-		qsort(dlist->dirs, dlist->num_dirs, sizeof(dmoz_dir_t *), qsort_cmp_dir);
+	dmoz_sort(flist, dlist);
 
 	if (err) {
 		errno = err;
@@ -893,3 +909,4 @@ int rename_file(const char *old, const char *newf, int clobber)
 #endif
 	return DMOZ_RENAME_OK;
 }
+
