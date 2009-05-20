@@ -121,8 +121,7 @@ static void read_directory(void)
 		directory_mtime = st.st_mtime;
 	/* if the stat call failed, this will probably break as well, but
 	at the very least, it'll add an entry for the root directory. */
-	if (dmoz_read_ex(inst_cwd, &flist, NULL,
-				dmoz_read_instrument_library) < 0)
+	if (dmoz_read(inst_cwd, &flist, NULL, dmoz_read_instrument_library) < 0)
 		perror(inst_cwd);
 
 	dmoz_filter_filelist(&flist,instgrep, &current_file, file_list_reposition);

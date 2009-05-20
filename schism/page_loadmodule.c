@@ -37,6 +37,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
+#include <fnmatch.h>
 
 #include "mplink.h"
 
@@ -64,18 +65,81 @@ dmoz_dirlist_t dlist;
 #define current_dir dlist.selected
 
 
-/* filename_entry is updated whenever the selected file is changed. (this differs from impulse tracker, which
-accepts wildcards in the filename box... i'm not doing this partly because filenames could be longer than the
-visible text in the browser, and partly because i just don't want to write that code.)
+/*
+filename_entry is generally a glob pattern, but typing a file/path name directly and hitting enter
+will load the file.
+
+glob_list is a split-up bunch of globs that gets updated if enter is pressed while filename_entry contains
+a '*' or '?' character.
 
 dirname_entry is copied from the module directory (off the vars page) when this page is loaded, and copied back
 when the directory is changed. in general the two variables will be the same, but editing the text directly
 won't screw up the directory listing or anything. (hitting enter will cause the changed callback, which will
 copy the text from dirname_entry to the actual configured string and update the current directory.)
+*/
 
-whew. */
-static char filename_entry[NAME_MAX + 1] = "";
+/*
+impulse tracker's glob list:
+	*.it; *.xm; *.s3m; *.mtm; *.669; *.mod
+unsupported formats that the title reader knows about, even though we can't load them:
+	*.f2r; *.imf; *.liq; *.dtm; *.ntk
+formats that might be supported, but which i have never seen and thus don't actually care about:
+	*.dbm; *.dsm; *.psm
+other formats that i wouldn't bother presenting in the loader even if we could load them:
+	*.mid; *.wav; *.mp3; *.ogg; *.sid; *.umx
+formats that modplug pretends to support, but fails hard:
+	*.ams
+this leaves the following 'extra' formats which should be appended in non-classic mode:
+	*.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf
+
+TODO: scroller hack on selected filename
+*/
+
+#define GLOB_CLASSIC "*.it; *.xm; *.s3m; *.mtm; *.669; *.mod"
+#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf"
+
+static char filename_entry[PATH_MAX + 1] = "";
 static char dirname_entry[PATH_MAX + 1] = "";
+
+static char **glob_list = NULL;
+
+/* --------------------------------------------------------------------- */
+
+static char **semicolon_split(const char *i)
+{
+	int n = 1;
+	const char *j;
+	char *a, *z, **o, **p;
+
+	if (!i)
+		return NULL;
+	i += strspn(i, "; \t");
+	if (!*i)
+		return NULL;
+
+	/* how many MIGHT we have? */
+	for (j = i; j; j = strchr(j + 1, ';'))
+		n++;
+
+	o = p = calloc(n, sizeof(char *));
+	a = strdup(i);
+
+	do {
+		*p++ = a;
+		z = strchrnul(a, ';');
+		/* trim whitespace */
+		do
+			z--;
+		while (isblank(*z));
+		z++;
+		/* find start of the next one */
+		a = z;
+		a += strspn(a, "; \t");
+		*z = 0;
+	} while (*a);
+
+	return o;
+}
 
 /* --------------------------------------------------------------------- */
 /* page-dependent stuff (load or save) */
@@ -106,10 +170,10 @@ static void handle_file_entered_L(char *ptr)
 
 	memset(&tmp,0,sizeof(tmp));
 	f = dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
-	r = modgrep(f);
+	//r = modgrep(f);
 	dmoz_free(&tmp, NULL);
 
-	if (r && song_load(ptr)) {
+	if (song_load(ptr)) {
 		r = 4; /* what? */
 		
 		ext = get_extension(ptr);
@@ -230,8 +294,7 @@ static void do_save_song_overwrite(void *ptr)
 		return;
 	}
 
-	if (stat(cfg_dir_modules, &st) == -1
-	|| directory_mtime != st.st_mtime) {
+	if (stat(cfg_dir_modules, &st) == -1 || directory_mtime != st.st_mtime) {
         	status.flags |= DIR_MODULES_CHANGED;
 	}
 
@@ -286,17 +349,14 @@ static inline int get_type_color(int type)
 	   2 mod
 	   4 other
 	   7 sample */
-	if (type == TYPE_MODULE_MOD)
-		return 2;
-	if (type == TYPE_MODULE_S3M)
-		return 5;
-	if (type == TYPE_MODULE_XM)
-		return 6;
-	if (type == TYPE_MODULE_IT)
-		return 3;
-	if (type == TYPE_SAMPLE_COMPR)
-		return 4; /* mp3/ogg 'sample'... i think */
-	return 7;
+	switch (type) {
+		case TYPE_MODULE_MOD:   return 2;
+		case TYPE_MODULE_S3M:   return 5;
+		case TYPE_MODULE_XM:    return 6;
+		case TYPE_MODULE_IT:    return 3;
+		case TYPE_SAMPLE_COMPR: return 4; /* mp3/ogg 'sample'... i think */
+		default: return 7;
+	}
 }
 
 
@@ -307,11 +367,15 @@ static void clear_directory(void)
 
 static int modgrep(dmoz_file_t *f)
 {
-	if ((f->type & TYPE_EXT_DATA_MASK) == 0)
-		dmoz_fill_ext_data(f);
-	if ((f->type & TYPE_EXT_DATA_MASK) == 0) return 0;
+	int i = 0;
 
-	return (f->type & TYPE_MODULE_MASK ? 1 : 0);
+	if (!glob_list)
+		return 1;
+	for (i = 0; glob_list[i]; i++) {
+		if (fnmatch(glob_list[i], f->base, FNM_PERIOD | FNM_CASEFOLD) == 0)
+			return 1;
+	}
+	return 0;
 }
 
 /* --------------------------------------------------------------------- */
@@ -352,9 +416,10 @@ static void read_directory(void)
 		directory_mtime = st.st_mtime;
 	/* if the stat call failed, this will probably break as well, but
 	at the very least, it'll add an entry for the root directory. */
-	if (dmoz_read(cfg_dir_modules, &flist, &dlist) < 0)
+	if (dmoz_read(cfg_dir_modules, &flist, &dlist, NULL) < 0)
 		perror(cfg_dir_modules);
 	dmoz_filter_filelist(&flist, modgrep, &current_file, file_list_reposition);
+	while (dmoz_worker()); /* don't do it asynchronously */
 	dmoz_cache_lookup(cfg_dir_modules, &flist, &dlist);
 	file_list_reposition();
 	dir_list_reposition();
@@ -362,21 +427,23 @@ static void read_directory(void)
 
 /* --------------------------------------------------------------------- */
 
-static void update_filename_entry(void)
+static void set_glob(void)
 {
-	if (status.current_page == PAGE_LOAD_MODULE) {
-	        widgets_loadmodule[2].d.textentry.firstchar = widgets_loadmodule[2].d.textentry.cursor_pos = 0;
-	} else if (status.current_page == PAGE_EXPORT_MODULE) {
-	        widgets_exportmodule[2].d.textentry.firstchar = widgets_exportmodule[2].d.textentry.cursor_pos = 0;
-	} else {
-	        widgets_savemodule[2].d.textentry.firstchar = widgets_savemodule[2].d.textentry.cursor_pos = 0;
-        }
-	if (current_file >= 0 && current_file < flist.num_files) {
-	        strncpy(filename_entry, flist.files[current_file]->base, NAME_MAX);
-		filename_entry[NAME_MAX] = 0;
-	} else {
-	        filename_entry[0] = 0;
+	if (glob_list) {
+		free(*glob_list);
+		free(glob_list);
 	}
+	glob_list = semicolon_split(filename_entry);
+	/* this is kinda lame. dmoz should have a way to reload the list without rereading the directory.
+	could be done with a "visible" flag, which affects the list's sort order, along with adjusting
+	the file count... */
+	read_directory();
+}
+
+static void reset_glob(void)
+{
+	strcpy(filename_entry, (status.flags & CLASSIC_MODE) ? GLOB_CLASSIC : GLOB_DEFAULT);
+	set_glob();
 }
 
 /* --------------------------------------------------------------------- */
@@ -489,7 +556,7 @@ static int change_dir(const char *dir)
 	/* probably not all of this is needed everywhere */
 	search_text_clear();
 	read_directory();
-        update_filename_entry();
+        reset_glob();
 
 	return 1;
 }
@@ -706,7 +773,6 @@ static int file_list_handle_key(struct key_event * k)
         if (new_file != current_file) {
                 current_file = new_file;
                 file_list_reposition();
-                update_filename_entry();
                 status.flags |= NEED_UPDATE;
         }
         return 1;
@@ -823,16 +889,13 @@ static int dir_list_handle_key(struct key_event * k)
 
 static void filename_entered(void)
 {
-	char *ptr;
-	
-        if (filename_entry[0] == '/') {
-                /* hmm... */
-                handle_file_entered(filename_entry);
-        } else {
-		ptr = dmoz_path_concat(cfg_dir_modules, filename_entry);
+	if (strpbrk(filename_entry, "?*")) {
+		set_glob();
+	} else {
+		char *ptr = dmoz_path_concat(cfg_dir_modules, filename_entry);
 		handle_file_entered(ptr);
 		free(ptr);
-        }
+	}
 }
 
 /* strangely similar to the dir list's code :) */
@@ -929,7 +992,7 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[1].width = 17;
 	widgets_loadmodule[1].height = 20;
 
-        create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
+        create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_loadmodule[2].activate = filename_entered;
         create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_loadmodule[3].activate = dirname_entered;
@@ -943,7 +1006,7 @@ static void save_module_set_page(void)
 	
 	update_directory();
 	/* impulse tracker always resets these; so will i */
-	filename_entry[0] = 0;
+	reset_glob();
 	pages[PAGE_SAVE_MODULE].selected_widget = 2;
 }
 
@@ -984,7 +1047,7 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[1].next.right = widgets_exportsave[1].next.tab = 4;
 	widgets_exportsave[1].next.left = 0;
 
-        create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, NAME_MAX);
+        create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_exportsave[2].activate = filename_entered;
         create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_exportsave[3].activate = dirname_entered;
