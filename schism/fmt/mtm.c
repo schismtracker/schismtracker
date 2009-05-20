@@ -1,4 +1,4 @@
-de/*
+/*
  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
