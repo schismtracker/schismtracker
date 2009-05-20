@@ -80,42 +80,17 @@ copy the text from dirname_entry to the actual configured string and update the 
 
 /*
 impulse tracker's glob list:
-	*.it
-	*.xm
-	*.s3m
-	*.mtm
-	*.669
-	*.mod
+	*.it; *.xm; *.s3m; *.mtm; *.669; *.mod
 unsupported formats that the title reader knows about, even though we can't load them:
-	*.f2r
-	*.imf
-	*.liq
-	*.dtm
-	*.ntk
+	*.f2r; *.imf; *.liq; *.dtm; *.ntk
 formats that might be supported, but which i have never seen and thus don't actually care about:
-	*.dbm
-	*.dsm
-	*.psm
+	*.dbm; *.dsm; *.psm
 other formats that i wouldn't bother presenting in the loader even if we could load them:
-	*.mid
-	*.wav
-	*.mp3
-	*.ogg
-	*.sid
-	*.umx
+	*.mid; *.wav; *.mp3; *.ogg; *.sid; *.umx
 formats that modplug pretends to support, but fails hard:
 	*.ams
 this leaves the following 'extra' formats which should be appended in non-classic mode:
-	*.mdl
-	*.mt2
-	*.stm
-	*.far
-	*.ult
-	*.med
-	*.ptm
-	*.okt (loader needs work)
-	*.amf (loader needs work)
-	*.dmf
+	*.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf
 
 TODO: scroller hack on selected filename
 */
@@ -394,22 +369,13 @@ static int modgrep(dmoz_file_t *f)
 {
 	int i = 0;
 
-	if ((f->type & TYPE_EXT_DATA_MASK) == 0)
-		dmoz_fill_ext_data(f);
-	if (glob_list) {
-		for (i = 0; glob_list[i]; i++) {
-			/* FIXME: this really is the wrong place for this. dmoz ought to be handling the glob
-			itself when it initally reads the dir; this filter function takes too long and runs
-			asynchronously */
-			if (fnmatch(glob_list[i], f->base, FNM_PERIOD | FNM_CASEFOLD) == 0)
-				return 1;
-		}
-		return 0;
-	} else {
-		/* I guess, just trust dmoz to do it right (even though it doesn't) */
-		if ((f->type & TYPE_EXT_DATA_MASK) == 0) return 0;
-		return (f->type & TYPE_MODULE_MASK ? 1 : 0);
+	if (!glob_list)
+		return 1;
+	for (i = 0; glob_list[i]; i++) {
+		if (fnmatch(glob_list[i], f->base, FNM_PERIOD | FNM_CASEFOLD) == 0)
+			return 1;
 	}
+	return 0;
 }
 
 /* --------------------------------------------------------------------- */
@@ -453,6 +419,7 @@ static void read_directory(void)
 	if (dmoz_read(cfg_dir_modules, &flist, &dlist, NULL) < 0)
 		perror(cfg_dir_modules);
 	dmoz_filter_filelist(&flist, modgrep, &current_file, file_list_reposition);
+	while (dmoz_worker()); /* don't do it asynchronously */
 	dmoz_cache_lookup(cfg_dir_modules, &flist, &dlist);
 	file_list_reposition();
 	dir_list_reposition();

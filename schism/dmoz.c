@@ -476,10 +476,8 @@ void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), i
 
 /* TODO:
 - create a one-shot filter that runs all its files at once
-- make these filters not actually drop the files from the list, but instead set a flag
+- make these filters not actually drop the files from the list, but instead set the hidden flag
 - add a 'num_unfiltered' variable to the struct that indicates the total number
-- move the sorting code out to a separate function
-- add the filter flag as a condition for sorting
 */
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -552,7 +550,11 @@ static int qsort_cmp_file(const void *_a, const void *_b)
 {
 	const dmoz_file_t *a = *(const dmoz_file_t **) _a;
 	const dmoz_file_t *b = *(const dmoz_file_t **) _b;
-	
+
+	if ((b->type & TYPE_HIDDEN) && !(a->type & TYPE_HIDDEN))
+		return -1; /* b goes first */
+	if ((a->type & TYPE_HIDDEN) && !(b->type & TYPE_HIDDEN))
+		return 1; /* b goes first */
 	if (a->sort_order < b->sort_order)
 		return -1; /* a goes first */
 	if (b->sort_order < a->sort_order)
@@ -565,14 +567,18 @@ static int qsort_cmp_dir(const void *_a, const void *_b)
 	const dmoz_dir_t *a = *(const dmoz_dir_t **) _a;
 	const dmoz_dir_t *b = *(const dmoz_dir_t **) _b;
 
-	/* Same code as above, but a different structure. Actually, since dmoz_file_t is just a superset of
-	dmoz_dir_t, I could use the same function, but doing so would reduce flexibility, in case I decided
-	to rearrange one of them for some reason. */
 	if (a->sort_order < b->sort_order)
 		return -1; /* a goes first */
 	if (b->sort_order < a->sort_order)
 		return 1; /* b goes first */
 	return strverscmp(a->base, b->base);
+}
+
+void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
+{
+	qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
+	if (dlist)
+		qsort(dlist->dirs, dlist->num_dirs, sizeof(dmoz_dir_t *), qsort_cmp_dir);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -713,9 +719,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	add_platform_dirs(path, flist, dlist);
 
 	/* finally... sort it */
-	qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
-	if (dlist)
-		qsort(dlist->dirs, dlist->num_dirs, sizeof(dmoz_dir_t *), qsort_cmp_dir);
+	dmoz_sort(flist, dlist);
 
 	if (err) {
 		errno = err;
