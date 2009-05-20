@@ -30,6 +30,7 @@
 
 #include "it_defs.h"
 
+#include "snd_gm.h"
 #include "midi.h"
 #include "diskwriter.h"
 
@@ -55,6 +56,9 @@ char song_filename[PATH_MAX + 1];
 char song_basename[NAME_MAX + 1];
 
 byte row_highlight_major = 16, row_highlight_minor = 4;
+
+// if true, don't stop playing on load, and start playing new song afterward
+static int stop_on_load = 0;
 
 // ------------------------------------------------------------------------
 // quiet a sample when loading
@@ -374,9 +378,15 @@ void song_new(int flags)
 int song_load_unchecked(const char *file)
 {
         const char *base = get_basename(file);
+        int was_playing;
 
 	// IT stops the song even if the new song can't be loaded
-	song_stop();
+	if (stop_on_load) {
+		was_playing = 0;
+		song_stop();
+	} else {
+		was_playing = (song_get_mode() == MODE_PLAYING);
+	}
 	
         slurp_t *s = slurp(file, NULL, 0);
         if (s == 0) {
@@ -394,16 +404,20 @@ int song_load_unchecked(const char *file)
                 delete mp;
                 mp = newsong;
 		mp->SetRepeatCount(-1);
+		max_channels_used = 0;
                 fix_song();
 		song_stop_unlocked(0);
-
-                song_unlock_audio();
+		song_unlock_audio();
+		
+		if (was_playing && !stop_on_load)
+			song_start();
 
 		// ugly #2
 		row_highlight_major = mp->m_rowHighlightMajor;
 		row_highlight_minor = mp->m_rowHighlightMinor;
 
                 main_song_changed_cb();
+                
 		status.flags &= ~SONG_NEEDS_SAVE;
 		status.flags &= ~PLAIN_TEXTEDIT;
 	
@@ -1688,3 +1702,4 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
         unslurp(s);
 	return r ? 0 : -1;
 }
+
