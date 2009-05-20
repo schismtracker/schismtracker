@@ -57,8 +57,8 @@ char song_basename[NAME_MAX + 1];
 
 byte row_highlight_major = 16, row_highlight_minor = 4;
 
-// if true, don't stop playing on load, and start playing new song afterward
-static int stop_on_load = 0;
+// if false, don't stop playing on load, and start playing new song afterward
+int stop_on_load = 1;
 
 // ------------------------------------------------------------------------
 // quiet a sample when loading
