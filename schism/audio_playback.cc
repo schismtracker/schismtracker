@@ -1122,6 +1122,8 @@ void song_set_surround(int on)
 // well this is certainly a dopey place to put this, config having nothing to do with playback... maybe i
 // should put all the cfg_ stuff in config.c :/
 
+extern int stop_on_load; // XXX craphack
+
 #define CFG_GET_A(v,d) audio_settings.v = cfg_get_number(cfg, "Audio", #v, d)
 #define CFG_GET_M(v,d) audio_settings.v = cfg_get_number(cfg, "Mixer Settings", #v, d)
 #define CFG_GET_D(v,d) audio_settings.v = cfg_get_number(cfg, "Modplug DSP", #v, d)
@@ -1174,6 +1176,8 @@ void cfg_load_audio(cfg_file_t *cfg)
 	audio_settings.eq_gain[1] = cfg_get_number(cfg, "EQ Med Low Band", "gain", 0);
 	audio_settings.eq_gain[2] = cfg_get_number(cfg, "EQ Med High Band", "gain", 0);
 	audio_settings.eq_gain[3] = cfg_get_number(cfg, "EQ High Band", "gain", 0);
+	
+	stop_on_load = !!cfg_get_number(cfg, "General", "stop_on_load", 1);
 }
 
 #define CFG_SET_A(v) cfg_set_number(cfg, "Audio", #v, audio_settings.v)
@@ -1232,6 +1236,7 @@ void cfg_save_audio(cfg_file_t *cfg)
 	cfg_set_number(cfg, "Diskwriter", "bits", diskwriter_output_bits);
 	cfg_set_number(cfg, "Diskwriter", "channels", diskwriter_output_channels);
 
+	cfg_set_number(cfg, "General", "stop_on_load", stop_on_load);
 }
 
 // ------------------------------------------------------------------------------------------------------------
