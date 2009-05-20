@@ -36,8 +36,10 @@ enum {
 	TYPE_DIRECTORY        = 0x4 | TYPE_BROWSABLE_MASK, /* if (type == TYPE_DIRECTORY) ... guess what! */
 	TYPE_NON_REGULAR      = 0x8, /* if (type == TYPE_NON_REGULAR) it's something weird, e.g. a socket */
 
+	/* (flags & 0xF0) are reserved for future use */
+
 	/* this has to match TYPE_BROWSABLE_MASK for directories */
-	TYPE_EXT_DATA_MASK    = ~0xE, /* if (type & TYPE_EXT_DATA_MASK) the extended data has been checked */
+	TYPE_EXT_DATA_MASK    = 0xFFF01, /* if (type & TYPE_EXT_DATA_MASK) the extended data has been checked */
 
 	TYPE_MODULE_MASK      = 0xF00, /* if (type & TYPE_MODULE_MASK) it's loadable as a module */
 	TYPE_MODULE_MOD       = 0x100 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
@@ -55,6 +57,9 @@ enum {
 	TYPE_SAMPLE_PLAIN     = 0x20000 | TYPE_FILE_MASK, /* au, aiff, wav (simple formats) */
 	TYPE_SAMPLE_EXTD      = 0x30000 | TYPE_FILE_MASK, /* its, s3i (tracker formats with extended stuff) */
 	TYPE_SAMPLE_COMPR     = 0x40000 | TYPE_FILE_MASK, /* ogg, mp3 (compressed audio) */
+	
+	TYPE_INTERNAL_FLAGS   = 0xF00000,
+	TYPE_HIDDEN           = 0x100000,
 };
 
 /* A brief description of the sort_order field:
@@ -143,6 +148,8 @@ for load_library, provide one of the dmoz_read_whatever_library functions, or NU
 int dmoz_read(const char *path, dmoz_filelist_t *files, dmoz_dirlist_t *dirs,
 	int (*load_library)(const char *,dmoz_filelist_t *,dmoz_dirlist_t *));
 void dmoz_free(dmoz_filelist_t *files, dmoz_dirlist_t *dirs);
+
+void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist);
 
 /* this function is in audio_loadsave.cc instead of dmoz.c, because of modplugness */
 int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist);
