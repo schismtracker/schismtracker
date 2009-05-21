@@ -126,7 +126,9 @@ static char **semicolon_split(const char *i)
 
 	do {
 		*p++ = a;
-		z = strchrnul(a, ';');
+		z = strchr(a, ';');
+		if (!z)
+			z = strchr(a, 0);
 		/* trim whitespace */
 		do
 			z--;
