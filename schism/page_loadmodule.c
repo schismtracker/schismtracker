@@ -194,8 +194,8 @@ static void handle_file_entered_L(char *ptr)
 		}
 		togglebutton_set(widgets_exportsave, r, 0);
 
-		/* set_page(PAGE_LOG); */
-		set_page(PAGE_BLANK);
+		/* TODO if there were warnings, redirect to log instead */
+		set_page((song_get_mode() == MODE_PLAYING) ? PAGE_INFO : PAGE_BLANK);
 	}
 }
 static void do_save_song(void *ptr);
@@ -429,23 +429,27 @@ static void read_directory(void)
 
 /* --------------------------------------------------------------------- */
 
-static void set_glob(void)
+static void set_glob(const char *globspec)
 {
 	if (glob_list) {
 		free(*glob_list);
 		free(glob_list);
 	}
-	glob_list = semicolon_split(filename_entry);
+	glob_list = semicolon_split(globspec);
 	/* this is kinda lame. dmoz should have a way to reload the list without rereading the directory.
 	could be done with a "visible" flag, which affects the list's sort order, along with adjusting
 	the file count... */
 	read_directory();
 }
 
-static void reset_glob(void)
+static void set_default_glob(int set_filename)
 {
-	strcpy(filename_entry, (status.flags & CLASSIC_MODE) ? GLOB_CLASSIC : GLOB_DEFAULT);
-	set_glob();
+	const char *s = (status.flags & CLASSIC_MODE) ? GLOB_CLASSIC : GLOB_DEFAULT;
+	if (set_filename) {
+		/* glob on load page is visible, but on save page the text should be empty */
+		strcpy(filename_entry, s);
+	}
+	set_glob(s);
 }
 
 /* --------------------------------------------------------------------- */
@@ -558,7 +562,6 @@ static int change_dir(const char *dir)
 	/* probably not all of this is needed everywhere */
 	search_text_clear();
 	read_directory();
-        reset_glob();
 
 	return 1;
 }
@@ -892,7 +895,7 @@ static int dir_list_handle_key(struct key_event * k)
 static void filename_entered(void)
 {
 	if (strpbrk(filename_entry, "?*")) {
-		set_glob();
+		set_glob(filename_entry);
 	} else {
 		char *ptr = dmoz_path_concat(cfg_dir_modules, filename_entry);
 		handle_file_entered(ptr);
@@ -937,6 +940,10 @@ static int update_directory(void)
 }
 
 /* --------------------------------------------------------------------- */
+
+/* FIXME what are these for? apart from clearing the directory list constantly */
+#undef CACHEFREE
+#if CACHEFREE
 static int _save_cachefree_hack(struct key_event *k)
 {
 	if ((k->sym == SDLK_F10 && NO_MODIFIER(k->mod))
@@ -955,12 +962,14 @@ static int _load_cachefree_hack(struct key_event *k)
 	}
 	return 0;
 }
+#endif
 
 static void load_module_set_page(void)
 {
 	handle_file_entered = handle_file_entered_L;
         if (update_directory())
 		pages[PAGE_LOAD_MODULE].selected_widget = (flist.num_files > 0) ? 0 : 1;
+	set_default_glob(1);
 }
 
 void load_module_load_page(struct page *page)
@@ -977,8 +986,10 @@ void load_module_load_page(struct page *page)
         page->total_widgets = 4;
         page->widgets = widgets_loadmodule;
         page->help_index = HELP_GLOBAL;
+#if CACHEFREE
 	page->pre_handle_key = _load_cachefree_hack;
-	
+#endif
+
 	create_other(widgets_loadmodule + 0, 1, file_list_handle_key, file_list_draw);
 	widgets_loadmodule[0].accept_text = 1;
 	widgets_loadmodule[0].x = 3;
@@ -1008,7 +1019,9 @@ static void save_module_set_page(void)
 	
 	update_directory();
 	/* impulse tracker always resets these; so will i */
-	reset_glob();
+	set_default_glob(0);
+	strncpy(filename_entry, song_basename, NAME_MAX);
+	filename_entry[NAME_MAX] = 0;
 	pages[PAGE_SAVE_MODULE].selected_widget = 2;
 }
 
@@ -1038,8 +1051,10 @@ void save_module_load_page(struct page *page, int do_export)
         page->total_widgets = 5;
         page->help_index = HELP_GLOBAL;
         page->selected_widget = 2;
+#if CACHEFREE
 	page->pre_handle_key = _save_cachefree_hack;
-	
+#endif
+
 	create_other(widgets_exportsave + 0, 1, file_list_handle_key, file_list_draw);
 	widgets_exportsave[0].accept_text = 1;
 	widgets_exportsave[0].next.left = 4;
