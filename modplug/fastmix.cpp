@@ -1458,19 +1458,24 @@ unsigned int CSoundFile::CreateStereoMix(int count)
 					pChannel->nVUMeter = vutmp;
 			} else if (vutmp) {
 				// can't fake the funk
+				int n;
 				if (pChannel->dwFlags & CHN_16BIT) {
-					const unsigned short *p =
-						(unsigned short *)(pChannel->pCurrentSample + pChannel->nPos);
+					const signed short *p = (signed short *)(pChannel->pCurrentSample);
 					if (pChannel->dwFlags & CHN_STEREO)
-						p += pChannel->nPos;
-					vutmp *= ((*p) & 0x7fff) >> 8;
+						n = p[2 * pChannel->nPos];
+					else
+						n = p[pChannel->nPos];
+					n >>= 8;
 				} else {
-					const unsigned char *p =
-						(unsigned char *)(pChannel->pCurrentSample + pChannel->nPos);
+					const signed char *p = (signed char *)(pChannel->pCurrentSample);
 					if (pChannel->dwFlags & CHN_STEREO)
-						p += pChannel->nPos;
-					vutmp *= ((*p) & 0x7f);
+						n = p[2 * pChannel->nPos];
+					else
+						n = p[pChannel->nPos];
 				}
+				if (n < 0)
+					n = -n;
+				vutmp *= n;
 				vutmp >>= 7; // 0..255
 				if (vutmp)
 					pChannel->nVUMeter = vutmp;

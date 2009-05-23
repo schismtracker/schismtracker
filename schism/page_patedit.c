@@ -1087,7 +1087,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	if (n < 64)
 		memset(track_view_scheme + n, r, 64 - n);
 
-	cfg_get_string(cfg, "Pattern Editor", "channel_multi", (char *) s, 65, "");
+	cfg_get_string(cfg, "Pattern Editor", "channel_multi", (char *) s, 64, "");
 	memset(channel_multi, 0, sizeof(channel_multi));
 	channel_multi_base = NULL;
 	for (n = 0; n < 64; n++) {
