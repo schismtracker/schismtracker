@@ -151,7 +151,7 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 
                 if (offset + c.length > len) {
                         log_appendf(4, "Corrupt WAV file. Chunk points outside of WAV file [%lu + %u > %lu]\n",
-                            offset, c.length, len);
+                            (unsigned long) offset, c.length, (unsigned long) len);
                         return 0;
                 }
 
