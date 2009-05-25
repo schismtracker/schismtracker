@@ -1184,8 +1184,25 @@ diskwriter_driver_t txtwriter = {
 int song_save(const char *file, const char *qt)
 {
 	const char *ext;
-	int i, nsmp, nins;
+	char *freeme;
+	int i, j, nsmp, nins;
 
+	freeme = NULL;
+	ext = get_extension(file);
+	if (!*ext) {
+		if (!qt) {
+			log_appendf(4, "Error: no extension, and no save/type");
+			return 1;
+		}
+		freeme = (char*)mem_alloc((i=strlen(file)) + strlen(qt) + 3);
+		strcpy(freeme, file);
+		freeme[i] = '.';i++;
+		for (j = 0; qt[j]; j++, i++) freeme[i] = tolower(((unsigned int)(qt[j])));
+		freeme[i] = '\0';
+		file = freeme;
+		puts(file);
+	}
+	
 
 	// fix m_nSamples and m_nInstruments
 	nsmp = 198;
@@ -1198,9 +1215,8 @@ int song_save(const char *file, const char *qt)
 	nins++;
 	mp->m_nSamples = nsmp;
 	mp->m_nInstruments = nins;
-	
+
 	if (!qt) {
-		ext = get_extension(file);
 		for (i = 0; diskwriter_drivers[i]; i++) {
 			if (strcasecmp(ext, diskwriter_drivers[i]->extension) == 0) {
 				qt = diskwriter_drivers[i]->name;
@@ -1213,9 +1229,11 @@ int song_save(const char *file, const char *qt)
 			/* okay, the "default" for textedit is plain-text */
 			if (diskwriter_start(file, &txtwriter) != DW_OK) {
 				log_appendf(4, "Cannot start diskwriter: %s", strerror(errno));
+				if (freeme) free(freeme);
 				return 0;
 			}
 			log_appendf(2, "Starting up diskwriter");
+			if (freeme) free(freeme);
 			return 1;
 		}
 
@@ -1234,6 +1252,7 @@ int song_save(const char *file, const char *qt)
 		if (diskwriter_start(file, diskwriter_drivers[i]) != DW_OK) {
 			log_appendf(4, "Cannot start diskwriter: %s",
 			strerror(errno));
+			if (freeme) free(freeme);
 			return 0;
 		}
 		if (! diskwriter_drivers[i]->export_only) {
@@ -1242,10 +1261,12 @@ int song_save(const char *file, const char *qt)
 				song_set_filename(file);
 		}
 		log_appendf(2, "Starting up diskwriter");
+		if (freeme) free(freeme);
 		return 1;
 	}
 
 	log_appendf(4, "Unknown file type: %s", qt);
+	if (freeme) free(freeme);
 	return 0;
 }
 
