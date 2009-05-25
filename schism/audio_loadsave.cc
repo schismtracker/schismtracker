@@ -1181,7 +1181,7 @@ diskwriter_driver_t txtwriter = {
 int song_save(const char *file, const char *qt)
 {
 	const char *ext;
-	char *freeme, *q;
+	char *freeme;
 	int i, j, nsmp, nins;
 
 	freeme = NULL;

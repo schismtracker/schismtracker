@@ -218,24 +218,12 @@ static void handle_file_entered_L(char *ptr)
 		set_page((song_get_mode() == MODE_PLAYING) ? PAGE_INFO : PAGE_BLANK);
 	}
 }
-static void do_save_song(void *ptr);
 
-static void do_save_song_exportok(void *ptr)
-{
-	set_page(PAGE_EXPORT_MODULE);
-	do_save_song(ptr);
-}
-static void do_exportonly_check(void *ptr)
-{
-	dialog_create(DIALOG_OK_CANCEL, "Cannot save song, export?",
-		do_save_song_exportok, free, 1, ptr);
-	
-}
 static void do_save_song(void *ptr)
 {
 	int i, n;
 	const char *typ = NULL;
-	const char *f, *qt;
+	const char *f;
 
 	if (ptr == NULL)
 		f = (void*)song_get_filename();
@@ -1032,7 +1020,7 @@ static void save_module_set_page(void)
 
 void save_module_load_page(struct page *page, int do_export)
 {
-	int i,n;
+	int i, n;
 
 	if (do_export) {
         	page->title = "Export Module (Shift-F10)";
@@ -1074,7 +1062,7 @@ void save_module_load_page(struct page *page, int do_export)
         create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_exportsave[3].activate = dirname_entered;
 
-	widgets_exportsave[4+n].d.togglebutton.state = 1;
+	widgets_exportsave[4].d.togglebutton.state = 1;
 	/* FIXME: pressing left and right should try and keep the cursor near the same vertical area */
 	for (i = n = 0; diskwriter_drivers[i]; i++) {
 		if (diskwriter_drivers[i]->export_only == do_export) {
@@ -1090,3 +1078,4 @@ void save_module_load_page(struct page *page, int do_export)
 	}
 	widgets_exportsave[4+n-1].next.down = 2;
 }
+
