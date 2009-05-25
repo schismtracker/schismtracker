@@ -37,11 +37,34 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
-#include <fnmatch.h>
 
 #include "mplink.h"
 
 #include "diskwriter.h"
+
+/* --------------------------------------------------------------------- */
+/* this was adapted from a really slick two-line fnmatch()
+at http://compressionratings.com/d_archiver_template.html
+and fuglified to add FNM_CASEFOLD|FNM_PERIOD behavior */
+
+#if HAVE_FNMATCH_H
+# include <fnmatch.h>
+#else
+# define FNM_CASEFOLD 0
+# define FNM_PERIOD 0
+# define fnmatch xfnmatch
+inline static int _fnmatch(const char *m, const char *s);
+inline static int _fnmatch(const char *m, const char *s)
+{
+	if (*m == '*') for (++m; *s; ++s) if (!_fnmatch(m, s)) return 0;
+	return (!*s || !(*m == '?' || tolower(*s) == tolower(*m)))
+		? tolower(*m) | tolower(*s) : _fnmatch(++m, ++s);
+}
+inline static int xfnmatch(const char *m, const char *s, UNUSED int f)
+{
+	return (*s == '.' && *m != '.') ? 0 : _fnmatch(m, s);
+}
+#endif /* !HAVE_FNMATCH_H */
 
 /* --------------------------------------------------------------------- */
 /* the locals */
