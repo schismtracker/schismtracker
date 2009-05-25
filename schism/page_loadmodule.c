@@ -37,11 +37,34 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
-#include <fnmatch.h>
 
 #include "mplink.h"
 
 #include "diskwriter.h"
+
+/* --------------------------------------------------------------------- */
+/* this was adapted from a really slick two-line fnmatch()
+at http://compressionratings.com/d_archiver_template.html
+and fuglified to add FNM_CASEFOLD|FNM_PERIOD behavior */
+
+#if HAVE_FNMATCH_H
+# include <fnmatch.h>
+#else
+# define FNM_CASEFOLD 0
+# define FNM_PERIOD 0
+# define fnmatch xfnmatch
+inline static int _fnmatch(const char *m, const char *s);
+inline static int _fnmatch(const char *m, const char *s)
+{
+	if (*m == '*') for (++m; *s; ++s) if (!_fnmatch(m, s)) return 0;
+	return (!*s || !(*m == '?' || tolower(*s) == tolower(*m)))
+		? tolower(*m) | tolower(*s) : _fnmatch(++m, ++s);
+}
+inline static int xfnmatch(const char *m, const char *s, UNUSED int f)
+{
+	return (*s == '.' && *m != '.') ? 0 : _fnmatch(m, s);
+}
+#endif /* !HAVE_FNMATCH_H */
 
 /* --------------------------------------------------------------------- */
 /* the locals */
@@ -183,11 +206,8 @@ static void handle_file_entered_L(char *ptr)
 			for (i = 0; diskwriter_drivers[i]; i++) {
 				if (strcasecmp(ext, diskwriter_drivers[i]->extension) == 0) {
 					/* ugh :) offset to the button for the file type on the save module
-					   page is (position in diskwriter driver array) + 5
-					   (TODO: maybe always use auto type? that way the button won't
-					   override the filename so you can e.g. save an xm as .it without
-					   having to switch the type first) */
-					r = i + 5;
+					   page is (position in diskwriter driver array) + 4 */
+					r = i + 4;
 					break;
 				}
 			}
@@ -198,24 +218,12 @@ static void handle_file_entered_L(char *ptr)
 		set_page((song_get_mode() == MODE_PLAYING) ? PAGE_INFO : PAGE_BLANK);
 	}
 }
-static void do_save_song(void *ptr);
 
-static void do_save_song_exportok(void *ptr)
-{
-	set_page(PAGE_EXPORT_MODULE);
-	do_save_song(ptr);
-}
-static void do_exportonly_check(void *ptr)
-{
-	dialog_create(DIALOG_OK_CANCEL, "Cannot save song, export?",
-		do_save_song_exportok, free, 1, ptr);
-	
-}
 static void do_save_song(void *ptr)
 {
 	int i, n;
 	const char *typ = NULL;
-	const char *f, *qt;
+	const char *f;
 
 	if (ptr == NULL)
 		f = (void*)song_get_filename();
@@ -233,27 +241,12 @@ static void do_save_song(void *ptr)
 		!= (status.current_page == PAGE_EXPORT_MODULE ? 1 : 0)) {
 			continue;
 		}
-		if (widgets_exportsave[n+5].d.togglebutton.state) {
-			typ = widgets_exportsave[n+5].d.togglebutton.text;
+		if (widgets_exportsave[n+4].d.togglebutton.state) {
+			typ = widgets_exportsave[n+4].d.togglebutton.text;
 			break;
 		}
 		n++;
 	}
-	if (!typ) {
-		qt = strrchr(f, '.');
-		if (qt && status.current_page != PAGE_EXPORT_MODULE) {
-			qt++;
-			for (i = 0; diskwriter_drivers[i]; i++) {
-				if (strcasecmp(qt, diskwriter_drivers[i]->extension) != 0)
-					continue;
-				if (!diskwriter_drivers[i]->export_only)
-					continue;
-				do_exportonly_check(ptr);
-				return;
-			}
-		}
-	}
-
 	set_page(PAGE_LOG);
 
 	if (song_save(f, typ)) {
@@ -1027,7 +1020,7 @@ static void save_module_set_page(void)
 
 void save_module_load_page(struct page *page, int do_export)
 {
-	int i, j, k, n;
+	int i, n;
 
 	if (do_export) {
         	page->title = "Export Module (Shift-F10)";
@@ -1048,7 +1041,7 @@ void save_module_load_page(struct page *page, int do_export)
 
         page->draw_const = save_module_draw_const;
         page->set_page = save_module_set_page;
-        page->total_widgets = 5;
+        page->total_widgets = 4;
         page->help_index = HELP_GLOBAL;
         page->selected_widget = 2;
 #if CACHEFREE
@@ -1069,37 +1062,20 @@ void save_module_load_page(struct page *page, int do_export)
         create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_exportsave[3].activate = dirname_entered;
 
-	for (i = 0; diskwriter_drivers[i]; i++, page->total_widgets++) {
-		if (diskwriter_drivers[i]->export_only != do_export)
-			page->total_widgets--;
-	}
-
-	i = 0;
-
-	j = i + 1;
-	if (j >= (page->total_widgets-4)) {
-		j = i;
-	}
-	create_togglebutton(&widgets_exportsave[4+i], 70, 13, 5, 4 + i, 4 + j, 1, 0, 2,
-			    NULL, " Auto", 1, filetype_saves);
 	widgets_exportsave[4].d.togglebutton.state = 1;
-	/* XXX classic mode shouldn't have an auto */
-	i++;
-	n = i;
-	for (; diskwriter_drivers[i-1]; i++) {
-		if (diskwriter_drivers[i-1]->export_only != do_export) {
-			continue;
+	/* FIXME: pressing left and right should try and keep the cursor near the same vertical area */
+	for (i = n = 0; diskwriter_drivers[i]; i++) {
+		if (diskwriter_drivers[i]->export_only == do_export) {
+			create_togglebutton(&widgets_exportsave[4+n], 70, 13 + (n*3), 5,
+					4 + (n == 0 ? 0 : (n-1)),
+					4 + (n+1),
+					1, 0, 2,
+					NULL, diskwriter_drivers[i]->name,
+					4 - ((strlen(diskwriter_drivers[i]->name)+1) / 2), filetype_saves);
+			page->total_widgets++;
+			n++;
 		}
-		k = n - 1;
-		j = n + 1;
-		if (j >= (page->total_widgets-4)) {
-			j = n;
-		}
-		/* FIXME: down key for last diskwriter driver should focus the filename entry,
-			  and left/right should at least try to keep the cursor around the same place */
-		create_togglebutton(&widgets_exportsave[4+n], 70, 13 + (n*3), 5, 4 + k, 4 + j, 1, 0, 2,
-				    NULL, diskwriter_drivers[i-1]->name,
-				    4 - ((strlen(diskwriter_drivers[i-1]->name)+1) / 2), filetype_saves);
-		n++;
 	}
+	widgets_exportsave[4+n-1].next.down = 2;
 }
+
