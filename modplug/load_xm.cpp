@@ -43,7 +43,8 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 	restartpos = bswapLE16(*((WORD *)(lpStream+66)));
 	channels = bswapLE16(*((WORD *)(lpStream+68)));
 	if (channels > 64) return FALSE;
-	m_nType = MOD_TYPE_XM;
+	m_nType = MOD_TYPE_IT;
+	m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS | SONG_INSTRUMENTMODE;
 	m_nChannels = channels;
 	if (restartpos < norders) m_nRestartPos = restartpos;
 	patterns = bswapLE16(*((WORD *)(lpStream+70)));
@@ -51,7 +52,6 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 	instruments = bswapLE16(*((WORD *)(lpStream+72)));
 	if (instruments >= MAX_INSTRUMENTS) instruments = MAX_INSTRUMENTS-1;
 	m_nInstruments = instruments;
-	m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	m_nSamples = 0;
 	memcpy(&xmflags, lpStream+74, 2);
 	xmflags = bswapLE16(xmflags);
@@ -151,7 +151,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 					if (p->note == 97) p->note = 0xFF; else
 					if ((p->note) && (p->note < 97)) p->note += 12;
 					if (p->note) channels_used[chn] = 1;
-					if (p->command | p->param) ConvertModCommand(p);
+					if (p->command | p->param) ConvertModCommand(p, 1);
 					if (p->instr == 0xff) p->instr = 0;
 					if (p->instr) InstUsed[p->instr] = TRUE;
 					if ((vol >= 0x10) && (vol <= 0x50))
@@ -186,6 +186,22 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 						case 0xE0:	p->volcmd = VOLCMD_PANSLIDERIGHT; break;
 						// F0-FF: Tone Portamento
 						case 0xF0:	p->volcmd = VOLCMD_TONEPORTAMENTO; break;
+						}
+					}
+					
+					// try to switch volume effects to the volume column
+					if (p->command == CMD_VOLUME) {
+						if (!(p->volcmd)) {
+							p->volcmd = VOLCMD_VOLUME;
+							p->command = 0;
+							p->vol = p->param; 
+							p->param = 0;
+						} else if (p->volcmd == VOLCMD_PANNING) {
+							int v = p->vol * 255 / 64;
+							p->volcmd = VOLCMD_VOLUME;
+							p->command = CMD_PANNING8;
+							p->vol = p->param;
+							p->param = v > 255 ? 255 : v;
 						}
 					}
 					p++;

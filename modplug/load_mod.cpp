@@ -12,7 +12,7 @@
 //////////////////////////////////////////////////////////
 // ProTracker / NoiseTracker MOD/NST file support
 
-void CSoundFile::ConvertModCommand(MODCOMMAND *m) const
+void CSoundFile::ConvertModCommand(MODCOMMAND *m, BOOL from_xm) const
 //-----------------------------------------------------
 {
 	UINT command = m->command, param = m->param;
@@ -27,11 +27,27 @@ void CSoundFile::ConvertModCommand(MODCOMMAND *m) const
 	case 0x05:	command = CMD_TONEPORTAVOL; if (param & 0xF0) param &= 0xF0; break;
 	case 0x06:	command = CMD_VIBRATOVOL; if (param & 0xF0) param &= 0xF0; break;
 	case 0x07:	command = CMD_TREMOLO; break;
-	case 0x08:	command = CMD_PANNING8; break;
+	case 0x08:
+		command = CMD_PANNING8;
+		if (!from_xm) {
+			param *= 2;
+			if (param > 0x7f) param = 0xff;
+		}
+		break;
 	case 0x09:	command = CMD_OFFSET; break;
 	case 0x0A:	command = CMD_VOLUMESLIDE; if (param & 0xF0) param &= 0xF0; break;
 	case 0x0B:	command = CMD_POSITIONJUMP; break;
-	case 0x0C:	command = CMD_VOLUME; break;
+	case 0x0C:
+		if (from_xm) {
+			command = CMD_VOLUME;
+		} else {
+			m->volcmd = VOLCMD_VOLUME;
+			m->vol = param;
+			if (m->vol > 64)
+				m->vol = 64;
+			command = param = 0;
+		}
+		break;
 	case 0x0D:	command = CMD_PATTERNBREAK; param = ((param >> 4) * 10) + (param & 0x0F); break;
 	case 0x0E:
 		command = CMD_S3MCMDEX;
@@ -63,8 +79,7 @@ void CSoundFile::ConvertModCommand(MODCOMMAND *m) const
 		}
 		break;
 	case 0x0F:
-		// FIXME: XM/MT2 interpret F20 as speed rather than tempo; this should be handled in the loaders
-		command = (param < 0x20) ? CMD_SPEED : CMD_TEMPO;
+		command = (param < (from_xm ? 0x21 : 0x20)) ? CMD_SPEED : CMD_TEMPO;
 		// I have no idea what this next line is supposed to do.
 		if ((param == 0xFF) && (m_nSamples == 15)) command = 0; break;
 	// Extension for XM extended effects
@@ -301,7 +316,8 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 	if ((dwWowTest < 0x600) || (dwWowTest > dwMemLength)) nErr += 8;
 	if ((m_nSamples == 15) && (nErr >= 16)) return FALSE;
 	// Default settings	
-	m_nType = MOD_TYPE_MOD;
+	m_nType = MOD_TYPE_IT;
+	m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
 	memcpy(m_szNames, lpStream, 20);
@@ -340,7 +356,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 				m->instr = ((UINT)A2 >> 4) | (A0 & 0x10);
 				m->command = A2 & 0x0F;
 				m->param = A3;
-				if ((m->command) || (m->param)) ConvertModCommand(m);
+				if ((m->command) || (m->param)) ConvertModCommand(m, 0);
 			}
 		}
 		dwMemPos += m_nChannels*256;

@@ -128,7 +128,7 @@ BOOL CSoundFile::ReadMTM(LPCBYTE lpStream, DWORD dwMemLength)
 				}
 				m->command = cmd;
 				m->param = param;
-				if ((cmd) || (param)) ConvertModCommand(m);
+				if ((cmd) || (param)) ConvertModCommand(m, 0);
 			}
 		}
 		pSeq += 32;

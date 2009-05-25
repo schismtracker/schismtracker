@@ -310,7 +310,7 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 										{
 											m[ch].command = cmd1;
 											m[ch].param = param1;
-											ConvertModCommand(&m[ch]);
+											ConvertModCommand(&m[ch], 0);
 										}
 									}
 								} else
