@@ -73,7 +73,11 @@ void CSoundFile::S3MConvert(MODCOMMAND *m, BOOL bIT) const
 	{
 	case 'A':	command = CMD_SPEED; break;
 	case 'B':	command = CMD_POSITIONJUMP; break;
-	case 'C':	command = CMD_PATTERNBREAK; if (!bIT) param = (param >> 4) * 10 + (param & 0x0F); break;
+	case 'C':
+		command = CMD_PATTERNBREAK;
+		if (!bIT)
+			param = (param >> 4) * 10 + (param & 0x0F);
+		break;
 	case 'D':	command = CMD_VOLUMESLIDE; break;
 	case 'E':	command = CMD_PORTAMENTODOWN; break;
 	case 'F':	command = CMD_PORTAMENTOUP; break;
@@ -92,9 +96,25 @@ void CSoundFile::S3MConvert(MODCOMMAND *m, BOOL bIT) const
 	case 'S':	command = CMD_S3MCMDEX; break;
 	case 'T':	command = CMD_TEMPO; break;
 	case 'U':	command = CMD_FINEVIBRATO; break;
-	case 'V':	command = CMD_GLOBALVOLUME; if (!bIT) param *= 2; break;
+	case 'V':
+		command = CMD_GLOBALVOLUME;
+		if (!bIT)
+			param *= 2;
+		break;
 	case 'W':	command = CMD_GLOBALVOLSLIDE; break;
-	case 'X':	command = CMD_PANNING8; break;
+	case 'X':
+		command = CMD_PANNING8;
+		if (!bIT) {
+			if (param == 0xa4) {
+				command = CMD_S3MCMDEX;
+				param = 0x91;
+			} else if (param > 0x7f) {
+				param = 0xff;
+			} else {
+				param *= 2;
+			}
+		}
+		break;
 	case 'Y':	command = CMD_PANBRELLO; break;
 	case 'Z':	command = CMD_MIDI; break;
 	default:	command = 0;
@@ -115,8 +135,8 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 	case CMD_POSITIONJUMP:		command = 'B'; break;
 	case CMD_PATTERNBREAK:		command = 'C'; if (!bIT) param = ((param / 10) << 4) + (param % 10); break;
 	case CMD_VOLUMESLIDE:		command = 'D'; break;
-	case CMD_PORTAMENTODOWN:	command = 'E'; if ((param >= 0xE0) && (m_nType & (MOD_TYPE_MOD|MOD_TYPE_XM))) param = 0xDF; break;
-	case CMD_PORTAMENTOUP:		command = 'F'; if ((param >= 0xE0) && (m_nType & (MOD_TYPE_MOD|MOD_TYPE_XM))) param = 0xDF; break;
+	case CMD_PORTAMENTODOWN:	command = 'E'; break;
+	case CMD_PORTAMENTOUP:		command = 'F'; break;
 	case CMD_TONEPORTAMENTO:	command = 'G'; break;
 	case CMD_VIBRATO:			command = 'H'; break;
 	case CMD_TREMOR:			command = 'I'; break;
@@ -129,8 +149,15 @@ void CSoundFile::S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const
 	case CMD_PANNINGSLIDE:		command = 'P'; break;
 	case CMD_RETRIG:			command = 'Q'; break;
 	case CMD_TREMOLO:			command = 'R'; break;
-	case CMD_S3MCMDEX:			command = 'S'; break;
-	case CMD_TEMPO:				command = 'T'; break;
+	case CMD_S3MCMDEX:
+		if (!bIT && param == 0x91) {
+			command = CMD_PANNING8;
+			param = 0xA4;
+		} else {
+			command = 'S';
+		}
+		break;
+	case CMD_TEMPO:			command = 'T'; break;
 	case CMD_FINEVIBRATO:		command = 'U'; break;
 	case CMD_GLOBALVOLUME:		command = 'V'; if (!bIT) param >>= 1;break;
 	case CMD_GLOBALVOLSLIDE:	command = 'W'; break;
@@ -248,23 +275,22 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 	psfh.scrm = bswapLE32(psfh.scrm);
 	psfh.special = bswapLE16(psfh.special);
 
-	if ((!lpStream) || (dwMemLength <= sizeof(S3MFILEHEADER)+sizeof(S3MSAMPLESTRUCT)+64)) return FALSE;
+	if ((!lpStream) || (dwMemLength <= sizeof(S3MFILEHEADER)+64)) return FALSE;
 	if (psfh.scrm != 0x4D524353) return FALSE;
 	dwMemPos = 0x60;
-	m_nType = MOD_TYPE_S3M;
+	m_nType = MOD_TYPE_IT;
+	// cgxx off oldfx on
+	m_dwSongFlags |= SONG_ITOLDEFFECTS;
 	memset(m_szNames,0,sizeof(m_szNames));
 	memcpy(m_szNames[0], psfh.name, 28);
 	// Speed
 	m_nDefaultSpeed = psfh.speed;
-	if (m_nDefaultSpeed < 1) m_nDefaultSpeed = 6;
-	if (m_nDefaultSpeed > 0x1F) m_nDefaultSpeed = 0x1F;
+	if (!m_nDefaultSpeed) m_nDefaultSpeed = 6;
 	// Tempo
 	m_nDefaultTempo = psfh.tempo;
-	if (m_nDefaultTempo < 40) m_nDefaultTempo = 40;
-	if (m_nDefaultTempo > 240) m_nDefaultTempo = 240;
 	// Global Volume
 	m_nDefaultGlobalVolume = psfh.globalvol << 2;
-	if ((!m_nDefaultGlobalVolume) || (m_nDefaultGlobalVolume > 256)) m_nDefaultGlobalVolume = 256;
+	if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
 	m_nSongPreAmp = psfh.mastervol & 0x7F;
 	// Channels
 	m_nChannels = 4;
