@@ -699,7 +699,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 
                         if (d == 0) {
                                 /* stick a blank dot there */
-				draw_char(193, n + 5, pos + base + 1, 2, 0);
+				draw_char(193, n + 5, pos + base + 1, 6, 0);
                                 continue;
                         }
                         fg = d & 0xf;
