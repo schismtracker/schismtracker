@@ -117,44 +117,12 @@ static void _convert_to_it(CSoundFile *qq)
 		}
 	}
 
-        if (qq->m_nType & MOD_TYPE_IT)
-                return;
-
-	for (int pat = 0; pat < MAX_PATTERNS; pat++) {
-		MODCOMMAND *note = qq->Patterns[pat];
-		if (!note)
-			continue;
-		for (unsigned int row = 0; row < qq->PatternSize[pat]; row++) {
-			for (unsigned int chan = 0; chan < qq->m_nChannels; chan++, note++) {
-				if (note->command == CMD_VOLUME && !(note->volcmd)) {
-					note->vol = note->param + 0x10;
-					note->volcmd = VOLCMD_VOLUME;
-					note->command = 0;
-					note->param = 0;
-				}
-			}
-		}
-	}
-
-	switch (qq->m_nType) {
-	case MOD_TYPE_XM:
+	if (qq->m_nType != MOD_TYPE_IT) {
 		song_set_compatible_gxx(1);
 		song_set_old_effects(1);
-		break;
-	case MOD_TYPE_MOD:
-		song_set_compatible_gxx(1);
-		song_set_old_effects(1);
-		break;
-	case MOD_TYPE_S3M:
-		song_set_compatible_gxx(0);
-		song_set_old_effects(1);
-		break;
-	// TODO: other file types
-	default:
-		break;
+		qq->m_nType = MOD_TYPE_IT;
 	}
 
-        qq->m_nType = MOD_TYPE_IT;
 }
 
 // mute the channels that aren't being used

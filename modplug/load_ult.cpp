@@ -189,7 +189,7 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 							{
 								pat->command = cmd1;
 								pat->param = dat1;
-								ConvertModCommand(pat);
+								ConvertModCommand(pat, 0);
 							}
 						}
 						if (cmd2 == 0x0C)
@@ -201,7 +201,7 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 						{
 							pat->command = cmd2;
 							pat->param = dat2;
-							ConvertModCommand(pat);
+							ConvertModCommand(pat, 0);
 						}
 						pat += m_nChannels;
 					}

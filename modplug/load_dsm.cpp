@@ -197,7 +197,7 @@ BOOL CSoundFile::ReadDSM(LPCBYTE lpStream, DWORD dwMemLength)
 						}
 						m[ch].command = (BYTE)command;
 						m[ch].param = (BYTE)param;
-						if (command) ConvertModCommand(&m[ch]);
+						if (command) ConvertModCommand(&m[ch], 0);
 					}
 				} else
 				{

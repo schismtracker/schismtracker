@@ -172,7 +172,7 @@ BOOL CSoundFile::ReadPTM(const BYTE *lpStream, DWORD dwMemLength)
 					} else
 					if (m[nChn].command < 0x10)
 					{
-						ConvertModCommand(&m[nChn]);
+						ConvertModCommand(&m[nChn], 0);
 					} else
 					{
 						switch(m[nChn].command)

@@ -171,7 +171,7 @@ static VOID ConvertMT2Command(CSoundFile *that, MODCOMMAND *m, MT2COMMAND *p)
 		{
 			m->command = p->fxparam2;
 			m->param = p->fxparam1;
-			that->ConvertModCommand(m);
+			that->ConvertModCommand(m, 1);
 		} else
 		{
 			// TODO: MT2 Effects

@@ -213,7 +213,7 @@ BOOL CSoundFile::ReadAMS(LPCBYTE lpStream, DWORD dwMemLength)
 						{
 							m[ch].command = cmd;
 							m[ch].param = b2;
-							ConvertModCommand(&m[ch]);
+							ConvertModCommand(&m[ch], 0);
 						}
 					}
 				}
@@ -513,7 +513,7 @@ BOOL CSoundFile::ReadAMS2(LPCBYTE lpStream, DWORD dwMemLength)
 							{
 								m[ch].command = command;
 								m[ch].param = param;
-								ConvertModCommand(&m[ch]);
+								ConvertModCommand(&m[ch], 0);
 							} else
 							{
 								// TODO: AMS effects
