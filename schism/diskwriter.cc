@@ -706,6 +706,7 @@ extern diskwriter_driver_t it214writer;
 extern diskwriter_driver_t s3mwriter;
 extern diskwriter_driver_t xmwriter;
 extern diskwriter_driver_t modwriter;
+extern diskwriter_driver_t mtmwriter;
 extern diskwriter_driver_t midiwriter;
 };
 
@@ -717,6 +718,7 @@ diskwriter_driver_t *diskwriter_drivers[] = {
 	&xmwriter,
 	&s3mwriter,
 	&modwriter,
+	&mtmwriter,
 	&wavewriter,
 	&midiwriter,
 	NULL,
