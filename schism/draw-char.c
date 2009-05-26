@@ -592,7 +592,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 #undef SIZE
 #undef BPP
 
-static void draw_char_bios(unsigned char c, int x, int y, Uint32 fg, Uint32 bg)
+void draw_char_bios(unsigned char c, int x, int y, Uint32 fg, Uint32 bg)
 {
     assert(x >= 0 && y >= 0 && x < 80 && y < 50);
     vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12) | 0x10000000;

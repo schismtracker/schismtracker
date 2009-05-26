@@ -28,6 +28,7 @@
 /* --------------------------------------------------------------------- */
 
 void draw_char(unsigned char c, int x, int y, Uint32 fg, Uint32 bg);
+void draw_char_bios(unsigned char c, int x, int y, Uint32 fg, Uint32 bg);
 
 /* return value is the number of characters drawn */
 int draw_text(const char * text, int x, int y, Uint32 fg, Uint32 bg);
