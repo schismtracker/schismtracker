@@ -224,8 +224,7 @@ static void text(char *line, int len, int n)
 		if (ch == ' ') {
 			draw_char(' ', 2+i, 13+n, 3,0);
 		} else {
-			if (message_extfont) ch |= 0x10000000;
-			draw_char(ch, 2+i, 13+n, fg, 0);
+			(message_extfont ? draw_char_bios : draw_char)(ch, 2+i, 13+n, fg, 0);
 		}
 	}
 }
