@@ -63,7 +63,21 @@ static const char *const loop_states[] = { "Off", "On Forwards", "On Ping Pong",
 static int last_note = 61;		/* C-5 */
 
 /* woo */
-static int _is_magic_sample(int no);
+
+static int _is_magic_sample(int no)
+{
+	char *name;
+	song_sample *sample;
+	int pn;
+
+	sample = song_get_sample(no, &name);
+	if (sample && name && ((unsigned char)name[23]) == 0xFF) {
+		pn = ((unsigned char)name[24]);
+		if (pn < 200) return 1;
+	}
+	return 0;
+}
+
 static void _fix_accept_text(void)
 {
 	if (_is_magic_sample(current_sample)) {
@@ -72,6 +86,7 @@ static void _fix_accept_text(void)
 		widgets_samplelist[0].accept_text = (sample_list_cursor_pos == 25 ? 0 : 1);
 	}
 }
+
 static int _last_vis_sample(void)
 {
 	int i, j, n;
@@ -88,19 +103,7 @@ static int _last_vis_sample(void)
 	if (n >= SCHISM_MAX_SAMPLES) n = SCHISM_MAX_SAMPLES;
 	return n;
 }
-static int _is_magic_sample(int no)
-{
-	char *name;
-	song_sample *sample;
-	int pn;
 
-	sample = song_get_sample(no, &name);
-	if (sample && name && ((unsigned char)name[23]) == 0xFF) {
-		pn = ((unsigned char)name[24]);
-		if (pn < 200) return 1;
-	}
-	return 0;
-}
 /* --------------------------------------------------------------------- */
 
 static void sample_list_reposition(void)
@@ -434,6 +437,7 @@ static void exchange_sample_dialog(void)
 	dialog->action_yes = do_exchange_sample;
 }
 
+
 static void do_copy_sample(UNUSED void *data)
 {
 	int n = atoi(swap_sample_entry);
@@ -465,6 +469,35 @@ static void copy_sample_dialog(void)
 	dialog = dialog_create_custom(26, 23, 29, 10, swap_sample_widgets, 2, 0,
 	                              copy_sample_draw_const, NULL);
 	dialog->action_yes = do_copy_sample;
+}
+
+
+static void do_replace_sample(UNUSED void *data)
+{
+	int n = atoi(swap_sample_entry);
+
+	if (n < 1 || n > _last_vis_sample())
+		return;
+	song_replace_sample(current_sample, n);
+}
+
+static void replace_sample_draw_const(void)
+{
+	draw_text("Replace sample:", 31, 25, 0, 2);
+	draw_text("Sample", 35, 27, 0, 2);
+	draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+static void replace_sample_dialog(void)
+{
+	struct dialog *dialog;
+	
+	swap_sample_entry[0] = 0;
+	create_textentry(swap_sample_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_sample_entry, 2);
+	create_button(swap_sample_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	dialog = dialog_create_custom(26, 23, 29, 10, swap_sample_widgets, 2, 0,
+	                              replace_sample_draw_const, NULL);
+	dialog->action_yes = do_replace_sample;
 }
 
 /* --------------------------------------------------------------------- */
@@ -1206,24 +1239,28 @@ static void resize_sample_cancel(UNUSED void *data)
 {
 	dialog_destroy();
 }
+
 static void do_resize_sample_aa(UNUSED void *data)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
 	sample_resize(sample, newlen, 1);
 }
+
 static void do_resize_sample(UNUSED void *data)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
 	unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
 	sample_resize(sample, newlen, 0);
 }
+
 static void resize_sample_draw_const(void)
 {
 	draw_text("Resize Sample", 34, 24, 3, 2);
 	draw_text("New Length", 31, 27, 0, 2);
 	draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
+
 static void resize_sample_dialog(int aa)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
@@ -1309,6 +1346,9 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		return;
 	case SDLK_p:
 		copy_sample_dialog();
+		return;
+	case SDLK_r:
+		replace_sample_dialog();
 		return;
 	case SDLK_s:
 		swap_sample_dialog();
@@ -1683,6 +1723,7 @@ void sample_synchronize_to_instrument(void)
 		sample_set(instnum);
 	}
 }
+
 void sample_list_load_page(struct page *page)
 {
 	vgamem_ovl_alloc(&sample_image);

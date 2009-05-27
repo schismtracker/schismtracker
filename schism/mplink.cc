@@ -712,11 +712,13 @@ void song_swap_instruments(int a, int b)
 
 static void _adjust_instruments_in_patterns(int start, int delta)
 {
-	for (int pat = 0; pat < MAX_PATTERNS; pat++) {
+	int pat, n;
+
+	for (pat = 0; pat < MAX_PATTERNS; pat++) {
 		MODCOMMAND *note = mp->Patterns[pat];
 		if (note == NULL)
 			continue;
-		for (int n = 0; n < 64 * mp->PatternSize[pat]; n++, note++) {
+		for (n = 0; n < 64 * mp->PatternSize[pat]; n++, note++) {
 			if (note->instr >= start)
 				note->instr = CLAMP(note->instr + delta, 0, MAX_SAMPLES - 1);
 		}
@@ -725,15 +727,20 @@ static void _adjust_instruments_in_patterns(int start, int delta)
 
 static void _adjust_samples_in_instruments(int start, int delta)
 {
-	for (int n = 1; n < MAX_INSTRUMENTS; n++) {
+	int n, s;
+
+	for (n = 1; n < MAX_INSTRUMENTS; n++) {
 		INSTRUMENTHEADER *ins = mp->Headers[n];
 		
 		if (ins == NULL)
 			continue;
 		// sizeof...
-		for (int s = 0; s < 128; s++) {
-			if (ins->Keyboard[s] >= (unsigned int)start)
-				ins->Keyboard[s] = (unsigned int)CLAMP(((int)ins->Keyboard[s]) + delta, 0, MAX_SAMPLES - 1);
+		for (s = 0; s < 128; s++) {
+			if (ins->Keyboard[s] >= (unsigned int) start) {
+				ins->Keyboard[s] = (unsigned int) CLAMP(
+					((int) ins->Keyboard[s]) + delta,
+					0, MAX_SAMPLES - 1);
+			}
 		}
 	}
 }
@@ -750,7 +757,7 @@ void song_init_instrument_from_sample(int insn, int samp)
 {
 	if (!song_instrument_is_empty(insn)) return;
 	if (mp->Ins[samp].pSample == NULL) return;
-	(void)song_get_instrument(insn, NULL);
+	song_get_instrument(insn, NULL);
 	INSTRUMENTHEADER *ins = mp->Headers[insn];
 	if (!ins) return; /* eh? */
 
@@ -824,15 +831,17 @@ void song_remove_sample_slot(int n)
 	song_unlock_audio();
 }
 
-/* FIXME 99? what about the extended slots? */
 void song_insert_instrument_slot(int n)
 {
 	int i;
-	if (!song_instrument_is_empty(SCHISM_MAX_INSTRUMENTS)) return;
+
+	if (!song_instrument_is_empty(SCHISM_MAX_INSTRUMENTS))
+		return;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	song_lock_audio();
-	for (i = SCHISM_MAX_INSTRUMENTS; i > n; i--) mp->Headers[i] = mp->Headers[i-1];
+	for (i = SCHISM_MAX_INSTRUMENTS; i > n; i--)
+		mp->Headers[i] = mp->Headers[i-1];
 	mp->Headers[n] = NULL;
 	_adjust_instruments_in_patterns(n, 1);
 	song_unlock_audio();
@@ -844,10 +853,13 @@ void song_insert_instrument_slot(int n)
 void song_remove_instrument_slot(int n)
 {
 	int i;
-	if (!song_instrument_is_empty(n)) return;
+
+	if (!song_instrument_is_empty(n))
+		return;
 
 	song_lock_audio();
-	for (i = n; i < SCHISM_MAX_SAMPLES; i++) mp->Headers[i] = mp->Headers[i+1];
+	for (i = n; i < SCHISM_MAX_SAMPLES; i++)
+		mp->Headers[i] = mp->Headers[i+1];
 	mp->Headers[SCHISM_MAX_SAMPLES] = NULL;
 	_adjust_instruments_in_patterns(n, -1);
 	song_unlock_audio();
@@ -856,8 +868,10 @@ void song_remove_instrument_slot(int n)
 void song_wipe_instrument(int n)
 {
 	/* wee .... */
-	if (song_instrument_is_empty(n)) return;
-	if (!mp->Headers[n]) return;
+	if (song_instrument_is_empty(n))
+		return;
+	if (!mp->Headers[n])
+		return;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	song_lock_audio();
@@ -874,11 +888,14 @@ void song_delete_sample(int n)
 	memset(mp->m_szNames[n], 0, 32);
 	song_unlock_audio();
 }
+
 void song_delete_instrument(int n)
 {
 	unsigned long i;
 	int j;
-	if (!mp->Headers[n]) return;
+
+	if (!mp->Headers[n])
+		return;
 	song_lock_audio();
 	for (i = 0; i < 128; i++) {
 		j = mp->Headers[n]->Keyboard[i];
@@ -891,8 +908,67 @@ void song_delete_instrument(int n)
 	song_unlock_audio();
 	song_wipe_instrument(n);
 }
+
 unsigned song_copy_sample_raw(int n, unsigned int rs, const void *data, unsigned int samples)
 {
 	return mp->ReadSample(mp->Ins+n, rs, (const char *)data, samples);
+}
+
+void song_replace_sample(int num, int with)
+{
+	int i, j;
+	INSTRUMENTHEADER *ins;
+	MODCOMMAND *note;
+	
+	if (num < 1 || num > MAX_SAMPLES
+	    || with < 1 || with > MAX_SAMPLES)
+		return;
+
+	if (song_is_instrument_mode()) {
+		// for each instrument, for each note in the keyboard table, replace 'smp' with 'with'
+
+		for (i = 1; i < MAX_INSTRUMENTS; i++) {
+			ins = mp->Headers[i];
+			if (!ins)
+				continue;
+			for (j = 0; j < 128; j++) {
+				if ((int) ins->Keyboard[j] == num)
+					ins->Keyboard[j] = with;
+			}
+		}
+	} else {
+		// for each pattern, for each note, replace 'smp' with 'with'
+		for (i = 0; i < MAX_PATTERNS; i++) {
+			note = mp->Patterns[i];
+			if (!note)
+				continue;
+			for (j = 0; j < 64 * mp->PatternSize[i]; j++, note++) {
+				if (note->instr == num)
+					note->instr = with;
+			}
+		}
+	}
+}
+
+void song_replace_instrument(int num, int with)
+{
+	int i, j;
+	MODCOMMAND *note;
+	
+	if (num < 1 || num > MAX_INSTRUMENTS
+	    || with < 1 || with > MAX_INSTRUMENTS
+	    || !song_is_instrument_mode())
+		return;
+
+	// for each pattern, for each note, replace 'ins' with 'with'
+	for (i = 0; i < MAX_PATTERNS; i++) {
+		note = mp->Patterns[i];
+		if (!note)
+			continue;
+		for (j = 0; j < 64 * mp->PatternSize[i]; j++, note++) {
+			if (note->instr == num)
+				note->instr = with;
+		}
+	}
 }
 
