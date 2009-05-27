@@ -444,7 +444,7 @@ static void do_replace_instrument(UNUSED void *data)
 	
 	if (n < 1 || n > _last_vis_inst())
 		return;
-	song_replace_instrument(n, current_instrument);
+	song_replace_instrument(current_instrument, n);
 }
 
 static void replace_instrument_draw_const(void)
