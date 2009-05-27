@@ -215,10 +215,8 @@ static void sample_list_draw_list(void)
 		} else if (sample_list_cursor_pos == 25) {
 			draw_text("Play", 31, 13 + pos, 0, (has_data ? 3 : 6));
 		} else {
-			//draw_char(((sample_list_cursor_pos > (signed) strlen(name))
-			//	   ? 0 : name[sample_list_cursor_pos]),
-			//	  sample_list_cursor_pos + 5, 13 + pos, 0, 3);
-			draw_char(name[sample_list_cursor_pos],
+			draw_char(((sample_list_cursor_pos > (signed) strlen(name))
+				   ? 0 : name[sample_list_cursor_pos]),
 				  sample_list_cursor_pos + 5, 13 + pos, 0, 3);
 		}
 	}
