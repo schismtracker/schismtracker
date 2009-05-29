@@ -680,7 +680,7 @@ static isysev_t event_parse(const char *s)
 		n = strtol(s, &e, 10);
 		if (s == e) {
 			printf("event_parse: what kind of rubbish is this?\n");
-			return 0u;
+			return (isysev_t) 0u;
 		}
 		ev.bits.dev_type = CLAMP(n, 0, SKDEV_TYPE_SENTINEL - 1);
 	} else {
@@ -719,8 +719,7 @@ static isysev_t event_parse(const char *s)
 		if (!len) {
 			// Argh, this isn't an event descriptor at all, it's just junk. Time to bail.
 			printf("event_parse: unknown event descriptor\n");
-			ev.ival = 0;
-			return ev;
+			return (isysev_t) 0u;
 		}
 	}
 	s += len;
@@ -732,9 +731,7 @@ static isysev_t event_parse(const char *s)
 		if (s == e) {
 			// Wait, no.
 			printf("event_parse: hexcode is not hex\n");
-			//ev.ival = 0;
-			//return ev;
-			return 0u;
+			return (isysev_t) 0u;
 		}
 		ev.bits.keycode = CLAMP(n, 0, SKCODE_MAX);
 		s = e;
@@ -792,16 +789,14 @@ static isysev_t event_parse(const char *s)
 		} else {
 			// Argh! All this work and it's not a valid key.
 			printf("event_parse: unknown key \"%s\"\n", tmp);
-			ev.ival = 0;
-			return ev;
+			return (isysev_t) 0u;
 		}
 
 		s += strlen(tmp);
 	} else {
 		// Give up!
 		printf("event_parse: invalid event descriptor for device\n");
-		ev.ival = 0;
-		return ev;
+		return (isysev_t) 0u;
 	}
 
 	len = strspn(s, " \t");
