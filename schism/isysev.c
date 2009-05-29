@@ -528,17 +528,22 @@ static void keytab_init(void)
 typedef void (*ev_handler) (isysev_t ev, void *data);
 
 typedef struct kmapnode kmapnode_t;
+typedef struct kmap kmap_t;
 
-typedef struct kmap {
+struct kmap {
 	char *name;
+	kmap_t *parent; // for inheritance
 	tree_t *bindings;
-} kmap_t;
+};
 
 struct kmapnode {
 	isysev_t ev;
 	ev_handler handler;
 	void *data;
 };
+
+tree_t *keymaps;
+
 
 static kmapnode_t *kmapnode_alloc(isysev_t ev, ev_handler handler, void *data)
 {
@@ -563,21 +568,59 @@ static int kmapnode_cmp(const void *a, const void *b)
 	return ((kmapnode_t *) a)->ev.ival - ((kmapnode_t *) b)->ev.ival;
 }
 
+static int kmap_cmp(const void *a, const void *b)
+{
+	return strcasecmp(((kmap_t *) a)->name, ((kmap_t *) b)->name);
+}
+
 
 static kmap_t *kmap_alloc(const char *name)
 {
 	kmap_t *m = malloc(sizeof(kmap_t));
 	m->name = strdup(name);
+	m->parent = NULL;
 	m->bindings = tree_alloc(kmapnode_cmp);
 	return m;
 }
 
-static void kmap_free(kmap_t *m)
+static void kmap_freemap(kmap_t *m)
 {
 	tree_free(m->bindings, kmapnode_free);
 	free(m->name);
 	free(m);
 }
+
+static void kmap_init(void)
+{
+	keymaps = tree_alloc(kmap_cmp);
+}
+
+static void kmap_free(void)
+{
+	tree_free(keymaps, (treewalk_t) kmap_freemap);
+}
+
+// if create is nonzero, the keymap is allocated if not already in the tree
+static kmap_t *kmap_find(const char *name, int create)
+{
+	kmap_t find;
+	kmap_t *m, *new;
+	
+	if (create) {
+		new = kmap_alloc(name);
+		m = tree_insert(keymaps, new);
+		if (m) {
+			kmap_freemap(new);
+			return m;
+		} else {
+			return new;
+		}
+	} else {
+		find.name = (char *) name; // stupid cast...
+		return tree_find(keymaps, &find);
+	}
+}
+
 
 static void kmap_bind(kmap_t *m, isysev_t ev, ev_handler handler, void *data)
 {
@@ -585,10 +628,19 @@ static void kmap_bind(kmap_t *m, isysev_t ev, ev_handler handler, void *data)
 	kmapnode_free(tree_replace(m->bindings, node));
 }
 
+static void kmap_inherit(kmap_t *child, kmap_t *parent)
+{
+	child->parent = parent;
+}
+
+
 static int kmap_run_binding(kmap_t *m, isysev_t ev)
 {
 	kmapnode_t *node;
 	kmapnode_t find;
+
+	if (!m)
+		return 0;
 
 	// Most of the time, the key-repeat behavior is desired (e.g. arrow keys), and in the rare cases
 	// where it isn't, the function that handles the event can check the flag itself.
@@ -613,8 +665,8 @@ static int kmap_run_binding(kmap_t *m, isysev_t ev)
 		return 1;
 	}
 
-	// Oh well.
-	return 0;
+	// Check inherited keymaps
+	return kmap_run_binding(m->parent, ev);
 }
 
 static void kmap_print(kmap_t *m)
@@ -839,8 +891,10 @@ enum {
 	KMAP_NUM_MAPS,
 };
 
-static kmap_t *keymaps[5];
+static kmap_t *active_keymaps[KMAP_NUM_MAPS];
 
+//- prefix map, only valid for one key
+//  for handling emacs-style keys like ^X^C
 //- local map, changes based on current page
 //  keys like alt-a on sample editor
 //- widget map, based on current focus
@@ -859,13 +913,12 @@ static void event_handle(isysev_t ev)
 
 	printf("\r%78s\r", "");
 	for (n = 0; n < KMAP_NUM_MAPS; n++) {
-		if (keymaps[n] && kmap_run_binding(keymaps[n], ev)) {
-			printf("-- key handled by kmap #%d %s\n", n, keymaps[n]->name);
+		if (kmap_run_binding(active_keymaps[n], ev)) {
+			printf("-- key handled by kmap #%d %s\n", n, active_keymaps[n]->name);
 			return;
 		}
 	}
 	// no one picked it up - fallback
-	// (XXX if prefix map is set, and this isn't a modifier key, clear the prefix map)
 	event_describe(buf, ev);
 	printf("ev=%08x  %s\r", ev.ival, buf);
 	fflush(stdout);
@@ -1043,6 +1096,7 @@ void ev_debug_print(isysev_t ev, void *data)
 // ------------------------------------------------------------------------------------------------------------
 
 typedef struct dbg {
+	const char *m;
 	const char *k;
 	const char *s;
 } dbg_t;
@@ -1050,6 +1104,7 @@ typedef struct dbg {
 int main(int argc, char **argv)
 {
 	int n, jn;
+	kmap_t *m;
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK);
 	SDL_EnableUNICODE(1);
@@ -1069,38 +1124,53 @@ int main(int argc, char **argv)
 	}
 
 	keytab_init();
-	keymaps[KMAP_GLOBAL] = kmap_alloc("(global)");
+	kmap_init();
+
+	// prefix local widget widgetclass global
+	active_keymaps[KMAP_GLOBAL] = kmap_find("Global", 1);
+	m = active_keymaps[KMAP_LOCAL] = kmap_find("Pattern Editor", 1);
+	kmap_inherit(m, kmap_find("Keyjazz", 1));
 
 	dbg_t debug[] = {
-		{"q", "C-1"},
-		{"2", "C#1"},
-		{"w", "D-1"},
-		{"3", "D#1"},
-		{"e", "E-1"},
-		{"r", "F-1"},
-		{"5", "F#1"},
-		{"t", "G-1"},
-		{"6", "G#1"},
-		{"y", "A-1"},
-		{"7", "A#1"},
-		{"u", "B-1"},
-		{"i", "C-2"},
-		{"Alt-Q", "Raise notes by a semitone"},
-		{"Alt-A", "Lower notes by a semitone"},
-		{"Alt-Shift-Q", "Raise notes by an octave"},
-		{"Alt-Shift-A", "Lower notes by an octave"},
+		{"Keyjazz", "q", "C-1"},
+		{"Keyjazz", "2", "C#1"},
+		{"Keyjazz", "w", "D-1"},
+		{"Keyjazz", "3", "D#1"},
+		{"Keyjazz", "e", "E-1"},
+		{"Keyjazz", "r", "F-1"},
+		{"Keyjazz", "5", "F#1"},
+		{"Keyjazz", "t", "G-1"},
+		{"Keyjazz", "6", "G#1"},
+		{"Keyjazz", "y", "A-1"},
+		{"Keyjazz", "7", "A#1"},
+		{"Keyjazz", "u", "B-1"},
+		{"Keyjazz", "i", "C-2"},
+		{"Pattern Editor", "Alt-Q", "Raise notes by a semitone"},
+		{"Pattern Editor", "Alt-A", "Lower notes by a semitone"},
+		{"Pattern Editor", "Alt-Shift-Q", "Raise notes by an octave"},
+		{"Pattern Editor", "Alt-Shift-A", "Lower notes by an octave"},
+		{"Pattern Editor", "F2", "Pattern Editor Options"},
+		{"Pattern Editor", "Ctrl-F2", "Set Pattern Length"},
+		{"Global", "Ctrl-Q", "Quit"},
+		{"Global", "F2", "Pattern Editor"},
+		{"Global", "F5", "Show Infopage / Play Song"},
+		{"Global", "F8", "Stop Song"},
+		{"Global", "Escape", "Main Menu"},
 		{NULL, NULL},
 	};
-	for (n = 0; debug[n].k; n++)
-		kmap_bind(keymaps[KMAP_GLOBAL], event_parse(debug[n].k), ev_debug_print, (void *) debug[n].s);
-	
-	kmap_print(keymaps[KMAP_GLOBAL]);
+	for (n = 0; debug[n].k; n++) {
+		if (strcasecmp(m->name, debug[n].m) != 0)
+			m = kmap_find(debug[n].m, 0);
+		kmap_bind(m, event_parse(debug[n].k), ev_debug_print, (void *) debug[n].s);
+	}
+
+	kmap_print(kmap_find("Pattern Editor", 0));
 
 	SDL_JoystickEventState(SDL_ENABLE);
 	SDL_SetVideoMode(200, 200, 0, 0);
 	event_loop();
 
-	kmap_free(keymaps[KMAP_GLOBAL]);
+	kmap_free();
 	keytab_free();
 
 	SDL_Quit();
