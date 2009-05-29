@@ -2,9 +2,8 @@
 #include <stdint.h>
 #include <SDL.h>
 
-// these are in util.h
-#define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
-#define UNUSED __attribute__((unused))
+#include "util.h"
+#include "tree.h"
 
 
 /*
@@ -531,109 +530,75 @@ typedef void (*ev_handler) (isysev_t ev, void *data);
 typedef struct kmapnode kmapnode_t;
 
 typedef struct kmap {
-	kmapnode_t *root;
 	char *name;
+	tree_t *bindings;
 } kmap_t;
 
 struct kmapnode {
-	kmapnode_t *left, *right;
 	isysev_t ev;
 	ev_handler handler;
 	void *data;
 };
 
-
-static void kmapnode_free(kmapnode_t *node)
+static kmapnode_t *kmapnode_alloc(isysev_t ev, ev_handler handler, void *data)
 {
-	free(node);
-}
-
-
-static kmapnode_t *kmapnode_lookup(kmapnode_t *node, isysev_t ev)
-{
-	while (node && node->ev.ival != ev.ival) {
-		if (ev.ival < node->ev.ival)
-			node = node->left;
-		else
-			node = node->right;
-	}
+	kmapnode_t *node = malloc(sizeof(kmapnode_t));
+	node->ev = ev;
+	node->handler = handler;
+	node->data = data;
 	return node;
 }
 
-static kmapnode_t *kmapnode_insert(kmapnode_t *node, kmapnode_t *new)
-{
-	if (!node)
-		return new;
-	if (new->ev.ival < node->ev.ival)
-		node->left = kmapnode_insert(node->left, new);
-	else
-		node->right = kmapnode_insert(node->right, new);
-	return node;
-}
+#define kmapnode_free free
 
 
-static void kmapnode_walk(kmapnode_t *node, void (*f)(kmapnode_t *))
+static void kmapnode_print(void *v)
 {
-	if (!node)
-		return;
-	if (node->left)
-		kmapnode_walk(node->left, f);
-	if (node->right)
-		kmapnode_walk(node->right, f);
-	f(node);
-}
-
-static void kmapnode_print(kmapnode_t *node)
-{
+	kmapnode_t *node = v;
 	printf("ev=%08x binding=%p(%p)\n", node->ev.ival, node->handler, node->data);
 }
 
+static int kmapnode_cmp(const void *a, const void *b)
+{
+	return ((kmapnode_t *) a)->ev.ival - ((kmapnode_t *) b)->ev.ival;
+}
 
 
 static kmap_t *kmap_alloc(const char *name)
 {
 	kmap_t *m = malloc(sizeof(kmap_t));
-	m->root = NULL;
 	m->name = strdup(name);
+	m->bindings = tree_alloc(kmapnode_cmp);
 	return m;
 }
 
 static void kmap_free(kmap_t *m)
 {
-	kmapnode_walk(m->root, kmapnode_free);
+	tree_free(m->bindings, kmapnode_free);
 	free(m->name);
 	free(m);
 }
 
-
 static void kmap_bind(kmap_t *m, isysev_t ev, ev_handler handler, void *data)
 {
-	kmapnode_t *node = kmapnode_lookup(m->root, ev);
-
-	if (!node) {
-		node = malloc(sizeof(kmapnode_t));
-		node->ev = ev;
-		node->left = node->right = NULL;
-		m->root = kmapnode_insert(m->root, node);
-	}
-	node->handler = handler;
-	node->data = data;
+	kmapnode_t *node = kmapnode_alloc(ev, handler, data);
+	kmapnode_free(tree_replace(m->bindings, node));
 }
 
 static int kmap_run_binding(kmap_t *m, isysev_t ev)
 {
 	kmapnode_t *node;
-
-	isysev_t sev = ev; // simplified event
+	kmapnode_t find;
 
 	// Most of the time, the key-repeat behavior is desired (e.g. arrow keys), and in the rare cases
 	// where it isn't, the function that handles the event can check the flag itself.
 	// Unicode is probably never useful.
-	sev.bits.repeat = 0;
-	sev.bits.unicode = 0;
+	find.ev = ev;
+	find.ev.bits.repeat = 0;
+	find.ev.bits.unicode = 0;
 
 	// If a binding was found, we're done
-	node = kmapnode_lookup(m->root, sev);
+	node = tree_find(m->bindings, &find);
 	if (node) {
 		node->handler(ev, node->data);
 		return 1;
@@ -641,8 +606,8 @@ static int kmap_run_binding(kmap_t *m, isysev_t ev)
 
 	// If the event couldn't be found in the keymap as is, clear the dev_id and look it up again.
 	// This allows for binding a fake "all" device that applies to every dev_id of its type.
-	sev.bits.dev_id = 0;
-	node = kmapnode_lookup(m->root, sev);
+	find.ev.bits.dev_id = 0;
+	node = tree_find(m->bindings, &find);
 	if (node) {
 		node->handler(ev, node->data);
 		return 1;
@@ -654,7 +619,7 @@ static int kmap_run_binding(kmap_t *m, isysev_t ev)
 
 static void kmap_print(kmap_t *m)
 {
-	kmapnode_walk(m->root, kmapnode_print);
+	tree_walk(m->bindings, kmapnode_print);
 }
 
 // ------------------------------------------------------------------------------------------------------------
