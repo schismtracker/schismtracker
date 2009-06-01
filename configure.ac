@@ -26,8 +26,8 @@ dnl We'll need machine type later
 AC_CANONICAL_TARGET([])
 machtype="$target_cpu"
 
-AM_INIT_AUTOMAKE(schismtracker, cvs)
-AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(schismtracker, hg)
+AC_CONFIG_HEADERS([config.h])
 
 dnl -----------------------------------------------------------------------
 
@@ -101,7 +101,7 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
-AC_CHECK_LIBM
+LT_LIB_M
 AC_SUBST(LIBM)
 AC_CHECK_LIB(z, inflate, [zlib=yes])
 if test "$zlib" = "yes"
