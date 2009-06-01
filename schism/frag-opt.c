@@ -57,19 +57,19 @@
 #include <frag-opt.h>
 
 /* helper functions */
-inline void	_frag_parse_bare(FRAG *frag);
-void		_frag_parse_sopt(FRAG *frag, const char *str);
-void		_frag_parse_lopt(FRAG *frag, const char *str);
-void		_frag_parse_nopt(FRAG *frag, const char *str);
-void		_frag_do_opt(FRAG *frag, int i);
-void		_frag_do_sopt(FRAG *frag, int i);
-void		_frag_do_lopt(FRAG *frag, int i);
-void		_frag_do_nopt(FRAG *frag, int i);
-inline int	_frag_print_options(FRAG *frag, const int i, int col);
-int		_frag_print_sopt(FRAG *frag, const int i, int col);
-int		_frag_print_lopt(FRAG *frag, const int i, int col);
-int		_frag_print_wrapped(const char *str, const int indent, int col);
-void		_frag_print_error(FRAG *frag);
+static inline void _frag_parse_bare(FRAG *frag);
+static void	_frag_parse_sopt(FRAG *frag, const char *str);
+static void	_frag_parse_lopt(FRAG *frag, const char *str);
+static void	_frag_parse_nopt(FRAG *frag, const char *str);
+static void	_frag_do_opt(FRAG *frag, int i);
+static void	_frag_do_sopt(FRAG *frag, int i);
+static void	_frag_do_lopt(FRAG *frag, int i);
+static void	_frag_do_nopt(FRAG *frag, int i);
+static inline int _frag_print_options(FRAG *frag, const int i, int col);
+static int	_frag_print_sopt(FRAG *frag, const int i, int col);
+static int	_frag_print_lopt(FRAG *frag, const int i, int col);
+static int	_frag_print_wrapped(const char *str, const int indent, int col);
+static void	_frag_print_error(FRAG *frag);
 
 FRAG *frag_init(frag_option *fops, int argc, char **argv, int flags)
 {
@@ -236,7 +236,7 @@ int frag_parse(FRAG *frag)
 	return frag->argc - frag->index;
 }
 
-inline void _frag_parse_bare(FRAG *frag)
+static inline void _frag_parse_bare(FRAG *frag)
 {
 	if (frag->prog != -1) {
 		if (frag->flags & FRAG_POSIX)
@@ -246,7 +246,7 @@ inline void _frag_parse_bare(FRAG *frag)
 		frag->id = FRAG_ERR_BAREWORD;
 }
 
-void _frag_parse_sopt(FRAG *frag, const char *str)
+static void _frag_parse_sopt(FRAG *frag, const char *str)
 {
 	int i;
 
@@ -262,7 +262,7 @@ void _frag_parse_sopt(FRAG *frag, const char *str)
 	frag->id = FRAG_ERR_UFO;
 }
 
-void _frag_parse_lopt(FRAG *frag, const char *str)
+static void _frag_parse_lopt(FRAG *frag, const char *str)
 {
 	int i, n;
 	const char *tmp = NULL;
@@ -304,7 +304,7 @@ void _frag_parse_lopt(FRAG *frag, const char *str)
 	frag->id = FRAG_ERR_UFO;
 }
 
-void _frag_parse_nopt(FRAG *frag, const char *str)
+static void _frag_parse_nopt(FRAG *frag, const char *str)
 {
 	int i;
 
@@ -321,7 +321,7 @@ void _frag_parse_nopt(FRAG *frag, const char *str)
 	frag->id = FRAG_ERR_UFO;
 }
 
-void _frag_do_opt(FRAG *frag, int i)
+static void _frag_do_opt(FRAG *frag, int i)
 {
 	frag->id = frag->fops[i].id;
 
@@ -336,7 +336,7 @@ void _frag_do_opt(FRAG *frag, int i)
 		_frag_do_lopt(frag, i);
 }
 
-void _frag_do_sopt(FRAG *frag, int i)
+static void _frag_do_sopt(FRAG *frag, int i)
 {
 	if ((frag->fops[i].type & _FRAG_TYPES) == FRAG_ARG
 	||  (frag->fops[i].type & _FRAG_TYPES) == FRAG_OPT_ARG) {
@@ -383,7 +383,7 @@ void _frag_do_sopt(FRAG *frag, int i)
 	}
 }
 
-void _frag_do_lopt(FRAG *frag, int i)
+static void _frag_do_lopt(FRAG *frag, int i)
 {
 	char *equals = strchr(frag->argv[frag->index], '=');
 
@@ -410,7 +410,7 @@ void _frag_do_lopt(FRAG *frag, int i)
 	}
 }
 
-void _frag_do_nopt(FRAG *frag, int i)
+static void _frag_do_nopt(FRAG *frag, int i)
 {	/* negation options can't take arguments so this is pretty simple */
 	frag->id = frag->fops[i].id;
 	frag->type = FRAG_DISABLE;
@@ -453,7 +453,7 @@ void frag_usage(FRAG *frag)
 	putchar('\n');
 }
 
-inline int _frag_print_options(FRAG *frag, const int i, int col)
+static inline int _frag_print_options(FRAG *frag, const int i, int col)
 {
 	int j;
 
@@ -475,7 +475,7 @@ inline int _frag_print_options(FRAG *frag, const int i, int col)
 	return col;
 }
 
-int _frag_print_sopt(FRAG *frag, const int i, int col)
+static int _frag_print_sopt(FRAG *frag, const int i, int col)
 {
 	int req = 2;	/* "-c" is required by everything */
 
@@ -542,7 +542,7 @@ int _frag_print_sopt(FRAG *frag, const int i, int col)
 	return col;
 }
 
-int _frag_print_lopt(FRAG *frag, const int i, int col)
+static int _frag_print_lopt(FRAG *frag, const int i, int col)
 {	/* TODO: think about the possibility of doing the wrapping thing with
 	 * sprintf() & _frag_print_wrapped() */
 	int req = 2;	/* everything requires "--" */
@@ -611,7 +611,7 @@ int _frag_print_lopt(FRAG *frag, const int i, int col)
 	return col;
 }
 
-int _frag_print_wrapped(const char *str, const int indent, int col)
+static int _frag_print_wrapped(const char *str, const int indent, int col)
 {	/* TODO: break at dash? */
 	int i, tail, head;
 
@@ -676,7 +676,7 @@ const char *frag_err(FRAG *frag)
 	}
 }
 
-void _frag_print_error(FRAG *frag)
+static void _frag_print_error(FRAG *frag)
 {
 	fprintf(stderr, "error: ");
 	switch (frag->id) {
