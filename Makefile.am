@@ -1,4 +1,4 @@
-AUTOMAKE_OPTIONS = gnu dist-bzip2 no-dist-gzip
+AUTOMAKE_OPTIONS = dist-bzip2 no-dist-gzip
 
 helptexts = \
 	helptext/index			\
@@ -46,10 +46,6 @@ EXTRA_DIST = \
 
 bin_PROGRAMS = schismtracker
 
-## whatever
-## this broke my build scripts. I'm putting it back -mrsb
-#noinst_SCRIPTS = scripts/*
-
 noinst_HEADERS = \
 	include/auto/build-version.h	\
 	include/auto/default-font.h	\
@@ -87,8 +83,6 @@ noinst_HEADERS = \
 	modplug/sndfile.h		\
 	modplug/stdafx.h
 
-LIBOBJS=
-
 if USE_X11
 files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c sys/x11/xv.c
 cflags_x11 = -DUSE_X11
@@ -104,9 +98,6 @@ if USE_ALSA_DLTRICK
 cflags_alsa=-DUSE_ALSA -DUSE_DLTRICK_ALSA
 else
 cflags_alsa=-DUSE_ALSA
-# automake complained about LIBOBJS too
-#   /storlek
-#LIBOBJS+=-lasound
 lib_asound=-lasound
 endif
 endif
@@ -123,7 +114,6 @@ endif
 if USE_WIN32MM
 files_win32mm = sys/win32/modkey.c sys/win32/slurp-win32.c sys/win32/mixer-win32mm.c sys/win32/midi-win32mm.c sys/win32/filetype.c
 cflags_win32mm=-DUSE_WIN32MM
-#LIBOBJS+=-lwinmm
 lib_win32mm=-lwinmm
 endif
 if USE_WINDRES
@@ -177,36 +167,36 @@ schismtracker_SOURCES = \
 	schism/clippy.c			\
 	schism/page_loadmodule.c	\
 	schism/page_vars.c		\
-	schism/fmt/raw.c		\
-	schism/fmt/liq.c		\
-	schism/fmt/f2r.c		\
-	schism/fmt/s3m.c		\
-	schism/fmt/mod.c		\
-	schism/fmt/far.c		\
-	schism/fmt/wav.c		\
-	schism/fmt/mid.cc		\
-	schism/fmt/its.cc		\
-	schism/fmt/psm.cc		\
-	schism/fmt/scri.cc		\
-	schism/fmt/iti.c		\
-	schism/fmt/xi.c			\
-	schism/fmt/pat.c		\
-	schism/fmt/imf.c		\
-	schism/fmt/mtm.c		\
-	schism/fmt/ult.c		\
-	schism/fmt/ams.c		\
-	schism/fmt/it.c			\
-	schism/fmt/stm.c		\
-	schism/fmt/mdl.c		\
-	schism/fmt/669.c		\
-	schism/fmt/au.c			\
-	schism/fmt/xm.c			\
-	schism/fmt/mt2.c		\
-	schism/fmt/ntk.c		\
-	schism/fmt/dtm.c		\
-	schism/fmt/aiff.c		\
-	schism/fmt/okt.c		\
-	schism/fmt/med.c		\
+	fmt/raw.c			\
+	fmt/liq.c			\
+	fmt/f2r.c			\
+	fmt/s3m.c			\
+	fmt/mod.c			\
+	fmt/far.c			\
+	fmt/wav.c			\
+	fmt/mid.cc			\
+	fmt/its.cc			\
+	fmt/psm.cc			\
+	fmt/scri.cc			\
+	fmt/iti.c			\
+	fmt/xi.c			\
+	fmt/pat.c			\
+	fmt/imf.c			\
+	fmt/mtm.c			\
+	fmt/ult.c			\
+	fmt/ams.c			\
+	fmt/it.c			\
+	fmt/stm.c			\
+	fmt/mdl.c			\
+	fmt/669.c			\
+	fmt/au.c			\
+	fmt/xm.c			\
+	fmt/mt2.c			\
+	fmt/ntk.c			\
+	fmt/dtm.c			\
+	fmt/aiff.c			\
+	fmt/okt.c			\
+	fmt/med.c			\
 	schism/inst_loader.c		\
 	schism/util.c			\
 	schism/pngw.c			\
@@ -295,7 +285,7 @@ schismtracker_SOURCES = \
 
 cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 
-INCLUDES = -D_USE_AUTOCONF -D_GNU_SOURCE \
+AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE \
 	-I$(srcdir)/include -I$(srcdir)/modplug -I. \
 	@SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
 	$(cflags_network) $(cflags_x11) $(cflags_zlib) \
@@ -306,6 +296,3 @@ schismtracker_DEPENDENCIES = $(files_windres)
 schismtracker_LDADD = $(lib_asound) $(lib_win32mm) \
 	@SDL_LIBS@ @LIBM@
 
-## this needs cvs2cl.pl, blarg
-ChangeLog:
-	cvs2cl.pl
