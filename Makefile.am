@@ -1,4 +1,4 @@
-AUTOMAKE_OPTIONS = dist-bzip2 no-dist-gzip
+AUTOMAKE_OPTIONS = foreign dist-bzip2 no-dist-gzip
 
 helptexts = \
 	helptext/index			\
