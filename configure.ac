@@ -18,7 +18,7 @@ dnl You should have received a copy of the GNU General Public License
 dnl along with this program; if not, write to the Free Software
 dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-AC_INIT
+AC_INIT([schismtracker], [hg])
 
 AC_CONFIG_SRCDIR([schism/main.c])
 
@@ -26,13 +26,14 @@ dnl We'll need machine type later
 AC_CANONICAL_TARGET([])
 machtype="$target_cpu"
 
-AM_INIT_AUTOMAKE(schismtracker, hg)
+AM_INIT_AUTOMAKE([-Wall subdir-objects])
 AC_CONFIG_HEADERS([config.h])
 
 dnl -----------------------------------------------------------------------
 
 dnl Check for standard programs
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_CXX
 AC_PROG_CXXCPP

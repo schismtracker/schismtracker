@@ -27,6 +27,7 @@ config.sub
 config.h.in
 config.h
 stamp-h1
+compile
 configure
 configure.lineno
 config.status.lineno
