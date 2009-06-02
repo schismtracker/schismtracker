@@ -525,7 +525,7 @@ static void keytab_init(void)
 
 // ------------------------------------------------------------------------------------------------------------
 
-typedef void (*ev_handler) (isysev_t ev, void *data);
+typedef void (*ev_handler) (isysev_t ev, const char *data);
 
 typedef struct kmapnode kmapnode_t;
 typedef struct kmap kmap_t;
@@ -539,13 +539,13 @@ struct kmap {
 struct kmapnode {
 	isysev_t ev;
 	ev_handler handler;
-	void *data;
+	const char *data;
 };
 
 tree_t *keymaps;
 
 
-static kmapnode_t *kmapnode_alloc(isysev_t ev, ev_handler handler, void *data)
+static kmapnode_t *kmapnode_alloc(isysev_t ev, ev_handler handler, const char *data)
 {
 	kmapnode_t *node = malloc(sizeof(kmapnode_t));
 	node->ev = ev;
@@ -622,7 +622,7 @@ static kmap_t *kmap_find(const char *name, int create)
 }
 
 
-static void kmap_bind(kmap_t *m, isysev_t ev, ev_handler handler, void *data)
+static void kmap_bind(kmap_t *m, isysev_t ev, ev_handler handler, const char *data)
 {
 	kmapnode_t *node = kmapnode_alloc(ev, handler, data);
 	kmapnode_free(tree_replace(m->bindings, node));
@@ -672,6 +672,60 @@ static int kmap_run_binding(kmap_t *m, isysev_t ev)
 static void kmap_print(kmap_t *m)
 {
 	tree_walk(m->bindings, kmapnode_print);
+}
+
+// ------------------------------------------------------------------------------------------------------------
+
+static tree_t *evfuncs;
+
+typedef struct evfunc {
+	const char *name;
+	ev_handler handler;
+} evfunc_t;
+
+
+
+static int evfunc_cmp(const void *a, const void *b)
+{
+	return strcasecmp(((evfunc_t *) a)->name, ((evfunc_t *) b)->name);
+}
+
+
+static void evfunc_init(void)
+{
+	evfuncs = tree_alloc(evfunc_cmp);
+}
+
+static void evfunc_free(void)
+{
+	tree_free(evfuncs, (treewalk_t) free);
+}
+
+
+static ev_handler evfunc_lookup(const char *name)
+{
+	evfunc_t *node;
+	evfunc_t find;
+
+	find.name = name;
+	node = tree_find(evfuncs, &find);
+	return node ? node->handler : NULL;
+}
+
+static void evfunc_register(const char *name, ev_handler handler)
+{
+	evfunc_t *node = malloc(sizeof(evfunc_t));
+	node->name = name;
+	node->handler = handler;
+	free(tree_replace(evfuncs, node));
+}
+
+static void evfunc_register_many(evfunc_t *funcs)
+{
+	evfunc_t *f;
+
+	for (f = funcs; f->handler; f++)
+		evfunc_register(f->name, f->handler);
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -883,9 +937,9 @@ static int event_describe(char *buf, isysev_t ev)
 
 enum {
 	KMAP_PREFIX,
-	KMAP_LOCAL,
 	KMAP_WIDGET,
 	KMAP_WIDGETCLASS,
+	KMAP_LOCAL,
 	KMAP_GLOBAL,
 
 	KMAP_NUM_MAPS,
@@ -895,15 +949,17 @@ static kmap_t *active_keymaps[KMAP_NUM_MAPS];
 
 //- prefix map, only valid for one key
 //  for handling emacs-style keys like ^X^C
-//- local map, changes based on current page
-//  keys like alt-a on sample editor
 //- widget map, based on current focus
 //  most custom widgets (e.g. pattern editor, envelopes) bind to this map
 //- widget-class map, also based on focus
 //  left/right on thumbbars
-//- global map, always active
+//- local map, changes based on current page
+//  keys like alt-a on sample editor
+//- global map
 //  contains keys that didn't get overriden by the page, such as Escape
 //  (the sample load page traps this key, as does the instrument envelope editor)
+
+// ** when a dialog is active, the global map is temporarily cleared, and the local map is set to the dialog's
 
 
 static void event_handle(isysev_t ev)
@@ -1088,23 +1144,127 @@ static void event_loop(void)
 
 // ------------------------------------------------------------------------------------------------------------
 
-void ev_debug_print(isysev_t ev, void *data)
+int current_page = 2;
+const char *page_names[] = {
+	NULL,
+	NULL,
+	"Pattern Editor",
+	"Sample List",
+	"Instrument List",
+	"Info Page",
+};
+
+static void ev_pat_raise_semitone(isysev_t ev, const char *data)
 {
-	printf("ev=%08x  %s\n", ev.ival, (char *) data);
+	printf("raise semitone\n");
+}
+
+static void ev_pat_lower_semitone(isysev_t ev, const char *data)
+{
+	printf("lower semitone\n");
+}
+
+static void ev_pat_raise_octave(isysev_t ev, const char *data)
+{
+	printf("raise octave\n");
+}
+
+static void ev_pat_lower_octave(isysev_t ev, const char *data)
+{
+	printf("lower octave\n");
+}
+
+static void ev_pat_options(isysev_t ev, const char *data)
+{
+	printf("pattern editor options dialog\n");
+
+	// override global keys (this should be done by the dialog/menu init code)
+	active_keymaps[KMAP_LOCAL] = kmap_find("Pattern Editor Options", 0);
+	active_keymaps[KMAP_GLOBAL] = kmap_find("Dialog", 0);
+}
+
+static void ev_pat_set_length(isysev_t ev, const char *data)
+{
+	printf("pattern editor length dialog\n");
+	active_keymaps[KMAP_LOCAL] = kmap_find("Pattern Editor Length", 0);
+	active_keymaps[KMAP_GLOBAL] = kmap_find("Dialog", 0);
+}
+
+static void ev_smp_swap_sign(isysev_t ev, const char *data)
+{
+	printf("sign convert\n");
+}
+
+static void ev_smp_toggle_quality(isysev_t ev, const char *data)
+{
+	printf("toggle 8/16 bit\n");
+}
+
+static void ev_keyjazz(isysev_t ev, const char *data)
+{
+	printf("keyjazz - %s\n", data);
+}
+
+static void ev_quit(isysev_t ev, const char *data)
+{
+	printf("quit\n");
+}
+
+static void ev_page_switch(isysev_t ev, const char *data)
+{
+	int n;
+
+	for (n = 2; n <= 5; n++) {
+		if (strcasecmp(page_names[n], data) == 0) {
+			current_page = n;
+			active_keymaps[KMAP_LOCAL] = kmap_find(data, 0);
+			printf("switched to page %d (%s)\n", n, data);
+			return;
+		}
+	}
+	printf("unknown page name \"%s\"\n", data);
+}
+
+static void ev_song_play_infopage(isysev_t ev, const char *data)
+{
+	printf("play song and show infopage!\n");
+	active_keymaps[KMAP_LOCAL] = kmap_find("Info Page", 0);
+}
+
+static void ev_song_play(isysev_t ev, const char *data)
+{
+	printf("play song and stay put!\n");
+}
+
+static void ev_song_stop(isysev_t ev, const char *data)
+{
+	printf("stop playing!\n");
+}
+
+static void ev_main_menu(isysev_t ev, const char *data)
+{
+	printf("pop up menu\n");
+	active_keymaps[KMAP_LOCAL] = kmap_find("Menu", 0);
+	active_keymaps[KMAP_GLOBAL] = kmap_find("Dialog", 0);
+}
+
+static void ev_dlg_cancel(isysev_t ev, const char *data)
+{
+	active_keymaps[KMAP_LOCAL] = kmap_find(page_names[current_page], 0);
+	active_keymaps[KMAP_GLOBAL] = kmap_find("Global", 0);
 }
 
 // ------------------------------------------------------------------------------------------------------------
 
 typedef struct dbg {
-	const char *m;
-	const char *k;
-	const char *s;
+	const char *m, *k, *f, *d;
 } dbg_t;
 
 int main(int argc, char **argv)
 {
 	int n, jn;
 	kmap_t *m;
+	ev_handler f;
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK);
 	SDL_EnableUNICODE(1);
@@ -1125,43 +1285,77 @@ int main(int argc, char **argv)
 
 	keytab_init();
 	kmap_init();
+	evfunc_init();
 
 	// prefix local widget widgetclass global
 	active_keymaps[KMAP_GLOBAL] = kmap_find("Global", 1);
 	m = active_keymaps[KMAP_LOCAL] = kmap_find("Pattern Editor", 1);
 	kmap_inherit(m, kmap_find("Keyjazz", 1));
 
-	dbg_t debug[] = {
-		{"Keyjazz", "q", "C-1"},
-		{"Keyjazz", "2", "C#1"},
-		{"Keyjazz", "w", "D-1"},
-		{"Keyjazz", "3", "D#1"},
-		{"Keyjazz", "e", "E-1"},
-		{"Keyjazz", "r", "F-1"},
-		{"Keyjazz", "5", "F#1"},
-		{"Keyjazz", "t", "G-1"},
-		{"Keyjazz", "6", "G#1"},
-		{"Keyjazz", "y", "A-1"},
-		{"Keyjazz", "7", "A#1"},
-		{"Keyjazz", "u", "B-1"},
-		{"Keyjazz", "i", "C-2"},
-		{"Pattern Editor", "Alt-Q", "Raise notes by a semitone"},
-		{"Pattern Editor", "Alt-A", "Lower notes by a semitone"},
-		{"Pattern Editor", "Alt-Shift-Q", "Raise notes by an octave"},
-		{"Pattern Editor", "Alt-Shift-A", "Lower notes by an octave"},
-		{"Pattern Editor", "F2", "Pattern Editor Options"},
-		{"Pattern Editor", "Ctrl-F2", "Set Pattern Length"},
-		{"Global", "Ctrl-Q", "Quit"},
-		{"Global", "F2", "Pattern Editor"},
-		{"Global", "F5", "Show Infopage / Play Song"},
-		{"Global", "F8", "Stop Song"},
-		{"Global", "Escape", "Main Menu"},
+	evfunc_t evs[] = {
+		{"pat_raise_semitone", ev_pat_raise_semitone},
+		{"pat_lower_semitone", ev_pat_lower_semitone},
+		{"pat_raise_octave", ev_pat_raise_octave},
+		{"pat_lower_octave", ev_pat_lower_octave},
+		{"pat_options", ev_pat_options},
+		{"pat_set_length", ev_pat_set_length},
+		{"smp_swap_sign", ev_smp_swap_sign},
+		{"smp_toggle_quality", ev_smp_toggle_quality},
+		{"keyjazz", ev_keyjazz},
+		{"quit", ev_quit},
+		{"page_switch", ev_page_switch},
+		{"song_play_infopage", ev_song_play_infopage},
+		{"song_play", ev_song_play},
+		{"song_stop", ev_song_stop},
+		{"main_menu", ev_main_menu},
+		{"dlg_cancel", ev_dlg_cancel},
 		{NULL, NULL},
+	};
+	evfunc_register_many(evs);
+
+	dbg_t debug[] = {
+		{"Pattern Editor",      "Alt-Q",        "pat_raise_semitone",   NULL},
+		{"Pattern Editor",      "Alt-A",        "pat_lower_semitone",   NULL},
+		{"Pattern Editor",      "Alt-Shift-Q",  "pat_raise_octave",     NULL},
+		{"Pattern Editor",      "Alt-Shift-A",  "pat_lower_octave",     NULL},
+		{"Pattern Editor",      "F2",           "pat_options",          NULL},
+		{"Pattern Editor",      "Ctrl-F2",      "pat_set_length",       NULL},
+		{"Pattern Editor Options", "F2",        "page_switch",          "Pattern Editor"},
+		{"Sample List",         "Alt-Q",        "smp_toggle_quality",   NULL},
+		{"Sample List",         "Alt-A",        "smp_swap_sign",        NULL},
+		{"Keyjazz",             "q",            "keyjazz",              "C-1"},
+		{"Keyjazz",             "2",            "keyjazz",              "C#1"},
+		{"Keyjazz",             "w",            "keyjazz",              "D-1"},
+		{"Keyjazz",             "3",            "keyjazz",              "D#1"},
+		{"Keyjazz",             "e",            "keyjazz",              "E-1"},
+		{"Keyjazz",             "r",            "keyjazz",              "F-1"},
+		{"Keyjazz",             "5",            "keyjazz",              "F#1"},
+		{"Keyjazz",             "t",            "keyjazz",              "G-1"},
+		{"Keyjazz",             "6",            "keyjazz",              "G#1"},
+		{"Keyjazz",             "y",            "keyjazz",              "A-1"},
+		{"Keyjazz",             "7",            "keyjazz",              "A#1"},
+		{"Keyjazz",             "u",            "keyjazz",              "B-1"},
+		{"Keyjazz",             "i",            "keyjazz",              "C-2"},
+		{"Global",              "Ctrl-Q",       "quit",                 NULL},
+		{"Global",              "F2",           "page_switch",          "Pattern Editor"},
+		{"Global",              "F3",           "page_switch",          "Sample List"},
+		{"Global",              "F4",           "page_switch",          "Instrument List"},
+		{"Global",              "F5",           "song_play_infopage",   NULL},
+		{"Global",              "Ctrl-F5",      "song_play",            NULL},
+		{"Global",              "F8",           "song_stop",            NULL},
+		{"Global",              "Escape",       "main_menu",            NULL},
+		{"Dialog",              "Escape",       "dlg_cancel",           NULL},
+		{NULL,                  NULL,           NULL,                   NULL},
 	};
 	for (n = 0; debug[n].k; n++) {
 		if (strcasecmp(m->name, debug[n].m) != 0)
-			m = kmap_find(debug[n].m, 0);
-		kmap_bind(m, event_parse(debug[n].k), ev_debug_print, (void *) debug[n].s);
+			m = kmap_find(debug[n].m, 1);
+		f = evfunc_lookup(debug[n].f);
+		if (!f) {
+			printf("warning: unknown function \"%s\"\n", debug[n].f);
+			continue;
+		}
+		kmap_bind(m, event_parse(debug[n].k), f, debug[n].d);
 	}
 
 	kmap_print(kmap_find("Pattern Editor", 0));
@@ -1170,6 +1364,7 @@ int main(int argc, char **argv)
 	SDL_SetVideoMode(200, 200, 0, 0);
 	event_loop();
 
+	evfunc_free();
 	kmap_free();
 	keytab_free();
 
