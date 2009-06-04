@@ -86,12 +86,6 @@ int macosx_ibook_fnswitch(int setting);
 void xscreensaver_deactivate(void);
 #endif
 
-/* wee... */
-#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
-unsigned key_repeat_rate(void);
-unsigned key_repeat_delay(void);
-#endif
-
 #if !defined(__amigaos4__)
 # define ENABLE_HOOKS 1
 #endif
@@ -190,14 +184,7 @@ static void display_init(void)
 	clippy_init();
 
 	display_print_info();
-#if 1
-	SDL_EnableKeyRepeat(125, 25);
-#elif defined(USE_X11) || defined(WIN32) || defined(MACOSX)
-	SDL_EnableKeyRepeat(key_repeat_delay(), key_repeat_rate());
-#else
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-#endif
-
+	set_key_repeat(0, 0); /* 0 = defaults */
 	SDL_EnableUNICODE(1);
 }
 

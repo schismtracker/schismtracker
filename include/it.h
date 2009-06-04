@@ -401,6 +401,9 @@ int kbd_get_note(struct key_event *k);
 
 int kbd_get_alnum(struct key_event *k);
 
+/* use 0 for delay to (re)set the default rate. */
+void set_key_repeat(int delay, int rate);
+
 /* --------------------------------------------------------------------- */
 /* log.c */
 

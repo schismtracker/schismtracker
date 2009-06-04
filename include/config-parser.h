@@ -51,6 +51,7 @@ struct cfg_file {
 	char *filename; /* this should never be NULL */
 	struct cfg_section *sections; /* NULL if file is empty */
 	char *eof_comments; /* comments following the last key are saved here */
+	int dirty; /* has this config been modified? */
 };
 
 typedef struct cfg_file cfg_file_t;
@@ -60,7 +61,8 @@ typedef struct cfg_file cfg_file_t;
 
 int cfg_read(cfg_file_t *cfg);
 
-/* write the structure back to disk. this will (try to) copy the current configuration to filename~ first. */
+/* write the structure back to disk. this will (try to) copy the current configuration to filename~ first.
+if the file has not been modified, this call is a no-op. */
 int cfg_write(cfg_file_t *cfg);
 
 /* the return value is the full value for the key. this will differ from the value copied to the value return
@@ -68,8 +70,8 @@ parameter if the length of the value is greater than the size of the buffer.
 value may be NULL, in which case nothing is copied. */
 const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char *key_name,
 			   char *value, int len, const char *def);
-
 int cfg_get_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int def);
+
 void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_name, const char *value);
 void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int value);
 
