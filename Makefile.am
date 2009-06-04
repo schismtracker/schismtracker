@@ -47,7 +47,6 @@ EXTRA_DIST = \
 bin_PROGRAMS = schismtracker
 
 noinst_HEADERS = \
-	include/auto/build-version.h	\
 	include/auto/default-font.h	\
 	include/auto/helpenum.h		\
 	include/auto/helptext.h		\
