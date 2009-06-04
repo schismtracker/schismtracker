@@ -325,6 +325,8 @@ int cfg_read(cfg_file_t *cfg)
 	} while (*pos);
 	cfg->eof_comments = comments;
 	
+	cfg->dirty = 0;
+	
 	unslurp(t);
 
 	return 0;
@@ -343,6 +345,10 @@ int cfg_write(cfg_file_t *cfg)
 		return -1;
 	}
 	
+	if (!cfg->dirty)
+		return 0;
+	cfg->dirty = 0;
+
 	make_backup_file(cfg->filename, 0);
 	
 	fp = fopen(cfg->filename, "w");
@@ -446,6 +452,7 @@ void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_n
 		key->value = str_dup(value);
 	else
 		key->value = NULL;
+	cfg->dirty = 1;
 }
 
 void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int value)
@@ -469,6 +476,7 @@ void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_n
 		perror("asprintf");
 		exit(255);
 	}
+	cfg->dirty = 1;
 }
 
 int cfg_init(cfg_file_t *cfg, const char *filename)

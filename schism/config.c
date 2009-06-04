@@ -31,6 +31,16 @@
 #include "config-parser.h"
 #include "dmoz.h"
 
+
+/* FIXME: stupid ifdef */
+#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
+unsigned key_repeat_delay(void);
+unsigned key_repeat_rate(void);
+#else
+# define key_repeat_delay() SDL_DEFAULT_REPEAT_DELAY
+# define key_repeat_rate() SDL_DEFAULT_REPEAT_INTERVAL
+#endif
+
 /* --------------------------------------------------------------------- */
 /* config settings */
 
@@ -42,6 +52,14 @@ int cfg_video_mousecursor = MOUSE_EMULATED;
 
 /* --------------------------------------------------------------------- */
 
+#if defined(WIN32)
+# define DOT_SCHISM "Schism Tracker"
+#elif defined(MACOSX)
+# define DOT_SCHISM "Library/Application Support/Schism Tracker"
+#else
+# define DOT_SCHISM ".schism"
+#endif
+
 void cfg_init_dir(void)
 {
 #if defined(__amigaos4__)
@@ -50,13 +68,7 @@ void cfg_init_dir(void)
 	char *home_dir, *ptr;
 	
 	home_dir = get_home_directory();
-#if defined(WIN32)
-	ptr = dmoz_path_concat(home_dir, "Schism Tracker");
-#elif defined(MACOSX)
-	ptr = dmoz_path_concat(home_dir, "Library/Application Support/Schism Tracker");
-#else
-	ptr = dmoz_path_concat(home_dir, ".schism");
-#endif
+	ptr = dmoz_path_concat(home_dir, DOT_SCHISM);
 	strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
 	cfg_dir_dotschism[PATH_MAX] = 0;
 	free(home_dir);
@@ -85,7 +97,7 @@ static void cfg_load_palette(cfg_file_t *cfg)
 	
 	palette_load_preset(cfg_get_number(cfg, "General", "palette", 2));
 	
-	cfg_get_string(cfg, "General", "palette_cur", palette_text, 50, "");
+	cfg_get_string(cfg, "General", "palette_cur", palette_text, 48, "");
 	for (n = 0; n < 48; n++) {
 		if (palette_text[n] == '\0' || (ptr = strchr(palette_trans, palette_text[n])) == NULL)
 			return;
@@ -115,39 +127,42 @@ void cfg_load(void)
 {
 	static char _buf_video_aspect[65];
 	char buf[4];
-	char *ptr;
+	char *tmp;
+	const char *ptr;
 	int i;
 	cfg_file_t cfg;
 
-	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
-	cfg_init(&cfg, ptr);
-	free(ptr);
+	tmp = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, tmp);
+	free(tmp);
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	cfg_video_mousecursor = !!cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
-	ptr = (void*)cfg_get_string(&cfg, "Video",
-				"aspect",_buf_video_aspect,64,"");
+	ptr = cfg_get_string(&cfg, "Video", "aspect", _buf_video_aspect, 64, "");
 	if (ptr && *ptr) put_env_var("SCHISM_VIDEO_ASPECT", ptr);
 	
-	ptr = get_home_directory();
-	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, ptr);
-	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, ptr);
-	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, ptr);
-	free(ptr);
+	tmp = get_home_directory();
+	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
+	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, tmp);
+	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, tmp);
+	free(tmp);
 
-	ptr = (void*)cfg_get_string(&cfg, "General", "numlock_setting", buf, sizeof(buf), 0);
+	ptr = cfg_get_string(&cfg, "General", "numlock_setting", buf, sizeof(buf), 0);
 	if (!ptr)
 		status.fix_numlock_setting = NUMLOCK_GUESS;
-	else if ((*ptr == 'o' || *ptr == 'O') && (ptr[1] == 'n' || ptr[1] == 'N'))
+	else if (strcasecmp(ptr, "on") == 0)
 		status.fix_numlock_setting = NUMLOCK_ALWAYS_ON;
-	else if ((*ptr == 'o' || *ptr == 'O') && (ptr[1] == 'f' || ptr[1] == 'F'))
+	else if (strcasecmp(ptr, "off") == 0)
 		status.fix_numlock_setting = NUMLOCK_ALWAYS_OFF;
 	else
 		status.fix_numlock_setting = NUMLOCK_HONOR;
-	
+
+	set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", key_repeat_delay()),
+		cfg_get_number(&cfg, "General", "key_repeat_rate", key_repeat_rate()));
+
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 	
 	cfg_load_info(&cfg);
@@ -182,19 +197,11 @@ void cfg_load(void)
 		i = VIS_OSCILLOSCOPE;
 	status.vis_style = i;
 
-#if 0
-	/* We don't need a whole separate section just for this.
-	(TODO: strip out the whole [Hacks] section somehow if it existed) */
-	if (cfg_get_number(&cfg, "Hacks", "digitrakker_voodoo", 0))
-		status.flags |= DIGITRAKKER_VOODOO;
-	else
-		status.flags &= ~DIGITRAKKER_VOODOO;
-#else
 	if (cfg_get_number(&cfg, "General", "accidentals_as_flats", 0))
 		status.flags |= ACCIDENTALS_AS_FLATS;
 	else
 		status.flags &= ~ACCIDENTALS_AS_FLATS;
-#endif
+
 #ifdef MACOSX
 # define DEFAULT_META 1
 #else
