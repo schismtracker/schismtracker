@@ -72,16 +72,29 @@ noinst_HEADERS = \
 	include/page.h			\
 	include/palettes.h		\
 	include/pattern-view.h		\
+	include/pngw.h			\
+	include/precomp_lut.h		\
 	include/sample-edit.h		\
 	include/sdlmain.h		\
 	include/slurp.h			\
 	include/song.h			\
+	include/tables.h		\
+	include/tree.h			\
 	include/util.h			\
 	include/vgamem-scanner.h	\
 	include/video.h			\
+	include/wine-ddraw.h		\
+	modplug/cmixer.h		\
+	modplug/fmopl.h			\
 	modplug/it_defs.h		\
 	modplug/sndfile.h		\
-	modplug/stdafx.h
+	modplug/snd_eq.h		\
+	modplug/snd_flt.h		\
+	modplug/snd_fm.h		\
+	modplug/snd_fx.h		\
+	modplug/snd_gm.h		\
+	modplug/stdafx.h		\
+	modplug/xm_defs.h
 
 if USE_X11
 files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c sys/x11/xv.c
