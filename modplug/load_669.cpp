@@ -17,39 +17,39 @@
 
 typedef struct tagFILEHEADER669
 {
-	WORD sig;				// 'if' or 'JN'
+	uint16_t sig;				// 'if' or 'JN'
         signed char songmessage[108];	// Song Message
-	BYTE samples;			// number of samples (1-64)
-	BYTE patterns;			// number of patterns (1-128)
-	BYTE restartpos;
-	BYTE orders[128];
-	BYTE tempolist[128];
-	BYTE breaks[128];
+	uint8_t samples;			// number of samples (1-64)
+	uint8_t patterns;			// number of patterns (1-128)
+	uint8_t restartpos;
+	uint8_t orders[128];
+	uint8_t tempolist[128];
+	uint8_t breaks[128];
 } FILEHEADER669;
 
 
 typedef struct tagSAMPLE669
 {
-	BYTE filename[13];
+	uint8_t filename[13];
 	unsigned int length, loopstart, loopend;
 } SAMPLE669;
 
 
-BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
+bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 //---------------------------------------------------------------
 {
-	BOOL b669Ext;
+	bool b669Ext;
 	const FILEHEADER669 *pfh = (const FILEHEADER669 *)lpStream;
 	const SAMPLE669 *psmp = (const SAMPLE669 *)(lpStream + 0x1F1);
-	DWORD dwMemPos = 0;
+	uint32_t dwMemPos = 0;
 
-	if ((!lpStream) || (dwMemLength < sizeof(FILEHEADER669))) return FALSE;
-	if ((bswapLE16(pfh->sig) != 0x6669) && (bswapLE16(pfh->sig) != 0x4E4A)) return FALSE;
-	b669Ext = (bswapLE16(pfh->sig) == 0x4E4A) ? TRUE : FALSE;
+	if ((!lpStream) || (dwMemLength < sizeof(FILEHEADER669))) return false;
+	if ((bswapLE16(pfh->sig) != 0x6669) && (bswapLE16(pfh->sig) != 0x4E4A)) return false;
+	b669Ext = (bswapLE16(pfh->sig) == 0x4E4A) ? true : false;
 	if ((!pfh->samples) || (pfh->samples > 64) || (pfh->restartpos >= 128)
-	 || (!pfh->patterns) || (pfh->patterns > 128)) return FALSE;
-	DWORD dontfuckwithme = 0x1F1 + pfh->samples * sizeof(SAMPLE669) + pfh->patterns * 0x600;
-	if (dontfuckwithme > dwMemLength) return FALSE;
+	 || (!pfh->patterns) || (pfh->patterns > 128)) return false;
+	uint32_t dontfuckwithme = 0x1F1 + pfh->samples * sizeof(SAMPLE669) + pfh->patterns * 0x600;
+	if (dontfuckwithme > dwMemLength) return false;
         for (int n = 0; n < 128; n++)
                 if (pfh->breaks[n] > 0x3f)
                         return false;
@@ -62,11 +62,11 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	memcpy(m_szNames[0], pfh->songmessage, 31);
 	m_szNames[0][31] = 0;
 	m_nSamples = pfh->samples;
-	for (UINT nins=1; nins<=m_nSamples; nins++, psmp++)
+	for (uint32_t nins=1; nins<=m_nSamples; nins++, psmp++)
 	{
-		DWORD len = bswapLE32(psmp->length);
-		DWORD loopstart = bswapLE32(psmp->loopstart);
-		DWORD loopend = bswapLE32(psmp->loopend);
+		uint32_t len = bswapLE32(psmp->length);
+		uint32_t loopstart = bswapLE32(psmp->loopstart);
+		uint32_t loopend = bswapLE32(psmp->loopend);
 		if (len > MAX_SAMPLE_LENGTH) len = MAX_SAMPLE_LENGTH;
 		if ((loopend > len) && (!loopstart)) loopend = 0;
 		if (loopend > len) loopend = len;
@@ -96,37 +96,37 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	m_nRestartPos = pfh->restartpos;
 	if (Order[m_nRestartPos] >= pfh->patterns) m_nRestartPos = 0;
 	// Reading Pattern Break Locations
-	for (UINT npan=0; npan<8; npan++)
+	for (uint32_t npan=0; npan<8; npan++)
 	{
 		ChnSettings[npan].nPan = (npan & 1) ? 0x30 : 0xD0;
 		ChnSettings[npan].nVolume = 64;
 	}
 	// Reading Patterns
 	dwMemPos = 0x1F1 + pfh->samples * 25;
-	for (UINT npat=0; npat<pfh->patterns; npat++)
+	for (uint32_t npat=0; npat<pfh->patterns; npat++)
 	{
 		Patterns[npat] = AllocatePattern(64, m_nChannels);
 		if (!Patterns[npat]) break;
 		PatternSize[npat] = 64;
 		PatternAllocSize[npat] = 64;
 		MODCOMMAND *m = Patterns[npat];
-		const BYTE *p = lpStream + dwMemPos;
-		for (UINT row=0; row<64; row++)
+		const uint8_t *p = lpStream + dwMemPos;
+		for (uint32_t row=0; row<64; row++)
 		{
 			MODCOMMAND *mspeed = m;
 			if ((row == pfh->breaks[npat]) && (row != 63))
 			{
-				for (UINT i=0; i<8; i++)
+				for (uint32_t i=0; i<8; i++)
 				{
 					m[i].command = CMD_PATTERNBREAK;
 					m[i].param = 0;
 				}
 			}
-			for (UINT n=0; n<8; n++, m++, p+=3)
+			for (uint32_t n=0; n<8; n++, m++, p+=3)
 			{
-				UINT note = p[0] >> 2;
-				UINT instr = ((p[0] & 0x03) << 4) | (p[1] >> 4);
-				UINT vol = p[1] & 0x0F;
+				uint32_t note = p[0] >> 2;
+				uint32_t instr = ((p[0] & 0x03) << 4) | (p[1] >> 4);
+				uint32_t vol = p[1] & 0x0F;
 				if (p[0] < 0xFE)
 				{
 					m->note = note + 37;
@@ -139,8 +139,8 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 				}
 				if (p[2] != 0xFF)
 				{
-					UINT command = p[2] >> 4;
-					UINT param = p[2] & 0x0F;
+					uint32_t command = p[2] >> 4;
+					uint32_t param = p[2] & 0x0F;
 					switch(command)
 					{
 					case 0x00:
@@ -192,7 +192,7 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 			}
 			if ((!row) && (mspeed))
 			{
-				for (UINT i=0; i<8; i++) if (!mspeed[i].command)
+				for (uint32_t i=0; i<8; i++) if (!mspeed[i].command)
 				{
 					mspeed[i].command = CMD_SPEED;
 					mspeed[i].param = pfh->tempolist[npat] + 2;
@@ -203,14 +203,14 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 		dwMemPos += 0x600;
 	}
 	// Reading Samples
-	for (UINT n=1; n<=m_nSamples; n++)
+	for (uint32_t n=1; n<=m_nSamples; n++)
 	{
-		UINT len = Ins[n].nLength;
+		uint32_t len = Ins[n].nLength;
 		if (dwMemPos >= dwMemLength) break;
 		if (len > 4) ReadSample(&Ins[n], RS_PCM8U, (LPSTR)(lpStream+dwMemPos), dwMemLength - dwMemPos);
 		dwMemPos += len;
 	}
-	return TRUE;
+	return true;
 }
 
 

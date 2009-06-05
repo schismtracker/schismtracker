@@ -13,10 +13,10 @@
 //////////////////////////////////////////////////////////
 // ProTracker / NoiseTracker MOD/NST file support
 
-void CSoundFile::ConvertModCommand(MODCOMMAND *m, BOOL from_xm) const
+void CSoundFile::ConvertModCommand(MODCOMMAND *m, bool from_xm) const
 //-----------------------------------------------------
 {
-	UINT command = m->command, param = m->param;
+	uint32_t command = m->command, param = m->param;
 
 	switch(command)
 	{
@@ -103,10 +103,10 @@ void CSoundFile::ConvertModCommand(MODCOMMAND *m, BOOL from_xm) const
 }
 
 
-WORD CSoundFile::ModSaveCommand(const MODCOMMAND *m, BOOL bXM) const
+uint16_t CSoundFile::ModSaveCommand(const MODCOMMAND *m, bool bXM) const
 //------------------------------------------------------------------
 {
-	UINT command = m->command & 0x3F, param = m->param;
+	uint32_t command = m->command & 0x3F, param = m->param;
 
 	switch(command)
 	{
@@ -168,7 +168,7 @@ WORD CSoundFile::ModSaveCommand(const MODCOMMAND *m, BOOL bXM) const
 		break;
 	default:		command = param = 0;
 	}
-	return (WORD)((command << 8) | (param));
+	return (uint16_t)((command << 8) | (param));
 }
 
 
@@ -176,39 +176,39 @@ WORD CSoundFile::ModSaveCommand(const MODCOMMAND *m, BOOL bXM) const
 
 typedef struct _MODSAMPLE
 {
-	CHAR name[22];
-	WORD length;
-	BYTE finetune;
-	BYTE volume;
-	WORD loopstart;
-	WORD looplen;
+	int8_t name[22];
+	uint16_t length;
+	uint8_t finetune;
+	uint8_t volume;
+	uint16_t loopstart;
+	uint16_t looplen;
 } MODSAMPLE, *PMODSAMPLE;
 
 typedef struct _MODMAGIC
 {
-	BYTE nOrders;
-	BYTE nRestartPos;
-	BYTE Orders[128];
-        char Magic[4];          // changed from CHAR
+	uint8_t nOrders;
+	uint8_t nRestartPos;
+	uint8_t Orders[128];
+        char Magic[4];          // changed from int8_t
 } MODMAGIC, *PMODMAGIC;
 
 #pragma pack()
 
-BOOL IsMagic(LPCSTR s1, LPCSTR s2)
+bool IsMagic(LPCSTR s1, LPCSTR s2)
 {
-	return ((*(DWORD *)s1) == (*(DWORD *)s2)) ? TRUE : FALSE;
+	return ((*(uint32_t *)s1) == (*(uint32_t *)s2)) ? true : false;
 }
 
 
-BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 //---------------------------------------------------------------
 {
-        char s[1024];          // changed from CHAR
-	DWORD dwMemPos, dwTotalSampleLen;
+        char s[1024];          // changed from int8_t
+	uint32_t dwMemPos, dwTotalSampleLen;
 	PMODMAGIC pMagic;
-	UINT nErr;
+	uint32_t nErr;
 
-	if ((!lpStream) || (dwMemLength < 0x600)) return FALSE;
+	if ((!lpStream) || (dwMemLength < 0x600)) return false;
 	dwMemPos = 20;
 	m_nSamples = 31;
 	m_nChannels = 4;
@@ -229,11 +229,11 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 	// Load Samples
 	nErr = 0;
 	dwTotalSampleLen = 0;
-	for	(UINT i=1; i<=m_nSamples; i++)
+	for	(uint32_t i=1; i<=m_nSamples; i++)
 	{
 		PMODSAMPLE pms = (PMODSAMPLE)(lpStream+dwMemPos);
 		MODINSTRUMENT *psmp = &Ins[i];
-		UINT loopstart, looplen;
+		uint32_t loopstart, looplen;
 
 		memcpy(m_szNames[i], pms->name, 22);
 		m_szNames[i][22] = 0;
@@ -258,7 +258,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		if (psmp->nLength < 2) psmp->nLength = 0;
 		if (psmp->nLength)
 		{
-			UINT derr = 0;
+			uint32_t derr = 0;
 			if (psmp->nLoopStart >= psmp->nLength) { psmp->nLoopStart = psmp->nLength-1; derr|=1; }
 			if (psmp->nLoopEnd > psmp->nLength) { psmp->nLoopEnd = psmp->nLength; derr |= 1; }
 			if (psmp->nLoopStart > psmp->nLoopEnd) derr |= 1;
@@ -269,14 +269,14 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		}
 		dwMemPos += sizeof(MODSAMPLE);
 	}
-	if ((m_nSamples == 15) && (dwTotalSampleLen > dwMemLength * 4)) return FALSE;
+	if ((m_nSamples == 15) && (dwTotalSampleLen > dwMemLength * 4)) return false;
 	pMagic = (PMODMAGIC)(lpStream+dwMemPos);
 	dwMemPos += sizeof(MODMAGIC);
 	if (m_nSamples == 15) dwMemPos -= 4;
 	memset(Order, 0,sizeof(Order));
 	memcpy(Order, pMagic->Orders, 128);
 
-	UINT nbp, nbpbuggy, nbpbuggy2, norders;
+	uint32_t nbp, nbpbuggy, nbpbuggy2, norders;
 
 	norders = pMagic->nOrders;
 	if ((!norders) || (norders > 0x80))
@@ -287,9 +287,9 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 	nbpbuggy = 0;
 	nbpbuggy2 = 0;
 	nbp = 0;
-	for (UINT iord=0; iord<128; iord++)
+	for (uint32_t iord=0; iord<128; iord++)
 	{
-		UINT i = Order[iord];
+		uint32_t i = Order[iord];
 		if ((i < 0x80) && (nbp <= i))
 		{
 			nbp = i+1;
@@ -297,13 +297,13 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		}
 		if (i >= nbpbuggy2) nbpbuggy2 = i+1;
 	}
-	for (UINT iend=norders; iend<MAX_ORDERS; iend++) Order[iend] = 0xFF;
+	for (uint32_t iend=norders; iend<MAX_ORDERS; iend++) Order[iend] = 0xFF;
 	norders--;
 	m_nRestartPos = pMagic->nRestartPos;
 	if (m_nRestartPos >= 0x78) m_nRestartPos = 0;
-	if (m_nRestartPos + 1 >= (UINT)norders) m_nRestartPos = 0;
-	if (!nbp) return FALSE;
-	DWORD dwWowTest = dwTotalSampleLen+dwMemPos;
+	if (m_nRestartPos + 1 >= (uint32_t)norders) m_nRestartPos = 0;
+	if (!nbp) return false;
+	uint32_t dwWowTest = dwTotalSampleLen+dwMemPos;
 	if ((IsMagic(pMagic->Magic, "M.K.")) && (dwWowTest + nbp*8*256 == dwMemLength)) m_nChannels = 8;
 	if ((nbp != nbpbuggy) && (dwWowTest + nbp*m_nChannels*256 != dwMemLength))
 	{
@@ -315,7 +315,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		nbp = nbpbuggy2;
 	}
 	if ((dwWowTest < 0x600) || (dwWowTest > dwMemLength)) nErr += 8;
-	if ((m_nSamples == 15) && (nErr >= 16)) return FALSE;
+	if ((m_nSamples == 15) && (nErr >= 16)) return false;
 	// Default settings	
 	m_nType = MOD_TYPE_IT;
 	m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS;
@@ -323,7 +323,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 	m_nDefaultTempo = 125;
 	memcpy(m_szNames, lpStream, 20);
 	// Setting channels pan
-	for (UINT ich=0; ich<m_nChannels; ich++)
+	for (uint32_t ich=0; ich<m_nChannels; ich++)
 	{
 		ChnSettings[ich].nVolume = 64;
 		ChnSettings[ich].nPan = (((ich&3)==1) || ((ich&3)==2)) ? 256 : 0;
@@ -331,7 +331,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 	m_nStereoSeparation = 64;
 	
 	// Reading channels
-	for (UINT ipat=0; ipat<nbp; ipat++)
+	for (uint32_t ipat=0; ipat<nbp; ipat++)
 	{
 		if (ipat < MAX_PATTERNS)
 		{
@@ -341,10 +341,10 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 			if (dwMemPos + m_nChannels*256 >= dwMemLength) break;
 			MODCOMMAND *m = Patterns[ipat];
 			LPCBYTE p = lpStream + dwMemPos;
-			for (UINT j=m_nChannels*64; j; m++,p+=4,j--)
+			for (uint32_t j=m_nChannels*64; j; m++,p+=4,j--)
 			{
-				BYTE A0=p[0], A1=p[1], A2=p[2], A3=p[3];
-				UINT n = ((((UINT)A0 & 0x0F) << 8) | (A1));
+				uint8_t A0=p[0], A1=p[1], A2=p[2], A3=p[3];
+				uint32_t n = ((((uint32_t)A0 & 0x0F) << 8) | (A1));
 				if ((n) && (n != 0xFFF)) {
 					m->note = 120; // ?
 					for (int z = 0; z <= 120; z++) {
@@ -354,7 +354,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 						}
 					}
 				}
-				m->instr = ((UINT)A2 >> 4) | (A0 & 0x10);
+				m->instr = ((uint32_t)A2 >> 4) | (A0 & 0x10);
 				m->command = A2 & 0x0F;
 				m->param = A3;
 				if ((m->command) || (m->param)) ConvertModCommand(m, 0);
@@ -363,11 +363,11 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		dwMemPos += m_nChannels*256;
 	}
 	// Reading instruments
-	DWORD dwErrCheck = 0;
-	for (UINT ismp=1; ismp<=m_nSamples; ismp++) if (Ins[ismp].nLength)
+	uint32_t dwErrCheck = 0;
+	for (uint32_t ismp=1; ismp<=m_nSamples; ismp++) if (Ins[ismp].nLength)
 	{
 		LPSTR p = (LPSTR)(lpStream+dwMemPos);
-		UINT flags = 0;
+		uint32_t flags = 0;
 		if (dwMemPos + 5 >= dwMemLength) break;
 		if (!strncasecmp(p, "ADPCM", 5))
 		{
@@ -375,27 +375,27 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 			p += 5;
 			dwMemPos += 5;
 		}
-		DWORD dwSize = ReadSample(&Ins[ismp], flags, p, dwMemLength - dwMemPos);
+		uint32_t dwSize = ReadSample(&Ins[ismp], flags, p, dwMemLength - dwMemPos);
 		if (dwSize)
 		{
 			dwMemPos += dwSize;
 			dwErrCheck++;
 		}
 	}
-	return (dwErrCheck) ? TRUE : FALSE; // MPT always returns TRUE here
+	return (dwErrCheck) ? true : false; // MPT always returns true here
 }
 
 
-BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
+bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 //----------------------------------------------------------
 {
-	BYTE insmap[32];
-	UINT inslen[32];
-	BYTE bTab[32];
-	BYTE ord[128];
-	UINT chanlim;
+	uint8_t insmap[32];
+	uint32_t inslen[32];
+	uint8_t bTab[32];
+	uint8_t ord[128];
+	uint32_t chanlim;
 
-	if ((!m_nChannels) || (!fp)) return FALSE;
+	if ((!m_nChannels) || (!fp)) return false;
 	chanlim  = GetHighestUsedChannel();
 	if (chanlim < 4) chanlim = 4;
 
@@ -404,9 +404,9 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 	{
 		memset(insmap, 0, sizeof(insmap));
-		for (UINT i=1; i<32; i++) if (Headers[i])
+		for (uint32_t i=1; i<32; i++) if (Headers[i])
 		{
-			for (UINT j=0; j<128; j++) if (Headers[i]->Keyboard[j])
+			for (uint32_t j=0; j<128; j++) if (Headers[i]->Keyboard[j])
 			{
 				insmap[i] = Headers[i]->Keyboard[j];
 				break;
@@ -414,15 +414,15 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 		}
 	} else
 	{
-		for (UINT i=0; i<32; i++) insmap[i] = (BYTE)i;
+		for (uint32_t i=0; i<32; i++) insmap[i] = (uint8_t)i;
 	}
 	// Writing song name
 	fp->o(fp, (const unsigned char *)m_szNames, 20);
 	// Writing instrument definition
-	for (UINT iins=1; iins<=31; iins++)
+	for (uint32_t iins=1; iins<=31; iins++)
 	{
 		MODINSTRUMENT *pins = &Ins[insmap[iins]];
-		WORD gg;
+		uint16_t gg;
 
 		int f2t = frequency_to_transpose(pins->nC5Speed);
 		int transp = f2t >> 7;
@@ -442,7 +442,7 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 		memcpy(bTab+22, &gg, 2);
 		if (transp < 0) bTab[24] = 0x08; else
 		if (transp > 0) bTab[24] = 0x07; else
-		bTab[24] = (BYTE)XM2MODFineTune(ftune);
+		bTab[24] = (uint8_t)XM2MODFineTune(ftune);
 		bTab[25] = pins->nVolume  / 4;
 		gg = bswapBE16(pins->nLoopStart / 2);
 		memcpy(bTab+26, &gg, 2);
@@ -451,8 +451,8 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 		fp->o(fp,(const unsigned char *) bTab, 30);
 	}
 	// Writing number of patterns
-	UINT nbp=0, norders=128;
-	for (UINT iord=0; iord<128; iord++)
+	uint32_t nbp=0, norders=128;
+	for (uint32_t iord=0; iord<128; iord++)
 	{
 		if (Order[iord] == 0xFF)
 		{
@@ -474,22 +474,22 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 		sprintf((LPSTR)&bTab, "%uCHN", chanlim);
 	fp->o(fp, (const unsigned char *)bTab, 4);
 	// Writing patterns
-	for (UINT ipat=0; ipat<nbp; ipat++) if (Patterns[ipat])
+	for (uint32_t ipat=0; ipat<nbp; ipat++) if (Patterns[ipat])
 	{
-		BYTE s[64*4];
+		uint8_t s[64*4];
 		MODCOMMAND *pm = Patterns[ipat];
-		for (UINT i=0; i<64; i++) if (i < PatternSize[ipat])
+		for (uint32_t i=0; i<64; i++) if (i < PatternSize[ipat])
 		{
 			LPBYTE p=s;
-			for (UINT c=0; c<chanlim; c++,p+=4)
+			for (uint32_t c=0; c<chanlim; c++,p+=4)
 			{
 				MODCOMMAND *m = &pm[ i * m_nChannels + c];
-				UINT param = ModSaveCommand(m, FALSE);
-				UINT command = param >> 8;
+				uint32_t param = ModSaveCommand(m, false);
+				uint32_t command = param >> 8;
 				param &= 0xFF;
 				if (command > 0x0F) command = param = 0;
 				if ((m->vol >= 0x10) && (m->vol <= 0x50) && (!command) && (!param)) { command = 0x0C; param = m->vol - 0x10; }
-				UINT period = m->note;
+				uint32_t period = m->note;
 				if (period)
 				{
 					if (period < 37) period = 37;
@@ -497,7 +497,7 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 					if (period >= 6*12) period = 6*12-1;
 					period = ProTrackerPeriodTable[period];
 				}
-				UINT instr = (m->instr > 31) ? 0 : m->instr;
+				uint32_t instr = (m->instr > 31) ? 0 : m->instr;
 				p[0] = ((period / 256) & 0x0F) | (instr & 0x10);
 				p[1] = period % 256;
 				p[2] = ((instr & 0x0F) << 4) | (command & 0x0F);
@@ -511,12 +511,12 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 		}
 	}
 	// Writing instruments
-	for (UINT ismpd=1; ismpd<=31; ismpd++) if (inslen[ismpd])
+	for (uint32_t ismpd=1; ismpd<=31; ismpd++) if (inslen[ismpd])
 	{
 		MODINSTRUMENT *pins = &Ins[insmap[ismpd]];
-		UINT flags = RS_PCM8S;
+		uint32_t flags = RS_PCM8S;
 		WriteSample(fp, pins, flags, inslen[ismpd]);
 	}
-	return TRUE;
+	return true;
 }
 

@@ -1422,7 +1422,7 @@ unsigned int CSoundFile::CreateStereoMix(int count)
 			// so that the data is never out of range... but it works now, and I'm hungry.
 			// also: we're missing background channels by doing it this way.
 			// need to use nMasterCh, add the vu meters for each physical voice, and bit shift.
-			UINT vutmp = pChannel->nRealVolume >> (14 - 8);
+			uint32_t vutmp = pChannel->nRealVolume >> (14 - 8);
 			if (vutmp > 0xFF) vutmp = 0xFF;
 			if (pChannel->dwFlags & CHN_ADLIB) {
 				// fake VU decay (intentionally similar to ST3)

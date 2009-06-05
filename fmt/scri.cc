@@ -121,7 +121,7 @@ static int load_scri_sample(const byte *data, size_t length, song_sample *smp, c
     {
 		mp->ReadSample((MODINSTRUMENT *) smp, format,
 				(LPCSTR) (data + 0x50),
-				(DWORD) (length - 0x50));
+				(uint32_t) (length - 0x50));
     }
 
     strncpy(smp->filename, header->dosfn,      11);

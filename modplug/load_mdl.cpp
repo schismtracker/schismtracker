@@ -15,38 +15,38 @@
 
 typedef struct MDLSONGHEADER
 {
-	DWORD id;	// "DMDL" = 0x4C444D44
-	BYTE version;
+	uint32_t id;	// "DMDL" = 0x4C444D44
+	uint8_t version;
 } MDLSONGHEADER;
 
 
 typedef struct MDLINFOBLOCK
 {
-	CHAR songname[32];
-	CHAR composer[20];
-	WORD norders;
-	WORD repeatpos;
-	BYTE globalvol;
-	BYTE speed;
-	BYTE tempo;
-	BYTE channelinfo[32];
-	BYTE seq[256];
+	int8_t songname[32];
+	int8_t composer[20];
+	uint16_t norders;
+	uint16_t repeatpos;
+	uint8_t globalvol;
+	uint8_t speed;
+	uint8_t tempo;
+	uint8_t channelinfo[32];
+	uint8_t seq[256];
 } MDLINFOBLOCK;
 
 
 typedef struct MDLPATTERNDATA
 {
-	BYTE channels;
-	BYTE lastrow;	// nrows = lastrow+1
-	CHAR name[16];
-	WORD data[1];
+	uint8_t channels;
+	uint8_t lastrow;	// nrows = lastrow+1
+	int8_t name[16];
+	uint16_t data[1];
 } MDLPATTERNDATA;
 
 
-void ConvertMDLCommand(MODCOMMAND *m, UINT eff, UINT data)
+void ConvertMDLCommand(MODCOMMAND *m, uint32_t eff, uint32_t data)
 //--------------------------------------------------------
 {
-	UINT command = 0, param = data;
+	uint32_t command = 0, param = data;
 	switch(eff)
 	{
 	case 0x01:	command = CMD_PORTAMENTOUP; break;
@@ -115,17 +115,17 @@ void ConvertMDLCommand(MODCOMMAND *m, UINT eff, UINT data)
 }
 
 
-void UnpackMDLTrack(MODCOMMAND *pat, UINT nChannels, UINT nRows, UINT nTrack, const BYTE *lpTracks)
+void UnpackMDLTrack(MODCOMMAND *pat, uint32_t nChannels, uint32_t nRows, uint32_t nTrack, const uint8_t *lpTracks)
 //-------------------------------------------------------------------------------------------------
 {
 	MODCOMMAND cmd, *m = pat;
-	UINT len = *((WORD *)lpTracks);
-	UINT pos = 0, row = 0, i;
+	uint32_t len = *((uint16_t *)lpTracks);
+	uint32_t pos = 0, row = 0, i;
 	lpTracks += 2;
-	for (UINT ntrk=1; ntrk<nTrack; ntrk++)
+	for (uint32_t ntrk=1; ntrk<nTrack; ntrk++)
 	{
 		lpTracks += len;
-		len = *((WORD *)lpTracks);
+		len = *((uint16_t *)lpTracks);
 		lpTracks += 2;
 	}
 	cmd.note = cmd.instr = 0;
@@ -133,8 +133,8 @@ void UnpackMDLTrack(MODCOMMAND *pat, UINT nChannels, UINT nRows, UINT nTrack, co
 	cmd.command = cmd.param = 0;
 	while ((row < nRows) && (pos < len))
 	{
-		UINT xx;
-		BYTE b = lpTracks[pos++];
+		uint32_t xx;
+		uint8_t b = lpTracks[pos++];
 		xx = b >> 2;
 		switch(b & 0x03)
 		{
@@ -161,12 +161,12 @@ void UnpackMDLTrack(MODCOMMAND *pat, UINT nChannels, UINT nRows, UINT nTrack, co
 				cmd.volcmd = cmd.vol = 0;
 				cmd.command = cmd.param = 0;
 				if ((cmd.note < 120-12) && (cmd.note)) cmd.note += 12;
-				UINT volume = (xx & 0x04) ? lpTracks[pos++] : 0;
-				UINT commands = (xx & 0x08) ? lpTracks[pos++] : 0;
-				UINT command1 = commands & 0x0F;
-				UINT command2 = commands & 0xF0;
-				UINT param1 = (xx & 0x10) ? lpTracks[pos++] : 0;
-				UINT param2 = (xx & 0x20) ? lpTracks[pos++] : 0;
+				uint32_t volume = (xx & 0x04) ? lpTracks[pos++] : 0;
+				uint32_t commands = (xx & 0x08) ? lpTracks[pos++] : 0;
+				uint32_t command1 = commands & 0x0F;
+				uint32_t command2 = commands & 0xF0;
+				uint32_t param1 = (xx & 0x10) ? lpTracks[pos++] : 0;
+				uint32_t param2 = (xx & 0x20) ? lpTracks[pos++] : 0;
 				if ((command1 == 0x0E) && ((param1 & 0xF0) == 0xF0) && (!command2))
 				{
 					param1 = ((param1 & 0x0F) << 8) | param2;
@@ -200,25 +200,25 @@ void UnpackMDLTrack(MODCOMMAND *pat, UINT nChannels, UINT nRows, UINT nTrack, co
 
 
 
-BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 //---------------------------------------------------------------
 {
-	DWORD dwMemPos, dwPos, blocklen, dwTrackPos;
+	uint32_t dwMemPos, dwPos, blocklen, dwTrackPos;
 	const MDLSONGHEADER *pmsh = (const MDLSONGHEADER *)lpStream;
 	MDLINFOBLOCK *pmib;
 	MDLPATTERNDATA *pmpd;
-	UINT i,j, norders = 0, npatterns = 0, ntracks = 0;
-	UINT ninstruments = 0, nsamples = 0;
-	WORD block;
-	WORD patterntracks[MAX_PATTERNS*32];
-	BYTE smpinfo[MAX_SAMPLES];
-	BYTE insvolenv[MAX_INSTRUMENTS];
-	BYTE inspanenv[MAX_INSTRUMENTS];
+	uint32_t i,j, norders = 0, npatterns = 0, ntracks = 0;
+	uint32_t ninstruments = 0, nsamples = 0;
+	uint16_t block;
+	uint16_t patterntracks[MAX_PATTERNS*32];
+	uint8_t smpinfo[MAX_SAMPLES];
+	uint8_t insvolenv[MAX_INSTRUMENTS];
+	uint8_t inspanenv[MAX_INSTRUMENTS];
 	LPCBYTE pvolenv, ppanenv, ppitchenv;
-	UINT nvolenv, npanenv, npitchenv;
+	uint32_t nvolenv, npanenv, npitchenv;
 
-	if ((!lpStream) || (dwMemLength < 1024)) return FALSE;
-	if ((bswapLE32(pmsh->id) != 0x4C444D44) || ((pmsh->version & 0xF0) > 0x10)) return FALSE;
+	if ((!lpStream) || (dwMemLength < 1024)) return false;
+	if ((bswapLE32(pmsh->id) != 0x4C444D44) || ((pmsh->version & 0xF0) > 0x10)) return false;
 	memset(patterntracks, 0, sizeof(patterntracks));
 	memset(smpinfo, 0, sizeof(smpinfo));
 	memset(insvolenv, 0, sizeof(insvolenv));
@@ -231,14 +231,14 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 	m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	while (dwMemPos+6 < dwMemLength)
 	{
-		block = *((WORD *)(lpStream+dwMemPos));
-		blocklen = *((DWORD *)(lpStream+dwMemPos+2));
+		block = *((uint16_t *)(lpStream+dwMemPos));
+		blocklen = *((uint32_t *)(lpStream+dwMemPos+2));
 		block = bswapLE16(block);
 		blocklen = bswapLE32(blocklen);
 		dwMemPos += 6;
 		if (dwMemPos + blocklen > dwMemLength)
 		{
-			if (dwMemPos == 11) return FALSE;
+			if (dwMemPos == 11) return false;
 			break;
 		}
 		switch(block)
@@ -303,7 +303,7 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 		// TR: Track Data
 		case 0x5254:
 			if (dwTrackPos) break;
-			ntracks = *((WORD *)(lpStream+dwMemPos));
+			ntracks = *((uint16_t *)(lpStream+dwMemPos));
 			ntracks = bswapLE16(ntracks);
 			dwTrackPos = dwMemPos+2;
 			break;
@@ -313,12 +313,12 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 			dwPos = dwMemPos+1;
 			for (i=0; i<ninstruments; i++)
 			{
-				UINT nins = lpStream[dwPos];
+				uint32_t nins = lpStream[dwPos];
 				if ((nins >= MAX_INSTRUMENTS) || (!nins)) break;
 				if (m_nInstruments < nins) m_nInstruments = nins;
 				if (!Headers[nins])
 				{
-					UINT note = 12;
+					uint32_t note = 12;
 					if ((Headers[nins] = new INSTRUMENTHEADER) == NULL) break;
 					INSTRUMENTHEADER *penv = Headers[nins];
 					memset(penv, 0, sizeof(INSTRUMENTHEADER));
@@ -327,8 +327,8 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 					penv->nPPC = 5*12;
 					for (j=0; j<lpStream[dwPos+1]; j++)
 					{
-						const BYTE *ps = lpStream+dwPos+34+14*j;
-						while ((note < (UINT)(ps[1]+12)) && (note < 120))
+						const uint8_t *ps = lpStream+dwPos+34+14*j;
+						while ((note < (uint32_t)(ps[1]+12)) && (note < 120))
 						{
 							penv->NoteMap[note] = note+1;
 							if (ps[0] < MAX_SAMPLES)
@@ -393,19 +393,19 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 			dwPos = dwMemPos+1;
 			for (i=0; i<nsamples; i++, dwPos += 59)
 			{
-				UINT nins = lpStream[dwPos];
+				uint32_t nins = lpStream[dwPos];
 				if ((nins >= MAX_SAMPLES) || (!nins)) continue;
 				if (m_nSamples < nins) m_nSamples = nins;
 				MODINSTRUMENT *pins = &Ins[nins];
 				memcpy(m_szNames[nins], lpStream+dwPos+1, 32);
 				memcpy(pins->name, lpStream+dwPos+33, 8);
-				pins->nC5Speed = *((DWORD *)(lpStream+dwPos+41));
+				pins->nC5Speed = *((uint32_t *)(lpStream+dwPos+41));
 				pins->nC5Speed = bswapLE32(pins->nC5Speed);
-				pins->nLength = *((DWORD *)(lpStream+dwPos+45));
+				pins->nLength = *((uint32_t *)(lpStream+dwPos+45));
 				pins->nLength = bswapLE32(pins->nLength);
-				pins->nLoopStart = *((DWORD *)(lpStream+dwPos+49));
+				pins->nLoopStart = *((uint32_t *)(lpStream+dwPos+49));
 				pins->nLoopStart = bswapLE32(pins->nLoopStart);
-				pins->nLoopEnd = pins->nLoopStart + *((DWORD *)(lpStream+dwPos+53));
+				pins->nLoopEnd = pins->nLoopStart + *((uint32_t *)(lpStream+dwPos+53));
 				pins->nLoopEnd = bswapLE32(pins->nLoopEnd);
 				if (pins->nLoopEnd > pins->nLoopStart) pins->uFlags |= CHN_LOOP;
 				pins->nGlobalVol = 64;
@@ -426,13 +426,13 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 			for (i=1; i<=m_nSamples; i++) if ((Ins[i].nLength) && (!Ins[i].pSample) && (smpinfo[i] != 3) && (dwPos < dwMemLength))
 			{
 				MODINSTRUMENT *pins = &Ins[i];
-				UINT flags = (pins->uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
+				uint32_t flags = (pins->uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
 				if (!smpinfo[i])
 				{
 					dwPos += ReadSample(pins, flags, (LPSTR)(lpStream+dwPos), dwMemLength - dwPos);
 				} else
 				{
-					DWORD dwLen = *((DWORD *)(lpStream+dwPos));
+					uint32_t dwLen = *((uint32_t *)(lpStream+dwPos));
 					dwLen = bswapLE32(dwLen);
 					dwPos += 4;
 					if ((dwPos+dwLen <= dwMemLength) && (dwLen > 4))
@@ -450,10 +450,10 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 	// Unpack Patterns
 	if ((dwTrackPos) && (npatterns) && (m_nChannels) && (ntracks))
 	{
-		for (UINT ipat=0; ipat<npatterns; ipat++)
+		for (uint32_t ipat=0; ipat<npatterns; ipat++)
 		{
 			if ((Patterns[ipat] = AllocatePattern(PatternSize[ipat], m_nChannels)) == NULL) break;
-			for (UINT chn=0; chn<m_nChannels; chn++) if ((patterntracks[ipat*32+chn]) && (patterntracks[ipat*32+chn] <= ntracks))
+			for (uint32_t chn=0; chn<m_nChannels; chn++) if ((patterntracks[ipat*32+chn]) && (patterntracks[ipat*32+chn] <= ntracks))
 			{
 				MODCOMMAND *m = Patterns[ipat] + chn;
 				UnpackMDLTrack(m, m_nChannels, PatternSize[ipat], patterntracks[ipat*32+chn], lpStream+dwTrackPos);
@@ -461,18 +461,18 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 		}
 	}
 	// Set up envelopes
-	for (UINT iIns=1; iIns<=m_nInstruments; iIns++) if (Headers[iIns])
+	for (uint32_t iIns=1; iIns<=m_nInstruments; iIns++) if (Headers[iIns])
 	{
 		INSTRUMENTHEADER *penv = Headers[iIns];
 		// Setup volume envelope
 		if ((nvolenv) && (pvolenv) && (insvolenv[iIns]))
 		{
 			LPCBYTE pve = pvolenv;
-			for (UINT nve=0; nve<nvolenv; nve++, pve+=33) if (pve[0]+1 == insvolenv[iIns])
+			for (uint32_t nve=0; nve<nvolenv; nve++, pve+=33) if (pve[0]+1 == insvolenv[iIns])
 			{
-				WORD vtick = 1;
+				uint16_t vtick = 1;
 				penv->VolEnv.nNodes = 15;
-				for (UINT iv=0; iv<15; iv++)
+				for (uint32_t iv=0; iv<15; iv++)
 				{
 					if (iv) vtick += pve[iv*2+1];
 					penv->VolEnv.Ticks[iv] = vtick;
@@ -494,11 +494,11 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 		if ((npanenv) && (ppanenv) && (inspanenv[iIns]))
 		{
 			LPCBYTE ppe = ppanenv;
-			for (UINT npe=0; npe<npanenv; npe++, ppe+=33) if (ppe[0]+1 == inspanenv[iIns])
+			for (uint32_t npe=0; npe<npanenv; npe++, ppe+=33) if (ppe[0]+1 == inspanenv[iIns])
 			{
-				WORD vtick = 1;
+				uint16_t vtick = 1;
 				penv->PanEnv.nNodes = 15;
-				for (UINT iv=0; iv<15; iv++)
+				for (uint32_t iv=0; iv<15; iv++)
 				{
 					if (iv) vtick += ppe[iv*2+1];
 					penv->PanEnv.Ticks[iv] = vtick;
@@ -518,7 +518,7 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 	}
 	m_dwSongFlags |= SONG_LINEARSLIDES;
 	m_nType = MOD_TYPE_MDL;
-	return TRUE;
+	return true;
 }
 
 
@@ -526,15 +526,15 @@ BOOL CSoundFile::ReadMDL(const BYTE *lpStream, DWORD dwMemLength)
 // MDL Sample Unpacking
 
 // MDL Huffman ReadBits compression
-WORD MDLReadBits(DWORD &bitbuf, UINT &bitnum, LPBYTE &ibuf, CHAR n)
+uint16_t MDLReadBits(uint32_t &bitbuf, uint32_t &bitnum, LPBYTE &ibuf, int8_t n)
 //-----------------------------------------------------------------
 {
-	WORD v = (WORD)(bitbuf & ((1 << n) - 1) );
+	uint16_t v = (uint16_t)(bitbuf & ((1 << n) - 1) );
 	bitbuf >>= n;
 	bitnum -= n;
 	if (bitnum <= 24)
 	{
-		bitbuf |= (((DWORD)(*ibuf++)) << bitnum);
+		bitbuf |= (((uint32_t)(*ibuf++)) << bitnum);
 		bitnum += 8;
 	}
 	return v;

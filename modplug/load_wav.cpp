@@ -160,7 +160,7 @@ bool CSoundFile::ReadWav(const unsigned char *data, unsigned int dwMemLength)
                 pins->nVolume    = 256;
                 pins->nPan       = 128;
                 pins->nGlobalVol = 64;
-                pins->uFlags     = (WORD)((pfmt.bitspersample >= 16) ? CHN_16BIT : 0);
+                pins->uFlags     = (uint16_t)((pfmt.bitspersample >= 16) ? CHN_16BIT : 0);
                 pins->uFlags    |= CHN_PANNING;
 
                 if (m_nSamples > 1) {
@@ -175,7 +175,7 @@ bool CSoundFile::ReadWav(const unsigned char *data, unsigned int dwMemLength)
                                 break;
 
                         case 2: 
-                                pins->nPan = (WORD)((m_nSamples == 3) ? 128 : 64); 
+                                pins->nPan = (uint16_t)((m_nSamples == 3) ? 128 : 64); 
                                 pcmd[nChn].command = CMD_S3MCMDEX; 
                                 pcmd[nChn].param = 0x91; 
                                 break;
@@ -231,7 +231,7 @@ bool CSoundFile::ReadWav(const unsigned char *data, unsigned int dwMemLength)
 
 typedef struct IMAADPCMBLOCK
 {
-        WORD sample;
+        uint16_t sample;
         unsigned char index;
         unsigned char Reserved;
 } DVI_ADPCMBLOCKHEADER;

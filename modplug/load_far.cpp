@@ -18,56 +18,56 @@
 
 typedef struct FARHEADER1
 {
-	DWORD id;				// file magic FAR=
-	CHAR songname[40];		// songname
-	CHAR magic2[3];			// 13,10,26
-	WORD headerlen;			// remaining length of header in bytes
-	BYTE version;			// 0xD1
-	BYTE onoff[16];
-	BYTE edit1[9];
-	BYTE speed;
-	BYTE panning[16];
-	BYTE edit2[4];
-	WORD stlen;
+	uint32_t id;				// file magic FAR=
+	int8_t songname[40];		// songname
+	int8_t magic2[3];			// 13,10,26
+	uint16_t headerlen;			// remaining length of header in bytes
+	uint8_t version;			// 0xD1
+	uint8_t onoff[16];
+	uint8_t edit1[9];
+	uint8_t speed;
+	uint8_t panning[16];
+	uint8_t edit2[4];
+	uint16_t stlen;
 } FARHEADER1;
 
 typedef struct FARHEADER2
 {
-	BYTE orders[256];
-	BYTE numpat;
-	BYTE snglen;
-	BYTE loopto;
-	WORD patsiz[256];
+	uint8_t orders[256];
+	uint8_t numpat;
+	uint8_t snglen;
+	uint8_t loopto;
+	uint16_t patsiz[256];
 } FARHEADER2;
 
 typedef struct FARSAMPLE
 {
-	CHAR samplename[32];
-	DWORD length;
-	BYTE finetune;
-	BYTE volume;
-	DWORD reppos;
-	DWORD repend;
-	BYTE type;
-	BYTE loop;
+	int8_t samplename[32];
+	uint32_t length;
+	uint8_t finetune;
+	uint8_t volume;
+	uint32_t reppos;
+	uint32_t repend;
+	uint8_t type;
+	uint8_t loop;
 } FARSAMPLE;
 
 #pragma pack()
 
 
-BOOL CSoundFile::ReadFAR(const BYTE *lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 //---------------------------------------------------------------
 {
 	FARHEADER1 *pmh1 = (FARHEADER1 *)lpStream;
 	FARHEADER2 *pmh2;
-	DWORD dwMemPos = sizeof(FARHEADER1);
-	UINT headerlen;
-	BYTE samplemap[8];
+	uint32_t dwMemPos = sizeof(FARHEADER1);
+	uint32_t headerlen;
+	uint8_t samplemap[8];
 
 	if ((!lpStream) || (dwMemLength < 1024) || (pmh1->id != FARFILEMAGIC)
-	 || (pmh1->magic2[0] != 13) || (pmh1->magic2[1] != 10) || (pmh1->magic2[2] != 26)) return FALSE;
+	 || (pmh1->magic2[0] != 13) || (pmh1->magic2[1] != 10) || (pmh1->magic2[2] != 26)) return false;
 	headerlen = pmh1->headerlen;
-	if ((headerlen >= dwMemLength) || (dwMemPos + pmh1->stlen + sizeof(FARHEADER2) >= dwMemLength)) return FALSE;
+	if ((headerlen >= dwMemLength) || (dwMemPos + pmh1->stlen + sizeof(FARHEADER2) >= dwMemLength)) return false;
 	// Globals
 	m_nType = MOD_TYPE_FAR;
 	m_nChannels = 16;
@@ -80,7 +80,7 @@ BOOL CSoundFile::ReadFAR(const BYTE *lpStream, DWORD dwMemLength)
 
 	memcpy(m_szNames[0], pmh1->songname, 32);
 	// Channel Setting
-	for (UINT nchpan=0; nchpan<16; nchpan++)
+	for (uint32_t nchpan=0; nchpan<16; nchpan++)
 	{
 		ChnSettings[nchpan].dwFlags = 0;
 		ChnSettings[nchpan].nPan = ((pmh1->panning[nchpan] & 0x0F) << 4) + 8;
@@ -89,7 +89,7 @@ BOOL CSoundFile::ReadFAR(const BYTE *lpStream, DWORD dwMemLength)
 	// Reading comment
 	if (pmh1->stlen)
 	{
-		UINT szLen = pmh1->stlen;
+		uint32_t szLen = pmh1->stlen;
 		if (szLen > dwMemLength - dwMemPos) szLen = dwMemLength - dwMemPos;
 		if ((m_lpszSongComments = new char[szLen + 1]) != NULL)
 		{
@@ -101,27 +101,27 @@ BOOL CSoundFile::ReadFAR(const BYTE *lpStream, DWORD dwMemLength)
 	// Reading orders
 	pmh2 = (FARHEADER2 *)(lpStream + dwMemPos);
 	dwMemPos += sizeof(FARHEADER2);
-	if (dwMemPos >= dwMemLength) return TRUE;
-	for (UINT iorder=0; iorder<MAX_ORDERS; iorder++)
+	if (dwMemPos >= dwMemLength) return true;
+	for (uint32_t iorder=0; iorder<MAX_ORDERS; iorder++)
 	{
 		Order[iorder] = (iorder <= pmh2->snglen) ? pmh2->orders[iorder] : 0xFF;
 	}
 	m_nRestartPos = pmh2->loopto;
 	// Reading Patterns	
 	dwMemPos += headerlen - (869 + pmh1->stlen);
-	if (dwMemPos >= dwMemLength) return TRUE;
+	if (dwMemPos >= dwMemLength) return true;
 
-	WORD *patsiz = (WORD *)pmh2->patsiz;
-	for (UINT ipat=0; ipat<256; ipat++) if (patsiz[ipat])
+	uint16_t *patsiz = (uint16_t *)pmh2->patsiz;
+	for (uint32_t ipat=0; ipat<256; ipat++) if (patsiz[ipat])
 	{
-		UINT patlen = patsiz[ipat];
+		uint32_t patlen = patsiz[ipat];
 		if ((ipat >= MAX_PATTERNS) || (patsiz[ipat] < 2))
 		{
 			dwMemPos += patlen;
 			continue;
 		}
-		if (dwMemPos + patlen >= dwMemLength) return TRUE;
-		UINT rows = (patlen - 2) >> 6;
+		if (dwMemPos + patlen >= dwMemLength) return true;
+		uint32_t rows = (patlen - 2) >> 6;
 		if (!rows)
 		{
 			dwMemPos += patlen;
@@ -131,18 +131,18 @@ BOOL CSoundFile::ReadFAR(const BYTE *lpStream, DWORD dwMemLength)
 		if (rows < 16) rows = 16;
 		PatternSize[ipat] = rows;
 		PatternAllocSize[ipat] = rows;
-		if ((Patterns[ipat] = AllocatePattern(rows, m_nChannels)) == NULL) return TRUE;
+		if ((Patterns[ipat] = AllocatePattern(rows, m_nChannels)) == NULL) return true;
 		MODCOMMAND *m = Patterns[ipat];
-		UINT patbrk = lpStream[dwMemPos];
-		const BYTE *p = lpStream + dwMemPos + 2;
-		UINT max = rows*16*4;
+		uint32_t patbrk = lpStream[dwMemPos];
+		const uint8_t *p = lpStream + dwMemPos + 2;
+		uint32_t max = rows*16*4;
 		if (max > patlen-2) max = patlen-2;
-		for (UINT len=0; len<max; len += 4, m++)
+		for (uint32_t len=0; len<max; len += 4, m++)
 		{
-			BYTE note = p[len];
-			BYTE ins = p[len+1];
-			BYTE vol = p[len+2];
-			BYTE eff = p[len+3];
+			uint8_t note = p[len];
+			uint8_t ins = p[len+1];
+			uint8_t vol = p[len+2];
+			uint8_t eff = p[len+3];
 			if (note)
 			{
 				m->instr = ins + 1;
@@ -222,13 +222,13 @@ BOOL CSoundFile::ReadFAR(const BYTE *lpStream, DWORD dwMemLength)
 		dwMemPos += patlen;
 	}
 	// Reading samples
-	if (dwMemPos + 8 >= dwMemLength) return TRUE;
+	if (dwMemPos + 8 >= dwMemLength) return true;
 	memcpy(samplemap, lpStream+dwMemPos, 8);
 	dwMemPos += 8;
 	MODINSTRUMENT *pins = &Ins[1];
-	for (UINT ismp=0; ismp<64; ismp++, pins++) if (samplemap[ismp >> 3] & (1 << (ismp & 7)))
+	for (uint32_t ismp=0; ismp<64; ismp++, pins++) if (samplemap[ismp >> 3] & (1 << (ismp & 7)))
 	{
-		if (dwMemPos + sizeof(FARSAMPLE) > dwMemLength) return TRUE;
+		if (dwMemPos + sizeof(FARSAMPLE) > dwMemLength) return true;
 		FARSAMPLE *pfs = (FARSAMPLE *)(lpStream + dwMemPos);
 		dwMemPos += sizeof(FARSAMPLE);
 		m_nSamples = ismp + 1;
@@ -255,6 +255,6 @@ BOOL CSoundFile::ReadFAR(const BYTE *lpStream, DWORD dwMemLength)
 		}
 		dwMemPos += pfs->length;
 	}
-	return TRUE;
+	return true;
 }
 

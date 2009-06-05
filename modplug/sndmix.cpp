@@ -17,25 +17,25 @@
 #define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
 
 // SNDMIX: These are global flags for playback control
-LONG CSoundFile::m_nStreamVolume = 0x8000;
+int32_t CSoundFile::m_nStreamVolume = 0x8000;
 unsigned int CSoundFile::m_nMaxMixChannels = 32; // ITT is 1994
 // Mixing Configuration (SetWaveConfig)
-DWORD CSoundFile::gdwSysInfo = 0;
-DWORD CSoundFile::gnChannels = 1;
-DWORD CSoundFile::gdwSoundSetup = 0;
-DWORD CSoundFile::gdwMixingFreq = 44100;
-DWORD CSoundFile::gnBitsPerSample = 16;
+uint32_t CSoundFile::gdwSysInfo = 0;
+uint32_t CSoundFile::gnChannels = 1;
+uint32_t CSoundFile::gdwSoundSetup = 0;
+uint32_t CSoundFile::gdwMixingFreq = 44100;
+uint32_t CSoundFile::gnBitsPerSample = 16;
 // Mixing data initialized in
 unsigned int CSoundFile::gnVolumeRampSamples = 64;
 unsigned int CSoundFile::gnVULeft = 0;
 unsigned int CSoundFile::gnVURight = 0;
 LPSNDMIXHOOKPROC CSoundFile::gpSndMixHook = NULL;
 PMIXPLUGINCREATEPROC CSoundFile::gpMixPluginCreateProc = NULL;
-LONG gnDryROfsVol = 0;
-LONG gnDryLOfsVol = 0;
+int32_t gnDryROfsVol = 0;
+int32_t gnDryLOfsVol = 0;
 int gbInitPlugins = 0;
 
-typedef DWORD (* LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
+typedef uint32_t (* LPCONVERTPROC)(LPVOID, int *, uint32_t, LPLONG, LPLONG);
 
 extern void interleave_front_rear(int *, int *, unsigned int);
 extern void mono_from_stereo(int *, unsigned int);
@@ -128,7 +128,7 @@ int csf_init_player(CSoundFile *csf, int reset)
 	Fmdrv_Init(csf->gdwMixingFreq);
 	OPL_Reset();
 	GM_Reset(0);
-	return TRUE;
+	return true;
 }
 
 
@@ -136,8 +136,8 @@ unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffe
 {
 	LPBYTE lpBuffer = (LPBYTE)lpDestBuffer;
 	LPCONVERTPROC pCvt = clip_32_to_8;
-	LONG vu_min[2];
-	LONG vu_max[2];
+	int32_t vu_min[2];
+	int32_t vu_max[2];
 	unsigned int lRead, lMax, lSampleSize, lCount, lSampleCount, nStat=0;
 #if 0
 	unsigned int nMaxPlugins;
@@ -321,13 +321,13 @@ int csf_process_row(CSoundFile *csf)
 							csf->m_nRepeatCount--;
 
 						if (!csf->m_nRepeatCount)
-							return FALSE;
+							return false;
 
 						csf->m_nCurrentPattern = csf->m_nRestartPos;
 
 						if ((csf->Order[csf->m_nCurrentPattern] >= MAX_PATTERNS)
 						    || (!csf->Patterns[csf->Order[csf->m_nCurrentPattern]]))
-							return FALSE;
+							return false;
 					}
 					else {
 						csf->m_nCurrentPattern++;
@@ -346,7 +346,7 @@ int csf_process_row(CSoundFile *csf)
 					csf->m_nRepeatCount--;
 
 				if (!csf->m_nRepeatCount)
-					return FALSE;
+					return false;
 			}
 		}
 
@@ -364,7 +364,7 @@ int csf_process_row(CSoundFile *csf)
 
 		// Weird stuff?
 		if (csf->m_nPattern >= MAX_PATTERNS)
-			return FALSE;
+			return false;
 
 		if (csf->m_nRow >= csf->PatternSize[csf->m_nPattern])
 			csf->m_nRow = 0;
@@ -375,7 +375,7 @@ int csf_process_row(CSoundFile *csf)
 			if (!(csf->m_dwSongFlags & SONG_PATTERNLOOP))
 				csf->m_nNextPattern = csf->m_nCurrentPattern + 1;
 			else if (csf->m_nRepeatCount > 0)
-				return FALSE;
+				return false;
 
 			csf->m_nNextRow = 0;
 		}
@@ -525,7 +525,7 @@ static inline void rn_tremor(CSoundFile *csf, MODCHANNEL *chan, int *vol)
 	if (tremcount >= on)
 		*vol = 0;
 
-	chan->nTremorCount = (BYTE)(tremcount + 1);
+	chan->nTremorCount = (uint8_t)(tremcount + 1);
 	chan->dwFlags |= CHN_FASTVOLRAMP;
 }
 
@@ -1167,10 +1167,10 @@ int csf_read_note(CSoundFile *csf)
 			csf->m_nTickCount = 0;
 
 		if (!csf->ProcessEffects())
-			return FALSE;
+			return false;
 	} else {
 		if (!csf_process_row(csf))
-			return FALSE;
+			return false;
 	}
 
 	handle_realtime_closures(csf);
@@ -1179,7 +1179,7 @@ int csf_read_note(CSoundFile *csf)
 	csf->m_nTotalCount++;
 
 	if (!csf->m_nMusicTempo)
-		return FALSE;
+		return false;
 
 	csf->m_nBufferCount = (csf->gdwMixingFreq * 5 * csf->m_nTempoFactor) / (csf->m_nMusicTempo << 8);
 
@@ -1191,21 +1191,21 @@ int csf_read_note(CSoundFile *csf)
 	if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
 		if (csf->stop_at_order <= (signed) csf->m_nCurrentPattern &&
 		    csf->stop_at_row <= (signed) csf->m_nRow) {
-			return FALSE;
+			return false;
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Update channels data
 	if (CSoundFile::gdwSoundSetup & SNDMIX_NOMIXING)
-		return TRUE;
+		return true;
 
 	// Master Volume + Pre-Amplification / Attenuation setup
 	// m_nSongPreAmp is the 'mixing volume' setting
 	// Modplug's master volume calculation limited the volume to 0x180, whereas this yields
 	// a maximum of 0x200. Try *3 here instead of <<2 if this proves to be problematic.
 	// I think this is a closer match to Impulse Tracker, though.
-	DWORD nMasterVol = csf->m_nSongPreAmp << 2;
+	uint32_t nMasterVol = csf->m_nSongPreAmp << 2;
 
 	csf->m_nMixChannels = 0;
 	MODCHANNEL *chan = csf->Chn;
@@ -1310,7 +1310,7 @@ int csf_read_note(CSoundFile *csf)
 
 			// Filter Envelope: controls cutoff frequency
 			if (chan && chan->pHeader && chan->pHeader->dwFlags & ENV_FILTER) {
-				setup_channel_filter(chan, (chan->dwFlags & CHN_FILTER) ? FALSE : TRUE, envpitch, csf->gdwMixingFreq);
+				setup_channel_filter(chan, (chan->dwFlags & CHN_FILTER) ? false : true, envpitch, csf->gdwMixingFreq);
 			}
 
 			chan->sample_freq = freq;
@@ -1377,6 +1377,6 @@ int csf_read_note(CSoundFile *csf)
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 

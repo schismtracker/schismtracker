@@ -316,8 +316,8 @@ static void multi_out_helper(int chan, int *buf, int len)
 {
 	/* mp->_multi_out_raw = multi_out_helper; */
 
-	LONG vu_min[2] = { 0x7fffffff, 0x7fffffff };
-	LONG vu_max[2] = {-0x7fffffff,-0x7fffffff };
+	int32_t vu_min[2] = { 0x7fffffff, 0x7fffffff };
+	int32_t vu_max[2] = {-0x7fffffff,-0x7fffffff };
 
 	if (!multi_fp[chan]) return;
 
