@@ -31,7 +31,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 
 	m_nChannels = 0;
 	if ((!lpStream) || (dwMemLength < 0x200)) return false;
-	if (strncasecmp((LPCSTR)lpStream, "Extended Module", 15)) return false;
+	if (strncasecmp((const char *)lpStream, "Extended Module", 15)) return false;
 
 	memcpy(m_szNames[0], lpStream+17, 20);
 	dwHdrSize = bswapLE32(*((uint32_t *)(lpStream+60)));
@@ -465,7 +465,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		{
 			if ((samplemap[ismpd]) && (samplesize[ismpd]) && (dwMemPos < dwMemLength))
 			{
-				ReadSample(&Ins[samplemap[ismpd]], flags[ismpd], (LPSTR)(lpStream + dwMemPos), dwMemLength - dwMemPos);
+				ReadSample(&Ins[samplemap[ismpd]], flags[ismpd], (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 			}
 			dwMemPos += samplesize[ismpd];
 			if (dwMemPos >= dwMemLength) break;
@@ -503,7 +503,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
 	fp->o(fp, (const unsigned char *)m_szNames[0], 20);
 	s[0] = 0x1A;
-	strcpy((LPSTR)&s[1], "Schism Tracker      ");
+	strcpy((char *)&s[1], "Schism Tracker      ");
 	s[21] = 0x04;
 	s[22] = 0x01;
 	fp->o(fp, (const unsigned char *)s, 23);

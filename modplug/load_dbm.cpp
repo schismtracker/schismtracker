@@ -127,8 +127,8 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 	dwMemPos += 2*nOrders;
 	while (dwMemPos + 10 < dwMemLength)
 	{
-		uint32_t chunk_id = ((LPDWORD)(lpStream+dwMemPos))[0];
-		uint32_t chunk_size = bswapBE32(((LPDWORD)(lpStream+dwMemPos))[1]);
+		uint32_t chunk_id = ((uint32_t *)(lpStream+dwMemPos))[0];
+		uint32_t chunk_size = bswapBE32(((uint32_t *)(lpStream+dwMemPos))[1]);
 		uint32_t chunk_pos;
 		
 		dwMemPos += 8;
@@ -253,7 +253,7 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 					MODCOMMAND *m = AllocatePattern(nRows, m_nChannels);
 					if (m)
 					{
-						LPBYTE pkdata = (LPBYTE)&pph->patterndata;
+						uint8_t * pkdata = (uint8_t *)&pph->patterndata;
 						uint32_t row = 0;
 						uint32_t i = 0;
 
@@ -362,7 +362,7 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 				if (sampleflags & 3)
 				{
 					ReadSample(pins, (pins->uFlags & CHN_16BIT) ? RS_PCM16M : RS_PCM8S,
-								(LPSTR)(psh->sampledata), samplesize);
+								(const char *)(psh->sampledata), samplesize);
 				}
 				chunk_pos += samplesize;
 			}

@@ -47,7 +47,7 @@ typedef struct tagMTMHEADER
 #pragma pack()
 
 
-bool CSoundFile::ReadMTM(LPCBYTE lpStream, uint32_t dwMemLength)
+bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
 	MTMHEADER *pmh = (MTMHEADER *)lpStream;
@@ -104,9 +104,9 @@ bool CSoundFile::ReadMTM(LPCBYTE lpStream, uint32_t dwMemLength)
 	memcpy(Order, lpStream + dwMemPos, pmh->lastorder+1);
 	dwMemPos += 128;
 	// Reading Patterns
-	LPCBYTE pTracks = lpStream + dwMemPos;
+	const uint8_t * pTracks = lpStream + dwMemPos;
 	dwMemPos += 192 * bswapLE16(pmh->numtracks);
-	LPWORD pSeq = (LPWORD)(lpStream + dwMemPos);
+	uint32_t * pSeq = (uint32_t *)(lpStream + dwMemPos);
 	for (uint32_t pat=0; pat<=pmh->lastpattern; pat++)
 	{
 		PatternSize[pat] = 64;
@@ -114,7 +114,7 @@ bool CSoundFile::ReadMTM(LPCBYTE lpStream, uint32_t dwMemLength)
 		if ((Patterns[pat] = AllocatePattern(64, m_nChannels)) == NULL) break;
 		for (uint32_t n=0; n<32; n++) if ((pSeq[n]) && (pSeq[n] <= bswapLE16(pmh->numtracks)) && (n < m_nChannels))
 		{
-			LPCBYTE p = pTracks + 192 * (pSeq[n]-1);
+			const uint8_t * p = pTracks + 192 * (pSeq[n]-1);
 			MODCOMMAND *m = Patterns[pat] + n;
 			for (uint32_t i=0; i<64; i++, m+=m_nChannels, p+=3)
 			{
@@ -157,7 +157,7 @@ bool CSoundFile::ReadMTM(LPCBYTE lpStream, uint32_t dwMemLength)
 	{
 		if (dwMemPos >= dwMemLength) break;
 		dwMemPos += ReadSample(&Ins[ismp], (Ins[ismp].uFlags & CHN_16BIT) ? RS_PCM16U : RS_PCM8U,
-								(LPSTR)(lpStream + dwMemPos), dwMemLength - dwMemPos);
+								(const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
 	return true;
 }

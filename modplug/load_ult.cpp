@@ -216,7 +216,7 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		if (dwMemPos >= dwMemLength) return true;
 		uint32_t flags = (Ins[smp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
-		dwMemPos += ReadSample(&Ins[smp], flags, (LPSTR)(lpStream+dwMemPos), dwMemLength - dwMemPos);
+		dwMemPos += ReadSample(&Ins[smp], flags, (const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
 	}
 	return true;
 }

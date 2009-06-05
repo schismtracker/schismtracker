@@ -260,7 +260,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 						// IT 2.14 8-bit packed sample ?
 						if (pis.flags & 8)	flags =	((pifh.cmwt >= 0x215) && (pis.cvt & 4)) ? RS_IT2158 : RS_IT2148;
 					}
-					ReadSample(&Ins[nsmp+1], flags, (LPSTR)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
+					ReadSample(&Ins[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 				}
 			}
 			memcpy(m_szNames[nsmp+1], pis.name, 26);
@@ -577,7 +577,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 					// IT 2.14 8-bit packed sample ?
 					if (pis.flags & 8)	flags =	((pifh.cmwt >= 0x215) && (pis.cvt & 4)) ? RS_IT2158 : RS_IT2148;
 				}
-				ReadSample(&Ins[nsmp+1], flags, (LPSTR)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
+				ReadSample(&Ins[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 			}
 		}
 		memcpy(m_szNames[nsmp+1], pis.name, 26);
@@ -728,7 +728,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 //////////////////////////////////////////////////////////////////////////////
 // IT 2.14 compression
 
-uint32_t ITReadBits(uint32_t &bitbuf, uint32_t &bitnum, LPBYTE &ibuf, int8_t n)
+uint32_t ITReadBits(uint32_t &bitbuf, uint32_t &bitnum, uint8_t * &ibuf, int8_t n)
 //-----------------------------------------------------------------
 {
 	uint32_t retval = 0;
@@ -754,11 +754,11 @@ uint32_t ITReadBits(uint32_t &bitbuf, uint32_t &bitnum, LPBYTE &ibuf, int8_t n)
 	return (retval >> (32-i));
 }
 
-void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, LPBYTE lpMemFile, uint32_t dwMemLength, bool b215)
+void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, bool b215)
 //-------------------------------------------------------------------------------------------
 {
 	signed char *pDst = pSample;
-	LPBYTE pSrc = lpMemFile;
+	uint8_t * pSrc = lpMemFile;
 	uint32_t wHdr = 0;
 	uint32_t wCount = 0;
 	uint32_t bitbuf = 0;
@@ -770,7 +770,7 @@ void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, LPBYTE lpMemFile, uint32
 		if (!wCount)
 		{
 			wCount = 0x8000;
-			wHdr = bswapLE16(*((LPWORD)pSrc));
+			wHdr = bswapLE16(*((uint32_t *)pSrc));
 			pSrc += 2;
 			bLeft = 9;
 			bTemp = bTemp2 = 0;
@@ -832,11 +832,11 @@ void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, LPBYTE lpMemFile, uint32
 }
 
 
-void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, LPBYTE lpMemFile, uint32_t dwMemLength, bool b215)
+void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, bool b215)
 //--------------------------------------------------------------------------------------------
 {
 	signed short *pDst = (signed short *)pSample;
-	LPBYTE pSrc = lpMemFile;
+	uint8_t * pSrc = lpMemFile;
 	uint32_t wHdr = 0;
 	uint32_t wCount = 0;
 	uint32_t bitbuf = 0;
@@ -849,7 +849,7 @@ void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, LPBYTE lpMemFile, uint3
 		if (!wCount)
 		{
 			wCount = 0x4000;
-			wHdr = bswapLE16(*((LPWORD)pSrc));
+			wHdr = bswapLE16(*((uint32_t *)pSrc));
 			pSrc += 2;
 			bLeft = 17;
 			wTemp = wTemp2 = 0;

@@ -215,7 +215,7 @@ bool CSoundFile::ReadOKT(const uint8_t *lpStream, uint32_t dwMemLength)
 	uint32_t nsmp = 1;
 	while ((dwMemPos+10 < dwMemLength) && (*((uint32_t *)(lpStream + dwMemPos)) == 0x444F4253))
 	{
-		if (nsmp < MAX_SAMPLES) ReadSample(&Ins[nsmp], RS_PCM8S, (LPSTR)(lpStream+dwMemPos+8), dwMemLength-dwMemPos-8);
+		if (nsmp < MAX_SAMPLES) ReadSample(&Ins[nsmp], RS_PCM8S, (const char *)(lpStream+dwMemPos+8), dwMemLength-dwMemPos-8);
 		dwMemPos += bswapBE32(*((uint32_t *)(lpStream + dwMemPos + 4))) + 8;
 		nsmp++;
 	}

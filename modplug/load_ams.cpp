@@ -42,7 +42,7 @@ typedef struct AMSSAMPLEHEADER
 
 
 
-bool CSoundFile::ReadAMS(LPCBYTE lpStream, uint32_t dwMemLength)
+bool CSoundFile::ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
 	uint8_t pkinf[MAX_SAMPLES];
@@ -236,7 +236,7 @@ bool CSoundFile::ReadAMS(LPCBYTE lpStream, uint32_t dwMemLength)
 	{
 		if (dwMemPos >= dwMemLength - 9) return true;
 		uint32_t flags = (Ins[iSmp].uFlags & CHN_16BIT) ? RS_AMS16 : RS_AMS8;
-		dwMemPos += ReadSample(&Ins[iSmp], flags, (LPSTR)(lpStream+dwMemPos), dwMemLength-dwMemPos);
+		dwMemPos += ReadSample(&Ins[iSmp], flags, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 	}
 	return true;
 }
@@ -303,7 +303,7 @@ typedef struct AMS2SAMPLE
 #pragma pack()
 
 
-bool CSoundFile::ReadAMS2(LPCBYTE lpStream, uint32_t dwMemLength)
+bool CSoundFile::ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength)
 //------------------------------------------------------------
 {
 	AMS2FILEHEADER *pfh = (AMS2FILEHEADER *)lpStream;
@@ -443,7 +443,7 @@ bool CSoundFile::ReadAMS2(LPCBYTE lpStream, uint32_t dwMemLength)
 			if (dwMemPos + chnnamlen + 256 >= dwMemLength) return true;
 		}
 		// packed comments (ignored)
-		uint32_t songtextlen = *((LPDWORD)(lpStream+dwMemPos));
+		uint32_t songtextlen = *((uint32_t *)(lpStream+dwMemPos));
 		dwMemPos += songtextlen;
 		if (dwMemPos + 256 >= dwMemLength) return true;
 	}
@@ -464,7 +464,7 @@ bool CSoundFile::ReadAMS2(LPCBYTE lpStream, uint32_t dwMemLength)
 	for (uint32_t ipat=0; ipat<psh->patterns; ipat++)
 	{
 		if (dwMemPos+8 >= dwMemLength) return true;
-		uint32_t packedlen = *((LPDWORD)(lpStream+dwMemPos));
+		uint32_t packedlen = *((uint32_t *)(lpStream+dwMemPos));
 		uint32_t numrows = 1 + (uint32_t)(lpStream[dwMemPos+4]);
 		//uint32_t patchn = 1 + (uint32_t)(lpStream[dwMemPos+5] & 0x1F);
 		//uint32_t patcmds = 1 + (uint32_t)(lpStream[dwMemPos+5] >> 5);
@@ -477,7 +477,7 @@ bool CSoundFile::ReadAMS2(LPCBYTE lpStream, uint32_t dwMemLength)
 			Patterns[ipat] = AllocatePattern(numrows, m_nChannels);
 			if (!Patterns[ipat]) return true;
 			// Unpack Pattern Data
-			LPCBYTE psrc = lpStream + dwMemPos;
+			const uint8_t * psrc = lpStream + dwMemPos;
 			uint32_t pos = 3 + patnamlen;
 			uint32_t row = 0;
 			while ((pos < packedlen) && (row < numrows))
@@ -538,7 +538,7 @@ bool CSoundFile::ReadAMS2(LPCBYTE lpStream, uint32_t dwMemLength)
 		{
 			flags = (Ins[iSmp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
 		}
-		dwMemPos += ReadSample(&Ins[iSmp], flags, (LPSTR)(lpStream+dwMemPos), dwMemLength-dwMemPos);
+		dwMemPos += ReadSample(&Ins[iSmp], flags, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 	}
 	return true;
 }
@@ -604,7 +604,7 @@ void AMSUnpack(const char *psrc, uint32_t inputlen, char *pdest, uint32_t dmax, 
 		signed char old = 0;
 		for (uint32_t i=0; i<dmax; i++)
 		{
-			int pos = ((LPBYTE)pdest)[i];
+			int pos = ((uint8_t *)pdest)[i];
 			if ((pos != 128) && (pos & 0x80)) pos = -(pos & 0x7F);
 			old -= (signed char)pos;
 			pdest[i] = old;

@@ -479,7 +479,7 @@ typedef struct _SNDMIXPLUGIN
 	IMixPlugin *pMixPlugin;
 	PSNDMIXPLUGINSTATE pMixState;
 	uint32_t nPluginDataSize;
-	PVOID pPluginData;
+	void * pPluginData;
 	SNDMIXPLUGININFO Info;
 } SNDMIXPLUGIN, *PSNDMIXPLUGIN;
 
@@ -555,7 +555,7 @@ public: // for Editing
 	uint32_t m_nFreqFactor, m_nTempoFactor, m_nOldGlbVolSlide;
 	int32_t m_nRepeatCount, m_nInitialRepeatCount;
 	uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
-	LPSTR m_lpszSongComments;
+	char * m_lpszSongComments;
 	char m_szNames[MAX_INSTRUMENTS][32];    // changed from int8_t
 	int8_t CompressionTable[16];
 
@@ -570,7 +570,7 @@ public:
 	~CSoundFile();
 
 public:
-	bool Create(LPCBYTE lpStream, uint32_t dwMemLength=0);
+	bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
 	bool Destroy();
 	uint32_t GetHighestUsedChannel();
 	uint32_t GetType() const { return m_nType; }
@@ -584,8 +584,8 @@ public:
 	uint32_t GetMaxPosition() const;
 	void SetCurrentPos(uint32_t nPos);
 	void SetCurrentOrder(uint32_t nOrder);
-	void GetTitle(LPSTR s) const { strncpy(s,m_szNames[0],32); }
-	LPCSTR GetTitle() const { return m_szNames[0]; }
+	void GetTitle(char * s) const { strncpy(s,m_szNames[0],32); }
+	const char * GetTitle() const { return m_szNames[0]; }
 	uint32_t GetMusicSpeed() const { return m_nMusicSpeed; }
 	uint32_t GetMusicTempo() const { return m_nMusicTempo; }
 	unsigned int GetLength(bool bAdjust, bool bTotal=false);
@@ -595,30 +595,30 @@ public:
 	bool IsPaused() const { return (m_dwSongFlags & SONG_PAUSED) ? true : false; }
 	void LoopPattern(int nPat, int nRow=0);
 	// Module Loaders
-	bool ReadXM(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadS3M(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadMod(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadMed(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadMTM(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadSTM(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadIT(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool Read669(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadUlt(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadWav(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadDSM(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadFAR(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadAMS(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadAMS2(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadMDL(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadOKT(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadDMF(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadPTM(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadDBM(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadAMF(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadMT2(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadPSM(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadUMX(LPCBYTE lpStream, uint32_t dwMemLength);
-	bool ReadMID(LPCBYTE lpStream, uint32_t dwMemLength);
+	bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadS3M(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadMod(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadMed(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadSTM(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadIT(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool Read669(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadUlt(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadWav(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadFAR(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadMDL(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadOKT(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadDMF(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadPTM(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadDBM(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadUMX(const uint8_t * lpStream, uint32_t dwMemLength);
+	bool ReadMID(const uint8_t * lpStream, uint32_t dwMemLength);
 	// Save Functions
 	uint32_t WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins, uint32_t nFlags, uint32_t nMaxLen=0);
 	bool SaveXM(diskwriter_driver_t *f, uint32_t);
@@ -681,7 +681,7 @@ public:
 	void ExtendedS3MCommands(uint32_t nChn, uint32_t param);
 	void ExtendedChannelEffect(MODCHANNEL *, uint32_t param);
 	void MidiSend(const unsigned char *data, unsigned int len, uint32_t nChn=0, int fake = 0);
-	void ProcessMidiMacro(uint32_t nChn, LPCSTR pszMidiMacro, uint32_t param=0,
+	void ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint32_t param=0,
 			uint32_t note=0, uint32_t velocity=0, uint32_t use_instr=0);
 	//void SetupChannelFilter(MODCHANNEL *pChn, bool bReset, int flt_modifier=256,int freq=0) const;
 	// Low-Level effect processing
@@ -694,7 +694,7 @@ public:
 	bool IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, uint32_t nJumpOrder, uint32_t nJumpRow) const;
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
-	uint32_t ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR pMemFile, uint32_t dwMemLength);
+	uint32_t ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
 	bool DestroySample(uint32_t nSample);
 	bool DestroyInstrument(uint32_t nInstr);
 	bool IsSampleUsed(uint32_t nSample);
@@ -722,9 +722,9 @@ public:
 public:
 	static MODCOMMAND *AllocatePattern(uint32_t rows, uint32_t nchns);
 	static signed char* AllocateSample(uint32_t nbytes);
-	static void FreePattern(LPVOID pat);
-	static void FreeSample(LPVOID p);
-	static uint32_t Normalize24BitBuffer(LPBYTE pbuffer, uint32_t cbsizebytes, uint32_t lmax24, uint32_t dwByteInc);
+	static void FreePattern(void * pat);
+	static void FreeSample(void * p);
+	static uint32_t Normalize24BitBuffer(uint8_t * pbuffer, uint32_t cbsizebytes, uint32_t lmax24, uint32_t dwByteInc);
 
 private:
     /* CSoundFile is a sentinel, prevent copying to avoid memory leaks */
@@ -743,7 +743,7 @@ int csf_set_resampling_mode(CSoundFile *csf, uint32_t nMode); // SRCMODE_XXXX
 // sndmix
 int csf_fade_song(CSoundFile *csf, unsigned int msec);
 int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
-unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffer);
+unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer);
 int csf_process_row(CSoundFile *csf);
 int csf_read_note(CSoundFile *csf);
 

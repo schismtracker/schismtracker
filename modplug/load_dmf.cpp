@@ -79,7 +79,7 @@ typedef struct DMFSAMPLE
 
 
 #ifdef DMFLOG
-extern void Log(LPCSTR s, ...);
+extern void Log(const char * s, ...);
 #endif
 
 
@@ -105,7 +105,7 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 #endif
 	while (dwMemPos + 7 < dwMemLength)
 	{
-		uint32_t id = *((LPDWORD)(lpStream+dwMemPos));
+		uint32_t id = *((uint32_t *)(lpStream+dwMemPos));
 
 		switch(id)
 		{
@@ -435,10 +435,10 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 					#endif
 						break;
 					}
-					pksize = *((LPDWORD)(lpStream+dwPos));
+					pksize = *((uint32_t *)(lpStream+dwPos));
 				#ifdef DMFLOG
 					Log("sample %d: pos=0x%X pksize=%d ", iSmp, dwPos, pksize);
-					Log("len=%d flags=0x%X [%08X]\n", Ins[iSmp].nLength, smplflags[ismpd], *((LPDWORD)(lpStream+dwPos+4)));
+					Log("len=%d flags=0x%X [%08X]\n", Ins[iSmp].nLength, smplflags[ismpd], *((uint32_t *)(lpStream+dwPos+4)));
 				#endif
 					dwPos += 4;
 					if (pksize > dwMemLength - dwPos)
@@ -452,7 +452,7 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 					{
 						uint32_t flags = (Ins[iSmp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
 						if (smplflags[ismpd] & 4) flags = (Ins[iSmp].uFlags & CHN_16BIT) ? RS_DMF16 : RS_DMF8;
-						ReadSample(&Ins[iSmp], flags, (LPSTR)(lpStream+dwPos), pksize);
+						ReadSample(&Ins[iSmp], flags, (const char *)(lpStream+dwPos), pksize);
 					}
 					dwPos += pksize;
 				}
@@ -497,8 +497,8 @@ typedef struct DMF_HNODE
 
 typedef struct DMF_HTREE
 {
-	LPBYTE ibuf;
-	LPBYTE ibufmax;
+	uint8_t * ibuf;
+	uint8_t * ibufmax;
 	uint32_t bitbuf;
 	uint32_t bitnum;
 	uint32_t lastnode, nodecount;
@@ -569,7 +569,7 @@ void DMFNewNode(DMF_HTREE *tree)
 }
 
 
-int DMFUnpack(LPBYTE psample, LPBYTE ibuf, LPBYTE ibufmax, uint32_t maxlen)
+int DMFUnpack(uint8_t * psample, uint8_t * ibuf, uint8_t * ibufmax, uint32_t maxlen)
 //----------------------------------------------------------------------
 {
 	DMF_HTREE tree;

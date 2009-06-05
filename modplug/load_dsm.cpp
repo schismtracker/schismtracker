@@ -82,7 +82,7 @@ typedef struct DSMPATT
 #pragma pack()
 
 
-bool CSoundFile::ReadDSM(LPCBYTE lpStream, uint32_t dwMemLength)
+bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
 	DSMFILEHEADER *pfh = (DSMFILEHEADER *)lpStream;
@@ -225,7 +225,7 @@ bool CSoundFile::ReadDSM(LPCBYTE lpStream, uint32_t dwMemLength)
 			psmp->nVolume = (uint16_t)(pins->volume << 2);
 			if (psmp->nVolume > 256) psmp->nVolume = 256;
 			uint32_t smptype = (pins->flags & 2) ? RS_PCM8S : RS_PCM8U;
-			ReadSample(psmp, smptype, (LPCSTR)(lpStream+dwPos), dwMemLength - dwPos);
+			ReadSample(psmp, smptype, (const char *)(lpStream+dwPos), dwMemLength - dwPos);
 			nSmp++;
 		} else
 		{

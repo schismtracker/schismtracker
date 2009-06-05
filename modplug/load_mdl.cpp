@@ -214,9 +214,9 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 	uint8_t smpinfo[MAX_SAMPLES];
 	uint8_t insvolenv[MAX_INSTRUMENTS];
 	uint8_t inspanenv[MAX_INSTRUMENTS];
-	LPCBYTE pvolenv;
-	LPCBYTE ppanenv;
-	LPCBYTE ppitchenv;
+	const uint8_t * pvolenv;
+	const uint8_t * ppanenv;
+	const uint8_t * ppitchenv;
 	uint32_t nvolenv, npanenv, npitchenv;
 
 	if ((!lpStream) || (dwMemLength < 1024)) return false;
@@ -431,7 +431,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 				uint32_t flags = (pins->uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
 				if (!smpinfo[i])
 				{
-					dwPos += ReadSample(pins, flags, (LPSTR)(lpStream+dwPos), dwMemLength - dwPos);
+					dwPos += ReadSample(pins, flags, (const char *)(lpStream+dwPos), dwMemLength - dwPos);
 				} else
 				{
 					uint32_t dwLen = *((uint32_t *)(lpStream+dwPos));
@@ -440,7 +440,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 					if ((dwPos+dwLen <= dwMemLength) && (dwLen > 4))
 					{
 						flags = (pins->uFlags & CHN_16BIT) ? RS_MDL16 : RS_MDL8;
-						ReadSample(pins, flags, (LPSTR)(lpStream+dwPos), dwLen);
+						ReadSample(pins, flags, (const char *)(lpStream+dwPos), dwLen);
 					}
 					dwPos += dwLen;
 				}
@@ -469,7 +469,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 		// Setup volume envelope
 		if ((nvolenv) && (pvolenv) && (insvolenv[iIns]))
 		{
-			LPCBYTE pve = pvolenv;
+			const uint8_t * pve = pvolenv;
 			for (uint32_t nve=0; nve<nvolenv; nve++, pve+=33) if (pve[0]+1 == insvolenv[iIns])
 			{
 				uint16_t vtick = 1;
@@ -495,7 +495,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 		// Setup panning envelope
 		if ((npanenv) && (ppanenv) && (inspanenv[iIns]))
 		{
-			LPCBYTE ppe = ppanenv;
+			const uint8_t * ppe = ppanenv;
 			for (uint32_t npe=0; npe<npanenv; npe++, ppe+=33) if (ppe[0]+1 == inspanenv[iIns])
 			{
 				uint16_t vtick = 1;
@@ -528,7 +528,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 // MDL Sample Unpacking
 
 // MDL Huffman ReadBits compression
-uint16_t MDLReadBits(uint32_t &bitbuf, uint32_t &bitnum, LPBYTE &ibuf, int8_t n)
+uint16_t MDLReadBits(uint32_t &bitbuf, uint32_t &bitnum, uint8_t * &ibuf, int8_t n)
 //-----------------------------------------------------------------
 {
 	uint16_t v = (uint16_t)(bitbuf & ((1 << n) - 1) );

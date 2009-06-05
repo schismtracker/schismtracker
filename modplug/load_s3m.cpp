@@ -358,18 +358,18 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		insflags[iSmp-1] = s[0x1F];
 		inspack[iSmp-1] = s[0x1E];
 		s[0x4C] = 0;
-		strcpy(m_szNames[iSmp], (LPCSTR)&s[0x30]);
+		strcpy(m_szNames[iSmp], (const char *)&s[0x30]);
 		
 		if ((s[0]==1) && (s[0x4E]=='R') && (s[0x4F]=='S'))
 		{
-			uint32_t j = bswapLE32(*((LPDWORD)(s+0x10)));
+			uint32_t j = bswapLE32(*((uint32_t *)(s+0x10)));
 			if (j > MAX_SAMPLE_LENGTH) j = MAX_SAMPLE_LENGTH;
 			if (j < 2) j = 0;
 			Ins[iSmp].nLength = j;
-			j = bswapLE32(*((LPDWORD)(s+0x14)));
+			j = bswapLE32(*((uint32_t *)(s+0x14)));
 			if (j >= Ins[iSmp].nLength) j = Ins[iSmp].nLength - 1;
 			Ins[iSmp].nLoopStart = j;
-			j = bswapLE32(*((LPDWORD)(s+0x18)));
+			j = bswapLE32(*((uint32_t *)(s+0x18)));
 			if (j > MAX_SAMPLE_LENGTH) j = MAX_SAMPLE_LENGTH;
 			if (j < 2) j = 0;
 			if (j > Ins[iSmp].nLength) j = Ins[iSmp].nLength;
@@ -379,11 +379,11 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 			Ins[iSmp].nVolume = j << 2;
 			Ins[iSmp].nGlobalVol = 64;
 			if (s[0x1F]&1) Ins[iSmp].uFlags |= CHN_LOOP;
-			j = bswapLE32(*((LPDWORD)(s+0x20)));
+			j = bswapLE32(*((uint32_t *)(s+0x20)));
 			if (!j) j = 8363;
 			if (j < 1024) j = 1024;
 			Ins[iSmp].nC5Speed = j;
-			insfile[iSmp] = ((uint32_t)bswapLE16(*((LPWORD)(s+0x0E)))) << 4;
+			insfile[iSmp] = ((uint32_t)bswapLE16(*((uint32_t *)(s+0x0E)))) << 4;
 			insfile[iSmp] += ((uint32_t)(uint8_t)s[0x0D]) << 20;
 			if (insfile[iSmp] > dwMemLength) insfile[iSmp] &= 0xFFFF;
 			if ((Ins[iSmp].nLoopStart >= Ins[iSmp].nLoopEnd) || (Ins[iSmp].nLoopEnd - Ins[iSmp].nLoopStart < 8))
@@ -406,7 +406,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 			if (j > 64) j = 64;
 			Ins[iSmp].nVolume = j << 2;
 			Ins[iSmp].nGlobalVol = 64;
-			j = bswapLE32(*((LPDWORD)(s+0x20)));
+			j = bswapLE32(*((uint32_t *)(s+0x20)));
 			if (!j) j = 8363;
 			Ins[iSmp].nC5Speed = j;
 			Ins[iSmp].nPan = 0x80;
@@ -457,7 +457,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		uint16_t len = bswapLE16(*((uint16_t *)(lpStream+nInd)));
 		nInd += 2;
 		
-		LPBYTE src = (LPBYTE)(lpStream+nInd);
+		uint8_t * src = (uint8_t *)(lpStream+nInd);
 		
 		if(len < 2 || (nInd + (len-2) > dwMemLength)) continue;
 		len -= 2;
@@ -632,7 +632,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (insflags[iRaw-1] & 2) flags |= RSF_STEREO;
 		if (inspack[iRaw-1] == 4) flags = RS_ADPCM4;
 		dwMemPos = insfile[iRaw];
-		dwMemPos += ReadSample(&Ins[iRaw], flags, (LPSTR)(lpStream + dwMemPos), dwMemLength - dwMemPos);
+		dwMemPos += ReadSample(&Ins[iRaw], flags, (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
 	
 	return true;

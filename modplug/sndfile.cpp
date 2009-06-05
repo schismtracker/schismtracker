@@ -17,11 +17,11 @@ extern "C" int mmcmp_unpack(uint8_t **ppMemFile, uint32_t *pdwMemLength);
 
 // External decompressors
 extern void AMSUnpack(const char *psrc, uint32_t inputlen, char *pdest, uint32_t dmax, char packcharacter);
-extern uint16_t MDLReadBits(uint32_t &bitbuf, uint32_t &bitnum, LPBYTE &ibuf, int8_t n);
-extern int DMFUnpack(LPBYTE psample, LPBYTE ibuf, LPBYTE ibufmax, uint32_t maxlen);
-extern uint32_t ITReadBits(uint32_t &bitbuf, uint32_t &bitnum, LPBYTE &ibuf, int8_t n);
-extern void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, LPBYTE lpMemFile, uint32_t dwMemLength, bool b215);
-extern void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, LPBYTE lpMemFile, uint32_t dwMemLength, bool b215);
+extern uint16_t MDLReadBits(uint32_t &bitbuf, uint32_t &bitnum, uint8_t * &ibuf, int8_t n);
+extern int DMFUnpack(uint8_t * psample, uint8_t * ibuf, uint8_t * ibufmax, uint32_t maxlen);
+extern uint32_t ITReadBits(uint32_t &bitbuf, uint32_t &bitnum, uint8_t * &ibuf, int8_t n);
+extern void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, bool b215);
+extern void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, bool b215);
 
 
 //////////////////////////////////////////////////////////
@@ -73,7 +73,7 @@ CSoundFile::~CSoundFile()
 }
 
 
-bool CSoundFile::Create(LPCBYTE lpStream, uint32_t dwMemLength)
+bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 //----------------------------------------------------------
 {
 	int i;
@@ -285,7 +285,7 @@ MODCOMMAND *CSoundFile::AllocatePattern(uint32_t rows, uint32_t nchns)
 }
 
 
-void CSoundFile::FreePattern(LPVOID pat)
+void CSoundFile::FreePattern(void * pat)
 //--------------------------------------
 {
 	if (pat) delete [] (signed char*)pat;
@@ -301,7 +301,7 @@ signed char* CSoundFile::AllocateSample(uint32_t nbytes)
 }
 
 
-void CSoundFile::FreeSample(LPVOID p)
+void CSoundFile::FreeSample(void * p)
 //-----------------------------------
 {
 	if (p)
@@ -774,7 +774,7 @@ uint32_t CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 //	6 = unsigned 16-bit PCM data
 
 
-uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpMemFile, uint32_t dwMemLength)
+uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, const char * lpMemFile, uint32_t dwMemLength)
 //------------------------------------------------------------------------------------------------
 {
 	uint32_t len = 0, mem = pIns->nLength+6;
@@ -994,9 +994,9 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpM
 		len = dwMemLength;
 		if (len < 2) break;
 		if ((nFlags == RS_IT2148) || (nFlags == RS_IT2158))
-			ITUnpack8Bit(pIns->pSample, pIns->nLength, (LPBYTE)lpMemFile, dwMemLength, (nFlags == RS_IT2158));
+			ITUnpack8Bit(pIns->pSample, pIns->nLength, (uint8_t *)lpMemFile, dwMemLength, (nFlags == RS_IT2158));
 		else
-			ITUnpack16Bit(pIns->pSample, pIns->nLength, (LPBYTE)lpMemFile, dwMemLength, (nFlags == RS_IT21516));
+			ITUnpack16Bit(pIns->pSample, pIns->nLength, (uint8_t *)lpMemFile, dwMemLength, (nFlags == RS_IT21516));
 		break;
 
 	// 8-bit interleaved stereo samples
@@ -1007,8 +1007,8 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpM
 			if (nFlags == RS_STIPCM8U) { iadd = -0x80; }
 			len = pIns->nLength;
 			if (len*2 > dwMemLength) len = dwMemLength >> 1;
-			LPBYTE psrc = (LPBYTE)lpMemFile;
-			LPBYTE pSample = (LPBYTE)pIns->pSample;
+			uint8_t * psrc = (uint8_t *)lpMemFile;
+			uint8_t * pSample = (uint8_t *)pIns->pSample;
 			for (uint32_t j=0; j<len; j++)
 			{
 				pSample[j*2] = (signed char)(psrc[0] + iadd);
@@ -1047,7 +1047,7 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpM
 		{
 			const char *psrc = lpMemFile;
 			char packcharacter = lpMemFile[8], *pdest = (char *)pIns->pSample;
-			len += bswapLE32(*((LPDWORD)(lpMemFile+4)));
+			len += bswapLE32(*((uint32_t *)(lpMemFile+4)));
 			if (len > dwMemLength) len = dwMemLength;
 			uint32_t dmax = pIns->nLength;
 			if (pIns->uFlags & CHN_16BIT) dmax <<= 1;
@@ -1082,8 +1082,8 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpM
 		len = dwMemLength;
 		if (len >= 4)
 		{
-			LPBYTE pSample = (LPBYTE)pIns->pSample;
-			LPBYTE ibuf = (LPBYTE)lpMemFile;
+			uint8_t * pSample = (uint8_t *)pIns->pSample;
+			uint8_t * ibuf = (uint8_t *)lpMemFile;
 			uint32_t bitbuf = bswapLE32(*((uint32_t *)ibuf));
 			uint32_t bitnum = 32;
 			uint8_t dlt = 0, lowbyte = 0;
@@ -1123,8 +1123,9 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpM
 		{
 			uint32_t maxlen = pIns->nLength;
 			if (pIns->uFlags & CHN_16BIT) maxlen <<= 1;
-			LPBYTE ibuf = (LPBYTE)lpMemFile, ibufmax = (LPBYTE)(lpMemFile+dwMemLength);
-			len = DMFUnpack((LPBYTE)pIns->pSample, ibuf, ibufmax, maxlen);
+			uint8_t * ibuf = (uint8_t *)lpMemFile;
+			uint8_t * ibufmax = (uint8_t *)(lpMemFile+dwMemLength);
+			len = DMFUnpack((uint8_t *)pIns->pSample, ibuf, ibufmax, maxlen);
 		}
 		break;
 
@@ -1137,7 +1138,7 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpM
 		if (len > 4*8)
 		{
 			uint32_t slsize = (nFlags == RS_PCM32S) ? 4 : 3;
-			LPBYTE pSrc = (LPBYTE)lpMemFile;
+			uint8_t * pSrc = (uint8_t *)lpMemFile;
 			int32_t max = 255;
 			if (nFlags == RS_PCM32S) pSrc++;
 			for (uint32_t j=0; j<len; j+=slsize)
@@ -1166,7 +1167,7 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpM
 		if (len > 8*8)
 		{
 			uint32_t slsize = (nFlags == RS_STIPCM32S) ? 4 : 3;
-			LPBYTE pSrc = (LPBYTE)lpMemFile;
+			uint8_t * pSrc = (uint8_t *)lpMemFile;
 			int32_t max = 255;
 			if (nFlags == RS_STIPCM32S) pSrc++;
 			for (uint32_t j=0; j<len; j+=slsize)
@@ -1195,7 +1196,7 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, LPCSTR lpM
 		{
 			len = pIns->nLength;
 			if (len*4 > dwMemLength) len = dwMemLength >> 2;
-			LPCBYTE psrc = (LPCBYTE)lpMemFile;
+			const uint8_t * psrc = (const uint8_t *)lpMemFile;
 			short int *pSample = (short int *)pIns->pSample;
 			for (uint32_t j=0; j<len; j++)
 			{

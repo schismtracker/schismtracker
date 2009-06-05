@@ -77,8 +77,8 @@ typedef struct MIDICHANNELSTATE
 
 typedef struct MIDITRACK
 {
-	LPCBYTE ptracks;
-	LPCBYTE ptrmax;
+	const uint8_t * ptracks;
+	const uint8_t * ptrmax;
 	uint32_t status;
 	int32_t nexteventtime;
 } MIDITRACK;
@@ -87,7 +87,7 @@ typedef struct MIDITRACK
 
 
 
-LPCSTR szMidiGroupNames[17] =
+const char * szMidiGroupNames[17] =
 {
 	"Piano",
 	"Chromatic Percussion",
@@ -109,7 +109,7 @@ LPCSTR szMidiGroupNames[17] =
 };
 
 
-LPCSTR szMidiProgramNames[128] =
+const char * szMidiProgramNames[128] =
 {
 	// 1-8: Piano
 	"Acoustic Grand Piano",
@@ -259,7 +259,7 @@ LPCSTR szMidiProgramNames[128] =
 
 
 // Notes 25-85
-LPCSTR szMidiPercussionNames[61] =
+const char * szMidiPercussionNames[61] =
 {
 	"Seq Click",
 	"Brush Tap",
@@ -335,7 +335,7 @@ const uint16_t kMidiChannelPriority[16] =
 ///////////////////////////////////////////////////////////////////////////
 // Helper functions
 
-static int32_t getmidilong(LPCBYTE &p, LPCBYTE pmax)
+static int32_t getmidilong(const uint8_t * &p, const uint8_t * pmax)
 //----------------------------------------------------------
 {
 	uint32_t n;

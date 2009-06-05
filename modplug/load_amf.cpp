@@ -50,7 +50,7 @@ typedef struct _AMFSAMPLE
 
 
 #ifdef AMFLOG
-extern void Log(LPCSTR, ...);
+extern void Log(const char *, ...);
 #endif
 
 void AMF_Unpack(MODCOMMAND *pPat, const uint8_t *pTrack, uint32_t nRows, uint32_t nChannels)
@@ -164,14 +164,14 @@ void AMF_Unpack(MODCOMMAND *pPat, const uint8_t *pTrack, uint32_t nRows, uint32_
 
 
 
-bool CSoundFile::ReadAMF(LPCBYTE lpStream, uint32_t dwMemLength)
+bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
 	AMFFILEHEADER *pfh = (AMFFILEHEADER *)lpStream;
 	uint32_t dwMemPos;
 	
 	if ((!lpStream) || (dwMemLength < 2048)) return false;
-	if ((!strncmp((LPCSTR)lpStream, "ASYLUM Music Format V1.0", 25)) && (dwMemLength > 4096))
+	if ((!strncmp((const char *)lpStream, "ASYLUM Music Format V1.0", 25)) && (dwMemLength > 4096))
 	{
 		uint32_t numorders, numpats, numsamples;
 
@@ -202,9 +202,9 @@ bool CSoundFile::ReadAMF(LPCBYTE lpStream, uint32_t dwMemLength)
 			psmp->nGlobalVol = 64;
 			if (psmp->nVolume > 0x40) psmp->nVolume = 0x40;
 			psmp->nVolume <<= 2;
-			psmp->nLength = bswapLE32(*((LPDWORD)(lpStream+dwMemPos+25)));
-			psmp->nLoopStart = bswapLE32(*((LPDWORD)(lpStream+dwMemPos+29)));
-			psmp->nLoopEnd = psmp->nLoopStart + bswapLE32(*((LPDWORD)(lpStream+dwMemPos+33)));
+			psmp->nLength = bswapLE32(*((uint32_t *)(lpStream+dwMemPos+25)));
+			psmp->nLoopStart = bswapLE32(*((uint32_t *)(lpStream+dwMemPos+29)));
+			psmp->nLoopEnd = psmp->nLoopStart + bswapLE32(*((uint32_t *)(lpStream+dwMemPos+33)));
 			if ((psmp->nLoopEnd > psmp->nLoopStart) && (psmp->nLoopEnd <= psmp->nLength))
 			{
 				psmp->uFlags = CHN_LOOP;
@@ -253,7 +253,7 @@ bool CSoundFile::ReadAMF(LPCBYTE lpStream, uint32_t dwMemLength)
 			MODINSTRUMENT *psmp = &Ins[iData+1];
 			if (psmp->nLength)
 			{
-				dwMemPos += ReadSample(psmp, RS_PCM8S, (LPCSTR)(lpStream+dwMemPos), dwMemLength);
+				dwMemPos += ReadSample(psmp, RS_PCM8S, (const char *)(lpStream+dwMemPos), dwMemLength);
 			}
 		}
 		return true;
@@ -412,7 +412,7 @@ bool CSoundFile::ReadAMF(LPCBYTE lpStream, uint32_t dwMemLength)
 		for (uint32_t iSmp=0; iSmp<m_nSamples; iSmp++) if (iSeek == sampleseekpos[iSmp])
 		{
 			MODINSTRUMENT *pins = &Ins[iSmp+1];
-			dwMemPos += ReadSample(pins, RS_PCM8U, (LPCSTR)(lpStream+dwMemPos), dwMemLength-dwMemPos);
+			dwMemPos += ReadSample(pins, RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 			break;
 		}
 	}

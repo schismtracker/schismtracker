@@ -75,7 +75,7 @@ typedef struct _PSMSAMPLE
 #pragma pack()
 
 
-bool CSoundFile::ReadPSM(LPCBYTE lpStream, uint32_t dwMemLength)
+bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
 	PSMCHUNK *pfh = (PSMCHUNK *)lpStream;
@@ -166,7 +166,7 @@ bool CSoundFile::ReadPSM(LPCBYTE lpStream, uint32_t dwMemLength)
 				// Load sample data
 				if ((pins->nLength > 3) && (len > 3))
 				{
-					ReadSample(pins, RS_PCM8D, (LPCSTR)pdata, len);
+					ReadSample(pins, RS_PCM8D, (const char *)pdata, len);
 				} else
 				{
 					pins->nLength = 0;

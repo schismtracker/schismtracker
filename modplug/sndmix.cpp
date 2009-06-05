@@ -35,7 +35,7 @@ int32_t gnDryROfsVol = 0;
 int32_t gnDryLOfsVol = 0;
 int gbInitPlugins = 0;
 
-typedef uint32_t (* LPCONVERTPROC)(LPVOID, int *, uint32_t, LPLONG, LPLONG);
+typedef uint32_t (* LPCONVERTPROC)(void *, int *, uint32_t, int *, int *);
 
 extern void interleave_front_rear(int *, int *, unsigned int);
 extern void mono_from_stereo(int *, unsigned int);
@@ -132,9 +132,9 @@ int csf_init_player(CSoundFile *csf, int reset)
 }
 
 
-unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffer)
+unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer)
 {
-	LPBYTE lpBuffer = (LPBYTE)lpDestBuffer;
+	uint8_t * lpBuffer = (uint8_t *)lpDestBuffer;
 	LPCONVERTPROC pCvt = clip_32_to_8;
 	int32_t vu_min[2];
 	int32_t vu_max[2];
