@@ -194,7 +194,7 @@ typedef struct _MODMAGIC
 
 #pragma pack()
 
-bool IsMagic(LPCSTR s1, LPCSTR s2)
+bool IsMagic(const char * s1, const char * s2)
 {
 	return ((*(uint32_t *)s1) == (*(uint32_t *)s2)) ? true : false;
 }
@@ -340,7 +340,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 			PatternAllocSize[ipat] = 64;
 			if (dwMemPos + m_nChannels*256 >= dwMemLength) break;
 			MODCOMMAND *m = Patterns[ipat];
-			LPCBYTE p = lpStream + dwMemPos;
+			const uint8_t * p = lpStream + dwMemPos;
 			for (uint32_t j=m_nChannels*64; j; m++,p+=4,j--)
 			{
 				uint8_t A0=p[0], A1=p[1], A2=p[2], A3=p[3];
@@ -366,7 +366,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	uint32_t dwErrCheck = 0;
 	for (uint32_t ismp=1; ismp<=m_nSamples; ismp++) if (Ins[ismp].nLength)
 	{
-		LPSTR p = (LPSTR)(lpStream+dwMemPos);
+		const char * p = (const char *)(lpStream+dwMemPos);
 		uint32_t flags = 0;
 		if (dwMemPos + 5 >= dwMemLength) break;
 		if (!strncasecmp(p, "ADPCM", 5))
@@ -469,9 +469,9 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 	fp->o(fp, (const unsigned char *)ord, 128);
 	// Writing signature
 	if (chanlim == 4)
-		strcpy((LPSTR)&bTab, "M.K.");
+		strcpy((char *)&bTab, "M.K.");
 	else
-		sprintf((LPSTR)&bTab, "%uCHN", chanlim);
+		sprintf((char *)&bTab, "%uCHN", chanlim);
 	fp->o(fp, (const unsigned char *)bTab, 4);
 	// Writing patterns
 	for (uint32_t ipat=0; ipat<nbp; ipat++) if (Patterns[ipat])
@@ -480,7 +480,7 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 		MODCOMMAND *pm = Patterns[ipat];
 		for (uint32_t i=0; i<64; i++) if (i < PatternSize[ipat])
 		{
-			LPBYTE p=s;
+			uint8_t * p=s;
 			for (uint32_t c=0; c<chanlim; c++,p+=4)
 			{
 				MODCOMMAND *m = &pm[ i * m_nChannels + c];

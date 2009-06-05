@@ -96,7 +96,7 @@ static uint32_t GetBits(struct MMCMPBITBUFFER *bb, uint32_t nBits)
 /*#define mmcmp_LOG*/
 
 #ifdef mmcmp_LOG
-extern void Log(LPCSTR s, uint32 d1=0, uint32 d2=0, uint32 d3=0);
+extern void Log(const char * s, uint32 d1=0, uint32 d2=0, uint32 d3=0);
 #endif
 
 static const uint32_t MMCMP8BitCommands[8] =

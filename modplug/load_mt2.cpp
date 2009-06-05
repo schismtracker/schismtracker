@@ -181,7 +181,7 @@ static void ConvertMT2Command(CSoundFile *that, MODCOMMAND *m, MT2COMMAND *p)
 }
 
 
-bool CSoundFile::ReadMT2(LPCBYTE lpStream, uint32_t dwMemLength)
+bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
 	MT2FILEHEADER *pfh = (MT2FILEHEADER *)lpStream;
@@ -639,7 +639,7 @@ bool CSoundFile::ReadMT2(LPCBYTE lpStream, uint32_t dwMemLength)
 				else
 					rsflags = (psmp->uFlags & CHN_16BIT) ? RS_PCM16D : RS_PCM8D;
 
-				dwMemPos += ReadSample(psmp, rsflags, (LPCSTR)(lpStream+dwMemPos), dwMemLength-dwMemPos);
+				dwMemPos += ReadSample(psmp, rsflags, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 			}
 		} else
 		if (dwMemPos+4 < dwMemLength)

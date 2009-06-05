@@ -16,16 +16,6 @@
 #include <string.h>
 #include <stdint.h>
 
-typedef uint8_t * PUCHAR;
-typedef uint8_t * LPBYTE;
-typedef const uint8_t * LPCBYTE;
-typedef char * LPSTR;
-typedef void * LPVOID;
-typedef int * LPLONG;
-typedef uint32_t * LPDWORD;
-typedef uint16_t * LPWORD;
-typedef const char * LPCSTR;
-typedef void * PVOID;
 
 
 //#define ENABLE_EQ

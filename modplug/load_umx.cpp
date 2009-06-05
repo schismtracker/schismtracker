@@ -36,7 +36,7 @@ bool CSoundFile::ReadUMX(const uint8_t *lpStream, uint32_t dwMemLength)
 				return ReadS3M(lpStream + dwRipOfs, dwMemLength - dwRipOfs);
 			}
 			// XM
-			if (!strncasecmp((LPCSTR)(lpStream+uscan), "Extended Module", 15))
+			if (!strncasecmp((const char *)(lpStream+uscan), "Extended Module", 15))
 			{
 				uint32_t dwRipOfs = uscan;
 				return ReadXM(lpStream + dwRipOfs, dwMemLength - dwRipOfs);

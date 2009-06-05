@@ -1816,7 +1816,7 @@ static int _was_complete_midi(unsigned char *q, unsigned int len, int nextc)
 	return ((nextc & 0x80) ? 1 : 0);
 }
 
-void CSoundFile::ProcessMidiMacro(uint32_t nChn, LPCSTR pszMidiMacro, uint32_t param,
+void CSoundFile::ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr)
 //---------------------------------------------------------------------------
 {

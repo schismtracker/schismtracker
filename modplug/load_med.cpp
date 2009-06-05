@@ -12,7 +12,7 @@
 //#define MED_LOG
 
 #ifdef MED_LOG
-extern void Log(LPCSTR s, ...);
+extern void Log(const char * s, ...);
 #endif
 
 //////////////////////////////////////////////////////////
@@ -479,7 +479,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 	const MMD2SONGHEADER *pmsh2;
 	const MMD0EXP *pmex;
 	uint32_t dwBlockArr, dwSmplArr, dwExpData, wNumBlocks;
-	LPDWORD pdwTable;
+	uint32_t * pdwTable;
 	int8_t version;
 	uint32_t deftempo;
 	int playtransp = 0;
@@ -660,7 +660,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 			
 			if ((playseqtable) && (playseqtable + nplayseq*4 < dwMemLength))
 			{
-				pseq = bswapBE32(((LPDWORD)(lpStream+playseqtable))[nplayseq]);
+				pseq = bswapBE32(((uint32_t *)(lpStream+playseqtable))[nplayseq]);
 			}
 			if ((pseq) && (pseq < dwMemLength - sizeof(MMD2PLAYSEQ)))
 			{
@@ -721,7 +721,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 
 			if ((iinfoptr) && (ientrysz < 256) && (iinfoptr + ientries*ientrysz < dwMemLength))
 			{
-				LPCSTR psznames = (LPCSTR)(lpStream + iinfoptr);
+				const char * psznames = (const char *)(lpStream + iinfoptr);
 				uint32_t maxnamelen = ientrysz;
 				if (maxnamelen > 32) maxnamelen = 32;
 				for (uint32_t i=0; i<ientries; i++) if (i < m_nSamples)
@@ -759,7 +759,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 	}
 	// Reading samples
 	if (dwSmplArr > dwMemLength - 4*m_nSamples) return true;
-	pdwTable = (LPDWORD)(lpStream + dwSmplArr);
+	pdwTable = (uint32_t *)(lpStream + dwSmplArr);
 	for (uint32_t iSmp=0; iSmp<m_nSamples; iSmp++) if (pdwTable[iSmp])
 	{
 		uint32_t dwPos = bswapBE32(pdwTable[iSmp]);
@@ -771,7 +771,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 	#endif
 		if ((len > MAX_SAMPLE_LENGTH) || (dwPos + len + 6 > dwMemLength)) len = 0;
 		uint32_t flags = RS_PCM8S, stype = bswapBE16(psdh->type);
-		LPSTR psdata = (LPSTR)(lpStream + dwPos + 6);
+		const char * psdata = (const char *)(lpStream + dwPos + 6);
 		if (stype & 0x80)
 		{
 			psdata += (stype & 0x20) ? 14 : 6;
@@ -794,7 +794,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading patterns (blocks)
 	if (wNumBlocks > MAX_PATTERNS) wNumBlocks = MAX_PATTERNS;
 	if ((!dwBlockArr) || (dwBlockArr > dwMemLength - 4*wNumBlocks)) return true;
-	pdwTable = (LPDWORD)(lpStream + dwBlockArr);
+	pdwTable = (uint32_t *)(lpStream + dwBlockArr);
 	playtransp += (version == '3') ? 24 : 48;
 	for (uint32_t iBlk=0; iBlk<wNumBlocks; iBlk++)
 	{
@@ -811,7 +811,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 			PatternSize[iBlk] = lines;
 			PatternAllocSize[iBlk] = lines;
 			MODCOMMAND *p = Patterns[iBlk];
-			LPBYTE s = (LPBYTE)(lpStream + dwPos + 2);
+			uint8_t * s = (uint8_t *)(lpStream + dwPos + 2);
 			uint32_t maxlen = tracks*lines*3;
 			if (maxlen + dwPos > dwMemLength - 2) break;
 			for (uint32_t y=0; y<lines; y++)
@@ -869,7 +869,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 				}
 			}
 			MODCOMMAND *p = Patterns[iBlk];
-			LPBYTE s = (LPBYTE)(lpStream + dwPos + 8);
+			uint8_t * s = (uint8_t *)(lpStream + dwPos + 8);
 			uint32_t maxlen = tracks*lines*4;
 			if (maxlen + dwPos > dwMemLength - 8) break;
 			for (uint32_t y=0; y<lines; y++)
