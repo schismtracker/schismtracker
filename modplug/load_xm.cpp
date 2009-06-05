@@ -8,6 +8,7 @@
 
 #include "stdafx.h"
 #include "sndfile.h"
+#include "snd_fx.h"
 
 ////////////////////////////////////////////////////////
 // FastTracker II XM file support
@@ -444,7 +445,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 				flags[ins] = RS_ADPCM4;
 				samplesize[ins] = (samplesize[ins]+1)/2 + 16;
 			}
-			pins->nC5Speed = TransposeToFrequency((int)xmss.relnote, xmss.finetune);
+			pins->nC5Speed = transpose_to_frequency((int)xmss.relnote, xmss.finetune);
 			pins->nPan = xmss.pan;
 			pins->uFlags |= CHN_PANNING;
 			pins->nVibType = xmsh.vibtype;
@@ -718,7 +719,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 			if (smptable[ins]) memcpy(xmss.name, m_szNames[smptable[ins]], 22);
 			pins = &Ins[smptable[ins]];
 			/* convert IT information to FineTune */
-			int f2t = FrequencyToTranspose(pins->nC5Speed);
+			int f2t = frequency_to_transpose(pins->nC5Speed);
 			int transp = f2t >> 7;
 			int ftune = f2t & 0x7F;
 			if (ftune > 80)

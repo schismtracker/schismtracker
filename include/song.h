@@ -413,7 +413,6 @@ unsigned song_copy_sample_raw(int n, unsigned int rs,
 #define RS_PTM8DTO16       0x25 /* ProTracker 8bit delta, 16bit sample */
 
 void song_sample_set_c5speed(int n, unsigned int c5);
-void song_sample_set_c5speed_finetune(int n, int relnote, int finetune);
 int song_sample_is_empty(int n);
 unsigned int song_sample_get_c5speed(int n);
 
