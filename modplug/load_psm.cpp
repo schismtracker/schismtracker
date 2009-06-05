@@ -173,16 +173,6 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 				}
 			}
 			break;
-	#if 0
-		default:
-			{
-				CHAR s[8], s2[64];
-				*(DWORD *)s = pchunk->id;
-				s[4] = 0;
-				wsprintf(s2, "%s: %4d bytes @ %4d\n", s, pchunk->len, dwMemPos);
-				OutputDebugString(s2);
-			}
-	#endif
 		}
 		dwMemPos += bswapLE32(pchunk->len);
 	}

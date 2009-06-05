@@ -8,8 +8,9 @@
 #include "stdafx.h"
 #include "sndfile.h"
 
+#define WAVE_FORMAT_PCM 1
 #ifndef WAVE_FORMAT_EXTENSIBLE
-#define WAVE_FORMAT_EXTENSIBLE  0xFFFE
+# define WAVE_FORMAT_EXTENSIBLE  0xFFFE
 #endif
 
 

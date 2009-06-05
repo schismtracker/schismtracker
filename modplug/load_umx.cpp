@@ -36,7 +36,7 @@ BOOL CSoundFile::ReadUMX(const BYTE *lpStream, DWORD dwMemLength)
 				return ReadS3M(lpStream + dwRipOfs, dwMemLength - dwRipOfs);
 			}
 			// XM
-			if (!strnicmp((LPCSTR)(lpStream+uscan), "Extended Module", 15))
+			if (!strncasecmp((LPCSTR)(lpStream+uscan), "Extended Module", 15))
 			{
 				DWORD dwRipOfs = uscan;
 				return ReadXM(lpStream + dwRipOfs, dwMemLength - dwRipOfs);

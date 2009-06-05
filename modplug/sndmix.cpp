@@ -35,7 +35,7 @@ LONG gnDryROfsVol = 0;
 LONG gnDryLOfsVol = 0;
 int gbInitPlugins = 0;
 
-typedef DWORD (MPPASMCALL * LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
+typedef DWORD (* LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
 
 extern void interleave_front_rear(int *, int *, unsigned int);
 extern void mono_from_stereo(int *, unsigned int);
@@ -214,16 +214,10 @@ unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffe
 		if (csf->gnChannels >= 2) {
 			lSampleCount *= 2;
 			csf->m_nMixStat += csf->CreateStereoMix(lCount);
-#if 0
-			if (nMaxPlugins) ProcessPlugins(lCount);
-#endif
 			csf_process_stereo_dsp(csf, lCount);
 		}
 		else {
 			csf->m_nMixStat += csf->CreateStereoMix(lCount);
-#if 0
-			if (nMaxPlugins) ProcessPlugins(lCount);
-#endif
 			mono_from_stereo(MixSoundBuffer, lCount);
 			csf_process_mono_dsp(csf, lCount);
 		}

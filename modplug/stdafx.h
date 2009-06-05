@@ -11,19 +11,6 @@
 
 #include "headers.h"
 
-#ifdef MSC_VER
-
-#pragma warning (disable:4201)
-#pragma warning (disable:4514)
-#include <windows.h>
-#include <windowsx.h>
-#include <mmsystem.h>
-#include <stdio.h>
-
-inline void ProcessPlugins(int n) {}
-
-#else
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,6 +26,7 @@ typedef int LONG;
 typedef unsigned short WORD;
 typedef unsigned char BYTE;
 typedef unsigned char * LPBYTE;
+typedef const BYTE * LPCBYTE;
 #ifdef __cplusplus
 typedef bool BOOL;
 #endif
@@ -53,24 +41,7 @@ typedef void * PVOID;
 typedef void VOID;
 
 
-#define LPCTSTR LPCSTR
-#define lstrcpyn strncpy
-#define lstrcpy strcpy
-#define lstrcmp strcmp
-#define WAVE_FORMAT_PCM 1
 //#define ENABLE_EQ
-
-#define  GHND   0
-
-#ifdef __cplusplus
-
-#define GlobalAllocPtr(ign,size) calloc(1,size)
-#define ProcessPlugins(z) /* noop */
-#define GlobalFreePtr(p) free((void *)(p))
-
-#define strnicmp(a,b,c)		strncasecmp(a,b,c)
-#define wsprintf			sprintf
-#endif
 
 #ifndef FALSE
 #define FALSE	false
@@ -80,9 +51,5 @@ typedef void VOID;
 #define TRUE	true
 #endif
 
-#endif // MSC_VER
-
-#endif
-
-
+#endif /* _STDAFX_H_ */
 

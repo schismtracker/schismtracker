@@ -64,8 +64,8 @@ BOOL CSoundFile::ReadSTM(const BYTE *lpStream, DWORD dwMemLength)
 	
 	if ((!lpStream) || (dwMemLength < sizeof(STMHEADER))) return FALSE;
 	if ((phdr->filetype != 2) || (phdr->unused != 0x1A)
-	 || ((strnicmp(phdr->trackername, "!SCREAM!", 8))
-	  && (strnicmp(phdr->trackername, "BMOD2STM", 8)))) return FALSE;
+	 || ((strncasecmp(phdr->trackername, "!SCREAM!", 8))
+	  && (strncasecmp(phdr->trackername, "BMOD2STM", 8)))) return FALSE;
 	memcpy(m_szNames[0], phdr->songname, 20);
 	// Read STM header
 	m_nType = MOD_TYPE_STM;

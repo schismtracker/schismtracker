@@ -14,10 +14,6 @@
 this is a schism header */
 #include "midi.h"
 
-#ifdef MSC_VER
-#pragma warning(disable:4244)
-#endif
-
 BYTE autovibit2xm[8] =
 { 0, 3, 1, 4, 2, 0, 0, 0 };
 

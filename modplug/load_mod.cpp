@@ -368,7 +368,7 @@ BOOL CSoundFile::ReadMod(const BYTE *lpStream, DWORD dwMemLength)
 		LPSTR p = (LPSTR)(lpStream+dwMemPos);
 		UINT flags = 0;
 		if (dwMemPos + 5 >= dwMemLength) break;
-		if (!strnicmp(p, "ADPCM", 5))
+		if (!strncasecmp(p, "ADPCM", 5))
 		{
 			flags = 3;
 			p += 5;
@@ -468,9 +468,9 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 	fp->o(fp, (const unsigned char *)ord, 128);
 	// Writing signature
 	if (chanlim == 4)
-		lstrcpy((LPSTR)&bTab, "M.K.");
+		strcpy((LPSTR)&bTab, "M.K.");
 	else
-		wsprintf((LPSTR)&bTab, "%uCHN", chanlim);
+		sprintf((LPSTR)&bTab, "%uCHN", chanlim);
 	fp->o(fp, (const unsigned char *)bTab, 4);
 	// Writing patterns
 	for (UINT ipat=0; ipat<nbp; ipat++) if (Patterns[ipat])

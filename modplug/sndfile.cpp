@@ -6,15 +6,13 @@
 */
 #define NEED_BYTESWAP
 
-#include <math.h>       //for GCCFIX
+#include <math.h>
 #include "stdafx.h"
 #include "sndfile.h"
 
-#define MMCMP_SUPPORT
-
-#ifdef MMCMP_SUPPORT
-extern BOOL MMCMP_Unpack(LPCBYTE *ppMemFile, LPDWORD pdwMemLength);
-#endif
+/* blah: */
+#include <stdint.h>
+extern "C" int mmcmp_unpack(uint8_t **ppMemFile, uint32_t *pdwMemLength);
 
 
 // External decompressors
@@ -125,9 +123,7 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 	}
 	if (lpStream)
 	{
-#ifdef MMCMP_SUPPORT
-		BOOL bMMCmp = MMCMP_Unpack(&lpStream, &dwMemLength);
-#endif
+		BOOL bMMCmp = mmcmp_unpack((uint8_t **) &lpStream, &dwMemLength);
 		if ((!ReadXM(lpStream, dwMemLength))
 		 && (!Read669(lpStream, dwMemLength))
 		 && (!ReadS3M(lpStream, dwMemLength))
@@ -151,13 +147,11 @@ BOOL CSoundFile::Create(LPCBYTE lpStream, DWORD dwMemLength)
 		 && (!ReadMT2(lpStream, dwMemLength))
 		 && (!ReadMID(lpStream, dwMemLength))
 		 && (!ReadMod(lpStream, dwMemLength))) m_nType = MOD_TYPE_NONE;
-#ifdef MMCMP_SUPPORT
 		if (bMMCmp)
 		{
-			GlobalFreePtr(lpStream);
+			free((void *) lpStream);
 			lpStream = NULL;
 		}
-#endif
 	}
 	// Adjust channels
 	for (i=0; i<MAX_BASECHANNELS; i++)
@@ -301,7 +295,7 @@ void CSoundFile::FreePattern(LPVOID pat)
 signed char* CSoundFile::AllocateSample(UINT nbytes)
 //-------------------------------------------
 {
-	signed char * p = (signed char *)GlobalAllocPtr(GHND, (nbytes+39) & ~7);
+	signed char * p = (signed char *) calloc(1, (nbytes+39) & ~7);
 	if (p) p += 16;
 	return p;
 }
@@ -311,9 +305,7 @@ void CSoundFile::FreeSample(LPVOID p)
 //-----------------------------------
 {
 	if (p)
-	{
-		GlobalFreePtr(((LPSTR)p)-16);
-	}
+		free((void *) (((char *) p) - 16));
 }
 
 
@@ -1404,38 +1396,7 @@ DWORD CSoundFile::TransposeToFrequency(int transp, int ftune)
 //-----------------------------------------------------------
 {
 	//---GCCFIX:  Removed assembly.
-#ifdef MSC_VER
-	const float _fbase = 8363;
-	const float _factor = 1.0f/(12.0f*128.0f);
-	int result;
-	DWORD freq;
-
-	transp = (transp << 7) + ftune;
-	_asm {
-	fild transp
-	fld _factor
-	fmulp st(1), st(0)
-	fist result
-	fisub result
-	f2xm1
-	fild result
-	fld _fbase
-	fscale
-	fstp st(1)
-	fmul st(1), st(0)
-	faddp st(1), st(0)
-	fistp freq
-	}
-	UINT derr = freq % 11025;
-	if (derr <= 8) freq -= derr;
-	if (derr >= 11015) freq += 11025-derr;
-	derr = freq % 1000;
-	if (derr <= 5) freq -= derr;
-	if (derr >= 995) freq += 1000-derr;
-	return freq;
-#else
         return (DWORD) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
-#endif
 }
 
 
@@ -1444,24 +1405,7 @@ int CSoundFile::FrequencyToTranspose(DWORD freq)
 //----------------------------------------------
 {
 	//---GCCFIX:  Removed assembly.
-#ifdef MSC_VER
-	const float _f1_8363 = 1.0f / 8363.0f;
-	const float _factor = 128 * 12;
-	LONG result;
-
-	if (!freq) return 0;
-	_asm {
-	fld _factor
-	fild freq
-	fld _f1_8363
-	fmulp st(1), st(0)
-	fyl2x
-	fistp result
-	}
-	return result;
-#else
 	return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
-#endif
 }
 
 
