@@ -1126,7 +1126,6 @@ extern int stop_on_load; // XXX craphack
 
 #define CFG_GET_A(v,d) audio_settings.v = cfg_get_number(cfg, "Audio", #v, d)
 #define CFG_GET_M(v,d) audio_settings.v = cfg_get_number(cfg, "Mixer Settings", #v, d)
-#define CFG_GET_D(v,d) audio_settings.v = cfg_get_number(cfg, "Modplug DSP", #v, d)
 void cfg_load_audio(cfg_file_t *cfg)
 {
 	CFG_GET_A(sample_rate, 44100);
@@ -1153,16 +1152,6 @@ void cfg_load_audio(cfg_file_t *cfg)
 	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_CHANNELS);
 	audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, 3);
 
-	// these should probably be CLAMP'ed
-	CFG_GET_D(xbass, 0);
-	CFG_GET_D(xbass_amount, 35);
-	CFG_GET_D(xbass_range, 50);
-	CFG_GET_D(surround, 0);
-	CFG_GET_D(surround_depth, 20);
-	CFG_GET_D(surround_delay, 20);
-	CFG_GET_D(reverb, 0);
-	CFG_GET_D(reverb_depth, 30);
-	CFG_GET_D(reverb_delay, 100);
 	diskwriter_output_rate = cfg_get_number(cfg, "Diskwriter", "rate", 44100);
 	diskwriter_output_bits = cfg_get_number(cfg, "Diskwriter", "bits", 16);
 	diskwriter_output_channels = cfg_get_number(cfg, "Diskwriter", "channels", 2);
@@ -1182,7 +1171,6 @@ void cfg_load_audio(cfg_file_t *cfg)
 
 #define CFG_SET_A(v) cfg_set_number(cfg, "Audio", #v, audio_settings.v)
 #define CFG_SET_M(v) cfg_set_number(cfg, "Mixer Settings", #v, audio_settings.v)
-#define CFG_SET_D(v) cfg_set_number(cfg, "Modplug DSP", #v, audio_settings.v)
 void cfg_atexit_save_audio(cfg_file_t *cfg)
 {
 	CFG_SET_A(sample_rate);
@@ -1196,16 +1184,6 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 	CFG_SET_M(hq_resampling);
 	CFG_SET_M(noise_reduction);
 	CFG_SET_M(no_ramping);
-
-	CFG_SET_D(xbass);
-	CFG_SET_D(xbass_amount);
-	CFG_SET_D(xbass_range);
-	CFG_SET_D(surround);
-	CFG_SET_D(surround_depth);
-	CFG_SET_D(surround_delay);
-	CFG_SET_D(reverb);
-	CFG_SET_D(reverb_depth);
-	CFG_SET_D(reverb_delay);
 
 	// Say, what happened to the switch for this in the gui?
 	CFG_SET_M(surround_effect);
@@ -1677,15 +1655,12 @@ void song_init_modplug(void)
 	CSoundFile::gpSndMixHook = NULL;
 
         CSoundFile::m_nMaxMixChannels = audio_settings.channel_limit;
-        csf_set_xbass_parameters(mp, audio_settings.xbass_amount, audio_settings.xbass_range);
-        csf_set_surround_parameters(mp, audio_settings.surround_depth, audio_settings.surround_delay);
-        csf_set_reverb_parameters(mp, audio_settings.reverb_depth, audio_settings.reverb_delay);
 	// the last param is the equalizer, which apparently isn't functional
-        csf_set_wave_config_ex(mp, audio_settings.surround,
+        csf_set_wave_config_ex(mp, false,
 				false,
-				audio_settings.reverb,
+				false,
 				true, //only makes sense... audio_settings.hq_resampling,
-				audio_settings.xbass,
+				false,
 				audio_settings.noise_reduction,
 				false);/*EQ off here... */
 	if (audio_settings.oversampling) {

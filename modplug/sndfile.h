@@ -97,8 +97,8 @@ typedef const BYTE * LPCBYTE;
 #define CHN_PITCHENV            0x800000
 #define CHN_FASTVOLRAMP         0x1000000
 //#define CHN_EXTRALOUD         0x2000000
-#define CHN_REVERB              0x4000000
-#define CHN_NOREVERB            0x8000000
+//#define CHN_REVERB            0x4000000
+//#define CHN_NOREVERB          0x8000000
 // used to turn off mute but have it reset later
 #define CHN_NNAMUTE             0x10000000
 // Another sample flag...
@@ -259,9 +259,9 @@ typedef const BYTE * LPCBYTE;
 //#define SNDMIX_AGC            0x0004
 #define SNDMIX_NORESAMPLING     0x0008
 #define SNDMIX_HQRESAMPLER      0x0010
-#define SNDMIX_MEGABASS         0x0020
-#define SNDMIX_SURROUND         0x0040
-#define SNDMIX_REVERB           0x0080
+//#define SNDMIX_MEGABASS       0x0020
+//#define SNDMIX_SURROUND       0x0040
+//#define SNDMIX_REVERB         0x0080
 #define SNDMIX_EQ               0x0100
 //#define SNDMIX_SOFTPANNING    0x0200
 #define SNDMIX_ULTRAHQSRCMODE   0x0400
@@ -270,21 +270,9 @@ typedef const BYTE * LPCBYTE;
 #define SNDMIX_NOBACKWARDJUMPS  0x40000
 //#define SNDMIX_MAXDEFAULTPAN  0x80000 // (no longer) Used by the MOD loader
 #define SNDMIX_MUTECHNMODE      0x100000 // Notes are not played on muted channels
-#define SNDMIX_NOSURROUND       0x200000
+#define SNDMIX_NOSURROUND       0x200000 // ignore S91
 #define SNDMIX_NOMIXING         0x400000 // don't actually do any mixing (values only)
 #define SNDMIX_NORAMPING        0x800000
-
-// Reverb Types (GM2 Presets)
-enum {
-	REVERBTYPE_SMALLROOM,
-	REVERBTYPE_MEDIUMROOM,
-	REVERBTYPE_LARGEROOM,
-	REVERBTYPE_SMALLHALL,
-	REVERBTYPE_MEDIUMHALL,
-	REVERBTYPE_LARGEHALL,
-	NUM_REVERBTYPES
-};
-
 
 enum {
 	SRCMODE_NEAREST,
@@ -541,9 +529,6 @@ class CSoundFile
 //==============
 {
 public: // Static Members
-	static UINT m_nXBassDepth, m_nXBassRange;
-	static UINT m_nReverbDepth, m_nReverbDelay, gnReverbType;
-	static UINT m_nProLogicDepth, m_nProLogicDelay;
 	static UINT m_nMaxMixChannels;
 	static LONG m_nStreamVolume;
 	static DWORD gdwSysInfo, gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
@@ -767,7 +752,7 @@ private:
 };
 
 int csf_set_wave_config(CSoundFile *csf, UINT nRate,UINT nBits,UINT nChannels);
-int csf_set_wave_config_ex(CSoundFile *csf, BOOL bSurround,BOOL bNoOverSampling,BOOL bReverb,BOOL hqido,BOOL bMegaBass,BOOL bNR,BOOL bEQ);
+int csf_set_wave_config_ex(CSoundFile *csf, BOOL,BOOL bNoOverSampling,BOOL,BOOL hqido,BOOL,BOOL bNR,BOOL bEQ);
 
 // Mixer Config
 int csf_init_player(CSoundFile *csf, int reset); // bReset=FALSE
@@ -785,15 +770,6 @@ int csf_read_note(CSoundFile *csf);
 void csf_initialize_dsp(CSoundFile *csf, int reset);
 void csf_process_stereo_dsp(CSoundFile *csf, int count);
 void csf_process_mono_dsp(CSoundFile *csf, int count);
-
-// [Reverb level 0(quiet)-100(loud)], [delay in ms, usually 40-200ms]
-int csf_set_reverb_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay);
-
-// [XBass level 0(quiet)-100(loud)], [cutoff in Hz 10-100]
-int csf_set_xbass_parameters(CSoundFile *csf, UINT nDepth, UINT nRange);
-
-// [Surround level 0(quiet)-100(heavy)] [delay in ms, usually 5-40ms]
-int csf_set_surround_parameters(CSoundFile *csf, UINT nDepth, UINT nDelay);
 
 #endif
 

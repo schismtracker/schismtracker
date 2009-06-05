@@ -23,12 +23,6 @@ void (*CSoundFile::_multi_out_raw) (int chan, int *buf, int len) = NULL;
 // Front Mix Buffer (Also room for interleaved rear mix)
 int MixSoundBuffer[MIXBUFFERSIZE * 4];
 
-// Reverb Mix Buffer
-#ifndef MODPLUG_NO_REVERB
-int MixReverbBuffer[MIXBUFFERSIZE * 2];
-extern unsigned int gnReverbSend;
-#endif
-
 int MixRearBuffer[MIXBUFFERSIZE * 2];
 float MixFloatBuffer[MIXBUFFERSIZE * 2];
 
@@ -37,8 +31,6 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 extern int gnDryROfsVol;
 extern int gnDryLOfsVol;
-extern int gnRvbROfsVol;
-extern int gnRvbLOfsVol;
 
 // 4x256 taps polyphase FIR resampling filter
 extern short int gFastSinc[];
@@ -1394,25 +1386,9 @@ unsigned int CSoundFile::CreateStereoMix(int count)
 		}
 
 		nsamples = count;
-#ifndef MODPLUG_NO_REVERB
-		pbuffer = (gdwSoundSetup & SNDMIX_REVERB) ? MixReverbBuffer : MixSoundBuffer;
-
-		if (pChannel->dwFlags & CHN_NOREVERB)
-			pbuffer = MixSoundBuffer;
-
-		if (pChannel->dwFlags & CHN_REVERB)
-			pbuffer = MixReverbBuffer;
-
-		if (pbuffer == MixReverbBuffer) {
-			if (!gnReverbSend)
-				memset(MixReverbBuffer, 0, count * 8);
-
-			gnReverbSend += count;
-		}
-#else
 		pbuffer = MixSoundBuffer;
-#endif
 
+		// XXX this appears to be very wrong
 		if (CSoundFile::_multi_out_raw) {
 			pbuffer = MultiSoundBuffer[nMasterCh];
 		}

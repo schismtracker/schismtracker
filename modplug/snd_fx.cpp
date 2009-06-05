@@ -1736,16 +1736,6 @@ void CSoundFile::ExtendedChannelEffect(MODCHANNEL *pChn, UINT param)
 	// Modplug Extensions
 	// S90: Surround Off
 	case 0x00:	pChn->dwFlags &= ~CHN_SURROUND;	break;
-	// S98: Reverb Off
-	case 0x08:
-		pChn->dwFlags &= ~CHN_REVERB;
-		pChn->dwFlags |= CHN_NOREVERB;
-		break;
-	// S99: Reverb On
-	case 0x09:
-		pChn->dwFlags &= ~CHN_NOREVERB;
-		pChn->dwFlags |= CHN_REVERB;
-		break;
 	// S9A: 2-Channels surround mode
 	case 0x0A:
 		m_dwSongFlags &= ~SONG_SURROUNDPAN;
