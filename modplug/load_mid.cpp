@@ -77,7 +77,8 @@ typedef struct MIDICHANNELSTATE
 
 typedef struct MIDITRACK
 {
-	LPCBYTE ptracks, ptrmax;
+	LPCBYTE ptracks;
+	LPCBYTE ptrmax;
 	uint32_t status;
 	int32_t nexteventtime;
 } MIDITRACK;
