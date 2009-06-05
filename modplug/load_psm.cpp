@@ -115,7 +115,7 @@ bool CSoundFile::ReadPSM(LPCBYTE lpStream, uint32_t dwMemLength)
 		if ((bswapLE32(pchunk->len) >= dwMemLength - 8)
 		|| (dwMemPos + bswapLE32(pchunk->len) + 8 > dwMemLength)) break;
 		dwMemPos += 8;
-		PUCHAR pdata = (PUCHAR)(lpStream+dwMemPos);
+		uint8_t *pdata = (uint8_t *)(lpStream+dwMemPos);
 		uint32_t len = bswapLE32(pchunk->len);
 		if (len) switch(bswapLE32(pchunk->id))
 		{
@@ -190,7 +190,7 @@ bool CSoundFile::ReadPSM(LPCBYTE lpStream, uint32_t dwMemLength)
 			dwMemPos += 8;
 			if ((bswapLE32(pchunk->len) > dwSongEnd)
 			|| (dwMemPos + bswapLE32(pchunk->len) > dwSongEnd)) break;
-			PUCHAR pdata = (PUCHAR)(lpStream+dwMemPos);
+			uint8_t *pdata = (uint8_t *)(lpStream+dwMemPos);
 			uint32_t len = bswapLE32(pchunk->len);
 			switch(bswapLE32(pchunk->id))
 			{

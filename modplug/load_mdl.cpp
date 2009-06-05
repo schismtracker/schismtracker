@@ -214,7 +214,9 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 	uint8_t smpinfo[MAX_SAMPLES];
 	uint8_t insvolenv[MAX_INSTRUMENTS];
 	uint8_t inspanenv[MAX_INSTRUMENTS];
-	LPCBYTE pvolenv, ppanenv, ppitchenv;
+	LPCBYTE pvolenv;
+	LPCBYTE ppanenv;
+	LPCBYTE ppitchenv;
 	uint32_t nvolenv, npanenv, npitchenv;
 
 	if ((!lpStream) || (dwMemLength < 1024)) return false;

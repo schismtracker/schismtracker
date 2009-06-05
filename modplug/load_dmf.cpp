@@ -497,7 +497,8 @@ typedef struct DMF_HNODE
 
 typedef struct DMF_HTREE
 {
-	LPBYTE ibuf, ibufmax;
+	LPBYTE ibuf;
+	LPBYTE ibufmax;
 	uint32_t bitbuf;
 	uint32_t bitnum;
 	uint32_t lastnode, nodecount;
