@@ -415,11 +415,11 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 //////////////////////////////////////////////////////////
 // Interfaces
 
-typedef void(MPPASMCALL * mix_interface_t)(MODCHANNEL *, int *, int *);
+typedef void(* mix_interface_t)(MODCHANNEL *, int *, int *);
 
 
 #define BEGIN_MIX_INTERFACE(func) \
-    void MPPASMCALL func(MODCHANNEL *pChannel, int *pbuffer, int *pbufmax) \
+    void func(MODCHANNEL *pChannel, int *pbuffer, int *pbufmax) \
     { \
         int nPos;
 

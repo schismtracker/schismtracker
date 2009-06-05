@@ -16,13 +16,6 @@
 #ifndef __SNDFILE_H
 #define __SNDFILE_H
 
-#ifdef UNDER_CE
-int _strnicmp(const char *str1,const char *str2, int n);
-#endif
-
-#ifndef LPCBYTE
-typedef const BYTE * LPCBYTE;
-#endif
 
 #define MOD_AMIGAC2             0x1AB
 #define MAX_SAMPLE_LENGTH       16000000
@@ -594,7 +587,7 @@ public:
 	UINT GetMaxPosition() const;
 	void SetCurrentPos(UINT nPos);
 	void SetCurrentOrder(UINT nOrder);
-	void GetTitle(LPSTR s) const { lstrcpyn(s,m_szNames[0],32); }
+	void GetTitle(LPSTR s) const { strncpy(s,m_szNames[0],32); }
 	LPCSTR GetTitle() const { return m_szNames[0]; }
 	UINT GetSampleName(UINT nSample,LPSTR s=NULL) const;
 	UINT GetInstrumentName(UINT nInstr,LPSTR s=NULL) const;
@@ -904,15 +897,6 @@ typedef struct WAVEEXTRAHEADER
 #define VOLUMERAMPPRECISION     12
 #define FADESONGDELAY           100
 #define EQ_BUFFERSIZE           (MIXBUFFERSIZE)
-
-// Calling conventions
-#ifdef MSC_VER
-#define MPPASMCALL      __cdecl
-#define MPPFASTCALL     __fastcall
-#else
-#define MPPASMCALL
-#define MPPFASTCALL
-#endif
 
 #define MOD2XMFineTune(k)       ((int)( (signed char)((k)<<4) ))
 #define XM2MODFineTune(k)       ((int)( (k>>4)&0x0f ))

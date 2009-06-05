@@ -729,7 +729,7 @@ BOOL CSoundFile::ReadMID(const BYTE *lpStream, DWORD dwMemLength)
 								CHAR s[32];
 								memcpy(s, ptrk->ptracks, k);
 								s[k] = 0;
-								if ((!strnicmp((char*)s, "Copyri", 6)) || (!s[0])) break;
+								if ((!strncasecmp((char*)s, "Copyri", 6)) || (!s[0])) break;
 								if (i == 0x03)
 								{
 									if (!m_szNames[0][0]) strcpy((char*)m_szNames[0], (char*)s);

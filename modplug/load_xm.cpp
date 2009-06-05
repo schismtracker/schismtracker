@@ -12,10 +12,6 @@
 ////////////////////////////////////////////////////////
 // FastTracker II XM file support
 
-#ifdef MSC_VER
-#pragma warning(disable:4244)
-#endif
-
 #include "xm_defs.h"
 
 BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
@@ -34,7 +30,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 
 	m_nChannels = 0;
 	if ((!lpStream) || (dwMemLength < 0x200)) return FALSE;
-	if (strnicmp((LPCSTR)lpStream, "Extended Module", 15)) return FALSE;
+	if (strncasecmp((LPCSTR)lpStream, "Extended Module", 15)) return FALSE;
 
 	memcpy(m_szNames[0], lpStream+17, 20);
 	dwHdrSize = bswapLE32(*((DWORD *)(lpStream+60)));
@@ -506,7 +502,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
 	fp->o(fp, (const unsigned char *)m_szNames[0], 20);
 	s[0] = 0x1A;
-	lstrcpy((LPSTR)&s[1], "Schism Tracker      ");
+	strcpy((LPSTR)&s[1], "Schism Tracker      ");
 	s[21] = 0x04;
 	s[22] = 0x01;
 	fp->o(fp, (const unsigned char *)s, 23);

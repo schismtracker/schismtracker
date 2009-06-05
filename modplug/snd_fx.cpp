@@ -11,10 +11,6 @@
 #include "snd_gm.h"
 #include "snd_flt.h"
 
-#ifdef MSC_VER
-#pragma warning(disable:4244)
-#endif
-
 #define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
 
 

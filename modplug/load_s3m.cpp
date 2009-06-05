@@ -358,7 +358,7 @@ BOOL CSoundFile::ReadS3M(const BYTE *lpStream, DWORD dwMemLength)
 		insflags[iSmp-1] = s[0x1F];
 		inspack[iSmp-1] = s[0x1E];
 		s[0x4C] = 0;
-		lstrcpy(m_szNames[iSmp], (LPCSTR)&s[0x30]);
+		strcpy(m_szNames[iSmp], (LPCSTR)&s[0x30]);
 		
 		if ((s[0]==1) && (s[0x4E]=='R') && (s[0x4F]=='S'))
 		{
