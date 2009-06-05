@@ -574,7 +574,6 @@ public:
 	BOOL Destroy();
 	UINT GetHighestUsedChannel();
 	UINT GetType() const { return m_nType; }
-	UINT GetNumChannels() const;
 	UINT GetLogicalChannels() const { return m_nChannels; }
 	UINT GetNumPatterns() const;
 	UINT GetNumInstruments() const;
@@ -582,15 +581,11 @@ public:
 	UINT GetCurrentPos() const;
 	UINT GetCurrentPattern() const { return m_nPattern; }
 	UINT GetCurrentOrder() const { return m_nCurrentPattern; }
-	UINT GetSongComments(LPSTR s, UINT cbsize, UINT linesize=32);
-	UINT GetRawSongComments(LPSTR s, UINT cbsize, UINT linesize=32);
 	UINT GetMaxPosition() const;
 	void SetCurrentPos(UINT nPos);
 	void SetCurrentOrder(UINT nOrder);
 	void GetTitle(LPSTR s) const { strncpy(s,m_szNames[0],32); }
 	LPCSTR GetTitle() const { return m_szNames[0]; }
-	UINT GetSampleName(UINT nSample,LPSTR s=NULL) const;
-	UINT GetInstrumentName(UINT nInstr,LPSTR s=NULL) const;
 	UINT GetMusicSpeed() const { return m_nMusicSpeed; }
 	UINT GetMusicTempo() const { return m_nMusicTempo; }
 	unsigned int GetLength(BOOL bAdjust, BOOL bTotal=FALSE);
@@ -630,8 +625,6 @@ public:
 	BOOL SaveS3M(diskwriter_driver_t *f, UINT);
 	BOOL SaveMod(diskwriter_driver_t *f, UINT);
 	// MOD Convert function
-	UINT GetBestSaveFormat() const;
-	UINT GetSaveFormats() const;
 	void ConvertModCommand(MODCOMMAND *m, BOOL from_xm) const;
 	void S3MConvert(MODCOMMAND *m, BOOL bIT) const;
 	void S3MSaveConvert(UINT *pcmd, UINT *pprm, BOOL bIT) const;
@@ -724,11 +717,6 @@ public:
 	UINT SaveMixPlugins(FILE *f=NULL, BOOL bUpdate=TRUE);
 	UINT LoadMixPlugins(const void *pData, UINT nLen);
 	void ResetTimestamps(); // for note playback dots
-
-	// Static helper functions
-public:
-	static DWORD TransposeToFrequency(int transp, int ftune=0);
-	static int FrequencyToTranspose(DWORD freq);
 
 	// System-Dependant functions
 public:

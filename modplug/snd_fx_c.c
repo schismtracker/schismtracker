@@ -1,4 +1,5 @@
 #include <limits.h>
+#include <math.h>
 
 #include "snd_fx.h"
 #define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
@@ -43,5 +44,16 @@ unsigned int get_freq_from_period(int period, unsigned int c5speed, int frac, in
 	if (period <= 0)
 		return INT_MAX;
 	return _muldiv(linear ? c5speed : 8363, 1712L << 8, (period << 8) + frac);
+}
+
+
+unsigned int transpose_to_frequency(int transp, int ftune)
+{
+        return (unsigned int) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
+}
+
+int frequency_to_transpose(unsigned int freq)
+{
+	return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
 }
 

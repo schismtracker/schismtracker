@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "sndfile.h"
+#include "snd_fx.h"
 
 //#define MT2DEBUG
 
@@ -560,7 +561,7 @@ BOOL CSoundFile::ReadMT2(LPCBYTE lpStream, DWORD dwMemLength)
 				psmp->nLoopEnd = pms->dwLoopEnd;
 
 				// this code is stupid
-				int f2t = FrequencyToTranspose(pms->dwFrequency);
+				int f2t = frequency_to_transpose(pms->dwFrequency);
 				int transp = f2t >> 7;
 				int ftune = f2t & 0x7F;
 				if (ftune > 80)
@@ -571,7 +572,7 @@ BOOL CSoundFile::ReadMT2(LPCBYTE lpStream, DWORD dwMemLength)
 				if (transp > 127) transp = 127;
 				if (transp < -127) transp = -127;
 				transp -= pms->nBaseNote - 49;
-				psmp->nC5Speed = TransposeToFrequency(transp, ftune);
+				psmp->nC5Speed = transpose_to_frequency(transp, ftune);
 
 				if (pms->nQuality == 2) { psmp->uFlags |= CHN_16BIT; psmp->nLength >>= 1; }
 				if (pms->nChannels == 2) { psmp->nLength >>= 1; }

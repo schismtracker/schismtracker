@@ -321,85 +321,6 @@ void CSoundFile::ResetMidiCfg()
 }
 
 
-UINT CSoundFile::GetNumChannels() const
-//-------------------------------------
-{
-	UINT n = 0;
-	for (UINT i=0; i<m_nChannels; i++) if (ChnSettings[i].nVolume) n++;
-	return n;
-}
-
-
-UINT CSoundFile::GetSongComments(LPSTR s, UINT len, UINT linesize)
-//----------------------------------------------------------------
-{
-	LPCSTR p = m_lpszSongComments;
-	if (!p) return 0;
-	UINT i = 2, ln=0;
-	if ((len) && (s)) s[0] = '\x0D';
-	if ((len > 1) && (s)) s[1] = '\x0A';
-	while ((*p)	&& (i+2 < len))
-	{
-		BYTE c = (BYTE)*p++;
-		if ((c == 0x0D) || ((c == ' ') && (ln >= linesize)))
-			{ if (s) { s[i++] = '\x0D'; s[i++] = '\x0A'; } else i+= 2; ln=0; }
-		else
-		if (c >= 0x20) { if (s) s[i++] = c; else i++; ln++; }
-	}
-	if (s) s[i] = 0;
-	return i;
-}
-
-
-UINT CSoundFile::GetRawSongComments(LPSTR s, UINT len, UINT linesize)
-//-------------------------------------------------------------------
-{
-	LPCSTR p = m_lpszSongComments;
-	if (!p) return 0;
-	UINT i = 0, ln=0;
-	while ((*p)	&& (i < len-1))
-	{
-		BYTE c = (BYTE)*p++;
-		if ((c == 0x0D)	|| (c == 0x0A))
-		{
-			if (ln)
-			{
-				while (ln < linesize) { if (s) s[i] = ' '; i++; ln++; }
-				ln = 0;
-			}
-		} else
-		if ((c == ' ') && (!ln))
-		{
-			UINT k=0;
-			while ((p[k]) && (p[k] >= ' '))	k++;
-			if (k <= linesize)
-			{
-				if (s) s[i] = ' ';
-				i++;
-				ln++;
-			}
-		} else
-		{
-			if (s) s[i] = c;
-			i++;
-			ln++;
-			if (ln == linesize) ln = 0;
-		}
-	}
-	if (ln)
-	{
-		while ((ln < linesize) && (i < len))
-		{
-			if (s) s[i] = ' ';
-			i++;
-			ln++;
-		}
-	}
-	if (s) s[i] = 0;
-	return i;
-}
-
-
 int csf_set_wave_config(CSoundFile *csf, UINT nRate,UINT nBits,UINT nChannels)
 //----------------------------------------------------------------------------
 {
@@ -657,49 +578,6 @@ void CSoundFile::LoopPattern(int nPat, int nRow)
 }
 
 
-UINT CSoundFile::GetBestSaveFormat() const
-//----------------------------------------
-{
-	if ((!m_nSamples) || (!m_nChannels)) return MOD_TYPE_NONE;
-	if (!m_nType) return MOD_TYPE_NONE;
-	return MOD_TYPE_IT;
-}
-
-
-UINT CSoundFile::GetSaveFormats() const
-//-------------------------------------
-{
-	if ((!m_nSamples) || (!m_nChannels) || (m_nType == MOD_TYPE_NONE)) return 0;
-	return MOD_TYPE_IT; // asjdkfjalsdfwhatever
-}
-
-
-UINT CSoundFile::GetSampleName(UINT nSample,LPSTR s) const
-//--------------------------------------------------------
-{
-        char sztmp[40] = "";      // changed from CHAR
-	memcpy(sztmp, m_szNames[nSample],32);
-	sztmp[31] = 0;
-	if (s) strcpy(s, sztmp);
-	return strlen(sztmp);
-}
-
-
-UINT CSoundFile::GetInstrumentName(UINT nInstr,LPSTR s) const
-//-----------------------------------------------------------
-{
-        char sztmp[40] = "";  // changed from CHAR
-	if ((nInstr >= MAX_INSTRUMENTS) || (!Headers[nInstr]))
-	{
-		if (s) *s = 0;
-		return 0;
-	}
-	INSTRUMENTHEADER *penv = Headers[nInstr];
-	memcpy(sztmp, penv->name, 32);
-	sztmp[31] = 0;
-	if (s) strcpy(s, sztmp);
-	return strlen(sztmp);
-}
 
 
 UINT CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
@@ -1388,25 +1266,6 @@ void CSoundFile::AdjustSampleLoop(MODINSTRUMENT *pIns)
 }
 
 
-/////////////////////////////////////////////////////////////
-// Transpose <-> Frequency conversions
-
-// returns 8363*2^((transp*128+ftune)/(12*128))
-DWORD CSoundFile::TransposeToFrequency(int transp, int ftune)
-//-----------------------------------------------------------
-{
-	//---GCCFIX:  Removed assembly.
-        return (DWORD) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
-}
-
-
-// returns 12*128*log2(freq/8363)
-int CSoundFile::FrequencyToTranspose(DWORD freq)
-//----------------------------------------------
-{
-	//---GCCFIX:  Removed assembly.
-	return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
-}
 
 
 UINT CSoundFile::GetHighestUsedChannel()

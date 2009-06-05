@@ -16,6 +16,7 @@
 
 #include "stdafx.h"
 #include "sndfile.h"
+#include "snd_fx.h"
 
 //#pragma warning(disable:4244)
 
@@ -180,7 +181,7 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 					psmp->nGlobalVol = 64;
 					psmp->nC5Speed = bswapBE32(pih->finetune);
 					// what?
-					//int f2t = FrequencyToTranspose(psmp->nC5Speed);
+					//int f2t = frequency_to_transpose(psmp->nC5Speed);
 					//psmp->RelativeTone = f2t >> 7;
 					//psmp->nFineTune = f2t & 0x7F;
 					if ((pih->looplen) && (sflags & 3))

@@ -8,6 +8,7 @@
 
 #include "stdafx.h"
 #include "sndfile.h"
+#include "snd_fx.h"
 
 //////////////////////////////////////////////////////////
 // ProTracker / NoiseTracker MOD/NST file support
@@ -423,7 +424,7 @@ BOOL CSoundFile::SaveMod(diskwriter_driver_t *fp, UINT)
 		MODINSTRUMENT *pins = &Ins[insmap[iins]];
 		WORD gg;
 
-		int f2t = FrequencyToTranspose(pins->nC5Speed);
+		int f2t = frequency_to_transpose(pins->nC5Speed);
 		int transp = f2t >> 7;
 		int ftune = f2t & 0x7F;
 		if (ftune > 80)
