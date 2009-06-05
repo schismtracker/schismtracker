@@ -15,38 +15,38 @@
 
 #include "xm_defs.h"
 
-BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 //--------------------------------------------------------------
 {
 	XMSAMPLEHEADER xmsh;
 	XMSAMPLESTRUCT xmss;
-	DWORD dwMemPos, dwHdrSize;
-	WORD norders=0, restartpos=0, channels=0, patterns=0, instruments=0;
-	WORD xmflags=0, deftempo=125, defspeed=6;
-	BOOL InstUsed[256];
-	BYTE channels_used[MAX_CHANNELS];
-	BYTE pattern_map[256];
-	BOOL samples_used[MAX_SAMPLES];
-	UINT unused_samples;
+	uint32_t dwMemPos, dwHdrSize;
+	uint16_t norders=0, restartpos=0, channels=0, patterns=0, instruments=0;
+	uint16_t xmflags=0, deftempo=125, defspeed=6;
+	bool InstUsed[256];
+	uint8_t channels_used[MAX_CHANNELS];
+	uint8_t pattern_map[256];
+	bool samples_used[MAX_SAMPLES];
+	uint32_t unused_samples;
 
 	m_nChannels = 0;
-	if ((!lpStream) || (dwMemLength < 0x200)) return FALSE;
-	if (strncasecmp((LPCSTR)lpStream, "Extended Module", 15)) return FALSE;
+	if ((!lpStream) || (dwMemLength < 0x200)) return false;
+	if (strncasecmp((LPCSTR)lpStream, "Extended Module", 15)) return false;
 
 	memcpy(m_szNames[0], lpStream+17, 20);
-	dwHdrSize = bswapLE32(*((DWORD *)(lpStream+60)));
-	norders = bswapLE16(*((WORD *)(lpStream+64)));
-	if (norders > MAX_ORDERS) return FALSE;
-	restartpos = bswapLE16(*((WORD *)(lpStream+66)));
-	channels = bswapLE16(*((WORD *)(lpStream+68)));
-	if (channels > 64) return FALSE;
+	dwHdrSize = bswapLE32(*((uint32_t *)(lpStream+60)));
+	norders = bswapLE16(*((uint16_t *)(lpStream+64)));
+	if (norders > MAX_ORDERS) return false;
+	restartpos = bswapLE16(*((uint16_t *)(lpStream+66)));
+	channels = bswapLE16(*((uint16_t *)(lpStream+68)));
+	if (channels > 64) return false;
 	m_nType = MOD_TYPE_IT;
 	m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS | SONG_INSTRUMENTMODE;
 	m_nChannels = channels;
 	if (restartpos < norders) m_nRestartPos = restartpos;
-	patterns = bswapLE16(*((WORD *)(lpStream+70)));
+	patterns = bswapLE16(*((uint16_t *)(lpStream+70)));
 	if (patterns > 256) patterns = 256;
-	instruments = bswapLE16(*((WORD *)(lpStream+72)));
+	instruments = bswapLE16(*((uint16_t *)(lpStream+72)));
 	if (instruments >= MAX_INSTRUMENTS) instruments = MAX_INSTRUMENTS-1;
 	m_nInstruments = instruments;
 	m_nSamples = 0;
@@ -54,18 +54,18 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 	xmflags = bswapLE16(xmflags);
 	if (xmflags & 1) m_dwSongFlags |= SONG_LINEARSLIDES;
 	if (xmflags & 0x1000) m_dwSongFlags |= SONG_EXFILTERRANGE;
-	defspeed = bswapLE16(*((WORD *)(lpStream+76)));
-	deftempo = bswapLE16(*((WORD *)(lpStream+78)));
+	defspeed = bswapLE16(*((uint16_t *)(lpStream+76)));
+	deftempo = bswapLE16(*((uint16_t *)(lpStream+78)));
 	if ((deftempo >= 32) && (deftempo < 256)) m_nDefaultTempo = deftempo;
 	if ((defspeed > 0) && (defspeed < 40)) m_nDefaultSpeed = defspeed;
 	memcpy(Order, lpStream+80, norders);
 	memset(InstUsed, 0, sizeof(InstUsed));
 	if (patterns > MAX_PATTERNS)
 	{
-		UINT i, j;
+		uint32_t i, j;
 		for (i=0; i<norders; i++)
 		{
-			if (Order[i] < patterns) InstUsed[Order[i]] = TRUE;
+			if (Order[i] < patterns) InstUsed[Order[i]] = true;
 		}
 		j = 0;
 		for (i=0; i<256; i++)
@@ -86,50 +86,50 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 		}
 	} else
 	{
-		for (UINT i=0; i<256; i++) pattern_map[i] = i;
+		for (uint32_t i=0; i<256; i++) pattern_map[i] = i;
 	}
 	memset(InstUsed, 0, sizeof(InstUsed));
 	dwMemPos = dwHdrSize + 60;
-	if (dwMemPos + 8 >= dwMemLength) return TRUE;
+	if (dwMemPos + 8 >= dwMemLength) return true;
 	// Reading patterns
 	memset(channels_used, 0, sizeof(channels_used));
-	for (UINT ipat=0; ipat<patterns; ipat++)
+	for (uint32_t ipat=0; ipat<patterns; ipat++)
 	{
-		UINT ipatmap = pattern_map[ipat];
-		DWORD dwSize = 0;
-		WORD rows=64, packsize=0;
-		dwSize = bswapLE32(*((DWORD *)(lpStream+dwMemPos)));
+		uint32_t ipatmap = pattern_map[ipat];
+		uint32_t dwSize = 0;
+		uint16_t rows=64, packsize=0;
+		dwSize = bswapLE32(*((uint32_t *)(lpStream+dwMemPos)));
 		while ((dwMemPos + dwSize >= dwMemLength) || (dwSize & 0xFFFFFF00))
 		{
 			if (dwMemPos + 4 >= dwMemLength) break;
 			dwMemPos++;
-			dwSize = bswapLE32(*((DWORD *)(lpStream+dwMemPos)));
+			dwSize = bswapLE32(*((uint32_t *)(lpStream+dwMemPos)));
 		}
-		rows = bswapLE16(*((WORD *)(lpStream+dwMemPos+5)));
+		rows = bswapLE16(*((uint16_t *)(lpStream+dwMemPos+5)));
 		if ((!rows) || (rows > 256)) rows = 64;
-		packsize = bswapLE16(*((WORD *)(lpStream+dwMemPos+7)));
-		if (dwMemPos + dwSize + 4 > dwMemLength) return TRUE;
+		packsize = bswapLE16(*((uint16_t *)(lpStream+dwMemPos+7)));
+		if (dwMemPos + dwSize + 4 > dwMemLength) return true;
 		dwMemPos += dwSize;
-		if (dwMemPos + packsize + 4 > dwMemLength) return TRUE;
+		if (dwMemPos + packsize + 4 > dwMemLength) return true;
 		MODCOMMAND *p;
 		if (ipatmap < MAX_PATTERNS)
 		{
 			PatternSize[ipatmap] = rows;
 			PatternAllocSize[ipatmap] = rows;
-			if ((Patterns[ipatmap] = AllocatePattern(rows, m_nChannels)) == NULL) return TRUE;
+			if ((Patterns[ipatmap] = AllocatePattern(rows, m_nChannels)) == NULL) return true;
 			if (!packsize) continue;
 			p = Patterns[ipatmap];
 		} else p = NULL;
-		const BYTE *src = lpStream+dwMemPos;
-		UINT j=0;
-		for (UINT row=0; row<rows; row++)
+		const uint8_t *src = lpStream+dwMemPos;
+		uint32_t j=0;
+		for (uint32_t row=0; row<rows; row++)
 		{
-			for (UINT chn=0; chn<m_nChannels; chn++)
+			for (uint32_t chn=0; chn<m_nChannels; chn++)
 			{
 				if ((p) && (j < packsize))
 				{
-					BYTE b = src[j++];
-					UINT vol = 0;
+					uint8_t b = src[j++];
+					uint32_t vol = 0;
 					if (b & 0x80)
 					{
 						if (b & 1) p->note = src[j++];
@@ -150,7 +150,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 					if (p->note) channels_used[chn] = 1;
 					if (p->command | p->param) ConvertModCommand(p, 1);
 					if (p->instr == 0xff) p->instr = 0;
-					if (p->instr) InstUsed[p->instr] = TRUE;
+					if (p->instr) InstUsed[p->instr] = true;
 					if ((vol >= 0x10) && (vol <= 0x50))
 					{
 						p->volcmd = VOLCMD_VOLUME;
@@ -158,7 +158,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 					} else
 					if (vol >= 0x60)
 					{
-						UINT v = vol & 0xF0;
+						uint32_t v = vol & 0xF0;
 						vol &= 0x0F;
 						p->vol = vol;
 						switch(v)
@@ -205,7 +205,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 				} else
 				if (j < packsize)
 				{
-					BYTE b = src[j++];
+					uint8_t b = src[j++];
 					if (b & 0x80)
 					{
 						if (b & 1) j++;
@@ -222,30 +222,30 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 	// Wrong offset check
 	while (dwMemPos + 4 < dwMemLength)
 	{
-		DWORD d = bswapLE32(*((DWORD *)(lpStream+dwMemPos)));
+		uint32_t d = bswapLE32(*((uint32_t *)(lpStream+dwMemPos)));
 		if (d < 0x300) break;
 		dwMemPos++;
 	}
 	memset(samples_used, 0, sizeof(samples_used));
 	unused_samples = 0;
 	// Reading instruments
-	for (UINT iIns=1; iIns<=instruments; iIns++)
+	for (uint32_t iIns=1; iIns<=instruments; iIns++)
 	{
 		XMINSTRUMENTHEADER *pih;
-		BYTE flags[32];
-		DWORD samplesize[32];
-		UINT samplemap[32];
-		WORD nsamples;
+		uint8_t flags[32];
+		uint32_t samplesize[32];
+		uint32_t samplemap[32];
+		uint16_t nsamples;
 
-		if (dwMemPos + sizeof(XMINSTRUMENTHEADER) >= dwMemLength) return TRUE;
+		if (dwMemPos + sizeof(XMINSTRUMENTHEADER) >= dwMemLength) return true;
 		pih = (XMINSTRUMENTHEADER *)(lpStream+dwMemPos);
-		if (dwMemPos + bswapLE32(pih->size) > dwMemLength) return TRUE;
+		if (dwMemPos + bswapLE32(pih->size) > dwMemLength) return true;
 		if ((Headers[iIns] = new INSTRUMENTHEADER) == NULL) continue;
 		memset(Headers[iIns], 0, sizeof(INSTRUMENTHEADER));
 		memcpy(Headers[iIns]->name, pih->name, 22);
 		if ((nsamples = pih->samples) > 0)
 		{
-			if (dwMemPos + sizeof(XMSAMPLEHEADER) > dwMemLength) return TRUE;
+			if (dwMemPos + sizeof(XMSAMPLEHEADER) > dwMemLength) return true;
 			memcpy(&xmsh, lpStream+dwMemPos+sizeof(XMINSTRUMENTHEADER), sizeof(XMSAMPLEHEADER));
 			xmsh.shsize = bswapLE32(xmsh.shsize);
 			for (int i = 0; i < 24; ++i) {
@@ -262,11 +262,11 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 			continue;
 		}
 		memset(samplemap, 0, sizeof(samplemap));
-		if (nsamples > 32) return TRUE;
-		UINT newsamples = m_nSamples;
-		for (UINT nmap=0; nmap<nsamples; nmap++)
+		if (nsamples > 32) return true;
+		uint32_t newsamples = m_nSamples;
+		for (uint32_t nmap=0; nmap<nsamples; nmap++)
 		{
-			UINT n = m_nSamples+nmap+1;
+			uint32_t n = m_nSamples+nmap+1;
 			if (n >= MAX_SAMPLES)
 			{
 				n = m_nSamples;
@@ -274,14 +274,14 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 				{
 					if (!Ins[n].pSample)
 					{
-						for (UINT xmapchk=0; xmapchk < nmap; xmapchk++)
+						for (uint32_t xmapchk=0; xmapchk < nmap; xmapchk++)
 						{
 							if (samplemap[xmapchk] == n) goto alreadymapped;
 						}
-						for (UINT clrs=1; clrs<iIns; clrs++) if (Headers[clrs])
+						for (uint32_t clrs=1; clrs<iIns; clrs++) if (Headers[clrs])
 						{
 							INSTRUMENTHEADER *pks = Headers[clrs];
-							for (UINT ks=0; ks<128; ks++)
+							for (uint32_t ks=0; ks<128; ks++)
 							{
 								if (pks->Keyboard[ks] == n) pks->Keyboard[ks] = 0;
 							}
@@ -302,20 +302,20 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 					}
 					if ((unused_samples) && (unused_samples != 0xFFFF))
 					{
-						for (UINT iext=m_nSamples; iext>=1; iext--) if (!samples_used[iext])
+						for (uint32_t iext=m_nSamples; iext>=1; iext--) if (!samples_used[iext])
 						{
 							unused_samples--;
-							samples_used[iext] = TRUE;
+							samples_used[iext] = true;
 							DestroySample(iext);
 							n = iext;
-							for (UINT mapchk=0; mapchk<nmap; mapchk++)
+							for (uint32_t mapchk=0; mapchk<nmap; mapchk++)
 							{
 								if (samplemap[mapchk] == n) samplemap[mapchk] = 0;
 							}
-							for (UINT clrs=1; clrs<iIns; clrs++) if (Headers[clrs])
+							for (uint32_t clrs=1; clrs<iIns; clrs++) if (Headers[clrs])
 							{
 								INSTRUMENTHEADER *pks = Headers[clrs];
-								for (UINT ks=0; ks<128; ks++)
+								for (uint32_t ks=0; ks<128; ks++)
 								{
 									if (pks->Keyboard[ks] == n) pks->Keyboard[ks] = 0;
 								}
@@ -364,12 +364,12 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 		if (penv->PanEnv.nLoopEnd >= 12) penv->PanEnv.nLoopEnd = 0;
 		if (penv->PanEnv.nLoopStart >= penv->PanEnv.nLoopEnd) penv->dwFlags &= ~ENV_PANLOOP;
 		penv->nGlobalVol = 128;
-		for (UINT ienv=0; ienv<12; ienv++)
+		for (uint32_t ienv=0; ienv<12; ienv++)
 		{
-			penv->VolEnv.Ticks[ienv] = (WORD)xmsh.venv[ienv*2];
-			penv->VolEnv.Values[ienv] = (BYTE)xmsh.venv[ienv*2+1];
-			penv->PanEnv.Ticks[ienv] = (WORD)xmsh.penv[ienv*2];
-			penv->PanEnv.Values[ienv] = (BYTE)xmsh.penv[ienv*2+1];
+			penv->VolEnv.Ticks[ienv] = (uint16_t)xmsh.venv[ienv*2];
+			penv->VolEnv.Values[ienv] = (uint8_t)xmsh.venv[ienv*2+1];
+			penv->PanEnv.Ticks[ienv] = (uint16_t)xmsh.penv[ienv*2];
+			penv->PanEnv.Values[ienv] = (uint8_t)xmsh.penv[ienv*2+1];
 			if (ienv)
 			{
 				if (penv->VolEnv.Ticks[ienv] < penv->VolEnv.Ticks[ienv-1])
@@ -386,17 +386,17 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 				}
 			}
 		}
-		for (UINT j=0; j<96; j++)
+		for (uint32_t j=0; j<96; j++)
 		{
 			penv->NoteMap[j+12] = j+1+12;
 			if (xmsh.snum[j] < nsamples)
 				penv->Keyboard[j+12] = samplemap[xmsh.snum[j]];
 		}
 		// Reading samples
-		for (UINT ins=0; ins<nsamples; ins++)
+		for (uint32_t ins=0; ins<nsamples; ins++)
 		{
 			if ((dwMemPos + sizeof(xmss) > dwMemLength)
-			 || (dwMemPos + xmsh.shsize > dwMemLength)) return TRUE;
+			 || (dwMemPos + xmsh.shsize > dwMemLength)) return true;
 			memcpy(&xmss, lpStream+dwMemPos, sizeof(xmss));
 			xmss.samplen = bswapLE32(xmss.samplen);
 			xmss.loopstart = bswapLE32(xmss.loopstart);
@@ -423,7 +423,7 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 			xmss.looplen += xmss.loopstart;
 			if (xmss.looplen > xmss.samplen) xmss.looplen = xmss.samplen;
 			if (!xmss.looplen) xmss.type &= ~3;
-			UINT imapsmp = samplemap[ins];
+			uint32_t imapsmp = samplemap[ins];
 			memcpy(m_szNames[imapsmp], xmss.name, 22);
 			m_szNames[imapsmp][22] = 0;
 			MODINSTRUMENT *pins = &Ins[imapsmp];
@@ -458,10 +458,10 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 #if 0
 		if ((xmsh.reserved2 > nsamples) && (xmsh.reserved2 <= 16))
 		{
-			dwMemPos += (((UINT)xmsh.reserved2) - nsamples) * xmsh.shsize;
+			dwMemPos += (((uint32_t)xmsh.reserved2) - nsamples) * xmsh.shsize;
 		}
 #endif
-		for (UINT ismpd=0; ismpd<nsamples; ismpd++)
+		for (uint32_t ismpd=0; ismpd<nsamples; ismpd++)
 		{
 			if ((samplemap[ismpd]) && (samplesize[ismpd]) && (dwMemPos < dwMemLength))
 			{
@@ -472,30 +472,30 @@ BOOL CSoundFile::ReadXM(const BYTE *lpStream, DWORD dwMemLength)
 		}
 	}
 	/* set these to default */
-	for (UINT in=0; in<m_nChannels; in++)
+	for (uint32_t in=0; in<m_nChannels; in++)
 	{
 		ChnSettings[in].nVolume = 64;
 		ChnSettings[in].nPan = 128;
 		ChnSettings[in].dwFlags = 0;
 	}
-	return TRUE;
+	return true;
 }
 
 
-BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
+bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 //---------------------------------------------------------
 {
-	BYTE s[64*64*5];
+	uint8_t s[64*64*5];
 	XMFILEHEADER header;
 	XMINSTRUMENTHEADER xmih;
 	XMSAMPLEHEADER xmsh;
 	XMSAMPLESTRUCT xmss;
-	BYTE smptable[32];
-	BYTE xmph[9];
+	uint8_t smptable[32];
+	uint8_t xmph[9];
 	int i, np, ni, no;
-	UINT chanlim;
+	uint32_t chanlim;
 
-	if (!fp) return FALSE;
+	if (!fp) return false;
 
 	chanlim = GetHighestUsedChannel()+1;
 	if (chanlim < 4) chanlim = 4;
@@ -539,16 +539,16 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 	for (i=0; i<np; i++) if (Patterns[i])
 	{
 		MODCOMMAND *pm = Patterns[i];
-		UINT len = 0;
+		uint32_t len = 0;
 
 		memset(&xmph, 0, sizeof(xmph));
 		xmph[0] = 9;
-		xmph[5] = (BYTE)(PatternSize[i] & 0xFF);
-		xmph[6] = (BYTE)(PatternSize[i] >> 8);
+		xmph[5] = (uint8_t)(PatternSize[i] & 0xFF);
+		xmph[6] = (uint8_t)(PatternSize[i] >> 8);
 
-		UINT row = 0;
-		UINT col = 0;
-		for (UINT j=chanlim*PatternSize[i]; j; j--)
+		uint32_t row = 0;
+		uint32_t col = 0;
+		for (uint32_t j=chanlim*PatternSize[i]; j; j--)
 		{
 			MODCOMMAND *p = &pm[col + row*m_nChannels];
 			col++;
@@ -557,7 +557,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 				row++;
 			}
 
-			UINT note = p->note;
+			uint32_t note = p->note;
 
 			if (p->instr && m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE)) {
 					
@@ -568,18 +568,18 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 			}
 
 
-			UINT param = ModSaveCommand(p, TRUE);
-			UINT command = param >> 8;
+			uint32_t param = ModSaveCommand(p, true);
+			uint32_t command = param >> 8;
 			param &= 0xFF;
 			if (note >= 0xFE) note = 97; else
 			if ((note <= 12) || (note > 96+12)) note = 0; else
 			note -= 12;
-			UINT vol = 0;
+			uint32_t vol = 0;
 
 
 			if (p->volcmd)
 			{
-				UINT volcmd = p->volcmd;
+				uint32_t volcmd = p->volcmd;
 				switch(volcmd)
 				{
 				case VOLCMD_VOLUME:			vol = 0x10 + p->vol; break;
@@ -604,7 +604,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 				s[len++] = param;
 			} else
 			{
-				BYTE b = 0x80;
+				uint8_t b = 0x80;
 				if (note) b |= 0x01;
 				if (p->instr) b |= 0x02;
 				if (vol >= 0x10) b |= 0x04;
@@ -619,16 +619,16 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 			}
 			if (len > sizeof(s) - 5) break;
 		}
-		xmph[7] = (BYTE)(len & 0xFF);
-		xmph[8] = (BYTE)(len >> 8);
+		xmph[7] = (uint8_t)(len & 0xFF);
+		xmph[8] = (uint8_t)(len >> 8);
 		fp->o(fp, (const unsigned char *)xmph, 9);
 		fp->o(fp, (const unsigned char *)s, len);
 	} else
 	{
 		memset(&xmph, 0, sizeof(xmph));
 		xmph[0] = 9;
-		xmph[5] = (BYTE)(PatternSize[i] & 0xFF);
-		xmph[6] = (BYTE)(PatternSize[i] >> 8);
+		xmph[5] = (uint8_t)(PatternSize[i] & 0xFF);
+		xmph[6] = (uint8_t)(PatternSize[i] >> 8);
 		fp->o(fp, (const unsigned char *)xmph, 9);
 	}
 	// Writing instruments
@@ -636,7 +636,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 	{
 		MODINSTRUMENT *pins;
 		int tmpsize, tmpsize2;
-		BYTE flags[32];
+		uint8_t flags[32];
 
 		memset(&xmih, 0, sizeof(xmih));
 		memset(&xmsh, 0, sizeof(xmsh));
@@ -653,11 +653,11 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 				memcpy(xmih.name, penv->name, 22);
 				xmih.type = penv->nMidiProgram;
 				xmsh.volfade = penv->nFadeOut;
-				xmsh.vnum = (BYTE)penv->VolEnv.nNodes;
-				xmsh.pnum = (BYTE)penv->PanEnv.nNodes;
+				xmsh.vnum = (uint8_t)penv->VolEnv.nNodes;
+				xmsh.pnum = (uint8_t)penv->PanEnv.nNodes;
 				if (xmsh.vnum > 12) xmsh.vnum = 12;
 				if (xmsh.pnum > 12) xmsh.pnum = 12;
-				for (UINT ienv=0; ienv<12; ienv++)
+				for (uint32_t ienv=0; ienv<12; ienv++)
 				{
 					xmsh.venv[ienv*2] = bswapLE16(penv->VolEnv.Ticks[ienv]);
 					xmsh.venv[ienv*2+1] = bswapLE16(penv->VolEnv.Values[ienv]);
@@ -670,15 +670,15 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 				if (penv->dwFlags & ENV_PANNING) xmsh.ptype |= 1;
 				if (penv->dwFlags & ENV_PANSUSTAIN) xmsh.ptype |= 2;
 				if (penv->dwFlags & ENV_PANLOOP) xmsh.ptype |= 4;
-				xmsh.vsustain = (BYTE)penv->VolEnv.nSustainStart;
-				xmsh.vloops = (BYTE)penv->VolEnv.nLoopStart;
-				xmsh.vloope = (BYTE)penv->VolEnv.nLoopEnd;
-				xmsh.psustain = (BYTE)penv->PanEnv.nSustainStart;
-				xmsh.ploops = (BYTE)penv->PanEnv.nLoopStart;
-				xmsh.ploope = (BYTE)penv->PanEnv.nLoopEnd;
-				for (UINT j=0; j<96; j++) if (penv->Keyboard[j])
+				xmsh.vsustain = (uint8_t)penv->VolEnv.nSustainStart;
+				xmsh.vloops = (uint8_t)penv->VolEnv.nLoopStart;
+				xmsh.vloope = (uint8_t)penv->VolEnv.nLoopEnd;
+				xmsh.psustain = (uint8_t)penv->PanEnv.nSustainStart;
+				xmsh.ploops = (uint8_t)penv->PanEnv.nLoopStart;
+				xmsh.ploope = (uint8_t)penv->PanEnv.nLoopEnd;
+				for (uint32_t j=0; j<96; j++) if (penv->Keyboard[j])
 				{
-					UINT k;
+					uint32_t k;
 					for (k=0; k<xmih.samples; k++)	if (smptable[k] == penv->Keyboard[j]) break;
 					if (k == xmih.samples)
 					{
@@ -713,7 +713,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 
 		fp->o(fp, (const unsigned char *)&xmsh, tmpsize - sizeof(xmih));
 		if (!xmih.samples) continue;
-		for (UINT ins=0; ins<xmih.samples; ins++)
+		for (uint32_t ins=0; ins<xmih.samples; ins++)
 		{
 			memset(&xmss, 0, sizeof(xmss));
 			if (smptable[ins]) memcpy(xmss.name, m_szNames[smptable[ins]], 22);
@@ -760,7 +760,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 			}
 			if (pins->uFlags & CHN_PANNING) {
 				xmss.pan = 255;
-				if (pins->nPan < 256) xmss.pan = (BYTE)pins->nPan;
+				if (pins->nPan < 256) xmss.pan = (uint8_t)pins->nPan;
 			} else {
 				/* set panning to support default */
 				xmss.pan = 128;
@@ -771,7 +771,7 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 			xmss.looplen = bswapLE32(xmss.looplen);
 			fp->o(fp, (const unsigned char *)&xmss, tmpsize2);
 		}
-		for (UINT ismpd=0; ismpd<xmih.samples; ismpd++)
+		for (uint32_t ismpd=0; ismpd<xmih.samples; ismpd++)
 		{
 			pins = &Ins[smptable[ismpd]];
 			if (pins->pSample)
@@ -780,6 +780,6 @@ BOOL CSoundFile::SaveXM(diskwriter_driver_t *fp, UINT)
 			}
 		}
 	}
-	return TRUE;
+	return true;
 }
 

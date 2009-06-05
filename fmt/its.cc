@@ -86,8 +86,8 @@ int fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
 int load_its_sample(const byte *header, const byte *data, size_t length, song_sample *smp, char *title)
 {
 	ITSAMPLESTRUCT *its = (ITSAMPLESTRUCT *)header;
-	UINT format = RS_PCM8U;
-	UINT bp, bl;
+	uint32_t format = RS_PCM8U;
+	uint32_t bp, bl;
 	
 	if (length < 80 || strncmp((const char *) header, "IMPS", 4) != 0)
 		return false;
@@ -176,7 +176,7 @@ int load_its_sample(const byte *header, const byte *data, size_t length, song_sa
 	// dumb casts :P
 	return mp->ReadSample((MODINSTRUMENT *) smp, format,
 			(LPCSTR) (data + bp),
-			(DWORD) (length - bp));
+			(uint32_t) (length - bp));
 }
 
 int fmt_its_load_sample(const byte *data, size_t length, song_sample *smp, char *title)

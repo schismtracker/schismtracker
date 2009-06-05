@@ -18,42 +18,42 @@
 // Raw ULT header struct:
 typedef struct tagULTHEADER
 {
-        char id[15];             // changed from CHAR
-        char songtitle[32];      // changed from CHAR
-	BYTE reserved;
+        char id[15];             // changed from int8_t
+        char songtitle[32];      // changed from int8_t
+	uint8_t reserved;
 } ULTHEADER;
 
 
 // Raw ULT sampleinfo struct:
 typedef struct tagULTSAMPLE
 {
-	CHAR samplename[32];
-	CHAR dosname[12];
-	LONG loopstart;
-	LONG loopend;
-	LONG sizestart;
-	LONG sizeend;
-	BYTE volume;
-	BYTE flags;
-	WORD finetune;
+	int8_t samplename[32];
+	int8_t dosname[12];
+	int32_t loopstart;
+	int32_t loopend;
+	int32_t sizestart;
+	int32_t sizeend;
+	uint8_t volume;
+	uint8_t flags;
+	uint16_t finetune;
 } ULTSAMPLE;
 
 #pragma pack()
 
 
-BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 //---------------------------------------------------------------
 {
 	ULTHEADER *pmh = (ULTHEADER *)lpStream;
 	ULTSAMPLE *pus;
-	UINT nos, nop;
-	DWORD dwMemPos = 0;
+	uint32_t nos, nop;
+	uint32_t dwMemPos = 0;
 
 	// try to read module header
-	if ((!lpStream) || (dwMemLength < 0x100)) return FALSE;
-	if (strncmp(pmh->id,"MAS_UTrack_V00",14)) return FALSE;
+	if ((!lpStream) || (dwMemLength < 0x100)) return false;
+	if (strncmp(pmh->id,"MAS_UTrack_V00",14)) return false;
 	// Warning! Not supported ULT format, trying anyway
-	// if ((pmh->id[14] < '1') || (pmh->id[14] > '4')) return FALSE;
+	// if ((pmh->id[14] < '1') || (pmh->id[14] > '4')) return false;
 	m_nType = MOD_TYPE_ULT;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
@@ -62,11 +62,11 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 	dwMemPos = sizeof(ULTHEADER);
 	if ((pmh->reserved) && (dwMemPos + pmh->reserved * 32 < dwMemLength))
 	{
-		UINT len = pmh->reserved * 32;
+		uint32_t len = pmh->reserved * 32;
 		m_lpszSongComments = new char[len + 1 + pmh->reserved];
 		if (m_lpszSongComments)
 		{
-			for (UINT l=0; l<pmh->reserved; l++)
+			for (uint32_t l=0; l<pmh->reserved; l++)
 			{
 				memcpy(m_lpszSongComments+l*33, lpStream+dwMemPos+l*32, 32);
 				m_lpszSongComments[l*33+32] = 0x0D;
@@ -75,14 +75,14 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 		}
 		dwMemPos += len;
 	}
-	if (dwMemPos >= dwMemLength) return TRUE;
+	if (dwMemPos >= dwMemLength) return true;
 	nos = lpStream[dwMemPos++];
 	m_nSamples = nos;
 	if (m_nSamples >= MAX_SAMPLES) m_nSamples = MAX_SAMPLES-1;
-	UINT smpsize = 64;
+	uint32_t smpsize = 64;
 	if (pmh->id[14] >= '4')	smpsize += 2;
-	if (dwMemPos + nos*smpsize + 256 + 2 > dwMemLength) return TRUE;
-	for (UINT ins=1; ins<=nos; ins++, dwMemPos+=smpsize) if (ins<=m_nSamples)
+	if (dwMemPos + nos*smpsize + 256 + 2 > dwMemLength) return true;
+	for (uint32_t ins=1; ins<=nos; ins++, dwMemPos+=smpsize) if (ins<=m_nSamples)
 	{
 		pus	= (ULTSAMPLE *)(lpStream+dwMemPos);
 		MODINSTRUMENT *pins = &Ins[ins];
@@ -114,7 +114,7 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 	dwMemPos += 2;
 	if (m_nChannels > 32) m_nChannels = 32;
 	// Default channel settings
-	for (UINT nSet=0; nSet<m_nChannels; nSet++)
+	for (uint32_t nSet=0; nSet<m_nChannels; nSet++)
 	{
 		ChnSettings[nSet].nVolume = 64;
 		ChnSettings[nSet].nPan = (nSet & 1) ? 0x40 : 0xC0;
@@ -122,15 +122,15 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 	// read pan position table for v1.5 and higher
 	if(pmh->id[14]>='3')
 	{
-		if (dwMemPos + m_nChannels > dwMemLength) return TRUE;
-		for(UINT t=0; t<m_nChannels; t++)
+		if (dwMemPos + m_nChannels > dwMemLength) return true;
+		for(uint32_t t=0; t<m_nChannels; t++)
 		{
 			ChnSettings[t].nPan = (lpStream[dwMemPos++] << 4) + 8;
 			if (ChnSettings[t].nPan > 256) ChnSettings[t].nPan = 256;
 		}
 	}
 	// Allocating Patterns
-	for (UINT nAllocPat=0; nAllocPat<nop; nAllocPat++)
+	for (uint32_t nAllocPat=0; nAllocPat<nop; nAllocPat++)
 	{
 		if (nAllocPat < MAX_PATTERNS)
 		{
@@ -140,9 +140,9 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 		}
 	}
 	// Reading Patterns
-	for (UINT nChn=0; nChn<m_nChannels; nChn++)
+	for (uint32_t nChn=0; nChn<m_nChannels; nChn++)
 	{
-		for (UINT nPat=0; nPat<nop; nPat++)
+		for (uint32_t nPat=0; nPat<nop; nPat++)
 		{
 			MODCOMMAND *pat = NULL;
 			
@@ -151,24 +151,24 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 				pat = Patterns[nPat];
 				if (pat) pat += nChn;
 			}
-			UINT row = 0;
+			uint32_t row = 0;
 			while (row < 64)
 			{
-				if (dwMemPos + 6 > dwMemLength) return TRUE;
-				UINT rep = 1;
-				UINT note = lpStream[dwMemPos++];
+				if (dwMemPos + 6 > dwMemLength) return true;
+				uint32_t rep = 1;
+				uint32_t note = lpStream[dwMemPos++];
 				if (note == 0xFC)
 				{
 					rep = lpStream[dwMemPos];
 					note = lpStream[dwMemPos+1];
 					dwMemPos += 2;
 				}
-				UINT instr = lpStream[dwMemPos++];
-				UINT eff = lpStream[dwMemPos++];
-				UINT dat1 = lpStream[dwMemPos++];
-				UINT dat2 = lpStream[dwMemPos++];
-				UINT cmd1 = eff & 0x0F;
-				UINT cmd2 = eff >> 4;
+				uint32_t instr = lpStream[dwMemPos++];
+				uint32_t eff = lpStream[dwMemPos++];
+				uint32_t dat1 = lpStream[dwMemPos++];
+				uint32_t dat2 = lpStream[dwMemPos++];
+				uint32_t cmd1 = eff & 0x0F;
+				uint32_t cmd2 = eff >> 4;
 				if (cmd1 == 0x0C) dat1 >>= 2; else
 				if (cmd1 == 0x0B) { cmd1 = dat1 = 0; }
 				if (cmd2 == 0x0C) dat2 >>= 2; else
@@ -212,12 +212,12 @@ BOOL CSoundFile::ReadUlt(const BYTE *lpStream, DWORD dwMemLength)
 		}
 	}
 	// Reading Instruments
-	for (UINT smp=1; smp<=m_nSamples; smp++) if (Ins[smp].nLength)
+	for (uint32_t smp=1; smp<=m_nSamples; smp++) if (Ins[smp].nLength)
 	{
-		if (dwMemPos >= dwMemLength) return TRUE;
-		UINT flags = (Ins[smp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
+		if (dwMemPos >= dwMemLength) return true;
+		uint32_t flags = (Ins[smp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
 		dwMemPos += ReadSample(&Ins[smp], flags, (LPSTR)(lpStream+dwMemPos), dwMemLength - dwMemPos);
 	}
-	return TRUE;
+	return true;
 }
 

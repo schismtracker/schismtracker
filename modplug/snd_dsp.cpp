@@ -16,8 +16,8 @@ void (*CSoundFile::_midi_out_raw)(const unsigned char *,unsigned int, unsigned i
 // DSP Effects internal state
 
 // Noise Reduction: simple low-pass filter
-static LONG nLeftNR = 0;
-static LONG nRightNR = 0;
+static int32_t nLeftNR = 0;
+static int32_t nRightNR = 0;
 
 // Access the main temporary mix buffer directly: avoids an extra pointer
 extern int MixSoundBuffer[MIXBUFFERSIZE*2];
@@ -77,9 +77,9 @@ void csf_process_mono_dsp(CSoundFile *csf, int count)
 /////////////////////////////////////////////////////////////////
 // Clean DSP Effects interface
 
-int csf_set_wave_config_ex(CSoundFile *csf,BOOL,BOOL,BOOL,BOOL hqido,BOOL,BOOL bNR,BOOL bEQ)
+int csf_set_wave_config_ex(CSoundFile *csf,bool,bool,bool,bool hqido,bool,bool bNR,bool bEQ)
 {
-        DWORD d = csf->gdwSoundSetup & ~(SNDMIX_NORESAMPLING | SNDMIX_HQRESAMPLER | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
+        uint32_t d = csf->gdwSoundSetup & ~(SNDMIX_NORESAMPLING | SNDMIX_HQRESAMPLER | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
 
 //      if (bNoOverSampling) d |= SNDMIX_NORESAMPLING;
         if (hqido) d |= SNDMIX_HQRESAMPLER;
@@ -87,7 +87,7 @@ int csf_set_wave_config_ex(CSoundFile *csf,BOOL,BOOL,BOOL,BOOL hqido,BOOL,BOOL b
         if (bEQ) d |= SNDMIX_EQ;
 
         csf->gdwSoundSetup = d;
-        csf_init_player(csf, FALSE);
-        return TRUE;
+        csf_init_player(csf, false);
+        return true;
 }
 

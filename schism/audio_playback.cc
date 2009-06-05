@@ -267,11 +267,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			if ((c->pSample || c->nRealtime) && note < 0x80) {
 				/* doesn't quite seem fair otherwise */
 				mp->NoteChange(chan, c->nRowNote,
-							FALSE, TRUE, FALSE);
+							false, true, false);
 				mp->ProcessEffects();
 				mp->CheckNNA(chan, ins_mode
 						? ins : samp, note,
-						FALSE);
+						false);
 			}
 			c->nPos = c->nPosLo = c->nLength = 0;
 			c->nInc = 1; /* weird... */
@@ -308,7 +308,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 			c->nGlobalVol = 64;
 			if (vol > -1) c->nVolume = (vol << 2);
-			mp->NoteChange(chan, note, FALSE, TRUE, TRUE);
+			mp->NoteChange(chan, note, false, true, true);
 			c->nMasterChn = chan % 64;
 		} else {
 			while (chan >= 64) chan -= 64;
@@ -319,11 +319,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				/* process the previous note */
 				/* (audio thread isn't there yet) */
 				mp->NoteChange(chan, c->nRowNote,
-							FALSE, TRUE, FALSE);
+							false, true, false);
 				mp->ProcessEffects();
 				mp->CheckNNA(chan, ins_mode
 						? ins : samp, note,
-						FALSE);
+						false);
 
 			}
 
@@ -515,7 +515,7 @@ static void song_reset_play_state()
 				| SNDMIX_NOMIXING
 				| SNDMIX_DIRECTTODISK);
 
-	csf_initialize_dsp(mp, TRUE);
+	csf_initialize_dsp(mp, true);
 
 	mp->m_nCurrentPattern = 255; // hack...
 	mp->m_nNextPattern = 0;
@@ -925,7 +925,7 @@ void song_update_playing_instrument(int i_changed)
 	while (n--) {
 		channel = mp->Chn + mp->ChnMix[n];
 		if (channel->pHeader && channel->pHeader == mp->Headers[i_changed]) {
-			mp->InstrumentChange(channel, i_changed, TRUE, FALSE, FALSE);
+			mp->InstrumentChange(channel, i_changed, true, false, false);
 			inst = channel->pHeader;
 			if (!inst) continue;
 
@@ -939,11 +939,11 @@ void song_update_playing_instrument(int i_changed)
 			}
 			if (inst->nIFC & 0x80) {
 				channel->nCutOff = inst->nIFC & 0x7F;
-				setup_channel_filter(channel, FALSE, 256, mp->gdwMixingFreq);
+				setup_channel_filter(channel, false, 256, mp->gdwMixingFreq);
 			} else {
 				channel->nCutOff = 0x7F;
 				if (inst->nIFR & 0x80) {
-					setup_channel_filter(channel, FALSE, 256, mp->gdwMixingFreq);
+					setup_channel_filter(channel, false, 256, mp->gdwMixingFreq);
 				}
 			}
 
@@ -1634,8 +1634,8 @@ RETRY:	using_driver = driver;
 
 void song_init_eq(int do_reset)
 {
-	UINT pg[4];
-	UINT pf[4];
+	uint32_t pg[4];
+	uint32_t pf[4];
 	int i;
 
 	for (i = 0; i < 4; i++) {
@@ -1644,7 +1644,7 @@ void song_init_eq(int do_reset)
 			* (CSoundFile::gdwMixingFreq / 128) / 1024);
 	}
 
-	set_eq_gains(pg, 4, pf, do_reset ? TRUE : FALSE, mp->gdwMixingFreq);
+	set_eq_gains(pg, 4, pf, do_reset ? true : false, mp->gdwMixingFreq);
 }
 
 

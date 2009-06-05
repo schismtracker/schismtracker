@@ -5,55 +5,55 @@
 
 typedef struct tagXMFILEHEADER
 {
-	DWORD size;
-	WORD norder;
-	WORD restartpos;
-	WORD channels;
-	WORD patterns;
-	WORD instruments;
-	WORD flags;
-	WORD speed;
-	WORD tempo;
-	BYTE order[256];
+	uint32_t size;
+	uint16_t norder;
+	uint16_t restartpos;
+	uint16_t channels;
+	uint16_t patterns;
+	uint16_t instruments;
+	uint16_t flags;
+	uint16_t speed;
+	uint16_t tempo;
+	uint8_t order[256];
 } XMFILEHEADER;
 
 
 typedef struct tagXMINSTRUMENTHEADER
 {
-	DWORD size;
-	CHAR name[22];
-	BYTE type;
-	BYTE samples;
-	BYTE samplesh;
+	uint32_t size;
+	int8_t name[22];
+	uint8_t type;
+	uint8_t samples;
+	uint8_t samplesh;
 } XMINSTRUMENTHEADER;
 
 
 typedef struct tagXMSAMPLEHEADER
 {
-	DWORD shsize;
-	BYTE snum[96];
-	WORD venv[24];
-	WORD penv[24];
-	BYTE vnum, pnum;
-	BYTE vsustain, vloops, vloope, psustain, ploops, ploope;
-	BYTE vtype, ptype;
-	BYTE vibtype, vibsweep, vibdepth, vibrate;
-	WORD volfade;
-	WORD res;
-	BYTE reserved1[20];
+	uint32_t shsize;
+	uint8_t snum[96];
+	uint16_t venv[24];
+	uint16_t penv[24];
+	uint8_t vnum, pnum;
+	uint8_t vsustain, vloops, vloope, psustain, ploops, ploope;
+	uint8_t vtype, ptype;
+	uint8_t vibtype, vibsweep, vibdepth, vibrate;
+	uint16_t volfade;
+	uint16_t res;
+	uint8_t reserved1[20];
 } XMSAMPLEHEADER;
 
 typedef struct tagXMSAMPLESTRUCT
 {
-	DWORD samplen;
-	DWORD loopstart;
-	DWORD looplen;
-	BYTE vol;
+	uint32_t samplen;
+	uint32_t loopstart;
+	uint32_t looplen;
+	uint8_t vol;
 	signed char finetune;
-	BYTE type;
-	BYTE pan;
+	uint8_t type;
+	uint8_t pan;
 	signed char relnote;
-	BYTE res;
+	uint8_t res;
 	char name[22];
 } XMSAMPLESTRUCT;
 
