@@ -207,9 +207,6 @@ struct audio_settings {
 	int channel_limit, interpolation_mode;
 	int oversampling, hq_resampling;
 	int noise_reduction, surround_effect;
-	int xbass, xbass_amount, xbass_range;
-	int surround, surround_depth, surround_delay;
-	int reverb, reverb_depth, reverb_delay;
 
 	unsigned int eq_freq[4];
 	unsigned int eq_gain[4];
@@ -272,8 +269,6 @@ enum {
         CHN_PITCHENV = (0x800000),
         CHN_FASTVOLRAMP = (0x1000000),
         //CHN_EXTRALOUD = (0x2000000),
-        CHN_REVERB = (0x4000000),
-        CHN_NOREVERB = (0x8000000),
 };
 
 // instrument envelope flags

@@ -18,7 +18,7 @@
 
 // SNDMIX: These are global flags for playback control
 LONG CSoundFile::m_nStreamVolume = 0x8000;
-unsigned int CSoundFile::m_nMaxMixChannels = 32;
+unsigned int CSoundFile::m_nMaxMixChannels = 32; // ITT is 1994
 // Mixing Configuration (SetWaveConfig)
 DWORD CSoundFile::gdwSysInfo = 0;
 DWORD CSoundFile::gnChannels = 1;
@@ -33,8 +33,6 @@ LPSNDMIXHOOKPROC CSoundFile::gpSndMixHook = NULL;
 PMIXPLUGINCREATEPROC CSoundFile::gpMixPluginCreateProc = NULL;
 LONG gnDryROfsVol = 0;
 LONG gnDryLOfsVol = 0;
-LONG gnRvbROfsVol = 0;
-LONG gnRvbLOfsVol = 0;
 int gbInitPlugins = 0;
 
 typedef DWORD (MPPASMCALL * LPCONVERTPROC)(LPVOID, int *, DWORD, LPLONG, LPLONG);
@@ -46,7 +44,6 @@ extern void stereo_fill(int *, unsigned int, int *, int *);
 extern int MixSoundBuffer[MIXBUFFERSIZE*4];
 extern int MixRearBuffer[MIXBUFFERSIZE*2];
 
-unsigned int gnReverbSend;
 
 
 // The volume we have here is in range 0..(63*255) (0..16065)
@@ -118,7 +115,6 @@ int csf_init_player(CSoundFile *csf, int reset)
 		csf->gnVolumeRampSamples = 2;
 
 	gnDryROfsVol = gnDryLOfsVol = 0;
-	gnRvbROfsVol = gnRvbLOfsVol = 0;
 
 	if (reset) {
 		csf->gnVULeft  = 0;
@@ -211,9 +207,6 @@ unsigned int csf_read(CSoundFile *csf, LPVOID lpDestBuffer, unsigned int cbBuffe
 			break;
 
 		lSampleCount = lCount;
-#ifndef MODPLUG_NO_REVERB
-		gnReverbSend = 0;
-#endif
 
 		// Resetting sound buffer
 		stereo_fill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
@@ -1043,7 +1036,7 @@ static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, 
 	chan->nRightRamp =
 	chan->nLeftRamp  = 0;
 
-	// Dolby Pro-Logic Surround
+	// Dolby Pro-Logic Surround (S91)
 	if (chan->dwFlags & CHN_SURROUND &&
 		csf->gnChannels <= 2 &&
 		!(csf->gdwSoundSetup & SNDMIX_NOSURROUND))

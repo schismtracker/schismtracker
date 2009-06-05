@@ -34,6 +34,8 @@
 
 #define VOLUME_SCALE	31
 
+/* this page will be the first against the wall when the revolution comes */
+
 /* --------------------------------------------------------------------- */
 /* statics */
 
@@ -86,10 +88,6 @@ static void preferences_draw_const(void)
 	draw_fill_chars(73, 29, 77, 31, 0);
 	draw_box(69, 28, 78, 32,  BOX_THIN | BOX_INNER | BOX_INSET);
 
-        draw_text("XBass", 64, 29, 0, 2);
-        draw_text("Reverb", 63, 30, 0, 2);
-        draw_text("Surround", 61, 31, 0, 2);
-
 #define CORNER_BOTTOM "http://schismtracker.org/"
 	draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 48, 1, 2);
 }
@@ -130,10 +128,6 @@ static void preferences_set_page(void)
 				= audio_settings.no_ramping?1:0;
         widgets_preferences[i+13].d.toggle.state = audio_settings.oversampling;
         widgets_preferences[i+14].d.toggle.state = audio_settings.noise_reduction;
-	widgets_preferences[i+15].d.toggle.state = audio_settings.xbass;
-	widgets_preferences[i+16].d.toggle.state = audio_settings.reverb;
-	widgets_preferences[i+17].d.toggle.state = audio_settings.surround;
-
 }
 
 /* --------------------------------------------------------------------- */
@@ -159,136 +153,7 @@ static void change_eq(void)
 	song_init_eq(1);
 }
 
-static struct widget dsp_dialog_widgets[4];
-static const char *dsp_dialog_title = "(null)";
-static const char *dsp_dialog_label1 = "(null)";
-static const char *dsp_dialog_label2 = "(null)";
-static int *dsp_value0;
-static int *dsp_value1, dsp_value_save1;
-static int *dsp_value2, dsp_value_save2;
 
-static void draw_dsp_dialog_const(void)
-{
-	int len;
-	len = strlen(dsp_dialog_title);
-	draw_text(dsp_dialog_title, 40 - (len/2), 24, 0, 2);
-
-	len = strlen(dsp_dialog_label1);
-	draw_text(dsp_dialog_label1, 29 - len, 27, 0, 2);
-
-	len = strlen(dsp_dialog_label2);
-	draw_text(dsp_dialog_label2, 29 - len, 28, 0, 2);
-
-        draw_box(29, 26, 55, 29, BOX_THIN | BOX_INNER | BOX_INSET);
-}
-static void dsp_dialog_update(UNUSED void*ign)
-{
-	*dsp_value1 = dsp_dialog_widgets[0].d.thumbbar.value;
-	*dsp_value2 = dsp_dialog_widgets[1].d.thumbbar.value;
-	song_init_modplug();
-}
-static void dsp_dialog_ok(UNUSED void *ign)
-{
-	dialog_destroy();
-	status.flags |= NEED_UPDATE;
-}
-static void dsp_dialog_cancel(UNUSED void*ign)
-{
-	int i;
-
-	*dsp_value0 = 0;
-
-	for (i = 0; interpolation_modes[i]; i++);
-	widgets_preferences[i+15].d.toggle.state = audio_settings.xbass;
-	widgets_preferences[i+16].d.toggle.state = audio_settings.reverb;
-	widgets_preferences[i+17].d.toggle.state = audio_settings.surround;
-
-	*dsp_value1 = dsp_value_save1;
-	*dsp_value2 = dsp_value_save2;
-	dialog_destroy();
-	dsp_dialog_update(0);
-	status.flags |= NEED_UPDATE;
-}
-
-/* do we need these unused parameters? */
-static void show_dsp_dialog(const char *text, int *ov,
-		const char *label1, int low1, int high1, int *v1,
-		const char *label2, UNUSED int low2, UNUSED int high2, int *v2)
-{
-	struct dialog *d;
-
-	dsp_dialog_title = text;
-	dsp_dialog_label1 = label1;
-	dsp_dialog_label2 = label2;
-	create_thumbbar(dsp_dialog_widgets+0, 30, 27, 25, 0, 1, 1,
-					(void *) dsp_dialog_update, low1, high1);
-	create_thumbbar(dsp_dialog_widgets+1, 30, 28, 25, 0, 2, 2,
-					(void *) dsp_dialog_update, low1, high1);
-	dsp_value0 = ov;
-	dsp_value1 = v1; dsp_dialog_widgets[0].d.thumbbar.value = *v1;
-	dsp_value2 = v2; dsp_dialog_widgets[1].d.thumbbar.value = *v2;
-	create_button(dsp_dialog_widgets+2, 28,31,8, 1, 2, 2, 3, 3,
-					(void *) dsp_dialog_ok, "OK", 4);
-	create_button(dsp_dialog_widgets+3, 42,31,8, 1, 2, 2, 3, 3,
-					(void *) dsp_dialog_cancel, "Cancel", 2);
-	d = dialog_create_custom(20, 22, 40, 12,
-			dsp_dialog_widgets,
-			4, 2,
-			draw_dsp_dialog_const,0);
-	d->action_yes = dsp_dialog_ok;
-	d->action_no = dsp_dialog_cancel;
-	d->action_cancel = dsp_dialog_cancel;
-}
-
-
-static void change_mixer_xbass(void)
-{
-	int i;
-	for (i = 0; interpolation_modes[i]; i++);
-
-	audio_settings.xbass = widgets_preferences[i+15].d.toggle.state;
-	song_init_modplug();
-
-	if (!audio_settings.xbass) {
-		return;
-	}
-
-	show_dsp_dialog("XBass Expansion", &audio_settings.xbass,
-		"Amount", 0, 100, &audio_settings.xbass_amount,
-		"Range", 10, 100, &audio_settings.xbass_range);
-}
-static void change_mixer_reverb(void)
-{
-	int i;
-	for (i = 0; interpolation_modes[i]; i++);
-
-	audio_settings.reverb = widgets_preferences[i+16].d.toggle.state;
-	song_init_modplug();
-
-	if (!audio_settings.reverb) {
-		return;
-	}
-
-	show_dsp_dialog("Reverb", &audio_settings.reverb,
-		"Depth", 0, 100, &audio_settings.reverb_depth,
-		"Delay", 40, 200, &audio_settings.reverb_delay);
-}
-static void change_mixer_surround(void)
-{
-	int i;
-	for (i = 0; interpolation_modes[i]; i++);
-
-	audio_settings.surround = widgets_preferences[i+17].d.toggle.state;
-	song_init_modplug();
-
-	if (!audio_settings.surround) {
-		return;
-	}
-
-	show_dsp_dialog("Surround Expansion", &audio_settings.surround,
-		"Depth", 0, 100, &audio_settings.surround_depth,
-		"Delay", 5, 50, &audio_settings.surround_delay);
-}
 static void change_mixer(void)
 {
 	int i;
@@ -323,7 +188,7 @@ void preferences_load_page(struct page *page)
         page->title = "Preferences (Shift-F5)";
         page->draw_const = preferences_draw_const;
         page->set_page = preferences_set_page;
-        page->total_widgets = 18;
+        page->total_widgets = 15;
         page->widgets = widgets_preferences;
         page->help_index = HELP_GLOBAL;
 
@@ -400,16 +265,5 @@ void preferences_load_page(struct page *page)
 			70, 26,
 			i+13,i+15,1+i, i+14,i+15,
 			change_mixer);
-	create_toggle(widgets_preferences+i+15,	/* XBass */
-			70, 29,
-			i+14,i+16,1+i, i+15,i+16,
-			change_mixer_xbass);
-	create_toggle(widgets_preferences+i+16,	/* Reverb */
-			70, 30,
-			i+15,i+17,1+i, i+16,i+17,
-			change_mixer_reverb);
-	create_toggle(widgets_preferences+i+17,	/* Surround */
-			70, 31,
-			i+16,i+17,1+i, i+17,0,
-			change_mixer_surround);
 }
+
