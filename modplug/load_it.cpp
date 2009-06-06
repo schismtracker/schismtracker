@@ -6,7 +6,6 @@
 */
 #define NEED_BYTESWAP
 
-#include "stdafx.h"
 #include "sndfile.h"
 #include "it_defs.h"
 

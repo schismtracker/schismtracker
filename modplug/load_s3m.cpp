@@ -8,7 +8,6 @@
 
 #include "headers.h"
 
-#include "stdafx.h"
 #include "sndfile.h"
 #include "midi.h"
 #include "it.h"

@@ -12,7 +12,6 @@
  * Trevor Nunes        26/01/04         conditional compilation for AMD,MMX calls
  *
  */
-#include "stdafx.h"
 #include "sndfile.h"
 #include "cmixer.h"
 #include "snd_eq.h"

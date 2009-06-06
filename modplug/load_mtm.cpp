@@ -5,7 +5,6 @@
 */
 #define NEED_BYTESWAP
 
-#include "stdafx.h"
 #include "sndfile.h"
 
 //#pragma warning(disable:4244)

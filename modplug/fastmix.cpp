@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "stdafx.h"
 #include "sndfile.h"
 #include "snd_fm.h"
 #include "snd_gm.h"

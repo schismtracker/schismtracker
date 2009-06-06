@@ -5,7 +5,6 @@
 */
 #define NEED_BYTESWAP
 
-#include "stdafx.h"
 #include "sndfile.h"
 
 #define WAVE_FORMAT_PCM 1
