@@ -4,17 +4,22 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>,
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
+#ifndef __SNDFILE_H
+#define __SNDFILE_H
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
+#define NEED_BYTESWAP
+#include "headers.h"
+
 #ifdef __cplusplus
-#include "diskwriter.h"
+# include "diskwriter.h"
 #endif
 
-#ifndef __SNDFILE_H
-#define __SNDFILE_H
+#include "tables.h"
+
 
 
 #define MOD_AMIGAC2             0x1AB
@@ -902,12 +907,6 @@ static inline int _muldivr(int a, int b, int c)
 	return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
 }
 
-
-
-#include "tables.h"
-
-#define NEED_BYTESWAP
-#include "headers.h"
 
 #endif
 
