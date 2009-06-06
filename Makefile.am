@@ -92,7 +92,6 @@ noinst_HEADERS = \
 	modplug/snd_fm.h		\
 	modplug/snd_fx.h		\
 	modplug/snd_gm.h		\
-	modplug/stdafx.h		\
 	modplug/xm_defs.h
 
 if USE_X11
