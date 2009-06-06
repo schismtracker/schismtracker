@@ -1387,12 +1387,6 @@ static void sample_list_handle_alt_key(struct key_event * k)
 
 static unsigned long calc_halftone(unsigned long hz, int rel)
 {
-	/* You wouldn't believe how long it took for me to figure this out. I had to calculate the
-	logarithmic regression of the values that Impulse Tracker produced and figure out what the
-	coefficients had to do with the number twelve... I don't imagine I'll forget this formula
-	now. :)
-	(FIXME: integer math and all that. Not that I exactly care, since this isn't at all
-	performance-critical, but in principle it'd be a good idea.) */
 	return pow(2, rel / 12.0) * hz + 0.5;
 }
 
