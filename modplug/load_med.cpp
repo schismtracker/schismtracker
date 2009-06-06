@@ -6,7 +6,6 @@
 */
 #define NEED_BYTESWAP
 
-#include "stdafx.h"
 #include "sndfile.h"
 
 //#define MED_LOG

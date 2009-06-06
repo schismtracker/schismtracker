@@ -7,7 +7,6 @@
 ////////////////////////////////////////
 // Farandole (FAR) module loader	  //
 ////////////////////////////////////////
-#include "stdafx.h"
 #include "sndfile.h"
 
 //#pragma warning(disable:4244)

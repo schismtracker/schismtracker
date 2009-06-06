@@ -10,7 +10,6 @@
 // 669 Composer / UNIS 669 module loader
 ////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
 #include "sndfile.h"
 
 //#pragma warning(disable:4244)

@@ -7,7 +7,6 @@
 
 #include <string.h>
 
-#include "stdafx.h"
 #include "sndfile.h"
 
 #include "cmixer.h"

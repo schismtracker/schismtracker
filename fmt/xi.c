@@ -28,7 +28,6 @@
 #include "song.h"
 
 #ifndef WIN32
-#include "stdafx.h"
 #endif
 
 #include "snd_fx.h"

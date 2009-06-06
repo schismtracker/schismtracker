@@ -4,7 +4,6 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>
 */
 
-#include "stdafx.h"
 #include "sndfile.h"
 #include "snd_fm.h"
 #include "snd_gm.h"

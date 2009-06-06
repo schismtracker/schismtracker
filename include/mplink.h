@@ -27,7 +27,6 @@
 #include "song.h"
 
 #ifdef __cplusplus
-#include "stdafx.h"
 #include "sndfile.h"
 
 extern CSoundFile *mp;

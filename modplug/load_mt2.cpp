@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "sndfile.h"
 #include "snd_fx.h"
 
