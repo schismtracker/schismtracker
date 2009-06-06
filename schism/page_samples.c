@@ -817,6 +817,58 @@ static void sample_amplify_dialog(void)
 
 /* --------------------------------------------------------------------- */
 
+static struct widget txtsynth_widgets[3];
+static char txtsynth_entry[65536];
+
+static void do_txtsynth(UNUSED void *data)
+{
+	int len = strlen(txtsynth_entry);
+	if (!len)
+		return;
+	
+	song_sample *sample = song_get_sample(current_sample, NULL);
+	if (sample->data)
+		song_sample_free(sample->data);
+	sample->data = song_sample_allocate(len);
+	memcpy(sample->data, txtsynth_entry, len);
+	sample->length = len;
+	sample->loop_start = 0;
+	sample->loop_end = len;
+	sample->sustain_start = sample->sustain_end = 0;
+	sample->flags |= SAMP_LOOP;
+	sample->flags &= ~(SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG
+			   | SAMP_16_BIT | SAMP_STEREO | SAMP_ADLIB);
+	/* These settings should already be set to sane values, but modplug sucks */
+	if (!sample->speed) {
+		sample->speed = 8363;
+		sample->volume = 64 * 4;
+		sample->global_volume = 64;
+	}
+}
+
+static void txtsynth_draw_const(void)
+{
+	draw_text("Enter a text string (e.g. ABCDCB for a triangle-wave)", 13, 27, 0, 2);
+	draw_box(12, 29, 66, 31, BOX_THIN | BOX_INNER | BOX_INSET);
+}
+
+static void txtsynth_dialog(void)
+{
+	struct dialog *dialog;
+
+	// TODO copy the current sample into the entry?
+
+	txtsynth_entry[0] = 0;
+	create_textentry(txtsynth_widgets + 0, 13, 30, 53, 0, 1, 1, NULL, txtsynth_entry, 65535);
+	create_button(txtsynth_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	create_button(txtsynth_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+
+	dialog = dialog_create_custom(9, 25, 61, 11, txtsynth_widgets, 3, 0, txtsynth_draw_const, NULL);
+	dialog->action_yes = do_txtsynth;
+}
+
+/* --------------------------------------------------------------------- */
+
 static struct widget sample_adlibconfig_widgets[28];
 
 /* namespace adlibconfig { */
@@ -870,17 +922,22 @@ static void do_adlibconfig(UNUSED void *data)
 	//page->help_index = HELP_SAMPLE_LIST;
 	
 	song_sample *sample = song_get_sample(current_sample, NULL);
-	if (!sample->data) {
-		sample->data = song_sample_allocate(1);
-		sample->length = 1;
-	}
+	if (sample->data)
+		song_sample_free(sample->data);
+	sample->data = song_sample_allocate(1);
+	sample->length = 1;
 	if (!(sample->flags & SAMP_ADLIB)) {
 		sample->flags |= SAMP_ADLIB;
 		status_text_flash("Created adlib sample");
 	}
 	sample->flags &= ~(SAMP_LOOP | SAMP_16_BIT | SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG | SAMP_STEREO);
-	sample->loop_start = 0;
-	sample->loop_end   = 0;
+	sample->loop_start = sample->loop_end = 0;
+	sample->sustain_start = sample->sustain_end = 0;
+	if (!sample->speed) {
+		sample->speed = 8363;
+		sample->volume = 64 * 4;
+		sample->global_volume = 64;
+	}
 }
 
 static void adlibconfig_refresh(void)
@@ -1361,6 +1418,10 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		return;
 	case SDLK_x:
 		exchange_sample_dialog();
+		return;
+	case SDLK_y:
+		/* hi virt */
+		txtsynth_dialog();
 		return;
 	case SDLK_z:
 		if (sample->data == NULL || (sample->flags & SAMP_ADLIB))
