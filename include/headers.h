@@ -44,6 +44,9 @@
 #include <limits.h>
 #endif
 
+#include <stdint.h>
+
+/* FIXME don't use inttypes.h */
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #else
