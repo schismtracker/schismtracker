@@ -940,7 +940,7 @@ static void do_adlibconfig(UNUSED void *data)
 static void adlibconfig_refresh(void)
 {
 	int a;
-	song_sample* sample = song_get_sample(current_sample, NULL);
+	song_sample *sample = song_get_sample(current_sample, NULL);
 
 	draw_sample_data(&sample_image, sample, current_sample);
 
@@ -972,7 +972,7 @@ static void sample_adlibconfig_draw_const(void)
 {
 	struct {
 		int x, y;
-		const char* label;
+		const char *label;
 	} labels[] = {
 	    	{19,  1, "Adlib Melodic Instrument Parameters"},
 		{19,  3, "Additive Synthesis:"},
@@ -1025,8 +1025,8 @@ static int do_adlib_handlekey(struct key_event *kk)
 
 static void sample_adlibconfig_dialog(UNUSED void *ign)
 {
-	struct dialog* dialog;
-	song_sample* sample = song_get_sample(current_sample, NULL);
+	struct dialog *dialog;
+	song_sample *sample = song_get_sample(current_sample, NULL);
 
 	int a;
 
