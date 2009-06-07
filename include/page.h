@@ -42,7 +42,7 @@ extern "C" {
 struct key_event {
 	SDLKey sym, orig_sym;
 	SDLMod mod;
-	Uint16 unicode;
+	uint16_t unicode;
 	int scancode;
 
 	int state; /* 0 for down, 1 for up/release */
@@ -443,7 +443,7 @@ void create_other(struct widget *w, int next_tab, int (*w_handle_key) (struct ke
 /* --------------------------------------------------------------------- */
 
 /* widget.c */
-int textentry_add_char(struct widget *widget, Uint16 unicode);
+int textentry_add_char(struct widget *widget, uint16_t unicode);
 void numentry_change_value(struct widget *widget, int new_value);
 int numentry_handle_digit(struct widget *widget, struct key_event *k);
 int menutoggle_handle_key(struct widget *widget, struct key_event *k);

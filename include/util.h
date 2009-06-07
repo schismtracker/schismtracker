@@ -35,12 +35,6 @@
 #define true (!0)
 #endif
 
-/* This is just for the sake of typing 4 chars rather than 13. */
-#ifndef byte
-#define byte byte
-typedef unsigned char byte;
-#endif
-
 #define ARRAY_SIZE(a) ((signed)(sizeof(a)/sizeof(*(a))))
 
 

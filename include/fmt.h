@@ -23,6 +23,7 @@
 #ifndef FMT_H
 #define FMT_H
 
+#include <stdint.h>
 #include "song.h"
 #include "dmoz.h"
 #include "util.h"
@@ -35,15 +36,15 @@ extern "C" {
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-typedef int (*fmt_read_info_func) (dmoz_file_t *file, const byte *data, size_t length);
-typedef int (*fmt_load_sample_func) (const byte *data, size_t length, song_sample *smp, char *title);
+typedef int (*fmt_read_info_func) (dmoz_file_t *file, const uint8_t *data, size_t length);
+typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sample *smp, char *title);
 typedef int (*fmt_save_sample_func) (diskwriter_driver_t *fp, song_sample *smp, char *title);
-typedef int (*fmt_load_instrument_func) (const byte *data, size_t length, int slot);
+typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int slot);
 
-#define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const byte *data, size_t length)
-#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+#define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
 #define SAVE_SAMPLE(t) int fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
-#define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const byte *data, size_t length, int slot)
+#define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot)
 #define SAVE_SONG(t) void fmt_##t##_save_song(diskwriter_driver_t *fp)
 
 READ_INFO(669);
@@ -117,7 +118,7 @@ void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe);
 
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title);
-int load_its_sample(const byte *header, const byte *data,
+int load_its_sample(const uint8_t *header, const uint8_t *data,
 		size_t length, song_sample *smp, char *title);
 
 /* --------------------------------------------------------------------------------------------------------- */
