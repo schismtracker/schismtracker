@@ -25,7 +25,7 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_s3m_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 48 && memcmp(data + 44, "SCRM", 4) == 0))
                 return false;

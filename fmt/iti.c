@@ -34,7 +34,7 @@
 
 
 /* --------------------------------------------------------------------- */
-int fmt_iti_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_iti_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return false;
 	file->description = "Impulse Tracker Instrument";
@@ -46,7 +46,7 @@ int fmt_iti_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	return true;
 }
 
-int fmt_iti_load_instrument(const byte *data, size_t length, int slot)
+int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
 {
 	ITINSTRUMENT iti;
 	struct instrumentloader ii;

@@ -33,7 +33,7 @@ static double ConvertFromIeeeExtended(const unsigned char *bytes);
 
 /* --------------------------------------------------------------------- */
 
-int fmt_aiff_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_aiff_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	size_t position, block_length;
 	/* these are offsets to various chunks of data in the file */
@@ -101,7 +101,7 @@ int fmt_aiff_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	return true;
 }
 
-int fmt_aiff_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
 {
 	size_t position, block_length;
 	unsigned long byte_length; /* size of the sample data */

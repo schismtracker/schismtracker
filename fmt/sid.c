@@ -38,7 +38,7 @@
 70 | 00 00 00 00  00 00 00 00  00 00 00 00  62 11 4c 72 | ............b.Lr
 */
 
-int fmt_sid_read_info(dmoz_file_t *file, const byte *data, size_t length);
+int fmt_sid_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
 {
         char buf[33];
         int n;

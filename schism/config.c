@@ -90,7 +90,7 @@ void cfg_init_dir(void)
 static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 static void cfg_load_palette(cfg_file_t *cfg)
 {
-	byte colors[48];
+	uint8_t colors[48];
 	int n;
 	char palette_text[49] = "";
 	const char *ptr;

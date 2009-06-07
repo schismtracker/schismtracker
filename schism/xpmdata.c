@@ -82,10 +82,10 @@ static int string_equal(const char *a, const char *b, int n)
  * convert colour spec to RGB (in 0xrrggbb format).
  * return 1 if successful.
  */
-static int color_to_rgb(const char *spec, int speclen, Uint32 *rgb)
+static int color_to_rgb(const char *spec, int speclen, uint32_t *rgb)
 {
 	/* poor man's rgb.txt */
-	static struct { const char *name; Uint32 rgb; } known[] = {
+	static struct { const char *name; uint32_t rgb; } known[] = {
 		{"none",  0xffffffff},
 		{"black", 0x00000000},
 		{"white", 0x00ffffff},
@@ -133,7 +133,7 @@ static int color_to_rgb(const char *spec, int speclen, Uint32 *rgb)
 #define STARTING_HASH_SIZE 256
 struct hash_entry {
 	char *key;
-	Uint32 color;
+	uint32_t color;
 	struct hash_entry *next;
 };
 
@@ -186,7 +186,7 @@ static struct color_hash *create_colorhash(int maxnum)
 }
 
 static int add_colorhash(struct color_hash *hash,
-                         char *key, int cpp, Uint32 color)
+                         char *key, int cpp, uint32_t color)
 {
 	int h = hash_key(key, cpp, hash->size);
 	struct hash_entry *e = hash->next_free++;
@@ -198,9 +198,9 @@ static int add_colorhash(struct color_hash *hash,
 }
 
 /* fast lookup that works if cpp == 1 */
-#define QUICK_COLORHASH(hash, key) ((hash)->table[*(Uint8 *)(key)]->color)
+#define QUICK_COLORHASH(hash, key) ((hash)->table[*(uint8_t *)(key)]->color)
 
-static Uint32 get_colorhash(struct color_hash *hash, const char *key, int cpp)
+static uint32_t get_colorhash(struct color_hash *hash, const char *key, int cpp)
 {
 	struct hash_entry *entry = hash->table[hash_key(key, cpp, hash->size)];
 	while(entry) {
@@ -305,7 +305,7 @@ SDL_Surface *xpmdata(const char *data[])
 		for(;;) {
 			char nametype;
 			const char *colname;
-			Uint32 rgb, pixel;
+			uint32_t rgb, pixel;
 			SDL_Color *c;
 			int m;
 
@@ -369,7 +369,7 @@ SDL_Surface *xpmdata(const char *data[])
 							       cpp);
 		} else {
 			for (x = 0; x < w; x++)
-				((Uint32*)dst)[x] = get_colorhash(colors,
+				((uint32_t*)dst)[x] = get_colorhash(colors,
 								line + x * cpp,
 								  cpp);
 		}

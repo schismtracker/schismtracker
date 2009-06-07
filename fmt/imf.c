@@ -25,7 +25,7 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_imf_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 64 && memcmp(data + 60, "IM10", 4) == 0))
                 return false;

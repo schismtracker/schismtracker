@@ -59,7 +59,7 @@ struct scri_header /* Note: This struct must match the disk layout struct */
  * attribute (on ia32) when configured in ludicrous mode.
  */
 
-static int load_scri_sample(const byte *data, size_t length, song_sample *smp, char *title,
+static int load_scri_sample(const uint8_t *data, size_t length, song_sample *smp, char *title,
                             bool load_sample_data = true)
 {
     const scri_header* header = (const scri_header*)data;
@@ -131,7 +131,7 @@ static int load_scri_sample(const byte *data, size_t length, song_sample *smp, c
 }
 
 
-int fmt_scri_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_scri_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
     song_sample tmp, *smp = &tmp;
     char title[32] = "";
@@ -157,7 +157,7 @@ int fmt_scri_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	return true;
 }
 
-int fmt_scri_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+int fmt_scri_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
 {
     return load_scri_sample(data, length, smp, title);
 }
@@ -230,7 +230,7 @@ static bool MidiS3M_Read(
 }
 
 
-int fmt_scri_load_instrument(const byte *data, size_t length, int slot)
+int fmt_scri_load_instrument(const uint8_t *data, size_t length, int slot)
 {
     if(length < 0x50) return false;
 

@@ -31,9 +31,9 @@ I don't know what this data's supposed to be for :) */
 
 /* btw: AMS stands for "Advanced Module System" */
 
-int fmt_ams_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_ams_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        byte n;
+        uint8_t n;
 
         if (!(length > 38 && memcmp(data, "AMShdr\x1a", 7) == 0))
                 return false;

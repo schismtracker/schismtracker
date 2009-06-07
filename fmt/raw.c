@@ -29,7 +29,7 @@
 
 /* does IT's raw sample loader use signed or unsigned samples? */
 
-int fmt_raw_load_sample(const byte *data, size_t length, song_sample *smp, UNUSED char *title)
+int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample *smp, UNUSED char *title)
 {
 	/* we'll uphold IT's limit of 4mb */
 	if (length > 4 * 1048576) {

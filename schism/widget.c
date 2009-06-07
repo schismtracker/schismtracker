@@ -301,7 +301,7 @@ static void textentry_reposition(struct widget *w)
 	}
 }
 
-int textentry_add_char(struct widget *w, Uint16 unicode)
+int textentry_add_char(struct widget *w, uint16_t unicode)
 {
         int c = unicode_to_ascii(unicode);
 

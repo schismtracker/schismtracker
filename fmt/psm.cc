@@ -32,7 +32,7 @@
 #include <math.h>
 
 
-int fmt_psm_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_psm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	static CSoundFile qq;
 	if (length < 5) return false;
