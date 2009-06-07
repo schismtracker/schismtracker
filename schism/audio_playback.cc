@@ -79,7 +79,7 @@ extern "C" {
 	extern void vis_work_8m(char *in, int inlen);
 };
 // this gets called from sdl
-static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
+static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 {
 	unsigned int wasrow = mp->m_nRow;
 	unsigned int waspat = mp->m_nCurrentPattern;
@@ -118,7 +118,7 @@ static void audio_callback(UNUSED void *qq, Uint8 * stream, int len)
 	if (audio_output_bits == 8) {
 		/* libmodplug emits unsigned 8bit output...
 		*/
-		stream = (Uint8*)audio_buffer;
+		stream = (uint8_t *) audio_buffer;
 		n *= audio_output_channels;
 		for (i = 0; i < n; i++) {
 			stream[i] ^= 128;
@@ -1454,7 +1454,7 @@ static int nosound_thread(UNUSED void *ign)
 	while (audio_thread_running) {
 		song_lock_audio();
 		if (!audio_thread_paused) {
-			audio_callback(0, (Uint8*)nosound_buffer, 8820);
+			audio_callback(0, (uint8_t *) nosound_buffer, 8820);
 		}
 		song_unlock_audio();
 		SDL_Delay(200);

@@ -37,7 +37,7 @@
 #include <stdlib.h>
 
 /* --------------------------------------------------------------------- */
-int fmt_xi_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	if (length <= 86) return false;
 	if (memcmp(data, "Extended Instrument: ", 21) != 0) return false;
@@ -52,7 +52,7 @@ int fmt_xi_read_info(dmoz_file_t *file, const byte *data, size_t length)
 }
 
 
-int fmt_xi_load_instrument(const byte *data, size_t length, int slot)
+int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 {
 	//XMINSTRUMENTHEADER xi;
 	XMSAMPLEHEADER xmsh;

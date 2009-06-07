@@ -27,7 +27,7 @@
 
 /* TODO: get more stm's and test this... one file's not good enough */
 
-int fmt_stm_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         /* data[29] is the type: 1 = song, 2 = module (with samples) */
         if (!(length > 28 && data[28] == 0x1a && (data[29] == 1 || data[29] == 2)

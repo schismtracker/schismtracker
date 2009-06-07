@@ -116,7 +116,7 @@ void (*shift_release)(void) = NULL;
 /* stuff SDL should already be doing but isn't */
 
 #if defined(GIO_FONT) && defined(PIO_FONT) && HAVE_SYS_KD_H
-static byte console_font[512 * 32];
+static uint8_t console_font[512 * 32];
 static int font_saved = 0;
 static void save_font(void)
 {
@@ -535,7 +535,7 @@ static void event_loop(void)
 	SDL_Event event;
 	struct key_event kk;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
-	Uint32 last_mouse_down, ticker;
+	uint32_t last_mouse_down, ticker;
 	SDLKey last_key = 0;
 	int modkey;
 	time_t startdown;

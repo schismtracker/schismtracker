@@ -249,7 +249,7 @@ static const struct track_view track_views[] = {
 
 #define NUM_TRACK_VIEWS ARRAY_SIZE(track_views)
 
-static byte track_view_scheme[64];
+static uint8_t track_view_scheme[64];
 static int *channel_multi_base = 0; /* <--- uh, wtf is this for? */
 static int channel_multi[64];
 static int channel_quick[64];
@@ -1046,7 +1046,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
 void cfg_load_patedit(cfg_file_t *cfg)
 {
 	int n, r = 0;
-	byte s[65];
+	uint8_t s[65];
 	
 	CFG_GET_PE(link_effect_column, 0);
 	CFG_GET_PE(draw_divisions, 1);

@@ -55,7 +55,7 @@
 char song_filename[PATH_MAX + 1];
 char song_basename[NAME_MAX + 1];
 
-byte row_highlight_major = 16, row_highlight_minor = 4;
+uint8_t row_highlight_major = 16, row_highlight_minor = 4;
 
 // if false, don't stop playing on load, and start playing new song afterward
 int stop_on_load = 1;
@@ -755,10 +755,10 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
 {
 	MODCOMMAND *noteptr = pat;
 	MODCOMMAND lastnote[64];
-	byte initmask[64];
-	byte lastmask[64];
+	uint8_t initmask[64];
+	uint8_t lastmask[64];
 	unsigned short pos = 0;
-	unsigned char data[65536];
+	uint8_t data[65536];
 	
 	memset(lastnote, 0, sizeof(lastnote));
 	memset(initmask, 0, 64);
@@ -766,7 +766,7 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
 	
 	for (int row = 0; row < patsize; row++) {
 		for (int chan = 0; chan < 64; chan++, noteptr++) {
-			byte m = 0;	// current mask
+			uint8_t m = 0;	// current mask
 			int vol = -1;
 			unsigned int note = noteptr->note;
 			unsigned int command = noteptr->command, param = noteptr->param;

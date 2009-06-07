@@ -35,7 +35,7 @@
 
 static int status_color = 0;
 static char *status_text = NULL;
-static Uint32 text_timeout;
+static uint32_t text_timeout;
 
 /* --------------------------------------------------------------------- */
 
@@ -155,7 +155,7 @@ static inline void draw_playing_channels(void)
 
 void status_text_redraw(void)
 {
-	Uint32 now = SDL_GetTicks();
+	uint32_t now = SDL_GetTicks();
 
         /* if there's a message set, and it's expired, clear it */
         if (status_text && now > text_timeout) {

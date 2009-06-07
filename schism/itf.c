@@ -31,7 +31,7 @@
 #include "sdlmain.h"
 #include <string.h>
 
-static const byte itfmap_chars[] = {
+static const uint8_t itfmap_chars[] = {
 128, 129, 130, ' ', 128, 129, 141, ' ', 142, 143, 144, ' ', 168, 'C', '-', '0',
 131, ' ', 132, ' ', 131, ' ', 132, ' ', 145, ' ', 146, ' ', 168, 'D', '-', '1',
 133, 134, 135, ' ', 140, 134, 135, ' ', 147, 148, 149, ' ', 168, 'E', '-', '2',
@@ -48,7 +48,7 @@ static const byte itfmap_chars[] = {
 169, 170, 171, 172, ' ', ' ', '^', '^', '^', ' ', 173, ' ', 168, 'B', '#', '4',
 193, 194, 195, 196, 197, 198, 199, 200, 201, ' ', ' ', ' ', ' ', ' ', ' ', ' ',
 };
-static const byte helptext_gen[] =
+static const uint8_t helptext_gen[] =
         "Tab         Next box   \xa8 Alt-C  Copy\n"
         "Shift-Tab   Prev. box  \xa8 Alt-P  Paste\n"
         "F2-F4       Switch box \xa8 Alt-M  Mix paste\n"
@@ -60,7 +60,7 @@ static const byte helptext_gen[] =
         "                       \xa8 0-9    Palette\n"
         "Ctrl-Q      Exit       \xa8  (+10 with shift)\n";
 
-static const byte helptext_editbox[] =
+static const uint8_t helptext_editbox[] =
 "Space       Plot/clear point\n"
 "Ins/Del     Fill/clear horiz.\n"
 "...w/Shift  Fill/clear vert.\n"
@@ -71,10 +71,10 @@ static const byte helptext_editbox[] =
 "\n" "Shift-\x18\x19\x1a\x1b  Shift character\n"
 "[/]         Rotate 90\xf8\n";
 
-static const byte helptext_charmap[] =
+static const uint8_t helptext_charmap[] =
 "Home/End    First/last char.\n";
 
-static const byte helptext_fontlist[] =
+static const uint8_t helptext_fontlist[] =
 "Home/End    First/last font\n"
 "Enter       Load/save file\n"
 "Escape      Hide font list\n"
@@ -125,7 +125,7 @@ note: x/y are for the top left corner of the frame, but w/h define the size of i
 	&& WITHIN((y), item##_Y, INNER_Y(item##_Y) + item##_H + FRAME_BOTTOM))
 
 static int edit_x = 3, edit_y = 3;
-static byte current_char = 'A';
+static uint8_t current_char = 'A';
 static int itfmap_pos = -1;
 
 static enum {
@@ -188,7 +188,7 @@ static void load_fontlist(void)
 
 
 
-static byte clipboard[8] = { 0 };
+static uint8_t clipboard[8] = { 0 };
 
 #define INCR_WRAPPED(n) (((n) & 0xf0) | (((n) + 1) & 0xf))
 #define DECR_WRAPPED(n) (((n) & 0xf0) | (((n) - 1) & 0xf))
@@ -288,7 +288,7 @@ static inline void draw_charmap(void)
 static inline void draw_itfmap(void)
 {
 	int n, fg, bg;
-	byte *ptr;
+	uint8_t *ptr;
 
 	if (itfmap_pos < 0 || itfmap_chars[itfmap_pos] != current_char) {
 		ptr = (unsigned char *) strchr((char *) itfmap_chars, current_char);
@@ -371,8 +371,8 @@ static inline void draw_fontlist(void)
 
 static inline void draw_helptext(void)
 {
-	const byte *ptr = helptext_gen;
-	const byte *eol;
+	const uint8_t *ptr = helptext_gen;
+	const uint8_t *eol;
 	int line;
 	int column;
 
@@ -454,10 +454,10 @@ static void draw_screen(void)
 }
 static void handle_key_editbox(struct key_event * k)
 {
-	byte tmp[8] = { 0 };
+	uint8_t tmp[8] = { 0 };
 	int ci = current_char << 3;
 	int n, bit;
-	byte *ptr = font_data + ci;
+	uint8_t *ptr = font_data + ci;
 
 	switch (k->sym) {
 	case SDLK_UP:
@@ -717,7 +717,7 @@ static void handle_key_fontlist(struct key_event * k)
 static void handle_mouse_editbox(struct key_event *k)
 {
 	int n, ci = current_char << 3, xrel, yrel;
-	byte *ptr = font_data + ci;
+	uint8_t *ptr = font_data + ci;
 	
 	xrel = k->x - INNER_X(EDITBOX_X);
 	yrel = k->y - INNER_Y(EDITBOX_Y);
@@ -829,7 +829,7 @@ static void handle_mouse(struct key_event * k)
 static int fontedit_handle_key(struct key_event * k)
 {
 	int n, ci = current_char << 3;
-	byte *ptr = font_data + ci;
+	uint8_t *ptr = font_data + ci;
 
 	if (k->mouse == MOUSE_SCROLL_UP || k->mouse == MOUSE_SCROLL_DOWN) {
 		/* err... */
@@ -954,7 +954,7 @@ static int fontedit_handle_key(struct key_event * k)
 		if (k->state) return 1;
 		if (k->mod & KMOD_ALT) {
 			for (n = 0; n < 4; n++) {
-				byte r = ptr[n];
+				uint8_t r = ptr[n];
 				ptr[n] = ptr[7 - n];
 				ptr[7 - n] = r;
 			}

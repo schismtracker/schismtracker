@@ -29,9 +29,9 @@
 /* Thumb bars */
 
 static inline void _draw_thumb_bar_internal(int width, int x, int y,
-                                            int val, Uint32 fg)
+                                            int val, uint32_t fg)
 {
-        const byte thumb_chars[2][8] = {
+        const uint8_t thumb_chars[2][8] = {
                 {155, 156, 157, 158, 159, 160, 161, 162},
                 {0, 0, 0, 163, 164, 165, 166, 167}
         };
@@ -75,7 +75,7 @@ void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
 
 void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 {
-        const byte endtext[8][3] = {
+        const uint8_t endtext[8][3] = {
                 {174, 0, 0}, {175, 0, 0}, {176, 0, 0}, {176, 177, 0},
                 {176, 178, 0}, {176, 179, 180}, {176, 179, 181},
                 {176, 179, 182},

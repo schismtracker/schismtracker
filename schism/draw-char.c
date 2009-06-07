@@ -86,17 +86,17 @@ do {						\
 /* --------------------------------------------------------------------- */
 /* statics */
 
-static byte font_normal[2048];
+static uint8_t font_normal[2048];
 
 /* There's no way to change the other fontsets at the moment.
  * (other than recompiling, of course) */
-static byte font_alt[2048];
-static byte font_half_data[1024];
+static uint8_t font_alt[2048];
+static uint8_t font_half_data[1024];
 
 /* --------------------------------------------------------------------- */
 /* globals */
 
-byte *font_data = font_normal; /* this only needs to be global for itf */
+uint8_t *font_data = font_normal; /* this only needs to be global for itf */
 
 /* int font_width = 8, font_height = 8; */
 
@@ -251,16 +251,16 @@ void font_reset_bios(void)
 /* ... or just one character */
 void font_reset_char(int ch)
 {
-	byte *base;
+	uint8_t *base;
 	int cx;
 	
 	ch <<= 3;
 	cx = ch;
 	if (ch >= 1024) {
-		base = (byte*)font_default_upper_itf;
+		base = (uint8_t *) font_default_upper_itf;
 		cx -= 1024;
 	} else {
-		base = (byte*)font_default_lower;
+		base = (uint8_t *) font_default_lower;
 	}
 	/* update them both... */
 	memcpy(font_normal + ch, base + cx, 8);
@@ -273,7 +273,7 @@ void font_reset_char(int ch)
 
 static int squeeze_8x16_font(FILE * fp)
 {
-        byte data_8x16[4096];
+        uint8_t data_8x16[4096];
         int n;
 
         if (fread(data_8x16, 4096, 1, fp) != 1)
@@ -290,7 +290,7 @@ int font_load(const char *filename)
 {
         FILE *fp;
         long pos;
-        byte data[4];
+        uint8_t data[4];
         char *font_dir, *font_file;
 
         font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
@@ -366,7 +366,7 @@ int font_load(const char *filename)
 int font_save(const char *filename)
 {
         FILE *fp;
-        byte ver[2] = { 0x12, 0x2 };
+        uint8_t ver[2] = { 0x12, 0x2 };
         char *font_dir, *font_file;
 
         font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
@@ -592,19 +592,19 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 #undef SIZE
 #undef BPP
 
-void draw_char_bios(unsigned char c, int x, int y, Uint32 fg, Uint32 bg)
+void draw_char_bios(unsigned char c, int x, int y, uint32_t fg, uint32_t bg)
 {
     assert(x >= 0 && y >= 0 && x < 80 && y < 50);
     vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12) | 0x10000000;
 }
 
-void draw_char(unsigned char c, int x, int y, Uint32 fg, Uint32 bg)
+void draw_char(unsigned char c, int x, int y, uint32_t fg, uint32_t bg)
 {
     assert(x >= 0 && y >= 0 && x < 80 && y < 50);
     vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12);
 }
 
-int draw_text(const char * text, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
         int n = 0;
 
@@ -616,7 +616,7 @@ int draw_text(const char * text, int x, int y, Uint32 fg, Uint32 bg)
 	
         return n;
 }
-int draw_text_bios(const char * text, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
         int n = 0;
 
@@ -628,7 +628,7 @@ int draw_text_bios(const char * text, int x, int y, Uint32 fg, Uint32 bg)
 	
         return n;
 }
-void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
+void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color)
 {
 	unsigned int *mm;
 	int x, len;
@@ -644,7 +644,7 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
 	} while (ye >= 0);
 }
 
-int draw_text_len(const char * text, int len, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
         int n = 0;
 
@@ -656,7 +656,7 @@ int draw_text_len(const char * text, int len, int x, int y, Uint32 fg, Uint32 bg
         draw_fill_chars(x + n, y, x + len - 1, y, bg);
         return n;
 }
-int draw_text_bios_len(const char * text, int len, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
         int n = 0;
 
@@ -671,8 +671,8 @@ int draw_text_bios_len(const char * text, int len, int x, int y, Uint32 fg, Uint
 
 /* --------------------------------------------------------------------- */
 
-void draw_half_width_chars(byte c1, byte c2, int x, int y,
-			   Uint32 fg1, Uint32 bg1, Uint32 fg2, Uint32 bg2)
+void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
+			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
 {
         assert(x >= 0 && y >= 0 && x < 80 && y < 50);
 	vgamem[x + (y*80)] =
@@ -689,13 +689,13 @@ enum box_type {
         BOX_THIN_INNER = 0, BOX_THIN_OUTER, BOX_THICK_OUTER
 };
 
-static const byte boxes[4][8] = {
+static const uint8_t boxes[4][8] = {
         {139, 138, 137, 136, 134, 129, 132, 131},       /* thin inner */
         {128, 130, 133, 135, 129, 134, 131, 132},       /* thin outer */
         {142, 144, 147, 149, 143, 148, 145, 146},       /* thick outer */
 };
 
-static void _draw_box_internal(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br, const byte ch[8])
+static void _draw_box_internal(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br, const uint8_t ch[8])
 {
         int n;
 
@@ -716,12 +716,12 @@ static void _draw_box_internal(int xs, int ys, int xe, int ye, Uint32 tl, Uint32
         }
 }
 
-void draw_thin_inner_box(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br)
+void draw_thin_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br)
 {
         _draw_box_internal(xs, ys, xe, ye, tl, br, boxes[BOX_THIN_INNER]);
 }
 
-void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br)
+void draw_thick_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br)
 {
         /* this one can't use _draw_box_internal because the corner
          * colors are different */
@@ -745,7 +745,7 @@ void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br)
         }
 }
 
-void draw_thin_outer_box(int xs, int ys, int xe, int ye, Uint32 c)
+void draw_thin_outer_box(int xs, int ys, int xe, int ye, uint32_t c)
 {
         _draw_box_internal(xs, ys, xe, ye, c, c, boxes[BOX_THIN_OUTER]);
 }
@@ -775,7 +775,7 @@ void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int flags)
         }
 }
 
-void draw_thick_outer_box(int xs, int ys, int xe, int ye, Uint32 c)
+void draw_thick_outer_box(int xs, int ys, int xe, int ye, uint32_t c)
 {
         _draw_box_internal(xs, ys, xe, ye, c, c, boxes[BOX_THICK_OUTER]);
 }

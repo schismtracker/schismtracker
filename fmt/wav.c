@@ -196,7 +196,7 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 }
 
 
-int fmt_wav_load_sample(const byte *data, size_t len, song_sample *smp, UNUSED char *title)
+int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSED char *title)
 {
         wave_file_t f;
 
@@ -233,7 +233,7 @@ int fmt_wav_load_sample(const byte *data, size_t len, song_sample *smp, UNUSED c
 }
 
 
-int fmt_wav_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         wave_file_t f;
 

@@ -70,8 +70,8 @@ static char *dw_rename_to = NULL;
 
 static int swab_buf(int n)
 {
-	Uint32 *le32;
-	Uint16 *le16;
+	uint32_t *le32;
+	uint16_t *le16;
 	int i;
 
 	n *= dw->channels;
@@ -83,12 +83,12 @@ dw->output_le
 #endif
 	) {
 		if (dw->bits <= 16) {
-			le16 = (Uint16*)diskbuf;
+			le16 = (uint16_t*)diskbuf;
 			for (i = 0; i < n; i++, le16++) {
 				(*le16) = bswap_16((*le16));
 			}
 		} else if (dw->bits <= 32) {
-			le32 = (Uint32*)diskbuf;
+			le32 = (uint32_t*)diskbuf;
 			for (i = 0; i < n; i++, le32++) {
 				(*le32) = bswap_32((*le32));
 			}
@@ -292,7 +292,7 @@ static int chan_detect(void)
 {
 	int nchan = diskwriter_output_channels;
 	int lim, i;
-	byte *ol;
+	uint8_t *ol;
 
 	for (i = 0; i < 64; i++) multi_mono[i] = 1;
 	if (mp->m_dwSongFlags & SONG_NOSTEREO) {

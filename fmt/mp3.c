@@ -51,7 +51,7 @@ static void get_title_from_id3(struct id3_tag const *tag, char **artist_ptr, cha
 
 /* --------------------------------------------------------------------- */
 
-int fmt_mp3_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_mp3_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         signed long id3len;
         unsigned long id3off = 0;
