@@ -23,6 +23,7 @@
 #ifndef SONG_H
 #define SONG_H
 
+#include <stdint.h>
 #include "util.h"
 #include "diskwriter.h"
 
@@ -75,7 +76,7 @@ typedef struct _song_channel {
 /* instrumentenvelope */
 typedef struct _song_envelope {
 	int ticks[32];
-	byte values[32];
+	uint8_t values[32];
 	int nodes;
 	int loop_start, loop_end;
 	int sustain_start, sustain_end;
@@ -107,12 +108,12 @@ typedef struct _song_instrument {
 
 /* modcommand */
 typedef struct _song_note {
-        byte note;
-        byte instrument;
-        byte volume_effect;
-        byte effect;
-        byte volume;
-        byte parameter;
+        uint8_t note;
+        uint8_t instrument;
+        uint8_t volume_effect;
+        uint8_t effect;
+        uint8_t volume;
+        uint8_t parameter;
 } song_note;
 
 /* modchannel (good grief...) */
@@ -193,7 +194,7 @@ typedef struct _song_mix_channel {
         unsigned int nActiveMacro, nPadding;
 	unsigned int nTickStart;
 	unsigned int nRealtime;
-	byte stupid_gcc_workaround;
+	uint8_t stupid_gcc_workaround;
 
 } song_mix_channel;
 
@@ -464,7 +465,7 @@ void song_restore_channel_states(void);
 int song_find_last_channel(void);
 
 int song_get_pattern(int n, song_note ** buf);  // return 0 -> error
-byte *song_get_orderlist(void);
+uint8_t *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
 

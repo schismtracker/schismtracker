@@ -46,13 +46,6 @@
 
 #include <stdint.h>
 
-/* FIXME don't use inttypes.h */
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#else
-typedef int intptr_t;
-#endif
-
 
 /* Portability is a pain. */
 #if STDC_HEADERS
