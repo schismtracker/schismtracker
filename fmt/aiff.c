@@ -289,10 +289,6 @@ static int _read_iff(dmoz_file_t *file, song_sample *smp, char *title, const uin
 		}
 
 		return 1;
-
-	default:
-		printf("I don't know!\n");
-		break;
 	}
 
 	return 0;
