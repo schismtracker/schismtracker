@@ -133,10 +133,6 @@ static int _read_iff(dmoz_file_t *file, song_sample *smp, char *title, const uin
 	because the structure is a const pointing into the data itself */
 	switch (bswapBE32(chunk.data->FORM.filetype)) {
 	case ID_8SVX:
-		// Look for a VHDR and BODY, and also possibly NAME.
-		// from VHDR we get the speed, volume, and data encoding (delta or not)
-		// positions of various interesting chunks
-		
 		// shut up, gcc
 		ZEROIZE(vhdr);
 		ZEROIZE(body);
