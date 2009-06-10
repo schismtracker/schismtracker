@@ -20,9 +20,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef WIN32
-#include <windows.h>
+#include "config.h"
+#ifndef WIN32
+# error You are not on Windows. What are you doing?
+#endif
 
+/* FIXME | this really ought to just provide an mmap() wrapper
+   FIXME | instead of reimplementing everything separately */
+
+#include <windows.h>
 #include <sys/stat.h>
 
 #include "slurp.h"
@@ -82,5 +88,3 @@ int slurp_win32(slurp_t *useme, const char *filename, size_t st)
 	useme->bextra = bp;
 	return 1;
 }
-
-#endif

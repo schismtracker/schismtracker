@@ -25,13 +25,15 @@
 #include "mixer.h"
 #include "util.h"
 
-#ifdef USE_WIN32MM
+#ifndef USE_WIN32MM
+# error Why do you want to build this if you do not intend to use it?
+#endif
 
 #include <windows.h>
 #include <mmsystem.h>
 
 /*  Note: [Gargaj]
-    
+
       WinMM DOES support max volumes up to 65535, but the scroller is
       so goddamn slow and it only supports 3 digits anyway, that
       it doesn't make any sense to keep the precision.
@@ -50,7 +52,7 @@ static HWAVEOUT open_mixer()
 	pwfx.wFormatTag = WAVE_FORMAT_UNKNOWN;
 	pwfx.nChannels = 0;
 	pwfx.nSamplesPerSec = 0;
-	pwfx.wBitsPerSample = 0; 
+	pwfx.wBitsPerSample = 0;
 	pwfx.nBlockAlign = 0;
 	pwfx.nAvgBytesPerSec = 0;
 	pwfx.cbSize = 0;
@@ -58,7 +60,7 @@ static HWAVEOUT open_mixer()
 	pwfx.wFormatTag = WAVE_FORMAT_PCM;
 	pwfx.nChannels = 1;
 	pwfx.nSamplesPerSec = 44100;
-	pwfx.wBitsPerSample = 8; 
+	pwfx.wBitsPerSample = 8;
 	pwfx.nBlockAlign = 4;
 	pwfx.nAvgBytesPerSec = 44100*1*1;
 	pwfx.cbSize = 0;
@@ -71,27 +73,26 @@ static HWAVEOUT open_mixer()
 void win32mm_mixer_read_volume(int *left, int *right)
 {
 	DWORD vol;
-	HWAVEOUT hwo=open_mixer();  
-  
+	HWAVEOUT hwo=open_mixer();
+
 	*left = *right = 0;
-	if (!hwo) return;  
-  
+	if (!hwo) return;
+
 	waveOutGetVolume(hwo,&vol);
-    
+
 	*left = (vol & 0xFFFF) >> 8;
 	*right = (vol >> 16) >> 8;
-  
+
 	waveOutClose(hwo);
 }
 
 void win32mm_mixer_write_volume(int left, int right)
 {
 	DWORD vol = ((left & 0xFF)<<8) | ((right & 0xFF)<<(16+8));
-	HWAVEOUT hwo = open_mixer();  
-	if (!hwo) return;  
-    
+	HWAVEOUT hwo = open_mixer();
+	if (!hwo) return;
+
 	waveOutSetVolume(hwo,vol);
-  
+
 	waveOutClose(hwo);
 }
-#endif
