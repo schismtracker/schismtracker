@@ -298,9 +298,9 @@ static void sample_list_predraw_hook(void)
 
 	if (need_retrigger > -1) {
 		if (last_keyup > -1)
-			song_keyup(current_sample, -1, last_keyup);
-		song_keyup(current_sample, -1, need_retrigger);
-		song_keydown(current_sample, -1, need_retrigger, 64, KEYDOWN_CHAN_CURRENT);
+			song_keyup(current_sample, 0, last_keyup);
+		song_keyup(current_sample, 0, need_retrigger);
+		song_keydown(current_sample, 0, need_retrigger, 64, KEYDOWN_CHAN_CURRENT);
 		last_keyup = song_is_multichannel_mode() ? -1 : need_retrigger;
 		song_update_playing_sample(current_sample);
 		need_retrigger = -1;
