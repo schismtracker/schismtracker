@@ -109,9 +109,6 @@ static const char *audio_driver = 0;
 static int did_fullscreen = 0;
 static int did_classic = 0;
 
-/* ugly hack... */
-void (*shift_release)(void) = NULL;
-
 /* --------------------------------------------------------------------- */
 /* stuff SDL should already be doing but isn't */
 
@@ -624,10 +621,6 @@ static void event_loop(void)
 			status.flags |= (NEED_UPDATE);
 			break;
 		case SDL_KEYUP:
-			if (event.key.keysym.sym == SDLK_LSHIFT
-			|| event.key.keysym.sym == SDLK_RSHIFT) {
-				if (shift_release) shift_release();
-			}
 #if defined(WIN32)
 #define _ALTTRACKED_KMOD	(KMOD_NUM|KMOD_CAPS)
 #else

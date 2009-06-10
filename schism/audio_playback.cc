@@ -238,23 +238,19 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 		ins_mode = song_is_instrument_mode();
 		
-		/*fprintf(stderr, "ins_mode(%d)ins(%d)samp(%d)note(%d)chan(%d)\n",
-		    ins_mode, ins, samp, note, chan);*/
-		
-		if (samp >= 0 && (c->dwFlags & CHN_ADLIB))
-		{
+		if (samp >= 0 && (c->dwFlags & CHN_ADLIB)) {
 			MODINSTRUMENT *i = mp->Ins + samp;
-    	    OPL_NoteOff(chan);
-    		OPL_Patch(chan, i->AdlibBytes);
+			OPL_NoteOff(chan);
+			OPL_Patch(chan, i->AdlibBytes);
 		}
-		if (ins >= 0 && (status.flags & MIDI_LIKE_TRACKER))
-		{
-    		INSTRUMENTHEADER* i = mp->Headers[ins];
-			if(i && i->nMidiChannelMask)
-    		{
-        		GM_KeyOff(chan);
+
+		if (ins >= 0 && (status.flags & MIDI_LIKE_TRACKER)) {
+			INSTRUMENTHEADER* i = mp->Headers[ins];
+
+			if (i && i->nMidiChannelMask) {
+				GM_KeyOff(chan);
 				GM_DPatch(chan, i->nMidiProgram, i->wMidiBank, i->nMidiChannelMask);
-		    }
+			}
 		}
 
 		if (ins < 0) {
@@ -289,13 +285,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->pSample = i->pSample;
 			c->pHeader = NULL;
 			c->pInstrument = i;
-			//c->nFineTune = i->nFineTune;
 			c->nLength = i->nLength;
-			//c->nTranspose = i->RelativeTone;
 			c->nC5Speed = i->nC5Speed;
 			c->nLoopStart = i->nLoopStart;
 			c->nLoopEnd = i->nLoopEnd;
-			c->dwFlags = (i->uFlags & 0x200000FF)|(c->dwFlags & CHN_MUTE);
+			c->dwFlags = (i->uFlags & 0x200000FF) | (c->dwFlags & CHN_MUTE);
 			if (c->dwFlags & CHN_MUTE) {
 				c->dwFlags &= ~(CHN_MUTE);
 				c->dwFlags |= CHN_NNAMUTE;
