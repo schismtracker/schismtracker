@@ -215,7 +215,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			if (pis.id == 0x53504D49)
 			{
 				SONGSAMPLE *pins = &Samples[nsmp+1];
-				memcpy(pins->name, pis.filename, 12);
+				memcpy(pins->filename, pis.filename, 12);
 				pins->uFlags = 0;
 				pins->nLength = 0;
 				pins->nLoopStart = pis.loopbegin;
@@ -262,7 +262,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 					ReadSample(&Samples[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 				}
 			}
-			memcpy(m_szNames[nsmp+1], pis.name, 26);
+			memcpy(Samples[nsmp+1].name, pis.name, 26);
 			
 		}
 
@@ -532,7 +532,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (pis.id == 0x53504D49)
 		{
 			SONGSAMPLE *pins = &Samples[nsmp+1];
-			memcpy(pins->name, pis.filename, 12);
+			memcpy(pins->filename, pis.filename, 12);
 			pins->uFlags = 0;
 			pins->nLength = 0;
 			pins->nLoopStart = pis.loopbegin;
@@ -579,7 +579,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 				ReadSample(&Samples[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 			}
 		}
-		memcpy(m_szNames[nsmp+1], pis.name, 26);
+		memcpy(Samples[nsmp+1].name, pis.name, 26);
 	}
 	// Reading Patterns
 	for (uint32_t npat=0; npat<npatterns; npat++)

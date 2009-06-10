@@ -234,8 +234,8 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 		SONGSAMPLE *psmp = &Samples[i];
 		uint32_t loopstart, looplen;
 
-		memcpy(m_szNames[i], pms->name, 22);
-		m_szNames[i][22] = 0;
+		memcpy(psmp->name, pms->name, 22);
+		psmp->name[22] = 0;
 		psmp->uFlags = 0;
 		psmp->nLength = bswapBE16(pms->length)*2;
 		dwTotalSampleLen += psmp->nLength;
@@ -434,7 +434,7 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 		if (transp > 127) transp = 127;
 		if (transp < -127) transp = -127;
 
-		memcpy(bTab, m_szNames[iins],22);
+		memcpy(bTab, Samples[iins].name, 22);
 		inslen[iins] = pins->nLength;
 		if (inslen[iins] > 0x1fff0) inslen[iins] = 0x1fff0;
 		gg = bswapBE16(inslen[iins] / 2);

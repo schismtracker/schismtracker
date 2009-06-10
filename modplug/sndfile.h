@@ -282,7 +282,7 @@ enum {
 
 
 // Sample Struct
-typedef struct _MODINSTRUMENT
+typedef struct _SONGSAMPLE
 {
 	uint32_t nLength,nLoopStart,nLoopEnd;
 	uint32_t nSustainStart, nSustainEnd;
@@ -296,7 +296,8 @@ typedef struct _MODINSTRUMENT
 	uint32_t nVibSweep;
 	uint32_t nVibDepth;
 	uint32_t nVibRate;
-	int8_t name[22];
+	char name[32];
+	char filename[22];
 	int played; // for note playback dots
 
 	// This must be 12-bytes to work around a bug in some gcc4.2s
@@ -315,7 +316,7 @@ typedef struct _INSTRUMENTENVELOPE {
 
 
 // Instrument Struct
-typedef struct _INSTRUMENTHEADER
+typedef struct _SONGINSTRUMENT
 {
 	uint32_t nFadeOut;
 	uint32_t dwFlags;
@@ -339,14 +340,14 @@ typedef struct _INSTRUMENTHEADER
 	unsigned int nMidiDrumKey;
 	int nPPS;
 	unsigned int nPPC;
-	int8_t name[32];
-	int8_t filename[12];
+	char name[32];
+	char filename[12];
 	int played; // for note playback dots
 } SONGINSTRUMENT;
 
 
 // Channel Struct
-typedef struct _MODCHANNEL
+typedef struct _SONGVOICE
 {
 	// First 32-bytes: Most used mixing information: don't change it
 	signed char * pCurrentSample;
@@ -562,7 +563,6 @@ public: // for Editing
 	uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
 	char * m_lpszSongComments;
 	char song_title[32];
-	char m_szNames[MAX_INSTRUMENTS][32];    // changed from int8_t
 	int8_t CompressionTable[16];
 
 	// chaseback

@@ -300,12 +300,13 @@ void CSoundFile::TranslateKeyboard(SONGINSTRUMENT* penv, uint32_t note, SONGSAMP
 	    {
 	        1,/*len*/
 	        0,0, 0,0, /* loop s/e, sus s/e */
-	        dummyinstrument.name, /*data*/
+	        (int8_t *) "", /*data*/
 	        8363, 0x80, /* c5 pan */
 	        255,64, /* volume global */
 	        0x00, /* flags*/  //CHN_ADLIB,
 	        0,0,0,0, /*vib*/
 	        "", /* name */
+	        "", /* filename */
 	        0,/* played */
 	        {
 	            /* Piano AdLib sample... doesn't really

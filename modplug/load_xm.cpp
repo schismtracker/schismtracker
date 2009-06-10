@@ -423,9 +423,9 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 			if (xmss.looplen > xmss.samplen) xmss.looplen = xmss.samplen;
 			if (!xmss.looplen) xmss.type &= ~3;
 			uint32_t imapsmp = samplemap[ins];
-			memcpy(m_szNames[imapsmp], xmss.name, 22);
-			m_szNames[imapsmp][22] = 0;
 			SONGSAMPLE *pins = &Samples[imapsmp];
+			memcpy(pins->name, xmss.name, 22);
+			pins->name[22] = 0;
 			pins->nLength = (xmss.samplen > MAX_SAMPLE_LENGTH) ? MAX_SAMPLE_LENGTH : xmss.samplen;
 			pins->nLoopStart = xmss.loopstart;
 			pins->nLoopEnd = xmss.looplen;
@@ -451,8 +451,8 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 			pins->nVibSweep = xmsh.vibsweep;
 			pins->nVibDepth = xmsh.vibdepth;
 			pins->nVibRate = xmsh.vibrate/4;
-			memcpy(pins->name, xmss.name, 22);
-			pins->name[21] = 0;
+			//memcpy(pins->filename, xmss.name, 22);
+			//pins->filename[21] = 0;
 		}
 #if 0
 		if ((xmsh.reserved2 > nsamples) && (xmsh.reserved2 <= 16))
@@ -641,7 +641,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 		memset(&xmsh, 0, sizeof(xmsh));
 		xmih.size = tmpsize = sizeof(xmih) + sizeof(xmsh);
 		xmih.size = bswapLE32(xmih.size);
-		memcpy(xmih.name, m_szNames[i], 22);
+		memcpy(xmih.name, Samples[i].name, 22);
 		xmih.type = 0;
 		xmih.samples = 0;
 		if (m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE))
@@ -715,7 +715,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 		for (uint32_t ins=0; ins<xmih.samples; ins++)
 		{
 			memset(&xmss, 0, sizeof(xmss));
-			if (smptable[ins]) memcpy(xmss.name, m_szNames[smptable[ins]], 22);
+			if (smptable[ins]) memcpy(xmss.name, Samples[smptable[ins]].name, 22);
 			pins = &Samples[smptable[ins]];
 			/* convert IT information to FineTune */
 			int f2t = frequency_to_transpose(pins->nC5Speed);

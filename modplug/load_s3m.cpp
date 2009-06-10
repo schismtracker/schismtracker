@@ -280,7 +280,6 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nType = MOD_TYPE_IT;
 	// cgxx off oldfx on
 	m_dwSongFlags |= SONG_ITOLDEFFECTS;
-	memset(m_szNames,0,sizeof(m_szNames));
 	memcpy(song_title, psfh.name, 28);
 	song_title[28] = 0;
 	// Speed
@@ -354,11 +353,11 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		uint32_t nInd = ((uint32_t)ptr[iSmp-1])*16;
 		if ((!nInd) || (nInd + 0x50 > dwMemLength)) continue;
 		memcpy(s, lpStream+nInd, 0x50);
-		memcpy(Samples[iSmp].name, s+1, 12);
+		memcpy(Samples[iSmp].filename, s+1, 12);
 		insflags[iSmp-1] = s[0x1F];
 		inspack[iSmp-1] = s[0x1E];
 		s[0x4C] = 0;
-		strcpy(m_szNames[iSmp], (const char *)&s[0x30]);
+		strcpy(Samples[iSmp].name, (const char *)&s[0x30]);
 		
 		if ((s[0]==1) && (s[0x4E]=='R') && (s[0x4F]=='S'))
 		{
@@ -430,7 +429,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		Instruments[iSmp]->nDCT = DCT_INSTRUMENT;
 		Instruments[iSmp]->dwFlags = Samples[iSmp].uFlags;
 		int scale;
-		if(MidiS3M_Read(*Instruments[iSmp], iSmp, m_szNames[iSmp], scale))
+		if(MidiS3M_Read(*Instruments[iSmp], iSmp, Samples[iSmp].name, scale))
 		{
 		    m_dwSongFlags |= SONG_INSTRUMENTMODE;
 			Instruments[iSmp]->nGlobalVol = scale*128/63;
@@ -877,8 +876,8 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 	for (i=1; i<=nbi; i++)
 	{
 		SONGSAMPLE *pins = &Samples[i];
-		memcpy(insex[i-1].dosname, pins->name, 12);
-		memcpy(insex[i-1].name, m_szNames[i], 28);
+		memcpy(insex[i-1].dosname, pins->filename, 12);
+		memcpy(insex[i-1].name, pins->name, 28);
 		memcpy(insex[i-1].scrs, "SCRS", 4);
 		insex[i-1].hmem = (uint8_t)((uint32_t)ofs >> 20);
 		insex[i-1].memseg = bswapLE16((uint16_t)((uint32_t)ofs >> 4));

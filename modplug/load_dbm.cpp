@@ -154,8 +154,8 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 				memcpy(penv->name, pih->name, 30);
 				if (psmp)
 				{
-					memcpy(m_szNames[nsmp], pih->name, 30);
-					m_szNames[nsmp][30] = 0;
+					memcpy(psmp->name, pih->name, 30);
+					psmp->name[30] = 0;
 				}
 				Instruments[iIns+1] = penv;
 				penv->nFadeOut = 1024;	// ???

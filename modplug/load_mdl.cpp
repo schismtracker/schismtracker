@@ -398,8 +398,8 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 				if ((nins >= MAX_SAMPLES) || (!nins)) continue;
 				if (m_nSamples < nins) m_nSamples = nins;
 				SONGSAMPLE *pins = &Samples[nins];
-				memcpy(m_szNames[nins], lpStream+dwPos+1, 32);
-				memcpy(pins->name, lpStream+dwPos+33, 8);
+				memcpy(pins->name, lpStream+dwPos+1, 32);
+				memcpy(pins->filename, lpStream+dwPos+33, 8);
 				pins->nC5Speed = *((uint32_t *)(lpStream+dwPos+41));
 				pins->nC5Speed = bswapLE32(pins->nC5Speed);
 				pins->nLength = *((uint32_t *)(lpStream+dwPos+45));

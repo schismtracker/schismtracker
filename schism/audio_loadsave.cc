@@ -216,9 +216,9 @@ static void _fix_names(CSoundFile *qq)
 
         for (n = 1; n < MAX_INSTRUMENTS; n++) {
                 for (c = 0; c < 25; c++)
-                        if (qq->m_szNames[n][c] == 0)
-                                qq->m_szNames[n][c] = 32;
-                qq->m_szNames[n][25] = 0;
+                        if (qq->Samples[n].name[c] == 0)
+                                qq->Samples[n].name[c] = 32;
+                qq->Samples[n].name[25] = 0;
 
                 if (!qq->Instruments[n])
                         continue;
@@ -287,11 +287,9 @@ void song_new(int flags)
 		for (i = 1; i < MAX_SAMPLES; i++) {
 			if (mp->Samples[i].pSample) {
 				CSoundFile::FreeSample(mp->Samples[i].pSample);
-				mp->Samples[i].pSample = NULL;
 			}
-			memset(mp->Samples + i, 0, sizeof(mp->Samples[i]));
-			memset(mp->m_szNames + i, 0, sizeof(mp->m_szNames[i]));
 		}
+		memset(mp->Samples, 0, sizeof(mp->Samples));
 		mp->m_nSamples = 0;
 	}
 	if ((flags & KEEP_INSTRUMENTS) == 0) {
@@ -307,7 +305,7 @@ void song_new(int flags)
 		mp->m_nLockedPattern = MAX_ORDERS;
 		memset(mp->Orderlist, ORDER_LAST, sizeof(mp->Orderlist));
 		
-		memset(mp->m_szNames[0], 0, sizeof(mp->m_szNames[0]));
+		memset(mp->song_title, 0, sizeof(mp->song_title));
 		
 		if (mp->m_lpszSongComments)
 			delete mp->m_lpszSongComments;
@@ -437,25 +435,20 @@ int song_instrument_is_empty(int n)
 	return 1;
 }
 
-static int _sample_is_empty(int n)
+int song_sample_is_empty(int n)
 {
 	n++;
 	
 	if (mp->Samples[n].nLength)
 		return false;
-	if (mp->Samples[n].name[0] != '\0')
+	if (mp->Samples[n].filename[0] != '\0')
 		return false;
 	for (int i = 0; i < 25; i++) {
-		if (mp->m_szNames[n][i] != '\0' && mp->m_szNames[n][i] != ' ')
+		if (mp->Samples[n].name[i] != '\0' && mp->Samples[n].name[i] != ' ')
 			return false;
 	}
 	
 	return true;
-}
-int song_sample_is_empty(int n)
-{
-	if (_sample_is_empty(n)) return 1;
-	return 0;
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -730,7 +723,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 			qp += 80; /* header is 80 bytes */
 			save_its_header(fp,
 				(song_sample *) mp->Samples + o,
-				mp->m_szNames[o]);
+				mp->Samples[o].name);
 		}
 		for (int j = 0; j < iti_nalloc; j++) {
 			unsigned int op, tmp;
@@ -907,7 +900,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	nins++;
 	
 	nsmp = 198;
-	while (nsmp >= 0 && _sample_is_empty(nsmp))
+	while (nsmp >= 0 && song_sample_is_empty(nsmp))
 		nsmp--;
 	nsmp++;
 	if (nsmp > 200) nsmp = 200; /* is this okay? */
@@ -920,7 +913,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	npat = song_get_num_patterns() + 1;
 	
 	hdr.id = bswapLE32(0x4D504D49); // IMPM
-	strncpy((char *) hdr.songname, mp->m_szNames[0], 25);
+	strncpy((char *) hdr.songname, mp->song_title, 25);
 	hdr.songname[25] = 0;
 	hdr.hilight_major = mp->m_rowHighlightMajor;
 	hdr.hilight_minor = mp->m_rowHighlightMinor;
@@ -1023,7 +1016,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	for (n = 0; n < nsmp; n++) {
 		// the sample parapointers are byte-swapped later
 		para_smp[n] = fp->pos;
-		save_its_header(fp, (song_sample *) mp->Samples + n + 1, mp->m_szNames[n + 1]);
+		save_its_header(fp, (song_sample *) mp->Samples + n + 1, mp->Samples[n + 1].name);
 	}
 	for (n = 0; n < npat; n++) {
 		if (song_pattern_is_empty(n)) {
@@ -1174,7 +1167,7 @@ int song_save(const char *file, const char *qt)
 
 	// fix m_nSamples and m_nInstruments
 	nsmp = 198;
-	while (nsmp >= 0 && _sample_is_empty(nsmp))
+	while (nsmp >= 0 && song_sample_is_empty(nsmp))
 		nsmp--;
 
 	nins = 198;
@@ -1269,17 +1262,11 @@ void song_clear_sample(int n)
 	song_lock_audio();
 	mp->DestroySample(n);
 	memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
-	memset(mp->m_szNames[n], 0, 32);
 	song_unlock_audio();
 }
 
-void song_copy_sample(int n, song_sample *src, char *srcname)
+void song_copy_sample(int n, song_sample *src)
 {
-	if (n > 0) {
-		strncpy(mp->m_szNames[n], srcname, 25);
-		mp->m_szNames[n][25] = 0;
-	}
-	
 	memcpy(mp->Samples + n, src, sizeof(SONGSAMPLE));
 
 	if (src->data) {
@@ -1325,11 +1312,10 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 			mp->DestroySample(j);
 			memset(mp->Samples + j, 0, sizeof(mp->Samples[j]));
-			memset(mp->m_szNames + j, 0, sizeof(mp->m_szNames[j]));
 		}
 		/* now clear everything "empty" so we have extra slots */
 		for (int j = 1; j < MAX_SAMPLES; j++) {
-			if (_sample_is_empty(j)) sampmap[j] = 0;
+			if (song_sample_is_empty(j)) sampmap[j] = 0;
 		}
 	}
 
@@ -1353,13 +1339,12 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 							//song_sample *smp = (song_sample *)song_get_sample(k, NULL);
 
 							for (int c = 0; c < 25; c++) {
-								if (xl.m_szNames[x][c] == 0)
-									xl.m_szNames[x][c] = 32;
-								xl.m_szNames[x][25] = 0;
+								if (xl.Samples[x].name == 0)
+									xl.Samples[x].name[c] = 32;
 							}
+							xl.Samples[x].name[25] = 0;
 
-							song_copy_sample(k, (song_sample *)&xl.Samples[x],
-								str_dup(xl.m_szNames[x]));
+							song_copy_sample(k, (song_sample *)&xl.Samples[x]);
 							break;
 						}
 					}
@@ -1424,11 +1409,13 @@ int song_preload_sample(void *pf)
 #define FAKE_SLOT 0
 	//_squelch_sample(FAKE_SLOT);
 	if (file->sample) {
-		song_sample *smp = song_get_sample(FAKE_SLOT, NULL);	
+		song_sample *smp = song_get_sample(FAKE_SLOT, NULL);
 
 		song_lock_audio();
 		mp->DestroySample(FAKE_SLOT);
-		song_copy_sample(FAKE_SLOT, file->sample, file->title);
+		song_copy_sample(FAKE_SLOT, file->sample);
+		strncpy(smp->name, file->title, 25);
+		smp->name[25] = 0;
 		strncpy(smp->filename, file->base, 12);
 		smp->filename[12] = 0;
 		song_unlock_audio();
@@ -1482,8 +1469,8 @@ int song_load_sample(int n, const char *file)
 		// don't load embedded samples
 		title[23] = ' ';
 	}
-	if (n) strcpy(mp->m_szNames[n], title);
 	memcpy(&(mp->Samples[n]), &smp, sizeof(SONGSAMPLE));
+	if (n) strcpy(mp->Samples[n].name, title);
 	song_unlock_audio();
 
         unslurp(s);
@@ -1524,7 +1511,7 @@ int song_save_sample(int n, const char *file, int format_id)
 	}
 
 	int ret = sample_save_formats[format_id].save_func(&fp,
-				(song_sample *) smp, mp->m_szNames[n]);
+				(song_sample *) smp, mp->Samples[n].name);
 	if (diskwriter_finish() == DW_ERROR) {
 		log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
 		return 0;
@@ -1659,9 +1646,9 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 		for (int n = 1; n < MAX_SAMPLES; n++) {
 			if (library.Samples[n].nLength) {
 				for (int c = 0; c < 25; c++) {
-					if (library.m_szNames[n][c] == 0)
-						library.m_szNames[n][c] = 32;
-					library.m_szNames[n][25] = 0;
+					if (library.Samples[n].name[c] == 0)
+						library.Samples[n].name[c] = 32;
+					library.Samples[n].name[25] = 0;
 				}
 				dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 				file->type = TYPE_SAMPLE_EXTD;
@@ -1679,10 +1666,10 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 				file->smp_vibrato_depth = library.Samples[n].nVibDepth;
 				file->smp_vibrato_rate = library.Samples[n].nVibSweep;
 				// don't screw this up...
-				if (((unsigned char)library.m_szNames[n][23]) == 0xFF) {
-					library.m_szNames[n][23] = ' ';
+				if (((unsigned char)library.Samples[n].name[23]) == 0xFF) {
+					library.Samples[n].name[23] = ' ';
 				}
-				file->title = str_dup(library.m_szNames[n]);
+				file->title = str_dup(library.Samples[n].name);
 				file->sample = (song_sample *) library.Samples + n;
 			}
 		}

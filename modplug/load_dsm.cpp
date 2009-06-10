@@ -212,9 +212,9 @@ bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 			if (dwMemPos + pins->inst_len >= dwMemLength - 8) break;
 			uint32_t dwPos = dwMemPos + sizeof(DSMINST);
 			dwMemPos += 8 + pins->inst_len;
-			memcpy(m_szNames[nSmp], pins->samplename, 28);
 			SONGSAMPLE *psmp = &Samples[nSmp];
-			memcpy(psmp->name, pins->filename, 13);
+			memcpy(psmp->name, pins->samplename, 28);
+			memcpy(psmp->filename, pins->filename, 13);
 			psmp->nGlobalVol = 64;
 			psmp->nC5Speed = pins->c2spd;
 			psmp->uFlags = (uint16_t)((pins->flags & 1) ? CHN_LOOP : 0);

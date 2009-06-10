@@ -74,7 +74,7 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 		Samples[nins].nLoopStart = loopstart;
 		Samples[nins].nLoopEnd = loopend;
 		if (loopend) Samples[nins].uFlags |= CHN_LOOP;
-		memcpy(m_szNames[nins], psmp->filename, 13);
+		memcpy(Samples[nins].name, psmp->filename, 13);
 		Samples[nins].nVolume = 256;
 		Samples[nins].nGlobalVol = 64;
 		Samples[nins].nPan = 128;

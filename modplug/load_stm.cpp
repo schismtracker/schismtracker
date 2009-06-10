@@ -89,8 +89,8 @@ bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		SONGSAMPLE *pIns = &Samples[nIns+1];
 		STMSAMPLE *pStm = &phdr->sample[nIns];  // STM sample data
-		memcpy(pIns->name, pStm->filename, 13);
-		memcpy(m_szNames[nIns+1], pStm->filename, 12);
+		memcpy(pIns->filename, pStm->filename, 13);
+		memcpy(pIns->name, pStm->filename, 12);
 		pIns->nC5Speed = pStm->c2spd;
 		pIns->nGlobalVol = 64;
 		pIns->nVolume = pStm->volume << 2;
