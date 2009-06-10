@@ -21,17 +21,22 @@
  */
 
 #include "headers.h"
+#include "sdlmain.h"
 
+#include "it.h" /* for log_appendf */
 #include "midi.h"
 
 #include "mixer.h"
 #include "util.h"
 
-#ifdef USE_WIN32MM
-
 #include <windows.h>
 #include <mmsystem.h>
 #include <stdio.h>
+
+#ifndef USE_WIN32MM
+# error You have no winmm. Why are you trying to build this file?
+#endif
+
 
 struct win32mm_midi {
 	DWORD id;
@@ -318,6 +323,3 @@ int win32mm_midi_setup(void)
 
 	return 1;
 }
-
-
-#endif

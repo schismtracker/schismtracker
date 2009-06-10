@@ -22,8 +22,6 @@ Boston, MA 02111-1307, USA.  */
 #include <stdio.h>
 #include <string.h>
 
-//unsigned long strtoul ();
-//char *malloc ();
 #include <stdlib.h>
 #include <stdarg.h>
 

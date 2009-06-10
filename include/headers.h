@@ -186,6 +186,8 @@ extern "C" {
 
 #ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
+#endif
+#ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
 
