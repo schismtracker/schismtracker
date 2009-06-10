@@ -19,17 +19,17 @@
 unsigned int CSoundFile::GetLength(bool bAdjust, bool bTotal)
 //----------------------------------------------------
 {
-	uint32_t dwElapsedTime=0, nRow=0, nCurrentPattern=0, nNextPattern=0, nPattern=Order[0];
+	uint32_t dwElapsedTime=0, nRow=0, nCurrentPattern=0, nNextPattern=0, nPattern=Orderlist[0];
 	uint32_t nMusicSpeed=m_nDefaultSpeed, nMusicTempo=m_nDefaultTempo, nNextRow=0;
 	uint32_t nMaxRow = 0, nMaxPattern = 0;
 	int32_t nGlbVol = m_nDefaultGlobalVolume, nOldGlbVolSlide = 0;
-	uint8_t samples[MAX_CHANNELS];
-	uint8_t instr[MAX_CHANNELS];
-	uint8_t notes[MAX_CHANNELS];
-	uint8_t vols[MAX_CHANNELS];
-	uint8_t oldparam[MAX_CHANNELS];
-	uint8_t chnvols[MAX_CHANNELS];
-	uint32_t patloop[MAX_CHANNELS];
+	uint8_t samples[MAX_VOICES];
+	uint8_t instr[MAX_VOICES];
+	uint8_t notes[MAX_VOICES];
+	uint8_t vols[MAX_VOICES];
+	uint8_t oldparam[MAX_VOICES];
+	uint8_t chnvols[MAX_VOICES];
+	uint32_t patloop[MAX_VOICES];
 
 	memset(instr, 0, sizeof(instr));
 	memset(notes, 0, sizeof(notes));
@@ -38,11 +38,11 @@ unsigned int CSoundFile::GetLength(bool bAdjust, bool bTotal)
 	memset(oldparam, 0, sizeof(oldparam));
 	memset(chnvols, 64, sizeof(chnvols));
 	memset(samples, 0, sizeof(samples));
-	for (uint32_t icv=0; icv<m_nChannels; icv++) chnvols[icv] = ChnSettings[icv].nVolume;
+	for (uint32_t icv=0; icv<m_nChannels; icv++) chnvols[icv] = Channels[icv].nVolume;
 	nMaxRow = m_nNextRow;
 	nMaxPattern = m_nNextPattern;
 	nCurrentPattern = nNextPattern = 0;
-	nPattern = Order[0];
+	nPattern = Orderlist[0];
 	nRow = nNextRow = 0;
 	for (;;)
 	{
@@ -51,7 +51,7 @@ unsigned int CSoundFile::GetLength(bool bAdjust, bool bTotal)
 		nCurrentPattern = nNextPattern;
 
 		// Check if pattern is valid
-		nPattern = Order[nCurrentPattern];
+		nPattern = Orderlist[nCurrentPattern];
 		while (nPattern >= MAX_PATTERNS)
 		{
 			// End of song ?
@@ -61,7 +61,7 @@ unsigned int CSoundFile::GetLength(bool bAdjust, bool bTotal)
 			} else
 			{
 				nCurrentPattern++;
-				nPattern = (nCurrentPattern < MAX_ORDERS) ? Order[nCurrentPattern] : 0xFF;
+				nPattern = (nCurrentPattern < MAX_ORDERS) ? Orderlist[nCurrentPattern] : 0xFF;
 			}
 			nNextPattern = nCurrentPattern;
 		}
@@ -106,7 +106,7 @@ unsigned int CSoundFile::GetLength(bool bAdjust, bool bTotal)
 				break;
 			}
 		}
-		MODCHANNEL *pChn = Chn;
+		SONGVOICE *pChn = Voices;
 		MODCOMMAND *p = Patterns[nPattern] + nRow * m_nChannels;
 		for (uint32_t nChn=0; nChn<m_nChannels; p++,pChn++, nChn++) if (*((uint32_t *)p))
 		{
@@ -273,13 +273,13 @@ EndMod:
 		m_nOldGlbVolSlide = nOldGlbVolSlide;
 		for (uint32_t n=0; n<m_nChannels; n++)
 		{
-			Chn[n].nGlobalVol = chnvols[n];
-			if (notes[n]) Chn[n].nNewNote = notes[n];
-			if (instr[n]) Chn[n].nNewIns = instr[n];
+			Voices[n].nGlobalVol = chnvols[n];
+			if (notes[n]) Voices[n].nNewNote = notes[n];
+			if (instr[n]) Voices[n].nNewIns = instr[n];
 			if (vols[n] != 0xFF)
 			{
 				if (vols[n] > 64) vols[n] = 64;
-				Chn[n].nVolume = vols[n] << 2;
+				Voices[n].nVolume = vols[n] << 2;
 			}
 		}
 	}
@@ -290,13 +290,13 @@ EndMod:
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Effects
 
-void CSoundFile::TranslateKeyboard(INSTRUMENTHEADER* penv, uint32_t note, MODINSTRUMENT*& psmp)
+void CSoundFile::TranslateKeyboard(SONGINSTRUMENT* penv, uint32_t note, SONGSAMPLE*& psmp)
 {
     uint32_t n = penv->Keyboard[note-1];
-	if ((n) && (n < MAX_SAMPLES)) psmp = &Ins[n];
+	if ((n) && (n < MAX_SAMPLES)) psmp = &Samples[n];
 	if (!n)
 	{
-	    static MODINSTRUMENT dummyinstrument =
+	    static SONGSAMPLE dummyinstrument =
 	    {
 	        1,/*len*/
 	        0,0, 0,0, /* loop s/e, sus s/e */
@@ -319,14 +319,14 @@ void CSoundFile::TranslateKeyboard(INSTRUMENTHEADER* penv, uint32_t note, MODINS
 	}
 }
 
-void CSoundFile::InstrumentChange(MODCHANNEL *pChn, uint32_t instr, bool bPorta, bool bUpdVol, bool bResetEnv)
+void CSoundFile::InstrumentChange(SONGVOICE *pChn, uint32_t instr, bool bPorta, bool bUpdVol, bool bResetEnv)
 //--------------------------------------------------------------------------------------------------------
 {
 	bool bInstrumentChanged = false;
 
 	if (instr >= MAX_INSTRUMENTS) return;
-	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? Headers[instr] : NULL;
-	MODINSTRUMENT *psmp = &Ins[instr];
+	SONGINSTRUMENT *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? Instruments[instr] : NULL;
+	SONGSAMPLE *psmp = &Samples[instr];
 	uint32_t note = pChn->nNewNote;
 	if ((penv) && (note) && (note <= 128))
 	{
@@ -456,9 +456,9 @@ void CSoundFile::NoteChange(uint32_t nChn, int note, bool bPorta, bool bResetEnv
 //-----------------------------------------------------------------------------------------
 {
 	if (note < 1) return;
-	MODCHANNEL * const pChn = &Chn[nChn];
-	MODINSTRUMENT *pins = pChn->pInstrument;
-	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	SONGVOICE * const pChn = &Voices[nChn];
+	SONGSAMPLE *pins = pChn->pInstrument;
+	SONGINSTRUMENT *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	if ((penv) && (note <= 0x80))
 	{
 		TranslateKeyboard(penv, note, pins);
@@ -621,10 +621,10 @@ void CSoundFile::NoteChange(uint32_t nChn, int note, bool bPorta, bool bResetEnv
 uint32_t CSoundFile::GetNNAChannel(uint32_t nChn)
 //---------------------------------------------
 {
-	MODCHANNEL *pChn = &Chn[nChn];
+	SONGVOICE *pChn = &Voices[nChn];
 	// Check for empty channel
-	MODCHANNEL *pi = &Chn[m_nChannels];
-	for (uint32_t i=m_nChannels; i<MAX_CHANNELS; i++, pi++) {
+	SONGVOICE *pi = &Voices[m_nChannels];
+	for (uint32_t i=m_nChannels; i<MAX_VOICES; i++, pi++) {
 		if (!pi->nLength) {
 			if (pi->dwFlags & CHN_MUTE) {
 				if (pi->dwFlags & CHN_NNAMUTE) {
@@ -642,8 +642,8 @@ uint32_t CSoundFile::GetNNAChannel(uint32_t nChn)
 	uint32_t result = 0;
 	uint32_t vol = 64*65536;	// 25%
 	int envpos = 0xFFFFFF;
-	const MODCHANNEL *pj = &Chn[m_nChannels];
-	for (uint32_t j=m_nChannels; j<MAX_CHANNELS; j++, pj++)
+	const SONGVOICE *pj = &Voices[m_nChannels];
+	for (uint32_t j=m_nChannels; j<MAX_VOICES; j++, pj++)
 	{
 		if (!pj->nFadeOutVol) return j;
 		uint32_t v = pj->nVolume;
@@ -661,7 +661,7 @@ uint32_t CSoundFile::GetNNAChannel(uint32_t nChn)
 	}
 	if (result) {
 		/* unmute new nna channel */
-		Chn[result].dwFlags &= ~(CHN_MUTE|CHN_NNAMUTE);
+		Voices[result].dwFlags &= ~(CHN_MUTE|CHN_NNAMUTE);
 	}
 	return result;
 }
@@ -670,10 +670,10 @@ uint32_t CSoundFile::GetNNAChannel(uint32_t nChn)
 void CSoundFile::CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCut)
 //------------------------------------------------------------------------
 {
-        MODCHANNEL *p;
-	MODCHANNEL *pChn = &Chn[nChn];
-	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
-	INSTRUMENTHEADER *pHeader;
+        SONGVOICE *p;
+	SONGVOICE *pChn = &Voices[nChn];
+	SONGINSTRUMENT *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	SONGINSTRUMENT *pHeader;
 	signed char *pSample;
 	if (note > 0x80) note = 0;
 	if (note < 1) return;
@@ -686,7 +686,7 @@ void CSoundFile::CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCu
 			return;
 		uint32_t n = GetNNAChannel(nChn);
 		if (!n) return;
-		p = &Chn[n];
+		p = &Voices[n];
 		// Copy Channel
 		*p = *pChn;
 		p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
@@ -708,7 +708,7 @@ void CSoundFile::CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCu
 	pHeader = pChn->pHeader;
 	if ((instr) && (note))
 	{
-		pHeader = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? Headers[instr] : NULL;
+		pHeader = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? Instruments[instr] : NULL;
 		if (pHeader)
 		{
 			uint32_t n = 0;
@@ -716,13 +716,13 @@ void CSoundFile::CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCu
 			{
 				n = pHeader->Keyboard[note-1];
 				note = pHeader->NoteMap[note-1];
-				if ((n) && (n < MAX_SAMPLES)) pSample = Ins[n].pSample;
+				if ((n) && (n < MAX_SAMPLES)) pSample = Samples[n].pSample;
 			}
 		} else pSample = NULL;
 	}
 	if (!penv) return;
 	p = pChn;
-	for (uint32_t i=nChn; i<MAX_CHANNELS; p++, i++)
+	for (uint32_t i=nChn; i<MAX_VOICES; p++, i++)
 	if ((i >= m_nChannels) || (p == pChn))
 	{
 		if (((p->nMasterChn == nChn+1) || (p == pChn)) && (p->pHeader))
@@ -778,7 +778,7 @@ void CSoundFile::CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCu
 		uint32_t n = GetNNAChannel(nChn);
 		if (n)
 		{
-			p = &Chn[n];
+			p = &Voices[n];
 			// Copy Channel
 			*p = *pChn;
 			p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
@@ -809,7 +809,7 @@ bool CSoundFile::ProcessEffects()
 //-------------------------------
 {
 	int nBreakRow = -1, nPosJump = -1, nPatLoopRow = -1;
-	MODCHANNEL *pChn = Chn;
+	SONGVOICE *pChn = Voices;
 	for (uint32_t nChn=0; nChn<m_nChannels; nChn++, pChn++)
 	{
 		pChn->nCommand=0;
@@ -867,7 +867,7 @@ bool CSoundFile::ProcessEffects()
 				if (m_dwSongFlags & SONG_INSTRUMENTMODE) {
 					if (pChn->pInstrument) pChn->nVolume = pChn->pInstrument->nVolume;
 				} else {
-					if (instr < MAX_SAMPLES) pChn->nVolume = Ins[instr].nVolume;
+					if (instr < MAX_SAMPLES) pChn->nVolume = Samples[instr].nVolume;
 				}
 			}
 			// Invalid Instrument ?
@@ -890,12 +890,12 @@ bool CSoundFile::ProcessEffects()
 			// Instrument Change ?
 			if (instr)
 			{
-				MODINSTRUMENT *psmp = pChn->pInstrument;
+				SONGSAMPLE *psmp = pChn->pInstrument;
 				InstrumentChange(pChn, instr, bPorta, true);
-				OPL_Patch(nChn, Ins[instr].AdlibBytes);
+				OPL_Patch(nChn, Samples[instr].AdlibBytes);
 				
-				if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Headers[instr])
-					GM_DPatch(nChn, Headers[instr]->nMidiProgram, Headers[instr]->wMidiBank, Headers[instr]->nMidiChannelMask);
+				if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Instruments[instr])
+					GM_DPatch(nChn, Instruments[instr]->nMidiProgram, Instruments[instr]->wMidiBank, Instruments[instr]->nMidiChannelMask);
 				
 				pChn->nNewIns = 0;
 				// Special IT case: portamento+note causes sample change -> ignore portamento
@@ -910,9 +910,9 @@ bool CSoundFile::ProcessEffects()
 				if ((!instr) && (pChn->nNewIns) && (note < 0x80))
 				{
 					InstrumentChange(pChn, pChn->nNewIns, bPorta, false, true);
-					if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Headers[pChn->nNewIns]) {
-						OPL_Patch(nChn, Ins[pChn->nNewIns].AdlibBytes);
-						GM_DPatch(nChn, Headers[pChn->nNewIns]->nMidiProgram, Headers[pChn->nNewIns]->wMidiBank, Headers[pChn->nNewIns]->nMidiChannelMask);
+					if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Instruments[pChn->nNewIns]) {
+						OPL_Patch(nChn, Samples[pChn->nNewIns].AdlibBytes);
+						GM_DPatch(nChn, Instruments[pChn->nNewIns]->nMidiProgram, Instruments[pChn->nNewIns]->wMidiBank, Instruments[pChn->nNewIns]->nMidiChannelMask);
 					}
 					pChn->nNewIns = 0;
 				}
@@ -997,9 +997,9 @@ bool CSoundFile::ProcessEffects()
 			{
 				pChn->nVolume = (param < 64) ? param*4 : 256;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
-				for (uint32_t i=m_nChannels; i<MAX_CHANNELS; i++)
+				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++)
 				{
-					MODCHANNEL *c = &Chn[i];
+					SONGVOICE *c = &Voices[i];
 					if (c->nMasterChn == (nChn+1)) {
 						c->nVolume = pChn->nVolume;
 						c->dwFlags |= CHN_FASTVOLRAMP;
@@ -1190,9 +1190,9 @@ bool CSoundFile::ProcessEffects()
 			{
 				pChn->nGlobalVol = param;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
-				for (uint32_t i=m_nChannels; i<MAX_CHANNELS; i++)
+				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++)
 				{
-					MODCHANNEL *c = &Chn[i];
+					SONGVOICE *c = &Voices[i];
 					if (c->nMasterChn == (nChn+1)) {
 						c->nGlobalVol = param;
 						c->dwFlags |= CHN_FASTVOLRAMP;
@@ -1206,9 +1206,9 @@ bool CSoundFile::ProcessEffects()
 			{
 				int saw_self = 0;
 
-				for (uint32_t i=m_nChannels; i<MAX_CHANNELS; i++)
+				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++)
 				{
-					MODCHANNEL *c = &Chn[i];
+					SONGVOICE *c = &Voices[i];
 					if (c->nMasterChn == (nChn+1)) {
 						if (c == pChn) saw_self = 1;
 						ChannelVolSlide(c, param);
@@ -1235,7 +1235,7 @@ bool CSoundFile::ProcessEffects()
 				pChn->nPitchEnvPosition = param;
 				if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
 				{
-					INSTRUMENTHEADER *penv = pChn->pHeader;
+					SONGINSTRUMENT *penv = pChn->pHeader;
 					if ((pChn->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes) && ((int)param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1]))
 					{
 						pChn->dwFlags &= ~CHN_PANENV;
@@ -1309,7 +1309,7 @@ bool CSoundFile::ProcessEffects()
 			{
 				if (nPosJump != (int)m_nCurrentPattern)
 				{
-					for (uint32_t i=0; i<m_nChannels; i++) Chn[i].nPatternLoopCount = 0;
+					for (uint32_t i=0; i<m_nChannels; i++) Voices[i].nPatternLoopCount = 0;
 				}
 				m_nNextPattern = nPosJump;
 				m_nNextRow = (uint32_t)nBreakRow;
@@ -1323,7 +1323,7 @@ bool CSoundFile::ProcessEffects()
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void CSoundFile::PortamentoUp(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::PortamentoUp(SONGVOICE *pChn, uint32_t param)
 //---------------------------------------------------------
 {
 	if (param) pChn->nOldPortaUpDown = param; else param = pChn->nOldPortaUpDown;
@@ -1352,7 +1352,7 @@ void CSoundFile::PortamentoUp(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::PortamentoDown(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::PortamentoDown(SONGVOICE *pChn, uint32_t param)
 //-----------------------------------------------------------
 {
 	if (param) pChn->nOldPortaUpDown = param; else param = pChn->nOldPortaUpDown;
@@ -1372,7 +1372,7 @@ void CSoundFile::PortamentoDown(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::FinePortamentoUp(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::FinePortamentoUp(SONGVOICE *pChn, uint32_t param)
 //-------------------------------------------------------------
 {
 	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
@@ -1385,7 +1385,7 @@ void CSoundFile::FinePortamentoUp(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::FinePortamentoDown(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::FinePortamentoDown(SONGVOICE *pChn, uint32_t param)
 //---------------------------------------------------------------
 {
 	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
@@ -1398,7 +1398,7 @@ void CSoundFile::FinePortamentoDown(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::ExtraFinePortamentoUp(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::ExtraFinePortamentoUp(SONGVOICE *pChn, uint32_t param)
 //------------------------------------------------------------------
 {
 	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
@@ -1411,7 +1411,7 @@ void CSoundFile::ExtraFinePortamentoUp(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::ExtraFinePortamentoDown(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::ExtraFinePortamentoDown(SONGVOICE *pChn, uint32_t param)
 //--------------------------------------------------------------------
 {
 	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
@@ -1425,7 +1425,7 @@ void CSoundFile::ExtraFinePortamentoDown(MODCHANNEL *pChn, uint32_t param)
 
 
 // Portamento Slide
-void CSoundFile::TonePortamento(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::TonePortamento(SONGVOICE *pChn, uint32_t param)
 //-----------------------------------------------------------
 {
 	if (param) pChn->nPortamentoSlide = param * 4;
@@ -1462,7 +1462,7 @@ void CSoundFile::TonePortamento(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::Vibrato(MODCHANNEL *p, uint32_t param)
+void CSoundFile::Vibrato(SONGVOICE *p, uint32_t param)
 //-------------------------------------------------
 {
 	if (param & 0x0F) p->nVibratoDepth = (param & 0x0F) * 4;
@@ -1471,7 +1471,7 @@ void CSoundFile::Vibrato(MODCHANNEL *p, uint32_t param)
 }
 
 
-void CSoundFile::FineVibrato(MODCHANNEL *p, uint32_t param)
+void CSoundFile::FineVibrato(SONGVOICE *p, uint32_t param)
 //-----------------------------------------------------
 {
 	if (param & 0x0F) p->nVibratoDepth = param & 0x0F;
@@ -1480,7 +1480,7 @@ void CSoundFile::FineVibrato(MODCHANNEL *p, uint32_t param)
 }
 
 
-void CSoundFile::Panbrello(MODCHANNEL *p, uint32_t param)
+void CSoundFile::Panbrello(SONGVOICE *p, uint32_t param)
 //---------------------------------------------------
 {
 	if (param & 0x0F) p->nPanbrelloDepth = param & 0x0F;
@@ -1489,7 +1489,7 @@ void CSoundFile::Panbrello(MODCHANNEL *p, uint32_t param)
 }
 
 
-void CSoundFile::VolumeSlide(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::VolumeSlide(SONGVOICE *pChn, uint32_t param)
 //--------------------------------------------------------
 {
 	if (param) pChn->nOldVolumeSlide = param; else param = pChn->nOldVolumeSlide;
@@ -1533,7 +1533,7 @@ void CSoundFile::VolumeSlide(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::PanningSlide(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::PanningSlide(SONGVOICE *pChn, uint32_t param)
 //---------------------------------------------------------
 {
 	int32_t nPanSlide = 0;
@@ -1571,7 +1571,7 @@ void CSoundFile::PanningSlide(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::FineVolumeUp(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::FineVolumeUp(SONGVOICE *pChn, uint32_t param)
 //---------------------------------------------------------
 {
 	if (param) pChn->nOldFineVolUpDown = param; else param = pChn->nOldFineVolUpDown;
@@ -1583,7 +1583,7 @@ void CSoundFile::FineVolumeUp(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::FineVolumeDown(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::FineVolumeDown(SONGVOICE *pChn, uint32_t param)
 //-----------------------------------------------------------
 {
 	if (param) pChn->nOldFineVolUpDown = param; else param = pChn->nOldFineVolUpDown;
@@ -1595,7 +1595,7 @@ void CSoundFile::FineVolumeDown(MODCHANNEL *pChn, uint32_t param)
 }
 
 
-void CSoundFile::Tremolo(MODCHANNEL *p, uint32_t param)
+void CSoundFile::Tremolo(SONGVOICE *p, uint32_t param)
 //-------------------------------------------------
 {
 	if (param & 0x0F) p->nTremoloDepth = (param & 0x0F) << 2;
@@ -1604,7 +1604,7 @@ void CSoundFile::Tremolo(MODCHANNEL *p, uint32_t param)
 }
 
 
-void CSoundFile::ChannelVolSlide(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::ChannelVolSlide(SONGVOICE *pChn, uint32_t param)
 //------------------------------------------------------------
 {
 	int32_t nChnSlide = 0;
@@ -1637,7 +1637,7 @@ void CSoundFile::ChannelVolSlide(MODCHANNEL *pChn, uint32_t param)
 void CSoundFile::ExtendedS3MCommands(uint32_t nChn, uint32_t param)
 //---------------------------------------------------------
 {
-	MODCHANNEL *pChn = &Chn[nChn];
+	SONGVOICE *pChn = &Voices[nChn];
 	uint32_t command = param & 0xF0;
 	param &= 0x0F;
 	switch(command)
@@ -1663,8 +1663,8 @@ void CSoundFile::ExtendedS3MCommands(uint32_t nChn, uint32_t param)
 			case 1:
 			case 2:
 				{
-					MODCHANNEL *bkp = &Chn[m_nChannels];
-					for (uint32_t i=m_nChannels; i<MAX_CHANNELS; i++, bkp++)
+					SONGVOICE *bkp = &Voices[m_nChannels];
+					for (uint32_t i=m_nChannels; i<MAX_VOICES; i++, bkp++)
 					{
 						if (bkp->nMasterChn == nChn+1)
 						{
@@ -1718,7 +1718,7 @@ void CSoundFile::ExtendedS3MCommands(uint32_t nChn, uint32_t param)
 }
 
 
-void CSoundFile::ExtendedChannelEffect(MODCHANNEL *pChn, uint32_t param)
+void CSoundFile::ExtendedChannelEffect(SONGVOICE *pChn, uint32_t param)
 //------------------------------------------------------------------
 {
 	// S9x and X9x commands (S3M/XM/IT only)
@@ -1766,7 +1766,7 @@ void CSoundFile::ExtendedChannelEffect(MODCHANNEL *pChn, uint32_t param)
 // this is all brisby
 void CSoundFile::MidiSend(const unsigned char *data, unsigned int len, uint32_t nChn, int fake)
 {
-	MODCHANNEL *pChn = &Chn[nChn];
+	SONGVOICE *pChn = &Voices[nChn];
 	int oldcutoff;
 
 	if (len > 2 && data[0] == 0xF0 && data[1] == 0xF0) {
@@ -1820,9 +1820,9 @@ void CSoundFile::ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint
 //---------------------------------------------------------------------------
 {
 /* this was all wrong. -mrsb */
-	MODCHANNEL *pChn = &Chn[nChn];
-	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE)
-			? Headers[use_instr
+	SONGVOICE *pChn = &Voices[nChn];
+	SONGINSTRUMENT *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE)
+			? Instruments[use_instr
 					?use_instr
 					:pChn->nLastInstr]
 			: NULL;
@@ -1937,7 +1937,7 @@ void CSoundFile::ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint
 void CSoundFile::RetrigNote(uint32_t nChn, uint32_t param)
 //------------------------------------------------
 {
-	MODCHANNEL *pChn = &Chn[nChn];
+	SONGVOICE *pChn = &Voices[nChn];
 
 	//printf("Q%02X note=%02X tick%d  %d\n", param, pChn->nRowNote, m_nTickCount, pChn->nRetrigCount);
 	if (!m_nTickCount && pChn->nRowNote) {
@@ -1966,7 +1966,7 @@ void CSoundFile::RetrigNote(uint32_t nChn, uint32_t param)
 }
 
 
-void CSoundFile::DoFreqSlide(MODCHANNEL *pChn, int32_t nFreqSlide)
+void CSoundFile::DoFreqSlide(SONGVOICE *pChn, int32_t nFreqSlide)
 //-------------------------------------------------------------
 {
 	// IT Linear slides
@@ -1992,7 +1992,7 @@ void CSoundFile::NoteCut(uint32_t nChn, uint32_t nTick)
 //---------------------------------------------
 {
 	if (m_nTickCount == nTick) {
-		MODCHANNEL *pChn = &Chn[nChn];
+		SONGVOICE *pChn = &Voices[nChn];
 		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
 		pChn->nVolume = 0;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
@@ -2007,7 +2007,7 @@ void CSoundFile::NoteCut(uint32_t nChn, uint32_t nTick)
 void CSoundFile::KeyOff(uint32_t nChn)
 //--------------------------------
 {
-	MODCHANNEL *pChn = &Chn[nChn];
+	SONGVOICE *pChn = &Voices[nChn];
 	bool bKeyOn = (pChn->dwFlags & CHN_KEYOFF) ? false : true;
 
 	/*fprintf(stderr, "KeyOff[%d] [ch%u]: flags=0x%X\n",
@@ -2015,7 +2015,7 @@ void CSoundFile::KeyOff(uint32_t nChn)
 	OPL_NoteOff(nChn);
 	GM_KeyOff(nChn);
 
-	INSTRUMENTHEADER *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	SONGINSTRUMENT *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	
 	/*if ((pChn->dwFlags & CHN_ADLIB)
 	||  (penv && penv->nMidiChannelMask))
@@ -2036,7 +2036,7 @@ void CSoundFile::KeyOff(uint32_t nChn)
 	if (!pChn->nLength) return;
 	if ((pChn->dwFlags & CHN_SUSTAINLOOP) && (pChn->pInstrument) && (bKeyOn))
 	{
-		MODINSTRUMENT *psmp = pChn->pInstrument;
+		SONGSAMPLE *psmp = pChn->pInstrument;
 		if (psmp->uFlags & CHN_LOOP)
 		{
 			if (psmp->uFlags & CHN_PINGPONGLOOP)
@@ -2095,7 +2095,7 @@ void CSoundFile::SetTempo(uint32_t param)
 }
 
 
-int CSoundFile::PatternLoop(MODCHANNEL *pChn, uint32_t param)
+int CSoundFile::PatternLoop(SONGVOICE *pChn, uint32_t param)
 //-------------------------------------------------------
 {
 	if (param)
@@ -2118,7 +2118,7 @@ int CSoundFile::PatternLoop(MODCHANNEL *pChn, uint32_t param)
                         // other channels at all... i'm not really
                         // sure what this code is doing :/
 #if 0
-			MODCHANNEL *p = Chn;
+			SONGVOICE *p = Voices;
 			for (uint32_t i=0; i<m_nChannels; i++, p++) if (p != pChn)
 			{
 				// Loop already done
@@ -2173,7 +2173,7 @@ uint32_t CSoundFile::IsSongFinished(uint32_t nStartOrder, uint32_t nStartRow) co
 
 	for (nOrd=nStartOrder; nOrd<MAX_ORDERS; nOrd++)
 	{
-		uint32_t nPat = Order[nOrd];
+		uint32_t nPat = Orderlist[nOrd];
 		if (nPat != 0xFE)
 		{
 			MODCOMMAND *p;
@@ -2203,7 +2203,7 @@ uint32_t CSoundFile::IsSongFinished(uint32_t nStartOrder, uint32_t nStartRow) co
 bool CSoundFile::IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, uint32_t nJumpOrder, uint32_t nJumpRow) const
 //----------------------------------------------------------------------------------------------------------
 {
-	while ((nJumpOrder < MAX_PATTERNS) && (Order[nJumpOrder] == 0xFE)) nJumpOrder++;
+	while ((nJumpOrder < MAX_PATTERNS) && (Orderlist[nJumpOrder] == 0xFE)) nJumpOrder++;
 	if ((nStartOrder >= MAX_PATTERNS) || (nJumpOrder >= MAX_PATTERNS)) return false;
 	// Treat only case with jumps in the same pattern
 	if (nJumpOrder > nStartOrder) return true;

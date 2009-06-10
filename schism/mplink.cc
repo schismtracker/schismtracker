@@ -113,7 +113,7 @@ song_sample *song_get_sample(int n, char **name_ptr)
                 return NULL;
         if (name_ptr)
                 *name_ptr = mp->m_szNames[n];
-        return (song_sample *) mp->Ins + n;
+        return (song_sample *) mp->Samples + n;
 }
 
 static void _init_envelope(INSTRUMENTENVELOPE *e, int n)
@@ -131,25 +131,25 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
                 return NULL;
 
         // Make a new instrument if it doesn't exist.
-        if (!mp->Headers[n]) {
-                mp->Headers[n] = new INSTRUMENTHEADER;
-		memset(mp->Headers[n], 0, sizeof(INSTRUMENTHEADER));
-		mp->Headers[n]->nGlobalVol = 128;
-		mp->Headers[n]->nPan = 128;
+        if (!mp->Instruments[n]) {
+                mp->Instruments[n] = new SONGINSTRUMENT;
+		memset(mp->Instruments[n], 0, sizeof(SONGINSTRUMENT));
+		mp->Instruments[n]->nGlobalVol = 128;
+		mp->Instruments[n]->nPan = 128;
 
-		_init_envelope(&mp->Headers[n]->VolEnv, 64);
-		_init_envelope(&mp->Headers[n]->PanEnv, 32);
-		_init_envelope(&mp->Headers[n]->PitchEnv, 32);
+		_init_envelope(&mp->Instruments[n]->VolEnv, 64);
+		_init_envelope(&mp->Instruments[n]->PanEnv, 32);
+		_init_envelope(&mp->Instruments[n]->PitchEnv, 32);
 
 		int i;
 		for (i = 0; i < 128; i++) {
-			mp->Headers[n]->NoteMap[i] = i+1;
+			mp->Instruments[n]->NoteMap[i] = i+1;
 		}
         }
 	
         if (name_ptr)
-                *name_ptr = (char *) mp->Headers[n]->name;
-        return (song_instrument *) mp->Headers[n];
+                *name_ptr = (char *) mp->Instruments[n]->name;
+        return (song_instrument *) mp->Instruments[n];
 }
 
 // this is a fairly gross way to do what should be such a simple thing
@@ -157,29 +157,29 @@ int song_get_instrument_number(song_instrument *inst)
 {
 	if (inst)
 		for (int n = 1; n < MAX_INSTRUMENTS; n++)
-			if (inst == ((song_instrument *) mp->Headers[n]))
+			if (inst == ((song_instrument *) mp->Instruments[n]))
 				return n;
 	return 0;
 }
 
 song_channel *song_get_channel(int n)
 {
-        if (n >= MAX_BASECHANNELS)
+        if (n >= MAX_CHANNELS)
                 return NULL;
-        return (song_channel *) mp->ChnSettings + n;
+        return (song_channel *) mp->Channels + n;
 }
 
 song_mix_channel *song_get_mix_channel(int n)
 {
-        if (n >= MAX_CHANNELS)
+        if (n >= MAX_VOICES)
                 return NULL;
-        return (song_mix_channel *) mp->Chn + n;
+        return (song_mix_channel *) mp->Voices + n;
 }
 
 int song_get_mix_state(unsigned int **channel_list)
 {
         if (channel_list)
-                *channel_list = mp->ChnMix;
+                *channel_list = mp->VoiceMix;
         return MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 }
 
@@ -191,7 +191,7 @@ static int channel_states[64];  // saved ("real") mute settings; nonzero = muted
 
 static inline void _save_state(int channel)
 {
-	channel_states[channel] = mp->Chn[channel].dwFlags & CHN_MUTE;
+	channel_states[channel] = mp->Voices[channel].dwFlags & CHN_MUTE;
 }
 
 void song_save_channel_states(void)
@@ -204,22 +204,22 @@ void song_save_channel_states(void)
 static inline void _fix_mutes_like(int chan)
 {
 	int i;
-	for (i = 0; i < MAX_CHANNELS; i++) {
+	for (i = 0; i < MAX_VOICES; i++) {
 		if (i == chan) continue;
-		if (((int)mp->Chn[i].nMasterChn) != (chan+1)) continue;
-		mp->Chn[i].dwFlags = (mp->Chn[i].dwFlags & (~(CHN_MUTE)))
-				| (mp->Chn[chan].dwFlags &   (CHN_MUTE));
+		if (((int)mp->Voices[i].nMasterChn) != (chan+1)) continue;
+		mp->Voices[i].dwFlags = (mp->Voices[i].dwFlags & (~(CHN_MUTE)))
+				| (mp->Voices[chan].dwFlags &   (CHN_MUTE));
 	}
 }
 
 void song_set_channel_mute(int channel, int muted)
 {
         if (muted) {
-                mp->ChnSettings[channel].dwFlags |= CHN_MUTE;
-                mp->Chn[channel].dwFlags |= CHN_MUTE;
+                mp->Channels[channel].dwFlags |= CHN_MUTE;
+                mp->Voices[channel].dwFlags |= CHN_MUTE;
         } else {
-                mp->ChnSettings[channel].dwFlags &= ~CHN_MUTE;
-                mp->Chn[channel].dwFlags &= ~CHN_MUTE;
+                mp->Channels[channel].dwFlags &= ~CHN_MUTE;
+                mp->Voices[channel].dwFlags &= ~CHN_MUTE;
 		_save_state(channel);
         }
 	_fix_mutes_like(channel);
@@ -240,18 +240,18 @@ void song_toggle_channel_mute(int channel)
         // i'm just going by the playing channel's state...
         // if the actual channel is muted but not the playing one,
         // tough luck :)
-	song_set_channel_mute(channel, (mp->Chn[channel].dwFlags & CHN_MUTE) == 0);
+	song_set_channel_mute(channel, (mp->Voices[channel].dwFlags & CHN_MUTE) == 0);
 }
 
 static int _soloed(int channel) {
 	int n = 64;
 	// if this channel is muted, it obviously isn't soloed
-	if (mp->Chn[channel].dwFlags & CHN_MUTE)
+	if (mp->Voices[channel].dwFlags & CHN_MUTE)
 		return 0;
 	while (n-- > 0) {
 		if (n == channel)
 			continue;
-		if (!(mp->Chn[n].dwFlags & CHN_MUTE))
+		if (!(mp->Voices[n].dwFlags & CHN_MUTE))
 			return 0;
 	}
 	return 1;
@@ -338,7 +338,7 @@ void song_pattern_install(int patno, song_note *n, int rows)
 
 unsigned char *song_get_orderlist()
 {
-        return mp->Order;
+        return mp->Orderlist;
 }
 
 // ------------------------------------------------------------------------
@@ -359,12 +359,12 @@ int song_order_for_pattern(int pat, int locked)
 	if (locked > 255) locked = 255;
 
 	for (i = locked; i < 255; i++) {
-		if (mp->Order[i] == pat) {
+		if (mp->Orderlist[i] == pat) {
 			return i;
 		}
 	}
 	for (i = 0; i < locked; i++) {
-		if (mp->Order[i] == pat) {
+		if (mp->Orderlist[i] == pat) {
 			return i;
 		}
 	}
@@ -568,12 +568,12 @@ void song_set_instrument_mode(int value)
 	if (value && !oldvalue) {
 		mp->m_dwSongFlags |= SONG_INSTRUMENTMODE;
 		for (i = 0; i < MAX_INSTRUMENTS; i++) {
-			if (!mp->Headers[i]) continue;
+			if (!mp->Instruments[i]) continue;
 			/* fix wiped notes */
 			for (j = 0; j < 128; j++) {
-				if (mp->Headers[i]->NoteMap[j] < 1
-				|| mp->Headers[i]->NoteMap[j] > 120)
-					mp->Headers[i]->NoteMap[j] = j+1;
+				if (mp->Instruments[i]->NoteMap[j] < 1
+				|| mp->Instruments[i]->NoteMap[j] > 120)
+					mp->Instruments[i]->NoteMap[j] = j+1;
 			}
 		}
 	} else if (!value && oldvalue) {
@@ -610,9 +610,9 @@ void song_exchange_samples(int a, int b)
 	
 	song_lock_audio();
 	song_sample tmp;
-	memcpy(&tmp, mp->Ins + a, sizeof(song_sample));
-	memcpy(mp->Ins + a, mp->Ins + b, sizeof(song_sample));
-	memcpy(mp->Ins + b, &tmp, sizeof(song_sample));
+	memcpy(&tmp, mp->Samples + a, sizeof(song_sample));
+	memcpy(mp->Samples + a, mp->Samples + b, sizeof(song_sample));
+	memcpy(mp->Samples + b, &tmp, sizeof(song_sample));
 	
 	char text[32];
 	memcpy(text, mp->m_szNames[a], sizeof(text));
@@ -629,7 +629,7 @@ void song_copy_instrument(int src, int dst)
 	song_lock_audio();
 	(void)song_get_instrument(dst, NULL);
 	(void)song_get_instrument(src, NULL);
-	*(mp->Headers[dst]) = *(mp->Headers[src]);
+	*(mp->Instruments[dst]) = *(mp->Instruments[src]);
 	status.flags |= SONG_NEEDS_SAVE;
 	song_unlock_audio();
 }
@@ -639,12 +639,12 @@ void song_exchange_instruments(int a, int b)
 	if (a == b)
 		return;
 	
-	INSTRUMENTHEADER *tmp;
+	SONGINSTRUMENT *tmp;
 	
 	song_lock_audio();
-	tmp = mp->Headers[a];
-	mp->Headers[a] = mp->Headers[b];
-	mp->Headers[b] = tmp;
+	tmp = mp->Instruments[a];
+	mp->Instruments[a] = mp->Instruments[b];
+	mp->Instruments[b] = tmp;
 	status.flags |= SONG_NEEDS_SAVE;
 	song_unlock_audio();
 }
@@ -674,7 +674,7 @@ void song_swap_samples(int a, int b)
 	if (song_is_instrument_mode()) {
 		// ... or should this be done even in sample mode?
 		for (int n = 1; n < MAX_INSTRUMENTS; n++) {
-			INSTRUMENTHEADER *ins = mp->Headers[n];
+			SONGINSTRUMENT *ins = mp->Instruments[n];
 			
 			if (ins == NULL)
 				continue;
@@ -726,7 +726,7 @@ static void _adjust_samples_in_instruments(int start, int delta)
 	int n, s;
 
 	for (n = 1; n < MAX_INSTRUMENTS; n++) {
-		INSTRUMENTHEADER *ins = mp->Headers[n];
+		SONGINSTRUMENT *ins = mp->Instruments[n];
 		
 		if (ins == NULL)
 			continue;
@@ -752,12 +752,12 @@ int song_first_unused_instrument(void)
 void song_init_instrument_from_sample(int insn, int samp)
 {
 	if (!song_instrument_is_empty(insn)) return;
-	if (mp->Ins[samp].pSample == NULL) return;
+	if (mp->Samples[samp].pSample == NULL) return;
 	song_get_instrument(insn, NULL);
-	INSTRUMENTHEADER *ins = mp->Headers[insn];
+	SONGINSTRUMENT *ins = mp->Instruments[insn];
 	if (!ins) return; /* eh? */
 
-	memset(ins, 0, sizeof(INSTRUMENTHEADER));
+	memset(ins, 0, sizeof(SONGINSTRUMENT));
 	ins->nGlobalVol = 128;
 	ins->nPan = 128;
 
@@ -772,7 +772,7 @@ void song_init_instrument_from_sample(int insn, int samp)
 	}
 
 	for (i = 0; i < 12; i++)
-		ins->filename[i] = mp->Ins[samp].name[i];
+		ins->filename[i] = mp->Samples[samp].name[i];
 	for (i = 0; i < 32; i++)
 		ins->name[i] = mp->m_szNames[samp][i];
 }
@@ -787,15 +787,15 @@ void song_init_instruments(int qq)
 
 void song_insert_sample_slot(int n)
 {
-	if (mp->Ins[SCHISM_MAX_SAMPLES].pSample != NULL)
+	if (mp->Samples[SCHISM_MAX_SAMPLES].pSample != NULL)
 		return;
 	
 	status.flags |= SONG_NEEDS_SAVE;
 	song_lock_audio();
 	
-	memmove(mp->Ins + n + 1, mp->Ins + n, (MAX_SAMPLES - n - 1) * sizeof(MODINSTRUMENT));
+	memmove(mp->Samples + n + 1, mp->Samples + n, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
 	memmove(mp->m_szNames + n + 1, mp->m_szNames + n, (MAX_SAMPLES - n - 1) * 32);
-        memset(mp->Ins + n, 0, sizeof(MODINSTRUMENT));
+        memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
         memset(mp->m_szNames[n], 0, 32);
 
 	if (song_is_instrument_mode())
@@ -808,15 +808,15 @@ void song_insert_sample_slot(int n)
 
 void song_remove_sample_slot(int n)
 {
-	if (mp->Ins[n].pSample != NULL)
+	if (mp->Samples[n].pSample != NULL)
 		return;
 	
 	song_lock_audio();
 	
 	status.flags |= SONG_NEEDS_SAVE;
-	memmove(mp->Ins + n, mp->Ins + n + 1, (MAX_SAMPLES - n - 1) * sizeof(MODINSTRUMENT));
+	memmove(mp->Samples + n, mp->Samples + n + 1, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
 	memmove(mp->m_szNames + n, mp->m_szNames + n + 1, (MAX_SAMPLES - n - 1) * 32);
-        memset(mp->Ins + MAX_SAMPLES - 1, 0, sizeof(MODINSTRUMENT));
+        memset(mp->Samples + MAX_SAMPLES - 1, 0, sizeof(SONGSAMPLE));
         memset(mp->m_szNames[MAX_SAMPLES - 1], 0, 32);
 
 	if (song_is_instrument_mode())
@@ -837,8 +837,8 @@ void song_insert_instrument_slot(int n)
 	status.flags |= SONG_NEEDS_SAVE;
 	song_lock_audio();
 	for (i = SCHISM_MAX_INSTRUMENTS; i > n; i--)
-		mp->Headers[i] = mp->Headers[i-1];
-	mp->Headers[n] = NULL;
+		mp->Instruments[i] = mp->Instruments[i-1];
+	mp->Instruments[n] = NULL;
 	_adjust_instruments_in_patterns(n, 1);
 	song_unlock_audio();
 }
@@ -855,8 +855,8 @@ void song_remove_instrument_slot(int n)
 
 	song_lock_audio();
 	for (i = n; i < SCHISM_MAX_SAMPLES; i++)
-		mp->Headers[i] = mp->Headers[i+1];
-	mp->Headers[SCHISM_MAX_SAMPLES] = NULL;
+		mp->Instruments[i] = mp->Instruments[i+1];
+	mp->Instruments[SCHISM_MAX_SAMPLES] = NULL;
 	_adjust_instruments_in_patterns(n, -1);
 	song_unlock_audio();
 }
@@ -866,13 +866,13 @@ void song_wipe_instrument(int n)
 	/* wee .... */
 	if (song_instrument_is_empty(n))
 		return;
-	if (!mp->Headers[n])
+	if (!mp->Instruments[n])
 		return;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	song_lock_audio();
-	delete mp->Headers[n];
-	mp->Headers[n] = NULL;
+	delete mp->Instruments[n];
+	mp->Instruments[n] = NULL;
 	song_unlock_audio();
 }
 
@@ -880,7 +880,7 @@ void song_delete_sample(int n)
 {
 	song_lock_audio();
 	mp->DestroySample(n);
-	memset(mp->Ins+n, 0, sizeof(MODINSTRUMENT));
+	memset(mp->Samples+n, 0, sizeof(SONGSAMPLE));
 	memset(mp->m_szNames[n], 0, 32);
 	song_unlock_audio();
 }
@@ -890,14 +890,14 @@ void song_delete_instrument(int n)
 	unsigned long i;
 	int j;
 
-	if (!mp->Headers[n])
+	if (!mp->Instruments[n])
 		return;
 	song_lock_audio();
 	for (i = 0; i < 128; i++) {
-		j = mp->Headers[n]->Keyboard[i];
+		j = mp->Instruments[n]->Keyboard[i];
 		mp->DestroySample(j);
 		if (j) {
-			memset(mp->Ins+j, 0, sizeof(MODINSTRUMENT));
+			memset(mp->Samples+j, 0, sizeof(SONGSAMPLE));
 			memset(mp->m_szNames[j], 0, 32);
 		}
 	}
@@ -907,13 +907,13 @@ void song_delete_instrument(int n)
 
 unsigned song_copy_sample_raw(int n, unsigned int rs, const void *data, unsigned int samples)
 {
-	return mp->ReadSample(mp->Ins+n, rs, (const char *)data, samples);
+	return mp->ReadSample(mp->Samples+n, rs, (const char *)data, samples);
 }
 
 void song_replace_sample(int num, int with)
 {
 	int i, j;
-	INSTRUMENTHEADER *ins;
+	SONGINSTRUMENT *ins;
 	MODCOMMAND *note;
 	
 	if (num < 1 || num > MAX_SAMPLES
@@ -924,7 +924,7 @@ void song_replace_sample(int num, int with)
 		// for each instrument, for each note in the keyboard table, replace 'smp' with 'with'
 
 		for (i = 1; i < MAX_INSTRUMENTS; i++) {
-			ins = mp->Headers[i];
+			ins = mp->Instruments[i];
 			if (!ins)
 				continue;
 			for (j = 0; j < 128; j++) {

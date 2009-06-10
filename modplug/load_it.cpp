@@ -30,7 +30,7 @@ static inline uint32_t ConvertVolParam(uint32_t value)
 }
 
 
-bool CSoundFile::ITInstrToMPT(const void *p, INSTRUMENTHEADER *penv, uint32_t trkvers)
+bool CSoundFile::ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers)
 //--------------------------------------------------------------------------------
 {
 	if (trkvers < 0x0200)
@@ -171,9 +171,9 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (dwMemLength < 554) return false;
 
 		uint16_t tv;
-		INSTRUMENTHEADER *zenv = new INSTRUMENTHEADER;
+		SONGINSTRUMENT *zenv = new SONGINSTRUMENT;
 		if (!zenv) return false;
-		memset(zenv, 0, sizeof(INSTRUMENTHEADER));
+		memset(zenv, 0, sizeof(SONGINSTRUMENT));
 		memcpy(&tv, lpStream+0x1C, 2); /* trkvers */
 		tv = bswapLE16(tv);
 		if (!ITInstrToMPT(lpStream, zenv, tv)) {
@@ -190,8 +190,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		m_nSamples = expect_samples;
 		m_dwSongFlags = SONG_INSTRUMENTMODE | SONG_LINEARSLIDES /* eh? */;
 
-		memcpy(m_szNames[0], lpStream + 0x20, 26);
-		m_szNames[0][26] = 0;
+		memcpy(song_title, lpStream + 0x20, 26);
+		song_title[26] = 0;
 
 		if (q+(80*expect_samples) >= dwMemLength) {
 			delete zenv;
@@ -214,7 +214,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	
 			if (pis.id == 0x53504D49)
 			{
-				MODINSTRUMENT *pins = &Ins[nsmp+1];
+				SONGSAMPLE *pins = &Samples[nsmp+1];
 				memcpy(pins->name, pis.filename, 12);
 				pins->uFlags = 0;
 				pins->nLength = 0;
@@ -259,14 +259,14 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 						// IT 2.14 8-bit packed sample ?
 						if (pis.flags & 8)	flags =	((pifh.cmwt >= 0x215) && (pis.cvt & 4)) ? RS_IT2158 : RS_IT2148;
 					}
-					ReadSample(&Ins[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
+					ReadSample(&Samples[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 				}
 			}
 			memcpy(m_szNames[nsmp+1], pis.name, 26);
 			
 		}
 
-		Headers[1] = zenv;
+		Instruments[1] = zenv;
 		return true;
 	}
 
@@ -301,8 +301,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	}
 	if (pifh.flags & 0x80) m_dwSongFlags |= SONG_EMBEDMIDICFG;
 	if (pifh.flags & 0x1000) m_dwSongFlags |= SONG_EXFILTERRANGE;
-	memcpy(m_szNames[0], pifh.songname, 26);
-	m_szNames[0][26] = 0;
+	memcpy(song_title, pifh.songname, 26);
+	song_title[26] = 0;
 	if (pifh.cwtv >= 0x0213) {
 		m_rowHighlightMinor = pifh.hilight_minor;
 		m_rowHighlightMajor = pifh.hilight_major;
@@ -322,12 +322,12 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading Channels Pan Positions
 	for (int ipan=0; ipan<64; ipan++) if (pifh.chnpan[ipan] != 0xFF)
 	{
-		ChnSettings[ipan].nVolume = pifh.chnvol[ipan];
-		ChnSettings[ipan].nPan = 128;
-		if (pifh.chnpan[ipan] & 0x80) ChnSettings[ipan].dwFlags |= CHN_MUTE;
+		Channels[ipan].nVolume = pifh.chnvol[ipan];
+		Channels[ipan].nPan = 128;
+		if (pifh.chnpan[ipan] & 0x80) Channels[ipan].dwFlags |= CHN_MUTE;
 		uint32_t n = pifh.chnpan[ipan] & 0x7F;
-		if (n <= 64) ChnSettings[ipan].nPan = n << 2;
-		if (n == 100) ChnSettings[ipan].dwFlags |= CHN_SURROUND;
+		if (n <= 64) Channels[ipan].nPan = n << 2;
+		if (n == 100) Channels[ipan].dwFlags |= CHN_SURROUND;
 	}
 	if (m_nChannels < 4) m_nChannels = 4;
 	// Reading Song Message
@@ -343,7 +343,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading orders
 	uint32_t nordsize = pifh.ordnum;
 	if (nordsize > MAX_ORDERS) nordsize = MAX_ORDERS;
-	memcpy(Order, lpStream+dwMemPos, nordsize);
+	memcpy(Orderlist, lpStream+dwMemPos, nordsize);
 
 	dwMemPos += pifh.ordnum;
 	// Reading Instrument Offsets
@@ -381,8 +381,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	dwMemPos += pifh.patnum * 4;
 
 	for (uint32_t i = 0; i < pifh.ordnum; i++) {
-		if (Order[i] >= pifh.patnum && Order[i] < MAX_PATTERNS) {
-			pifh.patnum = Order[i];
+		if (Orderlist[i] >= pifh.patnum && Orderlist[i] < MAX_PATTERNS) {
+			pifh.patnum = Orderlist[i];
 			for (uint32_t j = patpossize; j < (unsigned)(pifh.patnum>>2); j++)
 				patpos[j] = 0;
 			patpossize = pifh.patnum;
@@ -442,8 +442,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			if (n > m_nChannels) m_nChannels = n;
 			for (uint32_t i=0; i<n; i++)
 			{
-				memcpy(ChnSettings[i].szName, (lpStream+dwMemPos+i*MAX_CHANNELNAME), MAX_CHANNELNAME);
-				ChnSettings[i].szName[MAX_CHANNELNAME-1] = 0;
+				memcpy(Channels[i].szName, (lpStream+dwMemPos+i*MAX_CHANNELNAME), MAX_CHANNELNAME);
+				Channels[i].szName[MAX_CHANNELNAME-1] = 0;
 			}
 			dwMemPos += len;
 		}
@@ -507,10 +507,10 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		if ((inspos[nins] > 0) && (inspos[nins] < dwMemLength - sizeof(ITOLDINSTRUMENT)))
 		{
-			INSTRUMENTHEADER *penv = new INSTRUMENTHEADER;
+			SONGINSTRUMENT *penv = new SONGINSTRUMENT;
 			if (!penv) continue;
-			Headers[nins+1] = penv;
-			memset(penv, 0, sizeof(INSTRUMENTHEADER));
+			Instruments[nins+1] = penv;
+			memset(penv, 0, sizeof(SONGINSTRUMENT));
 			ITInstrToMPT(lpStream + inspos[nins], penv, pifh.cmwt);
 		}
 	}
@@ -531,7 +531,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 
 		if (pis.id == 0x53504D49)
 		{
-			MODINSTRUMENT *pins = &Ins[nsmp+1];
+			SONGSAMPLE *pins = &Samples[nsmp+1];
 			memcpy(pins->name, pis.filename, 12);
 			pins->uFlags = 0;
 			pins->nLength = 0;
@@ -576,7 +576,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 					// IT 2.14 8-bit packed sample ?
 					if (pis.flags & 8)	flags =	((pifh.cmwt >= 0x215) && (pis.cvt & 4)) ? RS_IT2158 : RS_IT2148;
 				}
-				ReadSample(&Ins[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
+				ReadSample(&Samples[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 			}
 		}
 		memcpy(m_szNames[nsmp+1], pis.name, 26);
@@ -712,12 +712,12 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			}
 		}
 	}
-	for (uint32_t ncu=0; ncu<MAX_BASECHANNELS; ncu++)
+	for (uint32_t ncu=0; ncu<MAX_CHANNELS; ncu++)
 	{
 		if (ncu>=m_nChannels)
 		{
-			ChnSettings[ncu].nVolume = 64;
-			ChnSettings[ncu].dwFlags &= ~CHN_MUTE;
+			Channels[ncu].nVolume = 64;
+			Channels[ncu].dwFlags &= ~CHN_MUTE;
 		}
 	}
 	return true;
@@ -957,7 +957,7 @@ uint32_t CSoundFile::SaveMixPlugins(FILE *f, bool bUpdate)
 	{
 		if (j < 64)
 		{
-			if ((chinfo[j] = ChnSettings[j].nMixPlugin) != 0)
+			if ((chinfo[j] = Channels[j].nMixPlugin) != 0)
 			{
 				nChInfo = j+1;
 			}
@@ -997,7 +997,7 @@ uint32_t CSoundFile::LoadMixPlugins(const void *pData, uint32_t nLen)
 		{
 			for (uint32_t ch=0; ch<64; ch++) if (ch*4 < nPluginSize)
 			{
-				ChnSettings[ch].nMixPlugin = bswapLE32(*(uint32_t *)(p+nPos+8+ch*4));
+				Channels[ch].nMixPlugin = bswapLE32(*(uint32_t *)(p+nPos+8+ch*4));
 			}
 		} else
 		{

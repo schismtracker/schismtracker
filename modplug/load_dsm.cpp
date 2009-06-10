@@ -108,17 +108,17 @@ bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nSongPreAmp = psong->mastervol & 0x7F;
 	for (uint32_t iOrd=0; iOrd<MAX_ORDERS; iOrd++)
 	{
-		Order[iOrd] = (uint8_t)((iOrd < psong->numord) ? psong->orders[iOrd] : 0xFF);
+		Orderlist[iOrd] = (uint8_t)((iOrd < psong->numord) ? psong->orders[iOrd] : 0xFF);
 	}
 	for (uint32_t iPan=0; iPan<16; iPan++)
 	{
-		ChnSettings[iPan].nPan = 0x80;
+		Channels[iPan].nPan = 0x80;
 		if (psong->panpos[iPan] <= 0x80)
 		{
-			ChnSettings[iPan].nPan = psong->panpos[iPan] << 1;
+			Channels[iPan].nPan = psong->panpos[iPan] << 1;
 		}
 	}
-	memcpy(m_szNames[0], psong->songname, 28);
+	memcpy(song_title, psong->songname, 28);
 	nPat = 0;
 	nSmp = 1;
 	while (dwMemPos < dwMemLength - 8)
@@ -213,7 +213,7 @@ bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 			uint32_t dwPos = dwMemPos + sizeof(DSMINST);
 			dwMemPos += 8 + pins->inst_len;
 			memcpy(m_szNames[nSmp], pins->samplename, 28);
-			MODINSTRUMENT *psmp = &Ins[nSmp];
+			SONGSAMPLE *psmp = &Samples[nSmp];
 			memcpy(psmp->name, pins->filename, 13);
 			psmp->nGlobalVol = 64;
 			psmp->nC5Speed = pins->c2spd;

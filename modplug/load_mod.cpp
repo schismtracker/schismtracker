@@ -231,7 +231,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	for	(uint32_t i=1; i<=m_nSamples; i++)
 	{
 		PMODSAMPLE pms = (PMODSAMPLE)(lpStream+dwMemPos);
-		MODINSTRUMENT *psmp = &Ins[i];
+		SONGSAMPLE *psmp = &Samples[i];
 		uint32_t loopstart, looplen;
 
 		memcpy(m_szNames[i], pms->name, 22);
@@ -272,8 +272,8 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	pMagic = (PMODMAGIC)(lpStream+dwMemPos);
 	dwMemPos += sizeof(MODMAGIC);
 	if (m_nSamples == 15) dwMemPos -= 4;
-	memset(Order, 0,sizeof(Order));
-	memcpy(Order, pMagic->Orders, 128);
+	memset(Orderlist, 0,sizeof(Orderlist));
+	memcpy(Orderlist, pMagic->Orders, 128);
 
 	uint32_t nbp, nbpbuggy, nbpbuggy2, norders;
 
@@ -281,14 +281,14 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	if ((!norders) || (norders > 0x80))
 	{
 		norders = 0x80;
-		while ((norders > 1) && (!Order[norders-1])) norders--;
+		while ((norders > 1) && (!Orderlist[norders-1])) norders--;
 	}
 	nbpbuggy = 0;
 	nbpbuggy2 = 0;
 	nbp = 0;
 	for (uint32_t iord=0; iord<128; iord++)
 	{
-		uint32_t i = Order[iord];
+		uint32_t i = Orderlist[iord];
 		if ((i < 0x80) && (nbp <= i))
 		{
 			nbp = i+1;
@@ -296,7 +296,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 		}
 		if (i >= nbpbuggy2) nbpbuggy2 = i+1;
 	}
-	for (uint32_t iend=norders; iend<MAX_ORDERS; iend++) Order[iend] = 0xFF;
+	for (uint32_t iend=norders; iend<MAX_ORDERS; iend++) Orderlist[iend] = 0xFF;
 	norders--;
 	m_nRestartPos = pMagic->nRestartPos;
 	if (m_nRestartPos >= 0x78) m_nRestartPos = 0;
@@ -320,12 +320,12 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
-	memcpy(m_szNames, lpStream, 20);
+	memcpy(song_title, lpStream, 20);
 	// Setting channels pan
 	for (uint32_t ich=0; ich<m_nChannels; ich++)
 	{
-		ChnSettings[ich].nVolume = 64;
-		ChnSettings[ich].nPan = (((ich&3)==1) || ((ich&3)==2)) ? 256 : 0;
+		Channels[ich].nVolume = 64;
+		Channels[ich].nPan = (((ich&3)==1) || ((ich&3)==2)) ? 256 : 0;
 	}
 	m_nStereoSeparation = 64;
 	
@@ -363,7 +363,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	}
 	// Reading instruments
 	uint32_t dwErrCheck = 0;
-	for (uint32_t ismp=1; ismp<=m_nSamples; ismp++) if (Ins[ismp].nLength)
+	for (uint32_t ismp=1; ismp<=m_nSamples; ismp++) if (Samples[ismp].nLength)
 	{
 		const char * p = (const char *)(lpStream+dwMemPos);
 		uint32_t flags = 0;
@@ -374,7 +374,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 			p += 5;
 			dwMemPos += 5;
 		}
-		uint32_t dwSize = ReadSample(&Ins[ismp], flags, p, dwMemLength - dwMemPos);
+		uint32_t dwSize = ReadSample(&Samples[ismp], flags, p, dwMemLength - dwMemPos);
 		if (dwSize)
 		{
 			dwMemPos += dwSize;
@@ -403,11 +403,11 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 	if (m_dwSongFlags & SONG_INSTRUMENTMODE)
 	{
 		memset(insmap, 0, sizeof(insmap));
-		for (uint32_t i=1; i<32; i++) if (Headers[i])
+		for (uint32_t i=1; i<32; i++) if (Instruments[i])
 		{
-			for (uint32_t j=0; j<128; j++) if (Headers[i]->Keyboard[j])
+			for (uint32_t j=0; j<128; j++) if (Instruments[i]->Keyboard[j])
 			{
-				insmap[i] = Headers[i]->Keyboard[j];
+				insmap[i] = Instruments[i]->Keyboard[j];
 				break;
 			}
 		}
@@ -416,11 +416,11 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 		for (uint32_t i=0; i<32; i++) insmap[i] = (uint8_t)i;
 	}
 	// Writing song name
-	fp->o(fp, (const unsigned char *)m_szNames, 20);
+	fp->o(fp, (const unsigned char *)song_title, 20);
 	// Writing instrument definition
 	for (uint32_t iins=1; iins<=31; iins++)
 	{
-		MODINSTRUMENT *pins = &Ins[insmap[iins]];
+		SONGSAMPLE *pins = &Samples[insmap[iins]];
 		uint16_t gg;
 
 		int f2t = frequency_to_transpose(pins->nC5Speed);
@@ -453,18 +453,18 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 	uint32_t nbp=0, norders=128;
 	for (uint32_t iord=0; iord<128; iord++)
 	{
-		if (Order[iord] == 0xFF)
+		if (Orderlist[iord] == 0xFF)
 		{
 			norders = iord;
 			break;
 		}
-		if ((Order[iord] < 0x80) && (nbp<=Order[iord])) nbp = Order[iord]+1;
+		if ((Orderlist[iord] < 0x80) && (nbp<=Orderlist[iord])) nbp = Orderlist[iord]+1;
 	}
 	bTab[0] = norders;
 	bTab[1] = m_nRestartPos;
 	fp->o(fp, (const unsigned char *)bTab, 2);
 	// Writing pattern list
-	if (norders) memcpy(ord, Order, norders);
+	if (norders) memcpy(ord, Orderlist, norders);
 	fp->o(fp, (const unsigned char *)ord, 128);
 	// Writing signature
 	if (chanlim == 4)
@@ -512,7 +512,7 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 	// Writing instruments
 	for (uint32_t ismpd=1; ismpd<=31; ismpd++) if (inslen[ismpd])
 	{
-		MODINSTRUMENT *pins = &Ins[insmap[ismpd]];
+		SONGSAMPLE *pins = &Samples[insmap[ismpd]];
 		uint32_t flags = RS_PCM8S;
 		WriteSample(fp, pins, flags, inslen[ismpd]);
 	}

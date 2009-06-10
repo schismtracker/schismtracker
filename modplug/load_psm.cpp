@@ -105,9 +105,9 @@ bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 	for (uint32_t iChPan=0; iChPan<16; iChPan++)
 	{
 		uint32_t pan = (((iChPan & 3) == 1) || ((iChPan&3)==2)) ? 0xC0 : 0x40;
-		ChnSettings[iChPan].nPan = pan;
+		Channels[iChPan].nPan = pan;
 	}
-	m_szNames[0][0]=0;
+	song_title[0]=0;
 	while (dwMemPos+8 < dwMemLength)
 	{
 		PSMCHUNK *pchunk = (PSMCHUNK *)(lpStream+dwMemPos);
@@ -121,8 +121,8 @@ bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 		// "TITL": Song title
 		case IFFID_TITL:
 			if (!pdata[0]) { pdata++; len--; }
-			memcpy(m_szNames[0], pdata, (len>31) ? 31 : len);
-			m_szNames[0][31] = 0;
+			memcpy(song_title, pdata, (len>31) ? 31 : len);
+			song_title[31] = 0;
 			break;
 		// "PBOD": Pattern
 		case IFFID_PBOD:
@@ -143,7 +143,7 @@ bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 			if ((len >= sizeof(PSMSAMPLE)) && (m_nSamples+1 < MAX_SAMPLES))
 			{
 				m_nSamples++;
-				MODINSTRUMENT *pins = &Ins[m_nSamples];
+				SONGSAMPLE *pins = &Samples[m_nSamples];
 				PSMSAMPLE *psmp = (PSMSAMPLE *)pdata;
 				smpnames[m_nSamples] = bswapLE32(psmp->smpid);
 				memcpy(m_szNames[m_nSamples], psmp->samplename, 31);
@@ -228,7 +228,7 @@ bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 							uint32_t dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
 							if (dwName == dwPatName)
 							{
-								Order[iOrd++] = i;
+								Orderlist[iOrd++] = i;
 								break;
 							}
 						}
@@ -578,7 +578,7 @@ CONST
   VAR
    Header             : PPSM_Header;
    Sample             : PPSM_SampleList;
-   Order              : PPSM_Order;
+   Orderlist              : PPSM_Order;
    ChannelSettings    : PPSM_ChannelSettings;
    MultiPurposeBuffer : PByteArray;
    PatternBuffer      : PUnpackedPattern;
@@ -623,7 +623,7 @@ CONST
   { *** init dynamic variables }
    NEW(Header);
    NEW(Sample);
-   NEW(Order);
+   NEW(Orderlist);
    NEW(ChannelSettings);
    NEW(MultiPurposeBuffer);
    NEW(PatternBuffer);
@@ -639,7 +639,7 @@ CONST
     END;
   { *** read order }
    SEEK(InFile,FilePosition + Header^.PSM_OrderPosition);
-   BLOCKREAD(InFile,Order^,Header^.PSM_OrderLength);
+   BLOCKREAD(InFile,Orderlist^,Header^.PSM_OrderLength);
   { *** read channelsettings }
    SEEK(InFile,FilePosition + Header^.PSM_ChannelSettingPosition);
    BLOCKREAD(InFile,ChannelSettings^,SIZEOF(TPSM_ChannelSettings));
@@ -700,7 +700,7 @@ CONST
     END;
   { *** init and copy order }
    FILLCHAR(Module^.Module_OrderPointer^,c_Maximum_OrderIndex+1,$FF);
-   MOVE(Order^,Module^.Module_OrderPointer^,Header^.PSM_OrderLength);
+   MOVE(Orderlist^,Module^.Module_OrderPointer^,Header^.PSM_OrderLength);
   { *** read pattern }
    SEEK(InFile,FilePosition + Header^.PSM_PatternPosition);
    NTMIK_LoaderPatternNumber := Header^.PSM_PatternNumber-1;
@@ -861,7 +861,7 @@ CONST
   { *** dispose all dynamic variables }
    DISPOSE(Header);
    DISPOSE(Sample);
-   DISPOSE(Order);
+   DISPOSE(Orderlist);
    DISPOSE(ChannelSettings);
    DISPOSE(MultiPurposeBuffer);
    DISPOSE(PatternBuffer);

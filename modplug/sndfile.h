@@ -29,8 +29,8 @@
 #define MAX_PATTERNS            240
 #define MAX_SAMPLES             240
 #define MAX_INSTRUMENTS         MAX_SAMPLES
-#define MAX_CHANNELS            256
-#define MAX_BASECHANNELS        64
+#define MAX_VOICES            256
+#define MAX_CHANNELS        64
 #define MAX_ENVPOINTS           32
 #define MAX_INFONAME            80
 #define MAX_EQ_BANDS            6
@@ -301,7 +301,7 @@ typedef struct _MODINSTRUMENT
 
 	// This must be 12-bytes to work around a bug in some gcc4.2s
 	unsigned char AdlibBytes[12];
-} MODINSTRUMENT;
+} SONGSAMPLE;
 
 typedef struct _INSTRUMENTENVELOPE {
 	int Ticks[32];
@@ -342,7 +342,7 @@ typedef struct _INSTRUMENTHEADER
 	int8_t name[32];
 	int8_t filename[12];
 	int played; // for note playback dots
-} INSTRUMENTHEADER;
+} SONGINSTRUMENT;
 
 
 // Channel Struct
@@ -378,8 +378,8 @@ typedef struct _MODCHANNEL
 	int32_t nRealVolume, nRealPan;
 	int32_t nVolume, nPan, nFadeOutVol;
 	int32_t nPeriod, nC5Speed, sample_freq, nPortamentoDest;
-	INSTRUMENTHEADER *pHeader;
-	MODINSTRUMENT *pInstrument;
+	SONGINSTRUMENT *pHeader;
+	SONGSAMPLE *pInstrument;
 	int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
 	uint32_t nMasterChn, nVUMeter;
 	int32_t nGlobalVol, nInsVol;
@@ -412,7 +412,7 @@ typedef struct _MODCHANNEL
 	unsigned int nRealtime;
 	uint8_t stupid_gcc_workaround;
 
-} MODCHANNEL;
+} SONGVOICE;
 
 
 typedef struct _MODCHANNELSETTINGS
@@ -536,15 +536,15 @@ public: // Static Members
 	static PMIXPLUGINCREATEPROC gpMixPluginCreateProc;
 
 public: // for Editing
-	MODCHANNEL Chn[MAX_CHANNELS];                                   // Channels
-	uint32_t ChnMix[MAX_CHANNELS];                                              // Channels to be mixed
-	MODINSTRUMENT Ins[MAX_SAMPLES];                                 // Instruments
-	INSTRUMENTHEADER *Headers[MAX_INSTRUMENTS];             // Instrument Headers
-	MODCHANNELSETTINGS ChnSettings[MAX_BASECHANNELS]; // Channels settings
+	SONGVOICE Voices[MAX_VOICES];                                   // Channels
+	uint32_t VoiceMix[MAX_VOICES];                                              // Channels to be mixed
+	SONGSAMPLE Samples[MAX_SAMPLES];                                 // Instruments
+	SONGINSTRUMENT *Instruments[MAX_INSTRUMENTS];             // Instrument Instruments
+	MODCHANNELSETTINGS Channels[MAX_CHANNELS]; // Channels settings
 	MODCOMMAND *Patterns[MAX_PATTERNS];                             // Patterns
 	uint16_t PatternSize[MAX_PATTERNS];                                 // Patterns Lengths
 	uint16_t PatternAllocSize[MAX_PATTERNS];                            // Allocated pattern lengths (for async. resizing/playback)
-	uint8_t Order[MAX_ORDERS];                                                 // Pattern Orders
+	uint8_t Orderlist[MAX_ORDERS];                                                 // Pattern Orders
 	MODMIDICFG m_MidiCfg;                                                   // Midi macro config table
 	SNDMIXPLUGIN m_MixPlugins[MAX_MIXPLUGINS];              // Mix plugins
 	uint32_t m_nDefaultSpeed, m_nDefaultTempo, m_nDefaultGlobalVolume;
@@ -561,6 +561,7 @@ public: // for Editing
 	int32_t m_nRepeatCount, m_nInitialRepeatCount;
 	uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
 	char * m_lpszSongComments;
+	char song_title[32];
 	char m_szNames[MAX_INSTRUMENTS][32];    // changed from int8_t
 	int8_t CompressionTable[16];
 
@@ -589,8 +590,8 @@ public:
 	uint32_t GetMaxPosition() const;
 	void SetCurrentPos(uint32_t nPos);
 	void SetCurrentOrder(uint32_t nOrder);
-	void GetTitle(char * s) const { strncpy(s,m_szNames[0],32); }
-	const char * GetTitle() const { return m_szNames[0]; }
+	void GetTitle(char * s) const { strncpy(s,song_title,32); }
+	const char * GetTitle() const { return song_title; }
 	uint32_t GetMusicSpeed() const { return m_nMusicSpeed; }
 	uint32_t GetMusicTempo() const { return m_nMusicTempo; }
 	unsigned int GetLength(bool bAdjust, bool bTotal=false);
@@ -625,7 +626,7 @@ public:
 	bool ReadUMX(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadMID(const uint8_t * lpStream, uint32_t dwMemLength);
 	// Save Functions
-	uint32_t WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins, uint32_t nFlags, uint32_t nMaxLen=0);
+	uint32_t WriteSample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen=0);
 	bool SaveXM(diskwriter_driver_t *f, uint32_t);
 	bool SaveS3M(diskwriter_driver_t *f, uint32_t);
 	bool SaveMod(diskwriter_driver_t *f, uint32_t);
@@ -660,37 +661,37 @@ public:
 	uint32_t GetNNAChannel(uint32_t nChn);
 	void CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCut);
 	void NoteChange(uint32_t nChn, int note, bool bPorta=false, bool bResetEnv=true, bool bManual=false);
-	void InstrumentChange(MODCHANNEL *pChn, uint32_t instr, bool bPorta=false,bool bUpdVol=true,bool bResetEnv=true);
-	void TranslateKeyboard(INSTRUMENTHEADER* penv, uint32_t note, MODINSTRUMENT*& psmp);
+	void InstrumentChange(SONGVOICE *pChn, uint32_t instr, bool bPorta=false,bool bUpdVol=true,bool bResetEnv=true);
+	void TranslateKeyboard(SONGINSTRUMENT* penv, uint32_t note, SONGSAMPLE*& psmp);
 	// Channel Effects
-	void PortamentoUp(MODCHANNEL *pChn, uint32_t param);
-	void PortamentoDown(MODCHANNEL *pChn, uint32_t param);
-	void FinePortamentoUp(MODCHANNEL *pChn, uint32_t param);
-	void FinePortamentoDown(MODCHANNEL *pChn, uint32_t param);
-	void ExtraFinePortamentoUp(MODCHANNEL *pChn, uint32_t param);
-	void ExtraFinePortamentoDown(MODCHANNEL *pChn, uint32_t param);
-	void TonePortamento(MODCHANNEL *pChn, uint32_t param);
-	void Vibrato(MODCHANNEL *pChn, uint32_t param);
-	void FineVibrato(MODCHANNEL *pChn, uint32_t param);
-	void VolumeSlide(MODCHANNEL *pChn, uint32_t param);
-	void PanningSlide(MODCHANNEL *pChn, uint32_t param);
-	void ChannelVolSlide(MODCHANNEL *pChn, uint32_t param);
-	void FineVolumeUp(MODCHANNEL *pChn, uint32_t param);
-	void FineVolumeDown(MODCHANNEL *pChn, uint32_t param);
-	void Tremolo(MODCHANNEL *pChn, uint32_t param);
-	void Panbrello(MODCHANNEL *pChn, uint32_t param);
+	void PortamentoUp(SONGVOICE *pChn, uint32_t param);
+	void PortamentoDown(SONGVOICE *pChn, uint32_t param);
+	void FinePortamentoUp(SONGVOICE *pChn, uint32_t param);
+	void FinePortamentoDown(SONGVOICE *pChn, uint32_t param);
+	void ExtraFinePortamentoUp(SONGVOICE *pChn, uint32_t param);
+	void ExtraFinePortamentoDown(SONGVOICE *pChn, uint32_t param);
+	void TonePortamento(SONGVOICE *pChn, uint32_t param);
+	void Vibrato(SONGVOICE *pChn, uint32_t param);
+	void FineVibrato(SONGVOICE *pChn, uint32_t param);
+	void VolumeSlide(SONGVOICE *pChn, uint32_t param);
+	void PanningSlide(SONGVOICE *pChn, uint32_t param);
+	void ChannelVolSlide(SONGVOICE *pChn, uint32_t param);
+	void FineVolumeUp(SONGVOICE *pChn, uint32_t param);
+	void FineVolumeDown(SONGVOICE *pChn, uint32_t param);
+	void Tremolo(SONGVOICE *pChn, uint32_t param);
+	void Panbrello(SONGVOICE *pChn, uint32_t param);
 	void RetrigNote(uint32_t nChn, uint32_t param);
 	void NoteCut(uint32_t nChn, uint32_t nTick);
 	void KeyOff(uint32_t nChn);
-	int PatternLoop(MODCHANNEL *, uint32_t param);
+	int PatternLoop(SONGVOICE *, uint32_t param);
 	void ExtendedS3MCommands(uint32_t nChn, uint32_t param);
-	void ExtendedChannelEffect(MODCHANNEL *, uint32_t param);
+	void ExtendedChannelEffect(SONGVOICE *, uint32_t param);
 	void MidiSend(const unsigned char *data, unsigned int len, uint32_t nChn=0, int fake = 0);
 	void ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint32_t param=0,
 			uint32_t note=0, uint32_t velocity=0, uint32_t use_instr=0);
-	//void SetupChannelFilter(MODCHANNEL *pChn, bool bReset, int flt_modifier=256,int freq=0) const;
+	//void SetupChannelFilter(SONGVOICE *pChn, bool bReset, int flt_modifier=256,int freq=0) const;
 	// Low-Level effect processing
-	void DoFreqSlide(MODCHANNEL *pChn, int32_t nFreqSlide);
+	void DoFreqSlide(SONGVOICE *pChn, int32_t nFreqSlide);
 	// Global Effects
 	void SetTempo(uint32_t param);
 	void SetSpeed(uint32_t param);
@@ -699,7 +700,7 @@ public:
 	bool IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, uint32_t nJumpOrder, uint32_t nJumpRow) const;
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
-	uint32_t ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
+	uint32_t ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
 	bool DestroySample(uint32_t nSample);
 	bool DestroyInstrument(uint32_t nInstr);
 	bool IsSampleUsed(uint32_t nSample);
@@ -707,7 +708,7 @@ public:
 	bool RemoveInstrumentSamples(uint32_t nInstr);
 	uint32_t DetectUnusedSamples(bool *);
 	bool RemoveSelectedSamples(bool *);
-	void AdjustSampleLoop(MODINSTRUMENT *pIns);
+	void AdjustSampleLoop(SONGSAMPLE *pIns);
 	// I/O from another sound file
 	bool ReadInstrumentFromSong(uint32_t nInstr, CSoundFile *, uint32_t nSrcInstrument);
 	bool ReadSampleFromSong(uint32_t nSample, CSoundFile *, uint32_t nSrcSample);
@@ -715,10 +716,10 @@ public:
 	uint32_t GetPeriodFromNote(uint32_t note, int nFineTune, uint32_t nC5Speed) const;
 	uint32_t GetFreqFromPeriod(uint32_t period, uint32_t nC5Speed, int nPeriodFrac=0) const;
 	// Misc functions
-	MODINSTRUMENT *GetSample(uint32_t n) { return Ins+n; }
+	SONGSAMPLE *GetSample(uint32_t n) { return Samples+n; }
 	void ResetMidiCfg();
 	uint32_t MapMidiInstrument(uint32_t dwProgram, uint32_t nChannel, uint32_t nNote);
-	bool ITInstrToMPT(const void *p, INSTRUMENTHEADER *penv, uint32_t trkvers);
+	bool ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers);
 	uint32_t SaveMixPlugins(FILE *f=NULL, bool bUpdate=true);
 	uint32_t LoadMixPlugins(const void *pData, uint32_t nLen);
 	void ResetTimestamps(); // for note playback dots

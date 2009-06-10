@@ -57,8 +57,8 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 	 || (pmh->numsamples >= MAX_SAMPLES) || (!pmh->numsamples)
 	 || (!pmh->numtracks) || (!pmh->numchannels)
 	 || (!pmh->lastpattern) || (pmh->lastpattern > MAX_PATTERNS)) return false;
-	strncpy(m_szNames[0], pmh->songname, 20);
-	m_szNames[0][20] = 0;
+	strncpy(song_title, pmh->songname, 20);
+	song_title[20] = 0;
 	if (dwMemPos + 37*pmh->numsamples + 128 + 192*bswapLE16(pmh->numtracks)
 	 + 64 * (pmh->lastpattern+1) + bswapLE16(pmh->commentsize) >= dwMemLength) return false;
 	m_nType = MOD_TYPE_MTM;
@@ -70,37 +70,37 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 		MTMSAMPLE *pms = (MTMSAMPLE *)(lpStream + dwMemPos);
 		strncpy(m_szNames[i], pms->samplename, 22);
 		m_szNames[i][22] = 0;
-		Ins[i].nVolume = pms->volume << 2;
-		Ins[i].nGlobalVol = 64;
+		Samples[i].nVolume = pms->volume << 2;
+		Samples[i].nGlobalVol = 64;
 		uint32_t len = bswapLE32(pms->length);
 		if ((len > 4) && (len <= MAX_SAMPLE_LENGTH))
 		{
-			Ins[i].nLength = len;
-			Ins[i].nLoopStart = bswapLE32(pms->reppos);
-			Ins[i].nLoopEnd = bswapLE32(pms->repend);
-			if (Ins[i].nLoopEnd > Ins[i].nLength) Ins[i].nLoopEnd = Ins[i].nLength;
-			if (Ins[i].nLoopStart + 4 >= Ins[i].nLoopEnd) Ins[i].nLoopStart = Ins[i].nLoopEnd = 0;
-			if (Ins[i].nLoopEnd) Ins[i].uFlags |= CHN_LOOP;
-			Ins[i].nC5Speed = S3MFineTuneTable[(pms->finetune & 0x0F) ^ 8];
+			Samples[i].nLength = len;
+			Samples[i].nLoopStart = bswapLE32(pms->reppos);
+			Samples[i].nLoopEnd = bswapLE32(pms->repend);
+			if (Samples[i].nLoopEnd > Samples[i].nLength) Samples[i].nLoopEnd = Samples[i].nLength;
+			if (Samples[i].nLoopStart + 4 >= Samples[i].nLoopEnd) Samples[i].nLoopStart = Samples[i].nLoopEnd = 0;
+			if (Samples[i].nLoopEnd) Samples[i].uFlags |= CHN_LOOP;
+			Samples[i].nC5Speed = S3MFineTuneTable[(pms->finetune & 0x0F) ^ 8];
 			if (pms->attribute & 0x01)
 			{
-				Ins[i].uFlags |= CHN_16BIT;
-				Ins[i].nLength >>= 1;
-				Ins[i].nLoopStart >>= 1;
-				Ins[i].nLoopEnd >>= 1;
+				Samples[i].uFlags |= CHN_16BIT;
+				Samples[i].nLength >>= 1;
+				Samples[i].nLoopStart >>= 1;
+				Samples[i].nLoopEnd >>= 1;
 			}
-			Ins[i].nPan = 128;
+			Samples[i].nPan = 128;
 		}
 		dwMemPos += 37;
 	}
 	// Setting Channel Pan Position
 	for (uint32_t ich=0; ich<m_nChannels; ich++)
 	{
-		ChnSettings[ich].nPan = ((pmh->panpos[ich] & 0x0F) << 4) + 8;
-		ChnSettings[ich].nVolume = 64;
+		Channels[ich].nPan = ((pmh->panpos[ich] & 0x0F) << 4) + 8;
+		Channels[ich].nVolume = 64;
 	}
 	// Reading pattern order
-	memcpy(Order, lpStream + dwMemPos, pmh->lastorder+1);
+	memcpy(Orderlist, lpStream + dwMemPos, pmh->lastorder+1);
 	dwMemPos += 128;
 	// Reading Patterns
 	const uint8_t * pTracks = lpStream + dwMemPos;
@@ -155,7 +155,7 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 	for (uint32_t ismp=1; ismp<=m_nSamples; ismp++)
 	{
 		if (dwMemPos >= dwMemLength) break;
-		dwMemPos += ReadSample(&Ins[ismp], (Ins[ismp].uFlags & CHN_16BIT) ? RS_PCM16U : RS_PCM8U,
+		dwMemPos += ReadSample(&Samples[ismp], (Samples[ismp].uFlags & CHN_16BIT) ? RS_PCM16U : RS_PCM8U,
 								(const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
 	return true;

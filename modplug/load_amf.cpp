@@ -189,12 +189,12 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 		m_nDefaultSpeed = 6;
 		for (uint32_t iOrd=0; iOrd<MAX_ORDERS; iOrd++)
 		{
-			Order[iOrd] = (iOrd < numorders) ? lpStream[dwMemPos+iOrd] : 0xFF;
+			Orderlist[iOrd] = (iOrd < numorders) ? lpStream[dwMemPos+iOrd] : 0xFF;
 		}
 		dwMemPos = 294; // ???
 		for (uint32_t iSmp=0; iSmp<numsamples; iSmp++)
 		{
-			MODINSTRUMENT *psmp = &Ins[iSmp+1];
+			SONGSAMPLE *psmp = &Samples[iSmp+1];
 			memcpy(m_szNames[iSmp+1], lpStream+dwMemPos, 22);
 			psmp->nC5Speed = S3MFineTuneTable[(lpStream[dwMemPos+22] & 0x0F) ^ 8];
 			psmp->nVolume = lpStream[dwMemPos+23];
@@ -249,7 +249,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 		// Read samples
 		for (uint32_t iData=0; iData<m_nSamples; iData++)
 		{
-			MODINSTRUMENT *psmp = &Ins[iData+1];
+			SONGSAMPLE *psmp = &Samples[iData+1];
 			if (psmp->nLength)
 			{
 				dwMemPos += ReadSample(psmp, RS_PCM8S, (const char *)(lpStream+dwMemPos), dwMemLength);
@@ -268,7 +268,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 	 || (!pfh->numsamples) || (pfh->numsamples > MAX_SAMPLES)
 	 || (pfh->numchannels < 4) || (pfh->numchannels > 32))
 		return false;
-	memcpy(m_szNames[0], pfh->title, 32);
+	memcpy(song_title, pfh->title, 32);
 	dwMemPos = sizeof(AMFFILEHEADER);
 	m_nType = MOD_TYPE_AMF;
 	m_nChannels = pfh->numchannels;
@@ -283,15 +283,15 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 		{
 			int pan = (panpos[i] + 64) * 2;
 			if (pan < 0) pan = 0;
-			if (pan > 256) { pan = 128; ChnSettings[i].dwFlags |= CHN_SURROUND; }
-			ChnSettings[i].nPan = pan;
+			if (pan > 256) { pan = 128; Channels[i].dwFlags |= CHN_SURROUND; }
+			Channels[i].nPan = pan;
 		}
 		dwMemPos += nchannels;
 	} else
 	{
 		for (uint32_t i=0; i<16; i++)
 		{
-			ChnSettings[i].nPan = (lpStream[dwMemPos+i] & 1) ? 0x30 : 0xD0;
+			Channels[i].nPan = (lpStream[dwMemPos+i] & 1) ? 0x30 : 0xD0;
 		}
 		dwMemPos += 16;
 	}
@@ -307,10 +307,10 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 	// Setup sequence list
 	for (uint32_t iOrd=0; iOrd<MAX_ORDERS; iOrd++)
 	{
-		Order[iOrd] = 0xFF;
+		Orderlist[iOrd] = 0xFF;
 		if (iOrd < pfh->numorders)
 		{
-			Order[iOrd] = iOrd;
+			Orderlist[iOrd] = iOrd;
 			PatternSize[iOrd] = 64;
 			PatternAllocSize[iOrd] = 64;
 			if (pfh->version >= 14)
@@ -328,7 +328,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 	uint32_t maxsampleseekpos = 0;
 	for (uint32_t iIns=0; iIns<m_nSamples; iIns++)
 	{
-		MODINSTRUMENT *pins = &Ins[iIns+1];
+		SONGSAMPLE *pins = &Samples[iIns+1];
 		AMFSAMPLE *psh = (AMFSAMPLE *)(lpStream + dwMemPos);
 
 		dwMemPos += sizeof(AMFSAMPLE);
@@ -410,7 +410,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 		if (dwMemPos >= dwMemLength) break;
 		for (uint32_t iSmp=0; iSmp<m_nSamples; iSmp++) if (iSeek == sampleseekpos[iSmp])
 		{
-			MODINSTRUMENT *pins = &Ins[iSmp+1];
+			SONGSAMPLE *pins = &Samples[iSmp+1];
 			dwMemPos += ReadSample(pins, RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 			break;
 		}

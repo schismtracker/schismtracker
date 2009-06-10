@@ -384,15 +384,15 @@ static int ConvertMidiTempo(int tempo_us, int *pTickMultiplier)
 uint32_t CSoundFile::MapMidiInstrument(uint32_t dwBankProgram, uint32_t nChannel, uint32_t nNote)
 //--------------------------------------------------------------------------------
 {
-	INSTRUMENTHEADER *penv;
+	SONGINSTRUMENT *penv;
 	uint32_t nProgram = dwBankProgram & 0x7F;
 	uint32_t nBank = dwBankProgram >> 7;
 
 	nNote &= 0x7F;
 	if (nNote >= 120) return 0;
-	for (uint32_t i=1; i<=m_nInstruments; i++) if (Headers[i])
+	for (uint32_t i=1; i<=m_nInstruments; i++) if (Instruments[i])
 	{
-		INSTRUMENTHEADER *p = Headers[i];
+		SONGINSTRUMENT *p = Instruments[i];
 		// Drum Kit ?
 		if (nChannel == MIDI_DRUMCHANNEL)
 		{
@@ -404,12 +404,12 @@ uint32_t CSoundFile::MapMidiInstrument(uint32_t dwBankProgram, uint32_t nChannel
 		}
 	}
 	if ((m_nInstruments + 1 >= MAX_INSTRUMENTS) || (m_nSamples + 1 >= MAX_SAMPLES)) return 0;
-	penv = new INSTRUMENTHEADER;
+	penv = new SONGINSTRUMENT;
 	if (!penv) return 0;
-	memset(penv, 0, sizeof(INSTRUMENTHEADER));
+	memset(penv, 0, sizeof(SONGINSTRUMENT));
 	m_nSamples++;
 	m_nInstruments++;
-	Headers[m_nInstruments] = penv;
+	Instruments[m_nInstruments] = penv;
 	penv->wMidiBank = nBank;
 	penv->nMidiProgram = nProgram;
 	penv->nMidiChannelMask = 1 << (nChannel-1);
@@ -452,17 +452,17 @@ uint32_t CSoundFile::MapMidiInstrument(uint32_t dwBankProgram, uint32_t nChannel
 	penv->VolEnv.nSustainStart=1;
 	penv->VolEnv.nSustainEnd=1;
 	// Sample
-	Ins[m_nSamples].nPan = 128;
-	Ins[m_nSamples].nVolume = 256;
-	Ins[m_nSamples].nGlobalVol = 64;
-	Ins[m_nSamples].pSample = AllocateSample(1);
-	Ins[m_nSamples].uFlags &= ~(CHN_LOOP | CHN_16BIT);
-	Ins[m_nSamples].nLength = 1;
+	Samples[m_nSamples].nPan = 128;
+	Samples[m_nSamples].nVolume = 256;
+	Samples[m_nSamples].nGlobalVol = 64;
+	Samples[m_nSamples].pSample = AllocateSample(1);
+	Samples[m_nSamples].uFlags &= ~(CHN_LOOP | CHN_16BIT);
+	Samples[m_nSamples].nLength = 1;
 	if (nChannel != MIDI_DRUMCHANNEL)
 	{
 		// GM Midi Name
-		strcpy((char*)penv->name, (char*)szMidiProgramNames[nProgram]);
-		strcpy((char*)m_szNames[m_nSamples], (char*)szMidiProgramNames[nProgram]);
+		strcpy((char*) penv->name, szMidiProgramNames[nProgram]);
+		strcpy(m_szNames[m_nSamples], szMidiProgramNames[nProgram]);
 	} else
 	{
 		strcpy((char*)penv->name, "Percussions");
@@ -491,7 +491,7 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 {
 	const MIDIFILEHEADER *pmfh = (const MIDIFILEHEADER *)lpStream;
 	const MIDITRACKHEADER *pmth;
-	MODCHANNELSTATE chnstate[MAX_BASECHANNELS];
+	MODCHANNELSTATE chnstate[MAX_CHANNELS];
 	MIDICHANNELSTATE midichstate[16];
 	MIDITRACK miditracks[MIDI_MAXTRACKS];
 	uint32_t dwMemPos, dwGlobalFlags, tracks, tempo;
@@ -563,20 +563,20 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 	midimastervol = m_nDefaultGlobalVolume;
 	
 	// Initializing 
-	memset(Order, 0xFF, sizeof(Order));
+	memset(Orderlist, 0xFF, sizeof(Orderlist));
 	memset(chnstate, 0, sizeof(chnstate));
 	memset(miditracks, 0, sizeof(miditracks));
 	memset(midichstate, 0, sizeof(midichstate));
 	// Initializing Patterns
-	Order[0] = 0;
+	Orderlist[0] = 0;
 	for (uint32_t ipat=0; ipat<MAX_PATTERNS; ipat++) PatternSize[ipat] = gnMidiPatternLen;
 	// Initializing Channels
-	for (uint32_t ics=0; ics<MAX_BASECHANNELS; ics++)
+	for (uint32_t ics=0; ics<MAX_CHANNELS; ics++)
 	{
 		// Channel settings
-		ChnSettings[ics].nPan = 128;
-		ChnSettings[ics].nVolume = 64;
-		ChnSettings[ics].dwFlags = 0;
+		Channels[ics].nPan = 128;
+		Channels[ics].nVolume = 64;
+		Channels[ics].dwFlags = 0;
 		// Channels state
 		chnstate[ics].pan = 128;
 		chnstate[ics].pitchsrc = 0x2000;
@@ -1119,8 +1119,8 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 			{
 				pat++;
 				if (pat >= MAX_PATTERNS-1) break;
-				Order[pat] = pat;
-				Order[pat+1] = 0xFF;
+				Orderlist[pat] = pat;
+				Orderlist[pat+1] = 0xFF;
 				row = 0;
 			}
 		}

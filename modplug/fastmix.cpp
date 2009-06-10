@@ -98,7 +98,7 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 // ----------------------------------------------------------------------------
 
 #define SNDMIX_BEGINSAMPLELOOP8 \
-        register MODCHANNEL * const pChn = pChannel; \
+        register SONGVOICE * const pChn = pChannel; \
         nPos = pChn->nPosLo; \
         const signed char *p = (signed char *)(pChn->pCurrentSample + pChn->nPos); \
         if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos; \
@@ -107,7 +107,7 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 
 
 #define SNDMIX_BEGINSAMPLELOOP16\
-        register MODCHANNEL * const pChn = pChannel;\
+        register SONGVOICE * const pChn = pChannel;\
         nPos = pChn->nPosLo;\
         const signed short *p = (signed short *)(pChn->pCurrentSample+(pChn->nPos*2));\
         if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos;\
@@ -414,11 +414,11 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 //////////////////////////////////////////////////////////
 // Interfaces
 
-typedef void(* mix_interface_t)(MODCHANNEL *, int *, int *);
+typedef void(* mix_interface_t)(SONGVOICE *, int *, int *);
 
 
 #define BEGIN_MIX_INTERFACE(func) \
-    void func(MODCHANNEL *pChannel, int *pbuffer, int *pbufmax) \
+    void func(SONGVOICE *pChannel, int *pbuffer, int *pbufmax) \
     { \
         int nPos;
 
@@ -1178,7 +1178,7 @@ const mix_interface_t fastmix_functions[2 * 2 * 16] = {
 };
 
 
-static int get_sample_count(MODCHANNEL *pChn, int samples)
+static int get_sample_count(SONGVOICE *pChn, int samples)
 {
 	int nLoopStart = (pChn->dwFlags & CHN_LOOP) ? pChn->nLoopStart : 0;
 	int nInc = pChn->nInc;
@@ -1338,7 +1338,7 @@ unsigned int CSoundFile::CreateStereoMix(int count)
 
 	for (unsigned int nChn = 0; nChn < m_nMixChannels; nChn++) {
 		const mix_interface_t *pMixFuncTable;
-		MODCHANNEL *const pChannel = &Chn[ChnMix[nChn]];
+		SONGVOICE *const pChannel = &Voices[VoiceMix[nChn]];
 		unsigned int nFlags, nMasterCh;
 		unsigned int nrampsamples;
 		int nSmpCount;
@@ -1348,7 +1348,7 @@ unsigned int CSoundFile::CreateStereoMix(int count)
 		if (!pChannel->pCurrentSample)
 			continue;
 
-		nMasterCh = (ChnMix[nChn] < m_nChannels) ? ChnMix[nChn] + 1 : pChannel->nMasterChn;
+		nMasterCh = (VoiceMix[nChn] < m_nChannels) ? VoiceMix[nChn] + 1 : pChannel->nMasterChn;
 		pOfsR = &gnDryROfsVol;
 		pOfsL = &gnDryLOfsVol;
 		nFlags = 0;

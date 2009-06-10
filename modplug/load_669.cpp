@@ -58,8 +58,8 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nDefaultTempo = 125;
 	m_nDefaultSpeed = 6;
 	m_nChannels = 8;
-	memcpy(m_szNames[0], pfh->songmessage, 31);
-	m_szNames[0][31] = 0;
+	memcpy(song_title, pfh->songmessage, 31);
+	song_title[31] = 0;
 	m_nSamples = pfh->samples;
 	for (uint32_t nins=1; nins<=m_nSamples; nins++, psmp++)
 	{
@@ -70,15 +70,15 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 		if ((loopend > len) && (!loopstart)) loopend = 0;
 		if (loopend > len) loopend = len;
 		if (loopstart + 4 >= loopend) loopstart = loopend = 0;
-		Ins[nins].nLength = len;
-		Ins[nins].nLoopStart = loopstart;
-		Ins[nins].nLoopEnd = loopend;
-		if (loopend) Ins[nins].uFlags |= CHN_LOOP;
+		Samples[nins].nLength = len;
+		Samples[nins].nLoopStart = loopstart;
+		Samples[nins].nLoopEnd = loopend;
+		if (loopend) Samples[nins].uFlags |= CHN_LOOP;
 		memcpy(m_szNames[nins], psmp->filename, 13);
-		Ins[nins].nVolume = 256;
-		Ins[nins].nGlobalVol = 64;
-		Ins[nins].nPan = 128;
-		Ins[nins].nC5Speed = 8363;
+		Samples[nins].nVolume = 256;
+		Samples[nins].nGlobalVol = 64;
+		Samples[nins].nPan = 128;
+		Samples[nins].nC5Speed = 8363;
 	}
 	// Song Message
 	m_lpszSongComments = new char[114];
@@ -91,14 +91,14 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 	memcpy(m_lpszSongComments + 76, pfh->songmessage + 72, 36);
 	m_lpszSongComments[112] = 0;
 	// Reading Orders
-	memcpy(Order, pfh->orders, 128);
+	memcpy(Orderlist, pfh->orders, 128);
 	m_nRestartPos = pfh->restartpos;
-	if (Order[m_nRestartPos] >= pfh->patterns) m_nRestartPos = 0;
+	if (Orderlist[m_nRestartPos] >= pfh->patterns) m_nRestartPos = 0;
 	// Reading Pattern Break Locations
 	for (uint32_t npan=0; npan<8; npan++)
 	{
-		ChnSettings[npan].nPan = (npan & 1) ? 0x30 : 0xD0;
-		ChnSettings[npan].nVolume = 64;
+		Channels[npan].nPan = (npan & 1) ? 0x30 : 0xD0;
+		Channels[npan].nVolume = 64;
 	}
 	// Reading Patterns
 	dwMemPos = 0x1F1 + pfh->samples * 25;
@@ -204,9 +204,9 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading Samples
 	for (uint32_t n=1; n<=m_nSamples; n++)
 	{
-		uint32_t len = Ins[n].nLength;
+		uint32_t len = Samples[n].nLength;
 		if (dwMemPos >= dwMemLength) break;
-		if (len > 4) ReadSample(&Ins[n], RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
+		if (len > 4) ReadSample(&Samples[n], RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
 		dwMemPos += len;
 	}
 	return true;

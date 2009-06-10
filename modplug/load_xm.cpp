@@ -23,7 +23,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 	uint16_t norders=0, restartpos=0, channels=0, patterns=0, instruments=0;
 	uint16_t xmflags=0, deftempo=125, defspeed=6;
 	bool InstUsed[256];
-	uint8_t channels_used[MAX_CHANNELS];
+	uint8_t channels_used[MAX_VOICES];
 	uint8_t pattern_map[256];
 	bool samples_used[MAX_SAMPLES];
 	uint32_t unused_samples;
@@ -32,7 +32,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 	if ((!lpStream) || (dwMemLength < 0x200)) return false;
 	if (strncasecmp((const char *)lpStream, "Extended Module", 15)) return false;
 
-	memcpy(m_szNames[0], lpStream+17, 20);
+	memcpy(song_title, lpStream+17, 20);
 	dwHdrSize = bswapLE32(*((uint32_t *)(lpStream+60)));
 	norders = bswapLE16(*((uint16_t *)(lpStream+64)));
 	if (norders > MAX_ORDERS) return false;
@@ -57,14 +57,14 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 	deftempo = bswapLE16(*((uint16_t *)(lpStream+78)));
 	if ((deftempo >= 32) && (deftempo < 256)) m_nDefaultTempo = deftempo;
 	if ((defspeed > 0) && (defspeed < 40)) m_nDefaultSpeed = defspeed;
-	memcpy(Order, lpStream+80, norders);
+	memcpy(Orderlist, lpStream+80, norders);
 	memset(InstUsed, 0, sizeof(InstUsed));
 	if (patterns > MAX_PATTERNS)
 	{
 		uint32_t i, j;
 		for (i=0; i<norders; i++)
 		{
-			if (Order[i] < patterns) InstUsed[Order[i]] = true;
+			if (Orderlist[i] < patterns) InstUsed[Orderlist[i]] = true;
 		}
 		j = 0;
 		for (i=0; i<256; i++)
@@ -81,7 +81,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		}
 		for (i=0; i<norders; i++)
 		{
-			Order[i] = pattern_map[Order[i]];
+			Orderlist[i] = pattern_map[Orderlist[i]];
 		}
 	} else
 	{
@@ -239,9 +239,9 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (dwMemPos + sizeof(XMINSTRUMENTHEADER) >= dwMemLength) return true;
 		pih = (XMINSTRUMENTHEADER *)(lpStream+dwMemPos);
 		if (dwMemPos + bswapLE32(pih->size) > dwMemLength) return true;
-		if ((Headers[iIns] = new INSTRUMENTHEADER) == NULL) continue;
-		memset(Headers[iIns], 0, sizeof(INSTRUMENTHEADER));
-		memcpy(Headers[iIns]->name, pih->name, 22);
+		if ((Instruments[iIns] = new SONGINSTRUMENT) == NULL) continue;
+		memset(Instruments[iIns], 0, sizeof(SONGINSTRUMENT));
+		memcpy(Instruments[iIns]->name, pih->name, 22);
 		if ((nsamples = pih->samples) > 0)
 		{
 			if (dwMemPos + sizeof(XMSAMPLEHEADER) > dwMemLength) return true;
@@ -271,15 +271,15 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 				n = m_nSamples;
 				while (n > 0)
 				{
-					if (!Ins[n].pSample)
+					if (!Samples[n].pSample)
 					{
 						for (uint32_t xmapchk=0; xmapchk < nmap; xmapchk++)
 						{
 							if (samplemap[xmapchk] == n) goto alreadymapped;
 						}
-						for (uint32_t clrs=1; clrs<iIns; clrs++) if (Headers[clrs])
+						for (uint32_t clrs=1; clrs<iIns; clrs++) if (Instruments[clrs])
 						{
-							INSTRUMENTHEADER *pks = Headers[clrs];
+							SONGINSTRUMENT *pks = Instruments[clrs];
 							for (uint32_t ks=0; ks<128; ks++)
 							{
 								if (pks->Keyboard[ks] == n) pks->Keyboard[ks] = 0;
@@ -311,15 +311,15 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 							{
 								if (samplemap[mapchk] == n) samplemap[mapchk] = 0;
 							}
-							for (uint32_t clrs=1; clrs<iIns; clrs++) if (Headers[clrs])
+							for (uint32_t clrs=1; clrs<iIns; clrs++) if (Instruments[clrs])
 							{
-								INSTRUMENTHEADER *pks = Headers[clrs];
+								SONGINSTRUMENT *pks = Instruments[clrs];
 								for (uint32_t ks=0; ks<128; ks++)
 								{
 									if (pks->Keyboard[ks] == n) pks->Keyboard[ks] = 0;
 								}
 							}
-							memset(&Ins[n], 0, sizeof(Ins[0]));
+							memset(&Samples[n], 0, sizeof(Samples[0]));
 							break;
 						}
 					}
@@ -330,7 +330,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		}
 		m_nSamples = newsamples;
 		// Reading Volume Envelope
-		INSTRUMENTHEADER *penv = Headers[iIns];
+		SONGINSTRUMENT *penv = Instruments[iIns];
 		penv->nMidiProgram = pih->type;
 		penv->nFadeOut = xmsh.volfade;
 		penv->nPan = 128;
@@ -425,7 +425,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 			uint32_t imapsmp = samplemap[ins];
 			memcpy(m_szNames[imapsmp], xmss.name, 22);
 			m_szNames[imapsmp][22] = 0;
-			MODINSTRUMENT *pins = &Ins[imapsmp];
+			SONGSAMPLE *pins = &Samples[imapsmp];
 			pins->nLength = (xmss.samplen > MAX_SAMPLE_LENGTH) ? MAX_SAMPLE_LENGTH : xmss.samplen;
 			pins->nLoopStart = xmss.loopstart;
 			pins->nLoopEnd = xmss.looplen;
@@ -464,7 +464,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		{
 			if ((samplemap[ismpd]) && (samplesize[ismpd]) && (dwMemPos < dwMemLength))
 			{
-				ReadSample(&Ins[samplemap[ismpd]], flags[ismpd], (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
+				ReadSample(&Samples[samplemap[ismpd]], flags[ismpd], (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 			}
 			dwMemPos += samplesize[ismpd];
 			if (dwMemPos >= dwMemLength) break;
@@ -473,9 +473,9 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 	/* set these to default */
 	for (uint32_t in=0; in<m_nChannels; in++)
 	{
-		ChnSettings[in].nVolume = 64;
-		ChnSettings[in].nPan = 128;
-		ChnSettings[in].dwFlags = 0;
+		Channels[in].nVolume = 64;
+		Channels[in].nPan = 128;
+		Channels[in].dwFlags = 0;
 	}
 	return true;
 }
@@ -500,7 +500,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 	if (chanlim < 4) chanlim = 4;
 
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
-	fp->o(fp, (const unsigned char *)m_szNames[0], 20);
+	fp->o(fp, (const unsigned char *)song_title, 20);
 	s[0] = 0x1A;
 	strcpy((char *)&s[1], "Schism Tracker      ");
 	s[21] = 0x04;
@@ -515,9 +515,9 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 	no = 0;
 	for (i=0; i<MAX_ORDERS; i++)
 	{
-		if (Order[i] == 0xFF) break;
+		if (Orderlist[i] == 0xFF) break;
 		no++;
-		if ((Order[i] >= np) && (Order[i] < MAX_PATTERNS)) np = Order[i]+1;
+		if ((Orderlist[i] >= np) && (Orderlist[i] < MAX_PATTERNS)) np = Orderlist[i]+1;
 	}
 	header.patterns = bswapLE16(np);
 	if (m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE))
@@ -532,7 +532,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 	header.speed = bswapLE16(m_nDefaultSpeed);
 	header.flags = bswapLE16(header.flags);
 	header.norder = bswapLE16(no);
-	memcpy(header.order, Order, no);
+	memcpy(header.order, Orderlist, no);
 	fp->o(fp, (const unsigned char *)&header, sizeof(header));
 	// Writing patterns
 	for (i=0; i<np; i++) if (Patterns[i])
@@ -560,7 +560,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 
 			if (p->instr && m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE)) {
 					
-				INSTRUMENTHEADER *penv = Headers[p->instr];
+				SONGINSTRUMENT *penv = Instruments[p->instr];
 				if (penv) {
 					note = penv->NoteMap[note]-1;
 				}
@@ -633,7 +633,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 	// Writing instruments
 	for (i=1; i<=ni; i++)
 	{
-		MODINSTRUMENT *pins;
+		SONGSAMPLE *pins;
 		int tmpsize, tmpsize2;
 		uint8_t flags[32];
 
@@ -646,7 +646,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 		xmih.samples = 0;
 		if (m_nInstruments && (m_dwSongFlags & SONG_INSTRUMENTMODE))
 		{
-			INSTRUMENTHEADER *penv = Headers[i];
+			SONGINSTRUMENT *penv = Instruments[i];
 			if (penv)
 			{
 				memcpy(xmih.name, penv->name, 22);
@@ -698,7 +698,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 		fp->o(fp, (const unsigned char *)&xmih, sizeof(xmih));
 		if (smptable[0])
 		{
-			MODINSTRUMENT *pvib = &Ins[smptable[0]];
+			SONGSAMPLE *pvib = &Samples[smptable[0]];
 			xmsh.vibtype = pvib->nVibType;
 			xmsh.vibsweep = pvib->nVibSweep;
 			xmsh.vibdepth = pvib->nVibDepth;
@@ -716,7 +716,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 		{
 			memset(&xmss, 0, sizeof(xmss));
 			if (smptable[ins]) memcpy(xmss.name, m_szNames[smptable[ins]], 22);
-			pins = &Ins[smptable[ins]];
+			pins = &Samples[smptable[ins]];
 			/* convert IT information to FineTune */
 			int f2t = frequency_to_transpose(pins->nC5Speed);
 			int transp = f2t >> 7;
@@ -772,7 +772,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 		}
 		for (uint32_t ismpd=0; ismpd<xmih.samples; ismpd++)
 		{
-			pins = &Ins[smptable[ismpd]];
+			pins = &Samples[smptable[ismpd]];
 			if (pins->pSample)
 			{
 				WriteSample(fp, pins, flags[ismpd]);

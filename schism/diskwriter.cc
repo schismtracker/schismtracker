@@ -605,7 +605,7 @@ int diskwriter_finish(void)
 			fini_sampno = sample_get_current();
 
 			/* okay, fixup sample */
-			MODINSTRUMENT *p = &mp->Ins[fini_sampno];
+			SONGSAMPLE *p = &mp->Samples[fini_sampno];
 			zed = mp->m_szNames[ fini_sampno ];
 			if (p->pSample) {
 				song_sample_free(p->pSample);

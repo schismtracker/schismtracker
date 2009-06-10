@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void setup_channel_filter(MODCHANNEL *, int, int, int);
+void setup_channel_filter(SONGVOICE *, int, int, int);
 
 
 #ifdef __cplusplus
