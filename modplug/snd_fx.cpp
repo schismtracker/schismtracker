@@ -40,7 +40,7 @@ unsigned int CSoundFile::GetLength(bool bAdjust, bool bTotal)
 	memset(samples, 0, sizeof(samples));
 	for (uint32_t icv=0; icv<m_nChannels; icv++) chnvols[icv] = Channels[icv].nVolume;
 	nMaxRow = m_nNextRow;
-	nMaxPattern = m_nNextPattern;
+	nMaxPattern = m_nNextOrder;
 	nCurrentPattern = nNextPattern = 0;
 	nPattern = Orderlist[0];
 	nRow = nNextRow = 0;
@@ -846,7 +846,7 @@ bool CSoundFile::ProcessEffects()
 				break;
 			case 0xe:
 				// Pattern Delay
-				m_nPatternDelay = param & 0x0F;
+				m_nCurrentPatternDelay = param & 0x0F;
 				break;
 			}
 		}
@@ -1275,21 +1275,21 @@ bool CSoundFile::ProcessEffects()
 		// Pattern Loop
 		if (nPatLoopRow >= 0)
 		{
-			m_nNextPattern = m_nCurrentPattern;
+			m_nNextOrder = m_nCurrentOrder;
 			m_nNextRow = nPatLoopRow;
-			if (m_nPatternDelay) m_nNextRow++;
+			if (m_nCurrentPatternDelay) m_nNextRow++;
 		} else
 		// Pattern Break / Position Jump only if no loop running
 		if ((nBreakRow >= 0) || (nPosJump >= 0))
 		{
 			bool bNoLoop = false;
-			if (nPosJump < 0) nPosJump = m_nCurrentPattern+1;
+			if (nPosJump < 0) nPosJump = m_nCurrentOrder+1;
 			if (nBreakRow < 0) nBreakRow = 0;
 			// Modplug Tracker & ModPlugin allow backward jumps
-			if ((nPosJump < (int)m_nCurrentPattern)
-			 || ((nPosJump == (int)m_nCurrentPattern) && (nBreakRow <= (int)m_nRow)))
+			if ((nPosJump < (int)m_nCurrentOrder)
+			 || ((nPosJump == (int)m_nCurrentOrder) && (nBreakRow <= (int)m_nRow)))
 			{
-				if (!IsValidBackwardJump(m_nCurrentPattern, m_nRow, nPosJump, nBreakRow))
+				if (!IsValidBackwardJump(m_nCurrentOrder, m_nRow, nPosJump, nBreakRow))
 				{
 					if (m_nRepeatCount)
 					{
@@ -1306,13 +1306,13 @@ bool CSoundFile::ProcessEffects()
 				}
 			}
 			if (((!bNoLoop) && (nPosJump < MAX_ORDERS))
-			 && ((nPosJump != (int)m_nCurrentPattern) || (nBreakRow != (int)m_nRow)))
+			 && ((nPosJump != (int)m_nCurrentOrder) || (nBreakRow != (int)m_nRow)))
 			{
-				if (nPosJump != (int)m_nCurrentPattern)
+				if (nPosJump != (int)m_nCurrentOrder)
 				{
 					for (uint32_t i=0; i<m_nChannels; i++) Voices[i].nPatternLoopCount = 0;
 				}
-				m_nNextPattern = nPosJump;
+				m_nNextOrder = nPosJump;
 				m_nNextRow = (uint32_t)nBreakRow;
 			}
 		}

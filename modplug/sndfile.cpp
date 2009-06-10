@@ -39,11 +39,11 @@ CSoundFile::CSoundFile()
       m_nChannels(), m_nMixChannels(0), m_nMixStat(), m_nBufferCount(),
       m_nType(MOD_TYPE_NONE),
       m_nSamples(0), m_nInstruments(0),
-      m_nTickCount(), m_nTotalCount(), m_nPatternDelay(), m_nFrameDelay(),
+      m_nTickCount(), m_nTotalCount(), m_nCurrentPatternDelay(), m_nFrameDelay(),
       m_nMusicSpeed(), m_nMusicTempo(),
       m_nNextRow(), m_nRow(),
-      m_nPattern(), m_nCurrentPattern(), m_nNextPattern(),
-      m_nLockedPattern(), m_nRestartPos(),
+      m_nCurrentPattern(), m_nCurrentOrder(), m_nNextOrder(),
+      m_nLockedOrder(), m_nRestartPos(),
       m_nGlobalVolume(128), m_nSongPreAmp(),
       m_nFreqFactor(128), m_nTempoFactor(128), m_nOldGlbVolSlide(),
       m_nRepeatCount(0), m_nInitialRepeatCount(),
@@ -90,13 +90,13 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nOldGlbVolSlide = 0;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
-	m_nPatternDelay = 0;
+	m_nCurrentPatternDelay = 0;
 	m_nFrameDelay = 0;
 	m_nNextRow = 0;
 	m_nRow = 0;
-	m_nPattern = 0;
 	m_nCurrentPattern = 0;
-	m_nNextPattern = 0;
+	m_nCurrentOrder = 0;
+	m_nNextOrder = 0;
 	m_nRestartPos = 0;
 	m_nSongPreAmp = 0x30;
 	m_lpszSongComments = NULL;
@@ -189,9 +189,9 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nMusicSpeed = m_nDefaultSpeed;
 	m_nMusicTempo = m_nDefaultTempo;
 	m_nGlobalVolume = m_nDefaultGlobalVolume;
-	m_nNextPattern = 0;
+	m_nNextOrder = 0;
+	m_nCurrentOrder = 0;
 	m_nCurrentPattern = 0;
-	m_nPattern = 0;
 	m_nBufferCount = 0;
 	m_nTickCount = m_nMusicSpeed;
 	m_nNextRow = 0;
@@ -387,7 +387,7 @@ uint32_t CSoundFile::GetCurrentPos() const
 {
 	uint32_t pos = 0;
 
-	for (uint32_t i=0; i<m_nCurrentPattern; i++) if (Orderlist[i] < MAX_PATTERNS)
+	for (uint32_t i=0; i<m_nCurrentOrder; i++) if (Orderlist[i] < MAX_PATTERNS)
 		pos += PatternSize[Orderlist[i]];
 	return pos + m_nRow;
 }
@@ -487,11 +487,11 @@ void CSoundFile::SetCurrentPos(uint32_t nPos)
 			}
 		}
 	}
-	m_nNextPattern = nPattern;
+	m_nNextOrder = nPattern;
 	m_nNextRow = nRow;
 	m_nTickCount = m_nMusicSpeed;
 	m_nBufferCount = 0;
-	m_nPatternDelay = 0;
+	m_nCurrentPatternDelay = 0;
 	m_nFrameDelay = 0;
 }
 
@@ -516,13 +516,13 @@ void CSoundFile::SetCurrentOrder(uint32_t nPos)
 		SetCurrentPos(0);
 	} else
 	{
-		m_nNextPattern = nPos;
+		m_nNextOrder = nPos;
 		m_nRow = m_nNextRow = 0;
-		m_nPattern = 0;
+		m_nCurrentPattern = 0;
 		m_nTickCount = m_nMusicSpeed;
 		m_nBufferCount = 0;
 		m_nTotalCount = 0;
-		m_nPatternDelay = 0;
+		m_nCurrentPatternDelay = 0;
 		m_nFrameDelay = 0;
 	}
 	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
@@ -564,10 +564,10 @@ void CSoundFile::LoopPattern(int nPat, int nRow)
 	} else
 	{
 		if ((nRow < 0) || (nRow >= PatternSize[nPat])) nRow = 0;
-		m_nPattern = nPat;
+		m_nCurrentPattern = nPat;
 		m_nRow = m_nNextRow = nRow;
 		m_nTickCount = m_nMusicSpeed;
-		m_nPatternDelay = 0;
+		m_nCurrentPatternDelay = 0;
 		m_nFrameDelay = 0;
 		m_nBufferCount = 0;
 		m_dwSongFlags |= SONG_PATTERNLOOP;

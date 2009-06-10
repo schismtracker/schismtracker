@@ -288,59 +288,59 @@ MixDone:
 
 int csf_process_row(CSoundFile *csf)
 {
-	if (++csf->m_nTickCount >= csf->m_nMusicSpeed * (csf->m_nPatternDelay+1) + csf->m_nFrameDelay) {
-		csf->m_nPatternDelay = 0;
+	if (++csf->m_nTickCount >= csf->m_nMusicSpeed * (csf->m_nCurrentPatternDelay+1) + csf->m_nFrameDelay) {
+		csf->m_nCurrentPatternDelay = 0;
 		csf->m_nFrameDelay = 0;
 		csf->m_nTickCount = 0;
 		csf->m_nRow = csf->m_nNextRow;
 		
 		// Reset Pattern Loop Effect
-		if (csf->m_nCurrentPattern != csf->m_nNextPattern) {
-			if (csf->m_nLockedPattern < MAX_ORDERS) {
-				csf->m_nCurrentPattern = csf->m_nLockedPattern;
+		if (csf->m_nCurrentOrder != csf->m_nNextOrder) {
+			if (csf->m_nLockedOrder < MAX_ORDERS) {
+				csf->m_nCurrentOrder = csf->m_nLockedOrder;
 
 				if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED))
-					csf->m_nLockedPattern = MAX_ORDERS;
+					csf->m_nLockedOrder = MAX_ORDERS;
 			}
 			else {
-				csf->m_nCurrentPattern = csf->m_nNextPattern;
+				csf->m_nCurrentOrder = csf->m_nNextOrder;
 			}
 
 			// Check if pattern is valid
 			if (!(csf->m_dwSongFlags & SONG_PATTERNLOOP)) {
-				csf->m_nPattern = (csf->m_nCurrentPattern < MAX_ORDERS) ? csf->Orderlist[csf->m_nCurrentPattern] : 0xFF;
+				csf->m_nCurrentPattern = (csf->m_nCurrentOrder < MAX_ORDERS) ? csf->Orderlist[csf->m_nCurrentOrder] : 0xFF;
 
-				if ((csf->m_nPattern < MAX_PATTERNS) && (!csf->Patterns[csf->m_nPattern]))
-					csf->m_nPattern = 0xFE;
+				if ((csf->m_nCurrentPattern < MAX_PATTERNS) && (!csf->Patterns[csf->m_nCurrentPattern]))
+					csf->m_nCurrentPattern = 0xFE;
 
-				while (csf->m_nPattern >= MAX_PATTERNS) {
+				while (csf->m_nCurrentPattern >= MAX_PATTERNS) {
 					// End of song ?
-					if ((csf->m_nPattern == 0xFF) || (csf->m_nCurrentPattern >= MAX_ORDERS)) {
+					if ((csf->m_nCurrentPattern == 0xFF) || (csf->m_nCurrentOrder >= MAX_ORDERS)) {
 						if (csf->m_nRepeatCount > 0)
 							csf->m_nRepeatCount--;
 
 						if (!csf->m_nRepeatCount)
 							return false;
 
-						csf->m_nCurrentPattern = csf->m_nRestartPos;
+						csf->m_nCurrentOrder = csf->m_nRestartPos;
 
-						if ((csf->Orderlist[csf->m_nCurrentPattern] >= MAX_PATTERNS)
-						    || (!csf->Patterns[csf->Orderlist[csf->m_nCurrentPattern]]))
+						if ((csf->Orderlist[csf->m_nCurrentOrder] >= MAX_PATTERNS)
+						    || (!csf->Patterns[csf->Orderlist[csf->m_nCurrentOrder]]))
 							return false;
 					}
 					else {
-						csf->m_nCurrentPattern++;
+						csf->m_nCurrentOrder++;
 					}
 
-					csf->m_nPattern = (csf->m_nCurrentPattern < MAX_ORDERS) ? csf->Orderlist[csf->m_nCurrentPattern] : 0xFF;
+					csf->m_nCurrentPattern = (csf->m_nCurrentOrder < MAX_ORDERS) ? csf->Orderlist[csf->m_nCurrentOrder] : 0xFF;
 
-					if ((csf->m_nPattern < MAX_PATTERNS) && (!csf->Patterns[csf->m_nPattern]))
-						csf->m_nPattern = 0xFE;
+					if ((csf->m_nCurrentPattern < MAX_PATTERNS) && (!csf->Patterns[csf->m_nCurrentPattern]))
+						csf->m_nCurrentPattern = 0xFE;
 				}
 
-				csf->m_nNextPattern = csf->m_nCurrentPattern;
+				csf->m_nNextOrder = csf->m_nCurrentOrder;
 			}
-			else if (csf->m_nCurrentPattern < 255) {
+			else if (csf->m_nCurrentOrder < 255) {
 				if (csf->m_nRepeatCount > 0)
 					csf->m_nRepeatCount--;
 
@@ -354,25 +354,25 @@ int csf_process_row(CSoundFile *csf)
 			csf->m_dwSongFlags |= SONG_PAUSED;
 		}
 
-		if (!csf->PatternSize[csf->m_nPattern] || !csf->Patterns[csf->m_nPattern]) {
+		if (!csf->PatternSize[csf->m_nCurrentPattern] || !csf->Patterns[csf->m_nCurrentPattern]) {
 			/* okay, this is wrong. allocate the pattern _NOW_ */
-			csf->Patterns[csf->m_nPattern] = csf->AllocatePattern(64,64);
-			csf->PatternSize[csf->m_nPattern] = 64;
-			csf->PatternAllocSize[csf->m_nPattern] = 64;
+			csf->Patterns[csf->m_nCurrentPattern] = csf->AllocatePattern(64,64);
+			csf->PatternSize[csf->m_nCurrentPattern] = 64;
+			csf->PatternAllocSize[csf->m_nCurrentPattern] = 64;
 		}
 
 		// Weird stuff?
-		if (csf->m_nPattern >= MAX_PATTERNS)
+		if (csf->m_nCurrentPattern >= MAX_PATTERNS)
 			return false;
 
-		if (csf->m_nRow >= csf->PatternSize[csf->m_nPattern])
+		if (csf->m_nRow >= csf->PatternSize[csf->m_nCurrentPattern])
 			csf->m_nRow = 0;
 
 		csf->m_nNextRow = csf->m_nRow + 1;
 
-		if (csf->m_nNextRow >= csf->PatternSize[csf->m_nPattern]) {
+		if (csf->m_nNextRow >= csf->PatternSize[csf->m_nCurrentPattern]) {
 			if (!(csf->m_dwSongFlags & SONG_PATTERNLOOP))
-				csf->m_nNextPattern = csf->m_nCurrentPattern + 1;
+				csf->m_nNextOrder = csf->m_nCurrentOrder + 1;
 			else if (csf->m_nRepeatCount > 0)
 				return false;
 
@@ -381,7 +381,7 @@ int csf_process_row(CSoundFile *csf)
 
 		// Reset channel values
 		SONGVOICE *pChn = csf->Voices;
-		MODCOMMAND *m = csf->Patterns[csf->m_nPattern] + csf->m_nRow * csf->m_nChannels;
+		MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
 
 		for (unsigned int nChn=0; nChn<csf->m_nChannels; pChn++, nChn++, m++) {
 			/* skip realtime copyin */
@@ -413,7 +413,7 @@ int csf_process_row(CSoundFile *csf)
 		}	 
 	}
 	else if (csf->_midi_out_note) {
-		MODCOMMAND *m = csf->Patterns[csf->m_nPattern] + csf->m_nRow * csf->m_nChannels;
+		MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
 
 		for (unsigned int nChn=0; nChn<csf->m_nChannels; nChn++, m++) {
 			/* m==NULL allows schism to receive notification of SDx and Scx commands */
@@ -430,7 +430,7 @@ int csf_process_row(CSoundFile *csf)
 	if (csf->m_nTickCount) {
 		csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
 
-		if (csf->m_nTickCount < csf->m_nMusicSpeed * (1 + csf->m_nPatternDelay)) {
+		if (csf->m_nTickCount < csf->m_nMusicSpeed * (1 + csf->m_nCurrentPatternDelay)) {
 			if (!(csf->m_nTickCount % csf->m_nMusicSpeed))
 				csf->m_dwSongFlags |= SONG_FIRSTTICK;
 		}
@@ -1151,7 +1151,7 @@ int csf_read_note(CSoundFile *csf)
 		if (!csf->m_nMusicSpeed) csf->m_nMusicSpeed = 6;
 		if (!csf->m_nMusicTempo) csf->m_nMusicTempo = 125;
 
-		csf->m_nPatternDelay = 0;
+		csf->m_nCurrentPatternDelay = 0;
 		csf->m_nFrameDelay = 0;
 
 		csf->m_dwSongFlags |= SONG_FIRSTTICK;
@@ -1188,7 +1188,7 @@ int csf_read_note(CSoundFile *csf)
 
 	// chaseback hoo hah
 	if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
-		if (csf->stop_at_order <= (signed) csf->m_nCurrentPattern &&
+		if (csf->stop_at_order <= (signed) csf->m_nCurrentOrder &&
 		    csf->stop_at_row <= (signed) csf->m_nRow) {
 			return false;
 		}

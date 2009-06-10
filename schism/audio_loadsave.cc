@@ -232,7 +232,7 @@ static void _fix_names(CSoundFile *qq)
 static void fix_song(void)
 {
 	/* poop */
-	mp->m_nLockedPattern = MAX_ORDERS;
+	mp->m_nLockedOrder = MAX_ORDERS;
 
         _convert_to_it(mp);
         _mute_unused_channels();
@@ -302,7 +302,7 @@ void song_new(int flags)
 		mp->m_nInstruments = 0;
 	}
 	if ((flags & KEEP_ORDERLIST) == 0) {
-		mp->m_nLockedPattern = MAX_ORDERS;
+		mp->m_nLockedOrder = MAX_ORDERS;
 		memset(mp->Orderlist, ORDER_LAST, sizeof(mp->Orderlist));
 		
 		memset(mp->song_title, 0, sizeof(mp->song_title));

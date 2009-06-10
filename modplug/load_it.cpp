@@ -421,7 +421,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			m_lpszPatternNames = new char[len];
 			if (m_lpszPatternNames)
 			{
-				m_nPatternNames = len / MAX_PATTERNNAME;
+				m_nCurrentPatternNames = len / MAX_PATTERNNAME;
 				memcpy(m_lpszPatternNames, lpStream+dwMemPos, len);
 			}
 			dwMemPos += len;

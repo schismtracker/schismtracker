@@ -348,11 +348,11 @@ int song_order_for_pattern(int pat, int locked)
 	int i;
 	if (locked == -1) {
 		if (mp->m_dwSongFlags & SONG_ORDERLOCKED)
-			locked = mp->m_nLockedPattern;
+			locked = mp->m_nLockedOrder;
 		else
-			locked = mp->GetCurrentOrder();
+			locked = mp->m_nCurrentOrder;
 	} else if (locked == -2) {
-		locked = mp->GetCurrentOrder();
+		locked = mp->m_nCurrentOrder;
 	}
 
 	if (locked < 0) locked = 0;
