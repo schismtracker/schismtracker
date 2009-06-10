@@ -78,10 +78,10 @@ static void _squelch_sample(int n)
 static void _convert_to_it(CSoundFile *qq)
 {
         unsigned int n, p;
-        //MODINSTRUMENT *s;
+        //SONGSAMPLE *s;
 
 	for (n = 1; n <= qq->m_nInstruments; n++) {
-		INSTRUMENTHEADER *i = mp->Headers[n];
+		SONGINSTRUMENT *i = mp->Instruments[n];
 		if (!i) continue;
 		if (i->VolEnv.nNodes < 1) {
 			i->VolEnv.Ticks[0] = 0;
@@ -132,7 +132,7 @@ static void _mute_unused_channels(void)
 
         if (used_channels > 0) {
                 for (int n = used_channels; n < 64; n++)
-                        mp->ChnSettings[n].dwFlags |= CHN_MUTE;
+                        mp->Channels[n].dwFlags |= CHN_MUTE;
         }
 }
 
@@ -220,12 +220,12 @@ static void _fix_names(CSoundFile *qq)
                                 qq->m_szNames[n][c] = 32;
                 qq->m_szNames[n][25] = 0;
 
-                if (!qq->Headers[n])
+                if (!qq->Instruments[n])
                         continue;
                 for (c = 0; c < 25; c++)
-                        if (qq->Headers[n]->name[c] == 0)
-                                qq->Headers[n]->name[c] = 32;
-                qq->Headers[n]->name[25] = 0;
+                        if (qq->Instruments[n]->name[c] == 0)
+                                qq->Instruments[n]->name[c] = 32;
+                qq->Instruments[n]->name[25] = 0;
         }
 }
 
@@ -285,27 +285,27 @@ void song_new(int flags)
 	}
 	if ((flags & KEEP_SAMPLES) == 0) {
 		for (i = 1; i < MAX_SAMPLES; i++) {
-			if (mp->Ins[i].pSample) {
-				CSoundFile::FreeSample(mp->Ins[i].pSample);
-				mp->Ins[i].pSample = NULL;
+			if (mp->Samples[i].pSample) {
+				CSoundFile::FreeSample(mp->Samples[i].pSample);
+				mp->Samples[i].pSample = NULL;
 			}
-			memset(mp->Ins + i, 0, sizeof(mp->Ins[i]));
+			memset(mp->Samples + i, 0, sizeof(mp->Samples[i]));
 			memset(mp->m_szNames + i, 0, sizeof(mp->m_szNames[i]));
 		}
 		mp->m_nSamples = 0;
 	}
 	if ((flags & KEEP_INSTRUMENTS) == 0) {
 		for (i = 0; i < MAX_INSTRUMENTS; i++) {
-			if (mp->Headers[i]) {
-				delete mp->Headers[i];
-				mp->Headers[i] = NULL;
+			if (mp->Instruments[i]) {
+				delete mp->Instruments[i];
+				mp->Instruments[i] = NULL;
 			}
 		}
 		mp->m_nInstruments = 0;
 	}
 	if ((flags & KEEP_ORDERLIST) == 0) {
 		mp->m_nLockedPattern = MAX_ORDERS;
-		memset(mp->Order, ORDER_LAST, sizeof(mp->Order));
+		memset(mp->Orderlist, ORDER_LAST, sizeof(mp->Orderlist));
 		
 		memset(mp->m_szNames[0], 0, sizeof(mp->m_szNames[0]));
 		
@@ -315,14 +315,14 @@ void song_new(int flags)
 		memset(mp->m_lpszSongComments, 0, 8000);
 		
 		for (i = 0; i < 64; i++) {
-			mp->ChnSettings[i].nVolume = 64;
-			mp->ChnSettings[i].nPan = 128;
-			mp->ChnSettings[i].dwFlags = 0;
-			mp->Chn[i].nVolume = 256;
-			mp->Chn[i].nGlobalVol = mp->ChnSettings[i].nVolume;
-			mp->Chn[i].nPan = mp->ChnSettings[i].nPan;
-			mp->Chn[i].dwFlags = mp->ChnSettings[i].dwFlags;
-			mp->Chn[i].nCutOff = 0x7F;
+			mp->Channels[i].nVolume = 64;
+			mp->Channels[i].nPan = 128;
+			mp->Channels[i].dwFlags = 0;
+			mp->Voices[i].nVolume = 256;
+			mp->Voices[i].nGlobalVol = mp->Channels[i].nVolume;
+			mp->Voices[i].nPan = mp->Channels[i].nPan;
+			mp->Voices[i].dwFlags = mp->Channels[i].dwFlags;
+			mp->Voices[i].nCutOff = 0x7F;
 		}
 	}
 
@@ -418,22 +418,22 @@ int song_load_unchecked(const char *file)
 
 int song_instrument_is_empty(int n)
 {
-	if (mp->Headers[n] == NULL)
+	if (mp->Instruments[n] == NULL)
 		return 1;
-	if (mp->Headers[n]->filename[0] != '\0')
+	if (mp->Instruments[n]->filename[0] != '\0')
 		return 0;
 	for (int i = 0; i < 25; i++) {
-		if (mp->Headers[n]->name[i] != '\0' && mp->Headers[n]->name[i] != ' ')
+		if (mp->Instruments[n]->name[i] != '\0' && mp->Instruments[n]->name[i] != ' ')
 			return 0;
 	}
 	for (int i = 0; i < 119; i++) {
-		if (mp->Headers[n]->Keyboard[i] != 0)
+		if (mp->Instruments[n]->Keyboard[i] != 0)
 			return 0;
 	}
-	if (mp->Headers[n]->wMidiBank
-	||mp->Headers[n]->nMidiProgram
-	||mp->Headers[n]->nMidiChannelMask
-	||mp->Headers[n]->nMidiDrumKey) return 0;
+	if (mp->Instruments[n]->wMidiBank
+	||mp->Instruments[n]->nMidiProgram
+	||mp->Instruments[n]->nMidiChannelMask
+	||mp->Instruments[n]->nMidiDrumKey) return 0;
 	return 1;
 }
 
@@ -441,9 +441,9 @@ static int _sample_is_empty(int n)
 {
 	n++;
 	
-	if (mp->Ins[n].nLength)
+	if (mp->Samples[n].nLength)
 		return false;
-	if (mp->Ins[n].name[0] != '\0')
+	if (mp->Samples[n].name[0] != '\0')
 		return false;
 	for (int i = 0; i < 25; i++) {
 		if (mp->m_szNames[n][i] != '\0' && mp->m_szNames[n][i] != ' ')
@@ -592,7 +592,7 @@ void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe)
 
 // ------------------------------------------------------------------------------------------------------------
 
-static INSTRUMENTHEADER blank_instrument;	// should be zero, it's coming from bss
+static SONGINSTRUMENT blank_instrument;	// should be zero, it's coming from bss
 
 // set iti_file if saving an instrument to disk by itself
 static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
@@ -600,7 +600,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	n++; // FIXME: this is dumb; really all the numbering should be one-based to make it simple
 	
 	ITINSTRUMENT iti;
-	INSTRUMENTHEADER *i = mp->Headers[n];
+	SONGINSTRUMENT *i = mp->Instruments[n];
 	
 	if (!i)
 		i = &blank_instrument;
@@ -729,7 +729,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 			iti_map[o] = qp;
 			qp += 80; /* header is 80 bytes */
 			save_its_header(fp,
-				(song_sample *) mp->Ins + o,
+				(song_sample *) mp->Samples + o,
 				mp->m_szNames[o]);
 		}
 		for (int j = 0; j < iti_nalloc; j++) {
@@ -737,7 +737,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 
 			int o = iti_invmap[ j ];
 
-			MODINSTRUMENT *smp = mp->Ins + o;
+			SONGSAMPLE *smp = mp->Samples + o;
 
 			op = fp->pos;
 			tmp = bswapLE32(op);
@@ -897,7 +897,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	
 	// IT always saves at least two orders.
 	nord = 255;
-	while (nord >= 0 && mp->Order[nord] == 0xff)
+	while (nord >= 0 && mp->Orderlist[nord] == 0xff)
 		nord--;
 	nord += 2;
 	
@@ -941,7 +941,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	//     instrument filters = 2.17
 	hdr.cmwt = bswapLE16(0x0214);	// compatible with IT 2.14
 	for (n = 1; n < nins; n++) {
-		INSTRUMENTHEADER *i = mp->Headers[n];
+		SONGINSTRUMENT *i = mp->Instruments[n];
 		if (!i) continue;
 		if (i->dwFlags & ENV_FILTER) {
 			hdr.cmwt = bswapLE16(0x0217);
@@ -983,15 +983,15 @@ static void _save_it(diskwriter_driver_t *fp)
 	// hdr.reserved2
 	
 	for (n = 0; n < 64; n++) {
-		hdr.chnpan[n] = ((mp->ChnSettings[n].dwFlags & CHN_SURROUND)
-				 ? 100 : (mp->ChnSettings[n].nPan / 4));
-		hdr.chnvol[n] = mp->ChnSettings[n].nVolume;
-		if (mp->ChnSettings[n].dwFlags & CHN_MUTE)
+		hdr.chnpan[n] = ((mp->Channels[n].dwFlags & CHN_SURROUND)
+				 ? 100 : (mp->Channels[n].nPan / 4));
+		hdr.chnvol[n] = mp->Channels[n].nVolume;
+		if (mp->Channels[n].dwFlags & CHN_MUTE)
 			hdr.chnpan[n] += 128;
 	}
 	
 	fp->o(fp, (const unsigned char *)&hdr, sizeof(hdr));
-	fp->o(fp, (const unsigned char *)mp->Order, nord);
+	fp->o(fp, (const unsigned char *)mp->Orderlist, nord);
 	
 	// we'll get back to these later
 	fp->o(fp, (const unsigned char *)para_ins, 4*nins);
@@ -1023,7 +1023,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	for (n = 0; n < nsmp; n++) {
 		// the sample parapointers are byte-swapped later
 		para_smp[n] = fp->pos;
-		save_its_header(fp, (song_sample *) mp->Ins + n + 1, mp->m_szNames[n + 1]);
+		save_its_header(fp, (song_sample *) mp->Samples + n + 1, mp->m_szNames[n + 1]);
 	}
 	for (n = 0; n < npat; n++) {
 		if (song_pattern_is_empty(n)) {
@@ -1037,7 +1037,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	// sample data
 	for (n = 0; n < nsmp; n++) {
 		unsigned int tmp, op;
-		MODINSTRUMENT *smp = mp->Ins + (n + 1);
+		SONGSAMPLE *smp = mp->Samples + (n + 1);
 		
 		if (smp->pSample) {
 			op = fp->pos;
@@ -1268,7 +1268,7 @@ void song_clear_sample(int n)
 {
 	song_lock_audio();
 	mp->DestroySample(n);
-	memset(mp->Ins + n, 0, sizeof(MODINSTRUMENT));
+	memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
 	memset(mp->m_szNames[n], 0, 32);
 	song_unlock_audio();
 }
@@ -1280,7 +1280,7 @@ void song_copy_sample(int n, song_sample *src, char *srcname)
 		mp->m_szNames[n][25] = 0;
 	}
 	
-	memcpy(mp->Ins + n, src, sizeof(MODINSTRUMENT));
+	memcpy(mp->Samples + n, src, sizeof(SONGSAMPLE));
 
 	if (src->data) {
 		unsigned long bytelength = src->length;
@@ -1289,8 +1289,8 @@ void song_copy_sample(int n, song_sample *src, char *srcname)
 		if (src->flags & SAMP_STEREO)
 			bytelength *= 2;
 		
-		mp->Ins[n].pSample = mp->AllocateSample(bytelength);
-		memcpy(mp->Ins[n].pSample, src->data, bytelength);
+		mp->Samples[n].pSample = mp->AllocateSample(bytelength);
+		memcpy(mp->Samples[n].pSample, src->data, bytelength);
 	}
 }
 
@@ -1304,18 +1304,18 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 	/* 0. delete old samples */
 	memset(sampmap, 0, sizeof(sampmap));
-	if (mp->Headers[target]) {
+	if (mp->Instruments[target]) {
 		/* init... */
 		for (unsigned int j = 0; j < 128; j++) {
-			x = mp->Headers[target]->Keyboard[j];
+			x = mp->Instruments[target]->Keyboard[j];
 			sampmap[x] = 1;
 		}
 		/* mark... */
 		for (unsigned int q = 0; q < MAX_INSTRUMENTS; q++) {
 			if ((int) q == target) continue;
-			if (!mp->Headers[q]) continue;
+			if (!mp->Instruments[q]) continue;
 			for (unsigned int j = 0; j < 128; j++) {
-				x = mp->Headers[q]->Keyboard[j];
+				x = mp->Instruments[q]->Keyboard[j];
 				sampmap[x] = 0;
 			}
 		}
@@ -1324,7 +1324,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			if (!sampmap[j]) continue;
 
 			mp->DestroySample(j);
-			memset(mp->Ins + j, 0, sizeof(mp->Ins[j]));
+			memset(mp->Samples + j, 0, sizeof(mp->Samples[j]));
 			memset(mp->m_szNames + j, 0, sizeof(mp->m_szNames[j]));
 		}
 		/* now clear everything "empty" so we have extra slots */
@@ -1344,11 +1344,11 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			/* 1. find a place for all the samples */
 			memset(sampmap, 0, sizeof(sampmap));
 			for (unsigned int j = 0; j < 128; j++) {
-				x = xl.Headers[n]->Keyboard[j];
+				x = xl.Instruments[n]->Keyboard[j];
 				if (!sampmap[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
 						for (int k = 1; k < MAX_SAMPLES; k++) {
-							if (mp->Ins[k].nLength) continue;
+							if (mp->Samples[k].nLength) continue;
 							sampmap[x] = k;
 							//song_sample *smp = (song_sample *)song_get_sample(k, NULL);
 
@@ -1358,7 +1358,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 								xl.m_szNames[x][25] = 0;
 							}
 
-							song_copy_sample(k, (song_sample *)&xl.Ins[x],
+							song_copy_sample(k, (song_sample *)&xl.Samples[x],
 								str_dup(xl.m_szNames[x]));
 							break;
 						}
@@ -1367,13 +1367,13 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			}
 
 			/* transfer the instrument */
-			mp->Headers[target] = xl.Headers[n];
-			xl.Headers[n] = 0; /* dangle */
+			mp->Instruments[target] = xl.Instruments[n];
+			xl.Instruments[n] = 0; /* dangle */
 
 			/* and rewrite! */
 			for (unsigned int k = 0; k < 128; k++) {
-				mp->Headers[target]->Keyboard[k] = sampmap[
-						mp->Headers[target]->Keyboard[k]
+				mp->Instruments[target]->Keyboard[k] = sampmap[
+						mp->Instruments[target]->Keyboard[k]
 				];
 			}
         		unslurp(s);
@@ -1483,7 +1483,7 @@ int song_load_sample(int n, const char *file)
 		title[23] = ' ';
 	}
 	if (n) strcpy(mp->m_szNames[n], title);
-	memcpy(&(mp->Ins[n]), &smp, sizeof(MODINSTRUMENT));
+	memcpy(&(mp->Samples[n]), &smp, sizeof(SONGSAMPLE));
 	song_unlock_audio();
 
         unslurp(s);
@@ -1507,7 +1507,7 @@ int song_save_sample(int n, const char *file, int format_id)
 {
 	assert(format_id < SSMP_SENTINEL);
 	
-	MODINSTRUMENT *smp = mp->Ins + n;
+	SONGSAMPLE *smp = mp->Samples + n;
 	if (!smp->pSample) {
 		log_appendf(4, "Sample %d: no data to save", n);
 		return 0;
@@ -1537,7 +1537,7 @@ int song_save_sample(int n, const char *file, int format_id)
 
 int song_save_instrument(int n, const char *file)
 {
-	INSTRUMENTHEADER *ins = mp->Headers[n];
+	SONGINSTRUMENT *ins = mp->Instruments[n];
 	
 	log_appendf(2, "Saving instrument %s", file);
 	if (!ins) {
@@ -1603,11 +1603,11 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 	if (r) {
         	_convert_to_it(&library);
 		for (int n = 1; n < MAX_INSTRUMENTS; n++) {
-			if (! library.Headers[n]) continue;
+			if (! library.Instruments[n]) continue;
 
 			dmoz_file_t *file = dmoz_add_file(flist,
 				str_dup(path), str_dup(base), NULL, n);
-			file->title = str_dup((char*)library.Headers[n]->name);
+			file->title = str_dup((char*)library.Instruments[n]->name);
 
 			int count[128];
 			memset(count, 0, sizeof(count));
@@ -1616,10 +1616,10 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 			file->filesize = 0;
 			file->instnum = n;
 			for (j = 0; j < 128; j++) {
-				x = library.Headers[n]->Keyboard[j];
+				x = library.Instruments[n]->Keyboard[j];
 				if (!count[x]) {
 					if (x > 0 && x < MAX_INSTRUMENTS) {
-						file->filesize += library.Ins[x].nLength;
+						file->filesize += library.Samples[x].nLength;
 						file->sampsize++;
 					}
 				}
@@ -1657,7 +1657,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	if (r) {
         	_convert_to_it(&library);
 		for (int n = 1; n < MAX_SAMPLES; n++) {
-			if (library.Ins[n].nLength) {
+			if (library.Samples[n].nLength) {
 				for (int c = 0; c < 25; c++) {
 					if (library.m_szNames[n][c] == 0)
 						library.m_szNames[n][c] = 32;
@@ -1666,24 +1666,24 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 				dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 				file->type = TYPE_SAMPLE_EXTD;
 				file->description = "Fishcakes"; // FIXME - what does IT say?
-				file->smp_speed = library.Ins[n].nC5Speed;
-				file->smp_loop_start = library.Ins[n].nLoopStart;
-				file->smp_loop_end = library.Ins[n].nLoopEnd;
-				file->smp_sustain_start = library.Ins[n].nSustainStart;
-				file->smp_sustain_end = library.Ins[n].nSustainEnd;
-				file->smp_length = library.Ins[n].nLength;
-				file->smp_flags = library.Ins[n].uFlags;
-				file->smp_defvol = library.Ins[n].nVolume>>2;
-				file->smp_gblvol = library.Ins[n].nGlobalVol;
-				file->smp_vibrato_speed = library.Ins[n].nVibRate;
-				file->smp_vibrato_depth = library.Ins[n].nVibDepth;
-				file->smp_vibrato_rate = library.Ins[n].nVibSweep;
+				file->smp_speed = library.Samples[n].nC5Speed;
+				file->smp_loop_start = library.Samples[n].nLoopStart;
+				file->smp_loop_end = library.Samples[n].nLoopEnd;
+				file->smp_sustain_start = library.Samples[n].nSustainStart;
+				file->smp_sustain_end = library.Samples[n].nSustainEnd;
+				file->smp_length = library.Samples[n].nLength;
+				file->smp_flags = library.Samples[n].uFlags;
+				file->smp_defvol = library.Samples[n].nVolume>>2;
+				file->smp_gblvol = library.Samples[n].nGlobalVol;
+				file->smp_vibrato_speed = library.Samples[n].nVibRate;
+				file->smp_vibrato_depth = library.Samples[n].nVibDepth;
+				file->smp_vibrato_rate = library.Samples[n].nVibSweep;
 				// don't screw this up...
 				if (((unsigned char)library.m_szNames[n][23]) == 0xFF) {
 					library.m_szNames[n][23] = ' ';
 				}
 				file->title = str_dup(library.m_szNames[n]);
-				file->sample = (song_sample *) library.Ins + n;
+				file->sample = (song_sample *) library.Samples + n;
 			}
 		}
         } else {

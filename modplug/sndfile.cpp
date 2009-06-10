@@ -27,9 +27,9 @@ extern void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemF
 // CSoundFile
 
 CSoundFile::CSoundFile()
-    : Chn(), ChnMix(), Ins(), Headers(),
-      ChnSettings(), Patterns(), PatternSize(),
-      PatternAllocSize(), Order(),
+    : Voices(), VoiceMix(), Samples(), Instruments(),
+      Channels(), Patterns(), PatternSize(),
+      PatternAllocSize(), Orderlist(),
       m_MidiCfg(), m_MixPlugins(),
       m_nDefaultSpeed(),
       m_nDefaultTempo(),
@@ -53,12 +53,12 @@ CSoundFile::CSoundFile()
       stop_at_order(), stop_at_row(), stop_at_time()
 //----------------------
 {
-	memset(Chn, 0, sizeof(Chn));
-	memset(ChnMix, 0, sizeof(ChnMix));
-	memset(Ins, 0, sizeof(Ins));
-	memset(ChnSettings, 0, sizeof(ChnSettings));
-	memset(Headers, 0, sizeof(Headers));
-	memset(Order, 0xFF, sizeof(Order));
+	memset(Voices, 0, sizeof(Voices));
+	memset(VoiceMix, 0, sizeof(VoiceMix));
+	memset(Samples, 0, sizeof(Samples));
+	memset(Channels, 0, sizeof(Channels));
+	memset(Instruments, 0, sizeof(Instruments));
+	memset(Orderlist, 0xFF, sizeof(Orderlist));
 	memset(Patterns, 0, sizeof(Patterns));
 	memset(m_szNames, 0, sizeof(m_szNames));
 	memset(m_MixPlugins, 0, sizeof(m_MixPlugins));
@@ -101,11 +101,11 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nRestartPos = 0;
 	m_nSongPreAmp = 0x30;
 	m_lpszSongComments = NULL;
-	memset(Ins, 0, sizeof(Ins));
-	memset(ChnMix, 0, sizeof(ChnMix));
-	memset(Chn, 0, sizeof(Chn));
-	memset(Headers, 0, sizeof(Headers));
-	memset(Order, 0xFF, sizeof(Order));
+	memset(Samples, 0, sizeof(Samples));
+	memset(VoiceMix, 0, sizeof(VoiceMix));
+	memset(Voices, 0, sizeof(Voices));
+	memset(Instruments, 0, sizeof(Instruments));
+	memset(Orderlist, 0xFF, sizeof(Orderlist));
 	memset(Patterns, 0, sizeof(Patterns));
 	memset(m_szNames, 0, sizeof(m_szNames));
 	memset(m_MixPlugins, 0, sizeof(m_MixPlugins));
@@ -114,11 +114,11 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 		PatternSize[npt] = 64;
 		PatternAllocSize[npt] = 64;
 	}
-	for (uint32_t nch=0; nch<MAX_BASECHANNELS; nch++)
+	for (uint32_t nch=0; nch<MAX_CHANNELS; nch++)
 	{
-		ChnSettings[nch].nPan = 128;
-		ChnSettings[nch].nVolume = 64;
-		ChnSettings[nch].dwFlags = 0;
+		Channels[nch].nPan = 128;
+		Channels[nch].nVolume = 64;
+		Channels[nch].dwFlags = 0;
 	}
 	if (lpStream)
 	{
@@ -153,18 +153,18 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 		}
 	}
 	// Adjust channels
-	for (i=0; i<MAX_BASECHANNELS; i++)
+	for (i=0; i<MAX_CHANNELS; i++)
 	{
-		if (ChnSettings[i].nVolume > 64) ChnSettings[i].nVolume = 64;
-		if (ChnSettings[i].nPan > 256) ChnSettings[i].nPan = 128;
-		Chn[i].nPan = ChnSettings[i].nPan;
-		Chn[i].nGlobalVol = ChnSettings[i].nVolume;
-		Chn[i].dwFlags = ChnSettings[i].dwFlags;
-		Chn[i].nVolume = 256;
-		Chn[i].nCutOff = 0x7F;
+		if (Channels[i].nVolume > 64) Channels[i].nVolume = 64;
+		if (Channels[i].nPan > 256) Channels[i].nPan = 128;
+		Voices[i].nPan = Channels[i].nPan;
+		Voices[i].nGlobalVol = Channels[i].nVolume;
+		Voices[i].dwFlags = Channels[i].dwFlags;
+		Voices[i].nVolume = 256;
+		Voices[i].nCutOff = 0x7F;
 	}
 	// Checking instruments
-	MODINSTRUMENT *pins = Ins;
+	SONGSAMPLE *pins = Samples;
 
 	for (i=0; i<MAX_INSTRUMENTS; i++, pins++)
 	{
@@ -184,7 +184,7 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 		if (pins->nGlobalVol > 64) pins->nGlobalVol = 64;
 	}
 	// Check invalid instruments
-	while ((m_nInstruments > 0) && (!Headers[m_nInstruments])) m_nInstruments--;
+	while ((m_nInstruments > 0) && (!Instruments[m_nInstruments])) m_nInstruments--;
 	// Set default values
 	if (m_nDefaultTempo < 31) m_nDefaultTempo = 31;
 	if (!m_nDefaultSpeed) m_nDefaultSpeed = 6;
@@ -198,7 +198,7 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nTickCount = m_nMusicSpeed;
 	m_nNextRow = 0;
 	m_nRow = 0;
-	if ((m_nRestartPos >= MAX_ORDERS) || (Order[m_nRestartPos] >= MAX_PATTERNS)) m_nRestartPos = 0;
+	if ((m_nRestartPos >= MAX_ORDERS) || (Orderlist[m_nRestartPos] >= MAX_PATTERNS)) m_nRestartPos = 0;
 	// Load plugins
 	if (gpMixPluginCreateProc)
 	{
@@ -236,7 +236,7 @@ bool CSoundFile::Destroy()
 	}
 	for (i=1; i<MAX_SAMPLES; i++)
 	{
-		MODINSTRUMENT *pins = &Ins[i];
+		SONGSAMPLE *pins = &Samples[i];
 		if (pins->pSample)
 		{
 			FreeSample(pins->pSample);
@@ -245,10 +245,10 @@ bool CSoundFile::Destroy()
 	}
 	for (i=0; i<MAX_INSTRUMENTS; i++)
 	{
-		if (Headers[i])
+		if (Instruments[i])
 		{
-			delete Headers[i];
-			Headers[i] = NULL;
+			delete Instruments[i];
+			Instruments[i] = NULL;
 		}
 	}
 	for (i=0; i<MAX_MIXPLUGINS; i++)
@@ -355,7 +355,7 @@ uint32_t CSoundFile::GetNumPatterns() const
 //-------------------------------------
 {
 	uint32_t i = 0;
-	while ((i < MAX_ORDERS) && (Order[i] < 0xFF)) i++;
+	while ((i < MAX_ORDERS) && (Orderlist[i] < 0xFF)) i++;
 	return i;
 }
 
@@ -364,7 +364,7 @@ uint32_t CSoundFile::GetNumInstruments() const
 //----------------------------------------
 {
 	uint32_t n=0;
-	for (uint32_t i=0; i<MAX_INSTRUMENTS; i++) if (Ins[i].pSample) n++;
+	for (uint32_t i=0; i<MAX_INSTRUMENTS; i++) if (Samples[i].pSample) n++;
 	return n;
 }
 
@@ -375,9 +375,9 @@ uint32_t CSoundFile::GetMaxPosition() const
 	uint32_t max = 0;
 	uint32_t i = 0;
 
-	while ((i < MAX_ORDERS) && (Order[i] != 0xFF))
+	while ((i < MAX_ORDERS) && (Orderlist[i] != 0xFF))
 	{
-		if (Order[i] < MAX_PATTERNS) max += PatternSize[Order[i]];
+		if (Orderlist[i] < MAX_PATTERNS) max += PatternSize[Orderlist[i]];
 		i++;
 	}
 	return max;
@@ -389,8 +389,8 @@ uint32_t CSoundFile::GetCurrentPos() const
 {
 	uint32_t pos = 0;
 
-	for (uint32_t i=0; i<m_nCurrentPattern; i++) if (Order[i] < MAX_PATTERNS)
-		pos += PatternSize[Order[i]];
+	for (uint32_t i=0; i<m_nCurrentPattern; i++) if (Orderlist[i] < MAX_PATTERNS)
+		pos += PatternSize[Orderlist[i]];
 	return pos + m_nRow;
 }
 
@@ -400,47 +400,47 @@ void CSoundFile::SetCurrentPos(uint32_t nPos)
 {
 	uint32_t i, nPattern;
 
-	for (i=0; i<MAX_CHANNELS; i++)
+	for (i=0; i<MAX_VOICES; i++)
 	{
-		Chn[i].nNote = Chn[i].nNewNote = Chn[i].nNewIns = 0;
-		Chn[i].pInstrument = NULL;
-		Chn[i].pHeader = NULL;
-		Chn[i].nPortamentoDest = 0;
-		Chn[i].nCommand = 0;
-		Chn[i].nPatternLoopCount = 0;
-		Chn[i].nPatternLoop = 0;
-		Chn[i].nFadeOutVol = 0;
-		Chn[i].dwFlags |= CHN_KEYOFF|CHN_NOTEFADE;
-		Chn[i].nTremorCount = 0;
+		Voices[i].nNote = Voices[i].nNewNote = Voices[i].nNewIns = 0;
+		Voices[i].pInstrument = NULL;
+		Voices[i].pHeader = NULL;
+		Voices[i].nPortamentoDest = 0;
+		Voices[i].nCommand = 0;
+		Voices[i].nPatternLoopCount = 0;
+		Voices[i].nPatternLoop = 0;
+		Voices[i].nFadeOutVol = 0;
+		Voices[i].dwFlags |= CHN_KEYOFF|CHN_NOTEFADE;
+		Voices[i].nTremorCount = 0;
 	}
 	if (!nPos)
 	{
-		for (i=0; i<MAX_CHANNELS; i++)
+		for (i=0; i<MAX_VOICES; i++)
 		{
-			Chn[i].nPeriod = 0;
-			Chn[i].nPos = Chn[i].nLength = 0;
-			Chn[i].nLoopStart = 0;
-			Chn[i].nLoopEnd = 0;
-			Chn[i].nROfs = Chn[i].nLOfs = 0;
-			Chn[i].pSample = NULL;
-			Chn[i].pInstrument = NULL;
-			Chn[i].pHeader = NULL;
-			Chn[i].nCutOff = 0x7F;
-			Chn[i].nResonance = 0;
-			Chn[i].nLeftVol = Chn[i].nRightVol = 0;
-			Chn[i].nNewLeftVol = Chn[i].nNewRightVol = 0;
-			Chn[i].nLeftRamp = Chn[i].nRightRamp = 0;
-			Chn[i].nVolume = 256;
-			if (i < MAX_BASECHANNELS)
+			Voices[i].nPeriod = 0;
+			Voices[i].nPos = Voices[i].nLength = 0;
+			Voices[i].nLoopStart = 0;
+			Voices[i].nLoopEnd = 0;
+			Voices[i].nROfs = Voices[i].nLOfs = 0;
+			Voices[i].pSample = NULL;
+			Voices[i].pInstrument = NULL;
+			Voices[i].pHeader = NULL;
+			Voices[i].nCutOff = 0x7F;
+			Voices[i].nResonance = 0;
+			Voices[i].nLeftVol = Voices[i].nRightVol = 0;
+			Voices[i].nNewLeftVol = Voices[i].nNewRightVol = 0;
+			Voices[i].nLeftRamp = Voices[i].nRightRamp = 0;
+			Voices[i].nVolume = 256;
+			if (i < MAX_CHANNELS)
 			{
-				Chn[i].dwFlags = ChnSettings[i].dwFlags;
-				Chn[i].nPan = ChnSettings[i].nPan;
-				Chn[i].nGlobalVol = ChnSettings[i].nVolume;
+				Voices[i].dwFlags = Channels[i].dwFlags;
+				Voices[i].nPan = Channels[i].nPan;
+				Voices[i].nGlobalVol = Channels[i].nVolume;
 			} else
 			{
-				Chn[i].dwFlags = 0;
-				Chn[i].nPan = 128;
-				Chn[i].nGlobalVol = 64;
+				Voices[i].dwFlags = 0;
+				Voices[i].nPan = 128;
+				Voices[i].nGlobalVol = 64;
 			}
 		}
 		m_nGlobalVolume = m_nDefaultGlobalVolume;
@@ -450,7 +450,7 @@ void CSoundFile::SetCurrentPos(uint32_t nPos)
 	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 	for (nPattern = 0; nPattern < MAX_ORDERS; nPattern++)
 	{
-		uint32_t ord = Order[nPattern];
+		uint32_t ord = Orderlist[nPattern];
 		if (ord == 0xFE) continue;
 		if (ord == 0xFF) break;
 		if (ord < MAX_PATTERNS)
@@ -461,17 +461,17 @@ void CSoundFile::SetCurrentPos(uint32_t nPos)
 	}
 	// Buggy position ?
 	if ((nPattern >= MAX_ORDERS)
-	 || (Order[nPattern] >= MAX_PATTERNS)
-	 || (nPos >= PatternSize[Order[nPattern]]))
+	 || (Orderlist[nPattern] >= MAX_PATTERNS)
+	 || (nPos >= PatternSize[Orderlist[nPattern]]))
 	{
 		nPos = 0;
 		nPattern = 0;
 	}
 	uint32_t nRow = nPos;
-	if ((nRow) && (Order[nPattern] < MAX_PATTERNS))
+	if ((nRow) && (Orderlist[nPattern] < MAX_PATTERNS))
 	{
-		MODCOMMAND *p = Patterns[Order[nPattern]];
-		if ((p) && (nRow < PatternSize[Order[nPattern]]))
+		MODCOMMAND *p = Patterns[Orderlist[nPattern]];
+		if ((p) && (nRow < PatternSize[Orderlist[nPattern]]))
 		{
 			bool bOk = false;
 			while ((!bOk) && (nRow > 0))
@@ -501,17 +501,17 @@ void CSoundFile::SetCurrentPos(uint32_t nPos)
 void CSoundFile::SetCurrentOrder(uint32_t nPos)
 //-----------------------------------------
 {
-	while ((nPos < MAX_ORDERS) && (Order[nPos] == 0xFE)) nPos++;
-	if ((nPos >= MAX_ORDERS) || (Order[nPos] >= MAX_PATTERNS)) return;
-	for (uint32_t j=0; j<MAX_CHANNELS; j++)
+	while ((nPos < MAX_ORDERS) && (Orderlist[nPos] == 0xFE)) nPos++;
+	if ((nPos >= MAX_ORDERS) || (Orderlist[nPos] >= MAX_PATTERNS)) return;
+	for (uint32_t j=0; j<MAX_VOICES; j++)
 	{
-		Chn[j].nPeriod = 0;
-		Chn[j].nNote = 0;
-		Chn[j].nPortamentoDest = 0;
-		Chn[j].nCommand = 0;
-		Chn[j].nPatternLoopCount = 0;
-		Chn[j].nPatternLoop = 0;
-		Chn[j].nTremorCount = 0;
+		Voices[j].nPeriod = 0;
+		Voices[j].nNote = 0;
+		Voices[j].nPortamentoDest = 0;
+		Voices[j].nCommand = 0;
+		Voices[j].nPatternLoopCount = 0;
+		Voices[j].nPatternLoop = 0;
+		Voices[j].nTremorCount = 0;
 	}
 	if (!nPos)
 	{
@@ -535,9 +535,9 @@ void CSoundFile::ResetChannels()
 {
 	m_dwSongFlags &= ~SONG_ENDREACHED;
 	m_nBufferCount = 0;
-	for (uint32_t i=0; i<MAX_CHANNELS; i++)
+	for (uint32_t i=0; i<MAX_VOICES; i++)
 	{
-		Chn[i].nROfs = Chn[i].nLOfs = Chn[i].strike = 0;
+		Voices[i].nROfs = Voices[i].nLOfs = Voices[i].strike = 0;
 	}
 }
 
@@ -548,11 +548,11 @@ void CSoundFile::ResetTimestamps()
 	int n;
 	
 	for (n = 1; n < MAX_SAMPLES; n++) {
-		Ins[n].played = 0;
+		Samples[n].played = 0;
 	}
 	for (n = 1; n < MAX_INSTRUMENTS; n++) {
-		if (Headers[n])
-			Headers[n]->played = 0;
+		if (Instruments[n])
+			Instruments[n]->played = 0;
 	}
 }
 
@@ -579,7 +579,7 @@ void CSoundFile::LoopPattern(int nPat, int nRow)
 
 
 
-uint32_t CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
+uint32_t CSoundFile::WriteSample(diskwriter_driver_t *f, SONGSAMPLE *pins,
 				uint32_t nFlags, uint32_t nMaxLen)
 //-----------------------------------------------------------------------------------
 {
@@ -773,7 +773,7 @@ uint32_t CSoundFile::WriteSample(diskwriter_driver_t *f, MODINSTRUMENT *pins,
 //	6 = unsigned 16-bit PCM data
 
 
-uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, const char * lpMemFile, uint32_t dwMemLength)
+uint32_t CSoundFile::ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFile, uint32_t dwMemLength)
 //------------------------------------------------------------------------------------------------
 {
 	uint32_t len = 0, mem = pIns->nLength+6;
@@ -1228,7 +1228,7 @@ uint32_t CSoundFile::ReadSample(MODINSTRUMENT *pIns, uint32_t nFlags, const char
 }
 
 
-void CSoundFile::AdjustSampleLoop(MODINSTRUMENT *pIns)
+void CSoundFile::AdjustSampleLoop(SONGSAMPLE *pIns)
 //----------------------------------------------------
 {
 	if (!pIns->pSample) return;
@@ -1316,7 +1316,7 @@ uint32_t CSoundFile::DetectUnusedSamples(bool *pbIns)
 					{
 						if ((p->instr) && (p->instr < MAX_INSTRUMENTS))
 						{
-							INSTRUMENTHEADER *penv = Headers[p->instr];
+							SONGINSTRUMENT *penv = Instruments[p->instr];
 							if (penv)
 							{
 								uint32_t n = penv->Keyboard[p->note-1];
@@ -1326,7 +1326,7 @@ uint32_t CSoundFile::DetectUnusedSamples(bool *pbIns)
 						{
 							for (uint32_t k=1; k<=m_nInstruments; k++)
 							{
-								INSTRUMENTHEADER *penv = Headers[k];
+								SONGINSTRUMENT *penv = Instruments[k];
 								if (penv)
 								{
 									uint32_t n = penv->Keyboard[p->note-1];
@@ -1340,7 +1340,7 @@ uint32_t CSoundFile::DetectUnusedSamples(bool *pbIns)
 		}
 		for (uint32_t ichk=1; ichk<=m_nSamples; ichk++)
 		{
-			if ((!pbIns[ichk]) && (Ins[ichk].pSample)) nExt++;
+			if ((!pbIns[ichk]) && (Samples[ichk].pSample)) nExt++;
 		}
 	}
 	return nExt;
@@ -1351,18 +1351,18 @@ bool CSoundFile::DestroySample(uint32_t nSample)
 //------------------------------------------
 {
 	if ((!nSample) || (nSample >= MAX_SAMPLES)) return false;
-	if (!Ins[nSample].pSample) return true;
-	MODINSTRUMENT *pins = &Ins[nSample];
+	if (!Samples[nSample].pSample) return true;
+	SONGSAMPLE *pins = &Samples[nSample];
 	signed char *pSample = pins->pSample;
 	pins->pSample = NULL;
 	pins->nLength = 0;
 	pins->uFlags &= ~(CHN_16BIT);
-	for (uint32_t i=0; i<MAX_CHANNELS; i++)
+	for (uint32_t i=0; i<MAX_VOICES; i++)
 	{
-		if (Chn[i].pSample == pSample)
+		if (Voices[i].pSample == pSample)
 		{
-			Chn[i].nPos = Chn[i].nLength = 0;
-			Chn[i].pSample = Chn[i].pCurrentSample = NULL;
+			Voices[i].nPos = Voices[i].nLength = 0;
+			Voices[i].pSample = Voices[i].pCurrentSample = NULL;
 		}
 	}
 	FreeSample(pSample);

@@ -206,10 +206,10 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	}
 	for (uint32_t iOrd=0; iOrd<MAX_ORDERS; iOrd++)
 	{
-		Order[iOrd] = (uint8_t)((iOrd < pfh->nOrders) ? pfh->Orders[iOrd] : 0xFF);
+		Orderlist[iOrd] = (uint8_t)((iOrd < pfh->nOrders) ? pfh->Orders[iOrd] : 0xFF);
 	}
-	memcpy(m_szNames[0], pfh->szSongName, 32);
-	m_szNames[0][31] = 0;
+	memcpy(song_title, pfh->szSongName, 32);
+	song_title[31] = 0;
 	dwMemPos = sizeof(MT2FILEHEADER);
 	nDrumDataLen = *(uint16_t *)(lpStream + dwMemPos);
 	dwDrumDataPos = dwMemPos + 2;
@@ -217,7 +217,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	dwMemPos += 2 + nDrumDataLen;
 #ifdef MT2DEBUG
 
-	Log("MT2 v%03X: \"%s\" (flags=%04X)\n", pfh->wVersion, m_szNames[0], pfh->fulFlags);
+	Log("MT2 v%03X: \"%s\" (flags=%04X)\n", pfh->wVersion, song_title, pfh->fulFlags);
 	Log("%d Channels, %d Patterns, %d Instruments, %d Samples\n", pfh->wChannels, pfh->wPatterns, pfh->wInstruments, pfh->wSamples);
 	Log("Drum Data: %d bytes @%04X\n", nDrumDataLen, dwDrumDataPos);
 #endif
@@ -401,14 +401,14 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	{
 		if (dwMemPos+36 > dwMemLength) return true;
 		MT2INSTRUMENT *pmi = (MT2INSTRUMENT *)(lpStream+dwMemPos);
-		INSTRUMENTHEADER *penv = NULL;
+		SONGINSTRUMENT *penv = NULL;
 		if (iIns <= m_nInstruments)
 		{
-			penv = new INSTRUMENTHEADER;
-			Headers[iIns] = penv;
+			penv = new SONGINSTRUMENT;
+			Instruments[iIns] = penv;
 			if (penv)
 			{
-				memset(penv, 0, sizeof(INSTRUMENTHEADER));
+				memset(penv, 0, sizeof(SONGINSTRUMENT));
 				memcpy(penv->name, pmi->szName, 32);
 				penv->nGlobalVol = 128;
 				penv->nPan = 128;
@@ -551,7 +551,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 			SampleMap[iSmp-1] = pms;
 			if (iSmp < MAX_SAMPLES)
 			{
-				MODINSTRUMENT *psmp = &Ins[iSmp];
+				SONGSAMPLE *psmp = &Samples[iSmp];
 				psmp->nGlobalVol = 64;
 				psmp->nVolume = (pms->wVolume >> 7);
 				psmp->nPan = (pms->nPan == 0x80) ? 128 : (pms->nPan^0x80);
@@ -591,8 +591,8 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	{
 		if (dwMemPos+8 > dwMemLength) return true;
 		MT2INSTRUMENT *pmi = InstrMap[iMap];
-		INSTRUMENTHEADER *penv = NULL;
-		if (iMap<m_nInstruments) penv = Headers[iMap+1];
+		SONGINSTRUMENT *penv = NULL;
+		if (iMap<m_nInstruments) penv = Instruments[iMap+1];
 		for (uint32_t iGrp=0; iGrp<pmi->wSamples; iGrp++)
 		{
 			if (penv)
@@ -606,10 +606,10 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 						penv->Keyboard[i+12] = (uint8_t)nSmp;
 						if (nSmp <= m_nSamples)
 						{
-							Ins[nSmp].nVibType = pmi->bVibType;
-							Ins[nSmp].nVibSweep = pmi->bVibSweep;
-							Ins[nSmp].nVibDepth = pmi->bVibDepth;
-							Ins[nSmp].nVibRate = pmi->bVibRate/4;
+							Samples[nSmp].nVibType = pmi->bVibType;
+							Samples[nSmp].nVibSweep = pmi->bVibSweep;
+							Samples[nSmp].nVibDepth = pmi->bVibDepth;
+							Samples[nSmp].nVibRate = pmi->bVibRate/4;
 						}
 					}
 				}
@@ -623,7 +623,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	for (uint32_t iData=0; iData<256; iData++) if ((iData < m_nSamples) && (SampleMap[iData]))
 	{
 		MT2SAMPLE *pms = SampleMap[iData];
-		MODINSTRUMENT *psmp = &Ins[iData+1];
+		SONGSAMPLE *psmp = &Samples[iData+1];
 		if (!(pms->nFlags & 5))
 		{
 			if (psmp->nLength > 0) 

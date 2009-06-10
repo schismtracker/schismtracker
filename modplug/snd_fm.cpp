@@ -3,7 +3,7 @@ extern "C" {
 }
 #include "snd_fm.h"
 
-#define MAX_CHANNELS 256 /* Must not be less than the setting in sndfile.h */
+#define MAX_VOICES 256 /* Must not be less than the setting in sndfile.h */
 
 #include <string.h>
 #include <stdlib.h>
@@ -117,8 +117,8 @@ void Fmdrv_MixTo(int *target, int count)
 
 
 static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
-static signed char Pans[MAX_CHANNELS];
-static const unsigned char *Dtab[MAX_CHANNELS] = {0};
+static signed char Pans[MAX_VOICES];
+static const unsigned char *Dtab[MAX_VOICES] = {0};
 
 
 static int SetBase(int c)
@@ -199,7 +199,7 @@ void OPL_HertzTouch(int c, int Hertz, int keyoff)
 
 void OPL_Touch(int c, unsigned Vol)
 {
-        if (c < MAX_CHANNELS)
+        if (c < MAX_VOICES)
                 OPL_Touch(c, Dtab[c], Vol);
 }
 
@@ -325,7 +325,7 @@ void OPL_Reset(void)
         for(a = 0; a < 244; a++)
                 OPL_Byte(a, 0);
 
-        for(a = 0; a < MAX_CHANNELS; ++a)
+        for(a = 0; a < MAX_VOICES; ++a)
                 Dtab[a] = 0;
 
         OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);

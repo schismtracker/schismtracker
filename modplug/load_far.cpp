@@ -77,13 +77,13 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nDefaultTempo = 80;
 	m_nDefaultGlobalVolume = 256;
 
-	memcpy(m_szNames[0], pmh1->songname, 32);
+	memcpy(song_title, pmh1->songname, 32);
 	// Channel Setting
 	for (uint32_t nchpan=0; nchpan<16; nchpan++)
 	{
-		ChnSettings[nchpan].dwFlags = 0;
-		ChnSettings[nchpan].nPan = ((pmh1->panning[nchpan] & 0x0F) << 4) + 8;
-		ChnSettings[nchpan].nVolume = 64;
+		Channels[nchpan].dwFlags = 0;
+		Channels[nchpan].nPan = ((pmh1->panning[nchpan] & 0x0F) << 4) + 8;
+		Channels[nchpan].nVolume = 64;
 	}
 	// Reading comment
 	if (pmh1->stlen)
@@ -103,7 +103,7 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 	if (dwMemPos >= dwMemLength) return true;
 	for (uint32_t iorder=0; iorder<MAX_ORDERS; iorder++)
 	{
-		Order[iorder] = (iorder <= pmh2->snglen) ? pmh2->orders[iorder] : 0xFF;
+		Orderlist[iorder] = (iorder <= pmh2->snglen) ? pmh2->orders[iorder] : 0xFF;
 	}
 	m_nRestartPos = pmh2->loopto;
 	// Reading Patterns	
@@ -224,7 +224,7 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 	if (dwMemPos + 8 >= dwMemLength) return true;
 	memcpy(samplemap, lpStream+dwMemPos, 8);
 	dwMemPos += 8;
-	MODINSTRUMENT *pins = &Ins[1];
+	SONGSAMPLE *pins = &Samples[1];
 	for (uint32_t ismp=0; ismp<64; ismp++, pins++) if (samplemap[ismp >> 3] & (1 << (ismp & 7)))
 	{
 		if (dwMemPos + sizeof(FARSAMPLE) > dwMemLength) return true;

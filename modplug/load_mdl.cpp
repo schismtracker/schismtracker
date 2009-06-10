@@ -247,7 +247,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 		// IN: infoblock
 		case 0x4E49:
 			pmib = (MDLINFOBLOCK *)(lpStream+dwMemPos);
-			memcpy(m_szNames[0], pmib->songname, 32);
+			memcpy(song_title, pmib->songname, 32);
 			norders = bswapLE16(pmib->norders);
 			if (norders > MAX_ORDERS) norders = MAX_ORDERS;
 			m_nRestartPos = bswapLE16(pmib->repeatpos);
@@ -259,14 +259,14 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 			m_nChannels = 4;
 			for (i=0; i<32; i++)
 			{
-				ChnSettings[i].nVolume = 64;
-				ChnSettings[i].nPan = (pmib->channelinfo[i] & 0x7F) << 1;
+				Channels[i].nVolume = 64;
+				Channels[i].nPan = (pmib->channelinfo[i] & 0x7F) << 1;
 				if (pmib->channelinfo[i] & 0x80)
-					ChnSettings[i].dwFlags |= CHN_MUTE;
+					Channels[i].dwFlags |= CHN_MUTE;
 				else
 					m_nChannels = i+1;
 			}
-			for (j=0; j<norders; j++) Order[j] = pmib->seq[j];
+			for (j=0; j<norders; j++) Orderlist[j] = pmib->seq[j];
 			break;
 		// ME: song message
 		case 0x454D:
@@ -317,12 +317,12 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 				uint32_t nins = lpStream[dwPos];
 				if ((nins >= MAX_INSTRUMENTS) || (!nins)) break;
 				if (m_nInstruments < nins) m_nInstruments = nins;
-				if (!Headers[nins])
+				if (!Instruments[nins])
 				{
 					uint32_t note = 12;
-					if ((Headers[nins] = new INSTRUMENTHEADER) == NULL) break;
-					INSTRUMENTHEADER *penv = Headers[nins];
-					memset(penv, 0, sizeof(INSTRUMENTHEADER));
+					if ((Instruments[nins] = new SONGINSTRUMENT) == NULL) break;
+					SONGINSTRUMENT *penv = Instruments[nins];
+					memset(penv, 0, sizeof(SONGINSTRUMENT));
 					memcpy(penv->name, lpStream+dwPos+2, 32);
 					penv->nGlobalVol = 128;
 					penv->nPPC = 5*12;
@@ -336,12 +336,12 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 							{
 								int ismp = ps[0];
 								penv->Keyboard[note] = ps[0];
-								Ins[ismp].nVolume = ps[2];
-								Ins[ismp].nPan = ps[4] << 1;
-								Ins[ismp].nVibType = ps[11];
-								Ins[ismp].nVibSweep = ps[10];
-								Ins[ismp].nVibDepth = ps[9];
-								Ins[ismp].nVibRate = ps[8];
+								Samples[ismp].nVolume = ps[2];
+								Samples[ismp].nPan = ps[4] << 1;
+								Samples[ismp].nVibType = ps[11];
+								Samples[ismp].nVibSweep = ps[10];
+								Samples[ismp].nVibDepth = ps[9];
+								Samples[ismp].nVibRate = ps[8];
 							}
 							penv->nFadeOut = (ps[7] << 8) | ps[6];
 							if (penv->nFadeOut == 0xFFFF) penv->nFadeOut = 0;
@@ -367,10 +367,10 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 				}
 				dwPos += 34 + 14*lpStream[dwPos+1];
 			}
-			for (j=1; j<=m_nInstruments; j++) if (!Headers[j])
+			for (j=1; j<=m_nInstruments; j++) if (!Instruments[j])
 			{
-				Headers[j] = new INSTRUMENTHEADER;
-				if (Headers[j]) memset(Headers[j], 0, sizeof(INSTRUMENTHEADER));
+				Instruments[j] = new SONGINSTRUMENT;
+				if (Instruments[j]) memset(Instruments[j], 0, sizeof(SONGINSTRUMENT));
 			}
 			break;
 		// VE: Volume Envelope
@@ -397,7 +397,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 				uint32_t nins = lpStream[dwPos];
 				if ((nins >= MAX_SAMPLES) || (!nins)) continue;
 				if (m_nSamples < nins) m_nSamples = nins;
-				MODINSTRUMENT *pins = &Ins[nins];
+				SONGSAMPLE *pins = &Samples[nins];
 				memcpy(m_szNames[nins], lpStream+dwPos+1, 32);
 				memcpy(pins->name, lpStream+dwPos+33, 8);
 				pins->nC5Speed = *((uint32_t *)(lpStream+dwPos+41));
@@ -424,9 +424,9 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 		// SA: Sample Data
 		case 0x4153:
 			dwPos = dwMemPos;
-			for (i=1; i<=m_nSamples; i++) if ((Ins[i].nLength) && (!Ins[i].pSample) && (smpinfo[i] != 3) && (dwPos < dwMemLength))
+			for (i=1; i<=m_nSamples; i++) if ((Samples[i].nLength) && (!Samples[i].pSample) && (smpinfo[i] != 3) && (dwPos < dwMemLength))
 			{
-				MODINSTRUMENT *pins = &Ins[i];
+				SONGSAMPLE *pins = &Samples[i];
 				uint32_t flags = (pins->uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
 				if (!smpinfo[i])
 				{
@@ -462,9 +462,9 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 		}
 	}
 	// Set up envelopes
-	for (uint32_t iIns=1; iIns<=m_nInstruments; iIns++) if (Headers[iIns])
+	for (uint32_t iIns=1; iIns<=m_nInstruments; iIns++) if (Instruments[iIns])
 	{
-		INSTRUMENTHEADER *penv = Headers[iIns];
+		SONGINSTRUMENT *penv = Instruments[iIns];
 		// Setup volume envelope
 		if ((nvolenv) && (pvolenv) && (insvolenv[iIns]))
 		{

@@ -174,7 +174,7 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 		return false;
 	}
 	// dumb casts :P
-	return mp->ReadSample((MODINSTRUMENT *) smp, format,
+	return mp->ReadSample((SONGSAMPLE *) smp, format,
 			(const char *) (data + bp),
 			(uint32_t) (length - bp));
 }

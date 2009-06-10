@@ -610,7 +610,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading Samples
 	for (uint32_t iSHdr=0; iSHdr<m_nSamples; iSHdr++)
 	{
-		MODINSTRUMENT *pins = &Ins[iSHdr+1];
+		SONGSAMPLE *pins = &Samples[iSHdr+1];
 		pins->nLoopStart = bswapBE16(pmsh->sample[iSHdr].rep) << 1;
 		pins->nLoopEnd = pins->nLoopStart + (bswapBE16(pmsh->sample[iSHdr].replen) << 1);
 		pins->nVolume = (pmsh->sample[iSHdr].svol << 2);
@@ -629,7 +629,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 		uint32_t nbo = pmsh->songlen >> 8;
 		if (nbo >= MAX_ORDERS) nbo = MAX_ORDERS-1;
 		if (!nbo) nbo = 1;
-		memcpy(Order, pmsh->playseq, nbo);
+		memcpy(Orderlist, pmsh->playseq, nbo);
 		playtransp = pmsh->playtransp;
 	} else
 	{
@@ -664,7 +664,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 			if ((pseq) && (pseq < dwMemLength - sizeof(MMD2PLAYSEQ)))
 			{
 				MMD2PLAYSEQ *pmps = (MMD2PLAYSEQ *)(lpStream + pseq);
-				if (!m_szNames[0][0]) memcpy(m_szNames[0], pmps->name, 31);
+				if (!song_title[0]) memcpy(song_title, pmps->name, 31);
 				uint32_t n = bswapBE16(pmps->length);
 				if (pseq+n <= dwMemLength)
 				{
@@ -673,14 +673,14 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 						uint32_t seqval = pmps->seq[i] >> 8;
 						if ((seqval < wNumBlocks) && (nOrders < MAX_ORDERS-1))
 						{
-							Order[nOrders++] = seqval;
+							Orderlist[nOrders++] = seqval;
 						}
 					}
 				}
 			}
 		}
 		playtransp = pmsh2->playtransp;
-		while (nOrders < MAX_ORDERS) Order[nOrders++] = 0xFF;
+		while (nOrders < MAX_ORDERS) Orderlist[nOrders++] = 0xFF;
 	}
 	// Reading Expansion structure
 	if (pmex)
@@ -708,7 +708,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 		if ((songname) && (songnamelen) && (songname+songnamelen <= dwMemLength))
 		{
 			if (songnamelen > 31) songnamelen = 31;
-			memcpy(m_szNames[0], lpStream+songname, songnamelen);
+			memcpy(song_title, lpStream+songname, songnamelen);
 		}
 		// Sample Names
 		uint32_t smpinfoex = bswapBE32(pmex->iinfo);
@@ -778,7 +778,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 		{
 			if (stype & 0x10)
 			{
-				Ins[iSmp+1].uFlags |= CHN_16BIT;
+				Samples[iSmp+1].uFlags |= CHN_16BIT;
 				len /= 2;
 				flags = (stype & 0x20) ? RS_STPCM16M : RS_PCM16M;
 			} else
@@ -787,8 +787,8 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 			}
 			if (stype & 0x20) len /= 2;
 		}
-		Ins[iSmp+1].nLength = len;
-		ReadSample(&Ins[iSmp+1], flags, psdata, dwMemLength - dwPos - 6);
+		Samples[iSmp+1].nLength = len;
+		ReadSample(&Samples[iSmp+1], flags, psdata, dwMemLength - dwPos - 6);
 	}
 	// Reading patterns (blocks)
 	if (wNumBlocks > MAX_PATTERNS) wNumBlocks = MAX_PATTERNS;
@@ -897,8 +897,8 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Setup channel pan positions
 	for (uint32_t iCh=0; iCh<m_nChannels; iCh++)
 	{
-		ChnSettings[iCh].nPan = (((iCh&3) == 1) || ((iCh&3) == 2)) ? 0xC0 : 0x40;
-		ChnSettings[iCh].nVolume = 64;
+		Channels[iCh].nPan = (((iCh&3) == 1) || ((iCh&3) == 2)) ? 0xC0 : 0x40;
+		Channels[iCh].nVolume = 64;
 	}
 	return true;
 }

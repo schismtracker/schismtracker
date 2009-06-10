@@ -81,8 +81,8 @@ bool CSoundFile::ReadWav(const unsigned char *data, unsigned int dwMemLength)
         m_nDefaultTempo = 125;
         m_dwSongFlags  |= SONG_LINEARSLIDES; // For no resampling
 
-        Order[0] = 0;
-        Order[1] = 0xFF;
+        Orderlist[0] = 0;
+        Orderlist[1] = 0xFF;
         PatternSize[0] = PatternSize[1] = 64;
         PatternAllocSize[0] = PatternAllocSize[1] = 64;
 
@@ -121,8 +121,8 @@ bool CSoundFile::ReadWav(const unsigned char *data, unsigned int dwMemLength)
         unsigned int norders = 1;
 
         while (framesperrow >= 0x20) {
-                Order[norders++] = 1;
-                Order[norders]   = 0xFF;
+                Orderlist[norders++] = 1;
+                Orderlist[norders]   = 0xFF;
                 framesperrow     = (dwTime + (64 * norders - 1)) / (64 * norders);
 
                 if (norders >= MAX_ORDERS - 1)
@@ -132,9 +132,9 @@ bool CSoundFile::ReadWav(const unsigned char *data, unsigned int dwMemLength)
         m_nDefaultSpeed = framesperrow;
 
         for (unsigned int i = 0; i < 4; i++) {
-                ChnSettings[i].nPan    = (i & 1) ? 256 : 0;
-                ChnSettings[i].nVolume = 64;
-                ChnSettings[i].dwFlags = 0;
+                Channels[i].nPan    = (i & 1) ? 256 : 0;
+                Channels[i].nVolume = 64;
+                Channels[i].dwFlags = 0;
         }
 
         // Setting up speed command
@@ -150,7 +150,7 @@ bool CSoundFile::ReadWav(const unsigned char *data, unsigned int dwMemLength)
 
         // Support for Multichannel Wave
         for (unsigned int nChn = 0; nChn < m_nSamples; nChn++) {
-                MODINSTRUMENT *pins = &Ins[nChn + 1];
+                SONGSAMPLE *pins = &Samples[nChn + 1];
                 pcmd[nChn].note  = pcmd[0].note;
                 pcmd[nChn].instr = (unsigned char)(nChn + 1);
 

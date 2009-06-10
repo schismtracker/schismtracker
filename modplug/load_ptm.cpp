@@ -85,22 +85,22 @@ bool CSoundFile::ReadPTM(const uint8_t *lpStream, uint32_t dwMemLength)
 	 || (!pfh.nsamples) || (pfh.nsamples > 255)
 	 || (!pfh.npatterns) || (pfh.npatterns > 128)
 	 || (SIZEOF_PTMFILEHEADER+pfh.nsamples*SIZEOF_PTMSAMPLE >= (int)dwMemLength)) return false;
-	memcpy(m_szNames[0], pfh.songname, 28);
-	m_szNames[0][28] = 0;
+	memcpy(song_title, pfh.songname, 28);
+	song_title[28] = 0;
 	m_nType = MOD_TYPE_PTM;
 	m_nChannels = pfh.nchannels;
 	m_nSamples = (pfh.nsamples < MAX_SAMPLES) ? pfh.nsamples : MAX_SAMPLES-1;
 	dwMemPos = SIZEOF_PTMFILEHEADER;
 	nOrders = (pfh.norders < MAX_ORDERS) ? pfh.norders : MAX_ORDERS-1;
-	memcpy(Order, pfh.orders, nOrders);
+	memcpy(Orderlist, pfh.orders, nOrders);
 	for (uint32_t ipan=0; ipan<m_nChannels; ipan++)
 	{
-		ChnSettings[ipan].nVolume = 64;
-		ChnSettings[ipan].nPan = ((pfh.chnpan[ipan] & 0x0F) << 4) + 4;
+		Channels[ipan].nVolume = 64;
+		Channels[ipan].nPan = ((pfh.chnpan[ipan] & 0x0F) << 4) + 4;
 	}
 	for (uint32_t ismp=0; ismp<m_nSamples; ismp++, dwMemPos += SIZEOF_PTMSAMPLE)
 	{
-		MODINSTRUMENT *pins = &Ins[ismp+1];
+		SONGSAMPLE *pins = &Samples[ismp+1];
 		PTMSAMPLE *psmp = (PTMSAMPLE *)(lpStream+dwMemPos);
 
 		strncpy(m_szNames[ismp+1], psmp->samplename, 28);

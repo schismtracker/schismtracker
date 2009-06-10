@@ -214,7 +214,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 				int effect, int param)
 {
 	int ins_mode, n;
-	MODCHANNEL *c;
+	SONGVOICE *c;
 	MODCOMMAND mc;
 
 	if (chan == KEYDOWN_CHAN_CURRENT) {
@@ -228,7 +228,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 
 		chan %= 64; chan += 64;
 
-		c = mp->Chn + chan;
+		c = mp->Voices + chan;
 
 		if (at) {
 			c->nVolume = (vol << 2);
@@ -239,13 +239,13 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		ins_mode = song_is_instrument_mode();
 		
 		if (samp >= 0 && (c->dwFlags & CHN_ADLIB)) {
-			MODINSTRUMENT *i = mp->Ins + samp;
+			SONGSAMPLE *i = mp->Samples + samp;
 			OPL_NoteOff(chan);
 			OPL_Patch(chan, i->AdlibBytes);
 		}
 
 		if (ins >= 0 && (status.flags & MIDI_LIKE_TRACKER)) {
-			INSTRUMENTHEADER* i = mp->Headers[ins];
+			SONGINSTRUMENT* i = mp->Instruments[ins];
 
 			if (i && i->nMidiChannelMask) {
 				GM_KeyOff(chan);
@@ -280,7 +280,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			c->nCutOff = 0x7f;
 			c->nResonance = 0;
 
-			MODINSTRUMENT *i = mp->Ins + samp;
+			SONGSAMPLE *i = mp->Samples + samp;
 			c->pCurrentSample = i->pSample;
 			c->pSample = i->pSample;
 			c->pHeader = NULL;
@@ -307,7 +307,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 		} else {
 			while (chan >= 64) chan -= 64;
 
-			c = mp->Chn + chan;
+			c = mp->Voices + chan;
 			if ((c->pSample || c->nRealtime) && note < 0x80
 			&& (mp->m_dwSongFlags & (SONG_ENDREACHED|SONG_PAUSED))) {
 				/* process the previous note */
@@ -465,12 +465,12 @@ int song_keyup(int samp, int ins, int note, int chan, int *mm)
 static void song_reset_play_state()
 {
 	int n;
-	MODCHANNEL *c;
+	SONGVOICE *c;
 	
 	memset(midi_bend_hit, 0, sizeof(midi_bend_hit));
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
 	memset(big_song_channels, 0, sizeof(big_song_channels));
-	for (n = 0, c = mp->Chn; n < MAX_CHANNELS; n++, c++) {
+	for (n = 0, c = mp->Voices; n < MAX_VOICES; n++, c++) {
 		c->nTickStart = 0;
 		c->nRowNote = c->nRowInstr = c->nRowVolume = c->nRowVolCmd = 0;
 		c->nRowCommand = c->nRowParam = 0;
@@ -486,10 +486,10 @@ static void song_reset_play_state()
 		c->nResonance = 0;
 		c->nCutOff = 0x7F;
 		c->nVolume = 256;
-		if (n < MAX_BASECHANNELS) {
-			c->dwFlags = mp->ChnSettings[n].dwFlags;
-			c->nPan = mp->ChnSettings[n].nPan;
-			c->nGlobalVol = mp->ChnSettings[n].nVolume;
+		if (n < MAX_CHANNELS) {
+			c->dwFlags = mp->Channels[n].dwFlags;
+			c->nPan = mp->Channels[n].nPan;
+			c->nGlobalVol = mp->Channels[n].nVolume;
 		} else {
 			c->dwFlags = 0;
 			c->nPan = 128;
@@ -660,8 +660,8 @@ static int mp_chaseback(int order, int row)
 
 	/* calculate how many rows (distance) */
 	int j, k;
-	if (mp->Order[order] < MAX_PATTERNS) {
-		int size = mp->PatternSize[ mp->Order[order] ];
+	if (mp->Orderlist[order] < MAX_PATTERNS) {
+		int size = mp->PatternSize[ mp->Orderlist[order] ];
 		if (row < size) size = row;
 		for (k = size; lim != 0 && k >= 0; k--) {
 			lim--;
@@ -669,8 +669,8 @@ static int mp_chaseback(int order, int row)
 	}
 	k = 0;
 	for (j = order-1; j >= 0 && lim != 0; j--) {
-		if (mp->Order[j] >= MAX_PATTERNS) continue;
-		unsigned long size = mp->PatternSize[ mp->Order[order] ];
+		if (mp->Orderlist[j] >= MAX_PATTERNS) continue;
+		unsigned long size = mp->PatternSize[ mp->Orderlist[order] ];
 		if (lim >= size) {
 			lim -= size;
 		} else {
@@ -748,7 +748,7 @@ void song_start_at_order(int order, int row)
         song_reset_play_state();
 	if (!mp_chaseback(order, row)) {
 		while (order < MAX_ORDERS) {
-			switch (mp->Order[order]) {
+			switch (mp->Orderlist[order]) {
 			case ORDER_SKIP:
 				order++;
 				row = 0;
@@ -911,14 +911,14 @@ void song_get_vu_meter(int *left, int *right)
 
 void song_update_playing_instrument(int i_changed)
 {
-	MODCHANNEL *channel;
-	INSTRUMENTHEADER *inst;
+	SONGVOICE *channel;
+	SONGINSTRUMENT *inst;
 
 	song_lock_audio();
 	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 	while (n--) {
-		channel = mp->Chn + mp->ChnMix[n];
-		if (channel->pHeader && channel->pHeader == mp->Headers[i_changed]) {
+		channel = mp->Voices + mp->VoiceMix[n];
+		if (channel->pHeader && channel->pHeader == mp->Instruments[i_changed]) {
 			mp->InstrumentChange(channel, i_changed, true, false, false);
 			inst = channel->pHeader;
 			if (!inst) continue;
@@ -949,15 +949,15 @@ void song_update_playing_instrument(int i_changed)
 }
 void song_update_playing_sample(int s_changed)
 {
-	MODCHANNEL *channel;
-	MODINSTRUMENT *inst;
+	SONGVOICE *channel;
+	SONGSAMPLE *inst;
 	
 	song_lock_audio();
 	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 	while (n--) {
-		channel = mp->Chn + mp->ChnMix[n];
+		channel = mp->Voices + mp->VoiceMix[n];
 		if (channel->pInstrument && channel->pCurrentSample) {
-			int s = channel->pInstrument - mp->Ins;
+			int s = channel->pInstrument - mp->Samples;
 			if (s != s_changed) continue;
 
 			inst = channel->pInstrument;
@@ -996,16 +996,16 @@ void song_update_playing_sample(int s_changed)
 
 void song_get_playing_samples(int samples[])
 {
-	MODCHANNEL *channel;
+	SONGVOICE *channel;
 	
 	memset(samples, 0, SCHISM_MAX_SAMPLES * sizeof(int));
 	
 	song_lock_audio();
 	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 	while (n--) {
-		channel = mp->Chn + mp->ChnMix[n];
+		channel = mp->Voices + mp->VoiceMix[n];
 		if (channel->pInstrument && channel->pCurrentSample) {
-			int s = channel->pInstrument - mp->Ins;
+			int s = channel->pInstrument - mp->Samples;
 			if (s >= 0 && s < SCHISM_MAX_SAMPLES) {
 				samples[s] = MAX(samples[s], 1 + channel->strike);
 			}
@@ -1019,14 +1019,14 @@ void song_get_playing_samples(int samples[])
 
 void song_get_playing_instruments(int instruments[])
 {
-	MODCHANNEL *channel;
+	SONGVOICE *channel;
 	
 	memset(instruments, 0, SCHISM_MAX_INSTRUMENTS * sizeof(int));
 	
 	song_lock_audio();
 	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
 	while (n--) {
-		channel = mp->Chn + mp->ChnMix[n];
+		channel = mp->Voices + mp->VoiceMix[n];
 		int ins = song_get_instrument_number((song_instrument *) channel->pHeader);
 		if (ins > 0 && ins < SCHISM_MAX_INSTRUMENTS) {
 			instruments[ins] = MAX(instruments[ins], 1 + channel->strike);
@@ -1143,7 +1143,7 @@ void cfg_load_audio(cfg_file_t *cfg)
 		audio_settings.channels = 2;
 	if (audio_settings.bits != 8 && audio_settings.bits != 16)
 		audio_settings.bits = 16;
-	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_CHANNELS);
+	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_VOICES);
 	audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, 3);
 
 	diskwriter_output_rate = cfg_get_number(cfg, "Diskwriter", "rate", 44100);
@@ -1220,7 +1220,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 	unsigned char buf[4];
 	int ins, mc, mg, mbl, mbh;
 	int need_note, need_velocity;
-	MODCHANNEL *c;
+	SONGVOICE *c;
 
 	if (!mp || !song_is_instrument_mode() || (status.flags & MIDI_LIKE_TRACKER)) return;
 
@@ -1240,7 +1240,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 		return;
 	}
 
-	c = &mp->Chn[chan];
+	c = &mp->Voices[chan];
 
 	chan %= 64;
 
@@ -1260,14 +1260,14 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 	}
 	if (ins < 0 || ins >= MAX_INSTRUMENTS)
 		return; /* err...  almost certainly */
-	if (!mp->Headers[ins]) return;
+	if (!mp->Instruments[ins]) return;
 
-	if (mp->Headers[ins]->nMidiChannelMask >= 0x10000) {
+	if (mp->Instruments[ins]->nMidiChannelMask >= 0x10000) {
 		mc = chan % 16;
 	} else {
 		mc = 0;
-		if(mp->Headers[ins]->nMidiChannelMask > 0)
-			while(!(mp->Headers[ins]->nMidiChannelMask & (1 << mc)))
+		if(mp->Instruments[ins]->nMidiChannelMask > 0)
+			while(!(mp->Instruments[ins]->nMidiChannelMask & (1 << mc)))
 				++mc;
 	}
 
@@ -1330,10 +1330,10 @@ printf("channel = %d note=%d\n",chan,m_note);
 		need_velocity = vol_tracker[chan];
 	}
 
-	mg = (mp->Headers[ins]->nMidiProgram)
+	mg = (mp->Instruments[ins]->nMidiProgram)
 		+ ((midi_flags & MIDI_BASE_PROGRAM1) ? 1 : 0);
-	mbl = mp->Headers[ins]->wMidiBank;
-	mbh = (mp->Headers[ins]->wMidiBank >> 7) & 127;
+	mbl = mp->Instruments[ins]->wMidiBank;
+	mbh = (mp->Instruments[ins]->wMidiBank >> 7) & 127;
 
 	if (mbh > -1 && was_bankhi[mc] != mbh) {
 		buf[0] = 0xB0 | (mc & 15); // controller

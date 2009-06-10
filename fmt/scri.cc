@@ -119,7 +119,7 @@ static int load_scri_sample(const uint8_t *data, size_t length, song_sample *smp
 
     if(load_sample_data)
     {
-		mp->ReadSample((MODINSTRUMENT *) smp, format,
+		mp->ReadSample((SONGSAMPLE *) smp, format,
 				(const char *) (data + 0x50),
 				(uint32_t) (length - 0x50));
     }

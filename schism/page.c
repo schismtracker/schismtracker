@@ -256,7 +256,7 @@ static void new_song_draw_const(void)
 	draw_text("Patterns", 26, 24, 0, 2);
 	draw_text("Samples", 27, 27, 0, 2);
 	draw_text("Instruments", 23, 30, 0, 2);
-	draw_text("Order List", 24, 33, 0, 2);
+	draw_text("Orderlist List", 24, 33, 0, 2);
 }
 
 void new_song_dialog(void)
@@ -444,7 +444,7 @@ static int handle_key_global(struct key_event * k)
 				set_current_pattern, NULL, 14, 6);
 			return 1;
 		} else if (k->y == 5 && k->x >= 11 && k->x <= 17) {
-			minipop_slide(song_get_current_order(), "Order",
+			minipop_slide(song_get_current_order(), "Orderlist",
 				0, song_get_num_orders(),
 				set_current_order, NULL, 14, 5);
 			return 1;
@@ -853,9 +853,9 @@ static int handle_key_global(struct key_event * k)
                 } else if (!k->state && k->mod & KMOD_ALT) {
 			_mp_finish(NULL);
 			if (song_toggle_orderlist_locked())
-				status_text_flash("Order list locked");
+				status_text_flash("Orderlist list locked");
 			else
-				status_text_flash("Order list unlocked");
+				status_text_flash("Orderlist list unlocked");
                 } else {
                         break;
                 }
@@ -1233,7 +1233,7 @@ static void draw_top_info_const(void)
 		(80 - strlen(schism_banner(status.flags & CLASSIC_MODE))) / 2, 1, 0, 2);
         draw_text("Song Name", 2, 3, 0, 2);
         draw_text("File Name", 2, 4, 0, 2);
-        draw_text("Order", 6, 5, 0, 2);
+        draw_text("Orderlist", 6, 5, 0, 2);
         draw_text("Pattern", 4, 6, 0, 2);
         draw_text("Row", 8, 7, 0, 2);
 

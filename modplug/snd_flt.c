@@ -87,7 +87,7 @@ static const float dmpfac[] = {
 //
 // XXX freq WAS unused but is now gdwMixingFreq!
 //
-void setup_channel_filter(MODCHANNEL *pChn, int reset, int flt_modifier, int freq)
+void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq)
 {
 	float fc;
 	float fs = freq;//(float)gdwMixingFreq;

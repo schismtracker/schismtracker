@@ -183,7 +183,7 @@ void CSoundFile::S3MSaveConvert(uint32_t *pcmd, uint32_t *pprm, bool bIT) const
 	*pprm = param;
 }
 
-static bool MidiS3M_Read(INSTRUMENTHEADER& Header, int iSmp, char name[32], int& scale)
+static bool MidiS3M_Read(SONGINSTRUMENT& Header, int iSmp, char name[32], int& scale)
 {
 //    fprintf(stderr, "Name(%s)\n", name);
 
@@ -281,7 +281,8 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 	// cgxx off oldfx on
 	m_dwSongFlags |= SONG_ITOLDEFFECTS;
 	memset(m_szNames,0,sizeof(m_szNames));
-	memcpy(m_szNames[0], psfh.name, 28);
+	memcpy(song_title, psfh.name, 28);
+	song_title[28] = 0;
 	// Speed
 	m_nDefaultSpeed = psfh.speed;
 	if (!m_nDefaultSpeed) m_nDefaultSpeed = 6;
@@ -295,16 +296,16 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nChannels = 4;
 	for (uint32_t ich=0; ich<32; ich++)
 	{
-		ChnSettings[ich].nPan = 128;
-		ChnSettings[ich].nVolume = 64;
+		Channels[ich].nPan = 128;
+		Channels[ich].nVolume = 64;
 
-		ChnSettings[ich].dwFlags = CHN_MUTE;
+		Channels[ich].dwFlags = CHN_MUTE;
 		if (psfh.channels[ich] != 0xFF)
 		{
 			m_nChannels = ich+1;
 			uint32_t b = psfh.channels[ich] & 0x0F;
-			ChnSettings[ich].nPan = (b & 8) ? 0xC0 : 0x40;
-			ChnSettings[ich].dwFlags = 0;
+			Channels[ich].nPan = (b & 8) ? 0xC0 : 0x40;
+			Channels[ich].dwFlags = 0;
 		}
 	}
 	if (m_nChannels < 4) m_nChannels = 4;
@@ -315,7 +316,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 	if (iord > MAX_ORDERS) iord = MAX_ORDERS;
 	if (iord)
 	{
-		memcpy(Order, lpStream+dwMemPos, iord);
+		memcpy(Orderlist, lpStream+dwMemPos, iord);
 		dwMemPos += iord;
 	}
 	if ((iord & 1) && (lpStream[dwMemPos] == 0xFF)) dwMemPos++;
@@ -338,7 +339,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 			const uint8_t *chnpan = lpStream+dwMemPos;
 			for (uint32_t i=0; i<32; i++) if (chnpan[i] & 0x20)
 			{
-				ChnSettings[i].nPan = ((chnpan[i] & 0x0F) << 4) + 8;
+				Channels[i].nPan = ((chnpan[i] & 0x0F) << 4) + 8;
 			}
 		}
 	}
@@ -353,7 +354,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		uint32_t nInd = ((uint32_t)ptr[iSmp-1])*16;
 		if ((!nInd) || (nInd + 0x50 > dwMemLength)) continue;
 		memcpy(s, lpStream+nInd, 0x50);
-		memcpy(Ins[iSmp].name, s+1, 12);
+		memcpy(Samples[iSmp].name, s+1, 12);
 		insflags[iSmp-1] = s[0x1F];
 		inspack[iSmp-1] = s[0x1E];
 		s[0x4C] = 0;
@@ -364,30 +365,30 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 			uint32_t j = bswapLE32(*((uint32_t *)(s+0x10)));
 			if (j > MAX_SAMPLE_LENGTH) j = MAX_SAMPLE_LENGTH;
 			if (j < 2) j = 0;
-			Ins[iSmp].nLength = j;
+			Samples[iSmp].nLength = j;
 			j = bswapLE32(*((uint32_t *)(s+0x14)));
-			if (j >= Ins[iSmp].nLength) j = Ins[iSmp].nLength - 1;
-			Ins[iSmp].nLoopStart = j;
+			if (j >= Samples[iSmp].nLength) j = Samples[iSmp].nLength - 1;
+			Samples[iSmp].nLoopStart = j;
 			j = bswapLE32(*((uint32_t *)(s+0x18)));
 			if (j > MAX_SAMPLE_LENGTH) j = MAX_SAMPLE_LENGTH;
 			if (j < 2) j = 0;
-			if (j > Ins[iSmp].nLength) j = Ins[iSmp].nLength;
-			Ins[iSmp].nLoopEnd = j;
+			if (j > Samples[iSmp].nLength) j = Samples[iSmp].nLength;
+			Samples[iSmp].nLoopEnd = j;
 			j = s[0x1C];
 			if (j > 64) j = 64;
-			Ins[iSmp].nVolume = j << 2;
-			Ins[iSmp].nGlobalVol = 64;
-			if (s[0x1F]&1) Ins[iSmp].uFlags |= CHN_LOOP;
+			Samples[iSmp].nVolume = j << 2;
+			Samples[iSmp].nGlobalVol = 64;
+			if (s[0x1F]&1) Samples[iSmp].uFlags |= CHN_LOOP;
 			j = bswapLE32(*((uint32_t *)(s+0x20)));
 			if (!j) j = 8363;
 			if (j < 1024) j = 1024;
-			Ins[iSmp].nC5Speed = j;
+			Samples[iSmp].nC5Speed = j;
 			insfile[iSmp] = ((uint32_t)bswapLE16(*((uint32_t *)(s+0x0E)))) << 4;
 			insfile[iSmp] += ((uint32_t)(uint8_t)s[0x0D]) << 20;
 			if (insfile[iSmp] > dwMemLength) insfile[iSmp] &= 0xFFFF;
-			if ((Ins[iSmp].nLoopStart >= Ins[iSmp].nLoopEnd) || (Ins[iSmp].nLoopEnd - Ins[iSmp].nLoopStart < 8))
-				Ins[iSmp].nLoopStart = Ins[iSmp].nLoopEnd = 0;
-			Ins[iSmp].nPan = 0x80;
+			if ((Samples[iSmp].nLoopStart >= Samples[iSmp].nLoopEnd) || (Samples[iSmp].nLoopEnd - Samples[iSmp].nLoopStart < 8))
+				Samples[iSmp].nLoopStart = Samples[iSmp].nLoopEnd = 0;
+			Samples[iSmp].nPan = 0x80;
 		}
 		/* TODO: Add support for the following configurations:
 		 *
@@ -399,48 +400,48 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		 */
 		if ((s[0]==2) && (s[0x4E]=='R') && (s[0x4F]=='I' || s[0x4F]=='S'))
 		{
-            memcpy(Ins[iSmp].AdlibBytes, s+0x10, 11);
+            memcpy(Samples[iSmp].AdlibBytes, s+0x10, 11);
 
 			int j = s[0x1C];
 			if (j > 64) j = 64;
-			Ins[iSmp].nVolume = j << 2;
-			Ins[iSmp].nGlobalVol = 64;
+			Samples[iSmp].nVolume = j << 2;
+			Samples[iSmp].nGlobalVol = 64;
 			j = bswapLE32(*((uint32_t *)(s+0x20)));
 			if (!j) j = 8363;
-			Ins[iSmp].nC5Speed = j;
-			Ins[iSmp].nPan = 0x80;
-			Ins[iSmp].uFlags |= CHN_ADLIB;
-			Ins[iSmp].uFlags &= ~(CHN_LOOP | CHN_16BIT);
-			Ins[iSmp].nLength = 1;
+			Samples[iSmp].nC5Speed = j;
+			Samples[iSmp].nPan = 0x80;
+			Samples[iSmp].uFlags |= CHN_ADLIB;
+			Samples[iSmp].uFlags &= ~(CHN_LOOP | CHN_16BIT);
+			Samples[iSmp].nLength = 1;
 			// Because most of the code in modplug requires
 			// the presence of pSample when nLength is given,
 			// we must have an at least 1-byte sample to make
 			// it work. The actual contents of the sample don't
 			// matter, since it will never be digitized. -Bisqwit
-			Ins[iSmp].pSample = AllocateSample(1);
+			Samples[iSmp].pSample = AllocateSample(1);
 			has_adlib_samples = true;
 		}
 		
-		Headers[iSmp] = new INSTRUMENTHEADER;
-		memset(Headers[iSmp], 0, sizeof(INSTRUMENTHEADER));
+		Instruments[iSmp] = new SONGINSTRUMENT;
+		memset(Instruments[iSmp], 0, sizeof(SONGINSTRUMENT));
 		
-		Headers[iSmp]->nNNA = NNA_NOTEOFF;
-		Headers[iSmp]->nDNA = DNA_NOTEOFF;
-		Headers[iSmp]->nDCT = DCT_INSTRUMENT;
-		Headers[iSmp]->dwFlags = Ins[iSmp].uFlags;
+		Instruments[iSmp]->nNNA = NNA_NOTEOFF;
+		Instruments[iSmp]->nDNA = DNA_NOTEOFF;
+		Instruments[iSmp]->nDCT = DCT_INSTRUMENT;
+		Instruments[iSmp]->dwFlags = Samples[iSmp].uFlags;
 		int scale;
-		if(MidiS3M_Read(*Headers[iSmp], iSmp, m_szNames[iSmp], scale))
+		if(MidiS3M_Read(*Instruments[iSmp], iSmp, m_szNames[iSmp], scale))
 		{
 		    m_dwSongFlags |= SONG_INSTRUMENTMODE;
-			Headers[iSmp]->nGlobalVol = scale*128/63;
+			Instruments[iSmp]->nGlobalVol = scale*128/63;
 		}
 		else
 		{
-		    delete Headers[iSmp];
-		    Headers[iSmp] = 0;
+		    delete Instruments[iSmp];
+		    Instruments[iSmp] = 0;
 		}
 		
-		//fprintf(stderr, "loaded uflags = %X, length = %d\n", Ins[iSmp].uFlags, Ins[iSmp].nLength);
+		//fprintf(stderr, "loaded uflags = %X, length = %d\n", Samples[iSmp].uFlags, Samples[iSmp].nLength);
 	}
 	
 	bool has_noteoff_commands = false;
@@ -557,7 +558,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 					{
 						unsigned ins = LastInstrNo[chn];
 						if(ins >= 1 && ins <= insnum
-						&& (Ins[ins].uFlags & CHN_ADLIB))
+						&& (Samples[ins].uFlags & CHN_ADLIB))
 						{
 							m.note = 0xFF; // Change into NOTE_OFF
 						}
@@ -572,7 +573,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		bool* visited = new bool[MAX_ORDERS*256];
 		for(;;)
 		{
-			unsigned pat = Order[ord];
+			unsigned pat = Orderlist[ord];
 			if(pat == 0xFE) { ++ord; continue; }
 			if(pat == 0xFF) break;
 			if(pat >= patnum || !Patterns[pat] || row >= PatternSize[pat])
@@ -592,7 +593,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 				{
 					unsigned ins = LastInstrNo[chn];
 					if(ins >= 1 && ins <= insnum
-					&& (Ins[ins].uFlags & CHN_ADLIB))
+					&& (Samples[ins].uFlags & CHN_ADLIB))
 					{
 						m.note = 0xFF; // Change into NOTE_OFF
 					}
@@ -621,7 +622,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 	}
 		
 	// Reading samples
-	for (uint32_t iRaw=1; iRaw<=insnum; iRaw++) if ((Ins[iRaw].nLength) && (insfile[iRaw]))
+	for (uint32_t iRaw=1; iRaw<=insnum; iRaw++) if ((Samples[iRaw].nLength) && (insfile[iRaw]))
 	{
 		uint32_t flags;
 		if (insflags[iRaw-1] & 4)
@@ -631,7 +632,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (insflags[iRaw-1] & 2) flags |= RSF_STEREO;
 		if (inspack[iRaw-1] == 4) flags = RS_ADPCM4;
 		dwMemPos = insfile[iRaw];
-		dwMemPos += ReadSample(&Ins[iRaw], flags, (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
+		dwMemPos += ReadSample(&Samples[iRaw], flags, (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
 	
 	return true;
@@ -660,7 +661,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 	// Writing S3M header
 	memset(header, 0, sizeof(header));
 	memset(insex, 0, sizeof(insex));
-	memcpy(header, m_szNames[0], 0x1C);
+	memcpy(header, song_title, 0x1C);
 	header[0x1B] = 0;
 	header[0x1C] = 0x1A;
 	header[0x1D] = 0x10;
@@ -678,7 +679,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 	header[0x23] = nbi >> 8;
 	nbp = 0;
 	for (i=0; Patterns[i]; i++) { nbp = i+1; if (nbp >= MAX_PATTERNS) break; }
-	for (i=0; i<MAX_ORDERS; i++) if ((Order[i] < MAX_PATTERNS) && (Order[i] >= nbp)) nbp = Order[i] + 1;
+	for (i=0; i<MAX_ORDERS; i++) if ((Orderlist[i] < MAX_PATTERNS) && (Orderlist[i] >= nbp)) nbp = Orderlist[i] + 1;
 	header[0x24] = nbp & 0xFF;
 	header[0x25] = nbp >> 8;
 	if (m_dwSongFlags & SONG_FASTVOLSLIDES) header[0x26] |= 0x40;
@@ -716,7 +717,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 		} else header[0x40+i] = 0xFF;
 	}
 	fp->o(fp, (const unsigned char *)header, 0x60);
-	fp->o(fp, (const unsigned char *)Order, nbo);
+	fp->o(fp, (const unsigned char *)Orderlist, nbo);
 	memset(patptr, 0, sizeof(patptr));
 	memset(insptr, 0, sizeof(insptr));
 	uint32_t ofs0 = 0x60 + nbo;
@@ -736,7 +737,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 		uint8_t chnpan[32];
 		for (i=0; i<32; i++)
 		{
-			uint32_t nPan = ((ChnSettings[i].nPan+7) < 0xF0) ? ChnSettings[i].nPan+7 : 0xF0;
+			uint32_t nPan = ((Channels[i].nPan+7) < 0xF0) ? Channels[i].nPan+7 : 0xF0;
 			chnpan[i] = (i<chanlim) ? 0x20 | (nPan >> 4) : 0x08;
 		}
 		fp->o(fp, (const unsigned char *)chnpan, 0x20);
@@ -781,8 +782,8 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 
 					if (m_dwSongFlags & SONG_INSTRUMENTMODE
 					&& note && inst) {
-						uint32_t nn = Headers[inst]->Keyboard[note];
-						uint32_t nm = Headers[inst]->NoteMap[note];
+						uint32_t nn = Instruments[inst]->Keyboard[note];
+						uint32_t nm = Instruments[inst]->NoteMap[note];
 						/* translate on save */
 						note = nm;
 						inst = nn;
@@ -875,7 +876,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 	// Writing samples
 	for (i=1; i<=nbi; i++)
 	{
-		MODINSTRUMENT *pins = &Ins[i];
+		SONGSAMPLE *pins = &Samples[i];
 		memcpy(insex[i-1].dosname, pins->name, 12);
 		memcpy(insex[i-1].name, m_szNames[i], 28);
 		memcpy(insex[i-1].scrs, "SCRS", 4);

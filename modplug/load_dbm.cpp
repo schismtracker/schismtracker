@@ -116,11 +116,11 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nChannels = bswapBE16(pfh->channels);
 	if (m_nChannels < 4) m_nChannels = 4;
 	if (m_nChannels > 64) m_nChannels = 64;
-	memcpy(m_szNames[0], (pfh->songname[0]) ? pfh->songname : pfh->songname2, 32);
-	m_szNames[0][31] = 0;
+	memcpy(song_title, (pfh->songname[0]) ? pfh->songname : pfh->songname2, 32);
+	song_title[31] = 0;
 	for (uint32_t iOrd=0; iOrd < nOrders; iOrd++)
 	{
-		Order[iOrd] = lpStream[dwMemPos+iOrd*2+1];
+		Orderlist[iOrd] = lpStream[dwMemPos+iOrd*2+1];
 		if (iOrd >= MAX_ORDERS-2) break;
 	}
 	dwMemPos += 2*nOrders;
@@ -140,24 +140,24 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 			if (nInstruments >= MAX_INSTRUMENTS) nInstruments = MAX_INSTRUMENTS-1;
 			for (uint32_t iIns=0; iIns<nInstruments; iIns++)
 			{
-				MODINSTRUMENT *psmp;
-				INSTRUMENTHEADER *penv;
+				SONGSAMPLE *psmp;
+				SONGINSTRUMENT *penv;
 				DBMINSTRUMENT *pih;
 				uint32_t nsmp;
 
 				if (chunk_pos + sizeof(DBMINSTRUMENT) > dwMemPos) break;
-				if ((penv = new INSTRUMENTHEADER) == NULL) break;
+				if ((penv = new SONGINSTRUMENT) == NULL) break;
 				pih = (DBMINSTRUMENT *)(lpStream+chunk_pos);
 				nsmp = bswapBE16(pih->sampleno);
-				psmp = ((nsmp) && (nsmp < MAX_SAMPLES)) ? &Ins[nsmp] : NULL;
-				memset(penv, 0, sizeof(INSTRUMENTHEADER));
+				psmp = ((nsmp) && (nsmp < MAX_SAMPLES)) ? &Samples[nsmp] : NULL;
+				memset(penv, 0, sizeof(SONGINSTRUMENT));
 				memcpy(penv->name, pih->name, 30);
 				if (psmp)
 				{
 					memcpy(m_szNames[nsmp], pih->name, 30);
 					m_szNames[nsmp][30] = 0;
 				}
-				Headers[iIns+1] = penv;
+				Instruments[iIns+1] = penv;
 				penv->nFadeOut = 1024;	// ???
 				penv->nGlobalVol = 128;
 				penv->nPan = bswapBE16(pih->panning);
@@ -211,9 +211,9 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 				if (chunk_pos + sizeof(DBMENVELOPE) > dwMemPos) break;
 				peh = (DBMENVELOPE *)(lpStream+chunk_pos);
 				nins = bswapBE16(peh->instrument);
-				if ((nins) && (nins < MAX_INSTRUMENTS) && (Headers[nins]) && (peh->numpoints))
+				if ((nins) && (nins < MAX_INSTRUMENTS) && (Instruments[nins]) && (peh->numpoints))
 				{
-					INSTRUMENTHEADER *penv = Headers[nins];
+					SONGINSTRUMENT *penv = Instruments[nins];
 
 					if (peh->flags & 1) penv->dwFlags |= ENV_VOLUME;
 					if (peh->flags & 2) penv->dwFlags |= ENV_VOLSUSTAIN;
@@ -340,7 +340,7 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 			m_nSamples = nSamples;
 			for (uint32_t iSmp=1; iSmp<=nSamples; iSmp++)
 			{
-				MODINSTRUMENT *pins;
+				SONGSAMPLE *pins;
 				DBMSAMPLE *psh;
 				uint32_t samplesize;
 				uint32_t sampleflags;
@@ -350,7 +350,7 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 				chunk_pos += 8;
 				samplesize = bswapBE32(psh->samplesize);
 				sampleflags = bswapBE32(psh->flags);
-				pins = &Ins[iSmp];
+				pins = &Samples[iSmp];
 				pins->nLength = samplesize;
 				if (sampleflags & 2)
 				{

@@ -65,7 +65,7 @@ bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 	if ((phdr->filetype != 2) || (phdr->unused != 0x1A)
 	 || ((strncasecmp(phdr->trackername, "!SCREAM!", 8))
 	  && (strncasecmp(phdr->trackername, "BMOD2STM", 8)))) return false;
-	memcpy(m_szNames[0], phdr->songname, 20);
+	memcpy(song_title, phdr->songname, 20);
 	// Read STM header
 	m_nType = MOD_TYPE_STM;
 	m_nSamples = 31;
@@ -76,18 +76,18 @@ bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nDefaultTempo = 125;
 	m_nDefaultGlobalVolume = phdr->globalvol << 2;
 	if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
-	memcpy(Order, phdr->patorder, 128);
+	memcpy(Orderlist, phdr->patorder, 128);
 	// Setting up channels
 	for (uint32_t nSet=0; nSet<4; nSet++)
 	{
-		ChnSettings[nSet].dwFlags = 0;
-		ChnSettings[nSet].nVolume = 64;
-		ChnSettings[nSet].nPan = (nSet & 1) ? 0x40 : 0xC0;
+		Channels[nSet].dwFlags = 0;
+		Channels[nSet].nVolume = 64;
+		Channels[nSet].nPan = (nSet & 1) ? 0x40 : 0xC0;
 	}
 	// Reading samples
 	for (uint32_t nIns=0; nIns<31; nIns++)
 	{
-		MODINSTRUMENT *pIns = &Ins[nIns+1];
+		SONGSAMPLE *pIns = &Samples[nIns+1];
 		STMSAMPLE *pStm = &phdr->sample[nIns];  // STM sample data
 		memcpy(pIns->name, pStm->filename, 13);
 		memcpy(m_szNames[nIns+1], pStm->filename, 12);
@@ -102,7 +102,7 @@ bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 		if ((pIns->nLoopEnd > pIns->nLoopStart) && (pIns->nLoopEnd != 0xFFFF)) pIns->uFlags |= CHN_LOOP;
 	}
 	dwMemPos = sizeof(STMHEADER);
-	for (uint32_t nOrd=0; nOrd<MAX_ORDERS; nOrd++) if (Order[nOrd] >= 99) Order[nOrd] = 0xFF;
+	for (uint32_t nOrd=0; nOrd<MAX_ORDERS; nOrd++) if (Orderlist[nOrd] >= 99) Orderlist[nOrd] = 0xFF;
 	uint32_t nPatterns = phdr->numpat;
 	for (uint32_t nPat=0; nPat<nPatterns; nPat++)
 	{
@@ -167,7 +167,7 @@ bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading Samples
 	for (uint32_t nSmp=1; nSmp<=31; nSmp++)
 	{
-		MODINSTRUMENT *pIns = &Ins[nSmp];
+		SONGSAMPLE *pIns = &Samples[nSmp];
 		dwMemPos = (dwMemPos + 15) & (~15);
 		if (pIns->nLength)
 		{

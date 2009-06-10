@@ -101,8 +101,8 @@ static unsigned int find_volume(unsigned short vol)
 
 int csf_init_player(CSoundFile *csf, int reset)
 {
-	if (csf->m_nMaxMixChannels > MAX_CHANNELS)
-		csf->m_nMaxMixChannels = MAX_CHANNELS;
+	if (csf->m_nMaxMixChannels > MAX_VOICES)
+		csf->m_nMaxMixChannels = MAX_VOICES;
 
 	csf->gdwMixingFreq = CLAMP(csf->gdwMixingFreq, 4000, MAX_SAMPLE_RATE);
 	csf->gnVolumeRampSamples = (csf->gdwMixingFreq * VOLUMERAMPLEN) / 100000;
@@ -308,7 +308,7 @@ int csf_process_row(CSoundFile *csf)
 
 			// Check if pattern is valid
 			if (!(csf->m_dwSongFlags & SONG_PATTERNLOOP)) {
-				csf->m_nPattern = (csf->m_nCurrentPattern < MAX_ORDERS) ? csf->Order[csf->m_nCurrentPattern] : 0xFF;
+				csf->m_nPattern = (csf->m_nCurrentPattern < MAX_ORDERS) ? csf->Orderlist[csf->m_nCurrentPattern] : 0xFF;
 
 				if ((csf->m_nPattern < MAX_PATTERNS) && (!csf->Patterns[csf->m_nPattern]))
 					csf->m_nPattern = 0xFE;
@@ -324,15 +324,15 @@ int csf_process_row(CSoundFile *csf)
 
 						csf->m_nCurrentPattern = csf->m_nRestartPos;
 
-						if ((csf->Order[csf->m_nCurrentPattern] >= MAX_PATTERNS)
-						    || (!csf->Patterns[csf->Order[csf->m_nCurrentPattern]]))
+						if ((csf->Orderlist[csf->m_nCurrentPattern] >= MAX_PATTERNS)
+						    || (!csf->Patterns[csf->Orderlist[csf->m_nCurrentPattern]]))
 							return false;
 					}
 					else {
 						csf->m_nCurrentPattern++;
 					}
 
-					csf->m_nPattern = (csf->m_nCurrentPattern < MAX_ORDERS) ? csf->Order[csf->m_nCurrentPattern] : 0xFF;
+					csf->m_nPattern = (csf->m_nCurrentPattern < MAX_ORDERS) ? csf->Orderlist[csf->m_nCurrentPattern] : 0xFF;
 
 					if ((csf->m_nPattern < MAX_PATTERNS) && (!csf->Patterns[csf->m_nPattern]))
 						csf->m_nPattern = 0xFE;
@@ -380,7 +380,7 @@ int csf_process_row(CSoundFile *csf)
 		}
 
 		// Reset channel values
-		MODCHANNEL *pChn = csf->Chn;
+		SONGVOICE *pChn = csf->Voices;
 		MODCOMMAND *m = csf->Patterns[csf->m_nPattern] + csf->m_nRow * csf->m_nChannels;
 
 		for (unsigned int nChn=0; nChn<csf->m_nChannels; pChn++, nChn++, m++) {
@@ -446,7 +446,7 @@ int csf_process_row(CSoundFile *csf)
  */
 static void handle_realtime_closures(CSoundFile *csf)
 {
-	MODCHANNEL *chan = csf->Chn;
+	SONGVOICE *chan = csf->Voices;
 
 	for (unsigned int i = 0; i < csf->m_nChannels; chan++, i++) {
 		/* reset end of "row" */
@@ -476,7 +476,7 @@ static void handle_realtime_closures(CSoundFile *csf)
 // XXX * Get rid of the pointer passing where it is not needed
 //
 
-static inline void rn_tremolo(CSoundFile *csf, MODCHANNEL *chan, int *vol)
+static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 {
 	unsigned int trempos = chan->nTremoloPos & 0x3F;
 	
@@ -506,7 +506,7 @@ static inline void rn_tremolo(CSoundFile *csf, MODCHANNEL *chan, int *vol)
 }
 
 
-static inline void rn_tremor(CSoundFile *csf, MODCHANNEL *chan, int *vol)
+static inline void rn_tremor(CSoundFile *csf, SONGVOICE *chan, int *vol)
 {
 	unsigned int on = chan->nTremorParam >> 4;
 	unsigned int off = chan->nTremorParam & 0x0F;
@@ -529,7 +529,7 @@ static inline void rn_tremor(CSoundFile *csf, MODCHANNEL *chan, int *vol)
 }
 
 
-static inline void rn_panbrello(MODCHANNEL *chan)
+static inline void rn_panbrello(SONGVOICE *chan)
 {
 	unsigned int panpos = ((chan->nPanbrelloPos + 0x10) >> 2) & 0x3F;
 	int pdelta;
@@ -556,7 +556,7 @@ static inline void rn_panbrello(MODCHANNEL *chan)
 }
 
 
-static inline void rn_vibrato(CSoundFile *csf, MODCHANNEL *chan, int *nperiod)
+static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 {
 	unsigned int vibpos = chan->nVibratoPos;
 	int vdelta;
@@ -609,11 +609,11 @@ static inline void rn_vibrato(CSoundFile *csf, MODCHANNEL *chan, int *nperiod)
 }
 
 
-static inline void rn_instrument_vibrato(CSoundFile *csf, MODCHANNEL *chan, int *nperiod, int *nperiodfrac)
+static inline void rn_instrument_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod, int *nperiodfrac)
 {
 	int period = *nperiod;
 	int periodfrac = *nperiodfrac;
-	MODINSTRUMENT *pins = chan->pInstrument;
+	SONGSAMPLE *pins = chan->pInstrument;
 
 	/* this isn't correct, but it's better... [original was without int cast] */
 	if (!pins->nVibSweep) {
@@ -679,9 +679,9 @@ static inline void rn_instrument_vibrato(CSoundFile *csf, MODCHANNEL *chan, int 
 }
 
 
-static inline void rn_process_envelope(MODCHANNEL *chan, int *nvol)
+static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 {
-	INSTRUMENTHEADER *penv = chan->pHeader;
+	SONGINSTRUMENT *penv = chan->pHeader;
 	int vol = *nvol;
 
 	// Volume Envelope
@@ -797,7 +797,7 @@ static inline void rn_process_envelope(MODCHANNEL *chan, int *nvol)
 
 
 #include "snd_fx.h"
-static inline int rn_arpeggio(CSoundFile *csf, MODCHANNEL *chan, int period)
+static inline int rn_arpeggio(CSoundFile *csf, SONGVOICE *chan, int period)
 {
 	int a;
 	switch (csf->m_nTickCount % 3) {
@@ -816,9 +816,9 @@ static inline int rn_arpeggio(CSoundFile *csf, MODCHANNEL *chan, int period)
 }
 
 
-static inline void rn_pitch_filter_envelope(MODCHANNEL *chan, int *nenvpitch, int *nperiod)
+static inline void rn_pitch_filter_envelope(SONGVOICE *chan, int *nenvpitch, int *nperiod)
 {
-	INSTRUMENTHEADER *penv = chan->pHeader;
+	SONGINSTRUMENT *penv = chan->pHeader;
 	int envpos = chan->nPitchEnvPosition;
 	unsigned int pt = penv->PitchEnv.nNodes - 1;
 	int period = *nperiod;
@@ -874,9 +874,9 @@ static inline void rn_pitch_filter_envelope(MODCHANNEL *chan, int *nenvpitch, in
 }
 
 
-static inline void rn_increment_env_pos(MODCHANNEL *chan)
+static inline void rn_increment_env_pos(SONGVOICE *chan)
 {
-	INSTRUMENTHEADER *penv = chan->pHeader;
+	SONGINSTRUMENT *penv = chan->pHeader;
 
 	// Volume Envelope
 	if (chan->dwFlags & CHN_VOLENV) {
@@ -966,7 +966,7 @@ static inline void rn_increment_env_pos(MODCHANNEL *chan)
 }
 
 
-static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, int nMasterVol)
+static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, int nMasterVol)
 {
 	// Adjusting volumes
 	if (csf->gnChannels >= 2) {
@@ -1087,9 +1087,9 @@ static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, 
 
 	// Adding the channel in the channel list
 	if (!(chan->dwFlags & CHN_MUTE)) {
-		csf->ChnMix[csf->m_nMixChannels++] = nChn;
+		csf->VoiceMix[csf->m_nMixChannels++] = nChn;
 
-		if (csf->m_nMixChannels >= MAX_CHANNELS)
+		if (csf->m_nMixChannels >= MAX_VOICES)
 			return 0;
 	}
 
@@ -1098,7 +1098,7 @@ static inline int rn_update_sample(CSoundFile *csf, MODCHANNEL *chan, int nChn, 
 
 
 // XXX Rename this
-static inline void rn_gen_key(CSoundFile *csf, MODCHANNEL *chan, const int chan_num, const int freq, const int vol)
+static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, const int chan_num, const int freq, const int vol)
 {
 	if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE &&
 	    chan->pHeader &&
@@ -1207,9 +1207,9 @@ int csf_read_note(CSoundFile *csf)
 	uint32_t nMasterVol = csf->m_nSongPreAmp << 2;
 
 	csf->m_nMixChannels = 0;
-	MODCHANNEL *chan = csf->Chn;
+	SONGVOICE *chan = csf->Voices;
 
-	for (unsigned int cn = 0; cn < MAX_CHANNELS; cn++, chan++) {
+	for (unsigned int cn = 0; cn < MAX_VOICES; cn++, chan++) {
 		/*if(cn == 0 || cn == 1)
 		fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
 			(int)cn, chan->nPeriod, chan->nPos, chan->nLength, chan->dwFlags);*/
@@ -1366,11 +1366,11 @@ int csf_read_note(CSoundFile *csf)
 			unsigned int j = i;
 
 			while ((j + 1 < csf->m_nMixChannels) &&
-			    (csf->Chn[csf->ChnMix[j]].nRealVolume < csf->Chn[csf->ChnMix[j + 1]].nRealVolume))
+			    (csf->Voices[csf->VoiceMix[j]].nRealVolume < csf->Voices[csf->VoiceMix[j + 1]].nRealVolume))
 			{
-				unsigned int n = csf->ChnMix[j];
-				csf->ChnMix[j] = csf->ChnMix[j + 1];
-				csf->ChnMix[j + 1] = n;
+				unsigned int n = csf->VoiceMix[j];
+				csf->VoiceMix[j] = csf->VoiceMix[j + 1];
+				csf->VoiceMix[j + 1] = n;
 				j++;
 			}
 		}

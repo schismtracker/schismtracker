@@ -56,7 +56,7 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nType = MOD_TYPE_ULT;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
-	memcpy(m_szNames[0], pmh->songtitle, 32);
+	memcpy(song_title, pmh->songtitle, 32);
 	// read songtext
 	dwMemPos = sizeof(ULTHEADER);
 	if ((pmh->reserved) && (dwMemPos + pmh->reserved * 32 < dwMemLength))
@@ -84,7 +84,7 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 	for (uint32_t ins=1; ins<=nos; ins++, dwMemPos+=smpsize) if (ins<=m_nSamples)
 	{
 		pus	= (ULTSAMPLE *)(lpStream+dwMemPos);
-		MODINSTRUMENT *pins = &Ins[ins];
+		SONGSAMPLE *pins = &Samples[ins];
 		memcpy(m_szNames[ins], pus->samplename, 32);
 		memcpy(pins->name, pus->dosname, 12);
 		pins->nLoopStart = pus->loopstart;
@@ -106,7 +106,7 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 			pins->nLoopEnd >>= 1;
 		}
 	}
-	memcpy(Order, lpStream+dwMemPos, 256);
+	memcpy(Orderlist, lpStream+dwMemPos, 256);
 	dwMemPos += 256;
 	m_nChannels = lpStream[dwMemPos] + 1;
 	nop = lpStream[dwMemPos+1] + 1;
@@ -115,8 +115,8 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Default channel settings
 	for (uint32_t nSet=0; nSet<m_nChannels; nSet++)
 	{
-		ChnSettings[nSet].nVolume = 64;
-		ChnSettings[nSet].nPan = (nSet & 1) ? 0x40 : 0xC0;
+		Channels[nSet].nVolume = 64;
+		Channels[nSet].nPan = (nSet & 1) ? 0x40 : 0xC0;
 	}
 	// read pan position table for v1.5 and higher
 	if(pmh->id[14]>='3')
@@ -124,8 +124,8 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (dwMemPos + m_nChannels > dwMemLength) return true;
 		for(uint32_t t=0; t<m_nChannels; t++)
 		{
-			ChnSettings[t].nPan = (lpStream[dwMemPos++] << 4) + 8;
-			if (ChnSettings[t].nPan > 256) ChnSettings[t].nPan = 256;
+			Channels[t].nPan = (lpStream[dwMemPos++] << 4) + 8;
+			if (Channels[t].nPan > 256) Channels[t].nPan = 256;
 		}
 	}
 	// Allocating Patterns
@@ -211,11 +211,11 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 		}
 	}
 	// Reading Instruments
-	for (uint32_t smp=1; smp<=m_nSamples; smp++) if (Ins[smp].nLength)
+	for (uint32_t smp=1; smp<=m_nSamples; smp++) if (Samples[smp].nLength)
 	{
 		if (dwMemPos >= dwMemLength) return true;
-		uint32_t flags = (Ins[smp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
-		dwMemPos += ReadSample(&Ins[smp], flags, (const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
+		uint32_t flags = (Samples[smp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
+		dwMemPos += ReadSample(&Samples[smp], flags, (const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
 	}
 	return true;
 }
