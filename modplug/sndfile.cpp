@@ -49,7 +49,7 @@ CSoundFile::CSoundFile()
       m_nRepeatCount(0), m_nInitialRepeatCount(),
       m_rowHighlightMajor(16), m_rowHighlightMinor(4),
       m_lpszSongComments(NULL),
-      m_szNames(), CompressionTable(),
+      CompressionTable(),
       stop_at_order(), stop_at_row(), stop_at_time()
 //----------------------
 {
@@ -60,7 +60,6 @@ CSoundFile::CSoundFile()
 	memset(Instruments, 0, sizeof(Instruments));
 	memset(Orderlist, 0xFF, sizeof(Orderlist));
 	memset(Patterns, 0, sizeof(Patterns));
-	memset(m_szNames, 0, sizeof(m_szNames));
 	memset(m_MixPlugins, 0, sizeof(m_MixPlugins));
 }
 
@@ -107,7 +106,6 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	memset(Instruments, 0, sizeof(Instruments));
 	memset(Orderlist, 0xFF, sizeof(Orderlist));
 	memset(Patterns, 0, sizeof(Patterns));
-	memset(m_szNames, 0, sizeof(m_szNames));
 	memset(m_MixPlugins, 0, sizeof(m_MixPlugins));
 	ResetMidiCfg();
 	for (uint32_t npt=0; npt<MAX_PATTERNS; npt++) {

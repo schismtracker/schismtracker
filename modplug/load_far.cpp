@@ -231,7 +231,7 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 		FARSAMPLE *pfs = (FARSAMPLE *)(lpStream + dwMemPos);
 		dwMemPos += sizeof(FARSAMPLE);
 		m_nSamples = ismp + 1;
-		memcpy(m_szNames[ismp+1], pfs->samplename, 32);
+		memcpy(pins->name, pfs->samplename, 32);
 		pins->nLength = pfs->length;
 		pins->nLoopStart = pfs->reppos;
 		pins->nLoopEnd = pfs->repend;

@@ -604,7 +604,9 @@ static void handle_enter_key(void)
 		if (_library_mode) return;
 		/* it's already been loaded, so copy it */
 		smp = song_get_sample(cur, NULL);
-		song_copy_sample(cur, file->sample, file->title);
+		song_copy_sample(cur, file->sample);
+		strncpy(smp->name, file->title, 25);
+		smp->name[25] = 0;
 		strncpy(smp->filename, file->base, 12);
 		smp->filename[12] = 0;
 		finish_load(cur);

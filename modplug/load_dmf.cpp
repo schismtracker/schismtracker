@@ -392,8 +392,8 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 						if (namelen)
 						{
 							uint32_t rlen = (namelen < 32) ? namelen : 31;
-							memcpy(m_szNames[iSmp], lpStream+dwPos+1, rlen);
-							m_szNames[iSmp][rlen] = 0;
+							memcpy(Samples[iSmp].name, lpStream+dwPos+1, rlen);
+							Samples[iSmp].name[rlen] = 0;
 						}
 						dwPos += namelen + 1;
 						DMFSAMPLE *psh = (DMFSAMPLE *)(lpStream+dwPos);

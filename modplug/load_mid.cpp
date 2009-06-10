@@ -461,15 +461,15 @@ uint32_t CSoundFile::MapMidiInstrument(uint32_t dwBankProgram, uint32_t nChannel
 	if (nChannel != MIDI_DRUMCHANNEL)
 	{
 		// GM Midi Name
-		strcpy((char*) penv->name, szMidiProgramNames[nProgram]);
-		strcpy(m_szNames[m_nSamples], szMidiProgramNames[nProgram]);
+		strcpy(penv->name, szMidiProgramNames[nProgram]);
+		strcpy(Samples[m_nSamples].name, szMidiProgramNames[nProgram]);
 	} else
 	{
 		strcpy((char*)penv->name, "Percussions");
 		if ((nNote >= 24) && (nNote <= 84))
-			strcpy((char*)m_szNames[m_nSamples], (char*)szMidiPercussionNames[nNote-24]);
+			strcpy(Samples[m_nSamples].name, szMidiPercussionNames[nNote-24]);
 		else
-			strcpy((char*)m_szNames[m_nSamples], "Percussions");
+			strcpy(Samples[m_nSamples].name, "Percussions");
 	}
 	return m_nInstruments;
 }
@@ -542,7 +542,7 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nSamples = 0;
 	m_nInstruments = 0;
 	m_dwSongFlags |= (SONG_LINEARSLIDES | SONG_INSTRUMENTMODE);
-	m_szNames[0][0] = 0;
+	song_title[0] = 0;
 	// MIDI->MOD Tempo Conversion
 	division = bswapBE16(pmfh->wDivision);
 	if (division < 0)
@@ -691,10 +691,10 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 						// FF.01 [text]: Song Information
 						case 0x01:
 							if (!len) break;
-							if ((len < 32) && (!m_szNames[0][0]))
+							if ((len < 32) && (!song_title[0]))
 							{
-								memcpy(m_szNames[0], ptrk->ptracks, len);
-								m_szNames[0][len] = 0;
+								memcpy(song_title, ptrk->ptracks, len);
+								song_title[len] = 0;
 							} else
 							if ((!m_lpszSongComments) && (ptrk->ptracks[0]) && (ptrk->ptracks[0] < 0x7F))
 							{
@@ -726,13 +726,13 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 							if ((len > 1) && (!trk))
 							{
 								uint32_t k = (len < 32) ? len : 31;
-								int8_t s[32];
+								char s[32];
 								memcpy(s, ptrk->ptracks, k);
 								s[k] = 0;
-								if ((!strncasecmp((char*)s, "Copyri", 6)) || (!s[0])) break;
+								if ((!strncasecmp(s, "Copyri", 6)) || (!s[0])) break;
 								if (i == 0x03)
 								{
-									if (!m_szNames[0][0]) strcpy((char*)m_szNames[0], (char*)s);
+									if (!song_title[0]) strcpy(song_title, s);
 								}
 							}
 							break;

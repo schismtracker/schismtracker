@@ -65,7 +65,7 @@ bool CSoundFile::ReadOKT(const uint8_t *lpStream, uint32_t dwMemLength)
 			OKTSAMPLE *psmp = (OKTSAMPLE *)(lpStream + dwMemPos);
 			SONGSAMPLE *pins = &Samples[smp];
 
-			memcpy(m_szNames[smp], psmp->name, 20);
+			memcpy(Samples[smp].name, psmp->name, 20);
 			pins->uFlags = 0;
 			pins->nLength = bswapBE32(psmp->length) & ~1;
 			pins->nLoopStart = bswapBE16(psmp->loopstart);

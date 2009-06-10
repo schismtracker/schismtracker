@@ -103,9 +103,9 @@ bool CSoundFile::ReadPTM(const uint8_t *lpStream, uint32_t dwMemLength)
 		SONGSAMPLE *pins = &Samples[ismp+1];
 		PTMSAMPLE *psmp = (PTMSAMPLE *)(lpStream+dwMemPos);
 
-		strncpy(m_szNames[ismp+1], psmp->samplename, 28);
-		memcpy(pins->name, psmp->filename, 12);
-		pins->name[12] = 0;
+		strncpy(pins->name, psmp->samplename, 28);
+		memcpy(pins->filename, psmp->filename, 12);
+		pins->filename[12] = 0;
 		pins->nGlobalVol = 64;
 		pins->nPan = 128;
 		pins->nVolume = psmp->volume << 2;

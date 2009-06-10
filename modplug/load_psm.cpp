@@ -146,8 +146,8 @@ bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 				SONGSAMPLE *pins = &Samples[m_nSamples];
 				PSMSAMPLE *psmp = (PSMSAMPLE *)pdata;
 				smpnames[m_nSamples] = bswapLE32(psmp->smpid);
-				memcpy(m_szNames[m_nSamples], psmp->samplename, 31);
-				m_szNames[m_nSamples][31] = 0;
+				memcpy(Samples[m_nSamples].name, psmp->samplename, 31);
+				Samples[m_nSamples].name[31] = 0;
 				samplemap[m_nSamples-1] = (uint8_t)m_nSamples;
 				// Init sample
 				pins->nGlobalVol = 0x40;

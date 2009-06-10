@@ -441,15 +441,11 @@ static void exchange_sample_dialog(void)
 static void do_copy_sample(UNUSED void *data)
 {
 	int n = atoi(swap_sample_entry);
-	song_sample *src;
-	char *name;
 	
 	if (n < 1 || n > _last_vis_sample())
 		return;
 
-	name = 0;
-	src = song_get_sample(n, &name);
-	song_copy_sample(current_sample, src, name);
+	song_copy_sample(current_sample, song_get_sample(n, NULL));
 }
 
 static void copy_sample_draw_const(void)

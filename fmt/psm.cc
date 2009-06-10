@@ -37,7 +37,7 @@ int fmt_psm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	static CSoundFile qq;
 	if (length < 5) return false;
 	if (!qq.ReadPSM(data,length)) return false;
-	file->title = str_dup(qq.m_szNames[0]);
+	file->title = str_dup(qq.song_title);
 	if (!file->title) return false;
 	file->description = "Epic Megagames MASI";
 	file->type = TYPE_MODULE_MOD;

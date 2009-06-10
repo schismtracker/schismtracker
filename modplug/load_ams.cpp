@@ -92,7 +92,7 @@ bool CSoundFile::ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength)
 		if (dwMemPos + 32 >= dwMemLength) return true;
 		tmp = lpStream[dwMemPos++];
 		tmp2 = (tmp < 32) ? tmp : 31;
-		if (tmp2) memcpy(m_szNames[sNam], lpStream+dwMemPos, tmp2);
+		if (tmp2) memcpy(Samples[sNam].name, lpStream+dwMemPos, tmp2);
 		dwMemPos += tmp;
 	}
 	// Skip Channel names
@@ -398,7 +398,7 @@ bool CSoundFile::ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength)
 			uint32_t smpnamelen = lpStream[dwMemPos];
 			if ((psmp) && (smpnamelen) && (smpnamelen <= 22))
 			{
-				memcpy(m_szNames[smpmap[ismp]], lpStream+dwMemPos+1, smpnamelen);
+				memcpy(Samples[smpmap[ismp]].name, lpStream+dwMemPos+1, smpnamelen);
 			}
 			dwMemPos += smpnamelen + 1;
 			if (psmp)

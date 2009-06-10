@@ -563,7 +563,6 @@ int diskwriter_sync(void)
 int diskwriter_finish(void)
 {
 	int need_realize = 0;
-	char *zed;
 	int r;
 
 	if (!dw || (!fp && fini_sampno == -1)) {
@@ -606,14 +605,13 @@ int diskwriter_finish(void)
 
 			/* okay, fixup sample */
 			SONGSAMPLE *p = &mp->Samples[fini_sampno];
-			zed = mp->m_szNames[ fini_sampno ];
 			if (p->pSample) {
 				song_sample_free(p->pSample);
 			} else {
 				if (fini_patno > -1) {
-					sprintf(zed, "Pattern # %d", fini_patno);
+					sprintf(p->name, "Pattern # %d", fini_patno);
 				} else {
-					strcpy(zed, "Entire Song");
+					strcpy(p->name, "Entire Song");
 				}
 				p->nGlobalVol = 64;
 				p->nVolume = 256;
@@ -641,8 +639,8 @@ int diskwriter_finish(void)
 			if (p->nLength < p->nSustainEnd) p->nSustainEnd = p->nLength;
 			if (fini_bindme) {
 				/* that should do it */
-				zed[23] = 0xFF;
-				zed[24] = ((unsigned char)fini_patno);
+				p->name[23] = 0xFF;
+				p->name[24] = ((unsigned char)fini_patno);
 			}
 		}
 		free(mbuf);

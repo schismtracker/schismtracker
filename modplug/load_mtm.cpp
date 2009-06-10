@@ -68,8 +68,8 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 	for	(uint32_t i=1; i<=m_nSamples; i++)
 	{
 		MTMSAMPLE *pms = (MTMSAMPLE *)(lpStream + dwMemPos);
-		strncpy(m_szNames[i], pms->samplename, 22);
-		m_szNames[i][22] = 0;
+		strncpy(Samples[i].name, pms->samplename, 22);
+		Samples[i].name[22] = 0;
 		Samples[i].nVolume = pms->volume << 2;
 		Samples[i].nGlobalVol = 64;
 		uint32_t len = bswapLE32(pms->length);

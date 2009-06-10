@@ -40,7 +40,7 @@ CSoundFile *mp = NULL;
 
 char *song_get_title()
 {
-        return mp->m_szNames[0];
+        return mp->song_title;
 }
 
 char *song_get_message()
@@ -112,7 +112,7 @@ song_sample *song_get_sample(int n, char **name_ptr)
         if (n >= MAX_SAMPLES)
                 return NULL;
         if (name_ptr)
-                *name_ptr = mp->m_szNames[n];
+                *name_ptr = mp->Samples[n].name;
         return (song_sample *) mp->Samples + n;
 }
 
@@ -613,12 +613,7 @@ void song_exchange_samples(int a, int b)
 	memcpy(&tmp, mp->Samples + a, sizeof(song_sample));
 	memcpy(mp->Samples + a, mp->Samples + b, sizeof(song_sample));
 	memcpy(mp->Samples + b, &tmp, sizeof(song_sample));
-	
-	char text[32];
-	memcpy(text, mp->m_szNames[a], sizeof(text));
-	memcpy(mp->m_szNames[a], mp->m_szNames[b], sizeof(text));
 	status.flags |= SONG_NEEDS_SAVE;
-	memcpy(mp->m_szNames[b], text, sizeof(text));
 	song_unlock_audio();
 }
 
@@ -627,8 +622,8 @@ void song_copy_instrument(int src, int dst)
 	if (src == dst) return;
 
 	song_lock_audio();
-	(void)song_get_instrument(dst, NULL);
-	(void)song_get_instrument(src, NULL);
+	song_get_instrument(dst, NULL);
+	song_get_instrument(src, NULL);
 	*(mp->Instruments[dst]) = *(mp->Instruments[src]);
 	status.flags |= SONG_NEEDS_SAVE;
 	song_unlock_audio();
@@ -772,9 +767,9 @@ void song_init_instrument_from_sample(int insn, int samp)
 	}
 
 	for (i = 0; i < 12; i++)
-		ins->filename[i] = mp->Samples[samp].name[i];
+		ins->filename[i] = mp->Samples[samp].filename[i];
 	for (i = 0; i < 32; i++)
-		ins->name[i] = mp->m_szNames[samp][i];
+		ins->name[i] = mp->Samples[samp].name[i];
 }
 
 void song_init_instruments(int qq)
@@ -794,9 +789,7 @@ void song_insert_sample_slot(int n)
 	song_lock_audio();
 	
 	memmove(mp->Samples + n + 1, mp->Samples + n, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
-	memmove(mp->m_szNames + n + 1, mp->m_szNames + n, (MAX_SAMPLES - n - 1) * 32);
         memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
-        memset(mp->m_szNames[n], 0, 32);
 
 	if (song_is_instrument_mode())
 		_adjust_samples_in_instruments(n, 1);
@@ -815,9 +808,7 @@ void song_remove_sample_slot(int n)
 	
 	status.flags |= SONG_NEEDS_SAVE;
 	memmove(mp->Samples + n, mp->Samples + n + 1, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
-	memmove(mp->m_szNames + n, mp->m_szNames + n + 1, (MAX_SAMPLES - n - 1) * 32);
         memset(mp->Samples + MAX_SAMPLES - 1, 0, sizeof(SONGSAMPLE));
-        memset(mp->m_szNames[MAX_SAMPLES - 1], 0, 32);
 
 	if (song_is_instrument_mode())
 		_adjust_samples_in_instruments(n, -1);
@@ -881,7 +872,6 @@ void song_delete_sample(int n)
 	song_lock_audio();
 	mp->DestroySample(n);
 	memset(mp->Samples+n, 0, sizeof(SONGSAMPLE));
-	memset(mp->m_szNames[n], 0, 32);
 	song_unlock_audio();
 }
 
@@ -898,7 +888,6 @@ void song_delete_instrument(int n)
 		mp->DestroySample(j);
 		if (j) {
 			memset(mp->Samples+j, 0, sizeof(SONGSAMPLE));
-			memset(mp->m_szNames[j], 0, 32);
 		}
 	}
 	song_unlock_audio();

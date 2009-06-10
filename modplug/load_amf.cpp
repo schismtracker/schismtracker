@@ -195,7 +195,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 		for (uint32_t iSmp=0; iSmp<numsamples; iSmp++)
 		{
 			SONGSAMPLE *psmp = &Samples[iSmp+1];
-			memcpy(m_szNames[iSmp+1], lpStream+dwMemPos, 22);
+			memcpy(psmp->name, lpStream+dwMemPos, 22);
 			psmp->nC5Speed = S3MFineTuneTable[(lpStream[dwMemPos+22] & 0x0F) ^ 8];
 			psmp->nVolume = lpStream[dwMemPos+23];
 			psmp->nGlobalVol = 64;
@@ -332,8 +332,8 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 		AMFSAMPLE *psh = (AMFSAMPLE *)(lpStream + dwMemPos);
 
 		dwMemPos += sizeof(AMFSAMPLE);
-		memcpy(m_szNames[iIns+1], psh->samplename, 32);
-		memcpy(pins->name, psh->filename, 13);
+		memcpy(pins->name, psh->samplename, 32);
+		memcpy(pins->filename, psh->filename, 13);
 		pins->nLength = bswapLE32(psh->length);
 		pins->nC5Speed = bswapLE16(psh->c2spd);
 		pins->nGlobalVol = 64;

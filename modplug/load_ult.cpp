@@ -85,8 +85,8 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		pus	= (ULTSAMPLE *)(lpStream+dwMemPos);
 		SONGSAMPLE *pins = &Samples[ins];
-		memcpy(m_szNames[ins], pus->samplename, 32);
-		memcpy(pins->name, pus->dosname, 12);
+		memcpy(pins->name, pus->samplename, 32);
+		memcpy(pins->filename, pus->dosname, 12);
 		pins->nLoopStart = pus->loopstart;
 		pins->nLoopEnd = pus->loopend;
 		pins->nLength = pus->sizeend - pus->sizestart;

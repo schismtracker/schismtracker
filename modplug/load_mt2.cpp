@@ -544,7 +544,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	#endif
 		if (iSmp < MAX_SAMPLES)
 		{
-			memcpy(m_szNames[iSmp], pms->szName, 32);
+			memcpy(Samples[iSmp].name, pms->szName, 32);
 		}
 		if (pms->dwDataLen > 0)
 		{

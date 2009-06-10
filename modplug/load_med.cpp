@@ -725,7 +725,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 				if (maxnamelen > 32) maxnamelen = 32;
 				for (uint32_t i=0; i<ientries; i++) if (i < m_nSamples)
 				{
-					strncpy(m_szNames[i+1], psznames + i*ientrysz, maxnamelen);
+					strncpy(Samples[i+1].name, psznames + i*ientrysz, maxnamelen);
 				}
 			}
 		}

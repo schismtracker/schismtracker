@@ -60,6 +60,7 @@ typedef struct _song_sample {
         unsigned int vib_rate;
         unsigned int vib_depth;
         unsigned int vib_speed;
+        char name[32];
         char filename[22];
         int played;
         unsigned char AdlibBytes[12];
@@ -368,7 +369,7 @@ int song_load_unchecked(const char *file);
 int song_save(const char *file, const char *type);
 
 void song_clear_sample(int n);
-void song_copy_sample(int n, song_sample *src, char *srcname);
+void song_copy_sample(int n, song_sample *src);
 int song_load_sample(int n, const char *file);
 int song_preload_sample(void *f);
 int song_save_sample(int n, const char *file, int format_id);
