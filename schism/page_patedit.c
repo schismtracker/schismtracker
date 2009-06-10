@@ -91,6 +91,8 @@ static int skip_value = 1;		/* aka cursor step */
 static int link_effect_column = 0;
 static int draw_divisions = 0;		/* = vertical lines between channels */
 
+static int shift_chord_channels = 0; /* incremented for each shift-note played */
+
 static int centralise_cursor = 0;
 static int highlight_current_row = 0;
 int playback_tracing = 0;	/* scroll lock */
@@ -3113,7 +3115,17 @@ static int pattern_editor_insert(struct key_event *k)
 
 			song_keyrecord(i, i, n, vol, current_channel, cur_note->effect, cur_note->parameter);
 		}
-		advance_cursor(!(k->mod & KMOD_SHIFT), 1);
+		if (k->mod & KMOD_SHIFT) {
+			// advance horizontally, stopping at channel 64
+			// (I have no idea how IT does this, it might wrap)
+			if (current_channel < 64) {
+				shift_chord_channels++;
+				current_channel++;
+				pattern_editor_reposition();
+			}
+		} else {
+			advance_cursor(1, 1);
+		}
 		break;
 	case 1:			/* octave */
 		j = kbd_char_to_hex(k);
@@ -4119,6 +4131,13 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SDLK_RSHIFT:
 		if (!k->state)
 			return 0;
+		if (shift_chord_channels) {
+			current_channel -= shift_chord_channels;
+			while (current_channel < 1)
+				current_channel += 64;
+			advance_cursor(1, 1);
+		}
+		shift_chord_channels = 0;
 		return 1;
 
 	default:
