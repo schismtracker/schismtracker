@@ -102,7 +102,7 @@ typedef struct _song_instrument {
         int pitch_pan_separation;
         unsigned int pitch_pan_center;
         char name[32];
-        char filename[12];
+        char filename[16];
 	
 	int played;
 } song_instrument;

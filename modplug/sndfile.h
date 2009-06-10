@@ -341,7 +341,7 @@ typedef struct _SONGINSTRUMENT
 	int nPPS;
 	unsigned int nPPC;
 	char name[32];
-	char filename[12];
+	char filename[16];
 	int played; // for note playback dots
 } SONGINSTRUMENT;
 
