@@ -553,10 +553,10 @@ public: // for Editing
 	uint32_t m_nStereoSeparation;
 	uint32_t m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
 	uint32_t m_nType, m_nSamples, m_nInstruments;
-	uint32_t m_nTickCount, m_nTotalCount, m_nPatternDelay, m_nFrameDelay;
+	uint32_t m_nTickCount, m_nTotalCount, m_nCurrentPatternDelay, m_nFrameDelay;
 	uint32_t m_nMusicSpeed, m_nMusicTempo;
 	uint32_t m_nNextRow, m_nRow;
-	uint32_t m_nPattern,m_nCurrentPattern,m_nNextPattern,m_nLockedPattern,m_nRestartPos;
+	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nNextOrder,m_nLockedOrder,m_nRestartPos;
 	uint32_t m_nGlobalVolume, m_nSongPreAmp;
 	uint32_t m_nFreqFactor, m_nTempoFactor, m_nOldGlbVolSlide;
 	int32_t m_nRepeatCount, m_nInitialRepeatCount;
@@ -579,26 +579,16 @@ public:
 	bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
 	bool Destroy();
 	uint32_t GetHighestUsedChannel();
-	uint32_t GetType() const { return m_nType; }
-	uint32_t GetLogicalChannels() const { return m_nChannels; }
 	uint32_t GetNumPatterns() const;
 	uint32_t GetNumInstruments() const;
-	uint32_t GetNumSamples() const { return m_nSamples; }
 	uint32_t GetCurrentPos() const;
-	uint32_t GetCurrentPattern() const { return m_nPattern; }
-	uint32_t GetCurrentOrder() const { return m_nCurrentPattern; }
 	uint32_t GetMaxPosition() const;
 	void SetCurrentPos(uint32_t nPos);
 	void SetCurrentOrder(uint32_t nOrder);
-	void GetTitle(char * s) const { strncpy(s,song_title,32); }
-	const char * GetTitle() const { return song_title; }
-	uint32_t GetMusicSpeed() const { return m_nMusicSpeed; }
-	uint32_t GetMusicTempo() const { return m_nMusicTempo; }
 	unsigned int GetLength(bool bAdjust, bool bTotal=false);
 	unsigned int GetSongTime() { return GetLength(false, true); }
 	void SetRepeatCount(int n) { m_nRepeatCount = n; m_nInitialRepeatCount = n; }
 	int GetRepeatCount() const { return m_nRepeatCount; }
-	bool IsPaused() const { return (m_dwSongFlags & SONG_PAUSED) ? true : false; }
 	void LoopPattern(int nPat, int nRow=0);
 	// Module Loaders
 	bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);

@@ -82,7 +82,7 @@ extern "C" {
 static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 {
 	unsigned int wasrow = mp->m_nRow;
-	unsigned int waspat = mp->m_nCurrentPattern;
+	unsigned int waspat = mp->m_nCurrentOrder;
 	int i, n;
 
 	if (!stream || !len || !mp) {
@@ -146,7 +146,7 @@ POST_EVENT:
 	audio_writeout_count++;
 	if (audio_writeout_count > audio_buffers_per_second) {
 		audio_writeout_count = 0;
-	} else if (waspat == mp->m_nCurrentPattern && wasrow == mp->m_nRow
+	} else if (waspat == mp->m_nCurrentOrder && wasrow == mp->m_nRow
 			&& !midi_need_flush()) {
 		/* skip it */
 		return;
@@ -502,7 +502,7 @@ static void song_reset_play_state()
 	mp->m_nGlobalVolume = mp->m_nDefaultGlobalVolume;
 	mp->m_nMusicTempo = mp->m_nDefaultTempo;
 	mp->m_nTickCount = mp->m_nMusicSpeed = mp->m_nDefaultSpeed;
-	mp->m_nPatternDelay = mp->m_nFrameDelay = 0;
+	mp->m_nCurrentPatternDelay = mp->m_nFrameDelay = 0;
 
 	// turn this crap off
 	CSoundFile::gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS
@@ -511,8 +511,8 @@ static void song_reset_play_state()
 
 	csf_initialize_dsp(mp, true);
 
-	mp->m_nCurrentPattern = 255; // hack...
-	mp->m_nNextPattern = 0;
+	mp->m_nCurrentOrder = 255; // hack...
+	mp->m_nNextOrder = 0;
 	mp->m_nRow = mp->m_nNextRow = 0;
 	mp->m_nInitialRepeatCount = -1;
 	mp->m_nRepeatCount = -1;
@@ -707,7 +707,7 @@ static int mp_chaseback(int order, int row)
 	mp->stop_at_row = -1;
 #if 0
 printf("stop_at_order = %u v. %u  and row = %u v. %u\n",
-		order, mp->m_nCurrentPattern, row, mp->m_nRow);
+		order, mp->m_nCurrentOrder, row, mp->m_nRow);
 #endif
 	CSoundFile::gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS
 				| SNDMIX_DIRECTTODISK
@@ -718,7 +718,7 @@ printf("stop_at_order = %u v. %u  and row = %u v. %u\n",
 	CSoundFile::_midi_out_note = _schism_midi_out_note;
 	CSoundFile::_midi_out_raw = _schism_midi_out_raw;
 
-	return (order == (signed) mp->m_nCurrentPattern) ? 1 : 0;
+	return (order == (signed) mp->m_nCurrentOrder) ? 1 : 0;
 }
 
 
@@ -880,12 +880,12 @@ int song_get_current_global_volume()
 
 int song_get_current_order()
 {
-        return mp->GetCurrentOrder();
+        return mp->m_nCurrentOrder;
 }
 
 int song_get_playing_pattern()
 {
-        return mp->GetCurrentPattern();
+        return mp->m_nCurrentPattern;
 }
 
 int song_get_current_row()
@@ -1073,7 +1073,7 @@ void song_set_current_order(int order)
 void song_set_next_order(int order)
 {
 	song_lock_audio();
-	mp->m_nLockedPattern = order;
+	mp->m_nLockedOrder = order;
 	song_unlock_audio();
 }
 
@@ -1082,9 +1082,9 @@ int song_toggle_orderlist_locked(void)
 {
 	mp->m_dwSongFlags ^= SONG_ORDERLOCKED;
 	if (mp->m_dwSongFlags & SONG_ORDERLOCKED)
-		mp->m_nLockedPattern = mp->m_nCurrentPattern;
+		mp->m_nLockedOrder = mp->m_nCurrentOrder;
 	else
-		mp->m_nLockedPattern = MAX_ORDERS;
+		mp->m_nLockedOrder = MAX_ORDERS;
 	return mp->m_dwSongFlags & SONG_ORDERLOCKED;
 }
 
