@@ -2863,19 +2863,18 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	if (k->midi_note == -1) {
 		/* nada */
 	} else if (k->state) {
-		c = song_keyup(k->midi_channel, k->midi_channel, k->midi_note, current_channel - 1, NULL);
-		c %= 64;
+		c = song_keyup(k->midi_channel, k->midi_channel, k->midi_note);
 
 		/* don't record noteoffs for no good reason... */
-		if (!(midi_flags & MIDI_RECORD_NOTEOFF)
-		    || !(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))
-		    || !playback_tracing)
+		if (!((midi_flags & MIDI_RECORD_NOTEOFF)
+				&& (song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))
+				&& playback_tracing)) {
 			return 0;
-		if (c == -1) return -1;
+		}
 
-		cur_note = pattern + 64 * current_row + c;
+		cur_note = pattern + 64 * current_row + (c-1);
 		/* never "overwrite" a note off */
-		patedit_record_note(cur_note, c + 1, current_row, NOTE_OFF, 0);
+		patedit_record_note(cur_note, c, current_row, NOTE_OFF, 0);
 		
 
 	} else {
@@ -2888,12 +2887,10 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			tk = 0;
 		}
 		n = k->midi_note;
-		c = song_keydown(-1, -1, n, v, current_channel - 1, NULL);
-		if (c == -1)
-			c = current_channel - 1;
-		c %= 64;
-		cur_note = pattern + 64 * current_row + c;
-		patedit_record_note(cur_note, c + 1, current_row, n, 0);
+		// XXX samp/ins were -1 here, I don't know what that meant (this is probably incorrect)
+		c = song_keydown(k->midi_channel, k->midi_channel, n, v, current_channel);
+		cur_note = pattern + 64 * current_row + (c-1);
+		patedit_record_note(cur_note, c, current_row, n, 0);
 
 		if (!template_mode) {
 			if (k->midi_channel > 0) {
@@ -2916,11 +2913,11 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	}
 
 	if (!(midi_flags & MIDI_PITCH_BEND) || midi_pitch_depth == 0 || k->midi_bend == 0) {
-		if (k->midi_note == -1 || k->state) return -1;
-		if (cur_note->instrument < 1) return -1;
-		song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note, v, c, 0,
-			cur_note->effect, cur_note->parameter);
-		pattern_selection_system_copyout();
+		if (k->state && k->midi_note > -1 && cur_note->instrument > 0) {
+			song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note, v, c+1,
+				cur_note->effect, cur_note->parameter);
+			pattern_selection_system_copyout();
+		}
 		return -1;
 	}
 
@@ -2958,9 +2955,8 @@ static int pattern_editor_insert_midi(struct key_event *k)
 				v = cur_note->volume;
 			else
 				v = -1;
-			song_keyrecord(cur_note->instrument, cur_note->instrument,
-				cur_note->note, v, c, 0,
-				cur_note->effect, cur_note->parameter);
+			song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
+				v, c+1, cur_note->effect, cur_note->parameter);
 		}
 	}
 	pattern_selection_system_copyout();
@@ -2994,13 +2990,8 @@ static int pattern_editor_insert(struct key_event *k)
 			} else {
 				vol = -1;
 			}
-			song_keyrecord(cur_note->instrument,
-				cur_note->instrument,
-				cur_note->note,
-				vol,
-				current_channel-1, 0,
-				cur_note->effect,
-				cur_note->parameter);
+			song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
+				vol, current_channel, cur_note->effect, cur_note->parameter);
 			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
 			return 1;
 		} else if (k->sym == SDLK_8 && k->orig_sym == SDLK_8) {
@@ -3012,6 +3003,13 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 
 		eff = param = 0;
+		i = cur_note->instrument;
+		if ((edit_copy_mask & MASK_INSTRUMENT) || i < 1) {
+			if (song_is_instrument_mode())
+				i = instrument_get_current();
+			else
+				i = sample_get_current();
+		}
 
 		/* TODO: rewrite this more logically */
 		if (k->sym == SDLK_SPACE) {
@@ -3029,14 +3027,6 @@ static int pattern_editor_insert(struct key_event *k)
 			if (n < 0)
 				return 0;
 
-			i = -1;
-			if (edit_copy_mask & MASK_INSTRUMENT) {
-				if (song_is_instrument_mode())
-					i = instrument_get_current();
-				else
-					i = sample_get_current();
-			}
-
 			if ((edit_copy_mask & MASK_VOLUME) && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
 				vol = mask_note.volume;
 			} else if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
@@ -3048,21 +3038,21 @@ static int pattern_editor_insert(struct key_event *k)
 			if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing) {
 				if (k->state && !(midi_flags & MIDI_RECORD_NOTEOFF))
 					return 1;
-				song_keyup(i, i, n, current_channel - 1, NULL);
+				song_keyup(i, i, n);
 				if (k->state)
 					n = NOTE_OFF;
-				song_keydown(i, i, n, vol, current_channel - 1, NULL);
+				song_keydown(i, i, n, vol, current_channel);
 			} else if (k->state) {
 				if (keyjazz_noteoff) {
 					/* coda mode */
-					song_keyup(i, i, n, current_channel - 1, NULL);
+					song_keyup(i, i, n);
 				}
 
 				return 0;
 			} else {
 				if (k->is_repeat && !keyjazz_repeat)
 					return 1;
-				song_keydown(-1, -1, n, vol, current_channel - 1, NULL);
+				song_keydown(i, i, n, vol, current_channel);
 			}
 		}
 
@@ -3121,7 +3111,7 @@ static int pattern_editor_insert(struct key_event *k)
 				vol = cur_note->volume;
 			}
 
-			song_keyrecord(i, i, n, vol, current_channel, NULL, cur_note->effect, cur_note->parameter);
+			song_keyrecord(i, i, n, vol, current_channel, cur_note->effect, cur_note->parameter);
 		}
 		advance_cursor(!(k->mod & KMOD_SHIFT), 1);
 		break;

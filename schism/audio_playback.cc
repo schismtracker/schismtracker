@@ -183,6 +183,7 @@ int song_get_current_play_channel(void)
 {
 	return current_play_channel;
 }
+
 void song_change_current_play_channel(int relative, int wraparound)
 {
 	current_play_channel += relative;
@@ -202,50 +203,103 @@ void song_toggle_multichannel_mode(void)
 	multichannel_mode = !multichannel_mode;
 	status_text_flash("Multichannel playback %s", (multichannel_mode ? "enabled" : "disabled"));
 }
+
 int song_is_multichannel_mode(void)
 {
 	return multichannel_mode;
 }
 
-static int big_song_channels[64];
 
-static int song_keydown_ex(int samp, int ins, int note, int vol,
-				int chan, int *mm, int at,
-				int effect, int param)
+/* Channel corresponding to each note played.
+That is, keydown_channels[66] will indicate in which channel F-5 was played most recently.
+This will break if the same note was keydown'd twice without a keyup, but I think that's a
+fairly unlikely scenario that you'd have to TRY to bring about. */
+static int keyjazz_channels[128];
+
+
+static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
-	int ins_mode, n;
+	int ins_mode;
 	SONGVOICE *c;
 	MODCOMMAND mc;
 
 	if (chan == KEYDOWN_CHAN_CURRENT) {
-		chan = current_play_channel-1;
-		if (multichannel_mode) song_change_current_play_channel(1,1);
+		chan = current_play_channel;
+		if (multichannel_mode)
+			song_change_current_play_channel(1, 1);
 	}
-	if (chan > -1 && !mm) {
-		if (ins < 0 && samp < 0) return chan;
+	
+	if (chan <= 0 || chan > 64 || ins < 0 || samp < 0) {
+		printf("song_keydown called with magic numbers\n");
+		abort();
+	}
 
-		song_lock_audio();
+	// keep track of what channel this note was played in so we can note-off properly later
+	if (note > 0 && note < 128)
+		keyjazz_channels[note] = chan;
 
-		chan %= 64; chan += 64;
+	song_lock_audio();
 
-		c = mp->Voices + chan;
+	c = mp->Voices + chan - 1;
 
-		if (at) {
-			c->nVolume = (vol << 2);
-			song_unlock_audio();
-			return chan;
+	ins_mode = song_is_instrument_mode();
+
+	if (samp >= 0 && (c->dwFlags & CHN_ADLIB)) {
+		OPL_NoteOff(chan);
+		OPL_Patch(chan, mp->Samples[samp].AdlibBytes);
+	}
+
+	/* previously this block also checked for SONG_ENDREACHED|SONG_PAUSED if (ins >= 0)
+	do we want to check that or not? what is this actually handling anyway? */
+	if ((c->pSample || c->nRealtime) && note < 0x80) {
+		mp->NoteChange(chan, c->nRowNote, false, true, false);
+		mp->ProcessEffects();
+		mp->CheckNNA(chan, ins_mode ? ins : samp, note, false);
+	}
+
+	if (ins <= 0 && samp > 0 && ins_mode) {
+		/* this is only needed on the sample page, when in instrument mode... */
+		SONGSAMPLE *s = mp->Samples + samp;
+
+		c->nRowCommand = effect;
+		c->nRowParam = param;
+
+		c->nPos = c->nPosLo = 0;
+		c->nInc = 1; /* weird... */
+		c->nGlobalVol = 64;
+		c->nInsVol = 64;
+		c->nPan = 128;
+		c->nNewNote = note;
+		c->nRightVol = c->nLeftVol = 0;
+		c->nROfs = c->nLOfs = 0;
+		c->nCutOff = 0x7f;
+		c->nResonance = 0;
+
+		c->pCurrentSample = s->pSample;
+		c->pSample = s->pSample;
+		c->pHeader = NULL;
+		c->pInstrument = s;
+		c->nLength = s->nLength;
+		c->nC5Speed = s->nC5Speed;
+		c->nLoopStart = s->nLoopStart;
+		c->nLoopEnd = s->nLoopEnd;
+		c->dwFlags = (s->uFlags & 0x200000FF) | (c->dwFlags & CHN_MUTE); // FIXME: UGH, MAGIC NUMBERS
+		if (c->dwFlags & CHN_MUTE) {
+			c->dwFlags &= ~(CHN_MUTE);
+			c->dwFlags |= CHN_NNAMUTE;
 		}
+		c->dwFlags &= ~(CHN_PINGPONGFLAG);
+		c->nPan = 128; // redundant?
+		c->nInsVol = s->nGlobalVol;
+		c->nFadeOutVol = 0x10000;
+		s->played = 1;
 
-		ins_mode = song_is_instrument_mode();
-		
-		if (samp >= 0 && (c->dwFlags & CHN_ADLIB)) {
-			SONGSAMPLE *i = mp->Samples + samp;
-			OPL_NoteOff(chan);
-			OPL_Patch(chan, i->AdlibBytes);
-		}
-
-		if (ins >= 0 && (status.flags & MIDI_LIKE_TRACKER)) {
-			SONGINSTRUMENT* i = mp->Instruments[ins];
+		if (vol > -1) c->nVolume = (vol << 2);
+		c->nMasterChn = 0; // indicates foreground channel.
+		mp->NoteChange(chan-1, note, false, true, true);
+	} else if ((ins_mode ? ins : samp) > 0) {
+		if ((status.flags & MIDI_LIKE_TRACKER) && ins > 0) {
+			SONGINSTRUMENT *i = mp->Instruments[ins];
 
 			if (i && i->nMidiChannelMask) {
 				GM_KeyOff(chan);
@@ -253,211 +307,63 @@ static int song_keydown_ex(int samp, int ins, int note, int vol,
 			}
 		}
 
-		if (ins < 0) {
-			/* this is only needed on the sample page, when in
-			instrument mode...
-			*/
-			c->nRowCommand = effect;
-			c->nRowParam = param;
-
-			if ((c->pSample || c->nRealtime) && note < 0x80) {
-				/* doesn't quite seem fair otherwise */
-				mp->NoteChange(chan, c->nRowNote,
-							false, true, false);
-				mp->ProcessEffects();
-				mp->CheckNNA(chan, ins_mode
-						? ins : samp, note,
-						false);
-			}
-			c->nPos = c->nPosLo = c->nLength = 0;
-			c->nInc = 1; /* weird... */
-			c->nGlobalVol = 64;
-			c->nInsVol = 64;
-			c->nPan = 128;
-			c->nNewNote = note;
-			c->nRightVol = c->nLeftVol = 0;
-			c->nROfs = c->nLOfs = 0;
-			c->nCutOff = 0x7f;
-			c->nResonance = 0;
-
-			SONGSAMPLE *i = mp->Samples + samp;
-			c->pCurrentSample = i->pSample;
-			c->pSample = i->pSample;
-			c->pHeader = NULL;
-			c->pInstrument = i;
-			c->nLength = i->nLength;
-			c->nC5Speed = i->nC5Speed;
-			c->nLoopStart = i->nLoopStart;
-			c->nLoopEnd = i->nLoopEnd;
-			c->dwFlags = (i->uFlags & 0x200000FF) | (c->dwFlags & CHN_MUTE);
-			if (c->dwFlags & CHN_MUTE) {
-				c->dwFlags &= ~(CHN_MUTE);
-				c->dwFlags |= CHN_NNAMUTE;
-			}
-			c->dwFlags &= ~(CHN_PINGPONGFLAG);
-			c->nPan = 128; // redundant?
-			c->nInsVol = i->nGlobalVol;
-			c->nFadeOutVol = 0x10000;
-			i->played = 1;
-
-			c->nGlobalVol = 64;
-			if (vol > -1) c->nVolume = (vol << 2);
-			mp->NoteChange(chan, note, false, true, true);
-			c->nMasterChn = chan % 64;
+		c->nRealtime = 1;
+		c->nTickStart = (mp->m_nTickCount+1) % mp->m_nMusicSpeed;
+		c->nRowNote = note;
+		if (vol > -1) {
+			c->nRowVolCmd = VOLCMD_VOLUME;
+			c->nRowVolume = vol;
+			c->nVolume = (vol << 2);
 		} else {
-			while (chan >= 64) chan -= 64;
-
-			c = mp->Voices + chan;
-			if ((c->pSample || c->nRealtime) && note < 0x80
-			&& (mp->m_dwSongFlags & (SONG_ENDREACHED|SONG_PAUSED))) {
-				/* process the previous note */
-				/* (audio thread isn't there yet) */
-				mp->NoteChange(chan, c->nRowNote,
-							false, true, false);
-				mp->ProcessEffects();
-				mp->CheckNNA(chan, ins_mode
-						? ins : samp, note,
-						false);
-
-			}
-
-			c->nRealtime = 1;
-
-			c->nTickStart = (mp->m_nTickCount+1)
-						% mp->m_nMusicSpeed;
-			c->nRowNote = note;
-			if (vol > -1) {
-				c->nRowVolCmd = VOLCMD_VOLUME;
-				c->nRowVolume = vol;
-				c->nVolume = (vol << 2);
-			} else {
-				c->nRowVolCmd = 0;
-				c->nRowVolume = 0;
-			}
-
-			if (c->dwFlags & CHN_MUTE) {
-				c->dwFlags &= ~(CHN_MUTE);
-				c->dwFlags |= CHN_NNAMUTE;
-			}
-			c->dwFlags &= ~(CHN_PINGPONGFLAG);
-
-			c->nRowInstr = ins_mode ? ins : samp;
-			c->nRowCommand = effect;
-			c->nRowParam = param;
+			c->nRowVolCmd = 0;
+			c->nRowVolume = 0;
 		}
-		
-		if (mp->m_dwSongFlags & SONG_ENDREACHED) {
-			mp->m_dwSongFlags &= ~SONG_ENDREACHED;
-			mp->m_dwSongFlags |= SONG_PAUSED;
+
+		if (c->dwFlags & CHN_MUTE) {
+			c->dwFlags &= ~(CHN_MUTE);
+			c->dwFlags |= CHN_NNAMUTE;
 		}
+		c->dwFlags &= ~(CHN_PINGPONGFLAG);
+
+		c->nRowInstr = ins_mode ? ins : samp;
+		c->nRowCommand = effect;
+		c->nRowParam = param;
+	}
 	
-		song_unlock_audio();
-		/* put it back into range as necessary */
-		while (chan > 64) chan -= 64;
-
-		if(!(status.flags & MIDI_LIKE_TRACKER) && ins > -1) {
-			mc.note = note;
-			mc.instr = ins;
-			mc.volcmd = VOLCMD_VOLUME;
-			mc.vol = vol;
-			mc.command = effect;
-			mc.param = param;
-			song_lock_audio();
-			_schism_midi_out_note(chan, &mc);
-			song_unlock_audio();
-		}
-
-		return chan;
+	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
+		mp->m_dwSongFlags &= ~SONG_ENDREACHED;
+		mp->m_dwSongFlags |= SONG_PAUSED;
 	}
 
-	if (mm) {
-		if (chan < 0) chan = 0;
-		for (n = chan; n < 64; n++) {
-			if (mm[n] == ((note << 1)|1)) {
-				return song_keydown_ex(samp, ins, note,
-						vol, 64+n,  0, at,
-						effect, param);
-			}
-			if (mm[n] != 1) continue;
-			mm[n] = 1 | (note << 1);
-			return song_keydown_ex(samp, ins,
-						note, vol, 64+n,  0, at,
-						effect, param);
-		}
-		for (n = 0; n < chan; n++) {
-			if (mm[n] == ((note << 1)|1)) {
-				return song_keydown_ex(samp, ins, note,
-						vol, 64+n,  0, at,
-						effect, param);
-			}
-			if (mm[n] != 1) continue;
-			mm[n] = 1 | (note << 1);
-			return song_keydown_ex(samp, ins, note,
-						vol, 64+n,  0, at,
-						effect, param);
-		}
-		/* put it back into range as necessary */
-		while (chan > 64) chan -= 64;
-		return chan; /* err... */
-	} else {
-		if (multichannel_mode) song_change_current_play_channel(1,1);
-
-		for (n = 0; n < 64; n++)
-			big_song_channels[n] |= 1;
-
-		return song_keydown_ex(samp, ins, note, vol,
-					chan-1,
-					big_song_channels, at,
-					effect, param);
+	if (!(status.flags & MIDI_LIKE_TRACKER) && ins > -1) {
+		mc.note = note;
+		mc.instr = ins;
+		mc.volcmd = VOLCMD_VOLUME;
+		mc.vol = vol;
+		mc.command = effect;
+		mc.param = param;
+		_schism_midi_out_note(chan, &mc);
 	}
-}
 
-int song_keydown(int samp, int ins, int note, int vol, int chan, int *mm)
-{
-	return song_keydown_ex(samp,ins,note,vol,chan,mm,0,
-			CMD_PANNING8, 0x80);
-}
-int song_keyrecord(int samp, int ins, int note, int vol, int chan, int *mm,
-				int effect, int param)
-{
-	return song_keydown_ex(samp,ins,note,vol,chan,mm, 0, effect, param);
-}
-
-int song_keyup(int samp, int ins, int note, int chan, int *mm)
-{
-	int i, j;
-
-	if (chan == KEYDOWN_CHAN_CURRENT)
-		chan = current_play_channel-1;
-	if (chan > -1 && !mm) {
-		if (ins > -1) {
-			return song_keydown_ex(samp,ins,NOTE_OFF,
-					-1,chan,mm, 0, 0,0);
-		} else {
-			return song_keydown_ex(samp,ins,NOTE_CUT,
-					-1,chan,mm, 0, 0,0);
-		}
-	} else {
-		if (!mm) {
-			if (multichannel_mode) return -1;
-			mm = big_song_channels;
-		}
-		j = -1;
-		for (i = 0; i < 64; i++) {
-			if (mm[i] == ((note << 1)|1)) {
-				mm[i] = 1;
-				j = song_keyup(samp,ins,note,64+i,0);
-			}
-		}
-		if (j > -1) return j;
-	}
-	/* put it back into range as necessary */
-	while (chan > 64) chan -= 64;
+	song_unlock_audio();
+	
 	return chan;
 }
 
-// useins: play the current instrument if nonzero, else play the current sample with a "blank" instrument,
-// i.e. no envelopes, vol/pan swing, nna setting, or note translations. (irrelevant if not instrument mode?)
+int song_keydown(int samp, int ins, int note, int vol, int chan)
+{
+	return song_keydown_ex(samp, ins, note, vol, chan, CMD_PANNING8, 0x80);
+}
+
+int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param)
+{
+	return song_keydown_ex(samp, ins, note, vol, chan, effect, param);
+}
+
+int song_keyup(int samp, int ins, int note)
+{
+	return song_keydown_ex(samp, ins, ins > -1 ? NOTE_OFF : NOTE_CUT, 0, keyjazz_channels[note], 0, 0);
+}
 
 // ------------------------------------------------------------------------------------------------------------
 
@@ -469,7 +375,7 @@ static void song_reset_play_state()
 	
 	memset(midi_bend_hit, 0, sizeof(midi_bend_hit));
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
-	memset(big_song_channels, 0, sizeof(big_song_channels));
+	memset(keyjazz_channels, 0, sizeof(keyjazz_channels));
 	for (n = 0, c = mp->Voices; n < MAX_VOICES; n++, c++) {
 		c->nTickStart = 0;
 		c->nRowNote = c->nRowInstr = c->nRowVolume = c->nRowVolCmd = 0;
@@ -814,13 +720,8 @@ void song_single_step(int patno, int row)
 		} else {
 			vol = cur_note->volume;
 		}
-		song_keyrecord(cur_note->instrument,
-			cur_note->instrument,
-			cur_note->note,
-			vol,
-			i, 0,
-			cur_note->effect,
-			cur_note->parameter);
+		song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
+			vol, i, cur_note->effect, cur_note->parameter);
 	}
 #if 0
         max_channels_used = 0;

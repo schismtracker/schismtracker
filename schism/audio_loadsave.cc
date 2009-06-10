@@ -66,9 +66,9 @@ static void _squelch_sample(int n)
 {
 	int x;
 
-	for (x = 0; x < 64; x++) {
-		song_keyup(n,-1,NOTE_CUT,x,NULL);
-		song_keyup(-1,n,NOTE_CUT,x,NULL);
+	for (x = 1; x <= 64; x++) {
+		song_keydown(n, -1, NOTE_CUT, 0, x);
+		song_keyup(-1, n, NOTE_CUT);
 	}
 }
 
