@@ -80,9 +80,6 @@ static int top_display_row = 0;		/* zero-based */
 static int current_channel = 1, current_position = 0;
 static int current_row = 0;
 
-/* if pressing shift WHILE TRACING the song is paused until we release it */
-static int tracing_was_playing = 0;
-
 static int keyjazz_noteoff = 0; /* issue noteoffs when releasing note */
 static int keyjazz_repeat = 1; /* insert multiple notes on key repeat */
 
@@ -2281,37 +2278,31 @@ static void pattern_editor_reposition(void)
 			top_display_row = total_rows - 31;
 	}
 }
-static void advance_cursor(void)
+static void advance_cursor(int next_row, int multichannel)
 {
 	int total_rows;
 
-	if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
-				&& playback_tracing) {
-		return;
-	}
+	if (next_row && !((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && !playback_tracing)) {
+		total_rows = song_get_rows_in_pattern(current_pattern);
 
-	total_rows = song_get_rows_in_pattern(current_pattern);
-
-	if (skip_value) {
-		if (current_row + skip_value > total_rows)
-			return;
-		current_row += skip_value;
-	} else {
-		if (current_channel < 64) {
-			current_channel++;
+		if (skip_value) {
+			if (current_row + skip_value <= total_rows) {
+				current_row += skip_value;
+				pattern_editor_reposition();
+			}
 		} else {
-			current_channel = 1;
-			if (current_row < total_rows)
-				current_row++;
+			if (current_channel < 64) {
+				current_channel++;
+			} else {
+				current_channel = 1;
+				if (current_row < total_rows)
+					current_row++;
+			}
+			pattern_editor_reposition();
 		}
 	}
-	pattern_editor_reposition();
-}
-
-static void shift_advance_cursor(struct key_event *k)
-{
-	if (!(k->mod & KMOD_SHIFT)) {
-		advance_cursor();
+	if (multichannel) {
+		current_channel = multichannel_get_next(current_channel);
 	}
 }
 
@@ -2872,8 +2863,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	if (k->midi_note == -1) {
 		/* nada */
 	} else if (k->state) {
-		c = song_keyup(k->midi_channel, k->midi_channel, k->midi_note,
-			current_channel - 1, channel_multi);
+		c = song_keyup(k->midi_channel, k->midi_channel, k->midi_note, current_channel - 1, NULL);
 		c %= 64;
 
 		/* don't record noteoffs for no good reason... */
@@ -2898,7 +2888,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			tk = 0;
 		}
 		n = k->midi_note;
-		c = song_keydown(-1, -1, n, v, current_channel - 1, channel_multi);
+		c = song_keydown(-1, -1, n, v, current_channel - 1, NULL);
 		if (c == -1)
 			c = current_channel - 1;
 		c %= 64;
@@ -3011,15 +3001,13 @@ static int pattern_editor_insert(struct key_event *k)
 				current_channel-1, 0,
 				cur_note->effect,
 				cur_note->parameter);
-			shift_advance_cursor(k);
-                        current_channel = multichannel_get_next (current_channel);
+			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
 			return 1;
 		} else if (k->sym == SDLK_8 && k->orig_sym == SDLK_8) {
                 	/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
 			if (k->state) return 0;
 			song_single_step(current_pattern, current_row);
-			shift_advance_cursor(k);
-                        /* current_channel = multichannel_get_next (current_channel); */
+			advance_cursor(!(k->mod & KMOD_SHIFT), 0);
 			return 1;
 		}
 
@@ -3030,7 +3018,6 @@ static int pattern_editor_insert(struct key_event *k)
 			if (k->state) return 0;
 			/* copy mask to note (FIXME: this should play the note, too) */
 			n = mask_note.note;
-			j = current_channel - 1;
 			if (edit_copy_mask & MASK_VOLUME) {
 				vol = mask_note.volume;
 			} else {
@@ -3050,8 +3037,7 @@ static int pattern_editor_insert(struct key_event *k)
 					i = sample_get_current();
 			}
 
-			if ((edit_copy_mask & MASK_VOLUME)
-			&& mask_note.volume_effect == VOL_EFFECT_VOLUME) {
+			if ((edit_copy_mask & MASK_VOLUME) && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
 				vol = mask_note.volume;
 			} else if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
 				vol = cur_note->volume;
@@ -3059,38 +3045,28 @@ static int pattern_editor_insert(struct key_event *k)
 				vol = -1;
 			}
 
-			if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
-						&& playback_tracing) {
-				if (k->state) {
-					if (!(midi_flags & MIDI_RECORD_NOTEOFF))
-						return 1;
-				}
-				j = song_keyup(i, i, n, current_channel - 1,
-					channel_multi_enabled ? channel_multi : NULL);
+			if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing) {
+				if (k->state && !(midi_flags & MIDI_RECORD_NOTEOFF))
+					return 1;
+				song_keyup(i, i, n, current_channel - 1, NULL);
 				if (k->state)
 					n = NOTE_OFF;
-				j = song_keydown(i, i, n, vol, current_channel - 1,
-					channel_multi_enabled ? channel_multi : NULL);
-				if (j == -1) return 1; /* err? */
-				j %= 64;
+				song_keydown(i, i, n, vol, current_channel - 1, NULL);
 			} else if (k->state) {
 				if (keyjazz_noteoff) {
 					/* coda mode */
-					song_keyup(i, i, n, current_channel - 1,
-						channel_multi_enabled ? channel_multi : NULL);
+					song_keyup(i, i, n, current_channel - 1, NULL);
 				}
 
 				return 0;
 			} else {
 				if (k->is_repeat && !keyjazz_repeat)
 					return 1;
-				j = song_keydown(-1, -1, n, vol, current_channel - 1,
-					channel_multi_enabled ? channel_multi : NULL);
-				current_channel = (j < 0) ? current_channel : ((j % 64) + 1);
+				song_keydown(-1, -1, n, vol, current_channel - 1, NULL);
 			}
 		}
 
-		patedit_record_note(cur_note, j+1, current_row, n,1);
+		patedit_record_note(cur_note, current_channel, current_row, n, 1);
 
 		/* mask stuff: if it's note cut/off/fade/clear, clear the
 		 * masked fields; otherwise, copy from the mask note */
@@ -3145,16 +3121,9 @@ static int pattern_editor_insert(struct key_event *k)
 				vol = cur_note->volume;
 			}
 
-			if (tracing_was_playing) {
-				song_single_step(current_pattern, current_row);
-			} else {
-				song_keyrecord(i, i, n, vol, j, NULL, cur_note->effect, cur_note->parameter);
-			}
-		} else if (tracing_was_playing) {
-			song_single_step(current_pattern, current_row);
+			song_keyrecord(i, i, n, vol, current_channel, NULL, cur_note->effect, cur_note->parameter);
 		}
-		shift_advance_cursor(k);
-                current_channel = multichannel_get_next (current_channel);
+		advance_cursor(!(k->mod & KMOD_SHIFT), 1);
 		break;
 	case 1:			/* octave */
 		j = kbd_char_to_hex(k);
@@ -3165,7 +3134,7 @@ static int pattern_editor_insert(struct key_event *k)
 			n = ((n - 1) % 12) + (12 * j) + 1;
 			cur_note->note = n;
 		}
-		advance_cursor();
+		advance_cursor(1, 0);
 		status.flags |= SONG_NEEDS_SAVE;
 		pattern_selection_system_copyout();
 		break;
@@ -3176,7 +3145,7 @@ static int pattern_editor_insert(struct key_event *k)
 				cur_note->instrument = instrument_get_current();
 			else
 				cur_note->instrument = sample_get_current();
-			advance_cursor();
+			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
@@ -3186,7 +3155,7 @@ static int pattern_editor_insert(struct key_event *k)
 				instrument_set(0);
 			else
 				sample_set(0);
-			advance_cursor();
+			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
@@ -3202,7 +3171,7 @@ static int pattern_editor_insert(struct key_event *k)
 
 			n = ((cur_note->instrument / 10) * 10) + j;
 			current_position--;
-			advance_cursor();
+			advance_cursor(1, 0);
 		}
 
 		/* this is kind of ugly... */
@@ -3235,14 +3204,14 @@ static int pattern_editor_insert(struct key_event *k)
 		if (k->sym == SDLK_SPACE) {
 			cur_note->volume = mask_note.volume;
 			cur_note->volume_effect = mask_note.volume_effect;
-			advance_cursor();
+			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
 		if (kbd_get_note(k) == 0) {
 			cur_note->volume = mask_note.volume = 0;
 			cur_note->volume_effect = mask_note.volume_effect = VOL_EFFECT_NONE;
-			advance_cursor();
+			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
@@ -3265,7 +3234,7 @@ static int pattern_editor_insert(struct key_event *k)
 			current_position++;
 		} else {
 			current_position = 4;
-			advance_cursor();
+			advance_cursor(1, 0);
 		}
 		status.flags |= SONG_NEEDS_SAVE;
 		pattern_selection_system_copyout();
@@ -3283,7 +3252,7 @@ static int pattern_editor_insert(struct key_event *k)
 		if (link_effect_column)
 			current_position++;
 		else
-			advance_cursor();
+			advance_cursor(1, 0);
 		pattern_selection_system_copyout();
 		break;
 	case 7:			/* param, high nibble */
@@ -3291,14 +3260,14 @@ static int pattern_editor_insert(struct key_event *k)
 		if (k->sym == SDLK_SPACE) {
 			cur_note->parameter = mask_note.parameter;
 			current_position = link_effect_column ? 6 : 7;
-			advance_cursor();
+			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			pattern_selection_system_copyout();
 			break;
 		} else if (kbd_get_note(k) == 0) {
 			cur_note->parameter = mask_note.parameter = 0;
 			current_position = link_effect_column ? 6 : 7;
-			advance_cursor();
+			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			pattern_selection_system_copyout();
 			break;
@@ -3315,7 +3284,7 @@ static int pattern_editor_insert(struct key_event *k)
 		} else /* current_position == 8 */ {
 			cur_note->parameter = (cur_note->parameter & 0xf0) | n;
 			current_position = link_effect_column ? 6 : 7;
-			advance_cursor();
+			advance_cursor(1, 0);
 		}
 		status.flags |= SONG_NEEDS_SAVE;
 		mask_note.parameter = cur_note->parameter;
@@ -4180,25 +4149,6 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	char buf[4];
 	int ret;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
-
-#if 0
-	/* this is fun; if we're playback tracing, hold shift to "pause the current position"
-	 * erm... why? you could just turn tracing off with scroll lock and
-	   accomplish the same effect. -storlek */
-	if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
-		if (k->state) {
-			if (tracing_was_playing) {
-				midi_playback_tracing = playback_tracing = 1;
-				song_start_at_pattern(current_pattern, tracing_was_playing-1);
-				tracing_was_playing = 0;
-			}
-		} else if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing) {
-			tracing_was_playing = current_row + 1;
-			midi_playback_tracing = playback_tracing = 0;
-			song_single_step(current_pattern, current_row);
-		}
-	}
-#endif
 
 	if (k->mod & KMOD_SHIFT) {
 		switch (k->sym) {
