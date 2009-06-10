@@ -298,17 +298,10 @@ static void sample_list_predraw_hook(void)
 
 	if (need_retrigger > -1) {
 		if (last_keyup > -1)
-			song_keyup(current_sample, -1, last_keyup,
-						KEYDOWN_CHAN_CURRENT, 0);
-		song_keyup(current_sample, -1, need_retrigger,
-						KEYDOWN_CHAN_CURRENT, 0);
-		song_keydown(current_sample, -1, need_retrigger, 64,
-						KEYDOWN_CHAN_CURRENT, 0);
-		if (!song_is_multichannel_mode()) {
-			last_keyup = need_retrigger;
-		} else {
-			last_keyup = -1;
-		}
+			song_keyup(current_sample, -1, last_keyup);
+		song_keyup(current_sample, -1, need_retrigger);
+		song_keydown(current_sample, -1, need_retrigger, 64, KEYDOWN_CHAN_CURRENT);
+		last_keyup = song_is_multichannel_mode() ? -1 : need_retrigger;
 		song_update_playing_sample(current_sample);
 		need_retrigger = -1;
 	}
@@ -536,7 +529,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				if (k->mouse == MOUSE_DBLCLICK
 				|| (new_sample == current_sample
 				&& sample_list_cursor_pos == 25)) {
-					need_retrigger = 61;
+					need_retrigger = 61; /* C-5 */
 					status.flags |= NEED_UPDATE;
 				}
 				new_cursor_pos = 25;

@@ -530,13 +530,12 @@ int song_is_multichannel_mode(void);
 void song_change_current_play_channel(int relative, int wraparound);
 int song_get_current_play_channel(void);
 
-/* these return the selected channel */
-#define KEYDOWN_CHAN_JAM	-1
-#define KEYDOWN_CHAN_CURRENT	-2
-int song_keydown(int s,int ins, int n, int v, int c, int *mm);
-int song_keyrecord(int s,int ins, int n, int v, int c, int *mm,
-						int effect, int param);
-int song_keyup(int s,int ins, int n, int c, int *mm);
+/* these return the channel that was used for the note */
+#define KEYDOWN_CHAN_CURRENT 0
+int song_keydown(int samp, int ins, int note, int vol, int chan);
+int song_keyrecord(int samp, int ins, int note, int vol, int chan,
+		int effect, int param);
+int song_keyup(int samp, int ins, int note);
 
 void song_start(void);
 void song_start_once(void);

@@ -328,11 +328,9 @@ static void load_sample_draw_const(void)
 	if (need_trigger > -1) {
 		if (fake_slot > -1) {
 			if (need_keyoff > -1)
-				song_keyup(fake_slot, -1, need_keyoff,
-						KEYDOWN_CHAN_CURRENT, 0);
-			song_keydown(fake_slot, -1,
-						need_keyoff = need_trigger, 64,
-						KEYDOWN_CHAN_CURRENT, 0);
+				song_keyup(fake_slot, -1, need_keyoff);
+			need_keyoff = need_trigger;
+			song_keydown(fake_slot, -1, need_trigger, 64, KEYDOWN_CHAN_CURRENT);
 		}
 		need_trigger = -1;
 	}
@@ -823,17 +821,14 @@ static void load_sample_handle_key(struct key_event * k)
 			}
 		} else {
 			if (need_keyoff > -1) {
-				song_keyup(fake_slot, -1, need_keyoff,
-						KEYDOWN_CHAN_CURRENT, 0);
+				song_keyup(fake_slot, -1, need_keyoff);
 				need_keyoff = -1;
 			}
 			if (k->state) {
-				song_keyup(fake_slot, -1, n,
-						KEYDOWN_CHAN_CURRENT, 0);
+				song_keyup(fake_slot, -1, n);
 				status.last_keysym = 0;
 			} else if (!k->is_repeat) {
-				song_keydown(fake_slot, -1, n, v,
-						KEYDOWN_CHAN_CURRENT, 0);
+				song_keydown(fake_slot, -1, n, v, KEYDOWN_CHAN_CURRENT);
 			}
 			need_trigger = -1;
 		}
