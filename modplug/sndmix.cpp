@@ -154,7 +154,7 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 	lRead = lMax;
 
 	if (csf->m_dwSongFlags & SONG_ENDREACHED)
-		goto MixDone;
+		lRead = 0; // skip the loop
 
 	while (lRead > 0) {
 		// Update Channel Data
@@ -171,14 +171,14 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 					return 0; /* faster */
 
 				if (lRead == lMax)
-					goto MixDone;
+					break;
 
 				if (!(csf->gdwSoundSetup & SNDMIX_DIRECTTODISK))
 					csf->m_nBufferCount = lRead;
 			}
 
 			if (!csf->m_nBufferCount)
-				goto MixDone;
+				break;
 		}
 
 		lCount = csf->m_nBufferCount;
@@ -233,7 +233,6 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 		csf->m_nBufferCount -= lCount;
 	}
 
-MixDone:
 	if (lRead)
 		memset(lpBuffer, (csf->gnBitsPerSample == 8) ? 0x80 : 0, lRead * lSampleSize);
 
@@ -778,7 +777,6 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 }
 
 
-#include "snd_fx.h"
 static inline int rn_arpeggio(CSoundFile *csf, SONGVOICE *chan, int period)
 {
 	int a;
@@ -1256,7 +1254,8 @@ int csf_read_note(CSoundFile *csf)
 			int period = chan->nPeriod;
 
 			if ((chan->dwFlags & (CHN_GLISSANDO|CHN_PORTAMENTO)) == (CHN_GLISSANDO|CHN_PORTAMENTO)) {
-				period = csf->GetPeriodFromNote(get_note_from_period(period), 0, chan->nC5Speed);
+				period = get_period_from_note(get_note_from_period(period),
+					chan->nC5Speed, csf->m_dwSongFlags & SONG_LINEARSLIDES);
 			}
 
 			// Arpeggio ?
@@ -1284,7 +1283,8 @@ int csf_read_note(CSoundFile *csf)
 			if (chan->pInstrument && chan->pInstrument->nVibDepth)
 				rn_instrument_vibrato(csf, chan, &period, &nPeriodFrac);
 
-			unsigned int freq = csf->GetFreqFromPeriod(period, chan->nC5Speed, nPeriodFrac);
+			unsigned int freq = get_freq_from_period(period, chan->nC5Speed, nPeriodFrac,
+				csf->m_dwSongFlags & SONG_LINEARSLIDES);
 			
 			if (!(chan->dwFlags & CHN_NOTEFADE))
 				rn_gen_key(csf, chan, cn, freq, vol);
