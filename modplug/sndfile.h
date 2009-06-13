@@ -564,7 +564,6 @@ public:
 	bool ReadIT(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool Read669(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadUlt(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadWav(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadFAR(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength);
