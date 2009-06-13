@@ -244,7 +244,6 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	csf_set_wave_config(mp, dw->rate*=2, dw->bits, dw->channels);
         csf_init_player(mp, 1);
 
-	//CSoundFile::gpSndMixHook = _dw_times_3;
 	CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	status.flags |= (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN);
 
@@ -259,7 +258,6 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 
 	if (!fp_ok) {
 		diskwriter_finish();
-		CSoundFile::gpSndMixHook = NULL;
 		status.flags &= ~(DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN);
 		return DW_ERROR;
 	}
@@ -651,7 +649,6 @@ int diskwriter_finish(void)
 		fini_patno = -1;
 		fini_bindme = -1;
 	}
-	CSoundFile::gpSndMixHook = NULL;
 
 	if (dw->m || dw->g) {
 		song_init_audio(0);

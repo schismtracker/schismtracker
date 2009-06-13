@@ -30,7 +30,7 @@ CSoundFile::CSoundFile()
     : Voices(), VoiceMix(), Samples(), Instruments(),
       Channels(), Patterns(), PatternSize(),
       PatternAllocSize(), Orderlist(),
-      m_MidiCfg(), m_MixPlugins(),
+      m_MidiCfg(),
       m_nDefaultSpeed(),
       m_nDefaultTempo(),
       m_nDefaultGlobalVolume(),
@@ -60,7 +60,6 @@ CSoundFile::CSoundFile()
 	memset(Instruments, 0, sizeof(Instruments));
 	memset(Orderlist, 0xFF, sizeof(Orderlist));
 	memset(Patterns, 0, sizeof(Patterns));
-	memset(m_MixPlugins, 0, sizeof(m_MixPlugins));
 }
 
 
@@ -106,7 +105,6 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	memset(Instruments, 0, sizeof(Instruments));
 	memset(Orderlist, 0xFF, sizeof(Orderlist));
 	memset(Patterns, 0, sizeof(Patterns));
-	memset(m_MixPlugins, 0, sizeof(m_MixPlugins));
 	ResetMidiCfg();
 	for (uint32_t npt=0; npt<MAX_PATTERNS; npt++) {
 		PatternSize[npt] = 64;
@@ -197,22 +195,7 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nNextRow = 0;
 	m_nRow = 0;
 	if ((m_nRestartPos >= MAX_ORDERS) || (Orderlist[m_nRestartPos] >= MAX_PATTERNS)) m_nRestartPos = 0;
-	// Load plugins
-	if (gpMixPluginCreateProc)
-	{
-		for (uint32_t iPlug=0; iPlug<MAX_MIXPLUGINS; iPlug++)
-		{
-			if ((m_MixPlugins[iPlug].Info.dwPluginId1)
-			 || (m_MixPlugins[iPlug].Info.dwPluginId2))
-			{
-				gpMixPluginCreateProc(&m_MixPlugins[iPlug]);
-				if (m_MixPlugins[iPlug].pMixPlugin)
-				{
-					m_MixPlugins[iPlug].pMixPlugin->RestoreAllParameters();
-				}
-			}
-		}
-	}
+
 	return m_nType ? true : false;
 }
 
@@ -249,21 +232,7 @@ bool CSoundFile::Destroy()
 			Instruments[i] = NULL;
 		}
 	}
-	for (i=0; i<MAX_MIXPLUGINS; i++)
-	{
-		if ((m_MixPlugins[i].nPluginDataSize) && (m_MixPlugins[i].pPluginData))
-		{
-			m_MixPlugins[i].nPluginDataSize = 0;
-			delete [] (signed char*)m_MixPlugins[i].pPluginData;
-			m_MixPlugins[i].pPluginData = NULL;
-		}
-		m_MixPlugins[i].pMixState = NULL;
-		if (m_MixPlugins[i].pMixPlugin)
-		{
-			m_MixPlugins[i].pMixPlugin->Release();
-			m_MixPlugins[i].pMixPlugin = NULL;
-		}
-	}
+
 	m_nType = MOD_TYPE_NONE;
 	m_nChannels = m_nSamples = m_nInstruments = 0;
 	return true;
