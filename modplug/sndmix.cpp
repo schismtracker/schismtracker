@@ -28,8 +28,6 @@ uint32_t CSoundFile::gnBitsPerSample = 16;
 unsigned int CSoundFile::gnVolumeRampSamples = 64;
 unsigned int CSoundFile::gnVULeft = 0;
 unsigned int CSoundFile::gnVURight = 0;
-LPSNDMIXHOOKPROC CSoundFile::gpSndMixHook = NULL;
-PMIXPLUGINCREATEPROC CSoundFile::gpMixPluginCreateProc = NULL;
 int32_t gnDryROfsVol = 0;
 int32_t gnDryLOfsVol = 0;
 int gbInitPlugins = 0;
@@ -138,19 +136,10 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 	int32_t vu_min[2];
 	int32_t vu_max[2];
 	unsigned int lRead, lMax, lSampleSize, lCount, lSampleCount, nStat=0;
-#if 0
-	unsigned int nMaxPlugins;
-#endif
 
 	vu_min[0] = vu_min[1] = 0x7FFFFFFF;
 	vu_max[0] = vu_max[1] = -0x7FFFFFFF;
 
-#if 0
-	{
-		nMaxPlugins = MAX_MIXPLUGINS;
-		while ((nMaxPlugins > 0) && (!m_MixPlugins[nMaxPlugins-1].pMixPlugin)) nMaxPlugins--;
-	}
-#endif
 
 	csf->m_nMixStat = 0;
 	lSampleSize = csf->gnChannels;
@@ -236,11 +225,6 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 		if (csf->gnChannels > 2) {
 			interleave_front_rear(MixSoundBuffer, MixRearBuffer, lSampleCount);
 			lTotalSampleCount *= 2;
-		}
-
-		// Hook Function
-		if (csf->gpSndMixHook) {
-			csf->gpSndMixHook(MixSoundBuffer, lTotalSampleCount, csf->gnChannels);
 		}
 
 		// Perform clipping + VU-Meter

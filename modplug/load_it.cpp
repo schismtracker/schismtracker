@@ -13,21 +13,12 @@
 this is a schism header */
 #include "midi.h"
 
-uint8_t autovibit2xm[8] =
-{ 0, 3, 1, 4, 2, 0, 0, 0 };
-
-uint8_t autovibxm2it[8] =
-{ 0, 2, 4, 1, 3, 0, 0, 0 };
+uint8_t autovibit2xm[8] = { 0, 3, 1, 4, 2, 0, 0, 0 };
+uint8_t autovibxm2it[8] = { 0, 2, 4, 1, 3, 0, 0, 0 };
 
 //////////////////////////////////////////////////////////
 // Impulse Tracker IT file support (import only)
 
-
-static inline uint32_t ConvertVolParam(uint32_t value)
-//--------------------------------------------
-{
-	return (value > 9)  ? 9 : value;
-}
 
 
 bool CSoundFile::ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers)
@@ -224,7 +215,6 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 				pins->nSustainEnd = pis.susloopend;
 				pins->nC5Speed = pis.C5Speed;
 				if (!pins->nC5Speed) pins->nC5Speed = 8363;
-				//if (pis.C5Speed < 256) pins->nC5Speed = 256;
 				pins->nVolume = pis.vol << 2;
 				if (pins->nVolume > 256) pins->nVolume = 256;
 				pins->nGlobalVol = pis.gvl;
@@ -410,50 +400,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	} else {
 		ResetMidiCfg();
 	}
-#if 0
-	// Read pattern names: "PNAM"
-	if ((dwMemPos + 8 < dwMemLength) && (bswapLE32(*((uint32_t *)(lpStream+dwMemPos))) == 0x4d414e50))
-	{
-		uint32_t len = bswapLE32(*((uint32_t *)(lpStream+dwMemPos+4)));
-		dwMemPos += 8;
-		if ((dwMemPos + len <= dwMemLength) && (len <= MAX_PATTERNS*MAX_PATTERNNAME) && (len >= MAX_PATTERNNAME))
-		{
-			m_lpszPatternNames = new char[len];
-			if (m_lpszPatternNames)
-			{
-				m_nCurrentPatternNames = len / MAX_PATTERNNAME;
-				memcpy(m_lpszPatternNames, lpStream+dwMemPos, len);
-			}
-			dwMemPos += len;
-		}
-	}
-#endif
 	// 4-channels minimum
 	m_nChannels = 4;
-#if 0
-	// Read channel names: "CNAM"
-	if ((dwMemPos + 8 < dwMemLength) && (bswapLE32(*((uint32_t *)(lpStream+dwMemPos))) == 0x4d414e43))
-	{
-		uint32_t len = bswapLE32(*((uint32_t *)(lpStream+dwMemPos+4)));
-		dwMemPos += 8;
-		if ((dwMemPos + len <= dwMemLength) && (len <= 64*MAX_CHANNELNAME))
-		{
-			uint32_t n = len / MAX_CHANNELNAME;
-			if (n > m_nChannels) m_nChannels = n;
-			for (uint32_t i=0; i<n; i++)
-			{
-				memcpy(Channels[i].szName, (lpStream+dwMemPos+i*MAX_CHANNELNAME), MAX_CHANNELNAME);
-				Channels[i].szName[MAX_CHANNELNAME-1] = 0;
-			}
-			dwMemPos += len;
-		}
-	}
-	// Read mix plugins information
-	if (dwMemPos + 8 < dwMemLength)
-	{
-		dwMemPos += LoadMixPlugins(lpStream+dwMemPos, dwMemLength-dwMemPos);
-	}
-#endif
 	// Checking for unused channels
 	uint32_t npatterns = pifh.patnum;
 	if (npatterns > MAX_PATTERNS) npatterns = MAX_PATTERNS;
@@ -541,7 +489,6 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			pins->nSustainEnd = pis.susloopend;
 			pins->nC5Speed = pis.C5Speed;
 			if (!pins->nC5Speed) pins->nC5Speed = 8363;
-			//if (pis.C5Speed < 256) pins->nC5Speed = 256;
 			pins->nVolume = pis.vol << 2;
 			if (pins->nVolume > 256) pins->nVolume = 256;
 			pins->nGlobalVol = pis.gvl;
@@ -908,131 +855,5 @@ void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, ui
 		pDst += d;
 		if (pSrc >= lpMemFile+dwMemLength) break;
 	}
-}
-
-
-#if 0
-uint32_t CSoundFile::SaveMixPlugins(FILE *f, bool bUpdate)
-//----------------------------------------------------
-{
-	uint32_t chinfo[64];
-	int8_t s[32];
-	uint32_t nPluginSize;
-	uint32_t nTotalSize = 0;
-	uint32_t nChInfo = 0;
-
-	for (uint32_t i=0; i<MAX_MIXPLUGINS; i++)
-	{
-		PSNDMIXPLUGIN p = &m_MixPlugins[i];
-		if ((p->Info.dwPluginId1) || (p->Info.dwPluginId2))
-		{
-			nPluginSize = sizeof(SNDMIXPLUGININFO)+4; // plugininfo+4 (datalen)
-			if ((p->pMixPlugin) && (bUpdate))
-			{
-				p->pMixPlugin->SaveAllParameters();
-			}
-			if (p->pPluginData)
-			{
-				nPluginSize += p->nPluginDataSize;
-			}
-			if (f)
-			{
-				s[0] = 'F';
-				s[1] = 'X';
-				s[2] = '0' + (i/10);
-				s[3] = '0' + (i%10);
-				fwrite(s, 1, 4, f);
-				fwrite(&nPluginSize, 1, 4, f);
-				fwrite(&p->Info, 1, sizeof(SNDMIXPLUGININFO), f);
-				fwrite(&m_MixPlugins[i].nPluginDataSize, 1, 4, f);
-				if (m_MixPlugins[i].pPluginData)
-				{
-					fwrite(m_MixPlugins[i].pPluginData, 1, m_MixPlugins[i].nPluginDataSize, f);
-				}
-			}
-			nTotalSize += nPluginSize + 8;
-		}
-	}
-	for (uint32_t j=0; j<m_nChannels; j++)
-	{
-		if (j < 64)
-		{
-			if ((chinfo[j] = Channels[j].nMixPlugin) != 0)
-			{
-				nChInfo = j+1;
-			}
-		}
-	}
-	if (nChInfo)
-	{
-		if (f)
-		{
-			nPluginSize = 0x58464843;
-			fwrite(&nPluginSize, 1, 4, f);
-			nPluginSize = nChInfo*4;
-			fwrite(&nPluginSize, 1, 4, f);
-			fwrite(chinfo, 1, nPluginSize, f);
-		}
-		nTotalSize += nChInfo*4 + 8;
-	}
-	return nTotalSize;
-}
-#endif
-
-
-uint32_t CSoundFile::LoadMixPlugins(const void *pData, uint32_t nLen)
-//-----------------------------------------------------------
-{
-	const uint8_t *p = (const uint8_t *)pData;
-	uint32_t nPos = 0;
-
-	while (nPos+8 < nLen)
-	{
-		uint32_t nPluginSize;
-		uint32_t nPlugin;
-
-		nPluginSize = bswapLE32(*(uint32_t *)(p+nPos+4));
-		if (nPluginSize > nLen-nPos-8) break;;
-		if ((bswapLE32(*(uint32_t *)(p+nPos))) == 0x58464843)
-		{
-			for (uint32_t ch=0; ch<64; ch++) if (ch*4 < nPluginSize)
-			{
-				Channels[ch].nMixPlugin = bswapLE32(*(uint32_t *)(p+nPos+8+ch*4));
-			}
-		} else
-		{
-			if ((p[nPos] != 'F') || (p[nPos+1] != 'X')
-			 || (p[nPos+2] < '0') || (p[nPos+3] < '0'))
-			{
-				break;
-			}
-			nPlugin = (p[nPos+2]-'0')*10 + (p[nPos+3]-'0');
-			if ((nPlugin < MAX_MIXPLUGINS) && (nPluginSize >= sizeof(SNDMIXPLUGININFO)+4))
-			{
-				uint32_t dwExtra = bswapLE32(*(uint32_t *)(p+nPos+8+sizeof(SNDMIXPLUGININFO)));
-				m_MixPlugins[nPlugin].Info = *(const SNDMIXPLUGININFO *)(p+nPos+8);
-				m_MixPlugins[nPlugin].Info.dwPluginId1 = bswapLE32(m_MixPlugins[nPlugin].Info.dwPluginId1);
-				m_MixPlugins[nPlugin].Info.dwPluginId2 = bswapLE32(m_MixPlugins[nPlugin].Info.dwPluginId2);
-				m_MixPlugins[nPlugin].Info.dwInputRouting = bswapLE32(m_MixPlugins[nPlugin].Info.dwInputRouting);
-				m_MixPlugins[nPlugin].Info.dwOutputRouting = bswapLE32(m_MixPlugins[nPlugin].Info.dwOutputRouting);
-				for (uint32_t j=0; j<4; j++)
-				{
-				        m_MixPlugins[nPlugin].Info.dwReserved[j] = bswapLE32(m_MixPlugins[nPlugin].Info.dwReserved[j]);
-				}
-				if ((dwExtra) && (dwExtra <= nPluginSize-sizeof(SNDMIXPLUGININFO)-4))
-				{
-					m_MixPlugins[nPlugin].nPluginDataSize = 0;
-					m_MixPlugins[nPlugin].pPluginData = new signed char [dwExtra];
-					if (m_MixPlugins[nPlugin].pPluginData)
-					{
-						m_MixPlugins[nPlugin].nPluginDataSize = dwExtra;
-						memcpy(m_MixPlugins[nPlugin].pPluginData, p+nPos+8+sizeof(SNDMIXPLUGININFO)+4, dwExtra);
-					}
-				}
-			}
-		}
-		nPos += nPluginSize + 8;
-	}
-	return nPos;
 }
 

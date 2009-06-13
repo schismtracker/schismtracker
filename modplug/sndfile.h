@@ -34,7 +34,6 @@
 #define MAX_ENVPOINTS           32
 #define MAX_INFONAME            80
 #define MAX_EQ_BANDS            6
-#define MAX_MIXPLUGINS          8
 
 
 #define MOD_TYPE_NONE           0x00
@@ -421,7 +420,6 @@ typedef struct _MODCHANNELSETTINGS
 	uint32_t nPan;
 	uint32_t nVolume;
 	uint32_t dwFlags;
-	uint32_t nMixPlugin;
 } MODCHANNELSETTINGS;
 
 
@@ -434,63 +432,6 @@ typedef struct _MODCOMMAND
 	uint8_t vol;
 	uint8_t param;
 } MODCOMMAND, *LPMODCOMMAND;
-
-////////////////////////////////////////////////////////////////////
-// Mix Plugins
-#define MIXPLUG_MIXREADY                        0x01    // Set when cleared
-
-#ifdef __cplusplus
-class IMixPlugin
-{
-public:
-	virtual ~IMixPlugin() = 0;
-	virtual int AddRef() = 0;
-	virtual int Release() = 0;
-	virtual void SaveAllParameters() = 0;
-	virtual void RestoreAllParameters() = 0;
-	virtual void Process(float *pOutL, float *pOutR, unsigned int nSamples) = 0;
-	virtual void Init(unsigned int nFreq, int bReset) = 0;
-	virtual void MidiSend(uint32_t dwMidiCode) = 0;
-	virtual void MidiCommand(uint32_t nMidiCh, uint32_t nMidiProg, uint32_t note, uint32_t vol) = 0;
-};
-#endif
-
-#define MIXPLUG_INPUTF_MASTEREFFECT             0x01    // Apply to master mix
-#define MIXPLUG_INPUTF_BYPASS                   0x02    // Bypass effect
-#define MIXPLUG_INPUTF_WETMIX                   0x04    // Wet Mix (dry added)
-
-typedef struct _SNDMIXPLUGINSTATE
-{
-	uint32_t dwFlags;                                  // MIXPLUG_XXXX
-	int32_t nVolDecayL, nVolDecayR;    // Buffer click removal
-	int *pMixBuffer;                                // Stereo effect send buffer
-	float *pOutBufferL;                             // Temp storage for int -> float conversion
-	float *pOutBufferR;
-} SNDMIXPLUGINSTATE, *PSNDMIXPLUGINSTATE;
-
-typedef struct _SNDMIXPLUGININFO
-{
-	uint32_t dwPluginId1;
-	uint32_t dwPluginId2;
-	uint32_t dwInputRouting;   // MIXPLUG_INPUTF_XXXX
-	uint32_t dwOutputRouting;  // 0=mix 0x80+=fx
-	uint32_t dwReserved[4];    // Reserved for routing info
-	int8_t szName[32];
-	int8_t szLibraryName[64]; // original DLL name
-} SNDMIXPLUGININFO, *PSNDMIXPLUGININFO; // Size should be 128
-
-#ifdef __cplusplus
-typedef struct _SNDMIXPLUGIN
-{
-	IMixPlugin *pMixPlugin;
-	PSNDMIXPLUGINSTATE pMixState;
-	uint32_t nPluginDataSize;
-	void * pPluginData;
-	SNDMIXPLUGININFO Info;
-} SNDMIXPLUGIN, *PSNDMIXPLUGIN;
-
-typedef bool (*PMIXPLUGINCREATEPROC)(PSNDMIXPLUGIN);
-#endif
 
 ////////////////////////////////////////////////////////////////////
 
@@ -509,13 +450,11 @@ enum {
 
 typedef struct MODMIDICFG
 {
-	char szMidiGlb[9*32];      // changed from int8_t
-	char szMidiSFXExt[16*32];  // changed from int8_t
-	char szMidiZXXExt[128*32]; // changed from int8_t
+	char szMidiGlb[9*32];
+	char szMidiSFXExt[16*32];
+	char szMidiZXXExt[128*32];
 } MODMIDICFG, *LPMODMIDICFG;
 
-
-typedef void (* LPSNDMIXHOOKPROC)(int *, unsigned int, unsigned int); // buffer, samples, channels
 
 
 #ifdef __cplusplus
@@ -533,8 +472,6 @@ public: // Static Members
 	static uint32_t gdwSysInfo, gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
 	static uint32_t gnVolumeRampSamples;
 	static uint32_t gnVULeft, gnVURight;
-	static LPSNDMIXHOOKPROC gpSndMixHook;
-	static PMIXPLUGINCREATEPROC gpMixPluginCreateProc;
 
 public: // for Editing
 	SONGVOICE Voices[MAX_VOICES];                                   // Channels
@@ -547,7 +484,6 @@ public: // for Editing
 	uint16_t PatternAllocSize[MAX_PATTERNS];                            // Allocated pattern lengths (for async. resizing/playback)
 	uint8_t Orderlist[MAX_ORDERS];                                                 // Pattern Orders
 	MODMIDICFG m_MidiCfg;                                                   // Midi macro config table
-	SNDMIXPLUGIN m_MixPlugins[MAX_MIXPLUGINS];              // Mix plugins
 	uint32_t m_nDefaultSpeed, m_nDefaultTempo, m_nDefaultGlobalVolume;
 	uint32_t m_dwSongFlags;                                                    // Song flags SONG_XXXX
 	uint32_t m_nStereoSeparation;
@@ -710,8 +646,6 @@ public:
 	void ResetMidiCfg();
 	uint32_t MapMidiInstrument(uint32_t dwProgram, uint32_t nChannel, uint32_t nNote);
 	bool ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers);
-	uint32_t SaveMixPlugins(FILE *f=NULL, bool bUpdate=true);
-	uint32_t LoadMixPlugins(const void *pData, uint32_t nLen);
 	void ResetTimestamps(); // for note playback dots
 
 	// System-Dependant functions

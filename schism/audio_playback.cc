@@ -1414,8 +1414,6 @@ RETRY:	using_driver = driver;
 		audio_output_bits = 8;
 		audio_sample_size = 2;
 
-		mp->gpSndMixHook = NULL;
-
 		audio_buffer = audio_buffer_;
 
 		fprintf(stderr, "Starting up nosound device...\n");
@@ -1491,8 +1489,6 @@ RETRY:	using_driver = driver;
 		audio_output_bits = obtained.format & 255;
 		audio_sample_size = audio_output_channels * (audio_output_bits/8);
 
-		mp->gpSndMixHook = NULL;
-
 		if (need_name) SDL_AudioDriverName(driver_name, sizeof(driver_name));
 
 		song_print_info_top(driver_name);
@@ -1547,8 +1543,6 @@ void song_init_modplug(void)
 {
 	song_lock_audio();
 	
-	CSoundFile::gpSndMixHook = NULL;
-
         CSoundFile::m_nMaxMixChannels = audio_settings.channel_limit;
 	// the last param is the equalizer, which apparently isn't functional
         csf_set_wave_config_ex(mp, false,
@@ -1586,7 +1580,6 @@ void song_initialise(void)
 {
 	CSoundFile::_midi_out_note = _schism_midi_out_note;
 	CSoundFile::_midi_out_raw = _schism_midi_out_raw;
-	CSoundFile::gpSndMixHook = NULL;
 
 	mp = new CSoundFile;
 
