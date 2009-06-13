@@ -603,13 +603,12 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 }
 
 
-uint32_t CSoundFile::GetNNAChannel(uint32_t nChn)
-//---------------------------------------------
+uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn)
 {
-	SONGVOICE *pChn = &Voices[nChn];
+	SONGVOICE *pChn = &csf->Voices[nChn];
 	// Check for empty channel
-	SONGVOICE *pi = &Voices[m_nChannels];
-	for (uint32_t i=m_nChannels; i<MAX_VOICES; i++, pi++) {
+	SONGVOICE *pi = &csf->Voices[csf->m_nChannels];
+	for (uint32_t i=csf->m_nChannels; i<MAX_VOICES; i++, pi++) {
 		if (!pi->nLength) {
 			if (pi->dwFlags & CHN_MUTE) {
 				if (pi->dwFlags & CHN_NNAMUTE) {
@@ -627,9 +626,8 @@ uint32_t CSoundFile::GetNNAChannel(uint32_t nChn)
 	uint32_t result = 0;
 	uint32_t vol = 64*65536;	// 25%
 	int envpos = 0xFFFFFF;
-	const SONGVOICE *pj = &Voices[m_nChannels];
-	for (uint32_t j=m_nChannels; j<MAX_VOICES; j++, pj++)
-	{
+	const SONGVOICE *pj = &csf->Voices[csf->m_nChannels];
+	for (uint32_t j=csf->m_nChannels; j<MAX_VOICES; j++, pj++) {
 		if (!pj->nFadeOutVol) return j;
 		uint32_t v = pj->nVolume;
 		if (pj->dwFlags & CHN_NOTEFADE)
@@ -637,8 +635,7 @@ uint32_t CSoundFile::GetNNAChannel(uint32_t nChn)
 		else
 			v <<= 16;
 		if (pj->dwFlags & CHN_LOOP) v >>= 1;
-		if ((v < vol) || ((v == vol) && (pj->nVolEnvPosition > envpos)))
-		{
+		if (v < vol || (v == vol && pj->nVolEnvPosition > envpos)) {
 			envpos = pj->nVolEnvPosition;
 			vol = v;
 			result = j;
@@ -646,32 +643,28 @@ uint32_t CSoundFile::GetNNAChannel(uint32_t nChn)
 	}
 	if (result) {
 		/* unmute new nna channel */
-		Voices[result].dwFlags &= ~(CHN_MUTE|CHN_NNAMUTE);
+		csf->Voices[result].dwFlags &= ~(CHN_MUTE|CHN_NNAMUTE);
 	}
 	return result;
 }
 
 
-void CSoundFile::CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCut)
-//------------------------------------------------------------------------
+void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, bool bForceCut)
 {
         SONGVOICE *p;
-	SONGVOICE *pChn = &Voices[nChn];
-	SONGINSTRUMENT *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	SONGVOICE *pChn = &csf->Voices[nChn];
+	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	SONGINSTRUMENT *pHeader;
 	signed char *pSample;
-	if (note > 0x80) note = 0;
-	if (note < 1) return;
+	if (note < 1 || note > 0x80)
+		return;
 	// Always NNA cut - using
-	if ((!(m_dwSongFlags & SONG_INSTRUMENTMODE)) || (bForceCut))
-	{
-		if ((!pChn->nLength)
-		    || (pChn->dwFlags & CHN_MUTE)
-		    || ((!pChn->nLeftVol) && (!pChn->nRightVol)))
+	if (bForceCut || !(csf->m_dwSongFlags & SONG_INSTRUMENTMODE)) {
+		if (!pChn->nLength || (pChn->dwFlags & CHN_MUTE) || (!pChn->nLeftVol && !pChn->nRightVol))
 			return;
-		uint32_t n = GetNNAChannel(nChn);
+		uint32_t n = csf_get_nna_channel(csf, nChn);
 		if (!n) return;
-		p = &Voices[n];
+		p = &csf->Voices[n];
 		// Copy Channel
 		*p = *pChn;
 		p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
@@ -691,94 +684,86 @@ void CSoundFile::CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCu
 	if (instr >= MAX_INSTRUMENTS) instr = 0;
 	pSample = pChn->pSample;
 	pHeader = pChn->pHeader;
-	if ((instr) && (note))
-	{
-		pHeader = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? Instruments[instr] : NULL;
-		if (pHeader)
-		{
+	if (instr && note) {
+		pHeader = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
+		if (pHeader) {
 			uint32_t n = 0;
-			if (note <= 0x80)
-			{
+			if (note <= 0x80) {
 				n = pHeader->Keyboard[note-1];
 				note = pHeader->NoteMap[note-1];
-				if ((n) && (n < MAX_SAMPLES)) pSample = Samples[n].pSample;
+				if ((n) && (n < MAX_SAMPLES)) pSample = csf->Samples[n].pSample;
 			}
-		} else pSample = NULL;
+		} else {
+			pSample = NULL;
+		}
 	}
 	if (!penv) return;
 	p = pChn;
-	for (uint32_t i=nChn; i<MAX_VOICES; p++, i++)
-	if ((i >= m_nChannels) || (p == pChn))
-	{
-		if (((p->nMasterChn == nChn+1) || (p == pChn)) && (p->pHeader))
-		{
-			bool bOk = false;
-			// Duplicate Check Type
-			switch(p->pHeader->nDCT)
-			{
-			// Note
-			case DCT_NOTE:
-				if ((note) && ((int)p->nNote == note) && (pHeader == p->pHeader)) bOk = true;
+	for (uint32_t i=nChn; i<MAX_VOICES; p++, i++) {
+		if (!((i >= csf->m_nChannels || p == pChn)
+		      && ((p->nMasterChn == nChn+1 || p == pChn)
+		          && p->pHeader)))
+			continue;
+		bool bOk = false;
+		// Duplicate Check Type
+		switch (p->pHeader->nDCT) {
+		case DCT_NOTE:
+			if (note && (int) p->nNote == note && pHeader == p->pHeader)
+				bOk = true;
+			break;
+		case DCT_SAMPLE:
+			if (pSample && pSample == p->pSample)
+				bOk = true;
+			break;
+		case DCT_INSTRUMENT:
+			if (pHeader == p->pHeader)
+				bOk = true;
+			break;
+		}
+		// Duplicate Note Action
+		if (bOk) {
+			switch(p->pHeader->nDNA) {
+			case DNA_NOTECUT:
+				csf->KeyOff(i);
+				p->nVolume = 0;
 				break;
-			// Sample
-			case DCT_SAMPLE:
-				if ((pSample) && (pSample == p->pSample)) bOk = true;
+			case DNA_NOTEOFF:
+				csf->KeyOff(i);
 				break;
-			// Instrument
-			case DCT_INSTRUMENT:
-				if (pHeader == p->pHeader) bOk = true;
+			case DNA_NOTEFADE:
+				p->dwFlags |= CHN_NOTEFADE;
 				break;
 			}
-			// Duplicate Note Action
-			if (bOk)
-			{
-				switch(p->pHeader->nDNA)
-				{
-				// Cut
-				case DNA_NOTECUT:
-					KeyOff(i);
-					p->nVolume = 0;
-					break;
-				// Note Off
-				case DNA_NOTEOFF:
-					KeyOff(i);
-					break;
-				// Note Fade
-				case DNA_NOTEFADE:
-					p->dwFlags |= CHN_NOTEFADE;
-					break;
-				}
-				if (!p->nVolume)
-				{
-					p->nFadeOutVol = 0;
-					p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
-				}
+			if (!p->nVolume) {
+				p->nFadeOutVol = 0;
+				p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
 			}
 		}
 	}
-	if (pChn->dwFlags & CHN_MUTE) return;
+	if (pChn->dwFlags & CHN_MUTE)
+		return;
 	// New Note Action
-	if ((pChn->nVolume) && (pChn->nLength))
-	{
-		uint32_t n = GetNNAChannel(nChn);
-		if (n)
-		{
-			p = &Voices[n];
+	if (pChn->nVolume && pChn->nLength) {
+		uint32_t n = csf_get_nna_channel(csf, nChn);
+		if (n) {
+			p = &csf->Voices[n];
 			// Copy Channel
 			*p = *pChn;
 			p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
 			p->nMasterChn = nChn+1;
 			p->nCommand = 0;
 			// Key Off the note
-			switch(pChn->nNNA)
-			{
-			case NNA_NOTEOFF:	KeyOff(n); break;
+			switch(pChn->nNNA) {
+			case NNA_NOTEOFF:
+				csf->KeyOff(n);
+				break;
 			case NNA_NOTECUT:
 				p->nFadeOutVol = 0;
-			case NNA_NOTEFADE:	p->dwFlags |= CHN_NOTEFADE; break;
+			case NNA_NOTEFADE:
+				p->dwFlags |= CHN_NOTEFADE;
+				break;
 			}
-			if (!p->nVolume)
-			{
+			if (!p->nVolume) {
 				p->nFadeOutVol = 0;
 				p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
 			}

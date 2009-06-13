@@ -485,6 +485,8 @@ unsigned int csf_get_length(CSoundFile *csf, bool bAdjust, bool bTotal);
 void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
                            bool bPorta, bool bUpdVol, bool bResetEnv);
 void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual);
+uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn);
+void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, bool bForceCut);
 
 
 //==============
@@ -531,7 +533,7 @@ public: // for Editing
 	int stop_at_row;
 	unsigned int stop_at_time;
 
-	static MODMIDICFG m_MidiCfgDefault;                                                     // Midi macro config table
+	static MODMIDICFG m_MidiCfgDefault;   // Midi macro config table
 public:
 	CSoundFile();
 	~CSoundFile();
@@ -608,8 +610,12 @@ public:
 
 public:
 	bool ProcessEffects();
-	uint32_t GetNNAChannel(uint32_t nChn);
-	void CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCut);
+	uint32_t GetNNAChannel(uint32_t nChn) {
+		return csf_get_nna_channel(this, nChn);
+	}
+	void CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCut) {
+		csf_check_nna(this, nChn, instr, note, bForceCut);
+	}
 	void NoteChange(uint32_t nChn, int note, bool bPorta=false, bool bResetEnv=true, bool bManual=false) {
 		csf_note_change(this, nChn, note, bPorta, bResetEnv, bManual);
 	}
