@@ -456,10 +456,35 @@ typedef struct MODMIDICFG
 } MODMIDICFG, *LPMODMIDICFG;
 
 
-
 #ifdef __cplusplus
 
+class CSoundFile;
 
+int csf_set_wave_config(CSoundFile *csf, uint32_t nRate,uint32_t nBits,uint32_t nChannels);
+int csf_set_wave_config_ex(CSoundFile *csf, bool,bool bNoOverSampling,bool,bool hqido,bool,bool bNR,bool bEQ);
+
+// Mixer Config
+int csf_init_player(CSoundFile *csf, int reset); // bReset=false
+int csf_set_resampling_mode(CSoundFile *csf, uint32_t nMode); // SRCMODE_XXXX
+
+
+// sndmix
+int csf_fade_song(CSoundFile *csf, unsigned int msec);
+int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
+unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer);
+int csf_process_row(CSoundFile *csf);
+int csf_read_note(CSoundFile *csf);
+
+// snd_dsp
+void csf_initialize_dsp(CSoundFile *csf, int reset);
+void csf_process_stereo_dsp(CSoundFile *csf, int count);
+void csf_process_mono_dsp(CSoundFile *csf, int count);
+
+// snd_fx
+unsigned int csf_get_length(CSoundFile *csf, bool bAdjust, bool bTotal);
+void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
+                           bool bPorta, bool bUpdVol, bool bResetEnv);
+void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual);
 
 
 //==============
@@ -521,8 +546,7 @@ public:
 	uint32_t GetMaxPosition() const;
 	void SetCurrentPos(uint32_t nPos);
 	void SetCurrentOrder(uint32_t nOrder);
-	unsigned int GetLength(bool bAdjust, bool bTotal=false);
-	unsigned int GetSongTime() { return GetLength(false, true); }
+	unsigned int GetSongTime() { return csf_get_length(this, false, true); }
 	void SetRepeatCount(int n) { m_nRepeatCount = n; m_nInitialRepeatCount = n; }
 	int GetRepeatCount() const { return m_nRepeatCount; }
 	void LoopPattern(int nPat, int nRow=0);
@@ -586,8 +610,12 @@ public:
 	bool ProcessEffects();
 	uint32_t GetNNAChannel(uint32_t nChn);
 	void CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCut);
-	void NoteChange(uint32_t nChn, int note, bool bPorta=false, bool bResetEnv=true, bool bManual=false);
-	void InstrumentChange(SONGVOICE *pChn, uint32_t instr, bool bPorta=false,bool bUpdVol=true,bool bResetEnv=true);
+	void NoteChange(uint32_t nChn, int note, bool bPorta=false, bool bResetEnv=true, bool bManual=false) {
+		csf_note_change(this, nChn, note, bPorta, bResetEnv, bManual);
+	}
+	void InstrumentChange(SONGVOICE *pChn, uint32_t instr, bool bPorta=false,bool bUpdVol=true,bool bResetEnv=true) {
+		csf_instrument_change(this, pChn, instr, bPorta, bUpdVol, bResetEnv);
+	}
 	void TranslateKeyboard(SONGINSTRUMENT* penv, uint32_t note, SONGSAMPLE*& psmp);
 	// Channel Effects
 	void PortamentoUp(SONGVOICE *pChn, uint32_t param);
@@ -662,25 +690,6 @@ private:
     void operator=(const CSoundFile&);
 };
 
-int csf_set_wave_config(CSoundFile *csf, uint32_t nRate,uint32_t nBits,uint32_t nChannels);
-int csf_set_wave_config_ex(CSoundFile *csf, bool,bool bNoOverSampling,bool,bool hqido,bool,bool bNR,bool bEQ);
-
-// Mixer Config
-int csf_init_player(CSoundFile *csf, int reset); // bReset=false
-int csf_set_resampling_mode(CSoundFile *csf, uint32_t nMode); // SRCMODE_XXXX
-
-
-// sndmix
-int csf_fade_song(CSoundFile *csf, unsigned int msec);
-int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
-unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer);
-int csf_process_row(CSoundFile *csf);
-int csf_read_note(CSoundFile *csf);
-
-// snd_dsp
-void csf_initialize_dsp(CSoundFile *csf, int reset);
-void csf_process_stereo_dsp(CSoundFile *csf, int count);
-void csf_process_mono_dsp(CSoundFile *csf, int count);
 
 #endif
 
