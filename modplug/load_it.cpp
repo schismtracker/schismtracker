@@ -319,7 +319,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (n <= 64) Channels[ipan].nPan = n << 2;
 		if (n == 100) Channels[ipan].dwFlags |= CHN_SURROUND;
 	}
-	if (m_nChannels < 4) m_nChannels = 4;
+	//if (m_nChannels < 4) m_nChannels = 4;
 	// Reading Song Message
 	if ((pifh.special & 0x01) && (pifh.msglength) && (pifh.msgoffset + pifh.msglength < dwMemLength))
 	{
@@ -388,20 +388,13 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (dwMemPos + nflt * 8 < dwMemLength) dwMemPos += nflt * 8;
 	}
 	// Reading Midi Output & Macros
-	if (m_dwSongFlags & SONG_EMBEDMIDICFG)
-	{
-		if (dwMemPos + sizeof(MODMIDICFG) < dwMemLength)
-		{
-			memcpy(&m_MidiCfg, lpStream+dwMemPos, sizeof(MODMIDICFG));
-			dwMemPos += sizeof(MODMIDICFG);
-		} else {
-			ResetMidiCfg();
-		}
+	if ((m_dwSongFlags & SONG_EMBEDMIDICFG) && dwMemPos + sizeof(MODMIDICFG) < dwMemLength) {
+		memcpy(&m_MidiCfg, lpStream+dwMemPos, sizeof(MODMIDICFG));
+		dwMemPos += sizeof(MODMIDICFG);
 	} else {
 		ResetMidiCfg();
 	}
-	// 4-channels minimum
-	m_nChannels = 4;
+	m_nChannels = 64;
 	// Checking for unused channels
 	uint32_t npatterns = pifh.patnum;
 	if (npatterns > MAX_PATTERNS) npatterns = MAX_PATTERNS;
