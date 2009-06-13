@@ -1293,60 +1293,37 @@ bool CSoundFile::ProcessEffects()
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void CSoundFile::PortamentoUp(SONGVOICE *pChn, uint32_t param)
-//---------------------------------------------------------
+static void fx_do_freq_slide(uint32_t flags, SONGVOICE *pChn, int32_t nFreqSlide)
 {
-	if (param) pChn->nOldPortaUpDown = param; else param = pChn->nOldPortaUpDown;
-	if (m_dwSongFlags & SONG_ITCOMPATMODE) pChn->nPortamentoSlide=param*4;
-	else pChn->nPortamentoDest=0;
-	if ((param & 0xF0) >= 0xE0)
-	{
-		if (param & 0x0F)
-		{
-			if ((param & 0xF0) == 0xF0)
-			{
-				FinePortamentoUp(pChn, param & 0x0F);
-			} else
-			if ((param & 0xF0) == 0xE0)
-			{
-				ExtraFinePortamentoUp(pChn, param & 0x0F);
-			}
+	// IT Linear slides
+	if (!pChn->nPeriod) return;
+	if (flags & SONG_LINEARSLIDES) {
+		if (nFreqSlide < 0) {
+			uint32_t n = (-nFreqSlide) >> 2;
+			if (n > 255)
+				n = 255;
+			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideDownTable[n], 65536);
+		} else {
+			uint32_t n = (nFreqSlide) >> 2;
+			if (n > 255)
+				n = 255;
+			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideUpTable[n], 65536);
 		}
-		return;
-	}
-	// Regular Slide
-	if (!(m_dwSongFlags & SONG_FIRSTTICK))
-	{
-		DoFreqSlide(pChn, -(int)(param * 4));
+	} else {
+		pChn->nPeriod += nFreqSlide;
 	}
 }
 
-
-void CSoundFile::PortamentoDown(SONGVOICE *pChn, uint32_t param)
-//-----------------------------------------------------------
+void CSoundFile::DoFreqSlide(SONGVOICE *pChn, int32_t nFreqSlide)
 {
-	if (param) pChn->nOldPortaUpDown = param; else param = pChn->nOldPortaUpDown;
-	if (m_dwSongFlags & SONG_ITCOMPATMODE) pChn->nPortamentoSlide=param*4;
-	else pChn->nPortamentoDest=0;
-	if ((param & 0xF0) >= 0xE0) {
-		if (param & 0x0F) {
-			if ((param & 0xF0) == 0xF0) {
-				FinePortamentoDown(pChn, param & 0x0F);
-			} else if ((param & 0xF0) == 0xE0) {
-				ExtraFinePortamentoDown(pChn, param & 0x0F);
-			}
-		}
-		return;
-	}
-	if (!(m_dwSongFlags & SONG_FIRSTTICK)) DoFreqSlide(pChn, (int)(param << 2));
+	fx_do_freq_slide(m_dwSongFlags, pChn, nFreqSlide);
 }
 
 
-void CSoundFile::FinePortamentoUp(SONGVOICE *pChn, uint32_t param)
-//-------------------------------------------------------------
+static void fx_fine_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
-	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
-		if (m_dwSongFlags & SONG_LINEARSLIDES) {
+	if ((flags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
+		if (flags & SONG_LINEARSLIDES) {
 			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideDownTable[param & 0x0F], 65536);
 		} else {
 			pChn->nPeriod -= (int)(param * 4);
@@ -1354,12 +1331,16 @@ void CSoundFile::FinePortamentoUp(SONGVOICE *pChn, uint32_t param)
 	}
 }
 
-
-void CSoundFile::FinePortamentoDown(SONGVOICE *pChn, uint32_t param)
-//---------------------------------------------------------------
+void CSoundFile::FinePortamentoUp(SONGVOICE *pChn, uint32_t param)
 {
-	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
-		if (m_dwSongFlags & SONG_LINEARSLIDES) {
+	fx_fine_portamento_up(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_fine_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if ((flags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
+		if (flags & SONG_LINEARSLIDES) {
 			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideUpTable[param & 0x0F], 65536);
 		} else {
 			pChn->nPeriod += (int)(param * 4);
@@ -1367,12 +1348,16 @@ void CSoundFile::FinePortamentoDown(SONGVOICE *pChn, uint32_t param)
 	}
 }
 
-
-void CSoundFile::ExtraFinePortamentoUp(SONGVOICE *pChn, uint32_t param)
-//------------------------------------------------------------------
+void CSoundFile::FinePortamentoDown(SONGVOICE *pChn, uint32_t param)
 {
-	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
-		if (m_dwSongFlags & SONG_LINEARSLIDES) {
+	fx_fine_portamento_down(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_extra_fine_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if ((flags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
+		if (flags & SONG_LINEARSLIDES) {
 			pChn->nPeriod = _muldivr(pChn->nPeriod, FineLinearSlideDownTable[param & 0x0F], 65536);
 		} else {
 			pChn->nPeriod -= (int)(param);
@@ -1380,12 +1365,16 @@ void CSoundFile::ExtraFinePortamentoUp(SONGVOICE *pChn, uint32_t param)
 	}
 }
 
-
-void CSoundFile::ExtraFinePortamentoDown(SONGVOICE *pChn, uint32_t param)
-//--------------------------------------------------------------------
+void CSoundFile::ExtraFinePortamentoUp(SONGVOICE *pChn, uint32_t param)
 {
-	if ((m_dwSongFlags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
-		if (m_dwSongFlags & SONG_LINEARSLIDES) {
+	fx_extra_fine_portamento_up(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_extra_fine_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if ((flags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
+		if (flags & SONG_LINEARSLIDES) {
 			pChn->nPeriod = _muldivr(pChn->nPeriod, FineLinearSlideUpTable[param & 0x0F], 65536);
 		} else {
 			pChn->nPeriod += (int)(param);
@@ -1393,20 +1382,82 @@ void CSoundFile::ExtraFinePortamentoDown(SONGVOICE *pChn, uint32_t param)
 	}
 }
 
-
-// Portamento Slide
-void CSoundFile::TonePortamento(SONGVOICE *pChn, uint32_t param)
-//-----------------------------------------------------------
+void CSoundFile::ExtraFinePortamentoDown(SONGVOICE *pChn, uint32_t param)
 {
-	if (param) pChn->nPortamentoSlide = param * 4;
+	fx_extra_fine_portamento_down(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (param)
+		pChn->nOldPortaUpDown = param;
+	else
+		param = pChn->nOldPortaUpDown;
+	if (flags & SONG_ITCOMPATMODE)
+		pChn->nPortamentoSlide=param*4;
+	else
+		pChn->nPortamentoDest=0;
+	if ((param & 0xF0) >= 0xE0) {
+		if (param & 0x0F) {
+			if ((param & 0xF0) == 0xF0) {
+				fx_fine_portamento_up(flags, pChn, param & 0x0F);
+			} else if ((param & 0xF0) == 0xE0) {
+				fx_extra_fine_portamento_up(flags, pChn, param & 0x0F);
+			}
+		}
+		return;
+	}
+	// Regular Slide
+	if (!(flags & SONG_FIRSTTICK))
+		fx_do_freq_slide(flags, pChn, -(int)(param * 4));
+}
+
+void CSoundFile::PortamentoUp(SONGVOICE *pChn, uint32_t param)
+{
+	fx_portamento_up(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (param)
+		pChn->nOldPortaUpDown = param;
+	else
+		param = pChn->nOldPortaUpDown;
+	if (flags & SONG_ITCOMPATMODE)
+		pChn->nPortamentoSlide=param*4;
+	else
+		pChn->nPortamentoDest=0;
+	if ((param & 0xF0) >= 0xE0) {
+		if (param & 0x0F) {
+			if ((param & 0xF0) == 0xF0) {
+				fx_fine_portamento_down(flags, pChn, param & 0x0F);
+			} else if ((param & 0xF0) == 0xE0) {
+				fx_extra_fine_portamento_down(flags, pChn, param & 0x0F);
+			}
+		}
+		return;
+	}
+	if (!(flags & SONG_FIRSTTICK))
+		fx_do_freq_slide(flags, pChn, (int)(param << 2));
+}
+
+void CSoundFile::PortamentoDown(SONGVOICE *pChn, uint32_t param)
+{
+	fx_portamento_down(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_tone_portamento(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (param)
+		pChn->nPortamentoSlide = param * 4;
 	pChn->dwFlags |= CHN_PORTAMENTO;
-	if ((pChn->nPeriod) && (pChn->nPortamentoDest) && (!(m_dwSongFlags & SONG_FIRSTTICK)))
-	{
-		if (pChn->nPeriod < pChn->nPortamentoDest)
-		{
+	if (pChn->nPeriod && pChn->nPortamentoDest && !(flags & SONG_FIRSTTICK)) {
+		if (pChn->nPeriod < pChn->nPortamentoDest) {
 			int32_t delta = (int)pChn->nPortamentoSlide;
-			if (m_dwSongFlags & SONG_LINEARSLIDES)
-			{
+			if (flags & SONG_LINEARSLIDES) {
 				uint32_t n = pChn->nPortamentoSlide >> 2;
 				if (n > 255) n = 255;
 				delta = _muldivr(pChn->nPeriod, LinearSlideUpTable[n], 65536) - pChn->nPeriod;
@@ -1414,12 +1465,9 @@ void CSoundFile::TonePortamento(SONGVOICE *pChn, uint32_t param)
 			}
 			pChn->nPeriod += delta;
 			if (pChn->nPeriod > pChn->nPortamentoDest) pChn->nPeriod = pChn->nPortamentoDest;
-		} else
-		if (pChn->nPeriod > pChn->nPortamentoDest)
-		{
+		} else if (pChn->nPeriod > pChn->nPortamentoDest) {
 			int32_t delta = - (int)pChn->nPortamentoSlide;
-			if (m_dwSongFlags & SONG_LINEARSLIDES)
-			{
+			if (flags & SONG_LINEARSLIDES) {
 				uint32_t n = pChn->nPortamentoSlide >> 2;
 				if (n > 255) n = 255;
 				delta = _muldivr(pChn->nPeriod, LinearSlideDownTable[n], 65536) - pChn->nPeriod;
@@ -1431,177 +1479,221 @@ void CSoundFile::TonePortamento(SONGVOICE *pChn, uint32_t param)
 	}
 }
 
+void CSoundFile::TonePortamento(SONGVOICE *pChn, uint32_t param)
+{
+	fx_tone_portamento(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_vibrato(SONGVOICE *p, uint32_t param)
+{
+	if (param & 0x0F)
+		p->nVibratoDepth = (param & 0x0F) * 4;
+	if (param & 0xF0)
+		p->nVibratoSpeed = (param >> 4) & 0x0F;
+	p->dwFlags |= CHN_VIBRATO;
+}
 
 void CSoundFile::Vibrato(SONGVOICE *p, uint32_t param)
-//-------------------------------------------------
 {
-	if (param & 0x0F) p->nVibratoDepth = (param & 0x0F) * 4;
-	if (param & 0xF0) p->nVibratoSpeed = (param >> 4) & 0x0F;
-	p->dwFlags |= CHN_VIBRATO;
+	fx_vibrato(p, param);
 }
 
+
+static void fx_fine_vibrato(SONGVOICE *p, uint32_t param)
+{
+	if (param & 0x0F)
+		p->nVibratoDepth = param & 0x0F;
+	if (param & 0xF0)
+		p->nVibratoSpeed = (param >> 4) & 0x0F;
+	p->dwFlags |= CHN_VIBRATO;
+}
 
 void CSoundFile::FineVibrato(SONGVOICE *p, uint32_t param)
-//-----------------------------------------------------
 {
-	if (param & 0x0F) p->nVibratoDepth = param & 0x0F;
-	if (param & 0xF0) p->nVibratoSpeed = (param >> 4) & 0x0F;
-	p->dwFlags |= CHN_VIBRATO;
+	fx_fine_vibrato(p, param);
 }
 
 
-void CSoundFile::Panbrello(SONGVOICE *p, uint32_t param)
-//---------------------------------------------------
+static void fx_panbrello(SONGVOICE *p, uint32_t param)
 {
-	if (param & 0x0F) p->nPanbrelloDepth = param & 0x0F;
-	if (param & 0xF0) p->nPanbrelloSpeed = (param >> 4) & 0x0F;
+	if (param & 0x0F)
+		p->nPanbrelloDepth = param & 0x0F;
+	if (param & 0xF0)
+		p->nPanbrelloSpeed = (param >> 4) & 0x0F;
 	p->dwFlags |= CHN_PANBRELLO;
 }
 
-
-void CSoundFile::VolumeSlide(SONGVOICE *pChn, uint32_t param)
-//--------------------------------------------------------
+void CSoundFile::Panbrello(SONGVOICE *p, uint32_t param)
 {
-	if (param) pChn->nOldVolumeSlide = param; else param = pChn->nOldVolumeSlide;
+	fx_panbrello(p, param);
+}
+
+
+static void fx_fine_volume_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (param)
+		pChn->nOldFineVolUpDown = param;
+	else
+		param = pChn->nOldFineVolUpDown;
+	if (flags & SONG_FIRSTTICK) {
+		pChn->nVolume += param * 4;
+		if (pChn->nVolume > 256)
+			pChn->nVolume = 256;
+	}
+}
+
+void CSoundFile::FineVolumeUp(SONGVOICE *pChn, uint32_t param)
+{
+	fx_fine_volume_up(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_fine_volume_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (param)
+		pChn->nOldFineVolUpDown = param;
+	else
+		param = pChn->nOldFineVolUpDown;
+	if (flags & SONG_FIRSTTICK) {
+		pChn->nVolume -= param * 4;
+		if (pChn->nVolume < 0)
+			pChn->nVolume = 0;
+	}
+}
+
+void CSoundFile::FineVolumeDown(SONGVOICE *pChn, uint32_t param)
+{
+	fx_fine_volume_down(m_dwSongFlags, pChn, param);
+}
+
+
+static void fx_volume_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (param)
+		pChn->nOldVolumeSlide = param;
+	else
+		param = pChn->nOldVolumeSlide;
 	int32_t newvolume = pChn->nVolume;
-	if ((param & 0x0F) == 0x0F)
-	{
-		if (param & 0xF0)
-		{
-			FineVolumeUp(pChn, (param >> 4));
+	if ((param & 0x0F) == 0x0F) {
+		if (param & 0xF0) {
+			fx_fine_volume_up(flags, pChn, (param >> 4));
 			return;
-		} else
-		{
-			if ((m_dwSongFlags & SONG_FIRSTTICK) && (!(m_dwSongFlags & SONG_FASTVOLSLIDES)))
-			{
+		} else {
+			if ((flags & SONG_FIRSTTICK) && !(flags & SONG_FASTVOLSLIDES)) {
 				newvolume -= 0x0F * 4;
 			}
 		}
-	} else
-	if ((param & 0xF0) == 0xF0)
-	{
-		if (param & 0x0F)
-		{
-			FineVolumeDown(pChn, (param & 0x0F));
+	} else if ((param & 0xF0) == 0xF0) {
+		if (param & 0x0F) {
+			fx_fine_volume_down(flags, pChn, param & 0x0F);
 			return;
-		} else
-		{
-			if ((m_dwSongFlags & SONG_FIRSTTICK) && (!(m_dwSongFlags & SONG_FASTVOLSLIDES)))
-			{
+		} else {
+			if ((flags & SONG_FIRSTTICK) && !(flags & SONG_FASTVOLSLIDES)) {
 				newvolume += 0x0F * 4;
 			}
 		}
 	}
-	if ((!(m_dwSongFlags & SONG_FIRSTTICK)) || (m_dwSongFlags & SONG_FASTVOLSLIDES))
-	{
-		if (param & 0x0F) newvolume -= (int)((param & 0x0F) * 4);
-		else newvolume += (int)((param & 0xF0) >> 2);
+	if (!(flags & SONG_FIRSTTICK) || (flags & SONG_FASTVOLSLIDES)) {
+		if (param & 0x0F)
+			newvolume -= (int)((param & 0x0F) * 4);
+		else
+			newvolume += (int)((param & 0xF0) >> 2);
 	}
-	if (newvolume < 0) newvolume = 0;
-	if (newvolume > 256) newvolume = 256;
-	pChn->nVolume = newvolume;
+	pChn->nVolume = CLAMP(newvolume, 0, 256);
+}
+
+void CSoundFile::VolumeSlide(SONGVOICE *pChn, uint32_t param)
+{
+	fx_volume_slide(m_dwSongFlags, pChn, param);
 }
 
 
-void CSoundFile::PanningSlide(SONGVOICE *pChn, uint32_t param)
-//---------------------------------------------------------
+static void fx_panning_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
 	int32_t nPanSlide = 0;
-	if (param) pChn->nOldPanSlide = param; else param = pChn->nOldPanSlide;
-	if (((param & 0x0F) == 0x0F) && (param & 0xF0))
-	{
-		if (m_dwSongFlags & SONG_FIRSTTICK)
-		{
+	if (param)
+		pChn->nOldPanSlide = param;
+	else
+		param = pChn->nOldPanSlide;
+	if ((param & 0x0F) == 0x0F && (param & 0xF0)) {
+		if (flags & SONG_FIRSTTICK) {
 			param = (param & 0xF0) >> 2;
 			nPanSlide = - (int)param;
 		}
-	} else
-	if (((param & 0xF0) == 0xF0) && (param & 0x0F))
-	{
-		if (m_dwSongFlags & SONG_FIRSTTICK)
-		{
+	} else if ((param & 0xF0) == 0xF0 && (param & 0x0F)) {
+		if (flags & SONG_FIRSTTICK) {
 			nPanSlide = (param & 0x0F) << 2;
 		}
-	} else
-	{
-		if (!(m_dwSongFlags & SONG_FIRSTTICK))
-		{
-			if (param & 0x0F) nPanSlide = (int)((param & 0x0F) << 2);
-			else nPanSlide = -(int)((param & 0xF0) >> 2);
+	} else {
+		if (!(flags & SONG_FIRSTTICK)) {
+			if (param & 0x0F)
+				nPanSlide = (int)((param & 0x0F) << 2);
+			else
+				nPanSlide = -(int)((param & 0xF0) >> 2);
 		}
 	}
-	if (nPanSlide)
-	{
+	if (nPanSlide) {
 		nPanSlide += pChn->nPan;
-		if (nPanSlide < 0) nPanSlide = 0;
-		if (nPanSlide > 256) nPanSlide = 256;
-		pChn->nPan = nPanSlide;
+		pChn->nPan = CLAMP(nPanSlide, 0, 256);
 	}
 	pChn->dwFlags &= ~CHN_SURROUND;
 }
 
-
-void CSoundFile::FineVolumeUp(SONGVOICE *pChn, uint32_t param)
-//---------------------------------------------------------
+void CSoundFile::PanningSlide(SONGVOICE *pChn, uint32_t param)
 {
-	if (param) pChn->nOldFineVolUpDown = param; else param = pChn->nOldFineVolUpDown;
-	if (m_dwSongFlags & SONG_FIRSTTICK)
-	{
-		pChn->nVolume += param * 4;
-		if (pChn->nVolume > 256) pChn->nVolume = 256;
-	}
+	fx_panning_slide(m_dwSongFlags, pChn, param);
 }
 
 
-void CSoundFile::FineVolumeDown(SONGVOICE *pChn, uint32_t param)
-//-----------------------------------------------------------
+static void fx_tremolo(SONGVOICE *p, uint32_t param)
 {
-	if (param) pChn->nOldFineVolUpDown = param; else param = pChn->nOldFineVolUpDown;
-	if (m_dwSongFlags & SONG_FIRSTTICK)
-	{
-		pChn->nVolume -= param * 4;
-		if (pChn->nVolume < 0) pChn->nVolume = 0;
-	}
-}
-
-
-void CSoundFile::Tremolo(SONGVOICE *p, uint32_t param)
-//-------------------------------------------------
-{
-	if (param & 0x0F) p->nTremoloDepth = (param & 0x0F) << 2;
-	if (param & 0xF0) p->nTremoloSpeed = (param >> 4) & 0x0F;
+	if (param & 0x0F)
+		p->nTremoloDepth = (param & 0x0F) << 2;
+	if (param & 0xF0)
+		p->nTremoloSpeed = (param >> 4) & 0x0F;
 	p->dwFlags |= CHN_TREMOLO;
 }
 
+void CSoundFile::Tremolo(SONGVOICE *p, uint32_t param)
+{
+	fx_tremolo(p, param);
+}
 
-void CSoundFile::ChannelVolSlide(SONGVOICE *pChn, uint32_t param)
-//------------------------------------------------------------
+
+static void fx_channel_vol_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
 	int32_t nChnSlide = 0;
-	if (param) pChn->nOldChnVolSlide = param; else param = pChn->nOldChnVolSlide;
-	if (((param & 0x0F) == 0x0F) && (param & 0xF0))
-	{
-		if (m_dwSongFlags & SONG_FIRSTTICK) nChnSlide = param >> 4;
-	} else
-	if (((param & 0xF0) == 0xF0) && (param & 0x0F))
-	{
-		if (m_dwSongFlags & SONG_FIRSTTICK) nChnSlide = - (int)(param & 0x0F);
-	} else
-	{
-		if (!(m_dwSongFlags & SONG_FIRSTTICK))
-		{
-			if (param & 0x0F) nChnSlide = -(int)(param & 0x0F);
-			else nChnSlide = (int)((param & 0xF0) >> 4);
+	if (param)
+		pChn->nOldChnVolSlide = param;
+	else
+		param = pChn->nOldChnVolSlide;
+	if ((param & 0x0F) == 0x0F && (param & 0xF0)) {
+		if (flags & SONG_FIRSTTICK)
+			nChnSlide = param >> 4;
+	} else if ((param & 0xF0) == 0xF0 && (param & 0x0F)) {
+		if (flags & SONG_FIRSTTICK)
+			nChnSlide = - (int)(param & 0x0F);
+	} else {
+		if (!(flags & SONG_FIRSTTICK)) {
+			if (param & 0x0F)
+				nChnSlide = -(int)(param & 0x0F);
+			else
+				nChnSlide = (int)((param & 0xF0) >> 4);
 		}
 	}
-	if (nChnSlide)
-	{
+	if (nChnSlide) {
 		nChnSlide += pChn->nGlobalVol;
-		if (nChnSlide < 0) nChnSlide = 0;
-		if (nChnSlide > 64) nChnSlide = 64;
-		pChn->nGlobalVol = nChnSlide;
+		pChn->nGlobalVol = CLAMP(nChnSlide, 0, 64);
 	}
 }
+
+void CSoundFile::ChannelVolSlide(SONGVOICE *pChn, uint32_t param)
+{
+	fx_channel_vol_slide(m_dwSongFlags, pChn, param);
+}
+
+
 
 
 void CSoundFile::ExtendedS3MCommands(uint32_t nChn, uint32_t param)
@@ -1614,76 +1706,96 @@ void CSoundFile::ExtendedS3MCommands(uint32_t nChn, uint32_t param)
 	{
 	// S0x: Set Filter
 	// S1x: Set Glissando Control
-	case 0x10:	pChn->dwFlags &= ~CHN_GLISSANDO; if (param) pChn->dwFlags |= CHN_GLISSANDO; break;
+	case 0x10:
+		pChn->dwFlags &= ~CHN_GLISSANDO;
+		if (param) pChn->dwFlags |= CHN_GLISSANDO;
+		break;
 	// S2x: Set FineTune (no longer implemented)
-	case 0x20:	break;
 	// S3x: Set Vibrato WaveForm
-	case 0x30:	pChn->nVibratoType = param & 0x07; break;
+	case 0x30:
+		pChn->nVibratoType = param & 0x07;
+		break;
 	// S4x: Set Tremolo WaveForm
-	case 0x40:	pChn->nTremoloType = param & 0x07; break;
+	case 0x40:
+		pChn->nTremoloType = param & 0x07;
+		break;
 	// S5x: Set Panbrello WaveForm
-	case 0x50:	pChn->nPanbrelloType = param & 0x07; break;
+	case 0x50:
+		pChn->nPanbrelloType = param & 0x07;
+		break;
 	// S6x: Pattern Delay for x frames
-	case 0x60:	m_nFrameDelay = param; break;
+	case 0x60:
+		m_nFrameDelay = param;
+		break;
 	// S7x: Envelope Control
-	case 0x70:	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			switch(param)
+	case 0x70:
+		if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed))
+			break;
+		switch(param) {
+		case 0:
+		case 1:
+		case 2:
 			{
-			case 0:
-			case 1:
-			case 2:
-				{
-					SONGVOICE *bkp = &Voices[m_nChannels];
-					for (uint32_t i=m_nChannels; i<MAX_VOICES; i++, bkp++)
-					{
-						if (bkp->nMasterChn == nChn+1)
-						{
-							if (param == 1) KeyOff(i); else
-							if (param == 2) bkp->dwFlags |= CHN_NOTEFADE; else
-								{ bkp->dwFlags |= CHN_NOTEFADE; bkp->nFadeOutVol = 0; }
+				SONGVOICE *bkp = &Voices[m_nChannels];
+				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++, bkp++) {
+					if (bkp->nMasterChn == nChn+1) {
+						if (param == 1) {
+							KeyOff(i);
+						} else if (param == 2) {
+							bkp->dwFlags |= CHN_NOTEFADE;
+						} else {
+							bkp->dwFlags |= CHN_NOTEFADE;
+							bkp->nFadeOutVol = 0;
 						}
 					}
 				}
-				break;
-			case 3:		pChn->nNNA = NNA_NOTECUT; break;
-			case 4:		pChn->nNNA = NNA_CONTINUE; break;
-			case 5:		pChn->nNNA = NNA_NOTEOFF; break;
-			case 6:		pChn->nNNA = NNA_NOTEFADE; break;
-			case 7:		pChn->dwFlags &= ~CHN_VOLENV; break;
-			case 8:		pChn->dwFlags |= CHN_VOLENV; break;
-			case 9:		pChn->dwFlags &= ~CHN_PANENV; break;
-			case 10:	pChn->dwFlags |= CHN_PANENV; break;
-			case 11:	pChn->dwFlags &= ~CHN_PITCHENV; break;
-			case 12:	pChn->dwFlags |= CHN_PITCHENV; break;
 			}
 			break;
+		case  3:	pChn->nNNA = NNA_NOTECUT; break;
+		case  4:	pChn->nNNA = NNA_CONTINUE; break;
+		case  5:	pChn->nNNA = NNA_NOTEOFF; break;
+		case  6:	pChn->nNNA = NNA_NOTEFADE; break;
+		case  7:	pChn->dwFlags &= ~CHN_VOLENV; break;
+		case  8:	pChn->dwFlags |= CHN_VOLENV; break;
+		case  9:	pChn->dwFlags &= ~CHN_PANENV; break;
+		case 10:	pChn->dwFlags |= CHN_PANENV; break;
+		case 11:	pChn->dwFlags &= ~CHN_PITCHENV; break;
+		case 12:	pChn->dwFlags |= CHN_PITCHENV; break;
+		}
+		break;
 	// S8x: Set 4-bit Panning
 	case 0x80:
-			pChn->dwFlags &= ~CHN_SURROUND;
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			pChn->nPan = (param << 4) + 8;
-			pChn->dwFlags |= CHN_FASTVOLRAMP;
+		pChn->dwFlags &= ~CHN_SURROUND;
+		if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed))
 			break;
+		pChn->nPan = (param << 4) + 8;
+		pChn->dwFlags |= CHN_FASTVOLRAMP;
+		break;
 	// S9x: Set Surround
-	case 0x90:	ExtendedChannelEffect(pChn, param & 0x0F); break;
+	case 0x90:
+		ExtendedChannelEffect(pChn, param & 0x0F);
+		break;
 	// SAx: Set 64k Offset
-	case 0xA0:	
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			pChn->nOldHiOffset = param;
-			if ((pChn->nRowNote) && (pChn->nRowNote < 0x80))
-			{
-				uint32_t pos = param << 16;
-				if (pos < pChn->nLength) pChn->nPos = pos;
-			}
+	case 0xA0:
+		if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed))
 			break;
+		pChn->nOldHiOffset = param;
+		if ((pChn->nRowNote) && (pChn->nRowNote < 0x80)) {
+			uint32_t pos = param << 16;
+			if (pos < pChn->nLength) pChn->nPos = pos;
+		}
+		break;
 	// SBx: Pattern Loop
 	// SCx: Note Cut
-	case 0xC0:	NoteCut(nChn, param); break;
+	case 0xC0:
+		NoteCut(nChn, param);
+		break;
 	// SDx: Note Delay
-	// case 0xD0:	break;
 	// SEx: Pattern Delay for x rows
 	// SFx: S3M: Funk Repeat, IT: Set Active Midi Macro
-	case 0xF0:	pChn->nActiveMacro = param; break;
+	case 0xF0:
+		pChn->nActiveMacro = param;
+		break;
 	}
 }
 
@@ -1692,15 +1804,19 @@ void CSoundFile::ExtendedChannelEffect(SONGVOICE *pChn, uint32_t param)
 //------------------------------------------------------------------
 {
 	// S9x and X9x commands (S3M/XM/IT only)
-	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) return;
-	switch(param & 0x0F)
-	{
+	if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed))
+		return;
+	switch(param & 0x0F) {
         // S91: Surround On
-	case 0x01:	pChn->dwFlags |= CHN_SURROUND; pChn->nPan = 128; break;
+	case 0x01:
+		pChn->dwFlags |= CHN_SURROUND; pChn->nPan = 128;
+		break;
 	////////////////////////////////////////////////////////////
 	// Modplug Extensions
 	// S90: Surround Off
-	case 0x00:	pChn->dwFlags &= ~CHN_SURROUND;	break;
+	case 0x00:
+		pChn->dwFlags &= ~CHN_SURROUND;
+		break;
 	// S9A: 2-Channels surround mode
 	case 0x0A:
 		m_dwSongFlags &= ~SONG_SURROUNDPAN;
@@ -1723,8 +1839,7 @@ void CSoundFile::ExtendedChannelEffect(SONGVOICE *pChn, uint32_t param)
 		break;
 	// S9F: Go backward (set position at the end for non-looping samples)
 	case 0x0F:
-		if ((!(pChn->dwFlags & CHN_LOOP)) && (!pChn->nPos) && (pChn->nLength))
-		{
+		if (!(pChn->dwFlags & CHN_LOOP) && !pChn->nPos && pChn->nLength) {
 			pChn->nPos = pChn->nLength - 1;
 			pChn->nPosLo = 0xFFFF;
 		}
@@ -1745,19 +1860,24 @@ void CSoundFile::MidiSend(const unsigned char *data, unsigned int len, uint32_t 
 			switch (data[2]) {
 			case 0x00: /* set cutoff */
 				oldcutoff = pChn->nCutOff;
-				if (data[3] < 0x80) pChn->nCutOff = data[3];
+				if (data[3] < 0x80)
+					pChn->nCutOff = data[3];
 				oldcutoff -= pChn->nCutOff;
-
-				if (oldcutoff < 0) oldcutoff = -oldcutoff;
-				if ((pChn->nVolume > 0) || (oldcutoff < 0x10)
-				 || (!(pChn->dwFlags & CHN_FILTER))
-				|| (!(pChn->nLeftVol|pChn->nRightVol)))
-					setup_channel_filter(pChn, (pChn->dwFlags & CHN_FILTER)
-							? false : true, 256, gdwMixingFreq);
+				if (oldcutoff < 0)
+					oldcutoff = -oldcutoff;
+				if (pChn->nVolume > 0 || oldcutoff < 0x10
+				    || !(pChn->dwFlags & CHN_FILTER)
+				    || !(pChn->nLeftVol|pChn->nRightVol)) {
+					setup_channel_filter(pChn,
+						(pChn->dwFlags & CHN_FILTER) ? false : true,
+						256, gdwMixingFreq);
+				}
 				break;
 			case 0x01: /* set resonance */
 				if (data[3] < 0x80) pChn->nResonance = data[3];
-				setup_channel_filter(pChn, (pChn->dwFlags & CHN_FILTER) ? false : true, 256, gdwMixingFreq);
+				setup_channel_filter(pChn,
+					(pChn->dwFlags & CHN_FILTER) ? false : true,
+					256, gdwMixingFreq);
 				break;
 			};
 		}
@@ -1935,27 +2055,6 @@ void CSoundFile::RetrigNote(uint32_t nChn, uint32_t param)
 	}
 }
 
-
-void CSoundFile::DoFreqSlide(SONGVOICE *pChn, int32_t nFreqSlide)
-//-------------------------------------------------------------
-{
-	// IT Linear slides
-	if (!pChn->nPeriod) return;
-	if (m_dwSongFlags & SONG_LINEARSLIDES) {
-		if (nFreqSlide < 0) {
-			uint32_t n = (- nFreqSlide) >> 2;
-			if (n > 255) n = 255;
-			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideDownTable[n], 65536);
-		} else {
-			uint32_t n = (nFreqSlide) >> 2;
-
-			if (n > 255) n = 255;
-			pChn->nPeriod = _muldivr(pChn->nPeriod, LinearSlideUpTable[n], 65536);
-		}
-	} else {
-		pChn->nPeriod += nFreqSlide;
-	}
-}
 
 
 void CSoundFile::NoteCut(uint32_t nChn, uint32_t nTick)
