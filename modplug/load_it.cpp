@@ -395,52 +395,6 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		ResetMidiCfg();
 	}
 	m_nChannels = 64;
-	// Checking for unused channels
-	uint32_t npatterns = pifh.patnum;
-	if (npatterns > MAX_PATTERNS) npatterns = MAX_PATTERNS;
-	for (uint32_t patchk=0; patchk<npatterns; patchk++)
-	{
-		memset(chnmask, 0, sizeof(chnmask));
-		if ((!patpos[patchk]) || ((uint32_t)patpos[patchk] + 4 >= dwMemLength)) continue;
-		uint32_t len = bswapLE16(*((uint16_t *)(lpStream+patpos[patchk])));
-		uint32_t rows = bswapLE16(*((uint16_t *)(lpStream+patpos[patchk]+2)));
-		if ((rows < 4) || (rows > 256)) continue;
-		if (patpos[patchk]+8+len > dwMemLength) continue;
-		uint32_t i = 0;
-		const uint8_t *p = lpStream+patpos[patchk]+8;
-		uint32_t nrow = 0;
-		while (nrow<rows)
-		{
-			if (i >= len) break;
-			uint8_t b = p[i++];
-			if (!b)
-			{
-				nrow++;
-				continue;
-			}
-			uint32_t ch = b & 0x7F;
-			if (ch) ch = (ch - 1) & 0x3F;
-			if (b & 0x80)
-			{
-				if (i >= len) break;
-				chnmask[ch] = p[i++];
-			}
-			// Channel used
-			if (chnmask[ch] & 0x0F)
-			{
-				if ((ch >= m_nChannels) && (ch < 64)) m_nChannels = ch+1;
-			}
-			// Note
-			if (chnmask[ch] & 1) i++;
-			// Instrument
-			if (chnmask[ch] & 2) i++;
-			// Volume
-			if (chnmask[ch] & 4) i++;
-			// Effect
-			if (chnmask[ch] & 8) i += 2;
-			if (i >= len) break;
-		}
-	}
 	// Reading Instruments
 	m_nInstruments = pifh.insnum;
 	if (m_nInstruments >= MAX_INSTRUMENTS) m_nInstruments = MAX_INSTRUMENTS-1;
@@ -522,6 +476,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		memcpy(Samples[nsmp+1].name, pis.name, 26);
 	}
 	// Reading Patterns
+	uint32_t npatterns = pifh.patnum;
+	if (npatterns > MAX_PATTERNS) npatterns = MAX_PATTERNS;
 	for (uint32_t npat=0; npat<npatterns; npat++)
 	{
 		if ((!patpos[npat]) || ((uint32_t)patpos[npat] + 4 >= dwMemLength))
