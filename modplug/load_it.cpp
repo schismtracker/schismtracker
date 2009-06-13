@@ -608,14 +608,6 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			}
 		}
 	}
-	for (uint32_t ncu=0; ncu<MAX_CHANNELS; ncu++)
-	{
-		if (ncu>=m_nChannels)
-		{
-			Channels[ncu].nVolume = 64;
-			Channels[ncu].dwFlags &= ~CHN_MUTE;
-		}
-	}
 	return true;
 }
 
