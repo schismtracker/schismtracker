@@ -2024,13 +2024,12 @@ void CSoundFile::ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint
 }
 
 
-void CSoundFile::RetrigNote(uint32_t nChn, uint32_t param)
-//------------------------------------------------
+static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
 {
-	SONGVOICE *pChn = &Voices[nChn];
+	SONGVOICE *pChn = &csf->Voices[nChn];
 
 	//printf("Q%02X note=%02X tick%d  %d\n", param, pChn->nRowNote, m_nTickCount, pChn->nRetrigCount);
-	if (!m_nTickCount && pChn->nRowNote) {
+	if (!csf->m_nTickCount && pChn->nRowNote) {
 		pChn->nRetrigCount = param & 0xf;
 	} else if (!--pChn->nRetrigCount) {
 		pChn->nRetrigCount = param & 0xf;
@@ -2047,36 +2046,45 @@ void CSoundFile::RetrigNote(uint32_t nChn, uint32_t param)
 
 		uint32_t nNote = pChn->nNewNote;
 		int32_t nOldPeriod = pChn->nPeriod;
-		if ((nNote) && (nNote <= 120) && (pChn->nLength))
-			csf_check_nna(this, nChn, 0, nNote, true);
-		csf_note_change(this, nChn, nNote, false, false, false);
+		if (nNote && nNote <= 120 && pChn->nLength)
+			csf_check_nna(csf, nChn, 0, nNote, true);
+		csf_note_change(csf, nChn, nNote, false, false, false);
 		if (nOldPeriod && !pChn->nRowNote)
 			pChn->nPeriod = nOldPeriod;
 	}
 }
 
-
-
-void CSoundFile::NoteCut(uint32_t nChn, uint32_t nTick)
-//---------------------------------------------
+void CSoundFile::RetrigNote(uint32_t nChn, uint32_t param)
 {
-	if (m_nTickCount == nTick) {
-		SONGVOICE *pChn = &Voices[nChn];
+	fx_retrig_note(this, nChn, param);
+}
+
+
+static void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick)
+{
+	if (csf->m_nTickCount == nTick) {
+		SONGVOICE *pChn = &csf->Voices[nChn];
 		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
 		pChn->nVolume = 0;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
 		pChn->nLength = 0;
-		
-		OPL_NoteOff(nChn); OPL_Touch(nChn, 0);
-		GM_KeyOff(nChn); GM_Touch(nChn, 0);
+
+		OPL_NoteOff(nChn);
+		OPL_Touch(nChn, 0);
+		GM_KeyOff(nChn);
+		GM_Touch(nChn, 0);
 	}
 }
 
-
-void CSoundFile::KeyOff(uint32_t nChn)
-//--------------------------------
+void CSoundFile::NoteCut(uint32_t nChn, uint32_t nTick)
 {
-	SONGVOICE *pChn = &Voices[nChn];
+	fx_note_cut(this, nChn, nTick);
+}
+
+
+static void fx_key_off(CSoundFile *csf, uint32_t nChn)
+{
+	SONGVOICE *pChn = &csf->Voices[nChn];
 	bool bKeyOn = (pChn->dwFlags & CHN_KEYOFF) ? false : true;
 
 	/*fprintf(stderr, "KeyOff[%d] [ch%u]: flags=0x%X\n",
@@ -2084,7 +2092,7 @@ void CSoundFile::KeyOff(uint32_t nChn)
 	OPL_NoteOff(nChn);
 	GM_KeyOff(nChn);
 
-	SONGINSTRUMENT *penv = (m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	
 	/*if ((pChn->dwFlags & CHN_ADLIB)
 	||  (penv && penv->nMidiChannelMask))
@@ -2098,16 +2106,14 @@ void CSoundFile::KeyOff(uint32_t nChn)
 
 	pChn->dwFlags |= CHN_KEYOFF;
 	//if ((!pChn->pHeader) || (!(pChn->dwFlags & CHN_VOLENV)))
-	if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && (pChn->pHeader) && (!(pChn->dwFlags & CHN_VOLENV)))
-	{
+	if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader && !(pChn->dwFlags & CHN_VOLENV)) {
 		pChn->dwFlags |= CHN_NOTEFADE;
 	}
-	if (!pChn->nLength) return;
-	if ((pChn->dwFlags & CHN_SUSTAINLOOP) && (pChn->pInstrument) && (bKeyOn))
-	{
+	if (!pChn->nLength)
+		return;
+	if ((pChn->dwFlags & CHN_SUSTAINLOOP) && pChn->pInstrument && bKeyOn) {
 		SONGSAMPLE *psmp = pChn->pInstrument;
-		if (psmp->uFlags & CHN_LOOP)
-		{
+		if (psmp->uFlags & CHN_LOOP) {
 			if (psmp->uFlags & CHN_PINGPONGLOOP)
 				pChn->dwFlags |= CHN_PINGPONGLOOP;
 			else
@@ -2117,14 +2123,18 @@ void CSoundFile::KeyOff(uint32_t nChn)
 			pChn->nLoopStart = psmp->nLoopStart;
 			pChn->nLoopEnd = psmp->nLoopEnd;
 			if (pChn->nLength > pChn->nLoopEnd) pChn->nLength = pChn->nLoopEnd;
-		} else
-		{
+		} else {
 			pChn->dwFlags &= ~(CHN_LOOP|CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
 			pChn->nLength = psmp->nLength;
 		}
 	}
 	if (penv && penv->nFadeOut && (penv->dwFlags & ENV_VOLLOOP))
 		pChn->dwFlags |= CHN_NOTEFADE;
+}
+
+void CSoundFile::KeyOff(uint32_t nChn)
+{
+	fx_key_off(this, nChn);
 }
 
 
@@ -2164,109 +2174,68 @@ void CSoundFile::SetTempo(uint32_t param)
 }
 
 
-int CSoundFile::PatternLoop(SONGVOICE *pChn, uint32_t param)
-//-------------------------------------------------------
+static int fx_pattern_loop(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 {
-	if (param)
-	{
-		if (pChn->nPatternLoopCount)
-		{
+	if (param) {
+		if (pChn->nPatternLoopCount) {
 			pChn->nPatternLoopCount--;
 			if (!pChn->nPatternLoopCount) {
-                                // this should get rid of that nasty infinite loop for cases like
-                                //     ... .. .. SB0
-                                //     ... .. .. SB1
-                                //     ... .. .. SB1
-                                // it still doesn't work right in a few strange cases, but oh well :P
-                                pChn->nPatternLoop = m_nRow + 1;
-                                return -1;
-                        }
-		} else
-		{
-                        // hmm. the pattern loop shouldn't care about
-                        // other channels at all... i'm not really
-                        // sure what this code is doing :/
-#if 0
-			SONGVOICE *p = Voices;
-			for (uint32_t i=0; i<m_nChannels; i++, p++) if (p != pChn)
-			{
-				// Loop already done
-				if (p->nPatternLoopCount) return -1;
+				// this should get rid of that nasty infinite loop for cases like
+				//     ... .. .. SB0
+				//     ... .. .. SB1
+				//     ... .. .. SB1
+				// it still doesn't work right in a few strange cases, but oh well :P
+				pChn->nPatternLoop = csf->m_nRow + 1;
+				return -1;
 			}
-#endif
+		} else {
 			pChn->nPatternLoopCount = param;
 		}
 		return pChn->nPatternLoop;
-	} else
-	{
-		pChn->nPatternLoop = m_nRow;
+	} else {
+		pChn->nPatternLoop = csf->m_nRow;
 	}
 	return -1;
 }
 
+int CSoundFile::PatternLoop(SONGVOICE *pChn, uint32_t param)
+{
+	return fx_pattern_loop(this, pChn, param);
+}
 
-void CSoundFile::GlobalVolSlide(uint32_t param)
-//-----------------------------------------
+
+static void fx_global_vol_slide(CSoundFile *csf, uint32_t param)
 {
 	int32_t nGlbSlide = 0;
-	if (param) m_nOldGlbVolSlide = param; else param = m_nOldGlbVolSlide;
-	if (((param & 0x0F) == 0x0F) && (param & 0xF0))
-	{
-		if (m_dwSongFlags & SONG_FIRSTTICK) nGlbSlide = (param >> 4) * 2;
-	} else
-	if (((param & 0xF0) == 0xF0) && (param & 0x0F))
-	{
-		if (m_dwSongFlags & SONG_FIRSTTICK) nGlbSlide = - (int)((param & 0x0F) * 2);
-	} else
-	{
-		if (!(m_dwSongFlags & SONG_FIRSTTICK))
-		{
-			if (param & 0xF0) nGlbSlide = (int)((param & 0xF0) >> 4) * 2;
+	// FIXME pretty sure global vol slide params are per-channel -- double check
+	if (param)
+		csf->m_nOldGlbVolSlide = param;
+	else
+		param = csf->m_nOldGlbVolSlide;
+	if ((param & 0x0F) == 0x0F && (param & 0xF0)) {
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			nGlbSlide = (param >> 4) * 2;
+	} else if ((param & 0xF0) == 0xF0 && (param & 0x0F)) {
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			nGlbSlide = -(int)((param & 0x0F) * 2);
+	} else {
+		if (!(csf->m_dwSongFlags & SONG_FIRSTTICK)) {
+			if (param & 0xF0)
+				nGlbSlide = (int)((param & 0xF0) >> 4) * 2;
 			else nGlbSlide = -(int)((param & 0x0F) * 2);
 		}
 	}
-	if (nGlbSlide)
-	{
-		nGlbSlide += m_nGlobalVolume;
-		if (nGlbSlide < 0) nGlbSlide = 0;
-		if (nGlbSlide > 256) nGlbSlide = 256;
-		m_nGlobalVolume = nGlbSlide;
+	if (nGlbSlide) {
+		nGlbSlide += csf->m_nGlobalVolume;
+		csf->m_nGlobalVolume = CLAMP(nGlbSlide, 0, 256);
 	}
 }
 
-
-uint32_t CSoundFile::IsSongFinished(uint32_t nStartOrder, uint32_t nStartRow) const
-//----------------------------------------------------------------------
+void CSoundFile::GlobalVolSlide(uint32_t param)
 {
-	uint32_t nOrd;
-
-	for (nOrd=nStartOrder; nOrd<MAX_ORDERS; nOrd++)
-	{
-		uint32_t nPat = Orderlist[nOrd];
-		if (nPat != 0xFE)
-		{
-			MODCOMMAND *p;
-
-			if (nPat >= MAX_PATTERNS) break;
-			p = Patterns[nPat];
-			if (p)
-			{
-				uint32_t len = PatternSize[nPat] * m_nChannels;
-				uint32_t pos = (nOrd == nStartOrder) ? nStartRow : 0;
-				pos *= m_nChannels;
-				while (pos < len)
-				{
-					uint32_t cmd;
-					if ((p[pos].note) || (p[pos].volcmd)) return 0;
-					cmd = p[pos].command;
-					if ((cmd) && (cmd != CMD_SPEED) && (cmd != CMD_TEMPO)) return 0;
-					pos++;
-				}
-			}
-		}
-	}
-	return (nOrd < MAX_ORDERS) ? nOrd : MAX_ORDERS-1;
+	fx_global_vol_slide(this, param);
 }
+
 
 
 bool CSoundFile::IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, uint32_t nJumpOrder, uint32_t nJumpRow) const

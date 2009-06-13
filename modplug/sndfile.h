@@ -645,7 +645,6 @@ public:
 	void SetTempo(uint32_t param);
 	void SetSpeed(uint32_t param);
 	void GlobalVolSlide(uint32_t param);
-	uint32_t IsSongFinished(uint32_t nOrder, uint32_t nRow) const;
 	bool IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, uint32_t nJumpOrder, uint32_t nJumpRow) const;
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
