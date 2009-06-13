@@ -30,7 +30,6 @@ unsigned int CSoundFile::gnVULeft = 0;
 unsigned int CSoundFile::gnVURight = 0;
 int32_t gnDryROfsVol = 0;
 int32_t gnDryLOfsVol = 0;
-int gbInitPlugins = 0;
 
 typedef uint32_t (* LPCONVERTPROC)(void *, int *, uint32_t, int *, int *);
 
@@ -118,7 +117,6 @@ int csf_init_player(CSoundFile *csf, int reset)
 		csf->gnVURight = 0;
 	}
 
-	gbInitPlugins = reset ? 3 : 1;
 	csf_initialize_dsp(csf, reset);
 	initialize_eq(reset, csf->gdwMixingFreq);
 	
