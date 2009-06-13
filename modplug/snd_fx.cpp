@@ -479,7 +479,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 	note = CLAMP(note, 1, 132); // why 132? random...
 	pChn->nNote = note;
 	pChn->nNewIns = 0;
-	uint32_t period = csf->GetPeriodFromNote(note, 0, pChn->nC5Speed);
+	uint32_t period = get_period_from_note(note, pChn->nC5Speed, csf->m_dwSongFlags & SONG_LINEARSLIDES);
 	if (period) {
 		if (!bPorta || !pChn->nPeriod)
 			pChn->nPeriod = period;
@@ -855,13 +855,13 @@ bool CSoundFile::ProcessEffects()
 			// New Note Action ? (not when paused!!!)
 			if ((note) && (note <= 128) && (!bPorta))
 			{
-				CheckNNA(nChn, instr, note, false);
+				csf_check_nna(this, nChn, instr, note, false);
 			}
 			// Instrument Change ?
 			if (instr)
 			{
 				SONGSAMPLE *psmp = pChn->pInstrument;
-				InstrumentChange(pChn, instr, bPorta, true);
+				csf_instrument_change(this, pChn, instr, bPorta, true, true);
 				OPL_Patch(nChn, Samples[instr].AdlibBytes);
 				
 				if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Instruments[instr])
@@ -879,14 +879,14 @@ bool CSoundFile::ProcessEffects()
 			{
 				if ((!instr) && (pChn->nNewIns) && (note < 0x80))
 				{
-					InstrumentChange(pChn, pChn->nNewIns, bPorta, false, true);
+					csf_instrument_change(this, pChn, pChn->nNewIns, bPorta, false, true);
 					if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Instruments[pChn->nNewIns]) {
 						OPL_Patch(nChn, Samples[pChn->nNewIns].AdlibBytes);
 						GM_DPatch(nChn, Instruments[pChn->nNewIns]->nMidiProgram, Instruments[pChn->nNewIns]->wMidiBank, Instruments[pChn->nNewIns]->nMidiChannelMask);
 					}
 					pChn->nNewIns = 0;
 				}
-				NoteChange(nChn, note, bPorta, true);
+				csf_note_change(this, nChn, note, bPorta, true, false);
 			}
 			// Tick-0 only volume commands
 			if (volcmd == VOLCMD_VOLUME)
@@ -1928,8 +1928,8 @@ void CSoundFile::RetrigNote(uint32_t nChn, uint32_t param)
 		uint32_t nNote = pChn->nNewNote;
 		int32_t nOldPeriod = pChn->nPeriod;
 		if ((nNote) && (nNote <= 120) && (pChn->nLength))
-			CheckNNA(nChn, 0, nNote, true);
-		NoteChange(nChn, nNote, false, false);
+			csf_check_nna(this, nChn, 0, nNote, true);
+		csf_note_change(this, nChn, nNote, false, false, false);
 		if (nOldPeriod && !pChn->nRowNote)
 			pChn->nPeriod = nOldPeriod;
 	}
@@ -2213,21 +2213,5 @@ bool CSoundFile::IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, u
 		if (row >= nRows) return true;
 	}
 	return false;
-}
-
-
-
-// here are some famous wrappers from the west side
-
-#include "snd_fx.h"
-
-uint32_t CSoundFile::GetPeriodFromNote(uint32_t note, int, uint32_t nC5Speed) const
-{
-	return get_period_from_note(note, nC5Speed, m_dwSongFlags & SONG_LINEARSLIDES);
-}
-
-uint32_t CSoundFile::GetFreqFromPeriod(uint32_t period, uint32_t nC5Speed, int nPeriodFrac) const
-{
-	return get_freq_from_period(period, nC5Speed, nPeriodFrac, m_dwSongFlags & SONG_LINEARSLIDES);
 }
 

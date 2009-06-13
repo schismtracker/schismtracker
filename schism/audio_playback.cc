@@ -252,9 +252,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	/* previously this block also checked for SONG_ENDREACHED|SONG_PAUSED if (ins >= 0)
 	do we want to check that or not? what is this actually handling anyway? */
 	if ((c->pSample || c->nRealtime) && note < 0x80) {
-		mp->NoteChange(chan, c->nRowNote, false, true, false);
+		csf_note_change(mp, chan, c->nRowNote, false, true, false);
 		mp->ProcessEffects();
-		mp->CheckNNA(chan, ins_mode ? ins : samp, note, false);
+		csf_check_nna(mp, chan, ins_mode ? ins : samp, note, false);
 	}
 
 	if (ins <= 0 && samp > 0 && ins_mode) {
@@ -296,7 +296,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 		if (vol > -1) c->nVolume = (vol << 2);
 		c->nMasterChn = 0; // indicates foreground channel.
-		mp->NoteChange(chan-1, note, false, true, true);
+		csf_note_change(mp, chan - 1, note, false, true, true);
 	} else if ((ins_mode ? ins : samp) > 0) {
 		if ((status.flags & MIDI_LIKE_TRACKER) && ins > 0) {
 			SONGINSTRUMENT *i = mp->Instruments[ins];
@@ -820,7 +820,7 @@ void song_update_playing_instrument(int i_changed)
 	while (n--) {
 		channel = mp->Voices + mp->VoiceMix[n];
 		if (channel->pHeader && channel->pHeader == mp->Instruments[i_changed]) {
-			mp->InstrumentChange(channel, i_changed, true, false, false);
+			csf_instrument_change(mp, channel, i_changed, true, false, false);
 			inst = channel->pHeader;
 			if (!inst) continue;
 

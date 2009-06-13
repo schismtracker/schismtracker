@@ -456,6 +456,8 @@ typedef struct MODMIDICFG
 } MODMIDICFG, *LPMODMIDICFG;
 
 
+#include "snd_fx.h" // blah
+
 #ifdef __cplusplus
 
 class CSoundFile;
@@ -610,18 +612,6 @@ public:
 
 public:
 	bool ProcessEffects();
-	uint32_t GetNNAChannel(uint32_t nChn) {
-		return csf_get_nna_channel(this, nChn);
-	}
-	void CheckNNA(uint32_t nChn, uint32_t instr, int note, bool bForceCut) {
-		csf_check_nna(this, nChn, instr, note, bForceCut);
-	}
-	void NoteChange(uint32_t nChn, int note, bool bPorta=false, bool bResetEnv=true, bool bManual=false) {
-		csf_note_change(this, nChn, note, bPorta, bResetEnv, bManual);
-	}
-	void InstrumentChange(SONGVOICE *pChn, uint32_t instr, bool bPorta=false,bool bUpdVol=true,bool bResetEnv=true) {
-		csf_instrument_change(this, pChn, instr, bPorta, bUpdVol, bResetEnv);
-	}
 	void TranslateKeyboard(SONGINSTRUMENT* penv, uint32_t note, SONGSAMPLE*& psmp);
 	// Channel Effects
 	void PortamentoUp(SONGVOICE *pChn, uint32_t param);
@@ -672,9 +662,6 @@ public:
 	// I/O from another sound file
 	bool ReadInstrumentFromSong(uint32_t nInstr, CSoundFile *, uint32_t nSrcInstrument);
 	bool ReadSampleFromSong(uint32_t nSample, CSoundFile *, uint32_t nSrcSample);
-	// Period/Note functions
-	uint32_t GetPeriodFromNote(uint32_t note, int nFineTune, uint32_t nC5Speed) const;
-	uint32_t GetFreqFromPeriod(uint32_t period, uint32_t nC5Speed, int nPeriodFrac=0) const;
 	// Misc functions
 	SONGSAMPLE *GetSample(uint32_t n) { return Samples+n; }
 	void ResetMidiCfg();
