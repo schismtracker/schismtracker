@@ -282,8 +282,7 @@ int csf_process_row(CSoundFile *csf)
 
 				if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED))
 					csf->m_nLockedOrder = MAX_ORDERS;
-			}
-			else {
+			} else {
 				csf->m_nCurrentOrder = csf->m_nNextOrder;
 			}
 
@@ -296,7 +295,8 @@ int csf_process_row(CSoundFile *csf)
 
 				while (csf->m_nCurrentPattern >= MAX_PATTERNS) {
 					// End of song ?
-					if ((csf->m_nCurrentPattern == 0xFF) || (csf->m_nCurrentOrder >= MAX_ORDERS)) {
+					if (csf->m_nCurrentPattern == 0xFF
+					    || csf->m_nCurrentOrder >= MAX_ORDERS) {
 						if (csf->m_nRepeatCount > 0)
 							csf->m_nRepeatCount--;
 
@@ -305,23 +305,24 @@ int csf_process_row(CSoundFile *csf)
 
 						csf->m_nCurrentOrder = csf->m_nRestartPos;
 
-						if ((csf->Orderlist[csf->m_nCurrentOrder] >= MAX_PATTERNS)
-						    || (!csf->Patterns[csf->Orderlist[csf->m_nCurrentOrder]]))
+						if (csf->Orderlist[csf->m_nCurrentOrder] >= MAX_PATTERNS
+						    || !csf->Patterns[csf->Orderlist[csf->m_nCurrentOrder]])
 							return false;
-					}
-					else {
+					} else {
 						csf->m_nCurrentOrder++;
 					}
 
-					csf->m_nCurrentPattern = (csf->m_nCurrentOrder < MAX_ORDERS) ? csf->Orderlist[csf->m_nCurrentOrder] : 0xFF;
+					csf->m_nCurrentPattern = (csf->m_nCurrentOrder < MAX_ORDERS)
+						? csf->Orderlist[csf->m_nCurrentOrder]
+						: 0xFF;
 
-					if ((csf->m_nCurrentPattern < MAX_PATTERNS) && (!csf->Patterns[csf->m_nCurrentPattern]))
+					if (csf->m_nCurrentPattern < MAX_PATTERNS
+					    && !csf->Patterns[csf->m_nCurrentPattern])
 						csf->m_nCurrentPattern = 0xFE;
 				}
 
 				csf->m_nNextOrder = csf->m_nCurrentOrder;
-			}
-			else if (csf->m_nCurrentOrder < 255) {
+			} else if (csf->m_nCurrentOrder < 255) {
 				if (csf->m_nRepeatCount > 0)
 					csf->m_nRepeatCount--;
 
@@ -464,8 +465,7 @@ static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 	if (*vol > 0) {
 		const int tremattn = 6;
 	
-		switch (chan->nTremoloType & 0x03)
-		{
+		switch (chan->nTremoloType & 0x03) {
 		case 1:
 			*vol += (ModRampDownTable[trempos] * (int)chan->nTremoloDepth) >> tremattn;
 			break;
@@ -480,8 +480,7 @@ static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 		}
 	}
 	
-	if (csf->m_nTickCount ||
-	    !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
+	if (csf->m_nTickCount || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
 		chan->nTremoloPos = (trempos + chan->nTremoloSpeed) & 0x3F;
 	}
 }
@@ -515,8 +514,7 @@ static inline void rn_panbrello(SONGVOICE *chan)
 	unsigned int panpos = ((chan->nPanbrelloPos + 0x10) >> 2) & 0x3F;
 	int pdelta;
 	
-	switch (chan->nPanbrelloType & 0x03)
-	{
+	switch (chan->nPanbrelloType & 0x03) {
 	case 1:
 		pdelta = ModRampDownTable[panpos];
 		break;
@@ -544,8 +542,7 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 	unsigned int vdepth;
 	int period = *nperiod;
 
-	switch (chan->nVibratoType & 0x03)
-	{
+	switch (chan->nVibratoType & 0x03) {
 	case 1:
 		vdelta = ModRampDownTable[vibpos];
 		break;
@@ -570,8 +567,7 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 
 			if (l & 0x03)
 				vdelta += _muldiv(period, FineLinearSlideDownTable[l & 0x03], 0x10000) - period;
-		}
-		else {
+		} else {
 			vdelta = _muldiv(period, LinearSlideUpTable[l >> 2], 0x10000) - period;
 
 			if (l & 0x03)
@@ -581,8 +577,7 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 
 	period += vdelta;
 
-	if (csf->m_nTickCount ||
-	    !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
+	if (csf->m_nTickCount || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
 		chan->nVibratoPos = (vibpos + chan->nVibratoSpeed) & 0x3F;
 	}
 
@@ -599,8 +594,7 @@ static inline void rn_instrument_vibrato(CSoundFile *csf, SONGVOICE *chan, int *
 	/* this isn't correct, but it's better... [original was without int cast] */
 	if (!pins->nVibSweep) {
 		chan->nAutoVibDepth = pins->nVibDepth << 8;
-	}
-	else {
+	} else {
 		chan->nAutoVibDepth += pins->nVibSweep;
 
 		if ((chan->nAutoVibDepth >> 8) > (int) pins->nVibDepth)
@@ -611,8 +605,7 @@ static inline void rn_instrument_vibrato(CSoundFile *csf, SONGVOICE *chan, int *
 
 	int val;
 
-	switch(pins->nVibType)
-	{
+	switch(pins->nVibType) {
 	case 4: // Random
 		val = ModRandomTable[chan->nAutoVibPos & 0x3F];
 		chan->nAutoVibPos++;
@@ -683,12 +676,10 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 		if (envpos >= x2) {
 			envvol = penv->VolEnv.Values[pt] << 2;
 			x1 = x2;
-		}
-		else if (pt) {
+		} else if (pt) {
 			envvol = penv->VolEnv.Values[pt-1] << 2;
 			x1 = penv->VolEnv.Ticks[pt-1];
-		}
-		else {
+		} else {
 			envvol = 0;
 			x1 = 0;
 		}
@@ -722,12 +713,10 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 		if (envpos >= x2) {
 			envpan = y2;
 			x1 = x2;
-		}
-		else if (pt) {
+		} else if (pt) {
 			envpan = penv->PanEnv.Values[pt-1];
 			x1 = penv->PanEnv.Ticks[pt-1];
-		}
-		else {
+		} else {
 			envpan = 128;
 			x1 = 0;
 		}
@@ -742,8 +731,7 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 
 		if (pan >= 128) {
 			pan += ((envpan - 32) * (256 - pan)) / 32;
-		}
-		else {
+		} else {
 			pan += ((envpan - 32) * (pan)) / 32;
 		}
 
@@ -761,15 +749,15 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 				chan->nFadeOutVol = 0;
 
 			vol = (vol * chan->nFadeOutVol) >> 16;
-		}
-		else if (!chan->nFadeOutVol) {
+		} else if (!chan->nFadeOutVol) {
 			vol = 0;
 		}
 	}
 
 	// Pitch/Pan separation
 	if (penv->nPPS && chan->nRealPan && chan->nNote) {
-		int pandelta = (int)chan->nRealPan + (int)((int)(chan->nNote - penv->nPPC - 1) * (int)penv->nPPS) / (int)8;
+		int pandelta = (int) chan->nRealPan
+		             + (int) ((int) (chan->nNote - penv->nPPC - 1) * (int) penv->nPPS) / (int) 8;
 		chan->nRealPan = CLAMP(pandelta, 0, 256);
 	}
 
@@ -817,12 +805,10 @@ static inline void rn_pitch_filter_envelope(SONGVOICE *chan, int *nenvpitch, int
 	if (envpos >= x2) {
 		envpitch = (((int)penv->PitchEnv.Values[pt]) - 32) * 8;
 		x1 = x2;
-	}
-	else if (pt) {
+	} else if (pt) {
 		envpitch = (((int)penv->PitchEnv.Values[pt - 1]) - 32) * 8;
 		x1 = penv->PitchEnv.Ticks[pt - 1];
-	}
-	else {
+	} else {
 		envpitch = 0;
 		x1 = 0;
 	}
@@ -870,8 +856,8 @@ static inline void rn_increment_env_pos(SONGVOICE *chan)
 			if (chan->nVolEnvPosition == volloopend) {
 				chan->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nLoopStart];
 
-				if (penv->VolEnv.nLoopEnd == penv->VolEnv.nLoopStart &&
-				    !penv->VolEnv.Values[penv->VolEnv.nLoopStart]) {
+				if (penv->VolEnv.nLoopEnd == penv->VolEnv.nLoopStart
+				    && !penv->VolEnv.Values[penv->VolEnv.nLoopStart]) {
 					chan->dwFlags |= CHN_NOTEFADE;
 					chan->nFadeOutVol = 0;
 				}
@@ -933,12 +919,10 @@ static inline void rn_increment_env_pos(SONGVOICE *chan)
 		}
 
 		// Pitch Sustain ?
-		if (penv->dwFlags & ENV_PITCHSUSTAIN &&
-		    !(chan->dwFlags & CHN_KEYOFF)) {
+		if (penv->dwFlags & ENV_PITCHSUSTAIN && !(chan->dwFlags & CHN_KEYOFF)) {
 			if (chan->nPitchEnvPosition == (int) penv->PitchEnv.Ticks[penv->PitchEnv.nSustainEnd]+1)
 				chan->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nSustainStart];
-		}
-		else {
+		} else {
 			if (chan->nPitchEnvPosition > penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1])
 				chan->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1];
 		}
@@ -989,8 +973,7 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 	if (csf->gdwSoundSetup & SNDMIX_NORESAMPLING) {
 		chan->dwFlags &= ~(CHN_HQSRC);
 		chan->dwFlags |= CHN_NOIDO;
-	}
-	else {
+	} else {
 		chan->dwFlags &= ~(CHN_NOIDO | CHN_HQSRC);
 
 		if (chan->nInc == 0x10000) {
@@ -1023,8 +1006,7 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 	if (!(csf->gdwSoundSetup & SNDMIX_NORAMPING) &&
 	    chan->dwFlags & CHN_VOLUMERAMP &&
 	    (chan->nRightVol != chan->nNewRightVol ||
-	     chan->nLeftVol  != chan->nNewLeftVol))
-	{
+	     chan->nLeftVol  != chan->nNewLeftVol)) {
 		int nRampLength = csf->gnVolumeRampSamples;
 		int nRightDelta = ((chan->nNewRightVol - chan->nRightVol) << VOLUMERAMPPRECISION);
 		int nLeftDelta	= ((chan->nNewLeftVol  - chan->nLeftVol)  << VOLUMERAMPPRECISION);
@@ -1049,14 +1031,12 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 
 		if (chan->nRightRamp | chan->nLeftRamp) {
 			chan->nRampLength = nRampLength;
-		}
-		else {
+		} else {
 			chan->dwFlags &= ~CHN_VOLUMERAMP;
 			chan->nRightVol = chan->nNewRightVol;
 			chan->nLeftVol	= chan->nNewLeftVol;
 		}
-	}
-	else {
+	} else {
 		chan->dwFlags  &= ~CHN_VOLUMERAMP;
 		chan->nRightVol = chan->nNewRightVol;
 		chan->nLeftVol	= chan->nNewLeftVol;
@@ -1092,21 +1072,18 @@ static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, const int chan_n
 		// Vol maximum is 64*64 here. (4096)
 		int volume = vol;
 
-		if (chan->dwFlags & CHN_ADLIB &&
-		    volume > 0) {
+		if (chan->dwFlags & CHN_ADLIB && volume > 0) {
 			// This gives a value in the range 0..127.
 			//int o = volume;
 			volume = find_volume((unsigned short) volume) * chan->nInsVol / 64;
 			//fprintf(stderr, "%d -> %d[%d]\n", o, volume, chan->nInsVol);
-		}
-		else {
+		} else {
 			// This gives a value in the range 0..127.
 			volume = volume * chan->nInsVol / 8192;
 		}
 
 		GM_SetFreqAndVol(chan_num, freq, volume, BendMode, chan->dwFlags & CHN_KEYOFF);
-	}
-	else if (chan->dwFlags & CHN_ADLIB) {
+	} else if (chan->dwFlags & CHN_ADLIB) {
 		// For some reason, scaling by about (2*3)/(8200/8300) is needed
 		// to get a frequency that matches with ST3.
 		int oplfreq = freq * 164 / 249;
