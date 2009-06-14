@@ -117,7 +117,7 @@ bool CSoundFile::ReadOKT(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (!rows) rows = 64;
 		if (npat < MAX_PATTERNS)
 		{
-			if ((Patterns[npat] = AllocatePattern(rows, m_nChannels)) == NULL) return true;
+			if ((Patterns[npat] = csf_allocate_pattern(rows, m_nChannels)) == NULL) return true;
 			MODCOMMAND *m = Patterns[npat];
 			PatternSize[npat] = rows;
 			PatternAllocSize[npat] = rows;

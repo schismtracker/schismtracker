@@ -110,7 +110,7 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 	{
 		PatternSize[pat] = 64;
 		PatternAllocSize[pat] = 64;
-		if ((Patterns[pat] = AllocatePattern(64, m_nChannels)) == NULL) break;
+		if ((Patterns[pat] = csf_allocate_pattern(64, m_nChannels)) == NULL) break;
 		for (uint32_t n=0; n<32; n++) if ((pSeq[n]) && (pSeq[n] <= bswapLE16(pmh->numtracks)) && (n < m_nChannels))
 		{
 			const uint8_t * p = pTracks + 192 * (pSeq[n]-1);

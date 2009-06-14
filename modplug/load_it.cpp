@@ -484,7 +484,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		{
 			PatternSize[npat] = 64;
 			PatternAllocSize[npat] = 64;
-			Patterns[npat] = AllocatePattern(64, m_nChannels);
+			Patterns[npat] = csf_allocate_pattern(64, m_nChannels);
 			continue;
 		}
 
@@ -494,7 +494,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (patpos[npat]+8+len > dwMemLength) continue;
 		PatternSize[npat] = rows;
 		PatternAllocSize[npat] = rows;
-		if ((Patterns[npat] = AllocatePattern(rows, m_nChannels)) == NULL) continue;
+		if ((Patterns[npat] = csf_allocate_pattern(rows, m_nChannels)) == NULL) continue;
 		memset(lastvalue, 0, sizeof(lastvalue));
 		memset(chnmask, 0, sizeof(chnmask));
 		MODCOMMAND *m = Patterns[npat];

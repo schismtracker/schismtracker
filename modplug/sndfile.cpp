@@ -205,7 +205,7 @@ bool CSoundFile::Destroy()
 	int i;
 	for (i=0; i<MAX_PATTERNS; i++) if (Patterns[i])
 	{
-		FreePattern(Patterns[i]);
+		csf_free_pattern(Patterns[i]);
 		Patterns[i] = NULL;
 	}
 	if (m_lpszSongComments)
@@ -218,7 +218,7 @@ bool CSoundFile::Destroy()
 		SONGSAMPLE *pins = &Samples[i];
 		if (pins->pSample)
 		{
-			FreeSample(pins->pSample);
+			csf_free_sample(pins->pSample);
 			pins->pSample = NULL;
 		}
 	}
@@ -237,46 +237,13 @@ bool CSoundFile::Destroy()
 }
 
 
-//////////////////////////////////////////////////////////////////////////
-// Memory Allocation
-
-MODCOMMAND *CSoundFile::AllocatePattern(uint32_t rows, uint32_t nchns)
-//------------------------------------------------------------
-{
-	MODCOMMAND *p = new MODCOMMAND[rows*nchns];
-	if (p) memset(p, 0, rows*nchns*sizeof(MODCOMMAND));
-	return p;
-}
-
-
-void CSoundFile::FreePattern(void * pat)
-//--------------------------------------
-{
-	if (pat) delete [] (signed char*)pat;
-}
-
-
-signed char* CSoundFile::AllocateSample(uint32_t nbytes)
-//-------------------------------------------
-{
-	signed char * p = (signed char *) calloc(1, (nbytes+39) & ~7);
-	if (p) p += 16;
-	return p;
-}
-
-
-void CSoundFile::FreeSample(void * p)
-//-----------------------------------
-{
-	if (p)
-		free((void *) (((char *) p) - 16));
-}
 
 
 //////////////////////////////////////////////////////////////////////////
 // Misc functions
 
 MODMIDICFG CSoundFile::m_MidiCfgDefault;
+
 
 void CSoundFile::ResetMidiCfg()
 //-----------------------------
@@ -757,7 +724,7 @@ uint32_t CSoundFile::ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * 
 		mem *= 2;
 		pIns->uFlags |= CHN_STEREO;
 	}
-	if ((pIns->pSample = AllocateSample(mem)) == NULL)
+	if ((pIns->pSample = csf_allocate_sample(mem)) == NULL)
 	{
 		pIns->nLength = 0;
 		return 0;
@@ -1182,7 +1149,7 @@ uint32_t CSoundFile::ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * 
 		if (pIns->pSample)
 		{
 			pIns->nLength = 0;
-			FreeSample(pIns->pSample);
+			csf_free_sample(pIns->pSample);
 			pIns->pSample = NULL;
 		}
 		return 0;
@@ -1329,7 +1296,7 @@ bool CSoundFile::DestroySample(uint32_t nSample)
 			Voices[i].pSample = Voices[i].pCurrentSample = NULL;
 		}
 	}
-	FreeSample(pSample);
+	csf_free_sample(pSample);
 	return true;
 }
 

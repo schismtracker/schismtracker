@@ -251,7 +251,7 @@ bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 		if ((nRows < 64) || (nRows > 256)) nRows = 64;
 		PatternSize[nPat] = nRows;
 		PatternAllocSize[nPat] = nRows;
-		if ((Patterns[nPat] = AllocatePattern(nRows, m_nChannels)) == NULL) break;
+		if ((Patterns[nPat] = csf_allocate_pattern(nRows, m_nChannels)) == NULL) break;
 		MODCOMMAND *m = Patterns[nPat];
 		MODCOMMAND *sp, dummy;
 		uint8_t *p = pPsmPat->data;

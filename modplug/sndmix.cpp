@@ -337,7 +337,7 @@ int csf_process_row(CSoundFile *csf)
 
 		if (!csf->PatternSize[csf->m_nCurrentPattern] || !csf->Patterns[csf->m_nCurrentPattern]) {
 			/* okay, this is wrong. allocate the pattern _NOW_ */
-			csf->Patterns[csf->m_nCurrentPattern] = csf->AllocatePattern(64,64);
+			csf->Patterns[csf->m_nCurrentPattern] = csf_allocate_pattern(64, 64);
 			csf->PatternSize[csf->m_nCurrentPattern] = 64;
 			csf->PatternAllocSize[csf->m_nCurrentPattern] = 64;
 		}

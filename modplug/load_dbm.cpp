@@ -249,7 +249,7 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 				nRows = bswapBE16(pph->rows);
 				if ((nRows >= 4) && (nRows <= 256))
 				{
-					MODCOMMAND *m = AllocatePattern(nRows, m_nChannels);
+					MODCOMMAND *m = csf_allocate_pattern(nRows, m_nChannels);
 					if (m)
 					{
 						uint8_t * pkdata = (uint8_t *)&pph->patterndata;

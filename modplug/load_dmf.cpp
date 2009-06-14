@@ -176,7 +176,7 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 					if ((pt->jmpsize >= dwMemLength) || (dwPos + pt->jmpsize + 4 >= dwMemLength)) break;
 					PatternSize[npat] = (uint16_t)ticks;
 					PatternAllocSize[npat] = (uint16_t)ticks;
-					MODCOMMAND *m = AllocatePattern(PatternSize[npat], m_nChannels);
+					MODCOMMAND *m = csf_allocate_pattern(PatternSize[npat], m_nChannels);
 					if (!m) goto dmfexit;
 					Patterns[npat] = m;
 					uint32_t d = dwPos;

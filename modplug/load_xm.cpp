@@ -115,7 +115,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		{
 			PatternSize[ipatmap] = rows;
 			PatternAllocSize[ipatmap] = rows;
-			if ((Patterns[ipatmap] = AllocatePattern(rows, m_nChannels)) == NULL) return true;
+			if ((Patterns[ipatmap] = csf_allocate_pattern(rows, m_nChannels)) == NULL) return true;
 			if (!packsize) continue;
 			p = Patterns[ipatmap];
 		} else p = NULL;

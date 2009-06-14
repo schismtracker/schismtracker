@@ -104,7 +104,7 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 	dwMemPos = 0x1F1 + pfh->samples * 25;
 	for (uint32_t npat=0; npat<pfh->patterns; npat++)
 	{
-		Patterns[npat] = AllocatePattern(64, m_nChannels);
+		Patterns[npat] = csf_allocate_pattern(64, m_nChannels);
 		if (!Patterns[npat]) break;
 		PatternSize[npat] = 64;
 		PatternAllocSize[npat] = 64;

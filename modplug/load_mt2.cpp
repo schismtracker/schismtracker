@@ -283,7 +283,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	#endif
 			PatternSize[iPat] = nLines;
 			PatternAllocSize[iPat] = nLines;
-			Patterns[iPat] = AllocatePattern(nLines, m_nChannels);
+			Patterns[iPat] = csf_allocate_pattern(nLines, m_nChannels);
 			if (!Patterns[iPat]) return true;
 			MODCOMMAND *m = Patterns[iPat];
 			uint32_t len = wDataLen;

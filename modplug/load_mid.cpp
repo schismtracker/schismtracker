@@ -455,7 +455,7 @@ uint32_t CSoundFile::MapMidiInstrument(uint32_t dwBankProgram, uint32_t nChannel
 	Samples[m_nSamples].nPan = 128;
 	Samples[m_nSamples].nVolume = 256;
 	Samples[m_nSamples].nGlobalVol = 64;
-	Samples[m_nSamples].pSample = AllocateSample(1);
+	Samples[m_nSamples].pSample = csf_allocate_sample(1);
 	Samples[m_nSamples].uFlags &= ~(CHN_LOOP | CHN_16BIT);
 	Samples[m_nSamples].nLength = 1;
 	if (nChannel != MIDI_DRUMCHANNEL)
@@ -619,7 +619,7 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 		// Allocate current pattern if not allocated yet
 		if (!Patterns[pat])
 		{
-			Patterns[pat] = AllocatePattern(PatternSize[pat], m_nChannels);
+			Patterns[pat] = csf_allocate_pattern(PatternSize[pat], m_nChannels);
 			if (!Patterns[pat]) break;
 		}
 		dwGlobalFlags |= MIDIGLOBAL_SONGENDED;

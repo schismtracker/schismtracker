@@ -460,8 +460,24 @@ typedef struct MODMIDICFG
 #include "snd_fx.h" // blah
 
 #ifdef __cplusplus
+extern "C" {
+#endif
+
+MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels);
+void csf_free_pattern(void *pat);
+signed char *csf_allocate_sample(uint32_t nbytes);
+void csf_free_sample(void *p);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+
+#ifdef __cplusplus
 
 class CSoundFile;
+
+extern "C" {
 
 int csf_set_wave_config(CSoundFile *csf, uint32_t nRate,uint32_t nBits,uint32_t nChannels);
 int csf_set_wave_config_ex(CSoundFile *csf, bool,bool bNoOverSampling,bool,bool hqido,bool,bool bNR,bool bEQ);
@@ -497,6 +513,8 @@ void fx_key_off(CSoundFile *csf, uint32_t nChn);
 void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
 void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr);
+
+} // extern "C"
 
 
 //==============
@@ -630,10 +648,6 @@ public:
 
 	// System-Dependant functions
 public:
-	static MODCOMMAND *AllocatePattern(uint32_t rows, uint32_t nchns);
-	static signed char* AllocateSample(uint32_t nbytes);
-	static void FreePattern(void * pat);
-	static void FreeSample(void * p);
 	static uint32_t Normalize24BitBuffer(uint8_t * pbuffer, uint32_t cbsizebytes, uint32_t lmax24, uint32_t dwByteInc);
 
 private:

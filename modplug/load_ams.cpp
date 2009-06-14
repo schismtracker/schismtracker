@@ -137,7 +137,7 @@ bool CSoundFile::ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength)
 		if ((len >= dwMemLength) || (dwMemPos + len > dwMemLength)) return true;
 		PatternSize[iPat] = 64;
 		PatternAllocSize[iPat] = 64;
-		MODCOMMAND *m = AllocatePattern(PatternSize[iPat], m_nChannels);
+		MODCOMMAND *m = csf_allocate_pattern(PatternSize[iPat], m_nChannels);
 		if (!m) return true;
 		Patterns[iPat] = m;
 		const uint8_t *p = lpStream + dwMemPos;
@@ -473,7 +473,7 @@ bool CSoundFile::ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength)
 		{
 			PatternSize[ipat] = numrows;
 			PatternAllocSize[ipat] = numrows;
-			Patterns[ipat] = AllocatePattern(numrows, m_nChannels);
+			Patterns[ipat] = csf_allocate_pattern(numrows, m_nChannels);
 			if (!Patterns[ipat]) return true;
 			// Unpack Pattern Data
 			const uint8_t * psrc = lpStream + dwMemPos;
