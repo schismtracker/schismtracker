@@ -140,7 +140,9 @@ void cfg_load(void)
 
 	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
-	cfg_video_mousecursor = !!cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
+	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
+	// this is slightly misleading; should maybe #define MOUSE_MAXSTATE MOUSE_CYCLE_STATE or something
+	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_CYCLE_STATE);
 	ptr = cfg_get_string(&cfg, "Video", "aspect", _buf_video_aspect, 64, "");
 	if (ptr && *ptr) put_env_var("SCHISM_VIDEO_ASPECT", ptr);
 	
