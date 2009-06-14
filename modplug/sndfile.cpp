@@ -45,7 +45,7 @@ CSoundFile::CSoundFile()
       m_nCurrentPattern(), m_nCurrentOrder(), m_nNextOrder(),
       m_nLockedOrder(), m_nRestartPos(),
       m_nGlobalVolume(128), m_nSongPreAmp(),
-      m_nFreqFactor(128), m_nTempoFactor(128), m_nOldGlbVolSlide(),
+      m_nFreqFactor(128), m_nTempoFactor(128),
       m_nRepeatCount(0), m_nInitialRepeatCount(),
       m_rowHighlightMajor(16), m_rowHighlightMinor(4),
       m_lpszSongComments(NULL),
@@ -86,7 +86,6 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nFreqFactor = m_nTempoFactor = 128;
 	m_nDefaultGlobalVolume = 256;
 	m_nGlobalVolume = 256;
-	m_nOldGlbVolSlide = 0;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
 	m_nCurrentPatternDelay = 0;

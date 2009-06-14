@@ -392,6 +392,7 @@ typedef struct _SONGVOICE
 	unsigned int nNote, nNNA;
 	unsigned int nNewNote, nNewIns, nCommand, nArpeggio;
 	unsigned int nOldVolumeSlide, nOldFineVolUpDown;
+	unsigned int nOldGlbVolSlide;
 	unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
 	unsigned int nOldPanSlide, nOldChnVolSlide;
 	unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
@@ -483,7 +484,7 @@ void csf_process_stereo_dsp(CSoundFile *csf, int count);
 void csf_process_mono_dsp(CSoundFile *csf, int count);
 
 // snd_fx
-unsigned int csf_get_length(CSoundFile *csf, bool bAdjust, bool bTotal);
+unsigned int csf_get_length(CSoundFile *csf);
 void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
                            bool bPorta, bool bUpdVol, bool bResetEnv);
 void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual);
@@ -523,7 +524,7 @@ public: // for Editing
 	uint32_t m_nNextRow, m_nRow;
 	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nNextOrder,m_nLockedOrder,m_nRestartPos;
 	uint32_t m_nGlobalVolume, m_nSongPreAmp;
-	uint32_t m_nFreqFactor, m_nTempoFactor, m_nOldGlbVolSlide;
+	uint32_t m_nFreqFactor, m_nTempoFactor;
 	int32_t m_nRepeatCount, m_nInitialRepeatCount;
 	uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
 	char * m_lpszSongComments;
@@ -550,7 +551,7 @@ public:
 	uint32_t GetMaxPosition() const;
 	void SetCurrentPos(uint32_t nPos);
 	void SetCurrentOrder(uint32_t nOrder);
-	unsigned int GetSongTime() { return csf_get_length(this, false, true); }
+	unsigned int GetSongTime() { return csf_get_length(this); }
 	void SetRepeatCount(int n) { m_nRepeatCount = n; m_nInitialRepeatCount = n; }
 	int GetRepeatCount() const { return m_nRepeatCount; }
 	void LoopPattern(int nPat, int nRow=0);
@@ -644,7 +645,7 @@ public:
 	// Global Effects
 	void SetTempo(uint32_t param);
 	void SetSpeed(uint32_t param);
-	void GlobalVolSlide(uint32_t param);
+	void GlobalVolSlide(SONGVOICE *pChn, uint32_t param);
 	bool IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, uint32_t nJumpOrder, uint32_t nJumpRow) const;
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
