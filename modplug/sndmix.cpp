@@ -418,7 +418,7 @@ int csf_process_row(CSoundFile *csf)
 	}
 
 	// Update Effects
-	return csf->ProcessEffects();
+	return csf_process_effects(csf);
 }
 
 
@@ -1115,13 +1115,13 @@ int csf_read_note(CSoundFile *csf)
 		if (csf->m_nTickCount)
 			csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
 
-		csf->ProcessEffects();
+		csf_process_effects(csf);
 		csf->m_nTickCount++;
 
 		if (csf->m_nTickCount >= csf->m_nMusicSpeed)
 			csf->m_nTickCount = 0;
 
-		if (!csf->ProcessEffects())
+		if (!csf_process_effects(csf))
 			return false;
 	} else {
 		if (!csf_process_row(csf))

@@ -253,7 +253,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	do we want to check that or not? what is this actually handling anyway? */
 	if ((c->pSample || c->nRealtime) && note < 0x80) {
 		csf_note_change(mp, chan, c->nRowNote, false, true, false);
-		mp->ProcessEffects();
+		csf_process_effects(mp);
 		csf_check_nna(mp, chan, ins_mode ? ins : samp, note, false);
 	}
 
@@ -498,29 +498,26 @@ void song_stop_unlocked(int quitting)
 		for (int chan = 0; chan < 64; chan++) {
 			if (note_tracker[chan] != 0) {
 				for (int j = 0; j < 16; j++) {
-					mp->ProcessMidiMacro(chan,
+					csf_process_midi_macro(mp, chan,
 						&mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
 						0, note_tracker[chan], 0, j);
 				}
 				moff[0] = 0x80 + chan;
 				moff[1] = note_tracker[chan];
-				mp->MidiSend((unsigned char *)moff, 2);
+				csf_midi_send(mp, (unsigned char *) moff, 2, 0, 0);
 			}
 		}
 		for (int j = 0; j < 16; j++) {
 			moff[0] = 0xe0 + j;
 			moff[1] = 0;
-			mp->MidiSend((unsigned char *)moff, 2);
+			csf_midi_send(mp, (unsigned char *) moff, 2, 0, 0);
 		}
 
 		// send all notes off
 #define _MIDI_PANIC	"\xb0\x78\0\xb0\x79\0\xb0\x7b\0"
-		mp->MidiSend((unsigned char *)_MIDI_PANIC,
-			sizeof(_MIDI_PANIC)-1);
-		mp->ProcessMidiMacro(0,
-			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_STOP*32], // STOP!
-			0, 0, 0);
-		midi_send_flush(); /* NOW! */
+		csf_midi_send(mp, (unsigned char *) _MIDI_PANIC, sizeof(_MIDI_PANIC) - 1, 0, 0);
+		csf_process_midi_macro(mp, NULL, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_STOP*32], 0, 0, 0, 0); // STOP!
+		midi_send_flush(); // NOW!
 
 		midi_playing = 0;
 	}
@@ -1131,9 +1128,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
     else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
 
 	if (!midi_playing) {
-		mp->ProcessMidiMacro(0,
-			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_START*32], // START!
-			0, 0, 0);
+		csf_process_midi_macro(mp, 0, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_START*32], 0, 0, 0, 0); // START!
 		midi_playing = 1;
 	}
 
@@ -1200,8 +1195,7 @@ printf("channel = %d note=%d\n",chan,m_note);
 	need_note = need_velocity = -1;
 	if (m_note > 120) {
 		if (note_tracker[chan] != 0) {
-			mp->ProcessMidiMacro(chan,
-				&mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
+			csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
 				0, note_tracker[chan], 0, ins);
 		}
 			
@@ -1217,8 +1211,7 @@ printf("channel = %d note=%d\n",chan,m_note);
 
 	} else if (m->note) {
 		if (note_tracker[chan] != 0) {
-			mp->ProcessMidiMacro(chan,
-				&mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
+			csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
 				0, note_tracker[chan], 0, ins);
 		}
 		note_tracker[chan] = m_note;
@@ -1240,35 +1233,32 @@ printf("channel = %d note=%d\n",chan,m_note);
 		buf[0] = 0xB0 | (mc & 15); // controller
 		buf[1] = 0x00; // corse bank/select
 		buf[2] = mbh; // corse bank/select
-		mp->MidiSend(buf, 3);
+		csf_midi_send(mp, buf, 3, 0, 0);
 		was_bankhi[mc] = mbh;
 	}
 	if (mbl > -1 && was_banklo[mc] != mbl) {
 		buf[0] = 0xB0 | (mc & 15); // controller
 		buf[1] = 0x20; // fine bank/select
 		buf[2] = mbl; // fine bank/select
-		mp->MidiSend(buf, 3);
+		csf_midi_send(mp, buf, 3, 0, 0);
 		was_banklo[mc] = mbl;
 	}
 	if (mg > -1 && was_program[mc] != mg) {
 		was_program[mc] = mg;
-		mp->ProcessMidiMacro(chan,
-			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_PROGRAM*32], // program change
-			mg, 0, 0, ins);
+		csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_PROGRAM*32],
+			mg, 0, 0, ins); // program change
 	}
 	if (c->dwFlags & CHN_MUTE) {
-		/* don't send noteon events when muted */
+		// don't send noteon events when muted
 	} else if (need_note > 0) {
-		if (need_velocity == -1) need_velocity = 64; /* eh? */
+		if (need_velocity == -1) need_velocity = 64; // eh?
 		need_velocity = CLAMP(need_velocity*2,0,127);
-		mp->ProcessMidiMacro(chan,
-			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEON*32], // noteon
-			0, need_note, need_velocity, ins);
+		csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEON*32],
+			0, need_note, need_velocity, ins); // noteon
 	} else if (need_velocity > -1 && note_tracker[chan] > 0) {
 		need_velocity = CLAMP(need_velocity*2,0,127);
-		mp->ProcessMidiMacro(chan,
-			&mp->m_MidiCfg.szMidiGlb[MIDIOUT_VOLUME*32], // volume-set
-			need_velocity, note_tracker[chan], need_velocity, ins);
+		csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_VOLUME*32],
+			need_velocity, note_tracker[chan], need_velocity, ins); // volume-set
 	}
 
 }
