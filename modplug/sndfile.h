@@ -646,10 +646,6 @@ public:
 	uint32_t MapMidiInstrument(uint32_t dwProgram, uint32_t nChannel, uint32_t nNote);
 	bool ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers);
 
-	// System-Dependant functions
-public:
-	static uint32_t Normalize24BitBuffer(uint8_t * pbuffer, uint32_t cbsizebytes, uint32_t lmax24, uint32_t dwByteInc);
-
 private:
     /* CSoundFile is a sentinel, prevent copying to avoid memory leaks */
     CSoundFile(const CSoundFile&);
