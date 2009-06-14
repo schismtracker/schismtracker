@@ -606,7 +606,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 				}
 			}
 			if (n == current_order) {
-				status_text_flash("Pattern %d not on Orderlist List", p);
+				status_text_flash("Pattern %d not on Order List", p);
 				return 1;
 			}
 		}
@@ -910,7 +910,7 @@ void orderpan_load_page(struct page *page)
 {
         int n;
 
-        page->title = "Orderlist List and Panning (F11)";
+        page->title = "Order List and Panning (F11)";
         page->draw_const = orderpan_draw_const;
         /* this does the work for both pages */
         page->song_changed_cb = order_pan_vol_song_changed_cb;
@@ -945,7 +945,7 @@ void ordervol_load_page(struct page *page)
 {
         int n;
 
-        page->title = "Orderlist List and Channel Volume (F11)";
+        page->title = "Order List and Channel Volume (F11)";
         page->draw_const = ordervol_draw_const;
         page->playback_update = order_pan_vol_playback_update;
 	page->pre_handle_key = order_pre_key;

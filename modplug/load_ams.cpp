@@ -122,7 +122,7 @@ bool CSoundFile::ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength)
 		memcpy(m_lpszSongComments, lpStream + dwMemPos, tmp);
 		dwMemPos += tmp;
 	}
-	// Read Orderlist List
+	// Read Order List
 	for (uint32_t iOrd=0; iOrd<pfh->orders; iOrd++, dwMemPos += 2)
 	{
 		uint32_t n = *((uint16_t *)(lpStream+dwMemPos));
@@ -446,7 +446,7 @@ bool CSoundFile::ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength)
 		dwMemPos += songtextlen;
 		if (dwMemPos + 256 >= dwMemLength) return true;
 	}
-	// Orderlist List
+	// Order List
 	{
 		for (uint32_t i=0; i<MAX_ORDERS; i++)
 		{

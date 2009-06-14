@@ -62,7 +62,7 @@ static const uint8_t helptext_gen[] =
 
 static const uint8_t helptext_editbox[] =
 "Space       Plot/clear point\n"
-"Samples/Del     Fill/clear horiz.\n"
+"Ins/Del     Fill/clear horiz.\n"
 "...w/Shift  Fill/clear vert.\n"
 "\n"
 "+/-         Next/prev. char.\n"
