@@ -104,7 +104,7 @@ static struct menu playback_menu = {
                 "Show Infopage          (F5)",
                 "Play Song         (Ctrl-F5)",
                 "Play Pattern           (F6)",
-                "Play from Orderlist  (Shift-F6)",
+                "Play from Order  (Shift-F6)",
                 "Play from Mark/Cursor  (F7)",
                 "Stop                   (F8)",
                 "Calculate Length   (Ctrl-P)",

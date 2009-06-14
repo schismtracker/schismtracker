@@ -98,7 +98,7 @@ static inline void draw_song_playing_status(void)
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        pos += draw_text("Playing, Orderlist: ", 2, 9, 0, 2);
+        pos += draw_text("Playing, Order: ", 2, 9, 0, 2);
         pos += draw_text(numtostr(0, song_get_current_order(), buf), pos, 9, 3, 2);
         draw_char('/', pos, 9, 0, 2);
         pos++;
