@@ -14,1167 +14,74 @@
 
 
 ////////////////////////////////////////////////////////////
-// Length
-
-unsigned int csf_get_length(CSoundFile *csf)
-{
-	uint32_t dwElapsedTime=0, nRow=0, nCurrentPattern=0, nNextPattern=0, nPattern=csf->Orderlist[0];
-	uint32_t nMusicSpeed=csf->m_nDefaultSpeed, nMusicTempo=csf->m_nDefaultTempo, nNextRow=0;
-	uint32_t nMaxRow = 0, nMaxPattern = 0;
-	uint8_t samples[MAX_VOICES];
-	uint8_t instr[MAX_VOICES];
-	uint8_t notes[MAX_VOICES];
-	uint8_t vols[MAX_VOICES];
-	uint8_t oldparam[MAX_VOICES];
-	uint8_t chnvols[MAX_VOICES];
-	uint32_t patloop[MAX_VOICES];
-
-	memset(instr, 0, sizeof(instr));
-	memset(notes, 0, sizeof(notes));
-	memset(vols, 0xFF, sizeof(vols));
-	memset(patloop, 0, sizeof(patloop));
-	memset(oldparam, 0, sizeof(oldparam));
-	memset(chnvols, 64, sizeof(chnvols));
-	memset(samples, 0, sizeof(samples));
-	for (uint32_t icv=0; icv<csf->m_nChannels; icv++)
-		chnvols[icv] = csf->Channels[icv].nVolume;
-	nMaxRow = csf->m_nNextRow;
-	nMaxPattern = csf->m_nNextOrder;
-	nCurrentPattern = nNextPattern = 0;
-	nPattern = csf->Orderlist[0];
-	nRow = nNextRow = 0;
-	for (;;) {
-		uint32_t nSpeedCount = 0;
-		nRow = nNextRow;
-		nCurrentPattern = nNextPattern;
-
-		// Check if pattern is valid
-		nPattern = csf->Orderlist[nCurrentPattern];
-		while (nPattern >= MAX_PATTERNS) {
-			// End of song ?
-			if (nPattern == 0xFF || nCurrentPattern >= MAX_ORDERS) {
-				goto EndMod;
-			} else {
-				nCurrentPattern++;
-				nPattern = (nCurrentPattern < MAX_ORDERS)
-					? csf->Orderlist[nCurrentPattern]
-					: 0xFF;
-			}
-			nNextPattern = nCurrentPattern;
-		}
-		// Weird stuff?
-		if ((nPattern >= MAX_PATTERNS) || (!csf->Patterns[nPattern])) break;
-		// Should never happen
-		if (nRow >= csf->PatternSize[nPattern]) nRow = 0;
-		// Update next position
-		nNextRow = nRow + 1;
-		if (nNextRow >= csf->PatternSize[nPattern]) {
-			nNextPattern = nCurrentPattern + 1;
-			nNextRow = 0;
-		}
-		/* muahahaha */
-		if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
-			if (csf->stop_at_order <= (signed) nCurrentPattern && csf->stop_at_row <= (signed) nRow)
-				goto EndMod;
-			if (csf->stop_at_time > 0) {
-				/* stupid api decision */
-				if (((dwElapsedTime+500) / 1000) >= csf->stop_at_time) {
-					csf->stop_at_order = nCurrentPattern;
-					csf->stop_at_row = nRow;
-					goto EndMod;
-				}
-			}
-		}
-
-		if (!nRow) {
-			for (uint32_t ipck=0; ipck<csf->m_nChannels; ipck++)
-				patloop[ipck] = dwElapsedTime;
-		}
-		SONGVOICE *pChn = csf->Voices;
-		MODCOMMAND *p = csf->Patterns[nPattern] + nRow * csf->m_nChannels;
-		for (uint32_t nChn=0; nChn<csf->m_nChannels; p++,pChn++, nChn++)
-		if (*((uint32_t *)p)) {
-			uint32_t command = p->command;
-			uint32_t param = p->param;
-			uint32_t note = p->note;
-			if (p->instr) {
-				instr[nChn] = p->instr;
-				notes[nChn] = 0;
-				vols[nChn] = 0xFF;
-			}
-			if ((note) && (note <= 120))
-				notes[nChn] = note;
-			if (p->volcmd == VOLCMD_VOLUME)
-				vols[nChn] = p->vol;
-			switch (command) {
-			case 0: break;
-			// Position Jump
-			case CMD_POSITIONJUMP:
-				if (param <= nCurrentPattern)
-					goto EndMod;
-				nNextPattern = param;
-				nNextRow = 0;
-				break;
-			// Pattern Break
-			case CMD_PATTERNBREAK:
-				nNextRow = param;
-				nNextPattern = nCurrentPattern + 1;
-				break;
-			// Set Speed
-			case CMD_SPEED:
-				if (param)
-					nMusicSpeed = param;
-				break;
-			// Set Tempo
-			case CMD_TEMPO:
-				if (param)
-					pChn->nOldTempo = param;
-				else
-					param = pChn->nOldTempo;
-				// this is split up due to c++ stupidity (gcc bug?)
-				int d; d = (param & 0xf);
-				switch (param >> 4) {
-				default:
-					nMusicTempo = param;
-					break;
-				case 0:
-					d = -d;
-				case 1:
-					d = d * nMusicSpeed + nMusicTempo;
-					nMusicTempo = CLAMP(d, 32, 255);
-					break;
-				}
-				break;
-			// Pattern Delay
-			case CMD_S3MCMDEX:
-				switch (param >> 4) {
-				case 0x6:
-					nSpeedCount = param & 0x0F;
-					break;
-				case 0xb:
-					if (param & 0x0F)
-						dwElapsedTime += (dwElapsedTime - patloop[nChn]) * (param & 0x0F);
-					else
-						patloop[nChn] = dwElapsedTime;
-					break;
-				case 0xe:
-					nSpeedCount = (param & 0x0F) * nMusicSpeed;
-					break;
-				}
-				break;
-			}
-		}
-		nSpeedCount += nMusicSpeed;
-		dwElapsedTime += (2500 * nSpeedCount) / nMusicTempo;
-	}
-EndMod:
-	return (dwElapsedTime+500) / 1000;
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////
-// Effects
-
-void CSoundFile::TranslateKeyboard(SONGINSTRUMENT* penv, uint32_t note, SONGSAMPLE*& psmp)
-{
-    uint32_t n = penv->Keyboard[note-1];
-	if ((n) && (n < MAX_SAMPLES)) psmp = &Samples[n];
-	if (!n)
-	{
-	    static SONGSAMPLE dummyinstrument =
-	    {
-	        1,/*len*/
-	        0,0, 0,0, /* loop s/e, sus s/e */
-	        (int8_t *) "", /*data*/
-	        8363, 0x80, /* c5 pan */
-	        255,64, /* volume global */
-	        0x00, /* flags*/  //CHN_ADLIB,
-	        0,0,0,0, /*vib*/
-	        "", /* name */
-	        "", /* filename */
-	        0,/* played */
-	        {
-	            /* Piano AdLib sample... doesn't really
-	             * matter, it should be never accessed anyway.
-	             */
-	            0x01,0x01, 0x8f,0x06, 0xf2,0xf2,
-	            0xf4,0xf7, 0x00,0x00, 0x08,0x00
-	        }
-	    };
-	    psmp = &dummyinstrument;
-	}
-}
-
-void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
-                           bool bPorta, bool bUpdVol, bool bResetEnv)
-{
-	bool bInstrumentChanged = false;
-
-	if (instr >= MAX_INSTRUMENTS) return;
-	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
-	SONGSAMPLE *psmp = &csf->Samples[instr];
-	uint32_t note = pChn->nNewNote;
-	if ((penv) && (note) && (note <= 128))
-	{
-		if (penv->NoteMap[note-1] >= 0xFE) return;
-		psmp = NULL;
-		csf->TranslateKeyboard(penv, note, psmp);
-		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
-	} else if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
-	{
-		/* XXX why check instrument mode here? at a glance this seems "wrong" */
-		if (note >= 0xFE)
-			return;
-		psmp = NULL;
-	}
-	// Update Volume
-	if (bUpdVol) pChn->nVolume = psmp ? psmp->nVolume : 0;
-	// bInstrumentChanged is used for IT carry-on env option
-	if (penv != pChn->pHeader) {
-		bInstrumentChanged = true;
-		pChn->pHeader = penv;
-	}
-	// Instrument adjust
-	pChn->nNewIns = 0;
-	if (psmp) {
-		psmp->played = 1;
-		if (penv) {
-			penv->played = 1;
-			pChn->nInsVol = (psmp->nGlobalVol * penv->nGlobalVol) >> 7;
-			if (penv->dwFlags & ENV_SETPANNING)
-				pChn->nPan = penv->nPan;
-			pChn->nNNA = penv->nNNA;
-		} else {
-			pChn->nInsVol = psmp->nGlobalVol;
-		}
-		if (psmp->uFlags & CHN_PANNING)
-			pChn->nPan = psmp->nPan;
-	}
-	// Reset envelopes
-	if (bResetEnv) {
-		if (!bPorta || (csf->m_dwSongFlags & SONG_ITCOMPATMODE)
-		    || !pChn->nLength || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)) {
-			pChn->dwFlags |= CHN_FASTVOLRAMP;
-			if (!bInstrumentChanged && penv && !(pChn->dwFlags & (CHN_KEYOFF|CHN_NOTEFADE))) {
-				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
-			} else {
-				pChn->nVolEnvPosition = 0;
-				pChn->nPanEnvPosition = 0;
-				pChn->nPitchEnvPosition = 0;
-			}
-			pChn->nAutoVibDepth = 0;
-			pChn->nAutoVibPos = 0;
-		} else if (penv && !(penv->dwFlags & ENV_VOLUME)) {
-			pChn->nVolEnvPosition = 0;
-			pChn->nAutoVibDepth = 0;
-			pChn->nAutoVibPos = 0;
-		}
-	}
-	// Invalid sample ?
-	if (!psmp) {
-		pChn->pInstrument = NULL;
-		pChn->nInsVol = 0;
-		return;
-	}
-	if (psmp == pChn->pInstrument) {
-		return;
-	} else {
-		pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE|CHN_VOLENV|CHN_PANENV|CHN_PITCHENV);
-		pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (psmp->uFlags);
-		if (penv) {
-			if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
-			if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
-			if (penv->dwFlags & ENV_PITCH) pChn->dwFlags |= CHN_PITCHENV;
-			if ((penv->dwFlags & ENV_PITCH) && (penv->dwFlags & ENV_FILTER)) {
-				if (!pChn->nCutOff)
-					pChn->nCutOff = 0x7F;
-			}
-			if (penv->nIFC & 0x80) pChn->nCutOff = penv->nIFC & 0x7F;
-			if (penv->nIFR & 0x80) pChn->nResonance = penv->nIFR & 0x7F;
-		}
-		pChn->nVolSwing = pChn->nPanSwing = 0;
-	}
-	pChn->pInstrument = psmp;
-	pChn->nLength = psmp->nLength;
-	pChn->nLoopStart = psmp->nLoopStart;
-	pChn->nLoopEnd = psmp->nLoopEnd;
-	pChn->nC5Speed = psmp->nC5Speed;
-	pChn->pSample = psmp->pSample;
-
-/*
-	AAAAAAAAAAAAAHHHHHHHHH!!!!!!!!!
-	how does one go about setting the frequency at which a note plays?
-	I'm fairly certain that this is the place to patch for abuse test #9
-	but can't figure out what exactly needs to be done :/
-	(it's probably stupidly obvious and I'll slap my forehead in retrospect)
-*/
-
-	if (pChn->dwFlags & CHN_SUSTAINLOOP) {
-		pChn->nLoopStart = psmp->nSustainStart;
-		pChn->nLoopEnd = psmp->nSustainEnd;
-		pChn->dwFlags |= CHN_LOOP;
-		if (pChn->dwFlags & CHN_PINGPONGSUSTAIN)
-			pChn->dwFlags |= CHN_PINGPONGLOOP;
-	}
-	if ((pChn->dwFlags & CHN_LOOP) && pChn->nLoopEnd < pChn->nLength)
-		pChn->nLength = pChn->nLoopEnd;
-	/*fprintf(stderr, "length set as %d (from %d), ch flags %X smp flags %X\n",
-	    (int)pChn->nLength,
-	    (int)psmp->nLength, pChn->dwFlags, psmp->uFlags);*/
-}
-
-
-void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual)
-{
-	if (note < 1) return;
-	SONGVOICE * const pChn = &csf->Voices[nChn];
-	SONGSAMPLE *pins = pChn->pInstrument;
-	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
-	if (penv && note <= 0x80) {
-		csf->TranslateKeyboard(penv, note, pins);
-		note = penv->NoteMap[note-1];
-		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
-	}
-
-	if (note >= 0x80) {
-		// 0xFE or invalid note => key off
-                // technically this is "wrong", as anything besides ^^^, ===, and a valid note
-		// should cause a note fade... (oh well, it's just a quick hack anyway.)
-                if (note == 0xFD) {
-			pChn->dwFlags |= CHN_NOTEFADE;
-                        return;
-                }
-
-		csf->KeyOff(nChn);
-		if (note == 0xFE) {
-			// Note Cut
-			pChn->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
-			if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
-				pChn->nVolume = 0;
-			pChn->nFadeOutVol = 0;
-		}
-		return;
-	}
-	if (!pins)
-		return;
-	note = CLAMP(note, 1, 132); // why 132? random...
-	pChn->nNote = note;
-	pChn->nNewIns = 0;
-	uint32_t period = get_period_from_note(note, pChn->nC5Speed, csf->m_dwSongFlags & SONG_LINEARSLIDES);
-	if (period) {
-		if (!bPorta || !pChn->nPeriod)
-			pChn->nPeriod = period;
-		pChn->nPortamentoDest = period;
-		if (!bPorta || !pChn->nLength) {
-			pChn->pInstrument = pins;
-			pChn->pSample = pins->pSample;
-			pChn->nLength = pins->nLength;
-			pChn->nLoopEnd = pins->nLength;
-			pChn->nLoopStart = 0;
-			pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (pins->uFlags); // FIXME - magic
-			if (pChn->dwFlags & CHN_SUSTAINLOOP) {
-				pChn->nLoopStart = pins->nSustainStart;
-				pChn->nLoopEnd = pins->nSustainEnd;
-				pChn->dwFlags &= ~CHN_PINGPONGLOOP;
-				pChn->dwFlags |= CHN_LOOP;
-				if (pChn->dwFlags & CHN_PINGPONGSUSTAIN) pChn->dwFlags |= CHN_PINGPONGLOOP;
-				if (pChn->nLength > pChn->nLoopEnd) pChn->nLength = pChn->nLoopEnd;
-			} else if (pChn->dwFlags & CHN_LOOP) {
-				pChn->nLoopStart = pins->nLoopStart;
-				pChn->nLoopEnd = pins->nLoopEnd;
-				if (pChn->nLength > pChn->nLoopEnd) pChn->nLength = pChn->nLoopEnd;
-			}
-			pChn->nPos = 0;
-			pChn->nPosLo = 0;
-			if (pChn->nVibratoType < 4)
-				pChn->nVibratoPos = (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) ? 0 : 0x10;
-			if (pChn->nTremoloType < 4)
-				pChn->nTremoloPos = 0;
-		}
-		if (pChn->nPos >= pChn->nLength)
-			pChn->nPos = pChn->nLoopStart;
-	} else {
-		bPorta = false;
-	}
-	if (!bPorta
-	    || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)
-	    || ((csf->m_dwSongFlags & SONG_ITCOMPATMODE) && pChn->nRowInstr)) {
-		if ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol) {
-			pChn->nVolEnvPosition = 0;
-			pChn->nPanEnvPosition = 0;
-			pChn->nPitchEnvPosition = 0;
-			pChn->nAutoVibDepth = 0;
-			pChn->nAutoVibPos = 0;
-			pChn->dwFlags &= ~CHN_NOTEFADE;
-			pChn->nFadeOutVol = 65536;
-		}
-		if (!bPorta || !(csf->m_dwSongFlags & SONG_ITCOMPATMODE) || pChn->nRowInstr) {
-			pChn->dwFlags &= ~CHN_NOTEFADE;
-			pChn->nFadeOutVol = 65536;
-		}
-	}
-	pChn->dwFlags &= ~CHN_KEYOFF;
-	// Enable Ramping
-	if (!bPorta) {
-		//pChn->nVUMeter = 0x100;
-		pChn->strike = 4; /* this affects how long the initial hit on the playback marks lasts */
-		pChn->nLeftVU = pChn->nRightVU = 0xFF;
-		pChn->dwFlags &= ~CHN_FILTER;
-		pChn->dwFlags |= CHN_FASTVOLRAMP;
-		pChn->nTremorCount = 0;
-		if (bResetEnv) {
-			pChn->nVolSwing = pChn->nPanSwing = 0;
-			if (penv) {
-				/* This is done above as well, with the instrument reset, but
-				 * I have a feeling that maybe it should only be here. Tests? */
-				pChn->dwFlags &= ~(CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
-				if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
-				if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
-				if (penv->dwFlags & ENV_PITCH) pChn->dwFlags |= CHN_PITCHENV;
-				
-				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
-				// Volume Swing
-				if (penv->nVolSwing) {
-					/* this was wrong */
-					int d = ((int32_t)penv->nVolSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 256;
-					pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
-				}
-				// Pan Swing
-				if (penv->nPanSwing) {
-					int d = ((int32_t)penv->nPanSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 128;
-					pChn->nPanSwing = (signed short)d;
-				}
-			}
-			pChn->nAutoVibDepth = 0;
-			pChn->nAutoVibPos = 0;
-		}
-		pChn->nLeftVol = pChn->nRightVol = 0;
-		bool bFlt = (csf->m_dwSongFlags & SONG_MPTFILTERMODE) ? false : true;
-		// Setup Initial Filter for this note
-		if (penv)
-		{
-			if (penv->nIFR & 0x80) {
-				pChn->nResonance = penv->nIFR & 0x7F;
-				bFlt = true;
-			}
-			if (penv->nIFC & 0x80) {
-				pChn->nCutOff = penv->nIFC & 0x7F;
-				bFlt = true;
-			}
-		} else {
-			pChn->nVolSwing = pChn->nPanSwing = 0;
-		}
-
-		if (pChn->nCutOff < 0x7F && bFlt)
-			setup_channel_filter(pChn, true, 256, csf->gdwMixingFreq);
-	}
-	// Special case for MPT
-	if (bManual)
-		pChn->dwFlags &= ~CHN_MUTE;
-	if (((pChn->dwFlags & CHN_MUTE) && (CSoundFile::gdwSoundSetup & SNDMIX_MUTECHNMODE))
-	    || (pChn->pInstrument && (pChn->pInstrument->uFlags & CHN_MUTE) && !bManual)
-	    || ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader
-	        && (pChn->pHeader->dwFlags & ENV_MUTE) && !bManual)) {
-		if (!bManual)
-			pChn->nPeriod = 0;
-	}
-
-}
-
-
-uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn)
-{
-	SONGVOICE *pChn = &csf->Voices[nChn];
-	// Check for empty channel
-	SONGVOICE *pi = &csf->Voices[csf->m_nChannels];
-	for (uint32_t i=csf->m_nChannels; i<MAX_VOICES; i++, pi++) {
-		if (!pi->nLength) {
-			if (pi->dwFlags & CHN_MUTE) {
-				if (pi->dwFlags & CHN_NNAMUTE) {
-					pi->dwFlags &= ~(CHN_NNAMUTE|CHN_MUTE);
-				} else {
-					/* this channel is muted; skip */
-					continue;
-				}
-			}
-			return i;
-		}
-	}
-	if (!pChn->nFadeOutVol) return 0;
-	// All channels are used: check for lowest volume
-	uint32_t result = 0;
-	uint32_t vol = 64*65536;	// 25%
-	int envpos = 0xFFFFFF;
-	const SONGVOICE *pj = &csf->Voices[csf->m_nChannels];
-	for (uint32_t j=csf->m_nChannels; j<MAX_VOICES; j++, pj++) {
-		if (!pj->nFadeOutVol) return j;
-		uint32_t v = pj->nVolume;
-		if (pj->dwFlags & CHN_NOTEFADE)
-			v = v * pj->nFadeOutVol;
-		else
-			v <<= 16;
-		if (pj->dwFlags & CHN_LOOP) v >>= 1;
-		if (v < vol || (v == vol && pj->nVolEnvPosition > envpos)) {
-			envpos = pj->nVolEnvPosition;
-			vol = v;
-			result = j;
-		}
-	}
-	if (result) {
-		/* unmute new nna channel */
-		csf->Voices[result].dwFlags &= ~(CHN_MUTE|CHN_NNAMUTE);
-	}
-	return result;
-}
-
-
-void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, bool bForceCut)
-{
-        SONGVOICE *p;
-	SONGVOICE *pChn = &csf->Voices[nChn];
-	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
-	SONGINSTRUMENT *pHeader;
-	signed char *pSample;
-	if (note < 1 || note > 0x80)
-		return;
-	// Always NNA cut - using
-	if (bForceCut || !(csf->m_dwSongFlags & SONG_INSTRUMENTMODE)) {
-		if (!pChn->nLength || (pChn->dwFlags & CHN_MUTE) || (!pChn->nLeftVol && !pChn->nRightVol))
-			return;
-		uint32_t n = csf_get_nna_channel(csf, nChn);
-		if (!n) return;
-		p = &csf->Voices[n];
-		// Copy Channel
-		*p = *pChn;
-		p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
-		p->nMasterChn = nChn+1;
-		p->nCommand = 0;
-		// Cut the note
-		p->nFadeOutVol = 0;
-		p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
-		// Stop this channel
-		pChn->nLength = pChn->nPos = pChn->nPosLo = 0;
-		pChn->nROfs = pChn->nLOfs = 0;
-		pChn->nLeftVol = pChn->nRightVol = 0;
-		OPL_NoteOff(nChn); OPL_Touch(nChn, 0);
-		GM_KeyOff(nChn); GM_Touch(nChn, 0);
-		return;
-	}
-	if (instr >= MAX_INSTRUMENTS) instr = 0;
-	pSample = pChn->pSample;
-	pHeader = pChn->pHeader;
-	if (instr && note) {
-		pHeader = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
-		if (pHeader) {
-			uint32_t n = 0;
-			if (note <= 0x80) {
-				n = pHeader->Keyboard[note-1];
-				note = pHeader->NoteMap[note-1];
-				if ((n) && (n < MAX_SAMPLES)) pSample = csf->Samples[n].pSample;
-			}
-		} else {
-			pSample = NULL;
-		}
-	}
-	if (!penv) return;
-	p = pChn;
-	for (uint32_t i=nChn; i<MAX_VOICES; p++, i++) {
-		if (!((i >= csf->m_nChannels || p == pChn)
-		      && ((p->nMasterChn == nChn+1 || p == pChn)
-		          && p->pHeader)))
-			continue;
-		bool bOk = false;
-		// Duplicate Check Type
-		switch (p->pHeader->nDCT) {
-		case DCT_NOTE:
-			if (note && (int) p->nNote == note && pHeader == p->pHeader)
-				bOk = true;
-			break;
-		case DCT_SAMPLE:
-			if (pSample && pSample == p->pSample)
-				bOk = true;
-			break;
-		case DCT_INSTRUMENT:
-			if (pHeader == p->pHeader)
-				bOk = true;
-			break;
-		}
-		// Duplicate Note Action
-		if (bOk) {
-			switch(p->pHeader->nDNA) {
-			case DNA_NOTECUT:
-				csf->KeyOff(i);
-				p->nVolume = 0;
-				break;
-			case DNA_NOTEOFF:
-				csf->KeyOff(i);
-				break;
-			case DNA_NOTEFADE:
-				p->dwFlags |= CHN_NOTEFADE;
-				break;
-			}
-			if (!p->nVolume) {
-				p->nFadeOutVol = 0;
-				p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
-			}
-		}
-	}
-	if (pChn->dwFlags & CHN_MUTE)
-		return;
-	// New Note Action
-	if (pChn->nVolume && pChn->nLength) {
-		uint32_t n = csf_get_nna_channel(csf, nChn);
-		if (n) {
-			p = &csf->Voices[n];
-			// Copy Channel
-			*p = *pChn;
-			p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
-			p->nMasterChn = nChn+1;
-			p->nCommand = 0;
-			// Key Off the note
-			switch(pChn->nNNA) {
-			case NNA_NOTEOFF:
-				csf->KeyOff(n);
-				break;
-			case NNA_NOTECUT:
-				p->nFadeOutVol = 0;
-			case NNA_NOTEFADE:
-				p->dwFlags |= CHN_NOTEFADE;
-				break;
-			}
-			if (!p->nVolume) {
-				p->nFadeOutVol = 0;
-				p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
-			}
-			// Stop this channel
-			pChn->nLength = pChn->nPos = pChn->nPosLo = 0;
-			pChn->nROfs = pChn->nLOfs = 0;
-		}
-	}
-}
-
-
-bool CSoundFile::ProcessEffects()
-//-------------------------------
-{
-	int nBreakRow = -1, nPosJump = -1, nPatLoopRow = -1;
-	SONGVOICE *pChn = Voices;
-	for (uint32_t nChn=0; nChn<m_nChannels; nChn++, pChn++)
-	{
-		pChn->nCommand=0;
-
-		uint32_t instr = pChn->nRowInstr;
-		uint32_t volcmd = pChn->nRowVolCmd;
-		uint32_t vol = pChn->nRowVolume;
-		uint32_t cmd = pChn->nRowCommand;
-		uint32_t param = pChn->nRowParam;
-		bool bPorta = ((cmd != CMD_TONEPORTAMENTO) && (cmd != CMD_TONEPORTAVOL) && (volcmd != VOLCMD_TONEPORTAMENTO)) ? false : true;
-		uint32_t nStartTick = pChn->nTickStart;
-
-		pChn->dwFlags &= ~CHN_FASTVOLRAMP;
-		// Process special effects (note delay, pattern delay, pattern loop)
-		if (cmd == CMD_S3MCMDEX)
-		{
-			int nloop; // g++ is dumb
-			if (param)
-				pChn->nOldCmdEx = param;
-			else
-				param = pChn->nOldCmdEx;
-			switch (param >> 4) {
-			case 0xd:
-				// Note Delay
-				nStartTick = param & 0x0F;
-				break;
-			case 0xb:
-				// Pattern loop
-				if (m_nTickCount) break;
-				nloop = PatternLoop(pChn, param & 0x0F);
-				if (nloop >= 0)
-					nPatLoopRow = nloop;
-				break;
-			case 0xe:
-				// Pattern Delay
-				m_nCurrentPatternDelay = param & 0x0F;
-				break;
-			}
-		}
-
-		// Handles note/instrument/volume changes
-		//
-		// this can be delayed by a note delay effect, but ITEXE has a bug here where
-		// SEx retriggers any row with an SDy in it "x" times at frame "y"
-		// this bug doesn't affect the S6x command
-		//
-		// Scream Tracker has a similar bug (which we don't simulate here)
-		// whereby SD0 and SC0 are ignored
-		if (((m_nTickCount - m_nFrameDelay) % m_nMusicSpeed) == nStartTick
-		    && (nStartTick > 0 || m_nTickCount == 0))
-		{
-			uint32_t note = pChn->nRowNote;
-			if (instr) pChn->nNewIns = instr;
-			if ((!note) && (instr)) {
-				if (m_dwSongFlags & SONG_INSTRUMENTMODE) {
-					if (pChn->pInstrument) pChn->nVolume = pChn->pInstrument->nVolume;
-				} else {
-					if (instr < MAX_SAMPLES) pChn->nVolume = Samples[instr].nVolume;
-				}
-			}
-			// Invalid Instrument ?
-			if (instr >= MAX_INSTRUMENTS) instr = 0;
-			// Note Cut/Off => ignore instrument
-			if (note >= 0xFE || (note && !bPorta))
-			{
-			    /* This is required when the instrument changes (KeyOff is not called) */
-			    /* Possibly a better bugfix could be devised. --Bisqwit */
-			    OPL_NoteOff(nChn); OPL_Touch(nChn, 0);
-			    GM_KeyOff(nChn); GM_Touch(nChn, 0);
-			}
-			if (note >= 0xFE) instr = 0;
-			if ((note) && (note <= 128)) pChn->nNewNote = note;
-			// New Note Action ? (not when paused!!!)
-			if ((note) && (note <= 128) && (!bPorta))
-			{
-				csf_check_nna(this, nChn, instr, note, false);
-			}
-			// Instrument Change ?
-			if (instr)
-			{
-				SONGSAMPLE *psmp = pChn->pInstrument;
-				csf_instrument_change(this, pChn, instr, bPorta, true, true);
-				OPL_Patch(nChn, Samples[instr].AdlibBytes);
-				
-				if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Instruments[instr])
-					GM_DPatch(nChn, Instruments[instr]->nMidiProgram, Instruments[instr]->wMidiBank, Instruments[instr]->nMidiChannelMask);
-				
-				pChn->nNewIns = 0;
-				// Special IT case: portamento+note causes sample change -> ignore portamento
-				if ((psmp != pChn->pInstrument) && (note) && (note < 0x80))
-				{
-					bPorta = false;
-				}
-			}
-			// New Note ?
-			if (note)
-			{
-				if ((!instr) && (pChn->nNewIns) && (note < 0x80))
-				{
-					csf_instrument_change(this, pChn, pChn->nNewIns, bPorta, false, true);
-					if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Instruments[pChn->nNewIns]) {
-						OPL_Patch(nChn, Samples[pChn->nNewIns].AdlibBytes);
-						GM_DPatch(nChn, Instruments[pChn->nNewIns]->nMidiProgram, Instruments[pChn->nNewIns]->wMidiBank, Instruments[pChn->nNewIns]->nMidiChannelMask);
-					}
-					pChn->nNewIns = 0;
-				}
-				csf_note_change(this, nChn, note, bPorta, true, false);
-			}
-			// Tick-0 only volume commands
-			if (volcmd == VOLCMD_VOLUME)
-			{
-				if (vol > 64) vol = 64;
-				pChn->nVolume = vol << 2;
-				pChn->dwFlags |= CHN_FASTVOLRAMP;
-			} else
-			if (volcmd == VOLCMD_PANNING)
-			{
-				if (vol > 64) vol = 64;
-				pChn->nPan = vol << 2;
-				pChn->dwFlags |= CHN_FASTVOLRAMP;
-				pChn->dwFlags &= ~CHN_SURROUND;
-			}
-		}
-
-		// Volume Column Effect (except volume & panning)
-		if ((volcmd > VOLCMD_PANNING) && (m_nTickCount >= nStartTick))
-		{
-			if (volcmd == VOLCMD_TONEPORTAMENTO)
-			{
-				TonePortamento(pChn, ImpulseTrackerPortaVolCmd[vol & 0x0F]);
-			} else
-			{
-				if (vol) pChn->nOldVolParam = vol; else vol = pChn->nOldVolParam;
-				switch(volcmd)
-				{
-				case VOLCMD_VOLSLIDEUP:
-					VolumeSlide(pChn, vol << 4);
-					break;
-
-				case VOLCMD_VOLSLIDEDOWN:
-					VolumeSlide(pChn, vol);
-					break;
-
-				case VOLCMD_FINEVOLUP:
-					if (m_nTickCount == nStartTick) VolumeSlide(pChn, (vol << 4) | 0x0F);
-					break;
-
-				case VOLCMD_FINEVOLDOWN:
-					if (m_nTickCount == nStartTick) VolumeSlide(pChn, 0xF0 | vol);
-					break;
-
-				case VOLCMD_VIBRATOSPEED:
-					Vibrato(pChn, vol << 4);
-					break;
-
-				case VOLCMD_VIBRATO:
-					Vibrato(pChn, vol);
-					break;
-
-				case VOLCMD_PANSLIDELEFT:
-					PanningSlide(pChn, vol);
-					break;
-
-				case VOLCMD_PANSLIDERIGHT:
-					PanningSlide(pChn, vol << 4);
-					break;
-
-				case VOLCMD_PORTAUP:
-					PortamentoUp(pChn, vol << 2);
-					break;
-
-				case VOLCMD_PORTADOWN:
-					PortamentoDown(pChn, vol << 2);
-					break;
-				}
-			}
-		}
-
-		// Effects
-		if (cmd) switch (cmd)
-		{
-		// Set Volume
-		case CMD_VOLUME:
-			if ((pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed)) break;
-			{
-				pChn->nVolume = (param < 64) ? param*4 : 256;
-				pChn->dwFlags |= CHN_FASTVOLRAMP;
-				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++)
-				{
-					SONGVOICE *c = &Voices[i];
-					if (c->nMasterChn == (nChn+1)) {
-						c->nVolume = pChn->nVolume;
-						c->dwFlags |= CHN_FASTVOLRAMP;
-					}
-				}
-			}
-			break;
-
-		// Portamento Up
-		case CMD_PORTAMENTOUP:
-			PortamentoUp(pChn, param);
-			break;
-
-		// Portamento Down
-		case CMD_PORTAMENTODOWN:
-			PortamentoDown(pChn, param);
-			break;
-
-		// Volume Slide
-		case CMD_VOLUMESLIDE:
-			VolumeSlide(pChn, param);
-			break;
-
-		// Tone-Portamento
-		case CMD_TONEPORTAMENTO:
-			TonePortamento(pChn, param);
-			break;
-
-		// Tone-Portamento + Volume Slide
-		case CMD_TONEPORTAVOL:
-			VolumeSlide(pChn, param);
-			TonePortamento(pChn, 0);
-			break;
-
-		// Vibrato
-		case CMD_VIBRATO:
-			Vibrato(pChn, param);
-			break;
-
-		// Vibrato + Volume Slide
-		case CMD_VIBRATOVOL:
-			VolumeSlide(pChn, param);
-			Vibrato(pChn, 0);
-			break;
-
-		// Set Speed
-		case CMD_SPEED:
-			if (!m_nTickCount) SetSpeed(param);
-			break;
-
-		// Set Tempo
-		case CMD_TEMPO:
-			if (!m_nTickCount)
-			{
-				if (param)
-					pChn->nOldTempo = param;
-				else
-					param = pChn->nOldTempo;
-				SetTempo(param);
-			} else {
-                                param = pChn->nOldTempo; // this just got set on tick zero
-
-                                switch (param >> 4) {
-                                case 0:
-                                        m_nMusicTempo -= param & 0xf;
-                                        if (m_nMusicTempo < 32)
-                                                m_nMusicTempo = 32;
-                                        break;
-                                case 1:
-                                        m_nMusicTempo += param & 0xf;
-                                        if (m_nMusicTempo > 255)
-                                                m_nMusicTempo = 255;
-                                        break;
-                                }
-                        }
-			break;
-
-		// Set Offset
-		case CMD_OFFSET:
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			if (param) pChn->nOldOffset = param; else param = pChn->nOldOffset;
-			param <<= 8;
-			param |= (uint32_t)(pChn->nOldHiOffset) << 16;
-			if ((pChn->nRowNote) && (pChn->nRowNote < 0x80))
-			{
-				if (bPorta)
-					pChn->nPos = param;
-				else
-					pChn->nPos += param;
-				if (pChn->nPos >= pChn->nLength)
-				{
-					pChn->nPos = pChn->nLoopStart;
-					if ((m_dwSongFlags & SONG_ITOLDEFFECTS) && (pChn->nLength > 4))
-					{
-						pChn->nPos = pChn->nLength - 2;
-					}
-				}
-			}
-			break;
-
-		// Arpeggio
-		case CMD_ARPEGGIO:
-			pChn->nCommand = CMD_ARPEGGIO;
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			if ((!pChn->nPeriod) || (!pChn->nNote)) break;
-			if (param) pChn->nArpeggio = param;
-			break;
-
-		// Retrig
-		case CMD_RETRIG:
-			if (param)
-				pChn->nRetrigParam = param & 0xFF;
-			RetrigNote(nChn, pChn->nRetrigParam);
-			break;
-
-		// Tremor
-		case CMD_TREMOR:
-			pChn->nCommand = CMD_TREMOR;
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			if (param) pChn->nTremorParam = param;
-			break;
-
-		// Set Global Volume
-		case CMD_GLOBALVOLUME:
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			if (param <= 128)
-				m_nGlobalVolume = param << 1;
-			break;
-
-		// Global Volume Slide
-		case CMD_GLOBALVOLSLIDE:
-			GlobalVolSlide(pChn, param);
-			break;
-
-		// Set 8-bit Panning (Xxx)
-		case CMD_PANNING8:
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			if (!(m_dwSongFlags & SONG_SURROUNDPAN)) pChn->dwFlags &= ~CHN_SURROUND;
-			pChn->nPan = param;
-			pChn->dwFlags |= CHN_FASTVOLRAMP;
-			break;
-
-		// Panning Slide
-		case CMD_PANNINGSLIDE:
-			PanningSlide(pChn, param);
-			break;
-
-		// Tremolo
-		case CMD_TREMOLO:
-			Tremolo(pChn, param);
-			break;
-
-		// Fine Vibrato
-		case CMD_FINEVIBRATO:
-			FineVibrato(pChn, param);
-			break;
-
-		// S3M/IT Sxx Extended Commands
-		case CMD_S3MCMDEX:
-			ExtendedS3MCommands(nChn, param);
-			break;
-
-		// Key Off
-		case CMD_KEYOFF:
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			KeyOff(nChn);
-			break;
-
-		// Extra-fine porta up/down
-		case CMD_XFINEPORTAUPDOWN:
-			switch(param & 0xF0)
-			{
-			case 0x10: ExtraFinePortamentoUp(pChn, param & 0x0F); break;
-			case 0x20: ExtraFinePortamentoDown(pChn, param & 0x0F); break;
-			// Modplug XM Extensions
-			case 0x50:
-			case 0x60:
-			case 0x70:
-			case 0x90:
-			case 0xA0: ExtendedS3MCommands(nChn, param); break;
-			}
-			break;
-
-		// Set Channel Global Volume
-		case CMD_CHANNELVOLUME:
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			if (param <= 64)
-			{
-				pChn->nGlobalVol = param;
-				pChn->dwFlags |= CHN_FASTVOLRAMP;
-				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++)
-				{
-					SONGVOICE *c = &Voices[i];
-					if (c->nMasterChn == (nChn+1)) {
-						c->nGlobalVol = param;
-						c->dwFlags |= CHN_FASTVOLRAMP;
-					}
-				}
-			}
-			break;
-
-		// Channel volume slide
-		case CMD_CHANNELVOLSLIDE:
-			{
-				int saw_self = 0;
-
-				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++)
-				{
-					SONGVOICE *c = &Voices[i];
-					if (c->nMasterChn == (nChn+1)) {
-						if (c == pChn) saw_self = 1;
-						ChannelVolSlide(c, param);
-					}
-				}
-				if (!saw_self) {
-					ChannelVolSlide(pChn, param);
-				}
-			}
-			
-			break;
-
-		// Panbrello (IT)
-		case CMD_PANBRELLO:
-			Panbrello(pChn, param);
-			break;
-
-		// Set Envelope Position
-		case CMD_SETENVPOSITION:
-			if ((pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed))
-			{
-				pChn->nVolEnvPosition = param;
-				pChn->nPanEnvPosition = param;
-				pChn->nPitchEnvPosition = param;
-				if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
-				{
-					SONGINSTRUMENT *penv = pChn->pHeader;
-					if ((pChn->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes) && ((int)param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1]))
-					{
-						pChn->dwFlags &= ~CHN_PANENV;
-					}
-				}
-			}
-			break;
-
-		// Position Jump
-		case CMD_POSITIONJUMP:
-			nPosJump = param;
-			break;
-
-		// Pattern Break
-		case CMD_PATTERNBREAK:
-			nBreakRow = param;
-			break;
-
-		// Midi Controller
-		case CMD_MIDI:
-			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			if (param < 0x80)
-			{
-				ProcessMidiMacro(nChn, &m_MidiCfg.szMidiSFXExt[pChn->nActiveMacro << 5], param);
-			} else
-			{
-				ProcessMidiMacro(nChn, &m_MidiCfg.szMidiZXXExt[(param & 0x7F) << 5], 0);
-			}
-			break;
-		}
-	}
-
-	// Navigation Effects
-	if (!m_nTickCount)
-	{
-		// Pattern Loop
-		if (nPatLoopRow >= 0)
-		{
-			m_nNextOrder = m_nCurrentOrder;
-			m_nNextRow = nPatLoopRow;
-			if (m_nCurrentPatternDelay) m_nNextRow++;
-		} else
-		// Pattern Break / Position Jump only if no loop running
-		if ((nBreakRow >= 0) || (nPosJump >= 0))
-		{
-			bool bNoLoop = false;
-			if (nPosJump < 0) nPosJump = m_nCurrentOrder+1;
-			if (nBreakRow < 0) nBreakRow = 0;
-			// Modplug Tracker & ModPlugin allow backward jumps
-			if ((nPosJump < (int)m_nCurrentOrder)
-			 || ((nPosJump == (int)m_nCurrentOrder) && (nBreakRow <= (int)m_nRow)))
-			{
-				if (!IsValidBackwardJump(m_nCurrentOrder, m_nRow, nPosJump, nBreakRow))
-				{
-					if (m_nRepeatCount)
-					{
-						if (m_nRepeatCount > 0) m_nRepeatCount--;
-					} else
-					{
-						if (gdwSoundSetup & SNDMIX_NOBACKWARDJUMPS)
-							// Backward jump disabled
-							bNoLoop = true;
-						//reset repeat count incase there are multiple loops.
-						//(i.e. Unreal tracks)
-						m_nRepeatCount = m_nInitialRepeatCount;
-					}
-				}
-			}
-			if (((!bNoLoop) && (nPosJump < MAX_ORDERS))
-			 && ((nPosJump != (int)m_nCurrentOrder) || (nBreakRow != (int)m_nRow)))
-			{
-				if (nPosJump != (int)m_nCurrentOrder)
-				{
-					for (uint32_t i=0; i<m_nChannels; i++) Voices[i].nPatternLoopCount = 0;
-				}
-				m_nNextOrder = nPosJump;
-				m_nNextRow = (uint32_t)nBreakRow;
-			}
-		}
-	}
-	return true;
-}
-
-
-////////////////////////////////////////////////////////////
 // Channels effects
+
+static void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick)
+{
+	if (csf->m_nTickCount == nTick) {
+		SONGVOICE *pChn = &csf->Voices[nChn];
+		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
+		pChn->nVolume = 0;
+		pChn->dwFlags |= CHN_FASTVOLRAMP;
+		pChn->nLength = 0;
+
+		OPL_NoteOff(nChn);
+		OPL_Touch(nChn, 0);
+		GM_KeyOff(nChn);
+		GM_Touch(nChn, 0);
+	}
+}
+
+static void fx_key_off(CSoundFile *csf, uint32_t nChn)
+{
+	SONGVOICE *pChn = &csf->Voices[nChn];
+	bool bKeyOn = (pChn->dwFlags & CHN_KEYOFF) ? false : true;
+
+	/*fprintf(stderr, "KeyOff[%d] [ch%u]: flags=0x%X\n",
+		m_nTickCount, (unsigned)nChn, pChn->dwFlags);*/
+	OPL_NoteOff(nChn);
+	GM_KeyOff(nChn);
+
+	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	
+	/*if ((pChn->dwFlags & CHN_ADLIB)
+	||  (penv && penv->nMidiChannelMask))
+	{
+		// When in AdLib / MIDI mode, end the sample
+		pChn->dwFlags |= CHN_FASTVOLRAMP;
+		pChn->nLength = 0;
+		pChn->nPos    = 0;
+		return;
+	}*/
+
+	pChn->dwFlags |= CHN_KEYOFF;
+	//if ((!pChn->pHeader) || (!(pChn->dwFlags & CHN_VOLENV)))
+	if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader && !(pChn->dwFlags & CHN_VOLENV)) {
+		pChn->dwFlags |= CHN_NOTEFADE;
+	}
+	if (!pChn->nLength)
+		return;
+	if ((pChn->dwFlags & CHN_SUSTAINLOOP) && pChn->pInstrument && bKeyOn) {
+		SONGSAMPLE *psmp = pChn->pInstrument;
+		if (psmp->uFlags & CHN_LOOP) {
+			if (psmp->uFlags & CHN_PINGPONGLOOP)
+				pChn->dwFlags |= CHN_PINGPONGLOOP;
+			else
+				pChn->dwFlags &= ~(CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
+			pChn->dwFlags |= CHN_LOOP;
+			pChn->nLength = psmp->nLength;
+			pChn->nLoopStart = psmp->nLoopStart;
+			pChn->nLoopEnd = psmp->nLoopEnd;
+			if (pChn->nLength > pChn->nLoopEnd) pChn->nLength = pChn->nLoopEnd;
+		} else {
+			pChn->dwFlags &= ~(CHN_LOOP|CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
+			pChn->nLength = psmp->nLength;
+		}
+	}
+	if (penv && penv->nFadeOut && (penv->dwFlags & ENV_VOLLOOP))
+		pChn->dwFlags |= CHN_NOTEFADE;
+}
+
 
 static void fx_do_freq_slide(uint32_t flags, SONGVOICE *pChn, int32_t nFreqSlide)
 {
@@ -1197,12 +104,6 @@ static void fx_do_freq_slide(uint32_t flags, SONGVOICE *pChn, int32_t nFreqSlide
 	}
 }
 
-void CSoundFile::DoFreqSlide(SONGVOICE *pChn, int32_t nFreqSlide)
-{
-	fx_do_freq_slide(m_dwSongFlags, pChn, nFreqSlide);
-}
-
-
 static void fx_fine_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
@@ -1213,12 +114,6 @@ static void fx_fine_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t para
 		}
 	}
 }
-
-void CSoundFile::FinePortamentoUp(SONGVOICE *pChn, uint32_t param)
-{
-	fx_fine_portamento_up(m_dwSongFlags, pChn, param);
-}
-
 
 static void fx_fine_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
@@ -1231,12 +126,6 @@ static void fx_fine_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t pa
 	}
 }
 
-void CSoundFile::FinePortamentoDown(SONGVOICE *pChn, uint32_t param)
-{
-	fx_fine_portamento_down(m_dwSongFlags, pChn, param);
-}
-
-
 static void fx_extra_fine_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
@@ -1248,12 +137,6 @@ static void fx_extra_fine_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_
 	}
 }
 
-void CSoundFile::ExtraFinePortamentoUp(SONGVOICE *pChn, uint32_t param)
-{
-	fx_extra_fine_portamento_up(m_dwSongFlags, pChn, param);
-}
-
-
 static void fx_extra_fine_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && pChn->nPeriod && param) {
@@ -1264,12 +147,6 @@ static void fx_extra_fine_portamento_down(uint32_t flags, SONGVOICE *pChn, uint3
 		}
 	}
 }
-
-void CSoundFile::ExtraFinePortamentoDown(SONGVOICE *pChn, uint32_t param)
-{
-	fx_extra_fine_portamento_down(m_dwSongFlags, pChn, param);
-}
-
 
 static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
@@ -1296,12 +173,6 @@ static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		fx_do_freq_slide(flags, pChn, -(int)(param * 4));
 }
 
-void CSoundFile::PortamentoUp(SONGVOICE *pChn, uint32_t param)
-{
-	fx_portamento_up(m_dwSongFlags, pChn, param);
-}
-
-
 static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
 	if (param)
@@ -1325,12 +196,6 @@ static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 	if (!(flags & SONG_FIRSTTICK))
 		fx_do_freq_slide(flags, pChn, (int)(param << 2));
 }
-
-void CSoundFile::PortamentoDown(SONGVOICE *pChn, uint32_t param)
-{
-	fx_portamento_down(m_dwSongFlags, pChn, param);
-}
-
 
 static void fx_tone_portamento(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
@@ -1362,11 +227,6 @@ static void fx_tone_portamento(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 	}
 }
 
-void CSoundFile::TonePortamento(SONGVOICE *pChn, uint32_t param)
-{
-	fx_tone_portamento(m_dwSongFlags, pChn, param);
-}
-
 
 static void fx_vibrato(SONGVOICE *p, uint32_t param)
 {
@@ -1377,12 +237,6 @@ static void fx_vibrato(SONGVOICE *p, uint32_t param)
 	p->dwFlags |= CHN_VIBRATO;
 }
 
-void CSoundFile::Vibrato(SONGVOICE *p, uint32_t param)
-{
-	fx_vibrato(p, param);
-}
-
-
 static void fx_fine_vibrato(SONGVOICE *p, uint32_t param)
 {
 	if (param & 0x0F)
@@ -1392,12 +246,6 @@ static void fx_fine_vibrato(SONGVOICE *p, uint32_t param)
 	p->dwFlags |= CHN_VIBRATO;
 }
 
-void CSoundFile::FineVibrato(SONGVOICE *p, uint32_t param)
-{
-	fx_fine_vibrato(p, param);
-}
-
-
 static void fx_panbrello(SONGVOICE *p, uint32_t param)
 {
 	if (param & 0x0F)
@@ -1405,11 +253,6 @@ static void fx_panbrello(SONGVOICE *p, uint32_t param)
 	if (param & 0xF0)
 		p->nPanbrelloSpeed = (param >> 4) & 0x0F;
 	p->dwFlags |= CHN_PANBRELLO;
-}
-
-void CSoundFile::Panbrello(SONGVOICE *p, uint32_t param)
-{
-	fx_panbrello(p, param);
 }
 
 
@@ -1426,12 +269,6 @@ static void fx_fine_volume_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 	}
 }
 
-void CSoundFile::FineVolumeUp(SONGVOICE *pChn, uint32_t param)
-{
-	fx_fine_volume_up(m_dwSongFlags, pChn, param);
-}
-
-
 static void fx_fine_volume_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
 	if (param)
@@ -1444,12 +281,6 @@ static void fx_fine_volume_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 			pChn->nVolume = 0;
 	}
 }
-
-void CSoundFile::FineVolumeDown(SONGVOICE *pChn, uint32_t param)
-{
-	fx_fine_volume_down(m_dwSongFlags, pChn, param);
-}
-
 
 static void fx_volume_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
@@ -1486,11 +317,6 @@ static void fx_volume_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 	pChn->nVolume = CLAMP(newvolume, 0, 256);
 }
 
-void CSoundFile::VolumeSlide(SONGVOICE *pChn, uint32_t param)
-{
-	fx_volume_slide(m_dwSongFlags, pChn, param);
-}
-
 
 static void fx_panning_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
@@ -1523,11 +349,6 @@ static void fx_panning_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 	pChn->dwFlags &= ~CHN_SURROUND;
 }
 
-void CSoundFile::PanningSlide(SONGVOICE *pChn, uint32_t param)
-{
-	fx_panning_slide(m_dwSongFlags, pChn, param);
-}
-
 
 static void fx_tremolo(SONGVOICE *p, uint32_t param)
 {
@@ -1538,9 +359,35 @@ static void fx_tremolo(SONGVOICE *p, uint32_t param)
 	p->dwFlags |= CHN_TREMOLO;
 }
 
-void CSoundFile::Tremolo(SONGVOICE *p, uint32_t param)
+
+static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
 {
-	fx_tremolo(p, param);
+	SONGVOICE *pChn = &csf->Voices[nChn];
+
+	//printf("Q%02X note=%02X tick%d  %d\n", param, pChn->nRowNote, m_nTickCount, pChn->nRetrigCount);
+	if (!csf->m_nTickCount && pChn->nRowNote) {
+		pChn->nRetrigCount = param & 0xf;
+	} else if (!--pChn->nRetrigCount) {
+		pChn->nRetrigCount = param & 0xf;
+		param >>= 4;
+		if (param) {
+			int vol = pChn->nVolume;
+			if (retrigTable1[param])
+				vol = (vol * retrigTable1[param]) >> 4;
+			else
+				vol += (retrigTable2[param]) << 2;
+			pChn->nVolume = CLAMP(vol, 0, 256);
+			pChn->dwFlags |= CHN_FASTVOLRAMP;
+		}
+
+		uint32_t nNote = pChn->nNewNote;
+		int32_t nOldPeriod = pChn->nPeriod;
+		if (nNote && nNote <= 120 && pChn->nLength)
+			csf_check_nna(csf, nChn, 0, nNote, true);
+		csf_note_change(csf, nChn, nNote, false, false, false);
+		if (nOldPeriod && !pChn->nRowNote)
+			pChn->nPeriod = nOldPeriod;
+	}
 }
 
 
@@ -1571,10 +418,58 @@ static void fx_channel_vol_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param
 	}
 }
 
-void CSoundFile::ChannelVolSlide(SONGVOICE *pChn, uint32_t param)
+
+static void fx_global_vol_slide(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 {
-	fx_channel_vol_slide(m_dwSongFlags, pChn, param);
+	int32_t nGlbSlide = 0;
+	if (param)
+		pChn->nOldGlbVolSlide = param;
+	else
+		param = pChn->nOldGlbVolSlide;
+	if ((param & 0x0F) == 0x0F && (param & 0xF0)) {
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			nGlbSlide = (param >> 4) * 2;
+	} else if ((param & 0xF0) == 0xF0 && (param & 0x0F)) {
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			nGlbSlide = -(int)((param & 0x0F) * 2);
+	} else {
+		if (!(csf->m_dwSongFlags & SONG_FIRSTTICK)) {
+			if (param & 0xF0)
+				nGlbSlide = (int)((param & 0xF0) >> 4) * 2;
+			else nGlbSlide = -(int)((param & 0x0F) * 2);
+		}
+	}
+	if (nGlbSlide) {
+		nGlbSlide += csf->m_nGlobalVolume;
+		csf->m_nGlobalVolume = CLAMP(nGlbSlide, 0, 256);
+	}
 }
+
+
+static int fx_pattern_loop(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
+{
+	if (param) {
+		if (pChn->nPatternLoopCount) {
+			pChn->nPatternLoopCount--;
+			if (!pChn->nPatternLoopCount) {
+				// this should get rid of that nasty infinite loop for cases like
+				//     ... .. .. SB0
+				//     ... .. .. SB1
+				//     ... .. .. SB1
+				// it still doesn't work right in a few strange cases, but oh well :P
+				pChn->nPatternLoop = csf->m_nRow + 1;
+				return -1;
+			}
+		} else {
+			pChn->nPatternLoopCount = param;
+		}
+		return pChn->nPatternLoop;
+	} else {
+		pChn->nPatternLoop = csf->m_nRow;
+	}
+	return -1;
+}
+
 
 
 
@@ -1623,7 +518,7 @@ void CSoundFile::ExtendedS3MCommands(uint32_t nChn, uint32_t param)
 				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++, bkp++) {
 					if (bkp->nMasterChn == nChn+1) {
 						if (param == 1) {
-							KeyOff(i);
+							fx_key_off(this, i);
 						} else if (param == 2) {
 							bkp->dwFlags |= CHN_NOTEFADE;
 						} else {
@@ -1671,7 +566,7 @@ void CSoundFile::ExtendedS3MCommands(uint32_t nChn, uint32_t param)
 	// SBx: Pattern Loop
 	// SCx: Note Cut
 	case 0xC0:
-		NoteCut(nChn, param);
+		fx_note_cut(this, nChn, param);
 		break;
 	// SDx: Note Delay
 	// SEx: Pattern Delay for x rows
@@ -1692,7 +587,8 @@ void CSoundFile::ExtendedChannelEffect(SONGVOICE *pChn, uint32_t param)
 	switch(param & 0x0F) {
         // S91: Surround On
 	case 0x01:
-		pChn->dwFlags |= CHN_SURROUND; pChn->nPan = 128;
+		pChn->dwFlags |= CHN_SURROUND;
+		pChn->nPan = 128;
 		break;
 	////////////////////////////////////////////////////////////
 	// Modplug Extensions
@@ -1907,216 +803,1159 @@ void CSoundFile::ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint
 }
 
 
-static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
-{
-	SONGVOICE *pChn = &csf->Voices[nChn];
 
-	//printf("Q%02X note=%02X tick%d  %d\n", param, pChn->nRowNote, m_nTickCount, pChn->nRetrigCount);
-	if (!csf->m_nTickCount && pChn->nRowNote) {
-		pChn->nRetrigCount = param & 0xf;
-	} else if (!--pChn->nRetrigCount) {
-		pChn->nRetrigCount = param & 0xf;
-		param >>= 4;
-		if (param) {
-			int vol = pChn->nVolume;
-			if (retrigTable1[param])
-				vol = (vol * retrigTable1[param]) >> 4;
-			else
-				vol += (retrigTable2[param]) << 2;
-			pChn->nVolume = CLAMP(vol, 0, 256);
-			pChn->dwFlags |= CHN_FASTVOLRAMP;
+////////////////////////////////////////////////////////////
+// Length
+
+unsigned int csf_get_length(CSoundFile *csf)
+{
+	uint32_t dwElapsedTime=0, nRow=0, nCurrentPattern=0, nNextPattern=0, nPattern=csf->Orderlist[0];
+	uint32_t nMusicSpeed=csf->m_nDefaultSpeed, nMusicTempo=csf->m_nDefaultTempo, nNextRow=0;
+	uint32_t nMaxRow = 0, nMaxPattern = 0;
+	uint8_t instr[MAX_VOICES] = {0};
+	uint8_t notes[MAX_VOICES] = {0};
+	uint32_t patloop[MAX_VOICES] = {0};
+	uint8_t vols[MAX_VOICES];
+	uint8_t chnvols[MAX_VOICES];
+
+	memset(vols, 0xFF, sizeof(vols));
+	memset(chnvols, 64, sizeof(chnvols));
+	for (uint32_t icv=0; icv<csf->m_nChannels; icv++)
+		chnvols[icv] = csf->Channels[icv].nVolume;
+	nMaxRow = csf->m_nNextRow;
+	nMaxPattern = csf->m_nNextOrder;
+	nCurrentPattern = nNextPattern = 0;
+	nPattern = csf->Orderlist[0];
+	nRow = nNextRow = 0;
+	for (;;) {
+		uint32_t nSpeedCount = 0;
+		nRow = nNextRow;
+		nCurrentPattern = nNextPattern;
+
+		// Check if pattern is valid
+		nPattern = csf->Orderlist[nCurrentPattern];
+		while (nPattern >= MAX_PATTERNS) {
+			// End of song ?
+			if (nPattern == 0xFF || nCurrentPattern >= MAX_ORDERS) {
+				goto EndMod;
+			} else {
+				nCurrentPattern++;
+				nPattern = (nCurrentPattern < MAX_ORDERS)
+					? csf->Orderlist[nCurrentPattern]
+					: 0xFF;
+			}
+			nNextPattern = nCurrentPattern;
+		}
+		// Weird stuff?
+		if ((nPattern >= MAX_PATTERNS) || (!csf->Patterns[nPattern])) break;
+		// Should never happen
+		if (nRow >= csf->PatternSize[nPattern]) nRow = 0;
+		// Update next position
+		nNextRow = nRow + 1;
+		if (nNextRow >= csf->PatternSize[nPattern]) {
+			nNextPattern = nCurrentPattern + 1;
+			nNextRow = 0;
+		}
+		/* muahahaha */
+		if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
+			if (csf->stop_at_order <= (signed) nCurrentPattern && csf->stop_at_row <= (signed) nRow)
+				goto EndMod;
+			if (csf->stop_at_time > 0) {
+				/* stupid api decision */
+				if (((dwElapsedTime+500) / 1000) >= csf->stop_at_time) {
+					csf->stop_at_order = nCurrentPattern;
+					csf->stop_at_row = nRow;
+					goto EndMod;
+				}
+			}
 		}
 
-		uint32_t nNote = pChn->nNewNote;
-		int32_t nOldPeriod = pChn->nPeriod;
-		if (nNote && nNote <= 120 && pChn->nLength)
-			csf_check_nna(csf, nChn, 0, nNote, true);
-		csf_note_change(csf, nChn, nNote, false, false, false);
-		if (nOldPeriod && !pChn->nRowNote)
-			pChn->nPeriod = nOldPeriod;
+		if (!nRow) {
+			for (uint32_t ipck=0; ipck<csf->m_nChannels; ipck++)
+				patloop[ipck] = dwElapsedTime;
+		}
+		SONGVOICE *pChn = csf->Voices;
+		MODCOMMAND *p = csf->Patterns[nPattern] + nRow * csf->m_nChannels;
+		for (uint32_t nChn=0; nChn<csf->m_nChannels; p++,pChn++, nChn++)
+		if (*((uint32_t *)p)) {
+			uint32_t command = p->command;
+			uint32_t param = p->param;
+			uint32_t note = p->note;
+			if (p->instr) {
+				instr[nChn] = p->instr;
+				notes[nChn] = 0;
+				vols[nChn] = 0xFF;
+			}
+			if ((note) && (note <= 120))
+				notes[nChn] = note;
+			if (p->volcmd == VOLCMD_VOLUME)
+				vols[nChn] = p->vol;
+			switch (command) {
+			case 0: break;
+			// Position Jump
+			case CMD_POSITIONJUMP:
+				if (param <= nCurrentPattern)
+					goto EndMod;
+				nNextPattern = param;
+				nNextRow = 0;
+				break;
+			// Pattern Break
+			case CMD_PATTERNBREAK:
+				nNextRow = param;
+				nNextPattern = nCurrentPattern + 1;
+				break;
+			// Set Speed
+			case CMD_SPEED:
+				if (param)
+					nMusicSpeed = param;
+				break;
+			// Set Tempo
+			case CMD_TEMPO:
+				if (param)
+					pChn->nOldTempo = param;
+				else
+					param = pChn->nOldTempo;
+				// this is split up due to c++ stupidity (gcc bug?)
+				int d; d = (param & 0xf);
+				switch (param >> 4) {
+				default:
+					nMusicTempo = param;
+					break;
+				case 0:
+					d = -d;
+				case 1:
+					d = d * nMusicSpeed + nMusicTempo;
+					nMusicTempo = CLAMP(d, 32, 255);
+					break;
+				}
+				break;
+			// Pattern Delay
+			case CMD_S3MCMDEX:
+				switch (param >> 4) {
+				case 0x6:
+					nSpeedCount = param & 0x0F;
+					break;
+				case 0xb:
+					if (param & 0x0F)
+						dwElapsedTime += (dwElapsedTime - patloop[nChn]) * (param & 0x0F);
+					else
+						patloop[nChn] = dwElapsedTime;
+					break;
+				case 0xe:
+					nSpeedCount = (param & 0x0F) * nMusicSpeed;
+					break;
+				}
+				break;
+			}
+		}
+		nSpeedCount += nMusicSpeed;
+		dwElapsedTime += (2500 * nSpeedCount) / nMusicTempo;
+	}
+EndMod:
+	return (dwElapsedTime+500) / 1000;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Effects
+
+static SONGSAMPLE *translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32_t note, SONGSAMPLE *def)
+{
+	static SONGSAMPLE dummyinstrument = {
+		1,/*len*/
+		0,0, 0,0, /* loop s/e, sus s/e */
+		(int8_t *) "", /*data*/
+		8363, 0x80, /* c5 pan */
+		255,64, /* volume global */
+		0x00, /* flags*/  //CHN_ADLIB,
+		0,0,0,0, /*vib*/
+		"", /* name */
+		"", /* filename */
+		0,/* played */
+		{
+			/* Piano AdLib sample... doesn't really
+			 * matter, it should be never accessed anyway. */
+			0x01,0x01, 0x8f,0x06, 0xf2,0xf2,
+			0xf4,0xf7, 0x00,0x00, 0x08,0x00
+		}
+	};
+	uint32_t n = penv->Keyboard[note - 1];
+
+	if (n) {
+		return (n < MAX_SAMPLES) ? &csf->Samples[n] : def;
+	} else {
+		return &dummyinstrument;
 	}
 }
 
-void CSoundFile::RetrigNote(uint32_t nChn, uint32_t param)
+void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
+                           bool bPorta, bool bUpdVol, bool bResetEnv)
 {
-	fx_retrig_note(this, nChn, param);
+	bool bInstrumentChanged = false;
+
+	if (instr >= MAX_INSTRUMENTS) return;
+	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
+	SONGSAMPLE *psmp = &csf->Samples[instr];
+	uint32_t note = pChn->nNewNote;
+	if (penv && note && note <= 128) {
+		if (penv->NoteMap[note-1] >= 0xFE) return;
+		psmp = translate_keyboard(csf, penv, note, NULL);
+		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
+	} else if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) {
+		/* XXX why check instrument mode here? at a glance this seems "wrong" */
+		if (note >= 0xFE)
+			return;
+		psmp = NULL;
+	}
+	// Update Volume
+	if (bUpdVol) pChn->nVolume = psmp ? psmp->nVolume : 0;
+	// bInstrumentChanged is used for IT carry-on env option
+	if (penv != pChn->pHeader) {
+		bInstrumentChanged = true;
+		pChn->pHeader = penv;
+	}
+	// Instrument adjust
+	pChn->nNewIns = 0;
+	if (psmp) {
+		psmp->played = 1;
+		if (penv) {
+			penv->played = 1;
+			pChn->nInsVol = (psmp->nGlobalVol * penv->nGlobalVol) >> 7;
+			if (penv->dwFlags & ENV_SETPANNING)
+				pChn->nPan = penv->nPan;
+			pChn->nNNA = penv->nNNA;
+		} else {
+			pChn->nInsVol = psmp->nGlobalVol;
+		}
+		if (psmp->uFlags & CHN_PANNING)
+			pChn->nPan = psmp->nPan;
+	}
+	// Reset envelopes
+	if (bResetEnv) {
+		if (!bPorta || (csf->m_dwSongFlags & SONG_ITCOMPATMODE)
+		    || !pChn->nLength || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)) {
+			pChn->dwFlags |= CHN_FASTVOLRAMP;
+			if (!bInstrumentChanged && penv && !(pChn->dwFlags & (CHN_KEYOFF|CHN_NOTEFADE))) {
+				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
+				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
+				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
+			} else {
+				pChn->nVolEnvPosition = 0;
+				pChn->nPanEnvPosition = 0;
+				pChn->nPitchEnvPosition = 0;
+			}
+			pChn->nAutoVibDepth = 0;
+			pChn->nAutoVibPos = 0;
+		} else if (penv && !(penv->dwFlags & ENV_VOLUME)) {
+			pChn->nVolEnvPosition = 0;
+			pChn->nAutoVibDepth = 0;
+			pChn->nAutoVibPos = 0;
+		}
+	}
+	// Invalid sample ?
+	if (!psmp) {
+		pChn->pInstrument = NULL;
+		pChn->nInsVol = 0;
+		return;
+	}
+	if (psmp == pChn->pInstrument) {
+		return;
+	} else {
+		pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE|CHN_VOLENV|CHN_PANENV|CHN_PITCHENV);
+		pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (psmp->uFlags);
+		if (penv) {
+			if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
+			if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
+			if (penv->dwFlags & ENV_PITCH) pChn->dwFlags |= CHN_PITCHENV;
+			if ((penv->dwFlags & ENV_PITCH) && (penv->dwFlags & ENV_FILTER)) {
+				if (!pChn->nCutOff)
+					pChn->nCutOff = 0x7F;
+			}
+			if (penv->nIFC & 0x80) pChn->nCutOff = penv->nIFC & 0x7F;
+			if (penv->nIFR & 0x80) pChn->nResonance = penv->nIFR & 0x7F;
+		}
+		pChn->nVolSwing = pChn->nPanSwing = 0;
+	}
+	pChn->pInstrument = psmp;
+	pChn->nLength = psmp->nLength;
+	pChn->nLoopStart = psmp->nLoopStart;
+	pChn->nLoopEnd = psmp->nLoopEnd;
+	pChn->nC5Speed = psmp->nC5Speed;
+	pChn->pSample = psmp->pSample;
+
+/*
+	AAAAAAAAAAAAAHHHHHHHHH!!!!!!!!!
+	how does one go about setting the frequency at which a note plays?
+	I'm fairly certain that this is the place to patch for abuse test #9
+	but can't figure out what exactly needs to be done :/
+	(it's probably stupidly obvious and I'll slap my forehead in retrospect)
+*/
+
+	if (pChn->dwFlags & CHN_SUSTAINLOOP) {
+		pChn->nLoopStart = psmp->nSustainStart;
+		pChn->nLoopEnd = psmp->nSustainEnd;
+		pChn->dwFlags |= CHN_LOOP;
+		if (pChn->dwFlags & CHN_PINGPONGSUSTAIN)
+			pChn->dwFlags |= CHN_PINGPONGLOOP;
+	}
+	if ((pChn->dwFlags & CHN_LOOP) && pChn->nLoopEnd < pChn->nLength)
+		pChn->nLength = pChn->nLoopEnd;
+	/*fprintf(stderr, "length set as %d (from %d), ch flags %X smp flags %X\n",
+	    (int)pChn->nLength,
+	    (int)psmp->nLength, pChn->dwFlags, psmp->uFlags);*/
 }
 
 
-static void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick)
+void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual)
 {
-	if (csf->m_nTickCount == nTick) {
-		SONGVOICE *pChn = &csf->Voices[nChn];
-		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
-		pChn->nVolume = 0;
-		pChn->dwFlags |= CHN_FASTVOLRAMP;
-		pChn->nLength = 0;
+	if (note < 1) return;
+	SONGVOICE * const pChn = &csf->Voices[nChn];
+	SONGSAMPLE *pins = pChn->pInstrument;
+	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	if (penv && note <= 0x80) {
+		pins = translate_keyboard(csf, penv, note, pins);
+		note = penv->NoteMap[note - 1];
+		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
+	}
 
+	if (note >= 0x80) {
+		// 0xFE or invalid note => key off
+                // technically this is "wrong", as anything besides ^^^, ===, and a valid note
+		// should cause a note fade... (oh well, it's just a quick hack anyway.)
+                if (note == 0xFD) {
+			pChn->dwFlags |= CHN_NOTEFADE;
+                        return;
+                }
+
+		fx_key_off(csf, nChn);
+		if (note == 0xFE) {
+			// Note Cut
+			pChn->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
+			if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
+				pChn->nVolume = 0;
+			pChn->nFadeOutVol = 0;
+		}
+		return;
+	}
+	if (!pins)
+		return;
+	note = CLAMP(note, 1, 132); // why 132? random...
+	pChn->nNote = note;
+	pChn->nNewIns = 0;
+	uint32_t period = get_period_from_note(note, pChn->nC5Speed, csf->m_dwSongFlags & SONG_LINEARSLIDES);
+	if (period) {
+		if (!bPorta || !pChn->nPeriod)
+			pChn->nPeriod = period;
+		pChn->nPortamentoDest = period;
+		if (!bPorta || !pChn->nLength) {
+			pChn->pInstrument = pins;
+			pChn->pSample = pins->pSample;
+			pChn->nLength = pins->nLength;
+			pChn->nLoopEnd = pins->nLength;
+			pChn->nLoopStart = 0;
+			pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (pins->uFlags); // FIXME - magic
+			if (pChn->dwFlags & CHN_SUSTAINLOOP) {
+				pChn->nLoopStart = pins->nSustainStart;
+				pChn->nLoopEnd = pins->nSustainEnd;
+				pChn->dwFlags &= ~CHN_PINGPONGLOOP;
+				pChn->dwFlags |= CHN_LOOP;
+				if (pChn->dwFlags & CHN_PINGPONGSUSTAIN) pChn->dwFlags |= CHN_PINGPONGLOOP;
+				if (pChn->nLength > pChn->nLoopEnd) pChn->nLength = pChn->nLoopEnd;
+			} else if (pChn->dwFlags & CHN_LOOP) {
+				pChn->nLoopStart = pins->nLoopStart;
+				pChn->nLoopEnd = pins->nLoopEnd;
+				if (pChn->nLength > pChn->nLoopEnd) pChn->nLength = pChn->nLoopEnd;
+			}
+			pChn->nPos = 0;
+			pChn->nPosLo = 0;
+			if (pChn->nVibratoType < 4)
+				pChn->nVibratoPos = (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) ? 0 : 0x10;
+			if (pChn->nTremoloType < 4)
+				pChn->nTremoloPos = 0;
+		}
+		if (pChn->nPos >= pChn->nLength)
+			pChn->nPos = pChn->nLoopStart;
+	} else {
+		bPorta = false;
+	}
+	if (!bPorta
+	    || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)
+	    || ((csf->m_dwSongFlags & SONG_ITCOMPATMODE) && pChn->nRowInstr)) {
+		if ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol) {
+			pChn->nVolEnvPosition = 0;
+			pChn->nPanEnvPosition = 0;
+			pChn->nPitchEnvPosition = 0;
+			pChn->nAutoVibDepth = 0;
+			pChn->nAutoVibPos = 0;
+			pChn->dwFlags &= ~CHN_NOTEFADE;
+			pChn->nFadeOutVol = 65536;
+		}
+		if (!bPorta || !(csf->m_dwSongFlags & SONG_ITCOMPATMODE) || pChn->nRowInstr) {
+			pChn->dwFlags &= ~CHN_NOTEFADE;
+			pChn->nFadeOutVol = 65536;
+		}
+	}
+	pChn->dwFlags &= ~CHN_KEYOFF;
+	// Enable Ramping
+	if (!bPorta) {
+		//pChn->nVUMeter = 0x100;
+		pChn->strike = 4; /* this affects how long the initial hit on the playback marks lasts */
+		pChn->nLeftVU = pChn->nRightVU = 0xFF;
+		pChn->dwFlags &= ~CHN_FILTER;
+		pChn->dwFlags |= CHN_FASTVOLRAMP;
+		pChn->nTremorCount = 0;
+		if (bResetEnv) {
+			pChn->nVolSwing = pChn->nPanSwing = 0;
+			if (penv) {
+				/* This is done above as well, with the instrument reset, but
+				 * I have a feeling that maybe it should only be here. Tests? */
+				pChn->dwFlags &= ~(CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
+				if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
+				if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
+				if (penv->dwFlags & ENV_PITCH) pChn->dwFlags |= CHN_PITCHENV;
+				
+				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
+				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
+				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
+				// Volume Swing
+				if (penv->nVolSwing) {
+					/* this was wrong */
+					int d = ((int32_t)penv->nVolSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 256;
+					pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
+				}
+				// Pan Swing
+				if (penv->nPanSwing) {
+					int d = ((int32_t)penv->nPanSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 128;
+					pChn->nPanSwing = (signed short)d;
+				}
+			}
+			pChn->nAutoVibDepth = 0;
+			pChn->nAutoVibPos = 0;
+		}
+		pChn->nLeftVol = pChn->nRightVol = 0;
+		bool bFlt = (csf->m_dwSongFlags & SONG_MPTFILTERMODE) ? false : true;
+		// Setup Initial Filter for this note
+		if (penv)
+		{
+			if (penv->nIFR & 0x80) {
+				pChn->nResonance = penv->nIFR & 0x7F;
+				bFlt = true;
+			}
+			if (penv->nIFC & 0x80) {
+				pChn->nCutOff = penv->nIFC & 0x7F;
+				bFlt = true;
+			}
+		} else {
+			pChn->nVolSwing = pChn->nPanSwing = 0;
+		}
+
+		if (pChn->nCutOff < 0x7F && bFlt)
+			setup_channel_filter(pChn, true, 256, csf->gdwMixingFreq);
+	}
+	// Special case for MPT
+	if (bManual)
+		pChn->dwFlags &= ~CHN_MUTE;
+	if (((pChn->dwFlags & CHN_MUTE) && (CSoundFile::gdwSoundSetup & SNDMIX_MUTECHNMODE))
+	    || (pChn->pInstrument && (pChn->pInstrument->uFlags & CHN_MUTE) && !bManual)
+	    || ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader
+	        && (pChn->pHeader->dwFlags & ENV_MUTE) && !bManual)) {
+		if (!bManual)
+			pChn->nPeriod = 0;
+	}
+
+}
+
+
+uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn)
+{
+	SONGVOICE *pChn = &csf->Voices[nChn];
+	// Check for empty channel
+	SONGVOICE *pi = &csf->Voices[csf->m_nChannels];
+	for (uint32_t i=csf->m_nChannels; i<MAX_VOICES; i++, pi++) {
+		if (!pi->nLength) {
+			if (pi->dwFlags & CHN_MUTE) {
+				if (pi->dwFlags & CHN_NNAMUTE) {
+					pi->dwFlags &= ~(CHN_NNAMUTE|CHN_MUTE);
+				} else {
+					/* this channel is muted; skip */
+					continue;
+				}
+			}
+			return i;
+		}
+	}
+	if (!pChn->nFadeOutVol) return 0;
+	// All channels are used: check for lowest volume
+	uint32_t result = 0;
+	uint32_t vol = 64*65536;	// 25%
+	int envpos = 0xFFFFFF;
+	const SONGVOICE *pj = &csf->Voices[csf->m_nChannels];
+	for (uint32_t j=csf->m_nChannels; j<MAX_VOICES; j++, pj++) {
+		if (!pj->nFadeOutVol) return j;
+		uint32_t v = pj->nVolume;
+		if (pj->dwFlags & CHN_NOTEFADE)
+			v = v * pj->nFadeOutVol;
+		else
+			v <<= 16;
+		if (pj->dwFlags & CHN_LOOP) v >>= 1;
+		if (v < vol || (v == vol && pj->nVolEnvPosition > envpos)) {
+			envpos = pj->nVolEnvPosition;
+			vol = v;
+			result = j;
+		}
+	}
+	if (result) {
+		/* unmute new nna channel */
+		csf->Voices[result].dwFlags &= ~(CHN_MUTE|CHN_NNAMUTE);
+	}
+	return result;
+}
+
+
+void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, bool bForceCut)
+{
+        SONGVOICE *p;
+	SONGVOICE *pChn = &csf->Voices[nChn];
+	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
+	SONGINSTRUMENT *pHeader;
+	signed char *pSample;
+	if (note < 1 || note > 0x80)
+		return;
+	// Always NNA cut - using
+	if (bForceCut || !(csf->m_dwSongFlags & SONG_INSTRUMENTMODE)) {
+		if (!pChn->nLength || (pChn->dwFlags & CHN_MUTE) || (!pChn->nLeftVol && !pChn->nRightVol))
+			return;
+		uint32_t n = csf_get_nna_channel(csf, nChn);
+		if (!n) return;
+		p = &csf->Voices[n];
+		// Copy Channel
+		*p = *pChn;
+		p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
+		p->nMasterChn = nChn+1;
+		p->nCommand = 0;
+		// Cut the note
+		p->nFadeOutVol = 0;
+		p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
+		// Stop this channel
+		pChn->nLength = pChn->nPos = pChn->nPosLo = 0;
+		pChn->nROfs = pChn->nLOfs = 0;
+		pChn->nLeftVol = pChn->nRightVol = 0;
 		OPL_NoteOff(nChn);
 		OPL_Touch(nChn, 0);
 		GM_KeyOff(nChn);
 		GM_Touch(nChn, 0);
-	}
-}
-
-void CSoundFile::NoteCut(uint32_t nChn, uint32_t nTick)
-{
-	fx_note_cut(this, nChn, nTick);
-}
-
-
-static void fx_key_off(CSoundFile *csf, uint32_t nChn)
-{
-	SONGVOICE *pChn = &csf->Voices[nChn];
-	bool bKeyOn = (pChn->dwFlags & CHN_KEYOFF) ? false : true;
-
-	/*fprintf(stderr, "KeyOff[%d] [ch%u]: flags=0x%X\n",
-		m_nTickCount, (unsigned)nChn, pChn->dwFlags);*/
-	OPL_NoteOff(nChn);
-	GM_KeyOff(nChn);
-
-	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
-	
-	/*if ((pChn->dwFlags & CHN_ADLIB)
-	||  (penv && penv->nMidiChannelMask))
-	{
-		// When in AdLib / MIDI mode, end the sample
-		pChn->dwFlags |= CHN_FASTVOLRAMP;
-		pChn->nLength = 0;
-		pChn->nPos    = 0;
 		return;
-	}*/
-
-	pChn->dwFlags |= CHN_KEYOFF;
-	//if ((!pChn->pHeader) || (!(pChn->dwFlags & CHN_VOLENV)))
-	if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader && !(pChn->dwFlags & CHN_VOLENV)) {
-		pChn->dwFlags |= CHN_NOTEFADE;
 	}
-	if (!pChn->nLength)
-		return;
-	if ((pChn->dwFlags & CHN_SUSTAINLOOP) && pChn->pInstrument && bKeyOn) {
-		SONGSAMPLE *psmp = pChn->pInstrument;
-		if (psmp->uFlags & CHN_LOOP) {
-			if (psmp->uFlags & CHN_PINGPONGLOOP)
-				pChn->dwFlags |= CHN_PINGPONGLOOP;
-			else
-				pChn->dwFlags &= ~(CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
-			pChn->dwFlags |= CHN_LOOP;
-			pChn->nLength = psmp->nLength;
-			pChn->nLoopStart = psmp->nLoopStart;
-			pChn->nLoopEnd = psmp->nLoopEnd;
-			if (pChn->nLength > pChn->nLoopEnd) pChn->nLength = pChn->nLoopEnd;
-		} else {
-			pChn->dwFlags &= ~(CHN_LOOP|CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
-			pChn->nLength = psmp->nLength;
-		}
-	}
-	if (penv && penv->nFadeOut && (penv->dwFlags & ENV_VOLLOOP))
-		pChn->dwFlags |= CHN_NOTEFADE;
-}
-
-void CSoundFile::KeyOff(uint32_t nChn)
-{
-	fx_key_off(this, nChn);
-}
-
-
-//////////////////////////////////////////////////////////
-// CSoundFile: Global Effects
-
-
-void CSoundFile::SetSpeed(uint32_t param)
-//-----------------------------------
-{
-        if (param)
-                m_nMusicSpeed = param;
-}
-
-
-void CSoundFile::SetTempo(uint32_t param)
-//-----------------------------------
-{
-	if (param < 0x20)
-	{
-#if 0 // argh... this is completely wrong
-		// Tempo Slide
-		if ((param & 0xF0) == 0x10)
-		{
-			m_nMusicTempo += (param & 0x0F) * 2;
-			if (m_nMusicTempo > 255) m_nMusicTempo = 255;
-		} else
-		{
-			m_nMusicTempo -= (param & 0x0F) * 2;
-			if ((int32_t)m_nMusicTempo < 32) m_nMusicTempo = 32;
-		}
-#endif
-	} else
-	{
-		m_nMusicTempo = param;
-	}
-}
-
-
-static int fx_pattern_loop(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
-{
-	if (param) {
-		if (pChn->nPatternLoopCount) {
-			pChn->nPatternLoopCount--;
-			if (!pChn->nPatternLoopCount) {
-				// this should get rid of that nasty infinite loop for cases like
-				//     ... .. .. SB0
-				//     ... .. .. SB1
-				//     ... .. .. SB1
-				// it still doesn't work right in a few strange cases, but oh well :P
-				pChn->nPatternLoop = csf->m_nRow + 1;
-				return -1;
+	if (instr >= MAX_INSTRUMENTS) instr = 0;
+	pSample = pChn->pSample;
+	pHeader = pChn->pHeader;
+	if (instr && note) {
+		pHeader = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
+		if (pHeader) {
+			uint32_t n = 0;
+			if (note <= 0x80) {
+				n = pHeader->Keyboard[note-1];
+				note = pHeader->NoteMap[note-1];
+				if ((n) && (n < MAX_SAMPLES)) pSample = csf->Samples[n].pSample;
 			}
 		} else {
-			pChn->nPatternLoopCount = param;
-		}
-		return pChn->nPatternLoop;
-	} else {
-		pChn->nPatternLoop = csf->m_nRow;
-	}
-	return -1;
-}
-
-int CSoundFile::PatternLoop(SONGVOICE *pChn, uint32_t param)
-{
-	return fx_pattern_loop(this, pChn, param);
-}
-
-
-static void fx_global_vol_slide(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
-{
-	int32_t nGlbSlide = 0;
-	if (param)
-		pChn->nOldGlbVolSlide = param;
-	else
-		param = pChn->nOldGlbVolSlide;
-	if ((param & 0x0F) == 0x0F && (param & 0xF0)) {
-		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
-			nGlbSlide = (param >> 4) * 2;
-	} else if ((param & 0xF0) == 0xF0 && (param & 0x0F)) {
-		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
-			nGlbSlide = -(int)((param & 0x0F) * 2);
-	} else {
-		if (!(csf->m_dwSongFlags & SONG_FIRSTTICK)) {
-			if (param & 0xF0)
-				nGlbSlide = (int)((param & 0xF0) >> 4) * 2;
-			else nGlbSlide = -(int)((param & 0x0F) * 2);
+			pSample = NULL;
 		}
 	}
-	if (nGlbSlide) {
-		nGlbSlide += csf->m_nGlobalVolume;
-		csf->m_nGlobalVolume = CLAMP(nGlbSlide, 0, 256);
+	if (!penv) return;
+	p = pChn;
+	for (uint32_t i=nChn; i<MAX_VOICES; p++, i++) {
+		if (!((i >= csf->m_nChannels || p == pChn)
+		      && ((p->nMasterChn == nChn+1 || p == pChn)
+		          && p->pHeader)))
+			continue;
+		bool bOk = false;
+		// Duplicate Check Type
+		switch (p->pHeader->nDCT) {
+		case DCT_NOTE:
+			if (note && (int) p->nNote == note && pHeader == p->pHeader)
+				bOk = true;
+			break;
+		case DCT_SAMPLE:
+			if (pSample && pSample == p->pSample)
+				bOk = true;
+			break;
+		case DCT_INSTRUMENT:
+			if (pHeader == p->pHeader)
+				bOk = true;
+			break;
+		}
+		// Duplicate Note Action
+		if (bOk) {
+			switch(p->pHeader->nDNA) {
+			case DNA_NOTECUT:
+				fx_key_off(csf, i);
+				p->nVolume = 0;
+				break;
+			case DNA_NOTEOFF:
+				fx_key_off(csf, i);
+				break;
+			case DNA_NOTEFADE:
+				p->dwFlags |= CHN_NOTEFADE;
+				break;
+			}
+			if (!p->nVolume) {
+				p->nFadeOutVol = 0;
+				p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
+			}
+		}
+	}
+	if (pChn->dwFlags & CHN_MUTE)
+		return;
+	// New Note Action
+	if (pChn->nVolume && pChn->nLength) {
+		uint32_t n = csf_get_nna_channel(csf, nChn);
+		if (n) {
+			p = &csf->Voices[n];
+			// Copy Channel
+			*p = *pChn;
+			p->dwFlags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
+			p->nMasterChn = nChn+1;
+			p->nCommand = 0;
+			// Key Off the note
+			switch(pChn->nNNA) {
+			case NNA_NOTEOFF:
+				fx_key_off(csf, n);
+				break;
+			case NNA_NOTECUT:
+				p->nFadeOutVol = 0;
+			case NNA_NOTEFADE:
+				p->dwFlags |= CHN_NOTEFADE;
+				break;
+			}
+			if (!p->nVolume) {
+				p->nFadeOutVol = 0;
+				p->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
+			}
+			// Stop this channel
+			pChn->nLength = pChn->nPos = pChn->nPosLo = 0;
+			pChn->nROfs = pChn->nLOfs = 0;
+		}
 	}
 }
 
-void CSoundFile::GlobalVolSlide(SONGVOICE *pChn, uint32_t param)
+
+bool CSoundFile::ProcessEffects()
+//-------------------------------
 {
-	fx_global_vol_slide(this, pChn, param);
+	int nBreakRow = -1, nPosJump = -1, nPatLoopRow = -1;
+	SONGVOICE *pChn = Voices;
+	for (uint32_t nChn=0; nChn<m_nChannels; nChn++, pChn++) {
+		pChn->nCommand=0;
+
+		uint32_t instr = pChn->nRowInstr;
+		uint32_t volcmd = pChn->nRowVolCmd;
+		uint32_t vol = pChn->nRowVolume;
+		uint32_t cmd = pChn->nRowCommand;
+		uint32_t param = pChn->nRowParam;
+		bool bPorta = (cmd == CMD_TONEPORTAMENTO
+		               || cmd == CMD_TONEPORTAVOL
+		               || volcmd == VOLCMD_TONEPORTAMENTO);
+		uint32_t nStartTick = pChn->nTickStart;
+
+		pChn->dwFlags &= ~CHN_FASTVOLRAMP;
+		// Process special effects (note delay, pattern delay, pattern loop)
+		if (cmd == CMD_S3MCMDEX) {
+			int nloop; // g++ is dumb
+			if (param)
+				pChn->nOldCmdEx = param;
+			else
+				param = pChn->nOldCmdEx;
+			switch (param >> 4) {
+			case 0xd:
+				// Note Delay
+				nStartTick = param & 0x0F;
+				break;
+			case 0xb:
+				// Pattern loop
+				if (m_nTickCount)
+					break;
+				nloop = fx_pattern_loop(this, pChn, param & 0x0F);
+				if (nloop >= 0)
+					nPatLoopRow = nloop;
+				break;
+			case 0xe:
+				// Pattern Delay
+				m_nCurrentPatternDelay = param & 0x0F;
+				break;
+			}
+		}
+
+		// Handles note/instrument/volume changes
+		//
+		// this can be delayed by a note delay effect, but ITEXE has a bug here where
+		// SEx retriggers any row with an SDy in it "x" times at frame "y"
+		// this bug doesn't affect the S6x command
+		//
+		// Scream Tracker has a similar bug (which we don't simulate here)
+		// whereby SD0 and SC0 are ignored
+		if (((m_nTickCount - m_nFrameDelay) % m_nMusicSpeed) == nStartTick
+		    && (nStartTick > 0 || m_nTickCount == 0))
+		{
+			uint32_t note = pChn->nRowNote;
+			if (instr) pChn->nNewIns = instr;
+			if (!note && instr) {
+				if (m_dwSongFlags & SONG_INSTRUMENTMODE) {
+					if (pChn->pInstrument) pChn->nVolume = pChn->pInstrument->nVolume;
+				} else {
+					if (instr < MAX_SAMPLES) pChn->nVolume = Samples[instr].nVolume;
+				}
+			}
+			// Invalid Instrument ?
+			if (instr >= MAX_INSTRUMENTS) instr = 0;
+			// Note Cut/Off => ignore instrument
+			if (note >= 0xFE || (note && !bPorta)) {
+				/* This is required when the instrument changes (KeyOff is not called) */
+				/* Possibly a better bugfix could be devised. --Bisqwit */
+				OPL_NoteOff(nChn);
+				OPL_Touch(nChn, 0);
+				GM_KeyOff(nChn);
+				GM_Touch(nChn, 0);
+			}
+			if (note >= 0xFE) instr = 0;
+			if (note && note <= 128)
+				pChn->nNewNote = note;
+			// New Note Action ? (not when paused!!!)
+			if (note && note <= 128 && !bPorta) {
+				csf_check_nna(this, nChn, instr, note, false);
+			}
+			// Instrument Change ?
+			if (instr) {
+				SONGSAMPLE *psmp = pChn->pInstrument;
+				csf_instrument_change(this, pChn, instr, bPorta, true, true);
+				OPL_Patch(nChn, Samples[instr].AdlibBytes);
+				
+				if((m_dwSongFlags & SONG_INSTRUMENTMODE) && Instruments[instr])
+					GM_DPatch(nChn, Instruments[instr]->nMidiProgram,
+						Instruments[instr]->wMidiBank,
+						Instruments[instr]->nMidiChannelMask);
+				
+				pChn->nNewIns = 0;
+				// Special IT case: portamento+note causes sample change -> ignore portamento
+				if (psmp != pChn->pInstrument && note && note < 0x80) {
+					bPorta = false;
+				}
+			}
+			// New Note ?
+			if (note) {
+				if (!instr && pChn->nNewIns && note < 0x80) {
+					csf_instrument_change(this, pChn, pChn->nNewIns, bPorta, false, true);
+					if ((m_dwSongFlags & SONG_INSTRUMENTMODE)
+					    && Instruments[pChn->nNewIns]) {
+						OPL_Patch(nChn, Samples[pChn->nNewIns].AdlibBytes);
+						GM_DPatch(nChn, Instruments[pChn->nNewIns]->nMidiProgram,
+							Instruments[pChn->nNewIns]->wMidiBank,
+							Instruments[pChn->nNewIns]->nMidiChannelMask);
+					}
+					pChn->nNewIns = 0;
+				}
+				csf_note_change(this, nChn, note, bPorta, true, false);
+			}
+			// Tick-0 only volume commands
+			if (volcmd == VOLCMD_VOLUME) {
+				if (vol > 64) vol = 64;
+				pChn->nVolume = vol << 2;
+				pChn->dwFlags |= CHN_FASTVOLRAMP;
+			} else if (volcmd == VOLCMD_PANNING) {
+				if (vol > 64) vol = 64;
+				pChn->nPan = vol << 2;
+				pChn->dwFlags |= CHN_FASTVOLRAMP;
+				pChn->dwFlags &= ~CHN_SURROUND;
+			}
+		}
+
+		// Volume Column Effect (except volume & panning)
+		if ((volcmd > VOLCMD_PANNING) && (m_nTickCount >= nStartTick)) {
+			if (volcmd == VOLCMD_TONEPORTAMENTO) {
+				fx_tone_portamento(m_dwSongFlags, pChn, ImpulseTrackerPortaVolCmd[vol & 0x0F]);
+			} else {
+				if (vol)
+					pChn->nOldVolParam = vol;
+				else
+					vol = pChn->nOldVolParam;
+				switch(volcmd) {
+				case VOLCMD_VOLSLIDEUP:
+					fx_volume_slide(m_dwSongFlags, pChn, vol << 4);
+					break;
+
+				case VOLCMD_VOLSLIDEDOWN:
+					fx_volume_slide(m_dwSongFlags, pChn, vol);
+					break;
+
+				case VOLCMD_FINEVOLUP:
+					if (m_nTickCount == nStartTick)
+						fx_volume_slide(m_dwSongFlags, pChn, (vol << 4) | 0x0F);
+					break;
+
+				case VOLCMD_FINEVOLDOWN:
+					if (m_nTickCount == nStartTick)
+						fx_volume_slide(m_dwSongFlags, pChn, 0xF0 | vol);
+					break;
+
+				case VOLCMD_VIBRATOSPEED:
+					fx_vibrato(pChn, vol << 4);
+					break;
+
+				case VOLCMD_VIBRATO:
+					fx_vibrato(pChn, vol);
+					break;
+
+				case VOLCMD_PANSLIDELEFT:
+					fx_panning_slide(m_dwSongFlags, pChn, vol);
+					break;
+
+				case VOLCMD_PANSLIDERIGHT:
+					fx_panning_slide(m_dwSongFlags, pChn, vol << 4);
+					break;
+
+				case VOLCMD_PORTAUP:
+					fx_portamento_up(m_dwSongFlags, pChn, vol << 2);
+					break;
+
+				case VOLCMD_PORTADOWN:
+					fx_portamento_down(m_dwSongFlags, pChn, vol << 2);
+					break;
+				}
+			}
+		}
+
+		// Effects
+		switch (cmd) {
+		case 0:
+			break;
+		// Set Volume
+		case CMD_VOLUME:
+			if ((pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed)) break;
+			{
+				pChn->nVolume = (param < 64) ? param*4 : 256;
+				pChn->dwFlags |= CHN_FASTVOLRAMP;
+				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++)
+				{
+					SONGVOICE *c = &Voices[i];
+					if (c->nMasterChn == (nChn+1)) {
+						c->nVolume = pChn->nVolume;
+						c->dwFlags |= CHN_FASTVOLRAMP;
+					}
+				}
+			}
+			break;
+
+		// Portamento Up
+		case CMD_PORTAMENTOUP:
+			fx_portamento_up(m_dwSongFlags, pChn, param);
+			break;
+
+		// Portamento Down
+		case CMD_PORTAMENTODOWN:
+			fx_portamento_down(m_dwSongFlags, pChn, param);
+			break;
+
+		// Volume Slide
+		case CMD_VOLUMESLIDE:
+			fx_volume_slide(m_dwSongFlags, pChn, param);
+			break;
+
+		// Tone-Portamento
+		case CMD_TONEPORTAMENTO:
+			fx_tone_portamento(m_dwSongFlags, pChn, param);
+			break;
+
+		// Tone-Portamento + Volume Slide
+		case CMD_TONEPORTAVOL:
+			fx_volume_slide(m_dwSongFlags, pChn, param);
+			fx_tone_portamento(m_dwSongFlags, pChn, 0);
+			break;
+
+		// Vibrato
+		case CMD_VIBRATO:
+			fx_vibrato(pChn, param);
+			break;
+
+		// Vibrato + Volume Slide
+		case CMD_VIBRATOVOL:
+			fx_volume_slide(m_dwSongFlags, pChn, param);
+			fx_vibrato(pChn, 0);
+			break;
+
+		// Set Speed
+		case CMD_SPEED:
+			if (!m_nTickCount && param)
+				m_nMusicSpeed = param;
+			break;
+
+		// Set Tempo
+		case CMD_TEMPO:
+			if (!m_nTickCount) {
+				if (param)
+					pChn->nOldTempo = param;
+				else
+					param = pChn->nOldTempo;
+				if (param >= 0x20)
+					m_nMusicTempo = param;
+			} else {
+                                param = pChn->nOldTempo; // this just got set on tick zero
+
+                                switch (param >> 4) {
+                                case 0:
+                                        m_nMusicTempo -= param & 0xf;
+                                        if (m_nMusicTempo < 32)
+                                                m_nMusicTempo = 32;
+                                        break;
+                                case 1:
+                                        m_nMusicTempo += param & 0xf;
+                                        if (m_nMusicTempo > 255)
+                                                m_nMusicTempo = 255;
+                                        break;
+                                }
+                        }
+			break;
+
+		// Set Offset
+		case CMD_OFFSET:
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed))
+				break;
+			if (param)
+				pChn->nOldOffset = param;
+			else
+				param = pChn->nOldOffset;
+			param <<= 8;
+			param |= (uint32_t)(pChn->nOldHiOffset) << 16;
+			if (pChn->nRowNote && pChn->nRowNote < 0x80) {
+				if (bPorta)
+					pChn->nPos = param;
+				else
+					pChn->nPos += param;
+				if (pChn->nPos >= pChn->nLength) {
+					pChn->nPos = pChn->nLoopStart;
+					if ((m_dwSongFlags & SONG_ITOLDEFFECTS) && pChn->nLength > 4) {
+						pChn->nPos = pChn->nLength - 2;
+					}
+				}
+			}
+			break;
+
+		// Arpeggio
+		case CMD_ARPEGGIO:
+			pChn->nCommand = CMD_ARPEGGIO;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			if (!pChn->nPeriod || !pChn->nNote) break;
+			if (param)
+				pChn->nArpeggio = param;
+			break;
+
+		// Retrig
+		case CMD_RETRIG:
+			if (param)
+				pChn->nRetrigParam = param & 0xFF;
+			fx_retrig_note(this, nChn, pChn->nRetrigParam);
+			break;
+
+		// Tremor
+		case CMD_TREMOR:
+			pChn->nCommand = CMD_TREMOR;
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			if (param) pChn->nTremorParam = param;
+			break;
+
+		// Set Global Volume
+		case CMD_GLOBALVOLUME:
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			if (param <= 128)
+				m_nGlobalVolume = param << 1;
+			break;
+
+		// Global Volume Slide
+		case CMD_GLOBALVOLSLIDE:
+			fx_global_vol_slide(this, pChn, param);
+			break;
+
+		// Set 8-bit Panning (Xxx)
+		case CMD_PANNING8:
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			if (!(m_dwSongFlags & SONG_SURROUNDPAN)) pChn->dwFlags &= ~CHN_SURROUND;
+			pChn->nPan = param;
+			pChn->dwFlags |= CHN_FASTVOLRAMP;
+			break;
+
+		// Panning Slide
+		case CMD_PANNINGSLIDE:
+			fx_panning_slide(m_dwSongFlags, pChn, param);
+			break;
+
+		// Tremolo
+		case CMD_TREMOLO:
+			fx_tremolo(pChn, param);
+			break;
+
+		// Fine Vibrato
+		case CMD_FINEVIBRATO:
+			fx_fine_vibrato(pChn, param);
+			break;
+
+		// S3M/IT Sxx Extended Commands
+		case CMD_S3MCMDEX:
+			ExtendedS3MCommands(nChn, param);
+			break;
+
+		// Key Off
+		case CMD_KEYOFF:
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			fx_key_off(this, nChn);
+			break;
+
+		// Extra-fine porta up/down
+		case CMD_XFINEPORTAUPDOWN:
+			switch(param & 0xF0)
+			{
+			case 0x10:
+				fx_extra_fine_portamento_up(m_dwSongFlags, pChn, param & 0x0F);
+				break;
+			case 0x20:
+				fx_extra_fine_portamento_down(m_dwSongFlags, pChn, param & 0x0F);
+				break;
+			// Modplug XM Extensions
+			case 0x50:
+			case 0x60:
+			case 0x70:
+			case 0x90:
+			case 0xA0:
+				ExtendedS3MCommands(nChn, param);
+				break;
+			}
+			break;
+
+		// Set Channel Global Volume
+		case CMD_CHANNELVOLUME:
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			if (param <= 64) {
+				pChn->nGlobalVol = param;
+				pChn->dwFlags |= CHN_FASTVOLRAMP;
+				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++) {
+					SONGVOICE *c = &Voices[i];
+					if (c->nMasterChn == (nChn+1)) {
+						c->nGlobalVol = param;
+						c->dwFlags |= CHN_FASTVOLRAMP;
+					}
+				}
+			}
+			break;
+
+		// Channel volume slide
+		case CMD_CHANNELVOLSLIDE:
+			{
+				int saw_self = 0;
+
+				for (uint32_t i=m_nChannels; i<MAX_VOICES; i++) {
+					SONGVOICE *c = &Voices[i];
+					if (c->nMasterChn == (nChn+1)) {
+						if (c == pChn) saw_self = 1;
+						fx_channel_vol_slide(m_dwSongFlags, c, param);
+					}
+				}
+				if (!saw_self) {
+					fx_channel_vol_slide(m_dwSongFlags, pChn, param);
+				}
+			}
+			
+			break;
+
+		// Panbrello (IT)
+		case CMD_PANBRELLO:
+			fx_panbrello(pChn, param);
+			break;
+
+		// Set Envelope Position
+		case CMD_SETENVPOSITION:
+			if ((pChn->nTickStart % m_nMusicSpeed) == (m_nTickCount % m_nMusicSpeed))
+			{
+				pChn->nVolEnvPosition = param;
+				pChn->nPanEnvPosition = param;
+				pChn->nPitchEnvPosition = param;
+				if ((m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader)
+				{
+					SONGINSTRUMENT *penv = pChn->pHeader;
+					if ((pChn->dwFlags & CHN_PANENV) && (penv->PanEnv.nNodes) && ((int)param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1]))
+					{
+						pChn->dwFlags &= ~CHN_PANENV;
+					}
+				}
+			}
+			break;
+
+		// Position Jump
+		case CMD_POSITIONJUMP:
+			nPosJump = param;
+			break;
+
+		// Pattern Break
+		case CMD_PATTERNBREAK:
+			nBreakRow = param;
+			break;
+
+		// Midi Controller
+		case CMD_MIDI:
+			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
+			if (param < 0x80) {
+				ProcessMidiMacro(nChn, &m_MidiCfg.szMidiSFXExt[pChn->nActiveMacro << 5], param);
+			} else {
+				ProcessMidiMacro(nChn, &m_MidiCfg.szMidiZXXExt[(param & 0x7F) << 5], 0);
+			}
+			break;
+		}
+	}
+
+	// Navigation Effects
+	if (!m_nTickCount) {
+		if (nPatLoopRow >= 0) {
+			// Pattern Loop
+			m_nNextOrder = m_nCurrentOrder;
+			m_nNextRow = nPatLoopRow;
+			if (m_nCurrentPatternDelay) m_nNextRow++;
+		} else if (nBreakRow >= 0 || nPosJump >= 0) {
+			// Pattern Break / Position Jump only if no loop running
+			bool bNoLoop = false;
+			if (nPosJump < 0) nPosJump = m_nCurrentOrder+1;
+			if (nBreakRow < 0) nBreakRow = 0;
+			// Modplug Tracker & ModPlugin allow backward jumps
+			if ((nPosJump < (int)m_nCurrentOrder)
+			 || ((nPosJump == (int)m_nCurrentOrder) && (nBreakRow <= (int)m_nRow)))
+			{
+				if (!IsValidBackwardJump(m_nCurrentOrder, m_nRow, nPosJump, nBreakRow))
+				{
+					if (m_nRepeatCount)
+					{
+						if (m_nRepeatCount > 0) m_nRepeatCount--;
+					} else
+					{
+						if (gdwSoundSetup & SNDMIX_NOBACKWARDJUMPS)
+							// Backward jump disabled
+							bNoLoop = true;
+						//reset repeat count incase there are multiple loops.
+						//(i.e. Unreal tracks)
+						m_nRepeatCount = m_nInitialRepeatCount;
+					}
+				}
+			}
+			if (!bNoLoop && nPosJump < MAX_ORDERS
+			    && (nPosJump != (int)m_nCurrentOrder || nBreakRow != (int)m_nRow)) {
+				if (nPosJump != (int)m_nCurrentOrder) {
+					for (uint32_t i=0; i<m_nChannels; i++)
+						Voices[i].nPatternLoopCount = 0;
+				}
+				m_nNextOrder = nPosJump;
+				m_nNextRow = (uint32_t)nBreakRow;
+			}
+		}
+	}
+	return true;
 }
+
+
 
 
 
@@ -2163,5 +2002,16 @@ bool CSoundFile::IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, u
 		if (row >= nRows) return true;
 	}
 	return false;
+}
+
+
+void CSoundFile::NoteCut(uint32_t nChn, uint32_t nTick) // XXX get rid of this
+{
+	fx_note_cut(this, nChn, nTick);
+}
+
+void CSoundFile::KeyOff(uint32_t nChn) // XXX get rid of this
+{
+	fx_key_off(this, nChn);
 }
 
