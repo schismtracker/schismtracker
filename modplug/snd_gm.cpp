@@ -711,7 +711,7 @@ void GM_IncrementSongCounter(int count)
          * where cmdA = last CMD_SPEED = m_nMusicSpeed
          *   and cmdT = last CMD_TEMPO = m_nMusicTempo
          */
-        int RowLengthInSamplesHi = 5 * mp->m_nMusicSpeed * mp->GetSampleRate();
+        int RowLengthInSamplesHi = 5 * mp->m_nMusicSpeed * mp->gdwMixingFreq;
         int RowLengthInSamplesLo = 2 * mp->m_nMusicTempo;
 
         double NumberOfSamplesPer32thNote =

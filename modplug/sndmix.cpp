@@ -19,7 +19,6 @@
 int32_t CSoundFile::m_nStreamVolume = 0x8000;
 unsigned int CSoundFile::m_nMaxMixChannels = 32; // ITT is 1994
 // Mixing Configuration (SetWaveConfig)
-uint32_t CSoundFile::gdwSysInfo = 0;
 uint32_t CSoundFile::gnChannels = 1;
 uint32_t CSoundFile::gdwSoundSetup = 0;
 uint32_t CSoundFile::gdwMixingFreq = 44100;
@@ -1132,7 +1131,6 @@ int csf_read_note(CSoundFile *csf)
 	handle_realtime_closures(csf);
 
 	////////////////////////////////////////////////////////////////////////////////////
-	csf->m_nTotalCount++;
 
 	if (!csf->m_nMusicTempo)
 		return false;

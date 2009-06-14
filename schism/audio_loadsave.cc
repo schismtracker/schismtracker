@@ -327,7 +327,7 @@ void song_new(int flags)
 	mp->m_nChannels = 64;
 	_convert_to_it(mp);
 
-	mp->SetRepeatCount(-1);
+	mp->m_nRepeatCount = mp->m_nInitialRepeatCount = -1;
         //song_stop();
 
 	mp->ResetMidiCfg();
@@ -369,7 +369,7 @@ int song_load_unchecked(const char *file)
 		
                 delete mp;
                 mp = newsong;
-		mp->SetRepeatCount(-1);
+		mp->m_nRepeatCount = mp->m_nInitialRepeatCount = -1;
 		max_channels_used = 0;
                 fix_song();
 		song_stop_unlocked(0);
@@ -383,7 +383,7 @@ int song_load_unchecked(const char *file)
 		row_highlight_minor = mp->m_rowHighlightMinor;
 
                 main_song_changed_cb();
-                
+
 		status.flags &= ~SONG_NEEDS_SAVE;
 		status.flags &= ~PLAIN_TEXTEDIT;
 	

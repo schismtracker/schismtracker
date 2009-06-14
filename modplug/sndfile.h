@@ -499,7 +499,7 @@ class CSoundFile
 public: // Static Members
 	static uint32_t m_nMaxMixChannels;
 	static int32_t m_nStreamVolume;
-	static uint32_t gdwSysInfo, gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
+	static uint32_t gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
 	static uint32_t gnVolumeRampSamples;
 	static uint32_t gnVULeft, gnVURight;
 
@@ -519,7 +519,7 @@ public: // for Editing
 	uint32_t m_nStereoSeparation;
 	uint32_t m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
 	uint32_t m_nType, m_nSamples, m_nInstruments;
-	uint32_t m_nTickCount, m_nTotalCount, m_nCurrentPatternDelay, m_nFrameDelay;
+	uint32_t m_nTickCount, m_nCurrentPatternDelay, m_nFrameDelay;
 	uint32_t m_nMusicSpeed, m_nMusicTempo;
 	uint32_t m_nNextRow, m_nRow;
 	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nNextOrder,m_nLockedOrder,m_nRestartPos;
@@ -551,9 +551,6 @@ public:
 	uint32_t GetMaxPosition() const;
 	void SetCurrentPos(uint32_t nPos);
 	void SetCurrentOrder(uint32_t nOrder);
-	unsigned int GetSongTime() { return csf_get_length(this); }
-	void SetRepeatCount(int n) { m_nRepeatCount = n; m_nInitialRepeatCount = n; }
-	int GetRepeatCount() const { return m_nRepeatCount; }
 	void LoopPattern(int nPat, int nRow=0);
 	// Module Loaders
 	bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);
@@ -598,55 +595,21 @@ public:
 public:
 	// Real-time sound functions
 	void ResetChannels();
+	void ResetTimestamps(); // for note playback dots
 
 	uint32_t CreateStereoMix(int count);
-	uint32_t GetTotalTickCount() const { return m_nTotalCount; }
-	void ResetTotalTickCount() { m_nTotalCount = 0; }
-
-public:
-	static bool IsStereo() { return (gnChannels > 1) ? true : false; }
-	static uint32_t GetSampleRate() { return gdwMixingFreq; }
-	static uint32_t GetBitsPerSample() { return gnBitsPerSample; }
-	static uint32_t GetSysInfo() { return gdwSysInfo; }
-	uint32_t InitSysInfo();
 
 public:
 	bool ProcessEffects();
-	void TranslateKeyboard(SONGINSTRUMENT* penv, uint32_t note, SONGSAMPLE*& psmp);
-	// Channel Effects
-	void PortamentoUp(SONGVOICE *pChn, uint32_t param);
-	void PortamentoDown(SONGVOICE *pChn, uint32_t param);
-	void FinePortamentoUp(SONGVOICE *pChn, uint32_t param);
-	void FinePortamentoDown(SONGVOICE *pChn, uint32_t param);
-	void ExtraFinePortamentoUp(SONGVOICE *pChn, uint32_t param);
-	void ExtraFinePortamentoDown(SONGVOICE *pChn, uint32_t param);
-	void TonePortamento(SONGVOICE *pChn, uint32_t param);
-	void Vibrato(SONGVOICE *pChn, uint32_t param);
-	void FineVibrato(SONGVOICE *pChn, uint32_t param);
-	void VolumeSlide(SONGVOICE *pChn, uint32_t param);
-	void PanningSlide(SONGVOICE *pChn, uint32_t param);
-	void ChannelVolSlide(SONGVOICE *pChn, uint32_t param);
-	void FineVolumeUp(SONGVOICE *pChn, uint32_t param);
-	void FineVolumeDown(SONGVOICE *pChn, uint32_t param);
-	void Tremolo(SONGVOICE *pChn, uint32_t param);
-	void Panbrello(SONGVOICE *pChn, uint32_t param);
-	void RetrigNote(uint32_t nChn, uint32_t param);
 	void NoteCut(uint32_t nChn, uint32_t nTick);
 	void KeyOff(uint32_t nChn);
-	int PatternLoop(SONGVOICE *, uint32_t param);
+
 	void ExtendedS3MCommands(uint32_t nChn, uint32_t param);
 	void ExtendedChannelEffect(SONGVOICE *, uint32_t param);
 	void MidiSend(const unsigned char *data, unsigned int len, uint32_t nChn=0, int fake = 0);
 	void ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint32_t param=0,
 			uint32_t note=0, uint32_t velocity=0, uint32_t use_instr=0);
-	//void SetupChannelFilter(SONGVOICE *pChn, bool bReset, int flt_modifier=256,int freq=0) const;
-	// Low-Level effect processing
-	void DoFreqSlide(SONGVOICE *pChn, int32_t nFreqSlide);
-	// Global Effects
-	void SetTempo(uint32_t param);
-	void SetSpeed(uint32_t param);
-	void GlobalVolSlide(SONGVOICE *pChn, uint32_t param);
-	bool IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, uint32_t nJumpOrder, uint32_t nJumpRow) const;
+
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
 	uint32_t ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
@@ -666,7 +629,6 @@ public:
 	void ResetMidiCfg();
 	uint32_t MapMidiInstrument(uint32_t dwProgram, uint32_t nChannel, uint32_t nNote);
 	bool ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers);
-	void ResetTimestamps(); // for note playback dots
 
 	// System-Dependant functions
 public:

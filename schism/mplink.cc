@@ -59,7 +59,7 @@ midi_config *song_get_default_midi_config(void) {
 // returned value is in seconds
 unsigned int song_get_length()
 {
-        return mp->GetSongTime();
+	return csf_get_length(mp);
 }
 unsigned int song_get_length_to(int order, int row)
 {
@@ -68,7 +68,7 @@ unsigned int song_get_length_to(int order, int row)
 	song_lock_audio();
 	mp->stop_at_order = order;
 	mp->stop_at_row = row;
-	t = mp->GetSongTime();
+	t = csf_get_length(mp);
 	mp->stop_at_order = mp->stop_at_row = -1;
 	song_unlock_audio();
 	return t;
@@ -83,7 +83,7 @@ void song_get_at_time(unsigned int seconds, int *order, int *row)
 		mp->stop_at_order = MAX_ORDERS;
 		mp->stop_at_row = 255; /* unpossible */
 		mp->stop_at_time = seconds;
-		(void)mp->GetSongTime();
+		csf_get_length(mp);
 		if (order) *order = mp->stop_at_order;
 		if (row) *row = mp->stop_at_row;
 		mp->stop_at_order = mp->stop_at_row = -1;

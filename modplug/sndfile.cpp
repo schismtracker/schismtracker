@@ -39,7 +39,7 @@ CSoundFile::CSoundFile()
       m_nChannels(), m_nMixChannels(0), m_nMixStat(), m_nBufferCount(),
       m_nType(MOD_TYPE_NONE),
       m_nSamples(0), m_nInstruments(0),
-      m_nTickCount(), m_nTotalCount(), m_nCurrentPatternDelay(), m_nFrameDelay(),
+      m_nTickCount(), m_nCurrentPatternDelay(), m_nFrameDelay(),
       m_nMusicSpeed(), m_nMusicTempo(),
       m_nNextRow(), m_nRow(),
       m_nCurrentPattern(), m_nCurrentOrder(), m_nNextOrder(),
@@ -488,7 +488,6 @@ void CSoundFile::SetCurrentOrder(uint32_t nPos)
 		m_nCurrentPattern = 0;
 		m_nTickCount = m_nMusicSpeed;
 		m_nBufferCount = 0;
-		m_nTotalCount = 0;
 		m_nCurrentPatternDelay = 0;
 		m_nFrameDelay = 0;
 	}
