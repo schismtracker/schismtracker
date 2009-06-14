@@ -468,6 +468,8 @@ void csf_free_pattern(void *pat);
 signed char *csf_allocate_sample(uint32_t nbytes);
 void csf_free_sample(void *p);
 
+void csf_adjust_sample_loop(SONGSAMPLE *pIns);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
@@ -513,6 +515,13 @@ void fx_key_off(CSoundFile *csf, uint32_t nChn);
 void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
 void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr);
+
+// sndfile
+void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow);
+void csf_reset_timestamps(CSoundFile *csf);
+
+// fastmix
+unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
 
 } // extern "C"
 
@@ -576,7 +585,6 @@ public:
 	uint32_t GetMaxPosition() const;
 	void SetCurrentPos(uint32_t nPos);
 	void SetCurrentOrder(uint32_t nOrder);
-	void LoopPattern(int nPat, int nRow=0);
 	// Module Loaders
 	bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadS3M(const uint8_t * lpStream, uint32_t dwMemLength);
@@ -618,13 +626,6 @@ public:
 	static void (*_multi_out_raw)(int chan, int *buf, int len);
 
 public:
-	// Real-time sound functions
-	void ResetChannels();
-	void ResetTimestamps(); // for note playback dots
-
-	uint32_t CreateStereoMix(int count);
-
-public:
 
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
@@ -636,7 +637,6 @@ public:
 	bool RemoveInstrumentSamples(uint32_t nInstr);
 	uint32_t DetectUnusedSamples(bool *);
 	bool RemoveSelectedSamples(bool *);
-	void AdjustSampleLoop(SONGSAMPLE *pIns);
 	// I/O from another sound file
 	bool ReadInstrumentFromSong(uint32_t nInstr, CSoundFile *, uint32_t nSrcInstrument);
 	bool ReadSampleFromSong(uint32_t nSample, CSoundFile *, uint32_t nSrcSample);

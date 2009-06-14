@@ -427,7 +427,7 @@ static void song_reset_play_state()
 
 	mp->stop_at_order = -1;
 	mp->stop_at_row = -1;
-	mp->ResetTimestamps();
+	csf_reset_timestamps(mp);
 	samples_played = 0;
 }
 
@@ -636,7 +636,7 @@ void song_loop_pattern(int pattern, int row)
 	if (n > -1) (void)mp_chaseback(n, row);
 
         max_channels_used = 0;
-        mp->LoopPattern(pattern, row);
+        csf_loop_pattern(mp, pattern, row);
 
         GM_SendSongStartCode();
 
@@ -720,15 +720,6 @@ void song_single_step(int patno, int row)
 		song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
 			vol, i, cur_note->effect, cur_note->parameter);
 	}
-#if 0
-        max_channels_used = 0;
-
-	mp->m_nTickCount = 0;
-        mp->m_dwSongFlags &= ~(SONG_ENDREACHED | SONG_PAUSED);
-        mp->m_dwSongFlags |= SONG_STEP | SONG_PATTERNLOOP;
-	mp->LoopPattern(pattern);
-	mp->m_nNextRow = row;
-#endif
 }
 
 // ------------------------------------------------------------------------
@@ -845,6 +836,7 @@ void song_update_playing_instrument(int i_changed)
 	}
 	song_unlock_audio();
 }
+
 void song_update_playing_sample(int s_changed)
 {
 	SONGVOICE *channel;

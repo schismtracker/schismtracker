@@ -236,7 +236,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 		song_start_once();
 
 		/* okay, restrict libmodplug to only play a single pattern */
-		mp->LoopPattern(patno, 0);
+		csf_loop_pattern(mp, patno, 0);
 		mp->m_nRepeatCount = 2; /* er... */
 	}
 
@@ -244,7 +244,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	csf_set_wave_config(mp, dw->rate*=2, dw->bits, dw->channels);
         csf_init_player(mp, 1);
 
-	CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
+	mp->gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	status.flags |= (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN);
 
 	mbuf = NULL;

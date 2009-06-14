@@ -461,49 +461,35 @@ void CSoundFile::SetCurrentOrder(uint32_t nPos)
 	m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 }
 
-void CSoundFile::ResetChannels()
-//------------------------------
-{
-	m_dwSongFlags &= ~SONG_ENDREACHED;
-	m_nBufferCount = 0;
-	for (uint32_t i=0; i<MAX_VOICES; i++)
-	{
-		Voices[i].nROfs = Voices[i].nLOfs = Voices[i].strike = 0;
-	}
-}
-
-
-void CSoundFile::ResetTimestamps()
-//--------------------------------
+// this function is named terribly
+void csf_reset_timestamps(CSoundFile *csf)
 {
 	int n;
 	
 	for (n = 1; n < MAX_SAMPLES; n++) {
-		Samples[n].played = 0;
+		csf->Samples[n].played = 0;
 	}
 	for (n = 1; n < MAX_INSTRUMENTS; n++) {
-		if (Instruments[n])
-			Instruments[n]->played = 0;
+		if (csf->Instruments[n])
+			csf->Instruments[n]->played = 0;
 	}
 }
 
 
-void CSoundFile::LoopPattern(int nPat, int nRow)
-//----------------------------------------------
+void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow)
 {
-	if ((nPat < 0) || (nPat >= MAX_PATTERNS) || (!Patterns[nPat]))
-	{
-		m_dwSongFlags &= ~SONG_PATTERNLOOP;
-	} else
-	{
-		if ((nRow < 0) || (nRow >= PatternSize[nPat])) nRow = 0;
-		m_nCurrentPattern = nPat;
-		m_nRow = m_nNextRow = nRow;
-		m_nTickCount = m_nMusicSpeed;
-		m_nCurrentPatternDelay = 0;
-		m_nFrameDelay = 0;
-		m_nBufferCount = 0;
-		m_dwSongFlags |= SONG_PATTERNLOOP;
+	if ((nPat < 0) || (nPat >= MAX_PATTERNS) || (!csf->Patterns[nPat])) {
+		csf->m_dwSongFlags &= ~SONG_PATTERNLOOP;
+	} else {
+		if ((nRow < 0) || (nRow >= csf->PatternSize[nPat]))
+			nRow = 0;
+		csf->m_nCurrentPattern = nPat;
+		csf->m_nRow = csf->m_nNextRow = nRow;
+		csf->m_nTickCount = csf->m_nMusicSpeed;
+		csf->m_nCurrentPatternDelay = 0;
+		csf->m_nFrameDelay = 0;
+		csf->m_nBufferCount = 0;
+		csf->m_dwSongFlags |= SONG_PATTERNLOOP;
 	}
 }
 
@@ -1154,13 +1140,12 @@ uint32_t CSoundFile::ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * 
 		}
 		return 0;
 	}
-	AdjustSampleLoop(pIns);
+	csf_adjust_sample_loop(pIns);
 	return len;
 }
 
 
-void CSoundFile::AdjustSampleLoop(SONGSAMPLE *pIns)
-//----------------------------------------------------
+void csf_adjust_sample_loop(SONGSAMPLE *pIns)
 {
 	if (!pIns->pSample) return;
 	if (pIns->nLoopEnd > pIns->nLength) pIns->nLoopEnd = pIns->nLength;
