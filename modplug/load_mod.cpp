@@ -334,7 +334,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		if (ipat < MAX_PATTERNS)
 		{
-			if ((Patterns[ipat] = AllocatePattern(64, m_nChannels)) == NULL) break;
+			if ((Patterns[ipat] = csf_allocate_pattern(64, m_nChannels)) == NULL) break;
 			PatternSize[ipat] = 64;
 			PatternAllocSize[ipat] = 64;
 			if (dwMemPos + m_nChannels*256 >= dwMemLength) break;

@@ -135,7 +135,7 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 		{
 			PatternSize[nAllocPat] = 64;
 			PatternAllocSize[nAllocPat] = 64;
-			Patterns[nAllocPat] = AllocatePattern(64, m_nChannels);
+			Patterns[nAllocPat] = csf_allocate_pattern(64, m_nChannels);
 		}
 	}
 	// Reading Patterns

@@ -130,7 +130,7 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (rows < 16) rows = 16;
 		PatternSize[ipat] = rows;
 		PatternAllocSize[ipat] = rows;
-		if ((Patterns[ipat] = AllocatePattern(rows, m_nChannels)) == NULL) return true;
+		if ((Patterns[ipat] = csf_allocate_pattern(rows, m_nChannels)) == NULL) return true;
 		MODCOMMAND *m = Patterns[ipat];
 		uint32_t patbrk = lpStream[dwMemPos];
 		const uint8_t *p = lpStream + dwMemPos + 2;

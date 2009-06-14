@@ -216,7 +216,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 		}
 		for (uint32_t iPat=0; iPat<numpats; iPat++)
 		{
-			MODCOMMAND *p = AllocatePattern(64, m_nChannels);
+			MODCOMMAND *p = csf_allocate_pattern(64, m_nChannels);
 			if (!p) break;
 			Patterns[iPat] = p;
 			PatternSize[iPat] = 64;
@@ -383,7 +383,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 	// Create the patterns from the list of tracks
 	for (uint32_t iPat=0; iPat<pfh->numorders; iPat++)
 	{
-		MODCOMMAND *p = AllocatePattern(PatternSize[iPat], m_nChannels);
+		MODCOMMAND *p = csf_allocate_pattern(PatternSize[iPat], m_nChannels);
 		if (!p) break;
 		Patterns[iPat] = p;
 		for (uint32_t iChn=0; iChn<m_nChannels; iChn++)

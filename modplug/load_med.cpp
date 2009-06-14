@@ -806,7 +806,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 			lines = pmb->lines + 1;
 			tracks = pmb->numtracks;
 			if (!tracks) tracks = m_nChannels;
-			if ((Patterns[iBlk] = AllocatePattern(lines, m_nChannels)) == NULL) continue;
+			if ((Patterns[iBlk] = csf_allocate_pattern(lines, m_nChannels)) == NULL) continue;
 			PatternSize[iBlk] = lines;
 			PatternAllocSize[iBlk] = lines;
 			MODCOMMAND *p = Patterns[iBlk];
@@ -843,7 +843,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 			lines = (pmb->lines >> 8) + 1;
 			tracks = pmb->numtracks >> 8;
 			if (!tracks) tracks = m_nChannels;
-			if ((Patterns[iBlk] = AllocatePattern(lines, m_nChannels)) == NULL) continue;
+			if ((Patterns[iBlk] = csf_allocate_pattern(lines, m_nChannels)) == NULL) continue;
 			PatternSize[iBlk] = (uint16_t)lines;
 			PatternAllocSize[iBlk] = (uint16_t)lines;
 			uint32_t dwBlockInfo = bswapBE32(pmb->info);

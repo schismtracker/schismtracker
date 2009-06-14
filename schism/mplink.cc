@@ -97,12 +97,12 @@ void song_get_at_time(unsigned int seconds, int *order, int *row)
 
 signed char *song_sample_allocate(int bytes)
 {
-	return CSoundFile::AllocateSample(bytes);
+	return csf_allocate_sample(bytes);
 }
 
 void song_sample_free(signed char *data)
 {
-	CSoundFile::FreeSample(data);
+	return csf_free_sample(data);
 }
 
 // ------------------------------------------------------------------------
@@ -294,8 +294,7 @@ int song_get_pattern(int n, song_note ** buf)
                 if (!mp->Patterns[n]) {
                         mp->PatternSize[n] = 64;
                         mp->PatternAllocSize[n] = 64;
-			mp->Patterns[n] = CSoundFile::AllocatePattern
-				(mp->PatternSize[n], 64);
+			mp->Patterns[n] = csf_allocate_pattern(mp->PatternSize[n], 64);
                 }
                 *buf = (song_note *) mp->Patterns[n];
         } else {
@@ -306,29 +305,29 @@ int song_get_pattern(int n, song_note ** buf)
 }
 song_note *song_pattern_allocate(int rows)
 {
-	return (song_note *)CSoundFile::AllocatePattern(rows,64);
+	return (song_note *) csf_allocate_pattern(rows, 64);
 }
 song_note *song_pattern_allocate_copy(int patno, int *rows)
 {
 	int len = mp->PatternSize[patno];
-	MODCOMMAND *newdata = CSoundFile::AllocatePattern(len,64);
+	MODCOMMAND *newdata = csf_allocate_pattern(len, 64);
 	MODCOMMAND *olddata = mp->Patterns[patno];
-	memcpy(newdata, olddata, len*sizeof(MODCOMMAND)*64);
+	memcpy(newdata, olddata, len * sizeof(MODCOMMAND) * 64);
 	if (rows) *rows=len;
 	return (song_note*)newdata;
 }
 void song_pattern_deallocate(song_note *n)
 {
-	CSoundFile::FreePattern((MODCOMMAND*)n);
+	csf_free_pattern((MODCOMMAND *) n);
 }
 void song_pattern_install(int patno, song_note *n, int rows)
 {
 	song_lock_audio();
 
 	MODCOMMAND *olddata = mp->Patterns[patno];
-	CSoundFile::FreePattern(olddata);
+	csf_free_pattern(olddata);
 
-	mp->Patterns[patno] = (MODCOMMAND*)n;
+	mp->Patterns[patno] = (MODCOMMAND*) n;
 	mp->PatternAllocSize[patno] = rows;
 	mp->PatternSize[patno] = rows;
 
@@ -425,15 +424,15 @@ void song_pattern_resize(int pattern, int newsize)
 	song_stop_unlocked(0);
 
 	if (!mp->Patterns[pattern] && newsize != 64) {
-		mp->Patterns[pattern] = CSoundFile::AllocatePattern(newsize, 64);
+		mp->Patterns[pattern] = csf_allocate_pattern(newsize, 64);
 		mp->PatternAllocSize[pattern] = newsize;
 
 	} else if (oldsize < newsize) {
 		MODCOMMAND *olddata = mp->Patterns[pattern];
-		MODCOMMAND *newdata = CSoundFile::AllocatePattern(newsize, 64);
+		MODCOMMAND *newdata = csf_allocate_pattern(newsize, 64);
 		if (olddata) {
 			memcpy(newdata, olddata, 64 * sizeof(MODCOMMAND) * MIN(newsize, oldsize));
-			CSoundFile::FreePattern(olddata);
+			csf_free_pattern(olddata);
 		}
 		mp->Patterns[pattern] = newdata;
 		mp->PatternAllocSize[pattern] = MAX(newsize,oldsize);

@@ -142,7 +142,7 @@ bool CSoundFile::ReadPTM(const uint8_t *lpStream, uint32_t dwMemLength)
 		if ((!dwMemPos) || (dwMemPos >= dwMemLength)) continue;
 		PatternSize[ipat] = 64;
 		PatternAllocSize[ipat] = 64;
-		if ((Patterns[ipat] = AllocatePattern(64, m_nChannels)) == NULL) break;
+		if ((Patterns[ipat] = csf_allocate_pattern(64, m_nChannels)) == NULL) break;
 		//
 		MODCOMMAND *m = Patterns[ipat];
 		for (uint32_t row=0; ((row < 64) && (dwMemPos < dwMemLength)); )

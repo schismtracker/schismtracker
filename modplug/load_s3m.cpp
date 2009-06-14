@@ -417,7 +417,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 			// we must have an at least 1-byte sample to make
 			// it work. The actual contents of the sample don't
 			// matter, since it will never be digitized. -Bisqwit
-			Samples[iSmp].pSample = AllocateSample(1);
+			Samples[iSmp].pSample = csf_allocate_sample(1);
 			has_adlib_samples = true;
 		}
 		
@@ -462,7 +462,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		len -= 2;
 		
 		PatternAllocSize[iPat] = PatternSize[iPat] = 64;
-		if ((Patterns[iPat] = AllocatePattern(PatternSize[iPat], m_nChannels)) == NULL)
+		if ((Patterns[iPat] = csf_allocate_pattern(PatternSize[iPat], m_nChannels)) == NULL)
 		{
 			continue;
 		}

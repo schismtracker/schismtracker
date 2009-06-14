@@ -453,7 +453,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		for (uint32_t ipat=0; ipat<npatterns; ipat++)
 		{
-			if ((Patterns[ipat] = AllocatePattern(PatternSize[ipat], m_nChannels)) == NULL) break;
+			if ((Patterns[ipat] = csf_allocate_pattern(PatternSize[ipat], m_nChannels)) == NULL) break;
 			for (uint32_t chn=0; chn<m_nChannels; chn++) if ((patterntracks[ipat*32+chn]) && (patterntracks[ipat*32+chn] <= ntracks))
 			{
 				MODCOMMAND *m = Patterns[ipat] + chn;

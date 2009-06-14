@@ -132,7 +132,7 @@ bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 			if (dwMemPos + ppatt->patt_len >= dwMemLength) break;
 			uint32_t dwPos = dwMemPos;
 			dwMemPos += ppatt->patt_len;
-			MODCOMMAND *m = AllocatePattern(64, m_nChannels);
+			MODCOMMAND *m = csf_allocate_pattern(64, m_nChannels);
 			if (!m) break;
 			PatternSize[nPat] = 64;
 			PatternAllocSize[nPat] = 64;

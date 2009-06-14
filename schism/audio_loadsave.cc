@@ -159,12 +159,12 @@ static void _resize_patterns(void)
                         rows = mp->PatternSize[n] = 32;
 			mp->PatternAllocSize[n] = rows;
 		}
-		newpat = CSoundFile::AllocatePattern(rows, 64);
+		newpat = csf_allocate_pattern(rows, 64);
                 for (int row = 0; row < old_rows; row++)
                         memcpy(newpat + 64 * row,
                                mp->Patterns[n] + used_channels * row,
                                sizeof(MODCOMMAND) * used_channels);
-		CSoundFile::FreePattern(mp->Patterns[n]);
+		csf_free_pattern(mp->Patterns[n]);
                 mp->Patterns[n] = newpat;
 
                 if (rows != old_rows) {
@@ -276,7 +276,7 @@ void song_new(int flags)
 		
 		for (i = 0; i < MAX_PATTERNS; i++) {
 			if (mp->Patterns[i]) {
-				CSoundFile::FreePattern(mp->Patterns[i]);
+				csf_free_pattern(mp->Patterns[i]);
 				mp->Patterns[i] = NULL;
 			}
 			mp->PatternSize[i] = 64;
@@ -286,7 +286,7 @@ void song_new(int flags)
 	if ((flags & KEEP_SAMPLES) == 0) {
 		for (i = 1; i < MAX_SAMPLES; i++) {
 			if (mp->Samples[i].pSample) {
-				CSoundFile::FreeSample(mp->Samples[i].pSample);
+				csf_free_sample(mp->Samples[i].pSample);
 			}
 		}
 		memset(mp->Samples, 0, sizeof(mp->Samples));
@@ -1276,7 +1276,7 @@ void song_copy_sample(int n, song_sample *src)
 		if (src->flags & SAMP_STEREO)
 			bytelength *= 2;
 		
-		mp->Samples[n].pSample = mp->AllocateSample(bytelength);
+		mp->Samples[n].pSample = csf_allocate_sample(bytelength);
 		memcpy(mp->Samples[n].pSample, src->data, bytelength);
 	}
 }
