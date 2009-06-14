@@ -1925,20 +1925,16 @@ bool CSoundFile::ProcessEffects()
 			if ((nPosJump < (int)m_nCurrentOrder)
 			 || ((nPosJump == (int)m_nCurrentOrder) && (nBreakRow <= (int)m_nRow)))
 			{
-				if (!IsValidBackwardJump(m_nCurrentOrder, m_nRow, nPosJump, nBreakRow))
-				{
-					if (m_nRepeatCount)
-					{
-						if (m_nRepeatCount > 0) m_nRepeatCount--;
-					} else
-					{
-						if (gdwSoundSetup & SNDMIX_NOBACKWARDJUMPS)
-							// Backward jump disabled
-							bNoLoop = true;
-						//reset repeat count incase there are multiple loops.
-						//(i.e. Unreal tracks)
-						m_nRepeatCount = m_nInitialRepeatCount;
-					}
+				if (m_nRepeatCount) {
+					if (m_nRepeatCount > 0)
+						m_nRepeatCount--;
+				} else {
+					if (gdwSoundSetup & SNDMIX_NOBACKWARDJUMPS)
+						// Backward jump disabled
+						bNoLoop = true;
+					//reset repeat count incase there are multiple loops.
+					//(i.e. Unreal tracks)
+					m_nRepeatCount = m_nInitialRepeatCount;
 				}
 			}
 			if (!bNoLoop && nPosJump < MAX_ORDERS
@@ -1956,53 +1952,6 @@ bool CSoundFile::ProcessEffects()
 }
 
 
-
-
-
-bool CSoundFile::IsValidBackwardJump(uint32_t nStartOrder, uint32_t nStartRow, uint32_t nJumpOrder, uint32_t nJumpRow) const
-//----------------------------------------------------------------------------------------------------------
-{
-	while ((nJumpOrder < MAX_PATTERNS) && (Orderlist[nJumpOrder] == 0xFE)) nJumpOrder++;
-	if ((nStartOrder >= MAX_PATTERNS) || (nJumpOrder >= MAX_PATTERNS)) return false;
-	// Treat only case with jumps in the same pattern
-	if (nJumpOrder > nStartOrder) return true;
-	if ((nJumpOrder < nStartOrder) || (nJumpRow >= PatternSize[nStartOrder])
-	 || (!Patterns[nStartOrder]) || (nStartRow >= 256) || (nJumpRow >= 256)) return false;
-	// See if the pattern is being played backward
-	uint8_t row_hist[256];
-	memset(row_hist, 0, sizeof(row_hist));
-	uint32_t nRows = PatternSize[nStartOrder], row = nJumpRow;
-	if (nRows > 256) nRows = 256;
-	row_hist[nStartRow] = true;
-	while ((row < 256) && (!row_hist[row]))
-	{
-		if (row >= nRows) return true;
-		row_hist[row] = true;
-		MODCOMMAND *p = Patterns[nStartOrder] + row * m_nChannels;
-		row++;
-		int breakrow = -1, posjump = 0;
-		for (uint32_t i=0; i<m_nChannels; i++, p++)
-		{
-			if (p->command == CMD_POSITIONJUMP)
-			{
-				if (p->param < nStartOrder) return false;
-				if (p->param > nStartOrder) return true;
-				posjump = true;
-			} else
-			if (p->command == CMD_PATTERNBREAK)
-			{
-				breakrow = p->param;
-			}
-		}
-		if (breakrow >= 0)
-		{
-			if (!posjump) return true;
-			row = breakrow;
-		}
-		if (row >= nRows) return true;
-	}
-	return false;
-}
 
 
 void CSoundFile::NoteCut(uint32_t nChn, uint32_t nTick) // XXX get rid of this
