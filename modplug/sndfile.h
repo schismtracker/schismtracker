@@ -497,13 +497,7 @@ void fx_key_off(CSoundFile *csf, uint32_t nChn);
 void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
 void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr);
-/*
-	void NoteCut(uint32_t nChn, uint32_t nTick);
-	void KeyOff(uint32_t nChn);
-	void MidiSend(const unsigned char *data, unsigned int len, uint32_t nChn=0, int fake = 0);
-	void ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint32_t param=0,
-			uint32_t note=0, uint32_t velocity=0, uint32_t use_instr=0);
-*/
+
 
 //==============
 class CSoundFile
