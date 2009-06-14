@@ -176,6 +176,7 @@ typedef struct _song_mix_channel {
         unsigned int nNewIns;   // nfi, always seems to be zero
         unsigned int nCommand, nArpeggio;
         unsigned int nOldVolumeSlide, nOldFineVolUpDown;
+        unsigned int nOldGlbVolSlide;
         unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
         unsigned int nOldPanSlide, nOldChnVolSlide;
         unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;

@@ -16,13 +16,11 @@
 ////////////////////////////////////////////////////////////
 // Length
 
-unsigned int csf_get_length(CSoundFile *csf, bool bAdjust, bool bTotal)
-//----------------------------------------------------
+unsigned int csf_get_length(CSoundFile *csf)
 {
 	uint32_t dwElapsedTime=0, nRow=0, nCurrentPattern=0, nNextPattern=0, nPattern=csf->Orderlist[0];
 	uint32_t nMusicSpeed=csf->m_nDefaultSpeed, nMusicTempo=csf->m_nDefaultTempo, nNextRow=0;
 	uint32_t nMaxRow = 0, nMaxPattern = 0;
-	int32_t nGlbVol = csf->m_nDefaultGlobalVolume, nOldGlbVolSlide = 0;
 	uint8_t samples[MAX_VOICES];
 	uint8_t instr[MAX_VOICES];
 	uint8_t notes[MAX_VOICES];
@@ -54,7 +52,7 @@ unsigned int csf_get_length(CSoundFile *csf, bool bAdjust, bool bTotal)
 		nPattern = csf->Orderlist[nCurrentPattern];
 		while (nPattern >= MAX_PATTERNS) {
 			// End of song ?
-			if ((nPattern == 0xFF) || (nCurrentPattern >= MAX_ORDERS)) {
+			if (nPattern == 0xFF || nCurrentPattern >= MAX_ORDERS) {
 				goto EndMod;
 			} else {
 				nCurrentPattern++;
@@ -92,16 +90,6 @@ unsigned int csf_get_length(CSoundFile *csf, bool bAdjust, bool bTotal)
 			for (uint32_t ipck=0; ipck<csf->m_nChannels; ipck++)
 				patloop[ipck] = dwElapsedTime;
 		}
-		if (!bTotal) {
-			if ((nCurrentPattern > nMaxPattern)
-			    || ((nCurrentPattern == nMaxPattern) && (nRow >= nMaxRow))) {
-				if (bAdjust) {
-					csf->m_nMusicSpeed = nMusicSpeed;
-					csf->m_nMusicTempo = nMusicTempo;
-				}
-				break;
-			}
-		}
 		SONGVOICE *pChn = csf->Voices;
 		MODCOMMAND *p = csf->Patterns[nPattern] + nRow * csf->m_nChannels;
 		for (uint32_t nChn=0; nChn<csf->m_nChannels; p++,pChn++, nChn++)
@@ -126,19 +114,11 @@ unsigned int csf_get_length(CSoundFile *csf, bool bAdjust, bool bTotal)
 					goto EndMod;
 				nNextPattern = param;
 				nNextRow = 0;
-				if (bAdjust) {
-					pChn->nPatternLoopCount = 0;
-					pChn->nPatternLoop = 0;
-				}
 				break;
 			// Pattern Break
 			case CMD_PATTERNBREAK:
 				nNextRow = param;
 				nNextPattern = nCurrentPattern + 1;
-				if (bAdjust) {
-					pChn->nPatternLoopCount = 0;
-					pChn->nPatternLoop = 0;
-				}
 				break;
 			// Set Speed
 			case CMD_SPEED:
@@ -183,108 +163,11 @@ unsigned int csf_get_length(CSoundFile *csf, bool bAdjust, bool bTotal)
 				}
 				break;
 			}
-			if (!bAdjust)
-				continue;
-			switch (command) {
-			// Portamento Up/Down
-			case CMD_PORTAMENTOUP:
-			case CMD_PORTAMENTODOWN:
-				if (param) pChn->nOldPortaUpDown = param;
-				break;
-			// Tone-Portamento
-			case CMD_TONEPORTAMENTO:
-				if (param) pChn->nPortamentoSlide = param << 2;
-				break;
-			// Offset
-			case CMD_OFFSET:
-				if (param) pChn->nOldOffset = param;
-				break;
-			// Volume Slide
-			case CMD_VOLUMESLIDE:
-			case CMD_TONEPORTAVOL:
-			case CMD_VIBRATOVOL:
-				if (param) pChn->nOldVolumeSlide = param;
-				break;
-			// Set Volume
-			case CMD_VOLUME:
-				vols[nChn] = param;
-				break;
-			// Global Volume
-			case CMD_GLOBALVOLUME:
-				if (param > 128) param = 128;
-				nGlbVol = param << 1;
-				break;
-			// Global Volume Slide
-			case CMD_GLOBALVOLSLIDE:
-				if (param)
-					nOldGlbVolSlide = param;
-				else
-					param = nOldGlbVolSlide;
-				if (((param & 0x0F) == 0x0F) && (param & 0xF0)) {
-					param >>= 4;
-					nGlbVol += param << 1;
-				} else if (((param & 0xF0) == 0xF0) && (param & 0x0F)) {
-					param = (param & 0x0F) << 1;
-					nGlbVol -= param;
-				} else if (param & 0xF0) {
-					param >>= 4;
-					param <<= 1;
-					nGlbVol += param * nMusicSpeed;
-				} else {
-					param = (param & 0x0F) << 1;
-					nGlbVol -= param * nMusicSpeed;
-				}
-				nGlbVol = CLAMP(nGlbVol, 0, 256);
-				break;
-			case CMD_CHANNELVOLUME:
-				if (param <= 64)
-					chnvols[nChn] = param;
-				break;
-			case CMD_CHANNELVOLSLIDE:
-				if (param)
-					oldparam[nChn] = param;
-				else
-					param = oldparam[nChn];
-				pChn->nOldChnVolSlide = param;
-				if (((param & 0x0F) == 0x0F) && (param & 0xF0)) {
-					param = (param >> 4) + chnvols[nChn];
-				} else if (((param & 0xF0) == 0xF0) && (param & 0x0F)) {
-					if (chnvols[nChn] > (int)(param & 0x0F))
-						param = chnvols[nChn] - (param & 0x0F);
-					else
-						param = 0;
-				} else if (param & 0x0F) {
-					param = (param & 0x0F) * nMusicSpeed;
-					param = (chnvols[nChn] > param) ? chnvols[nChn] - param : 0;
-				} else {
-					param = ((param & 0xF0) >> 4) * nMusicSpeed + chnvols[nChn];
-				}
-				if (param > 64)
-					param = 64;
-				chnvols[nChn] = param;
-				break;
-			}
 		}
 		nSpeedCount += nMusicSpeed;
 		dwElapsedTime += (2500 * nSpeedCount) / nMusicTempo;
 	}
 EndMod:
-	if ((bAdjust) && (!bTotal)) {
-		csf->m_nGlobalVolume = nGlbVol;
-		csf->m_nOldGlbVolSlide = nOldGlbVolSlide;
-		for (uint32_t n=0; n<csf->m_nChannels; n++) {
-			csf->Voices[n].nGlobalVol = chnvols[n];
-			if (notes[n])
-				csf->Voices[n].nNewNote = notes[n];
-			if (instr[n])
-				csf->Voices[n].nNewIns = instr[n];
-			if (vols[n] != 0xFF) {
-				if (vols[n] > 64)
-					vols[n] = 64;
-				csf->Voices[n].nVolume = vols[n] << 2;
-			}
-		}
-	}
 	return (dwElapsedTime+500) / 1000;
 }
 
@@ -1101,7 +984,7 @@ bool CSoundFile::ProcessEffects()
 
 		// Global Volume Slide
 		case CMD_GLOBALVOLSLIDE:
-			GlobalVolSlide(param);
+			GlobalVolSlide(pChn, param);
 			break;
 
 		// Set 8-bit Panning (Xxx)
@@ -2204,14 +2087,13 @@ int CSoundFile::PatternLoop(SONGVOICE *pChn, uint32_t param)
 }
 
 
-static void fx_global_vol_slide(CSoundFile *csf, uint32_t param)
+static void fx_global_vol_slide(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 {
 	int32_t nGlbSlide = 0;
-	// FIXME pretty sure global vol slide params are per-channel -- double check
 	if (param)
-		csf->m_nOldGlbVolSlide = param;
+		pChn->nOldGlbVolSlide = param;
 	else
-		param = csf->m_nOldGlbVolSlide;
+		param = pChn->nOldGlbVolSlide;
 	if ((param & 0x0F) == 0x0F && (param & 0xF0)) {
 		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
 			nGlbSlide = (param >> 4) * 2;
@@ -2231,9 +2113,9 @@ static void fx_global_vol_slide(CSoundFile *csf, uint32_t param)
 	}
 }
 
-void CSoundFile::GlobalVolSlide(uint32_t param)
+void CSoundFile::GlobalVolSlide(SONGVOICE *pChn, uint32_t param)
 {
-	fx_global_vol_slide(this, param);
+	fx_global_vol_slide(this, pChn, param);
 }
 
 
