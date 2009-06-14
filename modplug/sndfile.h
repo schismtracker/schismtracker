@@ -490,7 +490,20 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual);
 uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn);
 void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, bool bForceCut);
+bool csf_process_effects(CSoundFile *csf);
 
+void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick);
+void fx_key_off(CSoundFile *csf, uint32_t nChn);
+void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
+void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
+			uint32_t note, uint32_t velocity, uint32_t use_instr);
+/*
+	void NoteCut(uint32_t nChn, uint32_t nTick);
+	void KeyOff(uint32_t nChn);
+	void MidiSend(const unsigned char *data, unsigned int len, uint32_t nChn=0, int fake = 0);
+	void ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint32_t param=0,
+			uint32_t note=0, uint32_t velocity=0, uint32_t use_instr=0);
+*/
 
 //==============
 class CSoundFile
@@ -600,15 +613,6 @@ public:
 	uint32_t CreateStereoMix(int count);
 
 public:
-	bool ProcessEffects();
-	void NoteCut(uint32_t nChn, uint32_t nTick);
-	void KeyOff(uint32_t nChn);
-
-	void ExtendedS3MCommands(uint32_t nChn, uint32_t param);
-	void ExtendedChannelEffect(SONGVOICE *, uint32_t param);
-	void MidiSend(const unsigned char *data, unsigned int len, uint32_t nChn=0, int fake = 0);
-	void ProcessMidiMacro(uint32_t nChn, const char * pszMidiMacro, uint32_t param=0,
-			uint32_t note=0, uint32_t velocity=0, uint32_t use_instr=0);
 
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }

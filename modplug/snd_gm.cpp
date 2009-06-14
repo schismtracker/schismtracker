@@ -99,7 +99,7 @@ static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
         if (!nbytes)
                 return;
 
-        mp->MidiSend(buf, nbytes, c, 0);
+	csf_midi_send(mp, buf, nbytes, c, 0); // FIXME we should not know about 'mp' here!
 }
 
 
