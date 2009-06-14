@@ -198,11 +198,11 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 
 		if (csf->gnChannels >= 2) {
 			lSampleCount *= 2;
-			csf->m_nMixStat += csf->CreateStereoMix(lCount);
+			csf->m_nMixStat += csf_create_stereo_mix(csf, lCount);
 			csf_process_stereo_dsp(csf, lCount);
 		}
 		else {
-			csf->m_nMixStat += csf->CreateStereoMix(lCount);
+			csf->m_nMixStat += csf_create_stereo_mix(csf, lCount);
 			mono_from_stereo(MixSoundBuffer, lCount);
 			csf_process_mono_dsp(csf, lCount);
 		}
