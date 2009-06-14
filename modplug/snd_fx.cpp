@@ -978,8 +978,8 @@ bool CSoundFile::ProcessEffects()
 		// Set Global Volume
 		case CMD_GLOBALVOLUME:
 			if ((pChn->nTickStart % m_nMusicSpeed) != (m_nTickCount % m_nMusicSpeed)) break;
-			if (param > 128) param = 128;
-			m_nGlobalVolume = param << 1;
+			if (param <= 128)
+				m_nGlobalVolume = param << 1;
 			break;
 
 		// Global Volume Slide
