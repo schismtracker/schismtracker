@@ -66,7 +66,7 @@ CSoundFile::CSoundFile()
 CSoundFile::~CSoundFile()
 //-----------------------
 {
-	Destroy();
+	csf_destroy(this);
 }
 
 
@@ -108,6 +108,11 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	for (uint32_t npt=0; npt<MAX_PATTERNS; npt++) {
 		PatternSize[npt] = 64;
 		PatternAllocSize[npt] = 64;
+	}
+	for (uint32_t n = 0; n < MAX_SAMPLES; n++) {
+		Samples[n].nC5Speed = 8363;
+		Samples[n].nVolume = 64 * 4;
+		Samples[n].nGlobalVol = 64;
 	}
 	for (uint32_t nch=0; nch<MAX_CHANNELS; nch++)
 	{
@@ -194,46 +199,85 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nRow = 0;
 	if ((m_nRestartPos >= MAX_ORDERS) || (Orderlist[m_nRestartPos] >= MAX_PATTERNS)) m_nRestartPos = 0;
 
-	return m_nType ? true : false;
+	for (unsigned int n = 1; n <= this->m_nInstruments; n++) {
+		SONGINSTRUMENT *ins = this->Instruments[n];
+		if (!ins)
+			continue;
+		if (ins->VolEnv.nNodes < 1) {
+			ins->VolEnv.Ticks[0] = 0;
+			ins->VolEnv.Values[0] = 64;
+		}
+		if (ins->VolEnv.nNodes < 2) {
+			ins->VolEnv.nNodes = 2;
+			ins->VolEnv.Ticks[1] = 100;
+			ins->VolEnv.Values[1] = ins->VolEnv.Values[0];
+		}
+		if (ins->PanEnv.nNodes < 1) {
+			ins->PanEnv.Ticks[0] = 0;
+			ins->PanEnv.Values[0] = 32;
+		}
+		if (ins->PanEnv.nNodes < 2) {
+			ins->PanEnv.nNodes = 2;
+			ins->PanEnv.Ticks[1] = 100;
+			ins->PanEnv.Values[1] = ins->PanEnv.Values[0];
+		}
+		if (ins->PitchEnv.nNodes < 1) {
+			ins->PitchEnv.Ticks[0] = 0;
+			ins->PitchEnv.Values[0] = 32;
+		}
+		if (ins->PitchEnv.nNodes < 2) {
+			ins->PitchEnv.nNodes = 2;
+			ins->PitchEnv.Ticks[1] = 100;
+			ins->PitchEnv.Values[1] = ins->PitchEnv.Values[0];
+		}
+		for (int p = 0; p < 128; p++) {
+			if (ins->NoteMap[p] < 1 || ins->NoteMap[p] > 120)
+				ins->NoteMap[p] = p + 1;
+		}
+	}
+
+	switch (this->m_nType) {
+	default:
+		this->m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS;
+		this->m_nType = MOD_TYPE_IT;
+		/* fall through */
+	case MOD_TYPE_IT:
+		return true;
+	case 0:
+		return false;
+	}
 }
 
 
-bool CSoundFile::Destroy()
-
-//------------------------
+void csf_destroy(CSoundFile *csf)
 {
 	int i;
-	for (i=0; i<MAX_PATTERNS; i++) if (Patterns[i])
-	{
-		csf_free_pattern(Patterns[i]);
-		Patterns[i] = NULL;
+	for (i=0; i<MAX_PATTERNS; i++) {
+		if (csf->Patterns[i]) {
+			csf_free_pattern(csf->Patterns[i]);
+			csf->Patterns[i] = NULL;
+		}
 	}
-	if (m_lpszSongComments)
-	{
-		delete[] m_lpszSongComments;
-		m_lpszSongComments = NULL;
+	if (csf->m_lpszSongComments) {
+		delete[] csf->m_lpszSongComments;
+		csf->m_lpszSongComments = NULL;
 	}
-	for (i=1; i<MAX_SAMPLES; i++)
-	{
-		SONGSAMPLE *pins = &Samples[i];
-		if (pins->pSample)
-		{
+	for (i=1; i<MAX_SAMPLES; i++) {
+		SONGSAMPLE *pins = &csf->Samples[i];
+		if (pins->pSample) {
 			csf_free_sample(pins->pSample);
 			pins->pSample = NULL;
 		}
 	}
-	for (i=0; i<MAX_INSTRUMENTS; i++)
-	{
-		if (Instruments[i])
-		{
-			delete Instruments[i];
-			Instruments[i] = NULL;
+	for (i=0; i<MAX_INSTRUMENTS; i++) {
+		if (csf->Instruments[i]) {
+			delete csf->Instruments[i];
+			csf->Instruments[i] = NULL;
 		}
 	}
 
-	m_nType = MOD_TYPE_NONE;
-	m_nChannels = m_nSamples = m_nInstruments = 0;
-	return true;
+	csf->m_nType = MOD_TYPE_NONE;
+	csf->m_nChannels = csf->m_nSamples = csf->m_nInstruments = 0;
 }
 
 

@@ -1147,7 +1147,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 			pChn->nLength = pins->nLength;
 			pChn->nLoopEnd = pins->nLength;
 			pChn->nLoopStart = 0;
-			pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (pins->uFlags); // FIXME - magic
+			pChn->dwFlags = (pChn->dwFlags & ~CHN_SAMPLE_FLAGS) | (pins->uFlags);
 			if (pChn->dwFlags & CHN_SUSTAINLOOP) {
 				pChn->nLoopStart = pins->nSustainStart;
 				pChn->nLoopEnd = pins->nSustainEnd;

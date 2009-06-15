@@ -283,7 +283,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->nC5Speed = s->nC5Speed;
 		c->nLoopStart = s->nLoopStart;
 		c->nLoopEnd = s->nLoopEnd;
-		c->dwFlags = (s->uFlags & 0x200000FF) | (c->dwFlags & CHN_MUTE); // FIXME: UGH, MAGIC NUMBERS
+		c->dwFlags = (s->uFlags & CHN_SAMPLE_FLAGS) | (c->dwFlags & CHN_MUTE);
 		if (c->dwFlags & CHN_MUTE) {
 			c->dwFlags &= ~(CHN_MUTE);
 			c->dwFlags |= CHN_NNAMUTE;
