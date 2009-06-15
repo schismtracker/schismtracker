@@ -831,9 +831,6 @@ void song_insert_instrument_slot(int n)
 	song_unlock_audio();
 }
 
-/* FIXME Impulse Tracker doesn't care if you used an instrument or not; it'll
-   happily delete it and shift the next instrument into its place regardless.
-   should we replicate this behavior in CLASSIC_MODE or call it an IT bug? */
 void song_remove_instrument_slot(int n)
 {
 	int i;
