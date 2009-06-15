@@ -664,8 +664,8 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 	header[0x1B] = 0;
 	header[0x1C] = 0x1A;
 	header[0x1D] = 0x10;
-        nbo = (GetNumPatterns());
-        if (nbo == 0)
+        nbo = csf_get_num_orders(this);
+        if (nbo < 2)
                 nbo = 2;
         else if (nbo & 1)
                 nbo++;
@@ -703,7 +703,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 	header[0x33] = ((m_nSongPreAmp < 0x20) ? 0x20 : m_nSongPreAmp) | 0x80;	// Stereo
 	header[0x35] = 0xFC;
 
-	chanlim = GetHighestUsedChannel()+1;
+	chanlim = csf_get_highest_used_channel(this) + 1;
 	if (chanlim < 4) chanlim = 4;
 	if (chanlim > 32) chanlim = 32;
 

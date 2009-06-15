@@ -395,7 +395,7 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 	uint32_t chanlim;
 
 	if ((!m_nChannels) || (!fp)) return false;
-	chanlim  = GetHighestUsedChannel();
+	chanlim  = csf_get_highest_used_channel(this);
 	if (chanlim < 4) chanlim = 4;
 
 	memset(ord, 0, sizeof(ord));

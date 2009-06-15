@@ -372,9 +372,7 @@ int song_order_for_pattern(int pat, int locked)
 
 int song_get_num_orders()
 {
-        // for some reason, modplug calls it patterns, not orders... *shrug*
-        int n = mp->GetNumPatterns();
-        return n ? n - 1 : n;
+        return csf_get_num_orders(mp);
 }
 
 static song_note blank_pattern[64 * 64];
@@ -869,8 +867,8 @@ void song_wipe_instrument(int n)
 void song_delete_sample(int n)
 {
 	song_lock_audio();
-	mp->DestroySample(n);
-	memset(mp->Samples+n, 0, sizeof(SONGSAMPLE));
+	csf_destroy_sample(mp, n);
+	memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
 	song_unlock_audio();
 }
 
@@ -884,9 +882,9 @@ void song_delete_instrument(int n)
 	song_lock_audio();
 	for (i = 0; i < 128; i++) {
 		j = mp->Instruments[n]->Keyboard[i];
-		mp->DestroySample(j);
 		if (j) {
-			memset(mp->Samples+j, 0, sizeof(SONGSAMPLE));
+			csf_destroy_sample(mp, j);
+			memset(mp->Samples + j, 0, sizeof(SONGSAMPLE));
 		}
 	}
 	song_unlock_audio();

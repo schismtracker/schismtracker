@@ -584,7 +584,7 @@ static int mp_chaseback(int order, int row)
 	}
 
 	/* set starting point */
-        mp->SetCurrentOrder(0);
+        csf_set_current_order(mp, 0);
         mp->m_nRow = mp->m_nNextRow = 0;
 
 	CSoundFile::gdwSoundSetup |= SNDMIX_NOBACKWARDJUMPS
@@ -670,7 +670,7 @@ void song_start_at_order(int order, int row)
 			row = 0;
 		}
 
-		mp->SetCurrentOrder(order);
+		csf_set_current_order(mp, order);
 		mp->m_nRow = mp->m_nNextRow = row;
 		max_channels_used = 0;
 	}
@@ -950,11 +950,16 @@ void song_set_current_global_volume(int volume)
 
 void song_set_current_order(int order)
 {
+	// FIXME this used to use setcurrentorder all the time, and
+	// things seemed to work.
+	// Now, when using +/- keys to change order on the info page
+	// the song position gets reset sporadically.
+	// I think this is why.
 	if (song_get_mode() == MODE_PLAYING) {
                 song_start_at_order(order, 0);
 	} else {
 		song_lock_audio();
-        	mp->SetCurrentOrder(order);
+		csf_set_current_order(mp, order);
 		song_unlock_audio();
 	}
 }

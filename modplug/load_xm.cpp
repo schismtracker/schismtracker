@@ -292,20 +292,17 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 				}
 
 				// Damn! more than 200 samples: look for duplicates
-				if (!n)
-				{
-					if (!unused_samples)
-					{
-						unused_samples = DetectUnusedSamples(samples_used);
+				if (!n) {
+					if (!unused_samples) {
+						unused_samples = csf_detect_unused_samples(this, samples_used);
 						if (!unused_samples) unused_samples = 0xFFFF;
 					}
-					if ((unused_samples) && (unused_samples != 0xFFFF))
-					{
+					if (unused_samples && unused_samples != 0xFFFF) {
 						for (uint32_t iext=m_nSamples; iext>=1; iext--) if (!samples_used[iext])
 						{
 							unused_samples--;
 							samples_used[iext] = true;
-							DestroySample(iext);
+							csf_destroy_sample(this, iext);
 							n = iext;
 							for (uint32_t mapchk=0; mapchk<nmap; mapchk++)
 							{
@@ -496,7 +493,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 
 	if (!fp) return false;
 
-	chanlim = GetHighestUsedChannel()+1;
+	chanlim = csf_get_highest_used_channel(this) + 1;
 	if (chanlim < 4) chanlim = 4;
 
 	fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
