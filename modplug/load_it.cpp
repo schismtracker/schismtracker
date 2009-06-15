@@ -392,7 +392,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		memcpy(&m_MidiCfg, lpStream+dwMemPos, sizeof(MODMIDICFG));
 		dwMemPos += sizeof(MODMIDICFG);
 	} else {
-		ResetMidiCfg();
+		csf_reset_midi_cfg(this);
 	}
 	m_nChannels = 64;
 	// Reading Instruments

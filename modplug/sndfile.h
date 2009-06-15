@@ -517,8 +517,15 @@ void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidi
 			uint32_t note, uint32_t velocity, uint32_t use_instr);
 
 // sndfile
+void csf_reset_midi_cfg(CSoundFile *csf);
+uint32_t csf_get_num_orders(CSoundFile *csf);
+void csf_set_current_order(CSoundFile *csf, uint32_t nPos);
 void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow);
 void csf_reset_timestamps(CSoundFile *csf);
+
+uint32_t csf_get_highest_used_channel(CSoundFile *csf);
+uint32_t csf_detect_unused_samples(CSoundFile *csf, bool *pbIns);
+bool csf_destroy_sample(CSoundFile *csf, uint32_t nSample);
 
 // fastmix
 unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
@@ -578,13 +585,8 @@ public:
 public:
 	bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
 	bool Destroy();
-	uint32_t GetHighestUsedChannel();
 	uint32_t GetNumPatterns() const;
 	uint32_t GetNumInstruments() const;
-	uint32_t GetCurrentPos() const;
-	uint32_t GetMaxPosition() const;
-	void SetCurrentPos(uint32_t nPos);
-	void SetCurrentOrder(uint32_t nOrder);
 	// Module Loaders
 	bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadS3M(const uint8_t * lpStream, uint32_t dwMemLength);
@@ -630,19 +632,16 @@ public:
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
 	uint32_t ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
-	bool DestroySample(uint32_t nSample);
 	bool DestroyInstrument(uint32_t nInstr);
 	bool IsSampleUsed(uint32_t nSample);
 	bool IsInstrumentUsed(uint32_t nInstr);
 	bool RemoveInstrumentSamples(uint32_t nInstr);
-	uint32_t DetectUnusedSamples(bool *);
 	bool RemoveSelectedSamples(bool *);
 	// I/O from another sound file
 	bool ReadInstrumentFromSong(uint32_t nInstr, CSoundFile *, uint32_t nSrcInstrument);
 	bool ReadSampleFromSong(uint32_t nSample, CSoundFile *, uint32_t nSrcSample);
 	// Misc functions
 	SONGSAMPLE *GetSample(uint32_t n) { return Samples+n; }
-	void ResetMidiCfg();
 	uint32_t MapMidiInstrument(uint32_t dwProgram, uint32_t nChannel, uint32_t nNote);
 	bool ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers);
 

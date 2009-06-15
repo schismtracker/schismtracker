@@ -330,7 +330,7 @@ void song_new(int flags)
 	mp->m_nRepeatCount = mp->m_nInitialRepeatCount = -1;
         //song_stop();
 
-	mp->ResetMidiCfg();
+	csf_reset_midi_cfg(mp);
 
         song_unlock_audio();
 
@@ -1260,7 +1260,7 @@ static fmt_load_instrument_func load_instrument_funcs[] = {
 void song_clear_sample(int n)
 {
 	song_lock_audio();
-	mp->DestroySample(n);
+	csf_destroy_sample(mp, n);
 	memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
 	song_unlock_audio();
 }
@@ -1310,7 +1310,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		for (int j = 1; j < MAX_SAMPLES; j++) {
 			if (!sampmap[j]) continue;
 
-			mp->DestroySample(j);
+			csf_destroy_sample(mp, j);
 			memset(mp->Samples + j, 0, sizeof(mp->Samples[j]));
 		}
 		/* now clear everything "empty" so we have extra slots */
@@ -1412,7 +1412,7 @@ int song_preload_sample(void *pf)
 		song_sample *smp = song_get_sample(FAKE_SLOT, NULL);
 
 		song_lock_audio();
-		mp->DestroySample(FAKE_SLOT);
+		csf_destroy_sample(mp, FAKE_SLOT);
 		song_copy_sample(FAKE_SLOT, file->sample);
 		strncpy(smp->name, file->title, 25);
 		smp->name[25] = 0;
@@ -1464,7 +1464,7 @@ int song_load_sample(int n, const char *file)
 	smp.filename[12] = 0;
 	title[25] = 0;
 	
-	mp->DestroySample(n);
+	csf_destroy_sample(mp, n);
 	if (((unsigned char)title[23]) == 0xFF) {
 		// don't load embedded samples
 		title[23] = ' ';
