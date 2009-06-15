@@ -21,18 +21,15 @@ uint8_t autovibxm2it[8] = { 0, 2, 4, 1, 3, 0, 0, 0 };
 
 
 
-bool CSoundFile::ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers)
-//--------------------------------------------------------------------------------
+static bool it_instr_to_mpt(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers)
 {
-	if (trkvers < 0x0200)
-	{
+	if (trkvers < 0x0200) {
 		const ITOLDINSTRUMENT *pis = (const ITOLDINSTRUMENT *)p;
 		memcpy(penv->name, pis->name, 26);
 		memcpy(penv->filename, pis->filename, 12);
 		penv->nFadeOut = bswapLE16(pis->fadeout) << 6;
 		penv->nGlobalVol = 128;
-		for (uint32_t j=0; j<120; j++)
-		{
+		for (uint32_t j=0; j<120; j++) {
 			uint32_t note = pis->keyboard[j*2];
 			uint32_t ins = pis->keyboard[j*2+1];
 			if (ins < MAX_SAMPLES) penv->Keyboard[j] = ins;
@@ -47,10 +44,8 @@ bool CSoundFile::ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkv
 		penv->VolEnv.nSustainStart = pis->sls;
 		penv->VolEnv.nSustainEnd = pis->sle;
 		penv->VolEnv.nNodes = 25;
-		for (uint32_t ev=0; ev<25; ev++)
-		{
-			if ((penv->VolEnv.Ticks[ev] = pis->nodes[ev*2]) == 0xFF)
-			{
+		for (uint32_t ev=0; ev<25; ev++) {
+			if ((penv->VolEnv.Ticks[ev] = pis->nodes[ev*2]) == 0xFF) {
 				penv->VolEnv.nNodes = ev;
 				break;
 			}
@@ -59,8 +54,7 @@ bool CSoundFile::ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkv
 		penv->nNNA = pis->nna;
 		penv->nDCT = pis->dnc;
 		penv->nPan = 0x80;
-	} else
-	{
+	} else {
 		const ITINSTRUMENT *pis = (const ITINSTRUMENT *)p;
 		memcpy(penv->name, pis->name, 26);
 		memcpy(penv->filename, pis->filename, 12);
@@ -72,8 +66,7 @@ bool CSoundFile::ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkv
 		penv->nFadeOut = bswapLE16(pis->fadeout) << 5;
 		penv->nGlobalVol = pis->gbv;
 		if (penv->nGlobalVol > 128) penv->nGlobalVol = 128;
-		for (uint32_t j=0; j<120; j++)
-		{
+		for (uint32_t j=0; j<120; j++) {
 			uint32_t note = pis->keyboard[j*2];
 			uint32_t ins = pis->keyboard[j*2+1];
 			if (ins < MAX_SAMPLES) penv->Keyboard[j] = ins;
@@ -116,8 +109,7 @@ bool CSoundFile::ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkv
 		penv->PitchEnv.nSustainStart = pis->pitchenv.slb;
 		penv->PitchEnv.nSustainEnd = pis->pitchenv.sle;
 		// Envelopes Data
-		for (uint32_t ev=0; ev<25; ev++)
-		{
+		for (uint32_t ev=0; ev<25; ev++) {
 			penv->VolEnv.Values[ev] = pis->volenv.data[ev*3];
 			penv->VolEnv.Ticks[ev] = (pis->volenv.data[ev*3+2] << 8) | (pis->volenv.data[ev*3+1]);
 			penv->PanEnv.Values[ev] = pis->panenv.data[ev*3] + 32;
@@ -167,7 +159,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		memset(zenv, 0, sizeof(SONGINSTRUMENT));
 		memcpy(&tv, lpStream+0x1C, 2); /* trkvers */
 		tv = bswapLE16(tv);
-		if (!ITInstrToMPT(lpStream, zenv, tv)) {
+		if (!it_instr_to_mpt(lpStream, zenv, tv)) {
 			delete zenv;
 			return false;
 		}
@@ -406,7 +398,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			if (!penv) continue;
 			Instruments[nins+1] = penv;
 			memset(penv, 0, sizeof(SONGINSTRUMENT));
-			ITInstrToMPT(lpStream + inspos[nins], penv, pifh.cmwt);
+			it_instr_to_mpt(lpStream + inspos[nins], penv, pifh.cmwt);
 		}
 	}
 	// Reading Samples

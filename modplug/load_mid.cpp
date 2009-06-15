@@ -381,8 +381,7 @@ static int ConvertMidiTempo(int tempo_us, int *pTickMultiplier)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Maps a midi instrument - returns the instrument number in the file
-uint32_t CSoundFile::MapMidiInstrument(uint32_t dwBankProgram, uint32_t nChannel, uint32_t nNote)
-//--------------------------------------------------------------------------------
+static uint32_t csf_map_midi_instrument(CSoundFile *csf, uint32_t dwBankProgram, uint32_t nChannel, uint32_t nNote)
 {
 	SONGINSTRUMENT *penv;
 	uint32_t nProgram = dwBankProgram & 0x7F;
@@ -390,58 +389,60 @@ uint32_t CSoundFile::MapMidiInstrument(uint32_t dwBankProgram, uint32_t nChannel
 
 	nNote &= 0x7F;
 	if (nNote >= 120) return 0;
-	for (uint32_t i=1; i<=m_nInstruments; i++) if (Instruments[i])
-	{
-		SONGINSTRUMENT *p = Instruments[i];
-		// Drum Kit ?
-		if (nChannel == MIDI_DRUMCHANNEL)
-		{
-			if (nNote == p->nMidiDrumKey) return i;
-		} else
-		// Melodic Instrument
-		{
-			if (nProgram == p->nMidiProgram) return i;
+	for (uint32_t i = 1; i <= csf->m_nInstruments; i++) {
+		SONGINSTRUMENT *p = csf->Instruments[i];
+		if (!p)
+			continue;
+		if (nChannel == MIDI_DRUMCHANNEL) {
+			// Drum Kit ?
+			if (nNote == p->nMidiDrumKey)
+				return i;
+		} else {
+			// Melodic Instrument
+			if (nProgram == p->nMidiProgram)
+				return i;
 		}
 	}
-	if ((m_nInstruments + 1 >= MAX_INSTRUMENTS) || (m_nSamples + 1 >= MAX_SAMPLES)) return 0;
+	if (csf->m_nInstruments + 1 >= MAX_INSTRUMENTS || csf->m_nSamples + 1 >= MAX_SAMPLES)
+		return 0;
 	penv = new SONGINSTRUMENT;
-	if (!penv) return 0;
+	if (!penv)
+		return 0;
 	memset(penv, 0, sizeof(SONGINSTRUMENT));
-	m_nSamples++;
-	m_nInstruments++;
-	Instruments[m_nInstruments] = penv;
+	csf->m_nSamples++;
+	csf->m_nInstruments++;
+	csf->Instruments[csf->m_nInstruments] = penv;
 	penv->wMidiBank = nBank;
 	penv->nMidiProgram = nProgram;
-	penv->nMidiChannelMask = 1 << (nChannel-1);
-	if (nChannel == MIDI_DRUMCHANNEL)
-	{
+	penv->nMidiChannelMask = 1 << (nChannel - 1);
+	if (nChannel == MIDI_DRUMCHANNEL) {
 	    penv->nMidiDrumKey = nNote;
 	    penv->nMidiProgram = nNote + 128;
 	}
 	penv->nGlobalVol = 128;
 	penv->nFadeOut = 1024;
 	penv->nPan = 128;
-	penv->nPPC = 5*12;
+	penv->nPPC = 5 * 12;
 	penv->nNNA = NNA_NOTEOFF;
 	penv->nDCT = (nChannel == MIDI_DRUMCHANNEL) ? DCT_SAMPLE : DCT_NOTE;
 	penv->nDNA = DNA_NOTEFADE;
-	for (uint32_t j=0; j<120; j++)
-	{
-		int mapnote = j+1;
-		if (nChannel == MIDI_DRUMCHANNEL)
-		{
+	for (uint32_t j = 0; j < 120; j++) {
+		uint8_t mapnote = j + 1;
+		if (nChannel == MIDI_DRUMCHANNEL) {
 			mapnote = 61;
-			/*mapnote = 61 + j - nNote;
-			if (mapnote < 1) mapnote = 1;
-			if (mapnote > 120) mapnote = 120;*/
+			/*
+			mapnote = 61 + j - nNote;
+			mapnote = CLAMP(mapnote, 1, 120);
+			*/
 		}
-		penv->Keyboard[j] = m_nSamples;
-		penv->NoteMap[j] = (uint8_t)mapnote;
+		penv->Keyboard[j] = csf->m_nSamples;
+		penv->NoteMap[j] = mapnote;
 	}
 	penv->dwFlags |= ENV_VOLUME;
-	if (nChannel != MIDI_DRUMCHANNEL) penv->dwFlags |= ENV_VOLSUSTAIN;
-	penv->VolEnv.nNodes=4;
-	penv->VolEnv.Ticks[0]=0;
+	if (nChannel != MIDI_DRUMCHANNEL)
+		penv->dwFlags |= ENV_VOLSUSTAIN;
+	penv->VolEnv.nNodes = 4;
+	penv->VolEnv.Ticks[0] = 0;
 	penv->VolEnv.Values[0] = 64;
 	penv->VolEnv.Ticks[1] = 10;
 	penv->VolEnv.Values[1] = 64;
@@ -449,29 +450,27 @@ uint32_t CSoundFile::MapMidiInstrument(uint32_t dwBankProgram, uint32_t nChannel
 	penv->VolEnv.Values[2] = 48;
 	penv->VolEnv.Ticks[3] = 20;
 	penv->VolEnv.Values[3] = 0;
-	penv->VolEnv.nSustainStart=1;
-	penv->VolEnv.nSustainEnd=1;
+	penv->VolEnv.nSustainStart = 1;
+	penv->VolEnv.nSustainEnd = 1;
 	// Sample
-	Samples[m_nSamples].nPan = 128;
-	Samples[m_nSamples].nVolume = 256;
-	Samples[m_nSamples].nGlobalVol = 64;
-	Samples[m_nSamples].pSample = csf_allocate_sample(1);
-	Samples[m_nSamples].uFlags &= ~(CHN_LOOP | CHN_16BIT);
-	Samples[m_nSamples].nLength = 1;
-	if (nChannel != MIDI_DRUMCHANNEL)
-	{
+	csf->Samples[csf->m_nSamples].nPan = 128;
+	csf->Samples[csf->m_nSamples].nVolume = 256;
+	csf->Samples[csf->m_nSamples].nGlobalVol = 64;
+	csf->Samples[csf->m_nSamples].pSample = csf_allocate_sample(1);
+	csf->Samples[csf->m_nSamples].uFlags &= ~(CHN_LOOP | CHN_16BIT);
+	csf->Samples[csf->m_nSamples].nLength = 1;
+	if (nChannel != MIDI_DRUMCHANNEL) {
 		// GM Midi Name
 		strcpy(penv->name, szMidiProgramNames[nProgram]);
-		strcpy(Samples[m_nSamples].name, szMidiProgramNames[nProgram]);
-	} else
-	{
-		strcpy((char*)penv->name, "Percussions");
-		if ((nNote >= 24) && (nNote <= 84))
-			strcpy(Samples[m_nSamples].name, szMidiPercussionNames[nNote-24]);
+		strcpy(csf->Samples[csf->m_nSamples].name, szMidiProgramNames[nProgram]);
+	} else {
+		strcpy(penv->name, "Percussions");
+		if (nNote >= 24 && nNote <= 84)
+			strcpy(csf->Samples[csf->m_nSamples].name, szMidiPercussionNames[nNote - 24]);
 		else
-			strcpy(Samples[m_nSamples].name, "Percussions");
+			strcpy(csf->Samples[csf->m_nSamples].name, "Percussions");
 	}
-	return m_nInstruments;
+	return csf->m_nInstruments;
 }
 
 
@@ -832,7 +831,10 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 									if (realnote > 119) realnote = 119;
 								}
 								m[nchn].note = realnote+1;
-								m[nchn].instr = MapMidiInstrument(pmidich->program + ((uint32_t)pmidich->bank << 7), midich, note);
+								m[nchn].instr = csf_map_midi_instrument(this,
+									pmidich->program
+									+ ((uint32_t)pmidich->bank << 7),
+									midich, note);
 								m[nchn].volcmd = VOLCMD_VOLUME;
 								int32_t vol = midivolumetolinear(velocity) >> 8;
 								vol = (vol * (int32_t)pmidich->volume * (int32_t)pmidich->expression) >> 13;

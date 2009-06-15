@@ -29,8 +29,8 @@
 #define MAX_PATTERNS            240
 #define MAX_SAMPLES             240
 #define MAX_INSTRUMENTS         MAX_SAMPLES
-#define MAX_VOICES            256
-#define MAX_CHANNELS        64
+#define MAX_VOICES              256
+#define MAX_CHANNELS            64
 #define MAX_ENVPOINTS           32
 #define MAX_INFONAME            80
 #define MAX_EQ_BANDS            6
@@ -100,6 +100,9 @@
 #define CHN_NNAMUTE             0x10000000
 // Another sample flag...
 #define CHN_ADLIB               0x20000000 /* OPL mode */
+
+#define CHN_SAMPLE_FLAGS (CHN_16BIT | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP \
+	| CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO | CHN_PINGPONGFLAG | CHN_ADLIB)
 
 
 #define ENV_VOLUME              0x0001
@@ -525,6 +528,7 @@ void csf_reset_timestamps(CSoundFile *csf);
 
 uint32_t csf_get_highest_used_channel(CSoundFile *csf);
 uint32_t csf_detect_unused_samples(CSoundFile *csf, bool *pbIns);
+void csf_destroy(CSoundFile *csf);
 bool csf_destroy_sample(CSoundFile *csf, uint32_t nSample);
 
 // fastmix
@@ -584,7 +588,6 @@ public:
 
 public:
 	bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
-	bool Destroy();
 	uint32_t GetNumPatterns() const;
 	uint32_t GetNumInstruments() const;
 	// Module Loaders
@@ -632,18 +635,6 @@ public:
 	// Read/Write sample functions
 	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
 	uint32_t ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
-	bool DestroyInstrument(uint32_t nInstr);
-	bool IsSampleUsed(uint32_t nSample);
-	bool IsInstrumentUsed(uint32_t nInstr);
-	bool RemoveInstrumentSamples(uint32_t nInstr);
-	bool RemoveSelectedSamples(bool *);
-	// I/O from another sound file
-	bool ReadInstrumentFromSong(uint32_t nInstr, CSoundFile *, uint32_t nSrcInstrument);
-	bool ReadSampleFromSong(uint32_t nSample, CSoundFile *, uint32_t nSrcSample);
-	// Misc functions
-	SONGSAMPLE *GetSample(uint32_t n) { return Samples+n; }
-	uint32_t MapMidiInstrument(uint32_t dwProgram, uint32_t nChannel, uint32_t nNote);
-	bool ITInstrToMPT(const void *p, SONGINSTRUMENT *penv, uint32_t trkvers);
 
 private:
     /* CSoundFile is a sentinel, prevent copying to avoid memory leaks */

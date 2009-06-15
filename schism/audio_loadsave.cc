@@ -75,66 +75,6 @@ static void _squelch_sample(int n)
 // functions to "fix" the song for editing.
 // these are all called by fix_song after a file is loaded.
 
-static void _convert_to_it(CSoundFile *qq)
-{
-        unsigned int n, p;
-        //SONGSAMPLE *s;
-
-	for (n = 1; n <= qq->m_nInstruments; n++) {
-		SONGINSTRUMENT *i = mp->Instruments[n];
-		if (!i) continue;
-		if (i->VolEnv.nNodes < 1) {
-			i->VolEnv.Ticks[0] = 0;
-			i->VolEnv.Values[0] = 64;
-		}
-		if (i->VolEnv.nNodes < 2) {
-			i->VolEnv.nNodes = 2;
-			i->VolEnv.Ticks[1] = 100;
-			i->VolEnv.Values[1] = i->VolEnv.Values[0];
-		}
-		if (i->PanEnv.nNodes < 1) {
-			i->PanEnv.Ticks[0] = 0;
-			i->PanEnv.Values[0] = 32;
-		}
-		if (i->PanEnv.nNodes < 2) {
-			i->PanEnv.nNodes = 2;
-			i->PanEnv.Ticks[1] = 100;
-			i->PanEnv.Values[1] = i->PanEnv.Values[0];
-		}
-		if (i->PitchEnv.nNodes < 1) {
-			i->PitchEnv.Ticks[0] = 0;
-			i->PitchEnv.Values[0] = 32;
-		}
-		if (i->PitchEnv.nNodes < 2) {
-			i->PitchEnv.nNodes = 2;
-			i->PitchEnv.Ticks[1] = 100;
-			i->PitchEnv.Values[1] = i->PitchEnv.Values[0];
-		}
-		/* is this right? */
-		for (p = 0; p < 128; p++) {
-			if (i->NoteMap[p] < 1 || i->NoteMap[p] > 120)
-				i->NoteMap[p] = p+1;
-		}
-	}
-
-	if (qq->m_nType != MOD_TYPE_IT) {
-		song_set_compatible_gxx(1);
-		song_set_old_effects(1);
-		qq->m_nType = MOD_TYPE_IT;
-	}
-
-}
-
-// mute the channels that aren't being used
-static void _mute_unused_channels(void)
-{
-        int used_channels = mp->m_nChannels;
-
-        if (used_channels > 0) {
-                for (int n = used_channels; n < 64; n++)
-                        mp->Channels[n].dwFlags |= CHN_MUTE;
-        }
-}
 
 // modplug only allocates enough space for the number of channels used.
 // while this is good for playing, it sets a real limit on editing. this
@@ -234,8 +174,6 @@ static void fix_song(void)
 	/* poop */
 	mp->m_nLockedOrder = MAX_ORDERS;
 
-        _convert_to_it(mp);
-        _mute_unused_channels();
         _resize_patterns();
         /* possible TODO: put a Bxx in the last row of the last order
          * if m_nRestartPos != 0 (for xm compat.)
@@ -325,7 +263,7 @@ void song_new(int flags)
 	}
 
 	mp->m_nChannels = 64;
-	_convert_to_it(mp);
+	mp->m_nType = MOD_TYPE_IT;
 
 	mp->m_nRepeatCount = mp->m_nInitialRepeatCount = -1;
         //song_stop();
@@ -1324,9 +1262,6 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
        		s = slurp(libf, NULL, 0);
 		r = xl.Create(s->data, s->length);
 		if (r) {
-			/* 0. convert to IT (in case we want to load samps from an XM) */
-        		_convert_to_it(&xl);
-
 			/* 1. find a place for all the samples */
 			memset(sampmap, 0, sizeof(sampmap));
 			for (unsigned int j = 0; j < 128; j++) {
@@ -1577,7 +1512,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 	int x;
 
 	_squelch_sample(0);
-	library.Destroy();
+	csf_destroy(&library);
 	
         slurp_t *s = slurp(path, NULL, 0);
         if (s == 0) {
@@ -1588,7 +1523,6 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 	const char *base = get_basename(path);
 	int r = library.Create(s->data, s->length);
 	if (r) {
-        	_convert_to_it(&library);
 		for (int n = 1; n < MAX_INSTRUMENTS; n++) {
 			if (! library.Instruments[n]) continue;
 
@@ -1631,7 +1565,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
 {
 	_squelch_sample(0);
-	library.Destroy();
+	csf_destroy(&library);
 	
         slurp_t *s = slurp(path, NULL, 0);
         if (s == 0) {
@@ -1642,7 +1576,6 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	const char *base = get_basename(path);
 	int r = library.Create(s->data, s->length);
 	if (r) {
-        	_convert_to_it(&library);
 		for (int n = 1; n < MAX_SAMPLES; n++) {
 			if (library.Samples[n].nLength) {
 				for (int c = 0; c < 25; c++) {
