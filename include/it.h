@@ -272,6 +272,8 @@ extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */
 extern char cfg_font[];
 extern int cfg_palette;
 
+extern char cfg_filename_pattern[];
+
 void cfg_init_dir(void);
 void cfg_load(void);
 void cfg_save(void);
