@@ -271,7 +271,6 @@ static void sample_list_predraw_hook(void)
 	case VIB_SINE:
 		togglebutton_set(widgets_samplelist, 15, 0);
 		break;
-	case VIB_RAMP_UP:
 	case VIB_RAMP_DOWN:
 		togglebutton_set(widgets_samplelist, 16, 0);
 		break;

@@ -10,6 +10,14 @@
 //////////////////////////////////////////////
 #include "sndfile.h"
 
+static uint8_t autovib_import[8] = {
+	VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE,
+	// default to sine
+	VIB_SINE, VIB_SINE, VIB_SINE,
+	VIB_SINE, VIB_SINE,
+};
+
+
 //#pragma warning(disable:4244)
 
 typedef struct MDLSONGHEADER
@@ -338,7 +346,8 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 								penv->Keyboard[note] = ps[0];
 								Samples[ismp].nVolume = ps[2];
 								Samples[ismp].nPan = ps[4] << 1;
-								Samples[ismp].nVibType = ps[11];
+								Samples[ismp].nVibType
+									= autovib_import[ps[11] & 0x7];
 								Samples[ismp].nVibSweep = ps[10];
 								Samples[ismp].nVibDepth = ps[9];
 								Samples[ismp].nVibRate = ps[8];

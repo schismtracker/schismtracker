@@ -305,11 +305,10 @@ enum {
 };
 
 enum {
-        VIB_SINE = (0),
-        VIB_SQUARE = (1),
-        VIB_RAMP_UP = (2),
-        VIB_RAMP_DOWN = (3),    /* modplug extension -- not supported */
-        VIB_RANDOM = (4),
+        VIB_SINE,
+        VIB_RAMP_DOWN,
+        VIB_SQUARE,
+        VIB_RANDOM,
 };
 
 /* volume column effects */

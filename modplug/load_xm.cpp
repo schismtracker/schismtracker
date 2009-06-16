@@ -9,6 +9,15 @@
 #include "sndfile.h"
 #include "snd_fx.h"
 
+static uint8_t autovib_import[8] = {
+	VIB_SINE, VIB_SQUARE,
+	VIB_RAMP_DOWN, // actually ramp up
+	VIB_RAMP_DOWN, VIB_RANDOM,
+	// default to sine
+	VIB_SINE, VIB_SINE, VIB_SINE,
+};
+
+
 ////////////////////////////////////////////////////////
 // FastTracker II XM file support
 
@@ -439,7 +448,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 			pins->nC5Speed = transpose_to_frequency((int)xmss.relnote, xmss.finetune);
 			pins->nPan = xmss.pan;
 			pins->uFlags |= CHN_PANNING;
-			pins->nVibType = xmsh.vibtype;
+			pins->nVibType = autovib_import[xmsh.vibtype & 0x7];
 			pins->nVibSweep = xmsh.vibsweep;
 			pins->nVibDepth = xmsh.vibdepth;
 			pins->nVibRate = xmsh.vibrate/4;

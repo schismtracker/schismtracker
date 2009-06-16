@@ -213,6 +213,12 @@
 #define RS_PCM32S               (RS_PCM16S|0xC0)                // mono 24-bit signed
 #define RS_STIPCM32S            (RS_PCM16S|0xC0|RSF_STEREO)     // stereo 24-bit signed
 
+// Auto-vibrato types
+#define VIB_SINE                0
+#define VIB_RAMP_DOWN           1
+#define VIB_SQUARE              2
+#define VIB_RANDOM              3
+
 // NNA types
 #define NNA_NOTECUT             0
 #define NNA_CONTINUE            1
@@ -293,10 +299,10 @@ typedef struct _SONGSAMPLE
 	uint32_t nVolume;
 	uint32_t nGlobalVol;
 	uint32_t uFlags;
-	uint32_t nVibType;
-	uint32_t nVibSweep;
-	uint32_t nVibDepth;
-	uint32_t nVibRate;
+	uint32_t nVibType; // = type
+	uint32_t nVibSweep; // = rate
+	uint32_t nVibDepth; // = depth
+	uint32_t nVibRate; // = speed
 	char name[32];
 	char filename[22];
 	int played; // for note playback dots

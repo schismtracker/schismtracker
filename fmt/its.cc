@@ -224,8 +224,13 @@ void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title)
 	its.vis = smp->vib_speed;
 	its.vir = smp->vib_rate;
 	its.vid = smp->vib_depth;
-	//its.vit = smp->vib_type; <- Modplug uses different numbers for this. :/
-	its.vit = 0;
+	switch (smp->vib_type) {
+		case VIB_RANDOM:    its.vit = 3; break;
+		case VIB_SQUARE:    its.vit = 2; break;
+		case VIB_RAMP_DOWN: its.vit = 1; break;
+		default:
+		case VIB_SINE:      its.vit = 0; break;
+	}
 	
 	fp->o(fp, (const unsigned char *)&its, sizeof(its));
 }
