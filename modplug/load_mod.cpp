@@ -367,7 +367,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		const char * p = (const char *)(lpStream+dwMemPos);
 		uint32_t flags = RS_PCM8S;
-		uint32_t dwSize = ReadSample(&Samples[ismp], flags, p, dwMemLength - dwMemPos);
+		uint32_t dwSize = csf_read_sample(&Samples[ismp], flags, p, dwMemLength - dwMemPos);
 		if (dwSize)
 		{
 			dwMemPos += dwSize;
@@ -507,7 +507,7 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 	{
 		SONGSAMPLE *pins = &Samples[insmap[ismpd]];
 		uint32_t flags = RS_PCM8S;
-		WriteSample(fp, pins, flags, inslen[ismpd]);
+		csf_write_sample(fp, pins, flags, inslen[ismpd]);
 	}
 	return true;
 }

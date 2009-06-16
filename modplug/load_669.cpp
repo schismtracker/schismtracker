@@ -206,7 +206,7 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		uint32_t len = Samples[n].nLength;
 		if (dwMemPos >= dwMemLength) break;
-		if (len > 4) ReadSample(&Samples[n], RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
+		if (len > 4) csf_read_sample(&Samples[n], RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
 		dwMemPos += len;
 	}
 	return true;

@@ -630,7 +630,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 			flags = (psfh.version == 1) ? RS_PCM8S : RS_PCM8U;
 		if (insflags[iRaw-1] & 2) flags |= RSF_STEREO;
 		dwMemPos = insfile[iRaw];
-		dwMemPos += ReadSample(&Samples[iRaw], flags, (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
+		dwMemPos += csf_read_sample(&Samples[iRaw], flags, (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
 	
 	return true;
@@ -908,7 +908,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 				insex[i-1].flags |= 2;
 				flags = (pins->uFlags & CHN_16BIT) ? RS_STPCM16U : RS_STPCM8U;
 			}
-			uint32_t len = WriteSample(fp, pins, flags);
+			uint32_t len = csf_write_sample(fp, pins, flags, 0);
 			if (len & 0x0F)
 			{
 				fp->o(fp, (const unsigned char *)S3MFiller, 0x10 - (len & 0x0F));

@@ -224,7 +224,7 @@ bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 			psmp->nVolume = (uint16_t)(pins->volume << 2);
 			if (psmp->nVolume > 256) psmp->nVolume = 256;
 			uint32_t smptype = (pins->flags & 2) ? RS_PCM8S : RS_PCM8U;
-			ReadSample(psmp, smptype, (const char *)(lpStream+dwPos), dwMemLength - dwPos);
+			csf_read_sample(psmp, smptype, (const char *)(lpStream+dwPos), dwMemLength - dwPos);
 			nSmp++;
 		} else
 		{

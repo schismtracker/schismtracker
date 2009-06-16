@@ -451,7 +451,7 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 					{
 						uint32_t flags = (Samples[iSmp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
 						if (smplflags[ismpd] & 4) flags = (Samples[iSmp].uFlags & CHN_16BIT) ? RS_DMF16 : RS_DMF8;
-						ReadSample(&Samples[iSmp], flags, (const char *)(lpStream+dwPos), pksize);
+						csf_read_sample(&Samples[iSmp], flags, (const char *)(lpStream+dwPos), pksize);
 					}
 					dwPos += pksize;
 				}

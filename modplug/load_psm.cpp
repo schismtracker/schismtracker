@@ -165,7 +165,7 @@ bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 				// Load sample data
 				if ((pins->nLength > 3) && (len > 3))
 				{
-					ReadSample(pins, RS_PCM8D, (const char *)pdata, len);
+					csf_read_sample(pins, RS_PCM8D, (const char *)pdata, len);
 				} else
 				{
 					pins->nLength = 0;

@@ -252,7 +252,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 			SONGSAMPLE *psmp = &Samples[iData+1];
 			if (psmp->nLength)
 			{
-				dwMemPos += ReadSample(psmp, RS_PCM8S, (const char *)(lpStream+dwMemPos), dwMemLength);
+				dwMemPos += csf_read_sample(psmp, RS_PCM8S, (const char *)(lpStream+dwMemPos), dwMemLength);
 			}
 		}
 		return true;
@@ -411,7 +411,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 		for (uint32_t iSmp=0; iSmp<m_nSamples; iSmp++) if (iSeek == sampleseekpos[iSmp])
 		{
 			SONGSAMPLE *pins = &Samples[iSmp+1];
-			dwMemPos += ReadSample(pins, RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
+			dwMemPos += csf_read_sample(pins, RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 			break;
 		}
 	}
