@@ -249,11 +249,11 @@ void cfg_save_midi(cfg_file_t *cfg)
 	cfg_set_string(cfg,"MIDI","set_program", md->midi_global_data+(8*32));
 	for (i = 0; i < 16; i++) {
 		sprintf(buf, "SF%01x", i);
-		cfg_set_string(cfg, "MIDI", buf, md->midi_sfx+(i*32));
+		cfg_set_string(cfg, "MIDI", buf, md->midi_sfx + (i * 32));
 	}
-	for (i = 0; i < 0x7f; i++) {
+	for (i = 0; i < 128; i++) {
 		sprintf(buf, "Z%02x", i + 0x80);
-		cfg_set_string(cfg, "MIDI", buf, md->midi_zxx+(i*32));
+		cfg_set_string(cfg, "MIDI", buf, md->midi_zxx + (i * 32));
 	}
 	song_unlock_audio();
 
