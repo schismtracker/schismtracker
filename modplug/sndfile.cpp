@@ -285,12 +285,12 @@ void csf_destroy(CSoundFile *csf)
 //////////////////////////////////////////////////////////////////////////
 // Misc functions
 
-MODMIDICFG CSoundFile::m_MidiCfgDefault;
+MODMIDICFG default_midi_cfg;
 
 
 void csf_reset_midi_cfg(CSoundFile *csf)
 {
-	memcpy(&csf->m_MidiCfg, &csf->m_MidiCfgDefault, sizeof(csf->m_MidiCfg));
+	memcpy(&csf->m_MidiCfg, &default_midi_cfg, sizeof(default_midi_cfg));
 }
 
 

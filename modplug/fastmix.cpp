@@ -16,7 +16,7 @@
 // VU-Meter
 #define VUMETER_DECAY 16
 
-void (*CSoundFile::_multi_out_raw) (int chan, int *buf, int len) = NULL;
+void (*csf_multi_out_raw) (int chan, int *buf, int len) = NULL;
 
 
 // Front Mix Buffer (Also room for interleaved rear mix)
@@ -1332,7 +1332,7 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
 
 	nchused = nchmixed = 0;
 
-	if (csf->_multi_out_raw) {
+	if (csf_multi_out_raw) {
 		memset(MultiSoundBuffer, 0, sizeof(MultiSoundBuffer));
 	}
 
@@ -1390,7 +1390,7 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
 		pbuffer = MixSoundBuffer;
 
 		// XXX this appears to be very wrong
-		if (csf->_multi_out_raw) {
+		if (csf_multi_out_raw) {
 			pbuffer = MultiSoundBuffer[nMasterCh];
 		}
 
@@ -1535,13 +1535,13 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
 
 	GM_IncrementSongCounter(count);
 
-	if (csf->_multi_out_raw) {
+	if (csf_multi_out_raw) {
 		/* mix all adlib onto track one */
 		Fmdrv_MixTo(MultiSoundBuffer[1], count);
 
 		/* XXX why is this 1...63? shouldn't it be 0...63 or 1...64? */
 		for (unsigned int n = 1; n < 64; n++) {
-			csf->_multi_out_raw(n, MultiSoundBuffer[n], count * 2);
+			csf_multi_out_raw(n, MultiSoundBuffer[n], count * 2);
 		}
 	} else {
 		Fmdrv_MixTo(MixSoundBuffer, count);

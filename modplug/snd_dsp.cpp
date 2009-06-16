@@ -8,8 +8,8 @@
 
 
 
-void (*CSoundFile::_midi_out_note)(int chan, const MODCOMMAND *m) = NULL;
-void (*CSoundFile::_midi_out_raw)(const unsigned char *,unsigned int, unsigned int) = NULL;
+void (*csf_midi_out_note)(int chan, const MODCOMMAND *m) = NULL;
+void (*csf_midi_out_raw)(const unsigned char *,unsigned int, unsigned int) = NULL;
 
 ////////////////////////////////////////////////////////////////////
 // DSP Effects internal state

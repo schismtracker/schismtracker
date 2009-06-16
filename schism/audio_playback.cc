@@ -556,8 +556,8 @@ static int mp_chaseback(int order, int row)
 /* warning (XXX) this could be really dangerous if diskwriter is running... */
 
 	/* disable mp midi send hooks */
-	CSoundFile::_midi_out_note = 0;
-	CSoundFile::_midi_out_raw = 0;
+	csf_midi_out_note = NULL;
+	csf_midi_out_raw = NULL;
 
 	unsigned int lim = 6;
 
@@ -618,8 +618,8 @@ printf("stop_at_order = %u v. %u  and row = %u v. %u\n",
 	mp->m_nRepeatCount = -1;
 	mp->m_nInitialRepeatCount = -1;
 	
-	CSoundFile::_midi_out_note = _schism_midi_out_note;
-	CSoundFile::_midi_out_raw = _schism_midi_out_raw;
+	csf_midi_out_note = _schism_midi_out_note;
+	csf_midi_out_raw = _schism_midi_out_raw;
 
 	return (order == (signed) mp->m_nCurrentOrder) ? 1 : 0;
 }
@@ -1565,8 +1565,8 @@ void song_init_modplug(void)
 
 void song_initialise(void)
 {
-	CSoundFile::_midi_out_note = _schism_midi_out_note;
-	CSoundFile::_midi_out_raw = _schism_midi_out_raw;
+	csf_midi_out_note = _schism_midi_out_note;
+	csf_midi_out_raw = _schism_midi_out_raw;
 
 	mp = new CSoundFile;
 
