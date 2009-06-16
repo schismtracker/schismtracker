@@ -240,7 +240,7 @@ bool CSoundFile::ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength)
 				#endif
 					p->command = 0;
 				}
-				ConvertModCommand(p, 0);
+				csf_import_mod_effect(p, 0);
 				pin += 4;
 				p++;
 			}

@@ -212,7 +212,7 @@ bool CSoundFile::ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength)
 						{
 							m[ch].command = cmd;
 							m[ch].param = b2;
-							ConvertModCommand(&m[ch], 0);
+							csf_import_mod_effect(&m[ch], 0);
 						}
 					}
 				}
@@ -512,7 +512,7 @@ bool CSoundFile::ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength)
 							{
 								m[ch].command = command;
 								m[ch].param = param;
-								ConvertModCommand(&m[ch], 0);
+								csf_import_mod_effect(&m[ch], 0);
 							} else
 							{
 								// TODO: AMS effects

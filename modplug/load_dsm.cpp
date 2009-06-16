@@ -196,7 +196,7 @@ bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 						}
 						m[ch].command = (uint8_t)command;
 						m[ch].param = (uint8_t)param;
-						if (command) ConvertModCommand(&m[ch], 0);
+						if (command) csf_import_mod_effect(&m[ch], 0);
 					}
 				} else
 				{

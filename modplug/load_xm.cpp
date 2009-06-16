@@ -156,7 +156,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 					if (p->note == 97) p->note = 0xFF; else
 					if ((p->note) && (p->note < 97)) p->note += 12;
 					if (p->note) channels_used[chn] = 1;
-					if (p->command | p->param) ConvertModCommand(p, 1);
+					if (p->command | p->param) csf_import_mod_effect(p, 1);
 					if (p->instr == 0xff) p->instr = 0;
 					if (p->instr) InstUsed[p->instr] = true;
 					if ((vol >= 0x10) && (vol <= 0x50))
@@ -568,7 +568,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 			}
 
 
-			uint32_t param = ModSaveCommand(p, true);
+			uint32_t param = csf_export_mod_effect(p, true);
 			uint32_t command = param >> 8;
 			param &= 0xFF;
 			if (note >= 0xFE) note = 97; else

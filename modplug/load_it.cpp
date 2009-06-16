@@ -601,7 +601,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 					{
 						m[ch].command = cmd;
 						m[ch].param = param;
-						S3MConvert(&m[ch], true);
+						csf_import_s3m_effect(&m[ch], true);
 						lastvalue[ch].command = m[ch].command;
 						lastvalue[ch].param = m[ch].param;
 					}

@@ -127,7 +127,7 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 				}
 				m->command = cmd;
 				m->param = param;
-				if ((cmd) || (param)) ConvertModCommand(m, 0);
+				if ((cmd) || (param)) csf_import_mod_effect(m, 0);
 			}
 		}
 		pSeq += 32;

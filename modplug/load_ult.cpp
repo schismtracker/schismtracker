@@ -188,7 +188,7 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 							{
 								pat->command = cmd1;
 								pat->param = dat1;
-								ConvertModCommand(pat, 0);
+								csf_import_mod_effect(pat, 0);
 							}
 						}
 						if (cmd2 == 0x0C)
@@ -200,7 +200,7 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 						{
 							pat->command = cmd2;
 							pat->param = dat2;
-							ConvertModCommand(pat, 0);
+							csf_import_mod_effect(pat, 0);
 						}
 						pat += m_nChannels;
 					}

@@ -134,8 +134,7 @@ typedef struct _MT2GROUP
 #pragma pack()
 
 
-static void ConvertMT2Command(CSoundFile *that, MODCOMMAND *m, MT2COMMAND *p)
-//---------------------------------------------------------------------------
+static void ConvertMT2Command(MODCOMMAND *m, MT2COMMAND *p)
 {
 	// Note
 	m->note = 0;
@@ -143,47 +142,34 @@ static void ConvertMT2Command(CSoundFile *that, MODCOMMAND *m, MT2COMMAND *p)
 	// Instrument
 	m->instr = p->instr;
 	// Volume Column
-	if ((p->vol >= 0x10) && (p->vol <= 0x90))
-	{
+	if (p->vol >= 0x10 && p->vol <= 0x90) {
 		m->volcmd = VOLCMD_VOLUME;
 		m->vol = (p->vol - 0x10) >> 1;
-	} else
-	if ((p->vol >= 0xA0) && (p->vol <= 0xAF))
-	{
+	} else if (p->vol >= 0xA0 && p->vol <= 0xAF) {
 		m->volcmd = VOLCMD_VOLSLIDEDOWN;
 		m->vol = (p->vol & 0x0f);
-	} else
-	if ((p->vol >= 0xB0) && (p->vol <= 0xBF))
-	{
+	} else if (p->vol >= 0xB0 && p->vol <= 0xBF) {
 		m->volcmd = VOLCMD_VOLSLIDEUP;
 		m->vol = (p->vol & 0x0f);
-	} else
-	if ((p->vol >= 0xC0) && (p->vol <= 0xCF))
-	{
+	} else if (p->vol >= 0xC0 && p->vol <= 0xCF) {
 		m->volcmd = VOLCMD_FINEVOLDOWN;
 		m->vol = (p->vol & 0x0f);
-	} else
-	if ((p->vol >= 0xD0) && (p->vol <= 0xDF))
-	{
+	} else if (p->vol >= 0xD0 && p->vol <= 0xDF) {
 		m->volcmd = VOLCMD_FINEVOLUP;
 		m->vol = (p->vol & 0x0f);
-	} else
-	{
+	} else {
 		m->volcmd = 0;
 		m->vol = 0;
 	}
 	// Effects
 	m->command = 0;
 	m->param = 0;
-	if ((p->fxcmd) || (p->fxparam1) || (p->fxparam2))
-	{
-		if (!p->fxcmd)
-		{
+	if (p->fxcmd || p->fxparam1 || p->fxparam2) {
+		if (!p->fxcmd) {
 			m->command = p->fxparam2;
 			m->param = p->fxparam1;
-			that->ConvertModCommand(m, 1);
-		} else
-		{
+			csf_import_mod_effect(m, 1);
+		} else {
 			// TODO: MT2 Effects
 		}
 	}
@@ -334,7 +320,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 							Log("(%d.%d) MT2 FX=%02X.%02X.%02X\n", row, ch, cmd.fxcmd, cmd.fxparam1, cmd.fxparam2);
 						}
 					#endif
-						ConvertMT2Command(this, &m[patpos], &cmd);
+						ConvertMT2Command(&m[patpos], &cmd);
 					}
 					row += rptcount+1;
 					while (row >= nLines) { row-=nLines; ch++; }
@@ -346,7 +332,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 				uint32_t n = 0;
 				while ((len > sizeof(MT2COMMAND)) && (n < m_nChannels*nLines))
 				{
-					ConvertMT2Command(this, m, p);
+					ConvertMT2Command(m, p);
 					len -= sizeof(MT2COMMAND);
 					n++;
 					p++;
