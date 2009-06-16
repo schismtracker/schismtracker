@@ -1198,3 +1198,278 @@ bool csf_destroy_sample(CSoundFile *csf, uint32_t nSample)
 	return true;
 }
 
+
+
+void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
+{
+	uint32_t command = m->command, param = m->param;
+
+	switch(command) {
+	case 0x00:	if (param) command = CMD_ARPEGGIO; break;
+	case 0x01:	command = CMD_PORTAMENTOUP; break;
+	case 0x02:	command = CMD_PORTAMENTODOWN; break;
+	case 0x03:	command = CMD_TONEPORTAMENTO; break;
+	case 0x04:	command = CMD_VIBRATO; break;
+	case 0x05:	command = CMD_TONEPORTAVOL; if (param & 0xF0) param &= 0xF0; break;
+	case 0x06:	command = CMD_VIBRATOVOL; if (param & 0xF0) param &= 0xF0; break;
+	case 0x07:	command = CMD_TREMOLO; break;
+	case 0x08:
+		command = CMD_PANNING8;
+		if (!from_xm) {
+			param *= 2;
+			if (param > 0x7f) param = 0xff;
+		}
+		break;
+	case 0x09:	command = CMD_OFFSET; break;
+	case 0x0A:	command = CMD_VOLUMESLIDE; if (param & 0xF0) param &= 0xF0; break;
+	case 0x0B:	command = CMD_POSITIONJUMP; break;
+	case 0x0C:
+		if (from_xm) {
+			command = CMD_VOLUME;
+		} else {
+			m->volcmd = VOLCMD_VOLUME;
+			m->vol = param;
+			if (m->vol > 64)
+				m->vol = 64;
+			command = param = 0;
+		}
+		break;
+	case 0x0D:	command = CMD_PATTERNBREAK; param = ((param >> 4) * 10) + (param & 0x0F); break;
+	case 0x0E:
+		command = CMD_S3MCMDEX;
+		switch(param & 0xF0) {
+			case 0x10: command = CMD_PORTAMENTOUP; param |= 0xF0; break;
+			case 0x20: command = CMD_PORTAMENTODOWN; param |= 0xF0; break;
+			case 0x30: param = (param & 0x0F) | 0x10; break;
+			case 0x40: param = (param & 0x0F) | 0x30; break;
+			case 0x50: param = (param & 0x0F) | 0x20; break;
+			case 0x60: param = (param & 0x0F) | 0xB0; break;
+			case 0x70: param = (param & 0x0F) | 0x40; break;
+			case 0x90: command = CMD_RETRIG; param &= 0x0F; break;
+			case 0xA0:
+				if (param & 0x0F) {
+					command = CMD_VOLUMESLIDE;
+					param = (param << 4) | 0x0F;
+				} else {
+					command = param = 0;
+				}
+				break;
+			case 0xB0:
+				if (param & 0x0F) {
+					command = CMD_VOLUMESLIDE;
+					param |= 0xF0;
+				} else {
+					command=param=0;
+				}
+				break;
+		}
+		break;
+	case 0x0F:
+		command = (param < (from_xm ? 0x21 : 0x20)) ? CMD_SPEED : CMD_TEMPO;
+		// I have no idea what this next line is supposed to do.
+		//if ((param == 0xFF) && (m_nSamples == 15)) command = 0; break;
+	// Extension for XM extended effects
+	case 'G' - 55:	command = CMD_GLOBALVOLUME; break;
+	case 'H' - 55:	command = CMD_GLOBALVOLSLIDE; if (param & 0xF0) param &= 0xF0; break;
+	case 'K' - 55:	command = CMD_KEYOFF; break;
+	case 'L' - 55:	command = CMD_SETENVPOSITION; break;
+	case 'M' - 55:	command = CMD_CHANNELVOLUME; break;
+	case 'N' - 55:	command = CMD_CHANNELVOLSLIDE; break;
+	case 'P' - 55:	command = CMD_PANNINGSLIDE; if (param & 0xF0) param &= 0xF0; break;
+	case 'R' - 55:	command = CMD_RETRIG; break;
+	case 'T' - 55:	command = CMD_TREMOR; break;
+	case 'X' - 55:	command = CMD_XFINEPORTAUPDOWN;	break;
+	case 'Y' - 55:	command = CMD_PANBRELLO; break;
+	case 'Z' - 55:	command = CMD_MIDI;	break;
+	default:	command = 0;
+	}
+	m->command = command;
+	m->param = param;
+}
+
+uint16_t csf_export_mod_effect(const MODCOMMAND *m, int bXM)
+{
+	uint32_t command = m->command & 0x3F, param = m->param;
+
+	switch(command) {
+	case 0:				command = param = 0; break;
+	case CMD_ARPEGGIO:		command = 0; break;
+	case CMD_PORTAMENTOUP:
+		if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x10; break; }
+		else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x10; break; }
+		command = 0x01;
+		break;
+	case CMD_PORTAMENTODOWN:
+		if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x20; break; }
+		else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x20; break; }
+		command = 0x02;
+		break;
+	case CMD_TONEPORTAMENTO:	command = 0x03; break;
+	case CMD_VIBRATO:		command = 0x04; break;
+	case CMD_TONEPORTAVOL:		command = 0x05; break;
+	case CMD_VIBRATOVOL:		command = 0x06; break;
+	case CMD_TREMOLO:		command = 0x07; break;
+	case CMD_PANNING8:
+		command = 0x08;
+		if (!bXM) param >>= 1;
+		break;
+	case CMD_OFFSET:		command = 0x09; break;
+	case CMD_VOLUMESLIDE:		command = 0x0A; break;
+	case CMD_POSITIONJUMP:		command = 0x0B; break;
+	case CMD_VOLUME:		command = 0x0C; break;
+	case CMD_PATTERNBREAK:		command = 0x0D; param = ((param / 10) << 4) | (param % 10); break;
+	case CMD_SPEED:			command = 0x0F; if (param > 0x20) param = 0x20; break;
+	case CMD_TEMPO:			if (param > 0x20) { command = 0x0F; break; } return 0;
+	case CMD_GLOBALVOLUME:		command = 'G' - 55; break;
+	case CMD_GLOBALVOLSLIDE:	command = 'H' - 55; break;
+	case CMD_KEYOFF:		command = 'K' - 55; break;
+	case CMD_SETENVPOSITION:	command = 'L' - 55; break;
+	case CMD_CHANNELVOLUME:		command = 'M' - 55; break;
+	case CMD_CHANNELVOLSLIDE:	command = 'N' - 55; break;
+	case CMD_PANNINGSLIDE:		command = 'P' - 55; break;
+	case CMD_RETRIG:		command = 'R' - 55; break;
+	case CMD_TREMOR:		command = 'T' - 55; break;
+	case CMD_XFINEPORTAUPDOWN:	command = 'X' - 55; break;
+	case CMD_PANBRELLO:		command = 'Y' - 55; break;
+	case CMD_MIDI:			command = 'Z' - 55; break;
+	case CMD_S3MCMDEX:
+		switch (param & 0xF0) {
+		case 0x10:	command = 0x0E; param = (param & 0x0F) | 0x30; break;
+		case 0x20:	command = 0x0E; param = (param & 0x0F) | 0x50; break;
+		case 0x30:	command = 0x0E; param = (param & 0x0F) | 0x40; break;
+		case 0x40:	command = 0x0E; param = (param & 0x0F) | 0x70; break;
+		case 0x90:	command = 'X' - 55; break;
+		case 0xB0:	command = 0x0E; param = (param & 0x0F) | 0x60; break;
+		case 0xA0:
+		case 0x50:
+		case 0x70:
+		case 0x60:	command = param = 0; break;
+		default:	command = 0x0E; break;
+		}
+		break;
+	default:		command = param = 0;
+	}
+	return (uint16_t)((command << 8) | (param));
+}
+
+
+void csf_import_s3m_effect(MODCOMMAND *m, int bIT)
+{
+	uint32_t command = m->command;
+	uint32_t param = m->param;
+	switch (command + 0x40)
+	{
+	case 'A':	command = CMD_SPEED; break;
+	case 'B':	command = CMD_POSITIONJUMP; break;
+	case 'C':
+		command = CMD_PATTERNBREAK;
+		if (!bIT)
+			param = (param >> 4) * 10 + (param & 0x0F);
+		break;
+	case 'D':	command = CMD_VOLUMESLIDE; break;
+	case 'E':	command = CMD_PORTAMENTODOWN; break;
+	case 'F':	command = CMD_PORTAMENTOUP; break;
+	case 'G':	command = CMD_TONEPORTAMENTO; break;
+	case 'H':	command = CMD_VIBRATO; break;
+	case 'I':	command = CMD_TREMOR; break;
+	case 'J':	command = CMD_ARPEGGIO; break;
+	case 'K':	command = CMD_VIBRATOVOL; break;
+	case 'L':	command = CMD_TONEPORTAVOL; break;
+	case 'M':	command = CMD_CHANNELVOLUME; break;
+	case 'N':	command = CMD_CHANNELVOLSLIDE; break;
+	case 'O':	command = CMD_OFFSET; break;
+	case 'P':	command = CMD_PANNINGSLIDE; break;
+	case 'Q':	command = CMD_RETRIG; break;
+	case 'R':	command = CMD_TREMOLO; break;
+	case 'S':	command = CMD_S3MCMDEX; break;
+	case 'T':	command = CMD_TEMPO; break;
+	case 'U':	command = CMD_FINEVIBRATO; break;
+	case 'V':
+		command = CMD_GLOBALVOLUME;
+		if (!bIT)
+			param *= 2;
+		break;
+	case 'W':	command = CMD_GLOBALVOLSLIDE; break;
+	case 'X':
+		command = CMD_PANNING8;
+		if (!bIT) {
+			if (param == 0xa4) {
+				command = CMD_S3MCMDEX;
+				param = 0x91;
+			} else if (param > 0x7f) {
+				param = 0xff;
+			} else {
+				param *= 2;
+			}
+		}
+		break;
+	case 'Y':	command = CMD_PANBRELLO; break;
+	case 'Z':	command = CMD_MIDI; break;
+	default:	command = 0;
+	}
+	m->command = command;
+	m->param = param;
+}
+
+void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
+{
+	uint32_t command = *pcmd;
+	uint32_t param = *pprm;
+	switch (command) {
+	case CMD_SPEED:			command = 'A'; break;
+	case CMD_POSITIONJUMP:		command = 'B'; break;
+	case CMD_PATTERNBREAK:		command = 'C';
+					if (!bIT) param = ((param / 10) << 4) + (param % 10); break;
+	case CMD_VOLUMESLIDE:		command = 'D'; break;
+	case CMD_PORTAMENTODOWN:	command = 'E'; break;
+	case CMD_PORTAMENTOUP:		command = 'F'; break;
+	case CMD_TONEPORTAMENTO:	command = 'G'; break;
+	case CMD_VIBRATO:		command = 'H'; break;
+	case CMD_TREMOR:		command = 'I'; break;
+	case CMD_ARPEGGIO:		command = 'J'; break;
+	case CMD_VIBRATOVOL:		command = 'K'; break;
+	case CMD_TONEPORTAVOL:		command = 'L'; break;
+	case CMD_CHANNELVOLUME:		command = 'M'; break;
+	case CMD_CHANNELVOLSLIDE:	command = 'N'; break;
+	case CMD_OFFSET:		command = 'O'; break;
+	case CMD_PANNINGSLIDE:		command = 'P'; break;
+	case CMD_RETRIG:		command = 'Q'; break;
+	case CMD_TREMOLO:		command = 'R'; break;
+	case CMD_S3MCMDEX:
+		if (!bIT && param == 0x91) {
+			command = CMD_PANNING8;
+			param = 0xA4;
+		} else {
+			command = 'S';
+		}
+		break;
+	case CMD_TEMPO:			command = 'T'; break;
+	case CMD_FINEVIBRATO:		command = 'U'; break;
+	case CMD_GLOBALVOLUME:		command = 'V'; if (!bIT) param >>= 1;break;
+	case CMD_GLOBALVOLSLIDE:	command = 'W'; break;
+	case CMD_PANNING8:			
+		command = 'X';
+		if (!bIT)
+			param >>= 1;
+		break;
+	case CMD_PANBRELLO:		command = 'Y'; break;
+	case CMD_MIDI:			command = 'Z'; break;
+	case CMD_XFINEPORTAUPDOWN:
+		if (param & 0x0F) {
+			switch (param & 0xF0) {
+			case 0x10:	command = 'F'; param = (param & 0x0F) | 0xE0; break;
+			case 0x20:	command = 'E'; param = (param & 0x0F) | 0xE0; break;
+			case 0x90:	command = 'S'; break;
+			default:	command = param = 0;
+			}
+		} else {
+			command = param = 0;
+		}
+		break;
+	default:	command = param = 0;
+	}
+	command &= ~0x40;
+	*pcmd = command;
+	*pprm = param;
+}
+

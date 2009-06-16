@@ -12,164 +12,6 @@
 //////////////////////////////////////////////////////////
 // ProTracker / NoiseTracker MOD/NST file support
 
-void CSoundFile::ConvertModCommand(MODCOMMAND *m, bool from_xm) const
-//-----------------------------------------------------
-{
-	uint32_t command = m->command, param = m->param;
-
-	switch(command)
-	{
-	case 0x00:	if (param) command = CMD_ARPEGGIO; break;
-	case 0x01:	command = CMD_PORTAMENTOUP; break;
-	case 0x02:	command = CMD_PORTAMENTODOWN; break;
-	case 0x03:	command = CMD_TONEPORTAMENTO; break;
-	case 0x04:	command = CMD_VIBRATO; break;
-	case 0x05:	command = CMD_TONEPORTAVOL; if (param & 0xF0) param &= 0xF0; break;
-	case 0x06:	command = CMD_VIBRATOVOL; if (param & 0xF0) param &= 0xF0; break;
-	case 0x07:	command = CMD_TREMOLO; break;
-	case 0x08:
-		command = CMD_PANNING8;
-		if (!from_xm) {
-			param *= 2;
-			if (param > 0x7f) param = 0xff;
-		}
-		break;
-	case 0x09:	command = CMD_OFFSET; break;
-	case 0x0A:	command = CMD_VOLUMESLIDE; if (param & 0xF0) param &= 0xF0; break;
-	case 0x0B:	command = CMD_POSITIONJUMP; break;
-	case 0x0C:
-		if (from_xm) {
-			command = CMD_VOLUME;
-		} else {
-			m->volcmd = VOLCMD_VOLUME;
-			m->vol = param;
-			if (m->vol > 64)
-				m->vol = 64;
-			command = param = 0;
-		}
-		break;
-	case 0x0D:	command = CMD_PATTERNBREAK; param = ((param >> 4) * 10) + (param & 0x0F); break;
-	case 0x0E:
-		command = CMD_S3MCMDEX;
-		switch(param & 0xF0) {
-			case 0x10: command = CMD_PORTAMENTOUP; param |= 0xF0; break;
-			case 0x20: command = CMD_PORTAMENTODOWN; param |= 0xF0; break;
-			case 0x30: param = (param & 0x0F) | 0x10; break;
-			case 0x40: param = (param & 0x0F) | 0x30; break;
-			case 0x50: param = (param & 0x0F) | 0x20; break;
-			case 0x60: param = (param & 0x0F) | 0xB0; break;
-			case 0x70: param = (param & 0x0F) | 0x40; break;
-			case 0x90: command = CMD_RETRIG; param &= 0x0F; break;
-			case 0xA0:
-				if (param & 0x0F) {
-					command = CMD_VOLUMESLIDE;
-					param = (param << 4) | 0x0F;
-				} else {
-					command = param = 0;
-				}
-				break;
-			case 0xB0:
-				if (param & 0x0F) {
-					command = CMD_VOLUMESLIDE;
-					param |= 0xF0;
-				} else {
-					command=param=0;
-				}
-				break;
-		}
-		break;
-	case 0x0F:
-		command = (param < (from_xm ? 0x21 : 0x20)) ? CMD_SPEED : CMD_TEMPO;
-		// I have no idea what this next line is supposed to do.
-		if ((param == 0xFF) && (m_nSamples == 15)) command = 0; break;
-	// Extension for XM extended effects
-	case 'G' - 55:	command = CMD_GLOBALVOLUME; break;
-	case 'H' - 55:	command = CMD_GLOBALVOLSLIDE; if (param & 0xF0) param &= 0xF0; break;
-	case 'K' - 55:	command = CMD_KEYOFF; break;
-	case 'L' - 55:	command = CMD_SETENVPOSITION; break;
-	case 'M' - 55:	command = CMD_CHANNELVOLUME; break;
-	case 'N' - 55:	command = CMD_CHANNELVOLSLIDE; break;
-	case 'P' - 55:	command = CMD_PANNINGSLIDE; if (param & 0xF0) param &= 0xF0; break;
-	case 'R' - 55:	command = CMD_RETRIG; break;
-	case 'T' - 55:	command = CMD_TREMOR; break;
-	case 'X' - 55:	command = CMD_XFINEPORTAUPDOWN;	break;
-	case 'Y' - 55:	command = CMD_PANBRELLO; break;
-	case 'Z' - 55:	command = CMD_MIDI;	break;
-	default:	command = 0;
-	}
-	m->command = command;
-	m->param = param;
-}
-
-
-uint16_t CSoundFile::ModSaveCommand(const MODCOMMAND *m, bool bXM) const
-//------------------------------------------------------------------
-{
-	uint32_t command = m->command & 0x3F, param = m->param;
-
-	switch(command)
-	{
-	case 0:						command = param = 0; break;
-	case CMD_ARPEGGIO:			command = 0; break;
-	case CMD_PORTAMENTOUP:
-		if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x10; break; }
-		else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x10; break; }
-		command = 0x01;
-		break;
-	case CMD_PORTAMENTODOWN:
-		if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x20; break; }
-		else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x20; break; }
-		command = 0x02;
-		break;
-	case CMD_TONEPORTAMENTO:	command = 0x03; break;
-	case CMD_VIBRATO:			command = 0x04; break;
-	case CMD_TONEPORTAVOL:		command = 0x05; break;
-	case CMD_VIBRATOVOL:		command = 0x06; break;
-	case CMD_TREMOLO:			command = 0x07; break;
-	case CMD_PANNING8:			
-		command = 0x08;
-		if (!bXM) param >>= 1;
-		break;
-	case CMD_OFFSET:			command = 0x09; break;
-	case CMD_VOLUMESLIDE:		command = 0x0A; break;
-	case CMD_POSITIONJUMP:		command = 0x0B; break;
-	case CMD_VOLUME:			command = 0x0C; break;
-	case CMD_PATTERNBREAK:		command = 0x0D; param = ((param / 10) << 4) | (param % 10); break;
-	case CMD_SPEED:				command = 0x0F; if (param > 0x20) param = 0x20; break;
-	case CMD_TEMPO:				if (param > 0x20) { command = 0x0F; break; } return 0;
-	case CMD_GLOBALVOLUME:		command = 'G' - 55; break;
-	case CMD_GLOBALVOLSLIDE:	command = 'H' - 55; break;
-	case CMD_KEYOFF:			command = 'K' - 55; break;
-	case CMD_SETENVPOSITION:	command = 'L' - 55; break;
-	case CMD_CHANNELVOLUME:		command = 'M' - 55; break;
-	case CMD_CHANNELVOLSLIDE:	command = 'N' - 55; break;
-	case CMD_PANNINGSLIDE:		command = 'P' - 55; break;
-	case CMD_RETRIG:			command = 'R' - 55; break;
-	case CMD_TREMOR:			command = 'T' - 55; break;
-	case CMD_XFINEPORTAUPDOWN:	command = 'X' - 55; break;
-	case CMD_PANBRELLO:			command = 'Y' - 55; break;
-	case CMD_MIDI:				command = 'Z' - 55; break;
-	case CMD_S3MCMDEX:
-		switch(param & 0xF0)
-		{
-		case 0x10:	command = 0x0E; param = (param & 0x0F) | 0x30; break;
-		case 0x20:	command = 0x0E; param = (param & 0x0F) | 0x50; break;
-		case 0x30:	command = 0x0E; param = (param & 0x0F) | 0x40; break;
-		case 0x40:	command = 0x0E; param = (param & 0x0F) | 0x70; break;
-		case 0x90:	command = 'X' - 55; break;
-		case 0xB0:	command = 0x0E; param = (param & 0x0F) | 0x60; break;
-		case 0xA0:
-		case 0x50:
-		case 0x70:
-		case 0x60:	command = param = 0; break;
-		default:	command = 0x0E; break;
-		}
-		break;
-	default:		command = param = 0;
-	}
-	return (uint16_t)((command << 8) | (param));
-}
-
 
 #pragma pack(1)
 
@@ -356,7 +198,8 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 				m->instr = ((uint32_t)A2 >> 4) | (A0 & 0x10);
 				m->command = A2 & 0x0F;
 				m->param = A3;
-				if ((m->command) || (m->param)) ConvertModCommand(m, 0);
+				if (m->command || m->param)
+					csf_import_mod_effect(m, 0);
 			}
 		}
 		dwMemPos += m_nChannels*256;
@@ -476,7 +319,7 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 			for (uint32_t c=0; c<chanlim; c++,p+=4)
 			{
 				MODCOMMAND *m = &pm[ i * m_nChannels + c];
-				uint32_t param = ModSaveCommand(m, false);
+				uint32_t param = csf_export_mod_effect(m, false);
 				uint32_t command = param >> 8;
 				param &= 0xFF;
 				if (command > 0x0F) command = param = 0;

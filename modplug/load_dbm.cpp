@@ -310,7 +310,7 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 										{
 											m[ch].command = cmd1;
 											m[ch].param = param1;
-											ConvertModCommand(&m[ch], 0);
+											csf_import_mod_effect(&m[ch], 0);
 										}
 									}
 								} else

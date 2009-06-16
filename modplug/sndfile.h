@@ -484,6 +484,12 @@ extern void (*csf_midi_out_note)(int chan, const MODCOMMAND *m);
 extern void (*csf_midi_out_raw)(const unsigned char *, unsigned int, unsigned int);
 extern void (*csf_multi_out_raw)(int chan, int *buf, int len);
 
+void csf_import_mod_effect(MODCOMMAND *m, int from_xm);
+uint16_t csf_export_mod_effect(const MODCOMMAND *m, int bXM);
+
+void csf_import_s3m_effect(MODCOMMAND *m, int bIT);
+void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
@@ -624,11 +630,6 @@ public:
 	bool SaveXM(diskwriter_driver_t *f, uint32_t);
 	bool SaveS3M(diskwriter_driver_t *f, uint32_t);
 	bool SaveMod(diskwriter_driver_t *f, uint32_t);
-	// MOD Convert function
-	void ConvertModCommand(MODCOMMAND *m, bool from_xm) const;
-	void S3MConvert(MODCOMMAND *m, bool bIT) const;
-	void S3MSaveConvert(uint32_t *pcmd, uint32_t *pprm, bool bIT) const;
-	uint16_t ModSaveCommand(const MODCOMMAND *m, bool bXM) const;
 
 private:
     /* CSoundFile is a sentinel, prevent copying to avoid memory leaks */

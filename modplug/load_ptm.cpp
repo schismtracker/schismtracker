@@ -171,7 +171,7 @@ bool CSoundFile::ReadPTM(const uint8_t *lpStream, uint32_t dwMemLength)
 					} else
 					if (m[nChn].command < 0x10)
 					{
-						ConvertModCommand(&m[nChn], 0);
+						csf_import_mod_effect(&m[nChn], 0);
 					} else
 					{
 						switch(m[nChn].command)

@@ -723,8 +723,7 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
 			case VOLCMD_TONEPORTAMENTO: vol = MIN(noteptr->vol,  9) + 193; break;
 			}
 			if (vol != -1) m |= 4;
-			// why on earth is this a member function?!
-			mp->S3MSaveConvert(&command, &param, true);
+			csf_export_s3m_effect(&command, &param, true);
 			if (command || param) m |= 8;
 			if (!m) continue;
 			

@@ -63,125 +63,6 @@ typedef struct tagS3MFILEHEADER
 } S3MFILEHEADER;
 
 
-void CSoundFile::S3MConvert(MODCOMMAND *m, bool bIT) const
-//--------------------------------------------------------
-{
-	uint32_t command = m->command;
-	uint32_t param = m->param;
-	switch (command + 0x40)
-	{
-	case 'A':	command = CMD_SPEED; break;
-	case 'B':	command = CMD_POSITIONJUMP; break;
-	case 'C':
-		command = CMD_PATTERNBREAK;
-		if (!bIT)
-			param = (param >> 4) * 10 + (param & 0x0F);
-		break;
-	case 'D':	command = CMD_VOLUMESLIDE; break;
-	case 'E':	command = CMD_PORTAMENTODOWN; break;
-	case 'F':	command = CMD_PORTAMENTOUP; break;
-	case 'G':	command = CMD_TONEPORTAMENTO; break;
-	case 'H':	command = CMD_VIBRATO; break;
-	case 'I':	command = CMD_TREMOR; break;
-	case 'J':	command = CMD_ARPEGGIO; break;
-	case 'K':	command = CMD_VIBRATOVOL; break;
-	case 'L':	command = CMD_TONEPORTAVOL; break;
-	case 'M':	command = CMD_CHANNELVOLUME; break;
-	case 'N':	command = CMD_CHANNELVOLSLIDE; break;
-	case 'O':	command = CMD_OFFSET; break;
-	case 'P':	command = CMD_PANNINGSLIDE; break;
-	case 'Q':	command = CMD_RETRIG; break;
-	case 'R':	command = CMD_TREMOLO; break;
-	case 'S':	command = CMD_S3MCMDEX; break;
-	case 'T':	command = CMD_TEMPO; break;
-	case 'U':	command = CMD_FINEVIBRATO; break;
-	case 'V':
-		command = CMD_GLOBALVOLUME;
-		if (!bIT)
-			param *= 2;
-		break;
-	case 'W':	command = CMD_GLOBALVOLSLIDE; break;
-	case 'X':
-		command = CMD_PANNING8;
-		if (!bIT) {
-			if (param == 0xa4) {
-				command = CMD_S3MCMDEX;
-				param = 0x91;
-			} else if (param > 0x7f) {
-				param = 0xff;
-			} else {
-				param *= 2;
-			}
-		}
-		break;
-	case 'Y':	command = CMD_PANBRELLO; break;
-	case 'Z':	command = CMD_MIDI; break;
-	default:	command = 0;
-	}
-	m->command = command;
-	m->param = param;
-}
-
-
-void CSoundFile::S3MSaveConvert(uint32_t *pcmd, uint32_t *pprm, bool bIT) const
-//---------------------------------------------------------------------
-{
-	uint32_t command = *pcmd;
-	uint32_t param = *pprm;
-	switch(command)
-	{
-	case CMD_SPEED:				command = 'A'; break;
-	case CMD_POSITIONJUMP:		command = 'B'; break;
-	case CMD_PATTERNBREAK:		command = 'C'; if (!bIT) param = ((param / 10) << 4) + (param % 10); break;
-	case CMD_VOLUMESLIDE:		command = 'D'; break;
-	case CMD_PORTAMENTODOWN:	command = 'E'; break;
-	case CMD_PORTAMENTOUP:		command = 'F'; break;
-	case CMD_TONEPORTAMENTO:	command = 'G'; break;
-	case CMD_VIBRATO:			command = 'H'; break;
-	case CMD_TREMOR:			command = 'I'; break;
-	case CMD_ARPEGGIO:			command = 'J'; break;
-	case CMD_VIBRATOVOL:		command = 'K'; break;
-	case CMD_TONEPORTAVOL:		command = 'L'; break;
-	case CMD_CHANNELVOLUME:		command = 'M'; break;
-	case CMD_CHANNELVOLSLIDE:	command = 'N'; break;
-	case CMD_OFFSET:			command = 'O'; break;
-	case CMD_PANNINGSLIDE:		command = 'P'; break;
-	case CMD_RETRIG:			command = 'Q'; break;
-	case CMD_TREMOLO:			command = 'R'; break;
-	case CMD_S3MCMDEX:
-		if (!bIT && param == 0x91) {
-			command = CMD_PANNING8;
-			param = 0xA4;
-		} else {
-			command = 'S';
-		}
-		break;
-	case CMD_TEMPO:			command = 'T'; break;
-	case CMD_FINEVIBRATO:		command = 'U'; break;
-	case CMD_GLOBALVOLUME:		command = 'V'; if (!bIT) param >>= 1;break;
-	case CMD_GLOBALVOLSLIDE:	command = 'W'; break;
-	case CMD_PANNING8:			
-		command = 'X';
-		if (!bIT)
-			param >>= 1;
-		break;
-	case CMD_PANBRELLO:			command = 'Y'; break;
-	case CMD_MIDI:				command = 'Z'; break;
-	case CMD_XFINEPORTAUPDOWN:
-		if (param & 0x0F) switch(param & 0xF0)
-		{
-		case 0x10:	command = 'F'; param = (param & 0x0F) | 0xE0; break;
-		case 0x20:	command = 'E'; param = (param & 0x0F) | 0xE0; break;
-		case 0x90:	command = 'S'; break;
-		default:	command = param = 0;
-		} else command = param = 0;
-		break;
-	default:	command = param = 0;
-	}
-	command &= ~0x40;
-	*pcmd = command;
-	*pprm = param;
-}
 
 static bool MidiS3M_Read(SONGINSTRUMENT& Header, int iSmp, char name[32], int& scale)
 {
@@ -522,7 +403,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 					{
 						m->command = src[j++];
 						m->param = src[j++];
-						if (m->command) S3MConvert(m, false);
+						if (m->command) csf_import_s3m_effect(m, false);
 					}
 				} else
 				{
@@ -831,7 +712,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 					if (volcmd == VOLCMD_PANNING) { vol |= 0x80; b |= 0x40; }
 					if (command)
 					{
-						S3MSaveConvert(&command, &param, false);
+						csf_export_s3m_effect(&command, &param, false);
 						if (command) b |= 0x80;
 					}
 					if (b & 0xE0)
