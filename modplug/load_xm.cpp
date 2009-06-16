@@ -436,11 +436,6 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 			pins->nVolume = xmss.vol << 2;
 			if (pins->nVolume > 256) pins->nVolume = 256;
 			pins->nGlobalVol = 64;
-			if ((xmss.res == 0xAD) && (!(xmss.type & 0x30)))
-			{
-				flags[ins] = RS_ADPCM4;
-				samplesize[ins] = (samplesize[ins]+1)/2 + 16;
-			}
 			pins->nC5Speed = transpose_to_frequency((int)xmss.relnote, xmss.finetune);
 			pins->nPan = xmss.pan;
 			pins->uFlags |= CHN_PANNING;

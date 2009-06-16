@@ -49,7 +49,6 @@ CSoundFile::CSoundFile()
       m_nRepeatCount(0), m_nInitialRepeatCount(),
       m_rowHighlightMajor(16), m_rowHighlightMinor(4),
       m_lpszSongComments(NULL),
-      CompressionTable(),
       stop_at_order(), stop_at_row(), stop_at_time()
 //----------------------
 {
@@ -697,29 +696,6 @@ uint32_t CSoundFile::ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * 
 				delta += p[j];
 				*pSample++ = (signed char)delta;
 			}
-		}
-		break;
-
-	// 3: 4-bit ADPCM data
-	case RS_ADPCM4:
-		{
-			len = (pIns->nLength + 1) / 2;
-			if (len > dwMemLength - 16) break;
-			memcpy(CompressionTable, lpMemFile, 16);
-			lpMemFile += 16;
-			signed char *pSample = pIns->pSample;
-			signed char delta = 0;
-			for (uint32_t j=0; j<len; j++)
-			{
-				uint8_t b0 = (uint8_t)lpMemFile[j];
-				uint8_t b1 = (uint8_t)(lpMemFile[j] >> 4);
-				delta = (signed char)GetDeltaValue((int)delta, b0);
-				pSample[0] = delta;
-				delta = (signed char)GetDeltaValue((int)delta, b1);
-				pSample[1] = delta;
-				pSample += 2;
-			}
-			len += 16;
 		}
 		break;
 

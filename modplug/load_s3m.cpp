@@ -629,7 +629,6 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		else
 			flags = (psfh.version == 1) ? RS_PCM8S : RS_PCM8U;
 		if (insflags[iRaw-1] & 2) flags |= RSF_STEREO;
-		if (inspack[iRaw-1] == 4) flags = RS_ADPCM4;
 		dwMemPos = insfile[iRaw];
 		dwMemPos += ReadSample(&Samples[iRaw], flags, (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
