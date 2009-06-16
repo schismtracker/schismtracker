@@ -175,7 +175,6 @@
 #define RS_PCM8S                0       // 8-bit signed
 #define RS_PCM8U                1       // 8-bit unsigned
 #define RS_PCM8D                2       // 8-bit delta values
-#define RS_ADPCM4               3       // 4-bit ADPCM-packed
 #define RS_PCM16D               4       // 16-bit delta values
 #define RS_PCM16S               5       // 16-bit signed
 #define RS_PCM16U               6       // 16-bit unsigned
@@ -574,7 +573,6 @@ public: // for Editing
 	uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
 	char * m_lpszSongComments;
 	char song_title[32];
-	int8_t CompressionTable[16];
 
 	// chaseback
 	int stop_at_order;
@@ -631,9 +629,6 @@ public:
 	static void (*_multi_out_raw)(int chan, int *buf, int len);
 
 public:
-
-	// Read/Write sample functions
-	signed char GetDeltaValue(signed char prev, uint32_t n) const { return (signed char)(prev + CompressionTable[n & 0x0F]); }
 	uint32_t ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
 
 private:

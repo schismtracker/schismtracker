@@ -366,14 +366,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	for (uint32_t ismp=1; ismp<=m_nSamples; ismp++) if (Samples[ismp].nLength)
 	{
 		const char * p = (const char *)(lpStream+dwMemPos);
-		uint32_t flags = 0;
-		if (dwMemPos + 5 >= dwMemLength) break;
-		if (!strncasecmp(p, "ADPCM", 5))
-		{
-			flags = 3;
-			p += 5;
-			dwMemPos += 5;
-		}
+		uint32_t flags = RS_PCM8S;
 		uint32_t dwSize = ReadSample(&Samples[ismp], flags, p, dwMemLength - dwMemPos);
 		if (dwSize)
 		{

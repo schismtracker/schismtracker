@@ -227,19 +227,27 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 					pins->nLength = pis.length;
 					if (pins->nLength > MAX_SAMPLE_LENGTH) pins->nLength = MAX_SAMPLE_LENGTH;
 					uint32_t flags = (pis.cvt & 1) ? RS_PCM8S : RS_PCM8U;
-					if (pis.flags & 2)
-					{
+					if (pis.flags & 2) {
 						flags += 5;
-						if (pis.flags & 4) flags |= RSF_STEREO;
 						pins->uFlags |= CHN_16BIT;
+						if (pis.flags & 4) {
+							flags |= RSF_STEREO;
+						}
 						// IT 2.14 16-bit packed sample ?
-						if (pis.flags & 8) flags = ((pifh.cmwt >= 0x215) && (pis.cvt & 4)) ? RS_IT21516 : RS_IT21416;
-					} else
-					{
-						if (pis.flags & 4) flags |= RSF_STEREO;
-						if (pis.cvt == 0xFF) flags = RS_ADPCM4; else
-						// IT 2.14 8-bit packed sample ?
-						if (pis.flags & 8)	flags =	((pifh.cmwt >= 0x215) && (pis.cvt & 4)) ? RS_IT2158 : RS_IT2148;
+						if (pis.flags & 8) {
+							flags = ((pifh.cmwt >= 0x215) && (pis.cvt & 4))
+								? RS_IT21516
+								: RS_IT21416;
+						}
+					} else {
+						if (pis.flags & 4) {
+							flags |= RSF_STEREO;
+						}
+						if (pis.flags & 8) {
+							flags = ((pifh.cmwt >= 0x215) && (pis.cvt & 4))
+								? RS_IT2158
+								: RS_IT2148;
+						}
 					}
 					ReadSample(&Samples[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 				}
@@ -458,7 +466,6 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 				} else
 				{
 					if (pis.flags & 4) flags |= RSF_STEREO;
-					if (pis.cvt == 0xFF) flags = RS_ADPCM4; else
 					// IT 2.14 8-bit packed sample ?
 					if (pis.flags & 8)	flags =	((pifh.cmwt >= 0x215) && (pis.cvt & 4)) ? RS_IT2158 : RS_IT2148;
 				}
