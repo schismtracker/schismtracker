@@ -659,7 +659,7 @@ void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len,
 		}
 	}
 
-	if (!fake && csf->_midi_out_raw) {
+	if (!fake && csf_midi_out_raw) {
 		/* okay, this is kind of how it works.
 		we pass m_nBufferCount as here because while
 			1000 * ((8((buffer_size/2) - m_nBufferCount)) / sample_rate)
@@ -670,7 +670,7 @@ void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len,
 		fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
 
 		*/
-		csf->_midi_out_raw(data, len, csf->m_nBufferCount);
+		csf_midi_out_raw(data, len, csf->m_nBufferCount);
 	}
 }
 

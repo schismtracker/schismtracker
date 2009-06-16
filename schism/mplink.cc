@@ -50,10 +50,10 @@ char *song_get_message()
 
 // song midi config
 midi_config *song_get_midi_config(void) {
-	return (midi_config *)&mp->m_MidiCfg;
+	return (midi_config *) &mp->m_MidiCfg;
 }
 midi_config *song_get_default_midi_config(void) {
-	return (midi_config *)&mp->m_MidiCfgDefault;
+	return (midi_config *) &default_midi_cfg;
 }
 
 // returned value is in seconds

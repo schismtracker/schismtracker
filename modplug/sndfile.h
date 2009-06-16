@@ -462,6 +462,8 @@ typedef struct MODMIDICFG
 	char szMidiZXXExt[128*32];
 } MODMIDICFG, *LPMODMIDICFG;
 
+extern MODMIDICFG default_midi_cfg;
+
 
 #include "snd_fx.h" // blah
 
@@ -478,10 +480,13 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFil
 uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen);
 void csf_adjust_sample_loop(SONGSAMPLE *pIns);
 
+extern void (*csf_midi_out_note)(int chan, const MODCOMMAND *m);
+extern void (*csf_midi_out_raw)(const unsigned char *, unsigned int, unsigned int);
+extern void (*csf_multi_out_raw)(int chan, int *buf, int len);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
 
 #ifdef __cplusplus
 
@@ -585,7 +590,6 @@ public: // for Editing
 	int stop_at_row;
 	unsigned int stop_at_time;
 
-	static MODMIDICFG m_MidiCfgDefault;   // Midi macro config table
 public:
 	CSoundFile();
 	~CSoundFile();
@@ -625,11 +629,6 @@ public:
 	void S3MConvert(MODCOMMAND *m, bool bIT) const;
 	void S3MSaveConvert(uint32_t *pcmd, uint32_t *pprm, bool bIT) const;
 	uint16_t ModSaveCommand(const MODCOMMAND *m, bool bXM) const;
-public:
-	// backhooks :)
-	static void (*_midi_out_note)(int chan, const MODCOMMAND *m);
-	static void (*_midi_out_raw)(const unsigned char *,unsigned int, unsigned int);
-	static void (*_multi_out_raw)(int chan, int *buf, int len);
 
 private:
     /* CSoundFile is a sentinel, prevent copying to avoid memory leaks */

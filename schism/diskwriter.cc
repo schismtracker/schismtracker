@@ -312,7 +312,7 @@ static int chan_detect(void)
 
 static void multi_out_helper(int chan, int *buf, int len)
 {
-	/* mp->_multi_out_raw = multi_out_helper; */
+	/* csf_multi_out_raw = multi_out_helper; */
 
 	int32_t vu_min[2] = { 0x7fffffff, 0x7fffffff };
 	int32_t vu_max[2] = {-0x7fffffff,-0x7fffffff };
@@ -394,7 +394,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 	}
 
 	dw->channels = 2;
-	mp->_multi_out_raw = multi_out_helper;
+	csf_multi_out_raw = multi_out_helper;
 
 	current_song_len *= 2; /* two passes */
 
@@ -478,7 +478,7 @@ int diskwriter_sync(void)
 	unsigned int ct;
 	int n;
 
-	if (dw && mp->_multi_out_raw) {
+	if (dw && csf_multi_out_raw) {
 		/* we're up */
 		if (!dw) return DW_SYNC_DONE;
 	} else {
@@ -490,7 +490,7 @@ int diskwriter_sync(void)
 	if (!dw->m && !dw->g) {
 		if (!dw->x) {
 			/* do nothing */
-		} else if (mp->_multi_out_raw) {
+		} else if (csf_multi_out_raw) {
 			for (n = 1; n < 64; n++) {
 				if (!multi_fp[n]) continue;
 				fp = multi_fp[n];
@@ -505,7 +505,7 @@ int diskwriter_sync(void)
 
 	ct = song_get_current_time();
 	n = (int)(((double)ct * 100.0) / current_song_len);
-	if (mp->_multi_out_raw && dw->channels == 1) n += 50;
+	if (csf_multi_out_raw && dw->channels == 1) n += 50;
 	diskwriter_dialog_progress(n);
 
 	// estimate bytes remaining
@@ -522,7 +522,7 @@ int diskwriter_sync(void)
 	n = csf_read(mp, diskbuf, sizeof(diskbuf));
 	samples_played += n;
 
-	if (mp->_multi_out_raw) {
+	if (csf_multi_out_raw) {
 		/* okay, it's happening elsewhere */
 
 	} else if (dw->m) {
@@ -533,7 +533,7 @@ int diskwriter_sync(void)
 	if (!fp_ok)
 		return DW_SYNC_ERROR;
 	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
-		if (mp->_multi_out_raw && dw->channels == 2) {
+		if (csf_multi_out_raw && dw->channels == 2) {
 			/* pass 2 */
 			chan_setup(dw->rate/2, 1);
 			dw->channels = 1;
@@ -543,7 +543,7 @@ int diskwriter_sync(void)
 
 		if (!dw->x) {
 			/* do nothing */
-		} else if (mp->_multi_out_raw) {
+		} else if (csf_multi_out_raw) {
 			for (n = 1; n < 64; n++) {
 				if (!multi_fp[n]) continue;
 				fp = multi_fp[n];
@@ -568,7 +568,7 @@ int diskwriter_finish(void)
 		return DW_NOT_RUNNING; /* no writer running */
 	}
 
-	if (mp->_multi_out_raw) {
+	if (csf_multi_out_raw) {
 		for (r = 1; r < 64; r++) {
 			if (!multi_fp[r]) continue;
 			if (fclose(multi_fp[r]) != 0) fp_ok = 0;
@@ -653,7 +653,7 @@ int diskwriter_finish(void)
 	if (dw->m || dw->g) {
 		song_init_audio(0);
 	}
-	mp->_multi_out_raw = NULL;
+	csf_multi_out_raw = NULL;
 
 	dw = NULL; /* all done! */
 	diskwriter_dialog_finished();

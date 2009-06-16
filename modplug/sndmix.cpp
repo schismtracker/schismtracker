@@ -373,8 +373,8 @@ int csf_process_row(CSoundFile *csf)
 			// commands... ALL WE DO is dump raw midi data to
 			// our super-secret "midi buffer"
 			// -mrsb
-			if (csf->_midi_out_note)
-				csf->_midi_out_note(nChn, m);
+			if (csf_midi_out_note)
+				csf_midi_out_note(nChn, m);
 
 			pChn->nRowNote = m->note;
 
@@ -393,12 +393,12 @@ int csf_process_row(CSoundFile *csf)
 			pChn->nCommand = 0;
 		}	 
 	}
-	else if (csf->_midi_out_note) {
+	else if (csf_midi_out_note) {
 		MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
 
 		for (unsigned int nChn=0; nChn<csf->m_nChannels; nChn++, m++) {
 			/* m==NULL allows schism to receive notification of SDx and Scx commands */
-			csf->_midi_out_note(nChn, 0);
+			csf_midi_out_note(nChn, 0);
 		}
 	}
 
