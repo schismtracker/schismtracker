@@ -13,8 +13,10 @@
 this is a schism header */
 #include "midi.h"
 
-uint8_t autovibit2xm[8] = { 0, 3, 1, 4, 2, 0, 0, 0 };
-uint8_t autovibxm2it[8] = { 0, 2, 4, 1, 3, 0, 0, 0 };
+static uint8_t autovib_import[8] = {
+	VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM,
+	VIB_SINE, VIB_SINE, VIB_SINE, VIB_SINE,
+};
 
 //////////////////////////////////////////////////////////
 // Impulse Tracker IT file support (import only)
@@ -218,7 +220,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 				pins->nPan = (pis.dfp & 0x7F) << 2;
 				if (pins->nPan > 256) pins->nPan = 256;
 				if (pis.dfp & 0x80) pins->uFlags |= CHN_PANNING;
-				pins->nVibType = autovibit2xm[pis.vit & 7];
+				pins->nVibType = autovib_import[pis.vit & 7];
 				pins->nVibRate = pis.vis;
 				pins->nVibDepth = pis.vid & 0x7F;
 				pins->nVibSweep = pis.vir;
@@ -447,7 +449,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			pins->nPan = (pis.dfp & 0x7F) << 2;
 			if (pins->nPan > 256) pins->nPan = 256;
 			if (pis.dfp & 0x80) pins->uFlags |= CHN_PANNING;
-			pins->nVibType = autovibit2xm[pis.vit & 7];
+			pins->nVibType = autovib_import[pis.vit & 7];
 			pins->nVibRate = pis.vis;
 			pins->nVibDepth = pis.vid & 0x7F;
 			pins->nVibSweep = pis.vir;

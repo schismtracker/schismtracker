@@ -583,7 +583,6 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 	*nperiod = period;
 }
 
-
 static inline void rn_instrument_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod, int *nperiodfrac)
 {
 	int period = *nperiod;
@@ -605,19 +604,17 @@ static inline void rn_instrument_vibrato(CSoundFile *csf, SONGVOICE *chan, int *
 	int val;
 
 	switch(pins->nVibType) {
-	case 4: // Random
+	case VIB_RANDOM: // Random
 		val = ModRandomTable[chan->nAutoVibPos & 0x3F];
 		chan->nAutoVibPos++;
 		break;
-	case 3: // Ramp Down
+	case VIB_RAMP_DOWN: // Ramp Down
 		val = ((0x40 - (chan->nAutoVibPos >> 1)) & 0x7F) - 0x40;
 		break;
-	case 2: // Ramp Up
-		val = ((0x40 + (chan->nAutoVibPos >> 1)) & 0x7f) - 0x40;
-		break;
-	case 1: // Square
+	case VIB_SQUARE: // Square
 		val = (chan->nAutoVibPos & 128) ? +64 : -64;
 		break;
+	case VIB_SINE:
 	default: // Sine
 		val = ft2VibratoTable[chan->nAutoVibPos & 255];
 	}

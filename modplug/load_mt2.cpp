@@ -3,6 +3,16 @@
 
 //#define MT2DEBUG
 
+// can't even find a place to modify the vib type in madtracker, assuming it works like xm...
+static uint8_t autovib_import[8] = {
+	VIB_SINE, VIB_SQUARE,
+	VIB_RAMP_DOWN, // actually ramp up
+	VIB_RAMP_DOWN, VIB_RANDOM,
+	// default to sine
+	VIB_SINE, VIB_SINE, VIB_SINE,
+};
+
+
 #pragma pack(1)
 
 typedef struct _MT2FILEHEADER
@@ -606,7 +616,8 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 						penv->Keyboard[i+12] = (uint8_t)nSmp;
 						if (nSmp <= m_nSamples)
 						{
-							Samples[nSmp].nVibType = pmi->bVibType;
+							Samples[nSmp].nVibType
+								= autovib_import[pmi->bVibType & 0x7];
 							Samples[nSmp].nVibSweep = pmi->bVibSweep;
 							Samples[nSmp].nVibDepth = pmi->bVibDepth;
 							Samples[nSmp].nVibRate = pmi->bVibRate/4;
