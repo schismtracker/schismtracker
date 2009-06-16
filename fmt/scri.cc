@@ -118,7 +118,7 @@ static int load_scri_sample(const uint8_t *data, size_t length, song_sample *smp
 	int format = (smp->flags & SAMP_16_BIT) ? RS_PCM16S : RS_PCM8U;
 
 	if (load_sample_data) {
-		mp->ReadSample((SONGSAMPLE *) smp, format,
+		csf_read_sample((SONGSAMPLE *) smp, format,
 			(const char *) (data + 0x50), (uint32_t) (length - 0x50));
 	}
 

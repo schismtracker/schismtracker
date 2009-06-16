@@ -131,7 +131,7 @@ bool CSoundFile::ReadPTM(const uint8_t *lpStream, uint32_t dwMemLength)
 			}
 			if ((pins->nLength) && (samplepos) && (samplepos < dwMemLength))
 			{
-				ReadSample(pins, smpflg, (const char *)(lpStream+samplepos), dwMemLength-samplepos);
+				csf_read_sample(pins, smpflg, (const char *)(lpStream+samplepos), dwMemLength-samplepos);
 			}
 		}
 	}

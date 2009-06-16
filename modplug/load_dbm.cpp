@@ -360,7 +360,7 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 				if ((chunk_pos+samplesize > dwMemPos) || (samplesize > dwMemLength)) break;
 				if (sampleflags & 3)
 				{
-					ReadSample(pins, (pins->uFlags & CHN_16BIT) ? RS_PCM16M : RS_PCM8S,
+					csf_read_sample(pins, (pins->uFlags & CHN_16BIT) ? RS_PCM16M : RS_PCM8S,
 								(const char *)(psh->sampledata), samplesize);
 				}
 				chunk_pos += samplesize;

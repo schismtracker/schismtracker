@@ -249,7 +249,7 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 				pins->nLoopEnd >>= 1;
 			}
 			if ((pfs->loop & 8) && (pins->nLoopEnd > 4)) pins->uFlags |= CHN_LOOP;
-			ReadSample(pins, (pins->uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S,
+			csf_read_sample(pins, (pins->uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S,
 						(const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
 		}
 		dwMemPos += pfs->length;

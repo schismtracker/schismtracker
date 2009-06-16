@@ -465,7 +465,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		{
 			if ((samplemap[ismpd]) && (samplesize[ismpd]) && (dwMemPos < dwMemLength))
 			{
-				ReadSample(&Samples[samplemap[ismpd]], flags[ismpd], (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
+				csf_read_sample(&Samples[samplemap[ismpd]], flags[ismpd], (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 			}
 			dwMemPos += samplesize[ismpd];
 			if (dwMemPos >= dwMemLength) break;
@@ -776,7 +776,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 			pins = &Samples[smptable[ismpd]];
 			if (pins->pSample)
 			{
-				WriteSample(fp, pins, flags[ismpd]);
+				csf_write_sample(fp, pins, flags[ismpd], 0);
 			}
 		}
 	}

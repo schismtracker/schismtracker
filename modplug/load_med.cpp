@@ -788,7 +788,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 			if (stype & 0x20) len /= 2;
 		}
 		Samples[iSmp+1].nLength = len;
-		ReadSample(&Samples[iSmp+1], flags, psdata, dwMemLength - dwPos - 6);
+		csf_read_sample(&Samples[iSmp+1], flags, psdata, dwMemLength - dwPos - 6);
 	}
 	// Reading patterns (blocks)
 	if (wNumBlocks > MAX_PATTERNS) wNumBlocks = MAX_PATTERNS;

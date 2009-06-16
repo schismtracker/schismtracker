@@ -155,7 +155,7 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 	for (uint32_t ismp=1; ismp<=m_nSamples; ismp++)
 	{
 		if (dwMemPos >= dwMemLength) break;
-		dwMemPos += ReadSample(&Samples[ismp], (Samples[ismp].uFlags & CHN_16BIT) ? RS_PCM16U : RS_PCM8U,
+		dwMemPos += csf_read_sample(&Samples[ismp], (Samples[ismp].uFlags & CHN_16BIT) ? RS_PCM16U : RS_PCM8U,
 								(const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
 	return true;

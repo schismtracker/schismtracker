@@ -235,7 +235,7 @@ bool CSoundFile::ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength)
 	{
 		if (dwMemPos >= dwMemLength - 9) return true;
 		uint32_t flags = (Samples[iSmp].uFlags & CHN_16BIT) ? RS_AMS16 : RS_AMS8;
-		dwMemPos += ReadSample(&Samples[iSmp], flags, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
+		dwMemPos += csf_read_sample(&Samples[iSmp], flags, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 	}
 	return true;
 }
@@ -537,7 +537,7 @@ bool CSoundFile::ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength)
 		{
 			flags = (Samples[iSmp].uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
 		}
-		dwMemPos += ReadSample(&Samples[iSmp], flags, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
+		dwMemPos += csf_read_sample(&Samples[iSmp], flags, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 	}
 	return true;
 }

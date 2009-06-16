@@ -14,9 +14,7 @@
 #define NEED_BYTESWAP
 #include "headers.h"
 
-#ifdef __cplusplus
-# include "diskwriter.h"
-#endif
+#include "diskwriter.h"
 
 #include "tables.h"
 
@@ -476,6 +474,8 @@ void csf_free_pattern(void *pat);
 signed char *csf_allocate_sample(uint32_t nbytes);
 void csf_free_sample(void *p);
 
+uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
+uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen);
 void csf_adjust_sample_loop(SONGSAMPLE *pIns);
 
 #ifdef __cplusplus
@@ -592,8 +592,6 @@ public:
 
 public:
 	bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
-	uint32_t GetNumPatterns() const;
-	uint32_t GetNumInstruments() const;
 	// Module Loaders
 	bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadS3M(const uint8_t * lpStream, uint32_t dwMemLength);
@@ -619,7 +617,6 @@ public:
 	bool ReadUMX(const uint8_t * lpStream, uint32_t dwMemLength);
 	bool ReadMID(const uint8_t * lpStream, uint32_t dwMemLength);
 	// Save Functions
-	uint32_t WriteSample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen=0);
 	bool SaveXM(diskwriter_driver_t *f, uint32_t);
 	bool SaveS3M(diskwriter_driver_t *f, uint32_t);
 	bool SaveMod(diskwriter_driver_t *f, uint32_t);
@@ -633,9 +630,6 @@ public:
 	static void (*_midi_out_note)(int chan, const MODCOMMAND *m);
 	static void (*_midi_out_raw)(const unsigned char *,unsigned int, unsigned int);
 	static void (*_multi_out_raw)(int chan, int *buf, int len);
-
-public:
-	uint32_t ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
 
 private:
     /* CSoundFile is a sentinel, prevent copying to avoid memory leaks */

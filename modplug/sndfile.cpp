@@ -451,9 +451,7 @@ void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow)
 
 
 
-uint32_t CSoundFile::WriteSample(diskwriter_driver_t *f, SONGSAMPLE *pins,
-				uint32_t nFlags, uint32_t nMaxLen)
-//-----------------------------------------------------------------------------------
+uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen)
 {
 	uint32_t len = 0, bufcount;
 	union {
@@ -644,9 +642,7 @@ uint32_t CSoundFile::WriteSample(diskwriter_driver_t *f, SONGSAMPLE *pins,
 //	5 = signed 16-bit PCM data
 //	6 = unsigned 16-bit PCM data
 
-
-uint32_t CSoundFile::ReadSample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFile, uint32_t dwMemLength)
-//------------------------------------------------------------------------------------------------
+uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFile, uint32_t dwMemLength)
 {
 	uint32_t len = 0, mem = pIns->nLength+6;
 	

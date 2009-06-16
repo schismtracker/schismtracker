@@ -175,7 +175,7 @@ bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 			if ((nPos >= sizeof(STMHEADER)) && (nPos+pIns->nLength <= dwMemLength)) dwMemPos = nPos;
 			if (dwMemPos < dwMemLength)
 			{
-				dwMemPos += ReadSample(pIns, RS_PCM8S, (const char *)(lpStream+dwMemPos),dwMemLength-dwMemPos);
+				dwMemPos += csf_read_sample(pIns, RS_PCM8S, (const char *)(lpStream+dwMemPos),dwMemLength-dwMemPos);
 			}
 		}
 	}
