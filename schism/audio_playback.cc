@@ -223,17 +223,12 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	SONGVOICE *c;
 	MODCOMMAND mc;
 
-	if (chan == KEYDOWN_CHAN_CURRENT) {
+	if (chan == KEYJAZZ_CHAN_CURRENT) {
 		chan = current_play_channel;
 		if (multichannel_mode)
 			song_change_current_play_channel(1, 1);
 	}
 	
-	if (chan <= 0 || chan > 64 || ins < 0 || samp < 0) {
-		printf("song_keydown called with magic numbers\n");
-		abort();
-	}
-
 	// keep track of what channel this note was played in so we can note-off properly later
 	if (note > 0 && note < 128)
 		keyjazz_channels[note] = chan;
@@ -244,7 +239,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 	ins_mode = song_is_instrument_mode();
 
-	if (samp >= 0 && (c->dwFlags & CHN_ADLIB)) {
+	if (samp != KEYJAZZ_NOINST && (c->dwFlags & CHN_ADLIB)) {
 		OPL_NoteOff(chan);
 		OPL_Patch(chan, mp->Samples[samp].AdlibBytes);
 	}
@@ -257,48 +252,45 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		csf_check_nna(mp, chan, ins_mode ? ins : samp, note, false);
 	}
 
-	if (ins <= 0 && samp > 0 && ins_mode) {
+	if (ins == KEYJAZZ_NOINST && samp != KEYJAZZ_NOINST && (ins_mode || samp == 0)) {
 		/* this is only needed on the sample page, when in instrument mode... */
 		SONGSAMPLE *s = mp->Samples + samp;
 
 		c->nRowCommand = effect;
 		c->nRowParam = param;
 
-		c->nPos = c->nPosLo = 0;
-		c->nInc = 1; /* weird... */
-		c->nGlobalVol = 64;
-		c->nInsVol = 64;
-		c->nPan = 128;
-		c->nNewNote = note;
-		c->nRightVol = c->nLeftVol = 0;
-		c->nROfs = c->nLOfs = 0;
-		c->nCutOff = 0x7f;
-		c->nResonance = 0;
-
-		c->pCurrentSample = s->pSample;
-		c->pSample = s->pSample;
-		c->pHeader = NULL;
-		c->pInstrument = s;
-		c->nLength = s->nLength;
-		c->nC5Speed = s->nC5Speed;
-		c->nLoopStart = s->nLoopStart;
-		c->nLoopEnd = s->nLoopEnd;
 		c->dwFlags = (s->uFlags & CHN_SAMPLE_FLAGS) | (c->dwFlags & CHN_MUTE);
 		if (c->dwFlags & CHN_MUTE) {
-			c->dwFlags &= ~(CHN_MUTE);
+			c->dwFlags &= ~CHN_MUTE;
 			c->dwFlags |= CHN_NNAMUTE;
 		}
-		c->dwFlags &= ~(CHN_PINGPONGFLAG);
-		c->nPan = 128; // redundant?
-		c->nInsVol = s->nGlobalVol;
-		c->nFadeOutVol = 0x10000;
-		s->played = 1;
 
-		if (vol > -1) c->nVolume = (vol << 2);
-		c->nMasterChn = 0; // indicates foreground channel.
+
+		if (note > 0 && note < 128) {
+			c->nMasterChn = 0; // indicates foreground channel.
+			// most of these things seem to be taken care of by csf_note_change.
+			// also a bunch of stuff seems to not work
+			//c->dwFlags &= ~(CHN_PINGPONGFLAG);
+
+			// csf_note_change copies stuff from c->pInstrument as long as c->nLength is zero
+			// and if period != 0 (ie. sample not playing at a stupid rate)
+			c->pInstrument = s;
+			c->nLength = 0;
+			// ... but it doesn't copy the volumes, for somewhat obvious reasons.
+			c->nVolume = (vol == KEYJAZZ_DEFAULTVOL) ? s->nVolume : (vol << 2);
+			c->nInsVol = s->nGlobalVol;
+			c->nGlobalVol = 64;
+			// gotta set these by hand, too
+			c->nC5Speed = s->nC5Speed;
+			c->nCutOff = 0x7f;
+			c->nResonance = 0;
+			c->nNewNote = note;
+			c->pHeader = NULL;
+			s->played = 1;
+		}
 		csf_note_change(mp, chan - 1, note, false, true, true);
-	} else if ((ins_mode ? ins : samp) > 0) {
-		if ((status.flags & MIDI_LIKE_TRACKER) && ins > 0) {
+	} else if ((ins_mode ? ins : samp) != KEYJAZZ_NOINST) {
+		if ((status.flags & MIDI_LIKE_TRACKER) && ins != KEYJAZZ_NOINST) {
 			SONGINSTRUMENT *i = mp->Instruments[ins];
 
 			if (i && i->nMidiChannelMask) {
@@ -310,13 +302,13 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->nRealtime = 1;
 		c->nTickStart = (mp->m_nTickCount+1) % mp->m_nMusicSpeed;
 		c->nRowNote = note;
-		if (vol > -1) {
+		if (vol == KEYJAZZ_DEFAULTVOL) {
+			c->nRowVolCmd = 0;
+			c->nRowVolume = 0;
+		} else {
 			c->nRowVolCmd = VOLCMD_VOLUME;
 			c->nRowVolume = vol;
 			c->nVolume = (vol << 2);
-		} else {
-			c->nRowVolCmd = 0;
-			c->nRowVolume = 0;
 		}
 
 		if (c->dwFlags & CHN_MUTE) {
@@ -335,7 +327,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		mp->m_dwSongFlags |= SONG_PAUSED;
 	}
 
-	if (!(status.flags & MIDI_LIKE_TRACKER) && ins > -1) {
+	if (!(status.flags & MIDI_LIKE_TRACKER) && ins != KEYJAZZ_NOINST) {
 		mc.note = note;
 		mc.instr = ins;
 		mc.volcmd = VOLCMD_VOLUME;
@@ -362,7 +354,7 @@ int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, i
 
 int song_keyup(int samp, int ins, int note)
 {
-	return song_keydown_ex(samp, ins, ins > -1 ? NOTE_OFF : NOTE_CUT, 0, keyjazz_channels[note], 0, 0);
+	return song_keydown_ex(samp, ins, NOTE_OFF, KEYJAZZ_DEFAULTVOL, keyjazz_channels[note], 0, 0);
 }
 
 // ------------------------------------------------------------------------------------------------------------

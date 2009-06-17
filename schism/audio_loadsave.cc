@@ -67,8 +67,8 @@ static void _squelch_sample(int n)
 	int x;
 
 	for (x = 1; x <= 64; x++) {
-		song_keydown(n, 0, NOTE_CUT, 0, x);
-		song_keyup(0, n, NOTE_CUT);
+		song_keydown(n, KEYJAZZ_NOINST, NOTE_CUT, 0, x);
+		song_keyup(KEYJAZZ_NOINST, n, NOTE_CUT);
 	}
 }
 
@@ -1355,8 +1355,7 @@ int song_preload_sample(void *pf)
 		song_unlock_audio();
 		return FAKE_SLOT;
 	}
-	if (!song_load_sample(FAKE_SLOT, file->path)) return -1;
-	return FAKE_SLOT;
+	return song_load_sample(FAKE_SLOT, file->path) ? FAKE_SLOT : KEYJAZZ_NOINST;
 #undef FAKE_SLOT
 }
 

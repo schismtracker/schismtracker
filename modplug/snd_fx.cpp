@@ -1229,8 +1229,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 		pChn->nLeftVol = pChn->nRightVol = 0;
 		bool bFlt = (csf->m_dwSongFlags & SONG_MPTFILTERMODE) ? false : true;
 		// Setup Initial Filter for this note
-		if (penv)
-		{
+		if (penv) {
 			if (penv->nIFR & 0x80) {
 				pChn->nResonance = penv->nIFR & 0x7F;
 				bFlt = true;

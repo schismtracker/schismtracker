@@ -352,10 +352,10 @@ static int waterfall_handle_key(struct key_event *k)
 				ii = sample_get_current();
 			}
 			if (k->state) {
-				song_keyup(0, ii, n);
+				song_keyup(KEYJAZZ_NOINST, ii, n);
 				status.last_keysym = 0;
 			} else if (!k->is_repeat) {
-				song_keydown(0, ii, n, v, KEYDOWN_CHAN_CURRENT);
+				song_keydown(KEYJAZZ_NOINST, ii, n, v, KEYJAZZ_CHAN_CURRENT);
 			}
 			return 1;
 		}
