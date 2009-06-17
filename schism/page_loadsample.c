@@ -801,13 +801,10 @@ static void load_sample_handle_key(struct key_event * k)
 
 	handle_preload();
 	if (fake_slot != KEYJAZZ_NOINST) {
-		if (k->state) {
-			// key up
+		if (k->state)
 			song_keyup(fake_slot, KEYJAZZ_NOINST, n);
-		} else {
-			// key down
+		else
 			song_keydown(fake_slot, KEYJAZZ_NOINST, n, v, KEYJAZZ_CHAN_CURRENT);
-		}
 	}
 }
 
