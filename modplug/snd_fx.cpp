@@ -428,20 +428,21 @@ static void fx_global_vol_slide(CSoundFile *csf, SONGVOICE *pChn, uint32_t param
 		param = pChn->nOldGlbVolSlide;
 	if ((param & 0x0F) == 0x0F && (param & 0xF0)) {
 		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
-			nGlbSlide = (param >> 4) * 2;
+			nGlbSlide = param >> 4;
 	} else if ((param & 0xF0) == 0xF0 && (param & 0x0F)) {
 		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
-			nGlbSlide = -(int)((param & 0x0F) * 2);
+			nGlbSlide = -(int)(param & 0x0F);
 	} else {
 		if (!(csf->m_dwSongFlags & SONG_FIRSTTICK)) {
 			if (param & 0xF0)
-				nGlbSlide = (int)((param & 0xF0) >> 4) * 2;
-			else nGlbSlide = -(int)((param & 0x0F) * 2);
+				nGlbSlide = (int)((param & 0xF0) >> 4);
+			else
+				nGlbSlide = -(int)(param & 0x0F);
 		}
 	}
 	if (nGlbSlide) {
 		nGlbSlide += csf->m_nGlobalVolume;
-		csf->m_nGlobalVolume = CLAMP(nGlbSlide, 0, 256);
+		csf->m_nGlobalVolume = CLAMP(nGlbSlide, 0, 128);
 	}
 }
 
@@ -1760,7 +1761,7 @@ bool csf_process_effects(CSoundFile *csf)
 			    != (csf->m_nTickCount % csf->m_nMusicSpeed))
 				break;
 			if (param <= 128)
-				csf->m_nGlobalVolume = param << 1;
+				csf->m_nGlobalVolume = param;
 			break;
 
 		// Global Volume Slide

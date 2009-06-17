@@ -75,7 +75,7 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nSongPreAmp = 0x20;
 	m_nDefaultSpeed = pmh1->speed;
 	m_nDefaultTempo = 80;
-	m_nDefaultGlobalVolume = 256;
+	m_nDefaultGlobalVolume = 128;
 
 	memcpy(song_title, pmh1->songname, 32);
 	// Channel Setting

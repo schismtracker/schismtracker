@@ -302,8 +302,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		m_rowHighlightMajor = 16;
 	}
 	// Global Volume
-        m_nDefaultGlobalVolume = pifh.globalvol << 1;
-        if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
+        m_nDefaultGlobalVolume = pifh.globalvol;
+        if (m_nDefaultGlobalVolume > 128) m_nDefaultGlobalVolume = 128;
 	if (pifh.speed) m_nDefaultSpeed = pifh.speed;
 	if (pifh.tempo) m_nDefaultTempo = pifh.tempo;
 	m_nSongPreAmp = pifh.mv;

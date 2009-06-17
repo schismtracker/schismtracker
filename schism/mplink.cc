@@ -463,12 +463,12 @@ void song_set_initial_tempo(int new_tempo)
 
 int song_get_initial_global_volume()
 {
-        return mp->m_nDefaultGlobalVolume / 2;
+        return mp->m_nDefaultGlobalVolume;
 }
 
 void song_set_initial_global_volume(int new_vol)
 {
-        mp->m_nDefaultGlobalVolume = CLAMP(new_vol, 0, 128) * 2;
+        mp->m_nDefaultGlobalVolume = CLAMP(new_vol, 0, 128);
 }
 
 int song_get_mixing_volume()

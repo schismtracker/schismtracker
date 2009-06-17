@@ -169,8 +169,8 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Tempo
 	m_nDefaultTempo = psfh.tempo;
 	// Global Volume
-	m_nDefaultGlobalVolume = psfh.globalvol << 2;
-	if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
+	m_nDefaultGlobalVolume = psfh.globalvol;
+	if (m_nDefaultGlobalVolume > 128) m_nDefaultGlobalVolume = 128;
 	m_nSongPreAmp = psfh.mastervol & 0x7F;
 	// Channels
 	m_nChannels = 4;

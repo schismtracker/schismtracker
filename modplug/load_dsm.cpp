@@ -103,8 +103,8 @@ bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 	if (m_nSamples > MAX_SAMPLES) m_nSamples = MAX_SAMPLES;
 	m_nDefaultSpeed = psong->speed;
 	m_nDefaultTempo = psong->bpm;
-	m_nDefaultGlobalVolume = psong->globalvol << 2;
-	if ((!m_nDefaultGlobalVolume) || (m_nDefaultGlobalVolume > 256)) m_nDefaultGlobalVolume = 256;
+	m_nDefaultGlobalVolume = psong->globalvol << 1;
+	if (!m_nDefaultGlobalVolume || m_nDefaultGlobalVolume > 128) m_nDefaultGlobalVolume = 128;
 	m_nSongPreAmp = psong->mastervol & 0x7F;
 	for (uint32_t iOrd=0; iOrd<MAX_ORDERS; iOrd++)
 	{

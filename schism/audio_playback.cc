@@ -753,7 +753,7 @@ int song_get_current_tempo()
 
 int song_get_current_global_volume()
 {
-        return mp->m_nGlobalVolume / 2;
+        return mp->m_nGlobalVolume;
 }
 
 int song_get_current_order()
@@ -933,7 +933,7 @@ void song_set_current_global_volume(int volume)
                 return;
 
 	song_lock_audio();
-        mp->m_nGlobalVolume = volume * 2;
+        mp->m_nGlobalVolume = volume;
 	song_unlock_audio();
 }
 
