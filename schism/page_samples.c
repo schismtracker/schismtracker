@@ -46,8 +46,6 @@ static const int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
 
 static int top_sample = 1;
 static int current_sample = 1;
-static int need_retrigger = -1;
-static int last_keyup = -1;
 
 static int sample_list_cursor_pos = 25;	/* the "play" text */
 
@@ -294,16 +292,6 @@ static void sample_list_predraw_hook(void)
 	draw_text_len(numtostr(0, sample->length, buf), 13, 64, 23, 2, 0);
 
 	draw_sample_data(&sample_image, sample, current_sample);
-
-	if (need_retrigger > -1) {
-		if (last_keyup > -1)
-			song_keyup(current_sample, 0, last_keyup);
-		song_keyup(current_sample, 0, need_retrigger);
-		song_keydown(current_sample, 0, need_retrigger, 64, KEYDOWN_CHAN_CURRENT);
-		last_keyup = song_is_multichannel_mode() ? -1 : need_retrigger;
-		song_update_playing_sample(current_sample);
-		need_retrigger = -1;
-	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -528,8 +516,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				if (k->mouse == MOUSE_DBLCLICK
 				|| (new_sample == current_sample
 				&& sample_list_cursor_pos == 25)) {
-					need_retrigger = 61; /* C-5 */
-					status.flags |= NEED_UPDATE;
+					song_keydown(current_sample, KEYJAZZ_NOINST,
+						last_note, 64, KEYJAZZ_CHAN_CURRENT);
 				}
 				new_cursor_pos = 25;
 			}
@@ -1442,7 +1430,6 @@ static void sample_list_handle_key(struct key_event * k)
 	case SDLK_SPACE:
 		if (k->state) return;
 		if (selected_widget && *selected_widget == 0) {
-			need_retrigger = last_note;
 			status.flags |= NEED_UPDATE;
 		}
 		return;
@@ -1501,24 +1488,28 @@ static void sample_list_handle_key(struct key_event * k)
 		if (k->mod & KMOD_ALT) {
 			if (k->state) return;
 			sample_list_handle_alt_key(k);
-		} else {
+		} else if (!k->is_repeat) {
 			int n, v;
 			if (k->midi_note > -1) {
 				n = k->midi_note;
 				if (k->midi_volume > -1) {
 					v = k->midi_volume / 2;
 				} else {
-					v = 64;
+					v = KEYJAZZ_DEFAULTVOL;
 				}
 			} else {
-				n = kbd_get_note(k);
-				v = 64;
+				n = (k->sym == SDLK_SPACE)
+					? last_note
+					: kbd_get_note(k);
 				if (n <= 0 || n > 120)
 					return;
+				v = KEYJAZZ_DEFAULTVOL;
 			}
-			if (!k->state && !k->is_repeat) {
-				last_note = need_retrigger = n;
-				status.flags |= NEED_UPDATE;
+			if (k->state) {
+				song_keyup(current_sample, KEYJAZZ_NOINST, n);
+			} else {
+				song_keydown(current_sample, KEYJAZZ_NOINST, n, v, KEYJAZZ_CHAN_CURRENT);
+				last_note = n;
 			}
 		}
 		return;
@@ -1706,7 +1697,7 @@ static void update_sample_speed(void)
 {
 	song_sample_set_c5speed(current_sample,
 			widgets_samplelist[8].d.numentry.value);
-	need_retrigger = last_note;
+	//need_retrigger = last_note;
 	status.flags |= NEED_UPDATE;
 }
 

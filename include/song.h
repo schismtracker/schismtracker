@@ -529,11 +529,13 @@ int song_is_multichannel_mode(void);
 void song_change_current_play_channel(int relative, int wraparound);
 int song_get_current_play_channel(void);
 
-/* these return the channel that was used for the note */
-#define KEYDOWN_CHAN_CURRENT 0
+/* these return the channel that was used for the note.
+sample/inst slots 1+ are used "normally"; the sample loader uses slot #0 for preview playback */
+#define KEYJAZZ_CHAN_CURRENT 0
+#define KEYJAZZ_NOINST -1
+#define KEYJAZZ_DEFAULTVOL -1
 int song_keydown(int samp, int ins, int note, int vol, int chan);
-int song_keyrecord(int samp, int ins, int note, int vol, int chan,
-		int effect, int param);
+int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
 int song_keyup(int samp, int ins, int note);
 
 void song_start(void);

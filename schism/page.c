@@ -479,7 +479,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		} else {
 			if (!k->is_repeat)
-				song_keydown(i, i, j, 64, KEYDOWN_CHAN_CURRENT);
+				song_keydown(i, i, j, 64, KEYJAZZ_CHAN_CURRENT);
 			return 1;
 		}
 	}

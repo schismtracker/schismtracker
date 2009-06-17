@@ -1399,8 +1399,8 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int
 		if (k->state) return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		song_keyup(0, current_instrument, last_note);
-		song_keydown(0, current_instrument, last_note, 64, KEYDOWN_CHAN_CURRENT);
+		song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
+		song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
 		return 1;
 	case SDLK_RETURN:
 		if (!k->state) return 0;
@@ -1675,8 +1675,8 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope *env, int
 		if (k->state) return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		song_keyup(0, current_instrument, last_note);
-		song_keydown(0, current_instrument, last_note, 64, KEYDOWN_CHAN_CURRENT);
+		song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
+		song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
 		return 1;
 	case SDLK_RETURN:
 		if (!k->state) return 0;
@@ -2059,7 +2059,7 @@ static void instrument_list_handle_key(struct key_event * k)
 				song_keyup(0, current_instrument, n);
 				status.last_keysym = 0;
 			} else if (!k->is_repeat) {
-				song_keydown(0, current_instrument, n, v, KEYDOWN_CHAN_CURRENT);
+				song_keydown(KEYJAZZ_NOINST, current_instrument, n, v, KEYJAZZ_CHAN_CURRENT);
 			}
 			last_note = n;
 		}
