@@ -522,7 +522,6 @@ void song_unlock_audio(void);
 void song_stop_audio(void);
 void song_start_audio(void);
 const char *song_audio_driver(void);
-#define song_audio_driver_name() song_audio_driver()
 
 void song_toggle_multichannel_mode(void);
 int song_is_multichannel_mode(void);

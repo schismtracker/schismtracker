@@ -687,9 +687,6 @@ void song_start_at_pattern(int pattern, int row)
         song_loop_pattern(pattern, row);
 }
 
-// Actually this is wrong; single step shouldn't stop playing. Instead, it should *add* the notes in the row
-// to the mixed data. Additionally, it should process tick-N effects -- e.g. if there's an Exx, a single-step
-// on the row should slide the note down.
 void song_single_step(int patno, int row)
 {
 	int total_rows;
@@ -704,10 +701,10 @@ void song_single_step(int patno, int row)
 	for (i = 0; i < 64; i++, cur_note++) {
 		cx = song_get_mix_channel(i);
 		if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
-		if (cur_note->volume_effect != VOL_EFFECT_VOLUME) {
-			vol = -1;
-		} else {
+		if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
 			vol = cur_note->volume;
+		} else {
+			vol = KEYJAZZ_DEFAULTVOL;
 		}
 		song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
 			vol, i, cur_note->effect, cur_note->parameter);

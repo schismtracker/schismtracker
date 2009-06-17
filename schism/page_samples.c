@@ -1657,13 +1657,6 @@ static void update_sample_loop_points(void)
 	}
 
 	status.flags |= NEED_UPDATE;
-	/* IT retriggers
-	   ... wtf, no it doesn't -storlek
-	if (!(sample->flags & (SAMP_LOOP|SAMP_SUSLOOP))) {
-		need_retrigger = last_note;
-		status.flags |= NEED_UPDATE;
-	}
-	*/
 }
 
 /* --------------------------------------------------------------------- */
@@ -1697,7 +1690,6 @@ static void update_sample_speed(void)
 {
 	song_sample_set_c5speed(current_sample,
 			widgets_samplelist[8].d.numentry.value);
-	//need_retrigger = last_note;
 	status.flags |= NEED_UPDATE;
 }
 
