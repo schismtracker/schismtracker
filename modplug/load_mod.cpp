@@ -159,7 +159,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	if ((m_nSamples == 15) && (nErr >= 16)) return false;
 	// Default settings	
 	m_nType = MOD_TYPE_IT;
-	m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS;
+	m_dwSongFlags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
 	memcpy(song_title, lpStream, 20);
