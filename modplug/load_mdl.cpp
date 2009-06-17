@@ -259,9 +259,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 			norders = bswapLE16(pmib->norders);
 			if (norders > MAX_ORDERS) norders = MAX_ORDERS;
 			m_nRestartPos = bswapLE16(pmib->repeatpos);
-			m_nDefaultGlobalVolume = pmib->globalvol;
-                        if (m_nDefaultGlobalVolume == 255)
-                                m_nDefaultGlobalVolume++;
+			m_nDefaultGlobalVolume = pmib->globalvol * 128 / 255;
 			m_nDefaultTempo = pmib->tempo;
 			m_nDefaultSpeed = pmib->speed;
 			m_nChannels = 4;

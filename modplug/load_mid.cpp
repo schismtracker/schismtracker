@@ -558,7 +558,7 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 	tempo = ConvertMidiTempo(nTempoUsec, &nTickMultiplier);
 	m_nDefaultTempo = tempo;
 	m_nDefaultSpeed = gnMidiImportSpeed;
-	m_nDefaultGlobalVolume = 256;
+	m_nDefaultGlobalVolume = 128;
 	midimastervol = m_nDefaultGlobalVolume;
 	
 	// Initializing 
@@ -1090,7 +1090,7 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 					if (dwGlobalFlags & MIDIGLOBAL_UPDATEMASTERVOL)
 					{
 						m[ichn].command = CMD_GLOBALVOLUME;
-						m[ichn].param = midimastervol >> 1; // 0-128
+						m[ichn].param = midimastervol; // 0-128
 						dwGlobalFlags &= ~MIDIGLOBAL_UPDATEMASTERVOL;
 					}
 				}

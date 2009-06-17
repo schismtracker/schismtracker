@@ -1219,8 +1219,8 @@ int csf_read_note(CSoundFile *csf)
 			// vol is 14-bits
 			if (vol) {
 				// IMPORTANT: chan->nRealVolume is 14 bits !!!
-				// -> _muldiv( 14+8, 6+6, 18); => RealVolume: 14-bit result (22+12-20)
-				chan->nRealVolume = _muldiv(vol * csf->m_nGlobalVolume, chan->nGlobalVol * chan->nInsVol, 1 << 20);
+				// -> _muldiv( 14+7, 6+6, 18); => RealVolume: 14-bit result (21+12-19)
+				chan->nRealVolume = _muldiv(vol * csf->m_nGlobalVolume, chan->nGlobalVol * chan->nInsVol, 1 << 19);
 			}
 
 			int period = chan->nPeriod;

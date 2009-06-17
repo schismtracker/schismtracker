@@ -74,8 +74,8 @@ bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nDefaultSpeed = phdr->inittempo >> 4;
 	if (m_nDefaultSpeed < 1) m_nDefaultSpeed = 1;
 	m_nDefaultTempo = 125;
-	m_nDefaultGlobalVolume = phdr->globalvol << 2;
-	if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
+	m_nDefaultGlobalVolume = phdr->globalvol;
+	if (m_nDefaultGlobalVolume > 128) m_nDefaultGlobalVolume = 128;
 	memcpy(Orderlist, phdr->patorder, 128);
 	// Setting up channels
 	for (uint32_t nSet=0; nSet<4; nSet++)
