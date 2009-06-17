@@ -939,18 +939,9 @@ void song_set_current_global_volume(int volume)
 
 void song_set_current_order(int order)
 {
-	// FIXME this used to use setcurrentorder all the time, and
-	// things seemed to work.
-	// Now, when using +/- keys to change order on the info page
-	// the song position gets reset sporadically.
-	// I think this is why.
-	if (song_get_mode() == MODE_PLAYING) {
-                song_start_at_order(order, 0);
-	} else {
-		song_lock_audio();
-		csf_set_current_order(mp, order);
-		song_unlock_audio();
-	}
+	song_lock_audio();
+	csf_set_current_order(mp, order);
+	song_unlock_audio();
 }
 
 // Ctrl-F7
