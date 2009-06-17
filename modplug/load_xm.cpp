@@ -49,7 +49,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 	channels = bswapLE16(*((uint16_t *)(lpStream+68)));
 	if (channels > 64) return false;
 	m_nType = MOD_TYPE_IT;
-	m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS | SONG_INSTRUMENTMODE;
+	m_dwSongFlags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS | SONG_INSTRUMENTMODE;
 	m_nChannels = channels;
 	if (restartpos < norders) m_nRestartPos = restartpos;
 	patterns = bswapLE16(*((uint16_t *)(lpStream+70)));
@@ -61,7 +61,6 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 	memcpy(&xmflags, lpStream+74, 2);
 	xmflags = bswapLE16(xmflags);
 	if (xmflags & 1) m_dwSongFlags |= SONG_LINEARSLIDES;
-	if (xmflags & 0x1000) m_dwSongFlags |= SONG_EXFILTERRANGE;
 	defspeed = bswapLE16(*((uint16_t *)(lpStream+76)));
 	deftempo = bswapLE16(*((uint16_t *)(lpStream+78)));
 	if ((deftempo >= 32) && (deftempo < 256)) m_nDefaultTempo = deftempo;
@@ -528,7 +527,6 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 	ni++; // I don't know
 	header.instruments = bswapLE16(ni);
 	header.flags = (m_dwSongFlags & SONG_LINEARSLIDES) ? 0x01 : 0x00;
-	if (m_dwSongFlags & SONG_EXFILTERRANGE) header.flags |= 0x1000;
 	header.tempo = bswapLE16(m_nDefaultTempo);
 	header.speed = bswapLE16(m_nDefaultSpeed);
 	header.flags = bswapLE16(header.flags);

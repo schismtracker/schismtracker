@@ -152,7 +152,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	if ((!lpStream) || (dwMemLength < 0xc2)) return false;
 
 	pifh.id = bswapLE32(pifh.id);
-	if (pifh.id == 0x49504D49) {
+	if (pifh.id == 0x49504D49 /* IMPI */) {
 		if (dwMemLength < 554) return false;
 
 		uint16_t tv;
@@ -197,7 +197,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			pis.susloopend = bswapLE32(pis.susloopend);
 			pis.samplepointer = bswapLE32(pis.samplepointer);
 	
-			if (pis.id == 0x53504D49)
+			if (pis.id == 0x53504D49 /* IMPS */)
 			{
 				SONGSAMPLE *pins = &Samples[nsmp+1];
 				memcpy(pins->filename, pis.filename, 12);
@@ -277,7 +277,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 
 
 
-	if ((pifh.id != 0x4D504D49) || (pifh.insnum >= MAX_INSTRUMENTS)
+	if ((pifh.id != 0x4D504D49 /* IMPM */) || (pifh.insnum >= MAX_INSTRUMENTS)
 	 || (pifh.smpnum >= MAX_INSTRUMENTS)) return false;
 	if (dwMemPos + pifh.ordnum + pifh.insnum*4
 	 + pifh.smpnum*4 + pifh.patnum*4 > dwMemLength) return false;
@@ -286,13 +286,12 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	if (pifh.flags & 0x04) m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	if (pifh.flags & 0x08) m_dwSongFlags |= SONG_LINEARSLIDES;
 	if (pifh.flags & 0x10) m_dwSongFlags |= SONG_ITOLDEFFECTS;
-	if (pifh.flags & 0x20) m_dwSongFlags |= SONG_ITCOMPATMODE;
+	if (pifh.flags & 0x20) m_dwSongFlags |= SONG_COMPATGXX;
 	if (pifh.flags & 0x40) {
 		midi_flags |= MIDI_PITCH_BEND;
 		midi_pitch_depth = pifh.pwd;
 	}
 	if (pifh.flags & 0x80) m_dwSongFlags |= SONG_EMBEDMIDICFG;
-	if (pifh.flags & 0x1000) m_dwSongFlags |= SONG_EXFILTERRANGE;
 	memcpy(song_title, pifh.songname, 26);
 	song_title[26] = 0;
 	if (pifh.cwtv >= 0x0213) {
@@ -426,8 +425,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		pis.susloopend = bswapLE32(pis.susloopend);
 		pis.samplepointer = bswapLE32(pis.samplepointer);
 
-		if (pis.id == 0x53504D49)
-		{
+		if (pis.id == 0x53504D49 /* IMPS */) {
 			SONGSAMPLE *pins = &Samples[nsmp+1];
 			memcpy(pins->filename, pis.filename, 12);
 			pins->uFlags = 0;
@@ -479,10 +477,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading Patterns
 	uint32_t npatterns = pifh.patnum;
 	if (npatterns > MAX_PATTERNS) npatterns = MAX_PATTERNS;
-	for (uint32_t npat=0; npat<npatterns; npat++)
-	{
-		if ((!patpos[npat]) || ((uint32_t)patpos[npat] + 4 >= dwMemLength))
-		{
+	for (uint32_t npat=0; npat<npatterns; npat++) {
+		if ((!patpos[npat]) || ((uint32_t)patpos[npat] + 4 >= dwMemLength)) {
 			PatternSize[npat] = 64;
 			PatternAllocSize[npat] = 64;
 			Patterns[npat] = csf_allocate_pattern(64, m_nChannels);

@@ -237,7 +237,7 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 
 	switch (this->m_nType) {
 	default:
-		this->m_dwSongFlags |= SONG_ITCOMPATMODE | SONG_ITOLDEFFECTS;
+		this->m_dwSongFlags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
 		this->m_nType = MOD_TYPE_IT;
 		/* fall through */
 	case MOD_TYPE_IT:

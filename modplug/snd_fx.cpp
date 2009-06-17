@@ -154,7 +154,7 @@ static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		pChn->nOldPortaUpDown = param;
 	else
 		param = pChn->nOldPortaUpDown;
-	if (flags & SONG_ITCOMPATMODE)
+	if (flags & SONG_COMPATGXX)
 		pChn->nPortamentoSlide=param*4;
 	else
 		pChn->nPortamentoDest=0;
@@ -179,7 +179,7 @@ static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		pChn->nOldPortaUpDown = param;
 	else
 		param = pChn->nOldPortaUpDown;
-	if (flags & SONG_ITCOMPATMODE)
+	if (flags & SONG_COMPATGXX)
 		pChn->nPortamentoSlide=param*4;
 	else
 		pChn->nPortamentoDest=0;
@@ -497,14 +497,6 @@ static void fx_extended_channel(CSoundFile *csf, SONGVOICE *pChn, uint32_t param
 	// S9B: 4-Channels surround mode
 	case 0x0B:
 		csf->m_dwSongFlags |= SONG_SURROUNDPAN;
-		break;
-	// S9C: IT Filter Mode
-	case 0x0C:
-		csf->m_dwSongFlags &= ~SONG_MPTFILTERMODE;
-		break;
-	// S9D: MPT Filter Mode
-	case 0x0D:
-		csf->m_dwSongFlags |= SONG_MPTFILTERMODE;
 		break;
 	// S9E: Go forward
 	case 0x0E:
@@ -1026,7 +1018,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 	}
 	// Reset envelopes
 	if (bResetEnv) {
-		if (!bPorta || (csf->m_dwSongFlags & SONG_ITCOMPATMODE)
+		if (!bPorta || (csf->m_dwSongFlags & SONG_COMPATGXX)
 		    || !pChn->nLength || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)) {
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
 			if (!bInstrumentChanged && penv && !(pChn->dwFlags & (CHN_KEYOFF|CHN_NOTEFADE))) {
@@ -1174,7 +1166,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 	}
 	if (!bPorta
 	    || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)
-	    || ((csf->m_dwSongFlags & SONG_ITCOMPATMODE) && pChn->nRowInstr)) {
+	    || ((csf->m_dwSongFlags & SONG_COMPATGXX) && pChn->nRowInstr)) {
 		if ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol) {
 			pChn->nVolEnvPosition = 0;
 			pChn->nPanEnvPosition = 0;
@@ -1184,7 +1176,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 			pChn->dwFlags &= ~CHN_NOTEFADE;
 			pChn->nFadeOutVol = 65536;
 		}
-		if (!bPorta || !(csf->m_dwSongFlags & SONG_ITCOMPATMODE) || pChn->nRowInstr) {
+		if (!bPorta || !(csf->m_dwSongFlags & SONG_COMPATGXX) || pChn->nRowInstr) {
 			pChn->dwFlags &= ~CHN_NOTEFADE;
 			pChn->nFadeOutVol = 65536;
 		}
@@ -1227,9 +1219,9 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 			pChn->nAutoVibPos = 0;
 		}
 		pChn->nLeftVol = pChn->nRightVol = 0;
-		bool bFlt = (csf->m_dwSongFlags & SONG_MPTFILTERMODE) ? false : true;
 		// Setup Initial Filter for this note
 		if (penv) {
+			bool bFlt = false;
 			if (penv->nIFR & 0x80) {
 				pChn->nResonance = penv->nIFR & 0x7F;
 				bFlt = true;
@@ -1238,12 +1230,12 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 				pChn->nCutOff = penv->nIFC & 0x7F;
 				bFlt = true;
 			}
+
+			if (pChn->nCutOff < 0x7F && bFlt)
+				setup_channel_filter(pChn, true, 256, csf->gdwMixingFreq);
 		} else {
 			pChn->nVolSwing = pChn->nPanSwing = 0;
 		}
-
-		if (pChn->nCutOff < 0x7F && bFlt)
-			setup_channel_filter(pChn, true, 256, csf->gdwMixingFreq);
 	}
 	// Special case for MPT
 	if (bManual)

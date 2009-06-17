@@ -528,15 +528,15 @@ void song_set_old_effects(int value)
 
 int song_has_compatible_gxx()
 {
-        return !!(mp->m_dwSongFlags & SONG_ITCOMPATMODE);
+        return !!(mp->m_dwSongFlags & SONG_COMPATGXX);
 }
 
 void song_set_compatible_gxx(int value)
 {
         if (value)
-                mp->m_dwSongFlags |= SONG_ITCOMPATMODE;
+                mp->m_dwSongFlags |= SONG_COMPATGXX;
         else
-                mp->m_dwSongFlags &= ~SONG_ITCOMPATMODE;
+                mp->m_dwSongFlags &= ~SONG_COMPATGXX;
 }
 
 int song_has_linear_pitch_slides()
