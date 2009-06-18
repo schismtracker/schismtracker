@@ -27,11 +27,10 @@ fixes).
 Joel Yliluoma (Bisqwit) implemented MidiS3M support, Adlib S3M-files support,
 and Scream Tracker sample loading.
 
-
 fmopl (OPL2-emulator used in Dosbox and MAME) was written by Jarek Burczynski.
 
-Some (small) portions of code have been borrowed from Cheesetracker,
-written by Juan Linietsky <coding@reduz.com.ar>.
+Some (small) portions of code have been borrowed from Cheesetracker, written
+by Juan Linietsky <coding@reduz.com.ar>.
 
 Frag-opt written by Ville Jokela <midianian/att/goth/dott/net/>.
 
@@ -43,3 +42,5 @@ Michael Chen improved the software scaler quite a bit.
 <zenki@users.sourceforge.net>
 
 Some little fixes by ToastyX <toastyx@toastyx.net>.
+
+Ben de Graaff rewrote a large portion of libmodplug in C.
