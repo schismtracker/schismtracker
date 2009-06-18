@@ -745,10 +745,10 @@ static inline int rn_arpeggio(CSoundFile *csf, SONGVOICE *chan, int period)
 	int a;
 	// XXX test this, tick count goes the other way now so it's probably wrong
 	switch (csf->m_nTickCount % 3) {
-	case 1:
+	case 2:
 		a = chan->nArpeggio >> 4;
 		break;
-	case 2:
+	case 1:
 		a = chan->nArpeggio & 0xf;
 		break;
 	default:
