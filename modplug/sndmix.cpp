@@ -313,6 +313,7 @@ static int increment_row(CSoundFile *csf)
 
 int csf_process_tick(CSoundFile *csf)
 {
+	csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
 	/* [Decrease tick counter. Is tick counter 0?] */
 	if (--csf->m_nTickCount == 0) {
 		/* [-- Yes --] */
@@ -343,7 +344,6 @@ int csf_process_tick(CSoundFile *csf)
 		} else {
 			/* [-- No --] */
 			/* Call update-effects for each channel. */
-			csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
 		}
 
 
@@ -394,7 +394,9 @@ int csf_process_tick(CSoundFile *csf)
 	}
 
 	// Update Effects
-	return csf_process_effects(csf);
+	csf_process_effects(csf);
+
+	return true;
 }
 
 
@@ -1093,8 +1095,7 @@ int csf_read_note(CSoundFile *csf)
 		if (--csf->m_nTickCount == 0)
 			csf->m_nTickCount = csf->m_nMusicSpeed;
 
-		if (!csf_process_effects(csf))
-			return false;
+		csf_process_effects(csf);
 	} else {
 		if (!csf_process_tick(csf))
 			return false;

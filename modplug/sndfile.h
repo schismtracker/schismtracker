@@ -539,7 +539,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual);
 uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn);
 void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, bool bForceCut);
-bool csf_process_effects(CSoundFile *csf);
+void csf_process_effects(CSoundFile *csf);
 
 void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick);
 void fx_key_off(CSoundFile *csf, uint32_t nChn);
