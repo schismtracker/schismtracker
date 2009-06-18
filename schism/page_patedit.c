@@ -2972,9 +2972,9 @@ extern int key_scancode_lookup(int k);
 static int pattern_editor_insert(struct key_event *k)
 {
 	int total_rows;
-	int i, j, n, vol;
+	int ins, smp, j, n, vol;
 	song_note *pattern, *cur_note;
-	int eff, param, kc;
+	int kc;
 
 	total_rows = song_get_pattern(current_pattern, &pattern);
 	/* keydown events are handled here for multichannel */
@@ -3004,13 +3004,16 @@ static int pattern_editor_insert(struct key_event *k)
 			return 1;
 		}
 
-		eff = param = 0;
-		i = cur_note->instrument;
-		if ((edit_copy_mask & MASK_INSTRUMENT) || i < 1) {
-			if (song_is_instrument_mode())
-				i = instrument_get_current();
-			else
-				i = sample_get_current();
+		// ugh
+		smp = ins = cur_note->instrument;
+		if (song_is_instrument_mode()) {
+			if (ins < 1 || (edit_copy_mask & MASK_INSTRUMENT))
+				ins = instrument_get_current();
+			smp = -1;
+		} else {
+			if (smp < 1 || (edit_copy_mask & MASK_INSTRUMENT))
+				smp = sample_get_current();
+			ins = -1;
 		}
 
 		/* TODO: rewrite this more logically */
@@ -3040,21 +3043,21 @@ static int pattern_editor_insert(struct key_event *k)
 			if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing) {
 				if (k->state && !(midi_flags & MIDI_RECORD_NOTEOFF))
 					return 1;
-				song_keyup(i, i, n);
+				song_keyup(smp, ins, n);
 				if (k->state)
 					n = NOTE_OFF;
-				song_keydown(i, i, n, vol, current_channel);
+				song_keydown(smp, ins, n, vol, current_channel);
 			} else if (k->state) {
 				if (keyjazz_noteoff) {
 					/* coda mode */
-					song_keyup(i, i, n);
+					song_keyup(smp, ins, n);
 				}
 
 				return 0;
 			} else {
 				if (k->is_repeat && !keyjazz_repeat)
 					return 1;
-				song_keydown(i, i, n, vol, current_channel);
+				song_keydown(smp, ins, n, vol, current_channel);
 			}
 		}
 
@@ -3101,19 +3104,11 @@ static int pattern_editor_insert(struct key_event *k)
 
 		n = cur_note->note;
 		if (n <= 120 && n > 0) {
-			if (cur_note->instrument) {
-				i = cur_note->instrument;
-			} else {
-				if (song_is_instrument_mode())
-					i = instrument_get_current();
-				else
-					i = sample_get_current();
-			}
-			if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
+			if (cur_note->volume_effect == VOL_EFFECT_VOLUME)
 				vol = cur_note->volume;
-			}
 
-			song_keyrecord(i, i, n, vol, current_channel, cur_note->effect, cur_note->parameter);
+			song_keyrecord(smp, ins, n, vol, current_channel,
+				cur_note->effect, cur_note->parameter);
 		}
 		if (k->mod & KMOD_SHIFT) {
 			// advance horizontally, stopping at channel 64

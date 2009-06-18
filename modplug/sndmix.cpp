@@ -328,7 +328,7 @@ int csf_process_tick(CSoundFile *csf)
 			csf->m_nRowCount = 1; /* [Row counter = 1] */
 			
 			/* [Increase ProcessRow. Is ProcessRow > NumberOfRows?] */
-			if (++csf->m_nProcessRow > csf->PatternSize[csf->m_nCurrentPattern]) {
+			if (++csf->m_nProcessRow >= csf->PatternSize[csf->m_nCurrentPattern]) {
 				/* [-- Yes --] */
 				
 				if (!increment_row(csf))
