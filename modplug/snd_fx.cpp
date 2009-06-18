@@ -539,10 +539,10 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 	case 0x50:
 		pChn->nPanbrelloType = param & 0x07;
 		break;
-	// S6x: Pattern Delay for x frames
+	// S6x: Pattern Delay for x ticks
 	case 0x60:
 		// XXX shouldn't this be *added*?
-		csf->m_nFrameDelay = param;
+		csf->m_nTickDelay = param;
 		break;
 	// S7x: Envelope Control
 	case 0x70:
@@ -1466,7 +1466,7 @@ bool csf_process_effects(CSoundFile *csf)
 				break;
 			case 0xe:
 				// Pattern Delay
-				csf->m_nCurrentPatternDelay = param & 0x0F;
+				csf->m_nRowDelay = param & 0x0F;
 				break;
 			}
 		}
@@ -1479,7 +1479,7 @@ bool csf_process_effects(CSoundFile *csf)
 		//
 		// Scream Tracker has a similar bug (which we don't simulate here)
 		// whereby SD0 and SC0 are ignored
-		if (((csf->m_nTickCount - csf->m_nFrameDelay) % csf->m_nMusicSpeed) == nStartTick
+		if (((csf->m_nTickCount - csf->m_nTickDelay) % csf->m_nMusicSpeed) == nStartTick
 		    && (nStartTick > 0 || csf->m_nTickCount == 0))
 		{
 			uint32_t note = pChn->nRowNote;
@@ -1922,7 +1922,7 @@ bool csf_process_effects(CSoundFile *csf)
 			// Pattern Loop
 			csf->m_nNextOrder = csf->m_nCurrentOrder;
 			csf->m_nNextRow = nPatLoopRow;
-			if (csf->m_nCurrentPatternDelay)
+			if (csf->m_nRowDelay)
 				csf->m_nNextRow++;
 		} else if (nBreakRow >= 0 || nPosJump >= 0) {
 			// Pattern Break / Position Jump only if no loop running

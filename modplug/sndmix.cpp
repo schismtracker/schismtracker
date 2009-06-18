@@ -268,9 +268,9 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 
 int csf_process_row(CSoundFile *csf)
 {
-	if (++csf->m_nTickCount >= csf->m_nMusicSpeed * (csf->m_nCurrentPatternDelay+1) + csf->m_nFrameDelay) {
-		csf->m_nCurrentPatternDelay = 0;
-		csf->m_nFrameDelay = 0;
+	if (++csf->m_nTickCount >= csf->m_nMusicSpeed * (csf->m_nRowDelay+1) + csf->m_nTickDelay) {
+		csf->m_nRowDelay = 0;
+		csf->m_nTickDelay = 0;
 		csf->m_nTickCount = 0;
 		csf->m_nRow = csf->m_nNextRow;
 		
@@ -411,7 +411,7 @@ int csf_process_row(CSoundFile *csf)
 	if (csf->m_nTickCount) {
 		csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
 
-		if (csf->m_nTickCount < csf->m_nMusicSpeed * (1 + csf->m_nCurrentPatternDelay)) {
+		if (csf->m_nTickCount < csf->m_nMusicSpeed * (1 + csf->m_nRowDelay)) {
 			if (!(csf->m_nTickCount % csf->m_nMusicSpeed))
 				csf->m_dwSongFlags |= SONG_FIRSTTICK;
 		}
@@ -1104,8 +1104,8 @@ int csf_read_note(CSoundFile *csf)
 		if (!csf->m_nMusicSpeed) csf->m_nMusicSpeed = 6;
 		if (!csf->m_nMusicTempo) csf->m_nMusicTempo = 125;
 
-		csf->m_nCurrentPatternDelay = 0;
-		csf->m_nFrameDelay = 0;
+		csf->m_nRowDelay = 0;
+		csf->m_nTickDelay = 0;
 
 		csf->m_dwSongFlags |= SONG_FIRSTTICK;
 

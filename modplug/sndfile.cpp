@@ -39,7 +39,7 @@ CSoundFile::CSoundFile()
       m_nChannels(), m_nMixChannels(0), m_nMixStat(), m_nBufferCount(),
       m_nType(MOD_TYPE_NONE),
       m_nSamples(0), m_nInstruments(0),
-      m_nTickCount(), m_nCurrentPatternDelay(), m_nFrameDelay(),
+      m_nTickCount(), m_nRowDelay(), m_nTickDelay(),
       m_nMusicSpeed(), m_nMusicTempo(),
       m_nNextRow(), m_nRow(),
       m_nCurrentPattern(), m_nCurrentOrder(), m_nNextOrder(),
@@ -87,8 +87,8 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nGlobalVolume = 128;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
-	m_nCurrentPatternDelay = 0;
-	m_nFrameDelay = 0;
+	m_nRowDelay = 0;
+	m_nTickDelay = 0;
 	m_nNextRow = 0;
 	m_nRow = 0;
 	m_nCurrentPattern = 0;
@@ -382,8 +382,8 @@ static void set_current_pos_0(CSoundFile *csf)
 	csf->m_nNextRow = 0;
 	csf->m_nTickCount = csf->m_nMusicSpeed;
 	csf->m_nBufferCount = 0;
-	csf->m_nCurrentPatternDelay = 0;
-	csf->m_nFrameDelay = 0;
+	csf->m_nRowDelay = 0;
+	csf->m_nTickDelay = 0;
 }
 
 
@@ -410,8 +410,8 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 		csf->m_nCurrentPattern = 0;
 		csf->m_nTickCount = csf->m_nMusicSpeed;
 		csf->m_nBufferCount = 0;
-		csf->m_nCurrentPatternDelay = 0;
-		csf->m_nFrameDelay = 0;
+		csf->m_nRowDelay = 0;
+		csf->m_nTickDelay = 0;
 	}
 	csf->m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 }
@@ -441,8 +441,8 @@ void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow)
 		csf->m_nCurrentPattern = nPat;
 		csf->m_nRow = csf->m_nNextRow = nRow;
 		csf->m_nTickCount = csf->m_nMusicSpeed;
-		csf->m_nCurrentPatternDelay = 0;
-		csf->m_nFrameDelay = 0;
+		csf->m_nRowDelay = 0;
+		csf->m_nTickDelay = 0;
 		csf->m_nBufferCount = 0;
 		csf->m_dwSongFlags |= SONG_PATTERNLOOP;
 	}

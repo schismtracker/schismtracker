@@ -400,7 +400,7 @@ static void song_reset_play_state()
 	mp->m_nGlobalVolume = mp->m_nDefaultGlobalVolume;
 	mp->m_nMusicTempo = mp->m_nDefaultTempo;
 	mp->m_nTickCount = mp->m_nMusicSpeed = mp->m_nDefaultSpeed;
-	mp->m_nCurrentPatternDelay = mp->m_nFrameDelay = 0;
+	mp->m_nRowDelay = mp->m_nTickDelay = 0;
 
 	// turn this crap off
 	CSoundFile::gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS
