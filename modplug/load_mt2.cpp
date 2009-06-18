@@ -425,7 +425,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 				penv->nFadeOut = pmi->wFadeOut;
 				penv->nNNA = pmi->wNNA & 3;
 				penv->nDCT = (pmi->wNNA>>8) & 3;
-				penv->nDNA = (pmi->wNNA>>12) & 3;
+				penv->nDCA = (pmi->wNNA>>12) & 3;
 				MT2ENVELOPE *pehdr[4];
 				uint16_t *pedata[4];
 				if (pfh->wVersion <= 0x201)

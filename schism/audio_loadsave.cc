@@ -543,7 +543,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	iti.zero = 0;
 	iti.nna = i->nNNA;
 	iti.dct = i->nDCT;
-	iti.dca = i->nDNA;
+	iti.dca = i->nDCA;
 	iti.fadeout = bswapLE16(i->nFadeOut >> 5);
 	iti.pps = i->nPPS;
 	iti.ppc = i->nPPC;

@@ -1376,15 +1376,15 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, boo
 		}
 		// Duplicate Note Action
 		if (bOk) {
-			switch(p->pHeader->nDNA) {
-			case DNA_NOTECUT:
+			switch(p->pHeader->nDCA) {
+			case DCA_NOTECUT:
 				fx_key_off(csf, i);
 				p->nVolume = 0;
 				break;
-			case DNA_NOTEOFF:
+			case DCA_NOTEOFF:
 				fx_key_off(csf, i);
 				break;
-			case DNA_NOTEFADE:
+			case DCA_NOTEFADE:
 				p->dwFlags |= CHN_NOTEFADE;
 				break;
 			}

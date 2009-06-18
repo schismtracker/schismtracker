@@ -380,7 +380,7 @@ static void song_reset_play_state()
 	mp->m_nInitialRepeatCount = -1;
 	mp->m_nRepeatCount = -1;
 	mp->m_nBufferCount = 0;
-	mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_STEP | SONG_PATTERNLOOP | SONG_ENDREACHED);
+	mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
 
 	mp->stop_at_order = -1;
 	mp->stop_at_row = -1;
@@ -584,7 +584,7 @@ enum song_mode song_get_mode()
 {
         if ((mp->m_dwSongFlags & (SONG_ENDREACHED | SONG_PAUSED)) == (SONG_ENDREACHED | SONG_PAUSED))
                 return MODE_STOPPED;
-	if (mp->m_dwSongFlags & (SONG_STEP | SONG_PAUSED))
+	if (mp->m_dwSongFlags & SONG_PAUSED)
 		return MODE_SINGLE_STEP;
         if (mp->m_dwSongFlags & SONG_PATTERNLOOP)
                 return MODE_PATTERN_LOOP;
