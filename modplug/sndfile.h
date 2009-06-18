@@ -241,10 +241,10 @@
 #define DCT_SAMPLE              2
 #define DCT_INSTRUMENT          3
 
-// DNA types
-#define DNA_NOTECUT             0
-#define DNA_NOTEOFF             1
-#define DNA_NOTEFADE            2
+// DCA types
+#define DCA_NOTECUT             0
+#define DCA_NOTEOFF             1
+#define DCA_NOTEFADE            2
 
 // Nothing innately special about this -- just needs to be above the max pattern length.
 // process row is set to this in order to get the player to jump to the end of the pattern.
@@ -258,7 +258,7 @@
 #define SONG_COMPATGXX          0x0008
 #define SONG_LINEARSLIDES       0x0010
 #define SONG_PATTERNLOOP        0x0020
-#define SONG_STEP               0x0040
+//#define SONG_STEP             0x0040
 #define SONG_PAUSED             0x0080
 //#define SONG_FADINGSONG       0x0100
 #define SONG_ENDREACHED         0x0200
@@ -351,7 +351,7 @@ typedef struct _SONGINSTRUMENT
 	INSTRUMENTENVELOPE PitchEnv;
 	unsigned int nNNA;
 	unsigned int nDCT;
-	unsigned int nDNA;
+	unsigned int nDCA;
 	unsigned int nPanSwing;
 	unsigned int nVolSwing;
 	unsigned int nIFC;

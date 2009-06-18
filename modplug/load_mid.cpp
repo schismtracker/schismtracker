@@ -425,7 +425,7 @@ static uint32_t csf_map_midi_instrument(CSoundFile *csf, uint32_t dwBankProgram,
 	penv->nPPC = 5 * 12;
 	penv->nNNA = NNA_NOTEOFF;
 	penv->nDCT = (nChannel == MIDI_DRUMCHANNEL) ? DCT_SAMPLE : DCT_NOTE;
-	penv->nDNA = DNA_NOTEFADE;
+	penv->nDCA = DCA_NOTEFADE;
 	for (uint32_t j = 0; j < 120; j++) {
 		uint8_t mapnote = j + 1;
 		if (nChannel == MIDI_DRUMCHANNEL) {

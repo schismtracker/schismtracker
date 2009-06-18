@@ -121,7 +121,7 @@ static bool it_instr_to_mpt(const void *p, SONGINSTRUMENT *penv, uint32_t trkver
 		}
 		penv->nNNA = pis->nna % 4;
 		penv->nDCT = pis->dct % 4;
-		penv->nDNA = pis->dca % 3;
+		penv->nDCA = pis->dca % 3;
 		penv->nPPS = pis->pps;
 		penv->nPPC = pis->ppc;
 		penv->nIFC = pis->ifc;

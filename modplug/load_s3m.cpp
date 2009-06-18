@@ -306,7 +306,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		memset(Instruments[iSmp], 0, sizeof(SONGINSTRUMENT));
 		
 		Instruments[iSmp]->nNNA = NNA_NOTEOFF;
-		Instruments[iSmp]->nDNA = DNA_NOTEOFF;
+		Instruments[iSmp]->nDCA = DCA_NOTEOFF;
 		Instruments[iSmp]->nDCT = DCT_INSTRUMENT;
 		Instruments[iSmp]->dwFlags = Samples[iSmp].uFlags;
 		int scale;
