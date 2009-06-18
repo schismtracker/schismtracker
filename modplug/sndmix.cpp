@@ -297,6 +297,7 @@ static int increment_row(CSoundFile *csf)
 	}
 
 	/* [CurrentPattern = Order[ProcessOrder]] */
+	csf->m_nCurrentOrder = csf->m_nProcessOrder;
 	csf->m_nCurrentPattern = csf->Orderlist[csf->m_nProcessOrder];
 
 	if (!csf->PatternSize[csf->m_nCurrentPattern] || !csf->Patterns[csf->m_nCurrentPattern]) {

@@ -502,82 +502,6 @@ void song_stop_unlocked(int quitting)
 	memset(audio_buffer, 0, audio_buffer_size * audio_sample_size);
 }
 
-static int mp_chaseback(int order, int row)
-{
-	static unsigned char big_buffer[65536];
-	if (status.flags & CLASSIC_MODE) return 0; /* no chaseback in classic mode */
-	return 0;
-
-/* warning (XXX) this could be really dangerous if diskwriter is running... */
-
-	/* disable mp midi send hooks */
-	csf_midi_out_note = NULL;
-	csf_midi_out_raw = NULL;
-
-	unsigned int lim = 6;
-
-	/* calculate how many rows (distance) */
-	int j, k;
-	if (mp->Orderlist[order] < MAX_PATTERNS) {
-		int size = mp->PatternSize[ mp->Orderlist[order] ];
-		if (row < size) size = row;
-		for (k = size; lim != 0 && k >= 0; k--) {
-			lim--;
-		}
-	}
-	k = 0;
-	for (j = order-1; j >= 0 && lim != 0; j--) {
-		if (mp->Orderlist[j] >= MAX_PATTERNS) continue;
-		unsigned long size = mp->PatternSize[ mp->Orderlist[order] ];
-		if (lim >= size) {
-			lim -= size;
-		} else {
-			k = lim;
-			lim = 0;
-			break;
-		}
-	}
-
-	/* set starting point */
-        csf_set_current_order(mp, 0);
-        mp->m_nRow = mp->m_nProcessRow = 0;
-
-	CSoundFile::gdwSoundSetup |= SNDMIX_NOBACKWARDJUMPS
-				| SNDMIX_NOMIXING;
-	mp->m_nRepeatCount = 0;
-	mp->m_nInitialRepeatCount = 1;
-
-	mp->stop_at_order = j;
-	mp->stop_at_row = k;
-
-	while (csf_read(mp, big_buffer, sizeof(big_buffer)))
-		/* gcc is retarded */;
-	mp->m_dwSongFlags &= ~SONG_ENDREACHED;
-	CSoundFile::gdwSoundSetup &= ~(SNDMIX_NOMIXING);
-
-	mp->stop_at_order = order;
-	mp->stop_at_row = row;
-	while (csf_read(mp, big_buffer, sizeof(big_buffer)))
-		/* gcc is retarded */;
-
-	mp->m_dwSongFlags &= ~SONG_ENDREACHED;
-	mp->stop_at_order = -1;
-	mp->stop_at_row = -1;
-#if 0
-printf("stop_at_order = %u v. %u  and row = %u v. %u\n",
-		order, mp->m_nCurrentOrder, row, mp->m_nRow);
-#endif
-	CSoundFile::gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS
-				| SNDMIX_DIRECTTODISK
-				| SNDMIX_NOMIXING);
-	mp->m_nRepeatCount = -1;
-	mp->m_nInitialRepeatCount = -1;
-	
-	csf_midi_out_note = _schism_midi_out_note;
-	csf_midi_out_raw = _schism_midi_out_raw;
-
-	return (order == (signed) mp->m_nCurrentOrder) ? 1 : 0;
-}
 
 
 
@@ -586,9 +510,6 @@ void song_loop_pattern(int pattern, int row)
         song_lock_audio();
 
         song_reset_play_state();
-
-	int n = song_order_for_pattern(pattern, -1);
-	if (n > -1) (void)mp_chaseback(n, row);
 
         max_channels_used = 0;
         csf_loop_pattern(mp, pattern, row);
@@ -604,31 +525,11 @@ void song_start_at_order(int order, int row)
         song_lock_audio();
 
         song_reset_play_state();
-	if (!mp_chaseback(order, row)) {
-		while (order < MAX_ORDERS) {
-			switch (mp->Orderlist[order]) {
-			case ORDER_SKIP:
-				order++;
-				row = 0;
-				continue;
 
-			case ORDER_LAST:
-				if (!order && !row) break;
-				order = 0;
-				row = 0;
-				continue;
-			};
-			break;
-		}
-		if (order == MAX_ORDERS) {
-			order = 0;
-			row = 0;
-		}
+	csf_set_current_order(mp, order);
+	mp->m_nBreakRow = row;
+	max_channels_used = 0;
 
-		csf_set_current_order(mp, order);
-		mp->m_nRow = mp->m_nProcessRow = row;
-		max_channels_used = 0;
-	}
 	GM_SendSongStartCode();
 	/* TODO: GM_SendSongPositionCode(calculate the number of 1/16 notes) */
         song_unlock_audio();
