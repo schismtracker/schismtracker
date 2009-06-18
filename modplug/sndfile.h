@@ -246,6 +246,11 @@
 #define DNA_NOTEOFF             1
 #define DNA_NOTEFADE            2
 
+// Nothing innately special about this -- just needs to be above the max pattern length.
+// process row is set to this in order to get the player to jump to the end of the pattern.
+// (See ITTECH.TXT)
+#define PROCESS_NEXT_ORDER      0xFFFE
+
 // Module flags
 #define SONG_EMBEDMIDICFG       0x0001
 #define SONG_FASTVOLSLIDES      0x0002
