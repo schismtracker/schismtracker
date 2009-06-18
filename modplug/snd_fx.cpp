@@ -1556,7 +1556,7 @@ void csf_process_effects(CSoundFile *csf)
 		}
 
 		// Volume Column Effect (except volume & panning)
-		if ((volcmd > VOLCMD_PANNING) && (csf->m_dwSongFlags & SONG_FIRSTTICK)) {
+		if (volcmd > VOLCMD_PANNING) {
 			if (volcmd == VOLCMD_TONEPORTAMENTO) {
 				fx_tone_portamento(csf->m_dwSongFlags, pChn,
 					ImpulseTrackerPortaVolCmd[vol & 0x0F]);
