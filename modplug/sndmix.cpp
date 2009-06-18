@@ -269,7 +269,7 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 static int increment_row(CSoundFile *csf)
 {
 	csf->m_nProcessRow = csf->m_nBreakRow; /* [ProcessRow = BreakRow] */
-	csf->m_nBreakRow = 0;               /* [BreakRow = 0] */
+	csf->m_nBreakRow = 0;                  /* [BreakRow = 0] */
 
 	if (csf->m_dwSongFlags & SONG_PATTERNLOOP)
 		return true;

@@ -1885,7 +1885,7 @@ void csf_process_effects(CSoundFile *csf)
 		case CMD_POSITIONJUMP:
 			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
 				csf->m_nProcessOrder = param - 1;
-				csf->m_nProcessRow = 0xfffe;
+				csf->m_nProcessRow = PROCESS_NEXT_ORDER;
 			}
 			break;
 
@@ -1893,7 +1893,7 @@ void csf_process_effects(CSoundFile *csf)
 		case CMD_PATTERNBREAK:
 			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
 				csf->m_nBreakRow = param;
-				csf->m_nProcessRow = 0xfffe;
+				csf->m_nProcessRow = PROCESS_NEXT_ORDER;
 			}
 			break;
 
