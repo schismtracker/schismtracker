@@ -252,7 +252,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		csf_check_nna(mp, chan, ins_mode ? ins : samp, note, false);
 	}
 
-	if (ins == KEYJAZZ_NOINST && samp != KEYJAZZ_NOINST && (ins_mode || samp == 0)) {
+	if (ins == KEYJAZZ_NOINST && samp != KEYJAZZ_NOINST && (0 || ins_mode || samp == 0)) {
 		/* this is only needed on the sample page, when in instrument mode... */
 		SONGSAMPLE *s = mp->Samples + samp;
 
@@ -320,6 +320,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->nRowInstr = ins_mode ? ins : samp;
 		c->nRowCommand = effect;
 		c->nRowParam = param;
+		csf_instrument_change(mp, mp->Voices + chan - 1, c->nRowInstr, false, true, true);
+		csf_note_change(mp, chan - 1, note, false, true, true);
 	}
 	
 	if (mp->m_dwSongFlags & SONG_ENDREACHED) {

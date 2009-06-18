@@ -404,6 +404,7 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 
 	csf->m_nProcessOrder = nPos - 1;
 	csf->m_nProcessRow = 0xfffe;
+	csf->m_nRow = 0;
 	csf->m_nBreakRow = 0; /* set this to whatever row to jump to */
 	csf->m_nTickCount = 1;
 	csf->m_nRowCount = 1;
