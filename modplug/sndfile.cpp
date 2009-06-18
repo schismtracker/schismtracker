@@ -435,7 +435,7 @@ void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow)
 		if (nRow < 0 || nRow >= csf->PatternSize[nPat])
 			nRow = 0;
 		csf->m_nProcessOrder = 0; /* whatever */
-		csf->m_nProcessRow = nRow;
+		csf->m_nBreakRow = nRow;
 		csf->m_nTickCount = 1;
 		csf->m_nRowCount = 1;
 		csf->m_nCurrentPattern = nPat;
