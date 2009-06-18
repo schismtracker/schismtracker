@@ -1429,7 +1429,7 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, boo
 }
 
 
-bool csf_process_effects(CSoundFile *csf)
+void csf_process_effects(CSoundFile *csf)
 {
 	SONGVOICE *pChn = csf->Voices;
 	for (uint32_t nChn=0; nChn<csf->m_nChannels; nChn++, pChn++) {
@@ -1480,8 +1480,7 @@ bool csf_process_effects(CSoundFile *csf)
 		// whereby SD0 and SC0 are ignored
 		//
 		// (FIXME test this stuff, rewriting tick effects probably broke it)
-		if (((csf->m_nTickCount % csf->m_nMusicSpeed) == nStartTick)
-				&& (nStartTick > 0 || csf->m_nTickCount == 0)) {
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
 			uint32_t note = pChn->nRowNote;
 			if (instr) pChn->nNewIns = instr;
 			if (!note && instr) {
@@ -1618,8 +1617,7 @@ bool csf_process_effects(CSoundFile *csf)
 			break;
 		// Set Volume
 		case CMD_VOLUME:
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    == (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			pChn->nVolume = (param < 64) ? param*4 : 256;
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
@@ -1915,7 +1913,5 @@ bool csf_process_effects(CSoundFile *csf)
 			break;
 		}
 	}
-
-	return true;
 }
 
