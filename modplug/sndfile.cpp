@@ -39,10 +39,11 @@ CSoundFile::CSoundFile()
       m_nChannels(), m_nMixChannels(0), m_nMixStat(), m_nBufferCount(),
       m_nType(MOD_TYPE_NONE),
       m_nSamples(0), m_nInstruments(0),
-      m_nTickCount(), m_nRowDelay(), m_nTickDelay(),
+      m_nTickCount(), m_nRowCount(),
       m_nMusicSpeed(), m_nMusicTempo(),
-      m_nNextRow(), m_nRow(),
-      m_nCurrentPattern(), m_nCurrentOrder(), m_nNextOrder(),
+      m_nProcessRow(), m_nRow(),
+      m_nBreakRow(),
+      m_nCurrentPattern(), m_nCurrentOrder(), m_nProcessOrder(),
       m_nLockedOrder(), m_nRestartPos(),
       m_nGlobalVolume(128), m_nSongPreAmp(),
       m_nFreqFactor(128), m_nTempoFactor(128),
@@ -87,13 +88,11 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nGlobalVolume = 128;
 	m_nDefaultSpeed = 6;
 	m_nDefaultTempo = 125;
-	m_nRowDelay = 0;
-	m_nTickDelay = 0;
-	m_nNextRow = 0;
+	m_nProcessRow = 0;
 	m_nRow = 0;
 	m_nCurrentPattern = 0;
 	m_nCurrentOrder = 0;
-	m_nNextOrder = 0;
+	m_nProcessOrder = 0;
 	m_nRestartPos = 0;
 	m_nSongPreAmp = 0x30;
 	m_lpszSongComments = NULL;
@@ -186,17 +185,22 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	// Set default values
 	if (m_nDefaultTempo < 31) m_nDefaultTempo = 31;
 	if (!m_nDefaultSpeed) m_nDefaultSpeed = 6;
+
 	m_nMusicSpeed = m_nDefaultSpeed;
 	m_nMusicTempo = m_nDefaultTempo;
 	m_nGlobalVolume = m_nDefaultGlobalVolume;
-	m_nNextOrder = 0;
+	m_nProcessOrder = -1;
 	m_nCurrentOrder = 0;
 	m_nCurrentPattern = 0;
 	m_nBufferCount = 0;
-	m_nTickCount = m_nMusicSpeed;
-	m_nNextRow = 0;
+	m_nTickCount = 1;
+	m_nRowCount = 1;
 	m_nRow = 0;
-	if ((m_nRestartPos >= MAX_ORDERS) || (Orderlist[m_nRestartPos] >= MAX_PATTERNS)) m_nRestartPos = 0;
+	m_nProcessRow = 0xfffe;
+
+	// FIXME get rid of restart pos altogether, it's dumb
+	if ((m_nRestartPos >= MAX_ORDERS) || (Orderlist[m_nRestartPos] >= MAX_PATTERNS))
+		m_nRestartPos = 0;
 
 	for (unsigned int n = 1; n <= this->m_nInstruments; n++) {
 		SONGINSTRUMENT *ins = this->Instruments[n];
@@ -377,13 +381,6 @@ static void set_current_pos_0(CSoundFile *csf)
 	csf->m_nGlobalVolume = csf->m_nDefaultGlobalVolume;
 	csf->m_nMusicSpeed = csf->m_nDefaultSpeed;
 	csf->m_nMusicTempo = csf->m_nDefaultTempo;
-	csf->m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
-	csf->m_nNextOrder = 0;
-	csf->m_nNextRow = 0;
-	csf->m_nTickCount = csf->m_nMusicSpeed;
-	csf->m_nBufferCount = 0;
-	csf->m_nRowDelay = 0;
-	csf->m_nTickDelay = 0;
 }
 
 
@@ -402,17 +399,16 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 		csf->Voices[j].nPatternLoop = 0;
 		csf->Voices[j].nTremorCount = 0;
 	}
-	if (!nPos) {
+	if (!nPos)
 		set_current_pos_0(csf);
-	} else {
-		csf->m_nNextOrder = nPos;
-		csf->m_nRow = csf->m_nNextRow = 0;
-		csf->m_nCurrentPattern = 0;
-		csf->m_nTickCount = csf->m_nMusicSpeed;
-		csf->m_nBufferCount = 0;
-		csf->m_nRowDelay = 0;
-		csf->m_nTickDelay = 0;
-	}
+
+	csf->m_nProcessOrder = nPos - 1;
+	csf->m_nProcessRow = 0xfffe;
+	csf->m_nBreakRow = 0; /* set this to whatever row to jump to */
+	csf->m_nTickCount = 1;
+	csf->m_nRowCount = 1;
+	csf->m_nBufferCount = 0;
+
 	csf->m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 }
 
@@ -438,11 +434,11 @@ void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow)
 	} else {
 		if (nRow < 0 || nRow >= csf->PatternSize[nPat])
 			nRow = 0;
+		csf->m_nProcessOrder = 0; /* whatever */
+		csf->m_nProcessRow = nRow;
+		csf->m_nTickCount = 1;
+		csf->m_nRowCount = 1;
 		csf->m_nCurrentPattern = nPat;
-		csf->m_nRow = csf->m_nNextRow = nRow;
-		csf->m_nTickCount = csf->m_nMusicSpeed;
-		csf->m_nRowDelay = 0;
-		csf->m_nTickDelay = 0;
 		csf->m_nBufferCount = 0;
 		csf->m_dwSongFlags |= SONG_PATTERNLOOP;
 	}

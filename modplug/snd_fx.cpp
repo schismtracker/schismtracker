@@ -365,7 +365,7 @@ static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
 	SONGVOICE *pChn = &csf->Voices[nChn];
 
 	//printf("Q%02X note=%02X tick%d  %d\n", param, pChn->nRowNote, m_nTickCount, pChn->nRetrigCount);
-	if (!csf->m_nTickCount && pChn->nRowNote) {
+	if ((csf->m_dwSongFlags & SONG_FIRSTTICK) && pChn->nRowNote) {
 		pChn->nRetrigCount = param & 0xf;
 	} else if (!--pChn->nRetrigCount) {
 		pChn->nRetrigCount = param & 0xf;
@@ -477,8 +477,6 @@ static int fx_pattern_loop(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 static void fx_extended_channel(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 {
 	// S9x and X9x commands (S3M/XM/IT only)
-	if ((pChn->nTickStart % csf->m_nMusicSpeed) != (csf->m_nTickCount % csf->m_nMusicSpeed))
-		return;
 	switch(param & 0x0F) {
         // S91: Surround On
 	case 0x01:
@@ -541,12 +539,12 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 		break;
 	// S6x: Pattern Delay for x ticks
 	case 0x60:
-		// XXX shouldn't this be *added*?
-		csf->m_nTickDelay = param;
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			csf->m_nTickCount += param;
 		break;
 	// S7x: Envelope Control
 	case 0x70:
-		if ((pChn->nTickStart % csf->m_nMusicSpeed) != (csf->m_nTickCount % csf->m_nMusicSpeed))
+		if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 			break;
 		switch(param) {
 		case 0:
@@ -582,24 +580,25 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 		break;
 	// S8x: Set 4-bit Panning
 	case 0x80:
-		pChn->dwFlags &= ~CHN_SURROUND;
-		if ((pChn->nTickStart % csf->m_nMusicSpeed) != (csf->m_nTickCount % csf->m_nMusicSpeed))
-			break;
-		pChn->nPan = (param << 4) + 8;
-		pChn->dwFlags |= CHN_FASTVOLRAMP;
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+			pChn->dwFlags &= ~CHN_SURROUND;
+			pChn->nPan = (param << 4) + 8;
+			pChn->dwFlags |= CHN_FASTVOLRAMP;
+		}
 		break;
 	// S9x: Set Surround
 	case 0x90:
-		fx_extended_channel(csf, pChn, param & 0x0F);
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			fx_extended_channel(csf, pChn, param & 0x0F);
 		break;
 	// SAx: Set 64k Offset
 	case 0xA0:
-		if ((pChn->nTickStart % csf->m_nMusicSpeed) != (csf->m_nTickCount % csf->m_nMusicSpeed))
-			break;
-		pChn->nOldHiOffset = param;
-		if ((pChn->nRowNote) && (pChn->nRowNote < 0x80)) {
-			uint32_t pos = param << 16;
-			if (pos < pChn->nLength) pChn->nPos = pos;
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+			pChn->nOldHiOffset = param;
+			if ((pChn->nRowNote) && (pChn->nRowNote < 0x80)) {
+				uint32_t pos = param << 16;
+				if (pos < pChn->nLength) pChn->nPos = pos;
+			}
 		}
 		break;
 	// SBx: Pattern Loop
@@ -609,6 +608,10 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 		break;
 	// SDx: Note Delay
 	// SEx: Pattern Delay for x rows
+	case 0xE0:
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			csf->m_nTickCount += param;
+		break;
 	// SFx: S3M: Funk Repeat, IT: Set Active Midi Macro
 	case 0xF0:
 		pChn->nActiveMacro = param;
@@ -809,8 +812,8 @@ unsigned int csf_get_length(CSoundFile *csf)
 	memset(chnvols, 64, sizeof(chnvols));
 	for (uint32_t icv=0; icv<csf->m_nChannels; icv++)
 		chnvols[icv] = csf->Channels[icv].nVolume;
-	nMaxRow = csf->m_nNextRow;
-	nMaxPattern = csf->m_nNextOrder;
+	nMaxRow = csf->m_nProcessRow;
+	nMaxPattern = csf->m_nProcessOrder;
 	nCurrentPattern = nNextPattern = 0;
 	nPattern = csf->Orderlist[0];
 	nRow = nNextRow = 0;
@@ -1428,7 +1431,6 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, boo
 
 bool csf_process_effects(CSoundFile *csf)
 {
-	int nBreakRow = -1, nPosJump = -1, nPatLoopRow = -1;
 	SONGVOICE *pChn = csf->Voices;
 	for (uint32_t nChn=0; nChn<csf->m_nChannels; nChn++, pChn++) {
 		pChn->nCommand=0;
@@ -1445,6 +1447,7 @@ bool csf_process_effects(CSoundFile *csf)
 
 		pChn->dwFlags &= ~CHN_FASTVOLRAMP;
 		// Process special effects (note delay, pattern delay, pattern loop)
+		// FIXME why are these here and not with the rest of them?
 		if (cmd == CMD_S3MCMDEX) {
 			int nloop; // g++ is dumb
 			if (param)
@@ -1462,11 +1465,7 @@ bool csf_process_effects(CSoundFile *csf)
 					break;
 				nloop = fx_pattern_loop(csf, pChn, param & 0x0F);
 				if (nloop >= 0)
-					nPatLoopRow = nloop;
-				break;
-			case 0xe:
-				// Pattern Delay
-				csf->m_nRowDelay = param & 0x0F;
+					csf->m_nProcessRow = nloop;
 				break;
 			}
 		}
@@ -1479,9 +1478,10 @@ bool csf_process_effects(CSoundFile *csf)
 		//
 		// Scream Tracker has a similar bug (which we don't simulate here)
 		// whereby SD0 and SC0 are ignored
-		if (((csf->m_nTickCount - csf->m_nTickDelay) % csf->m_nMusicSpeed) == nStartTick
-		    && (nStartTick > 0 || csf->m_nTickCount == 0))
-		{
+		//
+		// (FIXME test this stuff, rewriting tick effects probably broke it)
+		if (((csf->m_nTickCount % csf->m_nMusicSpeed) == nStartTick)
+				&& (nStartTick > 0 || csf->m_nTickCount == 0)) {
 			uint32_t note = pChn->nRowNote;
 			if (instr) pChn->nNewIns = instr;
 			if (!note && instr) {
@@ -1557,7 +1557,7 @@ bool csf_process_effects(CSoundFile *csf)
 		}
 
 		// Volume Column Effect (except volume & panning)
-		if ((volcmd > VOLCMD_PANNING) && (csf->m_nTickCount >= nStartTick)) {
+		if ((volcmd > VOLCMD_PANNING) && (csf->m_dwSongFlags & SONG_FIRSTTICK)) {
 			if (volcmd == VOLCMD_TONEPORTAMENTO) {
 				fx_tone_portamento(csf->m_dwSongFlags, pChn,
 					ImpulseTrackerPortaVolCmd[vol & 0x0F]);
@@ -1671,13 +1671,15 @@ bool csf_process_effects(CSoundFile *csf)
 
 		// Set Speed
 		case CMD_SPEED:
-			if (!csf->m_nTickCount && param)
+			if ((csf->m_dwSongFlags & SONG_FIRSTTICK) && param) {
+				csf->m_nTickCount = param;
 				csf->m_nMusicSpeed = param;
+			}
 			break;
 
 		// Set Tempo
 		case CMD_TEMPO:
-			if (!csf->m_nTickCount) {
+			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
 				if (param)
 					pChn->nOldTempo = param;
 				else
@@ -1704,7 +1706,7 @@ bool csf_process_effects(CSoundFile *csf)
 
 		// Set Offset
 		case CMD_OFFSET:
-			if ((pChn->nTickStart % csf->m_nMusicSpeed) != (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			if (param)
 				pChn->nOldOffset = param;
@@ -1729,8 +1731,7 @@ bool csf_process_effects(CSoundFile *csf)
 		// Arpeggio
 		case CMD_ARPEGGIO:
 			pChn->nCommand = CMD_ARPEGGIO;
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    != (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			if (!pChn->nPeriod || !pChn->nNote)
 				break;
@@ -1748,8 +1749,7 @@ bool csf_process_effects(CSoundFile *csf)
 		// Tremor
 		case CMD_TREMOR:
 			pChn->nCommand = CMD_TREMOR;
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    != (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			if (param)
 				pChn->nTremorParam = param;
@@ -1757,8 +1757,7 @@ bool csf_process_effects(CSoundFile *csf)
 
 		// Set Global Volume
 		case CMD_GLOBALVOLUME:
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    != (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			if (param <= 128)
 				csf->m_nGlobalVolume = param;
@@ -1771,8 +1770,7 @@ bool csf_process_effects(CSoundFile *csf)
 
 		// Set 8-bit Panning (Xxx)
 		case CMD_PANNING8:
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    != (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			if (!(csf->m_dwSongFlags & SONG_SURROUNDPAN))
 				pChn->dwFlags &= ~CHN_SURROUND;
@@ -1802,8 +1800,7 @@ bool csf_process_effects(CSoundFile *csf)
 
 		// Key Off
 		case CMD_KEYOFF:
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    != (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			fx_key_off(csf, nChn);
 			break;
@@ -1830,8 +1827,7 @@ bool csf_process_effects(CSoundFile *csf)
 
 		// Set Channel Global Volume
 		case CMD_CHANNELVOLUME:
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    != (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			if (param <= 64) {
 				pChn->nGlobalVol = param;
@@ -1872,36 +1868,40 @@ bool csf_process_effects(CSoundFile *csf)
 
 		// Set Envelope Position
 		case CMD_SETENVPOSITION:
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    == (csf->m_nTickCount % csf->m_nMusicSpeed)) {
-				pChn->nVolEnvPosition = param;
-				pChn->nPanEnvPosition = param;
-				pChn->nPitchEnvPosition = param;
-				if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader) {
-					SONGINSTRUMENT *penv = pChn->pHeader;
-					if ((pChn->dwFlags & CHN_PANENV)
-					    && (penv->PanEnv.nNodes)
-					    && ((int)param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1])) {
-						pChn->dwFlags &= ~CHN_PANENV;
-					}
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
+				break;
+			pChn->nVolEnvPosition = param;
+			pChn->nPanEnvPosition = param;
+			pChn->nPitchEnvPosition = param;
+			if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader) {
+				SONGINSTRUMENT *penv = pChn->pHeader;
+				if ((pChn->dwFlags & CHN_PANENV)
+				    && (penv->PanEnv.nNodes)
+				    && ((int)param > penv->PanEnv.Ticks[penv->PanEnv.nNodes-1])) {
+					pChn->dwFlags &= ~CHN_PANENV;
 				}
 			}
 			break;
 
 		// Position Jump
 		case CMD_POSITIONJUMP:
-			nPosJump = param;
+			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+				csf->m_nProcessOrder = param - 1;
+				csf->m_nProcessRow = 0xfffe;
+			}
 			break;
 
 		// Pattern Break
 		case CMD_PATTERNBREAK:
-			nBreakRow = param;
+			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+				csf->m_nBreakRow = param;
+				csf->m_nProcessRow = 0xfffe;
+			}
 			break;
 
 		// Midi Controller
 		case CMD_MIDI:
-			if ((pChn->nTickStart % csf->m_nMusicSpeed)
-			    != (csf->m_nTickCount % csf->m_nMusicSpeed))
+			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			if (param < 0x80) {
 				csf_process_midi_macro(csf, nChn,
@@ -1916,48 +1916,6 @@ bool csf_process_effects(CSoundFile *csf)
 		}
 	}
 
-	// Navigation Effects
-	if (!csf->m_nTickCount) {
-		if (nPatLoopRow >= 0) {
-			// Pattern Loop
-			csf->m_nNextOrder = csf->m_nCurrentOrder;
-			csf->m_nNextRow = nPatLoopRow;
-			if (csf->m_nRowDelay)
-				csf->m_nNextRow++;
-		} else if (nBreakRow >= 0 || nPosJump >= 0) {
-			// Pattern Break / Position Jump only if no loop running
-			bool bNoLoop = false;
-			if (nPosJump < 0)
-				nPosJump = csf->m_nCurrentOrder + 1;
-			if (nBreakRow < 0)
-				nBreakRow = 0;
-			// Modplug Tracker & ModPlugin allow backward jumps
-			if ((nPosJump < (int)csf->m_nCurrentOrder)
-			 || ((nPosJump == (int)csf->m_nCurrentOrder) && (nBreakRow <= (int)csf->m_nRow)))
-			{
-				if (csf->m_nRepeatCount) {
-					if (csf->m_nRepeatCount > 0)
-						csf->m_nRepeatCount--;
-				} else {
-					if (csf->gdwSoundSetup & SNDMIX_NOBACKWARDJUMPS)
-						// Backward jump disabled
-						bNoLoop = true;
-					//reset repeat count incase there are multiple loops.
-					//(i.e. Unreal tracks)
-					csf->m_nRepeatCount = csf->m_nInitialRepeatCount;
-				}
-			}
-			if (!bNoLoop && nPosJump < MAX_ORDERS
-			    && (nPosJump != (int)csf->m_nCurrentOrder || nBreakRow != (int)csf->m_nRow)) {
-				if (nPosJump != (int)csf->m_nCurrentOrder) {
-					for (uint32_t i=0; i<csf->m_nChannels; i++)
-						csf->Voices[i].nPatternLoopCount = 0;
-				}
-				csf->m_nNextOrder = nPosJump;
-				csf->m_nNextRow = (uint32_t)nBreakRow;
-			}
-		}
-	}
 	return true;
 }
 

@@ -266,99 +266,85 @@ unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffe
 /////////////////////////////////////////////////////////////////////////////
 // Handles navigation/effects
 
-int csf_process_row(CSoundFile *csf)
+static int increment_row(CSoundFile *csf)
 {
-	if (++csf->m_nTickCount >= csf->m_nMusicSpeed * (csf->m_nRowDelay+1) + csf->m_nTickDelay) {
-		csf->m_nRowDelay = 0;
-		csf->m_nTickDelay = 0;
-		csf->m_nTickCount = 0;
-		csf->m_nRow = csf->m_nNextRow;
-		
-		// Reset Pattern Loop Effect
-		if (csf->m_nCurrentOrder != csf->m_nNextOrder) {
-			if (csf->m_nLockedOrder < MAX_ORDERS) {
-				csf->m_nCurrentOrder = csf->m_nLockedOrder;
+	csf->m_nProcessRow = csf->m_nBreakRow; /* [ProcessRow = BreakRow] */
+	csf->m_nBreakRow = 0;               /* [BreakRow = 0] */
 
-				if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED))
-					csf->m_nLockedOrder = MAX_ORDERS;
-			} else {
-				csf->m_nCurrentOrder = csf->m_nNextOrder;
-			}
+	if (csf->m_dwSongFlags & SONG_PATTERNLOOP)
+		return true;
 
-			// Check if pattern is valid
-			if (!(csf->m_dwSongFlags & SONG_PATTERNLOOP)) {
-				csf->m_nCurrentPattern = (csf->m_nCurrentOrder < MAX_ORDERS) ? csf->Orderlist[csf->m_nCurrentOrder] : 0xFF;
+	/* [Increase ProcessOrder] */
+	/* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
+	do
+		csf->m_nProcessOrder++;
+	while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP);
 
-				if ((csf->m_nCurrentPattern < MAX_PATTERNS) && (!csf->Patterns[csf->m_nCurrentPattern]))
-					csf->m_nCurrentPattern = 0xFE;
-
-				while (csf->m_nCurrentPattern >= MAX_PATTERNS) {
-					// End of song ?
-					if (csf->m_nCurrentPattern == 0xFF
-					    || csf->m_nCurrentOrder >= MAX_ORDERS) {
-						if (csf->m_nRepeatCount > 0)
-							csf->m_nRepeatCount--;
-
-						if (!csf->m_nRepeatCount)
-							return false;
-
-						csf->m_nCurrentOrder = csf->m_nRestartPos;
-
-						if (csf->Orderlist[csf->m_nCurrentOrder] >= MAX_PATTERNS
-						    || !csf->Patterns[csf->Orderlist[csf->m_nCurrentOrder]])
-							return false;
-					} else {
-						csf->m_nCurrentOrder++;
-					}
-
-					csf->m_nCurrentPattern = (csf->m_nCurrentOrder < MAX_ORDERS)
-						? csf->Orderlist[csf->m_nCurrentOrder]
-						: 0xFF;
-
-					if (csf->m_nCurrentPattern < MAX_PATTERNS
-					    && !csf->Patterns[csf->m_nCurrentPattern])
-						csf->m_nCurrentPattern = 0xFE;
-				}
-
-				csf->m_nNextOrder = csf->m_nCurrentOrder;
-			} else if (csf->m_nCurrentOrder < 255) {
-				if (csf->m_nRepeatCount > 0)
-					csf->m_nRepeatCount--;
-
-				if (!csf->m_nRepeatCount)
-					return false;
-			}
-		}
-
-		if (csf->m_dwSongFlags & SONG_STEP) {
-			csf->m_dwSongFlags &= ~SONG_STEP;
-			csf->m_dwSongFlags |= SONG_PAUSED;
-		}
-
-		if (!csf->PatternSize[csf->m_nCurrentPattern] || !csf->Patterns[csf->m_nCurrentPattern]) {
-			/* okay, this is wrong. allocate the pattern _NOW_ */
-			csf->Patterns[csf->m_nCurrentPattern] = csf_allocate_pattern(64, 64);
-			csf->PatternSize[csf->m_nCurrentPattern] = 64;
-			csf->PatternAllocSize[csf->m_nCurrentPattern] = 64;
-		}
-
-		// Weird stuff?
-		if (csf->m_nCurrentPattern >= MAX_PATTERNS)
+	/* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
+	if (csf->Orderlist[csf->m_nProcessOrder] == ORDER_LAST) {
+		if (csf->m_nRepeatCount > 0)
+			csf->m_nRepeatCount--;
+		if (!csf->m_nRepeatCount)
 			return false;
 
-		if (csf->m_nRow >= csf->PatternSize[csf->m_nCurrentPattern])
-			csf->m_nRow = 0;
+		csf->m_nProcessOrder = 0;
+		while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP)
+			csf->m_nProcessOrder++;
+	}
+	if (csf->Orderlist[csf->m_nProcessOrder] >= MAX_PATTERNS) {
+		// what the butt?
+		return false;
+	}
 
-		csf->m_nNextRow = csf->m_nRow + 1;
+	/* [CurrentPattern = Order[ProcessOrder]] */
+	csf->m_nCurrentPattern = csf->Orderlist[csf->m_nProcessOrder];
 
-		if (csf->m_nNextRow >= csf->PatternSize[csf->m_nCurrentPattern]) {
-			if (!(csf->m_dwSongFlags & SONG_PATTERNLOOP))
-				csf->m_nNextOrder = csf->m_nCurrentOrder + 1;
-			else if (csf->m_nRepeatCount > 0)
-				return false;
+	if (!csf->PatternSize[csf->m_nCurrentPattern] || !csf->Patterns[csf->m_nCurrentPattern]) {
+		/* okay, this is wrong. allocate the pattern _NOW_ */
+		csf->Patterns[csf->m_nCurrentPattern] = csf_allocate_pattern(64, 64);
+		csf->PatternSize[csf->m_nCurrentPattern] = 64;
+		csf->PatternAllocSize[csf->m_nCurrentPattern] = 64;
+	}
 
-			csf->m_nNextRow = 0;
+	return true;
+}
+
+
+int csf_process_tick(CSoundFile *csf)
+{
+	/* [Decrease tick counter. Is tick counter 0?] */
+	if (--csf->m_nTickCount == 0) {
+		/* [-- Yes --] */
+		
+		/* [Tick counter = Tick counter set (the current 'speed')] */
+		csf->m_nTickCount = csf->m_nMusicSpeed;
+
+		/* [Decrease row counter. Is row counter 0?] */
+		if (--csf->m_nRowCount == 0) {
+			/* [-- Yes --] */
+
+			csf->m_nRowCount = 1; /* [Row counter = 1] */
+			
+			/* [Increase ProcessRow. Is ProcessRow > NumberOfRows?] */
+			if (++csf->m_nProcessRow > csf->PatternSize[csf->m_nCurrentPattern]) {
+				/* [-- Yes --] */
+				
+				if (!increment_row(csf))
+					return false;
+			} /* else [-- No --] */
+			
+			/* [CurrentRow = ProcessRow] */
+			csf->m_nRow = csf->m_nProcessRow;
+
+			/* [Update Pattern Variables]
+			(this is handled along with update effects) */
+			csf->m_dwSongFlags |= SONG_FIRSTTICK;
+		} else {
+			/* [-- No --] */
+			/* Call update-effects for each channel. */
+			csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
 		}
+
 
 		// Reset channel values
 		SONGVOICE *pChn = csf->Voices;
@@ -392,28 +378,17 @@ int csf_process_row(CSoundFile *csf)
 			pChn->dwFlags &= ~(CHN_PORTAMENTO | CHN_VIBRATO | CHN_TREMOLO | CHN_PANBRELLO);
 			pChn->nCommand = 0;
 		}	 
-	}
-	else if (csf_midi_out_note) {
-		MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
+	} else {
+		/* [-- No --] */
+		/* [Update effects for each channel as required.] */
 
-		for (unsigned int nChn=0; nChn<csf->m_nChannels; nChn++, m++) {
-			/* m==NULL allows schism to receive notification of SDx and Scx commands */
-			csf_midi_out_note(nChn, 0);
-		}
-	}
+		if (csf_midi_out_note) {
+			MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
 
-	// Should we process tick0 effects?
-	if (!csf->m_nMusicSpeed)
-		csf->m_nMusicSpeed = 1;
-
-	csf->m_dwSongFlags |= SONG_FIRSTTICK;
-
-	if (csf->m_nTickCount) {
-		csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
-
-		if (csf->m_nTickCount < csf->m_nMusicSpeed * (1 + csf->m_nRowDelay)) {
-			if (!(csf->m_nTickCount % csf->m_nMusicSpeed))
-				csf->m_dwSongFlags |= SONG_FIRSTTICK;
+			for (unsigned int nChn=0; nChn<csf->m_nChannels; nChn++, m++) {
+				/* m==NULL allows schism to receive notification of SDx and Scx commands */
+				csf_midi_out_note(nChn, 0);
+			}
 		}
 	}
 
@@ -431,14 +406,13 @@ static void handle_realtime_closures(CSoundFile *csf)
 
 	for (unsigned int i = 0; i < csf->m_nChannels; chan++, i++) {
 		/* reset end of "row" */
-		if (chan->nRealtime &&
-		    chan->nRowNote &&
-		    (chan->nTickStart % csf->m_nMusicSpeed) ==
-		     (csf->m_nTickCount % csf->m_nMusicSpeed)) {
+		// FIXME this is probably broken now
+		if (chan->nRealtime && chan->nRowNote
+		    && (chan->nTickStart % csf->m_nMusicSpeed) == (csf->m_nTickCount % csf->m_nMusicSpeed)) {
 			chan->nRealtime = 0;
 			chan->nRowNote = 0;
 			chan->nRowInstr = 0;
-		  //chan->nMaster
+			//chan->nMaster
 			chan->nRowVolCmd = 0;
 			chan->nRowVolume = 0;
 			chan->nRowCommand = 0;
@@ -479,7 +453,8 @@ static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 		}
 	}
 	
-	if (csf->m_nTickCount || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
+	// handle on tick-N, or all ticks if not in old-effects mode
+	if (!(csf->m_dwSongFlags & SONG_FIRSTTICK) || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
 		chan->nTremoloPos = (trempos + chan->nTremoloSpeed) & 0x3F;
 	}
 }
@@ -576,7 +551,8 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 
 	period += vdelta;
 
-	if (csf->m_nTickCount || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
+	// handle on tick-N, or all ticks if not in old-effects mode
+	if (!(csf->m_dwSongFlags & SONG_FIRSTTICK) || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
 		chan->nVibratoPos = (vibpos + chan->nVibratoSpeed) & 0x3F;
 	}
 
@@ -764,6 +740,7 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 static inline int rn_arpeggio(CSoundFile *csf, SONGVOICE *chan, int period)
 {
 	int a;
+	// XXX test this, tick count goes the other way now so it's probably wrong
 	switch (csf->m_nTickCount % 3) {
 	case 1:
 		a = chan->nArpeggio >> 4;
@@ -1100,28 +1077,25 @@ int csf_read_note(CSoundFile *csf)
 {
 	// Checking end of row ?
 	if (csf->m_dwSongFlags & SONG_PAUSED) {
-		/*csf->m_nTickCount = 0;*/
-		if (!csf->m_nMusicSpeed) csf->m_nMusicSpeed = 6;
-		if (!csf->m_nMusicTempo) csf->m_nMusicTempo = 125;
+		if (!csf->m_nMusicSpeed)
+			csf->m_nMusicSpeed = 6;
+		if (!csf->m_nMusicTempo)
+			csf->m_nMusicTempo = 125;
 
-		csf->m_nRowDelay = 0;
-		csf->m_nTickDelay = 0;
-
-		csf->m_dwSongFlags |= SONG_FIRSTTICK;
-
-		if (csf->m_nTickCount)
+		if (csf->m_nRowCount)
 			csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
+		else
+			csf->m_dwSongFlags |= SONG_FIRSTTICK;
 
-		csf_process_effects(csf);
-		csf->m_nTickCount++;
-
-		if (csf->m_nTickCount >= csf->m_nMusicSpeed)
-			csf->m_nTickCount = 0;
+		// XXX why was this being done twice
+		//csf_process_effects(csf);
+		if (--csf->m_nTickCount == 0)
+			csf->m_nTickCount = csf->m_nMusicSpeed;
 
 		if (!csf_process_effects(csf))
 			return false;
 	} else {
-		if (!csf_process_row(csf))
+		if (!csf_process_tick(csf))
 			return false;
 	}
 
