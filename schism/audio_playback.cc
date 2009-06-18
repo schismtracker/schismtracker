@@ -78,6 +78,7 @@ extern "C" {
 	extern void vis_work_8s(char *in, int inlen);
 	extern void vis_work_8m(char *in, int inlen);
 };
+
 // this gets called from sdl
 static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 {
@@ -86,9 +87,8 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 	int i, n;
 
 	if (!stream || !len || !mp) {
-		if (status.current_page == PAGE_WATERFALL
-		|| status.vis_style == VIS_FFT) {
-			vis_work_8m(0,0);
+		if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
+			vis_work_8m(0, 0);
 		}
 		song_stop_unlocked(0);
 		goto POST_EVENT;
@@ -362,45 +362,9 @@ int song_keyup(int samp, int ins, int note)
 // this should be called with the audio LOCKED
 static void song_reset_play_state()
 {
-	int n;
-	SONGVOICE *c;
-	
 	memset(midi_bend_hit, 0, sizeof(midi_bend_hit));
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
 	memset(keyjazz_channels, 0, sizeof(keyjazz_channels));
-	for (n = 0, c = mp->Voices; n < MAX_VOICES; n++, c++) {
-		c->nTickStart = 0;
-		c->nRowNote = c->nRowInstr = c->nRowVolume = c->nRowVolCmd = 0;
-		c->nRowCommand = c->nRowParam = 0;
-		c->nLeftVol = c->nNewLeftVol = c->nLeftRamp = c->nLOfs = 0;
-		c->nRightVol = c->nNewRightVol = c->nRightRamp = c->nROfs = 0;
-		c->nFadeOutVol = c->nLength = c->nLoopStart = c->nLoopEnd = 0;
-		c->nNote = c->nNewNote = c->nNewIns = c->nCommand = c->nPeriod = c->nPos = 0;
-		c->nPatternLoop = c->nPatternLoopCount = c->nPortamentoDest = c->nTremorCount = 0;
-		c->pInstrument = NULL;
-		c->pSample = NULL;
-		c->pHeader = NULL;
-		c->nRealtime = 0;
-		c->nResonance = 0;
-		c->nCutOff = 0x7F;
-		c->nVolume = 256;
-		if (n < MAX_CHANNELS) {
-			c->dwFlags = mp->Channels[n].dwFlags;
-			c->nPan = mp->Channels[n].nPan;
-			c->nGlobalVol = mp->Channels[n].nVolume;
-		} else {
-			c->dwFlags = 0;
-			c->nPan = 128;
-			c->nGlobalVol = 64;
-		}
-
-		/* reset VU meters */
-		c->nRealVolume = c->nVUMeter = 0;
-	}
-	mp->m_nGlobalVolume = mp->m_nDefaultGlobalVolume;
-	mp->m_nMusicTempo = mp->m_nDefaultTempo;
-	mp->m_nTickCount = mp->m_nMusicSpeed = mp->m_nDefaultSpeed;
-	mp->m_nRowDelay = mp->m_nTickDelay = 0;
 
 	// turn this crap off
 	CSoundFile::gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS
@@ -409,9 +373,8 @@ static void song_reset_play_state()
 
 	csf_initialize_dsp(mp, true);
 
-	mp->m_nCurrentOrder = 255; // hack...
-	mp->m_nNextOrder = 0;
-	mp->m_nRow = mp->m_nNextRow = 0;
+	csf_set_current_order(mp, 0);
+
 	mp->m_nInitialRepeatCount = -1;
 	mp->m_nRepeatCount = -1;
 	mp->m_nBufferCount = 0;
@@ -577,7 +540,7 @@ static int mp_chaseback(int order, int row)
 
 	/* set starting point */
         csf_set_current_order(mp, 0);
-        mp->m_nRow = mp->m_nNextRow = 0;
+        mp->m_nRow = mp->m_nProcessRow = 0;
 
 	CSoundFile::gdwSoundSetup |= SNDMIX_NOBACKWARDJUMPS
 				| SNDMIX_NOMIXING;
@@ -663,7 +626,7 @@ void song_start_at_order(int order, int row)
 		}
 
 		csf_set_current_order(mp, order);
-		mp->m_nRow = mp->m_nNextRow = row;
+		mp->m_nRow = mp->m_nProcessRow = row;
 		max_channels_used = 0;
 	}
 	GM_SendSongStartCode();

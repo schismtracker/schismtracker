@@ -211,6 +211,18 @@
 #define RS_PCM32S               (RS_PCM16S|0xC0)                // mono 24-bit signed
 #define RS_STIPCM32S            (RS_PCM16S|0xC0|RSF_STEREO)     // stereo 24-bit signed
 
+// Orderlist
+#define ORDER_SKIP              254 // +++
+#define ORDER_LAST              255 // ---
+
+// 'Special' notes
+// Note fade IS actually supported in Impulse Tracker, but there's no way to handle it in the editor
+// (Actually, any non-valid note is handled internally as a note fade, but it's good to have a single
+// value for internal representation)
+#define NOTE_FADE               253 // ~~~
+#define NOTE_CUT                254 // ^^^
+#define NOTE_OFF                255 // ===
+
 // Auto-vibrato types
 #define VIB_SINE                0
 #define VIB_RAMP_DOWN           1
@@ -512,7 +524,7 @@ int csf_set_resampling_mode(CSoundFile *csf, uint32_t nMode); // SRCMODE_XXXX
 int csf_fade_song(CSoundFile *csf, unsigned int msec);
 int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
 unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer);
-int csf_process_row(CSoundFile *csf);
+int csf_process_tick(CSoundFile *csf);
 int csf_read_note(CSoundFile *csf);
 
 // snd_dsp
@@ -580,10 +592,10 @@ public: // for Editing
 	uint32_t m_nStereoSeparation;
 	uint32_t m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
 	uint32_t m_nType, m_nSamples, m_nInstruments;
-	uint32_t m_nTickCount, m_nRowDelay, m_nTickDelay;
+	uint32_t m_nTickCount, m_nRowCount;
 	uint32_t m_nMusicSpeed, m_nMusicTempo;
-	uint32_t m_nNextRow, m_nRow;
-	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nNextOrder,m_nLockedOrder,m_nRestartPos;
+	uint32_t m_nProcessRow, m_nRow, m_nBreakRow;
+	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nProcessOrder,m_nLockedOrder,m_nRestartPos;
 	uint32_t m_nGlobalVolume, m_nSongPreAmp;
 	uint32_t m_nFreqFactor, m_nTempoFactor;
 	int32_t m_nRepeatCount, m_nInitialRepeatCount;
