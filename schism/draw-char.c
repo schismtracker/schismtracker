@@ -103,82 +103,36 @@ uint8_t *font_data = font_normal; /* this only needs to be global for itf */
 /* --------------------------------------------------------------------- */
 /* half-width characters */
 
-/* wth? i don't get this... the half width table isn't linear anymore?
-   schism dies with "half width char ba not mapped" when i try inserting a
-   note fade, but i have no idea what this code does so i'm not touching it.
-	/storlek
-   update: fixed note fade bug elsewise. just don't draw it with the whacked-
-   looking sinewave chars and it'll be fine, but i still wanna know how this
-   code works, so i'm leaving these useless comments in here :) */
+/* ok i think i get this now, after inspecting it further.
+   good thing no one bothered putting any comments in the code. <grumble>
+   the fake vga buffer is pigeonholing the half-width characters into 14 bits.
+   why 14, i don't know, but that means 7 bits per character, and these functions
+   handle shifting stuff around to get them into that space. realistically, we
+   only need to bother with chars 32 through 127, as well as 173 (middot) and
+   205 (the double-line used for noteoff). since 32->127 is 96 characters, there's
+   plenty of room for the printable stuff... and guess what, 173->205 is another
+   32, which fits nice and clean into 7 bits! so if the character is within that
+   range, we're fine. otherwise it'll just result in a broken glyph. (but it
+   probably wasn't drawn in the font anyway) */
+
 static inline int _pack_halfw(int c)
 {
 	switch (c) {
-	case '0': return 0;
-	case '1': return 1;
-	case '2': return 2;
-	case '3': return 3;
-	case '4': return 4;
-	case '5': return 5;
-	case '6': return 6;
-	case '7': return 7;
-	case '8': return 8;
-	case '9': return 9;
-	case 'a': case 'A': return 10;
-	/* case 'b': */ case 'B': return 11; /* lowercase 'b' used for flat symbol */
-	case 'c': case 'C': return 12;
-	case 'd': case 'D': return 13;
-	case 'e': case 'E': return 14;
-	case 'f': case 'F': return 15;
-	case 'g': case 'G': return 16;
-	case 'h': case 'H': return 17;
-	case 'i': case 'I': return 18;
-	case 'j': case 'J': return 19;
-	case 'k': case 'K': return 20;
-	case 'l': case 'L': return 21;
-	case 'm': case 'M': return 22;
-	case 'n': case 'N': return 23;
-	case 'o': case 'O': return 24;
-	case 'p': case 'P': return 25;
-	case 'q': case 'Q': return 26;
-	case 'r': case 'R': return 27;
-	case 's': case 'S': return 28;
-	case 't': case 'T': return 29;
-	case 'u': case 'U': return 30;
-	case 'v': case 'V': return 31;
-	case 'w': case 'W': return 32;
-	case 'x': case 'X': return 33;
-	case 'y': case 'Y': return 34;
-	case 'z': case 'Z': return 35;
-
-	/* FT2 nonsense */
-	case '$': return 36;
-	case '<': return 37;
-	case '>': return 38;
-
-	case ' ': return 39;
-	case 0xad: return 40;
-	case 0x5e: return 41;
-	case 0xcd: return 42;
-	case 0x7e: return 43;
-
-        /* Mini-sharps and flats */
-        case '-': return 44;
-        case '#': return 45;
-        case 'b': return 46;
-
-	default:
-		fprintf(stderr, "FATAL: half-width character %x not mapped\n", c);
-		exit(255);
-	};
+		case  32 ... 127: return c - 32; /* 0 ... 95 */
+		case 173 ... 205: return 96 + c - 173; /* 96 ... 127 */
+		default:
+			abort();
+			return '?';
+	}
 }
+
 static inline int _unpack_halfw(int c)
 {
-	const unsigned char *zmap = (const unsigned char *)
-		"0123456789ABCDEFGHIJKLMNOPQRSTUV"
-		"WXYZ$<> \xad\x5e\xcd\x7e-#b.................";
-	if (c > 63)
-		return 0; /* eh? */
-	return (int) zmap[c];
+	switch (c) {
+		case  0 ...  95: return c + 32;
+		case 96 ... 127: return 96 - c + 173;
+		default: return '?'; /* should never happen */
+	}
 }
 
 /* --------------------------------------------------------------------- */
