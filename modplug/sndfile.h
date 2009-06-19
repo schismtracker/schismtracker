@@ -597,7 +597,8 @@ public: // for Editing
 	uint32_t m_nStereoSeparation;
 	uint32_t m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
 	uint32_t m_nType, m_nSamples, m_nInstruments;
-	uint32_t m_nTickCount, m_nRowCount;
+	uint32_t m_nTickCount;
+	int32_t m_nRowCount; /* IMPORTANT needs to be signed */
 	uint32_t m_nMusicSpeed, m_nMusicTempo;
 	uint32_t m_nProcessRow, m_nRow, m_nBreakRow;
 	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nProcessOrder,m_nLockedOrder,m_nRestartPos;

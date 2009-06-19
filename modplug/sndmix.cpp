@@ -322,10 +322,15 @@ int csf_process_tick(CSoundFile *csf)
 		csf->m_nTickCount = csf->m_nMusicSpeed;
 
 		/* [Decrease row counter. Is row counter 0?] */
-		if (--csf->m_nRowCount == 0) {
+		if (--csf->m_nRowCount <= 0) {
 			/* [-- Yes --] */
 
-			csf->m_nRowCount = 1; /* [Row counter = 1] */
+			/* [Row counter = 1]
+			this uses zero, in order to simplify SEx effect handling -- SEx has no effect if a
+			channel to its left has already set the delay value. thus we set the row counter
+			there to (value + 1) which is never zero, but 0 and 1 are fundamentally equivalent
+			as far as csf_process_tick is concerned. */
+			csf->m_nRowCount = 0;
 			
 			/* [Increase ProcessRow. Is ProcessRow > NumberOfRows?] */
 			if (++csf->m_nProcessRow >= csf->PatternSize[csf->m_nCurrentPattern]) {

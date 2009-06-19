@@ -407,7 +407,7 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 	csf->m_nRow = 0;
 	csf->m_nBreakRow = 0; /* set this to whatever row to jump to */
 	csf->m_nTickCount = 1;
-	csf->m_nRowCount = 1;
+	csf->m_nRowCount = 0;
 	csf->m_nBufferCount = 0;
 
 	csf->m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
@@ -438,7 +438,7 @@ void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow)
 		csf->m_nProcessOrder = 0; /* whatever */
 		csf->m_nBreakRow = nRow;
 		csf->m_nTickCount = 1;
-		csf->m_nRowCount = 1;
+		csf->m_nRowCount = 0;
 		csf->m_nCurrentPattern = nPat;
 		csf->m_nBufferCount = 0;
 		csf->m_dwSongFlags |= SONG_PATTERNLOOP;

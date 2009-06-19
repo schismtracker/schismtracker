@@ -609,8 +609,10 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 	// SDx: Note Delay
 	// SEx: Pattern Delay for x rows
 	case 0xE0:
-		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
-			csf->m_nTickCount += param;
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+			if (!csf->m_nRowCount) // ugh!
+				csf->m_nRowCount = param + 1;
+		}
 		break;
 	// SFx: S3M: Funk Repeat, IT: Set Active Midi Macro
 	case 0xF0:
@@ -1480,7 +1482,10 @@ void csf_process_effects(CSoundFile *csf)
 		// whereby SD0 and SC0 are ignored
 		//
 		// (FIXME test this stuff, rewriting tick effects probably broke it)
-		if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+		// m_nTickCount decrements from speed, and is always nonzero
+		// thus (m_nMusicSpeed - m_nTickCount) indicates how many ticks we are from zero
+		// nStartTick is the n'th tick on the row that the note should fire on
+		if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick) {
 			uint32_t note = pChn->nRowNote;
 			if (instr) pChn->nNewIns = instr;
 			if (!note && instr) {
