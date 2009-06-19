@@ -1260,7 +1260,8 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
 	case 0x0F:
 		command = (param < (from_xm ? 0x21 : 0x20)) ? CMD_SPEED : CMD_TEMPO;
 		// I have no idea what this next line is supposed to do.
-		//if ((param == 0xFF) && (m_nSamples == 15)) command = 0; break;
+		//if ((param == 0xFF) && (m_nSamples == 15)) command = 0;
+		break;
 	// Extension for XM extended effects
 	case 'G' - 55:	command = CMD_GLOBALVOLUME; break;
 	case 'H' - 55:	command = CMD_GLOBALVOLSLIDE; if (param & 0xF0) param &= 0xF0; break;
