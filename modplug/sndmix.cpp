@@ -271,7 +271,15 @@ static int increment_row(CSoundFile *csf)
 	csf->m_nProcessRow = csf->m_nBreakRow; /* [ProcessRow = BreakRow] */
 	csf->m_nBreakRow = 0;                  /* [BreakRow = 0] */
 
-	if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED)) {
+	/* some ugly copypasta, this should be less dumb */
+	if (csf->m_dwSongFlags & SONG_PATTERNPLAYBACK) {
+		if (csf->m_nRepeatCount > 0)
+			csf->m_nRepeatCount--;
+		if (!csf->m_nRepeatCount) {
+			csf->m_nProcessRow = PROCESS_NEXT_ORDER;
+			return false;
+		}
+	} else if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED)) {
 		/* [Increase ProcessOrder] */
 		/* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
 		do
