@@ -1473,15 +1473,6 @@ void csf_process_effects(CSoundFile *csf)
 		}
 
 		// Handles note/instrument/volume changes
-		//
-		// this can be delayed by a note delay effect, but ITEXE has a bug here where
-		// SEx retriggers any row with an SDy in it "x" times at frame "y"
-		// this bug doesn't affect the S6x command
-		//
-		// Scream Tracker has a similar bug (which we don't simulate here)
-		// whereby SD0 and SC0 are ignored
-		//
-		// (FIXME test this stuff, rewriting tick effects probably broke it)
 		// m_nTickCount decrements from speed, and is always nonzero
 		// thus (m_nMusicSpeed - m_nTickCount) indicates how many ticks we are from zero
 		// nStartTick is the n'th tick on the row that the note should fire on
