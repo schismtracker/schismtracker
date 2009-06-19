@@ -748,7 +748,6 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 static inline int rn_arpeggio(CSoundFile *csf, SONGVOICE *chan, int period)
 {
 	int a;
-	// XXX test this, tick count goes the other way now so it's probably wrong
 	switch (csf->m_nTickCount % 3) {
 	case 2:
 		a = chan->nArpeggio >> 4;
