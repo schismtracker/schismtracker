@@ -257,7 +257,7 @@
 #define SONG_ITOLDEFFECTS       0x0004
 #define SONG_COMPATGXX          0x0008
 #define SONG_LINEARSLIDES       0x0010
-#define SONG_PATTERNLOOP        0x0020
+#define SONG_PATTERNPLAYBACK    0x0020
 //#define SONG_STEP             0x0040
 #define SONG_PAUSED             0x0080
 //#define SONG_FADINGSONG       0x0100
@@ -272,6 +272,7 @@
 #define SONG_INSTRUMENTMODE     0x20000
 #define SONG_ORDERLOCKED        0x40000
 #define SONG_NOSTEREO           0x80000
+#define SONG_PATTERNLOOP        (SONG_PATTERNPLAYBACK | SONG_ORDERLOCKED)
 
 // Global Options (Renderer)
 #define SNDMIX_REVERSESTEREO    0x0001

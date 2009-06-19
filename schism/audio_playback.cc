@@ -586,7 +586,7 @@ enum song_mode song_get_mode()
                 return MODE_STOPPED;
 	if (mp->m_dwSongFlags & SONG_PAUSED)
 		return MODE_SINGLE_STEP;
-        if (mp->m_dwSongFlags & SONG_PATTERNLOOP)
+        if (mp->m_dwSongFlags & SONG_PATTERNPLAYBACK)
                 return MODE_PATTERN_LOOP;
         return MODE_PLAYING;
 }
