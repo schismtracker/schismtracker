@@ -271,7 +271,7 @@ static int increment_row(CSoundFile *csf)
 	csf->m_nProcessRow = csf->m_nBreakRow; /* [ProcessRow = BreakRow] */
 	csf->m_nBreakRow = 0;                  /* [BreakRow = 0] */
 
-	if (csf->m_dwSongFlags & SONG_PATTERNLOOP)
+	if (csf->m_dwSongFlags & SONG_ORDERLOCKED)
 		return true;
 
 	/* [Increase ProcessOrder] */
