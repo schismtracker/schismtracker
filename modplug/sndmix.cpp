@@ -271,34 +271,38 @@ static int increment_row(CSoundFile *csf)
 	csf->m_nProcessRow = csf->m_nBreakRow; /* [ProcessRow = BreakRow] */
 	csf->m_nBreakRow = 0;                  /* [BreakRow = 0] */
 
-	if (csf->m_dwSongFlags & SONG_ORDERLOCKED)
-		return true;
-
-	/* [Increase ProcessOrder] */
-	/* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
-	do
-		csf->m_nProcessOrder++;
-	while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP);
-
-	/* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
-	if (csf->Orderlist[csf->m_nProcessOrder] == ORDER_LAST) {
-		if (csf->m_nRepeatCount > 0)
-			csf->m_nRepeatCount--;
-		if (!csf->m_nRepeatCount)
-			return false;
-
-		csf->m_nProcessOrder = 0;
-		while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP)
+	if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED)) {
+		/* [Increase ProcessOrder] */
+		/* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
+		do
 			csf->m_nProcessOrder++;
-	}
-	if (csf->Orderlist[csf->m_nProcessOrder] >= MAX_PATTERNS) {
-		// what the butt?
-		return false;
-	}
+		while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP);
 
-	/* [CurrentPattern = Order[ProcessOrder]] */
-	csf->m_nCurrentOrder = csf->m_nProcessOrder;
-	csf->m_nCurrentPattern = csf->Orderlist[csf->m_nProcessOrder];
+		/* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
+		if (csf->Orderlist[csf->m_nProcessOrder] == ORDER_LAST) {
+			if (csf->m_nRepeatCount > 0)
+				csf->m_nRepeatCount--;
+			if (!csf->m_nRepeatCount) {
+				printf("no can't\n");
+				csf->m_nProcessRow = PROCESS_NEXT_ORDER;
+				return false;
+			}
+
+			csf->m_nProcessOrder = 0;
+			while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP)
+				csf->m_nProcessOrder++;
+		}
+		if (csf->Orderlist[csf->m_nProcessOrder] >= MAX_PATTERNS) {
+			// what the butt?
+			printf("WHAT\n");
+			csf->m_nProcessRow = PROCESS_NEXT_ORDER;
+			return false;
+		}
+
+		/* [CurrentPattern = Order[ProcessOrder]] */
+		csf->m_nCurrentOrder = csf->m_nProcessOrder;
+		csf->m_nCurrentPattern = csf->Orderlist[csf->m_nProcessOrder];
+	}
 
 	if (!csf->PatternSize[csf->m_nCurrentPattern] || !csf->Patterns[csf->m_nCurrentPattern]) {
 		/* okay, this is wrong. allocate the pattern _NOW_ */
@@ -748,11 +752,11 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 static inline int rn_arpeggio(CSoundFile *csf, SONGVOICE *chan, int period)
 {
 	int a;
-	switch (csf->m_nTickCount % 3) {
-	case 2:
+	switch ((csf->m_nMusicSpeed - csf->m_nTickCount) % 3) {
+	case 1:
 		a = chan->nArpeggio >> 4;
 		break;
-	case 1:
+	case 2:
 		a = chan->nArpeggio & 0xf;
 		break;
 	default:

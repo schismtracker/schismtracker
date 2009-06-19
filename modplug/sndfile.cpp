@@ -386,10 +386,6 @@ static void set_current_pos_0(CSoundFile *csf)
 
 void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 {
-	while (nPos < MAX_ORDERS && csf->Orderlist[nPos] == 0xFE)
-		nPos++;
-	if (nPos >= MAX_ORDERS || csf->Orderlist[nPos] >= MAX_PATTERNS)
-		return;
 	for (uint32_t j = 0; j < MAX_VOICES; j++) {
 		csf->Voices[j].nPeriod = 0;
 		csf->Voices[j].nNote = 0;
@@ -403,7 +399,7 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 		set_current_pos_0(csf);
 
 	csf->m_nProcessOrder = nPos - 1;
-	csf->m_nProcessRow = 0xfffe;
+	csf->m_nProcessRow = PROCESS_NEXT_ORDER;
 	csf->m_nRow = 0;
 	csf->m_nBreakRow = 0; /* set this to whatever row to jump to */
 	csf->m_nTickCount = 1;
