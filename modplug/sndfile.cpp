@@ -395,6 +395,8 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 		csf->Voices[j].nPatternLoop = 0;
 		csf->Voices[j].nTremorCount = 0;
 	}
+	if (nPos > MAX_ORDERS)
+		nPos = 0;
 	if (!nPos)
 		set_current_pos_0(csf);
 
