@@ -204,6 +204,7 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 # define mkdir(path,mode) mkdir(path)
 # define localtime_r(a,b) localtime(a) /* FIXME: not thread safe and stuff */
 # define setenv(a,b,c) /* stupid windows */
+# define fsync _commit
 #endif
 
 #define INT_SHAPED_PTR(v)		((intptr_t)(((void*)(v))))

@@ -1865,13 +1865,8 @@ void video_screenshot(void)
 	vgamem_unlock();
 	fp_ok = data.fp_ok;
 	if (ferror(data.fp)) fp_ok = 0;
-#ifdef WIN32
-	if (_commit(fileno(data.fp)) == -1)
-		fp_ok = 0;
-#else
 	if (fsync(fileno(data.fp)) == -1)
 		fp_ok = 0;
-#endif
 	if (ferror(data.fp)) fp_ok = 0;
 	if (fclose(data.fp) == EOF) fp_ok = 0;
 	if (!fp_ok) {
