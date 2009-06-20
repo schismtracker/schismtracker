@@ -51,7 +51,6 @@ static unsigned char diskbuf[32768];
 static diskwriter_driver_t *dw = NULL;
 static FILE *fp = NULL;
 static FILE *multi_fp[64] = {NULL};
-static int multi_mono[64] = {0};
 
 static unsigned char *mbuf = NULL;
 static off_t mbuf_size = 0;
@@ -227,8 +226,8 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	else dw->bits = 16;
 	if (dw->channels > 2) dw->channels = 2;
 
-	if (mp->m_dwSongFlags & SONG_NOSTEREO) dw->channels = 1;
-	else if (pattern_max_channels(patno, multi_mono) == 1) dw->channels = 1;
+	if (mp->m_dwSongFlags & SONG_NOSTEREO)
+		dw->channels = 1;
 
 	dw->m = (void(*)(diskwriter_driver_t*,const unsigned char *,unsigned int))_mw;
 
@@ -240,8 +239,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 		mp->m_nRepeatCount = 2; /* er... */
 	}
 
-	// XXX what is this *=2 for?
-	csf_set_wave_config(mp, dw->rate*=2, dw->bits, dw->channels);
+	csf_set_wave_config(mp, dw->rate, dw->bits, dw->channels);
         csf_init_player(mp, 1);
 
 	mp->gdwSoundSetup |= SNDMIX_DIRECTTODISK;
@@ -286,28 +284,14 @@ static void chan_setup(int rate, int nchan)
 		mp->gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	}
 }
+
 static int chan_detect(void)
 {
 	int nchan = diskwriter_output_channels;
-	int lim, i;
-	uint8_t *ol;
 
-	for (i = 0; i < 64; i++) multi_mono[i] = 1;
-	if (mp->m_dwSongFlags & SONG_NOSTEREO) {
-		nchan = 1;
-	} else {
-		ol = song_get_orderlist();
-		lim = 1;
-		for (i = 0; i < 256; i++) {
-			if (ol[i] == ORDER_SKIP) continue;
-			if (ol[i] == ORDER_LAST) break;
-			lim = pattern_max_channels(ol[i], multi_mono);
-			if (lim > 1) break;
-		}
-		if (lim == 1) nchan = 1; /* mono is possible */
-	}
-
-	return dw->channels = nchan;
+	nchan = ((mp->m_dwSongFlags & SONG_NOSTEREO) || diskwriter_output_channels == 1) ? 1 : 2;
+	dw->channels = nchan;
+	return nchan;
 }
 
 static void multi_out_helper(int chan, int *buf, int len)
@@ -320,8 +304,6 @@ static void multi_out_helper(int chan, int *buf, int len)
 	if (!multi_fp[chan]) return;
 
 	/* skip */
-	if (dw->channels != (multi_mono[chan-1] ? 1 : 2)) return;
-
 	if (dw->channels == 1) {
 		len *= 2;
 		mono_from_stereo((int *)diskbuf, len);
@@ -376,7 +358,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 			diskwriter_finish();
 			return DW_ERROR;
 		}
-		dw->channels = multi_mono[i-1] ? 1 : 2;
+		dw->channels = 2;
 		if (dw->p) dw->p(dw);
 	}
 
