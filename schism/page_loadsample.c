@@ -561,7 +561,7 @@ static void reposition_at_slash_search(void)
 			b = i;
 		}
 	}
-	if (bl > -1) {
+	if (bl > 0) {
 		current_file = b;
 		file_list_reposition();
 	}
