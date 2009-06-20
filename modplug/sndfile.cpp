@@ -637,12 +637,13 @@ uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFl
 
 uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFile, uint32_t dwMemLength)
 {
-	uint32_t len = 0, mem = pIns->nLength+6;
+	uint32_t len = 0, mem;
 	
 	if (pIns->uFlags & CHN_ADLIB) return 0; // no sample data
 
 	if ((!pIns) || (pIns->nLength < 1) || (!lpMemFile)) return 0;
 	if (pIns->nLength > MAX_SAMPLE_LENGTH) pIns->nLength = MAX_SAMPLE_LENGTH;
+	mem = pIns->nLength+6;
 	pIns->uFlags &= ~(CHN_16BIT|CHN_STEREO);
 	if (nFlags & RSF_16BIT)
 	{
