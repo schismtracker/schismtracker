@@ -249,7 +249,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			fg = active ? 1 : 0;
 		draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
 
-		if (!channel->sample_data)
+		if (!(channel->sample_data && channel->sample_length))
 			continue;
 
                 /* first box: vu meter */

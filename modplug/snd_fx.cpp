@@ -18,7 +18,7 @@
 
 void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick)
 {
-	if (csf->m_nTickCount == nTick) {
+	if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nTick) {
 		SONGVOICE *pChn = &csf->Voices[nChn];
 		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
 		pChn->nVolume = 0;
