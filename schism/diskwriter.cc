@@ -561,13 +561,8 @@ int diskwriter_finish(void)
 		if (fp_ok) fflush(fp);
 		if (ferror(fp))
 			fp_ok = 0;
-#ifdef WIN32
-		if (_commit(fileno(fp)) == -1)
-			fp_ok = 0;
-#else
 		if (fsync(fileno(fp)) == -1)
 			fp_ok = 0;
-#endif
 		fclose(fp);
 		fp = NULL;
 	}
