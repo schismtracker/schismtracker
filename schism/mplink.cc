@@ -614,7 +614,7 @@ void song_exchange_samples(int a, int b)
 	song_unlock_audio();
 }
 
-void song_copy_instrument(int src, int dst)
+void song_copy_instrument(int dst, int src)
 {
 	if (src == dst) return;
 
