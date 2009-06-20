@@ -64,11 +64,28 @@ int stop_on_load = 1;
 // quiet a sample when loading
 static void _squelch_sample(int n)
 {
-	int x;
+	int i;
+	SONGSAMPLE *smp = mp->Samples + n;
 
-	for (x = 1; x <= 64; x++) {
-		song_keydown(n, KEYJAZZ_NOINST, NOTE_CUT, 0, x);
-		song_keyup(KEYJAZZ_NOINST, n, NOTE_CUT);
+	for (i = 0; i < MAX_VOICES; i++) {
+		if (mp->Voices[i].pInstrument == smp
+		    || mp->Voices[i].pCurrentSample == smp->pSample
+		    || mp->Voices[i].pSample == smp->pSample) {
+			mp->Voices[i].nNote = mp->Voices[i].nNewNote = mp->Voices[i].nNewIns = 0;
+			mp->Voices[i].nFadeOutVol = 0;
+			mp->Voices[i].dwFlags |= CHN_KEYOFF|CHN_NOTEFADE;
+			mp->Voices[i].nPeriod = 0;
+			mp->Voices[i].nPos = mp->Voices[i].nLength = 0;
+			mp->Voices[i].nLoopStart = 0;
+			mp->Voices[i].nLoopEnd = 0;
+			mp->Voices[i].nROfs = mp->Voices[i].nLOfs = 0;
+			mp->Voices[i].pSample = NULL;
+			mp->Voices[i].pInstrument = NULL;
+			mp->Voices[i].pHeader = NULL;
+			mp->Voices[i].nLeftVol = mp->Voices[i].nRightVol = 0;
+			mp->Voices[i].nNewLeftVol = mp->Voices[i].nNewRightVol = 0;
+			mp->Voices[i].nLeftRamp = mp->Voices[i].nRightRamp = 0;
+		}
 	}
 }
 

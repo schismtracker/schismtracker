@@ -345,8 +345,6 @@ static void set_current_pos_0(CSoundFile *csf)
 
 	for (i = 0; i < MAX_VOICES; i++) {
 		csf->Voices[i].nNote = csf->Voices[i].nNewNote = csf->Voices[i].nNewIns = 0;
-		csf->Voices[i].pInstrument = NULL;
-		csf->Voices[i].pHeader = NULL;
 		csf->Voices[i].nPortamentoDest = 0;
 		csf->Voices[i].nCommand = 0;
 		csf->Voices[i].nPatternLoopCount = 0;
