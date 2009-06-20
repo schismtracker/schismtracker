@@ -1476,9 +1476,9 @@ void csf_process_effects(CSoundFile *csf)
 		// m_nTickCount decrements from speed, and is always nonzero
 		// thus (m_nMusicSpeed - m_nTickCount) indicates how many ticks we are from zero
 		// nStartTick is the n'th tick on the row that the note should fire on
+		if (instr) pChn->nNewIns = instr;
 		if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick && !pChn->nRealtime) {
 			uint32_t note = pChn->nRowNote;
-			if (instr) pChn->nNewIns = instr;
 			if (!note && instr) {
 				if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) {
 					if (pChn->pInstrument)
