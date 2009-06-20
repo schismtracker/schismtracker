@@ -614,7 +614,7 @@ void song_exchange_samples(int a, int b);
 void song_exchange_instruments(int a, int b);
 void song_swap_samples(int a, int b);
 void song_swap_instruments(int a, int b);
-void song_copy_instrument(int src, int dst);
+void song_copy_instrument(int dst, int src);
 void song_replace_sample(int num, int with);
 void song_replace_instrument(int num, int with);
 
