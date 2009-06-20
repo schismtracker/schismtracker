@@ -1463,11 +1463,11 @@ void csf_process_effects(CSoundFile *csf)
 				break;
 			case 0xb:
 				// Pattern loop
-				if (csf->m_nTickCount)
+				if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 					break;
 				nloop = fx_pattern_loop(csf, pChn, param & 0x0F);
 				if (nloop >= 0)
-					csf->m_nProcessRow = nloop;
+					csf->m_nProcessRow = nloop - 1;
 				break;
 			}
 		}
