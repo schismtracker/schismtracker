@@ -351,7 +351,7 @@ static void set_current_pos_0(CSoundFile *csf)
 		csf->Voices[i].nPatternLoop = 0;
 		csf->Voices[i].nFadeOutVol = 0;
 		csf->Voices[i].dwFlags |= CHN_KEYOFF|CHN_NOTEFADE;
-		csf->Voices[i].nTremorCount = 0;
+		csf->Voices[i].nTremorOn = csf->Voices[i].nTremorOff = 0;
 		csf->Voices[i].nPeriod = 0;
 		csf->Voices[i].nPos = csf->Voices[i].nLength = 0;
 		csf->Voices[i].nLoopStart = 0;
@@ -391,7 +391,7 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 		csf->Voices[j].nCommand = 0;
 		csf->Voices[j].nPatternLoopCount = 0;
 		csf->Voices[j].nPatternLoop = 0;
-		csf->Voices[j].nTremorCount = 0;
+		csf->Voices[j].nTremorOn = csf->Voices[j].nTremorOff = 0;
 	}
 	if (nPos > MAX_ORDERS)
 		nPos = 0;
