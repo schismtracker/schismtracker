@@ -1191,7 +1191,6 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 		pChn->nLeftVU = pChn->nRightVU = 0xFF;
 		pChn->dwFlags &= ~CHN_FILTER;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
-		pChn->nTremorCount = 0;
 		if (bResetEnv) {
 			pChn->nVolSwing = pChn->nPanSwing = 0;
 			if (penv) {
@@ -1739,9 +1738,7 @@ void csf_process_effects(CSoundFile *csf)
 		// Tremor
 		case CMD_TREMOR:
 			pChn->nCommand = CMD_TREMOR;
-			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
-				break;
-			if (param)
+			if ((csf->m_dwSongFlags & SONG_FIRSTTICK) && param)
 				pChn->nTremorParam = param;
 			break;
 
