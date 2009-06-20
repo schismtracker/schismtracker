@@ -641,27 +641,23 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	
 	if (pIns->uFlags & CHN_ADLIB) return 0; // no sample data
 
-	if ((!pIns) || (pIns->nLength < 1) || (!lpMemFile)) return 0;
+	if (!pIns || pIns->nLength < 1 || !lpMemFile) return 0;
 	if (pIns->nLength > MAX_SAMPLE_LENGTH) pIns->nLength = MAX_SAMPLE_LENGTH;
 	mem = pIns->nLength+6;
 	pIns->uFlags &= ~(CHN_16BIT|CHN_STEREO);
-	if (nFlags & RSF_16BIT)
-	{
+	if (nFlags & RSF_16BIT) {
 		mem *= 2;
 		pIns->uFlags |= CHN_16BIT;
 	}
-	if (nFlags & RSF_STEREO)
-	{
+	if (nFlags & RSF_STEREO) {
 		mem *= 2;
 		pIns->uFlags |= CHN_STEREO;
 	}
-	if ((pIns->pSample = csf_allocate_sample(mem)) == NULL)
-	{
+	if ((pIns->pSample = csf_allocate_sample(mem)) == NULL) {
 		pIns->nLength = 0;
 		return 0;
 	}
-	switch(nFlags)
-	{
+	switch(nFlags) {
 	// 1: 8-bit unsigned PCM data
 	case RS_PCM8U:
 		{
@@ -680,9 +676,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			signed char *pSample = pIns->pSample;
 			const signed char *p = (const signed char *)lpMemFile;
 			int delta = 0;
-
-			for (uint32_t j=0; j<len; j++)
-			{
+			for (uint32_t j=0; j<len; j++) {
 				delta += p[j];
 				*pSample++ = (signed char)delta;
 			}
@@ -698,8 +692,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			short *p = (short *)lpMemFile;
 			unsigned short tmp;
 			int delta16 = 0;
-			for (uint32_t j=0; j<len; j+=2)
-			{
+			for (uint32_t j=0; j<len; j+=2) {
 				tmp = *((unsigned short *)p++);
 				delta16 += bswapLE16(tmp);
 				*pSample++ = (short) delta16;
@@ -710,11 +703,10 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	// 5: 16-bit signed PCM data
 	case RS_PCM16S:
 	        {
-		len = pIns->nLength * 2;
-		if (len <= dwMemLength) memcpy(pIns->pSample, lpMemFile, len);
+			len = pIns->nLength * 2;
+			if (len <= dwMemLength) memcpy(pIns->pSample, lpMemFile, len);
 			short int *pSample = (short int *)pIns->pSample;
-			for (uint32_t j=0; j<len; j+=2)
-			{
+			for (uint32_t j=0; j<len; j+=2) {
 			        *pSample = bswapLE16(*pSample);
 				pSample++;
 			}
@@ -725,12 +717,10 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	case RS_PCM16M:
 		len = pIns->nLength * 2;
 		if (len > dwMemLength) len = dwMemLength & ~1;
-		if (len > 1)
-		{
+		if (len > 1) {
 			signed char *pSample = (signed char *)pIns->pSample;
 			signed char *pSrc = (signed char *)lpMemFile;
-			for (uint32_t j=0; j<len; j+=2)
-			{
+			for (uint32_t j=0; j<len; j+=2) {
 			  	// pSample[j] = pSrc[j+1];
 				// pSample[j+1] = pSrc[j];
 			        *((unsigned short *)(pSample+j)) = bswapBE16(*((unsigned short *)(pSrc+j)));
@@ -744,8 +734,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			len = pIns->nLength * 2;
 			if (len <= dwMemLength) memcpy(pIns->pSample, lpMemFile, len);
 			short int *pSample = (short int *)pIns->pSample;
-			for (uint32_t j=0; j<len; j+=2)
-			{
+			for (uint32_t j=0; j<len; j+=2) {
 			        *pSample = bswapLE16(*pSample) - 0x8000;
 				pSample++;
 			}
@@ -755,12 +744,10 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	// 16-bit signed stereo big endian
 	case RS_STPCM16M:
 		len = pIns->nLength * 2;
-		if (len*2 <= dwMemLength)
-		{
+		if (len*2 <= dwMemLength) {
 			signed char *pSample = (signed char *)pIns->pSample;
 			signed char *pSrc = (signed char *)lpMemFile;
-			for (uint32_t j=0; j<len; j+=2)
-			{
+			for (uint32_t j=0; j<len; j+=2) {
 			        // pSample[j*2] = pSrc[j+1];
 				// pSample[j*2+1] = pSrc[j];
 				// pSample[j*2+2] = pSrc[j+1+len];
@@ -777,19 +764,17 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	case RS_STPCM8U:
 	case RS_STPCM8D:
 		{
-			int iadd_l = 0, iadd_r = 0;
-			if (nFlags == RS_STPCM8U) { iadd_l = iadd_r = -128; }
+			int iadd_l, iadd_r;
+			iadd_l = iadd_r = (nFlags == RS_STPCM8U) ? -128 : 0;
 			len = pIns->nLength;
 			signed char *psrc = (signed char *)lpMemFile;
 			signed char *pSample = (signed char *)pIns->pSample;
 			if (len*2 > dwMemLength) break;
-			for (uint32_t j=0; j<len; j++)
-			{
+			for (uint32_t j=0; j<len; j++) {
 				pSample[j*2] = (signed char)(psrc[0] + iadd_l);
 				pSample[j*2+1] = (signed char)(psrc[len] + iadd_r);
 				psrc++;
-				if (nFlags == RS_STPCM8D)
-				{
+				if (nFlags == RS_STPCM8D) {
 					iadd_l = pSample[j*2];
 					iadd_r = pSample[j*2+1];
 				}
@@ -803,19 +788,17 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	case RS_STPCM16U:
 	case RS_STPCM16D:
 		{
-			int iadd_l = 0, iadd_r = 0;
-			if (nFlags == RS_STPCM16U) { iadd_l = iadd_r = -0x8000; }
+			int iadd_l, iadd_r;
+			iadd_l = iadd_r = (nFlags == RS_STPCM16U) ? -0x8000 : 0;
 			len = pIns->nLength;
 			short int *psrc = (short int *)lpMemFile;
 			short int *pSample = (short int *)pIns->pSample;
 			if (len*4 > dwMemLength) break;
-			for (uint32_t j=0; j<len; j++)
-			{
+			for (uint32_t j=0; j<len; j++) {
 				pSample[j*2] = (short int) (bswapLE16(psrc[0]) + iadd_l);
 				pSample[j*2+1] = (short int) (bswapLE16(psrc[len]) + iadd_r);
 				psrc++;
-				if (nFlags == RS_STPCM16D)
-				{
+				if (nFlags == RS_STPCM16D) {
 					iadd_l = pSample[j*2];
 					iadd_r = pSample[j*2+1];
 				}
@@ -831,10 +814,13 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	case RS_IT21516:
 		len = dwMemLength;
 		if (len < 2) break;
-		if ((nFlags == RS_IT2148) || (nFlags == RS_IT2158))
-			ITUnpack8Bit(pIns->pSample, pIns->nLength, (uint8_t *)lpMemFile, dwMemLength, (nFlags == RS_IT2158));
-		else
-			ITUnpack16Bit(pIns->pSample, pIns->nLength, (uint8_t *)lpMemFile, dwMemLength, (nFlags == RS_IT21516));
+		if (nFlags == RS_IT2148 || nFlags == RS_IT2158) {
+			ITUnpack8Bit(pIns->pSample, pIns->nLength,
+				(uint8_t *)lpMemFile, dwMemLength, (nFlags == RS_IT2158));
+		} else {
+			ITUnpack16Bit(pIns->pSample, pIns->nLength,
+				(uint8_t *)lpMemFile, dwMemLength, (nFlags == RS_IT21516));
+		}
 		break;
 
 	// 8-bit interleaved stereo samples
@@ -847,8 +833,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			if (len*2 > dwMemLength) len = dwMemLength >> 1;
 			uint8_t * psrc = (uint8_t *)lpMemFile;
 			uint8_t * pSample = (uint8_t *)pIns->pSample;
-			for (uint32_t j=0; j<len; j++)
-			{
+			for (uint32_t j=0; j<len; j++) {
 				pSample[j*2] = (signed char)(psrc[0] + iadd);
 				pSample[j*2+1] = (signed char)(psrc[1] + iadd);
 				psrc+=2;
@@ -867,8 +852,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			if (len*4 > dwMemLength) len = dwMemLength >> 2;
 			short int *psrc = (short int *)lpMemFile;
 			short int *pSample = (short int *)pIns->pSample;
-			for (uint32_t j=0; j<len; j++)
-			{
+			for (uint32_t j=0; j<len; j++) {
 				pSample[j*2] = (short int)(bswapLE16(psrc[0]) + iadd);
 				pSample[j*2+1] = (short int)(bswapLE16(psrc[1]) + iadd);
 				psrc += 2;
@@ -881,8 +865,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	case RS_AMS8:
 	case RS_AMS16:
 		len = 9;
-		if (dwMemLength > 9)
-		{
+		if (dwMemLength > 9) {
 			const char *psrc = lpMemFile;
 			char packcharacter = lpMemFile[8], *pdest = (char *)pIns->pSample;
 			len += bswapLE32(*((uint32_t *)(lpMemFile+4)));
@@ -900,14 +883,12 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			if (len > dwMemLength) break;
 			signed char *pSample = (signed char *)pIns->pSample;
 			signed char delta8 = 0;
-			for (uint32_t j=0; j<len; j++)
-			{
+			for (uint32_t j=0; j<len; j++) {
 				delta8 += lpMemFile[j];
 				*pSample++ = delta8;
 			}
 			uint16_t *pSampleW = (uint16_t *)pIns->pSample;
-			for (uint32_t j=0; j<len; j+=2)   // swaparoni!
-			{
+			for (uint32_t j=0; j<len; j+=2) {
 			        *pSampleW = bswapLE16(*pSampleW);
 				*pSampleW++;
 			}
@@ -918,35 +899,30 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	case RS_MDL8:
 	case RS_MDL16:
 		len = dwMemLength;
-		if (len >= 4)
-		{
+		if (len >= 4) {
 			uint8_t * pSample = (uint8_t *)pIns->pSample;
 			uint8_t * ibuf = (uint8_t *)lpMemFile;
 			uint32_t bitbuf = bswapLE32(*((uint32_t *)ibuf));
 			uint32_t bitnum = 32;
 			uint8_t dlt = 0, lowbyte = 0;
 			ibuf += 4;
-			for (uint32_t j=0; j<pIns->nLength; j++)
-			{
+			for (uint32_t j=0; j<pIns->nLength; j++) {
 				uint8_t hibyte;
 				uint8_t sign;
 				if (nFlags == RS_MDL16) lowbyte = (uint8_t)MDLReadBits(bitbuf, bitnum, ibuf, 8);
 				sign = (uint8_t)MDLReadBits(bitbuf, bitnum, ibuf, 1);
-				if (MDLReadBits(bitbuf, bitnum, ibuf, 1))
-				{
+				if (MDLReadBits(bitbuf, bitnum, ibuf, 1)) {
 					hibyte = (uint8_t)MDLReadBits(bitbuf, bitnum, ibuf, 3);
-				} else
-				{
+				} else {
 					hibyte = 8;
 					while (!MDLReadBits(bitbuf, bitnum, ibuf, 1)) hibyte += 0x10;
 					hibyte += MDLReadBits(bitbuf, bitnum, ibuf, 4);
 				}
 				if (sign) hibyte = ~hibyte;
 				dlt += hibyte;
-				if (nFlags != RS_MDL16)
+				if (nFlags != RS_MDL16) {
 					pSample[j] = dlt;
-				else
-				{
+				} else {
 					pSample[j<<1] = lowbyte;
 					pSample[(j<<1)+1] = dlt;
 				}
@@ -957,8 +933,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 	case RS_DMF8:
 	case RS_DMF16:
 		len = dwMemLength;
-		if (len >= 4)
-		{
+		if (len >= 4) {
 			uint32_t maxlen = pIns->nLength;
 			if (pIns->uFlags & CHN_16BIT) maxlen <<= 1;
 			uint8_t * ibuf = (uint8_t *)lpMemFile;
@@ -973,14 +948,12 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 		len = pIns->nLength * 3;
 		if (nFlags == RS_PCM32S) len += pIns->nLength;
 		if (len > dwMemLength) break;
-		if (len > 4*8)
-		{
+		if (len > 4*8) {
 			uint32_t slsize = (nFlags == RS_PCM32S) ? 4 : 3;
 			uint8_t * pSrc = (uint8_t *)lpMemFile;
 			int32_t max = 255;
 			if (nFlags == RS_PCM32S) pSrc++;
-			for (uint32_t j=0; j<len; j+=slsize)
-			{
+			for (uint32_t j=0; j<len; j+=slsize) {
 				int32_t l = ((((pSrc[j+2] << 8) + pSrc[j+1]) << 8) + pSrc[j]) << 8;
 				l /= 256;
 				if (l > max) max = l;
@@ -988,8 +961,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			}
 			max = (max / 128) + 1;
 			signed short *pDest = (signed short *)pIns->pSample;
-			for (uint32_t k=0; k<len; k+=slsize)
-			{
+			for (uint32_t k=0; k<len; k+=slsize) {
 				int32_t l = ((((pSrc[k+2] << 8) + pSrc[k+1]) << 8) + pSrc[k]) << 8;
 				*pDest++ = (signed short)(l / max);
 			}
@@ -1002,14 +974,12 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 		len = pIns->nLength * 6;
 		if (nFlags == RS_STIPCM32S) len += pIns->nLength * 2;
 		if (len > dwMemLength) break;
-		if (len > 8*8)
-		{
+		if (len > 8*8) {
 			uint32_t slsize = (nFlags == RS_STIPCM32S) ? 4 : 3;
 			uint8_t * pSrc = (uint8_t *)lpMemFile;
 			int32_t max = 255;
 			if (nFlags == RS_STIPCM32S) pSrc++;
-			for (uint32_t j=0; j<len; j+=slsize)
-			{
+			for (uint32_t j=0; j<len; j+=slsize) {
 				int32_t l = ((((pSrc[j+2] << 8) + pSrc[j+1]) << 8) + pSrc[j]) << 8;
 				l /= 256;
 				if (l > max) max = l;
@@ -1017,8 +987,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			}
 			max = (max / 128) + 1;
 			signed short *pDest = (signed short *)pIns->pSample;
-			for (uint32_t k=0; k<len; k+=slsize)
-			{
+			for (uint32_t k=0; k<len; k+=slsize) {
 				int32_t lr = ((((pSrc[k+2] << 8) + pSrc[k+1]) << 8) + pSrc[k]) << 8;
 				k += slsize;
 				int32_t ll = ((((pSrc[k+2] << 8) + pSrc[k+1]) << 8) + pSrc[k]) << 8;
@@ -1036,8 +1005,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			if (len*4 > dwMemLength) len = dwMemLength >> 2;
 			const uint8_t * psrc = (const uint8_t *)lpMemFile;
 			short int *pSample = (short int *)pIns->pSample;
-			for (uint32_t j=0; j<len; j++)
-			{
+			for (uint32_t j=0; j<len; j++) {
 				pSample[j*2] = (signed short)(((uint32_t)psrc[0] << 8) | (psrc[1]));
 				pSample[j*2+1] = (signed short)(((uint32_t)psrc[2] << 8) | (psrc[3]));
 				psrc += 4;
@@ -1052,10 +1020,8 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 		if (len > dwMemLength) len = pIns->nLength = dwMemLength;
 		memcpy(pIns->pSample, lpMemFile, len);
 	}
-	if (len > dwMemLength)
-	{
-		if (pIns->pSample)
-		{
+	if (len > dwMemLength) {
+		if (pIns->pSample) {
 			pIns->nLength = 0;
 			csf_free_sample(pIns->pSample);
 			pIns->pSample = NULL;
@@ -1071,8 +1037,7 @@ void csf_adjust_sample_loop(SONGSAMPLE *pIns)
 {
 	if (!pIns->pSample) return;
 	if (pIns->nLoopEnd > pIns->nLength) pIns->nLoopEnd = pIns->nLength;
-	if (pIns->nLoopStart+2 >= pIns->nLoopEnd)
-	{
+	if (pIns->nLoopStart+2 >= pIns->nLoopEnd) {
 		pIns->nLoopStart = pIns->nLoopEnd = 0;
 		pIns->uFlags &= ~CHN_LOOP;
 	}
@@ -1083,12 +1048,10 @@ void csf_adjust_sample_loop(SONGSAMPLE *pIns)
 	if (pIns->uFlags & CHN_16BIT) {
 		short int *pSample = (short int *)pIns->pSample;
 		// Adjust end of sample
-		if (pIns->uFlags & CHN_STEREO)
-		{
+		if (pIns->uFlags & CHN_STEREO) {
 			pSample[len*2+6] = pSample[len*2+4] = pSample[len*2+2] = pSample[len*2] = pSample[len*2-2];
 			pSample[len*2+7] = pSample[len*2+5] = pSample[len*2+3] = pSample[len*2+1] = pSample[len*2-1];
-		} else
-		{
+		} else {
 			pSample[len+4] = pSample[len+3] = pSample[len+2] = pSample[len+1] = pSample[len] = pSample[len-1];
 		}
 	} else {
