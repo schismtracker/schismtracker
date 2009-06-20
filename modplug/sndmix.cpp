@@ -987,9 +987,9 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 	chan->nLeftRamp  = 0;
 
 	// Dolby Pro-Logic Surround (S91)
-	if (chan->dwFlags & CHN_SURROUND &&
-		csf->gnChannels <= 2 &&
-		!(csf->gdwSoundSetup & SNDMIX_NOSURROUND))
+	if (chan->dwFlags & CHN_SURROUND && csf->gnChannels <= 2
+	    && !(csf->gdwSoundSetup & SNDMIX_NOSURROUND)
+	    && !(csf->m_dwSongFlags & SONG_NOSTEREO))
 		chan->nNewLeftVol = -chan->nNewLeftVol;
 
 	// Checking Ping-Pong Loops
