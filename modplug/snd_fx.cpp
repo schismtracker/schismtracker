@@ -1050,38 +1050,34 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 		pChn->nInsVol = 0;
 		return;
 	}
-	if (psmp == pChn->pInstrument) {
+	if (psmp == pChn->pInstrument)
 		return;
-	} else {
-		pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE|CHN_VOLENV|CHN_PANENV|CHN_PITCHENV);
-		pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (psmp->uFlags);
-		if (penv) {
-			if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
-			if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
-			if (penv->dwFlags & ENV_PITCH) pChn->dwFlags |= CHN_PITCHENV;
-			if ((penv->dwFlags & ENV_PITCH) && (penv->dwFlags & ENV_FILTER)) {
-				if (!pChn->nCutOff)
-					pChn->nCutOff = 0x7F;
-			}
-			if (penv->nIFC & 0x80) pChn->nCutOff = penv->nIFC & 0x7F;
-			if (penv->nIFR & 0x80) pChn->nResonance = penv->nIFR & 0x7F;
+
+
+	pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE|CHN_VOLENV|CHN_PANENV|CHN_PITCHENV);
+	pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (psmp->uFlags);
+	if (penv) {
+		if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
+		if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
+		if (penv->dwFlags & ENV_PITCH) pChn->dwFlags |= CHN_PITCHENV;
+		if ((penv->dwFlags & ENV_PITCH) && (penv->dwFlags & ENV_FILTER)) {
+			if (!pChn->nCutOff)
+				pChn->nCutOff = 0x7F;
 		}
-		pChn->nVolSwing = pChn->nPanSwing = 0;
+		if (penv->nIFC & 0x80) pChn->nCutOff = penv->nIFC & 0x7F;
+		if (penv->nIFR & 0x80) pChn->nResonance = penv->nIFR & 0x7F;
 	}
+	pChn->nVolSwing = pChn->nPanSwing = 0;
+
+	pChn->nPeriod = get_freq_from_period(get_freq_from_period(pChn->nPeriod, psmp->nC5Speed, 0, 1),
+					pChn->nC5Speed, 0, 1);
 	pChn->pInstrument = psmp;
 	pChn->nLength = psmp->nLength;
 	pChn->nLoopStart = psmp->nLoopStart;
 	pChn->nLoopEnd = psmp->nLoopEnd;
 	pChn->nC5Speed = psmp->nC5Speed;
 	pChn->pSample = psmp->pSample;
-
-/*
-	AAAAAAAAAAAAAHHHHHHHHH!!!!!!!!!
-	how does one go about setting the frequency at which a note plays?
-	I'm fairly certain that this is the place to patch for abuse test #9
-	but can't figure out what exactly needs to be done :/
-	(it's probably stupidly obvious and I'll slap my forehead in retrospect)
-*/
+	pChn->nPos = 0;
 
 	if (pChn->dwFlags & CHN_SUSTAINLOOP) {
 		pChn->nLoopStart = psmp->nSustainStart;
