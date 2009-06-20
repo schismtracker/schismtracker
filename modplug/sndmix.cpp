@@ -291,7 +291,6 @@ static int increment_row(CSoundFile *csf)
 			if (csf->m_nRepeatCount > 0)
 				csf->m_nRepeatCount--;
 			if (!csf->m_nRepeatCount) {
-				printf("no can't\n");
 				csf->m_nProcessRow = PROCESS_NEXT_ORDER;
 				return false;
 			}
@@ -302,7 +301,6 @@ static int increment_row(CSoundFile *csf)
 		}
 		if (csf->Orderlist[csf->m_nProcessOrder] >= MAX_PATTERNS) {
 			// what the butt?
-			printf("WHAT\n");
 			csf->m_nProcessRow = PROCESS_NEXT_ORDER;
 			return false;
 		}
