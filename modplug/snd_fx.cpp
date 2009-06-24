@@ -604,7 +604,7 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 	// SBx: Pattern Loop
 	// SCx: Note Cut
 	case 0xC0:
-		fx_note_cut(csf, nChn, param);
+		fx_note_cut(csf, nChn, param ?: 1);
 		break;
 	// SDx: Note Delay
 	// SEx: Pattern Delay for x rows
@@ -1454,7 +1454,7 @@ void csf_process_effects(CSoundFile *csf)
 			switch (param >> 4) {
 			case 0xd:
 				// Note Delay
-				nStartTick = param & 0x0F;
+				nStartTick = (param & 0x0F) ?: 1;
 				break;
 			case 0xb:
 				// Pattern loop
