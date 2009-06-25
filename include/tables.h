@@ -37,7 +37,6 @@ extern uint16_t S3MFineTuneTable[16];
 extern int16_t  ModSinusTable[64];
 extern int16_t  ModRampDownTable[64];
 extern int16_t  ModSquareTable[64];
-extern int16_t  ModRandomTable[64];
 
 extern int8_t   retrigTable1[16];
 extern int8_t   retrigTable2[16];
