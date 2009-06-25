@@ -452,23 +452,26 @@ static void handle_realtime_closures(CSoundFile *csf)
 static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 {
 	unsigned int trempos = chan->nTremoloPos & 0x3F;
+	int tdelta;
 	
 	if (*vol > 0) {
 		const int tremattn = 6;
 	
 		switch (chan->nTremoloType & 0x03) {
+		default:
+			tdelta = ModSinusTable[trempos];
+			break;
 		case 1:
-			*vol += (ModRampDownTable[trempos] * (int)chan->nTremoloDepth) >> tremattn;
+			tdelta = ModRampDownTable[trempos];
 			break;
 		case 2:
-			*vol += (ModSquareTable[trempos] * (int)chan->nTremoloDepth) >> tremattn;
+			tdelta = ModSquareTable[trempos];
 			break;
 		case 3:
-			*vol += (ModRandomTable[trempos] * (int)chan->nTremoloDepth) >> tremattn;
+			tdelta = 256 * ((double) rand() / RAND_MAX) - 128;
 			break;
-		default:
-			*vol += (ModSinusTable[trempos] * (int)chan->nTremoloDepth) >> tremattn;
 		}
+		*vol += (tdelta * (int)chan->nTremoloDepth) >> tremattn;
 	}
 	
 	// handle on tick-N, or all ticks if not in old-effects mode
@@ -511,6 +514,9 @@ static inline void rn_panbrello(SONGVOICE *chan)
 	int pdelta;
 	
 	switch (chan->nPanbrelloType & 0x03) {
+	default:
+		pdelta = ModSinusTable[panpos];
+		break;
 	case 1:
 		pdelta = ModRampDownTable[panpos];
 		break;
@@ -518,10 +524,8 @@ static inline void rn_panbrello(SONGVOICE *chan)
 		pdelta = ModSquareTable[panpos];
 		break;
 	case 3:
-		pdelta = ModRandomTable[panpos];
+		pdelta = 256 * ((double) rand() / RAND_MAX) - 128;
 		break;
-	default:
-		pdelta = ModSinusTable[panpos];
 	}
 	
 	chan->nPanbrelloPos += chan->nPanbrelloSpeed;
@@ -539,6 +543,9 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 	int period = *nperiod;
 
 	switch (chan->nVibratoType & 0x03) {
+	default:
+		vdelta = ModSinusTable[vibpos];
+		break;
 	case 1:
 		vdelta = ModRampDownTable[vibpos];
 		break;
@@ -546,10 +553,8 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 		vdelta = ModSquareTable[vibpos];
 		break;
 	case 3:
-		vdelta = ModRandomTable[vibpos];
+		vdelta = 256 * ((double) rand() / RAND_MAX) - 128;
 		break;
-	default:
-		vdelta = ModSinusTable[vibpos];
 	}
 
 	vdepth = (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) ? 6 : 7;
@@ -601,20 +606,21 @@ static inline void rn_instrument_vibrato(CSoundFile *csf, SONGVOICE *chan, int *
 
 	int val;
 
+	// XXX why is this so completely different from the other vibrato code?
 	switch(pins->nVibType) {
-	case VIB_RANDOM: // Random
-		val = ModRandomTable[chan->nAutoVibPos & 0x3F];
-		chan->nAutoVibPos++;
+	case VIB_SINE:
+	default:
+		val = ft2VibratoTable[chan->nAutoVibPos & 255];
 		break;
-	case VIB_RAMP_DOWN: // Ramp Down
+	case VIB_RAMP_DOWN:
 		val = ((0x40 - (chan->nAutoVibPos >> 1)) & 0x7F) - 0x40;
 		break;
-	case VIB_SQUARE: // Square
+	case VIB_SQUARE:
 		val = (chan->nAutoVibPos & 128) ? +64 : -64;
 		break;
-	case VIB_SINE:
-	default: // Sine
-		val = ft2VibratoTable[chan->nAutoVibPos & 255];
+	case VIB_RANDOM:
+		val = 128 * ((double) rand() / RAND_MAX) - 64;
+		break;
 	}
 
 	int n = ((val * chan->nAutoVibDepth) >> 8);
