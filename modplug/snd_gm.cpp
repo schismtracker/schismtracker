@@ -99,7 +99,7 @@ static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
         if (!nbytes)
                 return;
 
-        mp->MidiSend(buf, nbytes, c, 0);
+	csf_midi_send(mp, buf, nbytes, c, 0); // FIXME we should not know about 'mp' here!
 }
 
 
@@ -589,7 +589,8 @@ void GM_Pan(int c, signed char val)
 }
 
 
-#if !defined(HAVE_LOG2) && !defined(__USE_ISOC99)
+/* not sure what's up with os x here, already defines log2... actually why is this even here? */
+#if !defined(HAVE_LOG2) && !defined(__USE_ISOC99) && !defined(MACOSX)
 static double log2(double d)
 {
         return log(d) / log(2.0);
@@ -711,7 +712,7 @@ void GM_IncrementSongCounter(int count)
          * where cmdA = last CMD_SPEED = m_nMusicSpeed
          *   and cmdT = last CMD_TEMPO = m_nMusicTempo
          */
-        int RowLengthInSamplesHi = 5 * mp->m_nMusicSpeed * mp->GetSampleRate();
+        int RowLengthInSamplesHi = 5 * mp->m_nMusicSpeed * mp->gdwMixingFreq;
         int RowLengthInSamplesLo = 2 * mp->m_nMusicTempo;
 
         double NumberOfSamplesPer32thNote =

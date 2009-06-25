@@ -7,7 +7,6 @@
 //////////////////////////////////////////////
 // DSIK Internal Format (DSM) module loader //
 //////////////////////////////////////////////
-#include "stdafx.h"
 #include "sndfile.h"
 
 #pragma pack(1)
@@ -21,79 +20,79 @@
 
 typedef struct DSMNOTE
 {
-	BYTE note,ins,vol,cmd,inf;
+	uint8_t note,ins,vol,cmd,inf;
 } DSMNOTE;
 
 
 typedef struct DSMINST
 {
-	DWORD id_INST;
-	DWORD inst_len;
-	CHAR filename[13];
-	BYTE flags;
-	BYTE flags2;
-	BYTE volume;
-	DWORD length;
-	DWORD loopstart;
-	DWORD loopend;
-	DWORD reserved1;
-	WORD c2spd;
-	WORD reserved2;
-	CHAR samplename[28];
+	uint32_t id_INST;
+	uint32_t inst_len;
+	int8_t filename[13];
+	uint8_t flags;
+	uint8_t flags2;
+	uint8_t volume;
+	uint32_t length;
+	uint32_t loopstart;
+	uint32_t loopend;
+	uint32_t reserved1;
+	uint16_t c2spd;
+	uint16_t reserved2;
+	int8_t samplename[28];
 } DSMINST;
 
 
 typedef struct DSMFILEHEADER
 {
-	DWORD id_RIFF;	// "RIFF"
-	DWORD riff_len;
-	DWORD id_DSMF;	// "DSMF"
-	DWORD id_SONG;	// "SONG"
-	DWORD song_len;
+	uint32_t id_RIFF;	// "RIFF"
+	uint32_t riff_len;
+	uint32_t id_DSMF;	// "DSMF"
+	uint32_t id_SONG;	// "SONG"
+	uint32_t song_len;
 } DSMFILEHEADER;
 
 
 typedef struct DSMSONG
 {
-	CHAR songname[28];
-	WORD reserved1;
-	WORD flags;
-	DWORD reserved2;
-	WORD numord;
-	WORD numsmp;
-	WORD numpat;
-	WORD numtrk;
-	BYTE globalvol;
-	BYTE mastervol;
-	BYTE speed;
-	BYTE bpm;
-	BYTE panpos[16];
-	BYTE orders[128];
+	int8_t songname[28];
+	uint16_t reserved1;
+	uint16_t flags;
+	uint32_t reserved2;
+	uint16_t numord;
+	uint16_t numsmp;
+	uint16_t numpat;
+	uint16_t numtrk;
+	uint8_t globalvol;
+	uint8_t mastervol;
+	uint8_t speed;
+	uint8_t bpm;
+	uint8_t panpos[16];
+	uint8_t orders[128];
 } DSMSONG;
 
 typedef struct DSMPATT
 {
-	DWORD id_PATT;
-	DWORD patt_len;
-	BYTE dummy1;
-	BYTE dummy2;
+	uint32_t id_PATT;
+	uint32_t patt_len;
+	uint8_t dummy1;
+	uint8_t dummy2;
 } DSMPATT;
 
 #pragma pack()
 
 
-BOOL CSoundFile::ReadDSM(LPCBYTE lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
 	DSMFILEHEADER *pfh = (DSMFILEHEADER *)lpStream;
 	DSMSONG *psong;
-	DWORD dwMemPos;
-	UINT nPat, nSmp;
+	uint32_t dwMemPos;
+	uint32_t nPat, nSmp;
 
 	if ((!lpStream) || (dwMemLength < 1024) || (pfh->id_RIFF != DSMID_RIFF)
 	 || (pfh->riff_len + 8 > dwMemLength) || (pfh->riff_len < 1024)
 	 || (pfh->id_DSMF != DSMID_DSMF) || (pfh->id_SONG != DSMID_SONG)
-	 || (pfh->song_len > dwMemLength)) return FALSE;
+	 || (pfh->song_len > dwMemLength)) return false;
 	psong = (DSMSONG *)(lpStream + sizeof(DSMFILEHEADER));
 	dwMemPos = sizeof(DSMFILEHEADER) + pfh->song_len;
 	m_nType = MOD_TYPE_DSM;
@@ -104,22 +103,22 @@ BOOL CSoundFile::ReadDSM(LPCBYTE lpStream, DWORD dwMemLength)
 	if (m_nSamples > MAX_SAMPLES) m_nSamples = MAX_SAMPLES;
 	m_nDefaultSpeed = psong->speed;
 	m_nDefaultTempo = psong->bpm;
-	m_nDefaultGlobalVolume = psong->globalvol << 2;
-	if ((!m_nDefaultGlobalVolume) || (m_nDefaultGlobalVolume > 256)) m_nDefaultGlobalVolume = 256;
+	m_nDefaultGlobalVolume = psong->globalvol << 1;
+	if (!m_nDefaultGlobalVolume || m_nDefaultGlobalVolume > 128) m_nDefaultGlobalVolume = 128;
 	m_nSongPreAmp = psong->mastervol & 0x7F;
-	for (UINT iOrd=0; iOrd<MAX_ORDERS; iOrd++)
+	for (uint32_t iOrd=0; iOrd<MAX_ORDERS; iOrd++)
 	{
-		Order[iOrd] = (BYTE)((iOrd < psong->numord) ? psong->orders[iOrd] : 0xFF);
+		Orderlist[iOrd] = (uint8_t)((iOrd < psong->numord) ? psong->orders[iOrd] : 0xFF);
 	}
-	for (UINT iPan=0; iPan<16; iPan++)
+	for (uint32_t iPan=0; iPan<16; iPan++)
 	{
-		ChnSettings[iPan].nPan = 0x80;
+		Channels[iPan].nPan = 0x80;
 		if (psong->panpos[iPan] <= 0x80)
 		{
-			ChnSettings[iPan].nPan = psong->panpos[iPan] << 1;
+			Channels[iPan].nPan = psong->panpos[iPan] << 1;
 		}
 	}
-	memcpy(m_szNames[0], psong->songname, 28);
+	memcpy(song_title, psong->songname, 28);
 	nPat = 0;
 	nSmp = 1;
 	while (dwMemPos < dwMemLength - 8)
@@ -131,27 +130,27 @@ BOOL CSoundFile::ReadDSM(LPCBYTE lpStream, DWORD dwMemLength)
 		{
 			dwMemPos += 8;
 			if (dwMemPos + ppatt->patt_len >= dwMemLength) break;
-			DWORD dwPos = dwMemPos;
+			uint32_t dwPos = dwMemPos;
 			dwMemPos += ppatt->patt_len;
-			MODCOMMAND *m = AllocatePattern(64, m_nChannels);
+			MODCOMMAND *m = csf_allocate_pattern(64, m_nChannels);
 			if (!m) break;
 			PatternSize[nPat] = 64;
 			PatternAllocSize[nPat] = 64;
 			Patterns[nPat] = m;
-			UINT row = 0;
+			uint32_t row = 0;
 			while ((row < 64) && (dwPos + 2 <= dwMemPos))
 			{
-				UINT flag = lpStream[dwPos++];
+				uint32_t flag = lpStream[dwPos++];
 				if (flag)
 				{
-					UINT ch = (flag & 0x0F) % m_nChannels;
+					uint32_t ch = (flag & 0x0F) % m_nChannels;
 					if (flag & 0x80)
 					{
-						UINT note = lpStream[dwPos++];
+						uint32_t note = lpStream[dwPos++];
 						if (note)
 						{
 							if (note <= 12*9) note += 12;
-							m[ch].note = (BYTE)note;
+							m[ch].note = (uint8_t)note;
 						}
 					}
 					if (flag & 0x40)
@@ -165,8 +164,8 @@ BOOL CSoundFile::ReadDSM(LPCBYTE lpStream, DWORD dwMemLength)
 					}
 					if (flag & 0x10)
 					{
-						UINT command = lpStream[dwPos++];
-						UINT param = lpStream[dwPos++];
+						uint32_t command = lpStream[dwPos++];
+						uint32_t param = lpStream[dwPos++];
 						switch(command)
 						{
 						// 4-bit Panning
@@ -195,9 +194,9 @@ BOOL CSoundFile::ReadDSM(LPCBYTE lpStream, DWORD dwMemLength)
 							// Volume + Offset (?)
 							command = ((command & 0xF0) == 0x20) ? 0x09 : 0;
 						}
-						m[ch].command = (BYTE)command;
-						m[ch].param = (BYTE)param;
-						if (command) ConvertModCommand(&m[ch], 0);
+						m[ch].command = (uint8_t)command;
+						m[ch].param = (uint8_t)param;
+						if (command) csf_import_mod_effect(&m[ch], 0);
 					}
 				} else
 				{
@@ -211,27 +210,27 @@ BOOL CSoundFile::ReadDSM(LPCBYTE lpStream, DWORD dwMemLength)
 		if ((nSmp <= m_nSamples) && (pins->id_INST == DSMID_INST))
 		{
 			if (dwMemPos + pins->inst_len >= dwMemLength - 8) break;
-			DWORD dwPos = dwMemPos + sizeof(DSMINST);
+			uint32_t dwPos = dwMemPos + sizeof(DSMINST);
 			dwMemPos += 8 + pins->inst_len;
-			memcpy(m_szNames[nSmp], pins->samplename, 28);
-			MODINSTRUMENT *psmp = &Ins[nSmp];
-			memcpy(psmp->name, pins->filename, 13);
+			SONGSAMPLE *psmp = &Samples[nSmp];
+			memcpy(psmp->name, pins->samplename, 28);
+			memcpy(psmp->filename, pins->filename, 13);
 			psmp->nGlobalVol = 64;
 			psmp->nC5Speed = pins->c2spd;
-			psmp->uFlags = (WORD)((pins->flags & 1) ? CHN_LOOP : 0);
+			psmp->uFlags = (uint16_t)((pins->flags & 1) ? CHN_LOOP : 0);
 			psmp->nLength = pins->length;
 			psmp->nLoopStart = pins->loopstart;
 			psmp->nLoopEnd = pins->loopend;
-			psmp->nVolume = (WORD)(pins->volume << 2);
+			psmp->nVolume = (uint16_t)(pins->volume << 2);
 			if (psmp->nVolume > 256) psmp->nVolume = 256;
-			UINT smptype = (pins->flags & 2) ? RS_PCM8S : RS_PCM8U;
-			ReadSample(psmp, smptype, (LPCSTR)(lpStream+dwPos), dwMemLength - dwPos);
+			uint32_t smptype = (pins->flags & 2) ? RS_PCM8S : RS_PCM8U;
+			csf_read_sample(psmp, smptype, (const char *)(lpStream+dwPos), dwMemLength - dwPos);
 			nSmp++;
 		} else
 		{
 			break;
 		}
 	}
-	return TRUE;
+	return true;
 }
 

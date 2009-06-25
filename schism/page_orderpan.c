@@ -261,7 +261,7 @@ static void orderlist_add_unused_patterns(void)
 	 * p = pattern iterator
 	 * np = number of patterns */
 	int n0, n, p, np = song_get_num_patterns();
-	byte used[200] = {0};		/* could be a bitset... */
+	uint8_t used[200] = {0};		/* could be a bitset... */
 	unsigned char *list = song_get_orderlist();
 	
 	for (n = 0; n < 255; n++)

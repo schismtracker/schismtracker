@@ -10,7 +10,6 @@
 // PSM module loader
 //
 ///////////////////////////////////////////////////
-#include "stdafx.h"
 #include "sndfile.h"
 
 //#define PSM_LOG
@@ -30,100 +29,100 @@
 
 typedef struct _PSMCHUNK
 {
-	DWORD id;
-	DWORD len;
-	DWORD listid;
+	uint32_t id;
+	uint32_t len;
+	uint32_t listid;
 } PSMCHUNK;
 
 typedef struct _PSMSONGHDR
 {
-	CHAR songname[8];	// "MAINSONG"
-	BYTE reserved1;
-	BYTE reserved2;
-	BYTE channels;
+	int8_t songname[8];	// "MAINSONG"
+	uint8_t reserved1;
+	uint8_t reserved2;
+	uint8_t channels;
 } PSMSONGHDR;
 
 typedef struct _PSMPATTERN
 {
-	DWORD size;
-	DWORD name;
-	WORD rows;
-	WORD reserved1;
-	BYTE data[4];
+	uint32_t size;
+	uint32_t name;
+	uint16_t rows;
+	uint16_t reserved1;
+	uint8_t data[4];
 } PSMPATTERN;
 
 typedef struct _PSMSAMPLE
 {
-	BYTE flags;
-	CHAR songname[8];
-	DWORD smpid;
-	CHAR samplename[34];
-	DWORD reserved1;
-	BYTE reserved2;
-	BYTE insno;
-	BYTE reserved3;
-	DWORD length;
-	DWORD loopstart;
-	DWORD loopend;
-	WORD reserved4;
-	BYTE defvol;
-	DWORD reserved5;
-	DWORD samplerate;
-	BYTE reserved6[19];
+	uint8_t flags;
+	int8_t songname[8];
+	uint32_t smpid;
+	int8_t samplename[34];
+	uint32_t reserved1;
+	uint8_t reserved2;
+	uint8_t insno;
+	uint8_t reserved3;
+	uint32_t length;
+	uint32_t loopstart;
+	uint32_t loopend;
+	uint16_t reserved4;
+	uint8_t defvol;
+	uint32_t reserved5;
+	uint32_t samplerate;
+	uint8_t reserved6[19];
 } PSMSAMPLE;
 
 #pragma pack()
 
 
-BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
 	PSMCHUNK *pfh = (PSMCHUNK *)lpStream;
-	DWORD dwMemPos, dwSongPos;
-	DWORD smpnames[MAX_SAMPLES];
-	DWORD patptrs[MAX_PATTERNS];
-	BYTE samplemap[MAX_SAMPLES];
-	UINT nPatterns;
+	uint32_t dwMemPos, dwSongPos;
+	uint32_t smpnames[MAX_SAMPLES];
+	uint32_t patptrs[MAX_PATTERNS];
+	uint8_t samplemap[MAX_SAMPLES];
+	uint32_t nPatterns;
 
 	// Chunk0: "PSM ",filesize,"FILE"
-	if (dwMemLength < 256) return FALSE;
+	if (dwMemLength < 256) return false;
 	if (bswapLE32(pfh->id) == PSM_ID_OLD)
 	{
 	#ifdef PSM_LOG
 		printf("Old PSM format not supported\n");
 	#endif
-		return FALSE;
+		return false;
 	}
 	if ((bswapLE32(pfh->id) != PSM_ID_NEW)
 	|| (bswapLE32(pfh->len)+12 > dwMemLength)
-	|| (bswapLE32(pfh->listid) != IFFID_FILE)) return FALSE;
+	|| (bswapLE32(pfh->listid) != IFFID_FILE)) return false;
 	m_nType = MOD_TYPE_PSM;
 	m_nChannels = 16;
 	m_nSamples = 0;
 	nPatterns = 0;
 	dwMemPos = 12;
 	dwSongPos = 0;
-	for (UINT iChPan=0; iChPan<16; iChPan++)
+	for (uint32_t iChPan=0; iChPan<16; iChPan++)
 	{
-		UINT pan = (((iChPan & 3) == 1) || ((iChPan&3)==2)) ? 0xC0 : 0x40;
-		ChnSettings[iChPan].nPan = pan;
+		uint32_t pan = (((iChPan & 3) == 1) || ((iChPan&3)==2)) ? 0xC0 : 0x40;
+		Channels[iChPan].nPan = pan;
 	}
-	m_szNames[0][0]=0;
+	song_title[0]=0;
 	while (dwMemPos+8 < dwMemLength)
 	{
 		PSMCHUNK *pchunk = (PSMCHUNK *)(lpStream+dwMemPos);
 		if ((bswapLE32(pchunk->len) >= dwMemLength - 8)
 		|| (dwMemPos + bswapLE32(pchunk->len) + 8 > dwMemLength)) break;
 		dwMemPos += 8;
-		PUCHAR pdata = (PUCHAR)(lpStream+dwMemPos);
-		ULONG len = bswapLE32(pchunk->len);
+		uint8_t *pdata = (uint8_t *)(lpStream+dwMemPos);
+		uint32_t len = bswapLE32(pchunk->len);
 		if (len) switch(bswapLE32(pchunk->id))
 		{
 		// "TITL": Song title
 		case IFFID_TITL:
 			if (!pdata[0]) { pdata++; len--; }
-			memcpy(m_szNames[0], pdata, (len>31) ? 31 : len);
-			m_szNames[0][31] = 0;
+			memcpy(song_title, pdata, (len>31) ? 31 : len);
+			song_title[31] = 0;
 			break;
 		// "PBOD": Pattern
 		case IFFID_PBOD:
@@ -144,12 +143,12 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 			if ((len >= sizeof(PSMSAMPLE)) && (m_nSamples+1 < MAX_SAMPLES))
 			{
 				m_nSamples++;
-				MODINSTRUMENT *pins = &Ins[m_nSamples];
+				SONGSAMPLE *pins = &Samples[m_nSamples];
 				PSMSAMPLE *psmp = (PSMSAMPLE *)pdata;
 				smpnames[m_nSamples] = bswapLE32(psmp->smpid);
-				memcpy(m_szNames[m_nSamples], psmp->samplename, 31);
-				m_szNames[m_nSamples][31] = 0;
-				samplemap[m_nSamples-1] = (BYTE)m_nSamples;
+				memcpy(Samples[m_nSamples].name, psmp->samplename, 31);
+				Samples[m_nSamples].name[31] = 0;
+				samplemap[m_nSamples-1] = (uint8_t)m_nSamples;
 				// Init sample
 				pins->nGlobalVol = 0x40;
 				pins->nC5Speed = bswapLE32(psmp->samplerate);
@@ -166,33 +165,23 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 				// Load sample data
 				if ((pins->nLength > 3) && (len > 3))
 				{
-					ReadSample(pins, RS_PCM8D, (LPCSTR)pdata, len);
+					csf_read_sample(pins, RS_PCM8D, (const char *)pdata, len);
 				} else
 				{
 					pins->nLength = 0;
 				}
 			}
 			break;
-	#if 0
-		default:
-			{
-				CHAR s[8], s2[64];
-				*(DWORD *)s = pchunk->id;
-				s[4] = 0;
-				wsprintf(s2, "%s: %4d bytes @ %4d\n", s, pchunk->len, dwMemPos);
-				OutputDebugString(s2);
-			}
-	#endif
 		}
 		dwMemPos += bswapLE32(pchunk->len);
 	}
 	// Step #1: convert song structure
 	PSMSONGHDR *pSong = (PSMSONGHDR *)(lpStream+dwSongPos+8);
-	if ((!dwSongPos) || (pSong->channels < 2) || (pSong->channels > 32)) return TRUE;
+	if ((!dwSongPos) || (pSong->channels < 2) || (pSong->channels > 32)) return true;
 	m_nChannels = pSong->channels;
 	// Valid song header -> convert attached chunks
 	{
-		DWORD dwSongEnd = dwSongPos + 8 + *(DWORD *)(lpStream+dwSongPos+4);
+		uint32_t dwSongEnd = dwSongPos + 8 + *(uint32_t *)(lpStream+dwSongPos+4);
 		dwMemPos = dwSongPos + 8 + 11; // sizeof(PSMCHUNK)+sizeof(PSMSONGHDR)
 		while (dwMemPos + 8 < dwSongEnd)
 		{
@@ -200,25 +189,25 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 			dwMemPos += 8;
 			if ((bswapLE32(pchunk->len) > dwSongEnd)
 			|| (dwMemPos + bswapLE32(pchunk->len) > dwSongEnd)) break;
-			PUCHAR pdata = (PUCHAR)(lpStream+dwMemPos);
-			ULONG len = bswapLE32(pchunk->len);
+			uint8_t *pdata = (uint8_t *)(lpStream+dwMemPos);
+			uint32_t len = bswapLE32(pchunk->len);
 			switch(bswapLE32(pchunk->id))
 			{
 			case IFFID_OPLH:
 				if (len >= 0x20)
 				{
-					UINT pos = len - 3;
+					uint32_t pos = len - 3;
 					while (pos > 5)
 					{
-						BOOL bFound = FALSE;
+						bool bFound = false;
 						pos -= 5;
-						DWORD dwName = *(DWORD *)(pdata+pos);
-						for (UINT i=0; i<nPatterns; i++)
+						uint32_t dwName = *(uint32_t *)(pdata+pos);
+						for (uint32_t i=0; i<nPatterns; i++)
 						{
-							DWORD dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
+							uint32_t dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
 							if (dwName == dwPatName)
 							{
-								bFound = TRUE;
+								bFound = true;
 								break;
 							}
 						}
@@ -230,16 +219,16 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 							break;
 						}
 					}
-					UINT iOrd = 0;
+					uint32_t iOrd = 0;
 					while ((pos+5<len) && (iOrd < MAX_ORDERS))
 					{
-						DWORD dwName = *(DWORD *)(pdata+pos);
-						for (UINT i=0; i<nPatterns; i++)
+						uint32_t dwName = *(uint32_t *)(pdata+pos);
+						for (uint32_t i=0; i<nPatterns; i++)
 						{
-							DWORD dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
+							uint32_t dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
 							if (dwName == dwPatName)
 							{
-								Order[iOrd++] = i;
+								Orderlist[iOrd++] = i;
 								break;
 							}
 						}
@@ -253,29 +242,29 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 	}
 
 	// Step #2: convert patterns
-	for (UINT nPat=0; nPat<nPatterns; nPat++)
+	for (uint32_t nPat=0; nPat<nPatterns; nPat++)
 	{
 		PSMPATTERN *pPsmPat = (PSMPATTERN *)(lpStream+patptrs[nPat]+8);
-		ULONG len = bswapLE32(*(DWORD *)(lpStream+patptrs[nPat]+4)) - 12;
-		UINT nRows = bswapLE16(pPsmPat->rows);
+		uint32_t len = bswapLE32(*(uint32_t *)(lpStream+patptrs[nPat]+4)) - 12;
+		uint32_t nRows = bswapLE16(pPsmPat->rows);
 		if (len > bswapLE32(pPsmPat->size)) len = bswapLE32(pPsmPat->size);
 		if ((nRows < 64) || (nRows > 256)) nRows = 64;
 		PatternSize[nPat] = nRows;
 		PatternAllocSize[nPat] = nRows;
-		if ((Patterns[nPat] = AllocatePattern(nRows, m_nChannels)) == NULL) break;
+		if ((Patterns[nPat] = csf_allocate_pattern(nRows, m_nChannels)) == NULL) break;
 		MODCOMMAND *m = Patterns[nPat];
 		MODCOMMAND *sp, dummy;
-		BYTE *p = pPsmPat->data;
-		UINT pos = 0;
-		UINT row = 0;
-		UINT rowlim;
+		uint8_t *p = pPsmPat->data;
+		uint32_t pos = 0;
+		uint32_t row = 0;
+		uint32_t rowlim;
 	#ifdef PSM_LOG
-		//printf("Pattern %d at offset 0x%04X\n", nPat, (DWORD)(p - (BYTE *)lpStream));
+		//printf("Pattern %d at offset 0x%04X\n", nPat, (uint32_t)(p - (uint8_t *)lpStream));
 	#endif
 		rowlim = bswapLE16(pPsmPat->reserved1)-2;
 		while ((row < nRows) && (pos+1 < len))
 		{
-			UINT flags, ch;
+			uint32_t flags, ch;
 			if ((pos+1) >= rowlim) {
 				pos = rowlim;
 				rowlim = (((int)p[pos+1])<<8)
@@ -298,14 +287,14 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 			// Note + Instr
 			if ((flags & 0x80) && (pos+1 < len))
 			{
-				UINT note = p[pos++];
+				uint32_t note = p[pos++];
 				note = (note>>4)*12+(note&0x0f)+12+1;
 				if (note > 0x80) note = 0;
 				sp->note = note;
 			}
 			if ((flags & 0x40) && (pos+1 < len))
 			{
-				UINT nins = p[pos++];
+				uint32_t nins = p[pos++];
 			#ifdef PSM_LOG
 				if ((!nPat) && (nins >= m_nSamples)) printf("WARNING: invalid instrument number (%d)\n", nins);
 			#endif
@@ -320,8 +309,8 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 			// Effect
 			if ((flags & 0x10) && (pos+1 < len))
 			{
-				UINT command = p[pos++];
-				UINT param = p[pos++];
+				uint32_t command = p[pos++];
+				uint32_t param = p[pos++];
 				// Convert effects
 				switch(command & 0x3F)
 				{
@@ -403,8 +392,8 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 				#endif
 					command = param = 0;
 				}
-				sp->command = (BYTE)command;
-				sp->param = (BYTE)param;
+				sp->command = (uint8_t)command;
+				sp->param = (uint8_t)param;
 			}
 		}
 	#ifdef PSM_LOG
@@ -416,7 +405,7 @@ BOOL CSoundFile::ReadPSM(LPCBYTE lpStream, DWORD dwMemLength)
 	}
 
 	// Done (finally!)
-	return TRUE;
+	return true;
 }
 
 
@@ -435,22 +424,22 @@ CONST
  TYPE
   PPSM_Header = ^TPSM_Header;
   TPSM_Header = RECORD
-                 PSM_Sign                   : ARRAY[01..04] OF CHAR; { PSM + #254 }
-                 PSM_SongName               : ARRAY[01..58] OF CHAR;
-                 PSM_Byte00                 : BYTE;
-                 PSM_Byte1A                 : BYTE;
-                 PSM_Unknown00              : BYTE;
-                 PSM_Unknown01              : BYTE;
-                 PSM_Unknown02              : BYTE;
-                 PSM_Speed                  : BYTE;
-                 PSM_Tempo                  : BYTE;
-                 PSM_Unknown03              : BYTE;
-                 PSM_Unknown04              : WORD;
-                 PSM_OrderLength            : WORD;
-                 PSM_PatternNumber          : WORD;
-                 PSM_SampleNumber           : WORD;
-                 PSM_ChannelNumber          : WORD;
-                 PSM_ChannelUsed            : WORD;
+                 PSM_Sign                   : ARRAY[01..04] OF int8_t; { PSM + #254 }
+                 PSM_SongName               : ARRAY[01..58] OF int8_t;
+                 PSM_Byte00                 : uint8_t;
+                 PSM_Byte1A                 : uint8_t;
+                 PSM_Unknown00              : uint8_t;
+                 PSM_Unknown01              : uint8_t;
+                 PSM_Unknown02              : uint8_t;
+                 PSM_Speed                  : uint8_t;
+                 PSM_Tempo                  : uint8_t;
+                 PSM_Unknown03              : uint8_t;
+                 PSM_Unknown04              : uint16_t;
+                 PSM_OrderLength            : uint16_t;
+                 PSM_PatternNumber          : uint16_t;
+                 PSM_SampleNumber           : uint16_t;
+                 PSM_ChannelNumber          : uint16_t;
+                 PSM_ChannelUsed            : uint16_t;
                  PSM_OrderPosition          : LONGINT;
                  PSM_ChannelSettingPosition : LONGINT;
                  PSM_PatternPosition        : LONGINT;
@@ -461,34 +450,34 @@ CONST
 
   PPSM_Sample = ^TPSM_Sample;
   TPSM_Sample = RECORD
-                 PSM_SampleFileName  : ARRAY[01..12] OF CHAR;
-                 PSM_SampleByte00    : BYTE;
-                 PSM_SampleName      : ARRAY[01..22] OF CHAR;
-                 PSM_SampleUnknown00 : ARRAY[01..02] OF BYTE;
+                 PSM_SampleFileName  : ARRAY[01..12] OF int8_t;
+                 PSM_SampleByte00    : uint8_t;
+                 PSM_SampleName      : ARRAY[01..22] OF int8_t;
+                 PSM_SampleUnknown00 : ARRAY[01..02] OF uint8_t;
                  PSM_SamplePosition  : LONGINT;
-                 PSM_SampleUnknown01 : ARRAY[01..04] OF BYTE;
-                 PSM_SampleNumber    : BYTE;
-                 PSM_SampleFlags     : WORD;
+                 PSM_SampleUnknown01 : ARRAY[01..04] OF uint8_t;
+                 PSM_SampleNumber    : uint8_t;
+                 PSM_SampleFlags     : uint16_t;
                  PSM_SampleLength    : LONGINT;
                  PSM_SampleLoopBegin : LONGINT;
                  PSM_SampleLoopEnd   : LONGINT;
-                 PSM_Unknown03       : BYTE;
-                 PSM_SampleVolume    : BYTE;
-                 PSM_SampleC5Speed   : WORD;
+                 PSM_Unknown03       : uint8_t;
+                 PSM_SampleVolume    : uint8_t;
+                 PSM_SampleC5Speed   : uint16_t;
                 END;
 
   PPSM_SampleList = ^TPSM_SampleList;
   TPSM_SampleList = ARRAY[01..c_PSM_MaxSample] OF TPSM_Sample;
 
   PPSM_Order = ^TPSM_Order;
-  TPSM_Order = ARRAY[00..c_PSM_MaxOrder] OF BYTE;
+  TPSM_Order = ARRAY[00..c_PSM_MaxOrder] OF uint8_t;
 
   PPSM_ChannelSettings = ^TPSM_ChannelSettings;
-  TPSM_ChannelSettings = ARRAY[00..c_PSM_MaxChannel] OF BYTE;
+  TPSM_ChannelSettings = ARRAY[00..c_PSM_MaxChannel] OF uint8_t;
 
  CONST
-  PSM_NotesInPattern   : BYTE = $00;
-  PSM_ChannelInPattern : BYTE = $00;
+  PSM_NotesInPattern   : uint8_t = $00;
+  PSM_ChannelInPattern : uint8_t = $00;
 
  CONST
   c_PSM_SetSpeed = 60;
@@ -497,24 +486,24 @@ CONST
   BEGIN
   END;
 
- PROCEDURE PSM_UnpackPattern(VAR Source,Destination;PatternLength : WORD);
+ PROCEDURE PSM_UnpackPattern(VAR Source,Destination;PatternLength : uint16_t);
   VAR
-   Witz : ARRAY[00..04] OF WORD;
-   I1,I2        : WORD;
-   I3,I4        : WORD;
-   TopicalByte  : ^BYTE;
+   Witz : ARRAY[00..04] OF uint16_t;
+   I1,I2        : uint16_t;
+   I3,I4        : uint16_t;
+   TopicalByte  : ^uint8_t;
    Pattern      : PUnpackedPattern;
-   ChannelP     : BYTE;
-   NoteP        : BYTE;
-   InfoByte     : BYTE;
-   CodeByte     : BYTE;
-   InfoWord     : WORD;
-   Effect       : BYTE;
-   Opperand     : BYTE;
-   Panning      : BYTE;
-   Volume       : BYTE;
-   PrevInfo     : BYTE;
-   InfoIndex    : BYTE;
+   ChannelP     : uint8_t;
+   NoteP        : uint8_t;
+   InfoByte     : uint8_t;
+   CodeByte     : uint8_t;
+   InfoWord     : uint16_t;
+   Effect       : uint8_t;
+   Opperand     : uint8_t;
+   Panning      : uint8_t;
+   Volume       : uint8_t;
+   PrevInfo     : uint8_t;
+   InfoIndex    : uint8_t;
   BEGIN
    Pattern     := @Destination;
    TopicalByte := @Source;
@@ -584,22 +573,22 @@ CONST
     END;
   END;
 
- PROCEDURE PSM_Load(FileName : STRING;FilePosition : LONGINT;VAR Module : PModule;VAR ErrorCode : WORD);
+ PROCEDURE PSM_Load(FileName : STRING;FilePosition : LONGINT;VAR Module : PModule;VAR ErrorCode : uint16_t);
  { *** caution : Module has to be inited before!!!! }
   VAR
    Header             : PPSM_Header;
    Sample             : PPSM_SampleList;
-   Order              : PPSM_Order;
+   Orderlist              : PPSM_Order;
    ChannelSettings    : PPSM_ChannelSettings;
    MultiPurposeBuffer : PByteArray;
    PatternBuffer      : PUnpackedPattern;
-   TopicalParaPointer : WORD;
+   TopicalParaPointer : uint16_t;
 
    InFile : FILE;
-   I1,I2  : WORD;
-   I3,I4  : WORD;
-   TempW  : WORD;
-   TempB  : BYTE;
+   I1,I2  : uint16_t;
+   I3,I4  : uint16_t;
+   TempW  : uint16_t;
+   TempB  : uint8_t;
    TempP  : PByteArray;
    TempI  : INTEGER;
   { *** copy-vars for loop-extension }
@@ -634,7 +623,7 @@ CONST
   { *** init dynamic variables }
    NEW(Header);
    NEW(Sample);
-   NEW(Order);
+   NEW(Orderlist);
    NEW(ChannelSettings);
    NEW(MultiPurposeBuffer);
    NEW(PatternBuffer);
@@ -650,7 +639,7 @@ CONST
     END;
   { *** read order }
    SEEK(InFile,FilePosition + Header^.PSM_OrderPosition);
-   BLOCKREAD(InFile,Order^,Header^.PSM_OrderLength);
+   BLOCKREAD(InFile,Orderlist^,Header^.PSM_OrderLength);
   { *** read channelsettings }
    SEEK(InFile,FilePosition + Header^.PSM_ChannelSettingPosition);
    BLOCKREAD(InFile,ChannelSettings^,SIZEOF(TPSM_ChannelSettings));
@@ -669,15 +658,15 @@ CONST
    Module^.Module_Initial_Speed        := Header^.PSM_Speed;
    Module^.Module_Initial_Tempo        := Header^.PSM_Tempo;
 { *** paragraph 01 start }
-   Module^.Module_Flags                := c_Module_Flags_ZeroVolume        * BYTE(1) +
-                                          c_Module_Flags_Stereo            * BYTE(1) +
-                                          c_Module_Flags_ForceAmigaLimits  * BYTE(0) +
-                                          c_Module_Flags_Panning           * BYTE(1) +
-                                          c_Module_Flags_Surround          * BYTE(1) +
-                                          c_Module_Flags_QualityMixing     * BYTE(1) +
-                                          c_Module_Flags_FastVolumeSlides  * BYTE(0) +
-                                          c_Module_Flags_SpecialCustomData * BYTE(0) +
-                                          c_Module_Flags_SongName          * BYTE(1);
+   Module^.Module_Flags                := c_Module_Flags_ZeroVolume        * uint8_t(1) +
+                                          c_Module_Flags_Stereo            * uint8_t(1) +
+                                          c_Module_Flags_ForceAmigaLimits  * uint8_t(0) +
+                                          c_Module_Flags_Panning           * uint8_t(1) +
+                                          c_Module_Flags_Surround          * uint8_t(1) +
+                                          c_Module_Flags_QualityMixing     * uint8_t(1) +
+                                          c_Module_Flags_FastVolumeSlides  * uint8_t(0) +
+                                          c_Module_Flags_SpecialCustomData * uint8_t(0) +
+                                          c_Module_Flags_SongName          * uint8_t(1);
    I1 := $01;
    WHILE (Header^.PSM_SongName[I1] > #00) AND (I1 < c_Module_SongNameLength) DO
     BEGIN
@@ -693,12 +682,12 @@ CONST
       { *** channel enabled }
        Module^.Module_ChannelSettingPointer^[I1].ChannelSettings_GlobalVolume := 64;
        Module^.Module_ChannelSettingPointer^[I1].ChannelSettings_Panning      := (ChannelSettings^[I1]) * $08;
-       Module^.Module_ChannelSettingPointer^[I1].ChannelSettings_Code         := I1 + $10 * BYTE(ChannelSettings^[I1] > $08) +
-                                             c_ChannelSettings_Code_ChannelEnabled   * BYTE(1) +
-                                             c_ChannelSettings_Code_ChannelDigital   * BYTE(1);
+       Module^.Module_ChannelSettingPointer^[I1].ChannelSettings_Code         := I1 + $10 * uint8_t(ChannelSettings^[I1] > $08) +
+                                             c_ChannelSettings_Code_ChannelEnabled   * uint8_t(1) +
+                                             c_ChannelSettings_Code_ChannelDigital   * uint8_t(1);
        Module^.Module_ChannelSettingPointer^[I1].ChannelSettings_Controls     :=
-                                             c_ChannelSettings_Controls_EnhancedMode * BYTE(1) +
-                                             c_ChannelSettings_Controls_SurroundMode * BYTE(0);
+                                             c_ChannelSettings_Controls_EnhancedMode * uint8_t(1) +
+                                             c_ChannelSettings_Controls_SurroundMode * uint8_t(0);
       END
      ELSE
       BEGIN
@@ -711,7 +700,7 @@ CONST
     END;
   { *** init and copy order }
    FILLCHAR(Module^.Module_OrderPointer^,c_Maximum_OrderIndex+1,$FF);
-   MOVE(Order^,Module^.Module_OrderPointer^,Header^.PSM_OrderLength);
+   MOVE(Orderlist^,Module^.Module_OrderPointer^,Header^.PSM_OrderLength);
   { *** read pattern }
    SEEK(InFile,FilePosition + Header^.PSM_PatternPosition);
    NTMIK_LoaderPatternNumber := Header^.PSM_PatternNumber-1;
@@ -725,7 +714,7 @@ CONST
     { *** unpack pattern and set notes per channel to 64 }
      PSM_UnpackPattern(MultiPurposeBuffer^,PatternBuffer^,TempW);
      NTMIK_PackPattern(MultiPurposeBuffer^,PatternBuffer^,PSM_NotesInPattern);
-     TempW := WORD(256) * MultiPurposeBuffer^[01] + MultiPurposeBuffer^[00];
+     TempW := uint16_t(256) * MultiPurposeBuffer^[01] + MultiPurposeBuffer^[00];
      GETMEM(Module^.Module_PatternPointer^[I1],TempW);
      MOVE(MultiPurposeBuffer^,Module^.Module_PatternPointer^[I1]^,TempW);
     { *** next pattern }
@@ -764,14 +753,14 @@ CONST
      Module^.Module_SamplePointer^[I3]^.Sample_LoopEnd           := Sample^[I1].PSM_SampleLoopEnd;
     { *** now it's time for the flags }
      Module^.Module_SamplePointer^[I3]^.Sample_Flags :=
-                                 c_Sample_Flags_DigitalSample      * BYTE(1) +
-                                 c_Sample_Flags_8BitSample         * BYTE(1) +
-                                 c_Sample_Flags_UnsignedSampleData * BYTE(1) +
-                                 c_Sample_Flags_Packed             * BYTE(0) +
-                                 c_Sample_Flags_LoopCounter        * BYTE(0) +
-                                 c_Sample_Flags_SampleName         * BYTE(1) +
+                                 c_Sample_Flags_DigitalSample      * uint8_t(1) +
+                                 c_Sample_Flags_8BitSample         * uint8_t(1) +
+                                 c_Sample_Flags_UnsignedSampleData * uint8_t(1) +
+                                 c_Sample_Flags_Packed             * uint8_t(0) +
+                                 c_Sample_Flags_LoopCounter        * uint8_t(0) +
+                                 c_Sample_Flags_SampleName         * uint8_t(1) +
                                  c_Sample_Flags_LoopActive         *
-                             BYTE(Sample^[I1].PSM_SampleFlags AND (LONGINT(1) SHL 15) = (LONGINT(1) SHL 15));
+                             uint8_t(Sample^[I1].PSM_SampleFlags AND (LONGINT(1) SHL 15) = (LONGINT(1) SHL 15));
     { *** alloc memory for sample-data }
      E_Getmem(Module^.Module_SamplePointer^[I3]^.Sample_Selector,
               Module^.Module_SamplePointer^[I3]^.Sample_Position,
@@ -787,9 +776,9 @@ CONST
        CopyLength := Module^.Module_SamplePointer^[I3]^.Sample_Length;
       { *** decode sample }
        ASM
-        DB 066h; MOV CX,WORD PTR CopyLength
+        DB 066h; MOV CX,uint16_t PTR CopyLength
        { *** load sample selector }
-                 MOV ES,WORD PTR TempP[00002h]
+                 MOV ES,uint16_t PTR TempP[00002h]
         DB 066h; XOR SI,SI
         DB 066h; XOR DI,DI
                  XOR AH,AH
@@ -803,9 +792,9 @@ CONST
        END;
       { *** make samples unsigned }
        ASM
-        DB 066h; MOV CX,WORD PTR CopyLength
+        DB 066h; MOV CX,uint16_t PTR CopyLength
        { *** load sample selector }
-                 MOV ES,WORD PTR TempP[00002h]
+                 MOV ES,uint16_t PTR TempP[00002h]
         DB 066h; XOR SI,SI
         DB 066h; XOR DI,DI
        { *** conert all bytes }
@@ -823,12 +812,12 @@ CONST
          CopyLength      := CopyDestination - CopySource;
          ASM
          { *** load sample-selector }
-                   MOV ES,WORD PTR TempP[00002h]
-          DB 066h; MOV DI,WORD PTR CopyDestination
+                   MOV ES,uint16_t PTR TempP[00002h]
+          DB 066h; MOV DI,uint16_t PTR CopyDestination
          { *** calculate number of full sample-loops to copy }
                    XOR DX,DX
                    MOV AX,c_LoopExtensionSize
-                   MOV BX,WORD PTR CopyLength
+                   MOV BX,uint16_t PTR CopyLength
                    DIV BX
                    OR AX,AX
                    JE @@NoFullLoop
@@ -836,16 +825,16 @@ CONST
                    MOV CX,AX
                   @@InnerLoop:
                    PUSH CX
-          DB 066h; MOV SI,WORD PTR CopySource
+          DB 066h; MOV SI,uint16_t PTR CopySource
                    MOV CX,BX
-          DB 0F3h; DB 026h,067h,0A4h { REP MOVS BYTE PTR ES:[EDI],ES:[ESI] }
+          DB 0F3h; DB 026h,067h,0A4h { REP MOVS uint8_t PTR ES:[EDI],ES:[ESI] }
                    POP CX
                    LOOP @@InnerLoop
                   @@NoFullLoop:
          { *** calculate number of rest-bytes to copy }
-          DB 066h; MOV SI,WORD PTR CopySource
+          DB 066h; MOV SI,uint16_t PTR CopySource
                    MOV CX,DX
-          DB 0F3h; DB 026h,067h,0A4h { REP MOVS BYTE PTR ES:[EDI],ES:[ESI] }
+          DB 0F3h; DB 026h,067h,0A4h { REP MOVS uint8_t PTR ES:[EDI],ES:[ESI] }
          END;
         END
        ELSE
@@ -853,12 +842,12 @@ CONST
          CopyDestination := Module^.Module_SamplePointer^[I3]^.Sample_Length;
          ASM
          { *** load sample-selector }
-                   MOV ES,WORD PTR TempP[00002h]
-          DB 066h; MOV DI,WORD PTR CopyDestination
+                   MOV ES,uint16_t PTR TempP[00002h]
+          DB 066h; MOV DI,uint16_t PTR CopyDestination
          { *** clear extension }
                    MOV CX,c_LoopExtensionSize
                    MOV AL,080h
-          DB 0F3h; DB 067h,0AAh       { REP STOS BYTE PTR ES:[EDI] }
+          DB 0F3h; DB 067h,0AAh       { REP STOS uint8_t PTR ES:[EDI] }
          END;
         END;
       END;
@@ -872,7 +861,7 @@ CONST
   { *** dispose all dynamic variables }
    DISPOSE(Header);
    DISPOSE(Sample);
-   DISPOSE(Order);
+   DISPOSE(Orderlist);
    DISPOSE(ChannelSettings);
    DISPOSE(MultiPurposeBuffer);
    DISPOSE(PatternBuffer);

@@ -7,7 +7,6 @@
 
 #include <string.h>
 
-#include "stdafx.h"
 #include "sndfile.h"
 
 #include "cmixer.h"
@@ -47,7 +46,7 @@ void stereo_fill(int *buffer, unsigned int samples, int* profs, int *plofs)
 }
 
 
-void end_channel_ofs(MODCHANNEL *channel, int *buffer, unsigned int samples)
+void end_channel_ofs(SONGVOICE *channel, int *buffer, unsigned int samples)
 {
     int rofs = channel->nROfs;
     int lofs = channel->nLOfs;

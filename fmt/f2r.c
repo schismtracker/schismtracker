@@ -27,7 +27,7 @@
 
 /* TODO: test this code */
 
-int fmt_f2r_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_f2r_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 46 && memcmp(data, "F2R", 3) == 0))
                 return false;

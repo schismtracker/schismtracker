@@ -86,99 +86,53 @@ do {						\
 /* --------------------------------------------------------------------- */
 /* statics */
 
-static byte font_normal[2048];
+static uint8_t font_normal[2048];
 
 /* There's no way to change the other fontsets at the moment.
  * (other than recompiling, of course) */
-static byte font_alt[2048];
-static byte font_half_data[1024];
+static uint8_t font_alt[2048];
+static uint8_t font_half_data[1024];
 
 /* --------------------------------------------------------------------- */
 /* globals */
 
-byte *font_data = font_normal; /* this only needs to be global for itf */
+uint8_t *font_data = font_normal; /* this only needs to be global for itf */
 
 /* int font_width = 8, font_height = 8; */
 
 /* --------------------------------------------------------------------- */
 /* half-width characters */
 
-/* wth? i don't get this... the half width table isn't linear anymore?
-   schism dies with "half width char ba not mapped" when i try inserting a
-   note fade, but i have no idea what this code does so i'm not touching it.
-	/storlek
-   update: fixed note fade bug elsewise. just don't draw it with the whacked-
-   looking sinewave chars and it'll be fine, but i still wanna know how this
-   code works, so i'm leaving these useless comments in here :) */
+/* ok i think i get this now, after inspecting it further.
+   good thing no one bothered putting any comments in the code. <grumble>
+   the fake vga buffer is pigeonholing the half-width characters into 14 bits.
+   why 14, i don't know, but that means 7 bits per character, and these functions
+   handle shifting stuff around to get them into that space. realistically, we
+   only need to bother with chars 32 through 127, as well as 173 (middot) and
+   205 (the double-line used for noteoff). since 32->127 is 96 characters, there's
+   plenty of room for the printable stuff... and guess what, 173->205 is another
+   32, which fits nice and clean into 7 bits! so if the character is within that
+   range, we're fine. otherwise it'll just result in a broken glyph. (but it
+   probably wasn't drawn in the font anyway) */
+
 static inline int _pack_halfw(int c)
 {
 	switch (c) {
-	case '0': return 0;
-	case '1': return 1;
-	case '2': return 2;
-	case '3': return 3;
-	case '4': return 4;
-	case '5': return 5;
-	case '6': return 6;
-	case '7': return 7;
-	case '8': return 8;
-	case '9': return 9;
-	case 'a': case 'A': return 10;
-	/* case 'b': */ case 'B': return 11; /* lowercase 'b' used for flat symbol */
-	case 'c': case 'C': return 12;
-	case 'd': case 'D': return 13;
-	case 'e': case 'E': return 14;
-	case 'f': case 'F': return 15;
-	case 'g': case 'G': return 16;
-	case 'h': case 'H': return 17;
-	case 'i': case 'I': return 18;
-	case 'j': case 'J': return 19;
-	case 'k': case 'K': return 20;
-	case 'l': case 'L': return 21;
-	case 'm': case 'M': return 22;
-	case 'n': case 'N': return 23;
-	case 'o': case 'O': return 24;
-	case 'p': case 'P': return 25;
-	case 'q': case 'Q': return 26;
-	case 'r': case 'R': return 27;
-	case 's': case 'S': return 28;
-	case 't': case 'T': return 29;
-	case 'u': case 'U': return 30;
-	case 'v': case 'V': return 31;
-	case 'w': case 'W': return 32;
-	case 'x': case 'X': return 33;
-	case 'y': case 'Y': return 34;
-	case 'z': case 'Z': return 35;
-
-	/* FT2 nonsense */
-	case '$': return 36;
-	case '<': return 37;
-	case '>': return 38;
-
-	case ' ': return 39;
-	case 0xad: return 40;
-	case 0x5e: return 41;
-	case 0xcd: return 42;
-	case 0x7e: return 43;
-
-        /* Mini-sharps and flats */
-        case '-': return 44;
-        case '#': return 45;
-        case 'b': return 46;
-
-	default:
-		fprintf(stderr, "FATAL: half-width character %x not mapped\n", c);
-		exit(255);
-	};
+		case  32 ... 127: return c - 32; /* 0 ... 95 */
+		case 173 ... 205: return 96 + c - 173; /* 96 ... 127 */
+		default:
+			abort();
+			return '?';
+	}
 }
+
 static inline int _unpack_halfw(int c)
 {
-	const unsigned char *zmap = (const unsigned char *)
-		"0123456789ABCDEFGHIJKLMNOPQRSTUV"
-		"WXYZ$<> \xad\x5e\xcd\x7e-#b.................";
-	if (c > 63)
-		return 0; /* eh? */
-	return (int) zmap[c];
+	switch (c) {
+		case  0 ...  95: return c + 32;
+		case 96 ... 127: return 96 - c + 173;
+		default: return '?'; /* should never happen */
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -251,16 +205,16 @@ void font_reset_bios(void)
 /* ... or just one character */
 void font_reset_char(int ch)
 {
-	byte *base;
+	uint8_t *base;
 	int cx;
 	
 	ch <<= 3;
 	cx = ch;
 	if (ch >= 1024) {
-		base = (byte*)font_default_upper_itf;
+		base = (uint8_t *) font_default_upper_itf;
 		cx -= 1024;
 	} else {
-		base = (byte*)font_default_lower;
+		base = (uint8_t *) font_default_lower;
 	}
 	/* update them both... */
 	memcpy(font_normal + ch, base + cx, 8);
@@ -273,7 +227,7 @@ void font_reset_char(int ch)
 
 static int squeeze_8x16_font(FILE * fp)
 {
-        byte data_8x16[4096];
+        uint8_t data_8x16[4096];
         int n;
 
         if (fread(data_8x16, 4096, 1, fp) != 1)
@@ -290,7 +244,7 @@ int font_load(const char *filename)
 {
         FILE *fp;
         long pos;
-        byte data[4];
+        uint8_t data[4];
         char *font_dir, *font_file;
 
         font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
@@ -366,7 +320,7 @@ int font_load(const char *filename)
 int font_save(const char *filename)
 {
         FILE *fp;
-        byte ver[2] = { 0x12, 0x2 };
+        uint8_t ver[2] = { 0x12, 0x2 };
         char *font_dir, *font_file;
 
         font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
@@ -592,19 +546,19 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 #undef SIZE
 #undef BPP
 
-void draw_char_bios(unsigned char c, int x, int y, Uint32 fg, Uint32 bg)
+void draw_char_bios(unsigned char c, int x, int y, uint32_t fg, uint32_t bg)
 {
     assert(x >= 0 && y >= 0 && x < 80 && y < 50);
     vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12) | 0x10000000;
 }
 
-void draw_char(unsigned char c, int x, int y, Uint32 fg, Uint32 bg)
+void draw_char(unsigned char c, int x, int y, uint32_t fg, uint32_t bg)
 {
     assert(x >= 0 && y >= 0 && x < 80 && y < 50);
     vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12);
 }
 
-int draw_text(const char * text, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
         int n = 0;
 
@@ -616,7 +570,7 @@ int draw_text(const char * text, int x, int y, Uint32 fg, Uint32 bg)
 	
         return n;
 }
-int draw_text_bios(const char * text, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
         int n = 0;
 
@@ -628,7 +582,7 @@ int draw_text_bios(const char * text, int x, int y, Uint32 fg, Uint32 bg)
 	
         return n;
 }
-void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
+void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color)
 {
 	unsigned int *mm;
 	int x, len;
@@ -644,7 +598,7 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, Uint32 color)
 	} while (ye >= 0);
 }
 
-int draw_text_len(const char * text, int len, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
         int n = 0;
 
@@ -656,7 +610,7 @@ int draw_text_len(const char * text, int len, int x, int y, Uint32 fg, Uint32 bg
         draw_fill_chars(x + n, y, x + len - 1, y, bg);
         return n;
 }
-int draw_text_bios_len(const char * text, int len, int x, int y, Uint32 fg, Uint32 bg)
+int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
         int n = 0;
 
@@ -671,8 +625,8 @@ int draw_text_bios_len(const char * text, int len, int x, int y, Uint32 fg, Uint
 
 /* --------------------------------------------------------------------- */
 
-void draw_half_width_chars(byte c1, byte c2, int x, int y,
-			   Uint32 fg1, Uint32 bg1, Uint32 fg2, Uint32 bg2)
+void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
+			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
 {
         assert(x >= 0 && y >= 0 && x < 80 && y < 50);
 	vgamem[x + (y*80)] =
@@ -689,13 +643,13 @@ enum box_type {
         BOX_THIN_INNER = 0, BOX_THIN_OUTER, BOX_THICK_OUTER
 };
 
-static const byte boxes[4][8] = {
+static const uint8_t boxes[4][8] = {
         {139, 138, 137, 136, 134, 129, 132, 131},       /* thin inner */
         {128, 130, 133, 135, 129, 134, 131, 132},       /* thin outer */
         {142, 144, 147, 149, 143, 148, 145, 146},       /* thick outer */
 };
 
-static void _draw_box_internal(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br, const byte ch[8])
+static void _draw_box_internal(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br, const uint8_t ch[8])
 {
         int n;
 
@@ -716,12 +670,12 @@ static void _draw_box_internal(int xs, int ys, int xe, int ye, Uint32 tl, Uint32
         }
 }
 
-void draw_thin_inner_box(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br)
+void draw_thin_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br)
 {
         _draw_box_internal(xs, ys, xe, ye, tl, br, boxes[BOX_THIN_INNER]);
 }
 
-void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br)
+void draw_thick_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br)
 {
         /* this one can't use _draw_box_internal because the corner
          * colors are different */
@@ -745,7 +699,7 @@ void draw_thick_inner_box(int xs, int ys, int xe, int ye, Uint32 tl, Uint32 br)
         }
 }
 
-void draw_thin_outer_box(int xs, int ys, int xe, int ye, Uint32 c)
+void draw_thin_outer_box(int xs, int ys, int xe, int ye, uint32_t c)
 {
         _draw_box_internal(xs, ys, xe, ye, c, c, boxes[BOX_THIN_OUTER]);
 }
@@ -775,7 +729,7 @@ void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int flags)
         }
 }
 
-void draw_thick_outer_box(int xs, int ys, int xe, int ye, Uint32 c)
+void draw_thick_outer_box(int xs, int ys, int xe, int ye, uint32_t c)
 {
         _draw_box_internal(xs, ys, xe, ye, c, c, boxes[BOX_THICK_OUTER]);
 }

@@ -109,14 +109,11 @@ static const char *audio_driver = 0;
 static int did_fullscreen = 0;
 static int did_classic = 0;
 
-/* ugly hack... */
-void (*shift_release)(void) = NULL;
-
 /* --------------------------------------------------------------------- */
 /* stuff SDL should already be doing but isn't */
 
 #if defined(GIO_FONT) && defined(PIO_FONT) && HAVE_SYS_KD_H
-static byte console_font[512 * 32];
+static uint8_t console_font[512 * 32];
 static int font_saved = 0;
 static void save_font(void)
 {
@@ -535,7 +532,7 @@ static void event_loop(void)
 	SDL_Event event;
 	struct key_event kk;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
-	Uint32 last_mouse_down, ticker;
+	uint32_t last_mouse_down, ticker;
 	SDLKey last_key = 0;
 	int modkey;
 	time_t startdown;
@@ -624,10 +621,6 @@ static void event_loop(void)
 			status.flags |= (NEED_UPDATE);
 			break;
 		case SDL_KEYUP:
-			if (event.key.keysym.sym == SDLK_LSHIFT
-			|| event.key.keysym.sym == SDLK_RSHIFT) {
-				if (shift_release) shift_release();
-			}
 #if defined(WIN32)
 #define _ALTTRACKED_KMOD	(KMOD_NUM|KMOD_CAPS)
 #else
@@ -1231,6 +1224,10 @@ int main(int argc, char **argv)
 	if (initial_dir) {
 		strncpy(cfg_dir_modules, initial_dir, PATH_MAX);
 		cfg_dir_modules[PATH_MAX] = 0;
+		strncpy(cfg_dir_samples, initial_dir, PATH_MAX);
+		cfg_dir_samples[PATH_MAX] = 0;
+		strncpy(cfg_dir_instruments, initial_dir, PATH_MAX);
+		cfg_dir_instruments[PATH_MAX] = 0;
 		free(initial_dir);
 	}
 

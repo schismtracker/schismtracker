@@ -27,10 +27,12 @@
 #include "sdlmain.h"
 
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
-#define TOP_BANNER_NORMAL "Schism Tracker built on Y___-m_-d_ H_:M_"
 
-#include "auto/build-version.h"
-static char banner[80] = { 0 };
+/* Macros at our disposal:
+	__DATE__        "Jun  3 2009"
+	__TIME__        "23:39:19"
+	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009" */
+#define TOP_BANNER_NORMAL "Schism Tracker built on " __DATE__ " " __TIME__
 
 
 /* this should be 50 characters or shorter, as they are used in the startup dialog */
@@ -67,48 +69,8 @@ const char *ver_license[] = {
 
 const char *schism_banner(int classic)
 {
-	char *ptr;
-
-	if (classic)
-		return TOP_BANNER_CLASSIC;
-
-	if (banner[0] == 0) {
-		strcpy(banner, TOP_BANNER_NORMAL);
-
-		/* fix in the year 10,000 :) */
-		if ((ptr = strstr(banner, "Y___")) != NULL) {
-			/* Year */
-			ptr[0] = BUILD_VERSION[7];
-			ptr[1] = BUILD_VERSION[8];
-			ptr[2] = BUILD_VERSION[9];
-			ptr[3] = BUILD_VERSION[10];
-		}
-		if ((ptr = strstr(banner, "m_")) != NULL) {
-			/* Month */
-			ptr[0] = BUILD_VERSION[12];
-			ptr[1] = BUILD_VERSION[13];
-		}
-		if ((ptr = strstr(banner, "d_")) != NULL) {
-			/* Day */
-			ptr[0] = BUILD_VERSION[15];
-			ptr[1] = BUILD_VERSION[16];
-		}
-		if ((ptr = strstr(banner, "H_")) != NULL) {
-			/* Hour */
-			ptr[0] = BUILD_VERSION[18];
-			ptr[1] = BUILD_VERSION[19];
-		}
-		if ((ptr = strstr(banner, "M_")) != NULL) {
-			/* Minute */
-			ptr[0] = BUILD_VERSION[21];
-			ptr[1] = BUILD_VERSION[22];
-		}
-		if ((ptr = strstr(banner, "S_")) != NULL) {
-			/* Second */
-			ptr[0] = BUILD_VERSION[24];
-			ptr[1] = BUILD_VERSION[25];
-		}
-	}
-	return banner;
+	return (classic
+		? TOP_BANNER_CLASSIC
+		: TOP_BANNER_NORMAL);
 }
 

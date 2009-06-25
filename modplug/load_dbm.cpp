@@ -14,8 +14,8 @@
 //
 ///////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
 #include "sndfile.h"
+#include "snd_fx.h"
 
 //#pragma warning(disable:4244)
 
@@ -34,81 +34,81 @@
 
 typedef struct DBMFILEHEADER
 {
-	DWORD dbm_id;		// "DBM0" = 0x304d4244
-	WORD trkver;		// Tracker version: 02.15
-	WORD reserved;
-	DWORD name_id;		// "NAME" = 0x454d414e
-	DWORD name_len;		// name length: always 44
-	CHAR songname[44];
-	DWORD info_id;		// "INFO" = 0x4f464e49
-	DWORD info_len;		// 0x0a000000
-	WORD instruments;
-	WORD samples;
-	WORD songs;
-	WORD patterns;
-	WORD channels;
-	DWORD song_id;		// "SONG" = 0x474e4f53
-	DWORD song_len;
-	CHAR songname2[44];
-	WORD orders;
-//	WORD orderlist[0];	// orderlist[orders] in words
+	uint32_t dbm_id;		// "DBM0" = 0x304d4244
+	uint16_t trkver;		// Tracker version: 02.15
+	uint16_t reserved;
+	uint32_t name_id;		// "NAME" = 0x454d414e
+	uint32_t name_len;		// name length: always 44
+	int8_t songname[44];
+	uint32_t info_id;		// "INFO" = 0x4f464e49
+	uint32_t info_len;		// 0x0a000000
+	uint16_t instruments;
+	uint16_t samples;
+	uint16_t songs;
+	uint16_t patterns;
+	uint16_t channels;
+	uint32_t song_id;		// "SONG" = 0x474e4f53
+	uint32_t song_len;
+	int8_t songname2[44];
+	uint16_t orders;
+//	uint16_t orderlist[0];	// orderlist[orders] in words
 } DBMFILEHEADER;
 
 typedef struct DBMINSTRUMENT
 {
-	CHAR name[30];
-	WORD sampleno;
-	WORD volume;
-	DWORD finetune;
-	DWORD loopstart;
-	DWORD looplen;
-	WORD panning;
-	WORD flags;
+	int8_t name[30];
+	uint16_t sampleno;
+	uint16_t volume;
+	uint32_t finetune;
+	uint32_t loopstart;
+	uint32_t looplen;
+	uint16_t panning;
+	uint16_t flags;
 } DBMINSTRUMENT;
 
 typedef struct DBMENVELOPE
 {
-	WORD instrument;
-	BYTE flags;
-	BYTE numpoints;
-	BYTE sustain1;
-	BYTE loopbegin;
-	BYTE loopend;
-	BYTE sustain2;
-	WORD volenv[2*32];
+	uint16_t instrument;
+	uint8_t flags;
+	uint8_t numpoints;
+	uint8_t sustain1;
+	uint8_t loopbegin;
+	uint8_t loopend;
+	uint8_t sustain2;
+	uint16_t volenv[2*32];
 } DBMENVELOPE;
 
 typedef struct DBMPATTERN
 {
-	WORD rows;
-	DWORD packedsize;
-	BYTE patterndata[2];	// [packedsize]
+	uint16_t rows;
+	uint32_t packedsize;
+	uint8_t patterndata[2];	// [packedsize]
 } DBMPATTERN;
 
 typedef struct DBMSAMPLE
 {
-	DWORD flags;
-	DWORD samplesize;
-	BYTE sampledata[2];		// [samplesize]
+	uint32_t flags;
+	uint32_t samplesize;
+	uint8_t sampledata[2];		// [samplesize]
 } DBMSAMPLE;
 
 #pragma pack()
 
 
-BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 //---------------------------------------------------------------
 {
 	DBMFILEHEADER *pfh = (DBMFILEHEADER *)lpStream;
-	DWORD dwMemPos;
-	UINT nOrders, nSamples, nInstruments, nPatterns;
+	uint32_t dwMemPos;
+	uint32_t nOrders, nSamples, nInstruments, nPatterns;
 	
 	if ((!lpStream) || (dwMemLength <= sizeof(DBMFILEHEADER)) || (!pfh->channels)
 	 || (pfh->dbm_id != DBM_FILE_MAGIC) || (!pfh->songs) || (pfh->song_id != DBM_ID_SONG)
 	 || (pfh->name_id != DBM_ID_NAME) || (pfh->name_len != DBM_NAMELEN)
-	 || (pfh->info_id != DBM_ID_INFO) || (pfh->info_len != DBM_INFOLEN)) return FALSE;
+	 || (pfh->info_id != DBM_ID_INFO) || (pfh->info_len != DBM_INFOLEN)) return false;
 	dwMemPos = sizeof(DBMFILEHEADER);
 	nOrders = bswapBE16(pfh->orders);
-	if (dwMemPos + 2 * nOrders + 8*3 >= dwMemLength) return FALSE;
+	if (dwMemPos + 2 * nOrders + 8*3 >= dwMemLength) return false;
 	nInstruments = bswapBE16(pfh->instruments);
 	nSamples = bswapBE16(pfh->samples);
 	nPatterns = bswapBE16(pfh->patterns);
@@ -116,19 +116,19 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 	m_nChannels = bswapBE16(pfh->channels);
 	if (m_nChannels < 4) m_nChannels = 4;
 	if (m_nChannels > 64) m_nChannels = 64;
-	memcpy(m_szNames[0], (pfh->songname[0]) ? pfh->songname : pfh->songname2, 32);
-	m_szNames[0][31] = 0;
-	for (UINT iOrd=0; iOrd < nOrders; iOrd++)
+	memcpy(song_title, (pfh->songname[0]) ? pfh->songname : pfh->songname2, 32);
+	song_title[31] = 0;
+	for (uint32_t iOrd=0; iOrd < nOrders; iOrd++)
 	{
-		Order[iOrd] = lpStream[dwMemPos+iOrd*2+1];
+		Orderlist[iOrd] = lpStream[dwMemPos+iOrd*2+1];
 		if (iOrd >= MAX_ORDERS-2) break;
 	}
 	dwMemPos += 2*nOrders;
 	while (dwMemPos + 10 < dwMemLength)
 	{
-		DWORD chunk_id = ((LPDWORD)(lpStream+dwMemPos))[0];
-		DWORD chunk_size = bswapBE32(((LPDWORD)(lpStream+dwMemPos))[1]);
-		DWORD chunk_pos;
+		uint32_t chunk_id = ((uint32_t *)(lpStream+dwMemPos))[0];
+		uint32_t chunk_size = bswapBE32(((uint32_t *)(lpStream+dwMemPos))[1]);
+		uint32_t chunk_pos;
 		
 		dwMemPos += 8;
 		chunk_pos = dwMemPos;
@@ -138,26 +138,26 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 		if (chunk_id == DBM_ID_INST)
 		{
 			if (nInstruments >= MAX_INSTRUMENTS) nInstruments = MAX_INSTRUMENTS-1;
-			for (UINT iIns=0; iIns<nInstruments; iIns++)
+			for (uint32_t iIns=0; iIns<nInstruments; iIns++)
 			{
-				MODINSTRUMENT *psmp;
-				INSTRUMENTHEADER *penv;
+				SONGSAMPLE *psmp;
+				SONGINSTRUMENT *penv;
 				DBMINSTRUMENT *pih;
-				UINT nsmp;
+				uint32_t nsmp;
 
 				if (chunk_pos + sizeof(DBMINSTRUMENT) > dwMemPos) break;
-				if ((penv = new INSTRUMENTHEADER) == NULL) break;
+				if ((penv = new SONGINSTRUMENT) == NULL) break;
 				pih = (DBMINSTRUMENT *)(lpStream+chunk_pos);
 				nsmp = bswapBE16(pih->sampleno);
-				psmp = ((nsmp) && (nsmp < MAX_SAMPLES)) ? &Ins[nsmp] : NULL;
-				memset(penv, 0, sizeof(INSTRUMENTHEADER));
+				psmp = ((nsmp) && (nsmp < MAX_SAMPLES)) ? &Samples[nsmp] : NULL;
+				memset(penv, 0, sizeof(SONGINSTRUMENT));
 				memcpy(penv->name, pih->name, 30);
 				if (psmp)
 				{
-					memcpy(m_szNames[nsmp], pih->name, 30);
-					m_szNames[nsmp][30] = 0;
+					memcpy(psmp->name, pih->name, 30);
+					psmp->name[30] = 0;
 				}
-				Headers[iIns+1] = penv;
+				Instruments[iIns+1] = penv;
 				penv->nFadeOut = 1024;	// ???
 				penv->nGlobalVol = 128;
 				penv->nPan = bswapBE16(pih->panning);
@@ -166,7 +166,7 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 				else
 					penv->nPan = 128;
 				penv->nPPC = 5*12;
-				for (UINT i=0; i<120; i++)
+				for (uint32_t i=0; i<120; i++)
 				{
 					penv->Keyboard[i] = nsmp;
 					penv->NoteMap[i] = i+1;
@@ -174,13 +174,13 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 				// Sample Info
 				if (psmp)
 				{
-					DWORD sflags = bswapBE16(pih->flags);
+					uint32_t sflags = bswapBE16(pih->flags);
 					psmp->nVolume = bswapBE16(pih->volume) * 4;
 					if ((!psmp->nVolume) || (psmp->nVolume > 256)) psmp->nVolume = 256;
 					psmp->nGlobalVol = 64;
 					psmp->nC5Speed = bswapBE32(pih->finetune);
 					// what?
-					//int f2t = FrequencyToTranspose(psmp->nC5Speed);
+					//int f2t = frequency_to_transpose(psmp->nC5Speed);
 					//psmp->RelativeTone = f2t >> 7;
 					//psmp->nFineTune = f2t & 0x7F;
 					if ((pih->looplen) && (sflags & 3))
@@ -200,20 +200,20 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 		// Volume Envelopes
 		if (chunk_id == DBM_ID_VENV)
 		{
-			UINT nEnvelopes = lpStream[chunk_pos+1];
+			uint32_t nEnvelopes = lpStream[chunk_pos+1];
 			
 			chunk_pos += 2;
-			for (UINT iEnv=0; iEnv<nEnvelopes; iEnv++)
+			for (uint32_t iEnv=0; iEnv<nEnvelopes; iEnv++)
 			{
 				DBMENVELOPE *peh;
-				UINT nins;
+				uint32_t nins;
 				
 				if (chunk_pos + sizeof(DBMENVELOPE) > dwMemPos) break;
 				peh = (DBMENVELOPE *)(lpStream+chunk_pos);
 				nins = bswapBE16(peh->instrument);
-				if ((nins) && (nins < MAX_INSTRUMENTS) && (Headers[nins]) && (peh->numpoints))
+				if ((nins) && (nins < MAX_INSTRUMENTS) && (Instruments[nins]) && (peh->numpoints))
 				{
-					INSTRUMENTHEADER *penv = Headers[nins];
+					SONGINSTRUMENT *penv = Instruments[nins];
 
 					if (peh->flags & 1) penv->dwFlags |= ENV_VOLUME;
 					if (peh->flags & 2) penv->dwFlags |= ENV_VOLSUSTAIN;
@@ -226,7 +226,7 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 					for (int i=0; i<penv->VolEnv.nNodes; i++)
 					{
 						penv->VolEnv.Ticks[i] = bswapBE16(peh->volenv[i*2]);
-						penv->VolEnv.Values[i] = (BYTE)bswapBE16(peh->volenv[i*2+1]);
+						penv->VolEnv.Values[i] = (uint8_t)bswapBE16(peh->volenv[i*2+1]);
 					}
 				}
 				chunk_pos += sizeof(DBMENVELOPE);
@@ -236,11 +236,11 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 		if (chunk_id == DBM_ID_PATT)
 		{
 			if (nPatterns > MAX_PATTERNS) nPatterns = MAX_PATTERNS;
-			for (UINT iPat=0; iPat<nPatterns; iPat++)
+			for (uint32_t iPat=0; iPat<nPatterns; iPat++)
 			{
 				DBMPATTERN *pph;
-				DWORD pksize;
-				UINT nRows;
+				uint32_t pksize;
+				uint32_t nRows;
 
 				if (chunk_pos + sizeof(DBMPATTERN) > dwMemPos) break;
 				pph = (DBMPATTERN *)(lpStream+chunk_pos);
@@ -249,29 +249,29 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 				nRows = bswapBE16(pph->rows);
 				if ((nRows >= 4) && (nRows <= 256))
 				{
-					MODCOMMAND *m = AllocatePattern(nRows, m_nChannels);
+					MODCOMMAND *m = csf_allocate_pattern(nRows, m_nChannels);
 					if (m)
 					{
-						LPBYTE pkdata = (LPBYTE)&pph->patterndata;
-						UINT row = 0;
-						UINT i = 0;
+						uint8_t * pkdata = (uint8_t *)&pph->patterndata;
+						uint32_t row = 0;
+						uint32_t i = 0;
 
 						PatternSize[iPat] = nRows;
 						PatternAllocSize[iPat] = nRows;
 						Patterns[iPat] = m;
 						while ((i+3<pksize) && (row < nRows))
 						{
-							UINT ch = pkdata[i++];
+							uint32_t ch = pkdata[i++];
 
 							if (ch)
 							{
-								BYTE b = pkdata[i++];
+								uint8_t b = pkdata[i++];
 								ch--;
 								if (ch < m_nChannels)
 								{
 									if (b & 0x01)
 									{
-										UINT note = pkdata[i++];
+										uint32_t note = pkdata[i++];
 
 										if (note == 0x1F) note = 0xFF; else
 										if ((note) && (note < 0xFE))
@@ -283,10 +283,10 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 									if (b & 0x02) m[ch].instr = pkdata[i++];
 									if (b & 0x3C)
 									{
-										UINT cmd1 = 0xFF, param1 = 0, cmd2 = 0xFF, param2 = 0;
-										if (b & 0x04) cmd1 = (UINT)pkdata[i++];
+										uint32_t cmd1 = 0xFF, param1 = 0, cmd2 = 0xFF, param2 = 0;
+										if (b & 0x04) cmd1 = (uint32_t)pkdata[i++];
 										if (b & 0x08) param1 = pkdata[i++];
-										if (b & 0x10) cmd2 = (UINT)pkdata[i++];
+										if (b & 0x10) cmd2 = (uint32_t)pkdata[i++];
 										if (b & 0x20) param2 = pkdata[i++];
 										if (cmd1 == 0x0C)
 										{
@@ -310,7 +310,7 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 										{
 											m[ch].command = cmd1;
 											m[ch].param = param1;
-											ConvertModCommand(&m[ch], 0);
+											csf_import_mod_effect(&m[ch], 0);
 										}
 									}
 								} else
@@ -338,19 +338,19 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 		{
 			if (nSamples >= MAX_SAMPLES) nSamples = MAX_SAMPLES-1;
 			m_nSamples = nSamples;
-			for (UINT iSmp=1; iSmp<=nSamples; iSmp++)
+			for (uint32_t iSmp=1; iSmp<=nSamples; iSmp++)
 			{
-				MODINSTRUMENT *pins;
+				SONGSAMPLE *pins;
 				DBMSAMPLE *psh;
-				DWORD samplesize;
-				DWORD sampleflags;
+				uint32_t samplesize;
+				uint32_t sampleflags;
 
 				if (chunk_pos + sizeof(DBMSAMPLE) >= dwMemPos) break;
 				psh = (DBMSAMPLE *)(lpStream+chunk_pos);
 				chunk_pos += 8;
 				samplesize = bswapBE32(psh->samplesize);
 				sampleflags = bswapBE32(psh->flags);
-				pins = &Ins[iSmp];
+				pins = &Samples[iSmp];
 				pins->nLength = samplesize;
 				if (sampleflags & 2)
 				{
@@ -360,13 +360,13 @@ BOOL CSoundFile::ReadDBM(const BYTE *lpStream, DWORD dwMemLength)
 				if ((chunk_pos+samplesize > dwMemPos) || (samplesize > dwMemLength)) break;
 				if (sampleflags & 3)
 				{
-					ReadSample(pins, (pins->uFlags & CHN_16BIT) ? RS_PCM16M : RS_PCM8S,
-								(LPSTR)(psh->sampledata), samplesize);
+					csf_read_sample(pins, (pins->uFlags & CHN_16BIT) ? RS_PCM16M : RS_PCM8S,
+								(const char *)(psh->sampledata), samplesize);
 				}
 				chunk_pos += samplesize;
 			}
 		}
 	}
-	return TRUE;
+	return true;
 }
 

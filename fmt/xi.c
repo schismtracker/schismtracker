@@ -28,16 +28,16 @@
 #include "song.h"
 
 #ifndef WIN32
-#include "stdafx.h"
 #endif
 
+#include "snd_fx.h"
 #include "xm_defs.h"
 
 #include <string.h>
 #include <stdlib.h>
 
 /* --------------------------------------------------------------------- */
-int fmt_xi_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	if (length <= 86) return false;
 	if (memcmp(data, "Extended Instrument: ", 21) != 0) return false;
@@ -52,7 +52,7 @@ int fmt_xi_read_info(dmoz_file_t *file, const byte *data, size_t length)
 }
 
 
-int fmt_xi_load_instrument(const byte *data, size_t length, int slot)
+int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 {
 	//XMINSTRUMENTHEADER xi;
 	XMSAMPLEHEADER xmsh;
@@ -146,7 +146,7 @@ int fmt_xi_load_instrument(const byte *data, size_t length, int slot)
 		smp->vib_depth = xmsh.vibdepth;
 		smp->vib_rate = xmsh.vibrate / 4;
 
-		song_sample_set_c5speed_finetune(n, xmss.relnote, xmss.finetune);
+		song_sample_set_c5speed(n, transpose_to_frequency(xmss.relnote, xmss.finetune));
 		ptr += song_copy_sample_raw(n, rs, data+ptr, length - ptr);
 	}
 	return true;

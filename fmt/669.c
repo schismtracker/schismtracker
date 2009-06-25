@@ -28,15 +28,15 @@
 struct header_669 {
         char sig[2];
         char songmessage[108];
-        byte samples;
-        byte patterns;
-        byte restartpos;
-        byte orders[128];
-        byte tempolist[128];
-        byte breaks[128];
+        uint8_t samples;
+        uint8_t patterns;
+        uint8_t restartpos;
+        uint8_t orders[128];
+        uint8_t tempolist[128];
+        uint8_t breaks[128];
 };
 
-int fmt_669_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         struct header_669 *header = (struct header_669 *) data;
         unsigned long i;

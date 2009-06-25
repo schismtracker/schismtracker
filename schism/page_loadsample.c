@@ -58,9 +58,7 @@ static int _library_mode = 0;
 static struct widget widgets_loadsample[15];
 static int fake_slot_changed = 0;
 static int will_move_to = -1;
-static int fake_slot = -1;
-static int need_trigger = -1;
-static int need_keyoff = -1;
+static int fake_slot = KEYJAZZ_NOINST;
 static const char *const loop_states[] = {
 		"Off", "On Forwards", "On Ping Pong", NULL };
 
@@ -110,7 +108,7 @@ static int sampgrep(dmoz_file_t *f)
 static void clear_directory(void)
 {
 	dmoz_free(&flist, NULL);
-	fake_slot = -1;
+	fake_slot = KEYJAZZ_NOINST;
 	fake_slot_changed = 0;
 }
 static void file_list_reposition(void)
@@ -313,28 +311,13 @@ static void load_sample_draw_const(void)
 	draw_text("Date", 54, 46, 0, 2);
 	draw_text("Time", 54, 47, 0, 2);
 
-	if (fake_slot > -1) {
-		s = song_get_sample(fake_slot, 0);
-		if (s) {
-			vgamem_ovl_clear(&sample_image, 0);
-			draw_sample_data(&sample_image, s,
-					fake_slot);
-		} else {
-			vgamem_ovl_clear(&sample_image, 0);
-		    vgamem_ovl_apply(&sample_image);
-		}
-	}
-
-	if (need_trigger > -1) {
-		if (fake_slot > -1) {
-			if (need_keyoff > -1)
-				song_keyup(fake_slot, -1, need_keyoff,
-						KEYDOWN_CHAN_CURRENT, 0);
-			song_keydown(fake_slot, -1,
-						need_keyoff = need_trigger, 64,
-						KEYDOWN_CHAN_CURRENT, 0);
-		}
-		need_trigger = -1;
+	if (fake_slot != KEYJAZZ_NOINST) {
+		s = song_get_sample(fake_slot, NULL);
+		vgamem_ovl_clear(&sample_image, 0);
+		if (s)
+			draw_sample_data(&sample_image, s, fake_slot);
+		else
+			vgamem_ovl_apply(&sample_image);
 	}
 }
 
@@ -355,7 +338,7 @@ static void _common_set_page(void)
 	change_dir(cfg_dir_samples);
 
 	status.flags &= ~DIR_SAMPLES_CHANGED;
-	fake_slot = -1;
+	fake_slot = KEYJAZZ_NOINST;
 	fake_slot_changed = 0;
 
 	*selected_widget = 0;
@@ -578,7 +561,7 @@ static void reposition_at_slash_search(void)
 			b = i;
 		}
 	}
-	if (bl > -1) {
+	if (bl > 0) {
 		current_file = b;
 		file_list_reposition();
 	}
@@ -604,7 +587,9 @@ static void handle_enter_key(void)
 		if (_library_mode) return;
 		/* it's already been loaded, so copy it */
 		smp = song_get_sample(cur, NULL);
-		song_copy_sample(cur, file->sample, file->title);
+		song_copy_sample(cur, file->sample);
+		strncpy(smp->name, file->title, 25);
+		smp->name[25] = 0;
 		strncpy(smp->filename, file->base, 12);
 		smp->filename[12] = 0;
 		finish_load(cur);
@@ -621,7 +606,7 @@ static void handle_enter_key(void)
 
 static void do_discard_changes_and_move(UNUSED void *gn)
 {
-	fake_slot = -1;
+	fake_slot = KEYJAZZ_NOINST;
 	fake_slot_changed = 0;
 	search_pos = -1;
 	current_file = will_move_to;
@@ -766,7 +751,7 @@ static int file_list_handle_key(struct key_event * k)
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 	if (new_file != current_file) {
-		if (fake_slot > -1 && fake_slot_changed) {
+		if (fake_slot != KEYJAZZ_NOINST && fake_slot_changed) {
 			will_move_to = new_file;
 			dialog_create(DIALOG_YES_NO,
 				"Discard Changes?",
@@ -778,7 +763,7 @@ static int file_list_handle_key(struct key_event * k)
 			/*"Save Sample?" OK Cancel*/
 			/*"Discard Changes?" OK Cancel*/
 		}
-		fake_slot = -1;
+		fake_slot = KEYJAZZ_NOINST;
 		fake_slot_changed = 0;
 		search_pos = -1;
 		current_file = new_file;
@@ -803,38 +788,23 @@ static void load_sample_handle_key(struct key_event * k)
 		if (k->midi_volume > -1) {
 			v = k->midi_volume / 2;
 		} else {
-			v = 64;
+			v = KEYJAZZ_DEFAULTVOL;
 		}
+	} else if (k->is_repeat) {
+		return;
 	} else {
 		n = kbd_get_note(k);
-		v = 64;
+		v = KEYJAZZ_DEFAULTVOL;
 		if (n <= 0 || n > 120)
 			return;
 	}
 
 	handle_preload();
-	if (fake_slot > -1) {
-		if ((status.flags & CLASSIC_MODE) || !song_is_multichannel_mode()) {
-			if (!k->state && !k->is_repeat) {
-				need_trigger = n;
-				status.flags |= NEED_UPDATE;
-			}
-		} else {
-			if (need_keyoff > -1) {
-				song_keyup(fake_slot, -1, need_keyoff,
-						KEYDOWN_CHAN_CURRENT, 0);
-				need_keyoff = -1;
-			}
-			if (k->state) {
-				song_keyup(fake_slot, -1, n,
-						KEYDOWN_CHAN_CURRENT, 0);
-				status.last_keysym = 0;
-			} else if (!k->is_repeat) {
-				song_keydown(fake_slot, -1, n, v,
-						KEYDOWN_CHAN_CURRENT, 0);
-			}
-			need_trigger = -1;
-		}
+	if (fake_slot != KEYJAZZ_NOINST) {
+		if (k->state)
+			song_keyup(fake_slot, KEYJAZZ_NOINST, n);
+		else
+			song_keydown(fake_slot, KEYJAZZ_NOINST, n, v, KEYJAZZ_CHAN_CURRENT);
 	}
 }
 
@@ -843,7 +813,7 @@ static void handle_preload(void)
 {
 	dmoz_file_t *file;
 
-	if (fake_slot < 0 && current_file >= 0 && current_file < flist.num_files) {
+	if (fake_slot == KEYJAZZ_NOINST && current_file >= 0 && current_file < flist.num_files) {
 		file = flist.files[current_file];
 		if (file) {
 			fake_slot_changed = 0;
@@ -859,35 +829,25 @@ static void handle_load_copy_uint(unsigned int s, unsigned int *d)
 {
 	if (s != *d) {
 		*d = s;
-		fake_slot_changed=1;
+		fake_slot_changed = 1;
 	}
 }
 static void handle_load_copy(song_sample *s)
 {
-	handle_load_copy_uint(widgets_loadsample[2].d.numentry.value,
-			&s->speed);
-	handle_load_copy_uint(widgets_loadsample[4].d.numentry.value,
-			&s->loop_start);
-	handle_load_copy_uint(widgets_loadsample[5].d.numentry.value,
-			&s->loop_end);
-	handle_load_copy_uint(widgets_loadsample[7].d.numentry.value,
-			&s->sustain_start);
-	handle_load_copy_uint(widgets_loadsample[8].d.numentry.value,
-			&s->sustain_end);
-	handle_load_copy_uint(widgets_loadsample[9].d.thumbbar.value,
-			&s->volume);
+	handle_load_copy_uint(widgets_loadsample[2].d.numentry.value, &s->speed);
+	handle_load_copy_uint(widgets_loadsample[4].d.numentry.value, &s->loop_start);
+	handle_load_copy_uint(widgets_loadsample[5].d.numentry.value, &s->loop_end);
+	handle_load_copy_uint(widgets_loadsample[7].d.numentry.value, &s->sustain_start);
+	handle_load_copy_uint(widgets_loadsample[8].d.numentry.value, &s->sustain_end);
+	handle_load_copy_uint(widgets_loadsample[9].d.thumbbar.value, &s->volume);
 	if ((unsigned int)widgets_loadsample[9].d.thumbbar.value == (s->volume>>2)) {
 		s->volume = (widgets_loadsample[9].d.thumbbar.value << 2);
 		fake_slot_changed=1;
 	}
-	handle_load_copy_uint(widgets_loadsample[10].d.thumbbar.value,
-			&s->global_volume);
-	handle_load_copy_uint(widgets_loadsample[11].d.thumbbar.value,
-			&s->vib_rate);
-	handle_load_copy_uint(widgets_loadsample[12].d.thumbbar.value,
-			&s->vib_depth);
-	handle_load_copy_uint(widgets_loadsample[13].d.thumbbar.value,
-			&s->vib_speed);
+	handle_load_copy_uint(widgets_loadsample[10].d.thumbbar.value, &s->global_volume);
+	handle_load_copy_uint(widgets_loadsample[11].d.thumbbar.value, &s->vib_rate);
+	handle_load_copy_uint(widgets_loadsample[12].d.thumbbar.value, &s->vib_depth);
+	handle_load_copy_uint(widgets_loadsample[13].d.thumbbar.value, &s->vib_speed);
 	switch (widgets_loadsample[3].d.menutoggle.state) {
 	case 0:
 		if (s->flags & (SAMP_LOOP|SAMP_LOOP_PINGPONG)) {
@@ -937,7 +897,7 @@ static void handle_load_update(void)
 {
 	song_sample *s;
 	handle_preload();
-	if (fake_slot > -1) {
+	if (fake_slot != KEYJAZZ_NOINST) {
 		s = song_get_sample(fake_slot, NULL);
 		if (s) {
 			handle_load_copy(s);

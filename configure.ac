@@ -1,8 +1,10 @@
 dnl Process this file with autoconf to produce a configure script.
 
 dnl Schism Tracker - a cross-platform Impulse Tracker clone
-dnl copyright (c) 2003-2005 chisel <schism@chisel.cjb.net>
-dnl URL: http://rigelseven.com/schism/
+dnl copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+dnl copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+dnl copyright (c) 2009 Storlek & Mrs. Brisby
+dnl URL: http://schismtracker.org/
 dnl
 dnl This program is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by

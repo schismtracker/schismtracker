@@ -23,6 +23,7 @@
 #ifndef SONG_H
 #define SONG_H
 
+#include <stdint.h>
 #include "util.h"
 #include "diskwriter.h"
 
@@ -59,6 +60,7 @@ typedef struct _song_sample {
         unsigned int vib_rate;
         unsigned int vib_depth;
         unsigned int vib_speed;
+        char name[32];
         char filename[22];
         int played;
         unsigned char AdlibBytes[12];
@@ -69,13 +71,12 @@ typedef struct _song_channel {
         unsigned int panning;
         unsigned int volume;
         unsigned int flags;
-        unsigned int mix_plugin;
 } song_channel;
 
 /* instrumentenvelope */
 typedef struct _song_envelope {
 	int ticks[32];
-	byte values[32];
+	uint8_t values[32];
 	int nodes;
 	int loop_start, loop_end;
 	int sustain_start, sustain_end;
@@ -100,19 +101,19 @@ typedef struct _song_instrument {
         int pitch_pan_separation;
         unsigned int pitch_pan_center;
         char name[32];
-        char filename[12];
+        char filename[16];
 	
 	int played;
 } song_instrument;
 
 /* modcommand */
 typedef struct _song_note {
-        byte note;
-        byte instrument;
-        byte volume_effect;
-        byte effect;
-        byte volume;
-        byte parameter;
+        uint8_t note;
+        uint8_t instrument;
+        uint8_t volume_effect;
+        uint8_t effect;
+        uint8_t volume;
+        uint8_t parameter;
 } song_note;
 
 /* modchannel (good grief...) */
@@ -175,6 +176,7 @@ typedef struct _song_mix_channel {
         unsigned int nNewIns;   // nfi, always seems to be zero
         unsigned int nCommand, nArpeggio;
         unsigned int nOldVolumeSlide, nOldFineVolUpDown;
+        unsigned int nOldGlbVolSlide;
         unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
         unsigned int nOldPanSlide, nOldChnVolSlide;
         unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
@@ -184,7 +186,7 @@ typedef struct _song_mix_channel {
         unsigned int nOldOffset, nOldHiOffset;
         unsigned int nCutOff, nResonance;
         unsigned int nRetrigCount, nRetrigParam;
-        unsigned int nTremorCount, nTremorParam;
+        unsigned int nTremorParam, nTremorOn, nTremorLen;
         unsigned int nPatternLoop, nPatternLoopCount;
         unsigned int nRowNote, nRowInstr;
         unsigned int nRowVolCmd, nRowVolume;
@@ -193,7 +195,7 @@ typedef struct _song_mix_channel {
         unsigned int nActiveMacro, nPadding;
 	unsigned int nTickStart;
 	unsigned int nRealtime;
-	byte stupid_gcc_workaround;
+	uint8_t stupid_gcc_workaround;
 
 } song_mix_channel;
 
@@ -207,9 +209,6 @@ struct audio_settings {
 	int channel_limit, interpolation_mode;
 	int oversampling, hq_resampling;
 	int noise_reduction, surround_effect;
-	int xbass, xbass_amount, xbass_range;
-	int surround, surround_depth, surround_delay;
-	int reverb, reverb_depth, reverb_delay;
 
 	unsigned int eq_freq[4];
 	unsigned int eq_gain[4];
@@ -272,8 +271,6 @@ enum {
         CHN_PITCHENV = (0x800000),
         CHN_FASTVOLRAMP = (0x1000000),
         //CHN_EXTRALOUD = (0x2000000),
-        CHN_REVERB = (0x4000000),
-        CHN_NOREVERB = (0x8000000),
 };
 
 // instrument envelope flags
@@ -308,11 +305,10 @@ enum {
 };
 
 enum {
-        VIB_SINE = (0),
-        VIB_SQUARE = (1),
-        VIB_RAMP_UP = (2),
-        VIB_RAMP_DOWN = (3),    /* modplug extension -- not supported */
-        VIB_RANDOM = (4),
+        VIB_SINE,
+        VIB_RAMP_DOWN,
+        VIB_SQUARE,
+        VIB_RANDOM,
 };
 
 /* volume column effects */
@@ -372,7 +368,7 @@ int song_load_unchecked(const char *file);
 int song_save(const char *file, const char *type);
 
 void song_clear_sample(int n);
-void song_copy_sample(int n, song_sample *src, char *srcname);
+void song_copy_sample(int n, song_sample *src);
 int song_load_sample(int n, const char *file);
 int song_preload_sample(void *f);
 int song_save_sample(int n, const char *file, int format_id);
@@ -418,7 +414,6 @@ unsigned song_copy_sample_raw(int n, unsigned int rs,
 #define RS_PTM8DTO16       0x25 /* ProTracker 8bit delta, 16bit sample */
 
 void song_sample_set_c5speed(int n, unsigned int c5);
-void song_sample_set_c5speed_finetune(int n, int relnote, int finetune);
 int song_sample_is_empty(int n);
 unsigned int song_sample_get_c5speed(int n);
 
@@ -470,7 +465,7 @@ void song_restore_channel_states(void);
 int song_find_last_channel(void);
 
 int song_get_pattern(int n, song_note ** buf);  // return 0 -> error
-byte *song_get_orderlist(void);
+uint8_t *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
 
@@ -527,20 +522,20 @@ void song_unlock_audio(void);
 void song_stop_audio(void);
 void song_start_audio(void);
 const char *song_audio_driver(void);
-#define song_audio_driver_name() song_audio_driver()
 
 void song_toggle_multichannel_mode(void);
 int song_is_multichannel_mode(void);
 void song_change_current_play_channel(int relative, int wraparound);
 int song_get_current_play_channel(void);
 
-/* these return the selected channel */
-#define KEYDOWN_CHAN_JAM	-1
-#define KEYDOWN_CHAN_CURRENT	-2
-int song_keydown(int s,int ins, int n, int v, int c, int *mm);
-int song_keyrecord(int s,int ins, int n, int v, int c, int *mm,
-						int effect, int param);
-int song_keyup(int s,int ins, int n, int c, int *mm);
+/* these return the channel that was used for the note.
+sample/inst slots 1+ are used "normally"; the sample loader uses slot #0 for preview playback */
+#define KEYJAZZ_CHAN_CURRENT 0
+#define KEYJAZZ_NOINST -1
+#define KEYJAZZ_DEFAULTVOL -1
+int song_keydown(int samp, int ins, int note, int vol, int chan);
+int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
+int song_keyup(int samp, int ins, int note);
 
 void song_start(void);
 void song_start_once(void);
@@ -619,7 +614,7 @@ void song_exchange_samples(int a, int b);
 void song_exchange_instruments(int a, int b);
 void song_swap_samples(int a, int b);
 void song_swap_instruments(int a, int b);
-void song_copy_instrument(int src, int dst);
+void song_copy_instrument(int dst, int src);
 void song_replace_sample(int num, int with);
 void song_replace_instrument(int num, int with);
 

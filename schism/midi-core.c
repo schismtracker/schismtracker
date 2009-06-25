@@ -196,18 +196,17 @@ void cfg_load_midi(cfg_file_t *cfg)
 	cfg_get_string(cfg,"MIDI","set_program", md->midi_global_data+(8*32),32, "Cc p");
 	for (i = 0; i < 16; i++) {
 		sprintf(buf, "SF%01x", i);
-		cfg_get_string(cfg, "MIDI", buf, md->midi_sfx+(i*32),32, 
+		cfg_get_string(cfg, "MIDI", buf, md->midi_sfx + (i * 32), 32, 
 				i == 0 ? "F0F000z" : "");
 	}
 
-	for (i = 0; i < 0x7f; i++) {
+	for (i = 0; i < 128; i++) {
 		sprintf(buf, "Z%02x", i + 0x80);
-		if (i < 16) {
+		if (i < 16)
 			sprintf(buf2, "F0F001%02x", i * 8);
-		} else {
+		else
 			buf2[0] = 0;
-		}
-		cfg_get_string(cfg, "MIDI", buf, md->midi_zxx+(i*32),32, buf2);
+		cfg_get_string(cfg, "MIDI", buf, md->midi_zxx + (i * 32), 32, buf2);
 	}
 
         mc = song_get_midi_config();
@@ -250,11 +249,11 @@ void cfg_save_midi(cfg_file_t *cfg)
 	cfg_set_string(cfg,"MIDI","set_program", md->midi_global_data+(8*32));
 	for (i = 0; i < 16; i++) {
 		sprintf(buf, "SF%01x", i);
-		cfg_set_string(cfg, "MIDI", buf, md->midi_sfx+(i*32));
+		cfg_set_string(cfg, "MIDI", buf, md->midi_sfx + (i * 32));
 	}
-	for (i = 0; i < 0x7f; i++) {
+	for (i = 0; i < 128; i++) {
 		sprintf(buf, "Z%02x", i + 0x80);
-		cfg_set_string(cfg, "MIDI", buf, md->midi_zxx+(i*32));
+		cfg_set_string(cfg, "MIDI", buf, md->midi_zxx + (i * 32));
 	}
 	song_unlock_audio();
 

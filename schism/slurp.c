@@ -77,7 +77,7 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
 {
         int old_errno;
         FILE *fp;
-        byte *read_buf, *realloc_buf;
+        uint8_t *read_buf, *realloc_buf;
         size_t this_len;
         int chunks = 0;
 
@@ -132,7 +132,7 @@ static int _slurp_stdio(slurp_t * t, int fd)
         if (!fp)
                 return 0;
 
-        t->data = (byte *) malloc(t->length);
+        t->data = (uint8_t *) malloc(t->length);
         if (t->data == NULL) {
                 old_errno = errno;
                 fclose(fp);

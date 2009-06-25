@@ -111,7 +111,7 @@ static int gusfreq(unsigned int freq)
 
 
 /* --------------------------------------------------------------------- */
-int fmt_pat_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_pat_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	if (length <= 23) return false;
 	if (memcmp(data, "GF1PATCH", 8) != 0) return false;
@@ -125,7 +125,7 @@ int fmt_pat_read_info(dmoz_file_t *file, const byte *data, size_t length)
 }
 
 
-int fmt_pat_load_instrument(const byte *data, size_t length, int slot)
+int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
 {
 	struct GF1PatchHeader header;
 	struct GF1PatchSampleHeader gfsamp;

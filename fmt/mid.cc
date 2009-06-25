@@ -32,13 +32,13 @@
 #include <math.h>
 
 
-int fmt_mid_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_mid_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	static CSoundFile qq;
 	if (length < 5) return false;
 	if (memcmp(data,"MThd",4)!=0) return false;
 	if (!qq.ReadMID(data,length)) return false;
-	file->title = str_dup(qq.m_szNames[0]);
+	file->title = str_dup(qq.song_title);
 	if (!file->title) return false;
 	file->description = "MIDI File";
 	file->type = TYPE_MODULE_MOD;
@@ -251,7 +251,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 {
 	song_note *nb;
 	midi_config *g;
-	byte *orderlist;
+	uint8_t *orderlist;
 	struct midi_track trk[64];
 	struct midi_map map[SCHISM_MAX_SAMPLES], *m;
 	song_instrument *ins;

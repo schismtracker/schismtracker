@@ -249,7 +249,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			fg = active ? 1 : 0;
 		draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
 
-		if (!channel->sample_data)
+		if (!(channel->sample_data && channel->sample_length))
 			continue;
 
                 /* first box: vu meter */
@@ -644,10 +644,10 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
         song_sample *samples = song_get_sample(0, NULL); // XXX hack
         unsigned int *channel_list;
         char buf[4];
-        byte d, dn;
+        uint8_t d, dn;
         /* f#2 -> f#8 = 73 columns */
         /* lower nybble = colour, upper nybble = size */
-        byte dot_field[73][36] = { {0} };
+        uint8_t dot_field[73][36] = { {0} };
 
         draw_fill_chars(5, base + 1, 77, base + height - 2, 0);
         draw_box(4, base, 78, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);

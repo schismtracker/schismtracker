@@ -21,17 +21,22 @@
  */
 
 #include "headers.h"
+#include "sdlmain.h"
 
+#include "it.h" /* for log_appendf */
 #include "midi.h"
 
 #include "mixer.h"
 #include "util.h"
 
-#ifdef USE_WIN32MM
-
 #include <windows.h>
 #include <mmsystem.h>
 #include <stdio.h>
+
+#ifndef USE_WIN32MM
+# error You have no winmm. Why are you trying to build this file?
+#endif
+
 
 struct win32mm_midi {
 	DWORD id;
@@ -55,7 +60,7 @@ static MMRESULT (*XP_timeBeginPeriod)(UINT period) = 0;
 static MMRESULT (*XP_timeSetEvent)(UINT u,UINT r,LPTIMECALLBACK proc,
 			DWORD_PTR user, UINT flags) = 0;
 
-static void _win32mm_sysex(LPMIDIHDR *q, unsigned char *d, unsigned int len)
+static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
 {
 	unsigned char *z;
 	LPMIDIHDR m;
@@ -73,7 +78,7 @@ static void _win32mm_sysex(LPMIDIHDR *q, unsigned char *d, unsigned int len)
 	m->dwOffset = 0;
 	(*q) = (m);
 }
-static void _win32mm_send(struct midi_port *p, unsigned char *data,
+static void _win32mm_send(struct midi_port *p, const unsigned char *data,
 		unsigned int len, UNUSED unsigned int delay)
 {
 	struct win32mm_midi *m;
@@ -118,7 +123,7 @@ static CALLBACK void _win32mm_xp_output(UNUSED UINT uTimerID,
 	_win32mm_send(c->p, c->d, c->len, 0);
 	free(c);
 }
-static void _win32mm_send_xp(struct midi_port *p, unsigned char *buf,
+static void _win32mm_send_xp(struct midi_port *p, const unsigned char *buf,
 		unsigned int len, unsigned int delay)
 {
 	/* version for windows XP */
@@ -319,5 +324,3 @@ int win32mm_midi_setup(void)
 	return 1;
 }
 
-
-#endif

@@ -662,7 +662,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	struct dirent *ent;
 	char *ptr;
 	struct stat st;
-	int pathlen, namlen, err = 0;
+	int pathlen, namlen, lib = 0, err = 0;
 
 	if (!path || !*path)
 		path = FAILSAFE_PATH;
@@ -710,13 +710,21 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		/* oops, it's a file! -- load it as a library */
 		if (load_library && load_library(path, flist, dlist) != 0)
 			err = errno;
+		else
+			lib = 1;
 	} else {
 		/* opendir failed? that's unpossible! */
 		err = 0;
 	}
 
-	/* more directories! */
-	add_platform_dirs(path, flist, dlist);
+	/* more directories!
+	 * If this is actually a file, make a fake "." that actually points to the directory.
+	 * If something weird happens when trying to get the directory name, this falls back
+	 * to add_platform_dirs to keep from getting "stuck". */
+	if (lib && (ptr = get_parent_directory(path)) != NULL)
+		dmoz_add_file_or_dir(flist, dlist, ptr, str_dup("."), NULL, -10);
+	else
+		add_platform_dirs(path, flist, dlist);
 
 	/* finally... sort it */
 	dmoz_sort(flist, dlist);

@@ -465,8 +465,7 @@ static int handle_key_global(struct key_event * k)
 		return 0;
 	}
 
-	if ((status.flags & CAPS_PRESSED)
-	&& (status.current_page == PAGE_PATTERN_EDITOR)) {
+	if ((status.flags & CAPS_PRESSED) && (status.current_page == PAGE_PATTERN_EDITOR)) {
 		j = kbd_get_note(k);
 		if (song_is_instrument_mode()) {
 			i = instrument_get_current();
@@ -476,11 +475,11 @@ static int handle_key_global(struct key_event * k)
 		if (j <= 0 || j > 120 || i < 1) {
 			/* do nothing, falling through */
 		} else if (k->state) {
-			song_keyup(i,i,j,KEYDOWN_CHAN_CURRENT,0);
+			song_keyup(i, i, j);
 			return 1;
 		} else {
 			if (!k->is_repeat)
-				song_keydown(i,i,j,64,KEYDOWN_CHAN_CURRENT,0);
+				song_keydown(i, i, j, 64, KEYJAZZ_CHAN_CURRENT);
 			return 1;
 		}
 	}
@@ -539,6 +538,7 @@ static int handle_key_global(struct key_event * k)
                 break;
 
         case SDLK_d:
+		if (k->state) return 1; /* argh */
                 if (k->mod & KMOD_CTRL) {
                 	i = SDL_WM_GrabInput(SDL_GRAB_QUERY);
 			if (i == SDL_GRAB_QUERY)

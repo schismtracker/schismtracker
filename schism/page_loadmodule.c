@@ -124,6 +124,7 @@ TODO: scroller hack on selected filename
 static char filename_entry[PATH_MAX + 1] = "";
 static char dirname_entry[PATH_MAX + 1] = "";
 
+char cfg_filename_pattern[PATH_MAX + 1] = GLOB_DEFAULT;
 static char **glob_list = NULL;
 
 /* --------------------------------------------------------------------- */
@@ -437,7 +438,7 @@ static void set_glob(const char *globspec)
 
 static void set_default_glob(int set_filename)
 {
-	const char *s = (status.flags & CLASSIC_MODE) ? GLOB_CLASSIC : GLOB_DEFAULT;
+	const char *s = cfg_filename_pattern;
 	if (set_filename) {
 		/* glob on load page is visible, but on save page the text should be empty */
 		strcpy(filename_entry, s);

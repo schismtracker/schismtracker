@@ -47,7 +47,6 @@ EXTRA_DIST = \
 bin_PROGRAMS = schismtracker
 
 noinst_HEADERS = \
-	include/auto/build-version.h	\
 	include/auto/default-font.h	\
 	include/auto/helpenum.h		\
 	include/auto/helptext.h		\
@@ -72,16 +71,28 @@ noinst_HEADERS = \
 	include/page.h			\
 	include/palettes.h		\
 	include/pattern-view.h		\
+	include/pngw.h			\
+	include/precomp_lut.h		\
 	include/sample-edit.h		\
 	include/sdlmain.h		\
 	include/slurp.h			\
 	include/song.h			\
+	include/tables.h		\
+	include/tree.h			\
 	include/util.h			\
 	include/vgamem-scanner.h	\
 	include/video.h			\
+	include/wine-ddraw.h		\
+	modplug/cmixer.h		\
+	modplug/fmopl.h			\
 	modplug/it_defs.h		\
 	modplug/sndfile.h		\
-	modplug/stdafx.h
+	modplug/snd_eq.h		\
+	modplug/snd_flt.h		\
+	modplug/snd_fm.h		\
+	modplug/snd_fx.h		\
+	modplug/snd_gm.h		\
+	modplug/xm_defs.h
 
 if USE_X11
 files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c sys/x11/xv.c
@@ -250,7 +261,6 @@ schismtracker_SOURCES = \
 	modplug/snd_fx_c.c		\
 	modplug/load_mod.cpp		\
 	modplug/snd_flt.c		\
-	modplug/load_wav.cpp		\
 	modplug/load_dsm.cpp		\
 	modplug/load_umx.cpp		\
 	modplug/snd_dsp.cpp		\
@@ -266,7 +276,7 @@ schismtracker_SOURCES = \
 	modplug/sndmix.cpp		\
 	modplug/load_mdl.cpp		\
 	modplug/load_ptm.cpp		\
-	modplug/mmcmp.cpp		\
+	modplug/mmcmp.c			\
 	modplug/fastmix.cpp		\
 	modplug/fmopl.c			\
 	modplug/snd_fm.cpp		\

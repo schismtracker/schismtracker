@@ -51,7 +51,6 @@ static unsigned char diskbuf[32768];
 static diskwriter_driver_t *dw = NULL;
 static FILE *fp = NULL;
 static FILE *multi_fp[64] = {NULL};
-static int multi_mono[64] = {0};
 
 static unsigned char *mbuf = NULL;
 static off_t mbuf_size = 0;
@@ -70,8 +69,8 @@ static char *dw_rename_to = NULL;
 
 static int swab_buf(int n)
 {
-	Uint32 *le32;
-	Uint16 *le16;
+	uint32_t *le32;
+	uint16_t *le16;
 	int i;
 
 	n *= dw->channels;
@@ -83,12 +82,12 @@ dw->output_le
 #endif
 	) {
 		if (dw->bits <= 16) {
-			le16 = (Uint16*)diskbuf;
+			le16 = (uint16_t*)diskbuf;
 			for (i = 0; i < n; i++, le16++) {
 				(*le16) = bswap_16((*le16));
 			}
 		} else if (dw->bits <= 32) {
-			le32 = (Uint32*)diskbuf;
+			le32 = (uint32_t*)diskbuf;
 			for (i = 0; i < n; i++, le32++) {
 				(*le32) = bswap_32((*le32));
 			}
@@ -227,8 +226,8 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	else dw->bits = 16;
 	if (dw->channels > 2) dw->channels = 2;
 
-	if (mp->m_dwSongFlags & SONG_NOSTEREO) dw->channels = 1;
-	else if (pattern_max_channels(patno, multi_mono) == 1) dw->channels = 1;
+	if (mp->m_dwSongFlags & SONG_NOSTEREO)
+		dw->channels = 1;
 
 	dw->m = (void(*)(diskwriter_driver_t*,const unsigned char *,unsigned int))_mw;
 
@@ -236,16 +235,14 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 		song_start_once();
 
 		/* okay, restrict libmodplug to only play a single pattern */
-		mp->LoopPattern(patno, 0);
+		csf_loop_pattern(mp, patno, 0);
 		mp->m_nRepeatCount = 2; /* er... */
 	}
 
-	// XXX what is this *=2 for?
-	csf_set_wave_config(mp, dw->rate*=2, dw->bits, dw->channels);
+	csf_set_wave_config(mp, dw->rate, dw->bits, dw->channels);
         csf_init_player(mp, 1);
 
-	//CSoundFile::gpSndMixHook = _dw_times_3;
-	CSoundFile::gdwSoundSetup |= SNDMIX_DIRECTTODISK;
+	mp->gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	status.flags |= (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN);
 
 	mbuf = NULL;
@@ -259,7 +256,6 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 
 	if (!fp_ok) {
 		diskwriter_finish();
-		CSoundFile::gpSndMixHook = NULL;
 		status.flags &= ~(DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN);
 		return DW_ERROR;
 	}
@@ -288,42 +284,26 @@ static void chan_setup(int rate, int nchan)
 		mp->gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	}
 }
+
 static int chan_detect(void)
 {
 	int nchan = diskwriter_output_channels;
-	int lim, i;
-	byte *ol;
 
-	for (i = 0; i < 64; i++) multi_mono[i] = 1;
-	if (mp->m_dwSongFlags & SONG_NOSTEREO) {
-		nchan = 1;
-	} else {
-		ol = song_get_orderlist();
-		lim = 1;
-		for (i = 0; i < 256; i++) {
-			if (ol[i] == ORDER_SKIP) continue;
-			if (ol[i] == ORDER_LAST) break;
-			lim = pattern_max_channels(ol[i], multi_mono);
-			if (lim > 1) break;
-		}
-		if (lim == 1) nchan = 1; /* mono is possible */
-	}
-
-	return dw->channels = nchan;
+	nchan = ((mp->m_dwSongFlags & SONG_NOSTEREO) || diskwriter_output_channels == 1) ? 1 : 2;
+	dw->channels = nchan;
+	return nchan;
 }
 
 static void multi_out_helper(int chan, int *buf, int len)
 {
-	/* mp->_multi_out_raw = multi_out_helper; */
+	/* csf_multi_out_raw = multi_out_helper; */
 
-	LONG vu_min[2] = { 0x7fffffff, 0x7fffffff };
-	LONG vu_max[2] = {-0x7fffffff,-0x7fffffff };
+	int32_t vu_min[2] = { 0x7fffffff, 0x7fffffff };
+	int32_t vu_max[2] = {-0x7fffffff,-0x7fffffff };
 
 	if (!multi_fp[chan]) return;
 
 	/* skip */
-	if (dw->channels != (multi_mono[chan-1] ? 1 : 2)) return;
-
 	if (dw->channels == 1) {
 		len *= 2;
 		mono_from_stereo((int *)diskbuf, len);
@@ -378,7 +358,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 			diskwriter_finish();
 			return DW_ERROR;
 		}
-		dw->channels = multi_mono[i-1] ? 1 : 2;
+		dw->channels = 2;
 		if (dw->p) dw->p(dw);
 	}
 
@@ -396,7 +376,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 	}
 
 	dw->channels = 2;
-	mp->_multi_out_raw = multi_out_helper;
+	csf_multi_out_raw = multi_out_helper;
 
 	current_song_len *= 2; /* two passes */
 
@@ -480,7 +460,7 @@ int diskwriter_sync(void)
 	unsigned int ct;
 	int n;
 
-	if (dw && mp->_multi_out_raw) {
+	if (dw && csf_multi_out_raw) {
 		/* we're up */
 		if (!dw) return DW_SYNC_DONE;
 	} else {
@@ -492,7 +472,7 @@ int diskwriter_sync(void)
 	if (!dw->m && !dw->g) {
 		if (!dw->x) {
 			/* do nothing */
-		} else if (mp->_multi_out_raw) {
+		} else if (csf_multi_out_raw) {
 			for (n = 1; n < 64; n++) {
 				if (!multi_fp[n]) continue;
 				fp = multi_fp[n];
@@ -507,7 +487,7 @@ int diskwriter_sync(void)
 
 	ct = song_get_current_time();
 	n = (int)(((double)ct * 100.0) / current_song_len);
-	if (mp->_multi_out_raw && dw->channels == 1) n += 50;
+	if (csf_multi_out_raw && dw->channels == 1) n += 50;
 	diskwriter_dialog_progress(n);
 
 	// estimate bytes remaining
@@ -524,7 +504,7 @@ int diskwriter_sync(void)
 	n = csf_read(mp, diskbuf, sizeof(diskbuf));
 	samples_played += n;
 
-	if (mp->_multi_out_raw) {
+	if (csf_multi_out_raw) {
 		/* okay, it's happening elsewhere */
 
 	} else if (dw->m) {
@@ -535,7 +515,7 @@ int diskwriter_sync(void)
 	if (!fp_ok)
 		return DW_SYNC_ERROR;
 	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
-		if (mp->_multi_out_raw && dw->channels == 2) {
+		if (csf_multi_out_raw && dw->channels == 2) {
 			/* pass 2 */
 			chan_setup(dw->rate/2, 1);
 			dw->channels = 1;
@@ -545,7 +525,7 @@ int diskwriter_sync(void)
 
 		if (!dw->x) {
 			/* do nothing */
-		} else if (mp->_multi_out_raw) {
+		} else if (csf_multi_out_raw) {
 			for (n = 1; n < 64; n++) {
 				if (!multi_fp[n]) continue;
 				fp = multi_fp[n];
@@ -563,7 +543,6 @@ int diskwriter_sync(void)
 int diskwriter_finish(void)
 {
 	int need_realize = 0;
-	char *zed;
 	int r;
 
 	if (!dw || (!fp && fini_sampno == -1)) {
@@ -571,7 +550,7 @@ int diskwriter_finish(void)
 		return DW_NOT_RUNNING; /* no writer running */
 	}
 
-	if (mp->_multi_out_raw) {
+	if (csf_multi_out_raw) {
 		for (r = 1; r < 64; r++) {
 			if (!multi_fp[r]) continue;
 			if (fclose(multi_fp[r]) != 0) fp_ok = 0;
@@ -582,13 +561,8 @@ int diskwriter_finish(void)
 		if (fp_ok) fflush(fp);
 		if (ferror(fp))
 			fp_ok = 0;
-#ifdef WIN32
-		if (_commit(fileno(fp)) == -1)
-			fp_ok = 0;
-#else
 		if (fsync(fileno(fp)) == -1)
 			fp_ok = 0;
-#endif
 		fclose(fp);
 		fp = NULL;
 	}
@@ -605,15 +579,14 @@ int diskwriter_finish(void)
 			fini_sampno = sample_get_current();
 
 			/* okay, fixup sample */
-			MODINSTRUMENT *p = &mp->Ins[fini_sampno];
-			zed = mp->m_szNames[ fini_sampno ];
+			SONGSAMPLE *p = &mp->Samples[fini_sampno];
 			if (p->pSample) {
 				song_sample_free(p->pSample);
 			} else {
 				if (fini_patno > -1) {
-					sprintf(zed, "Pattern # %d", fini_patno);
+					sprintf(p->name, "Pattern # %d", fini_patno);
 				} else {
-					strcpy(zed, "Entire Song");
+					strcpy(p->name, "Entire Song");
 				}
 				p->nGlobalVol = 64;
 				p->nVolume = 256;
@@ -641,8 +614,8 @@ int diskwriter_finish(void)
 			if (p->nLength < p->nSustainEnd) p->nSustainEnd = p->nLength;
 			if (fini_bindme) {
 				/* that should do it */
-				zed[23] = 0xFF;
-				zed[24] = ((unsigned char)fini_patno);
+				p->name[23] = 0xFF;
+				p->name[24] = ((unsigned char)fini_patno);
 			}
 		}
 		free(mbuf);
@@ -653,12 +626,11 @@ int diskwriter_finish(void)
 		fini_patno = -1;
 		fini_bindme = -1;
 	}
-	CSoundFile::gpSndMixHook = NULL;
 
 	if (dw->m || dw->g) {
 		song_init_audio(0);
 	}
-	mp->_multi_out_raw = NULL;
+	csf_multi_out_raw = NULL;
 
 	dw = NULL; /* all done! */
 	diskwriter_dialog_finished();

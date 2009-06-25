@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <stdint.h>
 #include <unistd.h>
 
 /* --------------------------------------------------------------------- */
@@ -39,7 +40,7 @@
 typedef struct _slurp_struct slurp_t;
 struct _slurp_struct {
         size_t length;
-        byte *data;
+        uint8_t *data;
 	int extra;
 	void *bextra;
 	void (*closure)(slurp_t *);

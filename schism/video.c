@@ -1140,9 +1140,9 @@ static void _make_yuv(unsigned int *y, unsigned int *u, unsigned int *v,
 	ry = 16.0 + 219.0 * yy;
 	ru = 128.0 + 126.0 * cb;
 	rv = 128.0 + 160.0 * cr;
-	*y = (Uint8) ry;
-	*u = (Uint8) ru;
-	*v = (Uint8) rv;
+	*y = (uint8_t) ry;
+	*u = (uint8_t) ru;
+	*v = (uint8_t) rv;
 }
 static void _yuv_pal(int i, int rgb[3])
 {
@@ -1865,13 +1865,8 @@ void video_screenshot(void)
 	vgamem_unlock();
 	fp_ok = data.fp_ok;
 	if (ferror(data.fp)) fp_ok = 0;
-#ifdef WIN32
-	if (_commit(fileno(data.fp)) == -1)
-		fp_ok = 0;
-#else
 	if (fsync(fileno(data.fp)) == -1)
 		fp_ok = 0;
-#endif
 	if (ferror(data.fp)) fp_ok = 0;
 	if (fclose(data.fp) == EOF) fp_ok = 0;
 	if (!fp_ok) {

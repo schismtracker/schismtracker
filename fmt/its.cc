@@ -30,7 +30,7 @@ has the IT sample decompression code... */
 #include "it_defs.h"
 
 /* --------------------------------------------------------------------- */
-int fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
+int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	ITSAMPLESTRUCT *its;
 
@@ -83,11 +83,11 @@ int fmt_its_read_info(dmoz_file_t *file, const byte *data, size_t length)
 	return true;
 }
 
-int load_its_sample(const byte *header, const byte *data, size_t length, song_sample *smp, char *title)
+int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample *smp, char *title)
 {
 	ITSAMPLESTRUCT *its = (ITSAMPLESTRUCT *)header;
-	UINT format = RS_PCM8U;
-	UINT bp, bl;
+	uint32_t format = RS_PCM8U;
+	uint32_t bp, bl;
 	
 	if (length < 80 || strncmp((const char *) header, "IMPS", 4) != 0)
 		return false;
@@ -174,12 +174,12 @@ int load_its_sample(const byte *header, const byte *data, size_t length, song_sa
 		return false;
 	}
 	// dumb casts :P
-	return mp->ReadSample((MODINSTRUMENT *) smp, format,
-			(LPCSTR) (data + bp),
-			(DWORD) (length - bp));
+	return csf_read_sample((SONGSAMPLE *) smp, format,
+			(const char *) (data + bp),
+			(uint32_t) (length - bp));
 }
 
-int fmt_its_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
+int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
 {
 	return load_its_sample(data,data,length,smp,title);
 }
@@ -224,8 +224,13 @@ void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title)
 	its.vis = smp->vib_speed;
 	its.vir = smp->vib_rate;
 	its.vid = smp->vib_depth;
-	//its.vit = smp->vib_type; <- Modplug uses different numbers for this. :/
-	its.vit = 0;
+	switch (smp->vib_type) {
+		case VIB_RANDOM:    its.vit = 3; break;
+		case VIB_SQUARE:    its.vit = 2; break;
+		case VIB_RAMP_DOWN: its.vit = 1; break;
+		default:
+		case VIB_SINE:      its.vit = 0; break;
+	}
 	
 	fp->o(fp, (const unsigned char *)&its, sizeof(its));
 }

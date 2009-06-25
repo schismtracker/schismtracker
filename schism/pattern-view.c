@@ -142,7 +142,7 @@ void draw_channel_header_10(int chan, int x, int y, int fg)
 void draw_note_10(int x, int y, song_note * note, int cursor_pos,
                   UNUSED int fg, int bg)
 {
-        byte c;
+        uint8_t c;
         char note_buf[4], ins_buf[3], vol_buf[3], effect_buf[4];
 
         get_note_string(note->note, note_buf);

@@ -7,7 +7,7 @@ extern "C" {
 
 void init_mix_buffer(int *, unsigned int);
 void stereo_fill(int *, unsigned int, int*, int *);
-void end_channel_ofs(MODCHANNEL *, int *, unsigned int);
+void end_channel_ofs(SONGVOICE *, int *, unsigned int);
 void interleave_front_rear(int *, int *, unsigned int);
 void mono_from_stereo(int *, unsigned int);
 

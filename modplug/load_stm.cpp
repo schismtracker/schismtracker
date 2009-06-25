@@ -4,7 +4,6 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>
 */
 
-#include "stdafx.h"
 #include "sndfile.h"
 
 //#pragma warning(disable:4244)
@@ -13,60 +12,60 @@
 
 typedef struct tagSTMNOTE
 {
-	BYTE note;
-	BYTE insvol;
-	BYTE volcmd;
-	BYTE cmdinf;
+	uint8_t note;
+	uint8_t insvol;
+	uint8_t volcmd;
+	uint8_t cmdinf;
 } STMNOTE;
 
 
 // Raw STM sampleinfo struct:
 typedef struct tagSTMSAMPLE
 {
-	CHAR filename[14];	// Can't have long comments - just filename comments :)
-	WORD reserved;		// ISA in memory when in ST 2
-	WORD length;		// Sample length
-	WORD loopbeg;		// Loop start point
-	WORD loopend;		// Loop end point
-	BYTE volume;		// Volume
-	BYTE reserved2;		// More reserved crap
-	WORD c2spd;			// Good old c2spd
-	BYTE reserved3[6];	// Yet more of PSi's reserved crap
+	int8_t filename[14];	// Can't have long comments - just filename comments :)
+	uint16_t reserved;		// ISA in memory when in ST 2
+	uint16_t length;		// Sample length
+	uint16_t loopbeg;		// Loop start point
+	uint16_t loopend;		// Loop end point
+	uint8_t volume;		// Volume
+	uint8_t reserved2;		// More reserved crap
+	uint16_t c2spd;			// Good old c2spd
+	uint8_t reserved3[6];	// Yet more of PSi's reserved crap
 } STMSAMPLE;
 
 
 // Raw STM header struct:
 typedef struct tagSTMHEADER
 {
-        char songname[20];      // changed from CHAR
-	char trackername[8];	// !SCREAM! for ST 2.xx  // changed from CHAR
-	CHAR unused;			// 0x1A
-	CHAR filetype;			// 1=song, 2=module (only 2 is supported, of course) :)
-	CHAR ver_major;			// Like 2
-	CHAR ver_minor;			// "ditto"
-	BYTE inittempo;			// initspeed= stm inittempo>>4
-	BYTE numpat;			// number of patterns
-	BYTE globalvol;			// <- WoW! a RiGHT TRiANGLE =8*)
-	BYTE reserved[13];		// More of PSi's internal crap
+        char songname[20];      // changed from int8_t
+	char trackername[8];	// !SCREAM! for ST 2.xx  // changed from int8_t
+	int8_t unused;			// 0x1A
+	int8_t filetype;			// 1=song, 2=module (only 2 is supported, of course) :)
+	int8_t ver_major;			// Like 2
+	int8_t ver_minor;			// "ditto"
+	uint8_t inittempo;			// initspeed= stm inittempo>>4
+	uint8_t numpat;			// number of patterns
+	uint8_t globalvol;			// <- WoW! a RiGHT TRiANGLE =8*)
+	uint8_t reserved[13];		// More of PSi's internal crap
 	STMSAMPLE sample[31];	// STM sample data
-	BYTE patorder[128];		// Docs say 64 - actually 128
+	uint8_t patorder[128];		// Docs say 64 - actually 128
 } STMHEADER;
 
 #pragma pack()
 
 
 
-BOOL CSoundFile::ReadSTM(const BYTE *lpStream, DWORD dwMemLength)
+bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 //---------------------------------------------------------------
 {
 	STMHEADER *phdr = (STMHEADER *)lpStream;
-	DWORD dwMemPos = 0;
+	uint32_t dwMemPos = 0;
 	
-	if ((!lpStream) || (dwMemLength < sizeof(STMHEADER))) return FALSE;
+	if ((!lpStream) || (dwMemLength < sizeof(STMHEADER))) return false;
 	if ((phdr->filetype != 2) || (phdr->unused != 0x1A)
-	 || ((strnicmp(phdr->trackername, "!SCREAM!", 8))
-	  && (strnicmp(phdr->trackername, "BMOD2STM", 8)))) return FALSE;
-	memcpy(m_szNames[0], phdr->songname, 20);
+	 || ((strncasecmp(phdr->trackername, "!SCREAM!", 8))
+	  && (strncasecmp(phdr->trackername, "BMOD2STM", 8)))) return false;
+	memcpy(song_title, phdr->songname, 20);
 	// Read STM header
 	m_nType = MOD_TYPE_STM;
 	m_nSamples = 31;
@@ -75,23 +74,23 @@ BOOL CSoundFile::ReadSTM(const BYTE *lpStream, DWORD dwMemLength)
 	m_nDefaultSpeed = phdr->inittempo >> 4;
 	if (m_nDefaultSpeed < 1) m_nDefaultSpeed = 1;
 	m_nDefaultTempo = 125;
-	m_nDefaultGlobalVolume = phdr->globalvol << 2;
-	if (m_nDefaultGlobalVolume > 256) m_nDefaultGlobalVolume = 256;
-	memcpy(Order, phdr->patorder, 128);
+	m_nDefaultGlobalVolume = phdr->globalvol;
+	if (m_nDefaultGlobalVolume > 128) m_nDefaultGlobalVolume = 128;
+	memcpy(Orderlist, phdr->patorder, 128);
 	// Setting up channels
-	for (UINT nSet=0; nSet<4; nSet++)
+	for (uint32_t nSet=0; nSet<4; nSet++)
 	{
-		ChnSettings[nSet].dwFlags = 0;
-		ChnSettings[nSet].nVolume = 64;
-		ChnSettings[nSet].nPan = (nSet & 1) ? 0x40 : 0xC0;
+		Channels[nSet].dwFlags = 0;
+		Channels[nSet].nVolume = 64;
+		Channels[nSet].nPan = (nSet & 1) ? 0x40 : 0xC0;
 	}
 	// Reading samples
-	for (UINT nIns=0; nIns<31; nIns++)
+	for (uint32_t nIns=0; nIns<31; nIns++)
 	{
-		MODINSTRUMENT *pIns = &Ins[nIns+1];
+		SONGSAMPLE *pIns = &Samples[nIns+1];
 		STMSAMPLE *pStm = &phdr->sample[nIns];  // STM sample data
-		memcpy(pIns->name, pStm->filename, 13);
-		memcpy(m_szNames[nIns+1], pStm->filename, 12);
+		memcpy(pIns->filename, pStm->filename, 13);
+		memcpy(pIns->name, pStm->filename, 12);
 		pIns->nC5Speed = pStm->c2spd;
 		pIns->nGlobalVol = 64;
 		pIns->nVolume = pStm->volume << 2;
@@ -103,19 +102,19 @@ BOOL CSoundFile::ReadSTM(const BYTE *lpStream, DWORD dwMemLength)
 		if ((pIns->nLoopEnd > pIns->nLoopStart) && (pIns->nLoopEnd != 0xFFFF)) pIns->uFlags |= CHN_LOOP;
 	}
 	dwMemPos = sizeof(STMHEADER);
-	for (UINT nOrd=0; nOrd<MAX_ORDERS; nOrd++) if (Order[nOrd] >= 99) Order[nOrd] = 0xFF;
-	UINT nPatterns = phdr->numpat;
-	for (UINT nPat=0; nPat<nPatterns; nPat++)
+	for (uint32_t nOrd=0; nOrd<MAX_ORDERS; nOrd++) if (Orderlist[nOrd] >= 99) Orderlist[nOrd] = 0xFF;
+	uint32_t nPatterns = phdr->numpat;
+	for (uint32_t nPat=0; nPat<nPatterns; nPat++)
 	{
-		if (dwMemPos + 64*4*4 > dwMemLength) return TRUE;
+		if (dwMemPos + 64*4*4 > dwMemLength) return true;
 		PatternSize[nPat] = 64;
 		PatternAllocSize[nPat] = 64;
-		if ((Patterns[nPat] = AllocatePattern(64, m_nChannels)) == NULL) return TRUE;
+		if ((Patterns[nPat] = csf_allocate_pattern(64, m_nChannels)) == NULL) return true;
 		MODCOMMAND *m = Patterns[nPat];
 		STMNOTE *p = (STMNOTE *)(lpStream + dwMemPos);
-		for (UINT n=0; n<64*4; n++, p++, m++)
+		for (uint32_t n=0; n<64*4; n++, p++, m++)
 		{
-			UINT note,ins,vol,cmd;
+			uint32_t note,ins,vol,cmd;
 			// extract the various information from the 4 bytes that
 			// make up a single note
 			note = p->note;
@@ -166,20 +165,20 @@ BOOL CSoundFile::ReadSTM(const BYTE *lpStream, DWORD dwMemLength)
 		dwMemPos += 64*4*4;
 	}
 	// Reading Samples
-	for (UINT nSmp=1; nSmp<=31; nSmp++)
+	for (uint32_t nSmp=1; nSmp<=31; nSmp++)
 	{
-		MODINSTRUMENT *pIns = &Ins[nSmp];
+		SONGSAMPLE *pIns = &Samples[nSmp];
 		dwMemPos = (dwMemPos + 15) & (~15);
 		if (pIns->nLength)
 		{
-			UINT nPos = ((UINT)phdr->sample[nSmp-1].reserved) << 4;
+			uint32_t nPos = ((uint32_t)phdr->sample[nSmp-1].reserved) << 4;
 			if ((nPos >= sizeof(STMHEADER)) && (nPos+pIns->nLength <= dwMemLength)) dwMemPos = nPos;
 			if (dwMemPos < dwMemLength)
 			{
-				dwMemPos += ReadSample(pIns, RS_PCM8S, (LPSTR)(lpStream+dwMemPos),dwMemLength-dwMemPos);
+				dwMemPos += csf_read_sample(pIns, RS_PCM8S, (const char *)(lpStream+dwMemPos),dwMemLength-dwMemPos);
 			}
 		}
 	}
-	return TRUE;
+	return true;
 }
 

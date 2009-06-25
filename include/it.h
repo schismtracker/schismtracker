@@ -26,6 +26,7 @@
 #include "sdlmain.h"
 
 #include <stdio.h>
+#include <stdint.h>
 
 #include <sys/types.h>
 #include <sys/stat.h> /* roundabout way to get time_t */
@@ -208,7 +209,7 @@ struct log_line {
 
 struct it_palette {
         char name[21];
-        byte colors[16][3];
+        uint8_t colors[16][3];
 };
 
 enum {
@@ -236,9 +237,9 @@ extern "C" {
 /* global crap */
 
 extern struct tracker_status status;
-extern byte *font_data; /* ... which is 2048 bytes */
+extern uint8_t *font_data; /* ... which is 2048 bytes */
 extern struct it_palette palettes[];
-extern byte current_palette[16][3];
+extern uint8_t current_palette[16][3];
 extern int current_palette_index;
 
 extern int playback_tracing, midi_playback_tracing;
@@ -246,7 +247,7 @@ extern int playback_tracing, midi_playback_tracing;
 extern const char hexdigits[16];        /* in keyboard.c at the moment */
 
 /* currently in audio_loadsave.cc */
-extern byte row_highlight_major, row_highlight_minor;
+extern uint8_t row_highlight_major, row_highlight_minor;
 
 /* this used to just translate keys to notes, but it's sort of become the
  * keyboard map... perhaps i should rename it. */
@@ -270,6 +271,8 @@ extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
 extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */
 extern char cfg_font[];
 extern int cfg_palette;
+
+extern char cfg_filename_pattern[];
 
 void cfg_init_dir(void);
 void cfg_load(void);
@@ -301,7 +304,7 @@ void text_add_char(char *text, char c, int *cursor_pos, int max_length);
 void text_delete_char(char *text, int *cursor_pos, int max_length);
 void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 
-static inline unsigned char unicode_to_ascii(Uint16 unicode)
+static inline unsigned char unicode_to_ascii(uint16_t unicode)
 {
 	return unicode & 0xff;
 //        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));

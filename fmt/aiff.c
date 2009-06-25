@@ -24,182 +24,285 @@
 
 #define NEED_BYTESWAP
 #include "headers.h"
+#include "it.h" /* for log_appendf, although this should really be elsewhere */
 #include "fmt.h"
 
+#include <stdint.h>
+#include <unistd.h> /* swab */
 #include <math.h> /* for ldexp/frexp */
 
-UNUSED static void ConvertToIeeeExtended(double num, unsigned char *bytes);
+static void ConvertToIeeeExtended(double num, unsigned char *bytes);
 static double ConvertFromIeeeExtended(const unsigned char *bytes);
 
 /* --------------------------------------------------------------------- */
 
-int fmt_aiff_read_info(dmoz_file_t *file, const byte *data, size_t length)
+#pragma pack(push, 1)
+typedef union chunkdata {
+	struct {
+		uint32_t filetype; // AIFF, 8SVX, etc.
+		uint8_t data[0]; // rest of file is encapsulated in here, also chunked
+	} FORM;
+
+	// 8SVX
+	struct {
+		uint32_t smp_highoct_1shot;
+		uint32_t smp_highoct_repeat;
+		uint32_t smp_cycle_highoct;
+		uint16_t smp_per_sec;
+		uint8_t num_octaves;
+		uint8_t compression; // 0 = none, 1 = fibonacci-delta
+		uint32_t volume; // fixed point, 65536 = 1.0
+	} VHDR;
+
+	// AIFF
+	struct {
+		uint16_t num_channels;
+		uint32_t num_frames;
+		uint16_t sample_size;
+		uint8_t sample_rate[80]; // IEEE-extended
+	} COMM;
+
+	uint8_t bytes[0];
+} chunkdata_t;
+#pragma pack(pop)
+
+typedef struct chunk {
+	uint32_t id;
+	uint32_t size;
+	const chunkdata_t *data;
+} chunk_t;
+
+// other chunks that might exist: "NAME", "AUTH", "ANNO", "(c) "
+
+
+// 'chunk' is filled in with the chunk header
+// return: 0 if chunk overflows EOF, 1 if it was successfully read
+// pos is updated to point to the beginning of the next chunk
+static int iff_chunk_read(chunk_t *chunk, const uint8_t *data, size_t length, size_t *pos)
 {
-	size_t position, block_length;
-	/* these are offsets to various chunks of data in the file */
-	size_t comm_chunk = 0, name_chunk = 0, ssnd_chunk = 0;
-	short s; /* should be 16 bits */
-	unsigned long ul; /* 32 bits */
-
-	/* file structure: "FORM", filesize, "AIFF", chunks */
-	if (length < 12 || memcmp(data, "FORM", 4) != 0 || memcmp(data + 8, "AIFF", 4) != 0)
-		return false;
-	memcpy(&block_length, data + 4, 4);
-	block_length = bswapBE32(block_length);
-	if (block_length + 8 > length)
-		return false;
-	
-	/* same as below, mostly */
-	position = 12;
-	while (position + 8 < length) {
-		memcpy(&block_length, data + position + 4, 4);
-		block_length = bswapBE32(block_length);
-		if (comm_chunk == 0 && memcmp(data + position, "COMM", 4) == 0) {
-			if (block_length != 18)
-				return false;
-			comm_chunk = position;
-		} else if (name_chunk == 0 && memcmp(data + position, "NAME", 4) == 0) {
-			name_chunk = position;
-		} else if (ssnd_chunk == 0 && memcmp(data + position, "SSND", 4) == 0) {
-			ssnd_chunk = position;
-		}
-		position += 8 + block_length;
-	}
-	
-	if (comm_chunk == 0 || ssnd_chunk == 0)
-		return false;
-	
-	if (comm_chunk+16 > length) return false;
-	memcpy(&s, data + comm_chunk + 8, 2); /* short numChannels; */
-	file->smp_flags = 0;
-	if (bswapBE16(s) > 1) {
-		file->smp_flags |= SAMP_STEREO;
-	}
-
-	memcpy(&s, data + comm_chunk + 14, 2); /* short sampleSize; (bits per sample, 1..32) */
-	s = bswapBE16(s);
-	s = (s + 7) & ~7;
-	if (s == 16) {
-		file->smp_flags |= SAMP_16_BIT;
-	}
-
-	memcpy(&ul, data + comm_chunk + 10, 4); /* unsigned long numSampleFrames; */
-	file->smp_length = bswapBE32(ul);
-
-	if (name_chunk) {
-		/* should probably save the length as well, and not have to read it twice :P */
-		memcpy(&block_length, data + name_chunk + 4, 4);
-		block_length = bswapBE32(block_length);
-		file->title = mem_alloc(block_length + 1);
-		memcpy(file->title, data + name_chunk + 8, block_length);
-		file->title[block_length] = '\0';
-	}
-
-	file->description = "AIFF Sample";
-	file->smp_filename = file->title;
-	file->type = TYPE_SAMPLE_PLAIN;
-	return true;
+	if (*pos + 8 > length)
+		return 0;
+	memcpy(&chunk->id, data + *pos, 4);
+	memcpy(&chunk->size, data + *pos + 4, 4);
+	chunk->id = bswapBE32(chunk->id);
+	chunk->size = bswapBE32(chunk->size);
+	chunk->data = (chunkdata_t *) (data + *pos + 8);
+	*pos += 8 + chunk->size;
+	return (*pos <= length);
 }
 
-int fmt_aiff_load_sample(const byte *data, size_t length, song_sample *smp, char *title)
-{
-	size_t position, block_length;
-	unsigned long byte_length; /* size of the sample data */
-	/* these are offsets to various chunks of data in the file */
-	size_t comm_chunk = 0, name_chunk = 0, ssnd_chunk = 0;
-	/* temporary variables to read stuff into */
-	short s; /* should be 16 bits */
-	unsigned long ul; /* 32 bits */
+// Wish I could do this:
+//#define ID(x) ((0[#x] << 24) | (1[#x] << 16) | (2[#x] << 8) | (3[#x]))
+// It works great, but gcc doesn't think it's a constant, so it can't be used in a switch.
+// (although with -O, it definitely does optimize it into a constant...)
 
-	/* file structure: "FORM", filesize, "AIFF", chunks */
-	if (length < 12 || memcmp(data, "FORM", 4) != 0 || memcmp(data + 8, "AIFF", 4) != 0)
-		return false;
-	memcpy(&block_length, data + 4, 4);
-	block_length = bswapBE32(block_length);
-	if (block_length > length) {
-		printf("aiff: file claims to be bigger than it really is!");
-		return false;
-	}
-	
-	/* same as above, mostly */
-	position = 12;
-	while (position + 8 < length) {
-		memcpy(&block_length, data + position + 4, 4);
-		block_length = bswapBE32(block_length);
-		if (comm_chunk == 0 && memcmp(data + position, "COMM", 4) == 0) {
-			if (block_length != 18) {
-				printf("aiff: weird %ld-byte COMM chunk; bailing", (long)block_length);
-				return false;
+#define ID_FORM 0x464F524D
+#define ID_8SVX 0x38535658
+#define ID_VHDR 0x56484452
+#define ID_BODY 0x424F4459
+#define ID_NAME 0x4E414D45
+#define ID_AUTH 0x41555448
+#define ID_ANNO 0x414E4E4F
+#define ID__C__ 0x28632920 /* "(c) " */
+#define ID_AIFF 0x41494646
+#define ID_COMM 0x434F4D4D
+#define ID_SSND 0x53534E44
+
+/* --------------------------------------------------------------------- */
+
+#define ZEROIZE(x) memset(&(x), 0, sizeof(x))
+
+static int _read_iff(dmoz_file_t *file, song_sample *smp, char *title, const uint8_t *data, size_t length)
+{
+	chunk_t chunk;
+	size_t pos = 0;
+	chunk_t vhdr, body, name, comm, auth, anno, ssnd; // butt
+
+	if (!iff_chunk_read(&chunk, data, length, &pos))
+		return 0;
+	if (chunk.id != ID_FORM)
+		return 0;
+
+	// jump "into" the FORM chunk
+	// if (pos < length), there's more data after the FORM chunk -- but I don't care about this scenario
+	pos = 0;
+	length = chunk.size;
+	data = chunk.data->FORM.data;
+
+	/* the header is already byteswapped, but anything in 'chunk' will need to be swapped as needed
+	because the structure is a const pointing into the data itself */
+	switch (bswapBE32(chunk.data->FORM.filetype)) {
+	case ID_8SVX:
+		// shut up, gcc
+		ZEROIZE(vhdr);
+		ZEROIZE(body);
+		ZEROIZE(name);
+		ZEROIZE(auth);
+		ZEROIZE(anno);
+
+		while (iff_chunk_read(&chunk, data, length, &pos)) {
+			switch (chunk.id) {
+				case ID_VHDR: vhdr = chunk; break;
+				case ID_BODY: body = chunk; break;
+				case ID_NAME: name = chunk; break;
+				case ID_AUTH: auth = chunk; break;
+				case ID_ANNO: anno = chunk; break;
+				default: break;
 			}
-			comm_chunk = position;
-		} else if (name_chunk == 0 && memcmp(data + position, "NAME", 4) == 0) {
-			name_chunk = position;
-		} else if (ssnd_chunk == 0 && memcmp(data + position, "SSND", 4) == 0) {
-			ssnd_chunk = position;
 		}
-		position += 8 + block_length;
-	}
-	
-	if (comm_chunk == 0 || ssnd_chunk == 0)
-		return false;
-	
-	/* COMM chunk: sample format information */
-	memcpy(&s, data + comm_chunk + 8, 2); /* short numChannels; */
-	s = bswapBE16(s);
-	if (s == 2) {
-		smp->flags |= SAMP_STEREO;
-	} else if (s != 1) {
-		return false;
-	}
-	memcpy(&ul, data + comm_chunk + 10, 4); /* unsigned long numSampleFrames; */
-	smp->length = bswapBE32(ul);
-	memcpy(&s, data + comm_chunk + 14, 2); /* short sampleSize; (bits per sample, 1..32) */
-	s = bswapBE16(s);
-	s = (s + 7) & ~7;
-	if (s != 8 && s != 16) {
-		printf("aiff: %d-bit samples not supported; bailing", s);
-		return false;
-	}
-	if (s == 16)
-		smp->flags |= SAMP_16_BIT;
-	byte_length = s / 8 * smp->length;
-	if (smp->flags & SAMP_STEREO) byte_length *= 2;
-	smp->data = song_sample_allocate(byte_length);
-	smp->speed = ConvertFromIeeeExtended(data + comm_chunk + 16); /* extended sampleRate; */
-	
-	/* SSND chunk: the actual sample data */
-	memcpy(&ul, data + ssnd_chunk + 8, 4); /* unsigned long offset; (bytes to skip, for block alignment) */
-	ul = bswapBE32(ul);
-	/* unsigned long blockSize; (skipping this) */
-	memcpy(smp->data, data + ssnd_chunk + 16 + ul, byte_length); /* unsigned char soundData[]; */
+		if (!(vhdr.id && body.id))
+			return 0;
 
-#ifndef WORDS_BIGENDIAN
-	/* maybe this could use swab()? */
-	if (smp->flags & SAMP_16_BIT) {
-		signed short *p = (signed short *) smp->data;
-		unsigned long i = smp->length;
-		if (smp->flags & SAMP_STEREO) i *= 2;
-		while (i-- > 0) {
-			*p = bswapBE16(*p);
-			p++;
+		if (vhdr.data->VHDR.compression) {
+			log_appendf(4, "error: compressed 8SVX files are unsupported");
+			return 0;
 		}
-	}
+		if (vhdr.data->VHDR.num_octaves != 1) {
+			log_appendf(4, "warning: 8SVX file contains %d octaves",
+				vhdr.data->VHDR.num_octaves);
+		}
+		
+		if (file) {
+			file->description = "8SVX sample";
+			file->type = TYPE_SAMPLE_PLAIN;
+		}
+		if (!name.id) name = auth;
+		if (!name.id) name = anno;
+		if (name.id) {
+			if (file) {
+				file->title = calloc(1, name.size + 1);
+				memcpy(file->title, name.data->bytes, name.size);
+				file->title[name.size] = '\0';
+			}
+			if (title) {
+				int len = MIN(25, name.size);
+				memcpy(title, name.data->bytes, len);
+				title[len] = 0;
+			}
+		}
+
+		if (smp) {
+			smp->speed = bswapBE16(vhdr.data->VHDR.smp_per_sec);
+			smp->length = body.size;
+			smp->data = song_sample_allocate(body.size);
+			memcpy(smp->data, body.data->bytes, body.size);
+			smp->volume = 64*4;
+			smp->global_volume = 64;
+
+			// this is done kinda weird
+			smp->loop_end = bswapBE32(vhdr.data->VHDR.smp_highoct_repeat);
+			if (smp->loop_end) {
+				smp->loop_start = bswapBE32(vhdr.data->VHDR.smp_highoct_1shot);
+				smp->loop_end += smp->loop_start;
+				if (smp->loop_start > smp->length)
+					smp->loop_start = 0;
+				if (smp->loop_end > smp->length)
+					smp->loop_end = smp->length;
+				if (smp->loop_start + 2 < smp->loop_end)
+					smp->flags |= SAMP_LOOP;
+			}
+			// TODO vhdr.data->VHDR.volume ?
+		}
+
+		return 1;
+
+	case ID_AIFF:
+		ZEROIZE(comm);
+		ZEROIZE(ssnd);
+		ZEROIZE(name);
+		ZEROIZE(auth);
+		ZEROIZE(anno);
+
+		while (iff_chunk_read(&chunk, data, length, &pos)) {
+			switch (chunk.id) {
+				case ID_COMM: comm = chunk; break;
+				case ID_SSND: ssnd = chunk; break;
+				case ID_NAME: name = chunk; break;
+				default: break;
+			}
+		}
+		if (!(comm.id && ssnd.id))
+			return 0;
+
+		if (file) {
+			file->description = "Audio IFF sample";
+			file->type = TYPE_SAMPLE_PLAIN;
+		}
+		if (!name.id) name = auth;
+		if (!name.id) name = anno;
+		if (name.id) {
+			if (file) {
+				file->title = calloc(1, name.size + 1);
+				memcpy(file->title, name.data->bytes, name.size);
+				file->title[name.size] = '\0';
+			}
+			if (title) {
+				int len = MIN(25, name.size);
+				memcpy(title, name.data->bytes, len);
+				title[len] = 0;
+			}
+		}
+
+		if (smp) {
+			switch (bswapBE16(comm.data->COMM.num_channels)) {
+			default:
+				log_appendf(4, "warning: multichannel AIFF is unsupported");
+			case 1:
+				break;
+			case 2:
+				smp->flags |= SAMP_STEREO;
+				break;
+			}
+
+			switch ((bswapBE16(comm.data->COMM.sample_size) + 7) & ~7) {
+			default:
+				log_appendf(4, "warning: AIFF has unsupported bit-width");
+			case 8:
+				break;
+			case 16:
+				smp->flags |= SAMP_16_BIT;
+				break;
+			}
+
+			// TODO: data checking; make sure sample count and byte size agree
+			// (and if not, cut to shorter of the two)
+
+			smp->speed = ConvertFromIeeeExtended(comm.data->COMM.sample_rate);
+			smp->length = bswapBE32(comm.data->COMM.num_frames);
+			smp->data = song_sample_allocate(ssnd.size);
+			smp->volume = 64*4;
+			smp->global_volume = 64;
+
+#ifdef WORDS_BIGENDIAN
+			memcpy(smp->data, ssnd.data, ssnd.size);
+#else
+			if (smp->flags & SAMP_16_BIT) {
+				swab(ssnd.data, smp->data, ssnd.size & ~1);
+			} else {
+				memcpy(smp->data, ssnd.data, ssnd.size);
+			}
 #endif
+		}
 
-	/* NAME chunk: title (optional) */
-	if (name_chunk) {
-		memcpy(&block_length, data + name_chunk + 4, 4);
-		block_length = bswapBE32(block_length);
-		block_length = MIN(block_length, 25);
-		memcpy(title, data + name_chunk + 8, block_length);
-		title[block_length] = '\0';
+		return 1;
 	}
-	
-	smp->volume = 64 * 4;
-	smp->global_volume = 64;
-	
-	return true;
+
+	return 0;
 }
+
+/* --------------------------------------------------------------------- */
+
+int fmt_aiff_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+{
+	return _read_iff(file, NULL, NULL, data, length);
+}
+
+int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
+{
+	return _read_iff(NULL, smp, title, data, length);
+}
+
+/* --------------------------------------------------------------------- */
 
 int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 {

@@ -20,6 +20,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "headers.h"
+
+#include "slurp.h"
+#include "util.h"
+#include "config-parser.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -28,10 +34,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-
-#include "slurp.h"
-#include "util.h"
-#include "config-parser.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* some utilities for reading the config structure in memory */
@@ -278,11 +280,12 @@ int cfg_read(cfg_file_t *cfg)
 		pos += _parse_comments(pos, &comments);
 		
 		/* look for the end of the line or the next comment, whichever comes first. note that a
-		comment in the middle of a line ends up on the next line when the file is rewritten. */
-		len = strcspn(pos, "#;\r\n");
+		comment in the middle of a line ends up on the next line when the file is rewritten.
+		semicolon-comments are only handled at the start of lines. */
+		len = strcspn(pos, "#\r\n");
 		if (len) {
 			char *line;
-			line = (char *)mem_alloc(len + 1);
+			line = mem_alloc(len + 1);
 			strncpy(line, pos, len);
 			line[len] = 0;
 			trim_string(line);
