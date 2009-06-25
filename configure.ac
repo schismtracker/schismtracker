@@ -246,7 +246,7 @@ fi
 dnl wee...
 dnl this completely sucks...
 OBJC=$CC
-CFLAGS=$CFLAGS
+OBJCFLAGS=$CFLAGS
 AC_SUBST(OBJC)
 AC_SUBST(OBJCFLAGS)
 

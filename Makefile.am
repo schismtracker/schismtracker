@@ -290,6 +290,7 @@ AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE \
 AM_CFLAGS = @SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
 	$(cflags_network) $(cflags_x11) $(cflags_zlib) $(cflags_fmopl)
 AM_CXXFLAGS = ${AM_CFLAGS}
+AM_OBJCFLAGS = ${AM_CFLAGS}
 
 
 schismtracker_DEPENDENCIES = $(files_windres)

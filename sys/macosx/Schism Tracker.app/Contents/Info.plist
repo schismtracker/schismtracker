@@ -85,11 +85,11 @@
 		</dict>
 	</array>
 	<key>CFBundleGetInfoString</key>
-	<string>Schism Tracker Copyright 2003-2007 Storlek</string>
+	<string>Schism Tracker Copyright 2003-2009 Storlek</string>
 	<key>CFBundleIconFile</key>
 	<string>appIcon.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>net.sourceforge.schismtracker.SchismTracker</string>
+	<string>org.schismtracker.SchismTracker</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -97,11 +97,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.5rc1</string>
+	<string>hg</string>
 	<key>CFBundleSignature</key>
 	<string>Schm</string>
 	<key>CFBundleVersion</key>
-	<string>0.5rc1</string>
+	<string>hg</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
