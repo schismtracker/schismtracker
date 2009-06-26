@@ -198,7 +198,7 @@
 // MDL Huffman compression
 #define RS_MDL8                 0x20
 #define RS_MDL16                0x24
-#define RS_PTM8DTO16    0x25
+#define RS_PTM8DTO16            0x25
 // Stereo Interleaved Samples
 #define RS_STIPCM8S             (RS_PCM8S|0x40|RSF_STEREO)      // stereo 8-bit signed
 #define RS_STIPCM8U             (RS_PCM8U|0x40|RSF_STEREO)      // stereo 8-bit unsigned
@@ -219,9 +219,16 @@
 // Note fade IS actually supported in Impulse Tracker, but there's no way to handle it in the editor
 // (Actually, any non-valid note is handled internally as a note fade, but it's good to have a single
 // value for internal representation)
+#define NOTE_NONE               0   // ...
+#define NOTE_FIRST              1   // C-0
+#define NOTE_MIDC               61  // C-5
+#define NOTE_LAST               120 // B-9
 #define NOTE_FADE               253 // ~~~
 #define NOTE_CUT                254 // ^^^
 #define NOTE_OFF                255 // ===
+#define NOTE_IS_NOTE(n)         ((n) > NOTE_NONE && (n) <= NOTE_LAST) // anything playable - C-0 to B-9
+#define NOTE_IS_CONTROL(n)      ((n) > NOTE_LAST)                     // not a note, but non-empty
+#define NOTE_IS_INVALID(n)      ((n) > NOTE_LAST && (n) < NOTE_FADE)  // ???
 
 // Auto-vibrato types
 #define VIB_SINE                0

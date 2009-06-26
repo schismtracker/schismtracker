@@ -234,7 +234,7 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 			ins->PitchEnv.Values[1] = ins->PitchEnv.Values[0];
 		}
 		for (int p = 0; p < 128; p++) {
-			if (ins->NoteMap[p] < 1 || ins->NoteMap[p] > 120)
+			if (!NOTE_IS_NOTE(ins->NoteMap[p]))
 				ins->NoteMap[p] = p + 1;
 		}
 	}
@@ -385,13 +385,18 @@ static void set_current_pos_0(CSoundFile *csf)
 void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 {
 	for (uint32_t j = 0; j < MAX_VOICES; j++) {
-		csf->Voices[j].nPeriod = 0;
-		csf->Voices[j].nNote = 0;
-		csf->Voices[j].nPortamentoDest = 0;
-		csf->Voices[j].nCommand = 0;
-		csf->Voices[j].nPatternLoopCount = 0;
-		csf->Voices[j].nPatternLoop = 0;
-		csf->Voices[j].nTremorOn = csf->Voices[j].nTremorOff = 0;
+		SONGVOICE *v = csf->Voices + j;
+
+		v->nPeriod = 0;
+		v->nNote = v->nNewNote = v->nNewIns = 0;
+		v->nPortamentoDest = 0;
+		v->nCommand = 0;
+		v->nPatternLoopCount = 0;
+		v->nPatternLoop = 0;
+		v->nTremorOn = v->nTremorOff = 0;
+		// modplug sets vib pos to 16 in old effects mode for some reason *shrug*
+		v->nVibratoPos = (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) ? 0 : 0x10;
+		v->nTremoloPos = 0;
 	}
 	if (nPos > MAX_ORDERS)
 		nPos = 0;
@@ -1076,8 +1081,8 @@ uint32_t csf_get_highest_used_channel(CSoundFile *csf)
 		MODCOMMAND *p = csf->Patterns[ipat];
 		if (p) {
 			uint32_t jmax = csf->PatternSize[ipat] * csf->m_nChannels;
-			for (uint32_t j=0; j<jmax; j++, p++) {
-				if (p->note && p->note <= 120) {
+			for (uint32_t j = 0; j < jmax; j++, p++) {
+				if (NOTE_IS_NOTE(p->note)) {
 					if ((j % csf->m_nChannels) > highchan)
 						highchan = j % csf->m_nChannels;
 				}
@@ -1102,8 +1107,8 @@ uint32_t csf_detect_unused_samples(CSoundFile *csf, bool *pbIns)
 			MODCOMMAND *p = csf->Patterns[ipat];
 			if (p) {
 				uint32_t jmax = csf->PatternSize[ipat] * csf->m_nChannels;
-				for (uint32_t j=0; j<jmax; j++, p++) {
-					if (p->note && p->note <= 120) {
+				for (uint32_t j = 0; j < jmax; j++, p++) {
+					if (NOTE_IS_NOTE(p->note)) {
 						if (p->instr && p->instr < MAX_INSTRUMENTS) {
 							SONGINSTRUMENT *penv = csf->Instruments[p->instr];
 							if (penv) {
