@@ -25,6 +25,7 @@
 #include "fmt.h"
 #include "it.h"
 #include "diskwriter.h"
+#include "sndfile.h"
 #include <stdint.h>
 
 #define WAVE_FORMAT_PCM 1
@@ -226,10 +227,9 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSE
         if (!smp->data)
                 return false;
 
-        if (!wave_transform_data(&f.fmt, f.buf, (uint8_t *)smp->data, f.data.length))
-                return false;
-
-        return true;
+        return csf_read_sample((SONGSAMPLE *)smp,
+            f.fmt.bitspersample == 16 ? RS_PCM16S : RS_PCM8U,
+            f.buf, f.data.length);
 }
 
 
