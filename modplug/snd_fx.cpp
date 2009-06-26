@@ -365,7 +365,7 @@ static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
 	SONGVOICE *pChn = &csf->Voices[nChn];
 
 	//printf("Q%02X note=%02X tick%d  %d\n", param, pChn->nRowNote, m_nTickCount, pChn->nRetrigCount);
-	if ((csf->m_dwSongFlags & SONG_FIRSTTICK) && pChn->nRowNote) {
+	if ((csf->m_dwSongFlags & SONG_FIRSTTICK) && pChn->nRowNote != NOTE_NONE) {
 		pChn->nRetrigCount = param & 0xf;
 	} else if (!--pChn->nRetrigCount) {
 		pChn->nRetrigCount = param & 0xf;
@@ -382,10 +382,10 @@ static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
 
 		uint32_t nNote = pChn->nNewNote;
 		int32_t nOldPeriod = pChn->nPeriod;
-		if (nNote && nNote <= 120 && pChn->nLength)
+		if (NOTE_IS_NOTE(nNote) && pChn->nLength)
 			csf_check_nna(csf, nChn, 0, nNote, true);
 		csf_note_change(csf, nChn, nNote, false, false, false);
-		if (nOldPeriod && !pChn->nRowNote)
+		if (nOldPeriod && pChn->nRowNote == NOTE_NONE)
 			pChn->nPeriod = nOldPeriod;
 	}
 }
@@ -595,7 +595,7 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 	case 0xA0:
 		if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
 			pChn->nOldHiOffset = param;
-			if ((pChn->nRowNote) && (pChn->nRowNote < 0x80)) {
+			if (NOTE_IS_NOTE(pChn->nRowNote)) {
 				uint32_t pos = param << 16;
 				if (pos < pChn->nLength) pChn->nPos = pos;
 			}
@@ -878,7 +878,7 @@ unsigned int csf_get_length(CSoundFile *csf)
 				notes[nChn] = 0;
 				vols[nChn] = 0xFF;
 			}
-			if ((note) && (note <= 120))
+			if (NOTE_IS_NOTE(note))
 				notes[nChn] = note;
 			if (p->volcmd == VOLCMD_VOLUME)
 				vols[nChn] = p->vol;
@@ -989,16 +989,18 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
 	SONGSAMPLE *psmp = &csf->Samples[instr];
 	uint32_t note = pChn->nNewNote;
-	if (penv && note && note <= 128) {
-		if (penv->NoteMap[note-1] >= 0xFE) return;
+
+	if (note == NOTE_NONE) {
+		/* nothing to see here */
+	} else if (NOTE_IS_CONTROL(note)) {
+		psmp = NULL;
+	} else if (penv) {
+		if (NOTE_IS_CONTROL(penv->NoteMap[note-1]))
+			return;
 		psmp = translate_keyboard(csf, penv, note, NULL);
 		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
-	} else if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) {
-		/* XXX why check instrument mode here? at a glance this seems "wrong" */
-		if (note >= 0xFE)
-			return;
-		psmp = NULL;
 	}
+
 	// Update Volume
 	if (bUpdVol) pChn->nVolume = psmp ? psmp->nVolume : 0;
 	// bInstrumentChanged is used for IT carry-on env option
@@ -1050,12 +1052,12 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 		pChn->nInsVol = 0;
 		return;
 	}
-	if (psmp == pChn->pInstrument)
+	if (psmp == pChn->pInstrument && pChn->pCurrentSample && pChn->nLength)
 		return;
 
 
 	pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE|CHN_VOLENV|CHN_PANENV|CHN_PITCHENV);
-	pChn->dwFlags = (pChn->dwFlags & 0xDFFFFF00) | (psmp->uFlags);
+	pChn->dwFlags = (pChn->dwFlags & ~CHN_SAMPLE_FLAGS) | (psmp->uFlags);
 	if (penv) {
 		if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
 		if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
@@ -1096,38 +1098,44 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 
 void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual)
 {
-	if (note < 1) return;
+	// why would csf_note_change ever get a negative value for 'note'?
+	if (note == NOTE_NONE || note < 0)
+		return;
 	SONGVOICE * const pChn = &csf->Voices[nChn];
 	SONGSAMPLE *pins = pChn->pInstrument;
 	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
-	if (penv && note <= 0x80) {
+	if (penv && NOTE_IS_NOTE(note)) {
 		pins = translate_keyboard(csf, penv, note, pins);
 		note = penv->NoteMap[note - 1];
 		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	}
 
-	if (note >= 0x80) {
-		// 0xFE or invalid note => key off
-                // technically this is "wrong", as anything besides ^^^, ===, and a valid note
-		// should cause a note fade... (oh well, it's just a quick hack anyway.)
-                if (note == 0xFD) {
-			pChn->dwFlags |= CHN_NOTEFADE;
-                        return;
-                }
-
-		fx_key_off(csf, nChn);
-		if (note == 0xFE) {
-			// Note Cut
+	if (NOTE_IS_CONTROL(note)) {
+		// hax: keep random sample numbers from triggering notes (see csf_instrument_change)
+		// NOTE_OFF is a completely arbitrary choice - this could be anything above NOTE_LAST
+		pChn->nNewNote = NOTE_OFF;
+		switch (note) {
+		case NOTE_OFF:
+			fx_key_off(csf, nChn);
+			break;
+		case NOTE_CUT:
+			fx_key_off(csf, nChn);
 			pChn->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
 			if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
 				pChn->nVolume = 0;
 			pChn->nFadeOutVol = 0;
+			break;
+		case NOTE_FADE:
+		default: // Impulse Tracker handles all unknown notes as fade internally
+			pChn->dwFlags |= CHN_NOTEFADE;
+			break;
 		}
 		return;
 	}
+
 	if (!pins)
 		return;
-	note = CLAMP(note, 1, 132); // why 132? random...
+	note = CLAMP(note, NOTE_FIRST, NOTE_LAST);
 	pChn->nNote = note;
 	pChn->nNewIns = 0;
 	uint32_t period = get_period_from_note(note, pChn->nC5Speed, csf->m_dwSongFlags & SONG_LINEARSLIDES);
@@ -1154,12 +1162,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 				pChn->nLoopEnd = pins->nLoopEnd;
 				if (pChn->nLength > pChn->nLoopEnd) pChn->nLength = pChn->nLoopEnd;
 			}
-			pChn->nPos = 0;
-			pChn->nPosLo = 0;
-			if (pChn->nVibratoType < 4)
-				pChn->nVibratoPos = (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) ? 0 : 0x10;
-			if (pChn->nTremoloType < 4)
-				pChn->nTremoloPos = 0;
+			pChn->nPos = pChn->nPosLo = 0;
 		}
 		if (pChn->nPos >= pChn->nLength)
 			pChn->nPos = pChn->nLoopStart;
@@ -1305,7 +1308,7 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, boo
 	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	SONGINSTRUMENT *pHeader;
 	signed char *pSample;
-	if (note < 1 || note > 0x80)
+	if (!NOTE_IS_NOTE(note))
 		return;
 	// Always NNA cut - using
 	if (bForceCut || !(csf->m_dwSongFlags & SONG_INSTRUMENTMODE)) {
@@ -1339,10 +1342,11 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, boo
 		pHeader = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
 		if (pHeader) {
 			uint32_t n = 0;
-			if (note <= 0x80) {
+			if (!NOTE_IS_CONTROL(note)) {
 				n = pHeader->Keyboard[note-1];
 				note = pHeader->NoteMap[note-1];
-				if ((n) && (n < MAX_SAMPLES)) pSample = csf->Samples[n].pSample;
+				if (n && n < MAX_SAMPLES)
+					pSample = csf->Samples[n].pSample;
 			}
 		} else {
 			pSample = NULL;
@@ -1359,7 +1363,7 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, boo
 		// Duplicate Check Type
 		switch (p->pHeader->nDCT) {
 		case DCT_NOTE:
-			if (note && (int) p->nNote == note && pHeader == p->pHeader)
+			if (NOTE_IS_NOTE(note) && (int) p->nNote == note && pHeader == p->pHeader)
 				bOk = true;
 			break;
 		case DCT_SAMPLE:
@@ -1474,7 +1478,7 @@ void csf_process_effects(CSoundFile *csf)
 		if (instr) pChn->nNewIns = instr;
 		if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick && !pChn->nRealtime) {
 			uint32_t note = pChn->nRowNote;
-			if (!note && instr) {
+			if (instr && note == NOTE_NONE) {
 				if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) {
 					if (pChn->pInstrument)
 						pChn->nVolume = pChn->pInstrument->nVolume;
@@ -1486,7 +1490,7 @@ void csf_process_effects(CSoundFile *csf)
 			// Invalid Instrument ?
 			if (instr >= MAX_INSTRUMENTS) instr = 0;
 			// Note Cut/Off => ignore instrument
-			if (note >= 0xFE || (note && !bPorta)) {
+			if ((NOTE_IS_CONTROL(note)) || (note != NOTE_NONE && !bPorta)) {
 				/* This is required when the instrument changes (KeyOff is not called) */
 				/* Possibly a better bugfix could be devised. --Bisqwit */
 				OPL_NoteOff(nChn);
@@ -1494,12 +1498,14 @@ void csf_process_effects(CSoundFile *csf)
 				GM_KeyOff(nChn);
 				GM_Touch(nChn, 0);
 			}
-			if (note >= 0xFE) instr = 0;
-			if (note && note <= 128)
+
+			if (NOTE_IS_CONTROL(note)) {
+				instr = 0;
+			} else if (NOTE_IS_NOTE(note)) {
 				pChn->nNewNote = note;
-			// New Note Action ? (not when paused!!!)
-			if (note && note <= 128 && !bPorta) {
-				csf_check_nna(csf, nChn, instr, note, false);
+				// New Note Action ? (not when paused!!!)
+				if (!bPorta)
+					csf_check_nna(csf, nChn, instr, note, false);
 			}
 			// Instrument Change ?
 			if (instr) {
@@ -1514,13 +1520,13 @@ void csf_process_effects(CSoundFile *csf)
 				
 				pChn->nNewIns = 0;
 				// Special IT case: portamento+note causes sample change -> ignore portamento
-				if (psmp != pChn->pInstrument && note && note < 0x80) {
+				if (psmp != pChn->pInstrument && NOTE_IS_NOTE(note)) {
 					bPorta = false;
 				}
 			}
 			// New Note ?
-			if (note) {
-				if (!instr && pChn->nNewIns && note < 0x80) {
+			if (note != NOTE_NONE) {
+				if (!instr && pChn->nNewIns && NOTE_IS_NOTE(note)) {
 					csf_instrument_change(csf, pChn, pChn->nNewIns, bPorta, false, true);
 					if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
 					    && csf->Instruments[pChn->nNewIns]) {
@@ -1703,7 +1709,7 @@ void csf_process_effects(CSoundFile *csf)
 				param = pChn->nOldOffset;
 			param <<= 8;
 			param |= (uint32_t)(pChn->nOldHiOffset) << 16;
-			if (pChn->nRowNote && pChn->nRowNote < 0x80) {
+			if (NOTE_IS_NOTE(pChn->nRowNote)) {
 				if (bPorta)
 					pChn->nPos = param;
 				else
@@ -1722,7 +1728,7 @@ void csf_process_effects(CSoundFile *csf)
 			pChn->nCommand = CMD_ARPEGGIO;
 			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
-			if (!pChn->nPeriod || !pChn->nNote)
+			if (!pChn->nPeriod || pChn->nNote == NOTE_NONE)
 				break;
 			if (param)
 				pChn->nArpeggio = param;
