@@ -1741,6 +1741,13 @@ void video_mousecursor(int vis)
 		"Hardware mouse cursor enabled",
 	};
 
+	if (status.flags & NO_MOUSE) {
+		// disable it no matter what
+		video.mouse.visible = MOUSE_DISABLED;
+		//SDL_ShowCursor(0);
+		return;
+	}
+
 	switch (vis) {
 	case MOUSE_CYCLE_STATE:
 		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;

@@ -164,14 +164,25 @@ static void display_print_info(void)
 # define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE
 #endif
 
+static void sdl_init(void)
+{
+	char *err;
+	if (SDL_Init(SDL_INIT_FLAGS) == 0)
+		return;
+	err = SDL_GetError();
+	if (strstr(err, "mouse")) {
+		// see if we can start up mouseless
+		status.flags |= NO_MOUSE;
+		put_env_var("SDL_NOMOUSE", "1");
+		if (SDL_Init(SDL_INIT_FLAGS) == 0)
+			return;
+	}
+	fprintf(stderr, "SDL_Init: %s\n", err);
+	exit(1);
+}
+
 static void display_init(void)
 {
-	if (SDL_Init(SDL_INIT_FLAGS) < 0) {
-		fprintf(stderr, "init test %s\n", SDL_GetError());
-		exit(1);
-	}
-	shutdown_process |= EXIT_SDLQUIT;
-
 	video_startup();
 
 	if (SDL_GetVideoInfo()->wm_available) {
@@ -1191,6 +1202,10 @@ int main(int argc, char **argv)
 	}
 
 	shutdown_process |= EXIT_SAVECFG;
+
+	sdl_init();
+	shutdown_process |= EXIT_SDLQUIT;
+
 	display_init();
 	palette_apply();
 	font_init();
