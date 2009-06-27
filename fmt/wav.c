@@ -209,7 +209,7 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSE
         smp->speed         = f.fmt.freqHz;
         smp->length        = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
 
-        return csf_read_sample((SONGSAMPLE *)smp, flags, f.buf, f.data.length);
+        return csf_read_sample((SONGSAMPLE *)smp, flags, (const char *) f.buf, f.data.length);
 }
 
 
