@@ -93,29 +93,6 @@ typedef struct {
 #pragma pack(pop)
 
 
-static int wave_transform_data(const wave_format_t *fmt, const uint8_t *data, uint8_t *out, size_t len)
-{
-#if BYTE_ORDER == BIG_ENDIAN
-        if (fmt->bitspersample == 8) {
-#else
-        if (fmt->bitspersample == 8 || fmt->bitspersample == 16) {
-#endif
-                memcpy(out, data, len);
-                return 1;
-        }
-
-        switch (fmt->bitspersample) {
-        case 16:
-                swab(data, out, len);
-                return 1;
-
-        default:
-                log_appendf(4, "Warning: %u bps WAV files are not supported\n", fmt->bitspersample);
-                return 0;
-        }
-}
-
-
 static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 {
         wave_file_header_t phdr;
@@ -200,6 +177,7 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSED char *title)
 {
         wave_file_t f;
+        uint32_t flags;
 
         if (!wav_load(&f, data, len))
                 return false;
@@ -210,26 +188,28 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSE
             (f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16))
                 return false;
 
-        smp->flags  = 0;
+        smp->flags = 0;
+        flags      = 0;
 
-        if (f.fmt.channels == 2)
+        if (f.fmt.channels == 2) {
                 smp->flags |= SAMP_STEREO;
+                flags      |= RSF_STEREO;
+        }
 
-        if (f.fmt.bitspersample == 16)
+        if (f.fmt.bitspersample == 16) {
                 smp->flags |= SAMP_16_BIT;
+                flags      |= RS_PCM16S;
+        }
+        else {
+                flags      |= RS_PCM8U;
+        }
 
         smp->volume        = 64 * 4;
         smp->global_volume = 64;
         smp->speed         = f.fmt.freqHz;
         smp->length        = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
-        smp->data          = song_sample_allocate(f.data.length);
 
-        if (!smp->data)
-                return false;
-
-        return csf_read_sample((SONGSAMPLE *)smp,
-            f.fmt.bitspersample == 16 ? RS_PCM16S : RS_PCM8U,
-            f.buf, f.data.length);
+        return csf_read_sample((SONGSAMPLE *)smp, flags, f.buf, f.data.length);
 }
 
 
