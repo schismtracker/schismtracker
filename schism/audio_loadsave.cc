@@ -215,7 +215,7 @@ static void song_set_filename(const char *file)
 	}
 }
 
-// clear patterns => clear filename
+// clear patterns => clear filename and save flag
 // clear orderlist => clear title, message, and channel settings
 void song_new(int flags)
 {
@@ -228,6 +228,7 @@ void song_new(int flags)
 	status.flags &= ~PLAIN_TEXTEDIT;
 	if ((flags & KEEP_PATTERNS) == 0) {
 		song_set_filename(NULL);
+		status.flags &= ~SONG_NEEDS_SAVE;
 		
 		for (i = 0; i < MAX_PATTERNS; i++) {
 			if (mp->Patterns[i]) {
