@@ -389,7 +389,7 @@ int csf_process_tick(CSoundFile *csf)
 			pChn->nRightVol = pChn->nNewRightVol;
 			pChn->dwFlags &= ~(CHN_PORTAMENTO | CHN_VIBRATO | CHN_TREMOLO | CHN_PANBRELLO);
 			pChn->nCommand = 0;
-		}	 
+		}
 	} else {
 		/* [-- No --] */
 		/* [Update effects for each channel as required.] */
@@ -1071,6 +1071,9 @@ static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, const int chan_n
 
 int csf_read_note(CSoundFile *csf)
 {
+	SONGVOICE *chan;
+	unsigned int cn;
+
 	// Checking end of row ?
 	if (csf->m_dwSongFlags & SONG_PAUSED) {
 		if (!csf->m_nMusicSpeed)
@@ -1080,13 +1083,21 @@ int csf_read_note(CSoundFile *csf)
 
 		csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
 
-		// XXX why was this being done twice
-		//csf_process_effects(csf);
 		if (--csf->m_nTickCount == 0) {
 			csf->m_nTickCount = csf->m_nMusicSpeed;
 			if (--csf->m_nRowCount <= 0) {
 				csf->m_nRowCount = 0;
 				//csf->m_dwSongFlags |= SONG_FIRSTTICK;
+			}
+			// clear channel values (similar to csf_process_tick)
+			for (cn = 0, chan = csf->Voices; cn < MAX_CHANNELS; cn++, chan++) {
+				chan->nRowNote = 0;
+				chan->nRowInstr = 0;
+				chan->nRowVolCmd = 0;
+				chan->nRowVolume = 0;
+				chan->nRowCommand = 0;
+				chan->nRowParam = 0;
+				chan->nCommand = 0;
 			}
 		}
 		csf_process_effects(csf);
@@ -1127,9 +1138,8 @@ int csf_read_note(CSoundFile *csf)
 	uint32_t nMasterVol = csf->m_nSongPreAmp << 2;
 
 	csf->m_nMixChannels = 0;
-	SONGVOICE *chan = csf->Voices;
 
-	for (unsigned int cn = 0; cn < MAX_VOICES; cn++, chan++) {
+	for (cn = 0, chan = csf->Voices; cn < MAX_VOICES; cn++, chan++) {
 		/*if(cn == 0 || cn == 1)
 		fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
 			(int)cn, chan->nPeriod, chan->nPos, chan->nLength, chan->dwFlags);*/
