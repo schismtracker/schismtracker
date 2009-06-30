@@ -194,7 +194,6 @@ typedef struct _song_mix_channel {
         unsigned int left_vu, right_vu;
         unsigned int nActiveMacro, nPadding;
 	unsigned int nTickStart;
-	unsigned int nRealtime;
 	uint8_t stupid_gcc_workaround;
 
 } song_mix_channel;
