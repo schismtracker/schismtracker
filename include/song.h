@@ -191,7 +191,6 @@ typedef struct _song_mix_channel {
         unsigned int nRowNote, nRowInstr;
         unsigned int nRowVolCmd, nRowVolume;
         unsigned int nRowCommand, nRowParam;
-        unsigned int left_vu, right_vu;
         unsigned int nActiveMacro, nPadding;
 } song_mix_channel;
 
