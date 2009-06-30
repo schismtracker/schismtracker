@@ -951,7 +951,7 @@ EndMod:
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Effects
 
-static SONGSAMPLE *translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32_t note, SONGSAMPLE *def)
+SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32_t note, SONGSAMPLE *def)
 {
 	static SONGSAMPLE dummyinstrument = {
 		1,/*len*/
@@ -997,7 +997,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 	} else if (penv) {
 		if (NOTE_IS_CONTROL(penv->NoteMap[note-1]))
 			return;
-		psmp = translate_keyboard(csf, penv, note, NULL);
+		psmp = csf_translate_keyboard(csf, penv, note, NULL);
 		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	}
 
@@ -1105,7 +1105,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 	SONGSAMPLE *pins = pChn->pInstrument;
 	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? pChn->pHeader : NULL;
 	if (penv && NOTE_IS_NOTE(note)) {
-		pins = translate_keyboard(csf, penv, note, pins);
+		pins = csf_translate_keyboard(csf, penv, note, pins);
 		note = penv->NoteMap[note - 1];
 		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	}
@@ -1476,7 +1476,7 @@ void csf_process_effects(CSoundFile *csf)
 		// thus (m_nMusicSpeed - m_nTickCount) indicates how many ticks we are from zero
 		// nStartTick is the n'th tick on the row that the note should fire on
 		if (instr) pChn->nNewIns = instr;
-		if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick && !pChn->nRealtime) {
+		if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick) {
 			uint32_t note = pChn->nRowNote;
 			if (instr && note == NOTE_NONE) {
 				if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) {

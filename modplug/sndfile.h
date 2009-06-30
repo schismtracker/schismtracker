@@ -441,7 +441,6 @@ typedef struct _SONGVOICE
 	unsigned int nLeftVU, nRightVU;
 	unsigned int nActiveMacro, nLastInstr;
 	unsigned int nTickStart;
-	unsigned int nRealtime;
 	uint8_t stupid_gcc_workaround;
 
 } SONGVOICE;
@@ -559,6 +558,7 @@ void fx_key_off(CSoundFile *csf, uint32_t nChn);
 void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
 void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr);
+SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *ins, uint32_t note, SONGSAMPLE *def);
 
 // sndfile
 void csf_reset_midi_cfg(CSoundFile *csf);

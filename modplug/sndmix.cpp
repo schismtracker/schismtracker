@@ -367,10 +367,6 @@ int csf_process_tick(CSoundFile *csf)
 		MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
 
 		for (unsigned int nChn=0; nChn<csf->m_nChannels; pChn++, nChn++, m++) {
-			/* skip realtime copyin */
-			if (pChn->nRealtime)
-				continue;
-
 			// this is where we're going to spit out our midi
 			// commands... ALL WE DO is dump raw midi data to
 			// our super-secret "midi buffer"
@@ -413,33 +409,6 @@ int csf_process_tick(CSoundFile *csf)
 
 	return true;
 }
-
-
-/* XXX This kind of loop is performed many times in ReadNote.
- * XXX Sneak this in one of those somewhere?
- */
-static void handle_realtime_closures(CSoundFile *csf)
-{
-	SONGVOICE *chan = csf->Voices;
-
-	for (unsigned int i = 0; i < csf->m_nChannels; chan++, i++) {
-		/* reset end of "row" */
-		// FIXME this is probably broken now
-		if (chan->nRealtime && chan->nRowNote
-		    && (chan->nTickStart % csf->m_nMusicSpeed) == (csf->m_nTickCount % csf->m_nMusicSpeed)) {
-			chan->nRealtime = 0;
-			chan->nRowNote = 0;
-			chan->nRowInstr = 0;
-			//chan->nMaster
-			chan->nRowVolCmd = 0;
-			chan->nRowVolume = 0;
-			chan->nRowCommand = 0;
-			chan->nRowParam = 0;
-			chan->nTickStart = 0;
-		}
-	}
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -1124,8 +1093,6 @@ int csf_read_note(CSoundFile *csf)
 		if (!csf_process_tick(csf))
 			return false;
 	}
-
-	handle_realtime_closures(csf);
 
 	////////////////////////////////////////////////////////////////////////////////////
 

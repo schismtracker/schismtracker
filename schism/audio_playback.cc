@@ -222,6 +222,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	int ins_mode;
 	SONGVOICE *c;
 	MODCOMMAND mc;
+	SONGSAMPLE *s = NULL;
+	SONGINSTRUMENT *i = NULL;
 
 	if (chan == KEYJAZZ_CHAN_CURRENT) {
 		chan = current_play_channel;
@@ -229,107 +231,114 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			song_change_current_play_channel(1, 1);
 	}
 	
-	// keep track of what channel this note was played in so we can note-off properly later
-	if (note > 0 && note < 128)
-		keyjazz_channels[note] = chan;
-
 	song_lock_audio();
 
 	c = mp->Voices + chan - 1;
 
 	ins_mode = song_is_instrument_mode();
 
-	if (samp != KEYJAZZ_NOINST && (c->dwFlags & CHN_ADLIB)) {
+	if (NOTE_IS_NOTE(note)) {
+		// keep track of what channel this note was played in so we can note-off properly later
+		keyjazz_channels[note] = chan;
+
+		// give the channel a sample, and maybe an instrument
+		s = (samp == KEYJAZZ_NOINST) ? NULL : mp->Samples + samp;
+		i = (ins == KEYJAZZ_NOINST) ? NULL : (SONGINSTRUMENT *) song_get_instrument(ins, NULL); // blah
+
+		if (i && samp == KEYJAZZ_NOINST) {
+			// we're playing an instrument and don't know what sample! WHAT WILL WE EVER DO?!
+			// well, look it up in the note translation table, silly.
+			// the weirdness here the default value here is to mimic IT behavior: we want to use
+			// the sample corresponding to the instrument number if in sample mode and no sample
+			// is defined for the note in the instrument's note map.
+			s = csf_translate_keyboard(mp, i, note, ins_mode ? NULL : (mp->Samples + ins));
+		}
+	}
+
+	if (s && (c->dwFlags & CHN_ADLIB)) {
 		OPL_NoteOff(chan);
-		OPL_Patch(chan, mp->Samples[samp].AdlibBytes);
+		OPL_Patch(chan, s->AdlibBytes);
 	}
 
-	/* previously this block also checked for SONG_ENDREACHED|SONG_PAUSED if (ins >= 0)
-	do we want to check that or not? what is this actually handling anyway? */
-	if ((c->pSample || c->nRealtime) && note < 0x80) {
-		csf_note_change(mp, chan, c->nRowNote, false, true, false);
-		csf_process_effects(mp);
-		csf_check_nna(mp, chan, ins_mode ? ins : samp, note, false);
-	}
+	// XXX handle NNAs if we're playing an instrument
 
-	if (ins == KEYJAZZ_NOINST && samp != KEYJAZZ_NOINST && (0 || ins_mode || samp == 0)) {
-		/* this is only needed on the sample page, when in instrument mode... */
-		SONGSAMPLE *s = mp->Samples + samp;
 
-		c->nRowCommand = effect;
-		c->nRowParam = param;
+	c->nRowCommand = effect;
+	c->nRowParam = param;
 
+	// now do a rough equivalent of csf_instrument_change and csf_note_change
+	if (s) {
 		c->dwFlags = (s->uFlags & CHN_SAMPLE_FLAGS) | (c->dwFlags & CHN_MUTE);
 		if (c->dwFlags & CHN_MUTE) {
 			c->dwFlags &= ~CHN_MUTE;
 			c->dwFlags |= CHN_NNAMUTE;
 		}
 
+		if (i) {
+//			csf_instrument_change(mp, mp->Voices + chan - 1, c->nRowInstr, false, true, true);
 
-		if (note > 0 && note < 128) {
-			c->nMasterChn = 0; // indicates foreground channel.
-			// most of these things seem to be taken care of by csf_note_change.
-			// also a bunch of stuff seems to not work
-			//c->dwFlags &= ~(CHN_PINGPONGFLAG);
+			// XXX carry flag?
+			c->nVolEnvPosition = 0;
+			c->nPanEnvPosition = 0;
+			c->nPitchEnvPosition = 0;
+			if (i->dwFlags & ENV_VOLUME) c->dwFlags |= CHN_VOLENV;
+			if (i->dwFlags & ENV_PANNING) c->dwFlags |= CHN_PANENV;
+			if (i->dwFlags & ENV_PITCH) c->dwFlags |= CHN_PITCHENV;
+			
 
-			// csf_note_change copies stuff from c->pInstrument as long as c->nLength is zero
-			// and if period != 0 (ie. sample not playing at a stupid rate)
-			c->pInstrument = s;
-			c->nLength = 0;
-			// ... but it doesn't copy the volumes, for somewhat obvious reasons.
-			c->nVolume = (vol == KEYJAZZ_DEFAULTVOL) ? s->nVolume : (vol << 2);
-			c->nInsVol = s->nGlobalVol;
-			c->nGlobalVol = 64;
-			// gotta set these by hand, too
-			c->nC5Speed = s->nC5Speed;
+			i->played = 1;
+
+			if ((status.flags & MIDI_LIKE_TRACKER) && i) {
+				if (i->nMidiChannelMask) {
+					GM_KeyOff(chan);
+					GM_DPatch(chan, i->nMidiProgram, i->wMidiBank, i->nMidiChannelMask);
+				}
+			}
+			
+			if (i->nIFC & 0x80)
+				c->nCutOff = i->nIFC & 0x7f;
+			if (i->nIFR & 0x80)
+				c->nResonance = i->nIFR & 0x7f;
+			//?
+			c->nVolSwing = i->nVolSwing;
+			c->nPanSwing = i->nPanSwing;
+		} else {
+			c->pHeader = NULL;
 			c->nCutOff = 0x7f;
 			c->nResonance = 0;
-			c->nNewNote = note;
-			c->pHeader = NULL;
-			s->played = 1;
-		}
-		csf_note_change(mp, chan - 1, note, false, true, true);
-	} else if ((ins_mode ? ins : samp) != KEYJAZZ_NOINST) {
-		if ((status.flags & MIDI_LIKE_TRACKER) && ins != KEYJAZZ_NOINST) {
-			SONGINSTRUMENT *i = mp->Instruments[ins];
-
-			if (i && i->nMidiChannelMask) {
-				GM_KeyOff(chan);
-				GM_DPatch(chan, i->nMidiProgram, i->wMidiBank, i->nMidiChannelMask);
-			}
 		}
 
-		c->nRealtime = 1;
-		c->nTickStart = (mp->m_nTickCount+1) % mp->m_nMusicSpeed;
-		c->nRowNote = note;
-		if (vol == KEYJAZZ_DEFAULTVOL) {
-			c->nRowVolCmd = 0;
-			c->nRowVolume = 0;
-		} else {
-			c->nRowVolCmd = VOLCMD_VOLUME;
-			c->nRowVolume = vol;
-			c->nVolume = (vol << 2);
-		}
+		c->nMasterChn = 0; // indicates foreground channel.
+		//c->dwFlags &= ~(CHN_PINGPONGFLAG);
 
-		if (c->dwFlags & CHN_MUTE) {
-			c->dwFlags &= ~(CHN_MUTE);
-			c->dwFlags |= CHN_NNAMUTE;
-		}
-		c->dwFlags &= ~(CHN_PINGPONGFLAG);
+		// ?
+		//c->nAutoVibDepth = 0;
+		//c->nAutoVibPos = 0;
 
-		c->nRowInstr = ins_mode ? ins : samp;
-		c->nRowCommand = effect;
-		c->nRowParam = param;
-		csf_instrument_change(mp, mp->Voices + chan - 1, c->nRowInstr, false, true, true);
+		// csf_note_change copies stuff from c->pInstrument as long as c->nLength is zero
+		// and if period != 0 (ie. sample not playing at a stupid rate)
+		c->pInstrument = s;
+		c->nLength = 0;
+		// ... but it doesn't copy the volumes, for somewhat obvious reasons.
+		c->nVolume = (vol == KEYJAZZ_DEFAULTVOL) ? s->nVolume : (vol << 2);
+		c->nInsVol = s->nGlobalVol;
+		c->nGlobalVol = 64;
+		// gotta set these by hand, too
+		c->nC5Speed = s->nC5Speed;
+		c->nNewNote = note;
+		s->played = 1;
+		
 		csf_note_change(mp, chan - 1, note, false, true, true);
 	}
-	
+
+
+
 	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
 		mp->m_dwSongFlags &= ~SONG_ENDREACHED;
 		mp->m_dwSongFlags |= SONG_PAUSED;
 	}
 
-	if (!(status.flags & MIDI_LIKE_TRACKER) && ins != KEYJAZZ_NOINST) {
+	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		mc.note = note;
 		mc.instr = ins;
 		mc.volcmd = VOLCMD_VOLUME;
@@ -1015,9 +1024,7 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
 #if 0
 printf("channel = %d note=%d\n",chan,m_note);
 #endif
-	if (c->nRealtime) {
-		/* goggles */
-	} else if (m->command == CMD_S3MCMDEX) {
+	if (m->command == CMD_S3MCMDEX) {
 		switch (m->param & 0x80) {
 		case 0xC0: /* note cut */
 			if (tc == (((unsigned)m->param) & 15)) {
