@@ -265,7 +265,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			OPL_Patch(chan, s->AdlibBytes);
 		}
 
-
 		c->dwFlags = (s->uFlags & CHN_SAMPLE_FLAGS) | (c->dwFlags & CHN_MUTE);
 		if (c->dwFlags & CHN_MUTE) {
 			c->dwFlags &= ~CHN_MUTE;
@@ -283,7 +282,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			if (i->dwFlags & ENV_PANNING) c->dwFlags |= CHN_PANENV;
 			if (i->dwFlags & ENV_PITCH) c->dwFlags |= CHN_PITCHENV;
 			
-
 			i->played = 1;
 
 			if ((status.flags & MIDI_LIKE_TRACKER) && i) {
@@ -329,13 +327,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		csf_note_change(mp, chan - 1, note, false, true, true);
 	}
 
-
-
-	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
-		mp->m_dwSongFlags &= ~SONG_ENDREACHED;
-		mp->m_dwSongFlags |= SONG_PAUSED;
-	}
-
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		mc.note = note;
 		mc.instr = ins;
@@ -344,6 +335,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		mc.command = effect;
 		mc.param = param;
 		_schism_midi_out_note(chan, &mc);
+	}
+
+	if (mp->m_dwSongFlags & SONG_ENDREACHED) {
+		mp->m_dwSongFlags &= ~SONG_ENDREACHED;
+		mp->m_dwSongFlags |= SONG_PAUSED;
 	}
 
 	song_unlock_audio();
