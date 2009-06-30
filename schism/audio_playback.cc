@@ -277,6 +277,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			// XXX handle NNAs if we're playing an instrument
 			// XXX carry flag?
 
+			c->pHeader = i;
+
 			c->nVolEnvPosition = 0;
 			c->nPanEnvPosition = 0;
 			c->nPitchEnvPosition = 0;
