@@ -2284,7 +2284,7 @@ static void advance_cursor(int next_row, int multichannel)
 {
 	int total_rows;
 
-	if (next_row && !((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && !playback_tracing)) {
+	if (next_row && !((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing)) {
 		total_rows = song_get_rows_in_pattern(current_pattern);
 
 		if (skip_value) {
