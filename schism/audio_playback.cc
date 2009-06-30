@@ -255,19 +255,17 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		}
 	}
 
-	if (s && (c->dwFlags & CHN_ADLIB)) {
-		OPL_NoteOff(chan);
-		OPL_Patch(chan, s->AdlibBytes);
-	}
-
-	// XXX handle NNAs if we're playing an instrument
-
-
 	c->nRowCommand = effect;
 	c->nRowParam = param;
 
 	// now do a rough equivalent of csf_instrument_change and csf_note_change
 	if (s) {
+		if (c->dwFlags & CHN_ADLIB) {
+			OPL_NoteOff(chan);
+			OPL_Patch(chan, s->AdlibBytes);
+		}
+
+
 		c->dwFlags = (s->uFlags & CHN_SAMPLE_FLAGS) | (c->dwFlags & CHN_MUTE);
 		if (c->dwFlags & CHN_MUTE) {
 			c->dwFlags &= ~CHN_MUTE;
@@ -275,9 +273,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		}
 
 		if (i) {
-//			csf_instrument_change(mp, mp->Voices + chan - 1, c->nRowInstr, false, true, true);
-
+			// XXX handle NNAs if we're playing an instrument
 			// XXX carry flag?
+
 			c->nVolEnvPosition = 0;
 			c->nPanEnvPosition = 0;
 			c->nPitchEnvPosition = 0;
