@@ -3741,12 +3741,6 @@ static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't 
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
 	/* bleah */
-	if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
-		if (!k->state && shift_selection.in_progress) {
-			shift_selection_end();
-		}
-	}
-
 	if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
 		if (k->state) return 0;
 		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
@@ -4124,15 +4118,16 @@ static int pattern_editor_handle_key(struct key_event * k)
 
 	case SDLK_LSHIFT:
 	case SDLK_RSHIFT:
-		if (!k->state)
-			return 0;
-		if (shift_chord_channels) {
+		if (!k->state) {
+			if (shift_selection.in_progress)
+				shift_selection_end();
+		} else if (shift_chord_channels) {
 			current_channel -= shift_chord_channels;
 			while (current_channel < 1)
 				current_channel += 64;
 			advance_cursor(1, 1);
+			shift_chord_channels = 0;
 		}
-		shift_chord_channels = 0;
 		return 1;
 
 	default:
