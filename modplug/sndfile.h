@@ -574,16 +574,13 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
 
 } // extern "C"
 
-
 //==============
 class CSoundFile
 //==============
 {
 public: // Static Members
 	static uint32_t m_nMaxMixChannels;
-	static int32_t m_nStreamVolume;
 	static uint32_t gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
-	static uint32_t gnVolumeRampSamples;
 	static uint32_t gnVULeft, gnVURight;
 
 public: // for Editing

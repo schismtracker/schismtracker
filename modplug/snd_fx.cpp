@@ -155,9 +155,8 @@ static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 	else
 		param = pChn->nOldPortaUpDown;
 	if (flags & SONG_COMPATGXX)
-		pChn->nPortamentoSlide=param*4;
-	else
-		pChn->nPortamentoDest=0;
+		pChn->nPortamentoSlide=param;
+	pChn->nPortamentoDest = 0;
 	if ((param & 0xF0) >= 0xE0) {
 		if (param & 0x0F) {
 			if ((param & 0xF0) == 0xF0) {
@@ -179,10 +178,9 @@ static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		pChn->nOldPortaUpDown = param;
 	else
 		param = pChn->nOldPortaUpDown;
-	if (flags & SONG_COMPATGXX)
-		pChn->nPortamentoSlide=param*4;
-	else
-		pChn->nPortamentoDest=0;
+	if (!(flags & SONG_COMPATGXX))
+		pChn->nPortamentoSlide = param;
+	pChn->nPortamentoDest = 0;
 	if ((param & 0xF0) >= 0xE0) {
 		if (param & 0x0F) {
 			if ((param & 0xF0) == 0xF0) {
@@ -199,30 +197,38 @@ static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 
 static void fx_tone_portamento(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
+	int delta;
+
 	if (param)
-		pChn->nPortamentoSlide = param * 4;
+		pChn->nPortamentoSlide = param;
+	else
+		param = pChn->nPortamentoSlide;
+	if (!(flags & SONG_COMPATGXX))
+		pChn->nOldPortaUpDown = param;
 	pChn->dwFlags |= CHN_PORTAMENTO;
 	if (pChn->nPeriod && pChn->nPortamentoDest && !(flags & SONG_FIRSTTICK)) {
 		if (pChn->nPeriod < pChn->nPortamentoDest) {
-			int32_t delta = (int)pChn->nPortamentoSlide;
 			if (flags & SONG_LINEARSLIDES) {
-				uint32_t n = pChn->nPortamentoSlide >> 2;
-				if (n > 255) n = 255;
+				uint32_t n = MIN(255, param);
 				delta = _muldivr(pChn->nPeriod, LinearSlideUpTable[n], 65536) - pChn->nPeriod;
 				if (delta < 1) delta = 1;
+			} else {
+				delta = param * 4;
 			}
 			pChn->nPeriod += delta;
-			if (pChn->nPeriod > pChn->nPortamentoDest) pChn->nPeriod = pChn->nPortamentoDest;
+			if (pChn->nPeriod > pChn->nPortamentoDest)
+				pChn->nPeriod = pChn->nPortamentoDest;
 		} else if (pChn->nPeriod > pChn->nPortamentoDest) {
-			int32_t delta = - (int)pChn->nPortamentoSlide;
 			if (flags & SONG_LINEARSLIDES) {
-				uint32_t n = pChn->nPortamentoSlide >> 2;
-				if (n > 255) n = 255;
+				uint32_t n = MIN(255, param);
 				delta = _muldivr(pChn->nPeriod, LinearSlideDownTable[n], 65536) - pChn->nPeriod;
 				if (delta > -1) delta = -1;
+			} else {
+				delta = -param * 4;
 			}
 			pChn->nPeriod += delta;
-			if (pChn->nPeriod < pChn->nPortamentoDest) pChn->nPeriod = pChn->nPortamentoDest;
+			if (pChn->nPeriod < pChn->nPortamentoDest)
+				pChn->nPeriod = pChn->nPortamentoDest;
 		}
 	}
 }

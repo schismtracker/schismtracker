@@ -16,15 +16,14 @@
 #define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
 
 // SNDMIX: These are global flags for playback control
-int32_t CSoundFile::m_nStreamVolume = 0x8000;
-unsigned int CSoundFile::m_nMaxMixChannels = 32; // ITT is 1994
+unsigned int CSoundFile::m_nMaxMixChannels = 32; // ITT it is 1994
 // Mixing Configuration (SetWaveConfig)
 uint32_t CSoundFile::gnChannels = 1;
 uint32_t CSoundFile::gdwSoundSetup = 0;
 uint32_t CSoundFile::gdwMixingFreq = 44100;
 uint32_t CSoundFile::gnBitsPerSample = 16;
 // Mixing data initialized in
-unsigned int CSoundFile::gnVolumeRampSamples = 64;
+static unsigned int volume_ramp_samples = 64;
 unsigned int CSoundFile::gnVULeft = 0;
 unsigned int CSoundFile::gnVURight = 0;
 int32_t gnDryROfsVol = 0;
@@ -101,13 +100,13 @@ int csf_init_player(CSoundFile *csf, int reset)
 		csf->m_nMaxMixChannels = MAX_VOICES;
 
 	csf->gdwMixingFreq = CLAMP(csf->gdwMixingFreq, 4000, MAX_SAMPLE_RATE);
-	csf->gnVolumeRampSamples = (csf->gdwMixingFreq * VOLUMERAMPLEN) / 100000;
+	volume_ramp_samples = (csf->gdwMixingFreq * VOLUMERAMPLEN) / 100000;
 
-	if (csf->gnVolumeRampSamples < 8)
-		csf->gnVolumeRampSamples = 8;
+	if (volume_ramp_samples < 8)
+		volume_ramp_samples = 8;
 
 	if (csf->gdwSoundSetup & SNDMIX_NORAMPING)
-		csf->gnVolumeRampSamples = 2;
+		volume_ramp_samples = 2;
 
 	gnDryROfsVol = gnDryLOfsVol = 0;
 
@@ -976,7 +975,7 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 	    chan->dwFlags & CHN_VOLUMERAMP &&
 	    (chan->nRightVol != chan->nNewRightVol ||
 	     chan->nLeftVol  != chan->nNewLeftVol)) {
-		int nRampLength = csf->gnVolumeRampSamples;
+		int nRampLength = volume_ramp_samples;
 		int nRightDelta = ((chan->nNewRightVol - chan->nRightVol) << VOLUMERAMPPRECISION);
 		int nLeftDelta	= ((chan->nNewLeftVol  - chan->nLeftVol)  << VOLUMERAMPPRECISION);
 
@@ -987,7 +986,7 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 				nRampLength = csf->m_nBufferCount;
 
 				int l = (1 << (VOLUMERAMPPRECISION - 1));
-				int r =(int) csf->gnVolumeRampSamples;
+				int r =(int) volume_ramp_samples;
 
 				nRampLength = CLAMP(nRampLength, l, r);
 			}
