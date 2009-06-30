@@ -31,6 +31,8 @@
 #include "diskwriter.h"
 #include "event.h"
 
+#include <assert.h>
+
 #ifndef MACOSX
 #include <cstdio>
 #include <cstring>
@@ -1414,6 +1416,15 @@ void song_initialise(void)
 {
 	csf_midi_out_note = _schism_midi_out_note;
 	csf_midi_out_raw = _schism_midi_out_raw;
+
+	assert(sizeof(midi_config)      == sizeof(MODMIDICFG));
+	assert(sizeof(song_sample)      == sizeof(SONGSAMPLE));
+	assert(sizeof(song_envelope)    == sizeof(INSTRUMENTENVELOPE));
+	assert(sizeof(song_instrument)  == sizeof(SONGINSTRUMENT));
+	assert(sizeof(song_mix_channel) == sizeof(SONGVOICE));
+	assert(sizeof(song_channel)     == sizeof(MODCHANNELSETTINGS));
+	assert(sizeof(song_note)        == sizeof(MODCOMMAND));
+
 
 	mp = new CSoundFile;
 
