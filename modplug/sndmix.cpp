@@ -812,18 +812,14 @@ static inline void rn_increment_env_pos(SONGVOICE *chan)
 {
 	SONGINSTRUMENT *penv = chan->pHeader;
 
-	// Volume Envelope
 	if (chan->dwFlags & CHN_VOLENV) {
-		// Increase position
 		chan->nVolEnvPosition++;
 
-		// Volume Loop ?
 		if (penv->dwFlags & ENV_VOLLOOP) {
 			int volloopend = penv->VolEnv.Ticks[penv->VolEnv.nLoopEnd] + 1;
 
 			if (chan->nVolEnvPosition == volloopend) {
 				chan->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nLoopStart];
-
 				if (penv->VolEnv.nLoopEnd == penv->VolEnv.nLoopStart
 				    && !penv->VolEnv.Values[penv->VolEnv.nLoopStart]) {
 					chan->dwFlags |= CHN_NOTEFADE;
@@ -832,67 +828,63 @@ static inline void rn_increment_env_pos(SONGVOICE *chan)
 			}
 		}
 
-		// Volume Sustain ?
-		if (penv->dwFlags & ENV_VOLSUSTAIN &&
-		    !(chan->dwFlags & CHN_KEYOFF)) {
-			if (chan->nVolEnvPosition == (int)penv->VolEnv.Ticks[penv->VolEnv.nSustainEnd] + 1)
-				chan->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nSustainStart];
-		}
-		// End of Envelope ?
-		else if (chan->nVolEnvPosition > penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1]) {
-			chan->dwFlags |= CHN_NOTEFADE;
+		if (penv->dwFlags & ENV_VOLSUSTAIN
+		    && (chan->nVolEnvPosition == (int)penv->VolEnv.Ticks[penv->VolEnv.nSustainEnd] + 1)
+		    && !(chan->dwFlags & CHN_KEYOFF)) {
+			// Volume sustained
+			chan->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nSustainStart];
+		} else if (chan->nVolEnvPosition > penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1]) {
+			// End of Envelope
 			chan->nVolEnvPosition = penv->VolEnv.Ticks[penv->VolEnv.nNodes - 1];
-
+			chan->dwFlags |= CHN_NOTEFADE;
 			if (!penv->VolEnv.Values[penv->VolEnv.nNodes-1]) {
-				chan->dwFlags |= CHN_NOTEFADE;
 				chan->nFadeOutVol = 0;
 				chan->nRealVolume = 0;
 			}
 		}
 	}
 
-	// Panning Envelope
 	if (chan->dwFlags & CHN_PANENV) {
 		chan->nPanEnvPosition++;
 
 		if (penv->dwFlags & ENV_PANLOOP) {
 			int panloopend = penv->PanEnv.Ticks[penv->PanEnv.nLoopEnd] + 1;
 
-			if (chan->nPanEnvPosition == panloopend)
+			if (chan->nPanEnvPosition == panloopend) {
 				chan->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nLoopStart];
+			}
 		}
 
-		// Panning Sustain ?
-		if (penv->dwFlags & ENV_PANSUSTAIN &&
-			(chan->nPanEnvPosition == (int) penv->PanEnv.Ticks[penv->PanEnv.nSustainEnd] + 1) &&
-			!(chan->dwFlags & CHN_KEYOFF)) {
+		if (penv->dwFlags & ENV_PANSUSTAIN
+		    && (chan->nPanEnvPosition == (int) penv->PanEnv.Ticks[penv->PanEnv.nSustainEnd] + 1)
+		    && !(chan->dwFlags & CHN_KEYOFF)) {
 			// Panning sustained
 			chan->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nSustainStart];
-		}
-		else {
-			if (chan->nPanEnvPosition > penv->PanEnv.Ticks[penv->PanEnv.nNodes - 1])
-				chan->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nNodes - 1];
+		} else if (chan->nPanEnvPosition > penv->PanEnv.Ticks[penv->PanEnv.nNodes - 1]) {
+			// End of envelope
+			chan->nPanEnvPosition = penv->PanEnv.Ticks[penv->PanEnv.nNodes - 1];
 		}
 	}
 
-	// Pitch Envelope
 	if (chan->dwFlags & CHN_PITCHENV) {
-		// Increase position
 		chan->nPitchEnvPosition++;
 
-		// Pitch Loop ?
 		if (penv->dwFlags & ENV_PITCHLOOP) {
-			if (chan->nPitchEnvPosition >= penv->PitchEnv.Ticks[penv->PitchEnv.nLoopEnd])
+			int pitchloopend = penv->PitchEnv.Ticks[penv->PitchEnv.nLoopEnd] + 1;
+
+			if (chan->nPitchEnvPosition == pitchloopend) {
 				chan->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nLoopStart];
+			}
 		}
 
-		// Pitch Sustain ?
-		if (penv->dwFlags & ENV_PITCHSUSTAIN && !(chan->dwFlags & CHN_KEYOFF)) {
-			if (chan->nPitchEnvPosition == (int) penv->PitchEnv.Ticks[penv->PitchEnv.nSustainEnd]+1)
-				chan->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nSustainStart];
-		} else {
-			if (chan->nPitchEnvPosition > penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1])
-				chan->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1];
+		if (penv->dwFlags & ENV_PITCHSUSTAIN
+		    && (chan->nPitchEnvPosition == (int) penv->PitchEnv.Ticks[penv->PitchEnv.nSustainEnd]+1)
+		    && !(chan->dwFlags & CHN_KEYOFF)) {
+		    	// Pitch sustained
+			chan->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nSustainStart];
+		} else if (chan->nPitchEnvPosition > penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1]) {
+			// End of envelope
+			chan->nPitchEnvPosition = penv->PitchEnv.Ticks[penv->PitchEnv.nNodes - 1];
 		}
 	}
 }
