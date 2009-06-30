@@ -1172,9 +1172,8 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 	pChn->dwFlags &= ~CHN_KEYOFF;
 	// Enable Ramping
 	if (!bPorta) {
-		//pChn->nVUMeter = 0x100;
+		pChn->nVUMeter = 0x100;
 		pChn->strike = 4; /* this affects how long the initial hit on the playback marks lasts */
-		pChn->nLeftVU = pChn->nRightVU = 0xFF;
 		pChn->dwFlags &= ~CHN_FILTER;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
 		if (bResetEnv) {

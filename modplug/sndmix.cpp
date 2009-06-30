@@ -15,6 +15,9 @@
 #define VOLUMERAMPLEN	146 // 1.46ms = 64 samples at 44.1kHz
 #define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
 
+// VU meter
+#define VUMETER_DECAY 16
+
 // SNDMIX: These are global flags for playback control
 unsigned int CSoundFile::m_nMaxMixChannels = 32; // ITT it is 1994
 // Mixing Configuration (SetWaveConfig)
@@ -1056,6 +1059,51 @@ static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, const int chan_n
 }
 
 
+static inline void update_vu_meter(SONGVOICE *chan)
+{
+	// Update VU-Meter (nRealVolume is 14-bit)
+	// TODO: missing background channels by doing it this way.
+	// need to use nMasterCh, add the vu meters for each physical voice, and bit shift.
+	uint32_t vutmp = chan->nRealVolume >> (14 - 8);
+	if (vutmp > 0xFF) vutmp = 0xFF;
+	if (chan->dwFlags & CHN_ADLIB) {
+		// fake VU decay (intentionally similar to ST3)
+		if (chan->nVUMeter > VUMETER_DECAY) {
+			chan->nVUMeter -= VUMETER_DECAY;
+		} else {
+			chan->nVUMeter = 0;
+		}
+		if (chan->nVUMeter >= 0x100) {
+			chan->nVUMeter = vutmp;
+		}
+	} else if (vutmp) {
+		// can't fake the funk
+		int n;
+		if (chan->dwFlags & CHN_16BIT) {
+			const signed short *p = (signed short *)(chan->pCurrentSample);
+			if (chan->dwFlags & CHN_STEREO)
+				n = p[2 * chan->nPos];
+			else
+				n = p[chan->nPos];
+			n >>= 8;
+		} else {
+			const signed char *p = (signed char *)(chan->pCurrentSample);
+			if (chan->dwFlags & CHN_STEREO)
+				n = p[2 * chan->nPos];
+			else
+				n = p[chan->nPos];
+		}
+		if (n < 0)
+			n = -n;
+		vutmp *= n;
+		vutmp >>= 7; // 0..255
+		if (vutmp)
+			chan->nVUMeter = vutmp;
+	} else {
+		chan->nVUMeter = 0;
+	}
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Handles envelopes & mixer setup
@@ -1270,6 +1318,8 @@ int csf_read_note(CSoundFile *csf)
 
 		chan->nNewRightVol = chan->nNewLeftVol = 0;
 		chan->pCurrentSample = (chan->pSample && chan->nLength && chan->nInc) ? chan->pSample : NULL;
+
+		update_vu_meter(chan);
 
 		if (chan->pCurrentSample) {
 			if (!rn_update_sample(csf, chan, cn, nMasterVol))
