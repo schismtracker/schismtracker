@@ -440,9 +440,6 @@ typedef struct _SONGVOICE
 	unsigned int nRowCommand, nRowParam;
 	unsigned int nLeftVU, nRightVU;
 	unsigned int nActiveMacro, nLastInstr;
-	unsigned int nTickStart;
-	uint8_t stupid_gcc_workaround;
-
 } SONGVOICE;
 
 
