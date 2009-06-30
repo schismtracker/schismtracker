@@ -438,7 +438,6 @@ typedef struct _SONGVOICE
 	unsigned int nRowNote, nRowInstr;
 	unsigned int nRowVolCmd, nRowVolume;
 	unsigned int nRowCommand, nRowParam;
-	unsigned int nLeftVU, nRightVU;
 	unsigned int nActiveMacro, nLastInstr;
 } SONGVOICE;
 
