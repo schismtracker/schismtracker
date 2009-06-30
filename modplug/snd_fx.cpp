@@ -1444,7 +1444,7 @@ void csf_process_effects(CSoundFile *csf)
 		bool bPorta = (cmd == CMD_TONEPORTAMENTO
 		               || cmd == CMD_TONEPORTAVOL
 		               || volcmd == VOLCMD_TONEPORTAMENTO);
-		uint32_t nStartTick = pChn->nTickStart;
+		uint32_t nStartTick = (csf->m_dwSongFlags & SONG_FIRSTTICK) ? 0 : -1;
 
 		pChn->dwFlags &= ~CHN_FASTVOLRAMP;
 		// Process special effects (note delay, pattern delay, pattern loop)

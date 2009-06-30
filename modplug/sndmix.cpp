@@ -1078,16 +1078,17 @@ int csf_read_note(CSoundFile *csf)
 		if (!csf->m_nMusicTempo)
 			csf->m_nMusicTempo = 125;
 
-		if (csf->m_nRowCount)
-			csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
-		else
-			csf->m_dwSongFlags |= SONG_FIRSTTICK;
+		csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
 
 		// XXX why was this being done twice
 		//csf_process_effects(csf);
-		if (--csf->m_nTickCount == 0)
+		if (--csf->m_nTickCount == 0) {
 			csf->m_nTickCount = csf->m_nMusicSpeed;
-
+			if (--csf->m_nRowCount <= 0) {
+				csf->m_nRowCount = 0;
+				//csf->m_dwSongFlags |= SONG_FIRSTTICK;
+			}
+		}
 		csf_process_effects(csf);
 	} else {
 		if (!csf_process_tick(csf))
