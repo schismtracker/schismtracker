@@ -953,31 +953,8 @@ EndMod:
 
 SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32_t note, SONGSAMPLE *def)
 {
-	static SONGSAMPLE dummyinstrument = {
-		1,/*len*/
-		0,0, 0,0, /* loop s/e, sus s/e */
-		(int8_t *) "", /*data*/
-		8363, 0x80, /* c5 pan */
-		255,64, /* volume global */
-		0x00, /* flags*/  //CHN_ADLIB,
-		0,0,0,0, /*vib*/
-		"", /* name */
-		"", /* filename */
-		0,/* played */
-		{
-			/* Piano AdLib sample... doesn't really
-			 * matter, it should be never accessed anyway. */
-			0x01,0x01, 0x8f,0x06, 0xf2,0xf2,
-			0xf4,0xf7, 0x00,0x00, 0x08,0x00
-		}
-	};
 	uint32_t n = penv->Keyboard[note - 1];
-
-	if (n) {
-		return (n < MAX_SAMPLES) ? &csf->Samples[n] : def;
-	} else {
-		return &dummyinstrument;
-	}
+	return (n && n < MAX_SAMPLES) ? &csf->Samples[n] : def;
 }
 
 void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
