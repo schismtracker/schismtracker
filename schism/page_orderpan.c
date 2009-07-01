@@ -553,19 +553,13 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state) return 1;
                 orderlist_delete_pos();
                 return 1;
+	case SDLK_F7:
+		if (!(k->mod & KMOD_CTRL)) return 0;
+		/* fall through */
 	case SDLK_SPACE:
 		if (k->state) return 1;
 		song_set_next_order(current_order);
 		status_text_flash("Playing order %d next", current_order);
-		return 1;
-	case SDLK_F7:
-		if (k->mod & KMOD_CTRL) {
-			if (k->state) return 1;
-			song_set_next_order(current_order);
-			status_text_flash("Playing order %d next", current_order);
-		} else {
-			return 0;
-		}
 		return 1;
 	case SDLK_F6:
 		if (k->mod & KMOD_SHIFT) {
