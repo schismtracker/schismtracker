@@ -282,6 +282,11 @@ static int increment_row(CSoundFile *csf)
 			return false;
 		}
 	} else if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED)) {
+		if (csf->m_nLockedOrder < MAX_ORDERS) {
+			csf->m_nProcessOrder = csf->m_nLockedOrder - 1;
+			csf->m_nLockedOrder = MAX_ORDERS;
+		}
+
 		/* [Increase ProcessOrder] */
 		/* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
 		do
