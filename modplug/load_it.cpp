@@ -654,7 +654,7 @@ void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uin
 		if (!wCount)
 		{
 			wCount = 0x8000;
-			wHdr = bswapLE16(*((uint32_t *)pSrc));
+			wHdr = bswapLE16(*((uint16_t *)pSrc));
 			pSrc += 2;
 			bLeft = 9;
 			bTemp = bTemp2 = 0;
@@ -733,7 +733,7 @@ void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, ui
 		if (!wCount)
 		{
 			wCount = 0x4000;
-			wHdr = bswapLE16(*((uint32_t *)pSrc));
+			wHdr = bswapLE16(*((uint16_t *)pSrc));
 			pSrc += 2;
 			bLeft = 17;
 			wTemp = wTemp2 = 0;

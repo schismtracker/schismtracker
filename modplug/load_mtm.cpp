@@ -105,7 +105,7 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 	// Reading Patterns
 	const uint8_t * pTracks = lpStream + dwMemPos;
 	dwMemPos += 192 * bswapLE16(pmh->numtracks);
-	uint32_t * pSeq = (uint32_t *)(lpStream + dwMemPos);
+	uint16_t * pSeq = (uint16_t *)(lpStream + dwMemPos);
 	for (uint32_t pat=0; pat<=pmh->lastpattern; pat++)
 	{
 		PatternSize[pat] = 64;
