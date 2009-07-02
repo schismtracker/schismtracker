@@ -1,0 +1,46 @@
+Written by Storlek <schism@rigelseven.com> <http://rigelseven.com/>.
+
+Large swaths of code by Mrs. Brisby <mrs.brisby@nimh.org> <http://nimh.org/>.
+
+Based (obviously) on Impulse Tracker by Jeffrey Lim <jeff@lim.com.au>.
+
+Default fonts created with ITF by ZaStaR <zastar@uclink4.berkeley.edu>.
+
+Default palette settings are mostly from Impulse Tracker.
+- "Atlantic" is from an ooooold version of IT.
+- "Purple Motion" was roughly copied from an Imago Orpheus palette.
+- "Why Colors?" is loosely based on the like-named FT2 palette.
+- "Industrial" was created by Storlek.
+- "Kawaii" was co-designed by Storlek and mml.
+- "FX 2.0" was supplied by Virt.
+
+Tim Douglas <timdoug@users.sourceforge.net> maintained the original Mac OS X
+packages, and supplied patches fixing a handful of endianness issues.
+
+The Schism Tracker logo was designed by delt.
+
+Modplug was written by Olivier Lapicque <olivierl@jps.net>, with additional
+programming by Markus Fick <webmaster@mark-f.de> (spline mixing,
+fir-resampler) and Adam Goode <adam@evdebs.org> (endian-ness and char
+fixes).
+
+Joel Yliluoma (Bisqwit) implemented MidiS3M support, Adlib S3M-files support,
+and Scream Tracker sample loading.
+
+fmopl (OPL2-emulator used in Dosbox and MAME) was written by Jarek Burczynski.
+
+Some (small) portions of code have been borrowed from Cheesetracker, written
+by Juan Linietsky <coding@reduz.com.ar>.
+
+Frag-opt written by Ville Jokela <midianian/att/goth/dott/net/>.
+
+Various Amiga OS fixes by Juha Niemimäki <jniemima@mail.student.oulu.fi>.
+
+Win32 Mixer by Gargaj/CNS <gargaj@conspiracy.hu>.
+
+Michael Chen improved the software scaler quite a bit.
+<zenki@users.sourceforge.net>
+
+Some little fixes by ToastyX <toastyx@toastyx.net>.
+
+Ben de Graaff rewrote a large portion of libmodplug in C.
