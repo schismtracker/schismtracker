@@ -263,7 +263,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 			if (!j) j = 8363;
 			if (j < 1024) j = 1024;
 			Samples[iSmp].nC5Speed = j;
-			insfile[iSmp] = ((uint32_t)bswapLE16(*((uint32_t *)(s+0x0E)))) << 4;
+			insfile[iSmp] = ((uint32_t)bswapLE16(*((uint16_t *)(s+0x0E)))) << 4;
 			insfile[iSmp] += ((uint32_t)(uint8_t)s[0x0D]) << 20;
 			if (insfile[iSmp] > dwMemLength) insfile[iSmp] &= 0xFFFF;
 			if ((Samples[iSmp].nLoopStart >= Samples[iSmp].nLoopEnd) || (Samples[iSmp].nLoopEnd - Samples[iSmp].nLoopStart < 8))
