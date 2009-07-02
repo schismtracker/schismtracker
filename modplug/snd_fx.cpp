@@ -10,8 +10,7 @@
 #include "snd_gm.h"
 #include "snd_flt.h"
 
-#define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
-
+#include "util.h" /* for clamp/min */
 
 ////////////////////////////////////////////////////////////
 // Channels effects
