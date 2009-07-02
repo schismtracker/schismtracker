@@ -301,39 +301,35 @@ static int _mp_active = 0;
 static struct widget _mpw[1];
 static void (*_mp_setv)(int v) = 0;
 static void (*_mp_setv_noplay)(int v) = 0;
-static const char *_mp_text;
+static const char *_mp_text = "";
 static int _mp_text_x, _mp_text_y;
 
 static void _mp_draw(void)
 {
-	/* TODO: make this const. there's no reason we should need to edit the
-	name here. the only problem is there's no function to get a const ptr
-	to a sample/instrument name, so instead, for now there's a horrible
-	cast to strip the const off the default text. This needs to go away. */
-	char *name;
+	const char *name = NULL;
 	int n, i;
 
 	if (_mp_text[0] == '!') {
 		/* inst */
 		n = instrument_get_current();
 		if (n)
-			song_get_instrument(n, &name);
-		if (n == 0 || name == NULL || name[0] == '\0')
-			name = (char *) "(No Instrument)";
+			name = song_get_instrument(n, NULL)->name;
+		if (n == 0 || name == NULL)
+			name = "(No Instrument)";
 	} else if (_mp_text[0] == '@') {
 		/* samp */
                 n = sample_get_current();
 		if (n)
-			song_get_sample(n, &name);
-		if (n == 0 || name == NULL || name[0] == '\0')
-			name = (char *) "(No Sample)";
+			name = song_get_sample(n, NULL)->name;
+		if (n == 0 || name == NULL)
+			name = "(No Sample)";
 	} else {
-		name = (void *) _mp_text;
+		name = _mp_text;
 	}
 	i = strlen(name);
 	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, 2);
 	draw_text_len( name, 17, _mp_text_x, _mp_text_y, 0, 2);
-	if (i < 17 && name == (void *) _mp_text) {
+	if (i < 17 && name == _mp_text) {
 		draw_char(':', _mp_text_x + i, _mp_text_y, 0, 2);
 	}
 	draw_box(_mp_text_x, _mp_text_y + 1, _mp_text_x + 14, _mp_text_y + 3,
