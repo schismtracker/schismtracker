@@ -268,171 +268,159 @@ int str_break(const char *s, char c, char **first, char **second)
 	return 1;
 }
 
-/* adapted from glib. in addition to the normal c escapes, this also escapes the comment character (#)
- * as \043. if space_hack is true, the first/last character is also escaped if it is a space. */
-char *str_escape(const char *source, int space_hack)
+/* adapted from glib. in addition to the normal c escapes, this also escapes the hashmark and semicolon
+ * (comment characters). if space is true, the first/last character is also escaped if it is a space. */
+char *str_escape(const char *s, int space)
 {
-	const char *p = source;
 	/* Each source byte needs maximally four destination chars (\777) */
-	char *dest = calloc(4 * strlen(source) + 1, sizeof(char));
-	char *q = dest;
+	char *dest = calloc(4 * strlen(s) + 1, sizeof(char));
+	char *d = dest;
 	
-	if (space_hack) {
-		if (*p == ' ') {
-			*q++ = '\\';
-			*q++ = '0';
-			*q++ = '4';
-			*q++ = '0';
-			p++;
-		}
+	if (space && *s == ' ') {
+		*d++ = '\\';
+		*d++ = '0';
+		*d++ = '4';
+		*d++ = '0';
+		s++;
 	}
 	
-	while (*p) {
-		switch (*p) {
+	while (*s) {
+		switch (*s) {
 		case '\a':
-			*q++ = '\\';
-			*q++ = 'a';
+			*d++ = '\\';
+			*d++ = 'a';
+			break;
 		case '\b':
-			*q++ = '\\';
-			*q++ = 'b';
+			*d++ = '\\';
+			*d++ = 'b';
 			break;
 		case '\f':
-			*q++ = '\\';
-			*q++ = 'f';
+			*d++ = '\\';
+			*d++ = 'f';
 			break;
 		case '\n':
-			*q++ = '\\';
-			*q++ = 'n';
+			*d++ = '\\';
+			*d++ = 'n';
 			break;
 		case '\r':
-			*q++ = '\\';
-			*q++ = 'r';
+			*d++ = '\\';
+			*d++ = 'r';
 			break;
 		case '\t':
-			*q++ = '\\';
-			*q++ = 't';
+			*d++ = '\\';
+			*d++ = 't';
 			break;
 		case '\v':
-			*q++ = '\\';
-			*q++ = 'v';
+			*d++ = '\\';
+			*d++ = 'v';
 			break;
 		case '\\': case '"':
-			*q++ = '\\';
-			*q++ = *p;
+			*d++ = '\\';
+			*d++ = *s;
 			break;
+
 		default:
-			if ((*p < ' ') || (*p >= 0177) || (*p == '#')
-			    || (space_hack && p[1] == '\0' && *p == ' ')) {
-				*q++ = '\\';
-				*q++ = '0' + (((*p) >> 6) & 07);
-				*q++ = '0' + (((*p) >> 3) & 07);
-				*q++ = '0' + ((*p) & 07);
+			if (*s < ' ' || *s >= 127 || (space && *s == ' ' && s[1] == '\0')) {
+		case '#': case ';':
+				*d++ = '\\';
+				*d++ = '0' + ((((uint8_t) *s) >> 6) & 7);
+				*d++ = '0' + ((((uint8_t) *s) >> 3) & 7);
+				*d++ = '0' + ( ((uint8_t) *s)       & 7);
 			} else {
-				*q++ = *p;
+				*d++ = *s;
 			}
 			break;
 		}
-		p++;
+		s++;
 	}
-	
-	*q = 0;
+
+	*d = 0;
 	return dest;
 }
 
-static int hexn(int ch)
+static inline int readhex(const char *s, int w)
 {
-	switch(ch) {
-	case 'a': case 'A': return 10;
-	case 'b': case 'B': return 11;
-	case 'c': case 'C': return 12;
-	case 'd': case 'D': return 13;
-	case 'e': case 'E': return 14;
-	case 'f': case 'F': return 15;
-	case '0': return 0;
-	case '1': return 1;
-	case '2': return 2;
-	case '3': return 3;
-	case '4': return 4;
-	case '5': return 5;
-	case '6': return 6;
-	case '7': return 7;
-	case '8': return 8;
-	case '9': return 9;
-	default: return -1;
-	};
+	int o = 0;
+
+	while (w--) {
+		o <<= 4;
+		switch (*s) {
+			case '0'...'9': o |= *s - '0';      break;
+			case 'a'...'f': o |= *s - 'a' + 10; break;
+			case 'A'...'F': o |= *s - 'A' + 10; break;
+			default: return -1;
+		}
+		s++;
+	}
+	return o;
 }
 
 /* opposite of str_escape. (this is glib's 'compress' function renamed more clearly)
 TODO: it'd be nice to handle \xNN as well... */
-char *str_unescape(const char *source)
+char *str_unescape(const char *s)
 {
-	const char *p = source;
-	const char *octal;
-	int hexa, hexb;
-	char *dest = calloc(strlen(source) + 1, sizeof(char));
-	char *q = dest;
+	const char *end;
+	int hex;
+	char *dest = calloc(strlen(s) + 1, sizeof(char));
+	char *d = dest;
 	
-	while (*p) {
-		if (*p == '\\') {
-			p++;
-			switch (*p) {
-			case '0': case '1': case '2': case '3':
-			case '4': case '5': case '6': case '7':
-				*q = 0;
-				octal = p;
-				while ((p < octal + 3) && (*p >= '0') && (*p <= '7')) {
-					*q = (*q * 8) + (*p - '0');
-					p++;
+	while (*s) {
+		if (*s == '\\') {
+			s++;
+			switch (*s) {
+			case '0'...'7':
+				*d = 0;
+				end = s + 3;
+				while (s < end && *s >= '0' && *s <= '7') {
+					*d = *d * 8 + *s - '0';
+					s++;
 				}
-				q++;
-				p--;
+				d++;
+				s--;
 				break;
 			case 'a':
-				*q++ = '\a';
+				*d++ = '\a';
 				break;
 			case 'b':
-				*q++ = '\b';
+				*d++ = '\b';
 				break;
 			case 'f':
-				*q++ = '\f';
+				*d++ = '\f';
 				break;
 			case 'n':
-				*q++ = '\n';
+				*d++ = '\n';
 				break;
 			case 'r':
-				*q++ = '\r';
+				*d++ = '\r';
 				break;
 			case 't':
-				*q++ = '\t';
+				*d++ = '\t';
 				break;
 			case 'v':
-				*q++ = '\v';
+				*d++ = '\v';
+				break;
+			case '\0': // trailing backslash?
+				*d++ = '\\';
+				s--;
 				break;
 			case 'x':
-				if (q[1] && q[2]) {
-					hexa = hexn(q[1]);
-					if (hexa > -1) {
-						hexb = hexn(q[2]);
-						if (hexb > -1) {
-							*q++ = (hexa << 4)
-								| hexb;
-							break;
-						}
-						/* fall through */
-					}
-					/* fall through */
+				hex = readhex(s + 1, 2);
+				if (hex >= 0) {
+					*d++ = hex;
+					s += 2;
+					break;
 				}
 				/* fall through */
-			default:		/* Also handles \" and \\ */
-				*q++ = *p;
+			default: /* Also handles any other char, like \" \\ \; etc. */
+				*d++ = *s;
 				break;
 			}
 		} else {
-			*q++ = *p;
+			*d++ = *s;
 		}
-		p++;
+		s++;
 	}
-	*q = 0;
+	*d = 0;
 	
 	return dest;
 }
