@@ -11,9 +11,10 @@
 #include "snd_flt.h"
 #include "snd_eq.h"
 
+#include "util.h" /* for clamp */
+
 // Volume ramp length, in 1/10 ms
 #define VOLUMERAMPLEN	146 // 1.46ms = 64 samples at 44.1kHz
-#define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
 
 // VU meter
 #define VUMETER_DECAY 16

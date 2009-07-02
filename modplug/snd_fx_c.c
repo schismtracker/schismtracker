@@ -4,7 +4,7 @@
 #include "sndfile.h"
 
 #include "snd_fx.h"
-#define CLAMP(a,y,z) ((a) < (y) ? (y) : ((a) > (z) ? (z) : (a)))
+#include "util.h" /* for clamp */
 
 extern unsigned short FreqS3MTable[16];
 
