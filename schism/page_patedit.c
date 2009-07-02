@@ -2280,6 +2280,7 @@ static void pattern_editor_reposition(void)
 			top_display_row = total_rows - 31;
 	}
 }
+
 static void advance_cursor(int next_row, int multichannel)
 {
 	int total_rows;
@@ -3314,7 +3315,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	n = numeric_key_event(k, 0);
 	if (n > -1 && n <= 9) {
 		if (k->state) return 1;
-		skip_value = n;
+		skip_value = (n == 9) ? 16 : n;
 		status_text_flash("Cursor step set to %d", skip_value);
 		return 1;
 	}
@@ -3940,17 +3941,21 @@ static int pattern_editor_handle_key(struct key_event * k)
 	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state) return 0;
-		if (skip_value)
-			current_row -= skip_value;
-		else
+		if (skip_value) {
+			if (current_row - skip_value >= 0)
+				current_row -= skip_value;
+		} else {
 			current_row--;
+		}
 		return -1;
 	case SDLK_DOWN:
 		if (k->state) return 0;
-		if (skip_value)
-			current_row += skip_value;
-		else
+		if (skip_value) {
+			if (current_row + skip_value < total_rows)
+				current_row += skip_value;
+		} else {
 			current_row++;
+		}
 		return -1;
 	case SDLK_LEFT:
 		if (k->state) return 0;
