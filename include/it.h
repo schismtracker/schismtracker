@@ -192,6 +192,7 @@ enum {
 	MOUSE_CYCLE_STATE,
 	MOUSE_RESET_STATE,
 };
+#define MOUSE_MAX_STATE MOUSE_CYCLE_STATE
 
 
 struct log_line {
@@ -273,7 +274,7 @@ extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */
 extern char cfg_font[];
 extern int cfg_palette;
 
-extern char cfg_filename_pattern[];
+extern char cfg_module_pattern[];
 
 void cfg_init_dir(void);
 void cfg_load(void);

@@ -369,6 +369,9 @@ int cfg_write(cfg_file_t *cfg)
 		if (section->omit) fputc('#', fp);
 		fprintf(fp, "[%s]\n", section->name);
 		for (key = section->keys; key; key = key->next) {
+			/* NOTE: key names are intentionally not escaped in any way;
+			 * it is up to the program to choose names that aren't stupid.
+			 * (cfg_delete_key uses this to comment out a key name) */
 			if (key->comments)
 				fprintf(fp, "%s", key->comments);
 			if (section->omit) fputc('#', fp);
@@ -480,6 +483,25 @@ void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_n
 		exit(255);
 	}
 	cfg->dirty = 1;
+}
+
+void cfg_delete_key(cfg_file_t *cfg, const char *section_name, const char *key_name)
+{
+	struct cfg_section *section;
+	struct cfg_key *key;
+	char *newname;
+	
+	if (section_name == NULL || key_name == NULL)
+		return;
+	section = _get_section(cfg, section_name, 1);
+	key = _get_key(section, key_name, 0);
+	if (key == NULL || key->name[0] == '#')
+		return;
+	newname = malloc(strlen(key->name) + 2);
+	newname[0] = '#';
+	strcpy(newname + 1, key->name);
+	free(key->name);
+	key->name = newname;
 }
 
 int cfg_init(cfg_file_t *cfg, const char *filename)

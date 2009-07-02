@@ -75,6 +75,10 @@ int cfg_get_number(cfg_file_t *cfg, const char *section_name, const char *key_na
 void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_name, const char *value);
 void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int value);
 
+/* delete a key from the config file.
+ * well, actually it doesn't delete it, it just comments it out. */
+void cfg_delete_key(cfg_file_t *cfg, const char *section_name, const char *key_name);
+
 /* set up a structure and (try to) read the configuration file from disk. */
 int cfg_init(cfg_file_t *cfg, const char *filename);
 

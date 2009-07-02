@@ -139,8 +139,7 @@ void cfg_load(void)
 	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
-	// this is slightly misleading; should maybe #define MOUSE_MAXSTATE MOUSE_CYCLE_STATE or something
-	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_CYCLE_STATE);
+	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
 	ptr = cfg_get_string(&cfg, "Video", "aspect", NULL, 0, NULL);
 	if (ptr && *ptr)
 		put_env_var("SCHISM_VIDEO_ASPECT", ptr);
@@ -149,10 +148,10 @@ void cfg_load(void)
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
 	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, tmp);
 	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, tmp);
-	ptr = cfg_get_string(&cfg, "Directories", "filename_pattern", NULL, 0, NULL);
+	ptr = cfg_get_string(&cfg, "Directories", "module_pattern", NULL, 0, NULL);
 	if (ptr) {
-		strncpy(cfg_filename_pattern, ptr, PATH_MAX);
-		cfg_filename_pattern[PATH_MAX] = 0;
+		strncpy(cfg_module_pattern, ptr, PATH_MAX);
+		cfg_module_pattern[PATH_MAX] = 0;
 	}
 	free(tmp);
 
@@ -264,11 +263,14 @@ void cfg_save(void)
 	cfg_init(&cfg, ptr);
 	free(ptr);
 
+	// this wart is here because Storlek is retarded
+	cfg_delete_key(&cfg, "Directories", "filename_pattern");
+
 	cfg_set_string(&cfg, "Directories", "modules", cfg_dir_modules);
 	cfg_set_string(&cfg, "Directories", "samples", cfg_dir_samples);
 	cfg_set_string(&cfg, "Directories", "instruments", cfg_dir_instruments);
-	/* No, it's not a directory, but whatever. This section should probably be renamed. */
-	cfg_set_string(&cfg, "Directories", "filename_pattern", cfg_filename_pattern);
+	/* No, it's not a directory, but whatever. */
+	cfg_set_string(&cfg, "Directories", "module_pattern", cfg_module_pattern);
 
 	cfg_save_info(&cfg);
 	cfg_save_patedit(&cfg);
