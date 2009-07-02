@@ -193,7 +193,7 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSE
 
         if (f.fmt.channels == 2) {
                 smp->flags |= SAMP_STEREO;
-                flags      |= RSF_STEREO;
+                flags      |= RSF_STEREO | RSF_INTERLEAVED;
         }
 
         if (f.fmt.bitspersample == 16) {

@@ -169,6 +169,7 @@
 
 #define RSF_16BIT               0x04
 #define RSF_STEREO              0x08
+#define RSF_INTERLEAVED         0x40
 
 #define RS_PCM8S                0       // 8-bit signed
 #define RS_PCM8U                1       // 8-bit unsigned
@@ -200,11 +201,11 @@
 #define RS_MDL16                0x24
 #define RS_PTM8DTO16            0x25
 // Stereo Interleaved Samples
-#define RS_STIPCM8S             (RS_PCM8S|0x40|RSF_STEREO)      // stereo 8-bit signed
-#define RS_STIPCM8U             (RS_PCM8U|0x40|RSF_STEREO)      // stereo 8-bit unsigned
-#define RS_STIPCM16S            (RS_PCM16S|0x40|RSF_STEREO)     // stereo 16-bit signed
-#define RS_STIPCM16U            (RS_PCM16U|0x40|RSF_STEREO)     // stereo 16-bit unsigned
-#define RS_STIPCM16M            (RS_PCM16M|0x40|RSF_STEREO)     // stereo 16-bit signed big endian
+#define RS_STIPCM8S             (RS_PCM8S|RSF_INTERLEAVED|RSF_STEREO)      // stereo 8-bit signed
+#define RS_STIPCM8U             (RS_PCM8U|RSF_INTERLEAVED|RSF_STEREO)      // stereo 8-bit unsigned
+#define RS_STIPCM16S            (RS_PCM16S|RSF_INTERLEAVED|RSF_STEREO)     // stereo 16-bit signed
+#define RS_STIPCM16U            (RS_PCM16U|RSF_INTERLEAVED|RSF_STEREO)     // stereo 16-bit unsigned
+#define RS_STIPCM16M            (RS_PCM16M|RSF_INTERLEAVED|RSF_STEREO)     // stereo 16-bit signed big endian
 // 24-bit signed
 #define RS_PCM24S               (RS_PCM16S|0x80)                // mono 24-bit signed
 #define RS_STIPCM24S            (RS_PCM16S|0x80|RSF_STEREO)     // stereo 24-bit signed
