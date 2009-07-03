@@ -1082,7 +1082,7 @@ static inline void update_vu_meter(SONGVOICE *chan)
 		if (chan->nVUMeter >= 0x100) {
 			chan->nVUMeter = vutmp;
 		}
-	} else if (vutmp) {
+	} else if (vutmp && chan->pCurrentSample) {
 		// can't fake the funk
 		int n;
 		if (chan->dwFlags & CHN_16BIT) {
