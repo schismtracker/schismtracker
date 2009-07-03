@@ -1206,21 +1206,16 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 		pChn->nLeftVol = pChn->nRightVol = 0;
 		// Setup Initial Filter for this note
 		if (penv) {
-			bool bFlt = false;
-			if (penv->nIFR & 0x80) {
+			if (penv->nIFR & 0x80)
 				pChn->nResonance = penv->nIFR & 0x7F;
-				bFlt = true;
-			}
-			if (penv->nIFC & 0x80) {
+			if (penv->nIFC & 0x80)
 				pChn->nCutOff = penv->nIFC & 0x7F;
-				bFlt = true;
-			}
-
-			if (pChn->nCutOff < 0x7F && bFlt)
-				setup_channel_filter(pChn, true, 256, csf->gdwMixingFreq);
 		} else {
 			pChn->nVolSwing = pChn->nPanSwing = 0;
 		}
+
+		if (pChn->nCutOff < 0x7F)
+			setup_channel_filter(pChn, true, 256, csf->gdwMixingFreq);
 	}
 	// Special case for MPT
 	if (bManual)
