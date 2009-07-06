@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -44,6 +45,8 @@ struct _slurp_struct {
 	int extra;
 	void *bextra;
 	void (*closure)(slurp_t *);
+	/* for reading streams */
+	size_t pos;
 };
 
 /* --------------------------------------------------------------------- */
@@ -68,9 +71,18 @@ int slurp_win32(slurp_t *useme, const char *filename, size_t st);
 int slurp_mmap(slurp_t *useme, const char *filename, size_t st);
 #endif
 
+/* stdio-style file processing */
+int slurp_seek(slurp_t *t, long offset, int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END */
+long slurp_tell(slurp_t *t);
+#define slurp_rewind(t) slurp_seek((t), 0, SEEK_SET)
+
+size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never realy liked fread */
+int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
+int slurp_eof(slurp_t *t); /* 1 = end of file */
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* ! SLURP_H */
+

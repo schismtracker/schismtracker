@@ -186,6 +186,7 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
         t = (slurp_t *) mem_alloc(sizeof(slurp_t));
         if (t == NULL)
                 return NULL;
+	t->pos = 0;
 
         /* TODO | add a third param for flags, and make this optional.
          * TODO | (along with decompression once that gets written) */
@@ -247,3 +248,51 @@ void unslurp(slurp_t * t)
 	}
         free(t);
 }
+
+/* --------------------------------------------------------------------- */
+
+int slurp_seek(slurp_t *t, long offset, int whence)
+{
+	switch (whence) {
+	default:
+	case SEEK_SET:
+		break;
+	case SEEK_CUR:
+		offset += t->pos;
+		break;
+	case SEEK_END:
+		offset += t->length;
+		break;
+	}
+	if (offset < 0 || offset > t->length)
+		return -1;
+	t->pos = offset;
+	return 0;
+}
+
+long slurp_tell(slurp_t *t)
+{
+	return (long) t->pos;
+}
+
+size_t slurp_read(slurp_t *t, void *ptr, size_t count)
+{
+	size_t bytesleft = t->length - t->pos;
+	if (count > bytesleft)
+		count = bytesleft;
+	if (count)
+		memcpy(ptr, t->data + t->pos, count);
+	t->pos += count;
+	return count;
+}
+
+int slurp_getc(slurp_t *t)
+{
+	return (t->pos < t->length) ? t->data[t->pos++] : EOF;
+}
+
+int slurp_eof(slurp_t *t)
+{
+	return t->pos >= t->length;
+}
+
