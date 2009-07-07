@@ -178,10 +178,12 @@ schismtracker_SOURCES = \
 	schism/clippy.c			\
 	schism/page_loadmodule.c	\
 	schism/page_vars.c		\
+	fmt/generic.c			\
 	fmt/raw.c			\
 	fmt/liq.c			\
 	fmt/f2r.c			\
 	fmt/s3m.c			\
+	fmt/sfx.c			\
 	fmt/mod.c			\
 	fmt/far.c			\
 	fmt/wav.c			\

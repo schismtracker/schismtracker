@@ -27,34 +27,6 @@
 
 #include "sndfile.h"
 
-#define PROTRACKER_PANNING(c) ((((c) & 3) == 1 || ((c) & 3) == 2) ? 256 : 0)
-
-/* --------------------------------------------------------------------- */
-/* these should be moved out to a 'general' file for all loaders... */
-
-
-// we want a 12 element table that goes from 1712 to 907
-static int _mod_period_to_note(int period)
-{
-        int n;
-
-        if (period)
-                for (n = 0; n <= NOTE_LAST; n++)
-                        if (period >= (32 * FreqS3MTable[n % 12] >> (n / 12 + 2)))
-                                return n;
-        return NOTE_NONE;
-}
-
-static void mod_import_note(const uint8_t p[4], MODCOMMAND *note)
-{
-        note->note = _mod_period_to_note(((p[0] & 0xf) << 8) + p[1]);
-        note->instr = (p[0] & 0xf0) + (p[2] >> 4);
-        note->volcmd = VOLCMD_NONE;
-        note->vol = 0;
-        note->command = p[2] & 0xf;
-        note->param = p[3];
-}
-
 /* --------------------------------------------------------------------- */
 
 /* TODO: WOW files */
@@ -230,7 +202,7 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		/* this is only necessary for the wow test... */
 		samplesize += song->Samples[n].nLength;
 		
-		song->Samples[n].nC5Speed = S3MFineTuneTable[(slurp_getc(fp) & 0x0F) ^ 8];
+		song->Samples[n].nC5Speed = MOD_FINETUNE(slurp_getc(fp));
 		
 		song->Samples[n].nVolume = slurp_getc(fp);
 		if (song->Samples[n].nVolume > 64)
@@ -369,6 +341,4 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	/* done! */
 	return LOAD_SUCCESS;
 }
-
-// MOD_FINETUNE_TABLE = 8363,8413,8463,8529,8581,8651,8723,8757,7895,7941,7985,8046,8107,8169,8232,8280
 
