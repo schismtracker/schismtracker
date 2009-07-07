@@ -61,9 +61,9 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	uint32_t tmplong;
 	uint8_t b[4];
 	/* parapointers */
-	uint16_t para_smp[99];
+	uint16_t para_smp[256];
 	uint16_t para_pat[256];
-	uint32_t para_sdata[99] = { 0 };
+	uint32_t para_sdata[256] = { 0 };
 	SONGSAMPLE *sample;
 
 	/* check the tag */
