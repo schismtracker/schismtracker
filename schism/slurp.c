@@ -264,7 +264,7 @@ int slurp_seek(slurp_t *t, long offset, int whence)
 		offset += t->length;
 		break;
 	}
-	if (offset < 0 || offset > t->length)
+	if (offset < 0 || (size_t) offset > t->length)
 		return -1;
 	t->pos = offset;
 	return 0;
