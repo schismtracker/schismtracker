@@ -87,6 +87,7 @@ READ_INFO(ult);
 READ_INFO(xm);
 READ_INFO(okt);
 READ_INFO(med);
+READ_INFO(sfx); LOAD_SONG(sfx);
 
 #ifdef USE_NON_TRACKED_TYPES
 READ_INFO(sid);
@@ -143,9 +144,22 @@ int load_its_sample(const uint8_t *header, const uint8_t *data,
 		size_t length, song_sample *smp, char *title);
 
 /* --------------------------------------------------------------------------------------------------------- */
+// other misc functions...
+
+// load a .mod-style 4-byte packed note
+void mod_import_note(const uint8_t p[4], MODCOMMAND *note);
+
+// get L-R-R-L panning value from a (zero-based!) channel number
+#define PROTRACKER_PANNING(c) ((((c) & 3) == 1 || ((c) & 3) == 2) ? 256 : 0)
+
+// convert .mod finetune byte value to c5speed
+#define MOD_FINETUNE(b) (S3MFineTuneTable[((b) & 0xf) ^ 8])
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* ! FMT_H */
+
