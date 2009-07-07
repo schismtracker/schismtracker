@@ -107,9 +107,6 @@ static const fmt_read_info_func read_info_funcs[] = {
 	/* These next formats have their magic at the beginning of the data, so none of them can possibly
 	conflict with other ones. I've organized them pretty much in order of popularity. */
 	READ_INFO(xm),
-	/* There's a bit of weirdness with some IT files (including "Acid Dreams" by Legend, a demo song for
-	version 2.08) requiring two different checks and three memcmp's. However, since it's so widely used
-	<opinion>'cuz Impulse Tracker owns</opinion>, I'm putting it up here anyway. */
 	READ_INFO(it),
 	READ_INFO(psm),
 	READ_INFO(mt2),
@@ -132,12 +129,15 @@ static const fmt_read_info_func read_info_funcs[] = {
 
 	READ_INFO(ult),
 	READ_INFO(liq),
-	/* I have NEVER seen any of these next three */
+
 	READ_INFO(ams),
 	READ_INFO(f2r),
 	READ_INFO(dtm),  /* not sure about the placement here */
 	
-	READ_INFO(imf), /* not sure here either */
+	/* IMF and SFX (as well as STX) all have the magic values at 0x3C-0x3F, which is positioned in IT's
+	"reserved" field, Not sure about this positioning, but these are kind of rare formats anyway. */
+	READ_INFO(imf),
+	READ_INFO(sfx),
 	
 	/* bleh */
 #if defined(USE_NON_TRACKED_TYPES) && defined(HAVE_VORBIS)
