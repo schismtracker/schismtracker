@@ -104,11 +104,9 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         slurp_read(fp, b, 3);
         if (memcmp(b, "MTM", 3) != 0)
                 return LOAD_UNSUPPORTED;
-
-        slurp_getc(fp);      /* version (don't care) */
-
+        n = slurp_getc(fp);
+        sprintf(song->tracker_id, "MultiTracker %d.%d", n >> 4, n & 0xf);
         slurp_read(fp, song->song_title, 20);
-        strcpy(song->tracker_id, "MultiTracker");
         song->song_title[20] = 0;
         slurp_read(fp, &ntrk, 2);
         ntrk = bswapLE16(ntrk);
