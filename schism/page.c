@@ -1684,7 +1684,7 @@ void main_song_changed_cb(void)
          * POV of the client, so the other info IT prints wouldn't be
          * very useful. */
         if (song_get_basename()[0]) {
-        	if (tid)
+        	if (tid[0])
 	                log_appendf(2, "Loaded song: %s (%s)", song_get_basename(), tid);
         	else
 	                log_appendf(2, "Loaded song: %s", song_get_basename());

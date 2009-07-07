@@ -65,7 +65,9 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	uint16_t para_pat[256];
 	uint32_t para_sdata[256] = { 0 };
 	SONGSAMPLE *sample;
+	uint16_t trkvers;
 	uint32_t adlib = 0; // bitset
+        const char *tid = NULL;
 
 	/* check the tag */
 	slurp_seek(fp, 44, SEEK_SET);
@@ -95,7 +97,8 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
 	song->m_dwSongFlags = SONG_ITOLDEFFECTS;
 	slurp_read(fp, &tmp, 2);  /* flags (don't really care) */
-	slurp_read(fp, &tmp, 2);  /* tracker version (don't care) */
+	slurp_read(fp, &trkvers, 2);
+	trkvers = bswapLE16(trkvers);
 	slurp_read(fp, &tmp, 2);  /* file format info */
 	if (tmp == bswapLE16(1))
 		bleh &= ~1;     /* signed samples (ancient s3m) */
@@ -306,6 +309,31 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 			}
 		}
 	}
+
+	if (!tid) {
+		switch (trkvers >> 12) {
+		case 1:
+			tid = "Scream Tracker %d.%02x";
+			break;
+		case 2:
+			tid = "Imago Orpheus %d.%02x";
+			break;
+		case 3:
+			if (trkvers == 0x3216)
+				tid = "Impulse Tracker 2.14v3";
+			else if (trkvers == 0x3217)
+				tid = "Impulse Tracker 2.14v5";
+			else
+				tid = "Impulse Tracker %d.%02x";
+			break;
+		case 4:
+			// we don't really bump the version properly, but let's show it anyway
+			tid = "Schism Tracker %d.%02x";
+			break;
+		}
+	}
+	if (tid)
+		sprintf(song->tracker_id, tid, (trkvers & 0xf00) >> 8, trkvers & 0xff);
 
 //	if (ferror(fp)) {
 //		return LOAD_FILE_ERROR;
