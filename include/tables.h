@@ -53,5 +53,7 @@ extern uint32_t LinearSlideDownTable[256];
 
 extern int32_t  SpectrumSinusTable[256*2];
 
+extern const int SHORT_PANNING[16];
+
 #endif /* ! TABLES_H */
 
