@@ -20,8 +20,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#define NEED_BYTESWAP
 #include "headers.h"
+#include "slurp.h"
 #include "fmt.h"
+
+#include "sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -38,3 +42,248 @@ int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->type = TYPE_MODULE_S3M;
         return true;
 }
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+{
+	uint16_t nsmp, nord, npat;
+	/* 'bleh' is just some temporary flags:
+	 *     if (bleh & 1) samples stored in unsigned format
+	 *     if (bleh & 2) load channel pannings
+	 * (these are both generally true) */
+	int bleh = 3;
+	int n;
+	MODCOMMAND *note;
+	/* junk variables for reading stuff into */
+	uint16_t tmp;
+	uint8_t c;
+	uint32_t tmplong;
+	uint8_t b[4];
+	/* parapointers */
+	uint16_t para_smp[99];
+	uint16_t para_pat[256];
+	uint32_t para_sdata[99] = { 0 };
+	SONGSAMPLE *sample;
+
+	/* check the tag */
+	slurp_seek(fp, 44, SEEK_SET);
+	slurp_read(fp, b, 4);
+	if (memcmp(b, "SCRM", 4) != 0)
+		return LOAD_UNSUPPORTED;
+
+	/* read the title */
+	slurp_rewind(fp);
+	slurp_read(fp, song->song_title, 25);
+	song->song_title[25] = 0;
+
+	/* skip the last three bytes of the title, the supposed-to-be-0x1a byte,
+	the tracker ID, and the two useless reserved bytes */
+	slurp_seek(fp, 7, SEEK_CUR);
+
+	slurp_read(fp, &nord, 2);
+	slurp_read(fp, &nsmp, 2);
+	slurp_read(fp, &npat, 2);
+	nord = bswapLE16(nord);
+	nsmp = bswapLE16(nsmp);
+	npat = bswapLE16(npat);
+
+	song->m_dwSongFlags = SONG_ITOLDEFFECTS;
+	slurp_read(fp, &tmp, 2);  /* flags (don't really care) */
+	slurp_read(fp, &tmp, 2);  /* tracker version (don't care) */
+	slurp_read(fp, &tmp, 2);  /* file format info */
+	if (tmp == bswapLE16(1))
+		bleh &= ~1;     /* signed samples (ancient s3m) */
+
+	slurp_seek(fp, 4, SEEK_CUR); /* skip the tag */
+	
+	song->m_nDefaultGlobalVolume = slurp_getc(fp) << 1;
+	song->m_nDefaultSpeed = slurp_getc(fp);
+	song->m_nDefaultTempo = slurp_getc(fp);
+	song->m_nSongPreAmp = slurp_getc(fp);
+	if (song->m_nSongPreAmp & 0x80) {
+		song->m_nSongPreAmp ^= 0x80;
+	} else {
+		song->m_dwSongFlags |= SONG_NOSTEREO;
+	}
+	slurp_getc(fp); /* ultraclick removal (useless) */
+
+	if (slurp_getc(fp) != 0xfc)
+		bleh &= ~2;     /* stored pan values */
+
+	/* the rest of the header is pretty much irrelevant... */
+	slurp_seek(fp, 64, SEEK_SET);
+
+	/* channel settings */
+	for (n = 0; n < 32; n++) {
+		c = slurp_getc(fp);
+		if (c == 255) {
+			song->Channels[n].nPan = 32;
+			song->Channels[n].dwFlags = CHN_MUTE;
+		} else {
+			song->Channels[n].nPan = (c & 8) ? 48 : 16;
+			if (c & 0x80)
+				song->Channels[n].dwFlags = CHN_MUTE;
+		}
+		song->Channels[n].nVolume = 64;
+	}
+	for (; n < 64; n++) {
+		song->Channels[n].nPan = 32*4; //mphack
+		song->Channels[n].nVolume = 64;
+		song->Channels[n].dwFlags = CHN_MUTE;
+	}
+
+	/* orderlist */
+	slurp_read(fp, song->Orderlist, nord);
+	memset(song->Orderlist + nord, 255, 256 - nord);
+
+	/* load the parapointers */
+	slurp_read(fp, para_smp, 2 * nsmp);
+	slurp_read(fp, para_pat, 2 * npat);
+#ifdef WORDS_BIGENDIAN
+	swab(para_smp, para_smp, 2 * nsmp);
+	swab(para_pat, para_pat, 2 * npat);
+#endif
+
+	/* default pannings */
+	if (bleh & 2) {
+		for (n = 0; n < 32; n++) {
+			c = slurp_getc(fp);
+			if (c & 0x20)
+				song->Channels[n].nPan = ((c & 0xf) << 2) + 2;
+		}
+	}
+	
+	//mphack - fix the pannings
+	for (n = 0; n < 64; n++)
+		song->Channels[n].nPan *= 4;
+
+	/* samples */
+	for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
+		uint8_t type;
+
+		slurp_seek(fp, para_smp[n] << 4, SEEK_SET);
+
+		type = slurp_getc(fp);
+		slurp_read(fp, sample->filename, 12);
+		sample->filename[12] = 0;
+
+		slurp_read(fp, b, 3);
+		slurp_read(fp, &tmplong, 4);
+		if (type == 1) {
+			para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
+			sample->nLength = bswapLE32(tmplong);
+		}
+		slurp_read(fp, &tmplong, 4);
+		sample->nLoopStart = bswapLE32(tmplong);
+		slurp_read(fp, &tmplong, 4);
+		sample->nLoopEnd = bswapLE32(tmplong);
+		sample->nVolume = slurp_getc(fp) * 4; //mphack
+		sample->nGlobalVol = 64;
+		slurp_getc(fp);      /* unused byte */
+		slurp_getc(fp);      /* packing info (never used) */
+		c = slurp_getc(fp);  /* flags */
+		if (c & 1)
+			sample->uFlags |= CHN_LOOP;
+		if (c & 4)
+			sample->uFlags |= CHN_16BIT;
+		// TODO stereo
+		slurp_read(fp, &tmplong, 4);
+		sample->nC5Speed = bswapLE32(tmplong);
+		slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
+		slurp_read(fp, sample->name, 25);
+		sample->name[25] = 0;
+		song->Samples[n].nVibType = 0;
+		song->Samples[n].nVibSweep = 0;
+		song->Samples[n].nVibDepth = 0;
+		song->Samples[n].nVibRate = 0;
+	}
+	
+	/* sample data */
+	if (!(lflags & LOAD_NOSAMPLES)) {
+		for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
+			int8_t *ptr;
+			uint32_t len = sample->nLength;
+			int bps = 1;    /* bytes per sample (i.e. bits / 8) */
+
+			if (!para_sdata[n])
+				continue;
+
+			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
+			if (sample->uFlags & CHN_16BIT)
+				bps = 2;
+			ptr = csf_allocate_sample(bps * len);
+			slurp_read(fp, ptr, bps * len);
+			sample->pSample = ptr;
+
+			if (bleh & 1) {
+				/* convert to signed */
+				uint32_t pos = len;
+				if (bps == 2)
+					while (pos-- > 0)
+						ptr[2 * pos + 1] ^= 0x80;
+				else
+					while (pos-- > 0)
+						ptr[pos] ^= 0x80;
+			}
+#ifdef WORDS_BIGENDIAN
+			if (bps == 2)
+				swab(ptr, ptr, 2 * len);
+#endif
+		}
+	}
+
+	if (!(lflags & LOAD_NOPATTERNS)) {
+		for (n = 0; n < npat; n++) {
+			int row = 0;
+
+			/* The +2 is because the first two bytes are the length of the packed
+			data, which is superfluous for the way I'm reading the patterns. */
+			slurp_seek(fp, (para_pat[n] << 4) + 2, SEEK_SET);
+
+			song->Patterns[n] = csf_allocate_pattern(64, 64);
+
+			while (row < 64) {
+				uint8_t mask = slurp_getc(fp);
+
+				if (!mask) {
+					/* done with the row */
+					row++;
+					continue;
+				}
+				note = song->Patterns[n] + (mask & 31) + (64 * row);
+				if (mask & 32) {
+					/* note/instrument */
+					note->note = slurp_getc(fp);
+					note->instr = slurp_getc(fp);
+					//if (note->instr > 99)
+					//	note->instr = 0;
+					if (note->note < 254)
+						note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12;
+				}
+				if (mask & 64) {
+					/* volume */
+					note->volcmd = VOLCMD_VOLUME;
+					note->vol = slurp_getc(fp);
+					if (note->vol > 64) {
+						note->volcmd = VOLCMD_NONE;
+						note->vol = 0;
+					}
+				}
+				if (mask & 128) {
+					note->command = slurp_getc(fp);
+					note->param = slurp_getc(fp);
+					csf_import_s3m_effect(note, 0);
+				}
+				/* ... next note, same row */
+			}
+		}
+	}
+
+//	if (ferror(fp)) {
+//		return LOAD_FILE_ERROR;
+//	}
+	/* done! */
+	return LOAD_SUCCESS;
+}
+

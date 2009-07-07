@@ -309,6 +309,7 @@ static int _modplug_load_song(CSoundFile *csf, slurp_t *sl, UNUSED unsigned int 
 static fmt_load_song_func load_song_funcs[] = {
 	fmt_669_load_song,
 	fmt_mod_load_song,
+	fmt_s3m_load_song,
 	_modplug_load_song,
 	NULL,
 };
