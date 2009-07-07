@@ -360,3 +360,10 @@ int32_t SpectrumSinusTable[256*2] =
 	-12, -11, -10, -10, -9, -8, -7, -7, -6, -5, -4, -3, -3, -2, -1, 0, 
 };
 
+/* This is precisely the same set of values that Impulse Tracker uses when handling the S8x effect. I doubt
+IT uses a lookup table to figure out something simple like this, but I can't quite guess the formula IT uses,
+and besides, tables are fun :P
+These values are also used in the MTM loader. However, when loading the default panning positions in S3M files,
+IT shifts the stored value left two and then adds two. (= numbers at intervals of 4, between 2 and 62) */
+const int SHORT_PANNING[16] = {0, 4, 9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64};
+

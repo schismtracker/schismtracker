@@ -310,6 +310,7 @@ static fmt_load_song_func load_song_funcs[] = {
 	fmt_669_load_song,
 	fmt_mod_load_song,
 	fmt_s3m_load_song,
+	fmt_mtm_load_song,
 	_modplug_load_song,
 	NULL,
 };
@@ -342,6 +343,7 @@ int song_load_unchecked(const char *file)
         newsong->m_nChannels = 64;
 
         for (func = load_song_funcs; *func && !ok; func++) {
+        	slurp_rewind(s);
         	switch ((*func)(newsong, s, 0)) {
         	case LOAD_SUCCESS:
         		ok = 1;

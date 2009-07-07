@@ -79,7 +79,7 @@ READ_INFO(liq);
 READ_INFO(mdl);
 READ_INFO(mod); LOAD_SONG(mod);
 READ_INFO(mt2);
-READ_INFO(mtm); SAVE_SONG(mtm);
+READ_INFO(mtm); LOAD_SONG(mtm); SAVE_SONG(mtm);
 READ_INFO(ntk);
 READ_INFO(s3m); LOAD_SONG(s3m);
 READ_INFO(stm);
