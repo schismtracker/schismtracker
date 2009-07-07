@@ -147,7 +147,7 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         sample->nLoopStart = 0;
                         sample->nLoopEnd = 0;
                 }
-                song->Samples[n].nC5Speed = S3MFineTuneTable[(slurp_getc(fp) & 0x0F) ^ 8];
+                song->Samples[n].nC5Speed = MOD_FINETUNE(slurp_getc(fp));
                 sample->nVolume = slurp_getc(fp);
                 sample->nVolume *= 4; //mphack
                 sample->nGlobalVol = 64;
