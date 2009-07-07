@@ -278,7 +278,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 					switch (note->note) {
 					default:
 						// Note; hi=oct, lo=note
-						note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12;
+						note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12 + 1;
 						break;
 					case 255:
 						note->note = NOTE_NONE;

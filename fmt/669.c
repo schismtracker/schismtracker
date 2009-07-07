@@ -184,7 +184,7 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                 case 0xff:     /* no note or volume */
                                         break;
                                 default:
-                                        note->note = (b[0] >> 2) + 36;
+                                        note->note = (b[0] >> 2) + 36 + 1;
                                         note->instr = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
                                         note->volcmd = VOLCMD_VOLUME;
                                         note->vol = (b[1] & 0xf) << 2;
