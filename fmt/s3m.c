@@ -65,6 +65,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	uint16_t para_pat[256];
 	uint32_t para_sdata[256] = { 0 };
 	SONGSAMPLE *sample;
+	uint32_t adlib = 0; // bitset
 
 	/* check the tag */
 	slurp_seek(fp, 44, SEEK_SET);
@@ -87,6 +88,10 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	nord = bswapLE16(nord);
 	nsmp = bswapLE16(nsmp);
 	npat = bswapLE16(npat);
+	
+	nord = MIN(nord, MAX_ORDERS);
+	nsmp = MIN(nsmp, MAX_SAMPLES);
+	npat = MIN(npat, MAX_PATTERNS);
 
 	song->m_dwSongFlags = SONG_ITOLDEFFECTS;
 	slurp_read(fp, &tmp, 2);  /* flags (don't really care) */
@@ -122,13 +127,17 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 			song->Channels[n].dwFlags = CHN_MUTE;
 		} else {
 			song->Channels[n].nPan = (c & 8) ? 48 : 16;
-			if (c & 0x80)
+			if (c & 0x80) {
+				c ^= 0x80;
 				song->Channels[n].dwFlags = CHN_MUTE;
+			}
+			if (c >= 16 && c < 32)
+				adlib |= 1 << n;
 		}
 		song->Channels[n].nVolume = 64;
 	}
 	for (; n < 64; n++) {
-		song->Channels[n].nPan = 32*4; //mphack
+		song->Channels[n].nPan = 32;
 		song->Channels[n].nVolume = 64;
 		song->Channels[n].dwFlags = CHN_MUTE;
 	}
@@ -171,8 +180,12 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		slurp_read(fp, b, 3);
 		slurp_read(fp, &tmplong, 4);
 		if (type == 1) {
+			// pcm sample
 			para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
 			sample->nLength = bswapLE32(tmplong);
+		} else if (type == 2) {
+			// adlib
+			return LOAD_UNSUPPORTED; // it IS supported, but just not with *this* loader... yet :)
 		}
 		slurp_read(fp, &tmplong, 4);
 		sample->nLoopStart = bswapLE32(tmplong);
@@ -245,29 +258,43 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
 			while (row < 64) {
 				uint8_t mask = slurp_getc(fp);
+				uint8_t chn = (mask & 31);
 
 				if (!mask) {
 					/* done with the row */
 					row++;
 					continue;
 				}
-				note = song->Patterns[n] + (mask & 31) + (64 * row);
+				note = song->Patterns[n] + 64 * row + chn;
 				if (mask & 32) {
 					/* note/instrument */
 					note->note = slurp_getc(fp);
 					note->instr = slurp_getc(fp);
 					//if (note->instr > 99)
 					//	note->instr = 0;
-					if (note->note < 254)
+					switch (note->note) {
+					default:
+						// Note; hi=oct, lo=note
 						note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12;
+						break;
+					case 255:
+						note->note = NOTE_NONE;
+						break;
+					case 254:
+						note->note = (adlib & (1 << chn)) ? NOTE_OFF : NOTE_CUT;
+						break;
+					}
 				}
 				if (mask & 64) {
 					/* volume */
 					note->volcmd = VOLCMD_VOLUME;
 					note->vol = slurp_getc(fp);
-					if (note->vol > 64) {
+					if (note->vol == 255) {
 						note->volcmd = VOLCMD_NONE;
 						note->vol = 0;
+					} else if (note->vol > 64) {
+						// some weirdly saved s3m?
+						note->vol = 64;
 					}
 				}
 				if (mask & 128) {
