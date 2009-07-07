@@ -32,7 +32,7 @@ static int _mod_period_to_note(int period)
         if (period)
                 for (n = 0; n <= NOTE_LAST; n++)
                         if (period >= (32 * FreqS3MTable[n % 12] >> (n / 12 + 2)))
-                                return n;
+                                return n + 1;
         return NOTE_NONE;
 }
 

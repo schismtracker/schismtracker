@@ -76,7 +76,7 @@ static void mtm_unpack_track(const uint8_t *b, MODCOMMAND *note, int rows)
         int n;
 
         for (n = 0; n < rows; n++, note++, b += 3) {
-                note->note = ((b[0] & 0xfc) ? ((b[0] >> 2) + 36) : NOTE_NONE);
+                note->note = ((b[0] & 0xfc) ? ((b[0] >> 2) + 36 + 1) : NOTE_NONE);
                 note->instr = ((b[0] & 0x3) << 4) | (b[1] >> 4);
                 note->volcmd = VOLCMD_NONE;
                 note->vol = 0;
@@ -126,8 +126,10 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		printf("TODO: test this file with other players (beats per track != 64)");
 	}
         nchan = slurp_getc(fp);
-        for (n = 0; n < 32; n++)
+        for (n = 0; n < 32; n++) {
                 song->Channels[n].nPan = SHORT_PANNING[slurp_getc(fp) & 0xf];
+                song->Channels[n].nPan *= 4; //mphack
+	}
 	for (n = nchan; n < MAX_CHANNELS; n++)
                 song->Channels[n].dwFlags = CHN_MUTE;
 
