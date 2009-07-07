@@ -305,7 +305,9 @@ static int _modplug_load_song(CSoundFile *csf, slurp_t *sl, UNUSED unsigned int 
 	return csf->Create(sl->data, sl->length) ? LOAD_SUCCESS : LOAD_UNSUPPORTED;
 }
 
+// see dmoz.c for detailed information on the ordering used here
 static fmt_load_song_func load_song_funcs[] = {
+	fmt_669_load_song,
 	fmt_mod_load_song,
 	_modplug_load_song,
 	NULL,

@@ -20,8 +20,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#define NEED_BYTESWAP
 #include "headers.h"
+#include "slurp.h"
 #include "fmt.h"
+
+#include "sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -75,3 +79,232 @@ int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
         return true;
 }
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+/* <opinion humble="false">This is better than IT's and MPT's 669 loaders</opinion> */
+
+int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+{
+        uint8_t b[16];
+        uint16_t npat, nsmp;
+        int n, pat, chan, smp, row;
+        MODCOMMAND *note;
+        uint16_t tmp;
+        uint32_t tmplong;
+        uint8_t patspeed[128], breakpos[128];
+	
+        slurp_read(fp, &tmp, 2);
+        if (tmp != bswapLE16(0x6669) && tmp != bswapLE16(0x4e4a))
+                return LOAD_UNSUPPORTED;
+	
+        /* The message is 108 bytes, split onto 3 lines of 36 bytes each.
+	I'm just reading the first 25 bytes as the title and throwing out the rest...
+	(... TODO load this into the actual message) */
+        slurp_read(fp, song->song_title, 25);
+        song->song_title[25] = 0;
+        slurp_seek(fp, 83, SEEK_CUR);
+	
+        nsmp = slurp_getc(fp);
+        if (nsmp > 64)
+                return LOAD_UNSUPPORTED;
+        npat = slurp_getc(fp);
+        if (npat > 128)
+                return LOAD_UNSUPPORTED;
+        if (slurp_getc(fp) > 127)    /* loop order */
+                return LOAD_UNSUPPORTED;
+
+        /* orderlist */
+        slurp_read(fp, song->Orderlist, 128);
+
+        /* stupid crap */
+        slurp_read(fp, patspeed, 128);
+        slurp_read(fp, breakpos, 128);
+
+        /* samples */
+        for (smp = 1; smp <= nsmp; smp++) {
+                slurp_read(fp, b, 13);
+		b[13] = 0; /* the spec says it's supposed to be ASCIIZ, but some 669's use all 13 chars */
+                strcpy(song->Samples[smp].name, (char *) b);
+                b[12] = 0; /* ... filename field only has room for 12 chars though */
+                strcpy(song->Samples[smp].filename, (char *) b);
+		
+                slurp_read(fp, &tmplong, 4);
+                song->Samples[smp].nLength = bswapLE32(tmplong);
+                slurp_read(fp, &tmplong, 4);
+                song->Samples[smp].nLoopStart = bswapLE32(tmplong);
+                slurp_read(fp, &tmplong, 4);
+                tmplong = bswapLE32(tmplong);
+                if (tmplong > song->Samples[smp].nLength)
+                        tmplong = 0;
+                else
+                        song->Samples[smp].uFlags |= CHN_LOOP;
+                song->Samples[smp].nLoopEnd = tmplong;
+
+                song->Samples[smp].nC5Speed = 8363;
+                song->Samples[smp].nVolume = 60;  /* ickypoo */
+                song->Samples[smp].nVolume *= 4; //mphack
+                song->Samples[smp].nGlobalVol = 64;  /* ickypoo */
+		song->Samples[n].nVibType = 0;
+		song->Samples[n].nVibSweep = 0;
+		song->Samples[n].nVibDepth = 0;
+		song->Samples[n].nVibRate = 0;
+        }
+
+        /* patterns */
+        for (pat = 0; pat < npat; pat++) {
+                uint8_t effect[8] = {
+                        255, 255, 255, 255, 255, 255, 255, 255
+                };
+                uint8_t rows = breakpos[pat] + 1;
+		
+                note = song->Patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64), 64);
+                song->PatternSize[pat] = song->PatternAllocSize[pat] = CLAMP(rows, 32, 64);
+		
+                for (row = 0; row < rows; row++, note += 56) {
+                        for (chan = 0; chan < 8; chan++, note++) {
+                                slurp_read(fp, b, 3);
+
+                                switch (b[0]) {
+                                case 0xfe:     /* no note, only volume */
+                                	note->volcmd = VOLCMD_VOLUME;
+                                        note->vol = (b[1] & 0xf) << 2;
+                                        break;
+                                case 0xff:     /* no note or volume */
+                                        break;
+                                default:
+                                        note->note = (b[0] >> 2) + 36;
+                                        note->instr = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
+                                        note->volcmd = VOLCMD_VOLUME;
+                                        note->vol = (b[1] & 0xf) << 2;
+                                        break;
+                                }
+                                /* (sloppily) import the stupid effect */
+                                if (b[2] != 0xff)
+                                        effect[chan] = b[2];
+                                if (effect[chan] == 0xff)
+                                        continue;
+                                note->param = effect[chan] & 0xf;
+                                switch (effect[chan] >> 4) {
+                                default:
+                                        /* oops. never mind. */
+					//printf("ignoring effect %X\n", effect[chan]);
+                                        note->param = 0;
+                                        break;
+                                case 0: /* A - portamento up */
+                                        note->command = CMD_PORTAMENTOUP;
+                                        break;
+                                case 1: /* B - portamento down */
+                                        note->command = CMD_PORTAMENTODOWN;
+                                        break;
+                                case 2: /* C - port to note */
+                                        note->command = CMD_TONEPORTAMENTO;
+                                        break;
+                                case 3: /* D - frequency adjust (??) */
+                                        note->command = CMD_PORTAMENTODOWN;
+                                        if (note->param)
+                                                note->param |= 0xf0;
+                                        else
+                                                note->param = 0xf1;
+                                        effect[chan] = 0xff;
+                                        break;
+                                case 4: /* E - frequency vibrato */
+                                        note->command = CMD_VIBRATO;
+                                        note->param |= 0x80;
+                                        break;
+                                case 5: /* F - set tempo */
+					/* TODO: param 0 is a "super fast tempo" in extended mode (?) */
+                                        if (note->param)
+                                                note->command = CMD_SPEED;
+                                        effect[chan] = 0xff;
+                                        break;
+				case 6: /* G - subcommands (extended) */
+					switch (note->param) {
+					case 0: /* balance fine slide left */
+						//TODO("test pan slide effect (P%dR%dC%d)", pat, row, chan);
+						note->command = CMD_PANNINGSLIDE;
+						note->param = 0x8F;
+						break;
+					case 1: /* balance fine slide right */
+						//TODO("test pan slide effect (P%dR%dC%d)", pat, row, chan);
+						note->command = CMD_PANNINGSLIDE;
+						note->param = 0xF8;
+						break;
+					default:
+						/* oops, nothing again */
+						note->param = 0;
+					}
+					break;
+				case 7: /* H - slot retrig */
+					//TODO("test slot retrig (P%dR%dC%d)", pat, row, chan);
+					note->command = CMD_RETRIG;
+					break;
+                                }
+                        }
+                }
+                if (rows < 64) {
+                        /* skip the rest of the rows beyond the break position */
+                        slurp_seek(fp, 3 * 8 * (64 - rows), SEEK_CUR);
+                }
+
+                /* handle the stupid pattern speed */
+                note = song->Patterns[pat];
+                for (chan = 0; chan < 9; chan++, note++) {
+                        if (note->command == CMD_SPEED) {
+                                break;
+                        } else if (!note->command) {
+                                note->command = CMD_SPEED;
+                                note->param = patspeed[pat];
+                                break;
+                        }
+                }
+                /* handle the break position */
+                if (rows < 32) {
+			//printf("adding pattern break for pattern %d\n", pat);
+                        note = song->Patterns[pat] + MAX_CHANNELS * (rows - 1);
+                        for (chan = 0; chan < 9; chan++, note++) {
+                                if (!note->command) {
+                                        note->command = CMD_PATTERNBREAK;
+                                        note->param = 0;
+                                        break;
+                                }
+                        }
+                }
+        }
+
+        /* sample data */
+        if (!(lflags & LOAD_NOSAMPLES)) {
+		for (smp = 1; smp <= nsmp; smp++) {
+		        int8_t *ptr;
+		
+		        if (song->Samples[smp].nLength == 0)
+		                continue;
+		        ptr = song_sample_allocate(song->Samples[smp].nLength);
+		        slurp_read(fp, ptr, song->Samples[smp].nLength);
+		        song->Samples[smp].pSample = ptr;
+		        /* convert to signed */
+		        n = song->Samples[smp].nLength;
+		        while (n-- > 0)
+		                ptr[n] += 0x80;
+		}
+	}
+
+        /* set the rest of the stuff */
+        song->m_nDefaultSpeed = 4;
+        song->m_nDefaultTempo = 78;
+        song->m_dwSongFlags = SONG_ITOLDEFFECTS | SONG_LINEARSLIDES;
+	
+	song->m_nStereoSeparation = 64;
+        for (n = 0; n < 8; n++)
+                song->Channels[n].nPan = (n & 1) ? 256 : 0; //mphack
+        for (n = 8; n < 64; n++)
+                song->Channels[n].dwFlags = CHN_MUTE;
+	
+//	if (ferror(fp)) {
+//		return LOAD_FILE_ERROR;
+//	}
+	
+        /* done! */
+        return LOAD_SUCCESS;
+}
+

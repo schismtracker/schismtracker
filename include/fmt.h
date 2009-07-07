@@ -68,7 +68,7 @@ typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int
 #define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot)
 #define SAVE_SONG(t) void fmt_##t##_save_song(diskwriter_driver_t *fp)
 
-READ_INFO(669);
+READ_INFO(669); LOAD_SONG(669);
 READ_INFO(ams);
 READ_INFO(dtm);
 READ_INFO(f2r);
