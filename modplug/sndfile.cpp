@@ -48,6 +48,9 @@ static void _csf_reset(CSoundFile *csf)
 	csf->m_nSongPreAmp = 0x30;
 	csf->m_lpszSongComments = NULL;
 
+	csf->m_rowHighlightMajor = 16;
+	csf->m_rowHighlightMinor = 4;
+
 	memset(csf->Voices, 0, sizeof(csf->Voices));
 	memset(csf->VoiceMix, 0, sizeof(csf->VoiceMix));
 	memset(csf->Samples, 0, sizeof(csf->Samples));
@@ -76,42 +79,19 @@ static void _csf_reset(CSoundFile *csf)
 //////////////////////////////////////////////////////////
 // CSoundFile
 
-CSoundFile::CSoundFile()
-    : Voices(), VoiceMix(), Samples(), Instruments(),
-      Channels(), Patterns(), PatternSize(),
-      PatternAllocSize(), Orderlist(),
-      m_MidiCfg(),
-      m_nDefaultSpeed(),
-      m_nDefaultTempo(),
-      m_nDefaultGlobalVolume(),
-      m_dwSongFlags(0),
-      m_nStereoSeparation(128),
-      m_nChannels(), m_nMixChannels(0), m_nMixStat(), m_nBufferCount(),
-      m_nType(MOD_TYPE_NONE),
-      m_nSamples(0), m_nInstruments(0),
-      m_nTickCount(), m_nRowCount(),
-      m_nMusicSpeed(), m_nMusicTempo(),
-      m_nProcessRow(), m_nRow(),
-      m_nBreakRow(),
-      m_nCurrentPattern(), m_nCurrentOrder(), m_nProcessOrder(),
-      m_nLockedOrder(), m_nRestartPos(),
-      m_nGlobalVolume(128), m_nSongPreAmp(),
-      m_nFreqFactor(128), m_nTempoFactor(128),
-      m_nRepeatCount(0), m_nInitialRepeatCount(),
-      m_rowHighlightMajor(16), m_rowHighlightMinor(4),
-      m_lpszSongComments(NULL),
-      stop_at_order(), stop_at_row(), stop_at_time()
-//----------------------
+CSoundFile *csf_allocate(void)
 {
-	_csf_reset(this);
+	CSoundFile *csf = (CSoundFile *) calloc(1, sizeof(CSoundFile));
+	_csf_reset(csf);
+	return csf;
 }
 
-
-CSoundFile::~CSoundFile()
-//-----------------------
+void csf_free(CSoundFile *csf)
 {
-	csf_destroy(this);
+	csf_destroy(csf);
+	free(csf);
 }
+
 
 
 bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
@@ -302,19 +282,19 @@ void csf_reset_midi_cfg(CSoundFile *csf)
 
 int csf_set_wave_config(CSoundFile *csf, uint32_t nRate,uint32_t nBits,uint32_t nChannels)
 {
-	bool bReset = ((csf->gdwMixingFreq != nRate) || (csf->gnBitsPerSample != nBits) || (csf->gnChannels != nChannels));
-	csf->gnChannels = nChannels;
-	csf->gdwMixingFreq = nRate;
-	csf->gnBitsPerSample = nBits;
+	bool bReset = ((gdwMixingFreq != nRate) || (gnBitsPerSample != nBits) || (gnChannels != nChannels));
+	gnChannels = nChannels;
+	gdwMixingFreq = nRate;
+	gnBitsPerSample = nBits;
 	csf_init_player(csf, bReset);
 //printf("Rate=%u Bits=%u Channels=%u\n",gdwMixingFreq,gnBitsPerSample,gnChannels);
 	return true;
 }
 
 
-int csf_set_resampling_mode(CSoundFile *csf, uint32_t nMode)
+int csf_set_resampling_mode(CSoundFile *, uint32_t nMode)
 {
-	uint32_t d = csf->gdwSoundSetup & ~(SNDMIX_NORESAMPLING|SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE);
+	uint32_t d = gdwSoundSetup & ~(SNDMIX_NORESAMPLING|SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE);
 	switch(nMode) {
 		case SRCMODE_NEAREST:   d |= SNDMIX_NORESAMPLING; break;
 		case SRCMODE_LINEAR:    break;
@@ -322,7 +302,7 @@ int csf_set_resampling_mode(CSoundFile *csf, uint32_t nMode)
 		case SRCMODE_POLYPHASE: d |= (SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE); break;
 		default:                return false;
 	}
-	csf->gdwSoundSetup = d;
+	gdwSoundSetup = d;
 	return true;
 }
 
@@ -1098,7 +1078,7 @@ uint32_t csf_get_highest_used_channel(CSoundFile *csf)
 
 
 // FIXME this function really sucks
-uint32_t csf_detect_unused_samples(CSoundFile *csf, bool *pbIns)
+uint32_t csf_detect_unused_samples(CSoundFile *csf, int *pbIns)
 {
 	uint32_t nExt = 0;
 
@@ -1141,7 +1121,7 @@ uint32_t csf_detect_unused_samples(CSoundFile *csf, bool *pbIns)
 }
 
 
-bool csf_destroy_sample(CSoundFile *csf, uint32_t nSample)
+int csf_destroy_sample(CSoundFile *csf, uint32_t nSample)
 {
 	if (!nSample || nSample >= MAX_SAMPLES)
 		return false;

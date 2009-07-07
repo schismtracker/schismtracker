@@ -1324,7 +1324,7 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
 	if (!count)
 		return 0;
 
-	if (csf->gnChannels > 2)
+	if (gnChannels > 2)
 		init_mix_buffer(MixRearBuffer, count * 2);
 
 	nchused = nchmixed = 0;
@@ -1362,12 +1362,12 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
 			nFlags |= MIXNDX_FILTER;
 
 		if (!(pChannel->dwFlags & CHN_NOIDO) &&
-		    !(csf->gdwSoundSetup & SNDMIX_NORESAMPLING)) {
+		    !(gdwSoundSetup & SNDMIX_NORESAMPLING)) {
 			// use hq-fir mixer?
-			if ((csf->gdwSoundSetup & (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
+			if ((gdwSoundSetup & (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
 						== (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
 				nFlags |= MIXNDX_FIRSRC;
-			else if (csf->gdwSoundSetup & SNDMIX_HQRESAMPLER)
+			else if (gdwSoundSetup & SNDMIX_HQRESAMPLER)
 				nFlags |= MIXNDX_SPLINESRC;
 			else
 				nFlags |= MIXNDX_LINEARSRC;    // use
@@ -1430,7 +1430,7 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
 
 			// Should we mix this channel ?
 
-			if ((nchmixed >= csf->m_nMaxMixChannels && !(csf->gdwSoundSetup & SNDMIX_DIRECTTODISK))
+			if ((nchmixed >= m_nMaxMixChannels && !(gdwSoundSetup & SNDMIX_DIRECTTODISK))
 			    || (!pChannel->nRampLength && !(pChannel->nLeftVol | pChannel->nRightVol))) {
 				int delta = (pChannel->nInc * (int) nSmpCount) + (int) pChannel->nPosLo;
 				pChannel->nPosLo = delta & 0xFFFF;

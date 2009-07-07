@@ -297,11 +297,11 @@ void song_new(int flags)
         main_song_changed_cb();
 }
 
-
-static int _modplug_load_song(CSoundFile *csf, slurp_t *sl)
+static int _modplug_load_song(CSoundFile *csf, slurp_t *sl, UNUSED unsigned int flags)
 {
 	return csf->Create(sl->data, sl->length);
 }
+
 
 int song_load_unchecked(const char *file)
 {
@@ -322,14 +322,14 @@ int song_load_unchecked(const char *file)
                 return 0;
         }
 
-        CSoundFile *newsong = new CSoundFile();
-        int r = _modplug_load_song(newsong, s);
+        CSoundFile *newsong = csf_allocate();
+        int r = fmt_mod_load_song(newsong, s, 0) || _modplug_load_song(newsong, s, 0);
 	if (r) {
 		song_set_filename(file);
 
                 song_lock_audio();
 		
-                delete mp;
+                csf_free(mp);
                 mp = newsong;
 		mp->m_nRepeatCount = mp->m_nInitialRepeatCount = -1;
 		max_channels_used = 0;
@@ -367,7 +367,7 @@ int song_load_unchecked(const char *file)
                 // awwww, nerts!
                 log_appendf(4, "%s: Unrecognised file type", base);
 		status.flags &= ~PLAIN_TEXTEDIT;
-                delete newsong;
+                csf_free(newsong);
         }
 	
         unslurp(s);

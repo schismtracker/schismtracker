@@ -649,14 +649,14 @@ void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len,
 				    || !(pChn->nLeftVol|pChn->nRightVol)) {
 					setup_channel_filter(pChn,
 						(pChn->dwFlags & CHN_FILTER) ? false : true,
-						256, csf->gdwMixingFreq);
+						256, gdwMixingFreq);
 				}
 				break;
 			case 0x01: /* set resonance */
 				if (data[3] < 0x80) pChn->nResonance = data[3];
 				setup_channel_filter(pChn,
 					(pChn->dwFlags & CHN_FILTER) ? false : true,
-					256, csf->gdwMixingFreq);
+					256, gdwMixingFreq);
 				break;
 			};
 		}
@@ -963,7 +963,7 @@ SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32
 }
 
 void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
-                           bool bPorta, bool bUpdVol, bool bResetEnv)
+                           int bPorta, int bUpdVol, int bResetEnv)
 {
 	bool bInstrumentChanged = false;
 
@@ -1078,7 +1078,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 }
 
 
-void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual)
+void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int bResetEnv, int bManual)
 {
 	// why would csf_note_change ever get a negative value for 'note'?
 	if (note == NOTE_NONE || note < 0)
@@ -1215,12 +1215,12 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool
 		}
 
 		if (pChn->nCutOff < 0x7F)
-			setup_channel_filter(pChn, true, 256, csf->gdwMixingFreq);
+			setup_channel_filter(pChn, true, 256, gdwMixingFreq);
 	}
 	// Special case for MPT
 	if (bManual)
 		pChn->dwFlags &= ~CHN_MUTE;
-	if (((pChn->dwFlags & CHN_MUTE) && (csf->gdwSoundSetup & SNDMIX_MUTECHNMODE))
+	if (((pChn->dwFlags & CHN_MUTE) && (gdwSoundSetup & SNDMIX_MUTECHNMODE))
 	    || (pChn->pInstrument && (pChn->pInstrument->uFlags & CHN_MUTE) && !bManual)
 	    || ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader
 	        && (pChn->pHeader->dwFlags & ENV_MUTE) && !bManual)) {
@@ -1277,7 +1277,7 @@ uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn)
 }
 
 
-void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, bool bForceCut)
+void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int bForceCut)
 {
         SONGVOICE *p;
 	SONGVOICE *pChn = &csf->Voices[nChn];

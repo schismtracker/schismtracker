@@ -31,10 +31,10 @@ void csf_initialize_dsp(CSoundFile *, int reset)
 }
 
 
-void csf_process_stereo_dsp(CSoundFile *csf, int count)
+void csf_process_stereo_dsp(CSoundFile *, int count)
 {
         // Noise Reduction
-        if (csf->gdwSoundSetup & SNDMIX_NOISEREDUCTION) {
+        if (gdwSoundSetup & SNDMIX_NOISEREDUCTION) {
                 int n1 = nLeftNR, n2 = nRightNR;
                 int *pnr = MixSoundBuffer;
 
@@ -54,11 +54,11 @@ void csf_process_stereo_dsp(CSoundFile *csf, int count)
 }
 
 
-void csf_process_mono_dsp(CSoundFile *csf, int count)
+void csf_process_mono_dsp(CSoundFile *, int count)
 //----------------------------------------
 {
         // Noise Reduction
-        if (csf->gdwSoundSetup & SNDMIX_NOISEREDUCTION) {
+        if (gdwSoundSetup & SNDMIX_NOISEREDUCTION) {
                 int n = nLeftNR;
                 int *pnr = MixSoundBuffer;
 
@@ -76,16 +76,15 @@ void csf_process_mono_dsp(CSoundFile *csf, int count)
 /////////////////////////////////////////////////////////////////
 // Clean DSP Effects interface
 
-int csf_set_wave_config_ex(CSoundFile *csf,bool,bool,bool,bool hqido,bool,bool bNR,bool bEQ)
+int csf_set_wave_config_ex(CSoundFile *csf, int hqido, int bNR, int bEQ)
 {
-        uint32_t d = csf->gdwSoundSetup & ~(SNDMIX_NORESAMPLING | SNDMIX_HQRESAMPLER | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
+        uint32_t d = gdwSoundSetup & ~(SNDMIX_NORESAMPLING | SNDMIX_HQRESAMPLER | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
 
-//      if (bNoOverSampling) d |= SNDMIX_NORESAMPLING;
         if (hqido) d |= SNDMIX_HQRESAMPLER;
         if (bNR) d |= SNDMIX_NOISEREDUCTION;
         if (bEQ) d |= SNDMIX_EQ;
 
-        csf->gdwSoundSetup = d;
+        gdwSoundSetup = d;
         csf_init_player(csf, false);
         return true;
 }

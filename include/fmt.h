@@ -26,22 +26,43 @@
 #include <stdint.h>
 #include "song.h"
 #include "dmoz.h"
+#include "slurp.h"
 #include "util.h"
 
 #include "diskwriter.h"
+
+#include "sndfile.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* --------------------------------------------------------------------------------------------------------- */
+/* module loaders */
+
+/* flags to skip loading some data (mainly for scraping titles)
+this is only a suggestion in order to speed loading; don't be surprised if the loader ignores these */
+#define LOAD_NOSAMPLES  1
+#define LOAD_NOPATTERNS 2
+
+/* return codes for module loaders */
+enum {
+	LOAD_SUCCESS,           /* all's well */
+	LOAD_UNSUPPORTED,       /* wrong file type for the loader */
+	LOAD_FILE_ERROR,        /* couldn't read the file; check errno */
+	LOAD_FORMAT_ERROR,      /* it appears to be the correct type, but there's something wrong */
+};
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 typedef int (*fmt_read_info_func) (dmoz_file_t *file, const uint8_t *data, size_t length);
+typedef int (*fmt_load_song_func) (CSoundFile *song, slurp_t *fp, unsigned int lflags);
 typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sample *smp, char *title);
 typedef int (*fmt_save_sample_func) (diskwriter_driver_t *fp, song_sample *smp, char *title);
 typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int slot);
 
 #define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+#define LOAD_SONG(t) int fmt_##t##_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 #define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
 #define SAVE_SAMPLE(t) int fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 #define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot)
@@ -56,7 +77,7 @@ READ_INFO(imf);
 READ_INFO(it);
 READ_INFO(liq);
 READ_INFO(mdl);
-READ_INFO(mod);
+READ_INFO(mod); LOAD_SONG(mod);
 READ_INFO(mt2);
 READ_INFO(mtm); SAVE_SONG(mtm);
 READ_INFO(ntk);
