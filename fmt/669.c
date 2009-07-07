@@ -93,10 +93,19 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         uint16_t tmp;
         uint32_t tmplong;
         uint8_t patspeed[128], breakpos[128];
+        const char *tid;
 	
         slurp_read(fp, &tmp, 2);
-        if (tmp != bswapLE16(0x6669) && tmp != bswapLE16(0x4e4a))
+        switch (bswapLE16(tmp)) {
+        case 0x6669: // 'if'
+        	tid = "Composer 669";
+        	break;
+        case 0x4e4a: // 'JN'
+        	tid = "UNIS 669";
+        	break;
+        default:
                 return LOAD_UNSUPPORTED;
+	}
 	
         /* The message is 108 bytes, split onto 3 lines of 36 bytes each.
 	I'm just reading the first 25 bytes as the title and throwing out the rest...
@@ -113,6 +122,8 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 return LOAD_UNSUPPORTED;
         if (slurp_getc(fp) > 127)    /* loop order */
                 return LOAD_UNSUPPORTED;
+
+	strcpy(song->tracker_id, tid);
 
         /* orderlist */
         slurp_read(fp, song->Orderlist, 128);

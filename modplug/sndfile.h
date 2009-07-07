@@ -521,6 +521,7 @@ typedef struct _CSoundFile {
 	uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
 	char * m_lpszSongComments;
 	char song_title[32];
+	char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
 
 	// chaseback
 	int stop_at_order;

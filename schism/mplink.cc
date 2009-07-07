@@ -38,6 +38,11 @@ CSoundFile *mp = NULL;
 // ------------------------------------------------------------------------
 // song information
 
+const char *song_get_tracker_id()
+{
+	return mp->tracker_id;
+}
+
 char *song_get_title()
 {
         return mp->song_title;
