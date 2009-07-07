@@ -180,7 +180,7 @@ int song_get_mix_state(unsigned int **channel_list)
 {
         if (channel_list)
                 *channel_list = mp->VoiceMix;
-        return MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+        return MIN(mp->m_nMixChannels, m_nMaxMixChannels);
 }
 
 // ------------------------------------------------------------------------

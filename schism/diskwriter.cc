@@ -242,7 +242,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
 	csf_set_wave_config(mp, dw->rate, dw->bits, dw->channels);
         csf_init_player(mp, 1);
 
-	mp->gdwSoundSetup |= SNDMIX_DIRECTTODISK;
+	gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	status.flags |= (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN);
 
 	mbuf = NULL;
@@ -281,7 +281,7 @@ static void chan_setup(int rate, int nchan)
 	if (dw->m || dw->g) {
 		song_start_once();
                 csf_set_wave_config(mp, rate, dw->bits, nchan);
-		mp->gdwSoundSetup |= SNDMIX_DIRECTTODISK;
+		gdwSoundSetup |= SNDMIX_DIRECTTODISK;
 	}
 }
 

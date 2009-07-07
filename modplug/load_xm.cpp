@@ -34,7 +34,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 	bool InstUsed[256];
 	uint8_t channels_used[MAX_VOICES];
 	uint8_t pattern_map[256];
-	bool samples_used[MAX_SAMPLES];
+	int samples_used[MAX_SAMPLES];
 	uint32_t unused_samples;
 
 	m_nChannels = 0;

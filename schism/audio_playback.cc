@@ -143,7 +143,7 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 	}
 	
 	if (mp->m_nMixChannels > max_channels_used)
-		max_channels_used = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+		max_channels_used = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
 POST_EVENT:
 	audio_writeout_count++;
 	if (audio_writeout_count > audio_buffers_per_second) {
@@ -376,9 +376,7 @@ static void song_reset_play_state()
 	memset(keyjazz_channels, 0, sizeof(keyjazz_channels));
 
 	// turn this crap off
-	CSoundFile::gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS
-				| SNDMIX_NOMIXING
-				| SNDMIX_DIRECTTODISK);
+	gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_NOMIXING | SNDMIX_DIRECTTODISK);
 
 	csf_initialize_dsp(mp, true);
 
@@ -400,7 +398,7 @@ void song_start_once()
         song_lock_audio();
 
         song_reset_play_state();
-	CSoundFile::gdwSoundSetup |= SNDMIX_NOBACKWARDJUMPS;
+	gdwSoundSetup |= SNDMIX_NOBACKWARDJUMPS;
         max_channels_used = 0;
 	mp->m_nInitialRepeatCount = 0;
 	mp->m_nRepeatCount = 1;
@@ -506,8 +504,8 @@ void song_stop_unlocked(int quitting)
         // Modplug doesn't actually have a "stop" mode, but if SONG_ENDREACHED is set, mp->Read just returns.
         mp->m_dwSongFlags |= SONG_PAUSED | SONG_ENDREACHED;
 	
-	mp->gnVULeft = 0;
-	mp->gnVURight = 0;
+	gnVULeft = 0;
+	gnVURight = 0;
 	memset(audio_buffer, 0, audio_buffer_size * audio_sample_size);
 }
 
@@ -601,7 +599,7 @@ enum song_mode song_get_mode()
 // returned value is in seconds
 unsigned int song_get_current_time()
 {
-        return samples_played / CSoundFile::gdwMixingFreq;
+        return samples_played / gdwMixingFreq;
 }
 
 int song_get_current_tick()
@@ -646,7 +644,7 @@ int song_get_current_row()
 
 int song_get_playing_channels()
 {
-        return MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+        return MIN(mp->m_nMixChannels, m_nMaxMixChannels);
 }
 
 int song_get_max_channels()
@@ -656,8 +654,8 @@ int song_get_max_channels()
 
 void song_get_vu_meter(int *left, int *right)
 {
-	*left = mp->gnVULeft;
-	*right = mp->gnVURight;
+	*left = gnVULeft;
+	*right = gnVURight;
 }
 
 void song_update_playing_instrument(int i_changed)
@@ -666,7 +664,7 @@ void song_update_playing_instrument(int i_changed)
 	SONGINSTRUMENT *inst;
 
 	song_lock_audio();
-	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+	int n = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
 	while (n--) {
 		channel = mp->Voices + mp->VoiceMix[n];
 		if (channel->pHeader && channel->pHeader == mp->Instruments[i_changed]) {
@@ -684,11 +682,11 @@ void song_update_playing_instrument(int i_changed)
 			}
 			if (inst->nIFC & 0x80) {
 				channel->nCutOff = inst->nIFC & 0x7F;
-				setup_channel_filter(channel, false, 256, mp->gdwMixingFreq);
+				setup_channel_filter(channel, false, 256, gdwMixingFreq);
 			} else {
 				channel->nCutOff = 0x7F;
 				if (inst->nIFR & 0x80) {
-					setup_channel_filter(channel, false, 256, mp->gdwMixingFreq);
+					setup_channel_filter(channel, false, 256, gdwMixingFreq);
 				}
 			}
 
@@ -705,7 +703,7 @@ void song_update_playing_sample(int s_changed)
 	SONGSAMPLE *inst;
 	
 	song_lock_audio();
-	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+	int n = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
 	while (n--) {
 		channel = mp->Voices + mp->VoiceMix[n];
 		if (channel->pInstrument && channel->pCurrentSample) {
@@ -753,7 +751,7 @@ void song_get_playing_samples(int samples[])
 	memset(samples, 0, SCHISM_MAX_SAMPLES * sizeof(int));
 	
 	song_lock_audio();
-	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+	int n = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
 	while (n--) {
 		channel = mp->Voices + mp->VoiceMix[n];
 		if (channel->pInstrument && channel->pCurrentSample) {
@@ -776,7 +774,7 @@ void song_get_playing_instruments(int instruments[])
 	memset(instruments, 0, SCHISM_MAX_INSTRUMENTS * sizeof(int));
 	
 	song_lock_audio();
-	int n = MIN(mp->m_nMixChannels, mp->m_nMaxMixChannels);
+	int n = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
 	while (n--) {
 		channel = mp->Voices + mp->VoiceMix[n];
 		int ins = song_get_instrument_number((song_instrument *) channel->pHeader);
@@ -841,20 +839,20 @@ int song_toggle_orderlist_locked(void)
 
 void song_flip_stereo()
 {
-        CSoundFile::gdwSoundSetup ^= SNDMIX_REVERSESTEREO;
+        gdwSoundSetup ^= SNDMIX_REVERSESTEREO;
 }
 
 int song_get_surround()
 {
-	return (CSoundFile::gdwSoundSetup & SNDMIX_NOSURROUND) ? 0 : 1;
+	return (gdwSoundSetup & SNDMIX_NOSURROUND) ? 0 : 1;
 }
 
 void song_set_surround(int on)
 {
 	if (on)
-		CSoundFile::gdwSoundSetup &= ~SNDMIX_NOSURROUND;
+		gdwSoundSetup &= ~SNDMIX_NOSURROUND;
 	else
-		CSoundFile::gdwSoundSetup |= SNDMIX_NOSURROUND;
+		gdwSoundSetup |= SNDMIX_NOSURROUND;
 	
 	// without copying the value back to audio_settings, it won't get saved (oops)
 	audio_settings.surround_effect = on;
@@ -1114,7 +1112,7 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 {
 #if 0
 	i = (8000*(audio_buffer_size - delay));
-	i /= (CSoundFile::gdwMixingFreq);
+	i /= (gdwMixingFreq);
 #endif
 #if 0
 	for (int i=0; i < len; i++) {
@@ -1370,10 +1368,10 @@ void song_init_eq(int do_reset)
 	for (i = 0; i < 4; i++) {
 		pg[i] = audio_settings.eq_gain[i];
 		pf[i] = 120 + (((i*128) * audio_settings.eq_freq[i])
-			* (CSoundFile::gdwMixingFreq / 128) / 1024);
+			* (gdwMixingFreq / 128) / 1024);
 	}
 
-	set_eq_gains(pg, 4, pf, do_reset ? true : false, mp->gdwMixingFreq);
+	set_eq_gains(pg, 4, pf, do_reset ? true : false, gdwMixingFreq);
 }
 
 
@@ -1381,34 +1379,27 @@ void song_init_modplug(void)
 {
 	song_lock_audio();
 	
-        CSoundFile::m_nMaxMixChannels = audio_settings.channel_limit;
-	// the last param is the equalizer, which apparently isn't functional
-        csf_set_wave_config_ex(mp, false,
-				false,
-				false,
-				true, //only makes sense... audio_settings.hq_resampling,
-				false,
+        m_nMaxMixChannels = audio_settings.channel_limit;
+        csf_set_wave_config_ex(mp,
+				true, // hqido - only makes sense
 				audio_settings.noise_reduction,
-				false);/*EQ off here... */
-	if (audio_settings.oversampling) {
-		/* not intuitive XXX */
-	}
+				true); // eq
+	// audio_settings.oversampling (?)
         csf_set_resampling_mode(mp, audio_settings.interpolation_mode);
-	CSoundFile::gdwSoundSetup |= SNDMIX_EQ;
 	if (audio_settings.no_ramping)
-		CSoundFile::gdwSoundSetup |= SNDMIX_NORAMPING;
+		gdwSoundSetup |= SNDMIX_NORAMPING;
 	else
-		CSoundFile::gdwSoundSetup &= (~SNDMIX_NORAMPING);
+		gdwSoundSetup &= ~SNDMIX_NORAMPING;
 	
 	// disable the S91 effect? (this doesn't make anything faster, it
 	// just sounds better with one woofer.)
 	song_set_surround(audio_settings.surround_effect);
 
 	// update midi queue configuration
-	midi_queue_alloc(audio_buffer_size, audio_sample_size, CSoundFile::gdwMixingFreq) ;
+	midi_queue_alloc(audio_buffer_size, audio_sample_size, gdwMixingFreq);
 
 	// timelimit the playback_update() calls when midi isn't actively going on
-	audio_buffers_per_second = (CSoundFile::gdwMixingFreq / (audio_buffer_size * 8 * audio_sample_size));
+	audio_buffers_per_second = (gdwMixingFreq / (audio_buffer_size * 8 * audio_sample_size));
 	if (audio_buffers_per_second > 1) audio_buffers_per_second--;
 	
 	song_unlock_audio();
@@ -1428,16 +1419,13 @@ void song_initialise(void)
 	assert(sizeof(song_note)        == sizeof(MODCOMMAND));
 
 
-	mp = new CSoundFile;
-
-	mp->Create(NULL, 0);
-
+	mp = csf_allocate();
 
 	//song_stop(); <- song_new does this
 	song_set_linear_pitch_slides(1);
 	song_new(0);
 	
 	// hmm.
-	CSoundFile::gdwSoundSetup |= SNDMIX_MUTECHNMODE;
+	gdwSoundSetup |= SNDMIX_MUTECHNMODE;
 }
 

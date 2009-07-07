@@ -153,6 +153,7 @@
 
 
 // Volume Column commands
+#define VOLCMD_NONE             0
 #define VOLCMD_VOLUME           1
 #define VOLCMD_PANNING          2
 #define VOLCMD_VOLSLIDEUP       3
@@ -488,102 +489,12 @@ extern MODMIDICFG default_midi_cfg;
 
 #include "snd_fx.h" // blah
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// static class members
+extern uint32_t m_nMaxMixChannels;
+extern uint32_t gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
+extern uint32_t gnVULeft, gnVURight;
 
-MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels);
-void csf_free_pattern(void *pat);
-signed char *csf_allocate_sample(uint32_t nbytes);
-void csf_free_sample(void *p);
-
-uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
-uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen);
-void csf_adjust_sample_loop(SONGSAMPLE *pIns);
-
-extern void (*csf_midi_out_note)(int chan, const MODCOMMAND *m);
-extern void (*csf_midi_out_raw)(const unsigned char *, unsigned int, unsigned int);
-extern void (*csf_multi_out_raw)(int chan, int *buf, int len);
-
-void csf_import_mod_effect(MODCOMMAND *m, int from_xm);
-uint16_t csf_export_mod_effect(const MODCOMMAND *m, int bXM);
-
-void csf_import_s3m_effect(MODCOMMAND *m, int bIT);
-void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-
-#ifdef __cplusplus
-
-class CSoundFile;
-
-extern "C" {
-
-int csf_set_wave_config(CSoundFile *csf, uint32_t nRate,uint32_t nBits,uint32_t nChannels);
-int csf_set_wave_config_ex(CSoundFile *csf, bool,bool bNoOverSampling,bool,bool hqido,bool,bool bNR,bool bEQ);
-
-// Mixer Config
-int csf_init_player(CSoundFile *csf, int reset); // bReset=false
-int csf_set_resampling_mode(CSoundFile *csf, uint32_t nMode); // SRCMODE_XXXX
-
-
-// sndmix
-int csf_fade_song(CSoundFile *csf, unsigned int msec);
-int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
-unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer);
-int csf_process_tick(CSoundFile *csf);
-int csf_read_note(CSoundFile *csf);
-
-// snd_dsp
-void csf_initialize_dsp(CSoundFile *csf, int reset);
-void csf_process_stereo_dsp(CSoundFile *csf, int count);
-void csf_process_mono_dsp(CSoundFile *csf, int count);
-
-// snd_fx
-unsigned int csf_get_length(CSoundFile *csf);
-void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
-                           bool bPorta, bool bUpdVol, bool bResetEnv);
-void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, bool bPorta, bool bResetEnv, bool bManual);
-uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn);
-void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, bool bForceCut);
-void csf_process_effects(CSoundFile *csf);
-
-void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick);
-void fx_key_off(CSoundFile *csf, uint32_t nChn);
-void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
-void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
-			uint32_t note, uint32_t velocity, uint32_t use_instr);
-SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *ins, uint32_t note, SONGSAMPLE *def);
-
-// sndfile
-void csf_reset_midi_cfg(CSoundFile *csf);
-uint32_t csf_get_num_orders(CSoundFile *csf);
-void csf_set_current_order(CSoundFile *csf, uint32_t nPos);
-void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow);
-void csf_reset_timestamps(CSoundFile *csf);
-
-uint32_t csf_get_highest_used_channel(CSoundFile *csf);
-uint32_t csf_detect_unused_samples(CSoundFile *csf, bool *pbIns);
-void csf_destroy(CSoundFile *csf);
-bool csf_destroy_sample(CSoundFile *csf, uint32_t nSample);
-
-// fastmix
-unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
-
-} // extern "C"
-
-//==============
-class CSoundFile
-//==============
-{
-public: // Static Members
-	static uint32_t m_nMaxMixChannels;
-	static uint32_t gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
-	static uint32_t gnVULeft, gnVURight;
-
-public: // for Editing
+typedef struct _CSoundFile {
 	SONGVOICE Voices[MAX_VOICES];                                   // Channels
 	uint32_t VoiceMix[MAX_VOICES];                                              // Channels to be mixed
 	SONGSAMPLE Samples[MAX_SAMPLES];                                 // Instruments
@@ -616,10 +527,7 @@ public: // for Editing
 	int stop_at_row;
 	unsigned int stop_at_time;
 
-public:
-	CSoundFile();
-	~CSoundFile();
-
+#ifdef __cplusplus
 public:
 	bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
 	// Module Loaders
@@ -650,16 +558,92 @@ public:
 	bool SaveXM(diskwriter_driver_t *f, uint32_t);
 	bool SaveS3M(diskwriter_driver_t *f, uint32_t);
 	bool SaveMod(diskwriter_driver_t *f, uint32_t);
+#endif /* C++ */
+} CSoundFile;
 
-private:
-    /* CSoundFile is a sentinel, prevent copying to avoid memory leaks */
-    CSoundFile(const CSoundFile&);
-    void operator=(const CSoundFile&);
-};
-
-
+#ifdef __cplusplus
+extern "C" {
 #endif
 
+MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels);
+void csf_free_pattern(void *pat);
+signed char *csf_allocate_sample(uint32_t nbytes);
+void csf_free_sample(void *p);
+
+uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
+uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen);
+void csf_adjust_sample_loop(SONGSAMPLE *pIns);
+
+extern void (*csf_midi_out_note)(int chan, const MODCOMMAND *m);
+extern void (*csf_midi_out_raw)(const unsigned char *, unsigned int, unsigned int);
+extern void (*csf_multi_out_raw)(int chan, int *buf, int len);
+
+void csf_import_mod_effect(MODCOMMAND *m, int from_xm);
+uint16_t csf_export_mod_effect(const MODCOMMAND *m, int bXM);
+
+void csf_import_s3m_effect(MODCOMMAND *m, int bIT);
+void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT);
+
+
+
+int csf_set_wave_config(CSoundFile *csf, uint32_t nRate,uint32_t nBits,uint32_t nChannels);
+int csf_set_wave_config_ex(CSoundFile *csf, int hqido, int bNR, int bEQ);
+
+// Mixer Config
+int csf_init_player(CSoundFile *csf, int reset); // bReset=false
+int csf_set_resampling_mode(CSoundFile *csf, uint32_t nMode); // SRCMODE_XXXX
+
+
+// sndmix
+int csf_fade_song(CSoundFile *csf, unsigned int msec);
+int csf_global_fade_song(CSoundFile *csf, unsigned int msec);
+unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer);
+int csf_process_tick(CSoundFile *csf);
+int csf_read_note(CSoundFile *csf);
+
+// snd_dsp
+void csf_initialize_dsp(CSoundFile *csf, int reset);
+void csf_process_stereo_dsp(CSoundFile *csf, int count);
+void csf_process_mono_dsp(CSoundFile *csf, int count);
+
+// snd_fx
+unsigned int csf_get_length(CSoundFile *csf);
+void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
+                           int bPorta, int bUpdVol, int bResetEnv);
+void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int bResetEnv, int bManual);
+uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn);
+void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int bForceCut);
+void csf_process_effects(CSoundFile *csf);
+
+void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick);
+void fx_key_off(CSoundFile *csf, uint32_t nChn);
+void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
+void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
+			uint32_t note, uint32_t velocity, uint32_t use_instr);
+SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *ins, uint32_t note, SONGSAMPLE *def);
+
+// sndfile
+CSoundFile *csf_allocate(void);
+void csf_free(CSoundFile *csf);
+
+void csf_destroy(CSoundFile *csf); /* erase everything -- equiv. to new song */
+int csf_destroy_sample(CSoundFile *csf, uint32_t nSample);
+
+void csf_reset_midi_cfg(CSoundFile *csf);
+uint32_t csf_get_num_orders(CSoundFile *csf);
+void csf_set_current_order(CSoundFile *csf, uint32_t nPos);
+void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow);
+void csf_reset_timestamps(CSoundFile *csf);
+
+uint32_t csf_get_highest_used_channel(CSoundFile *csf);
+uint32_t csf_detect_unused_samples(CSoundFile *csf, int *pbIns);
+
+// fastmix
+unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 ///////////////////////////////////////////////////////////
 // Low-level Mixing functions
