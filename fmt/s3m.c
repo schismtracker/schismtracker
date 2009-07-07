@@ -209,10 +209,10 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
 		slurp_read(fp, sample->name, 25);
 		sample->name[25] = 0;
-		song->Samples[n].nVibType = 0;
-		song->Samples[n].nVibSweep = 0;
-		song->Samples[n].nVibDepth = 0;
-		song->Samples[n].nVibRate = 0;
+		sample->nVibType = 0;
+		sample->nVibSweep = 0;
+		sample->nVibDepth = 0;
+		sample->nVibRate = 0;
 	}
 	
 	/* sample data */
