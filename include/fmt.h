@@ -63,11 +63,12 @@ typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int
 
 #define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 #define LOAD_SONG(t) int fmt_##t##_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+#define SAVE_SONG(t) void fmt_##t##_save_song(diskwriter_driver_t *fp)
 #define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
 #define SAVE_SAMPLE(t) int fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 #define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot)
-#define SAVE_SONG(t) void fmt_##t##_save_song(diskwriter_driver_t *fp)
 
+/* module types (and some other things that act like modules) */
 READ_INFO(669); LOAD_SONG(669);
 READ_INFO(ams);
 READ_INFO(dtm);
@@ -77,18 +78,22 @@ READ_INFO(imf);
 READ_INFO(it);
 READ_INFO(liq);
 READ_INFO(mdl);
+// mid med mod... and i suppose mt2 is mad, now we just need a mud format!
+READ_INFO(mid);                 SAVE_SONG(mid);
+READ_INFO(med);
 READ_INFO(mod); LOAD_SONG(mod);
 READ_INFO(mt2);
 READ_INFO(mtm); LOAD_SONG(mtm); SAVE_SONG(mtm);
 READ_INFO(ntk);
+READ_INFO(okt);
+READ_INFO(psm);
 READ_INFO(s3m); LOAD_SONG(s3m);
+READ_INFO(sfx); LOAD_SONG(sfx);
 READ_INFO(stm);
 READ_INFO(ult);
 READ_INFO(xm);
-READ_INFO(okt);
-READ_INFO(med);
-READ_INFO(sfx); LOAD_SONG(sfx);
 
+/* things that don't really act like modules or samples, and which we also don't use in any way */
 #ifdef USE_NON_TRACKED_TYPES
 READ_INFO(sid);
 READ_INFO(mp3);
@@ -97,24 +102,22 @@ READ_INFO(ogg);
 # endif
 #endif
 
-READ_INFO(iti);  LOAD_INSTRUMENT(iti);
-READ_INFO(xi);   LOAD_INSTRUMENT(xi);
-READ_INFO(pat);  LOAD_INSTRUMENT(pat);
-                 LOAD_INSTRUMENT(scri);
-
+/* sample types */
 READ_INFO(aiff); LOAD_SAMPLE(aiff);    SAVE_SAMPLE(aiff);
 READ_INFO(au);   LOAD_SAMPLE(au);      SAVE_SAMPLE(au);
+READ_INFO(iti);  LOAD_INSTRUMENT(iti);
 READ_INFO(its);  LOAD_SAMPLE(its);     SAVE_SAMPLE(its);
+READ_INFO(pat);  LOAD_INSTRUMENT(pat);
                  LOAD_SAMPLE(raw);     SAVE_SAMPLE(raw);
-READ_INFO(wav);	 LOAD_SAMPLE(wav);     SAVE_SAMPLE(wav);
-READ_INFO(psm);
-READ_INFO(mid);						   SAVE_SONG(mid);
-READ_INFO(scri); LOAD_SAMPLE(scri);
+READ_INFO(scri); LOAD_SAMPLE(scri);                       LOAD_INSTRUMENT(scri);
+READ_INFO(wav);  LOAD_SAMPLE(wav);     SAVE_SAMPLE(wav);
+READ_INFO(xi);                                            LOAD_INSTRUMENT(xi);
 
 #undef READ_INFO
+#undef LOAD_SONG
+#undef SAVE_SONG
 #undef LOAD_SAMPLE
 #undef SAVE_SAMPLE
-#undef SAVE_SONG
 #undef LOAD_INSTRUMENT
 
 /* --------------------------------------------------------------------------------------------------------- */
