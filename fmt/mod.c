@@ -141,6 +141,7 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	int startrekker = 0;
 	int test_wow = 0;
 	long samplesize = 0;
+	const char *tid = NULL;
 
 	/* check the tag (and set the number of channels) -- this is ugly, so don't look */
 	slurp_seek(fp, 1080, SEEK_SET);
@@ -149,30 +150,53 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		/* M.K. = Protracker etc., or Mod's Grave (*.wow) */
 		nchan = 4;
 		test_wow = 1;
-	} else if (!memcmp(tag, "M!K!", 4) || !memcmp(tag, "M&K!", 4)
-		   || !memcmp(tag, "N.T.", 4) || !memcmp(tag, "FLT4", 4)) {
-		/* M!K! = Protracker
-		 * N.T., M&K! = Noisetracker
-		 * FLT4 = Startrekker
-		 * I've never seen any of these except "M!K!"... */
+		tid = "Amiga-NewTracker";
+	} else if (!memcmp(tag, "M!K!", 4)) {
 		nchan = 4;
+		tid = "Amiga-ProTracker";
+	} else if (!memcmp(tag, "M&K!", 4) || !memcmp(tag, "N.T.", 4)) {
+		nchan = 4;
+		tid = "Amiga-NoiseTracker"; // or so the word on the street is; I don't have any of these
+	} else if (!memcmp(tag, "FLT4", 4)) {
+		nchan = 4;
+		tid = "%d Channel Startrekker";
 	} else if (!memcmp(tag, "FLT8", 4)) {
 		nchan = 8;
 		startrekker = 1;
-	} else if (!memcmp(tag, "OCTA", 4) || !memcmp(tag, "CD81", 4)) {
-		/* OCTA = Amiga Oktalyzer
-		 * CD81 = Atari Oktalyser; Falcon */
+		tid = "%d Channel Startrekker";
+	} else if (!memcmp(tag, "OCTA", 4)) {
 		nchan = 8;
+		tid = "Amiga Oktalyzer"; // IT just identifies this as "8 Channel MOD"
+	} else if (!memcmp(tag, "CD81", 4)) {
+		nchan = 8;
+		tid = "8 Channel Falcon"; // Atari Oktalyser
 	} else if (tag[0] > '0' && tag[0] <= '9' && !memcmp(tag + 1, "CHN", 3)) {
 		/* nCHN = Fast Tracker (if n is even) or TakeTracker (if n = 5, 7, or 9) */
 		nchan = tag[0] - '0';
+		if (nchan == 5 || nchan == 7 || nchan == 9)
+			tid = "%d Channel TakeTracker";
+		else if (nchan & 1)
+			tid = "%d Channel MOD"; // generic
+		else
+			tid = "%d Channel FastTracker";
 	} else if (tag[0] > '0' && tag[0] <= '9' && tag[1] >= '0' && tag[1] <= '9'
 		   && tag[2] == 'C' && (tag[3] == 'H' || tag[3] == 'N')) {
-		/* nnCH = Fast Tracker (if n is even and <= 32) or TakeTracker (if n = 11, 13, 15) */
+		/* nnCH = Fast Tracker (if n is even and <= 32) or TakeTracker (if n = 11, 13, 15)
+		 * Not sure what the nnCN variant is. */
 		nchan = 10 * (tag[0] - '0') + (tag[1] - '0');
+		if (nchan == 11 || nchan == 13 || nchan == 15)
+			tid = "%d Channel TakeTracker";
+		else if ((nchan & 1) || nchan > 32 || tag[3] == 'N')
+			tid = "%d Channel MOD"; // generic
+		else
+			tid = "%d Channel FastTracker";
 	} else if (!memcmp(tag, "TDZ", 3) && tag[3] > '0' && tag[3] <= '9') {
 		/* TDZ[1-3] = TakeTracker */
 		nchan = tag[3] - '0';
+		if (nchan < 4)
+			tid = "%d Channel TakeTracker";
+		else
+			tid = "%d Channel MOD";
 	} else {
 		return LOAD_UNSUPPORTED;
 	}
@@ -249,10 +273,13 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	/* hey, is this a wow file? */
 	if (test_wow) {
 		slurp_seek(fp, 0, SEEK_END);
-		if (slurp_tell(fp) >= 2048 * npat + samplesize + 3132)
+		if (slurp_tell(fp) >= 2048 * npat + samplesize + 3132) {
 			nchan = 8;
+			tid = "Mod's Grave WOW";
+		}
 	}
 	
+	sprintf(song->tracker_id, tid ?: "%d Channel MOD", nchan);
 	slurp_seek(fp, 1084, SEEK_SET);
 
 	/* pattern data */

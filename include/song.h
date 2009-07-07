@@ -421,6 +421,7 @@ int song_order_for_pattern(int pat, int locked);
 
 const char *song_get_filename(void);
 const char *song_get_basename(void);
+const char *song_get_tracker_id(void);
 char *song_get_title(void);     // editable
 char *song_get_message(void);   // editable
 
