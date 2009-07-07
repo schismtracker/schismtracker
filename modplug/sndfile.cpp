@@ -23,6 +23,56 @@ extern void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFi
 extern void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, bool b215);
 
 
+
+static void _csf_reset(CSoundFile *csf)
+{
+	unsigned int i;
+
+	csf->m_dwSongFlags = 0;
+	csf->m_nStereoSeparation = 128;
+	csf->m_nChannels = 0;
+	csf->m_nMixChannels = 0;
+	csf->m_nSamples = 0;
+	csf->m_nInstruments = 0;
+	csf->m_nFreqFactor = csf->m_nTempoFactor = 128;
+	csf->m_nDefaultGlobalVolume = 128;
+	csf->m_nGlobalVolume = 128;
+	csf->m_nDefaultSpeed = 6;
+	csf->m_nDefaultTempo = 125;
+	csf->m_nProcessRow = 0;
+	csf->m_nRow = 0;
+	csf->m_nCurrentPattern = 0;
+	csf->m_nCurrentOrder = 0;
+	csf->m_nProcessOrder = 0;
+	csf->m_nRestartPos = 0;
+	csf->m_nSongPreAmp = 0x30;
+	csf->m_lpszSongComments = NULL;
+
+	memset(csf->Voices, 0, sizeof(csf->Voices));
+	memset(csf->VoiceMix, 0, sizeof(csf->VoiceMix));
+	memset(csf->Samples, 0, sizeof(csf->Samples));
+	memset(csf->Instruments, 0, sizeof(csf->Instruments));
+	memset(csf->Orderlist, 0xFF, sizeof(csf->Orderlist));
+	memset(csf->Patterns, 0, sizeof(csf->Patterns));
+
+	csf_reset_midi_cfg(csf);
+
+	for (i = 0; i < MAX_PATTERNS; i++) {
+		csf->PatternSize[i] = 64;
+		csf->PatternAllocSize[i] = 64;
+	}
+	for (i = 0; i < MAX_SAMPLES; i++) {
+		csf->Samples[i].nC5Speed = 8363;
+		csf->Samples[i].nVolume = 64 * 4;
+		csf->Samples[i].nGlobalVol = 64;
+	}
+	for (i = 0; i < MAX_CHANNELS; i++) {
+		csf->Channels[i].nPan = 128;
+		csf->Channels[i].nVolume = 64;
+		csf->Channels[i].dwFlags = 0;
+	}
+}
+
 //////////////////////////////////////////////////////////
 // CSoundFile
 
@@ -53,13 +103,7 @@ CSoundFile::CSoundFile()
       stop_at_order(), stop_at_row(), stop_at_time()
 //----------------------
 {
-	memset(Voices, 0, sizeof(Voices));
-	memset(VoiceMix, 0, sizeof(VoiceMix));
-	memset(Samples, 0, sizeof(Samples));
-	memset(Channels, 0, sizeof(Channels));
-	memset(Instruments, 0, sizeof(Instruments));
-	memset(Orderlist, 0xFF, sizeof(Orderlist));
-	memset(Patterns, 0, sizeof(Patterns));
+	_csf_reset(this);
 }
 
 
@@ -75,51 +119,9 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 {
 	int i;
 
-	// deja vu...
+	csf_destroy(this);
 	m_nType = MOD_TYPE_NONE;
-	m_dwSongFlags = 0;
-	m_nStereoSeparation = 128;
-	m_nChannels = 0;
-	m_nMixChannels = 0;
-	m_nSamples = 0;
-	m_nInstruments = 0;
-	m_nFreqFactor = m_nTempoFactor = 128;
-	m_nDefaultGlobalVolume = 128;
-	m_nGlobalVolume = 128;
-	m_nDefaultSpeed = 6;
-	m_nDefaultTempo = 125;
-	m_nProcessRow = 0;
-	m_nRow = 0;
-	m_nCurrentPattern = 0;
-	m_nCurrentOrder = 0;
-	m_nProcessOrder = 0;
-	m_nRestartPos = 0;
-	m_nSongPreAmp = 0x30;
-	m_lpszSongComments = NULL;
-	memset(Samples, 0, sizeof(Samples));
-	memset(VoiceMix, 0, sizeof(VoiceMix));
-	memset(Voices, 0, sizeof(Voices));
-	memset(Instruments, 0, sizeof(Instruments));
-	memset(Orderlist, 0xFF, sizeof(Orderlist));
-	memset(Patterns, 0, sizeof(Patterns));
-	csf_reset_midi_cfg(this);
-	for (uint32_t npt=0; npt<MAX_PATTERNS; npt++) {
-		PatternSize[npt] = 64;
-		PatternAllocSize[npt] = 64;
-	}
-	for (uint32_t n = 0; n < MAX_SAMPLES; n++) {
-		Samples[n].nC5Speed = 8363;
-		Samples[n].nVolume = 64 * 4;
-		Samples[n].nGlobalVol = 64;
-	}
-	for (uint32_t nch=0; nch<MAX_CHANNELS; nch++)
-	{
-		Channels[nch].nPan = 128;
-		Channels[nch].nVolume = 64;
-		Channels[nch].dwFlags = 0;
-	}
-	if (lpStream)
-	{
+	if (lpStream) {
 		bool bMMCmp = mmcmp_unpack((uint8_t **) &lpStream, &dwMemLength);
 		if ((!ReadXM(lpStream, dwMemLength))
 		 && (!Read669(lpStream, dwMemLength))
@@ -143,15 +145,13 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 		 && (!ReadMT2(lpStream, dwMemLength))
 		 && (!ReadMID(lpStream, dwMemLength))
 		 && (!ReadMod(lpStream, dwMemLength))) m_nType = MOD_TYPE_NONE;
-		if (bMMCmp)
-		{
+		if (bMMCmp) {
 			free((void *) lpStream);
 			lpStream = NULL;
 		}
 	}
 	// Adjust channels
-	for (i=0; i<MAX_CHANNELS; i++)
-	{
+	for (i=0; i<MAX_CHANNELS; i++) {
 		if (Channels[i].nVolume > 64) Channels[i].nVolume = 64;
 		if (Channels[i].nPan > 256) Channels[i].nPan = 128;
 		Voices[i].nPan = Channels[i].nPan;
@@ -281,6 +281,8 @@ void csf_destroy(CSoundFile *csf)
 
 	csf->m_nType = MOD_TYPE_NONE;
 	csf->m_nChannels = csf->m_nSamples = csf->m_nInstruments = 0;
+
+	_csf_reset(csf);
 }
 
 

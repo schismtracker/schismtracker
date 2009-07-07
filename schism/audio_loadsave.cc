@@ -297,6 +297,12 @@ void song_new(int flags)
         main_song_changed_cb();
 }
 
+
+static int _modplug_load_song(CSoundFile *csf, slurp_t *sl)
+{
+	return csf->Create(sl->data, sl->length);
+}
+
 int song_load_unchecked(const char *file)
 {
         const char *base = get_basename(file);
@@ -311,13 +317,13 @@ int song_load_unchecked(const char *file)
 	}
 	
         slurp_t *s = slurp(file, NULL, 0);
-        if (s == 0) {
+        if (!s) {
                 log_appendf(4, "%s: %s", base, strerror(errno));
                 return 0;
         }
 
         CSoundFile *newsong = new CSoundFile();
-	int r = newsong->Create(s->data, s->length);
+        int r = _modplug_load_song(newsong, s);
 	if (r) {
 		song_set_filename(file);
 
