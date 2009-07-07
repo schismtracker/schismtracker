@@ -324,6 +324,10 @@ int song_load_unchecked(const char *file)
         }
 
         CSoundFile *newsong = csf_allocate();
+        // hack on top of hack alert!
+        // modplug touches m_nChannels; our own loaders don't and always allocate 64 channels to a pattern.
+        // set this here so that fix_song() doesn't clobber stuff.
+        newsong->m_nChannels = 64;
         int r = fmt_mod_load_song(newsong, s, 0) == LOAD_SUCCESS
         	|| _modplug_load_song(newsong, s, 0) == LOAD_SUCCESS;
 	if (r) {
