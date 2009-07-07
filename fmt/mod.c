@@ -296,13 +296,13 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 1; n < 32; n++) {
-			char *ptr;
+			int8_t *ptr;
 
 			if (song->Samples[n].nLength == 0)
 				continue;
-			ptr = malloc(song->Samples[n].nLength);
+			ptr = csf_allocate_sample(song->Samples[n].nLength);
 			slurp_read(fp, ptr, song->Samples[n].nLength);
-			song->Samples[n].pSample = (int8_t *) ptr;
+			song->Samples[n].pSample = ptr;
 		}
 	}
 	

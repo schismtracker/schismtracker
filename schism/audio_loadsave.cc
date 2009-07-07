@@ -299,7 +299,8 @@ void song_new(int flags)
 
 static int _modplug_load_song(CSoundFile *csf, slurp_t *sl, UNUSED unsigned int flags)
 {
-	return csf->Create(sl->data, sl->length);
+	printf("note: using modplug's loader\n");
+	return csf->Create(sl->data, sl->length) ? LOAD_SUCCESS : LOAD_UNSUPPORTED;
 }
 
 
@@ -323,7 +324,8 @@ int song_load_unchecked(const char *file)
         }
 
         CSoundFile *newsong = csf_allocate();
-        int r = fmt_mod_load_song(newsong, s, 0) || _modplug_load_song(newsong, s, 0);
+        int r = fmt_mod_load_song(newsong, s, 0) == LOAD_SUCCESS
+        	|| _modplug_load_song(newsong, s, 0) == LOAD_SUCCESS;
 	if (r) {
 		song_set_filename(file);
 

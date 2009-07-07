@@ -235,7 +235,8 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 void csf_destroy(CSoundFile *csf)
 {
 	int i;
-	for (i=0; i<MAX_PATTERNS; i++) {
+
+	for (i = 0; i < MAX_PATTERNS; i++) {
 		if (csf->Patterns[i]) {
 			csf_free_pattern(csf->Patterns[i]);
 			csf->Patterns[i] = NULL;
@@ -245,14 +246,14 @@ void csf_destroy(CSoundFile *csf)
 		delete[] csf->m_lpszSongComments;
 		csf->m_lpszSongComments = NULL;
 	}
-	for (i=1; i<MAX_SAMPLES; i++) {
+	for (i = 1; i < MAX_SAMPLES; i++) {
 		SONGSAMPLE *pins = &csf->Samples[i];
 		if (pins->pSample) {
 			csf_free_sample(pins->pSample);
 			pins->pSample = NULL;
 		}
 	}
-	for (i=0; i<MAX_INSTRUMENTS; i++) {
+	for (i = 0; i < MAX_INSTRUMENTS; i++) {
 		if (csf->Instruments[i]) {
 			delete csf->Instruments[i];
 			csf->Instruments[i] = NULL;
