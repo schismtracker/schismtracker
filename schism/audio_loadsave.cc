@@ -297,17 +297,26 @@ void song_new(int flags)
         main_song_changed_cb();
 }
 
+// ------------------------------------------------------------------------------------------------------------
+
 static int _modplug_load_song(CSoundFile *csf, slurp_t *sl, UNUSED unsigned int flags)
 {
 	printf("note: using modplug's loader\n");
 	return csf->Create(sl->data, sl->length) ? LOAD_SUCCESS : LOAD_UNSUPPORTED;
 }
 
+static fmt_load_song_func load_song_funcs[] = {
+	fmt_mod_load_song,
+	_modplug_load_song,
+	NULL,
+};
 
 int song_load_unchecked(const char *file)
 {
         const char *base = get_basename(file);
         int was_playing;
+        fmt_load_song_func *func;
+        int ok = 0;
 
 	// IT stops the song even if the new song can't be loaded
 	if (stop_on_load) {
@@ -328,9 +337,29 @@ int song_load_unchecked(const char *file)
         // modplug touches m_nChannels; our own loaders don't and always allocate 64 channels to a pattern.
         // set this here so that fix_song() doesn't clobber stuff.
         newsong->m_nChannels = 64;
-        int r = fmt_mod_load_song(newsong, s, 0) == LOAD_SUCCESS
-        	|| _modplug_load_song(newsong, s, 0) == LOAD_SUCCESS;
-	if (r) {
+
+        for (func = load_song_funcs; *func && !ok; func++) {
+        	switch ((*func)(newsong, s, 0)) {
+        	case LOAD_SUCCESS:
+        		ok = 1;
+        		break;
+        	case LOAD_UNSUPPORTED:
+        		continue;
+        	case LOAD_FORMAT_ERROR:
+        		log_appendf(4, "%s: file format error (corrupt?)", base);
+        		break;
+        	case LOAD_FILE_ERROR:
+			log_appendf(4, "%s: %s", base, strerror(errno));
+			break;
+        	}
+        	if (!ok) {
+        		csf_free(newsong);
+        		unslurp(s);
+        		return 0;
+        	}
+        }
+
+	if (ok) {
 		song_set_filename(file);
 
                 song_lock_audio();
@@ -367,17 +396,17 @@ int song_load_unchecked(const char *file)
 
 		status.flags &= ~SONG_NEEDS_SAVE;
 		status.flags |= PLAIN_TEXTEDIT;
-		r = 1;
-		
+		ok = 1;
+
         } else {
                 // awwww, nerts!
                 log_appendf(4, "%s: Unrecognised file type", base);
 		status.flags &= ~PLAIN_TEXTEDIT;
                 csf_free(newsong);
         }
-	
+
         unslurp(s);
-	return r;
+	return ok;
 }
 
 // ------------------------------------------------------------------------------------------------------------
