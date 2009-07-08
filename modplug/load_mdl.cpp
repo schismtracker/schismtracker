@@ -326,9 +326,8 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 				if (!Instruments[nins])
 				{
 					uint32_t note = 12;
-					if ((Instruments[nins] = new SONGINSTRUMENT) == NULL) break;
+					if ((Instruments[nins] = csf_allocate_instrument()) == NULL) break;
 					SONGINSTRUMENT *penv = Instruments[nins];
-					memset(penv, 0, sizeof(SONGINSTRUMENT));
 					memcpy(penv->name, lpStream+dwPos+2, 32);
 					penv->nGlobalVol = 128;
 					penv->nPPC = 5*12;
@@ -376,8 +375,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 			}
 			for (j=1; j<=m_nInstruments; j++) if (!Instruments[j])
 			{
-				Instruments[j] = new SONGINSTRUMENT;
-				if (Instruments[j]) memset(Instruments[j], 0, sizeof(SONGINSTRUMENT));
+				Instruments[j] = csf_allocate_instrument();
 			}
 			break;
 		// VE: Volume Envelope

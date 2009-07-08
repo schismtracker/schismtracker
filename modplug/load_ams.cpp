@@ -346,10 +346,9 @@ bool CSoundFile::ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength)
 		dwMemPos += 5 + panenv->points*3;
 		pitchenv = (AMS2ENVELOPE *)(lpStream+dwMemPos);
 		dwMemPos += 5 + pitchenv->points*3;
-		SONGINSTRUMENT *penv = new SONGINSTRUMENT;
+		SONGINSTRUMENT *penv = csf_allocate_instrument();
 		if (!penv) return true;
 		memset(smpmap, 0, sizeof(smpmap));
-		memset(penv, 0, sizeof(SONGINSTRUMENT));
 		for (uint32_t ismpmap=0; ismpmap<pins->samples; ismpmap++)
 		{
 			if ((ismpmap >= 16) || (m_nSamples+1 >= MAX_SAMPLES)) break;

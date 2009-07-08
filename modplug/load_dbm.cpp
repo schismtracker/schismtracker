@@ -146,11 +146,10 @@ bool CSoundFile::ReadDBM(const uint8_t *lpStream, uint32_t dwMemLength)
 				uint32_t nsmp;
 
 				if (chunk_pos + sizeof(DBMINSTRUMENT) > dwMemPos) break;
-				if ((penv = new SONGINSTRUMENT) == NULL) break;
+				if ((penv = csf_allocate_instrument()) == NULL) break;
 				pih = (DBMINSTRUMENT *)(lpStream+chunk_pos);
 				nsmp = bswapBE16(pih->sampleno);
 				psmp = ((nsmp) && (nsmp < MAX_SAMPLES)) ? &Samples[nsmp] : NULL;
-				memset(penv, 0, sizeof(SONGINSTRUMENT));
 				memcpy(penv->name, pih->name, 30);
 				if (psmp)
 				{

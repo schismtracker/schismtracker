@@ -405,10 +405,9 @@ static uint32_t csf_map_midi_instrument(CSoundFile *csf, uint32_t dwBankProgram,
 	}
 	if (csf->m_nInstruments + 1 >= MAX_INSTRUMENTS || csf->m_nSamples + 1 >= MAX_SAMPLES)
 		return 0;
-	penv = new SONGINSTRUMENT;
+	penv = csf_allocate_instrument();
 	if (!penv)
 		return 0;
-	memset(penv, 0, sizeof(SONGINSTRUMENT));
 	csf->m_nSamples++;
 	csf->m_nInstruments++;
 	csf->Instruments[csf->m_nInstruments] = penv;

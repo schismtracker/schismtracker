@@ -137,8 +137,7 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
 
         // Make a new instrument if it doesn't exist.
         if (!mp->Instruments[n]) {
-                mp->Instruments[n] = new SONGINSTRUMENT;
-		memset(mp->Instruments[n], 0, sizeof(SONGINSTRUMENT));
+                mp->Instruments[n] = csf_allocate_instrument();
 		mp->Instruments[n]->nGlobalVol = 128;
 		mp->Instruments[n]->nPan = 128;
 
@@ -861,7 +860,7 @@ void song_wipe_instrument(int n)
 
 	status.flags |= SONG_NEEDS_SAVE;
 	song_lock_audio();
-	delete mp->Instruments[n];
+	csf_free_instrument(mp->Instruments[n]);
 	mp->Instruments[n] = NULL;
 	song_unlock_audio();
 }

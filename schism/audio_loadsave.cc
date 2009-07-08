@@ -248,7 +248,7 @@ void song_new(int flags)
 	if ((flags & KEEP_INSTRUMENTS) == 0) {
 		for (i = 0; i < MAX_INSTRUMENTS; i++) {
 			if (mp->Instruments[i]) {
-				delete mp->Instruments[i];
+				csf_free_instrument(mp->Instruments[i]);
 				mp->Instruments[i] = NULL;
 			}
 		}
