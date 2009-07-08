@@ -570,6 +570,8 @@ MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels);
 void csf_free_pattern(void *pat);
 signed char *csf_allocate_sample(uint32_t nbytes);
 void csf_free_sample(void *p);
+SONGINSTRUMENT *csf_allocate_instrument(void);
+void csf_free_instrument(void);
 
 uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
 uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen);
