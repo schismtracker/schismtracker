@@ -74,7 +74,7 @@ READ_INFO(ams);
 READ_INFO(dtm);
 READ_INFO(f2r);
 READ_INFO(far);
-READ_INFO(imf);
+READ_INFO(imf); LOAD_SONG(imf);
 READ_INFO(it);
 READ_INFO(liq);
 READ_INFO(mdl);
