@@ -514,7 +514,7 @@ typedef struct _CSoundFile {
 	int32_t m_nRowCount; /* IMPORTANT needs to be signed */
 	uint32_t m_nMusicSpeed, m_nMusicTempo;
 	uint32_t m_nProcessRow, m_nRow, m_nBreakRow;
-	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nProcessOrder,m_nLockedOrder,m_nRestartPos;
+	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nProcessOrder,m_nLockedOrder;
 	uint32_t m_nGlobalVolume, m_nSongPreAmp;
 	uint32_t m_nFreqFactor, m_nTempoFactor;
 	int32_t m_nRepeatCount, m_nInitialRepeatCount;

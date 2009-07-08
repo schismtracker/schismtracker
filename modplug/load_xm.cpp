@@ -51,7 +51,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_nType = MOD_TYPE_IT;
 	m_dwSongFlags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS | SONG_INSTRUMENTMODE;
 	m_nChannels = channels;
-	if (restartpos < norders) m_nRestartPos = restartpos;
+	//if (restartpos < norders) m_nRestartPos = restartpos;
 	patterns = bswapLE16(*((uint16_t *)(lpStream+70)));
 	if (patterns > 256) patterns = 256;
 	instruments = bswapLE16(*((uint16_t *)(lpStream+72)));
@@ -509,7 +509,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 	// Writing song header
 	memset(&header, 0, sizeof(header));
 	header.size = bswapLE32(sizeof(XMFILEHEADER));
-	header.restartpos = bswapLE16(m_nRestartPos);
+	//header.restartpos = bswapLE16(m_nRestartPos);
 	header.channels = bswapLE16(chanlim);
 	np = 0;
 	no = 0;

@@ -192,9 +192,6 @@ static void fix_song(void)
 	mp->m_nLockedOrder = MAX_ORDERS;
 
         _resize_patterns();
-        /* possible TODO: put a Bxx in the last row of the last order
-         * if m_nRestartPos != 0 (for xm compat.)
-         * (Impulse Tracker doesn't do this, in fact) */
         _resize_message();
         _fix_names(mp);
 }

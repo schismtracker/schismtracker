@@ -193,7 +193,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	pdd = NULL;
 	m_nType = MOD_TYPE_MT2;
 	m_nChannels = pfh->wChannels;
-	m_nRestartPos = pfh->wRestart;
+	//m_nRestartPos = pfh->wRestart;
 	m_nDefaultSpeed = pfh->bTicksPerLine;
 	m_nDefaultTempo = 125;
 	if ((pfh->wSamplesPerTick > 100) && (pfh->wSamplesPerTick < 5000))
