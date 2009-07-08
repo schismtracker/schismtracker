@@ -47,31 +47,71 @@ int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 #pragma pack(push,1)
 struct imf_channel {
-	char name[12]; /* asciz */
-	/* status:
-	 *     0x00 = channel enabled;
-	 *     0x01 = mute (processed but not played);
-	 *     0x02 = channel disabled (not processed)
-	 * panning is a full 0x00->0xff value */
-	uint8_t chorus, reverb, panning, status;
+	char name[12];		/* Channelname (ASCIIZ-String, max 11 chars) */
+	uint8_t chorus;		/* Default chorus */
+	uint8_t reverb;		/* Default reverb */
+	uint8_t panning;	/* Pan positions 00-FF */
+	uint8_t status;		/* Channel status: 0 = enabled, 1 = mute, 2 = disabled (ignore effects!) */
 };
 
+
 struct imf_header {
-	char title[32]; /* asciz */
-	uint16_t ordnum, patnum, insnum;
-	uint16_t flags; /* & 1 => linear */
-	char res[8]; /* nothing */
-	uint8_t tempo; /* Axx (1..255) */
-	uint8_t bpm; /* bpm -> Txx (32..255) */
-	uint8_t master; /* master -> Vxx (0..64) */
-	uint8_t amp; /* amp -> mixing volume (4..127) */
-	char res2[8]; /* nothing */
-	char im10[4]; /* "IM10" tag */
-	struct imf_channel channels[32];
-	/* 0xff = +++; blank out any orders beyond nord */
-	uint8_t orderlist[256];
+	char title[32];		/* Songname (ASCIIZ-String, max. 31 chars) */
+	uint16_t ordnum;	/* Number of orders saved */
+	uint16_t patnum;	/* Number of patterns saved */
+	uint16_t insnum;	/* Number of instruments saved */
+	uint16_t flags;		/* Module flags (&1 => linear) */
+	uint8_t unused1[8];
+	uint8_t tempo;		/* Default tempo (Axx, 1..255) */
+	uint8_t bpm;		/* Default beats per minute (BPM) (Txx, 32..255) */
+	uint8_t master;		/* Default mastervolume (Vxx, 0..64) */
+	uint8_t amp;		/* Amplification factor (mixing volume, 4..127) */
+	uint8_t unused2[8];
+	char im10[4];		/* 'IM10' */
+	struct imf_channel channels[32]; /* Channel settings */
+	uint8_t orderlist[256];	/* Order list (0xff = +++; blank out anything beyond ordnum) */
+};
+
+struct imf_env {
+	uint8_t points;		/* Number of envelope points */
+	uint8_t sustain;	/* Envelope sustain point */
+	uint8_t loop_start;	/* Envelope loop start point */
+	uint8_t loop_end;	/* Envelope loop end point */
+	uint8_t flags;		/* Envelope flags */
+	uint8_t unused[3];
+};
+
+struct imf_instrument {
+	char name[32];		/* Inst. name (ASCIIZ-String, max. 31 chars) */
+	uint8_t map[120];	/* Multisample settings */
+	uint8_t unused[8];
+	uint16_t vol_env[32];	/* Volume envelope settings */
+	uint16_t pan_env[32];	/* Pan envelope settings */
+	uint16_t pitch_env[32];	/* Pitch envelope settings */
+	struct imf_env env[3];
+	uint16_t fadeout;	/* Fadeout rate (0...0FFFH) */
+	uint16_t smpnum;	/* Number of samples in instrument */
+	char ii10[4];		/* 'II10' */
+};
+
+struct imf_sample {
+	char name[13];		/* Sample filename (12345678.ABC) */
+	uint8_t unused1[3];
+	uint32_t length;	/* Length */
+	uint32_t loop_start;	/* Loop start */
+	uint32_t loop_end;	/* Loop end */
+	uint32_t c5speed;	/* Samplerate */
+	uint8_t volume;		/* Default volume (0..64) */
+	uint8_t panning;	/* Default pan (00h = Left / 80h = Middle) */
+	uint8_t unused2[14];
+	uint8_t flags;		/* Sample flags */
+	uint8_t unused3[5];
+	uint16_t ems;		/* Reserved for internal usage */
+	uint32_t dram;		/* Reserved for internal usage */
+	char is10[4];		/* 'IS10' */
 };
 #pragma pack(pop)
+
 
 static uint8_t imf_efftrans[] = {
 	CMD_NONE,
@@ -143,6 +183,7 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 	uint16_t length, nrows;
 	uint8_t status, channel;
 	int row, startpos;
+	unsigned int lostfx = 0;
 	MODCOMMAND *row_data, *note, junk_note;
 	
 	startpos = slurp_tell(fp);
@@ -222,7 +263,7 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 				/* check if one of the effects is a 'global' effect
 				-- if so, put it in some unused channel instead.
 				otherwise pick the most important effect. */
-				printf("lost an effect!\n");
+				lostfx++;
 				note->command = e2c;
 				note->param = e2d;
 			}
@@ -234,6 +275,8 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 		import_imf_effect(note);
 	}
 	
+	if (lostfx)
+		printf("warning: %d effect%s skipped\n", lostfx, lostfx == 1 ? "" : "s");
 	if (slurp_tell(fp) - startpos != length)
 		printf("warning: expected %d bytes, but read %ld bytes\n", length, slurp_tell(fp) - startpos);
 }
@@ -241,7 +284,9 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 {
 	struct imf_header hdr;
-	int n;
+	int n, s;
+	SONGSAMPLE *sample = song->Samples + 1;
+	int firstsample = 1; // first sample for the current instrument
 	uint32_t ignore_channels = 0; /* bit set for each channel that's completely disabled */
 
 	/* TODO: endianness */
@@ -255,6 +300,7 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 	
 	if (hdr.flags & 1)
 		song->m_dwSongFlags |= SONG_LINEARSLIDES;
+	song->m_dwSongFlags |= SONG_INSTRUMENTMODE;
 	song->m_nDefaultSpeed = hdr.tempo;
 	song->m_nDefaultTempo = hdr.bpm;
 	song->m_nDefaultGlobalVolume = 2 * hdr.master;
@@ -290,6 +336,73 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 	
 	for (n = 0; n < hdr.patnum; n++) {
 		load_imf_pattern(song, n, ignore_channels, fp);
+	}
+	
+	for (n = 0; n < hdr.insnum; n++) {
+		// read the ins header
+		struct imf_instrument imfins;
+		SONGINSTRUMENT *ins;
+		slurp_read(fp, &imfins, sizeof(imfins));
+
+		printf("inst %d\n", n);
+		if (memcmp(imfins.ii10, "II10", 4) != 0) {
+			printf("ii10 says %02x %02x %02x %02x!\n",
+				imfins.ii10[0], imfins.ii10[1], imfins.ii10[2], imfins.ii10[3]);
+			return LOAD_FORMAT_ERROR;
+		}
+		
+		ins = song->Instruments[n + 1] = csf_allocate_instrument();
+		strncpy(ins->name, imfins.name, 25);
+		ins->name[25] = 0;
+
+		for (s = 0; s < 120; s++)
+			ins->Keyboard[s] = firstsample + imfins.map[s];
+
+		// TODO: envelopes; fadeout
+		
+		imfins.smpnum = bswapLE16(imfins.smpnum);
+		for (s = 0; s < imfins.smpnum; s++) {
+			struct imf_sample imfsmp;
+			uint32_t blen;
+			slurp_read(fp, &imfsmp, sizeof(imfsmp));
+			
+			printf(" smp %d\n", s);
+			if (memcmp(imfsmp.is10, "IS10", 4) != 0) {
+				printf("is10 says %02x %02x %02x %02x!\n",
+					imfsmp.is10[0], imfsmp.is10[1], imfsmp.is10[2], imfsmp.is10[3]);
+				return LOAD_FORMAT_ERROR;
+			}
+			
+			strncpy(sample->filename, imfsmp.name, 12);
+			sample->filename[12] = 0;
+			strcpy(sample->name, sample->filename);
+			blen = sample->nLength = bswapLE32(imfsmp.length);
+			sample->nLoopStart = bswapLE32(imfsmp.loop_start);
+			sample->nLoopEnd = bswapLE32(imfsmp.loop_end);
+			sample->nC5Speed = bswapLE32(imfsmp.c5speed);
+			sample->nVolume = imfsmp.volume * 4; //mphack
+			sample->nPan = imfsmp.panning; //mphack (IT uses 0-64, IMF uses the full 0-255)
+			if (imfsmp.flags & 1)
+				sample->uFlags |= CHN_LOOP;
+			if (imfsmp.flags & 2)
+				sample->uFlags |= CHN_PINGPONGLOOP;
+			if (imfsmp.flags & 4) {
+				sample->uFlags |= CHN_16BIT;
+				blen *= 2;
+			}
+			if (imfsmp.flags & 8)
+				sample->uFlags |= CHN_PANNING;
+			
+			if (lflags & LOAD_NOSAMPLES) {
+				slurp_seek(fp, blen, SEEK_CUR);
+			} else {
+				sample->pSample = csf_allocate_sample(blen);
+				slurp_read(fp, sample->pSample, blen);
+			}
+
+			sample++;
+		}
+		firstsample += imfins.smpnum;
 	}
 	
 	/* haven't bothered finishing this */
