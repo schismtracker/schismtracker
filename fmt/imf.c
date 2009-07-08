@@ -510,6 +510,8 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 			if (imfsmp.flags & 4) {
 				sample->uFlags |= CHN_16BIT;
 				sample->nLength >>= 1;
+				sample->nLoopStart >>= 1;
+				sample->nLoopEnd >>= 1;
 			}
 			if (imfsmp.flags & 8)
 				sample->uFlags |= CHN_PANNING;
