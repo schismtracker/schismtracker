@@ -141,7 +141,7 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 			{
 				uint32_t nseq = sequ->seqsize >> 1;
 				if (nseq >= MAX_ORDERS-1) nseq = MAX_ORDERS-1;
-				if (sequ->loopstart < nseq) m_nRestartPos = sequ->loopstart;
+				//if (sequ->loopstart < nseq) m_nRestartPos = sequ->loopstart;
 				for (uint32_t i=0; i<nseq; i++) Orderlist[i] = (uint8_t)sequ->sequ[i];
 			}
 			dwMemPos += sequ->seqsize + 8;
