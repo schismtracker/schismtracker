@@ -91,6 +91,17 @@ void csf_free(CSoundFile *csf)
 	free(csf);
 }
 
+SONGINSTRUMENT *csf_allocate_instrument(void)
+{
+	SONGINSTRUMENT *i = new SONGINSTRUMENT;
+	memset(i, 0, sizeof(i));
+	return i;
+}
+
+void csf_free_instrument(SONGINSTRUMENT *i)
+{
+	delete i;
+}
 
 
 bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
