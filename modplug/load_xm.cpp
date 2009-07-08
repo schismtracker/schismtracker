@@ -247,7 +247,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (dwMemPos + sizeof(XMINSTRUMENTHEADER) >= dwMemLength) return true;
 		pih = (XMINSTRUMENTHEADER *)(lpStream+dwMemPos);
 		if (dwMemPos + bswapLE32(pih->size) > dwMemLength) return true;
-		if ((Instruments[iIns] = new SONGINSTRUMENT) == NULL) continue;
+		if ((Instruments[iIns] = csf_allocate_instrument()) == NULL) continue;
 		memset(Instruments[iIns], 0, sizeof(SONGINSTRUMENT));
 		memcpy(Instruments[iIns]->name, pih->name, 22);
 		if ((nsamples = pih->samples) > 0)

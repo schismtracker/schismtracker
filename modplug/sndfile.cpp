@@ -93,14 +93,13 @@ void csf_free(CSoundFile *csf)
 
 SONGINSTRUMENT *csf_allocate_instrument(void)
 {
-	SONGINSTRUMENT *i = new SONGINSTRUMENT;
-	memset(i, 0, sizeof(i));
+	SONGINSTRUMENT *i = (SONGINSTRUMENT *) calloc(1, sizeof(SONGINSTRUMENT));
 	return i;
 }
 
 void csf_free_instrument(SONGINSTRUMENT *i)
 {
-	delete i;
+	free(i);
 }
 
 
@@ -261,7 +260,7 @@ void csf_destroy(CSoundFile *csf)
 	}
 	for (i = 0; i < MAX_INSTRUMENTS; i++) {
 		if (csf->Instruments[i]) {
-			delete csf->Instruments[i];
+			csf_free_instrument(csf->Instruments[i]);
 			csf->Instruments[i] = NULL;
 		}
 	}

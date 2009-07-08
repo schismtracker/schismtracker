@@ -302,9 +302,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 			has_adlib_samples = true;
 		}
 		
-		Instruments[iSmp] = new SONGINSTRUMENT;
-		memset(Instruments[iSmp], 0, sizeof(SONGINSTRUMENT));
-		
+		Instruments[iSmp] = csf_allocate_instrument();
 		Instruments[iSmp]->nNNA = NNA_NOTEOFF;
 		Instruments[iSmp]->nDCA = DCA_NOTEOFF;
 		Instruments[iSmp]->nDCT = DCT_INSTRUMENT;
@@ -317,8 +315,8 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 		}
 		else
 		{
-		    delete Instruments[iSmp];
-		    Instruments[iSmp] = 0;
+		    csf_free_instrument(Instruments[iSmp]);
+		    Instruments[iSmp] = NULL;
 		}
 		
 		//fprintf(stderr, "loaded uflags = %X, length = %d\n", Samples[iSmp].uFlags, Samples[iSmp].nLength);

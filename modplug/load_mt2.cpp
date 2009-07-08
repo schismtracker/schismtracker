@@ -400,8 +400,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 		SONGINSTRUMENT *penv = NULL;
 		if (iIns <= m_nInstruments)
 		{
-			penv = new SONGINSTRUMENT;
-			Instruments[iIns] = penv;
+			Instruments[iIns] = penv = csf_allocate_instrument();
 			if (penv)
 			{
 				memset(penv, 0, sizeof(SONGINSTRUMENT));

@@ -72,6 +72,12 @@ struct imf_header {
 	uint8_t orderlist[256];	/* Order list (0xff = +++; blank out anything beyond ordnum) */
 };
 
+enum {
+	IMF_ENV_VOL = 0,
+	IMF_ENV_PAN = 1,
+	IMF_ENV_PITCH = 2,
+};
+
 struct imf_env {
 	uint8_t points;		/* Number of envelope points */
 	uint8_t sustain;	/* Envelope sustain point */
@@ -81,13 +87,16 @@ struct imf_env {
 	uint8_t unused[3];
 };
 
+struct imf_envnodes {
+	uint16_t tick;
+	uint16_t value;
+};
+
 struct imf_instrument {
 	char name[32];		/* Inst. name (ASCIIZ-String, max. 31 chars) */
 	uint8_t map[120];	/* Multisample settings */
 	uint8_t unused[8];
-	uint16_t vol_env[32];	/* Volume envelope settings */
-	uint16_t pan_env[32];	/* Pan envelope settings */
-	uint16_t pitch_env[32];	/* Pitch envelope settings */
+	struct imf_envnodes nodes[3][16];
 	struct imf_env env[3];
 	uint16_t fadeout;	/* Fadeout rate (0...0FFFH) */
 	uint16_t smpnum;	/* Number of samples in instrument */
@@ -192,7 +201,6 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 	length = bswapLE16(length);
 	slurp_read(fp, &nrows, 2);
 	nrows = bswapLE16(nrows);
-	printf("pattern %d: %d bytes, %d rows\n", pat, length, nrows);
 	
 	row_data = song->Patterns[pat] = csf_allocate_pattern(nrows, 64);
 	song->PatternSize[pat] = song->PatternAllocSize[pat] = nrows;
@@ -281,6 +289,39 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 		printf("warning: expected %d bytes, but read %ld bytes\n", length, slurp_tell(fp) - startpos);
 }
 
+
+static unsigned int envflags[3][3] = {
+	{ENV_VOLUME,  ENV_VOLSUSTAIN,   ENV_VOLLOOP},
+	{ENV_PANNING, ENV_PANSUSTAIN,   ENV_PANLOOP},
+	{ENV_PITCH,   ENV_PITCHSUSTAIN, ENV_PITCHLOOP},
+};
+
+// guessing all of this
+static void load_imf_envelope(SONGINSTRUMENT *ins, INSTRUMENTENVELOPE *env, struct imf_instrument *imfins, int e)
+{
+	int n;
+	int min = 0; // minimum tick value for next node
+
+	env->nNodes = CLAMP(imfins->env[e].points, 2, 25);
+	env->nLoopStart = imfins->env[e].loop_start;
+	env->nLoopEnd = imfins->env[e].loop_end;
+	env->nSustainStart = env->nSustainEnd = imfins->env[e].sustain;
+
+	for (n = 0; n < env->nNodes; n++) {
+		env->Ticks[n] = MAX(min, imfins->nodes[e][n].tick);
+		env->Values[n] = MIN(imfins->nodes[e][n].value, 64);
+		min = env->Ticks[n] + 1;
+	}
+	// this would be less retarded if the envelopes all had their own flags...
+	if (imfins->env[e].flags & 1)
+		ins->dwFlags |= envflags[e][0];
+	if (imfins->env[e].flags & 2)
+		ins->dwFlags |= envflags[e][1];
+	if (imfins->env[e].flags & 4)
+		ins->dwFlags |= envflags[e][2];
+}
+
+
 int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 {
 	struct imf_header hdr;
@@ -306,9 +347,6 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 	song->m_nDefaultGlobalVolume = 2 * hdr.master;
 	song->m_nSongPreAmp = hdr.amp;
 	
-	//printf("%d orders, %d patterns, %d instruments; %s frequency table\n",
-	//       hdr.ordnum, hdr.patnum, hdr.insnum, (hdr.flags & 1) ? "linear" : "amiga");
-	//printf("initial tempo %d, bpm %d, master %d, amp %d\n", hdr.tempo, hdr.bpm, hdr.master, hdr.amp);
 	for (n = 0; n < 32; n++) {
 		song->Channels[n].nPan = hdr.channels[n].panning * 64 / 255;
 		song->Channels[n].nPan *= 4; //mphack
@@ -334,9 +372,8 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 	for (n = 0; n < hdr.ordnum; n++)
 		song->Orderlist[n] = ((hdr.orderlist[n] == 0xff) ? ORDER_SKIP : hdr.orderlist[n]);
 	
-	for (n = 0; n < hdr.patnum; n++) {
+	for (n = 0; n < hdr.patnum; n++)
 		load_imf_pattern(song, n, ignore_channels, fp);
-	}
 	
 	for (n = 0; n < hdr.insnum; n++) {
 		// read the ins header
@@ -344,7 +381,6 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 		SONGINSTRUMENT *ins;
 		slurp_read(fp, &imfins, sizeof(imfins));
 
-		printf("inst %d\n", n);
 		if (memcmp(imfins.ii10, "II10", 4) != 0) {
 			printf("ii10 says %02x %02x %02x %02x!\n",
 				imfins.ii10[0], imfins.ii10[1], imfins.ii10[2], imfins.ii10[3]);
@@ -355,18 +391,35 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 		strncpy(ins->name, imfins.name, 25);
 		ins->name[25] = 0;
 
-		for (s = 0; s < 120; s++)
+		for (s = 0; s < 120; s++) {
+			ins->NoteMap[s] = s + 1;
 			ins->Keyboard[s] = firstsample + imfins.map[s];
+		}
 
-		// TODO: envelopes; fadeout
-		
+		/* Fadeout:
+		IT1 - 64
+		IT2 - 256
+		FT2 - 4095
+		IMF - 4095
+		MPT - god knows what, all the loaders are inconsistent
+		Schism - 128 presented (!); 8192? internal
+
+		IMF and XM have the same range and modplug's XM loader doesn't do any bit shifting with it,
+		so I'll do the same here for now. I suppose I should get this nonsense straightened
+		out at some point, though. */
+		ins->nFadeOut = imfins.fadeout;
+		ins->nGlobalVol = 128;
+
+		load_imf_envelope(ins, &ins->VolEnv, &imfins, IMF_ENV_VOL);
+		load_imf_envelope(ins, &ins->PanEnv, &imfins, IMF_ENV_PAN);
+		load_imf_envelope(ins, &ins->PitchEnv, &imfins, IMF_ENV_PITCH);
+
 		imfins.smpnum = bswapLE16(imfins.smpnum);
 		for (s = 0; s < imfins.smpnum; s++) {
 			struct imf_sample imfsmp;
 			uint32_t blen;
 			slurp_read(fp, &imfsmp, sizeof(imfsmp));
 			
-			printf(" smp %d\n", s);
 			if (memcmp(imfsmp.is10, "IS10", 4) != 0) {
 				printf("is10 says %02x %02x %02x %02x!\n",
 					imfsmp.is10[0], imfsmp.is10[1], imfsmp.is10[2], imfsmp.is10[3]);
@@ -405,12 +458,6 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 		firstsample += imfins.smpnum;
 	}
 	
-	/* haven't bothered finishing this */
-
-	//dump_general(song);
-	//dump_channels(song);
-	//dump_orderlist(song);
-
 	return LOAD_SUCCESS;
 }
 

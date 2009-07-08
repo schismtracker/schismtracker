@@ -156,13 +156,12 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (dwMemLength < 554) return false;
 
 		uint16_t tv;
-		SONGINSTRUMENT *zenv = new SONGINSTRUMENT;
+		SONGINSTRUMENT *zenv = csf_allocate_instrument();
 		if (!zenv) return false;
-		memset(zenv, 0, sizeof(SONGINSTRUMENT));
 		memcpy(&tv, lpStream+0x1C, 2); /* trkvers */
 		tv = bswapLE16(tv);
 		if (!it_instr_to_mpt(lpStream, zenv, tv)) {
-			delete zenv;
+			csf_free_instrument(zenv);
 			return false;
 		}
 
@@ -179,7 +178,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 		song_title[26] = 0;
 
 		if (q+(80*expect_samples) >= dwMemLength) {
-			delete zenv;
+			csf_free_instrument(zenv);
 			return false;
 		}
 
@@ -403,10 +402,9 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		if ((inspos[nins] > 0) && (inspos[nins] < dwMemLength - sizeof(ITOLDINSTRUMENT)))
 		{
-			SONGINSTRUMENT *penv = new SONGINSTRUMENT;
+			SONGINSTRUMENT *penv = csf_allocate_instrument();
 			if (!penv) continue;
 			Instruments[nins+1] = penv;
-			memset(penv, 0, sizeof(SONGINSTRUMENT));
 			it_instr_to_mpt(lpStream + inspos[nins], penv, pifh.cmwt);
 		}
 	}
