@@ -1,0 +1,134 @@
+|                               ‹†††††††††††††††Š
+|                               „  MIDI Output  ‘
+|                               ‰–
+|
+| MIDI output causes MIDI data to be sent to all enabled output ports on the
+| MIDI configuration page (Shift-F1) whenever the player sees an event.
+|
+| The data actually sent is the result of a macro configuration on the MIDI
+| Output page.
+|
+| Each event is described below:
+|
+|     MIDI Start  Â Player begins
+|      MIDI Stop  Â Player stops playing
+|      MIDI Tick  Â Every row(?)
+|        Note On  Â Every note recorded
+|       Note Off  Â Every note off (including NNA note-off)
+|  Change Volume  Â Volume change (more like aftertouch)
+|    Bank Select  Â Bank change
+| Program Change  Â Program change
+|      SF0 - SFF  Â When a Z00-Z7F is seen in the same IT-channel
+|      Z80 - Z8F  Â When played
+|
+| These events are written in UPPERCASE hexadecimal, with LOWERCASE variable
+| substitution. The variables are:
+|
+|              a  Â Coarse bank/change (only available on Bank Select)
+|              b  Â Fine bank/change (only available on Bank Select)
+|              c  Â Selected MIDI channel
+|              n  Â Selected MIDI note (Note On events only)
+|              p  Â Program setting (Program Change events only)
+|              v  Â Velocity (initial volume)
+|              u  Â Current volume
+|              x  Â Set Panning
+|              y  Â Calculated Panning (includes panning envelope)
+|              z  Â MIDI Macro (Z00-Z7F commands)
+|
+| MIDI messages are normally three-bytes (except for System Exclusive
+| messages). A new "message" begins with a byte having it's high-bit set.
+| This means that the first byte is going to be between 0x80 and 0xFF.
+|
+| System Exclusive (SysEx) messages begin with a 0xF0 and end with a 0xF7
+| byte. Schism/Impulse Tracker the following SysEx messages internally:
+|
+| F0 F0 00 qq F7  Â Set the current filter cutoff point to be qq
+| F0 F0 01 qq F7  Â Set the current filter resonance to be qq
+|
+| You'll generally need the programming guide for your MIDI synthesizers to
+| come up with useful values. You do not have to include the F7 as Schism
+| Tracker will automatically terminate SysEx messages.
+|
+| Other MIDI messages include:
+|         8c n v  Â Note-off for channel "c", note "n"
+|         9c n v  Â Note-on for channel "c", note "n", velocity "v"
+|         Ac n v  Â Aftertouch (adjust velocity)
+|         Bc q z  Â Set MIDI controller "q" on channel "c", to value "z"
+|         Cc p    Â Program change channel "c" to "p"
+|         Dc z    Â Set total key pressure to "z"
+|         Ec q q  Â Pitch Wheel; q q is a 14-bit value.
+|         F8      Â MIDI "Clock" operation
+|         FA      Â Start MIDI
+|         FB      Â Continue MIDI
+|         FC      Â Stop MIDI
+|         FF      Â Reset
+|
+| There are other MIDI messages, but they are unlikely to be useful with
+| Impulse or Schism Tracker.
+|
+| Nevertheless, your programming guide will be authoritative.
+| 
+|
+| Controllers (Bc q z) are reasonably common. They generally come in two
+| flavors: a "coarse" or "high byte" setting, and "fine" or "low byte"
+| setting. If a listed controller only comes in one kind, the values will be
+| listed only for coarse adjustment.
+|
+| The names listed below are likely to be similar to the names on your
+| synthesizer.
+|
+| Coarse  Fine   Description
+| 
+|  00      20    Bank Select
+|  01      21    Modulation Wheel (MOD Wheel)
+|  02      22    Breath Controller
+|  04      24    Foot Pedal
+|  05      25    Portamento Time
+|  06      26    Data Entry/Slider
+|  07      27    Volume
+|  08      28    Balance/Panning
+|  0A      2A    Panning Position
+|  0B      2B    (Volume) Expression
+|  0C      2C    Effect Control 1
+|  0D      2D    Effect Control 2
+|  10            General Purpose Slider 1
+|  11            General Purpose Slider 2
+|  12            General Purpose Slider 3
+|  13            General Purpose Slider 4
+|  40            Hold Pedal
+|  41            Portamento On/Off
+|  42            Sustenuto
+|  43            Soft Pedal
+|  44            Legato Pedal
+|  45            Hold 2 Pedal
+|  46            Sound Variation
+|  47            Sound Timbre
+|  48            Sound Release Time
+|  49            Sound Attack Time
+|  4A            Sound Brightness
+|  4B            Sound Control 6
+|  4C            Sound Control 7
+|  4D            Sound Control 8
+|  4E            Sound Control 9
+|  4F            Sound Control 10
+|  50            General Purpose Button 1
+|  51            General Purpose Button 2
+|  52            General Purpose Button 3
+|  53            General Purpose Button 4
+|  5B            Effects Level
+|  5C            Tremulo Level
+|  5D            Chorus Level
+|  5E            Celeste Level
+|  5F            Phaser Level
+|  60            Data Button Increment
+|  61            Data Button Descrement
+|  63      62    Non-Registered Parameter Number (NRPN)
+|  65      64    Registered Parameter Number (RPN)
+|  78            All Sound Off
+|  79            All Controllers Off
+|  7A            Local Keyboard On/Off
+|  7B            All Notes Off
+|  7C            Omni Mode Off
+|  7D            Omni Mode On
+|  7E            Monophonic Operation
+|  7F            Polyphonic Operation
