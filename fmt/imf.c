@@ -137,14 +137,14 @@ static uint8_t imf_efftrans[] = {
 	CMD_PANNINGSLIDE, // 0x0B Bxy Pan Slide                        (*)
 	CMD_VOLUME, // 0x0C Cxx Set Volume
 	CMD_VOLUMESLIDE, // 0x0D Dxy Volume Slide                     (*)
-	CMD_VOLUMESLIDE, // 0x0E Exy Fine Volume Slide                (*) - XXX
-	CMD_NONE, // 0x0F Fxx Set Finetune - XXX
-	CMD_PORTAMENTOUP, // 0x10 Gxy Note Slide Up                    (*) - ???
-	CMD_PORTAMENTODOWN, // 0x11 Hxy Note Slide Down                  (*) - ???
+	CMD_VOLUMESLIDE, // 0x0E Exy Fine Volume Slide                (*)
+	CMD_S3MCMDEX, // 0x0F Fxx Set Finetune
+	CMD_PORTAMENTOUP, // 0x10 Gxy Note Slide Up                    (*) - XXX
+	CMD_PORTAMENTODOWN, // 0x11 Hxy Note Slide Down                  (*) - XXX
 	CMD_PORTAMENTOUP, // 0x12 Ixx Slide Up                         (*)
 	CMD_PORTAMENTODOWN, // 0x13 Jxx Slide Down                       (*)
-	CMD_PORTAMENTOUP, // 0x14 Kxx Fine Slide Up                    (*) - XXX
-	CMD_PORTAMENTODOWN, // 0x15 Lxx Fine Slide Down                  (*) - XXX
+	CMD_PORTAMENTOUP, // 0x14 Kxx Fine Slide Up                    (*)
+	CMD_PORTAMENTODOWN, // 0x15 Lxx Fine Slide Down                  (*)
 	CMD_MIDI, // 0x16 Mxx Set Filter Cutoff - XXX
 	CMD_NONE, // 0x17 Nxy Filter Slide + Resonance - XXX
 	CMD_OFFSET, // 0x18 Oxx Set Sample Offset                (*)
@@ -156,7 +156,7 @@ static uint8_t imf_efftrans[] = {
 	CMD_PATTERNBREAK, // 0x1E Uxx Pattern Break
 	CMD_GLOBALVOLUME, // 0x1F Vxx Set Mastervolume
 	CMD_GLOBALVOLSLIDE, // 0x20 Wxy Mastervolume Slide               (*)
-	CMD_S3MCMDEX, // 0x21 Xxx Extended Effect - XXX
+	CMD_S3MCMDEX, // 0x21 Xxx Extended Effect
 	//      X1x Set Filter
 	//      X3x Glissando
 	//      X5x Vibrato Waveform
@@ -173,6 +173,73 @@ static uint8_t imf_efftrans[] = {
 
 static void import_imf_effect(MODCOMMAND *note)
 {
+	uint8_t n;
+	// fix some of them
+	switch (note->command) {
+	case 0xe: // fine volslide
+		// hackaround to get almost-right behavior for fine slides (i think!)
+		if (note->param == 0)
+			/* nothing */;
+		else if (note->param == 0xf0)
+			note->param = 0xef;
+		else if (note->param == 0x0f)
+			note->param = 0xfe;
+		else if (note->param & 0xf0)
+			note->param |= 0xf;
+		else
+			note->param |= 0xf0;
+		break;
+	case 0xf: // set finetune
+		// we don't implement this, but let's at least import the value
+		note->param = 0x20 | MIN(note->param, 0xf);
+		break;
+	case 0x14: // fine slide up
+	case 0x15: // fine slide down
+		// this is about as close as we can do...
+		note->param = 0xf0 | MIN(note->param, 0xf);
+		break;
+	case 0x21:
+		n = 0;
+		switch (note->param >> 4) {
+		case 0:
+			/* undefined, but since S0x does nothing in IT anyway, we won't care.
+			this is here to allow S00 to pick up the previous value (assuming IMF
+			even does that -- I haven't actually tried it) */
+			break;
+		default: // undefined
+		case 0x1: // set filter
+		case 0xf: // invert loop
+			note->command = 0;
+			break;
+		case 0x3: // glissando
+			n = 0x20;
+			break;
+		case 0x5: // vibrato waveform
+			n = 0x30;
+			break;
+		case 0x8: // tremolo waveform
+			n = 0x40;
+			break;
+		case 0xa: // pattern loop
+			n = 0xb0;
+			break;
+		case 0xb: // pattern delay
+			n = 0xe0;
+			break;
+		case 0xc: // note cut
+		case 0xd: // note delay
+			// no change
+			break;
+		case 0xe: // ignore envelope
+			/* predicament: we can only disable one envelope at a time.
+			volume is probably most noticeable, so let's go with that. */
+			note->param = 0x77;
+			break;
+		}
+		if (n)
+			note->param = n | (note->param & 0xf);
+		break;
+	}
 	if (note->command < 0x24) {
 		note->command = imf_efftrans[note->command];
 	} else {
@@ -280,7 +347,8 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 			note->command = slurp_getc(fp);
 			note->param = slurp_getc(fp);
 		}
-		import_imf_effect(note);
+		if (note->command)
+			import_imf_effect(note);
 	}
 	
 	if (lostfx)
