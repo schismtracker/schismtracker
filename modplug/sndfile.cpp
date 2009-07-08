@@ -44,7 +44,6 @@ static void _csf_reset(CSoundFile *csf)
 	csf->m_nCurrentPattern = 0;
 	csf->m_nCurrentOrder = 0;
 	csf->m_nProcessOrder = 0;
-	csf->m_nRestartPos = 0;
 	csf->m_nSongPreAmp = 0x30;
 	csf->m_lpszSongComments = NULL;
 
@@ -177,10 +176,6 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nRowCount = 1;
 	m_nRow = 0;
 	m_nProcessRow = 0xfffe;
-
-	// FIXME get rid of restart pos altogether, it's dumb
-	if ((m_nRestartPos >= MAX_ORDERS) || (Orderlist[m_nRestartPos] >= MAX_PATTERNS))
-		m_nRestartPos = 0;
 
 	for (unsigned int n = 1; n <= this->m_nInstruments; n++) {
 		SONGINSTRUMENT *ins = this->Instruments[n];

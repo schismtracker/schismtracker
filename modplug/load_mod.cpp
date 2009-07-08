@@ -140,9 +140,9 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	}
 	for (uint32_t iend=norders; iend<MAX_ORDERS; iend++) Orderlist[iend] = 0xFF;
 	norders--;
-	m_nRestartPos = pMagic->nRestartPos;
-	if (m_nRestartPos >= 0x78) m_nRestartPos = 0;
-	if (m_nRestartPos + 1 >= (uint32_t)norders) m_nRestartPos = 0;
+	//m_nRestartPos = pMagic->nRestartPos;
+	//if (m_nRestartPos >= 0x78) m_nRestartPos = 0;
+	//if (m_nRestartPos + 1 >= (uint32_t)norders) m_nRestartPos = 0;
 	if (!nbp) return false;
 	uint32_t dwWowTest = dwTotalSampleLen+dwMemPos;
 	if ((IsMagic(pMagic->Magic, "M.K.")) && (dwWowTest + nbp*8*256 == dwMemLength)) m_nChannels = 8;
@@ -297,7 +297,8 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 		if ((Orderlist[iord] < 0x80) && (nbp<=Orderlist[iord])) nbp = Orderlist[iord]+1;
 	}
 	bTab[0] = norders;
-	bTab[1] = m_nRestartPos;
+	bTab[1] = 0xff;
+	//bTab[1] = m_nRestartPos;
 	fp->o(fp, (const unsigned char *)bTab, 2);
 	// Writing pattern list
 	if (norders) memcpy(ord, Orderlist, norders);

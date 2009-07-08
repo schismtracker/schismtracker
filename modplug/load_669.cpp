@@ -92,8 +92,8 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_lpszSongComments[112] = 0;
 	// Reading Orders
 	memcpy(Orderlist, pfh->orders, 128);
-	m_nRestartPos = pfh->restartpos;
-	if (Orderlist[m_nRestartPos] >= pfh->patterns) m_nRestartPos = 0;
+	//m_nRestartPos = pfh->restartpos;
+	//if (Orderlist[m_nRestartPos] >= pfh->patterns) m_nRestartPos = 0;
 	// Reading Pattern Break Locations
 	for (uint32_t npan=0; npan<8; npan++)
 	{
