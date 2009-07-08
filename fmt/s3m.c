@@ -66,7 +66,10 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	uint32_t para_sdata[256] = { 0 };
 	SONGSAMPLE *sample;
 	uint16_t trkvers;
+	uint16_t flags;
+	uint16_t special;
 	uint32_t adlib = 0; // bitset
+	int uc;
         const char *tid = NULL;
 
 	/* check the tag */
@@ -96,7 +99,8 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	npat = MIN(npat, MAX_PATTERNS);
 
 	song->m_dwSongFlags = SONG_ITOLDEFFECTS;
-	slurp_read(fp, &tmp, 2);  /* flags (don't really care) */
+	slurp_read(fp, &flags, 2);  /* flags (don't really care) */
+	flags = bswapLE16(flags);
 	slurp_read(fp, &trkvers, 2);
 	trkvers = bswapLE16(trkvers);
 	slurp_read(fp, &tmp, 2);  /* file format info */
@@ -114,13 +118,14 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	} else {
 		song->m_dwSongFlags |= SONG_NOSTEREO;
 	}
-	slurp_getc(fp); /* ultraclick removal (useless) */
+	uc = slurp_getc(fp); /* ultraclick removal (useless) */
 
 	if (slurp_getc(fp) != 0xfc)
 		bleh &= ~2;     /* stored pan values */
 
-	/* the rest of the header is pretty much irrelevant... */
-	slurp_seek(fp, 64, SEEK_SET);
+	slurp_seek(fp, 8, SEEK_CUR); // 8 unused bytes (XXX what do programs actually write for these?)
+	slurp_read(fp, &special, 2); // field not used by st3
+	special = bswapLE16(special);
 
 	/* channel settings */
 	for (n = 0; n < 32; n++) {
@@ -310,6 +315,17 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		}
 	}
 
+	/* MPT identifies as ST3.20 in the trkvers field, but it puts zeroes for the 'special' field, only ever
+	 * sets flags 0x10 and 0x40, writes multiples of 16 orders, and writes zero into the ultraclick removal
+	 * field. (ST3 always puts either 8, 12, or 16 there) */
+	if (trkvers == 0x1320) {
+		if (special == 0 && uc == 0 && (flags & ~0x50) == 0 && (nord % 16) == 0) {
+			tid = "Modplug Tracker";
+		} else if (uc != 8 && uc != 12 && uc != 16) {
+			// sure isn't scream tracker
+			tid = "Unknown tracker";
+		}
+	}
 	if (!tid) {
 		switch (trkvers >> 12) {
 		case 1:
