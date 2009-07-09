@@ -369,7 +369,7 @@ static unsigned int envflags[3][3] = {
 
 static void load_imf_envelope(SONGINSTRUMENT *ins, INSTRUMENTENVELOPE *env, struct imf_instrument *imfins, int e)
 {
-	int n;
+	int n, t, v;
 	int min = 0; // minimum tick value for next node
 	int shift = (e == IMF_ENV_VOL ? 0 : 2);
 
@@ -379,9 +379,11 @@ static void load_imf_envelope(SONGINSTRUMENT *ins, INSTRUMENTENVELOPE *env, stru
 	env->nSustainStart = env->nSustainEnd = imfins->env[e].sustain;
 
 	for (n = 0; n < env->nNodes; n++) {
-		env->Ticks[n] = MAX(min, imfins->nodes[e][n].tick);
-		env->Values[n] = MIN(imfins->nodes[e][n].value >> shift, 64);
-		min = env->Ticks[n] + 1;
+		t = bswapLE16(imfins->nodes[e][n].tick);
+		v = bswapLE16(imfins->nodes[e][n].value) >> shift;
+		env->Ticks[n] = MAX(min, t);
+		env->Values[n] = v = MIN(v, 64);
+		min = v + 1;
 	}
 	// this would be less retarded if the envelopes all had their own flags...
 	if (imfins->env[e].flags & 1)
@@ -401,8 +403,11 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 	int firstsample = 1; // first sample for the current instrument
 	uint32_t ignore_channels = 0; /* bit set for each channel that's completely disabled */
 
-	/* TODO: endianness */
 	slurp_read(fp, &hdr, sizeof(hdr));
+	hdr.ordnum = bswapLE16(hdr.ordnum);
+	hdr.patnum = bswapLE16(hdr.patnum);
+	hdr.insnum = bswapLE16(hdr.insnum);
+	hdr.flags = bswapLE16(hdr.flags);
 
 	if (memcmp(hdr.im10, "IM10", 4) != 0)
 		return LOAD_UNSUPPORTED;
@@ -452,6 +457,9 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 		SONGINSTRUMENT *ins;
 		slurp_read(fp, &imfins, sizeof(imfins));
 
+		imfins.smpnum = bswapLE16(imfins.smpnum);
+		imfins.fadeout = bswapLE16(imfins.fadeout);
+
 		if (memcmp(imfins.ii10, "II10", 4) != 0) {
 			printf("ii10 says %02x %02x %02x %02x!\n",
 				imfins.ii10[0], imfins.ii10[1], imfins.ii10[2], imfins.ii10[3]);
@@ -487,7 +495,6 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 		load_imf_envelope(ins, &ins->PanEnv, &imfins, IMF_ENV_PAN);
 		load_imf_envelope(ins, &ins->PitchEnv, &imfins, IMF_ENV_FILTER);
 
-		imfins.smpnum = bswapLE16(imfins.smpnum);
 		for (s = 0; s < imfins.smpnum; s++) {
 			struct imf_sample imfsmp;
 			uint32_t blen;
