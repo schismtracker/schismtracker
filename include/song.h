@@ -638,6 +638,19 @@ void song_flip_stereo(void);
 int song_get_surround(void);
 void song_set_surround(int on);
 
+/* for the orderpan page */
+enum {
+	PANS_STEREO,
+	PANS_AMIGA,
+	PANS_LEFT,
+	PANS_RIGHT,
+	PANS_MONO,
+	PANS_SLASH,
+	PANS_BACKSLASH,
+//	PANS_CROSS,
+};
+void song_set_pan_scheme(int scheme);
+
 /* actually from sndfile.h */
 #define SCHISM_MAX_SAMPLES	200
 #define SCHISM_MAX_INSTRUMENTS	SCHISM_MAX_SAMPLES
@@ -649,3 +662,4 @@ void song_set_surround(int on);
 #endif
 
 #endif /* ! SONG_H */
+
