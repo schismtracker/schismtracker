@@ -23,6 +23,7 @@
 #define NEED_BYTESWAP
 #include "headers.h"
 #include "slurp.h"
+#include "it.h" /* for log_appendf */
 #include "fmt.h"
 
 #include "sndfile.h"
@@ -198,6 +199,9 @@ static void import_imf_effect(MODCOMMAND *note)
 		// this is about as close as we can do...
 		note->param = 0xf0 | MIN(note->param, 0xf);
 		break;
+	case 0x1f: // set global volume
+		note->param = MIN(note->param << 1, 0xff);
+		break;
 	case 0x21:
 		n = 0;
 		switch (note->param >> 4) {
@@ -240,12 +244,7 @@ static void import_imf_effect(MODCOMMAND *note)
 			note->param = n | (note->param & 0xf);
 		break;
 	}
-	if (note->command < 0x24) {
-		note->command = imf_efftrans[note->command];
-	} else {
-		printf("warning: stray effect %x\n", note->command);
-		note->command = CMD_NONE;
-	}
+	note->command = (note->command < 0x24) ? imf_efftrans[note->command] : CMD_NONE;
 	if (note->command == CMD_VOLUME && note->volcmd == VOLCMD_NONE) {
 		note->volcmd = VOLCMD_VOLUME;
 		note->vol = note->param;
@@ -257,7 +256,7 @@ static void import_imf_effect(MODCOMMAND *note)
 static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels, slurp_t *fp)
 {
 	uint16_t length, nrows;
-	uint8_t status, channel;
+	uint8_t mask, channel;
 	int row, startpos;
 	unsigned int lostfx = 0;
 	MODCOMMAND *row_data, *note, junk_note;
@@ -274,25 +273,25 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 	
 	row = 0;
 	while (row < nrows) {
-		status = slurp_getc(fp);
-		if (status == 0) {
+		mask = slurp_getc(fp);
+		if (mask == 0) {
 			row++;
 			row_data += MAX_CHANNELS;
 			continue;
 		}
 		
-		channel = status & 0x1f;
+		channel = mask & 0x1f;
 		
 		if (ignore_channels & (1 << channel)) {
 			/* should do this better, i.e. not go through the whole process of deciding
 			what to do with the effects since they're just being thrown out */
-			printf("warning: disabled channel contains data\n");
+			//printf("disabled channel %d contains data\n", channel + 1);
 			note = &junk_note;
 		} else {
 			note = row_data + channel;
 		}
 		
-		if (status & 0x20) {
+		if (mask & 0x20) {
 			/* read note/instrument */
 			note->note = slurp_getc(fp);
 			note->instr = slurp_getc(fp);
@@ -303,13 +302,13 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 			} else {
 				note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12 + 1;
 				if (!NOTE_IS_NOTE(note->note)) {
-					printf("%d.%d.%d: funny note 0x%02x\n",
-						pat, row, channel, fp->data[fp->pos - 1]);
+					//printf("%d.%d.%d: funny note 0x%02x\n",
+					//	pat, row, channel, fp->data[fp->pos - 1]);
 					note->note = NOTE_NONE;
 				}
 			}
 		}
-		if ((status & 0xc0) == 0xc0) {
+		if ((mask & 0xc0) == 0xc0) {
 			uint8_t e1c, e1d, e2c, e2d;
 			
 			/* read both effects and figure out what to do with them */
@@ -345,7 +344,7 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 				note->command = e2c;
 				note->param = e2d;
 			}
-		} else if (status & 0xc0) {
+		} else if (mask & 0xc0) {
 			/* there's one effect, just stick it in the effect column */
 			note->command = slurp_getc(fp);
 			note->param = slurp_getc(fp);
@@ -355,9 +354,7 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 	}
 	
 	if (lostfx)
-		printf("warning: %d effect%s skipped\n", lostfx, lostfx == 1 ? "" : "s");
-	if (slurp_tell(fp) - startpos != length)
-		printf("warning: expected %d bytes, but read %ld bytes\n", length, slurp_tell(fp) - startpos);
+		log_appendf(2, "Pattern %d: %d effect%s skipped!\n", pat, lostfx, lostfx == 1 ? "" : "s");
 }
 
 
@@ -414,6 +411,7 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 	memcpy(song->song_title, hdr.title, 25);
 	song->song_title[25] = 0;
+	strcpy(song->tracker_id, "Imago Orpheus");
 	
 	if (hdr.flags & 1)
 		song->m_dwSongFlags |= SONG_LINEARSLIDES;
@@ -438,7 +436,7 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 			ignore_channels |= (1 << n);
 			break;
 		default: /* uhhhh.... freak out */
-			fprintf(stderr, "imf: channel %d has unknown status %d\n", n, hdr.channels[n].status);
+			//fprintf(stderr, "imf: channel %d has unknown status %d\n", n, hdr.channels[n].status);
 			return LOAD_FORMAT_ERROR;
 		}
 	}
@@ -461,8 +459,8 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 		imfins.fadeout = bswapLE16(imfins.fadeout);
 
 		if (memcmp(imfins.ii10, "II10", 4) != 0) {
-			printf("ii10 says %02x %02x %02x %02x!\n",
-				imfins.ii10[0], imfins.ii10[1], imfins.ii10[2], imfins.ii10[3]);
+			//printf("ii10 says %02x %02x %02x %02x!\n",
+			//	imfins.ii10[0], imfins.ii10[1], imfins.ii10[2], imfins.ii10[3]);
 			return LOAD_FORMAT_ERROR;
 		}
 		
@@ -501,8 +499,8 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 			slurp_read(fp, &imfsmp, sizeof(imfsmp));
 			
 			if (memcmp(imfsmp.is10, "IS10", 4) != 0) {
-				printf("is10 says %02x %02x %02x %02x!\n",
-					imfsmp.is10[0], imfsmp.is10[1], imfsmp.is10[2], imfsmp.is10[3]);
+				//printf("is10 says %02x %02x %02x %02x!\n",
+				//	imfsmp.is10[0], imfsmp.is10[1], imfsmp.is10[2], imfsmp.is10[3]);
 				return LOAD_FORMAT_ERROR;
 			}
 			
