@@ -75,7 +75,7 @@ struct imf_header {
 enum {
 	IMF_ENV_VOL = 0,
 	IMF_ENV_PAN = 1,
-	IMF_ENV_PITCH = 2,
+	IMF_ENV_FILTER = 2,
 };
 
 struct imf_env {
@@ -300,10 +300,13 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 				note->note = NOTE_OFF; /* ??? */
 			} else if (note->note == 255) {
 				note->note = NOTE_NONE; /* ??? */
-			} else if (note->note == 0 || note->note > NOTE_LAST) {
-				printf("%d.%d.%d: funny note %d\n", pat, row, channel, note->note);
 			} else {
-				note->note++;
+				note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12 + 1;
+				if (!NOTE_IS_NOTE(note->note)) {
+					printf("%d.%d.%d: funny note 0x%02x\n",
+						pat, row, channel, fp->data[fp->pos - 1]);
+					note = NOTE_NONE;
+				}
 			}
 		}
 		if ((status & 0xc0) == 0xc0) {
@@ -359,16 +362,16 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 
 
 static unsigned int envflags[3][3] = {
-	{ENV_VOLUME,  ENV_VOLSUSTAIN,   ENV_VOLLOOP},
-	{ENV_PANNING, ENV_PANSUSTAIN,   ENV_PANLOOP},
-	{ENV_PITCH,   ENV_PITCHSUSTAIN, ENV_PITCHLOOP},
+	{ENV_VOLUME,             ENV_VOLSUSTAIN,   ENV_VOLLOOP},
+	{ENV_PANNING,            ENV_PANSUSTAIN,   ENV_PANLOOP},
+	{ENV_PITCH | ENV_FILTER, ENV_PITCHSUSTAIN, ENV_PITCHLOOP},
 };
 
-// guessing all of this
 static void load_imf_envelope(SONGINSTRUMENT *ins, INSTRUMENTENVELOPE *env, struct imf_instrument *imfins, int e)
 {
 	int n;
 	int min = 0; // minimum tick value for next node
+	int shift = (e == IMF_ENV_VOL ? 0 : 2);
 
 	env->nNodes = CLAMP(imfins->env[e].points, 2, 25);
 	env->nLoopStart = imfins->env[e].loop_start;
@@ -377,7 +380,7 @@ static void load_imf_envelope(SONGINSTRUMENT *ins, INSTRUMENTENVELOPE *env, stru
 
 	for (n = 0; n < env->nNodes; n++) {
 		env->Ticks[n] = MAX(min, imfins->nodes[e][n].tick);
-		env->Values[n] = MIN(imfins->nodes[e][n].value, 64);
+		env->Values[n] = MIN(imfins->nodes[e][n].value >> shift, 64);
 		min = env->Ticks[n] + 1;
 	}
 	// this would be less retarded if the envelopes all had their own flags...
@@ -480,7 +483,7 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 		load_imf_envelope(ins, &ins->VolEnv, &imfins, IMF_ENV_VOL);
 		load_imf_envelope(ins, &ins->PanEnv, &imfins, IMF_ENV_PAN);
-		load_imf_envelope(ins, &ins->PitchEnv, &imfins, IMF_ENV_PITCH);
+		load_imf_envelope(ins, &ins->PitchEnv, &imfins, IMF_ENV_FILTER);
 
 		imfins.smpnum = bswapLE16(imfins.smpnum);
 		for (s = 0; s < imfins.smpnum; s++) {
