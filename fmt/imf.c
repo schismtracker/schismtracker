@@ -462,9 +462,11 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 		strncpy(ins->name, imfins.name, 25);
 		ins->name[25] = 0;
 
-		for (s = 0; s < 120; s++) {
-			ins->NoteMap[s] = s + 1;
-			ins->Keyboard[s] = firstsample + imfins.map[s];
+		if (imfins.smpnum) {
+			for (s = 0; s < 120; s++) {
+				ins->NoteMap[s] = s + 1;
+				ins->Keyboard[s] = firstsample + imfins.map[s];
+			}
 		}
 
 		/* Fadeout:
@@ -519,7 +521,9 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 			if (imfsmp.flags & 8)
 				sample->uFlags |= CHN_PANNING;
 			
-			if (lflags & LOAD_NOSAMPLES) {
+			if (!blen) {
+				/* leave it blank */
+			} else if (lflags & LOAD_NOSAMPLES) {
 				slurp_seek(fp, blen, SEEK_CUR);
 			} else {
 				sample->pSample = csf_allocate_sample(blen);
