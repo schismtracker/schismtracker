@@ -305,7 +305,7 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 				if (!NOTE_IS_NOTE(note->note)) {
 					printf("%d.%d.%d: funny note 0x%02x\n",
 						pat, row, channel, fp->data[fp->pos - 1]);
-					note = NOTE_NONE;
+					note->note = NOTE_NONE;
 				}
 			}
 		}
