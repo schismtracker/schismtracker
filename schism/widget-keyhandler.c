@@ -22,6 +22,7 @@
 
 #include "headers.h"
 
+#include "song.h"
 #include "clippy.h"
 
 /* --------------------------------------------------------------------- */
@@ -763,38 +764,89 @@ int widget_handle_key(struct key_event * k)
 		break;
 	case SDLK_l:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR && NO_MODIFIER(k->mod)) {
-			widget->d.panbar.muted = 0;
-			widget->d.panbar.surround = 0;
-			numentry_change_value(widget, 0);
-			return 1;
+		if (current_type == WIDGET_PANBAR) {
+			if (k->mod & KMOD_ALT) {
+				song_set_pan_scheme(PANS_LEFT);
+				return 1;
+			} else if (NO_MODIFIER(k->mod)) {
+				widget->d.panbar.muted = 0;
+				widget->d.panbar.surround = 0;
+				numentry_change_value(widget, 0);
+				return 1;
+			}
 		}
 		break;
 	case SDLK_m:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR && NO_MODIFIER(k->mod)) {
-			widget->d.panbar.muted = 0;
-			widget->d.panbar.surround = 0;
-			numentry_change_value(widget, 32);
-			return 1;
+		if (current_type == WIDGET_PANBAR) {
+			if (k->mod & KMOD_ALT) {
+				song_set_pan_scheme(PANS_MONO);
+				return 1;
+			} else if (NO_MODIFIER(k->mod)) {
+				widget->d.panbar.muted = 0;
+				widget->d.panbar.surround = 0;
+				numentry_change_value(widget, 32);
+				return 1;
+			}
 		}
 		break;
 	case SDLK_r:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR && NO_MODIFIER(k->mod)) {
-			widget->d.panbar.muted = 0;
-			widget->d.panbar.surround = 0;
-			numentry_change_value(widget, 64);
-			return 1;
+		if (current_type == WIDGET_PANBAR) {
+			if (k->mod & KMOD_ALT) {
+				song_set_pan_scheme(PANS_RIGHT);
+				return 1;
+			} else if (NO_MODIFIER(k->mod)) {
+				widget->d.panbar.muted = 0;
+				widget->d.panbar.surround = 0;
+				numentry_change_value(widget, 64);
+				return 1;
+			}
 		}
 		break;
 	case SDLK_s:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR && NO_MODIFIER(k->mod)) {
-			widget->d.panbar.muted = 0;
-			widget->d.panbar.surround = 1;
-			if (widget->changed) widget->changed();
-			status.flags |= NEED_UPDATE;
+		if (current_type == WIDGET_PANBAR) {
+			if (k->mod & KMOD_ALT) {
+				song_set_pan_scheme(PANS_STEREO);
+				return 1;
+			} else if(NO_MODIFIER(k->mod)) {
+				widget->d.panbar.muted = 0;
+				widget->d.panbar.surround = 1;
+				if (widget->changed) widget->changed();
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
+		}
+		break;
+	case SDLK_a:
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
+			song_set_pan_scheme(PANS_AMIGA);
+			return 1;
+		}
+		break;
+#if 0
+	case SDLK_x:
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
+			song_set_pan_scheme(PANS_CROSS);
+			return 1;
+		}
+		break;
+#endif
+	case SDLK_SLASH:
+	case SDLK_KP_DIVIDE:
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
+			song_set_pan_scheme(PANS_SLASH);
+			return 1;
+		}
+		break;
+	case SDLK_BACKSLASH:
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
+			song_set_pan_scheme(PANS_BACKSLASH);
 			return 1;
 		}
 		break;
@@ -836,3 +888,4 @@ int widget_handle_key(struct key_event * k)
 	/* if we got down here the key wasn't handled */
 	return 0;
 }
+

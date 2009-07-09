@@ -966,3 +966,109 @@ void ordervol_load_page(struct page *page)
         }
         create_thumbbar(widgets_ordervol + 64, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
 }
+
+/* --------------------------------------------------------------------- */
+/* this function is a lost little puppy */
+
+#define MAX_CHANNELS 64 // blah
+void song_set_pan_scheme(int scheme)
+{
+	int n, nc;
+	//int half;
+	int active = 0;
+	song_channel *chn = song_get_channel(0);
+	
+	//mphack alert, all pan values multiplied by 4
+	switch (scheme) {
+	case PANS_STEREO:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE))
+				chn[n].panning = (n & 1) ? 256 : 0;
+		}
+		break;
+	case PANS_AMIGA:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE))
+				chn[n].panning = ((n + 1) & 2) ? 256 : 0;
+		}
+		break;
+	case PANS_LEFT:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE))
+				chn[n].panning = 0;
+		}
+		break;
+	case PANS_RIGHT:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE))
+				chn[n].panning = 256;
+		}
+		break;
+	case PANS_MONO:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE))
+				chn[n].panning = 128;
+		}
+		break;
+	case PANS_SLASH:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE))
+				active++;
+		}
+		for (n = 0, nc = 0; nc < active; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) {
+				chn[n].panning = 256 - (256 * nc / (active - 1));
+				nc++;
+			}
+		}
+		break;
+	case PANS_BACKSLASH:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE))
+				active++;
+		}
+		for (n = 0, nc = 0; nc < active; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) {
+				chn[n].panning = (256 * nc / (active - 1));
+				nc++;
+			}
+		}
+		break;
+#if 0
+	case PANS_CROSS:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE))
+				active++;
+		}
+		half = active / 2;
+		for (n = 0, nc = 0; nc < half; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) {
+				if (nc & 1) {
+					// right bias - go from 64 to 32
+					chn[n].panning = (64 - (32 * nc / half)) * 4;
+				} else {
+					// left bias - go from 0 to 32
+					chn[n].panning = (32 * nc / half) * 4;
+				}
+				nc++;
+			}
+		}
+		for (; nc < active; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) {
+				if (nc & 1) {
+					chn[n].panning = (64 - (32 * (active - nc) / half)) * 4;
+				} else {
+					chn[n].panning = (32 * (active - nc) / half) * 4;
+				}
+				nc++;
+			}
+		}
+		break;
+#endif
+	default:
+		printf("oh i am confused\n");
+	}
+	// get the values on the page to correspond to the song...
+	order_pan_vol_song_changed_cb();
+}
+

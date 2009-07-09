@@ -20,6 +20,7 @@
 
 #include "headers.h"
 
+#include "song.h"
 #include "mplink.h"
 #include "slurp.h"
 #include "snd_fx.h"
