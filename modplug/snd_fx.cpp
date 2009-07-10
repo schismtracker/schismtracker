@@ -372,7 +372,7 @@ static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
 	//printf("Q%02X note=%02X tick%d  %d\n", param, pChn->nRowNote, m_nTickCount, pChn->nRetrigCount);
 	if ((csf->m_dwSongFlags & SONG_FIRSTTICK) && pChn->nRowNote != NOTE_NONE) {
 		pChn->nRetrigCount = param & 0xf;
-	} else if (!--pChn->nRetrigCount) {
+	} else if (--pChn->nRetrigCount <= 0) {
 		pChn->nRetrigCount = param & 0xf;
 		param >>= 4;
 		if (param) {
@@ -1548,12 +1548,12 @@ void csf_process_effects(CSoundFile *csf)
 					break;
 
 				case VOLCMD_FINEVOLUP:
-					if (csf->m_nTickCount == nStartTick)
+					if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick)
 						fx_volume_slide(csf->m_dwSongFlags, pChn, (vol << 4) | 0x0F);
 					break;
 
 				case VOLCMD_FINEVOLDOWN:
-					if (csf->m_nTickCount == nStartTick)
+					if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick)
 						fx_volume_slide(csf->m_dwSongFlags, pChn, 0xF0 | vol);
 					break;
 
