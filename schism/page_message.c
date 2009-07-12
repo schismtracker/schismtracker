@@ -35,6 +35,7 @@
 #include "clippy.h"
 
 #include <ctype.h>
+#include <assert.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -75,10 +76,7 @@ static int get_nth_line(char *text, int n, char **ptr)
 {
         char *tmp;
 
-        if (!text) {
-                *ptr = NULL;
-                return 0;
-        }
+	assert(text != NULL);
 
         *ptr = text;
         while (n > 0) {
@@ -159,7 +157,7 @@ static int message_add_char(int newchar, int position)
 {
         int len = strlen(message);
 
-        if (len == 8000) {
+        if (len == SCHISM_MAX_MESSAGE) {
                 dialog_create(DIALOG_OK, "  Song message too long!  ", NULL, NULL, 0, NULL);
                 return 0;
         }
@@ -401,7 +399,7 @@ static void message_delete_char(void)
                 return;
         memmove(message + cursor_pos - 1, message + cursor_pos,
                 len - cursor_pos + 1);
-        message[8000] = 0;
+        message[SCHISM_MAX_MESSAGE] = 0;
         cursor_pos--;
         if (cursor_char == 0) {
                 cursor_line--;
@@ -422,7 +420,7 @@ static void message_delete_next_char(void)
                 return;
         memmove(message + cursor_pos, message + cursor_pos + 1,
                 len - cursor_pos);
-        message[8000] = 0;
+        message[SCHISM_MAX_MESSAGE] = 0;
 
         status.flags |= NEED_UPDATE;
 }
@@ -546,7 +544,7 @@ static void _delete_selection(void)
                 return;
         memmove(message + cursor_pos, message + cursor_pos + eat + 1,
                 ((len - cursor_pos) - eat)+1);
-        message[8000] = 0;
+        message[SCHISM_MAX_MESSAGE] = 0;
 	set_absolute_position(message, cursor_pos, &cursor_line, &cursor_char);
         message_reposition();
 
@@ -788,7 +786,7 @@ static void song_changed_cb(void)
 	widgets_message[0].accept_text = 0;
         widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
         top_line = 0;
-        message = (char *)song_get_message();
+        message = song_get_message();
 
         len = get_nth_line(message, 0, &line);
         while (len >= 0) {
@@ -823,8 +821,6 @@ static void message_set_page(void)
 	}
 	if (status.flags & PLAIN_TEXTEDIT) {
 		message_set_editmode();
-	} else {
-		/* CHECK: did IT stay in edit mode on set-page? */
 	}
 }
 void message_load_page(struct page *page)

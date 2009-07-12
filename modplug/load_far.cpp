@@ -90,11 +90,9 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		uint32_t szLen = pmh1->stlen;
 		if (szLen > dwMemLength - dwMemPos) szLen = dwMemLength - dwMemPos;
-		if ((m_lpszSongComments = new char[szLen + 1]) != NULL)
-		{
-			memcpy(m_lpszSongComments, lpStream+dwMemPos, szLen);
-			m_lpszSongComments[szLen] = 0;
-		}
+		szLen = MIN(szLen, MAX_MESSAGE);
+		memcpy(m_lpszSongComments, lpStream+dwMemPos, szLen);
+		m_lpszSongComments[szLen] = 0;
 		dwMemPos += pmh1->stlen;
 	}
 	// Reading orders

@@ -698,9 +698,9 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
 		uint32_t annolen = bswapBE32(pmex->annolen);
 		if ((annotxt) && (annolen) && (annotxt+annolen <= dwMemLength))
 		{
-			m_lpszSongComments = new char[annolen+1];
-			memcpy(m_lpszSongComments, lpStream+annotxt, annolen);
-			m_lpszSongComments[annolen] = 0;
+			int len = MIN(annolen, MAX_MESSAGE);
+			memcpy(m_lpszSongComments, lpStream+annotxt, len);
+			m_lpszSongComments[len] = 0;
 		}
 		// Song Name
 		uint32_t songname = bswapBE32(pmex->songname);

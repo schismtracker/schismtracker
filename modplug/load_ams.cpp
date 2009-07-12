@@ -116,10 +116,9 @@ bool CSoundFile::ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength)
 	if (dwMemPos + tmp >= dwMemLength) return true;
 	if (tmp)
 	{
-		m_lpszSongComments = new char[tmp+1];  // changed from int8_t
-		if (!m_lpszSongComments) return true;
-		memset(m_lpszSongComments, 0, tmp+1);
-		memcpy(m_lpszSongComments, lpStream + dwMemPos, tmp);
+		int mlen = MIN(tmp, MAX_MESSAGE);
+		memcpy(m_lpszSongComments, lpStream + dwMemPos, mlen);
+		m_lpszSongComments[mlen] = 0;
 		dwMemPos += tmp;
 	}
 	// Read Order List
@@ -425,12 +424,9 @@ bool CSoundFile::ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength)
 		uint32_t composernamelen = lpStream[dwMemPos];
 		if (composernamelen)
 		{
-			m_lpszSongComments = new char[composernamelen+1]; // changed from int8_t
-			if (m_lpszSongComments)
-			{
-				memcpy(m_lpszSongComments, lpStream+dwMemPos+1, composernamelen);
-				m_lpszSongComments[composernamelen] = 0;
-			}
+			int mlen = MIN(composernamelen, MAX_MESSAGE);
+			memcpy(m_lpszSongComments, lpStream + dwMemPos, mlen);
+			m_lpszSongComments[mlen] = 0;
 		}
 		dwMemPos += composernamelen + 1;
 		// channel names

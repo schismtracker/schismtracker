@@ -61,17 +61,14 @@ bool CSoundFile::ReadUlt(const uint8_t *lpStream, uint32_t dwMemLength)
 	dwMemPos = sizeof(ULTHEADER);
 	if ((pmh->reserved) && (dwMemPos + pmh->reserved * 32 < dwMemLength))
 	{
-		uint32_t len = pmh->reserved * 32;
-		m_lpszSongComments = new char[len + 1 + pmh->reserved];
-		if (m_lpszSongComments)
-		{
-			for (uint32_t l=0; l<pmh->reserved; l++)
-			{
-				memcpy(m_lpszSongComments+l*33, lpStream+dwMemPos+l*32, 32);
-				m_lpszSongComments[l*33+32] = 0x0D;
-			}
-			m_lpszSongComments[len] = 0;
+		// terrible hackjob
+		uint32_t s, d, len = pmh->reserved * 32;
+		memset(m_lpszSongComments, 0, MAX_MESSAGE);
+		for (s = 0, d = 0; s < pmh->reserved && d < MAX_MESSAGE; s += 32, d += 33) {
+			memcpy(m_lpszSongComments + d, lpStream+dwMemPos + s, 32);
+			m_lpszSongComments[d + 32] = '\n';
 		}
+		m_lpszSongComments[MAX_MESSAGE] = 0;
 		dwMemPos += len;
 	}
 	if (dwMemPos >= dwMemLength) return true;

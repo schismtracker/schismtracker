@@ -323,12 +323,9 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading Song Message
 	if ((pifh.special & 0x01) && (pifh.msglength) && (pifh.msgoffset + pifh.msglength < dwMemLength))
 	{
-		m_lpszSongComments = new char[pifh.msglength+1];
-		if (m_lpszSongComments)
-		{
-			memcpy(m_lpszSongComments, lpStream+pifh.msgoffset, pifh.msglength);
-			m_lpszSongComments[pifh.msglength] = 0;
-		}
+		int len = MIN(MAX_MESSAGE, pifh.msglength);
+		memcpy(m_lpszSongComments, lpStream+pifh.msgoffset, len);
+		m_lpszSongComments[len] = 0;
 	}
 	// Reading orders
 	uint32_t nordsize = pifh.ordnum;

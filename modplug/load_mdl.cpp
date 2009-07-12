@@ -276,15 +276,10 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 			break;
 		// ME: song message
 		case 0x454D:
-			if (blocklen)
-			{
-				if (m_lpszSongComments) delete m_lpszSongComments;
-				m_lpszSongComments = new char[blocklen];
-				if (m_lpszSongComments)
-				{
-					memcpy(m_lpszSongComments, lpStream+dwMemPos, blocklen);
-					m_lpszSongComments[blocklen-1] = 0;
-				}
+			if (blocklen) {
+				int len = MIN(blocklen, 8000);
+				memcpy(m_lpszSongComments, lpStream+dwMemPos, len);
+				m_lpszSongComments[len-1] = 0;
 			}
 			break;
 		// PA: Pattern Data
