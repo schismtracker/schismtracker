@@ -457,35 +457,12 @@ void kbd_set_current_octave(int new_octave)
 
 inline int kbd_char_to_99(struct key_event *k)
 {
+	int c;
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	if (k->unicode == 'h' || k->unicode == 'H') return 10;
-	if (k->unicode == 'i' || k->unicode == 'I') return 11;
-	if (k->unicode == 'j' || k->unicode == 'J') return 12;
-	if (k->unicode == 'k' || k->unicode == 'K') return 13;
-	if (k->unicode == 'l' || k->unicode == 'L') return 14;
-	if (k->unicode == 'm' || k->unicode == 'M') return 15;
-	if (k->unicode == 'n' || k->unicode == 'N') return 16;
-	if (k->unicode == 'o' || k->unicode == 'O') return 17;
-	if (k->unicode == 'p' || k->unicode == 'P') return 18;
-	if (k->unicode == 'q' || k->unicode == 'Q') return 19;
-	if (k->unicode == 'r' || k->unicode == 'R') return 20;
-	
-	switch (k->sym) {
-	case SDLK_h: return 10;
-	case SDLK_i: return 11;
-	case SDLK_j: return 12;
-	case SDLK_k: return 13;
-	case SDLK_l: return 14;
-	case SDLK_m: return 15;
-	case SDLK_n: return 16;
-	case SDLK_o: return 17;
-	case SDLK_p: return 18;
-	case SDLK_q: return 19;
-	case SDLK_r: return 20;
-	default:
-		break;
-	};
+	c = tolower(k->unicode ?: k->sym);
+	if (c >= 'h' && c <= 'z')
+		return 10 + c - 'h';
 
 	return kbd_char_to_hex(k);
 

@@ -652,7 +652,7 @@ enum {
 void song_set_pan_scheme(int scheme);
 
 /* actually from sndfile.h */
-#define SCHISM_MAX_SAMPLES	240
+#define SCHISM_MAX_SAMPLES	236
 #define SCHISM_MAX_INSTRUMENTS	SCHISM_MAX_SAMPLES
 #define SCHISM_MAX_MESSAGE 8000
 
