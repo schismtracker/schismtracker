@@ -12,6 +12,7 @@
 // MIDI loader                              //
 //////////////////////////////////////////////
 #include "sndfile.h"
+#include "util.h"
 
 #define MIDI_DRUMCHANNEL	10
 #define MIDI_MAXTRACKS		64

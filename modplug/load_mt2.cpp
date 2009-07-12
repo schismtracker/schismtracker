@@ -1,5 +1,6 @@
 #include "sndfile.h"
 #include "snd_fx.h"
+#include "util.h"
 
 //#define MT2DEBUG
 
