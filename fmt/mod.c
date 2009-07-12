@@ -207,7 +207,8 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		song->Samples[n].nVolume = slurp_getc(fp);
 		if (song->Samples[n].nVolume > 64)
 			song->Samples[n].nVolume = 64;
-		if (!song->Samples[n].nLength && song->Samples[n].nVolume == 0)
+		//if (!song->Samples[n].nLength && song->Samples[n].nVolume == 0)
+		//	maybe_ft2 = 1;
 		song->Samples[n].nVolume *= 4; //mphack
 		song->Samples[n].nGlobalVol = 64;
 		
