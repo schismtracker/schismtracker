@@ -142,10 +142,10 @@ char *get_time_string(time_t when, char *buf)
 
 char *num99tostr(int n, char *buf)
 {
-	static const char *qv = "HIJKLMNOPQRS";
+	static const char *qv = "HIJKLMNOPQRSTUVWXYZ";
 	if (n < 100) {
 		sprintf(buf, "%02d", n);
-	} else if (n <= 200) {
+	} else if (n <= 256) {
 		n -= 100;
 		sprintf(buf, "%c%d", 
 			qv[(n/10)], (n % 10));

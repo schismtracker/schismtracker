@@ -25,7 +25,7 @@
 #define MAX_SAMPLE_RATE         192000
 #define MAX_ORDERS              256
 #define MAX_PATTERNS            240
-#define MAX_SAMPLES             240
+#define MAX_SAMPLES             236
 #define MAX_INSTRUMENTS         MAX_SAMPLES
 #define MAX_VOICES              256
 #define MAX_CHANNELS            64
