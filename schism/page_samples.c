@@ -92,13 +92,13 @@ static int _last_vis_sample(void)
 	n = 99;
 	j = 0;
 	/* 65 is last visible sample on last page */
-	for (i = 65; i <= SCHISM_MAX_SAMPLES; i++) {
+	for (i = 65; i < SCHISM_MAX_SAMPLES; i++) {
 		if (!song_sample_is_empty(i)) {
 			j = i;
 		}
 	}
 	while ((j + 34) > n) n += 34;
-	if (n >= SCHISM_MAX_SAMPLES) n = SCHISM_MAX_SAMPLES;
+	if (n >= SCHISM_MAX_SAMPLES) n = SCHISM_MAX_SAMPLES - 1;
 	return n;
 }
 
