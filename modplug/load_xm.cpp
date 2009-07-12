@@ -471,11 +471,14 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		}
 	}
 	/* set these to default */
-	for (uint32_t in=0; in<m_nChannels; in++)
-	{
+	uint32_t in;
+	for (in=0; in<m_nChannels; in++) {
 		Channels[in].nVolume = 64;
 		Channels[in].nPan = 128;
 		Channels[in].dwFlags = 0;
+	}
+	for (; in < MAX_CHANNELS; in++) {
+		Channels[in].dwFlags = CHN_MUTE;
 	}
 	return true;
 }
