@@ -115,8 +115,7 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         slurp_read(fp, &comment_len, 2);
         comment_len = bswapLE16(comment_len);
-        if (comment_len)
-        	return LOAD_UNSUPPORTED; // we don't do comments yet, so give this to modplug
+
         nsmp = slurp_getc(fp);
         slurp_getc(fp); /* attribute byte (unused) */
         rows = slurp_getc(fp); /* beats per track (translation: number of rows in every pattern) */
@@ -206,8 +205,24 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 free(trackdata[n]);
         free(trackdata);
 
-        /* just skip the comment (TODO) */
-        slurp_seek(fp, comment_len, SEEK_CUR);
+        if (comment_len) {
+        	printf("%lx\n", slurp_tell(fp));
+
+		n = MIN(comment_len, MAX_MESSAGE);
+		slurp_read(fp, song->m_lpszSongComments, n);
+		song->m_lpszSongComments[n] = 0;
+
+		// adjust position if we didn't read the whole message
+		if (comment_len > MAX_MESSAGE)
+			slurp_seek(fp, comment_len - MAX_MESSAGE, SEEK_CUR);
+
+		// fix nonsense
+		comment_len = n;
+		for (n = 0; n < comment_len; n++) {
+			if (!song->m_lpszSongComments[n])
+				song->m_lpszSongComments[n] = ((n + 1) % 40) ? ' ' : '\n';
+		}
+	}
 
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {

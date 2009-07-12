@@ -844,9 +844,9 @@ void song_remove_instrument_slot(int n)
 		return;
 
 	song_lock_audio();
-	for (i = n; i < SCHISM_MAX_SAMPLES; i++)
+	for (i = n; i < SCHISM_MAX_INSTRUMENTS; i++)
 		mp->Instruments[i] = mp->Instruments[i+1];
-	mp->Instruments[SCHISM_MAX_SAMPLES] = NULL;
+	mp->Instruments[SCHISM_MAX_INSTRUMENTS] = NULL;
 	_adjust_instruments_in_patterns(n, -1);
 	song_unlock_audio();
 }

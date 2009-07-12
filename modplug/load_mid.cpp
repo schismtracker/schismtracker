@@ -612,6 +612,7 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 	row = 0;
 	midi_clock = 0;
 	dwGlobalFlags = MIDIGLOBAL_UPDATETEMPO | MIDIGLOBAL_FROZEN;
+	m_lpszSongComments[0] = 0;
 	do
 	{
 		// Allocate current pattern if not allocated yet
@@ -694,27 +695,21 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 								memcpy(song_title, ptrk->ptracks, len);
 								song_title[len] = 0;
 							} else
-							if ((!m_lpszSongComments) && (ptrk->ptracks[0]) && (ptrk->ptracks[0] < 0x7F))
+							if ((!m_lpszSongComments[0]) && (ptrk->ptracks[0]) && (ptrk->ptracks[0] < 0x7F))
 							{
-								m_lpszSongComments = new char [len+1];
-								if (m_lpszSongComments)
-								{
-									memcpy(m_lpszSongComments, ptrk->ptracks, len);
-									m_lpszSongComments[len] = 0;
-								}
+								int mlen = MIN(len, MAX_MESSAGE);
+								memcpy(m_lpszSongComments, ptrk->ptracks, mlen);
+								m_lpszSongComments[mlen] = 0;
 							}
 							break;
 						// FF.02 [text]: Song Copyright
 						case 0x02:
 							if (!len) break;
-							if ((!m_lpszSongComments) && (ptrk->ptracks[0]) && (ptrk->ptracks[0] < 0x7F) && (len > 7))
+							if ((!m_lpszSongComments[0]) && (ptrk->ptracks[0]) && (ptrk->ptracks[0] < 0x7F) && (len > 7))
 							{
-								m_lpszSongComments = new char [len+1];
-								if (m_lpszSongComments)
-								{
-									memcpy(m_lpszSongComments, ptrk->ptracks, len);
-									m_lpszSongComments[len] = 0;
-								}
+								int mlen = MIN(len, MAX_MESSAGE);
+								memcpy(m_lpszSongComments, ptrk->ptracks, mlen);
+								m_lpszSongComments[mlen] = 0;
 							}
 							break;
 						// FF.03: Sequence Name

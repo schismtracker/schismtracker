@@ -245,14 +245,9 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 		case 0x0047534D:
 			if ((dwLen > 3) && (!m_lpszSongComments))
 			{
-				uint32_t nTxtLen = dwLen;
-				if (nTxtLen > 32000) nTxtLen = 32000;
-				m_lpszSongComments = new char[nTxtLen];  // changed from int8_t
-				if (m_lpszSongComments)
-				{
-					memcpy(m_lpszSongComments, lpStream+dwMemPos+1, nTxtLen-1);
-					m_lpszSongComments[nTxtLen-1] = 0;
-				}
+				uint32_t nTxtLen = MIN(dwLen, MAX_MESSAGE);
+				memcpy(m_lpszSongComments, lpStream+dwMemPos+1, nTxtLen);
+				m_lpszSongComments[nTxtLen] = 0;
 			}
 			break;
 		// SUM -> author name (or "Unregistered")

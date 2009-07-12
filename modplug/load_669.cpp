@@ -81,7 +81,6 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 		Samples[nins].nC5Speed = 8363;
 	}
 	// Song Message
-	m_lpszSongComments = new char[114];
 	memcpy(m_lpszSongComments, pfh->songmessage, 36);
 	m_lpszSongComments[36] = '\015';
 	m_lpszSongComments[37] = '\012';

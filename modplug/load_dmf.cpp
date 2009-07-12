@@ -117,19 +117,15 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 			if ((psi->infosize > dwMemLength) || (psi->infosize + dwMemPos + 8 > dwMemLength)) goto dmfexit;
 			if ((psi->infosize >= 8) && (!m_lpszSongComments))
 			{
-			    m_lpszSongComments = new char[psi->infosize]; // changed from int8_t
-				if (m_lpszSongComments)
-				{
-					for (uint32_t i=0; i<psi->infosize-1; i++)
-					{
-						int8_t c = lpStream[dwMemPos+8+i];
-						if ((i % 40) == 39)
-							m_lpszSongComments[i] = 0x0d;
-						else
-							m_lpszSongComments[i] = (c < ' ') ? ' ' : c;
-					}
-					m_lpszSongComments[psi->infosize-1] = 0;
+				uint32_t len = MIN(psi->infosize - 1, MAX_MESSAGE);
+				for (uint32_t i=0; i < len; i++) {
+					int8_t c = lpStream[dwMemPos+8+i];
+					if ((i % 40) == 39)
+						m_lpszSongComments[i] = '\n';
+					else
+						m_lpszSongComments[i] = MAX(c, ' ');
 				}
+				m_lpszSongComments[len] = 0;
 			}
 			dwMemPos += psi->infosize + 8 - 1;
 			break;

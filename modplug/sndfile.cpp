@@ -45,7 +45,7 @@ static void _csf_reset(CSoundFile *csf)
 	csf->m_nCurrentOrder = 0;
 	csf->m_nProcessOrder = 0;
 	csf->m_nSongPreAmp = 0x30;
-	csf->m_lpszSongComments = NULL;
+	memset(csf->m_lpszSongComments, 0, sizeof(csf->m_lpszSongComments));
 
 	csf->m_rowHighlightMajor = 16;
 	csf->m_rowHighlightMinor = 4;
@@ -101,6 +101,7 @@ void csf_free_instrument(SONGINSTRUMENT *i)
 {
 	free(i);
 }
+
 
 
 bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
@@ -246,10 +247,6 @@ void csf_destroy(CSoundFile *csf)
 			csf_free_pattern(csf->Patterns[i]);
 			csf->Patterns[i] = NULL;
 		}
-	}
-	if (csf->m_lpszSongComments) {
-		delete[] csf->m_lpszSongComments;
-		csf->m_lpszSongComments = NULL;
 	}
 	for (i = 1; i < MAX_SAMPLES; i++) {
 		SONGSAMPLE *pins = &csf->Samples[i];

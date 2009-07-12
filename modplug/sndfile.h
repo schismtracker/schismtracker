@@ -32,6 +32,7 @@
 #define MAX_ENVPOINTS           32
 #define MAX_INFONAME            80
 #define MAX_EQ_BANDS            6
+#define MAX_MESSAGE             8000
 
 
 #define MOD_TYPE_NONE           0x00
@@ -498,8 +499,8 @@ extern uint32_t gnVULeft, gnVURight;
 typedef struct _CSoundFile {
 	SONGVOICE Voices[MAX_VOICES];                                   // Channels
 	uint32_t VoiceMix[MAX_VOICES];                                              // Channels to be mixed
-	SONGSAMPLE Samples[MAX_SAMPLES];                                 // Instruments
-	SONGINSTRUMENT *Instruments[MAX_INSTRUMENTS];             // Instrument Instruments
+	SONGSAMPLE Samples[MAX_SAMPLES+1];                                 // Samples (1-based!)
+	SONGINSTRUMENT *Instruments[MAX_INSTRUMENTS+1];             // Instruments (1-based!)
 	MODCHANNELSETTINGS Channels[MAX_CHANNELS]; // Channels settings
 	MODCOMMAND *Patterns[MAX_PATTERNS];                             // Patterns
 	uint16_t PatternSize[MAX_PATTERNS];                                 // Patterns Lengths
@@ -520,7 +521,7 @@ typedef struct _CSoundFile {
 	uint32_t m_nFreqFactor, m_nTempoFactor;
 	int32_t m_nRepeatCount, m_nInitialRepeatCount;
 	uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
-	char * m_lpszSongComments;
+	char m_lpszSongComments[MAX_MESSAGE + 1];
 	char song_title[32];
 	char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
 

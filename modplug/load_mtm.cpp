@@ -133,21 +133,15 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 		pSeq += 32;
 	}
 	dwMemPos += 64*(pmh->lastpattern+1);
-	if (bswapLE16(pmh->commentsize) && (dwMemPos + bswapLE16(pmh->commentsize) < dwMemLength))
-	{
+	if (bswapLE16(pmh->commentsize) && (dwMemPos + bswapLE16(pmh->commentsize) < dwMemLength)) {
 		uint32_t n = bswapLE16(pmh->commentsize);
-		m_lpszSongComments = new char[n+1];
-		if (m_lpszSongComments)
-		{
-			memcpy(m_lpszSongComments, lpStream+dwMemPos, n);
-			m_lpszSongComments[n] = 0;
-			for (uint32_t i=0; i<n; i++)
-			{
-				if (!m_lpszSongComments[i])
-				{
-					m_lpszSongComments[i] = ((i+1) % 40) ? 0x20 : 0x0D;
-				}
-			}
+		n = MIN(n, MAX_MESSAGE);
+		printf("%x\n", dwMemPos);
+		memcpy(m_lpszSongComments, lpStream+dwMemPos, n);
+		m_lpszSongComments[n] = 0;
+		for (uint32_t i=0; i<n; i++) {
+			if (!m_lpszSongComments[i])
+				m_lpszSongComments[i] = ((i+1) % 40) ? 0x20 : '\n';
 		}
 	}
 	dwMemPos += bswapLE16(pmh->commentsize);

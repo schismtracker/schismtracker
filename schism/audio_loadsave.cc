@@ -148,20 +148,6 @@ static void _resize_patterns(void)
         }
 }
 
-static void _resize_message(void)
-{
-        // make the song message easy to handle
-        char *tmp = new char[8001];
-	memset(tmp, 0, 8000);
-        if (mp->m_lpszSongComments) {
-                int len = strlen(mp->m_lpszSongComments) + 1;
-                memcpy(tmp, mp->m_lpszSongComments, MIN(8000, len));
-                tmp[8000] = 0;
-                delete[] mp->m_lpszSongComments;
-        }
-        mp->m_lpszSongComments = tmp;
-}
-
 // replace any '\0' chars with spaces, mostly to make the string handling
 // much easier.
 // TODO | Maybe this should be done with the filenames and the song title
@@ -192,7 +178,6 @@ static void fix_song(void)
 	mp->m_nLockedOrder = MAX_ORDERS;
 
         _resize_patterns();
-        _resize_message();
         _fix_names(mp);
 }
 
@@ -260,10 +245,7 @@ void song_new(int flags)
 		
 		memset(mp->song_title, 0, sizeof(mp->song_title));
 		
-		if (mp->m_lpszSongComments)
-			delete mp->m_lpszSongComments;
-		mp->m_lpszSongComments = new char[8001];
-		memset(mp->m_lpszSongComments, 0, 8000);
+		memset(mp->m_lpszSongComments, 0, MAX_MESSAGE);
 		
 		for (i = 0; i < 64; i++) {
 			mp->Channels[i].nVolume = 64;
@@ -392,10 +374,7 @@ int song_load_unchecked(const char *file)
 		song_new(~0);
 		song_set_filename(file);
 
-		if (mp->m_lpszSongComments)
-			delete mp->m_lpszSongComments;
-		mp->m_lpszSongComments = new char[s->length+1];
-		memcpy(mp->m_lpszSongComments, s->data, s->length);
+		memcpy(mp->m_lpszSongComments, s->data, MIN(s->length, MAX_MESSAGE));
 		mp->m_lpszSongComments[s->length] = '\0';
 
 		status.flags &= ~SONG_NEEDS_SAVE;
