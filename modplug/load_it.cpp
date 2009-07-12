@@ -8,6 +8,7 @@
 
 #include "sndfile.h"
 #include "it_defs.h"
+#include "util.h"
 
 /* blah, -mrsb.
 this is a schism header */
