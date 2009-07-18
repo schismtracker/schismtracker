@@ -211,8 +211,9 @@
 // 24-bit signed
 #define RS_PCM24S               (RS_PCM16S|0x80)                // mono 24-bit signed
 #define RS_STIPCM24S            (RS_PCM16S|0x80|RSF_STEREO)     // stereo 24-bit signed
-#define RS_PCM32S               (RS_PCM16S|0xC0)                // mono 24-bit signed
-#define RS_STIPCM32S            (RS_PCM16S|0xC0|RSF_STEREO)     // stereo 24-bit signed
+// 32-bit signed
+#define RS_PCM32S               (RS_PCM16S|0xC0)                // mono 32-bit signed
+#define RS_STIPCM32S            (RS_PCM16S|0xC0|RSF_STEREO)     // stereo 32-bit signed
 
 // Orderlist
 #define ORDER_SKIP              254 // +++

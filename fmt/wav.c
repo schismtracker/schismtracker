@@ -28,8 +28,11 @@
 #include "sndfile.h"
 #include <stdint.h>
 
-#define WAVE_FORMAT_PCM 1
-#define WAVE_FORMAT_EXTENSIBLE  0xFFFE
+#define WAVE_FORMAT_PCM             0x0001
+#define WAVE_FORMAT_IEEE_FLOAT      0x0003 // IEEE float
+#define WAVE_FORMAT_ALAW            0x0006 // 8-bit ITU-T G.711 A-law
+#define WAVE_FORMAT_MULAW           0x0007 // 8-bit ITU-T G.711 µ-law
+#define WAVE_FORMAT_EXTENSIBLE      0xFFFE
 
 // Standard IFF chunks IDs
 #define IFFID_FORM              0x4d524f46
@@ -184,24 +187,27 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSE
 
         if (f.fmt.format != WAVE_FORMAT_PCM ||
             !f.fmt.freqHz ||
-            (f.fmt.channels != 1 && f.fmt.channels != 2) ||
-            (f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16))
+            (f.fmt.channels != 1 && f.fmt.channels != 2))
                 return false;
 
-        smp->flags = 0;
+        // Currently supported bitrates
+        if (f.fmt.bitspersample != 8 &&
+            f.fmt.bitspersample != 16 && 
+            f.fmt.bitspersample != 24 &&
+            f.fmt.bitspersample != 32)
+                return false;
+
+        smp->flags = 0; // flags are set by csf_read_sample
         flags      = 0;
 
-        if (f.fmt.channels == 2) {
-                smp->flags |= SAMP_STEREO;
-                flags      |= RSF_STEREO | RSF_INTERLEAVED;
-        }
+        if (f.fmt.channels == 2)
+                flags |= RSF_STEREO | RSF_INTERLEAVED;
 
-        if (f.fmt.bitspersample == 16) {
-                smp->flags |= SAMP_16_BIT;
-                flags      |= RS_PCM16S;
-        }
-        else {
-                flags      |= RS_PCM8U;
+        switch (f.fmt.bitspersample) {
+        case 8:  flags |= RS_PCM8U;  break;
+        case 16: flags |= RS_PCM16S; break;
+        case 24: flags |= RS_PCM24S; break;
+        case 32: flags |= RS_PCM32S; break;
         }
 
         smp->volume        = 64 * 4;
@@ -222,7 +228,8 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         else if (f.fmt.format != WAVE_FORMAT_PCM ||
                 !f.fmt.freqHz ||
                 (f.fmt.channels != 1 && f.fmt.channels != 2) ||
-                (f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16))
+                (f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16 &&
+                 f.fmt.bitspersample != 24 && f.fmt.bitspersample != 32))
                 return false;
 
         file->smp_flags  = 0;
