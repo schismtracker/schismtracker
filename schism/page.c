@@ -29,7 +29,6 @@
 #include "util.h"
 #include "midi.h"
 #include "charset.h"
-#include "clippy.h"
 
 #include "sdlmain.h"
 
@@ -482,21 +481,6 @@ static int handle_key_global(struct key_event * k)
         /* first, check the truly global keys (the ones that still work if
          * a dialog's open) */
         switch (k->sym) {
-	case SDLK_INSERT:
-		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
-			if (k->mod & KMOD_SHIFT) {
-				if (!k->state) return 1;
-				status.flags |= CLIPPY_PASTE_BUFFER;
-				_mp_finish(NULL);
-				return 1;
-			} else if (k->mod & KMOD_CTRL) {
-				if (!k->state) return 1;
-				_mp_finish(NULL);
-				clippy_yank();
-				return 1;
-			}
-		}
-		break;
         case SDLK_RETURN:
                 if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
 			if (!k->state) return 1;
@@ -504,26 +488,6 @@ static int handle_key_global(struct key_event * k)
                         return 1;
                 }
                 break;
-	case SDLK_c:
-		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
-			if ((k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
-				if (k->state) clippy_yank();
-				_mp_finish(NULL);
-				return 1;
-			}
-		}
-		break;
-	case SDLK_v:
-	case SDLK_p:
-		if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
-			if ((k->mod & KMOD_CTRL) && !(k->mod & KMOD_SHIFT) && !(k->mod & KMOD_ALT)) {
-				if (!k->state) return 1;
-				status.flags |= CLIPPY_PASTE_BUFFER;
-				_mp_finish(NULL);
-				return 1;
-			}
-		}
-		break;
         case SDLK_m:
                 if (k->mod & KMOD_CTRL) {
 			if (k->state) return 1;

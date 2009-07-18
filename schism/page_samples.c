@@ -21,16 +21,14 @@
  */
 
 #include "headers.h"
-
-#include "clippy.h"
-
+#include "it.h"
+#include "page.h"
 #include "song.h"
 #include "dmoz.h"
 #include "sample-edit.h"
+#include "video.h"
 
 #include <math.h>			/* for pow */
-
-#include "video.h"
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -159,18 +157,7 @@ static void sample_list_draw_list(void)
 	int ss, cl = 0, cr = 0;
 	int is_playing[SCHISM_MAX_SAMPLES];
 
-	if (clippy_owner(CLIPPY_SELECT) == widgets_samplelist) {
-		cl = widgets_samplelist[0].clip_start % 25;
-		cr = widgets_samplelist[0].clip_end % 25;
-		if (cl > cr) {
-			ss = cl;
-			cl = cr;
-			cr = ss;
-		}
-		ss = (widgets_samplelist[0].clip_start / 25);
-	} else {
-		ss = -1;
-	}
+	ss = -1;
 	
 	song_get_playing_samples(is_playing);
 
@@ -482,7 +469,6 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 {
 	int new_sample = current_sample;
 	int new_cursor_pos = sample_list_cursor_pos;
-	char *name;
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 		if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
@@ -500,9 +486,9 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		} else {
-			if (k->state || k->sy == k->y) {
-				new_sample = (k->y - 13) + top_sample;
-			}
+			//if (k->state || k->sy == k->y) {
+			new_sample = (k->y - 13) + top_sample;
+			//}
 			if (k->x <= 29) { /* and button1 */
 				if (k->mouse == MOUSE_DBLCLICK) {
 					set_page(PAGE_LOAD_SAMPLE);
@@ -629,7 +615,6 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	
 	new_sample = CLAMP(new_sample, 1, _last_vis_sample());
 	new_cursor_pos = CLAMP(new_cursor_pos, 0, 25);
-	clippy_select(0,0,0);
 
 	if (new_sample != current_sample) {
 		sample_set(new_sample);
@@ -637,20 +622,6 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	} else if (new_cursor_pos != sample_list_cursor_pos) {
 		sample_list_cursor_pos = new_cursor_pos;
 		_fix_accept_text();
-	}
-	if (k->mouse && k->x != k->sx) {
-		song_get_sample(current_sample, &name);
-		widgets_samplelist[0].clip_start = (k->sx - 5) + (current_sample*25);
-		widgets_samplelist[0].clip_end = (k->x - 5) + (current_sample*25);
-		if (widgets_samplelist[0].clip_start < widgets_samplelist[0].clip_end) {
-			clippy_select(widgets_samplelist, 
-				name + (k->sx - 5),
-				(k->x - k->sx));
-		} else {
-			clippy_select(widgets_samplelist, 
-				name + (k->x - 5),
-				(k->sx - k->x));
-		}
 	}
 
 	status.flags |= NEED_UPDATE;
