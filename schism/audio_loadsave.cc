@@ -207,7 +207,6 @@ void song_new(int flags)
 
 	song_stop_unlocked(0);
 
-	status.flags &= ~PLAIN_TEXTEDIT;
 	if ((flags & KEEP_PATTERNS) == 0) {
 		song_set_filename(NULL);
 		status.flags &= ~SONG_NEEDS_SAVE;
@@ -368,23 +367,9 @@ int song_load_unchecked(const char *file)
                 main_song_changed_cb();
 
 		status.flags &= ~SONG_NEEDS_SAVE;
-		status.flags &= ~PLAIN_TEXTEDIT;
-	
-	} else if (status.flags & STARTUP_TEXTEDIT) {
-		song_new(~0);
-		song_set_filename(file);
-
-		memcpy(mp->m_lpszSongComments, s->data, MIN(s->length, MAX_MESSAGE));
-		mp->m_lpszSongComments[s->length] = '\0';
-
-		status.flags &= ~SONG_NEEDS_SAVE;
-		status.flags |= PLAIN_TEXTEDIT;
-		ok = 1;
-
         } else {
                 // awwww, nerts!
                 log_appendf(4, "%s: Unrecognised file type", base);
-		status.flags &= ~PLAIN_TEXTEDIT;
                 csf_free(newsong);
         }
 
@@ -1165,22 +1150,7 @@ int song_save(const char *file, const char *qt)
 		}
 	}
 	if (!qt) { /* still? damn */
-		if (status.flags & PLAIN_TEXTEDIT) {
-			/* okay, the "default" for textedit is plain-text */
-			if (diskwriter_start(file, &txtwriter) != DW_OK) {
-				log_appendf(4, "Cannot start diskwriter: %s", strerror(errno));
-				if (freeme) free(freeme);
-				return 0;
-			}
-			log_appendf(2, "Starting up diskwriter");
-			if (freeme) free(freeme);
-			return 1;
-		}
-
 		qt = "IT214";
-	}
-	if (status.flags & PLAIN_TEXTEDIT) {
-		log_appendf(3, "Warning: saving plain text as module");
 	}
 
 	mp->m_rowHighlightMajor = row_highlight_major;

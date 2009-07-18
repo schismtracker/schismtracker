@@ -123,9 +123,6 @@ enum {
 	META_IS_CTRL = (1 << 21),
 	ALTGR_IS_ALT = (1 << 22),
 
-	/* text-editor */
-	STARTUP_TEXTEDIT = (1 << 23),
-	PLAIN_TEXTEDIT = (1 << 24),
 
 	/* Devi Ever's hack */
 	CRAYOLA_MODE = (1 << 25),
