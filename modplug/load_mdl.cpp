@@ -1,0 +1,544 @@
+/*
+ * This source code is public domain.
+ *
+ * Authors: Olivier Lapicque <olivierl@jps.net>
+*/
+#define NEED_BYTESWAP
+
+//////////////////////////////////////////////
+// DigiTracker (MDL) module loader          //
+//////////////////////////////////////////////
+#include "sndfile.h"
+
+static uint8_t autovib_import[8] = {
+	VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE,
+	// default to sine
+	VIB_SINE, VIB_SINE, VIB_SINE,
+	VIB_SINE, VIB_SINE,
+};
+
+
+//#pragma warning(disable:4244)
+
+typedef struct MDLSONGHEADER
+{
+	uint32_t id;	// "DMDL" = 0x4C444D44
+	uint8_t version;
+} MDLSONGHEADER;
+
+
+typedef struct MDLINFOBLOCK
+{
+	int8_t songname[32];
+	int8_t composer[20];
+	uint16_t norders;
+	uint16_t repeatpos;
+	uint8_t globalvol;
+	uint8_t speed;
+	uint8_t tempo;
+	uint8_t channelinfo[32];
+	uint8_t seq[256];
+} MDLINFOBLOCK;
+
+
+typedef struct MDLPATTERNDATA
+{
+	uint8_t channels;
+	uint8_t lastrow;	// nrows = lastrow+1
+	int8_t name[16];
+	uint16_t data[1];
+} MDLPATTERNDATA;
+
+
+void ConvertMDLCommand(MODCOMMAND *m, uint32_t eff, uint32_t data)
+//--------------------------------------------------------
+{
+	uint32_t command = 0, param = data;
+	switch(eff)
+	{
+	case 0x01:	command = CMD_PORTAMENTOUP; break;
+	case 0x02:	command = CMD_PORTAMENTODOWN; break;
+	case 0x03:	command = CMD_TONEPORTAMENTO; break;
+	case 0x04:	command = CMD_VIBRATO; break;
+	case 0x05:	command = CMD_ARPEGGIO; break;
+	case 0x07:	command = (param < 0x20) ? CMD_SPEED : CMD_TEMPO; break;
+	case 0x08:	command = CMD_PANNING8; param <<= 1; break;
+	case 0x0B:	command = CMD_POSITIONJUMP; break;
+	case 0x0C:	command = CMD_GLOBALVOLUME; break;
+	case 0x0D:	command = CMD_PATTERNBREAK; param = (data & 0x0F) + (data>>4)*10; break;
+	case 0x0E:
+		command = CMD_S3MCMDEX;
+		switch(data & 0xF0)
+		{
+		case 0x00:	command = 0; break; // What is E0x in MDL (there is a bunch) ?
+		case 0x10:	if (param & 0x0F) { param |= 0xF0; command = CMD_PANNINGSLIDE; } else command = 0; break;
+		case 0x20:	if (param & 0x0F) { param = (param << 4) | 0x0F; command = CMD_PANNINGSLIDE; } else command = 0; break;
+		case 0x30:	param = (data & 0x0F) | 0x10; break; // glissando
+		case 0x40:	param = (data & 0x0F) | 0x30; break; // vibrato waveform
+		case 0x60:	param = (data & 0x0F) | 0xB0; break;
+		case 0x70:	param = (data & 0x0F) | 0x40; break; // tremolo waveform
+		case 0x90:	command = CMD_RETRIG; param &= 0x0F; break;
+		case 0xA0:	param = (data & 0x0F) << 4; command = CMD_GLOBALVOLSLIDE; break;
+		case 0xB0:	param = data & 0x0F; command = CMD_GLOBALVOLSLIDE; break;
+		case 0xF0:	param = ((data >> 8) & 0x0F) | 0xA0; break;
+		}
+		break;
+	case 0x0F:	command = CMD_SPEED; break;
+
+	case 0x10:
+                if ((param & 0xF0) != 0xE0) {
+                        command = CMD_VOLUMESLIDE;
+                        if ((param & 0xF0) == 0xF0) {
+                                param = ((param << 4) | 0x0F);
+                        } else {
+                                param >>= 2;
+                                if (param > 0xF)
+                                        param = 0xF;
+                                param <<= 4;
+                        }
+                }
+                break;
+	case 0x20:
+                if ((param & 0xF0) != 0xE0) {
+                        command = CMD_VOLUMESLIDE;
+                        if ((param & 0xF0) != 0xF0) {
+                                param >>= 2;
+                                if (param > 0xF)
+                                        param = 0xF;
+                        }
+                }
+                break;
+
+	case 0x30:	command = CMD_RETRIG; break;
+	case 0x40:	command = CMD_TREMOLO; break;
+	case 0x50:	command = CMD_TREMOR; break;
+	case 0xEF:	if (param > 0xFF) param = 0xFF; command = CMD_OFFSET; break;
+	}
+	if (command)
+	{
+		m->command = command;
+		m->param = param;
+	}
+}
+
+
+void UnpackMDLTrack(MODCOMMAND *pat, uint32_t nChannels, uint32_t nRows, uint32_t nTrack, const uint8_t *lpTracks)
+//-------------------------------------------------------------------------------------------------
+{
+	MODCOMMAND cmd, *m = pat;
+	uint32_t len = *((uint16_t *)lpTracks);
+	uint32_t pos = 0, row = 0, i;
+	lpTracks += 2;
+	for (uint32_t ntrk=1; ntrk<nTrack; ntrk++)
+	{
+		lpTracks += len;
+		len = *((uint16_t *)lpTracks);
+		lpTracks += 2;
+	}
+	cmd.note = cmd.instr = 0;
+	cmd.volcmd = cmd.vol = 0;
+	cmd.command = cmd.param = 0;
+	while ((row < nRows) && (pos < len))
+	{
+		uint32_t xx;
+		uint8_t b = lpTracks[pos++];
+		xx = b >> 2;
+		switch(b & 0x03)
+		{
+		case 0x01:
+			for (i=0; i<=xx; i++)
+			{
+				if (row) *m = *(m-nChannels);
+				m += nChannels;
+				row++;
+				if (row >= nRows) break;
+			}
+			break;
+
+		case 0x02:
+			if (xx < row) *m = pat[nChannels*xx];
+			m += nChannels;
+			row++;
+			break;
+
+		case 0x03:
+			{
+				cmd.note = (xx & 0x01) ? lpTracks[pos++] : 0;
+				cmd.instr = (xx & 0x02) ? lpTracks[pos++] : 0;
+				cmd.volcmd = cmd.vol = 0;
+				cmd.command = cmd.param = 0;
+				if ((cmd.note < 120-12) && (cmd.note)) cmd.note += 12;
+				uint32_t volume = (xx & 0x04) ? lpTracks[pos++] : 0;
+				uint32_t commands = (xx & 0x08) ? lpTracks[pos++] : 0;
+				uint32_t command1 = commands & 0x0F;
+				uint32_t command2 = commands & 0xF0;
+				uint32_t param1 = (xx & 0x10) ? lpTracks[pos++] : 0;
+				uint32_t param2 = (xx & 0x20) ? lpTracks[pos++] : 0;
+				if ((command1 == 0x0E) && ((param1 & 0xF0) == 0xF0) && (!command2))
+				{
+					param1 = ((param1 & 0x0F) << 8) | param2;
+					command1 = 0xEF;
+					command2 = param2 = 0;
+				}
+				if (volume)
+				{
+					cmd.volcmd = VOLCMD_VOLUME;
+					cmd.vol = (volume+1) >> 2;
+				}
+				ConvertMDLCommand(&cmd, command1, param1);
+				if ((cmd.command != CMD_SPEED)
+				 && (cmd.command != CMD_TEMPO)
+				 && (cmd.command != CMD_PATTERNBREAK))
+					ConvertMDLCommand(&cmd, command2, param2);
+				*m = cmd;
+				m += nChannels;
+				row++;
+			}
+			break;
+
+		// Empty Slots
+		default:
+			row += xx+1;
+			m += (xx+1)*nChannels;
+			if (row >= nRows) break;
+		}
+	}
+}
+
+
+
+bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
+//---------------------------------------------------------------
+{
+	uint32_t dwMemPos, dwPos, blocklen, dwTrackPos;
+	const MDLSONGHEADER *pmsh = (const MDLSONGHEADER *)lpStream;
+	MDLINFOBLOCK *pmib;
+	MDLPATTERNDATA *pmpd;
+	uint32_t i,j, norders = 0, npatterns = 0, ntracks = 0;
+	uint32_t ninstruments = 0, nsamples = 0;
+	uint16_t block;
+	uint16_t patterntracks[MAX_PATTERNS*32];
+	uint8_t smpinfo[MAX_SAMPLES];
+	uint8_t insvolenv[MAX_INSTRUMENTS];
+	uint8_t inspanenv[MAX_INSTRUMENTS];
+	const uint8_t * pvolenv;
+	const uint8_t * ppanenv;
+	const uint8_t * ppitchenv;
+	uint32_t nvolenv, npanenv, npitchenv;
+
+	if ((!lpStream) || (dwMemLength < 1024)) return false;
+	if ((bswapLE32(pmsh->id) != 0x4C444D44) || ((pmsh->version & 0xF0) > 0x10)) return false;
+	memset(patterntracks, 0, sizeof(patterntracks));
+	memset(smpinfo, 0, sizeof(smpinfo));
+	memset(insvolenv, 0, sizeof(insvolenv));
+	memset(inspanenv, 0, sizeof(inspanenv));
+	dwMemPos = 5;
+	dwTrackPos = 0;
+	pvolenv = ppanenv = ppitchenv = NULL;
+	nvolenv = npanenv = npitchenv = 0;
+	m_nSamples = m_nInstruments = 0;
+	m_dwSongFlags |= SONG_INSTRUMENTMODE;
+	while (dwMemPos+6 < dwMemLength)
+	{
+		block = *((uint16_t *)(lpStream+dwMemPos));
+		blocklen = *((uint32_t *)(lpStream+dwMemPos+2));
+		block = bswapLE16(block);
+		blocklen = bswapLE32(blocklen);
+		dwMemPos += 6;
+		if (dwMemPos + blocklen > dwMemLength)
+		{
+			if (dwMemPos == 11) return false;
+			break;
+		}
+		switch(block)
+		{
+		// IN: infoblock
+		case 0x4E49:
+			pmib = (MDLINFOBLOCK *)(lpStream+dwMemPos);
+			memcpy(song_title, pmib->songname, 32);
+			norders = bswapLE16(pmib->norders);
+			if (norders > MAX_ORDERS) norders = MAX_ORDERS;
+			//m_nRestartPos = bswapLE16(pmib->repeatpos);
+			m_nDefaultGlobalVolume = pmib->globalvol * 128 / 255;
+			m_nDefaultTempo = pmib->tempo;
+			m_nDefaultSpeed = pmib->speed;
+			m_nChannels = 4;
+			for (i=0; i<32; i++)
+			{
+				Channels[i].nVolume = 64;
+				Channels[i].nPan = (pmib->channelinfo[i] & 0x7F) << 1;
+				if (pmib->channelinfo[i] & 0x80)
+					Channels[i].dwFlags |= CHN_MUTE;
+				else
+					m_nChannels = i+1;
+			}
+			for (j=0; j<norders; j++) Orderlist[j] = pmib->seq[j];
+			break;
+		// ME: song message
+		case 0x454D:
+			if (blocklen) {
+				int len = MIN(blocklen, 8000);
+				memcpy(m_lpszSongComments, lpStream+dwMemPos, len);
+				m_lpszSongComments[len-1] = 0;
+			}
+			break;
+		// PA: Pattern Data
+		case 0x4150:
+			npatterns = lpStream[dwMemPos];
+			if (npatterns > MAX_PATTERNS) npatterns = MAX_PATTERNS;
+			dwPos = dwMemPos + 1;
+			for (i=0; i<npatterns; i++)
+			{
+				if (dwPos+18 >= dwMemLength) break;
+				pmpd = (MDLPATTERNDATA *)(lpStream + dwPos);
+				if (pmpd->channels > 32) break;
+				PatternSize[i] = pmpd->lastrow+1;
+				PatternAllocSize[i] = pmpd->lastrow+1;
+				if (m_nChannels < pmpd->channels) m_nChannels = pmpd->channels;
+				dwPos += 18 + 2*pmpd->channels;
+				for (j=0; j<pmpd->channels; j++)
+				{
+					patterntracks[i*32+j] = bswapLE16(pmpd->data[j]);
+				}
+			}
+			break;
+		// TR: Track Data
+		case 0x5254:
+			if (dwTrackPos) break;
+			ntracks = *((uint16_t *)(lpStream+dwMemPos));
+			ntracks = bswapLE16(ntracks);
+			dwTrackPos = dwMemPos+2;
+			break;
+		// II: Instruments
+		case 0x4949:
+			ninstruments = lpStream[dwMemPos];
+			dwPos = dwMemPos+1;
+			for (i=0; i<ninstruments; i++)
+			{
+				uint32_t nins = lpStream[dwPos];
+				if ((nins >= MAX_INSTRUMENTS) || (!nins)) break;
+				if (m_nInstruments < nins) m_nInstruments = nins;
+				if (!Instruments[nins])
+				{
+					uint32_t note = 12;
+					if ((Instruments[nins] = csf_allocate_instrument()) == NULL) break;
+					SONGINSTRUMENT *penv = Instruments[nins];
+					memcpy(penv->name, lpStream+dwPos+2, 32);
+					penv->nGlobalVol = 128;
+					penv->nPPC = 5*12;
+					for (j=0; j<lpStream[dwPos+1]; j++)
+					{
+						const uint8_t *ps = lpStream+dwPos+34+14*j;
+						while ((note < (uint32_t)(ps[1]+12)) && (note < 120))
+						{
+							penv->NoteMap[note] = note+1;
+							if (ps[0] < MAX_SAMPLES)
+							{
+								int ismp = ps[0];
+								penv->Keyboard[note] = ps[0];
+								Samples[ismp].nVolume = ps[2];
+								Samples[ismp].nPan = ps[4] << 1;
+								Samples[ismp].nVibType
+									= autovib_import[ps[11] & 0x7];
+								Samples[ismp].nVibSweep = ps[10];
+								Samples[ismp].nVibDepth = ps[9];
+								Samples[ismp].nVibRate = ps[8];
+							}
+							penv->nFadeOut = (ps[7] << 8) | ps[6];
+							if (penv->nFadeOut == 0xFFFF) penv->nFadeOut = 0;
+							note++;
+						}
+						// Use volume envelope ?
+						if (ps[3] & 0x80)
+						{
+							penv->dwFlags |= ENV_VOLUME;
+							insvolenv[nins] = (ps[3] & 0x3F) + 1;
+						}
+						// Use panning envelope ?
+						if (ps[5] & 0x80)
+						{
+							penv->dwFlags |= ENV_PANNING;
+							inspanenv[nins] = (ps[5] & 0x3F) + 1;
+						}
+						// taken from load_xm.cpp - seems to fix wakingup.mdl
+						if (!(penv->dwFlags & ENV_VOLUME) && !penv->nFadeOut) {
+							penv->nFadeOut = 8192;
+						}
+					}
+				}
+				dwPos += 34 + 14*lpStream[dwPos+1];
+			}
+			for (j=1; j<=m_nInstruments; j++) if (!Instruments[j])
+			{
+				Instruments[j] = csf_allocate_instrument();
+			}
+			break;
+		// VE: Volume Envelope
+		case 0x4556:
+			if ((nvolenv = lpStream[dwMemPos]) == 0) break;
+			if (dwMemPos + nvolenv*32 + 1 <= dwMemLength) pvolenv = lpStream + dwMemPos + 1;
+			break;
+		// PE: Panning Envelope
+		case 0x4550:
+			if ((npanenv = lpStream[dwMemPos]) == 0) break;
+			if (dwMemPos + npanenv*32 + 1 <= dwMemLength) ppanenv = lpStream + dwMemPos + 1;
+			break;
+		// FE: Pitch Envelope
+		case 0x4546:
+			if ((npitchenv = lpStream[dwMemPos]) == 0) break;
+			if (dwMemPos + npitchenv*32 + 1 <= dwMemLength) ppitchenv = lpStream + dwMemPos + 1;
+			break;
+		// IS: Sample Infoblock
+		case 0x5349:
+			nsamples = lpStream[dwMemPos];
+			dwPos = dwMemPos+1;
+			for (i=0; i<nsamples; i++, dwPos += 59)
+			{
+				uint32_t nins = lpStream[dwPos];
+				if ((nins >= MAX_SAMPLES) || (!nins)) continue;
+				if (m_nSamples < nins) m_nSamples = nins;
+				SONGSAMPLE *pins = &Samples[nins];
+				memcpy(pins->name, lpStream+dwPos+1, 32);
+				memcpy(pins->filename, lpStream+dwPos+33, 8);
+				pins->nC5Speed = *((uint32_t *)(lpStream+dwPos+41));
+				pins->nC5Speed = bswapLE32(pins->nC5Speed);
+				pins->nLength = *((uint32_t *)(lpStream+dwPos+45));
+				pins->nLength = bswapLE32(pins->nLength);
+				pins->nLoopStart = *((uint32_t *)(lpStream+dwPos+49));
+				pins->nLoopStart = bswapLE32(pins->nLoopStart);
+				pins->nLoopEnd = pins->nLoopStart + *((uint32_t *)(lpStream+dwPos+53));
+				pins->nLoopEnd = bswapLE32(pins->nLoopEnd);
+				if (pins->nLoopEnd > pins->nLoopStart) pins->uFlags |= CHN_LOOP;
+				pins->nGlobalVol = 64;
+				if (lpStream[dwPos+58] & 0x01)
+				{
+					pins->uFlags |= CHN_16BIT;
+					pins->nLength >>= 1;
+					pins->nLoopStart >>= 1;
+					pins->nLoopEnd >>= 1;
+				}
+				if (lpStream[dwPos+58] & 0x02) pins->uFlags |= CHN_PINGPONGLOOP;
+				smpinfo[nins] = (lpStream[dwPos+58] >> 2) & 3;
+			}
+			break;
+		// SA: Sample Data
+		case 0x4153:
+			dwPos = dwMemPos;
+			for (i=1; i<=m_nSamples; i++) if ((Samples[i].nLength) && (!Samples[i].pSample) && (smpinfo[i] != 3) && (dwPos < dwMemLength))
+			{
+				SONGSAMPLE *pins = &Samples[i];
+				uint32_t flags = (pins->uFlags & CHN_16BIT) ? RS_PCM16S : RS_PCM8S;
+				if (!smpinfo[i])
+				{
+					dwPos += csf_read_sample(pins, flags, (const char *)(lpStream+dwPos), dwMemLength - dwPos);
+				} else
+				{
+					uint32_t dwLen = *((uint32_t *)(lpStream+dwPos));
+					dwLen = bswapLE32(dwLen);
+					dwPos += 4;
+					if ((dwPos+dwLen <= dwMemLength) && (dwLen > 4))
+					{
+						flags = (pins->uFlags & CHN_16BIT) ? RS_MDL16 : RS_MDL8;
+						csf_read_sample(pins, flags, (const char *)(lpStream+dwPos), dwLen);
+					}
+					dwPos += dwLen;
+				}
+			}
+			break;
+		}
+		dwMemPos += blocklen;
+	}
+	// Unpack Patterns
+	if ((dwTrackPos) && (npatterns) && (m_nChannels) && (ntracks))
+	{
+		for (uint32_t ipat=0; ipat<npatterns; ipat++)
+		{
+			if ((Patterns[ipat] = csf_allocate_pattern(PatternSize[ipat], m_nChannels)) == NULL) break;
+			for (uint32_t chn=0; chn<m_nChannels; chn++) if ((patterntracks[ipat*32+chn]) && (patterntracks[ipat*32+chn] <= ntracks))
+			{
+				MODCOMMAND *m = Patterns[ipat] + chn;
+				UnpackMDLTrack(m, m_nChannels, PatternSize[ipat], patterntracks[ipat*32+chn], lpStream+dwTrackPos);
+			}
+		}
+	}
+	// Set up envelopes
+	for (uint32_t iIns=1; iIns<=m_nInstruments; iIns++) if (Instruments[iIns])
+	{
+		SONGINSTRUMENT *penv = Instruments[iIns];
+		// Setup volume envelope
+		if ((nvolenv) && (pvolenv) && (insvolenv[iIns]))
+		{
+			const uint8_t * pve = pvolenv;
+			for (uint32_t nve=0; nve<nvolenv; nve++, pve+=33) if (pve[0]+1 == insvolenv[iIns])
+			{
+				uint16_t vtick = 1;
+				penv->VolEnv.nNodes = 15;
+				for (uint32_t iv=0; iv<15; iv++)
+				{
+					if (iv) vtick += pve[iv*2+1];
+					penv->VolEnv.Ticks[iv] = vtick;
+					penv->VolEnv.Values[iv] = pve[iv*2+2];
+					if (!pve[iv*2+1])
+					{
+						penv->VolEnv.nNodes = iv+1;
+						break;
+					}
+				}
+				penv->VolEnv.nSustainStart = penv->VolEnv.nSustainEnd = pve[31] & 0x0F;
+				if (pve[31] & 0x10) penv->dwFlags |= ENV_VOLSUSTAIN;
+				if (pve[31] & 0x20) penv->dwFlags |= ENV_VOLLOOP;
+				penv->VolEnv.nLoopStart = pve[32] & 0x0F;
+				penv->VolEnv.nLoopEnd = pve[32] >> 4;
+			}
+		}
+		// Setup panning envelope
+		if ((npanenv) && (ppanenv) && (inspanenv[iIns]))
+		{
+			const uint8_t * ppe = ppanenv;
+			for (uint32_t npe=0; npe<npanenv; npe++, ppe+=33) if (ppe[0]+1 == inspanenv[iIns])
+			{
+				uint16_t vtick = 1;
+				penv->PanEnv.nNodes = 15;
+				for (uint32_t iv=0; iv<15; iv++)
+				{
+					if (iv) vtick += ppe[iv*2+1];
+					penv->PanEnv.Ticks[iv] = vtick;
+					penv->PanEnv.Values[iv] = ppe[iv*2+2];
+					if (!ppe[iv*2+1])
+					{
+						penv->PanEnv.nNodes = iv+1;
+						break;
+					}
+				}
+				if (ppe[31] & 0x10) penv->dwFlags |= ENV_PANSUSTAIN;
+				if (ppe[31] & 0x20) penv->dwFlags |= ENV_PANLOOP;
+				penv->PanEnv.nLoopStart = ppe[32] & 0x0F;
+				penv->PanEnv.nLoopEnd = ppe[32] >> 4;
+			}
+		}
+	}
+	m_dwSongFlags |= SONG_LINEARSLIDES;
+	m_nType = MOD_TYPE_MDL;
+	return true;
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+// MDL Sample Unpacking
+
+// MDL Huffman ReadBits compression
+uint16_t MDLReadBits(uint32_t &bitbuf, uint32_t &bitnum, uint8_t * &ibuf, int8_t n)
+//-----------------------------------------------------------------
+{
+	uint16_t v = (uint16_t)(bitbuf & ((1 << n) - 1) );
+	bitbuf >>= n;
+	bitnum -= n;
+	if (bitnum <= 24)
+	{
+		bitbuf |= (((uint32_t)(*ibuf++)) << bitnum);
+		bitnum += 8;
+	}
+	return v;
+}
+
+

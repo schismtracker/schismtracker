@@ -1,0 +1,28 @@
+|                         ‹††††††††††††††††††††††††††Š
+|                         „  Order List and Panning  ‘
+|                         ‰–
+|
+| Order Keys.
+|   N                 Insert next pattern
+:   Shift-N           Copy current pattern to new pattern, and insert order
+|   -                 End of song mark
+|   +                 Skip to next Order mark
+|   Ins               Insert a pattern
+|   Del               Delete a pattern
+|   Tab/Shift-Tab     Move to next window
+|   Ctrl-F7           Play this Order next
+|
+|   Alt-F11           Lock/unlock order list
+|   Alt-R             Sort order list
+|   Alt-U             Search for unused patterns
+:
+:   Ctrl-B            Link (diskwriter) this pattern to the current sample
+:   Ctrl-O            Copy (diskwriter) this pattern to the current sample
+:
+:   C                 Continue to next entry in order list of current pattern
+:
+:   Alt-Enter         Save order list
+:   Alt-Backspace     Swap order list with saved order list
+|
+| Panning Keys.
+|   L/M/R/S           Set panning to Left/Middle/Right/Surround
