@@ -248,7 +248,9 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 			song->Orderlist[n] >>= 1;
 	}
 	for (n = 0; n < 128; n++) {
-		if (song->Orderlist[n] > npat)
+		if (song->Orderlist[n] >= MAX_PATTERNS)
+			song->Orderlist[n] = ORDER_SKIP;
+		else if (song->Orderlist[n] > npat)
 			npat = song->Orderlist[n];
 	}
 	/* set all the extra orders to the end-of-song marker */
