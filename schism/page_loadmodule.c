@@ -866,12 +866,13 @@ static int dir_list_handle_key(struct key_event * k)
 		if (k->state) return 0;
 		if (search_text_length == 0 && current_dir != 0) {
 			// slash -> go to top (root) dir
-			current_dir = 0;
-		} else if (current_dir >= 0 && current_dir < dlist.num_dirs) {
+			new_dir = 0;
+		} else if (current_dir > 0 && current_dir < dlist.num_dirs) {
 			change_dir(dlist.dirs[current_dir]->path);
+			status.flags |= NEED_UPDATE;
+			return 1;
 		}
-		status.flags |= NEED_UPDATE;
-                return 1;
+		break;
         default:
 		if (k->mouse == 0) {
 			if (k->state) return 0;
