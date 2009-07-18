@@ -21,8 +21,8 @@
  */
 
 #include "headers.h"
-
-#include "clippy.h"
+#include "it.h"
+#include "page.h"
 
 /* --------------------------------------------------------------------- */
 /* create_* functions (the constructors, if you will) */
@@ -308,7 +308,6 @@ int textentry_add_char(struct widget *w, uint16_t unicode)
         if (c == 0)
                 return 0;
         text_add_char(w->d.textentry.text, c, &(w->d.textentry.cursor_pos), w->d.textentry.max_length);
-	if (clippy_owner(CLIPPY_SELECT) == w) clippy_select(0,0,0);
 
 	if (w->changed) w->changed();
         status.flags |= NEED_UPDATE;
@@ -436,7 +435,7 @@ void draw_widget(struct widget *w, int selected)
         char buf[16] = "Channel 42";
         const char *ptr, *endptr;       /* for the menutoggle */
 	char *str;
-        int n, i, j, clen, coff;
+        int n, j;
         int tfg = selected ? 0 : 2;
         int tbg = selected ? 3 : 0;
 	int drew_cursor = 0;
@@ -474,31 +473,6 @@ void draw_widget(struct widget *w, int selected)
         case WIDGET_TEXTENTRY:
                 textentry_reposition(w);
                 draw_text_len(w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
-		if (clippy_owner(CLIPPY_SELECT) == w) {
-			/* wee.... */
-			clen = w->clip_end - w->clip_start;
-			if (clen < 0) {
-				clen *= -1;
-				coff = w->clip_end;
-			} else {
-				coff = w->clip_start;
-			}
-			for (i = 0; i < clen; i++) {
-				n = coff + (i - w->d.textentry.firstchar);
-				if (n < 0) continue;
-				if (n >= w->width) break;
-				if (n > (signed)strlen(w->d.textentry.text)) break;
-				if (selected && (coff+i) == w->d.textentry.cursor_pos) {
-					fg = 9;
-					bg = 3;
-					drew_cursor = 1;
-				} else {
-					fg = 3;
-					bg = 8;
-				}
-				draw_char(w->d.textentry.text[n], w->x + n, w->y, fg, bg);
-			}
-                }
 		if (selected && !drew_cursor) {
                         n = w->d.textentry.cursor_pos - w->d.textentry.firstchar;
                         draw_char(((n < (signed) strlen(w->d.textentry.text))
@@ -516,31 +490,6 @@ void draw_widget(struct widget *w, int selected)
 						w->y, 2, 0);
 			}
 			j = strlen(str);
-			if (clippy_owner(CLIPPY_SELECT) == w) {
-				clen = w->clip_end - w->clip_start;
-				if (clen < 0) {
-					clen *= -1;
-					coff = w->clip_end;
-				} else {
-					coff = w->clip_start;
-				}
-				for (i = 0; i < clen; i++) {
-					n = coff + i;
-					if (n < 0) continue;
-					if (n >= w->width) break;
-					if (n >= j) break;
-					if (selected && (coff+i) == *w->d.numentry.cursor_pos) {
-						fg = 9;
-						bg = 3;
-						drew_cursor = 1;
-					} else {
-						fg = 3;
-						bg = 8;
-					}
-					draw_char(str[n],
-						((w->x+w->width)-j) + n, w->y, fg, bg);
-				}
-			}
 	                if (selected && !drew_cursor) {
 				while (str[0] && str[1]) str++;
 				if (!str[0]) str[0] = ' ';
@@ -557,30 +506,7 @@ void draw_widget(struct widget *w, int selected)
 			}
 			draw_text_len(buf,
 					w->width, w->x, w->y, 2, 0);
-			if (clippy_owner(CLIPPY_SELECT) == w) {
-				clen = w->clip_end - w->clip_start;
-				if (clen < 0) {
-					clen *= -1;
-					coff = w->clip_end;
-				} else {
-					coff = w->clip_start;
-				}
-				for (i = 0; i < clen; i++) {
-					n = coff + i;
-					if (n < 0) continue;
-					if (n >= w->width) break;
-					if (selected && (coff+i) == *w->d.numentry.cursor_pos) {
-						fg = 9;
-						bg = 3;
-						drew_cursor = 1;
-					} else {
-						fg = 3;
-						bg = 8;
-					}
-					draw_char(buf[n], w->x + n, w->y, fg, bg);
-				}
-			}
-	                if (selected && !drew_cursor) {
+			if (selected && !drew_cursor) {
 				n = *(w->d.numentry.cursor_pos);
 				draw_char(buf[n], w->x + n, w->y, 0, 3);
 			}

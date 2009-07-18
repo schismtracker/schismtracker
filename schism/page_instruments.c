@@ -23,21 +23,13 @@
 /* This is getting almost as disturbing as the pattern editor. */
 
 #include "headers.h"
-
-#include "clippy.h"
+#include "it.h"
+#include "page.h"
 #include "song.h"
-
 #include "dmoz.h"
-
-#include <sys/stat.h>
-
 #include "video.h"
 
-/* rastops for envelope */
-static struct vgamem_overlay env_overlay = {
-	32, 18, 65, 25,
-	0, 0, 0, 0
-};
+#include <sys/stat.h>
 
 /* --------------------------------------------------------------------- */
 /* just one global variable... */
@@ -51,6 +43,12 @@ static struct widget widgets_general[18];
 static struct widget widgets_volume[17];
 static struct widget widgets_panning[19];
 static struct widget widgets_pitch[20];
+
+/* rastops for envelope */
+static struct vgamem_overlay env_overlay = {
+	32, 18, 65, 25,
+	0, 0, 0, 0
+};
 
 /* toggled when pressing "," on the note table's sample field
  * more of a boolean than a bit mask  -delt.
@@ -478,18 +476,7 @@ static void instrument_list_draw_list(void)
         int is_playing[SCHISM_MAX_INSTRUMENTS];
         char buf[4];
 	
-	if (clippy_owner(CLIPPY_SELECT) == widgets_general) {
-		cl = widgets_general[0].clip_start % 25;
-		cr = widgets_general[0].clip_end % 25;
-		if (cl > cr) {
-			ss = cl;
-			cl = cr;
-			cr = ss;
-		}
-		ss = (widgets_general[0].clip_start / 25);
-	} else {
-		ss = -1;
-	}
+	ss = -1;
 
 	song_get_playing_instruments(is_playing);
 
@@ -529,14 +516,12 @@ static void instrument_list_draw_list(void)
 static int instrument_list_handle_key_on_list(struct key_event * k)
 {
         int new_ins = current_instrument;
-	char *name;
 
 	if (!k->state && k->mouse && k->y >= 13 && k->y <= 47 && k->x >= 5 && k->x <= 30) {
 		if (k->mouse == MOUSE_CLICK) {
-			if (k->state || k->sy == k->y) {
-				new_ins = (k->y - 13) + top_instrument;
-			} else {
-			}
+			//if (k->state || k->sy == k->y) {
+			new_ins = (k->y - 13) + top_instrument;
+			//}
 			if (new_ins == current_instrument) {
 				instrument_cursor_pos = k->x - 5;
                 		status.flags |= NEED_UPDATE;
@@ -718,22 +703,6 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                 status.flags |= NEED_UPDATE;
 		memused_songchanged();
         }
-
-	clippy_select(0,0,0);
-	if (k->mouse && k->x != k->sx) {
-		song_get_instrument(current_instrument, &name);
-		widgets_general[0].clip_start = (k->sx - 5) + (current_instrument*25);
-		widgets_general[0].clip_end = (k->x - 5) + (current_instrument*25);
-		if (widgets_general[0].clip_start < widgets_general[0].clip_end) {
-			clippy_select(widgets_general, 
-				name + (k->sx - 5),
-				(k->x - k->sx));
-		} else {
-			clippy_select(widgets_general, 
-				name + (k->x - 5),
-				(k->sx - k->x));
-		}
-	}
 
         return 1;
 }
