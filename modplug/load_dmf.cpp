@@ -8,6 +8,7 @@
 // DMF DELUSION DIGITAL MUSIC FILEFORMAT (X-Tracker) //
 ///////////////////////////////////////////////////////
 #include "sndfile.h"
+#include "util.h"
 
 //#define DMFLOG
 

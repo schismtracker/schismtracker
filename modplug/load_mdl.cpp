@@ -9,6 +9,7 @@
 // DigiTracker (MDL) module loader          //
 //////////////////////////////////////////////
 #include "sndfile.h"
+#include "util.h"
 
 static uint8_t autovib_import[8] = {
 	VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE,
