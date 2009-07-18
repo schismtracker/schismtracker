@@ -161,10 +161,10 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 song->Samples[smp].nVolume = 60;  /* ickypoo */
                 song->Samples[smp].nVolume *= 4; //mphack
                 song->Samples[smp].nGlobalVol = 64;  /* ickypoo */
-		song->Samples[n].nVibType = 0;
-		song->Samples[n].nVibSweep = 0;
-		song->Samples[n].nVibDepth = 0;
-		song->Samples[n].nVibRate = 0;
+		song->Samples[smp].nVibType = 0;
+		song->Samples[smp].nVibSweep = 0;
+		song->Samples[smp].nVibDepth = 0;
+		song->Samples[smp].nVibRate = 0;
         }
 
         /* patterns */
