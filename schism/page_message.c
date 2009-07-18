@@ -327,13 +327,11 @@ static inline void message_set_editmode(void)
 
 static inline void message_set_viewmode(void)
 {
-	if (!(status.flags & PLAIN_TEXTEDIT)) {
-		edit_mode = 0;
-		widgets_message[0].accept_text = 0;
-		widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
+	edit_mode = 0;
+	widgets_message[0].accept_text = 0;
+	widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
 
-		status.flags |= NEED_UPDATE;
-	}
+	status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -801,6 +799,7 @@ static void song_changed_cb(void)
 }
 
 /* --------------------------------------------------------------------- */
+
 static int message_key_hack(struct key_event *k)
 {
 	if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod) && edit_mode) {
@@ -812,21 +811,9 @@ static int message_key_hack(struct key_event *k)
 	return 0;
 }
 
-static void message_set_page(void)
-{
-	if (status.flags & PLAIN_TEXTEDIT) {
-		pages[PAGE_MESSAGE].title = "Text Editor (Shift-F9)";
-	} else {
-		pages[PAGE_MESSAGE].title = "Message Editor (Shift-F9)";
-	}
-	if (status.flags & PLAIN_TEXTEDIT) {
-		message_set_editmode();
-	}
-}
 void message_load_page(struct page *page)
 {
 	page->title = "Message Editor (Shift-F9)";
-	page->set_page = message_set_page;
 	page->draw_const = message_draw_const;
 	page->song_changed_cb = song_changed_cb;
 	page->pre_handle_key = message_key_hack;
@@ -837,3 +824,4 @@ void message_load_page(struct page *page)
 	create_other(widgets_message + 0, 0, message_handle_key_viewmode, message_draw);
 	widgets_message[0].accept_text = edit_mode;
 }
+

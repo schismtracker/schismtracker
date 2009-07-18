@@ -269,8 +269,7 @@ enum {
 	SF_HOOKS = 2, /* --no-hooks: don't run startup/exit scripts */
 	SF_FONTEDIT = 4,
 	SF_CLASSIC = 8,
-	SF_TEXTEDIT = 16,
-	SF_NETWORK = 32,
+	SF_NETWORK = 16,
 };
 static int startup_flags = SF_HOOKS | SF_NETWORK;
 
@@ -292,7 +291,6 @@ enum {
 	O_CLASSIC_MODE,
 	O_FULLSCREEN,
 	O_FONTEDIT,
-	O_TEXTEDIT,
 	O_PLAY,
 #if ENABLE_HOOKS
 	O_HOOKS,
@@ -334,7 +332,6 @@ static void parse_options(int argc, char **argv)
 		{O_FULLSCREEN, 'f', "fullscreen", FRAG_NEG, NULL, "start in fullscreen mode"},
 		{O_PLAY, 'p', "play", FRAG_NEG, NULL, "start playing after loading song on command line"},
 		{O_FONTEDIT, 0, "font-editor", FRAG_NEG, NULL, "start in font editor (itf)"},
-		{O_TEXTEDIT, 0, "text-editor", FRAG_NEG, NULL, "start in text editor"},
 #if ENABLE_HOOKS
 		{O_HOOKS, 0, "hooks", FRAG_NEG, NULL, "run startup/exit hooks (default: enabled)"},
 #endif
@@ -424,12 +421,6 @@ static void parse_options(int argc, char **argv)
 				startup_flags |= SF_PLAY;
 			else
 				startup_flags &= ~SF_PLAY;
-			break;
-		case O_TEXTEDIT:
-			if (frag->type)
-				startup_flags |= SF_TEXTEDIT;
-			else
-				startup_flags &= ~SF_TEXTEDIT;
 			break;
 		case O_FONTEDIT:
 			if (frag->type)
@@ -1246,10 +1237,6 @@ int main(int argc, char **argv)
 		free(initial_dir);
 	}
 
-	if (startup_flags & SF_TEXTEDIT) {
-		status.flags |= STARTUP_TEXTEDIT;
-	}
-
 	if (startup_flags & SF_FONTEDIT) {
 		status.flags |= STARTUP_FONTEDIT;
 		set_page(PAGE_FONT_EDIT);
@@ -1257,13 +1244,7 @@ int main(int argc, char **argv)
 		if (song_load_unchecked(initial_song)) {
 			if (startup_flags & SF_PLAY) {
 				song_start();
-				if (status.flags & STARTUP_TEXTEDIT) {
-					set_page(PAGE_MESSAGE);
-				} else {
-					set_page(PAGE_INFO);
-				}
-			} else if (status.flags & STARTUP_TEXTEDIT) {
-				set_page(PAGE_MESSAGE);
+				set_page(PAGE_INFO);
 			} else {
 				/* set_page(PAGE_LOG); */
 				set_page(PAGE_BLANK);
@@ -1272,8 +1253,6 @@ int main(int argc, char **argv)
 			set_page(PAGE_LOG);
 		}
 		free(initial_song);
-	} else if (status.flags & STARTUP_TEXTEDIT) {
-		set_page(PAGE_MESSAGE);
 	} else {
 		set_page(PAGE_ABOUT);
 		show_about();
