@@ -472,11 +472,25 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         case 0:
                 fg = 0;
                 bg = 3;
-                break;
         case 1: /* Mini-accidentals on 2-col. view */
                 get_note_string(note->note, buf);
-                draw_char(buf[0], x, y, 6, bg);
-                draw_half_width_chars(buf[1], buf[2], x + 1, y, 0, 3, 0, 3);
+                draw_char(buf[0], x, y, fg, bg);
+                // XXX cut-and-paste hackjob programming... this code should only exist in one place
+		switch ((unsigned char) buf[0]) {
+		case '^':
+		case '~':
+		case 0xCD: // note off
+		case 0xAD: // dot (empty)
+			if (cursor_pos == 1)
+				draw_char(buf[1], x + 1, y, 0, 3);
+			else
+				draw_char(buf[1], x + 1, y, fg, bg);
+			break;
+		default:
+			draw_half_width_chars(buf[1], buf[2], x + 1, y,
+				fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
+			break;
+		}
                 return;
                 /*
                 get_note_string_short(note->note, buf);
@@ -516,8 +530,22 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
         if (note->note) {
                 get_note_string(note->note, buf);
-                draw_char(buf[0], x, y, fg, bg);
-                draw_half_width_chars(buf[1], buf[2], x + 1, y, fg, bg, fg, bg);
+                draw_char(buf[0], x, y, 6, bg);
+		switch ((unsigned char) buf[0]) {
+		case '^':
+		case '~':
+		case 0xCD: // note off
+		case 0xAD: // dot (empty)
+			if (cursor_pos == 1)
+				draw_char(buf[1], x + 1, y, 0, 3);
+			else
+				draw_char(buf[1], x + 1, y, fg, bg);
+			break;
+		default:
+			draw_half_width_chars(buf[1], buf[2], x + 1, y,
+				fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
+			break;
+		}
                 /*
                 get_note_string_short(note->note, buf);
                 draw_text(buf, x, y, fg, bg);
@@ -739,29 +767,29 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 
 #else
 
-        get_note_string (note -> note, note_buf);
+	get_note_string (note -> note, note_buf);
 
-        if (cursor_pos == 0)
-          draw_char (note_buf [0], x, y, 0, 3);
-        else
-          draw_char (note_buf [0], x, y, fg, bg);
+	if (cursor_pos == 0)
+		draw_char (note_buf [0], x, y, 0, 3);
+	else
+		draw_char (note_buf [0], x, y, fg, bg);
 
-        bg1 = bg2 = bg;
-        switch ( (unsigned char) note_buf [0])
-          {
-          case '^':    /* empty notes, note-off and note-cuts */
-	  case '~':
-          case 0xCD:
-          case 0xAD:
-            if (cursor_pos == 1)
-              draw_char (note_buf [1], x + 1, y, 0, 3);
-            else
-              draw_char (note_buf [1], x + 1, y, fg, bg);
-          break;
-          default:
-            draw_half_width_chars (note_buf [1], note_buf [2], x + 1, y, fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
-          break;
-          }
+	bg1 = bg2 = bg;
+	switch ((unsigned char) note_buf[0]) {
+	case '^':
+	case '~':
+	case 0xCD: // note off
+	case 0xAD: // dot (empty)
+		if (cursor_pos == 1)
+			draw_char(note_buf[1], x + 1, y, 0, 3);
+		else
+			draw_char(note_buf[1], x + 1, y, fg, bg);
+		break;
+	default:
+		draw_half_width_chars(note_buf[1], note_buf[2], x + 1, y,
+			fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
+		break;
+	}
 
 #endif
 
@@ -772,17 +800,16 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 
         fg1 = fg2 = (note->instrument ? 10 : 2);
         bg1 = bg2 = bg;
-        switch (cursor_pos)
-          {
-          case 2:
-            fg1 = 0;
-            bg1 = 3;
-          break;
-          case 3:
-            fg2 = 0;
-            bg2 = 3;
-          break;
-          }
+	switch (cursor_pos) {
+	case 2:
+		fg1 = 0;
+		bg1 = 3;
+		break;
+	case 3:
+		fg2 = 0;
+		bg2 = 3;
+		break;
+	}
 
         draw_half_width_chars(ins_buf[0], ins_buf[1], x + 2, y, fg1, bg1, fg2, bg2);
         /* volume */
