@@ -315,11 +315,15 @@ song_note *song_pattern_allocate(int rows)
 song_note *song_pattern_allocate_copy(int patno, int *rows)
 {
 	int len = mp->PatternSize[patno];
-	MODCOMMAND *newdata = csf_allocate_pattern(len, 64);
 	MODCOMMAND *olddata = mp->Patterns[patno];
-	memcpy(newdata, olddata, len * sizeof(MODCOMMAND) * 64);
-	if (rows) *rows=len;
-	return (song_note*)newdata;
+	MODCOMMAND *newdata = NULL;
+	if (olddata) {
+		newdata = csf_allocate_pattern(len, 64);
+		memcpy(newdata, olddata, len * sizeof(MODCOMMAND) * 64);
+	}
+	if (rows)
+		*rows = len;
+	return (song_note *) newdata;
 }
 void song_pattern_deallocate(song_note *n)
 {
