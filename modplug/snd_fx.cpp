@@ -153,8 +153,8 @@ static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		pChn->nOldPortaUpDown = param;
 	else
 		param = pChn->nOldPortaUpDown;
-	if (flags & SONG_COMPATGXX)
-		pChn->nPortamentoSlide=param;
+	if (!(flags & SONG_COMPATGXX))
+		pChn->nPortamentoSlide = param;
 	if ((param & 0xF0) >= 0xE0) {
 		if (param & 0x0F) {
 			if ((param & 0xF0) == 0xF0) {
