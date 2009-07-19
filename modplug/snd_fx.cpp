@@ -155,7 +155,6 @@ static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		param = pChn->nOldPortaUpDown;
 	if (flags & SONG_COMPATGXX)
 		pChn->nPortamentoSlide=param;
-	pChn->nPortamentoDest = 0;
 	if ((param & 0xF0) >= 0xE0) {
 		if (param & 0x0F) {
 			if ((param & 0xF0) == 0xF0) {
@@ -179,7 +178,6 @@ static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		param = pChn->nOldPortaUpDown;
 	if (!(flags & SONG_COMPATGXX))
 		pChn->nPortamentoSlide = param;
-	pChn->nPortamentoDest = 0;
 	if ((param & 0xF0) >= 0xE0) {
 		if (param & 0x0F) {
 			if ((param & 0xF0) == 0xF0) {
@@ -215,8 +213,10 @@ static void fx_tone_portamento(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 				delta = param * 4;
 			}
 			pChn->nPeriod += delta;
-			if (pChn->nPeriod > pChn->nPortamentoDest)
+			if (pChn->nPeriod > pChn->nPortamentoDest) {
 				pChn->nPeriod = pChn->nPortamentoDest;
+				pChn->nPortamentoDest = 0;
+			}
 		} else if (pChn->nPeriod > pChn->nPortamentoDest) {
 			if (flags & SONG_LINEARSLIDES) {
 				uint32_t n = MIN(255, param);
@@ -226,8 +226,10 @@ static void fx_tone_portamento(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 				delta = -param * 4;
 			}
 			pChn->nPeriod += delta;
-			if (pChn->nPeriod < pChn->nPortamentoDest)
+			if (pChn->nPeriod < pChn->nPortamentoDest) {
 				pChn->nPeriod = pChn->nPortamentoDest;
+				pChn->nPortamentoDest = 0;
+			}
 		}
 	}
 }
@@ -1122,9 +1124,10 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 	pChn->nNewIns = 0;
 	uint32_t period = get_period_from_note(note, pChn->nC5Speed, csf->m_dwSongFlags & SONG_LINEARSLIDES);
 	if (period) {
+		if (bPorta)
+			pChn->nPortamentoDest = period;
 		if (!bPorta || !pChn->nPeriod)
 			pChn->nPeriod = period;
-		pChn->nPortamentoDest = period;
 		if (!bPorta || !pChn->nLength) {
 			pChn->pInstrument = pins;
 			pChn->pSample = pins->pSample;
