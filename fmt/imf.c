@@ -243,6 +243,11 @@ static void import_imf_effect(MODCOMMAND *note)
 			(... actually, orpheus doesn't even seem to implement this at all) */
 			note->param = 0x77;
 			break;
+		case 0x18: // sample offset
+			// O00 doesn't pick up the previous value
+			if (!note->param)
+				note->command = 0;
+			break;
 		}
 		if (n)
 			note->param = n | (note->param & 0xf);
