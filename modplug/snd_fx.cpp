@@ -147,6 +147,19 @@ static void fx_extra_fine_portamento_down(uint32_t flags, SONGVOICE *pChn, uint3
 	}
 }
 
+static void fx_reg_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (!(flags & SONG_FIRSTTICK))
+		fx_do_freq_slide(flags, pChn, -(int)(param * 4));
+}
+
+static void fx_reg_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (!(flags & SONG_FIRSTTICK))
+		fx_do_freq_slide(flags, pChn, (int)(param * 4));
+}
+
+
 static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
 	if (param)
@@ -155,19 +168,18 @@ static void fx_portamento_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		param = pChn->nOldPortaUpDown;
 	if (!(flags & SONG_COMPATGXX))
 		pChn->nPortamentoSlide = param;
-	if ((param & 0xF0) >= 0xE0) {
-		if (param & 0x0F) {
-			if ((param & 0xF0) == 0xF0) {
-				fx_fine_portamento_up(flags, pChn, param & 0x0F);
-			} else if ((param & 0xF0) == 0xE0) {
-				fx_extra_fine_portamento_up(flags, pChn, param & 0x0F);
-			}
-		}
-		return;
+
+	switch (param & 0xf0) {
+	case 0xe0:
+		fx_extra_fine_portamento_up(flags, pChn, param & 0x0F);
+		break;
+	case 0xf0:
+		fx_fine_portamento_up(flags, pChn, param & 0x0F);
+		break;
+	default:
+		fx_reg_portamento_up(flags, pChn, param);
+		break;
 	}
-	// Regular Slide
-	if (!(flags & SONG_FIRSTTICK))
-		fx_do_freq_slide(flags, pChn, -(int)(param * 4));
 }
 
 static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
@@ -178,18 +190,18 @@ static void fx_portamento_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 		param = pChn->nOldPortaUpDown;
 	if (!(flags & SONG_COMPATGXX))
 		pChn->nPortamentoSlide = param;
-	if ((param & 0xF0) >= 0xE0) {
-		if (param & 0x0F) {
-			if ((param & 0xF0) == 0xF0) {
-				fx_fine_portamento_down(flags, pChn, param & 0x0F);
-			} else if ((param & 0xF0) == 0xE0) {
-				fx_extra_fine_portamento_down(flags, pChn, param & 0x0F);
-			}
-		}
-		return;
+
+	switch (param & 0xf0) {
+	case 0xe0:
+		fx_extra_fine_portamento_down(flags, pChn, param & 0x0F);
+		break;
+	case 0xf0:
+		fx_fine_portamento_down(flags, pChn, param & 0x0F);
+		break;
+	default:
+		fx_reg_portamento_down(flags, pChn, param);
+		break;
 	}
-	if (!(flags & SONG_FIRSTTICK))
-		fx_do_freq_slide(flags, pChn, (int)(param << 2));
 }
 
 static void fx_tone_portamento(uint32_t flags, SONGVOICE *pChn, uint32_t param)
@@ -1565,11 +1577,23 @@ void csf_process_effects(CSoundFile *csf)
 			break;
 
 		case VOLCMD_PORTAUP: // Fx
-			fx_portamento_up(csf->m_dwSongFlags, pChn, 4 * vol);
+			if (vol)
+				vol = pChn->nOldPortaUpDown = 4 * vol;
+			else
+				vol = pChn->nOldPortaUpDown;
+			if (!(csf->m_dwSongFlags & SONG_COMPATGXX))
+				pChn->nPortamentoSlide = vol;
+			fx_reg_portamento_up(csf->m_dwSongFlags, pChn, vol);
 			break;
 
 		case VOLCMD_PORTADOWN: // Ex
-			fx_portamento_down(csf->m_dwSongFlags, pChn, 4 * vol);
+			if (vol)
+				vol = pChn->nOldPortaUpDown = 4 * vol;
+			else
+				vol = pChn->nOldPortaUpDown;
+			if (!(csf->m_dwSongFlags & SONG_COMPATGXX))
+				pChn->nPortamentoSlide = vol;
+			fx_reg_portamento_down(csf->m_dwSongFlags, pChn, vol);
 			break;
 
 		case VOLCMD_TONEPORTAMENTO: // Gx
