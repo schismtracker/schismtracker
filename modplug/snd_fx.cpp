@@ -1949,7 +1949,6 @@ void csf_process_effects(CSoundFile *csf)
 				if (vol)
 					pChn->nOldVolParam = vol;
 			} else {
-				printf("D%d\n", pChn->nOldVolParam);
 				fx_volume_down(csf->m_dwSongFlags, pChn, pChn->nOldVolParam);
 			}
 			break;
