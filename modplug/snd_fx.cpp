@@ -1906,8 +1906,8 @@ void csf_process_effects(CSoundFile *csf)
 
 		case VOLCMD_VOLSLIDEUP: // Cx
 			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
-				if (param)
-					pChn->nOldVolParam = param;
+				if (vol)
+					pChn->nOldVolParam = vol;
 			} else {
 				fx_volume_up(csf->m_dwSongFlags, pChn, pChn->nOldVolParam);
 			}
@@ -1915,29 +1915,30 @@ void csf_process_effects(CSoundFile *csf)
 
 		case VOLCMD_VOLSLIDEDOWN: // Dx
 			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
-				if (param)
-					pChn->nOldVolParam = param;
+				if (vol)
+					pChn->nOldVolParam = vol;
 			} else {
+				printf("D%d\n", pChn->nOldVolParam);
 				fx_volume_down(csf->m_dwSongFlags, pChn, pChn->nOldVolParam);
 			}
 			break;
 
 		case VOLCMD_FINEVOLUP: // Ax
 			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
-				if (param)
-					pChn->nOldVolParam = param;
+				if (vol)
+					pChn->nOldVolParam = vol;
 				else
-					param = pChn->nOldVolParam;
+					vol = pChn->nOldVolParam;
 				fx_fine_volume_up(csf->m_dwSongFlags, pChn, vol);
 			}
 			break;
 
 		case VOLCMD_FINEVOLDOWN: // Bx
 			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
-				if (param)
-					pChn->nOldVolParam = param;
+				if (vol)
+					pChn->nOldVolParam = vol;
 				else
-					param = pChn->nOldVolParam;
+					vol = pChn->nOldVolParam;
 				fx_fine_volume_down(csf->m_dwSongFlags, pChn, vol);
 			}
 			break;
