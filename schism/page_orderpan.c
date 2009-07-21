@@ -451,14 +451,6 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 	}
 
         switch (k->sym) {
-	case SDLK_RETURN:
-		if (status.flags & CLASSIC_MODE) return 0;
-		if (!(k->mod & KMOD_ALT)) return 0;
-		if (!k->state) return 1;
-		status_text_flash("Saved orderlist");
-		orderlist_save();
-		return 1;
-	
 	case SDLK_BACKSPACE:
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
@@ -467,6 +459,29 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		status_text_flash("Restored orderlist");
 		orderlist_restore();
 		return 1;
+
+	case SDLK_RETURN:
+        case SDLK_KP_ENTER:
+		if (status.flags & CLASSIC_MODE) return 0;
+		if (k->mod & KMOD_ALT) {
+			if (!k->state) return 1;
+			status_text_flash("Saved orderlist");
+			orderlist_save();
+			return 1;
+		}
+		// else fall through
+
+        case SDLK_g:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (!k->state) return 1;
+                n = list[new_order];
+                if (n < 200) {
+                        set_current_pattern(n);
+                        set_page(PAGE_PATTERN_EDITOR);
+                }
+                return 1;
+	
         case SDLK_TAB:
 		if (k->mod & KMOD_SHIFT) {
 			if (k->state) return 1;
@@ -605,16 +620,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			}
 		}
 		break;
-        case SDLK_g:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (!k->state) return 1;
-                n = list[new_order];
-                if (n < 200) {
-                        set_current_pattern(n);
-                        set_page(PAGE_PATTERN_EDITOR);
-                }
-                return 1;
+
 	case SDLK_r:
 		if (k->mod & KMOD_ALT) {
 			if (!k->state) return 1;
