@@ -137,7 +137,6 @@ bool CSoundFile::ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength)
 	if (bswapLE16(pmh->commentsize) && (dwMemPos + bswapLE16(pmh->commentsize) < dwMemLength)) {
 		uint32_t n = bswapLE16(pmh->commentsize);
 		n = MIN(n, MAX_MESSAGE);
-		printf("%x\n", dwMemPos);
 		memcpy(m_lpszSongComments, lpStream+dwMemPos, n);
 		m_lpszSongComments[n] = 0;
 		for (uint32_t i=0; i<n; i++) {
