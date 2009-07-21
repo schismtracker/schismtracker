@@ -1666,8 +1666,6 @@ void csf_process_effects(CSoundFile *csf)
 			pChn->nCommand = CMD_ARPEGGIO;
 			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
-			if (!pChn->nPeriod || pChn->nNote == NOTE_NONE)
-				break;
 			if (param)
 				pChn->nArpeggio = param;
 			break;
