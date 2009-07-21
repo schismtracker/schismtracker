@@ -1034,7 +1034,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 	}
 	// Reset envelopes
 	if (bResetEnv) {
-		if (!bPorta || (csf->m_dwSongFlags & SONG_COMPATGXX)
+		if (!bPorta // || (csf->m_dwSongFlags & SONG_COMPATGXX)
 		    || !pChn->nLength || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)) {
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
 			if (!bInstrumentChanged && penv && !(pChn->dwFlags & (CHN_KEYOFF|CHN_NOTEFADE))) {
