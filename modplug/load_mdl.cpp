@@ -113,7 +113,12 @@ void ConvertMDLCommand(MODCOMMAND *m, uint32_t eff, uint32_t data)
 	case 0x30:	command = CMD_RETRIG; break;
 	case 0x40:	command = CMD_TREMOLO; break;
 	case 0x50:	command = CMD_TREMOR; break;
-	case 0xEF:	if (param > 0xFF) param = 0xFF; command = CMD_OFFSET; break;
+	case 0xEF:
+		if (param) {
+			if (param > 0xFF) param = 0xFF;
+			command = CMD_OFFSET;
+		}
+		break;
 	}
 	if (command)
 	{
