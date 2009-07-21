@@ -246,6 +246,30 @@ static void fx_tone_portamento(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 	}
 }
 
+// Implemented for IMF compatibility, can't actually save this in any formats
+// sign should be 1 (up) or -1 (down)
+static void fx_note_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param, int sign)
+{
+	uint8_t x, y;
+	if (flags & SONG_FIRSTTICK) {
+		x = param & 0xf0;
+		if (x)
+			pChn->nNoteSlideSpeed = (x >> 4);
+		y = param & 0xf;
+		if (y)
+			pChn->nNoteSlideStep = y;
+		pChn->nNoteSlideCounter = pChn->nNoteSlideSpeed;
+	} else {
+			if (--pChn->nNoteSlideCounter == 0) {
+				pChn->nNoteSlideCounter = pChn->nNoteSlideSpeed;
+				// update it
+				pChn->nPeriod = get_period_from_note
+					(sign * pChn->nNoteSlideStep + get_note_from_period(pChn->nPeriod), 8363, 0);
+			}
+	}
+}
+
+
 
 static void fx_vibrato(SONGVOICE *p, uint32_t param)
 {
@@ -1841,6 +1865,13 @@ void csf_process_effects(CSoundFile *csf)
 					&csf->m_MidiCfg.szMidiZXXExt[(param & 0x7F) << 5],
 					0, 0, 0, 0);
 			}
+			break;
+		
+		case CMD_NOTESLIDEUP:
+			fx_note_slide(csf->m_dwSongFlags, pChn, param, 1);
+			break;
+		case CMD_NOTESLIDEDOWN:
+			fx_note_slide(csf->m_dwSongFlags, pChn, param, -1);
 			break;
 		}
 

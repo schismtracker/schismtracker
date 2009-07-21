@@ -140,8 +140,8 @@ static uint8_t imf_efftrans[] = {
 	CMD_VOLUMESLIDE, // 0x0D Dxy Volume Slide                     (*)
 	CMD_VOLUMESLIDE, // 0x0E Exy Fine Volume Slide                (*)
 	CMD_S3MCMDEX, // 0x0F Fxx Set Finetune
-	CMD_PORTAMENTOUP, // 0x10 Gxy Note Slide Up                    (*) - XXX
-	CMD_PORTAMENTODOWN, // 0x11 Hxy Note Slide Down                  (*) - XXX
+	CMD_NOTESLIDEUP, // 0x10 Gxy Note Slide Up                    (*)
+	CMD_NOTESLIDEDOWN, // 0x11 Hxy Note Slide Down                  (*)
 	CMD_PORTAMENTOUP, // 0x12 Ixx Slide Up                         (*)
 	CMD_PORTAMENTODOWN, // 0x13 Jxx Slide Down                       (*)
 	CMD_PORTAMENTOUP, // 0x14 Kxx Fine Slide Up                    (*)
@@ -192,12 +192,15 @@ static void import_imf_effect(MODCOMMAND *note)
 		break;
 	case 0xf: // set finetune
 		// we don't implement this, but let's at least import the value
-		note->param = 0x20 | MIN(note->param, 0xf);
+		note->param = 0x20 | MIN(note->param >> 4, 0xf);
 		break;
 	case 0x14: // fine slide up
 	case 0x15: // fine slide down
 		// this is about as close as we can do...
-		note->param = 0xf0 | MIN(note->param, 0xf);
+		if (note->param >> 4)
+			note->param = 0xf0 | MIN(note->param >> 4, 0xf);
+		else
+			note->param |= 0xe0;
 		break;
 	case 0x1f: // set global volume
 		note->param = MIN(note->param << 1, 0xff);
@@ -236,7 +239,8 @@ static void import_imf_effect(MODCOMMAND *note)
 			break;
 		case 0xe: // ignore envelope
 			/* predicament: we can only disable one envelope at a time.
-			volume is probably most noticeable, so let's go with that. */
+			volume is probably most noticeable, so let's go with that.
+			(... actually, orpheus doesn't even seem to implement this at all) */
 			note->param = 0x77;
 			break;
 		}
@@ -492,6 +496,10 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 		load_imf_envelope(ins, &ins->VolEnv, &imfins, IMF_ENV_VOL);
 		load_imf_envelope(ins, &ins->PanEnv, &imfins, IMF_ENV_PAN);
 		load_imf_envelope(ins, &ins->PitchEnv, &imfins, IMF_ENV_FILTER);
+
+		// hack to get === to stop notes (from modplug's xm loader)
+		if (!(ins->dwFlags & ENV_VOLUME) && !ins->nFadeOut)
+			ins->nFadeOut = 8192;
 
 		for (s = 0; s < imfins.smpnum; s++) {
 			struct imf_sample imfsmp;

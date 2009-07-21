@@ -151,6 +151,8 @@
 #define CMD_PANNINGSLIDE        29
 #define CMD_SETENVPOSITION      30
 #define CMD_MIDI                31
+#define CMD_NOTESLIDEUP         32 // IMF Gxy
+#define CMD_NOTESLIDEDOWN       33 // IMF Hxy
 
 
 // Volume Column commands
@@ -430,6 +432,7 @@ typedef struct _SONGVOICE
 	unsigned int nOldGlbVolSlide;
 	unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
 	unsigned int nOldPanSlide, nOldChnVolSlide;
+	unsigned int nNoteSlideCounter, nNoteSlideSpeed, nNoteSlideStep;
 	unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
 	unsigned int nTremoloType, nTremoloSpeed, nTremoloDepth;
 	unsigned int nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
