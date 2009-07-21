@@ -190,7 +190,7 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 	if ((!lpStream) || (dwMemLength < sizeof(MT2FILEHEADER))
 	 || (pfh->dwMT20 != 0x3032544D)
 	 || (pfh->wVersion < 0x0200) || (pfh->wVersion >= 0x0300)
-	 || (pfh->wChannels < 4) || (pfh->wChannels > 64)) return false;
+	 || (pfh->wChannels > MAX_CHANNELS)) return false;
 	pdd = NULL;
 	m_nType = MOD_TYPE_MT2;
 	m_nChannels = pfh->wChannels;
