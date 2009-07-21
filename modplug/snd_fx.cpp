@@ -265,10 +265,6 @@ static void fx_panbrello(SONGVOICE *p, uint32_t param)
 
 static void fx_fine_volume_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
-	if (param)
-		pChn->nOldFineVolUpDown = param;
-	else
-		param = pChn->nOldFineVolUpDown;
 	if (flags & SONG_FIRSTTICK) {
 		pChn->nVolume += param * 4;
 		if (pChn->nVolume > 256)
@@ -278,11 +274,25 @@ static void fx_fine_volume_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 
 static void fx_fine_volume_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
-	if (param)
-		pChn->nOldFineVolUpDown = param;
-	else
-		param = pChn->nOldFineVolUpDown;
 	if (flags & SONG_FIRSTTICK) {
+		pChn->nVolume -= param * 4;
+		if (pChn->nVolume < 0)
+			pChn->nVolume = 0;
+	}
+}
+
+static void fx_volume_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (!(flags & SONG_FIRSTTICK) || (flags & SONG_FASTVOLSLIDES)) {
+		pChn->nVolume += param * 4;
+		if (pChn->nVolume > 256)
+			pChn->nVolume = 256;
+	}
+}
+
+static void fx_volume_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+{
+	if (!(flags & SONG_FIRSTTICK) || (flags & SONG_FASTVOLSLIDES)) {
 		pChn->nVolume -= param * 4;
 		if (pChn->nVolume < 0)
 			pChn->nVolume = 0;
@@ -291,37 +301,39 @@ static void fx_fine_volume_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 
 static void fx_volume_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
 {
+	// Dxx     Volume slide down
+	//
+	// if (xx == 0) then xx = last xx for (Dxx/Kxx/Lxx) for this channel.
 	if (param)
 		pChn->nOldVolumeSlide = param;
 	else
 		param = pChn->nOldVolumeSlide;
-	int32_t newvolume = pChn->nVolume;
-	if ((param & 0x0F) == 0x0F) {
-		if (param & 0xF0) {
-			fx_fine_volume_up(flags, pChn, (param >> 4));
-			return;
-		} else {
-			if ((flags & SONG_FIRSTTICK) && !(flags & SONG_FASTVOLSLIDES)) {
-				newvolume -= 0x0F * 4;
-			}
-		}
-	} else if ((param & 0xF0) == 0xF0) {
-		if (param & 0x0F) {
-			fx_fine_volume_down(flags, pChn, param & 0x0F);
-			return;
-		} else {
-			if ((flags & SONG_FIRSTTICK) && !(flags & SONG_FASTVOLSLIDES)) {
-				newvolume += 0x0F * 4;
-			}
-		}
+
+	// Order of testing: Dx0, D0x, DxF, DFx
+	if (param == (param & 0xf0)) {
+		// Dx0     Set effect update for channel enabled if channel is ON.
+		//         If x = F, then slide up volume by 15 straight away also (for S3M compat)
+		//         Every update, add x to the volume, check and clip values > 64 to 64
+		param >>= 4;
+		if (param == 0xf)
+			flags |= SONG_FASTVOLSLIDES;
+		fx_volume_up(flags, pChn, param);
+	} else if (param == (param & 0xf)) {
+		// D0x     Set effect update for channel enabled if channel is ON.
+		//         If x = F, then slide down volume by 15 straight away also (for S3M)
+		//         Every update, subtract x from the volume, check and clip values < 0 to 0
+		if (param == 0xf)
+			flags |= SONG_FASTVOLSLIDES;
+		fx_volume_down(flags, pChn, param);
+	} else if ((param & 0xf) == 0xf) {
+		// DxF     Add x to volume straight away. Check and clip values > 64 to 64
+		param >>= 4;
+		fx_fine_volume_up(flags, pChn, param);
+	} else if ((param & 0xf0) == 0xf0) {	
+		// DFx     Subtract x from volume straight away. Check and clip values < 0 to 0
+		param &= 0xf;
+		fx_fine_volume_down(flags, pChn, param);
 	}
-	if (!(flags & SONG_FIRSTTICK) || (flags & SONG_FASTVOLSLIDES)) {
-		if (param & 0x0F)
-			newvolume -= (int)((param & 0x0F) * 4);
-		else
-			newvolume += (int)((param & 0xF0) >> 2);
-	}
-	pChn->nVolume = CLAMP(newvolume, 0, 256);
 }
 
 
@@ -1518,79 +1530,111 @@ void csf_process_effects(CSoundFile *csf)
 				}
 				csf_note_change(csf, nChn, note, bPorta, true, false);
 			}
-			// Tick-0 only volume commands
-			if (volcmd == VOLCMD_VOLUME) {
+		}
+
+		// Volume Column Effect (except volume & panning)
+		/*
+		A few notes, paraphrased from ITTECH.TXT:
+			Ex/Fx/Gx are shared with Exx/Fxx/Gxx; Ex/Fx are 4x the 'normal' slide value
+			Gx is linked with Ex/Fx if Compat Gxx is off, just like Gxx is with Exx/Fxx
+			Gx values: 1, 4, 8, 16, 32, 64, 96, 128, 255
+			Ax/Bx/Cx/Dx values are used directly (i.e. D9 == D09), and are NOT shared with Dxx
+				(value is stored into nOldVolParam and used by A0/B0/C0/D0)
+			Hx uses the same value as Hxx and Uxx, and affects the *depth*
+				so... hxx = (hx | (oldhxx & 0xf0))  ???
+		*/
+		switch (volcmd) {
+		case VOLCMD_NONE:
+			break;
+
+		case VOLCMD_VOLUME:
+			if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick) {
 				if (vol > 64) vol = 64;
 				pChn->nVolume = vol << 2;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
-			} else if (volcmd == VOLCMD_PANNING) {
+			}
+			break;
+
+		case VOLCMD_PANNING:
+			if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick) {
 				if (vol > 64) vol = 64;
 				pChn->nPan = vol << 2;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
 				pChn->dwFlags &= ~CHN_SURROUND;
 			}
-		}
+			break;
 
-		// Volume Column Effect (except volume & panning)
-		if (volcmd > VOLCMD_PANNING) {
-			if (volcmd == VOLCMD_TONEPORTAMENTO) {
-				fx_tone_portamento(csf->m_dwSongFlags, pChn,
-					ImpulseTrackerPortaVolCmd[vol & 0x0F]);
-			} else {
-				if (vol)
-					pChn->nOldVolParam = vol;
+		case VOLCMD_PORTAUP: // Fx
+			fx_portamento_up(csf->m_dwSongFlags, pChn, 4 * vol);
+			break;
+
+		case VOLCMD_PORTADOWN: // Ex
+			fx_portamento_down(csf->m_dwSongFlags, pChn, 4 * vol);
+			break;
+
+		case VOLCMD_TONEPORTAMENTO: // Gx
+			fx_tone_portamento(csf->m_dwSongFlags, pChn,
+				ImpulseTrackerPortaVolCmd[vol & 0x0F]);
+			break;
+
+		case VOLCMD_VOLSLIDEUP: // Cx
+			if (param)
+				pChn->nOldVolParam = param;
+			else
+				param = pChn->nOldVolParam;
+			fx_volume_up(csf->m_dwSongFlags, pChn, vol);
+			break;
+
+		case VOLCMD_VOLSLIDEDOWN: // Dx
+			if (param)
+				pChn->nOldVolParam = param;
+			else
+				param = pChn->nOldVolParam;
+			fx_volume_down(csf->m_dwSongFlags, pChn, vol);
+			break;
+
+		case VOLCMD_FINEVOLUP: // Ax
+			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+				if (param)
+					pChn->nOldVolParam = param;
 				else
-					vol = pChn->nOldVolParam;
-				switch(volcmd) {
-				case VOLCMD_VOLSLIDEUP:
-					fx_volume_slide(csf->m_dwSongFlags, pChn, vol << 4);
-					break;
-
-				case VOLCMD_VOLSLIDEDOWN:
-					fx_volume_slide(csf->m_dwSongFlags, pChn, vol);
-					break;
-
-				case VOLCMD_FINEVOLUP:
-					if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick)
-						fx_volume_slide(csf->m_dwSongFlags, pChn, (vol << 4) | 0x0F);
-					break;
-
-				case VOLCMD_FINEVOLDOWN:
-					if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick)
-						fx_volume_slide(csf->m_dwSongFlags, pChn, 0xF0 | vol);
-					break;
-
-				case VOLCMD_VIBRATOSPEED:
-					fx_vibrato(pChn, vol << 4);
-					break;
-
-				case VOLCMD_VIBRATO:
-					fx_vibrato(pChn, vol);
-					break;
-
-				case VOLCMD_PANSLIDELEFT:
-					fx_panning_slide(csf->m_dwSongFlags, pChn, vol);
-					break;
-
-				case VOLCMD_PANSLIDERIGHT:
-					fx_panning_slide(csf->m_dwSongFlags, pChn, vol << 4);
-					break;
-
-				case VOLCMD_PORTAUP:
-					fx_portamento_up(csf->m_dwSongFlags, pChn, vol << 2);
-					break;
-
-				case VOLCMD_PORTADOWN:
-					fx_portamento_down(csf->m_dwSongFlags, pChn, vol << 2);
-					break;
-				}
+					param = pChn->nOldVolParam;
+				fx_fine_volume_up(csf->m_dwSongFlags, pChn, vol);
 			}
+			break;
+
+		case VOLCMD_FINEVOLDOWN: // Bx
+			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+				if (param)
+					pChn->nOldVolParam = param;
+				else
+					param = pChn->nOldVolParam;
+				fx_fine_volume_down(csf->m_dwSongFlags, pChn, vol);
+			}
+			break;
+
+		case VOLCMD_VIBRATO: // Hx
+			fx_vibrato(pChn, vol);
+			break;
+
+		case VOLCMD_VIBRATOSPEED: // $x (FT2 compat.)
+			fx_vibrato(pChn, vol << 4);
+			break;
+
+		case VOLCMD_PANSLIDELEFT: // <x (FT2)
+			fx_panning_slide(csf->m_dwSongFlags, pChn, vol);
+			break;
+
+		case VOLCMD_PANSLIDERIGHT: // >x (FT2)
+			fx_panning_slide(csf->m_dwSongFlags, pChn, vol << 4);
+			break;
 		}
 
 		// Effects
 		switch (cmd) {
-		case 0:
+		case CMD_NONE:
 			break;
+
 		// Set Volume
 		case CMD_VOLUME:
 			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
