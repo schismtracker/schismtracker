@@ -476,6 +476,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 0;
 		if (!k->state) return 1;
                 n = list[new_order];
+                while (n >= 200 && new_order > 0)
+                        n = list[--new_order];
                 if (n < 200) {
                         set_current_pattern(n);
                         set_page(PAGE_PATTERN_EDITOR);
