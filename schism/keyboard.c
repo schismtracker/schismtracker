@@ -59,9 +59,10 @@ const char hexdigits[16] = "0123456789ABCDEF";
 
 /* extra non-IT effects:
  *         '!' = volume '#' = modcmdex '$' = keyoff
- *         '%' = xfineportaupdown '&' = setenvposition */
-static const char effects[33] = ".JFEGHLKRXODB!CQATI#SMNVW$UY%P&Z";
-static const char ptm_effects[33] = ".0123456789ABCDRFFTE???GHK?YXPLZ";
+ *         '%' = xfineportaupdown '&' = setenvposition
+ *         '('/')' = noteslide up/down (IMF) */
+static const char effects[] = ".JFEGHLKRXODB!CQATI#SMNVW$UY%P&Z()";
+static const char ptm_effects[] = ".0123456789ABCDRFFTE???GHK?YXPLZ()";
 
 /* --------------------------------------------------------------------- */
 
@@ -92,7 +93,7 @@ void kbd_sharp_flat_toggle(int e)
 
 char get_effect_char(int effect)
 {
-        if (effect < 0 || effect > 31) {
+        if (effect < 0 || effect > 33) {
                 log_appendf(4, "get_effect_char: effect %d out of range",
                             effect);
                 return '?';

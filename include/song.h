@@ -179,6 +179,7 @@ typedef struct _song_mix_channel {
         unsigned int nOldGlbVolSlide;
         unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
         unsigned int nOldPanSlide, nOldChnVolSlide;
+        unsigned int nNoteSlideCounter, nNoteSlideSpeed, nNoteSlideStep;
         unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
         unsigned int nTremoloType, nTremoloSpeed, nTremoloDepth;
         unsigned int nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
