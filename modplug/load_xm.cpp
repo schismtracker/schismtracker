@@ -213,6 +213,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 					// (but still plays previous notes and processes the volume column!)
 					if (p->command == CMD_KEYOFF && p->param == 0) {
 						p->note = NOTE_NONE;
+						p->instr = 0;
 						p->command = CMD_NONE;
 					}
 					
