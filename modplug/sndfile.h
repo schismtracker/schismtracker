@@ -147,7 +147,6 @@
 #define CMD_KEYOFF              25
 #define CMD_FINEVIBRATO         26
 #define CMD_PANBRELLO           27
-#define CMD_XFINEPORTAUPDOWN    28
 #define CMD_PANNINGSLIDE        29
 #define CMD_SETENVPOSITION      30
 #define CMD_MIDI                31

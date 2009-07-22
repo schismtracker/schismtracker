@@ -111,11 +111,9 @@
 :   >x Panning slide to right by x       [$E0-$EF]
 :
 :  General effects.
-:   !xx Set volume                       [Cxx] - ?
-:   $xx Key off                          [Kxx] - ?
-:   %1x Extra fine pitch slide up by x   [X1x] - FEx
-:   %2x Extra fine pitch slide down by x [X2x] - EEx
-:   &xx Set envelope position            [Lxx] - ?
+:   !xx Set volume                       [Cxx]
+:   $xx Key off                          [Kxx]
+:   &xx Set envelope position            [Lxx]
 :
 %
 |

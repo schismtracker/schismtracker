@@ -1753,29 +1753,8 @@ void csf_process_effects(CSoundFile *csf)
 
 		// Key Off
 		case CMD_KEYOFF:
-			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
-				break;
-			fx_key_off(csf, nChn);
-			break;
-
-		// Extra-fine porta up/down
-		case CMD_XFINEPORTAUPDOWN:
-			switch(param & 0xF0) {
-			case 0x10:
-				fx_extra_fine_portamento_up(csf->m_dwSongFlags, pChn, param & 0x0F);
-				break;
-			case 0x20:
-				fx_extra_fine_portamento_down(csf->m_dwSongFlags, pChn, param & 0x0F);
-				break;
-			// Modplug XM Extensions
-			case 0x50:
-			case 0x60:
-			case 0x70:
-			case 0x90:
-			case 0xA0:
-				fx_extended_s3m(csf, nChn, param);
-				break;
-			}
+			if ((csf->m_nMusicSpeed - csf->m_nTickCount) == param)
+				fx_key_off(csf, nChn);
 			break;
 
 		// Set Channel Global Volume
