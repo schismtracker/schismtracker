@@ -12,6 +12,7 @@
 #include "snd_fm.h"
 #include "snd_gm.h"
 #include "cmixer.h"
+#include "util.h" // for CLAMP
 
 void (*csf_multi_out_raw) (int chan, int *buf, int len) = NULL;
 
@@ -366,6 +367,8 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 ///////////////////////////////////////////////////
 // Resonant Filters
 
+#define FILT_CLIP(i) CLAMP(i, -4096, 4095)
+
 // Mono
 #define MIX_BEGIN_FILTER \
     double fy1 = pChannel->nFilter_Y1; \
@@ -379,7 +382,8 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 
 
 #define SNDMIX_PROCESSFILTER \
-    ta = ((double)vol * pChn->nFilter_A0 + fy1 * pChn->nFilter_B0 + fy2 * pChn->nFilter_B1); \
+    ta = ((double)vol * pChn->nFilter_A0 + fy1 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
+          + FILT_CLIP((fy2-fy1) * pChn->nFilter_B1)); \
     fy2 = fy1; \
     fy1 = ta; \
     vol = (int)ta;
@@ -402,8 +406,10 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 
 
 #define SNDMIX_PROCESSSTEREOFILTER \
-    ta = ((double)vol_l * pChn->nFilter_A0 + fy1 * pChn->nFilter_B0 + fy2 * pChn->nFilter_B1); \
-    tb = ((double)vol_r * pChn->nFilter_A0 + fy3 * pChn->nFilter_B0 + fy4 * pChn->nFilter_B1); \
+    ta = ((double)vol_l * pChn->nFilter_A0 + fy1 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
+          + FILT_CLIP((fy2-fy1) * pChn->nFilter_B1)); \
+    tb = ((double)vol_r * pChn->nFilter_A0 + fy1 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
+          + FILT_CLIP((fy2-fy1) * pChn->nFilter_B1)); \
     fy2 = fy1; fy1 = ta; vol_l = (int) ta; \
     fy4 = fy3; fy3 = tb; vol_r = (int) tb;
 
