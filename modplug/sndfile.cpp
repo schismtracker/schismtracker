@@ -1217,7 +1217,10 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
 		//if ((param == 0xFF) && (m_nSamples == 15)) command = 0;
 		break;
 	// Extension for XM extended effects
-	case 'G' - 55:	command = CMD_GLOBALVOLUME; break;
+	case 'G' - 55:
+		command = CMD_GLOBALVOLUME;
+		param = MIN(param << 1, 0x80);
+		break;
 	case 'H' - 55:	command = CMD_GLOBALVOLSLIDE; if (param & 0xF0) param &= 0xF0; break;
 	case 'K' - 55:	command = CMD_KEYOFF; break;
 	case 'L' - 55:	command = CMD_SETENVPOSITION; break;
