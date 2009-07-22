@@ -209,12 +209,26 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 						}
 					}
 					
-					// FT2 ignores both K00 and its note entirely
-					// (but still plays previous notes and processes the volume column!)
 					if (p->command == CMD_KEYOFF && p->param == 0) {
+						// FT2 ignores both K00 and its note entirely (but still
+						// plays previous notes and processes the volume column!)
 						p->note = NOTE_NONE;
 						p->instr = 0;
 						p->command = CMD_NONE;
+					} else if (p->note == NOTE_OFF && p->command == CMD_S3MCMDEX
+					           && (p->param >> 4) == 0xd) {
+						// note off with a delay ignores the note off, and also
+						// ignores set-panning (but not other effects!)
+						// (actually the other vol. column effects happen on the
+						// first tick with ft2, but this is "close enough" i think)
+						p->note = NOTE_NONE;
+						p->instr = 0;
+						if (p->volcmd == VOLCMD_PANNING) {
+							p->volcmd = VOLCMD_NONE;
+							p->vol = 0;
+							p->command = CMD_NONE;
+							p->param = 0;
+						}
 					}
 					
 					p++;
