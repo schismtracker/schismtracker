@@ -108,7 +108,7 @@ void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq
 	fc = (float) filter_cutoff[cutoff];
 
 	fc *= 3.14159265358979 * 2 / fs;
-	d2 = dmpfac[resonance] / 65536.0;
+	d2 = dmpfac[resonance] / (4*65536.0);
 	d = (1.0 - d2) * fc;
 
 	if (d > 2.0)
