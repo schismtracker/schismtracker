@@ -1221,7 +1221,11 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
 		command = CMD_GLOBALVOLUME;
 		param = MIN(param << 1, 0x80);
 		break;
-	case 'H' - 55:	command = CMD_GLOBALVOLSLIDE; if (param & 0xF0) param &= 0xF0; break;
+	case 'H' - 55:
+		command = CMD_GLOBALVOLSLIDE;
+		//if (param & 0xF0) param &= 0xF0;
+		param = MIN((param & 0xf0) << 1, 0xf0) | MIN((param & 0xf) << 1, 0xf);
+		break;
 	case 'K' - 55:	command = CMD_KEYOFF; break;
 	case 'L' - 55:	command = CMD_SETENVPOSITION; break;
 	case 'M' - 55:	command = CMD_CHANNELVOLUME; break;
@@ -1308,7 +1312,7 @@ uint16_t csf_export_mod_effect(const MODCOMMAND *m, int bXM)
 	case CMD_SPEED:			command = 0x0F; if (param > 0x20) param = 0x20; break;
 	case CMD_TEMPO:			if (param > 0x20) { command = 0x0F; break; } return 0;
 	case CMD_GLOBALVOLUME:		command = 'G' - 55; break;
-	case CMD_GLOBALVOLSLIDE:	command = 'H' - 55; break;
+	case CMD_GLOBALVOLSLIDE:	command = 'H' - 55; break; // FIXME this needs to be adjusted
 	case CMD_KEYOFF:		command = 'K' - 55; break;
 	case CMD_SETENVPOSITION:	command = 'L' - 55; break;
 	case CMD_CHANNELVOLUME:		command = 'M' - 55; break;
