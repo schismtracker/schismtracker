@@ -646,6 +646,8 @@ void csf_reset_timestamps(CSoundFile *csf);
 uint32_t csf_get_highest_used_channel(CSoundFile *csf);
 uint32_t csf_detect_unused_samples(CSoundFile *csf, int *pbIns);
 
+void csf_insert_restart_pos(CSoundFile *csf, uint32_t restart_order); // hax
+
 // fastmix
 unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
 

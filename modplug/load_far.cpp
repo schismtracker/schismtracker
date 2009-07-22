@@ -104,7 +104,6 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 	{
 		Orderlist[iorder] = (iorder <= pmh2->snglen) ? pmh2->orders[iorder] : 0xFF;
 	}
-	//m_nRestartPos = pmh2->loopto;
 	// Reading Patterns	
 	dwMemPos += headerlen - (869 + pmh1->stlen);
 	if (dwMemPos >= dwMemLength) return true;
@@ -253,6 +252,7 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 		}
 		dwMemPos += pfs->length;
 	}
+	csf_insert_restart_pos(this, pmh2->loopto);
 	return true;
 }
 

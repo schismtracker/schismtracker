@@ -262,8 +262,6 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		tid = "%d Channel Soundtracker";
 	}
 
-	// TODO: "really" use the restart position, and put a Bxx at the last pattern
-
 	/* hey, is this a wow file? */
 	if (test_wow) {
 		slurp_seek(fp, 0, SEEK_END);
@@ -314,6 +312,8 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 			}
 		}
 	}
+	if (restart < npat)
+		csf_insert_restart_pos(song, restart);
 	
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {

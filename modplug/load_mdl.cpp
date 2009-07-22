@@ -223,6 +223,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 	uint32_t i,j, norders = 0, npatterns = 0, ntracks = 0;
 	uint32_t ninstruments = 0, nsamples = 0;
 	uint16_t block;
+	uint16_t restartpos = 0;
 	uint16_t patterntracks[MAX_PATTERNS*32];
 	uint8_t smpinfo[MAX_SAMPLES];
 	uint8_t insvolenv[MAX_INSTRUMENTS];
@@ -264,7 +265,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 			memcpy(song_title, pmib->songname, 32);
 			norders = bswapLE16(pmib->norders);
 			if (norders > MAX_ORDERS) norders = MAX_ORDERS;
-			//m_nRestartPos = bswapLE16(pmib->repeatpos);
+			restartpos = bswapLE16(pmib->repeatpos);
 			m_nDefaultGlobalVolume = pmib->globalvol * 128 / 255;
 			m_nDefaultTempo = pmib->tempo;
 			m_nDefaultSpeed = pmib->speed;
@@ -525,6 +526,7 @@ bool CSoundFile::ReadMDL(const uint8_t *lpStream, uint32_t dwMemLength)
 	}
 	m_dwSongFlags |= SONG_LINEARSLIDES;
 	m_nType = MOD_TYPE_MDL;
+	csf_insert_restart_pos(this, restartpos);
 	return true;
 }
 
