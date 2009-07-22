@@ -68,7 +68,6 @@ int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	slurp_read(fp, smpsize, 4 * 15);
 	slurp_seek(fp, 4, SEEK_CUR); /* the tag again */
 	slurp_read(fp, &tmp, 2);
-	printf("%d\n", bswapBE16(tmp));
 	if (!tmp)
 		return LOAD_UNSUPPORTED; // erf
 	tmp = 14565 * 122 / bswapBE16(tmp);
@@ -181,6 +180,7 @@ int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	for (; n < MAX_CHANNELS; n++)
 		song->Channels[n].dwFlags = CHN_MUTE;
 	
+	strcpy(song->tracker_id, "Sound FX");
 	song->m_nStereoSeparation = 64;
 	
 //	if (ferror(fp)) {
