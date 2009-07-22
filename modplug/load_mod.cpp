@@ -47,6 +47,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
         char s[1024];          // changed from int8_t
 	uint32_t dwMemPos, dwTotalSampleLen;
 	PMODMAGIC pMagic;
+	uint32_t restartpos;
 	uint32_t nErr;
 
 	if ((!lpStream) || (dwMemLength < 0x600)) return false;
@@ -140,9 +141,9 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 	}
 	for (uint32_t iend=norders; iend<MAX_ORDERS; iend++) Orderlist[iend] = 0xFF;
 	norders--;
-	//m_nRestartPos = pMagic->nRestartPos;
-	//if (m_nRestartPos >= 0x78) m_nRestartPos = 0;
-	//if (m_nRestartPos + 1 >= (uint32_t)norders) m_nRestartPos = 0;
+	restartpos = pMagic->nRestartPos;
+	if (restartpos >= 0x78) restartpos = 0;
+	if (restartpos + 1 >= norders) restartpos = 0;
 	if (!nbp) return false;
 	uint32_t dwWowTest = dwTotalSampleLen+dwMemPos;
 	if ((IsMagic(pMagic->Magic, "M.K.")) && (dwWowTest + nbp*8*256 == dwMemLength)) m_nChannels = 8;
@@ -217,6 +218,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 			dwErrCheck++;
 		}
 	}
+	csf_insert_restart_pos(this, restartpos);
 	return (dwErrCheck) ? true : false; // MPT always returns true here
 }
 
@@ -298,7 +300,6 @@ bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
 	}
 	bTab[0] = norders;
 	bTab[1] = 0xff;
-	//bTab[1] = m_nRestartPos;
 	fp->o(fp, (const unsigned char *)bTab, 2);
 	// Writing pattern list
 	if (norders) memcpy(ord, Orderlist, norders);

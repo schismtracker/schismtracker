@@ -9,6 +9,8 @@
 #include <math.h>
 #include "sndfile.h"
 
+#include "log.h"
+
 /* blah: */
 #include <stdint.h>
 extern "C" int mmcmp_unpack(uint8_t **ppMemFile, uint32_t *pdwMemLength);
@@ -1449,5 +1451,79 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
 	command &= ~0x40;
 	*pcmd = command;
 	*pprm = param;
+}
+
+
+void csf_insert_restart_pos(CSoundFile *csf, uint32_t restart_order)
+{
+	// these are uint32_t to match m_nChannels, if we get rid of modplug's annoying
+	// behavior of allocating variable numbers of channels, they can all be changed to int
+	uint32_t n, max, row;
+	int ord, pat, newpat;
+	uint32_t used; // how many times it was used (if >1, copy it)
+	
+	if (!restart_order)
+		return;
+	
+	// find the last pattern, also look for one that's not being used
+	for (max = ord = n = 0; n < MAX_ORDERS && csf->Orderlist[n] < MAX_PATTERNS; ord = n, n++)
+		if (csf->Orderlist[n] > max)
+			max = csf->Orderlist[n];
+	newpat = max + 1;
+	pat = csf->Orderlist[ord];
+	if (pat >= MAX_PATTERNS || !csf->Patterns[pat] || !csf->PatternSize[pat])
+		return;
+	for (max = n, used = 0, n = 0; n < max; n++)
+		if (csf->Orderlist[n] == pat)
+			used++;
+
+	if (used > 1) {
+		// copy the pattern so we don't screw up the playback elsewhere
+		while (newpat < MAX_PATTERNS && csf->Patterns[newpat])
+			newpat++;
+		if (newpat >= MAX_PATTERNS)
+			return; // no more patterns? sux
+		log_appendf(2, "Copying pattern %d to %d for restart position", pat, newpat);
+		csf->Patterns[newpat] = csf_allocate_pattern(csf->PatternSize[pat], csf->m_nChannels);
+		csf->PatternSize[newpat] = csf->PatternAllocSize[newpat] = csf->PatternSize[pat];
+		memcpy(csf->Patterns[newpat], csf->Patterns[pat],
+			sizeof(MODCOMMAND) * csf->m_nChannels * csf->PatternSize[pat]);
+		csf->Orderlist[ord] = pat = newpat;
+	} else {
+		log_appendf(2, "Modifying pattern %d to add restart position", pat);
+	}
+
+
+	max = csf->PatternSize[pat] - 1;
+	for (row = 0; row <= max; row++) {
+		MODCOMMAND *note = csf->Patterns[pat] + csf->m_nChannels * row;
+		MODCOMMAND *empty = NULL; // where's an empty effect?
+		int has_break = 0, has_jump = 0;
+
+		for (n = 0; n < csf->m_nChannels; n++, note++) {
+			switch (note->command) {
+			case CMD_POSITIONJUMP:
+				has_jump = 1;
+				break;
+			case CMD_PATTERNBREAK:
+				has_break = 1;
+				if (!note->param)
+					empty = note; // always rewrite C00 with Bxx (it's cleaner)
+				break;
+			case CMD_NONE:
+				if (!empty)
+					empty = note;
+				break;
+			}
+		}
+
+		// if there's not already a Bxx, and we have a spare channel,
+		// AND either there's a Cxx or it's the last row of the pattern,
+		// then stuff in a jump back to the restart position.
+		if (!has_jump && empty && (has_break || row == max)) {
+			empty->command = CMD_POSITIONJUMP;
+			empty->param = restart_order;
+		}
+	}
 }
 

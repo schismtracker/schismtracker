@@ -91,8 +91,6 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 	m_lpszSongComments[112] = 0;
 	// Reading Orders
 	memcpy(Orderlist, pfh->orders, 128);
-	//m_nRestartPos = pfh->restartpos;
-	//if (Orderlist[m_nRestartPos] >= pfh->patterns) m_nRestartPos = 0;
 	// Reading Pattern Break Locations
 	for (uint32_t npan=0; npan<8; npan++)
 	{
@@ -208,6 +206,7 @@ bool CSoundFile::Read669(const uint8_t *lpStream, uint32_t dwMemLength)
 		if (len > 4) csf_read_sample(&Samples[n], RS_PCM8U, (const char *)(lpStream+dwMemPos), dwMemLength - dwMemPos);
 		dwMemPos += len;
 	}
+	csf_insert_restart_pos(this, pfh->restartpos);
 	return true;
 }
 
