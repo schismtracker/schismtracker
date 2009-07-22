@@ -10,8 +10,7 @@
 #include "it_defs.h"
 #include "util.h"
 
-/* blah, -mrsb.
-this is a schism header */
+#include "it.h"
 #include "midi.h"
 
 static uint8_t autovib_import[8] = {
@@ -149,6 +148,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	uint32_t patpos[MAX_PATTERNS];
 	uint8_t chnmask[64], channels_used[64];
 	MODCOMMAND lastvalue[64];
+	bool ignorezxx = false, warnzxx = false;
 
 	if ((!lpStream) || (dwMemLength < 0xc2)) return false;
 
@@ -294,6 +294,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	if (pifh.flags & 0x80) m_dwSongFlags |= SONG_EMBEDMIDICFG;
 	memcpy(song_title, pifh.songname, 26);
 	song_title[26] = 0;
+	if (pifh.cwtv < 0x0214)
+		ignorezxx = true;
 	if (pifh.cwtv >= 0x0213) {
 		m_rowHighlightMinor = pifh.hilight_minor;
 		m_rowHighlightMajor = pifh.hilight_major;
@@ -594,6 +596,10 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 						m[ch].command = cmd;
 						m[ch].param = param;
 						csf_import_s3m_effect(&m[ch], true);
+						if (ignorezxx && m[ch].command == CMD_MIDI) {
+							m[ch].command = CMD_NONE;
+							warnzxx = true;
+						}
 						lastvalue[ch].command = m[ch].command;
 						lastvalue[ch].param = m[ch].param;
 					}
@@ -601,6 +607,8 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			}
 		}
 	}
+	if (warnzxx)
+		log_appendf(4, "Warning: MIDI Zxx events discarded (saved with too old IT version)");
 	return true;
 }
 
