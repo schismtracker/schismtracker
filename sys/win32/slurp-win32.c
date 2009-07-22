@@ -31,7 +31,7 @@
 #include <windows.h>
 #include <sys/stat.h>
 
-#include "it.h" /* for log_appendf, but why do we need it? */
+#include "log.h"
 #include "slurp.h"
 
 static void _win32_unmap(slurp_t *useme)

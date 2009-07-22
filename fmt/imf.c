@@ -23,7 +23,7 @@
 #define NEED_BYTESWAP
 #include "headers.h"
 #include "slurp.h"
-#include "it.h" /* for log_appendf */
+#include "log.h"
 #include "fmt.h"
 
 #include "sndfile.h"

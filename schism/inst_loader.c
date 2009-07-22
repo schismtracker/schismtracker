@@ -19,7 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include "it.h" /* all this for status_text_flash */
+#include "log.h"
 #include "fmt.h"
 
 #include <string.h>
@@ -33,6 +33,7 @@ song_instrument *instrument_loader_init(struct instrumentloader *ii, int slot)
 	memset(ii->sample_map, 0, sizeof(ii->sample_map));
 	return ii->inst;
 }
+
 int instrument_loader_abort(struct instrumentloader *ii)
 {
 	int n;
@@ -45,6 +46,7 @@ int instrument_loader_abort(struct instrumentloader *ii)
 	}
 	return false;
 }
+
 int instrument_loader_sample(struct instrumentloader *ii, int slot)
 {
 	int x;
@@ -61,3 +63,4 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
 	status_text_flash("Too many samples");
 	return 0;
 }
+

@@ -24,7 +24,7 @@
 
 #define NEED_BYTESWAP
 #include "headers.h"
-#include "it.h" /* for log_appendf, although this should really be elsewhere */
+#include "log.h"
 #include "fmt.h"
 
 #include <stdint.h>
