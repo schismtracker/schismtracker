@@ -2,7 +2,7 @@
  * into MIDI style thinking.
 */
 
-#include "it.h"
+#include "log.h"
 #include "mplink.h"
 #include "snd_gm.h"
 

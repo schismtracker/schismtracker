@@ -23,7 +23,7 @@
 #include "headers.h"
 #include "sdlmain.h"
 
-#include "it.h" /* for log_appendf */
+#include "log.h"
 #include "midi.h"
 
 #include "mixer.h"

@@ -33,6 +33,7 @@
 
 #include "util.h"
 #include "video.h"
+#include "log.h"
 
 /* --------------------------------------------------------------------- */
 /* preprocessor stuff */
@@ -191,20 +192,6 @@ enum {
 };
 #define MOUSE_MAX_STATE MOUSE_CYCLE_STATE
 
-
-struct log_line {
-        int color;
-        const char *text;
-	int bios_font;
-	/* Set this flag if the text should be free'd when it is scrolled offscreen.
-	DON'T set it if the text is going to be modified after it is added to the log (e.g. for displaying
-	status information for module loaders like IT); in that case, change the text pointer to some
-	constant value such as "". Also don't try changing must_free after adding a line to the log, since
-	there's a chance that the line scrolled offscreen, and it'd never get free'd. (Also, ignore this
-	comment since there's currently no interface for manipulating individual lines in the log after
-	adding them.) */
-        int must_free;
-};
 
 struct it_palette {
         char name[21];
@@ -407,15 +394,6 @@ int kbd_get_alnum(struct key_event *k);
 void set_key_repeat(int delay, int rate);
 
 /* --------------------------------------------------------------------- */
-/* log.c */
-
-void log_nl(void);
-void log_append(int color, int must_free, const char *text);
-void log_append2(int bios_font, int color, int must_free, const char *text);
-void log_appendf(int color, const char *format, ...)
-        __attribute__ ((format(printf, 2, 3)));
-
-/* --------------------------------------------------------------------- */
 /* stuff */
 
 int sample_get_current(void);
@@ -435,14 +413,6 @@ int song_get_current_instrument(void);
 
 void set_previous_instrument(void);
 void set_next_instrument(void);
-
-void status_text_flash(const char *format, ...)
-        __attribute__ ((format(printf, 1, 2)));
-void status_text_flash_bios(const char *format, ...)
-        __attribute__ ((format(printf, 1, 2)));
-void status_text_flash_color(int co, const char *format, ...)
-        __attribute__ ((format(printf, 2, 3)));
-
 
 int get_current_channel(void);
 void set_current_channel(int channel);
@@ -507,3 +477,4 @@ extern const char *schism_banner(int classic)
 #endif
 
 #endif /* ! IT_H */
+

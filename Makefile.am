@@ -64,6 +64,7 @@ noinst_HEADERS = \
 	include/frag-opt.h		\
 	include/headers.h		\
 	include/it.h			\
+	include/log.h			\
 	include/macosx-sdlmain.h	\
 	include/midi.h			\
 	include/mixer.h			\

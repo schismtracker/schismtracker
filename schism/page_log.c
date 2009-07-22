@@ -32,6 +32,20 @@
 
 #include <stdarg.h>
 
+struct log_line {
+        int color;
+        const char *text;
+	int bios_font;
+	/* Set this flag if the text should be free'd when it is scrolled offscreen.
+	DON'T set it if the text is going to be modified after it is added to the log (e.g. for displaying
+	status information for module loaders like IT); in that case, change the text pointer to some
+	constant value such as "". Also don't try changing must_free after adding a line to the log, since
+	there's a chance that the line scrolled offscreen, and it'd never get free'd. (Also, ignore this
+	comment since there's currently no interface for manipulating individual lines in the log after
+	adding them.) */
+        int must_free;
+};
+
 /* --------------------------------------------------------------------- */
 
 static struct widget widgets_log[1];
