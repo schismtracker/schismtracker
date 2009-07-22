@@ -137,7 +137,9 @@ static void _resize_patterns(void)
                         for (chan = 0; chan < 64; chan++) {
                                 MODCOMMAND *note = ptr + chan;
 
-                                if (note->command == 0) {
+                                if (note->command == CMD_PATTERNBREAK) {
+                                        break;
+                                } else if (note->command == 0) {
                                         note->command = CMD_PATTERNBREAK;
                                         note->param = 0;
                                         break;
