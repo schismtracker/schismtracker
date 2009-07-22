@@ -58,11 +58,11 @@ static int current_octave = 4;
 const char hexdigits[16] = "0123456789ABCDEF";
 
 /* extra non-IT effects:
- *         '!' = volume '#' = modcmdex '$' = keyoff
- *         '%' = xfineportaupdown '&' = setenvposition
+ *         '!' = volume '$' = keyoff
+ *         '&' = setenvposition
  *         '('/')' = noteslide up/down (IMF) */
-static const char effects[] = ".JFEGHLKRXODB!CQATI#SMNVW$UY%P&Z()";
-static const char ptm_effects[] = ".0123456789ABCDRFFTE???GHK?YXPLZ()";
+static const char effects[] = ".JFEGHLKRXODB!CQATI?SMNVW$UY?P&Z()";
+static const char ptm_effects[] = ".0123456789ABCDRFFT????GHK?YXPLZ()";
 
 /* --------------------------------------------------------------------- */
 
@@ -137,10 +137,6 @@ QZA(w);QZA(x);QZA(y);QZA(z);
 #undef QZA
 	case SDLK_PERIOD: case SDLK_KP_PERIOD:
 		return get_effect_number('.');
-	case SDLK_3:
-		if (!(k->mod & KMOD_SHIFT)) return -1;
-	case SDLK_HASH:
-		return get_effect_number('#');
 	case SDLK_1:
 		if (!(k->mod & KMOD_SHIFT)) return -1;
 	case SDLK_EXCLAIM:
@@ -149,9 +145,6 @@ QZA(w);QZA(x);QZA(y);QZA(z);
 		if (!(k->mod & KMOD_SHIFT)) return -1;
 	case SDLK_DOLLAR:
 		return get_effect_number('$');
-	case SDLK_5:
-		if (!(k->mod & KMOD_SHIFT)) return -1;
-		return get_effect_number('%');
 	case SDLK_7:
 		if (!(k->mod & KMOD_SHIFT)) return -1;
 	case SDLK_AMPERSAND:

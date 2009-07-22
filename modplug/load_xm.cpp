@@ -208,6 +208,14 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 							p->param = v > 255 ? 255 : v;
 						}
 					}
+					
+					// FT2 ignores both K00 and its note entirely
+					// (but still plays previous notes and processes the volume column!)
+					if (p->command == CMD_KEYOFF && p->param == 0) {
+						p->note = NOTE_NONE;
+						p->command = CMD_NONE;
+					}
+					
 					p++;
 				} else
 				if (j < packsize)

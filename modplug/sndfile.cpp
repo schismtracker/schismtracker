@@ -1226,7 +1226,21 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
 	case 'P' - 55:	command = CMD_PANNINGSLIDE; if (param & 0xF0) param &= 0xF0; break;
 	case 'R' - 55:	command = CMD_RETRIG; break;
 	case 'T' - 55:	command = CMD_TREMOR; break;
-	case 'X' - 55:	command = CMD_XFINEPORTAUPDOWN;	break;
+	case 'X' - 55:
+		switch (param & 0xf0) {
+		case 0x10:
+			command = CMD_PORTAMENTOUP;
+			param = 0xe0 | (param & 0xf);
+			break;
+		case 0x20:
+			command = CMD_PORTAMENTODOWN;
+			param = 0xe0 | (param & 0xf);
+			break;
+		default:
+			command = param = 0;
+			break;
+		}
+		break;
 	case 'Y' - 55:	command = CMD_PANBRELLO; break;
 	case 'Z' - 55:	command = CMD_MIDI;	break;
 	default:	command = 0;
@@ -1243,14 +1257,36 @@ uint16_t csf_export_mod_effect(const MODCOMMAND *m, int bXM)
 	case 0:				command = param = 0; break;
 	case CMD_ARPEGGIO:		command = 0; break;
 	case CMD_PORTAMENTOUP:
-		if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x10; break; }
-		else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x10; break; }
-		command = 0x01;
+		if ((param & 0xF0) == 0xE0) {
+			if (bXM) {
+				command = 'X' - 55;
+				param = 0x10 | (param & 0xf);
+			} else {
+				command = 0x0E;
+				param = 0x10 | ((param & 0xf) >> 2);
+			}
+		} else if ((param & 0xF0) == 0xF0) {
+			command = 0x0E;
+			param = 0x10 | (param & 0xf);
+		} else {
+			command = 0x01;
+		}
 		break;
 	case CMD_PORTAMENTODOWN:
-		if ((param & 0xF0) == 0xE0) { command=0x0E; param=((param & 0x0F) >> 2)|0x20; break; }
-		else if ((param & 0xF0) == 0xF0) { command=0x0E; param &= 0x0F; param|=0x20; break; }
-		command = 0x02;
+		if ((param & 0xF0) == 0xE0) {
+			if (bXM) {
+				command = 'X' - 55;
+				param = 0x20 | (param & 0xf);
+			} else {
+				command = 0x0E;
+				param = 0x20 | ((param & 0xf) >> 2);
+			}
+		} else if ((param & 0xF0) == 0xF0) {
+			command = 0x0E;
+			param = 0x20 | (param & 0xf);
+		} else {
+			command = 0x02;
+		}
 		break;
 	case CMD_TONEPORTAMENTO:	command = 0x03; break;
 	case CMD_VIBRATO:		command = 0x04; break;
@@ -1277,7 +1313,6 @@ uint16_t csf_export_mod_effect(const MODCOMMAND *m, int bXM)
 	case CMD_PANNINGSLIDE:		command = 'P' - 55; break;
 	case CMD_RETRIG:		command = 'R' - 55; break;
 	case CMD_TREMOR:		command = 'T' - 55; break;
-	case CMD_XFINEPORTAUPDOWN:	command = 'X' - 55; break;
 	case CMD_PANBRELLO:		command = 'Y' - 55; break;
 	case CMD_MIDI:			command = 'Z' - 55; break;
 	case CMD_S3MCMDEX:
@@ -1402,18 +1437,6 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
 		break;
 	case CMD_PANBRELLO:		command = 'Y'; break;
 	case CMD_MIDI:			command = 'Z'; break;
-	case CMD_XFINEPORTAUPDOWN:
-		if (param & 0x0F) {
-			switch (param & 0xF0) {
-			case 0x10:	command = 'F'; param = (param & 0x0F) | 0xE0; break;
-			case 0x20:	command = 'E'; param = (param & 0x0F) | 0xE0; break;
-			case 0x90:	command = 'S'; break;
-			default:	command = param = 0;
-			}
-		} else {
-			command = param = 0;
-		}
-		break;
 	default:	command = param = 0;
 	}
 	command &= ~0x40;
