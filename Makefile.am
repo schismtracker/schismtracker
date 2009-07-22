@@ -295,6 +295,10 @@ schismtracker_SOURCES = \
 	$(files_mmap)			\
 	$(files_windres)
 
+# have version.o rely on all files
+schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
+
+
 cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 
 AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE \
