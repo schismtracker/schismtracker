@@ -93,6 +93,7 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         uint16_t tmp;
         uint32_t tmplong;
         uint8_t patspeed[128], breakpos[128];
+        uint8_t restartpos;
         const char *tid;
         char msg[109];
 	
@@ -125,7 +126,8 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         npat = slurp_getc(fp);
         if (npat > 128)
                 return LOAD_UNSUPPORTED;
-        if (slurp_getc(fp) > 127)    /* loop order */
+        restartpos = slurp_getc(fp);
+        if (restartpos > 127)
                 return LOAD_UNSUPPORTED;
 
 	strcpy(song->tracker_id, tid);
@@ -287,6 +289,7 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         }
                 }
         }
+        csf_insert_restart_pos(song, restartpos);
 
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {

@@ -389,7 +389,7 @@ static void load_imf_envelope(SONGINSTRUMENT *ins, INSTRUMENTENVELOPE *env, stru
 		v = bswapLE16(imfins->nodes[e][n].value) >> shift;
 		env->Ticks[n] = MAX(min, t);
 		env->Values[n] = v = MIN(v, 64);
-		min = v + 1;
+		min = t + 1;
 	}
 	// this would be less retarded if the envelopes all had their own flags...
 	if (imfins->env[e].flags & 1)
