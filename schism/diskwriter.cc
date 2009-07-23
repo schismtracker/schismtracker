@@ -674,7 +674,7 @@ extern "C" {
 //extern unsigned int diskwriter_output_rate, diskwriter_output_bits,
 //			diskwriter_output_channels;
 extern diskwriter_driver_t wavewriter;
-extern diskwriter_driver_t it214writer;
+extern diskwriter_driver_t itwriter;
 extern diskwriter_driver_t s3mwriter;
 extern diskwriter_driver_t xmwriter;
 extern diskwriter_driver_t modwriter;
@@ -686,7 +686,7 @@ unsigned int diskwriter_output_rate = 44100;
 unsigned int diskwriter_output_bits = 16;
 unsigned int diskwriter_output_channels = 2;
 diskwriter_driver_t *diskwriter_drivers[] = {
-	&it214writer,
+	&itwriter,
 	&xmwriter,
 	&s3mwriter,
 	&modwriter,
