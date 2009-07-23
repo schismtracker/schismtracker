@@ -1084,8 +1084,8 @@ static void _save_mod(diskwriter_driver_t *dw)
 	}
 }
 
-diskwriter_driver_t it214writer = {
-	"IT214", "it", 0, _save_it, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
+diskwriter_driver_t itwriter = {
+	"IT", "it", 0, _save_it, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 diskwriter_driver_t s3mwriter = {
 	"S3M", "s3m", 0, _save_s3m, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
@@ -1152,7 +1152,7 @@ int song_save(const char *file, const char *qt)
 		}
 	}
 	if (!qt) { /* still? damn */
-		qt = "IT214";
+		qt = "IT";
 	}
 
 	mp->m_rowHighlightMajor = row_highlight_major;
