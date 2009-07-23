@@ -502,28 +502,26 @@ static void fx_global_vol_slide(CSoundFile *csf, SONGVOICE *pChn, uint32_t param
 }
 
 
-static int fx_pattern_loop(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
+static void fx_pattern_loop(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 {
 	if (param) {
 		if (pChn->nPatternLoopCount) {
-			pChn->nPatternLoopCount--;
-			if (!pChn->nPatternLoopCount) {
+			if (!--pChn->nPatternLoopCount) {
 				// this should get rid of that nasty infinite loop for cases like
 				//     ... .. .. SB0
 				//     ... .. .. SB1
 				//     ... .. .. SB1
 				// it still doesn't work right in a few strange cases, but oh well :P
 				pChn->nPatternLoop = csf->m_nRow + 1;
-				return -1;
+				return; // don't loop!
 			}
 		} else {
 			pChn->nPatternLoopCount = param;
 		}
-		return pChn->nPatternLoop;
+		csf->m_nProcessRow = pChn->nPatternLoop - 1;
 	} else {
 		pChn->nPatternLoop = csf->m_nRow;
 	}
-	return -1;
 }
 
 
@@ -657,6 +655,10 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 		}
 		break;
 	// SBx: Pattern Loop
+	case 0xB0:
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			fx_pattern_loop(csf, pChn, param & 0x0F);
+		break;
 	// SCx: Note Cut
 	case 0xC0:
 		fx_note_cut(csf, nChn, param ?: 1);
@@ -1477,24 +1479,13 @@ void csf_process_effects(CSoundFile *csf)
 		// Process special effects (note delay, pattern delay, pattern loop)
 		// FIXME why are these here and not with the rest of them?
 		if (cmd == CMD_S3MCMDEX) {
-			int nloop; // g++ is dumb
 			if (param)
 				pChn->nOldCmdEx = param;
 			else
 				param = pChn->nOldCmdEx;
-			switch (param >> 4) {
-			case 0xd:
+			if ((param >> 4) == 0xd) {
 				// Note Delay
 				nStartTick = (param & 0x0F) ?: 1;
-				break;
-			case 0xb:
-				// Pattern loop
-				if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
-					break;
-				nloop = fx_pattern_loop(csf, pChn, param & 0x0F);
-				if (nloop >= 0)
-					csf->m_nProcessRow = nloop - 1;
-				break;
 			}
 		}
 
