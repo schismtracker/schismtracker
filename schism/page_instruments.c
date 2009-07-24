@@ -1465,13 +1465,13 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int
 
 		n = numeric_key_event(k, 0);
 		if (n > -1) {
-			if (k->mod & KMOD_ALT) {
+			if (k->mod & (KMOD_ALT | KMOD_CTRL)) {
 				save_envelope(n, env, sec);
 				status_text_flash("Envelope copied into slot %d", n);
-			} else if (k->mod & KMOD_CTRL) {
+			} else if (k->mod & KMOD_SHIFT) {
 				restore_envelope(n, env, sec);
 				if (!(status.flags & CLASSIC_MODE))
-					status_text_flash("Copied envelope from slot %d", n);
+					status_text_flash("Pasted envelope from slot %d", n);
 			}
 			return 1;
 		}
