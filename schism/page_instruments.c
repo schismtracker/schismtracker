@@ -1316,11 +1316,58 @@ static void do_pre_loop_cut(void *ign)
 		env->sustain_end = env->sustain_start;
 	status.flags |= NEED_UPDATE;
 }
+
 static void do_post_loop_cut(void *ign)
 {
 	song_envelope *env = (song_envelope *)ign;
 	env->nodes = env->loop_end+1;
 }
+
+
+static void env_resize(song_envelope *env, int ticks)
+{
+	int old = env->ticks[env->nodes - 1];
+	int n, t;
+	
+	if (ticks > 9999)
+		ticks = 9999;
+	for (n = 1; n < env->nodes; n++) {
+		t = env->ticks[n] * ticks / old;
+		env->ticks[n] = MAX(t, env->ticks[n - 1] + 1);
+	}
+	status.flags |= NEED_UPDATE;
+}
+
+
+static struct widget env_resize_widgets[2];
+static int env_resize_cursor;
+
+static void do_env_resize(void *data)
+{
+        env_resize((song_envelope *) data, env_resize_widgets[0].d.numentry.value);
+}
+
+static void env_resize_draw_const(void)
+{
+        draw_text("Resize Envelope", 34, 24, 3, 2);
+        draw_text("New Length", 31, 27, 0, 2);
+        draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+static void env_resize_dialog(song_envelope *env)
+{
+        struct dialog *dialog;
+        
+        env_resize_cursor = 0;
+        create_numentry(env_resize_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999, &env_resize_cursor);
+        env_resize_widgets[0].d.numentry.value = env->ticks[env->nodes - 1];
+        create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+        dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, NULL);
+        dialog->action_yes = do_env_resize;
+        dialog->data = env;
+}
+
+
 /* the return value here is actually a bitmask:
 r & 1 => the key was handled
 r & 2 => the envelope changed (i.e., it should be enabled) */
@@ -1394,6 +1441,24 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int
 			return 1;
 		}
 		return 0;
+
+	// F/G for key symmetry with pattern double/halve block
+	// E for symmetry with sample resize
+	case SDLK_f:
+		if (!k->state) return 0;
+		if (!(k->mod & KMOD_ALT)) return 0;
+		env_resize(env, env->ticks[env->nodes - 1] * 2);
+		return 1;
+	case SDLK_g:
+		if (!k->state) return 0;
+		if (!(k->mod & KMOD_ALT)) return 0;
+		env_resize(env, env->ticks[env->nodes - 1] / 2);
+		return 1;
+	case SDLK_e:
+		if (!k->state) return 0;
+		if (!(k->mod & KMOD_ALT)) return 0;
+		env_resize_dialog(env);
+		return 1;
 
         default:
 		if (!k->state) return 0;
