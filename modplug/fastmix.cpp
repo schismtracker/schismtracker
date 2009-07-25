@@ -408,8 +408,8 @@ extern short int gKaiserSinc[];    // 8-taps polyphase
 #define SNDMIX_PROCESSSTEREOFILTER \
     ta = ((double)vol_l * pChn->nFilter_A0 + fy1 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
           + FILT_CLIP((fy2-fy1) * pChn->nFilter_B1)); \
-    tb = ((double)vol_r * pChn->nFilter_A0 + fy1 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
-          + FILT_CLIP((fy2-fy1) * pChn->nFilter_B1)); \
+    tb = ((double)vol_r * pChn->nFilter_A0 + fy3 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
+          + FILT_CLIP((fy4-fy3) * pChn->nFilter_B1)); \
     fy2 = fy1; fy1 = ta; vol_l = (int) ta; \
     fy4 = fy3; fy3 = tb; vol_r = (int) tb;
 
