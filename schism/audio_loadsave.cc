@@ -312,9 +312,11 @@ int song_load_unchecked(const char *file)
 		was_playing = (song_get_mode() == MODE_PLAYING);
 	}
 	
+	log_appendf(2, "Loading %s", base);
+	
         slurp_t *s = slurp(file, NULL, 0);
         if (!s) {
-                log_appendf(4, "%s: %s", base, strerror(errno));
+                log_appendf(4, "  %s", strerror(errno));
                 return 0;
         }
 
@@ -333,10 +335,10 @@ int song_load_unchecked(const char *file)
         	case LOAD_UNSUPPORTED:
         		continue;
         	case LOAD_FORMAT_ERROR:
-        		log_appendf(4, "%s: file format error (corrupt?)", base);
+        		log_appendf(4, "  File format error (corrupt?)");
         		break;
         	case LOAD_FILE_ERROR:
-			log_appendf(4, "%s: %s", base, strerror(errno));
+			log_appendf(4, "  %s", strerror(errno));
 			break;
         	}
         	if (!ok) {
@@ -371,9 +373,30 @@ int song_load_unchecked(const char *file)
 		status.flags &= ~SONG_NEEDS_SAVE;
         } else {
                 // awwww, nerts!
-                log_appendf(4, "%s: Unrecognised file type", base);
+                log_appendf(4, "  Unrecognised file type");
                 csf_free(newsong);
         }
+
+	if (ok) {
+		const char *tid = song_get_tracker_id();
+		char fmt[] = "  %d patterns, %d samples, %d instruments";
+		int n, nsmp, nins;
+		SONGSAMPLE *smp;
+		SONGINSTRUMENT **ins;
+
+		for (n = 0, smp = mp->Samples + 1, nsmp = 0; n < MAX_SAMPLES; n++, smp++)
+			if (smp->pSample)
+				nsmp++;
+		for (n = 0, ins = mp->Instruments + 1, nins = 0; n < MAX_INSTRUMENTS; n++, ins++)
+			if (*ins != NULL)
+				nins++;
+
+		if (tid[0])
+			log_appendf(2, "  %s", tid);
+		if (!nins)
+			*strrchr(fmt, ',') = 0; // cut off 'instruments'
+		log_appendf(2, fmt, song_get_num_patterns(), nsmp, nins);
+	}
 
         unslurp(s);
 	return ok;

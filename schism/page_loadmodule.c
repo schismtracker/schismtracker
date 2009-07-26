@@ -215,8 +215,7 @@ static void handle_file_entered_L(char *ptr)
 		}
 		togglebutton_set(widgets_exportsave, r, 0);
 
-		/* TODO if there were warnings, redirect to log instead */
-		set_page((song_get_mode() == MODE_PLAYING) ? PAGE_INFO : PAGE_BLANK);
+		set_page((song_get_mode() == MODE_PLAYING) ? PAGE_INFO : PAGE_LOG);
 	}
 }
 

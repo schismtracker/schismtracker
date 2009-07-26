@@ -1616,7 +1616,6 @@ void load_pages(void)
 void main_song_changed_cb(void)
 {
         int n;
-	const char *tid = song_get_tracker_id();
 
         /* perhaps this should be in page_patedit.c? */
         set_current_order(0);
@@ -1632,15 +1631,6 @@ void main_song_changed_cb(void)
 			pages[n].song_changed_cb();
 	}
 
-        /* With Modplug, loading is sort of an atomic operation from the
-         * POV of the client, so the other info IT prints wouldn't be
-         * very useful. */
-        if (song_get_basename()[0]) {
-        	if (tid[0])
-	                log_appendf(2, "Loaded song: %s (%s)", song_get_basename(), tid);
-        	else
-	                log_appendf(2, "Loaded song: %s", song_get_basename());
-        }
         /* TODO | print some message like "new song created" if there's
          * TODO | no filename, and thus no file. (but DON'T print it the
          * TODO | very first time this is called) */
