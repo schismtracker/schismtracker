@@ -71,7 +71,7 @@ static void _sign_convert_8(signed char *data, unsigned long length)
 
         while (pos) {
                 pos--;
-                data[pos] ^= 128;
+                data[pos] += 128;
         }
 }
 
@@ -81,7 +81,7 @@ static void _sign_convert_16(signed short *data, unsigned long length)
 
         while (pos) {
                 pos--;
-                data[pos] ^= 32768;
+                data[pos] += 32768;
         }
 }
 
