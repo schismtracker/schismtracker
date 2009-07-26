@@ -67,24 +67,28 @@ static int log_handle_key(struct key_event * k)
 {
 	switch (k->sym) {
 	case SDLK_UP:
-		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state) return 1;
 		top_line--;
 		break;
 	case SDLK_PAGEUP:
-		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state) return 1;
 		top_line -= 15;
 		break;
 	case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state) return 1;
 		top_line++;
 		break;
 	case SDLK_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state) return 1;
 		top_line += 15;
+		break;
+	case SDLK_HOME:
+		if (k->state) return 1;
+		top_line = 0;
+		break;
+	case SDLK_END:
+		if (k->state) return 1;
+		top_line = last_line;
 		break;
 	default:
 		if (!k->state) {
@@ -99,7 +103,7 @@ static int log_handle_key(struct key_event * k)
 			
 		return 0;
 	};
-	top_line = CLAMP(top_line, 0, (last_line-33));
+	top_line = CLAMP(top_line, 0, (last_line-32));
 	if (top_line < 0) top_line = 0;
 	status.flags |= NEED_UPDATE;
         return 1;
