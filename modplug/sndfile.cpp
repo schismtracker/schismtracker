@@ -1373,7 +1373,12 @@ void csf_import_s3m_effect(MODCOMMAND *m, int bIT)
 	case 'P':	command = CMD_PANNINGSLIDE; break;
 	case 'Q':	command = CMD_RETRIG; break;
 	case 'R':	command = CMD_TREMOLO; break;
-	case 'S':	command = CMD_S3MCMDEX; break;
+	case 'S':
+		command = CMD_S3MCMDEX;
+		// convert old SAx to S8x
+		if (!bIT && ((param & 0xf0) == 0xa0))
+			param = 0x80 | ((param & 0xf) ^ 8);
+		break;
 	case 'T':	command = CMD_TEMPO; break;
 	case 'U':	command = CMD_FINEVIBRATO; break;
 	case 'V':
