@@ -114,6 +114,7 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	int test_wow = 0;
 	int mk = 0;
 	int maybe_st3 = 0;
+	int maybe_ft2 = 0;
 	uint8_t restart;
 	long samplesize = 0;
 	const char *tid = NULL;
@@ -126,6 +127,7 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		nchan = 4;
 		test_wow = 1;
 		mk = 1;
+		maybe_ft2 = 1;
 		tid = "Amiga-NewTracker";
 	} else if (!memcmp(tag, "M!K!", 4)) {
 		nchan = 4;
@@ -149,24 +151,26 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	} else if (tag[0] > '0' && tag[0] <= '9' && !memcmp(tag + 1, "CHN", 3)) {
 		/* nCHN = Fast Tracker (if n is even) or TakeTracker (if n = 5, 7, or 9) */
 		nchan = tag[0] - '0';
-		if (nchan == 5 || nchan == 7 || nchan == 9)
+		if (nchan == 5 || nchan == 7 || nchan == 9) {
 			tid = "%d Channel TakeTracker";
-		else if (nchan & 1)
+		} else {
+			if (!(nchan & 1))
+				maybe_ft2 = 1;
 			tid = "%d Channel MOD"; // generic
-		else
-			tid = "%d Channel FastTracker";
+		}
 		maybe_st3 = 1;
 	} else if (tag[0] > '0' && tag[0] <= '9' && tag[1] >= '0' && tag[1] <= '9'
 		   && tag[2] == 'C' && (tag[3] == 'H' || tag[3] == 'N')) {
 		/* nnCH = Fast Tracker (if n is even and <= 32) or TakeTracker (if n = 11, 13, 15)
 		 * Not sure what the nnCN variant is. */
 		nchan = 10 * (tag[0] - '0') + (tag[1] - '0');
-		if (nchan == 11 || nchan == 13 || nchan == 15)
+		if (nchan == 11 || nchan == 13 || nchan == 15) {
 			tid = "%d Channel TakeTracker";
-		else if ((nchan & 1) || nchan > 32 || tag[3] == 'N')
+		} else {
+			if ((nchan & 1) == 0 && nchan <= 32 && tag[3] == 'H')
+				maybe_ft2 = 1;
 			tid = "%d Channel MOD"; // generic
-		else
-			tid = "%d Channel FastTracker";
+		}
 		if (tag[3] == 'H')
 			maybe_st3 = 1;
 	} else if (!memcmp(tag, "TDZ", 3) && tag[3] > '0' && tag[3] <= '9') {
@@ -190,7 +194,7 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	slurp_rewind(fp);
 	slurp_read(fp, song->song_title, 20);
 	song->song_title[20] = 0;
-	
+
 	/* sample headers */
 	for (n = 1; n < 32; n++) {
 		slurp_read(fp, song->Samples[n].name, 22);
@@ -207,8 +211,8 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		song->Samples[n].nVolume = slurp_getc(fp);
 		if (song->Samples[n].nVolume > 64)
 			song->Samples[n].nVolume = 64;
-		//if (!song->Samples[n].nLength && song->Samples[n].nVolume == 0)
-		//	maybe_ft2 = 1;
+		if (!song->Samples[n].nLength && song->Samples[n].nVolume)
+			maybe_ft2 = 0;
 		song->Samples[n].nVolume *= 4; //mphack
 		song->Samples[n].nGlobalVol = 64;
 		
@@ -218,8 +222,10 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		tmp = bswapBE16(tmp) * 2;
 		if (tmp > 2)
 			song->Samples[n].uFlags |= CHN_LOOP;
-		if (tmp == 0)
-			maybe_st3 = 0; // possibly fast tracker?
+		else if (tmp == 0)
+			maybe_st3 = 0;
+		else if (!song->Samples[n].nLength)
+			maybe_ft2 = 0;
 		song->Samples[n].nLoopEnd = song->Samples[n].nLoopStart + tmp;
 		song->Samples[n].nVibType = 0;
 		song->Samples[n].nVibSweep = 0;
@@ -233,17 +239,18 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
 	slurp_read(fp, song->Orderlist, 128);
 	npat = 0;
-	if (startrekker && nchan == 8) {
+	if (startrekker) {
 		/* from mikmod: if the file says FLT8, but the orderlist
 		has odd numbers, it's probably really an FLT4 */
 		for (n = 0; n < 128; n++) {
 			if (song->Orderlist[n] & 1) {
+				startrekker = 0;
 				nchan = 4;
 				break;
 			}
 		}
 	}
-	if (startrekker && nchan == 8) {
+	if (startrekker) {
 		for (n = 0; n < 128; n++)
 			song->Orderlist[n] >>= 1;
 	}
@@ -255,17 +262,20 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	}
 	/* set all the extra orders to the end-of-song marker */
 	memset(song->Orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
-	
-	if (restart == 0x7f && maybe_st3) {
+
+	if (restart == 0x7f && maybe_st3)
 		tid = "Scream Tracker 3?";
-	} else if (restart == npat && mk) {
+	else if (restart == 0x7f && mk)
+		tid = "%d Channel ProTracker";
+	else if (restart <= npat && maybe_ft2)
+		tid = "%d Channel FastTracker";
+	else if (restart == npat && mk)
 		tid = "%d Channel Soundtracker";
-	}
 
 	/* hey, is this a wow file? */
 	if (test_wow) {
 		slurp_seek(fp, 0, SEEK_END);
-		if (slurp_tell(fp) >= 2048 * npat + samplesize + 3132) {
+		if (slurp_tell(fp) == 2048 * npat + samplesize + 3132) {
 			nchan = 8;
 			tid = "Mod's Grave WOW";
 		}
@@ -276,7 +286,7 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	slurp_seek(fp, 1084, SEEK_SET);
 
 	/* pattern data */
-	if (startrekker && nchan == 8) {
+	if (startrekker) {
 		for (pat = 0; pat <= npat; pat++) {
 			note = song->Patterns[pat] = csf_allocate_pattern(64, 64);
 			song->PatternSize[pat] = song->PatternAllocSize[pat] = 64;
