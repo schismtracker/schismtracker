@@ -575,7 +575,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 	header[0x2D] = 'C';
 	header[0x2E] = 'R';
 	header[0x2F] = 'M';
-	header[0x30] = m_nDefaultGlobalVolume >> 2;
+	header[0x30] = m_nDefaultGlobalVolume >> 1;
 	header[0x31] = m_nDefaultSpeed;
 	header[0x32] = m_nDefaultTempo;
 	header[0x33] = ((m_nSongPreAmp < 0x20) ? 0x20 : m_nSongPreAmp) | 0x80;	// Stereo
