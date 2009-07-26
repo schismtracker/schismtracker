@@ -227,7 +227,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 			uint32_t len = sample->nLength;
 			int bps = 1;    /* bytes per sample (i.e. bits / 8) */
 
-			if (!para_sdata[n])
+			if (!para_sdata[n] || !len)
 				continue;
 
 			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
