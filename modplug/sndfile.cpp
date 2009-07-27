@@ -10,6 +10,7 @@
 #include "sndfile.h"
 
 #include "log.h"
+#include "util.h"
 
 /* blah: */
 #include <stdint.h>
