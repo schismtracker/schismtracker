@@ -1158,10 +1158,6 @@ int csf_read_note(CSoundFile *csf)
 
 	csf->m_nBufferCount = (gdwMixingFreq * 5 * csf->m_nTempoFactor) / (csf->m_nMusicTempo << 8);
 
-	if (csf->m_dwSongFlags & SONG_PAUSED) {
-		csf->m_nBufferCount = gdwMixingFreq / 64; // 1/64 seconds (XXX - why?)
-	}
-
 	// chaseback hoo hah
 	if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
 		if (csf->stop_at_order <= (signed) csf->m_nCurrentOrder &&
