@@ -439,6 +439,7 @@ typedef struct _SONGVOICE
 	unsigned int nOldOffset, nOldHiOffset;
 	unsigned int nCutOff, nResonance;
 	int nRetrigCount;
+	int nNoteDelay, nNoteCut;
 	unsigned int nRetrigParam;
 	unsigned int nTremorParam, nTremorOn, nTremorOff;
 	unsigned int nPatternLoop, nPatternLoopCount;
@@ -623,7 +624,7 @@ uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn);
 void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int bForceCut);
 void csf_process_effects(CSoundFile *csf);
 
-void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick);
+void fx_note_cut(CSoundFile *csf, uint32_t nChn);
 void fx_key_off(CSoundFile *csf, uint32_t nChn);
 void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
 void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
