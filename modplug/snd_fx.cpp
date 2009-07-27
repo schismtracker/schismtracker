@@ -15,20 +15,18 @@
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void fx_note_cut(CSoundFile *csf, uint32_t nChn, uint32_t nTick)
+void fx_note_cut(CSoundFile *csf, uint32_t nChn)
 {
-	if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nTick) {
-		SONGVOICE *pChn = &csf->Voices[nChn];
-		// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
-		pChn->nVolume = 0;
-		pChn->dwFlags |= CHN_FASTVOLRAMP;
-		pChn->nLength = 0;
+	SONGVOICE *pChn = &csf->Voices[nChn];
+	// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
+	pChn->nVolume = 0;
+	pChn->dwFlags |= CHN_FASTVOLRAMP;
+	pChn->nLength = 0;
 
-		OPL_NoteOff(nChn);
-		OPL_Touch(nChn, 0);
-		GM_KeyOff(nChn);
-		GM_Touch(nChn, 0);
-	}
+	OPL_NoteOff(nChn);
+	OPL_Touch(nChn, 0);
+	GM_KeyOff(nChn);
+	GM_Touch(nChn, 0);
 }
 
 void fx_key_off(CSoundFile *csf, uint32_t nChn)
@@ -661,7 +659,10 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 		break;
 	// SCx: Note Cut
 	case 0xC0:
-		fx_note_cut(csf, nChn, param ?: 1);
+		if (csf->m_dwSongFlags & SONG_FIRSTTICK)
+			pChn->nNoteCut = param ?: 1;
+		else if (--pChn->nNoteCut == 0)
+			fx_note_cut(csf, nChn);
 		break;
 	// SDx: Note Delay
 	// SEx: Pattern Delay for x rows
@@ -1473,28 +1474,45 @@ void csf_process_effects(CSoundFile *csf)
 		bool bPorta = (cmd == CMD_TONEPORTAMENTO
 		               || cmd == CMD_TONEPORTAVOL
 		               || volcmd == VOLCMD_TONEPORTAMENTO);
-		uint32_t nStartTick = (csf->m_dwSongFlags & SONG_FIRSTTICK) ? 0 : -1;
+		int start_note = csf->m_dwSongFlags & SONG_FIRSTTICK;
 
 		pChn->dwFlags &= ~CHN_FASTVOLRAMP;
-		// Process special effects (note delay, pattern delay, pattern loop)
-		// FIXME why are these here and not with the rest of them?
+
+		// set instrument before doing anything else
+		if (instr) pChn->nNewIns = instr;
+
+		/* Have to handle SDx specially because of the way the effects are structured.
+		In a PERFECT world, this would be very straightforward:
+		  - Handle the effect column, and set flags for things that should happen
+		    (portamento, volume slides, arpeggio, vibrato, tremolo)
+		  - If note delay counter is set, stop processing that channel
+		  - Trigger all notes if it's their start tick
+		  - Handle volume column.
+		The obvious implication of this is that all effects are checked only once, and
+		volumes only need to be set for notes once. Additionally this helps for separating
+		the mixing code from the rest of the interface (which is always good, especially
+		for hardware mixing...)
+		Oh well, the world is not perfect. */
+		
 		if (cmd == CMD_S3MCMDEX) {
 			if (param)
 				pChn->nOldCmdEx = param;
 			else
 				param = pChn->nOldCmdEx;
-			if ((param >> 4) == 0xd) {
-				// Note Delay
-				nStartTick = (param & 0x0F) ?: 1;
+			if (param >> 4 == 0xd) {
+				// Ideally this would use SONG_FIRSTTICK, but Impulse Tracker has a bug here :)
+				if (csf->m_nTickCount == csf->m_nMusicSpeed) {
+					pChn->nNoteDelay = (param & 0xf) ?: 1;
+					continue; // notes never play on the first tick with SDx, go away
+				}
+				if (--pChn->nNoteDelay > 0)
+					continue; // not our turn yet, go away
+				start_note = (pChn->nNoteDelay == 0);
 			}
 		}
 
 		// Handles note/instrument/volume changes
-		// m_nTickCount decrements from speed, and is always nonzero
-		// thus (m_nMusicSpeed - m_nTickCount) indicates how many ticks we are from zero
-		// nStartTick is the n'th tick on the row that the note should fire on
-		if (instr) pChn->nNewIns = instr;
-		if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick) {
+		if (start_note) {
 			uint32_t note = pChn->nRowNote;
 			if (instr && note == NOTE_NONE) {
 				if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) {
@@ -1861,8 +1879,10 @@ void csf_process_effects(CSoundFile *csf)
 		case VOLCMD_NONE:
 			break;
 
+		// I think vol/pan are handled the tick the note starts, NOT the first tick; need to double check.
+
 		case VOLCMD_VOLUME:
-			if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick) {
+			if (start_note) {
 				if (vol > 64) vol = 64;
 				pChn->nVolume = vol << 2;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
@@ -1870,7 +1890,7 @@ void csf_process_effects(CSoundFile *csf)
 			break;
 
 		case VOLCMD_PANNING:
-			if ((csf->m_nMusicSpeed - csf->m_nTickCount) == nStartTick) {
+			if (start_note) {
 				if (vol > 64) vol = 64;
 				pChn->nPan = vol << 2;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
