@@ -18,10 +18,11 @@
 void fx_note_cut(CSoundFile *csf, uint32_t nChn)
 {
 	SONGVOICE *pChn = &csf->Voices[nChn];
-	// if (m_dwSongFlags & SONG_INSTRUMENTMODE) KeyOff(pChn); ?
+	// stop the current note:
 	pChn->nVolume = 0;
 	pChn->dwFlags |= CHN_FASTVOLRAMP;
 	pChn->nLength = 0;
+	pChn->nPeriod = 0; // keep instrument numbers from picking up old notes
 
 	OPL_NoteOff(nChn);
 	OPL_Touch(nChn, 0);
@@ -1015,34 +1016,37 @@ SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32
 	return (n && n < MAX_SAMPLES) ? &csf->Samples[n] : def;
 }
 
-void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
-                           int bPorta, int bUpdVol, int bResetEnv)
+
+void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int bPorta, int instr_column)
 {
 	bool bInstrumentChanged = false;
 
 	if (instr >= MAX_INSTRUMENTS) return;
 	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
-	SONGSAMPLE *psmp = &csf->Samples[instr];
+	SONGSAMPLE *psmp = pChn->pInstrument;
 	uint32_t note = pChn->nNewNote;
 
 	if (note == NOTE_NONE) {
 		/* nothing to see here */
 	} else if (NOTE_IS_CONTROL(note)) {
-		psmp = NULL;
+		/* nothing here either */
 	} else if (penv) {
 		if (NOTE_IS_CONTROL(penv->NoteMap[note-1]))
 			return;
 		psmp = csf_translate_keyboard(csf, penv, note, NULL);
 		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
+	} else {
+		psmp = csf->Samples + instr;
 	}
 
 	// Update Volume
-	if (bUpdVol) pChn->nVolume = psmp ? psmp->nVolume : 0;
+	if (instr_column && psmp) pChn->nVolume = psmp->nVolume;
 	// bInstrumentChanged is used for IT carry-on env option
 	if (penv != pChn->pHeader) {
 		bInstrumentChanged = true;
 		pChn->pHeader = penv;
 	}
+
 	// Instrument adjust
 	pChn->nNewIns = 0;
 	if (psmp) {
@@ -1059,28 +1063,64 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
 		if (psmp->uFlags & CHN_PANNING)
 			pChn->nPan = psmp->nPan;
 	}
+
 	// Reset envelopes
-	if (bResetEnv) {
-		if (!bPorta // || (csf->m_dwSongFlags & SONG_COMPATGXX)
-		    || !pChn->nLength || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)) {
+	
+	// Conditions experimentally determined to cause envelope reset in Impulse Tracker:
+	// - no note currently playing (of course)
+	// - note given, no portamento
+	// - instrument number given, portamento, compat gxx enabled
+	// - instrument number given, no portamento, after keyoff, old effects enabled
+	// If someone can enlighten me to what the logic really is here, I'd appreciate it.
+	// Seems like it's just a total mess though, probably to get XMs to play right.
+	if (penv) {
+		if ((
+			!pChn->nLength
+		) || (
+			!instr_column
+			&& !bPorta
+		) || (
+			instr_column
+			&& bPorta
+			&& (csf->m_dwSongFlags & SONG_COMPATGXX)
+		) || (
+			instr_column
+			&& !bPorta
+			&& (pChn->dwFlags & (CHN_NOTEFADE|CHN_KEYOFF))
+			&& (csf->m_dwSongFlags & SONG_ITOLDEFFECTS)
+		)) {
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
-			if (!bInstrumentChanged && penv && !(pChn->dwFlags & (CHN_KEYOFF|CHN_NOTEFADE))) {
-				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
-			} else {
+			if (bInstrumentChanged || !pChn->nLength) {
 				pChn->nVolEnvPosition = 0;
 				pChn->nPanEnvPosition = 0;
 				pChn->nPitchEnvPosition = 0;
+			} else {
+				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
+				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
+				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
 			}
 			pChn->nAutoVibDepth = 0;
 			pChn->nAutoVibPos = 0;
-		} else if (penv && !(penv->dwFlags & ENV_VOLUME)) {
+		} else if (!(penv->dwFlags & ENV_VOLUME)) {
+			// XXX why is this being done?
 			pChn->nVolEnvPosition = 0;
 			pChn->nAutoVibDepth = 0;
 			pChn->nAutoVibPos = 0;
 		}
+
+		pChn->nVolSwing = pChn->nPanSwing = 0;
+		if (penv->nVolSwing) {
+			/* this was wrong */
+			/* FIXME: it's STILL wrong. vol swing is a percentage. */
+			int d = ((int32_t)penv->nVolSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 256;
+			pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
+		}
+		if (penv->nPanSwing) {
+			int d = ((int32_t)penv->nPanSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 128;
+			pChn->nPanSwing = (signed short)d;
+		}
 	}
+	
 	// Invalid sample ?
 	if (!psmp) {
 		pChn->pInstrument = NULL;
@@ -1154,11 +1194,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 			fx_key_off(csf, nChn);
 			break;
 		case NOTE_CUT:
-			fx_key_off(csf, nChn);
-			pChn->dwFlags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
-			if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
-				pChn->nVolume = 0;
-			pChn->nFadeOutVol = 0;
+			fx_note_cut(csf, nChn);
 			break;
 		case NOTE_FADE:
 		default: // Impulse Tracker handles all unknown notes as fade internally
@@ -1205,23 +1241,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 	} else {
 		bPorta = false;
 	}
-	if (!bPorta
-	    || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)
-	    || ((csf->m_dwSongFlags & SONG_COMPATGXX) && pChn->nRowInstr)) {
-		if ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol) {
-			pChn->nVolEnvPosition = 0;
-			pChn->nPanEnvPosition = 0;
-			pChn->nPitchEnvPosition = 0;
-			pChn->nAutoVibDepth = 0;
-			pChn->nAutoVibPos = 0;
-			pChn->dwFlags &= ~CHN_NOTEFADE;
-			pChn->nFadeOutVol = 65536;
-		}
-		if (!bPorta || !(csf->m_dwSongFlags & SONG_COMPATGXX) || pChn->nRowInstr) {
-			pChn->dwFlags &= ~CHN_NOTEFADE;
-			pChn->nFadeOutVol = 65536;
-		}
-	}
+
 	pChn->dwFlags &= ~CHN_KEYOFF;
 	// Enable Ramping
 	if (!bPorta) {
@@ -1230,30 +1250,6 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 		pChn->dwFlags &= ~CHN_FILTER;
 		pChn->dwFlags |= CHN_FASTVOLRAMP;
 		if (bResetEnv) {
-			pChn->nVolSwing = pChn->nPanSwing = 0;
-			if (penv) {
-				/* This is done above as well, with the instrument reset, but
-				 * I have a feeling that maybe it should only be here. Tests? */
-				pChn->dwFlags &= ~(CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
-				if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
-				if (penv->dwFlags & ENV_PANNING) pChn->dwFlags |= CHN_PANENV;
-				if (penv->dwFlags & ENV_PITCH) pChn->dwFlags |= CHN_PITCHENV;
-				
-				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
-				// Volume Swing
-				if (penv->nVolSwing) {
-					/* this was wrong */
-					int d = ((int32_t)penv->nVolSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 256;
-					pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
-				}
-				// Pan Swing
-				if (penv->nPanSwing) {
-					int d = ((int32_t)penv->nPanSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 128;
-					pChn->nPanSwing = (signed short)d;
-				}
-			}
 			pChn->nAutoVibDepth = 0;
 			pChn->nAutoVibPos = 0;
 		}
@@ -1546,7 +1542,7 @@ void csf_process_effects(CSoundFile *csf)
 			// Instrument Change ?
 			if (instr) {
 				SONGSAMPLE *psmp = pChn->pInstrument;
-				csf_instrument_change(csf, pChn, instr, bPorta, true, true);
+				csf_instrument_change(csf, pChn, instr, bPorta, true);
 				OPL_Patch(nChn, csf->Samples[instr].AdlibBytes);
 				
 				if((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && csf->Instruments[instr])
@@ -1563,7 +1559,7 @@ void csf_process_effects(CSoundFile *csf)
 			// New Note ?
 			if (note != NOTE_NONE) {
 				if (!instr && pChn->nNewIns && NOTE_IS_NOTE(note)) {
-					csf_instrument_change(csf, pChn, pChn->nNewIns, bPorta, false, true);
+					csf_instrument_change(csf, pChn, pChn->nNewIns, bPorta, false);
 					if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
 					    && csf->Instruments[pChn->nNewIns]) {
 						OPL_Patch(nChn, csf->Samples[pChn->nNewIns].AdlibBytes);
