@@ -1271,13 +1271,6 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 	// Special case for MPT
 	if (bManual)
 		pChn->dwFlags &= ~CHN_MUTE;
-	if (((pChn->dwFlags & CHN_MUTE) && (gdwSoundSetup & SNDMIX_MUTECHNMODE))
-	    || (pChn->pInstrument && (pChn->pInstrument->uFlags & CHN_MUTE) && !bManual)
-	    || ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && pChn->pHeader
-	        && (pChn->pHeader->dwFlags & ENV_MUTE) && !bManual)) {
-		if (!bManual)
-			pChn->nPeriod = 0;
-	}
 
 }
 

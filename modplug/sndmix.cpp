@@ -971,11 +971,13 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 	if (chan->dwFlags & CHN_PINGPONGFLAG)
 		chan->nInc = -chan->nInc;
 
-	// Setting up volume ramp
-	if (!(gdwSoundSetup & SNDMIX_NORAMPING) &&
+	if (chan->dwFlags & CHN_MUTE) {
+		chan->nLeftVol = chan->nRightVol = 0;
+	} else if (!(gdwSoundSetup & SNDMIX_NORAMPING) &&
 	    chan->dwFlags & CHN_VOLUMERAMP &&
 	    (chan->nRightVol != chan->nNewRightVol ||
 	     chan->nLeftVol  != chan->nNewLeftVol)) {
+		// Setting up volume ramp
 		int nRampLength = volume_ramp_samples;
 		int nRightDelta = ((chan->nNewRightVol - chan->nRightVol) << VOLUMERAMPPRECISION);
 		int nLeftDelta	= ((chan->nNewLeftVol  - chan->nLeftVol)  << VOLUMERAMPPRECISION);
@@ -1015,12 +1017,10 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 	chan->nRampLeftVol = chan->nLeftVol << VOLUMERAMPPRECISION;
 
 	// Adding the channel in the channel list
-	if (!(chan->dwFlags & CHN_MUTE)) {
-		csf->VoiceMix[csf->m_nMixChannels++] = nChn;
+	csf->VoiceMix[csf->m_nMixChannels++] = nChn;
 
-		if (csf->m_nMixChannels >= MAX_VOICES)
-			return 0;
-	}
+	if (csf->m_nMixChannels >= MAX_VOICES)
+		return 0;
 
 	return 1;
 }
