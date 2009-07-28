@@ -19,7 +19,6 @@ void fx_note_cut(CSoundFile *csf, uint32_t nChn)
 {
 	SONGVOICE *pChn = &csf->Voices[nChn];
 	// stop the current note:
-	pChn->nVolume = 0;
 	pChn->dwFlags |= CHN_FASTVOLRAMP;
 	pChn->nLength = 0;
 	pChn->nPeriod = 0; // keep instrument numbers from picking up old notes
