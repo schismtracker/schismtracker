@@ -3509,7 +3509,9 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		break;
 	case SDLK_i:
 		if (k->state) return 1;
-		if (fast_volume_mode)
+		if (k->mod & KMOD_SHIFT)
+			template_mode = TEMPLATE_OFF;
+		else if (fast_volume_mode)
 			fast_volume_amplify();
 		else
 			template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
@@ -4233,7 +4235,7 @@ static void pattern_editor_playback_update(void)
 			current_row = playing_row;
 			pattern_editor_reposition();
 			status.flags |= NEED_UPDATE;
-		} else if (current_pattern == song_get_playing_pattern()) {
+		} else if (current_pattern == playing_pattern) {
 			status.flags |= NEED_UPDATE;
 		}
 	}
