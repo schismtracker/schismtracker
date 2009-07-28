@@ -1398,8 +1398,7 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int
 		if (bOk) {
 			switch(p->pHeader->nDCA) {
 			case DCA_NOTECUT:
-				fx_key_off(csf, i);
-				p->nVolume = 0;
+				fx_note_cut(csf, i);
 				break;
 			case DCA_NOTEOFF:
 				fx_key_off(csf, i);
