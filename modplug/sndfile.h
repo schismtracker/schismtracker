@@ -617,8 +617,7 @@ void csf_process_mono_dsp(CSoundFile *csf, int count);
 
 // snd_fx
 unsigned int csf_get_length(CSoundFile *csf);
-void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr,
-                           int bPorta, int bUpdVol, int bResetEnv);
+void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int bPorta, int instr_column);
 void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int bResetEnv, int bManual);
 uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn);
 void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int bForceCut);

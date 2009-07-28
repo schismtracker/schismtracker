@@ -668,7 +668,7 @@ void song_update_playing_instrument(int i_changed)
 	while (n--) {
 		channel = mp->Voices + mp->VoiceMix[n];
 		if (channel->pHeader && channel->pHeader == mp->Instruments[i_changed]) {
-			csf_instrument_change(mp, channel, i_changed, true, false, false);
+			csf_instrument_change(mp, channel, i_changed, true, false);
 			inst = channel->pHeader;
 			if (!inst) continue;
 
