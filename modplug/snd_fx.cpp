@@ -636,6 +636,7 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 			pChn->dwFlags &= ~CHN_SURROUND;
 			pChn->nPan = (param << 4) + 8;
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
+			pChn->nPanSwing = 0;
 		}
 		break;
 	// S9x: Set Surround
@@ -1144,7 +1145,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 		if (penv->nIFC & 0x80) pChn->nCutOff = penv->nIFC & 0x7F;
 		if (penv->nIFR & 0x80) pChn->nResonance = penv->nIFR & 0x7F;
 	}
-	pChn->nVolSwing = pChn->nPanSwing = 0;
+
 
 	pChn->nPeriod = get_freq_from_period(get_freq_from_period(pChn->nPeriod, psmp->nC5Speed, 0, 1),
 					pChn->nC5Speed, 0, 1);
@@ -1733,6 +1734,7 @@ void csf_process_effects(CSoundFile *csf)
 			if (!(csf->m_dwSongFlags & SONG_SURROUNDPAN))
 				pChn->dwFlags &= ~CHN_SURROUND;
 			pChn->nPan = param;
+			pChn->nPanSwing = 0;
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
 			break;
 
@@ -1889,6 +1891,7 @@ void csf_process_effects(CSoundFile *csf)
 			if (start_note) {
 				if (vol > 64) vol = 64;
 				pChn->nPan = vol << 2;
+				pChn->nPanSwing = 0;
 				pChn->dwFlags |= CHN_FASTVOLRAMP;
 				pChn->dwFlags &= ~CHN_SURROUND;
 			}
