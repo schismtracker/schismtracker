@@ -25,11 +25,9 @@
 #include "slurp.h"
 #include "snd_fx.h"
 
-#ifndef MACOSX
-#include <cstdio>
-#include <cstring>
-#include <cmath>
-#endif
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 
 // ------------------------------------------------------------------------
 // variables
@@ -153,7 +151,7 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
         }
 	
         if (name_ptr)
-                *name_ptr = (char *) mp->Instruments[n]->name;
+                *name_ptr = mp->Instruments[n]->name;
         return (song_instrument *) mp->Instruments[n];
 }
 
@@ -388,9 +386,9 @@ static song_note blank_pattern[64 * 64];
 int song_pattern_is_empty(int n)
 {
         if (!mp->Patterns[n])
-                return true;
+                return 1;
         if (mp->PatternSize[n] != 64)
-                return false;
+                return 0;
         return !memcmp(mp->Patterns[n], blank_pattern, sizeof(blank_pattern));
 }
 
@@ -899,7 +897,7 @@ void song_delete_instrument(int n)
 
 unsigned song_copy_sample_raw(int n, unsigned int rs, const void *data, unsigned int samples)
 {
-	return csf_read_sample(mp->Samples+n, rs, (const char *)data, samples);
+	return csf_read_sample(mp->Samples+n, rs, data, samples);
 }
 
 void song_replace_sample(int num, int with)

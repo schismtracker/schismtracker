@@ -33,12 +33,10 @@
 
 #include <assert.h>
 
-#ifndef MACOSX
-#include <cstdio>
-#include <cstring>
-#include <cerrno>
-#include <cmath>
-#endif
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <math.h>
 
 #include "sdlmain.h"
 
@@ -73,13 +71,11 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 // ------------------------------------------------------------------------
 // playback
 
-extern "C" {
-	extern int midi_bend_hit[64], midi_last_bend_hit[64];
-	extern void vis_work_16s(short *in, int inlen);
-	extern void vis_work_16m(short *in, int inlen);
-	extern void vis_work_8s(char *in, int inlen);
-	extern void vis_work_8m(char *in, int inlen);
-};
+extern int midi_bend_hit[64], midi_last_bend_hit[64];
+extern void vis_work_16s(short *in, int inlen);
+extern void vis_work_16m(short *in, int inlen);
+extern void vis_work_8s(char *in, int inlen);
+extern void vis_work_8m(char *in, int inlen);
 
 // this gets called from sdl
 static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
@@ -320,7 +316,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->pInstrument = s;
 		c->nLength = 0;
 		// ... but it doesn't copy the volumes, for somewhat obvious reasons.
-		c->nVolume = (vol == KEYJAZZ_DEFAULTVOL) ? s->nVolume : (vol << 2);
+		c->nVolume = (vol == KEYJAZZ_DEFAULTVOL) ? s->nVolume : (((unsigned) vol) << 2);
 		c->nInsVol = s->nGlobalVol;
 		c->nGlobalVol = 64;
 		// gotta set these by hand, too
@@ -329,7 +325,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		s->played = 1;
 		
 	}
-	csf_note_change(mp, chan - 1, note, false, true, true);
+	csf_note_change(mp, chan - 1, note, 0, 1, 1);
 
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		mc.note = note;
@@ -369,7 +365,7 @@ int song_keyup(int samp, int ins, int note)
 // ------------------------------------------------------------------------------------------------------------
 
 // this should be called with the audio LOCKED
-static void song_reset_play_state()
+static void song_reset_play_state(void)
 {
 	memset(midi_bend_hit, 0, sizeof(midi_bend_hit));
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
@@ -378,7 +374,7 @@ static void song_reset_play_state()
 	// turn this crap off
 	gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_NOMIXING | SNDMIX_DIRECTTODISK);
 
-	csf_initialize_dsp(mp, true);
+	csf_initialize_dsp(mp, 1);
 
 	csf_set_current_order(mp, 0);
 
@@ -393,7 +389,7 @@ static void song_reset_play_state()
 	samples_played = 0;
 }
 
-void song_start_once()
+void song_start_once(void)
 {
         song_lock_audio();
 
@@ -408,7 +404,7 @@ void song_start_once()
 	main_song_mode_changed_cb();
 }
 
-void song_start()
+void song_start(void)
 {
         song_lock_audio();
 
@@ -420,7 +416,7 @@ void song_start()
 	main_song_mode_changed_cb();
 }
 
-void song_pause()
+void song_pause(void)
 {
 	song_lock_audio();
 	// Highly unintuitive, but SONG_PAUSED has nothing to do with pause.
@@ -430,7 +426,7 @@ void song_pause()
 	main_song_mode_changed_cb();
 }
 
-void song_stop()
+void song_stop(void)
 {
 	song_lock_audio();
 	song_stop_unlocked(0);
@@ -478,7 +474,7 @@ void song_stop_unlocked(int quitting)
 		// send all notes off
 #define _MIDI_PANIC	"\xb0\x78\0\xb0\x79\0\xb0\x7b\0"
 		csf_midi_send(mp, (unsigned char *) _MIDI_PANIC, sizeof(_MIDI_PANIC) - 1, 0, 0);
-		csf_process_midi_macro(mp, NULL, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_STOP*32], 0, 0, 0, 0); // STOP!
+		csf_process_midi_macro(mp, 0, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_STOP*32], 0, 0, 0, 0); // STOP!
 		midi_send_flush(); // NOW!
 
 		midi_playing = 0;
@@ -585,7 +581,7 @@ void song_single_step(int patno, int row)
 // ------------------------------------------------------------------------
 // info on what's playing
 
-enum song_mode song_get_mode()
+enum song_mode song_get_mode(void)
 {
         if ((mp->m_dwSongFlags & (SONG_ENDREACHED | SONG_PAUSED)) == (SONG_ENDREACHED | SONG_PAUSED))
                 return MODE_STOPPED;
@@ -597,16 +593,16 @@ enum song_mode song_get_mode()
 }
 
 // returned value is in seconds
-unsigned int song_get_current_time()
+unsigned int song_get_current_time(void)
 {
         return samples_played / gdwMixingFreq;
 }
 
-int song_get_current_tick()
+int song_get_current_tick(void)
 {
 	return mp->m_nTickCount % mp->m_nMusicSpeed;
 }
-int song_get_current_speed()
+int song_get_current_speed(void)
 {
         return mp->m_nMusicSpeed;
 }
@@ -617,37 +613,37 @@ void song_set_current_tempo(int new_tempo)
         mp->m_nMusicTempo = CLAMP(new_tempo, 31, 255);
 	song_unlock_audio();
 }
-int song_get_current_tempo()
+int song_get_current_tempo(void)
 {
         return mp->m_nMusicTempo;
 }
 
-int song_get_current_global_volume()
+int song_get_current_global_volume(void)
 {
         return mp->m_nGlobalVolume;
 }
 
-int song_get_current_order()
+int song_get_current_order(void)
 {
         return mp->m_nCurrentOrder;
 }
 
-int song_get_playing_pattern()
+int song_get_playing_pattern(void)
 {
         return mp->m_nCurrentPattern;
 }
 
-int song_get_current_row()
+int song_get_current_row(void)
 {
         return mp->m_nRow;
 }
 
-int song_get_playing_channels()
+int song_get_playing_channels(void)
 {
         return MIN(mp->m_nMixChannels, m_nMaxMixChannels);
 }
 
-int song_get_max_channels()
+int song_get_max_channels(void)
 {
         return max_channels_used;
 }
@@ -668,7 +664,7 @@ void song_update_playing_instrument(int i_changed)
 	while (n--) {
 		channel = mp->Voices + mp->VoiceMix[n];
 		if (channel->pHeader && channel->pHeader == mp->Instruments[i_changed]) {
-			csf_instrument_change(mp, channel, i_changed, true, false);
+			csf_instrument_change(mp, channel, i_changed, 1, 0);
 			inst = channel->pHeader;
 			if (!inst) continue;
 
@@ -682,11 +678,11 @@ void song_update_playing_instrument(int i_changed)
 			}
 			if (inst->nIFC & 0x80) {
 				channel->nCutOff = inst->nIFC & 0x7F;
-				setup_channel_filter(channel, false, 256, gdwMixingFreq);
+				setup_channel_filter(channel, 0, 256, gdwMixingFreq);
 			} else {
 				channel->nCutOff = 0x7F;
 				if (inst->nIFR & 0x80) {
-					setup_channel_filter(channel, false, 256, gdwMixingFreq);
+					setup_channel_filter(channel, 0, 256, gdwMixingFreq);
 				}
 			}
 
@@ -837,12 +833,12 @@ int song_toggle_orderlist_locked(void)
 // ------------------------------------------------------------------------
 // global flags
 
-void song_flip_stereo()
+void song_flip_stereo(void)
 {
         gdwSoundSetup ^= SNDMIX_REVERSESTEREO;
 }
 
-int song_get_surround()
+int song_get_surround(void)
 {
 	return (gdwSoundSetup & SNDMIX_NOSURROUND) ? 0 : 1;
 }
@@ -1371,7 +1367,7 @@ void song_init_eq(int do_reset)
 			* (gdwMixingFreq / 128) / 1024);
 	}
 
-	set_eq_gains(pg, 4, pf, do_reset ? true : false, gdwMixingFreq);
+	set_eq_gains(pg, 4, pf, do_reset, gdwMixingFreq);
 }
 
 
@@ -1381,9 +1377,9 @@ void song_init_modplug(void)
 	
         m_nMaxMixChannels = audio_settings.channel_limit;
         csf_set_wave_config_ex(mp,
-				true, // hqido - only makes sense
+				1, // hqido - only makes sense
 				audio_settings.noise_reduction,
-				true); // eq
+				1); // eq
 	// audio_settings.oversampling (?)
         csf_set_resampling_mode(mp, audio_settings.interpolation_mode);
 	if (audio_settings.no_ramping)
