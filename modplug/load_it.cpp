@@ -616,25 +616,21 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 //////////////////////////////////////////////////////////////////////////////
 // IT 2.14 compression
 
-uint32_t ITReadBits(uint32_t &bitbuf, uint32_t &bitnum, uint8_t * &ibuf, int8_t n)
-//-----------------------------------------------------------------
+uint32_t ITReadBits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n)
 {
 	uint32_t retval = 0;
 	uint32_t i = n;
 
-	if (n > 0)
-	{
-		do
-		{
-			if (!bitnum)
-			{
-				bitbuf = *ibuf++;
-				bitnum = 8;
+	if (n > 0) {
+		do {
+			if (!*bitnum) {
+				*bitbuf = *(*ibuf)++;
+				*bitnum = 8;
 			}
 			retval >>= 1;
-			retval |= bitbuf << 31;
-			bitbuf >>= 1;
-			bitnum--;
+			retval |= (*bitbuf) << 31;
+			(*bitbuf) >>= 1;
+			(*bitnum)--;
 			i--;
 		} while (i);
 		i = n;
@@ -642,7 +638,7 @@ uint32_t ITReadBits(uint32_t &bitbuf, uint32_t &bitnum, uint8_t * &ibuf, int8_t 
 	return (retval >> (32-i));
 }
 
-void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, bool b215)
+void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, int b215)
 //-------------------------------------------------------------------------------------------
 {
 	signed char *pDst = pSample;
@@ -670,13 +666,13 @@ void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uin
 		uint32_t dwPos = 0;
 		do
 		{
-			uint16_t wBits = (uint16_t)ITReadBits(bitbuf, bitnum, pSrc, bLeft);
+			uint16_t wBits = (uint16_t)ITReadBits(&bitbuf, &bitnum, &pSrc, bLeft);
 			if (bLeft < 7)
 			{
 				uint32_t i = 1 << (bLeft-1);
 				uint32_t j = wBits & 0xFFFF;
 				if (i != j) goto UnpackByte;
-				wBits = (uint16_t)(ITReadBits(bitbuf, bitnum, pSrc, 3) + 1) & 0xFF;
+				wBits = (uint16_t)(ITReadBits(&bitbuf, &bitnum, &pSrc, 3) + 1) & 0xFF;
 				bLeft = ((uint8_t)wBits < bLeft) ? (uint8_t)wBits : (uint8_t)((wBits+1) & 0xFF);
 				goto Next;
 			}
@@ -720,7 +716,7 @@ void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uin
 }
 
 
-void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, bool b215)
+void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, int b215)
 //--------------------------------------------------------------------------------------------
 {
 	signed short *pDst = (signed short *)pSample;
@@ -749,13 +745,13 @@ void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, ui
 		uint32_t dwPos = 0;
 		do
 		{
-			uint32_t dwBits = ITReadBits(bitbuf, bitnum, pSrc, bLeft);
+			uint32_t dwBits = ITReadBits(&bitbuf, &bitnum, &pSrc, bLeft);
 			if (bLeft < 7)
 			{
 				uint32_t i = 1 << (bLeft-1);
 				uint32_t j = dwBits;
 				if (i != j) goto UnpackByte;
-				dwBits = ITReadBits(bitbuf, bitnum, pSrc, 4) + 1;
+				dwBits = ITReadBits(&bitbuf, &bitnum, &pSrc, 4) + 1;
 				bLeft = ((uint8_t)(dwBits & 0xFF) < bLeft) ? (uint8_t)(dwBits & 0xFF) : (uint8_t)((dwBits+1) & 0xFF);
 				goto Next;
 			}
