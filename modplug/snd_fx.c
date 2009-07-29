@@ -116,7 +116,6 @@ void fx_note_cut(CSoundFile *csf, uint32_t nChn)
 void fx_key_off(CSoundFile *csf, uint32_t nChn)
 {
 	SONGVOICE *pChn = &csf->Voices[nChn];
-	int bKeyOn = (pChn->dwFlags & CHN_KEYOFF);
 
 	/*fprintf(stderr, "KeyOff[%d] [ch%u]: flags=0x%X\n",
 		m_nTickCount, (unsigned)nChn, pChn->dwFlags);*/
@@ -142,7 +141,7 @@ void fx_key_off(CSoundFile *csf, uint32_t nChn)
 	}
 	if (!pChn->nLength)
 		return;
-	if ((pChn->dwFlags & CHN_SUSTAINLOOP) && pChn->pInstrument && bKeyOn) {
+	if ((pChn->dwFlags & CHN_SUSTAINLOOP) && pChn->pInstrument) {
 		SONGSAMPLE *psmp = pChn->pInstrument;
 		if (psmp->uFlags & CHN_LOOP) {
 			if (psmp->uFlags & CHN_PINGPONGLOOP)
