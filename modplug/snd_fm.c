@@ -1,6 +1,4 @@
-extern "C" {
 #include "fmopl.h"
-}
 #include "snd_fm.h"
 
 #define MAX_VOICES 256 /* Must not be less than the setting in sndfile.h */
@@ -127,10 +125,10 @@ static int SetBase(int c)
 }
 
 
-static void OPL_Byte(unsigned char index, unsigned char data)
+static void OPL_Byte(unsigned char idx, unsigned char data)
 {
         //register int a;
-        Fmdrv_Outportb(oplbase, index);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
+        Fmdrv_Outportb(oplbase, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
         Fmdrv_Outportb(oplbase + 1, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
 }
 
@@ -197,17 +195,14 @@ void OPL_HertzTouch(int c, int Hertz, int keyoff)
 }
 
 
-void OPL_Touch(int c, unsigned Vol)
-{
-        if (c < MAX_VOICES)
-                OPL_Touch(c, Dtab[c], Vol);
-}
-
-
 void OPL_Touch(int c, const unsigned char *D, unsigned vol)
 {
-        if (!D)
-            return;
+        if (!D) {
+                if (c < MAX_VOICES)
+                        D = Dtab[c];
+                if (!D)
+                        return;
+        }
 
 //fprintf(stderr, "OPL_Touch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
 //    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
@@ -244,11 +239,11 @@ void OPL_Touch(int c, const unsigned char *D, unsigned vol)
         //  (63 + (d[2] & 63) * vol / 63 - vol)          - old formula
         //  (63 - ((63 - (d[2] & 63)) * vol     ) / 63)  - older formula
         //  (63 - ((63 - (d[2] & 63)) * vol + 32) / 64)  - revised formula, like ST3
-            ((int(D[2] & 63) - 63) * vol + 63 * 64 - 32) / 64 // - optimized revised formula
+            (((int)(D[2] & 63) - 63) * vol + 63 * 64 - 32) / 64 // - optimized revised formula
         );
 
         OPL_Byte(KSL_LEVEL + 3 + Ope, (D[3] & KSL_MASK) |
-            ((int(D[3] & 63) - 63) * vol + 63 * 64 - 32) / 64
+            (((int)(D[3] & 63) - 63) * vol + 63 * 64 - 32) / 64
         );
 
         /* 2008-09-27 Bisqwit:

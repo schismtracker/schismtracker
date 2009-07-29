@@ -421,7 +421,7 @@ typedef void(* mix_interface_t)(SONGVOICE *, int *, int *);
 
 
 #define BEGIN_MIX_INTERFACE(func) \
-    void func(SONGVOICE *pChannel, int *pbuffer, int *pbufmax) \
+    static void func(SONGVOICE *pChannel, int *pbuffer, int *pbufmax) \
     { \
         int nPos;
 
@@ -1156,9 +1156,9 @@ const mix_interface_t fastmix_functions[2 * 2 * 16] = {
 	FilterStereo8BitLinearRampMix,      FilterStereo16BitLinearRampMix,
 
 	// Spline SRC
-	Mono8BitSplineMix,                  Mono16BitSplineMix,
+	FastMono8BitSplineMix,              FastMono16BitSplineMix,
 	Stereo8BitSplineMix,                Stereo16BitSplineMix,
-	Mono8BitSplineRampMix,              Mono16BitSplineRampMix,
+	FastMono8BitSplineRampMix,          FastMono16BitSplineRampMix,
 	Stereo8BitSplineRampMix,            Stereo16BitSplineRampMix,
 
 	// Spline SRC, Filter
@@ -1168,9 +1168,9 @@ const mix_interface_t fastmix_functions[2 * 2 * 16] = {
 	FilterStereo8BitSplineRampMix,      FilterStereo16BitSplineRampMix,
 
 	// FirFilter SRC
-	Mono8BitFirFilterMix,               Mono16BitFirFilterMix,
+	FastMono8BitFirFilterMix,           FastMono16BitFirFilterMix,
 	Stereo8BitFirFilterMix,             Stereo16BitFirFilterMix,
-	Mono8BitFirFilterRampMix,           Mono16BitFirFilterRampMix,
+	FastMono8BitFirFilterRampMix,       FastMono16BitFirFilterRampMix,
 	Stereo8BitFirFilterRampMix,         Stereo16BitFirFilterRampMix,
 
 	// FirFilter SRC, Filter

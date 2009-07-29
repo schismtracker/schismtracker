@@ -1,6 +1,10 @@
 #ifndef __FMOPL_H_
 #define __FMOPL_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define logerror(...) /**/
 
 /* --- select emulation chips --- */
@@ -113,5 +117,8 @@ void Y8950SetUpdateHandler (int which, OPL_UPDATEHANDLER UpdateHandler, int para
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

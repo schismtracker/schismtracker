@@ -1060,7 +1060,7 @@ static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, const int chan_n
 		OPL_HertzTouch(chan_num, oplfreq, chan->dwFlags & CHN_KEYOFF);
 
 		// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
-		OPL_Touch(chan_num, vol * chan->nInsVol * 63 / (1 << 20));
+		OPL_Touch(chan_num, NULL, vol * chan->nInsVol * 63 / (1 << 20));
 	}
 }
 

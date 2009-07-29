@@ -1,16 +1,100 @@
-/*
- * This source code is public domain.
- *
- * Authors: Olivier Lapicque <olivierl@jps.net>
-*/
+#include <limits.h>
+#include <math.h>
 
 #include "sndfile.h"
 
 #include "snd_fm.h"
+#include "snd_fx.h"
 #include "snd_gm.h"
 #include "snd_flt.h"
 
 #include "util.h" /* for clamp/min */
+
+
+extern unsigned short FreqS3MTable[16];
+
+/* note/freq/period conversion functions */
+
+int get_note_from_period(int period)
+{
+	int n;
+	if (!period)
+		return 0;
+	for (n = 0; n <= 120; n++) {
+		/* Essentially, this is just doing a note_to_period(n, 8363), but with less
+		computation since there's no c5speed to deal with. */
+		if (period >= (32 * FreqS3MTable[n % 12] >> (n / 12)))
+			return n + 1;
+	}
+	return 120;
+}
+
+int get_period_from_note(int note, unsigned int c5speed, int linear)
+{
+	if (!note || note > 0xF0)
+		return 0;
+	note--;
+	if (linear)
+		return (FreqS3MTable[note % 12] << 5) >> (note / 12);
+	else if (!c5speed)
+		return INT_MAX;
+	else
+		return _muldiv(8363, (FreqS3MTable[note % 12] << 5), c5speed << (note / 12));
+}
+
+
+unsigned int get_freq_from_period(int period, unsigned int c5speed, int frac, int linear)
+{
+	if (period <= 0)
+		return INT_MAX;
+	return _muldiv(linear ? c5speed : 8363, 1712L << 8, (period << 8) + frac);
+}
+
+
+unsigned int transpose_to_frequency(int transp, int ftune)
+{
+        return (unsigned int) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
+}
+
+int frequency_to_transpose(unsigned int freq)
+{
+	return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
+/* crap that shouldn't be here */
+
+
+// XXX this stuff was lifted from sndfile.cpp and moved to a .c file to avoid c++ braindeadness.
+// it should be placed somewhere better in the future.
+
+MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels)
+{
+	return calloc(rows * channels, sizeof(MODCOMMAND));
+}
+
+void csf_free_pattern(void *pat)
+{
+	free(pat);
+}
+
+signed char *csf_allocate_sample(uint32_t nbytes)
+{
+	signed char *p = calloc(1, (nbytes + 39) & ~7); // magic
+	if (p)
+		p += 16;
+	return p;
+}
+
+void csf_free_sample(void *p)
+{
+	if (p)
+		free(p - 16);
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
+/* the full content of snd_fx.cpp follows. */
+
 
 ////////////////////////////////////////////////////////////
 // Channels effects
@@ -24,7 +108,7 @@ void fx_note_cut(CSoundFile *csf, uint32_t nChn)
 	pChn->nPeriod = 0; // keep instrument numbers from picking up old notes
 
 	OPL_NoteOff(nChn);
-	OPL_Touch(nChn, 0);
+	OPL_Touch(nChn, NULL, 0);
 	GM_KeyOff(nChn);
 	GM_Touch(nChn, 0);
 }
@@ -32,7 +116,7 @@ void fx_note_cut(CSoundFile *csf, uint32_t nChn)
 void fx_key_off(CSoundFile *csf, uint32_t nChn)
 {
 	SONGVOICE *pChn = &csf->Voices[nChn];
-	bool bKeyOn = (pChn->dwFlags & CHN_KEYOFF) ? false : true;
+	int bKeyOn = (pChn->dwFlags & CHN_KEYOFF);
 
 	/*fprintf(stderr, "KeyOff[%d] [ch%u]: flags=0x%X\n",
 		m_nTickCount, (unsigned)nChn, pChn->dwFlags);*/
@@ -436,8 +520,8 @@ static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
 		uint32_t nNote = pChn->nNewNote;
 		int32_t nOldPeriod = pChn->nPeriod;
 		if (NOTE_IS_NOTE(nNote) && pChn->nLength)
-			csf_check_nna(csf, nChn, 0, nNote, true);
-		csf_note_change(csf, nChn, nNote, false, false, false);
+			csf_check_nna(csf, nChn, 0, nNote, 1);
+		csf_note_change(csf, nChn, nNote, 0, 0, 0);
 		if (nOldPeriod && pChn->nRowNote == NOTE_NONE)
 			pChn->nPeriod = nOldPeriod;
 	}
@@ -702,14 +786,14 @@ void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len,
 				    || !(pChn->dwFlags & CHN_FILTER)
 				    || !(pChn->nLeftVol|pChn->nRightVol)) {
 					setup_channel_filter(pChn,
-						(pChn->dwFlags & CHN_FILTER) ? false : true,
+						!(pChn->dwFlags & CHN_FILTER),
 						256, gdwMixingFreq);
 				}
 				break;
 			case 0x01: /* set resonance */
 				if (data[3] < 0x80) pChn->nResonance = data[3];
 				setup_channel_filter(pChn,
-					(pChn->dwFlags & CHN_FILTER) ? false : true,
+					!(pChn->dwFlags & CHN_FILTER),
 					256, gdwMixingFreq);
 				break;
 			};
@@ -1019,7 +1103,7 @@ SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32
 
 void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int bPorta, int instr_column)
 {
-	bool bInstrumentChanged = false;
+	int bInstrumentChanged = 0;
 
 	if (instr >= MAX_INSTRUMENTS) return;
 	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
@@ -1043,7 +1127,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 	if (instr_column && psmp) pChn->nVolume = psmp->nVolume;
 	// bInstrumentChanged is used for IT carry-on env option
 	if (penv != pChn->pHeader) {
-		bInstrumentChanged = true;
+		bInstrumentChanged = 1;
 		pChn->pHeader = penv;
 	}
 
@@ -1239,7 +1323,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 		if (pChn->nPos >= pChn->nLength)
 			pChn->nPos = pChn->nLoopStart;
 	} else {
-		bPorta = false;
+		bPorta = 0;
 	}
 
 	pChn->dwFlags &= ~CHN_KEYOFF;
@@ -1265,7 +1349,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 		}
 
 		if (pChn->nCutOff < 0x7F)
-			setup_channel_filter(pChn, true, 256, gdwMixingFreq);
+			setup_channel_filter(pChn, 1, 256, gdwMixingFreq);
 	}
 	// Special case for MPT
 	if (bManual)
@@ -1349,7 +1433,7 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int
 		pChn->nROfs = pChn->nLOfs = 0;
 		pChn->nLeftVol = pChn->nRightVol = 0;
 		OPL_NoteOff(nChn);
-		OPL_Touch(nChn, 0);
+		OPL_Touch(nChn, NULL, 0);
 		GM_KeyOff(nChn);
 		GM_Touch(nChn, 0);
 		return;
@@ -1378,20 +1462,17 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int
 		      && ((p->nMasterChn == nChn+1 || p == pChn)
 		          && p->pHeader)))
 			continue;
-		bool bOk = false;
+		int bOk = 0;
 		// Duplicate Check Type
 		switch (p->pHeader->nDCT) {
 		case DCT_NOTE:
-			if (NOTE_IS_NOTE(note) && (int) p->nNote == note && pHeader == p->pHeader)
-				bOk = true;
+			bOk = (NOTE_IS_NOTE(note) && (int) p->nNote == note && pHeader == p->pHeader);
 			break;
 		case DCT_SAMPLE:
-			if (pSample && pSample == p->pSample)
-				bOk = true;
+			bOk = (pSample && pSample == p->pSample);
 			break;
 		case DCT_INSTRUMENT:
-			if (pHeader == p->pHeader)
-				bOk = true;
+			bOk = (pHeader == p->pHeader);
 			break;
 		}
 		// Duplicate Note Action
@@ -1459,7 +1540,7 @@ void csf_process_effects(CSoundFile *csf)
 		uint32_t vol = pChn->nRowVolume;
 		uint32_t cmd = pChn->nRowCommand;
 		uint32_t param = pChn->nRowParam;
-		bool bPorta = (cmd == CMD_TONEPORTAMENTO
+		int bPorta = (cmd == CMD_TONEPORTAMENTO
 		               || cmd == CMD_TONEPORTAVOL
 		               || volcmd == VOLCMD_TONEPORTAMENTO);
 		int start_note = csf->m_dwSongFlags & SONG_FIRSTTICK;
@@ -1518,7 +1599,7 @@ void csf_process_effects(CSoundFile *csf)
 				/* This is required when the instrument changes (KeyOff is not called) */
 				/* Possibly a better bugfix could be devised. --Bisqwit */
 				OPL_NoteOff(nChn);
-				OPL_Touch(nChn, 0);
+				OPL_Touch(nChn, NULL, 0);
 				GM_KeyOff(nChn);
 				GM_Touch(nChn, 0);
 			}
@@ -1529,12 +1610,12 @@ void csf_process_effects(CSoundFile *csf)
 				pChn->nNewNote = note;
 				// New Note Action ? (not when paused!!!)
 				if (!bPorta)
-					csf_check_nna(csf, nChn, instr, note, false);
+					csf_check_nna(csf, nChn, instr, note, 0);
 			}
 			// Instrument Change ?
 			if (instr) {
 				SONGSAMPLE *psmp = pChn->pInstrument;
-				csf_instrument_change(csf, pChn, instr, bPorta, true);
+				csf_instrument_change(csf, pChn, instr, bPorta, 1);
 				OPL_Patch(nChn, csf->Samples[instr].AdlibBytes);
 				
 				if((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && csf->Instruments[instr])
@@ -1545,13 +1626,13 @@ void csf_process_effects(CSoundFile *csf)
 				pChn->nNewIns = 0;
 				// Special IT case: portamento+note causes sample change -> ignore portamento
 				if (psmp != pChn->pInstrument && NOTE_IS_NOTE(note)) {
-					bPorta = false;
+					bPorta = 0;
 				}
 			}
 			// New Note ?
 			if (note != NOTE_NONE) {
 				if (!instr && pChn->nNewIns && NOTE_IS_NOTE(note)) {
-					csf_instrument_change(csf, pChn, pChn->nNewIns, bPorta, false);
+					csf_instrument_change(csf, pChn, pChn->nNewIns, bPorta, 0);
 					if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE)
 					    && csf->Instruments[pChn->nNewIns]) {
 						OPL_Patch(nChn, csf->Samples[pChn->nNewIns].AdlibBytes);
@@ -1561,7 +1642,7 @@ void csf_process_effects(CSoundFile *csf)
 					}
 					pChn->nNewIns = 0;
 				}
-				csf_note_change(csf, nChn, note, bPorta, true, false);
+				csf_note_change(csf, nChn, note, bPorta, 1, 0);
 			}
 		}
 
