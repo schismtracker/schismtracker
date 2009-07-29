@@ -136,3 +136,8 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	}
 }
 
+int csf_load(CSoundFile *csf, const uint8_t * lpStream, uint32_t dwMemLength)
+{
+	return csf->Create(lpStream, dwMemLength);
+}
+

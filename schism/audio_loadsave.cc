@@ -282,7 +282,7 @@ void song_new(int flags)
 static int _modplug_load_song(CSoundFile *csf, slurp_t *sl, UNUSED unsigned int flags)
 {
 	printf("note: using modplug's loader\n");
-	return csf->Create(sl->data, sl->length) ? LOAD_SUCCESS : LOAD_UNSUPPORTED;
+	return csf_load(csf, sl->data, sl->length) ? LOAD_SUCCESS : LOAD_UNSUPPORTED;
 }
 
 // see dmoz.c for detailed information on the ordering used here
@@ -297,28 +297,28 @@ static fmt_load_song_func load_song_funcs[] = {
 	NULL,
 };
 
-int song_load_unchecked(const char *file)
-{
-        const char *base = get_basename(file);
-        int was_playing;
-        fmt_load_song_func *func;
-        int ok = 0;
 
-	// IT stops the song even if the new song can't be loaded
-	if (stop_on_load) {
-		was_playing = 0;
-		song_stop();
-	} else {
-		was_playing = (song_get_mode() == MODE_PLAYING);
+
+static const char *fmt_strerror(int n)
+{
+	switch (n) {
+	case -LOAD_UNSUPPORTED:
+		return "Unrecognised file type";
+	case -LOAD_FORMAT_ERROR:
+		return "File format error (corrupt?)";
+	default:
+		return strerror(errno);
 	}
-	
-	log_appendf(2, "Loading %s", base);
-	
+}
+
+static CSoundFile *song_create_load(const char *file)
+{
+        fmt_load_song_func *func;
+        int ok = 0, err = 0;
+
         slurp_t *s = slurp(file, NULL, 0);
-        if (!s) {
-                log_appendf(4, "  %s", strerror(errno));
-                return 0;
-        }
+        if (!s)
+                return NULL;
 
         CSoundFile *newsong = csf_allocate();
         // hack on top of hack alert!
@@ -330,76 +330,105 @@ int song_load_unchecked(const char *file)
         	slurp_rewind(s);
         	switch ((*func)(newsong, s, 0)) {
         	case LOAD_SUCCESS:
+        		err = 0;
         		ok = 1;
         		break;
         	case LOAD_UNSUPPORTED:
+        		err = -LOAD_UNSUPPORTED;
         		continue;
         	case LOAD_FORMAT_ERROR:
-        		log_appendf(4, "  File format error (corrupt?)");
+        		err = -LOAD_FORMAT_ERROR;
         		break;
         	case LOAD_FILE_ERROR:
-			log_appendf(4, "  %s", strerror(errno));
+        		err = errno;
 			break;
         	}
-        	if (!ok) {
+        	if (err) {
         		csf_free(newsong);
         		unslurp(s);
-        		return 0;
+        		errno = err;
+        		return NULL;
         	}
         }
 
-	if (ok) {
-		song_set_filename(file);
+        unslurp(s);
 
-                song_lock_audio();
-		
-                csf_free(mp);
-                mp = newsong;
-		mp->m_nRepeatCount = mp->m_nInitialRepeatCount = -1;
-		max_channels_used = 0;
-                fix_song();
-		song_stop_unlocked(0);
-		song_unlock_audio();
-		
-		if (was_playing && !stop_on_load)
-			song_start();
+	if (err) {
+		// awwww, nerts!
+		csf_free(newsong);
+		errno = err;
+		return NULL;
+	}
+	return newsong;
+}
 
-		// ugly #2
-		row_highlight_major = mp->m_rowHighlightMajor;
-		row_highlight_minor = mp->m_rowHighlightMinor;
+int song_load_unchecked(const char *file)
+{
+        const char *base = get_basename(file);
+        int was_playing;
+        CSoundFile *newsong;
 
-                main_song_changed_cb();
-
-		status.flags &= ~SONG_NEEDS_SAVE;
-        } else {
-                // awwww, nerts!
-                log_appendf(4, "  Unrecognised file type");
-                csf_free(newsong);
-        }
-
-	if (ok) {
-		const char *tid = song_get_tracker_id();
-		char fmt[] = "  %d patterns, %d samples, %d instruments";
-		int n, nsmp, nins;
-		SONGSAMPLE *smp;
-		SONGINSTRUMENT **ins;
-
-		for (n = 0, smp = mp->Samples + 1, nsmp = 0; n < MAX_SAMPLES; n++, smp++)
-			if (smp->pSample)
-				nsmp++;
-		for (n = 0, ins = mp->Instruments + 1, nins = 0; n < MAX_INSTRUMENTS; n++, ins++)
-			if (*ins != NULL)
-				nins++;
-
-		if (tid[0])
-			log_appendf(2, "  %s", tid);
-		if (!nins)
-			*strrchr(fmt, ',') = 0; // cut off 'instruments'
-		log_appendf(2, fmt, song_get_num_patterns(), nsmp, nins);
+	// IT stops the song even if the new song can't be loaded
+	if (stop_on_load) {
+		was_playing = 0;
+		song_stop();
+	} else {
+		was_playing = (song_get_mode() == MODE_PLAYING);
 	}
 
-        unslurp(s);
-	return ok;
+	log_appendf(2, "Loading %s", base);
+	
+	newsong = song_create_load(file);
+	if (!newsong) {
+		log_appendf(4, "  %s", fmt_strerror(errno));
+		return 0;
+	}
+
+
+	song_set_filename(file);
+
+        song_lock_audio();
+        csf_free(mp);
+        mp = newsong;
+	mp->m_nRepeatCount = mp->m_nInitialRepeatCount = -1;
+	max_channels_used = 0;
+        fix_song();
+	song_stop_unlocked(0);
+	song_unlock_audio();
+	
+	if (was_playing && !stop_on_load)
+		song_start();
+
+	// ugly #2
+	row_highlight_major = mp->m_rowHighlightMajor;
+	row_highlight_minor = mp->m_rowHighlightMinor;
+
+        main_song_changed_cb();
+
+	status.flags &= ~SONG_NEEDS_SAVE;
+
+	// print out some stuff
+	const char *tid = song_get_tracker_id();
+	char fmt[] = "  %d patterns, %d samples, %d instruments";
+	int n, nsmp, nins;
+	SONGSAMPLE *smp;
+	SONGINSTRUMENT **ins;
+
+	for (n = 0, smp = mp->Samples + 1, nsmp = 0; n < MAX_SAMPLES; n++, smp++)
+		if (smp->pSample)
+			nsmp++;
+	for (n = 0, ins = mp->Instruments + 1, nins = 0; n < MAX_INSTRUMENTS; n++, ins++)
+		if (*ins != NULL)
+			nins++;
+
+	if (tid[0])
+		log_appendf(2, "  %s", tid);
+	if (!nins)
+		*strrchr(fmt, ',') = 0; // cut off 'instruments'
+	log_appendf(2, fmt, song_get_num_patterns(), nsmp, nins);
+
+
+	return 1;
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -1294,64 +1323,55 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	}
 
 	if (libf) { /* file is ignored */
-		CSoundFile xl;
-		memset((void *) &xl, 0, sizeof(xl));
-       		s = slurp(libf, NULL, 0);
-		r = xl.Create(s->data, s->length);
-		if (r) {
-			/* 1. find a place for all the samples */
-			memset(sampmap, 0, sizeof(sampmap));
-			for (unsigned int j = 0; j < 128; j++) {
-				x = xl.Instruments[n]->Keyboard[j];
-				if (!sampmap[x]) {
-					if (x > 0 && x < MAX_INSTRUMENTS) {
-						for (int k = 1; k < MAX_SAMPLES; k++) {
-							if (mp->Samples[k].nLength) continue;
-							sampmap[x] = k;
-							//song_sample *smp = (song_sample *)song_get_sample(k, NULL);
-
-							for (int c = 0; c < 25; c++) {
-								if (xl.Samples[x].name == 0)
-									xl.Samples[x].name[c] = 32;
-							}
-							xl.Samples[x].name[25] = 0;
-
-							song_copy_sample(k, (song_sample *)&xl.Samples[x]);
-							break;
-						}
-					}
-				}
-			}
-
-			/* transfer the instrument */
-			mp->Instruments[target] = xl.Instruments[n];
-			xl.Instruments[n] = 0; /* dangle */
-
-			/* and rewrite! */
-			for (unsigned int k = 0; k < 128; k++) {
-				mp->Instruments[target]->Keyboard[k] = sampmap[
-						mp->Instruments[target]->Keyboard[k]
-				];
-			}
-        		unslurp(s);
-			song_unlock_audio();
-			return 1;
-		}
-		status_text_flash("Could not load instrument from %s", libf);
-		song_unlock_audio();
-		return 0;
-	}
-	if (libf && !file) {
-		if (n != -1) {
-			status_text_flash("Could not load instrument from %s", libf);
+		CSoundFile *xl = song_create_load(libf);
+		if (!xl) {
+			log_appendf(4, "%s: %s", libf, fmt_strerror(errno));
 			song_unlock_audio();
 			return 0;
 		}
-		file = libf;
+
+		/* 1. find a place for all the samples */
+		memset(sampmap, 0, sizeof(sampmap));
+		for (unsigned int j = 0; j < 128; j++) {
+			x = xl->Instruments[n]->Keyboard[j];
+			if (!sampmap[x]) {
+				if (x > 0 && x < MAX_INSTRUMENTS) {
+					for (int k = 1; k < MAX_SAMPLES; k++) {
+						if (mp->Samples[k].nLength) continue;
+						sampmap[x] = k;
+						//song_sample *smp = (song_sample *)song_get_sample(k, NULL);
+
+						for (int c = 0; c < 25; c++) {
+							if (xl->Samples[x].name == 0)
+								xl->Samples[x].name[c] = 32;
+						}
+						xl->Samples[x].name[25] = 0;
+
+						song_copy_sample(k, (song_sample *)&xl->Samples[x]);
+						break;
+					}
+				}
+			}
+		}
+
+		/* transfer the instrument */
+		mp->Instruments[target] = xl->Instruments[n];
+		xl->Instruments[n] = NULL; /* dangle */
+
+		/* and rewrite! */
+		for (unsigned int k = 0; k < 128; k++) {
+			mp->Instruments[target]->Keyboard[k] = sampmap[
+					mp->Instruments[target]->Keyboard[k]
+			];
+		}
+
+		song_unlock_audio();
+		return 1;
 	}
+
 	/* okay, load an ITI file */
 	s = slurp(file, NULL, 0);
-        if (s == 0) {
+        if (!s) {
                 log_appendf(4, "%s: %s", file, strerror(errno));
 		song_unlock_audio();
                 return 0;
@@ -1538,7 +1558,7 @@ const char *song_get_basename()
 // sample library browsing
 
 // FIXME: unload the module when leaving the library 'directory'
-CSoundFile library;
+CSoundFile *library = NULL;
 
 
 // TODO: stat the file?
@@ -1548,106 +1568,93 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 	int x;
 
 	_squelch_sample(0);
-	csf_destroy(&library);
-	
-        slurp_t *s = slurp(path, NULL, 0);
-        if (s == 0) {
-                //log_appendf(4, "%s: %s", base, strerror(errno));
-                return -1;
-        }
+	csf_free(library);
 
 	const char *base = get_basename(path);
-	int r = library.Create(s->data, s->length);
-	if (r) {
-		for (int n = 1; n < MAX_INSTRUMENTS; n++) {
-			if (! library.Instruments[n]) continue;
+	library = song_create_load(path);
+	if (!library) {
+		log_appendf(4, "%s: %s", base, fmt_strerror(errno));
+		return -1;
+	}
 
-			dmoz_file_t *file = dmoz_add_file(flist,
-				str_dup(path), str_dup(base), NULL, n);
-			file->title = str_dup((char*)library.Instruments[n]->name);
+	for (int n = 1; n < MAX_INSTRUMENTS; n++) {
+		if (!library->Instruments[n])
+			continue;
 
-			int count[128];
-			memset(count, 0, sizeof(count));
-	
-			file->sampsize = 0;
-			file->filesize = 0;
-			file->instnum = n;
-			for (j = 0; j < 128; j++) {
-				x = library.Instruments[n]->Keyboard[j];
-				if (!count[x]) {
-					if (x > 0 && x < MAX_INSTRUMENTS) {
-						file->filesize += library.Samples[x].nLength;
-						file->sampsize++;
-					}
+		dmoz_file_t *file = dmoz_add_file(flist,
+			str_dup(path), str_dup(base), NULL, n);
+		file->title = str_dup(library->Instruments[n]->name);
+
+		int count[128];
+		memset(count, 0, sizeof(count));
+
+		file->sampsize = 0;
+		file->filesize = 0;
+		file->instnum = n;
+		for (j = 0; j < 128; j++) {
+			x = library->Instruments[n]->Keyboard[j];
+			if (!count[x]) {
+				if (x > 0 && x < MAX_INSTRUMENTS) {
+					file->filesize += library->Samples[x].nLength;
+					file->sampsize++;
 				}
-				count[x]++;
 			}
-
-			file->type = TYPE_INST_ITI;
-			file->description = "Fishcakes";
-			// IT doesn't support this, despite it being useful.
-			// Simply "unrecognized"
+			count[x]++;
 		}
-        } else {
-                // awwww, nerts!
-                log_appendf(4, "%s: Unrecognised file type", base);
-        }
-	
-        unslurp(s);
-	return r ? 0 : -1;
+
+		file->type = TYPE_INST_ITI;
+		file->description = "Fishcakes";
+		// IT doesn't support this, despite it being useful.
+		// Simply "unrecognized"
+	}
+
+	return 0;
 }
 
 
 int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
 {
 	_squelch_sample(0);
-	csf_destroy(&library);
-	
-        slurp_t *s = slurp(path, NULL, 0);
-        if (s == 0) {
-                //log_appendf(4, "%s: %s", base, strerror(errno));
-                return -1;
-        }
+	csf_free(library);
 	
 	const char *base = get_basename(path);
-	int r = library.Create(s->data, s->length);
-	if (r) {
-		for (int n = 1; n < MAX_SAMPLES; n++) {
-			if (library.Samples[n].nLength) {
-				for (int c = 0; c < 25; c++) {
-					if (library.Samples[n].name[c] == 0)
-						library.Samples[n].name[c] = 32;
-					library.Samples[n].name[25] = 0;
-				}
-				dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
-				file->type = TYPE_SAMPLE_EXTD;
-				file->description = "Fishcakes"; // FIXME - what does IT say?
-				file->smp_speed = library.Samples[n].nC5Speed;
-				file->smp_loop_start = library.Samples[n].nLoopStart;
-				file->smp_loop_end = library.Samples[n].nLoopEnd;
-				file->smp_sustain_start = library.Samples[n].nSustainStart;
-				file->smp_sustain_end = library.Samples[n].nSustainEnd;
-				file->smp_length = library.Samples[n].nLength;
-				file->smp_flags = library.Samples[n].uFlags;
-				file->smp_defvol = library.Samples[n].nVolume>>2;
-				file->smp_gblvol = library.Samples[n].nGlobalVol;
-				file->smp_vibrato_speed = library.Samples[n].nVibRate;
-				file->smp_vibrato_depth = library.Samples[n].nVibDepth;
-				file->smp_vibrato_rate = library.Samples[n].nVibSweep;
-				// don't screw this up...
-				if (((unsigned char)library.Samples[n].name[23]) == 0xFF) {
-					library.Samples[n].name[23] = ' ';
-				}
-				file->title = str_dup(library.Samples[n].name);
-				file->sample = (song_sample *) library.Samples + n;
-			}
-		}
-        } else {
-                // awwww, nerts!
-                log_appendf(4, "%s: Unrecognised file type", base);
-        }
+	library = song_create_load(path);
+	if (!library) {
+		log_appendf(4, "%s: %s", base, fmt_strerror(errno));
+		return -1;
+	}
 	
-        unslurp(s);
-	return r ? 0 : -1;
+	for (int n = 1; n < MAX_SAMPLES; n++) {
+		if (library->Samples[n].nLength) {
+			for (int c = 0; c < 25; c++) {
+				if (library->Samples[n].name[c] == 0)
+					library->Samples[n].name[c] = 32;
+				library->Samples[n].name[25] = 0;
+			}
+			dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
+			file->type = TYPE_SAMPLE_EXTD;
+			file->description = "Fishcakes"; // FIXME - what does IT say?
+			file->smp_speed = library->Samples[n].nC5Speed;
+			file->smp_loop_start = library->Samples[n].nLoopStart;
+			file->smp_loop_end = library->Samples[n].nLoopEnd;
+			file->smp_sustain_start = library->Samples[n].nSustainStart;
+			file->smp_sustain_end = library->Samples[n].nSustainEnd;
+			file->smp_length = library->Samples[n].nLength;
+			file->smp_flags = library->Samples[n].uFlags;
+			file->smp_defvol = library->Samples[n].nVolume>>2;
+			file->smp_gblvol = library->Samples[n].nGlobalVol;
+			file->smp_vibrato_speed = library->Samples[n].nVibRate;
+			file->smp_vibrato_depth = library->Samples[n].nVibDepth;
+			file->smp_vibrato_rate = library->Samples[n].nVibSweep;
+			// don't screw this up...
+			if (((unsigned char)library->Samples[n].name[23]) == 0xFF) {
+				library->Samples[n].name[23] = ' ';
+			}
+			file->title = str_dup(library->Samples[n].name);
+			file->sample = (song_sample *) library->Samples + n;
+		}
+	}
+
+	return 0;
 }
 

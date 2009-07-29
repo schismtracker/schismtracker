@@ -77,8 +77,10 @@ CSoundFile *csf_allocate(void)
 
 void csf_free(CSoundFile *csf)
 {
-	csf_destroy(csf);
-	free(csf);
+	if (csf) {
+		csf_destroy(csf);
+		free(csf);
+	}
 }
 
 SONGINSTRUMENT *csf_allocate_instrument(void)

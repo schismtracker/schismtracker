@@ -634,6 +634,7 @@ SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *ins, uint32_
 CSoundFile *csf_allocate(void);
 void csf_free(CSoundFile *csf);
 
+int csf_load(CSoundFile *csf, const uint8_t * lpStream, uint32_t dwMemLength);
 void csf_destroy(CSoundFile *csf); /* erase everything -- equiv. to new song */
 int csf_destroy_sample(CSoundFile *csf, uint32_t nSample);
 
