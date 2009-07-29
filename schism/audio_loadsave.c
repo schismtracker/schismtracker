@@ -34,15 +34,10 @@
 #include "midi.h"
 #include "diskwriter.h"
 
-#ifdef MACOSX
+#include <stdio.h>
+#include <string.h>
 #include <errno.h>
 #include <assert.h>
-#else
-#include <cstdio>
-#include <cstring>
-#include <cerrno>
-#include <cassert>
-#endif
 
 #include <limits.h>
 
@@ -459,15 +454,15 @@ int song_sample_is_empty(int n)
 	n++;
 	
 	if (mp->Samples[n].nLength)
-		return false;
+		return 0;
 	if (mp->Samples[n].filename[0] != '\0')
-		return false;
+		return 0;
 	for (int i = 0; i < 25; i++) {
 		if (mp->Samples[n].name[i] != '\0' && mp->Samples[n].name[i] != ' ')
-			return false;
+			return 0;
 	}
 	
-	return true;
+	return 1;
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -804,7 +799,7 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
 			case VOLCMD_TONEPORTAMENTO: vol = MIN(noteptr->vol,  9) + 193; break;
 			}
 			if (vol != -1) m |= 4;
-			csf_export_s3m_effect(&command, &param, true);
+			csf_export_s3m_effect(&command, &param, 1);
 			if (command || param) m |= 8;
 			if (!m) continue;
 			
@@ -1079,7 +1074,7 @@ static void _save_s3m(diskwriter_driver_t *dw)
 			".v",
 			".ABCDEFGHIJKLOQRSTUV1`"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
 
-	if (!mp->SaveS3M(dw, 0)) {
+	if (!csf_save_s3m(mp, dw, 0)) {
 		status_text_flash("Error writing to disk");
 		dw->e(dw);
 	}
@@ -1099,7 +1094,7 @@ static void _save_xm(diskwriter_driver_t *dw)
 			".vpABCDEFGH$<>",
 			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
 
-	if (!mp->SaveXM(dw, 0)) {
+	if (!csf_save_xm(mp, dw, 0)) {
 		status_text_flash("Error writing to disk");
 		dw->e(dw);
 	}
@@ -1130,7 +1125,7 @@ static void _save_mod(diskwriter_driver_t *dw)
 			".",
 			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
 
-	if (!mp->SaveMod(dw, 0)) {
+	if (!csf_save_mod(mp, dw, 0)) {
 		status_text_flash("Error writing to disk");
 		dw->e(dw);
 	}

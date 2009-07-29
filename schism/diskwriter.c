@@ -138,9 +138,9 @@ static void _mw(diskwriter_driver_t *x, const unsigned char *buf, unsigned int l
 	if (!fp_ok) return;
 
 	if (x->pos + (int)len >= (int)mbuf_size) {
-		tmp = (char*)realloc(mbuf, nl = (x->pos + len + 65536));
+		tmp = realloc(mbuf, nl = (x->pos + len + 65536));
 		if (!tmp) {
-			(void)free(mbuf);
+			free(mbuf);
 			mbuf = NULL;
 			mbuf_size = 0;
 			fp_ok = 0;
@@ -166,7 +166,7 @@ static void _ml(diskwriter_driver_t *x, off_t pos)
 	x->pos = pos;
 }
 
-int diskwriter_start_nodriver(diskwriter_driver_t *f)
+static int diskwriter_start_nodriver(diskwriter_driver_t *f)
 {
 	if (fp)
 		return DW_ERROR;
@@ -199,11 +199,9 @@ int diskwriter_start_nodriver(diskwriter_driver_t *f)
 	return DW_OK;
 }
 
-extern "C" {
-	static diskwriter_driver_t _samplewriter = {
-		"Sample", "blah", 1, NULL, NULL, NULL /* no midi data */,
-		NULL, NULL, NULL, NULL, NULL, NULL, 44100, 16, 2, 1, 0,
-	};
+static diskwriter_driver_t _samplewriter = {
+	"Sample", "blah", 1, NULL, NULL, NULL /* no midi data */,
+	NULL, NULL, NULL, NULL, NULL, NULL, 44100, 16, 2, 1, 0,
 };
 
 int diskwriter_writeout_sample(int sampno, int patno, int dobind)
@@ -272,7 +270,7 @@ int diskwriter_writeout(const char *file, diskwriter_driver_t *f)
 {
 	/* f is "simplified */
 	memset(f, 0, sizeof(diskwriter_driver_t));
-	f->name = (const char *)"Simple";
+	f->name = "Simple";
 	return diskwriter_start(file, f);
 }
 
@@ -326,7 +324,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 	int i;
 
 	put_env_var("DISKWRITER_DIR", dir);
-	str = (char*)mem_alloc(strlen(dir)+64);
+	str = mem_alloc(strlen(dir)+64);
 	if (!str) return DW_ERROR;
 	memset(multi_fp, 0, sizeof(multi_fp));
 
@@ -402,7 +400,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 	/* ERR: should write to temporary */
 	dw_rename_to = str_dup(file);
 
-	str = (char*)mem_alloc(strlen(file)+16);
+	str = mem_alloc(strlen(file)+16);
 	strcpy(str, file);
 	pq = strrchr(str, '.');
 	if (!pq) pq = strrchr(str, '\\');
@@ -669,18 +667,6 @@ int _diskwriter_writemidi(const unsigned char *data, unsigned int len, unsigned 
 	return DW_OK;
 }
 
-
-extern "C" {
-//extern unsigned int diskwriter_output_rate, diskwriter_output_bits,
-//			diskwriter_output_channels;
-extern diskwriter_driver_t wavewriter;
-extern diskwriter_driver_t itwriter;
-extern diskwriter_driver_t s3mwriter;
-extern diskwriter_driver_t xmwriter;
-extern diskwriter_driver_t modwriter;
-extern diskwriter_driver_t mtmwriter;
-extern diskwriter_driver_t midiwriter;
-};
 
 unsigned int diskwriter_output_rate = 44100;
 unsigned int diskwriter_output_bits = 16;
