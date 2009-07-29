@@ -24,6 +24,8 @@
 #define SONG_H
 
 #include <stdint.h>
+
+#include "sndfile.h"
 #include "util.h"
 #include "diskwriter.h"
 
@@ -232,99 +234,34 @@ extern struct sample_save_format sample_save_formats[];
 /* some enums */
 
 // sample flags
-enum {
-        SAMP_16_BIT = (0x01),
-        SAMP_LOOP = (0x02),
-        SAMP_LOOP_PINGPONG = (0x04),
-        SAMP_SUSLOOP = (0x08),
-        SAMP_SUSLOOP_PINGPONG = (0x10),
-        SAMP_PANNING = (0x20),
-        SAMP_STEREO         = (0x40),
+#define SAMP_16_BIT            CHN_16BIT
+#define SAMP_LOOP              CHN_LOOP
+#define SAMP_LOOP_PINGPONG     CHN_PINGPONGLOOP
+#define SAMP_SUSLOOP           CHN_SUSTAINLOOP
+#define SAMP_SUSLOOP_PINGPONG  CHN_PINGPONGSUSTAIN
+#define SAMP_PANNING           CHN_PANNING
+#define SAMP_STEREO            CHN_STEREO
+#define SAMP_ADLIB             CHN_ADLIB // indicates an adlib sample
 
-	/* used for features */
-	SAMP_GLOBALVOL	= (0x10000),
+#define SAMP_GLOBALVOL 0x10000 /* used for feature-check, completely not related to the player */
 
-	/* high flags */
-        SAMP_ADLIB   = (0x20000000) // indicates an Adlib sample
-};
-
-// channel flags
-enum {
-        CHN_MUTE = (0x100),     /* this one's important :) */
-        CHN_KEYOFF = (0x200),
-        CHN_NOTEFADE = (0x400),
-        CHN_SURROUND = (0x800), /* important :) */
-        CHN_NOIDO = (0x1000),
-        CHN_HQSRC = (0x2000),
-        CHN_FILTER = (0x4000),
-        CHN_VOLUMERAMP = (0x8000),
-        CHN_VIBRATO = (0x10000),
-        CHN_TREMOLO = (0x20000),
-        CHN_PANBRELLO = (0x40000),
-        CHN_PORTAMENTO = (0x80000),
-        CHN_GLISSANDO = (0x100000),
-        CHN_VOLENV = (0x200000),
-        CHN_PANENV = (0x400000),
-        CHN_PITCHENV = (0x800000),
-        CHN_FASTVOLRAMP = (0x1000000),
-        //CHN_EXTRALOUD = (0x2000000),
-};
-
-// instrument envelope flags
-enum {
-        ENV_VOLUME = (0x0001),
-        ENV_VOLSUSTAIN = (0x0002),
-        ENV_VOLLOOP = (0x0004),
-        ENV_PANNING = (0x0008),
-        ENV_PANSUSTAIN = (0x0010),
-        ENV_PANLOOP = (0x0020),
-        ENV_PITCH = (0x0040),
-        ENV_PITCHSUSTAIN = (0x0080),
-        ENV_PITCHLOOP = (0x0100),
-        ENV_SETPANNING = (0x0200),
-        ENV_FILTER = (0x0400),
-        ENV_VOLCARRY = (0x0800),
-        ENV_PANCARRY = (0x1000),
-        ENV_PITCHCARRY = (0x2000),
-};
-
-enum {
-        ORDER_SKIP = (254),     // the '+++' order
-        ORDER_LAST = (255),     // the '---' order
-};
-
-// note fade IS actually supported in Impulse Tracker,
-// but there's no way to handle it in the editor :)
-enum {
-        NOTE_FADE = (253),      // '~~~'
-        NOTE_CUT = (254),       // '^^^' 
-        NOTE_OFF = (255),       // '==='
-};
-
-enum {
-        VIB_SINE,
-        VIB_RAMP_DOWN,
-        VIB_SQUARE,
-        VIB_RANDOM,
-};
 
 /* volume column effects */
-enum {
-        VOL_EFFECT_NONE,
-        VOL_EFFECT_VOLUME,
-        VOL_EFFECT_PANNING,
-        VOL_EFFECT_VOLSLIDEUP,
-        VOL_EFFECT_VOLSLIDEDOWN,
-        VOL_EFFECT_FINEVOLUP,
-        VOL_EFFECT_FINEVOLDOWN,
-        VOL_EFFECT_VIBRATOSPEED,
-        VOL_EFFECT_VIBRATO,
-        VOL_EFFECT_PANSLIDELEFT,
-        VOL_EFFECT_PANSLIDERIGHT,
-	VOL_EFFECT_TONEPORTAMENTO,
-        VOL_EFFECT_PORTAUP,
-        VOL_EFFECT_PORTADOWN
-};
+#define VOL_EFFECT_NONE            VOLCMD_NONE
+#define VOL_EFFECT_VOLUME          VOLCMD_VOLUME
+#define VOL_EFFECT_PANNING         VOLCMD_PANNING
+#define VOL_EFFECT_VOLSLIDEUP      VOLCMD_VOLSLIDEUP
+#define VOL_EFFECT_VOLSLIDEDOWN    VOLCMD_VOLSLIDEDOWN
+#define VOL_EFFECT_FINEVOLUP       VOLCMD_FINEVOLUP
+#define VOL_EFFECT_FINEVOLDOWN     VOLCMD_FINEVOLDOWN
+#define VOL_EFFECT_VIBRATOSPEED    VOLCMD_VIBRATOSPEED
+#define VOL_EFFECT_VIBRATO         VOLCMD_VIBRATO
+#define VOL_EFFECT_PANSLIDELEFT    VOLCMD_PANSLIDELEFT
+#define VOL_EFFECT_PANSLIDERIGHT   VOLCMD_PANSLIDERIGHT
+#define VOL_EFFECT_TONEPORTAMENTO  VOLCMD_TONEPORTAMENTO
+#define VOL_EFFECT_PORTAUP         VOLCMD_PORTAUP
+#define VOL_EFFECT_PORTADOWN       VOLCMD_PORTADOWN
+
 
 /* for song_get_mode */
 enum song_mode {
@@ -380,35 +317,8 @@ midi_config *song_get_default_midi_config(void);
 /* returns bytes */
 unsigned song_copy_sample_raw(int n, unsigned int rs,
 		const void *data, unsigned int samples);
-#define RSF_STEREO	   0x08	/* stereo flag */
-#define RSF_16BIT	   0x04	/* 16-bit flag */
 
-#define RS_PCM8S           0       /* 8-bit signed */
-#define RS_PCM8U           1       /* 8-bit unsigned */
-#define RS_PCM8D           2       /* 8-bit delta values */
-#define RS_ADPCM4          3       /* 4-bit ADPCM-packed */
-#define RS_PCM16D          4       /* 16-bit delta values */
-#define RS_PCM16S          5       /* 16-bit signed */
-#define RS_PCM16U          6       /* 16-bit unsigned */
-#define RS_PCM16M          7       /* 16-bit motorola order */
-#define RS_STPCM8S         (RS_PCM8S|RSF_STEREO)  /* stereo 8-bit signed */
-#define RS_STPCM8U         (RS_PCM8U|RSF_STEREO)  /* stereo 8-bit unsigned */
-#define RS_STPCM8D         (RS_PCM8D|RSF_STEREO)  /* stereo 8-bit delta values */
-#define RS_STPCM16S        (RS_PCM16S|RSF_STEREO) /* stereo 16-bit signed */
-#define RS_STPCM16U        (RS_PCM16U|RSF_STEREO) /* stereo 16-bit unsigned */
-#define RS_STPCM16D        (RS_PCM16D|RSF_STEREO) /* stereo 16-bit delta values */
-#define RS_STPCM16M        (RS_PCM16M|RSF_STEREO) /* stereo 16-bit signed big endian */
-#define RS_IT2148          0x10	/* impulse tracker 2.14 8-bit */
-#define RS_IT21416         0x14 /* impulse tracker 2.14 16-bit */
-#define RS_IT2158          0x12 /* impulse tracker 2.15 8-bit */
-#define RS_IT21516         0x16 /* impulse tracker 2.15 16-bit */
-#define RS_AMS8            0x11	/* AMS 8-bit */
-#define RS_AMS16           0x15 /* AMS 16-bit */
-#define RS_DMF8            0x13	/* DMF 8-bit */
-#define RS_DMF16           0x17 /* DMF 16-bit */
-#define RS_MDL8            0x20 /* MDL 8-bit */
-#define RS_MDL16           0x24 /* MDL 16-bit */
-#define RS_PTM8DTO16       0x25 /* ProTracker 8bit delta, 16bit sample */
+
 
 void song_sample_set_c5speed(int n, unsigned int c5);
 int song_sample_is_empty(int n);
@@ -654,9 +564,9 @@ enum {
 void song_set_pan_scheme(int scheme);
 
 /* actually from sndfile.h */
-#define SCHISM_MAX_SAMPLES	236
-#define SCHISM_MAX_INSTRUMENTS	SCHISM_MAX_SAMPLES
-#define SCHISM_MAX_MESSAGE 8000
+#define SCHISM_MAX_SAMPLES	MAX_SAMPLES
+#define SCHISM_MAX_INSTRUMENTS	MAX_INSTRUMENTS
+#define SCHISM_MAX_MESSAGE      MAX_MESSAGE
 
 /* --------------------------------------------------------------------- */
 

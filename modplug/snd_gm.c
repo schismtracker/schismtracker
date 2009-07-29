@@ -3,14 +3,24 @@
 */
 
 #include "log.h"
-#include "mplink.h"
+#include "it.h" // needed for status.flags
+#include "sndfile.h"
+#include "mplink.h" // for 'mp', which we shouldn't need
 #include "snd_gm.h"
 
 #include <math.h> // for log and log2
 
-static const unsigned MAXCHN = 256;
-static const bool LinearMidivol = true;
-static const unsigned PitchBendCenter = 0x2000;
+/* not sure what's up with os x here, already defines log2... actually why is this even here? */
+#if !defined(HAVE_LOG2) && !defined(__USE_ISOC99) && !defined(MACOSX)
+static double log2(double d)
+{
+        return log(d) / log(2.0);
+}
+#endif
+
+
+#define LinearMidivol 1
+#define PitchBendCenter 0x2000
 
 
 static const enum
@@ -90,7 +100,7 @@ About the controllers... In AWE32 they are:
 
 static unsigned RunningStatus = 0;
 #ifdef GM_DEBUG
-static bool resetting = false;
+static int resetting = 0; // boolean
 #endif
 
 
@@ -161,7 +171,7 @@ static void MPU_NoteOff(int c, int k, int v)
 
 static void MPU_SendPN(int ch,
                        unsigned portindex,
-                       unsigned param, unsigned valuehi, unsigned valuelo = 0)
+                       unsigned param, unsigned valuehi, unsigned valuelo)
 {
         MPU_Ctrl(ch, portindex+1, param>>7);
         MPU_Ctrl(ch, portindex+0, param & 0x80);
@@ -175,24 +185,9 @@ static void MPU_SendPN(int ch,
 }
 
 
-static void MPU_SendNRPN(int ch, unsigned param, unsigned valuehi, unsigned valuelo=0) UNUSED;
-
-static void MPU_SendNRPN(int ch, unsigned param, unsigned valuehi, unsigned valuelo)
-{
-    MPU_SendPN(ch, 98, param, valuehi, valuelo);
-}
-
-
-static void MPU_SendRPN(int ch, unsigned param, unsigned valuehi, unsigned valuelo=0)
-{
-    MPU_SendPN(ch, 100, param, valuehi, valuelo);
-}
-
-
-static void MPU_ResetPN(int ch)
-{
-    MPU_SendRPN(ch, 0x4080, 0);
-}
+#define MPU_SendNRPN(ch,param,hi,lo) MPU_SendPN(ch,98,param,hi,lo)
+#define MPU_SendRPN(ch,param,hi,lo) MPU_SendPN(ch,100,param,hi,lo)
+#define MPU_ResetPN(ch) MPU_SendRPN(ch,0x4080,0,0)
 
 
 typedef struct {
@@ -225,7 +220,7 @@ static void s3m_reset(s3m_channel_info_t *ci) {
 
 
 /* This maps S3M concepts into MIDI concepts */
-static s3m_channel_info_t s3m_chans[MAXCHN];
+static s3m_channel_info_t s3m_chans[MAX_VOICES];
 
 
 typedef struct {
@@ -317,20 +312,20 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pre
          * Channel with biggest score is selected.
          *
          */
-        bool bad_channels[16] = {};  // channels having the same key playing
-        bool used_channels[16] = {}; // channels having something playing
+        int bad_channels[16] = {0};  // channels having the same key playing
+        int used_channels[16] = {0}; // channels having something playing
 
         memset(bad_channels, 0, sizeof(bad_channels));
         memset(used_channels, 0, sizeof(used_channels));
 
-        for (unsigned int a = 0; a < MAXCHN; ++a) {
+        for (unsigned int a = 0; a < MAX_VOICES; ++a) {
                 if (s3m_active(s3m_chans[a]) &&
                     !s3m_percussion(s3m_chans[a])) {
                         //fprintf(stderr, "S3M[%d] active at %d\n", a, s3m_chans[a].chan);
-                        used_channels[s3m_chans[a].chan] = true; // channel is active
+                        used_channels[s3m_chans[a].chan] = 1; // channel is active
 
                         if (s3m_chans[a].note == key)
-                                bad_channels[s3m_chans[a].chan] = true; // ...with the same key
+                                bad_channels[s3m_chans[a].chan] = 1; // ...with the same key
                 }
         }
 
@@ -387,7 +382,7 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pre
 
 void GM_Patch(int c, unsigned char p, int pref_chn_mask)
 {
-        if (c < 0 || ((unsigned int) c) >= MAXCHN)
+        if (c < 0 || ((unsigned int) c) >= MAX_VOICES)
                 return;
 
         s3m_chans[c].patch         = p; // No actual data is sent.
@@ -397,7 +392,7 @@ void GM_Patch(int c, unsigned char p, int pref_chn_mask)
 
 void GM_Bank(int c, unsigned char b)
 {
-        if (c < 0 || ((unsigned int) c) >= MAXCHN)
+        if (c < 0 || ((unsigned int) c) >= MAX_VOICES)
                 return;
 
         s3m_chans[c].bank = b; // No actual data is sent yet.
@@ -406,7 +401,7 @@ void GM_Bank(int c, unsigned char b)
 
 void GM_Touch(int c, unsigned char vol)
 {
-        if (c < 0 || ((unsigned int) c) >= MAXCHN)
+        if (c < 0 || ((unsigned int) c) >= MAX_VOICES)
                 return;
 
         /* This function must only be called when
@@ -421,7 +416,7 @@ void GM_Touch(int c, unsigned char vol)
 
 void GM_KeyOn(int c, unsigned char key, unsigned char vol)
 {
-        if (c < 0 || ((unsigned int) c) >= MAXCHN)
+        if (c < 0 || ((unsigned int) c) >= MAX_VOICES)
                 return;
 
         GM_KeyOff(c); // Ensure the previous key on this channel is off.
@@ -462,7 +457,7 @@ void GM_KeyOn(int c, unsigned char key, unsigned char vol)
 
 void GM_KeyOff(int c)
 {
-        if (c < 0 || ((unsigned int)c) >= MAXCHN)
+        if (c < 0 || ((unsigned int)c) >= MAX_VOICES)
                 return;
 
         if (!s3m_active(s3m_chans[c]))
@@ -484,7 +479,7 @@ void GM_KeyOff(int c)
 
 void GM_Bend(int c, unsigned count)
 {
-       if (c < 0 || ((unsigned int)c) >= MAXCHN)
+       if (c < 0 || ((unsigned int)c) >= MAX_VOICES)
                 return;
 
         /* I hope nobody tries to bend hi-hat or something like that :-) */
@@ -507,12 +502,12 @@ void GM_Bend(int c, unsigned count)
 void GM_Reset(int quitting)
 {
 #ifdef GM_DEBUG
-        resetting = true;
+        resetting = 1;
 #endif
         unsigned int a;
         //fprintf(stderr, "GM_Reset\n");
 
-        for (a = 0; a < MAXCHN; a++) {
+        for (a = 0; a < MAX_VOICES; a++) {
                 GM_KeyOff(a);
                 //s3m_chans[a].patch = s3m_chans[a].bank = s3m_chans[a].pan = 0;
                 s3m_reset(&s3m_chans[a]);
@@ -553,7 +548,7 @@ void GM_Reset(int quitting)
         }
 
 #ifdef GM_DEBUG
-        resetting = false;
+        resetting = 0;
         fprintf(stderr, "-------------- GM_Reset completed ---------------\n");
 #endif
 }
@@ -565,7 +560,7 @@ void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask)
         fprintf(stderr, "GM_DPatch(%d, %02X @ %d)\n", ch, GM, bank);
 #endif
 
-        if (ch < 0 || ((unsigned int)ch) >= MAXCHN)
+        if (ch < 0 || ((unsigned int)ch) >= MAX_VOICES)
                 return;
 
         GM_Bank(ch, bank);
@@ -576,7 +571,7 @@ void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask)
 void GM_Pan(int c, signed char val)
 {
         //fprintf(stderr, "GM_Pan(%d,%d)\n", c,val);
-        if (c < 0 || ((unsigned int)c) >= MAXCHN)
+        if (c < 0 || ((unsigned int)c) >= MAX_VOICES)
                 return;
 
         s3m_chans[c].pan = val;
@@ -589,13 +584,6 @@ void GM_Pan(int c, signed char val)
 }
 
 
-/* not sure what's up with os x here, already defines log2... actually why is this even here? */
-#if !defined(HAVE_LOG2) && !defined(__USE_ISOC99) && !defined(MACOSX)
-static double log2(double d)
-{
-        return log(d) / log(2.0);
-}
-#endif
 
 
 void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int keyoff)
@@ -603,7 +591,7 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 #ifdef GM_DEBUG
         fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,vol);
 #endif
-        if (c < 0 || ((unsigned int)c) >= MAXCHN)
+        if (c < 0 || ((unsigned int)c) >= MAX_VOICES)
                 return;
 
         /*
@@ -641,7 +629,7 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 
         int note = s3m_chans[c].note; // what's playing on the channel right now?
 
-        bool new_note = !s3m_active(s3m_chans[c]);
+        int new_note = !s3m_active(s3m_chans[c]);
 
         if (new_note && !keyoff) {
                 // If the note is not active, activate it first.

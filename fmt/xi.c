@@ -135,10 +135,6 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 		smp->volume = xmss.vol << 2;
 		if (smp->volume > 256) smp->volume = 256;
 		smp->global_volume = 64;
-		if ((xmss.res==0xAD) && (!(xmss.type & 0x30))) {
-			rs = RS_ADPCM4;
-			samplesize = ((samplesize+1)/2) + 16;
-		}
 		smp->panning = xmss.pan;
 		smp->flags |= SAMP_PANNING;
 		smp->vib_type = xmsh.vibtype;

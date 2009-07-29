@@ -260,13 +260,12 @@ schismtracker_SOURCES = \
 	modplug/load_it.cpp		\
 	modplug/load_mid.cpp		\
 	modplug/load_ams.cpp		\
-	modplug/snd_fx.cpp		\
-	modplug/snd_fx_c.c		\
+	modplug/snd_fx.c		\
 	modplug/load_mod.cpp		\
 	modplug/snd_flt.c		\
 	modplug/load_dsm.cpp		\
 	modplug/load_umx.cpp		\
-	modplug/snd_dsp.cpp		\
+	modplug/snd_dsp.c		\
 	modplug/load_mt2.cpp		\
 	modplug/snd_eq.c		\
 	modplug/load_amf.cpp		\
@@ -276,14 +275,14 @@ schismtracker_SOURCES = \
 	modplug/load_mtm.cpp		\
 	modplug/load_med.cpp		\
 	modplug/load_dbm.cpp		\
-	modplug/sndmix.cpp		\
+	modplug/sndmix.c		\
 	modplug/load_mdl.cpp		\
 	modplug/load_ptm.cpp		\
 	modplug/mmcmp.c			\
-	modplug/fastmix.cpp		\
+	modplug/fastmix.c		\
 	modplug/fmopl.c			\
-	modplug/snd_fm.cpp		\
-	modplug/snd_gm.cpp		\
+	modplug/snd_fm.c		\
+	modplug/snd_gm.c		\
 	modplug/cmixer.c		\
 	$(files_macosx)			\
 	$(files_alsa)			\

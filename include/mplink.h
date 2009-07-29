@@ -25,12 +25,9 @@
 
 #include "it.h"
 #include "song.h"
-
-#ifdef __cplusplus
 #include "sndfile.h"
 
 extern CSoundFile *mp;
-#endif
 
 extern char song_filename[]; /* the full path (as given to song_load) */
 extern char song_basename[]; /* everything after the last slash */

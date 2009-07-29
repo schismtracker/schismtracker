@@ -5,7 +5,7 @@
 */
 
 #include "sndfile.h"
-
+#include "util.h" // for UNUSED
 
 
 void (*csf_midi_out_note)(int chan, const MODCOMMAND *m) = NULL;
@@ -22,7 +22,7 @@ static int32_t nRightNR = 0;
 extern int MixSoundBuffer[MIXBUFFERSIZE*2];
 
 
-void csf_initialize_dsp(CSoundFile *, int reset)
+void csf_initialize_dsp(UNUSED CSoundFile *csf, int reset)
 {
         if (reset) {
                 // Noise Reduction
@@ -31,7 +31,7 @@ void csf_initialize_dsp(CSoundFile *, int reset)
 }
 
 
-void csf_process_stereo_dsp(CSoundFile *, int count)
+void csf_process_stereo_dsp(UNUSED CSoundFile *csf, int count)
 {
         // Noise Reduction
         if (gdwSoundSetup & SNDMIX_NOISEREDUCTION) {
@@ -54,7 +54,7 @@ void csf_process_stereo_dsp(CSoundFile *, int count)
 }
 
 
-void csf_process_mono_dsp(CSoundFile *, int count)
+void csf_process_mono_dsp(UNUSED CSoundFile *csf, int count)
 //----------------------------------------
 {
         // Noise Reduction
@@ -85,7 +85,7 @@ int csf_set_wave_config_ex(CSoundFile *csf, int hqido, int bNR, int bEQ)
         if (bEQ) d |= SNDMIX_EQ;
 
         gdwSoundSetup = d;
-        csf_init_player(csf, false);
-        return true;
+        csf_init_player(csf, 0);
+        return 1;
 }
 
