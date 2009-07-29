@@ -175,7 +175,7 @@ schismtracker_SOURCES = \
 	schism/mixer-core.c		\
 	schism/diskwriter.cc		\
 	schism/page_loadinst.c		\
-	schism/mplink.cc		\
+	schism/mplink.c			\
 	schism/clippy.c			\
 	schism/page_loadmodule.c	\
 	schism/page_vars.c		\
@@ -243,7 +243,7 @@ schismtracker_SOURCES = \
 	schism/page_waterfall.c		\
 	schism/midi-core.c		\
 	schism/midi-ip.c		\
-	schism/audio_playback.cc	\
+	schism/audio_playback.c		\
 	schism/config-parser.c		\
 	schism/audio_loadsave.cc	\
 	schism/draw-misc.c		\
