@@ -1295,6 +1295,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 	if (libf) { /* file is ignored */
 		CSoundFile xl;
+		memset((void *) &xl, 0, sizeof(xl));
        		s = slurp(libf, NULL, 0);
 		r = xl.Create(s->data, s->length);
 		if (r) {
