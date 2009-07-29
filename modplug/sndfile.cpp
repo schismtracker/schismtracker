@@ -1,4 +1,6 @@
 #include "sndfile.h"
+#include "diskwriter.h"
+#include "util.h"
 
 #include <stdint.h>
 extern "C" int mmcmp_unpack(uint8_t **ppMemFile, uint32_t *pdwMemLength);
@@ -139,5 +141,23 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 int csf_load(CSoundFile *csf, const uint8_t * lpStream, uint32_t dwMemLength)
 {
 	return csf->Create(lpStream, dwMemLength);
+}
+
+
+/* stupid c++ */
+
+int csf_save_xm(CSoundFile *csf, diskwriter_driver_t *f, UNUSED uint32_t z)
+{
+	return csf->SaveXM(f, z);
+}
+
+int csf_save_s3m(CSoundFile *csf, diskwriter_driver_t *f, UNUSED uint32_t z)
+{
+	return csf->SaveS3M(f, z);
+}
+
+int csf_save_mod(CSoundFile *csf, diskwriter_driver_t *f, UNUSED uint32_t z)
+{
+	return csf->SaveMod(f, z);
 }
 

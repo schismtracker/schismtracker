@@ -125,8 +125,18 @@ void diskwriter_dialog_finished(void);
 extern unsigned int diskwriter_output_rate, diskwriter_output_bits,
 			diskwriter_output_channels;
 
+
+extern diskwriter_driver_t wavewriter;
+extern diskwriter_driver_t itwriter;
+extern diskwriter_driver_t s3mwriter;
+extern diskwriter_driver_t xmwriter;
+extern diskwriter_driver_t modwriter;
+extern diskwriter_driver_t mtmwriter;
+extern diskwriter_driver_t midiwriter;
+
 #ifdef __cplusplus
 };
 #endif
 
 #endif
+

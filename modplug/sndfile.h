@@ -572,6 +572,12 @@ public:
 extern "C" {
 #endif
 
+/* these should not be here */
+int csf_save_xm(CSoundFile *csf, diskwriter_driver_t *f, uint32_t z);
+int csf_save_s3m(CSoundFile *csf, diskwriter_driver_t *f, uint32_t z);
+int csf_save_mod(CSoundFile *csf, diskwriter_driver_t *f, uint32_t z);
+
+
 MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels);
 void csf_free_pattern(void *pat);
 signed char *csf_allocate_sample(uint32_t nbytes);
