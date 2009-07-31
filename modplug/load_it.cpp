@@ -485,7 +485,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 
 		uint32_t len = bswapLE16(*((uint16_t *)(lpStream+patpos[npat])));
 		uint32_t rows = bswapLE16(*((uint16_t *)(lpStream+patpos[npat]+2)));
-		if ((rows < 4) || (rows > 256)) continue;
+		if (rows < 1 || rows > 256) continue;
 		if (patpos[npat]+8+len > dwMemLength) continue;
 		PatternSize[npat] = rows;
 		PatternAllocSize[npat] = rows;
