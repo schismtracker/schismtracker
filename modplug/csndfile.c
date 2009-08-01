@@ -183,39 +183,18 @@ uint32_t csf_get_num_orders(CSoundFile *csf)
 // out the row count.
 static void set_current_pos_0(CSoundFile *csf)
 {
-	uint32_t i;
-
-	for (i = 0; i < MAX_VOICES; i++) {
-		csf->Voices[i].nNote = csf->Voices[i].nNewNote = csf->Voices[i].nNewIns = 0;
-		csf->Voices[i].nPortamentoDest = 0;
-		csf->Voices[i].nCommand = 0;
-		csf->Voices[i].nPatternLoopCount = 0;
-		csf->Voices[i].nPatternLoop = 0;
-		csf->Voices[i].nFadeOutVol = 0;
-		csf->Voices[i].dwFlags |= CHN_KEYOFF|CHN_NOTEFADE;
-		csf->Voices[i].nTremorOn = csf->Voices[i].nTremorOff = 0;
-		csf->Voices[i].nPeriod = 0;
-		csf->Voices[i].nPos = csf->Voices[i].nLength = 0;
-		csf->Voices[i].nLoopStart = 0;
-		csf->Voices[i].nLoopEnd = 0;
-		csf->Voices[i].nROfs = csf->Voices[i].nLOfs = 0;
-		csf->Voices[i].pSample = NULL;
-		csf->Voices[i].pInstrument = NULL;
-		csf->Voices[i].pHeader = NULL;
-		csf->Voices[i].nCutOff = 0x7F;
-		csf->Voices[i].nResonance = 0;
-		csf->Voices[i].nLeftVol = csf->Voices[i].nRightVol = 0;
-		csf->Voices[i].nNewLeftVol = csf->Voices[i].nNewRightVol = 0;
-		csf->Voices[i].nLeftRamp = csf->Voices[i].nRightRamp = 0;
-		csf->Voices[i].nVolume = 256;
+	SONGVOICE *v = csf->Voices;
+	for (uint32_t i = 0; i < MAX_VOICES; i++, v++) {
+		memset(v, 0, sizeof(*v));
+		v->nCutOff = 0x7F;
+		v->nVolume = 256;
 		if (i < MAX_CHANNELS) {
-			csf->Voices[i].dwFlags = csf->Channels[i].dwFlags;
-			csf->Voices[i].nPan = csf->Channels[i].nPan;
-			csf->Voices[i].nGlobalVol = csf->Channels[i].nVolume;
+			v->nPan = csf->Channels[i].nPan;
+			v->nGlobalVol = csf->Channels[i].nVolume;
+			v->dwFlags = csf->Channels[i].dwFlags;
 		} else {
-			csf->Voices[i].dwFlags = 0;
-			csf->Voices[i].nPan = 128;
-			csf->Voices[i].nGlobalVol = 64;
+			v->nPan = 128;
+			v->nGlobalVol = 64;
 		}
 	}
 	csf->m_nGlobalVolume = csf->m_nDefaultGlobalVolume;
