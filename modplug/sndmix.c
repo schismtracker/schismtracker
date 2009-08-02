@@ -458,28 +458,10 @@ static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 }
 
 
-static inline void rn_tremor(CSoundFile *csf, SONGVOICE *chan, int *vol)
+static inline void rn_tremor(SONGVOICE *chan, int *vol)
 {
-	if (chan->nTremorOn)
-		chan->nTremorOn--;
-	if (!chan->nTremorOn) {
-		if (chan->nTremorOff) {
-			*vol = 0;
-			chan->nTremorOff--;
-		} else {
-			chan->nTremorOn = chan->nTremorParam >> 4;
-			chan->nTremorOff = chan->nTremorParam & 0x0F;
-			if (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) {
-				chan->nTremorOn++;
-				chan->nTremorOff++;
-			} else {
-				if (!chan->nTremorOn)
-					chan->nTremorOn = 1;
-				if (!chan->nTremorOff)
-					chan->nTremorOff = 1;
-			}
-		}
-	}
+	if ((chan->nTremorOn & 192) == 128)
+		*vol = 0;
 
 	chan->dwFlags |= CHN_FASTVOLRAMP;
 }
@@ -1217,7 +1199,7 @@ int csf_read_note(CSoundFile *csf)
 
 			// Tremor
 			if (chan->nCommand == CMD_TREMOR)
-				rn_tremor(csf, chan, &vol);
+				rn_tremor(chan, &vol);
 
 			// Clip volume
 			vol = CLAMP(vol, 0, 0x100);
