@@ -1081,6 +1081,8 @@ static int info_page_handle_key(struct key_event * k)
                         selected_channel--;
                 break;
         case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT))
+			return 0;
 		if (k->state) return 1;
                 if (selected_channel > 1)
                         selected_channel--;
@@ -1105,6 +1107,8 @@ static int info_page_handle_key(struct key_event * k)
                         selected_channel++;
                 break;
         case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT))
+			return 0;
 		if (k->state) return 1;
                 if (selected_channel < 64)
                         selected_channel++;
