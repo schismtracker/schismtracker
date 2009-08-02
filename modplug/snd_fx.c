@@ -1790,16 +1790,16 @@ void csf_process_effects(CSoundFile *csf)
 					if (param & 0x0f) param -= 0x01;
 				}
 				pChn->nTremorParam = param;
-				pChn->nTremorOn |= 128;
+				pChn->nTremorCount |= 128;
 			}
 
-			if ((pChn->nTremorOn & 128) && pChn->nLength) {
-				if (pChn->nTremorOn == 128)
-					pChn->nTremorOn = (param >> 4) | 192;
-				else if (pChn->nTremorOn == 192)
-					pChn->nTremorOn = (param & 0xf) | 128;
+			if ((pChn->nTremorCount & 128) && pChn->nLength) {
+				if (pChn->nTremorCount == 128)
+					pChn->nTremorCount = (param >> 4) | 192;
+				else if (pChn->nTremorCount == 192)
+					pChn->nTremorCount = (param & 0xf) | 128;
 				else
-					pChn->nTremorOn--;
+					pChn->nTremorCount--;
 			}
 
 			pChn->nCommand = CMD_TREMOR;

@@ -438,10 +438,9 @@ typedef struct _SONGVOICE
 	unsigned int nOldCmdEx, nOldVolParam, nOldTempo;
 	unsigned int nOldOffset, nOldHiOffset;
 	unsigned int nCutOff, nResonance;
-	int nRetrigCount;
 	int nNoteDelay, nNoteCut;
-	unsigned int nRetrigParam;
-	unsigned int nTremorParam, nTremorOn, nTremorOff;
+	unsigned int nRetrigCount, nRetrigParam;
+	unsigned int nTremorParam, nTremorCount;
 	unsigned int nPatternLoop, nPatternLoopCount;
 	unsigned int nRowNote, nRowInstr;
 	unsigned int nRowVolCmd, nRowVolume;
