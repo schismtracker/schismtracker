@@ -401,7 +401,7 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 					{
 						m->command = src[j++];
 						m->param = src[j++];
-						if (m->command) csf_import_s3m_effect(m, false);
+						csf_import_s3m_effect(m, false);
 					}
 				} else
 				{
