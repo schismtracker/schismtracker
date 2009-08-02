@@ -1780,9 +1780,30 @@ void csf_process_effects(CSoundFile *csf)
 
 		// Tremor
 		case CMD_TREMOR:
-			pChn->nCommand = CMD_TREMOR;
-			if ((csf->m_dwSongFlags & SONG_FIRSTTICK) && param)
+			// Tremor logic lifted from DUMB, which is the only player that actually gets it right.
+			// I *sort of* understand it.
+			if (csf->m_dwSongFlags & SONG_FIRSTTICK) {
+				if (!param)
+					param = pChn->nTremorParam;
+				else if (!(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
+					if (param & 0xf0) param -= 0x10;
+					if (param & 0x0f) param -= 0x01;
+				}
 				pChn->nTremorParam = param;
+				pChn->nTremorOn |= 128;
+			}
+
+			if ((pChn->nTremorOn & 128) && pChn->nLength) {
+				if (pChn->nTremorOn == 128)
+					pChn->nTremorOn = (param >> 4) | 192;
+				else if (pChn->nTremorOn == 192)
+					pChn->nTremorOn = (param & 0xf) | 128;
+				else
+					pChn->nTremorOn--;
+			}
+
+			pChn->nCommand = CMD_TREMOR;
+
 			break;
 
 		// Set Global Volume
