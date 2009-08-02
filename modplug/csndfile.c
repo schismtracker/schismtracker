@@ -1285,7 +1285,7 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
 		break;
 	case CMD_PANBRELLO:		command = 'Y'; break;
 	case CMD_MIDI:			command = 'Z'; break;
-	default:	command = param = 0;
+	default:	command = 0;
 	}
 	command &= ~0x40;
 	*pcmd = command;

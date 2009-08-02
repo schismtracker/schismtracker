@@ -591,7 +591,6 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 				uint32_t param = p[i++];
 				if (ch < m_nChannels)
 				{
-					if (cmd)
 					{
 						m[ch].command = cmd;
 						m[ch].param = param;
