@@ -460,7 +460,7 @@ static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 
 static inline void rn_tremor(SONGVOICE *chan, int *vol)
 {
-	if ((chan->nTremorOn & 192) == 128)
+	if ((chan->nTremorCount & 192) == 128)
 		*vol = 0;
 
 	chan->dwFlags |= CHN_FASTVOLRAMP;

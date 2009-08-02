@@ -214,7 +214,7 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
 		v->nCommand = 0;
 		v->nPatternLoopCount = 0;
 		v->nPatternLoop = 0;
-		v->nTremorOn = v->nTremorOff = 0;
+		v->nTremorCount = 0;
 		// modplug sets vib pos to 16 in old effects mode for some reason *shrug*
 		v->nVibratoPos = (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) ? 0 : 0x10;
 		v->nTremoloPos = 0;

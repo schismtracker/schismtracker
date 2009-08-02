@@ -190,7 +190,7 @@ typedef struct _song_mix_channel {
         unsigned int nCutOff, nResonance;
         unsigned int nRetrigCount, nRetrigParam;
         int nNoteDelay, nNoteCut;
-        unsigned int nTremorParam, nTremorOn, nTremorLen;
+        unsigned int nTremorParam, nTremorCount;
         unsigned int nPatternLoop, nPatternLoopCount;
         unsigned int nRowNote, nRowInstr;
         unsigned int nRowVolCmd, nRowVolume;
