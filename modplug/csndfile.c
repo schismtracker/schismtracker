@@ -1268,7 +1268,7 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
 	case CMD_TREMOLO:		command = 'R'; break;
 	case CMD_S3MCMDEX:
 		if (!bIT && param == 0x91) {
-			command = 'I';
+			command = 'X';
 			param = 0xA4;
 		} else {
 			command = 'S';
