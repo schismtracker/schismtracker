@@ -125,7 +125,29 @@ void csf_destroy(CSoundFile *csf)
 	_csf_reset(csf);
 }
 
+MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels)
+{
+	return calloc(rows * channels, sizeof(MODCOMMAND));
+}
 
+void csf_free_pattern(void *pat)
+{
+	free(pat);
+}
+
+signed char *csf_allocate_sample(uint32_t nbytes)
+{
+	signed char *p = calloc(1, (nbytes + 39) & ~7); // magic
+	if (p)
+		p += 16;
+	return p;
+}
+
+void csf_free_sample(void *p)
+{
+	if (p)
+		free(p - 16);
+}
 
 
 //////////////////////////////////////////////////////////////////////////

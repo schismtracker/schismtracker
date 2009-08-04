@@ -7,12 +7,11 @@
 #include "snd_fx.h"
 #include "snd_gm.h"
 #include "snd_flt.h"
+#include "tables.h"
 
 #include "util.h" /* for clamp/min */
 
-
-extern unsigned short FreqS3MTable[16];
-
+/* --------------------------------------------------------------------------------------------------------- */
 /* note/freq/period conversion functions */
 
 int get_note_from_period(int period)
@@ -59,37 +58,6 @@ unsigned int transpose_to_frequency(int transp, int ftune)
 int frequency_to_transpose(unsigned int freq)
 {
 	return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
-}
-
-/* --------------------------------------------------------------------------------------------------------- */
-/* crap that shouldn't be here */
-
-
-// XXX this stuff was lifted from sndfile.cpp and moved to a .c file to avoid c++ braindeadness.
-// it should be placed somewhere better in the future.
-
-MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels)
-{
-	return calloc(rows * channels, sizeof(MODCOMMAND));
-}
-
-void csf_free_pattern(void *pat)
-{
-	free(pat);
-}
-
-signed char *csf_allocate_sample(uint32_t nbytes)
-{
-	signed char *p = calloc(1, (nbytes + 39) & ~7); // magic
-	if (p)
-		p += 16;
-	return p;
-}
-
-void csf_free_sample(void *p)
-{
-	if (p)
-		free(p - 16);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
