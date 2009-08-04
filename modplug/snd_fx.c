@@ -1074,22 +1074,24 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 
 	if (instr >= MAX_INSTRUMENTS) return;
 	SONGINSTRUMENT *penv = (csf->m_dwSongFlags & SONG_INSTRUMENTMODE) ? csf->Instruments[instr] : NULL;
-	SONGSAMPLE *psmp = csf->Samples + instr;
+	SONGSAMPLE *psmp = pChn->pInstrument;
 	uint32_t note = pChn->nNewNote;
 
 	if (note == NOTE_NONE) {
 		/* nothing to see here */
 	} else if (NOTE_IS_CONTROL(note)) {
-		psmp = NULL;
+		/* nothing here either */
 	} else if (penv) {
 		if (NOTE_IS_CONTROL(penv->NoteMap[note-1]))
 			return;
 		psmp = csf_translate_keyboard(csf, penv, note, NULL);
 		pChn->dwFlags &= ~CHN_SUSTAINLOOP; // turn off sustain
+	} else {
+		psmp = csf->Samples + instr;
 	}
 
 	// Update Volume
-	if (instr_column) pChn->nVolume = psmp ? psmp->nVolume : 0;
+	if (instr_column && psmp) pChn->nVolume = psmp->nVolume;
 	// bInstrumentChanged is used for IT carry-on env option
 	if (penv != pChn->pHeader) {
 		bInstrumentChanged = 1;
@@ -1114,22 +1116,43 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 	}
 
 	// Reset envelopes
-	if (instr_column) {
-		if (!bPorta // || (csf->m_dwSongFlags & SONG_COMPATGXX)
-		    || !pChn->nLength || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)) {
+	
+	// Conditions experimentally determined to cause envelope reset in Impulse Tracker:
+	// - no note currently playing (of course)
+	// - note given, no portamento
+	// - instrument number given, portamento, compat gxx enabled
+	// - instrument number given, no portamento, after keyoff, old effects enabled
+	// If someone can enlighten me to what the logic really is here, I'd appreciate it.
+	// Seems like it's just a total mess though, probably to get XMs to play right.
+	if (penv) {
+		if ((
+			!pChn->nLength
+		) || (
+			!instr_column
+			&& !bPorta
+		) || (
+			instr_column
+			&& bPorta
+			&& (csf->m_dwSongFlags & SONG_COMPATGXX)
+		) || (
+			instr_column
+			&& !bPorta
+			&& (pChn->dwFlags & (CHN_NOTEFADE|CHN_KEYOFF))
+			&& (csf->m_dwSongFlags & SONG_ITOLDEFFECTS)
+		)) {
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
-			if (!bInstrumentChanged && penv && !(pChn->dwFlags & (CHN_KEYOFF|CHN_NOTEFADE))) {
-				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
-			} else {
+			if (bInstrumentChanged) {
 				pChn->nVolEnvPosition = 0;
 				pChn->nPanEnvPosition = 0;
 				pChn->nPitchEnvPosition = 0;
+			} else {
+				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
+				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
+				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
 			}
 			pChn->nAutoVibDepth = 0;
 			pChn->nAutoVibPos = 0;
-		} else if (penv && !(penv->dwFlags & ENV_VOLUME)) {
+		} else if (!(penv->dwFlags & ENV_VOLUME)) {
 			// XXX why is this being done?
 			pChn->nVolEnvPosition = 0;
 			pChn->nAutoVibDepth = 0;
@@ -1137,17 +1160,15 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 		}
 
 		pChn->nVolSwing = pChn->nPanSwing = 0;
-		if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && penv) {
-			if (penv->nVolSwing) {
-				/* this was wrong */
-				/* FIXME: it's STILL wrong. vol swing is a percentage. */
-				int d = ((int32_t)penv->nVolSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 256;
-				pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
-			}
-			if (penv->nPanSwing) {
-				int d = ((int32_t)penv->nPanSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 128;
-				pChn->nPanSwing = (signed short)d;
-			}
+		if (penv->nVolSwing) {
+			/* this was wrong */
+			/* FIXME: it's STILL wrong. vol swing is a percentage. */
+			int d = ((int32_t)penv->nVolSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 256;
+			pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
+		}
+		if (penv->nPanSwing) {
+			int d = ((int32_t)penv->nPanSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 128;
+			pChn->nPanSwing = (signed short)d;
 		}
 	}
 	
@@ -1275,6 +1296,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 	if (!bPorta
 	    || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)
 	    || ((csf->m_dwSongFlags & SONG_COMPATGXX) && pChn->nRowInstr)) {
+#if 0 // XXX What is this code supposed to be doing? Does removing it cause any problems?
 		if ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol) {
 			pChn->nVolEnvPosition = 0;
 			pChn->nPanEnvPosition = 0;
@@ -1284,6 +1306,8 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 			pChn->dwFlags &= ~CHN_NOTEFADE;
 			pChn->nFadeOutVol = 65536;
 		}
+#endif
+		// This bit is necessary to prevent note fade from cutting samples. I have no idea why.
 		if (!bPorta || !(csf->m_dwSongFlags & SONG_COMPATGXX) || pChn->nRowInstr) {
 			pChn->dwFlags &= ~CHN_NOTEFADE;
 			pChn->nFadeOutVol = 65536;
