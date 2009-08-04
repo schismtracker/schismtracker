@@ -1854,8 +1854,10 @@ static void pattern_delete_rows(int what_row, int num_rows, int first_channel, i
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* history/undo */
+
 static void pated_history_clear(void)
 {
+	// clear undo history
 	int i;
 	for (i = 0; i < 10; i++) {
 		if (undo_history[i].snap_op_allocated)
@@ -1866,7 +1868,9 @@ static void pated_history_clear(void)
 		undo_history[i].snap_op = "Empty";
 		undo_history[i].snap_op_allocated = 0;
 	}
+
 }
+
 static void set_note_note(song_note *n, int a, int b)
 {
 	if (a > 0 && a < 250) {
@@ -4241,6 +4245,15 @@ static void pattern_editor_playback_update(void)
 	}
 }
 
+static void pated_song_changed(void)
+{
+	pated_history_clear();
+
+	// reset ctrl-f7
+	marked_pattern = -1;
+	marked_row = 0;
+}
+
 /* --------------------------------------------------------------------- */
 
 static int _fix_f7(struct key_event *k)
@@ -4253,6 +4266,7 @@ static int _fix_f7(struct key_event *k)
 	}
 	return 0;
 }
+
 void pattern_editor_load_page(struct page *page)
 {
 	int i;
@@ -4263,7 +4277,7 @@ void pattern_editor_load_page(struct page *page)
 	}
 	page->title = "Pattern Editor (F2)";
 	page->playback_update = pattern_editor_playback_update;
-	page->song_changed_cb = pated_history_clear;
+	page->song_changed_cb = pated_song_changed;
 	page->pre_handle_key = _fix_f7;
 	page->total_widgets = 1;
 	page->clipboard_paste = pattern_selection_system_paste;
