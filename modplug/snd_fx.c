@@ -1137,15 +1137,17 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 		}
 
 		pChn->nVolSwing = pChn->nPanSwing = 0;
-		if (penv->nVolSwing) {
-			/* this was wrong */
-			/* FIXME: it's STILL wrong. vol swing is a percentage. */
-			int d = ((int32_t)penv->nVolSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 256;
-			pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
-		}
-		if (penv->nPanSwing) {
-			int d = ((int32_t)penv->nPanSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 128;
-			pChn->nPanSwing = (signed short)d;
+		if ((csf->m_dwSongFlags & SONG_INSTRUMENTMODE) && penv) {
+			if (penv->nVolSwing) {
+				/* this was wrong */
+				/* FIXME: it's STILL wrong. vol swing is a percentage. */
+				int d = ((int32_t)penv->nVolSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 256;
+				pChn->nVolSwing = (signed short)((d * pChn->nVolume + 1)/256);
+			}
+			if (penv->nPanSwing) {
+				int d = ((int32_t)penv->nPanSwing*(int32_t)((rand() & 0xFF) - 0x7F)) / 128;
+				pChn->nPanSwing = (signed short)d;
+			}
 		}
 	}
 	
