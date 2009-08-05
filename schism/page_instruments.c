@@ -1344,28 +1344,96 @@ static int env_resize_cursor;
 
 static void do_env_resize(void *data)
 {
-        env_resize((song_envelope *) data, env_resize_widgets[0].d.numentry.value);
+	env_resize((song_envelope *) data, env_resize_widgets[0].d.numentry.value);
 }
 
 static void env_resize_draw_const(void)
 {
-        draw_text("Resize Envelope", 34, 24, 3, 2);
-        draw_text("New Length", 31, 27, 0, 2);
-        draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+	draw_text("Resize Envelope", 34, 24, 3, 2);
+	draw_text("New Length", 31, 27, 0, 2);
+	draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
 static void env_resize_dialog(song_envelope *env)
 {
-        struct dialog *dialog;
-        
-        env_resize_cursor = 0;
-        create_numentry(env_resize_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999, &env_resize_cursor);
-        env_resize_widgets[0].d.numentry.value = env->ticks[env->nodes - 1];
-        create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, NULL);
-        dialog->action_yes = do_env_resize;
-        dialog->data = env;
+	struct dialog *dialog;
+
+	env_resize_cursor = 0;
+	create_numentry(env_resize_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999, &env_resize_cursor);
+	env_resize_widgets[0].d.numentry.value = env->ticks[env->nodes - 1];
+	create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, env);
+	dialog->action_yes = do_env_resize;
 }
+
+
+
+static struct widget env_adsr_widgets[4];
+static int env_adsr_cursor = 0;
+
+static void do_env_adsr(void *data)
+{
+	// FIXME | move env flags into the envelope itself, where they should be in the first place.
+	// FIXME | then this nonsense can go away.
+	song_instrument *ins = (song_instrument *) data;
+	song_envelope *env = &ins->vol_env;
+	int a = env_adsr_widgets[0].d.thumbbar.value;
+	int d = env_adsr_widgets[1].d.thumbbar.value;
+	int s = env_adsr_widgets[2].d.thumbbar.value;
+	int r = env_adsr_widgets[3].d.thumbbar.value;
+	int v1 = MAX(a, a * a / 16);
+	int v2 = MAX(v1 + d * d / 16, v1 + d);
+	int v3 = MAX(v2 + r * r / 4, v2 + r);
+	int n = 0;
+	
+	if (a) {
+		env->ticks[n] = 0;
+		env->values[n++] = 0;
+	}
+	if (d) {
+		env->ticks[n] = v1;
+		env->values[n++] = 64;
+	}
+	env->sustain_start = env->sustain_end = n;
+	env->ticks[n] = v2;
+	env->values[n++] = s / 2;
+	env->ticks[n] = v3;
+	env->values[n++] = 0;
+	env->nodes = n;
+	for (n = 0; n < env->nodes - 1; n++)
+		if (env->ticks[n] >= env->ticks[n + 1])
+			env->ticks[n + 1] = env->ticks[n] + 1;
+	ins->flags |= ENV_VOLSUSTAIN | ENV_VOLUME; // arghhhhh
+}
+
+static void env_adsr_draw_const(void)
+{
+	draw_text("Envelope Generator", 32, 22, 0, 2);
+	draw_text("Attack", 27, 24, 0, 2);
+	draw_text("Decay", 28, 25, 0, 2);
+	draw_text("Sustain", 26, 26, 0, 2);
+	draw_text("Release", 26, 27, 0, 2);
+
+	draw_box(33, 23, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+static void env_adsr_dialog(song_envelope *env)
+{
+	struct dialog *dialog;
+	song_instrument *ins = song_get_instrument(current_instrument, NULL); // ARGHHH
+
+	env_adsr_cursor = 0;
+	create_thumbbar(env_adsr_widgets + 0, 34, 24, 17, 4, 1, 4, NULL, 0, 128);
+	create_thumbbar(env_adsr_widgets + 1, 34, 25, 17, 0, 2, 4, NULL, 0, 128);
+	create_thumbbar(env_adsr_widgets + 2, 34, 26, 17, 1, 3, 4, NULL, 0, 128);
+	create_thumbbar(env_adsr_widgets + 3, 34, 27, 17, 2, 4, 4, NULL, 0, 128);
+	create_button(env_adsr_widgets + 4, 36, 30, 6, 3, 0, 4, 4, 0, dialog_cancel_NULL, "Cancel", 1);
+
+	dialog = dialog_create_custom(25, 21, 31, 12, env_adsr_widgets, 5, 0, env_adsr_draw_const, ins);
+	dialog->action_yes = do_env_adsr;
+}
+
+
 
 
 /* the return value here is actually a bitmask:
@@ -1460,7 +1528,13 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int
 		env_resize_dialog(env);
 		return 1;
 
-        default:
+	case SDLK_z:
+		if (!k->state) return 0;
+		if (!(k->mod & KMOD_ALT)) return 0;
+		env_adsr_dialog(env);
+		return 1;
+
+	default:
 		if (!k->state) return 0;
 
 		n = numeric_key_event(k, 0);
