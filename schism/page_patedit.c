@@ -3361,7 +3361,10 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			if (total_rows - (current_row - 1) > block_double_size)
 				block_double_size <<= 1;
 		} else {
-			block_double_size = row_highlight_major;
+			// emulate some weird impulse tracker behavior here:
+			// with row highlight set to zero, alt-d selects the whole channel
+			// if the cursor is at the top, and clears the selection otherwise
+			block_double_size = row_highlight_major ?: (current_row ? 0 : 65536);
 			selection.first_channel = selection.last_channel = current_channel;
 			selection.first_row = current_row;
 		}
@@ -4002,11 +4005,11 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (k->state) return 0;
 		if (current_row == total_rows)
 			current_row++;
-		current_row -= row_highlight_major;
+		current_row -= row_highlight_major ?: 16;
 		return -1;
 	case SDLK_PAGEDOWN:
 		if (k->state) return 0;
-		current_row += row_highlight_major;
+		current_row += row_highlight_major ?: 16;
 		return -1;
 	case SDLK_HOME:
 		if (k->state) return 0;
