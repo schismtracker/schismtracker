@@ -288,16 +288,8 @@ int numeric_key_event(struct key_event *k, int kponly)
 		return -1;
 	}
 
-	if (k->unicode == '0' || k->unicode == ')') return 0;
-	if (k->unicode == '1' || k->unicode == '!') return 1;
-	if (k->unicode == '2' || k->unicode == '@') return 2;
-	if (k->unicode == '3' || k->unicode == '#') return 3;
-	if (k->unicode == '4' || k->unicode == '$') return 4;
-	if (k->unicode == '5' || k->unicode == '%') return 5;
-	if (k->unicode == '6' || k->unicode == '^') return 6;
-	if (k->unicode == '7' || k->unicode == '&') return 7;
-	if (k->unicode == '8' || k->unicode == '*') return 8;
-	if (k->unicode == '9' || k->unicode == '(') return 9;
+	if (k->unicode >= '0' && k->unicode <= '9')
+		return k->unicode - '0';
 
 	switch (k->orig_sym) {
 	case SDLK_0: case SDLK_KP0: return 0;
