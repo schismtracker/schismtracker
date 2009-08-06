@@ -266,8 +266,8 @@ void song_new(int flags)
         song_unlock_audio();
 
 	// ugly #1
-	row_highlight_major = mp->m_rowHighlightMajor;
-	row_highlight_minor = mp->m_rowHighlightMinor;
+	mp->m_rowHighlightMajor = row_highlight_major;
+	mp->m_rowHighlightMinor = row_highlight_minor;
 
         main_song_changed_cb();
 }
