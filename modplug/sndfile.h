@@ -224,16 +224,19 @@
 // Note fade IS actually supported in Impulse Tracker, but there's no way to handle it in the editor
 // (Actually, any non-valid note is handled internally as a note fade, but it's good to have a single
 // value for internal representation)
+// update 20090805: ok just discovered that IT internally uses 253 for its "no note" value.
+// guess we'll use a different value for fade!
+// note: 246 is rather arbitrary, but IT conveniently displays this value as "F#D" ("FD" with 2-char notes)
 #define NOTE_NONE               0   // ...
 #define NOTE_FIRST              1   // C-0
 #define NOTE_MIDC               61  // C-5
 #define NOTE_LAST               120 // B-9
-#define NOTE_FADE               253 // ~~~
+#define NOTE_FADE               246 // ~~~
 #define NOTE_CUT                254 // ^^^
 #define NOTE_OFF                255 // ===
 #define NOTE_IS_NOTE(n)         ((n) > NOTE_NONE && (n) <= NOTE_LAST) // anything playable - C-0 to B-9
 #define NOTE_IS_CONTROL(n)      ((n) > NOTE_LAST)                     // not a note, but non-empty
-#define NOTE_IS_INVALID(n)      ((n) > NOTE_LAST && (n) < NOTE_FADE)  // ???
+#define NOTE_IS_INVALID(n)      ((n) > NOTE_LAST && (n) < NOTE_CUT && (n) != NOTE_FADE) // ???
 
 // Auto-vibrato types
 #define VIB_SINE                0
