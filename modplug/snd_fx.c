@@ -1784,9 +1784,9 @@ void csf_process_effects(CSoundFile *csf)
 
 			if ((pChn->nTremorCount & 128) && pChn->nLength) {
 				if (pChn->nTremorCount == 128)
-					pChn->nTremorCount = (param >> 4) | 192;
+					pChn->nTremorCount = (pChn->nTremorParam >> 4) | 192;
 				else if (pChn->nTremorCount == 192)
-					pChn->nTremorCount = (param & 0xf) | 128;
+					pChn->nTremorCount = (pChn->nTremorParam & 0xf) | 128;
 				else
 					pChn->nTremorCount--;
 			}
