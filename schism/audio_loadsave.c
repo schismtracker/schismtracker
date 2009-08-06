@@ -1092,7 +1092,7 @@ static void _save_xm(diskwriter_driver_t *dw)
 			0, 96,
 			0, 255, 
 			".vpABCDEFGH$<>",
-			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
+			".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&`"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
 
 	if (!csf_save_xm(mp, dw, 0)) {
 		status_text_flash("Error writing to disk");
