@@ -1262,10 +1262,12 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 	pChn->nNewIns = 0;
 	uint32_t period = get_period_from_note(note, pChn->nC5Speed, csf->m_dwSongFlags & SONG_LINEARSLIDES);
 	if (period) {
-		if (bPorta)
+		if (bPorta && pChn->nPeriod) {
 			pChn->nPortamentoDest = period;
-		if (!bPorta || !pChn->nPeriod)
+		} else {
+			pChn->nPortamentoDest = 0;
 			pChn->nPeriod = period;
+		}
 		if (!bPorta || !pChn->nLength) {
 			pChn->pInstrument = pins;
 			pChn->pSample = pins->pSample;
