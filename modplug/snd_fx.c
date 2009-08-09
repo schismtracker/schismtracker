@@ -1067,6 +1067,32 @@ SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32
 	return (n && n < MAX_SAMPLES) ? &csf->Samples[n] : def;
 }
 
+static void env_reset(SONGVOICE *pChn, int carry)
+{
+	if (pChn->pHeader) {
+		pChn->dwFlags |= CHN_FASTVOLRAMP;
+		if (carry) {
+			pChn->nVolEnvPosition = 0;
+			pChn->nPanEnvPosition = 0;
+			pChn->nPitchEnvPosition = 0;
+		} else {
+			if (!(pChn->pHeader->dwFlags & ENV_VOLCARRY))
+				pChn->nVolEnvPosition = 0;
+			if (!(pChn->pHeader->dwFlags & ENV_PANCARRY))
+				pChn->nPanEnvPosition = 0;
+			if (!(pChn->pHeader->dwFlags & ENV_PITCHCARRY))
+				pChn->nPitchEnvPosition = 0;
+		}
+	}
+
+	// should this be happening here?
+	pChn->nAutoVibDepth = 0;
+	pChn->nAutoVibPos = 0;
+
+	// this was migrated from csf_note_change, should it be here?
+	pChn->dwFlags &= ~CHN_NOTEFADE;
+	pChn->nFadeOutVol = 65536;
+}
 
 void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int bPorta, int instr_column)
 {
@@ -1128,9 +1154,6 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 		if ((
 			!pChn->nLength
 		) || (
-			!instr_column
-			&& !bPorta
-		) || (
 			instr_column
 			&& bPorta
 			&& (csf->m_dwSongFlags & SONG_COMPATGXX)
@@ -1140,18 +1163,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 			&& (pChn->dwFlags & (CHN_NOTEFADE|CHN_KEYOFF))
 			&& (csf->m_dwSongFlags & SONG_ITOLDEFFECTS)
 		)) {
-			pChn->dwFlags |= CHN_FASTVOLRAMP;
-			if (bInstrumentChanged) {
-				pChn->nVolEnvPosition = 0;
-				pChn->nPanEnvPosition = 0;
-				pChn->nPitchEnvPosition = 0;
-			} else {
-				if (!(penv->dwFlags & ENV_VOLCARRY)) pChn->nVolEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PANCARRY)) pChn->nPanEnvPosition = 0;
-				if (!(penv->dwFlags & ENV_PITCHCARRY)) pChn->nPitchEnvPosition = 0;
-			}
-			pChn->nAutoVibDepth = 0;
-			pChn->nAutoVibPos = 0;
+			env_reset(pChn, bInstrumentChanged);
 		} else if (!(penv->dwFlags & ENV_VOLUME)) {
 			// XXX why is this being done?
 			pChn->nVolEnvPosition = 0;
@@ -1294,27 +1306,9 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
 	} else {
 		bPorta = 0;
 	}
-	// This REALLY should not be here.
-	if (!bPorta
-	    || ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol)
-	    || ((csf->m_dwSongFlags & SONG_COMPATGXX) && pChn->nRowInstr)) {
-#if 0 // XXX What is this code supposed to be doing? Does removing it cause any problems?
-		if ((pChn->dwFlags & CHN_NOTEFADE) && !pChn->nFadeOutVol) {
-			pChn->nVolEnvPosition = 0;
-			pChn->nPanEnvPosition = 0;
-			pChn->nPitchEnvPosition = 0;
-			pChn->nAutoVibDepth = 0;
-			pChn->nAutoVibPos = 0;
-			pChn->dwFlags &= ~CHN_NOTEFADE;
-			pChn->nFadeOutVol = 65536;
-		}
-#endif
-		// This bit is necessary to prevent note fade from cutting samples. I have no idea why.
-		if (!bPorta || !(csf->m_dwSongFlags & SONG_COMPATGXX) || pChn->nRowInstr) {
-			pChn->dwFlags &= ~CHN_NOTEFADE;
-			pChn->nFadeOutVol = 65536;
-		}
-	}
+
+	if (!bPorta)
+		env_reset(pChn, 0);
 
 	pChn->dwFlags &= ~CHN_KEYOFF;
 	// Enable Ramping
