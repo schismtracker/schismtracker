@@ -1194,7 +1194,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 		return;
 
 
-	if ((pChn->dwFlags & (CHN_KEYOFF | CHN_NOTEFADE)) && instr_column && !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
+	if ((pChn->dwFlags & (CHN_KEYOFF | CHN_NOTEFADE)) && instr_column) {
 		// Don't start new notes after ===/~~~
 		pChn->nPeriod = 0;
 	} else {
