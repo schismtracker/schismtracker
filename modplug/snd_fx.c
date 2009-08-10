@@ -1194,7 +1194,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 		return;
 
 
-	pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE|CHN_VOLENV|CHN_PANENV|CHN_PITCHENV);
+	pChn->dwFlags &= ~(CHN_VOLENV|CHN_PANENV|CHN_PITCHENV);
 	pChn->dwFlags = (pChn->dwFlags & ~CHN_SAMPLE_FLAGS) | (psmp->uFlags);
 	if (penv) {
 		if (penv->dwFlags & ENV_VOLUME) pChn->dwFlags |= CHN_VOLENV;
@@ -1209,8 +1209,14 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 	}
 
 
+	if ((pChn->dwFlags & (CHN_KEYOFF | CHN_NOTEFADE)) && instr_column && !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
+		// Don't start new notes after ===/~~~
+		pChn->nPeriod = 0;
+	} else {
 	pChn->nPeriod = get_freq_from_period(get_freq_from_period(pChn->nPeriod, psmp->nC5Speed, 0, 1),
 					pChn->nC5Speed, 0, 1);
+	}
+	pChn->dwFlags &= ~(CHN_KEYOFF|CHN_NOTEFADE);
 	pChn->pInstrument = psmp;
 	pChn->nLength = psmp->nLength;
 	pChn->nLoopStart = psmp->nLoopStart;
