@@ -1506,32 +1506,27 @@ static int vary_value(int ov, int limit, int depth)
 	if (j > limit) j = limit;
 	return j;
 }
-static int common_variable_group(char ch)
+
+static int common_variable_group(int ch)
 {
 	switch (ch) {
-	case 'E': case 'F': case 'G': case 'L':
-		return 'G';
-	case 'H': case 'K':
-		return 'H';
-	case 'X': case 'P': case 'Y':
-		return 'X';
+	case CMD_PORTAMENTODOWN:
+	case CMD_PORTAMENTOUP:
+	case CMD_TONEPORTAMENTO:
+		return CMD_TONEPORTAMENTO;
+	case CMD_VOLUMESLIDE:
+	case CMD_TONEPORTAVOL:
+	case CMD_VIBRATOVOL:
+		return CMD_VOLUMESLIDE;
+	case CMD_PANNING8:
+	case CMD_PANNINGSLIDE:
+	case CMD_PANBRELLO:
+		return CMD_PANNING8;
 	default:
 		return ch; /* err... */
 	};
 }
-static int same_variable_group(char ch1, char ch2)
-{
-	/* k is in both G and H */
-	if (ch1 == 'K' && ch2 == 'D') return 1;
-	if (ch2 == 'K' && ch1 == 'D') return 1;
 
-	if (ch1 == 'L' && ch2 == 'D') return 1;
-	if (ch2 == 'L' && ch1 == 'D') return 1;
-
-	if (common_variable_group(ch1) == common_variable_group(ch2))
-		return 1;
-	return 0;
-}
 static void selection_vary(int fast, int depth, int how)
 {
 	int row, chan, total_rows;
@@ -1541,22 +1536,38 @@ static void selection_vary(int fast, int depth, int how)
 	char ch;
 
 	/* don't ever vary these things */
-	if (how == '?' || how == '.'
-	|| how == 'S' || how == 'A' || how == 'B' || how == 'C') return;
-	if (how < 'A' || how > 'Z') return;
+	switch (how) {
+	default:
+		if (!CMD_IS_EFFECT(how))
+			return;
+		break;
+
+	case CMD_NONE:
+	case CMD_S3MCMDEX:
+	case CMD_SPEED:
+	case CMD_POSITIONJUMP:
+	case CMD_PATTERNBREAK:
+
+	case CMD_KEYOFF:
+	case CMD_SETENVPOSITION:
+	case CMD_VOLUME:
+	case CMD_NOTESLIDEUP:
+	case CMD_NOTESLIDEDOWN:
+			return;
+	}
 
 	CHECK_FOR_SELECTION(return);
 
 	status.flags |= SONG_NEEDS_SAVE;
 	switch (how) {
-	case 'M':
-	case 'N':
+	case CMD_CHANNELVOLUME:
+	case CMD_CHANNELVOLSLIDE:
 		vary_how = "Undo volume-channel vary      (Ctrl-U)";
 		if (fast) status_text_flash("Fast volume vary");
 		break;
-	case 'X':
-	case 'P':
-	case 'Y':
+	case CMD_PANNING8:
+	case CMD_PANNINGSLIDE:
+	case CMD_PANBRELLO:
 		vary_how = "Undo panning vary             (Ctrl-Y)";
 		if (fast) status_text_flash("Fast panning vary");
 		break;
@@ -1582,86 +1593,71 @@ static void selection_vary(int fast, int depth, int how)
 	for (row = selection.first_row; row <= selection.last_row; row++) {
 		note = pattern + 64 * row + selection.first_channel - 1;
 		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
-			if (how == 'M' || how == 'N') {
+			if (how == CMD_CHANNELVOLUME || how == CMD_CHANNELVOLSLIDE) {
 				if (note->volume_effect == VOL_EFFECT_VOLUME) {
-					note->volume = vary_value(note->volume,
-							64, depth);
+					note->volume = vary_value(note->volume, 64, depth);
 				}
 			}
-			if (how == 'P' || how == 'X' || how == 'Y') {
+			if (how == CMD_PANNINGSLIDE || how == CMD_PANNING8 || how == CMD_PANBRELLO) {
 				if (note->volume_effect == VOL_EFFECT_PANNING) {
-					note->volume = vary_value(note->volume,
-							64, depth);
+					note->volume = vary_value(note->volume, 64, depth);
 				}
 			}
 			
-			ch = get_effect_char(note->effect);
-			if (ch == '?' || ch == '.') continue;
-			if (!same_variable_group(ch, how)) continue;
+			ch = note->effect;
+			if (!CMD_IS_EFFECT(ch)) continue;
+			if (common_variable_group(ch) != common_variable_group(how)) continue;
 			switch (ch) {
 			/* these are .0 0. and .f f. values */
-			case 'D':
-			case 'N':
-			case 'P':
-			case 'W':
+			case CMD_VOLUMESLIDE:
+			case CMD_CHANNELVOLSLIDE:
+			case CMD_PANNINGSLIDE:
+			case CMD_GLOBALVOLSLIDE:
+			case CMD_VIBRATOVOL:
+			case CMD_TONEPORTAVOL:
 				if ((note->parameter & 15) == 15) continue;
 				if ((note->parameter & 0xF0) == (0xF0))continue;
 				if ((note->parameter & 15) == 0) {
-					note->parameter = (1+(vary_value(
-							note->parameter>>4,
-							15, depth))) << 4;
+					note->parameter = (1+(vary_value(note->parameter>>4, 15, depth))) << 4;
 				} else {
-					note->parameter = 1+(vary_value(
-							note->parameter & 15,
-							15, depth));
+					note->parameter = 1+(vary_value(note->parameter & 15, 15, depth));
 				}
 				break;
 			/* tempo has a slide */
-			case 'T':
+			case CMD_TEMPO:
 				if ((note->parameter & 15) == 15) continue;
 				if ((note->parameter & 0xF0) == (0xF0))continue;
 				/* but otherwise it's absolute */
-				note->parameter = 1 + (vary_value(
-							note->parameter,
-							255, depth));
+				note->parameter = 1 + (vary_value(note->parameter, 255, depth));
 				break;
 			/* don't vary .E. and .F. values */
-			case 'E':
-			case 'F':
+			case CMD_PORTAMENTODOWN:
+			case CMD_PORTAMENTOUP:
 				if ((note->parameter & 15) == 15) continue;
 				if ((note->parameter & 15) == 14) continue;
 				if ((note->parameter & 0xF0) == (0xF0))continue;
 				if ((note->parameter & 0xF0) == (0xE0))continue;
-				note->parameter = 16 + (vary_value(
-							note->parameter-16,
-							224, depth));
+				note->parameter = 16 + (vary_value(note->parameter-16, 224, depth));
 				break;
 			/* these are all "xx" commands */
-			case 'G':
-			case 'K':
-			case 'L':
-			case 'M':
-			case 'O':
-			case 'V':
-			case 'X':
-				note->parameter = 1 + (vary_value(
-							note->parameter,
-							255, depth));
+			// FIXME global/channel volume should be limited to 0-128 and 0-64, respectively
+			case CMD_TONEPORTAMENTO:
+			case CMD_CHANNELVOLUME:
+			case CMD_OFFSET:
+			case CMD_GLOBALVOLUME:
+			case CMD_PANNING8:
+				note->parameter = 1 + (vary_value(note->parameter, 255, depth));
 				break;
 			/* these are all "xy" commands */
-			case 'H':
-			case 'I':
-			case 'J':
-			case 'Q':
-			case 'R':
-			case 'Y':
-			case 'U':
-				note->parameter = (1 + (vary_value(
-							note->parameter & 15,
-							15, depth)))
-					|	((1 + (vary_value(
-						(note->parameter >> 4)& 15,
-							15, depth))) << 4);
+			case CMD_VIBRATO:
+			case CMD_TREMOR:
+			case CMD_ARPEGGIO:
+			case CMD_RETRIG:
+			case CMD_TREMOLO:
+			case CMD_PANBRELLO:
+			case CMD_FINEVIBRATO:
+				note->parameter = (1 + (vary_value(note->parameter & 15, 15, depth)))
+					| ((1 + (vary_value((note->parameter >> 4) & 15, 15, depth))) << 4);
 				break;
 			};
 		}
@@ -3690,26 +3686,25 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SDLK_u:
 		if (k->state) return 1;
 		if (fast_volume_mode)
-			selection_vary(1, 100-fast_volume_percent, 'M');
+			selection_vary(1, 100-fast_volume_percent, CMD_CHANNELVOLUME);
 		else
-			vary_command('M');
+			vary_command(CMD_CHANNELVOLUME);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_y:
 		if (k->state) return 1;
 		if (fast_volume_mode)
-			selection_vary(1, 100-fast_volume_percent, 'Y');
+			selection_vary(1, 100-fast_volume_percent, CMD_PANBRELLO);
 		else
-			vary_command('Y');
+			vary_command(CMD_PANBRELLO);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_k:
 		if (k->state) return 1;
 		if (fast_volume_mode)
-			selection_vary(1, 100-fast_volume_percent,
-					get_effect_char(current_effect()));
+			selection_vary(1, 100-fast_volume_percent, current_effect());
 		else
-			vary_command(get_effect_char(current_effect()));
+			vary_command(current_effect());
 		status.flags |= NEED_UPDATE;
 		return 1;
 
