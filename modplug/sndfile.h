@@ -153,6 +153,7 @@
 #define CMD_NOTESLIDEUP         32 // IMF Gxy
 #define CMD_NOTESLIDEDOWN       33 // IMF Hxy
 
+#define CMD_IS_EFFECT(v) ((v) > 0 && (v) <= 33)
 
 // Volume Column commands
 #define VOLCMD_NONE             0
