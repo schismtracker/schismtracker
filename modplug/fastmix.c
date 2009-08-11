@@ -14,6 +14,14 @@
 #include "cmixer.h"
 #include "util.h" // for CLAMP
 
+// For pingpong loops that work like most of Impulse Tracker's drivers
+// (including SB16, SBPro, and the disk writer) -- as well as XMPlay, use 2
+// To make them sound like the GUS driver, use 1.
+// It's really only noticeable for very small loops... (e.g. chip samples)
+// (thanks Saga_Musix for this)
+#define PINGPONG_OFFSET 2
+
+
 void (*csf_multi_out_raw) (int chan, int *buf, int len) = NULL;
 
 
@@ -1241,9 +1249,8 @@ static int get_sample_count(SONGVOICE *pChn, int samples)
 			pChn->nPos = pChn->nLength - nDeltaHi - (nDeltaLo >> 16);
 			pChn->nPosLo = nDeltaLo & 0xFFFF;
 
-			if (pChn->nPos <= pChn->nLoopStart ||
-			    pChn->nPos >= pChn->nLength)
-				pChn->nPos = pChn->nLength - 1;
+			if (pChn->nPos <= pChn->nLoopStart || pChn->nPos >= pChn->nLength)
+				pChn->nPos = pChn->nLength - PINGPONG_OFFSET;
 		}
 		else {
 			// This is a bug
