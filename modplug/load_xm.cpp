@@ -116,7 +116,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 		packsize = bswapLE16(*((uint16_t *)(lpStream+dwMemPos+7)));
 		if (dwMemPos + dwSize + 4 > dwMemLength) return true;
 		dwMemPos += dwSize;
-		if (dwMemPos + packsize + 4 > dwMemLength) return true;
+		if (dwMemPos + packsize > dwMemLength) return true;
 		MODCOMMAND *p;
 		if (ipatmap < MAX_PATTERNS)
 		{
