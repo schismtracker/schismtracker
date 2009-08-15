@@ -737,34 +737,33 @@ void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len,
 {
 	SONGVOICE *pChn = &csf->Voices[nChn];
 	int oldcutoff;
+	const unsigned char *idata = data;
+	unsigned int ilen = len;
 
-	if (len > 2 && data[0] == 0xF0 && data[1] == 0xF0) {
-		/* impulse tracker filter control (mfg. 0xF0) */
-		if (len == 5) {
-			switch (data[2]) {
-			case 0x00: /* set cutoff */
-				oldcutoff = pChn->nCutOff;
-				if (data[3] < 0x80)
-					pChn->nCutOff = data[3];
-				oldcutoff -= pChn->nCutOff;
-				if (oldcutoff < 0)
-					oldcutoff = -oldcutoff;
-				if (pChn->nVolume > 0 || oldcutoff < 0x10
-				    || !(pChn->dwFlags & CHN_FILTER)
-				    || !(pChn->nLeftVol|pChn->nRightVol)) {
-					setup_channel_filter(pChn,
-						!(pChn->dwFlags & CHN_FILTER),
-						256, gdwMixingFreq);
-				}
-				break;
-			case 0x01: /* set resonance */
-				if (data[3] < 0x80) pChn->nResonance = data[3];
-				setup_channel_filter(pChn,
-					!(pChn->dwFlags & CHN_FILTER),
-					256, gdwMixingFreq);
-				break;
-			};
+	while (ilen > 4 && idata[0] == 0xF0 && idata[1] == 0xF0) {
+		// impulse tracker filter control (mfg. 0xF0)
+		switch (idata[2]) {
+		case 0x00: // set cutoff
+			oldcutoff = pChn->nCutOff;
+			if (idata[3] < 0x80)
+				pChn->nCutOff = idata[3];
+			oldcutoff -= pChn->nCutOff;
+			if (oldcutoff < 0)
+				oldcutoff = -oldcutoff;
+			if (pChn->nVolume > 0 || oldcutoff < 0x10
+			    || !(pChn->dwFlags & CHN_FILTER)
+			    || !(pChn->nLeftVol|pChn->nRightVol)) {
+				setup_channel_filter(pChn, !(pChn->dwFlags & CHN_FILTER), 256, gdwMixingFreq);
+			}
+			break;
+		case 0x01: // set resonance
+			if (idata[3] < 0x80)
+				pChn->nResonance = idata[3];
+			setup_channel_filter(pChn, !(pChn->dwFlags & CHN_FILTER), 256, gdwMixingFreq);
+			break;
 		}
+		idata += 4;
+		ilen -= 4;
 	}
 
 	if (!fake && csf_midi_out_raw) {
