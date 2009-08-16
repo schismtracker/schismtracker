@@ -1070,7 +1070,8 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
 		}
 		break;
 	case 0x0F:
-		command = (param < (from_xm ? 0x21 : 0x20)) ? CMD_SPEED : CMD_TEMPO;
+		// FT2 processes 0x20 as Txx; ST3 loads it as Axx
+		command = (param < (from_xm ? 0x20 : 0x21)) ? CMD_SPEED : CMD_TEMPO;
 		// I have no idea what this next line is supposed to do.
 		//if ((param == 0xFF) && (m_nSamples == 15)) command = 0;
 		break;
