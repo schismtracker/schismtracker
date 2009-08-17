@@ -45,14 +45,13 @@ int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+#define S3M_UNSIGNED 1
+#define S3M_CHANPAN 2 // the FC byte
+
 int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 {
 	uint16_t nsmp, nord, npat;
-	/* 'bleh' is just some temporary flags:
-	 *     if (bleh & 1) samples stored in unsigned format
-	 *     if (bleh & 2) load channel pannings
-	 * (these are both generally true) */
-	int bleh = 3;
+	int misc = S3M_UNSIGNED | S3M_CHANPAN; // temporary flags, these are both generally true
 	int n;
 	MODCOMMAND *note;
 	/* junk variables for reading stuff into */
@@ -105,7 +104,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	trkvers = bswapLE16(trkvers);
 	slurp_read(fp, &tmp, 2);  /* file format info */
 	if (tmp == bswapLE16(1))
-		bleh &= ~1;     /* signed samples (ancient s3m) */
+		misc &= ~S3M_UNSIGNED;     /* signed samples (ancient s3m) */
 
 	slurp_seek(fp, 4, SEEK_CUR); /* skip the tag */
 	
@@ -121,7 +120,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	uc = slurp_getc(fp); /* ultraclick removal (useless) */
 
 	if (slurp_getc(fp) != 0xfc)
-		bleh &= ~2;     /* stored pan values */
+		misc &= ~S3M_CHANPAN;     /* stored pan values */
 
 	slurp_seek(fp, 8, SEEK_CUR); // 8 unused bytes (XXX what do programs actually write for these?)
 	slurp_read(fp, &special, 2); // field not used by st3
@@ -163,7 +162,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 #endif
 
 	/* default pannings */
-	if (bleh & 2) {
+	if (misc & S3M_CHANPAN) {
 		for (n = 0; n < 32; n++) {
 			c = slurp_getc(fp);
 			if (c & 0x20)
@@ -206,9 +205,10 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 		c = slurp_getc(fp);  /* flags */
 		if (c & 1)
 			sample->uFlags |= CHN_LOOP;
+		if (c & 2)
+			return LOAD_UNSUPPORTED; // because I'm lazy
 		if (c & 4)
 			sample->uFlags |= CHN_16BIT;
-		// TODO stereo
 		slurp_read(fp, &tmplong, 4);
 		sample->nC5Speed = bswapLE32(tmplong);
 		slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
@@ -237,7 +237,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 			slurp_read(fp, ptr, bps * len);
 			sample->pSample = ptr;
 
-			if (bleh & 1) {
+			if (misc & S3M_UNSIGNED) {
 				/* convert to signed */
 				uint32_t pos = len;
 				if (bps == 2)
@@ -316,11 +316,17 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	/* MPT identifies as ST3.20 in the trkvers field, but it puts zeroes for the 'special' field, only ever
-	 * sets flags 0x10 and 0x40, writes multiples of 16 orders, and writes zero into the ultraclick removal
-	 * field. (ST3 always puts either 8, 12, or 16 there) */
+	 * sets flags 0x10 and 0x40, writes multiples of 16 orders, always saves channel pannings, and writes
+	 * zero into the ultraclick removal field. (ST3 always puts either 8, 12, or 16 there).
+	 * Velvet Studio also pretends to be ST3, but writes zeroes for 'special'. ultraclick, and flags, and
+	 * does NOT save channel pannings. Also, it writes a fairly recognizable LRRL pattern for the channels,
+	 * but I'm not checking that. (yet?) */
 	if (trkvers == 0x1320) {
-		if (special == 0 && uc == 0 && (flags & ~0x50) == 0 && (nord % 16) == 0) {
+		if (special == 0 && uc == 0 && (flags & ~0x50) == 0
+		    && misc == (S3M_UNSIGNED | S3M_CHANPAN) && (nord % 16) == 0) {
 			tid = "Modplug Tracker";
+		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
+			tid = "Velvet Studio";
 		} else if (uc != 8 && uc != 12 && uc != 16) {
 			// sure isn't scream tracker
 			tid = "Unknown tracker";
