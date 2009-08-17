@@ -278,8 +278,12 @@ long slurp_tell(slurp_t *t)
 size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 {
 	size_t bytesleft = t->length - t->pos;
-	if (count > bytesleft)
+	if (count > bytesleft) {
+		// short read -- fill in any extra bytes with zeroes
+		size_t tail = count - bytesleft;
 		count = bytesleft;
+		memset(ptr + count, 0, tail);
+	}
 	if (count)
 		memcpy(ptr, t->data + t->pos, count);
 	t->pos += count;
