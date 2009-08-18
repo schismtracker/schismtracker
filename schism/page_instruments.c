@@ -1417,7 +1417,7 @@ static void env_adsr_draw_const(void)
 	draw_box(33, 23, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
-static void env_adsr_dialog(song_envelope *env)
+static void env_adsr_dialog(UNUSED song_envelope *env)
 {
 	struct dialog *dialog;
 	song_instrument *ins = song_get_instrument(current_instrument, NULL); // ARGHHH
