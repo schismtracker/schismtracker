@@ -435,7 +435,7 @@ void fmt_mid_save_song(diskwriter_driver_t *dw)
 					row = j;
 					left = 0;
 					break;
-				case CMD_PANNING8:
+				case CMD_PANNING:
 					if (j < 0x80) {
 						*p = 0xb0|(m->c-1); p++;
 						*p = 0x10; p++;

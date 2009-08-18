@@ -200,7 +200,7 @@ bool CSoundFile::ReadFAR(const uint8_t *lpStream, uint32_t dwMemLength)
 				break;
 			// B.x: Set Balance
 			case 0xB0:
-				m->command = CMD_PANNING8;
+				m->command = CMD_PANNING;
 				m->param = (eff & 0x0F) << 4;
 				break;
 			// F.x: Set Speed

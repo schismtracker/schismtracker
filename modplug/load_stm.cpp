@@ -157,7 +157,7 @@ bool CSoundFile::ReadSTM(const uint8_t *lpStream, uint32_t dwMemLength)
 			// Lxy Dual command G00 & Dxy
 			case 12: m->command = CMD_TONEPORTAVOL; break;
 			// Xxx amiga command 8xx
-			case 0x18:	m->command = CMD_PANNING8; break;
+			case 0x18:	m->command = CMD_PANNING; break;
 			default:
 				m->command = m->param = 0;
 			}

@@ -256,7 +256,7 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
                 break;
         case VOL_EFFECT_TONEPORTAMENTO:
         case VOL_EFFECT_VIBRATOSPEED:
-        case VOL_EFFECT_VIBRATO:
+        case VOL_EFFECT_VIBRATODEPTH:
                 /* for whatever reason, Impulse Tracker uses color 10 for
                  * Gx and Hx... bug? */
                 fg1 = (status.flags & CLASSIC_MODE) ? 10 : 12;
@@ -822,7 +822,7 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
         case VOL_EFFECT_PANNING:
         case VOL_EFFECT_TONEPORTAMENTO:
         case VOL_EFFECT_VIBRATOSPEED:
-        case VOL_EFFECT_VIBRATO:
+        case VOL_EFFECT_VIBRATODEPTH:
                 fg1 = 10;
                 break;
         default:

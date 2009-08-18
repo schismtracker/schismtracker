@@ -134,7 +134,7 @@ static uint8_t imf_efftrans[] = {
 	CMD_FINEVIBRATO, // 0x07 7xy Fine Vibrato                     (*)
 	CMD_TREMOLO, // 0x08 8xy Tremolo                          (*)
 	CMD_ARPEGGIO, // 0x09 9xy Arpeggio                         (*)
-	CMD_PANNING8, // 0x0A Axx Set Pan Position                
+	CMD_PANNING, // 0x0A Axx Set Pan Position
 	CMD_PANNINGSLIDE, // 0x0B Bxy Pan Slide                        (*)
 	CMD_VOLUME, // 0x0C Cxx Set Volume
 	CMD_VOLUMESLIDE, // 0x0D Dxy Volume Slide                     (*)

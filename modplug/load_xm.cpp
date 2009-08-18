@@ -180,7 +180,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 						// A0-AF: Set Vibrato Speed
 						case 0xA0:	p->volcmd = VOLCMD_VIBRATOSPEED; break;
 						// B0-BF: Vibrato
-						case 0xB0:	p->volcmd = VOLCMD_VIBRATO; break;
+						case 0xB0:	p->volcmd = VOLCMD_VIBRATODEPTH; break;
 						// C0-CF: Set Panning
 						case 0xC0:	p->volcmd = VOLCMD_PANNING; p->vol = (vol << 2) + 2; break;
 						// D0-DF: Panning Slide Left
@@ -202,7 +202,7 @@ bool CSoundFile::ReadXM(const uint8_t *lpStream, uint32_t dwMemLength)
 						} else if (p->volcmd == VOLCMD_PANNING) {
 							int v = p->vol * 255 / 64;
 							p->volcmd = VOLCMD_VOLUME;
-							p->command = CMD_PANNING8;
+							p->command = CMD_PANNING;
 							p->vol = p->param;
 							p->param = v > 255 ? 255 : v;
 						}
@@ -612,7 +612,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
 				case VOLCMD_FINEVOLDOWN:	vol = 0x80 + (p->vol & 0x0F); break;
 				case VOLCMD_FINEVOLUP:		vol = 0x90 + (p->vol & 0x0F); break;
 				case VOLCMD_VIBRATOSPEED:	vol = 0xA0 + (p->vol & 0x0F); break;
-				case VOLCMD_VIBRATO:		vol = 0xB0 + (p->vol & 0x0F); break;
+				case VOLCMD_VIBRATODEPTH:	vol = 0xB0 + (p->vol & 0x0F); break;
 				case VOLCMD_PANNING:		vol = 0xC0 + (p->vol >> 2); if (vol > 0xCF) vol = 0xCF; break;
 				case VOLCMD_PANSLIDELEFT:	vol = 0xD0 + (p->vol & 0x0F); break;
 				case VOLCMD_PANSLIDERIGHT:	vol = 0xE0 + (p->vol & 0x0F); break;

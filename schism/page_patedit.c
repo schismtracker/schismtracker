@@ -631,7 +631,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 				case 'a':n.volume_effect=VOL_EFFECT_FINEVOLUP;break;
 				case 'b':n.volume_effect=VOL_EFFECT_FINEVOLDOWN;break;
 				case 'u':n.volume_effect=VOL_EFFECT_VIBRATOSPEED;break;
-				case 'h':n.volume_effect=VOL_EFFECT_VIBRATO;break;
+				case 'h':n.volume_effect=VOL_EFFECT_VIBRATODEPTH;break;
 				case 'l':n.volume_effect=VOL_EFFECT_PANSLIDELEFT;break;
 				case 'r':n.volume_effect=VOL_EFFECT_PANSLIDERIGHT;break;
 				case 'g':n.volume_effect=VOL_EFFECT_TONEPORTAMENTO;break;
@@ -731,7 +731,7 @@ static void pattern_selection_system_copyout(void)
 			case VOL_EFFECT_FINEVOLUP:	str[len+2] = 'a';break;
 			case VOL_EFFECT_FINEVOLDOWN:	str[len+2] = 'b';break;
 			case VOL_EFFECT_VIBRATOSPEED:	str[len+2] = 'u';break;
-			case VOL_EFFECT_VIBRATO:	str[len+2] = 'h';break;
+			case VOL_EFFECT_VIBRATODEPTH:	str[len+2] = 'h';break;
 			case VOL_EFFECT_PANSLIDELEFT:	str[len+2] = 'l';break;
 			case VOL_EFFECT_PANSLIDERIGHT:	str[len+2] = 'r';break;
 			case VOL_EFFECT_TONEPORTAMENTO:	str[len+2] = 'g';break;
@@ -1518,10 +1518,10 @@ static int common_variable_group(int ch)
 	case CMD_TONEPORTAVOL:
 	case CMD_VIBRATOVOL:
 		return CMD_VOLUMESLIDE;
-	case CMD_PANNING8:
+	case CMD_PANNING:
 	case CMD_PANNINGSLIDE:
 	case CMD_PANBRELLO:
-		return CMD_PANNING8;
+		return CMD_PANNING;
 	default:
 		return ch; /* err... */
 	};
@@ -1565,7 +1565,7 @@ static void selection_vary(int fast, int depth, int how)
 		vary_how = "Undo volume-channel vary      (Ctrl-U)";
 		if (fast) status_text_flash("Fast volume vary");
 		break;
-	case CMD_PANNING8:
+	case CMD_PANNING:
 	case CMD_PANNINGSLIDE:
 	case CMD_PANBRELLO:
 		vary_how = "Undo panning vary             (Ctrl-Y)";
@@ -1598,7 +1598,7 @@ static void selection_vary(int fast, int depth, int how)
 					note->volume = vary_value(note->volume, 64, depth);
 				}
 			}
-			if (how == CMD_PANNINGSLIDE || how == CMD_PANNING8 || how == CMD_PANBRELLO) {
+			if (how == CMD_PANNINGSLIDE || how == CMD_PANNING || how == CMD_PANBRELLO) {
 				if (note->volume_effect == VOL_EFFECT_PANNING) {
 					note->volume = vary_value(note->volume, 64, depth);
 				}
@@ -1645,7 +1645,7 @@ static void selection_vary(int fast, int depth, int how)
 			case CMD_CHANNELVOLUME:
 			case CMD_OFFSET:
 			case CMD_GLOBALVOLUME:
-			case CMD_PANNING8:
+			case CMD_PANNING:
 				note->parameter = 1 + (vary_value(note->parameter, 255, depth));
 				break;
 			/* these are all "xy" commands */
@@ -2732,7 +2732,7 @@ static int handle_volume(song_note * note, struct key_event *k, int pos)
 			fx = VOL_EFFECT_TONEPORTAMENTO;
 			vol %= 10;
 		} else if (k->sym == SDLK_h) {
-			fx = VOL_EFFECT_VIBRATO;
+			fx = VOL_EFFECT_VIBRATODEPTH;
 			vol %= 10;
 		} else if (status.flags & CLASSIC_MODE) {
 			return 0;
