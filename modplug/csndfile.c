@@ -1019,7 +1019,7 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
 	case 0x06:	command = CMD_VIBRATOVOL; if (param & 0xF0) param &= 0xF0; break;
 	case 0x07:	command = CMD_TREMOLO; break;
 	case 0x08:
-		command = CMD_PANNING8;
+		command = CMD_PANNING;
 		if (!from_xm) {
 			param *= 2;
 			if (param > 0x7f) param = 0xff;
@@ -1159,7 +1159,7 @@ uint16_t csf_export_mod_effect(const MODCOMMAND *m, int bXM)
 	case CMD_TONEPORTAVOL:		command = 0x05; break;
 	case CMD_VIBRATOVOL:		command = 0x06; break;
 	case CMD_TREMOLO:		command = 0x07; break;
-	case CMD_PANNING8:
+	case CMD_PANNING:
 		command = 0x08;
 		if (!bXM) param >>= 1;
 		break;
@@ -1245,7 +1245,7 @@ void csf_import_s3m_effect(MODCOMMAND *m, int bIT)
 		break;
 	case 'W':	command = CMD_GLOBALVOLSLIDE; break;
 	case 'X':
-		command = CMD_PANNING8;
+		command = CMD_PANNING;
 		if (!bIT) {
 			if (param == 0xa4) {
 				command = CMD_S3MCMDEX;
@@ -1301,7 +1301,7 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
 	case CMD_FINEVIBRATO:		command = 'U'; break;
 	case CMD_GLOBALVOLUME:		command = 'V'; if (!bIT) param >>= 1;break;
 	case CMD_GLOBALVOLSLIDE:	command = 'W'; break;
-	case CMD_PANNING8:			
+	case CMD_PANNING:
 		command = 'X';
 		if (!bIT)
 			param >>= 1;

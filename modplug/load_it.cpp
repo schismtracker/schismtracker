@@ -578,7 +578,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 					// 193-202: Portamento To
 					if ((vol >= 193) && (vol <= 202)) { m[ch].volcmd = VOLCMD_TONEPORTAMENTO; m[ch].vol = vol - 193; } else
 					// 203-212: Vibrato
-					if ((vol >= 203) && (vol <= 212)) { m[ch].volcmd = VOLCMD_VIBRATO; m[ch].vol = vol - 203; }
+					if ((vol >= 203) && (vol <= 212)) { m[ch].volcmd = VOLCMD_VIBRATODEPTH; m[ch].vol = vol - 203; }
 					lastvalue[ch].volcmd = m[ch].volcmd;
 					lastvalue[ch].vol = m[ch].vol;
 				}

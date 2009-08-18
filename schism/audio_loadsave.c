@@ -794,7 +794,7 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
 			case VOLCMD_PORTADOWN:      vol = MIN(noteptr->vol,  9) + 105; break;
 			case VOLCMD_PORTAUP:        vol = MIN(noteptr->vol,  9) + 115; break;
 			case VOLCMD_PANNING:        vol = MIN(noteptr->vol, 64) + 128; break;
-			case VOLCMD_VIBRATO:        vol = MIN(noteptr->vol,  9) + 203; break;
+			case VOLCMD_VIBRATODEPTH:   vol = MIN(noteptr->vol,  9) + 203; break;
 			case VOLCMD_VIBRATOSPEED:   vol = 203;                         break;
 			case VOLCMD_TONEPORTAMENTO: vol = MIN(noteptr->vol,  9) + 193; break;
 			}

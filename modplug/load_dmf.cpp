@@ -300,7 +300,7 @@ bool CSoundFile::ReadDMF(const uint8_t *lpStream, uint32_t dwMemLength)
 										cmd.command = CMD_VOLUMESLIDE; cmd.param = eval; break;
 								// 7: Set Pan
 								case 7: if (!cmd.volcmd) { cmd.volcmd = VOLCMD_PANNING; cmd.vol = (eval+3)>>2; }
-										else { cmd.command = CMD_PANNING8; cmd.param = eval; } break;
+										else { cmd.command = CMD_PANNING; cmd.param = eval; } break;
 								// 8: Pan Slide Left
 								case 8: eval = (eval+3)>>2; if (eval > 0x0f) eval = 0x0f;
 										cmd.command = CMD_PANNINGSLIDE; cmd.param = eval<<4; break;

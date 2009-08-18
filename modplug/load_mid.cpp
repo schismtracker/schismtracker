@@ -841,7 +841,7 @@ bool CSoundFile::ReadMID(const uint8_t *lpStream, uint32_t dwMemLength)
 								{
 									chnstate[nchn].pan = pmidich->pan;
 									m[nchn].param = pmidich->pan;
-									m[nchn].command = CMD_PANNING8;
+									m[nchn].command = CMD_PANNING;
 								}
 							}
 						} else

@@ -63,7 +63,7 @@ void ConvertMDLCommand(MODCOMMAND *m, uint32_t eff, uint32_t data)
 	case 0x04:	command = CMD_VIBRATO; break;
 	case 0x05:	command = CMD_ARPEGGIO; break;
 	case 0x07:	command = (param < 0x20) ? CMD_SPEED : CMD_TEMPO; break;
-	case 0x08:	command = CMD_PANNING8; param <<= 1; break;
+	case 0x08:	command = CMD_PANNING; param <<= 1; break;
 	case 0x0B:	command = CMD_POSITIONJUMP; break;
 	case 0x0C:	command = CMD_GLOBALVOLUME; break;
 	case 0x0D:	command = CMD_PATTERNBREAK; param = (data & 0x0F) + (data>>4)*10; break;

@@ -1811,7 +1811,7 @@ void csf_process_effects(CSoundFile *csf)
 			break;
 
 		// Set 8-bit Panning (Xxx)
-		case CMD_PANNING8:
+		case CMD_PANNING:
 			if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
 				break;
 			if (!(csf->m_dwSongFlags & SONG_SURROUNDPAN))
@@ -1821,7 +1821,7 @@ void csf_process_effects(CSoundFile *csf)
 			pChn->dwFlags |= CHN_FASTVOLRAMP;
 			break;
 
-		// Panning Slide
+	// Panning Slide
 		case CMD_PANNINGSLIDE:
 			fx_panning_slide(csf->m_dwSongFlags, pChn, param);
 			break;
@@ -2045,7 +2045,7 @@ void csf_process_effects(CSoundFile *csf)
 			}
 			break;
 
-		case VOLCMD_VIBRATO: // Hx
+		case VOLCMD_VIBRATODEPTH: // Hx
 			fx_vibrato(pChn, vol);
 			break;
 

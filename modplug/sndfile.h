@@ -129,7 +129,7 @@
 #define CMD_TONEPORTAVOL        6
 #define CMD_VIBRATOVOL          7
 #define CMD_TREMOLO             8
-#define CMD_PANNING8            9
+#define CMD_PANNING             9
 #define CMD_OFFSET              10
 #define CMD_VOLUMESLIDE         11
 #define CMD_POSITIONJUMP        12
@@ -164,7 +164,7 @@
 #define VOLCMD_FINEVOLUP        5
 #define VOLCMD_FINEVOLDOWN      6
 #define VOLCMD_VIBRATOSPEED     7
-#define VOLCMD_VIBRATO          8
+#define VOLCMD_VIBRATODEPTH     8
 #define VOLCMD_PANSLIDELEFT     9
 #define VOLCMD_PANSLIDERIGHT    10
 #define VOLCMD_TONEPORTAMENTO   11
