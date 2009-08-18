@@ -138,7 +138,7 @@ void log_load_page(struct page *page)
         page->widgets = widgets_log;
         page->help_index = HELP_GLOBAL;
 
-	create_other(widgets_log + 0, 1, log_handle_key, log_redraw);
+	create_other(widgets_log + 0, 0, log_handle_key, log_redraw);
 }
 
 /* --------------------------------------------------------------------- */
