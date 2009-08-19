@@ -363,7 +363,7 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
 	}
 	
 	if (lostfx)
-		log_appendf(2, "Pattern %d: %d effect%s skipped!\n", pat, lostfx, lostfx == 1 ? "" : "s");
+		log_appendf(2, "Pattern %d: %d effect%s skipped!", pat, lostfx, lostfx == 1 ? "" : "s");
 }
 
 
