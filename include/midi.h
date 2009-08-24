@@ -46,7 +46,7 @@ struct midi_driver {
 };
 
 struct midi_provider {
-	const char *name;
+	char *name;
 	void (*poll)(struct midi_provider *);
 	void *thread; /*actually SDL_Thread* */
 
