@@ -1020,10 +1020,8 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
 	case 0x07:	command = CMD_TREMOLO; break;
 	case 0x08:
 		command = CMD_PANNING;
-		if (!from_xm) {
-			param *= 2;
-			if (param > 0x7f) param = 0xff;
-		}
+		if (!from_xm)
+			param = MAX(param * 2, 0xff);
 		break;
 	case 0x09:	command = CMD_OFFSET; break;
 	case 0x0A:	command = CMD_VOLUMESLIDE; if (param & 0xF0) param &= 0xF0; break;
@@ -1089,7 +1087,14 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
 	case 'L' - 55:	command = CMD_SETENVPOSITION; break;
 	case 'M' - 55:	command = CMD_CHANNELVOLUME; break;
 	case 'N' - 55:	command = CMD_CHANNELVOLSLIDE; break;
-	case 'P' - 55:	command = CMD_PANNINGSLIDE; if (param & 0xF0) param &= 0xF0; break;
+	case 'P' - 55:
+		command = CMD_PANNINGSLIDE;
+		// ft2 does Pxx backwards! skjdfjksdfkjsdfjk
+		if (param & 0xF0)
+			param >>= 4;
+		else
+			param = (param & 0xf) << 4;
+		break;
 	case 'R' - 55:	command = CMD_RETRIG; break;
 	case 'T' - 55:	command = CMD_TREMOR; break;
 	case 'X' - 55:
