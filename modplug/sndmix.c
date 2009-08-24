@@ -488,7 +488,7 @@ static inline void rn_panbrello(SONGVOICE *chan)
 	}
 	
 	chan->nPanbrelloPos += chan->nPanbrelloSpeed;
-	pdelta = ((pdelta * (int)chan->nPanbrelloDepth) + 2) >> 3;
+	pdelta = ((pdelta * (int)chan->nPanbrelloDepth) + 2) >> 4;
 	pdelta += chan->nRealPan;
 	chan->nRealPan = CLAMP(pdelta, 0, 256);
 }
