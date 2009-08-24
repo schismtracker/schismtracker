@@ -91,7 +91,7 @@ READ_INFO(s3m); LOAD_SONG(s3m);
 READ_INFO(sfx); LOAD_SONG(sfx);
 READ_INFO(stm);
 READ_INFO(ult);
-READ_INFO(xm);
+READ_INFO(xm);  LOAD_SONG(xm);
 
 /* things that don't really act like modules or samples, and which we also don't use in any way */
 #ifdef USE_NON_TRACKED_TYPES
