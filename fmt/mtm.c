@@ -206,8 +206,6 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         free(trackdata);
 
         if (comment_len) {
-        	printf("%lx\n", slurp_tell(fp));
-
 		n = MIN(comment_len, MAX_MESSAGE);
 		slurp_read(fp, song->m_lpszSongComments, n);
 		song->m_lpszSongComments[n] = 0;
