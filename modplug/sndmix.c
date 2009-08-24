@@ -535,7 +535,7 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 		}
 	}
 
-	period += vdelta;
+	period -= vdelta;
 
 	// handle on tick-N, or all ticks if not in old-effects mode
 	if (!(csf->m_dwSongFlags & SONG_FIRSTTICK) || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
