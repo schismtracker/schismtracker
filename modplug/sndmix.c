@@ -430,27 +430,25 @@ static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 {
 	unsigned int trempos = chan->nTremoloPos & 0x3F;
 	int tdelta;
-	
-	if (*vol > 0) {
-		const int tremattn = 6;
-	
-		switch (chan->nTremoloType & 0x03) {
-		default:
-			tdelta = ModSinusTable[trempos];
-			break;
-		case 1:
-			tdelta = ModRampDownTable[trempos];
-			break;
-		case 2:
-			tdelta = ModSquareTable[trempos];
-			break;
-		case 3:
-			tdelta = 256 * ((double) rand() / RAND_MAX) - 128;
-			break;
-		}
-		*vol += (tdelta * (int)chan->nTremoloDepth) >> tremattn;
+
+	const int tremattn = 6;
+
+	switch (chan->nTremoloType & 0x03) {
+	default:
+		tdelta = ModSinusTable[trempos];
+		break;
+	case 1:
+		tdelta = ModRampDownTable[trempos];
+		break;
+	case 2:
+		tdelta = ModSquareTable[trempos];
+		break;
+	case 3:
+		tdelta = 256 * ((double) rand() / RAND_MAX) - 128;
+		break;
 	}
-	
+	*vol += (tdelta * (int)chan->nTremoloDepth) >> tremattn;
+
 	// handle on tick-N, or all ticks if not in old-effects mode
 	if (!(csf->m_dwSongFlags & SONG_FIRSTTICK) || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
 		chan->nTremoloPos = (trempos + chan->nTremoloSpeed) & 0x3F;
