@@ -428,30 +428,30 @@ int csf_process_tick(CSoundFile *csf)
 
 static inline void rn_tremolo(CSoundFile *csf, SONGVOICE *chan, int *vol)
 {
-	unsigned int trempos = chan->nTremoloPos & 0x3F;
+	unsigned int trempos = chan->nTremoloPos & 0xFF;
 	int tdelta;
 
-	const int tremattn = 6;
+	const int tremattn = 5;
 
 	switch (chan->nTremoloType & 0x03) {
 	default:
-		tdelta = ModSinusTable[trempos];
+		tdelta = FineSineData[trempos];
 		break;
 	case 1:
-		tdelta = ModRampDownTable[trempos];
+		tdelta = FineRampDownData[trempos];
 		break;
 	case 2:
-		tdelta = ModSquareTable[trempos];
+		tdelta = FineSquareWave[trempos];
 		break;
 	case 3:
-		tdelta = 256 * ((double) rand() / RAND_MAX) - 128;
+		tdelta = 128 * ((double) rand() / RAND_MAX) - 64;
 		break;
 	}
 	*vol += (tdelta * (int)chan->nTremoloDepth) >> tremattn;
 
 	// handle on tick-N, or all ticks if not in old-effects mode
 	if (!(csf->m_dwSongFlags & SONG_FIRSTTICK) || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
-		chan->nTremoloPos = (trempos + chan->nTremoloSpeed) & 0x3F;
+		chan->nTremoloPos = (trempos + 4 * chan->nTremoloSpeed) & 0xFF;
 	}
 }
 
@@ -467,26 +467,26 @@ static inline void rn_tremor(SONGVOICE *chan, int *vol)
 
 static inline void rn_panbrello(SONGVOICE *chan)
 {
-	unsigned int panpos = ((chan->nPanbrelloPos + 0x10) >> 2) & 0x3F;
+	unsigned int panpos = chan->nPanbrelloPos & 0xFF;
 	int pdelta;
 	
 	switch (chan->nPanbrelloType & 0x03) {
 	default:
-		pdelta = ModSinusTable[panpos];
+		pdelta = FineSineData[panpos];
 		break;
 	case 1:
-		pdelta = ModRampDownTable[panpos];
+		pdelta = FineRampDownData[panpos];
 		break;
 	case 2:
-		pdelta = ModSquareTable[panpos];
+		pdelta = FineSquareWave[panpos];
 		break;
 	case 3:
-		pdelta = 256 * ((double) rand() / RAND_MAX) - 128;
+		pdelta = 128 * ((double) rand() / RAND_MAX) - 64;
 		break;
 	}
 	
 	chan->nPanbrelloPos += chan->nPanbrelloSpeed;
-	pdelta = ((pdelta * (int)chan->nPanbrelloDepth) + 2) >> 4;
+	pdelta = ((pdelta * (int)chan->nPanbrelloDepth) + 2) >> 3;
 	pdelta += chan->nRealPan;
 	chan->nRealPan = CLAMP(pdelta, 0, 256);
 }
@@ -494,27 +494,32 @@ static inline void rn_panbrello(SONGVOICE *chan)
 
 static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 {
-	unsigned int vibpos = chan->nVibratoPos;
+	unsigned int vibpos = chan->nVibratoPos & 0xFF;
 	int vdelta;
 	unsigned int vdepth;
 	int period = *nperiod;
 
 	switch (chan->nVibratoType & 0x03) {
 	default:
-		vdelta = ModSinusTable[vibpos];
+		vdelta = FineSineData[vibpos];
 		break;
 	case 1:
-		vdelta = ModRampDownTable[vibpos];
+		vdelta = FineRampDownData[vibpos];
 		break;
 	case 2:
-		vdelta = ModSquareTable[vibpos];
+		vdelta = FineSquareWave[vibpos];
 		break;
 	case 3:
-		vdelta = 256 * ((double) rand() / RAND_MAX) - 128;
+		vdelta = 128 * ((double) rand() / RAND_MAX) - 64;
 		break;
 	}
 
-	vdepth = (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) ? 6 : 7;
+	if (csf->m_dwSongFlags & SONG_ITOLDEFFECTS) {
+		vdepth = 5;
+		vdelta = -vdelta; // yes, IT does vibrato backwards in old-effects mode. try it.
+	} else {
+		vdepth = 6;
+	}
 	vdelta = (vdelta * (int)chan->nVibratoDepth) >> vdepth;
 
 	if (csf->m_dwSongFlags & SONG_LINEARSLIDES) {
@@ -537,7 +542,7 @@ static inline void rn_vibrato(CSoundFile *csf, SONGVOICE *chan, int *nperiod)
 
 	// handle on tick-N, or all ticks if not in old-effects mode
 	if (!(csf->m_dwSongFlags & SONG_FIRSTTICK) || !(csf->m_dwSongFlags & SONG_ITOLDEFFECTS)) {
-		chan->nVibratoPos = (vibpos + chan->nVibratoSpeed) & 0x3F;
+		chan->nVibratoPos = (vibpos + 4 * chan->nVibratoSpeed) & 0xFF;
 	}
 
 	*nperiod = period;
