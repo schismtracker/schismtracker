@@ -34,9 +34,9 @@ extern uint16_t ProTrackerTunedPeriods[16*12];
 extern uint16_t FreqS3MTable[16];
 extern uint16_t S3MFineTuneTable[16];
 
-extern int16_t  ModSinusTable[64];
-extern int16_t  ModRampDownTable[64];
-extern int16_t  ModSquareTable[64];
+extern int8_t FineSineData[256];
+extern int8_t FineRampDownData[256];
+extern int8_t FineSquareWave[256];
 
 extern int8_t   retrigTable1[16];
 extern int8_t   retrigTable2[16];
