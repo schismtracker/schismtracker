@@ -443,7 +443,8 @@ typedef struct _SONGVOICE
 	unsigned int nOldOffset, nOldHiOffset;
 	unsigned int nCutOff, nResonance;
 	int nNoteDelay, nNoteCut;
-	unsigned int nRetrigCount, nRetrigParam;
+	int nRetrigCount;
+	unsigned int nRetrigParam;
 	unsigned int nTremorParam, nTremorCount;
 	unsigned int nPatternLoop, nPatternLoopCount;
 	unsigned int nRowNote, nRowInstr;
