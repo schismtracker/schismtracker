@@ -87,7 +87,6 @@ static void _sign_convert_16(signed short *data, unsigned long length)
 
 void sample_sign_convert(song_sample * sample)
 {
-	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
@@ -145,7 +144,6 @@ void sample_reverse(song_sample * sample)
 {
         unsigned long tmp;
 
-	song_stop();
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 
@@ -203,9 +201,12 @@ static void _quality_convert_16to8(signed short *idata, signed char *odata, unsi
 void sample_toggle_quality(song_sample * sample, int convert_data)
 {
 	signed char *odata;
-		
-	song_stop();
+
 	song_lock_audio();
+
+	// stop playing the sample because we'll be reallocating and/or changing lengths
+	song_stop_sample(sample);
+
 	sample->flags ^= SAMP_16_BIT;
 	
 	status.flags |= SONG_NEEDS_SAVE;
@@ -508,10 +509,14 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 	if (!newlen) return;
 	if (!sample->data || !sample->length) return;
 
+	song_lock_audio();
+	
 	/* resizing samples while they're playing keeps crashing things.
 	so here's my "fix": stop the song. --plusminus */
-	song_stop();
-	song_lock_audio();
+	// I suppose that works, but it's slightly annoying, so I'll just stop the sample...
+	// hopefully this won't (re)introduce crashes. --Storlek
+	song_stop_sample(sample);
+	
 	bps = (((sample->flags & SAMP_STEREO) ? 2 : 1)
 		* ((sample->flags & SAMP_16_BIT) ? 2 : 1));
 

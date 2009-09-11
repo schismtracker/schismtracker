@@ -306,6 +306,7 @@ void song_copy_sample(int n, song_sample *src);
 int song_load_sample(int n, const char *file);
 int song_preload_sample(void *f);
 int song_save_sample(int n, const char *file, int format_id);
+void song_stop_sample(song_sample *ssmp);
 
 int song_load_instrument(int n, const char *file);
 int song_load_instrument_ex(int n, const char *file, const char *libf, int nx);

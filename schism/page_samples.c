@@ -646,14 +646,12 @@ static void do_sign_convert(UNUSED void *data)
 static void do_quality_convert(UNUSED void *data)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
-	song_stop();
 	sample_toggle_quality(sample, 1);
 }
 
 static void do_quality_toggle(UNUSED void *data)
 {
 	song_sample *sample = song_get_sample(current_sample, NULL);
-	song_stop();
 	sample_toggle_quality(sample, 0);
 }
 
@@ -672,8 +670,8 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 	if (pos == sample->length)
 		return;
 
-	song_stop();
 	song_lock_audio();
+	song_stop_sample(sample);
 	if (sample->loop_end > pos) sample->loop_end = pos;
 	if (sample->sustain_end > pos) sample->sustain_end = pos;
 
@@ -696,9 +694,8 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 	if (pos == 0)
 		return;
 	
-	song_stop();
-	
 	song_lock_audio();
+	song_stop_sample(sample);
 	data = song_sample_allocate(bytes);
 	memcpy(data, sample->data + start_byte, bytes);
 	song_sample_free(sample->data);
