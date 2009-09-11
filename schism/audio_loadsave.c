@@ -57,10 +57,11 @@ int stop_on_load = 1;
 
 // ------------------------------------------------------------------------
 // quiet a sample when loading
-static void _squelch_sample(int n)
+
+void song_stop_sample(song_sample *ssmp)
 {
 	int i;
-	SONGSAMPLE *smp = mp->Samples + n;
+	SONGSAMPLE *smp = (SONGSAMPLE *) ssmp; // bleargh
 
 	for (i = 0; i < MAX_VOICES; i++) {
 		if (mp->Voices[i].pInstrument == smp
@@ -83,6 +84,12 @@ static void _squelch_sample(int n)
 		}
 	}
 }
+
+static void _squelch_sample(int n)
+{
+	song_stop_sample((song_sample *) mp->Samples + n); // sdkflhaghljfsdh
+}
+
 
 // functions to "fix" the song for editing.
 // these are all called by fix_song after a file is loaded.
