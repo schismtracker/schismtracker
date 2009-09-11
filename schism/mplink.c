@@ -409,16 +409,6 @@ int song_get_rows_in_pattern(int pattern)
 
 // ------------------------------------------------------------------------
 
-/*
-mp->PatternSize
-	The size of the pattern, of course.
-mp->PatternAllocSize
-	Not used anywhere (yet). I'm planning on keeping track of space off the end of a pattern when it's
-	shrunk, so that making it longer again will restore it. (i.e., handle resizing the same way IT does)
-	I'll add this stuff in later; I have three handwritten pages detailing how to implement it. ;)
-get_current_pattern() = in pattern editor
-song_get_playing_pattern() = current pattern being played
-*/
 void song_pattern_resize(int pattern, int newsize)
 {
 	song_lock_audio();
