@@ -491,6 +491,7 @@ static void fx_retrig_note(CSoundFile *csf, uint32_t nChn, uint32_t param)
 		csf_note_change(csf, nChn, nNote, 1, 0, 0);
 		if (nOldPeriod && pChn->nRowNote == NOTE_NONE)
 			pChn->nPeriod = nOldPeriod;
+		pChn->nPos = pChn->nPosLo = 0;
 	}
 }
 
