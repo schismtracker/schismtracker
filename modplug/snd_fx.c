@@ -575,8 +575,6 @@ static void fx_pattern_loop(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 }
 
 
-
-
 static void fx_extended_channel(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 {
 	// S9x and X9x commands (S3M/XM/IT only)
@@ -1017,8 +1015,7 @@ unsigned int csf_get_length(CSoundFile *csf)
 					pChn->nOldTempo = param;
 				else
 					param = pChn->nOldTempo;
-				// this is split up due to c++ stupidity (gcc bug?)
-				int d; d = (param & 0xf);
+				int d = (param & 0xf);
 				switch (param >> 4) {
 				default:
 					nMusicTempo = param;
