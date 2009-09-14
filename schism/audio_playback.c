@@ -557,7 +557,7 @@ void song_start_at_pattern(int pattern, int row)
 void song_single_step(int patno, int row)
 {
 	int total_rows;
-	int i, vol;
+	int i, vol, smp, ins;
 	song_note *pattern, *cur_note;
 	song_mix_channel *cx;
 
@@ -573,7 +573,21 @@ void song_single_step(int patno, int row)
 		} else {
 			vol = KEYJAZZ_DEFAULTVOL;
 		}
-		song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
+
+		// look familiar? this is modified slightly from pattern_editor_insert
+		// (and it is wrong for the same reason as described there)
+		smp = ins = cur_note->instrument;
+		if (song_is_instrument_mode()) {
+			if (ins < 1)
+				ins = KEYJAZZ_NOINST;
+			smp = -1;
+		} else {
+			if (smp < 1)
+				smp = KEYJAZZ_NOINST;
+			ins = -1;
+		}
+
+		song_keyrecord(smp, ins, cur_note->note,
 			vol, i, cur_note->effect, cur_note->parameter);
 	}
 }

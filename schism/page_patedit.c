@@ -2985,27 +2985,8 @@ static int pattern_editor_insert(struct key_event *k)
 
 	switch (current_position) {
 	case 0:			/* note */
-		if (k->sym == SDLK_4) {
-			if (k->state) return 0;
-			
-			if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
-				vol = cur_note->volume;
-			} else {
-				vol = -1;
-			}
-			song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
-				vol, current_channel, cur_note->effect, cur_note->parameter);
-			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
-			return 1;
-		} else if (k->sym == SDLK_8 && k->orig_sym == SDLK_8) {
-                	/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
-			if (k->state) return 0;
-			song_single_step(current_pattern, current_row);
-			advance_cursor(!(k->mod & KMOD_SHIFT), 0);
-			return 1;
-		}
-
-		// ugh
+		// FIXME: this is actually quite wrong; instrument numbers should be independent for each
+		// channel and take effect when the instrument is played (e.g. with 4/8 or keyjazz input)
 		smp = ins = cur_note->instrument;
 		if (song_is_instrument_mode()) {
 			if (ins < 1 || (edit_copy_mask & MASK_INSTRUMENT))
@@ -3015,6 +2996,26 @@ static int pattern_editor_insert(struct key_event *k)
 			if (smp < 1 || (edit_copy_mask & MASK_INSTRUMENT))
 				smp = sample_get_current();
 			ins = -1;
+		}
+
+		if (k->sym == SDLK_4) {
+			if (k->state) return 0;
+			
+			if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
+				vol = cur_note->volume;
+			} else {
+				vol = -1;
+			}
+			song_keyrecord(smp, ins, cur_note->note,
+				vol, current_channel, cur_note->effect, cur_note->parameter);
+			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
+			return 1;
+		} else if (k->sym == SDLK_8 && k->orig_sym == SDLK_8) {
+                	/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
+			if (k->state) return 0;
+			song_single_step(current_pattern, current_row);
+			advance_cursor(!(k->mod & KMOD_SHIFT), 0);
+			return 1;
 		}
 
 		/* TODO: rewrite this more logically */
