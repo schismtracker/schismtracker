@@ -106,5 +106,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>CGDisableCoalescedUpdates</key>
+	<true/>
 </dict>
 </plist>
