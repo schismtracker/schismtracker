@@ -10,6 +10,7 @@ helptexts = \
 	helptext/orderlist-pan		\
 	helptext/orderlist-vol		\
 	helptext/pattern-editor		\
+	helptext/adlib-sample		\
 	helptext/sample-list
 fonts = \
 	font/default-lower.fnt		\
@@ -18,7 +19,6 @@ fonts = \
 	font/half-width.fnt
 icons = \
 	icons/appIcon.icns		\
-	icons/it_logo.png		\
 	icons/moduleIcon.icns		\
 	icons/schism-file-128.png	\
 	icons/schism-icon-128.png	\
@@ -33,8 +33,32 @@ icons = \
 	icons/schism-icon-72.png	\
 	icons/schism-icon-96.png	\
 	icons/schism-icon.svg		\
+	icons/schism-itf-icon-128.png	\
+	icons/schism-itf-icon-16.png	\
+	icons/schism-itf-icon-192.png	\
+	icons/schism-itf-icon-22.png	\
+	icons/schism-itf-icon-24.png	\
+	icons/schism-itf-icon-32.png	\
+	icons/schism-itf-icon-36.png	\
+	icons/schism-itf-icon-48.png	\
+	icons/schism-itf-icon-64.png	\
+	icons/schism-itf-icon-72.png	\
+	icons/schism-itf-icon-96.png	\
+	icons/schism-itf-icon.svg	\
+	icons/it_logo.png		\
 	icons/schism_logo.png		\
 	icons/schismres.ico
+sysfiles = \
+	sys/fd.org/autopackage.apspec	\
+	sys/fd.org/itf.desktop		\
+	sys/fd.org/schism.desktop	\
+	sys/macosx/Schism Tracker.app/Contents/Info.plist			\
+	sys/macosx/Schism Tracker.app/Contents/PkgInfo				\
+	sys/macosx/Schism Tracker.app/Contents/Resources/AppSettings.plist	\
+	sys/macosx/Schism Tracker.app/Contents/Resources/appIcon.icns		\
+	sys/macosx/Schism Tracker.app/Contents/Resources/moduleIcon.icns	\
+	sys/win32/schism.nsis		\
+	sys/sdl/README
 
 EXTRA_DIST = \
 	COPYING.frag-opt		\
@@ -43,6 +67,24 @@ EXTRA_DIST = \
 	$(helptexts)			\
 	$(fonts)			\
 	$(icons)
+
+
+## The following files are available from the hg repository but ae deliberately NOT being included in
+## the static packages, either because they are used to generate other source files which are already
+## included, or because they are of limited use without a repository.
+##
+##   - .hgignore
+##   - .hgtags
+##   - README.maint-notes
+##   - fmt/mp3.c
+##   - fmt/ogg.c
+##   - fmt/sid.c
+##   - lutgen/*
+##   - schism/isysev.c
+##   - schism/tree.c
+##   - scripts/*
+
+
 
 bin_PROGRAMS = schismtracker
 
