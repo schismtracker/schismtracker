@@ -1024,8 +1024,7 @@ static void save_module_set_page(void)
 	update_directory();
 	/* impulse tracker always resets these; so will i */
 	set_default_glob(0);
-	strncpy(filename_entry, song_basename, NAME_MAX);
-	filename_entry[NAME_MAX] = 0;
+	filename_entry[0] = 0;
 	pages[PAGE_SAVE_MODULE].selected_widget = 2;
 }
 
