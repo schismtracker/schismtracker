@@ -231,7 +231,7 @@ schismtracker_SOURCES = \
 	fmt/far.c			\
 	fmt/wav.c			\
 	fmt/mid.cc			\
-	fmt/its.cc			\
+	fmt/its.c			\
 	fmt/psm.cc			\
 	fmt/scri.cc			\
 	fmt/iti.c			\
