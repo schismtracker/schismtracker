@@ -619,6 +619,8 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 	
 	if (!i)
 		i = &blank_instrument;
+
+	memset(&iti, 0, sizeof(iti));
 	
 	// envelope: flags num lpb lpe slb sle data[25*3] reserved
 	
@@ -868,7 +870,7 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
 	}				// end row
 	
 	// write the data to the file (finally!)
-	unsigned short h[4];
+	unsigned short h[4] = {0};
 	h[0] = bswapLE16(pos);
 	h[1] = bswapLE16(patsize);
 	// h[2] and h[3] are meaningless
@@ -885,6 +887,8 @@ static void _save_it(diskwriter_driver_t *fp)
 	unsigned int para_ins[256], para_smp[256], para_pat[256];
 	unsigned int extra;
 	unsigned short zero;
+
+	memset(&hdr, 0, sizeof(hdr));
 
 	feature_check_instruments("IT", 99,
 			ENV_SETPANNING
@@ -916,10 +920,9 @@ static void _save_it(diskwriter_driver_t *fp)
 	nord += 2;
 	
 	nins = 198;
-	while (nins >= 0 && song_instrument_is_empty(nins-1))
+	while (nins >= 0 && song_instrument_is_empty(nins))
 		nins--;
-	nins++;
-	
+
 	nsmp = 198;
 	while (nsmp >= 0 && song_sample_is_empty(nsmp))
 		nsmp--;
@@ -981,7 +984,10 @@ static void _save_it(diskwriter_driver_t *fp)
 		extra += sizeof(MODMIDICFG);
 	}
 	hdr.flags = bswapLE16(hdr.flags);
-	if (msglen) hdr.special |= 1;
+	if (msglen) {
+		hdr.special |= 1;
+		msglen++;
+	}
 	hdr.special = bswapLE16(hdr.special);
 
 	// 16+ = reserved (always off?)
@@ -1053,14 +1059,14 @@ static void _save_it(diskwriter_driver_t *fp)
 		unsigned int tmp, op;
 		SONGSAMPLE *smp = mp->Samples + (n + 1);
 		
-		if (smp->pSample) {
-			op = fp->pos;
-			tmp = bswapLE32(op);
-			fp->l(fp, para_smp[n]+0x48);
-			fp->o(fp, (const unsigned char *)&tmp, 4);
-			fp->l(fp, op);
+		// Always save the data pointer, even if there's not actually any data being pointed to
+		op = fp->pos;
+		tmp = bswapLE32(op);
+		fp->l(fp, para_smp[n]+0x48);
+		fp->o(fp, (const unsigned char *)&tmp, 4);
+		fp->l(fp, op);
+		if (smp->pSample)
 			save_sample_data_LE(fp, (song_sample *)smp, 1);
-		}
 		// done using the pointer internally, so *now* swap it
 		para_smp[n] = bswapLE32(para_smp[n]);
 	}

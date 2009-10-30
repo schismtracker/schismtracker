@@ -186,11 +186,10 @@ void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title)
 {
 	ITSAMPLESTRUCT its;
 	
+	memset(&its, 0, sizeof(its));
 	its.id = bswapLE32(0x53504D49); // IMPS
 	strncpy((char *) its.filename, (char *) smp->filename, 12);
-	its.zero = 0;
 	its.gvl = smp->global_volume;
-	its.flags = 0; // uFlags
 	if (smp->data && smp->length)
 		its.flags |= 1;
 	if (smp->flags & SAMP_16_BIT)
