@@ -24,8 +24,6 @@
 #include "headers.h"
 #include "fmt.h"
 
-/* FIXME - shouldn't be using the Modplug headers here. The only reason I'm doing so is because Modplug
-has the IT sample decompression code... */
 #include "mplink.h"
 #include "it_defs.h"
 
