@@ -915,13 +915,14 @@ static void _save_it(diskwriter_driver_t *fp)
 	
 	// IT always saves at least two orders.
 	nord = 255;
-	while (nord >= 0 && mp->Orderlist[nord] == 0xff)
+	while (nord >= 1 && mp->Orderlist[nord] == 0xff)
 		nord--;
 	nord += 2;
 	
 	nins = 198;
 	while (nins >= 0 && song_instrument_is_empty(nins))
 		nins--;
+	if (nins < 0) nins = 0; // stupid workaround
 
 	nsmp = 198;
 	while (nsmp >= 0 && song_sample_is_empty(nsmp))
