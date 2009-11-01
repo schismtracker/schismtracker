@@ -567,8 +567,8 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 	    Impulse = 3xyy
 	    So we'll use 4
 	reference: http://xmp.cvs.sf.net/viewvc/xmp/xmp2/src/loaders/s3m_load.c?view=markup */
-	header[0x28] = 0x50; // ST3.20 = 0x1320
-	header[0x29] = 0x40;
+	header[0x28] = ver_cwtv & 0xff;
+	header[0x29] = 0x40 | (ver_cwtv >> 8);
 	header[0x2A] = 0x02; // Version = 1 => Signed samples
 	header[0x2B] = 0x00;
 	header[0x2C] = 'S';

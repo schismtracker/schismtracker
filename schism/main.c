@@ -1065,6 +1065,11 @@ int main(int argc, char **argv)
 		status.flags |= NO_NETWORK;
         }
 #endif
+	/* this needs to be done very early, because the version is used in the help text etc.
+	Also, this needs to happen before any locale stuff is initialized
+	(but we don't do that at all yet, anyway) */
+	ver_init();
+
 	/* FIXME: make a config option for this, and stop abusing frickin' environment variables! */
 	put_env_var("SCHISM_VIDEO_ASPECT", "full");
 
