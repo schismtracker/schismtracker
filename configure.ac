@@ -107,21 +107,6 @@ AC_TYPE_SIZE_T
 AC_STRUCT_TM
 LT_LIB_M
 AC_SUBST(LIBM)
-AC_CHECK_LIB(z, inflate, [zlib=yes])
-if test "$zlib" = "yes"
-then
-	AM_CONDITIONAL([USE_ZLIB], [true])
-
-	SDL_LIBS="$SDL_LIBS -lz"
-	AC_SUBST(SDL_LIBS)
-	
-	LIBS="$LIBS -lz"
-	AC_SUBST(LIBS)
-
-	AC_CHECK_HEADERS(zlib.h)
-else
-	AM_CONDITIONAL([USE_ZLIB], [false])
-fi
 
 AC_CHECK_FUNCS(log2)
 
