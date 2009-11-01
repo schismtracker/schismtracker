@@ -123,6 +123,7 @@ static int get_version_tm(struct tm *version)
 {
 	char *ret;
 #ifdef HG_VERSION
+	memset(version, 0, sizeof(*version));
 	/* Try this first, but make sure it's not broken (can happen if 'hg' is removed after configure) */
 	if (HG_VERSION[0] >= '0' && HG_VERSION[0] <= '9') {
 		ret = strptime(HG_VERSION, "%Y-%m-%d", version);
@@ -131,10 +132,12 @@ static int get_version_tm(struct tm *version)
 	}
 #endif
 	/* Ok how about VERSION? (Note this has spaces only because strptime is dumb) */
+	memset(version, 0, sizeof(*version));
 	ret = strptime(VERSION, "%Y %m %d", version);
 	if (ret && !*ret)
 		return 1;
 	/* Argh. */
+	memset(version, 0, sizeof(*version));
 	ret = strptime(__DATE__, "%b %e %Y", version);
 	if (ret && !*ret)
 		return 1;
@@ -144,7 +147,7 @@ static int get_version_tm(struct tm *version)
 
 void ver_init(void)
 {
-	struct tm version = {0}, epoch = { .tm_year = 109, .tm_mon = 9, .tm_mday = 31 }; /* 2009-10-31 */
+	struct tm version, epoch = { .tm_year = 109, .tm_mon = 9, .tm_mday = 31 }; /* 2009-10-31 */
 	time_t version_sec, epoch_sec;
 
 	if (get_version_tm(&version)) {
