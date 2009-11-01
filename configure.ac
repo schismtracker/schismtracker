@@ -20,6 +20,7 @@ dnl You should have received a copy of the GNU General Public License
 dnl along with this program; if not, write to the Free Software
 dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+dnl 'hg', or a date in the form YYYYMMDD
 AC_INIT([schismtracker], [hg])
 
 AC_CONFIG_SRCDIR([schism/main.c])
@@ -251,6 +252,43 @@ OBJC=$CC
 OBJCFLAGS=$CFLAGS
 AC_SUBST(OBJC)
 AC_SUBST(OBJCFLAGS)
+
+dnl -----------------------------------------------------------------------
+dnl stupid version hack
+
+AC_ARG_ENABLE(mercurial,
+	AS_HELP_STRING([--enable-mercurial], [Use Mercurial for version/timestamps]),
+	USE_MERCURIAL=$enableval,
+	USE_MERCURIAL=yes)
+
+dnl We want to get the most accurate information of the version possible.
+dnl If Mercurial is present, 'hg parents' will tell us what version is
+dnl really being compiled.
+
+AC_MSG_CHECKING(for Mercurial)
+if test x$USE_MERCURIAL = xyes; then
+	hg_dirstate=no
+	if test -e "$ac_abs_confdir"/.hg/dirstate; then
+		if hg --version >/dev/null; then
+			AC_MSG_RESULT(found)
+			hg_dirstate=yes
+		else
+			AC_MSG_RESULT(not found)
+			echo "*** Warning: .hg/dirstate exists, but no 'hg' command in PATH"
+			echo "*** Mercurial version information cannot be compiled in"
+		fi
+	else
+		AC_MSG_RESULT(not found)
+	fi
+else
+	AC_MSG_RESULT(skipped)
+fi
+
+if test "x$hg_dirstate" = "xyes"; then
+	AM_CONDITIONAL([USE_MERCURIAL], [true])
+else
+	AM_CONDITIONAL([USE_MERCURIAL], [false])
+fi
 
 dnl -----------------------------------------------------------------------
 dnl Optimizations borrowed and modified a bit from DGen.

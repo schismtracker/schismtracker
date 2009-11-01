@@ -198,6 +198,12 @@ if NEED_GNU_MEMCMP
 files_gnu_memcmp=schism/memcmp.c
 endif
 
+if USE_MERCURIAL
+cflags_version=-DHG_VERSION=\""`hg parents --template '{date|shortdate}'`"\"
+# used in the dependency declaration of version.o to cause rebuild after commit
+hg_dirstate=.hg/dirstate
+endif
+
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
 	schism/page_blank.c		\
@@ -339,7 +345,7 @@ schismtracker_SOURCES = \
 	$(files_windres)
 
 # have version.o rely on all files
-schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
+schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS) $(hg_dirstate)
 
 
 cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
@@ -347,7 +353,8 @@ cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE \
 	-I$(srcdir)/include -I$(srcdir)/modplug -I.
 AM_CFLAGS = @SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
-	$(cflags_network) $(cflags_x11) $(cflags_zlib) $(cflags_fmopl)
+	$(cflags_network) $(cflags_x11) $(cflags_zlib) $(cflags_fmopl) \
+	$(cflags_version)
 AM_CXXFLAGS = ${AM_CFLAGS}
 AM_OBJCFLAGS = ${AM_CFLAGS}
 
