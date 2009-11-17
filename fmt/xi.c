@@ -98,11 +98,11 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 		xmss.samplen = bswapLE32(xmss.samplen);
 		xmss.loopstart = bswapLE32(xmss.loopstart);
 		xmss.looplen = bswapLE32(xmss.looplen);
-		if (xmss.type & 0x20) {
-			rs = (xmss.type & 0x10) ? RS_STPCM16D : RS_STPCM8D;
-		} else {
-			rs = (xmss.type & 0x10) ? RS_PCM16D : RS_PCM8D;
-		}
+
+		rs = SF_LE | SF_PCMD; // endianness; encoding
+		rs |= (xmss.type & 0x20) ? SF_SS : SF_M; // channels
+		rs |= (xmss.type & 0x10) ? SF_16 : SF_8; // bits
+
 		if (xmss.type & 0x10) {
 			xmss.looplen >>= 1;
 			xmss.loopstart >>= 1;

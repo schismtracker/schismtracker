@@ -35,11 +35,13 @@ bool CSoundFile::ReadUMX(const uint8_t *lpStream, uint32_t dwMemLength)
 				return ReadS3M(lpStream + dwRipOfs, dwMemLength - dwRipOfs);
 			}
 			// XM
+#if 0
 			if (!strncasecmp((const char *)(lpStream+uscan), "Extended Module", 15))
 			{
 				uint32_t dwRipOfs = uscan;
 				return ReadXM(lpStream + dwRipOfs, dwMemLength - dwRipOfs);
 			}
+#endif
 			// MOD
 			if ((uscan > MODMAGIC_OFFSET) && (dwScan == 0x2e4b2e4d))
 			{

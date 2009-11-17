@@ -8,6 +8,7 @@
 
 #include <math.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include "sndfile.h"
 #include "log.h"
@@ -474,30 +475,46 @@ uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFl
 }
 
 
-// Flags:
-//	0 = signed 8-bit PCM data (default)
-//	1 = unsigned 8-bit PCM data
-//	2 = 8-bit ADPCM data with linear table
-//	3 = 4-bit ADPCM data
-//	4 = 16-bit ADPCM data with linear table
-//	5 = signed 16-bit PCM data
-//	6 = unsigned 16-bit PCM data
-
+#define SF_FAIL(name,n) log_appendf(4, "csf_read_sample: internal error: unsupported %s %d", name, n);return 0
 uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFile, uint32_t dwMemLength)
 {
 	uint32_t len = 0, mem;
-	
+
+	// validate the read flags before anything else
+	switch (nFlags & SF_BIT_MASK) {
+		case SF_8: case SF_16: case SF_24: case SF_32: break;
+		default: SF_FAIL("bit width", nFlags & SF_BIT_MASK);
+	}
+	switch (nFlags & SF_CHN_MASK) {
+		case SF_M: case SF_SI: case SF_SS: break;
+		default: SF_FAIL("channel mask", nFlags & SF_CHN_MASK);
+	}
+	switch (nFlags & SF_END_MASK) {
+		case SF_LE: case SF_BE: break;
+		default: SF_FAIL("endianness", nFlags & SF_END_MASK);
+	}
+	switch (nFlags & SF_ENC_MASK) {
+		case SF_PCMS: case SF_PCMU: case SF_PCMD: case SF_IT214: case SF_IT215:
+		case SF_AMS: case SF_DMF: case SF_MDL: case SF_PTM:
+			break;
+		default: SF_FAIL("encoding", nFlags & SF_ENC_MASK);
+	}
+	if ((nFlags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK)) != 0) {
+		SF_FAIL("extra flag", nFlags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK));
+	}
+
 	if (pIns->uFlags & CHN_ADLIB) return 0; // no sample data
 
 	if (!pIns || pIns->nLength < 1 || !lpMemFile) return 0;
 	if (pIns->nLength > MAX_SAMPLE_LENGTH) pIns->nLength = MAX_SAMPLE_LENGTH;
 	mem = pIns->nLength+6;
 	pIns->uFlags &= ~(CHN_16BIT|CHN_STEREO);
-	if (nFlags & RSF_16BIT) {
+	if ((nFlags & SF_BIT_MASK) == SF_16) {
 		mem *= 2;
 		pIns->uFlags |= CHN_16BIT;
 	}
-	if (nFlags & RSF_STEREO) {
+	switch (nFlags & SF_CHN_MASK) {
+	case SF_SI: case SF_SS:
 		mem *= 2;
 		pIns->uFlags |= CHN_STEREO;
 	}
@@ -768,7 +785,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 				}
 				if (sign) hibyte = ~hibyte;
 				dlt += hibyte;
-				if (nFlags != RS_MDL16) {
+				if (nFlags == RS_MDL8) {
 					pSample[j] = dlt;
 				} else {
 					pSample[j<<1] = lowbyte;
@@ -790,9 +807,11 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 		}
 		break;
 
+#if 0 // THESE ARE BROKEN
 	// PCM 24-bit signed -> load sample, and normalize it to 16-bit
 	case RS_PCM24S:
 	case RS_PCM32S:
+		printf("PCM 24/32\n");
 		len = pIns->nLength * 3;
 		if (nFlags == RS_PCM32S) len += pIns->nLength;
 		if (len > dwMemLength) break;
@@ -845,6 +864,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 			}
 		}
 		break;
+#endif
 
 	// 16-bit signed big endian interleaved stereo
 	case RS_STIPCM16M:
@@ -864,6 +884,9 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
 
 	// Default: 8-bit signed PCM data
 	default:
+		printf("DEFAULT: %d\n", nFlags);
+		pIns->uFlags &= ~(CHN_16BIT | CHN_STEREO);
+	case RS_PCM8S:
 		len = pIns->nLength;
 		if (len > dwMemLength) len = pIns->nLength = dwMemLength;
 		memcpy(pIns->pSample, lpMemFile, len);

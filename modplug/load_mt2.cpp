@@ -622,12 +622,9 @@ bool CSoundFile::ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength)
 			#ifdef MT2DEBUG
 				Log("  Reading sample #%d at offset 0x%04X (len=%d)\n", iData+1, dwMemPos, psmp->nLength);
 			#endif
-				uint32_t rsflags;
-				
-				if (pms->nChannels == 2)
-					rsflags = (psmp->uFlags & CHN_16BIT) ? RS_STPCM16D : RS_STPCM8D;
-				else
-					rsflags = (psmp->uFlags & CHN_16BIT) ? RS_PCM16D : RS_PCM8D;
+				uint32_t rsflags = SF_LE | SF_PCMD;
+				rsflags |= (pms->nChannels == 2) ? SF_SS : SF_M;
+				rsflags |= (psmp->uFlags & CHN_16BIT) ? SF_16 : SF_8;
 
 				dwMemPos += csf_read_sample(psmp, rsflags, (const char *)(lpStream+dwMemPos), dwMemLength-dwMemPos);
 			}

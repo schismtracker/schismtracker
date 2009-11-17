@@ -228,25 +228,17 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 				{
 					pins->nLength = pis.length;
 					if (pins->nLength > MAX_SAMPLE_LENGTH) pins->nLength = MAX_SAMPLE_LENGTH;
-					uint32_t flags = (pis.cvt & 1) ? RS_PCM8S : RS_PCM8U;
-					if (pis.flags & 2) {
-						flags += 5;
-						pins->uFlags |= CHN_16BIT;
-						if (pis.flags & 4) {
-							flags |= RSF_STEREO;
-						}
-						// IT 2.14 16-bit packed sample ?
-						if (pis.flags & 8) {
-							flags = (pis.cvt & 4) ? RS_IT21516 : RS_IT21416;
-						}
+					
+					// see fmt/its.c
+					uint32_t flags = SF_LE;
+					if (pis.flags & 8) {
+						flags |= SF_M;
+						flags |= (pis.cvt & 4) ? SF_IT215 : SF_IT214;
 					} else {
-						if (pis.flags & 4) {
-							flags |= RSF_STEREO;
-						}
-						if (pis.flags & 8) {
-							flags = (pis.cvt & 4) ? RS_IT2158 : RS_IT2148;
-						}
+						flags |= (pis.flags & 4) ? SF_SS : SF_M;
+						flags |= (pis.cvt & 1) ? SF_PCMS : SF_PCMU;
 					}
+					flags |= (pis.flags & 2) ? SF_16 : SF_8;
 					csf_read_sample(&Samples[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 				}
 			}
@@ -451,22 +443,17 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 			{
 				pins->nLength = pis.length;
 				if (pins->nLength > MAX_SAMPLE_LENGTH) pins->nLength = MAX_SAMPLE_LENGTH;
-				uint32_t flags = (pis.cvt & 1) ? RS_PCM8S : RS_PCM8U;
-				if (pis.flags & 2)
-				{
-					flags += 5;
-					if (pis.flags & 4) flags |= RSF_STEREO;
-					pins->uFlags |= CHN_16BIT;
-					// IT 2.14 16-bit packed sample ?
-					if (pis.flags & 8)
-						flags = (pis.cvt & 4) ? RS_IT21516 : RS_IT21416;
-				} else
-				{
-					if (pis.flags & 4) flags |= RSF_STEREO;
-					// IT 2.14 8-bit packed sample ?
-					if (pis.flags & 8)
-						flags = (pis.cvt & 4) ? RS_IT2158 : RS_IT2148;
+				
+				// idiotic copy-paste programming
+				uint32_t flags = SF_LE;
+				if (pis.flags & 8) {
+					flags |= SF_M;
+					flags |= (pis.cvt & 4) ? SF_IT215 : SF_IT214;
+				} else {
+					flags |= (pis.flags & 4) ? SF_SS : SF_M;
+					flags |= (pis.cvt & 1) ? SF_PCMS : SF_PCMU;
 				}
+				flags |= (pis.flags & 2) ? SF_16 : SF_8;
 				csf_read_sample(&Samples[nsmp+1], flags, (const char *)(lpStream+pis.samplepointer), dwMemLength - pis.samplepointer);
 			}
 		}

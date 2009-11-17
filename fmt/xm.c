@@ -501,7 +501,7 @@ static void load_xm_samples(SONGSAMPLE *first, int total, slurp_t *fp)
 		}
 		// modplug's sample-reading function is complicated and retarded
 		smp->pSample = csf_allocate_sample(smpsize);
-		csf_read_sample(smp, (smp->uFlags & CHN_16BIT) ? RS_PCM16D : RS_PCM8D,
+		csf_read_sample(smp, SF_LE | SF_M | SF_PCMD | ((smp->uFlags & CHN_16BIT) ? SF_16 : SF_8),
 			(const char *) fp->data + fp->pos, fp->length - fp->pos);
 		slurp_seek(fp, smpsize, SEEK_CUR);
 	}
@@ -537,6 +537,9 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
 	if (strncmp(song->tracker_id, "FastTracker ", 12) == 0) {
 		if (hdr->headersz == 276 && strncmp(song->tracker_id + 12, "v2.00   ", 8) == 0) {
 			// TODO: is it at all possible to tell the precise FT2 version? that'd be a neat trick.
+			// (Answer: unlikely. After some testing, I can't identify any differences between 2.04
+			// and 2.09. Doesn't mean for certain that they're identical, but I would be surprised
+			// if anything did change.)
 			detected = ID_FT2GENERIC | ID_MAYBEMODPLUG;
 			// replace the "v2.00" with just a 2, since it's probably not actually v2.00
 			strcpy(song->tracker_id + 12, "2");

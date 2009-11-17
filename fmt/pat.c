@@ -188,11 +188,9 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
 		smp->speed = gfsamp.samplerate;
 		
 		smp->flags = 0;
-		if (gfsamp.smpmode & 2) {
-			rs = (gfsamp.smpmode & 1) ? RS_PCM16S : RS_PCM8S;
-		} else {
-			rs = (gfsamp.smpmode & 1) ? RS_PCM16U : RS_PCM8U;
-		}
+		rs = SF_M | SF_LE; // channels; endianness
+		rs |= (gfsamp.smpmode & 1) ? SF_16 : SF_8; // bit width
+		rs |= (gfsamp.smpmode & 2) ? SF_PCMS : SF_PCMU; // encoding
 		if (gfsamp.smpmode & 4) smp->flags |= SAMP_LOOP;
 		if (gfsamp.smpmode & 8) smp->flags |= SAMP_LOOP_PINGPONG;
 		if (gfsamp.smpmode & 32) smp->flags |= SAMP_SUSLOOP;

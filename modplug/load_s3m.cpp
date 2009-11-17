@@ -502,12 +502,10 @@ bool CSoundFile::ReadS3M(const uint8_t *lpStream, uint32_t dwMemLength)
 	// Reading samples
 	for (uint32_t iRaw=1; iRaw<=insnum; iRaw++) if ((Samples[iRaw].nLength) && (insfile[iRaw]))
 	{
-		uint32_t flags;
-		if (insflags[iRaw-1] & 4)
-			flags = (psfh.version == 1) ? RS_PCM16S : RS_PCM16U;
-		else
-			flags = (psfh.version == 1) ? RS_PCM8S : RS_PCM8U;
-		if (insflags[iRaw-1] & 2) flags |= RSF_STEREO;
+		uint32_t flags = SF_LE
+			| ((insflags[iRaw - 1] & 2) ? SF_SS : SF_M)
+			| ((psfh.version == 1) ? SF_PCMS : SF_PCMU)
+			| ((insflags[iRaw - 1] & 4) ? SF_16 : SF_8);
 		dwMemPos = insfile[iRaw];
 		dwMemPos += csf_read_sample(&Samples[iRaw], flags, (const char *)(lpStream + dwMemPos), dwMemLength - dwMemPos);
 	}
@@ -776,16 +774,20 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 			insex[i-1].loopbegin = bswapLE32(pins->nLoopStart);
 			insex[i-1].loopend = bswapLE32(pins->nLoopEnd);
 			insex[i-1].flags = (pins->uFlags & CHN_LOOP) ? 1 : 0;
-			uint32_t flags = RS_PCM8U;
+			uint32_t flags = SF_LE | SF_PCMU;
 			if (pins->uFlags & CHN_16BIT)
 			{
 				insex[i-1].flags |= 4;
-				flags = RS_PCM16U;
+				flags |= SF_16;
+			} else {
+				flags |= SF_8;
 			}
 			if (pins->uFlags & CHN_STEREO)
 			{
 				insex[i-1].flags |= 2;
-				flags = (pins->uFlags & CHN_16BIT) ? RS_STPCM16U : RS_STPCM8U;
+				flags |= SF_SS;
+			} else {
+				flags = SF_M;
 			}
 			uint32_t len = csf_write_sample(fp, pins, flags, 0);
 			if (len & 0x0F)

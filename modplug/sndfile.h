@@ -171,52 +171,6 @@
 #define VOLCMD_PORTAUP          12
 #define VOLCMD_PORTADOWN        13
 
-#define RSF_16BIT               0x04
-#define RSF_STEREO              0x08
-#define RSF_INTERLEAVED         0x40
-
-#define RS_PCM8S                0       // 8-bit signed
-#define RS_PCM8U                1       // 8-bit unsigned
-#define RS_PCM8D                2       // 8-bit delta values
-#define RS_PCM16D               4       // 16-bit delta values
-#define RS_PCM16S               5       // 16-bit signed
-#define RS_PCM16U               6       // 16-bit unsigned
-#define RS_PCM16M               7       // 16-bit motorola order
-#define RS_STPCM8S              (RS_PCM8S|RSF_STEREO)  // stereo 8-bit signed
-#define RS_STPCM8U              (RS_PCM8U|RSF_STEREO)  // stereo 8-bit unsigned
-#define RS_STPCM8D              (RS_PCM8D|RSF_STEREO)  // stereo 8-bit delta values
-#define RS_STPCM16S             (RS_PCM16S|RSF_STEREO) // stereo 16-bit signed
-#define RS_STPCM16U             (RS_PCM16U|RSF_STEREO) // stereo 16-bit unsigned
-#define RS_STPCM16D             (RS_PCM16D|RSF_STEREO) // stereo 16-bit delta values
-#define RS_STPCM16M             (RS_PCM16M|RSF_STEREO) // stereo 16-bit signed big endian
-// IT 2.14 compressed samples
-#define RS_IT2148               0x10
-#define RS_IT21416              0x14
-#define RS_IT2158               0x12
-#define RS_IT21516              0x16
-// AMS Packed Samples
-#define RS_AMS8                 0x11
-#define RS_AMS16                0x15
-// DMF Huffman compression
-#define RS_DMF8                 0x13
-#define RS_DMF16                0x17
-// MDL Huffman compression
-#define RS_MDL8                 0x20
-#define RS_MDL16                0x24
-#define RS_PTM8DTO16            0x25
-// Stereo Interleaved Samples
-#define RS_STIPCM8S             (RS_PCM8S|RSF_INTERLEAVED|RSF_STEREO)      // stereo 8-bit signed
-#define RS_STIPCM8U             (RS_PCM8U|RSF_INTERLEAVED|RSF_STEREO)      // stereo 8-bit unsigned
-#define RS_STIPCM16S            (RS_PCM16S|RSF_INTERLEAVED|RSF_STEREO)     // stereo 16-bit signed
-#define RS_STIPCM16U            (RS_PCM16U|RSF_INTERLEAVED|RSF_STEREO)     // stereo 16-bit unsigned
-#define RS_STIPCM16M            (RS_PCM16M|RSF_INTERLEAVED|RSF_STEREO)     // stereo 16-bit signed big endian
-// 24-bit signed
-#define RS_PCM24S               (RS_PCM16S|0x80)                // mono 24-bit signed
-#define RS_STIPCM24S            (RS_PCM16S|0x80|RSF_STEREO)     // stereo 24-bit signed
-// 32-bit signed
-#define RS_PCM32S               (RS_PCM16S|0xC0)                // mono 32-bit signed
-#define RS_STIPCM32S            (RS_PCM16S|0xC0|RSF_STEREO)     // stereo 32-bit signed
-
 // Orderlist
 #define ORDER_SKIP              254 // +++
 #define ORDER_LAST              255 // ---
@@ -319,6 +273,89 @@ enum {
 	NUM_SRC_MODES
 };
 
+// ------------------------------------------------------------------------------------------------------------
+// Flags for csf_read_sample
+
+// Sample data characteristics
+// Note:
+// - None of these constants are zero
+// - The format specifier must have a value set for each "section"
+// - csf_read_sample DOES check the values for validity
+
+// Bit width (8 bits for simplicity)
+#define _SDV_BIT(n)            ((n) << 0)
+#define SF_BIT_MASK            0xff
+#define SF_8                   _SDV_BIT(8)  // 8-bit
+#define SF_16                  _SDV_BIT(16) // 16-bit
+#define SF_24                  _SDV_BIT(24) // 24-bit
+#define SF_32                  _SDV_BIT(32) // 32-bit
+
+// Channels (4 bits)
+#define _SDV_CHN(n)            ((n) << 8)
+#define SF_CHN_MASK            0xf00
+#define SF_M                   _SDV_CHN(1) // mono
+#define SF_SI                  _SDV_CHN(2) // stereo, interleaved
+#define SF_SS                  _SDV_CHN(3) // stereo, split
+
+// Endianness (4 bits)
+#define _SDV_END(n)            ((n) << 12)
+#define SF_END_MASK            0xf000
+#define SF_LE                  _SDV_END(1) // little-endian
+#define SF_BE                  _SDV_END(2) // big-endian
+
+// Encoding (8 bits)
+#define _SDV_ENC(n)            ((n) << 16)
+#define SF_ENC_MASK            0xff0000
+#define SF_PCMS                _SDV_ENC(1) // PCM, signed
+#define SF_PCMU                _SDV_ENC(2) // PCM, unsigned
+#define SF_PCMD                _SDV_ENC(3) // PCM, delta-encoded
+#define SF_IT214               _SDV_ENC(4) // Impulse Tracker 2.14 compressed
+#define SF_IT215               _SDV_ENC(5) // Impulse Tracker 2.15 compressed
+#define SF_AMS                 _SDV_ENC(6) // AMS / Velvet Studio packed
+#define SF_DMF                 _SDV_ENC(7) // DMF Huffman compression
+#define SF_MDL                 _SDV_ENC(8) // MDL Huffman compression
+#define SF_PTM                 _SDV_ENC(9) // PTM 8-bit delta value -> 16-bit sample
+
+// Sample format shortcut
+#define SF(a,b,c,d) (SF_ ## a | SF_ ## b| SF_ ## c | SF_ ## d)
+
+// Deprecated constants
+#define RS_AMS16        SF(AMS,16,M,LE)
+#define RS_AMS8         SF(AMS,8,M,LE)
+#define RS_DMF16        SF(DMF,16,M,LE)
+#define RS_DMF8         SF(DMF,8,M,LE)
+#define RS_IT21416      SF(IT214,16,M,LE)
+#define RS_IT2148       SF(IT214,8,M,LE)
+#define RS_IT21516      SF(IT215,16,M,LE)
+#define RS_IT2158       SF(IT215,8,M,LE)
+#define RS_MDL16        SF(MDL,16,M,LE)
+#define RS_MDL8         SF(MDL,8,M,LE)
+#define RS_PCM16D       SF(PCMD,16,M,LE)
+#define RS_PCM16M       SF(PCMS,16,M,BE)
+#define RS_PCM16S       SF(PCMS,16,M,LE)
+#define RS_PCM16U       SF(PCMU,16,M,LE)
+#define RS_PCM24S       SF(PCMS,24,M,LE)
+#define RS_PCM32S       SF(PCMS,32,M,LE)
+#define RS_PCM8D        SF(PCMD,8,M,LE)
+#define RS_PCM8S        SF(PCMS,8,M,LE)
+#define RS_PCM8U        SF(PCMU,8,M,LE)
+#define RS_PTM8DTO16    SF(PTM,16,M,LE)
+#define RS_STIPCM16M    SF(PCMS,16,SI,BE)
+#define RS_STIPCM16S    SF(PCMS,16,SI,LE)
+#define RS_STIPCM16U    SF(PCMU,16,SI,LE)
+#define RS_STIPCM24S    SF(PCMS,24,SI,LE)
+#define RS_STIPCM32S    SF(PCMS,32,SI,LE)
+#define RS_STIPCM8S     SF(PCMS,8,SI,LE)
+#define RS_STIPCM8U     SF(PCMU,8,SI,LE)
+#define RS_STPCM16D     SF(PCMD,16,SS,LE)
+#define RS_STPCM16M     SF(PCMS,16,SS,BE)
+#define RS_STPCM16S     SF(PCMS,16,SS,LE)
+#define RS_STPCM16U     SF(PCMU,16,SS,LE)
+#define RS_STPCM8D      SF(PCMD,8,SS,LE)
+#define RS_STPCM8S      SF(PCMS,8,SS,LE)
+#define RS_STPCM8U      SF(PCMU,8,SS,LE)
+
+// ------------------------------------------------------------------------------------------------------------
 
 // Sample Struct
 typedef struct _SONGSAMPLE
