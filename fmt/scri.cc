@@ -115,7 +115,8 @@ static int load_scri_sample(const uint8_t *data, size_t length, song_sample *smp
 		smp->data = csf_allocate_sample(1);
 	}
 
-	int format = (smp->flags & SAMP_16_BIT) ? RS_PCM16S : RS_PCM8U;
+	int format = SF_M | SF_LE; // endianness; channels
+	format |= (smp->flags & SAMP_16_BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
 
 	if (load_sample_data) {
 		csf_read_sample((SONGSAMPLE *) smp, format,

@@ -14,9 +14,7 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
 	m_nType = MOD_TYPE_NONE;
 	if (lpStream) {
 		bool bMMCmp = mmcmp_unpack((uint8_t **) &lpStream, &dwMemLength);
-		if ((!ReadXM(lpStream, dwMemLength))
-		 && (!Read669(lpStream, dwMemLength))
-		 && (!ReadS3M(lpStream, dwMemLength))
+		if ((!ReadS3M(lpStream, dwMemLength))
 		 && (!ReadIT(lpStream, dwMemLength))
 		 && (!ReadSTM(lpStream, dwMemLength))
 		 && (!ReadMed(lpStream, dwMemLength))

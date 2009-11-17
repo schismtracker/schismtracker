@@ -84,7 +84,7 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample *smp, char *title)
 {
 	ITSAMPLESTRUCT *its = (ITSAMPLESTRUCT *)header;
-	uint32_t format = RS_PCM8U;
+	uint32_t format;
 	uint32_t bp, bl;
 	
 	if (length < 80 || strncmp((const char *) header, "IMPS", 4) != 0)
@@ -97,18 +97,24 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 		// sample associated with header
 		return false;
 	}
+
+	// endianness (always little)
+	format = SF_LE;
 	if (its->flags & 8) {
-		// compressed
-		format = (its->flags & 2) ? RS_IT21416 : RS_IT2148;
+		// no such thing as compressed stereo
+		// (TODO perhaps test with various players to see how this is implemented)
+		format |= SF_M;
+		// compression algorithm
+		format |= (its->cvt & 4) ? SF_IT215 : SF_IT214;
 	} else {
-		if (its->flags & 2) {
-			// 16 bit
-			format = (its->cvt & 1) ? RS_PCM16S : RS_PCM16U;
-		} else {
-			// 8 bit
-			format = (its->cvt & 1) ? RS_PCM8S : RS_PCM8U;
-		}
+		// channels
+		format |= (its->flags & 4) ? SF_SS : SF_M;
+		// signedness
+		format |= (its->cvt & 1) ? SF_PCMS : SF_PCMU;
 	}
+	// bit width
+	format |= (its->flags & 2) ? SF_16 : SF_8;
+
 	smp->global_volume = its->gvl;
 	if (its->flags & 16) {
 		smp->flags |= SAMP_LOOP;
@@ -125,11 +131,6 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 	smp->panning = (its->dfp & 127) * 4;
 	if (its->dfp & 128)
 		smp->flags |= SAMP_PANNING;
-	if (its->flags & 4) {
-		// stereo
-		format |= RSF_STEREO;
-		smp->flags |= SAMP_STEREO;
-	}
 	smp->loop_start = bswapLE32(its->loopbegin);
 	smp->loop_end = bswapLE32(its->loopend);
 	smp->speed = bswapLE32(its->C5Speed);

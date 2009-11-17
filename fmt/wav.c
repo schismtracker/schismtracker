@@ -190,25 +190,23 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSE
             (f.fmt.channels != 1 && f.fmt.channels != 2))
                 return false;
 
-        // Currently supported bitrates
-        if (f.fmt.bitspersample != 8 &&
-            f.fmt.bitspersample != 16 && 
-            f.fmt.bitspersample != 24 &&
-            f.fmt.bitspersample != 32)
-                return false;
-
         smp->flags = 0; // flags are set by csf_read_sample
         flags      = 0;
 
-        if (f.fmt.channels == 2)
-                flags |= RSF_STEREO | RSF_INTERLEAVED;
-
+        // endianness
+        flags = SF_LE;
+        // channels
+        flags |= (f.fmt.channels == 2) ? SF_SI : SF_M; // interleaved stereo
+        // bit width
         switch (f.fmt.bitspersample) {
-        case 8:  flags |= RS_PCM8U;  break;
-        case 16: flags |= RS_PCM16S; break;
-        case 24: flags |= RS_PCM24S; break;
-        case 32: flags |= RS_PCM32S; break;
+        case 8:  flags |= SF_8;  break;
+        case 16: flags |= SF_16; break;
+        case 24: flags |= SF_24; break;
+        case 32: flags |= SF_32; break;
+        default: return false; // unsupported
         }
+        // encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
+        flags |= (f.fmt.bitspersample == 8) ? SF_PCMU : SF_PCMS;
 
         smp->volume        = 64 * 4;
         smp->global_volume = 64;
