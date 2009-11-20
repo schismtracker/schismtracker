@@ -76,7 +76,7 @@ void Fmdrv_Init(int mixfreq)
 
 void Fmdrv_MixTo(int *target, int count)
 {
-        static short *buf = 0;
+        static short *buf = NULL;
         static int buf_size = 0;
 
         if (!fm_active)
@@ -116,7 +116,7 @@ void Fmdrv_MixTo(int *target, int count)
 
 static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
 static signed char Pans[MAX_VOICES];
-static const unsigned char *Dtab[MAX_VOICES] = {0};
+static const unsigned char *Dtab[MAX_VOICES] = {NULL};
 
 
 static int SetBase(int c)
@@ -321,7 +321,7 @@ void OPL_Reset(void)
                 OPL_Byte(a, 0);
 
         for(a = 0; a < MAX_VOICES; ++a)
-                Dtab[a] = 0;
+                Dtab[a] = NULL;
 
         OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
 

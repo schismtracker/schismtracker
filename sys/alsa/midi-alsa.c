@@ -104,11 +104,11 @@ the configure script, so to test it, you should use that when developing.
 extern void *_dltrick_handle;
 
 /* don't try this at home... */
-#define _void_dltrick(a,b,c) static void (*_dltrick_ ## a)b = 0; \
+#define _void_dltrick(a,b,c) static void (*_dltrick_ ## a)b = NULL; \
 void a b { if (!_dltrick_##a) _dltrick_##a = dlsym(_dltrick_handle, #a); \
 if (!_dltrick_##a) abort(); _dltrick_ ## a c; }
 
-#define _any_dltrick(r,a,b,c) static r (*_dltrick_ ## a)b = 0; \
+#define _any_dltrick(r,a,b,c) static r (*_dltrick_ ## a)b = NULL; \
 r a b { if (!_dltrick_##a) _dltrick_##a = dlsym(_dltrick_handle, #a); \
 if (!_dltrick_##a) abort(); return _dltrick_ ## a c; }
 
@@ -260,7 +260,7 @@ static int _alsa_thread(struct midi_provider *p)
 	struct pollfd *pfd;
 	struct midi_port *ptr, *src;
 	struct alsa_midi *data;
-	static snd_midi_event_t *dev = 0;
+	static snd_midi_event_t *dev = NULL;
 	snd_seq_event_t *ev;
 	long s;
 
@@ -283,7 +283,7 @@ static int _alsa_thread(struct midi_provider *p)
 			}
 			if (!ev) continue;
 
-			ptr = src = 0;
+			ptr = src = NULL;
 			while (midi_port_foreach(p, &ptr)) {
 				data = (struct alsa_midi *)ptr->userdata;
 				if (ev->source.client == data->c
@@ -348,7 +348,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 		return;
 	}
 
-	ptr = 0;
+	ptr = NULL;
 	while (midi_port_foreach(_alsa_provider, &ptr)) {
 		data = (struct alsa_midi *)ptr->userdata;
 		data->mark = 0;
@@ -378,7 +378,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 			if (c == SND_SEQ_CLIENT_SYSTEM) continue;
 
 			p = snd_seq_port_info_get_port(pinfo);
-			ptr = 0;
+			ptr = NULL;
 			ok = 0;
 			while (midi_port_foreach(_alsa_provider, &ptr)) {
 				data = (struct alsa_midi *)ptr->userdata;
@@ -399,7 +399,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 			data->client = ctext;
 			data->mark = 1;
 			data->port = ptext;
-			buffer = 0;
+			buffer = NULL;
 
 			if (snd_midi_event_new(MIDI_BUFSIZE, &data->dev) < 0) {
 				/* err... */
@@ -418,7 +418,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 	}
 
 	/* remove "disappeared" midi ports */
-	ptr = 0;
+	ptr = NULL;
 	while (midi_port_foreach(_alsa_provider, &ptr)) {
 		data = (struct alsa_midi *)ptr->userdata;
 		if (data->mark) continue;

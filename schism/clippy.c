@@ -29,9 +29,9 @@
 
 #include "sdlmain.h"
 
-static char *_current_selection = 0;
-static char *_current_clipboard = 0;
-static struct widget *_widget_owner[16] = {0};
+static char *_current_selection = NULL;
+static char *_current_clipboard = NULL;
+static struct widget *_widget_owner[16] = {NULL};
 
 static int has_sys_clip;
 #if defined(WIN32)
@@ -39,7 +39,7 @@ static HWND SDL_Window, _hmem;
 #elif defined(__QNXNTO__)
 static unsigned short inputgroup;
 #elif defined(USE_X11)
-static Display *SDL_Display=0;
+static Display *SDL_Display = NULL;
 static Window SDL_Window;
 static void (*lock_display)(void);
 static void (*unlock_display)(void);
@@ -65,9 +65,9 @@ static void _clippy_copy_to_sys(int do_sel)
 	int status;
 #endif
 
-	freeme = 0;
+	freeme = NULL;
 	if (!_current_selection) {
-		dst = 0;
+		dst = NULL;
 		j = 0;
 	} else
 #if defined(WIN32)
@@ -83,7 +83,7 @@ static void _clippy_copy_to_sys(int do_sel)
 		}
 		dst[j] = '\0';
 	} else {
-		dst = 0;
+		dst = NULL;
 		j = 0;
 	}
 #endif
@@ -129,7 +129,7 @@ static void _clippy_copy_to_sys(int do_sel)
 				SetClipboardData(CF_TEXT, _hmem);
 			}
 		}
-		(void)CloseClipboard();
+		CloseClipboard();
 		_hmem = NULL;
 		dst = 0;
 	}
@@ -191,7 +191,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 		sevent = ev->syswm.msg->event.xevent;
 		if (sevent.xselection.requestor == SDL_Window) {
 			lock_display();
-			src = 0;
+			src = NULL;
 			if (XGetWindowProperty(SDL_Display, SDL_Window, atom_sel,
 						0, 9000, False, XA_STRING,
 						(Atom *)&seln_type,
@@ -252,7 +252,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 	return 1;
 }
 
-static int (*orig_xlib_err)(Display *d, XErrorEvent *e) = 0;
+static int (*orig_xlib_err)(Display *d, XErrorEvent *e) = NULL;
 static int handle_xlib_err(Display *d, XErrorEvent *e)
 {
 	/* X_SetSelectionOwner == 22 */
@@ -341,7 +341,7 @@ static char *_internal_clippy_paste(int cb)
 			because of this (otherwise) oddity, we take the selection immediately...
 			*/
 			unlock_display();
-			return 0;
+			return NULL;
 		}
 #else
 		if (cb == CLIPPY_BUFFER) {
@@ -424,7 +424,7 @@ static char *_internal_clippy_paste(int cb)
 #else
 	if (cb == CLIPPY_BUFFER) return _current_clipboard;
 #endif
-	return 0;
+	return NULL;
 }
 
 
@@ -444,10 +444,12 @@ void clippy_select(struct widget *w, char *addr, int len)
 		free(_current_selection);
 	}
 	if (!addr) {
-		_current_selection = 0;
-		_widget_owner[CLIPPY_SELECT] = 0;
+		_current_selection = NULL;
+		_widget_owner[CLIPPY_SELECT] = NULL;
 	} else {
-		for (i = 0; addr[i] && (len < 0 || i < len); i++);
+		for (i = 0; addr[i] && (len < 0 || i < len); i++) {
+		        /* nothing */
+		}
 		_current_selection = mem_alloc(i+1);
 		memcpy(_current_selection, addr, i);
 		_current_selection[i] = 0;
@@ -461,7 +463,7 @@ struct widget *clippy_owner(int cb)
 {
 	if (cb == CLIPPY_SELECT || cb == CLIPPY_BUFFER)
 		return _widget_owner[cb];
-	return 0;
+	return NULL;
 }
 
 void clippy_yank(void)

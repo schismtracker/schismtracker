@@ -37,31 +37,33 @@ CSoundFile *mp = NULL;
 // ------------------------------------------------------------------------
 // song information
 
-const char *song_get_tracker_id()
+const char *song_get_tracker_id(void)
 {
 	return mp->tracker_id;
 }
 
-char *song_get_title()
+char *song_get_title(void)
 {
         return mp->song_title;
 }
 
-char *song_get_message()
+char *song_get_message(void)
 {
         return mp->m_lpszSongComments;
 }
 
 // song midi config
-midi_config *song_get_midi_config(void) {
+midi_config *song_get_midi_config(void)
+{
 	return (midi_config *) &mp->m_MidiCfg;
 }
-midi_config *song_get_default_midi_config(void) {
+midi_config *song_get_default_midi_config(void)
+{
 	return (midi_config *) &default_midi_cfg;
 }
 
 // returned value is in seconds
-unsigned int song_get_length()
+unsigned int song_get_length(void)
 {
 	return csf_get_length(mp);
 }
@@ -106,7 +108,7 @@ signed char *song_sample_allocate(int bytes)
 
 void song_sample_free(signed char *data)
 {
-	return csf_free_sample(data);
+	csf_free_sample(data);
 }
 
 // ------------------------------------------------------------------------
@@ -274,7 +276,7 @@ void song_handle_channel_solo(int channel)
 
 // returned channel number is ONE-based
 // (to make it easier to work with in the pattern editor and info page)
-int song_find_last_channel()
+int song_find_last_channel(void)
 {
         int n = 64;
 	
@@ -342,7 +344,7 @@ void song_pattern_install(int patno, song_note *n, int rows)
 }
 
 
-unsigned char *song_get_orderlist()
+unsigned char *song_get_orderlist(void)
 {
         return mp->Orderlist;
 }
@@ -377,7 +379,7 @@ int song_order_for_pattern(int pat, int locked)
 	return -1;
 }
 
-int song_get_num_orders()
+int song_get_num_orders(void)
 {
         return csf_get_num_orders(mp);
 }
@@ -392,7 +394,7 @@ int song_pattern_is_empty(int n)
         return !memcmp(mp->Patterns[n], blank_pattern, sizeof(blank_pattern));
 }
 
-int song_get_num_patterns()
+int song_get_num_patterns(void)
 {
         int n;
         for (n = 199; n && song_pattern_is_empty(n); n--)
@@ -438,7 +440,7 @@ void song_pattern_resize(int pattern, int newsize)
 
 // ------------------------------------------------------------------------
 
-int song_get_initial_speed()
+int song_get_initial_speed(void)
 {
         return mp->m_nDefaultSpeed;
 }
@@ -448,7 +450,7 @@ void song_set_initial_speed(int new_speed)
         mp->m_nDefaultSpeed = CLAMP(new_speed, 1, 255);
 }
 
-int song_get_initial_tempo()
+int song_get_initial_tempo(void)
 {
         return mp->m_nDefaultTempo;
 }
@@ -458,7 +460,7 @@ void song_set_initial_tempo(int new_tempo)
         mp->m_nDefaultTempo = CLAMP(new_tempo, 31, 255);
 }
 
-int song_get_initial_global_volume()
+int song_get_initial_global_volume(void)
 {
         return mp->m_nDefaultGlobalVolume;
 }
@@ -468,7 +470,7 @@ void song_set_initial_global_volume(int new_vol)
         mp->m_nDefaultGlobalVolume = CLAMP(new_vol, 0, 128);
 }
 
-int song_get_mixing_volume()
+int song_get_mixing_volume(void)
 {
         return mp->m_nSongPreAmp;
 }
@@ -478,7 +480,7 @@ void song_set_mixing_volume(int new_vol)
         mp->m_nSongPreAmp = CLAMP(new_vol, 0, 128);
 }
 
-int song_get_separation()
+int song_get_separation(void)
 {
         return mp->m_nStereoSeparation;
 }
@@ -488,29 +490,29 @@ void song_set_separation(int new_sep)
 	mp->m_nStereoSeparation = CLAMP(new_sep, 0, 128);
 }
 
-int song_is_stereo()
+int song_is_stereo(void)
 {
 	if (mp->m_dwSongFlags & SONG_NOSTEREO) return 0;
         return 1;
 }
-void song_toggle_stereo()
+void song_toggle_stereo(void)
 {
 	mp->m_dwSongFlags ^= SONG_NOSTEREO;
 }
-void song_toggle_mono()
+void song_toggle_mono(void)
 {
 	mp->m_dwSongFlags ^= SONG_NOSTEREO;
 }
-void song_set_mono()
+void song_set_mono(void)
 {
 	mp->m_dwSongFlags |= SONG_NOSTEREO;
 }
-void song_set_stereo()
+void song_set_stereo(void)
 {
 	mp->m_dwSongFlags &= ~SONG_NOSTEREO;
 }
 
-int song_has_old_effects()
+int song_has_old_effects(void)
 {
         return !!(mp->m_dwSongFlags & SONG_ITOLDEFFECTS);
 }
@@ -523,7 +525,7 @@ void song_set_old_effects(int value)
                 mp->m_dwSongFlags &= ~SONG_ITOLDEFFECTS;
 }
 
-int song_has_compatible_gxx()
+int song_has_compatible_gxx(void)
 {
         return !!(mp->m_dwSongFlags & SONG_COMPATGXX);
 }
@@ -536,7 +538,7 @@ void song_set_compatible_gxx(int value)
                 mp->m_dwSongFlags &= ~SONG_COMPATGXX;
 }
 
-int song_has_linear_pitch_slides()
+int song_has_linear_pitch_slides(void)
 {
         return !!(mp->m_dwSongFlags & SONG_LINEARSLIDES);
 }
@@ -549,7 +551,7 @@ void song_set_linear_pitch_slides(int value)
                 mp->m_dwSongFlags &= ~SONG_LINEARSLIDES;
 }
 
-int song_is_instrument_mode()
+int song_is_instrument_mode(void)
 {
 	return !!(mp->m_dwSongFlags & SONG_INSTRUMENTMODE);
 }
@@ -575,7 +577,7 @@ void song_set_instrument_mode(int value)
 	}
 }
 
-int song_get_current_instrument()
+int song_get_current_instrument(void)
 {
         return (song_is_instrument_mode() ? instrument_get_current() : sample_get_current());
 }
@@ -585,7 +587,7 @@ int song_get_current_instrument()
 unsigned int song_sample_get_c5speed(int n)
 {
 	song_sample *smp;
-	smp = song_get_sample(n, 0);
+	smp = song_get_sample(n, NULL);
 	if (!smp) return 8363;
 	return smp->speed;
 }
@@ -593,7 +595,7 @@ unsigned int song_sample_get_c5speed(int n)
 void song_sample_set_c5speed(int n, unsigned int spd)
 {
 	song_sample *smp;
-	smp = song_get_sample(n, 0);
+	smp = song_get_sample(n, NULL);
 	if (smp) smp->speed = spd;
 }
 

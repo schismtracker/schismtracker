@@ -79,7 +79,7 @@ static int _oss_thread(struct midi_provider *p)
 	int i, j, r;
 
 	for (;;) {
-		ptr = 0;
+		ptr = NULL;
 		j = 0;
 		while (midi_port_foreach(p, &ptr)) {
 			i = INT_SHAPED_PTR(ptr->userdata);
@@ -100,7 +100,7 @@ static int _oss_thread(struct midi_provider *p)
 				r = read(pfd[i].fd, midi_buf, sizeof(midi_buf));
 			} while (r == -1 && errno == EINTR);
 			if (r > 0) {
-				ptr = src = 0;
+				ptr = src = NULL;
 				while (midi_port_foreach(p, &ptr)) {
 					if (INT_SHAPED_PTR(ptr->userdata) == pfd[i].fd) {
 						src = ptr;
@@ -135,7 +135,7 @@ static void _tryopen(int n, const char *name, struct midi_provider *_oss_provide
 		io = MIDI_INPUT | MIDI_OUTPUT;
 	}
 
-	ptr = 0;
+	ptr = NULL;
 	if (asprintf(&ptr, " %-16s (OSS)", name) == -1) {
 		return;
 	}

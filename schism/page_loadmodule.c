@@ -82,8 +82,8 @@ static const int filetype_saves[] = { 4, 5, 6, 7, 8, 9, -1 };
 
 static int top_file = 0, top_dir = 0;
 static time_t directory_mtime;
-dmoz_filelist_t flist;
-dmoz_dirlist_t dlist;
+static dmoz_filelist_t flist;
+static dmoz_dirlist_t dlist;
 #define current_file flist.selected
 #define current_dir dlist.selected
 
@@ -154,9 +154,9 @@ static char **semicolon_split(const char *i)
 		if (!z)
 			z = strchr(a, 0);
 		/* trim whitespace */
-		do
+		do {
 			z--;
-		while (isblank(*z));
+		} while (isblank(*z));
 		z++;
 		/* find start of the next one */
 		a = z;

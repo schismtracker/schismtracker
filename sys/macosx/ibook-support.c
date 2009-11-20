@@ -22,6 +22,8 @@
 #include "headers.h"
 #include "util.h"
 
+int macosx_ibook_fnswitch(int setting); /* FIXME: ugliness */
+
 #ifdef MACOSX
 
 #include <IOKit/IOKitLib.h>
@@ -39,7 +41,6 @@
 #define kIOHIDFKeyModeKey    "HIDFKeyMode"
 #endif
 
-int macosx_ibook_fnswitch(int setting); /* FIXME: ugliness */
 int macosx_ibook_fnswitch(int setting)
 {
 	kern_return_t kr;

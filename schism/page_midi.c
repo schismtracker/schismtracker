@@ -63,7 +63,7 @@ static void update_midi_values(void)
 	|	(widgets_midi[4].d.toggle.state ? MIDI_RECORD_VELOCITY : 0)
 	|	(widgets_midi[5].d.toggle.state ? MIDI_RECORD_AFTERTOUCH : 0)
 	|	(widgets_midi[6].d.toggle.state ? MIDI_CUT_NOTE_OFF : 0)
-	|	(widgets_midi[9].d.toggle.state ? MIDI_PITCH_BEND : 0)
+	|	(widgets_midi[9].d.toggle.state ? MIDI_PITCHBEND : 0)
 	|	(widgets_midi[11].d.toggle.state? MIDI_EMBED_DATA : 0)
 	|	(widgets_midi[14].d.toggle.state? MIDI_RECORD_SDX : 0);
 
@@ -82,7 +82,7 @@ static void save_midi_config(void)
 static void toggle_port(void)
 {
 	struct midi_port *p;
-	p = midi_engine_port(current_port, 0);
+	p = midi_engine_port(current_port, NULL);
 	if (p) {
 		status.flags |= NEED_UPDATE;
 
@@ -350,7 +350,7 @@ void midi_load_page(struct page *page)
 
 	create_toggle(widgets_midi+9, 53, 34,
 			8, 10, 4, 9, 10, update_midi_values); /* off */
-	widgets_midi[9].d.toggle.state = midi_flags & MIDI_PITCH_BEND;
+	widgets_midi[9].d.toggle.state = midi_flags & MIDI_PITCHBEND;
 	create_thumbbar(widgets_midi+10, 53, 35, 20,
 			9, 11, 11, update_midi_values, 0, 48); /* d. 0 */
 	widgets_midi[10].d.thumbbar.value = midi_pitch_depth;

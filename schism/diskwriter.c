@@ -44,7 +44,7 @@
 static char dwbuf[65536];
 
 
-unsigned int (*dw_multi_pCvt)(void *, int *, unsigned int, int*, int*) = clip_32_to_8;
+static unsigned int (*dw_multi_pCvt)(void *, int *, unsigned int, int*, int*) = clip_32_to_8;
 
 
 static unsigned char diskbuf[32768];
@@ -342,7 +342,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 	chan_setup(dw->rate,2);
 
 	for (i = 1; i < 64; i++) {
-		multi_fp[i] = 0;
+		multi_fp[i] = NULL;
 		if (song_get_channel(i-1)->flags & CHN_MUTE) continue;
 
 		sprintf(str, "%s%cmulti-%02d.%s",
@@ -626,7 +626,7 @@ int diskwriter_finish(void)
 	}
 
 	if (dw->m || dw->g) {
-		song_init_audio(0);
+		song_init_audio(NULL);
 	}
 	csf_multi_out_raw = NULL;
 

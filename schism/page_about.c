@@ -35,15 +35,15 @@
 #define LOGO_HEIGHT 50
 
 static int fake_driver = 0;
-static SDL_Surface *it_logo = 0;
-static SDL_Surface *schism_logo = 0;
+static SDL_Surface *it_logo = NULL;
+static SDL_Surface *schism_logo = NULL;
 
 static struct widget widgets_about[1];
 
 static struct vgamem_overlay logo_image = {
 	23, 17,
 	58, 24,
-	0, 0, 0, 0,
+	NULL, 0, 0, 0,
 };
 
 
@@ -167,9 +167,9 @@ void show_about(void)
 	}
 
 	if (status.flags & CLASSIC_MODE) {
-		p = it_logo ? it_logo->pixels : 0;
+		p = it_logo ? it_logo->pixels : NULL;
 	} else {
-		p = schism_logo ? schism_logo->pixels : 0;
+		p = schism_logo ? schism_logo->pixels : NULL;
 	}
 
 	/* this is currently pretty gross */

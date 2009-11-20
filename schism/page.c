@@ -298,8 +298,8 @@ void new_song_dialog(void)
 
 static int _mp_active = 0;
 static struct widget _mpw[1];
-static void (*_mp_setv)(int v) = 0;
-static void (*_mp_setv_noplay)(int v) = 0;
+static void (*_mp_setv)(int v) = NULL;
+static void (*_mp_setv_noplay)(int v) = NULL;
 static const char *_mp_text = "";
 static int _mp_text_x, _mp_text_y;
 
@@ -370,7 +370,7 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	create_thumbbar(_mpw, midx - 8, midy, 13, 0, 0, 0, _mp_change, min, max);
 	_mpw[0].d.thumbbar.value = CLAMP(cv, min, max);
 	_mpw[0].depressed = 1; /* maybe it just needs some zoloft? */
-	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, 0);
+	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
 
 	_mp_active = 1;
 	status.flags |= NEED_UPDATE;
@@ -520,7 +520,7 @@ static int handle_key_global(struct key_event * k)
 				return 1;
 			}
                         song_stop();
-			song_init_audio(0);
+			song_init_audio(NULL);
 			if (status.flags & CLASSIC_MODE)
 				// FIXME: but we spontaneously report a GUS card sometimes...
 				status_text_flash("Sound Blaster 16 reinitialised");
@@ -1317,7 +1317,7 @@ static void _draw_vis_box(void)
 static int _vis_virgin = 1;
 static struct vgamem_overlay vis_overlay = {
 	63, 6, 77, 7,
-	0, 0, 0, 0,
+	NULL, 0, 0, 0,
 };
 
 extern short current_fft_data[2][256];

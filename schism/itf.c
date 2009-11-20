@@ -137,7 +137,7 @@ static enum {
 } fontlist_mode = MODE_OFF;
 
 static dmoz_filelist_t flist;
-int top_font = 0, cur_font = 0;
+static int top_font = 0, cur_font = 0;
 
 
 static void fontlist_reposition(void)

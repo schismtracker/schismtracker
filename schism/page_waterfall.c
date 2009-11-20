@@ -52,8 +52,7 @@ static int mono = 0;
 static int gain = -5;
 
 /* get the _whole_ display */
-static struct vgamem_overlay ovl = { 0, 0, 79, 49,
-					0,0,0,0 };
+static struct vgamem_overlay ovl = { 0, 0, 79, 49, NULL, 0, 0, 0 };
 
 /* tables */
 static unsigned int bit_reverse[FFT_BUFFER_SIZE];

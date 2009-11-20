@@ -276,7 +276,7 @@ bool CSoundFile::ReadIT(const uint8_t *lpStream, uint32_t dwMemLength)
 	if (pifh.flags & 0x10) m_dwSongFlags |= SONG_ITOLDEFFECTS;
 	if (pifh.flags & 0x20) m_dwSongFlags |= SONG_COMPATGXX;
 	if (pifh.flags & 0x40) {
-		midi_flags |= MIDI_PITCH_BEND;
+		midi_flags |= MIDI_PITCHBEND;
 		midi_pitch_depth = pifh.pwd;
 	}
 	if (pifh.flags & 0x80) m_dwSongFlags |= SONG_EMBEDMIDICFG;

@@ -169,7 +169,7 @@ struct dmoz_cache {
 	char *cache_filen;
 	char *cache_dirn;
 };
-static struct dmoz_cache *cache_top = 0;
+static struct dmoz_cache *cache_top = NULL;
 
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl)
 {
@@ -177,29 +177,37 @@ void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 	if (fl && fl->selected > -1 && fl->selected < fl->num_files && fl->files[fl->selected])
 		fn = fl->files[fl->selected]->base;
 	else
-		fn = 0;
+		fn = NULL;
 	if (dl && dl->selected > -1 && dl->selected < dl->num_dirs && dl->dirs[dl->selected])
 		dn = dl->dirs[dl->selected]->base;
 	else
-		dn = 0;
+		dn = NULL;
 	dmoz_cache_update_names(path,fn,dn);
 }
 
-void dmoz_cache_update_names(const char *path, char *filen, char *dirn)
+void dmoz_cache_update_names(const char *path, const char *filen, const char *dirn)
 {
 	struct dmoz_cache *p, *lp;
 	char *q;
 	q = str_dup(path);
-	lp = 0;
-	filen = filen ? (void*)get_basename(filen) : 0;
-	dirn = dirn ? (void*)get_basename(dirn) : 0;
-	if (filen && strcmp(filen,"..")==0) filen=0;
-	if (dirn && strcmp(dirn,"..")==0) dirn=0;
+	lp = NULL;
+	filen = filen ? get_basename(filen) : NULL;
+	dirn = dirn ? get_basename(dirn) : NULL;
+	if (filen && strcmp(filen, "..") == 0)
+		filen = NULL;
+	if (dirn && strcmp(dirn, "..") == 0)
+		dirn = NULL;
 	for (p = cache_top; p; p = p->next) {
 		if (strcmp(p->path,q)==0) {
 			free(q);
-			if (filen) { free(p->cache_filen); p->cache_filen = str_dup(filen); }
-			if (dirn) { free(p->cache_dirn); p->cache_dirn = str_dup(dirn); }
+			if (filen) {
+				free(p->cache_filen);
+				p->cache_filen = str_dup(filen);
+			}
+			if (dirn) {
+				free(p->cache_dirn);
+				p->cache_dirn = str_dup(dirn);
+			}
 			if (lp) {
 				lp->next = p->next;
 				/* !lp means we're already cache_top */
@@ -212,8 +220,8 @@ void dmoz_cache_update_names(const char *path, char *filen, char *dirn)
 	}
 	p = mem_alloc(sizeof(struct dmoz_cache));
 	p->path = q;
-	p->cache_filen = filen ? str_dup(filen) : 0;
-	p->cache_dirn = dirn ? str_dup(dirn) : 0;
+	p->cache_filen = filen ? str_dup(filen) : NULL;
+	p->cache_dirn = dirn ? str_dup(dirn) : NULL;
 	p->next = cache_top;
 	cache_top = p;
 }
@@ -413,28 +421,32 @@ void dmoz_free(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
 }
 
 static int current_dmoz_file = 0;
-static dmoz_filelist_t *current_dmoz_filelist = 0;
-static int (*current_dmoz_filter)(dmoz_file_t *) = 0;
-static int *current_dmoz_file_pointer = 0;
-static void (*dmoz_worker_onmove)(void);
+static dmoz_filelist_t *current_dmoz_filelist = NULL;
+static int (*current_dmoz_filter)(dmoz_file_t *) = NULL;
+static int *current_dmoz_file_pointer = NULL;
+static void (*dmoz_worker_onmove)(void) = NULL;
+
 int dmoz_worker(void)
 {
 	dmoz_file_t *nf;
 
-	if (!current_dmoz_filelist || !current_dmoz_filter) return 0;
+	if (!current_dmoz_filelist || !current_dmoz_filter)
+		return 0;
 	if (current_dmoz_file >= current_dmoz_filelist->num_files) {
-		current_dmoz_filelist = 0;
-		current_dmoz_filter = 0;
-		if (dmoz_worker_onmove) dmoz_worker_onmove();
+		current_dmoz_filelist = NULL;
+		current_dmoz_filter = NULL;
+		if (dmoz_worker_onmove)
+			dmoz_worker_onmove();
 		return 0;
 	}
 
 	if (!current_dmoz_filter(current_dmoz_filelist->files[ current_dmoz_file ])) {
 		if (current_dmoz_filelist->num_files == current_dmoz_file+1) {
 			current_dmoz_filelist->num_files--;
-			current_dmoz_filelist = 0;
-			current_dmoz_filter = 0;
-			if (dmoz_worker_onmove) dmoz_worker_onmove();
+			current_dmoz_filelist = NULL;
+			current_dmoz_filter = NULL;
+			if (dmoz_worker_onmove)
+				dmoz_worker_onmove();
 			return 0;
 		}
 

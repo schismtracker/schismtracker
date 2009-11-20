@@ -125,7 +125,7 @@ static void read_directory(void)
 		perror(inst_cwd);
 
 	dmoz_filter_filelist(&flist,instgrep, &current_file, file_list_reposition);
-        dmoz_cache_lookup(inst_cwd, &flist, 0);
+        dmoz_cache_lookup(inst_cwd, &flist, NULL);
 	file_list_reposition();
 }
 
@@ -139,7 +139,7 @@ static int change_dir(const char *dir)
 	if (!ptr)
 		return 0;
 
-        dmoz_cache_update(inst_cwd, &flist, 0);
+        dmoz_cache_update(inst_cwd, &flist, NULL);
 
 	if (stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
 		strncpy(cfg_dir_instruments, ptr, PATH_MAX);
@@ -312,7 +312,7 @@ static void handle_enter_key(void)
 	
 	if (current_file < 0 || current_file >= flist.num_files) return;
 	file = flist.files[current_file];
-        dmoz_cache_update(inst_cwd, &flist, 0);
+        dmoz_cache_update(inst_cwd, &flist, NULL);
 
 	if (file->type & TYPE_BROWSABLE_MASK) {
 		change_dir(file->path);

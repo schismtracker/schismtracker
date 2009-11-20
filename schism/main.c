@@ -69,8 +69,8 @@
 
 #if defined(USE_DLTRICK_ALSA)
 #include <dlfcn.h>
-void *_dltrick_handle = 0;
-static void *_alsaless_sdl_hack = 0;
+void *_dltrick_handle = NULL;
+static void *_alsaless_sdl_hack = NULL;
 #elif defined(USE_ALSA)
 #include <alsa/pcm.h>
 #endif
@@ -104,8 +104,8 @@ enum {
 };
 static int shutdown_process = 0;
 
-static const char *video_driver = 0;
-static const char *audio_driver = 0;
+static const char *video_driver = NULL;
+static const char *audio_driver = NULL;
 static int did_fullscreen = 0;
 static int did_classic = 0;
 
@@ -927,7 +927,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
 			}
 			break;
 		}
-		if (sawrep || !SDL_PollEvent(0)) {
+		if (sawrep || !SDL_PollEvent(NULL)) {
 			time(&status.now);
 			tmr = localtime(&status.now);
 			status.h = tmr->tm_hour;
@@ -962,7 +962,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
 				break;
 			};
 
-			while ((q = diskwriter_sync()) == DW_SYNC_MORE && !SDL_PollEvent(0)) {
+			while ((q = diskwriter_sync()) == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
 				check_update();
 			}
 
@@ -989,7 +989,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
 			/* let dmoz build directory lists, etc
 			as long as there's no user-event going on...
 			*/
-			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(0))
+			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL))
 				/* nothing */;
 		}
 	}
@@ -1081,7 +1081,7 @@ int main(int argc, char **argv)
 	kbd_init();
 	video_fullscreen(0);
 
-	srand(time(0));
+	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
 #if defined(USE_DLTRICK_ALSA)
@@ -1186,7 +1186,7 @@ int main(int argc, char **argv)
 
 	if (!video_driver) {
 		video_driver = cfg_video_driver;
-		if (!video_driver || !*video_driver) video_driver = 0;
+		if (!video_driver || !*video_driver) video_driver = NULL;
 	}
 	if (!did_fullscreen) {
 		video_fullscreen(cfg_video_fullscreen);

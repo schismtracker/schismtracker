@@ -427,7 +427,7 @@ char *get_note_string_short(int note, char *buf)
 
 /* --------------------------------------------------------------------- */
 
-int kbd_get_current_octave()
+int kbd_get_current_octave(void)
 {
         return current_octave;
 }

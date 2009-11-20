@@ -196,7 +196,7 @@ void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 int dmoz_worker(void);
 
 /* these update the file selection cache for the various pages */
-void dmoz_cache_update_names(const char *path, char *filen, char *dirn);
+void dmoz_cache_update_names(const char *path, const char *filen, const char *dirn);
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 

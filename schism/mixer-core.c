@@ -25,9 +25,9 @@
 #include "util.h"
 #include "SDL.h"
 
-static int (*__mixer_get_max_volume)(void) = 0;
-static void (*__mixer_read_volume)(int *left, int *right) = 0;
-static void (*__mixer_write_volume)(int left, int right) = 0;
+static int (*__mixer_get_max_volume)(void) = NULL;
+static void (*__mixer_read_volume)(int *left, int *right) = NULL;
+static void (*__mixer_write_volume)(int left, int right) = NULL;
 
 #ifdef USE_ALSA
 extern int alsa_mixer_get_max_volume(void);

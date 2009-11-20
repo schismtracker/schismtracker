@@ -54,7 +54,7 @@ the control gets back to slurp, it closes the fd (again). It doesn't seem to exi
 
 static void _slurp_stdio_closure(slurp_t *t)
 {
-	(void)free((void*)t->data);
+	free(t->data);
 }
 
 /* --------------------------------------------------------------------- */
@@ -93,7 +93,7 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
                 if (realloc_buf == NULL) {
                         old_errno = errno;
                         fclose(fp);
-                        free((void *) t->data);
+                        free(t->data);
                         errno = old_errno;
                         return 0;
                 }
@@ -104,7 +104,7 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
                         if (ferror(fp)) {
                                 old_errno = errno;
                                 fclose(fp);
-                                free((void *) t->data);
+                                free(t->data);
                                 errno = old_errno;
                                 return 0;
                         }
@@ -144,12 +144,12 @@ static int _slurp_stdio(slurp_t * t, int fd)
          * so keep trying until it returns zero. */
         need = t->length;
         do {
-                len = fread((void *) (t->data + got), 1, need, fp);
+                len = fread(t->data + got, 1, need, fp);
                 if (len <= 0) {
                         if (ferror(fp)) {
                                 old_errno = errno;
                                 fclose(fp);
-                                free((void *) t->data);
+                                free(t->data);
                                 errno = old_errno;
                                 return 0;
                         }
@@ -195,7 +195,7 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 		if (_slurp_stdio(t, STDIN_FILENO))
 			return t;
 		free(t);
-		return 0;
+		return NULL;
         }
 
 	if (size <= 0) {

@@ -314,7 +314,7 @@ struct dialog *dialog_create(int type, const char *text, void (*action_yes) (voi
 #ifndef NDEBUG
 	if ((type & DIALOG_BOX) == 0) {
 		fprintf(stderr, "dialog_create called with bogus dialog type %d\n", type);
-		return 0;
+		return NULL;
 	}
 #endif
 

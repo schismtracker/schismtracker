@@ -34,14 +34,6 @@ float MixFloatBuffer[MIXBUFFERSIZE * 2];
 int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
-extern int gnDryROfsVol;
-extern int gnDryLOfsVol;
-
-// 4x256 taps polyphase FIR resampling filter
-extern short int gFastSinc[];
-extern short int gKaiserSinc[];    // 8-taps polyphase
-
-
 
 /* The following lut settings are PRECOMPUTED.
  *
@@ -1087,7 +1079,7 @@ END_RAMPMIX_STFLT_INTERFACE()
 
 
 // mix_(bits)(m/s)[_filt]_(interp/spline/fir/whatever)[_ramp]
-const mix_interface_t mix_functions[2 * 2 * 16] = {
+static const mix_interface_t mix_functions[2 * 2 * 16] = {
 	// No SRC
 	Mono8BitMix,                        Mono16BitMix,
 	Stereo8BitMix,                      Stereo16BitMix,
@@ -1138,7 +1130,7 @@ const mix_interface_t mix_functions[2 * 2 * 16] = {
 };
 
 
-const mix_interface_t fastmix_functions[2 * 2 * 16] = {
+static const mix_interface_t fastmix_functions[2 * 2 * 16] = {
 	// No SRC
 	FastMono8BitMix,                    FastMono16BitMix,
 	Stereo8BitMix,                      Stereo16BitMix,
