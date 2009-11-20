@@ -48,8 +48,8 @@ static int cursor_char = 0;
  * (should be updated whenever cursor_line/cursor_char change) */
 static int cursor_pos = 0;
 
-char *message = NULL;
-int edit_mode = 0;
+static char *message = NULL;
+static int edit_mode = 0;
 
 /* nonzero => message should use the alternate font */
 static int message_extfont = 1;
@@ -101,7 +101,7 @@ static void set_absolute_position(char *text, int pos, int *line, int *ch)
 	char *ptr;
 
 	*line = *ch = 0;
-	ptr = 0;
+	ptr = NULL;
 	while (pos > 0) {
 	        len = get_nth_line(text, *line, &ptr);
 		if (len < 0) {
@@ -130,7 +130,7 @@ static int get_absolute_position(char *text, int line, int character)
         int len;
         char *ptr;
 
-	ptr = 0;
+	ptr = NULL;
         len = get_nth_line(text, line, &ptr);
         if (len < 0) {
                 return 0;
@@ -437,7 +437,7 @@ static void message_delete_line(void)
         movelen = (message + strlen(message) - ptr);
         if (movelen == 0)
                 return;
-        memmove((void *) ptr, ptr + len + 1, movelen);
+        memmove(ptr, ptr + len + 1, movelen);
         len = get_nth_line(message, cursor_line, &ptr);
         if (cursor_char > len) {
                 cursor_char = len;
@@ -537,7 +537,7 @@ static void _delete_selection(void)
 	} else {
 		eat = widgets_message[0].clip_end - cursor_pos;
 	}
-	clippy_select(0,0,0);
+	clippy_select(NULL, NULL, 0);
         if (cursor_pos == len)
                 return;
         memmove(message + cursor_pos, message + cursor_pos + eat + 1,
@@ -671,7 +671,7 @@ static int message_handle_key_editmode(struct key_event * k)
                                 message_extfont = !message_extfont;
                                 break;
                         } else if (k->sym == SDLK_y) {
-				clippy_select(0,0,0);
+				clippy_select(NULL, NULL, 0);
                                 message_delete_line();
                                 break;
                         }
@@ -703,7 +703,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
 		if (k->state) return 1;
 		if (!doing_drag) {
-			clippy_select(0,0,0);
+			clippy_select(NULL, NULL, 0);
 		}
         }
 

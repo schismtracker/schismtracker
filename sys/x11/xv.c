@@ -52,10 +52,10 @@ unsigned int xv_yuvlayout(void)
 	if (SDL_GetWMInfo(&info)) {
 		dpy = info.info.x11.display;
 	} else {
-		dpy = 0;
+		dpy = NULL;
 	}
 	if (!dpy) {
-		dpy = XOpenDisplay(0);
+		dpy = XOpenDisplay(NULL);
 		memset(&info, 0, sizeof(info));
 		if (!dpy) return 0;
 	}

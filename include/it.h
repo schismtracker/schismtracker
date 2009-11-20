@@ -136,6 +136,10 @@ enum {
 	
 	/* Play MIDI events using the same semantics as tracker samples */
 	MIDI_LIKE_TRACKER = (1 << 29),
+
+	/* if true, don't stop playing on load, and start playing new song afterward
+	(but only if the last song was already playing before loading) */
+	PLAY_AFTER_LOAD = (1 << 30),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */

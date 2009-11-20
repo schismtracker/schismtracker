@@ -54,8 +54,6 @@ extraneous libraries (i.e. GLib). */
 #include <sys/wait.h>
 #endif
 
-extern char **environ;
-
 void ms_sleep(unsigned int ms)
 {
 #ifdef WIN32
@@ -588,15 +586,16 @@ char *get_home_directory(void)
 char *str_concat(const char *s, ...)
 {
 	va_list ap;
-	char *out = 0;
+	char *out = NULL;
 	int len = 0;
 	
 	va_start(ap,s);
 	while (s) {
-		out = (char *)mem_realloc(out, (len += strlen(s)+1));
+		out = mem_realloc(out, (len += strlen(s)+1));
 		strcat(out, s);
 		s = va_arg(ap, const char *);
 	}
+	va_end(ap);
 	return out;
 
 }
@@ -604,10 +603,10 @@ char *str_concat(const char *s, ...)
 void unset_env_var(const char *key)
 {
 #ifdef HAVE_UNSETENV
-	(void)unsetenv(key);
+	unsetenv(key);
 #else
 	/* assume POSIX-style semantics */
-	(void)putenv(key);
+	putenv(key);
 #endif
 }
 
@@ -655,13 +654,12 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 		if (!ptr) ptr = "command.com";
 		r = _spawnlp(_P_WAIT, ptr, ptr, "/c", buf2, maybe_arg, 0);
 	}
-	(void)SetCurrentDirectory(buf);
-	(void)chdir(buf);
+	SetCurrentDirectory(buf);
+	chdir(buf);
 	if (r == 0) return 1;
 	return 0;
 #else
 	char *tmp;
-	char *argv[3];
 	int st;
 
 	switch (fork()) {
@@ -671,13 +669,11 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 		tmp = malloc(strlen(name)+4);
 		if (!tmp) _exit(255);
 		sprintf(tmp, "./%s", name);
-		argv[0] = tmp;
-		argv[1] = (void*)maybe_arg;
-		argv[2] = 0;
-		execve(tmp, argv, environ);
+		execl(tmp, tmp, maybe_arg, NULL);
 		_exit(255);
 	};
-	while (wait(&st) == -1);
+	while (wait(&st) == -1) {
+	}
 	if (WIFEXITED(st) && WEXITSTATUS(st) == 0) return 1;
 	return 0;
 #endif

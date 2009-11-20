@@ -85,8 +85,8 @@ typedef void * (APIENTRY * PFNWGLALLOCATEMEMORYNVPROC) (int size, float readfreq
 typedef void (APIENTRY * PFNWGLFREEMEMORYNVPROC) (void *pointer);
 #endif
 
-PFNWGLALLOCATEMEMORYNVPROC db_glAllocateMemoryNV = NULL;
-PFNWGLFREEMEMORYNVPROC db_glFreeMemoryNV = NULL;
+static PFNWGLALLOCATEMEMORYNVPROC db_glAllocateMemoryNV = NULL;
+static PFNWGLFREEMEMORYNVPROC db_glFreeMemoryNV = NULL;
 
 #ifndef GL_NV_pixel_data_range
 #define GL_NV_pixel_data_range 1
@@ -95,7 +95,7 @@ typedef void (APIENTRYP PFNGLPIXELDATARANGENVPROC) (GLenum target, GLsizei lengt
 typedef void (APIENTRYP PFNGLFLUSHPIXELDATARANGENVPROC) (GLenum target);
 #endif
 
-PFNGLPIXELDATARANGENVPROC glPixelDataRangeNV = NULL;
+static PFNGLPIXELDATARANGENVPROC glPixelDataRangeNV = NULL;
 
 #endif
 
@@ -383,8 +383,8 @@ static void _video_preinit(void)
 {
 	if (!_did_preinit) {
 		memset(&video, 0, sizeof(video));
-		video.cv32backing = (void*)mem_alloc(NATIVE_SCREEN_WIDTH * 8);
-		video.cv8backing = (void*)mem_alloc(NATIVE_SCREEN_WIDTH);
+		video.cv32backing = mem_alloc(NATIVE_SCREEN_WIDTH * 8);
+		video.cv8backing = mem_alloc(NATIVE_SCREEN_WIDTH);
 		_did_preinit = 1;
 	}
 
@@ -440,7 +440,8 @@ void video_setup(const char *driver)
 	char *q;
 	/* _SOME_ drivers can be switched to, but not all of them... */
 
-	if (driver && strcasecmp(driver, "auto") == 0) driver = 0;
+	if (driver && strcasecmp(driver, "auto") == 0)
+		driver = NULL;
 
 	_video_preinit();
 
@@ -656,7 +657,7 @@ SKIP1:
 			/* fallback */
 			video.desktop.want_type = VIDEO_SURFACE;
 		}
-		video.gl.framebuf = 0;
+		video.gl.framebuf = NULL;
 		video.gl.texture = 0;
 		video.gl.displaylist = 0;
 		my_glGetIntegerv(GL_MAX_TEXTURE_SIZE, &video.gl.max_texsize);
@@ -716,7 +717,7 @@ SKIP1:
 						| SDL_DOUBLEBUF
 						| SDL_ASYNCBLIT);
 			}
-			(void)close(fb);
+			close(fb);
 		}
 	}
 #endif
@@ -934,7 +935,7 @@ RETRYSURF:	/* use SDL surfaces */
 	case VIDEO_YUV:
 		if (video.overlay) {
 			SDL_FreeYUVOverlay(video.overlay);
-			video.overlay = 0;
+			video.overlay = NULL;
 		}
 		_setup_surface(width, height, 0);
 		/* TODO: switch? */
@@ -1015,7 +1016,7 @@ RETRYSURF:	/* use SDL surfaces */
 		default:
 			/* can't get a recognized planes */
 			SDL_FreeYUVOverlay(video.overlay);
-			video.overlay = 0;
+			video.overlay = NULL;
 			goto RETRYSURF;
 		};
 		video.desktop.type = VIDEO_YUV;
@@ -1067,7 +1068,7 @@ RETRYSURF:	/* use SDL surfaces */
 		} else
 #endif
 		if (!video.gl.framebuf) {
-			video.gl.framebuf = (void*)mem_alloc(NATIVE_SCREEN_WIDTH
+			video.gl.framebuf = mem_alloc(NATIVE_SCREEN_WIDTH
 							*NATIVE_SCREEN_HEIGHT*4);
 		}
 		
@@ -1090,7 +1091,7 @@ RETRYSURF:	/* use SDL surfaces */
 						GL_NEAREST);
 		}
 		my_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
-			0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0);
+			0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, NULL);
 		my_glClearColor(0.0, 0.0, 0.0, 1.0);
 		my_glClear(GL_COLOR_BUFFER_BIT);
 		SDL_GL_SwapBuffers();
@@ -1806,14 +1807,14 @@ struct _ss_data {
 };
 static void _ss_output(struct pngw_arg *o, const void *data, int len)
 {
-	struct _ss_data *d = (void *)o->extra_user_data;
+	struct _ss_data *d = o->extra_user_data;
 	if (fwrite(data, len, 1, d->fp) != 1) {
 		d->fp_ok = 0;
 	}
 }
 static int _ss_next_pixel(struct pngw_arg *o)
 {
-	struct _ss_data *d = (void *)o->extra_user_data;
+	struct _ss_data *d = o->extra_user_data;
 
 	if (d->x == NATIVE_SCREEN_WIDTH) {
 		d->x = 0;
@@ -1865,7 +1866,7 @@ void video_screenshot(void)
 	pa.output = _ss_output;
 	pa.read_pixel = _ss_next_pixel;
 	data.fp_ok = 0;
-	pa.extra_user_data = (void*)&data;
+	pa.extra_user_data = &data;
 
 	vgamem_lock();
 	pngw(&pa);

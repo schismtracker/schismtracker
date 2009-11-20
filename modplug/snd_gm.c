@@ -2,13 +2,13 @@
  * into MIDI style thinking.
 */
 
+#include <math.h> // for log and log2
+
 #include "log.h"
 #include "it.h" // needed for status.flags
 #include "sndfile.h"
 #include "mplink.h" // for 'mp', which we shouldn't need
 #include "snd_gm.h"
-
-#include <math.h> // for log and log2
 
 /* not sure what's up with os x here, already defines log2... actually why is this even here? */
 #if !defined(HAVE_LOG2) && !defined(__USE_ISOC99) && !defined(MACOSX)
@@ -674,10 +674,10 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 
 static double LastSongCounter = 0.0;
 
-void GM_SendSongStartCode()    { unsigned char c = 0xFA; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongStopCode()     { unsigned char c = 0xFC; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongContinueCode() { unsigned char c = 0xFB; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongTickCode()     { unsigned char c = 0xF8; MPU_SendCommand(&c, 1, 0); }
+void GM_SendSongStartCode(void)    { unsigned char c = 0xFA; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
+void GM_SendSongStopCode(void)     { unsigned char c = 0xFC; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
+void GM_SendSongContinueCode(void) { unsigned char c = 0xFB; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
+void GM_SendSongTickCode(void)     { unsigned char c = 0xF8; MPU_SendCommand(&c, 1, 0); }
 
 
 void GM_SendSongPositionCode(unsigned note16pos)

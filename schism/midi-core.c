@@ -113,7 +113,7 @@ FAIL:
 /* configurable midi stuff */
 int midi_flags = MIDI_TICK_QUANTIZE | MIDI_RECORD_NOTEOFF
 		| MIDI_RECORD_VELOCITY | MIDI_RECORD_AFTERTOUCH
-		| MIDI_PITCH_BEND;
+		| MIDI_PITCHBEND;
 		
 int midi_pitch_depth = 12;
 int midi_amplification = 100;
@@ -179,7 +179,7 @@ void cfg_load_midi(cfg_file_t *cfg)
 
 	CFG_GET_MI(flags, MIDI_TICK_QUANTIZE | MIDI_RECORD_NOTEOFF
 		| MIDI_RECORD_VELOCITY | MIDI_RECORD_AFTERTOUCH
-		| MIDI_PITCH_BEND);
+		| MIDI_PITCHBEND);
 	CFG_GET_MI(pitch_depth, 12);
 	CFG_GET_MI(amplification, 100);
 	CFG_GET_MI(c5note, 60);
@@ -729,7 +729,7 @@ void midi_send_flush(void)
 	if (!need_explicit_flush) return;
 
 	if (!midi_queue_thread) {
-		midi_queue_thread = SDL_CreateThread(_midi_queue_run, 0);
+		midi_queue_thread = SDL_CreateThread(_midi_queue_run, NULL);
 		if (midi_queue_thread) {
 			log_appendf(3, "Started MIDI queue thread");
 		} else {
@@ -758,7 +758,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		}
 		memcpy(status.last_midi_event, data, status.last_midi_len);
 		status.flags |= MIDI_EVENT_CHANGED;
-		status.last_midi_port = 0;
+		status.last_midi_port = NULL;
 		time(&status.last_midi_time);
 		status.flags |= NEED_UPDATE;
 	}
@@ -799,7 +799,7 @@ void midi_port_unregister(int num)
 			if (q->free_userdata) free(q->userdata);
 			free(q);
 
-			port_top[i] = 0;
+			port_top[i] = NULL;
 			port_count--;
 			break;
 		}
@@ -886,7 +886,7 @@ void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocit
 	e.user.type = SCHISM_EVENT_MIDI;
 	e.user.code = SCHISM_EVENT_MIDI_NOTE;
 	e.user.data1 = st;
-	e.user.data2 = 0;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 
@@ -903,7 +903,7 @@ void midi_event_controller(int channel, int param, int value)
 	e.user.type = SCHISM_EVENT_MIDI;
 	e.user.code = SCHISM_EVENT_MIDI_CONTROLLER;
 	e.user.data1 = st;
-	e.user.data2 = 0;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 
@@ -920,7 +920,7 @@ void midi_event_program(int channel, int value)
 	e.user.type = SCHISM_EVENT_MIDI;
 	e.user.code = SCHISM_EVENT_MIDI_PROGRAM;
 	e.user.data1 = st;
-	e.user.data2 = 0;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 
@@ -937,7 +937,7 @@ void midi_event_aftertouch(int channel, int value)
 	e.user.type = SCHISM_EVENT_MIDI;
 	e.user.code = SCHISM_EVENT_MIDI_AFTERTOUCH;
 	e.user.data1 = st;
-	e.user.data2 = 0;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 
@@ -954,7 +954,7 @@ void midi_event_pitchbend(int channel, int value)
 	e.user.type = SCHISM_EVENT_MIDI;
 	e.user.code = SCHISM_EVENT_MIDI_PITCHBEND;
 	e.user.data1 = st;
-	e.user.data2 = 0;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 
@@ -971,7 +971,7 @@ void midi_event_system(int argv, int param)
 	e.user.type = SCHISM_EVENT_MIDI;
 	e.user.code = SCHISM_EVENT_MIDI_SYSTEM;
 	e.user.data1 = st;
-	e.user.data2 = 0;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 
@@ -981,8 +981,8 @@ void midi_event_tick(void)
 
 	e.user.type = SCHISM_EVENT_MIDI;
 	e.user.code = SCHISM_EVENT_MIDI_TICK;
-	e.user.data1 = 0;
-	e.user.data2 = 0;
+	e.user.data1 = NULL;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 
@@ -995,7 +995,7 @@ void midi_event_sysex(const unsigned char *data, unsigned int len)
 	e.user.data1 = mem_alloc(len+sizeof(len));
 	memcpy(e.user.data1, &len, sizeof(len));
 	memcpy(e.user.data1+sizeof(len), data, len);
-	e.user.data2 = 0;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 

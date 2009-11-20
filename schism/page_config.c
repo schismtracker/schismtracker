@@ -104,7 +104,7 @@ static void change_ui_settings(void)
 static int countdown = 10;
 static time_t started = 0;
 
-static const char *video_revert_driver = 0;
+static const char *video_revert_driver = NULL;
 static int video_revert_fs = 0;
 
 static void video_mode_keep(UNUSED void*ign)
@@ -139,7 +139,7 @@ static void video_dialog_draw_const(void)
 		time(&started); /* err... */
 		status.flags |= NEED_UPDATE;
 		if (countdown == 0) {
-			video_mode_cancel(0);
+			video_mode_cancel(NULL);
 			return;
 		}
 	}

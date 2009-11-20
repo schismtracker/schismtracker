@@ -52,9 +52,6 @@ char song_basename[NAME_MAX + 1];
 
 uint8_t row_highlight_major = 16, row_highlight_minor = 4;
 
-// if false, don't stop playing on load, and start playing new song afterward
-int stop_on_load = 1;
-
 // ------------------------------------------------------------------------
 // quiet a sample when loading
 
@@ -372,11 +369,11 @@ int song_load_unchecked(const char *file)
         CSoundFile *newsong;
 
 	// IT stops the song even if the new song can't be loaded
-	if (stop_on_load) {
+	if (status.flags & PLAY_AFTER_LOAD) {
+		was_playing = (song_get_mode() == MODE_PLAYING);
+	} else {
 		was_playing = 0;
 		song_stop();
-	} else {
-		was_playing = (song_get_mode() == MODE_PLAYING);
 	}
 
 	log_appendf(2, "Loading %s", base);
@@ -399,7 +396,7 @@ int song_load_unchecked(const char *file)
 	song_stop_unlocked(0);
 	song_unlock_audio();
 	
-	if (was_playing && !stop_on_load)
+	if (was_playing && (status.flags & PLAY_AFTER_LOAD))
 		song_start();
 
 	// ugly #2
@@ -975,7 +972,7 @@ static void _save_it(diskwriter_driver_t *fp)
 	if (song_has_linear_pitch_slides()) hdr.flags |= 8;
 	if (song_has_old_effects())         hdr.flags |= 16;
 	if (song_has_compatible_gxx())      hdr.flags |= 32;
-	if (midi_flags & MIDI_PITCH_BEND) {
+	if (midi_flags & MIDI_PITCHBEND) {
 		hdr.flags |= 64;
 		hdr.pwd = midi_pitch_depth;
 	}
@@ -1115,21 +1112,6 @@ static void _save_xm(diskwriter_driver_t *dw)
 	}
 }
 
-static void _save_txt(diskwriter_driver_t *fp)
-{
-	const char *s = (const char *)song_get_message();
-	for (int i = 0; s[i]; i++) {
-		if (s[i] == '\r' && s[i+1] == '\n') {
-			continue;
-
-		} else if (s[i] == '\r') {
-			fp->o(fp, (const unsigned char *)"\n", 1);
-		} else {
-			fp->o(fp, ((const unsigned char *)s)+i, 1);
-		}
-	}
-}
-
 static void _save_mod(diskwriter_driver_t *dw)
 {
 	feature_check_instruments("MOD", 0,  0);
@@ -1163,9 +1145,6 @@ diskwriter_driver_t mtmwriter = {
 };
 diskwriter_driver_t midiwriter = {
 	"MIDI", "mid", 1, fmt_mid_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
-};
-diskwriter_driver_t txtwriter = {
-	"TXT", "txt", -1, _save_txt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 
 /* ------------------------------------------------------------------------- */
@@ -1352,7 +1331,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 						//song_sample *smp = (song_sample *)song_get_sample(k, NULL);
 
 						for (int c = 0; c < 25; c++) {
-							if (xl->Samples[x].name == 0)
+							if (xl->Samples[x].name[c] == 0)
 								xl->Samples[x].name[c] = 32;
 						}
 						xl->Samples[x].name[25] = 0;
@@ -1436,7 +1415,7 @@ int song_load_sample(int n, const char *file)
         const char *base = get_basename(file);
         slurp_t *s = slurp(file, NULL, 0);
 
-        if (s == 0) {
+        if (s == NULL) {
                 log_appendf(4, "%s: %s", base, strerror(errno));
                 return 0;
         }
@@ -1554,12 +1533,12 @@ int song_save_instrument(int n, const char *file)
 // ------------------------------------------------------------------------
 // song information
 
-const char *song_get_filename()
+const char *song_get_filename(void)
 {
         return song_filename;
 }
 
-const char *song_get_basename()
+const char *song_get_basename(void)
 {
         return song_basename;
 }
@@ -1568,7 +1547,7 @@ const char *song_get_basename()
 // sample library browsing
 
 // FIXME: unload the module when leaving the library 'directory'
-CSoundFile *library = NULL;
+static CSoundFile *library = NULL;
 
 
 // TODO: stat the file?

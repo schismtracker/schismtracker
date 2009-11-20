@@ -290,9 +290,9 @@ static int increment_row(CSoundFile *csf)
 
 		/* [Increase ProcessOrder] */
 		/* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
-		do
+		do {
 			csf->m_nProcessOrder++;
-		while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP);
+		} while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP);
 
 		/* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
 		if (csf->Orderlist[csf->m_nProcessOrder] == ORDER_LAST) {
@@ -407,7 +407,7 @@ int csf_process_tick(CSoundFile *csf)
 
 			for (unsigned int nChn=0; nChn<csf->m_nChannels; nChn++, m++) {
 				/* m==NULL allows schism to receive notification of SDx and Scx commands */
-				csf_midi_out_note(nChn, 0);
+				csf_midi_out_note(nChn, NULL);
 			}
 		}
 	}

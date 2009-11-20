@@ -184,8 +184,8 @@ struct widget_panbar {
         int max;
         int value;
         int channel;
-        int muted:1;
-        int surround:1;
+        unsigned int muted:1;
+        unsigned int surround:1;
 };
 
 struct widget_other {

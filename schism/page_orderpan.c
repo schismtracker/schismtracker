@@ -331,7 +331,7 @@ static void orderlist_reorder(void)
 	}
 	for (i = 0; i < 200; i++) {
 		if (!np[i]) {
-			song_pattern_install(i, 0, 64);
+			song_pattern_install(i, NULL, 64);
 		} else {
 			song_pattern_install(i, np[i], nplen[i]);
 		}
@@ -652,12 +652,12 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			&& ((unsigned char)z[23]) == 0xFF
 			&& ((unsigned char)z[24]) < 200) {
 				dialog_create(DIALOG_OK_CANCEL,
-	"This will replace and unlink the current sample", _copysam, dialog_cancel, 1, 0);
+	"This will replace and unlink the current sample", _copysam, dialog_cancel, 1, NULL);
 			} else if (song_sample_is_empty(n)) {
-				_copysam(0);
+				_copysam(NULL);
 			} else {
 				dialog_create(DIALOG_OK_CANCEL,
-	"This will replace the current sample", _copysam, dialog_cancel, 1, 0);
+	"This will replace the current sample", _copysam, dialog_cancel, 1, NULL);
 			}
 		}
                 return 0;
@@ -681,10 +681,10 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			}
 
 			if (song_sample_is_empty(sample_get_current())) {
-				_attachsam(0);
+				_attachsam(NULL);
 			} else {
 				dialog_create(DIALOG_OK_CANCEL,
-	"This will replace the current sample", _attachsam, dialog_cancel, 1, 0);
+	"This will replace the current sample", _attachsam, dialog_cancel, 1, NULL);
 			}
 		}
                 return 0;

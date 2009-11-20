@@ -34,7 +34,7 @@
 /* static in my attic */
 static struct vgamem_overlay sample_image = {
 	55,26,76,29,
-	0, 0, 0, 0,
+	NULL, 0, 0, 0,
 };
 
 static int dialog_f1_hack = 0;
@@ -105,7 +105,7 @@ static int _last_vis_sample(void)
 static void sample_list_reposition(void)
 {
 	if (dialog_f1_hack) {
-		sample_adlibconfig_dialog(0);
+		sample_adlibconfig_dialog(NULL);
 		dialog_f1_hack = 0;
 
 	} else if (current_sample < top_sample) {
@@ -1328,7 +1328,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 	case SDLK_q:
 		if (sample->data != NULL) {
 			if (sample->flags & SAMP_STEREO) {
-				do_quality_convert(0);
+				do_quality_convert(NULL);
 			} else {
 				dialog_create(DIALOG_YES_NO, "Convert sample?",
 				      do_quality_convert, do_quality_toggle, 0, NULL);

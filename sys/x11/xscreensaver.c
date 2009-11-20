@@ -45,7 +45,7 @@
 /* FIXME: put this in some header somewhere */
 void xscreensaver_deactivate(void);
 
-static XErrorHandler old_handler = 0;
+static XErrorHandler old_handler = NULL;
 static int BadWindow_ehandler(Display *dpy, XErrorEvent *error)
 {
 	if (error->error_code == BadWindow) {
@@ -73,7 +73,7 @@ void xscreensaver_deactivate(void)
 	Window win;
 	time_t now;
 
-	Display *dpy = 0;
+	Display *dpy = NULL;
 	XEvent ev;
 
 	if (!setup) {
@@ -81,7 +81,7 @@ void xscreensaver_deactivate(void)
 		SDL_GetWMInfo(&info);
 		dpy = info.info.x11.display;
 		if (!dpy) {
-			dpy = XOpenDisplay(0);
+			dpy = XOpenDisplay(NULL);
 			if (!dpy) return;
 			memset(&info, 0, sizeof(info));
 			info.info.x11.display = dpy;
@@ -133,7 +133,7 @@ void xscreensaver_deactivate(void)
 		Atom type;
 		int format;
 		unsigned long nitems, bytesafter;
-		unsigned char *v = 0;
+		unsigned char *v = NULL;
 
 		XSync(dpy, False);
 		old_handler = XSetErrorHandler(BadWindow_ehandler);

@@ -50,9 +50,9 @@ static int wakeup[2];
 static int real_num_ports = 0;
 static int num_ports = 0;
 static int out_fd = -1;
-static int *port_fd = 0;
-static int *state = 0;
-static SDL_mutex *blocker = 0;
+static int *port_fd = NULL;
+static int *state = NULL;
+static SDL_mutex *blocker = NULL;
 
 static void do_wake_main(void)
 {
@@ -60,8 +60,8 @@ static void do_wake_main(void)
 	SDL_Event e;
 	e.user.type = SCHISM_EVENT_UPDATE_IPMIDI;
 	e.user.code = 0;
-	e.user.data1 = 0;
-	e.user.data2 = 0;
+	e.user.data1 = NULL;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 static void do_wake_midi(void)
@@ -94,18 +94,18 @@ static int _get_fd(int pb, int isout)
 	opt = !isout;
 	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void*)&opt, sizeof(opt)) < 0) {
 #ifdef WIN32
-		(void)closesocket(fd);
+		closesocket(fd);
 #endif
-		(void)close(fd);
+		close(fd);
 		return -1;
 	}
 
 	opt = 31;
 	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&opt, sizeof(opt)) < 0) {
 #ifdef WIN32
-		(void)closesocket(fd);
+		closesocket(fd);
 #endif
-		(void)close(fd);
+		close(fd);
 		return -1;
 	}
 
@@ -114,18 +114,18 @@ static int _get_fd(int pb, int isout)
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
 	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) < 0) {
 #ifdef WIN32
-		(void)closesocket(fd);
+		closesocket(fd);
 #endif
-		(void)close(fd);
+		close(fd);
 		return -1;
 	}
 
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void*)&opt, sizeof(opt)) < 0) {
 #ifdef WIN32
-		(void)closesocket(fd);
+		closesocket(fd);
 #endif
-		(void)close(fd);
+		close(fd);
 		return -1;
 	}
 
@@ -139,9 +139,9 @@ static int _get_fd(int pb, int isout)
 	}
 	if (bind(fd, (struct sockaddr *)&asin, sizeof(asin)) < 0) {
 #ifdef WIN32
-		(void)closesocket(fd);
+		closesocket(fd);
 #endif
-		(void)close(fd);
+		close(fd);
 		return -1;
 	}
 
@@ -168,7 +168,7 @@ static void _readin(struct midi_provider *p, int en, int fd)
 	r = recvfrom(fd, buffer, sizeof(buffer), 0,
 		(struct sockaddr *)&asin, &slen);
 	if (r > 0) {
-		ptr = src = 0;
+		ptr = src = NULL;
 		while (midi_port_foreach(p, &ptr)) {
 			int n = INT_SHAPED_PTR(ptr->userdata);
 			if (n == en) src = ptr;
@@ -191,7 +191,7 @@ static int _ip_thread(struct midi_provider *p)
 		m = (volatile int)num_ports;
 		if (m > real_num_ports) {
 			/* need more ports */
-			tmp = (int *)malloc(2 * (m * sizeof(int)));
+			tmp = malloc(2 * (m * sizeof(int)));
 			if (tmp) {
 				tmp2 = tmp + m;
 				for (i = 0; i < real_num_ports; i++) {
@@ -218,9 +218,9 @@ static int _ip_thread(struct midi_provider *p)
 		} else if (m < real_num_ports) {
 			for (i = m; i < real_num_ports; i++) {
 #ifdef WIN32
-				(void)closesocket(port_fd[i]);
+				closesocket(port_fd[i]);
 #endif
-				(void)close(port_fd[i]);
+				close(port_fd[i]);
 				port_fd[i] = -1;
 			}
 			real_num_ports = num_ports = m;
@@ -246,11 +246,11 @@ static int _ip_thread(struct midi_provider *p)
 		if (wakeup[0] > m) m = wakeup[0];
 #endif
 		do {
-			i = select(m+1, &rfds, 0, 0, 
+			i = select(m+1, &rfds, NULL, NULL,
 #ifdef WIN32
 				&tv
 #else
-				(struct timeval *)0
+				NULL
 #endif
 				);
 		} while (i == -1 && errno == EINTR);
@@ -335,7 +335,7 @@ static void _ip_poll(struct midi_provider *p)
 	SDL_mutexP(blocker);
 	m = (volatile int)real_num_ports;
 	if (m < last_buildout) {
-		ptr = 0;
+		ptr = NULL;
 		while (midi_port_foreach(p, &ptr)) {
 			i = INT_SHAPED_PTR(ptr->userdata);
 			if (i >= m) midi_port_unregister(ptr->num);
@@ -343,7 +343,7 @@ static void _ip_poll(struct midi_provider *p)
 		last_buildout = m;
 	} else if (m > last_buildout) {
 		for (i = last_buildout; i < m; i++) {
-			buffer = 0;
+			buffer = NULL;
 			if (asprintf(&buffer, " Multicast/IP MIDI %lu", i+1) == -1) {
 				perror("asprintf");
 				exit(255);
@@ -375,8 +375,8 @@ int ip_midi_setup(void)
 	if (pipe(wakeup) == -1) {
 		return 0;
 	}
-	(void)fcntl(wakeup[0], F_SETFL, fcntl(wakeup[0], F_GETFL, 0) | O_NONBLOCK);
-	(void)fcntl(wakeup[1], F_SETFL, fcntl(wakeup[1], F_GETFL, 0) | O_NONBLOCK);
+	fcntl(wakeup[0], F_SETFL, fcntl(wakeup[0], F_GETFL, 0) | O_NONBLOCK);
+	fcntl(wakeup[1], F_SETFL, fcntl(wakeup[1], F_GETFL, 0) | O_NONBLOCK);
 #endif
 
 	if (out_fd == -1) {
@@ -397,15 +397,8 @@ int ip_midi_setup(void)
 	return 1;
 }
 
-#else
-
-void ip_midi_setports(int n)
+int ip_midi_getports(void)
 {
-}
-
-#endif
-
-int ip_midi_getports(void) {
 	int tmp;
 
 	if (out_fd == -1) return 0;
@@ -416,3 +409,12 @@ int ip_midi_getports(void) {
 	SDL_mutexV(blocker);
 	return tmp;
 }
+
+#else
+
+void ip_midi_setports(int n)
+{
+}
+
+#endif
+

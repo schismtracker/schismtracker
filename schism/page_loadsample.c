@@ -43,7 +43,7 @@
 /* the locals */
 static struct vgamem_overlay sample_image = {
 	52,25,76,28,
-	0, 0, 0, 0,
+	NULL, 0, 0, 0,
 };
 
 static char current_filename[PATH_MAX];
@@ -191,7 +191,7 @@ static void read_directory(void)
 		perror(cfg_dir_samples);
 
 	dmoz_filter_filelist(&flist, sampgrep, &current_file, file_list_reposition);
-        dmoz_cache_lookup(cfg_dir_samples, &flist, 0);
+        dmoz_cache_lookup(cfg_dir_samples, &flist, NULL);
 	file_list_reposition();
 }
 
@@ -204,7 +204,7 @@ static int change_dir(const char *dir)
 	if (!ptr)
 		return 0;
 
-        dmoz_cache_update(cfg_dir_samples, &flist, 0);
+        dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
 	/* FIXME: need to make sure it exists, and that it's a directory */
 	strncpy(cfg_dir_samples, ptr, PATH_MAX);
@@ -242,7 +242,7 @@ static void load_sample_draw_const(void)
 	draw_box(58, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	filled = 0;
-	f = 0;
+	f = NULL;
 	if (current_file >= 0 && current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
 
@@ -425,7 +425,7 @@ static void do_create_host_realize(UNUSED void *gn)
 }
 static void do_create_host(UNUSED void *gn)
 {
-	do_create_host_realize(0);
+	do_create_host_realize(NULL);
 	set_page(PAGE_SAMPLE_LIST);
 }
 static void dont_create_host_realize(UNUSED void *gn)
@@ -577,7 +577,7 @@ static void handle_enter_key(void)
 	if (current_file < 0 || current_file >= flist.num_files) return;
 
 	file = flist.files[current_file];
-        dmoz_cache_update(cfg_dir_samples, &flist, 0);
+        dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
 	if ((file->type & (TYPE_BROWSABLE_MASK|TYPE_INST_MASK))
 	&& !(file->type & TYPE_SAMPLE_MASK)) {

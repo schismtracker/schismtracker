@@ -41,11 +41,11 @@ static const char *alsa_card_id = "default";
 extern void *_dltrick_handle;
 
 /* don't try this at home... */
-#define _void_dltrick(a,b,c) static void (*_dltrick_ ## a)b = 0; \
+#define _void_dltrick(a,b,c) static void (*_dltrick_ ## a)b = NULL; \
 void a b { if (!_dltrick_##a) _dltrick_##a = dlsym(_dltrick_handle, #a); \
 if (!_dltrick_##a) abort(); _dltrick_ ## a c; }
 
-#define _any_dltrick(r,a,b,c) static r (*_dltrick_ ## a)b = 0; \
+#define _any_dltrick(r,a,b,c) static r (*_dltrick_ ## a)b = NULL; \
 r a b { if (!_dltrick_##a) _dltrick_##a = dlsym(_dltrick_handle, #a); \
 if (!_dltrick_##a) abort(); return _dltrick_ ## a c; }
 

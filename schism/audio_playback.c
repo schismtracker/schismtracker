@@ -86,7 +86,7 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 
 	if (!stream || !len || !mp) {
 		if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
-			vis_work_8m(0, 0);
+			vis_work_8m(NULL, 0);
 		}
 		song_stop_unlocked(0);
 		goto POST_EVENT;
@@ -99,7 +99,7 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 	        if (!n) {
 			if (status.current_page == PAGE_WATERFALL
 			|| status.vis_style == VIS_FFT) {
-				vis_work_8m(0,0);
+				vis_work_8m(NULL, 0);
 			}
 			song_stop_unlocked(0);
 			goto POST_EVENT;
@@ -154,8 +154,8 @@ POST_EVENT:
 	SDL_Event e;
 	e.user.type = SCHISM_EVENT_PLAYBACK;
 	e.user.code = 0;
-	e.user.data1 = 0;
-	e.user.data2 = 0;
+	e.user.data1 = NULL;
+	e.user.data2 = NULL;
 	SDL_PushEvent(&e);
 }
 
@@ -872,8 +872,6 @@ void song_set_surround(int on)
 // well this is certainly a dopey place to put this, config having nothing to do with playback... maybe i
 // should put all the cfg_ stuff in config.c :/
 
-extern int stop_on_load; // XXX craphack
-
 #define CFG_GET_A(v,d) audio_settings.v = cfg_get_number(cfg, "Audio", #v, d)
 #define CFG_GET_M(v,d) audio_settings.v = cfg_get_number(cfg, "Mixer Settings", #v, d)
 void cfg_load_audio(cfg_file_t *cfg)
@@ -915,8 +913,12 @@ void cfg_load_audio(cfg_file_t *cfg)
 	audio_settings.eq_gain[1] = cfg_get_number(cfg, "EQ Med Low Band", "gain", 0);
 	audio_settings.eq_gain[2] = cfg_get_number(cfg, "EQ Med High Band", "gain", 0);
 	audio_settings.eq_gain[3] = cfg_get_number(cfg, "EQ High Band", "gain", 0);
-	
-	stop_on_load = !!cfg_get_number(cfg, "General", "stop_on_load", 1);
+
+	if (cfg_get_number(cfg, "General", "stop_on_load", 1)) {
+		status.flags &= ~PLAY_AFTER_LOAD;
+	} else {
+		status.flags |= PLAY_AFTER_LOAD;
+	}
 }
 
 #define CFG_SET_A(v) cfg_set_number(cfg, "Audio", #v, audio_settings.v)
@@ -964,7 +966,7 @@ void cfg_save_audio(cfg_file_t *cfg)
 	cfg_set_number(cfg, "Diskwriter", "bits", diskwriter_output_bits);
 	cfg_set_number(cfg, "Diskwriter", "channels", diskwriter_output_channels);
 
-	cfg_set_number(cfg, "General", "stop_on_load", stop_on_load);
+	cfg_set_number(cfg, "General", "stop_on_load", !(status.flags & PLAY_AFTER_LOAD));
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -1137,10 +1139,10 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 
 // ------------------------------------------------------------------------------------------------------------
 
-static SDL_Thread *audio_thread = 0;
+static SDL_Thread *audio_thread = NULL;
 static int audio_thread_running = 1;
 static int audio_thread_paused = 1;
-static SDL_mutex *audio_thread_mutex = 0;
+static SDL_mutex *audio_thread_mutex = NULL;
 
 void song_lock_audio(void)
 {
@@ -1195,7 +1197,7 @@ static int nosound_thread(UNUSED void *ign)
 	while (audio_thread_running) {
 		song_lock_audio();
 		if (!audio_thread_paused) {
-			audio_callback(0, (uint8_t *) nosound_buffer, 8820);
+			audio_callback(NULL, (uint8_t *) nosound_buffer, 8820);
 		}
 		song_unlock_audio();
 		SDL_Delay(200);
@@ -1211,7 +1213,7 @@ static void song_print_info_top(const char *d)
         log_appendf(5, " Using driver '%s'", d);
 }
 
-static const char *using_driver = 0;
+static const char *using_driver = NULL;
 static char driver_name[256];
 
 const char *song_audio_driver(void)
@@ -1272,7 +1274,7 @@ RETRY:	using_driver = driver;
 				fprintf(stderr, "Couldn't create nosound device: %s\n", SDL_GetError());
 				exit(1);
 			}
-			audio_thread = SDL_CreateThread(nosound_thread, 0);
+			audio_thread = SDL_CreateThread(nosound_thread, NULL);
 			if (!audio_thread) {
 				fprintf(stderr, "Couldn't create nosound device: %s\n", SDL_GetError());
 				exit(1);

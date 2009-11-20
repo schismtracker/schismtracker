@@ -47,7 +47,7 @@ static struct widget widgets_pitch[20];
 /* rastops for envelope */
 static struct vgamem_overlay env_overlay = {
 	32, 18, 65, 25,
-	0, 0, 0, 0
+	NULL, 0, 0, 0
 };
 
 /* toggled when pressing "," on the note table's sample field

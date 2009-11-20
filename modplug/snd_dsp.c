@@ -6,6 +6,7 @@
 
 #include "sndfile.h"
 #include "util.h" // for UNUSED
+#include "cmixer.h"
 
 
 void (*csf_midi_out_note)(int chan, const MODCOMMAND *m) = NULL;
@@ -17,9 +18,6 @@ void (*csf_midi_out_raw)(const unsigned char *,unsigned int, unsigned int) = NUL
 // Noise Reduction: simple low-pass filter
 static int32_t nLeftNR = 0;
 static int32_t nRightNR = 0;
-
-// Access the main temporary mix buffer directly: avoids an extra pointer
-extern int MixSoundBuffer[MIXBUFFERSIZE*2];
 
 
 void csf_initialize_dsp(UNUSED CSoundFile *csf, int reset)

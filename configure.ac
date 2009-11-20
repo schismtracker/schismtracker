@@ -315,8 +315,8 @@ if test x$ADD_OPT \!= xno; then
 fi
 
 if test x$ADD_WARN \!= xno; then
-        ADD_WARN="-Wall -W -Winline -Wshadow -Wcast-align -Wwrite-strings"
-        ADD_WARN="$ADD_WARN -Waggregate-return -Wpacked"
+        ADD_WARN="-Wall -Wextra -Winline -Wshadow -Wcast-align -Wwrite-strings"
+        ADD_WARN="$ADD_WARN -Waggregate-return -Wpacked -Wempty-body"
         CFLAGS="$CFLAGS $ADD_WARN -Wstrict-prototypes -Wmissing-prototypes"
         CFLAGS="$CFLAGS -Wmissing-declarations -Wnested-externs"
         CXXFLAGS="$CXXFLAGS $ADD_WARN"

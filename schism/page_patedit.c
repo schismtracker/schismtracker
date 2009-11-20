@@ -49,7 +49,7 @@ int show_default_volumes = 0;
 /* --------------------------------------------------------------------- */
 /* The (way too many) static variables */
 
-int midi_start_record = 0;
+static int midi_start_record = 0;
 
 enum {
     TEMPLATE_OFF = 0,
@@ -194,9 +194,6 @@ static struct {
 } shift_selection = { 0, 0, 0 };
 
 /* *INDENT-ON* */
-
-/* set to 1 if the last movement key was shifted */
-int previous_shift = 0;
 
 /* this is set to 1 on the first alt-d selection,
  * and shifted left on each successive press. */
@@ -374,7 +371,7 @@ static void length_edit_close(UNUSED void *data)
 	status.flags |= SONG_NEEDS_SAVE;
 	for (i = length_edit_widgets[1].d.thumbbar.value;
 	i <= length_edit_widgets[2].d.thumbbar.value; i++) {
-		if (song_get_pattern(i, 0) != nl) {
+		if (song_get_pattern(i, NULL) != nl) {
 			song_pattern_resize(i, nl);
 			if (i == current_pattern) {
 				status.flags |= NEED_UPDATE;
@@ -393,7 +390,7 @@ void pattern_editor_length_edit(void)
 	struct dialog *dialog;
 
 	create_thumbbar(length_edit_widgets + 0, 34, 24, 22, 0, 1, 1, NULL, 32, 200);
-	length_edit_widgets[0].d.thumbbar.value = song_get_pattern(current_pattern, 0);
+	length_edit_widgets[0].d.thumbbar.value = song_get_pattern(current_pattern, NULL );
 	create_thumbbar(length_edit_widgets + 1, 34, 27, 26, 0, 2, 2, NULL, 0, 199);
 	create_thumbbar(length_edit_widgets + 2, 34, 28, 26, 1, 3, 3, NULL, 0, 199);
 	length_edit_widgets[1].d.thumbbar.value
@@ -669,7 +666,7 @@ static void pattern_selection_system_copyout(void)
 	if (!(SELECTION_EXISTS)) {
 		if (clippy_owner(CLIPPY_SELECT) == widgets_pattern) {
 			/* unselect if we don't have a selection */
-			clippy_select(0,0,0);
+			clippy_select(NULL, NULL, 0);
 		}
 		return;
 	}
@@ -2915,7 +2912,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		}
 	}
 
-	if (!(midi_flags & MIDI_PITCH_BEND) || midi_pitch_depth == 0 || k->midi_bend == 0) {
+	if (!(midi_flags & MIDI_PITCHBEND) || midi_pitch_depth == 0 || k->midi_bend == 0) {
 		if (k->state && k->midi_note > -1 && cur_note->instrument > 0) {
 			song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note, v, c+1,
 				cur_note->effect, cur_note->parameter);
@@ -3401,7 +3398,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		} else if (clipboard.data) {
 			clipboard_free();
 
-			clippy_select(0,0,0);
+			clippy_select(NULL, NULL, 0);
 			clippy_yank();
 		} else {
 			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
@@ -3994,7 +3991,6 @@ static int pattern_editor_handle_key(struct key_event * k)
 		/* hack to keep shift-tab from changing the selection */
 		k->mod &= ~KMOD_SHIFT;
 		shift_selection_end();
-		previous_shift = 0;
 
 		return -1;
 	case SDLK_PAGEUP:

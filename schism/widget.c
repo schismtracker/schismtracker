@@ -613,7 +613,8 @@ struct widget *find_widget_xy_ex(int x, int y, int *num)
 	struct widget *w;
 	int i, pad;
 
-	if (!total_widgets)  return 0;
+	if (!total_widgets)
+		return NULL;
 	for (i = 0; i < *total_widgets; i++) {
 		w = &widgets[i];
 		switch (w->type) {
@@ -633,16 +634,16 @@ struct widget *find_widget_xy_ex(int x, int y, int *num)
 			}
 		}
 	}
-	return 0;
+	return NULL;
 }
 struct widget *find_widget_xy(int x, int y)
 {
-	return find_widget_xy_ex(x,y,0);
+	return find_widget_xy_ex(x, y, NULL);
 }
 int change_focus_to_xy(int x, int y)
 {
 	int n;
-	if (find_widget_xy_ex(x, y, &n) != 0) {
+	if (find_widget_xy_ex(x, y, &n) != NULL) {
 		change_focus_to(n);
 		return 1;
 	}

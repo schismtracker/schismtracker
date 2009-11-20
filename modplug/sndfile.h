@@ -19,7 +19,6 @@
 #include "tables.h"
 
 
-
 #define MOD_AMIGAC2             0x1AB
 #define MAX_SAMPLE_LENGTH       16000000
 #define MAX_SAMPLE_RATE         192000
@@ -716,14 +715,6 @@ void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, ui
 
 ///////////////////////////////////////////////////////////
 // Low-level Mixing functions
-
-#define MIXBUFFERSIZE           512
-#define MIXING_ATTENUATION      5
-#define MIXING_CLIPMIN          (-0x04000000)
-#define MIXING_CLIPMAX          (0x03FFFFFF)
-#define VOLUMERAMPPRECISION     12
-#define FADESONGDELAY           100
-#define EQ_BUFFERSIZE           (MIXBUFFERSIZE)
 
 #define MOD2XMFineTune(k)       ((int)( (signed char)((k)<<4) ))
 #define XM2MODFineTune(k)       ((int)( (k>>4)&0x0f ))

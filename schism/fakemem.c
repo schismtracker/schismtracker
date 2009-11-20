@@ -58,7 +58,7 @@ unsigned int memused_clipboard(void)
 	if (_cache_ok & 2) return c_cached;
 	_cache_ok |= 2;
 
-	memused_get_pattern_saved(&q, 0);
+	memused_get_pattern_saved(&q, NULL);
 	c_cached = q*256;
 	return c_cached;
 }
@@ -68,7 +68,7 @@ unsigned int memused_history(void)
 	unsigned int q = 0;
 	if (_cache_ok & 4) return h_cached;
 	_cache_ok |= 4;
-	memused_get_pattern_saved(0, &q);
+	memused_get_pattern_saved(NULL, &q);
 	return h_cached = (q * 256);
 }
 unsigned int memused_samples(void)
@@ -83,7 +83,7 @@ unsigned int memused_samples(void)
 
 	q = 0;
 	for (i = 0; i < 99; i++) {
-		s = song_get_sample(i, 0);
+		s = song_get_sample(i, NULL);
 		q += s->length;
 		if (s->flags & SAMP_STEREO) q += s->length;
 		if (s->flags & SAMP_16_BIT) q += s->length;

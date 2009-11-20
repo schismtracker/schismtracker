@@ -68,8 +68,12 @@ struct menu {
 
 /* *INDENT-OFF* */
 static struct menu main_menu = {
-        x: 6, y: 11, w: 25, title: " Main Menu",
-        num_items: 10, {
+        .x = 6,
+        .y = 11,
+        .w = 25,
+        .title = " Main Menu",
+        .num_items = 10,
+        .items = {
                 "File Menu...",
                 "Playback Menu...",
                 "View Patterns        (F2)",
@@ -80,13 +84,19 @@ static struct menu main_menu = {
                 "Message Editor (Shift-F9)",
                 "Settings Menu...",
                 "Help!                (F1)",
-        }, selected_item: 0, active_item: -1,
-        main_menu_selected_cb
+        },
+        .selected_item = 0,
+        .active_item = -1,
+        .selected_cb = main_menu_selected_cb,
 };
 
 static struct menu file_menu = {
-        x: 25, y: 13, w: 22, title: "File Menu",
-        num_items: 7, {
+        .x = 25,
+        .y = 13,
+        .w = 22,
+        .title = "File Menu",
+        .num_items = 7,
+        .items = {
                 "Load...           (F9)",
                 "New...        (Ctrl-N)",
                 "Save Current  (Ctrl-S)",
@@ -94,13 +104,19 @@ static struct menu file_menu = {
                 "Export...  (Shift-F10)",
                 "Message Log (Ctrl-F11)",
                 "Quit          (Ctrl-Q)",
-        }, selected_item: 0, active_item: -1,
-        file_menu_selected_cb
+        },
+        .selected_item = 0,
+        .active_item = -1,
+        .selected_cb = file_menu_selected_cb,
 };
 
 static struct menu playback_menu = {
-        x: 25, y: 13, w: 27, title: " Playback Menu",
-        num_items: 7, {
+        .x = 25,
+        .y = 13,
+        .w = 27,
+        .title = " Playback Menu",
+        .num_items = 7,
+        .items = {
                 "Show Infopage          (F5)",
                 "Play Song         (Ctrl-F5)",
                 "Play Pattern           (F6)",
@@ -108,42 +124,62 @@ static struct menu playback_menu = {
                 "Play from Mark/Cursor  (F7)",
                 "Stop                   (F8)",
                 "Calculate Length   (Ctrl-P)",
-        }, selected_item: 0, active_item: -1,
-        playback_menu_selected_cb
+        },
+        .selected_item = 0,
+        .active_item = -1,
+        .selected_cb = playback_menu_selected_cb,
 };
 
 static struct menu sample_menu = {
-        x: 25, y: 20, w: 25, title: "Sample Menu",
-        num_items: 3, {
+        .x = 25,
+        .y = 20,
+        .w = 25,
+        .title = "Sample Menu",
+        .num_items = 3,
+        .items = {
                 "Sample List          (F3)",
                 "Sample Library  (Ctrl-F3)",
                 "Reload Soundcard (Ctrl-G)",
-        }, selected_item: 0, active_item: -1,
-        sample_menu_selected_cb
+        },
+        .selected_item = 0,
+        .active_item = -1,
+        .selected_cb = sample_menu_selected_cb,
 };
 
 static struct menu instrument_menu = {
-        x: 20, y: 23, w: 29, title: "Instrument Menu",
-        num_items: 2, {
+        .x = 20,
+        .y = 23,
+        .w = 29,
+        .title = "Instrument Menu",
+        .num_items = 2,
+        .items = {
                 "Instrument List          (F4)",
                 "Instrument Library  (Ctrl-F4)",
-        }, selected_item: 0, active_item: -1,
-        instrument_menu_selected_cb
+        },
+        .selected_item = 0,
+        .active_item = -1,
+        .selected_cb = instrument_menu_selected_cb,
 };
 
 static struct menu settings_menu = {
-        x: 22, y: 25, w: 34, title: "Settings Menu",
-	/* num_items is fiddled with when the menu is loaded (if there's no window manager,
-	the toggle fullscreen item doesn't appear) */
-        num_items: 6, {
+        .x = 22,
+        .y = 25,
+        .w = 34,
+        .title = "Settings Menu",
+        /* num_items is fiddled with when the menu is loaded (if there's no window manager,
+        the toggle fullscreen item doesn't appear) */
+        .num_items = 6,
+        .items = {
                 "Preferences             (Shift-F5)",
                 "MIDI Configuration      (Shift-F1)",
-		"System Configuration     (Ctrl-F1)",
+                "System Configuration     (Ctrl-F1)",
                 "Palette Editor          (Ctrl-F12)",
-		"Font Editor            (Shift-F12)",
+                "Font Editor            (Shift-F12)",
                 "Toggle Fullscreen (Ctrl-Alt-Enter)",
-        }, selected_item: 0, active_item: -1,
-        settings_menu_selected_cb
+        },
+        .selected_item = 0,
+        .active_item = -1,
+        .selected_cb = settings_menu_selected_cb,
 };
 
 /* *INDENT-ON* */
