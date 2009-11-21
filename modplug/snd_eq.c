@@ -7,7 +7,7 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>
  *
  * Name                Date             Description
- * 
+ *
  * Olivier Lapicque    --/--/--         Creation
  * Trevor Nunes        26/01/04         conditional compilation for AMD,MMX calls
  *

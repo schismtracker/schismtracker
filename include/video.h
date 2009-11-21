@@ -28,12 +28,12 @@ it needs access to the fonts, and it shrank recently :)
 void vgamem_clear(void);
 
 struct vgamem_overlay {
-	unsigned int x1, y1, x2, y2; /* in character cells... */
+        unsigned int x1, y1, x2, y2; /* in character cells... */
 
-	unsigned char *q;		/* points inside ovl */
-	unsigned int skip;
+        unsigned char *q;               /* points inside ovl */
+        unsigned int skip;
 
-	int width, height; /* in pixels; signed to avoid bugs elsewhere */
+        int width, height; /* in pixels; signed to avoid bugs elsewhere */
 };
 
 void vgamem_lock(void);
@@ -66,7 +66,7 @@ void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int tri);
 void video_translate(unsigned int vx, unsigned int vy,
-			unsigned int *x, unsigned int *y);
+                        unsigned int *x, unsigned int *y);
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);
@@ -79,17 +79,17 @@ SDL_Surface *xpmdata(const char *xpmdata[]);
 unsigned int xv_yuvlayout(void);
 #endif
 
-#define VIDEO_YUV_UYVY	0x59565955
-#define VIDEO_YUV_YUY2	0x32595559
-#define VIDEO_YUV_YV12	0x32315659
-#define VIDEO_YUV_IYUV	0x56555949
-#define VIDEO_YUV_YVYU	0x55595659
-#define VIDEO_YUV_YV12_TV	(VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
-#define VIDEO_YUV_IYUV_TV	(VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
-#define VIDEO_YUV_RGBA		0x41424752
-#define VIDEO_YUV_RGBT		0x54424752
-#define VIDEO_YUV_RGB565	0x32424752
-#define VIDEO_YUV_RGB24		0x0
-#define VIDEO_YUV_RGB32		0x3
+#define VIDEO_YUV_UYVY  0x59565955
+#define VIDEO_YUV_YUY2  0x32595559
+#define VIDEO_YUV_YV12  0x32315659
+#define VIDEO_YUV_IYUV  0x56555949
+#define VIDEO_YUV_YVYU  0x55595659
+#define VIDEO_YUV_YV12_TV       (VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
+#define VIDEO_YUV_IYUV_TV       (VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
+#define VIDEO_YUV_RGBA          0x41424752
+#define VIDEO_YUV_RGBT          0x54424752
+#define VIDEO_YUV_RGB565        0x32424752
+#define VIDEO_YUV_RGB24         0x0
+#define VIDEO_YUV_RGB32         0x3
 
 #endif

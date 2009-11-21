@@ -36,56 +36,56 @@
 
 static void _win32_unmap(slurp_t *useme)
 {
-	HANDLE *bp;
-	(void)UnmapViewOfFile((LPVOID)useme->data);
+        HANDLE *bp;
+        (void)UnmapViewOfFile((LPVOID)useme->data);
 
-	bp = (HANDLE*)useme->bextra;
-	CloseHandle(bp[0]);
-	CloseHandle(bp[1]);
-	free(bp);
+        bp = (HANDLE*)useme->bextra;
+        CloseHandle(bp[0]);
+        CloseHandle(bp[1]);
+        free(bp);
 }
 int slurp_win32(slurp_t *useme, const char *filename, size_t st)
 {
-	HANDLE h, m, *bp;
-	LPVOID addr;
-	SECURITY_ATTRIBUTES sa;
+        HANDLE h, m, *bp;
+        LPVOID addr;
+        SECURITY_ATTRIBUTES sa;
 
-	sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-	sa.bInheritHandle = TRUE;
-	sa.lpSecurityDescriptor = 0;
+        sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+        sa.bInheritHandle = TRUE;
+        sa.lpSecurityDescriptor = 0;
 
-	bp = (HANDLE*)mem_alloc(sizeof(HANDLE)*2);
+        bp = (HANDLE*)mem_alloc(sizeof(HANDLE)*2);
 
-	h = CreateFile(filename, GENERIC_READ,
-			FILE_SHARE_READ, NULL,
-			OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (!h) {
-		log_appendf(4, "CreateFile(%s) failed with %d", filename,
-					GetLastError());
-		free(bp);
-		return 0;
-	}
+        h = CreateFile(filename, GENERIC_READ,
+                        FILE_SHARE_READ, NULL,
+                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (!h) {
+                log_appendf(4, "CreateFile(%s) failed with %d", filename,
+                                        GetLastError());
+                free(bp);
+                return 0;
+        }
 
-	m = CreateFileMapping(h, NULL, PAGE_READONLY, 0, 0, NULL);
-	if (!h) {
-		log_appendf(4, "CreateFileMapping failed with %d", GetLastError());
-		CloseHandle(h);
-		free(bp);
-		return -1;
-	}
-	addr = MapViewOfFile(m, FILE_MAP_READ, 0, 0, 0);
-	if (!addr) {
-		log_appendf(4, "MapViewOfFile failed with %d", GetLastError());
-		CloseHandle(m);
-		CloseHandle(h);
-		free(bp);
-		return -1;
-	}
-	useme->data = addr;
-	useme->length = st;
-	useme->closure = _win32_unmap;
+        m = CreateFileMapping(h, NULL, PAGE_READONLY, 0, 0, NULL);
+        if (!h) {
+                log_appendf(4, "CreateFileMapping failed with %d", GetLastError());
+                CloseHandle(h);
+                free(bp);
+                return -1;
+        }
+        addr = MapViewOfFile(m, FILE_MAP_READ, 0, 0, 0);
+        if (!addr) {
+                log_appendf(4, "MapViewOfFile failed with %d", GetLastError());
+                CloseHandle(m);
+                CloseHandle(h);
+                free(bp);
+                return -1;
+        }
+        useme->data = addr;
+        useme->length = st;
+        useme->closure = _win32_unmap;
 
-	bp[0] = m; bp[1] = h;
-	useme->bextra = bp;
-	return 1;
+        bp[0] = m; bp[1] = h;
+        useme->bextra = bp;
+        return 1;
 }

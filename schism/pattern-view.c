@@ -38,21 +38,21 @@ atnote  (1)  cursor_pos == 0
 masked  (4)  mask & MASK_whatever
 */
 static const char mask_chars[] = {
-	143, // 0
-	143, // atnote
-	169, // over
-	169, // over && atnote
-	170, // masked
-	169, // masked && atnote
-	171, // masked && over
-	171, // masked && over && atnote
+        143, // 0
+        143, // atnote
+        169, // over
+        169, // over && atnote
+        170, // masked
+        169, // masked && atnote
+        171, // masked && over
+        171, // masked && over && atnote
 };
 #define MASK_CHAR(field, pos, pos2)              \
-	mask_chars                             [ \
-	((cursor_pos == 0)   ? 1 : 0)          | \
-	((cursor_pos == pos) ? 2 : 0)          | \
-	((pos2 && cursor_pos == pos2) ? 2 : 0) | \
-	((mask & field)      ? 4 : 0)          ]
+        mask_chars                             [ \
+        ((cursor_pos == 0)   ? 1 : 0)          | \
+        ((cursor_pos == pos) ? 2 : 0)          | \
+        ((pos2 && cursor_pos == pos2) ? 2 : 0) | \
+        ((mask & field)      ? 4 : 0)          ]
 
 /* --------------------------------------------------------------------- */
 /* 13-column track view */
@@ -69,7 +69,7 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
 {
         int cursor_pos_map[9] = { 0, 2, 4, 5, 7, 8, 10, 11, 12 };
         char note_text[16], note_buf[4], vol_buf[4];
-	char instbuf[4];
+        char instbuf[4];
 
         get_note_string(note->note, note_buf);
         get_volume_string(note->volume, note->volume_effect, vol_buf);
@@ -77,30 +77,30 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
         /* come to think of it, maybe the instrument text should be
          * created the same way as the volume. */
         if (note->instrument)
-		num99tostr(note->instrument, instbuf);
-	else
-		strcpy(instbuf, "\xad\xad");
+                num99tostr(note->instrument, instbuf);
+        else
+                strcpy(instbuf, "\xad\xad");
 
-	snprintf(note_text, 16, "%s %s %s %c%02X",
-		note_buf, instbuf, vol_buf,
-		get_effect_char(note->effect), note->parameter);
+        snprintf(note_text, 16, "%s %s %s %c%02X",
+                note_buf, instbuf, vol_buf,
+                get_effect_char(note->effect), note->parameter);
 
-	if (show_default_volumes && note->volume_effect == VOL_EFFECT_NONE && note->instrument > 0) {
-		/* Modplug-specific hack: volume bit shift */
-		int n = song_get_sample(note->instrument, NULL)->volume >> 2;
-		note_text[6] = 0xbf;
-		note_text[7] = '0' + n / 10 % 10;
-		note_text[8] = '0' + n / 1 % 10;
-		note_text[9] = 0xc0;
-	}
-	
+        if (show_default_volumes && note->volume_effect == VOL_EFFECT_NONE && note->instrument > 0) {
+                /* Modplug-specific hack: volume bit shift */
+                int n = song_get_sample(note->instrument, NULL)->volume >> 2;
+                note_text[6] = 0xbf;
+                note_text[7] = '0' + n / 10 % 10;
+                note_text[8] = '0' + n / 1 % 10;
+                note_text[9] = 0xc0;
+        }
+
         draw_text(note_text, x, y, fg, bg);
 
         /* lazy coding here: the panning is written twice, or if the
          * cursor's on it, *three* times. */
-	if (note->volume_effect == VOL_EFFECT_PANNING)
+        if (note->volume_effect == VOL_EFFECT_PANNING)
                 draw_text(vol_buf, x + 7, y, 2, bg);
-	
+
         if (cursor_pos >= 0) {
                 cursor_pos = cursor_pos_map[cursor_pos];
                 draw_char(note_text[cursor_pos], x + cursor_pos, y, 0, 3);
@@ -109,24 +109,24 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
 
 void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 1),
-		143,
-		MASK_CHAR(MASK_INSTRUMENT, 2, 0),
-		MASK_CHAR(MASK_INSTRUMENT, 3, 0),
-		143,
-		MASK_CHAR(MASK_VOLUME, 4, 0),
-		MASK_CHAR(MASK_VOLUME, 5, 0),
-		143,
-		MASK_CHAR(MASK_EFFECT, 6, 0),
-		MASK_CHAR(MASK_EFFECT, 7, 0),
-		MASK_CHAR(MASK_EFFECT, 8, 0),
-		0,
-	};
+        char buf[] = {
+                MASK_CHAR(MASK_NOTE, 0, 0),
+                MASK_CHAR(MASK_NOTE, 0, 0),
+                MASK_CHAR(MASK_NOTE, 0, 1),
+                143,
+                MASK_CHAR(MASK_INSTRUMENT, 2, 0),
+                MASK_CHAR(MASK_INSTRUMENT, 3, 0),
+                143,
+                MASK_CHAR(MASK_VOLUME, 4, 0),
+                MASK_CHAR(MASK_VOLUME, 5, 0),
+                143,
+                MASK_CHAR(MASK_EFFECT, 6, 0),
+                MASK_CHAR(MASK_EFFECT, 7, 0),
+                MASK_CHAR(MASK_EFFECT, 8, 0),
+                0,
+        };
 
-	draw_text(buf, x, y, fg, bg);
+        draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -157,7 +157,7 @@ void draw_note_10(int x, int y, song_note * note, int cursor_pos,
                 note->parameter);
 
         draw_text(note_buf, x, y, 6, bg);
-	draw_text(ins_buf, x + 3, y, note->instrument ? 10 : 2, bg);
+        draw_text(ins_buf, x + 3, y, note->instrument ? 10 : 2, bg);
         draw_text(vol_buf, x + 5, y, ((note->volume_effect == VOL_EFFECT_PANNING) ? 2 : 6), bg);
         draw_text(effect_buf, x + 7, y, 2, bg);
 
@@ -183,21 +183,21 @@ void draw_note_10(int x, int y, song_note * note, int cursor_pos,
 
 void draw_mask_10(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 1),
-		MASK_CHAR(MASK_INSTRUMENT, 2, 0),
-		MASK_CHAR(MASK_INSTRUMENT, 3, 0),
-		MASK_CHAR(MASK_VOLUME, 4, 0),
-		MASK_CHAR(MASK_VOLUME, 5, 0),
-		MASK_CHAR(MASK_EFFECT, 6, 0),
-		MASK_CHAR(MASK_EFFECT, 7, 0),
-		MASK_CHAR(MASK_EFFECT, 8, 0),
-		0,
-	};
+        char buf[] = {
+                MASK_CHAR(MASK_NOTE, 0, 0),
+                MASK_CHAR(MASK_NOTE, 0, 0),
+                MASK_CHAR(MASK_NOTE, 0, 1),
+                MASK_CHAR(MASK_INSTRUMENT, 2, 0),
+                MASK_CHAR(MASK_INSTRUMENT, 3, 0),
+                MASK_CHAR(MASK_VOLUME, 4, 0),
+                MASK_CHAR(MASK_VOLUME, 5, 0),
+                MASK_CHAR(MASK_EFFECT, 6, 0),
+                MASK_CHAR(MASK_EFFECT, 7, 0),
+                MASK_CHAR(MASK_EFFECT, 8, 0),
+                0,
+        };
 
-	draw_text(buf, x, y, fg, bg);
+        draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -282,7 +282,7 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
 
         /* effect */
         draw_char(get_effect_char(note->effect), x + 5, y,
-		  (cursor_pos == 6) ? 0 : 2, (cursor_pos == 6) ? 3 : bg);
+                  (cursor_pos == 6) ? 0 : 2, (cursor_pos == 6) ? 3 : bg);
 
         /* effect value */
         fg1 = fg2 = 10;
@@ -298,24 +298,24 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
                 break;
         }
         draw_half_width_chars(hexdigits[(note->parameter & 0xf0) >> 4],
-			      hexdigits[note->parameter & 0xf],
-			      x + 6, y, fg1, bg1, fg2, bg2);
+                              hexdigits[note->parameter & 0xf],
+                              x + 6, y, fg1, bg1, fg2, bg2);
 }
 
 void draw_mask_7(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 1),
-		MASK_CHAR(MASK_INSTRUMENT, 2, 3),
-		MASK_CHAR(MASK_VOLUME, 4, 5),
-		MASK_CHAR(MASK_EFFECT, 6, 0),
-		MASK_CHAR(MASK_EFFECT, 7, 8),
-		0,
-	};
+        char buf[] = {
+                MASK_CHAR(MASK_NOTE, 0, 0),
+                MASK_CHAR(MASK_NOTE, 0, 0),
+                MASK_CHAR(MASK_NOTE, 0, 1),
+                MASK_CHAR(MASK_INSTRUMENT, 2, 3),
+                MASK_CHAR(MASK_VOLUME, 4, 5),
+                MASK_CHAR(MASK_EFFECT, 6, 0),
+                MASK_CHAR(MASK_EFFECT, 7, 8),
+                0,
+        };
 
-	draw_text(buf, x, y, fg, bg);
+        draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -403,29 +403,29 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_mask_3(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {143, 143, 143, 0};
+        char buf[] = {143, 143, 143, 0};
 
-	switch (cursor_pos) {
-	case 0: case 1:
-		buf[0] = buf[1] = MASK_CHAR(MASK_NOTE, 0, 0);
-		buf[2] = MASK_CHAR(MASK_NOTE, 0, 1);
-		break;
-	case 2: case 3:
-		buf[1] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
-		buf[2] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
-		break;
-	case 4: case 5:
-		buf[1] = MASK_CHAR(MASK_VOLUME, 4, 0);
-		buf[2] = MASK_CHAR(MASK_VOLUME, 5, 0);
-		break;
-	case 6: case 7: case 8:
-		buf[0] = MASK_CHAR(MASK_EFFECT, 6, 0);
-		buf[1] = MASK_CHAR(MASK_EFFECT, 7, 0);
-		buf[2] = MASK_CHAR(MASK_EFFECT, 8, 0);
-		break;
-	};
+        switch (cursor_pos) {
+        case 0: case 1:
+                buf[0] = buf[1] = MASK_CHAR(MASK_NOTE, 0, 0);
+                buf[2] = MASK_CHAR(MASK_NOTE, 0, 1);
+                break;
+        case 2: case 3:
+                buf[1] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
+                buf[2] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
+                break;
+        case 4: case 5:
+                buf[1] = MASK_CHAR(MASK_VOLUME, 4, 0);
+                buf[2] = MASK_CHAR(MASK_VOLUME, 5, 0);
+                break;
+        case 6: case 7: case 8:
+                buf[0] = MASK_CHAR(MASK_EFFECT, 6, 0);
+                buf[1] = MASK_CHAR(MASK_EFFECT, 7, 0);
+                buf[2] = MASK_CHAR(MASK_EFFECT, 8, 0);
+                break;
+        };
 
-	draw_text(buf, x, y, fg, bg);
+        draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -460,8 +460,8 @@ static void draw_effect_2(int x, int y, song_note * note, int cursor_pos, int bg
         }
         draw_char(get_effect_char(note->effect), x, y, fg, bg);
         draw_half_width_chars(hexdigits[(note->parameter & 0xf0) >> 4],
-			      hexdigits[note->parameter & 0xf],
-			      x + 1, y, fg1, bg1, fg2, bg2);
+                              hexdigits[note->parameter & 0xf],
+                              x + 1, y, fg1, bg1, fg2, bg2);
 }
 
 void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
@@ -476,21 +476,21 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 get_note_string(note->note, buf);
                 draw_char(buf[0], x, y, fg, bg);
                 // XXX cut-and-paste hackjob programming... this code should only exist in one place
-		switch ((unsigned char) buf[0]) {
-		case '^':
-		case '~':
-		case 0xCD: // note off
-		case 0xAD: // dot (empty)
-			if (cursor_pos == 1)
-				draw_char(buf[1], x + 1, y, 0, 3);
-			else
-				draw_char(buf[1], x + 1, y, fg, bg);
-			break;
-		default:
-			draw_half_width_chars(buf[1], buf[2], x + 1, y,
-				fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
-			break;
-		}
+                switch ((unsigned char) buf[0]) {
+                case '^':
+                case '~':
+                case 0xCD: // note off
+                case 0xAD: // dot (empty)
+                        if (cursor_pos == 1)
+                                draw_char(buf[1], x + 1, y, 0, 3);
+                        else
+                                draw_char(buf[1], x + 1, y, fg, bg);
+                        break;
+                default:
+                        draw_half_width_chars(buf[1], buf[2], x + 1, y,
+                                fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
+                        break;
+                }
                 return;
                 /*
                 get_note_string_short(note->note, buf);
@@ -531,21 +531,21 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         if (note->note) {
                 get_note_string(note->note, buf);
                 draw_char(buf[0], x, y, 6, bg);
-		switch ((unsigned char) buf[0]) {
-		case '^':
-		case '~':
-		case 0xCD: // note off
-		case 0xAD: // dot (empty)
-			if (cursor_pos == 1)
-				draw_char(buf[1], x + 1, y, 0, 3);
-			else
-				draw_char(buf[1], x + 1, y, fg, bg);
-			break;
-		default:
-			draw_half_width_chars(buf[1], buf[2], x + 1, y,
-				fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
-			break;
-		}
+                switch ((unsigned char) buf[0]) {
+                case '^':
+                case '~':
+                case 0xCD: // note off
+                case 0xAD: // dot (empty)
+                        if (cursor_pos == 1)
+                                draw_char(buf[1], x + 1, y, 0, 3);
+                        else
+                                draw_char(buf[1], x + 1, y, fg, bg);
+                        break;
+                default:
+                        draw_half_width_chars(buf[1], buf[2], x + 1, y,
+                                fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
+                        break;
+                }
                 /*
                 get_note_string_short(note->note, buf);
                 draw_text(buf, x, y, fg, bg);
@@ -568,28 +568,28 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_mask_2(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {143, 143, 0};
+        char buf[] = {143, 143, 0};
 
-	switch (cursor_pos) {
-	case 0: case 1:
-		buf[0] = MASK_CHAR(MASK_NOTE, 0, 0);
-		buf[1] = MASK_CHAR(MASK_NOTE, 0, 1);
-		break;
-	case 2: case 3:
-		buf[0] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
-		buf[1] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
-		break;
-	case 4: case 5:
-		buf[0] = MASK_CHAR(MASK_VOLUME, 4, 0);
-		buf[1] = MASK_CHAR(MASK_VOLUME, 5, 0);
-		break;
-	case 6: case 7: case 8:
-		buf[0] = MASK_CHAR(MASK_EFFECT, 6, 0);
-		buf[1] = MASK_CHAR(MASK_EFFECT, 7, 8);
-		break;
-	};
+        switch (cursor_pos) {
+        case 0: case 1:
+                buf[0] = MASK_CHAR(MASK_NOTE, 0, 0);
+                buf[1] = MASK_CHAR(MASK_NOTE, 0, 1);
+                break;
+        case 2: case 3:
+                buf[0] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
+                buf[1] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
+                break;
+        case 4: case 5:
+                buf[0] = MASK_CHAR(MASK_VOLUME, 4, 0);
+                buf[1] = MASK_CHAR(MASK_VOLUME, 5, 0);
+                break;
+        case 6: case 7: case 8:
+                buf[0] = MASK_CHAR(MASK_EFFECT, 6, 0);
+                buf[1] = MASK_CHAR(MASK_EFFECT, 7, 8);
+                break;
+        };
 
-	draw_text(buf, x, y, fg, bg);
+        draw_text(buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -625,8 +625,8 @@ static void draw_effect_1(int x, int y, song_note * note, int cursor_pos, int fg
         }
         if (cursor_pos == 7 || cursor_pos == 8 || (note->effect == 0 && note->parameter != 0)) {
                 draw_half_width_chars(hexdigits[(note->parameter & 0xf0) >> 4],
-				      hexdigits[note-> parameter & 0xf],
-				      x, y, fg1, bg1, fg2, bg2);
+                                      hexdigits[note-> parameter & 0xf],
+                                      x, y, fg1, bg1, fg2, bg2);
         } else {
                 draw_char(get_effect_char(note->effect), x, y, fg, bg);
         }
@@ -648,7 +648,7 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 break;
         case 1:
                 get_note_string_short(note->note, buf);
-		draw_half_width_chars(buf[0], buf[1], x, y, fg, bg, 0, 3);
+                draw_half_width_chars(buf[0], buf[1], x, y, fg, bg, 0, 3);
                 return;
         case 2:
         case 3:
@@ -699,27 +699,27 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
 
 void draw_mask_1(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char c = 143;
+        char c = 143;
 
-	switch (cursor_pos) {
-	case 0: case 1:
-		c = MASK_CHAR(MASK_NOTE, 0, 1);
-		break;
-	case 2: case 3:
-		c = MASK_CHAR(MASK_INSTRUMENT, 2, 3);
-		break;
-	case 4: case 5:
-		c = MASK_CHAR(MASK_VOLUME, 4, 5);
-		break;
-	case 6:
-		c = MASK_CHAR(MASK_EFFECT, 6, 0);
-		break;
-	case 7: case 8:
-		c = MASK_CHAR(MASK_EFFECT, 7, 8);
-		break;
-	};
+        switch (cursor_pos) {
+        case 0: case 1:
+                c = MASK_CHAR(MASK_NOTE, 0, 1);
+                break;
+        case 2: case 3:
+                c = MASK_CHAR(MASK_INSTRUMENT, 2, 3);
+                break;
+        case 4: case 5:
+                c = MASK_CHAR(MASK_VOLUME, 4, 5);
+                break;
+        case 6:
+                c = MASK_CHAR(MASK_EFFECT, 6, 0);
+                break;
+        case 7: case 8:
+                c = MASK_CHAR(MASK_EFFECT, 7, 8);
+                break;
+        };
 
-	draw_char(c, x, y, fg, bg);
+        draw_char(c, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -767,29 +767,29 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 
 #else
 
-	get_note_string (note -> note, note_buf);
+        get_note_string (note -> note, note_buf);
 
-	if (cursor_pos == 0)
-		draw_char (note_buf [0], x, y, 0, 3);
-	else
-		draw_char (note_buf [0], x, y, fg, bg);
+        if (cursor_pos == 0)
+                draw_char (note_buf [0], x, y, 0, 3);
+        else
+                draw_char (note_buf [0], x, y, fg, bg);
 
-	bg1 = bg2 = bg;
-	switch ((unsigned char) note_buf[0]) {
-	case '^':
-	case '~':
-	case 0xCD: // note off
-	case 0xAD: // dot (empty)
-		if (cursor_pos == 1)
-			draw_char(note_buf[1], x + 1, y, 0, 3);
-		else
-			draw_char(note_buf[1], x + 1, y, fg, bg);
-		break;
-	default:
-		draw_half_width_chars(note_buf[1], note_buf[2], x + 1, y,
-			fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
-		break;
-	}
+        bg1 = bg2 = bg;
+        switch ((unsigned char) note_buf[0]) {
+        case '^':
+        case '~':
+        case 0xCD: // note off
+        case 0xAD: // dot (empty)
+                if (cursor_pos == 1)
+                        draw_char(note_buf[1], x + 1, y, 0, 3);
+                else
+                        draw_char(note_buf[1], x + 1, y, fg, bg);
+                break;
+        default:
+                draw_half_width_chars(note_buf[1], note_buf[2], x + 1, y,
+                        fg, bg, (cursor_pos == 1 ? 0 : fg), (cursor_pos == 1 ? 3 : bg));
+                break;
+        }
 
 #endif
 
@@ -800,16 +800,16 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 
         fg1 = fg2 = (note->instrument ? 10 : 2);
         bg1 = bg2 = bg;
-	switch (cursor_pos) {
-	case 2:
-		fg1 = 0;
-		bg1 = 3;
-		break;
-	case 3:
-		fg2 = 0;
-		bg2 = 3;
-		break;
-	}
+        switch (cursor_pos) {
+        case 2:
+                fg1 = 0;
+                bg1 = 3;
+                break;
+        case 3:
+                fg2 = 0;
+                bg2 = 3;
+                break;
+        }
 
         draw_half_width_chars(ins_buf[0], ins_buf[1], x + 2, y, fg1, bg1, fg2, bg2);
         /* volume */
@@ -846,7 +846,7 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
 
         /* effect */
         draw_char(get_effect_char(note->effect), x + 4, y,
-		  cursor_pos == 6 ? 0 : 2, cursor_pos == 6 ? 3 : bg);
+                  cursor_pos == 6 ? 0 : 2, cursor_pos == 6 ? 3 : bg);
 
         /* effect value */
         fg1 = fg2 = 10;
@@ -862,22 +862,22 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
                 break;
         }
         draw_half_width_chars(hexdigits[(note->parameter & 0xf0) >> 4],
-			      hexdigits[note->parameter & 0xf],
-			      x + 5, y, fg1, bg1, fg2, bg2);
+                              hexdigits[note->parameter & 0xf],
+                              x + 5, y, fg1, bg1, fg2, bg2);
 }
 
 void draw_mask_6(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 1),
-		MASK_CHAR(MASK_INSTRUMENT, 2, 3),
-		MASK_CHAR(MASK_VOLUME, 4, 5),
-		MASK_CHAR(MASK_EFFECT, 6, 0),
-		MASK_CHAR(MASK_EFFECT, 7, 8),
-		0,
-	};
+        char buf[] = {
+                MASK_CHAR(MASK_NOTE, 0, 0),
+                MASK_CHAR(MASK_NOTE, 0, 1),
+                MASK_CHAR(MASK_INSTRUMENT, 2, 3),
+                MASK_CHAR(MASK_VOLUME, 4, 5),
+                MASK_CHAR(MASK_EFFECT, 6, 0),
+                MASK_CHAR(MASK_EFFECT, 7, 8),
+                0,
+        };
 
-	draw_text(buf, x, y, fg, bg);
+        draw_text(buf, x, y, fg, bg);
 }
 

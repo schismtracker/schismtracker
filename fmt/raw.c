@@ -31,25 +31,25 @@
 
 int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample *smp, UNUSED char *title)
 {
-	/* we'll uphold IT's limit of 4mb */
-	if (length > 4 * 1048576) {
-		errno = EFBIG;
-		return false;
-	}
+        /* we'll uphold IT's limit of 4mb */
+        if (length > 4 * 1048576) {
+                errno = EFBIG;
+                return false;
+        }
 
-	smp->speed = 8363;
-	smp->volume = 64 * 4;
-	smp->global_volume = 64;
-	
-	smp->data = song_sample_allocate(length);
-	memcpy(smp->data, data, length);
-	smp->length = length;
-	
-	return true;
+        smp->speed = 8363;
+        smp->volume = 64 * 4;
+        smp->global_volume = 64;
+
+        smp->data = song_sample_allocate(length);
+        memcpy(smp->data, data, length);
+        smp->length = length;
+
+        return true;
 }
 
 int fmt_raw_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *title)
 {
-	fp->o(fp, (unsigned char *) smp->data, ((smp->flags & SAMP_16_BIT) ? 2:1)*smp->length);
-	return true;
+        fp->o(fp, (unsigned char *) smp->data, ((smp->flags & SAMP_16_BIT) ? 2:1)*smp->length);
+        return true;
 }

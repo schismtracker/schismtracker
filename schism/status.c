@@ -42,13 +42,13 @@ static uint32_t text_timeout;
 void status_text_flash(const char *format, ...)
 {
         va_list ap;
-	
-	text_timeout = SDL_GetTicks() + 1000;
-	
+
+        text_timeout = SDL_GetTicks() + 1000;
+
         if (status_text)
                 free(status_text);
-	
-	status_color = 0;
+
+        status_color = 0;
         va_start(ap, format);
         if (vasprintf(&status_text, format, ap) == -1) abort();
         va_end(ap);
@@ -59,13 +59,13 @@ void status_text_flash(const char *format, ...)
 void status_text_flash_bios(const char *format, ...)
 {
         va_list ap;
-	
-	text_timeout = SDL_GetTicks() + 1000;
-	
+
+        text_timeout = SDL_GetTicks() + 1000;
+
         if (status_text)
                 free(status_text);
-	
-	status_color = 16; /* color & 16 is for bios font */
+
+        status_color = 16; /* color & 16 is for bios font */
         va_start(ap, format);
         if (vasprintf(&status_text, format, ap) == -1) abort();
         va_end(ap);
@@ -76,13 +76,13 @@ void status_text_flash_bios(const char *format, ...)
 void status_text_flash_color(int co, const char *format, ...)
 {
         va_list ap;
-	
-	text_timeout = SDL_GetTicks() + 1000;
-	
+
+        text_timeout = SDL_GetTicks() + 1000;
+
         if (status_text)
                 free(status_text);
-	
-	status_color = co;
+
+        status_color = co;
         va_start(ap, format);
         if (vasprintf(&status_text, format, ap) == -1) abort();
         va_end(ap);
@@ -115,7 +115,7 @@ static inline void draw_song_playing_status(void)
         draw_char(0, pos, 9, 0, 2);
         pos++;
         pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
-	
+
         if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
                 draw_char(16, 61, 9, 1, 2);
 }
@@ -145,31 +145,31 @@ static inline void draw_pattern_playing_status(void)
 
 static inline void draw_playing_channels(void)
 {
-	int pos = 2;
-	char buf[16];
-	
-	pos += draw_text("Playing, ", 2, 9, 0, 2);
-	pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
-	draw_text(" Channels", pos, 9, 0, 2);
+        int pos = 2;
+        char buf[16];
+
+        pos += draw_text("Playing, ", 2, 9, 0, 2);
+        pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
+        draw_text(" Channels", pos, 9, 0, 2);
 }
 
 void status_text_redraw(void)
 {
-	uint32_t now = SDL_GetTicks();
+        uint32_t now = SDL_GetTicks();
 
         /* if there's a message set, and it's expired, clear it */
         if (status_text && now > text_timeout) {
                 free(status_text);
                 status_text = NULL;
         }
-	
+
         if (status_text) {
-		/* color & 16 is for bios font */
-		if (status_color & 16) {
-	                draw_text_bios_len(status_text, 60, 2, 9, status_color & 15, 2);
-		} else {
-	                draw_text_len(status_text, 60, 2, 9, status_color & 15, 2);
-		}
+                /* color & 16 is for bios font */
+                if (status_color & 16) {
+                        draw_text_bios_len(status_text, 60, 2, 9, status_color & 15, 2);
+                } else {
+                        draw_text_len(status_text, 60, 2, 9, status_color & 15, 2);
+                }
         } else {
                 switch (song_get_mode()) {
                 case MODE_PLAYING:
@@ -179,12 +179,12 @@ void status_text_redraw(void)
                         draw_pattern_playing_status();
                         break;
                 case MODE_SINGLE_STEP:
-			if (song_get_playing_channels() > 1) {
-				draw_playing_channels();
-				break;
-			}
-		default:
-			break;
+                        if (song_get_playing_channels() > 1) {
+                                draw_playing_channels();
+                                break;
+                        }
+                default:
+                        break;
                 }
         }
 }

@@ -34,19 +34,19 @@
 
 /* midi config */
 typedef struct _midiconfig {
-	char midi_global_data[9*32];
-	char midi_sfx[16*32];
-	char midi_zxx[128*32];
+        char midi_global_data[9*32];
+        char midi_sfx[16*32];
+        char midi_zxx[128*32];
 } midi_config;
-#define MIDI_GCF_START		(0*32)
-#define MIDI_GCF_STOP		(1*32)
-#define MIDI_GCF_TICK		(2*32)
-#define MIDI_GCF_NOTEON		(3*32)
-#define MIDI_GCF_NOTEOFF	(4*32)
-#define MIDI_GCF_VOLUME		(5*32)
-#define MIDI_GCF_PAN		(6*32)
-#define MIDI_GCF_BANKCHANGE	(7*32)
-#define MIDI_GCF_PROGRAMCHANGE	(8*32)
+#define MIDI_GCF_START          (0*32)
+#define MIDI_GCF_STOP           (1*32)
+#define MIDI_GCF_TICK           (2*32)
+#define MIDI_GCF_NOTEON         (3*32)
+#define MIDI_GCF_NOTEOFF        (4*32)
+#define MIDI_GCF_VOLUME         (5*32)
+#define MIDI_GCF_PAN            (6*32)
+#define MIDI_GCF_BANKCHANGE     (7*32)
+#define MIDI_GCF_PROGRAMCHANGE  (8*32)
 
 /* aka modinstrument */
 typedef struct _song_sample {
@@ -77,11 +77,11 @@ typedef struct _song_channel {
 
 /* instrumentenvelope */
 typedef struct _song_envelope {
-	int ticks[32];
-	uint8_t values[32];
-	int nodes;
-	int loop_start, loop_end;
-	int sustain_start, sustain_end;
+        int ticks[32];
+        uint8_t values[32];
+        int nodes;
+        int loop_start, loop_end;
+        int sustain_start, sustain_end;
 } song_envelope;
 
 /* instrumentheader */
@@ -91,7 +91,7 @@ typedef struct _song_instrument {
         unsigned int global_volume;
         unsigned int panning;
         unsigned int sample_map[128], note_map[128];
-	song_envelope vol_env, pan_env, pitch_env;
+        song_envelope vol_env, pan_env, pitch_env;
         unsigned int nna, dct, dca;
         unsigned int pan_swing, volume_swing;
         unsigned int filter_cutoff;
@@ -104,8 +104,8 @@ typedef struct _song_instrument {
         unsigned int pitch_pan_center;
         char name[32];
         char filename[16];
-	
-	int played;
+
+        int played;
 } song_instrument;
 
 /* modcommand */
@@ -123,7 +123,7 @@ typedef struct _song_mix_channel {
         signed char *sample_data;
         unsigned int sample_pos;
         unsigned int nPosLo;
-	unsigned int topnote_offset;
+        unsigned int topnote_offset;
         int nInc;
         int nRightVol; // these two are the current left/right volumes
         int nLeftVol;  /* (duh...) - i'm not sure if that's 100% right,
@@ -204,14 +204,14 @@ typedef struct _song_mix_channel {
 /* defined in audio_playback.cc; also used by page_settings.c */
 
 struct audio_settings {
-	int sample_rate, bits, channels, buffer_size;
-	int channel_limit, interpolation_mode;
-	int oversampling, hq_resampling;
-	int noise_reduction, surround_effect;
+        int sample_rate, bits, channels, buffer_size;
+        int channel_limit, interpolation_mode;
+        int oversampling, hq_resampling;
+        int noise_reduction, surround_effect;
 
-	unsigned int eq_freq[4];
-	unsigned int eq_gain[4];
-	int no_ramping;
+        unsigned int eq_freq[4];
+        unsigned int eq_gain[4];
+        int no_ramping;
 };
 
 extern struct audio_settings audio_settings;
@@ -221,11 +221,11 @@ extern struct audio_settings audio_settings;
 
 //typedef int (*fmt_save_sample_func) (FILE *fp, song_sample *smp, char *title);
 struct sample_save_format {
-	const char *name;
-	const char *ext;
-	//fmt_save_sample_func *save_func;
-	int (*save_func) (diskwriter_driver_t *fp,
-				song_sample *smp, char *title);
+        const char *name;
+        const char *ext;
+        //fmt_save_sample_func *save_func;
+        int (*save_func) (diskwriter_driver_t *fp,
+                                song_sample *smp, char *title);
 };
 
 extern struct sample_save_format sample_save_formats[];
@@ -268,24 +268,24 @@ enum song_mode {
         MODE_STOPPED = 0,
         MODE_PLAYING = 1,
         MODE_PATTERN_LOOP = 2,
-	MODE_SINGLE_STEP = 4,
+        MODE_SINGLE_STEP = 4,
 };
 
 enum song_new_flags {
-	KEEP_PATTERNS = 1,
-	KEEP_SAMPLES = 2,
-	KEEP_INSTRUMENTS = 4,
-	KEEP_ORDERLIST = 8,
+        KEEP_PATTERNS = 1,
+        KEEP_SAMPLES = 2,
+        KEEP_INSTRUMENTS = 4,
+        KEEP_ORDERLIST = 8,
 };
 
 /* used as indices to sample_save_formats[] */
 enum sample_save_format_ids {
-	SSMP_ITS = 0,
-	SSMP_AIFF = 1,
-	SSMP_AU = 2,
-	SSMP_WAV = 3,
-	SSMP_RAW = 4,
-	SSMP_SENTINEL = 5,
+        SSMP_ITS = 0,
+        SSMP_AIFF = 1,
+        SSMP_AU = 2,
+        SSMP_WAV = 3,
+        SSMP_RAW = 4,
+        SSMP_SENTINEL = 5,
 };
 
 /* --------------------------------------------------------------------- */
@@ -317,7 +317,7 @@ midi_config *song_get_default_midi_config(void);
 
 /* returns bytes */
 unsigned song_copy_sample_raw(int n, unsigned int rs,
-		const void *data, unsigned int samples);
+                const void *data, unsigned int samples);
 
 
 
@@ -326,9 +326,9 @@ int song_sample_is_empty(int n);
 unsigned int song_sample_get_c5speed(int n);
 
 /* get the order for a particular pattern; locked can be:
-	* a starting order number (0-255)
-	* "-1" meaning start at the locked order
-	* "-2" meaning start at the current order
+        * a starting order number (0-255)
+        * "-1" meaning start at the locked order
+        * "-2" meaning start at the current order
 */
 int song_order_for_pattern(int pat, int locked);
 
@@ -504,7 +504,7 @@ song_mix_channel *song_get_mix_channel(int n);
  * are being mixed. the return value is the number of channels to mix
  * (i.e. the length of the channel_list array). so... to go through each
  * channel that's being mixed:
- * 
+ *
  *         unsigned int *channel_list;
  *         song_mix_channel *channel;
  *         int n = song_get_mix_state(&channel_list);
@@ -514,7 +514,7 @@ song_mix_channel *song_get_mix_channel(int n);
  *         }
  * it's kind of ugly, but it'll do... i hope :) */
 int song_get_mix_state(unsigned int **channel_list);
-	
+
 /* --------------------------------------------------------------------- */
 /* rearranging stuff */
 
@@ -553,20 +553,20 @@ void song_set_surround(int on);
 
 /* for the orderpan page */
 enum {
-	PANS_STEREO,
-	PANS_AMIGA,
-	PANS_LEFT,
-	PANS_RIGHT,
-	PANS_MONO,
-	PANS_SLASH,
-	PANS_BACKSLASH,
-//	PANS_CROSS,
+        PANS_STEREO,
+        PANS_AMIGA,
+        PANS_LEFT,
+        PANS_RIGHT,
+        PANS_MONO,
+        PANS_SLASH,
+        PANS_BACKSLASH,
+//      PANS_CROSS,
 };
 void song_set_pan_scheme(int scheme);
 
 /* actually from sndfile.h */
-#define SCHISM_MAX_SAMPLES	MAX_SAMPLES
-#define SCHISM_MAX_INSTRUMENTS	MAX_INSTRUMENTS
+#define SCHISM_MAX_SAMPLES      MAX_SAMPLES
+#define SCHISM_MAX_INSTRUMENTS  MAX_INSTRUMENTS
 #define SCHISM_MAX_MESSAGE      MAX_MESSAGE
 
 /* --------------------------------------------------------------------- */

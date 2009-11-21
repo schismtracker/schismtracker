@@ -34,9 +34,9 @@ void setup_help_text_pointers(void)
 {
         int n;
         char *ptr = (char*)help_text;
-	
+
         for (n = 0; n < HELP_NUM_ITEMS; n++) {
-		help_text_lastpos[n] = 0;
+                help_text_lastpos[n] = 0;
                 help_text_pointers[n] = ptr;
                 ptr = strchr(ptr, 0) + 1;
         }

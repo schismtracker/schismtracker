@@ -26,35 +26,35 @@ this simulates a fictional vga-like card that supports three banks of characters
 a packed display of 4000 32-bit words.
 
 the banks are:
-	0x80000000	new overlay
+        0x80000000      new overlay
 
-			the layout is relative to the scanline position: it gets pixel
-			values from "ovl" which is [640*400]
+                        the layout is relative to the scanline position: it gets pixel
+                        values from "ovl" which is [640*400]
 
-	0x40000000	half-width font
-			the layout of this is based on a special bank of 4bit wide fonts.
-			the packing format of the field is:
-				fg1 is nybble in bits 22-25
-				fg2 is nybble in bits 26-29
-				bg1 is nybble in bits 18-21
-				bg2 is nybble in bits 14-17
-				ch1 is 7 bits; 7-13
-				ch2 is 7 bits: 0-6
-			lower bits are unused
+        0x40000000      half-width font
+                        the layout of this is based on a special bank of 4bit wide fonts.
+                        the packing format of the field is:
+                                fg1 is nybble in bits 22-25
+                                fg2 is nybble in bits 26-29
+                                bg1 is nybble in bits 18-21
+                                bg2 is nybble in bits 14-17
+                                ch1 is 7 bits; 7-13
+                                ch2 is 7 bits: 0-6
+                        lower bits are unused
 
-	0x10000080
-			bios font
-			this layout looks surprisingly like a real vga card
-			(mostly because it was ripped from one ;)
-				fg is nybble in bits 8-11
-				bg is nybble in bits 12-15
-				ch is lower byte
-	0x00000000
-			regular
-			this layout uses the itf font
-				fg is nybble in bits 8-11
-				bg is nybble in bits 12-15
-				ch is lower byte
+        0x10000080
+                        bios font
+                        this layout looks surprisingly like a real vga card
+                        (mostly because it was ripped from one ;)
+                                fg is nybble in bits 8-11
+                                bg is nybble in bits 12-15
+                                ch is lower byte
+        0x00000000
+                        regular
+                        this layout uses the itf font
+                                fg is nybble in bits 8-11
+                                bg is nybble in bits 12-15
+                                ch is lower byte
 */
 
 #include "headers.h"
@@ -74,12 +74,12 @@ the banks are:
 /* preprocessor stuff */
 
 #define CHECK_INVERT(tl,br,n) \
-do {						\
-	if (status.flags & INVERTED_PALETTE) {	\
-		n = tl;				\
-		tl = br;			\
-		br = n;				\
-	}					\
+do {                                            \
+        if (status.flags & INVERTED_PALETTE) {  \
+                n = tl;                         \
+                tl = br;                        \
+                br = n;                         \
+        }                                       \
 } while(0)
 
 
@@ -117,22 +117,22 @@ uint8_t *font_data = font_normal; /* this only needs to be global for itf */
 
 static inline int _pack_halfw(int c)
 {
-	switch (c) {
-		case  32 ... 127: return c - 32; /* 0 ... 95 */
-		case 173 ... 205: return 96 + c - 173; /* 96 ... 127 */
-		default:
-			abort();
-			return '?';
-	}
+        switch (c) {
+                case  32 ... 127: return c - 32; /* 0 ... 95 */
+                case 173 ... 205: return 96 + c - 173; /* 96 ... 127 */
+                default:
+                        abort();
+                        return '?';
+        }
 }
 
 static inline int _unpack_halfw(int c)
 {
-	switch (c) {
-		case  0 ...  95: return c + 32;
-		case 96 ... 127: return 96 - c + 173;
-		default: return '?'; /* should never happen */
-	}
+        switch (c) {
+                case  0 ...  95: return c + 32;
+                case 96 ... 127: return 96 - c + 173;
+                default: return '?'; /* should never happen */
+        }
 }
 
 /* --------------------------------------------------------------------- */
@@ -205,21 +205,21 @@ void font_reset_bios(void)
 /* ... or just one character */
 void font_reset_char(int ch)
 {
-	uint8_t *base;
-	int cx;
-	
-	ch <<= 3;
-	cx = ch;
-	if (ch >= 1024) {
-		base = (uint8_t *) font_default_upper_itf;
-		cx -= 1024;
-	} else {
-		base = (uint8_t *) font_default_lower;
-	}
-	/* update them both... */
-	memcpy(font_normal + ch, base + cx, 8);
+        uint8_t *base;
+        int cx;
 
-	/* update */
+        ch <<= 3;
+        cx = ch;
+        if (ch >= 1024) {
+                base = (uint8_t *) font_default_upper_itf;
+                cx -= 1024;
+        } else {
+                base = (uint8_t *) font_default_lower;
+        }
+        /* update them both... */
+        memcpy(font_normal + ch, base + cx, 8);
+
+        /* update */
         make_half_width_middot();
 }
 
@@ -254,7 +254,7 @@ int font_load(const char *filename)
         fp = fopen(font_file, "rb");
         if (fp == NULL) {
                 SDL_SetError("%s: %s", font_file, strerror(errno));
-		free(font_file);
+                free(font_file);
                 return -1;
         }
 
@@ -268,13 +268,13 @@ int font_load(const char *filename)
                         SDL_SetError("%s: %s", font_file,
                                      feof(fp) ? "Unexpected EOF on read" : strerror(errno));
                         fclose(fp);
-			free(font_file);
+                        free(font_file);
                         return -1;
                 }
                 if (data[1] != 0x2 || (data[0] != 0x12 && data[0] != 9)) {
                         SDL_SetError("%s: Unsupported ITF file version %02x.%20x", font_file, data[1], data[0]);
                         fclose(fp);
-			free(font_file);
+                        free(font_file);
                         return -1;
                 }
                 rewind(fp);
@@ -286,19 +286,19 @@ int font_load(const char *filename)
                 if (squeeze_8x16_font(fp) == 0) {
                         make_half_width_middot();
                         fclose(fp);
-			free(font_file);
+                        free(font_file);
                         return 0;
                 } else {
                         SDL_SetError("%s: %s", font_file,
                                      feof(fp) ? "Unexpected EOF on read" : strerror(errno));
                         fclose(fp);
-			free(font_file);
+                        free(font_file);
                         return -1;
                 }
         } else {
                 SDL_SetError("%s: Invalid font file", font_file);
                 fclose(fp);
-		free(font_file);
+                free(font_file);
                 return -1;
         }
 
@@ -306,14 +306,14 @@ int font_load(const char *filename)
                 SDL_SetError("%s: %s", font_file,
                              feof(fp) ? "Unexpected EOF on read" : strerror(errno));
                 fclose(fp);
-		free(font_file);
+                free(font_file);
                 return -1;
         }
 
         make_half_width_middot();
 
         fclose(fp);
-	free(font_file);
+        free(font_file);
         return 0;
 }
 
@@ -325,36 +325,36 @@ int font_save(const char *filename)
 
         font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
         font_file = dmoz_path_concat(font_dir, filename);
-	free(font_dir);
+        free(font_dir);
 
         fp = fopen(font_file, "wb");
         if (fp == NULL) {
                 SDL_SetError("%s: %s", font_file, strerror(errno));
-		free(font_file);
+                free(font_file);
                 return -1;
         }
 
         if (fwrite(font_normal, 2048, 1, fp) < 1 || fwrite(ver, 2, 1, fp) < 1) {
                 SDL_SetError("%s: %s", font_file, strerror(errno));
                 fclose(fp);
-		free(font_file);
+                free(font_file);
                 return -1;
         }
 
         fclose(fp);
-	free(font_file);
+        free(font_file);
         return 0;
 }
 
 void font_init(void)
 {
-	memcpy(font_half_data, font_half_width, 1024);
-	
+        memcpy(font_half_data, font_half_width, 1024);
+
         if (font_load(cfg_font) != 0) {
-		SDL_ClearError();
+                SDL_ClearError();
                 font_reset();
-	}
-	
+        }
+
         memcpy(font_alt, font_default_lower, 1024);
         memcpy(font_alt + 1024, font_default_upper_alt, 1024);
 }
@@ -367,7 +367,7 @@ static unsigned char ovl[640*400]; /* 256K */
 
 void vgamem_flip(void)
 {
-	memcpy(vgamem_read, vgamem, sizeof(vgamem));
+        memcpy(vgamem_read, vgamem, sizeof(vgamem));
 }
 void vgamem_lock(void)
 {
@@ -378,81 +378,81 @@ void vgamem_unlock(void)
 
 void vgamem_clear(void)
 {
-	memset(vgamem,0,sizeof(vgamem));
+        memset(vgamem,0,sizeof(vgamem));
 }
 
 void vgamem_ovl_alloc(struct vgamem_overlay *n)
 {
-	n->q = &ovl[ (n->x1*8) + (n->y1 * 5120) ];
-	n->width = 8 * ((n->x2 - n->x1) + 1);
-	n->height = 8 * ((n->y2 - n->y1) + 1);
-	n->skip = (640 - n->width);
+        n->q = &ovl[ (n->x1*8) + (n->y1 * 5120) ];
+        n->width = 8 * ((n->x2 - n->x1) + 1);
+        n->height = 8 * ((n->y2 - n->y1) + 1);
+        n->skip = (640 - n->width);
 }
 void vgamem_ovl_apply(struct vgamem_overlay *n)
 {
-	unsigned int x, y;
+        unsigned int x, y;
 
-	for (y = n->y1; y <= n->y2; y++) {
-		for (x = n->x1; x <= n->x2; x++) {
-			vgamem[x + (y*80)] = 0x80000000;
-		}
-	}
+        for (y = n->y1; y <= n->y2; y++) {
+                for (x = n->x1; x <= n->x2; x++) {
+                        vgamem[x + (y*80)] = 0x80000000;
+                }
+        }
 }
 
 void vgamem_ovl_clear(struct vgamem_overlay *n, int color)
 {
-	int i, j;
-	unsigned char *q = n->q;
-	for (j = 0; j < n->height; j++) {
-		for (i = 0; i < n->width; i++) {
-			*q = color;
-			q++;
-		}
-		q += n->skip;
-	}
+        int i, j;
+        unsigned char *q = n->q;
+        for (j = 0; j < n->height; j++) {
+                for (i = 0; i < n->width; i++) {
+                        *q = color;
+                        q++;
+                }
+                q += n->skip;
+        }
 }
 void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color)
 {
-	n->q[ (640*y) + x ] = color;
+        n->q[ (640*y) + x ] = color;
 }
 static inline void _draw_line_v(struct vgamem_overlay *n, int x,
-		int ys, int ye, int color)
+                int ys, int ye, int color)
 {
-	unsigned char *q = n->q + x;
-	int y;
+        unsigned char *q = n->q + x;
+        int y;
 
-	if (ys < ye) {
-		q += (ys * 640);
-		for (y = ys; y <= ye; y++) {
-			*q = color;
-			q += 640;
-		}
-	} else {
-		q += (ye * 640);
-		for (y = ye; y <= ys; y++) {
-			*q = color;
-			q += 640;
-		}
-	}
+        if (ys < ye) {
+                q += (ys * 640);
+                for (y = ys; y <= ye; y++) {
+                        *q = color;
+                        q += 640;
+                }
+        } else {
+                q += (ye * 640);
+                for (y = ye; y <= ys; y++) {
+                        *q = color;
+                        q += 640;
+                }
+        }
 }
 static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
-		int xe, int y, int color)
+                int xe, int y, int color)
 {
-	unsigned char *q = n->q + (y * 640);
-	int x;
-	if (xs < xe) {
-		q += xs;
-		for (x = xs; x <= xe; x++) {
-			*q = color;
-			q++;
-		}
-	} else {
-		q += xe;
-		for (x = xe; x <= xs; x++) {
-			*q = color;
-			q++;
-		}
-	}
+        unsigned char *q = n->q + (y * 640);
+        int x;
+        if (xs < xe) {
+                q += xs;
+                for (x = xs; x <= xe; x++) {
+                        *q = color;
+                        q++;
+                }
+        } else {
+                q += xe;
+                for (x = xe; x <= xs; x++) {
+                        *q = color;
+                        q++;
+                }
+        }
 }
 #ifndef ABS
 # define ABS(x) ((x) < 0 ? -(x) : (x))
@@ -462,7 +462,7 @@ static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
 #endif
 
 void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
-	int ys, int xe, int ye, int color)
+        int ys, int xe, int ye, int color)
 {
         int d, x, y, ax, ay, sx, sy, dx, dy;
 
@@ -567,7 +567,7 @@ int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
                 n++;
                 text++;
         }
-	
+
         return n;
 }
 int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
@@ -579,23 +579,23 @@ int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
                 n++;
                 text++;
         }
-	
+
         return n;
 }
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color)
 {
-	unsigned int *mm;
-	int x, len;
-	mm = &vgamem[(ys * 80) + xs];
-	len = (xe - xs)+1;
-	ye -= ys;
-	do {
-		for (x = 0; x < len; x++) {
-			mm[x] = (color << 12) | (color << 8);
-		}
-		mm += 80;
-		ye--;
-	} while (ye >= 0);
+        unsigned int *mm;
+        int x, len;
+        mm = &vgamem[(ys * 80) + xs];
+        len = (xe - xs)+1;
+        ye -= ys;
+        do {
+                for (x = 0; x < len; x++) {
+                        mm[x] = (color << 12) | (color << 8);
+                }
+                mm += 80;
+                ye--;
+        } while (ye >= 0);
 }
 
 int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
@@ -626,15 +626,15 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 /* --------------------------------------------------------------------- */
 
 void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
-			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
+                           uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
 {
         assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-	vgamem[x + (y*80)] =
-		0x40000000
-		| (fg1 << 22) | (fg2 << 26)
-		| (bg1 << 18) | (bg2 << 14)
-		| (_pack_halfw(c1) << 7) 
-		| (_pack_halfw(c2));
+        vgamem[x + (y*80)] =
+                0x40000000
+                | (fg1 << 22) | (fg2 << 26)
+                | (bg1 << 18) | (bg2 << 14)
+                | (_pack_halfw(c1) << 7)
+                | (_pack_halfw(c2));
 }
 /* --------------------------------------------------------------------- */
 /* boxes */
@@ -653,7 +653,7 @@ static void _draw_box_internal(int xs, int ys, int xe, int ye, uint32_t tl, uint
 {
         int n;
 
-	CHECK_INVERT(tl, br, n);
+        CHECK_INVERT(tl, br, n);
 
         draw_char(ch[0], xs, ys, tl, 2);       /* TL corner */
         draw_char(ch[1], xe, ys, br, 2);       /* TR corner */
@@ -682,7 +682,7 @@ void draw_thick_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t 
 
         int n;
 
-	CHECK_INVERT(tl, br, n);
+        CHECK_INVERT(tl, br, n);
 
         draw_char(153, xs, ys, tl, 2); /* TL corner */
         draw_char(152, xe, ys, tl, 2); /* TR corner */
@@ -711,7 +711,7 @@ void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int flags)
         int br = colors[flags & BOX_SHADE_MASK][1];
         int n;
 
-	CHECK_INVERT(tl, br, n);
+        CHECK_INVERT(tl, br, n);
 
         draw_char(128, xs, ys, tl, 2); /* TL corner */
         draw_char(141, xe, ys, 1, 2);  /* TR corner */

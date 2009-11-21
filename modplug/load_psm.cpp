@@ -14,61 +14,61 @@
 
 //#define PSM_LOG
 
-#define PSM_ID_NEW	0x204d5350
-#define PSM_ID_OLD	0xfe4d5350
-#define IFFID_FILE	0x454c4946
-#define IFFID_TITL	0x4c544954
-#define IFFID_SDFT	0x54464453
-#define IFFID_PBOD	0x444f4250
-#define IFFID_SONG	0x474e4f53
-#define IFFID_PATT	0x54544150
-#define IFFID_DSMP	0x504d5344
-#define IFFID_OPLH	0x484c504f
+#define PSM_ID_NEW      0x204d5350
+#define PSM_ID_OLD      0xfe4d5350
+#define IFFID_FILE      0x454c4946
+#define IFFID_TITL      0x4c544954
+#define IFFID_SDFT      0x54464453
+#define IFFID_PBOD      0x444f4250
+#define IFFID_SONG      0x474e4f53
+#define IFFID_PATT      0x54544150
+#define IFFID_DSMP      0x504d5344
+#define IFFID_OPLH      0x484c504f
 
 #pragma pack(1)
 
 typedef struct _PSMCHUNK
 {
-	uint32_t id;
-	uint32_t len;
-	uint32_t listid;
+        uint32_t id;
+        uint32_t len;
+        uint32_t listid;
 } PSMCHUNK;
 
 typedef struct _PSMSONGHDR
 {
-	int8_t songname[8];	// "MAINSONG"
-	uint8_t reserved1;
-	uint8_t reserved2;
-	uint8_t channels;
+        int8_t songname[8];     // "MAINSONG"
+        uint8_t reserved1;
+        uint8_t reserved2;
+        uint8_t channels;
 } PSMSONGHDR;
 
 typedef struct _PSMPATTERN
 {
-	uint32_t size;
-	uint32_t name;
-	uint16_t rows;
-	uint16_t reserved1;
-	uint8_t data[4];
+        uint32_t size;
+        uint32_t name;
+        uint16_t rows;
+        uint16_t reserved1;
+        uint8_t data[4];
 } PSMPATTERN;
 
 typedef struct _PSMSAMPLE
 {
-	uint8_t flags;
-	int8_t songname[8];
-	uint32_t smpid;
-	int8_t samplename[34];
-	uint32_t reserved1;
-	uint8_t reserved2;
-	uint8_t insno;
-	uint8_t reserved3;
-	uint32_t length;
-	uint32_t loopstart;
-	uint32_t loopend;
-	uint16_t reserved4;
-	uint8_t defvol;
-	uint32_t reserved5;
-	uint32_t samplerate;
-	uint8_t reserved6[19];
+        uint8_t flags;
+        int8_t songname[8];
+        uint32_t smpid;
+        int8_t samplename[34];
+        uint32_t reserved1;
+        uint8_t reserved2;
+        uint8_t insno;
+        uint8_t reserved3;
+        uint32_t length;
+        uint32_t loopstart;
+        uint32_t loopend;
+        uint16_t reserved4;
+        uint8_t defvol;
+        uint32_t reserved5;
+        uint32_t samplerate;
+        uint8_t reserved6[19];
 } PSMSAMPLE;
 
 #pragma pack()
@@ -77,335 +77,335 @@ typedef struct _PSMSAMPLE
 bool CSoundFile::ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength)
 //-----------------------------------------------------------
 {
-	PSMCHUNK *pfh = (PSMCHUNK *)lpStream;
-	uint32_t dwMemPos, dwSongPos;
-	uint32_t smpnames[MAX_SAMPLES];
-	uint32_t patptrs[MAX_PATTERNS];
-	uint8_t samplemap[MAX_SAMPLES];
-	uint32_t nPatterns;
+        PSMCHUNK *pfh = (PSMCHUNK *)lpStream;
+        uint32_t dwMemPos, dwSongPos;
+        uint32_t smpnames[MAX_SAMPLES];
+        uint32_t patptrs[MAX_PATTERNS];
+        uint8_t samplemap[MAX_SAMPLES];
+        uint32_t nPatterns;
 
-	// Chunk0: "PSM ",filesize,"FILE"
-	if (dwMemLength < 256) return false;
-	if (bswapLE32(pfh->id) == PSM_ID_OLD)
-	{
-	#ifdef PSM_LOG
-		printf("Old PSM format not supported\n");
-	#endif
-		return false;
-	}
-	if ((bswapLE32(pfh->id) != PSM_ID_NEW)
-	|| (bswapLE32(pfh->len)+12 > dwMemLength)
-	|| (bswapLE32(pfh->listid) != IFFID_FILE)) return false;
-	m_nType = MOD_TYPE_PSM;
-	m_nChannels = 16;
-	m_nSamples = 0;
-	nPatterns = 0;
-	dwMemPos = 12;
-	dwSongPos = 0;
-	for (uint32_t iChPan=0; iChPan<16; iChPan++)
-	{
-		uint32_t pan = (((iChPan & 3) == 1) || ((iChPan&3)==2)) ? 0xC0 : 0x40;
-		Channels[iChPan].nPan = pan;
-	}
-	song_title[0]=0;
-	while (dwMemPos+8 < dwMemLength)
-	{
-		PSMCHUNK *pchunk = (PSMCHUNK *)(lpStream+dwMemPos);
-		if ((bswapLE32(pchunk->len) >= dwMemLength - 8)
-		|| (dwMemPos + bswapLE32(pchunk->len) + 8 > dwMemLength)) break;
-		dwMemPos += 8;
-		uint8_t *pdata = (uint8_t *)(lpStream+dwMemPos);
-		uint32_t len = bswapLE32(pchunk->len);
-		if (len) switch(bswapLE32(pchunk->id))
-		{
-		// "TITL": Song title
-		case IFFID_TITL:
-			if (!pdata[0]) { pdata++; len--; }
-			memcpy(song_title, pdata, (len>31) ? 31 : len);
-			song_title[31] = 0;
-			break;
-		// "PBOD": Pattern
-		case IFFID_PBOD:
-			if ((len >= 12) && (nPatterns < MAX_PATTERNS))
-			{
-				patptrs[nPatterns++] = dwMemPos-8;
-			}
-			break;
-		// "SONG": Song description
-		case IFFID_SONG:
-			if ((len >= sizeof(PSMSONGHDR)+8) && (!dwSongPos))
-			{
-				dwSongPos = dwMemPos - 8;
-			}
-			break;
-		// "DSMP": Sample Data
-		case IFFID_DSMP:
-			if ((len >= sizeof(PSMSAMPLE)) && (m_nSamples+1 < MAX_SAMPLES))
-			{
-				m_nSamples++;
-				SONGSAMPLE *pins = &Samples[m_nSamples];
-				PSMSAMPLE *psmp = (PSMSAMPLE *)pdata;
-				smpnames[m_nSamples] = bswapLE32(psmp->smpid);
-				memcpy(Samples[m_nSamples].name, psmp->samplename, 31);
-				Samples[m_nSamples].name[31] = 0;
-				samplemap[m_nSamples-1] = (uint8_t)m_nSamples;
-				// Init sample
-				pins->nGlobalVol = 0x40;
-				pins->nC5Speed = bswapLE32(psmp->samplerate);
-				pins->nLength = bswapLE32(psmp->length);
-				pins->nLoopStart = bswapLE32(psmp->loopstart);
-				pins->nLoopEnd = bswapLE32(psmp->loopend);
-				pins->nPan = 128;
-				pins->nVolume = (psmp->defvol+1) * 2;
-				pins->uFlags = (psmp->flags & 0x80) ? CHN_LOOP : 0;
-				if (pins->nLoopStart > 0) pins->nLoopStart--;
-				// Point to sample data
-				pdata += 0x60;
-				len -= 0x60;
-				// Load sample data
-				if ((pins->nLength > 3) && (len > 3))
-				{
-					csf_read_sample(pins, RS_PCM8D, (const char *)pdata, len);
-				} else
-				{
-					pins->nLength = 0;
-				}
-			}
-			break;
-		}
-		dwMemPos += bswapLE32(pchunk->len);
-	}
-	// Step #1: convert song structure
-	PSMSONGHDR *pSong = (PSMSONGHDR *)(lpStream+dwSongPos+8);
-	if ((!dwSongPos) || (pSong->channels < 2) || (pSong->channels > 32)) return true;
-	m_nChannels = pSong->channels;
-	// Valid song header -> convert attached chunks
-	{
-		uint32_t dwSongEnd = dwSongPos + 8 + *(uint32_t *)(lpStream+dwSongPos+4);
-		dwMemPos = dwSongPos + 8 + 11; // sizeof(PSMCHUNK)+sizeof(PSMSONGHDR)
-		while (dwMemPos + 8 < dwSongEnd)
-		{
-			PSMCHUNK *pchunk = (PSMCHUNK *)(lpStream+dwMemPos);
-			dwMemPos += 8;
-			if ((bswapLE32(pchunk->len) > dwSongEnd)
-			|| (dwMemPos + bswapLE32(pchunk->len) > dwSongEnd)) break;
-			uint8_t *pdata = (uint8_t *)(lpStream+dwMemPos);
-			uint32_t len = bswapLE32(pchunk->len);
-			switch(bswapLE32(pchunk->id))
-			{
-			case IFFID_OPLH:
-				if (len >= 0x20)
-				{
-					uint32_t pos = len - 3;
-					while (pos > 5)
-					{
-						bool bFound = false;
-						pos -= 5;
-						uint32_t dwName = *(uint32_t *)(pdata+pos);
-						for (uint32_t i=0; i<nPatterns; i++)
-						{
-							uint32_t dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
-							if (dwName == dwPatName)
-							{
-								bFound = true;
-								break;
-							}
-						}
-						if ((!bFound) && (pdata[pos+1] > 0) && (pdata[pos+1] <= 0x10)
-						 && (pdata[pos+3] > 0x40) && (pdata[pos+3] < 0xC0))
-						{
-							m_nDefaultSpeed = pdata[pos+1];
-							m_nDefaultTempo = pdata[pos+3];
-							break;
-						}
-					}
-					uint32_t iOrd = 0;
-					while ((pos+5<len) && (iOrd < MAX_ORDERS))
-					{
-						uint32_t dwName = *(uint32_t *)(pdata+pos);
-						for (uint32_t i=0; i<nPatterns; i++)
-						{
-							uint32_t dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
-							if (dwName == dwPatName)
-							{
-								Orderlist[iOrd++] = i;
-								break;
-							}
-						}
-						pos += 5;
-					}
-				}
-				break;
-			}
-			dwMemPos += bswapLE32(pchunk->len);
-		}
-	}
+        // Chunk0: "PSM ",filesize,"FILE"
+        if (dwMemLength < 256) return false;
+        if (bswapLE32(pfh->id) == PSM_ID_OLD)
+        {
+        #ifdef PSM_LOG
+                printf("Old PSM format not supported\n");
+        #endif
+                return false;
+        }
+        if ((bswapLE32(pfh->id) != PSM_ID_NEW)
+        || (bswapLE32(pfh->len)+12 > dwMemLength)
+        || (bswapLE32(pfh->listid) != IFFID_FILE)) return false;
+        m_nType = MOD_TYPE_PSM;
+        m_nChannels = 16;
+        m_nSamples = 0;
+        nPatterns = 0;
+        dwMemPos = 12;
+        dwSongPos = 0;
+        for (uint32_t iChPan=0; iChPan<16; iChPan++)
+        {
+                uint32_t pan = (((iChPan & 3) == 1) || ((iChPan&3)==2)) ? 0xC0 : 0x40;
+                Channels[iChPan].nPan = pan;
+        }
+        song_title[0]=0;
+        while (dwMemPos+8 < dwMemLength)
+        {
+                PSMCHUNK *pchunk = (PSMCHUNK *)(lpStream+dwMemPos);
+                if ((bswapLE32(pchunk->len) >= dwMemLength - 8)
+                || (dwMemPos + bswapLE32(pchunk->len) + 8 > dwMemLength)) break;
+                dwMemPos += 8;
+                uint8_t *pdata = (uint8_t *)(lpStream+dwMemPos);
+                uint32_t len = bswapLE32(pchunk->len);
+                if (len) switch(bswapLE32(pchunk->id))
+                {
+                // "TITL": Song title
+                case IFFID_TITL:
+                        if (!pdata[0]) { pdata++; len--; }
+                        memcpy(song_title, pdata, (len>31) ? 31 : len);
+                        song_title[31] = 0;
+                        break;
+                // "PBOD": Pattern
+                case IFFID_PBOD:
+                        if ((len >= 12) && (nPatterns < MAX_PATTERNS))
+                        {
+                                patptrs[nPatterns++] = dwMemPos-8;
+                        }
+                        break;
+                // "SONG": Song description
+                case IFFID_SONG:
+                        if ((len >= sizeof(PSMSONGHDR)+8) && (!dwSongPos))
+                        {
+                                dwSongPos = dwMemPos - 8;
+                        }
+                        break;
+                // "DSMP": Sample Data
+                case IFFID_DSMP:
+                        if ((len >= sizeof(PSMSAMPLE)) && (m_nSamples+1 < MAX_SAMPLES))
+                        {
+                                m_nSamples++;
+                                SONGSAMPLE *pins = &Samples[m_nSamples];
+                                PSMSAMPLE *psmp = (PSMSAMPLE *)pdata;
+                                smpnames[m_nSamples] = bswapLE32(psmp->smpid);
+                                memcpy(Samples[m_nSamples].name, psmp->samplename, 31);
+                                Samples[m_nSamples].name[31] = 0;
+                                samplemap[m_nSamples-1] = (uint8_t)m_nSamples;
+                                // Init sample
+                                pins->nGlobalVol = 0x40;
+                                pins->nC5Speed = bswapLE32(psmp->samplerate);
+                                pins->nLength = bswapLE32(psmp->length);
+                                pins->nLoopStart = bswapLE32(psmp->loopstart);
+                                pins->nLoopEnd = bswapLE32(psmp->loopend);
+                                pins->nPan = 128;
+                                pins->nVolume = (psmp->defvol+1) * 2;
+                                pins->uFlags = (psmp->flags & 0x80) ? CHN_LOOP : 0;
+                                if (pins->nLoopStart > 0) pins->nLoopStart--;
+                                // Point to sample data
+                                pdata += 0x60;
+                                len -= 0x60;
+                                // Load sample data
+                                if ((pins->nLength > 3) && (len > 3))
+                                {
+                                        csf_read_sample(pins, RS_PCM8D, (const char *)pdata, len);
+                                } else
+                                {
+                                        pins->nLength = 0;
+                                }
+                        }
+                        break;
+                }
+                dwMemPos += bswapLE32(pchunk->len);
+        }
+        // Step #1: convert song structure
+        PSMSONGHDR *pSong = (PSMSONGHDR *)(lpStream+dwSongPos+8);
+        if ((!dwSongPos) || (pSong->channels < 2) || (pSong->channels > 32)) return true;
+        m_nChannels = pSong->channels;
+        // Valid song header -> convert attached chunks
+        {
+                uint32_t dwSongEnd = dwSongPos + 8 + *(uint32_t *)(lpStream+dwSongPos+4);
+                dwMemPos = dwSongPos + 8 + 11; // sizeof(PSMCHUNK)+sizeof(PSMSONGHDR)
+                while (dwMemPos + 8 < dwSongEnd)
+                {
+                        PSMCHUNK *pchunk = (PSMCHUNK *)(lpStream+dwMemPos);
+                        dwMemPos += 8;
+                        if ((bswapLE32(pchunk->len) > dwSongEnd)
+                        || (dwMemPos + bswapLE32(pchunk->len) > dwSongEnd)) break;
+                        uint8_t *pdata = (uint8_t *)(lpStream+dwMemPos);
+                        uint32_t len = bswapLE32(pchunk->len);
+                        switch(bswapLE32(pchunk->id))
+                        {
+                        case IFFID_OPLH:
+                                if (len >= 0x20)
+                                {
+                                        uint32_t pos = len - 3;
+                                        while (pos > 5)
+                                        {
+                                                bool bFound = false;
+                                                pos -= 5;
+                                                uint32_t dwName = *(uint32_t *)(pdata+pos);
+                                                for (uint32_t i=0; i<nPatterns; i++)
+                                                {
+                                                        uint32_t dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
+                                                        if (dwName == dwPatName)
+                                                        {
+                                                                bFound = true;
+                                                                break;
+                                                        }
+                                                }
+                                                if ((!bFound) && (pdata[pos+1] > 0) && (pdata[pos+1] <= 0x10)
+                                                 && (pdata[pos+3] > 0x40) && (pdata[pos+3] < 0xC0))
+                                                {
+                                                        m_nDefaultSpeed = pdata[pos+1];
+                                                        m_nDefaultTempo = pdata[pos+3];
+                                                        break;
+                                                }
+                                        }
+                                        uint32_t iOrd = 0;
+                                        while ((pos+5<len) && (iOrd < MAX_ORDERS))
+                                        {
+                                                uint32_t dwName = *(uint32_t *)(pdata+pos);
+                                                for (uint32_t i=0; i<nPatterns; i++)
+                                                {
+                                                        uint32_t dwPatName = ((PSMPATTERN *)(lpStream+patptrs[i]+8))->name;
+                                                        if (dwName == dwPatName)
+                                                        {
+                                                                Orderlist[iOrd++] = i;
+                                                                break;
+                                                        }
+                                                }
+                                                pos += 5;
+                                        }
+                                }
+                                break;
+                        }
+                        dwMemPos += bswapLE32(pchunk->len);
+                }
+        }
 
-	// Step #2: convert patterns
-	for (uint32_t nPat=0; nPat<nPatterns; nPat++)
-	{
-		PSMPATTERN *pPsmPat = (PSMPATTERN *)(lpStream+patptrs[nPat]+8);
-		uint32_t len = bswapLE32(*(uint32_t *)(lpStream+patptrs[nPat]+4)) - 12;
-		uint32_t nRows = bswapLE16(pPsmPat->rows);
-		if (len > bswapLE32(pPsmPat->size)) len = bswapLE32(pPsmPat->size);
-		if ((nRows < 64) || (nRows > 256)) nRows = 64;
-		PatternSize[nPat] = nRows;
-		PatternAllocSize[nPat] = nRows;
-		if ((Patterns[nPat] = csf_allocate_pattern(nRows, m_nChannels)) == NULL) break;
-		MODCOMMAND *m = Patterns[nPat];
-		MODCOMMAND *sp, dummy;
-		uint8_t *p = pPsmPat->data;
-		uint32_t pos = 0;
-		uint32_t row = 0;
-		uint32_t rowlim;
-	#ifdef PSM_LOG
-		//printf("Pattern %d at offset 0x%04X\n", nPat, (uint32_t)(p - (uint8_t *)lpStream));
-	#endif
-		rowlim = bswapLE16(pPsmPat->reserved1)-2;
-		while ((row < nRows) && (pos+1 < len))
-		{
-			uint32_t flags, ch;
-			if ((pos+1) >= rowlim) {
-				pos = rowlim;
-				rowlim = (((int)p[pos+1])<<8)
-					| ((int)p[pos+0]);
-				m += m_nChannels;
-				row++;
-				rowlim += pos;
-				pos += 2;
-			}
-			flags = p[pos++];
-			ch = p[pos++];
-			if (ch >= m_nChannels) {
-			#ifdef PSM_LOG
-				printf("Invalid channel row=%d (0x%02X.0x%02X)\n", row, flags, ch);
-			#endif
-				sp = &dummy;
-			} else {
-				sp = &m[ch];
-			}
-			// Note + Instr
-			if ((flags & 0x80) && (pos+1 < len))
-			{
-				uint32_t note = p[pos++];
-				note = (note>>4)*12+(note&0x0f)+12+1;
-				if (note > 0x80) note = 0;
-				sp->note = note;
-			}
-			if ((flags & 0x40) && (pos+1 < len))
-			{
-				uint32_t nins = p[pos++];
-			#ifdef PSM_LOG
-				if ((!nPat) && (nins >= m_nSamples)) printf("WARNING: invalid instrument number (%d)\n", nins);
-			#endif
-				sp->instr = samplemap[nins];
-			}
-			// Volume
-			if ((flags & 0x20) && (pos < len))
-			{
-				sp->volcmd = VOLCMD_VOLUME;
-				sp->vol = p[pos++] / 2;
-			}
-			// Effect
-			if ((flags & 0x10) && (pos+1 < len))
-			{
-				uint32_t command = p[pos++];
-				uint32_t param = p[pos++];
-				// Convert effects
-				switch(command & 0x3F)
-				{
-				// 01: fine volslide up
-				case 0x01:
+        // Step #2: convert patterns
+        for (uint32_t nPat=0; nPat<nPatterns; nPat++)
+        {
+                PSMPATTERN *pPsmPat = (PSMPATTERN *)(lpStream+patptrs[nPat]+8);
+                uint32_t len = bswapLE32(*(uint32_t *)(lpStream+patptrs[nPat]+4)) - 12;
+                uint32_t nRows = bswapLE16(pPsmPat->rows);
+                if (len > bswapLE32(pPsmPat->size)) len = bswapLE32(pPsmPat->size);
+                if ((nRows < 64) || (nRows > 256)) nRows = 64;
+                PatternSize[nPat] = nRows;
+                PatternAllocSize[nPat] = nRows;
+                if ((Patterns[nPat] = csf_allocate_pattern(nRows, m_nChannels)) == NULL) break;
+                MODCOMMAND *m = Patterns[nPat];
+                MODCOMMAND *sp, dummy;
+                uint8_t *p = pPsmPat->data;
+                uint32_t pos = 0;
+                uint32_t row = 0;
+                uint32_t rowlim;
+        #ifdef PSM_LOG
+                //printf("Pattern %d at offset 0x%04X\n", nPat, (uint32_t)(p - (uint8_t *)lpStream));
+        #endif
+                rowlim = bswapLE16(pPsmPat->reserved1)-2;
+                while ((row < nRows) && (pos+1 < len))
+                {
+                        uint32_t flags, ch;
+                        if ((pos+1) >= rowlim) {
+                                pos = rowlim;
+                                rowlim = (((int)p[pos+1])<<8)
+                                        | ((int)p[pos+0]);
+                                m += m_nChannels;
+                                row++;
+                                rowlim += pos;
+                                pos += 2;
+                        }
+                        flags = p[pos++];
+                        ch = p[pos++];
+                        if (ch >= m_nChannels) {
+                        #ifdef PSM_LOG
+                                printf("Invalid channel row=%d (0x%02X.0x%02X)\n", row, flags, ch);
+                        #endif
+                                sp = &dummy;
+                        } else {
+                                sp = &m[ch];
+                        }
+                        // Note + Instr
+                        if ((flags & 0x80) && (pos+1 < len))
+                        {
+                                uint32_t note = p[pos++];
+                                note = (note>>4)*12+(note&0x0f)+12+1;
+                                if (note > 0x80) note = 0;
+                                sp->note = note;
+                        }
+                        if ((flags & 0x40) && (pos+1 < len))
+                        {
+                                uint32_t nins = p[pos++];
+                        #ifdef PSM_LOG
+                                if ((!nPat) && (nins >= m_nSamples)) printf("WARNING: invalid instrument number (%d)\n", nins);
+                        #endif
+                                sp->instr = samplemap[nins];
+                        }
+                        // Volume
+                        if ((flags & 0x20) && (pos < len))
+                        {
+                                sp->volcmd = VOLCMD_VOLUME;
+                                sp->vol = p[pos++] / 2;
+                        }
+                        // Effect
+                        if ((flags & 0x10) && (pos+1 < len))
+                        {
+                                uint32_t command = p[pos++];
+                                uint32_t param = p[pos++];
+                                // Convert effects
+                                switch(command & 0x3F)
+                                {
+                                // 01: fine volslide up
+                                case 0x01:
 #if PSM_LOG
-					printf("fvup command pat=%d row=%d ch=%d   %02x %02x\n",
-							nPat,
-								row,1+ch,
-								command, param);
+                                        printf("fvup command pat=%d row=%d ch=%d   %02x %02x\n",
+                                                        nPat,
+                                                                row,1+ch,
+                                                                command, param);
 #endif
 #if 0
-					if (!sp->volcmd) {
-						sp->volcmd = VOLCMD_FINEVOLUP;
-						sp->vol = (param >> 1) & 0xF;
-						command = CMD_PORTAMENTOUP;
-						param>>=4; param |= 0xf0;
-						if (param == 240) param=241;
-					} else {
+                                        if (!sp->volcmd) {
+                                                sp->volcmd = VOLCMD_FINEVOLUP;
+                                                sp->vol = (param >> 1) & 0xF;
+                                                command = CMD_PORTAMENTOUP;
+                                                param>>=4; param |= 0xf0;
+                                                if (param == 240) param=241;
+                                        } else {
 #endif
-					command = CMD_VOLUMESLIDE;
-					param |= 0x0f;
-					if (param == 15) param=31;
-					break;
-				// 02: volslide up
-				case 0x02:	command = CMD_VOLUMESLIDE; param>>=1; param<<=4; break;
-				// 03: fine volslide down
-				case 0x03:	
+                                        command = CMD_VOLUMESLIDE;
+                                        param |= 0x0f;
+                                        if (param == 15) param=31;
+                                        break;
+                                // 02: volslide up
+                                case 0x02:      command = CMD_VOLUMESLIDE; param>>=1; param<<=4; break;
+                                // 03: fine volslide down
+                                case 0x03:
 #if PSM_LOG
-					printf("fvdown command pat=%d row=%d ch=%d   %02x %02x\n",
-							nPat,
-								row,1+ch,
-								command, param);
+                                        printf("fvdown command pat=%d row=%d ch=%d   %02x %02x\n",
+                                                        nPat,
+                                                                row,1+ch,
+                                                                command, param);
 #endif
 #if 0
-					if (!sp->volcmd) {
-						sp->volcmd = VOLCMD_FINEVOLDOWN;
-						sp->vol = (param >> 2) & 0xF;
-						if (!sp->vol) sp->vol = 1;
-						command = CMD_PORTAMENTODOWN;
-					}
+                                        if (!sp->volcmd) {
+                                                sp->volcmd = VOLCMD_FINEVOLDOWN;
+                                                sp->vol = (param >> 2) & 0xF;
+                                                if (!sp->vol) sp->vol = 1;
+                                                command = CMD_PORTAMENTODOWN;
+                                        }
 #endif
-					command = CMD_VOLUMESLIDE;
-					param>>=4; param |= 0xf0;
-					if (param == 240) param=241;
-					break;
-				// 04: volslide down
-				case 0x04:	command = CMD_VOLUMESLIDE; param>>=1; break;
-				// 0C: portamento up
-				case 0x0C:	command = CMD_PORTAMENTOUP; param = (param+1)/2; break;
-				// 0E: portamento down
-				case 0x0E:	command = CMD_PORTAMENTODOWN; param = (param+1)/2; break;
-				// 0F: tone portamento
-				case 0x0F:	command = CMD_TONEPORTAMENTO; param = param/4; break;
-				// 15: vibrato
-				case 0x15:	command = CMD_VIBRATO; break;
-				// 29: wtf
-				case 0x29: pos += 2; break;
-				// 2A: retrig
-				case 0x2A:	command = CMD_RETRIG; break;
-				// 33: Position Jump
-				case 0x33:	command = CMD_POSITIONJUMP; break;
-				// 34: Pattern break
-				case 0x34:	command = CMD_PATTERNBREAK; break;
-				// 3D: speed
-				case 0x3D:	command = CMD_SPEED;
-						if (!row && !nPat)
-							m_nDefaultSpeed = param;
-						break;
-				// 3E: tempo
-				case 0x3E:	command = CMD_TEMPO;
-						if (!row && !nPat)
-							m_nDefaultTempo = param;
-						break;
-				// Unknown
-				default:
-				#ifdef PSM_LOG
-					printf("Unknown PSM effect pat=%d row=%d ch=%d: %02X.%02X\n", nPat, row, ch, command, param);
-				#endif
-					command = param = 0;
-				}
-				sp->command = (uint8_t)command;
-				sp->param = (uint8_t)param;
-			}
-		}
-	#ifdef PSM_LOG
-		if (pos < len)
-		{
-//			printf("Pattern %d: %d/%d[%d] rows (%d bytes) -> %d bytes left\n", nPat, row, nRows, pPsmPat->rows, pPsmPat->size, len-pos);
-		}
-	#endif
-	}
+                                        command = CMD_VOLUMESLIDE;
+                                        param>>=4; param |= 0xf0;
+                                        if (param == 240) param=241;
+                                        break;
+                                // 04: volslide down
+                                case 0x04:      command = CMD_VOLUMESLIDE; param>>=1; break;
+                                // 0C: portamento up
+                                case 0x0C:      command = CMD_PORTAMENTOUP; param = (param+1)/2; break;
+                                // 0E: portamento down
+                                case 0x0E:      command = CMD_PORTAMENTODOWN; param = (param+1)/2; break;
+                                // 0F: tone portamento
+                                case 0x0F:      command = CMD_TONEPORTAMENTO; param = param/4; break;
+                                // 15: vibrato
+                                case 0x15:      command = CMD_VIBRATO; break;
+                                // 29: wtf
+                                case 0x29: pos += 2; break;
+                                // 2A: retrig
+                                case 0x2A:      command = CMD_RETRIG; break;
+                                // 33: Position Jump
+                                case 0x33:      command = CMD_POSITIONJUMP; break;
+                                // 34: Pattern break
+                                case 0x34:      command = CMD_PATTERNBREAK; break;
+                                // 3D: speed
+                                case 0x3D:      command = CMD_SPEED;
+                                                if (!row && !nPat)
+                                                        m_nDefaultSpeed = param;
+                                                break;
+                                // 3E: tempo
+                                case 0x3E:      command = CMD_TEMPO;
+                                                if (!row && !nPat)
+                                                        m_nDefaultTempo = param;
+                                                break;
+                                // Unknown
+                                default:
+                                #ifdef PSM_LOG
+                                        printf("Unknown PSM effect pat=%d row=%d ch=%d: %02X.%02X\n", nPat, row, ch, command, param);
+                                #endif
+                                        command = param = 0;
+                                }
+                                sp->command = (uint8_t)command;
+                                sp->param = (uint8_t)param;
+                        }
+                }
+        #ifdef PSM_LOG
+                if (pos < len)
+                {
+//                      printf("Pattern %d: %d/%d[%d] rows (%d bytes) -> %d bytes left\n", nPat, row, nRows, pPsmPat->rows, pPsmPat->size, len-pos);
+                }
+        #endif
+        }
 
-	// Done (finally!)
-	return true;
+        // Done (finally!)
+        return true;
 }
 
 

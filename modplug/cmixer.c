@@ -136,7 +136,7 @@ void float_to_mono_mix(const float *in, int *out, unsigned int count)
 // Clip and convert functions
 // ----------------------------------------------------------------------------
 // XXX mins/max were int[2]
-// 
+//
 // The original C version was written by Rani Assaf <rani@magic.metawire.com>
 
 
@@ -159,7 +159,7 @@ unsigned int clip_32_to_8(void *ptr, int *buffer, unsigned int samples, int *min
             maxs[i & 1] = n;
 
         // 8-bit unsigned
-        p[i] = (n >> (24 - MIXING_ATTENUATION)) ^ 0x80;    
+        p[i] = (n >> (24 - MIXING_ATTENUATION)) ^ 0x80;
     }
 
     return samples;
@@ -177,14 +177,14 @@ unsigned int clip_32_to_16(void *ptr, int *buffer, unsigned int samples, int *mi
             n = MIXING_CLIPMIN;
         else if (n > MIXING_CLIPMAX)
             n = MIXING_CLIPMAX;
-    
+
         if (n < mins[i & 1])
             mins[i & 1] = n;
         else if (n > maxs[i & 1])
             maxs[i & 1] = n;
 
         // 16-bit signed
-        p[i] = n >> (16 - MIXING_ATTENUATION);    
+        p[i] = n >> (16 - MIXING_ATTENUATION);
     }
 
     return samples * 2;

@@ -37,64 +37,64 @@ static int dg_progress = 0;
 
 static void _diskwriter_draw_const(void)
 {
-	if (dg_progress >= 63) {
-		draw_text("Finishing up...", 32, 27, 0, 2);
-	} else if (status.flags & DISKWRITER_ACTIVE_PATTERN) {
-		draw_text("Updating sample...", 30, 27, 0, 2);
-		draw_text("Please wait...", 34, 33, 0, 2); /* no cancel button */
-	} else {
-		draw_text("Writing song to disk...", 28, 27, 0, 2);
-	}
-	draw_fill_chars(24,30,55,30,0);
+        if (dg_progress >= 63) {
+                draw_text("Finishing up...", 32, 27, 0, 2);
+        } else if (status.flags & DISKWRITER_ACTIVE_PATTERN) {
+                draw_text("Updating sample...", 30, 27, 0, 2);
+                draw_text("Please wait...", 34, 33, 0, 2); /* no cancel button */
+        } else {
+                draw_text("Writing song to disk...", 28, 27, 0, 2);
+        }
+        draw_fill_chars(24,30,55,30,0);
 
-	draw_vu_meter(24, 30, 32, dg_progress, 4, 4);
-	draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
+        draw_vu_meter(24, 30, 32, dg_progress, 4, 4);
+        draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 static void _diskwriter_cancel(UNUSED void*ignored)
 {
-	if (status.flags & DISKWRITER_ACTIVE_PATTERN) return; /* err? */
-	if (dg != NULL) {
-		diskwriter_finish(); /* eek! */
-		dg = NULL;
-	}
+        if (status.flags & DISKWRITER_ACTIVE_PATTERN) return; /* err? */
+        if (dg != NULL) {
+                diskwriter_finish(); /* eek! */
+                dg = NULL;
+        }
 }
 void diskwriter_dialog_progress(unsigned int perc)
 {
-	int x;
+        int x;
 
-	x = (int)(((double)perc / 100.0) * 64.0);
+        x = (int)(((double)perc / 100.0) * 64.0);
 
-	if (dg_init == 0) {
-		dg_init = 1;
-		create_button(_diskwriter_widgets+0, 36, 33, 6,
-				0,0,0,0,0, dialog_cancel_NULL, "Cancel", 1);
-	}
-	if (!dg) {
-		dg = dialog_create_custom(22,25,36,11,
-			_diskwriter_widgets,
-			(status.flags & DISKWRITER_ACTIVE_PATTERN ? 0 : 1),
-			0,
-			_diskwriter_draw_const,
-			NULL);
-		if (!(status.flags & DISKWRITER_ACTIVE_PATTERN)) {
-			dg->action_yes = _diskwriter_cancel;
-			dg->action_cancel = _diskwriter_cancel;
-		}
-	} else if (dg_progress == x) {
-		return;
-	}
+        if (dg_init == 0) {
+                dg_init = 1;
+                create_button(_diskwriter_widgets+0, 36, 33, 6,
+                                0,0,0,0,0, dialog_cancel_NULL, "Cancel", 1);
+        }
+        if (!dg) {
+                dg = dialog_create_custom(22,25,36,11,
+                        _diskwriter_widgets,
+                        (status.flags & DISKWRITER_ACTIVE_PATTERN ? 0 : 1),
+                        0,
+                        _diskwriter_draw_const,
+                        NULL);
+                if (!(status.flags & DISKWRITER_ACTIVE_PATTERN)) {
+                        dg->action_yes = _diskwriter_cancel;
+                        dg->action_cancel = _diskwriter_cancel;
+                }
+        } else if (dg_progress == x) {
+                return;
+        }
 
-	dg_progress = x;
-	status.flags |= NEED_UPDATE;
+        dg_progress = x;
+        status.flags |= NEED_UPDATE;
 }
 void diskwriter_dialog_finished(void)
 {
-	if (dg) {
-		dg = NULL;
-		if (status.dialog_type != DIALOG_NONE)
-			dialog_cancel_NULL();
-		dialog_destroy_all(); /* poop */
-	}
-	dg_progress = 64;
-	status.flags |= NEED_UPDATE;
+        if (dg) {
+                dg = NULL;
+                if (status.dialog_type != DIALOG_NONE)
+                        dialog_cancel_NULL();
+                dialog_destroy_all(); /* poop */
+        }
+        dg_progress = 64;
+        status.flags |= NEED_UPDATE;
 }

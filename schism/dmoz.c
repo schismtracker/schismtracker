@@ -56,7 +56,7 @@
 
 /* note: this has do be split up like this; otherwise it gets read as '\x9ad' which is the Wrong Thing. */
 #define TITLE_DIRECTORY "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a" \
-	"Directory\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
+        "Directory\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
 #define TITLE_LIBRARY "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9aLibrary\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
 #define DESCR_DIRECTORY "Directory"
 #define DESCR_UNKNOWN "Unknown sample format"
@@ -85,178 +85,178 @@ doing weird stuff like hacking the files, but then you're just asking for troubl
 #define READ_INFO(t) fmt_##t##_read_info
 
 static const fmt_read_info_func read_info_funcs[] = {
-	/* 669 has lots of checks to compensate for a really crappy 2-byte magic. (It's even a common English
-	word ffs... "if"?!) Still, it's better than STM. The only reason this is first is because the position
-	of the SCRM magic lies within the 669 message field, and the 669 check is much more complex (and thus
-	more likely to be right). */
-	READ_INFO(669),
+        /* 669 has lots of checks to compensate for a really crappy 2-byte magic. (It's even a common English
+        word ffs... "if"?!) Still, it's better than STM. The only reason this is first is because the position
+        of the SCRM magic lies within the 669 message field, and the 669 check is much more complex (and thus
+        more likely to be right). */
+        READ_INFO(669),
 
-	/* Since so many programs have added noncompatible extensions to the mod format, there are about 30
-	strings to compare against for the magic. Also, there are special cases for WOW files, which even
-	share the same magic as plain ProTracker, but are quite different; there are some really nasty
-	heuristics to detect these... ugh, ugh, ugh. However, it has to be above the formats with the magic
-	at the beginning... */
-	READ_INFO(mod),
+        /* Since so many programs have added noncompatible extensions to the mod format, there are about 30
+        strings to compare against for the magic. Also, there are special cases for WOW files, which even
+        share the same magic as plain ProTracker, but are quite different; there are some really nasty
+        heuristics to detect these... ugh, ugh, ugh. However, it has to be above the formats with the magic
+        at the beginning... */
+        READ_INFO(mod),
 
-	/* S3M needs to be before a lot of stuff. */
-	READ_INFO(s3m),
-	/* FAR and S3M have different magic in the same place, so it doesn't really matter which one goes
-	where. I just have S3M first since it's a more common format. */
-	READ_INFO(far),
+        /* S3M needs to be before a lot of stuff. */
+        READ_INFO(s3m),
+        /* FAR and S3M have different magic in the same place, so it doesn't really matter which one goes
+        where. I just have S3M first since it's a more common format. */
+        READ_INFO(far),
 
-	/* These next formats have their magic at the beginning of the data, so none of them can possibly
-	conflict with other ones. I've organized them pretty much in order of popularity. */
-	READ_INFO(xm),
-	READ_INFO(it),
-	READ_INFO(psm),
-	READ_INFO(mt2),
-	READ_INFO(mtm),
-	READ_INFO(ntk),
+        /* These next formats have their magic at the beginning of the data, so none of them can possibly
+        conflict with other ones. I've organized them pretty much in order of popularity. */
+        READ_INFO(xm),
+        READ_INFO(it),
+        READ_INFO(psm),
+        READ_INFO(mt2),
+        READ_INFO(mtm),
+        READ_INFO(ntk),
 #ifdef USE_NON_TRACKED_TYPES
-	READ_INFO(sid),  /* 6581 0wnz j00! */
+        READ_INFO(sid),  /* 6581 0wnz j00! */
 #endif
-	READ_INFO(mdl),
-	READ_INFO(med),
-	READ_INFO(okt),
+        READ_INFO(mdl),
+        READ_INFO(med),
+        READ_INFO(okt),
 
-	READ_INFO(xi),
+        READ_INFO(xi),
 
-	READ_INFO(iti),
-	READ_INFO(its),
-	READ_INFO(scri),
-	READ_INFO(au),
-	READ_INFO(aiff),
+        READ_INFO(iti),
+        READ_INFO(its),
+        READ_INFO(scri),
+        READ_INFO(au),
+        READ_INFO(aiff),
 
-	READ_INFO(ult),
-	READ_INFO(liq),
+        READ_INFO(ult),
+        READ_INFO(liq),
 
-	READ_INFO(ams),
-	READ_INFO(f2r),
-	READ_INFO(dtm),  /* not sure about the placement here */
-	
-	/* IMF and SFX (as well as STX) all have the magic values at 0x3C-0x3F, which is positioned in IT's
-	"reserved" field, Not sure about this positioning, but these are kind of rare formats anyway. */
-	READ_INFO(imf),
-	READ_INFO(sfx),
-	
-	/* bleh */
+        READ_INFO(ams),
+        READ_INFO(f2r),
+        READ_INFO(dtm),  /* not sure about the placement here */
+
+        /* IMF and SFX (as well as STX) all have the magic values at 0x3C-0x3F, which is positioned in IT's
+        "reserved" field, Not sure about this positioning, but these are kind of rare formats anyway. */
+        READ_INFO(imf),
+        READ_INFO(sfx),
+
+        /* bleh */
 #if defined(USE_NON_TRACKED_TYPES) && defined(HAVE_VORBIS)
-	READ_INFO(ogg),
+        READ_INFO(ogg),
 #endif
-	READ_INFO(mid),
-	READ_INFO(pat),
+        READ_INFO(mid),
+        READ_INFO(pat),
 
-	/* STM seems to have a case insensitive magic string with several possible values, and only one byte
-	is guaranteed to be the same in the whole file... yeagh. */
-	READ_INFO(stm),
+        /* STM seems to have a case insensitive magic string with several possible values, and only one byte
+        is guaranteed to be the same in the whole file... yeagh. */
+        READ_INFO(stm),
 
-	READ_INFO(wav),
-	/* An ID3 tag could actually be anywhere in an MP3 file, and there's no guarantee that it even exists
-	at all. I might move this toward the top if I can figure out how to identify an MP3 more precisely. */
+        READ_INFO(wav),
+        /* An ID3 tag could actually be anywhere in an MP3 file, and there's no guarantee that it even exists
+        at all. I might move this toward the top if I can figure out how to identify an MP3 more precisely. */
 #ifdef USE_NON_TRACKED_TYPES
-	READ_INFO(mp3),
+        READ_INFO(mp3),
 #endif
 
-	NULL /* This needs to be at the bottom of the list! */
+        NULL /* This needs to be at the bottom of the list! */
 };
 
 #undef READ_INFO
 /* --------------------------------------------------------------------------------------------------------- */
 /* "selected" and cache */
 struct dmoz_cache {
-	struct dmoz_cache *next;
-	char *path;
-	char *cache_filen;
-	char *cache_dirn;
+        struct dmoz_cache *next;
+        char *path;
+        char *cache_filen;
+        char *cache_dirn;
 };
 static struct dmoz_cache *cache_top = NULL;
 
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl)
 {
-	char *fn, *dn;
-	if (fl && fl->selected > -1 && fl->selected < fl->num_files && fl->files[fl->selected])
-		fn = fl->files[fl->selected]->base;
-	else
-		fn = NULL;
-	if (dl && dl->selected > -1 && dl->selected < dl->num_dirs && dl->dirs[dl->selected])
-		dn = dl->dirs[dl->selected]->base;
-	else
-		dn = NULL;
-	dmoz_cache_update_names(path,fn,dn);
+        char *fn, *dn;
+        if (fl && fl->selected > -1 && fl->selected < fl->num_files && fl->files[fl->selected])
+                fn = fl->files[fl->selected]->base;
+        else
+                fn = NULL;
+        if (dl && dl->selected > -1 && dl->selected < dl->num_dirs && dl->dirs[dl->selected])
+                dn = dl->dirs[dl->selected]->base;
+        else
+                dn = NULL;
+        dmoz_cache_update_names(path,fn,dn);
 }
 
 void dmoz_cache_update_names(const char *path, const char *filen, const char *dirn)
 {
-	struct dmoz_cache *p, *lp;
-	char *q;
-	q = str_dup(path);
-	lp = NULL;
-	filen = filen ? get_basename(filen) : NULL;
-	dirn = dirn ? get_basename(dirn) : NULL;
-	if (filen && strcmp(filen, "..") == 0)
-		filen = NULL;
-	if (dirn && strcmp(dirn, "..") == 0)
-		dirn = NULL;
-	for (p = cache_top; p; p = p->next) {
-		if (strcmp(p->path,q)==0) {
-			free(q);
-			if (filen) {
-				free(p->cache_filen);
-				p->cache_filen = str_dup(filen);
-			}
-			if (dirn) {
-				free(p->cache_dirn);
-				p->cache_dirn = str_dup(dirn);
-			}
-			if (lp) {
-				lp->next = p->next;
-				/* !lp means we're already cache_top */
-				p->next = cache_top;
-				cache_top = p;
-			}
-			return;
-		}
-		lp = p;
-	}
-	p = mem_alloc(sizeof(struct dmoz_cache));
-	p->path = q;
-	p->cache_filen = filen ? str_dup(filen) : NULL;
-	p->cache_dirn = dirn ? str_dup(dirn) : NULL;
-	p->next = cache_top;
-	cache_top = p;
+        struct dmoz_cache *p, *lp;
+        char *q;
+        q = str_dup(path);
+        lp = NULL;
+        filen = filen ? get_basename(filen) : NULL;
+        dirn = dirn ? get_basename(dirn) : NULL;
+        if (filen && strcmp(filen, "..") == 0)
+                filen = NULL;
+        if (dirn && strcmp(dirn, "..") == 0)
+                dirn = NULL;
+        for (p = cache_top; p; p = p->next) {
+                if (strcmp(p->path,q)==0) {
+                        free(q);
+                        if (filen) {
+                                free(p->cache_filen);
+                                p->cache_filen = str_dup(filen);
+                        }
+                        if (dirn) {
+                                free(p->cache_dirn);
+                                p->cache_dirn = str_dup(dirn);
+                        }
+                        if (lp) {
+                                lp->next = p->next;
+                                /* !lp means we're already cache_top */
+                                p->next = cache_top;
+                                cache_top = p;
+                        }
+                        return;
+                }
+                lp = p;
+        }
+        p = mem_alloc(sizeof(struct dmoz_cache));
+        p->path = q;
+        p->cache_filen = filen ? str_dup(filen) : NULL;
+        p->cache_dirn = dirn ? str_dup(dirn) : NULL;
+        p->next = cache_top;
+        cache_top = p;
 }
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl)
 {
-	struct dmoz_cache *p;
-	char *q;
-	int i;
+        struct dmoz_cache *p;
+        char *q;
+        int i;
 
-	q = str_dup(path);
-	if (fl) fl->selected = 0;
-	if (dl) dl->selected = 0;
-	for (p = cache_top; p; p = p->next) {
-		if (strcmp(p->path,path) == 0) {
-			if (fl && p->cache_filen) {
-				for (i = 0; i < fl->num_files; i++) {
-					if (!fl->files[i]) continue;
-					if (strcmp(fl->files[i]->base, p->cache_filen) == 0) {
-						fl->selected = i;
-						break;
-					}
-				}
-			}
-			if (dl && p->cache_dirn) {
-				for (i = 0; i < dl->num_dirs; i++) {
-					if (!dl->dirs[i]) continue;
-					if (strcmp(dl->dirs[i]->base, p->cache_dirn) == 0) {
-						dl->selected = i;
-						break;
-					}
-				}
-			}
-			break;
-		}
-	}
+        q = str_dup(path);
+        if (fl) fl->selected = 0;
+        if (dl) dl->selected = 0;
+        for (p = cache_top; p; p = p->next) {
+                if (strcmp(p->path,path) == 0) {
+                        if (fl && p->cache_filen) {
+                                for (i = 0; i < fl->num_files; i++) {
+                                        if (!fl->files[i]) continue;
+                                        if (strcmp(fl->files[i]->base, p->cache_filen) == 0) {
+                                                fl->selected = i;
+                                                break;
+                                        }
+                                }
+                        }
+                        if (dl && p->cache_dirn) {
+                                for (i = 0; i < dl->num_dirs; i++) {
+                                        if (!dl->dirs[i]) continue;
+                                        if (strcmp(dl->dirs[i]->base, p->cache_dirn) == 0) {
+                                                dl->selected = i;
+                                                break;
+                                        }
+                                }
+                        }
+                        break;
+                }
+        }
 }
 
 
@@ -265,80 +265,80 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 /* path string hacking */
 
 /* This function should:
-	- strip out any parent directory references ("/sheep/../goat" => "/goat")
-	- switch slashes to backslashes for MS systems ("c:/winnt" => "c:\\winnt")
-	- condense multiple slashes into one ("/sheep//goat" => "/sheep/goat")
-	- remove any trailing slashes
+        - strip out any parent directory references ("/sheep/../goat" => "/goat")
+        - switch slashes to backslashes for MS systems ("c:/winnt" => "c:\\winnt")
+        - condense multiple slashes into one ("/sheep//goat" => "/sheep/goat")
+        - remove any trailing slashes
 FIXME: also try to resolve relative paths based on getcwd(), if possible
 */
 char *dmoz_path_normal(const char *path)
 {
-	char *ret, *p;
+        char *ret, *p;
 
-	ret = calloc(strlen(path) + 2, sizeof(char));
-	if (!ret) {
-		perror("calloc");
-		exit(255);
-	}
-	p = ret;
-	while (*path) {
-		if (*path == '/') {
-SLASHES:		while (*path == '/') path++;
-			if (*path == '.' && path[1] == '.' && path[2] == '/') {
-				while (p >= ret) {
-					if (*p == '/') break;
-					p--;
-				}
-				path = &path[2];
-				goto SLASHES;
-			} else if (*path == '.' && path[1] == '/') {
-				path = &path[1];
-				goto SLASHES;
-			}
-			*p++ = '/';
-		} else {
-			*p++ = *path++;
-		}
-	}
-	if (p == ret) {
-		*p = '/';
-		p[1] = '\0';
-	} else if (p[-1] == '/') {
-		p[-1] = '\0'; /* trailing slash */
-	}
+        ret = calloc(strlen(path) + 2, sizeof(char));
+        if (!ret) {
+                perror("calloc");
+                exit(255);
+        }
+        p = ret;
+        while (*path) {
+                if (*path == '/') {
+SLASHES:                while (*path == '/') path++;
+                        if (*path == '.' && path[1] == '.' && path[2] == '/') {
+                                while (p >= ret) {
+                                        if (*p == '/') break;
+                                        p--;
+                                }
+                                path = &path[2];
+                                goto SLASHES;
+                        } else if (*path == '.' && path[1] == '/') {
+                                path = &path[1];
+                                goto SLASHES;
+                        }
+                        *p++ = '/';
+                } else {
+                        *p++ = *path++;
+                }
+        }
+        if (p == ret) {
+                *p = '/';
+                p[1] = '\0';
+        } else if (p[-1] == '/') {
+                p[-1] = '\0'; /* trailing slash */
+        }
 #if defined(WIN32)
-	for (p = ret; *p; p++)
-		if (*p == '/') *p = '\\';
+        for (p = ret; *p; p++)
+                if (*p == '/') *p = '\\';
 #endif
-	return ret;
+        return ret;
 }
 
 char *dmoz_path_concat(const char *a, const char *b)
 {
-	return dmoz_path_concat_len(a, b, strlen(a), strlen(b));
+        return dmoz_path_concat_len(a, b, strlen(a), strlen(b));
 }
 
 char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen)
 {
-	char *ret = mem_alloc(alen + blen + 2);
+        char *ret = mem_alloc(alen + blen + 2);
 
-	if (alen) {
-		char last = a[alen - 1];
-		
-		strcpy(ret, a);
-		
-		/* need a slash? */
+        if (alen) {
+                char last = a[alen - 1];
+
+                strcpy(ret, a);
+
+                /* need a slash? */
 #if defined(__amigaos4__)
-		if (last != ':' && last != '/')
-			strcat(ret, "/");
+                if (last != ':' && last != '/')
+                        strcat(ret, "/");
 #else
-		if (last != DIR_SEPARATOR)
-			strcat(ret, DIR_SEPARATOR_STR);
+                if (last != DIR_SEPARATOR)
+                        strcat(ret, DIR_SEPARATOR_STR);
 #endif
-	}
-	strcat(ret, b);
+        }
+        strcat(ret, b);
 
-	return ret;
+        return ret;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -346,78 +346,78 @@ char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen)
 
 static void allocate_more_files(dmoz_filelist_t *flist)
 {
-	if (flist->alloc_size == 0) {
-		flist->alloc_size = FILE_BLOCK_SIZE;
-		flist->files = (dmoz_file_t **)mem_alloc(FILE_BLOCK_SIZE * sizeof(dmoz_file_t *));
-	} else {
-		flist->alloc_size *= 2;
-		flist->files = (dmoz_file_t **)mem_realloc(flist->files, flist->alloc_size * sizeof(dmoz_filelist_t *));
-	}
+        if (flist->alloc_size == 0) {
+                flist->alloc_size = FILE_BLOCK_SIZE;
+                flist->files = (dmoz_file_t **)mem_alloc(FILE_BLOCK_SIZE * sizeof(dmoz_file_t *));
+        } else {
+                flist->alloc_size *= 2;
+                flist->files = (dmoz_file_t **)mem_realloc(flist->files, flist->alloc_size * sizeof(dmoz_filelist_t *));
+        }
 }
 
 static void allocate_more_dirs(dmoz_dirlist_t *dlist)
 {
-	if (dlist->alloc_size == 0) {
-		dlist->alloc_size = DIR_BLOCK_SIZE;
-		dlist->dirs = (dmoz_dir_t **)mem_alloc(DIR_BLOCK_SIZE * sizeof(dmoz_dir_t *));
-	} else {
-		dlist->alloc_size *= 2;
-		dlist->dirs = (dmoz_dir_t **)mem_realloc(dlist->dirs, dlist->alloc_size * sizeof(dmoz_dir_t *));
-	}
+        if (dlist->alloc_size == 0) {
+                dlist->alloc_size = DIR_BLOCK_SIZE;
+                dlist->dirs = (dmoz_dir_t **)mem_alloc(DIR_BLOCK_SIZE * sizeof(dmoz_dir_t *));
+        } else {
+                dlist->alloc_size *= 2;
+                dlist->dirs = (dmoz_dir_t **)mem_realloc(dlist->dirs, dlist->alloc_size * sizeof(dmoz_dir_t *));
+        }
 }
 
 static void free_file(dmoz_file_t *file)
 {
-	if (!file)
-		return;
-	if (file->smp_filename != file->base && file->smp_filename != file->title) {
-		free(file->smp_filename);
-	}
-	free(file->path);
-	free(file->base);
-	if (file->type & TYPE_EXT_DATA_MASK) {
-		if (file->artist)
-			free(file->artist);
-		free(file->title);
-		/* if (file->sample) {
-			if (file->sample->data)
-				song_sample_free(file->sample->data);
-			free(file->sample);
-		} */
-	}
-	free(file);
+        if (!file)
+                return;
+        if (file->smp_filename != file->base && file->smp_filename != file->title) {
+                free(file->smp_filename);
+        }
+        free(file->path);
+        free(file->base);
+        if (file->type & TYPE_EXT_DATA_MASK) {
+                if (file->artist)
+                        free(file->artist);
+                free(file->title);
+                /* if (file->sample) {
+                        if (file->sample->data)
+                                song_sample_free(file->sample->data);
+                        free(file->sample);
+                } */
+        }
+        free(file);
 }
 
 static void free_dir(dmoz_dir_t *dir)
 {
-	if (!dir)
-		return;
-	free(dir->path);
-	free(dir->base);
-	free(dir);
+        if (!dir)
+                return;
+        free(dir->path);
+        free(dir->base);
+        free(dir);
 }
 
 void dmoz_free(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
 {
-	int n;
+        int n;
 
-	if (flist) {
-		for (n = 0; n < flist->num_files; n++)
-			free_file(flist->files[n]);
-		free(flist->files);
-		flist->files = NULL;
-		flist->num_files = 0;
-		flist->alloc_size = 0;
-	}
+        if (flist) {
+                for (n = 0; n < flist->num_files; n++)
+                        free_file(flist->files[n]);
+                free(flist->files);
+                flist->files = NULL;
+                flist->num_files = 0;
+                flist->alloc_size = 0;
+        }
 
-	if (dlist) {
-		for (n = 0; n < dlist->num_dirs; n++)
-			free_dir(dlist->dirs[n]);
-		free(dlist->dirs);
-		dlist->dirs = NULL;
-		dlist->num_dirs = 0;
-		dlist->alloc_size = 0;
-	}
+        if (dlist) {
+                for (n = 0; n < dlist->num_dirs; n++)
+                        free_dir(dlist->dirs[n]);
+                free(dlist->dirs);
+                dlist->dirs = NULL;
+                dlist->num_dirs = 0;
+                dlist->alloc_size = 0;
+        }
 }
 
 static int current_dmoz_file = 0;
@@ -428,50 +428,50 @@ static void (*dmoz_worker_onmove)(void) = NULL;
 
 int dmoz_worker(void)
 {
-	dmoz_file_t *nf;
+        dmoz_file_t *nf;
 
-	if (!current_dmoz_filelist || !current_dmoz_filter)
-		return 0;
-	if (current_dmoz_file >= current_dmoz_filelist->num_files) {
-		current_dmoz_filelist = NULL;
-		current_dmoz_filter = NULL;
-		if (dmoz_worker_onmove)
-			dmoz_worker_onmove();
-		return 0;
-	}
+        if (!current_dmoz_filelist || !current_dmoz_filter)
+                return 0;
+        if (current_dmoz_file >= current_dmoz_filelist->num_files) {
+                current_dmoz_filelist = NULL;
+                current_dmoz_filter = NULL;
+                if (dmoz_worker_onmove)
+                        dmoz_worker_onmove();
+                return 0;
+        }
 
-	if (!current_dmoz_filter(current_dmoz_filelist->files[ current_dmoz_file ])) {
-		if (current_dmoz_filelist->num_files == current_dmoz_file+1) {
-			current_dmoz_filelist->num_files--;
-			current_dmoz_filelist = NULL;
-			current_dmoz_filter = NULL;
-			if (dmoz_worker_onmove)
-				dmoz_worker_onmove();
-			return 0;
-		}
+        if (!current_dmoz_filter(current_dmoz_filelist->files[ current_dmoz_file ])) {
+                if (current_dmoz_filelist->num_files == current_dmoz_file+1) {
+                        current_dmoz_filelist->num_files--;
+                        current_dmoz_filelist = NULL;
+                        current_dmoz_filter = NULL;
+                        if (dmoz_worker_onmove)
+                                dmoz_worker_onmove();
+                        return 0;
+                }
 
-		nf = current_dmoz_filelist->files[ current_dmoz_file ];
-		memmove(&current_dmoz_filelist->files[ current_dmoz_file ],
-			&current_dmoz_filelist->files[ current_dmoz_file+1 ],
-			sizeof(dmoz_file_t *) * (current_dmoz_filelist->num_files
-						- current_dmoz_file));
-		free_file(nf);
-		current_dmoz_filelist->num_files--;
-		if (current_dmoz_file_pointer && *current_dmoz_file_pointer >=
-					current_dmoz_file) {
-			(*current_dmoz_file_pointer) = (*current_dmoz_file_pointer) - 1;
-			if (dmoz_worker_onmove) dmoz_worker_onmove();
-		}
-		if (current_dmoz_file_pointer && *current_dmoz_file_pointer >=
-					current_dmoz_filelist->num_files) {	
-			(*current_dmoz_file_pointer) = (current_dmoz_filelist->num_files-1);
-			if (dmoz_worker_onmove) dmoz_worker_onmove();
-		}
-		status.flags |= NEED_UPDATE;
-	} else {
-		current_dmoz_file++;
-	}
-	return 1;
+                nf = current_dmoz_filelist->files[ current_dmoz_file ];
+                memmove(&current_dmoz_filelist->files[ current_dmoz_file ],
+                        &current_dmoz_filelist->files[ current_dmoz_file+1 ],
+                        sizeof(dmoz_file_t *) * (current_dmoz_filelist->num_files
+                                                - current_dmoz_file));
+                free_file(nf);
+                current_dmoz_filelist->num_files--;
+                if (current_dmoz_file_pointer && *current_dmoz_file_pointer >=
+                                        current_dmoz_file) {
+                        (*current_dmoz_file_pointer) = (*current_dmoz_file_pointer) - 1;
+                        if (dmoz_worker_onmove) dmoz_worker_onmove();
+                }
+                if (current_dmoz_file_pointer && *current_dmoz_file_pointer >=
+                                        current_dmoz_filelist->num_files) {
+                        (*current_dmoz_file_pointer) = (current_dmoz_filelist->num_files-1);
+                        if (dmoz_worker_onmove) dmoz_worker_onmove();
+                }
+                status.flags |= NEED_UPDATE;
+        } else {
+                current_dmoz_file++;
+        }
+        return 1;
 }
 
 
@@ -479,11 +479,11 @@ int dmoz_worker(void)
 so it can't generate error conditions. */
 void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), int *pointer, void (*fn)(void))
 {
-	current_dmoz_filelist = flist;
-	current_dmoz_filter = grep;
-	current_dmoz_file = 0;
-	current_dmoz_file_pointer = pointer;
-	dmoz_worker_onmove = fn;
+        current_dmoz_filelist = flist;
+        current_dmoz_filter = grep;
+        current_dmoz_file = 0;
+        current_dmoz_file_pointer = pointer;
+        dmoz_worker_onmove = fn;
 }
 
 /* TODO:
@@ -497,62 +497,62 @@ void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), i
 
 dmoz_file_t *dmoz_add_file(dmoz_filelist_t *flist, char *path, char *base, struct stat *st, int sort_order)
 {
-	dmoz_file_t *file = calloc(1, sizeof(dmoz_file_t));
+        dmoz_file_t *file = calloc(1, sizeof(dmoz_file_t));
 
-	file->path = path;
-	file->base = base;
-	file->sort_order = sort_order;
-	file->sampsize = 0;
-	file->instnum = -1;
-	
-	if (st == NULL || S_ISDIR(st->st_mode)) {
-		file->type = TYPE_DIRECTORY;
-		/* have to fill everything in for directories */
-		file->description = DESCR_DIRECTORY;
-		file->title = str_dup(TITLE_DIRECTORY);
-	} else if (S_ISREG(st->st_mode)) {
-		file->type = TYPE_FILE_MASK; /* really ought to have a separate TYPE_UNCHECKED_FILE... */
-	} else {
-		file->type = TYPE_NON_REGULAR;
-	}
-	
-	if (st) {
-		file->timestamp = st->st_mtime;
-		file->filesize = st->st_size;
-	} else {
-		file->timestamp = 0;
-		file->filesize = 0;
-	}
+        file->path = path;
+        file->base = base;
+        file->sort_order = sort_order;
+        file->sampsize = 0;
+        file->instnum = -1;
 
-	if (flist->num_files >= flist->alloc_size)
-		allocate_more_files(flist);
-	flist->files[flist->num_files++] = file;
-	
-	return file;
+        if (st == NULL || S_ISDIR(st->st_mode)) {
+                file->type = TYPE_DIRECTORY;
+                /* have to fill everything in for directories */
+                file->description = DESCR_DIRECTORY;
+                file->title = str_dup(TITLE_DIRECTORY);
+        } else if (S_ISREG(st->st_mode)) {
+                file->type = TYPE_FILE_MASK; /* really ought to have a separate TYPE_UNCHECKED_FILE... */
+        } else {
+                file->type = TYPE_NON_REGULAR;
+        }
+
+        if (st) {
+                file->timestamp = st->st_mtime;
+                file->filesize = st->st_size;
+        } else {
+                file->timestamp = 0;
+                file->filesize = 0;
+        }
+
+        if (flist->num_files >= flist->alloc_size)
+                allocate_more_files(flist);
+        flist->files[flist->num_files++] = file;
+
+        return file;
 }
 
 dmoz_dir_t *dmoz_add_dir(dmoz_dirlist_t *dlist, char *path, char *base, int sort_order)
 {
-	dmoz_dir_t *dir = calloc(1, sizeof(dmoz_dir_t));
+        dmoz_dir_t *dir = calloc(1, sizeof(dmoz_dir_t));
 
-	dir->path = path;
-	dir->base = base;
-	dir->sort_order = sort_order;
+        dir->path = path;
+        dir->base = base;
+        dir->sort_order = sort_order;
 
-	if (dlist->num_dirs >= dlist->alloc_size)
-		allocate_more_dirs(dlist);
-	dlist->dirs[dlist->num_dirs++] = dir;
-	
-	return dir;
+        if (dlist->num_dirs >= dlist->alloc_size)
+                allocate_more_dirs(dlist);
+        dlist->dirs[dlist->num_dirs++] = dir;
+
+        return dir;
 }
 
 void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
-			  char *path, char *base, struct stat *st, int sort_order)
+                          char *path, char *base, struct stat *st, int sort_order)
 {
-	if (dlist)
-		dmoz_add_dir(dlist, path, base, sort_order);
-	else
-		dmoz_add_file(flist, path, base, st, sort_order);
+        if (dlist)
+                dmoz_add_dir(dlist, path, base, sort_order);
+        else
+                dmoz_add_file(flist, path, base, st, sort_order);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -560,37 +560,37 @@ void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 static int qsort_cmp_file(const void *_a, const void *_b)
 {
-	const dmoz_file_t *a = *(const dmoz_file_t **) _a;
-	const dmoz_file_t *b = *(const dmoz_file_t **) _b;
+        const dmoz_file_t *a = *(const dmoz_file_t **) _a;
+        const dmoz_file_t *b = *(const dmoz_file_t **) _b;
 
-	if ((b->type & TYPE_HIDDEN) && !(a->type & TYPE_HIDDEN))
-		return -1; /* b goes first */
-	if ((a->type & TYPE_HIDDEN) && !(b->type & TYPE_HIDDEN))
-		return 1; /* b goes first */
-	if (a->sort_order < b->sort_order)
-		return -1; /* a goes first */
-	if (b->sort_order < a->sort_order)
-		return 1; /* b goes first */
-	return strverscmp(a->base, b->base);
+        if ((b->type & TYPE_HIDDEN) && !(a->type & TYPE_HIDDEN))
+                return -1; /* b goes first */
+        if ((a->type & TYPE_HIDDEN) && !(b->type & TYPE_HIDDEN))
+                return 1; /* b goes first */
+        if (a->sort_order < b->sort_order)
+                return -1; /* a goes first */
+        if (b->sort_order < a->sort_order)
+                return 1; /* b goes first */
+        return strverscmp(a->base, b->base);
 }
 
 static int qsort_cmp_dir(const void *_a, const void *_b)
 {
-	const dmoz_dir_t *a = *(const dmoz_dir_t **) _a;
-	const dmoz_dir_t *b = *(const dmoz_dir_t **) _b;
+        const dmoz_dir_t *a = *(const dmoz_dir_t **) _a;
+        const dmoz_dir_t *b = *(const dmoz_dir_t **) _b;
 
-	if (a->sort_order < b->sort_order)
-		return -1; /* a goes first */
-	if (b->sort_order < a->sort_order)
-		return 1; /* b goes first */
-	return strverscmp(a->base, b->base);
+        if (a->sort_order < b->sort_order)
+                return -1; /* a goes first */
+        if (b->sort_order < a->sort_order)
+                return 1; /* b goes first */
+        return strverscmp(a->base, b->base);
 }
 
 void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
 {
-	qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
-	if (dlist)
-		qsort(dlist->dirs, dlist->num_dirs, sizeof(dmoz_dir_t *), qsort_cmp_dir);
+        qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
+        if (dlist)
+                qsort(dlist->dirs, dlist->num_dirs, sizeof(dmoz_dir_t *), qsort_cmp_dir);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -599,62 +599,62 @@ void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
 /* TODO: stat these? (certainly not critical, but would be nice) */
 static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
 {
-	char *ptr;
+        char *ptr;
 #if defined(__amigaos4__)
-	/* Amiga OS volume list from Juha Niemimäki */
-	struct DosList *pList;
-	char *pTemp, *pString;
-	int i, order = -1024;
-	
-	if ((pList = IDOS->LockDosList(LDF_VOLUMES | LDF_READ))) {
-		while ((pList = IDOS->NextDosEntry(pList, LDF_VOLUMES))) {
-			pTemp = pList->dol_Name << 2;
-			if (pTemp && pTemp[0] > 0) {
-				pString = calloc(pTemp[0] + 1, sizeof(char));
-				if (pString) {
-					/* for (i = 0; i < pTemp[0]; i++)
-					 *	pString[i] = pTemp[i + 1]; */
-					memcpy(pString, pTemp + 1, pTemp[0]);
-					pString[pTemp[0]] = '\0';
-					dmoz_add_file_or_dir(flist, dlist, pString, str_dup(pString),
-							     NULL, order++);
-				}
-			}
-		}
-		IDOS->UnLockDosList(LDF_VOLUMES);
-	}
-#elif defined(WIN32)
-	char sbuf[32];
-	DWORD x;
-	UINT em;
-	int i;
+        /* Amiga OS volume list from Juha Niemimäki */
+        struct DosList *pList;
+        char *pTemp, *pString;
+        int i, order = -1024;
 
-	em = SetErrorMode(0);
-	x = GetLogicalDrives();
-	strcpy(sbuf, "A:\\");
-	i = 0;
-	while (x && i < 26) {
-		if (x & 1) {
-			sbuf[0] = i + 'A';
-			dmoz_add_file_or_dir(flist, dlist, str_dup(sbuf),
-						str_dup(sbuf), NULL, -(1024-i));
-		}
-		x >>= 1;
-		i++;
-	}
-	em = SetErrorMode(em);
+        if ((pList = IDOS->LockDosList(LDF_VOLUMES | LDF_READ))) {
+                while ((pList = IDOS->NextDosEntry(pList, LDF_VOLUMES))) {
+                        pTemp = pList->dol_Name << 2;
+                        if (pTemp && pTemp[0] > 0) {
+                                pString = calloc(pTemp[0] + 1, sizeof(char));
+                                if (pString) {
+                                        /* for (i = 0; i < pTemp[0]; i++)
+                                         *      pString[i] = pTemp[i + 1]; */
+                                        memcpy(pString, pTemp + 1, pTemp[0]);
+                                        pString[pTemp[0]] = '\0';
+                                        dmoz_add_file_or_dir(flist, dlist, pString, str_dup(pString),
+                                                             NULL, order++);
+                                }
+                        }
+                }
+                IDOS->UnLockDosList(LDF_VOLUMES);
+        }
+#elif defined(WIN32)
+        char sbuf[32];
+        DWORD x;
+        UINT em;
+        int i;
+
+        em = SetErrorMode(0);
+        x = GetLogicalDrives();
+        strcpy(sbuf, "A:\\");
+        i = 0;
+        while (x && i < 26) {
+                if (x & 1) {
+                        sbuf[0] = i + 'A';
+                        dmoz_add_file_or_dir(flist, dlist, str_dup(sbuf),
+                                                str_dup(sbuf), NULL, -(1024-i));
+                }
+                x >>= 1;
+                i++;
+        }
+        em = SetErrorMode(em);
 
 #else /* assume POSIX */
-/*	char *home;
-	home = get_home_directory();*/
-	dmoz_add_file_or_dir(flist, dlist, str_dup("/"), str_dup("/"), NULL, -1024);
-/*	dmoz_add_file_or_dir(flist, dlist, home, str_dup("~"), NULL, -5); */
+/*      char *home;
+        home = get_home_directory();*/
+        dmoz_add_file_or_dir(flist, dlist, str_dup("/"), str_dup("/"), NULL, -1024);
+/*      dmoz_add_file_or_dir(flist, dlist, home, str_dup("~"), NULL, -5); */
 
 #endif /* platform */
-	
-	ptr = get_parent_directory(path);
-	if (ptr)
-		dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(".."), NULL, -10);
+
+        ptr = get_parent_directory(path);
+        if (ptr)
+                dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(".."), NULL, -10);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -668,159 +668,159 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 /* on success, this will fill the lists and return 0. if something goes
 wrong, it adds a 'stub' entry for the root directory, and returns -1. */
 int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
-		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
+                int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
 {
-	DIR *dir;
-	struct dirent *ent;
-	char *ptr;
-	struct stat st;
-	int pathlen, namlen, lib = 0, err = 0;
+        DIR *dir;
+        struct dirent *ent;
+        char *ptr;
+        struct stat st;
+        int pathlen, namlen, lib = 0, err = 0;
 
-	if (!path || !*path)
-		path = FAILSAFE_PATH;
-	dir = opendir(path);
-	if (dir) {
-		pathlen = strlen(path);
-		while ((ent = readdir(dir)) != NULL) {
-			namlen = _D_EXACT_NAMLEN(ent);
-			/* ignore hidden/backup files (TODO: make this code more portable;
-			some OSes have different ideas of whether a file is hidden) */
+        if (!path || !*path)
+                path = FAILSAFE_PATH;
+        dir = opendir(path);
+        if (dir) {
+                pathlen = strlen(path);
+                while ((ent = readdir(dir)) != NULL) {
+                        namlen = _D_EXACT_NAMLEN(ent);
+                        /* ignore hidden/backup files (TODO: make this code more portable;
+                        some OSes have different ideas of whether a file is hidden) */
 #if defined(WIN32)
-			/* hide these, windows makes its later */
-			if (strcmp(ent->d_name, ".") == 0
-			|| strcmp(ent->d_name, "..") == 0)
-				continue;
+                        /* hide these, windows makes its later */
+                        if (strcmp(ent->d_name, ".") == 0
+                        || strcmp(ent->d_name, "..") == 0)
+                                continue;
 #else
-			if (ent->d_name[0] == '.' || ent->d_name[namlen - 1] == '~')
-				continue;
+                        if (ent->d_name[0] == '.' || ent->d_name[namlen - 1] == '~')
+                                continue;
 #endif
-			ptr = dmoz_path_concat_len(path, ent->d_name, pathlen, namlen);
+                        ptr = dmoz_path_concat_len(path, ent->d_name, pathlen, namlen);
 
 #if defined(WIN32)
-			if (GetFileAttributes(ptr) & (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)) {
-				free(ptr);
-				continue;
-			}
+                        if (GetFileAttributes(ptr) & (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)) {
+                                free(ptr);
+                                continue;
+                        }
 #endif
 
-			if (stat(ptr, &st) < 0) {
-				/* doesn't exist? */
-				perror(ptr);
-				free(ptr);
-				continue; /* better luck next time */
-			}
-			if (st.st_mtime < 0) st.st_mtime = 0;
-			if (S_ISDIR(st.st_mode))
-				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(ent->d_name), &st, 0);
-			else if (S_ISREG(st.st_mode))
-				dmoz_add_file(flist, ptr, str_dup(ent->d_name), &st, 1);
-			else
-				free(ptr);
-		}
-		closedir(dir);
-	} else if (errno == ENOTDIR) {
-		/* oops, it's a file! -- load it as a library */
-		if (load_library && load_library(path, flist, dlist) != 0)
-			err = errno;
-		else
-			lib = 1;
-	} else {
-		/* opendir failed? that's unpossible! */
-		err = 0;
-	}
+                        if (stat(ptr, &st) < 0) {
+                                /* doesn't exist? */
+                                perror(ptr);
+                                free(ptr);
+                                continue; /* better luck next time */
+                        }
+                        if (st.st_mtime < 0) st.st_mtime = 0;
+                        if (S_ISDIR(st.st_mode))
+                                dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(ent->d_name), &st, 0);
+                        else if (S_ISREG(st.st_mode))
+                                dmoz_add_file(flist, ptr, str_dup(ent->d_name), &st, 1);
+                        else
+                                free(ptr);
+                }
+                closedir(dir);
+        } else if (errno == ENOTDIR) {
+                /* oops, it's a file! -- load it as a library */
+                if (load_library && load_library(path, flist, dlist) != 0)
+                        err = errno;
+                else
+                        lib = 1;
+        } else {
+                /* opendir failed? that's unpossible! */
+                err = 0;
+        }
 
-	/* more directories!
-	 * If this is actually a file, make a fake "." that actually points to the directory.
-	 * If something weird happens when trying to get the directory name, this falls back
-	 * to add_platform_dirs to keep from getting "stuck". */
-	if (lib && (ptr = get_parent_directory(path)) != NULL)
-		dmoz_add_file_or_dir(flist, dlist, ptr, str_dup("."), NULL, -10);
-	else
-		add_platform_dirs(path, flist, dlist);
+        /* more directories!
+         * If this is actually a file, make a fake "." that actually points to the directory.
+         * If something weird happens when trying to get the directory name, this falls back
+         * to add_platform_dirs to keep from getting "stuck". */
+        if (lib && (ptr = get_parent_directory(path)) != NULL)
+                dmoz_add_file_or_dir(flist, dlist, ptr, str_dup("."), NULL, -10);
+        else
+                add_platform_dirs(path, flist, dlist);
 
-	/* finally... sort it */
-	dmoz_sort(flist, dlist);
+        /* finally... sort it */
+        dmoz_sort(flist, dlist);
 
-	if (err) {
-		errno = err;
-		return -1;
-	} else {
-		return 0;
-	}
+        if (err) {
+                errno = err;
+                return -1;
+        } else {
+                return 0;
+        }
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
 
 enum {
-	FINF_SUCCESS = (0),     /* nothing wrong */
-	FINF_UNSUPPORTED = (1), /* unsupported file type */
-	FINF_EMPTY = (2),       /* zero-byte-long file */
-	FINF_ERRNO = (-1),      /* check errno */
+        FINF_SUCCESS = (0),     /* nothing wrong */
+        FINF_UNSUPPORTED = (1), /* unsupported file type */
+        FINF_EMPTY = (2),       /* zero-byte-long file */
+        FINF_ERRNO = (-1),      /* check errno */
 };
 
 static int file_info_get(dmoz_file_t *file)
 {
-	slurp_t *t;
-	const fmt_read_info_func *func;
+        slurp_t *t;
+        const fmt_read_info_func *func;
 
-	if (file->filesize == 0)
-		return FINF_EMPTY;
-	t = slurp(file->path, NULL, file->filesize);
-	if (t == NULL)
-		return FINF_ERRNO;
-	file->artist = NULL;
-	file->title = NULL;
-	file->smp_defvol = 64;
-	file->smp_gblvol = 64;
-	for (func = read_info_funcs; *func; func++) {
-		if ((*func) (file, t->data, t->length)) {
-			if (file->artist)
-				trim_string(file->artist);
-			if (file->title == NULL)
-				file->title = str_dup(""); /* or the basename? */
-			trim_string(file->title);
-			break;
-		}
-	}
-	unslurp(t);
-	return file->title ? FINF_SUCCESS : FINF_UNSUPPORTED;
+        if (file->filesize == 0)
+                return FINF_EMPTY;
+        t = slurp(file->path, NULL, file->filesize);
+        if (t == NULL)
+                return FINF_ERRNO;
+        file->artist = NULL;
+        file->title = NULL;
+        file->smp_defvol = 64;
+        file->smp_gblvol = 64;
+        for (func = read_info_funcs; *func; func++) {
+                if ((*func) (file, t->data, t->length)) {
+                        if (file->artist)
+                                trim_string(file->artist);
+                        if (file->title == NULL)
+                                file->title = str_dup(""); /* or the basename? */
+                        trim_string(file->title);
+                        break;
+                }
+        }
+        unslurp(t);
+        return file->title ? FINF_SUCCESS : FINF_UNSUPPORTED;
 }
 
 /* return: 1 on success, 0 on error. in either case, it fills the data in with *something*. */
 int dmoz_fill_ext_data(dmoz_file_t *file)
 {
-	int ret;
+        int ret;
 
-	if ((file->type & TYPE_EXT_DATA_MASK)
-	|| (file->type == TYPE_DIRECTORY)) {
-		/* nothing to do */
-		return 1;
-	}
-	ret = file_info_get(file);
-	switch (ret) {
-	case FINF_SUCCESS:
-		return 1;
-	case FINF_UNSUPPORTED:
-		file->description = "Unsupported file format"; /* used to be "Unsupported module format" */
-		break;
-	case FINF_EMPTY:
-		file->description = "Empty file";
-		break;
-	case FINF_ERRNO:
-		/* It would be nice to use the error string for the description, but there doesn't seem to be
-		any easy/portable way to do that without dynamically allocating it (since strerror might
-		return a static buffer), and str_dup'ing EVERY description is kind of a waste of memory. */
-		perror(file->base);
-		file->description = "File error";
-		break;
-	default:
-		/* shouldn't ever happen */
-		file->description = "Internal error";
-		break;
-	}
-	file->type = TYPE_UNKNOWN;
-	file->title = str_dup("");
-	return 0;
+        if ((file->type & TYPE_EXT_DATA_MASK)
+        || (file->type == TYPE_DIRECTORY)) {
+                /* nothing to do */
+                return 1;
+        }
+        ret = file_info_get(file);
+        switch (ret) {
+        case FINF_SUCCESS:
+                return 1;
+        case FINF_UNSUPPORTED:
+                file->description = "Unsupported file format"; /* used to be "Unsupported module format" */
+                break;
+        case FINF_EMPTY:
+                file->description = "Empty file";
+                break;
+        case FINF_ERRNO:
+                /* It would be nice to use the error string for the description, but there doesn't seem to be
+                any easy/portable way to do that without dynamically allocating it (since strerror might
+                return a static buffer), and str_dup'ing EVERY description is kind of a waste of memory. */
+                perror(file->base);
+                file->description = "File error";
+                break;
+        default:
+                /* shouldn't ever happen */
+                file->description = "Internal error";
+                break;
+        }
+        file->type = TYPE_UNKNOWN;
+        file->title = str_dup("");
+        return 0;
 }
 
 
@@ -830,36 +830,36 @@ static int _rename_nodestroy(const char *old, const char *newf)
 {
 /* XXX does __amigaos4__ have a special need for this? */
 #ifdef WIN32
-	/* is this code not finished? it never returns success */
-	UINT em = SetErrorMode(0);
-	if (!MoveFile(old,newf)) {
-		switch (GetLastError()) {
-		case ERROR_ALREADY_EXISTS:
-		case ERROR_FILE_EXISTS:
-			SetErrorMode(em);
-			return DMOZ_RENAME_EXISTS;
-		};
-		SetErrorMode(em);
-		return DMOZ_RENAME_ERRNO;
-	}
-	SetErrorMode(em);
-	return DMOZ_RENAME_OK;
+        /* is this code not finished? it never returns success */
+        UINT em = SetErrorMode(0);
+        if (!MoveFile(old,newf)) {
+                switch (GetLastError()) {
+                case ERROR_ALREADY_EXISTS:
+                case ERROR_FILE_EXISTS:
+                        SetErrorMode(em);
+                        return DMOZ_RENAME_EXISTS;
+                };
+                SetErrorMode(em);
+                return DMOZ_RENAME_ERRNO;
+        }
+        SetErrorMode(em);
+        return DMOZ_RENAME_OK;
 #else
-	if (link(old,newf) == -1) {
-		return (errno == EEXIST)
-			? DMOZ_RENAME_EXISTS
-			: DMOZ_RENAME_ERRNO;
-	}
-	if (unlink(old) == -1) {
-		/* This can occur when people are using a system with
-		broken link() semantics, or if the user can create files
-		that he cannot remove. these systems are decidedly not POSIX.1
-		but they may try to compile schism, and we won't know they
-		are broken unless we warn them.
-		*/
-		log_appendf(3, "link() succeeded, but unlink() failed. something is very wrong");
-	}
-	return DMOZ_RENAME_OK;
+        if (link(old,newf) == -1) {
+                return (errno == EEXIST)
+                        ? DMOZ_RENAME_EXISTS
+                        : DMOZ_RENAME_ERRNO;
+        }
+        if (unlink(old) == -1) {
+                /* This can occur when people are using a system with
+                broken link() semantics, or if the user can create files
+                that he cannot remove. these systems are decidedly not POSIX.1
+                but they may try to compile schism, and we won't know they
+                are broken unless we warn them.
+                */
+                log_appendf(3, "link() succeeded, but unlink() failed. something is very wrong");
+        }
+        return DMOZ_RENAME_OK;
 #endif
 }
 
@@ -870,63 +870,63 @@ extern void win32_filecreated_callback(const char *filename);
 int rename_file(const char *old, const char *newf, int clobber)
 {
 #ifdef WIN32
-	UINT em;
+        UINT em;
 #endif
-	if (!clobber)
-		return _rename_nodestroy(old, newf);
+        if (!clobber)
+                return _rename_nodestroy(old, newf);
 #ifdef WIN32
-	em = SetErrorMode(0);
-	if (!MoveFile(old,newf)) {
-		switch (GetLastError()) {
-		case ERROR_ALREADY_EXISTS:
-		case ERROR_FILE_EXISTS:
-			break;
-		default:
-			/* eh... */
-			SetErrorMode(em);
-			return DMOZ_RENAME_ERRNO;
-		};
+        em = SetErrorMode(0);
+        if (!MoveFile(old,newf)) {
+                switch (GetLastError()) {
+                case ERROR_ALREADY_EXISTS:
+                case ERROR_FILE_EXISTS:
+                        break;
+                default:
+                        /* eh... */
+                        SetErrorMode(em);
+                        return DMOZ_RENAME_ERRNO;
+                };
 
-		if (MoveFileEx(old,newf,MOVEFILE_REPLACE_EXISTING)) {
-			/* yay */
-			SetErrorMode(em);
-			return DMOZ_RENAME_OK;
-		}
-		/* this sometimes work with win95 and novell shares */
-		chmod(newf,0777);
-		chmod(old,0777);
-		/* more junk */
-		SetFileAttributesA(newf,FILE_ATTRIBUTE_NORMAL);
-		SetFileAttributesA(newf,FILE_ATTRIBUTE_TEMPORARY);
+                if (MoveFileEx(old,newf,MOVEFILE_REPLACE_EXISTING)) {
+                        /* yay */
+                        SetErrorMode(em);
+                        return DMOZ_RENAME_OK;
+                }
+                /* this sometimes work with win95 and novell shares */
+                chmod(newf,0777);
+                chmod(old,0777);
+                /* more junk */
+                SetFileAttributesA(newf,FILE_ATTRIBUTE_NORMAL);
+                SetFileAttributesA(newf,FILE_ATTRIBUTE_TEMPORARY);
 
-		if (MoveFile(old, newf)) {
-			/* err.. yay! */
-			win32_filecreated_callback(newf);
-			SetErrorMode(em);
-			return DMOZ_RENAME_OK;
-		}
-		/* okay, let's try again */
-		if (!DeleteFileA(newf)) {
-			/* no chance! */
-			SetErrorMode(em);
-			return DMOZ_RENAME_ERRNO;
-		}
-		if (MoveFile(old, newf)) {
-			/* .... */
-			win32_filecreated_callback(newf);
-			SetErrorMode(em);
-			return DMOZ_RENAME_OK;
-		}
-		/* alright, thems the breaks. win95 eats your files,
-		and not a damn thing I can do about it.
-		*/
-		SetErrorMode(em);
-		return DMOZ_RENAME_ERRNO;
-	}
-	win32_filecreated_callback(newf);
+                if (MoveFile(old, newf)) {
+                        /* err.. yay! */
+                        win32_filecreated_callback(newf);
+                        SetErrorMode(em);
+                        return DMOZ_RENAME_OK;
+                }
+                /* okay, let's try again */
+                if (!DeleteFileA(newf)) {
+                        /* no chance! */
+                        SetErrorMode(em);
+                        return DMOZ_RENAME_ERRNO;
+                }
+                if (MoveFile(old, newf)) {
+                        /* .... */
+                        win32_filecreated_callback(newf);
+                        SetErrorMode(em);
+                        return DMOZ_RENAME_OK;
+                }
+                /* alright, thems the breaks. win95 eats your files,
+                and not a damn thing I can do about it.
+                */
+                SetErrorMode(em);
+                return DMOZ_RENAME_ERRNO;
+        }
+        win32_filecreated_callback(newf);
 #else
-	if (rename(old,newf) == -1) return DMOZ_RENAME_ERRNO;
+        if (rename(old,newf) == -1) return DMOZ_RENAME_ERRNO;
 #endif
-	return DMOZ_RENAME_OK;
+        return DMOZ_RENAME_OK;
 }
 

@@ -74,8 +74,8 @@ static void update_thumbbars(void)
         int n;
 
         for (n = 0; n < 16; n++) {
-		/* palettes[current_palette_index].colors[n] ?
-		 * or current_palette[n] ? */
+                /* palettes[current_palette_index].colors[n] ?
+                 * or current_palette[n] ? */
                 widgets_palette[3 * n].d.thumbbar.value = current_palette[n][0];
                 widgets_palette[3 * n + 1].d.thumbbar.value = current_palette[n][1];
                 widgets_palette[3 * n + 2].d.thumbbar.value = current_palette[n][2];
@@ -87,32 +87,32 @@ static void update_thumbbars(void)
 static void palette_list_draw(void)
 {
         int n, focused = (ACTIVE_PAGE.selected_widget == 48);
-	int fg, bg;
+        int fg, bg;
 
         draw_fill_chars(56, 27, 76, 46, 0);
 
-	fg = 6;
-	bg = 0;
-	if (focused && -1 == selected_palette) {
-		fg = 0;
-		bg = 3;
-	} else if (-1 == selected_palette) {
-		bg = 14;
-	}
+        fg = 6;
+        bg = 0;
+        if (focused && -1 == selected_palette) {
+                fg = 0;
+                bg = 3;
+        } else if (-1 == selected_palette) {
+                bg = 14;
+        }
 
-	draw_text_len("User Defined", 21, 56, 27, fg, bg);
-	for (n = 0; n < 19 && palettes[n].name[0]; n++) {
-		fg = 6;
-		bg = 0;
-	        if (focused && n == selected_palette) {
-	                fg = 0;
-	                bg = 3;
-	        } else if (n == selected_palette) {
-	                bg = 14;
-	        }
-	        draw_text_len(palettes[n].name, 21, 56, 28 + n, fg, bg);
-	}
-	max_palette = n;
+        draw_text_len("User Defined", 21, 56, 27, fg, bg);
+        for (n = 0; n < 19 && palettes[n].name[0]; n++) {
+                fg = 6;
+                bg = 0;
+                if (focused && n == selected_palette) {
+                        fg = 0;
+                        bg = 3;
+                } else if (n == selected_palette) {
+                        bg = 14;
+                }
+                draw_text_len(palettes[n].name, 21, 56, 28 + n, fg, bg);
+        }
+        max_palette = n;
 }
 
 static int palette_list_handle_key_on_list(struct key_event * k)
@@ -120,47 +120,47 @@ static int palette_list_handle_key_on_list(struct key_event * k)
         int new_palette = selected_palette;
         const int focus_offsets[] = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12 };
 
-	if (k->mouse == 1) {
-		if (!k->state) return 0;
-		if (k->x < 56 || k->y < 27 || k->y > 46 || k->x > 76) return 0;
-		new_palette = (k->y - 28);
-		if (new_palette == selected_palette) {
-			// alright
-                	if (selected_palette == -1) return 1;
-			palette_load_preset(selected_palette);
-			palette_apply();
-			update_thumbbars();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-	} else {
-		if (k->state) return 0;
-		if (k->mouse == 2) new_palette--;
-		else if (k->mouse == 3) new_palette++;
-	}
+        if (k->mouse == 1) {
+                if (!k->state) return 0;
+                if (k->x < 56 || k->y < 27 || k->y > 46 || k->x > 76) return 0;
+                new_palette = (k->y - 28);
+                if (new_palette == selected_palette) {
+                        // alright
+                        if (selected_palette == -1) return 1;
+                        palette_load_preset(selected_palette);
+                        palette_apply();
+                        update_thumbbars();
+                        status.flags |= NEED_UPDATE;
+                        return 1;
+                }
+        } else {
+                if (k->state) return 0;
+                if (k->mouse == 2) new_palette--;
+                else if (k->mouse == 3) new_palette++;
+        }
 
         switch (k->sym) {
         case SDLK_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
                 if (--new_palette < -1) {
                         change_focus_to(47);
                         return 1;
                 }
                 break;
         case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
                 new_palette++;
                 break;
         case SDLK_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
                 new_palette = 0;
                 break;
         case SDLK_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
                 if (new_palette == -1) {
                         change_focus_to(45);
                         return 1;
@@ -168,45 +168,45 @@ static int palette_list_handle_key_on_list(struct key_event * k)
                 new_palette -= 16;
                 break;
         case SDLK_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
                 new_palette = max_palette - 1;
                 break;
         case SDLK_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
                 new_palette += 16;
                 break;
         case SDLK_RETURN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-               	if (selected_palette == -1) return 1;
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
+                if (selected_palette == -1) return 1;
                 palette_load_preset(selected_palette);
-		palette_apply();
+                palette_apply();
                 update_thumbbars();
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_RIGHT:
         case SDLK_TAB:
-		if (k->mod & KMOD_SHIFT) {
-                	change_focus_to(focus_offsets[selected_palette+1] + 29);
-	                return 1;
-		}
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+                if (k->mod & KMOD_SHIFT) {
+                        change_focus_to(focus_offsets[selected_palette+1] + 29);
+                        return 1;
+                }
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
                 change_focus_to(focus_offsets[selected_palette+1] + 8);
                 return 1;
         case SDLK_LEFT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+                if (!NO_MODIFIER(k->mod))
+                        return 0;
                 change_focus_to(focus_offsets[selected_palette+1] + 29);
                 return 1;
         default:
                 if (!k->mouse) return 0;
         }
 
-	if (new_palette < -1) new_palette = -1;
-	else if (new_palette >= (max_palette-1)) new_palette = (max_palette-1);
+        if (new_palette < -1) new_palette = -1;
+        else if (new_palette >= (max_palette-1)) new_palette = (max_palette-1);
         if (new_palette != selected_palette) {
                 selected_palette = new_palette;
                 status.flags |= NEED_UPDATE;
@@ -221,11 +221,11 @@ static void palette_list_handle_key(struct key_event * k)
 {
         int n = *selected_widget;
 
-	if (!NO_MODIFIER(k->mod))
-		return;
+        if (!NO_MODIFIER(k->mod))
+                return;
 
-	if (k->state) return;
-	
+        if (k->state) return;
+
         switch (k->sym) {
         case SDLK_PAGEUP:
                 n -= 3;
@@ -264,7 +264,7 @@ static void update_palette(void)
                 current_palette[n][1] = widgets_palette[3 * n + 1].d.thumbbar.value;
                 current_palette[n][2] = widgets_palette[3 * n + 2].d.thumbbar.value;
         }
-	selected_palette = current_palette_index = -1;
+        selected_palette = current_palette_index = -1;
         palette_apply();
         status.flags |= NEED_UPDATE;
 }
@@ -299,13 +299,13 @@ void palette_load_page(struct page *page)
                                 3 * n, 3 * n + 2, tabs[1], update_palette, 0, 63);
                 create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
                                 3 * n + 1, 3 * n + 3, tabs[2], update_palette, 0, 63);
-	}
-	update_thumbbars();
-	
-	create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, palette_list_draw);
-	widgets_palette[48].x = 56;
-	widgets_palette[48].y = 27;
-	widgets_palette[48].width = 20;
-	widgets_palette[48].height = 19;
+        }
+        update_thumbbars();
+
+        create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, palette_list_draw);
+        widgets_palette[48].x = 56;
+        widgets_palette[48].y = 27;
+        widgets_palette[48].width = 20;
+        widgets_palette[48].height = 19;
 }
 

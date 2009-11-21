@@ -102,7 +102,7 @@ while test x$1 != x; do
     shift
 done
 if test x$link = xyes; then
-	x86_args=`echo "$x86_args -framework QuickTime -framework AudioUnit -framework Carbon" | sed -e 's,/sw/,/sw-i386/,g'`
+        x86_args=`echo "$x86_args -framework QuickTime -framework AudioUnit -framework Carbon" | sed -e 's,/sw/,/sw-i386/,g'`
 fi
 echo "+x86 $GCC_COMPILE_X86 $x86_args"
 $GCC_COMPILE_X86 $x86_args || exit $?

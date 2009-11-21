@@ -40,8 +40,8 @@ int fmt_dtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         position = 0;
         while (memcmp(data + position, "SONG", 4) != 0) {
                 memcpy(&block_length, data + position + 4, 4);
-		block_length = bswapLE32(block_length);
-		
+                block_length = bswapLE32(block_length);
+
                 position += block_length + 8;
                 if (position + 8 > length)
                         return false;
@@ -53,8 +53,8 @@ int fmt_dtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         /* now see if it has a title */
         while (position + 8 < length) {
                 memcpy(&block_length, data + position + 4, 4);
-		block_length = bswapLE32(block_length);
-		
+                block_length = bswapLE32(block_length);
+
                 if (block_length + position > length)
                         return false;
 

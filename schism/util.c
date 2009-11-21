@@ -57,46 +57,46 @@ extraneous libraries (i.e. GLib). */
 void ms_sleep(unsigned int ms)
 {
 #ifdef WIN32
-	SleepEx(ms,FALSE);
+        SleepEx(ms,FALSE);
 #else
-	usleep(ms*1000);
+        usleep(ms*1000);
 #endif
 }
 
 char *str_dup(const char *s)
 {
-	char *q;
-	q = strdup(s);
-	if (!q) {
-		/* throw out of memory exception */
-		perror("strdup");
-		exit(255);
-	}
-	return q;
+        char *q;
+        q = strdup(s);
+        if (!q) {
+                /* throw out of memory exception */
+                perror("strdup");
+                exit(255);
+        }
+        return q;
 }
 
 void *mem_alloc(size_t amount)
 {
-	void *q;
-	q = malloc(amount);
-	if (!q) {
-		/* throw out of memory exception */
-		perror("malloc");
-		exit(255);
-	}
-	return q;
+        void *q;
+        q = malloc(amount);
+        if (!q) {
+                /* throw out of memory exception */
+                perror("malloc");
+                exit(255);
+        }
+        return q;
 }
 void *mem_realloc(void *orig, size_t amount)
 {
-	void *q;
-	if (!orig) return mem_alloc(amount);
-	q = realloc(orig, amount);
-	if (!q) {
-		/* throw out of memory exception */
-		perror("malloc");
-		exit(255);
-	}
-	return q;
+        void *q;
+        if (!orig) return mem_alloc(amount);
+        q = realloc(orig, amount);
+        if (!q) {
+                /* throw out of memory exception */
+                perror("malloc");
+                exit(255);
+        }
+        return q;
 }
 
 /* --------------------------------------------------------------------- */
@@ -105,26 +105,26 @@ void *mem_realloc(void *orig, size_t amount)
 char *get_date_string(time_t when, char *buf)
 {
         struct tm tm, *tmr;
-	const char *month_str[12] = {
-		"January",
-		"February",
-		"March",
-		"April",
-		"May",
-		"June",
-		"July",
-		"August",
-		"September",
-		"October",
-		"November",
-		"December",
-	};
+        const char *month_str[12] = {
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
+        };
 
-	/* DO NOT change this back to localtime(). If some backward platform
-	doesn't have localtime_r, it needs to be implemented separately. */
-	tmr = localtime_r(&when, &tm);
+        /* DO NOT change this back to localtime(). If some backward platform
+        doesn't have localtime_r, it needs to be implemented separately. */
+        tmr = localtime_r(&when, &tm);
         snprintf(buf, 27, "%s %d, %d", month_str[tmr->tm_mon],
-				tmr->tm_mday, 1900 + tmr->tm_year);
+                                tmr->tm_mday, 1900 + tmr->tm_year);
         return buf;
 }
 
@@ -132,52 +132,52 @@ char *get_time_string(time_t when, char *buf)
 {
         struct tm tm, *tmr;
 
-	tmr = localtime_r(&when, &tm);
+        tmr = localtime_r(&when, &tm);
         snprintf(buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? : 12,
-		 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
+                 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
         return buf;
 }
 
 char *num99tostr(int n, char *buf)
 {
-	static const char *qv = "HIJKLMNOPQRSTUVWXYZ";
-	if (n < 100) {
-		sprintf(buf, "%02d", n);
-	} else if (n <= 256) {
-		n -= 100;
-		sprintf(buf, "%c%d", 
-			qv[(n/10)], (n % 10));
-	}
-	return buf;
+        static const char *qv = "HIJKLMNOPQRSTUVWXYZ";
+        if (n < 100) {
+                sprintf(buf, "%02d", n);
+        } else if (n <= 256) {
+                n -= 100;
+                sprintf(buf, "%c%d",
+                        qv[(n/10)], (n % 10));
+        }
+        return buf;
 
 }
 char *numtostr(int digits, unsigned int n, char *buf)
 {
-	if (digits > 0) {
-		char fmt[] = "%03u";
-		
-		digits %= 10;
-		fmt[2] = '0' + digits;
-		snprintf(buf, digits + 1, fmt, n);
-		buf[digits] = 0;
-	} else {
-		sprintf(buf, "%u", n);
-	}
-	return buf;
+        if (digits > 0) {
+                char fmt[] = "%03u";
+
+                digits %= 10;
+                fmt[2] = '0' + digits;
+                snprintf(buf, digits + 1, fmt, n);
+                buf[digits] = 0;
+        } else {
+                sprintf(buf, "%u", n);
+        }
+        return buf;
 }
 char *numtostr_signed(int digits, int n, char *buf)
 {
-	if (digits > 0) {
-		char fmt[] = "%03d";
-		
-		digits %= 10;
-		fmt[2] = '0' + digits;
-		snprintf(buf, digits + 1, fmt, n);
-		buf[digits] = 0;
-	} else {
-		sprintf(buf, "%d", n);
-	}
-	return buf;
+        if (digits > 0) {
+                char fmt[] = "%03d";
+
+                digits %= 10;
+                fmt[2] = '0' + digits;
+                snprintf(buf, digits + 1, fmt, n);
+                buf[digits] = 0;
+        } else {
+                sprintf(buf, "%d", n);
+        }
+        return buf;
 }
 
 /* --------------------------------------------------------------------- */
@@ -219,25 +219,25 @@ const char *get_extension(const char *filename)
 
 char *get_parent_directory(const char *dirname)
 {
-	char *ret, *pos;
-	int n;
-	
-	if (!dirname || !dirname[0])
-		return NULL;
-	
-	ret = str_dup(dirname);
-	if (!ret)
-		return NULL;
-	n = strlen(ret) - 1;
-	if (ret[n] == DIR_SEPARATOR)
-		ret[n] = 0;
-	pos = strrchr(ret, DIR_SEPARATOR);
-	if (!pos) {
-		free(ret);
-		return NULL;
-	}
-	pos[1] = 0;
-	return ret;
+        char *ret, *pos;
+        int n;
+
+        if (!dirname || !dirname[0])
+                return NULL;
+
+        ret = str_dup(dirname);
+        if (!ret)
+                return NULL;
+        n = strlen(ret) - 1;
+        if (ret[n] == DIR_SEPARATOR)
+                ret[n] = 0;
+        pos = strrchr(ret, DIR_SEPARATOR);
+        if (!pos) {
+                free(ret);
+                return NULL;
+        }
+        pos[1] = 0;
+        return ret;
 }
 
 static const char *whitespace = " \t\v\r\n";
@@ -256,171 +256,171 @@ return: 1 if the string contained the character (and thus could be split), 0 if 
 the pointers returned in first/second should be free()'d by the caller. */
 int str_break(const char *s, char c, char **first, char **second)
 {
-	const char *p = strchr(s, c);
-	if (!p)
-		return 0;
-	*first = mem_alloc(p - s + 1);
-	strncpy(*first, s, p - s);
-	(*first)[p - s] = 0;
-	*second = str_dup(p + 1);
-	return 1;
+        const char *p = strchr(s, c);
+        if (!p)
+                return 0;
+        *first = mem_alloc(p - s + 1);
+        strncpy(*first, s, p - s);
+        (*first)[p - s] = 0;
+        *second = str_dup(p + 1);
+        return 1;
 }
 
 /* adapted from glib. in addition to the normal c escapes, this also escapes the hashmark and semicolon
  * (comment characters). if space is true, the first/last character is also escaped if it is a space. */
 char *str_escape(const char *s, int space)
 {
-	/* Each source byte needs maximally four destination chars (\777) */
-	char *dest = calloc(4 * strlen(s) + 1, sizeof(char));
-	char *d = dest;
-	
-	if (space && *s == ' ') {
-		*d++ = '\\';
-		*d++ = '0';
-		*d++ = '4';
-		*d++ = '0';
-		s++;
-	}
-	
-	while (*s) {
-		switch (*s) {
-		case '\a':
-			*d++ = '\\';
-			*d++ = 'a';
-			break;
-		case '\b':
-			*d++ = '\\';
-			*d++ = 'b';
-			break;
-		case '\f':
-			*d++ = '\\';
-			*d++ = 'f';
-			break;
-		case '\n':
-			*d++ = '\\';
-			*d++ = 'n';
-			break;
-		case '\r':
-			*d++ = '\\';
-			*d++ = 'r';
-			break;
-		case '\t':
-			*d++ = '\\';
-			*d++ = 't';
-			break;
-		case '\v':
-			*d++ = '\\';
-			*d++ = 'v';
-			break;
-		case '\\': case '"':
-			*d++ = '\\';
-			*d++ = *s;
-			break;
+        /* Each source byte needs maximally four destination chars (\777) */
+        char *dest = calloc(4 * strlen(s) + 1, sizeof(char));
+        char *d = dest;
 
-		default:
-			if (*s < ' ' || *s >= 127 || (space && *s == ' ' && s[1] == '\0')) {
-		case '#': case ';':
-				*d++ = '\\';
-				*d++ = '0' + ((((uint8_t) *s) >> 6) & 7);
-				*d++ = '0' + ((((uint8_t) *s) >> 3) & 7);
-				*d++ = '0' + ( ((uint8_t) *s)       & 7);
-			} else {
-				*d++ = *s;
-			}
-			break;
-		}
-		s++;
-	}
+        if (space && *s == ' ') {
+                *d++ = '\\';
+                *d++ = '0';
+                *d++ = '4';
+                *d++ = '0';
+                s++;
+        }
 
-	*d = 0;
-	return dest;
+        while (*s) {
+                switch (*s) {
+                case '\a':
+                        *d++ = '\\';
+                        *d++ = 'a';
+                        break;
+                case '\b':
+                        *d++ = '\\';
+                        *d++ = 'b';
+                        break;
+                case '\f':
+                        *d++ = '\\';
+                        *d++ = 'f';
+                        break;
+                case '\n':
+                        *d++ = '\\';
+                        *d++ = 'n';
+                        break;
+                case '\r':
+                        *d++ = '\\';
+                        *d++ = 'r';
+                        break;
+                case '\t':
+                        *d++ = '\\';
+                        *d++ = 't';
+                        break;
+                case '\v':
+                        *d++ = '\\';
+                        *d++ = 'v';
+                        break;
+                case '\\': case '"':
+                        *d++ = '\\';
+                        *d++ = *s;
+                        break;
+
+                default:
+                        if (*s < ' ' || *s >= 127 || (space && *s == ' ' && s[1] == '\0')) {
+                case '#': case ';':
+                                *d++ = '\\';
+                                *d++ = '0' + ((((uint8_t) *s) >> 6) & 7);
+                                *d++ = '0' + ((((uint8_t) *s) >> 3) & 7);
+                                *d++ = '0' + ( ((uint8_t) *s)       & 7);
+                        } else {
+                                *d++ = *s;
+                        }
+                        break;
+                }
+                s++;
+        }
+
+        *d = 0;
+        return dest;
 }
 
 static inline int readhex(const char *s, int w)
 {
-	int o = 0;
+        int o = 0;
 
-	while (w--) {
-		o <<= 4;
-		switch (*s) {
-			case '0'...'9': o |= *s - '0';      break;
-			case 'a'...'f': o |= *s - 'a' + 10; break;
-			case 'A'...'F': o |= *s - 'A' + 10; break;
-			default: return -1;
-		}
-		s++;
-	}
-	return o;
+        while (w--) {
+                o <<= 4;
+                switch (*s) {
+                        case '0'...'9': o |= *s - '0';      break;
+                        case 'a'...'f': o |= *s - 'a' + 10; break;
+                        case 'A'...'F': o |= *s - 'A' + 10; break;
+                        default: return -1;
+                }
+                s++;
+        }
+        return o;
 }
 
 /* opposite of str_escape. (this is glib's 'compress' function renamed more clearly)
 TODO: it'd be nice to handle \xNN as well... */
 char *str_unescape(const char *s)
 {
-	const char *end;
-	int hex;
-	char *dest = calloc(strlen(s) + 1, sizeof(char));
-	char *d = dest;
-	
-	while (*s) {
-		if (*s == '\\') {
-			s++;
-			switch (*s) {
-			case '0'...'7':
-				*d = 0;
-				end = s + 3;
-				while (s < end && *s >= '0' && *s <= '7') {
-					*d = *d * 8 + *s - '0';
-					s++;
-				}
-				d++;
-				s--;
-				break;
-			case 'a':
-				*d++ = '\a';
-				break;
-			case 'b':
-				*d++ = '\b';
-				break;
-			case 'f':
-				*d++ = '\f';
-				break;
-			case 'n':
-				*d++ = '\n';
-				break;
-			case 'r':
-				*d++ = '\r';
-				break;
-			case 't':
-				*d++ = '\t';
-				break;
-			case 'v':
-				*d++ = '\v';
-				break;
-			case '\0': // trailing backslash?
-				*d++ = '\\';
-				s--;
-				break;
-			case 'x':
-				hex = readhex(s + 1, 2);
-				if (hex >= 0) {
-					*d++ = hex;
-					s += 2;
-					break;
-				}
-				/* fall through */
-			default: /* Also handles any other char, like \" \\ \; etc. */
-				*d++ = *s;
-				break;
-			}
-		} else {
-			*d++ = *s;
-		}
-		s++;
-	}
-	*d = 0;
-	
-	return dest;
+        const char *end;
+        int hex;
+        char *dest = calloc(strlen(s) + 1, sizeof(char));
+        char *d = dest;
+
+        while (*s) {
+                if (*s == '\\') {
+                        s++;
+                        switch (*s) {
+                        case '0'...'7':
+                                *d = 0;
+                                end = s + 3;
+                                while (s < end && *s >= '0' && *s <= '7') {
+                                        *d = *d * 8 + *s - '0';
+                                        s++;
+                                }
+                                d++;
+                                s--;
+                                break;
+                        case 'a':
+                                *d++ = '\a';
+                                break;
+                        case 'b':
+                                *d++ = '\b';
+                                break;
+                        case 'f':
+                                *d++ = '\f';
+                                break;
+                        case 'n':
+                                *d++ = '\n';
+                                break;
+                        case 'r':
+                                *d++ = '\r';
+                                break;
+                        case 't':
+                                *d++ = '\t';
+                                break;
+                        case 'v':
+                                *d++ = '\v';
+                                break;
+                        case '\0': // trailing backslash?
+                                *d++ = '\\';
+                                s--;
+                                break;
+                        case 'x':
+                                hex = readhex(s + 1, 2);
+                                if (hex >= 0) {
+                                        *d++ = hex;
+                                        s += 2;
+                                        break;
+                                }
+                                /* fall through */
+                        default: /* Also handles any other char, like \" \\ \; etc. */
+                                *d++ = *s;
+                                break;
+                        }
+                } else {
+                        *d++ = *s;
+                }
+                s++;
+        }
+        *d = 0;
+
+        return dest;
 }
 
 char *pretty_name(const char *filename)
@@ -478,37 +478,37 @@ int get_num_lines(const char *text)
 
 int make_backup_file(const char *filename, int numbered)
 {
-	char *buf;
-	int e = 0, n, ret;
-	int maxlen = strlen(filename) + 16; /* plenty of room to breathe */
-	
-	buf = mem_alloc(maxlen);
-	if (numbered) {
-		/* If some crazy person needs more than 65536 backup files,
-		   they probably have more serious issues to tend to. */
-		n = 1;
-		do {
-			snprintf(buf, maxlen, "%s.%d~", filename, n++);
-			ret = rename_file(filename, buf, 0);
-		} while (ret == DMOZ_RENAME_EXISTS && n < 65536);
-		if (ret == DMOZ_RENAME_ERRNO)
-			e = errno;
-		else if (ret != DMOZ_RENAME_OK)
-			e = EEXIST;
-	} else {
-		strcpy(buf, filename);
-		strcat(buf, "~");
-		if (rename_file(filename, buf, 1) == DMOZ_RENAME_ERRNO)
-			e = errno;
-	}
-	free(buf);
-	
-	if (e) {
-		errno = e;
-		return false;
-	} else {
-		return true;
-	}
+        char *buf;
+        int e = 0, n, ret;
+        int maxlen = strlen(filename) + 16; /* plenty of room to breathe */
+
+        buf = mem_alloc(maxlen);
+        if (numbered) {
+                /* If some crazy person needs more than 65536 backup files,
+                   they probably have more serious issues to tend to. */
+                n = 1;
+                do {
+                        snprintf(buf, maxlen, "%s.%d~", filename, n++);
+                        ret = rename_file(filename, buf, 0);
+                } while (ret == DMOZ_RENAME_EXISTS && n < 65536);
+                if (ret == DMOZ_RENAME_ERRNO)
+                        e = errno;
+                else if (ret != DMOZ_RENAME_OK)
+                        e = EEXIST;
+        } else {
+                strcpy(buf, filename);
+                strcat(buf, "~");
+                if (rename_file(filename, buf, 1) == DMOZ_RENAME_ERRNO)
+                        e = errno;
+        }
+        free(buf);
+
+        if (e) {
+                errno = e;
+                return false;
+        } else {
+                return true;
+        }
 }
 
 long file_size(const char *filename)
@@ -542,139 +542,139 @@ int is_directory(const char *filename)
 
 char *get_current_directory(void)
 {
-	char buf[PATH_MAX + 1];
+        char buf[PATH_MAX + 1];
 
-	/* hmm. fall back to the current dir */
-	if (getcwd(buf, PATH_MAX))
-		return str_dup(buf);
-	return str_dup(".");
+        /* hmm. fall back to the current dir */
+        if (getcwd(buf, PATH_MAX))
+                return str_dup(buf);
+        return str_dup(".");
 }
 
 /* this function is horrible */
 char *get_home_directory(void)
 {
 #if defined(__amigaos4__)
-	return str_dup("PROGDIR:");
+        return str_dup("PROGDIR:");
 #else
-	char *ptr, buf[PATH_MAX + 1];
-	
-	ptr = getenv("HOME");
+        char *ptr, buf[PATH_MAX + 1];
+
+        ptr = getenv("HOME");
 #ifdef WIN32
-	if (!ptr) /* let $HOME override %APPDATA% on win32... */
-		ptr = getenv("APPDATA");
-	if (!ptr) {
-		/* WINE doesn't set %APPDATA% */
-		ptr = getenv("USERPROFILE");
-		if (ptr) {
-			snprintf(buf, PATH_MAX, "%s/Application Data", ptr);
-			ptr = buf;
-		}
-	}
+        if (!ptr) /* let $HOME override %APPDATA% on win32... */
+                ptr = getenv("APPDATA");
+        if (!ptr) {
+                /* WINE doesn't set %APPDATA% */
+                ptr = getenv("USERPROFILE");
+                if (ptr) {
+                        snprintf(buf, PATH_MAX, "%s/Application Data", ptr);
+                        ptr = buf;
+                }
+        }
 #endif
-	if (ptr)
-		return str_dup(ptr);
-	
-	/* hmm. fall back to the current dir */
-	if (getcwd(buf, PATH_MAX))
-		return str_dup(buf);
-	
-	/* still don't have a directory? sheesh. */
-	return str_dup(FALLBACK_DIR);
+        if (ptr)
+                return str_dup(ptr);
+
+        /* hmm. fall back to the current dir */
+        if (getcwd(buf, PATH_MAX))
+                return str_dup(buf);
+
+        /* still don't have a directory? sheesh. */
+        return str_dup(FALLBACK_DIR);
 #endif
 }
 
 char *str_concat(const char *s, ...)
 {
-	va_list ap;
-	char *out = NULL;
-	int len = 0;
-	
-	va_start(ap,s);
-	while (s) {
-		out = mem_realloc(out, (len += strlen(s)+1));
-		strcat(out, s);
-		s = va_arg(ap, const char *);
-	}
-	va_end(ap);
-	return out;
+        va_list ap;
+        char *out = NULL;
+        int len = 0;
+
+        va_start(ap,s);
+        while (s) {
+                out = mem_realloc(out, (len += strlen(s)+1));
+                strcat(out, s);
+                s = va_arg(ap, const char *);
+        }
+        va_end(ap);
+        return out;
 
 }
 
 void unset_env_var(const char *key)
 {
 #ifdef HAVE_UNSETENV
-	unsetenv(key);
+        unsetenv(key);
 #else
-	/* assume POSIX-style semantics */
-	putenv(key);
+        /* assume POSIX-style semantics */
+        putenv(key);
 #endif
 }
 
 void put_env_var(const char *key, const char *value)
 {
-	char *x;
-	x = mem_alloc(strlen(key) + strlen(value)+2);
-	sprintf(x, "%s=%s", key,value);
-	if (putenv(x) == -1) {
-		perror("putenv");
-		exit(255); /* memory exception */
-	}
+        char *x;
+        x = mem_alloc(strlen(key) + strlen(value)+2);
+        sprintf(x, "%s=%s", key,value);
+        if (putenv(x) == -1) {
+                perror("putenv");
+                exit(255); /* memory exception */
+        }
 }
 
 /* fast integer sqrt */
 unsigned int i_sqrt(unsigned int r)
 {
-	unsigned int t, b, c=0;
-	for (b = 0x10000000; b != 0; b >>= 2) {
-		t = c + b;
-		c >>= 1;
-		if (t <= r) {
-			r -= t;
-			c += b;
-		}
-	}
-	return(c);
+        unsigned int t, b, c=0;
+        for (b = 0x10000000; b != 0; b >>= 2) {
+                t = c + b;
+                c >>= 1;
+                if (t <= r) {
+                        r -= t;
+                        c += b;
+                }
+        }
+        return(c);
 }
 
 int run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #ifdef WIN32
-	char buf[PATH_MAX], *ptr;
-	char buf2[PATH_MAX];
-	struct stat sb;
-	int r;
+        char buf[PATH_MAX], *ptr;
+        char buf2[PATH_MAX];
+        struct stat sb;
+        int r;
 
-	if (!GetCurrentDirectory(PATH_MAX-1,buf)) return 0;
-	snprintf(buf2, PATH_MAX-2, "%s.bat", name);
-	if (chdir(dir) == -1) return 0;
-	if (stat(buf2, &sb) == -1) {
-		r = 0;
-	} else {
-		ptr = getenv("COMSPEC");
-		if (!ptr) ptr = "command.com";
-		r = _spawnlp(_P_WAIT, ptr, ptr, "/c", buf2, maybe_arg, 0);
-	}
-	SetCurrentDirectory(buf);
-	chdir(buf);
-	if (r == 0) return 1;
-	return 0;
+        if (!GetCurrentDirectory(PATH_MAX-1,buf)) return 0;
+        snprintf(buf2, PATH_MAX-2, "%s.bat", name);
+        if (chdir(dir) == -1) return 0;
+        if (stat(buf2, &sb) == -1) {
+                r = 0;
+        } else {
+                ptr = getenv("COMSPEC");
+                if (!ptr) ptr = "command.com";
+                r = _spawnlp(_P_WAIT, ptr, ptr, "/c", buf2, maybe_arg, 0);
+        }
+        SetCurrentDirectory(buf);
+        chdir(buf);
+        if (r == 0) return 1;
+        return 0;
 #else
-	char *tmp;
-	int st;
+        char *tmp;
+        int st;
 
-	switch (fork()) {
-	case -1: return 0;
-	case 0:
-		if (chdir(dir) == -1) _exit(255);
-		tmp = malloc(strlen(name)+4);
-		if (!tmp) _exit(255);
-		sprintf(tmp, "./%s", name);
-		execl(tmp, tmp, maybe_arg, NULL);
-		_exit(255);
-	};
-	while (wait(&st) == -1) {
-	}
-	if (WIFEXITED(st) && WEXITSTATUS(st) == 0) return 1;
-	return 0;
+        switch (fork()) {
+        case -1: return 0;
+        case 0:
+                if (chdir(dir) == -1) _exit(255);
+                tmp = malloc(strlen(name)+4);
+                if (!tmp) _exit(255);
+                sprintf(tmp, "./%s", name);
+                execl(tmp, tmp, maybe_arg, NULL);
+                _exit(255);
+        };
+        while (wait(&st) == -1) {
+        }
+        if (WIFEXITED(st) && WEXITSTATUS(st) == 0) return 1;
+        return 0;
 #endif
 }

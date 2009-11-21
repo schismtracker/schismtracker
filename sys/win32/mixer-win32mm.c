@@ -41,58 +41,58 @@
 
 int win32mm_mixer_get_max_volume(void)
 {
-	return 0xFF;
+        return 0xFF;
 }
 
 static HWAVEOUT open_mixer()
 {
-	HWAVEOUT hwo=NULL;
-	WAVEFORMATEX pwfx;
+        HWAVEOUT hwo=NULL;
+        WAVEFORMATEX pwfx;
 #if 0
-	pwfx.wFormatTag = WAVE_FORMAT_UNKNOWN;
-	pwfx.nChannels = 0;
-	pwfx.nSamplesPerSec = 0;
-	pwfx.wBitsPerSample = 0;
-	pwfx.nBlockAlign = 0;
-	pwfx.nAvgBytesPerSec = 0;
-	pwfx.cbSize = 0;
+        pwfx.wFormatTag = WAVE_FORMAT_UNKNOWN;
+        pwfx.nChannels = 0;
+        pwfx.nSamplesPerSec = 0;
+        pwfx.wBitsPerSample = 0;
+        pwfx.nBlockAlign = 0;
+        pwfx.nAvgBytesPerSec = 0;
+        pwfx.cbSize = 0;
 #else
-	pwfx.wFormatTag = WAVE_FORMAT_PCM;
-	pwfx.nChannels = 1;
-	pwfx.nSamplesPerSec = 44100;
-	pwfx.wBitsPerSample = 8;
-	pwfx.nBlockAlign = 4;
-	pwfx.nAvgBytesPerSec = 44100*1*1;
-	pwfx.cbSize = 0;
+        pwfx.wFormatTag = WAVE_FORMAT_PCM;
+        pwfx.nChannels = 1;
+        pwfx.nSamplesPerSec = 44100;
+        pwfx.wBitsPerSample = 8;
+        pwfx.nBlockAlign = 4;
+        pwfx.nAvgBytesPerSec = 44100*1*1;
+        pwfx.cbSize = 0;
 #endif
-	if (waveOutOpen(&hwo, WAVE_MAPPER, &pwfx, 0, 0, CALLBACK_NULL)!=MMSYSERR_NOERROR)
-		return NULL;
-	return hwo;
+        if (waveOutOpen(&hwo, WAVE_MAPPER, &pwfx, 0, 0, CALLBACK_NULL)!=MMSYSERR_NOERROR)
+                return NULL;
+        return hwo;
 }
 
 void win32mm_mixer_read_volume(int *left, int *right)
 {
-	DWORD vol;
-	HWAVEOUT hwo=open_mixer();
+        DWORD vol;
+        HWAVEOUT hwo=open_mixer();
 
-	*left = *right = 0;
-	if (!hwo) return;
+        *left = *right = 0;
+        if (!hwo) return;
 
-	waveOutGetVolume(hwo,&vol);
+        waveOutGetVolume(hwo,&vol);
 
-	*left = (vol & 0xFFFF) >> 8;
-	*right = (vol >> 16) >> 8;
+        *left = (vol & 0xFFFF) >> 8;
+        *right = (vol >> 16) >> 8;
 
-	waveOutClose(hwo);
+        waveOutClose(hwo);
 }
 
 void win32mm_mixer_write_volume(int left, int right)
 {
-	DWORD vol = ((left & 0xFF)<<8) | ((right & 0xFF)<<(16+8));
-	HWAVEOUT hwo = open_mixer();
-	if (!hwo) return;
+        DWORD vol = ((left & 0xFF)<<8) | ((right & 0xFF)<<(16+8));
+        HWAVEOUT hwo = open_mixer();
+        if (!hwo) return;
 
-	waveOutSetVolume(hwo,vol);
+        waveOutSetVolume(hwo,vol);
 
-	waveOutClose(hwo);
+        waveOutClose(hwo);
 }

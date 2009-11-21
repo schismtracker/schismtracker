@@ -140,7 +140,7 @@ char *strchr(), *strrchr();
 #  include <byteswap.h>
 # else
 #  define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
-		       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
+                       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
 #  define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
 # endif
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
@@ -151,15 +151,15 @@ char *strchr(), *strrchr();
    addresses. -mrsb */
 static inline unsigned short int ARM_get16(const void *data)
 {
-	unsigned short int s;
-	memcpy(&s,data,sizeof(s));
-	return s;
+        unsigned short int s;
+        memcpy(&s,data,sizeof(s));
+        return s;
 }
 static inline unsigned int ARM_get32(const void *data)
 {
-	unsigned int s;
-	memcpy(&s,data,sizeof(s));
-	return s;
+        unsigned int s;
+        memcpy(&s,data,sizeof(s));
+        return s;
 }
 #  define bswapLE16(x) ARM_get16(&x)
 #  define bswapLE32(x) ARM_get32(&x)
@@ -196,7 +196,7 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
 
 #ifdef __APPLE_CC__
-#define MACOSX	1
+#define MACOSX  1
 #endif
 
 /* Various other stuff */
@@ -207,13 +207,13 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 # define fsync _commit
 #endif
 
-#define INT_SHAPED_PTR(v)		((intptr_t)(((void*)(v))))
-#define PTR_SHAPED_INT(i)		((void*)i)
+#define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
+#define PTR_SHAPED_INT(i)               ((void*)i)
 
 static inline int isdigit_safe(int n)
 {
-	if (n >= '0' && n <= '9') return 1;
-	return 0;
+        if (n >= '0' && n <= '9') return 1;
+        return 0;
 }
 
 #endif

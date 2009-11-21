@@ -7,10 +7,10 @@
 echo "making include/auto/helptext.h" >&2
 tempfile="include/auto/.helptext.tmp"
 while read REPLY; do
-	set $REPLY
-	cat helptext/$1
-	awk 'BEGIN { printf "%c", 0 }' < /dev/null
-	echo "	helptext/$1" >&2
+        set $REPLY
+        cat helptext/$1
+        awk 'BEGIN { printf "%c", 0 }' < /dev/null
+        echo "  helptext/$1" >&2
 done > $tempfile < helptext/index
 tempfile2="include/auto/.helptext.h"
 
@@ -21,9 +21,9 @@ mv "$tempfile2" "include/auto/helptext.h" || exit 1
 echo "making include/auto/helpenum.h" >&2
 echo "enum {" > $tempfile || exit 1
 while read REPLY; do
-	set $REPLY
-	echo "HELP_$2,"
-	echo "	$2" >&2
+        set $REPLY
+        echo "HELP_$2,"
+        echo "  $2" >&2
 done >> $tempfile < helptext/index
 echo "HELP_NUM_ITEMS" >> $tempfile || exit 1
 echo "};" >> $tempfile || exit 1
@@ -66,5 +66,5 @@ sh scripts/bin2h.sh -n font_half_width font/half-width.fnt >> $tempfile || exit 
 mv $tempfile include/auto/default-font.h
 
 if [ -d .git ]; then
-	git-commit -m 'Build' include/auto/*.h
+        git-commit -m 'Build' include/auto/*.h
 fi

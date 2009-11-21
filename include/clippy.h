@@ -25,8 +25,8 @@
 #include "it.h"
 #include "page.h"
 
-#define CLIPPY_SELECT	0	/* reflects the current selection */
-#define CLIPPY_BUFFER	1	/* reflects the yank/cut buffer */
+#define CLIPPY_SELECT   0       /* reflects the current selection */
+#define CLIPPY_BUFFER   1       /* reflects the yank/cut buffer */
 
 /* called when schism needs a paste operation; cb is CLIPPY_SELECT if the middle button is
 used to paste, otherwise if the "paste key" is pressed, this uses CLIPPY_BUFFER

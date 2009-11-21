@@ -34,34 +34,34 @@
 
 static void _munmap_slurp(slurp_t *useme)
 {
-	(void)munmap((void*)useme->data, useme->length);
-	(void)close(useme->extra);
+        (void)munmap((void*)useme->data, useme->length);
+        (void)close(useme->extra);
 }
 
 int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
 {
-	int fd;
-	void *addr;
+        int fd;
+        void *addr;
 
-	fd = open(filename, O_RDONLY);
-	if (fd == -1) return 0;
-	addr = mmap(NULL, st, PROT_READ, MAP_SHARED
+        fd = open(filename, O_RDONLY);
+        if (fd == -1) return 0;
+        addr = mmap(NULL, st, PROT_READ, MAP_SHARED
 #if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
-		| MAP_POPULATE | MAP_NONBLOCK
+                | MAP_POPULATE | MAP_NONBLOCK
 #endif
 #if defined(MAP_NORESERVE)
-		| MAP_NORESERVE
+                | MAP_NORESERVE
 #endif
-		, fd, 0);
-	if (!addr || addr == ((void*)-1)) {
-		(void)close(fd);
-		return -1;
-	}
-	useme->closure = _munmap_slurp;
-	useme->length = st;
-	useme->data = addr;
-	useme->extra = fd;
-	return 1;
+                , fd, 0);
+        if (!addr || addr == ((void*)-1)) {
+                (void)close(fd);
+                return -1;
+        }
+        useme->closure = _munmap_slurp;
+        useme->length = st;
+        useme->data = addr;
+        useme->extra = fd;
+        return 1;
 }
 
 #endif

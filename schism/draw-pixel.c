@@ -42,22 +42,22 @@ int current_palette_index;
 void palette_apply(void)
 {
         int n;
-	unsigned char cx[16][3];
+        unsigned char cx[16][3];
 
-	for (n = 0; n < 16; n++) {
-		cx[n][0] = current_palette[n][0] << 2;
-		cx[n][1] = current_palette[n][1] << 2;
-		cx[n][2] = current_palette[n][2] << 2;
-	}
-	video_colors(cx);
+        for (n = 0; n < 16; n++) {
+                cx[n][0] = current_palette[n][0] << 2;
+                cx[n][1] = current_palette[n][1] << 2;
+                cx[n][2] = current_palette[n][2] << 2;
+        }
+        video_colors(cx);
 
         /* is the "light" border color actually darker than the "dark" color? */
-	if ((current_palette[1][0] + current_palette[1][1] + current_palette[1][2])
-	    > (current_palette[3][0] + current_palette[3][1] + current_palette[3][2])) {
-		status.flags |= INVERTED_PALETTE;
-	} else {
-		status.flags &= ~INVERTED_PALETTE;
-	}
+        if ((current_palette[1][0] + current_palette[1][1] + current_palette[1][2])
+            > (current_palette[3][0] + current_palette[3][1] + current_palette[3][2])) {
+                status.flags |= INVERTED_PALETTE;
+        } else {
+                status.flags &= ~INVERTED_PALETTE;
+        }
 }
 
 void palette_load_preset(int palette_index)
@@ -65,7 +65,7 @@ void palette_load_preset(int palette_index)
         if (palette_index < -1 || palette_index >= NUM_PALETTES)
                 return;
 
-	current_palette_index = palette_index;
-	if (palette_index == -1) return;
-	memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
+        current_palette_index = palette_index;
+        if (palette_index == -1) return;
+        memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
 }
