@@ -27,7 +27,7 @@
 
 void win32_filecreated_callback(const char *filename)
 {
-	/* let explorer know when we create a file. */
-	SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, filename, NULL);
-	SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, filename, NULL);
+        /* let explorer know when we create a file. */
+        SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, filename, NULL);
+        SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, filename, NULL);
 }

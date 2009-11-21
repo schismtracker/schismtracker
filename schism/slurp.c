@@ -54,14 +54,14 @@ the control gets back to slurp, it closes the fd (again). It doesn't seem to exi
 
 static void _slurp_stdio_closure(slurp_t *t)
 {
-	free(t->data);
+        free(t->data);
 }
 
 /* --------------------------------------------------------------------- */
 
 /* CHUNK is how much memory is allocated at once. Too large a number is a
  * waste of memory; too small means constantly realloc'ing.
- * 
+ *
  * <mml> also, too large a number might take the OS more than an efficient number of reads to read in one
  *       hit -- which you could be processing/reallocing while waiting for the next bit
  * <mml> we had something for some proggy on the server that was sucking data off stdin
@@ -88,7 +88,7 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
 
         do {
                 chunks++;
-		/* Have to cast away the const... */
+                /* Have to cast away the const... */
                 realloc_buf = realloc((void *) t->data, CHUNK * chunks);
                 if (realloc_buf == NULL) {
                         old_errno = errno;
@@ -121,7 +121,7 @@ static int _slurp_stdio(slurp_t * t, int fd)
         int old_errno;
         FILE *fp;
         size_t got = 0, need, len;
-	
+
         if (t->length == 0) {
                 /* Hrmph. Probably a pipe or something... gotta do it the REALLY ugly way. */
                 return _slurp_stdio_pipe(t, fd);
@@ -186,49 +186,49 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
         t = (slurp_t *) mem_alloc(sizeof(slurp_t));
         if (t == NULL)
                 return NULL;
-	t->pos = 0;
+        t->pos = 0;
 
         /* TODO | add a third param for flags, and make this optional.
          * TODO | (along with decompression once that gets written) */
 
         if (strcmp(filename, "-") == 0) {
-		if (_slurp_stdio(t, STDIN_FILENO))
-			return t;
-		free(t);
-		return NULL;
+                if (_slurp_stdio(t, STDIN_FILENO))
+                        return t;
+                free(t);
+                return NULL;
         }
 
-	if (size <= 0) {
-		size = (buf ? buf->st_size : file_size(filename));
-	}
+        if (size <= 0) {
+                size = (buf ? buf->st_size : file_size(filename));
+        }
 
 #ifdef WIN32
-	switch (slurp_win32(t, filename, size)) {
-	case 0: free(t); return NULL;
-	case 1: return t;
-	};
+        switch (slurp_win32(t, filename, size)) {
+        case 0: free(t); return NULL;
+        case 1: return t;
+        };
 #endif
-		
+
 #if HAVE_MMAP
-	switch (slurp_mmap(t, filename, size)) {
-	case 0: free(t); return NULL;
-	case 1: return t;
-	};
+        switch (slurp_mmap(t, filename, size)) {
+        case 0: free(t); return NULL;
+        case 1: return t;
+        };
 #endif
 
         /* TODO | add a third param for flags, and make this optional.
          * TODO | (along with decompression once that gets written) */
-	fd = open(filename, O_RDONLY | O_BINARY);
+        fd = open(filename, O_RDONLY | O_BINARY);
 
-	if (fd < 0) {
-		free(t);
-		return NULL;
-	}
+        if (fd < 0) {
+                free(t);
+                return NULL;
+        }
 
         t->length = size;
 
         if (_slurp_stdio(t, fd)) {
-		close(fd);
+                close(fd);
                 return t;
         }
 
@@ -243,9 +243,9 @@ void unslurp(slurp_t * t)
 {
         if (!t)
                 return;
-	if (t->data && t->closure) {
-		t->closure(t);
-	}
+        if (t->data && t->closure) {
+                t->closure(t);
+        }
         free(t);
 }
 
@@ -253,50 +253,50 @@ void unslurp(slurp_t * t)
 
 int slurp_seek(slurp_t *t, long offset, int whence)
 {
-	switch (whence) {
-	default:
-	case SEEK_SET:
-		break;
-	case SEEK_CUR:
-		offset += t->pos;
-		break;
-	case SEEK_END:
-		offset += t->length;
-		break;
-	}
-	if (offset < 0 || (size_t) offset > t->length)
-		return -1;
-	t->pos = offset;
-	return 0;
+        switch (whence) {
+        default:
+        case SEEK_SET:
+                break;
+        case SEEK_CUR:
+                offset += t->pos;
+                break;
+        case SEEK_END:
+                offset += t->length;
+                break;
+        }
+        if (offset < 0 || (size_t) offset > t->length)
+                return -1;
+        t->pos = offset;
+        return 0;
 }
 
 long slurp_tell(slurp_t *t)
 {
-	return (long) t->pos;
+        return (long) t->pos;
 }
 
 size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 {
-	size_t bytesleft = t->length - t->pos;
-	if (count > bytesleft) {
-		// short read -- fill in any extra bytes with zeroes
-		size_t tail = count - bytesleft;
-		count = bytesleft;
-		memset(ptr + count, 0, tail);
-	}
-	if (count)
-		memcpy(ptr, t->data + t->pos, count);
-	t->pos += count;
-	return count;
+        size_t bytesleft = t->length - t->pos;
+        if (count > bytesleft) {
+                // short read -- fill in any extra bytes with zeroes
+                size_t tail = count - bytesleft;
+                count = bytesleft;
+                memset(ptr + count, 0, tail);
+        }
+        if (count)
+                memcpy(ptr, t->data + t->pos, count);
+        t->pos += count;
+        return count;
 }
 
 int slurp_getc(slurp_t *t)
 {
-	return (t->pos < t->length) ? t->data[t->pos++] : EOF;
+        return (t->pos < t->length) ? t->data[t->pos++] : EOF;
 }
 
 int slurp_eof(slurp_t *t)
 {
-	return t->pos >= t->length;
+        return t->pos >= t->length;
 }
 

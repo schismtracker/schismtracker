@@ -47,10 +47,10 @@ this is only a suggestion in order to speed loading; don't be surprised if the l
 
 /* return codes for module loaders */
 enum {
-	LOAD_SUCCESS,           /* all's well */
-	LOAD_UNSUPPORTED,       /* wrong file type for the loader */
-	LOAD_FILE_ERROR,        /* couldn't read the file; check errno */
-	LOAD_FORMAT_ERROR,      /* it appears to be the correct type, but there's something wrong */
+        LOAD_SUCCESS,           /* all's well */
+        LOAD_UNSUPPORTED,       /* wrong file type for the loader */
+        LOAD_FILE_ERROR,        /* couldn't read the file; check errno */
+        LOAD_FORMAT_ERROR,      /* it appears to be the correct type, but there's something wrong */
 };
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -122,9 +122,9 @@ READ_INFO(xi);                                            LOAD_INSTRUMENT(xi);
 
 /* --------------------------------------------------------------------------------------------------------- */
 struct instrumentloader {
-	song_instrument *inst;
-	int sample_map[SCHISM_MAX_SAMPLES];
-	int basex, slot, expect_samples;
+        song_instrument *inst;
+        int sample_map[SCHISM_MAX_SAMPLES];
+        int basex, slot, expect_samples;
 };
 song_instrument *instrument_loader_init(struct instrumentloader *ii, int slot);
 int instrument_loader_abort(struct instrumentloader *ii);
@@ -144,7 +144,7 @@ void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe);
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title);
 int load_its_sample(const uint8_t *header, const uint8_t *data,
-		size_t length, song_sample *smp, char *title);
+                size_t length, song_sample *smp, char *title);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...

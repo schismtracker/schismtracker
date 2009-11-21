@@ -109,7 +109,7 @@ static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
         if (!nbytes)
                 return;
 
-	csf_midi_send(mp, buf, nbytes, c, 0); // FIXME we should not know about 'mp' here!
+        csf_midi_send(mp, buf, nbytes, c, 0); // FIXME we should not know about 'mp' here!
 }
 
 
@@ -434,7 +434,7 @@ void GM_KeyOn(int c, unsigned char key, unsigned char vol)
 
                 if (s3m_chans[c].patch & 0x80)
                         percu = s3m_chans[c].patch - 128;
-        
+
                 int mc = s3m_chans[c].chan = 9;
                 msi_set_pan(&midi_chans[mc], mc, s3m_chans[c].pan);
                 msi_set_volume(&midi_chans[mc], mc, GM_volume(vol));
@@ -656,17 +656,17 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
                 // all purposes, but will significantly reduce the bend event load.
                 //const int bend_artificial_inaccuracy = semitone_bend_depth / 100;
                 //bend = (bend / bend_artificial_inaccuracy) * bend_artificial_inaccuracy;
-                
+
                 // Clamp the bending value so that we won't break the protocol
                 if(bend < 0) bend = 0;
                 if(bend > 0x3FFF) bend = 0x3FFF;
-                
+
                 GM_Bend(c, bend);
         }
 
         if (vol < 0) vol = 0;
         else if (vol > 127) vol = 127;
-                
+
         //if (!new_note)
         GM_Touch(c, vol);
 }

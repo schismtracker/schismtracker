@@ -50,320 +50,320 @@ int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 {
-	uint16_t nsmp, nord, npat;
-	int misc = S3M_UNSIGNED | S3M_CHANPAN; // temporary flags, these are both generally true
-	int n;
-	MODCOMMAND *note;
-	/* junk variables for reading stuff into */
-	uint16_t tmp;
-	uint8_t c;
-	uint32_t tmplong;
-	uint8_t b[4];
-	/* parapointers */
-	uint16_t para_smp[256];
-	uint16_t para_pat[256];
-	uint32_t para_sdata[256] = { 0 };
-	SONGSAMPLE *sample;
-	uint16_t trkvers;
-	uint16_t flags;
-	uint16_t special;
-	uint32_t adlib = 0; // bitset
-	int uc;
+        uint16_t nsmp, nord, npat;
+        int misc = S3M_UNSIGNED | S3M_CHANPAN; // temporary flags, these are both generally true
+        int n;
+        MODCOMMAND *note;
+        /* junk variables for reading stuff into */
+        uint16_t tmp;
+        uint8_t c;
+        uint32_t tmplong;
+        uint8_t b[4];
+        /* parapointers */
+        uint16_t para_smp[256];
+        uint16_t para_pat[256];
+        uint32_t para_sdata[256] = { 0 };
+        SONGSAMPLE *sample;
+        uint16_t trkvers;
+        uint16_t flags;
+        uint16_t special;
+        uint32_t adlib = 0; // bitset
+        int uc;
         const char *tid = NULL;
 
-	/* check the tag */
-	slurp_seek(fp, 44, SEEK_SET);
-	slurp_read(fp, b, 4);
-	if (memcmp(b, "SCRM", 4) != 0)
-		return LOAD_UNSUPPORTED;
+        /* check the tag */
+        slurp_seek(fp, 44, SEEK_SET);
+        slurp_read(fp, b, 4);
+        if (memcmp(b, "SCRM", 4) != 0)
+                return LOAD_UNSUPPORTED;
 
-	/* read the title */
-	slurp_rewind(fp);
-	slurp_read(fp, song->song_title, 25);
-	song->song_title[25] = 0;
+        /* read the title */
+        slurp_rewind(fp);
+        slurp_read(fp, song->song_title, 25);
+        song->song_title[25] = 0;
 
-	/* skip the last three bytes of the title, the supposed-to-be-0x1a byte,
-	the tracker ID, and the two useless reserved bytes */
-	slurp_seek(fp, 7, SEEK_CUR);
+        /* skip the last three bytes of the title, the supposed-to-be-0x1a byte,
+        the tracker ID, and the two useless reserved bytes */
+        slurp_seek(fp, 7, SEEK_CUR);
 
-	slurp_read(fp, &nord, 2);
-	slurp_read(fp, &nsmp, 2);
-	slurp_read(fp, &npat, 2);
-	nord = bswapLE16(nord);
-	nsmp = bswapLE16(nsmp);
-	npat = bswapLE16(npat);
-	
-	nord = MIN(nord, MAX_ORDERS);
-	nsmp = MIN(nsmp, MAX_SAMPLES);
-	npat = MIN(npat, MAX_PATTERNS);
+        slurp_read(fp, &nord, 2);
+        slurp_read(fp, &nsmp, 2);
+        slurp_read(fp, &npat, 2);
+        nord = bswapLE16(nord);
+        nsmp = bswapLE16(nsmp);
+        npat = bswapLE16(npat);
 
-	song->m_dwSongFlags = SONG_ITOLDEFFECTS;
-	slurp_read(fp, &flags, 2);  /* flags (don't really care) */
-	flags = bswapLE16(flags);
-	slurp_read(fp, &trkvers, 2);
-	trkvers = bswapLE16(trkvers);
-	slurp_read(fp, &tmp, 2);  /* file format info */
-	if (tmp == bswapLE16(1))
-		misc &= ~S3M_UNSIGNED;     /* signed samples (ancient s3m) */
+        nord = MIN(nord, MAX_ORDERS);
+        nsmp = MIN(nsmp, MAX_SAMPLES);
+        npat = MIN(npat, MAX_PATTERNS);
 
-	slurp_seek(fp, 4, SEEK_CUR); /* skip the tag */
-	
-	song->m_nDefaultGlobalVolume = slurp_getc(fp) << 1;
-	song->m_nDefaultSpeed = slurp_getc(fp);
-	song->m_nDefaultTempo = slurp_getc(fp);
-	song->m_nSongPreAmp = slurp_getc(fp);
-	if (song->m_nSongPreAmp & 0x80) {
-		song->m_nSongPreAmp ^= 0x80;
-	} else {
-		song->m_dwSongFlags |= SONG_NOSTEREO;
-	}
-	uc = slurp_getc(fp); /* ultraclick removal (useless) */
+        song->m_dwSongFlags = SONG_ITOLDEFFECTS;
+        slurp_read(fp, &flags, 2);  /* flags (don't really care) */
+        flags = bswapLE16(flags);
+        slurp_read(fp, &trkvers, 2);
+        trkvers = bswapLE16(trkvers);
+        slurp_read(fp, &tmp, 2);  /* file format info */
+        if (tmp == bswapLE16(1))
+                misc &= ~S3M_UNSIGNED;     /* signed samples (ancient s3m) */
 
-	if (slurp_getc(fp) != 0xfc)
-		misc &= ~S3M_CHANPAN;     /* stored pan values */
+        slurp_seek(fp, 4, SEEK_CUR); /* skip the tag */
 
-	slurp_seek(fp, 8, SEEK_CUR); // 8 unused bytes (XXX what do programs actually write for these?)
-	slurp_read(fp, &special, 2); // field not used by st3
-	special = bswapLE16(special);
+        song->m_nDefaultGlobalVolume = slurp_getc(fp) << 1;
+        song->m_nDefaultSpeed = slurp_getc(fp);
+        song->m_nDefaultTempo = slurp_getc(fp);
+        song->m_nSongPreAmp = slurp_getc(fp);
+        if (song->m_nSongPreAmp & 0x80) {
+                song->m_nSongPreAmp ^= 0x80;
+        } else {
+                song->m_dwSongFlags |= SONG_NOSTEREO;
+        }
+        uc = slurp_getc(fp); /* ultraclick removal (useless) */
 
-	/* channel settings */
-	for (n = 0; n < 32; n++) {
-		c = slurp_getc(fp);
-		if (c == 255) {
-			song->Channels[n].nPan = 32;
-			song->Channels[n].dwFlags = CHN_MUTE;
-		} else {
-			song->Channels[n].nPan = (c & 8) ? 48 : 16;
-			if (c & 0x80) {
-				c ^= 0x80;
-				song->Channels[n].dwFlags = CHN_MUTE;
-			}
-			if (c >= 16 && c < 32)
-				adlib |= 1 << n;
-		}
-		song->Channels[n].nVolume = 64;
-	}
-	for (; n < 64; n++) {
-		song->Channels[n].nPan = 32;
-		song->Channels[n].nVolume = 64;
-		song->Channels[n].dwFlags = CHN_MUTE;
-	}
+        if (slurp_getc(fp) != 0xfc)
+                misc &= ~S3M_CHANPAN;     /* stored pan values */
 
-	/* orderlist */
-	slurp_read(fp, song->Orderlist, nord);
-	memset(song->Orderlist + nord, 255, 256 - nord);
+        slurp_seek(fp, 8, SEEK_CUR); // 8 unused bytes (XXX what do programs actually write for these?)
+        slurp_read(fp, &special, 2); // field not used by st3
+        special = bswapLE16(special);
 
-	/* load the parapointers */
-	slurp_read(fp, para_smp, 2 * nsmp);
-	slurp_read(fp, para_pat, 2 * npat);
+        /* channel settings */
+        for (n = 0; n < 32; n++) {
+                c = slurp_getc(fp);
+                if (c == 255) {
+                        song->Channels[n].nPan = 32;
+                        song->Channels[n].dwFlags = CHN_MUTE;
+                } else {
+                        song->Channels[n].nPan = (c & 8) ? 48 : 16;
+                        if (c & 0x80) {
+                                c ^= 0x80;
+                                song->Channels[n].dwFlags = CHN_MUTE;
+                        }
+                        if (c >= 16 && c < 32)
+                                adlib |= 1 << n;
+                }
+                song->Channels[n].nVolume = 64;
+        }
+        for (; n < 64; n++) {
+                song->Channels[n].nPan = 32;
+                song->Channels[n].nVolume = 64;
+                song->Channels[n].dwFlags = CHN_MUTE;
+        }
+
+        /* orderlist */
+        slurp_read(fp, song->Orderlist, nord);
+        memset(song->Orderlist + nord, 255, 256 - nord);
+
+        /* load the parapointers */
+        slurp_read(fp, para_smp, 2 * nsmp);
+        slurp_read(fp, para_pat, 2 * npat);
 #ifdef WORDS_BIGENDIAN
-	swab(para_smp, para_smp, 2 * nsmp);
-	swab(para_pat, para_pat, 2 * npat);
+        swab(para_smp, para_smp, 2 * nsmp);
+        swab(para_pat, para_pat, 2 * npat);
 #endif
 
-	/* default pannings */
-	if (misc & S3M_CHANPAN) {
-		for (n = 0; n < 32; n++) {
-			c = slurp_getc(fp);
-			if (c & 0x20)
-				song->Channels[n].nPan = ((c & 0xf) << 2) + 2;
-		}
-	}
-	
-	//mphack - fix the pannings
-	for (n = 0; n < 64; n++)
-		song->Channels[n].nPan *= 4;
+        /* default pannings */
+        if (misc & S3M_CHANPAN) {
+                for (n = 0; n < 32; n++) {
+                        c = slurp_getc(fp);
+                        if (c & 0x20)
+                                song->Channels[n].nPan = ((c & 0xf) << 2) + 2;
+                }
+        }
 
-	/* samples */
-	for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
-		uint8_t type;
+        //mphack - fix the pannings
+        for (n = 0; n < 64; n++)
+                song->Channels[n].nPan *= 4;
 
-		slurp_seek(fp, para_smp[n] << 4, SEEK_SET);
+        /* samples */
+        for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
+                uint8_t type;
 
-		type = slurp_getc(fp);
-		slurp_read(fp, sample->filename, 12);
-		sample->filename[12] = 0;
+                slurp_seek(fp, para_smp[n] << 4, SEEK_SET);
 
-		slurp_read(fp, b, 3);
-		slurp_read(fp, &tmplong, 4);
-		if (type == 1) {
-			// pcm sample
-			para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
-			sample->nLength = bswapLE32(tmplong);
-		} else if (type == 2) {
-			// adlib
-			return LOAD_UNSUPPORTED; // it IS supported, but just not with *this* loader... yet :)
-		}
-		slurp_read(fp, &tmplong, 4);
-		sample->nLoopStart = bswapLE32(tmplong);
-		slurp_read(fp, &tmplong, 4);
-		sample->nLoopEnd = bswapLE32(tmplong);
-		sample->nVolume = slurp_getc(fp) * 4; //mphack
-		sample->nGlobalVol = 64;
-		slurp_getc(fp);      /* unused byte */
-		slurp_getc(fp);      /* packing info (never used) */
-		c = slurp_getc(fp);  /* flags */
-		if (c & 1)
-			sample->uFlags |= CHN_LOOP;
-		if (c & 2)
-			return LOAD_UNSUPPORTED; // because I'm lazy
-		if (c & 4)
-			sample->uFlags |= CHN_16BIT;
-		slurp_read(fp, &tmplong, 4);
-		sample->nC5Speed = bswapLE32(tmplong);
-		slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
-		slurp_read(fp, sample->name, 25);
-		sample->name[25] = 0;
-		sample->nVibType = 0;
-		sample->nVibSweep = 0;
-		sample->nVibDepth = 0;
-		sample->nVibRate = 0;
-	}
-	
-	/* sample data */
-	if (!(lflags & LOAD_NOSAMPLES)) {
-		for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
-			int8_t *ptr;
-			uint32_t len = sample->nLength;
-			int bps = 1;    /* bytes per sample (i.e. bits / 8) */
+                type = slurp_getc(fp);
+                slurp_read(fp, sample->filename, 12);
+                sample->filename[12] = 0;
 
-			if (!para_sdata[n] || !len)
-				continue;
+                slurp_read(fp, b, 3);
+                slurp_read(fp, &tmplong, 4);
+                if (type == 1) {
+                        // pcm sample
+                        para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
+                        sample->nLength = bswapLE32(tmplong);
+                } else if (type == 2) {
+                        // adlib
+                        return LOAD_UNSUPPORTED; // it IS supported, but just not with *this* loader... yet :)
+                }
+                slurp_read(fp, &tmplong, 4);
+                sample->nLoopStart = bswapLE32(tmplong);
+                slurp_read(fp, &tmplong, 4);
+                sample->nLoopEnd = bswapLE32(tmplong);
+                sample->nVolume = slurp_getc(fp) * 4; //mphack
+                sample->nGlobalVol = 64;
+                slurp_getc(fp);      /* unused byte */
+                slurp_getc(fp);      /* packing info (never used) */
+                c = slurp_getc(fp);  /* flags */
+                if (c & 1)
+                        sample->uFlags |= CHN_LOOP;
+                if (c & 2)
+                        return LOAD_UNSUPPORTED; // because I'm lazy
+                if (c & 4)
+                        sample->uFlags |= CHN_16BIT;
+                slurp_read(fp, &tmplong, 4);
+                sample->nC5Speed = bswapLE32(tmplong);
+                slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
+                slurp_read(fp, sample->name, 25);
+                sample->name[25] = 0;
+                sample->nVibType = 0;
+                sample->nVibSweep = 0;
+                sample->nVibDepth = 0;
+                sample->nVibRate = 0;
+        }
 
-			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-			if (sample->uFlags & CHN_16BIT)
-				bps = 2;
-			ptr = csf_allocate_sample(bps * len);
-			slurp_read(fp, ptr, bps * len);
-			sample->pSample = ptr;
+        /* sample data */
+        if (!(lflags & LOAD_NOSAMPLES)) {
+                for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
+                        int8_t *ptr;
+                        uint32_t len = sample->nLength;
+                        int bps = 1;    /* bytes per sample (i.e. bits / 8) */
 
-			if (misc & S3M_UNSIGNED) {
-				/* convert to signed */
-				uint32_t pos = len;
-				if (bps == 2)
-					while (pos-- > 0)
-						ptr[2 * pos + 1] ^= 0x80;
-				else
-					while (pos-- > 0)
-						ptr[pos] ^= 0x80;
-			}
+                        if (!para_sdata[n] || !len)
+                                continue;
+
+                        slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
+                        if (sample->uFlags & CHN_16BIT)
+                                bps = 2;
+                        ptr = csf_allocate_sample(bps * len);
+                        slurp_read(fp, ptr, bps * len);
+                        sample->pSample = ptr;
+
+                        if (misc & S3M_UNSIGNED) {
+                                /* convert to signed */
+                                uint32_t pos = len;
+                                if (bps == 2)
+                                        while (pos-- > 0)
+                                                ptr[2 * pos + 1] ^= 0x80;
+                                else
+                                        while (pos-- > 0)
+                                                ptr[pos] ^= 0x80;
+                        }
 #ifdef WORDS_BIGENDIAN
-			if (bps == 2)
-				swab(ptr, ptr, 2 * len);
+                        if (bps == 2)
+                                swab(ptr, ptr, 2 * len);
 #endif
-		}
-	}
+                }
+        }
 
-	if (!(lflags & LOAD_NOPATTERNS)) {
-		for (n = 0; n < npat; n++) {
-			int row = 0;
+        if (!(lflags & LOAD_NOPATTERNS)) {
+                for (n = 0; n < npat; n++) {
+                        int row = 0;
 
-			/* The +2 is because the first two bytes are the length of the packed
-			data, which is superfluous for the way I'm reading the patterns. */
-			slurp_seek(fp, (para_pat[n] << 4) + 2, SEEK_SET);
+                        /* The +2 is because the first two bytes are the length of the packed
+                        data, which is superfluous for the way I'm reading the patterns. */
+                        slurp_seek(fp, (para_pat[n] << 4) + 2, SEEK_SET);
 
-			song->Patterns[n] = csf_allocate_pattern(64, 64);
+                        song->Patterns[n] = csf_allocate_pattern(64, 64);
 
-			while (row < 64) {
-				uint8_t mask = slurp_getc(fp);
-				uint8_t chn = (mask & 31);
+                        while (row < 64) {
+                                uint8_t mask = slurp_getc(fp);
+                                uint8_t chn = (mask & 31);
 
-				if (!mask) {
-					/* done with the row */
-					row++;
-					continue;
-				}
-				note = song->Patterns[n] + 64 * row + chn;
-				if (mask & 32) {
-					/* note/instrument */
-					note->note = slurp_getc(fp);
-					note->instr = slurp_getc(fp);
-					//if (note->instr > 99)
-					//	note->instr = 0;
-					switch (note->note) {
-					default:
-						// Note; hi=oct, lo=note
-						note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12 + 1;
-						break;
-					case 255:
-						note->note = NOTE_NONE;
-						break;
-					case 254:
-						note->note = (adlib & (1 << chn)) ? NOTE_OFF : NOTE_CUT;
-						break;
-					}
-				}
-				if (mask & 64) {
-					/* volume */
-					note->volcmd = VOLCMD_VOLUME;
-					note->vol = slurp_getc(fp);
-					if (note->vol == 255) {
-						note->volcmd = VOLCMD_NONE;
-						note->vol = 0;
-					} else if (note->vol > 64) {
-						// some weirdly saved s3m?
-						note->vol = 64;
-					}
-				}
-				if (mask & 128) {
-					note->command = slurp_getc(fp);
-					note->param = slurp_getc(fp);
-					csf_import_s3m_effect(note, 0);
-				}
-				/* ... next note, same row */
-			}
-		}
-	}
+                                if (!mask) {
+                                        /* done with the row */
+                                        row++;
+                                        continue;
+                                }
+                                note = song->Patterns[n] + 64 * row + chn;
+                                if (mask & 32) {
+                                        /* note/instrument */
+                                        note->note = slurp_getc(fp);
+                                        note->instr = slurp_getc(fp);
+                                        //if (note->instr > 99)
+                                        //      note->instr = 0;
+                                        switch (note->note) {
+                                        default:
+                                                // Note; hi=oct, lo=note
+                                                note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12 + 1;
+                                                break;
+                                        case 255:
+                                                note->note = NOTE_NONE;
+                                                break;
+                                        case 254:
+                                                note->note = (adlib & (1 << chn)) ? NOTE_OFF : NOTE_CUT;
+                                                break;
+                                        }
+                                }
+                                if (mask & 64) {
+                                        /* volume */
+                                        note->volcmd = VOLCMD_VOLUME;
+                                        note->vol = slurp_getc(fp);
+                                        if (note->vol == 255) {
+                                                note->volcmd = VOLCMD_NONE;
+                                                note->vol = 0;
+                                        } else if (note->vol > 64) {
+                                                // some weirdly saved s3m?
+                                                note->vol = 64;
+                                        }
+                                }
+                                if (mask & 128) {
+                                        note->command = slurp_getc(fp);
+                                        note->param = slurp_getc(fp);
+                                        csf_import_s3m_effect(note, 0);
+                                }
+                                /* ... next note, same row */
+                        }
+                }
+        }
 
-	/* MPT identifies as ST3.20 in the trkvers field, but it puts zeroes for the 'special' field, only ever
-	 * sets flags 0x10 and 0x40, writes multiples of 16 orders, always saves channel pannings, and writes
-	 * zero into the ultraclick removal field. (ST3 always puts either 8, 12, or 16 there).
-	 * Velvet Studio also pretends to be ST3, but writes zeroes for 'special'. ultraclick, and flags, and
-	 * does NOT save channel pannings. Also, it writes a fairly recognizable LRRL pattern for the channels,
-	 * but I'm not checking that. (yet?) */
-	if (trkvers == 0x1320) {
-		if (special == 0 && uc == 0 && (flags & ~0x50) == 0
-		    && misc == (S3M_UNSIGNED | S3M_CHANPAN) && (nord % 16) == 0) {
-			tid = "Modplug Tracker";
-		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
-			tid = "Velvet Studio";
-		} else if (uc != 8 && uc != 12 && uc != 16) {
-			// sure isn't scream tracker
-			tid = "Unknown tracker";
-		}
-	}
-	if (!tid) {
-		switch (trkvers >> 12) {
-		case 1:
-			tid = "Scream Tracker %d.%02x";
-			break;
-		case 2:
-			tid = "Imago Orpheus %d.%02x";
-			break;
-		case 3:
-			if (trkvers == 0x3216)
-				tid = "Impulse Tracker 2.14v3";
-			else if (trkvers == 0x3217)
-				tid = "Impulse Tracker 2.14v5";
-			else
-				tid = "Impulse Tracker %d.%02x";
-			break;
-		case 4:
-			// we don't really bump the version properly, but let's show it anyway
-			tid = "Schism Tracker %d.%02x";
-			break;
-		case 5:
-			tid = "OpenMPT %d.%02x";
-			break;
-		}
-	}
-	if (tid)
-		sprintf(song->tracker_id, tid, (trkvers & 0xf00) >> 8, trkvers & 0xff);
+        /* MPT identifies as ST3.20 in the trkvers field, but it puts zeroes for the 'special' field, only ever
+         * sets flags 0x10 and 0x40, writes multiples of 16 orders, always saves channel pannings, and writes
+         * zero into the ultraclick removal field. (ST3 always puts either 8, 12, or 16 there).
+         * Velvet Studio also pretends to be ST3, but writes zeroes for 'special'. ultraclick, and flags, and
+         * does NOT save channel pannings. Also, it writes a fairly recognizable LRRL pattern for the channels,
+         * but I'm not checking that. (yet?) */
+        if (trkvers == 0x1320) {
+                if (special == 0 && uc == 0 && (flags & ~0x50) == 0
+                    && misc == (S3M_UNSIGNED | S3M_CHANPAN) && (nord % 16) == 0) {
+                        tid = "Modplug Tracker";
+                } else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
+                        tid = "Velvet Studio";
+                } else if (uc != 8 && uc != 12 && uc != 16) {
+                        // sure isn't scream tracker
+                        tid = "Unknown tracker";
+                }
+        }
+        if (!tid) {
+                switch (trkvers >> 12) {
+                case 1:
+                        tid = "Scream Tracker %d.%02x";
+                        break;
+                case 2:
+                        tid = "Imago Orpheus %d.%02x";
+                        break;
+                case 3:
+                        if (trkvers == 0x3216)
+                                tid = "Impulse Tracker 2.14v3";
+                        else if (trkvers == 0x3217)
+                                tid = "Impulse Tracker 2.14v5";
+                        else
+                                tid = "Impulse Tracker %d.%02x";
+                        break;
+                case 4:
+                        // we don't really bump the version properly, but let's show it anyway
+                        tid = "Schism Tracker %d.%02x";
+                        break;
+                case 5:
+                        tid = "OpenMPT %d.%02x";
+                        break;
+                }
+        }
+        if (tid)
+                sprintf(song->tracker_id, tid, (trkvers & 0xf00) >> 8, trkvers & 0xff);
 
-//	if (ferror(fp)) {
-//		return LOAD_FILE_ERROR;
-//	}
-	/* done! */
-	return LOAD_SUCCESS;
+//      if (ferror(fp)) {
+//              return LOAD_FILE_ERROR;
+//      }
+        /* done! */
+        return LOAD_SUCCESS;
 }
 

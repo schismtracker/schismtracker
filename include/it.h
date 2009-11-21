@@ -50,16 +50,16 @@
 
 /* tracker_status dialog_types */
 enum {
-        DIALOG_NONE = (0),				/* 0000 0000 */
-        DIALOG_MENU = (1 << 0),				/* 0000 0001 */
+        DIALOG_NONE = (0),                              /* 0000 0000 */
+        DIALOG_MENU = (1 << 0),                         /* 0000 0001 */
         DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)),    /* 0000 0011 */
         DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),      /* 0000 0101 */
-        DIALOG_BOX = (1 << 3),				/* 0000 1000 */
-        DIALOG_OK = (DIALOG_BOX | (1 << 4)),		/* 0001 1000 */
-        DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),	/* 0010 1000 */
+        DIALOG_BOX = (1 << 3),                          /* 0000 1000 */
+        DIALOG_OK = (DIALOG_BOX | (1 << 4)),            /* 0001 1000 */
+        DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),     /* 0010 1000 */
         /* yes/no technically has a cancel as well, i.e. the escape key */
-        DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)),	/* 0100 1000 */
-        DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),	/* 1000 1000 */
+        DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)),        /* 0100 1000 */
+        DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),        /* 1000 1000 */
 };
 
 /* tracker_status flags
@@ -72,8 +72,8 @@ enum {
         /* if this flag is set, the screen will be redrawn */
         NEED_UPDATE = (1 << 0),
 
-	/* is the current palette "backwards"? (used to make the borders look right) */
-	INVERTED_PALETTE = (1 << 1),
+        /* is the current palette "backwards"? (used to make the borders look right) */
+        INVERTED_PALETTE = (1 << 1),
 
         DIR_MODULES_CHANGED = (1 << 2),
         DIR_SAMPLES_CHANGED = (1 << 3),
@@ -88,58 +88,58 @@ enum {
         /* if this is set, some stuff behaves differently
          * (grep the source files for what stuff ;) */
         CLASSIC_MODE = (1 << 8),
-	
-	/* make a backup file (song.it~) when saving a module? */
-	MAKE_BACKUPS = (1 << 9),
-	NUMBERED_BACKUPS = (1 << 10), /* song.it.3~ */
 
-	LAZY_REDRAW = (1 << 11),
-	
-	/* this is here if anything is "changed" and we need to whine to
-	the user if they quit */
-	SONG_NEEDS_SAVE = (1 << 12),
+        /* make a backup file (song.it~) when saving a module? */
+        MAKE_BACKUPS = (1 << 9),
+        NUMBERED_BACKUPS = (1 << 10), /* song.it.3~ */
 
-	/* if the software mouse pointer moved.... */
-	SOFTWARE_MOUSE_MOVED = (1 << 13),
+        LAZY_REDRAW = (1 << 11),
 
-	/* pasting is done by setting a flag here, the main event loop then synthesizes
-	the various events... after we return */
-	CLIPPY_PASTE_SELECTION = (1 << 14),
-	CLIPPY_PASTE_BUFFER = (1 << 15),
+        /* this is here if anything is "changed" and we need to whine to
+        the user if they quit */
+        SONG_NEEDS_SAVE = (1 << 12),
 
-	/* if the diskwriter is active */
-	DISKWRITER_ACTIVE = (1 << 16),
-	DISKWRITER_ACTIVE_PATTERN = (1 << 17), /* recording only a single pattern */
+        /* if the software mouse pointer moved.... */
+        SOFTWARE_MOUSE_MOVED = (1 << 13),
 
-	/* mark... set by midi core when received new midi event */
-	MIDI_EVENT_CHANGED = (1 << 18),
+        /* pasting is done by setting a flag here, the main event loop then synthesizes
+        the various events... after we return */
+        CLIPPY_PASTE_SELECTION = (1 << 14),
+        CLIPPY_PASTE_BUFFER = (1 << 15),
 
-	/* poop */
-	ACCIDENTALS_AS_FLATS = (1 << 19),
+        /* if the diskwriter is active */
+        DISKWRITER_ACTIVE = (1 << 16),
+        DISKWRITER_ACTIVE_PATTERN = (1 << 17), /* recording only a single pattern */
 
-	/* fontedit */
-	STARTUP_FONTEDIT = (1 << 20),
+        /* mark... set by midi core when received new midi event */
+        MIDI_EVENT_CHANGED = (1 << 18),
 
-	/* key hacks -- should go away when keyboard redefinition is possible */
-	META_IS_CTRL = (1 << 21),
-	ALTGR_IS_ALT = (1 << 22),
+        /* poop */
+        ACCIDENTALS_AS_FLATS = (1 << 19),
+
+        /* fontedit */
+        STARTUP_FONTEDIT = (1 << 20),
+
+        /* key hacks -- should go away when keyboard redefinition is possible */
+        META_IS_CTRL = (1 << 21),
+        ALTGR_IS_ALT = (1 << 22),
 
 
-	/* Devi Ever's hack */
-	CRAYOLA_MODE = (1 << 25),
+        /* Devi Ever's hack */
+        CRAYOLA_MODE = (1 << 25),
 
-	/* holding caps */
-	CAPS_PRESSED = (1 << 26),
+        /* holding caps */
+        CAPS_PRESSED = (1 << 26),
 
-	NO_NETWORK = (1 << 27),
-	NO_MOUSE = (1 << 28),
-	
-	/* Play MIDI events using the same semantics as tracker samples */
-	MIDI_LIKE_TRACKER = (1 << 29),
+        NO_NETWORK = (1 << 27),
+        NO_MOUSE = (1 << 28),
 
-	/* if true, don't stop playing on load, and start playing new song afterward
-	(but only if the last song was already playing before loading) */
-	PLAY_AFTER_LOAD = (1 << 30),
+        /* Play MIDI events using the same semantics as tracker samples */
+        MIDI_LIKE_TRACKER = (1 << 29),
+
+        /* if true, don't stop playing on load, and start playing new song afterward
+        (but only if the last song was already playing before loading) */
+        PLAY_AFTER_LOAD = (1 << 30),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
@@ -150,7 +150,7 @@ enum tracker_time_display {
 
 /* what should go in the little box on the top right? */
 enum tracker_vis_style {
-	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
+        VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
 };
 
 struct tracker_status {
@@ -160,39 +160,39 @@ struct tracker_status {
         int dialog_type;        /* one of the DIALOG_* constants above */
         int flags;
         enum tracker_time_display time_display;
-	enum tracker_vis_style vis_style;
+        enum tracker_vis_style vis_style;
         SDLKey last_keysym;
 
-	time_t last_midi_time;
-	unsigned char last_midi_event[64];
-	unsigned int last_midi_len;
-	unsigned int last_midi_real_len;
-	void *last_midi_port; /* really a struct midi_port * */
+        time_t last_midi_time;
+        unsigned char last_midi_event[64];
+        unsigned int last_midi_len;
+        unsigned int last_midi_real_len;
+        void *last_midi_port; /* really a struct midi_port * */
 
-	/* clock is driven from the main/event thread */
-	time_t now;
-	int h, m, s;
+        /* clock is driven from the main/event thread */
+        time_t now;
+        int h, m, s;
 
-	int fix_numlock_setting;
+        int fix_numlock_setting;
 };
 
 /* numlock hackery */
 enum {
-	NUMLOCK_ALWAYS_OFF = 0,
-	NUMLOCK_ALWAYS_ON = 1,
-	NUMLOCK_HONOR = -1, /* don't fix it */
-	NUMLOCK_GUESS = -2, /* don't fix it... except on non-ibook macs */
+        NUMLOCK_ALWAYS_OFF = 0,
+        NUMLOCK_ALWAYS_ON = 1,
+        NUMLOCK_HONOR = -1, /* don't fix it */
+        NUMLOCK_GUESS = -2, /* don't fix it... except on non-ibook macs */
 };
 
 /* mouse visibility - these are passed to video_mousecursor()
 first three are stored as the physical mouse state */
 enum {
-	MOUSE_DISABLED,
-	MOUSE_EMULATED,
-	MOUSE_SYSTEM,
+        MOUSE_DISABLED,
+        MOUSE_EMULATED,
+        MOUSE_SYSTEM,
 
-	MOUSE_CYCLE_STATE,
-	MOUSE_RESET_STATE,
+        MOUSE_CYCLE_STATE,
+        MOUSE_RESET_STATE,
 };
 #define MOUSE_MAX_STATE MOUSE_CYCLE_STATE
 
@@ -247,7 +247,7 @@ extern const char *note_trans;  /* keyboard.c */
 extern char *help_text_pointers[HELP_NUM_ITEMS];
 extern int help_text_lastpos[HELP_NUM_ITEMS];
 
-extern int show_default_volumes;	/* pattern-view.c */
+extern int show_default_volumes;        /* pattern-view.c */
 
 /* --------------------------------------------------------------------- */
 /* settings (config.c) */
@@ -296,7 +296,7 @@ void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 
 static inline unsigned char unicode_to_ascii(uint16_t unicode)
 {
-	return unicode & 0xff;
+        return unicode & 0xff;
 //        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
 }
 
@@ -457,12 +457,12 @@ void memused_songchanged(void);
 void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
 
 void feature_check_instruments(const char *fmt,
-		int limit, unsigned int flags_mask);
+                int limit, unsigned int flags_mask);
 void feature_check_samples(const char *fmt, int limit, unsigned int flags_mask);
 void feature_check_notes(const char *fmt,
-		int min_note, int max_note,
-		int min_inst,int max_inst,
-		const char *volcmd, const char *fxcmd);
+                int min_note, int max_note,
+                int min_inst,int max_inst,
+                const char *volcmd, const char *fxcmd);
 
 
 /* various boilerplate defined in version.c */
@@ -473,7 +473,7 @@ extern const char *ver_license[];
 extern short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
 
 extern const char *schism_banner(int classic)
-	__attribute__((pure));
+        __attribute__((pure));
 
 /* little hack, need to call this at startup */
 extern void ver_init(void);

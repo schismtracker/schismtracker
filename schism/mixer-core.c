@@ -55,53 +55,53 @@ extern void win32mm_mixer_write_volume(int, int);
 
 void mixer_setup(void)
 {
-	char *drv, drv_buf[256];
+        char *drv, drv_buf[256];
 
-	drv = SDL_AudioDriverName(drv_buf,sizeof(drv_buf));
+        drv = SDL_AudioDriverName(drv_buf,sizeof(drv_buf));
 
 #ifdef USE_ALSA
-	if ((!drv && !__mixer_get_max_volume) || (drv && !strcmp(drv, "alsa"))) {
-		__mixer_get_max_volume = alsa_mixer_get_max_volume;
-		__mixer_read_volume = alsa_mixer_read_volume;
-		__mixer_write_volume = alsa_mixer_write_volume;
-	}
+        if ((!drv && !__mixer_get_max_volume) || (drv && !strcmp(drv, "alsa"))) {
+                __mixer_get_max_volume = alsa_mixer_get_max_volume;
+                __mixer_read_volume = alsa_mixer_read_volume;
+                __mixer_write_volume = alsa_mixer_write_volume;
+        }
 #endif
 #ifdef USE_OSS
-	if ((!drv && !__mixer_get_max_volume) || (drv && !strcmp(drv, "oss"))
-					|| (drv && !strcmp(drv, "dsp"))) {
-		__mixer_get_max_volume = oss_mixer_get_max_volume;
-		__mixer_read_volume = oss_mixer_read_volume;
-		__mixer_write_volume = oss_mixer_write_volume;
-	}
+        if ((!drv && !__mixer_get_max_volume) || (drv && !strcmp(drv, "oss"))
+                                        || (drv && !strcmp(drv, "dsp"))) {
+                __mixer_get_max_volume = oss_mixer_get_max_volume;
+                __mixer_read_volume = oss_mixer_read_volume;
+                __mixer_write_volume = oss_mixer_write_volume;
+        }
 #endif
 #ifdef MACOSX
-	if ((!drv && !__mixer_get_max_volume) || (drv && (!strcmp(drv, "coreaudio") || !strcmp(drv, "macosx")) )) {
-		__mixer_get_max_volume = macosx_mixer_get_max_volume;
-		__mixer_read_volume = macosx_mixer_read_volume;
-		__mixer_write_volume = macosx_mixer_write_volume;
-	}
+        if ((!drv && !__mixer_get_max_volume) || (drv && (!strcmp(drv, "coreaudio") || !strcmp(drv, "macosx")) )) {
+                __mixer_get_max_volume = macosx_mixer_get_max_volume;
+                __mixer_read_volume = macosx_mixer_read_volume;
+                __mixer_write_volume = macosx_mixer_write_volume;
+        }
 #endif
 #ifdef USE_WIN32MM
-	if ((!drv && !__mixer_get_max_volume) || (drv && (!strcmp(drv, "waveout") || !strcmp(drv, "dsound")) )) {
-		__mixer_get_max_volume = win32mm_mixer_get_max_volume;
-		__mixer_read_volume = win32mm_mixer_read_volume;
-		__mixer_write_volume = win32mm_mixer_write_volume;
-	}
+        if ((!drv && !__mixer_get_max_volume) || (drv && (!strcmp(drv, "waveout") || !strcmp(drv, "dsound")) )) {
+                __mixer_get_max_volume = win32mm_mixer_get_max_volume;
+                __mixer_read_volume = win32mm_mixer_read_volume;
+                __mixer_write_volume = win32mm_mixer_write_volume;
+        }
 #endif
 }
 
 
 int mixer_get_max_volume(void)
 {
-	if (__mixer_get_max_volume) return __mixer_get_max_volume();
-	return 1; /* Can't return 0, that breaks things. */
+        if (__mixer_get_max_volume) return __mixer_get_max_volume();
+        return 1; /* Can't return 0, that breaks things. */
 }
 void mixer_read_volume(int *left, int *right)
 {
-	if (__mixer_read_volume) __mixer_read_volume(left,right);
-	else { *left=0; *right=0; }
+        if (__mixer_read_volume) __mixer_read_volume(left,right);
+        else { *left=0; *right=0; }
 }
 void mixer_write_volume(int left, int right)
 {
-	if (__mixer_write_volume) __mixer_write_volume(left,right);
+        if (__mixer_write_volume) __mixer_write_volume(left,right);
 }

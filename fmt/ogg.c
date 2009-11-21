@@ -97,7 +97,7 @@ static long fake_tell(void *void_data)
 
 static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **title_ptr)
 {
-	char *buf, *key, *value;
+        char *buf, *key, *value;
         char **ptr = ov_comment(vf, -1)->user_comments;
         int n = -1;
 
@@ -112,7 +112,7 @@ static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **ti
                 /* hack? where? */
                 *value = 0;
                 value = str_dup(value + 1);
-		
+
                 if (strcmp(key, "artist") == 0)
                         *artist_ptr = value;
                 else if (strcmp(key, "title") == 0)

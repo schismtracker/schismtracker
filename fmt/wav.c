@@ -166,7 +166,7 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
                         f->buf = (uint8_t *)(data + offset);
                         return 1;
                 }
-        
+
             offset += c.length;
 
             if (offset == len)

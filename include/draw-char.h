@@ -42,7 +42,7 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color);
 
 void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
-			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);
+                           uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);
 
 /* --------------------------------------------------------------------- */
 /* boxes */

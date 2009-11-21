@@ -87,41 +87,41 @@ static void update_values_in_song(void)
         song_set_initial_speed(widgets_vars[2].d.thumbbar.value);
         song_set_initial_global_volume(widgets_vars[3].d.thumbbar.value);
         song_set_mixing_volume(widgets_vars[4].d.thumbbar.value);
-	song_set_separation(widgets_vars[5].d.thumbbar.value);
+        song_set_separation(widgets_vars[5].d.thumbbar.value);
         song_set_old_effects(widgets_vars[6].d.toggle.state);
         song_set_compatible_gxx(widgets_vars[7].d.toggle.state);
         song_set_instrument_mode(widgets_vars[8].d.togglebutton.state);
-	if (widgets_vars[10].d.togglebutton.state) {
-		if (!song_is_stereo()) {
-			song_set_stereo();
-		}
-	} else {
-		if (song_is_stereo()) {
-			song_set_mono();
-		}
-	}
+        if (widgets_vars[10].d.togglebutton.state) {
+                if (!song_is_stereo()) {
+                        song_set_stereo();
+                }
+        } else {
+                if (song_is_stereo()) {
+                        song_set_mono();
+                }
+        }
         song_set_linear_pitch_slides(widgets_vars[12].d.togglebutton.state);
-	status.flags |= SONG_NEEDS_SAVE;
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 
 static void init_instruments(UNUSED void *data)
 {
-	song_init_instruments(-1);
-	song_set_instrument_mode(1);
+        song_init_instruments(-1);
+        song_set_instrument_mode(1);
 }
 
 static void maybe_init_instruments(void)
 {
-	/* XXX actually, in IT the buttons on this dialog say OK/No for whatever reason */
-	dialog_create(DIALOG_YES_NO, "Initialise instruments?", init_instruments, NULL, 0, NULL);
+        /* XXX actually, in IT the buttons on this dialog say OK/No for whatever reason */
+        dialog_create(DIALOG_YES_NO, "Initialise instruments?", init_instruments, NULL, 0, NULL);
 }
 
 
 static void song_changed_cb(void)
 {
-	char *b;
-	int c;
+        char *b;
+        int c;
 
         widgets_vars[0].d.textentry.text = song_get_title();
         widgets_vars[0].d.textentry.cursor_pos = strlen(widgets_vars[0].d.textentry.text);
@@ -130,32 +130,32 @@ static void song_changed_cb(void)
         widgets_vars[2].d.thumbbar.value = song_get_initial_speed();
         widgets_vars[3].d.thumbbar.value = song_get_initial_global_volume();
         widgets_vars[4].d.thumbbar.value = song_get_mixing_volume();
-	widgets_vars[5].d.thumbbar.value = song_get_separation();
+        widgets_vars[5].d.thumbbar.value = song_get_separation();
         widgets_vars[6].d.toggle.state = song_has_old_effects();
         widgets_vars[7].d.toggle.state = song_has_compatible_gxx();
 
         if (song_is_instrument_mode())
-		togglebutton_set(widgets_vars, 8, 0);
+                togglebutton_set(widgets_vars, 8, 0);
         else
-		togglebutton_set(widgets_vars, 9, 0);
-	
-        if (song_is_stereo())
-		togglebutton_set(widgets_vars, 10, 0);
-        else
-		togglebutton_set(widgets_vars, 11, 0);
+                togglebutton_set(widgets_vars, 9, 0);
 
-	if (song_has_linear_pitch_slides())
-		togglebutton_set(widgets_vars, 12, 0);
+        if (song_is_stereo())
+                togglebutton_set(widgets_vars, 10, 0);
         else
-		togglebutton_set(widgets_vars, 13, 0);
+                togglebutton_set(widgets_vars, 11, 0);
+
+        if (song_has_linear_pitch_slides())
+                togglebutton_set(widgets_vars, 12, 0);
+        else
+                togglebutton_set(widgets_vars, 13, 0);
 
         update_song_title();
-        
-	for (b = strpbrk(song_get_basename(), "Aa"),
-	c = 12632; c && b && b[1]; c >>= 4, b++)
-	if ((c & 15) != b[1] - *b) return;
-	if (!c) for (b = Amiga, c = 12632; c; c>>= 4, b++)
-	b[1] = *b + (c & 15);
+
+        for (b = strpbrk(song_get_basename(), "Aa"),
+        c = 12632; c && b && b[1]; c >>= 4, b++)
+        if ((c & 15) != b[1] - *b) return;
+        if (!c) for (b = Amiga, c = 12632; c; c>>= 4, b++)
+        b[1] = *b + (c & 15);
 }
 
 /* --------------------------------------------------------------------- */

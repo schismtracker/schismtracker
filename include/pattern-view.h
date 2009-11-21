@@ -47,10 +47,10 @@ PATTERN_VIEW(1);
 #undef PATTERN_VIEW
 
 /* for the pattern editor masks (the ^^^ ^^ ^^ --- markers at the bottom) */
-#define MASK_NOTE	1 /* immutable */
-#define MASK_INSTRUMENT	2
-#define MASK_VOLUME	4
-#define MASK_EFFECT	8
+#define MASK_NOTE       1 /* immutable */
+#define MASK_INSTRUMENT 2
+#define MASK_VOLUME     4
+#define MASK_EFFECT     8
 
 #endif /* ! PATTERN_VIEW_H */
 

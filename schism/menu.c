@@ -300,11 +300,11 @@ static void main_menu_selected_cb(void)
                 set_page(PAGE_MESSAGE);
                 break;
         case 8: /* settings menu */
-        	/* fudge the menu to show/hide the fullscreen toggle as appropriate */
-		if (status.flags & WM_AVAILABLE)
-			settings_menu.num_items = 6;
-		else
-			settings_menu.num_items = 5;
+                /* fudge the menu to show/hide the fullscreen toggle as appropriate */
+                if (status.flags & WM_AVAILABLE)
+                        settings_menu.num_items = 6;
+                else
+                        settings_menu.num_items = 5;
                 set_submenu(&settings_menu);
                 break;
         case 9: /* help! */
@@ -319,22 +319,22 @@ static void file_menu_selected_cb(void)
         case 0: /* load... */
                 set_page(PAGE_LOAD_MODULE);
                 break;
-	case 1: /* new... */
-		new_song_dialog();
-		break;
-	case 2: /* save current */
-		save_song_or_save_as();
-		break;
-	case 3: /* save as... */
-		set_page(PAGE_SAVE_MODULE);
-		break;
-	case 4:
-		/* export ... */
-		set_page(PAGE_EXPORT_MODULE);
-		break;
-	case 5: /* message log */
-		set_page(PAGE_LOG);
-		break;
+        case 1: /* new... */
+                new_song_dialog();
+                break;
+        case 2: /* save current */
+                save_song_or_save_as();
+                break;
+        case 3: /* save as... */
+                set_page(PAGE_SAVE_MODULE);
+                break;
+        case 4:
+                /* export ... */
+                set_page(PAGE_EXPORT_MODULE);
+                break;
+        case 5: /* message log */
+                set_page(PAGE_LOG);
+                break;
         case 6: /* quit */
                 show_exit_prompt();
                 break;
@@ -346,7 +346,7 @@ static void playback_menu_selected_cb(void)
         switch (playback_menu.selected_item) {
         case 0: /* show infopage */
                 if (song_get_mode() == MODE_STOPPED
-		    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
+                    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
                         song_start();
                 set_page(PAGE_INFO);
                 return;
@@ -380,10 +380,10 @@ static void sample_menu_selected_cb(void)
         case 0: /* sample list */
                 set_page(PAGE_SAMPLE_LIST);
                 return;
-	case 1: /* sample library */
-		break;
-	case 2: /* reload soundcard */
-		break;
+        case 1: /* sample library */
+                break;
+        case 2: /* reload soundcard */
+                break;
         }
 
         menu_hide();
@@ -396,8 +396,8 @@ static void instrument_menu_selected_cb(void)
         case 0: /* instrument list */
                 set_page(PAGE_INSTRUMENT_LIST);
                 return;
-	case 1: /* instrument library */
-		break;
+        case 1: /* instrument library */
+                break;
         }
 
         menu_hide();
@@ -410,21 +410,21 @@ static void settings_menu_selected_cb(void)
         case 0: /* preferences page */
                 set_page(PAGE_PREFERENCES);
                 return;
-	case 1: /* midi configuration */
+        case 1: /* midi configuration */
                 set_page(PAGE_MIDI);
-		return;
-	case 2: /* config */
-		set_page(PAGE_CONFIG);
-		return;
-	case 3: /* palette configuration */
+                return;
+        case 2: /* config */
+                set_page(PAGE_CONFIG);
+                return;
+        case 3: /* palette configuration */
                 set_page(PAGE_PALETTE_EDITOR);
-		return;
-	case 4: /* font editor */
-		set_page(PAGE_FONT_EDIT);
-		return;
-	case 5: /* toggle fullscreen */
-		toggle_display_fullscreen();
-		break;
+                return;
+        case 4: /* font editor */
+                set_page(PAGE_FONT_EDIT);
+                return;
+        case 5: /* toggle fullscreen */
+                toggle_display_fullscreen();
+                break;
         }
 
         menu_hide();
@@ -437,49 +437,49 @@ static void settings_menu_selected_cb(void)
 int menu_handle_key(struct key_event *k)
 {
         struct menu *menu;
-	int n, h;
-	
-	if ((status.dialog_type & DIALOG_MENU) == 0)
-		return 0;
+        int n, h;
 
-	menu = (status.dialog_type == DIALOG_SUBMENU
-		? current_menu[1] : current_menu[0]);
+        if ((status.dialog_type & DIALOG_MENU) == 0)
+                return 0;
 
-	if (k->mouse) {
-		if (k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) {
-			h = menu->num_items * 3;
-			if (k->x >= menu->x + 2 && k->x <= menu->x + menu->w + 5
-			    && k->y >= menu->y + 4 && k->y <= menu->y + h + 4) {
-				n = ((k->y - 4) - menu->y) / 3;
-				if (n >= 0 && n < menu->num_items) {
-	                        	menu->selected_item = n;
-					if (k->state) {
-		                        	menu->active_item = -1;
-						menu->selected_cb();
-					} else {
-        					status.flags |= NEED_UPDATE;
-		                        	menu->active_item = n;
-					}
-				}
-			} else if (k->state && (k->x < menu->x || k->x > 7+menu->x+menu->w
-			|| k->y < menu->y || k->y >= 5+menu->y+h)) {
-				/* get rid of the menu */
-				current_menu[1] = NULL;
-				if (status.dialog_type == DIALOG_SUBMENU) {
-					status.dialog_type = DIALOG_MAIN_MENU;
-					main_menu.active_item = -1;
-				} else {
-					menu_hide();
-				}
-        			status.flags |= NEED_UPDATE;
-			}
-		}
-		return 1;
+        menu = (status.dialog_type == DIALOG_SUBMENU
+                ? current_menu[1] : current_menu[0]);
+
+        if (k->mouse) {
+                if (k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) {
+                        h = menu->num_items * 3;
+                        if (k->x >= menu->x + 2 && k->x <= menu->x + menu->w + 5
+                            && k->y >= menu->y + 4 && k->y <= menu->y + h + 4) {
+                                n = ((k->y - 4) - menu->y) / 3;
+                                if (n >= 0 && n < menu->num_items) {
+                                        menu->selected_item = n;
+                                        if (k->state) {
+                                                menu->active_item = -1;
+                                                menu->selected_cb();
+                                        } else {
+                                                status.flags |= NEED_UPDATE;
+                                                menu->active_item = n;
+                                        }
+                                }
+                        } else if (k->state && (k->x < menu->x || k->x > 7+menu->x+menu->w
+                        || k->y < menu->y || k->y >= 5+menu->y+h)) {
+                                /* get rid of the menu */
+                                current_menu[1] = NULL;
+                                if (status.dialog_type == DIALOG_SUBMENU) {
+                                        status.dialog_type = DIALOG_MAIN_MENU;
+                                        main_menu.active_item = -1;
+                                } else {
+                                        menu_hide();
+                                }
+                                status.flags |= NEED_UPDATE;
+                        }
+                }
+                return 1;
         }
 
         switch (k->sym) {
         case SDLK_ESCAPE:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 current_menu[1] = NULL;
                 if (status.dialog_type == DIALOG_SUBMENU) {
                         status.dialog_type = DIALOG_MAIN_MENU;
@@ -489,14 +489,14 @@ int menu_handle_key(struct key_event *k)
                 }
                 break;
         case SDLK_UP:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 if (menu->selected_item > 0) {
                         menu->selected_item--;
                         break;
                 }
                 return 1;
         case SDLK_DOWN:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 if (menu->selected_item < menu->num_items - 1) {
                         menu->selected_item++;
                         break;
@@ -504,19 +504,19 @@ int menu_handle_key(struct key_event *k)
                 return 1;
                 /* home/end are new here :) */
         case SDLK_HOME:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 menu->selected_item = 0;
                 break;
         case SDLK_END:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 menu->selected_item = menu->num_items - 1;
                 break;
         case SDLK_RETURN:
-		if (!k->state) {
-			menu->active_item = menu->selected_item;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
+                if (!k->state) {
+                        menu->active_item = menu->selected_item;
+                        status.flags |= NEED_UPDATE;
+                        return 1;
+                }
                 menu->selected_cb();
                 return 1;
         default:
@@ -524,6 +524,6 @@ int menu_handle_key(struct key_event *k)
         }
 
         status.flags |= NEED_UPDATE;
-	
-	return 1;
+
+        return 1;
 }

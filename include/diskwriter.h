@@ -30,60 +30,60 @@ extern "C" {
 
 typedef struct diskwriter_driver diskwriter_driver_t;
 struct diskwriter_driver {
-	const char *name; /* this REALLY needs to be short (3 characters) */
-	const char *extension; /* no dot */
-	int export_only;
+        const char *name; /* this REALLY needs to be short (3 characters) */
+        const char *extension; /* no dot */
+        int export_only;
 
-	/* supplied by driver
-		p is called before anything else (optional)
+        /* supplied by driver
+                p is called before anything else (optional)
 
-		m does some mutation/work
-		g receives midi events
+                m does some mutation/work
+                g receives midi events
 
-		x is called at the end (optional)
+                x is called at the end (optional)
 
-		these functions definitely need better names /storlek
-	*/
-	void (*p)(diskwriter_driver_t *x);
-	void (*m)(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len);
-	void (*g)(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len, unsigned int delay);
-	void (*x)(diskwriter_driver_t *x);
+                these functions definitely need better names /storlek
+        */
+        void (*p)(diskwriter_driver_t *x);
+        void (*m)(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len);
+        void (*g)(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len, unsigned int delay);
+        void (*x)(diskwriter_driver_t *x);
 
-	/* supplied by diskwriter (write function) */
-	void (*o)(diskwriter_driver_t *x, const unsigned char *buf,
-							unsigned int len);
-	void (*l)(diskwriter_driver_t *x, off_t pos);
-	/* error condition */
-	void (*e)(diskwriter_driver_t *x); 
+        /* supplied by diskwriter (write function) */
+        void (*o)(diskwriter_driver_t *x, const unsigned char *buf,
+                                                        unsigned int len);
+        void (*l)(diskwriter_driver_t *x, off_t pos);
+        /* error condition */
+        void (*e)(diskwriter_driver_t *x);
 
-	/* supplied by driver
-		if "s" is supplied, schism will call it and expect IT
-		to call diskwriter_start(0,0) again when its actually ready.
+        /* supplied by driver
+                if "s" is supplied, schism will call it and expect IT
+                to call diskwriter_start(0,0) again when its actually ready.
 
-		this routine is supplied to allow drivers to write dialogs for
-		accepting some configuration
-	*/
-	void (*s)(diskwriter_driver_t *x);
+                this routine is supplied to allow drivers to write dialogs for
+                accepting some configuration
+        */
+        void (*s)(diskwriter_driver_t *x);
 
-	/* untouched by diskwriter; driver may use for anything */
-	void *userdata;
+        /* untouched by diskwriter; driver may use for anything */
+        void *userdata;
 
-	/* sound config */
-	unsigned int rate, bits, channels;
-	int output_le;
+        /* sound config */
+        unsigned int rate, bits, channels;
+        int output_le;
 
-	/* used by readers, etc */
-	off_t pos;
+        /* used by readers, etc */
+        off_t pos;
 };
 
 enum {
-	DW_OK = 1,
-	DW_ERROR = 0,
-	DW_NOT_RUNNING = -1,
+        DW_OK = 1,
+        DW_ERROR = 0,
+        DW_NOT_RUNNING = -1,
 
-	DW_SYNC_DONE = 0,
-	DW_SYNC_ERROR = -1,
-	DW_SYNC_MORE = 1,
+        DW_SYNC_DONE = 0,
+        DW_SYNC_ERROR = -1,
+        DW_SYNC_MORE = 1,
 };
 
 /* starts up the diskwriter.
@@ -104,8 +104,8 @@ return: DW_SYNC_*, self explanatory */
 int diskwriter_sync(void);
 
 /* Terminate the diskwriter.
-	If called BEFORE diskwriter_sync() returns DW_OK, this will delete any
-	temporary files created; otherwise, it will commit them.
+        If called BEFORE diskwriter_sync() returns DW_OK, this will delete any
+        temporary files created; otherwise, it will commit them.
 return: DW_OK or DW_ERROR */
 int diskwriter_finish(void);
 
@@ -115,7 +115,7 @@ extern diskwriter_driver_t *diskwriter_drivers[];
 
 /* this call is used by audio/loadsave to send midi data */
 int _diskwriter_writemidi(const unsigned char *data, unsigned int len,
-						unsigned int delay);
+                                                unsigned int delay);
 
 /* these are used inbetween diskwriter interfaces */
 void diskwriter_dialog_progress(unsigned int perc);
@@ -123,7 +123,7 @@ void diskwriter_dialog_finished(void);
 
 
 extern unsigned int diskwriter_output_rate, diskwriter_output_bits,
-			diskwriter_output_channels;
+                        diskwriter_output_channels;
 
 
 extern diskwriter_driver_t wavewriter;

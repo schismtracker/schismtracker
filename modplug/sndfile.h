@@ -100,7 +100,7 @@
 #define CHN_ADLIB               0x20000000 /* OPL mode */
 
 #define CHN_SAMPLE_FLAGS (CHN_16BIT | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP \
-	| CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO | CHN_PINGPONGFLAG | CHN_ADLIB)
+        | CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO | CHN_PINGPONGFLAG | CHN_ADLIB)
 
 
 #define ENV_VOLUME              0x0001
@@ -265,11 +265,11 @@
 #define SNDMIX_NORAMPING        0x800000
 
 enum {
-	SRCMODE_NEAREST,
-	SRCMODE_LINEAR,
-	SRCMODE_SPLINE,
-	SRCMODE_POLYPHASE,
-	NUM_SRC_MODES
+        SRCMODE_NEAREST,
+        SRCMODE_LINEAR,
+        SRCMODE_SPLINE,
+        SRCMODE_POLYPHASE,
+        NUM_SRC_MODES
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -359,175 +359,175 @@ enum {
 // Sample Struct
 typedef struct _SONGSAMPLE
 {
-	uint32_t nLength,nLoopStart,nLoopEnd;
-	uint32_t nSustainStart, nSustainEnd;
-	signed char *pSample;
-	uint32_t nC5Speed;
-	uint32_t nPan;
-	uint32_t nVolume;
-	uint32_t nGlobalVol;
-	uint32_t uFlags;
-	uint32_t nVibType; // = type
-	uint32_t nVibSweep; // = rate
-	uint32_t nVibDepth; // = depth
-	uint32_t nVibRate; // = speed
-	char name[32];
-	char filename[22];
-	int played; // for note playback dots
+        uint32_t nLength,nLoopStart,nLoopEnd;
+        uint32_t nSustainStart, nSustainEnd;
+        signed char *pSample;
+        uint32_t nC5Speed;
+        uint32_t nPan;
+        uint32_t nVolume;
+        uint32_t nGlobalVol;
+        uint32_t uFlags;
+        uint32_t nVibType; // = type
+        uint32_t nVibSweep; // = rate
+        uint32_t nVibDepth; // = depth
+        uint32_t nVibRate; // = speed
+        char name[32];
+        char filename[22];
+        int played; // for note playback dots
 
-	// This must be 12-bytes to work around a bug in some gcc4.2s
-	unsigned char AdlibBytes[12];
+        // This must be 12-bytes to work around a bug in some gcc4.2s
+        unsigned char AdlibBytes[12];
 } SONGSAMPLE;
 
 typedef struct _INSTRUMENTENVELOPE {
-	int Ticks[32];
-	uint8_t Values[32];
-	int nNodes;
-	int nLoopStart;
-	int nLoopEnd;
-	int nSustainStart;
-	int nSustainEnd;
+        int Ticks[32];
+        uint8_t Values[32];
+        int nNodes;
+        int nLoopStart;
+        int nLoopEnd;
+        int nSustainStart;
+        int nSustainEnd;
 } INSTRUMENTENVELOPE;
 
 
 // Instrument Struct
 typedef struct _SONGINSTRUMENT
 {
-	uint32_t nFadeOut;
-	uint32_t dwFlags;
-	unsigned int nGlobalVol;
-	unsigned int nPan;
-	unsigned int Keyboard[128];
-	unsigned int NoteMap[128];
-	INSTRUMENTENVELOPE VolEnv;
-	INSTRUMENTENVELOPE PanEnv;
-	INSTRUMENTENVELOPE PitchEnv;
-	unsigned int nNNA;
-	unsigned int nDCT;
-	unsigned int nDCA;
-	unsigned int nPanSwing;
-	unsigned int nVolSwing;
-	unsigned int nIFC;
-	unsigned int nIFR;
-	unsigned int wMidiBank;
-	unsigned int nMidiProgram;
-	unsigned int nMidiChannelMask;
-	unsigned int nMidiDrumKey;
-	int nPPS;
-	unsigned int nPPC;
-	char name[32];
-	char filename[16];
-	int played; // for note playback dots
+        uint32_t nFadeOut;
+        uint32_t dwFlags;
+        unsigned int nGlobalVol;
+        unsigned int nPan;
+        unsigned int Keyboard[128];
+        unsigned int NoteMap[128];
+        INSTRUMENTENVELOPE VolEnv;
+        INSTRUMENTENVELOPE PanEnv;
+        INSTRUMENTENVELOPE PitchEnv;
+        unsigned int nNNA;
+        unsigned int nDCT;
+        unsigned int nDCA;
+        unsigned int nPanSwing;
+        unsigned int nVolSwing;
+        unsigned int nIFC;
+        unsigned int nIFR;
+        unsigned int wMidiBank;
+        unsigned int nMidiProgram;
+        unsigned int nMidiChannelMask;
+        unsigned int nMidiDrumKey;
+        int nPPS;
+        unsigned int nPPC;
+        char name[32];
+        char filename[16];
+        int played; // for note playback dots
 } SONGINSTRUMENT;
 
 
 // Channel Struct
 typedef struct _SONGVOICE
 {
-	// First 32-bytes: Most used mixing information: don't change it
-	signed char * pCurrentSample;
-	uint32_t nPos;
-	uint32_t nPosLo;   // actually 16-bit
-	unsigned int topnote_offset;
-	int32_t nInc;              // 16.16
-	int32_t nRightVol;
-	int32_t nLeftVol;
-	int32_t nRightRamp;
-	int32_t nLeftRamp;
-	// 2nd cache line
-	uint32_t nLength;
-	uint32_t dwFlags;
-	uint32_t nLoopStart;
-	uint32_t nLoopEnd;
-	int32_t nRampRightVol;
-	int32_t nRampLeftVol;
-	int32_t strike; // decremented to zero
+        // First 32-bytes: Most used mixing information: don't change it
+        signed char * pCurrentSample;
+        uint32_t nPos;
+        uint32_t nPosLo;   // actually 16-bit
+        unsigned int topnote_offset;
+        int32_t nInc;              // 16.16
+        int32_t nRightVol;
+        int32_t nLeftVol;
+        int32_t nRightRamp;
+        int32_t nLeftRamp;
+        // 2nd cache line
+        uint32_t nLength;
+        uint32_t dwFlags;
+        uint32_t nLoopStart;
+        uint32_t nLoopEnd;
+        int32_t nRampRightVol;
+        int32_t nRampLeftVol;
+        int32_t strike; // decremented to zero
 
-	double nFilter_Y1, nFilter_Y2, nFilter_Y3, nFilter_Y4;
-	double nFilter_A0, nFilter_B0, nFilter_B1;
+        double nFilter_Y1, nFilter_Y2, nFilter_Y3, nFilter_Y4;
+        double nFilter_A0, nFilter_B0, nFilter_B1;
 
-	int32_t nROfs, nLOfs;
-	int32_t nRampLength;
-	// Information not used in the mixer
-	signed char * pSample;
-	int32_t nNewRightVol, nNewLeftVol;
-	int32_t nRealVolume, nRealPan;
-	int32_t nVolume, nPan, nFadeOutVol;
-	int32_t nPeriod, nC5Speed, sample_freq, nPortamentoDest;
-	SONGINSTRUMENT *pHeader;
-	SONGSAMPLE *pInstrument;
-	int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
-	uint32_t nMasterChn, nVUMeter;
-	int32_t nGlobalVol, nInsVol;
-	int32_t nPortamentoSlide, nAutoVibDepth;
-	uint32_t nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
-	// 16-bit members
-	int nVolSwing, nPanSwing;
+        int32_t nROfs, nLOfs;
+        int32_t nRampLength;
+        // Information not used in the mixer
+        signed char * pSample;
+        int32_t nNewRightVol, nNewLeftVol;
+        int32_t nRealVolume, nRealPan;
+        int32_t nVolume, nPan, nFadeOutVol;
+        int32_t nPeriod, nC5Speed, sample_freq, nPortamentoDest;
+        SONGINSTRUMENT *pHeader;
+        SONGSAMPLE *pInstrument;
+        int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
+        uint32_t nMasterChn, nVUMeter;
+        int32_t nGlobalVol, nInsVol;
+        int32_t nPortamentoSlide, nAutoVibDepth;
+        uint32_t nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
+        // 16-bit members
+        int nVolSwing, nPanSwing;
 
-	// formally 8-bit members
-	unsigned int nNote, nNNA;
-	unsigned int nNewNote, nNewIns, nCommand, nArpeggio;
-	unsigned int nOldVolumeSlide, nOldFineVolUpDown;
-	unsigned int nOldGlbVolSlide;
-	unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
-	unsigned int nOldPanSlide, nOldChnVolSlide;
-	unsigned int nNoteSlideCounter, nNoteSlideSpeed, nNoteSlideStep;
-	unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
-	unsigned int nTremoloType, nTremoloSpeed, nTremoloDepth;
-	unsigned int nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
-	unsigned int nOldCmdEx, nOldVolParam, nOldTempo;
-	unsigned int nOldOffset, nOldHiOffset;
-	unsigned int nCutOff, nResonance;
-	int nNoteDelay, nNoteCut;
-	int nRetrigCount;
-	unsigned int nRetrigParam;
-	unsigned int nTremorParam, nTremorCount;
-	unsigned int nPatternLoop, nPatternLoopCount;
-	unsigned int nRowNote, nRowInstr;
-	unsigned int nRowVolCmd, nRowVolume;
-	unsigned int nRowCommand, nRowParam;
-	unsigned int nActiveMacro, nLastInstr;
+        // formally 8-bit members
+        unsigned int nNote, nNNA;
+        unsigned int nNewNote, nNewIns, nCommand, nArpeggio;
+        unsigned int nOldVolumeSlide, nOldFineVolUpDown;
+        unsigned int nOldGlbVolSlide;
+        unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
+        unsigned int nOldPanSlide, nOldChnVolSlide;
+        unsigned int nNoteSlideCounter, nNoteSlideSpeed, nNoteSlideStep;
+        unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
+        unsigned int nTremoloType, nTremoloSpeed, nTremoloDepth;
+        unsigned int nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
+        unsigned int nOldCmdEx, nOldVolParam, nOldTempo;
+        unsigned int nOldOffset, nOldHiOffset;
+        unsigned int nCutOff, nResonance;
+        int nNoteDelay, nNoteCut;
+        int nRetrigCount;
+        unsigned int nRetrigParam;
+        unsigned int nTremorParam, nTremorCount;
+        unsigned int nPatternLoop, nPatternLoopCount;
+        unsigned int nRowNote, nRowInstr;
+        unsigned int nRowVolCmd, nRowVolume;
+        unsigned int nRowCommand, nRowParam;
+        unsigned int nActiveMacro, nLastInstr;
 } SONGVOICE;
 
 
 typedef struct _MODCHANNELSETTINGS
 {
-	uint32_t nPan;
-	uint32_t nVolume;
-	uint32_t dwFlags;
+        uint32_t nPan;
+        uint32_t nVolume;
+        uint32_t dwFlags;
 } MODCHANNELSETTINGS;
 
 
 typedef struct _MODCOMMAND
 {
-	uint8_t note;
-	uint8_t instr;
-	uint8_t volcmd;
-	uint8_t command;
-	uint8_t vol;
-	uint8_t param;
+        uint8_t note;
+        uint8_t instr;
+        uint8_t volcmd;
+        uint8_t command;
+        uint8_t vol;
+        uint8_t param;
 } MODCOMMAND, *LPMODCOMMAND;
 
 ////////////////////////////////////////////////////////////////////
 
 enum {
-	MIDIOUT_START=0,
-	MIDIOUT_STOP,
-	MIDIOUT_TICK,
-	MIDIOUT_NOTEON,
-	MIDIOUT_NOTEOFF,
-	MIDIOUT_VOLUME,
-	MIDIOUT_PAN,
-	MIDIOUT_BANKSEL,
-	MIDIOUT_PROGRAM,
+        MIDIOUT_START=0,
+        MIDIOUT_STOP,
+        MIDIOUT_TICK,
+        MIDIOUT_NOTEON,
+        MIDIOUT_NOTEOFF,
+        MIDIOUT_VOLUME,
+        MIDIOUT_PAN,
+        MIDIOUT_BANKSEL,
+        MIDIOUT_PROGRAM,
 };
 
 
 typedef struct MODMIDICFG
 {
-	char szMidiGlb[9*32];
-	char szMidiSFXExt[16*32];
-	char szMidiZXXExt[128*32];
+        char szMidiGlb[9*32];
+        char szMidiSFXExt[16*32];
+        char szMidiZXXExt[128*32];
 } MODMIDICFG, *LPMODMIDICFG;
 
 extern MODMIDICFG default_midi_cfg;
@@ -541,70 +541,70 @@ extern uint32_t gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
 extern uint32_t gnVULeft, gnVURight;
 
 typedef struct _CSoundFile {
-	SONGVOICE Voices[MAX_VOICES];                                   // Channels
-	uint32_t VoiceMix[MAX_VOICES];                                              // Channels to be mixed
-	SONGSAMPLE Samples[MAX_SAMPLES+1];                                 // Samples (1-based!)
-	SONGINSTRUMENT *Instruments[MAX_INSTRUMENTS+1];             // Instruments (1-based!)
-	MODCHANNELSETTINGS Channels[MAX_CHANNELS]; // Channels settings
-	MODCOMMAND *Patterns[MAX_PATTERNS];                             // Patterns
-	uint16_t PatternSize[MAX_PATTERNS];                                 // Patterns Lengths
-	uint16_t PatternAllocSize[MAX_PATTERNS];                            // Allocated pattern lengths (for async. resizing/playback)
-	uint8_t Orderlist[MAX_ORDERS];                                                 // Pattern Orders
-	MODMIDICFG m_MidiCfg;                                                   // Midi macro config table
-	uint32_t m_nDefaultSpeed, m_nDefaultTempo, m_nDefaultGlobalVolume;
-	uint32_t m_dwSongFlags;                                                    // Song flags SONG_XXXX
-	uint32_t m_nStereoSeparation;
-	uint32_t m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
-	uint32_t m_nType, m_nSamples, m_nInstruments;
-	uint32_t m_nTickCount;
-	int32_t m_nRowCount; /* IMPORTANT needs to be signed */
-	uint32_t m_nMusicSpeed, m_nMusicTempo;
-	uint32_t m_nProcessRow, m_nRow, m_nBreakRow;
-	uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nProcessOrder,m_nLockedOrder;
-	uint32_t m_nGlobalVolume, m_nSongPreAmp;
-	uint32_t m_nFreqFactor, m_nTempoFactor;
-	int32_t m_nRepeatCount, m_nInitialRepeatCount;
-	uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
-	char m_lpszSongComments[MAX_MESSAGE + 1];
-	char song_title[32];
-	char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
+        SONGVOICE Voices[MAX_VOICES];                                   // Channels
+        uint32_t VoiceMix[MAX_VOICES];                                              // Channels to be mixed
+        SONGSAMPLE Samples[MAX_SAMPLES+1];                                 // Samples (1-based!)
+        SONGINSTRUMENT *Instruments[MAX_INSTRUMENTS+1];             // Instruments (1-based!)
+        MODCHANNELSETTINGS Channels[MAX_CHANNELS]; // Channels settings
+        MODCOMMAND *Patterns[MAX_PATTERNS];                             // Patterns
+        uint16_t PatternSize[MAX_PATTERNS];                                 // Patterns Lengths
+        uint16_t PatternAllocSize[MAX_PATTERNS];                            // Allocated pattern lengths (for async. resizing/playback)
+        uint8_t Orderlist[MAX_ORDERS];                                                 // Pattern Orders
+        MODMIDICFG m_MidiCfg;                                                   // Midi macro config table
+        uint32_t m_nDefaultSpeed, m_nDefaultTempo, m_nDefaultGlobalVolume;
+        uint32_t m_dwSongFlags;                                                    // Song flags SONG_XXXX
+        uint32_t m_nStereoSeparation;
+        uint32_t m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
+        uint32_t m_nType, m_nSamples, m_nInstruments;
+        uint32_t m_nTickCount;
+        int32_t m_nRowCount; /* IMPORTANT needs to be signed */
+        uint32_t m_nMusicSpeed, m_nMusicTempo;
+        uint32_t m_nProcessRow, m_nRow, m_nBreakRow;
+        uint32_t m_nCurrentPattern,m_nCurrentOrder,m_nProcessOrder,m_nLockedOrder;
+        uint32_t m_nGlobalVolume, m_nSongPreAmp;
+        uint32_t m_nFreqFactor, m_nTempoFactor;
+        int32_t m_nRepeatCount, m_nInitialRepeatCount;
+        uint8_t m_rowHighlightMajor, m_rowHighlightMinor;
+        char m_lpszSongComments[MAX_MESSAGE + 1];
+        char song_title[32];
+        char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
 
-	// chaseback
-	int stop_at_order;
-	int stop_at_row;
-	unsigned int stop_at_time;
+        // chaseback
+        int stop_at_order;
+        int stop_at_row;
+        unsigned int stop_at_time;
 
 #ifdef __cplusplus
 public:
-	bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
-	// Module Loaders
-	bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadS3M(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadMod(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadMed(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadSTM(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadIT(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool Read669(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadUlt(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadFAR(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadMDL(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadOKT(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadDMF(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadPTM(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadDBM(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadUMX(const uint8_t * lpStream, uint32_t dwMemLength);
-	bool ReadMID(const uint8_t * lpStream, uint32_t dwMemLength);
-	// Save Functions
-	bool SaveXM(diskwriter_driver_t *f, uint32_t);
-	bool SaveS3M(diskwriter_driver_t *f, uint32_t);
-	bool SaveMod(diskwriter_driver_t *f, uint32_t);
+        bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
+        // Module Loaders
+        bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadS3M(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadMod(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadMed(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadSTM(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadIT(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool Read669(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadUlt(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadFAR(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadMDL(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadOKT(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadDMF(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadPTM(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadDBM(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadUMX(const uint8_t * lpStream, uint32_t dwMemLength);
+        bool ReadMID(const uint8_t * lpStream, uint32_t dwMemLength);
+        // Save Functions
+        bool SaveXM(diskwriter_driver_t *f, uint32_t);
+        bool SaveS3M(diskwriter_driver_t *f, uint32_t);
+        bool SaveMod(diskwriter_driver_t *f, uint32_t);
 #endif /* C++ */
 } CSoundFile;
 
@@ -673,7 +673,7 @@ void fx_note_cut(CSoundFile *csf, uint32_t nChn);
 void fx_key_off(CSoundFile *csf, uint32_t nChn);
 void csf_midi_send(CSoundFile *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
 void csf_process_midi_macro(CSoundFile *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
-			uint32_t note, uint32_t velocity, uint32_t use_instr);
+                        uint32_t note, uint32_t velocity, uint32_t use_instr);
 SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *ins, uint32_t note, SONGSAMPLE *def);
 
 // sndfile
@@ -722,14 +722,14 @@ void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, ui
 // Return (a*b)/c - no divide error
 static inline int _muldiv(int a, int b, int c)
 {
-	return ((unsigned long long) a * (unsigned long long) b ) / c;
+        return ((unsigned long long) a * (unsigned long long) b ) / c;
 }
 
 
 // Return (a*b+c/2)/c - no divide error
 static inline int _muldivr(int a, int b, int c)
 {
-	return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
+        return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
 }
 
 

@@ -34,8 +34,8 @@ int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         /* "Bart just said I-M-P! He's made of pee!" */
         if (length > 30 && memcmp(data, "IMPM", 4) == 0) {
                 mmcmp = false;
-		/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
-		it's probably not compressed, irrespective of what the CMWT says. */
+                /* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
+                it's probably not compressed, irrespective of what the CMWT says. */
                 if (data[42] >= 0x14)
                         file->description = "Compressed Impulse Tracker";
                 else

@@ -37,7 +37,7 @@ static struct widget widgets_help[2];
 /* newline_pointers[0] = top of text
  * newline_pointers[1] = second line
  * etc.
- * 
+ *
  * Each line is terminated by chr 13, chr 10, or chr 0... yeah, maybe I
  * could've done this a smarter way and have every line end with chr 0
  * or something, but it'd be harder to deal with in other places, like
@@ -57,13 +57,13 @@ static void help_draw_const(void)
 {
         draw_box(1, 12, 78, 45, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	if (status.dialog_type == DIALOG_NONE) change_focus_to(1);
+        if (status.dialog_type == DIALOG_NONE) change_focus_to(1);
 }
 
 static void help_redraw(void)
 {
         int n, pos, x;
-	int lp;
+        int lp;
         const char **ptr;
 
         draw_fill_chars(2, 13, 77, 44, 0);
@@ -71,24 +71,24 @@ static void help_redraw(void)
         ptr = newline_pointers + top_line;
         for (pos = 13, n = top_line; pos < 45; pos++, n++) {
                 switch (**ptr) {
-		case ':':	/* schism-only (drawn the same) */
-		case ';':
-                case '|':	/* normal line */
-		case '!':	/* classic mode only */
-			lp = strcspn(*ptr+1, "\015\012");
-			if (lp > 76) lp = 76;
-			if (**ptr == ';') {
-	                        draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
-			} else {
-	                        draw_text_len(*ptr + 1, lp, 2, pos, 6, 0);
-			}
+                case ':':       /* schism-only (drawn the same) */
+                case ';':
+                case '|':       /* normal line */
+                case '!':       /* classic mode only */
+                        lp = strcspn(*ptr+1, "\015\012");
+                        if (lp > 76) lp = 76;
+                        if (**ptr == ';') {
+                                draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
+                        } else {
+                                draw_text_len(*ptr + 1, lp, 2, pos, 6, 0);
+                        }
                         break;
                 case '#':      /* hidden line */
-			lp = strcspn(*ptr+1, "\015\012");
-			if (lp > 76) lp = 76;
+                        lp = strcspn(*ptr+1, "\015\012");
+                        if (lp > 76) lp = 76;
                         draw_text_len(*ptr + 1,
-					lp, 2,
-					pos, 7, 0);
+                                        lp, 2,
+                                        pos, 7, 0);
                         break;
                 case '%':      /* separator line */
                         for (x = 2; x < 78; x++)
@@ -105,63 +105,63 @@ static void help_redraw(void)
 /* --------------------------------------------------------------------- */
 static void _help_close(void)
 {
-	set_page(status.previous_page);
+        set_page(status.previous_page);
 }
 static int help_handle_key(struct key_event * k)
 {
         int new_line = top_line;
 
-	if (status.dialog_type != DIALOG_NONE) return 0;
+        if (status.dialog_type != DIALOG_NONE) return 0;
 
-	if (k->mouse == 2) {
-		new_line--;
-	} else if (k->mouse == 3) {
-		new_line++;
+        if (k->mouse == 2) {
+                new_line--;
+        } else if (k->mouse == 3) {
+                new_line++;
 
-	} else if (k->mouse) {
-		return 0;
-	}
+        } else if (k->mouse) {
+                return 0;
+        }
         switch (k->sym) {
         case SDLK_ESCAPE:
-		if (!k->state) return 1;
+                if (!k->state) return 1;
                 set_page(status.previous_page);
                 return 1;
         case SDLK_UP:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 new_line--;
                 break;
         case SDLK_DOWN:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 new_line++;
                 break;
         case SDLK_PAGEUP:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 new_line -= 32;
                 break;
         case SDLK_PAGEDOWN:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 new_line += 32;
                 break;
         case SDLK_HOME:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 new_line = 0;
                 break;
         case SDLK_END:
-		if (k->state) return 1;
+                if (k->state) return 1;
                 new_line = num_lines - 32;
                 break;
         default:
-		if (k->mouse) {
-			if (k->state) return 1;
-		} else {
-			return 0;
-		}
+                if (k->mouse) {
+                        if (k->state) return 1;
+                } else {
+                        return 0;
+                }
         }
 
         new_line = CLAMP(new_line, 0, num_lines - 32);
         if (new_line != top_line) {
                 top_line = new_line;
-        	help_text_lastpos[status.current_help_index] = top_line;
+                help_text_lastpos[status.current_help_index] = top_line;
                 status.flags |= NEED_UPDATE;
         }
 
@@ -177,7 +177,7 @@ static void help_set_page(void)
         int local_lines = 0, global_lines = 0, cur_line = 0;
         int have_local_help = (status.current_help_index != HELP_GLOBAL);
 
-	change_focus_to(1);
+        change_focus_to(1);
         top_line = help_text_lastpos[status.current_help_index];
 
         /* how many lines? */
@@ -199,14 +199,14 @@ static void help_set_page(void)
         if (have_local_help) {
                 ptr = help_text_pointers[status.current_help_index];
                 while (local_lines--) {
-			if (status.flags & CLASSIC_MODE) {
-				if (ptr[0] != ';' && ptr[0] != ':' && ptr[0] != '#')
-					newline_pointers[cur_line++] = ptr;
-			} else {
-				if (ptr[0] != '!')
-					newline_pointers[cur_line++] = ptr;
-			}
-			ptr = strpbrk(ptr, "\015\012");
+                        if (status.flags & CLASSIC_MODE) {
+                                if (ptr[0] != ';' && ptr[0] != ':' && ptr[0] != '#')
+                                        newline_pointers[cur_line++] = ptr;
+                        } else {
+                                if (ptr[0] != '!')
+                                        newline_pointers[cur_line++] = ptr;
+                        }
+                        ptr = strpbrk(ptr, "\015\012");
                         if (ptr[0] == 13 && ptr[1] == 10)
                                 ptr += 2;
                         else
@@ -224,13 +224,13 @@ static void help_set_page(void)
         /* global help text */
         ptr = help_text_pointers[HELP_GLOBAL];
         while (global_lines--) {
-		if (status.flags & CLASSIC_MODE) {
-			if (ptr[0] != ';' && ptr[0] != ':' && ptr[0] != '#')
-				newline_pointers[cur_line++] = ptr;
-		} else {
-			if (ptr[0] != '!')
-				newline_pointers[cur_line++] = ptr;
-		}
+                if (status.flags & CLASSIC_MODE) {
+                        if (ptr[0] != ';' && ptr[0] != ':' && ptr[0] != '#')
+                                newline_pointers[cur_line++] = ptr;
+                } else {
+                        if (ptr[0] != '!')
+                                newline_pointers[cur_line++] = ptr;
+                }
                 ptr = strpbrk(ptr, "\015\012");
                 if (ptr[0] == 13 && ptr[1] == 10)
                         ptr += 2;
@@ -244,7 +244,7 @@ static void help_set_page(void)
         }
 
         newline_pointers[cur_line] = NULL;
-	num_lines = cur_line;
+        num_lines = cur_line;
 }
 
 /* --------------------------------------------------------------------- */
@@ -256,9 +256,9 @@ void help_load_page(struct page *page)
         page->set_page = help_set_page;
         page->total_widgets = 2;
         page->widgets = widgets_help;
-	page->pre_handle_key = help_handle_key;
+        page->pre_handle_key = help_handle_key;
 
-	create_other(widgets_help + 0, 0, help_handle_key, help_redraw);
-	create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
-			_help_close, "Done", 3);
+        create_other(widgets_help + 0, 0, help_handle_key, help_redraw);
+        create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
+                        _help_close, "Done", 3);
 }

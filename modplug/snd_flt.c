@@ -89,47 +89,47 @@ static const float dmpfac[] = {
 //
 void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq)
 {
-	float fc;
-	float fs = freq;//(float)gdwMixingFreq;
-	float fg, fb0, fb1;
-	float d2, d, e;
-	int cutoff = pChn->nCutOff * 2;
-	int resonance = pChn->nResonance;
+        float fc;
+        float fs = freq;//(float)gdwMixingFreq;
+        float fg, fb0, fb1;
+        float d2, d, e;
+        int cutoff = pChn->nCutOff * 2;
+        int resonance = pChn->nResonance;
 
-	cutoff *= (flt_modifier + 256) / 2;
-	cutoff /= 256;
+        cutoff *= (flt_modifier + 256) / 2;
+        cutoff /= 256;
 
-	if (cutoff > 255)
-		cutoff = 255;
+        if (cutoff > 255)
+                cutoff = 255;
 
-	if (resonance > 255)
-		resonance = 255;
+        if (resonance > 255)
+                resonance = 255;
 
-	fc = (float) filter_cutoff[cutoff];
+        fc = (float) filter_cutoff[cutoff];
 
-	fc *= 3.14159265358979 * 2 / fs;
-	d2 = dmpfac[resonance] / (4*65536.0);
-	d = (1.0 - d2) * fc;
+        fc *= 3.14159265358979 * 2 / fs;
+        d2 = dmpfac[resonance] / (4*65536.0);
+        d = (1.0 - d2) * fc;
 
-	if (d > 2.0)
-		d = 2.0;
+        if (d > 2.0)
+                d = 2.0;
 
-	d = (d2 - d) / fc;
-	e = 1.0 / (fc * fc);
+        d = (d2 - d) / fc;
+        e = 1.0 / (fc * fc);
 
-	fg  = 1.0 / (1 + d + e);
-	fb0 = (d + e + e) / (1 + d + e);
-	fb1 = -e / (1 + d + e);
+        fg  = 1.0 / (1 + d + e);
+        fb0 = (d + e + e) / (1 + d + e);
+        fb1 = -e / (1 + d + e);
 
-	pChn->nFilter_A0 = (double) fg;
-	pChn->nFilter_B0 = (double) fb0;
-	pChn->nFilter_B1 = (double) fb1;
+        pChn->nFilter_A0 = (double) fg;
+        pChn->nFilter_B0 = (double) fb0;
+        pChn->nFilter_B1 = (double) fb1;
 
-	if (reset) {
-		pChn->nFilter_Y1 = pChn->nFilter_Y2 = 0;
-		pChn->nFilter_Y3 = pChn->nFilter_Y4 = 0;
-	}
+        if (reset) {
+                pChn->nFilter_Y1 = pChn->nFilter_Y2 = 0;
+                pChn->nFilter_Y3 = pChn->nFilter_Y4 = 0;
+        }
 
-	pChn->dwFlags |= CHN_FILTER;
+        pChn->dwFlags |= CHN_FILTER;
 }
 

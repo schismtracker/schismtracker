@@ -73,14 +73,14 @@ static int open_mixer_device(void)
 int oss_mixer_get_max_volume(void);
 int oss_mixer_get_max_volume(void)
 {
-	return VOLUME_MAX;
+        return VOLUME_MAX;
 }
 
 void oss_mixer_read_volume(int *left, int *right);
 void oss_mixer_read_volume(int *left, int *right)
 {
         int fd;
-	uint8_t volume[4];
+        uint8_t volume[4];
 
         fd = open_mixer_device();
         if (fd < 0) {
@@ -104,11 +104,11 @@ void oss_mixer_write_volume(int left, int right);
 void oss_mixer_write_volume(int left, int right)
 {
         int fd;
-	uint8_t volume[4];
-	
-	volume[0] = CLAMP(left, 0, VOLUME_MAX);
-	volume[1] = CLAMP(right, 0, VOLUME_MAX);
-	
+        uint8_t volume[4];
+
+        volume[0] = CLAMP(left, 0, VOLUME_MAX);
+        volume[1] = CLAMP(right, 0, VOLUME_MAX);
+
         fd = open_mixer_device();
         if (fd < 0) {
                 perror(device_file);

@@ -31,55 +31,55 @@ struct midi_provider;
 struct midi_port;
 
 struct midi_driver {
-	unsigned int flags;
-#define MIDI_PORT_CAN_SCHEDULE	1
+        unsigned int flags;
+#define MIDI_PORT_CAN_SCHEDULE  1
 
-	void (*poll)(struct midi_provider *m);
-	int (*thread)(struct midi_provider *m);
+        void (*poll)(struct midi_provider *m);
+        int (*thread)(struct midi_provider *m);
 
-	int (*enable)(struct midi_port *d);
-	int (*disable)(struct midi_port *d);
+        int (*enable)(struct midi_port *d);
+        int (*disable)(struct midi_port *d);
 
-	void (*send)(struct midi_port *d,
-			const unsigned char *seq, unsigned int len, unsigned int delay);
-	void (*drain)(struct midi_port *d);
+        void (*send)(struct midi_port *d,
+                        const unsigned char *seq, unsigned int len, unsigned int delay);
+        void (*drain)(struct midi_port *d);
 };
 
 struct midi_provider {
-	char *name;
-	void (*poll)(struct midi_provider *);
-	void *thread; /*actually SDL_Thread* */
+        char *name;
+        void (*poll)(struct midi_provider *);
+        void *thread; /*actually SDL_Thread* */
 
-	struct midi_provider *next;
+        struct midi_provider *next;
 
-	/* forwarded; don't touch */
-	int (*enable)(struct midi_port *d);
-	int (*disable)(struct midi_port *d);
+        /* forwarded; don't touch */
+        int (*enable)(struct midi_port *d);
+        int (*disable)(struct midi_port *d);
 
-	void (*send_now)(struct midi_port *d,
-			const unsigned char *seq, unsigned int len, unsigned int delay);
-	void (*send_later)(struct midi_port *d,
-			const unsigned char *seq, unsigned int len, unsigned int delay);
-	void (*drain)(struct midi_port *d);
+        void (*send_now)(struct midi_port *d,
+                        const unsigned char *seq, unsigned int len, unsigned int delay);
+        void (*send_later)(struct midi_port *d,
+                        const unsigned char *seq, unsigned int len, unsigned int delay);
+        void (*drain)(struct midi_port *d);
 };
 struct midi_port {
-	int io, iocap;
-#define MIDI_INPUT	1
-#define MIDI_OUTPUT	2
-	char *name;
-	int num;
+        int io, iocap;
+#define MIDI_INPUT      1
+#define MIDI_OUTPUT     2
+        char *name;
+        int num;
 
-	void *userdata;
-	int free_userdata;
-	int (*enable)(struct midi_port *d);
-	int (*disable)(struct midi_port *d);
-	void (*send_now)(struct midi_port *d,
-			const unsigned char *seq, unsigned int len, unsigned int delay);
-	void (*send_later)(struct midi_port *d,
-			const unsigned char *seq, unsigned int len, unsigned int delay);
-	void (*drain)(struct midi_port *d);
+        void *userdata;
+        int free_userdata;
+        int (*enable)(struct midi_port *d);
+        int (*disable)(struct midi_port *d);
+        void (*send_now)(struct midi_port *d,
+                        const unsigned char *seq, unsigned int len, unsigned int delay);
+        void (*send_later)(struct midi_port *d,
+                        const unsigned char *seq, unsigned int len, unsigned int delay);
+        void (*drain)(struct midi_port *d);
 
-	struct midi_provider *provider;
+        struct midi_provider *provider;
 };
 
 
@@ -107,7 +107,7 @@ int midi_engine_port_count(void);
 
 /* midi engines register a provider (one each!) */
 struct midi_provider *midi_provider_register(const char *name, struct midi_driver *f);
-		
+
 
 /* midi engines list ports this way */
 int midi_port_register(struct midi_provider *p,
@@ -122,9 +122,9 @@ void midi_port_unregister(int num);
    midi drivers should never all these...
 */
 enum midi_note {
-	MIDI_NOTEOFF,
-	MIDI_NOTEON,
-	MIDI_KEYPRESS,
+        MIDI_NOTEOFF,
+        MIDI_NOTEON,
+        MIDI_KEYPRESS,
 };
 void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity);
 void midi_event_controller(int channel, int param, int value);
@@ -157,16 +157,16 @@ int macosx_midi_setup(void);
 
 
 /* MIDI_PITCH_BEND is defined by OSS -- maybe these need more specific names? */
-#define MIDI_TICK_QUANTIZE	0x00000001
-#define MIDI_BASE_PROGRAM1	0x00000002
-#define MIDI_RECORD_NOTEOFF	0x00000004
-#define MIDI_RECORD_VELOCITY	0x00000008
-#define MIDI_RECORD_AFTERTOUCH	0x00000010
-#define MIDI_CUT_NOTE_OFF	0x00000020
-#define MIDI_PITCHBEND		0x00000040
-#define MIDI_EMBED_DATA		0x00000080
-#define MIDI_RECORD_SDX		0x00000100
-#define MIDI_DISABLE_RECORD	0x00010000
+#define MIDI_TICK_QUANTIZE      0x00000001
+#define MIDI_BASE_PROGRAM1      0x00000002
+#define MIDI_RECORD_NOTEOFF     0x00000004
+#define MIDI_RECORD_VELOCITY    0x00000008
+#define MIDI_RECORD_AFTERTOUCH  0x00000010
+#define MIDI_CUT_NOTE_OFF       0x00000020
+#define MIDI_PITCHBEND          0x00000040
+#define MIDI_EMBED_DATA         0x00000080
+#define MIDI_RECORD_SDX         0x00000100
+#define MIDI_DISABLE_RECORD     0x00010000
 
 extern int midi_flags, midi_pitch_depth, midi_amplification, midi_c5note;
 

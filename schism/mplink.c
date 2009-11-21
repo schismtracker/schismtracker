@@ -39,7 +39,7 @@ CSoundFile *mp = NULL;
 
 const char *song_get_tracker_id(void)
 {
-	return mp->tracker_id;
+        return mp->tracker_id;
 }
 
 char *song_get_title(void)
@@ -55,47 +55,47 @@ char *song_get_message(void)
 // song midi config
 midi_config *song_get_midi_config(void)
 {
-	return (midi_config *) &mp->m_MidiCfg;
+        return (midi_config *) &mp->m_MidiCfg;
 }
 midi_config *song_get_default_midi_config(void)
 {
-	return (midi_config *) &default_midi_cfg;
+        return (midi_config *) &default_midi_cfg;
 }
 
 // returned value is in seconds
 unsigned int song_get_length(void)
 {
-	return csf_get_length(mp);
+        return csf_get_length(mp);
 }
 unsigned int song_get_length_to(int order, int row)
 {
-	unsigned int t;
+        unsigned int t;
 
-	song_lock_audio();
-	mp->stop_at_order = order;
-	mp->stop_at_row = row;
-	t = csf_get_length(mp);
-	mp->stop_at_order = mp->stop_at_row = -1;
-	song_unlock_audio();
-	return t;
+        song_lock_audio();
+        mp->stop_at_order = order;
+        mp->stop_at_row = row;
+        t = csf_get_length(mp);
+        mp->stop_at_order = mp->stop_at_row = -1;
+        song_unlock_audio();
+        return t;
 }
 void song_get_at_time(unsigned int seconds, int *order, int *row)
 {
-	if (!seconds) {
-		if (order) *order = 0;
-		if (row) *row = 0;
-	} else {
-		song_lock_audio();
-		mp->stop_at_order = MAX_ORDERS;
-		mp->stop_at_row = 255; /* unpossible */
-		mp->stop_at_time = seconds;
-		csf_get_length(mp);
-		if (order) *order = mp->stop_at_order;
-		if (row) *row = mp->stop_at_row;
-		mp->stop_at_order = mp->stop_at_row = -1;
-		mp->stop_at_time = 0;
-		song_unlock_audio();
-	}
+        if (!seconds) {
+                if (order) *order = 0;
+                if (row) *row = 0;
+        } else {
+                song_lock_audio();
+                mp->stop_at_order = MAX_ORDERS;
+                mp->stop_at_row = 255; /* unpossible */
+                mp->stop_at_time = seconds;
+                csf_get_length(mp);
+                if (order) *order = mp->stop_at_order;
+                if (row) *row = mp->stop_at_row;
+                mp->stop_at_order = mp->stop_at_row = -1;
+                mp->stop_at_time = 0;
+                song_unlock_audio();
+        }
 }
 
 // ------------------------------------------------------------------------
@@ -103,12 +103,12 @@ void song_get_at_time(unsigned int seconds, int *order, int *row)
 
 signed char *song_sample_allocate(int bytes)
 {
-	return csf_allocate_sample(bytes);
+        return csf_allocate_sample(bytes);
 }
 
 void song_sample_free(signed char *data)
 {
-	csf_free_sample(data);
+        csf_free_sample(data);
 }
 
 // ------------------------------------------------------------------------
@@ -124,11 +124,11 @@ song_sample *song_get_sample(int n, char **name_ptr)
 
 static void _init_envelope(INSTRUMENTENVELOPE *e, int n)
 {
-	e->Ticks[0] = 0;
-	e->Values[0] = n;
-	e->Ticks[1] = 100;
-	e->Values[1] = n;
-	e->nNodes = 2;
+        e->Ticks[0] = 0;
+        e->Values[0] = n;
+        e->Ticks[1] = 100;
+        e->Values[1] = n;
+        e->nNodes = 2;
 }
 
 song_instrument *song_get_instrument(int n, char **name_ptr)
@@ -139,19 +139,19 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
         // Make a new instrument if it doesn't exist.
         if (!mp->Instruments[n]) {
                 mp->Instruments[n] = csf_allocate_instrument();
-		mp->Instruments[n]->nGlobalVol = 128;
-		mp->Instruments[n]->nPan = 128;
+                mp->Instruments[n]->nGlobalVol = 128;
+                mp->Instruments[n]->nPan = 128;
 
-		_init_envelope(&mp->Instruments[n]->VolEnv, 64);
-		_init_envelope(&mp->Instruments[n]->PanEnv, 32);
-		_init_envelope(&mp->Instruments[n]->PitchEnv, 32);
+                _init_envelope(&mp->Instruments[n]->VolEnv, 64);
+                _init_envelope(&mp->Instruments[n]->PanEnv, 32);
+                _init_envelope(&mp->Instruments[n]->PitchEnv, 32);
 
-		int i;
-		for (i = 0; i < 128; i++) {
-			mp->Instruments[n]->NoteMap[i] = i+1;
-		}
+                int i;
+                for (i = 0; i < 128; i++) {
+                        mp->Instruments[n]->NoteMap[i] = i+1;
+                }
         }
-	
+
         if (name_ptr)
                 *name_ptr = mp->Instruments[n]->name;
         return (song_instrument *) mp->Instruments[n];
@@ -160,11 +160,11 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
 // this is a fairly gross way to do what should be such a simple thing
 int song_get_instrument_number(song_instrument *inst)
 {
-	if (inst)
-		for (int n = 1; n < MAX_INSTRUMENTS; n++)
-			if (inst == ((song_instrument *) mp->Instruments[n]))
-				return n;
-	return 0;
+        if (inst)
+                for (int n = 1; n < MAX_INSTRUMENTS; n++)
+                        if (inst == ((song_instrument *) mp->Instruments[n]))
+                                return n;
+        return 0;
 }
 
 song_channel *song_get_channel(int n)
@@ -196,25 +196,25 @@ static int channel_states[64];  // saved ("real") mute settings; nonzero = muted
 
 static inline void _save_state(int channel)
 {
-	channel_states[channel] = mp->Voices[channel].dwFlags & CHN_MUTE;
+        channel_states[channel] = mp->Voices[channel].dwFlags & CHN_MUTE;
 }
 
 void song_save_channel_states(void)
 {
-	int n = 64;
-	
-	while (n-- > 0)
-		_save_state(n);
+        int n = 64;
+
+        while (n-- > 0)
+                _save_state(n);
 }
 static inline void _fix_mutes_like(int chan)
 {
-	int i;
-	for (i = 0; i < MAX_VOICES; i++) {
-		if (i == chan) continue;
-		if (((int)mp->Voices[i].nMasterChn) != (chan+1)) continue;
-		mp->Voices[i].dwFlags = (mp->Voices[i].dwFlags & (~(CHN_MUTE)))
-				| (mp->Voices[chan].dwFlags &   (CHN_MUTE));
-	}
+        int i;
+        for (i = 0; i < MAX_VOICES; i++) {
+                if (i == chan) continue;
+                if (((int)mp->Voices[i].nMasterChn) != (chan+1)) continue;
+                mp->Voices[i].dwFlags = (mp->Voices[i].dwFlags & (~(CHN_MUTE)))
+                                | (mp->Voices[chan].dwFlags &   (CHN_MUTE));
+        }
 }
 
 void song_set_channel_mute(int channel, int muted)
@@ -225,19 +225,19 @@ void song_set_channel_mute(int channel, int muted)
         } else {
                 mp->Channels[channel].dwFlags &= ~CHN_MUTE;
                 mp->Voices[channel].dwFlags &= ~CHN_MUTE;
-		_save_state(channel);
+                _save_state(channel);
         }
-	_fix_mutes_like(channel);
+        _fix_mutes_like(channel);
 }
 
 // I don't think this is useful besides undoing a channel solo (a few lines
 // below), but I'm making it extern anyway for symmetry.
 inline void song_restore_channel_states(void)
 {
-	int n = 64;
-	
-	while (n-- > 0)
-		song_set_channel_mute(n, channel_states[n]);
+        int n = 64;
+
+        while (n-- > 0)
+                song_set_channel_mute(n, channel_states[n]);
 }
 
 void song_toggle_channel_mute(int channel)
@@ -245,33 +245,33 @@ void song_toggle_channel_mute(int channel)
         // i'm just going by the playing channel's state...
         // if the actual channel is muted but not the playing one,
         // tough luck :)
-	song_set_channel_mute(channel, (mp->Voices[channel].dwFlags & CHN_MUTE) == 0);
+        song_set_channel_mute(channel, (mp->Voices[channel].dwFlags & CHN_MUTE) == 0);
 }
 
 static int _soloed(int channel) {
-	int n = 64;
-	// if this channel is muted, it obviously isn't soloed
-	if (mp->Voices[channel].dwFlags & CHN_MUTE)
-		return 0;
-	while (n-- > 0) {
-		if (n == channel)
-			continue;
-		if (!(mp->Voices[n].dwFlags & CHN_MUTE))
-			return 0;
-	}
-	return 1;
+        int n = 64;
+        // if this channel is muted, it obviously isn't soloed
+        if (mp->Voices[channel].dwFlags & CHN_MUTE)
+                return 0;
+        while (n-- > 0) {
+                if (n == channel)
+                        continue;
+                if (!(mp->Voices[n].dwFlags & CHN_MUTE))
+                        return 0;
+        }
+        return 1;
 }
 
 void song_handle_channel_solo(int channel)
 {
-	int n = 64;
-	
-	if (_soloed(channel)) {
-		song_restore_channel_states();
-	} else {
-		while (n-- > 0)
-			song_set_channel_mute(n, n != channel);
-	}
+        int n = 64;
+
+        if (_soloed(channel)) {
+                song_restore_channel_states();
+        } else {
+                while (n-- > 0)
+                        song_set_channel_mute(n, n != channel);
+        }
 }
 
 // returned channel number is ONE-based
@@ -279,10 +279,10 @@ void song_handle_channel_solo(int channel)
 int song_find_last_channel(void)
 {
         int n = 64;
-	
-	while (channel_states[--n])
-		if (n == 0)
-			return 64;
+
+        while (channel_states[--n])
+                if (n == 0)
+                        return 64;
         return n + 1;
 }
 
@@ -299,7 +299,7 @@ int song_get_pattern(int n, song_note ** buf)
                 if (!mp->Patterns[n]) {
                         mp->PatternSize[n] = 64;
                         mp->PatternAllocSize[n] = 64;
-			mp->Patterns[n] = csf_allocate_pattern(mp->PatternSize[n], 64);
+                        mp->Patterns[n] = csf_allocate_pattern(mp->PatternSize[n], 64);
                 }
                 *buf = (song_note *) mp->Patterns[n];
         } else {
@@ -310,37 +310,37 @@ int song_get_pattern(int n, song_note ** buf)
 }
 song_note *song_pattern_allocate(int rows)
 {
-	return (song_note *) csf_allocate_pattern(rows, 64);
+        return (song_note *) csf_allocate_pattern(rows, 64);
 }
 song_note *song_pattern_allocate_copy(int patno, int *rows)
 {
-	int len = mp->PatternSize[patno];
-	MODCOMMAND *olddata = mp->Patterns[patno];
-	MODCOMMAND *newdata = NULL;
-	if (olddata) {
-		newdata = csf_allocate_pattern(len, 64);
-		memcpy(newdata, olddata, len * sizeof(MODCOMMAND) * 64);
-	}
-	if (rows)
-		*rows = len;
-	return (song_note *) newdata;
+        int len = mp->PatternSize[patno];
+        MODCOMMAND *olddata = mp->Patterns[patno];
+        MODCOMMAND *newdata = NULL;
+        if (olddata) {
+                newdata = csf_allocate_pattern(len, 64);
+                memcpy(newdata, olddata, len * sizeof(MODCOMMAND) * 64);
+        }
+        if (rows)
+                *rows = len;
+        return (song_note *) newdata;
 }
 void song_pattern_deallocate(song_note *n)
 {
-	csf_free_pattern((MODCOMMAND *) n);
+        csf_free_pattern((MODCOMMAND *) n);
 }
 void song_pattern_install(int patno, song_note *n, int rows)
 {
-	song_lock_audio();
+        song_lock_audio();
 
-	MODCOMMAND *olddata = mp->Patterns[patno];
-	csf_free_pattern(olddata);
+        MODCOMMAND *olddata = mp->Patterns[patno];
+        csf_free_pattern(olddata);
 
-	mp->Patterns[patno] = (MODCOMMAND*) n;
-	mp->PatternAllocSize[patno] = rows;
-	mp->PatternSize[patno] = rows;
+        mp->Patterns[patno] = (MODCOMMAND*) n;
+        mp->PatternAllocSize[patno] = rows;
+        mp->PatternSize[patno] = rows;
 
-	song_unlock_audio();
+        song_unlock_audio();
 }
 
 
@@ -353,30 +353,30 @@ unsigned char *song_get_orderlist(void)
 
 int song_order_for_pattern(int pat, int locked)
 {
-	int i;
-	if (locked == -1) {
-		if (mp->m_dwSongFlags & SONG_ORDERLOCKED)
-			locked = mp->m_nLockedOrder;
-		else
-			locked = mp->m_nCurrentOrder;
-	} else if (locked == -2) {
-		locked = mp->m_nCurrentOrder;
-	}
+        int i;
+        if (locked == -1) {
+                if (mp->m_dwSongFlags & SONG_ORDERLOCKED)
+                        locked = mp->m_nLockedOrder;
+                else
+                        locked = mp->m_nCurrentOrder;
+        } else if (locked == -2) {
+                locked = mp->m_nCurrentOrder;
+        }
 
-	if (locked < 0) locked = 0;
-	if (locked > 255) locked = 255;
+        if (locked < 0) locked = 0;
+        if (locked > 255) locked = 255;
 
-	for (i = locked; i < 255; i++) {
-		if (mp->Orderlist[i] == pat) {
-			return i;
-		}
-	}
-	for (i = 0; i < locked; i++) {
-		if (mp->Orderlist[i] == pat) {
-			return i;
-		}
-	}
-	return -1;
+        for (i = locked; i < 255; i++) {
+                if (mp->Orderlist[i] == pat) {
+                        return i;
+                }
+        }
+        for (i = 0; i < locked; i++) {
+                if (mp->Orderlist[i] == pat) {
+                        return i;
+                }
+        }
+        return -1;
 }
 
 int song_get_num_orders(void)
@@ -413,29 +413,29 @@ int song_get_rows_in_pattern(int pattern)
 
 void song_pattern_resize(int pattern, int newsize)
 {
-	song_lock_audio();
+        song_lock_audio();
 
-	int oldsize = mp->PatternAllocSize[pattern];
-	status.flags |= SONG_NEEDS_SAVE;
+        int oldsize = mp->PatternAllocSize[pattern];
+        status.flags |= SONG_NEEDS_SAVE;
 
-	song_stop_unlocked(0);
+        song_stop_unlocked(0);
 
-	if (!mp->Patterns[pattern] && newsize != 64) {
-		mp->Patterns[pattern] = csf_allocate_pattern(newsize, 64);
-		mp->PatternAllocSize[pattern] = newsize;
+        if (!mp->Patterns[pattern] && newsize != 64) {
+                mp->Patterns[pattern] = csf_allocate_pattern(newsize, 64);
+                mp->PatternAllocSize[pattern] = newsize;
 
-	} else if (oldsize < newsize) {
-		MODCOMMAND *olddata = mp->Patterns[pattern];
-		MODCOMMAND *newdata = csf_allocate_pattern(newsize, 64);
-		if (olddata) {
-			memcpy(newdata, olddata, 64 * sizeof(MODCOMMAND) * MIN(newsize, oldsize));
-			csf_free_pattern(olddata);
-		}
-		mp->Patterns[pattern] = newdata;
-		mp->PatternAllocSize[pattern] = MAX(newsize,oldsize);
-	}
-	mp->PatternSize[pattern] = newsize;
-	song_unlock_audio();
+        } else if (oldsize < newsize) {
+                MODCOMMAND *olddata = mp->Patterns[pattern];
+                MODCOMMAND *newdata = csf_allocate_pattern(newsize, 64);
+                if (olddata) {
+                        memcpy(newdata, olddata, 64 * sizeof(MODCOMMAND) * MIN(newsize, oldsize));
+                        csf_free_pattern(olddata);
+                }
+                mp->Patterns[pattern] = newdata;
+                mp->PatternAllocSize[pattern] = MAX(newsize,oldsize);
+        }
+        mp->PatternSize[pattern] = newsize;
+        song_unlock_audio();
 }
 
 // ------------------------------------------------------------------------
@@ -487,29 +487,29 @@ int song_get_separation(void)
 
 void song_set_separation(int new_sep)
 {
-	mp->m_nStereoSeparation = CLAMP(new_sep, 0, 128);
+        mp->m_nStereoSeparation = CLAMP(new_sep, 0, 128);
 }
 
 int song_is_stereo(void)
 {
-	if (mp->m_dwSongFlags & SONG_NOSTEREO) return 0;
+        if (mp->m_dwSongFlags & SONG_NOSTEREO) return 0;
         return 1;
 }
 void song_toggle_stereo(void)
 {
-	mp->m_dwSongFlags ^= SONG_NOSTEREO;
+        mp->m_dwSongFlags ^= SONG_NOSTEREO;
 }
 void song_toggle_mono(void)
 {
-	mp->m_dwSongFlags ^= SONG_NOSTEREO;
+        mp->m_dwSongFlags ^= SONG_NOSTEREO;
 }
 void song_set_mono(void)
 {
-	mp->m_dwSongFlags |= SONG_NOSTEREO;
+        mp->m_dwSongFlags |= SONG_NOSTEREO;
 }
 void song_set_stereo(void)
 {
-	mp->m_dwSongFlags &= ~SONG_NOSTEREO;
+        mp->m_dwSongFlags &= ~SONG_NOSTEREO;
 }
 
 int song_has_old_effects(void)
@@ -553,28 +553,28 @@ void song_set_linear_pitch_slides(int value)
 
 int song_is_instrument_mode(void)
 {
-	return !!(mp->m_dwSongFlags & SONG_INSTRUMENTMODE);
+        return !!(mp->m_dwSongFlags & SONG_INSTRUMENTMODE);
 }
 
 void song_set_instrument_mode(int value)
 {
-	int oldvalue = song_is_instrument_mode();
-	int i, j;
-	
-	if (value && !oldvalue) {
-		mp->m_dwSongFlags |= SONG_INSTRUMENTMODE;
-		for (i = 0; i < MAX_INSTRUMENTS; i++) {
-			if (!mp->Instruments[i]) continue;
-			/* fix wiped notes */
-			for (j = 0; j < 128; j++) {
-				if (mp->Instruments[i]->NoteMap[j] < 1
-				|| mp->Instruments[i]->NoteMap[j] > 120)
-					mp->Instruments[i]->NoteMap[j] = j+1;
-			}
-		}
-	} else if (!value && oldvalue) {
-		mp->m_dwSongFlags &= ~SONG_INSTRUMENTMODE;
-	}
+        int oldvalue = song_is_instrument_mode();
+        int i, j;
+
+        if (value && !oldvalue) {
+                mp->m_dwSongFlags |= SONG_INSTRUMENTMODE;
+                for (i = 0; i < MAX_INSTRUMENTS; i++) {
+                        if (!mp->Instruments[i]) continue;
+                        /* fix wiped notes */
+                        for (j = 0; j < 128; j++) {
+                                if (mp->Instruments[i]->NoteMap[j] < 1
+                                || mp->Instruments[i]->NoteMap[j] > 120)
+                                        mp->Instruments[i]->NoteMap[j] = j+1;
+                        }
+                }
+        } else if (!value && oldvalue) {
+                mp->m_dwSongFlags &= ~SONG_INSTRUMENTMODE;
+        }
 }
 
 int song_get_current_instrument(void)
@@ -586,367 +586,367 @@ int song_get_current_instrument(void)
 
 unsigned int song_sample_get_c5speed(int n)
 {
-	song_sample *smp;
-	smp = song_get_sample(n, NULL);
-	if (!smp) return 8363;
-	return smp->speed;
+        song_sample *smp;
+        smp = song_get_sample(n, NULL);
+        if (!smp) return 8363;
+        return smp->speed;
 }
 
 void song_sample_set_c5speed(int n, unsigned int spd)
 {
-	song_sample *smp;
-	smp = song_get_sample(n, NULL);
-	if (smp) smp->speed = spd;
+        song_sample *smp;
+        smp = song_get_sample(n, NULL);
+        if (smp) smp->speed = spd;
 }
 
 void song_exchange_samples(int a, int b)
 {
-	if (a == b)
-		return;
-	
-	song_lock_audio();
-	song_sample tmp;
-	memcpy(&tmp, mp->Samples + a, sizeof(song_sample));
-	memcpy(mp->Samples + a, mp->Samples + b, sizeof(song_sample));
-	memcpy(mp->Samples + b, &tmp, sizeof(song_sample));
-	status.flags |= SONG_NEEDS_SAVE;
-	song_unlock_audio();
+        if (a == b)
+                return;
+
+        song_lock_audio();
+        song_sample tmp;
+        memcpy(&tmp, mp->Samples + a, sizeof(song_sample));
+        memcpy(mp->Samples + a, mp->Samples + b, sizeof(song_sample));
+        memcpy(mp->Samples + b, &tmp, sizeof(song_sample));
+        status.flags |= SONG_NEEDS_SAVE;
+        song_unlock_audio();
 }
 
 void song_copy_instrument(int dst, int src)
 {
-	if (src == dst) return;
+        if (src == dst) return;
 
-	song_lock_audio();
-	song_get_instrument(dst, NULL);
-	song_get_instrument(src, NULL);
-	*(mp->Instruments[dst]) = *(mp->Instruments[src]);
-	status.flags |= SONG_NEEDS_SAVE;
-	song_unlock_audio();
+        song_lock_audio();
+        song_get_instrument(dst, NULL);
+        song_get_instrument(src, NULL);
+        *(mp->Instruments[dst]) = *(mp->Instruments[src]);
+        status.flags |= SONG_NEEDS_SAVE;
+        song_unlock_audio();
 }
 
 void song_exchange_instruments(int a, int b)
 {
-	if (a == b)
-		return;
-	
-	SONGINSTRUMENT *tmp;
-	
-	song_lock_audio();
-	tmp = mp->Instruments[a];
-	mp->Instruments[a] = mp->Instruments[b];
-	mp->Instruments[b] = tmp;
-	status.flags |= SONG_NEEDS_SAVE;
-	song_unlock_audio();
+        if (a == b)
+                return;
+
+        SONGINSTRUMENT *tmp;
+
+        song_lock_audio();
+        tmp = mp->Instruments[a];
+        mp->Instruments[a] = mp->Instruments[b];
+        mp->Instruments[b] = tmp;
+        status.flags |= SONG_NEEDS_SAVE;
+        song_unlock_audio();
 }
 
 // instrument, sample, whatever.
 static void _swap_instruments_in_patterns(int a, int b)
 {
-	for (int pat = 0; pat < MAX_PATTERNS; pat++) {
-		MODCOMMAND *note = mp->Patterns[pat];
-		if (note == NULL)
-			continue;
-		for (int n = 0; n < 64 * mp->PatternSize[pat]; n++, note++) {
-			if (note->instr == a)
-				note->instr = b;
-			else if (note->instr == b)
-				note->instr = a;
-		}
-	}
+        for (int pat = 0; pat < MAX_PATTERNS; pat++) {
+                MODCOMMAND *note = mp->Patterns[pat];
+                if (note == NULL)
+                        continue;
+                for (int n = 0; n < 64 * mp->PatternSize[pat]; n++, note++) {
+                        if (note->instr == a)
+                                note->instr = b;
+                        else if (note->instr == b)
+                                note->instr = a;
+                }
+        }
 }
 
 void song_swap_samples(int a, int b)
 {
-	if (a == b)
-		return;
-	
-	song_lock_audio();
-	if (song_is_instrument_mode()) {
-		// ... or should this be done even in sample mode?
-		for (int n = 1; n < MAX_INSTRUMENTS; n++) {
-			SONGINSTRUMENT *ins = mp->Instruments[n];
-			
-			if (ins == NULL)
-				continue;
-			// sizeof(ins->Keyboard)...
-			for (int s = 0; s < 128; s++) {
-				if (ins->Keyboard[s] == (unsigned int)a)
-					ins->Keyboard[s] = (unsigned int)b;
-				else if (ins->Keyboard[s] == (unsigned int)b)
-					ins->Keyboard[s] = (unsigned int)a;
-			}
-		}
-	} else {
-		_swap_instruments_in_patterns(a, b);
-	}
-	song_unlock_audio();
-	song_exchange_samples(a, b);
+        if (a == b)
+                return;
+
+        song_lock_audio();
+        if (song_is_instrument_mode()) {
+                // ... or should this be done even in sample mode?
+                for (int n = 1; n < MAX_INSTRUMENTS; n++) {
+                        SONGINSTRUMENT *ins = mp->Instruments[n];
+
+                        if (ins == NULL)
+                                continue;
+                        // sizeof(ins->Keyboard)...
+                        for (int s = 0; s < 128; s++) {
+                                if (ins->Keyboard[s] == (unsigned int)a)
+                                        ins->Keyboard[s] = (unsigned int)b;
+                                else if (ins->Keyboard[s] == (unsigned int)b)
+                                        ins->Keyboard[s] = (unsigned int)a;
+                        }
+                }
+        } else {
+                _swap_instruments_in_patterns(a, b);
+        }
+        song_unlock_audio();
+        song_exchange_samples(a, b);
 }
 
 void song_swap_instruments(int a, int b)
 {
-	if (a == b)
-		return;
-	
-	if (song_is_instrument_mode()) {
-		song_lock_audio();
-		_swap_instruments_in_patterns(a, b);
-		song_unlock_audio();
-	}
-	song_exchange_instruments(a, b);
+        if (a == b)
+                return;
+
+        if (song_is_instrument_mode()) {
+                song_lock_audio();
+                _swap_instruments_in_patterns(a, b);
+                song_unlock_audio();
+        }
+        song_exchange_instruments(a, b);
 }
 
 static void _adjust_instruments_in_patterns(int start, int delta)
 {
-	int pat, n;
+        int pat, n;
 
-	for (pat = 0; pat < MAX_PATTERNS; pat++) {
-		MODCOMMAND *note = mp->Patterns[pat];
-		if (note == NULL)
-			continue;
-		for (n = 0; n < 64 * mp->PatternSize[pat]; n++, note++) {
-			if (note->instr >= start)
-				note->instr = CLAMP(note->instr + delta, 0, MAX_SAMPLES - 1);
-		}
-	}
+        for (pat = 0; pat < MAX_PATTERNS; pat++) {
+                MODCOMMAND *note = mp->Patterns[pat];
+                if (note == NULL)
+                        continue;
+                for (n = 0; n < 64 * mp->PatternSize[pat]; n++, note++) {
+                        if (note->instr >= start)
+                                note->instr = CLAMP(note->instr + delta, 0, MAX_SAMPLES - 1);
+                }
+        }
 }
 
 static void _adjust_samples_in_instruments(int start, int delta)
 {
-	int n, s;
+        int n, s;
 
-	for (n = 1; n < MAX_INSTRUMENTS; n++) {
-		SONGINSTRUMENT *ins = mp->Instruments[n];
-		
-		if (ins == NULL)
-			continue;
-		// sizeof...
-		for (s = 0; s < 128; s++) {
-			if (ins->Keyboard[s] >= (unsigned int) start) {
-				ins->Keyboard[s] = (unsigned int) CLAMP(
-					((int) ins->Keyboard[s]) + delta,
-					0, MAX_SAMPLES - 1);
-			}
-		}
-	}
+        for (n = 1; n < MAX_INSTRUMENTS; n++) {
+                SONGINSTRUMENT *ins = mp->Instruments[n];
+
+                if (ins == NULL)
+                        continue;
+                // sizeof...
+                for (s = 0; s < 128; s++) {
+                        if (ins->Keyboard[s] >= (unsigned int) start) {
+                                ins->Keyboard[s] = (unsigned int) CLAMP(
+                                        ((int) ins->Keyboard[s]) + delta,
+                                        0, MAX_SAMPLES - 1);
+                        }
+                }
+        }
 }
 
 int song_first_unused_instrument(void)
 {
-	int ins;
-	for (ins = 1; ins < MAX_INSTRUMENTS; ins++)
-		if (song_instrument_is_empty(ins)) return ins;
-	return 0;
+        int ins;
+        for (ins = 1; ins < MAX_INSTRUMENTS; ins++)
+                if (song_instrument_is_empty(ins)) return ins;
+        return 0;
 }
 
 void song_init_instrument_from_sample(int insn, int samp)
 {
-	if (!song_instrument_is_empty(insn)) return;
-	if (mp->Samples[samp].pSample == NULL) return;
-	song_get_instrument(insn, NULL);
-	SONGINSTRUMENT *ins = mp->Instruments[insn];
-	if (!ins) return; /* eh? */
+        if (!song_instrument_is_empty(insn)) return;
+        if (mp->Samples[samp].pSample == NULL) return;
+        song_get_instrument(insn, NULL);
+        SONGINSTRUMENT *ins = mp->Instruments[insn];
+        if (!ins) return; /* eh? */
 
-	memset(ins, 0, sizeof(SONGINSTRUMENT));
-	ins->nGlobalVol = 128;
-	ins->nPan = 128;
+        memset(ins, 0, sizeof(SONGINSTRUMENT));
+        ins->nGlobalVol = 128;
+        ins->nPan = 128;
 
-	_init_envelope(&ins->VolEnv, 64);
-	_init_envelope(&ins->PanEnv, 32);
-	_init_envelope(&ins->PitchEnv, 32);
+        _init_envelope(&ins->VolEnv, 64);
+        _init_envelope(&ins->PanEnv, 32);
+        _init_envelope(&ins->PitchEnv, 32);
 
-	int i;
-	for (i = 0; i < 128; i++) {
-		ins->Keyboard[i] = samp;
-		ins->NoteMap[i] = i+1;
-	}
+        int i;
+        for (i = 0; i < 128; i++) {
+                ins->Keyboard[i] = samp;
+                ins->NoteMap[i] = i+1;
+        }
 
-	for (i = 0; i < 12; i++)
-		ins->filename[i] = mp->Samples[samp].filename[i];
-	for (i = 0; i < 32; i++)
-		ins->name[i] = mp->Samples[samp].name[i];
+        for (i = 0; i < 12; i++)
+                ins->filename[i] = mp->Samples[samp].filename[i];
+        for (i = 0; i < 32; i++)
+                ins->name[i] = mp->Samples[samp].name[i];
 }
 
 void song_init_instruments(int qq)
 {
-	for (int n = 1; n < MAX_INSTRUMENTS; n++) {
-		if (qq > -1 && qq != n) continue;
-		song_init_instrument_from_sample(n,n);
-	}
+        for (int n = 1; n < MAX_INSTRUMENTS; n++) {
+                if (qq > -1 && qq != n) continue;
+                song_init_instrument_from_sample(n,n);
+        }
 }
 
 void song_insert_sample_slot(int n)
 {
-	if (mp->Samples[SCHISM_MAX_SAMPLES].pSample != NULL)
-		return;
-	
-	status.flags |= SONG_NEEDS_SAVE;
-	song_lock_audio();
-	
-	memmove(mp->Samples + n + 1, mp->Samples + n, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
+        if (mp->Samples[SCHISM_MAX_SAMPLES].pSample != NULL)
+                return;
+
+        status.flags |= SONG_NEEDS_SAVE;
+        song_lock_audio();
+
+        memmove(mp->Samples + n + 1, mp->Samples + n, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
         memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
 
-	if (song_is_instrument_mode())
-		_adjust_samples_in_instruments(n, 1);
-	else
-		_adjust_instruments_in_patterns(n, 1);
-	
-	song_unlock_audio();
+        if (song_is_instrument_mode())
+                _adjust_samples_in_instruments(n, 1);
+        else
+                _adjust_instruments_in_patterns(n, 1);
+
+        song_unlock_audio();
 }
 
 void song_remove_sample_slot(int n)
 {
-	if (mp->Samples[n].pSample != NULL)
-		return;
-	
-	song_lock_audio();
-	
-	status.flags |= SONG_NEEDS_SAVE;
-	memmove(mp->Samples + n, mp->Samples + n + 1, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
+        if (mp->Samples[n].pSample != NULL)
+                return;
+
+        song_lock_audio();
+
+        status.flags |= SONG_NEEDS_SAVE;
+        memmove(mp->Samples + n, mp->Samples + n + 1, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
         memset(mp->Samples + MAX_SAMPLES - 1, 0, sizeof(SONGSAMPLE));
 
-	if (song_is_instrument_mode())
-		_adjust_samples_in_instruments(n, -1);
-	else
-		_adjust_instruments_in_patterns(n, -1);
-	
-	song_unlock_audio();
+        if (song_is_instrument_mode())
+                _adjust_samples_in_instruments(n, -1);
+        else
+                _adjust_instruments_in_patterns(n, -1);
+
+        song_unlock_audio();
 }
 
 void song_insert_instrument_slot(int n)
 {
-	int i;
+        int i;
 
-	if (!song_instrument_is_empty(SCHISM_MAX_INSTRUMENTS))
-		return;
+        if (!song_instrument_is_empty(SCHISM_MAX_INSTRUMENTS))
+                return;
 
-	status.flags |= SONG_NEEDS_SAVE;
-	song_lock_audio();
-	for (i = SCHISM_MAX_INSTRUMENTS; i > n; i--)
-		mp->Instruments[i] = mp->Instruments[i-1];
-	mp->Instruments[n] = NULL;
-	_adjust_instruments_in_patterns(n, 1);
-	song_unlock_audio();
+        status.flags |= SONG_NEEDS_SAVE;
+        song_lock_audio();
+        for (i = SCHISM_MAX_INSTRUMENTS; i > n; i--)
+                mp->Instruments[i] = mp->Instruments[i-1];
+        mp->Instruments[n] = NULL;
+        _adjust_instruments_in_patterns(n, 1);
+        song_unlock_audio();
 }
 
 void song_remove_instrument_slot(int n)
 {
-	int i;
+        int i;
 
-	if (!song_instrument_is_empty(n))
-		return;
+        if (!song_instrument_is_empty(n))
+                return;
 
-	song_lock_audio();
-	for (i = n; i < SCHISM_MAX_INSTRUMENTS; i++)
-		mp->Instruments[i] = mp->Instruments[i+1];
-	mp->Instruments[SCHISM_MAX_INSTRUMENTS] = NULL;
-	_adjust_instruments_in_patterns(n, -1);
-	song_unlock_audio();
+        song_lock_audio();
+        for (i = n; i < SCHISM_MAX_INSTRUMENTS; i++)
+                mp->Instruments[i] = mp->Instruments[i+1];
+        mp->Instruments[SCHISM_MAX_INSTRUMENTS] = NULL;
+        _adjust_instruments_in_patterns(n, -1);
+        song_unlock_audio();
 }
 
 void song_wipe_instrument(int n)
 {
-	/* wee .... */
-	if (song_instrument_is_empty(n))
-		return;
-	if (!mp->Instruments[n])
-		return;
+        /* wee .... */
+        if (song_instrument_is_empty(n))
+                return;
+        if (!mp->Instruments[n])
+                return;
 
-	status.flags |= SONG_NEEDS_SAVE;
-	song_lock_audio();
-	csf_free_instrument(mp->Instruments[n]);
-	mp->Instruments[n] = NULL;
-	song_unlock_audio();
+        status.flags |= SONG_NEEDS_SAVE;
+        song_lock_audio();
+        csf_free_instrument(mp->Instruments[n]);
+        mp->Instruments[n] = NULL;
+        song_unlock_audio();
 }
 
 void song_delete_sample(int n)
 {
-	song_lock_audio();
-	csf_destroy_sample(mp, n);
-	memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
-	song_unlock_audio();
+        song_lock_audio();
+        csf_destroy_sample(mp, n);
+        memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
+        song_unlock_audio();
 }
 
 void song_delete_instrument(int n)
 {
-	unsigned long i;
-	int j;
+        unsigned long i;
+        int j;
 
-	if (!mp->Instruments[n])
-		return;
-	song_lock_audio();
-	for (i = 0; i < 128; i++) {
-		j = mp->Instruments[n]->Keyboard[i];
-		if (j) {
-			csf_destroy_sample(mp, j);
-			memset(mp->Samples + j, 0, sizeof(SONGSAMPLE));
-		}
-	}
-	song_unlock_audio();
-	song_wipe_instrument(n);
+        if (!mp->Instruments[n])
+                return;
+        song_lock_audio();
+        for (i = 0; i < 128; i++) {
+                j = mp->Instruments[n]->Keyboard[i];
+                if (j) {
+                        csf_destroy_sample(mp, j);
+                        memset(mp->Samples + j, 0, sizeof(SONGSAMPLE));
+                }
+        }
+        song_unlock_audio();
+        song_wipe_instrument(n);
 }
 
 unsigned song_copy_sample_raw(int n, unsigned int rs, const void *data, unsigned int samples)
 {
-	return csf_read_sample(mp->Samples+n, rs, data, samples);
+        return csf_read_sample(mp->Samples+n, rs, data, samples);
 }
 
 void song_replace_sample(int num, int with)
 {
-	int i, j;
-	SONGINSTRUMENT *ins;
-	MODCOMMAND *note;
-	
-	if (num < 1 || num > MAX_SAMPLES
-	    || with < 1 || with > MAX_SAMPLES)
-		return;
+        int i, j;
+        SONGINSTRUMENT *ins;
+        MODCOMMAND *note;
 
-	if (song_is_instrument_mode()) {
-		// for each instrument, for each note in the keyboard table, replace 'smp' with 'with'
+        if (num < 1 || num > MAX_SAMPLES
+            || with < 1 || with > MAX_SAMPLES)
+                return;
 
-		for (i = 1; i < MAX_INSTRUMENTS; i++) {
-			ins = mp->Instruments[i];
-			if (!ins)
-				continue;
-			for (j = 0; j < 128; j++) {
-				if ((int) ins->Keyboard[j] == num)
-					ins->Keyboard[j] = with;
-			}
-		}
-	} else {
-		// for each pattern, for each note, replace 'smp' with 'with'
-		for (i = 0; i < MAX_PATTERNS; i++) {
-			note = mp->Patterns[i];
-			if (!note)
-				continue;
-			for (j = 0; j < 64 * mp->PatternSize[i]; j++, note++) {
-				if (note->instr == num)
-					note->instr = with;
-			}
-		}
-	}
+        if (song_is_instrument_mode()) {
+                // for each instrument, for each note in the keyboard table, replace 'smp' with 'with'
+
+                for (i = 1; i < MAX_INSTRUMENTS; i++) {
+                        ins = mp->Instruments[i];
+                        if (!ins)
+                                continue;
+                        for (j = 0; j < 128; j++) {
+                                if ((int) ins->Keyboard[j] == num)
+                                        ins->Keyboard[j] = with;
+                        }
+                }
+        } else {
+                // for each pattern, for each note, replace 'smp' with 'with'
+                for (i = 0; i < MAX_PATTERNS; i++) {
+                        note = mp->Patterns[i];
+                        if (!note)
+                                continue;
+                        for (j = 0; j < 64 * mp->PatternSize[i]; j++, note++) {
+                                if (note->instr == num)
+                                        note->instr = with;
+                        }
+                }
+        }
 }
 
 void song_replace_instrument(int num, int with)
 {
-	int i, j;
-	MODCOMMAND *note;
-	
-	if (num < 1 || num > MAX_INSTRUMENTS
-	    || with < 1 || with > MAX_INSTRUMENTS
-	    || !song_is_instrument_mode())
-		return;
+        int i, j;
+        MODCOMMAND *note;
 
-	// for each pattern, for each note, replace 'ins' with 'with'
-	for (i = 0; i < MAX_PATTERNS; i++) {
-		note = mp->Patterns[i];
-		if (!note)
-			continue;
-		for (j = 0; j < 64 * mp->PatternSize[i]; j++, note++) {
-			if (note->instr == num)
-				note->instr = with;
-		}
-	}
+        if (num < 1 || num > MAX_INSTRUMENTS
+            || with < 1 || with > MAX_INSTRUMENTS
+            || !song_is_instrument_mode())
+                return;
+
+        // for each pattern, for each note, replace 'ins' with 'with'
+        for (i = 0; i < MAX_PATTERNS; i++) {
+                note = mp->Patterns[i];
+                if (!note)
+                        continue;
+                for (j = 0; j < 64 * mp->PatternSize[i]; j++, note++) {
+                        if (note->instr == num)
+                                note->instr = with;
+                }
+        }
 }
 

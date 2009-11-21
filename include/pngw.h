@@ -26,16 +26,16 @@
  * filled out before using the pngw() function.
  */
 struct pngw_arg {
-	int width, height;
+        int width, height;
 
-	int pal_size;
-	/* always in BGR8 format */
-	unsigned int *pal;
+        int pal_size;
+        /* always in BGR8 format */
+        unsigned int *pal;
 
-	void (*output)(struct pngw_arg *o, const void *data, int len);
-	int  (*read_pixel)(struct pngw_arg *o);
+        void (*output)(struct pngw_arg *o, const void *data, int len);
+        int  (*read_pixel)(struct pngw_arg *o);
 
-	void *extra_user_data;
+        void *extra_user_data;
 };
 
 void pngw(struct pngw_arg *p);

@@ -73,7 +73,7 @@ int fmt_mp3_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
         tag = id3_tag_parse(data + id3off, id3len);
         if (tag) {
-		get_title_from_id3(tag, &file->artist, &file->title);
+                get_title_from_id3(tag, &file->artist, &file->title);
                 id3_tag_delete(tag);
         }
         /* Dunno what it means when id3_tag_parse barfs with a NULL tag, but I bet it's not a good

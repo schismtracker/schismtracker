@@ -92,7 +92,7 @@ void cubic_spline_init(void)
 #ifdef SPLINE_CLAMPFORUNITY
         sum = cubic_spline_lut[indx + 0] +
               cubic_spline_lut[indx + 1] +
-              cubic_spline_lut[indx + 2] + 
+              cubic_spline_lut[indx + 2] +
               cubic_spline_lut[indx + 3];
 
         if (sum != SPLINE_QUANTSCALE) {

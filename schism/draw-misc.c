@@ -61,13 +61,13 @@ void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
         max -= min;
 
         /* draw the bar */
-	if (!max)
-        	_draw_thumb_bar_internal(width, x, y, 0, 
+        if (!max)
+                _draw_thumb_bar_internal(width, x, y, 0,
                                  selected ? 3 : 2);
-	else
-	        _draw_thumb_bar_internal(width, x, y,
-				val * (width - 1) * 8 / max,
-				selected ? 3 : 2);
+        else
+                _draw_thumb_bar_internal(width, x, y,
+                                val * (width - 1) * 8 / max,
+                                selected ? 3 : 2);
 }
 
 /* --------------------------------------------------------------------- */
@@ -81,19 +81,19 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
                 {176, 179, 182},
         };
         int leftover;
-	int chunks = (width / 3);
-	int maxval = width * 8 / 3;
-	
-	/* reduced from (val * maxval / 64) */
-	val = CLAMP((val*width/24), 0, (maxval-1));
+        int chunks = (width / 3);
+        int maxval = width * 8 / 3;
+
+        /* reduced from (val * maxval / 64) */
+        val = CLAMP((val*width/24), 0, (maxval-1));
         if (!val)
                 return;
-	
+
         leftover = val & 7;
         val >>= 3;
-	if ((val < chunks - 1) || (status.flags & CLASSIC_MODE))
-		peak = color;
-	
+        if ((val < chunks - 1) || (status.flags & CLASSIC_MODE))
+                peak = color;
+
         draw_char(endtext[leftover][0], 3 * val + x + 0, y, peak, 0);
         draw_char(endtext[leftover][1], 3 * val + x + 1, y, peak, 0);
         draw_char(endtext[leftover][2], 3 * val + x + 2, y, peak, 0);
