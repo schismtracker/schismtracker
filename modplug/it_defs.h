@@ -1,7 +1,7 @@
 #ifndef _ITDEFS_H_
 #define _ITDEFS_H_
 
-#pragma pack(1)
+#pragma pack(push, 1)
 
 typedef struct tagITFILEHEADER
 {
@@ -127,7 +127,7 @@ typedef struct ITSAMPLESTRUCT
         uint8_t vit;
 } ITSAMPLESTRUCT;
 
-#pragma pack()
+#pragma pack(pop)
 
 
 #endif

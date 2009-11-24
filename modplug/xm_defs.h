@@ -1,7 +1,7 @@
 #ifndef _XMDEFS_H_
 #define _XMDEFS_H
 
-#pragma pack(1)
+#pragma pack(push, 1)
 
 typedef struct tagXMFILEHEADER
 {
@@ -57,6 +57,6 @@ typedef struct tagXMSAMPLESTRUCT
         char name[22];
 } XMSAMPLESTRUCT;
 
-#pragma pack()
+#pragma pack(pop)
 
 #endif

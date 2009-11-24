@@ -51,7 +51,7 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------- */
 
-#pragma pack(push,1)
+#pragma pack(push, 1)
 struct stm_sample {
         char name[12];
         uint8_t zero;
