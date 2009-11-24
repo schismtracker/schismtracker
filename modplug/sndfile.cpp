@@ -16,7 +16,6 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
                 bool bMMCmp = mmcmp_unpack((uint8_t **) &lpStream, &dwMemLength);
                 if ((!ReadS3M(lpStream, dwMemLength))
                  && (!ReadIT(lpStream, dwMemLength))
-                 && (!ReadSTM(lpStream, dwMemLength))
                  && (!ReadMed(lpStream, dwMemLength))
                  && (!ReadMTM(lpStream, dwMemLength))
                  && (!ReadMDL(lpStream, dwMemLength))

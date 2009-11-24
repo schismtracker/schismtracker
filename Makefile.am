@@ -298,7 +298,6 @@ schismtracker_SOURCES = \
 	modplug/load_s3m.cpp		\
 	modplug/tables.c		\
 	modplug/load_ult.cpp		\
-	modplug/load_stm.cpp		\
 	modplug/load_far.cpp		\
 	modplug/load_it.cpp		\
 	modplug/load_mid.cpp		\
