@@ -293,6 +293,7 @@ static fmt_load_song_func load_song_funcs[] = {
         fmt_mtm_load_song,
         fmt_imf_load_song,
         fmt_sfx_load_song,
+        fmt_stm_load_song,
         _modplug_load_song,
         NULL,
 };

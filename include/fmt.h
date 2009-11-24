@@ -89,7 +89,7 @@ READ_INFO(okt);
 READ_INFO(psm);
 READ_INFO(s3m); LOAD_SONG(s3m);
 READ_INFO(sfx); LOAD_SONG(sfx);
-READ_INFO(stm);
+READ_INFO(stm); LOAD_SONG(stm);
 READ_INFO(ult);
 READ_INFO(xm);  LOAD_SONG(xm);
 
