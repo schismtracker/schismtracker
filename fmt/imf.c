@@ -46,7 +46,7 @@ int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#pragma pack(push,1)
+#pragma pack(push, 1)
 struct imf_channel {
         char name[12];          /* Channelname (ASCIIZ-String, max 11 chars) */
         uint8_t chorus;         /* Default chorus */

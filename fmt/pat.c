@@ -30,7 +30,7 @@
 #include <stdlib.h>
 
 /* --------------------------------------------------------------------- */
-#pragma pack(1)
+#pragma pack(push, 1)
 
 struct GF1PatchHeader
 {
@@ -78,7 +78,7 @@ struct GF1PatchSampleHeader
         unsigned short  scalefac;
         unsigned char   reserved[36];
 };
-#pragma pack()
+#pragma pack(pop)
 
 /* --------------------------------------------------------------------- */
 
