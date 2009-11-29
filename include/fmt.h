@@ -75,7 +75,7 @@ READ_INFO(dtm);
 READ_INFO(f2r);
 READ_INFO(far);
 READ_INFO(imf); LOAD_SONG(imf);
-READ_INFO(it);
+READ_INFO(it);  LOAD_SONG(it);
 READ_INFO(liq);
 READ_INFO(mdl);
 // mid med mod... and i suppose mt2 is mad, now we just need a mud format!

@@ -22,12 +22,14 @@ bool CSoundFile::ReadUMX(const uint8_t *lpStream, uint32_t dwMemLength)
                 for (uint32_t uscan=0x40; uscan<0x500; uscan++)
                 {
                         uint32_t dwScan = bswapLE32(*((uint32_t *)(lpStream+uscan)));
+#if 0
                         // IT
                         if (dwScan == 0x4D504D49)
                         {
                                 uint32_t dwRipOfs = uscan;
                                 return ReadIT(lpStream + dwRipOfs, dwMemLength - dwRipOfs);
                         }
+#endif
                         // S3M
                         if (dwScan == 0x4D524353)
                         {

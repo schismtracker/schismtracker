@@ -3,7 +3,6 @@
 #include "util.h"
 
 #include <stdint.h>
-extern "C" int mmcmp_unpack(uint8_t **ppMemFile, uint32_t *pdwMemLength);
 
 
 bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
@@ -13,9 +12,7 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
         csf_destroy(this);
         m_nType = MOD_TYPE_NONE;
         if (lpStream) {
-                bool bMMCmp = mmcmp_unpack((uint8_t **) &lpStream, &dwMemLength);
                 if ((!ReadS3M(lpStream, dwMemLength))
-                 && (!ReadIT(lpStream, dwMemLength))
                  && (!ReadMed(lpStream, dwMemLength))
                  && (!ReadMDL(lpStream, dwMemLength))
                  && (!ReadDBM(lpStream, dwMemLength))
@@ -32,10 +29,6 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
                  && (!ReadMT2(lpStream, dwMemLength))
                  && (!ReadMID(lpStream, dwMemLength))
                  && (!ReadMod(lpStream, dwMemLength))) m_nType = MOD_TYPE_NONE;
-                if (bMMCmp) {
-                        free((void *) lpStream);
-                        lpStream = NULL;
-                }
         }
         // Adjust channels
         for (i=0; i<MAX_CHANNELS; i++) {

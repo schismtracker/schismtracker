@@ -52,7 +52,7 @@ the control gets back to slurp, it closes the fd (again). It doesn't seem to exi
 # endif
 #endif
 
-static void _slurp_stdio_closure(slurp_t *t)
+static void _slurp_closure_free(slurp_t *t)
 {
         free(t->data);
 }
@@ -112,7 +112,7 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
                 t->length += this_len;
         } while (this_len);
         fclose(fp);
-        t->closure = _slurp_stdio_closure;
+        t->closure = _slurp_closure_free;
         return 1;
 }
 
@@ -166,14 +166,14 @@ static int _slurp_stdio(slurp_t * t, int fd)
         } while (need > 0);
 
         fclose(fp);
-        t->closure = _slurp_stdio_closure;
+        t->closure = _slurp_closure_free;
         return 1;
 }
 
 
 /* --------------------------------------------------------------------- */
 
-slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
+static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size)
 {
         slurp_t *t;
         int fd, old_errno;
@@ -187,9 +187,6 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
         if (t == NULL)
                 return NULL;
         t->pos = 0;
-
-        /* TODO | add a third param for flags, and make this optional.
-         * TODO | (along with decompression once that gets written) */
 
         if (strcmp(filename, "-") == 0) {
                 if (_slurp_stdio(t, STDIN_FILENO))
@@ -216,8 +213,6 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
         };
 #endif
 
-        /* TODO | add a third param for flags, and make this optional.
-         * TODO | (along with decompression once that gets written) */
         fd = open(filename, O_RDONLY | O_BINARY);
 
         if (fd < 0) {
@@ -238,6 +233,35 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
         errno = old_errno;
         return NULL;
 }
+
+slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
+{
+        slurp_t *t = _slurp_open(filename, buf, size);
+        uint8_t *mmdata;
+        size_t mmlen;
+
+        if (!t) {
+                return NULL;
+        }
+
+        mmdata = t->data;
+        mmlen = t->length;
+        if (mmcmp_unpack(&mmdata, &mmlen)) {
+                // clean up the existing data
+                if (t->data && t->closure) {
+                        t->closure(t);
+                }
+                // and put the new stuff in
+                t->length = mmlen;
+                t->data = mmdata;
+                t->closure = _slurp_closure_free;
+        }
+
+        // TODO re-add PP20 unpacker, possibly also handle other formats?
+
+        return t;
+}
+
 
 void unslurp(slurp_t * t)
 {
