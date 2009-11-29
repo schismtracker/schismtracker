@@ -80,6 +80,9 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never realy liked f
 int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
 int slurp_eof(slurp_t *t); /* 1 = end of file */
 
+/* used internally by slurp, nothing else should need this */
+int mmcmp_unpack(uint8_t **data, size_t *length);
+
 #ifdef __cplusplus
 }
 #endif
