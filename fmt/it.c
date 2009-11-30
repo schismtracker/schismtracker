@@ -638,7 +638,7 @@ int fmt_it_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 // TODO write ver_decode_cwtv
                 tid = "Schism Tracker %d.%02x";
         } else if ((hdr.cwtv >> 12) == 0 && hist != 0 && hdr.reserved != 0) {
-                tid = "Impulse Tracker %d.%02x";
+                // early catch to exclude possible false positives without repeating a bunch of stuff.
         } else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0200 && hdr.flags == 9 && hdr.special == 0
                    && hdr.highlight_major == 0 && hdr.highlight_minor == 0
                    && hdr.insnum == 0 && hdr.patnum + 1 == hdr.ordnum
@@ -652,7 +652,7 @@ int fmt_it_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 if (memchr(hdr.chan_pan, 0xff, 64) == NULL) {
                         // There's the chance that it's really a MPT 1.16 saved file that
                         // really uses all 64 channels, but this catches the majority case
-                        tid = "OpenMPT (compat. mode)";
+                        tid = "OpenMPT (compatibility mode)";
                 } else {
                         tid = "Modplug Tracker 1.09 - 1.16";
                 }
@@ -672,16 +672,31 @@ int fmt_it_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 // all sample/instrument filenames say "XXXXXXXX.YYY"
                 tid = "CheeseTracker?";
         } else if ((hdr.cwtv >> 12) == 0) {
-                // Catch-all. Not very likely, but at least one file in my collection (denonde.it)
-                // triggers a false-negative because its reserved field is zero although it was
-                // saved with IT -- but removing the reserved check will trigger too many false positives
-                // to be thoroughly useful.
-                // "saved %d time%s", hist, (hist == 1) ? "" : "s"
-                tid = "Impulse Tracker %d.%02x";
+                // Catch-all. The above IT condition only works for newer IT versions which write something
+                // into the reserved field; older IT versions put zero there (which suggests that maybe it
+                // really is being used for something useful)
+                // (handled below)
         } else {
                 tid = "Unknown tracker";
         }
-        sprintf(song->tracker_id, tid, (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff);
+
+        // argh
+        if (!tid) {
+                tid = "Impulse Tracker %d.%02x";
+                if (hdr.cmwt > 0x0214) {
+                        hdr.cwtv = 0x0215;
+                } else if (hdr.cwtv > 0x0214) {
+                        // Patched update of IT 2.14 (0x0215 - 0x0217 == p1 - p3)
+                        // p4 (as found on modland) adds the ITVSOUND driver, but doesn't seem to change
+                        // anything as far as file saving is concerned.
+                        tid = NULL;
+                        sprintf(song->tracker_id, "Impulse Tracker 2.14p%d", hdr.cwtv - 0x0214);
+                }
+                //"saved %d time%s", hist, (hist == 1) ? "" : "s"
+        }
+        if (tid) {
+                sprintf(song->tracker_id, tid, (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff);
+        }
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;
