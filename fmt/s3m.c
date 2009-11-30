@@ -341,12 +341,12 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         tid = "Imago Orpheus %d.%02x";
                         break;
                 case 3:
-                        if (trkvers == 0x3216)
-                                tid = "Impulse Tracker 2.14v3";
-                        else if (trkvers == 0x3217)
-                                tid = "Impulse Tracker 2.14v5";
-                        else
+                        if (trkvers <= 0x3214) {
                                 tid = "Impulse Tracker %d.%02x";
+                        } else {
+                                tid = NULL;
+                                sprintf(song->tracker_id, "Impulse Tracker 2.14p%d", trkvers - 0x3214);
+                        }
                         break;
                 case 4:
                         // we don't really bump the version properly, but let's show it anyway
