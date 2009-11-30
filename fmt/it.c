@@ -158,8 +158,8 @@ static void it_import_voleffect(MODCOMMAND *note, uint8_t v)
                 case  75 ...  84: adj =  75; note->volcmd = VOLCMD_FINEVOLDOWN; break;
                 case  85 ...  94: adj =  85; note->volcmd = VOLCMD_VOLSLIDEUP; break;
                 case  95 ... 104: adj =  95; note->volcmd = VOLCMD_VOLSLIDEDOWN; break;
-                case 105 ... 114: adj = 105; note->volcmd = VOLCMD_PORTAUP; break;
-                case 115 ... 124: adj = 115; note->volcmd = VOLCMD_PORTADOWN; break;
+                case 105 ... 114: adj = 105; note->volcmd = VOLCMD_PORTADOWN; break;
+                case 115 ... 124: adj = 115; note->volcmd = VOLCMD_PORTAUP; break;
                 case 193 ... 202: adj = 193; note->volcmd = VOLCMD_TONEPORTAMENTO; break;
                 case 203 ... 212: adj = 203; note->volcmd = VOLCMD_VIBRATODEPTH; break;
                 default: return; // weird alien volume
