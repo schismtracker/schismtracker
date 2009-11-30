@@ -412,7 +412,7 @@ static void load_it_sample(SONGSAMPLE *sample, slurp_t *fp)
         sample->filename[12] = '\0';
 
         sample->nGlobalVol = MIN(shdr.gvl, 64);
-        sample->nVolume = MIN(shdr.vol, 64);
+        sample->nVolume = MIN(shdr.vol, 64) * 4; //mphack
         sample->nPan = MIN(shdr.dfp, 64) * 4; //mphack
         sample->nLength = bswapLE32(shdr.length);
         sample->nLength = MIN(sample->nLength, MAX_SAMPLE_LENGTH);
