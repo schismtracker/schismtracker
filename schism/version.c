@@ -24,6 +24,7 @@
 #include "headers.h"
 #include "it.h"
 #include "sdlmain.h"
+#include "version.h"
 
 
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
@@ -80,6 +81,8 @@ const char *ver_license[] = {
         "59 Temple Place, Suite 330, Boston, MA 02111-1307  USA",
         NULL,
 };
+
+static time_t epoch_sec;
 
 
 const char *schism_banner(int classic)
@@ -148,7 +151,7 @@ static int get_version_tm(struct tm *version)
 void ver_init(void)
 {
         struct tm version, epoch = { .tm_year = 109, .tm_mon = 9, .tm_mday = 31 }; /* 2009-10-31 */
-        time_t version_sec, epoch_sec;
+        time_t version_sec;
 
         if (get_version_tm(&version)) {
                 version_sec = mktime(&version);
@@ -170,5 +173,23 @@ void ver_init(void)
 #endif
                 __DATE__, __TIME__);
         top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
+}
+
+void ver_decode_cwtv(uint16_t cwtv, char *buf)
+{
+        struct tm version;
+        time_t version_sec;
+
+        cwtv &= 0xfff;
+        if (cwtv > 0x050) {
+                // Annoyingly, mktime uses local time instead of UTC. Why etc.
+                version_sec = ((cwtv - 0x050) * 86400) + epoch_sec;
+                if (localtime_r(&version_sec, &version)) {
+                        sprintf(buf, "%04d-%02d-%02d",
+                                version.tm_year + 1900, version.tm_mon + 1, version.tm_mday);
+                        return;
+                }
+        }
+        sprintf(buf, "0.%x", cwtv);
 }
 

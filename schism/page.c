@@ -29,6 +29,7 @@
 #include "util.h"
 #include "midi.h"
 #include "charset.h"
+#include "version.h"
 
 #include "sdlmain.h"
 

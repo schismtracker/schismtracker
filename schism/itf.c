@@ -27,6 +27,7 @@
 #include "it.h"
 #include "dmoz.h"
 #include "page.h"
+#include "version.h"
 
 #include "sdlmain.h"
 #include <string.h>

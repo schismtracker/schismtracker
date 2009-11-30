@@ -464,20 +464,6 @@ void feature_check_notes(const char *fmt,
                 int min_inst,int max_inst,
                 const char *volcmd, const char *fxcmd);
 
-
-/* various boilerplate defined in version.c */
-extern const char *ver_short_copyright;
-extern const char *ver_short_based_on;
-extern const char *ver_copyright_credits[];
-extern const char *ver_license[];
-extern short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
-
-extern const char *schism_banner(int classic)
-        __attribute__((pure));
-
-/* little hack, need to call this at startup */
-extern void ver_init(void);
-
 /* --------------------------------------------------------------------- */
 
 #ifdef __cplusplus
