@@ -7,6 +7,7 @@
 #define NEED_BYTESWAP
 
 #include "headers.h"
+#include "version.h"
 
 #include "sndfile.h"
 #include "midi.h"

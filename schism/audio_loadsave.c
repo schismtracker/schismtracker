@@ -24,6 +24,7 @@
 #include "mplink.h"
 #include "slurp.h"
 #include "page.h"
+#include "version.h"
 
 #include "fmt.h"
 #include "dmoz.h"

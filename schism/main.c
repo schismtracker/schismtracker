@@ -33,6 +33,7 @@
 #include "clippy.h"
 #include "diskwriter.h"
 
+#include "version.h"
 #include "song.h"
 #include "mixer.h"
 #include "midi.h"

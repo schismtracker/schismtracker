@@ -25,6 +25,7 @@
 #include "page.h"
 #include "video.h"
 #include "song.h"
+#include "version.h"
 
 /* Eventual TODO: draw the pattern data in the Schism logo in a different color than the words */
 #include "auto/logoit.h"

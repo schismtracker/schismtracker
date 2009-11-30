@@ -123,6 +123,7 @@ noinst_HEADERS = \
 	include/tables.h		\
 	include/tree.h			\
 	include/util.h			\
+	include/version.h		\
 	include/vgamem-scanner.h	\
 	include/video.h			\
 	include/wine-ddraw.h		\

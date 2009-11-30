@@ -24,6 +24,7 @@
 #include "headers.h"
 #include "slurp.h"
 #include "fmt.h"
+#include "version.h"
 
 #include "sndfile.h"
 
@@ -349,8 +350,9 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         }
                         break;
                 case 4:
-                        // we don't really bump the version properly, but let's show it anyway
-                        tid = "Schism Tracker %d.%02x";
+                        tid = NULL;
+                        strcpy(song->tracker_id, "Schism Tracker ");
+                        ver_decode_cwtv(trkvers, song->tracker_id + strlen(song->tracker_id));
                         break;
                 case 5:
                         tid = "OpenMPT %d.%02x";
