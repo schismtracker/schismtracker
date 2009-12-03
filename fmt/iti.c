@@ -69,7 +69,7 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
         g->fadeout = (bswapLE16(iti.fadeout) << 5);
         g->pitch_pan_separation = iti.pps;
         g->pitch_pan_center = iti.ppc;
-        g->global_volume = iti.gbv >> 1;
+        g->global_volume = iti.gbv;
         g->panning = (iti.dfp & 0x7F) << 2;
         if (g->panning > 256) g->panning = 128;
         g->flags = 0;
