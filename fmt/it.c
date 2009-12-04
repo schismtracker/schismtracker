@@ -431,7 +431,6 @@ static void load_it_sample(SONGSAMPLE *sample, slurp_t *fp)
         if (shdr.dfp & 128)
                 sample->uFlags |= CHN_PANNING;
 
-        sample->uFlags = 0;
         if (shdr.flag & 16)
                 sample->uFlags |= CHN_LOOP;
         if (shdr.flag & 32)
