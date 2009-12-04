@@ -2252,7 +2252,7 @@ static void instrument_list_volume_predraw_hook(void)
 
         /* mp hack: shifting values all over the place here, ugh */
         widgets_volume[14].d.thumbbar.value = ins->global_volume;
-        widgets_volume[15].d.thumbbar.value = ins->fadeout >> 6;
+        widgets_volume[15].d.thumbbar.value = ins->fadeout >> 5;
         widgets_volume[16].d.thumbbar.value = ins->volume_swing;
 }
 
@@ -2378,7 +2378,7 @@ static void instrument_list_volume_update_values(void)
 
         /* more ugly shifts */
         ins->global_volume = widgets_volume[14].d.thumbbar.value;
-        ins->fadeout = widgets_volume[15].d.thumbbar.value << 6;
+        ins->fadeout = widgets_volume[15].d.thumbbar.value << 5;
         ins->volume_swing = widgets_volume[16].d.thumbbar.value;
 
         song_update_playing_instrument(current_instrument);
@@ -2770,7 +2770,7 @@ void instrument_list_volume_load_page(struct page *page)
         create_thumbbar(widgets_volume + 14, 54, 42, 17, 13, 15, 0,
                         instrument_list_volume_update_values, 0, 128);
         create_thumbbar(widgets_volume + 15, 54, 43, 17, 14, 16, 0,
-                        instrument_list_volume_update_values, 0, 128);
+                        instrument_list_volume_update_values, 0, 256);
         create_thumbbar(widgets_volume + 16, 54, 46, 17, 15, 16, 0,
                         instrument_list_volume_update_values, 0, 100);
 }
