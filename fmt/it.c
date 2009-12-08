@@ -412,6 +412,11 @@ static void load_it_sample(SONGSAMPLE *sample, slurp_t *fp)
         memcpy(sample->filename, shdr.filename, 12);
         sample->filename[12] = '\0';
 
+        if (shdr.dfp & 128) {
+                sample->uFlags |= CHN_PANNING;
+                shdr.dfp &= 127;
+        }
+
         sample->nGlobalVol = MIN(shdr.gvl, 64);
         sample->nVolume = MIN(shdr.vol, 64) * 4; //mphack
         sample->nPan = MIN(shdr.dfp, 64) * 4; //mphack
@@ -427,9 +432,6 @@ static void load_it_sample(SONGSAMPLE *sample, slurp_t *fp)
         sample->nVibDepth = shdr.vid & 0x7f; // XXX why the bit mask? (copied over from modplug)
         sample->nVibSweep = shdr.vir;
         sample->nVibType = autovib_import[shdr.vit % 4];
-
-        if (shdr.dfp & 128)
-                sample->uFlags |= CHN_PANNING;
 
         if (shdr.flag & 16)
                 sample->uFlags |= CHN_LOOP;
@@ -532,13 +534,16 @@ int fmt_it_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         song->m_nStereoSeparation = hdr.sep;
 
         for (n = 0, channel = song->Channels; n < 64; n++, channel++) {
-                if (hdr.chan_pan[n] & 128)
+                int pan = hdr.chan_pan[n];
+                if (pan & 128) {
                         channel->dwFlags |= CHN_MUTE;
-                if ((hdr.chan_pan[n] & 127) == 100) {
+                        pan &= ~128;
+                }
+                if (pan == 100) {
                         channel->dwFlags |= CHN_SURROUND;
                         channel->nPan = 32;
                 } else {
-                        channel->nPan = MIN(hdr.chan_pan[n], 64);
+                        channel->nPan = MIN(pan, 64);
                 }
                 channel->nPan *= 4; //mphack
                 channel->nVolume = MIN(hdr.chan_vol[n], 64);
