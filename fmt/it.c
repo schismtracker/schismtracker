@@ -652,16 +652,30 @@ int fmt_it_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                    && hdr.msg_length == 0 && hdr.msg_offset == 0 && hdr.reserved == 0) {
                 // :)
                 tid = "OpenSPC conversion";
+        } else if ((hdr.cwtv >> 12) == 5 && hdr.cmwt == 0x0214) {
+                tid = "OpenMPT %d.%02x";
         } else if (hdr.cwtv == 0x0888 && hdr.cmwt == 0x0888 && hdr.reserved == 0 && hdr.ordnum == 256) {
                 tid = "OpenMPT 1.17.02.54";
         } else if (hdr.cwtv == 0x0217 && hdr.cmwt == 0x0200 && hdr.reserved == 0) {
-                if (memchr(hdr.chan_pan, 0xff, 64) == NULL) {
-                        // There's the chance that it's really a MPT 1.16 saved file that
-                        // really uses all 64 channels, but this catches the majority case
-                        tid = "OpenMPT (compatibility mode)";
-                } else {
-                        tid = "Modplug Tracker 1.09 - 1.16";
+                int ompt = 0;
+                if (hdr.insnum > 0) {
+                        // check trkvers -- OpenMPT writes 0x0220; older MPT writes 0x0211
+                        uint16_t tmp;
+                        slurp_seek(fp, bswapLE32(para_ins[0]) + 0x1c, SEEK_SET);
+                        slurp_read(fp, &tmp, 2);
+                        tmp = bswapLE16(tmp);
+                        if (tmp == 0x0220)
+                                ompt = 1;
                 }
+                if (!ompt && (memchr(hdr.chan_pan, 0xff, 64) == NULL)) {
+                        // MPT 1.16 writes 0xff for unused channels; OpenMPT never does this
+                        // XXX this is a false positive if all 64 channels are actually in use
+                        // -- but then again, who would use 64 channels and not instrument mode?
+                        ompt = 1;
+                }
+                tid = (ompt
+                        ? "OpenMPT (compatibility mode)"
+                        : "Modplug Tracker 1.09 - 1.16");
         } else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0200 && hdr.reserved == 0) {
                 // instruments 560 bytes apart
                 tid = "Modplug Tracker 1.00a5";
