@@ -96,13 +96,9 @@ static void _squelch_sample(int n)
 // modplug only allocates enough space for the number of channels used.
 // while this is good for playing, it sets a real limit on editing. this
 // resizes the patterns so they all use 64 channels.
-//
-// plus, xm files can have like two rows per pattern, whereas impulse
-// tracker's limit is 32, so this will expand patterns with fewer than
-// 32 rows and put a pattern break effect at the old end of the pattern.
 static void _resize_patterns(void)
 {
-        int n, rows, old_rows;
+        int n, rows;
         int used_channels = mp->m_nChannels;
         MODCOMMAND *newpat;
 
@@ -111,42 +107,14 @@ static void _resize_patterns(void)
         for (n = 0; n < MAX_PATTERNS; n++) {
                 if (!mp->Patterns[n])
                         continue;
-                old_rows = rows = mp->PatternSize[n];
-                if (rows < 32) {
-                        rows = mp->PatternSize[n] = 32;
-                        mp->PatternAllocSize[n] = rows;
-                }
+                rows = mp->PatternSize[n];
                 newpat = csf_allocate_pattern(rows, 64);
-                for (int row = 0; row < old_rows; row++)
+                for (int row = 0; row < rows; row++)
                         memcpy(newpat + 64 * row,
                                mp->Patterns[n] + used_channels * row,
                                sizeof(MODCOMMAND) * used_channels);
                 csf_free_pattern(mp->Patterns[n]);
                 mp->Patterns[n] = newpat;
-
-                if (rows != old_rows) {
-                        int chan;
-                        MODCOMMAND *ptr =
-                                (mp->Patterns[n] + (64 * (old_rows - 1)));
-
-                        log_appendf(2, "Pattern %d: resized to 32 rows"
-                                    " (originally %d)", n, old_rows);
-
-                        // find the first channel without a command,
-                        // and stick a pattern break in it
-                        for (chan = 0; chan < 64; chan++) {
-                                MODCOMMAND *note = ptr + chan;
-
-                                if (note->command == CMD_PATTERNBREAK) {
-                                        break;
-                                } else if (note->command == 0) {
-                                        note->command = CMD_PATTERNBREAK;
-                                        note->param = 0;
-                                        break;
-                                }
-                        }
-                        // if chan == 64, do something creative...
-                }
         }
 }
 

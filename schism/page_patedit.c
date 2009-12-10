@@ -314,7 +314,7 @@ void pattern_editor_display_options(void)
                 create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
                 create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
                 create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
-                create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
+                create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 1, 200);
                 create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
                                     NULL, "Link", 3, options_link_split);
                 create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
@@ -2276,6 +2276,8 @@ static void pattern_editor_reposition(void)
                 if (top_display_row + 31 > total_rows)
                         top_display_row = total_rows - 31;
         }
+        if (top_display_row < 0)
+                top_display_row = 0;
 }
 
 static void advance_cursor(int next_row, int multichannel)
@@ -2520,6 +2522,7 @@ static void set_view_scheme(int scheme)
 
 /* --------------------------------------------------------------------- */
 
+static song_note empty_note;
 static void pattern_editor_redraw(void)
 {
         int chan, chan_pos, chan_drawpos = 5;
@@ -2555,7 +2558,7 @@ static void pattern_editor_redraw(void)
                                                 ((song_get_channel(chan - 1)->flags & CHN_MUTE) ? 0 : 3));
 
                 note = pattern + 64 * top_display_row + chan - 1;
-                for (row = top_display_row, row_pos = 0; row_pos < 32; row++, row_pos++) {
+                for (row = top_display_row, row_pos = 0; row_pos < 32 && row < total_rows; row++, row_pos++) {
                         if (chan_pos == 0) {
                                 fg = pattern_is_playing && row == playing_row ? 3 : 0;
                                 bg = (current_pattern == marked_pattern && row == marked_row) ? 11 : 2;
@@ -2592,6 +2595,19 @@ static void pattern_editor_redraw(void)
 
                         /* next row, same channel */
                         note += 64;
+                }
+                // hmm...?
+                for (; row_pos < 32; row++, row_pos++) {
+                        if (ROW_IS_MAJOR(row))
+                                bg = 14;
+                        else if (ROW_IS_MINOR(row))
+                                bg = 15;
+                        else
+                                bg = 0;
+                        track_view->draw_note(chan_drawpos, 15 + row_pos, &empty_note, -1, 6, bg);
+                        if (draw_divisions && chan_pos < visible_channels - 1) {
+                                draw_char(168, chan_drawpos + track_view->width, 15 + row_pos, 2, bg);
+                        }
                 }
                 if (chan == current_channel) {
                         track_view->draw_mask(chan_drawpos, 47, edit_copy_mask, current_position, mc, 2);
