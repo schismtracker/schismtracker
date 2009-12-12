@@ -718,8 +718,10 @@ static inline void rn_process_envelope(SONGVOICE *chan, int *nvol)
 
         // Pitch/Pan separation
         if (penv->nPPS && chan->nRealPan && chan->nNote) {
+                // PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
+                // with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
                 int pandelta = (int) chan->nRealPan
-                             + (int) ((int) (chan->nNote - penv->nPPC - 1) * (int) penv->nPPS) / (int) 8;
+                             + (int) ((int) (chan->nNote - penv->nPPC - 1) * (int) penv->nPPS) / (int) 4;
                 chan->nRealPan = CLAMP(pandelta, 0, 256);
         }
 
