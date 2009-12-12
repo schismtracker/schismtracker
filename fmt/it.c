@@ -655,7 +655,9 @@ int fmt_it_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         } else if ((hdr.cwtv >> 12) == 5 && hdr.cmwt == 0x0214) {
                 tid = "OpenMPT %d.%02x";
         } else if (hdr.cwtv == 0x0888 && hdr.cmwt == 0x0888 && hdr.reserved == 0 && hdr.ordnum == 256) {
-                tid = "OpenMPT 1.17.02.54";
+                // erh.
+                // There's a way to identify the exact version apparently, but it seems too much trouble
+                tid = "OpenMPT 1.17.02.*";
         } else if (hdr.cwtv == 0x0217 && hdr.cmwt == 0x0200 && hdr.reserved == 0) {
                 int ompt = 0;
                 if (hdr.insnum > 0) {
