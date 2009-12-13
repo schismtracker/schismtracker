@@ -152,6 +152,7 @@ void ver_init(void)
 {
         struct tm version, epoch = { .tm_year = 109, .tm_mon = 9, .tm_mday = 31 }; /* 2009-10-31 */
         time_t version_sec;
+        char ver[32] = VERSION;
 
         if (get_version_tm(&version)) {
                 version_sec = mktime(&version);
@@ -165,13 +166,15 @@ void ver_init(void)
         ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
         ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
 
+#ifdef HG_VERSION
+        if (strcmp(VERSION, "hg") == 0) {
+                strcat(ver, ":");
+                strcat(ver, HG_VERSION);
+        }
+#endif
         snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
                 "Schism Tracker %s built %s %s",
-                VERSION
-#ifdef HG_VERSION
-                ":" HG_VERSION,
-#endif
-                __DATE__, __TIME__);
+                ver, __DATE__, __TIME__);
         top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
 }
 
