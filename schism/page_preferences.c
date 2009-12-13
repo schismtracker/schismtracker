@@ -85,8 +85,6 @@ static void preferences_draw_const(void)
 
         draw_fill_chars(73, 24, 77, 26, 0);
         draw_box(69, 24, 78, 27,  BOX_THIN | BOX_INNER | BOX_INSET);
-        draw_fill_chars(73, 29, 77, 31, 0);
-        draw_box(69, 28, 78, 32,  BOX_THIN | BOX_INNER | BOX_INSET);
 
 #define CORNER_BOTTOM "http://schismtracker.org/"
         draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 48, 1, 2);
