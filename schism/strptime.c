@@ -36,8 +36,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define NEED_TIME
 #include "headers.h"
 #include <ctype.h>
+
+#define TM_YEAR_BASE 1900
 
 /*
  * We do not implement alternate representations. However, we always
