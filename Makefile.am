@@ -196,9 +196,9 @@ files_gnu_memcmp=schism/memcmp.c
 endif
 
 if USE_MERCURIAL
-cflags_version=-DHG_VERSION=\""`hg parents --template '{date|shortdate}'`"\"
+cflags_version=-DHG_VERSION=\""`(cd @srcdir@ && hg parents --template '{date|shortdate}')`"\"
 # used in the dependency declaration of version.o to cause rebuild after commit
-hg_dirstate=.hg/dirstate
+hg_dirstate=@srcdir@/.hg/dirstate
 endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
