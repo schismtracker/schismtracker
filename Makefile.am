@@ -185,6 +185,7 @@ if USE_NETWORK
 cflags_network=-DUSE_NETWORK
 endif
 
+## XXX these should not be in schism/
 if NEED_GNU_ASPRINTF
 files_gnu_asprintf=schism/asprintf.c
 endif
@@ -193,6 +194,9 @@ files_gnu_vasprintf=schism/vasprintf.c
 endif
 if NEED_GNU_MEMCMP
 files_gnu_memcmp=schism/memcmp.c
+endif
+if NEED_STRPTIME
+files_strptime=schism/strptime.c
 endif
 
 if USE_MERCURIAL
@@ -335,6 +339,7 @@ schismtracker_SOURCES = \
 	$(files_gnu_asprintf)		\
 	$(files_gnu_vasprintf)		\
 	$(files_gnu_memcmp)		\
+	$(files_strptime)		\
 	$(files_mmap)			\
 	$(files_windres)
 
