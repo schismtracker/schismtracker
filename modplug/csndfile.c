@@ -258,8 +258,7 @@ void csf_set_current_order(CSoundFile *csf, uint32_t nPos)
         csf->m_dwSongFlags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 }
 
-// this function is named terribly
-void csf_reset_timestamps(CSoundFile *csf)
+void csf_reset_playmarks(CSoundFile *csf)
 {
         int n;
 

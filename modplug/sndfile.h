@@ -688,7 +688,7 @@ void csf_reset_midi_cfg(CSoundFile *csf);
 uint32_t csf_get_num_orders(CSoundFile *csf);
 void csf_set_current_order(CSoundFile *csf, uint32_t nPos);
 void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow);
-void csf_reset_timestamps(CSoundFile *csf);
+void csf_reset_playmarks(CSoundFile *csf);
 
 uint32_t csf_get_highest_used_channel(CSoundFile *csf);
 uint32_t csf_detect_unused_samples(CSoundFile *csf, int *pbIns);
