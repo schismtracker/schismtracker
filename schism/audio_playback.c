@@ -385,7 +385,6 @@ static void song_reset_play_state(void)
 
         mp->stop_at_order = -1;
         mp->stop_at_row = -1;
-        csf_reset_timestamps(mp);
         samples_played = 0;
 }
 
