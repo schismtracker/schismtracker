@@ -38,80 +38,82 @@
 /* sample drawing
 there are only two changes between 8- and 16-bit samples:
 - the type of 'data'
-- the amount to divide (note though, this number is used twice!) */
+- the amount to divide (note though, this number is used twice!)
 
-/* do we need 'channels' here? */
+fakemono is 2 when drawing the mono oscilloscope in the top status section, 1 otherwise */
+
 static void _draw_sample_data_8(struct vgamem_overlay *r,
-        signed char *data, unsigned long length, int channels, int fakemono) // 8/16
+        signed char *data, unsigned long length, int channels, int fakemono)
 {
         unsigned long pos;
         int level, xs, ys, xe, ye, step;
         int nh, cc, np;
+        int chip;
 
         nh = (r->height / channels);
         np = r->height - (nh / 2);
 
         length /= channels;
+        chip = (length / 2 < r->width);
 
         for (cc = 0; cc < channels; cc++) {
-                level = (data[cc] * nh) / (SCHAR_MAX - SCHAR_MIN + 1);
+                pos = 0;
+                step = MAX(1, (length / r->width) >> 8);
+
+                level = data[(pos * channels * fakemono) + cc] * nh / (SCHAR_MAX - SCHAR_MIN + 1);
                 xs = 0;
                 ys = (np - 1) - level;
-                if (ys < 0) ys = 0;
-                if (ys >= r->height) ys = r->height;
-                step = MAX(1, (length / r->width) >> 8);
-                for (pos = channels+cc; pos < length; pos += step) {
-                        level = (data[(pos*channels*fakemono)+cc] * nh)
-                                        / (SCHAR_MAX - SCHAR_MIN + 1);
+                ys = CLAMP(ys, 0, r->height - 1);
+                do {
+                        pos += step;
+                        level = data[(pos * channels * fakemono) + cc] * nh / (SCHAR_MAX - SCHAR_MIN + 1);
                         xe = pos * r->width / length;
                         ye = (np - 1) - level;
-                        if (xe < 0) xe = 0;
-                        if (xe >= r->width) xe = (r->width-1);
-                        if (ye < 0) ye = 0;
-                        if (ye >= r->height) ye = (r->height-1);
-                        vgamem_ovl_drawline(r, xs, ys, xe, ye,
-                                        SAMPLE_DATA_COLOR);
+                        xe = CLAMP(xe, 0, r->width - 1);
+                        ye = CLAMP(ye, 0, r->height - 1);
+                        // 'ye' is more or less useless for small samples, but this is much cleaner
+                        // code than writing nearly the same loop four different times :P
+                        vgamem_ovl_drawline(r, xs, ys, xe, chip ? ys : ye, SAMPLE_DATA_COLOR);
                         xs = xe;
                         ys = ye;
-                }
+                } while (pos < length);
                 np -= nh;
         }
 }
 
-/* again, do we need 'channels'? */
 static void _draw_sample_data_16(struct vgamem_overlay *r,
          signed short *data, unsigned long length, int channels, int fakemono)
 {
         unsigned long pos;
         int level, xs, ys, xe, ye, step;
         int nh, cc, np;
+        int chip;
 
         nh = (r->height / channels);
         np = r->height - (nh / 2);
 
         length /= channels;
+        chip = (length / 2 < r->width);
 
         for (cc = 0; cc < channels; cc++) {
-                level = (data[cc] * nh) / (SHRT_MAX - SHRT_MIN + 1);
+                pos = 0;
+                step = MAX(1, (length / r->width) >> 8);
+
+                level = data[(pos * channels * fakemono) + cc] * nh / (SHRT_MAX - SHRT_MIN + 1);
                 xs = 0;
                 ys = (np - 1) - level;
-                if (ys < 0) ys = 0;
-                if (ys >= r->height) ys = r->height;
-                step = MAX(1, (length / r->width) >> 8);
-                for (pos = channels+cc; (pos+cc) < length; pos += step) {
-                        level = (data[(pos*channels*fakemono)+cc] * nh)
-                                        / (SHRT_MAX - SHRT_MIN + 1);
+                ys = CLAMP(ys, 0, r->height - 1);
+                do {
+                        pos += step;
+                        level = data[(pos * channels * fakemono) + cc] * nh / (SHRT_MAX - SHRT_MIN + 1);
                         xe = pos * r->width / length;
                         ye = (np - 1) - level;
-                        if (xe < 0) xe = 0;
-                        if (xe >= r->width) xe = (r->width-1);
-                        if (ye < 0) ye = 0;
-                        if (ye >= r->height) ye = (r->height-1);
-                        vgamem_ovl_drawline(r, xs, ys, xe, ye,
-                                        SAMPLE_DATA_COLOR);
+                        xe = CLAMP(xe, 0, r->width - 1);
+                        ye = CLAMP(ye, 0, r->height - 1);
+                        vgamem_ovl_drawline(r, xs, ys, xe, chip ? ys : ye, SAMPLE_DATA_COLOR);
                         xs = xe;
                         ys = ye;
-                }
+                } while (pos < length);
                 np -= nh;
         }
 }
