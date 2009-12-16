@@ -54,7 +54,7 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
         np = r->height - (nh / 2);
 
         length /= channels;
-        chip = (length / 2 < r->width);
+        chip = (length < (unsigned int) r->width * 2);
 
         for (cc = 0; cc < channels; cc++) {
                 pos = 0;
@@ -93,7 +93,7 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
         np = r->height - (nh / 2);
 
         length /= channels;
-        chip = (length / 2 < r->width);
+        chip = (length < (unsigned int) r->width * 2);
 
         for (cc = 0; cc < channels; cc++) {
                 pos = 0;

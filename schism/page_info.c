@@ -46,6 +46,8 @@ static int instrument_names = 0;
 /* window setup */
 
 struct info_window_type {
+        const char *id;
+
         void (*draw) (int base, int height, int active, int first_channel);
         void (*click) (int x, int y, int num_vis_channel, int first_channel);
 
@@ -493,6 +495,28 @@ static void info_draw_track_5(int base, int height, int active, int first_channe
         _draw_track_view(base, height, first_channel, 5, 13, 1, draw_note_13);
 }
 
+static void info_draw_track_8(int base, int height, int active, int first_channel)
+{
+        int chan, chan_pos, fg;
+        char buf[4];
+
+        draw_fill_chars(5, base + 1, 75, base + height - 2, 0);
+        
+        draw_box(4, base, 76, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        for (chan = first_channel, chan_pos = 0; chan_pos < 8; chan++, chan_pos++) {
+                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                        fg = (chan == selected_channel ? 6 : 1);
+                else
+                        fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
+                draw_char(0, 6 + 9 * chan_pos, base, 1, 1);
+                draw_char(0, 6 + 9 * chan_pos + 1, base, 1, 1);
+                draw_text(numtostr(2, chan, buf), 6 + 9 * chan_pos + 2, base, fg, 1);
+                draw_char(0, 6 + 9 * chan_pos + 4, base, 1, 1);
+                draw_char(0, 6 + 9 * chan_pos + 5, base, 1, 1);
+        }
+        _draw_track_view(base, height, first_channel, 8, 8, 1, draw_note_8);
+}
+
 static void info_draw_track_10(int base, int height, int active, int first_channel)
 {
         int chan, chan_pos, fg;
@@ -779,19 +803,20 @@ static void click_chn_nil(UNUSED int x, UNUSED int y,
 /* --------------------------------------------------------------------- */
 /* declarations of the window types */
 
-#define TRACK_VIEW(n) {info_draw_track_##n, click_chn_is_x, 1, n}
+#define TRACK_VIEW(n) {"track" # n, info_draw_track_##n, click_chn_is_x, 1, n}
 static const struct info_window_type window_types[] = {
-        {info_draw_samples, click_chn_is_y_nohead, 0, -2},
+        {"samples", info_draw_samples, click_chn_is_y_nohead, 0, -2},
         TRACK_VIEW(5),
+        TRACK_VIEW(8),
         TRACK_VIEW(10),
         TRACK_VIEW(12),
         TRACK_VIEW(18),
         TRACK_VIEW(24),
         TRACK_VIEW(36),
         TRACK_VIEW(64),
-        {info_draw_channels, click_chn_nil, 1, 0},
-        {info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
-        {info_draw_technical, click_chn_is_y, 1, -2},
+        {"global", info_draw_channels, click_chn_nil, 1, 0},
+        {"dots", info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
+        {"tech", info_draw_technical, click_chn_is_y, 1, -2},
 };
 #undef TRACK_VIEW
 
@@ -859,23 +884,33 @@ static void recalculate_windows(void)
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
-/* settings
- * TODO: save all the windows in a single key, maybe comma-separated or something */
+/* settings */
 
 void cfg_save_info(cfg_file_t *cfg)
 {
-        char key[] = "windowX";
+        // for 5 windows, roughly 12 chars per window, this is way more than enough
+        char buf[256] = "";
+        char *s = buf;
+        int rem = sizeof(buf) - 1;
+        int len;
         int i;
 
-        cfg_set_number(cfg, "Info Page", "num_windows", num_windows);
-
         for (i = 0; i < num_windows; i++) {
-                key[6] = i + '0';
-                cfg_set_number(cfg, "Info Page", key, (windows[i].type << 8) | (windows[i].height));
+                len = snprintf(s, rem, " %s %d", window_types[windows[i].type].id, windows[i].height);
+                if (!len) {
+                        // this should not ever happen
+                        break;
+                }
+                rem -= len;
+                s += len;
         }
+        buf[255] = '\0';
+
+        // (don't write the first space to the config)
+        cfg_set_string(cfg, "Info Page", "layout", buf + 1);
 }
 
-void cfg_load_info(cfg_file_t *cfg)
+static void cfg_load_info_old(cfg_file_t *cfg)
 {
         char key[] = "windowX";
         int i;
@@ -894,6 +929,10 @@ void cfg_load_info(cfg_file_t *cfg)
                         break;
                 }
                 windows[i].type = tmp >> 8;
+                if (windows[i].type >= 2) {
+                        // compensate for added 8-channel view
+                        windows[i].type++;
+                }
                 windows[i].height = tmp & 0xff;
                 if (windows[i].type < 0 || windows[i].type >= NUM_WINDOW_TYPES || windows[i].height < 3) {
                         /* Broken window? */
@@ -908,14 +947,63 @@ void cfg_load_info(cfg_file_t *cfg)
                 num_windows = 3;
                 windows[0].type = 0;    /* samples */
                 windows[0].height = 19;
-                windows[1].type = 8;    /* active channels */
+                windows[1].type = 9;    /* active channels */
                 windows[1].height = 3;
-                windows[2].type = 5;    /* 24chn track view */
+                windows[2].type = 6;    /* 24chn track view */
                 windows[2].height = 15;
         }
 
-        for (i = 0; i < num_windows; i++)
+        for (i = 0; i < num_windows; i++) {
                 windows[i].first_channel = 1;
+        }
+
+        recalculate_windows();
+        if (status.current_page == PAGE_INFO)
+                status.flags |= NEED_UPDATE;
+}
+
+void cfg_load_info(cfg_file_t *cfg)
+{
+        int n;
+        char buf[256];
+        char *left, *right;
+        size_t len;
+
+        if (!cfg_get_string(cfg, "Info Page", "layout", buf, 255, NULL)) {
+                cfg_load_info_old(cfg);
+                return;
+        }
+
+        left = buf;
+        num_windows = 0;
+        do {
+                left += strspn(left, " \t");
+                len = strcspn(left, " \t");
+                if (!len) {
+                        break;
+                }
+                left[len] = '\0'; // chop it into pieces
+                windows[num_windows].first_channel = 1;
+                windows[num_windows].type = -1;
+                for (n = 0; n < NUM_WINDOW_TYPES; n++) {
+                        if (strcasecmp(window_types[n].id, left) == 0) {
+                                windows[num_windows].type = n;
+                                break;
+                        }
+                }
+                // (a pythonic for...else would be lovely right about here)
+                if (windows[num_windows].type == -1) {
+                        break;
+                }
+                right = left + len + 1;
+                left[len] = '\0';
+                n = strtol(right, &left, 10);
+                if (!left || left == right || n < 3) {
+                        // failed to parse any digits, or number is too small
+                        break;
+                }
+                windows[num_windows++].height = n;
+        } while (num_windows < MAX_WINDOWS - 1);
 
         recalculate_windows();
         if (status.current_page == PAGE_INFO)
