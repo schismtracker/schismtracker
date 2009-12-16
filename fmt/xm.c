@@ -858,6 +858,7 @@ int fmt_xm_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 load_xm_patterns(song, &hdr, fp);
                 load_xm_samples(song->Samples + 1, nsamp, fp);
         }
+        csf_insert_restart_pos(song, hdr.restart);
 
         return LOAD_SUCCESS;
 }
