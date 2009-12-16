@@ -201,6 +201,36 @@ void draw_mask_10(int x, int y, int mask, int cursor_pos, int fg, int bg)
 }
 
 /* --------------------------------------------------------------------- */
+/* 8-column track view (no instrument column; no editing) */
+
+void draw_channel_header_8(int chan, int x, int y, int fg)
+{
+        char buf[8];
+        sprintf(buf, "  %02d  ", chan);
+        draw_text(buf, x, y, fg, 1);
+}
+
+void draw_note_8(int x, int y, song_note *note, UNUSED int cursor_pos, int fg, int bg)
+{
+        char buf[4];
+        
+        get_note_string(note->note, buf);
+        draw_text(buf, x, y, fg, bg);
+
+        if (note->volume || note->volume_effect) {
+                get_volume_string(note->volume, note->volume_effect, buf);
+                draw_text(buf, x + 3, y, (note->volume_effect == VOL_EFFECT_PANNING) ? 1 : 2, bg);
+        } else {
+                draw_char(0, x + 3, y, fg, bg);
+                draw_char(0, x + 4, y, fg, bg);
+        }
+        
+        snprintf(buf, 4, "%c%02X", get_effect_char(note->effect), note->parameter);
+        buf[3] = '\0';
+        draw_text(buf, x + 5, y, fg, bg);
+}
+
+/* --------------------------------------------------------------------- */
 /* 7-column track view */
 
 void draw_channel_header_7(int chan, int x, int y, int fg)
