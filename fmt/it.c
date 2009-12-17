@@ -448,7 +448,7 @@ static void load_it_sample(SONGSAMPLE *sample, slurp_t *fp)
                 uint32_t flags = SF_LE;
                 if (shdr.flag & 8) {
                         flags |= SF_M;
-                        flags |= (shdr.cvt & 4) ? SF_IT214 : SF_IT214;
+                        flags |= (shdr.cvt & 4) ? SF_IT215 : SF_IT214;
                 } else {
                         flags |= (shdr.flag & 4) ? SF_SS : SF_M;
                         // XXX for some reason I had a note in pm/fmt/it.c saying that I had found some
@@ -459,6 +459,8 @@ static void load_it_sample(SONGSAMPLE *sample, slurp_t *fp)
                 }
                 flags |= (shdr.flag & 2) ? SF_16 : SF_8;
                 csf_read_sample(sample, flags, (const char *) fp->data + fp->pos, fp->length - fp->pos);
+        } else {
+                sample->nLength = 0;
         }
 }
 
