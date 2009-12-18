@@ -704,9 +704,6 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
 void AMSUnpack(const char *psrc, uint32_t inputlen, char *pdest, uint32_t dmax, char packcharacter);
 uint16_t MDLReadBits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n);
 int DMFUnpack(uint8_t * psample, uint8_t * ibuf, uint8_t * ibufmax, uint32_t maxlen);
-uint32_t ITReadBits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n);
-void ITUnpack8Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, int b215);
-void ITUnpack16Bit(signed char *pSample, uint32_t dwLen, uint8_t * lpMemFile, uint32_t dwMemLength, int b215);
 
 
 #ifdef __cplusplus

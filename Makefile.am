@@ -228,6 +228,7 @@ schismtracker_SOURCES = \
 	schism/clippy.c			\
 	schism/page_loadmodule.c	\
 	schism/page_vars.c		\
+	fmt/compression.c		\
 	fmt/generic.c			\
 	fmt/raw.c			\
 	fmt/liq.c			\
@@ -304,7 +305,6 @@ schismtracker_SOURCES = \
 	modplug/tables.c		\
 	modplug/load_ult.cpp		\
 	modplug/load_far.cpp		\
-	modplug/load_it.cpp		\
 	modplug/load_mid.cpp		\
 	modplug/load_ams.cpp		\
 	modplug/snd_fx.c		\
