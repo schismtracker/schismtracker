@@ -85,7 +85,7 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 {
         ITSAMPLESTRUCT *its = (ITSAMPLESTRUCT *)header;
         uint32_t format;
-        uint32_t bp, bl;
+        uint32_t bp;
 
         if (length < 80 || strncmp((const char *) header, "IMPS", 4) != 0)
                 return false;
