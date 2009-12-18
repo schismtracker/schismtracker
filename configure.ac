@@ -115,16 +115,16 @@ saved_libs=$LIBS
 alsa=no
 AC_CHECK_LIB(asound, snd_seq_open,[alsa=yes])
 alsadltrick=no
-if test "$alsa" = "yes"
-then if test "$ac_cv_header_sys_soundcard_h" = "yes"
-then alsadltrick=yes
-LIBS=$saved_libs
-fi
+if test "$alsa" = "yes"; then
+	if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
+		alsadltrick=yes
+		LIBS=$saved_libs
+	fi
 fi
 AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
 AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
 
-dnl should probably have some AC_MSG_CHECKING here, buh meh
+dnl should probably have some AC_MSG_CHECKING here, but meh
 if test "x$macosx" = "xyes"; then
 	if test "x$with_x" = "x"; then
 		AC_MSG_NOTICE([X11 disabled by default on Mac OS X; use --with-x to enable])
@@ -132,8 +132,7 @@ if test "x$macosx" = "xyes"; then
 	fi
 fi
 AC_PATH_XTRA()
-if test "$no_x" = "yes"
-then
+if test "$no_x" = "yes"; then
 	dnl no X11
 	AM_CONDITIONAL([USE_X11], [false])
 	AM_CONDITIONAL([USE_XV], [false])
@@ -148,37 +147,30 @@ else
 
 	AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h X11/extensions/XKB.h)
 	AC_CHECK_LIB(Xxf86misc, XF86MiscGetKbdSettings,,,-lX11 -lXext)
-	if test "$ac_cv_lib_Xxf86misc_XF86MiscGetKbdSettings" = "yes"
-	then 
+	if test "$ac_cv_lib_Xxf86misc_XF86MiscGetKbdSettings" = "yes"; then
 		AC_CHECK_HEADERS(X11/extensions/xf86misc.h,,,[[
 #include <X11/Xlib.h>
 		]])
-		if test "$ac_cv_header_X11_extensions_xf86misc_h" = "yes"
-		then 
+		if test "$ac_cv_header_X11_extensions_xf86misc_h" = "yes"; then
 			SDL_LIBS="$SDL_LIBS -lXxf86misc -lXext"
 			AC_SUBST(SDL_LIBS)
 		fi
 	fi
 	AC_CHECK_LIB(Xv, XvQueryExtension,,,-lX11 -lXext)
-	if test "$ac_cv_lib_Xv_XvQueryExtension" = "yes"
-	then
+	if test "$ac_cv_lib_Xv_XvQueryExtension" = "yes"; then
 		AC_CHECK_HEADERS(X11/extensions/Xvlib.h,,,[[
 #include <X11/Xlib.h>
 		]])
-		if test "$ac_cv_header_X11_extensions_xvlib_h" = "yes"
-		then 
+		if test "$ac_cv_header_X11_extensions_xvlib_h" = "yes"; then
+			SDL_LIBS="$SDL_LIBS -lXv -lXext"
+			AC_SUBST(SDL_LIBS)
+			AM_CONDITIONAL([USE_XV], [true])
+		elif test "$ac_cv_header_X11_extensions_Xvlib_h" = "yes"; then
 			SDL_LIBS="$SDL_LIBS -lXv -lXext"
 			AC_SUBST(SDL_LIBS)
 			AM_CONDITIONAL([USE_XV], [true])
 		else
-			if test "$ac_cv_header_X11_extensions_Xvlib_h" = "yes"
-			then
-				SDL_LIBS="$SDL_LIBS -lXv -lXext"
-				AC_SUBST(SDL_LIBS)
-				AM_CONDITIONAL([USE_XV], [true])
-			else
-				AM_CONDITIONAL([USE_XV], [false])
-			fi
+			AM_CONDITIONAL([USE_XV], [false])
 		fi
 	else
 		AM_CONDITIONAL([USE_XV], [false])
@@ -196,8 +188,7 @@ AC_SUBST(WINDRES)
 
 dnl winmm testing...
 AC_CHECK_HEADERS(winsock.h winsock2.h windows.h)
-if test "X$ac_cv_header_windows_h" = "Xyes"
-then
+if test "X$ac_cv_header_windows_h" = "Xyes"; then
 	AM_CONDITIONAL([USE_WIN32MM], true)
 	SDL_LIBS="$SDL_LIBS -lwinmm"
 	AC_SUBST(SDL_LIBS)
@@ -205,26 +196,25 @@ else
 	AM_CONDITIONAL([USE_WIN32MM], false)
 fi
 
-if test "X$ac_cv_func_socket" = "Xyes"
-then
+if test "X$ac_cv_func_socket" = "Xyes"; then
 	dnl free networking
 	AM_CONDITIONAL([USE_NETWORK], [test "x" = "x"])
 else
 	AC_CHECK_HEADERS(winsock.h winsock2.h sys/socket.h)
-	if test "x$ac_cv_header_winsock_h" = "xyes"
-	then	AM_CONDITIONAL([USE_NETWORK], true)
+	if test "x$ac_cv_header_winsock_h" = "xyes"; then
+		AM_CONDITIONAL([USE_NETWORK], true)
 		SDL_LIBS="$SDL_LIBS -lwsock32"
 		AC_SUBST(SDL_LIBS)
-	else if test "x$ac_cv_header_winsock2_h" = "xyes"
-		then	AM_CONDITIONAL([USE_NETWORK], true)
-			SDL_LIBS="$SDL_LIBS -lws2_32"
-			AC_SUBST(SDL_LIBS)
-		else if test "x$ac_cv_header_sys_socket_h" = "xyes"
-			then	AM_CONDITIONAL([USE_NETWORK], true)
-				SDL_LIBS="$SDL_LIBS -lsocket"
-				AC_SUBST(SDL_LIBS)
-			fi
-		fi
+	elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+		AM_CONDITIONAL([USE_NETWORK], true)
+		SDL_LIBS="$SDL_LIBS -lws2_32"
+		AC_SUBST(SDL_LIBS)
+	elif test "x$ac_cv_header_sys_socket_h" = "xyes"; then
+		AM_CONDITIONAL([USE_NETWORK], true)
+		SDL_LIBS="$SDL_LIBS -lsocket"
+		AC_SUBST(SDL_LIBS)
+	else
+		AM_CONDITIONAL([USE_NETWORK], false)
 	fi
 fi
 
