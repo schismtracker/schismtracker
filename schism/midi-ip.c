@@ -412,7 +412,11 @@ int ip_midi_getports(void)
 
 #else
 
-void ip_midi_setports(int n)
+int ip_midi_getports(void)
+{
+}
+
+void ip_midi_setports(UNUSED int n)
 {
 }
 
