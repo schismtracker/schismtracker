@@ -91,8 +91,6 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
                 return false;
         /* alright, let's get started */
         smp->length = bswapLE32(its->length);
-        if (smp->length + 80 > length)
-                return false;
         if ((its->flags & 1) == 0) {
                 // sample associated with header
                 return false;
@@ -162,16 +160,8 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
                 smp->flags &= ~(SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG);
         }
 
-        // use length correctly
         bp = bswapLE32(its->samplepointer);
-        bl = smp->length;
-        if (smp->flags & SAMP_STEREO) bl *= 2;
-        if (smp->flags & SAMP_16_BIT) bl *= 2; /* 16bit */
 
-        if (bl + bp > length) {
-                /* wrong length */
-                return false;
-        }
         // dumb casts :P
         return csf_read_sample((SONGSAMPLE *) smp, format,
                         (const char *) (data + bp),
