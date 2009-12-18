@@ -39,7 +39,7 @@
 
 /* The dup's are because fclose closes its file descriptor even if the FILE* was acquired with fdopen, and when
 the control gets back to slurp, it closes the fd (again). It doesn't seem to exist on Amiga OS though, so... */
-#ifdef __amigaos4__
+#ifndef HAVE_DUP
 # define dup(fd) fd
 #endif
 

@@ -85,7 +85,7 @@ else
 fi
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strptime asprintf vasprintf memcmp mmap socket nice unsetenv)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strptime asprintf vasprintf memcmp mmap socket nice unsetenv dup)
 AM_CONDITIONAL([NEED_GNU_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
 AM_CONDITIONAL([NEED_GNU_VASPRINTF], [test "$ac_cv_func_vasprintf" = "no"])
 AM_CONDITIONAL([NEED_GNU_MEMCMP], [test "$ac_cv_func_memcmp" = "no"])
