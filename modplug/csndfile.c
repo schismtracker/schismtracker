@@ -13,6 +13,7 @@
 #include "sndfile.h"
 #include "log.h"
 #include "util.h"
+#include "fmt.h" // for it_decompress8 / it_decompress16
 
 
 static void _csf_reset(CSoundFile *csf)
@@ -679,11 +680,11 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFi
                 len = dwMemLength;
                 if (len < 2) break;
                 if (nFlags == RS_IT2148 || nFlags == RS_IT2158) {
-                        ITUnpack8Bit(pIns->pSample, pIns->nLength,
-                                (uint8_t *)lpMemFile, dwMemLength, (nFlags == RS_IT2158));
+                        it_decompress8(pIns->pSample, pIns->nLength,
+                                        lpMemFile, dwMemLength, (nFlags == RS_IT2158));
                 } else {
-                        ITUnpack16Bit(pIns->pSample, pIns->nLength,
-                                (uint8_t *)lpMemFile, dwMemLength, (nFlags == RS_IT21516));
+                        it_decompress16(pIns->pSample, pIns->nLength,
+                                        lpMemFile, dwMemLength, (nFlags == RS_IT21516));
                 }
                 break;
 

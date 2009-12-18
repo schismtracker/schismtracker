@@ -130,6 +130,10 @@ song_instrument *instrument_loader_init(struct instrumentloader *ii, int slot);
 int instrument_loader_abort(struct instrumentloader *ii);
 int instrument_loader_sample(struct instrumentloader *ii, int slot);
 
+/* --------------------------------------------------------------------------------------------------------- */
+
+void it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215);
+void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
