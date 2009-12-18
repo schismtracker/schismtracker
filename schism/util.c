@@ -657,6 +657,9 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
         chdir(buf);
         if (r == 0) return 1;
         return 0;
+#elif defined(GEKKO)
+        // help how do I operating system
+        return 0;
 #else
         char *tmp;
         int st;

@@ -87,7 +87,7 @@ int macosx_ibook_fnswitch(int setting);
 void xscreensaver_deactivate(void);
 #endif
 
-#if !defined(__amigaos4__)
+#if !defined(__amigaos4__) && !defined(GEKKO)
 # define ENABLE_HOOKS 1
 #endif
 
@@ -1053,8 +1053,16 @@ extern void win32_setup_keymap(void);
 #endif
 
 
+#ifdef GEKKO
+#include <fat.h>
+#endif
+
 int main(int argc, char **argv)
 {
+#ifdef GEKKO
+        fatInitDefault();
+#endif
+
 #if defined(WIN32)
         static WSADATA ignored;
 
