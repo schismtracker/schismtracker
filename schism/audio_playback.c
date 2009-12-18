@@ -23,8 +23,8 @@
 #include "it.h"
 #include "page.h"
 #include "mplink.h"
-#include "modplug/snd_flt.h"
-#include "modplug/snd_eq.h"
+#include "snd_flt.h" // modplug
+#include "snd_eq.h"  // modplug
 #include "slurp.h"
 #include "config-parser.h"
 
