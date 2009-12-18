@@ -10,8 +10,7 @@
 #include "mplink.h" // for 'mp', which we shouldn't need
 #include "snd_gm.h"
 
-/* not sure what's up with os x here, already defines log2... actually why is this even here? */
-#if !defined(HAVE_LOG2) && !defined(__USE_ISOC99) && !defined(MACOSX)
+#if !defined(HAVE_LOG2) && !defined(__USE_ISOC99) && !defined(log2)
 static double log2(double d)
 {
         return log(d) / log(2.0);
