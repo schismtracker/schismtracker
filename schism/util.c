@@ -353,8 +353,7 @@ static inline int readhex(const char *s, int w)
         return o;
 }
 
-/* opposite of str_escape. (this is glib's 'compress' function renamed more clearly)
-TODO: it'd be nice to handle \xNN as well... */
+/* opposite of str_escape. (this is glib's 'compress' function renamed more clearly) */
 char *str_unescape(const char *s)
 {
         const char *end;
