@@ -455,7 +455,7 @@ static void load_it_sample(SONGSAMPLE *sample, slurp_t *fp)
                         // .it files with the signed flag set incorrectly and to assume unsigned when
                         // hdr.cwtv < 0x0202. Why, and for what files?
                         // Do any other players use the header for deciding sample data signedness?
-                        flags |= (shdr.cvt & 1) ? SF_PCMS : SF_PCMU;
+                        flags |= (shdr.cvt & 4) ? SF_PCMD : (shdr.cvt & 1) ? SF_PCMS : SF_PCMU;
                 }
                 flags |= (shdr.flag & 2) ? SF_16 : SF_8;
                 csf_read_sample(sample, flags, (const char *) fp->data + fp->pos, fp->length - fp->pos);
