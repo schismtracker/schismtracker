@@ -1116,7 +1116,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
         // Update Volume
         if (instr_column && psmp) pChn->nVolume = psmp->nVolume;
         // bInstrumentChanged is used for IT carry-on env option
-        if (penv != pChn->pHeader) {
+        if (penv != pChn->pHeader || !pChn->pCurrentSample) {
                 bInstrumentChanged = 1;
                 pChn->pHeader = penv;
         }
