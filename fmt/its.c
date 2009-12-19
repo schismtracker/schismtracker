@@ -107,8 +107,8 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
         } else {
                 // channels
                 format |= (its->flags & 4) ? SF_SS : SF_M;
-                // signedness
-                format |= (its->cvt & 1) ? SF_PCMS : SF_PCMU;
+                // signedness (or delta?)
+                format |= (its->cvt & 4) ? SF_PCMD : (its->cvt & 1) ? SF_PCMS : SF_PCMU;
         }
         // bit width
         format |= (its->flags & 2) ? SF_16 : SF_8;
