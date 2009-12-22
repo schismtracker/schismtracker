@@ -414,6 +414,7 @@ int ip_midi_getports(void)
 
 int ip_midi_getports(void)
 {
+        return 0;
 }
 
 void ip_midi_setports(UNUSED int n)
