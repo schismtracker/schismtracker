@@ -40,10 +40,6 @@
 #include <sys/param.h>
 #endif
 
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
-
 #include <stdint.h>
 
 
@@ -78,19 +74,6 @@ char *strchr(), *strrchr();
 #endif
 
 
-#ifndef NAME_MAX
-# ifdef MAXPATHLEN
-#  define NAME_MAX MAXPATHLEN
-# else
-#  ifdef FILENAME_MAX
-#   define NAME_MAX FILENAME_MAX
-#  else
-#   define NAME_MAX 256
-#  endif
-# endif
-#endif
-
-
 #ifdef NEED_DIRENT
 # if HAVE_DIRENT_H
 #  include <dirent.h>
@@ -110,6 +93,28 @@ char *strchr(), *strrchr();
 #  endif
 #  if HAVE_NDIR_H
 #   include <ndir.h>
+#  endif
+# endif
+#endif
+
+/* dumb workaround for dumb devkitppc bug */
+#ifdef GEKKO
+# undef NAME_MAX
+# undef PATH_MAX
+#endif
+
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
+
+#ifndef NAME_MAX
+# ifdef MAXPATHLEN
+#  define NAME_MAX MAXPATHLEN /* BSD name */
+# else
+#  ifdef FILENAME_MAX
+#   define NAME_MAX FILENAME_MAX
+#  else
+#   define NAME_MAX 256
 #  endif
 # endif
 #endif

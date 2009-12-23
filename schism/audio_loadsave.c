@@ -40,12 +40,6 @@
 #include <errno.h>
 #include <assert.h>
 
-#include <limits.h>
-
-#ifndef PATH_MAX
-#define PATH_MAX 1024
-#endif
-
 // ------------------------------------------------------------------------
 
 char song_filename[PATH_MAX + 1];
