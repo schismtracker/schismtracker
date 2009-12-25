@@ -68,6 +68,15 @@
 #include <signal.h>
 #endif
 
+#ifdef GEKKO
+# include <di/di.h>
+# include <fat.h>
+# include <ogc/system.h>
+# include <sys/dir.h>
+# include "isfs.h"
+# define CACHE_PAGES 8
+#endif
+
 #if defined(USE_DLTRICK_ALSA)
 #include <dlfcn.h>
 void *_dltrick_handle = NULL;
@@ -680,7 +689,11 @@ static void event_loop(void)
                         };
 
                         kk.mod = modkey;
+#ifdef GEKKO // Wii SDL doesn't have unicode support, so fake it
+                        kk.unicode = kbd_get_alnum(&kk);
+#else
                         kk.unicode = event.key.keysym.unicode;
+#endif
                         kk.mouse = 0;
                         if (debug_s && strstr(debug_s, "key")) {
                                 log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
@@ -1030,6 +1043,9 @@ static void schism_shutdown(void)
                 */
                 SDL_Quit();
         }
+#ifdef GEKKO
+        ISFS_Deinitialize();
+#endif
 }
 
 static void dump_misc_about_text(void)
@@ -1052,18 +1068,42 @@ extern void vis_init(void);
 extern void win32_setup_keymap(void);
 #endif
 
-
-#ifdef GEKKO
-#include <fat.h>
-#endif
-
 int main(int argc, char **argv)
 {
 #ifdef GEKKO
-        fatInitDefault();
-#endif
+        DIR_ITER *dir;
+        char *ptr;
 
-#if defined(WIN32)
+        ISFS_SU();
+        if (ISFS_Initialize() == IPC_OK)
+                ISFS_Mount();
+        fatInit(CACHE_PAGES, 0);
+
+        // Attempt to locate a suitable home directory.
+        if (strchr(argv[0], '/') != NULL) {
+                // presumably launched from hbc menu - put stuff in the boot dir
+                // (does get_parent_directory do what I want here?)
+                ptr = get_parent_directory(argv[0]);
+        } else {
+                // Make a guess anyway
+                ptr = str_dup("sd:/apps/schismtracker");
+        }
+        if (chdir(ptr) != 0) {
+                free(ptr);
+                dir = diropen("sd:/");
+                if (dir) {
+                        // Ok at least the sd card works, there's some other dysfunction
+                        dirclose(dir);
+                        ptr = str_dup("sd:/");
+                } else {
+                        // Safe (but useless) default
+                        ptr = str_dup("isfs:/");
+                }
+                chdir(ptr); // Hope that worked, otherwise we're hosed
+        }
+        put_env_var("HOME", ptr);
+        free(ptr);
+#elif defined(WIN32)
         static WSADATA ignored;
 
         win32_setup_keymap();
