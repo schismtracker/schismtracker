@@ -44,3 +44,7 @@ Michael Chen improved the software scaler quite a bit.
 Some little fixes by ToastyX <toastyx@toastyx.net>.
 
 Ben de Graaff rewrote a large portion of libmodplug in C.
+
+Wii ISFS filesystem support code from ftpii by Joseph Jordan
+<joe.ftpii@psychlaw.com.au>.
+

@@ -42,6 +42,8 @@ extraneous libraries (i.e. GLib). */
 # define FALLBACK_DIR "." /* not used... */
 #elif defined(WIN32)
 # define FALLBACK_DIR "C:\\"
+#elif defined(GEKKO)
+# define FALLBACK_DIR "isfs:/" // always exists, seldom useful
 #else /* POSIX? */
 # define FALLBACK_DIR "/"
 #endif

@@ -45,6 +45,21 @@
 #include "snd_fm.h"
 #include "snd_gm.h"
 
+// Default audio configuration
+// (XXX: Can DEF_SAMPLE_RATE be defined to 48000 everywhere?
+// Does any sound card NOT support 48khz decently nowadays?)
+#ifdef GEKKO
+# define DEF_SAMPLE_RATE 48000
+#else
+# define DEF_SAMPLE_RATE 44100
+#endif
+#ifdef WIN32
+# define DEF_BUFFER_SIZE 2048
+#else
+# define DEF_BUFFER_SIZE 1024
+#endif
+#define DEF_CHANNEL_LIMIT 128
+
 static int midi_playing;
 // ------------------------------------------------------------------------
 
@@ -875,16 +890,12 @@ void song_set_surround(int on)
 #define CFG_GET_M(v,d) audio_settings.v = cfg_get_number(cfg, "Mixer Settings", #v, d)
 void cfg_load_audio(cfg_file_t *cfg)
 {
-        CFG_GET_A(sample_rate, 44100);
+        CFG_GET_A(sample_rate, DEF_SAMPLE_RATE);
         CFG_GET_A(bits, 16);
         CFG_GET_A(channels, 2);
-#ifdef WIN32
-        CFG_GET_A(buffer_size, 2048);
-#else
-        CFG_GET_A(buffer_size, 1024);
-#endif
+        CFG_GET_A(buffer_size, DEF_BUFFER_SIZE);
 
-        CFG_GET_M(channel_limit, 64);
+        CFG_GET_M(channel_limit, DEF_CHANNEL_LIMIT);
         CFG_GET_M(interpolation_mode, SRCMODE_LINEAR);
         CFG_GET_M(oversampling, 1);
         CFG_GET_M(hq_resampling, 1);
