@@ -85,10 +85,38 @@ void csf_free(CSoundFile *csf)
         }
 }
 
+
+static void _init_envelope(INSTRUMENTENVELOPE *env, int n)
+{
+        env->nNodes = 2;
+        env->Ticks[0] = 0;
+        env->Ticks[1] = 100;
+        env->Values[0] = n;
+        env->Values[1] = n;
+}
+
+void csf_init_instrument(SONGINSTRUMENT *ins, int samp)
+{
+        int n;
+        _init_envelope(&ins->VolEnv, 64);
+        _init_envelope(&ins->PanEnv, 32);
+        _init_envelope(&ins->PitchEnv, 32);
+        ins->nGlobalVol = 128;
+        ins->nPan = 128;
+        ins->wMidiBank = -1;
+        ins->nMidiProgram = -1;
+        ins->nPPC = 60; // why does pitch/pan not use the same note values as everywhere else?!
+        for (n = 0; n < 128; n++) {
+                ins->Keyboard[n] = samp;
+                ins->NoteMap[n] = n + 1;
+        }
+}
+
 SONGINSTRUMENT *csf_allocate_instrument(void)
 {
-        SONGINSTRUMENT *i = calloc(1, sizeof(SONGINSTRUMENT));
-        return i;
+        SONGINSTRUMENT *ins = calloc(1, sizeof(SONGINSTRUMENT));
+        csf_init_instrument(ins, 0);
+        return ins;
 }
 
 void csf_free_instrument(SONGINSTRUMENT *i)
