@@ -1016,7 +1016,9 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 // XXX Rename this
 static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, const int chan_num, const int freq, const int vol)
 {
-        if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE &&
+        if (chan->dwFlags & CHN_MUTE) {
+                // don't do anything
+        } else if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE &&
             chan->pHeader &&
             chan->pHeader->nMidiChannelMask > 0) {
                 MidiBendMode BendMode = MIDI_BEND_NORMAL;
