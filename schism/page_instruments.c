@@ -79,6 +79,7 @@ static const char *const pitch_envelope_states[] = { "Off", "On Pitch", "On Filt
 
 static int top_instrument = 1;
 static int current_instrument = 1;
+static int _altswap_lastvis = 99; // for alt-down instrument-swapping
 static int instrument_cursor_pos = 25;  /* "play" mode */
 
 static int note_trans_top_line = 0;
@@ -557,15 +558,33 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                 switch (k->sym) {
                 case SDLK_UP:
                         if (k->state) return 0;
-                        if (!NO_MODIFIER(k->mod))
+                        if (k->mod & KMOD_ALT) {
+                                if (current_instrument > 1) {
+                                        new_ins = current_instrument - 1;
+                                        song_swap_instruments(current_instrument, new_ins);
+                                }
+                        } else if (!NO_MODIFIER(k->mod)) {
                                 return 0;
-                        new_ins--;
+                        } else {
+                                new_ins--;
+                        }
                         break;
                 case SDLK_DOWN:
                         if (k->state) return 0;
-                        if (!NO_MODIFIER(k->mod))
+                        if (k->mod & KMOD_ALT) {
+                                // restrict position to the "old" value of _last_vis_inst()
+                                // (this is entirely for aesthetic reasons)
+                                if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+                                        _altswap_lastvis = _last_vis_inst();
+                                if (current_instrument < _altswap_lastvis) {
+                                        new_ins = current_instrument + 1;
+                                        song_swap_instruments(current_instrument, new_ins);
+                                }
+                        } else if (!NO_MODIFIER(k->mod)) {
                                 return 0;
-                        new_ins++;
+                        } else {
+                                new_ins++;
+                        }
                         break;
                 case SDLK_PAGEUP:
                         if (k->state) return 0;
