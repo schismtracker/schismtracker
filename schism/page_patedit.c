@@ -813,13 +813,13 @@ static int history_handle_key(struct key_event *k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_UP:
-                if (!k->state) return 0;
+                if (k->state) return 0;
                 undo_selection--;
                 if (undo_selection < 0) undo_selection = 0;
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_DOWN:
-                if (!k->state) return 0;
+                if (k->state) return 0;
                 undo_selection++;
                 if (undo_selection > 9) undo_selection = 9;
                 status.flags |= NEED_UPDATE;
