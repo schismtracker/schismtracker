@@ -122,15 +122,6 @@ song_sample *song_get_sample(int n, char **name_ptr)
         return (song_sample *) mp->Samples + n;
 }
 
-static void _init_envelope(INSTRUMENTENVELOPE *e, int n)
-{
-        e->Ticks[0] = 0;
-        e->Values[0] = n;
-        e->Ticks[1] = 100;
-        e->Values[1] = n;
-        e->nNodes = 2;
-}
-
 song_instrument *song_get_instrument(int n, char **name_ptr)
 {
         if (n >= MAX_INSTRUMENTS)
@@ -139,17 +130,6 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
         // Make a new instrument if it doesn't exist.
         if (!mp->Instruments[n]) {
                 mp->Instruments[n] = csf_allocate_instrument();
-                mp->Instruments[n]->nGlobalVol = 128;
-                mp->Instruments[n]->nPan = 128;
-
-                _init_envelope(&mp->Instruments[n]->VolEnv, 64);
-                _init_envelope(&mp->Instruments[n]->PanEnv, 32);
-                _init_envelope(&mp->Instruments[n]->PitchEnv, 32);
-
-                int i;
-                for (i = 0; i < 128; i++) {
-                        mp->Instruments[n]->NoteMap[i] = i+1;
-                }
         }
 
         if (name_ptr)
@@ -749,23 +729,11 @@ void song_init_instrument_from_sample(int insn, int samp)
         if (!ins) return; /* eh? */
 
         memset(ins, 0, sizeof(SONGINSTRUMENT));
-        ins->nGlobalVol = 128;
-        ins->nPan = 128;
+        csf_init_instrument(ins, samp);
 
-        _init_envelope(&ins->VolEnv, 64);
-        _init_envelope(&ins->PanEnv, 32);
-        _init_envelope(&ins->PitchEnv, 32);
-
-        int i;
-        for (i = 0; i < 128; i++) {
-                ins->Keyboard[i] = samp;
-                ins->NoteMap[i] = i+1;
-        }
-
-        for (i = 0; i < 12; i++)
-                ins->filename[i] = mp->Samples[samp].filename[i];
-        for (i = 0; i < 32; i++)
-                ins->name[i] = mp->Samples[samp].name[i];
+        // IT doesn't set instrument filenames unless loading an instrument from disk
+        //memcpy(ins->filename, mp->Samples[samp].filename, 12);
+        memcpy(ins->name, mp->Samples[samp].name, 32);
 }
 
 void song_init_instruments(int qq)
@@ -786,7 +754,9 @@ void song_insert_sample_slot(int n)
 
         memmove(mp->Samples + n + 1, mp->Samples + n, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
         memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
-
+        mp->Samples[n].nC5Speed = 8363;
+        mp->Samples[n].nVolume = 64 * 4;
+        mp->Samples[n].nGlobalVol = 64;
         if (song_is_instrument_mode())
                 _adjust_samples_in_instruments(n, 1);
         else

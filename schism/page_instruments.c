@@ -196,14 +196,14 @@ static int _last_vis_inst(void)
         n = 99;
         j = 0;
         /* 65 is last visible sample on last page */
-        for (i = 65; i <= SCHISM_MAX_INSTRUMENTS; i++) {
+        for (i = 65; i < SCHISM_MAX_INSTRUMENTS; i++) {
                 if (!song_instrument_is_empty(i)) {
                         j = i;
                 }
         }
-        while ((j + 34) > n) n += 34;
-        if (n >= SCHISM_MAX_INSTRUMENTS) n = SCHISM_MAX_INSTRUMENTS;
-        return n;
+        while ((j + 34) > n) 
+                n += 34;
+        return MIN(n, SCHISM_MAX_INSTRUMENTS - 1);
 }
 /* the actual list */
 

@@ -623,6 +623,7 @@ void csf_free_pattern(void *pat);
 signed char *csf_allocate_sample(uint32_t nbytes);
 void csf_free_sample(void *p);
 SONGINSTRUMENT *csf_allocate_instrument(void);
+void csf_init_instrument(SONGINSTRUMENT *ins, int samp);
 void csf_free_instrument(SONGINSTRUMENT *p);
 
 uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);

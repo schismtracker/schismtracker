@@ -192,6 +192,11 @@ void song_new(int flags)
                 }
                 memset(mp->Samples, 0, sizeof(mp->Samples));
                 mp->m_nSamples = 0;
+                for (i = 1; i < MAX_SAMPLES; i++) {
+                        mp->Samples[i].nC5Speed = 8363;
+                        mp->Samples[i].nVolume = 64 * 4;
+                        mp->Samples[i].nGlobalVol = 64;
+                }
         }
         if ((flags & KEEP_INSTRUMENTS) == 0) {
                 for (i = 0; i < MAX_INSTRUMENTS; i++) {
@@ -412,10 +417,10 @@ int song_instrument_is_empty(int n)
                 if (mp->Instruments[n]->Keyboard[i] != 0)
                         return 0;
         }
-        if (mp->Instruments[n]->wMidiBank
-        ||mp->Instruments[n]->nMidiProgram
-        ||mp->Instruments[n]->nMidiChannelMask
-        ||mp->Instruments[n]->nMidiDrumKey) return 0;
+        // this used to check midi program and bank, but if those are set to -1 the instrument should still
+        // be considered empty. not to mention, isn't midi program 0 meaningful?
+        if (mp->Instruments[n]->nMidiChannelMask != 0)
+                return 0;
         return 1;
 }
 
@@ -1219,6 +1224,9 @@ void song_clear_sample(int n)
         song_lock_audio();
         csf_destroy_sample(mp, n);
         memset(mp->Samples + n, 0, sizeof(SONGSAMPLE));
+        mp->Samples[n].nC5Speed = 8363;
+        mp->Samples[n].nVolume = 64 * 4;
+        mp->Samples[n].nGlobalVol = 64;
         song_unlock_audio();
 }
 
