@@ -416,6 +416,8 @@ static void read_directory(void)
         dmoz_filter_filelist(&flist, modgrep, &current_file, file_list_reposition);
         while (dmoz_worker()); /* don't do it asynchronously */
         dmoz_cache_lookup(cfg_dir_modules, &flist, &dlist);
+        // background the title checker
+        dmoz_filter_filelist(&flist, dmoz_fill_ext_data, &current_file, file_list_reposition);
         file_list_reposition();
         dir_list_reposition();
 }
@@ -600,9 +602,6 @@ static void file_list_draw(void)
                 for (n = top_file, pos = 13; n < flist.num_files && pos < 44; n++, pos++) {
                         file = flist.files[n];
 
-                        if ((file->type & TYPE_EXT_DATA_MASK) == 0)
-                                dmoz_fill_ext_data(file);
-
                         if (n == current_file && ACTIVE_PAGE.selected_widget == 0) {
                                 fg1 = fg2 = 0;
                                 bg = 3;
@@ -614,13 +613,13 @@ static void file_list_draw(void)
 
                         draw_text_len(file->base, 18, 3, pos, fg1, bg);
                         draw_char(168, 21, pos, 2, bg);
-                        draw_text_len(file->title, 25, 22, pos, fg2, bg);
+                        draw_text_len(file->title ?: "", 25, 22, pos, fg2, bg);
                 }
 
                 /* info for the current file */
                 if (current_file >= 0 && current_file < flist.num_files) {
                         file = flist.files[current_file];
-                        draw_text_len((file->description ? file->description : ""), 26, 51, 40, 5, 0);
+                        draw_text_len(file->description ?: "", 26, 51, 40, 5, 0);
                         sprintf(buf, "%09lu", (unsigned long)file->filesize);
                         draw_text_len(buf, 26, 51, 41, 5, 0);
                         draw_text_len(get_date_string(file->timestamp, buf), 26, 51, 42, 5, 0);

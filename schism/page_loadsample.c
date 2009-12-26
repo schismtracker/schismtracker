@@ -98,13 +98,6 @@ static inline int get_type_color(int type)
         return 3; /* sample */
 }
 
-static int sampgrep(dmoz_file_t *f)
-{
-        if ((f->type & TYPE_EXT_DATA_MASK) == 0)
-                dmoz_fill_ext_data(f);
-        return 1;
-}
-
 static void clear_directory(void)
 {
         dmoz_free(&flist, NULL);
@@ -190,7 +183,7 @@ static void read_directory(void)
         if (dmoz_read(cfg_dir_samples, &flist, NULL, dmoz_read_sample_library) < 0)
                 perror(cfg_dir_samples);
 
-        dmoz_filter_filelist(&flist, sampgrep, &current_file, file_list_reposition);
+        dmoz_filter_filelist(&flist, dmoz_fill_ext_data, &current_file, file_list_reposition);
         dmoz_cache_lookup(cfg_dir_samples, &flist, NULL);
         file_list_reposition();
 }
@@ -370,8 +363,6 @@ static void file_list_draw(void)
         if (current_file < 0) current_file = 0;
         for (n = top_file, pos = 13; n < flist.num_files && pos < 48; n++, pos++) {
                 file = flist.files[n];
-                if ((file->type & TYPE_EXT_DATA_MASK) == 0)
-                        dmoz_fill_ext_data(file);
 
                 if (n == current_file && ACTIVE_PAGE.selected_widget == 0) {
                         fg = 0;
@@ -381,11 +372,9 @@ static void file_list_draw(void)
                         bg = 0;
                 }
                 draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
-                draw_text_len((file->title ? file->title : ""),
-                                        25, 6, pos, fg, bg);
+                draw_text_len(file->title ?: "", 25, 6, pos, fg, bg);
                 draw_char(168, 31, pos, 2, bg);
-                draw_text_len((file->base ? file->base : ""),
-                                        18, 32, pos, fg, bg);
+                draw_text_len(file->base ?: "", 18, 32, pos, fg, bg);
                 if (file->base && search_pos > -1) {
                         if (strncasecmp(file->base,search_str,search_pos) == 0) {
                                 for (i = 0 ; i < search_pos; i++) {
@@ -578,6 +567,7 @@ static void handle_enter_key(void)
 
         file = flist.files[current_file];
         dmoz_cache_update(cfg_dir_samples, &flist, NULL);
+        dmoz_fill_ext_data(file);
 
         if ((file->type & (TYPE_BROWSABLE_MASK|TYPE_INST_MASK))
         && !(file->type & TYPE_SAMPLE_MASK)) {

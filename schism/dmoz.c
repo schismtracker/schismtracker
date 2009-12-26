@@ -818,7 +818,7 @@ static int file_info_get(dmoz_file_t *file)
 }
 
 /* return: 1 on success, 0 on error. in either case, it fills the data in with *something*. */
-int dmoz_fill_ext_data(dmoz_file_t *file)
+int dmoz_filter_ext_data(dmoz_file_t *file)
 {
         int ret;
 
@@ -852,6 +852,13 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
         file->type = TYPE_UNKNOWN;
         file->title = str_dup("");
         return 0;
+}
+
+/* same as dmoz_filter_ext_data, except without the filtering effect when used with dmoz_filter_filelist */
+int dmoz_fill_ext_data(dmoz_file_t *file)
+{
+        dmoz_filter_ext_data(file);
+        return 1;
 }
 
 

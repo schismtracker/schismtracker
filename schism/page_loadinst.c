@@ -87,13 +87,8 @@ static void clear_directory(void)
 
 static int instgrep(dmoz_file_t *f)
 {
-        if ((f->type & TYPE_EXT_DATA_MASK) == 0)
-                dmoz_fill_ext_data(f);
-
-        if ((f->type & TYPE_EXT_DATA_MASK) == 0) return 0;
-        return (f->type == TYPE_SAMPLE_MASK
-        || f->type == TYPE_UNKNOWN)
-        ? 0 : 1;
+        dmoz_fill_ext_data(f);
+        return f->type & (TYPE_INST_MASK | TYPE_BROWSABLE_MASK);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

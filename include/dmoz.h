@@ -90,7 +90,7 @@ struct dmoz_file {
         size_t filesize; /* stat.st_size */
 
         /* if ((type & TYPE_EXT_DATA_MASK) == 0) nothing below this point will
-        be defined (call dmoz_fill_ext_data to define it) */
+        be defined (call dmoz_{fill,filter}_ext_data to define it) */
 
         const char *description; /* i.e. "Impulse Tracker sample" -- does NOT need free'd */
         char *artist; /* needs free'd (may be -- and usually is -- NULL) */
@@ -156,6 +156,9 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, dmoz_dirl
 int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist);
 
 /* if ((file->type & TYPE_EXT_DATA_MASK) == 0), call this function to get the title and description */
+int dmoz_filter_ext_data(dmoz_file_t *file);
+
+/* same as dmoz_filter_ext_data, but always returns 1 (for async title reading) */
 int dmoz_fill_ext_data(dmoz_file_t *file);
 
 /* filters stuff based on... whatever you like :) */
