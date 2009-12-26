@@ -3000,14 +3000,11 @@ static int pattern_editor_insert(struct key_event *k)
         case 0:                 /* note */
                 // FIXME: this is actually quite wrong; instrument numbers should be independent for each
                 // channel and take effect when the instrument is played (e.g. with 4/8 or keyjazz input)
+                // also, this is fully idiotic
                 smp = ins = cur_note->instrument;
                 if (song_is_instrument_mode()) {
-                        if (ins < 1 || (edit_copy_mask & MASK_INSTRUMENT))
-                                ins = instrument_get_current();
                         smp = -1;
                 } else {
-                        if (smp < 1 || (edit_copy_mask & MASK_INSTRUMENT))
-                                smp = sample_get_current();
                         ins = -1;
                 }
 
@@ -3029,6 +3026,14 @@ static int pattern_editor_insert(struct key_event *k)
                         song_single_step(current_pattern, current_row);
                         advance_cursor(!(k->mod & KMOD_SHIFT), 0);
                         return 1;
+                }
+
+                if (song_is_instrument_mode()) {
+                        if (ins < 1 || (edit_copy_mask & MASK_INSTRUMENT))
+                                ins = instrument_get_current();
+                } else {
+                        if (smp < 1 || (edit_copy_mask & MASK_INSTRUMENT))
+                                smp = sample_get_current();
                 }
 
                 /* TODO: rewrite this more logically */
