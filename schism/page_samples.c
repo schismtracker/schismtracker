@@ -44,6 +44,7 @@ static const int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
 
 static int top_sample = 1;
 static int current_sample = 1;
+static int _altswap_lastvis = 99; // for alt-down sample-swapping
 
 static int sample_list_cursor_pos = 25; /* the "play" text */
 
@@ -536,15 +537,33 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                         break;
                 case SDLK_UP:
                         if (k->state) return 0;
-                        if (!NO_MODIFIER(k->mod))
+                        if (k->mod & KMOD_ALT) {
+                                if (current_sample > 1) {
+                                        new_sample = current_sample - 1;
+                                        song_swap_samples(current_sample, new_sample);
+                                }
+                        } else if (!NO_MODIFIER(k->mod)) {
                                 return 0;
-                        new_sample--;
+                        } else {
+                                new_sample--;
+                        }
                         break;
                 case SDLK_DOWN:
                         if (k->state) return 0;
-                        if (!NO_MODIFIER(k->mod))
+                        if (k->mod & KMOD_ALT) {
+                                // restrict position to the "old" value of _last_vis_sample()
+                                // (this is entirely for aesthetic reasons)
+                                if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+                                        _altswap_lastvis = _last_vis_sample();
+                                if (current_sample < _altswap_lastvis) {
+                                        new_sample = current_sample + 1;
+                                        song_swap_samples(current_sample, new_sample);
+                                }
+                        } else if (!NO_MODIFIER(k->mod)) {
                                 return 0;
-                        new_sample++;
+                        } else {
+                                new_sample++;
+                        }
                         break;
                 case SDLK_PAGEUP:
                         if (k->state) return 0;
