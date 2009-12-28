@@ -48,7 +48,12 @@ char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instr
         cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
 char cfg_video_driver[65];
 int cfg_video_fullscreen = 0;
-int cfg_video_mousecursor = MOUSE_EMULATED;
+#ifdef GEKKO
+# define DEFAULT_MOUSECURSOR MOUSE_DISABLED
+#else
+# define DEFAULT_MOUSECURSOR MOUSE_EMULATED
+#endif
+int cfg_video_mousecursor = DEFAULT_MOUSECURSOR;
 
 /* --------------------------------------------------------------------- */
 

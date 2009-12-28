@@ -69,7 +69,7 @@ EXTRA_DIST = \
 	$(icons)
 
 
-## The following files are available from the hg repository but ae deliberately NOT being included in
+## The following files are available from the hg repository but are deliberately NOT being included in
 ## the static packages, either because they are used to generate other source files which are already
 ## included, or because they are of limited use without a repository.
 ##
@@ -83,6 +83,7 @@ EXTRA_DIST = \
 ##   - schism/isysev.c
 ##   - schism/tree.c
 ##   - scripts/*
+##   - sys/wii/data/*
 
 
 
@@ -111,6 +112,7 @@ noinst_HEADERS = \
 	include/midi.h			\
 	include/mixer.h			\
 	include/mplink.h		\
+	include/osdefs.h		\
 	include/page.h			\
 	include/palettes.h		\
 	include/pattern-view.h		\
@@ -127,6 +129,10 @@ noinst_HEADERS = \
 	include/vgamem-scanner.h	\
 	include/video.h			\
 	include/wine-ddraw.h		\
+	sys/wii/isfs.h			\
+	sys/wii/certs_bin.h		\
+	sys/wii/su_tik_bin.h		\
+	sys/wii/su_tmd_bin.h		\
 	modplug/cmixer.h		\
 	modplug/fmopl.h			\
 	modplug/it_defs.h		\
@@ -177,8 +183,13 @@ if USE_WINDRES
 files_windres=sys/win32/schismres.rc
 endif
 
+if USE_WII
+files_wii=sys/wii/isfs.c sys/wii/osdefs.c
+cflags_wii=-I@srcdir@/sys/wii
+endif
+
 if USE_MACOSX
-files_macosx=sys/macosx/macosx-sdlmain.m sys/macosx/ibook-support.c sys/macosx/midi-macosx.c sys/macosx/mixer-macosx.c
+files_macosx=sys/macosx/macosx-sdlmain.m sys/macosx/ibook-support.c sys/macosx/midi-macosx.c sys/macosx/mixer-macosx.c sys/macosx/osdefs.c
 endif
 
 if USE_NETWORK
@@ -341,6 +352,7 @@ schismtracker_SOURCES = \
 	$(files_gnu_memcmp)		\
 	$(files_strptime)		\
 	$(files_mmap)			\
+	$(files_wii)			\
 	$(files_windres)
 
 # have version.o rely on all files
@@ -353,7 +365,7 @@ AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE \
 	-I$(srcdir)/include -I$(srcdir)/modplug -I.
 AM_CFLAGS = @SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
-	$(cflags_version)
+	$(cflags_version) $(cflags_wii)
 AM_CXXFLAGS = ${AM_CFLAGS}
 AM_OBJCFLAGS = ${AM_CFLAGS}
 

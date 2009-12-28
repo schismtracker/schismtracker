@@ -85,7 +85,7 @@ else
 fi
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strptime asprintf vasprintf memcmp mmap socket nice unsetenv dup)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strptime asprintf vasprintf memcmp mmap socket nice unsetenv dup fnmatch log2)
 AM_CONDITIONAL([NEED_GNU_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
 AM_CONDITIONAL([NEED_GNU_VASPRINTF], [test "$ac_cv_func_vasprintf" = "no"])
 AM_CONDITIONAL([NEED_GNU_MEMCMP], [test "$ac_cv_func_memcmp" = "no"])
@@ -96,7 +96,7 @@ dnl Headers, typedef crap, et al.
 AC_HEADER_STDC
 AC_HEADER_DIRENT
 AC_HEADER_TIME
-AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/soundcard.h fnmatch.h)
+AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/soundcard.h)
 AM_CONDITIONAL([USE_OSS], [test "$ac_cv_header_sys_soundcard_h" = yes])
 
 AC_C_CONST
@@ -106,8 +106,6 @@ AC_TYPE_SIZE_T
 AC_STRUCT_TM
 LT_LIB_M
 AC_SUBST(LIBM)
-
-AC_CHECK_FUNCS(log2)
 
 dnl -----------------------------------------------------------------------
 
@@ -219,6 +217,27 @@ else
 fi
 
 #AC_CHECK_LIB(kernel32, GetConsoleMode, SDL_LIBS="$SDL_LIBS -Wl,--subsystem,console")
+
+dnl Wii crap
+AC_CHECK_LIB(ogc, IOS_ReloadIOS, libogc_found=yes, libogc_found=no, [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
+if test x"$libogc_found" = "xyes"; then
+        AM_CONDITIONAL([USE_WII], true)
+        wii_machdep="-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float"
+        CFLAGS="$CFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include"
+        CXXFLAGS="$CXXFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include"
+        LIBS="$LIBS $wii_machdep -L${DEVKITPRO}/libogc/lib/wii"
+        SDL_CFLAGS="$SDL_CFLAGS -I${DEVKITPRO}/libogc/include/SDL"
+        SDL_LIBS="$SDL_LIBS -lSDL -lfat -lwiiuse -lbte -logc -lm -lwiikeyboard"
+        AC_SUBST(CFLAGS)
+        AC_SUBST(CXXFLAGS)
+        AC_SUBST(LIBS)
+        AC_SUBST(SDL_CFLAGS)
+        AC_SUBST(SDL_LIBS)
+        EXEEXT=.elf
+        AC_SUBST(EXEEXT)
+else
+        AM_CONDITIONAL([USE_WII], false)
+fi
 
 dnl wee...
 dnl this completely sucks...
