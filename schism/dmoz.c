@@ -581,7 +581,7 @@ static int qsort_cmp_file(const void *_a, const void *_b)
                 return -1; /* a goes first */
         if (b->sort_order < a->sort_order)
                 return 1; /* b goes first */
-        return strverscmp(a->base, b->base);
+        return (*cfg_string_compare)(a->base, b->base);
 }
 
 static int qsort_cmp_dir(const void *_a, const void *_b)
@@ -593,7 +593,7 @@ static int qsort_cmp_dir(const void *_a, const void *_b)
                 return -1; /* a goes first */
         if (b->sort_order < a->sort_order)
                 return 1; /* b goes first */
-        return strverscmp(a->base, b->base);
+        return (*cfg_string_compare)(a->base, b->base);
 }
 
 void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
