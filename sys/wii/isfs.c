@@ -426,5 +426,8 @@ bool ISFS_Unmount() {
 
 s32 ISFS_SU() {
     u32 key = 0;
-    return ES_Identify((signed_blob *)certs_bin, certs_bin_size, (signed_blob *)su_tmd_bin, su_tmd_bin_size, (signed_blob *)su_tik_bin, su_tik_bin_size, &key);
+    return ES_Identify((signed_blob *) certs_bin, sizeof(certs_bin),
+                       (signed_blob *) su_tmd_bin, sizeof(su_tmd_bin),
+                       (signed_blob *) su_tik_bin, sizeof(su_tik_bin),
+                       &key);
 }

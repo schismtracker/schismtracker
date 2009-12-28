@@ -40,6 +40,8 @@
 #include "dmoz.h"
 #include "frag-opt.h"
 
+#include "osdefs.h"
+
 #include <errno.h>
 
 #if HAVE_SYS_KD_H
@@ -85,16 +87,6 @@ static void *_alsaless_sdl_hack = NULL;
 #include <alsa/pcm.h>
 #endif
 
-/* FIXME: don't declare functions here -- this stuff goes in .h files :P */
-#if defined(WIN32)
-extern void win32_get_modkey(int*);
-#endif
-#if defined(MACOSX)
-int macosx_ibook_fnswitch(int setting);
-#endif
-#if defined(USE_X11)
-void xscreensaver_deactivate(void);
-#endif
 
 #if !defined(__amigaos4__) && !defined(GEKKO)
 # define ENABLE_HOOKS 1
@@ -593,6 +585,8 @@ static void event_loop(void)
         status.m = tmr->tm_min;
         status.s = tmr->tm_sec;
         while (SDL_WaitEvent(&event)) {
+                if (!os_sdlevent(&event))
+                        continue;
                 sawrep = 0;
                 if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
                         kk.state = 0;
@@ -601,26 +595,11 @@ static void event_loop(void)
                 }
                 if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
                         if (event.key.keysym.sym == 0) {
+                                // XXX when does this happen?
                                 kk.mouse = 0;
                                 kk.unicode = 0;
                                 kk.is_repeat = 0;
-                                switch (event.key.keysym.scancode) {
-                                case 106: /* mac F16 key */
-                                        kk.sym = SDLK_PRINT;
-                                        kk.mod = KMOD_CTRL;
-                                        handle_key(&kk);
-                                        continue;
-                                case 234:
-                                        if (kk.state)
-                                                song_set_current_order(song_get_current_order() - 1);
-                                        continue;
-                                case 233:
-                                        if (kk.state)
-                                                song_set_current_order(song_get_current_order() + 1);
-                                        continue;
-                                };
                         }
-
                 }
                 switch (event.type) {
                 case SDL_SYSWMEVENT:
@@ -632,12 +611,13 @@ static void event_loop(void)
                 case SDL_VIDEOEXPOSE:
                         status.flags |= (NEED_UPDATE);
                         break;
-                case SDL_KEYUP:
+
 #if defined(WIN32)
 #define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
 #else
 #define _ALTTRACKED_KMOD        0
 #endif
+                case SDL_KEYUP:
                 case SDL_KEYDOWN:
                         switch (event.key.keysym.sym) {
                         case SDLK_NUMLOCK:
@@ -668,6 +648,7 @@ static void event_loop(void)
                         switch (fix_numlock_key) {
                         case NUMLOCK_GUESS:
 #ifdef MACOSX
+                                // FIXME can this be moved to macosx_sdlevent?
                                 if (ibook_helper != -1) {
                                         if (ACTIVE_PAGE.selected_widget > -1
                                             && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
@@ -689,11 +670,7 @@ static void event_loop(void)
                         };
 
                         kk.mod = modkey;
-#ifdef GEKKO // Wii SDL doesn't have unicode support, so fake it
-                        kk.unicode = kbd_get_alnum(&kk);
-#else
                         kk.unicode = event.key.keysym.unicode;
-#endif
                         kk.mouse = 0;
                         if (debug_s && strstr(debug_s, "key")) {
                                 log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
@@ -740,9 +717,6 @@ static void event_loop(void)
                 case SDL_MOUSEMOTION:
                 case SDL_MOUSEBUTTONDOWN:
                 case SDL_MOUSEBUTTONUP:
-                        if (video_mousecursor_visible() == MOUSE_DISABLED)
-                                continue;
-
                         if (!kk.state) {
                                 modkey = event.key.keysym.mod;
 #if defined(WIN32)
@@ -1031,6 +1005,9 @@ static void schism_shutdown(void)
                 song_stop_unlocked(1);
                 song_unlock_audio();
 
+                // Clear to black on exit (nicer on Wii; I suppose it won't hurt elsewhere)
+                video_refresh();
+                video_blit();
                 video_shutdown();
                 /*
                 If this is the atexit() handler, why are we calling SDL_Quit?
@@ -1250,6 +1227,7 @@ int main(int argc, char **argv)
 
         sdl_init();
         shutdown_process |= EXIT_SDLQUIT;
+        os_sdlinit();
 
         display_init();
         palette_apply();

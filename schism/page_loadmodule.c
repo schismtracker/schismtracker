@@ -47,7 +47,7 @@
 at http://compressionratings.com/d_archiver_template.html
 and fuglified to add FNM_CASEFOLD|FNM_PERIOD behavior */
 
-#if HAVE_FNMATCH_H
+#if HAVE_FNMATCH
 # include <fnmatch.h>
 #else
 # define FNM_CASEFOLD 0
@@ -64,7 +64,7 @@ inline static int xfnmatch(const char *m, const char *s, UNUSED int f)
 {
         return (*s == '.' && *m != '.') ? 0 : _fnmatch(m, s);
 }
-#endif /* !HAVE_FNMATCH_H */
+#endif /* !HAVE_FNMATCH */
 
 /* --------------------------------------------------------------------- */
 /* the locals */
