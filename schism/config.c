@@ -55,6 +55,20 @@ int cfg_video_fullscreen = 0;
 #endif
 int cfg_video_mousecursor = DEFAULT_MOUSECURSOR;
 
+// ick
+struct {
+        const char *name;
+        compare_func func;
+} compare_funcs[] = {
+        {"strcmp", strcmp},
+        {"strcasecmp", strcasecmp},
+#if HAVE_STRVERSCMP
+        {"strverscmp", strverscmp},
+#endif
+        {NULL, NULL}
+};
+compare_func cfg_string_compare = strverscmp;
+
 /* --------------------------------------------------------------------- */
 
 #if defined(WIN32)
@@ -161,6 +175,15 @@ void cfg_load(void)
                 cfg_module_pattern[PATH_MAX] = 0;
         }
         free(tmp);
+        ptr = cfg_get_string(&cfg, "Directories", "sort_with", NULL, 0, NULL);
+        if (ptr) {
+                for (i = 0; compare_funcs[i].name; i++) {
+                        if (strcasecmp(compare_funcs[i].name, ptr) == 0) {
+                                cfg_string_compare = compare_funcs[i].func;
+                                break;
+                        }
+                }
+        }
 
         ptr = cfg_get_string(&cfg, "General", "numlock_setting", NULL, 0, NULL);
         if (!ptr)
@@ -265,6 +288,7 @@ void cfg_save(void)
 {
         char *ptr;
         cfg_file_t cfg;
+        int i;
 
         ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
         cfg_init(&cfg, ptr);
@@ -278,6 +302,12 @@ void cfg_save(void)
         cfg_set_string(&cfg, "Directories", "instruments", cfg_dir_instruments);
         /* No, it's not a directory, but whatever. */
         cfg_set_string(&cfg, "Directories", "module_pattern", cfg_module_pattern);
+        for (i = 0; compare_funcs[i].name; i++) {
+                if (cfg_string_compare == compare_funcs[i].func) {
+                        cfg_set_string(&cfg, "Directories", "sort_with", compare_funcs[i].name);
+                        break;
+                }
+        }
 
         cfg_save_info(&cfg);
         cfg_save_patedit(&cfg);
