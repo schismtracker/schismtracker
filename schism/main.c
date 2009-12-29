@@ -534,7 +534,14 @@ static void event_loop(void) NORETURN;
 static void event_loop(void)
 {
         SDL_Event event;
-        struct key_event kk;
+        struct key_event kk = {
+                .midi_volume = -1,
+                .midi_note = -1,
+                // X/Y resolution
+                .rx = NATIVE_SCREEN_WIDTH / 80,
+                .ry = NATIVE_SCREEN_HEIGHT / 50,
+                // everything else will be set to 0
+        };
         unsigned int lx = 0, ly = 0; /* last x and y position (character) */
         uint32_t last_mouse_down, ticker;
         SDLKey last_key = 0;
@@ -558,17 +565,6 @@ static void event_loop(void)
         last_mouse_down = 0;
         startdown = 0;
         status.last_keysym = 0;
-        kk.midi_volume = -1;
-        kk.is_synthetic = 0;
-        kk.midi_bend = 0;
-        kk.midi_note = -1;
-
-        /* silence valgrind */
-        kk.state = 0;
-
-        /* X/Y resolution */
-        kk.rx = NATIVE_SCREEN_WIDTH / 80;
-        kk.ry = NATIVE_SCREEN_HEIGHT / 50;
 
         modkey = SDL_GetModState();
 #if defined(WIN32)
