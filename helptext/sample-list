@@ -27,10 +27,15 @@
 |   Alt-T        Save current sample to disk (Export Format)
 |   Alt-W        Save current sample to disk (RAW Format)
 |   Alt-X        Exchange sample (only in Sample List)
+:   Alt-Y        Text to sample data
 :   Alt-Z        Edit/create AdLib (FM) sample
 |
 |   Alt-Ins      Insert sample slot (updates pattern data)
 |   Alt-Del      Remove sample slot (updates pattern data)
+:   Alt-Up/Down  Swap sample with previous/next
+:
+:   Alt-F9       Toggle current sample
+:   Alt-F10      Solo current sample
 |
 |   < >          Decrease/Increase playback channel
 |
