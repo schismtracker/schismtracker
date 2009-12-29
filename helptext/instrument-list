@@ -44,6 +44,7 @@
 :   Alt-F           Double envelope length
 :   Alt-G           Halve envelope length
 :   Alt-E           Resize envelope
+:   Alt-Z           Generate envelope from ADSR values
 |
 |   Press Spacebar  Play default note
 |   Release Space   Note off command
