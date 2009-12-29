@@ -65,6 +65,7 @@ typedef struct _song_sample {
         char name[32];
         char filename[22];
         int played;
+        uint32_t globalvol_saved;
         unsigned char AdlibBytes[12];
 } song_sample;
 
