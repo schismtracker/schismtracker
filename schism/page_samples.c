@@ -171,7 +171,7 @@ static void sample_list_draw_list(void)
                 if (sample->played)
                         draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 
-                draw_text(num99tostr(n, buf), 2, 13 + pos, 0, 2);
+                draw_text(num99tostr(n, buf), 2, 13 + pos, (sample->flags & CHN_MUTE) ? 1 : 0, 2);
 
                 pn = ((unsigned char)name[24]);
                 if (((unsigned char)name[23]) == 0xFF && pn < 200) {
@@ -234,6 +234,7 @@ static void sample_list_predraw_hook(void)
 
         /* global volume */
         widgets_samplelist[2].d.thumbbar.value = sample->global_volume;
+        widgets_samplelist[2].d.thumbbar.text_at_min = (sample->flags & CHN_MUTE) ? "  Muted  " : NULL;
 
         /* default pan (another modplug hack) */
         widgets_samplelist[3].d.toggle.state = (sample->flags & SAMP_PANNING);
@@ -1293,6 +1294,50 @@ static void resize_sample_dialog(int aa)
 
 /* --------------------------------------------------------------------- */
 
+static void sample_set_mute(int n, int mute)
+{
+        song_sample *smp = song_get_sample(n, NULL);
+
+        if (mute) {
+                if (smp->flags & CHN_MUTE)
+                        return;
+                smp->globalvol_saved = smp->global_volume;
+                smp->global_volume = 0;
+                smp->flags |= CHN_MUTE;
+        } else {
+                if (!(smp->flags & CHN_MUTE))
+                        return;
+                smp->global_volume = smp->globalvol_saved;
+                smp->flags &= ~CHN_MUTE;
+        }
+}
+
+static void sample_toggle_mute(int n)
+{
+        song_sample *smp = song_get_sample(n, NULL);
+        sample_set_mute(n, !(smp->flags & CHN_MUTE));
+}
+
+static void sample_toggle_solo(int n)
+{
+        int i, solo = 0;
+
+        if (song_get_sample(n, NULL)->flags & CHN_MUTE) {
+                solo = 1;
+        } else {
+                for (i = 1; i < SCHISM_MAX_SAMPLES; i++) {
+                        if (i != n && !(song_get_sample(i, NULL)->flags & CHN_MUTE)) {
+                                solo = 1;
+                                break;
+                        }
+                }
+        }
+        for (i = 1; i < SCHISM_MAX_SAMPLES; i++)
+                sample_set_mute(i, solo && i != n);
+}
+
+/* --------------------------------------------------------------------- */
+
 static void sample_list_handle_alt_key(struct key_event * k)
 {
         song_sample *sample = song_get_sample(current_sample, NULL);
@@ -1389,12 +1434,16 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 return;
         case SDLK_INSERT:
                 song_insert_sample_slot(current_sample);
-                status.flags |= NEED_UPDATE;
-                return;
+                break;
         case SDLK_DELETE:
                 song_remove_sample_slot(current_sample);
-                status.flags |= NEED_UPDATE;
-                return;
+                break;
+        case SDLK_F9:
+                sample_toggle_mute(current_sample);
+                break;
+        case SDLK_F10:
+                sample_toggle_solo(current_sample);
+                break;
         default:
                 return;
         }
@@ -1655,6 +1704,7 @@ static void update_values_in_song(void)
         /* a few more modplug hacks here... */
         sample->volume = widgets_samplelist[1].d.thumbbar.value * 4;
         sample->global_volume = widgets_samplelist[2].d.thumbbar.value;
+
         if (widgets_samplelist[3].d.toggle.state)
                 sample->flags |= SAMP_PANNING;
         else

@@ -1200,7 +1200,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
                                                 pChn->nC5Speed, 0, 1);
         }
         pChn->dwFlags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
-        pChn->dwFlags |= psmp->uFlags;
+        pChn->dwFlags |= psmp->uFlags & CHN_SAMPLE_FLAGS;
         if (penv) {
                 if (penv->dwFlags & ENV_VOLUME)
                         pChn->dwFlags |= CHN_VOLENV;
@@ -1291,7 +1291,7 @@ void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int b
                         pChn->nLength = pins->nLength;
                         pChn->nLoopEnd = pins->nLength;
                         pChn->nLoopStart = 0;
-                        pChn->dwFlags = (pChn->dwFlags & ~CHN_SAMPLE_FLAGS) | (pins->uFlags);
+                        pChn->dwFlags = (pChn->dwFlags & ~CHN_SAMPLE_FLAGS) | (pins->uFlags & CHN_SAMPLE_FLAGS);
                         if (pChn->dwFlags & CHN_SUSTAINLOOP) {
                                 pChn->nLoopStart = pins->nSustainStart;
                                 pChn->nLoopEnd = pins->nSustainEnd;

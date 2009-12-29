@@ -374,6 +374,7 @@ typedef struct _SONGSAMPLE
         char name[32];
         char filename[22];
         int played; // for note playback dots
+        uint32_t globalvol_saved; // for muting individual samples
 
         // This must be 12-bytes to work around a bug in some gcc4.2s
         unsigned char AdlibBytes[12];
