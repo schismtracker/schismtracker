@@ -891,6 +891,11 @@ static void order_pan_vol_handle_key(struct key_event * k)
 
 static int order_pre_key(struct key_event *k)
 {
+        // hack to sync the active widget between pan/vol pages
+        pages[PAGE_ORDERLIST_PANNING].selected_widget
+                = pages[PAGE_ORDERLIST_VOLUMES].selected_widget
+                = *selected_widget;
+
         /* this was wrong */
         if (k->sym == SDLK_F7) {
                 if (!NO_MODIFIER(k->mod)) return 0;
