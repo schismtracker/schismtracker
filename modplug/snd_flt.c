@@ -93,11 +93,13 @@ void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq
         float fs = freq;//(float)gdwMixingFreq;
         float fg, fb0, fb1;
         float d2, d, e;
-        int cutoff = pChn->nCutOff * 2;
+        int cutoff = pChn->nCutOff;
         int resonance = pChn->nResonance;
 
-        cutoff *= (flt_modifier + 256) / 2;
-        cutoff /= 256;
+        if (cutoff < 127)
+                pChn->dwFlags |= CHN_FILTER;
+
+        cutoff = cutoff * (flt_modifier + 256) / 256;
 
         if (cutoff > 255)
                 cutoff = 255;
@@ -129,7 +131,5 @@ void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq
                 pChn->nFilter_Y1 = pChn->nFilter_Y2 = 0;
                 pChn->nFilter_Y3 = pChn->nFilter_Y4 = 0;
         }
-
-        pChn->dwFlags |= CHN_FILTER;
 }
 
