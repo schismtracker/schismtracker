@@ -3042,15 +3042,22 @@ static int pattern_editor_insert(struct key_event *k)
 
                 /* TODO: rewrite this more logically */
                 if (k->sym == SDLK_SPACE) {
-                        if (k->state) return 0;
-                        /* copy mask to note (FIXME: this should play the note, too) */
+                        /* copy mask to note */
                         n = mask_note.note;
-                        if (edit_copy_mask & MASK_VOLUME) {
-                                vol = mask_note.volume;
-                        } else {
-                                vol = -1;
+                        if (k->state) {
+                                if (keyjazz_noteoff) {
+                                        /* coda mode */
+                                        song_keyup(smp, ins, n);
+                                }
+                                return 0;
                         }
-                        /* if n == 0, don't care */
+                        vol = ((edit_copy_mask & MASK_VOLUME) && cur_note->volume_effect == VOL_EFFECT_VOLUME)
+                                ? mask_note.volume
+                                : -1;
+                        if (k->is_repeat && !keyjazz_repeat)
+                                return 1;
+                        if (NOTE_IS_NOTE(n))
+                                song_keydown(smp, ins, n, vol, current_channel);
                 } else {
                         n = kbd_get_note(k);
                         if (n < 0)
@@ -3072,7 +3079,7 @@ static int pattern_editor_insert(struct key_event *k)
                                         n = NOTE_OFF;
                                 song_keydown(smp, ins, n, vol, current_channel);
                         } else if (k->state) {
-                                if (keyjazz_noteoff) {
+                                if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
                                         /* coda mode */
                                         song_keyup(smp, ins, n);
                                 }
@@ -3081,7 +3088,8 @@ static int pattern_editor_insert(struct key_event *k)
                         } else {
                                 if (k->is_repeat && !keyjazz_repeat)
                                         return 1;
-                                song_keydown(smp, ins, n, vol, current_channel);
+                                if (NOTE_IS_NOTE(n))
+                                        song_keydown(smp, ins, n, vol, current_channel);
                         }
                 }
 
@@ -3089,7 +3097,7 @@ static int pattern_editor_insert(struct key_event *k)
 
                 /* mask stuff: if it's note cut/off/fade/clear, clear the
                  * masked fields; otherwise, copy from the mask note */
-                if (n > 120 || (k->sym != SDLK_SPACE && n == 0)) {
+                if (NOTE_IS_CONTROL(n) || (k->sym != SDLK_SPACE && n == NOTE_NONE)) {
                         /* note cut/off/fade = clear masked fields */
                         if (edit_copy_mask & MASK_INSTRUMENT) {
                                 cur_note->instrument = 0;
@@ -3127,7 +3135,7 @@ static int pattern_editor_insert(struct key_event *k)
                 pattern_selection_system_copyout();
 
                 n = cur_note->note;
-                if (n <= 120 && n > 0) {
+                if (NOTE_IS_NOTE(n)) {
                         if (cur_note->volume_effect == VOL_EFFECT_VOLUME)
                                 vol = cur_note->volume;
 
