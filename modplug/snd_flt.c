@@ -96,9 +96,6 @@ void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq
         int cutoff = pChn->nCutOff;
         int resonance = pChn->nResonance;
 
-        if (cutoff < 127)
-                pChn->dwFlags |= CHN_FILTER;
-
         cutoff = cutoff * (flt_modifier + 256) / 256;
 
         if (cutoff > 255)
@@ -106,6 +103,12 @@ void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq
 
         if (resonance > 255)
                 resonance = 255;
+
+        // Should be 255, but Zxx cutoff is limited to 127, so...
+        if (cutoff < 254)
+                pChn->dwFlags |= CHN_FILTER;
+        else
+                cutoff = 255;
 
         fc = (float) filter_cutoff[cutoff];
 
