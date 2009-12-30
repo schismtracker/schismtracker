@@ -314,7 +314,11 @@ void pattern_editor_display_options(void)
                 create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
                 create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
                 create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
-                create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 1, 200);
+                /* Although patterns as small as 1 row can be edited properly (as of c759f7a0166c), I have
+                discovered it's a bit annoying to hit 'home' here expecting to get 32 rows but end up with
+                just one row instead. so I'll allow editing these patterns, but not really provide a way to
+                set the size, at least until I decide how to present the option nonintrusively. */
+                create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
                 create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
                                     NULL, "Link", 3, options_link_split);
                 create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
