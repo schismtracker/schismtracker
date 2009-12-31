@@ -63,5 +63,24 @@ int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow
 void win32_get_modkey(int *m);
 void xscreensaver_deactivate(void); // this is for x11 (needs renamed)
 
+
+// Mixer interfaces
+
+int alsa_mixer_get_max_volume(void);
+void alsa_mixer_read_volume(int *, int *);
+void alsa_mixer_write_volume(int, int);
+
+int oss_mixer_get_max_volume(void);
+void oss_mixer_read_volume(int *, int *);
+void oss_mixer_write_volume(int, int);
+
+int macosx_mixer_get_max_volume(void);
+void macosx_mixer_read_volume(int *, int *);
+void macosx_mixer_write_volume(int, int);
+
+int win32mm_mixer_get_max_volume(void);
+void win32mm_mixer_read_volume(int *, int *);
+void win32mm_mixer_write_volume(int, int);
+
 #endif /* ! OSDEFS_H */
 

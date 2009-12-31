@@ -24,34 +24,12 @@
 #include "mixer.h"
 #include "util.h"
 #include "SDL.h"
+#include "osdefs.h"
 
 static int (*__mixer_get_max_volume)(void) = NULL;
 static void (*__mixer_read_volume)(int *left, int *right) = NULL;
 static void (*__mixer_write_volume)(int left, int right) = NULL;
 
-#ifdef USE_ALSA
-extern int alsa_mixer_get_max_volume(void);
-extern void alsa_mixer_read_volume(int *, int *);
-extern void alsa_mixer_write_volume(int, int);
-#endif
-
-#ifdef USE_OSS
-extern int oss_mixer_get_max_volume(void);
-extern void oss_mixer_read_volume(int *, int *);
-extern void oss_mixer_write_volume(int, int);
-#endif
-
-#ifdef MACOSX
-extern int macosx_mixer_get_max_volume(void);
-extern void macosx_mixer_read_volume(int *, int *);
-extern void macosx_mixer_write_volume(int, int);
-#endif
-
-#ifdef USE_WIN32MM
-extern int win32mm_mixer_get_max_volume(void);
-extern void win32mm_mixer_read_volume(int *, int *);
-extern void win32mm_mixer_write_volume(int, int);
-#endif
 
 void mixer_setup(void)
 {
