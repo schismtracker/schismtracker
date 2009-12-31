@@ -2587,9 +2587,25 @@ static void pattern_editor_redraw(void)
                                         bg = 0;
                         }
 
-                        track_view->draw_note(chan_drawpos, 15 + row_pos, note,
-                                              ((row == current_row && chan == current_channel)
-                                               ? current_position : -1), fg, bg);
+                        // draw the cursor if on the current row, and:
+                        // - drawing the current channel, regardless of position
+                        // - template is enabled and the channel fits within the template size
+                        // (oh god it's lisp)
+                        int cpos;
+                        if ((row == current_row)
+                            && ((current_position > 0 || template_mode == TEMPLATE_OFF)
+                                ? (chan == current_channel)
+                                : (chan >= current_channel
+                                   && chan < (current_channel
+                                              + (clipboard.data ? clipboard.channels : 1))))) {
+                                // yes! do write the cursor
+                                cpos = current_position;
+                                if (cpos == 6 && link_effect_column && !(status.flags & CLASSIC_MODE))
+                                        cpos = 9; // highlight full effect and value
+                        } else {
+                                cpos = -1;
+                        }
+                        track_view->draw_note(chan_drawpos, 15 + row_pos, note, cpos, fg, bg);
 
                         if (draw_divisions && chan_pos < visible_channels - 1) {
                                 if (is_in_selection(chan, row))
