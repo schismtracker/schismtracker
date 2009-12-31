@@ -279,8 +279,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 csf_check_nna(mp, chan - 1, ins, note, 0);
         if (s) {
                 if (c->dwFlags & CHN_ADLIB) {
-                        OPL_NoteOff(chan);
-                        OPL_Patch(chan, s->AdlibBytes);
+                        OPL_NoteOff(chan - 1);
+                        OPL_Patch(chan - 1, s->AdlibBytes);
                 }
 
                 c->dwFlags = (s->uFlags & CHN_SAMPLE_FLAGS) | (c->dwFlags & CHN_MUTE);
@@ -303,8 +303,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
                         if ((status.flags & MIDI_LIKE_TRACKER) && i) {
                                 if (i->nMidiChannelMask) {
-                                        GM_KeyOff(chan);
-                                        GM_DPatch(chan, i->nMidiProgram, i->wMidiBank, i->nMidiChannelMask);
+                                        GM_KeyOff(chan - 1);
+                                        GM_DPatch(chan - 1, i->nMidiProgram, i->wMidiBank, i->nMidiChannelMask);
                                 }
                         }
 
