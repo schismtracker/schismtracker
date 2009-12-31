@@ -341,8 +341,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 c->nC5Speed = s->nC5Speed;
                 c->nNewNote = note;
                 s->played = 1;
-
         }
+        if (c->nInc < 0)
+                c->nInc = -c->nInc; // lousy hack
         csf_note_change(mp, chan - 1, note, 0, 1, 1);
 
         if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
