@@ -1769,9 +1769,11 @@ void video_mousecursor(int vis)
 
         // Totally turn off mouse event sending when the mouse is disabled
         int evstate = video.mouse.visible == MOUSE_DISABLED ? SDL_DISABLE : SDL_ENABLE;
-        SDL_EventState(SDL_MOUSEMOTION, evstate);
-        SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-        SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+        if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
+                SDL_EventState(SDL_MOUSEMOTION, evstate);
+                SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
+                SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+        }
 }
 
 void video_translate(unsigned int vx, unsigned int vy,
