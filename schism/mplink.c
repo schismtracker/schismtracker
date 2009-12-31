@@ -401,8 +401,6 @@ void song_pattern_resize(int pattern, int newsize)
         int oldsize = mp->PatternAllocSize[pattern];
         status.flags |= SONG_NEEDS_SAVE;
 
-        song_stop_unlocked(0);
-
         if (!mp->Patterns[pattern] && newsize != 64) {
                 mp->Patterns[pattern] = csf_allocate_pattern(newsize, 64);
                 mp->PatternAllocSize[pattern] = newsize;
