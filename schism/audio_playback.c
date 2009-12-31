@@ -272,6 +272,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
         c->nRowParam = param;
 
         // now do a rough equivalent of csf_instrument_change and csf_note_change
+        if (i)
+                csf_check_nna(mp, chan - 1, ins, note, 0);
         if (s) {
                 if (c->dwFlags & CHN_ADLIB) {
                         OPL_NoteOff(chan);
@@ -285,14 +287,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 }
 
                 if (i) {
-                        // XXX handle NNAs if we're playing an instrument
-                        // XXX carry flag?
-
                         c->pHeader = i;
 
-                        c->nVolEnvPosition = 0;
-                        c->nPanEnvPosition = 0;
-                        c->nPitchEnvPosition = 0;
+                        if (!(i->dwFlags & ENV_VOLCARRY)) c->nVolEnvPosition = 0;
+                        if (!(i->dwFlags & ENV_PANCARRY)) c->nPanEnvPosition = 0;
+                        if (!(i->dwFlags & ENV_PITCHCARRY)) c->nPitchEnvPosition = 0;
                         if (i->dwFlags & ENV_VOLUME) c->dwFlags |= CHN_VOLENV;
                         if (i->dwFlags & ENV_PANNING) c->dwFlags |= CHN_PANENV;
                         if (i->dwFlags & ENV_PITCH) c->dwFlags |= CHN_PITCHENV;
@@ -313,6 +312,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                         //?
                         c->nVolSwing = i->nVolSwing;
                         c->nPanSwing = i->nPanSwing;
+                        c->nNNA = i->nNNA;
                 } else {
                         c->pHeader = NULL;
                         c->nCutOff = 0x7f;
