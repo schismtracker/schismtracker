@@ -101,7 +101,9 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
         if (note->volume_effect == VOL_EFFECT_PANNING)
                 draw_text(vol_buf, x + 7, y, 2, bg);
 
-        if (cursor_pos >= 0) {
+        if (cursor_pos == 9) {
+                draw_text(note_text + 10, x + 10, y, 0, 3);
+        } else if (cursor_pos >= 0) {
                 cursor_pos = cursor_pos_map[cursor_pos];
                 draw_char(note_text[cursor_pos], x + cursor_pos, y, 0, 3);
         }
@@ -165,20 +167,22 @@ void draw_note_10(int x, int y, song_note * note, int cursor_pos,
                 return;
         if (cursor_pos > 0)
                 cursor_pos++;
-        /* *INDENT-OFF* */
-        switch (cursor_pos) {
-        case 0: c = note_buf[0]; break;
-        case 2: c = note_buf[2]; break;
-        case 3: c =  ins_buf[0]; break;
-        case 4: c =  ins_buf[1]; break;
-        case 5: c =  vol_buf[0]; break;
-        case 6: c =  vol_buf[1]; break;
-        default: /* 7->9 */
-                c = effect_buf[cursor_pos - 7];
-                break;
+        if (cursor_pos == 10) {
+                draw_text(effect_buf, x + 7, y, 0, 3);
+        } else {
+                switch (cursor_pos) {
+                case 0: c = note_buf[0]; break;
+                case 2: c = note_buf[2]; break;
+                case 3: c =  ins_buf[0]; break;
+                case 4: c =  ins_buf[1]; break;
+                case 5: c =  vol_buf[0]; break;
+                case 6: c =  vol_buf[1]; break;
+                default: /* 7->9 */
+                        c = effect_buf[cursor_pos - 7];
+                        break;
+                }
+                draw_char(c, x + cursor_pos, y, 0, 3);
         }
-        /* *INDENT-ON* */
-        draw_char(c, x + cursor_pos, y, 0, 3);
 }
 
 void draw_mask_10(int x, int y, int mask, int cursor_pos, int fg, int bg)
@@ -310,10 +314,6 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
         }
         draw_half_width_chars(vol_buf[0], vol_buf[1], x + 4, y, fg1, bg1, fg2, bg2);
 
-        /* effect */
-        draw_char(get_effect_char(note->effect), x + 5, y,
-                  (cursor_pos == 6) ? 0 : 2, (cursor_pos == 6) ? 3 : bg);
-
         /* effect value */
         fg1 = fg2 = 10;
         bg1 = bg2 = bg;
@@ -326,10 +326,19 @@ void draw_note_7(int x, int y, song_note * note, int cursor_pos,
                 fg2 = 0;
                 bg2 = 3;
                 break;
+        case 9:
+                fg1 = fg2 = 0;
+                bg1 = bg2 = 3;
+                cursor_pos = 6; // hack
+                break;
         }
         draw_half_width_chars(hexdigits[(note->parameter & 0xf0) >> 4],
                               hexdigits[note->parameter & 0xf],
                               x + 6, y, fg1, bg1, fg2, bg2);
+
+        /* effect */
+        draw_char(get_effect_char(note->effect), x + 5, y,
+                  (cursor_pos == 6) ? 0 : 2, (cursor_pos == 6) ? 3 : bg);
 }
 
 void draw_mask_7(int x, int y, int mask, int cursor_pos, int fg, int bg)
@@ -399,6 +408,10 @@ void draw_note_3(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 sprintf(buf, "%c%02X", get_effect_char(note->effect), note->parameter);
                 draw_text(buf, x, y, 2, bg);
                 draw_char(buf[cursor_pos], x + cursor_pos, y, 0, 3);
+                return;
+        case 9:
+                sprintf(buf, "%c%02X", get_effect_char(note->effect), note->parameter);
+                draw_text(buf, x, y, 0, 3);
                 return;
         default:
                 /* bleh */
@@ -487,6 +500,10 @@ static void draw_effect_2(int x, int y, song_note * note, int cursor_pos, int bg
                 fg2 = 0;
                 bg2 = 3;
                 break;
+        case 9:
+                fg = fg1 = fg2 = 0;
+                bg = bg1 = bg2 = 3;
+                break;
         }
         draw_char(get_effect_char(note->effect), x, y, fg, bg);
         draw_half_width_chars(hexdigits[(note->parameter & 0xf0) >> 4],
@@ -550,6 +567,7 @@ void draw_note_2(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
         case 6:
         case 7:
         case 8:
+        case 9:
                 draw_effect_2(x, y, note, cursor_pos, bg);
                 return;
         default:
@@ -702,6 +720,9 @@ void draw_note_1(int x, int y, song_note * note, int cursor_pos, int fg, int bg)
                 else
                         draw_half_width_chars(buf[0], buf[1], x, y, fg, bg, 0, 3);
                 return;
+        case 9:
+                cursor_pos = 6;
+                // fall through
         case 6:
         case 7:
         case 8:
@@ -874,10 +895,6 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
         }
         draw_half_width_chars(vol_buf[0], vol_buf[1], x + 3, y, fg1, bg1, fg2, bg2);
 
-        /* effect */
-        draw_char(get_effect_char(note->effect), x + 4, y,
-                  cursor_pos == 6 ? 0 : 2, cursor_pos == 6 ? 3 : bg);
-
         /* effect value */
         fg1 = fg2 = 10;
         bg1 = bg2 = bg;
@@ -890,10 +907,19 @@ void draw_note_6(int x, int y, song_note * note, int cursor_pos, UNUSED int fg, 
                 fg2 = 0;
                 bg2 = 3;
                 break;
+        case 9:
+                fg1 = fg2 = 0;
+                bg1 = bg2 = 3;
+                cursor_pos = 6; // hack
+                break;
         }
         draw_half_width_chars(hexdigits[(note->parameter & 0xf0) >> 4],
                               hexdigits[note->parameter & 0xf],
                               x + 5, y, fg1, bg1, fg2, bg2);
+
+        /* effect */
+        draw_char(get_effect_char(note->effect), x + 4, y,
+                  cursor_pos == 6 ? 0 : 2, cursor_pos == 6 ? 3 : bg);
 }
 
 void draw_mask_6(int x, int y, int mask, int cursor_pos, int fg, int bg)
