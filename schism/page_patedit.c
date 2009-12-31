@@ -2813,39 +2813,27 @@ static int note_is_empty(song_note *p)
 }
 #endif
 
-static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row, int note, int force)
+// FIXME: why the 'row' parameter? should it be removed, or should the references to current_row be replaced?
+// fwiw, every call to this uses current_row.
+// return: zero if there was a template error, nonzero otherwise
+static int patedit_record_note(song_note *cur_note, int channel, UNUSED int row, int note, int force)
 {
         song_note *q;
-        int i;
+        int i, r = 1;
 
         status.flags |= SONG_NEEDS_SAVE;
-        if (note == 0 || note == NOTE_OFF || note == NOTE_CUT || note == NOTE_FADE) {
-                if (template_mode == TEMPLATE_OFF) {
-                        /* no template mode */
-                        if (force || !cur_note->note) cur_note->note = note;
-                } else if (template_mode != TEMPLATE_NOTES_ONLY) {
-                        /* this is a really great idea, but not IT-like at all... */
-                        for (i = 0; i < clipboard.channels; i++) {
-                                if (i+channel > 64) break;
-                                if (template_mode == TEMPLATE_MIX_PATTERN_PRECEDENCE) {
-                                        if (!cur_note->note)
-                                                cur_note->note = note;
-                                } else {
-                                        cur_note->note = note;
-                                }
-                                cur_note++;
-                        }
-                }
-        } else {
+        if (NOTE_IS_NOTE(note)) {
                 if (template_mode) {
                         q = clipboard.data;
                         if (clipboard.channels < 1 || clipboard.rows < 1 || !clipboard.data) {
                                 dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
+                                r = 0;
                         } else if (!q->note) {
                                 create_button(template_error_widgets+0,36,32,6,0,0,0,0,0,
                                                 dialog_yes_NULL,"OK",3);
                                 dialog_create_custom(20, 23, 40, 12, template_error_widgets, 1,
                                                 0, template_error_draw, NULL);
+                                r = 0;
                         } else {
                                 i = note - q->note;
 
@@ -2867,8 +2855,26 @@ static void patedit_record_note(song_note *cur_note, int channel, UNUSED int row
                 } else {
                         cur_note->note = note;
                 }
+        } else {
+                if (template_mode == TEMPLATE_OFF) {
+                        /* no template mode */
+                        if (force || !cur_note->note) cur_note->note = note;
+                } else if (template_mode != TEMPLATE_NOTES_ONLY) {
+                        /* this is a really great idea, but not IT-like at all... */
+                        for (i = 0; i < clipboard.channels; i++) {
+                                if (i+channel > 64) break;
+                                if (template_mode == TEMPLATE_MIX_PATTERN_PRECEDENCE) {
+                                        if (!cur_note->note)
+                                                cur_note->note = note;
+                                } else {
+                                        cur_note->note = note;
+                                }
+                                cur_note++;
+                        }
+                }
         }
         pattern_selection_system_copyout();
+        return r;
 }
 
 static int pattern_editor_insert_midi(struct key_event *k)
@@ -3109,7 +3115,10 @@ static int pattern_editor_insert(struct key_event *k)
                         }
                 }
 
-                patedit_record_note(cur_note, current_channel, current_row, n, 1);
+                if (!patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
+                        // there was a template error, don't advance the cursor and so on
+                        break;
+                }
 
                 /* mask stuff: if it's note cut/off/fade/clear, clear the
                  * masked fields; otherwise, copy from the mask note */
