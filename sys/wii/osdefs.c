@@ -47,13 +47,6 @@ void wii_sdlinit(void)
                         log_appendf(4, "[%d] open fail", n);
                         continue;
                 }
-                log_appendf(2, "[%d] %s axes=%d balls=%d hats=%d buttons=%d",
-                        n,
-                        SDL_JoystickName(n),
-                        SDL_JoystickNumAxes(js),
-                        SDL_JoystickNumBalls(js),
-                        SDL_JoystickNumHats(js),
-                        SDL_JoystickNumButtons(js));
         }
 }
 
@@ -100,7 +93,6 @@ int wii_sdlevent(SDL_Event *event)
                         };
                         event->key.keysym.unicode = kbd_get_alnum(&k);
                 }
-                log_appendf(2, "key");
                 return 1;
 
         case SDL_JOYHATMOTION:
@@ -185,7 +177,6 @@ int wii_sdlevent(SDL_Event *event)
                         newev.key.state = SDL_RELEASED;
                 }
                 newev.key.type = newev.type;
-                log_appendf(2, "joy %d button %d down", event->jbutton.which, event->jbutton.button);
                 *event = newev;
                 return 1;
         }
