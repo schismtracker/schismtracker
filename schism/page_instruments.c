@@ -1688,7 +1688,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope *env, int *curre
                                 for (i = 1; i < env->nodes; i++) {
                                         /* something too close */
                                         if (env->ticks[i] <= x) *current_node = i;
-                                        if (abs(env->ticks[i] - x) <= 4) return 0;
+                                        if (abs(env->ticks[i] - x) < 2) return 0;
                                 }
                                 best_dist_node = (_env_node_add(env, *current_node, x, y))+1;
                                 status_text_flash("Created node %d", best_dist_node);
