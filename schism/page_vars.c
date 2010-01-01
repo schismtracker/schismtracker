@@ -112,10 +112,15 @@ static void init_instruments(UNUSED void *data)
         song_set_instrument_mode(1);
 }
 
+static void dont_init_instruments(UNUSED void *data)
+{
+        song_set_instrument_mode(1);
+}
+
 static void maybe_init_instruments(void)
 {
         /* XXX actually, in IT the buttons on this dialog say OK/No for whatever reason */
-        dialog_create(DIALOG_YES_NO, "Initialise instruments?", init_instruments, NULL, 0, NULL);
+        dialog_create(DIALOG_YES_NO, "Initialise instruments?", init_instruments, dont_init_instruments, 0, NULL);
 }
 
 
