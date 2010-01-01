@@ -341,6 +341,10 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 c->nC5Speed = s->nC5Speed;
                 c->nNewNote = note;
                 s->played = 1;
+        } else if (NOTE_IS_NOTE(note)) {
+                // Note given with no sample number. This might happen if on the instrument list and playing
+                // an instrument that has no sample mapped for the given note. In this case, ignore the note.
+                note = NOTE_NONE;
         }
         if (c->nInc < 0)
                 c->nInc = -c->nInc; // lousy hack
