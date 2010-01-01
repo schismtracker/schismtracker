@@ -504,6 +504,10 @@ void video_setup(const char *driver)
         } else if (!strcasecmp(driver, "sdlddraw")) {
                 putenv("SDL_VIDEODRIVER=directx");
         }
+#elif defined(GEKKO)
+        if (!driver) {
+                driver = "yuv";
+        }
 #else
         if (!driver) {
                 if (getenv("DISPLAY")) {
