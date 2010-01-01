@@ -884,9 +884,7 @@ static int handle_key_global(struct key_event * k)
                 if (k->state) return 1;
 
                 song_toggle_channel_mute(i);
-                if (status.current_page == PAGE_PATTERN_EDITOR) {
-                        status.flags |= NEED_UPDATE;
-                }
+                status.flags |= NEED_UPDATE;
                 return 1;
         }
 
