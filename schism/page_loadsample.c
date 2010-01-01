@@ -806,7 +806,7 @@ static void handle_preload(void)
 
         if (fake_slot == KEYJAZZ_NOINST && current_file >= 0 && current_file < flist.num_files) {
                 file = flist.files[current_file];
-                if (file) {
+                if (file && (file->type & TYPE_SAMPLE_MASK)) {
                         fake_slot_changed = 0;
                         fake_slot = song_preload_sample(file);
                 }
