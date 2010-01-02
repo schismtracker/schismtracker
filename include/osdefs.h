@@ -49,7 +49,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlevent(ev) 1
 #endif
 #ifndef os_sdlinit
-# define os_sdlinit() 1
+# define os_sdlinit()
 #endif
 
 

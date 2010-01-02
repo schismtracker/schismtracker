@@ -156,6 +156,10 @@ static void _clippy_copy_to_sys(int do_sel)
         }
 #elif defined(MACOSX)
         if (!do_sel) macosx_clippy_put(_current_clipboard);
+#else
+        // some other system -- linux without x11, maybe
+        // pretend we used the param to silence warnings
+        (void) do_sel;
 #endif
         if (freeme)
                 free(freeme);
