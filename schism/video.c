@@ -176,7 +176,7 @@ struct video_cf {
                 DDBLTFX fx;
         } ddblit;
 #endif
-        int yuvlayout;
+        unsigned int yuvlayout;
         SDL_Rect clip;
         SDL_Surface * surface;
         SDL_Overlay * overlay;
@@ -1762,7 +1762,7 @@ void video_mousecursor(int vis)
         case MOUSE_SYSTEM:
         case MOUSE_EMULATED:
                 video.mouse.visible = vis;
-                status_text_flash(state[video.mouse.visible]);
+                status_text_flash("%s", state[video.mouse.visible]);
         case MOUSE_RESET_STATE:
                 break;
         default:

@@ -1,6 +1,3 @@
-#include <limits.h>
-#include <math.h>
-
 #include "sndfile.h"
 
 #include "snd_fm.h"
@@ -10,6 +7,8 @@
 #include "tables.h"
 
 #include "util.h" /* for clamp/min */
+
+#include <math.h>
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* note/freq/period conversion functions */

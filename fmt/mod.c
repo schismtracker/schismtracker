@@ -283,7 +283,8 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         }
 
 
-        sprintf(song->tracker_id, tid ?: "%d Channel MOD", nchan);
+        // http://llvm.org/viewvc/llvm-project?view=rev&revision=91888
+        sprintf(song->tracker_id, tid ? tid : "%d Channel MOD", nchan);
         slurp_seek(fp, 1084, SEEK_SET);
 
         /* pattern data */
