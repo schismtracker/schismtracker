@@ -307,20 +307,20 @@ int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample *smp, c
 
 int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 {
-        short s;
-        unsigned long ul;
+        int16_t s;
+        uint32_t ul;
         int tlen, bps = (smp->flags & SAMP_16_BIT) ? 2 : 1;
         unsigned char b[10];
 
         /* File header
                ID ckID;
-               long ckSize;
+               int32_t ckSize;
                ID formType; */
         fp->o(fp, (const unsigned char *)"FORM\1\1\1\1AIFFNAME", 16);
 
         /* NAME chunk
                ID ckID;
-               long ckSize;
+               int32_t ckSize;
                char text[]; */
         tlen = strlen(title);
         if (tlen & 1)
@@ -331,10 +331,10 @@ int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 
         /* COMM chunk
                ID ckID;
-               long ckSize;
-               short numChannels;
-               unsigned long numSampleFrames;
-               short sampleSize;
+               int32_t ckSize;
+               int16_t numChannels;
+               uint32_t numSampleFrames;
+               int16_t sampleSize;
                extended sampleRate; */
         fp->o(fp, (const unsigned char *)"COMM", 4);
         ul = bswapBE32(18);
@@ -351,10 +351,10 @@ int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 
         /* SSND chunk:
                char ckID[4];
-               long ckSize;
-               unsigned long offset;
-               unsigned long blockSize;
-               unsigned char soundData[]; */
+               int32_t ckSize;
+               uint32_t offset;
+               uint32_t blockSize;
+               uint8_t soundData[]; */
         fp->o(fp, (const unsigned char *)"SSND", 4);
         ul = smp->length * bps;
         ul = bswapBE32(ul);
@@ -369,11 +369,11 @@ int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
                 fp->o(fp, (const unsigned char *)smp->data, smp->length * bps);
         } else {
 #define BUFS    4096
-                unsigned short buffer[BUFS];
-                unsigned short *q, *p, *end;
-                unsigned int length;
+                uint16_t buffer[BUFS];
+                uint16_t *q, *p, *end;
+                uint32_t length;
 
-                q = (unsigned short *)smp->data;
+                q = (uint16_t *)smp->data;
                 length = smp->length;
                 end = &buffer[BUFS-2];
                 p = buffer;
@@ -444,14 +444,14 @@ int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 # define HUGE_VAL HUGE
 #endif /* HUGE_VAL */
 
-#define FloatToUnsigned(f) ((unsigned long) (((long) (f - 2147483648.0)) + 2147483647L + 1))
-#define UnsignedToFloat(u) (((double) ((long) (u - 2147483647L - 1))) + 2147483648.0)
+#define FloatToUnsigned(f) ((uint32_t) (((int32_t) (f - 2147483648.0)) + 2147483647L + 1))
+#define UnsignedToFloat(u) (((double) ((int32_t) (u - 2147483647L - 1))) + 2147483648.0)
 
 static void ConvertToIeeeExtended(double num, unsigned char *bytes)
 {
         int sign, expon;
         double fMant, fsMant;
-        unsigned long hiMant, loMant;
+        uint32_t hiMant, loMant;
 
         if (num < 0) {
                 sign = 0x8000;
@@ -505,17 +505,17 @@ static double ConvertFromIeeeExtended(const unsigned char *bytes)
 {
         double f;
         int expon;
-        unsigned long hiMant, loMant;
+        uint32_t hiMant, loMant;
 
         expon = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
-        hiMant = ((unsigned long) (bytes[2] & 0xFF) << 24)
-                | ((unsigned long) (bytes[3] & 0xFF) << 16)
-                | ((unsigned long) (bytes[4] & 0xFF) << 8)
-                | ((unsigned long) (bytes[5] & 0xFF));
-        loMant = ((unsigned long) (bytes[6] & 0xFF) << 24)
-                | ((unsigned long) (bytes[7] & 0xFF) << 16)
-                | ((unsigned long) (bytes[8] & 0xFF) << 8)
-                | ((unsigned long) (bytes[9] & 0xFF));
+        hiMant = ((uint32_t) (bytes[2] & 0xFF) << 24)
+                | ((uint32_t) (bytes[3] & 0xFF) << 16)
+                | ((uint32_t) (bytes[4] & 0xFF) << 8)
+                | ((uint32_t) (bytes[5] & 0xFF));
+        loMant = ((uint32_t) (bytes[6] & 0xFF) << 24)
+                | ((uint32_t) (bytes[7] & 0xFF) << 16)
+                | ((uint32_t) (bytes[8] & 0xFF) << 8)
+                | ((uint32_t) (bytes[9] & 0xFF));
 
         if (expon == 0 && hiMant == 0 && loMant == 0) {
                 f = 0;
