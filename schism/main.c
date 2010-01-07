@@ -1054,11 +1054,17 @@ int main(int argc, char **argv)
         fatInit(CACHE_PAGES, 0);
 
         // Attempt to locate a suitable home directory.
-        if (strchr(argv[0], '/') != NULL) {
+        if (!argc || !argv) {
+                // loader didn't bother setting these
+                argc = 1;
+                argv = malloc(sizeof(char **));
+                *argv = str_dup("?");
+        } else if (strchr(argv[0], '/') != NULL) {
                 // presumably launched from hbc menu - put stuff in the boot dir
                 // (does get_parent_directory do what I want here?)
                 ptr = get_parent_directory(argv[0]);
-        } else {
+        }
+        if (!ptr) {
                 // Make a guess anyway
                 ptr = str_dup("sd:/apps/schismtracker");
         }
