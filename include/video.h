@@ -80,11 +80,11 @@ SDL_Surface *xpmdata(const char *xpmdata[]);
 unsigned int xv_yuvlayout(void);
 #endif
 
-#define VIDEO_YUV_UYVY  0x59565955
-#define VIDEO_YUV_YUY2  0x32595559
-#define VIDEO_YUV_YV12  0x32315659
-#define VIDEO_YUV_IYUV  0x56555949
-#define VIDEO_YUV_YVYU  0x55595659
+#define VIDEO_YUV_UYVY          0x59565955
+#define VIDEO_YUV_YUY2          0x32595559
+#define VIDEO_YUV_YV12          0x32315659
+#define VIDEO_YUV_IYUV          0x56555949
+#define VIDEO_YUV_YVYU          0x55595659
 #define VIDEO_YUV_YV12_TV       (VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
 #define VIDEO_YUV_IYUV_TV       (VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
 #define VIDEO_YUV_RGBA          0x41424752
@@ -92,5 +92,6 @@ unsigned int xv_yuvlayout(void);
 #define VIDEO_YUV_RGB565        0x32424752
 #define VIDEO_YUV_RGB24         0x0
 #define VIDEO_YUV_RGB32         0x3
+#define VIDEO_YUV_NONE          0xFFFFFFFF
 
 #endif
