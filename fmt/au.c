@@ -39,7 +39,7 @@ enum {
 
 struct au_header {
         char magic[4]; /* ".snd" */
-        unsigned long data_offset, data_size, encoding, sample_rate, channels;
+        uint32_t data_offset, data_size, encoding, sample_rate, channels;
 };
 
 
@@ -155,7 +155,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp, cha
 int fmt_au_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
 {
         struct au_header au;
-        unsigned long ln;
+        uint32_t ln;
 
         memcpy(au.magic, ".snd", 4);
 
