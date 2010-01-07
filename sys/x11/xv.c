@@ -41,7 +41,7 @@ unsigned int xv_yuvlayout(void)
         SDL_SysWMinfo info;
         Display *dpy;
         unsigned int nencode, nadaptors;
-        unsigned int resc;
+        unsigned int resc = VIDEO_YUV_NONE;
         int numImages;
         int i, j, k, nscreens;
         unsigned int w, h;
@@ -58,13 +58,13 @@ unsigned int xv_yuvlayout(void)
         if (!dpy) {
                 dpy = XOpenDisplay(NULL);
                 memset(&info, 0, sizeof(info));
-                if (!dpy) return 0;
+                if (!dpy) return VIDEO_YUV_NONE;
         }
         ver=rev=reqB=eventB=errorB=0;
         if ((Success != XvQueryExtension(dpy, &ver, &rev, &reqB,
                                                 &eventB, &errorB))) {
                 /* no XV support */
-                return 0;
+                return VIDEO_YUV_NONE;
         }
 
         nscreens = ScreenCount(dpy);
@@ -119,7 +119,7 @@ unsigned int xv_yuvlayout(void)
         }
         return resc;
 #else
-        return 0;
+        return VIDEO_YUV_NONE;
 #endif
 }
 
