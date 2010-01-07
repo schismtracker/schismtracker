@@ -1074,19 +1074,20 @@ static inline void update_vu_meter(SONGVOICE *chan)
         } else if (vutmp && chan->pCurrentSample) {
                 // can't fake the funk
                 int n;
+                int pos = chan->nPos; // necessary on 64-bit systems (sometimes pos == -1, weird)
                 if (chan->dwFlags & CHN_16BIT) {
                         const signed short *p = (signed short *)(chan->pCurrentSample);
                         if (chan->dwFlags & CHN_STEREO)
-                                n = p[2 * chan->nPos];
+                                n = p[2 * pos];
                         else
-                                n = p[chan->nPos];
+                                n = p[pos];
                         n >>= 8;
                 } else {
                         const signed char *p = (signed char *)(chan->pCurrentSample);
                         if (chan->dwFlags & CHN_STEREO)
-                                n = p[2 * chan->nPos];
+                                n = p[2 * pos];
                         else
-                                n = p[chan->nPos];
+                                n = p[pos];
                 }
                 if (n < 0)
                         n = -n;
