@@ -450,7 +450,7 @@ void video_setup(const char *driver)
         video.draw.height = NATIVE_SCREEN_HEIGHT;
         video.mouse.visible = MOUSE_EMULATED;
 
-        video.yuvlayout = -1;
+        video.yuvlayout = 0;
         if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
                 if (strcasecmp(q, "YUY2") == 0
                 || strcasecmp(q, "YUNV") == 0
@@ -480,7 +480,7 @@ void video_setup(const char *driver)
                 } else if (strcasecmp(q, "RGB32") == 0 || strcasecmp(q, "RGB") == 0) {
                         video.yuvlayout = VIDEO_YUV_RGB32;
                 } else if (sscanf(q, "%x", &video.yuvlayout) != 1) {
-                        video.yuvlayout = -1;
+                        video.yuvlayout = 0;
                 }
         }
 
@@ -521,13 +521,13 @@ void video_setup(const char *driver)
         video.desktop.fb_hacks = 0;
 #ifdef USE_X11
         /* get xv info */
-        if (video.yuvlayout == -1) video.yuvlayout = xv_yuvlayout();
+        if (video.yuvlayout == 0) video.yuvlayout = xv_yuvlayout();
 #else
-        if (video.yuvlayout == -1) video.yuvlayout = VIDEO_YUV_YUY2;
+        if (video.yuvlayout == 0) video.yuvlayout = VIDEO_YUV_YUY2;
 #endif
-        if ((video.yuvlayout != (int)VIDEO_YUV_YV12_TV
-        &&   video.yuvlayout != (int)VIDEO_YUV_IYUV_TV
-        &&   video.yuvlayout != -1 && 0) /* don't do this until we figure out how to make it better */
+        if ((video.yuvlayout != VIDEO_YUV_YV12_TV
+        &&   video.yuvlayout != VIDEO_YUV_IYUV_TV
+        &&   video.yuvlayout != 0 && 0) /* don't do this until we figure out how to make it better */
                          && !strcasecmp(driver, "x11")) {
                 video.desktop.want_type = VIDEO_YUV;
                 putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");

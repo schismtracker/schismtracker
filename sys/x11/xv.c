@@ -119,7 +119,7 @@ unsigned int xv_yuvlayout(void)
         }
         return resc;
 #else
-        return -1;
+        return 0;
 #endif
 }
 
