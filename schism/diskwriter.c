@@ -447,7 +447,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
                 return DW_ERROR;
         }
 
-        log_appendf(2, "Opening %s for writing", str);
+        log_appendf(2, "Saving file %s", dw_rename_to);
         status.flags |= DISKWRITER_ACTIVE;
 
         return DW_OK;

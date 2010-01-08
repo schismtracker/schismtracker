@@ -65,7 +65,7 @@ static void readProc(const MIDIPacketList *np, UNUSED void *rc, void *crc)
                 x = MIDIPacketNext(x);
         }
 }
-static void _macosx_send(struct midi_port *p, unsigned char *data,
+static void _macosx_send(struct midi_port *p, const unsigned char *data,
                                 unsigned int len, unsigned int delay)
 {
         struct macosx_midi *m;

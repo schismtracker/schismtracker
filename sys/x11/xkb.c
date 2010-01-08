@@ -24,6 +24,7 @@
 
 #include "sdlmain.h"
 #include "it.h"
+#include "osdefs.h"
 
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
@@ -31,19 +32,9 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 
-#if defined(HAVE_X11_XKBLIB_H)
-#include <X11/XKBlib.h>
-#define USE_XKB
-#elif defined(HAVE_X11_EXTENSIONS_XKB_H)
-#include <X11/XKBlib.h>
-#define USE_XKB
+#ifdef USE_XKB
+# include <X11/XKBlib.h>
 #endif
-
-/* FIXME: don't put declarations in c files... */
-unsigned key_repeat_rate(void);
-unsigned key_repeat_delay(void);
-int key_scancode_lookup(int k);
-
 
 static int virgin = 1;
 static unsigned int delay, rate;
@@ -114,18 +105,20 @@ static void _key_info_setup(void)
                 info.info.x11.unlock_func();
 }
 
-unsigned key_repeat_rate(void)
+unsigned int key_repeat_rate(void)
 {
-        _key_info_setup(); return rate;
+        _key_info_setup();
+        return rate;
 }
 
-unsigned key_repeat_delay(void)
+unsigned int key_repeat_delay(void)
 {
-        _key_info_setup(); return delay;
+        _key_info_setup();
+        return delay;
 }
 
 #ifdef USE_XKB
-int key_scancode_lookup(int k)
+int key_scancode_lookup(int k, int def)
 {
         static unsigned int d;
         KeySym sym;
@@ -134,11 +127,6 @@ int key_scancode_lookup(int k)
                         XkbTranslateKeyCode(us_kb_map, k, 0, &d, &sym)) {
                 return sym;
         }
-        return -1;
-}
-#else
-int key_scancode_lookup(UNUSED int k)
-{
-        return -1;
+        return def;
 }
 #endif

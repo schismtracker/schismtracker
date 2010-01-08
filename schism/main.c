@@ -936,10 +936,10 @@ Also why these would not be defined, I'm not sure either, but hey. */
                         switch (song_get_mode()) {
                         case MODE_PLAYING:
                         case MODE_PATTERN_LOOP:
-#ifdef USE_X11
+#ifdef os_screensaver_deactivate
                                 if ((status.now-last_ss) > 14) {
                                         last_ss=status.now;
-                                        xscreensaver_deactivate();
+                                        os_screensaver_deactivate();
                                 }
 #endif
                                 break;
@@ -964,10 +964,11 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                         log_appendf(4, "Error shutting down diskwriter: %s", strerror(errno));
                                         break;
                                 case DW_OK:
-                                        log_appendf(2, "Diskwriter completed successfully");
+                                        //log_appendf(2, "Diskwriter completed successfully");
 #ifdef ENABLE_HOOKS
                                         run_diskwriter_complete_hook();
 #endif
+                                        break;
                                 }
                         }
 
@@ -1038,15 +1039,11 @@ static void dump_misc_about_text(void)
 
 extern void vis_init(void);
 
-#if defined(WIN32)
-extern void win32_setup_keymap(void);
-#endif
-
 int main(int argc, char **argv)
 {
 #ifdef GEKKO
         DIR_ITER *dir;
-        char *ptr;
+        char *ptr = NULL;
 
         ISFS_SU();
         if (ISFS_Initialize() == IPC_OK)

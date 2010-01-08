@@ -2,7 +2,7 @@
  * into MIDI style thinking.
 */
 
-#include <math.h> // for log and log2
+#include "headers.h"
 
 #include "log.h"
 #include "it.h" // needed for status.flags
@@ -10,6 +10,7 @@
 #include "mplink.h" // for 'mp', which we shouldn't need
 #include "snd_gm.h"
 
+#include <math.h> // for log and log2
 #if !defined(HAVE_LOG2) && !defined(__USE_ISOC99) && !defined(log2)
 static double log2(double d)
 {

@@ -24,6 +24,7 @@
 #include "headers.h"
 #include "sdlmain.h"
 #include "it.h"
+#include "osdefs.h"
 
 #include <windows.h>
 
@@ -45,14 +46,14 @@ void win32_get_modkey(int *mk)
 }
 
 /* more windows key stuff... */
-unsigned key_repeat_rate(void)
+unsigned int key_repeat_rate(void)
 {
         DWORD spd;
         if (!SystemParametersInfo(SPI_GETKEYBOARDSPEED, 0, &spd, 0)) return 0;
         if (!spd) return 1;
         return spd;
 }
-unsigned key_repeat_delay(void)
+unsigned int key_repeat_delay(void)
 {
         int delay;
 
@@ -74,7 +75,7 @@ void win32_setup_keymap(void)
         us_keymap = LoadKeyboardLayout("00000409", KLF_ACTIVATE|KLF_REPLACELANG|KLF_NOTELLSHELL);
         (void)ActivateKeyboardLayout(default_keymap,0);
 }
-int key_scancode_lookup(int k)
+int key_scancode_lookup(int k, int def)
 {
 #ifndef VK_0
 #define VK_0    '0'
@@ -174,5 +175,5 @@ int key_scancode_lookup(int k)
         case VK_LBRACKET: return SDLK_LEFTBRACKET;
         case VK_RBRACKET: return SDLK_RIGHTBRACKET;
         };
-        return -1;
+        return def;
 }

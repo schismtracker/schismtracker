@@ -123,9 +123,6 @@ static const unsigned int _mouse_pointer[] = {
 
 
 #ifdef WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
 #include <windows.h>
 #include "wine-ddraw.h"
 struct private_hwdata {
@@ -597,7 +594,6 @@ void video_startup(void)
         char *q;
         SDL_Rect **modes;
         int i, j, x, y;
-        SDL_Surface *icon;
 
         /* because first mode is 0 */
         vgamem_clear();
@@ -606,7 +602,7 @@ void video_startup(void)
         SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
-        icon = xpmdata(_schism_icon_xpm);
+        SDL_Surface *icon = xpmdata(_schism_icon_xpm);
         SDL_WM_SetIcon(icon, NULL);
         SDL_FreeSurface(icon);
 #endif

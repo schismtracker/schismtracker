@@ -25,8 +25,9 @@
 
 #include "mixer.h"
 #include "util.h"
+#include "osdefs.h"
 
-#ifndef USE_WIN32MM
+#ifndef WIN32
 # error Why do you want to build this if you do not intend to use it?
 #endif
 
@@ -45,7 +46,7 @@ int win32mm_mixer_get_max_volume(void)
         return 0xFF;
 }
 
-static HWAVEOUT open_mixer()
+static HWAVEOUT open_mixer(void)
 {
         HWAVEOUT hwo=NULL;
         WAVEFORMATEX pwfx;

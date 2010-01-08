@@ -41,6 +41,7 @@ extern char *initial_song;
 
 #include <SDL.h> /* necessary here */
 #include "event.h"
+#include "osdefs.h"
 
 #import "macosx-sdlmain.h"
 
@@ -396,7 +397,7 @@ static void setupWindowMenu(void)
 }
 
 /* Replacement for NSApplicationMain */
-static void CustomApplicationMain (argc, argv)
+static void CustomApplicationMain (int argc, char **argv)
 {
         NSAutoreleasePool       *pool = [[NSAutoreleasePool alloc] init];
         SDLMain                         *sdlMain;
@@ -540,7 +541,7 @@ void macosx_clippy_put(const char *buf)
         [pb setString:contents forType:NSStringPboardType];
 }
 // ktt appears to be 1/60th of a second?
-unsigned key_repeat_rate(void)
+unsigned int key_repeat_rate(void)
 {
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         int ktt = [defaults integerForKey:@"KeyRepeat"];
@@ -548,7 +549,7 @@ unsigned key_repeat_rate(void)
         ktt = (ktt * 1000) / 60;
         return (unsigned)ktt;
 }
-unsigned key_repeat_delay(void)
+unsigned int key_repeat_delay(void)
 {
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         int ktt = [defaults integerForKey:@"InitialKeyRepeat"];
@@ -556,7 +557,7 @@ unsigned key_repeat_delay(void)
         ktt = (ktt * 1000) / 60;
         return (unsigned)ktt;
 }
-int key_scancode_lookup(int k)
+int key_scancode_lookup(int k, int def)
 {
         switch (k & 127) {
         case 0x32: /* QZ_BACKQUOTE */ return SDLK_BACKQUOTE;
@@ -607,6 +608,6 @@ int key_scancode_lookup(int k)
         case 0x2F: /* QZ_. */ return SDLK_PERIOD;
         case 0x2C: /* QZ_slash */ return SDLK_SLASH;
         case 0x31: /* QZ_space */ return SDLK_SPACE;
-        default: return -1;
+        default: return def;
         };
 }

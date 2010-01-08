@@ -34,7 +34,7 @@
 #include <mmsystem.h>
 #include <stdio.h>
 
-#ifndef USE_WIN32MM
+#ifndef WIN32
 # error You have no winmm. Why are you trying to build this file?
 #endif
 
@@ -63,7 +63,7 @@ static MMRESULT (*XP_timeSetEvent)(UINT u,UINT r,LPTIMECALLBACK proc,
 
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
 {
-        unsigned char *z;
+        char *z;
         LPMIDIHDR m;
 
         if (!d) len=0;
@@ -116,8 +116,8 @@ struct curry {
 static CALLBACK void _win32mm_xp_output(UNUSED UINT uTimerID,
                         UNUSED UINT uMsg,
                         DWORD_PTR dwUser,
-                        DWORD_PTR dw1,
-                        DWORD_PTR dw2)
+                        UNUSED DWORD_PTR dw1,
+                        UNUSED DWORD_PTR dw2)
 {
         struct curry *c;
         c = (struct curry *)dwUser;
@@ -141,8 +141,8 @@ static void _win32mm_send_xp(struct midi_port *p, const unsigned char *buf,
                                         TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
 }
 
-static CALLBACK void  _win32mm_inputcb(HMIDIIN in, UINT wmsg, DWORD inst,
-                                                DWORD param1, DWORD param2)
+static CALLBACK void  _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD inst,
+                                                DWORD param1, UNUSED DWORD param2)
 {
         struct midi_port *p = (struct midi_port *)inst;
         struct win32mm_midi *m;
@@ -162,7 +162,7 @@ static CALLBACK void  _win32mm_inputcb(HMIDIIN in, UINT wmsg, DWORD inst,
         case MIM_LONGDATA:
                 /* long data */
                 m = p->userdata;
-                midi_received_cb(p, m->hh.lpData, m->hh.dwBytesRecorded);
+                midi_received_cb(p, (unsigned char *) m->hh.lpData, m->hh.dwBytesRecorded);
                 m->hh.dwBytesRecorded = 0;
                 (void)midiInAddBuffer(m->in, &m->hh, sizeof(MIDIHDR));
                 break;
@@ -210,7 +210,6 @@ static int _win32mm_stop(struct midi_port *p)
 {
         struct win32mm_midi *m;
         LPMIDIHDR ptr;
-        WORD r;
 
         m = p->userdata;
         if (p->io & MIDI_INPUT) {
@@ -237,7 +236,6 @@ static int _win32mm_stop(struct midi_port *p)
 
 static void _win32mm_poll(struct midi_provider *p)
 {
-        struct midi_port *ptr;
         struct win32mm_midi *data;
 
         UINT i;
@@ -289,6 +287,7 @@ int win32mm_midi_setup(void)
         driver.enable = _win32mm_start;
         driver.disable = _win32mm_stop;
 
+        // FIXME: explanation required
         winmm = GetModuleHandle("WINMM.DLL");
         if (!winmm) winmm = LoadLibrary("WINMM.DLL");
         if (!winmm) winmm = GetModuleHandle("WINMM.DLL");

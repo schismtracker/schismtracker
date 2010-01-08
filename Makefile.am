@@ -66,7 +66,8 @@ EXTRA_DIST = \
 	include/auto/README		\
 	$(helptexts)			\
 	$(fonts)			\
-	$(icons)
+	$(icons)			\
+	$(sysfiles)
 
 
 ## The following files are available from the hg repository but are deliberately NOT being included in
@@ -168,16 +169,17 @@ if USE_MMAP
 files_mmap = sys/posix/slurp-mmap.c
 endif
 
-if USE_WIN32MM
-files_win32mm = sys/win32/modkey.c sys/win32/slurp-win32.c sys/win32/mixer-win32mm.c sys/win32/midi-win32mm.c sys/win32/filetype.c
-cflags_win32mm=-DUSE_WIN32MM
-lib_win32mm=-lwinmm
+if USE_WIN32
+files_win32 = \
+	sys/win32/modkey.c		\
+	sys/win32/slurp-win32.c		\
+	sys/win32/mixer-win32mm.c	\
+	sys/win32/midi-win32mm.c	\
+	sys/win32/filetype.c		\
+	sys/win32/localtime_r.c
+lib_win32=-lwinmm
 endif
 if USE_WINDRES
-# Hope this works, I can't test it -storlek
-# If not, try uncommetning the next line --
-#lib_windres=schismres.o
-# and then add $(lib_windres) under schismtracker_LDADD below
 .o: .rc
 	$(WINDRES) -I@srcdir@ -i $< -o $@
 files_windres=sys/win32/schismres.rc
@@ -189,7 +191,12 @@ cflags_wii=-I@srcdir@/sys/wii
 endif
 
 if USE_MACOSX
-files_macosx=sys/macosx/macosx-sdlmain.m sys/macosx/ibook-support.c sys/macosx/midi-macosx.c sys/macosx/mixer-macosx.c sys/macosx/osdefs.c
+files_macosx = \
+	sys/macosx/macosx-sdlmain.m	\
+	sys/macosx/ibook-support.c	\
+	sys/macosx/midi-macosx.c	\
+	sys/macosx/mixer-macosx.c	\
+	sys/macosx/osdefs.c
 endif
 
 if USE_NETWORK
@@ -345,7 +352,7 @@ schismtracker_SOURCES = \
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\
-	$(files_win32mm)		\
+	$(files_win32)			\
 	$(files_x11)			\
 	$(files_gnu_asprintf)		\
 	$(files_gnu_vasprintf)		\
@@ -363,7 +370,7 @@ cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 
 AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE \
 	-I$(srcdir)/include -I$(srcdir)/modplug -I.
-AM_CFLAGS = @SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) $(cflags_win32mm) \
+AM_CFLAGS = @SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_wii)
 AM_CXXFLAGS = ${AM_CFLAGS}
@@ -371,6 +378,6 @@ AM_OBJCFLAGS = ${AM_CFLAGS}
 
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32mm) \
+schismtracker_LDADD = $(lib_asound) $(lib_win32) \
 	@SDL_LIBS@ @LIBM@
 

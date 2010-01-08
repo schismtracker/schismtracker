@@ -641,7 +641,8 @@ unsigned int i_sqrt(unsigned int r)
 int run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #ifdef WIN32
-        char buf[PATH_MAX], *ptr;
+        char buf[PATH_MAX];
+        const char *ptr;
         char buf2[PATH_MAX];
         struct stat sb;
         int r;
@@ -652,8 +653,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
         if (stat(buf2, &sb) == -1) {
                 r = 0;
         } else {
-                ptr = getenv("COMSPEC");
-                if (!ptr) ptr = "command.com";
+                ptr = getenv("COMSPEC") ?: "command.com";
                 r = _spawnlp(_P_WAIT, ptr, ptr, "/c", buf2, maybe_arg, 0);
         }
         SetCurrentDirectory(buf);
@@ -662,6 +662,9 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
         return 0;
 #elif defined(GEKKO)
         // help how do I operating system
+        (void) dir;
+        (void) name;
+        (void) maybe_arg;
         return 0;
 #else
         char *tmp;

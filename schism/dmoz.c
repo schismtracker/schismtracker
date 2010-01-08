@@ -32,6 +32,7 @@
 #include "dmoz.h"
 #include "slurp.h"
 #include "util.h"
+#include "osdefs.h"
 
 #include "fmt.h"
 
@@ -902,18 +903,13 @@ static int _rename_nodestroy(const char *old, const char *newf)
 #endif
 }
 
-#ifdef WIN32
-extern void win32_filecreated_callback(const char *filename);
-#endif
-
 int rename_file(const char *old, const char *newf, int clobber)
 {
-#ifdef WIN32
-        UINT em;
-#endif
         if (!clobber)
                 return _rename_nodestroy(old, newf);
+
 #ifdef WIN32
+        UINT em;
         em = SetErrorMode(0);
         if (!MoveFile(old,newf)) {
                 switch (GetLastError()) {

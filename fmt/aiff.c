@@ -32,6 +32,10 @@
 #include <unistd.h> /* swab */
 #include <math.h> /* for ldexp/frexp */
 
+#ifdef WIN32
+# define swab(a,b,c) swab((const char*)(a),(char*)(b),(size_t)(c))
+#endif
+
 static void ConvertToIeeeExtended(double num, unsigned char *bytes);
 static double ConvertFromIeeeExtended(const unsigned char *bytes);
 
