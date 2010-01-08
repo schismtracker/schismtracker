@@ -145,16 +145,6 @@ else
 	AC_SUBST(LIBS)
 
 	AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h X11/extensions/XKB.h)
-	AC_CHECK_LIB(Xxf86misc, XF86MiscGetKbdSettings,,,-lX11 -lXext)
-	if test "$ac_cv_lib_Xxf86misc_XF86MiscGetKbdSettings" = "yes"; then
-		AC_CHECK_HEADERS(X11/extensions/xf86misc.h,,,[[
-#include <X11/Xlib.h>
-		]])
-		if test "$ac_cv_header_X11_extensions_xf86misc_h" = "yes"; then
-			SDL_LIBS="$SDL_LIBS -lXxf86misc -lXext"
-			AC_SUBST(SDL_LIBS)
-		fi
-	fi
 	AC_CHECK_LIB(Xv, XvQueryExtension,,,-lX11 -lXext)
 	if test "$ac_cv_lib_Xv_XvQueryExtension" = "yes"; then
 		AC_CHECK_HEADERS(X11/extensions/Xvlib.h,,,[[

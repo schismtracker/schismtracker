@@ -31,10 +31,6 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 
-#ifdef HAVE_X11_EXTENSIONS_XF86MISC_H
-#  include <X11/extensions/xf86misc.h>
-#endif
-
 #if defined(HAVE_X11_XKBLIB_H)
 #include <X11/XKBlib.h>
 #define USE_XKB
@@ -58,13 +54,6 @@ static XkbDescPtr us_kb_map;
 
 static void _key_info_setup(void)
 {
-#ifdef HAVE_X11_EXTENSIONS_XF86MISC_H
-        int a, b;
-        XF86MiscKbdSettings kbdsettings;
-#endif
-#ifdef USE_XKB
-        XkbComponentNamesRec rec;
-#endif
         Display *dpy;
         SDL_SysWMinfo info;
 
@@ -87,42 +76,34 @@ static void _key_info_setup(void)
         }
 
 #ifdef USE_XKB
-        rec.keymap = (void*)"";
-        rec.keycodes = (void*)"";
-        rec.types = (void*)"";
-        rec.compat = (void*)"";
-        rec.symbols = (void*)"+us(basic)";
-        rec.geometry = (void*)"";
+        /* Dear X11,
+                You suck.
+        Sincerely, Storlek */
+        char blank[] = "";
+        char symbols[] = "+us(basic)";
+        XkbComponentNamesRec rec = {
+                .symbols = symbols,
+                .keymap = blank,
+                .keycodes = blank,
+                .types = blank,
+                .compat = blank,
+                .geometry = blank,
+        };
         us_kb_map = XkbGetKeyboardByName(dpy, XkbUseCoreKbd, &rec,
                         XkbGBN_AllComponentsMask, XkbGBN_AllComponentsMask, False);
-        if (us_kb_map == NULL) {
-                log_appendf(3, "Warning: XKB support missing or broken; keyjamming might not work right");
-        } else {
+        if (us_kb_map) {
                 log_appendf(3, "Note: XKB will be used to override scancodes");
+        } else {
+                log_appendf(3, "Warning: XKB support missing or broken; keyjamming might not work right");
         }
-#else
-        log_appendf(3, "Warning: XKB support not compiled in; keyjamming might not work right");
-#endif
 
-#ifdef USE_XKB
         if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
                 if (info.info.x11.unlock_func)
                         info.info.x11.unlock_func();
                 return;
         }
-#endif
-
-#ifdef HAVE_X11_EXTENSIONS_XF86MISC_H
-        if (XF86MiscQueryExtension(dpy, &a, &b)) {
-                XF86MiscGetKbdSettings(dpy, &kbdsettings);
-                if (kbdsettings.delay > -1 && kbdsettings.rate > -1) {
-                        delay = kbdsettings.delay;
-                        rate = kbdsettings.rate;
-                        if (info.info.x11.unlock_func)
-                                info.info.x11.unlock_func();
-                        return;
-                }
-        }
+#else
+        log_appendf(3, "Warning: XKB support not compiled in; keyjamming might not work right");
 #endif
 
         /* eh... */
