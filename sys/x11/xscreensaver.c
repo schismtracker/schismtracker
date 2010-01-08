@@ -31,9 +31,11 @@
    -mrsb
 */
 
+#define NEED_TIME
 #include "headers.h"
 
 #include "sdlmain.h"
+#include "osdefs.h"
 
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
@@ -41,10 +43,6 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 
-#include <time.h>
-
-/* FIXME: put this in some header somewhere */
-void xscreensaver_deactivate(void);
 
 static XErrorHandler old_handler = NULL;
 static int BadWindow_ehandler(Display *dpy, XErrorEvent *error)
@@ -58,7 +56,7 @@ static int BadWindow_ehandler(Display *dpy, XErrorEvent *error)
         }
 }
 
-void xscreensaver_deactivate(void)
+void x11_screensaver_deactivate(void)
 {
         static Atom XA_SCREENSAVER_VERSION;
         static Atom XA_DEACTIVATE;

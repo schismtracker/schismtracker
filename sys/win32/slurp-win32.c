@@ -61,7 +61,7 @@ int slurp_win32(slurp_t *useme, const char *filename, size_t st)
                         FILE_SHARE_READ, NULL,
                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if (!h) {
-                log_appendf(4, "CreateFile(%s) failed with %d", filename,
+                log_appendf(4, "CreateFile(%s) failed with %lu", filename,
                                         GetLastError());
                 free(bp);
                 return 0;
@@ -69,14 +69,14 @@ int slurp_win32(slurp_t *useme, const char *filename, size_t st)
 
         m = CreateFileMapping(h, NULL, PAGE_READONLY, 0, 0, NULL);
         if (!h) {
-                log_appendf(4, "CreateFileMapping failed with %d", GetLastError());
+                log_appendf(4, "CreateFileMapping failed with %lu", GetLastError());
                 CloseHandle(h);
                 free(bp);
                 return -1;
         }
         addr = MapViewOfFile(m, FILE_MAP_READ, 0, 0, 0);
         if (!addr) {
-                log_appendf(4, "MapViewOfFile failed with %d", GetLastError());
+                log_appendf(4, "MapViewOfFile failed with %lu", GetLastError());
                 CloseHandle(m);
                 CloseHandle(h);
                 free(bp);

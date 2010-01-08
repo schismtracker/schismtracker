@@ -1141,7 +1141,6 @@ int song_save(const char *file, const char *qt)
                 for (j = 0; qt[j]; j++, i++) freeme[i] = tolower(((unsigned int)(qt[j])));
                 freeme[i] = '\0';
                 file = freeme;
-                puts(file);
         }
 
 
@@ -1186,7 +1185,7 @@ int song_save(const char *file, const char *qt)
                         if (strcasecmp(song_filename, file))
                                 song_set_filename(file);
                 }
-                log_appendf(2, "Starting up diskwriter");
+                //log_appendf(2, "Starting up diskwriter");
                 if (freeme) free(freeme);
                 return 1;
         }

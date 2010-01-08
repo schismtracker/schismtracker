@@ -47,7 +47,9 @@
 #define MIDI_IP_BASE    21928
 #define MAX_DGRAM_SIZE  1280
 
+#ifndef WIN32
 static int wakeup[2];
+#endif
 static int real_num_ports = 0;
 static int num_ports = 0;
 static int out_fd = -1;
@@ -179,9 +181,10 @@ static void _readin(struct midi_provider *p, int en, int fd)
 }
 static int _ip_thread(struct midi_provider *p)
 {
-        static unsigned char buffer[4096];
 #ifdef WIN32
         struct timeval tv;
+#else
+        static unsigned char buffer[4096];
 #endif
         fd_set rfds;
         int *tmp2, *tmp;

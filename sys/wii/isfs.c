@@ -22,6 +22,9 @@ misrepresented as being the original software.
 
 3.This notice may not be removed or altered from any source distribution.
 
+
+[In compliance with the above: I patched this code up somewhat so that it
+builds with all warnings. -- Storlek]
 */
 #include <errno.h>
 #include <ogc/isfs.h>
@@ -41,6 +44,8 @@ misrepresented as being the original software.
 #define DIR_SEPARATOR '/'
 #define SECTOR_SIZE 0x800
 #define BUFFER_SIZE 0x8000
+
+#define UNUSED __attribute__((unused))
 
 typedef struct DIR_ENTRY_STRUCT {
     char *name;
@@ -130,7 +135,8 @@ static DIR_ENTRY *entry_from_path(const char *path) {
     return NULL;
 }
 
-static int _ISFS_open_r(struct _reent *r, void *fileStruct, const char *path, int flags, int mode) {
+static int _ISFS_open_r(struct _reent *r, void *fileStruct, const char *path,
+                        UNUSED int flags, UNUSED int mode) {
     FILE_STRUCT *file = (FILE_STRUCT *)fileStruct;
     DIR_ENTRY *entry = entry_from_path(path);
     if (!entry) {
@@ -184,7 +190,7 @@ static int _ISFS_read_r(struct _reent *r, int fd, char *ptr, size_t len) {
     if (ret < 0) {
         r->_errno = -ret;
         return -1;
-    } else if (ret < len) {
+    } else if ((size_t) ret < len) {
         r->_errno = EOVERFLOW;
     }
     
@@ -331,6 +337,9 @@ static const devoptab_t dotab_isfs = {
     _ISFS_dirreset_r,
     _ISFS_dirnext_r,
     _ISFS_dirclose_r,
+    NULL,
+    NULL,
+    NULL,
     NULL
 };
 

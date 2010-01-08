@@ -31,16 +31,7 @@
 
 #include "config-parser.h"
 #include "dmoz.h"
-
-
-/* FIXME: stupid ifdef */
-#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
-unsigned key_repeat_delay(void);
-unsigned key_repeat_rate(void);
-#else
-# define key_repeat_delay() SDL_DEFAULT_REPEAT_DELAY
-# define key_repeat_rate() SDL_DEFAULT_REPEAT_INTERVAL
-#endif
+#include "osdefs.h"
 
 /* --------------------------------------------------------------------- */
 /* config settings */

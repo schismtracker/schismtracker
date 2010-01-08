@@ -22,6 +22,9 @@ misrepresented as being the original software.
 
 3.This notice may not be removed or altered from any source distribution.
 
+
+[In compliance with the above: I patched this code up somewhat so that it
+builds with all warnings. -- Storlek]
 */
 #ifndef _LIBISFS_H
 #define _LIBISFS_H
@@ -30,8 +33,8 @@ misrepresented as being the original software.
 
 #define ISFS_MAXPATHLEN (ISFS_MAXPATH + 1)
 
-bool ISFS_Mount();
-bool ISFS_Unmount();
-s32 ISFS_SU();
+bool ISFS_Mount(void);
+bool ISFS_Unmount(void);
+s32 ISFS_SU(void);
 
 #endif /* _LIBISFS_H_ */

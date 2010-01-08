@@ -52,6 +52,14 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlinit()
 #endif
 
+/* os_screensaver_deactivate: whatever is needed to keep the screensaver away.
+Leave this *undefined* if no implementation exists. */
+#if defined(USE_X11)
+# define os_screensaver_deactivate x11_screensaver_deactivate
+#else
+# undef os_screensaver_deactivate
+#endif
+
 
 // Implementations for the above, and more.
 
@@ -61,8 +69,31 @@ int macosx_ibook_fnswitch(int setting);
 void wii_sdlinit(void); // set up wiimote
 int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
 
+void x11_screensaver_deactivate(void);
+
 void win32_get_modkey(int *m);
-void xscreensaver_deactivate(void); // this is for x11 (needs renamed)
+void win32_setup_keymap(void);
+void win32_filecreated_callback(const char *filename);
+
+// migrated from xkb.c
+#if defined(HAVE_X11_XKBLIB_H)
+# define USE_XKB 1
+#endif
+
+#if defined(USE_XKB) || defined(WIN32) || defined(MACOSX)
+int key_scancode_lookup(int k, int def);
+#else
+#define key_scancode_lookup(k, def) def
+#endif
+
+#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
+unsigned int key_repeat_delay(void);
+unsigned int key_repeat_rate(void);
+#else
+# include "sdlmain.h" // blecch
+# define key_repeat_delay() SDL_DEFAULT_REPEAT_DELAY
+# define key_repeat_rate() SDL_DEFAULT_REPEAT_INTERVAL
+#endif
 
 
 // Mixer interfaces

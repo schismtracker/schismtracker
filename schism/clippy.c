@@ -56,7 +56,7 @@ extern void macosx_clippy_put(const char *buf);
 
 static void _clippy_copy_to_sys(int do_sel)
 {
-        int i, j;
+        int j;
         char *dst;
         char *freeme;
 #if defined(__QNXNTO__)
@@ -75,6 +75,7 @@ static void _clippy_copy_to_sys(int do_sel)
         j = strlen(_current_selection);
 #else
         if (has_sys_clip) {
+                int i;
                 /* convert to local */
                 freeme = dst = malloc(strlen(_current_selection)+4);
                 if (!dst) return;
@@ -316,7 +317,7 @@ static char *_internal_clippy_paste(int cb)
         Window owner;
         int getme;
 #elif defined(WIN32)
-        char *tmp, *src;
+        char *src;
         int clen;
 #elif defined(__QNXNTO__)
         void *clhandle;

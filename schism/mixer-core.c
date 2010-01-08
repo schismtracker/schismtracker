@@ -60,7 +60,7 @@ void mixer_setup(void)
                 __mixer_write_volume = macosx_mixer_write_volume;
         }
 #endif
-#ifdef USE_WIN32MM
+#ifdef WIN32
         if ((!drv && !__mixer_get_max_volume) || (drv && (!strcmp(drv, "waveout") || !strcmp(drv, "dsound")) )) {
                 __mixer_get_max_volume = win32mm_mixer_get_max_volume;
                 __mixer_read_volume = win32mm_mixer_read_volume;

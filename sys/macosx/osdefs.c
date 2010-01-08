@@ -49,5 +49,6 @@ int macosx_sdlevent(SDL_Event *event)
                         };
                 }
         }
+        return 1;
 }
 

@@ -69,7 +69,7 @@ static SDLKey hat_to_keysym(int value)
                 return SDLK_LEFT;
         case SDL_HAT_RIGHT:
                 return SDLK_RIGHT;
-        case SDL_HAT_CENTERED:
+        default: // SDL_HAT_CENTERED
                 return 0;
         }
 }

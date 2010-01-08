@@ -31,9 +31,9 @@ extern "C" {
 struct midi_provider;
 struct midi_port;
 
+#define MIDI_PORT_CAN_SCHEDULE  1
 struct midi_driver {
         unsigned int flags;
-#define MIDI_PORT_CAN_SCHEDULE  1
 
         void (*poll)(struct midi_provider *m);
         int (*thread)(struct midi_provider *m);
@@ -63,10 +63,11 @@ struct midi_provider {
                         const unsigned char *seq, unsigned int len, unsigned int delay);
         void (*drain)(struct midi_port *d);
 };
-struct midi_port {
-        int io, iocap;
+
 #define MIDI_INPUT      1
 #define MIDI_OUTPUT     2
+struct midi_port {
+        int io, iocap;
         char *name;
         int num;
 
@@ -140,21 +141,14 @@ void midi_event_system(int argv, int param);
 void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int len);
 
 
-#ifdef USE_NETWORK
-int ip_midi_setup(void);
-#endif
-#ifdef USE_OSS
-int oss_midi_setup(void);
-#endif
-#ifdef USE_ALSA
-int alsa_midi_setup(void);
-#endif
-#ifdef USE_WIN32MM
-int win32mm_midi_setup(void);
-#endif
-#ifdef MACOSX
-int macosx_midi_setup(void);
-#endif
+int ip_midi_setup(void);        // USE_NETWORK
+void ip_midi_setports(int n);   // USE_NETWORK
+int ip_midi_getports(void);     // USE_NETWORK
+
+int oss_midi_setup(void);       // USE_OSS
+int alsa_midi_setup(void);      // USE_ALSA
+int win32mm_midi_setup(void);   // WIN32
+int macosx_midi_setup(void);    // MACOSX
 
 
 /* MIDI_PITCH_BEND is defined by OSS -- maybe these need more specific names? */
@@ -170,10 +164,6 @@ int macosx_midi_setup(void);
 #define MIDI_DISABLE_RECORD     0x00010000
 
 extern int midi_flags, midi_pitch_depth, midi_amplification, midi_c5note;
-
-/* only available with networks */
-void ip_midi_setports(int n);
-int ip_midi_getports(void);
 
 #ifdef __cplusplus
 };

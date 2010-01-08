@@ -196,6 +196,14 @@ int asprintf(char **strp, const char *fmt, ...);
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
+#ifdef NEED_TIME
+# ifndef HAVE_STRPTIME
+char *strptime(const char *buf, const char *fmt, struct tm *tm);
+# endif
+# ifdef WIN32
+struct tm *localtime_r(const time_t *timep, struct tm *result);
+# endif
+#endif
 
 #ifdef __cplusplus
 }
@@ -208,7 +216,6 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 /* Various other stuff */
 #ifdef WIN32
 # define mkdir(path,mode) mkdir(path)
-# define localtime_r(a,b) localtime(a) /* FIXME: not thread safe and stuff */
 # define setenv(a,b,c) /* stupid windows */
 # define fsync _commit
 #endif

@@ -144,7 +144,10 @@ else
 	LIBS="$LIBS $X_LIBS"
 	AC_SUBST(LIBS)
 
-	AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h X11/extensions/XKB.h)
+	dnl this previously checked X11/extensions/XKB.h, but nothing
+	dnl ever used it (xkb.c still included X11/XKBlib.h even when
+	dnl autoconf reported it as nonexistent -- weird!)
+	AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h)
 	AC_CHECK_LIB(Xv, XvQueryExtension,,,-lX11 -lXext)
 	if test "$ac_cv_lib_Xv_XvQueryExtension" = "yes"; then
 		AC_CHECK_HEADERS(X11/extensions/Xvlib.h,,,[[
@@ -178,16 +181,16 @@ AC_SUBST(WINDRES)
 dnl winmm testing...
 AC_CHECK_HEADERS(winsock.h winsock2.h windows.h)
 if test "X$ac_cv_header_windows_h" = "Xyes"; then
-	AM_CONDITIONAL([USE_WIN32MM], true)
+	AM_CONDITIONAL([USE_WIN32], true)
 	SDL_LIBS="$SDL_LIBS -lwinmm"
 	AC_SUBST(SDL_LIBS)
 else
-	AM_CONDITIONAL([USE_WIN32MM], false)
+	AM_CONDITIONAL([USE_WIN32], false)
 fi
 
 if test "X$ac_cv_func_socket" = "Xyes"; then
 	dnl free networking
-	AM_CONDITIONAL([USE_NETWORK], [test "x" = "x"])
+	AM_CONDITIONAL([USE_NETWORK], true)
 else
 	AC_CHECK_HEADERS(winsock.h winsock2.h sys/socket.h)
 	if test "x$ac_cv_header_winsock_h" = "xyes"; then
@@ -275,8 +278,6 @@ else
 fi
 
 dnl -----------------------------------------------------------------------
-dnl Optimizations borrowed and modified a bit from DGen.
-dnl I really don't know what they all do, to be honest :)
 dnl (This ought to be above AC_PROG_CC, but that causes configure to fail
 dnl when all the insane warnings are are enabled.)
 
@@ -301,30 +302,38 @@ AC_ARG_ENABLE(profiling,
 	ADD_PROFILING=no)
 
 AC_ARG_ENABLE(ludicrous-mode,
-	AS_HELP_STRING([--enable-ludicrous-mode], [Treat warnings as errors]),
+	AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings, and treat as errors]),
 	ADD_LUDICROUS=$enableval,
 	ADD_LUDICROUS=no)
 
+dnl place extra optimizations after existing cflags so that they can override
+dnl override whatever flags might exist by default (-g -O2 usually)
 if test x$ADD_OPT \!= xno; then
 	ADD_OPT="-g0 -s -O3 -ffast-math -fomit-frame-pointer -fno-exceptions"
 	ADD_OPT="$ADD_OPT -funroll-loops -frerun-cse-after-loop -fno-ident"
 	ADD_OPT="$ADD_OPT -fno-strength-reduce"
 	CFLAGS="$CFLAGS $ADD_OPT"
-	CXXFLAGS="$CXXFLAGS $ADD_OPT -fno-rtti -fno-enforce-eh-specs"
+	CXXFLAGS="-fno-rtti -fno-enforce-eh-specs $CXXFLAGS $ADD_OPT"
 fi
 
+if test x$ADD_LUDICROUS \!= xno; then
+	ADD_WARN=yes
+fi
+
+dnl ... but put the warnings first, to make it possible to quiet certain
+dnl warnings if necessary, while still providing most of the benefit
 if test x$ADD_WARN \!= xno; then
         ADD_WARN="-Wall -Wextra -Winline -Wshadow -Wcast-align -Wwrite-strings"
-        ADD_WARN="$ADD_WARN -Waggregate-return -Wpacked -Wempty-body"
-        CFLAGS="$CFLAGS $ADD_WARN -Wstrict-prototypes -Wmissing-prototypes"
-        CFLAGS="$CFLAGS -Wmissing-declarations -Wnested-externs"
-        CXXFLAGS="$CXXFLAGS $ADD_WARN"
+        ADD_WARN="$ADD_WARN -Waggregate-return -Wpacked"
+        CFLAGS="$ADD_WARN -Wstrict-prototypes -Wmissing-prototypes $CFLAGS"
+        CFLAGS="-Wmissing-declarations -Wnested-externs $CFLAGS"
+        CXXFLAGS="$ADD_WARN $CXXFLAGS"
 fi
 
 if test x$ADD_LUDICROUS \!= xno; then
         ADD_WARN=yes
-        CFLAGS="$CFLAGS  -Werror -D_FORTIFY_SOURCE=2"
-        CXXFLAGS="$CXXFLAGS -Weffc++ -Wno-aggregate-return -Wno-inline -Werror -D_FORTIFY_SOURCE=2"
+        CFLAGS="-Werror -D_FORTIFY_SOURCE=2 $CFLAGS"
+        CXXFLAGS=" -Werror -D_FORTIFY_SOURCE=2 -Weffc++ -Wno-aggregate-return -Wno-inline $CXXFLAGS"
         # In C++, the following mad warnings are disabled:
         #
         # Winline with Werror is pure madness, it provides no useful
@@ -347,7 +356,6 @@ if test x$ADD_LUDICROUS \!= xno; then
         # -Weffc++ however was enabled, because it includes warnings
         # that enable the production of less buggy code, though a lot
         # of what it suggests are not really necessary changes.
-        #
 fi
 
 if test x$ADD_DEBUG \!= xno; then

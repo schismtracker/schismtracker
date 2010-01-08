@@ -310,7 +310,7 @@ static void _midi_engine_connect(void)
 #ifdef USE_ALSA
         alsa_midi_setup();
 #endif
-#ifdef USE_WIN32MM
+#ifdef WIN32
         win32mm_midi_setup();
 #endif
 #ifdef MACOSX
