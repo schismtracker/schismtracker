@@ -9,21 +9,10 @@
  * Modified again by Storlek to de-xmp-ify it.
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
+#define NEED_BYTESWAP
+#include "headers.h"
 
-#include <stdlib.h>
-#ifdef __EMX__
-#include <sys/types.h>
-#endif
-#include <sys/stat.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdint.h>
-
-#include "slurp.h"
-
+#include "slurp.h" // for definition of mmcmp_unpack
 
 #pragma pack(push, 1)
 typedef struct mm_header {
@@ -105,72 +94,88 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
         size_t memlength;
         uint8_t *memfile;
         uint8_t *buffer;
-        mm_header_t *hdr;
+        mm_header_t hdr;
         uint32_t *pblk_table;
         size_t filesize;
         uint32_t block, i;
 
-        if (!data || !length || !*data) {
+        if (!data || !*data || !length || *length < 256) {
                 return 0;
         }
         memlength = *length;
         memfile = *data;
-        hdr = (mm_header_t *) memfile;
 
-        if (memlength < 256
-            || memcmp(hdr->zirconia, "ziRCONia", 8) != 0
-            || hdr->hdrsize < 14
-            || !hdr->blocks
-            || hdr->filesize < 16
-            || hdr->filesize > 0x8000000
-            || hdr->blktable >= memlength
-            || hdr->blktable + 4 * hdr->blocks > memlength) {
+        memcpy(&hdr, memfile, sizeof(hdr));
+        hdr.hdrsize = bswapLE16(hdr.hdrsize);
+        hdr.version = bswapLE16(hdr.version);
+        hdr.blocks = bswapLE16(hdr.blocks);
+        hdr.filesize = bswapLE32(hdr.filesize);
+        hdr.blktable = bswapLE32(hdr.blktable);
+
+        if (memcmp(hdr.zirconia, "ziRCONia", 8) != 0
+            || hdr.hdrsize < 14
+            || hdr.blocks == 0
+            || hdr.filesize < 16
+            || hdr.filesize > 0x8000000
+            || hdr.blktable >= memlength
+            || hdr.blktable + 4 * hdr.blocks > memlength) {
                 return 0;
         }
-        filesize = hdr->filesize;
+        filesize = hdr.filesize;
         if ((buffer = calloc(1, (filesize + 31) & ~15)) == NULL)
                 return 0;
 
-        pblk_table = (uint32_t *) (memfile + hdr->blktable);
+        pblk_table = (uint32_t *) (memfile + hdr.blktable);
 
-        for (block = 0; block < hdr->blocks; block++) {
-                uint32_t pos = pblk_table[block];
-                mm_block_t *pblk = (mm_block_t *) (memfile + pos);
+        for (block = 0; block < hdr.blocks; block++) {
+                uint32_t pos = bswapLE32(pblk_table[block]);
                 mm_subblock_t *psubblk = (mm_subblock_t *) (memfile + pos + 20);
+                mm_block_t pblk;
+
+                memcpy(&pblk, memfile + pos, sizeof(pblk));
+                pblk.unpk_size = bswapLE32(pblk.unpk_size);
+                pblk.pk_size = bswapLE32(pblk.pk_size);
+                pblk.xor_chk = bswapLE32(pblk.xor_chk);
+                pblk.sub_blk = bswapLE16(pblk.sub_blk);
+                pblk.flags = bswapLE16(pblk.flags);
+                pblk.tt_entries = bswapLE16(pblk.tt_entries);
+                pblk.num_bits = bswapLE16(pblk.num_bits);
 
                 if ((pos + 20 >= memlength)
-                    || (pos + 20 + pblk->sub_blk * 8 >= memlength)) {
+                    || (pos + 20 + pblk.sub_blk * 8 >= memlength)) {
                         break;
                 }
-                pos += 20 + pblk->sub_blk * 8;
+                pos += 20 + pblk.sub_blk * 8;
 
-                if (!(pblk->flags & MM_COMP)) {
+                if (!(pblk.flags & MM_COMP)) {
                         /* Data is not packed */
-                        for (i = 0; i < pblk->sub_blk; i++) {
-                                if ((psubblk->unpk_pos > filesize)
-                                    || (psubblk->unpk_pos + psubblk->unpk_size > filesize)) {
+                        for (i = 0; i < pblk.sub_blk; i++) {
+                                uint32_t unpk_pos = bswapLE32(psubblk->unpk_pos);
+                                uint32_t unpk_size = bswapLE32(psubblk->unpk_size);
+                                if ((unpk_pos > filesize)
+                                    || (unpk_pos + unpk_size > filesize)) {
                                         break;
                                 }
-                                memcpy(buffer + psubblk->unpk_pos, memfile + pos, psubblk->unpk_size);
-                                pos += psubblk->unpk_size;
+                                memcpy(buffer + unpk_pos, memfile + pos, unpk_size);
+                                pos += unpk_size;
                                 psubblk++;
                         }
-                } else if (pblk->flags & MM_16BIT) {
+                } else if (pblk.flags & MM_16BIT) {
                         /* Data is 16-bit packed */
-                        uint16_t *dest = (uint16_t *) (buffer + psubblk->unpk_pos);
-                        uint32_t size = psubblk->unpk_size >> 1;
+                        uint16_t *dest = (uint16_t *) (buffer + bswapLE32(psubblk->unpk_pos));
+                        uint32_t size = bswapLE32(psubblk->unpk_size) >> 1;
                         uint32_t destpos = 0;
-                        uint32_t numbits = pblk->num_bits;
+                        uint32_t numbits = pblk.num_bits;
                         uint32_t subblk = 0, oldval = 0;
 
                         mm_bit_buffer_t bb = {
                                 .bits = 0,
                                 .buffer = 0,
-                                .src = memfile + pos + pblk->tt_entries,
-                                .end = memfile + pos + pblk->pk_size,
+                                .src = memfile + pos + pblk.tt_entries,
+                                .end = memfile + pos + pblk.pk_size,
                         };
 
-                        while (subblk < pblk->sub_blk) {
+                        while (subblk < pblk.sub_blk) {
                                 uint32_t newval = 0x10000;
                                 uint32_t d = get_bits(&bb, numbits + 1);
 
@@ -196,10 +201,10 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
                                         newval = (newval & 1)
                                                 ? (uint32_t) (-(int32_t)((newval + 1) >> 1))
                                                 : (uint32_t) (newval >> 1);
-                                        if (pblk->flags & MM_DELTA) {
+                                        if (pblk.flags & MM_DELTA) {
                                                 newval += oldval;
                                                 oldval = newval;
-                                        } else if (!(pblk->flags & MM_ABS16)) {
+                                        } else if (!(pblk.flags & MM_ABS16)) {
                                                 newval ^= 0x8000;
                                         }
                                         dest[destpos++] = (uint16_t) newval;
@@ -207,27 +212,27 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
                                 if (destpos >= size) {
                                         subblk++;
                                         destpos = 0;
-                                        size = psubblk[subblk].unpk_size >> 1;
-                                        dest = (uint16_t *)(buffer + psubblk[subblk].unpk_pos);
+                                        size = bswapLE32(psubblk[subblk].unpk_size) >> 1;
+                                        dest = (uint16_t *)(buffer + bswapLE32(psubblk[subblk].unpk_pos));
                                 }
                         }
                 } else {
                         /* Data is 8-bit packed */
-                        uint8_t *dest = buffer + psubblk->unpk_pos;
-                        uint32_t size = psubblk->unpk_size;
+                        uint8_t *dest = buffer + bswapLE32(psubblk->unpk_pos);
+                        uint32_t size = bswapLE32(psubblk->unpk_size);
                         uint32_t destpos = 0;
-                        uint32_t numbits = pblk->num_bits;
+                        uint32_t numbits = pblk.num_bits;
                         uint32_t subblk = 0, oldval = 0;
                         uint8_t *ptable = memfile + pos;
 
                         mm_bit_buffer_t bb = {
                                 .bits = 0,
                                 .buffer = 0,
-                                .src = memfile + pos + pblk->tt_entries,
-                                .end = memfile + pos + pblk->pk_size,
+                                .src = memfile + pos + pblk.tt_entries,
+                                .end = memfile + pos + pblk.pk_size,
                         };
 
-                        while (subblk < pblk->sub_blk) {
+                        while (subblk < pblk.sub_blk) {
                                 uint32_t newval = 0x100;
                                 uint32_t d = get_bits(&bb, numbits + 1);
 
@@ -251,7 +256,7 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
                                 }
                                 if (newval < 0x100) {
                                         int n = ptable[newval];
-                                        if (pblk->flags & MM_DELTA) {
+                                        if (pblk.flags & MM_DELTA) {
                                                 n += oldval;
                                                 oldval = n;
                                         }
@@ -260,8 +265,8 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
                                 if (destpos >= size) {
                                         subblk++;
                                         destpos = 0;
-                                        size = psubblk[subblk].unpk_size;
-                                        dest = buffer + psubblk[subblk].unpk_pos;
+                                        size = bswapLE32(psubblk[subblk].unpk_size);
+                                        dest = buffer + bswapLE32(psubblk[subblk].unpk_pos);
                                 }
                         }
                 }
