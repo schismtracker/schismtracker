@@ -60,6 +60,15 @@ Leave this *undefined* if no implementation exists. */
 # undef os_screensaver_deactivate
 #endif
 
+/* os_yuvlayout: return the best YUV layout. */
+#if defined(USE_XV)
+#  define os_yuvlayout xv_yuvlayout
+#elif defined(USE_X11)
+# define os_yuvlayout() VIDEO_YUV_NONE
+#else
+# define os_yuvlayout() VIDEO_YUV_YUY2
+#endif
+
 
 // Implementations for the above, and more.
 
@@ -70,6 +79,7 @@ void wii_sdlinit(void); // set up wiimote
 int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
 
 void x11_screensaver_deactivate(void);
+unsigned int xv_yuvlayout(void);
 
 void win32_get_modkey(int *m);
 void win32_setup_keymap(void);

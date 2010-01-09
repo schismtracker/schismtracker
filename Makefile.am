@@ -146,8 +146,12 @@ noinst_HEADERS = \
 	modplug/xm_defs.h
 
 if USE_X11
-files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c sys/x11/xv.c
+files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c
 cflags_x11 = -DUSE_X11
+if USE_XV
+files_x11 += sys/x11/xv.c
+cflags_x11 += -DUSE_XV
+endif
 endif
 
 if USE_ALSA
