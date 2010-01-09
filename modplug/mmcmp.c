@@ -207,7 +207,7 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
                                         } else if (!(pblk.flags & MM_ABS16)) {
                                                 newval ^= 0x8000;
                                         }
-                                        dest[destpos++] = (uint16_t) newval;
+                                        dest[destpos++] = bswapLE16((uint16_t) newval);
                                 }
                                 if (destpos >= size) {
                                         subblk++;
