@@ -24,16 +24,18 @@
 
 #include <X11/X.h>
 #include <X11/Xlib.h>
-#ifdef HAVE_X11_EXTENSIONS_XVLIB_H
 #include <X11/extensions/Xvlib.h>
+
+#ifndef HAVE_X11_EXTENSIONS_XVLIB_H
+# error what
 #endif
 
 #include "sdlmain.h"
 #include "video.h"
+#include "osdefs.h"
 
 unsigned int xv_yuvlayout(void)
 {
-#ifdef HAVE_X11_EXTENSIONS_XVLIB_H
         unsigned int ver, rev, eventB, reqB, errorB;
         XvImageFormatValues *formats;
         XvAdaptorInfo *ainfo;
@@ -118,8 +120,5 @@ unsigned int xv_yuvlayout(void)
                 }
         }
         return resc;
-#else
-        return VIDEO_YUV_NONE;
-#endif
 }
 

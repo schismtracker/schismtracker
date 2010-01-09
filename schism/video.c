@@ -26,6 +26,7 @@
 #include "headers.h"
 #include "it.h"
 #include "pngw.h"
+#include "osdefs.h"
 
 /* bugs
  * ... in sdl. not in this file :)
@@ -516,12 +517,9 @@ void video_setup(const char *driver)
 #endif
 
         video.desktop.fb_hacks = 0;
-#ifdef USE_X11
         /* get xv info */
-        if (video.yuvlayout == VIDEO_YUV_NONE) video.yuvlayout = xv_yuvlayout();
-#else
-        if (video.yuvlayout == VIDEO_YUV_NONE) video.yuvlayout = VIDEO_YUV_YUY2;
-#endif
+        if (video.yuvlayout == VIDEO_YUV_NONE)
+                video.yuvlayout = os_yuvlayout();
         if ((video.yuvlayout != VIDEO_YUV_YV12_TV
         &&   video.yuvlayout != VIDEO_YUV_IYUV_TV
         &&   video.yuvlayout != VIDEO_YUV_NONE && 0) /* don't do this until we figure out how to make it better */
