@@ -526,7 +526,7 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
 {
         int n, ni, ns;
         int abssamp = 1; // "real" sample
-        uint32_t ihdr, shdr; // instrument/sample header size
+        int32_t ihdr, shdr; // instrument/sample header size (yes these should be signed)
         uint8_t b;
         uint16_t w;
         uint32_t d;
