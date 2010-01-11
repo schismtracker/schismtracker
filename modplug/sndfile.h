@@ -579,14 +579,8 @@ typedef struct _CSoundFile {
 public:
         bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
         // Module Loaders
-        bool ReadXM(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadS3M(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadMod(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadMed(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadMTM(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadSTM(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadIT(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool Read669(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadUlt(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadFAR(const uint8_t * lpStream, uint32_t dwMemLength);
