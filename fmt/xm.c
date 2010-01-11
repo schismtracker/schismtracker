@@ -501,9 +501,8 @@ static void load_xm_samples(SONGSAMPLE *first, int total, slurp_t *fp)
                         smp->nLoopEnd >>= 1;
                 }
                 // modplug's sample-reading function is complicated and retarded
-                smp->pSample = csf_allocate_sample(smpsize);
                 csf_read_sample(smp, SF_LE | SF_M | SF_PCMD | ((smp->uFlags & CHN_16BIT) ? SF_16 : SF_8),
-                        (const char *) fp->data + fp->pos, fp->length - fp->pos);
+                                fp->data + fp->pos, fp->length - fp->pos);
                 slurp_seek(fp, smpsize, SEEK_CUR);
         }
 }
