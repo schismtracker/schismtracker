@@ -12,7 +12,7 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
         csf_destroy(this);
         m_nType = MOD_TYPE_NONE;
         if (lpStream) {
-                if ((!ReadS3M(lpStream, dwMemLength))
+                if (1
                  && (!ReadMed(lpStream, dwMemLength))
                  && (!ReadMDL(lpStream, dwMemLength))
                  && (!ReadDBM(lpStream, dwMemLength))
