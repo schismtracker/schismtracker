@@ -627,7 +627,7 @@ SONGINSTRUMENT *csf_allocate_instrument(void);
 void csf_init_instrument(SONGINSTRUMENT *ins, int samp);
 void csf_free_instrument(SONGINSTRUMENT *p);
 
-uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * pMemFile, uint32_t dwMemLength);
+uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata, uint32_t dwMemLength);
 uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen);
 void csf_adjust_sample_loop(SONGSAMPLE *pIns);
 

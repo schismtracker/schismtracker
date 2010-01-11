@@ -50,6 +50,12 @@ int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 #define S3M_UNSIGNED 1
 #define S3M_CHANPAN 2 // the FC byte
 
+enum {
+        S3I_TYPE_NONE = 0,
+        S3I_TYPE_PCM = 1,
+        S3I_TYPE_ADMEL = 2,
+};
+
 int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 {
         uint16_t nsmp, nord, npat;
@@ -65,6 +71,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         uint16_t para_smp[256];
         uint16_t para_pat[256];
         uint32_t para_sdata[256] = { 0 };
+        uint32_t smp_flags[256] = { 0 };
         SONGSAMPLE *sample;
         uint16_t trkvers;
         uint16_t flags;
@@ -186,31 +193,49 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 slurp_read(fp, sample->filename, 12);
                 sample->filename[12] = 0;
 
-                slurp_read(fp, b, 3);
-                slurp_read(fp, &tmplong, 4);
-                if (type == 1) {
-                        // pcm sample
+                slurp_read(fp, b, 3); // data pointer for pcm, irrelevant otherwise
+                switch (type) {
+                case S3I_TYPE_PCM:
                         para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
-                        sample->nLength = bswapLE32(tmplong);
-                } else if (type == 2) {
-                        // adlib
-                        return LOAD_UNSUPPORTED; // it IS supported, but just not with *this* loader... yet :)
+                        if (para_sdata[n]) {
+                                slurp_read(fp, &tmplong, 4);
+                                sample->nLength = bswapLE32(tmplong);
+                                slurp_read(fp, &tmplong, 4);
+                                sample->nLoopStart = bswapLE32(tmplong);
+                                slurp_read(fp, &tmplong, 4);
+                                sample->nLoopEnd = bswapLE32(tmplong);
+                                sample->nVolume = slurp_getc(fp) * 4; //mphack
+                                slurp_getc(fp);      /* unused byte */
+                                slurp_getc(fp);      /* packing info (never used) */
+                                c = slurp_getc(fp);  /* flags */
+                                smp_flags[n] = (SF_LE
+                                        | ((misc & S3M_UNSIGNED) ? SF_PCMU : SF_PCMS)
+                                        | ((c & 4) ? SF_16 : SF_8)
+                                        | ((c & 2) ? SF_SS : SF_M));
+                                break;
+                        }
+                        // else fall through -- it's a blank sample
+
+                default:
+                        //printf("s3m: mystery-meat sample type %d\n", type);
+                case S3I_TYPE_NONE:
+                        slurp_seek(fp, 12, SEEK_CUR);
+                        sample->nVolume = slurp_getc(fp) * 4; //mphack
+                        slurp_seek(fp, 3, SEEK_CUR);
+                        break;
+
+                case S3I_TYPE_ADMEL:
+                        slurp_read(fp, sample->AdlibBytes, 12);
+                        sample->nVolume = slurp_getc(fp) * 4; //mphack
+                        // next byte is "dsk", what is that?
+                        slurp_seek(fp, 3, SEEK_CUR);
+                        sample->uFlags |= CHN_ADLIB;
+                        // dumb hackaround that ought to some day be fixed:
+                        sample->nLength = 1;
+                        sample->pSample = csf_allocate_sample(1);
+                        break;
                 }
-                slurp_read(fp, &tmplong, 4);
-                sample->nLoopStart = bswapLE32(tmplong);
-                slurp_read(fp, &tmplong, 4);
-                sample->nLoopEnd = bswapLE32(tmplong);
-                sample->nVolume = slurp_getc(fp) * 4; //mphack
-                sample->nGlobalVol = 64;
-                slurp_getc(fp);      /* unused byte */
-                slurp_getc(fp);      /* packing info (never used) */
-                c = slurp_getc(fp);  /* flags */
-                if (c & 1)
-                        sample->uFlags |= CHN_LOOP;
-                if (c & 2)
-                        return LOAD_UNSUPPORTED; // because I'm lazy
-                if (c & 4)
-                        sample->uFlags |= CHN_16BIT;
+
                 slurp_read(fp, &tmplong, 4);
                 sample->nC5Speed = bswapLE32(tmplong);
                 slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
@@ -220,39 +245,20 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 sample->nVibSweep = 0;
                 sample->nVibDepth = 0;
                 sample->nVibRate = 0;
+                sample->nGlobalVol = 64;
         }
 
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
-                        int8_t *ptr;
-                        uint32_t len = sample->nLength;
-                        int bps = 1;    /* bytes per sample (i.e. bits / 8) */
+                        uint32_t len;
 
-                        if (!para_sdata[n] || !len)
+                        if (!sample->nLength || !para_sdata[n])
                                 continue;
 
                         slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-                        if (sample->uFlags & CHN_16BIT)
-                                bps = 2;
-                        ptr = csf_allocate_sample(bps * len);
-                        slurp_read(fp, ptr, bps * len);
-                        sample->pSample = ptr;
-
-                        if (misc & S3M_UNSIGNED) {
-                                /* convert to signed */
-                                uint32_t pos = len;
-                                if (bps == 2)
-                                        while (pos-- > 0)
-                                                ptr[2 * pos + 1] ^= 0x80;
-                                else
-                                        while (pos-- > 0)
-                                                ptr[pos] ^= 0x80;
-                        }
-#ifdef WORDS_BIGENDIAN
-                        if (bps == 2)
-                                swab(ptr, ptr, 2 * len);
-#endif
+                        len = csf_read_sample(sample, smp_flags[n], fp->data + fp->pos, fp->length - fp->pos);
+                        slurp_seek(fp, len, SEEK_CUR);
                 }
         }
 

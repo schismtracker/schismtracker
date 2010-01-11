@@ -504,9 +504,10 @@ uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFl
 
 
 #define SF_FAIL(name,n) log_appendf(4, "csf_read_sample: internal error: unsupported %s %d", name, n);return 0
-uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const char * lpMemFile, uint32_t dwMemLength)
+uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata, uint32_t dwMemLength)
 {
         uint32_t len = 0, mem;
+        const char *lpMemFile = (const char *) filedata;
 
         // validate the read flags before anything else
         switch (nFlags & SF_BIT_MASK) {
