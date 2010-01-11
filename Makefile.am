@@ -333,7 +333,6 @@ schismtracker_SOURCES = \
 	modplug/load_mod.cpp		\
 	modplug/snd_flt.c		\
 	modplug/load_dsm.cpp		\
-	modplug/load_umx.cpp		\
 	modplug/snd_dsp.c		\
 	modplug/load_mt2.cpp		\
 	modplug/snd_eq.c		\
