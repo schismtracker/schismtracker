@@ -137,18 +137,37 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         /* channel settings */
         for (n = 0; n < 32; n++) {
+                /* Channel 'type': 0xFF is a disabled channel, which shows up as (--) in ST3.
+                Any channel with the high bit set is muted.
+                00-07 are L1-L8, 08-0F are R1-R8, 10-18 are adlib channels A1-A9.
+                Hacking at a file with a hex editor shows some perhaps partially-implemented stuff:
+                types 19-1D show up in ST3 as AB, AS, AT, AC, and AH; 20-2D are the same as 10-1D
+                except with 'B' insted of 'A'. None of these appear to produce any sound output,
+                apart from 19 which plays adlib instruments briefly before cutting them. (Weird!)
+                Also, 1E/1F and 2E/2F display as "??"; and pressing 'A' on a disabled (--) channel
+                will change its type to 1F.
+                Values past 2F seem to display bits of the UI like the copyright and help, strange!
+                These out-of-range channel types will almost certainly hang or crash ST3 or
+                produce other strange behavior. Simply put, don't do it. :) */
                 c = slurp_getc(fp);
-                if (c == 255) {
+                if (c & 0x80) {
+                        song->Channels[n].dwFlags |= CHN_MUTE;
+                        c &= ~0x80;
+                }
+                if (c < 0x08) {
+                        // L1-L8
+                        song->Channels[n].nPan = 16;
+                } else if (c < 0x10) {
+                        // R1-R8
+                        song->Channels[n].nPan = 48;
+                } else if (c < 0x19) {
+                        // A1-A9
                         song->Channels[n].nPan = 32;
-                        song->Channels[n].dwFlags = CHN_MUTE;
+                        adlib |= 1 << n;
                 } else {
-                        song->Channels[n].nPan = (c & 8) ? 48 : 16;
-                        if (c & 0x80) {
-                                c ^= 0x80;
-                                song->Channels[n].dwFlags = CHN_MUTE;
-                        }
-                        if (c >= 16 && c < 32)
-                                adlib |= 1 << n;
+                        // Disabled 0xff/0x7f, or broken
+                        song->Channels[n].nPan = 32;
+                        song->Channels[n].dwFlags |= CHN_MUTE;
                 }
                 song->Channels[n].nVolume = 64;
         }
@@ -208,6 +227,8 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                 slurp_getc(fp);      /* unused byte */
                                 slurp_getc(fp);      /* packing info (never used) */
                                 c = slurp_getc(fp);  /* flags */
+                                if (c & 1)
+                                        sample->uFlags |= CHN_LOOP;
                                 smp_flags[n] = (SF_LE
                                         | ((misc & S3M_UNSIGNED) ? SF_PCMU : SF_PCMS)
                                         | ((c & 4) ? SF_16 : SF_8)
