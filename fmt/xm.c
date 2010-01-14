@@ -687,6 +687,11 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                 if (b & 1) ins->dwFlags |= ENV_PANNING;
                 if (b & 2) ins->dwFlags |= ENV_PANSUSTAIN;
                 if (b & 4) ins->dwFlags |= ENV_PANLOOP;
+                if ((ins->dwFlags & (ENV_VOLUME | ENV_VOLLOOP)) == ENV_VOLUME) {
+                        // fix note-fade
+                        ins->dwFlags |= ENV_VOLLOOP;
+                        ins->VolEnv.nLoopStart = ins->VolEnv.nLoopEnd = ins->VolEnv.nNodes - 1;
+                }
 
                 vtype = autovib_import[slurp_getc(fp) & 0x7];
                 vsweep = slurp_getc(fp);
