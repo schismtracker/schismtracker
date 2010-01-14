@@ -223,7 +223,7 @@
 
 // Module flags
 #define SONG_EMBEDMIDICFG       0x0001
-#define SONG_FASTVOLSLIDES      0x0002
+//#define SONG_FASTVOLSLIDES    0x0002
 #define SONG_ITOLDEFFECTS       0x0004
 #define SONG_COMPATGXX          0x0008
 #define SONG_LINEARSLIDES       0x0010
@@ -236,7 +236,7 @@
 //#define SONG_CPUVERYHIGH      0x0800
 #define SONG_FIRSTTICK          0x1000
 //#define SONG_MPTFILTERMODE    0x2000
-#define SONG_SURROUNDPAN        0x4000
+//#define SONG_SURROUNDPAN      0x4000
 //#define SONG_EXFILTERRANGE    0x8000
 //#define SONG_AMIGALIMITS      0x10000
 #define SONG_INSTRUMENTMODE     0x20000

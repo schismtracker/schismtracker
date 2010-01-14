@@ -82,7 +82,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
         for (i=0; i<MAX_ORDERS; i++) if ((Orderlist[i] < MAX_PATTERNS) && (Orderlist[i] >= nbp)) nbp = Orderlist[i] + 1;
         header[0x24] = nbp & 0xFF;
         header[0x25] = nbp >> 8;
-        if (m_dwSongFlags & SONG_FASTVOLSLIDES) header[0x26] |= 0x40;
+        //if (m_dwSongFlags & SONG_FASTVOLSLIDES) header[0x26] |= 0x40;
         //if ((m_nMaxPeriod < 20000) || (m_dwSongFlags & SONG_AMIGALIMITS)) header[0x26] |= 0x10;
         /* CWT/V identifiers:
             STx.yy  = 1xyy

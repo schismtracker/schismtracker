@@ -347,40 +347,18 @@ static void fx_panbrello(SONGVOICE *p, uint32_t param)
 }
 
 
-static void fx_fine_volume_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+static void fx_volume_up(SONGVOICE *pChn, uint32_t param)
 {
-        if (flags & SONG_FIRSTTICK) {
-                pChn->nVolume += param * 4;
-                if (pChn->nVolume > 256)
-                        pChn->nVolume = 256;
-        }
+        pChn->nVolume += param * 4;
+        if (pChn->nVolume > 256)
+                pChn->nVolume = 256;
 }
 
-static void fx_fine_volume_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
+static void fx_volume_down(SONGVOICE *pChn, uint32_t param)
 {
-        if (flags & SONG_FIRSTTICK) {
-                pChn->nVolume -= param * 4;
-                if (pChn->nVolume < 0)
-                        pChn->nVolume = 0;
-        }
-}
-
-static void fx_volume_up(uint32_t flags, SONGVOICE *pChn, uint32_t param)
-{
-        if (!(flags & SONG_FIRSTTICK) || (flags & SONG_FASTVOLSLIDES)) {
-                pChn->nVolume += param * 4;
-                if (pChn->nVolume > 256)
-                        pChn->nVolume = 256;
-        }
-}
-
-static void fx_volume_down(uint32_t flags, SONGVOICE *pChn, uint32_t param)
-{
-        if (!(flags & SONG_FIRSTTICK) || (flags & SONG_FASTVOLSLIDES)) {
-                pChn->nVolume -= param * 4;
-                if (pChn->nVolume < 0)
-                        pChn->nVolume = 0;
-        }
+        pChn->nVolume -= param * 4;
+        if (pChn->nVolume < 0)
+                pChn->nVolume = 0;
 }
 
 static void fx_volume_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
@@ -399,24 +377,24 @@ static void fx_volume_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param)
                 //         If x = F, then slide up volume by 15 straight away also (for S3M compat)
                 //         Every update, add x to the volume, check and clip values > 64 to 64
                 param >>= 4;
-                if (param == 0xf)
-                        flags |= SONG_FASTVOLSLIDES;
-                fx_volume_up(flags, pChn, param);
+                if (param == 0xf || !(flags & SONG_FIRSTTICK))
+                        fx_volume_up(pChn, param);
         } else if (param == (param & 0xf)) {
                 // D0x     Set effect update for channel enabled if channel is ON.
                 //         If x = F, then slide down volume by 15 straight away also (for S3M)
                 //         Every update, subtract x from the volume, check and clip values < 0 to 0
-                if (param == 0xf)
-                        flags |= SONG_FASTVOLSLIDES;
-                fx_volume_down(flags, pChn, param);
+                if (param == 0xf || !(flags & SONG_FIRSTTICK))
+                        fx_volume_down(pChn, param);
         } else if ((param & 0xf) == 0xf) {
                 // DxF     Add x to volume straight away. Check and clip values > 64 to 64
                 param >>= 4;
-                fx_fine_volume_up(flags, pChn, param);
+                if (flags & SONG_FIRSTTICK)
+                        fx_volume_up(pChn, param);
         } else if ((param & 0xf0) == 0xf0) {
                 // DFx     Subtract x from volume straight away. Check and clip values < 0 to 0
                 param &= 0xf;
-                fx_fine_volume_down(flags, pChn, param);
+                if (flags & SONG_FIRSTTICK)
+                        fx_volume_down(pChn, param);
         }
 }
 
@@ -574,44 +552,6 @@ static void fx_pattern_loop(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
 }
 
 
-static void fx_extended_channel(CSoundFile *csf, SONGVOICE *pChn, uint32_t param)
-{
-        // S9x and X9x commands (S3M/XM/IT only)
-        switch(param & 0x0F) {
-        // S91: Surround On
-        case 0x01:
-                pChn->dwFlags |= CHN_SURROUND;
-                pChn->nPan = 128;
-                break;
-        ////////////////////////////////////////////////////////////
-        // Modplug Extensions
-        // S90: Surround Off
-        case 0x00:
-                pChn->dwFlags &= ~CHN_SURROUND;
-                break;
-        // S9A: 2-Channels surround mode
-        case 0x0A:
-                csf->m_dwSongFlags &= ~SONG_SURROUNDPAN;
-                break;
-        // S9B: 4-Channels surround mode
-        case 0x0B:
-                csf->m_dwSongFlags |= SONG_SURROUNDPAN;
-                break;
-        // S9E: Go forward
-        case 0x0E:
-                pChn->dwFlags &= ~(CHN_PINGPONGFLAG);
-                break;
-        // S9F: Go backward (set position at the end for non-looping samples)
-        case 0x0F:
-                if (!(pChn->dwFlags & CHN_LOOP) && !pChn->nPos && pChn->nLength) {
-                        pChn->nPos = pChn->nLength - 1;
-                        pChn->nPosLo = 0xFFFF;
-                }
-                pChn->dwFlags |= CHN_PINGPONGFLAG;
-                break;
-        }
-}
-
 static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
 {
         SONGVOICE *pChn = &csf->Voices[nChn];
@@ -689,8 +629,10 @@ static void fx_extended_s3m(CSoundFile *csf, uint32_t nChn, uint32_t param)
                 break;
         // S9x: Set Surround
         case 0x90:
-                if (csf->m_dwSongFlags & SONG_FIRSTTICK)
-                        fx_extended_channel(csf, pChn, param & 0x0F);
+                if (param == 1 && (csf->m_dwSongFlags & SONG_FIRSTTICK)) {
+                        pChn->dwFlags |= CHN_SURROUND;
+                        pChn->nPan = 128;
+                }
                 break;
         // SAx: Set 64k Offset
         case 0xA0:
@@ -1812,8 +1754,7 @@ void csf_process_effects(CSoundFile *csf)
                 case CMD_PANNING:
                         if (!(csf->m_dwSongFlags & SONG_FIRSTTICK))
                                 break;
-                        if (!(csf->m_dwSongFlags & SONG_SURROUNDPAN))
-                                pChn->dwFlags &= ~CHN_SURROUND;
+                        pChn->dwFlags &= ~CHN_SURROUND;
                         pChn->nPan = param;
                         pChn->nPanSwing = 0;
                         pChn->dwFlags |= CHN_FASTVOLRAMP;
@@ -2010,7 +1951,7 @@ void csf_process_effects(CSoundFile *csf)
                                 if (vol)
                                         pChn->nOldVolParam = vol;
                         } else {
-                                fx_volume_up(csf->m_dwSongFlags, pChn, pChn->nOldVolParam);
+                                fx_volume_up(pChn, pChn->nOldVolParam);
                         }
                         break;
 
@@ -2019,7 +1960,7 @@ void csf_process_effects(CSoundFile *csf)
                                 if (vol)
                                         pChn->nOldVolParam = vol;
                         } else {
-                                fx_volume_down(csf->m_dwSongFlags, pChn, pChn->nOldVolParam);
+                                fx_volume_down(pChn, pChn->nOldVolParam);
                         }
                         break;
 
@@ -2029,7 +1970,7 @@ void csf_process_effects(CSoundFile *csf)
                                         pChn->nOldVolParam = vol;
                                 else
                                         vol = pChn->nOldVolParam;
-                                fx_fine_volume_up(csf->m_dwSongFlags, pChn, vol);
+                                fx_volume_up(pChn, vol);
                         }
                         break;
 
@@ -2039,7 +1980,7 @@ void csf_process_effects(CSoundFile *csf)
                                         pChn->nOldVolParam = vol;
                                 else
                                         vol = pChn->nOldVolParam;
-                                fx_fine_volume_down(csf->m_dwSongFlags, pChn, vol);
+                                fx_volume_down(pChn, vol);
                         }
                         break;
 

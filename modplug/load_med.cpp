@@ -623,7 +623,7 @@ bool CSoundFile::ReadMed(const uint8_t *lpStream, uint32_t dwMemLength)
                 if (pins->nLoopEnd) pins->uFlags |= CHN_LOOP;
         }
         // Common Flags
-        if (!(pmsh->flags & 0x20)) m_dwSongFlags |= SONG_FASTVOLSLIDES;
+        //if (!(pmsh->flags & 0x20)) m_dwSongFlags |= SONG_FASTVOLSLIDES;
         // Reading play sequence
         if (version < '2')
         {
