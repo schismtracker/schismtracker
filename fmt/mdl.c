@@ -23,7 +23,12 @@
 
 #define NEED_BYTESWAP
 #include "headers.h"
+#include "slurp.h"
 #include "fmt.h"
+#include "log.h"
+#include "version.h"
+
+#include "sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -63,3 +68,1053 @@ int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
         return false;
 }
+
+/* --------------------------------------------------------------------------------------------------------- */
+/* Structs and stuff for the loader */
+
+#define MDL_BLOCK(a,b)          (((a) << 8) | (b))
+#define MDL_BLK_INFO            MDL_BLOCK('I','N')
+#define MDL_BLK_MESSAGE         MDL_BLOCK('M','E')
+#define MDL_BLK_PATTERNS        MDL_BLOCK('P','A')
+#define MDL_BLK_PATTERNNAMES    MDL_BLOCK('P','N')
+#define MDL_BLK_TRACKS          MDL_BLOCK('T','R')
+#define MDL_BLK_INSTRUMENTS     MDL_BLOCK('I','I')
+#define MDL_BLK_VOLENVS         MDL_BLOCK('V','E')
+#define MDL_BLK_PANENVS         MDL_BLOCK('P','E')
+#define MDL_BLK_FREQENVS        MDL_BLOCK('F','E')
+#define MDL_BLK_SAMPLEINFO      MDL_BLOCK('I','S')
+#define MDL_BLK_SAMPLEDATA      MDL_BLOCK('S','A')
+
+#define MDL_FADE_CUT 0xffff
+
+enum {
+        MDLNOTE_NOTE            = 1 << 0,
+        MDLNOTE_SAMPLE          = 1 << 1,
+        MDLNOTE_VOLUME          = 1 << 2,
+        MDLNOTE_EFFECTS         = 1 << 3,
+        MDLNOTE_PARAM1          = 1 << 4,
+        MDLNOTE_PARAM2          = 1 << 5,
+};
+
+#pragma pack(push,1)
+struct mdl_infoblock {
+        char title[32];
+        char composer[20];
+        uint16_t numorders;
+        uint16_t repeatpos;
+        uint8_t globalvol;
+        uint8_t speed;
+        uint8_t tempo;
+        uint8_t chanpan[32];
+};
+
+/* This is actually a part of the instrument (II) block */
+struct mdl_samplehdr {
+        uint8_t smpnum;
+        uint8_t lastnote;
+        uint8_t volume;
+        uint8_t volenv_flags; // 6 bits env #, 2 bits flags
+        uint8_t panning;
+        uint8_t panenv_flags;
+        uint16_t fadeout;
+        uint8_t vibspeed;
+        uint8_t vibdepth;
+        uint8_t vibsweep;
+        uint8_t vibtype;
+        uint8_t reserved; // zero
+        uint8_t freqenv_flags;
+};
+
+struct mdl_sampleinfo {
+        uint8_t smpnum;
+        char name[32];
+        char filename[8];
+        uint32_t c4speed; // c4, c5, whatever
+        uint32_t length;
+        uint32_t loopstart;
+        uint32_t looplen;
+        uint8_t unused; // was volume in v0.0, why it was changed I have no idea
+        uint8_t flags;
+};
+
+struct mdl_sampleinfo_v0 {
+        uint8_t smpnum;
+        char name[32];
+        char filename[8];
+        uint16_t c4speed;
+        uint32_t length;
+        uint32_t loopstart;
+        uint32_t looplen;
+        uint8_t volume;
+        uint8_t flags;
+};
+
+struct mdl_envelope {
+        uint8_t envnum;
+        struct {
+                uint8_t x; // delta-value from last point, 0 means no more points defined
+                uint8_t y; // 0-63
+        } nodes[15];
+        uint8_t flags;
+        uint8_t loop; // lower 4 bits = start, upper 4 bits = end
+};
+#pragma pack(pop)
+
+/* --------------------------------------------------------------------------------------------------------- */
+/* Internal definitions */
+
+struct mdlpat {
+        int track; // which track to put here
+        int rows; // 1-256
+        MODCOMMAND *note; // first note -- add 64 for next note, etc.
+        struct mdlpat *next;
+};
+
+struct mdlenv {
+        uint32_t flags;
+        INSTRUMENTENVELOPE data;
+};
+
+enum {
+        MDL_HAS_INFO            = 1 << 0,
+        MDL_HAS_MESSAGE         = 1 << 1,
+        MDL_HAS_PATTERNS        = 1 << 2,
+        MDL_HAS_TRACKS          = 1 << 3,
+        MDL_HAS_INSTRUMENTS     = 1 << 4,
+        MDL_HAS_VOLENVS         = 1 << 5,
+        MDL_HAS_PANENVS         = 1 << 6,
+        MDL_HAS_FREQENVS        = 1 << 7,
+        MDL_HAS_SAMPLEINFO      = 1 << 8,
+        MDL_HAS_SAMPLEDATA      = 1 << 9,
+};
+
+static const uint8_t mdl_efftrans[] = {
+        /* 0 */ CMD_NONE,
+        /* 1st column only */
+        /* 1 */ CMD_PORTAMENTOUP,
+        /* 2 */ CMD_PORTAMENTODOWN,
+        /* 3 */ CMD_TONEPORTAMENTO,
+        /* 4 */ CMD_VIBRATO,
+        /* 5 */ CMD_ARPEGGIO,
+        /* 6 */ CMD_NONE,
+        /* Either column */
+        /* 7 */ CMD_TEMPO,
+        /* 8 */ CMD_PANNING,
+        /* 9 */ CMD_SETENVPOSITION,
+        /* A */ CMD_NONE,
+        /* B */ CMD_POSITIONJUMP,
+        /* C */ CMD_GLOBALVOLUME,
+        /* D */ CMD_PATTERNBREAK,
+        /* E */ CMD_S3MCMDEX,
+        /* F */ CMD_SPEED,
+        /* 2nd column only */
+        /* G */ CMD_VOLUMESLIDE, // up
+        /* H */ CMD_VOLUMESLIDE, // down
+        /* I */ CMD_RETRIG,
+        /* J */ CMD_TREMOLO,
+        /* K */ CMD_TREMOR,
+        /* L */ CMD_NONE,
+};
+
+static const uint8_t autovib_import[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_SINE};
+
+/* --------------------------------------------------------------------------------------------------------- */
+/* a highly overcomplicated mess to import effects */
+
+// receive an MDL effect, give back a 'normal' one.
+static void translate_fx(uint8_t *pe, uint8_t *pp)
+{
+        uint8_t e = *pe;
+        uint8_t p = *pp;
+
+        if (e > 21)
+                e = 0; // (shouldn't ever happen)
+        *pe = mdl_efftrans[e];
+
+        switch (e) {
+        case 7: // tempo
+                // MDL supports any nonzero tempo value, but we don't
+                p = MAX(p, 0x20);
+                break;
+        case 8: // panning
+                p = MIN(p << 1, 0xff);
+                break;
+        case 0xd: // pattern break
+                // convert from stupid decimal-hex
+                p = 10 * (p >> 4) + (p & 0xf);
+                break;
+        case 0xe: // special
+                switch (p >> 4) {
+                case 0: // unused
+                case 3: // unused
+                case 5: // set finetune
+                case 8: // set samplestatus (what?)
+                        *pe = CMD_NONE;
+                        break;
+                case 1: // pan slide left
+                        *pe = CMD_PANNINGSLIDE;
+                        p = (MAX(p & 0xf, 0xe) << 4) | 0xf;
+                        break;
+                case 2: // pan slide right
+                        *pe = CMD_PANNINGSLIDE;
+                        p = 0xf0 | MAX(p & 0xf, 0xe);
+                        break;
+                case 4: // vibrato waveform
+                        p = 0x30 | (p & 0xf);
+                        break;
+                case 6: // pattern loop
+                        p = 0xb0 | (p & 0xf);
+                        break;
+                case 7: // tremolo waveform
+                        p = 0x40 | (p & 0xf);
+                        break;
+                case 9: // retrig
+                        *pe = CMD_RETRIG;
+                        p &= 0xf;
+                        break;
+                case 0xa: // global vol slide up
+                        *pe = CMD_GLOBALVOLSLIDE;
+                        p = 0xf0 & (((p & 0xf) + 1) << 3);
+                        break;
+                case 0xb: // global vol slide down
+                        *pe = CMD_GLOBALVOLSLIDE;
+                        p = ((p & 0xf) + 1) >> 1;
+                        break;
+                case 0xc: // note cut
+                case 0xd: // note delay
+                case 0xe: // pattern delay
+                        // nothing to change here
+                        break;
+                case 0xf: // offset -- further mangled later.
+                        *pe = CMD_OFFSET;
+                        break;
+                }
+                break;
+        case 0x10: // volslide up
+                switch (p >> 4) {
+                case 0: // G0y -> Dy0
+                        p <<= 4;
+                        break;
+                case 0xf: // GFy -> DyF
+                        p = (p << 4) | 0xf;
+                        break;
+                case 0xe: // GEy -> DzF (z=(y>>2))?
+                        p = (p << 2) | 0xf;
+                        break;
+                default: // some large slide up -- best we can do is DF0
+                        p = 0xf0;
+                        break;
+                }
+                break;
+        case 0x11: // volslide down
+                switch (p >> 4) {
+                case 0: // H0y -> D0y
+                case 0xf: // HFy -> DFy
+                        break;
+                case 0xe: // HEy -> DFz (z=(y>>2))?
+                        p = 0xf0 | ((p & 0xf) >> 2);
+                        break;
+                default: // some huge slide down
+                        p = 0xf;
+                        break;
+                }
+                break;
+        }
+
+        *pp = p;
+}
+
+// return: 1 if an effect was lost, 0 if not.
+static int cram_mdl_effects(MODCOMMAND *note, uint8_t vol, uint8_t e1, uint8_t e2, uint8_t p1, uint8_t p2)
+{
+        int lostfx = 0;
+        int n;
+        uint8_t tmp;
+
+        // map second effect values 1-6 to effects G-L
+        if (e2 >= 1 && e2 <= 6)
+                e2 += 15;
+
+        translate_fx(&e1, &p1);
+        translate_fx(&e2, &p2);
+        /* From the Digitrakker documentation:
+                * EFx -xx - Set Sample Offset
+                This  is a  double-command.  It starts the
+                sample at adress xxx*256.
+                Example: C-5 01 -- EF1 -23 ->starts sample
+                01 at address 12300 (in hex).
+        Kind of screwy, but I guess it's better than the mess required to do it with IT (which effectively
+        requires 3 rows in order to set the offset past 0xff00). If we had access to the entire track, we
+        *might* be able to shove the high offset SAy into surrounding rows, but it wouldn't always be possible,
+        it'd make the loader a lot uglier, and generally would be more trouble than it'd be worth to implement.
+
+        What's more is, if there's another effect in the second column, it's ALSO processed in addition to the
+        offset, and the second data byte is shared between the two effects.
+        And: an offset effect without a note will retrigger the previous note, but I'm not even going to try to
+        handle that behavior. */
+        if (e1 == CMD_OFFSET) {
+                // EFy -xx => offset yxx00
+                p1 = (p1 & 0xf) ? 0xff : p2;
+                if (e2 == CMD_OFFSET)
+                        e2 = CMD_NONE;
+        } else if (e2 == CMD_OFFSET) {
+                // --- EFy => offset y0000 (best we can do without doing a ton of extra work is 0xff00)
+                p2 = (p2 & 0xf) ? 0xff : 0;
+        }
+
+        if (vol) {
+                note->volcmd = VOLCMD_VOLUME;
+                note->vol = (vol + 2) >> 2;
+        }
+
+        /* If we have Dxx + G00, or Dxx + H00, combine them into Lxx/Kxx.
+        (Since pitch effects only "fit" in the first effect column, and volume effects only work in the
+        second column, we don't have to check every combination here.) */
+        if (e2 == CMD_VOLUMESLIDE && p1 == 0) {
+                if (e1 == CMD_TONEPORTAMENTO) {
+                        e1 = CMD_NONE;
+                        e2 = CMD_TONEPORTAVOL;
+                } else if (e1 == CMD_VIBRATO) {
+                        e1 = CMD_NONE;
+                        e2 = CMD_VIBRATOVOL;
+                }
+        }
+
+        /* Try to fit the "best" effect into e2. */
+        if (e1 == CMD_NONE) {
+                // easy
+        } else if (e2 == CMD_NONE) {
+                // almost as easy
+                e2 = e1;
+                p2 = p1;
+                e1 = CMD_NONE;
+        } else if (e1 == e2 && e1 != CMD_S3MCMDEX) {
+                /* Digitrakker processes the effects left-to-right, so if both effects are the same, the
+                second essentially overrides the first. */
+                e1 = CMD_NONE;
+        } else if (!vol) {
+                // The volume column is free, so try to shove one of them into there.
+
+                // See also xm.c.
+                // (Just because I'm using the same sort of code twice doesn't make it any less of a hack)
+                for (n = 0; n < 4; n++) {
+                        if (convert_voleffect(&e1, &p1, n >> 1)) {
+                                note->volcmd = e1;
+                                note->vol = p1;
+                                e1 = CMD_NONE;
+                                break;
+                        } else {
+                                // swap them
+                                tmp = e2; e2 = e1; e1 = tmp;
+                                tmp = p2; p2 = p1; p1 = tmp;
+                        }
+                }
+        }
+
+        // If we still have two effects, pick the 'best' one
+        if (e1 != CMD_NONE && e2 != CMD_NONE) {
+                lostfx++;
+                if (effect_weight[e1] < effect_weight[e2]) {
+                        e2 = e1;
+                        p2 = p1;
+                }
+        }
+
+        note->command = e2;
+        note->param = p2;
+
+        return lostfx;
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
+/* block reading */
+
+// return: repeat position.
+static int mdl_read_info(CSoundFile *song, slurp_t *fp)
+{
+        struct mdl_infoblock info;
+        int n, songlen;
+        uint8_t b;
+
+        slurp_read(fp, &info, sizeof(info));
+        info.numorders = bswapLE16(info.numorders);
+        info.repeatpos = bswapLE16(info.repeatpos);
+
+        // title is space-padded
+        info.title[31] = '\0';
+        trim_string(info.title);
+        strncpy(song->song_title, info.title, 25);
+        song->song_title[25] = '\0';
+
+        song->m_nDefaultGlobalVolume = (info.globalvol + 1) >> 1;
+        song->m_nDefaultSpeed = info.speed ?: 1;
+        song->m_nDefaultTempo = MAX(info.tempo, 31); // MDL tempo range is actually 4-255
+
+        // channel pannings
+        for (n = 0; n < 32; n++) {
+                song->Channels[n].nPan = (info.chanpan[n] & 127) << 1; // ugh
+                if (info.chanpan[n] & 128)
+                        song->Channels[n].dwFlags |= CHN_MUTE;
+        }
+        for (; n < 64; n++) {
+                song->Channels[n].nPan = 128;
+                song->Channels[n].dwFlags |= CHN_MUTE;
+        }
+
+        songlen = MIN(info.numorders, MAX_ORDERS - 1);
+        for (n = 0; n < songlen; n++) {
+                b = slurp_getc(fp);
+                song->Orderlist[n] = (b < MAX_PATTERNS) ? b : ORDER_SKIP;
+        }
+
+        return info.repeatpos;
+}
+
+static void mdl_read_message(CSoundFile *song, slurp_t *fp, uint32_t blklen)
+{
+        char *ptr = song->m_lpszSongComments;
+
+        blklen = MIN(blklen, MAX_MESSAGE);
+        slurp_read(fp, ptr, blklen);
+        ptr[blklen] = '\0';
+
+        while ((ptr = strchr(ptr, '\r')) != NULL)
+                *ptr = '\n';
+}
+
+static struct mdlpat *mdl_read_patterns(CSoundFile *song, slurp_t *fp)
+{
+        struct mdlpat pat_head = { .next = NULL }; // only exists for .next
+        struct mdlpat *patptr = &pat_head;
+        MODCOMMAND *note;
+        int npat, nchn, rows, pat, chn;
+        uint16_t trknum;
+
+        npat = slurp_getc(fp);
+        npat = MIN(npat, MAX_PATTERNS);
+        for (pat = 0; pat < npat; pat++) {
+
+                nchn = slurp_getc(fp);
+                rows = slurp_getc(fp) + 1;
+                slurp_seek(fp, 16, SEEK_CUR); // skip the name
+
+                note = song->Patterns[pat] = csf_allocate_pattern(rows, 64);
+                song->PatternSize[pat] = song->PatternAllocSize[pat] = rows;
+                for (chn = 0; chn < nchn; chn++, note++) {
+                        slurp_read(fp, &trknum, 2);
+                        trknum = bswapLE16(trknum);
+                        if (!trknum)
+                                continue;
+
+                        patptr->next = malloc(sizeof(struct mdlpat));
+                        patptr = patptr->next;
+                        patptr->track = trknum;
+                        patptr->rows = rows;
+                        patptr->note = note;
+                        patptr->next = NULL;
+                }
+        }
+
+        return pat_head.next;
+}
+
+// mostly the same as above
+static struct mdlpat *mdl_read_patterns_v0(CSoundFile *song, slurp_t *fp)
+{
+        struct mdlpat pat_head = { .next = NULL };
+        struct mdlpat *patptr = &pat_head;
+        MODCOMMAND *note;
+        int npat, pat, chn;
+        uint16_t trknum;
+
+        npat = slurp_getc(fp);
+        npat = MIN(npat, MAX_PATTERNS);
+        for (pat = 0; pat < npat; pat++) {
+
+                note = song->Patterns[pat] = csf_allocate_pattern(64, 64);
+                song->PatternSize[pat] = song->PatternAllocSize[pat] = 64;
+                for (chn = 0; chn < 32; chn++, note++) {
+                        slurp_read(fp, &trknum, 2);
+                        trknum = bswapLE16(trknum);
+                        if (!trknum)
+                                continue;
+
+                        patptr->next = malloc(sizeof(struct mdlpat));
+                        patptr = patptr->next;
+                        patptr->track = trknum;
+                        patptr->rows = 64;
+                        patptr->note = note;
+                        patptr->next = NULL;
+                }
+        }
+
+        return pat_head.next;
+}
+
+static MODCOMMAND **mdl_read_tracks(slurp_t *fp)
+{
+        MODCOMMAND **tracks = calloc(65536, sizeof(MODCOMMAND *));
+        int ntrks, trk, row, lostfx;
+        uint16_t h;
+        uint8_t b, x, y;
+        uint8_t vol, e1, e2, p1, p2;
+        size_t bytesleft, reallen = fp->length;
+
+        slurp_read(fp, &h, 2);
+        ntrks = bswapLE16(h);
+
+        // track 0 is always blank
+        for (trk = 1; trk <= ntrks; trk++) {
+                slurp_read(fp, &h, 2);
+                bytesleft = bswapLE16(h);
+                fp->length = MIN(fp->length, fp->pos + bytesleft); // narrow
+                tracks[trk] = calloc(256, sizeof(MODCOMMAND));
+                row = 0;
+                while (row < 256 && !slurp_eof(fp)) {
+                        b = slurp_getc(fp);
+                        x = b >> 2;
+                        y = b & 3;
+                        switch (y) {
+                        case 0: // (x+1) empty notes follow
+                                row += x + 1;
+                                break;
+                        case 1: // Repeat previous note (x+1) times
+                                if (row > 0) {
+                                        do {
+                                                tracks[trk][row] = tracks[trk][row - 1];
+                                        } while (++row < 256 && x--);
+                                }
+                                break;
+                        case 2: // Copy note from row x
+                                if (row > x)
+                                        tracks[trk][row] = tracks[trk][x];
+                                row++;
+                                break;
+                        case 3: // New note data
+                                if (x & MDLNOTE_NOTE) {
+                                        b = slurp_getc(fp);
+                                        // convenient! :)
+                                        // (I don't know what DT does for out of range notes, might be worth
+                                        // checking some time)
+                                        tracks[trk][row].note = (b > 120) ? NOTE_OFF : b;
+                                }
+                                if (x & MDLNOTE_SAMPLE) {
+                                        b = slurp_getc(fp);
+                                        if (b >= MAX_INSTRUMENTS)
+                                                b = 0;
+                                        tracks[trk][row].instr = b;
+                                }
+                                vol = (x & MDLNOTE_VOLUME) ? slurp_getc(fp) : 0;
+                                if (x & MDLNOTE_EFFECTS) {
+                                        b = slurp_getc(fp);
+                                        e1 = b & 0xf;
+                                        e2 = b >> 4;
+                                } else {
+                                        e1 = e2 = 0;
+                                }
+                                p1 = (x & MDLNOTE_PARAM1) ? slurp_getc(fp) : 0;
+                                p2 = (x & MDLNOTE_PARAM2) ? slurp_getc(fp) : 0;
+                                lostfx += cram_mdl_effects(&tracks[trk][row], vol, e1, e2, p1, p2);
+                                row++;
+                                break;
+                        }
+                }
+                fp->length = reallen; // widen
+        }
+        // the XM loader complains about this in each pattern, but it's just way too noisy here
+        // (since there's many more tracks than patterns, and dropping effects is also much more common)
+        if (lostfx)
+                log_appendf(2, "%d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+
+        return tracks;
+}
+
+
+/* This is actually somewhat horrible.
+Digitrakker's envelopes are actually properties of the *sample*, not the instrument -- that is, the only thing
+an instrument is actually doing is providing a keyboard split and grouping a bunch of samples together.
+
+This is handled here by importing the instrument names and note/sample mapping into a "master" instrument,
+but NOT writing the envelope data there -- instead, that stuff is placed into whatever instrument matches up
+with the sample number. Then, when building the tracks into patterns, we'll actually *remap* all the numbers
+and rewrite each instrument's sample map as a 1:1 mapping with the sample.
+In the end, the song will play back correctly (well, at least hopefully it will ;) though the instrument names
+won't always line up. */
+static void mdl_read_instruments(CSoundFile *song, slurp_t *fp)
+{
+        struct mdl_samplehdr shdr; // Etaoin shrdlu
+        SONGINSTRUMENT *ins; // 'master' instrument
+        SONGINSTRUMENT *sins; // other instruments created to track each sample's individual envelopes
+        SONGSAMPLE *smp;
+        int nins, nsmp;
+        int insnum;
+        int firstnote, note;
+
+        nins = slurp_getc(fp);
+        while (nins--) {
+                insnum = slurp_getc(fp);
+                firstnote = 0;
+                nsmp = slurp_getc(fp);
+                // if it's out of range, or if the same instrument was already loaded (weird), don't read it
+                if (insnum == 0 || insnum > MAX_INSTRUMENTS) {
+                        // skip it (32 bytes name, plus 14 bytes per sample)
+                        slurp_seek(fp, 32 + 14 * nsmp, SEEK_SET);
+                        continue;
+                }
+                // ok, make an instrument
+                if (!song->Instruments[insnum])
+                        song->Instruments[insnum] = csf_allocate_instrument();
+                ins = song->Instruments[insnum];
+
+                slurp_read(fp, ins->name, 25);
+                slurp_seek(fp, 7, SEEK_CUR); // throw away the rest
+                ins->name[25] = '\0';
+
+                while (nsmp--) {
+                        // read a sample
+                        slurp_read(fp, &shdr, sizeof(shdr));
+                        shdr.fadeout = bswapLE16(shdr.fadeout);
+                        if (shdr.smpnum == 0 || shdr.smpnum > MAX_SAMPLES) {
+                                continue;
+                        }
+                        if (!song->Instruments[shdr.smpnum])
+                                song->Instruments[shdr.smpnum] = csf_allocate_instrument();
+                        sins = song->Instruments[shdr.smpnum];
+
+                        smp = song->Samples + shdr.smpnum;
+
+                        // Write this sample's instrument mapping
+                        // (note: test "jazz 2 jazz.mdl", it uses a multisampled piano)
+                        shdr.lastnote = MIN(shdr.lastnote, 119);
+                        for (note = firstnote; note <= shdr.lastnote; note++)
+                                ins->Keyboard[note] = shdr.smpnum;
+                        firstnote = shdr.lastnote + 1; // get ready for the next sample
+
+                        // temporarily hijack the envelope "nNodes" field to write the envelope number
+                        sins->VolEnv.nNodes = shdr.volenv_flags & 63;
+                        sins->PanEnv.nNodes = shdr.panenv_flags & 63;
+                        sins->PitchEnv.nNodes = shdr.freqenv_flags & 63;
+
+                        if (shdr.volenv_flags & 128)
+                                sins->dwFlags |= ENV_VOLUME;
+                        if (shdr.panenv_flags & 128)
+                                sins->dwFlags |= ENV_PANNING;
+                        if (shdr.freqenv_flags & 128)
+                                sins->dwFlags |= ENV_PITCH;
+
+                        // DT fadeout = 0000-1fff, or 0xffff for "cut"
+                        // assuming DT uses 'cut' behavior for anything past 0x1fff, too lazy to bother
+                        // hex-editing a file at the moment to find out :P
+                        sins->nFadeOut = (shdr.fadeout < 0x2000)
+                                ? (shdr.fadeout + 1) >> 1 // this seems about right
+                                : MDL_FADE_CUT; // temporary
+
+                        // for the volume envelope / flags:
+                        //      "bit 6   -> flags, if volume is used"
+                        // ... huh? what happens if the volume isn't used?
+                        smp->nVolume = shdr.volume; //mphack (range 0-255, s/b 0-64)
+                        smp->nPan = ((MIN(shdr.panning, 127) + 1) >> 1) * 4; //mphack
+                        if (shdr.panenv_flags & 64)
+                                smp->uFlags |= CHN_PANNING;
+
+                        smp->nVibRate = shdr.vibspeed; // XXX bother checking ranges for vibrato
+                        smp->nVibDepth = shdr.vibdepth;
+                        smp->nVibSweep = shdr.vibsweep;
+                        smp->nVibType = autovib_import[shdr.vibtype & 3];
+                }
+        }
+}
+
+static void mdl_read_sampleinfo(CSoundFile *song, slurp_t *fp, uint8_t *packtype)
+{
+        struct mdl_sampleinfo sinfo;
+        SONGSAMPLE *smp;
+        int nsmp;
+
+        nsmp = slurp_getc(fp);
+        while (nsmp--) {
+                slurp_read(fp, &sinfo, sizeof(sinfo));
+                if (sinfo.smpnum == 0 || sinfo.smpnum > MAX_SAMPLES) {
+                        continue;
+                }
+
+                smp = song->Samples + sinfo.smpnum;
+                strncpy(smp->name, sinfo.name, 25);
+                smp->name[25] = '\0';
+                strncpy(smp->filename, sinfo.filename, 8);
+                smp->filename[8] = '\0';
+
+                // MDL has ten octaves like IT, but they're not the *same* ten octaves -- dropping
+                // perfectly good note data is stupid so I'm adjusting the sample tunings instead
+                smp->nC5Speed = bswapLE32(sinfo.c4speed) * 2;
+                smp->nLength = bswapLE32(sinfo.length);
+                smp->nLoopStart = bswapLE32(sinfo.loopstart);
+                smp->nLoopEnd = bswapLE32(sinfo.looplen);
+                if (smp->nLoopEnd) {
+                        smp->nLoopEnd += smp->nLoopStart;
+                        smp->uFlags |= CHN_LOOP;
+                }
+                if (sinfo.flags & 1) {
+                        smp->uFlags |= CHN_16BIT;
+                        smp->nLength >>= 1;
+                        smp->nLoopStart >>= 1;
+                        smp->nLoopEnd >>= 1;
+                }
+                if (sinfo.flags & 2)
+                        smp->uFlags |= CHN_PINGPONGLOOP;
+                packtype[sinfo.smpnum] = ((sinfo.flags >> 2) & 3);
+
+                smp->nGlobalVol = 64;
+        }
+}
+
+// (ughh)
+static void mdl_read_sampleinfo_v0(CSoundFile *song, slurp_t *fp, uint8_t *packtype)
+{
+        struct mdl_sampleinfo_v0 sinfo;
+        SONGSAMPLE *smp;
+        int nsmp;
+
+        nsmp = slurp_getc(fp);
+        while (nsmp--) {
+                slurp_read(fp, &sinfo, sizeof(sinfo));
+                if (sinfo.smpnum == 0 || sinfo.smpnum > MAX_SAMPLES) {
+                        continue;
+                }
+
+                smp = song->Samples + sinfo.smpnum;
+                strncpy(smp->name, sinfo.name, 25);
+                smp->name[25] = '\0';
+                strncpy(smp->filename, sinfo.filename, 8);
+                smp->filename[8] = '\0';
+
+                smp->nC5Speed = bswapLE16(sinfo.c4speed) * 2;
+                smp->nLength = bswapLE32(sinfo.length);
+                smp->nLoopStart = bswapLE32(sinfo.loopstart);
+                smp->nLoopEnd = bswapLE32(sinfo.looplen);
+                smp->nVolume = sinfo.volume; //mphack (range 0-255, I think?)
+                if (smp->nLoopEnd) {
+                        smp->nLoopEnd += smp->nLoopStart;
+                        smp->uFlags |= CHN_LOOP;
+                }
+                if (sinfo.flags & 1) {
+                        smp->uFlags |= CHN_16BIT;
+                        smp->nLength >>= 1;
+                        smp->nLoopStart >>= 1;
+                        smp->nLoopEnd >>= 1;
+                }
+                if (sinfo.flags & 2)
+                        smp->uFlags |= CHN_PINGPONGLOOP;
+                packtype[sinfo.smpnum] = ((sinfo.flags >> 2) & 3);
+
+                smp->nGlobalVol = 64;
+        }
+}
+
+static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags)
+{
+        struct mdl_envelope ehdr;
+        INSTRUMENTENVELOPE *env;
+        uint8_t nenv;
+        int n, tick;
+
+        nenv = slurp_getc(fp);
+        while (nenv--) {
+                slurp_read(fp, &ehdr, sizeof(ehdr));
+                if (ehdr.envnum > 63)
+                        continue;
+
+                if (!envs[ehdr.envnum])
+                        envs[ehdr.envnum] = calloc(1, sizeof(struct mdlenv));
+                env = &envs[ehdr.envnum]->data;
+
+                env->nNodes = 15;
+                tick = -ehdr.nodes[0].x; // adjust so it starts at zero
+                for (n = 0; n < 15; n++) {
+                        if (!ehdr.nodes[n].x) {
+                                env->nNodes = MAX(n, 2);
+                                break;
+                        }
+                        tick += ehdr.nodes[n].x;
+                        env->Ticks[n] = tick;
+                        env->Values[n] = MIN(ehdr.nodes[n].y, 64); // actually 0-63
+                }
+
+                env->nLoopStart = ehdr.loop & 0xf;
+                env->nLoopEnd = ehdr.loop >> 4;
+                env->nSustainStart = env->nSustainEnd = ehdr.flags & 0xf;
+
+                envs[ehdr.envnum]->flags = 0;
+                if (ehdr.flags & 16)
+                        envs[ehdr.envnum]->flags |= flags & (ENV_VOLSUSTAIN | ENV_PANSUSTAIN | ENV_PITCHSUSTAIN);
+                if (ehdr.flags & 32)
+                        envs[ehdr.envnum]->flags |= flags & (ENV_VOLLOOP | ENV_PANLOOP | ENV_PITCHLOOP);
+        }
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+static void copy_envelope(SONGINSTRUMENT *ins, INSTRUMENTENVELOPE *ienv, struct mdlenv **envs, uint32_t enable)
+{
+        // nNodes temporarily indicates which envelope to load
+        struct mdlenv *env = envs[ienv->nNodes];
+        if (env) {
+                ins->dwFlags |= env->flags;
+                memcpy(ienv, &env->data, sizeof(INSTRUMENTENVELOPE));
+        } else {
+                ins->dwFlags &= ~enable;
+                ienv->nNodes = 2;
+        }
+}
+
+int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
+{
+        struct mdlpat *pat, *patptr = NULL;
+        struct mdlenv *volenvs[64] = {NULL}, *panenvs[64] = {NULL}, *freqenvs[64] = {NULL};
+        uint8_t packtype[MAX_SAMPLES] = {0};
+        MODCOMMAND **tracks = NULL;
+        long datapos = 0; // where to seek for the sample data
+        int restartpos = -1;
+        int trk, n;
+        uint32_t readflags = 0;
+        uint8_t tag[4];
+        uint8_t fmtver; // file format version, e.g. 0x11 = v1.1
+
+        slurp_read(fp, tag, 4);
+        if (memcmp(tag, "DMDL", 4) != 0)
+                return LOAD_UNSUPPORTED;
+
+        fmtver = slurp_getc(fp);
+
+        // Read the next block
+        while (!slurp_eof(fp)) {
+                uint32_t blklen; // length of this block
+                size_t nextpos; // ... and start of next one
+
+                slurp_read(fp, tag, 2);
+                slurp_read(fp, &blklen, 4);
+                blklen = bswapLE32(blklen);
+                nextpos = slurp_tell(fp) + blklen;
+
+                switch (MDL_BLOCK(tag[0], tag[1])) {
+                case MDL_BLK_INFO:
+                        if (!(readflags & MDL_HAS_INFO)) {
+                                readflags |= MDL_HAS_INFO;
+                                restartpos = mdl_read_info(song, fp);
+                        }
+                        break;
+                case MDL_BLK_MESSAGE:
+                        if (!(readflags & MDL_HAS_MESSAGE)) {
+                                readflags |= MDL_HAS_MESSAGE;
+                                mdl_read_message(song, fp, blklen);
+                        }
+                        break;
+                case MDL_BLK_PATTERNS:
+                        if (!(readflags & MDL_HAS_PATTERNS)) {
+                                readflags |= MDL_HAS_PATTERNS;
+                                patptr = ((fmtver >> 4) ? mdl_read_patterns : mdl_read_patterns_v0)(song, fp);
+                        }
+                        break;
+                case MDL_BLK_TRACKS:
+                        if (!(readflags & MDL_HAS_TRACKS)) {
+                                readflags |= MDL_HAS_TRACKS;
+                                tracks = mdl_read_tracks(fp);
+                        }
+                        break;
+                case MDL_BLK_INSTRUMENTS:
+                        if (!(readflags & MDL_HAS_INSTRUMENTS)) {
+                                readflags |= MDL_HAS_INSTRUMENTS;
+                                mdl_read_instruments(song, fp);
+                        }
+                        break;
+                case MDL_BLK_VOLENVS:
+                        if (!(readflags & MDL_HAS_VOLENVS)) {
+                                readflags |= MDL_HAS_VOLENVS;
+                                mdl_read_envelopes(fp, volenvs, ENV_VOLLOOP | ENV_VOLSUSTAIN);
+                        }
+                        break;
+                case MDL_BLK_PANENVS:
+                        if (!(readflags & MDL_HAS_PANENVS)) {
+                                readflags |= MDL_HAS_PANENVS;
+                                mdl_read_envelopes(fp, panenvs, ENV_PANLOOP | ENV_PANSUSTAIN);
+                        }
+                        break;
+                case MDL_BLK_FREQENVS:
+                        if (!(readflags & MDL_HAS_FREQENVS)) {
+                                readflags |= MDL_HAS_FREQENVS;
+                                mdl_read_envelopes(fp, freqenvs, ENV_PITCHLOOP | ENV_PITCHSUSTAIN);
+                        }
+                        break;
+                case MDL_BLK_SAMPLEINFO:
+                        if (!(readflags & MDL_HAS_SAMPLEINFO)) {
+                                readflags |= MDL_HAS_SAMPLEINFO;
+                                ((fmtver >> 4) ? mdl_read_sampleinfo : mdl_read_sampleinfo_v0)(song, fp, packtype);
+                        }
+                        break;
+                case MDL_BLK_SAMPLEDATA:
+                        // Can't do anything until we have the sample info block loaded, since the sample
+                        // lengths and packing information is stored there.
+                        // Best we can do at the moment is to remember where this block was so we can jump
+                        // back to it later.
+                        if (!(readflags & MDL_HAS_SAMPLEDATA)) {
+                                readflags |= MDL_HAS_SAMPLEDATA;
+                                datapos = slurp_tell(fp);
+                        }
+                        break;
+
+                case MDL_BLK_PATTERNNAMES:
+                        // don't care
+                        break;
+
+                default:
+                        //log_appendf(4, "unknown block of type '%c%c' (0x%04X) at %ld",
+                        //        tag[0], tag[1], MDL_BLOCK(tag[0], tag[1]), slurp_tell(fp));
+                        break;
+                }
+
+                if (slurp_seek(fp, nextpos, SEEK_SET) != 0) {
+                        log_appendf(4, "MDL: failed to seek (file truncated?)");
+                        break;
+                }
+        }
+
+        if (!(readflags & MDL_HAS_INSTRUMENTS)) {
+                // Probably a v0 file, fake an instrument
+                for (n = 1; n < MAX_SAMPLES; n++) {
+                        if (song->Samples[n].nLength) {
+                                song->Instruments[n] = csf_allocate_instrument();
+                                strcpy(song->Instruments[n]->name, song->Samples[n].name);
+                        }
+                }
+        }
+
+        if (readflags & MDL_HAS_SAMPLEINFO) {
+                // Sample headers loaded!
+                // if the sample data was encountered, load it now
+                // otherwise, clear out the sample lengths so Bad Things don't happen later
+                if (datapos) {
+                        slurp_seek(fp, datapos, SEEK_SET);
+                        for (n = 1; n < MAX_SAMPLES; n++) {
+                                if (!packtype[n] && !song->Samples[n].nLength)
+                                        continue;
+                                uint32_t smpsize, flags;
+                                if (packtype[n] > 2) {
+                                        log_appendf(4, "sample %d: unknown packing type %d", n, packtype[n]);
+                                        packtype[n] = 0; // ?
+                                } else if (packtype[n] == ((song->Samples[n].uFlags & CHN_16BIT) ? 1 : 2)) {
+                                        log_appendf(4, "sample %d: bit width / pack type mismatch", n);
+                                }
+                                flags = SF_LE | SF_M;
+                                flags |= packtype[n] ? SF_MDL : SF_PCMS;
+                                flags |= (song->Samples[n].uFlags & CHN_16BIT) ? SF_16 : SF_8;
+                                smpsize = csf_read_sample(song->Samples + n, flags,
+                                        fp->data + fp->pos, fp->length - fp->pos);
+                                slurp_seek(fp, smpsize, SEEK_CUR);
+                        }
+                } else {
+                        for (n = 1; n < MAX_SAMPLES; n++)
+                                song->Samples[n].nLength = 0;
+                }
+        }
+
+        if (readflags & MDL_HAS_TRACKS) {
+                MODCOMMAND *patnote, *trknote;
+
+                // first off, fix all the instrument numbers to compensate
+                // for the screwy envelope craziness
+                if (fmtver >> 4) {
+                        for (trk = 1; trk < 65536 && tracks[trk]; trk++) {
+                                uint8_t cnote = NOTE_FIRST; // current/last used data
+
+                                for (n = 0, trknote = tracks[trk]; n < 256; n++, trknote++) {
+                                        if (NOTE_IS_NOTE(trknote->note)) {
+                                                cnote = trknote->note;
+                                        }
+                                        if (trknote->instr) {
+                                                // translate it
+                                                trknote->instr = song->Instruments[trknote->instr]
+                                                        ? song->Instruments[trknote->instr]->Keyboard[cnote - 1]
+                                                        : 0;
+                                        }
+                                }
+                        }
+                }
+
+                // "paste" the tracks into the channels
+                for (pat = patptr; pat; pat = pat->next) {
+                        trknote = tracks[pat->track];
+                        if (!trknote)
+                                continue;
+                        patnote = pat->note;
+                        for (n = 0; n < pat->rows; n++, trknote++, patnote += 64) {
+                                *patnote = *trknote;
+                        }
+                }
+                // and clean up
+                for (trk = 1; trk < 65536 && tracks[trk]; trk++)
+                        free(tracks[trk]);
+                free(tracks);
+        }
+        while (patptr) {
+                pat = patptr;
+                patptr = patptr->next;
+                free(pat);
+        }
+
+        // Finish fixing up the instruments
+        for (n = 1; n < MAX_INSTRUMENTS; n++) {
+                SONGINSTRUMENT *ins = song->Instruments[n];
+                if (ins) {
+                        copy_envelope(ins, &ins->VolEnv, volenvs, ENV_VOLUME);
+                        copy_envelope(ins, &ins->PanEnv, panenvs, ENV_PANNING);
+                        copy_envelope(ins, &ins->PitchEnv, freqenvs, ENV_PITCH);
+
+                        if ((ins->dwFlags & (ENV_VOLUME | ENV_VOLLOOP)) == ENV_VOLUME) {
+                                // fix note-fade
+                                ins->dwFlags |= ENV_VOLLOOP;
+                                ins->VolEnv.nLoopStart = ins->VolEnv.nLoopEnd = ins->VolEnv.nNodes - 1;
+                        }
+                        if (ins->nFadeOut == MDL_FADE_CUT) {
+                                // fix note-off
+                                if (!(ins->dwFlags & ENV_VOLUME)) {
+                                        ins->VolEnv.Ticks[0] = 0;
+                                        ins->VolEnv.Values[0] = 64;
+                                        ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd = 0;
+                                        ins->dwFlags |= ENV_VOLUME | ENV_VOLSUSTAIN;
+                                        // (the rest is set below)
+                                } else if (!(ins->dwFlags & ENV_VOLSUSTAIN)) {
+                                        ins->dwFlags |= ENV_VOLSUSTAIN;
+                                        ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd
+                                                = ins->VolEnv.nNodes - 1;
+                                }
+                                int se = ins->VolEnv.nSustainEnd;
+                                ins->VolEnv.nNodes = se + 2;
+                                ins->VolEnv.Ticks[se + 1] = ins->VolEnv.Ticks[se] + 1;
+                                ins->VolEnv.Values[se + 1] = 0;
+                                ins->nFadeOut = 0;
+                        }
+
+                        // set a 1:1 map for each instrument with a corresponding sample,
+                        // and a blank map for each one that doesn't.
+                        int note, smp = song->Samples[n].pSample ? n : 0;
+                        for (note = 0; note < 120; note++) {
+                                ins->Keyboard[note] = smp;
+                                ins->NoteMap[note] = note + 1;
+                        }
+                }
+        }
+
+        if (restartpos > 0)
+                csf_insert_restart_pos(song, restartpos);
+
+        song->m_dwSongFlags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE | SONG_LINEARSLIDES;
+
+        sprintf(song->tracker_id, "Digitrakker %s",
+                (fmtver == 0x11) ? "3" // really could be 2.99b -- but close enough for me
+                : (fmtver == 0x10) ? "2.3"
+                : (fmtver == 0x00) ? "2.0 - 2.2b" // there was no 1.x release
+                : "v?.?");
+
+        return LOAD_SUCCESS;
+}
+

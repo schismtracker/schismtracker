@@ -14,7 +14,6 @@ bool CSoundFile::Create(const uint8_t * lpStream, uint32_t dwMemLength)
         if (lpStream) {
                 if (1
                  && (!ReadMed(lpStream, dwMemLength))
-                 && (!ReadMDL(lpStream, dwMemLength))
                  && (!ReadDBM(lpStream, dwMemLength))
                  && (!ReadFAR(lpStream, dwMemLength))
                  && (!ReadAMS(lpStream, dwMemLength))

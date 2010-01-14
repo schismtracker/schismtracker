@@ -233,3 +233,18 @@ void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filele
         }
 }
 
+// ------------------------------------------------------------------------------------------------------------
+// MDL sample decompression
+
+uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n)
+{
+        uint16_t v = (uint16_t)((*bitbuf) & ((1 << n) - 1) );
+        (*bitbuf) >>= n;
+        (*bitnum) -= n;
+        if ((*bitnum) <= 24) {
+                (*bitbuf) |= (((uint32_t)(*(*ibuf)++)) << (*bitnum));
+                (*bitnum) += 8;
+        }
+        return v;
+}
+

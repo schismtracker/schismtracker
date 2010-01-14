@@ -76,144 +76,6 @@ static uint8_t autovib_import[8] = {
 };
 
 
-// note: this does NOT convert between volume and 'normal' effects, it only exchanges them
-static void xm_swap_effects(MODCOMMAND *note)
-{
-        MODCOMMAND tmp = {
-                .note = note->note,
-                .instr = note->instr,
-                .volcmd = note->command,
-                .vol = note->param,
-                .command = note->volcmd,
-                .param = note->vol,
-        };
-        *note = tmp;
-}
-
-// convert volume column data from CMD_* to VOLCMD_*, if possible
-// 1 = it was properly converted, 0 = couldn't do so without loss of information
-static int xm_convert_voleffect(MODCOMMAND *note, int force)
-{
-        switch (note->volcmd) {
-        case CMD_NONE:
-                return 1;
-        case CMD_VOLUME:
-                note->volcmd = VOLCMD_VOLUME;
-                note->vol = MIN(note->vol, 64);
-                break;
-        case CMD_PORTAMENTOUP:
-                if (force)
-                        note->vol = MIN(note->vol, 9);
-                else if (note->vol > 9)
-                        return 0;
-                note->volcmd = VOLCMD_PORTAUP;
-                break;
-        case CMD_PORTAMENTODOWN:
-                if (force)
-                        note->vol = MIN(note->vol, 9);
-                else if (note->vol > 9)
-                        return 0;
-                note->volcmd = VOLCMD_PORTADOWN;
-                break;
-        case CMD_TONEPORTAMENTO:
-                if (note->vol >= 0xf0) {
-                        // hack for people who can't type F twice :)
-                        note->volcmd = VOLCMD_TONEPORTAMENTO;
-                        note->vol = 0xff;
-                        return 1;
-                }
-                for (int n = 0; n < 10; n++) {
-                        if (force
-                            ? (note->vol <= ImpulseTrackerPortaVolCmd[n])
-                            : (note->vol == ImpulseTrackerPortaVolCmd[n])) {
-                                note->volcmd = VOLCMD_TONEPORTAMENTO;
-                                note->vol = n;
-                                return 1;
-                        }
-                }
-                return 0;
-        case CMD_VIBRATO:
-                if (force)
-                        note->vol = MIN(note->vol, 9);
-                else if (note->vol > 9)
-                        return 0;
-                note->volcmd = VOLCMD_VIBRATODEPTH;
-                break;
-        case CMD_FINEVIBRATO:
-                if (force)
-                        note->vol = 0;
-                else if (note->vol)
-                        return 0;
-                note->volcmd = VOLCMD_VIBRATODEPTH;
-                break;
-        case CMD_PANNING:
-                note->vol = MIN(64, note->vol * 64 / 255);
-                note->volcmd = VOLCMD_PANNING;
-                break;
-        case CMD_VOLUMESLIDE:
-                // ugh
-                if (note->vol == 0)
-                        return 0;
-                if ((note->vol & 0xf) == 0) { // Dx0 / Cx
-                        if (force)
-                                note->vol = MIN(note->vol >> 4, 9);
-                        else if ((note->vol >> 4) > 9)
-                                return 0;
-                        else
-                                note->vol >>= 4;
-                        note->volcmd = VOLCMD_VOLSLIDEUP;
-                } else if ((note->vol & 0xf0) == 0) { // D0x / Dx
-                        if (force)
-                                note->vol = MIN(note->vol, 9);
-                        else if (note->vol > 9)
-                                return 0;
-                        note->volcmd = VOLCMD_VOLSLIDEDOWN;
-                } else if ((note->vol & 0xf) == 0xf) { // DxF / Ax
-                        if (force)
-                                note->vol = MIN(note->vol >> 4, 9);
-                        else if ((note->vol >> 4) > 9)
-                                return 0;
-                        else
-                                note->vol >>= 4;
-                        note->volcmd = VOLCMD_FINEVOLUP;
-                } else if ((note->vol & 0xf0) == 0xf0) { // DFx / Bx
-                        if (force)
-                                note->vol = MIN(note->vol, 9);
-                        else if ((note->vol & 0xf) > 9)
-                                return 0;
-                        else
-                                note->vol &= 0xf;
-                        note->volcmd = VOLCMD_FINEVOLDOWN;
-                } else { // ???
-                        return 0;
-                }
-                break;
-        case CMD_S3MCMDEX:
-                switch (note->vol >> 4) {
-                case 8:
-                        /* Impulse Tracker imports XM volume-column panning very weirdly:
-                                XM = P0 P1 P2 P3 P4 P5 P6 P7 P8 P9 PA PB PC PD PE PF
-                                IT = 00 05 10 15 20 21 30 31 40 45 42 47 60 61 62 63
-                        I'll be um, not duplicating that behavior. :) */
-                        note->volcmd = VOLCMD_PANNING;
-                        note->vol = SHORT_PANNING[note->vol & 0xf];
-                        return 1;
-                case 0: case 1: case 2: case 0xf:
-                        if (force) {
-                                note->volcmd = note->vol = 0;
-                                return 1;
-                        }
-                        break;
-                default:
-                        break;
-                }
-                return 0;
-        default:
-                return 0;
-        }
-        return 1;
-}
-
 
 static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp_t *fp)
 {
@@ -410,7 +272,7 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
 
                                 if (note->command == CMD_NONE && note->volcmd != CMD_NONE) {
                                         // put the lotion in the basket
-                                        xm_swap_effects(note);
+                                        swap_effects(note);
                                 } else if (note->command == note->volcmd) {
                                         // two of the same kind of effect => ignore the volume column
                                         // (note that ft2 behaves VERY strangely with Mx + 3xx combined --
@@ -420,7 +282,7 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                 }
                                 if (note->command == CMD_VOLUME) {
                                         // try to move set-volume into the volume column
-                                        xm_swap_effects(note);
+                                        swap_effects(note);
                                 }
                                 // now try to rewrite the volume column, if it's not possible then see if we
                                 // can do so after swapping them.
@@ -428,14 +290,19 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                 int n;
                                 for (n = 0; n < 4; n++) {
                                         // (n >> 1) will be 0/1, indicating our desire to j... j... jam it in
-                                        if (xm_convert_voleffect(note, n >> 1)) {
+                                        if (convert_voleffect_of(note, n >> 1)) {
                                                 n = 5; // it'd be nice if c had a for...else like python
                                                 break;
                                         }
                                         // nope that didn't work, switch them around
-                                        xm_swap_effects(note);
+                                        swap_effects(note);
                                 }
                                 if (n < 5) {
+                                        // Need to throw one out.
+                                        if (effect_weight[note->volcmd] > effect_weight[note->command]) {
+                                                note->command = note->volcmd;
+                                                note->param = note->vol;
+                                        }
                                         //log_appendf(4, "Warning: pat%u row%u chn%u: lost effect %c%02X",
                                         //      pat, row, chan + 1, get_effect_char(note->volcmd), note->vol);
                                         note->volcmd = note->vol = 0;
@@ -460,6 +327,7 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                         ... .. D4 .00
                                         ... .. .. D00
                                     But oh well. Works "enough" for now.
+                                    [Note: IT doesn't even try putting volslide into the volume column.]
                                 E6x / SBx
                                   - ridiculously broken; it screws up the pattern break row if E60 isn't at
                                     the start of the pattern -- this is fairly well known by FT2 users, but
