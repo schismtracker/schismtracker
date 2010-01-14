@@ -151,8 +151,9 @@
 #define CMD_MIDI                31
 #define CMD_NOTESLIDEUP         32 // IMF Gxy
 #define CMD_NOTESLIDEDOWN       33 // IMF Hxy
+#define CMD_MAX                 34
 
-#define CMD_IS_EFFECT(v) ((v) > 0 && (v) <= 33)
+#define CMD_IS_EFFECT(v) ((v) > 0 && (v) < CMD_MAX)
 
 // Volume Column commands
 #define VOLCMD_NONE             0
@@ -586,7 +587,6 @@ public:
         bool ReadFAR(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadMDL(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadOKT(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadDMF(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadPTM(const uint8_t * lpStream, uint32_t dwMemLength);
@@ -698,7 +698,6 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
 // sample data decompressors
 
 void AMSUnpack(const char *psrc, uint32_t inputlen, char *pdest, uint32_t dmax, char packcharacter);
-uint16_t MDLReadBits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n);
 int DMFUnpack(uint8_t * psample, uint8_t * ibuf, uint8_t * ibufmax, uint32_t maxlen);
 
 

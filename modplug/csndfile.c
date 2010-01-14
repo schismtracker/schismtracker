@@ -792,25 +792,28 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
         // Huffman MDL compressed samples
         case RS_MDL8:
         case RS_MDL16:
-                len = dwMemLength;
-                if (len >= 4) {
+                if (dwMemLength >= 8) {
+                        // first 4 bytes indicate packed length
+                        len = bswapLE32(*((uint32_t *) lpMemFile));
+                        len = MIN(len, dwMemLength) + 4;
                         uint8_t * pSample = (uint8_t *)pIns->pSample;
-                        uint8_t * ibuf = (uint8_t *)lpMemFile;
+                        uint8_t * ibuf = (uint8_t *)(lpMemFile + 4);
                         uint32_t bitbuf = bswapLE32(*((uint32_t *)ibuf));
                         uint32_t bitnum = 32;
                         uint8_t dlt = 0, lowbyte = 0;
                         ibuf += 4;
+                        // TODO move all this junk to fmt/compression.c
                         for (uint32_t j=0; j<pIns->nLength; j++) {
                                 uint8_t hibyte;
                                 uint8_t sign;
-                                if (nFlags == RS_MDL16) lowbyte = (uint8_t)MDLReadBits(&bitbuf, &bitnum, &ibuf, 8);
-                                sign = (uint8_t)MDLReadBits(&bitbuf, &bitnum, &ibuf, 1);
-                                if (MDLReadBits(&bitbuf, &bitnum, &ibuf, 1)) {
-                                        hibyte = (uint8_t)MDLReadBits(&bitbuf, &bitnum, &ibuf, 3);
+                                if (nFlags == RS_MDL16) lowbyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, &ibuf, 8);
+                                sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, &ibuf, 1);
+                                if (mdl_read_bits(&bitbuf, &bitnum, &ibuf, 1)) {
+                                        hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, &ibuf, 3);
                                 } else {
                                         hibyte = 8;
-                                        while (!MDLReadBits(&bitbuf, &bitnum, &ibuf, 1)) hibyte += 0x10;
-                                        hibyte += MDLReadBits(&bitbuf, &bitnum, &ibuf, 4);
+                                        while (!mdl_read_bits(&bitbuf, &bitnum, &ibuf, 1)) hibyte += 0x10;
+                                        hibyte += mdl_read_bits(&bitbuf, &bitnum, &ibuf, 4);
                                 }
                                 if (sign) hibyte = ~hibyte;
                                 dlt += hibyte;
@@ -1166,6 +1169,9 @@ void csf_import_mod_effect(MODCOMMAND *m, int from_xm)
                 break;
         case 'Y' - 55:  command = CMD_PANBRELLO; break;
         case 'Z' - 55:  command = CMD_MIDI;     break;
+        case '[' - 55:
+                // FT2 shows this weird effect as -xx, and it can even be inserted
+                // by typing "-", although it doesn't appear to do anything.
         default:        command = 0;
         }
         m->command = command;

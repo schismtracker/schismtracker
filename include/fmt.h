@@ -78,7 +78,7 @@ READ_INFO(far);
 READ_INFO(imf); LOAD_SONG(imf);
 READ_INFO(it);  LOAD_SONG(it);
 READ_INFO(liq);
-READ_INFO(mdl);
+READ_INFO(mdl); LOAD_SONG(mdl);
 // mid med mod... and i suppose mt2 is mad, now we just need a mud format!
 READ_INFO(mid);                 SAVE_SONG(mid);
 READ_INFO(med);
@@ -136,6 +136,8 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot);
 void it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215);
 void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215);
 
+uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n);
+
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* save the sample's data in little- or big- endian byte order (defined in audio_loadsave.cc)
@@ -153,6 +155,20 @@ int load_its_sample(const uint8_t *header, const uint8_t *data,
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
+
+/* effect_weight[CMD_something] => how "important" the effect is. */
+extern const uint8_t effect_weight[];
+
+/* Shuffle the effect and volume-effect values around.
+Note: this does NOT convert between volume and 'normal' effects, it only exchanges them.
+(This function is most useful in conjunction with convert_voleffect in order to try to
+cram ten pounds of crap into a five pound container) */
+void swap_effects(MODCOMMAND *note);
+
+/* Convert volume column data from CMD_* to VOLCMD_*, if possible.
+Return: 1 = it was properly converted, 0 = couldn't do so without loss of information. */
+int convert_voleffect(uint8_t *effect, uint8_t *param, int force);
+#define convert_voleffect_of(note,force) convert_voleffect(&((note)->volcmd), &((note)->vol), (force))
 
 // load a .mod-style 4-byte packed note
 void mod_import_note(const uint8_t p[4], MODCOMMAND *note);
