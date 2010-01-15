@@ -399,6 +399,8 @@ static void song_reset_play_state(void)
 
         csf_initialize_dsp(mp, 1);
 
+        OPL_Reset(); /* gruh? */
+
         csf_set_current_order(mp, 0);
 
         mp->m_nInitialRepeatCount = -1;
