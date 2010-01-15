@@ -66,6 +66,8 @@
 static int midi_playing;
 // ------------------------------------------------------------------------
 
+#define SMP_INIT (UINT_MAX - 1) /* for a click noise on init */
+
 unsigned int samples_played = 0;
 unsigned int max_channels_used = 0;
 
@@ -108,6 +110,12 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
                 }
                 song_stop_unlocked(0);
                 goto POST_EVENT;
+        }
+
+        if (samples_played >= SMP_INIT) {
+                memset(stream, 0x80, len);
+                samples_played++; // will loop back to 0
+                return;
         }
 
         if (mp->m_dwSongFlags & SONG_ENDREACHED) {
@@ -1383,7 +1391,7 @@ RETRY:  using_driver = driver;
 
         // barf out some more info on modplug's settings?
 
-        samples_played = 0;
+        samples_played = (status.flags & CLASSIC_MODE) ? SMP_INIT : 0;
 
         first_init = 0;
 
