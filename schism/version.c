@@ -54,7 +54,7 @@ short ver_cwtv;
 
 /* this should be 50 characters or shorter, as they are used in the startup dialog */
 const char *ver_short_copyright =
-        "Copyright (c) 2003-2009 Storlek & Mrs. Brisby";
+        "Copyright (c) 2003-2010 Storlek & Mrs. Brisby";
 const char *ver_short_based_on =
         "Based on Impulse Tracker by Jeffrey Lim aka Pulse";
 
@@ -64,8 +64,9 @@ const char *ver_copyright_credits[] = {
         "Copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>",
         "Copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>",
         "Copyright (c) 2009 Storlek & Mrs. Brisby",
+        "Copyright (c) 2010 Storlek",
         "",
-        "Based on Impulse Tracker which is copyright (C) 1995-1998 Jeffrey Lim.",
+        "Based on Impulse Tracker which is copyright (c) 1995-1998 Jeffrey Lim.",
         "Contains code by Olivier Lapicque, Markus Fick, Adam Goode, Ville Jokela,",
         "Juan Linietsky, Juha Niemim\x84ki, and others. See the file AUTHORS in",
         "the source distribution for details.",

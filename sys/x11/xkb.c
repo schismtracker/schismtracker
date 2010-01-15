@@ -82,11 +82,8 @@ static void _key_info_setup(void)
         };
         us_kb_map = XkbGetKeyboardByName(dpy, XkbUseCoreKbd, &rec,
                         XkbGBN_AllComponentsMask, XkbGBN_AllComponentsMask, False);
-        if (us_kb_map) {
-                log_appendf(3, "Note: XKB will be used to override scancodes");
-        } else {
+        if (!us_kb_map)
                 log_appendf(3, "Warning: XKB support missing or broken; keyjamming might not work right");
-        }
 
         if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
                 if (info.info.x11.unlock_func)
