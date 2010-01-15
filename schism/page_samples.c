@@ -1047,6 +1047,20 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
     dialog->handle_key = do_adlib_handlekey;
 }
 
+
+static void sample_adlibpatch_finish(int n)
+{
+        song_sample *sample = song_get_sample(current_sample, NULL);
+        if (n >= 0)
+                adlib_patch_apply((SONGSAMPLE *) sample, n);
+        status.flags |= NEED_UPDATE; // redraw the sample
+}
+
+static void sample_adlibpatch_dialog(UNUSED void *ign)
+{
+        numprompt_create("Enter Patch (1-128)", sample_adlibpatch_finish, 0);
+}
+
 /* --------------------------------------------------------------------- */
 
 /* filename can be NULL, in which case the sample filename is used (quick save) */
@@ -1426,12 +1440,17 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 txtsynth_dialog();
                 return;
         case SDLK_z:
-                if (sample->data == NULL || (sample->flags & SAMP_ADLIB))
-                        sample_adlibconfig_dialog(NULL);
-                else
-                        dialog_create(DIALOG_OK_CANCEL, "This will replace this sample",
-                                      sample_adlibconfig_dialog,
-                                      dialog_cancel, 1, NULL);
+                { // uguu~
+                        void (*dlg)(void *) = (k->mod & KMOD_SHIFT)
+                                ? sample_adlibpatch_dialog
+                                : sample_adlibconfig_dialog;
+                        if (sample->data == NULL || (sample->flags & SAMP_ADLIB)) {
+                                dlg(NULL);
+                        } else {
+                                dialog_create(DIALOG_OK_CANCEL, "This will replace this sample",
+                                              dlg, NULL, 1, NULL);
+                        }
+                }
                 return;
         case SDLK_INSERT:
                 song_insert_sample_slot(current_sample);

@@ -556,6 +556,12 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
                                     int dialog_total_widgets, int dialog_selected_widget,
                                     void (*draw_const) (void), void *data);
 
+/* --------------------------------------------------------------------- */
+/* Other UI prompt stuff. */
+
+/* Ask for a value, like the thumbbars. */
+void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue);
+
 #ifdef __cplusplus
 };
 #endif

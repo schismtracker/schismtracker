@@ -700,6 +700,8 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
 void AMSUnpack(const char *psrc, uint32_t inputlen, char *pdest, uint32_t dmax, char packcharacter);
 int DMFUnpack(uint8_t * psample, uint8_t * ibuf, uint8_t * ibufmax, uint32_t maxlen);
 
+/* apply a preset Adlib patch */
+void adlib_patch_apply(SONGSAMPLE *smp, int patchnum);
 
 #ifdef __cplusplus
 } /* extern "C" */
