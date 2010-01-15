@@ -347,6 +347,7 @@ schismtracker_SOURCES = \
 	modplug/mmcmp.c			\
 	modplug/fastmix.c		\
 	modplug/fmopl.c			\
+	modplug/fmpatches.c		\
 	modplug/snd_fm.c		\
 	modplug/snd_gm.c		\
 	modplug/cmixer.c		\

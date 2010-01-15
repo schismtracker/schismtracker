@@ -63,21 +63,8 @@ static void bitset_move_cursor(struct widget *widget, int n)
 /* --------------------------------------------------------------------- */
 /* thumbbar value prompt */
 
-static char thumbbar_prompt_buf[4];
-static struct widget thumbbar_prompt_widgets[1];
-
-/* this is bound to the textentry's activate callback.
-since this dialog might be called from another dialog as well as from a page, it can't use the
-normal dialog_yes handler -- it needs to destroy the prompt dialog first so that ACTIVE_WIDGET
-points to whatever thumbbar actually triggered the dialog box. */
-static void thumbbar_prompt_update(void)
+static void thumbbar_prompt_finish(int n)
 {
-        /* FIXME: what does IT do with invalid data?
-           entering "ack" is currently interpreted as zero, which is probably wrong */
-        int n = atoi(thumbbar_prompt_buf);
-
-        dialog_destroy();
-
         if (n >= ACTIVE_WIDGET.d.thumbbar.min && n <= ACTIVE_WIDGET.d.thumbbar.max) {
                 ACTIVE_WIDGET.d.thumbbar.value = n;
                 if (ACTIVE_WIDGET.changed) ACTIVE_WIDGET.changed();
@@ -86,18 +73,9 @@ static void thumbbar_prompt_update(void)
         status.flags |= NEED_UPDATE;
 }
 
-static void thumbbar_prompt_draw_const(void)
-{
-        draw_text("Enter Value", 32, 26, 3, 2);
-        draw_box(43, 25, 48, 27, BOX_THICK | BOX_INNER | BOX_INSET);
-        draw_fill_chars(44, 26, 47, 26, 0);
-}
-
 static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 {
         int c;
-        const char *asciidigits = "0123456789";
-        struct dialog *dialog;
 
         if (!NO_MODIFIER(k->mod)) {
                 /* annoying */
@@ -109,19 +87,12 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
                 c = '-';
         } else {
                 c = numeric_key_event(k, 0);
-                if (c == -1) return 0;
-                c = asciidigits[c];
+                if (c < 0)
+                        return 0;
+                c += '0';
         }
 
-        thumbbar_prompt_buf[0] = c;
-        thumbbar_prompt_buf[1] = 0;
-
-        create_textentry(thumbbar_prompt_widgets + 0, 44, 26, 4, 0, 0, 0, NULL, thumbbar_prompt_buf, 3);
-        thumbbar_prompt_widgets[0].activate = thumbbar_prompt_update;
-        thumbbar_prompt_widgets[0].d.textentry.cursor_pos = 1;
-
-        dialog = dialog_create_custom(29, 24, 22, 5, thumbbar_prompt_widgets, 1, 0,
-                                      thumbbar_prompt_draw_const, NULL);
+        numprompt_create("Enter Value", thumbbar_prompt_finish, c);
 
         return 1;
 }
