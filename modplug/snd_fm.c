@@ -13,6 +13,11 @@
 #define OPLUpdateOne YM3812UpdateOne
 #define OPLClose     YM3812Shutdown
 
+/* Mostly pulled from my posterior. Original value was 2000, but Manwe says that's too quiet.
+It'd help if this was at all connected to the song's mixing volume...
+*/
+#define OPL_VOLUME 5000
+
 /*
 The documentation in this file regarding the output ports,
 including the comment "Don't ask me why", are attributed
@@ -105,8 +110,8 @@ void Fmdrv_MixTo(int *target, int count)
         */
 
         for (int a = 0; a < count; ++a) {
-            target[a * 2 + 0] += buf[a] * 2000;
-            target[a * 2 + 1] += buf[a] * 2000;
+            target[a * 2 + 0] += buf[a] * OPL_VOLUME;
+            target[a * 2 + 1] += buf[a] * OPL_VOLUME;
         }
 }
 
