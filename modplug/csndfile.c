@@ -820,8 +820,13 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
                                 if (nFlags == RS_MDL8) {
                                         pSample[j] = dlt;
                                 } else {
+#ifdef WORDS_BIGENDIAN
+                                        pSample[j<<1] = dlt;
+                                        pSample[(j<<1)+1] = lowbyte;
+#else
                                         pSample[j<<1] = lowbyte;
                                         pSample[(j<<1)+1] = dlt;
+#endif
                                 }
                         }
                 }
