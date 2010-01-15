@@ -164,7 +164,7 @@ int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         song->m_nDefaultTempo = 80;
 
         // to my knowledge, no other program is insane enough to save in this format
-        strcpy(song->tracker_id, "Farnadole Composer");
+        strcpy(song->tracker_id, "Farandole Composer");
 
         /* Farandole's song message doesn't have line breaks, and the tracker runs in
         some screwy ultra-wide text mode, so this displays more or less like crap. */
