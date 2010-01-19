@@ -1018,6 +1018,7 @@ static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, int chan_num, in
 {
         if (chan->dwFlags & CHN_MUTE) {
                 // don't do anything
+                return;
         } else if (csf->m_dwSongFlags & SONG_INSTRUMENTMODE &&
             chan->pHeader &&
             chan->pHeader->nMidiChannelMask > 0) {
@@ -1041,7 +1042,8 @@ static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, int chan_num, in
                 }
 
                 GM_SetFreqAndVol(chan_num, freq, volume, BendMode, chan->dwFlags & CHN_KEYOFF);
-        } else if (chan->dwFlags & CHN_ADLIB) {
+        }
+        if (chan->dwFlags & CHN_ADLIB) {
                 // For some reason, scaling by about (2*3)/(8200/8300) is needed
                 // to get a frequency that matches with ST3.
                 int oplfreq = freq * 164 / 249;
