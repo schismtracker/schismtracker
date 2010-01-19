@@ -112,7 +112,8 @@ static DIR_ENTRY *entry_from_path(const char *path) {
         u32 fileIndex = 0;
         while (fileIndex < dir->fileCount && !found && !notFound) {
             entry = &dir->children[fileIndex];
-            if (dirnameLength == strnlen(entry->name, ISFS_MAXPATHLEN - 1) && !strncasecmp(pathPosition, entry->name, dirnameLength)) found = true;
+            if (dirnameLength == strnlen(entry->name, ISFS_MAXPATHLEN - 1)
+                && !strncasecmp(pathPosition, entry->name, dirnameLength)) found = true;
             if (found && !is_dir(entry) && nextPathPosition) found = false;
             if (!found) fileIndex++;
         }

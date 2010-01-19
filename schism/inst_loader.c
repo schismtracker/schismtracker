@@ -45,7 +45,7 @@ int instrument_loader_abort(struct instrumentloader *ii)
                         ii->sample_map[n] = 0;
                 }
         }
-        return false;
+        return 0;
 }
 
 int instrument_loader_sample(struct instrumentloader *ii, int slot)

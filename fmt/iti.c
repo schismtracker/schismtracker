@@ -37,14 +37,14 @@
 /* --------------------------------------------------------------------- */
 int fmt_iti_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return false;
+        if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
         file->description = "Impulse Tracker Instrument";
         file->title = (char *)calloc(26,sizeof(char *));
         memcpy(file->title, data+32, 25);
         file->title[25] = 0;
         file->type = TYPE_INST_ITI;
 
-        return true;
+        return 1;
 }
 
 int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
@@ -57,7 +57,7 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
         song_sample *smp;
         int j;
 
-        if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return false;
+        if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
 
         memcpy(&iti, data, sizeof(iti));
 
@@ -146,5 +146,5 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
                 }
                 q += 80; /* length if ITS header */
         }
-        return true;
+        return 1;
 }

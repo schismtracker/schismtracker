@@ -37,7 +37,7 @@ int fmt_ams_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         uint8_t n;
 
         if (!(length > 38 && memcmp(data, "AMShdr\x1a", 7) == 0))
-                return false;
+                return 0;
 
         n = data[7];
         if (n > 30)
@@ -48,5 +48,5 @@ int fmt_ams_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         memcpy(file->title, data + 8, n);
         file->title[n] = 0;
         file->type = TYPE_MODULE_XM;
-        return true;
+        return 1;
 }

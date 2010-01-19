@@ -445,7 +445,9 @@ void GM_KeyOn(int c, unsigned char key, unsigned char vol)
                 // Allocate a MIDI channel for this key.
                 // Note: If you need to transpone the key, do it before allocating the channel.
 
-                int mc = s3m_chans[c].chan = GM_AllocateMelodyChannel(c, s3m_chans[c].patch, s3m_chans[c].bank, key, s3m_chans[c].pref_chn_mask);
+                int mc = s3m_chans[c].chan = GM_AllocateMelodyChannel(
+                        c, s3m_chans[c].patch, s3m_chans[c].bank,
+                        key, s3m_chans[c].pref_chn_mask);
 
                 msi_set_patch_and_bank(&midi_chans[mc], mc, s3m_chans[c].patch, s3m_chans[c].bank);
                 msi_set_volume(&midi_chans[mc], mc, GM_volume(vol));

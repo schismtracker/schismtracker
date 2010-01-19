@@ -229,7 +229,8 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
         w->activate = NULL;
 }
 
-void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k), void (*i_redraw) (void))
+void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
+                  void (*i_redraw) (void))
 {
         w->type = WIDGET_OTHER;
         w->accept_text = 0;

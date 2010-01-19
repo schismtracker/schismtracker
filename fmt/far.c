@@ -35,7 +35,7 @@ int fmt_far_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         /* The magic for this format is truly weird (which I suppose is good, as the chance of it
         being "accidentally" correct is pretty low) */
         if (!(length > 47 && memcmp(data + 44, "\x0d\x0a\x1a", 3) == 0 && memcmp(data, "FAR\xfe", 4) == 0))
-                return false;
+                return 0;
 
         file->description = "Farandole Module";
         /*file->extension = str_dup("far");*/
@@ -43,7 +43,7 @@ int fmt_far_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         memcpy(file->title, data + 4, 40);
         file->title[40] = 0;
         file->type = TYPE_MODULE_S3M;
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

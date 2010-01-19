@@ -83,7 +83,8 @@ extern int macosx_did_finderlaunch;
 
 #ifndef WGL_NV_allocate_memory
 #define WGL_NV_allocate_memory 1
-typedef void * (APIENTRY * PFNWGLALLOCATEMEMORYNVPROC) (int size, float readfreq, float writefreq, float priority);
+typedef void * (APIENTRY * PFNWGLALLOCATEMEMORYNVPROC)
+        (int size, float readfreq, float writefreq, float priority);
 typedef void (APIENTRY * PFNWGLFREEMEMORYNVPROC) (void *pointer);
 #endif
 
@@ -521,8 +522,8 @@ void video_setup(const char *driver)
         if (video.yuvlayout == VIDEO_YUV_NONE)
                 video.yuvlayout = os_yuvlayout();
         if ((video.yuvlayout != VIDEO_YUV_YV12_TV
-        &&   video.yuvlayout != VIDEO_YUV_IYUV_TV
-        &&   video.yuvlayout != VIDEO_YUV_NONE && 0) /* don't do this until we figure out how to make it better */
+        && video.yuvlayout != VIDEO_YUV_IYUV_TV
+        && video.yuvlayout != VIDEO_YUV_NONE && 0) /* don't do this until we figure out how to make it better */
                          && !strcasecmp(driver, "x11")) {
                 video.desktop.want_type = VIDEO_YUV;
                 putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
@@ -607,7 +608,8 @@ void video_startup(void)
 
 #ifndef MACOSX
         if (video.desktop.want_type == VIDEO_GL) {
-#define Z(q) my_ ## q = SDL_GL_GetProcAddress( #q ); if (! my_ ## q) { video.desktop.want_type = VIDEO_SURFACE; goto SKIP1; }
+#define Z(q) my_ ## q = SDL_GL_GetProcAddress( #q ); \
+        if (! my_ ## q) { video.desktop.want_type = VIDEO_SURFACE; goto SKIP1; }
                 if (did_this_2) {
                         /* do nothing */
                 } else if (getenv("SDL_VIDEO_GL_DRIVER")
@@ -673,7 +675,8 @@ SKIP1:
                 video.gl.packed_pixel=(strstr(gl_ext,"EXT_packed_pixels") != NULL);
                 video.gl.paletted_texture=(strstr(gl_ext,"EXT_paletted_texture") != NULL);
 #if defined(NVIDIA_PixelDataRange)
-                video.gl.pixel_data_range=(strstr(gl_ext,"GL_NV_pixel_data_range") != NULL) && glPixelDataRangeNV && db_glAllocateMemoryNV && db_glFreeMemoryNV;
+                video.gl.pixel_data_range=(strstr(gl_ext,"GL_NV_pixel_data_range") != NULL)
+                        && glPixelDataRangeNV && db_glAllocateMemoryNV && db_glFreeMemoryNV;
 #endif
         }
 
@@ -1674,7 +1677,8 @@ void video_blit(void)
         };
 
         vgamem_lock();
-        if (video.draw.autoscale || (video.clip.w == NATIVE_SCREEN_WIDTH && video.clip.h == NATIVE_SCREEN_HEIGHT)) {
+        if (video.draw.autoscale
+            || (video.clip.w == NATIVE_SCREEN_WIDTH && video.clip.h == NATIVE_SCREEN_HEIGHT)) {
                 /* scaling is provided by the hardware, or isn't necessary */
                 _blit11(bpp, pixels, pitch, video.pal);
         } else {

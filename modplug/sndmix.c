@@ -125,7 +125,7 @@ int csf_init_player(CSoundFile *csf, int reset)
         Fmdrv_Init(gdwMixingFreq);
         OPL_Reset();
         GM_Reset(0);
-        return true;
+        return 1;
 }
 
 
@@ -280,7 +280,7 @@ static int increment_row(CSoundFile *csf)
                         csf->m_nRepeatCount--;
                 if (!csf->m_nRepeatCount) {
                         csf->m_nProcessRow = PROCESS_NEXT_ORDER;
-                        return false;
+                        return 0;
                 }
         } else if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED)) {
                 if (csf->m_nLockedOrder < MAX_ORDERS) {
@@ -300,7 +300,7 @@ static int increment_row(CSoundFile *csf)
                                 csf->m_nRepeatCount--;
                         if (!csf->m_nRepeatCount) {
                                 csf->m_nProcessRow = PROCESS_NEXT_ORDER;
-                                return false;
+                                return 0;
                         }
 
                         csf->m_nProcessOrder = 0;
@@ -310,7 +310,7 @@ static int increment_row(CSoundFile *csf)
                 if (csf->Orderlist[csf->m_nProcessOrder] >= MAX_PATTERNS) {
                         // what the butt?
                         csf->m_nProcessRow = PROCESS_NEXT_ORDER;
-                        return false;
+                        return 0;
                 }
 
                 /* [CurrentPattern = Order[ProcessOrder]] */
@@ -325,7 +325,7 @@ static int increment_row(CSoundFile *csf)
                 csf->PatternAllocSize[csf->m_nCurrentPattern] = 64;
         }
 
-        return true;
+        return 1;
 }
 
 
@@ -355,7 +355,7 @@ int csf_process_tick(CSoundFile *csf)
                                 /* [-- Yes --] */
 
                                 if (!increment_row(csf))
-                                        return false;
+                                        return 0;
                         } /* else [-- No --] */
 
                         /* [CurrentRow = ProcessRow] */
@@ -415,7 +415,7 @@ int csf_process_tick(CSoundFile *csf)
         // Update Effects
         csf_process_effects(csf);
 
-        return true;
+        return 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -983,9 +983,9 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
                 }
 
                 chan->nRightRamp = nRightDelta / nRampLength;
-                chan->nLeftRamp  = nLeftDelta / nRampLength;
-                chan->nRightVol  = chan->nNewRightVol - ((chan->nRightRamp * nRampLength) >> VOLUMERAMPPRECISION);
-                chan->nLeftVol   = chan->nNewLeftVol - ((chan->nLeftRamp * nRampLength) >> VOLUMERAMPPRECISION);
+                chan->nLeftRamp = nLeftDelta / nRampLength;
+                chan->nRightVol = chan->nNewRightVol - ((chan->nRightRamp * nRampLength) >> VOLUMERAMPPRECISION);
+                chan->nLeftVol = chan->nNewLeftVol - ((chan->nLeftRamp * nRampLength) >> VOLUMERAMPPRECISION);
 
                 if (chan->nRightRamp | chan->nLeftRamp) {
                         chan->nRampLength = nRampLength;
@@ -1014,7 +1014,7 @@ static inline int rn_update_sample(CSoundFile *csf, SONGVOICE *chan, int nChn, i
 
 
 // XXX Rename this
-static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, const int chan_num, const int freq, const int vol)
+static inline void rn_gen_key(CSoundFile *csf, SONGVOICE *chan, int chan_num, int freq, int vol)
 {
         if (chan->dwFlags & CHN_MUTE) {
                 // don't do anything
@@ -1138,13 +1138,13 @@ int csf_read_note(CSoundFile *csf)
                 csf_process_effects(csf);
         } else {
                 if (!csf_process_tick(csf))
-                        return false;
+                        return 0;
         }
 
         ////////////////////////////////////////////////////////////////////////////////////
 
         if (!csf->m_nMusicTempo)
-                return false;
+                return 0;
 
         csf->m_nBufferCount = (gdwMixingFreq * 5 * csf->m_nTempoFactor) / (csf->m_nMusicTempo << 8);
 
@@ -1152,14 +1152,14 @@ int csf_read_note(CSoundFile *csf)
         if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
                 if (csf->stop_at_order <= (signed) csf->m_nCurrentOrder &&
                     csf->stop_at_row <= (signed) csf->m_nRow) {
-                        return false;
+                        return 0;
                 }
         }
 
         ////////////////////////////////////////////////////////////////////////////////////
         // Update channels data
         if (gdwSoundSetup & SNDMIX_NOMIXING)
-                return true;
+                return 1;
 
         // Master Volume + Pre-Amplification / Attenuation setup
         // m_nSongPreAmp is the 'mixing volume' setting
@@ -1229,7 +1229,8 @@ int csf_read_note(CSoundFile *csf)
                         if (vol) {
                                 // IMPORTANT: chan->nRealVolume is 14 bits !!!
                                 // -> _muldiv( 14+7, 6+6, 18); => RealVolume: 14-bit result (21+12-19)
-                                chan->nRealVolume = _muldiv(vol * csf->m_nGlobalVolume, chan->nGlobalVol * chan->nInsVol, 1 << 19);
+                                chan->nRealVolume = _muldiv(vol * csf->m_nGlobalVolume,
+                                        chan->nGlobalVol * chan->nInsVol, 1 << 19);
                         }
 
                         int period = chan->nPeriod;
@@ -1272,7 +1273,8 @@ int csf_read_note(CSoundFile *csf)
 
                         // Filter Envelope: controls cutoff frequency
                         if (chan && chan->pHeader && chan->pHeader->dwFlags & ENV_FILTER) {
-                                setup_channel_filter(chan, (chan->dwFlags & CHN_FILTER) ? false : true, envpitch, gdwMixingFreq);
+                                setup_channel_filter(chan,
+                                        !(chan->dwFlags & CHN_FILTER), envpitch, gdwMixingFreq);
                         }
 
                         chan->sample_freq = freq;
@@ -1330,7 +1332,8 @@ int csf_read_note(CSoundFile *csf)
                         unsigned int j = i;
 
                         while ((j + 1 < csf->m_nMixChannels) &&
-                            (csf->Voices[csf->VoiceMix[j]].nRealVolume < csf->Voices[csf->VoiceMix[j + 1]].nRealVolume))
+                            (csf->Voices[csf->VoiceMix[j]].nRealVolume
+                             < csf->Voices[csf->VoiceMix[j + 1]].nRealVolume))
                         {
                                 unsigned int n = csf->VoiceMix[j];
                                 csf->VoiceMix[j] = csf->VoiceMix[j + 1];
@@ -1340,6 +1343,6 @@ int csf_read_note(CSoundFile *csf)
                 }
         }
 
-        return true;
+        return 1;
 }
 

@@ -507,9 +507,9 @@ int make_backup_file(const char *filename, int numbered)
 
         if (e) {
                 errno = e;
-                return false;
+                return 0;
         } else {
-                return true;
+                return 1;
         }
 }
 
@@ -536,7 +536,7 @@ int is_directory(const char *filename)
 
         if (stat(filename, &buf) == -1) {
                 /* Well, at least we tried. */
-                return false;
+                return 0;
         }
 
         return S_ISDIR(buf.st_mode);

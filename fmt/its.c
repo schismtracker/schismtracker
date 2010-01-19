@@ -34,7 +34,7 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         ITSAMPLESTRUCT *its;
 
         if (!(length > 80 && memcmp(data, "IMPS", 4) == 0))
-                return false;
+                return 0;
 
         its = (ITSAMPLESTRUCT *)data;
         file->smp_length = bswapLE32(its->length);
@@ -79,7 +79,7 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->title[25] = 0;
         file->type = TYPE_SAMPLE_EXTD;
 
-        return true;
+        return 1;
 }
 
 int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample *smp, char *title)
@@ -89,12 +89,12 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
         uint32_t bp;
 
         if (length < 80 || strncmp((const char *) header, "IMPS", 4) != 0)
-                return false;
+                return 0;
         /* alright, let's get started */
         smp->length = bswapLE32(its->length);
         if ((its->flags & 1) == 0) {
                 // sample associated with header
-                return false;
+                return 0;
         }
 
         // endianness (always little)
@@ -235,5 +235,5 @@ int fmt_its_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
         fp->l(fp, 0x48);
         fp->o(fp, (const unsigned char *)&tmp, 4);
 
-        return true;
+        return 1;
 }

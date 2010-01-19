@@ -33,13 +33,13 @@
 int fmt_sfx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 64 && memcmp(data + 60, "SONG", 4) == 0))
-                return false;
+                return 0;
 
         file->description = "Sound FX";
         /*file->extension = str_dup("sfx");*/
         file->title = strdup(""); // whatever
         file->type = TYPE_MODULE_MOD;
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

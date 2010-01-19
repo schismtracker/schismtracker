@@ -1308,7 +1308,8 @@ static int get_sample_count(SONGVOICE *pChn, int samples)
                 int nPosDest = nPos + nDeltaHi + ((nPosLo + nDeltaLo) >> 16);
 
                 if (nPosDest >= (int) pChn->nLength) {
-                        sample_count = (unsigned int) (((((long long) pChn->nLength - nPos) << 16) - nPosLo - 1) / nInc) + 1;
+                        sample_count = (unsigned int)
+                                (((((long long) pChn->nLength - nPos) << 16) - nPosLo - 1) / nInc) + 1;
                 }
         }
 

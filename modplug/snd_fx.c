@@ -312,7 +312,8 @@ static void fx_note_slide(uint32_t flags, SONGVOICE *pChn, uint32_t param, int s
                                 pChn->nNoteSlideCounter = pChn->nNoteSlideSpeed;
                                 // update it
                                 pChn->nPeriod = get_period_from_note
-                                        (sign * pChn->nNoteSlideStep + get_note_from_period(pChn->nPeriod), 8363, 0);
+                                        (sign * pChn->nNoteSlideStep + get_note_from_period(pChn->nPeriod),
+                                         8363, 0);
                         }
         }
 }
@@ -976,10 +977,12 @@ unsigned int csf_get_length(CSoundFile *csf)
                                         nSpeedCount = param & 0x0F;
                                         break;
                                 case 0xb:
-                                        if (param & 0x0F)
-                                                dwElapsedTime += (dwElapsedTime - patloop[nChn]) * (param & 0x0F);
-                                        else
+                                        if (param & 0x0F) {
+                                                dwElapsedTime +=
+                                                        (dwElapsedTime - patloop[nChn]) * (param & 0x0F);
+                                        } else {
                                                 patloop[nChn] = dwElapsedTime;
+                                        }
                                         break;
                                 case 0xe:
                                         nSpeedCount = (param & 0x0F) * nMusicSpeed;
@@ -1140,7 +1143,8 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
                 pChn->nPeriod = get_freq_from_period(get_freq_from_period(pChn->nPeriod, psmp->nC5Speed, 0, 1),
                                                 pChn->nC5Speed, 0, 1);
         }
-        pChn->dwFlags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
+        pChn->dwFlags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE
+                           | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
         pChn->dwFlags |= psmp->uFlags & CHN_SAMPLE_FLAGS;
         if (penv) {
                 if (penv->dwFlags & ENV_VOLUME)
@@ -1894,12 +1898,12 @@ void csf_process_effects(CSoundFile *csf)
                                 (value is stored into nOldVolParam and used by A0/B0/C0/D0)
                         Hx uses the same value as Hxx and Uxx, and affects the *depth*
                                 so... hxx = (hx | (oldhxx & 0xf0))  ???
-                */
+                
+                Additionally: volume and panning are handled on the start tick, not
+                the first tick of the row (that is, SDx alters their behavior) */
                 switch (volcmd) {
                 case VOLCMD_NONE:
                         break;
-
-                // I think vol/pan are handled the tick the note starts, NOT the first tick; need to double check.
 
                 case VOLCMD_VOLUME:
                         if (start_note) {

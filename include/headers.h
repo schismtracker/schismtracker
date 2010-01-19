@@ -146,7 +146,8 @@ char *strchr(), *strrchr();
 #  include <byteswap.h>
 # else
 #  define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
-                       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
+                       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) \
+                       | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
 #  define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
 # endif
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */

@@ -734,7 +734,7 @@ void midi_send_flush(void)
                 if (midi_queue_thread) {
                         log_appendf(3, "Started MIDI queue thread");
                 } else {
-                        log_appendf(2, "AAACK: Couldn't start off MIDI thread; things are likely going to go boom!");
+                        log_appendf(2, "ACK: Couldn't start MIDI thread; things are likely going to go boom!");
                 }
         }
 

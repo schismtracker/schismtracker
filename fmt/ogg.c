@@ -143,7 +143,7 @@ int fmt_ogg_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file_data.position = 0;
 
         if (ov_open_callbacks(&file_data, &vf, NULL, 0, cb) < 0)
-                return false;
+                return 0;
 
         /* song_length = ov_time_total(&vf, -1); */
 
@@ -154,5 +154,5 @@ int fmt_ogg_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
         ov_clear(&vf);
 
-        return true;
+        return 1;
 }

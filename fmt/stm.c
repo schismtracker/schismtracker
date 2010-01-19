@@ -37,7 +37,7 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         /* data[29] is the type: 1 = song, 2 = module (with samples) */
         if (!(length > 28 && data[28] == 0x1a && (data[29] == 1 || data[29] == 2)
               && (memcmp(data + 14, "!Scream!", 8) || memcmp(data + 14, "BMOD2STM", 8))))
-                return false;
+                return 0;
 
         /* I used to check whether it was a 'song' or 'module' and set the description
         accordingly, but it's fairly pointless information :) */
@@ -47,7 +47,7 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->title = calloc(21, sizeof(char));
         memcpy(file->title, data, 20);
         file->title[20] = 0;
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------- */

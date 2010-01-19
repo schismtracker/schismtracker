@@ -37,11 +37,8 @@
 
 int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        int mmcmp;
-
         /* "Bart just said I-M-P! He's made of pee!" */
         if (length > 30 && memcmp(data, "IMPM", 4) == 0) {
-                mmcmp = false;
                 /* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
                 it's probably not compressed, irrespective of what the CMWT says. */
                 if (data[42] >= 0x14)
@@ -49,7 +46,7 @@ int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
                 else
                         file->description = "Impulse Tracker";
         } else {
-                return false;
+                return 0;
         }
 
         /*file->extension = str_dup("it");*/
@@ -57,7 +54,7 @@ int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         memcpy(file->title, data + 4, 25);
         file->title[25] = 0;
         file->type = TYPE_MODULE_IT;
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------- */

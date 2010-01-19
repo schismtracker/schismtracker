@@ -360,7 +360,8 @@ int widget_handle_key(struct key_event * k)
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         if (status.flags & CLASSIC_MODE) return 0;
-                        widget->d.menutoggle.state = (widget->d.menutoggle.state + 1) % widget->d.menutoggle.num_choices;
+                        widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
+                                % widget->d.menutoggle.num_choices;
                         if (widget->changed) widget->changed();
                         status.flags |= NEED_UPDATE;
                         return 1;
@@ -576,7 +577,8 @@ int widget_handle_key(struct key_event * k)
                 case WIDGET_MENUTOGGLE:
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
-                        widget->d.menutoggle.state = (widget->d.menutoggle.state + 1) % widget->d.menutoggle.num_choices;
+                        widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
+                                % widget->d.menutoggle.num_choices;
                         if (widget->changed) widget->changed();
                         status.flags |= NEED_UPDATE;
                         return 1;
@@ -623,7 +625,8 @@ int widget_handle_key(struct key_event * k)
                                                       widget->d.textentry.max_length);
                         } else {
                                 text_delete_char(widget->d.textentry.text,
-                                                 &(widget->d.textentry.cursor_pos), widget->d.textentry.max_length);
+                                                 &(widget->d.textentry.cursor_pos),
+                                                 widget->d.textentry.max_length);
                         }
                 }
                 if (widget->changed) widget->changed();

@@ -36,7 +36,7 @@
 int fmt_xm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 38 && memcmp(data, "Extended Module: ", 17) == 0))
-                return false;
+                return 0;
 
         file->description = "Fast Tracker 2 Module";
         file->type = TYPE_MODULE_XM;
@@ -44,7 +44,7 @@ int fmt_xm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->title = calloc(21, sizeof(char));
         memcpy(file->title, data + 17, 20);
         file->title[20] = 0;
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

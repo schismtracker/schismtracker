@@ -75,9 +75,10 @@ static void _macosx_send(struct midi_port *p, const unsigned char *data,
                 m->x = MIDIPacketListInit(m->pl);
         }
 
+        /* msec to nsec? */
         m->x = MIDIPacketListAdd(m->pl, sizeof(m->packet),
                         m->x, (MIDITimeStamp)AudioConvertNanosToHostTime(
-                        AudioConvertHostTimeToNanos(AudioGetCurrentHostTime()) + (1000000*delay)), /* msec to nsec? */
+                        AudioConvertHostTimeToNanos(AudioGetCurrentHostTime()) + (1000000*delay)),
                         len, data);
 }
 static void _macosx_drain(struct midi_port *p)

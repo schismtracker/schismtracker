@@ -646,8 +646,10 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
                                 // pSample[j*2+1] = pSrc[j];
                                 // pSample[j*2+2] = pSrc[j+1+len];
                                 // pSample[j*2+3] = pSrc[j+len];
-                                *((unsigned short *)(pSample+j*2)) = bswapBE16(*((unsigned short *)(pSrc+j)));
-                                *((unsigned short *)(pSample+j*2+2)) = bswapBE16(*((unsigned short *)(pSrc+j+len)));
+                                *((unsigned short *)(pSample+j*2))
+                                        = bswapBE16(*((unsigned short *)(pSrc+j)));
+                                *((unsigned short *)(pSample+j*2+2))
+                                        = bswapBE16(*((unsigned short *)(pSrc+j+len)));
                         }
                         len *= 2;
                 }
@@ -806,7 +808,8 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
                         for (uint32_t j=0; j<pIns->nLength; j++) {
                                 uint8_t hibyte;
                                 uint8_t sign;
-                                if (nFlags == RS_MDL16) lowbyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, &ibuf, 8);
+                                if (nFlags == RS_MDL16)
+                                        lowbyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, &ibuf, 8);
                                 sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, &ibuf, 1);
                                 if (mdl_read_bits(&bitbuf, &bitnum, &ibuf, 1)) {
                                         hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, &ibuf, 3);
@@ -957,19 +960,45 @@ void csf_adjust_sample_loop(SONGSAMPLE *pIns)
                 short int *pSample = (short int *)pIns->pSample;
                 // Adjust end of sample
                 if (pIns->uFlags & CHN_STEREO) {
-                        pSample[len*2+6] = pSample[len*2+4] = pSample[len*2+2] = pSample[len*2] = pSample[len*2-2];
-                        pSample[len*2+7] = pSample[len*2+5] = pSample[len*2+3] = pSample[len*2+1] = pSample[len*2-1];
+                        pSample[len*2+6]
+                                = pSample[len*2+4]
+                                = pSample[len*2+2]
+                                = pSample[len*2]
+                                = pSample[len*2-2];
+                        pSample[len*2+7]
+                                = pSample[len*2+5]
+                                = pSample[len*2+3]
+                                = pSample[len*2+1]
+                                = pSample[len*2-1];
                 } else {
-                        pSample[len+4] = pSample[len+3] = pSample[len+2] = pSample[len+1] = pSample[len] = pSample[len-1];
+                        pSample[len+4]
+                                = pSample[len+3]
+                                = pSample[len+2]
+                                = pSample[len+1]
+                                = pSample[len]
+                                = pSample[len-1];
                 }
         } else {
                 signed char *pSample = pIns->pSample;
                 // Adjust end of sample
                 if (pIns->uFlags & CHN_STEREO) {
-                        pSample[len*2+6] = pSample[len*2+4] = pSample[len*2+2] = pSample[len*2] = pSample[len*2-2];
-                        pSample[len*2+7] = pSample[len*2+5] = pSample[len*2+3] = pSample[len*2+1] = pSample[len*2-1];
+                        pSample[len*2+6]
+                                = pSample[len*2+4]
+                                = pSample[len*2+2]
+                                = pSample[len*2]
+                                = pSample[len*2-2];
+                        pSample[len*2+7]
+                                = pSample[len*2+5]
+                                = pSample[len*2+3]
+                                = pSample[len*2+1]
+                                = pSample[len*2-1];
                 } else {
-                        pSample[len+4] = pSample[len+3] = pSample[len+2] = pSample[len+1] = pSample[len] = pSample[len-1];
+                        pSample[len+4]
+                                = pSample[len+3]
+                                = pSample[len+2]
+                                = pSample[len+1]
+                                = pSample[len]
+                                = pSample[len-1];
                 }
         }
 }

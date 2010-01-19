@@ -39,29 +39,32 @@ void mixer_setup(void)
         drv = SDL_AudioDriverName(drv_buf,sizeof(drv_buf));
 
 #ifdef USE_ALSA
-        if ((!drv && !__mixer_get_max_volume) || (drv && !strcmp(drv, "alsa"))) {
+        if ((!drv && !__mixer_get_max_volume)
+            || (drv && (!strcmp(drv, "alsa")))) {
                 __mixer_get_max_volume = alsa_mixer_get_max_volume;
                 __mixer_read_volume = alsa_mixer_read_volume;
                 __mixer_write_volume = alsa_mixer_write_volume;
         }
 #endif
 #ifdef USE_OSS
-        if ((!drv && !__mixer_get_max_volume) || (drv && !strcmp(drv, "oss"))
-                                        || (drv && !strcmp(drv, "dsp"))) {
+        if ((!drv && !__mixer_get_max_volume)
+            || (drv && (!strcmp(drv, "oss") || !strcmp(drv, "dsp")))) {
                 __mixer_get_max_volume = oss_mixer_get_max_volume;
                 __mixer_read_volume = oss_mixer_read_volume;
                 __mixer_write_volume = oss_mixer_write_volume;
         }
 #endif
 #ifdef MACOSX
-        if ((!drv && !__mixer_get_max_volume) || (drv && (!strcmp(drv, "coreaudio") || !strcmp(drv, "macosx")) )) {
+        if ((!drv && !__mixer_get_max_volume)
+            || (drv && (!strcmp(drv, "coreaudio") || !strcmp(drv, "macosx")))) {
                 __mixer_get_max_volume = macosx_mixer_get_max_volume;
                 __mixer_read_volume = macosx_mixer_read_volume;
                 __mixer_write_volume = macosx_mixer_write_volume;
         }
 #endif
 #ifdef WIN32
-        if ((!drv && !__mixer_get_max_volume) || (drv && (!strcmp(drv, "waveout") || !strcmp(drv, "dsound")) )) {
+        if ((!drv && !__mixer_get_max_volume)
+            || (drv && (!strcmp(drv, "waveout") || !strcmp(drv, "dsound")))) {
                 __mixer_get_max_volume = win32mm_mixer_get_max_volume;
                 __mixer_read_volume = win32mm_mixer_read_volume;
                 __mixer_write_volume = win32mm_mixer_write_volume;

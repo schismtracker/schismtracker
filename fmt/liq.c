@@ -31,7 +31,7 @@ int fmt_liq_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         char buf[32];
 
         if (!(length > 64 && data[64] == 0x1a && memcmp(data, "Liquid Module:", 14) == 0))
-                return false;
+                return 0;
 
         file->description = "Liquid Tracker";
         /*file->extension = str_dup("liq");*/
@@ -43,5 +43,5 @@ int fmt_liq_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->title = str_dup(buf);
         file->type = TYPE_MODULE_S3M;
 
-        return true;
+        return 1;
 }

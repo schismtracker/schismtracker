@@ -543,18 +543,18 @@ extern uint32_t gdwSoundSetup, gdwMixingFreq, gnBitsPerSample, gnChannels;
 extern uint32_t gnVULeft, gnVURight;
 
 typedef struct _CSoundFile {
-        SONGVOICE Voices[MAX_VOICES];                                   // Channels
-        uint32_t VoiceMix[MAX_VOICES];                                              // Channels to be mixed
-        SONGSAMPLE Samples[MAX_SAMPLES+1];                                 // Samples (1-based!)
-        SONGINSTRUMENT *Instruments[MAX_INSTRUMENTS+1];             // Instruments (1-based!)
-        MODCHANNELSETTINGS Channels[MAX_CHANNELS]; // Channels settings
-        MODCOMMAND *Patterns[MAX_PATTERNS];                             // Patterns
-        uint16_t PatternSize[MAX_PATTERNS];                                 // Patterns Lengths
-        uint16_t PatternAllocSize[MAX_PATTERNS];                            // Allocated pattern lengths (for async. resizing/playback)
-        uint8_t Orderlist[MAX_ORDERS];                                                 // Pattern Orders
-        MODMIDICFG m_MidiCfg;                                                   // Midi macro config table
+        SONGVOICE Voices[MAX_VOICES];                   // Channels
+        uint32_t VoiceMix[MAX_VOICES];                  // Channels to be mixed
+        SONGSAMPLE Samples[MAX_SAMPLES+1];              // Samples (1-based!)
+        SONGINSTRUMENT *Instruments[MAX_INSTRUMENTS+1]; // Instruments (1-based!)
+        MODCHANNELSETTINGS Channels[MAX_CHANNELS];      // Channels settings
+        MODCOMMAND *Patterns[MAX_PATTERNS];             // Patterns
+        uint16_t PatternSize[MAX_PATTERNS];             // Patterns Lengths
+        uint16_t PatternAllocSize[MAX_PATTERNS];        // Allocated lengths (for async. resizing/playback)
+        uint8_t Orderlist[MAX_ORDERS];                  // Pattern Orders
+        MODMIDICFG m_MidiCfg;                           // Midi macro config table
         uint32_t m_nDefaultSpeed, m_nDefaultTempo, m_nDefaultGlobalVolume;
-        uint32_t m_dwSongFlags;                                                    // Song flags SONG_XXXX
+        uint32_t m_dwSongFlags;                         // Song flags SONG_XXXX
         uint32_t m_nStereoSeparation;
         uint32_t m_nChannels, m_nMixChannels, m_nMixStat, m_nBufferCount;
         uint32_t m_nType, m_nSamples, m_nInstruments;

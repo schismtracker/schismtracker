@@ -439,7 +439,9 @@ void create_bitset(struct widget *w, int x, int y, int width, int next_up,
 void create_panbar(struct widget *w, int x, int y, int next_up,
                    int next_down, int next_tab, void (*changed) (void),
                    int channel);
-void create_other(struct widget *w, int next_tab, int (*w_handle_key) (struct key_event * k), void (*w_redraw) (void));
+void create_other(struct widget *w, int next_tab,
+                  int (*w_handle_key) (struct key_event * k),
+                  void (*w_redraw) (void));
 
 /* --------------------------------------------------------------------- */
 

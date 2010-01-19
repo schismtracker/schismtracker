@@ -409,7 +409,7 @@ int fmt_aiff_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
         fp->l(fp, 4);
         fp->o(fp, (const unsigned char *)&ul, 4);
 
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------- */

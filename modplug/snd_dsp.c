@@ -76,8 +76,7 @@ void csf_process_mono_dsp(UNUSED CSoundFile *csf, int count)
 
 int csf_set_wave_config_ex(CSoundFile *csf, int hqido, int bNR, int bEQ)
 {
-        uint32_t d = gdwSoundSetup & ~(SNDMIX_NORESAMPLING | SNDMIX_HQRESAMPLER | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
-
+        uint32_t d = gdwSoundSetup & ~(SNDMIX_HQRESAMPLER | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
         if (hqido) d |= SNDMIX_HQRESAMPLER;
         if (bNR) d |= SNDMIX_NOISEREDUCTION;
         if (bEQ) d |= SNDMIX_EQ;

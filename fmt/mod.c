@@ -76,7 +76,7 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         int i = 0;
 
         if (length < 1085)
-                return false;
+                return 0;
 
         memcpy(tag, data + 1080, 4);
         tag[4] = 0;
@@ -94,11 +94,11 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
                         memcpy(file->title, data, 20);
                         file->title[20] = 0;
                         file->type = TYPE_MODULE_MOD;
-                        return true;
+                        return 1;
                 }
         }
 
-        return false;
+        return 0;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

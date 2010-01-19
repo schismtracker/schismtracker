@@ -315,14 +315,16 @@ static void handle_file_entered_S(char *ptr)
         } else {
                 if (S_ISDIR(buf.st_mode)) {
                         if (status.current_page == PAGE_EXPORT_MODULE) {
-                                dialog_create(DIALOG_OK_CANCEL, "Multi-out?", do_multiwrite, free, 1, str_dup(ptr));
+                                dialog_create(DIALOG_OK_CANCEL, "Multi-out?",
+                                              do_multiwrite, free, 1, str_dup(ptr));
                         } else {
                                 /* TODO: maybe change the current directory in this case? */
                                 log_appendf(4, "%s: Is a directory", ptr);
                         }
 
                 } else if (S_ISREG(buf.st_mode)) {
-                        dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_song_overwrite, free, 1, str_dup(ptr));
+                        dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
+                                      do_save_song_overwrite, free, 1, str_dup(ptr));
                 } else {
                         /* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
                         dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0, NULL);

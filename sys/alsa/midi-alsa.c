@@ -117,12 +117,14 @@ if (!_dltrick_##a) abort(); return _dltrick_ ## a c; }
 _any_dltrick(size_t,snd_seq_port_info_sizeof,(void),())
 _any_dltrick(size_t,snd_seq_client_info_sizeof,(void),())
 
-_any_dltrick(int,snd_seq_control_queue,(snd_seq_t*s,int q,int type, int value, snd_seq_event_t *ev), (s,q,type,value,ev))
+_any_dltrick(int,snd_seq_control_queue,(snd_seq_t*s,int q,int type, int value, snd_seq_event_t *ev),
+        (s,q,type,value,ev))
 
 _any_dltrick(int,snd_seq_queue_tempo_malloc,(snd_seq_queue_tempo_t**ptr),(ptr))
 _void_dltrick(snd_seq_queue_tempo_set_tempo,(snd_seq_queue_tempo_t *info, unsigned int tempo),(info,tempo))
 _void_dltrick(snd_seq_queue_tempo_set_ppq,(snd_seq_queue_tempo_t *info, int ppq),(info,ppq))
-_any_dltrick(int,snd_seq_set_queue_tempo,(snd_seq_t *handle, int q, snd_seq_queue_tempo_t *tempo),(handle,q,tempo))
+_any_dltrick(int,snd_seq_set_queue_tempo,(snd_seq_t *handle, int q, snd_seq_queue_tempo_t *tempo),
+        (handle,q,tempo))
 _any_dltrick(long,snd_midi_event_encode,
 (snd_midi_event_t *dev,const unsigned char *buf,long count,snd_seq_event_t *ev),
 (dev,buf,count,ev))
@@ -147,7 +149,8 @@ _any_dltrick(int,snd_seq_disconnect_to,
 (seeq,my_port,dest_client,dest_port))
 _any_dltrick(const char *,snd_strerror,(int errnum),(errnum))
 _any_dltrick(int,snd_seq_poll_descriptors_count,(snd_seq_t*h,short e),(h,e))
-_any_dltrick(int,snd_seq_poll_descriptors,(snd_seq_t*h,struct pollfd*pfds,unsigned int space, short e),(h,pfds,space,e))
+_any_dltrick(int,snd_seq_poll_descriptors,(snd_seq_t*h,struct pollfd*pfds,unsigned int space, short e),
+        (h,pfds,space,e))
 _any_dltrick(int,snd_seq_event_input,(snd_seq_t*h,snd_seq_event_t**ev),(h,ev))
 _any_dltrick(int,snd_seq_event_input_pending,(snd_seq_t*h,int fs),(h,fs))
 _any_dltrick(int,snd_midi_event_new,(size_t s,snd_midi_event_t **rd),(s,rd))
