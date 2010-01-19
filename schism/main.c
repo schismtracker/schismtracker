@@ -319,7 +319,7 @@ static void parse_options(int argc, char **argv)
                 {O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
                 {O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
 
-                {O_VIDEO_YUVLAYOUT, 0, "video-yuvlayout", FRAG_ARG, "LAYOUT", "Specify YUV layout (if schism doesnt detect)" },
+                {O_VIDEO_YUVLAYOUT, 0, "video-yuvlayout", FRAG_ARG, "LAYOUT", "Specify YUV layout" },
                 {O_VIDEO_RESOLUTION,0, "video-size", FRAG_ARG, "WIDTHxHEIGHT", "Specify default window size" },
                 {O_VIDEO_ASPECT,0, "video-stretch", FRAG_ARG, NULL, "Unfix the aspect ratio" },
                 {O_VIDEO_GLPATH,0,"video-gl-path", FRAG_ARG, OPENGL_PATH, "Specify path of OpenGL library"},
@@ -957,8 +957,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
                         } else if (q == DW_SYNC_DONE) {
                                 switch (diskwriter_finish()) {
                                 case DW_NOT_RUNNING:
-                                        /* FIXME: WHY DO WE NEED THIS?
-                                        if the diskwriter isn't running, this whole mess of code shouldn't either */
+                                        /* FIXME: WHY DO WE NEED THIS? */
                                         break;
                                 case DW_ERROR:
                                         log_appendf(4, "Error shutting down diskwriter: %s", strerror(errno));

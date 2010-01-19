@@ -31,7 +31,7 @@
 int fmt_ult_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 48 && memcmp(data, "MAS_UTrack_V00", 14) == 0))
-                return false;
+                return 0;
 
         file->description = "UltraTracker Module";
         file->type = TYPE_MODULE_S3M;
@@ -39,5 +39,5 @@ int fmt_ult_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->title = calloc(33, sizeof(char));
         memcpy(file->title, data + 15, 32);
         file->title[32] = 0;
-        return true;
+        return 1;
 }

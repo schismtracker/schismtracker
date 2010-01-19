@@ -91,7 +91,8 @@ void sample_sign_convert(song_sample * sample)
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
-                _sign_convert_16((signed short *) sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                _sign_convert_16((signed short *) sample->data,
+                        sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         else
                 _sign_convert_8(sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         song_unlock_audio();
@@ -213,11 +214,15 @@ void sample_toggle_quality(song_sample * sample, int convert_data)
         status.flags |= SONG_NEEDS_SAVE;
         if (convert_data) {
                 if (sample->flags & SAMP_16_BIT) {
-                        odata = song_sample_allocate(2 * sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
-                        _quality_convert_8to16(sample->data, (signed short *) odata, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                        odata = song_sample_allocate(2 * sample->length
+                                * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                        _quality_convert_8to16(sample->data, (signed short *) odata,
+                                sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                 } else {
-                        odata = song_sample_allocate(sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
-                        _quality_convert_16to8((signed short *) sample->data, odata, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                        odata = song_sample_allocate(sample->length
+                                * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                        _quality_convert_16to8((signed short *) sample->data, odata,
+                                sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                 }
                 song_sample_free(sample->data);
                 sample->data = odata;
@@ -293,7 +298,8 @@ void sample_centralise(song_sample * sample)
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
-                _centralise_16((signed short *) sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                _centralise_16((signed short *) sample->data,
+                        sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         else
                 _centralise_8(sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         song_unlock_audio();
@@ -331,7 +337,8 @@ void sample_amplify(song_sample * sample, int percent)
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
-                _amplify_16((signed short *) sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1), percent);
+                _amplify_16((signed short *) sample->data,
+                        sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1), percent);
         else
                 _amplify_8(sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1), percent);
         song_unlock_audio();
@@ -360,9 +367,11 @@ int sample_get_amplify_amount(song_sample *sample)
         int percent;
 
         if (sample->flags & SAMP_16_BIT)
-                percent = _get_amplify_16((signed short *) sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                percent = _get_amplify_16((signed short *) sample->data,
+                        sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         else
-                percent = _get_amplify_8(sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                percent = _get_amplify_8(sample->data,
+                        sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
 
         if (percent < 100) percent = 100;
         return percent;
@@ -400,7 +409,8 @@ void sample_delta_decode(song_sample * sample)
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
-                _delta_decode_16((signed short *) sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                _delta_decode_16((signed short *) sample->data,
+                        sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         else
                 _delta_decode_8(sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         song_unlock_audio();
@@ -567,7 +577,8 @@ void sample_invert(song_sample * sample)
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
         if (sample->flags & SAMP_16_BIT)
-                _invert_16((signed short *) sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
+                _invert_16((signed short *) sample->data,
+                        sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         else
                 _invert_8(sample->data, sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
         song_unlock_audio();

@@ -41,14 +41,14 @@ int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
         /* data[4] = major version number (accept 0 or 1) */
         if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1 && memcmp(data, "DMDL", 4) == 0))
-                return false;
+                return 0;
 
         position = 5;
         while (position + 6 < length) {
                 memcpy(&block_length, data + position + 2, 4);
                 block_length = bswapLE32(block_length);
                 if (block_length + position > length)
-                        return false;
+                        return 0;
                 if (memcmp(data + position, "IN", 2) == 0) {
                         /* hey! we have a winner */
                         memcpy(buf, data + position + 6, 32);
@@ -61,12 +61,12 @@ int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
                         file->description = "Digitrakker";
                         /*file->extension = str_dup("mdl");*/
                         file->type = TYPE_MODULE_XM;
-                        return true;
+                        return 1;
                 } /* else... */
                 position += 6 + block_length;
         }
 
-        return false;
+        return 0;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -846,9 +846,11 @@ static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags
 
                 envs[ehdr.envnum]->flags = 0;
                 if (ehdr.flags & 16)
-                        envs[ehdr.envnum]->flags |= flags & (ENV_VOLSUSTAIN | ENV_PANSUSTAIN | ENV_PITCHSUSTAIN);
+                        envs[ehdr.envnum]->flags
+                                |= (flags & (ENV_VOLSUSTAIN | ENV_PANSUSTAIN | ENV_PITCHSUSTAIN));
                 if (ehdr.flags & 32)
-                        envs[ehdr.envnum]->flags |= flags & (ENV_VOLLOOP | ENV_PANLOOP | ENV_PITCHLOOP);
+                        envs[ehdr.envnum]->flags
+                                |= (flags & (ENV_VOLLOOP | ENV_PANLOOP | ENV_PITCHLOOP));
         }
 }
 
@@ -948,7 +950,8 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 case MDL_BLK_SAMPLEINFO:
                         if (!(readflags & MDL_HAS_SAMPLEINFO)) {
                                 readflags |= MDL_HAS_SAMPLEINFO;
-                                ((fmtver >> 4) ? mdl_read_sampleinfo : mdl_read_sampleinfo_v0)(song, fp, packtype);
+                                ((fmtver >> 4) ? mdl_read_sampleinfo : mdl_read_sampleinfo_v0)
+                                        (song, fp, packtype);
                         }
                         break;
                 case MDL_BLK_SAMPLEDATA:

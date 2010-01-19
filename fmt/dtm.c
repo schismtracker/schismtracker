@@ -35,7 +35,7 @@ int fmt_dtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         unsigned int position, block_length = 0;
 
         if (!(length > 8))
-                return false;
+                return 0;
 
         /* find the SONG block */
         position = 0;
@@ -45,7 +45,7 @@ int fmt_dtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
                 position += block_length + 8;
                 if (position + 8 > length)
-                        return false;
+                        return 0;
         }
 
         /* "truncate" it to the length of the block */
@@ -57,7 +57,7 @@ int fmt_dtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
                 block_length = bswapLE32(block_length);
 
                 if (block_length + position > length)
-                        return false;
+                        return 0;
 
                 if (memcmp(data + position, "NAME", 4) == 0) {
                         /* hey! we have a winner */
@@ -72,6 +72,6 @@ int fmt_dtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->description = "DigiTrekker 3";
         /*file->extension = str_dup("dtm");*/
         file->type = TYPE_MODULE_XM;
-        return true;
+        return 1;
 }
 

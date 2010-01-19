@@ -29,11 +29,11 @@
 int fmt_med_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 32 && memcmp(data, "MMD0", 3) == 0))
-                return false;
+                return 0;
 
         file->description = "OctaMed";
         file->title = strdup(""); // TODO actually read the title
         file->type = TYPE_MODULE_MOD;
-        return true;
+        return 1;
 }
 

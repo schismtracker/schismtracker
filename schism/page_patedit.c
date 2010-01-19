@@ -904,8 +904,10 @@ static void fast_volume_toggle(void)
                 create_thumbbar(volume_setup_widgets + 0, 33, 30, 11, 0, 1, 1, NULL, 10, 90);
 
                 volume_setup_widgets[0].d.thumbbar.value = fast_volume_percent;
-                create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-                create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+                create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2,
+                              dialog_yes_NULL, "OK", 3);
+                create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1,
+                              dialog_cancel_NULL, "Cancel", 1);
 
                 dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
                                               3, 0, fast_volume_setup_draw_const, NULL);
@@ -957,7 +959,8 @@ static void volume_amplify(void)
         volume_setup_widgets[0].d.thumbbar.value = volume_percent;
         create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
         create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets, 3, 0, volume_setup_draw_const, NULL);
+        dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
+                                      3, 0, volume_setup_draw_const, NULL);
         dialog->handle_key = volume_amplify_jj;
         dialog->action_yes = volume_amplify_ok;
 }
@@ -986,7 +989,8 @@ static void vary_command(int how)
         volume_setup_widgets[0].d.thumbbar.value = vary_depth;
         create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
         create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets, 3, 0, vary_setup_draw_const, (void*)0);
+        dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
+                                      3, 0, vary_setup_draw_const, NULL);
         dialog->action_yes = vary_amplify_ok;
         current_vary = how;
 }
@@ -1491,7 +1495,7 @@ static void selection_wipe_volume(int reckless)
         for (row = selection.first_row; row <= selection.last_row; row++) {
                 note = pattern + 64 * row + selection.first_channel - 1;
                 for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
-                        if (reckless || ((note->note == 0 || note->note == NOTE_OFF || note->note == NOTE_CUT || note->note == NOTE_FADE) && note->instrument == 0)) {
+                        if (reckless || (note->instrument == 0 && !NOTE_IS_NOTE(note->note))) {
                                 note->volume = 0;
                                 note->volume_effect = VOL_EFFECT_NONE;
                         }
@@ -2085,7 +2089,8 @@ static void clipboard_paste_overwrite(int suppress, int grow)
                         status_text_flash("Resized pattern %d, but clipped to 200 rows", current_pattern);
                         song_pattern_resize(current_pattern, 200);
                 } else {
-                        status_text_flash("Resized pattern %d to %d rows", current_pattern, current_row+clipboard.rows);
+                        status_text_flash("Resized pattern %d to %d rows", current_pattern,
+                                          current_row + clipboard.rows);
                         song_pattern_resize(current_pattern, current_row+clipboard.rows);
                 }
         }

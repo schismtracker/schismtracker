@@ -40,16 +40,16 @@
 /* --------------------------------------------------------------------- */
 int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        if (length <= 86) return false;
-        if (memcmp(data, "Extended Instrument: ", 21) != 0) return false;
-        if (data[43] != 26) return false;
-        if (memcmp(data+44, "FastTracker v", 13) != 0) return false;
+        if (length <= 86) return 0;
+        if (memcmp(data, "Extended Instrument: ", 21) != 0) return 0;
+        if (data[43] != 26) return 0;
+        if (memcmp(data+44, "FastTracker v", 13) != 0) return 0;
         file->description = "FastTracker Instrument";
         file->title = mem_alloc(24);
         memcpy(file->title, ((char*)data)+21, 22);
         file->title[22]='\0';
         file->type = TYPE_INST_XI;
-        return true;
+        return 1;
 }
 
 
@@ -66,9 +66,9 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
         unsigned int ptr;
         unsigned int k, j, n;
 
-        if (length <= 302) return false;
-        if (memcmp(data, "Extended Instrument: ", 21) != 0) return false;
-        if (!slot) return false;
+        if (length <= 302) return 0;
+        if (memcmp(data, "Extended Instrument: ", 21) != 0) return 0;
+        if (!slot) return 0;
 
         g = instrument_loader_init(&ii, slot);
         memcpy((char*)g->name, data+21, 22);
@@ -94,7 +94,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
         ptr = 298 + (nsamples * sizeof(xmss));
         for (k = 0; k < nsamples; k++) {
                 j = 298 + (k * sizeof(xmss));
-                if (j >= length) return false;
+                if (j >= length) return 0;
                 memcpy(&xmss, data + j, sizeof(xmss));
                 xmss.samplen = bswapLE32(xmss.samplen);
                 xmss.loopstart = bswapLE32(xmss.loopstart);
@@ -146,6 +146,6 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 song_sample_set_c5speed(n, transpose_to_frequency(xmss.relnote, xmss.finetune));
                 ptr += song_copy_sample_raw(n, rs, data+ptr, length - ptr);
         }
-        return true;
+        return 1;
 }
 

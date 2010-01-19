@@ -35,7 +35,7 @@ int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample *smp, UN
         /* we'll uphold IT's limit of 4mb */
         if (length > 4 * 1048576) {
                 errno = EFBIG;
-                return false;
+                return 0;
         }
 
         smp->speed = 8363;
@@ -46,11 +46,11 @@ int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample *smp, UN
         memcpy(smp->data, data, length);
         smp->length = length;
 
-        return true;
+        return 1;
 }
 
 int fmt_raw_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *title)
 {
         fp->o(fp, (unsigned char *) smp->data, ((smp->flags & SAMP_16_BIT) ? 2:1)*smp->length);
-        return true;
+        return 1;
 }

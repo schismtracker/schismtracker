@@ -34,7 +34,7 @@
 int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 64 && memcmp(data + 60, "IM10", 4) == 0))
-                return false;
+                return 0;
 
         file->description = "Imago Orpheus";
         /*file->extension = str_dup("imf");*/
@@ -42,7 +42,7 @@ int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         memcpy(file->title, data, 32);
         file->title[32] = 0;
         file->type = TYPE_MODULE_IT;
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

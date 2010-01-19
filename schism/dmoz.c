@@ -363,7 +363,8 @@ static void allocate_more_files(dmoz_filelist_t *flist)
                 flist->files = (dmoz_file_t **)mem_alloc(FILE_BLOCK_SIZE * sizeof(dmoz_file_t *));
         } else {
                 flist->alloc_size *= 2;
-                flist->files = (dmoz_file_t **)mem_realloc(flist->files, flist->alloc_size * sizeof(dmoz_filelist_t *));
+                flist->files = (dmoz_file_t **)mem_realloc(flist->files,
+                        flist->alloc_size * sizeof(dmoz_filelist_t *));
         }
 }
 
@@ -374,7 +375,8 @@ static void allocate_more_dirs(dmoz_dirlist_t *dlist)
                 dlist->dirs = (dmoz_dir_t **)mem_alloc(DIR_BLOCK_SIZE * sizeof(dmoz_dir_t *));
         } else {
                 dlist->alloc_size *= 2;
-                dlist->dirs = (dmoz_dir_t **)mem_realloc(dlist->dirs, dlist->alloc_size * sizeof(dmoz_dir_t *));
+                dlist->dirs = (dmoz_dir_t **)mem_realloc(dlist->dirs,
+                        dlist->alloc_size * sizeof(dmoz_dir_t *));
         }
 }
 

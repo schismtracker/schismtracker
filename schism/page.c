@@ -856,7 +856,8 @@ static int handle_key_global(struct key_event * k)
                          * so catch ctrl+scroll lock here as well */
                         if (!k->state) {
                                 midi_playback_tracing = (playback_tracing = !playback_tracing);
-                                status_text_flash("Playback tracing %s", (playback_tracing ? "enabled" : "disabled"));
+                                status_text_flash("Playback tracing %s",
+                                                  (playback_tracing ? "enabled" : "disabled"));
                         }
                         return 1;
                 }
@@ -913,7 +914,8 @@ void handle_key(struct key_event * k)
                 return;
         }
 
-        if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE.widgets[ ACTIVE_PAGE.selected_widget ].accept_text) {
+        if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
+            && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
                 if (digraph_n == -1 && k->state) {
                         digraph_n = 0;
 
@@ -939,7 +941,8 @@ void handle_key(struct key_event * k)
                                 memset(&fake, 0, sizeof(fake));
                                 fake.unicode = char_digraph(digraph_c, c);
                                 if (fake.unicode) {
-                                        status_text_flash_bios("Enter digraph: %c%c -> %c", digraph_c, c, fake.unicode);
+                                        status_text_flash_bios("Enter digraph: %c%c -> %c",
+                                                               digraph_c, c, fake.unicode);
                                 } else {
                                         status_text_flash_bios("Enter digraph: %c%c -> INVALID", digraph_c, c);
                                 }
@@ -963,7 +966,8 @@ void handle_key(struct key_event * k)
                                 memset(&fake, 0, sizeof(fake));
                                 fake.unicode = char_unicode_to_cp437(cs_unicode);
                                 if (fake.unicode) {
-                                        status_text_flash_bios("Enter Unicode: U+%04X -> %c", cs_unicode, fake.unicode);
+                                        status_text_flash_bios("Enter Unicode: U+%04X -> %c",
+                                                               cs_unicode, fake.unicode);
                                         fake.is_synthetic = 3;
                                         handle_key(&fake);
                                         fake.state=1;
@@ -1000,12 +1004,14 @@ void handle_key(struct key_event * k)
                 }
 
                 /* alt+numpad -> char number */
-                if ((k->sym == SDLK_LALT || k->sym == SDLK_RALT || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA)) {
+                if (k->sym == SDLK_LALT || k->sym == SDLK_RALT
+                    || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA) {
                         if (k->state && alt_numpad_c > 0 && (alt_numpad&255) > 0) {
                                 memset(&fake, 0, sizeof(fake));
                                 fake.unicode = alt_numpad & 255;
                                 if (!(status.flags & CLASSIC_MODE))
-                                        status_text_flash_bios("Enter DOS/ASCII: %d -> %c", (int)fake.unicode, (int)fake.unicode);
+                                        status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
+                                                               (int)fake.unicode, (int)fake.unicode);
                                 fake.is_synthetic = 3;
                                 handle_key(&fake);
                                 fake.state=1;

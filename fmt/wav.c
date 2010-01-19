@@ -184,12 +184,12 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSE
         uint32_t flags;
 
         if (!wav_load(&f, data, len))
-                return false;
+                return 0;
 
         if (f.fmt.format != WAVE_FORMAT_PCM ||
             !f.fmt.freqHz ||
             (f.fmt.channels != 1 && f.fmt.channels != 2))
-                return false;
+                return 0;
 
         smp->flags = 0; // flags are set by csf_read_sample
         flags      = 0;
@@ -204,7 +204,7 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSE
         case 16: flags |= SF_16; break;
         case 24: flags |= SF_24; break;
         case 32: flags |= SF_32; break;
-        default: return false; // unsupported
+        default: return 0; // unsupported
         }
         // encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
         flags |= (f.fmt.bitspersample == 8) ? SF_PCMU : SF_PCMS;
@@ -223,13 +223,13 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         wave_file_t f;
 
         if (!wav_load(&f, data, length))
-                return false;
+                return 0;
         else if (f.fmt.format != WAVE_FORMAT_PCM ||
                 !f.fmt.freqHz ||
                 (f.fmt.channels != 1 && f.fmt.channels != 2) ||
                 (f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16 &&
                  f.fmt.bitspersample != 24 && f.fmt.bitspersample != 32))
-                return false;
+                return 0;
 
         file->smp_flags  = 0;
 
@@ -245,7 +245,7 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->description  = "IBM/Microsoft RIFF Audio";
         file->type         = TYPE_SAMPLE_PLAIN;
         file->smp_filename = file->base;
-        return true;
+        return 1;
 }
 
 
@@ -380,6 +380,6 @@ int fmt_wav_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *
         _wavout_data(fp, (uint8_t *) smp->data, smp->length * (fp->bits / 8) * fp->channels);
 #endif
         _wavout_tail(fp);
-        return true;
+        return 1;
 }
 

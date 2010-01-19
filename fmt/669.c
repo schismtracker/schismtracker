@@ -48,7 +48,7 @@ int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         const char *desc;
 
         if (length < sizeof(struct header_669))
-                return false;
+                return 0;
 
         /* Impulse Tracker identifies any 669 file as a "Composer 669 Module",
         regardless of the signature tag. */
@@ -57,15 +57,15 @@ int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         else if (memcmp(header->sig, "JN", 2) == 0)
                 desc = "Extended 669 Module";
         else
-                return false;
+                return 0;
 
         if (header->samples == 0 || header->patterns == 0
             || header->samples > 64 || header->patterns > 128
             || header->restartpos > 127)
-                return false;
+                return 0;
         for (i = 0; i < 128; i++)
                 if (header->breaks[i] > 0x3f)
-                        return false;
+                        return 0;
 
         /* From my very brief observation, it seems the message of a 669 file is split into 3 lines.
         This (naively) takes the first line of it as the title, as the format doesn't actually have
@@ -78,7 +78,7 @@ int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         /*file->extension = str_dup("669");*/
         file->type = TYPE_MODULE_S3M;
 
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

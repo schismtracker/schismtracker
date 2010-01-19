@@ -50,12 +50,12 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         struct au_header hh;
 
         if (!(length > 24 && memcmp(data, ".snd", 4) == 0))
-                return false;
+                return 0;
 
         memcpy(&hh, data, 24);
 
         if (!(hh.data_offset < length && hh.data_size > 0 && hh.data_size <= length - hh.data_offset))
-                return false;
+                return 0;
 
         file->smp_length = hh.data_size / hh.channels;
         file->smp_flags = 0;
@@ -82,7 +82,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         }
         file->smp_filename = file->title;
         file->type = TYPE_SAMPLE_PLAIN;
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------- */
@@ -92,7 +92,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp, cha
         struct au_header au;
 
         if (length < 24)
-                return false;
+                return 0;
 
         memcpy(&au, data, sizeof(au));
         /* optimization: could #ifdef this out on big-endian machines */
@@ -102,8 +102,8 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp, cha
         au.sample_rate = bswapBE32(au.sample_rate);
         au.channels = bswapBE32(au.channels);
 
-/*#define C__(cond) if (!(cond)) { log_appendf(2, "failed condition: %s", #cond); return false; }*/
-#define C__(cond) if (!(cond)) { return false; }
+/*#define C__(cond) if (!(cond)) { log_appendf(2, "failed condition: %s", #cond); return 0; }*/
+#define C__(cond) if (!(cond)) { return 0; }
         C__(memcmp(au.magic, ".snd", 4) == 0);
         C__(au.data_offset >= 24);
         C__(au.data_offset < length);
@@ -147,7 +147,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp, cha
         }
 #endif
 
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -180,5 +180,5 @@ int fmt_au_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
         fp->o(fp, (const unsigned char *)title, 25);
         save_sample_data_BE(fp, smp, 0);
 
-        return true;
+        return 1;
 }

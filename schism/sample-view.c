@@ -267,14 +267,16 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int 
         vgamem_ovl_apply(r);
 }
 
-void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data, int length, unsigned int channels, int fakemono)
+void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data,
+        int length, unsigned int channels, int fakemono)
 {
         vgamem_ovl_clear(r, 0);
         _draw_sample_data_16(r, data, length, channels, fakemono);
         vgamem_ovl_apply(r);
 }
 
-void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int length, unsigned int channels, int fakemono)
+void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data,
+        int length, unsigned int channels, int fakemono)
 {
         vgamem_ovl_clear(r, 0);
         _draw_sample_data_8(r, data, length, channels, fakemono);

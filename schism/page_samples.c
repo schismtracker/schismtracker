@@ -272,13 +272,15 @@ static void sample_list_predraw_hook(void)
 
         widgets_samplelist[19].d.thumbbar.value = sample->vib_rate;
 
-        if (sample->flags & SAMP_STEREO) {
-                draw_text_len((has_data ? (sample->flags & SAMP_16_BIT ? "16 bit Stereo" : "8 bit Stereo") : "No sample"),
-                      13, 64, 22, 2, 0);
+        if (has_data) {
+                sprintf(buf, "%d bit%s",
+                        (sample->flags & SAMP_16_BIT) ? 16 : 8,
+                        (sample->flags & SAMP_STEREO) ? " Stereo" : "");
         } else {
-                draw_text_len((has_data ? (sample->flags & SAMP_16_BIT ? "16 bit" : "8 bit") : "No sample"),
-                      13, 64, 22, 2, 0);
+                strcpy(buf, "No sample");
         }
+        draw_text_len(buf, 13, 64, 22, 2, 0);
+
         draw_text_len(numtostr(0, sample->length, buf), 13, 64, 23, 2, 0);
 
         draw_sample_data(&sample_image, sample, current_sample);
@@ -293,8 +295,7 @@ static int sample_list_add_char(char c)
         if (c < 32)
                 return 0;
         song_get_sample(current_sample, &name);
-        text_add_char(name, c, &sample_list_cursor_pos, _is_magic_sample(current_sample)
-                                                        ? 22 : 25);
+        text_add_char(name, c, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 22 : 25);
         _fix_accept_text();
 
         status.flags |= NEED_UPDATE;
@@ -307,8 +308,7 @@ static void sample_list_delete_char(void)
         char *name;
 
         song_get_sample(current_sample, &name);
-        text_delete_char(name, &sample_list_cursor_pos, _is_magic_sample(current_sample)
-                                                        ? 23 : 25);
+        text_delete_char(name, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 23 : 25);
         _fix_accept_text();
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -320,8 +320,7 @@ static void sample_list_delete_next_char(void)
         char *name;
 
         song_get_sample(current_sample, &name);
-        text_delete_next_char(name, &sample_list_cursor_pos, _is_magic_sample(current_sample)
-                                                        ? 23 : 25);
+        text_delete_next_char(name, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 23 : 25);
         _fix_accept_text();
 
         status.flags |= NEED_UPDATE;
@@ -1246,8 +1245,10 @@ static void export_sample_dialog(void)
         song_sample *sample = song_get_sample(current_sample, NULL);
         struct dialog *dialog;
 
-        create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL, export_sample_filename, NAME_MAX);
-        create_textentry(export_sample_widgets + 1, 33, 27, 18, 0, 2, 3, NULL, export_sample_options, 256);
+        create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
+                         export_sample_filename, NAME_MAX);
+        create_textentry(export_sample_widgets + 1, 33, 27, 18, 0, 2, 3, NULL,
+                         export_sample_options, 256);
         create_button(export_sample_widgets + 2, 33, 30, 9, 1, 4, 3, 3, 3, configure_options, "Configure", 1);
         create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, export_sample_list_draw);
         create_button(export_sample_widgets + 4, 31, 35, 6, 2, 4, 5, 5, 5, dialog_yes_NULL, "OK", 3);
@@ -1256,7 +1257,8 @@ static void export_sample_dialog(void)
         strncpy(export_sample_filename, sample->filename, NAME_MAX);
         export_sample_filename[NAME_MAX] = 0;
 
-        dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 6, 0, export_sample_draw_const, NULL);
+        dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 6, 0,
+                                      export_sample_draw_const, NULL);
         dialog->action_yes = do_export_sample;
 }
 
@@ -1298,8 +1300,10 @@ static void resize_sample_dialog(int aa)
         resize_sample_cursor = 0;
         create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
         resize_sample_widgets[0].d.numentry.value = sample->length;
-        create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, (void *) resize_sample_cancel, "Cancel", 1);
-        dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0, resize_sample_draw_const, NULL);
+        create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1,
+                (void *) resize_sample_cancel, "Cancel", 1);
+        dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0,
+                resize_sample_draw_const, NULL);
         if (aa) {
                 dialog->action_yes = do_resize_sample_aa;
         } else {
@@ -1366,7 +1370,8 @@ static void sample_list_handle_alt_key(struct key_event * k)
         case SDLK_b:
                 /* this statement is too complicated :P */
                 if (!(sample->data == NULL
-                      || (sample->flags & SAMP_SUSLOOP && sample->loop_start == 0 && sample->sustain_start == 0)
+                      || ((sample->flags & SAMP_SUSLOOP)
+                          && sample->loop_start == 0 && sample->sustain_start == 0)
                       || (sample->loop_start == 0)))
                         dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
                 return;
@@ -1833,7 +1838,8 @@ void sample_list_load_page(struct page *page)
         create_textentry(widgets_samplelist + 7, 64, 13, 13, 7, 8, 0, NULL, NULL, 12);
         create_numentry(widgets_samplelist + 8, 64, 14, 7, 7, 9, 0,
                         update_sample_speed, 0, 9999999, &sample_numentry_cursor_pos);
-        create_menutoggle(widgets_samplelist + 9, 64, 15, 8, 10, 1, 0, 0, update_sample_loop_flags, loop_states);
+        create_menutoggle(widgets_samplelist + 9, 64, 15, 8, 10, 1, 0, 0,
+                          update_sample_loop_flags, loop_states);
         create_numentry(widgets_samplelist + 10, 64, 16, 7, 9, 11, 0,
                         update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
         create_numentry(widgets_samplelist + 11, 64, 17, 7, 10, 12, 0,

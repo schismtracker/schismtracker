@@ -63,13 +63,13 @@ int fmt_mp3_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         if (id3len <= 0) {
                 /*version = 1;*/
                 if (length <= 128)
-                        return false;
+                        return 0;
 
                 id3off = length - 128;
                 id3len = id3_tag_query(data + id3off, 128);
                 if (id3len <= 0)
                         /* See the note at the end of this file. */
-                        return false;
+                        return 0;
         }
 
         tag = id3_tag_parse(data + id3off, id3len);
@@ -86,7 +86,7 @@ int fmt_mp3_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         /*snprintf(file->description, 22, "MPEG Layer 3, ID3 v%d", version);*/
         file->description = "MPEG Layer 3";
         file->type = TYPE_SAMPLE_COMPR;
-        return true;
+        return 1;
 }
 
 /* The nonexistence of an ID3 tag does NOT necessarily mean the file isn't an MP3. Really, MP3 files can

@@ -48,10 +48,10 @@ int fmt_sid_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
          * the biggest one i have is jch/vibrants - "better late than
          * never", and it's only 20k. */
         if (length > 32767)
-                return false;
+                return 0;
 
         if (!(length > 128 && memcmp(data, "PSID", 4) == 0))
-                return false;
+                return 0;
 
         memcpy(buf, data + 22, 32);
         buf[32] = 0;
@@ -64,5 +64,5 @@ int fmt_sid_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
         file->description = "Commodore 64 SID";
         /*file->extension = str_dup("sid");*/
         file->type = TYPE_SAMPLE_COMPR; /* FIXME: not even close. */
-        return true;
+        return 1;
 }

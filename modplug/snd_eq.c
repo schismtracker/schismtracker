@@ -213,7 +213,8 @@ void initialize_eq(int reset, float freq)
 }
 
 
-void set_eq_gains(const unsigned int *gainbuff, unsigned int gains, const unsigned int *freqs, int reset, int mix_freq)
+void set_eq_gains(const unsigned int *gainbuff, unsigned int gains, const unsigned int *freqs,
+                  int reset, int mix_freq)
 {
         for (unsigned int i = 0; i < MAX_EQ_BANDS; i++) {
                 float g, f = 0;

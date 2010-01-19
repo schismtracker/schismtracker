@@ -34,7 +34,7 @@
 int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 48 && memcmp(data + 44, "SCRM", 4) == 0))
-                return false;
+                return 0;
 
         file->description = "Scream Tracker 3";
         /*file->extension = str_dup("s3m");*/
@@ -42,7 +42,7 @@ int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         memcpy(file->title, data, 27);
         file->title[27] = 0;
         file->type = TYPE_MODULE_S3M;
-        return true;
+        return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -312,7 +312,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                         switch (note->note) {
                                         default:
                                                 // Note; hi=oct, lo=note
-                                                note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 12 + 1;
+                                                note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 13;
                                                 break;
                                         case 255:
                                                 note->note = NOTE_NONE;

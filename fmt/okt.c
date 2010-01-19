@@ -29,12 +29,12 @@
 int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         if (!(length > 12 && memcmp(data, "OKTASONGCMOD", 12) == 0))
-                return false;
+                return 0;
 
         file->description = "Oktalyzer";
         /* okts don't have names? */
         file->title = strdup("");
         file->type = TYPE_MODULE_MOD;
-        return true;
+        return 1;
 }
 
