@@ -296,85 +296,61 @@ const char *video_driver_name(void)
 void video_report(void)
 {
         char buf[256];
+        struct {
+                unsigned int num;
+                const char *name, *type;
+        } yuv_layouts[] = {
+                {VIDEO_YUV_IYUV, "IYUV", "planar"},
+                {VIDEO_YUV_YV12_TV, "YV12", "planar+tv"},
+                {VIDEO_YUV_IYUV_TV, "IYUV", "planar+tv"},
+                {VIDEO_YUV_YVYU, "YVYU", "packed"},
+                {VIDEO_YUV_UYVY, "UYVY", "packed"},
+                {VIDEO_YUV_YUY2, "YUY2", "packed"},
+                {VIDEO_YUV_RGBA, "RGBA", "packed"},
+                {VIDEO_YUV_RGBT, "RGBT", "packed"},
+                {VIDEO_YUV_RGB565, "RGB565", "packed"},
+                {VIDEO_YUV_RGB24, "RGB24", "packed"},
+                {VIDEO_YUV_RGB32, "RGB32", "packed"},
+                {0, NULL, NULL},
+        }, *layout = yuv_layouts;
+
+        log_appendf(5, " Using driver '%s'", SDL_VideoDriverName(buf, 256));
+
         switch (video.desktop.type) {
         case VIDEO_SURFACE:
-                log_appendf(2," Using %s%s surface SDL driver '%s'",
-                                ((video.surface->flags & SDL_HWSURFACE)
-                                        ? "hardware" : "software"),
-                ((video.surface->flags & SDL_HWACCEL) ? " accelerated" : ""),
-                                                SDL_VideoDriverName(buf,256));
+                log_appendf(5, " %s%s video surface",
+                        (video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
+                        (video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
                 if (SDL_MUSTLOCK(video.surface))
-                        log_append(4,0," Must lock surface");
-                log_appendf(5, " Display format: %d bits/pixel",
-                                        video.surface->format->BitsPerPixel);
+                        log_append(4, 0, " Must lock surface");
+                log_appendf(5, " Display format: %d bits/pixel", video.surface->format->BitsPerPixel);
                 break;
+
         case VIDEO_YUV:
-                if (video.overlay->hw_overlay) {
-                        log_append(2,0, " Using hardware accelerated video overlay");
-                } else {
-                        log_append(2,0, " Using video overlay");
-                }
-                switch (video.yuvlayout) {
-                case VIDEO_YUV_YV12:
-                        log_append(5,0, " Display format: YV12 (planar)");
-                        break;
-                case VIDEO_YUV_IYUV:
-                        log_append(5,0, " Display format: IYUV (planar)");
-                        break;
-                case VIDEO_YUV_YV12_TV:
-                        log_append(5,0, " Display format: YV12 (planar+tv)");
-                        break;
-                case VIDEO_YUV_IYUV_TV:
-                        log_append(5,0, " Display format: IYUV (planar+tv)");
-                        break;
-                case VIDEO_YUV_YVYU:
-                        log_append(5,0, " Display format: YVYU (packed)");
-                        break;
-                case VIDEO_YUV_UYVY:
-                        log_append(5,0, " Display format: UYVY (packed)");
-                        break;
-                case VIDEO_YUV_YUY2:
-                        log_append(5,0, " Display format: YUY2 (packed)");
-                        break;
-                case VIDEO_YUV_RGBA:
-                        log_append(5,0, " Display format: RGBA (packed)");
-                        break;
-                case VIDEO_YUV_RGBT:
-                        log_append(5,0, " Display format: RGBT (packed)");
-                        break;
-                case VIDEO_YUV_RGB565:
-                        log_append(5,0, " Display format: RGB565 (packed)");
-                        break;
-                case VIDEO_YUV_RGB24:
-                        log_append(5,0, " Display format: RGB24 (packed)");
-                        break;
-                case VIDEO_YUV_RGB32:
-                        log_append(5,0, " Display format: RGB32 (packed)");
-                        break;
-                default:
-                        log_appendf(5," Display format: %x",
-                                        video.yuvlayout);
-                        break;
-                };
+                /* if an overlay isn't hardware accelerated, what is it? I guess this works */
+                log_appendf(5, " %s-accelerated video overlay",
+                        video.overlay->hw_overlay ? "Hardware" : "Non");
+                while (video.yuvlayout != layout->num && layout->name != NULL)
+                        layout++;
+                if (layout->name)
+                        log_appendf(5, " Display format: %s (%s)", layout->name, layout->type);
+                else
+                        log_appendf(5, " Display format: %x", video.yuvlayout);
                 break;
         case VIDEO_GL:
-                log_append(2,0, " Using OpenGL interface");
+                log_append(5, 0, " OpenGL interface");
 #if defined(NVIDIA_PixelDataRange)
-                if (video.gl.pixel_data_range) {
-                        log_append(2,0, " Using NVidia pixel range extensions");
-                }
+                if (video.gl.pixel_data_range)
+                        log_append(5, 0, " NVidia pixel range extensions available");
 #endif
-                log_appendf(5, " Display format: %d bits/pixel",
-                                        (int)video.surface->format->BitsPerPixel);
                 break;
         case VIDEO_DDRAW:
-                log_append(2,0, " Using DirectDraw interface");
-                log_appendf(5, " Display format: %d bits/pixel",
-                                        (int)video.surface->format->BitsPerPixel);
+                log_append(5, 0, " DirectDraw interface");
                 break;
         };
+        log_appendf(5, " %d bits/pixel", video.surface->format->BitsPerPixel);
         if (video.desktop.fullscreen || video.desktop.fb_hacks) {
-                log_appendf(2," at %dx%d", video.desktop.width, video.desktop.height);
+                log_appendf(5, " Display dimensions: %dx%d", video.desktop.width, video.desktop.height);
         }
 }
 
