@@ -23,13 +23,12 @@
 
 #include "headers.h"
 #include "it.h"
+#include "sndfile.h" /* for calc_halftone */
 #include "page.h"
 #include "song.h"
 #include "dmoz.h"
 #include "sample-edit.h"
 #include "video.h"
-
-#include <math.h>                       /* for pow */
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -1474,11 +1473,6 @@ static void sample_list_handle_alt_key(struct key_event * k)
         }
 
         status.flags |= NEED_UPDATE;
-}
-
-static unsigned long calc_halftone(unsigned long hz, int rel)
-{
-        return pow(2, rel / 12.0) * hz + 0.5;
 }
 
 static void sample_list_handle_key(struct key_event * k)
