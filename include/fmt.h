@@ -91,7 +91,7 @@ READ_INFO(psm);
 READ_INFO(s3m); LOAD_SONG(s3m);
 READ_INFO(sfx); LOAD_SONG(sfx);
 READ_INFO(stm); LOAD_SONG(stm);
-READ_INFO(ult);
+READ_INFO(ult); LOAD_SONG(ult);
 READ_INFO(xm);  LOAD_SONG(xm);
 
 /* things that don't really act like modules or samples, and which we also don't use in any way */
@@ -174,7 +174,7 @@ int convert_voleffect(uint8_t *effect, uint8_t *param, int force);
 void mod_import_note(const uint8_t p[4], MODCOMMAND *note);
 
 // get L-R-R-L panning value from a (zero-based!) channel number
-#define PROTRACKER_PANNING(c) ((((c) & 3) == 1 || ((c) & 3) == 2) ? 256 : 0)
+#define PROTRACKER_PANNING(c) (((((n) + 1) >> 1) & 1) & 256)
 
 // convert .mod finetune byte value to c5speed
 #define MOD_FINETUNE(b) (S3MFineTuneTable[((b) & 0xf) ^ 8])
