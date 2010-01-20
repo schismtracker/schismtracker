@@ -268,6 +268,7 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         strcpy(song->song_title, buf);
 
         sprintf(song->tracker_id, "Ultra Tracker %s", verstr[ver - 1]);
+        song->m_dwSongFlags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
 
         nmsg = slurp_getc(fp);
         ptr = song->m_lpszSongComments;
