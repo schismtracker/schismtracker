@@ -174,7 +174,7 @@ int convert_voleffect(uint8_t *effect, uint8_t *param, int force);
 void mod_import_note(const uint8_t p[4], MODCOMMAND *note);
 
 // get L-R-R-L panning value from a (zero-based!) channel number
-#define PROTRACKER_PANNING(c) (((((n) + 1) >> 1) & 1) & 256)
+#define PROTRACKER_PANNING(c) (((((n) + 1) >> 1) & 1) * 256)
 
 // convert .mod finetune byte value to c5speed
 #define MOD_FINETUNE(b) (S3MFineTuneTable[((b) & 0xf) ^ 8])
