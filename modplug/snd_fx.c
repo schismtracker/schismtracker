@@ -59,6 +59,12 @@ int frequency_to_transpose(unsigned int freq)
         return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
 }
 
+
+unsigned long calc_halftone(unsigned long hz, int rel)
+{
+        return pow(2, rel / 12.0) * hz + 0.5;
+}
+
 /* --------------------------------------------------------------------------------------------------------- */
 /* the full content of snd_fx.cpp follows. */
 

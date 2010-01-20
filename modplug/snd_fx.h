@@ -12,6 +12,8 @@ unsigned int get_freq_from_period(int period, unsigned int c5speed, int frac, in
 unsigned int transpose_to_frequency(int transp, int ftune);
 int frequency_to_transpose(unsigned int freq);
 
+unsigned long calc_halftone(unsigned long hz, int rel);
+
 #ifdef __cplusplus
 }
 #endif
