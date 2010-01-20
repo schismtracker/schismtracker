@@ -49,11 +49,6 @@ static struct vgamem_overlay logo_image = {
 };
 
 
-static int about_page_handle_key(UNUSED struct key_event *k)
-{
-        return 0;
-}
-
 static void about_page_redraw(void)
 {
         draw_fill_chars(0,0,79,49,0);
@@ -95,7 +90,7 @@ void about_load_page(struct page *page)
         page->pre_handle_key = _fixup_ignore_globals;
         page->help_index = HELP_GLOBAL;
         page->draw_full = _draw_full;
-        create_other(widgets_about + 0, 0, about_page_handle_key, about_page_redraw);
+        create_other(widgets_about + 0, 0, NULL, about_page_redraw);
 }
 
 static void about_close(UNUSED void *data)
@@ -194,7 +189,7 @@ void show_about(void)
                         33,32,
                         12,
                         0,0,0,0,0,
-                        (void *) about_close, "Continue", 3);
+                        dialog_yes_NULL, "Continue", 3);
         d = dialog_create_custom(11,16,
                         58, 19,
                         widgets_about, 1, 0,

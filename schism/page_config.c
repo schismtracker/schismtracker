@@ -110,14 +110,12 @@ static int video_revert_fs = 0;
 
 static void video_mode_keep(UNUSED void*ign)
 {
-        dialog_destroy();
         status_text_flash(SAVED_AT_EXIT);
         config_set_page();
         status.flags |= NEED_UPDATE;
 }
 static void video_mode_cancel(UNUSED void*ign)
 {
-        dialog_destroy();
         if (video_revert_driver) {
                 video_setup(video_revert_driver);
                 video_startup();
@@ -140,6 +138,7 @@ static void video_dialog_draw_const(void)
                 time(&started); /* err... */
                 status.flags |= NEED_UPDATE;
                 if (countdown == 0) {
+                        dialog_destroy();
                         video_mode_cancel(NULL);
                         return;
                 }
@@ -166,9 +165,9 @@ static void video_change_dialog(void)
         time(&started);
 
         create_button(video_dialog_widgets+0, 28,28,8, 0, 0, 0, 1, 1,
-                                        (void *) video_mode_keep, "OK", 4);
+                                        dialog_yes_NULL, "OK", 4);
         create_button(video_dialog_widgets+1, 42,28,8, 1, 1, 0, 1, 0,
-                                        (void *) video_mode_cancel, "Cancel", 2);
+                                        dialog_cancel_NULL, "Cancel", 2);
         d = dialog_create_custom(20, 17, 40, 14,
                         video_dialog_widgets,
                         2, 1,
@@ -190,7 +189,7 @@ static void change_video_settings(void)
         } else if (widgets_config[13].d.togglebutton.state) {
                 new_video_driver = "gl";
         } else if (widgets_config[14].d.togglebutton.state) {
-                new_video_driver = "directdraw";;
+                new_video_driver = "directdraw";
         } else {
                 new_video_driver = "sdl";
         }

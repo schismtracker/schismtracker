@@ -652,10 +652,6 @@ static int sample_list_handle_key_on_list(struct key_event * k)
  * these don't need to do any actual redrawing, because the screen gets
  * redrawn anyway when the dialog is cleared. */
 
-/* TODO | Deleting a sample doesn't require stopping the song because Modplug cleanly stops any playing copies
- * TODO | of the sample when it destroys it. It'd be nice if the other sample manipulations (quality convert,
- * TODO | loop cut, etc.) did this as well. */
-
 static void do_sign_convert(UNUSED void *data)
 {
         song_sample *sample = song_get_sample(current_sample, NULL);
@@ -1265,10 +1261,6 @@ static void export_sample_dialog(void)
 /* resize sample dialog */
 static struct widget resize_sample_widgets[2];
 static int resize_sample_cursor;
-static void resize_sample_cancel(UNUSED void *data)
-{
-        dialog_destroy();
-}
 
 static void do_resize_sample_aa(UNUSED void *data)
 {
@@ -1300,14 +1292,10 @@ static void resize_sample_dialog(int aa)
         create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
         resize_sample_widgets[0].d.numentry.value = sample->length;
         create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1,
-                (void *) resize_sample_cancel, "Cancel", 1);
+                dialog_cancel_NULL, "Cancel", 1);
         dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0,
                 resize_sample_draw_const, NULL);
-        if (aa) {
-                dialog->action_yes = do_resize_sample_aa;
-        } else {
-                dialog->action_yes = do_resize_sample;
-        }
+        dialog->action_yes = aa ? do_resize_sample_aa : do_resize_sample;
 }
 
 /* --------------------------------------------------------------------- */
