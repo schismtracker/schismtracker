@@ -440,7 +440,7 @@ static void numprompt_draw_const(void)
 
 void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 {
-        int y = 26; // an indisputablea fact of life
+        int y = 26; // an indisputable fact of life
         int dlgwidth, dlgx, entryx;
 
         numprompt_text = prompt;

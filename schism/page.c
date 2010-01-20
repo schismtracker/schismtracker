@@ -60,6 +60,8 @@ int *total_widgets = NULL;
 
 static int currently_grabbed = SDL_GRAB_OFF;
 
+static int fontedit_return_page = PAGE_PATTERN_EDITOR;
+
 /* --------------------------------------------------------------------- */
 
 /* *INDENT-OFF* */
@@ -825,7 +827,10 @@ static int handle_key_global(struct key_event * k)
                         if (!k->state) set_page(PAGE_PALETTE_EDITOR);
                 } else if (k->mod & KMOD_SHIFT) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_FONT_EDIT);
+                        if (!k->state) {
+                                fontedit_return_page = status.current_page;
+                                set_page(PAGE_FONT_EDIT);
+                        }
 
                 } else if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
@@ -1702,21 +1707,21 @@ int song_load(const char *filename)
 
 void show_exit_prompt(void)
 {
-        /* since this can be called with a dialog already active (on sdl
-         * quit action, when the window's close button is clicked for
-         * instance) it needs to get rid of any other open dialogs.
-         * (dialog_create takes care of closing menus.) */
-        dialog_destroy_all();
+        /* This used to kill all open dialogs, but that doesn't seem to be necessary.
+        Do keep in mind though, a dialog *might* exist when this function is called
+        (for example, if the WM sends a close request). */
 
-        if (status.current_page == PAGE_FONT_EDIT) {
-                /* maybe if we didn't start with the font editor, just exit
-                   without prompting */
+        if (status.current_page == PAGE_ABOUT) {
+                /* haven't even started up yet; don't bother confirming */
+                exit(0);
+        } else if (status.current_page == PAGE_FONT_EDIT) {
                 if (status.flags & STARTUP_FONTEDIT) {
                         dialog_create(DIALOG_OK_CANCEL, "Exit Font Editor?",
                                       exit_ok_confirm, NULL, 0, NULL);
                 } else {
+                        /* don't ask, just go away */
                         dialog_destroy_all();
-                        set_page(PAGE_PATTERN_EDITOR);
+                        set_page(fontedit_return_page);
                 }
         } else {
                 dialog_create(DIALOG_OK_CANCEL,
@@ -1787,8 +1792,6 @@ void show_song_timejump(void)
         d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
         d->handle_key = _timejump_keyh;
         d->action_yes = _timejump_ok;
-        d->action_no = NULL;
-        d->action_cancel = NULL;
 }
 
 void show_song_length(void)
