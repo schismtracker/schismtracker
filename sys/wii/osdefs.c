@@ -29,7 +29,57 @@
 #include "page.h" // need for struct key_event
 #include "log.h"
 
+#include <di/di.h>
+#include <fat.h>
+#include <ogc/system.h>
+#include <sys/dir.h>
+#include "isfs.h"
+#define CACHE_PAGES 8
+
+
 const char *osname = "wii";
+
+void wii_sysinit(void)
+{
+        DIR_ITER *dir;
+        char *ptr = NULL;
+
+        ISFS_SU();
+        if (ISFS_Initialize() == IPC_OK)
+                ISFS_Mount();
+        fatInit(CACHE_PAGES, 0);
+
+        // Attempt to locate a suitable home directory.
+        if (!argc || !argv) {
+                // loader didn't bother setting these
+                argc = 1;
+                argv = malloc(sizeof(char **));
+                *argv = str_dup("?");
+        } else if (strchr(argv[0], '/') != NULL) {
+                // presumably launched from hbc menu - put stuff in the boot dir
+                // (does get_parent_directory do what I want here?)
+                ptr = get_parent_directory(argv[0]);
+        }
+        if (!ptr) {
+                // Make a guess anyway
+                ptr = str_dup("sd:/apps/schismtracker");
+        }
+        if (chdir(ptr) != 0) {
+                free(ptr);
+                dir = diropen("sd:/");
+                if (dir) {
+                        // Ok at least the sd card works, there's some other dysfunction
+                        dirclose(dir);
+                        ptr = str_dup("sd:/");
+                } else {
+                        // Safe (but useless) default
+                        ptr = str_dup("isfs:/");
+                }
+                chdir(ptr); // Hope that worked, otherwise we're hosed
+        }
+        put_env_var("HOME", ptr);
+        free(ptr);
+}
 
 void wii_sdlinit(void)
 {

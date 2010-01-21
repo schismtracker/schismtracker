@@ -21,12 +21,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/* Predominantly this file is keyboard crap, but we also get the network configured here */
+
 #include "headers.h"
 #include "sdlmain.h"
 #include "it.h"
 #include "osdefs.h"
 
 #include <windows.h>
+#include <ws2tcpip.h>
 
 /* eek... */
 void win32_get_modkey(int *mk)
@@ -69,12 +72,13 @@ unsigned int key_repeat_delay(void)
 static HKL default_keymap;
 static HKL us_keymap;
 
-void win32_setup_keymap(void)
+static void win32_setup_keymap(void)
 {
         default_keymap = GetKeyboardLayout(0);
         us_keymap = LoadKeyboardLayout("00000409", KLF_ACTIVATE|KLF_REPLACELANG|KLF_NOTELLSHELL);
-        (void)ActivateKeyboardLayout(default_keymap,0);
+        ActivateKeyboardLayout(default_keymap,0);
 }
+
 int key_scancode_lookup(int k, int def)
 {
 #ifndef VK_0
@@ -177,3 +181,18 @@ int key_scancode_lookup(int k, int def)
         };
         return def;
 }
+
+
+void win32_sysinit(void)
+{
+        static WSADATA ignored;
+
+        win32_setup_keymap();
+
+        memset(&ignored, 0, sizeof(ignored));
+        if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
+                WSACleanup(); /* ? */
+                status.flags |= NO_NETWORK;
+        }
+}
+

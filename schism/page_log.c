@@ -194,7 +194,7 @@ void log_underline(int chars)
 {
         char buf[75];
 
-        chars = CLAMP(chars, 0, sizeof(buf) - 1);
+        chars = CLAMP(chars, 0, (int) sizeof(buf) - 1);
         buf[chars--] = '\0';
         do
                 buf[chars] = 0x81;
