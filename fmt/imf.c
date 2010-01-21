@@ -419,6 +419,9 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         if (memcmp(hdr.im10, "IM10", 4) != 0)
                 return LOAD_UNSUPPORTED;
 
+        if (hdr.ordnum > MAX_ORDERS || hdr.patnum > MAX_PATTERNS || hdr.insnum > MAX_INSTRUMENTS)
+                return LOAD_FORMAT_ERROR;
+
         memcpy(song->song_title, hdr.title, 25);
         song->song_title[25] = 0;
         strcpy(song->tracker_id, "Imago Orpheus");
@@ -491,7 +494,7 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 FT2 - 4095
                 IMF - 4095
                 MPT - god knows what, all the loaders are inconsistent
-                Schism - 128 presented (!); 8192? internal
+                Schism - 256 presented; 8192? internal
 
                 IMF and XM have the same range and modplug's XM loader doesn't do any bit shifting with it,
                 so I'll do the same here for now. I suppose I should get this nonsense straightened
@@ -503,9 +506,19 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 load_imf_envelope(ins, &ins->PanEnv, &imfins, IMF_ENV_PAN);
                 load_imf_envelope(ins, &ins->PitchEnv, &imfins, IMF_ENV_FILTER);
 
-                // hack to get === to stop notes (from modplug's xm loader)
-                if (!(ins->dwFlags & ENV_VOLUME) && !ins->nFadeOut)
-                        ins->nFadeOut = 8192;
+                /* I'm not sure if XM's envelope hacks apply here or not, but Orpheus *does* at least stop
+                samples upon note-off when no envelope is active. Whether or not this depends on the fadeout
+                value, I don't know, and since the fadeout doesn't even seem to be implemented in the gui,
+                I might never find out. :P */
+                if (!(ins->dwFlags & ENV_VOLUME)) {
+                        ins->VolEnv.Ticks[0] = 0;
+                        ins->VolEnv.Ticks[1] = 1;
+                        ins->VolEnv.Values[0] = 64;
+                        ins->VolEnv.Values[1] = 0;
+                        ins->VolEnv.nNodes = 2;
+                        ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd = 0;
+                        ins->dwFlags |= ENV_VOLUME | ENV_VOLSUSTAIN;
+                }
 
                 for (s = 0; s < imfins.smpnum; s++) {
                         struct imf_sample imfsmp;

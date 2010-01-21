@@ -1072,10 +1072,14 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         copy_envelope(ins, &ins->PanEnv, panenvs, ENV_PANNING);
                         copy_envelope(ins, &ins->PitchEnv, freqenvs, ENV_PITCH);
 
-                        if ((ins->dwFlags & (ENV_VOLUME | ENV_VOLLOOP)) == ENV_VOLUME) {
+                        if (ins->dwFlags & ENV_VOLUME) {
                                 // fix note-fade
-                                ins->dwFlags |= ENV_VOLLOOP;
-                                ins->VolEnv.nLoopStart = ins->VolEnv.nLoopEnd = ins->VolEnv.nNodes - 1;
+                                if (!(ins->dwFlags & ENV_VOLLOOP))
+                                        ins->VolEnv.nLoopStart = ins->VolEnv.nLoopEnd = ins->VolEnv.nNodes - 1;
+                                if (!(ins->dwFlags & ENV_VOLSUSTAIN))
+                                        ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd
+                                                = ins->VolEnv.nNodes - 1;
+                                ins->dwFlags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
                         }
                         if (ins->nFadeOut == MDL_FADE_CUT) {
                                 // fix note-off
@@ -1085,10 +1089,6 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                         ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd = 0;
                                         ins->dwFlags |= ENV_VOLUME | ENV_VOLSUSTAIN;
                                         // (the rest is set below)
-                                } else if (!(ins->dwFlags & ENV_VOLSUSTAIN)) {
-                                        ins->dwFlags |= ENV_VOLSUSTAIN;
-                                        ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd
-                                                = ins->VolEnv.nNodes - 1;
                                 }
                                 int se = ins->VolEnv.nSustainEnd;
                                 ins->VolEnv.nNodes = se + 2;
