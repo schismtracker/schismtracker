@@ -58,31 +58,7 @@ const char *ver_short_copyright =
 const char *ver_short_based_on =
         "Based on Impulse Tracker by Jeffrey Lim aka Pulse";
 
-/* and these should be no more than 74 chars per line */
-const char *ver_copyright_credits[] = {
-        /* same as the boilerplate for each .c file */
-        "Copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>",
-        "Copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>",
-        "Copyright (c) 2009 Storlek & Mrs. Brisby",
-        "Copyright (c) 2010 Storlek",
-        "",
-        "Based on Impulse Tracker which is copyright (c) 1995-1998 Jeffrey Lim.",
-        "Contains code by Olivier Lapicque, Markus Fick, Adam Goode, Ville Jokela,",
-        "Juan Linietsky, Juha Niemim\x84ki, and others. See the file AUTHORS in",
-        "the source distribution for details.",
-        NULL,
-};
-const char *ver_license[] = {
-        "This program is free software; you can redistribute it and/or modify it",
-        "under the terms of the GNU General Public License as published by the",
-        "Free Software Foundation; either version 2 of the License, or (at your",
-        "option) any later version.",
-        "",
-        "You should have received a copy of the GNU General Public License along",
-        "with this program; if not, write to the Free Software Foundation, Inc.,",
-        "59 Temple Place, Suite 330, Boston, MA 02111-1307  USA",
-        NULL,
-};
+/* SEE ALSO: helptext/copyright (contains full copyright information, credits, and GPL boilerplate) */
 
 static time_t epoch_sec;
 

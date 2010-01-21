@@ -137,7 +137,7 @@ void log_load_page(struct page *page)
         page->draw_const = log_draw_const;
         page->total_widgets = 1;
         page->widgets = widgets_log;
-        page->help_index = HELP_GLOBAL;
+        page->help_index = HELP_COPYRIGHT; /* I guess */
 
         create_other(widgets_log + 0, 0, log_handle_key, log_redraw);
 }

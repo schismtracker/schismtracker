@@ -36,6 +36,7 @@
 /* Line type characters (the marker at the start of each line) */
 enum {
         LTYPE_NORMAL = '|',
+        LTYPE_BIOS = '+',
         LTYPE_SCHISM = ':',
         LTYPE_SCHISM_BIOS = ';',
         LTYPE_CLASSIC = '!',
@@ -46,8 +47,10 @@ enum {
 
 /* Types that should be hidden from view in classic/non-classic mode */
 #define LINE_SCHISM_HIDDEN(p) (0[p] == LTYPE_CLASSIC)
-#define LINE_CLASSIC_HIDDEN(p)  (0[p] == LTYPE_SCHISM || 0[p] == LTYPE_SCHISM_BIOS)
+#define LINE_CLASSIC_HIDDEN(p) (0[p] == LTYPE_SCHISM || 0[p] == LTYPE_SCHISM_BIOS)
 
+/* Types that should be rendered with the standard font */
+#define LINE_BIOS(p) (0[p] == LTYPE_BIOS || 0[p] == LTYPE_SCHISM_BIOS)
 
 static struct widget widgets_help[2];
 
@@ -106,7 +109,7 @@ static void help_redraw(void)
                 switch (**ptr) {
                 default:
                         lp = strcspn(*ptr+1, "\015\012");
-                        if (**ptr == LTYPE_SCHISM_BIOS) {
+                        if (LINE_BIOS(*ptr)) {
                                 draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
                         } else {
                                 draw_text_len(*ptr + 1, lp, 2, pos, **ptr == LTYPE_DISABLED ? 7 : 6, 0);

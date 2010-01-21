@@ -70,6 +70,7 @@ struct key_event {
 /* NOTE: this enum should be in the same order as helptexts in Makefile.am */
 enum {
         HELP_GLOBAL, /* needs to be first! */
+        HELP_COPYRIGHT,
         HELP_INFO_PAGE,
         HELP_INSTRUMENT_LIST,
         HELP_MESSAGE_EDITOR,
