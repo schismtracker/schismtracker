@@ -29,6 +29,7 @@
 |   Alt-X        Exchange sample (only in Sample List)
 :   Alt-Y        Text to sample data
 :   Alt-Z        Edit/create AdLib (FM) sample
+:   Alt-Shift-Z  Load predefined AdLib sample by MIDI patch number
 |
 |   Alt-Ins      Insert sample slot (updates pattern data)
 |   Alt-Del      Remove sample slot (updates pattern data)

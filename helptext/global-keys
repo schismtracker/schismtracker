@@ -12,10 +12,13 @@
 |   F6                Play current pattern
 |   Shift-F6          Play song from current Order
 |   F7                Play from mark / current row
+:   Shift-F8          Pause / Resume Playback
 |   F8                Stop Playback
-|   F9                Load Module
+!   F9                Load Module
+:   F9                Load Module (also Ctrl-L, Ctrl-O)
 |   Shift-F9          Message Editor
-|   F10               Save Module
+!   F10               Save Module
+:   F10               Save Module (also Ctrl-W)
 :   Shift-F10         Export Module (to WAV, MIDI)
 |   F11               Order List and Panning
 | 2*F11               Order List and Channel Volume
@@ -35,6 +38,7 @@
 |   Ctrl-I            Reinitialise sound driver
 |   Ctrl-M            Toggle mouse cursor
 |   Ctrl-N            New Song
+:   Ctrl-P            Calculate approximate song length
 !   Ctrl-Q            Quit to DOS
 :   Ctrl-Q            Quit Schism Tracker
 |   Ctrl-S            Save current song
