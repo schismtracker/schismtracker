@@ -60,11 +60,14 @@ sysfiles = \
 	sys/win32/schism.nsis		\
 	sys/sdl/README
 
+genhelp = scripts/genhelp.py
+
 EXTRA_DIST = \
 	COPYING.frag-opt		\
 	COPYING.libmodplug		\
 	include/auto/README		\
 	$(helptexts)			\
+	$(genhelp)			\
 	$(fonts)			\
 	$(icons)			\
 	$(sysfiles)
@@ -144,11 +147,9 @@ noinst_HEADERS = \
 	modplug/xm_defs.h
 
 
-genhelp = scripts/genhelp.py
-
 noinst_SCRIPTS = $(genhelp)
 nodist_schismtracker_SOURCES = auto/helptext.c
-CLEANFILES = helptext.c
+CLEANFILES = auto/helptext.c
 
 auto/helptext.c: Makefile.am $(genhelp) $(helptexts)
 	$(PYTHON) @srcdir@/$(genhelp) @srcdir@ $(helptexts) >$@
