@@ -555,11 +555,6 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                 if (b & 1) ins->dwFlags |= ENV_PANNING;
                 if (b & 2) ins->dwFlags |= ENV_PANSUSTAIN;
                 if (b & 4) ins->dwFlags |= ENV_PANLOOP;
-                if ((ins->dwFlags & (ENV_VOLUME | ENV_VOLLOOP)) == ENV_VOLUME) {
-                        // fix note-fade
-                        ins->dwFlags |= ENV_VOLLOOP;
-                        ins->VolEnv.nLoopStart = ins->VolEnv.nLoopEnd = ins->VolEnv.nNodes - 1;
-                }
 
                 vtype = autovib_import[slurp_getc(fp) & 0x7];
                 vsweep = slurp_getc(fp);
@@ -569,8 +564,15 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                 slurp_read(fp, &w, 2);
                 ins->nFadeOut = bswapLE16(w);
 
-                // fix note-off
-                if (!(ins->dwFlags & ENV_VOLUME) && ins->nFadeOut) {
+                if (ins->dwFlags & ENV_VOLUME) {
+                        // fix note-fade
+                        if (!(ins->dwFlags & ENV_VOLLOOP))
+                                ins->VolEnv.nLoopStart = ins->VolEnv.nLoopEnd = ins->VolEnv.nNodes - 1;
+                        if (!(ins->dwFlags & ENV_VOLSUSTAIN))
+                                ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd = ins->VolEnv.nNodes - 1;
+                        ins->dwFlags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
+                } else {
+                        // fix note-off
                         ins->VolEnv.Ticks[0] = 0;
                         ins->VolEnv.Ticks[1] = 1;
                         ins->VolEnv.Values[0] = 64;
@@ -598,7 +600,8 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                 w = bswapLE16(w);
                 ins->nMidiProgram = MIN(w, 127);
                 slurp_read(fp, &w, 2); // bender range (halftones) = 0-36
-                slurp_getc(fp); // mute computer = 0/1
+                if (slurp_getc(fp) == 1)
+                        ins->nGlobalVol = 0; // mute computer = 0/1
 
                 slurp_seek(fp, ihdr - 248, SEEK_CUR);
 

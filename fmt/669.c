@@ -122,13 +122,10 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         song->m_lpszSongComments[111] = '\0';
 
         nsmp = slurp_getc(fp);
-        if (nsmp > 64)
-                return LOAD_UNSUPPORTED;
         npat = slurp_getc(fp);
-        if (npat > 128)
-                return LOAD_UNSUPPORTED;
         restartpos = slurp_getc(fp);
-        if (restartpos > 127)
+
+        if (nsmp > 64 || npat > 128 || restartpos > 127)
                 return LOAD_UNSUPPORTED;
 
         strcpy(song->tracker_id, tid);

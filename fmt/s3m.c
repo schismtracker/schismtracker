@@ -102,9 +102,8 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         nsmp = bswapLE16(nsmp);
         npat = bswapLE16(npat);
 
-        nord = MIN(nord, MAX_ORDERS);
-        nsmp = MIN(nsmp, MAX_SAMPLES);
-        npat = MIN(npat, MAX_PATTERNS);
+        if (nord > MAX_ORDERS || nsmp > MAX_SAMPLES || npat > MAX_PATTERNS)
+                return LOAD_FORMAT_ERROR;
 
         song->m_dwSongFlags = SONG_ITOLDEFFECTS;
         slurp_read(fp, &flags, 2);  /* flags (don't really care) */
