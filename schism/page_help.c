@@ -33,24 +33,54 @@
 
 /* --------------------------------------------------------------------- */
 
+/* Line type characters (the marker at the start of each line) */
+enum {
+        LTYPE_NORMAL = '|',
+        LTYPE_SCHISM = ':',
+        LTYPE_SCHISM_BIOS = ';',
+        LTYPE_CLASSIC = '!',
+        LTYPE_SEPARATOR = '%',
+        LTYPE_DISABLED = '#',
+        LTYPE_GRAPHIC = '=',
+};
+
+/* Types that should be hidden from view in classic/non-classic mode */
+#define LINE_SCHISM_HIDDEN(p) (0[p] == LTYPE_CLASSIC)
+#define LINE_CLASSIC_HIDDEN(p)  (0[p] == LTYPE_SCHISM || 0[p] == LTYPE_SCHISM_BIOS)
+
+
 static struct widget widgets_help[2];
 
-/* newline_pointers[0] = top of text
- * newline_pointers[1] = second line
- * etc.
- *
- * Each line is terminated by chr 13, chr 10, or chr 0... yeah, maybe I
- * could've done this a smarter way and have every line end with chr 0
- * or something, but it'd be harder to deal with in other places, like
- * editing the text (especially considering the dopey crlf newlines
- * imposed by that ugly OS on the other side of the tracks) */
-static const char **newline_pointers = NULL;
+/*
+Pointers to the start of each line for each help text,
+for both classic and "normal" mode.
+
+For example,
+        help_linecache[HELP_PATTERN_EDITOR][0][3][5]
+is the fifth character of the third line of the non-classic-mode help for the
+pattern editor.
+
+Each line is terminated by some combination of \r and \n, or \0.
+*/
+static const char **help_linecache[HELP_NUM_ITEMS][2] = {{NULL}};
+
+/* Shortcut for sanity -- this will point to the currently applicable help. */
+#define CURRENT_HELP_LINECACHE (help_linecache[status.current_help_index][!!(status.flags & CLASSIC_MODE)])
+
+/* should always point to the currently applicable help text -- cached
+to prevent repetitively checking things that aren't going to change */
+static const char **lines = NULL;
 
 static int num_lines = 0;
 static int top_line = 0;
 
-static const char *blank_line = "|";
-static const char *separator_line = "%";
+static const char blank_line[] = {LTYPE_NORMAL, '\0'};
+static const char separator_line[] = {LTYPE_SEPARATOR, '\0'};
+
+static int help_text_lastpos[HELP_NUM_ITEMS] = {0};
+
+/* This isn't defined in an .h file since it's only used here. */
+extern const char *help_text[];
 
 /* --------------------------------------------------------------------- */
 
@@ -66,37 +96,34 @@ static void help_redraw(void)
         int n, pos, x;
         int lp;
         const char **ptr;
+        const char graphic_chars[] = {0, 0x89, 0x8f, 0x96, 0x84, 0, 0x91, 0x8b, 0x86, 0x8a};
+        char ch;
 
         draw_fill_chars(2, 13, 77, 44, 0);
 
-        ptr = newline_pointers + top_line;
+        ptr = lines + top_line;
         for (pos = 13, n = top_line; pos < 45; pos++, n++) {
                 switch (**ptr) {
-                case ':':       /* schism-only (drawn the same) */
-                case ';':
-                case '|':       /* normal line */
-                case '!':       /* classic mode only */
+                default:
                         lp = strcspn(*ptr+1, "\015\012");
-                        if (lp > 76) lp = 76;
-                        if (**ptr == ';') {
+                        if (**ptr == LTYPE_SCHISM_BIOS) {
                                 draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
                         } else {
-                                draw_text_len(*ptr + 1, lp, 2, pos, 6, 0);
+                                draw_text_len(*ptr + 1, lp, 2, pos, **ptr == LTYPE_DISABLED ? 7 : 6, 0);
                         }
                         break;
-                case '#':      /* hidden line */
-                        lp = strcspn(*ptr+1, "\015\012");
-                        if (lp > 76) lp = 76;
-                        draw_text_len(*ptr + 1,
-                                        lp, 2,
-                                        pos, 7, 0);
+                case LTYPE_GRAPHIC:
+                        lp = strcspn(*ptr + 1, "\015\012");
+                        for (x = 1; x <= lp; x++) {
+                                ch = ptr[0][x];
+                                if (ch >= '1' && ch <= '9')
+                                        ch = graphic_chars[ch - '0'];
+                                draw_char(ch, x + 1, pos, 6, 0);
+                        }
                         break;
-                case '%':      /* separator line */
+                case LTYPE_SEPARATOR:
                         for (x = 2; x < 78; x++)
                                 draw_char(154, x, pos, 6, 0);
-                        break;
-                default:       /* ack! */
-                        fprintf(stderr, "unknown help line format %c\n", **ptr);
                         break;
                 }
                 ptr++;
@@ -104,10 +131,12 @@ static void help_redraw(void)
 }
 
 /* --------------------------------------------------------------------- */
+
 static void _help_close(void)
 {
         set_page(status.previous_page);
 }
+
 static int help_handle_key(struct key_event * k)
 {
         int new_line = top_line;
@@ -170,81 +199,76 @@ static int help_handle_key(struct key_event * k)
 }
 
 /* --------------------------------------------------------------------- */
-/* TODO | move all this crap to helptext.c
- * TODO | (so it gets done for all the pages, all at once) */
+
 static void help_set_page(void)
 {
-        char *ptr;
+        const char *ptr;
         int local_lines = 0, global_lines = 0, cur_line = 0;
         int have_local_help = (status.current_help_index != HELP_GLOBAL);
 
         change_focus_to(1);
         top_line = help_text_lastpos[status.current_help_index];
 
+        lines = CURRENT_HELP_LINECACHE;
+        if (lines)
+                return;
+
         /* how many lines? */
-        global_lines = get_num_lines(help_text_pointers[HELP_GLOBAL]);
+        global_lines = get_num_lines(help_text[HELP_GLOBAL]);
         if (have_local_help) {
-                local_lines = get_num_lines(help_text_pointers
-                                      [status.current_help_index]);
+                local_lines = get_num_lines(help_text[status.current_help_index]);
                 num_lines = local_lines + global_lines + 5;
         } else {
                 num_lines = global_lines + 2;
         }
 
         /* allocate the array */
-        if (newline_pointers)
-                free(newline_pointers);
-        newline_pointers = calloc(num_lines + 1, sizeof(char *));
+        lines = CURRENT_HELP_LINECACHE = calloc(num_lines + 1, sizeof(char *));
 
         /* page help text */
         if (have_local_help) {
-                ptr = help_text_pointers[status.current_help_index];
+                ptr = help_text[status.current_help_index];
                 while (local_lines--) {
                         if (status.flags & CLASSIC_MODE) {
-                                if (ptr[0] != ';' && ptr[0] != ':' && ptr[0] != '#')
-                                        newline_pointers[cur_line++] = ptr;
+                                if (!LINE_CLASSIC_HIDDEN(ptr))
+                                        lines[cur_line++] = ptr;
                         } else {
-                                if (ptr[0] != '!')
-                                        newline_pointers[cur_line++] = ptr;
+                                if (!LINE_SCHISM_HIDDEN(ptr))
+                                        lines[cur_line++] = ptr;
                         }
                         ptr = strpbrk(ptr, "\015\012");
-                        if (ptr[0] == 13 && ptr[1] == 10)
-                                ptr += 2;
-                        else
+                        if (*ptr == 13)
+                                ptr++;
+                        if (*ptr == 10)
                                 ptr++;
                 }
-                /* separator line */
-                newline_pointers[cur_line++] = blank_line;
-                newline_pointers[cur_line++] = separator_line;
-                newline_pointers[cur_line++] = blank_line;
-        } else {
-                /* some padding at the top */
-                newline_pointers[cur_line++] = blank_line;
+                lines[cur_line++] = blank_line;
+                lines[cur_line++] = separator_line;
         }
+        lines[cur_line++] = blank_line;
 
         /* global help text */
-        ptr = help_text_pointers[HELP_GLOBAL];
+        ptr = help_text[HELP_GLOBAL];
         while (global_lines--) {
                 if (status.flags & CLASSIC_MODE) {
-                        if (ptr[0] != ';' && ptr[0] != ':' && ptr[0] != '#')
-                                newline_pointers[cur_line++] = ptr;
+                        if (!LINE_CLASSIC_HIDDEN(ptr))
+                                lines[cur_line++] = ptr;
                 } else {
-                        if (ptr[0] != '!')
-                                newline_pointers[cur_line++] = ptr;
+                        if (!LINE_SCHISM_HIDDEN(ptr))
+                                lines[cur_line++] = ptr;
                 }
                 ptr = strpbrk(ptr, "\015\012");
-                if (ptr[0] == 13 && ptr[1] == 10)
-                        ptr += 2;
-                else
+                if (*ptr == 13)
+                        ptr++;
+                if (*ptr == 10)
                         ptr++;
         }
 
-        newline_pointers[cur_line++] = blank_line;
-        if (have_local_help) {
-                newline_pointers[cur_line++] = separator_line;
-        }
+        lines[cur_line++] = blank_line;
+        if (have_local_help)
+                lines[cur_line++] = separator_line;
 
-        newline_pointers[cur_line] = NULL;
+        lines[cur_line] = NULL;
         num_lines = cur_line;
 }
 
@@ -263,3 +287,4 @@ void help_load_page(struct page *page)
         create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
                         _help_close, "Done", 3);
 }
+

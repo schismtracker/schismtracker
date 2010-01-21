@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign dist-bzip2 no-dist-gzip
 
+## NOTE: helptexts should be in the same order as the enum in page.h
 helptexts = \
-	helptext/index			\
 	helptext/global-keys		\
 	helptext/info-page		\
 	helptext/instrument-list	\
@@ -83,7 +83,7 @@ EXTRA_DIST = \
 ##   - lutgen/*
 ##   - schism/isysev.c
 ##   - schism/tree.c
-##   - scripts/*
+##   - scripts/* (except genhelp.py)
 ##   - sys/wii/data/*
 
 
@@ -92,8 +92,6 @@ bin_PROGRAMS = schismtracker
 
 noinst_HEADERS = \
 	include/auto/default-font.h	\
-	include/auto/helpenum.h		\
-	include/auto/helptext.h		\
 	include/auto/logoit.h		\
 	include/auto/logoschism.h	\
 	include/auto/schismico.h	\
@@ -144,6 +142,17 @@ noinst_HEADERS = \
 	modplug/snd_fx.h		\
 	modplug/snd_gm.h		\
 	modplug/xm_defs.h
+
+
+genhelp = scripts/genhelp.py
+
+noinst_SCRIPTS = $(genhelp)
+nodist_schismtracker_SOURCES = auto/helptext.c
+CLEANFILES = helptext.c
+
+auto/helptext.c: Makefile.am $(genhelp) $(helptexts)
+	$(PYTHON) @srcdir@/$(genhelp) @srcdir@ $(helptexts) >$@
+
 
 if USE_X11
 files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c
@@ -289,7 +298,6 @@ schismtracker_SOURCES = \
 	schism/page_midi.c		\
 	schism/diskwriter_dialog.c	\
 	schism/draw-char.c		\
-	schism/helptext.c		\
 	schism/page_help.c		\
 	schism/slurp.c			\
 	schism/widget-keyhandler.c	\

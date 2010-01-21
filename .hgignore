@@ -11,6 +11,7 @@ syntax: glob
 
 *-build
 schismtracker
+auto
 
 TAGS
 ID
