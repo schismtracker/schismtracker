@@ -189,3 +189,16 @@ void log_appendf(int color, const char *format, ...)
 
         log_append(color, 1, ptr);
 }
+
+void log_underline(int chars)
+{
+        char buf[75];
+
+        chars = CLAMP(chars, 0, sizeof(buf) - 1);
+        buf[chars--] = '\0';
+        do
+                buf[chars] = 0x81;
+        while (chars--);
+        log_appendf(2, "%s", buf);
+}
+

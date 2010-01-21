@@ -32,6 +32,7 @@ void log_append(int color, int must_free, const char *text);
 void log_append2(int bios_font, int color, int must_free, const char *text);
 void log_appendf(int color, const char *format, ...)
         __attribute__ ((format(printf, 2, 3)));
+void log_underline(int chars);
 
 
 void status_text_flash(const char *format, ...)
