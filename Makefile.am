@@ -166,7 +166,7 @@ endif
 endif
 
 if USE_ALSA
-files_alsa = sys/alsa/mixer-alsa.c sys/alsa/midi-alsa.c
+files_alsa = sys/alsa/init.c sys/alsa/mixer-alsa.c sys/alsa/midi-alsa.c
 if USE_ALSA_DLTRICK
 cflags_alsa=-DUSE_ALSA -DUSE_DLTRICK_ALSA
 else
@@ -186,7 +186,7 @@ endif
 
 if USE_WIN32
 files_win32 = \
-	sys/win32/modkey.c		\
+	sys/win32/osdefs.c		\
 	sys/win32/slurp-win32.c		\
 	sys/win32/mixer-win32mm.c	\
 	sys/win32/midi-win32mm.c	\

@@ -35,21 +35,35 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 extern const char *osname;
 
 
-/* os_sdlevent: preprocessing for SDL events.
+/*
+os_sysinit: any platform-dependent setup that needs to occur directly upon startup.
+This code is processed right as soon as main() starts.
+
+os_sdlinit: any platform-dependent setup that needs to occur after SDL is up and running.
+Currently only used on the Wii in order to get the Wiimote working.
+
+os_sdlevent: preprocessing for SDL events.
 This is used to hack in system-dependent input methods (e.g. F16 and other scancodes on OS X; Wiimote buttons;
 etc.) If defined, this function will be called after capturing an SDL event.
-A return value of 0 indicates that the event should NOT be processed by the main event handler. */
+A return value of 0 indicates that the event should NOT be processed by the main event handler.
+*/
 #if defined(MACOSX)
 # define os_sdlevent macosx_sdlevent
 #elif defined(GEKKO)
+# define os_sysinit wii_sysinit
 # define os_sdlinit wii_sdlinit
 # define os_sdlevent wii_sdlevent
+#elif defined(WIN32)
+# define os_sysinit win32_sysinit
 #endif
 #ifndef os_sdlevent
 # define os_sdlevent(ev) 1
 #endif
 #ifndef os_sdlinit
 # define os_sdlinit()
+#endif
+#ifndef os_sysinit
+# define os_sysinit()
 #endif
 
 /* os_screensaver_deactivate: whatever is needed to keep the screensaver away.
@@ -75,14 +89,15 @@ Leave this *undefined* if no implementation exists. */
 int macosx_sdlevent(SDL_Event *event); // patch up osx scancodes for printscreen et al; numlock hack?
 int macosx_ibook_fnswitch(int setting);
 
+void wii_sysinit(void); // set up filesystem
 void wii_sdlinit(void); // set up wiimote
 int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
 
 void x11_screensaver_deactivate(void);
 unsigned int xv_yuvlayout(void);
 
+void win32_sysinit(void);
 void win32_get_modkey(int *m);
-void win32_setup_keymap(void);
 void win32_filecreated_callback(const char *filename);
 
 // migrated from xkb.c
@@ -123,6 +138,15 @@ void macosx_mixer_write_volume(int, int);
 int win32mm_mixer_get_max_volume(void);
 void win32mm_mixer_read_volume(int *, int *);
 void win32mm_mixer_write_volume(int, int);
+
+
+// Nasty alsa crap
+#if defined(USE_DLTRICK_ALSA) || defined(USE_ALSA)
+void alsa_init(const char **p_driver);
+#else
+# define alsa_init(p)
+#endif
+
 
 #endif /* ! OSDEFS_H */
 

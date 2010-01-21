@@ -64,28 +64,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#ifdef WIN32
-#include <windows.h>
-#include <ws2tcpip.h>
-#else
-#include <signal.h>
-#endif
-
-#ifdef GEKKO
-# include <di/di.h>
-# include <fat.h>
-# include <ogc/system.h>
-# include <sys/dir.h>
-# include "isfs.h"
-# define CACHE_PAGES 8
-#endif
-
-#if defined(USE_DLTRICK_ALSA)
-#include <dlfcn.h>
-void *_dltrick_handle = NULL;
-static void *_alsaless_sdl_hack = NULL;
-#elif defined(USE_ALSA)
-#include <alsa/pcm.h>
+#ifndef WIN32
+# include <signal.h>
 #endif
 
 
@@ -343,7 +323,6 @@ static void parse_options(int argc, char **argv)
                 {O_HELP, 'h', "help", 0, NULL, "print this stuff"},
                 {FRAG_END_ARRAY}
         };
-        int n;
 
         frag = frag_init(opts, argc, argv, FRAG_ENABLE_NO_SPACE_SHORT | FRAG_ENABLE_SPACED_LONG);
         if (!frag) {
@@ -1023,56 +1002,8 @@ extern void vis_init(void);
 
 int main(int argc, char **argv)
 {
-#ifdef GEKKO
-        DIR_ITER *dir;
-        char *ptr = NULL;
+        os_sysinit();
 
-        ISFS_SU();
-        if (ISFS_Initialize() == IPC_OK)
-                ISFS_Mount();
-        fatInit(CACHE_PAGES, 0);
-
-        // Attempt to locate a suitable home directory.
-        if (!argc || !argv) {
-                // loader didn't bother setting these
-                argc = 1;
-                argv = malloc(sizeof(char **));
-                *argv = str_dup("?");
-        } else if (strchr(argv[0], '/') != NULL) {
-                // presumably launched from hbc menu - put stuff in the boot dir
-                // (does get_parent_directory do what I want here?)
-                ptr = get_parent_directory(argv[0]);
-        }
-        if (!ptr) {
-                // Make a guess anyway
-                ptr = str_dup("sd:/apps/schismtracker");
-        }
-        if (chdir(ptr) != 0) {
-                free(ptr);
-                dir = diropen("sd:/");
-                if (dir) {
-                        // Ok at least the sd card works, there's some other dysfunction
-                        dirclose(dir);
-                        ptr = str_dup("sd:/");
-                } else {
-                        // Safe (but useless) default
-                        ptr = str_dup("isfs:/");
-                }
-                chdir(ptr); // Hope that worked, otherwise we're hosed
-        }
-        put_env_var("HOME", ptr);
-        free(ptr);
-#elif defined(WIN32)
-        static WSADATA ignored;
-
-        win32_setup_keymap();
-
-        memset(&ignored, 0, sizeof(ignored));
-        if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
-                WSACleanup(); /* ? */
-                status.flags |= NO_NETWORK;
-        }
-#endif
         /* this needs to be done very early, because the version is used in the help text etc.
         Also, this needs to happen before any locale stuff is initialized
         (but we don't do that at all yet, anyway) */
@@ -1090,64 +1021,8 @@ int main(int argc, char **argv)
         srand(time(NULL));
         parse_options(argc, argv); /* shouldn't this be like, first? */
 
-#if defined(USE_DLTRICK_ALSA)
-        /* okay, this is how this works:
-         * to operate the alsa mixer and alsa midi, we need functions in
-         * libasound.so.2 -- if we can do that, *AND* libSDL has the
-         * ALSA_bootstrap routine- then SDL was built with alsa-support-
-         * which means schism can probably use ALSA - so we set that as the
-         * default here.
-         */
-        _dltrick_handle = dlopen("libasound.so.2", RTLD_NOW);
-        if (!_dltrick_handle)
-                _dltrick_handle = dlopen("libasound.so", RTLD_NOW);
-        if (!getenv("SDL_AUDIODRIVER")) {
-                _alsaless_sdl_hack = dlopen("libSDL-1.2.so.0", RTLD_NOW);
-                if (!_alsaless_sdl_hack)
-                        _alsaless_sdl_hack = RTLD_DEFAULT;
+        alsa_init(&audio_driver);
 
-                if (_dltrick_handle && _alsaless_sdl_hack
-                && (dlsym(_alsaless_sdl_hack, "ALSA_bootstrap")
-                || dlsym(_alsaless_sdl_hack, "snd_pcm_open"))) {
-                        static int (*alsa_snd_pcm_open)(void **pcm,
-                                        const char *name,
-                                        int stream,
-                                        int mode);
-                        static int (*alsa_snd_pcm_close)(void *pcm);
-                        static void *ick;
-                        static int r;
-
-                        alsa_snd_pcm_open = dlsym(_dltrick_handle, "snd_pcm_open");
-                        alsa_snd_pcm_close = dlsym(_dltrick_handle, "snd_pcm_close");
-
-                        if (alsa_snd_pcm_open && alsa_snd_pcm_close) {
-                                if (!audio_driver) {
-                                        audio_driver = "alsa";
-                                } else if (strcmp(audio_driver, "default") == 0) {
-                                        audio_driver = "sdlauto";
-                                } else if (!getenv("AUDIODEV")) {
-                                        r = alsa_snd_pcm_open(&ick,
-                                                audio_driver, 0, 1);
-                                        if (r >= 0) {
-                                                put_env_var("AUDIODEV", audio_driver);
-                                                audio_driver = "alsa";
-                                                alsa_snd_pcm_close(ick);
-                                        }
-                                }
-                        }
-                }
-        }
-#elif defined(USE_ALSA)
-        if (audio_driver) {
-                static snd_pcm_t *h;
-                if (snd_pcm_open(&h, audio_driver, SND_PCM_STREAM_PLAYBACK,
-                                        SND_PCM_NONBLOCK) >= 0) {
-                        put_env_var("AUDIODEV", audio_driver);
-                        audio_driver = "alsa";
-                        snd_pcm_close(h);
-                }
-        }
-#endif
         if (audio_driver) {
                 char *p;
                 char *q = strchr(audio_driver,'=');
