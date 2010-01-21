@@ -52,11 +52,11 @@ sysfiles = \
 	sys/fd.org/autopackage.apspec	\
 	sys/fd.org/itf.desktop		\
 	sys/fd.org/schism.desktop	\
-	sys/macosx/Schism Tracker.app/Contents/Info.plist			\
-	sys/macosx/Schism Tracker.app/Contents/PkgInfo				\
-	sys/macosx/Schism Tracker.app/Contents/Resources/AppSettings.plist	\
-	sys/macosx/Schism Tracker.app/Contents/Resources/appIcon.icns		\
-	sys/macosx/Schism Tracker.app/Contents/Resources/moduleIcon.icns	\
+	sys/macosx/Schism_Tracker.app/Contents/Info.plist			\
+	sys/macosx/Schism_Tracker.app/Contents/PkgInfo				\
+	sys/macosx/Schism_Tracker.app/Contents/Resources/AppSettings.plist	\
+	sys/macosx/Schism_Tracker.app/Contents/Resources/appIcon.icns		\
+	sys/macosx/Schism_Tracker.app/Contents/Resources/moduleIcon.icns	\
 	sys/win32/schism.nsis		\
 	sys/sdl/README
 
