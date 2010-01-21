@@ -1236,9 +1236,8 @@ static int nosound_thread(UNUSED void *ign)
 
 static void song_print_info_top(const char *d)
 {
-        log_appendf(2, "Audio initialised");
-        log_appendf(2, "\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81"
-                    "\x81\x81\x81\x81\x81\x81");
+        log_append(2, 0, "Audio initialised");
+        log_underline(17);
         log_appendf(5, " Using driver '%s'", d);
 }
 

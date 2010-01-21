@@ -154,7 +154,7 @@ static void restore_font(void)
 static void display_print_info(void)
 {
         log_append(2, 0, "Video initialised");
-        log_append(2, 0, "\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81");
+        log_underline(17);
         video_report();
 }
 
@@ -1219,8 +1219,6 @@ int main(int argc, char **argv)
         log_nl();
         song_init_audio(audio_driver);
         song_init_modplug();
-        log_nl();
-        log_nl();
 
 #ifndef WIN32
         signal(SIGINT, exit);

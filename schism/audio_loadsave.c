@@ -352,11 +352,14 @@ int song_load_unchecked(const char *file)
                 song_stop();
         }
 
+        log_nl();
+        log_nl();
         log_appendf(2, "Loading %s", base);
+        log_underline(strlen(base) + 8);
 
         newsong = song_create_load(file);
         if (!newsong) {
-                log_appendf(4, "  %s", fmt_strerror(errno));
+                log_appendf(4, " %s", fmt_strerror(errno));
                 return 0;
         }
 
@@ -385,7 +388,7 @@ int song_load_unchecked(const char *file)
 
         // print out some stuff
         const char *tid = song_get_tracker_id();
-        char fmt[] = "  %d patterns, %d samples, %d instruments";
+        char fmt[] = " %d patterns, %d samples, %d instruments";
         int n, nsmp, nins;
         SONGSAMPLE *smp;
         SONGINSTRUMENT **ins;
@@ -398,10 +401,10 @@ int song_load_unchecked(const char *file)
                         nins++;
 
         if (tid[0])
-                log_appendf(2, "  %s", tid);
+                log_appendf(5, " %s", tid);
         if (!nins)
                 *strrchr(fmt, ',') = 0; // cut off 'instruments'
-        log_appendf(2, fmt, song_get_num_patterns(), nsmp, nins);
+        log_appendf(5, fmt, song_get_num_patterns(), nsmp, nins);
 
 
         return 1;
