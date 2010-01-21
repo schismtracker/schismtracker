@@ -49,11 +49,6 @@ static struct vgamem_overlay logo_image = {
 };
 
 
-static void about_page_redraw(void)
-{
-        draw_fill_chars(0,0,79,49,0);
-}
-
 static int _fixup_ignore_globals(struct key_event *k)
 {
         if (k->mouse && k->y > 20) return 0;
@@ -80,25 +75,26 @@ static int _fixup_ignore_globals(struct key_event *k)
 
 static void _draw_full(void)
 {
+        draw_fill_chars(0,0,79,49,0);
 }
 
 void about_load_page(struct page *page)
 {
         page->title = "";
-        page->total_widgets = 1;
-        page->widgets = widgets_about;
+        page->total_widgets = 0;
+        page->widgets = NULL;
         page->pre_handle_key = _fixup_ignore_globals;
         page->help_index = HELP_COPYRIGHT;
         page->draw_full = _draw_full;
-        create_other(widgets_about + 0, 0, NULL, about_page_redraw);
+        page->set_page = show_about;
 }
 
 static void about_close(UNUSED void *data)
 {
-        dialog_destroy();
         if (status.current_page == PAGE_ABOUT) set_page(PAGE_LOAD_MODULE);
         status.flags |= NEED_UPDATE;
 }
+
 static void about_draw_const(void)
 {
         char buf[81];
