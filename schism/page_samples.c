@@ -105,17 +105,18 @@ static int _last_vis_sample(void)
 
 static void sample_list_reposition(void)
 {
-        if (dialog_f1_hack) {
-                sample_adlibconfig_dialog(NULL);
-                dialog_f1_hack = 0;
-
-        } else if (current_sample < top_sample) {
+        if (current_sample < top_sample) {
                 top_sample = current_sample;
                 if (top_sample < 1)
                         top_sample = 1;
         } else if (current_sample > top_sample + 34) {
                 top_sample = current_sample - 34;
         }
+        if (dialog_f1_hack
+            && status.current_page == PAGE_SAMPLE_LIST
+            && status.previous_page == PAGE_HELP)
+                sample_adlibconfig_dialog(NULL);
+        dialog_f1_hack = 0;
 }
 
 /* --------------------------------------------------------------------- */
