@@ -1,10 +1,10 @@
-|                             ‹†††††††††††††††††Š
-|                             „  AdLib samples  ‘
-|                             ‰–
+=                             7888888888888888889
+=                             4  AdLib Samples  6
+=                             1222222222222222223
 |
 | AdLib synthesis is a method of music creation originally provided by
 | Yamaha's YM3812 chip, that used to exist in most soundcards, especially
-| Sound Blaster compatibles, in the 1990s. In SchismTracker, AdLib support
+| Sound Blaster compatibles, in the 1990s. In Schism Tracker, AdLib support
 | is provided through emulation.
 |
 | AdLib allows for producing impressive music while using very little
@@ -18,7 +18,7 @@
 |
 |   Frequency, Octave, Note On/off
 |                These properties are automatically managed
-|                by SchismTracker when the music plays, and
+|                by Schism Tracker when the music plays, and
 |                are not part of the sample editor.
 |
 |   Synthesis mode (Additive synthesis)
@@ -47,11 +47,11 @@
 |                                                \_/   \_/
 |                 1 = half sinewave            _     _
 |                                             / \___/ \___
-|                 
-|                 2 = polarized sinewave       _  _  _  _ 
-|                                             / \/ \/ \/ \                     
-|                 
-|                 3 = half polarized sinewave  .  .  .  .   
+|
+|                 2 = polarized sinewave       _  _  _  _
+|                                             / \/ \/ \/ \
+|
+|                 3 = half polarized sinewave  .  .  .  .
 |                                             /|_/|_/|_/|_
 |         Volume(0-63)
 |                 The volume level of this operator. The volume levels
@@ -99,7 +99,7 @@
 |
 |   IMPORTANT NOTE: AdLib instruments can currently only be
 |   loaded from / saved to S3M files! They are not supported
-|   by any other format supported by SchismTracker, and thus,
+|   by any other format supported by Schism Tracker, and thus,
 |   if you save your AdLib module in e.g. IT format, the AdLib
 |   instruments will be lost.
 |

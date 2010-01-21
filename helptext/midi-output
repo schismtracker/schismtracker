@@ -1,6 +1,6 @@
-|                               ‹†††††††††††††††Š
-|                               „  MIDI Output  ‘
-|                               ‰–
+=                               78888888888888889
+=                               4  MIDI Output  6
+=                               12222222222222223
 |
 | MIDI output causes MIDI data to be sent to all enabled output ports on the
 | MIDI configuration page (Shift-F1) whenever the player sees an event.
@@ -10,64 +10,64 @@
 |
 | Each event is described below:
 |
-|     MIDI Start  Â Player begins
-|      MIDI Stop  Â Player stops playing
-|      MIDI Tick  Â Every row(?)
-|        Note On  Â Every note recorded
-|       Note Off  Â Every note off (including NNA note-off)
-|  Change Volume  Â Volume change (more like aftertouch)
-|    Bank Select  Â Bank change
-| Program Change  Â Program change
-|      SF0 - SFF  Â When a Z00-Z7F is seen in the same IT-channel
-|      Z80 - Z8F  Â When played
+|     MIDI Start  - Player begins
+|      MIDI Stop  - Player stops playing
+|      MIDI Tick  - Every row(?)
+|        Note On  - Every note recorded
+|       Note Off  - Every note off (including NNA note-off)
+|  Change Volume  - Volume change (more like aftertouch)
+|    Bank Select  - Bank change
+| Program Change  - Program change
+|      SF0 - SFF  - When a Z00-Z7F is seen in the same IT-channel
+|      Z80 - Z8F  - When played
 |
 | These events are written in UPPERCASE hexadecimal, with LOWERCASE variable
 | substitution. The variables are:
 |
-|              a  Â Coarse bank/change (only available on Bank Select)
-|              b  Â Fine bank/change (only available on Bank Select)
-|              c  Â Selected MIDI channel
-|              n  Â Selected MIDI note (Note On events only)
-|              p  Â Program setting (Program Change events only)
-|              v  Â Velocity (initial volume)
-|              u  Â Current volume
-|              x  Â Set Panning
-|              y  Â Calculated Panning (includes panning envelope)
-|              z  Â MIDI Macro (Z00-Z7F commands)
+|              a  - Coarse bank/change (only available on Bank Select)
+|              b  - Fine bank/change (only available on Bank Select)
+|              c  - Selected MIDI channel
+|              n  - Selected MIDI note (Note On events only)
+|              p  - Program setting (Program Change events only)
+|              v  - Velocity (initial volume)
+|              u  - Current volume
+|              x  - Set Panning
+|              y  - Calculated Panning (includes panning envelope)
+|              z  - MIDI Macro (Z00-Z7F commands)
 |
-| MIDI messages are normally three-bytes (except for System Exclusive
-| messages). A new "message" begins with a byte having it's high-bit set.
+| MIDI messages are normally three bytes (except for System Exclusive
+| messages). A new "message" begins with a byte having its high bit set.
 | This means that the first byte is going to be between 0x80 and 0xFF.
 |
 | System Exclusive (SysEx) messages begin with a 0xF0 and end with a 0xF7
-| byte. Schism/Impulse Tracker the following SysEx messages internally:
+| byte. Schism/Impulse Tracker use the following SysEx messages internally:
 |
-| F0 F0 00 qq F7  Â Set the current filter cutoff point to be qq
-| F0 F0 01 qq F7  Â Set the current filter resonance to be qq
+| F0 F0 00 x F7  - Set the current filter cutoff point to be "x"
+| F0 F0 01 x F7  - Set the current filter resonance to be "x"
 |
 | You'll generally need the programming guide for your MIDI synthesizers to
 | come up with useful values. You do not have to include the F7 as Schism
 | Tracker will automatically terminate SysEx messages.
 |
 | Other MIDI messages include:
-|         8c n v  Â Note-off for channel "c", note "n"
-|         9c n v  Â Note-on for channel "c", note "n", velocity "v"
-|         Ac n v  Â Aftertouch (adjust velocity)
-|         Bc q z  Â Set MIDI controller "q" on channel "c", to value "z"
-|         Cc p    Â Program change channel "c" to "p"
-|         Dc z    Â Set total key pressure to "z"
-|         Ec q q  Â Pitch Wheel; q q is a 14-bit value.
-|         F8      Â MIDI "Clock" operation
-|         FA      Â Start MIDI
-|         FB      Â Continue MIDI
-|         FC      Â Stop MIDI
-|         FF      Â Reset
+|         8c n v  - Note-off for channel "c", note "n"
+|         9c n v  - Note-on for channel "c", note "n", velocity "v"
+|         Ac n v  - Aftertouch (adjust velocity)
+|         Bc q z  - Set MIDI controller "q" on channel "c", to value "z"
+|         Cc p    - Program change channel "c" to "p"
+|         Dc z    - Set total key pressure to "z"
+|         Ec q q  - Pitch Wheel; q q is a 14-bit value.
+|         F8      - MIDI "Clock" operation
+|         FA      - Start MIDI
+|         FB      - Continue MIDI
+|         FC      - Stop MIDI
+|         FF      - Reset
 |
 | There are other MIDI messages, but they are unlikely to be useful with
 | Impulse or Schism Tracker.
 |
 | Nevertheless, your programming guide will be authoritative.
-| 
+|
 |
 | Controllers (Bc q z) are reasonably common. They generally come in two
 | flavors: a "coarse" or "high byte" setting, and "fine" or "low byte"
@@ -78,7 +78,7 @@
 | synthesizer.
 |
 | Coarse  Fine   Description
-| 
+|
 |  00      20    Bank Select
 |  01      21    Modulation Wheel (MOD Wheel)
 |  02      22    Breath Controller

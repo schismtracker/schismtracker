@@ -65,6 +65,27 @@ struct key_event {
 };
 
 /* --------------------------------------------------------------------- */
+/* help text */
+
+/* NOTE: this enum should be in the same order as helptexts in Makefile.am */
+enum {
+        HELP_GLOBAL, /* needs to be first! */
+        HELP_INFO_PAGE,
+        HELP_INSTRUMENT_LIST,
+        HELP_MESSAGE_EDITOR,
+        HELP_MIDI_OUTPUT,
+        HELP_ORDERLIST_PANNING,
+        HELP_ORDERLIST_VOLUME,
+        HELP_PATTERN_EDITOR,
+        HELP_ADLIB_SAMPLE,
+        HELP_SAMPLE_LIST,
+
+        HELP_NUM_ITEMS /* needs to be last! */
+};
+
+extern const char *help_text[HELP_NUM_ITEMS];
+
+/* --------------------------------------------------------------------- */
 /* there's a value in this enum for each kind of widget... */
 
 enum widget_type {

@@ -1,6 +1,6 @@
-|                    ‹†††††††††††††††††††††††††††††††††Š
-|                    „  Order List and Channel Volume  ‘
-|                    ‰–
+=                    78888888888888888888888888888888889
+=                    4  Order List and Channel Volume  6
+=                    12222222222222222222222222222222223
 |
 | Order Keys.
 |   N                 Insert next pattern
@@ -19,7 +19,7 @@
 :   Ctrl-B            Link (diskwriter) this pattern to the current sample
 :   Ctrl-O            Copy (diskwriter) this pattern to the current sample
 :
-:   C                 Continue to next entry in order list of current pattern
+:   C                 Continue to next position of current pattern
 :
 :   Alt-Enter         Save order list
 :   Alt-Backspace     Swap order list with saved order list

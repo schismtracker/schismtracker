@@ -216,8 +216,6 @@ enum {
         NOTE_TRANS_PLAY_ROW,
 };
 
-#include "auto/helpenum.h"
-
 /* --------------------------------------------------------------------- */
 
 #ifdef __cplusplus
@@ -244,9 +242,6 @@ extern uint8_t row_highlight_major, row_highlight_minor;
  * keyboard map... perhaps i should rename it. */
 extern const char *note_trans;  /* keyboard.c */
 
-
-extern char *help_text_pointers[HELP_NUM_ITEMS];
-extern int help_text_lastpos[HELP_NUM_ITEMS];
 
 extern int show_default_volumes;        /* pattern-view.c */
 
@@ -440,9 +435,6 @@ void set_current_order(int order);
 void prev_order_pattern(void);
 void next_order_pattern(void);
 void orderpan_recheck_muted_channels(void);
-
-/* this dies painfully if something goes wrong */
-void setup_help_text_pointers(void);
 
 void show_exit_prompt(void);
 void show_song_length(void);

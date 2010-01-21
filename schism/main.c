@@ -1098,8 +1098,6 @@ int main(int argc, char **argv)
         /* FIXME: make a config option for this, and stop abusing frickin' environment variables! */
         put_env_var("SCHISM_VIDEO_ASPECT", "full");
 
-        setup_help_text_pointers();
-
         vis_init();
         atexit(schism_shutdown);
 

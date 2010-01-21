@@ -45,6 +45,9 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_CC_C99
 
+dnl Necessary for building the internal help.
+AM_PATH_PYTHON([2.4])
+
 dnl We're using C
 AC_LANG([C])
 
