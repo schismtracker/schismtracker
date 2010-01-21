@@ -1207,7 +1207,7 @@ int song_save(const char *file, const char *qt)
 
 static fmt_load_sample_func load_sample_funcs[] = {
         fmt_its_load_sample,
-        fmt_scri_load_sample,
+        fmt_s3i_load_sample,
         fmt_wav_load_sample,
         fmt_aiff_load_sample,
         fmt_au_load_sample,
@@ -1219,7 +1219,6 @@ static fmt_load_instrument_func load_instrument_funcs[] = {
         fmt_iti_load_instrument,
         fmt_xi_load_instrument,
         fmt_pat_load_instrument,
-        fmt_scri_load_instrument,
         NULL,
 };
 

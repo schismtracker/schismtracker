@@ -273,7 +273,7 @@ schismtracker_SOURCES = \
 	fmt/mid.cc			\
 	fmt/its.c			\
 	fmt/psm.cc			\
-	fmt/scri.cc			\
+	fmt/s3i.c			\
 	fmt/iti.c			\
 	fmt/xi.c			\
 	fmt/pat.c			\
