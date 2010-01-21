@@ -104,15 +104,15 @@ READ_INFO(ogg);
 #endif
 
 /* sample types */
-READ_INFO(aiff); LOAD_SAMPLE(aiff);    SAVE_SAMPLE(aiff);
-READ_INFO(au);   LOAD_SAMPLE(au);      SAVE_SAMPLE(au);
-READ_INFO(iti);  LOAD_INSTRUMENT(iti);
-READ_INFO(its);  LOAD_SAMPLE(its);     SAVE_SAMPLE(its);
-READ_INFO(pat);  LOAD_INSTRUMENT(pat);
-                 LOAD_SAMPLE(raw);     SAVE_SAMPLE(raw);
-READ_INFO(scri); LOAD_SAMPLE(scri);                       LOAD_INSTRUMENT(scri);
-READ_INFO(wav);  LOAD_SAMPLE(wav);     SAVE_SAMPLE(wav);
-READ_INFO(xi);                                            LOAD_INSTRUMENT(xi);
+READ_INFO(aiff);LOAD_SAMPLE(aiff);      SAVE_SAMPLE(aiff);
+READ_INFO(au);  LOAD_SAMPLE(au);        SAVE_SAMPLE(au);
+READ_INFO(iti); LOAD_INSTRUMENT(iti);
+READ_INFO(its); LOAD_SAMPLE(its);       SAVE_SAMPLE(its);
+READ_INFO(pat); LOAD_INSTRUMENT(pat);
+                LOAD_SAMPLE(raw);       SAVE_SAMPLE(raw);
+READ_INFO(s3i); LOAD_SAMPLE(s3i);
+READ_INFO(wav); LOAD_SAMPLE(wav);       SAVE_SAMPLE(wav);
+READ_INFO(xi);  LOAD_INSTRUMENT(xi);
 
 #undef READ_INFO
 #undef LOAD_SONG
