@@ -442,9 +442,6 @@ static void parse_options(int argc, char **argv)
                 case O_VERSION:
                         puts(schism_banner(0));
                         puts(ver_short_copyright);
-                        putchar('\n');
-                        for (n = 0; ver_license[n] && ver_license[n][0]; n++)
-                                puts(ver_license[n]);
                         frag_free(frag);
                         exit(0);
                 case O_HELP:
@@ -1022,20 +1019,6 @@ static void schism_shutdown(void)
 #endif
 }
 
-static void dump_misc_about_text(void)
-{
-        int n;
-
-        log_append2(1, 3, 0, schism_banner(0));
-        log_nl();
-        for (n = 0; ver_copyright_credits[n]; n++)
-                log_append2(1, 6, 0, ver_copyright_credits[n]);
-        log_nl();
-        for (n = 0; ver_license[n]; n++)
-                log_append2(1, 6, 0, ver_license[n]);
-        log_nl();
-}
-
 extern void vis_init(void);
 
 int main(int argc, char **argv)
@@ -1197,7 +1180,10 @@ int main(int argc, char **argv)
         save_font();
         shutdown_process |= EXIT_CONSOLEFONT;
 
-        dump_misc_about_text();
+        /* Eh. */
+        log_append2(0, 3, 0, schism_banner(0));
+        log_nl();
+        log_nl();
 
         song_initialise();
         cfg_load();

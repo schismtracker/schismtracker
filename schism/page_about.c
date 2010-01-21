@@ -88,7 +88,7 @@ void about_load_page(struct page *page)
         page->total_widgets = 1;
         page->widgets = widgets_about;
         page->pre_handle_key = _fixup_ignore_globals;
-        page->help_index = HELP_GLOBAL;
+        page->help_index = HELP_COPYRIGHT;
         page->draw_full = _draw_full;
         create_other(widgets_about + 0, 0, NULL, about_page_redraw);
 }
@@ -141,8 +141,8 @@ static void about_draw_const(void)
                 /* build date? */
                 draw_text(ver_short_copyright, 15, 27, 1, 2);
                 draw_text(ver_short_based_on, 15, 28, 1, 2);
-                /* XXX if we allow key remapping, need to reflect the *real* log viewer key here */
-                draw_text("Press Ctrl-F11 for copyright and full credits", 15, 29, 1, 2);
+                /* XXX if we allow key remapping, need to reflect the *real* help key here */
+                draw_text("Press F1 for copyright and full credits", 15, 29, 1, 2);
         }
         vgamem_ovl_apply(&logo_image);
 }

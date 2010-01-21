@@ -15,11 +15,11 @@ if len(sys.argv) < 3:
 
 
 def die_at(filename, line, message):
-        sys.stderr.write("%s:%d: %s\n" % (filename, line, message))
+        sys.stderr.write("%s:%d: %s\n" % (filename, line + 1, message))
         sys.exit(1)
 
 # valid characters to start a line (see page_help.c)
-typechars = frozenset("|:;!%#=")
+typechars = frozenset("|+:;!%#=")
 
 srcdir = sys.argv[1]
 helptexts = sys.argv[2:]
@@ -35,7 +35,13 @@ for idx, textfile in enumerate(sys.argv[2:]):
         blank = True
         for lnum, line in enumerate(open(os.path.join(srcdir, textfile))):
                 blank = False
-                line = line.rstrip('\r\n')
+                try:
+                        line = (line.rstrip('\r\n').decode('utf8')
+                                .replace(u'\u00B6', u'\x14') # paragraph mark
+                                .replace(u'\u00A7', u'\x15') # section mark (why? I don't know)
+                                .encode('cp437'))
+                except UnicodeError:
+                        die_at(textfile, lnum, "malformed character")
                 if not line:
                         continue
                 elif line.endswith(' '):

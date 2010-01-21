@@ -3,6 +3,7 @@ AUTOMAKE_OPTIONS = foreign dist-bzip2 no-dist-gzip
 ## NOTE: helptexts should be in the same order as the enum in page.h
 helptexts = \
 	helptext/global-keys		\
+	helptext/copyright		\
 	helptext/info-page		\
 	helptext/instrument-list	\
 	helptext/message-editor		\

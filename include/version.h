@@ -30,8 +30,6 @@ extern "C" {
 /* various boilerplate defined in version.c */
 extern const char *ver_short_copyright;
 extern const char *ver_short_based_on;
-extern const char *ver_copyright_credits[];
-extern const char *ver_license[];
 extern short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
 
 extern const char *schism_banner(int classic)
