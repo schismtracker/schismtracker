@@ -747,7 +747,7 @@ void song_init_instruments(int qq)
 
 void song_insert_sample_slot(int n)
 {
-        if (mp->Samples[SCHISM_MAX_SAMPLES].pSample != NULL)
+        if (mp->Samples[SCHISM_MAX_SAMPLES - 1].pSample != NULL)
                 return;
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -776,6 +776,9 @@ void song_remove_sample_slot(int n)
         status.flags |= SONG_NEEDS_SAVE;
         memmove(mp->Samples + n, mp->Samples + n + 1, (MAX_SAMPLES - n - 1) * sizeof(SONGSAMPLE));
         memset(mp->Samples + MAX_SAMPLES - 1, 0, sizeof(SONGSAMPLE));
+        mp->Samples[MAX_SAMPLES - 1].nC5Speed = 8363;
+        mp->Samples[MAX_SAMPLES - 1].nVolume = 64 * 4;
+        mp->Samples[MAX_SAMPLES - 1].nGlobalVol = 64;
 
         if (song_is_instrument_mode())
                 _adjust_samples_in_instruments(n, -1);
