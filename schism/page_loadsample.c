@@ -658,9 +658,9 @@ static int file_list_handle_key(struct key_event * k)
                 if (k->x >= 6 && k->x <= 49 && k->y >= 13 && k->y <= 47) {
                         search_pos = -1;
                         if (k->mouse == MOUSE_SCROLL_UP) {
-                                new_file -= 2;
+                                new_file -= MOUSE_SCROLL_LINES;
                         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                                new_file += 2;
+                                new_file += MOUSE_SCROLL_LINES;
                         } else {
                                 new_file = top_file + (k->y - 13);
                         }

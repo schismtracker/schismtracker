@@ -120,9 +120,9 @@ static int midi_page_handle_key(struct key_event * k)
         int pos;
 
         if (k->mouse == MOUSE_SCROLL_UP) {
-                new_port--;
+                new_port -= MOUSE_SCROLL_LINES;
         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                new_port++;
+                new_port += MOUSE_SCROLL_LINES;
         } else if (k->mouse) {
                 if (k->x >= 3 && k->x <= 11 && k->y >= 15 && k->y <= 27) {
                         if (k->mouse == MOUSE_DBLCLICK) {

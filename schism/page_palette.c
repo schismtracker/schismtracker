@@ -121,7 +121,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
         int new_palette = selected_palette;
         const int focus_offsets[] = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12 };
 
-        if (k->mouse == 1) {
+        if (k->mouse == MOUSE_CLICK) {
                 if (!k->state) return 0;
                 if (k->x < 56 || k->y < 27 || k->y > 46 || k->x > 76) return 0;
                 new_palette = (k->y - 28);
@@ -136,8 +136,8 @@ static int palette_list_handle_key_on_list(struct key_event * k)
                 }
         } else {
                 if (k->state) return 0;
-                if (k->mouse == 2) new_palette--;
-                else if (k->mouse == 3) new_palette++;
+                if (k->mouse == MOUSE_SCROLL_UP) new_palette -= MOUSE_SCROLL_LINES;
+                else if (k->mouse == MOUSE_SCROLL_DOWN) new_palette += MOUSE_SCROLL_LINES;
         }
 
         switch (k->sym) {
