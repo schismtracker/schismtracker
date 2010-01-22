@@ -4161,15 +4161,6 @@ static int pattern_editor_handle_key(struct key_event * k)
                 if (k->state) return 0;
                 copy_note_to_mask();
                 return 1;
-        case SDLK_6:
-                if ((status.flags & CLASSIC_MODE) && (k->mod & KMOD_SHIFT)) {
-                        if (k->state) return 0;
-                        if (current_channel > 1) current_channel--;
-                        current_position = 0;
-                        song_toggle_channel_mute(current_channel-1);
-                        return 1;
-                }
-                return pattern_editor_handle_key_default(k);
         case SDLK_l:
                 if (k->mod & KMOD_SHIFT) {
                         if (status.flags & CLASSIC_MODE) return 0;
