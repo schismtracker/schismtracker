@@ -3079,24 +3079,14 @@ static int pattern_editor_insert(struct key_event *k)
                                 smp = sample_get_current();
                 }
 
-                /* TODO: rewrite this more logically */
+
                 if (k->sym == SDLK_SPACE) {
                         /* copy mask to note */
                         n = mask_note.note;
-                        if (k->state) {
-                                if (keyjazz_noteoff) {
-                                        /* coda mode */
-                                        song_keyup(smp, ins, n);
-                                }
-                                return 0;
-                        }
+
                         vol = ((edit_copy_mask & MASK_VOLUME) && cur_note->volume_effect == VOL_EFFECT_VOLUME)
                                 ? mask_note.volume
                                 : -1;
-                        if (k->is_repeat && !keyjazz_repeat)
-                                return 1;
-                        if (NOTE_IS_NOTE(n))
-                                song_keydown(smp, ins, n, vol, current_channel);
                 } else {
                         n = kbd_get_note(k);
                         if (n < 0)
@@ -3109,59 +3099,62 @@ static int pattern_editor_insert(struct key_event *k)
                         } else {
                                 vol = -1;
                         }
-
-                        if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing) {
-                                if (k->state && !(midi_flags & MIDI_RECORD_NOTEOFF))
-                                        return 1;
+                }
+#if 0
+                /* ? */
+                if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing) {
+                        if (k->state && !(midi_flags & MIDI_RECORD_NOTEOFF))
+                                return 1;
+                        song_keyup(smp, ins, n);
+                        if (k->state)
+                                n = NOTE_OFF;
+                        song_keydown(smp, ins, n, vol, current_channel);
+                }
+#endif
+                if (k->state) {
+                        if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
+                                /* coda mode */
                                 song_keyup(smp, ins, n);
-                                if (k->state)
-                                        n = NOTE_OFF;
-                                song_keydown(smp, ins, n, vol, current_channel);
-                        } else if (k->state) {
-                                if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
-                                        /* coda mode */
-                                        song_keyup(smp, ins, n);
-                                }
-
-                                return 0;
-                        } else {
-                                if (k->is_repeat && !keyjazz_repeat)
-                                        return 1;
-                                if (NOTE_IS_NOTE(n))
-                                        song_keydown(smp, ins, n, vol, current_channel);
                         }
+                        return 1;
                 }
+                if (k->is_repeat && !keyjazz_repeat)
+                        return 1;
 
-                if (status.flags & CAPS_PRESSED) {
-                        /* Don't insert anything */
-                        break;
-                }
 
-                if (!patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
+                int writenote = !(status.flags & CAPS_PRESSED);
+                if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
                         // there was a template error, don't advance the cursor and so on
-                        break;
+                        writenote = 0;
+                        n = NOTE_NONE;
                 }
+                /* Be quiet when pasting templates.
+                It'd be nice to "play" a template when pasting it (maybe only for ones that are one row high)
+                so as to hear the chords being inserted etc., but that's a little complicated to do.
+                FIXME: this ought to be handling effects too. Problem is, they don't exist until the row and
+                mask note are both modified (below) and this needs to happen before that for caps-lock play.
+                Blah. */
+                if (NOTE_IS_NOTE(n) && !(template_mode && writenote))
+                        song_keydown(smp, ins, n, vol, current_channel);
+                if (!writenote)
+                        break;
 
-                /* mask stuff: if it's note cut/off/fade/clear, clear the
-                 * masked fields; otherwise, copy from the mask note */
-                if (NOTE_IS_CONTROL(n) || (k->sym != SDLK_SPACE && n == NOTE_NONE)) {
-                } else {
-                        /* copy the current sample/instrument -- UNLESS the note is empty */
-                        if (!template_mode) {
-                                if (edit_copy_mask & MASK_INSTRUMENT) {
-                                        if (song_is_instrument_mode())
-                                                cur_note->instrument = instrument_get_current();
-                                        else
-                                                cur_note->instrument = sample_get_current();
-                                }
-                                if (edit_copy_mask & MASK_VOLUME) {
-                                        cur_note->volume_effect = mask_note.volume_effect;
-                                        cur_note->volume = mask_note.volume;
-                                }
-                                if (edit_copy_mask & MASK_EFFECT) {
-                                        cur_note->effect = mask_note.effect;
-                                        cur_note->parameter = mask_note.parameter;
-                                }
+                /* Never copy the instrument etc. from the mask when inserting control notes or when
+                erasing a note -- but DO write it when inserting a blank note with the space key. */
+                if (!(NOTE_IS_CONTROL(n) || (k->sym != SDLK_SPACE && n == NOTE_NONE)) && !template_mode) {
+                        if (edit_copy_mask & MASK_INSTRUMENT) {
+                                if (song_is_instrument_mode())
+                                        cur_note->instrument = instrument_get_current();
+                                else
+                                        cur_note->instrument = sample_get_current();
+                        }
+                        if (edit_copy_mask & MASK_VOLUME) {
+                                cur_note->volume_effect = mask_note.volume_effect;
+                                cur_note->volume = mask_note.volume;
+                        }
+                        if (edit_copy_mask & MASK_EFFECT) {
+                                cur_note->effect = mask_note.effect;
+                                cur_note->parameter = mask_note.parameter;
                         }
                 }
 
@@ -3170,13 +3163,8 @@ static int pattern_editor_insert(struct key_event *k)
                 pattern_selection_system_copyout();
 
                 n = cur_note->note;
-                if (NOTE_IS_NOTE(n)) {
-                        if (cur_note->volume_effect == VOL_EFFECT_VOLUME)
-                                vol = cur_note->volume;
-
-                        song_keyrecord(smp, ins, n, vol, current_channel,
-                                cur_note->effect, cur_note->parameter);
-                }
+                if (NOTE_IS_NOTE(n) && cur_note->volume_effect == VOL_EFFECT_VOLUME)
+                        vol = cur_note->volume;
                 if (k->mod & KMOD_SHIFT) {
                         // advance horizontally, stopping at channel 64
                         // (I have no idea how IT does this, it might wrap)
