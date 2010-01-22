@@ -45,18 +45,6 @@
 
 #include <errno.h>
 
-#if HAVE_SYS_KD_H
-# include <sys/kd.h>
-#endif
-#if HAVE_LINUX_FB_H
-# include <linux/fb.h>
-#endif
-#include <sys/types.h>
-#include <sys/stat.h>
-#if HAVE_SYS_IOCTL_H
-# include <sys/ioctl.h>
-#endif
-
 #include "sdlmain.h"
 
 #include <stdio.h>
@@ -81,7 +69,6 @@
 
 enum {
         EXIT_HOOK = 1,
-        EXIT_CONSOLEFONT = 2,
         EXIT_SAVECFG = 4,
         EXIT_SDLQUIT = 16,
 };
@@ -91,43 +78,6 @@ static const char *video_driver = NULL;
 static const char *audio_driver = NULL;
 static int did_fullscreen = 0;
 static int did_classic = 0;
-
-/* --------------------------------------------------------------------- */
-/* stuff SDL should already be doing but isn't */
-
-#if defined(GIO_FONT) && defined(PIO_FONT) && HAVE_SYS_KD_H
-static uint8_t console_font[512 * 32];
-static int font_saved = 0;
-static void save_font(void)
-{
-        int t = open("/dev/tty", O_RDONLY);
-        if (t < 0)
-                return;
-        if (ioctl(t, GIO_FONT, &console_font) >= 0)
-                font_saved = 1;
-        close(t);
-}
-static void restore_font(void)
-{
-        int t;
-
-        if (!font_saved)
-                return;
-        t = open("/dev/tty", O_RDONLY);
-        if (t < 0)
-                return;
-        if (ioctl(t, PIO_FONT, &console_font) < 0)
-                perror("set font");
-        close(t);
-}
-#else
-static void save_font(void)
-{
-}
-static void restore_font(void)
-{
-}
-#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -975,8 +925,6 @@ static void schism_shutdown(void)
         if (shutdown_process & EXIT_HOOK)
                 run_exit_hook();
 #endif
-        if (shutdown_process & EXIT_CONSOLEFONT)
-                restore_font();
         if (shutdown_process & EXIT_SAVECFG)
                 cfg_atexit_save();
 
@@ -1062,9 +1010,6 @@ int main(int argc, char **argv)
 #ifdef MACOSX
         ibook_helper = macosx_ibook_fnswitch(1);
 #endif
-
-        save_font();
-        shutdown_process |= EXIT_CONSOLEFONT;
 
         /* Eh. */
         log_append2(0, 3, 0, schism_banner(0));
