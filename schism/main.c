@@ -323,6 +323,8 @@ static void parse_options(int argc, char **argv)
                 {O_HELP, 'h', "help", 0, NULL, "print this stuff"},
                 {FRAG_END_ARRAY}
         };
+        char *cwd = get_current_directory();
+        char *tmp, *norm;
 
         frag = frag_init(opts, argc, argv, FRAG_ENABLE_NO_SPACE_SHORT | FRAG_ENABLE_SPACED_LONG);
         if (!frag) {
@@ -332,17 +334,18 @@ static void parse_options(int argc, char **argv)
 
         while (frag_parse(frag)) {
                 switch (frag->id) {
-                /* FIXME: make absolute paths here if at all possible */
                 case O_ARG:
-                        if (is_directory(frag->arg)) {
-                                initial_dir = dmoz_path_normal(frag->arg);
-                                if (!initial_dir)
-                                        perror(frag->arg);
-                        } else {
-                                initial_song = dmoz_path_normal(frag->arg);
-                                if (!initial_song)
-                                        perror(frag->arg);
+                        tmp = dmoz_path_concat(cwd, frag->arg);
+                        if (!tmp) {
+                                perror(frag->arg);
+                                break;
                         }
+                        norm = dmoz_path_normal(tmp);
+                        free(tmp);
+                        if (is_directory(frag->arg))
+                                initial_dir = norm;
+                        else
+                                initial_song = norm;
                         break;
                 case O_SDL_AUDIODRIVER:
                         audio_driver = str_dup(frag->arg);
@@ -433,6 +436,7 @@ static void parse_options(int argc, char **argv)
                         exit(2);
                 }
         }
+        free(cwd);
         frag_free(frag);
 }
 
