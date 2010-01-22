@@ -389,9 +389,9 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 }
         }
         if (gxx)
-                log_appendf(2, "Warning: Gxx effects may not be suitably imported");
+                log_appendf(4, " Warning: Gxx effects may not be suitably imported");
         if (lostfx)
-                log_appendf(2, "%d effect%s lost", lostfx, lostfx == 1 ? "" : "s");
+                log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 0, smp = song->Samples + 1; n < nsmp; n++, smp++) {

@@ -1442,14 +1442,14 @@ void csf_insert_restart_pos(CSoundFile *csf, uint32_t restart_order)
                         newpat++;
                 if (newpat >= MAX_PATTERNS)
                         return; // no more patterns? sux
-                log_appendf(2, "Copying pattern %d to %d for restart position", pat, newpat);
+                //log_appendf(2, "Copying pattern %d to %d for restart position", pat, newpat);
                 csf->Patterns[newpat] = csf_allocate_pattern(csf->PatternSize[pat], csf->m_nChannels);
                 csf->PatternSize[newpat] = csf->PatternAllocSize[newpat] = csf->PatternSize[pat];
                 memcpy(csf->Patterns[newpat], csf->Patterns[pat],
                         sizeof(MODCOMMAND) * csf->m_nChannels * csf->PatternSize[pat]);
                 csf->Orderlist[ord] = pat = newpat;
         } else {
-                log_appendf(2, "Modifying pattern %d to add restart position", pat);
+                //log_appendf(2, "Modifying pattern %d to add restart position", pat);
         }
 
 

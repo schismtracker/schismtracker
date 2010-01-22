@@ -263,7 +263,8 @@ static void import_imf_effect(MODCOMMAND *note)
         }
 }
 
-static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels, slurp_t *fp)
+/* return: number of lost effects */
+static int load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels, slurp_t *fp)
 {
         uint16_t length, nrows;
         uint8_t mask, channel;
@@ -363,8 +364,7 @@ static void load_imf_pattern(CSoundFile *song, int pat, uint32_t ignore_channels
                         import_imf_effect(note);
         }
 
-        if (lostfx)
-                log_appendf(2, "Pattern %d: %d effect%s skipped!", pat, lostfx, lostfx == 1 ? "" : "s");
+        return lostfx;
 }
 
 
@@ -409,6 +409,7 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         SONGSAMPLE *sample = song->Samples + 1;
         int firstsample = 1; // first sample for the current instrument
         uint32_t ignore_channels = 0; /* bit set for each channel that's completely disabled */
+        int lostfx = 0;
 
         slurp_read(fp, &hdr, sizeof(hdr));
         hdr.ordnum = bswapLE16(hdr.ordnum);
@@ -460,7 +461,10 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 song->Orderlist[n] = ((hdr.orderlist[n] == 0xff) ? ORDER_SKIP : hdr.orderlist[n]);
 
         for (n = 0; n < hdr.patnum; n++)
-                load_imf_pattern(song, n, ignore_channels, fp);
+                lostfx += load_imf_pattern(song, n, ignore_channels, fp);
+
+        if (lostfx)
+                log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
         for (n = 0; n < hdr.insnum; n++) {
                 // read the ins header

@@ -626,11 +626,12 @@ int fmt_it_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         warnzxx += load_it_pattern(song->Patterns[n], fp, rows, ignorezxx);
                         got = slurp_tell(fp) - para - 8;
                         if (bytes != got)
-                                log_appendf(2, "pattern %d: size mismatch (expected %d bytes, got %lu)",
+                                log_appendf(4, " Warning: Pattern %d: size mismatch"
+                                        " (expected %d bytes, got %lu)",
                                         n, bytes, (unsigned long) got);
                 }
                 if (warnzxx)
-                        log_appendf(2, "%d Zxx effect%s discarded (too old file version)",
+                        log_appendf(2, " Warning: %d Zxx effect%s discarded (too old file version)",
                                 warnzxx, warnzxx == 1 ? "" : "s");
         }
 

@@ -621,10 +621,8 @@ static MODCOMMAND **mdl_read_tracks(slurp_t *fp)
                 }
                 fp->length = reallen; // widen
         }
-        // the XM loader complains about this in each pattern, but it's just way too noisy here
-        // (since there's many more tracks than patterns, and dropping effects is also much more common)
         if (lostfx)
-                log_appendf(2, "%d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+                log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
         return tracks;
 }
@@ -970,13 +968,13 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         break;
 
                 default:
-                        //log_appendf(4, "unknown block of type '%c%c' (0x%04X) at %ld",
+                        //log_appendf(4, " Warning: Unknown block of type '%c%c' (0x%04X) at %ld",
                         //        tag[0], tag[1], MDL_BLOCK(tag[0], tag[1]), slurp_tell(fp));
                         break;
                 }
 
                 if (slurp_seek(fp, nextpos, SEEK_SET) != 0) {
-                        log_appendf(4, "MDL: failed to seek (file truncated?)");
+                        log_appendf(4, " Warning: Failed to seek (file truncated?)");
                         break;
                 }
         }
@@ -1002,10 +1000,12 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                         continue;
                                 uint32_t smpsize, flags;
                                 if (packtype[n] > 2) {
-                                        log_appendf(4, "sample %d: unknown packing type %d", n, packtype[n]);
+                                        log_appendf(4, " Warning: Sample %d: unknown packing type %d",
+                                                    n, packtype[n]);
                                         packtype[n] = 0; // ?
                                 } else if (packtype[n] == ((song->Samples[n].uFlags & CHN_16BIT) ? 1 : 2)) {
-                                        log_appendf(4, "sample %d: bit width / pack type mismatch", n);
+                                        log_appendf(4, " Warning: Sample %d: bit width / pack type mismatch",
+                                                    n);
                                 }
                                 flags = SF_LE | SF_M;
                                 flags |= packtype[n] ? SF_MDL : SF_PCMS;
