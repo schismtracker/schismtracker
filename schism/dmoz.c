@@ -281,7 +281,16 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
         - switch slashes to backslashes for MS systems ("c:/winnt" => "c:\\winnt")
         - condense multiple slashes into one ("/sheep//goat" => "/sheep/goat")
         - remove any trailing slashes
-FIXME: also try to resolve relative paths based on getcwd(), if possible
+
+FIXME! This is doing some very wrong things:
+
+        Test input              Expected        Result
+        ----------              --------        ------
+        yellow/blue/..          yellow          yellow/blue/..
+        blue/.                  blue            blue/.
+        red/blue/../../green    green           red/green
+        green/yellow/../../red  red             green/redlow
+        /../orange              /orange         orange
 */
 char *dmoz_path_normal(const char *path)
 {
@@ -325,14 +334,38 @@ SLASHES:                while (*path == '/') path++;
         return ret;
 }
 
+int dmoz_path_is_absolute(const char *path)
+{
+#if defined(WIN32)
+        if (isalpha(path[0]) && path[1] == ':')
+                return 1;
+#elif defined(__amigaos4__)
+        /* Entirely a guess -- could some fine Amiga user please tell me if this is right or not? */
+        char *colon = strchr(path, ':'), *slash = strchr(path, '/');
+        if (colon < slash || (colon && !slash && colon[1] == '\0'))
+                return 1;
+#elif defined(GEKKO)
+        if (strchr(path, ':') + 1 == strchr(path, '/'))
+                return 1;
+#endif
+        /* presumably, /foo (or \foo) is an absolute path on all platforms */
+        return (path[0] == DIR_SEPARATOR);
+}
+
+/* See dmoz_path_concat_len. This function is a convenience for when the lengths aren't already known. */
 char *dmoz_path_concat(const char *a, const char *b)
 {
         return dmoz_path_concat_len(a, b, strlen(a), strlen(b));
 }
 
+/* Concatenate two paths. Additionally, if 'b' is an absolute path, ignore 'a' and return a copy of 'b'. */
 char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen)
 {
-        char *ret = mem_alloc(alen + blen + 2);
+        char *ret;
+        if (dmoz_path_is_absolute(b))
+                return strdup(b);
+
+        ret = mem_alloc(alen + blen + 2);
 
         if (alen) {
                 char last = a[alen - 1];

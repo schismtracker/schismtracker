@@ -173,8 +173,13 @@ this will return NULL if the path could not be normalized (not well-formed?).
 the returned string must be free()'d. */
 char *dmoz_path_normal(const char *path);
 
+/* Return nonzero if the path is an absolute path (e.g. /bin, c:\progra~1, sd:/apps, etc.) */
+int dmoz_path_is_absolute(const char *path);
+
 /* Concatenate two paths, adding separators between them as necessary. The returned string must be free()'d.
-The second version can be used if the string lengths are already known to avoid redundant strlen() calls. */
+The second version can be used if the string lengths are already known to avoid redundant strlen() calls.
+Additionally, if 'b' is an absolute path (as determined by dmoz_path_is_absolute), ignore 'a' and return a
+copy of 'b'. */
 char *dmoz_path_concat(const char *a, const char *b);
 char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen);
 
