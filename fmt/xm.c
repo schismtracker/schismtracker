@@ -87,11 +87,9 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
         size_t end; // should be same data type as slurp_t's length
         MODCOMMAND *note;
         unsigned int lostpat = 0;
-        unsigned int lostfx;
+        unsigned int lostfx = 0;
 
         for (pat = 0; pat < hdr->patterns; pat++) {
-                lostfx = 0;
-
                 slurp_read(fp, &patlen, 4); // = 8/9
                 patlen = bswapLE32(patlen);
                 b = slurp_getc(fp); // = 0
@@ -340,15 +338,13 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                     (this is documented) */
                         }
                 }
-
-                if (lostfx) {
-                        log_appendf(2, "Pattern %d: %d effect%s skipped!",
-                                pat, lostfx, lostfx == 1 ? "" : "s");
-                }
         }
 
+        if (lostfx)
+                log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+
         if (lostpat)
-                log_appendf(4, "Warning: too many patterns in song (%d skipped)", lostpat);
+                log_appendf(4, " Warning: Too many patterns in song (%d skipped)", lostpat);
 }
 
 static void load_xm_samples(SONGSAMPLE *first, int total, slurp_t *fp)
@@ -442,7 +438,7 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
 
                 if (ni >= MAX_INSTRUMENTS) {
                         // TODO: try harder
-                        log_appendf(4, "Warning: too many instruments in file");
+                        log_appendf(4, " Warning: Too many instruments in file");
                         break;
                 }
                 song->Instruments[ni] = ins = csf_allocate_instrument();
@@ -611,7 +607,7 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
 
                         if (abssamp + ns >= MAX_SAMPLES) {
                                 // TODO: try harder (fill unused sample slots)
-                                log_appendf(4, "Warning: too many samples in file");
+                                log_appendf(4, " Warning: Too many samples in file");
                                 break;
                         }
                         smp = song->Samples + abssamp + ns;
