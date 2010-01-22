@@ -125,6 +125,8 @@ enum {
         META_IS_CTRL = (1 << 21),
         ALTGR_IS_ALT = (1 << 22),
 
+        /* holding shift (used on pattern editor for weird template thing) */
+        SHIFT_PRESSED = (1 << 23),
 
         /* Devi Ever's hack */
         CRAYOLA_MODE = (1 << 25),

@@ -604,9 +604,16 @@ static void event_loop(void)
                                 }
                                 modkey ^= KMOD_CAPS;
                                 break;
+                        case SDLK_LSHIFT: case SDLK_RSHIFT:
+                                if (event.type == SDL_KEYDOWN)
+                                        status.flags |= SHIFT_PRESSED;
+                                else
+                                        status.flags &= ~SHIFT_PRESSED;
+                                break;
                         default:
                                 break;
                         };
+
                         if (!kk.state) {
                                 modkey = (event.key.keysym.mod
                                         & ~(_ALTTRACKED_KMOD))

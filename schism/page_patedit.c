@@ -2594,13 +2594,16 @@ static void pattern_editor_redraw(void)
                                         bg = 0;
                         }
 
-                        // draw the cursor if on the current row, and:
-                        // - drawing the current channel, regardless of position
-                        // - template is enabled and the channel fits within the template size
-                        // (oh god it's lisp)
+                        /* draw the cursor if on the current row, and:
+                        drawing the current channel, regardless of position
+                        OR: when the template is enabled,
+                          and the channel fits within the template size,
+                          AND shift is not being held down.
+                        (oh god it's lisp) */
                         int cpos;
                         if ((row == current_row)
-                            && ((current_position > 0 || template_mode == TEMPLATE_OFF)
+                            && ((current_position > 0 || template_mode == TEMPLATE_OFF
+                                 || (status.flags & SHIFT_PRESSED))
                                 ? (chan == current_channel)
                                 : (chan >= current_channel
                                    && chan < (current_channel
@@ -2826,7 +2829,7 @@ static int note_is_empty(song_note *p)
 static int patedit_record_note(song_note *cur_note, int channel, UNUSED int row, int note, int force)
 {
         song_note *q;
-        int i, r = 1;
+        int i, r = 1, channels;
 
         status.flags |= SONG_NEEDS_SAVE;
         if (NOTE_IS_NOTE(note)) {
@@ -2863,21 +2866,30 @@ static int patedit_record_note(song_note *cur_note, int channel, UNUSED int row,
                         cur_note->note = note;
                 }
         } else {
-                if (template_mode == TEMPLATE_OFF) {
-                        /* no template mode */
-                        if (force || !cur_note->note) cur_note->note = note;
-                } else if (template_mode != TEMPLATE_NOTES_ONLY) {
-                        /* this is a really great idea, but not IT-like at all... */
-                        for (i = 0; i < clipboard.channels; i++) {
-                                if (i+channel > 64) break;
-                                if (template_mode == TEMPLATE_MIX_PATTERN_PRECEDENCE) {
-                                        if (!cur_note->note)
-                                                cur_note->note = note;
-                                } else {
-                                        cur_note->note = note;
-                                }
-                                cur_note++;
+                /* Note cut, etc. -- need to clear all masked fields. This will never cause a template error.
+                Also, for one-row templates, replicate control notes across the width of the template. */
+                channels = (template_mode && clipboard.data != NULL && clipboard.rows == 1)
+                        ? clipboard.channels
+                        : 1;
+
+                for (i = 0; i < channels && i + channel <= 64; i++) {
+                        /* I don't know what this whole 'force' thing is about, but okay */
+                        if (!force && cur_note->note)
+                                continue;
+
+                        cur_note->note = note;
+                        if (edit_copy_mask & MASK_INSTRUMENT) {
+                                cur_note->instrument = 0;
                         }
+                        if (edit_copy_mask & MASK_VOLUME) {
+                                cur_note->volume_effect = 0;
+                                cur_note->volume = 0;
+                        }
+                        if (edit_copy_mask & MASK_EFFECT) {
+                                cur_note->effect = 0;
+                                cur_note->parameter = 0;
+                        }
+                        cur_note++;
                 }
         }
         pattern_selection_system_copyout();
@@ -3120,6 +3132,11 @@ static int pattern_editor_insert(struct key_event *k)
                         }
                 }
 
+                if (status.flags & CAPS_PRESSED) {
+                        /* Don't insert anything */
+                        break;
+                }
+
                 if (!patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
                         // there was a template error, don't advance the cursor and so on
                         break;
@@ -3128,18 +3145,6 @@ static int pattern_editor_insert(struct key_event *k)
                 /* mask stuff: if it's note cut/off/fade/clear, clear the
                  * masked fields; otherwise, copy from the mask note */
                 if (NOTE_IS_CONTROL(n) || (k->sym != SDLK_SPACE && n == NOTE_NONE)) {
-                        /* note cut/off/fade = clear masked fields */
-                        if (edit_copy_mask & MASK_INSTRUMENT) {
-                                cur_note->instrument = 0;
-                        }
-                        if (edit_copy_mask & MASK_VOLUME) {
-                                cur_note->volume_effect = 0;
-                                cur_note->volume = 0;
-                        }
-                        if (edit_copy_mask & MASK_EFFECT) {
-                                cur_note->effect = 0;
-                                cur_note->parameter = 0;
-                        }
                 } else {
                         /* copy the current sample/instrument -- UNLESS the note is empty */
                         if (!template_mode) {
@@ -4160,6 +4165,8 @@ static int pattern_editor_handle_key(struct key_event * k)
         case SDLK_RETURN:
                 if (k->state) return 0;
                 copy_note_to_mask();
+                if (template_mode != TEMPLATE_NOTES_ONLY)
+                        template_mode = TEMPLATE_OFF;
                 return 1;
         case SDLK_l:
                 if (k->mod & KMOD_SHIFT) {
