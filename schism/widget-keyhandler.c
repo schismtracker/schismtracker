@@ -187,6 +187,41 @@ int widget_handle_key(struct key_event * k)
                 };
         }
 
+        if (k->mouse == MOUSE_CLICK) {
+                if (status.flags & DISKWRITER_ACTIVE) return 0;
+                switch (current_type) {
+                case WIDGET_TOGGLE:
+                        if (!NO_MODIFIER(k->mod))
+                                return 0;
+                        if (k->state) return 1;
+                        widget->d.toggle.state = !widget->d.toggle.state;
+                        if (widget->changed) widget->changed();
+                        status.flags |= NEED_UPDATE;
+                        return 1;
+                case WIDGET_MENUTOGGLE:
+                        if (!NO_MODIFIER(k->mod))
+                                return 0;
+                        if (k->state) return 1;
+                        widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
+                                % widget->d.menutoggle.num_choices;
+                        if (widget->changed) widget->changed();
+                        status.flags |= NEED_UPDATE;
+                        return 1;
+                default:
+                        break;
+                }
+        } else if (k->mouse == MOUSE_DBLCLICK) {
+                if (status.flags & DISKWRITER_ACTIVE) return 0;
+                if (current_type == WIDGET_PANBAR) {
+                        if (!NO_MODIFIER(k->mod))
+                                return 0;
+                        widget->d.panbar.muted = !widget->d.panbar.muted;
+                        changed = widget->changed;
+                        if (changed) changed();
+                        return 1;
+                }
+        }
+
         if (k->mouse == MOUSE_CLICK
             || (k->mouse == 0 && k->sym == SDLK_RETURN)) {
 #if 0
@@ -330,52 +365,10 @@ int widget_handle_key(struct key_event * k)
                         if (widget->changed) widget->changed();
                         status.flags |= NEED_UPDATE;
                         return 1;
-                case WIDGET_MENUTOGGLE:
-                        if (status.flags & DISKWRITER_ACTIVE) return 0;
-                        if (status.flags & CLASSIC_MODE) {
-                                widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
-                                                % widget->d.menutoggle.num_choices;
-                                if (widget->changed) widget->changed();
-                                status.flags |= NEED_UPDATE;
-                                return 1;
-                        }
-                        /* ... */
                 default:
                         break;
                 }
                 return 0;
-        }
-
-        if (k->mouse == MOUSE_DBLCLICK) {
-                if (status.flags & DISKWRITER_ACTIVE) return 0;
-                switch (current_type) {
-                case WIDGET_TOGGLE:
-                        if (!NO_MODIFIER(k->mod))
-                                return 0;
-                        widget->d.toggle.state = !widget->d.toggle.state;
-                        if (widget->changed) widget->changed();
-                        status.flags |= NEED_UPDATE;
-                        return 1;
-                case WIDGET_MENUTOGGLE:
-                        if (!NO_MODIFIER(k->mod))
-                                return 0;
-                        if (status.flags & CLASSIC_MODE) return 0;
-                        widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
-                                % widget->d.menutoggle.num_choices;
-                        if (widget->changed) widget->changed();
-                        status.flags |= NEED_UPDATE;
-                        return 1;
-                case WIDGET_PANBAR:
-                        if (!NO_MODIFIER(k->mod))
-                                return 0;
-                        widget->d.panbar.muted = !widget->d.panbar.muted;
-                        changed = widget->changed;
-                        change_focus_to(widget->next.down);
-                        if (changed) changed();
-                        return 1;
-                default:
-                        break;
-                }
         }
 
         /* a WIDGET_OTHER that *didn't* handle the key itself needs to get run through the switch

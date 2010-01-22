@@ -521,20 +521,13 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 
         if (!k->state && k->mouse && k->y >= 13 && k->y <= 47 && k->x >= 5 && k->x <= 30) {
                 if (k->mouse == MOUSE_CLICK) {
-                        //if (k->state || k->sy == k->y) {
                         new_ins = (k->y - 13) + top_instrument;
-                        //}
-                        if (new_ins == current_instrument) {
-                                instrument_cursor_pos = k->x - 5;
-                                status.flags |= NEED_UPDATE;
-                                if (instrument_cursor_pos >= 25) {
-                                        instrument_cursor_pos = 25;
-                                        get_page_widgets()->accept_text = 0;
-                                } else {
-                                        get_page_widgets()->accept_text = 1;
-                                }
-                        }
+                        if (instrument_cursor_pos < 25)
+                                instrument_cursor_pos = MIN(k->x - 5, 24);
+                        status.flags |= NEED_UPDATE;
                 } else if (k->mouse == MOUSE_DBLCLICK) {
+                        /* this doesn't seem to work, but I think it'd be
+                        more useful if double click switched to edit mode */
                         if (instrument_cursor_pos < 25) {
                                 instrument_cursor_pos = 25;
                                 get_page_widgets()->accept_text = 0;
@@ -545,12 +538,12 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         return 1;
 
                 } else if (k->mouse == MOUSE_SCROLL_UP) {
-                        top_instrument--;
+                        top_instrument -= MOUSE_SCROLL_LINES;
                         if (top_instrument < 1) top_instrument = 1;
                         status.flags |= NEED_UPDATE;
                         return 1;
                 } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                        top_instrument++;
+                        top_instrument += MOUSE_SCROLL_LINES;
                         if (top_instrument > (_last_vis_inst()-34)) top_instrument = _last_vis_inst()-34;
                         status.flags |= NEED_UPDATE;
                         return 1;
@@ -902,6 +895,10 @@ static int note_trans_handle_key(struct key_event * k)
         if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
                 if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
                 return 1;
+        } else if (k->mouse == MOUSE_SCROLL_UP || k->mouse == MOUSE_SCROLL_DOWN) {
+                /* FIXME should be changing note_trans_top_line */
+                if (k->state) return 1;
+                new_line += (k->mouse == MOUSE_SCROLL_UP) ? -3 : 3;
         } else if (k->mouse) {
                 if (k->x >= 32 && k->x <= 41 && k->y >= 16 && k->y <= 47) {
                         new_line = k->y - 16;
@@ -1587,7 +1584,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope *env, int *curre
         int x, y, i;
         int max_ticks = 50;
 
-        if (k->mouse != 1) return 0;
+        if (k->mouse != MOUSE_CLICK) return 0;
 
         if (k->state) {
                 /* mouse release */

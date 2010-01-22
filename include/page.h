@@ -40,6 +40,10 @@ extern "C" {
 #define MOUSE_SCROLL_UP         2
 #define MOUSE_SCROLL_DOWN       3
 #define MOUSE_DBLCLICK          4
+
+/* How much to scroll. */
+#define MOUSE_SCROLL_LINES       3
+
 struct key_event {
         SDLKey sym, orig_sym;
         SDLMod mod;

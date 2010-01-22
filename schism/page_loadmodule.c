@@ -751,7 +751,7 @@ static int file_list_handle_key(struct key_event * k)
         case MOUSE_SCROLL_DOWN:
                 if (!k->state)
                         return 0;
-                top_file += (k->mouse == MOUSE_SCROLL_UP) ? -3 : 3;
+                top_file += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
                 /* don't allow scrolling down past either end.
                    this can't be CLAMP'd because the first check might scroll
                    too far back if the list is small.
@@ -816,10 +816,11 @@ static int dir_list_handle_key(struct key_event * k)
                                         *selected_widget = 0;
                                 status.flags |= NEED_UPDATE;
                                 return 1;
+                        /* FIXME wheel should be adjusting top_dir instead (and then adjust it later) */
                         } else if (k->mouse == MOUSE_SCROLL_UP) {
-                                new_dir--;
+                                new_dir -= MOUSE_SCROLL_LINES;
                         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                                new_dir++;
+                                new_dir += MOUSE_SCROLL_LINES;
                         }
                 } else {
                         return 0;

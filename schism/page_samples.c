@@ -477,29 +477,28 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                 return 1;
         } else if (!k->state && k->mouse && k->x >= 5 && k->y >= 13 && k->y <= 47 && k->x <= 34) {
                 if (k->mouse == MOUSE_SCROLL_UP) {
-                        top_sample--;
+                        top_sample -= MOUSE_SCROLL_LINES;
                         if (top_sample < 1) top_sample = 1;
                         status.flags |= NEED_UPDATE;
                         return 1;
                 } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                        top_sample++;
+                        top_sample += MOUSE_SCROLL_LINES;
                         if (top_sample > (_last_vis_sample()-34))
                                 top_sample = (_last_vis_sample()-34);
                         status.flags |= NEED_UPDATE;
                         return 1;
                 } else {
-                        //if (k->state || k->sy == k->y) {
                         new_sample = (k->y - 13) + top_sample;
-                        //}
+                        new_cursor_pos = k->x - 5;
                         if (k->x <= 29) { /* and button1 */
                                 if (k->mouse == MOUSE_DBLCLICK) {
+                                        /* this doesn't appear to work */
                                         set_page(PAGE_LOAD_SAMPLE);
                                         status.flags |= NEED_UPDATE;
                                         return 1;
-                                } else if (new_sample == current_sample
-                                || sample_list_cursor_pos != 25) {
-                                        new_cursor_pos = k->x - 5;
+                                } else {
                                 }
+#if 0 /* buggy and annoying, could be implemented properly but I don't care enough */
                         } else if (k->state || k->x == k->sx) {
                                 if (k->mouse == MOUSE_DBLCLICK
                                 || (new_sample == current_sample
@@ -508,6 +507,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                                                 last_note, 64, KEYJAZZ_CHAN_CURRENT);
                                 }
                                 new_cursor_pos = 25;
+#endif
                         }
                 }
         } else {
@@ -639,7 +639,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
         if (new_sample != current_sample) {
                 sample_set(new_sample);
                 sample_list_reposition();
-        } else if (new_cursor_pos != sample_list_cursor_pos) {
+        }
+        if (new_cursor_pos != sample_list_cursor_pos) {
                 sample_list_cursor_pos = new_cursor_pos;
                 _fix_accept_text();
         }

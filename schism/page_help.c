@@ -146,10 +146,10 @@ static int help_handle_key(struct key_event * k)
 
         if (status.dialog_type != DIALOG_NONE) return 0;
 
-        if (k->mouse == 2) {
-                new_line--;
-        } else if (k->mouse == 3) {
-                new_line++;
+        if (k->mouse == MOUSE_SCROLL_UP) {
+                new_line -= MOUSE_SCROLL_LINES;
+        } else if (k->mouse == MOUSE_SCROLL_DOWN) {
+                new_line += MOUSE_SCROLL_LINES;
 
         } else if (k->mouse) {
                 return 0;

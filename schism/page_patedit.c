@@ -3867,7 +3867,7 @@ static int pattern_editor_handle_key(struct key_event * k)
                         if (k->state) return 0;
                         if (k->mouse == MOUSE_SCROLL_UP) {
                                 if (top_display_row > 0) {
-                                        top_display_row = MAX(top_display_row - 2, 0);
+                                        top_display_row = MAX(top_display_row - MOUSE_SCROLL_LINES, 0);
                                         if (current_row > top_display_row + 31)
                                                 current_row = top_display_row + 31;
                                         if (current_row < 0)
@@ -3876,7 +3876,7 @@ static int pattern_editor_handle_key(struct key_event * k)
                                 }
                         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
                                 if (top_display_row + 31 < total_rows) {
-                                        top_display_row = MIN(top_display_row + 2, total_rows);
+                                        top_display_row = MIN(top_display_row + MOUSE_SCROLL_LINES, total_rows);
                                         if (current_row < top_display_row)
                                                 current_row = top_display_row;
                                         return -1;

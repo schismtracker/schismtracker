@@ -432,10 +432,11 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 
         if (k->mouse) {
                 if (k->x >= 6 && k->x <= 8 && k->y >= 15 && k->y <= 46) {
+                        /* FIXME adjust top_order, not the cursor */
                         if (k->mouse == MOUSE_SCROLL_UP) {
-                                new_order--;
+                                new_order -= MOUSE_SCROLL_LINES;
                         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                                new_order++;
+                                new_order += MOUSE_SCROLL_LINES;
                         } else {
                                 if (!k->state) return 0;
 

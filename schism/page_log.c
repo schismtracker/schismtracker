@@ -94,10 +94,10 @@ static int log_handle_key(struct key_event * k)
         default:
                 if (!k->state) {
                         if (k->mouse == MOUSE_SCROLL_UP) {
-                                top_line--;
+                                top_line -= MOUSE_SCROLL_LINES;
                                 break;
                         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                                top_line++;
+                                top_line += MOUSE_SCROLL_LINES;
                                 break;
                         }
                 }

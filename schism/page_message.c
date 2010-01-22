@@ -470,9 +470,9 @@ static int message_handle_key_viewmode(struct key_event * k)
 {
         if (!k->state) {
                 if (k->mouse == MOUSE_SCROLL_UP) {
-                        top_line--;
+                        top_line -= MOUSE_SCROLL_LINES;
                 } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                        top_line++;
+                        top_line += MOUSE_SCROLL_LINES;
                 } else if (k->mouse == MOUSE_CLICK) {
                         message_set_editmode();
                         return message_handle_key_editmode(k);
@@ -561,10 +561,10 @@ static int message_handle_key_editmode(struct key_event * k)
 
         if (k->mouse == MOUSE_SCROLL_UP) {
                 if (k->state) return 0;
-                new_cursor_line--;
+                new_cursor_line -= MOUSE_SCROLL_LINES;
         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
                 if (k->state) return 0;
-                new_cursor_line++;
+                new_cursor_line += MOUSE_SCROLL_LINES;
         } else if (k->mouse == MOUSE_CLICK && k->mouse_button == 2) {
                 if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
                 return 1;
