@@ -419,9 +419,25 @@ void song_set_instrument_mode(int value);
 /* this is called way early */
 void song_initialise(void);
 
-/* these are called later at startup, and also when the relevant settings are changed */
-void song_init_audio(const char *driver);
+/* called later at startup, and also when the relevant settings are changed */
 void song_init_modplug(void);
+
+/* Called at startup.
+The 'driver_spec' parameter is formatted as driver[:device].
+        'driver' is the name of the SDL driver to use
+                example: "alsa", "dsound"
+                SDL_AUDIODRIVER is set to this value
+        'device' (optional) is the name of the device to use
+                example: "hw:2", "/dev/dsp"
+                SDL_PATH_DSP and AUDIODEV are set to this
+
+For the SDL driver, 'nosound' and 'none' are aliases for 'dummy', for
+compatibility with previous Schism Tracker versions, and 'oss' is an
+alias for 'dsp', because 'dsp' is a dumb name for an audio driver. */
+void audio_init(const char *driver_spec);
+
+/* Reconfigure the same device that was opened before. */
+void audio_reinit(void);
 
 /* eq */
 void song_init_eq(int do_reset);

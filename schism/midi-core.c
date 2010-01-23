@@ -622,7 +622,7 @@ struct qent {
 static struct qent *qq = NULL;
 static int midims, ms10s, qlen;
 
-void midi_queue_alloc(int my_audio_buffer_size, int channels, int samples_per_second)
+void midi_queue_alloc(int my_audio_buffer_samples, int channels, int samples_per_second)
 {
         if (qq) {
                 free(qq);
@@ -637,16 +637,16 @@ void midi_queue_alloc(int my_audio_buffer_size, int channels, int samples_per_se
         ms10s = midims / 80;
         midims /= 8;
 
-        if (ms10s > my_audio_buffer_size) {
+        if (ms10s > my_audio_buffer_samples) {
                 /* okay, there's not even 10msec of audio data; midi queueing will be impossible */
                 qlen = 0;
                 return;
         }
 
-        if ((my_audio_buffer_size % ms10s) != 0) {
-                my_audio_buffer_size += (ms10s - (my_audio_buffer_size % ms10s));
+        if ((my_audio_buffer_samples % ms10s) != 0) {
+                my_audio_buffer_samples += (ms10s - (my_audio_buffer_samples % ms10s));
         }
-        qlen = my_audio_buffer_size / ms10s;
+        qlen = my_audio_buffer_samples / ms10s;
         /* now qlen is the number of msec in digital output buffer */
 
         qq = malloc(qlen * sizeof(struct qent));

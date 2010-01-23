@@ -246,7 +246,8 @@ static void parse_options(int argc, char **argv)
         FRAG *frag;
         frag_option opts[] = {
                 {O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
-                {O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "SDL audio driver (or \"none\")"},
+                /* FIXME this example isn't very helpful for Win/Mac/etc. users */
+                {O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "Audio driver (e.g. alsa:hw:1)"},
                 {O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
 
                 {O_VIDEO_YUVLAYOUT, 0, "video-yuvlayout", FRAG_ARG, "LAYOUT", "Specify YUV layout" },
@@ -980,24 +981,9 @@ int main(int argc, char **argv)
         srand(time(NULL));
         parse_options(argc, argv); /* shouldn't this be like, first? */
 
-        alsa_init(&audio_driver);
-
-        if (audio_driver) {
-                char *p;
-                char *q = strchr(audio_driver,'=');
-
-                if (q) {
-                        p = strdup(q);
-                        if (!p) {
-                                perror("strdup");
-                                exit(255);
-                        }
-                        q = p + (q - audio_driver);
-                        *q = '\0';
-                        put_env_var("AUDIODEV", q+1);
-                        audio_driver = p;
-                }
-        }
+#ifdef USE_DLTRICK_ALSA
+        alsa_dlinit();
+#endif
 
         cfg_init_dir();
 
@@ -1048,7 +1034,7 @@ int main(int argc, char **argv)
         font_init();
         midi_engine_start();
         log_nl();
-        song_init_audio(audio_driver);
+        audio_init(audio_driver);
         song_init_modplug();
 
 #ifndef WIN32

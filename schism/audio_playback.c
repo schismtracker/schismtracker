@@ -71,10 +71,8 @@ static int midi_playing;
 unsigned int samples_played = 0;
 unsigned int max_channels_used = 0;
 
-static signed short audio_buffer_[16726];
-
-signed short *audio_buffer = audio_buffer_;
-unsigned int audio_buffer_size = 0;
+signed short *audio_buffer = NULL;
+unsigned int audio_buffer_samples = 0; /* multiply by audio_sample_size to get bytes */
 
 unsigned int audio_output_channels = 2;
 unsigned int audio_output_bits = 16;
@@ -87,6 +85,18 @@ struct audio_settings audio_settings;
 
 static void _schism_midi_out_note(int chan, const MODCOMMAND *m);
 static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int delay);
+
+/* Audio driver related stuff */
+
+/* The (short) name of the SDL driver in use, e.g. "alsa" */
+static char driver_name[256];
+
+/* This is the full driver spec for whatever device was successfully init'ed when audio was set up.
+When reinitializing the audio, this can be used to reacquire the same device. Hopefully. */
+static char active_audio_driver[256];
+
+/* Whatever was in the config file. This is used if no driver is given to audio_setup. */
+static char cfg_audio_driver[256];
 
 // ------------------------------------------------------------------------
 // playback
@@ -534,7 +544,7 @@ void song_stop_unlocked(int quitting)
 
         gnVULeft = 0;
         gnVURight = 0;
-        memset(audio_buffer, 0, audio_buffer_size * audio_sample_size);
+        memset(audio_buffer, 0, audio_buffer_samples * audio_sample_size);
 }
 
 
@@ -914,6 +924,8 @@ void cfg_load_audio(cfg_file_t *cfg)
         CFG_GET_A(channels, 2);
         CFG_GET_A(buffer_size, DEF_BUFFER_SIZE);
 
+        cfg_get_string(cfg, "Audio", "driver", cfg_audio_driver, 255, NULL);
+
         CFG_GET_M(channel_limit, DEF_CHANNEL_LIMIT);
         CFG_GET_M(interpolation_mode, SRCMODE_LINEAR);
         CFG_GET_M(oversampling, 1);
@@ -1152,7 +1164,7 @@ printf("channel = %d note=%d\n",chan,m_note);
 static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int pos)
 {
 #if 0
-        i = (8000*(audio_buffer_size - delay));
+        i = (8000*(audio_buffer_samples - delay));
         i /= (gdwMixingFreq);
 #endif
 #if 0
@@ -1168,71 +1180,23 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 
 // ------------------------------------------------------------------------------------------------------------
 
-static SDL_Thread *audio_thread = NULL;
-static int audio_thread_running = 1;
-static int audio_thread_paused = 1;
-static SDL_mutex *audio_thread_mutex = NULL;
-
 void song_lock_audio(void)
 {
-        if (audio_thread_mutex) {
-                SDL_mutexP(audio_thread_mutex);
-        } else {
-                SDL_LockAudio();
-        }
+        SDL_LockAudio();
 }
 void song_unlock_audio(void)
 {
-        if (audio_thread_mutex) {
-                SDL_mutexV(audio_thread_mutex);
-        } else {
-                SDL_UnlockAudio();
-        }
+        SDL_UnlockAudio();
 }
 void song_start_audio(void)
 {
-        if (audio_thread) {
-                song_lock_audio();
-                audio_thread_paused = 0;
-                song_unlock_audio();
-        } else {
-                SDL_PauseAudio(0);
-        }
+        SDL_PauseAudio(0);
 }
 void song_stop_audio(void)
 {
-        if (audio_thread) {
-                song_lock_audio();
-                audio_thread_paused = 1;
-                song_unlock_audio();
-        } else {
-                SDL_PauseAudio(1);
-        }
+        SDL_PauseAudio(1);
 }
 
-static int nosound_thread(UNUSED void *ign)
-{
-        static char nosound_buffer[8820];
-        /* nosound assumes 11025 samples per second(hz), and each sample being 2
-        8-bit bytes; see below if you really want to change it...
-
-        if we want to be alerted roughly 5 times per second, that means
-        that the above value needs to be 22050 / 5 == 4410
-        and our sleep time needs to be 1/5 of a second, or 200 msec
-
-        the above buffer, would (being stereo) be of course, double the
-        result, thusly 8820
-        */
-        while (audio_thread_running) {
-                song_lock_audio();
-                if (!audio_thread_paused) {
-                        audio_callback(NULL, (uint8_t *) nosound_buffer, 8820);
-                }
-                song_unlock_audio();
-                SDL_Delay(200);
-        }
-        return 0; /* shrug... */
-}
 
 static void song_print_info_top(const char *d)
 {
@@ -1241,163 +1205,217 @@ static void song_print_info_top(const char *d)
         log_appendf(5, " Using driver '%s'", d);
 }
 
-static const char *using_driver = NULL;
-static char driver_name[256];
+
+/* --------------------------------------------------------------------------------------------------------- */
+/* Nasty stuff here */
 
 const char *song_audio_driver(void)
 {
-        if (!using_driver) return (const char *)"nosound";
-        return (const char *)driver_name;
+        return driver_name;
 }
 
-void song_init_audio(const char *driver)
+/* NOTE: driver_spec must not be NULL here */
+static void _audio_set_envvars(const char *driver_spec)
 {
-        /* Hack around some SDL stupidity: if SDL_CloseAudio() is called *before* the first SDL_OpenAudio(),
-         * but no audio device is available, it crashes. WTFBBQ?!?! (At any rate, SDL_Init should fail, not
-         * SDL_OpenAudio, but wtf.) */
-        static int first_init = 1;
-        unsigned int need_samples;
+        char *driver = NULL, *device = NULL;
 
-        if (!first_init) {
-                song_stop();
-        }
+        unset_env_var("AUDIODEV");
+        unset_env_var("SDL_PATH_DSP");
 
-        if (!driver) {
-                if (!using_driver)
-                        driver = "sdlauto";
-                else
-                        driver = using_driver;
-        }
-
-RETRY:  using_driver = driver;
-
-        if (!strcasecmp(driver, "nil")
-        || !strcasecmp(driver, "null")
-        || !strcasecmp(driver, "nul")
-        || !strcmp(driver, "/dev/null")
-        || !strcasecmp(driver, "none")
-        || !strcasecmp(driver, "nosound")
-        || !strcasecmp(driver, "silence")
-        || !strcasecmp(driver, "silense")
-        || !strcasecmp(driver, "quiet")
-        || !strcasecmp(driver, "off")) {
-                strcpy(driver_name, "nosound");
-
-                /* don't change this without looking at nosound_thread() */
-                csf_set_wave_config(mp, 11025, 8, 2);
-                need_samples = 4410 * 2;
-                audio_output_channels = 2;
-                audio_output_bits = 8;
-                audio_sample_size = 2;
-
-                audio_buffer = audio_buffer_;
-
-                fprintf(stderr, "Starting up nosound device...\n");
-                if (first_init) {
-                        /* fake audio driver (wooo!) */
-                        audio_thread_running = 1;
-                        audio_thread_paused = 1;
-                        audio_thread_mutex = SDL_CreateMutex();
-                        if (!audio_thread_mutex) {
-                                fprintf(stderr, "Couldn't create nosound device: %s\n", SDL_GetError());
-                                exit(1);
-                        }
-                        audio_thread = SDL_CreateThread(nosound_thread, NULL);
-                        if (!audio_thread) {
-                                fprintf(stderr, "Couldn't create nosound device: %s\n", SDL_GetError());
-                                exit(1);
-                        }
+        if (!*driver_spec) {
+                unset_env_var("SDL_AUDIODRIVER");
+        } else if (str_break(driver_spec, ':', &driver, &device)) {
+                /* "nosound" and "none" are for the sake of older versions: --help suggested using
+                "none", but the name presented in the rest of the interface was "nosound".
+                "oss" is a synonym for "dsp" because everyone should know what "oss" is and "dsp"
+                is a lousy name for an audio driver */
+                put_env_var("SDL_AUDIODRIVER",
+                        (strcmp(driver, "oss") == 0) ? "dsp"
+                        : (strcmp(driver, "nosound") == 0) ? "dummy"
+                        : (strcmp(driver, "none") == 0) ? "dummy"
+                        : driver);
+                if (*device) {
+                        /* Documentation says that SDL_PATH_DSP overrides AUDIODEV if it's set,
+                        but the SDL alsa code only looks at AUDIODEV. Annoying. */
+                        put_env_var("AUDIODEV", device);
+                        put_env_var("SDL_PATH_DSP", device);
                 }
 
-                song_lock_audio();
-
-                song_print_info_top("nosound");
+                free(driver);
+                free(device);
         } else {
-                static SDL_AudioSpec desired, obtained;
-                int need_name = 1;
+                /* Assuming just the driver was given.
+                (Old behavior was trying to guess -- selecting 'dsp' driver for /dev/dsp, etc.
+                but this is rather flaky and problematic) */
+                put_env_var("SDL_AUDIODRIVER", driver_spec);
+        }
 
-                if (*driver == '/') {
-                        if (strncmp(driver, "/dev/", 5) == 0) {
-                                put_env_var("SDL_PATH_DSP", driver);
-                                put_env_var("AUDIODEV", driver);
-                        } else {
-                                put_env_var("SDL_AUDIODRIVER", "disk");
-                                put_env_var("SDL_DISKAUDIOFILE", driver);
-                        }
+        strncpy(active_audio_driver, driver_spec, sizeof(active_audio_driver));
+        active_audio_driver[sizeof(active_audio_driver) - 1] = '\0';
+}
 
-                        strncpy(driver_name, driver, sizeof(driver_name)-2);
-                        need_name = 0;
-                } else if (strcasecmp(driver, "sdlauto")) {
-                        /* unknown audio driver- use SDL */
-                        put_env_var("SDL_AUDIODRIVER", driver);
-                }
+/* NOTE: driver_spec must not be NULL here
+'verbose' => print stuff to the log about what device/driver was configured */
+static int _audio_open(const char *driver_spec, int verbose)
+{
+        _audio_set_envvars(driver_spec);
 
-                if (first_init && SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
-                        fprintf(stderr, "Couldn't initialise audio: %s\n", SDL_GetError());
-                        driver = "nil";
-                        goto RETRY;
+        if (SDL_WasInit(SDL_INIT_AUDIO))
+                SDL_QuitSubSystem(SDL_INIT_AUDIO);
+        if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+                return 0;
 
-                }
-                desired.freq = audio_settings.sample_rate;
-                desired.format = (audio_settings.bits == 8) ? AUDIO_U8 : AUDIO_S16SYS;
-                desired.channels = audio_settings.channels;
-                desired.samples = audio_settings.buffer_size;
-                desired.callback = audio_callback;
-                desired.userdata = NULL;
+        /* This is needed in order to coax alsa into actually respecting the buffer size, since it's evidently
+        ignored entirely for "fake" devices such as "default" -- which SDL happens to use if no device name
+        is set. (see SDL_alsa_audio.c: http://tinyurl.com/ybf398f)
+        If hw doesn't exist, so be it -- let this fail, we'll fall back to the dummy device, and the
+        user can pick a more reasonable device later. */
+        if (SDL_AudioDriverName(driver_name, sizeof(driver_name)) != NULL && !strcmp(driver_name, "alsa")) {
+                char *dev = getenv("AUDIODEV");
+                if (!dev || !*dev)
+                        put_env_var("AUDIODEV", "hw");
+        }
 
-                if (first_init) memset(&obtained, 0, sizeof(obtained));
-                if (first_init && SDL_OpenAudio(&desired, &obtained) < 0) {
-                        /* okay, FAKE it... */
-                        fprintf(stderr, "Couldn't initialise audio: %s\n", SDL_GetError());
-                        driver = "nil";
-                        goto RETRY;
-                }
+        /* ... THIS is needed because, if the buffer size isn't a power of two, the dsp driver will punt since
+        it's not nice enough to fix it for us. (contrast alsa, which is TOO nice and fixes it even when we
+        don't want it to) */
+        int size_pow2 = 2;
+        while (size_pow2 < audio_settings.buffer_size)
+                size_pow2 <<= 1;
+        /* Round to nearest, I suppose */
+        if (size_pow2 != audio_settings.buffer_size
+            && (size_pow2 - audio_settings.buffer_size) > (audio_settings.buffer_size - (size_pow2 >> 1))) {
+                size_pow2 >>= 1;
+        }
 
-                need_samples = obtained.samples;
+        SDL_AudioSpec desired = {
+                .freq = audio_settings.sample_rate,
+                .format = (audio_settings.bits == 8) ? AUDIO_U8 : AUDIO_S16SYS,
+                .channels = audio_settings.channels,
+                .samples = size_pow2,
+                .callback = audio_callback,
+                .userdata = NULL,
+        };
+        SDL_AudioSpec obtained;
 
-                song_lock_audio();
+        if (SDL_OpenAudio(&desired, &obtained) < 0)
+                return 0;
 
-                /* format&255 is SDL specific... need bits */
-                csf_set_wave_config(mp, obtained.freq,
-                        obtained.format & 255,
-                        obtained.channels);
-                audio_output_channels = obtained.channels;
-                audio_output_bits = obtained.format & 255;
-                audio_sample_size = audio_output_channels * (audio_output_bits/8);
+        /* I don't know why this would change between SDL_AudioInit and SDL_OpenAudio, but I'm paranoid */
+        SDL_AudioDriverName(driver_name, sizeof(driver_name));
 
-                if (need_name) SDL_AudioDriverName(driver_name, sizeof(driver_name));
+        song_lock_audio();
 
+        /* format&255 is SDL specific... need bits */
+        csf_set_wave_config(mp, obtained.freq,
+                obtained.format & 255,
+                obtained.channels);
+        audio_output_channels = obtained.channels;
+        audio_output_bits = obtained.format & 255;
+        audio_sample_size = audio_output_channels * (audio_output_bits/8);
+        audio_buffer_samples = obtained.samples;
+
+        if (verbose) {
                 song_print_info_top(driver_name);
-                log_appendf(5, " %d Hz, %d bit, %s", obtained.freq,
-                        (int)(obtained.format & 0xff),
+
+                log_appendf(5, " %d Hz, %d bit, %s", obtained.freq, (obtained.format & 0xff),
                         obtained.channels == 1 ? "mono" : "stereo");
-                log_appendf(5, " Buffer size: %d samples",
-                                (int)obtained.samples);
+                log_appendf(5, " Buffer size: %d samples", obtained.samples);
         }
 
-        audio_buffer_size = need_samples;
-        if (audio_sample_size * need_samples < sizeof(audio_buffer_)) {
-                if (audio_buffer && audio_buffer != audio_buffer_)
-                        free(audio_buffer);
-                audio_buffer = audio_buffer_;
-        } else {
-                if (audio_buffer && audio_buffer != audio_buffer_)
-                        free(audio_buffer);
-                audio_buffer = (short int*)mem_alloc(audio_buffer_size
-                                        * audio_sample_size);
+        return 1;
+}
+
+// Configure a device. (called at startup)
+static void _audio_init_head(const char *driver_spec, int verbose)
+{
+        const char *err = NULL, *err_default = NULL;
+        char ugh[256];
+
+        /* Use the device from the config if it exists. */
+        if (!driver_spec || !*driver_spec)
+                driver_spec = cfg_audio_driver;
+
+        if (*driver_spec) {
+                errno = 0;
+
+                if (_audio_open(driver_spec, verbose))
+                        return;
+                err = SDL_GetError();
+
+                /* Errors returned only as strings! Environment variables used for everything!
+                Turns out that SDL is actually a very elaborate shell script, so it all makes sense.
+
+                Anyway, this error isn't really accurate because there might be many more devices
+                and it's just as likely that the *driver* name is wrong (e.g. "asla").
+                errno MIGHT be useful, at least on 'nix, and it does tend to provide reasonable
+                messages for common cases such as the device being opened already; plus, we can
+                make a guess if SDL just gave up and didn't do anything because it didn't know the
+                driver name. However, since this is probably just as likely to be wrong as it is
+                right, make a note of it. */
+
+                if (strcmp(err, "No available audio device") == 0) {
+                        if (errno == 0) {
+                                err = "Device init failed (No SDL driver by that name?)";
+                        } else {
+                                snprintf(ugh, sizeof(ugh), "Device init failed (%s?)", strerror(errno));
+                                ugh[sizeof(ugh) - 1] = '\0';
+                                err = ugh;
+                        }
+                }
+
+                log_appendf(4, "%s: %s", driver_spec, err);
+                log_appendf(4, "Retrying with default device...");
+                log_nl();
         }
 
-        memset(audio_buffer,0,audio_buffer_size * audio_sample_size);
+        /* Try the default device? */
+        if (_audio_open("", verbose))
+                return;
 
-        // barf out some more info on modplug's settings?
+        err_default = SDL_GetError();
+        log_appendf(4, "%s", err_default);
+
+        if (!_audio_open("dummy", 0)) {
+                /* yarrr, abandon ship! */
+                if (*driver_spec)
+                        fprintf(stderr, "%s: %s\n", driver_spec, err);
+                fprintf(stderr, "%s\n", err_default);
+                fprintf(stderr, "Couldn't initialise audio!\n");
+                exit(1);
+        }
+}
+
+// Set up audio_buffer, reset the sample count, and kick off the mixer
+// (note: _audio_open will leave the device LOCKED)
+static void _audio_init_tail(void)
+{
+        free(audio_buffer);
+        audio_buffer = calloc(audio_buffer_samples, audio_sample_size);
+        if (!audio_buffer) {
+                perror("calloc");
+                exit(255);
+        }
 
         samples_played = (status.flags & CLASSIC_MODE) ? SMP_INIT : 0;
-
-        first_init = 0;
 
         song_unlock_audio();
         song_start_audio();
 }
+
+void audio_init(const char *driver_spec)
+{
+        _audio_init_head(driver_spec, 1);
+        _audio_init_tail();
+}
+
+void audio_reinit(void)
+{
+        _audio_init_head(active_audio_driver, 0);
+        _audio_init_tail();
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 void song_init_eq(int do_reset)
 {
@@ -1436,10 +1454,10 @@ void song_init_modplug(void)
         song_set_surround(audio_settings.surround_effect);
 
         // update midi queue configuration
-        midi_queue_alloc(audio_buffer_size, audio_sample_size, gdwMixingFreq);
+        midi_queue_alloc(audio_buffer_samples, audio_sample_size, gdwMixingFreq);
 
         // timelimit the playback_update() calls when midi isn't actively going on
-        audio_buffers_per_second = (gdwMixingFreq / (audio_buffer_size * 8 * audio_sample_size));
+        audio_buffers_per_second = (gdwMixingFreq / (audio_buffer_samples * 8 * audio_sample_size));
         if (audio_buffers_per_second > 1) audio_buffers_per_second--;
 
         song_unlock_audio();

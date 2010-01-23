@@ -324,7 +324,7 @@ void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int le
 
 /* these are in audio_playback.cc */
 extern signed short *audio_buffer;
-extern unsigned int audio_buffer_size;
+extern unsigned int audio_buffer_samples;
 extern unsigned int audio_output_channels;
 extern unsigned int audio_output_bits;
 
