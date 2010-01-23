@@ -282,75 +282,101 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
         - condense multiple slashes into one ("/sheep//goat" => "/sheep/goat")
         - remove any trailing slashes
 
-FIXME! This is doing some very wrong things:
-
-        Test input              Expected        Result
-        ----------              --------        ------
-        yellow/blue/..          yellow          yellow/blue/..
-        blue/.                  blue            blue/.
-        red/blue/../../green    green           red/green
-        green/yellow/../../red  red             green/redlow
-        /../orange              /orange         orange
-*/
+[Amiga note: is foo:/bar the same as foo:bar, is it like /bar, or something else?] */
 char *dmoz_path_normal(const char *path)
 {
-        char *ret, *p;
+        char stub_char;
+        char *result, *p, *q, *base, *dotdot;
+        int rooted;
 
-        ret = calloc(strlen(path) + 2, sizeof(char));
-        if (!ret) {
-                perror("calloc");
-                exit(255);
-        }
-        p = ret;
-        while (*path) {
-                if (*path == '/') {
-SLASHES:                while (*path == '/') path++;
-                        if (*path == '.' && path[1] == '.' && path[2] == '/') {
-                                while (p >= ret) {
-                                        if (*p == '/') break;
-                                        p--;
+        /* The result cannot be larger than the input PATH. */
+        result = strdup(path);
+
+        rooted = dmoz_path_is_absolute(path);
+        base = result + rooted;
+        stub_char = rooted ? DIR_SEPARATOR : '.';
+
+#ifdef WIN32
+        /* Stupid hack -- fix up any initial slashes in the absolute part of the path.
+        (The rest of them will be handled as the path components are processed.) */
+        for (q = result; q < base; q++)
+                if (*q == '/')
+                        *q = '//';
+#endif
+
+        /* invariants:
+                base points to the portion of the path we want to modify
+                p points at beginning of path element we're considering.
+                q points just past the last path element we wrote (no slash).
+                dotdot points just past the point where .. cannot backtrack
+                any further (no slash). */
+        p = q = dotdot = base;
+
+        while (*p) {
+                if (IS_DIR_SEPARATOR(p[0])) {
+                        /* null element */
+                        p++;
+                } else if (p[0] == '.' && (!p[1] || IS_DIR_SEPARATOR(p[1]))) {
+                        /* . and ./ */
+                        p += 1; /* don't count the separator in case it is nul */
+                } else if (p[0] == '.' && p[1] == '.' && (!p[2] || IS_DIR_SEPARATOR(p[2]))) {
+                        /* .. and ../ */
+                        p += 2; /* skip `..' */
+                        if (q > dotdot) {       /* can backtrack */
+                                while (--q > dotdot && !IS_DIR_SEPARATOR(*q)) {
+                                        /* nothing */
                                 }
-                                path = &path[2];
-                                goto SLASHES;
-                        } else if (*path == '.' && path[1] == '/') {
-                                path = &path[1];
-                                goto SLASHES;
+                        } else if (!rooted) {
+                                /* /.. is / but ./../ is .. */
+                                if (q != base)
+                                        *q++ = DIR_SEPARATOR;
+                                *q++ = '.';
+                                *q++ = '.';
+                                dotdot = q;
                         }
-                        *p++ = '/';
                 } else {
-                        *p++ = *path++;
+                        /* real path element */
+                        /* add separator if not at start of work portion of result */
+                        if (q != base)
+                                *q++ = DIR_SEPARATOR;
+                        while (*p && !IS_DIR_SEPARATOR(*p))
+                                *q++ = *p++;
                 }
         }
-        if (p == ret) {
-                *p = '/';
-                p[1] = '\0';
-        } else if (p[-1] == '/') {
-                p[-1] = '\0'; /* trailing slash */
-        }
-#if defined(WIN32)
-        for (p = ret; *p; p++)
-                if (*p == '/') *p = '\\';
-#endif
-        return ret;
+
+        /* Empty string is really ``.'' or `/', depending on what we started with. */
+        if (q == result)
+                *q++ = stub_char;
+        *q = '\0';
+
+        return result;
 }
 
 int dmoz_path_is_absolute(const char *path)
 {
+        if (!path || !*path)
+                return 0;
 #if defined(WIN32)
         if (isalpha(path[0]) && path[1] == ':')
-                return 1;
+                return IS_DIR_SEPARATOR(path[2]) ? 3 : 2;
 #elif defined(__amigaos4__)
         /* Entirely a guess -- could some fine Amiga user please tell me if this is right or not? */
         char *colon = strchr(path, ':'), *slash = strchr(path, '/');
-        if (colon < slash || (colon && !slash && colon[1] == '\0'))
-                return 1;
+        if (colon && (colon < slash || (colon && !slash && colon[1] == '\0')))
+                return colon - path + 1;
 #elif defined(GEKKO)
-        if (strchr(path, ':') + 1 == strchr(path, '/'))
-                return 1;
+        char *colon = strchr(path, ':'), *slash = strchr(path, '/');
+        if (colon + 1 == slash)
+                return slash - path + 1;
 #endif
         /* presumably, /foo (or \foo) is an absolute path on all platforms */
-        return (path[0] == DIR_SEPARATOR);
+        if (!IS_DIR_SEPARATOR(path[0]))
+                return 0;
+        /* POSIX says to allow two leading slashes, but not more.
+        (This also catches win32 \\share\blah\blah semantics) */
+        return (IS_DIR_SEPARATOR(path[1]) && !IS_DIR_SEPARATOR(path[2])) ? 2 : 1;
 }
+
 
 /* See dmoz_path_concat_len. This function is a convenience for when the lengths aren't already known. */
 char *dmoz_path_concat(const char *a, const char *b)

@@ -61,3 +61,4 @@ IMF note slide effect processing taken from Imago Orpheus by Lutz Röder
 Other portions of file loading and playing code has been liberally adapted
 from Mikmod by Raphael Assenat and Miodrag Vallat.
 
+Path manipulation code taken from bash.
