@@ -62,7 +62,6 @@ the banks are:
 
 #include "it.h"
 #include "dmoz.h" /* for dmoz_path_concat */
-#include "auto/default-font.h"
 
 #include "sdlmain.h"
 
@@ -83,6 +82,12 @@ do {                                            \
         }                                       \
 } while(0)
 
+/* This isn't defined in an .h file since it's only used here. (maybe I
+should make a header for declarations of all this auto-built stuff) */
+extern const unsigned char font_default_lower[];
+extern const unsigned char font_default_upper_alt[];
+extern const unsigned char font_default_upper_itf[];
+extern const unsigned char font_half_width[];
 
 /* --------------------------------------------------------------------- */
 /* statics */

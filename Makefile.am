@@ -60,18 +60,21 @@ sysfiles = \
 	sys/macosx/Schism_Tracker.app/Contents/Resources/moduleIcon.icns	\
 	sys/win32/schism.nsis		\
 	sys/sdl/README
-
-genhelp = scripts/genhelp.py
+scripts = \
+	scripts/bin2h.sh		\
+	scripts/build-font.sh		\
+	scripts/genhelp.py		\
+	scripts/palette.py
 
 EXTRA_DIST = \
 	COPYING.frag-opt		\
 	COPYING.libmodplug		\
 	include/auto/README		\
 	$(helptexts)			\
-	$(genhelp)			\
 	$(fonts)			\
 	$(icons)			\
-	$(sysfiles)
+	$(sysfiles)			\
+	$(scripts)
 
 
 ## The following files are available from the hg repository but are deliberately NOT being included in
@@ -87,7 +90,6 @@ EXTRA_DIST = \
 ##   - lutgen/*
 ##   - schism/isysev.c
 ##   - schism/tree.c
-##   - scripts/* (except genhelp.py)
 ##   - sys/wii/data/*
 
 
@@ -95,7 +97,6 @@ EXTRA_DIST = \
 bin_PROGRAMS = schismtracker
 
 noinst_HEADERS = \
-	include/auto/default-font.h	\
 	include/auto/logoit.h		\
 	include/auto/logoschism.h	\
 	include/auto/schismico.h	\
@@ -148,13 +149,19 @@ noinst_HEADERS = \
 	modplug/xm_defs.h
 
 
-noinst_SCRIPTS = $(genhelp)
-nodist_schismtracker_SOURCES = auto/helptext.c
-CLEANFILES = auto/helptext.c
+noinst_SCRIPTS = $(scripts)
 
-auto/helptext.c: Makefile.am $(genhelp) $(helptexts)
-	$(PYTHON) @srcdir@/$(genhelp) @srcdir@ $(helptexts) >$@
+nodist_schismtracker_SOURCES = \
+	auto/default-font.c		\
+	auto/helptext.c
+CLEANFILES = \
+	auto/default-font.c		\
+	auto/helptext.c
 
+auto/default-font.c: Makefile.am scripts/bin2h.sh scripts/build-font.sh $(fonts)
+	sh @srcdir@/scripts/build-font.sh @srcdir@ $(fonts) >$@
+auto/helptext.c: Makefile.am scripts/genhelp.py $(helptexts)
+	$(PYTHON) @srcdir@/scripts/genhelp.py @srcdir@ $(helptexts) >$@
 
 if USE_X11
 files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c
