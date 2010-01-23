@@ -88,9 +88,11 @@
 #ifdef WIN32
 # define DIR_SEPARATOR '\\'
 # define DIR_SEPARATOR_STR "\\"
+# define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')
 #else
 # define DIR_SEPARATOR '/'
 # define DIR_SEPARATOR_STR "/"
+# define IS_DIR_SEPARATOR(c) ((c) == '/')
 #endif
 
 /* --------------------------------------------------------------------- */
