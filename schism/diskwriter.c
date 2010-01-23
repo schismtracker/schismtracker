@@ -627,7 +627,7 @@ int diskwriter_finish(void)
         }
 
         if (dw->m || dw->g) {
-                song_init_audio(NULL);
+                audio_reinit();
         }
         csf_multi_out_raw = NULL;
 

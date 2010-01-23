@@ -141,11 +141,7 @@ void win32mm_mixer_write_volume(int, int);
 
 
 // Nasty alsa crap
-#if defined(USE_DLTRICK_ALSA) || defined(USE_ALSA)
-void alsa_init(const char **p_driver);
-#else
-# define alsa_init(p)
-#endif
+void alsa_dlinit(void);
 
 
 #endif /* ! OSDEFS_H */

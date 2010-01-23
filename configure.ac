@@ -55,20 +55,7 @@ dnl check endianness
 AC_C_BIGENDIAN
 
 dnl Check for SDL libs
-AM_PATH_SDL(1.1.8, , AC_MSG_ERROR([*** SDL version >= 1.1.8 not found.]))
-
-enable_sdlstatic=no
-AC_ARG_ENABLE(static-sdl, [  --enable-static-sdl     Link SDL statically], enable_sdlstatic=yes,enable_sdlstatic=no)
-if test "x$enable_sdlstatic" = "xyes"; then
-	if test "x$SDL_CONFIG" = "xno"; then
-		echo "*** SDL_CONFIG explicitly set to 'no' but you asked for static-sdl"
-		echo "*** one of those has to go..."
-		exit 1
-	else
-		SDL_LIBS=`$SDL_CONFIG $sdlconf_args --static-libs`
-		AC_SUBST(SDL_LIBS)
-	fi
-fi
+AM_PATH_SDL(1.2.10, , AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.]))
 
 dnl CoreMIDI (Mac OS X)
 AC_MSG_CHECKING(for CoreAudio/CoreMIDI Framework)

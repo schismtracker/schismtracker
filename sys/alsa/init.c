@@ -31,19 +31,14 @@
 # include <dlfcn.h>
 void *_dltrick_handle = NULL;
 static void *_alsaless_sdl_hack = NULL;
-#elif defined(USE_ALSA)
-# include <alsa/pcm.h>
 #else
 # error You are in a maze of twisty little passages, all alike.
 #endif
 
 /* --------------------------------------------------------------------- */
 
-void alsa_init(const char **p_driver)
+void alsa_dlinit(void)
 {
-        const char *driver = *p_driver;
-
-#if defined(USE_DLTRICK_ALSA)
         /* okay, this is how this works:
          * to operate the alsa mixer and alsa midi, we need functions in
          * libasound.so.2 -- if we can do that, *AND* libSDL has the
@@ -67,41 +62,10 @@ void alsa_init(const char **p_driver)
                                         int stream,
                                         int mode);
                         static int (*alsa_snd_pcm_close)(void *pcm);
-                        static void *ick;
-                        static int r;
 
                         alsa_snd_pcm_open = dlsym(_dltrick_handle, "snd_pcm_open");
                         alsa_snd_pcm_close = dlsym(_dltrick_handle, "snd_pcm_close");
-
-                        if (alsa_snd_pcm_open && alsa_snd_pcm_close) {
-                                if (!driver) {
-                                        driver = "alsa";
-                                } else if (strcmp(driver, "default") == 0) {
-                                        driver = "sdlauto";
-                                } else if (!getenv("AUDIODEV")) {
-                                        r = alsa_snd_pcm_open(&ick,
-                                                driver, 0, 1);
-                                        if (r >= 0) {
-                                                put_env_var("AUDIODEV", driver);
-                                                driver = "alsa";
-                                                alsa_snd_pcm_close(ick);
-                                        }
-                                }
-                        }
                 }
         }
-#else
-        if (driver) {
-                static snd_pcm_t *h;
-                if (snd_pcm_open(&h, driver, SND_PCM_STREAM_PLAYBACK,
-                                        SND_PCM_NONBLOCK) >= 0) {
-                        put_env_var("AUDIODEV", driver);
-                        driver = "alsa";
-                        snd_pcm_close(h);
-                }
-        }
-#endif
-
-        *p_driver = driver;
 }
 

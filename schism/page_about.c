@@ -109,7 +109,7 @@ static void about_draw_const(void)
 
                 draw_text("Sound Card Setup", 32, 26, 0, 2);
 
-                if (strcasecmp((char *) song_audio_driver(), "nosound") == 0) {
+                if (strcasecmp(song_audio_driver(), "dummy") == 0) {
                         draw_text("No sound card detected", 29, 28, 0, 2);
                 } else {
                         switch (fake_driver) {

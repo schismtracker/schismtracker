@@ -505,7 +505,7 @@ static int handle_key_global(struct key_event * k)
                                 return 1;
                         }
                         song_stop();
-                        song_init_audio(NULL);
+                        audio_reinit();
                         if (status.flags & CLASSIC_MODE)
                                 // FIXME: but we spontaneously report a GUS card sometimes...
                                 status_text_flash("Sound Blaster 16 reinitialised");
@@ -1363,18 +1363,18 @@ static void vis_oscilloscope(void)
         if (status.vis_style == VIS_MONOSCOPE) {
                 if (audio_output_bits == 16) {
                         draw_sample_data_rect_16(&vis_overlay,audio_buffer,
-                                        audio_buffer_size,
+                                        audio_buffer_samples,
                                         1,2);
                 } else {
                         draw_sample_data_rect_8(&vis_overlay,(void*)audio_buffer,
-                                        audio_buffer_size,
+                                        audio_buffer_samples,
                                         1,2);
                 }
         } else if (audio_output_bits == 16) {
-                draw_sample_data_rect_16(&vis_overlay,audio_buffer,audio_buffer_size,
+                draw_sample_data_rect_16(&vis_overlay,audio_buffer,audio_buffer_samples,
                                         audio_output_channels,1);
         } else {
-                draw_sample_data_rect_8(&vis_overlay,(void *)audio_buffer,audio_buffer_size,
+                draw_sample_data_rect_8(&vis_overlay,(void *)audio_buffer,audio_buffer_samples,
                                         audio_output_channels,1);
         }
         song_unlock_audio();
