@@ -11,7 +11,7 @@
 # gnu-style versions of these tools
 
 name=""
-type="static unsigned const char"
+type="unsigned const char"
 if [ "X$1" = "X-n" ]; then
         name="$2"
         shift
@@ -34,6 +34,10 @@ if [ "X$SED" = "X" ]; then
         SED="sed"
 fi
 
+case "$type" in
+        *static*) ;;
+        *) echo "extern $type $name""[];" ;;
+esac
 echo "$type $name""[] = {"
 $OD -b -v "$@" \
 | $SED -e 's/^[^ ][^ ]*[ ]*//' \
