@@ -1,6 +1,0 @@
-files in here are for package maintainers, and that includes source "tarballs"
-for people that want to build their own.
-
-they are not useful to people who simply want to "build" schism, or even to
-do much development, although they may be useful if you're interested in knowing
-how I do binary builds...
