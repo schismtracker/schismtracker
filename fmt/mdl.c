@@ -26,7 +26,6 @@
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
-#include "version.h"
 
 #include "sndfile.h"
 
