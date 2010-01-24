@@ -59,11 +59,15 @@ sysfiles = \
 	sys/macosx/Schism_Tracker.app/Contents/Resources/appIcon.icns		\
 	sys/macosx/Schism_Tracker.app/Contents/Resources/moduleIcon.icns	\
 	sys/win32/schism.nsis		\
+	sys/wii/schismtracker/icon.png	\
+	sys/wii/schismtracker/meta.xml	\
 	sys/sdl/README
 scripts = \
 	scripts/bin2h.sh		\
 	scripts/build-font.sh		\
 	scripts/genhelp.py		\
+	scripts/itf2half.py		\
+	scripts/half2itf.py		\
 	scripts/palette.py
 
 EXTRA_DIST = \
@@ -87,11 +91,13 @@ EXTRA_DIST = \
 ##   - fmt/mp3.c
 ##   - fmt/ogg.c
 ##   - fmt/sid.c
-##   - lutgen/*
+##   - scripts/lutgen.c
 ##   - schism/isysev.c
 ##   - schism/tree.c
 ##   - sys/wii/data/*
-
+##
+## To get a rough list of files that aren't listed here:
+## $ for f in `hg manifest`; do grep -Fq $f Makefile.am || echo $f; done
 
 
 bin_PROGRAMS = schismtracker
