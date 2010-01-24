@@ -1,0 +1,62 @@
+| Global Keys.
+|   F1                Help (Context sensitive!)
+|   Shift-F1          MIDI Screen
+:   Ctrl-F1           System Configuration
+|   F2                Pattern Editor / Pattern Editor Options
+|   F3                Sample List
+|   Ctrl-F3           Sample Library
+|   F4                Instrument List
+|   Ctrl-F4           Instrument Library
+|   F5                Play Information / Play song
+|   Ctrl-F5           Play Song
+|   F6                Play current pattern
+|   Shift-F6          Play song from current Order
+|   F7                Play from mark / current row
+:   Shift-F8          Pause / Resume Playback
+|   F8                Stop Playback
+!   F9                Load Module
+:   F9                Load Module (also Ctrl-L, Ctrl-O)
+|   Shift-F9          Message Editor
+!   F10               Save Module
+:   F10               Save Module (also Ctrl-W)
+:   Shift-F10         Export Module (to WAV, MIDI)
+|   F11               Order List and Panning
+| 2*F11               Order List and Channel Volume
+:   Ctrl-F11          Schism Logging
+|   F12               Song Variables & Directory Configuration
+|   Ctrl-F12          Palette Configuration
+:   Shift-F12         Font Editor
+|
+|   { }               Decrease/Increase playback speed
+:   Ctrl-[ ]          Decrease/Increase playback tempo
+|   [ ]               Decrease/Increase global volume
+|   Alt-F1 -> Alt-F8  Toggle channels 1->8
+|
+!   Ctrl-D            DOS Shell
+:   Ctrl-D            Toggle mouse/keyboard grab
+|   Ctrl-E            Refresh screen and reset cache identification
+:   Ctrl-G            Go to order/pattern/row given time
+|   Ctrl-I            Reinitialise sound driver
+|   Ctrl-M            Toggle mouse cursor
+|   Ctrl-N            New Song
+:   Ctrl-P            Calculate approximate song length
+!   Ctrl-Q            Quit to DOS
+:   Ctrl-Q            Quit Schism Tracker
+|   Ctrl-S            Save current song
+:
+:   PrintScreen       Take a screenshot (also Ctrl-Alt-D)
+:
+: On text widgets.
+:   Ctrl, Ctrl        Digraph entry:
+;     C,  ->  Ç    i>  ->  î    y:  ->  ÿ    n?  ->  ñ    pi  ->  π
+;     u:  ->  ü    i!  ->  ì    O:  ->  Ö    N?  ->  Ñ    My  ->  µ
+;     e'  ->  é    A:  ->  Ä    U:  ->  Ü    -a  ->  ª    o/  ->  φ
+;     a>  ->  â    AA  ->  Å    Ct  ->  ¢    -o  ->  º    O/  ->  φ
+;     a:  ->  ä    E'  ->  É    Pd  ->  £    ?I  ->  ¿    +-  ->  ±
+;     a!  ->  à    ae  ->  æ    Ye  ->  ¥    NO  ->  ¬    -:  ->  ÷
+;     aa  ->  å    AE  ->  Æ    Pt  ->  ₧    12  ->  ½    DG  ->  °
+;     c,  ->  ç    o>  ->  ô    ff  ->  ƒ    14  ->  «    .M  ->  ∙
+;     e>  ->  ê    o:  ->  ö    a'  ->  á    !I  ->  »    2S  ->  ²
+;     e:  ->  ë    o!  ->  ò    i'  ->  í    <<  ->  ░    nS  ->  ⁿ
+;     e!  ->  è    u>  ->  û    o'  ->  ó    >>  ->  ▒    PI  ->  ¶
+;     i:  ->  ï    u!  ->  ù    u'  ->  ú    ss  ->  ß    SE  ->  §
