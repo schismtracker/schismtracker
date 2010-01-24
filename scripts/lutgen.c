@@ -1,3 +1,6 @@
+#define compile \
+        exec gcc -Wall -pedantic -std=gnu99 -lm lutgen.c -o lutgen || exit 255
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
