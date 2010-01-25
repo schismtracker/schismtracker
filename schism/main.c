@@ -561,9 +561,9 @@ static void event_loop(void)
                                 break;
                         case SDLK_LSHIFT: case SDLK_RSHIFT:
                                 if (event.type == SDL_KEYDOWN)
-                                        status.flags |= SHIFT_PRESSED;
+                                        status.flags |= SHIFT_KEY_DOWN;
                                 else
-                                        status.flags &= ~SHIFT_PRESSED;
+                                        status.flags &= ~SHIFT_KEY_DOWN;
                                 break;
                         default:
                                 break;

@@ -2603,7 +2603,7 @@ static void pattern_editor_redraw(void)
                         int cpos;
                         if ((row == current_row)
                             && ((current_position > 0 || template_mode == TEMPLATE_OFF
-                                 || (status.flags & SHIFT_PRESSED))
+                                 || (status.flags & SHIFT_KEY_DOWN))
                                 ? (chan == current_channel)
                                 : (chan >= current_channel
                                    && chan < (current_channel
