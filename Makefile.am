@@ -245,12 +245,6 @@ if NEED_STRPTIME
 files_strptime=schism/strptime.c
 endif
 
-if USE_MERCURIAL
-cflags_version=-DHG_VERSION=\""`(cd @srcdir@ && hg parents --template '{date|shortdate}')`"\"
-# used in the dependency declaration of version.o to cause rebuild after commit
-hg_dirstate=@srcdir@/.hg/dirstate
-endif
-
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
 	schism/page_blank.c		\
@@ -307,6 +301,7 @@ schismtracker_SOURCES = \
 	fmt/aiff.c			\
 	fmt/okt.c			\
 	fmt/med.c			\
+	fmt/mf.c			\
 	schism/inst_loader.c		\
 	schism/util.c			\
 	schism/pngw.c			\
@@ -361,7 +356,6 @@ schismtracker_SOURCES = \
 	modplug/load_dmf.cpp		\
 	modplug/sndfile.cpp		\
 	modplug/csndfile.c		\
-	modplug/load_okt.cpp		\
 	modplug/load_med.cpp		\
 	modplug/load_dbm.cpp		\
 	modplug/sndmix.c		\
@@ -385,6 +379,16 @@ schismtracker_SOURCES = \
 	$(files_mmap)			\
 	$(files_wii)			\
 	$(files_windres)
+
+if USE_MERCURIAL
+# used in the dependency declaration of version.o to cause rebuild after commit
+# (thanks, apostrophe -- neat trick!)
+hg_dirstate = auto/dirstate.check
+BUILT_SOURCES = $(hg_dirstate)
+$(hg_dirstate): $(top_srcdir)/.hg/dirstate
+	hg -R $(top_srcdir) parents --template "{date|shortdate}" >$@
+cflags_version = -DHG_VERSION=\""`(cat $(hg_dirstate) /dev/null)`"\"
+endif
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS) $(hg_dirstate)

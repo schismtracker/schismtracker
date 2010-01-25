@@ -152,6 +152,7 @@
 #define CMD_NOTESLIDEUP         32 // IMF Gxy
 #define CMD_NOTESLIDEDOWN       33 // IMF Hxy
 #define CMD_MAX                 34
+#define CMD_UNIMPLEMENTED       CMD_MAX // no-op, displayed as "?"
 
 #define CMD_IS_EFFECT(v) ((v) > 0 && (v) < CMD_MAX)
 
@@ -285,6 +286,7 @@ enum {
 // Bit width (8 bits for simplicity)
 #define _SDV_BIT(n)            ((n) << 0)
 #define SF_BIT_MASK            0xff
+#define SF_7                   _SDV_BIT(7)  // 7-bit (weird!)
 #define SF_8                   _SDV_BIT(8)  // 8-bit
 #define SF_16                  _SDV_BIT(16) // 16-bit
 #define SF_24                  _SDV_BIT(24) // 24-bit

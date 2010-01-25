@@ -79,14 +79,14 @@ READ_INFO(imf); LOAD_SONG(imf);
 READ_INFO(it);  LOAD_SONG(it);
 READ_INFO(liq);
 READ_INFO(mdl); LOAD_SONG(mdl);
-// mid med mod... and i suppose mt2 is mad, now we just need a mud format!
 READ_INFO(mid);                 SAVE_SONG(mid);
 READ_INFO(med);
+READ_INFO(mf);
 READ_INFO(mod); LOAD_SONG(mod);
 READ_INFO(mt2);
 READ_INFO(mtm); LOAD_SONG(mtm); SAVE_SONG(mtm);
 READ_INFO(ntk);
-READ_INFO(okt);
+READ_INFO(okt); LOAD_SONG(okt);
 READ_INFO(psm);
 READ_INFO(s3m); LOAD_SONG(s3m);
 READ_INFO(sfx); LOAD_SONG(sfx);
@@ -174,7 +174,7 @@ int convert_voleffect(uint8_t *effect, uint8_t *param, int force);
 void mod_import_note(const uint8_t p[4], MODCOMMAND *note);
 
 // get L-R-R-L panning value from a (zero-based!) channel number
-#define PROTRACKER_PANNING(c) (((((n) + 1) >> 1) & 1) * 256)
+#define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)
 
 // convert .mod finetune byte value to c5speed
 #define MOD_FINETUNE(b) (S3MFineTuneTable[((b) & 0xf) ^ 8])

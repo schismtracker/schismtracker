@@ -511,7 +511,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
 
         // validate the read flags before anything else
         switch (nFlags & SF_BIT_MASK) {
-                case SF_8: case SF_16: case SF_24: case SF_32: break;
+                case SF_7: case SF_8: case SF_16: case SF_24: case SF_32: break;
                 default: SF_FAIL("bit width", nFlags & SF_BIT_MASK);
         }
         switch (nFlags & SF_CHN_MASK) {
@@ -922,14 +922,25 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
                 }
                 break;
 
+        // 7-bit (data shifted one bit left)
+        case SF(7,M,BE,PCMS):
+        case SF(7,M,LE,PCMS):
+                pIns->uFlags &= ~(CHN_16BIT | CHN_STEREO);
+                len = pIns->nLength = MIN(pIns->nLength, dwMemLength);
+                for (uint32_t j = 0; j < len; j++)
+                        pIns->pSample[j] = CLAMP(lpMemFile[j] * 2, -128, 127);
+                break;
+
         // Default: 8-bit signed PCM data
         default:
                 printf("DEFAULT: %d\n", nFlags);
+        case SF(8,M,BE,PCMS): /* endianness is irrelevant for 8-bit samples */
+        case SF(8,M,LE,PCMS):
                 pIns->uFlags &= ~(CHN_16BIT | CHN_STEREO);
-        case RS_PCM8S:
                 len = pIns->nLength;
                 if (len > dwMemLength) len = pIns->nLength = dwMemLength;
                 memcpy(pIns->pSample, lpMemFile, len);
+                break;
         }
         if (len > dwMemLength) {
                 if (pIns->pSample) {
