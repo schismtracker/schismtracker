@@ -39,7 +39,7 @@
 
 const char *osname = "wii";
 
-void wii_sysinit(void)
+void wii_sysinit(int *pargc, char ***pargv)
 {
         DIR_ITER *dir;
         char *ptr = NULL;
@@ -50,15 +50,15 @@ void wii_sysinit(void)
         fatInit(CACHE_PAGES, 0);
 
         // Attempt to locate a suitable home directory.
-        if (!argc || !argv) {
+        if (!*pargc || !*pargv) {
                 // loader didn't bother setting these
-                argc = 1;
-                argv = malloc(sizeof(char **));
-                *argv = str_dup("?");
-        } else if (strchr(argv[0], '/') != NULL) {
+                *pargc = 1;
+                *pargv = malloc(sizeof(char **));
+                *pargv[0] = str_dup("?");
+        } else if (strchr(*pargv[0], '/') != NULL) {
                 // presumably launched from hbc menu - put stuff in the boot dir
                 // (does get_parent_directory do what I want here?)
-                ptr = get_parent_directory(argv[0]);
+                ptr = get_parent_directory(*pargv[0]);
         }
         if (!ptr) {
                 // Make a guess anyway
@@ -79,6 +79,11 @@ void wii_sysinit(void)
         }
         put_env_var("HOME", ptr);
         free(ptr);
+}
+
+void wii_sysexit(void)
+{
+        ISFS_Deinitialize();
 }
 
 void wii_sdlinit(void)

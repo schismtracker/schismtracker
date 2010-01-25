@@ -52,10 +52,12 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #elif defined(GEKKO)
 # define os_sysinit wii_sysinit
 # define os_sdlinit wii_sdlinit
+# define os_sysexit wii_sysexit
 # define os_sdlevent wii_sdlevent
 #elif defined(WIN32)
 # define os_sysinit win32_sysinit
 #endif
+
 #ifndef os_sdlevent
 # define os_sdlevent(ev) 1
 #endif
@@ -63,7 +65,10 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlinit()
 #endif
 #ifndef os_sysinit
-# define os_sysinit()
+# define os_sysinit(pargc,argv)
+#endif
+#ifndef os_sysexit
+# define os_sysexit()
 #endif
 
 /* os_screensaver_deactivate: whatever is needed to keep the screensaver away.
@@ -89,14 +94,15 @@ Leave this *undefined* if no implementation exists. */
 int macosx_sdlevent(SDL_Event *event); // patch up osx scancodes for printscreen et al; numlock hack?
 int macosx_ibook_fnswitch(int setting);
 
-void wii_sysinit(void); // set up filesystem
+void wii_sysinit(int *pargc, char ***pargv); // set up filesystem
+void wii_sysexit(void); // close filesystem
 void wii_sdlinit(void); // set up wiimote
 int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
 
 void x11_screensaver_deactivate(void);
 unsigned int xv_yuvlayout(void);
 
-void win32_sysinit(void);
+void win32_sysinit(int *pargc, char ***pargv);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
 

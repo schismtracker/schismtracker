@@ -183,7 +183,7 @@ int key_scancode_lookup(int k, int def)
 }
 
 
-void win32_sysinit(void)
+void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 {
         static WSADATA ignored;
 
