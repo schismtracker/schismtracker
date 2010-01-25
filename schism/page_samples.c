@@ -1046,9 +1046,8 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
 
 static void sample_adlibpatch_finish(int n)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
-        if (n >= 0)
-                adlib_patch_apply((SONGSAMPLE *) sample, n);
+        if (n > 0 && n <= 128)
+                adlib_patch_apply((SONGSAMPLE *) song_get_sample(current_sample, NULL), n - 1);
         status.flags |= NEED_UPDATE; // redraw the sample
 }
 
