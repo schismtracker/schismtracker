@@ -302,7 +302,7 @@ char *dmoz_path_normal(const char *path)
         (The rest of them will be handled as the path components are processed.) */
         for (q = result; q < base; q++)
                 if (*q == '/')
-                        *q = '//';
+                        *q = '\\';
 #endif
 
         /* invariants:
