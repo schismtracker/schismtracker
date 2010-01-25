@@ -55,7 +55,7 @@ static const char *const sharp_flat[] = {
 };
 
 static const char *const output_channels[] = {
-        "Monaural", "Stereo", "Dolby/Surround", NULL
+        "Mono", "Stereo", NULL
 };
 
 static int sample_rate_cursor = 0;
