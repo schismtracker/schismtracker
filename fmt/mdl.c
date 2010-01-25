@@ -553,7 +553,7 @@ static struct mdlpat *mdl_read_patterns_v0(CSoundFile *song, slurp_t *fp)
 static MODCOMMAND **mdl_read_tracks(slurp_t *fp)
 {
         MODCOMMAND **tracks = calloc(65536, sizeof(MODCOMMAND *));
-        int ntrks, trk, row, lostfx;
+        int ntrks, trk, row, lostfx = 0;
         uint16_t h;
         uint8_t b, x, y;
         uint8_t vol, e1, e2, p1, p2;
