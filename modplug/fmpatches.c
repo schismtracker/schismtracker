@@ -5,7 +5,6 @@
 #include "sndfile.h"
 
 static const uint8_t patches[][11] = {
-        {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, /*(unused)*/
         {0x00,0x00,0x4F,0x00,0xF1,0xD2,0x51,0x43,0x00,0x00,0x06}, /*1*/
         {0x02,0x12,0x4F,0x00,0xF1,0xD2,0x51,0x43,0x00,0x00,0x02}, /*2*/
         {0x00,0x11,0x4A,0x00,0xF1,0xD2,0x53,0x74,0x00,0x00,0x06}, /*3*/
@@ -138,9 +137,13 @@ static const uint8_t patches[][11] = {
 
 void adlib_patch_apply(SONGSAMPLE *smp, int patchnum)
 {
-        if (patchnum < 0 || patchnum > 128)
-                patchnum = 0;
+        if (patchnum < 0 || patchnum > 127) {
+                printf("adlib_patch_apply: invalid patch %d\n", patchnum);
+                return;
+        }
         memcpy(smp->AdlibBytes, patches[patchnum], 11);
+        snprintf(smp->name, sizeof(smp->name) - 1, "%03d:%s", patchnum + 1, midi_program_names[patchnum]);
+        smp->name[sizeof(smp->name) - 1] = '\0'; // Paranoid.
         smp->uFlags |= CHN_ADLIB;
         if (!smp->pSample) {
                 smp->nLength = 1;

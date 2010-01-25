@@ -56,5 +56,10 @@ extern int32_t  SpectrumSinusTable[256*2];
 
 extern const int SHORT_PANNING[16];
 
+
+extern const char *midi_group_names[17];
+extern const char *midi_program_names[128];
+extern const char *midi_percussion_names[61];
+
 #endif /* ! TABLES_H */
 
