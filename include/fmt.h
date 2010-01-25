@@ -79,9 +79,9 @@ READ_INFO(imf); LOAD_SONG(imf);
 READ_INFO(it);  LOAD_SONG(it);
 READ_INFO(liq);
 READ_INFO(mdl); LOAD_SONG(mdl);
-// mid med mod... and i suppose mt2 is mad, now we just need a mud format!
 READ_INFO(mid);                 SAVE_SONG(mid);
 READ_INFO(med);
+READ_INFO(mf);
 READ_INFO(mod); LOAD_SONG(mod);
 READ_INFO(mt2);
 READ_INFO(mtm); LOAD_SONG(mtm); SAVE_SONG(mtm);
