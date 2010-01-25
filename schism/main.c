@@ -953,16 +953,14 @@ static void schism_shutdown(void)
                 */
                 SDL_Quit();
         }
-#ifdef GEKKO
-        ISFS_Deinitialize();
-#endif
+        os_sysexit();
 }
 
 extern void vis_init(void);
 
 int main(int argc, char **argv)
 {
-        os_sysinit();
+        os_sysinit(&argc, &argv);
 
         /* this needs to be done very early, because the version is used in the help text etc.
         Also, this needs to happen before any locale stuff is initialized
