@@ -82,6 +82,7 @@ READ_INFO(mdl); LOAD_SONG(mdl);
 READ_INFO(mid);                 SAVE_SONG(mid);
 READ_INFO(med);
 READ_INFO(mf);
+READ_INFO(mus); LOAD_SONG(mus);
 READ_INFO(mod); LOAD_SONG(mod);
 READ_INFO(mt2);
 READ_INFO(mtm); LOAD_SONG(mtm); SAVE_SONG(mtm);

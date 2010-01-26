@@ -130,6 +130,7 @@ static const fmt_read_info_func read_info_funcs[] = {
         READ_INFO(mdl),
         READ_INFO(med),
         READ_INFO(okt),
+        READ_INFO(mus),
         READ_INFO(mf),
 
         READ_INFO(xi),
