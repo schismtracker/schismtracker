@@ -302,6 +302,7 @@ schismtracker_SOURCES = \
 	fmt/okt.c			\
 	fmt/med.c			\
 	fmt/mf.c			\
+	fmt/mus.c			\
 	schism/inst_loader.c		\
 	schism/util.c			\
 	schism/pngw.c			\

@@ -266,6 +266,7 @@ static fmt_load_song_func load_song_funcs[] = {
         fmt_mtm_load_song,
         fmt_mdl_load_song,
         fmt_okt_load_song,
+        fmt_mus_load_song,
         fmt_ult_load_song,
         fmt_imf_load_song,
         fmt_sfx_load_song,
