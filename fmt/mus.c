@@ -140,6 +140,8 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 
                         note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
                         note[MUS_SPEED_CHANNEL].param = prevspeed;
+
+                        note += 64 * row;
                 }
 
                 event = slurp_getc(fp);
