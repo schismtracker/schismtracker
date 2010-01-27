@@ -1109,16 +1109,12 @@ static int info_page_handle_key(struct key_event * k)
                 }
                 return 0;
         case SDLK_PLUS:
-                if (!NO_MODIFIER(k->mod))
-                        return 0;
                 if (k->state) return 1;
                 if (song_get_mode() == MODE_PLAYING) {
                         song_set_current_order(song_get_current_order() + 1);
                 }
                 return 1;
         case SDLK_MINUS:
-                if (!NO_MODIFIER(k->mod))
-                        return 0;
                 if (k->state) return 1;
                 if (song_get_mode() == MODE_PLAYING) {
                         song_set_current_order(song_get_current_order() - 1);
