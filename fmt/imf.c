@@ -456,6 +456,15 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         }
         for (; n < MAX_CHANNELS; n++)
                 song->Channels[n].dwFlags |= CHN_MUTE;
+        /* From mikmod: work around an Orpheus bug */
+        if (hdr.channels[0].status == 0) {
+                for (n = 1; n < 16; n++)
+                        if (hdr.channels[n].status != 1)
+                                break;
+                if (n == 16)
+                        for (n = 1; n < 16; n++)
+                                song->Channels[n].dwFlags &= ~CHN_MUTE;
+        }
 
         for (n = 0; n < hdr.ordnum; n++)
                 song->Orderlist[n] = ((hdr.orderlist[n] == 0xff) ? ORDER_SKIP : hdr.orderlist[n]);
@@ -474,12 +483,6 @@ int fmt_imf_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 
                 imfins.smpnum = bswapLE16(imfins.smpnum);
                 imfins.fadeout = bswapLE16(imfins.fadeout);
-
-                if (memcmp(imfins.ii10, "II10", 4) != 0) {
-                        //printf("ii10 says %02x %02x %02x %02x!\n",
-                        //      imfins.ii10[0], imfins.ii10[1], imfins.ii10[2], imfins.ii10[3]);
-                        return LOAD_FORMAT_ERROR;
-                }
 
                 ins = song->Instruments[n + 1] = csf_allocate_instrument();
                 strncpy(ins->name, imfins.name, 25);
