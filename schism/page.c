@@ -500,18 +500,7 @@ static int handle_key_global(struct key_event * k)
                 /* reset audio stuff? */
                 if (k->mod & KMOD_CTRL) {
                         if (k->state) return 1;
-                        if (status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN)) {
-                                /* never allowed */
-                                return 1;
-                        }
-                        song_stop();
                         audio_reinit();
-                        if (status.flags & CLASSIC_MODE)
-                                // FIXME: but we spontaneously report a GUS card sometimes...
-                                status_text_flash("Sound Blaster 16 reinitialised");
-                        else
-                                status_text_flash("Audio output reinitialised");
-                        status.flags |= NEED_UPDATE;
                         return 1;
                 }
                 break;

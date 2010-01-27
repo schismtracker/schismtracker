@@ -1411,8 +1411,19 @@ void audio_init(const char *driver_spec)
 
 void audio_reinit(void)
 {
+        if (status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN)) {
+                /* never allowed */
+                return;
+        }
+        song_stop();
         _audio_init_head(active_audio_driver, 0);
         _audio_init_tail();
+
+        if (status.flags & CLASSIC_MODE)
+                // FIXME: but we spontaneously report a GUS card sometimes...
+                status_text_flash("Sound Blaster 16 reinitialised");
+        else
+                status_text_flash("Audio output reinitialised");
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

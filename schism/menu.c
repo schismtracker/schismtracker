@@ -116,7 +116,7 @@ static struct menu playback_menu = {
         .y = 13,
         .w = 27,
         .title = " Playback Menu",
-        .num_items = 7,
+        .num_items = 9,
         .items = {
                 "Show Infopage          (F5)",
                 "Play Song         (Ctrl-F5)",
@@ -124,6 +124,8 @@ static struct menu playback_menu = {
                 "Play from Order  (Shift-F6)",
                 "Play from Mark/Cursor  (F7)",
                 "Stop                   (F8)",
+                "Reinit Soundcard   (Ctrl-I)",
+                "Driver Screen    (Shift-F5)",
                 "Calculate Length   (Ctrl-P)",
         },
         .selected_item = 0,
@@ -366,7 +368,13 @@ static void playback_menu_selected_cb(void)
         case 5: /* stop */
                 song_stop();
                 break;
-        case 6: /* calculate length */
+        case 6: /* reinit soundcard */
+                audio_reinit();
+                break;
+        case 7: /* driver screen */
+                set_page(PAGE_PREFERENCES);
+                return;
+        case 8: /* calculate length */
                 show_song_length();
                 return;
         }
