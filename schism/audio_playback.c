@@ -414,8 +414,8 @@ void song_single_step(int patno, int row)
         if (!pattern || row >= total_rows) return;
 
         cur_note = pattern + 64 * row;
-        for (i = 0; i < 64; i++, cur_note++) {
-                cx = song_get_mix_channel(i);
+        cx = song_get_mix_channel(0);
+        for (i = 1; i <= 64; i++, cx++, cur_note++) {
                 if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
                 if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
                         vol = cur_note->volume;
