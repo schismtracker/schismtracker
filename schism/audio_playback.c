@@ -403,6 +403,44 @@ int song_keyup(int samp, int ins, int note)
         return song_keydown_ex(samp, ins, NOTE_OFF, KEYJAZZ_DEFAULTVOL, keyjazz_channels[note], 0, 0);
 }
 
+void song_single_step(int patno, int row)
+{
+        int total_rows;
+        int i, vol, smp, ins;
+        song_note *pattern, *cur_note;
+        song_mix_channel *cx;
+
+        total_rows = song_get_pattern(patno, &pattern);
+        if (!pattern || row >= total_rows) return;
+
+        cur_note = pattern + 64 * row;
+        for (i = 0; i < 64; i++, cur_note++) {
+                cx = song_get_mix_channel(i);
+                if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
+                if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
+                        vol = cur_note->volume;
+                } else {
+                        vol = KEYJAZZ_DEFAULTVOL;
+                }
+
+                // look familiar? this is modified slightly from pattern_editor_insert
+                // (and it is wrong for the same reason as described there)
+                smp = ins = cur_note->instrument;
+                if (song_is_instrument_mode()) {
+                        if (ins < 1)
+                                ins = KEYJAZZ_NOINST;
+                        smp = -1;
+                } else {
+                        if (smp < 1)
+                                smp = KEYJAZZ_NOINST;
+                        ins = -1;
+                }
+
+                song_keyrecord(smp, ins, cur_note->note,
+                        vol, i, cur_note->effect, cur_note->parameter);
+        }
+}
+
 // ------------------------------------------------------------------------------------------------------------
 
 // this should be called with the audio LOCKED
@@ -602,44 +640,6 @@ void song_start_at_pattern(int pattern, int row)
         }
 
         song_loop_pattern(pattern, row);
-}
-
-void song_single_step(int patno, int row)
-{
-        int total_rows;
-        int i, vol, smp, ins;
-        song_note *pattern, *cur_note;
-        song_mix_channel *cx;
-
-        total_rows = song_get_pattern(patno, &pattern);
-        if (!pattern || row >= total_rows) return;
-
-        cur_note = pattern + 64 * row;
-        for (i = 0; i < 64; i++, cur_note++) {
-                cx = song_get_mix_channel(i);
-                if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
-                if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
-                        vol = cur_note->volume;
-                } else {
-                        vol = KEYJAZZ_DEFAULTVOL;
-                }
-
-                // look familiar? this is modified slightly from pattern_editor_insert
-                // (and it is wrong for the same reason as described there)
-                smp = ins = cur_note->instrument;
-                if (song_is_instrument_mode()) {
-                        if (ins < 1)
-                                ins = KEYJAZZ_NOINST;
-                        smp = -1;
-                } else {
-                        if (smp < 1)
-                                smp = KEYJAZZ_NOINST;
-                        ins = -1;
-                }
-
-                song_keyrecord(smp, ins, cur_note->note,
-                        vol, i, cur_note->effect, cur_note->parameter);
-        }
 }
 
 // ------------------------------------------------------------------------
