@@ -398,6 +398,8 @@ int csf_process_tick(CSoundFile *csf)
                         pChn->dwFlags &= ~(CHN_PORTAMENTO | CHN_VIBRATO | CHN_TREMOLO | CHN_PANBRELLO);
                         pChn->nCommand = 0;
                 }
+
+                csf_process_effects(csf, 1);
         } else {
                 /* [-- No --] */
                 /* [Update effects for each channel as required.] */
@@ -410,10 +412,9 @@ int csf_process_tick(CSoundFile *csf)
                                 csf_midi_out_note(nChn, NULL);
                         }
                 }
-        }
 
-        // Update Effects
-        csf_process_effects(csf);
+                csf_process_effects(csf, 0);
+        }
 
         return 1;
 }
@@ -1139,7 +1140,7 @@ int csf_read_note(CSoundFile *csf)
                                 chan->nCommand = 0;
                         }
                 }
-                csf_process_effects(csf);
+                csf_process_effects(csf, 0);
         } else {
                 if (!csf_process_tick(csf))
                         return 0;

@@ -1469,7 +1469,8 @@ void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int
 }
 
 
-void csf_process_effects(CSoundFile *csf)
+/* firsttick is only used for SDx at the moment */
+void csf_process_effects(CSoundFile *csf, int firsttick)
 {
         SONGVOICE *pChn = csf->Voices;
         for (uint32_t nChn=0; nChn<csf->m_nChannels; nChn++, pChn++) {
@@ -1510,7 +1511,7 @@ void csf_process_effects(CSoundFile *csf)
                                 param = pChn->nOldCmdEx;
                         if (param >> 4 == 0xd) {
                                 // Ideally this would use SONG_FIRSTTICK, but Impulse Tracker has a bug here :)
-                                if (csf->m_nTickCount == csf->m_nMusicSpeed) {
+                                if (firsttick) {
                                         pChn->nNoteDelay = (param & 0xf) ?: 1;
                                         continue; // notes never play on the first tick with SDx, go away
                                 }

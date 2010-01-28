@@ -665,7 +665,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
 void csf_note_change(CSoundFile *csf, uint32_t nChn, int note, int bPorta, int bResetEnv, int bManual);
 uint32_t csf_get_nna_channel(CSoundFile *csf, uint32_t nChn);
 void csf_check_nna(CSoundFile *csf, uint32_t nChn, uint32_t instr, int note, int bForceCut);
-void csf_process_effects(CSoundFile *csf);
+void csf_process_effects(CSoundFile *csf, int firsttick);
 
 void fx_note_cut(CSoundFile *csf, uint32_t nChn);
 void fx_key_off(CSoundFile *csf, uint32_t nChn);
