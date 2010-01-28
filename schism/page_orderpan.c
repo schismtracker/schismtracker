@@ -868,7 +868,7 @@ static void order_pan_vol_song_changed_cb(void)
 
 static void order_pan_vol_handle_key(struct key_event * k)
 {
-        int n = *selected_widget;
+        int n = ACTIVE_PAGE.selected_widget;
 
         if (k->state) return;
 
@@ -887,18 +887,19 @@ static void order_pan_vol_handle_key(struct key_event * k)
         }
 
         n = CLAMP(n, 1, 64);
-        if (*selected_widget != n)
+        if (ACTIVE_PAGE.selected_widget != n)
                 change_focus_to(n);
 }
 
 static int order_pre_key(struct key_event *k)
 {
         // hack to sync the active widget between pan/vol pages
-        pages[PAGE_ORDERLIST_PANNING].selected_widget
-                = pages[PAGE_ORDERLIST_VOLUMES].selected_widget
-                = *selected_widget;
+        if (!(status.flags & CLASSIC_MODE)) {
+                pages[PAGE_ORDERLIST_PANNING].selected_widget
+                        = pages[PAGE_ORDERLIST_VOLUMES].selected_widget
+                        = ACTIVE_PAGE.selected_widget;
+        }
 
-        /* this was wrong */
         if (k->sym == SDLK_F7) {
                 if (!NO_MODIFIER(k->mod)) return 0;
                 if (k->state) return 1;
