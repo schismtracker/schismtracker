@@ -444,6 +444,8 @@ void song_start_once(void)
         GM_SendSongStartCode();
         song_unlock_audio();
         main_song_mode_changed_cb();
+
+        csf_reset_playmarks(mp);
 }
 
 void song_start(void)
@@ -456,6 +458,8 @@ void song_start(void)
         GM_SendSongStartCode();
         song_unlock_audio();
         main_song_mode_changed_cb();
+
+        csf_reset_playmarks(mp);
 }
 
 void song_pause(void)
@@ -563,6 +567,8 @@ void song_loop_pattern(int pattern, int row)
 
         song_unlock_audio();
         main_song_mode_changed_cb();
+
+        csf_reset_playmarks(mp);
 }
 
 void song_start_at_order(int order, int row)
@@ -579,6 +585,8 @@ void song_start_at_order(int order, int row)
         /* TODO: GM_SendSongPositionCode(calculate the number of 1/16 notes) */
         song_unlock_audio();
         main_song_mode_changed_cb();
+
+        csf_reset_playmarks(mp);
 }
 
 void song_start_at_pattern(int pattern, int row)

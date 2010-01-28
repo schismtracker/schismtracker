@@ -127,6 +127,7 @@ static char dirname_entry[PATH_MAX + 1] = "";
 
 char cfg_module_pattern[PATH_MAX + 1] = GLOB_DEFAULT;
 static char **glob_list = NULL;
+static char glob_list_src[PATH_MAX + 1] = ""; // the pattern used to make glob_list (this is an icky hack)
 
 /* --------------------------------------------------------------------- */
 
@@ -433,7 +434,9 @@ static void set_glob(const char *globspec)
                 free(*glob_list);
                 free(glob_list);
         }
-        glob_list = semicolon_split(globspec);
+        strncpy(glob_list_src, globspec, PATH_MAX);
+        glob_list_src[PATH_MAX] = '\0';
+        glob_list = semicolon_split(glob_list_src);
         /* this is kinda lame. dmoz should have a way to reload the list without rereading the directory.
         could be done with a "visible" flag, which affects the list's sort order, along with adjusting
         the file count... */
@@ -865,6 +868,9 @@ static int dir_list_handle_key(struct key_event * k)
                         search_text_delete_char();
                 return 1;
         case SDLK_SLASH:
+#ifdef WIN32
+        case SDLK_BACKSLASH:
+#endif
                 if (k->state) return 0;
                 if (search_text_length == 0 && current_dir != 0) {
                         // slash -> go to top (root) dir
@@ -976,7 +982,10 @@ static void load_module_set_page(void)
         handle_file_entered = handle_file_entered_L;
         if (update_directory())
                 pages[PAGE_LOAD_MODULE].selected_widget = (flist.num_files > 0) ? 0 : 1;
-        set_default_glob(1);
+
+        // Don't reparse the glob if it hasn't changed; that will mess with the cursor position
+        if (strcasecmp(glob_list_src, cfg_module_pattern) != 0)
+                set_default_glob(1);
 }
 
 void load_module_load_page(struct page *page)

@@ -31,7 +31,6 @@
 #include "midi.h"
 #include "charset.h"
 #include "version.h"
-#include "mplink.h" // blah, for csf_reset_playmarks
 
 #include "sdlmain.h"
 
@@ -691,9 +690,6 @@ static int handle_key_global(struct key_event * k)
                         _mp_finish(NULL);
                         if (!k->state) song_stop();
                         status.flags |= NEED_UPDATE;
-                        if (status.last_keysym == SDLK_F8) {
-                                csf_reset_playmarks(mp);
-                        }
                 } else {
                         break;
                 }
