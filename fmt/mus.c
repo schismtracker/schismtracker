@@ -76,6 +76,7 @@ Some things yet to tackle:
 #define MUS_ROWS_PER_PATTERN 200
 #define MUS_SPEED_CHANNEL 15 // where the speed adjustments go (counted from 0 -- 15 is the drum channel)
 #define MUS_BREAK_CHANNEL (MUS_SPEED_CHANNEL + 1)
+#define MUS_TICKADJ_CHANNEL (MUS_BREAK_CHANNEL + 1) // S6x tick adjustments go here *and subsequent channels!!*
 
 // Tick calculations are done in fixed point for better accuracy
 #define FRACBITS 12
@@ -86,8 +87,8 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 {
         struct mus_header hdr;
         int n;
-        MODCOMMAND *note = NULL;
-        int pat = -1, row = MUS_ROWS_PER_PATTERN;
+        MODCOMMAND *note;
+        int pat, row;
         int finished = 0;
         size_t reallen;
         int tickfrac = 0; // fixed point
@@ -122,27 +123,16 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 
         memset(chanstate, 0, sizeof(chanstate));
 
+        /* start the first pattern */
+        pat = 0;
+        row = 0;
+        song->PatternSize[pat] = song->PatternAllocSize[pat] = MUS_ROWS_PER_PATTERN;
+        song->Patterns[pat] = csf_allocate_pattern(MUS_ROWS_PER_PATTERN, 64);
+        note = song->Patterns[pat];
+        song->Orderlist[pat] = pat;
+
         while (!finished && !slurp_eof(fp)) {
                 uint8_t event, b1, b2, type, ch;
-
-                while (row >= MUS_ROWS_PER_PATTERN) {
-                        /* Make a new pattern. */
-                        pat++;
-                        row -= MUS_ROWS_PER_PATTERN;
-                        if (pat >= MAX_PATTERNS) {
-                                log_appendf(4, " Warning: Too much note data");
-                                break;
-                        }
-                        song->PatternSize[pat] = song->PatternAllocSize[pat] = MUS_ROWS_PER_PATTERN;
-                        song->Patterns[pat] = csf_allocate_pattern(MUS_ROWS_PER_PATTERN, 64);
-                        note = song->Patterns[pat];
-                        song->Orderlist[pat] = pat;
-
-                        note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
-                        note[MUS_SPEED_CHANNEL].param = prevspeed;
-
-                        note += 64 * row;
-                }
 
                 event = slurp_getc(fp);
                 type = (event >> 4) & 7;
@@ -250,10 +240,13 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 }
 
                 if (finished) {
+                        int leftover = (tickfrac + (1 << FRACBITS)) >> FRACBITS;
                         note[MUS_BREAK_CHANNEL].command = CMD_PATTERNBREAK;
                         note[MUS_BREAK_CHANNEL].param = 0;
-                        note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
-                        note[MUS_SPEED_CHANNEL].param = (tickfrac + (1 << FRACBITS)) >> FRACBITS;
+                        if (leftover && leftover != prevspeed) {
+                                note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
+                                note[MUS_SPEED_CHANNEL].param = leftover;
+                        }
                 } else if (event & 0x80) {
                         // Read timing information and advance the row
                         int ticks = 0;
@@ -261,6 +254,8 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         do {
                                 b1 = slurp_getc(fp);
                                 ticks = 128 * ticks + (b1 & 127);
+                                if (ticks > 0xffff)
+                                        ticks = 0xffff;
                         } while (b1 & 128);
                         ticks = MIN(ticks, (0x7fffffff / 255) >> 12); // protect against overflow
 
@@ -270,12 +265,27 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         tickfrac = ticks & FRACMASK; // save the fractional part
                         ticks >>= FRACBITS; // and back to a normal integer
 
-                        if (!ticks) {
+                        if (ticks < 1) {
                                 // There's only part of a tick - compensate by skipping one tick later
                                 tickfrac -= 1 << FRACBITS;
                                 ticks = 1;
-                        }
+                        } else if (ticks > 255) {
+                                /* Too many ticks for a single row with Axx.
+                                We can increment multiple rows easily, but that only allows for exact multiples
+                                of some number of ticks, so adding in some "padding" is necessary. Since there
+                                is no guarantee that rows after the current one even exist, any adjusting has
+                                to happen on *this* row. */
 
+                                int adjust = ticks % 255;
+                                int s6xch = MUS_TICKADJ_CHANNEL;
+                                while (adjust) {
+                                        int s6x = MIN(adjust, 0xf);
+                                        note[s6xch].command = CMD_S3MCMDEX;
+                                        note[s6xch].param = 0x60 | s6x;
+                                        adjust -= s6x;
+                                        s6xch++;
+                                }
+                        }
                         if (prevspeed != MIN(ticks, 255)) {
                                 prevspeed = MIN(ticks, 255);
                                 note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
@@ -284,6 +294,25 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         ticks = ticks / 255 + 1;
                         row += ticks;
                         note += 64 * ticks;
+                }
+
+                while (row >= MUS_ROWS_PER_PATTERN) {
+                        /* Make a new pattern. */
+                        pat++;
+                        row -= MUS_ROWS_PER_PATTERN;
+                        if (pat >= MAX_PATTERNS) {
+                                log_appendf(4, " Warning: Too much note data");
+                                break;
+                        }
+                        song->PatternSize[pat] = song->PatternAllocSize[pat] = MUS_ROWS_PER_PATTERN;
+                        song->Patterns[pat] = csf_allocate_pattern(MUS_ROWS_PER_PATTERN, 64);
+                        note = song->Patterns[pat];
+                        song->Orderlist[pat] = pat;
+
+                        note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
+                        note[MUS_SPEED_CHANNEL].param = prevspeed;
+
+                        note += 64 * row;
                 }
         }
 
