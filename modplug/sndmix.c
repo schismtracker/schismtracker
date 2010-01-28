@@ -96,329 +96,6 @@ static unsigned int find_volume(unsigned short vol)
 }
 
 
-
-
-int csf_init_player(CSoundFile *csf, int reset)
-{
-        if (m_nMaxMixChannels > MAX_VOICES)
-                m_nMaxMixChannels = MAX_VOICES;
-
-        gdwMixingFreq = CLAMP(gdwMixingFreq, 4000, MAX_SAMPLE_RATE);
-        volume_ramp_samples = (gdwMixingFreq * VOLUMERAMPLEN) / 100000;
-
-        if (volume_ramp_samples < 8)
-                volume_ramp_samples = 8;
-
-        if (gdwSoundSetup & SNDMIX_NORAMPING)
-                volume_ramp_samples = 2;
-
-        gnDryROfsVol = gnDryLOfsVol = 0;
-
-        if (reset) {
-                gnVULeft  = 0;
-                gnVURight = 0;
-        }
-
-        csf_initialize_dsp(csf, reset);
-        initialize_eq(reset, gdwMixingFreq);
-
-        Fmdrv_Init(gdwMixingFreq);
-        OPL_Reset();
-        GM_Reset(0);
-        return 1;
-}
-
-
-unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer)
-{
-        uint8_t * lpBuffer = (uint8_t *)lpDestBuffer;
-        LPCONVERTPROC pCvt = clip_32_to_8;
-        int32_t vu_min[2];
-        int32_t vu_max[2];
-        unsigned int lRead, lMax, lSampleSize, lCount, lSampleCount, nStat=0;
-
-        vu_min[0] = vu_min[1] = 0x7FFFFFFF;
-        vu_max[0] = vu_max[1] = -0x7FFFFFFF;
-
-
-        csf->m_nMixStat = 0;
-        lSampleSize = gnChannels;
-
-             if (gnBitsPerSample == 16) { lSampleSize *= 2; pCvt = clip_32_to_16; }
-        else if (gnBitsPerSample == 24) { lSampleSize *= 3; pCvt = clip_32_to_24; }
-        else if (gnBitsPerSample == 32) { lSampleSize *= 4; pCvt = clip_32_to_32; }
-
-        lMax = cbBuffer / lSampleSize;
-
-        if (!lMax || !lpBuffer || !csf->m_nChannels)
-                return 0;
-
-        lRead = lMax;
-
-        if (csf->m_dwSongFlags & SONG_ENDREACHED)
-                lRead = 0; // skip the loop
-
-        while (lRead > 0) {
-                // Update Channel Data
-                unsigned int lTotalSampleCount;
-
-                if (!csf->m_nBufferCount) {
-                        if (!(gdwSoundSetup & SNDMIX_DIRECTTODISK))
-                                csf->m_nBufferCount = lRead;
-
-                        if (!csf_read_note(csf)) {
-                                csf->m_dwSongFlags |= SONG_ENDREACHED;
-
-                                if (csf->stop_at_order > -1)
-                                        return 0; /* faster */
-
-                                if (lRead == lMax)
-                                        break;
-
-                                if (!(gdwSoundSetup & SNDMIX_DIRECTTODISK))
-                                        csf->m_nBufferCount = lRead;
-                        }
-
-                        if (!csf->m_nBufferCount)
-                                break;
-                }
-
-                lCount = csf->m_nBufferCount;
-
-                if (lCount > MIXBUFFERSIZE)
-                        lCount = MIXBUFFERSIZE;
-
-                if (lCount > lRead)
-                        lCount = lRead;
-
-                if (!lCount)
-                        break;
-
-                lSampleCount = lCount;
-
-                // Resetting sound buffer
-                stereo_fill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
-
-                if (gnChannels >= 2) {
-                        lSampleCount *= 2;
-                        csf->m_nMixStat += csf_create_stereo_mix(csf, lCount);
-                        csf_process_stereo_dsp(csf, lCount);
-                }
-                else {
-                        csf->m_nMixStat += csf_create_stereo_mix(csf, lCount);
-                        mono_from_stereo(MixSoundBuffer, lCount);
-                        csf_process_mono_dsp(csf, lCount);
-                }
-
-                if (gdwSoundSetup & SNDMIX_EQ) {
-                        if (gnChannels >= 2)
-                                eq_stereo(MixSoundBuffer, lCount);
-                        else
-                                eq_mono(MixSoundBuffer, lCount);
-                }
-
-                nStat++;
-
-                lTotalSampleCount = lSampleCount;
-
-                // Multichannel
-                if (gnChannels > 2) {
-                        interleave_front_rear(MixSoundBuffer, MixRearBuffer, lSampleCount);
-                        lTotalSampleCount *= 2;
-                }
-
-                // Perform clipping + VU-Meter
-                lpBuffer += pCvt(lpBuffer, MixSoundBuffer, lTotalSampleCount, vu_min, vu_max);
-
-                // Buffer ready
-                lRead -= lCount;
-                csf->m_nBufferCount -= lCount;
-        }
-
-        if (lRead)
-                memset(lpBuffer, (gnBitsPerSample == 8) ? 0x80 : 0, lRead * lSampleSize);
-
-        // VU-Meter
-        vu_min[0] >>= 18;
-        vu_min[1] >>= 18;
-        vu_max[0] >>= 18;
-        vu_max[1] >>= 18;
-
-        if (vu_max[0] < vu_min[0])
-                vu_max[0] = vu_min[0];
-
-        if (vu_max[1] < vu_min[1])
-                vu_max[1] = vu_min[1];
-
-        if ((gnVULeft = (unsigned int)(vu_max[0] - vu_min[0])) > 0xFF)
-                gnVULeft = 0xFF;
-
-        if ((gnVURight = (unsigned int)(vu_max[1] - vu_min[1])) > 0xFF)
-                gnVURight = 0xFF;
-
-        if (nStat) {
-                csf->m_nMixStat += nStat - 1;
-                csf->m_nMixStat /= nStat;
-        }
-
-        return lMax - lRead;
-}
-
-
-
-/////////////////////////////////////////////////////////////////////////////
-// Handles navigation/effects
-
-static int increment_row(CSoundFile *csf)
-{
-        csf->m_nProcessRow = csf->m_nBreakRow; /* [ProcessRow = BreakRow] */
-        csf->m_nBreakRow = 0;                  /* [BreakRow = 0] */
-
-        /* some ugly copypasta, this should be less dumb */
-        if (csf->m_dwSongFlags & SONG_PATTERNPLAYBACK) {
-                if (csf->m_nRepeatCount > 0)
-                        csf->m_nRepeatCount--;
-                if (!csf->m_nRepeatCount) {
-                        csf->m_nProcessRow = PROCESS_NEXT_ORDER;
-                        return 0;
-                }
-        } else if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED)) {
-                if (csf->m_nLockedOrder < MAX_ORDERS) {
-                        csf->m_nProcessOrder = csf->m_nLockedOrder - 1;
-                        csf->m_nLockedOrder = MAX_ORDERS;
-                }
-
-                /* [Increase ProcessOrder] */
-                /* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
-                do {
-                        csf->m_nProcessOrder++;
-                } while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP);
-
-                /* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
-                if (csf->Orderlist[csf->m_nProcessOrder] == ORDER_LAST) {
-                        if (csf->m_nRepeatCount > 0)
-                                csf->m_nRepeatCount--;
-                        if (!csf->m_nRepeatCount) {
-                                csf->m_nProcessRow = PROCESS_NEXT_ORDER;
-                                return 0;
-                        }
-
-                        csf->m_nProcessOrder = 0;
-                        while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP)
-                                csf->m_nProcessOrder++;
-                }
-                if (csf->Orderlist[csf->m_nProcessOrder] >= MAX_PATTERNS) {
-                        // what the butt?
-                        csf->m_nProcessRow = PROCESS_NEXT_ORDER;
-                        return 0;
-                }
-
-                /* [CurrentPattern = Order[ProcessOrder]] */
-                csf->m_nCurrentOrder = csf->m_nProcessOrder;
-                csf->m_nCurrentPattern = csf->Orderlist[csf->m_nProcessOrder];
-        }
-
-        if (!csf->PatternSize[csf->m_nCurrentPattern] || !csf->Patterns[csf->m_nCurrentPattern]) {
-                /* okay, this is wrong. allocate the pattern _NOW_ */
-                csf->Patterns[csf->m_nCurrentPattern] = csf_allocate_pattern(64, 64);
-                csf->PatternSize[csf->m_nCurrentPattern] = 64;
-                csf->PatternAllocSize[csf->m_nCurrentPattern] = 64;
-        }
-
-        return 1;
-}
-
-
-int csf_process_tick(CSoundFile *csf)
-{
-        csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
-        /* [Decrease tick counter. Is tick counter 0?] */
-        if (--csf->m_nTickCount == 0) {
-                /* [-- Yes --] */
-
-                /* [Tick counter = Tick counter set (the current 'speed')] */
-                csf->m_nTickCount = csf->m_nMusicSpeed;
-
-                /* [Decrease row counter. Is row counter 0?] */
-                if (--csf->m_nRowCount <= 0) {
-                        /* [-- Yes --] */
-
-                        /* [Row counter = 1]
-                        this uses zero, in order to simplify SEx effect handling -- SEx has no effect if a
-                        channel to its left has already set the delay value. thus we set the row counter
-                        there to (value + 1) which is never zero, but 0 and 1 are fundamentally equivalent
-                        as far as csf_process_tick is concerned. */
-                        csf->m_nRowCount = 0;
-
-                        /* [Increase ProcessRow. Is ProcessRow > NumberOfRows?] */
-                        if (++csf->m_nProcessRow >= csf->PatternSize[csf->m_nCurrentPattern]) {
-                                /* [-- Yes --] */
-
-                                if (!increment_row(csf))
-                                        return 0;
-                        } /* else [-- No --] */
-
-                        /* [CurrentRow = ProcessRow] */
-                        csf->m_nRow = csf->m_nProcessRow;
-
-                        /* [Update Pattern Variables]
-                        (this is handled along with update effects) */
-                        csf->m_dwSongFlags |= SONG_FIRSTTICK;
-                } else {
-                        /* [-- No --] */
-                        /* Call update-effects for each channel. */
-                }
-
-
-                // Reset channel values
-                SONGVOICE *pChn = csf->Voices;
-                MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
-
-                for (unsigned int nChn=0; nChn<csf->m_nChannels; pChn++, nChn++, m++) {
-                        // this is where we're going to spit out our midi
-                        // commands... ALL WE DO is dump raw midi data to
-                        // our super-secret "midi buffer"
-                        // -mrsb
-                        if (csf_midi_out_note)
-                                csf_midi_out_note(nChn, m);
-
-                        pChn->nRowNote = m->note;
-
-                        if (m->instr)
-                                pChn->nLastInstr = m->instr;
-
-                        pChn->nRowInstr = m->instr;
-                        pChn->nRowVolCmd = m->volcmd;
-                        pChn->nRowVolume = m->vol;
-                        pChn->nRowCommand = m->command;
-                        pChn->nRowParam = m->param;
-
-                        pChn->nLeftVol = pChn->nNewLeftVol;
-                        pChn->nRightVol = pChn->nNewRightVol;
-                        pChn->dwFlags &= ~(CHN_PORTAMENTO | CHN_VIBRATO | CHN_TREMOLO | CHN_PANBRELLO);
-                        pChn->nCommand = 0;
-                }
-
-                csf_process_effects(csf, 1);
-        } else {
-                /* [-- No --] */
-                /* [Update effects for each channel as required.] */
-
-                if (csf_midi_out_note) {
-                        MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
-
-                        for (unsigned int nChn=0; nChn<csf->m_nChannels; nChn++, m++) {
-                                /* m==NULL allows schism to receive notification of SDx and Scx commands */
-                                csf_midi_out_note(nChn, NULL);
-                        }
-                }
-
-                csf_process_effects(csf, 0);
-        }
-
-        return 1;
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////
 //
 // XXX * I prefixed these with `rn_' to avoid any namespace conflicts
@@ -1105,6 +782,328 @@ static inline void update_vu_meter(SONGVOICE *chan)
         }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////
+
+int csf_init_player(CSoundFile *csf, int reset)
+{
+        if (m_nMaxMixChannels > MAX_VOICES)
+                m_nMaxMixChannels = MAX_VOICES;
+
+        gdwMixingFreq = CLAMP(gdwMixingFreq, 4000, MAX_SAMPLE_RATE);
+        volume_ramp_samples = (gdwMixingFreq * VOLUMERAMPLEN) / 100000;
+
+        if (volume_ramp_samples < 8)
+                volume_ramp_samples = 8;
+
+        if (gdwSoundSetup & SNDMIX_NORAMPING)
+                volume_ramp_samples = 2;
+
+        gnDryROfsVol = gnDryLOfsVol = 0;
+
+        if (reset) {
+                gnVULeft  = 0;
+                gnVURight = 0;
+        }
+
+        csf_initialize_dsp(csf, reset);
+        initialize_eq(reset, gdwMixingFreq);
+
+        Fmdrv_Init(gdwMixingFreq);
+        OPL_Reset();
+        GM_Reset(0);
+        return 1;
+}
+
+
+unsigned int csf_read(CSoundFile *csf, void * lpDestBuffer, unsigned int cbBuffer)
+{
+        uint8_t * lpBuffer = (uint8_t *)lpDestBuffer;
+        LPCONVERTPROC pCvt = clip_32_to_8;
+        int32_t vu_min[2];
+        int32_t vu_max[2];
+        unsigned int lRead, lMax, lSampleSize, lCount, lSampleCount, nStat=0;
+
+        vu_min[0] = vu_min[1] = 0x7FFFFFFF;
+        vu_max[0] = vu_max[1] = -0x7FFFFFFF;
+
+
+        csf->m_nMixStat = 0;
+        lSampleSize = gnChannels;
+
+             if (gnBitsPerSample == 16) { lSampleSize *= 2; pCvt = clip_32_to_16; }
+        else if (gnBitsPerSample == 24) { lSampleSize *= 3; pCvt = clip_32_to_24; }
+        else if (gnBitsPerSample == 32) { lSampleSize *= 4; pCvt = clip_32_to_32; }
+
+        lMax = cbBuffer / lSampleSize;
+
+        if (!lMax || !lpBuffer || !csf->m_nChannels)
+                return 0;
+
+        lRead = lMax;
+
+        if (csf->m_dwSongFlags & SONG_ENDREACHED)
+                lRead = 0; // skip the loop
+
+        while (lRead > 0) {
+                // Update Channel Data
+                unsigned int lTotalSampleCount;
+
+                if (!csf->m_nBufferCount) {
+                        if (!(gdwSoundSetup & SNDMIX_DIRECTTODISK))
+                                csf->m_nBufferCount = lRead;
+
+                        if (!csf_read_note(csf)) {
+                                csf->m_dwSongFlags |= SONG_ENDREACHED;
+
+                                if (csf->stop_at_order > -1)
+                                        return 0; /* faster */
+
+                                if (lRead == lMax)
+                                        break;
+
+                                if (!(gdwSoundSetup & SNDMIX_DIRECTTODISK))
+                                        csf->m_nBufferCount = lRead;
+                        }
+
+                        if (!csf->m_nBufferCount)
+                                break;
+                }
+
+                lCount = csf->m_nBufferCount;
+
+                if (lCount > MIXBUFFERSIZE)
+                        lCount = MIXBUFFERSIZE;
+
+                if (lCount > lRead)
+                        lCount = lRead;
+
+                if (!lCount)
+                        break;
+
+                lSampleCount = lCount;
+
+                // Resetting sound buffer
+                stereo_fill(MixSoundBuffer, lSampleCount, &gnDryROfsVol, &gnDryLOfsVol);
+
+                if (gnChannels >= 2) {
+                        lSampleCount *= 2;
+                        csf->m_nMixStat += csf_create_stereo_mix(csf, lCount);
+                        csf_process_stereo_dsp(csf, lCount);
+                }
+                else {
+                        csf->m_nMixStat += csf_create_stereo_mix(csf, lCount);
+                        mono_from_stereo(MixSoundBuffer, lCount);
+                        csf_process_mono_dsp(csf, lCount);
+                }
+
+                if (gdwSoundSetup & SNDMIX_EQ) {
+                        if (gnChannels >= 2)
+                                eq_stereo(MixSoundBuffer, lCount);
+                        else
+                                eq_mono(MixSoundBuffer, lCount);
+                }
+
+                nStat++;
+
+                lTotalSampleCount = lSampleCount;
+
+                // Multichannel
+                if (gnChannels > 2) {
+                        interleave_front_rear(MixSoundBuffer, MixRearBuffer, lSampleCount);
+                        lTotalSampleCount *= 2;
+                }
+
+                // Perform clipping + VU-Meter
+                lpBuffer += pCvt(lpBuffer, MixSoundBuffer, lTotalSampleCount, vu_min, vu_max);
+
+                // Buffer ready
+                lRead -= lCount;
+                csf->m_nBufferCount -= lCount;
+        }
+
+        if (lRead)
+                memset(lpBuffer, (gnBitsPerSample == 8) ? 0x80 : 0, lRead * lSampleSize);
+
+        // VU-Meter
+        vu_min[0] >>= 18;
+        vu_min[1] >>= 18;
+        vu_max[0] >>= 18;
+        vu_max[1] >>= 18;
+
+        if (vu_max[0] < vu_min[0])
+                vu_max[0] = vu_min[0];
+
+        if (vu_max[1] < vu_min[1])
+                vu_max[1] = vu_min[1];
+
+        if ((gnVULeft = (unsigned int)(vu_max[0] - vu_min[0])) > 0xFF)
+                gnVULeft = 0xFF;
+
+        if ((gnVURight = (unsigned int)(vu_max[1] - vu_min[1])) > 0xFF)
+                gnVURight = 0xFF;
+
+        if (nStat) {
+                csf->m_nMixStat += nStat - 1;
+                csf->m_nMixStat /= nStat;
+        }
+
+        return lMax - lRead;
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Handles navigation/effects
+
+static int increment_row(CSoundFile *csf)
+{
+        csf->m_nProcessRow = csf->m_nBreakRow; /* [ProcessRow = BreakRow] */
+        csf->m_nBreakRow = 0;                  /* [BreakRow = 0] */
+
+        /* some ugly copypasta, this should be less dumb */
+        if (csf->m_dwSongFlags & SONG_PATTERNPLAYBACK) {
+                if (csf->m_nRepeatCount > 0)
+                        csf->m_nRepeatCount--;
+                if (!csf->m_nRepeatCount) {
+                        csf->m_nProcessRow = PROCESS_NEXT_ORDER;
+                        return 0;
+                }
+        } else if (!(csf->m_dwSongFlags & SONG_ORDERLOCKED)) {
+                if (csf->m_nLockedOrder < MAX_ORDERS) {
+                        csf->m_nProcessOrder = csf->m_nLockedOrder - 1;
+                        csf->m_nLockedOrder = MAX_ORDERS;
+                }
+
+                /* [Increase ProcessOrder] */
+                /* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
+                do {
+                        csf->m_nProcessOrder++;
+                } while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP);
+
+                /* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
+                if (csf->Orderlist[csf->m_nProcessOrder] == ORDER_LAST) {
+                        if (csf->m_nRepeatCount > 0)
+                                csf->m_nRepeatCount--;
+                        if (!csf->m_nRepeatCount) {
+                                csf->m_nProcessRow = PROCESS_NEXT_ORDER;
+                                return 0;
+                        }
+
+                        csf->m_nProcessOrder = 0;
+                        while (csf->Orderlist[csf->m_nProcessOrder] == ORDER_SKIP)
+                                csf->m_nProcessOrder++;
+                }
+                if (csf->Orderlist[csf->m_nProcessOrder] >= MAX_PATTERNS) {
+                        // what the butt?
+                        csf->m_nProcessRow = PROCESS_NEXT_ORDER;
+                        return 0;
+                }
+
+                /* [CurrentPattern = Order[ProcessOrder]] */
+                csf->m_nCurrentOrder = csf->m_nProcessOrder;
+                csf->m_nCurrentPattern = csf->Orderlist[csf->m_nProcessOrder];
+        }
+
+        if (!csf->PatternSize[csf->m_nCurrentPattern] || !csf->Patterns[csf->m_nCurrentPattern]) {
+                /* okay, this is wrong. allocate the pattern _NOW_ */
+                csf->Patterns[csf->m_nCurrentPattern] = csf_allocate_pattern(64, 64);
+                csf->PatternSize[csf->m_nCurrentPattern] = 64;
+                csf->PatternAllocSize[csf->m_nCurrentPattern] = 64;
+        }
+
+        return 1;
+}
+
+
+int csf_process_tick(CSoundFile *csf)
+{
+        csf->m_dwSongFlags &= ~SONG_FIRSTTICK;
+        /* [Decrease tick counter. Is tick counter 0?] */
+        if (--csf->m_nTickCount == 0) {
+                /* [-- Yes --] */
+
+                /* [Tick counter = Tick counter set (the current 'speed')] */
+                csf->m_nTickCount = csf->m_nMusicSpeed;
+
+                /* [Decrease row counter. Is row counter 0?] */
+                if (--csf->m_nRowCount <= 0) {
+                        /* [-- Yes --] */
+
+                        /* [Row counter = 1]
+                        this uses zero, in order to simplify SEx effect handling -- SEx has no effect if a
+                        channel to its left has already set the delay value. thus we set the row counter
+                        there to (value + 1) which is never zero, but 0 and 1 are fundamentally equivalent
+                        as far as csf_process_tick is concerned. */
+                        csf->m_nRowCount = 0;
+
+                        /* [Increase ProcessRow. Is ProcessRow > NumberOfRows?] */
+                        if (++csf->m_nProcessRow >= csf->PatternSize[csf->m_nCurrentPattern]) {
+                                /* [-- Yes --] */
+
+                                if (!increment_row(csf))
+                                        return 0;
+                        } /* else [-- No --] */
+
+                        /* [CurrentRow = ProcessRow] */
+                        csf->m_nRow = csf->m_nProcessRow;
+
+                        /* [Update Pattern Variables]
+                        (this is handled along with update effects) */
+                        csf->m_dwSongFlags |= SONG_FIRSTTICK;
+                } else {
+                        /* [-- No --] */
+                        /* Call update-effects for each channel. */
+                }
+
+
+                // Reset channel values
+                SONGVOICE *pChn = csf->Voices;
+                MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
+
+                for (unsigned int nChn=0; nChn<csf->m_nChannels; pChn++, nChn++, m++) {
+                        // this is where we're going to spit out our midi
+                        // commands... ALL WE DO is dump raw midi data to
+                        // our super-secret "midi buffer"
+                        // -mrsb
+                        if (csf_midi_out_note)
+                                csf_midi_out_note(nChn, m);
+
+                        pChn->nRowNote = m->note;
+
+                        if (m->instr)
+                                pChn->nLastInstr = m->instr;
+
+                        pChn->nRowInstr = m->instr;
+                        pChn->nRowVolCmd = m->volcmd;
+                        pChn->nRowVolume = m->vol;
+                        pChn->nRowCommand = m->command;
+                        pChn->nRowParam = m->param;
+
+                        pChn->nLeftVol = pChn->nNewLeftVol;
+                        pChn->nRightVol = pChn->nNewRightVol;
+                        pChn->dwFlags &= ~(CHN_PORTAMENTO | CHN_VIBRATO | CHN_TREMOLO | CHN_PANBRELLO);
+                        pChn->nCommand = 0;
+                }
+
+                csf_process_effects(csf, 1);
+        } else {
+                /* [-- No --] */
+                /* [Update effects for each channel as required.] */
+
+                if (csf_midi_out_note) {
+                        MODCOMMAND *m = csf->Patterns[csf->m_nCurrentPattern] + csf->m_nRow * csf->m_nChannels;
+
+                        for (unsigned int nChn=0; nChn<csf->m_nChannels; nChn++, m++) {
+                                /* m==NULL allows schism to receive notification of SDx and Scx commands */
+                                csf_midi_out_note(nChn, NULL);
+                        }
+                }
+
+                csf_process_effects(csf, 0);
+        }
+
+        return 1;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Handles envelopes & mixer setup
