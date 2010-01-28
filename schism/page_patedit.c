@@ -457,11 +457,11 @@ static void multichannel_draw_const(void)
                         38,
                         BOX_THIN|BOX_INNER|BOX_INSET);
         }
-        draw_text("Multichannel Selection", 28, 19, 3, 2);
+        draw_text("Multichannel Selection", 29, 19, 3, 2);
 }
 static void mp_advance_channel(void)
 {
-        change_focus_to(ACTIVE_WIDGET.next.tab);
+        change_focus_to(*selected_widget + 1);
 }
 
 static void pattern_editor_display_multichannel(void)
@@ -478,12 +478,12 @@ static void pattern_editor_display_multichannel(void)
                         ((i % 16) == 15) ? 64 : (i+1),
                         (i < 16) ? (i+48) : (i-16),
                         ((i + 16) % 64),
-                        i+1,
+                        ((i + 16) % 64),
 
                         mp_advance_channel);
                 multichannel_widgets[i].d.toggle.state = !!channel_multi[i];
         }
-        create_button(multichannel_widgets + 64, 35, 40, 8, 15, 0, 63, 15, 0, dialog_yes_NULL, "OK", 4);
+        create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes_NULL, "OK", 3);
 
         dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, 65, 0,
                                       multichannel_draw_const, NULL);

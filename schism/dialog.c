@@ -201,8 +201,12 @@ int dialog_handle_key(struct key_event * k)
                 case SDLK_n:
                         switch (status.dialog_type) {
                         case DIALOG_YES_NO:
-                                dialog_no(d->data);
-                                return 1;
+                                /* in Impulse Tracker, 'n' means cancel, not "no"!
+                                (results in different behavior on sample quality convert dialog) */
+                                if (!(status.flags & CLASSIC_MODE)) {
+                                        dialog_no(d->data);
+                                        return 1;
+                                } /* else fall through */
                         case DIALOG_OK_CANCEL:
                                 dialog_cancel(d->data);
                                 return 1;
@@ -211,9 +215,11 @@ int dialog_handle_key(struct key_event * k)
                         }
                         break;
                 case SDLK_ESCAPE:
+                case SDLK_c:
                         dialog_cancel(d->data);
                         return 1;
                 case SDLK_RETURN:
+                case SDLK_o:
                         yes = 1;
                         break;
                 default:

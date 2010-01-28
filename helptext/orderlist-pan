@@ -26,3 +26,7 @@
 |
 | Panning Keys.
 |   L/M/R/S           Set panning to Left/Middle/Right/Surround
+:   Alt-L/M/R         Pan all unmuted channels Left/Middle/Right
+:   Alt-S/A           Pan all unmuted channels Stereo/Amiga Stereo
+:   Alt-Backslash     Linear panning (left to right)
+:   Alt-Slash         Linear panning (right to left)

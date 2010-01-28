@@ -173,11 +173,11 @@
 |   Alt-H            Toggle track view divisions
 |   Ctrl-0           Deselect current track
 !   Ctrl-1 - Ctrl-5  View current track in scheme 1-5
-;   Ctrl-1 - Ctrl-6  View current track in scheme 1-6
+:   Ctrl-1 - Ctrl-6  View current track in scheme 1-6
 |   Ctrl-Left/Right  Move left/right between track view columns
 |
 !   L-Ctrl&Shift 1-4 Quick view scheme setup
-;   Ctrl-Shift 1-6   Quick view scheme setup
+:   Ctrl-Shift 1-6   Quick view scheme setup
 |
 |   Ctrl-T           Toggle View-Channel cursor-tracking
 |
