@@ -4045,9 +4045,13 @@ static int pattern_editor_handle_key(struct key_event * k)
                 return -1;
         case SDLK_PAGEUP:
                 if (k->state) return 0;
-                if (current_row == total_rows)
-                        current_row++;
-                current_row -= row_highlight_major ?: 16;
+                {
+                        int rh = row_highlight_major ?: 16;
+                        if (current_row == total_rows)
+                                current_row -= (current_row % rh) ?: rh;
+                        else
+                                current_row -= rh;
+                }
                 return -1;
         case SDLK_PAGEDOWN:
                 if (k->state) return 0;
