@@ -1014,15 +1014,16 @@ SONGSAMPLE *csf_translate_keyboard(CSoundFile *csf, SONGINSTRUMENT *penv, uint32
         return (n && n < MAX_SAMPLES) ? &csf->Samples[n] : def;
 }
 
-static void env_reset(SONGVOICE *pChn, int carry)
+static void env_reset(SONGVOICE *pChn, int always)
 {
         if (pChn->pHeader) {
                 pChn->dwFlags |= CHN_FASTVOLRAMP;
-                if (carry) {
+                if (always) {
                         pChn->nVolEnvPosition = 0;
                         pChn->nPanEnvPosition = 0;
                         pChn->nPitchEnvPosition = 0;
                 } else {
+                        /* only reset envelopes with carry off */
                         if (!(pChn->pHeader->dwFlags & ENV_VOLCARRY))
                                 pChn->nVolEnvPosition = 0;
                         if (!(pChn->pHeader->dwFlags & ENV_PANCARRY))
@@ -1110,7 +1111,7 @@ void csf_instrument_change(CSoundFile *csf, SONGVOICE *pChn, uint32_t instr, int
                         && (pChn->dwFlags & (CHN_NOTEFADE|CHN_KEYOFF))
                         && (csf->m_dwSongFlags & SONG_ITOLDEFFECTS)
                 )) {
-                        env_reset(pChn, bInstrumentChanged);
+                        env_reset(pChn, bInstrumentChanged || (pChn->dwFlags & CHN_KEYOFF));
                 } else if (!(penv->dwFlags & ENV_VOLUME)) {
                         // XXX why is this being done?
                         pChn->nVolEnvPosition = 0;
