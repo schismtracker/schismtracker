@@ -99,7 +99,7 @@ void sample_sign_convert(song_sample * sample)
 }
 
 /* --------------------------------------------------------------------- */
-/* i don't think this is being done correctly :/ */
+/* from the back to the front */
 
 static void _reverse_8(signed char *data, unsigned long length)
 {
@@ -176,9 +176,7 @@ void sample_reverse(song_sample * sample)
 
 /* if convert_data is nonzero, the sample data is modified (so it sounds
  * the same); otherwise, the sample length is changed and the data is
- * left untouched.
- * this is irrelevant, as i haven't gotten to writing the convert stuff
- * yet. (not that it's hard, i just haven't gotten to it.) */
+ * left untouched. */
 
 static void _quality_convert_8to16(signed char *idata, signed short *odata, unsigned long length)
 {
@@ -213,14 +211,13 @@ void sample_toggle_quality(song_sample * sample, int convert_data)
 
         status.flags |= SONG_NEEDS_SAVE;
         if (convert_data) {
+                odata = song_sample_allocate(sample->length
+                        * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
+                        * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                 if (sample->flags & SAMP_16_BIT) {
-                        odata = song_sample_allocate(2 * sample->length
-                                * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                         _quality_convert_8to16(sample->data, (signed short *) odata,
                                 sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                 } else {
-                        odata = song_sample_allocate(sample->length
-                                * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                         _quality_convert_16to8((signed short *) sample->data, odata,
                                 sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                 }

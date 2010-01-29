@@ -410,7 +410,12 @@ void instrument_set(int n);
 void instrument_synchronize_to_sample(void);
 void sample_synchronize_to_instrument(void);
 int sample_is_used_by_instrument(int samp);
-void sample_realize(void);
+
+/* if necessary, prompt to create a new instrument. if newpage >= 0, the page
+is changed upon completion of the dialog, or immediately if no dialog was
+shown.
+return value is 1 if the dialog was shown, 0 if not. */
+int sample_host_dialog(int newpage);
 
 /* instrument... sample... whatever */
 

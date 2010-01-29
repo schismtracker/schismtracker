@@ -43,7 +43,7 @@
 /* the locals */
 
 static struct widget widgets_loadinst[1];
-static char inst_cwd[PATH_MAX+1];
+static char inst_cwd[PATH_MAX+1] + "";
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -185,11 +185,13 @@ static void _common_set_page(void)
         *selected_widget = 0;
         slash_search_mode = -1;
 }
+
 static void load_instrument_set_page(void)
 {
         _library_mode = 0;
         _common_set_page();
 }
+
 static void library_instrument_set_page(void)
 {
         _library_mode = 1;
@@ -265,7 +267,6 @@ static void file_list_draw(void)
                 draw_char(168, 31, pos++, 2, 0);
 }
 
-/* on the file list, that is */
 static void do_enable_inst(UNUSED void *d)
 {
         song_set_instrument_mode(1);
@@ -273,10 +274,12 @@ static void do_enable_inst(UNUSED void *d)
         set_page(PAGE_INSTRUMENT_LIST);
         memused_songchanged();
 }
+
 static void dont_enable_inst(UNUSED void *d)
 {
         set_page(PAGE_INSTRUMENT_LIST);
 }
+
 static void reposition_at_slash_search(void)
 {
         dmoz_file_t *f;
@@ -301,6 +304,8 @@ static void reposition_at_slash_search(void)
                 file_list_reposition();
         }
 }
+
+/* on the file list, that is */
 static void handle_enter_key(void)
 {
         dmoz_file_t *file;
@@ -496,14 +501,12 @@ void load_instrument_load_page(struct page *page)
         page->total_widgets = 1;
         page->widgets = widgets_loadinst;
         page->help_index = HELP_GLOBAL;
-        inst_cwd[0] = 0;
         create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_draw);
         widgets_loadinst[0].accept_text = 1;
 }
+
 void library_instrument_load_page(struct page *page)
 {
-        clear_directory();
-
         page->title = "Instrument Library (Ctrl-F4)";
         page->draw_const = load_instrument_draw_const;
         page->set_page = library_instrument_set_page;
@@ -511,7 +514,5 @@ void library_instrument_load_page(struct page *page)
         page->total_widgets = 1;
         page->widgets = widgets_loadinst;
         page->help_index = HELP_GLOBAL;
-        inst_cwd[0] = 0;
-        create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_draw);
-        widgets_loadinst[0].accept_text = 1;
 }
+
