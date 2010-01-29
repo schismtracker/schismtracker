@@ -127,7 +127,9 @@ char *num99tostr(int n, char *buf);
 const char *get_basename(const char *filename);
 const char *get_extension(const char *filename);
 char *get_parent_directory(const char *dirname);
-void trim_string(char *s);
+int ltrim_string(char *s); // return: length of string after trimming
+int rtrim_string(char *s);
+int trim_string(char *s);
 int str_break(const char *s, char c, char **first, char **second);
 char *str_escape(const char *source, int space_hack);
 char *str_unescape(const char *source);

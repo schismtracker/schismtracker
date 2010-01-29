@@ -206,22 +206,7 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 free(trackdata[n]);
         free(trackdata);
 
-        if (comment_len) {
-                n = MIN(comment_len, MAX_MESSAGE);
-                slurp_read(fp, song->m_lpszSongComments, n);
-                song->m_lpszSongComments[n] = 0;
-
-                // adjust position if we didn't read the whole message
-                if (comment_len > MAX_MESSAGE)
-                        slurp_seek(fp, comment_len - MAX_MESSAGE, SEEK_CUR);
-
-                // fix nonsense
-                comment_len = n;
-                for (n = 0; n < comment_len; n++) {
-                        if (!song->m_lpszSongComments[n])
-                                song->m_lpszSongComments[n] = ((n + 1) % 40) ? ' ' : '\n';
-                }
-        }
+        read_lined_message(song->m_lpszSongComments, fp, comment_len, 40);
 
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {

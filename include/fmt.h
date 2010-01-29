@@ -174,6 +174,10 @@ int convert_voleffect(uint8_t *effect, uint8_t *param, int force);
 // load a .mod-style 4-byte packed note
 void mod_import_note(const uint8_t p[4], MODCOMMAND *note);
 
+// Read a message with fixed-size line lengths
+void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
+
+
 // get L-R-R-L panning value from a (zero-based!) channel number
 #define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)
 

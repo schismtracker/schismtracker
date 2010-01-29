@@ -244,15 +244,34 @@ char *get_parent_directory(const char *dirname)
 }
 
 static const char *whitespace = " \t\v\r\n";
-void trim_string(char *s)
-{
-        int i = strspn(s, whitespace);
 
-        if (i)
-                memmove(s, &(s[i]), strlen(s) - i + 1);
-        for (i = strlen(s)-1; i > 0 && strchr(whitespace, s[i]); i--);
-        s[1 + i] = 0;
+inline int ltrim_string(char *s)
+{
+        int ws = strspn(s, whitespace);
+        int len = strlen(s) - ws;
+
+        if (ws)
+                memmove(s, s + ws, len + 1);
+        return len;
 }
+
+inline int rtrim_string(char *s)
+{
+        int len = strlen(s) - 1;
+
+        while (len > 0 && strchr(whitespace, s[len]))
+                len--;
+        len++;
+        s[len] = '\0';
+        return len;
+}
+
+int trim_string(char *s)
+{
+        ltrim_string(s);
+        return rtrim_string(s);
+}
+
 
 /* break the string 's' with the character 'c', placing the two parts in 'first' and 'second'.
 return: 1 if the string contained the character (and thus could be split), 0 if not.
