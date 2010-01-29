@@ -68,6 +68,8 @@ scripts = \
 	scripts/genhelp.py		\
 	scripts/itf2half.py		\
 	scripts/half2itf.py		\
+	scripts/itcfg.py		\
+	scripts/lutgen.c		\
 	scripts/palette.py
 
 EXTRA_DIST = \
@@ -91,7 +93,6 @@ EXTRA_DIST = \
 ##   - fmt/mp3.c
 ##   - fmt/ogg.c
 ##   - fmt/sid.c
-##   - scripts/lutgen.c
 ##   - schism/isysev.c
 ##   - schism/tree.c
 ##   - sys/wii/data/*
