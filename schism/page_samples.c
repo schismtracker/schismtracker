@@ -409,12 +409,14 @@ static void exchange_sample_dialog(void)
 
 static void do_copy_sample(UNUSED void *data)
 {
+        /* TODO accept strings like I4 for high-numbered samples */
         int n = atoi(swap_sample_entry);
 
         if (n < 1 || n > _last_vis_sample())
                 return;
 
         song_copy_sample(current_sample, song_get_sample(n, NULL));
+        sample_host_dialog(-1);
 }
 
 static void copy_sample_draw_const(void)
@@ -669,7 +671,11 @@ static void do_quality_convert(UNUSED void *data)
 static void do_quality_toggle(UNUSED void *data)
 {
         song_sample *sample = song_get_sample(current_sample, NULL);
-        sample_toggle_quality(sample, 0);
+
+        if (sample->flags & SAMP_STEREO)
+                status_text_flash("Can't toggle quality for stereo samples");
+        else
+                sample_toggle_quality(sample, 0);
 }
 
 static void do_delete_sample(UNUSED void *data)
@@ -684,7 +690,7 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
                              ? MAX(sample->loop_end, sample->sustain_end)
                              : sample->loop_end);
 
-        if (pos == sample->length)
+        if (pos == 0 || pos >= sample->length)
                 return;
 
         song_lock_audio();
@@ -708,7 +714,7 @@ static void do_pre_loop_cut(UNUSED void *bweh)
         unsigned long  bytes = (sample->length - pos) * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
                                 * ((sample->flags & SAMP_STEREO) ? 2 : 1);
 
-        if (pos == 0)
+        if (pos == 0 || pos > sample->length)
                 return;
 
         song_lock_audio();
@@ -799,12 +805,7 @@ static void do_txtsynth(UNUSED void *data)
         sample->flags |= SAMP_LOOP;
         sample->flags &= ~(SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG
                            | SAMP_16_BIT | SAMP_STEREO | SAMP_ADLIB);
-        /* These settings should already be set to sane values, but modplug sucks */
-        if (!sample->speed) {
-                sample->speed = 8363;
-                sample->volume = 64 * 4;
-                sample->global_volume = 64;
-        }
+        sample_host_dialog(-1);
 }
 
 static void txtsynth_draw_const(void)
@@ -896,6 +897,7 @@ static void do_adlibconfig(UNUSED void *data)
                 sample->volume = 64 * 4;
                 sample->global_volume = 64;
         }
+        sample_host_dialog(-1);
 }
 
 static void adlibconfig_refresh(void)
@@ -1036,19 +1038,28 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
                 }
         }
 
-    dialog = dialog_create_custom(9, 30, 61, 15, sample_adlibconfig_widgets,
+        dialog = dialog_create_custom(9, 30, 61, 15, sample_adlibconfig_widgets,
                                   ARRAY_SIZE(adlibconfig_widgets), 0,
                                   sample_adlibconfig_draw_const, NULL);
-    dialog->action_yes = do_adlibconfig;
-    dialog->handle_key = do_adlib_handlekey;
+        dialog->action_yes = do_adlibconfig;
+        dialog->handle_key = do_adlib_handlekey;
 }
 
 
 static void sample_adlibpatch_finish(int n)
 {
-        if (n > 0 && n <= 128)
-                adlib_patch_apply((SONGSAMPLE *) song_get_sample(current_sample, NULL), n - 1);
+        song_sample *sample;
+
+        if (n <= 0 || n > 128)
+                return;
+
+        sample = song_get_sample(current_sample, NULL);
+        if (sample->data)
+                song_sample_free(sample->data);
+        adlib_patch_apply((SONGSAMPLE *) sample, n - 1);
         status.flags |= NEED_UPDATE; // redraw the sample
+
+        sample_host_dialog(-1);
 }
 
 static void sample_adlibpatch_dialog(UNUSED void *ign)
@@ -1348,63 +1359,59 @@ static void sample_toggle_solo(int n)
 static void sample_list_handle_alt_key(struct key_event * k)
 {
         song_sample *sample = song_get_sample(current_sample, NULL);
+        int canmod = (sample->data != NULL && !(sample->flags & SAMP_ADLIB));
 
         if (k->state) return;
         switch (k->sym) {
         case SDLK_a:
-                if (sample->data != NULL)
+                if (canmod)
                         dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
                 return;
         case SDLK_b:
-                /* this statement is too complicated :P */
-                if (!(sample->data == NULL
-                      || ((sample->flags & SAMP_SUSLOOP)
-                          && sample->loop_start == 0 && sample->sustain_start == 0)
-                      || (sample->loop_start == 0)))
+                if (canmod && (sample->loop_start > 0
+                               || ((sample->flags & SAMP_SUSLOOP) && sample->sustain_start > 0)) {
                         dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
+                }
                 return;
         case SDLK_d:
                 dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample, NULL, 1, NULL);
                 return;
         case SDLK_e:
-                resize_sample_dialog(1);
+                if (canmod)
+                        resize_sample_dialog(1);
                 break;
         case SDLK_f:
-                resize_sample_dialog(0);
+                if (canmod)
+                        resize_sample_dialog(0);
                 break;
         case SDLK_g:
-                if (sample->data == NULL)
-                        return;
-                sample_reverse(sample);
+                if (canmod)
+                        sample_reverse(sample);
                 break;
         case SDLK_h:
-                if (sample->data != NULL)
+                if (canmod)
                         dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
                 return;
         case SDLK_i:
-                if (sample->data == NULL)
-                        return;
-                sample_invert(sample);
+                if (canmod)
+                        sample_invert(sample);
                 break;
         case SDLK_l:
-                if (sample->data != NULL && (sample->loop_end != 0 || sample->sustain_end != 0))
+                if (canmod && (sample->loop_end > 0
+                               || ((sample->flags & SAMP_SUSLOOP) && sample->sustain_end > 0)) {
                         dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
                 return;
         case SDLK_m:
-                if (sample->data != NULL && !(sample->flags & SAMP_ADLIB))
+                if (canmod)
                         sample_amplify_dialog();
                 return;
         case SDLK_n:
                 song_toggle_multichannel_mode();
                 return;
         case SDLK_q:
-                if (sample->data != NULL) {
-                        if (sample->flags & SAMP_STEREO) {
-                                do_quality_convert(NULL);
-                        } else {
-                                dialog_create(DIALOG_YES_NO, "Convert sample?",
-                                      do_quality_convert, do_quality_toggle, 0, NULL);
-                        }
+                if (canmod) {
+                        dialog_create(DIALOG_YES_NO, "Convert sample?",
+                              do_quality_convert, do_quality_toggle, 0, NULL);
                 }
                 return;
         case SDLK_o:
@@ -1437,11 +1444,11 @@ static void sample_list_handle_alt_key(struct key_event * k)
                         void (*dlg)(void *) = (k->mod & KMOD_SHIFT)
                                 ? sample_adlibpatch_dialog
                                 : sample_adlibconfig_dialog;
-                        if (sample->data == NULL || (sample->flags & SAMP_ADLIB)) {
-                                dlg(NULL);
-                        } else {
+                        if (canmod) {
                                 dialog_create(DIALOG_OK_CANCEL, "This will replace this sample",
                                               dlg, NULL, 1, NULL);
+                        } else {
+                                dlg(NULL);
                         }
                 }
                 return;

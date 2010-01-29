@@ -351,52 +351,49 @@ extern int instrument_list_subpage;
 /* --------------------------------------------------------------------- */
 
 enum page_numbers {
-        PAGE_BLANK = (0),
-        PAGE_HELP = (1),
-        PAGE_PATTERN_EDITOR = (2),
-        PAGE_SAMPLE_LIST = (3),
-        /* PAGE_INSTRUMENT_LIST = (4),  * doesn't exist */
-        PAGE_INFO = (5),
+        PAGE_BLANK,
+        PAGE_HELP,
+        PAGE_ABOUT,
+        PAGE_LOG,
 
-        PAGE_MIDI = (6),
-        PAGE_PREFERENCES = (7),
+        PAGE_PATTERN_EDITOR,
+        PAGE_SAMPLE_LIST,
+        // PAGE_INSTRUMENT_LIST doesn't exist
+        PAGE_INFO,
 
-        PAGE_LOAD_MODULE = (9),
-        PAGE_SAVE_MODULE = (10),
-        PAGE_ORDERLIST_PANNING = (11),
-        PAGE_SONG_VARIABLES = (12),
-        PAGE_PALETTE_EDITOR = (13),
-        PAGE_ORDERLIST_VOLUMES = (14),
-        PAGE_MESSAGE = (15),
-        PAGE_LOG = (16),
+        PAGE_CONFIG,
+        PAGE_PREFERENCES,
+
+        PAGE_MIDI,
+        PAGE_MIDI_OUTPUT,
+
+        PAGE_LOAD_MODULE,
+        PAGE_SAVE_MODULE,
+        PAGE_EXPORT_MODULE,
+
+        PAGE_ORDERLIST_PANNING,
+        PAGE_ORDERLIST_VOLUMES,
+
+        PAGE_SONG_VARIABLES,
+        PAGE_MESSAGE,
 
         /* don't use these directly with set_page */
-        PAGE_INSTRUMENT_LIST_GENERAL = (17),
-        PAGE_INSTRUMENT_LIST_VOLUME = (18),
-        PAGE_INSTRUMENT_LIST_PANNING = (19),
-        PAGE_INSTRUMENT_LIST_PITCH = (20),
+        PAGE_INSTRUMENT_LIST_GENERAL,
+        PAGE_INSTRUMENT_LIST_VOLUME,
+        PAGE_INSTRUMENT_LIST_PANNING,
+        PAGE_INSTRUMENT_LIST_PITCH,
 
-        PAGE_LOAD_SAMPLE = (21),
-        PAGE_SAMPLE_BROWSER = (22),
-        PAGE_LOAD_INSTRUMENT = (23),
-        PAGE_INSTRUMENT_BROWSER = (24),
+        PAGE_LOAD_SAMPLE,
+        PAGE_LIBRARY_SAMPLE,
+        PAGE_LOAD_INSTRUMENT,
+        PAGE_LIBRARY_INSTRUMENT,
 
-        PAGE_MIDI_OUTPUT = (25),
+        PAGE_PALETTE_EDITOR,
+        PAGE_FONT_EDIT,
 
-        PAGE_FONT_EDIT = (26),
+        PAGE_WATERFALL,
 
-        PAGE_LIBRARY_SAMPLE = (27),
-        PAGE_LIBRARY_INSTRUMENT = (28),
-
-        PAGE_ABOUT = (29),
-
-        PAGE_CONFIG = (30),
-        PAGE_WATERFALL = (31),
-
-        PAGE_EXPORT_MODULE = (32),
-
-        PAGE_LAST_PAGE = (32),
-/* limit =48 */
+        PAGE_MAX
 };
 
 /* --------------------------------------------------------------------- */

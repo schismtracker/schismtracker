@@ -1440,6 +1440,23 @@ int song_load_sample(int n, const char *file)
         return 1;
 }
 
+void song_create_host_instrument(int smp)
+{
+        int ins = instrument_get_current();
+
+        if (song_instrument_is_empty(smp))
+                ins = smp;
+        else if ((status.flags & CLASSIC_MODE) || !song_instrument_is_empty(ins))
+                ins = song_first_unused_instrument();
+
+        if (ins) {
+                song_init_instrument_from_sample(ins, smp);
+                status_text_flash("Sample assigned to Instrument %d", ins);
+        } else {
+                status_text_flash("Error: No available Instruments!");
+        }
+}
+
 // ------------------------------------------------------------------------------------------------------------
 
 struct sample_save_format sample_save_formats[] = {
@@ -1591,7 +1608,9 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
         const char *base = get_basename(path);
         library = song_create_load(path);
         if (!library) {
+                /* FIXME: try loading as an instrument before giving up */
                 log_appendf(4, "%s: %s", base, fmt_strerror(errno));
+                errno = ENOTDIR;
                 return -1;
         }
 

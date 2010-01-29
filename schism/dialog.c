@@ -182,11 +182,13 @@ void dialog_cancel_NULL(void)
 int dialog_handle_key(struct key_event * k)
 {
         struct dialog *d = dialogs + num_dialogs - 1;
-        int yes = 0;
 
         ENSURE_DIALOG(return 0);
 
-        if (k->state) {
+        if (d->handle_key && d->handle_key(k))
+                return 1;
+
+        if (k->state && NO_MODIFIER(k->mod)) {
                 switch (k->sym) {
                 case SDLK_y:
                         switch (status.dialog_type) {
@@ -220,19 +222,13 @@ int dialog_handle_key(struct key_event * k)
                         return 1;
                 case SDLK_RETURN:
                 case SDLK_o:
-                        yes = 1;
-                        break;
+                        dialog_yes(d->data);
+                        return 1;
                 default:
                         break;
                 }
         }
 
-        if (d->handle_key && d->handle_key(k)) {
-                return 1;
-        } else if (yes) {
-                dialog_yes(d->data);
-                return 1;
-        }
         return 0;
 }
 

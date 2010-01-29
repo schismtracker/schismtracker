@@ -105,6 +105,7 @@ static void clear_directory(void)
         fake_slot = KEYJAZZ_NOINST;
         fake_slot_changed = 0;
 }
+
 static void file_list_reposition(void)
 {
         dmoz_file_t *f;
@@ -174,7 +175,6 @@ static void read_directory(void)
         struct stat st;
 
         clear_directory();
-
         if (stat(cfg_dir_samples, &st) < 0)
                 directory_mtime = 0;
         else
@@ -344,6 +344,7 @@ static void load_sample_set_page(void)
         _library_mode = 0;
         _common_set_page();
 }
+
 static void library_sample_set_page(void)
 {
         _library_mode = 1;
@@ -393,46 +394,46 @@ static void file_list_draw(void)
                 draw_char(168, 31, pos++, 2, 0);
 }
 
-static void do_create_host_realize(UNUSED void *gn)
-{
-        int cur = sample_get_current();
-        int n;
+/* --------------------------------------------------------------------------------------------------------- */
+/* Nasty mess to load a sample and prompt for stereo convert / create host instrument as necessary. */
 
-        dialog_destroy_all();
-        if (song_instrument_is_empty(cur)) {
-                song_init_instrument_from_sample(cur, cur);
-        } else if (!(status.flags & CLASSIC_MODE)
-        && song_instrument_is_empty((n=instrument_get_current()))) {
-                song_init_instrument_from_sample(n, cur);
-        } else {
-                n = song_first_unused_instrument();
-                if (n) {
-                        song_init_instrument_from_sample(n, cur);
-                } else {
-                        status_text_flash("Out of instruments");
-                }
-        }
-}
-static void do_create_host(UNUSED void *gn)
+static struct widget stereo_cvt_widgets[4];
+
+static void _create_host_ok(void *vpage)
 {
-        do_create_host_realize(NULL);
-        set_page(PAGE_SAMPLE_LIST);
+        intptr_t page = (intptr_t) vpage;
+        song_create_host_instrument(sample_get_current());
+        if (page >= 0)
+                set_page(page);
 }
-static void dont_create_host_realize(UNUSED void *gn)
+
+static void _create_host_cancel(void *vpage)
 {
-        dialog_destroy_all();
+        intptr_t page = (intptr_t) vpage;
+        if (page >= 0)
+                set_page(page);
 }
-void sample_realize(void)
+
+int sample_host_dialog(int newpage)
 {
-        int cur = sample_get_current();
-        if (!sample_is_used_by_instrument(cur) && song_is_instrument_mode()) {
+        /* Actually IT defaults to No when the sample slot already had a sample in it, rather than checking if
+        it was assigned to an instrument. Maybe this is better, though?
+        (Not to mention, passing around the extra state that'd be required to do it that way would be kind of
+        messy...)
+
+        also the double pointer cast sucks.
+
+        also also, IT says Ok/No here instead of Yes/No... but do I care? */
+
+        if (song_is_instrument_mode()) {
+                int used = sample_is_used_by_instrument(sample_get_current());
                 dialog_create(DIALOG_YES_NO, "Create host instrument?",
-                        do_create_host_realize, dont_create_host_realize, 0, NULL);
+                        _create_host_ok, _create_host_cancel, used ? 1 : 0, (void *) (intptr_t) newpage);
+                return 1;
         }
-}
-static void dont_create_host(UNUSED void *gn)
-{
-        set_page(PAGE_SAMPLE_LIST);
+        if (newpage >= 0)
+                set_page(newpage);
+        return 0;
 }
 
 static void finish_load(int cur);
@@ -442,52 +443,60 @@ static void stereo_cvt_complete_left(void)
         song_sample *smp;
         smp = song_get_sample(cur, NULL);
         sample_mono_left(smp);
-        dialog_destroy_all();
+        dialog_destroy();
         finish_load(cur);
 }
+
 static void stereo_cvt_complete_right(void)
 {
         int cur = sample_get_current();
         song_sample *smp;
         smp = song_get_sample(cur, NULL);
         sample_mono_right(smp);
-        dialog_destroy_all();
+        dialog_destroy();
         finish_load(cur);
 }
+
 static void stereo_cvt_complete_both(void)
 {
-        int cur = sample_get_current();
-        dialog_destroy_all();
         memused_songchanged();
-        if (!sample_is_used_by_instrument(cur) && song_is_instrument_mode()) {
-                dialog_create(DIALOG_YES_NO, "Create host instrument?",
-                        do_create_host, dont_create_host, 0, NULL);
-        } else {
+        dialog_destroy();
+        if (!sample_host_dialog(1))
                 set_page(PAGE_SAMPLE_LIST);
-        }
 }
+
 static void stereo_cvt_dialog(void)
 {
         draw_text("Loading Stereo Sample", 30, 27, 0, 2);
 }
+
 static int stereo_cvt_hk(struct key_event *k)
 {
-        if (k->sym == SDLK_l) {
-                if (!NO_MODIFIER(k->mod)) return 0;
-                if (k->state) stereo_cvt_complete_left();
+        if (!NO_MODIFIER(k->mod))
+                return 0;
+
+        /* trap the default dialog keys - we don't want to escape this dialog without running something */
+        switch (k->sym) {
+        case SDLK_RETURN:
+                printf("why am I here\n");
+        case SDLK_ESCAPE: case SDLK_o: case SDLK_c:
                 return 1;
-        }
-        if (k->sym == SDLK_r) {
-                if (!NO_MODIFIER(k->mod)) return 0;
-                if (k->state) stereo_cvt_complete_right();
+        case SDLK_l:
+                if (k->state)
+                        stereo_cvt_complete_left();
                 return 1;
-        }
-        if (k->sym == SDLK_s || k->sym == SDLK_b) {
-                if (!NO_MODIFIER(k->mod)) return 0;
-                if (k->state) stereo_cvt_complete_both();
+        case SDLK_r:
+                if (k->state)
+                        stereo_cvt_complete_right();
                 return 1;
+        case SDLK_s:
+        case SDLK_b:
+                if (k->state)
+                        stereo_cvt_complete_both();
+                return 1;
+        default:
+                return 0;
         }
-        return 0;
 }
 
 static void finish_load(int cur)
@@ -497,14 +506,9 @@ static void finish_load(int cur)
         memused_songchanged();
         smp = song_get_sample(cur, NULL);
         if (smp->flags & SAMP_STEREO) {
-/* Loading Stereo Sample
-Left  Both  Right
-*/
                 struct dialog *dd;
-                static struct widget stereo_cvt_widgets[4];
                 create_button(stereo_cvt_widgets+0, 27, 30, 6,
-                                0, 0, 0,    (status.flags & CLASSIC_MODE) ? 2 : 1,
-                                        (status.flags & CLASSIC_MODE) ? 2 : 1,
+                                0, 0, 2, 1, 1,
                                 stereo_cvt_complete_left, "Left", 2);
 
                 create_button(stereo_cvt_widgets+1, 37, 30, 6,
@@ -512,24 +516,17 @@ Left  Both  Right
                                 stereo_cvt_complete_both, "Both", 2);
 
                 create_button(stereo_cvt_widgets+2, 47, 30, 6,
-                                1, 1, (status.flags & CLASSIC_MODE) ? 0 : 1, 2, 0,
+                                2, 2, 1, 0, 0,
                                 stereo_cvt_complete_right, "Right", 1);
 
                 dd = dialog_create_custom(24, 25, 33, 8,
                                 stereo_cvt_widgets, 3,
                                 1,
                                 stereo_cvt_dialog, NULL);
-                dd->action_cancel = (void *) stereo_cvt_complete_both;
                 dd->handle_key = stereo_cvt_hk;
                 return;
         }
-
-        if (!sample_is_used_by_instrument(cur) && song_is_instrument_mode()) {
-                dialog_create(DIALOG_YES_NO, "Create host instrument?",
-                        do_create_host, dont_create_host, 0, NULL);
-        } else {
-                set_page(PAGE_SAMPLE_LIST);
-        }
+        sample_host_dialog(PAGE_SAMPLE_LIST);
 }
 
 static void reposition_at_slash_search(void)
@@ -574,8 +571,9 @@ static void handle_enter_key(void)
         && !(file->type & TYPE_SAMPLE_MASK)) {
                 change_dir(file->path);
                 status.flags |= NEED_UPDATE;
+        } else if (_library_mode) {
+                return;
         } else if (file->sample) {
-                if (_library_mode) return;
                 /* it's already been loaded, so copy it */
                 smp = song_get_sample(cur, NULL);
                 song_copy_sample(cur, file->sample);
@@ -586,13 +584,11 @@ static void handle_enter_key(void)
                 finish_load(cur);
                 memused_songchanged();
         } else if (file->type & TYPE_SAMPLE_MASK) {
-                if (_library_mode) return;
                 /* load the sample */
                 song_load_sample(cur, file->path);
                 finish_load(cur);
                 memused_songchanged();
         }
-
 }
 
 static void do_discard_changes_and_move(UNUSED void *gn)
@@ -602,14 +598,7 @@ static void do_discard_changes_and_move(UNUSED void *gn)
         search_pos = -1;
         current_file = will_move_to;
         file_list_reposition();
-        dialog_destroy_all();
         status.flags |= NEED_UPDATE;
-}
-
-/* FIXME what? this function shouldn't be needed at all */
-static void dont_discard_changes(UNUSED void *gn)
-{
-        dialog_destroy_all();
 }
 
 static void do_delete_file(UNUSED void *data)
@@ -747,7 +736,7 @@ static int file_list_handle_key(struct key_event * k)
                         dialog_create(DIALOG_YES_NO,
                                 "Discard Changes?",
                                 do_discard_changes_and_move,
-                                dont_discard_changes,
+                                NULL,
                                 0, NULL);
                         return 1;
                         /* support saving? XXX */
@@ -812,10 +801,12 @@ static void handle_preload(void)
                 }
         }
 }
+
 static void handle_rename_op(void)
 {
         handle_preload();
 }
+
 static void handle_load_copy_uint(unsigned int s, unsigned int *d)
 {
         if (s != *d) {
@@ -823,6 +814,7 @@ static void handle_load_copy_uint(unsigned int s, unsigned int *d)
                 fake_slot_changed = 1;
         }
 }
+
 static void handle_load_copy(song_sample *s)
 {
         handle_load_copy_uint(widgets_loadsample[2].d.numentry.value, &s->speed);
@@ -884,6 +876,7 @@ static void handle_load_copy(song_sample *s)
                 break;
         };
 }
+
 static void handle_load_update(void)
 {
         song_sample *s;
@@ -897,8 +890,13 @@ static void handle_load_update(void)
         }
 }
 
-static int make_widgets(void)
+
+void load_sample_load_page(struct page *page)
 {
+        vgamem_ovl_alloc(&sample_image);
+        clear_directory();
+
+
         create_other(widgets_loadsample + 0, 0,
                                 file_list_handle_key, file_list_draw);
         widgets_loadsample[0].accept_text = 1;
@@ -983,40 +981,27 @@ static int make_widgets(void)
                         9,
                         12, 13, 0, handle_load_update,
                         0,255);
-        return 14;
-}
-static void page_load_once(void)
-{
-        static int did = 0;
-        if (!did) {
-                vgamem_ovl_alloc(&sample_image);
-                did=1;
-        }
-}
-void load_sample_load_page(struct page *page)
-{
-        page_load_once();
-        clear_directory();
+
 
         page->title = "Load Sample";
         page->draw_const = load_sample_draw_const;
         page->set_page = load_sample_set_page;
         page->handle_key = load_sample_handle_key;
-        page->total_widgets = make_widgets();
+        page->total_widgets = 14;
         page->widgets = widgets_loadsample;
         page->help_index = HELP_GLOBAL;
 }
 
 void library_sample_load_page(struct page *page)
 {
-        page_load_once();
-        clear_directory();
+        /* this shares all the widgets from load_sample */
 
         page->title = "Sample Library (Ctrl-F3)";
         page->draw_const = load_sample_draw_const;
         page->set_page = library_sample_set_page;
         page->handle_key = load_sample_handle_key;
-        page->total_widgets = make_widgets();
+        page->total_widgets = 14;
         page->widgets = widgets_loadsample;
         page->help_index = HELP_GLOBAL;
 }
+

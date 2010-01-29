@@ -203,7 +203,7 @@ POST_EVENT:
 static void main_song_mode_changed_cb(void)
 {
         int n;
-        for (n = 0; n < PAGE_LAST_PAGE; n++) {
+        for (n = 0; n < PAGE_MAX; n++) {
                 if (pages[n].song_mode_changed_cb)
                         pages[n].song_mode_changed_cb();
         }

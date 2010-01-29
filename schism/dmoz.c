@@ -822,7 +822,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
                         lib = 1;
         } else {
                 /* opendir failed? that's unpossible! */
-                err = 0;
+                err = errno;
         }
 
         /* more directories!

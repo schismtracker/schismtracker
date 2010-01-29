@@ -51,7 +51,7 @@ struct tracker_status status = {
         0, 0, "", 0, 0, NULL, 0, 0, 0, 0, 0
 };
 
-struct page pages[48];
+struct page pages[PAGE_MAX];
 
 struct widget *widgets = NULL;
 int *selected_widget = NULL;
@@ -537,7 +537,7 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (k->state) show_exit_prompt();
+                        if (!k->state) show_exit_prompt();
                         return 1;
                 }
                 break;
@@ -546,7 +546,7 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (k->state) new_song_dialog();
+                        if (!k->state) new_song_dialog();
                         return 1;
                 }
                 break;
@@ -555,7 +555,7 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (k->state) show_song_timejump();
+                        if (!k->state) show_song_timejump();
                         return 1;
                 }
                 break;
@@ -564,7 +564,7 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (k->state) show_song_length();
+                        if (!k->state) show_song_length();
                         return 1;
                 }
                 break;
@@ -1244,6 +1244,8 @@ void update_current_instrument(void)
 
         if (page_is_instrument_list(status.current_page)
         || status.current_page == PAGE_SAMPLE_LIST
+        || status.current_page == PAGE_LOAD_SAMPLE
+        || status.current_page == PAGE_LIBRARY_SAMPLE
         || (!(status.flags & CLASSIC_MODE)
                 && (status.current_page == PAGE_ORDERLIST_PANNING
                         || status.current_page == PAGE_ORDERLIST_VOLUMES)))

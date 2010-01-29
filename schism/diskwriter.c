@@ -541,7 +541,7 @@ int diskwriter_sync(void)
 
 int diskwriter_finish(void)
 {
-        int need_realize = 0;
+        int need_host = 0;
         int r;
 
         if (!dw || (!fp && fini_sampno == -1)) {
@@ -573,7 +573,7 @@ int diskwriter_finish(void)
 
         if (mbuf) {
                 if (fp_ok && fini_sampno > -1) {
-                        need_realize = 1;
+                        need_host = 1;
                         sample_set(fini_sampno);
                         fini_sampno = sample_get_current();
 
@@ -655,7 +655,8 @@ int diskwriter_finish(void)
                 r = DW_OK;
         }
 
-        if (need_realize) sample_realize();
+        if (need_host)
+                sample_host_dialog(-1);
         return r;
 }
 
