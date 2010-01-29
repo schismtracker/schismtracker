@@ -1369,7 +1369,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 return;
         case SDLK_b:
                 if (canmod && (sample->loop_start > 0
-                               || ((sample->flags & SAMP_SUSLOOP) && sample->sustain_start > 0)) {
+                               || ((sample->flags & SAMP_SUSLOOP) && sample->sustain_start > 0))) {
                         dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
                 }
                 return;
@@ -1398,8 +1398,9 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 break;
         case SDLK_l:
                 if (canmod && (sample->loop_end > 0
-                               || ((sample->flags & SAMP_SUSLOOP) && sample->sustain_end > 0)) {
+                               || ((sample->flags & SAMP_SUSLOOP) && sample->sustain_end > 0))) {
                         dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
+                }
                 return;
         case SDLK_m:
                 if (canmod)

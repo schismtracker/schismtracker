@@ -43,7 +43,7 @@
 /* the locals */
 
 static struct widget widgets_loadinst[1];
-static char inst_cwd[PATH_MAX+1] + "";
+static char inst_cwd[PATH_MAX+1] = "";
 
 /* --------------------------------------------------------------------------------------------------------- */
 
