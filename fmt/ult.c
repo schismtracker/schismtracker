@@ -248,9 +248,8 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         char buf[34];
         uint8_t ver;
         int nmsg, nsmp, nchn, npat;
-        int n, c, chn, pat, row, msglen;
+        int n, chn, pat, row;
         int lostfx = 0, gxx = 0;
-        char *ptr;
         struct ult_sample usmp;
         SONGSAMPLE *smp;
         const char *verstr[] = {"<1.4", "1.4", "1.5", "1.6"};
@@ -271,22 +270,7 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         song->m_dwSongFlags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
 
         nmsg = slurp_getc(fp);
-        ptr = song->m_lpszSongComments;
-        msglen = 0;
-        for (n = 0; n < nmsg; n++) {
-                if (msglen + 33 >= MAX_MESSAGE) {
-                        slurp_seek(fp, (nmsg - n) * 32, SEEK_CUR);
-                        break;
-                }
-                msglen += 33;
-                slurp_read(fp, ptr, 32);
-                for (c = 0; c < 32; c++, ptr++) {
-                        if (*ptr == '\0')
-                                *ptr = ' ';
-                }
-                *ptr++ = '\n';
-        }
-        *ptr = '\0';
+        read_lined_message(song->m_lpszSongComments, fp, nmsg * 32, 32);
 
         nsmp = slurp_getc(fp);
         for (n = 0, smp = song->Samples + 1; n < nsmp; n++, smp++) {

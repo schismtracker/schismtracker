@@ -130,6 +130,7 @@ static void far_import_note(MODCOMMAND *note, const uint8_t data[4])
         note->command = far_effects[data[3] >> 4];
 }
 
+
 int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 {
         struct far_header fhdr;
@@ -168,9 +169,8 @@ int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         /* Farandole's song message doesn't have line breaks, and the tracker runs in
         some screwy ultra-wide text mode, so this displays more or less like crap. */
-        n = MIN(fhdr.message_len, MAX_MESSAGE - 1);
-        slurp_read(fp, song->m_lpszSongComments, n);
-        song->m_lpszSongComments[n] = '\0';
+        read_lined_message(song->m_lpszSongComments, fp, fhdr.message_len, 132);
+
 
         slurp_seek(fp, sizeof(fhdr) + fhdr.message_len, SEEK_SET);
 

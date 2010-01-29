@@ -96,7 +96,7 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         uint8_t patspeed[128], breakpos[128];
         uint8_t restartpos;
         const char *tid;
-        char msg[109];
+        char titletmp[37];
 
         slurp_read(fp, &tmp, 2);
         switch (bswapLE16(tmp)) {
@@ -113,13 +113,13 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         /* The message is 108 bytes, split onto 3 lines of 36 bytes each.
         Also copy the first part of the message into the title, because 669 doesn't actually have
         a dedicated title field... */
-        slurp_read(fp, msg, 108);
-        memcpy(song->song_title, msg + strspn(msg, " \t\r\n"), 25);
-        song->song_title[25] = 0;
-        memcpy(song->m_lpszSongComments +  0, msg +  0, 36); song->m_lpszSongComments[ 36] = '\n';
-        memcpy(song->m_lpszSongComments + 37, msg + 36, 36); song->m_lpszSongComments[ 73] = '\n';
-        memcpy(song->m_lpszSongComments + 74, msg + 72, 36); song->m_lpszSongComments[110] = '\n';
-        song->m_lpszSongComments[111] = '\0';
+        read_lined_message(song->m_lpszSongComments, fp, 108, 36);
+        strncpy(titletmp, song->m_lpszSongComments, 36);
+        titletmp[36] = '\0';
+        titletmp[strcspn(titletmp, "\r\n")] = '\0';
+        trim_string(titletmp);
+        titletmp[25] = '\0';
+        strcpy(song->song_title, titletmp);
 
         nsmp = slurp_getc(fp);
         npat = slurp_getc(fp);

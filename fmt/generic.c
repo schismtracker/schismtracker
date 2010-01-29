@@ -220,3 +220,28 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
         return 1;
 }
 
+
+void read_lined_message(char *msg, slurp_t *fp, int len, int linelen)
+{
+        int msgsize = 0, linesize;
+
+        while (len) {
+                linesize = MIN(len, linelen);
+                if (msgsize + linesize + 1 >= MAX_MESSAGE) {
+                        /* Skip the rest */
+                        slurp_seek(fp, len, SEEK_CUR);
+                        break;
+                }
+
+                slurp_read(fp, msg, linesize);
+                len -= linesize;
+
+                msg[linesize] = '\0';
+                linesize = rtrim_string(msg);
+                msgsize += linesize + 1;
+                msg += linesize;
+                *msg++ = '\n';
+        }
+        *msg = '\0';
+}
+
