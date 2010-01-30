@@ -231,7 +231,7 @@ try:
                 sys.exit(1)
         itcfg.seek(0) # back to start
 except IOError:
-        warning("%s: failed to seek, what kind of non-file is this?" % itcfg)
+        warning("%s: failed to seek, what kind of non-file is this?" % sys.argv[1])
         sys.exit(1)
 
 
