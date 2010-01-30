@@ -69,6 +69,7 @@ scripts = \
 	scripts/itf2half.py		\
 	scripts/half2itf.py		\
 	scripts/itcfg.py		\
+	scripts/itmidicfg.py		\
 	scripts/lutgen.c		\
 	scripts/palette.py
 
