@@ -834,53 +834,6 @@ static void instrument_note_trans_delete(song_instrument *ins, int pos)
         ins->note_map[119] = ins->note_map[118]+1;
 }
 
-static int note_trans_handle_alt_key(struct key_event * k)
-{
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
-        int n, s;
-
-        if (k->state) return 0;
-        switch (k->sym) {
-        case SDLK_UP:
-                instrument_note_trans_transpose(ins, 1);
-                break;
-        case SDLK_DOWN:
-                instrument_note_trans_transpose(ins, -1);
-                break;
-        case SDLK_INSERT:
-                instrument_note_trans_insert(ins, note_trans_sel_line);
-                break;
-        case SDLK_DELETE:
-                instrument_note_trans_delete(ins, note_trans_sel_line);
-                break;
-        case SDLK_p:
-                if (!note_trans_sel_line) return 1;
-                n = ins->sample_map[note_trans_sel_line-1];
-                s = ins->sample_map[note_trans_sel_line-1];
-                ins->note_map[note_trans_sel_line] = n;
-                ins->sample_map[note_trans_sel_line] = s;
-                break;
-        case SDLK_n:
-                if (!note_trans_sel_line) return 1;
-                s = ins->sample_map[note_trans_sel_line-1];
-                n = ins->sample_map[note_trans_sel_line-1];
-                ins->note_map[note_trans_sel_line] = n+1;
-                ins->sample_map[note_trans_sel_line] = s;
-                break;
-        case SDLK_a:
-                s = sample_get_current();
-                for (n = 0; n < 120; n++)
-                        ins->sample_map[n] = s;
-                break;
-        default:
-                return 0;
-        }
-
-        status.flags |= NEED_UPDATE;
-        memused_songchanged();
-        return 1;
-}
-
 static int note_trans_handle_key(struct key_event * k)
 {
         int prev_line = note_trans_sel_line;
@@ -888,7 +841,6 @@ static int note_trans_handle_key(struct key_event * k)
         int prev_pos = note_trans_cursor_pos;
         int new_pos = prev_pos;
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
-        /* char c; */
         const char *digit_string = "0123456789HIJKLMNOPQR"; /* FIXME this string should not be here */
         int c, n;
 
@@ -896,12 +848,15 @@ static int note_trans_handle_key(struct key_event * k)
                 if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
                 return 1;
         } else if (k->mouse == MOUSE_SCROLL_UP || k->mouse == MOUSE_SCROLL_DOWN) {
-                /* FIXME should be changing note_trans_top_line */
-                if (k->state) return 1;
-                new_line += (k->mouse == MOUSE_SCROLL_UP) ? -3 : 3;
+                if (!k->state) {
+                        note_trans_top_line += (k->mouse == MOUSE_SCROLL_UP) ? -3 : 3;
+                        note_trans_top_line = CLAMP(note_trans_top_line, 0, 119 - 31);
+                        status.flags |= NEED_UPDATE;
+                }
+                return 1;
         } else if (k->mouse) {
                 if (k->x >= 32 && k->x <= 41 && k->y >= 16 && k->y <= 47) {
-                        new_line = k->y - 16;
+                        new_line = note_trans_top_line + k->y - 16;
                         if (new_line == prev_line) {
                                 switch (k->x - 36) {
                                 case 2:
@@ -919,10 +874,47 @@ static int note_trans_handle_key(struct key_event * k)
                                 };
                         }
                 }
+        } else if (k->mod & KMOD_ALT) {
+                if (k->state)
+                        return 0;
+                switch (k->sym) {
+                case SDLK_UP:
+                        instrument_note_trans_transpose(ins, 1);
+                        break;
+                case SDLK_DOWN:
+                        instrument_note_trans_transpose(ins, -1);
+                        break;
+                case SDLK_INSERT:
+                        instrument_note_trans_insert(ins, note_trans_sel_line);
+                        break;
+                case SDLK_DELETE:
+                        instrument_note_trans_delete(ins, note_trans_sel_line);
+                        break;
+                case SDLK_n:
+                        n = note_trans_sel_line - 1; // the line to copy *from*
+                        if (n < 0 || ins->note_map[n] == NOTE_LAST)
+                                break;
+                        ins->note_map[note_trans_sel_line] = ins->note_map[n] + 1;
+                        ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
+                        new_line++;
+                        break;
+                case SDLK_p:
+                        n = note_trans_sel_line + 1; // the line to copy *from*
+                        if (n > (NOTE_LAST - NOTE_FIRST) || ins->note_map[n] == NOTE_FIRST)
+                                break;
+                        ins->note_map[note_trans_sel_line] = ins->note_map[n] - 1;
+                        ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
+                        new_line--;
+                        break;
+                case SDLK_a:
+                        c = sample_get_current();
+                        for (n = 0; n < (NOTE_LAST - NOTE_FIRST + 1); n++)
+                                ins->sample_map[n] = c;
+                        break;
+                default:
+                        return 0;
+                }
         } else {
-                if (k->mod & KMOD_ALT)
-                        return note_trans_handle_alt_key(k);
-
                 switch (k->sym) {
                 case SDLK_UP:
                         if (k->state) return 0;
@@ -1007,14 +999,8 @@ static int note_trans_handle_key(struct key_event * k)
                         if (k->state) return 0;
                         switch (note_trans_cursor_pos) {
                         case 0:        /* note */
-                                if (k->sym == SDLK_1) {
-                                        ins->sample_map[note_trans_sel_line] = 0;
-                                        sample_set(0);
-                                        new_line++;
-                                        break;
-                                }
                                 n = kbd_get_note(k);
-                                if (n <= 0 || n > 120)
+                                if (!NOTE_IS_NOTE(n))
                                         return 0;
                                 ins->note_map[note_trans_sel_line] = n;
                                 if (note_sample_mask || (status.flags & CLASSIC_MODE))
