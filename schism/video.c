@@ -338,14 +338,19 @@ void video_report(void)
                         log_appendf(5, " Display format: %x", video.yuvlayout);
                 break;
         case VIDEO_GL:
-                log_append(5, 0, " OpenGL interface");
+                log_appendf(5, " %s%s OpenGL interface",
+                        (video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
+                        (video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
 #if defined(NVIDIA_PixelDataRange)
                 if (video.gl.pixel_data_range)
                         log_append(5, 0, " NVidia pixel range extensions available");
 #endif
                 break;
         case VIDEO_DDRAW:
-                log_append(5, 0, " DirectDraw interface");
+                // is this meaningful?
+                log_appendf(5, " %s%s DirectDraw interface",
+                        (video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
+                        (video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
                 break;
         };
         log_appendf(5, " %d bits/pixel", video.surface->format->BitsPerPixel);
@@ -788,6 +793,7 @@ SKIP1:
         };
         /* okay, i think we're ready */
         SDL_ShowCursor(SDL_DISABLE);
+#if 0 /* Do we need these? Everything seems to work just fine without */
         SDL_EventState(SDL_VIDEORESIZE, SDL_ENABLE);
         SDL_EventState(SDL_VIDEOEXPOSE, SDL_ENABLE);
         SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
@@ -798,9 +804,11 @@ SKIP1:
         SDL_EventState(SDL_MOUSEMOTION, SDL_ENABLE);
         SDL_EventState(SDL_MOUSEBUTTONDOWN, SDL_ENABLE);
         SDL_EventState(SDL_MOUSEBUTTONUP, SDL_ENABLE);
+#endif
         _did_init = 1;
         video_fullscreen(video.desktop.fullscreen);
 }
+
 static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int sdlflags)
 {
         int want_fixed = video.desktop.want_fixed;
@@ -859,6 +867,21 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
         }
         return video.surface;
 }
+
+static void _set_gl_attributes(void)
+{
+        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+        SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
+        SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 0);
+        SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 0);
+        SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 0);
+        SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE, 0);
+#if SDL_VERSION_ATLEAST(1,2,11)
+        SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
+#endif
+}
+
 void video_resize(unsigned int width, unsigned int height)
 {
         GLfloat tex_width, tex_height;
@@ -1000,31 +1023,13 @@ RETRYSURF:      /* use SDL surfaces */
                 video.desktop.type = VIDEO_YUV;
                 break;
         case VIDEO_GL:
-                SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-                SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
-                SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
-                SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 0);
-                SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 0);
-                SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 0);
-                SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE, 0);
-#if SDL_VERSION_ATLEAST(1,2,11)
-                SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
-#endif
+                _set_gl_attributes();
                 _setup_surface(width, height, SDL_OPENGL);
                 if (video.surface->format->BitsPerPixel < 15) {
                         goto RETRYSURF;
                 }
                 /* grumble... */
-                SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-                SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
-                SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
-                SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 0);
-                SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 0);
-                SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 0);
-                SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE, 0);
-#if SDL_VERSION_ATLEAST(1,2,11)
-                SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
-#endif
+                _set_gl_attributes();
                 my_glViewport(video.clip.x, video.clip.y,
                         video.clip.w, video.clip.h);
                 texsize = 2 << int_log2(NATIVE_SCREEN_WIDTH);
