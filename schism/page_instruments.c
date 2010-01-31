@@ -841,7 +841,6 @@ static int note_trans_handle_key(struct key_event * k)
         int prev_pos = note_trans_cursor_pos;
         int new_pos = prev_pos;
         song_instrument *ins = song_get_instrument(current_instrument, NULL);
-        const char *digit_string = "0123456789HIJKLMNOPQR"; /* FIXME this string should not be here */
         int c, n;
 
         if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
@@ -1038,22 +1037,20 @@ static int note_trans_handle_key(struct key_event * k)
                                         break;
                                 }
 
-                                /* c = kbd_char_to_hex(k); */
-                                c = 0; k->unicode = toupper(k->unicode);
-                                while (c < 21 && k->unicode != digit_string[c])
-                                        c++;
                                 n = ins->sample_map[note_trans_sel_line];
                                 if (note_trans_cursor_pos == 2) {
-                                        if (c < 0 || c > 20) return 0;
+                                        c = kbd_char_to_99(k);
+                                        if (c < 0) return 0;
                                         n = (c * 10) + (n % 10);
                                         new_pos++;
                                 } else {
+                                        c = kbd_char_to_hex(k);
                                         if (c < 0 || c > 9) return 0;
                                         n = ((n / 10) * 10) + c;
                                         new_pos--;
                                         new_line++;
                                 }
-                                if (n > 200) n = 200;
+                                n = MIN(n, SCHISM_MAX_SAMPLES - 1);
                                 ins->sample_map[note_trans_sel_line] = n;
                                 sample_set(n);
                                 break;
