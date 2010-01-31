@@ -142,8 +142,9 @@ void adlib_patch_apply(SONGSAMPLE *smp, int patchnum)
                 return;
         }
         memcpy(smp->AdlibBytes, patches[patchnum], 11);
-        snprintf(smp->name, sizeof(smp->name) - 1, "%03d:%s", patchnum + 1, midi_program_names[patchnum]);
+        strncpy(smp->name, midi_program_names[patchnum], sizeof(smp->name) - 1);
         smp->name[sizeof(smp->name) - 1] = '\0'; // Paranoid.
+        sprintf(smp->filename, "MIDI#%03d", patchnum + 1);
         smp->uFlags |= CHN_ADLIB;
         if (!smp->pSample) {
                 smp->nLength = 1;
