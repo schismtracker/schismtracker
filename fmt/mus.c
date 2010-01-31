@@ -266,9 +266,21 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         ticks >>= FRACBITS; // and back to a normal integer
 
                         if (ticks < 1) {
+#if 0
                                 // There's only part of a tick - compensate by skipping one tick later
                                 tickfrac -= 1 << FRACBITS;
                                 ticks = 1;
+#else
+                                /* Don't advance the row: if there's another note right after one of the ones
+                                inserted already, the existing note will be rendered more or less irrelevant
+                                anyway, so just allow any following events to overwrite the data.
+                                Also, there's no need to write the speed, because it'd just be trampled over
+                                later anyway.
+                                The only thing that would necessitate advancing the row is if there's a pitch
+                                adjustment that's at least 15/16 of a semitone; in that case, "steal" a tick
+                                (see above). */
+                                continue;
+#endif
                         } else if (ticks > 255) {
                                 /* Too many ticks for a single row with Axx.
                                 We can increment multiple rows easily, but that only allows for exact multiples
@@ -302,6 +314,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         row -= MUS_ROWS_PER_PATTERN;
                         if (pat >= MAX_PATTERNS) {
                                 log_appendf(4, " Warning: Too much note data");
+                                finished = 1;
                                 break;
                         }
                         song->PatternSize[pat] = song->PatternAllocSize[pat] = MUS_ROWS_PER_PATTERN;
@@ -322,6 +335,8 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         song->m_dwSongFlags |= SONG_NOSTEREO;
         song->m_nDefaultSpeed = 1;
         song->m_nDefaultTempo = 255;
+
+        strcpy(song->tracker_id, "Doom Music File"); // ?
 
         return LOAD_SUCCESS;
 }
