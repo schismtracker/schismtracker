@@ -1054,8 +1054,10 @@ static void sample_adlibpatch_finish(int n)
                 return;
 
         sample = song_get_sample(current_sample, NULL);
-        if (sample->data)
+        if (sample->data) {
                 song_sample_free(sample->data);
+                sample->data = NULL;
+        }
         adlib_patch_apply((SONGSAMPLE *) sample, n - 1);
         status.flags |= NEED_UPDATE; // redraw the sample
 
