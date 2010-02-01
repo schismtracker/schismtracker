@@ -184,59 +184,49 @@ static void handle_file_entered_L(char *ptr)
 {
         dmoz_filelist_t tmp;
         struct stat sb;
-        const char *ext;
         dmoz_file_t *f;
-        int r, i;
 
-        /* these shenanagans force the file to take another trip... */
-        if (stat(ptr, &sb) == -1) return;
-        if (status.current_page == PAGE_EXPORT_MODULE) {
-                widgets_exportsave = widgets_exportmodule;
-        } else {
-                widgets_exportsave = widgets_savemodule;
-        }
+        /* these shenanigans force the file to take another trip... */
+        if (stat(ptr, &sb) == -1)
+                return;
 
-        memset(&tmp,0,sizeof(tmp));
+        memset(&tmp, 0, sizeof(tmp));
         f = dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
-        //r = modgrep(f);
         dmoz_free(&tmp, NULL);
 
-        if (song_load(ptr)) {
-                r = 4; /* what? */
+        song_load(ptr);
+}
 
-                ext = get_extension(ptr);
-                if (ext[0]) {
-                        for (i = 0; diskwriter_drivers[i]; i++) {
-                                if (strcasecmp(ext, diskwriter_drivers[i]->extension) == 0) {
-                                        /* ugh :) offset to the button for the file type on the save module
-                                           page is (position in diskwriter driver array) + 4 */
-                                        r = i + 4;
-                                        break;
-                                }
+static void loadsave_song_changed(void)
+{
+        int r = 4; /* what? */
+        int i;
+        const char *ext;
+        const char *ptr = song_get_filename();
+
+        if (!ptr)
+                return;
+        ext = get_extension(ptr);
+        if (ext[0]) {
+                for (i = 0; diskwriter_drivers[i]; i++) {
+                        if (strcasecmp(ext, diskwriter_drivers[i]->extension) == 0) {
+                                /* ugh :) offset to the button for the file type on the save module
+                                   page is (position in diskwriter driver array) + 4 */
+                                r = i + 4;
+                                break;
                         }
                 }
-                togglebutton_set(widgets_exportsave, r, 0);
-
-                set_page((song_get_mode() == MODE_PLAYING) ? PAGE_INFO : PAGE_LOG);
         }
+        togglebutton_set(widgets_savemodule, r, 0);
 }
+
+
 
 static void do_save_song(void *ptr)
 {
         int i, n;
         const char *typ = NULL;
-        const char *f;
-
-        if (ptr == NULL)
-                f = (void*)song_get_filename();
-        else
-                f = (const char *)ptr;
-
-        if (status.current_page == PAGE_EXPORT_MODULE) {
-                widgets_exportsave = widgets_exportmodule;
-        } else {
-                widgets_exportsave = widgets_savemodule;
-        }
+        const char *f = ptr ?: song_get_filename();
 
         for (i = n = 0; diskwriter_drivers[i]; i++) {
                 if (diskwriter_drivers[i]->export_only
@@ -253,7 +243,6 @@ static void do_save_song(void *ptr)
 
         if (song_save(f, typ)) {
                 set_page(PAGE_LOG);
-                /* set_page(PAGE_BLANK); */
         }
         free(ptr);
 }
@@ -271,12 +260,7 @@ void save_song_or_save_as(void)
 extern diskwriter_driver_t wavewriter;
 static void do_multiwrite(void *ptr)
 {
-        const char *f;
-
-        if (ptr == NULL)
-                f = (void*)song_get_filename();
-        else
-                f = (const char *)ptr;
+        const char *f = ptr ?: song_get_filename();
 
         /* FIXME: support other writers? */
         diskwriter_multiout(f, &wavewriter);
@@ -1038,6 +1022,10 @@ static void save_module_set_page(void)
         set_default_glob(0);
         filename_entry[0] = 0;
         pages[PAGE_SAVE_MODULE].selected_widget = 2;
+
+        widgets_exportsave = (status.current_page == PAGE_EXPORT_MODULE)
+                ? widgets_exportmodule
+                : widgets_savemodule;
 }
 
 void save_module_load_page(struct page *page, int do_export)
@@ -1069,6 +1057,7 @@ void save_module_load_page(struct page *page, int do_export)
 #if CACHEFREE
         page->pre_handle_key = _save_cachefree_hack;
 #endif
+        page->song_changed_cb = loadsave_song_changed;
 
         create_other(widgets_exportsave + 0, 1, file_list_handle_key, file_list_draw);
         widgets_exportsave[0].accept_text = 1;

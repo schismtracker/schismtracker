@@ -1624,6 +1624,15 @@ void main_song_changed_cb(void)
 /* --------------------------------------------------------------------- */
 /* not sure where else to toss this crap */
 
+static void savecheck(void (*ok)(void *data), void (*cancel)(void *data), void *data)
+{
+        if (status.flags & SONG_NEEDS_SAVE) {
+                dialog_create(DIALOG_OK_CANCEL, "Current module not saved. Proceed?", ok, cancel, 1, data);
+        } else {
+                ok(data);
+        }
+}
+
 static void exit_ok_confirm(UNUSED void *data)
 {
         exit(0);
@@ -1631,45 +1640,22 @@ static void exit_ok_confirm(UNUSED void *data)
 
 static void exit_ok(UNUSED void *data)
 {
-        struct dialog *d;
-        if (status.flags & SONG_NEEDS_SAVE) {
-                d = dialog_create(DIALOG_OK_CANCEL,
-                        "Current module not saved. Proceed?",
-                              exit_ok_confirm, NULL, 1, NULL);
-                /* hack to make cancel default */
-                d->selected_widget = 1;
-        } else {
-                exit(0);
-        }
+        savecheck(exit_ok_confirm, NULL, NULL);
 }
-static void real_load_ok(void *data)
+
+static void real_load_ok(void *filename)
 {
-        dialog_destroy_all();
-        song_load_unchecked(data);
-        free(data);
-}
-int song_load(const char *filename)
-{
-        struct dialog *d;
-        char *tmp;
-
-        dialog_destroy_all();
-
-        if (status.flags & SONG_NEEDS_SAVE) {
-                tmp = str_dup(filename);
-                assert(tmp);
-
-                d = dialog_create(DIALOG_OK_CANCEL,
-                        "Current module not saved. Proceed?",
-                              real_load_ok, free, 1, tmp);
-                /* hack to make cancel default */
-                /* that's not a hack, that's just how you do it :) -storlek */
-                d->selected_widget = 1;
-                /* um... */
-                return 0;
+        if (song_load_unchecked(filename)) {
+                set_page((song_get_mode() == MODE_PLAYING) ? PAGE_INFO : PAGE_LOG);
         } else {
-                return song_load_unchecked(filename);
+                set_page(PAGE_LOG);
         }
+        free(filename);
+}
+
+void song_load(const char *filename)
+{
+        savecheck(real_load_ok, free, str_dup(filename));
 }
 
 void show_exit_prompt(void)

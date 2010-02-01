@@ -779,9 +779,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                 /* used by native system scripting */
                                 switch (event.user.code) {
                                 case SCHISM_EVENT_NATIVE_OPEN: /* open song */
-                                        if (song_load(event.user.data1)) {
-                                                set_page(PAGE_BLANK);
-                                        }
+                                        song_load(event.user.data1);
                                         break;
                                 case SCHISM_EVENT_NATIVE_SCRIPT:
                                         /* TODO: hash the string's value and do a switch() on it */
@@ -1069,14 +1067,9 @@ int main(int argc, char **argv)
                 status.flags |= STARTUP_FONTEDIT;
                 set_page(PAGE_FONT_EDIT);
         } else if (initial_song) {
-                if (song_load_unchecked(initial_song)) {
-                        if (startup_flags & SF_PLAY) {
-                                song_start();
-                                set_page(PAGE_INFO);
-                        } else {
-                                /* set_page(PAGE_LOG); */
-                                set_page(PAGE_BLANK);
-                        }
+                if (song_load_unchecked(initial_song) && (startup_flags & SF_PLAY)) {
+                        song_start();
+                        set_page(PAGE_INFO);
                 } else {
                         set_page(PAGE_LOG);
                 }
