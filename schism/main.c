@@ -466,14 +466,6 @@ static void event_loop(void) NORETURN;
 static void event_loop(void)
 {
         SDL_Event event;
-        struct key_event kk = {
-                .midi_volume = -1,
-                .midi_note = -1,
-                // X/Y resolution
-                .rx = NATIVE_SCREEN_WIDTH / 80,
-                .ry = NATIVE_SCREEN_HEIGHT / 50,
-                // everything else will be set to 0
-        };
         unsigned int lx = 0, ly = 0; /* last x and y position (character) */
         uint32_t last_mouse_down, ticker;
         SDLKey last_key = 0;
@@ -513,6 +505,15 @@ static void event_loop(void)
         status.m = tmr->tm_min;
         status.s = tmr->tm_sec;
         while (SDL_WaitEvent(&event)) {
+                struct key_event kk = {
+                        .midi_volume = -1,
+                        .midi_note = -1,
+                        // X/Y resolution
+                        .rx = NATIVE_SCREEN_WIDTH / 80,
+                        .ry = NATIVE_SCREEN_HEIGHT / 50,
+                        // everything else will be set to 0
+                };
+
                 if (!os_sdlevent(&event))
                         continue;
                 sawrep = 0;
@@ -1013,7 +1014,6 @@ int main(int argc, char **argv)
         if (!did_fullscreen) {
                 video_fullscreen(cfg_video_fullscreen);
         }
-        video_setup(video_driver);
 
         if (!(startup_flags & SF_NETWORK)) {
                 status.flags |= NO_NETWORK;
@@ -1025,6 +1025,7 @@ int main(int argc, char **argv)
         shutdown_process |= EXIT_SDLQUIT;
         os_sdlinit();
 
+        video_setup(video_driver);
         display_init();
         palette_apply();
         font_init();

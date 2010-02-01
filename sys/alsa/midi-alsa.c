@@ -39,6 +39,11 @@
 #endif
 #include <alsa/seq.h>
 
+
+
+#define PORT_NAME       "Schism Tracker"
+
+
 static snd_seq_t *seq;
 static int local_port = -1;
 
@@ -329,7 +334,6 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 
         if (local_port == -1) {
 
-#define PORT_NAME       "Schism Tracker"
                 local_port = snd_seq_create_simple_port(seq,
                                 PORT_NAME,
                                 SND_SEQ_PORT_CAP_READ
@@ -446,7 +450,7 @@ int alsa_midi_setup(void)
         driver.drain = _alsa_drain;
 
         if (snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, 0) < 0
-        || snd_seq_set_client_name(seq, "Schism Tracker") < 0) {
+        || snd_seq_set_client_name(seq, PORT_NAME) < 0) {
                 return 0;
         }
 

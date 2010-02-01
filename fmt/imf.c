@@ -38,7 +38,7 @@ int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
         file->description = "Imago Orpheus";
         /*file->extension = str_dup("imf");*/
-        file->title = calloc(32, sizeof(char));
+        file->title = calloc(33, sizeof(char));
         memcpy(file->title, data, 32);
         file->title[32] = 0;
         file->type = TYPE_MODULE_IT;

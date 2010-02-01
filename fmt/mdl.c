@@ -35,7 +35,7 @@
 
 int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        size_t position, block_length;
+        uint32_t position, block_length;
         char buf[33];
 
         /* data[4] = major version number (accept 0 or 1) */
@@ -1104,6 +1104,19 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                 ins->NoteMap[note] = note + 1;
                         }
                 }
+        }
+
+        if (readflags & MDL_HAS_VOLENVS) {
+                for (n = 0; n < 64; n++)
+                        free(volenvs[n]);
+        }
+        if (readflags & MDL_HAS_PANENVS) {
+                for (n = 0; n < 64; n++)
+                        free(panenvs[n]);
+        }
+        if (readflags & MDL_HAS_FREQENVS) {
+                for (n = 0; n < 64; n++)
+                        free(freqenvs[n]);
         }
 
         if (restartpos > 0)
