@@ -461,8 +461,7 @@ static void stereo_cvt_complete_both(void)
 {
         memused_songchanged();
         dialog_destroy();
-        if (!sample_host_dialog(1))
-                set_page(PAGE_SAMPLE_LIST);
+        sample_host_dialog(PAGE_SAMPLE_LIST);
 }
 
 static void stereo_cvt_dialog(void)
