@@ -62,3 +62,7 @@ Other portions of file loading and playing code has been liberally adapted
 from Mikmod by Raphael Assenat and Miodrag Vallat.
 
 Path manipulation code taken from bash.
+
+Predefined Adlib MIDI patches taken from dro2midi, originally extracted from
+Creative Labs' MIDI player (PLAY.EXE).
+
