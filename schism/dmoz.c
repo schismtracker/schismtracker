@@ -175,14 +175,17 @@ static const fmt_read_info_func read_info_funcs[] = {
 };
 
 #undef READ_INFO
+
 /* --------------------------------------------------------------------------------------------------------- */
 /* "selected" and cache */
+
 struct dmoz_cache {
         struct dmoz_cache *next;
         char *path;
         char *cache_filen;
         char *cache_dirn;
 };
+
 static struct dmoz_cache *cache_top = NULL;
 
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl)
@@ -239,13 +242,12 @@ void dmoz_cache_update_names(const char *path, const char *filen, const char *di
         p->next = cache_top;
         cache_top = p;
 }
+
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl)
 {
         struct dmoz_cache *p;
-        char *q;
         int i;
 
-        q = str_dup(path);
         if (fl) fl->selected = 0;
         if (dl) dl->selected = 0;
         for (p = cache_top; p; p = p->next) {
@@ -272,8 +274,6 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
                 }
         }
 }
-
-
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* path string hacking */

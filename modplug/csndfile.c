@@ -165,6 +165,8 @@ void csf_free_pattern(void *pat)
         free(pat);
 }
 
+/* Note: this function will appear in valgrind to be a sieve for memory leaks.
+It isn't; it's just being confused by the adjusted pointer being stored. */
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
         signed char *p = calloc(1, (nbytes + 39) & ~7); // magic
@@ -1084,7 +1086,7 @@ uint32_t csf_detect_unused_samples(CSoundFile *csf, int *pbIns)
 
 int csf_destroy_sample(CSoundFile *csf, uint32_t nSample)
 {
-        if (!nSample || nSample >= MAX_SAMPLES)
+        if (nSample >= MAX_SAMPLES)
                 return 0;
         if (!csf->Samples[nSample].pSample)
                 return 1;

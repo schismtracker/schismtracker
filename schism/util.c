@@ -697,6 +697,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
                 if (!tmp) _exit(255);
                 sprintf(tmp, "./%s", name);
                 execl(tmp, tmp, maybe_arg, NULL);
+                free(tmp);
                 _exit(255);
         };
         while (wait(&st) == -1) {
