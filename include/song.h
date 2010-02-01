@@ -298,8 +298,19 @@ extern "C" {
 
 /* --------------------------------------------------------------------- */
 
+/*
+song_load:
+        prompt ok/cancel if the existing song hasn't been saved.
+        after loading, the current page is changed accordingly.
+song_load_unchecked:
+        *NO* dialog, just goes right into loading the song
+        doesn't set the page after loading
+        return value is nonzero if the load was successful.
+        generally speaking, don't use this function directly;
+        use song_load instead.
+*/
 void song_new(int flags);
-int song_load(const char *file);
+void song_load(const char *file);
 int song_load_unchecked(const char *file);
 int song_save(const char *file, const char *type);
 
