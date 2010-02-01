@@ -99,6 +99,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         } chanstate[16];
         uint8_t prevspeed = 1;
         uint8_t patch_samples[128] = {0};
+        uint8_t patch_percussion[128] = {0};
         uint8_t nsmp = 1; // Next free sample
 
         slurp_read(fp, &hdr, sizeof(hdr));
@@ -111,8 +112,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 return LOAD_FORMAT_ERROR;
 
 
-        // Drums are on channel 16 -- until they're implemented properly, mute it to silence the random notes
-        for (n = 15; n < 64; n++)
+        for (n = 16; n < 64; n++)
                 song->Channels[n].dwFlags |= CHN_MUTE;
 
         slurp_seek(fp, hdr.scorestart, SEEK_SET);
@@ -152,11 +152,44 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         b1 = slurp_getc(fp); // & 128 => volume follows, & 127 => note number
                         if (b1 & 128) {
                                 chanstate[ch].vol = ((slurp_getc(fp) & 127) + 1) >> 1;
+                                b1 &= 127;
                         }
-                        chanstate[ch].note = MIN((b1 & 127) + 1, NOTE_LAST);
-                        if (chanstate[ch].instr) {
-                                note[ch].note = chanstate[ch].note;
-                                note[ch].instr = chanstate[ch].instr;
+                        chanstate[ch].note = MIN(b1 + 1, NOTE_LAST);
+                        if (ch == 15) {
+                                // Percussion
+                                b1 = CLAMP(b1, 24, 84); // ?
+                                if (!patch_percussion[b1]) {
+                                        if (nsmp < MAX_SAMPLES) {
+                                                // New sample!
+                                                patch_percussion[b1] = nsmp;
+                                                strncpy(song->Samples[nsmp].name,
+                                                        midi_percussion_names[b1 - 24], 25);
+                                                song->Samples[nsmp].name[25] = '\0';
+                                                nsmp++;
+                                        } else {
+                                                // Phooey.
+                                                log_appendf(4, " Warning: Too many samples");
+                                                note[ch].note = NOTE_OFF;
+                                        }
+                                }
+#if 0
+                                note[ch].note = NOTE_MIDC;
+                                note[ch].instr = patch_percussion[b1];
+#else
+                                /* adlib is broken currently: it kind of "folds" every 9th channel, but only
+                                for SOME events ... what this amounts to is attempting to play notes from
+                                both of any two "folded" channels will cause everything to go haywire.
+                                for the moment, ignore the drums. even if we could load them, the playback
+                                would be completely awful.
+                                also reset the channel state, so that random note-off events don't stick ===
+                                into the channel, that's even enough to screw it up */
+                                chanstate[ch].note = NOTE_NONE;
+#endif
+                        } else {
+                                if (chanstate[ch].instr) {
+                                        note[ch].note = chanstate[ch].note;
+                                        note[ch].instr = chanstate[ch].instr;
+                                }
                         }
                         note[ch].volcmd = VOLCMD_VOLUME;
                         note[ch].vol = chanstate[ch].vol;
@@ -193,17 +226,16 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         b2 = slurp_getc(fp) & 127; // new value
                         switch (b1) {
                         case 0: // Instrument number
+                                if (ch == 15) {
+                                        // don't fall for this nasty trick, this is the percussion channel
+                                        break;
+                                }
                                 if (!patch_samples[b2]) {
                                         if (nsmp < MAX_SAMPLES) {
                                                 // New sample!
-                                                if (b2 < 128) {
-                                                        // Not already allocated a sample
-                                                        patch_samples[b2] = nsmp;
-                                                        adlib_patch_apply(song->Samples + nsmp, b2);
-                                                        nsmp++;
-                                                } else {
-                                                        // Percussion (TODO)
-                                                }
+                                                patch_samples[b2] = nsmp;
+                                                adlib_patch_apply(song->Samples + nsmp, b2);
+                                                nsmp++;
                                         } else {
                                                 // Don't have a sample number for this patch, and never will.
                                                 log_appendf(4, " Warning: Too many samples");
