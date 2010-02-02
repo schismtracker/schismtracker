@@ -90,7 +90,6 @@ EXTRA_DIST = \
 ##
 ##   - .hgignore
 ##   - .hgtags
-##   - README.maint-notes
 ##   - fmt/mp3.c
 ##   - fmt/ogg.c
 ##   - fmt/sid.c

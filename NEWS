@@ -1,2 +1,158 @@
-2009-06-01: Back to mutilate the code beyond recognition again. :3
-	-- Storlek
+20100202 (Groundhog Day)
+
+  - BIG update -- lots of stuff added this month!
+
+File loading/saving:
+
+  - MMCMP decompression fixed for big-endian systems
+  - Fixed a crash bug and some problems with XM and AIFF on 64-bit
+  - Replaced loaders: FAR, MDL, ULT, OKT
+  - New loader: MUS (Doom music)
+  - Some fixes to XM and IMF envelope behavior; XM envelopes should now load
+    just like IT
+  - XM loader was leaking a ton of memory by allocating space for each sample
+    twice, whoops
+  - Added title scanner for MoonFish files, because why not :)
+  - Relative paths on the command line (e.g. schismtracker ./file.it) are
+    changed to absolute paths. This fixes a long-standing bug with the file
+    browsers getting "stuck" inside the current directory.
+  - Font path defined in the config file can be an absolute path residing
+    outside of ~/.schism/fonts now, so it's possible, for example, to share
+    the same font.cfg between Schism Tracker and Impulse Tracker.
+  - Path normalizing code rewritten, and now actually works correctly
+  - Module browser remembers cursor position (this got broken when filename
+    pattern matching was added)
+  - Changed the formatting for printing information when loading songs: less
+    "cramped", more IT-like
+
+Pattern editor:
+
+  - More template changes to better match IT behavior
+      - Enter key turns template mode off (except with Notes Only templates)
+      - Multi-cursor only shows when shift is not being held down (for block
+        selections)
+      - Note cut/off/fade and clear now correctly wipe all masked fields in
+        all affected channels
+      - Some behavior was erroneously dependent on the specific template mode
+  - PgUp from the last row of a pattern will place the cursor on the previous
+    major highlight, even if the highlight doesn't line up with the pattern
+    size.
+  - Multichannel dialog layout and cursor alignment changed to match Impulse
+    Tracker
+  - Block swap (Alt-Y) wasn't recording the pattern state for undo.
+
+Sample list:
+
+  - New feature: press Alt-Shift-Z on the sample list to select from 128
+    built-in Adlib MIDI patches!
+  - Host instrument dialog defaults to No when an instrument containing the
+    sample already exists (not QUITE the same as Impulse Tracker, but maybe
+    this is better?)
+  - When creating a host instrument, the number of the instrument used is
+    displayed in the status line
+  - Anything that "generates" a sample (Alt-P, Alt-Y, Alt-Z, Alt-Shift-Z) will
+    prompt for a host instrument if instrument mode is enabled.
+  - Sample modification keys (reverse, sign flip, amplify, etc.) are disabled
+    with Adlib samples.
+  - Quality convert fixed to show the confirmation dialog with stereo samples,
+    although changing quality without converting the data is unimplemented
+    (and probably would not be very useful, for that matter)
+  - Sample-loading page fixed to always show the current sample number/name at
+    the top of the screen (was showing the current instrument if instrument
+    mode was enabled)
+  - I was wrong: in Impulse Tracker, F8 never clears the dots that show what
+    samples have been played; *starting* playback does that. Fixed.
+  - Fixed some edge-case bugs with Alt-Ins/Del on the sample list
+
+Player:
+
+  - Modplug's extensions to S9x removed (they were mostly broken anyway, and
+    no one seemed to notice)
+  - Fixed a player bug with the handling of S6x and SDx effects on the same
+    row
+  - Envelope carry behavior changed to reset the envelope regardless of carry
+    if a new note is played after a note-off
+  - Adlib mixing volume amplified due to request from Manwe. (Sorry this took
+    so long... it was *really* easy after I found the right place to do it,
+    haha)
+  - Changed internal handling of arpeggio slightly
+
+Miscellaneous:
+
+  - Copyright text moved off of the log page to a new help screen, accessible
+    by pressing F1 at the startup dialog (or on Ctrl-F11)
+  - Several previously undocumented keys added to help
+  - Some other internal changes with help text; should be easier to keep it
+    up-to-date in the future
+  - Alt-P and Alt-N keys on instrument list note translation table fixed
+  - Upper value limit fixed for entering sample numbers on note translation
+    table
+  - Dialog changes: 'c' and 'o' keys to select OK/Cancel
+  - Global keys that open dialogs (Ctrl-N, Ctrl-P, etc.) show the dialog on
+    key-down, instead of key-up
+  - In classic mode, Schism Tracker will make the clicking sound that IT
+    produced when initializing the sound card.
+  - Audio device setup code rewritten
+  - New config file parameter: [Audio] driver=alsa:hw:2 (format is
+    driver:device)
+  - Mouse behavior is (hopefully) more consistent and expected
+
+
+
+20100101 (Happy New Year!)
+
+Sample/Instrument lists:
+
+  - Global volume in .iti files is now loaded correctly (it was being divided
+    by two)
+  - Fadeout resolution fixed to match Impulse Tracker (cosmetic only)
+  - F8 no longer clears the dots next to the samples/instruments; press F8
+    again to erase them
+  - Sample waveform display is more accurate for chip samples
+  - Pan swing and volume swing fixed; they should act exactly like Impulse
+    Tracker now
+  - Samples and instruments can now be shuffled around with the Alt-Up and
+    Alt-Down keys
+  - Alt-F9 and Alt-F10 keys added on sample list, to mute/solo individual
+    samples
+  - All data should always be initialized now (e.g. C5Speed, volumes,
+    instrument envelopes)
+
+Pattern editor:
+
+  - In template mode, a cursor is drawn in each column of the template when in
+    the note column
+  - Cursor position is no longer advanced in event of a template error
+  - In the effect column, the cursor is drawn differently in "link" and
+    "split" modes
+  - Inserting note cut/off/fade no longer cut/keyoff/fade a note that's
+    playing
+  - Resizing a pattern no longer stops the song (!)
+
+Player:
+
+  - Qxx no longer resets envelope positions (it wasn't supposed to)
+  - Adlib samples no longer play when the channel is muted
+
+Miscellaneous:
+
+  - Title scanner runs in the background (MUCH better performance with big
+    directories on slow disks!)
+  - Some files were missing from the source distribution
+  - Stepping through a pattern with the 4 key should use the correct samples
+    for multisampled instruments
+  - Internal option to change the sort method in the config file. No GUI
+    option for this (yet)
+  - Cursor position is now synchronized between panning and volume pages for
+    the orderlist
+  - Fixed occasional spurious errors like "/home: Cannot allocate memory"
+  - Muting/unmuting channels from on the info page updates the screen as it
+    should
+  - Several keyjazz fixes:
+      - NNAs are now handled when playing instruments (still no chord
+        playback, sorry)
+      - Adlib instruments mostly play (you MIGHT need to play the first note
+        twice)
+      - Playing a note when the same sample is playing backwards works
+        correctly
+
