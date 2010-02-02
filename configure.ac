@@ -57,24 +57,6 @@ AC_C_BIGENDIAN
 dnl Check for SDL libs
 AM_PATH_SDL(1.2.10, , AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.]))
 
-dnl CoreMIDI (Mac OS X)
-AC_MSG_CHECKING(for CoreAudio/CoreMIDI Framework)
-if echo "$SDL_LIBS" | grep -- -framework >/dev/null 2>&1; then
-	AC_MSG_RESULT(found)
-	dnl frameworks aren't part of sdl... should be a separate variable
-	SDL_LIBS="$SDL_LIBS -framework CoreAudio -framework CoreMIDI -framework IOKit -framework OpenGL"
-	AC_SUBST(SDL_LIBS)
-
-	AM_CONDITIONAL([USE_MACOSX], true)
-	AM_CONDITIONAL([am__fastdepOBJC], true)
-	macosx=yes
-else
-	AC_MSG_RESULT(not found)
-	AM_CONDITIONAL([USE_MACOSX], false)
-	AM_CONDITIONAL([am__fastdepOBJC], false)
-	macosx=no
-fi
-
 dnl Functions
 AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strptime asprintf vasprintf memcmp mmap socket nice unsetenv dup fnmatch log2)
 AM_CONDITIONAL([NEED_GNU_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
@@ -100,6 +82,84 @@ AC_SUBST(LIBM)
 
 dnl -----------------------------------------------------------------------
 
+dnl Always use x11 by default unless overriden later per-platform
+dnl (this is stupid, and only needed because the x11 check is dysfunctional)
+defaultx11=yes
+
+
+dnl CoreMIDI (Mac OS X)
+AC_MSG_CHECKING(for CoreAudio/CoreMIDI Framework)
+if echo "$SDL_LIBS" | grep -- -framework >/dev/null 2>&1; then
+	AC_MSG_RESULT(found)
+	dnl frameworks aren't part of sdl... should be a separate variable
+	SDL_LIBS="$SDL_LIBS -framework CoreAudio -framework CoreMIDI -framework IOKit -framework OpenGL"
+	AC_SUBST(SDL_LIBS)
+
+	AM_CONDITIONAL([USE_MACOSX], true)
+	AM_CONDITIONAL([am__fastdepOBJC], true)
+	defaultx11=no
+else
+	AC_MSG_RESULT(not found)
+	AM_CONDITIONAL([USE_MACOSX], false)
+	AM_CONDITIONAL([am__fastdepOBJC], false)
+fi
+
+
+dnl Windows poop
+AC_ARG_WITH(windres,
+	[  --with-windres=RSC      Name of windres tool (optional)],
+	windres="$withval", windres="")
+AM_CONDITIONAL([USE_WINDRES], [test "x$windres" != "x"])
+
+WINDRES="$windres"
+AC_SUBST(WINDRES)
+
+dnl winmm testing...
+AC_CHECK_HEADERS(winsock.h winsock2.h windows.h)
+if test "X$ac_cv_header_windows_h" = "Xyes"; then
+	AM_CONDITIONAL([USE_WIN32], true)
+	SDL_LIBS="$SDL_LIBS -lwinmm"
+	AC_SUBST(SDL_LIBS)
+	defaultx11=no
+else
+	AM_CONDITIONAL([USE_WIN32], false)
+fi
+
+
+dnl Wii crap
+AC_CHECK_LIB(ogc, IOS_ReloadIOS, libogc_found=yes, libogc_found=no, [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
+if test x"$libogc_found" = "xyes"; then
+        AM_CONDITIONAL([USE_WII], true)
+        wii_machdep="-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float"
+        CFLAGS="$CFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include"
+        CXXFLAGS="$CXXFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include"
+        LIBS="$LIBS $wii_machdep -L${DEVKITPRO}/libogc/lib/wii"
+        SDL_CFLAGS="$SDL_CFLAGS -I${DEVKITPRO}/libogc/include/SDL"
+        SDL_LIBS="$SDL_LIBS -lSDL -lfat -lwiiuse -lbte -logc -lm -lwiikeyboard"
+        AC_SUBST(CFLAGS)
+        AC_SUBST(CXXFLAGS)
+        AC_SUBST(LIBS)
+        AC_SUBST(SDL_CFLAGS)
+        AC_SUBST(SDL_LIBS)
+        EXEEXT=.elf
+        AC_SUBST(EXEEXT)
+        defaultx11=no
+else
+        AM_CONDITIONAL([USE_WII], false)
+fi
+
+
+dnl should probably have some AC_MSG_CHECKING here, but meh
+if test "x$defaultx11" = "xno"; then
+	if test "x$with_x" = "x"; then
+		AC_MSG_NOTICE([X11 disabled by default; use --with-x if you really want it])
+		dnl (you don't want it, because it's probably broken anyway)
+		with_x=no
+	fi
+fi
+
+dnl -----------------------------------------------------------------------
+
 saved_libs=$LIBS
 alsa=no
 AC_CHECK_LIB(asound, snd_seq_open,[alsa=yes])
@@ -113,13 +173,7 @@ fi
 AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
 AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
 
-dnl should probably have some AC_MSG_CHECKING here, but meh
-if test "x$macosx" = "xyes"; then
-	if test "x$with_x" = "x"; then
-		AC_MSG_NOTICE([X11 disabled by default on Mac OS X; use --with-x to enable])
-		with_x=no
-	fi
-fi
+
 AC_PATH_XTRA()
 if test "$no_x" = "yes"; then
 	dnl no X11
@@ -159,25 +213,6 @@ else
 	fi
 fi
 
-
-AC_ARG_WITH(windres,
-	[  --with-windres=RSC      Name of windres tool (optional)],
-	windres="$withval", windres="")
-AM_CONDITIONAL([USE_WINDRES], [test "x$windres" != "x"])
-
-WINDRES="$windres"
-AC_SUBST(WINDRES)
-
-dnl winmm testing...
-AC_CHECK_HEADERS(winsock.h winsock2.h windows.h)
-if test "X$ac_cv_header_windows_h" = "Xyes"; then
-	AM_CONDITIONAL([USE_WIN32], true)
-	SDL_LIBS="$SDL_LIBS -lwinmm"
-	AC_SUBST(SDL_LIBS)
-else
-	AM_CONDITIONAL([USE_WIN32], false)
-fi
-
 if test "X$ac_cv_func_socket" = "Xyes"; then
 	dnl free networking
 	AM_CONDITIONAL([USE_NETWORK], true)
@@ -201,27 +236,6 @@ else
 fi
 
 #AC_CHECK_LIB(kernel32, GetConsoleMode, SDL_LIBS="$SDL_LIBS -Wl,--subsystem,console")
-
-dnl Wii crap
-AC_CHECK_LIB(ogc, IOS_ReloadIOS, libogc_found=yes, libogc_found=no, [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
-if test x"$libogc_found" = "xyes"; then
-        AM_CONDITIONAL([USE_WII], true)
-        wii_machdep="-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float"
-        CFLAGS="$CFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include"
-        CXXFLAGS="$CXXFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include"
-        LIBS="$LIBS $wii_machdep -L${DEVKITPRO}/libogc/lib/wii"
-        SDL_CFLAGS="$SDL_CFLAGS -I${DEVKITPRO}/libogc/include/SDL"
-        SDL_LIBS="$SDL_LIBS -lSDL -lfat -lwiiuse -lbte -logc -lm -lwiikeyboard"
-        AC_SUBST(CFLAGS)
-        AC_SUBST(CXXFLAGS)
-        AC_SUBST(LIBS)
-        AC_SUBST(SDL_CFLAGS)
-        AC_SUBST(SDL_LIBS)
-        EXEEXT=.elf
-        AC_SUBST(EXEEXT)
-else
-        AM_CONDITIONAL([USE_WII], false)
-fi
 
 dnl wee...
 dnl this completely sucks...
@@ -272,12 +286,12 @@ dnl (This ought to be above AC_PROG_CC, but that causes configure to fail
 dnl when all the insane warnings are are enabled.)
 
 AC_ARG_ENABLE(extra-opt,
-	AS_HELP_STRING([--enable-extra-opt], [Add extra optimizations (egcs/GCC >= 2.95 only)]),
+	AS_HELP_STRING([--enable-extra-opt], [Add extra optimizations]),
 	ADD_OPT=$enableval,
 	ADD_OPT=no)
 
 AC_ARG_ENABLE(all-warnings,
-	AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings (GCC)]),
+	AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings]),
 	ADD_WARN=$enableval,
 	ADD_WARN=no)
 
