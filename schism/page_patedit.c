@@ -1331,22 +1331,21 @@ static void selection_swap(void)
         num_rows = selection.last_row - selection.first_row + 1;
         num_chans = selection.last_channel - selection.first_channel + 1;
 
-        if (current_row + num_rows > total_rows || current_channel + num_chans - 1 > 64) {
-                /* should be one column wider (see note for CHECK_SELECTION_EXISTS) */
-                dialog_create(DIALOG_OK, "Out of pattern range", NULL, NULL, 0, NULL);
-                return;
-        }
-
         /* The minimum combined size for the two blocks is double the number of rows in the selection by
          * double the number of channels. So, if the width and height don't add up, they must overlap. It's
          * of course possible to have the blocks adjacent but not overlapping -- there is only overlap if
          * *both* the width and height are less than double the size. */
+
         if ((MAX(selection.last_channel, current_channel + num_chans - 1)
              - MIN(selection.first_channel, current_channel) + 1) < 2 * num_chans
             && (MAX(selection.last_row, current_row + num_rows - 1)
                 - MIN(selection.first_row, current_row) + 1) < 2 * num_rows) {
-                /* one column wider; the text should be shifted a column left as well */
-                dialog_create(DIALOG_OK, "Swap blocks overlap", NULL, NULL, 0, NULL);
+                dialog_create(DIALOG_OK, "   Swap blocks overlap    ", NULL, NULL, 0, NULL);
+                return;
+        }
+
+        if (current_row + num_rows > total_rows || current_channel + num_chans - 1 > 64) {
+                dialog_create(DIALOG_OK, "   Out of pattern range   ", NULL, NULL, 0, NULL);
                 return;
         }
 
