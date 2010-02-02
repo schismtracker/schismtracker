@@ -48,6 +48,8 @@ Ben de Graaff rewrote a large portion of libmodplug in C.
 Wii ISFS filesystem support code from ftpii by Joseph Jordan
 <joe.ftpii@psychlaw.com.au>.
 
+Wii Homebrew Browser icon by pbsds.
+
 Some file-loading mechanisms, in particular large portions of the IMF loader,
 as well as many of the tracker-identifying heuristics, have been adapted from
 xmp by Claudio Matsuoka and Hipolito Carraro Jr <http://xmp.sf.net/>.
