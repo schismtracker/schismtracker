@@ -1,8 +1,0 @@
-this file is notes for maintainers
-
-1. versions are included in:
-	configure.in
-	sys/fd.org/autopackage.apspec
-	sys/macosx/Schism Tracker.app/Contents/Info.plist
-
-
