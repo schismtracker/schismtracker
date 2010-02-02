@@ -10,6 +10,7 @@ syntax: glob
 .git
 
 *-build
+build*
 schismtracker
 auto
 
