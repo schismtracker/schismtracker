@@ -1320,7 +1320,8 @@ static void selection_swap(void)
 {
         /* s_note = selection; p_note = position */
         song_note *pattern, *s_note, *p_note, tmp;
-        int row, chan, num_rows, num_chans, total_rows;
+        int row, chan, sel_rows, sel_chans, total_rows;
+        int affected_width, affected_height;
 
         CHECK_FOR_SELECTION(return);
 
@@ -1328,31 +1329,37 @@ static void selection_swap(void)
         total_rows = song_get_pattern(current_pattern, &pattern);
         if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
         if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
-        num_rows = selection.last_row - selection.first_row + 1;
-        num_chans = selection.last_channel - selection.first_channel + 1;
+        sel_rows = selection.last_row - selection.first_row + 1;
+        sel_chans = selection.last_channel - selection.first_channel + 1;
+
+        affected_width = MAX(selection.last_channel, current_channel + sel_chans - 1)
+                        - MIN(selection.first_channel, current_channel) + 1;
+        affected_height = MAX(selection.last_row, current_row + sel_rows - 1)
+                        - MIN(selection.first_row, current_row) + 1;
 
         /* The minimum combined size for the two blocks is double the number of rows in the selection by
          * double the number of channels. So, if the width and height don't add up, they must overlap. It's
          * of course possible to have the blocks adjacent but not overlapping -- there is only overlap if
          * *both* the width and height are less than double the size. */
-
-        if ((MAX(selection.last_channel, current_channel + num_chans - 1)
-             - MIN(selection.first_channel, current_channel) + 1) < 2 * num_chans
-            && (MAX(selection.last_row, current_row + num_rows - 1)
-                - MIN(selection.first_row, current_row) + 1) < 2 * num_rows) {
+        if (affected_width < 2 * sel_chans && affected_height < 2 * sel_rows) {
                 dialog_create(DIALOG_OK, "   Swap blocks overlap    ", NULL, NULL, 0, NULL);
                 return;
         }
 
-        if (current_row + num_rows > total_rows || current_channel + num_chans - 1 > 64) {
+        if (current_row + sel_rows > total_rows || current_channel + sel_chans - 1 > 64) {
                 dialog_create(DIALOG_OK, "   Out of pattern range   ", NULL, NULL, 0, NULL);
                 return;
         }
 
-        for (row = 0; row < num_rows; row++) {
+        pated_history_add("Undo swap block                (Alt-Y)",
+                MIN(selection.first_channel, current_channel) - 1,
+                MIN(selection.first_row, current_row),
+                affected_width, affected_height);
+
+        for (row = 0; row < sel_rows; row++) {
                 s_note = pattern + 64 * (selection.first_row + row) + selection.first_channel - 1;
                 p_note = pattern + 64 * (current_row + row) + current_channel - 1;
-                for (chan = 0; chan < num_chans; chan++, s_note++, p_note++) {
+                for (chan = 0; chan < sel_chans; chan++, s_note++, p_note++) {
                         tmp = *s_note;
                         *s_note = *p_note;
                         *p_note = tmp;
