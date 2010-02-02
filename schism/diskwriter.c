@@ -259,7 +259,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
                 return DW_ERROR;
         }
 
-        log_appendf(2, "Writing to sample %d", sampno);
+        //log_appendf(2, "Writing to sample %d", sampno);
         fini_sampno = sampno;
         fini_bindme = dobind;
         fini_patno = patno;
@@ -379,8 +379,11 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
 
         current_song_len *= 2; /* two passes */
 
+        //log_nl();
+        log_nl();
         log_appendf(2, "Multi-out diskwriting into %s/*.%s", dir,
                         dw->extension);
+        //log_underline(27 + strlen(dir) + 1 + strlen(dw->extension));
         status.flags |= DISKWRITER_ACTIVE;
 
         return DW_OK;
@@ -447,7 +450,10 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
                 return DW_ERROR;
         }
 
+        //log_nl();
+        log_nl();
         log_appendf(2, "Saving file %s", dw_rename_to);
+        //log_underline(12 + strlen(dw_rename_to));
         status.flags |= DISKWRITER_ACTIVE;
 
         return DW_OK;
