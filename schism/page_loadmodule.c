@@ -106,21 +106,19 @@ copy the text from dirname_entry to the actual configured string and update the 
 impulse tracker's glob list:
         *.it; *.xm; *.s3m; *.mtm; *.669; *.mod
 unsupported formats that the title reader knows about, even though we can't load them:
-        *.f2r; *.imf; *.liq; *.dtm; *.ntk
+        *.f2r; *.liq; *.dtm; *.ntk; *.mf
 formats that might be supported, but which i have never seen and thus don't actually care about:
         *.dbm; *.dsm; *.psm
 other formats that i wouldn't bother presenting in the loader even if we could load them:
         *.mid; *.wav; *.mp3; *.ogg; *.sid; *.umx
 formats that modplug pretends to support, but fails hard:
         *.ams
-this leaves the following 'extra' formats which should be appended in non-classic mode:
-        *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf
 
 TODO: scroller hack on selected filename
 */
 
 #define GLOB_CLASSIC "*.it; *.xm; *.s3m; *.mtm; *.669; *.mod"
-#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf"
+#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus"
 
 static char filename_entry[PATH_MAX + 1] = "";
 static char dirname_entry[PATH_MAX + 1] = "";
