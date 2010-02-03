@@ -231,18 +231,17 @@ if USE_NETWORK
 cflags_network=-DUSE_NETWORK
 endif
 
-## XXX these should not be in schism/
 if NEED_GNU_ASPRINTF
-files_gnu_asprintf=schism/asprintf.c
+files_gnu_asprintf=sys/stdlib/asprintf.c
 endif
 if NEED_GNU_VASPRINTF
-files_gnu_vasprintf=schism/vasprintf.c
+files_gnu_vasprintf=sys/stdlib/vasprintf.c
 endif
 if NEED_GNU_MEMCMP
-files_gnu_memcmp=schism/memcmp.c
+files_gnu_memcmp=sys/stdlib/memcmp.c
 endif
 if NEED_STRPTIME
-files_strptime=schism/strptime.c
+files_strptime=sys/stdlib/strptime.c
 endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
