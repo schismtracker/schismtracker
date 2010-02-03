@@ -25,7 +25,6 @@
 
 #include "headers.h"
 #include "it.h"
-#include "pngw.h"
 #include "osdefs.h"
 
 /* bugs
@@ -1783,100 +1782,5 @@ void video_translate(unsigned int vx, unsigned int vy,
         video.mouse.y = vy;
         if (x) *x = vx;
         if (y) *y = vy;
-}
-
-
-/* here we go... */
-struct _ss_data {
-        int x, y;
-
-        unsigned char scanline[NATIVE_SCREEN_WIDTH];
-        unsigned int mouseline[80];
-        unsigned int tc_identity[256];
-
-        FILE *fp;
-        int fp_ok;
-};
-static void _ss_output(struct pngw_arg *o, const void *data, int len)
-{
-        struct _ss_data *d = o->extra_user_data;
-        if (fwrite(data, len, 1, d->fp) != 1) {
-                d->fp_ok = 0;
-        }
-}
-static int _ss_next_pixel(struct pngw_arg *o)
-{
-        struct _ss_data *d = o->extra_user_data;
-
-        if (d->x == NATIVE_SCREEN_WIDTH) {
-                d->x = 0;
-                d->y++;
-
-                vgamem_scan8(d->y, d->scanline, d->tc_identity, d->mouseline);
-        }
-
-        d->x++;
-        return (int)d->scanline[ d->x - 1 ];
-}
-
-void video_screenshot(void)
-{
-        struct _ss_data data;
-        struct pngw_arg pa;
-        char dwbuf[65536];
-        char fname[64];
-        int i, fd, fp_ok;
-
-        data.x = NATIVE_SCREEN_WIDTH;
-        data.y = -1;
-        memset(data.mouseline, 0, 80*sizeof(unsigned int));
-        for (i = 0; i < 256; i++) data.tc_identity[i] = i;
-        for (i = 0;; i++) {
-                sprintf(fname, "Screenshot-%d.png", i);
-                fd = open(fname, O_CREAT|O_EXCL|O_RDWR, 0666);
-                if (fd == -1 && errno == EEXIST) continue;
-                if (fd == -1) {
-                        log_appendf(4, "Cannot open %s for writing: %s",fname,
-                                        strerror(errno));
-                        return;
-                }
-                data.fp = fopen(fname, "wb");
-                if (!data.fp) {
-                        log_appendf(4, "Cannot open %s for writing: %s",fname,
-                                        strerror(errno));
-                        return;
-                }
-                close(fd);
-                setvbuf(data.fp, dwbuf, _IOFBF, sizeof(dwbuf));
-                break;
-        }
-
-        pa.width = NATIVE_SCREEN_WIDTH;
-        pa.height = NATIVE_SCREEN_HEIGHT;
-        pa.pal_size = 256;
-        pa.pal = video.tc_bgr32;
-        pa.output = _ss_output;
-        pa.read_pixel = _ss_next_pixel;
-        data.fp_ok = 0;
-        pa.extra_user_data = &data;
-
-        vgamem_lock();
-        pngw(&pa);
-        vgamem_unlock();
-        fp_ok = data.fp_ok;
-        if (ferror(data.fp)) fp_ok = 0;
-        if (fsync(fileno(data.fp)) == -1)
-                fp_ok = 0;
-        if (ferror(data.fp)) fp_ok = 0;
-        if (fclose(data.fp) == EOF) fp_ok = 0;
-        if (!fp_ok) {
-                unlink(fname);
-                log_appendf(4, "Cannot write to %s: %s",fname,
-                                strerror(errno));
-        } else {
-                log_appendf(2, "Wrote screenshot: %s",fname);
-                status_text_flash("Wrote screenshot: %s",fname);
-        }
-
 }
 

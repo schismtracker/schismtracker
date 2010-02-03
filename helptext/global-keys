@@ -44,8 +44,6 @@
 :   Ctrl-Q            Quit Schism Tracker
 |   Ctrl-S            Save current song
 :
-:   PrintScreen       Take a screenshot (also Ctrl-Alt-D)
-:
 : On text widgets.
 :   Ctrl, Ctrl        Digraph entry:
 ;     C,  ->  Ç    i>  ->  î    y:  ->  ÿ    n?  ->  ñ    pi  ->  π
