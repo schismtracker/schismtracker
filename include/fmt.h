@@ -62,58 +62,14 @@ typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sa
 typedef int (*fmt_save_sample_func) (diskwriter_driver_t *fp, song_sample *smp, char *title);
 typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int slot);
 
-#define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
-#define LOAD_SONG(t) int fmt_##t##_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
-#define SAVE_SONG(t) void fmt_##t##_save_song(diskwriter_driver_t *fp)
-#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
-#define SAVE_SAMPLE(t) int fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
-#define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot)
+#define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
+#define LOAD_SONG(t) int fmt_##t##_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags);
+#define SAVE_SONG(t) void fmt_##t##_save_song(diskwriter_driver_t *fp);
+#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title);
+#define SAVE_SAMPLE(t) int fmt_##t##_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title);
+#define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot);
 
-/* module types (and some other things that act like modules) */
-READ_INFO(669); LOAD_SONG(669);
-READ_INFO(ams);
-READ_INFO(dtm);
-READ_INFO(f2r);
-READ_INFO(far); LOAD_SONG(far);
-READ_INFO(imf); LOAD_SONG(imf);
-READ_INFO(it);  LOAD_SONG(it);
-READ_INFO(liq);
-READ_INFO(mdl); LOAD_SONG(mdl);
-READ_INFO(mid);                 SAVE_SONG(mid);
-READ_INFO(med);
-READ_INFO(mf);
-READ_INFO(mus); LOAD_SONG(mus);
-READ_INFO(mod); LOAD_SONG(mod);
-READ_INFO(mt2);
-READ_INFO(mtm); LOAD_SONG(mtm); SAVE_SONG(mtm);
-READ_INFO(ntk);
-READ_INFO(okt); LOAD_SONG(okt);
-READ_INFO(psm);
-READ_INFO(s3m); LOAD_SONG(s3m);
-READ_INFO(sfx); LOAD_SONG(sfx);
-READ_INFO(stm); LOAD_SONG(stm);
-READ_INFO(ult); LOAD_SONG(ult);
-READ_INFO(xm);  LOAD_SONG(xm);
-
-/* things that don't really act like modules or samples, and which we also don't use in any way */
-#ifdef USE_NON_TRACKED_TYPES
-READ_INFO(sid);
-READ_INFO(mp3);
-# ifdef HAVE_VORBIS
-READ_INFO(ogg);
-# endif
-#endif
-
-/* sample types */
-READ_INFO(aiff);LOAD_SAMPLE(aiff);      SAVE_SAMPLE(aiff);
-READ_INFO(au);  LOAD_SAMPLE(au);        SAVE_SAMPLE(au);
-READ_INFO(iti); LOAD_INSTRUMENT(iti);
-READ_INFO(its); LOAD_SAMPLE(its);       SAVE_SAMPLE(its);
-READ_INFO(pat); LOAD_INSTRUMENT(pat);
-                LOAD_SAMPLE(raw);       SAVE_SAMPLE(raw);
-READ_INFO(s3i); LOAD_SAMPLE(s3i);
-READ_INFO(wav); LOAD_SAMPLE(wav);       SAVE_SAMPLE(wav);
-READ_INFO(xi);  LOAD_INSTRUMENT(xi);
+#include "fmt-types.h"
 
 #undef READ_INFO
 #undef LOAD_SONG

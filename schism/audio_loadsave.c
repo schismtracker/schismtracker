@@ -255,22 +255,9 @@ static int _modplug_load_song(CSoundFile *csf, slurp_t *sl, UNUSED unsigned int 
         return csf_load(csf, sl->data, sl->length) ? LOAD_SUCCESS : LOAD_UNSUPPORTED;
 }
 
-// see dmoz.c for detailed information on the ordering used here
+#define LOAD_SONG(x) fmt_##x##_load_song,
 static fmt_load_song_func load_song_funcs[] = {
-        fmt_669_load_song,
-        fmt_mod_load_song,
-        fmt_s3m_load_song,
-        fmt_far_load_song,
-        fmt_xm_load_song,
-        fmt_it_load_song,
-        fmt_mtm_load_song,
-        fmt_mdl_load_song,
-        fmt_okt_load_song,
-        fmt_mus_load_song,
-        fmt_ult_load_song,
-        fmt_imf_load_song,
-        fmt_sfx_load_song,
-        fmt_stm_load_song,
+#include "fmt-types.h"
         _modplug_load_song,
         NULL,
 };
@@ -1210,20 +1197,15 @@ int song_save(const char *file, const char *qt)
 // it is sure that it can accept the file.
 // The title points to a buffer of 26 characters.
 
+#define LOAD_SAMPLE(x) fmt_##x##_load_sample,
 static fmt_load_sample_func load_sample_funcs[] = {
-        fmt_its_load_sample,
-        fmt_s3i_load_sample,
-        fmt_wav_load_sample,
-        fmt_aiff_load_sample,
-        fmt_au_load_sample,
-        fmt_raw_load_sample,
+#include "fmt-types.h"
         NULL,
 };
 
+#define LOAD_INSTRUMENT(x) fmt_##x##_load_instrument,
 static fmt_load_instrument_func load_instrument_funcs[] = {
-        fmt_iti_load_instrument,
-        fmt_xi_load_instrument,
-        fmt_pat_load_instrument,
+#include "fmt-types.h"
         NULL,
 };
 
