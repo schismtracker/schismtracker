@@ -25,6 +25,7 @@
 
 #include "mixer.h"
 #include "util.h"
+#include "log.h"
 
 #ifdef USE_OSS
 
@@ -85,13 +86,13 @@ void oss_mixer_read_volume(int *left, int *right)
 
         fd = open_mixer_device();
         if (fd < 0) {
-                perror(device_file);
+                log_perror(device_file);
                 *left = *right = 0;
                 return;
         }
 
         if (ioctl(fd, MIXER_READ(SCHISM_MIXER_CONTROL), volume) == EOF) {
-                perror(device_file);
+                log_perror(device_file);
                 *left = *right = 0;
         } else {
                 *left = volume[0];
@@ -112,12 +113,12 @@ void oss_mixer_write_volume(int left, int right)
 
         fd = open_mixer_device();
         if (fd < 0) {
-                perror(device_file);
+                log_perror(device_file);
                 return;
         }
 
         if (ioctl(fd, MIXER_WRITE(SCHISM_MIXER_CONTROL), volume) == EOF) {
-                perror(device_file);
+                log_perror(device_file);
         }
 
         close(fd);

@@ -712,7 +712,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
                         if (stat(ptr, &st) < 0) {
                                 /* doesn't exist? */
-                                perror(ptr);
+                                log_perror(ptr);
                                 free(ptr);
                                 continue; /* better luck next time */
                         }
@@ -817,7 +817,7 @@ int dmoz_filter_ext_data(dmoz_file_t *file)
                 /* It would be nice to use the error string for the description, but there doesn't seem to be
                 any easy/portable way to do that without dynamically allocating it (since strerror might
                 return a static buffer), and str_dup'ing EVERY description is kind of a waste of memory. */
-                perror(file->base);
+                log_perror(file->base);
                 file->description = "File error";
                 break;
         default:

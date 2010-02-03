@@ -1170,8 +1170,7 @@ int song_save(const char *file, const char *qt)
                 if (strcmp(qt, diskwriter_drivers[i]->name) != 0)
                         continue;
                 if (diskwriter_start(file, diskwriter_drivers[i]) != DW_OK) {
-                        log_appendf(4, "Cannot start diskwriter: %s",
-                        strerror(errno));
+                        log_perror("Cannot start diskwriter");
                         if (freeme) free(freeme);
                         return 0;
                 }
@@ -1325,7 +1324,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
         /* okay, load an ITI file */
         s = slurp(file, NULL, 0);
         if (!s) {
-                log_appendf(4, "%s: %s", file, strerror(errno));
+                log_perror(file);
                 song_unlock_audio();
                 return 0;
         }
@@ -1380,7 +1379,7 @@ int song_load_sample(int n, const char *file)
         slurp_t *s = slurp(file, NULL, 0);
 
         if (s == NULL) {
-                log_appendf(4, "%s: %s", base, strerror(errno));
+                log_perror(base);
                 return 0;
         }
 
@@ -1398,7 +1397,7 @@ int song_load_sample(int n, const char *file)
 
         if (!load) {
                 unslurp(s);
-                log_appendf(4, "%s: %s", base, strerror(errno));
+                log_perror(base);
                 song_unlock_audio();
                 return 0;
         }
@@ -1467,14 +1466,14 @@ int song_save_sample(int n, const char *file, int format_id)
 
         diskwriter_driver_t fp;
         if (!diskwriter_writeout(file, &fp)) {
-                log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
+                log_perror(get_basename(file));
                 return 0;
         }
 
         int ret = sample_save_formats[format_id].save_func(&fp,
                                 (song_sample *) smp, mp->Samples[n].name);
         if (diskwriter_finish() == DW_ERROR) {
-                log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
+                log_perror(get_basename(file));
                 return 0;
         }
 
@@ -1500,12 +1499,12 @@ int song_save_instrument(int n, const char *file)
         }
         diskwriter_driver_t fp;
         if (!diskwriter_writeout(file, &fp)) {
-                log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
+                log_perror(get_basename(file));
                 return 0;
         }
         _save_it_instrument(n-1 /* grr.... */, &fp, 1);
         if (diskwriter_finish() == DW_ERROR) {
-                log_appendf(4, "%s: %s", get_basename(file), strerror(errno));
+                log_perror(get_basename(file));
                 return 0;
         }
         return 1;

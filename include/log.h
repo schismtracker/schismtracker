@@ -34,6 +34,7 @@ void log_appendf(int color, const char *format, ...)
         __attribute__ ((format(printf, 2, 3)));
 void log_underline(int chars);
 
+void log_perror(const char *prefix);
 
 void status_text_flash(const char *format, ...)
         __attribute__ ((format(printf, 1, 2)));

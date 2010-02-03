@@ -29,6 +29,7 @@
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
+#include "log.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -118,7 +119,7 @@ static void read_directory(void)
         /* if the stat call failed, this will probably break as well, but
         at the very least, it'll add an entry for the root directory. */
         if (dmoz_read(inst_cwd, &flist, NULL, dmoz_read_instrument_library) < 0)
-                perror(inst_cwd);
+                log_perror(inst_cwd);
 
         dmoz_filter_filelist(&flist,instgrep, &current_file, file_list_reposition);
         dmoz_cache_lookup(inst_cwd, &flist, NULL);

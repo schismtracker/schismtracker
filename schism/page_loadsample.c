@@ -30,6 +30,7 @@
 #include "page.h"
 #include "dmoz.h"
 #include "sample-edit.h"
+#include "log.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -182,7 +183,7 @@ static void read_directory(void)
         /* if the stat call failed, this will probably break as well, but
         at the very least, it'll add an entry for the root directory. */
         if (dmoz_read(cfg_dir_samples, &flist, NULL, dmoz_read_sample_library) < 0)
-                perror(cfg_dir_samples);
+                log_perror(cfg_dir_samples);
 
         dmoz_filter_filelist(&flist, dmoz_fill_ext_data, &current_file, file_list_reposition);
         dmoz_cache_lookup(cfg_dir_samples, &flist, NULL);
