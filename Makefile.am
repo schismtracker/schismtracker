@@ -127,7 +127,6 @@ noinst_HEADERS = \
 	include/page.h			\
 	include/palettes.h		\
 	include/pattern-view.h		\
-	include/pngw.h			\
 	include/precomp_lut.h		\
 	include/sample-edit.h		\
 	include/sdlmain.h		\
@@ -306,7 +305,6 @@ schismtracker_SOURCES = \
 	fmt/mus.c			\
 	schism/inst_loader.c		\
 	schism/util.c			\
-	schism/pngw.c			\
 	schism/page_midi.c		\
 	schism/diskwriter_dialog.c	\
 	schism/draw-char.c		\
