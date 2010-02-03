@@ -29,6 +29,7 @@
 #include "dmoz.h"
 #include "page.h"
 #include "version.h"
+#include "log.h"
 
 #include "sdlmain.h"
 #include <string.h>
@@ -179,7 +180,7 @@ static void load_fontlist(void)
         memset(&st, 0, sizeof(st));
         dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -100); /* put it on top */
         if (dmoz_read(font_dir, &flist, NULL, NULL) < 0)
-                perror(font_dir);
+                log_perror(font_dir);
         free(font_dir);
         dmoz_filter_filelist(&flist, fontgrep, &cur_font, NULL);
         while (dmoz_worker());

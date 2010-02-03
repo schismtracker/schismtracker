@@ -239,7 +239,7 @@ static int _alsa_start(struct midi_port *p)
                 err = snd_seq_connect_to(seq, 0, data->c, data->p);
         }
         if (err < 0) {
-                status_text_flash("ALSA: %s", snd_strerror(err));
+                log_appendf(4, "ALSA: %s", snd_strerror(err));
                 return 0;
         }
         return 1;
@@ -258,7 +258,7 @@ static int _alsa_stop(struct midi_port *p)
                 err = snd_seq_disconnect_from(seq, 0, data->c, data->p);
         }
         if (err < 0) {
-                status_text_flash("ALSA: %s", snd_strerror(err));
+                log_appendf(4, "ALSA: %s", snd_strerror(err));
                 return 0;
         }
         return 1;

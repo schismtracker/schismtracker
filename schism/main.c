@@ -889,7 +889,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
                         }
 
                         if (q == DW_SYNC_ERROR) {
-                                log_appendf(4, "Error running diskwriter: %s", strerror(errno));
+                                log_perror("Error running diskwriter");
                                 diskwriter_finish();
                         } else if (q == DW_SYNC_DONE) {
                                 switch (diskwriter_finish()) {
@@ -897,7 +897,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                         /* FIXME: WHY DO WE NEED THIS? */
                                         break;
                                 case DW_ERROR:
-                                        log_appendf(4, "Error shutting down diskwriter: %s", strerror(errno));
+                                        log_perror("Error shutting down diskwriter");
                                         break;
                                 case DW_OK:
                                         //log_appendf(2, "Diskwriter completed successfully");

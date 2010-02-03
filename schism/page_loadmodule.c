@@ -29,6 +29,7 @@
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
+#include "log.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -293,7 +294,7 @@ static void handle_file_entered_S(char *ptr)
                 if (errno == ENOENT) {
                         do_save_song(str_dup(ptr));
                 } else {
-                        log_appendf(4, "%s: %s", ptr, strerror(errno));
+                        log_perror(ptr);
                 }
         } else {
                 if (S_ISDIR(buf.st_mode)) {
@@ -398,7 +399,7 @@ static void read_directory(void)
         /* if the stat call failed, this will probably break as well, but
         at the very least, it'll add an entry for the root directory. */
         if (dmoz_read(cfg_dir_modules, &flist, &dlist, NULL) < 0)
-                perror(cfg_dir_modules);
+                log_perror(cfg_dir_modules);
         dmoz_filter_filelist(&flist, modgrep, &current_file, file_list_reposition);
         while (dmoz_worker()); /* don't do it asynchronously */
         dmoz_cache_lookup(cfg_dir_modules, &flist, &dlist);

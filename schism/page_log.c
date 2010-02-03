@@ -32,6 +32,7 @@
 #include "sdlmain.h"
 
 #include <stdarg.h>
+#include <errno.h>
 
 struct log_line {
         int color;
@@ -200,5 +201,12 @@ void log_underline(int chars)
                 buf[chars] = 0x81;
         while (chars--);
         log_appendf(2, "%s", buf);
+}
+
+void log_perror(const char *prefix)
+{
+        char *e = strerror(errno);
+        perror(prefix);
+        log_appendf(4, "%s: %s", prefix, e);
 }
 
