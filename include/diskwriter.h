@@ -45,17 +45,35 @@ struct diskwriter_driver {
 
                 these functions definitely need better names /storlek
         */
-        void (*p)(diskwriter_driver_t *x);
-        void (*m)(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len);
-        void (*g)(diskwriter_driver_t *x, const unsigned char *buf, unsigned int len, unsigned int delay);
-        void (*x)(diskwriter_driver_t *x);
+        /* (preceding comment left for posterity)
+        now that I've spent about 2 hours unobfuscating all of this code, here's what
+        these functions REALLY DO:
+                * first thing, when a .wav (or whatever export-format) write is started,
+                  the disk writer calls 'header', so that the driver can do whatever setup
+                  is necessary; namely, writing out the file header (or more realistically,
+                  seeking past it, since the file length and other stuff that's likely to
+                  go in a header isn't known yet)
+                * then, 'writeaudio' and 'writemidi' are called as necessary while the file
+                  is played through, and are given various chunks of data
+                * at the end of the song, the 'finish' function is called; this is the time
+                  to seek back to that incomplete header and fill in the fields (or do
+                  anything else that has to happen at the end)
+                * 'configure' is called FIRST, but seeing as it's not ever used, its true
+                  purpose is evidently to make the struct slightly bigger -- sort of like
+                  the button on the Alt-T dialog in the sample editor :P
+                * write/seek/error are completely unrelated to the driver, and handle the
+                  actual data being output to the file.
+        */
+        void (*header)(diskwriter_driver_t *x);
+        void (*writeaudio)(diskwriter_driver_t *x, const void *buf, unsigned int len);
+        void (*writemidi)(diskwriter_driver_t *x, const void *buf, unsigned int len, unsigned int delay);
+        void (*finish)(diskwriter_driver_t *x);
 
         /* supplied by diskwriter (write function) */
-        void (*o)(diskwriter_driver_t *x, const unsigned char *buf,
-                                                        unsigned int len);
-        void (*l)(diskwriter_driver_t *x, off_t pos);
+        void (*write)(diskwriter_driver_t *x, const void *buf, unsigned int len);
+        void (*seek)(diskwriter_driver_t *x, off_t pos);
         /* error condition */
-        void (*e)(diskwriter_driver_t *x);
+        void (*error)(diskwriter_driver_t *x);
 
         /* supplied by driver
                 if "s" is supplied, schism will call it and expect IT
@@ -64,7 +82,7 @@ struct diskwriter_driver {
                 this routine is supplied to allow drivers to write dialogs for
                 accepting some configuration
         */
-        void (*s)(diskwriter_driver_t *x);
+        void (*configure)(diskwriter_driver_t *x);
 
         /* untouched by diskwriter; driver may use for anything */
         void *userdata;
@@ -115,8 +133,7 @@ int diskwriter_finish(void);
 extern diskwriter_driver_t *diskwriter_drivers[];
 
 /* this call is used by audio/loadsave to send midi data */
-int _diskwriter_writemidi(const unsigned char *data, unsigned int len,
-                                                unsigned int delay);
+int _diskwriter_writemidi(const void *data, unsigned int len, unsigned int delay);
 
 /* these are used inbetween diskwriter interfaces */
 void diskwriter_dialog_progress(unsigned int perc);

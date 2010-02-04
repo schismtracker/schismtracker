@@ -176,8 +176,8 @@ int fmt_au_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
         }
         au.data_size = bswapBE32(ln);
 
-        fp->o(fp, (const unsigned char *)&au, sizeof(au));
-        fp->o(fp, (const unsigned char *)title, 25);
+        fp->write(fp, &au, sizeof(au));
+        fp->write(fp, title, 25);
         save_sample_data_BE(fp, smp, 0);
 
         return 1;

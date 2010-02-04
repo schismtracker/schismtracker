@@ -261,11 +261,11 @@ static void _wavout_header(diskwriter_driver_t *x)
         hdr.id_RIFF  = bswapLE32(IFFID_RIFF);
         hdr.filesize = 0x0BBC0DE0;
         hdr.id_WAVE  = bswapLE32(IFFID_WAVE);
-        x->o(x, (const uint8_t*) &hdr, sizeof(hdr));
+        x->write(x, &hdr, sizeof(hdr));
 
         pfx.id     = bswapLE32(IFFID_fmt);
         pfx.length = bswapLE32(sizeof(wave_format_t));
-        x->o(x, (const uint8_t*) &pfx, sizeof(pfx));
+        x->write(x, &pfx, sizeof(pfx));
 
         fmt.format        = bswapLE16(WAVE_FORMAT_PCM);
         fmt.channels      = bswapLE16(x->channels);
@@ -273,11 +273,11 @@ static void _wavout_header(diskwriter_driver_t *x)
         fmt.bytessec      = bswapLE32(x->rate * x->channels * (x->bits / 8));
         fmt.samplesize    = bswapLE16(x->bits / 8);
         fmt.bitspersample = bswapLE16(x->bits);
-        x->o(x, (const uint8_t*) &fmt, sizeof(fmt));
+        x->write(x, &fmt, sizeof(fmt));
 
         pfx.id     = bswapLE32(IFFID_data);
         pfx.length = 0x0BBC0DE0;
-        x->o(x, (const uint8_t*) &pfx, sizeof(pfx));
+        x->write(x, &pfx, sizeof(pfx));
 }
 
 
@@ -292,24 +292,24 @@ static void _wavout_tail(diskwriter_driver_t *x)
         tmp = bswapLE32(tt);
 
         // Skip RIFF
-        x->l(x, sizeof(uint32_t));
-        x->o(x, (const uint8_t*) &tmp, sizeof(uint32_t));
+        x->seek(x, sizeof(uint32_t));
+        x->write(x, &tmp, sizeof(uint32_t));
 
         // File size after format header and so on
         tt -= sizeof(wave_format_t) + (2 * sizeof(wave_chunk_prefix_t)) + sizeof(uint32_t);
         tmp = bswapLE32(tt);
 
-        x->l(x, sizeof(wave_file_header_t) +
+        x->seek(x, sizeof(wave_file_header_t) +
                 sizeof(wave_chunk_prefix_t) +
                 sizeof(wave_format_t) +
                 sizeof(uint32_t));
-        x->o(x, (const uint8_t*) &tmp, sizeof(uint32_t));
+        x->write(x, &tmp, sizeof(uint32_t));
 }
 
 
-static void _wavout_data(diskwriter_driver_t *x, const uint8_t *buf, uint32_t len)
+static void _wavout_data(diskwriter_driver_t *x, const void *buf, uint32_t len)
 {
-        x->o(x, buf, len);
+        x->write(x, buf, len);
 }
 
 

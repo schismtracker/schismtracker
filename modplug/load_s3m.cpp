@@ -116,8 +116,8 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
                         header[0x40+i] = (i & 0x10) | ((i & 1) ? 8+tmp : tmp);
                 } else header[0x40+i] = 0xFF;
         }
-        fp->o(fp, (const unsigned char *)header, 0x60);
-        fp->o(fp, (const unsigned char *)Orderlist, nbo);
+        fp->write(fp, header, 0x60);
+        fp->write(fp, Orderlist, nbo);
         memset(patptr, 0, sizeof(patptr));
         memset(insptr, 0, sizeof(insptr));
         uint32_t ofs0 = 0x60 + nbo;
@@ -130,8 +130,8 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
 
         for (i=0; i<nbi; i++) insptr[i] = bswapLE16((uint16_t)((ofs + i*0x50) / 16));
         for (i=0; i<nbp; i++) patptr[i] = bswapLE16((uint16_t)((ofs + nbi*0x50) / 16));
-        fp->o(fp, (const unsigned char *)insptr, nbi*2);
-        fp->o(fp, (const unsigned char *)patptr, nbp*2);
+        fp->write(fp, insptr, nbi*2);
+        fp->write(fp, patptr, nbp*2);
         if (header[0x35] == 0xFC)
         {
                 uint8_t chnpan[32];
@@ -140,18 +140,18 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
                         uint32_t nPan = ((Channels[i].nPan+7) < 0xF0) ? Channels[i].nPan+7 : 0xF0;
                         chnpan[i] = (i<chanlim) ? 0x20 | (nPan >> 4) : 0x08;
                 }
-                fp->o(fp, (const unsigned char *)chnpan, 0x20);
+                fp->write(fp, chnpan, 0x20);
         }
         if ((nbi*2+nbp*2) & 0x0F)
         {
-                fp->o(fp, (const unsigned char *)S3MFiller, 0x10 - ((nbi*2+nbp*2) & 0x0F));
+                fp->write(fp, S3MFiller, 0x10 - ((nbi*2+nbp*2) & 0x0F));
         }
-        fp->l(fp, ofs1);
+        fp->seek(fp, ofs1);
         ofs1 = fp->pos;
-        fp->o(fp, (const unsigned char *)insex, nbi*0x50);
+        fp->write(fp, insex, nbi*0x50);
         // Packing patterns
         ofs += nbi*0x50;
-        fp->l(fp,ofs);
+        fp->seek(fp,ofs);
         for (i=0; i<nbp; i++)
         {
                 uint16_t len = 64;
@@ -270,7 +270,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
                 buffer[1] = (len) >> 8;
                 len = (len+15) & (~0x0F);
 
-                fp->o(fp, (const unsigned char *)buffer, len);
+                fp->write(fp, buffer, len);
                 ofs += len;
         }
         // Writing samples
@@ -317,7 +317,7 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
                         uint32_t len = csf_write_sample(fp, pins, flags, 0);
                         if (len & 0x0F)
                         {
-                                fp->o(fp, (const unsigned char *)S3MFiller, 0x10 - (len & 0x0F));
+                                fp->write(fp, S3MFiller, 0x10 - (len & 0x0F));
                         }
                         ofs += (len + 15) & (~0x0F);
                 } else {
@@ -325,11 +325,11 @@ bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
                 }
         }
         // Updating parapointers
-        fp->l(fp, ofs0);
-        fp->o(fp, (const unsigned char *)insptr, nbi*2);
-        fp->o(fp, (const unsigned char *)patptr, nbp*2);
-        fp->l(fp, ofs1);
-        fp->o(fp, (const unsigned char *)insex, 0x50*nbi);
+        fp->seek(fp, ofs0);
+        fp->write(fp, insptr, nbi*2);
+        fp->write(fp, patptr, nbp*2);
+        fp->seek(fp, ofs1);
+        fp->write(fp, insex, 0x50*nbi);
         return true;
 }
 
