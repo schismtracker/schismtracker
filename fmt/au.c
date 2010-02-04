@@ -176,8 +176,8 @@ int fmt_au_save_sample(disko_t *fp, song_sample *smp, char *title)
         }
         au.data_size = bswapBE32(ln);
 
-        fp->write(fp, &au, sizeof(au));
-        fp->write(fp, title, 25);
+        disko_write(fp, &au, sizeof(au));
+        disko_write(fp, title, 25);
         save_sample_data_BE(fp, smp, 0);
 
         return 1;

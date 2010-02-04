@@ -221,7 +221,7 @@ void save_its_header(disko_t *fp, song_sample *smp, char *title)
                 case VIB_SINE:      its.vit = 0; break;
         }
 
-        fp->write(fp, &its, sizeof(its));
+        disko_write(fp, &its, sizeof(its));
 }
 
 int fmt_its_save_sample(disko_t *fp, song_sample *smp, char *title)
@@ -232,8 +232,8 @@ int fmt_its_save_sample(disko_t *fp, song_sample *smp, char *title)
         /* Write the sample pointer. In an ITS file, the sample data is right after the header,
         so its position in the file will be the same as the size of the header. */
         unsigned int tmp = bswapLE32(sizeof(ITSAMPLESTRUCT));
-        fp->seek(fp, 0x48);
-        fp->write(fp, &tmp, 4);
+        disko_seek(fp, 0x48, SEEK_SET);
+        disko_write(fp, &tmp, 4);
 
         return 1;
 }

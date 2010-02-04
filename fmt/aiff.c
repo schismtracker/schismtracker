@@ -320,7 +320,7 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample *smp, char *title)
                ID ckID;
                int32_t ckSize;
                ID formType; */
-        fp->write(fp, "FORM\1\1\1\1AIFFNAME", 16);
+        disko_write(fp, "FORM\1\1\1\1AIFFNAME", 16);
 
         /* NAME chunk
                ID ckID;
@@ -330,8 +330,8 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample *smp, char *title)
         if (tlen & 1)
                 tlen++; /* must be even */
         ul = bswapBE32(tlen);
-        fp->write(fp, &ul, 4);
-        fp->write(fp, title, tlen);
+        disko_write(fp, &ul, 4);
+        disko_write(fp, title, tlen);
 
         /* COMM chunk
                ID ckID;
@@ -340,18 +340,18 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample *smp, char *title)
                uint32_t numSampleFrames;
                int16_t sampleSize;
                extended sampleRate; */
-        fp->write(fp, "COMM", 4);
+        disko_write(fp, "COMM", 4);
         ul = bswapBE32(18);
-        fp->write(fp, &ul, 4);
+        disko_write(fp, &ul, 4);
         s = bswapBE16(1);
-        fp->write(fp, &s, 2);
+        disko_write(fp, &s, 2);
         ul = bswapBE32(smp->length);
-        fp->write(fp, &ul, 4);
+        disko_write(fp, &ul, 4);
         s = 8 * bps;
         s = bswapBE16(s);
-        fp->write(fp, &s, 2);
+        disko_write(fp, &s, 2);
         ConvertToIeeeExtended(smp->speed, b);
-        fp->write(fp, b, 10);
+        disko_write(fp, b, 10);
 
         /* SSND chunk:
                char ckID[4];
@@ -359,18 +359,18 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample *smp, char *title)
                uint32_t offset;
                uint32_t blockSize;
                uint8_t soundData[]; */
-        fp->write(fp, "SSND", 4);
+        disko_write(fp, "SSND", 4);
         ul = smp->length * bps;
         ul = bswapBE32(ul);
-        fp->write(fp, &ul, 4);
+        disko_write(fp, &ul, 4);
         ul = bswapBE32(0);
-        fp->write(fp, &ul, 4);
-        fp->write(fp, &ul, 4);
+        disko_write(fp, &ul, 4);
+        disko_write(fp, &ul, 4);
 
 #if !WORDS_BIGENDIAN
         if (fp->bits == 8) {
                 /* no swapping required */
-                fp->write(fp, smp->data, smp->length * bps);
+                disko_write(fp, smp->data, smp->length * bps);
         } else {
 #define BUFS    4096
                 uint16_t buffer[BUFS];
@@ -383,7 +383,7 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample *smp, char *title)
                 p = buffer;
                 while (length > 0) {
                         if (p >= end) {
-                                fp->write(fp, buffer, ((char*)p)-((char*)buffer));
+                                disko_write(fp, buffer, ((char*)p)-((char*)buffer));
                                 p = buffer;
                         }
                         *p = bswap_16(*q);
@@ -395,18 +395,18 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample *smp, char *title)
                         length--;
                 }
                 if (p != buffer) {
-                        fp->write(fp, buffer, ((char*)p)-((char*)buffer));
+                        disko_write(fp, buffer, ((char*)p)-((char*)buffer));
                 }
         }
 #else
-        fp->write(fp, smp->data, smp->length * bps);
+        disko_write(fp, smp->data, smp->length * bps);
 #endif
 
         /* fix the length in the file header */
         ul = fp->pos - 8;
         ul = bswapBE32(ul);
-        fp->seek(fp, 4);
-        fp->write(fp, &ul, 4);
+        disko_seek(fp, 4, SEEK_SET);
+        disko_write(fp, &ul, 4);
 
         return 1;
 }
