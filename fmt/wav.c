@@ -261,11 +261,11 @@ static void _wavout_header(disko_t *x)
         hdr.id_RIFF  = bswapLE32(IFFID_RIFF);
         hdr.filesize = 0x0BBC0DE0;
         hdr.id_WAVE  = bswapLE32(IFFID_WAVE);
-        x->write(x, &hdr, sizeof(hdr));
+        disko_write(x, &hdr, sizeof(hdr));
 
         pfx.id     = bswapLE32(IFFID_fmt);
         pfx.length = bswapLE32(sizeof(wave_format_t));
-        x->write(x, &pfx, sizeof(pfx));
+        disko_write(x, &pfx, sizeof(pfx));
 
         fmt.format        = bswapLE16(WAVE_FORMAT_PCM);
         fmt.channels      = bswapLE16(x->channels);
@@ -273,11 +273,11 @@ static void _wavout_header(disko_t *x)
         fmt.bytessec      = bswapLE32(x->rate * x->channels * (x->bits / 8));
         fmt.samplesize    = bswapLE16(x->bits / 8);
         fmt.bitspersample = bswapLE16(x->bits);
-        x->write(x, &fmt, sizeof(fmt));
+        disko_write(x, &fmt, sizeof(fmt));
 
         pfx.id     = bswapLE32(IFFID_data);
         pfx.length = 0x0BBC0DE0;
-        x->write(x, &pfx, sizeof(pfx));
+        disko_write(x, &pfx, sizeof(pfx));
 }
 
 
@@ -292,24 +292,24 @@ static void _wavout_tail(disko_t *x)
         tmp = bswapLE32(tt);
 
         // Skip RIFF
-        x->seek(x, sizeof(uint32_t));
-        x->write(x, &tmp, sizeof(uint32_t));
+        disko_seek(x, sizeof(uint32_t), SEEK_SET);
+        disko_write(x, &tmp, sizeof(uint32_t), SEEK_SET);
 
         // File size after format header and so on
         tt -= sizeof(wave_format_t) + (2 * sizeof(wave_chunk_prefix_t)) + sizeof(uint32_t);
         tmp = bswapLE32(tt);
 
-        x->seek(x, sizeof(wave_file_header_t) +
+        disko_seek(x, sizeof(wave_file_header_t) +
                 sizeof(wave_chunk_prefix_t) +
                 sizeof(wave_format_t) +
-                sizeof(uint32_t));
-        x->write(x, &tmp, sizeof(uint32_t));
+                sizeof(uint32_t), SEEK_SET);
+        disko_write(x, &tmp, sizeof(uint32_t));
 }
 
 
 static void _wavout_data(disko_t *x, const void *buf, uint32_t len)
 {
-        x->write(x, buf, len);
+        disko_write(x, buf, len);
 }
 
 

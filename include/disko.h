@@ -61,19 +61,16 @@ struct disko {
                 * 'configure' is called FIRST, but seeing as it's not ever used, its true
                   purpose is evidently to make the struct slightly bigger -- sort of like
                   the button on the Alt-T dialog in the sample editor :P
-                * write/seek/error are completely unrelated to the driver, and handle the
-                  actual data being output to the file.
         */
         void (*header)(disko_t *x);
         void (*writeaudio)(disko_t *x, const void *buf, unsigned int len);
         void (*writemidi)(disko_t *x, const void *buf, unsigned int len, unsigned int delay);
         void (*finish)(disko_t *x);
 
-        /* supplied by diskwriter (write function) */
-        void (*write)(disko_t *x, const void *buf, unsigned int len);
-        void (*seek)(disko_t *x, off_t pos);
-        /* error condition */
-        void (*error)(disko_t *x);
+        /* don't touch these in the diskwriter drivers -- use disko_write etc. */
+        void (*_write)(disko_t *x, const void *buf, unsigned int len);
+        void (*_seek)(disko_t *x, off_t pos, int whence);
+        void (*_seterror)(disko_t *x);
 
         /* supplied by driver
                 if "s" is supplied, schism will call it and expect IT
@@ -127,6 +124,20 @@ int disko_sync(void);
         temporary files created; otherwise, it will commit them.
 return: DW_OK or DW_ERROR */
 int disko_finish(void);
+
+
+
+/* For use by the diskwriter drivers: */
+
+/* Write data to the file, as in fwrite() */
+void disko_write(disko_t *ds, const void *buf, unsigned int len);
+
+/* Change file position. This CAN be used to seek past the end,
+but be cognizant that random data might exist in the "gap". */
+void disko_seek(disko_t *ds, off_t pos, int whence);
+
+/* Call this to signal a nonrecoverable error condition. */
+void disko_seterror(disko_t *ds);
 
 /* ------------------------------------------------------------------------- */
 

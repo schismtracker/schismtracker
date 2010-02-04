@@ -306,7 +306,7 @@ void fmt_mid_save_song(disko_t *dw)
                         map[i].nna = NNA_NOTECUT;
                 }
         }
-        dw->write(dw, "MThd\0\0\0\6\0\1\0\100\x00\x60", 14);
+        disko_write(dw, "MThd\0\0\0\6\0\1\0\100\x00\x60", 14);
 
         s = song_get_title();
         if (s && *s) {
@@ -530,10 +530,10 @@ void fmt_mid_save_song(disko_t *dw)
                 packet[2] = (trk[i].used >> 8) & 255;
                 packet[3] = (trk[i].used) & 255;
 
-                dw->write(dw, "MTrk", 4);
-                dw->write(dw, packet, 4);
+                disko_write(dw, "MTrk", 4);
+                disko_write(dw, packet, 4);
                 if (trk[i].used) {
-                        dw->write(dw, trk[i].buf, trk[i].used);
+                        disko_write(dw, trk[i].buf, trk[i].used);
                         free(trk[i].buf);
                 }
         }

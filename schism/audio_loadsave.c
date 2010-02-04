@@ -460,7 +460,7 @@ void save_sample_data_LE(disko_t *fp, song_sample *smp, int noe)
                                 memcpy(buffer+bufcount, &s, 2);
                                 bufcount += 2;
                                 if (bufcount >= sizeof(buffer)) {
-                                        fp->write(fp, buffer, bufcount);
+                                        disko_write(fp, buffer, bufcount);
                                         bufcount = 0;
                                 }
                         }
@@ -470,12 +470,12 @@ void save_sample_data_LE(disko_t *fp, song_sample *smp, int noe)
                                 memcpy(buffer+bufcount, &s, 2);
                                 bufcount += 2;
                                 if (bufcount >= sizeof(buffer)) {
-                                        fp->write(fp, buffer, bufcount);
+                                        disko_write(fp, buffer, bufcount);
                                         bufcount = 0;
                                 }
                         }
                         if (bufcount > 0) {
-                                fp->write(fp, buffer, bufcount);
+                                disko_write(fp, buffer, bufcount);
                         }
                 } else {
 #if WORDS_BIGENDIAN
@@ -486,15 +486,15 @@ void save_sample_data_LE(disko_t *fp, song_sample *smp, int noe)
                                 memcpy(buffer+bufcount, &s, 2);
                                 bufcount += 2;
                                 if (bufcount >= sizeof(buffer)) {
-                                        fp->write(fp, buffer, bufcount);
+                                        disko_write(fp, buffer, bufcount);
                                         bufcount = 0;
                                 }
                         }
                         if (bufcount > 0) {
-                                fp->write(fp, buffer, bufcount);
+                                disko_write(fp, buffer, bufcount);
                         }
 #else
-                        fp->write(fp, smp->data, 2*len);
+                        disko_write(fp, smp->data, 2*len);
 #endif
                 }
         } else if (smp->flags & SAMP_STEREO) {
@@ -502,23 +502,23 @@ void save_sample_data_LE(disko_t *fp, song_sample *smp, int noe)
                 for (unsigned int n = 0; n < len; n += 2) {
                         buffer[bufcount++] = (smp->data)[n];
                         if (bufcount >= sizeof(buffer)) {
-                                fp->write(fp, buffer, bufcount);
+                                disko_write(fp, buffer, bufcount);
                                 bufcount = 0;
                         }
                 }
                 for (unsigned int n = 1; n < len; n += 2) {
                         buffer[bufcount++] = (smp->data)[n];
                         if (bufcount >= sizeof(buffer)) {
-                                fp->write(fp, buffer, bufcount);
+                                disko_write(fp, buffer, bufcount);
                                 bufcount = 0;
                         }
                 }
                 if (bufcount > 0) {
-                        fp->write(fp, buffer, bufcount);
+                        disko_write(fp, buffer, bufcount);
                 }
 
         } else {
-                fp->write(fp, smp->data, len);
+                disko_write(fp, smp->data, len);
         }
 }
 
@@ -539,34 +539,34 @@ void save_sample_data_BE(disko_t *fp, song_sample *smp, int noe)
                         for (unsigned int n = 0; n < len; n += 2) {
                                 signed short s = ((signed short *) smp->data)[n];
                                 s = bswapBE16(s);
-                                fp->write(fp, &s, 2);
+                                disko_write(fp, &s, 2);
                         }
                         for (unsigned int n = 1; n < len; n += 2) {
                                 signed short s = ((signed short *) smp->data)[n];
                                 s = bswapBE16(s);
-                                fp->write(fp, &s, 2);
+                                disko_write(fp, &s, 2);
                         }
                 } else {
 #if WORDS_BIGENDIAN
-                        fp->write(fp, smp->data, 2*len);
+                        disko_write(fp, smp->data, 2*len);
 #else
                         for (unsigned int n = 0; n < len; n++) {
                                 signed short s = ((signed short *) smp->data)[n];
                                 s = bswapBE16(s);
-                                fp->write(fp, &s, 2);
+                                disko_write(fp, &s, 2);
                         }
 #endif
                 }
         } else if (smp->flags & SAMP_STEREO) {
                 for (unsigned int n = 0; n < len; n += 2) {
-                        fp->write(fp, (smp->data)+n, 1);
+                        disko_write(fp, (smp->data)+n, 1);
                 }
                 for (unsigned int n = 1; n < len; n += 2) {
-                        fp->write(fp, (smp->data)+n, 1);
+                        disko_write(fp, (smp->data)+n, 1);
                 }
 
         } else {
-                fp->write(fp, smp->data, len);
+                disko_write(fp, smp->data, len);
         }
 }
 
@@ -694,11 +694,11 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
         }
 
         // ITI files *need* to write 554 bytes due to alignment, but in a song it doesn't matter
-        fp->write(fp, &iti, sizeof(iti));
+        disko_write(fp, &iti, sizeof(iti));
         if (iti_file) {
                 if (sizeof(iti) < 554) {
                         for (int j = sizeof(iti); j < 554; j++) {
-                                fp->write(fp, "\x0", 1);
+                                disko_write(fp, "\x0", 1);
                         }
                 }
                 assert(sizeof(iti) <= 554);
@@ -723,9 +723,9 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 
                         op = fp->pos;
                         tmp = bswapLE32(op);
-                        fp->seek(fp, iti_map[o]+0x48);
-                        fp->write(fp, &tmp, 4);
-                        fp->seek(fp, op);
+                        disko_seek(fp, iti_map[o]+0x48, SEEK_SET);
+                        disko_write(fp, &tmp, 4);
+                        disko_seek(fp, op, SEEK_SET);
                         save_sample_data_LE(fp, (song_sample *)smp, 1);
 
                 }
@@ -839,8 +839,8 @@ static void _save_it_pattern(disko_t *fp, MODCOMMAND *pat, int patsize)
         h[0] = bswapLE16(pos);
         h[1] = bswapLE16(patsize);
         // h[2] and h[3] are meaningless
-        fp->write(fp, &h, 8);
-        fp->write(fp, data, pos);
+        disko_write(fp, &h, 8);
+        disko_write(fp, data, pos);
 }
 
 static void _save_it(disko_t *fp)
@@ -976,30 +976,30 @@ static void _save_it(disko_t *fp)
                         hdr.chnpan[n] += 128;
         }
 
-        fp->write(fp, &hdr, sizeof(hdr));
-        fp->write(fp, mp->Orderlist, nord);
+        disko_write(fp, &hdr, sizeof(hdr));
+        disko_write(fp, mp->Orderlist, nord);
 
         // we'll get back to these later
-        fp->write(fp, para_ins, 4*nins);
-        fp->write(fp, para_smp, 4*nsmp);
-        fp->write(fp, para_pat, 4*npat);
+        disko_write(fp, para_ins, 4*nins);
+        disko_write(fp, para_smp, 4*nsmp);
+        disko_write(fp, para_pat, 4*npat);
 
 
         // here is the IT "extra" info (IT doesn't seem to use it)
         // TODO: check to see if any "registered" IT save formats (217?)
-        zero = 0; fp->write(fp, &zero, 2);
+        zero = 0; disko_write(fp, &zero, 2);
 
         // here comes MIDI configuration
         // here comes MIDI configuration
         // right down MIDI configuration lane
         if (midi_flags & MIDI_EMBED_DATA) {
                 //printf("attempting to embed %d bytes\n", sizeof(mp->m_MidiCfg));
-                fp->write(fp, &mp->m_MidiCfg, sizeof(mp->m_MidiCfg));
+                disko_write(fp, &mp->m_MidiCfg, sizeof(mp->m_MidiCfg));
         }
 
         // IT puts something else here (timestamp?)
         // (need to change hdr.msgoffset above if adding other stuff here)
-        fp->write(fp, song_get_message(), msglen);
+        disko_write(fp, song_get_message(), msglen);
 
         // instruments, samples, and patterns
         for (n = 0; n < nins; n++) {
@@ -1028,9 +1028,9 @@ static void _save_it(disko_t *fp)
                 // Always save the data pointer, even if there's not actually any data being pointed to
                 op = fp->pos;
                 tmp = bswapLE32(op);
-                fp->seek(fp, para_smp[n]+0x48);
-                fp->write(fp, &tmp, 4);
-                fp->seek(fp, op);
+                disko_seek(fp, para_smp[n]+0x48, SEEK_SET);
+                disko_write(fp, &tmp, 4);
+                disko_seek(fp, op, SEEK_SET);
                 if (smp->pSample)
                         save_sample_data_LE(fp, (song_sample *)smp, 1);
                 // done using the pointer internally, so *now* swap it
@@ -1038,10 +1038,10 @@ static void _save_it(disko_t *fp)
         }
 
         // rewrite the parapointers
-        fp->seek(fp, 0xc0 + nord);
-        fp->write(fp, para_ins, 4*nins);
-        fp->write(fp, para_smp, 4*nsmp);
-        fp->write(fp, para_pat, 4*npat);
+        disko_seek(fp, 0xc0 + nord, SEEK_SET);
+        disko_write(fp, para_ins, 4*nins);
+        disko_write(fp, para_smp, 4*nsmp);
+        disko_write(fp, para_pat, 4*npat);
 }
 
 static void _save_s3m(disko_t *dw)
@@ -1056,7 +1056,7 @@ static void _save_s3m(disko_t *dw)
 
         if (!csf_save_s3m(mp, dw, 0)) {
                 status_text_flash("Error writing to disk");
-                dw->error(dw);
+                disko_seterror(dw);
         }
 }
 
@@ -1076,7 +1076,7 @@ static void _save_xm(disko_t *dw)
 
         if (!csf_save_xm(mp, dw, 0)) {
                 status_text_flash("Error writing to disk");
-                dw->error(dw);
+                disko_seterror(dw);
         }
 }
 
@@ -1092,7 +1092,7 @@ static void _save_mod(disko_t *dw)
 
         if (!csf_save_mod(mp, dw, 0)) {
                 status_text_flash("Error writing to disk");
-                dw->error(dw);
+                disko_seterror(dw);
         }
 }
 

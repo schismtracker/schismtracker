@@ -250,7 +250,7 @@ static void write_sample_u16(disko_t *fp, void *v, unsigned int length)
         memcpy(o, v, length * 2);
         for (n = 0; n < length; n++)
                 o[n] += 32768;
-        fp->write(fp, o, length * 2);
+        disko_write(fp, o, length * 2);
         free(o);
 }
 
@@ -261,7 +261,7 @@ static void write_sample_u8(disko_t *fp, void *v, unsigned int length)
         memcpy(o, v, length);
         for (n = 0; n < length; n++)
                 o[n] += 128;
-        fp->write(fp, o, length);
+        disko_write(fp, o, length);
         free(o);
 }
 
@@ -468,7 +468,7 @@ void fmt_mtm_save_song(disko_t *fp)
         }
 
         /* yay, we can write the header now */
-        fp->write(fp, &hdr, sizeof(hdr));
+        disko_write(fp, &hdr, sizeof(hdr));
 
         /* sampletime */
         for (n = 1; n <= hdr.nsamples; n++) {
@@ -489,18 +489,18 @@ void fmt_mtm_save_song(disko_t *fp)
                 smp.length = bswapLE32(smp.length);
                 smp.volume = ss->volume / 4; /* XXX modplug hack */
                 smp.finetune = c5speed_to_finetune(ss->speed);
-                fp->write(fp, &smp, sizeof(smp));
+                disko_write(fp, &smp, sizeof(smp));
         }
 
-        fp->write(fp, ord, sizeof(ord));
+        disko_write(fp, ord, sizeof(ord));
 
         trk2 = NULL;
         for (trk = tracks.next; trk; trk = trk->next) {
-                fp->write(fp, trk->data, sizeof(trk->data));
+                disko_write(fp, trk->data, sizeof(trk->data));
                 free(trk2);
                 trk2 = trk;
         }
-        fp->write(fp, seq, 2 * 32 * (hdr.last_pattern + 1));
+        disko_write(fp, seq, 2 * 32 * (hdr.last_pattern + 1));
 
         free(seq);
 

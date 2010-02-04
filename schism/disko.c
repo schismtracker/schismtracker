@@ -111,20 +111,19 @@ dw->output_le
 
 
 /* disk writer */
-/* Nice comment, but WTF do these functions do? */
-static void _dw_stdio_seek(disko_t *x, off_t pos)
+static void _dw_stdio_seek(disko_t *x, off_t pos, int whence)
 {
         if (!fp) {
                 fp_ok = 0;
                 return;
         }
-        fseek(fp, pos, SEEK_SET);
+        fseek(fp, pos, whence);
         if (ferror(fp))
                 fp_ok = 0;
         x->pos = pos;
 }
 
-static void _dw_error(UNUSED disko_t *x)
+static void _dw_seterror(UNUSED disko_t *x)
 {
         fp_ok = 0;
 }
@@ -170,11 +169,21 @@ static void _dw_mem_write(disko_t *x, const void *buf, unsigned int len)
         }
 }
 
-static void _dw_mem_seek(disko_t *x, off_t pos)
+static void _dw_mem_seek(disko_t *x, off_t pos, int whence)
 {
         if (!fp) {
                 fp_ok = 0;
                 return;
+        }
+        switch (whence) {
+        case SEEK_SET:
+                break;
+        case SEEK_CUR:
+                pos += x->pos;
+                break;
+        case SEEK_END:
+                pos += x->length;
+                break;
         }
         if (pos < 0) pos = 0;
         x->pos = pos;
@@ -261,10 +270,10 @@ int disko_writeout_sample(int sampno, int patno, int dobind)
         mbuf_size = 0;
         mbuf_len = 0;
 
-        dw->error = _dw_error;
+        dw->_seterror = _dw_seterror;
 
-        dw->write = _dw_mem_write; /* completeness.... */
-        dw->seek = _dw_mem_seek;
+        dw->_write = _dw_mem_write; /* completeness.... */
+        dw->_seek = _dw_mem_seek;
 
         if (!fp_ok) {
                 disko_finish();
@@ -345,9 +354,9 @@ int disko_multiout(const char *dir, disko_t *f)
         if (disko_start_nodriver(f) != DW_OK)
                 return DW_ERROR;
 
-        dw->write = _dw_stdio_write;
-        dw->error = _dw_error;
-        dw->seek = _dw_stdio_seek;
+        dw->_write = _dw_stdio_write;
+        dw->_seterror = _dw_seterror;
+        dw->_seek = _dw_stdio_seek;
         fp_ok = 1;
         dw_rename_from = NULL;
         dw_rename_to = NULL;
@@ -452,9 +461,9 @@ int disko_start(const char *file, disko_t *f)
 
         dw_rename_from = str;
 
-        dw->write = _dw_stdio_write;
-        dw->error = _dw_error;
-        dw->seek = _dw_stdio_seek;
+        dw->_write = _dw_stdio_write;
+        dw->_seterror = _dw_seterror;
+        dw->_seek = _dw_stdio_seek;
 
         if (dw->header)
                 dw->header(dw);
@@ -679,6 +688,24 @@ int disko_finish(void)
                 sample_host_dialog(-1);
         return r;
 }
+
+
+void disko_write(disko_t *ds, const void *buf, unsigned int len)
+{
+        return ds->_write(ds, buf, len);
+}
+
+void disko_seek(disko_t *ds, off_t pos, int whence)
+{
+        return ds->_seek(ds, pos, whence);
+}
+
+void disko_seterror(disko_t *ds)
+{
+        return ds->_seterror(ds);
+}
+
+
 
 int _disko_writemidi(const void *data, unsigned int len, unsigned int delay)
 {

@@ -254,7 +254,7 @@ bool CSoundFile::SaveMod(disko_t *fp, uint32_t)
                 for (uint32_t i=0; i<32; i++) insmap[i] = (uint8_t)i;
         }
         // Writing song name
-        fp->write(fp, song_title, 20);
+        disko_write(fp, song_title, 20);
         // Writing instrument definition
         for (uint32_t iins=1; iins<=31; iins++)
         {
@@ -285,7 +285,7 @@ bool CSoundFile::SaveMod(disko_t *fp, uint32_t)
                 memcpy(bTab+26, &gg, 2);
                 gg = bswapBE16((pins->nLoopEnd - pins->nLoopStart)/ 2);
                 memcpy(bTab+28, &gg, 2);
-                fp->write(fp, bTab, 30);
+                disko_write(fp, bTab, 30);
         }
         // Writing number of patterns
         uint32_t nbp=0, norders=128;
@@ -300,16 +300,16 @@ bool CSoundFile::SaveMod(disko_t *fp, uint32_t)
         }
         bTab[0] = norders;
         bTab[1] = 0xff;
-        fp->write(fp, bTab, 2);
+        disko_write(fp, bTab, 2);
         // Writing pattern list
         if (norders) memcpy(ord, Orderlist, norders);
-        fp->write(fp, ord, 128);
+        disko_write(fp, ord, 128);
         // Writing signature
         if (chanlim == 4)
                 strcpy((char *)&bTab, "M.K.");
         else
                 sprintf((char *)&bTab, "%uCHN", chanlim);
-        fp->write(fp, bTab, 4);
+        disko_write(fp, bTab, 4);
         // Writing patterns
         for (uint32_t ipat=0; ipat<nbp; ipat++) if (Patterns[ipat])
         {
@@ -340,11 +340,11 @@ bool CSoundFile::SaveMod(disko_t *fp, uint32_t)
                                 p[2] = ((instr & 0x0F) << 4) | (command & 0x0F);
                                 p[3] = param;
                         }
-                        fp->write(fp, s, chanlim*4);
+                        disko_write(fp, s, chanlim*4);
                 } else
                 {
                         memset(s, 0, chanlim*4);
-                        fp->write(fp, s, chanlim*4);
+                        disko_write(fp, s, chanlim*4);
                 }
         }
         // Writing instruments
