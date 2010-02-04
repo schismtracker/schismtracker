@@ -115,6 +115,7 @@ noinst_HEADERS = \
 	include/draw-char.h		\
 	include/event.h			\
 	include/fmt.h			\
+	include/fmt-types.h		\
 	include/frag-opt.h		\
 	include/headers.h		\
 	include/it.h			\
