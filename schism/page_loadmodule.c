@@ -42,7 +42,7 @@
 
 #include "mplink.h"
 
-#include "diskwriter.h"
+#include "disko.h"
 
 /* --------------------------------------------------------------------- */
 /* this was adapted from a really slick two-line fnmatch()
@@ -207,8 +207,8 @@ static void loadsave_song_changed(void)
                 return;
         ext = get_extension(ptr);
         if (ext[0]) {
-                for (i = 0; diskwriter_drivers[i]; i++) {
-                        if (strcasecmp(ext, diskwriter_drivers[i]->extension) == 0) {
+                for (i = 0; disko_formats[i]; i++) {
+                        if (strcasecmp(ext, disko_formats[i]->extension) == 0) {
                                 /* ugh :) offset to the button for the file type on the save module
                                    page is (position in diskwriter driver array) + 4 */
                                 r = i + 4;
@@ -227,8 +227,8 @@ static void do_save_song(void *ptr)
         const char *typ = NULL;
         const char *f = ptr ?: song_get_filename();
 
-        for (i = n = 0; diskwriter_drivers[i]; i++) {
-                if (diskwriter_drivers[i]->export_only
+        for (i = n = 0; disko_formats[i]; i++) {
+                if (disko_formats[i]->export_only
                 != (status.current_page == PAGE_EXPORT_MODULE ? 1 : 0)) {
                         continue;
                 }
@@ -256,13 +256,13 @@ void save_song_or_save_as(void)
         }
 }
 
-extern diskwriter_driver_t wavewriter;
+extern disko_t wavewriter;
 static void do_multiwrite(void *ptr)
 {
         const char *f = ptr ?: song_get_filename();
 
         /* FIXME: support other writers? */
-        diskwriter_multiout(f, &wavewriter);
+        disko_multiout(f, &wavewriter);
 }
 
 static void do_save_song_overwrite(void *ptr)
@@ -1074,14 +1074,15 @@ void save_module_load_page(struct page *page, int do_export)
 
         widgets_exportsave[4].d.togglebutton.state = 1;
         /* FIXME: pressing left and right should try and keep the cursor near the same vertical area */
-        for (i = n = 0; diskwriter_drivers[i]; i++) {
-                if (diskwriter_drivers[i]->export_only == do_export) {
+        for (i = n = 0; disko_formats[i]; i++) {
+                if (disko_formats[i]->export_only == do_export) {
                         create_togglebutton(&widgets_exportsave[4+n], 70, 13 + (n*3), 5,
                                         4 + (n == 0 ? 0 : (n-1)),
                                         4 + (n+1),
                                         1, 0, 2,
-                                        NULL, diskwriter_drivers[i]->name,
-                                        4 - ((strlen(diskwriter_drivers[i]->name)+1) / 2), filetype_saves);
+                                        NULL, disko_formats[i]->name,
+                                        4 - ((strlen(disko_formats[i]->name)+1) / 2),
+                                        filetype_saves);
                         page->total_widgets++;
                         n++;
                 }

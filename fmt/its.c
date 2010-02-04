@@ -174,7 +174,7 @@ int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample *smp, ch
         return load_its_sample(data,data,length,smp,title);
 }
 
-void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title)
+void save_its_header(disko_t *fp, song_sample *smp, char *title)
 {
         ITSAMPLESTRUCT its;
 
@@ -224,7 +224,7 @@ void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title)
         fp->write(fp, &its, sizeof(its));
 }
 
-int fmt_its_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
+int fmt_its_save_sample(disko_t *fp, song_sample *smp, char *title)
 {
         save_its_header(fp, smp, title);
         save_sample_data_LE(fp, smp, 1);

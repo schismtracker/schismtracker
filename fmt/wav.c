@@ -25,7 +25,7 @@
 #include "headers.h"
 #include "fmt.h"
 #include "it.h"
-#include "diskwriter.h"
+#include "disko.h"
 #include "sndfile.h"
 #include <stdint.h>
 
@@ -252,7 +252,7 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 // wavewriter
 //
 // Filesize and data length are updated by _wavout_tail
-static void _wavout_header(diskwriter_driver_t *x)
+static void _wavout_header(disko_t *x)
 {
         wave_file_header_t  hdr;
         wave_format_t       fmt;
@@ -281,7 +281,7 @@ static void _wavout_header(diskwriter_driver_t *x)
 }
 
 
-static void _wavout_tail(diskwriter_driver_t *x)
+static void _wavout_tail(disko_t *x)
 {
         off_t tt;
         uint32_t tmp;
@@ -307,13 +307,13 @@ static void _wavout_tail(diskwriter_driver_t *x)
 }
 
 
-static void _wavout_data(diskwriter_driver_t *x, const void *buf, uint32_t len)
+static void _wavout_data(disko_t *x, const void *buf, uint32_t len)
 {
         x->write(x, buf, len);
 }
 
 
-diskwriter_driver_t wavewriter = {
+disko_t wavewriter = {
     "WAV", "wav", 1,
     _wavout_header,
     _wavout_data,
@@ -327,7 +327,7 @@ diskwriter_driver_t wavewriter = {
 };
 
 
-int fmt_wav_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *title)
+int fmt_wav_save_sample(disko_t *fp, song_sample *smp, UNUSED char *title)
 {
         fp->rate     = smp->speed;
         fp->channels = (smp->flags & SAMP_STEREO) ? 2 : 1;

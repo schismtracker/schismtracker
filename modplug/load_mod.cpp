@@ -223,7 +223,7 @@ bool CSoundFile::ReadMod(const uint8_t *lpStream, uint32_t dwMemLength)
 }
 
 
-bool CSoundFile::SaveMod(diskwriter_driver_t *fp, uint32_t)
+bool CSoundFile::SaveMod(disko_t *fp, uint32_t)
 //----------------------------------------------------------
 {
         uint8_t insmap[32];

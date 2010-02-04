@@ -32,7 +32,7 @@
 #include "event.h"
 
 #include "clippy.h"
-#include "diskwriter.h"
+#include "disko.h"
 
 #include "version.h"
 #include "song.h"
@@ -168,7 +168,7 @@ static void run_startup_hook(void)
 {
         run_hook(cfg_dir_dotschism, "startup-hook", NULL);
 }
-static void run_diskwriter_complete_hook(void)
+static void run_disko_complete_hook(void)
 {
         run_hook(cfg_dir_dotschism, "diskwriter-hook", NULL);
 }
@@ -884,15 +884,15 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                 break;
                         };
 
-                        while ((q = diskwriter_sync()) == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
+                        while ((q = disko_sync()) == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
                                 check_update();
                         }
 
                         if (q == DW_SYNC_ERROR) {
                                 log_perror("Error running diskwriter");
-                                diskwriter_finish();
+                                disko_finish();
                         } else if (q == DW_SYNC_DONE) {
-                                switch (diskwriter_finish()) {
+                                switch (disko_finish()) {
                                 case DW_NOT_RUNNING:
                                         /* FIXME: WHY DO WE NEED THIS? */
                                         break;
@@ -902,7 +902,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                 case DW_OK:
                                         //log_appendf(2, "Diskwriter completed successfully");
 #ifdef ENABLE_HOOKS
-                                        run_diskwriter_complete_hook();
+                                        run_disko_complete_hook();
 #endif
                                         break;
                                 }

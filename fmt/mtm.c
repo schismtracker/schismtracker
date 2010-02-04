@@ -243,7 +243,7 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 /* --------------------------------------------------------------------- */
 /* FIXME: these should not be here. also, make less stupid */
 
-static void write_sample_u16(diskwriter_driver_t *fp, void *v, unsigned int length)
+static void write_sample_u16(disko_t *fp, void *v, unsigned int length)
 {
         unsigned int n;
         uint16_t *o = malloc(length * 2);
@@ -254,7 +254,7 @@ static void write_sample_u16(diskwriter_driver_t *fp, void *v, unsigned int leng
         free(o);
 }
 
-static void write_sample_u8(diskwriter_driver_t *fp, void *v, unsigned int length)
+static void write_sample_u8(disko_t *fp, void *v, unsigned int length)
 {
         unsigned int n;
         uint8_t *o = malloc(length);
@@ -392,7 +392,7 @@ static int c5speed_to_finetune(int c5speed)
 
 
 /* FIXME why are the save_song functions prototyped like this? ugh */
-void fmt_mtm_save_song(diskwriter_driver_t *fp)
+void fmt_mtm_save_song(disko_t *fp)
 {
         char *t;
         int n, c, rows, msglen;

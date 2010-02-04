@@ -248,7 +248,7 @@ static void keyoff(midi_config *g, unsigned char **pp, struct midi_track *t)
                 t->note_on[j] = 0;
         }
 }
-void fmt_mid_save_song(diskwriter_driver_t *dw)
+void fmt_mid_save_song(disko_t *dw)
 {
         song_note *nb;
         midi_config *g;
