@@ -460,7 +460,7 @@ void save_sample_data_LE(diskwriter_driver_t *fp, song_sample *smp, int noe)
                                 memcpy(buffer+bufcount, &s, 2);
                                 bufcount += 2;
                                 if (bufcount >= sizeof(buffer)) {
-                                        fp->o(fp, (const unsigned char *)buffer, bufcount);
+                                        fp->write(fp, buffer, bufcount);
                                         bufcount = 0;
                                 }
                         }
@@ -470,12 +470,12 @@ void save_sample_data_LE(diskwriter_driver_t *fp, song_sample *smp, int noe)
                                 memcpy(buffer+bufcount, &s, 2);
                                 bufcount += 2;
                                 if (bufcount >= sizeof(buffer)) {
-                                        fp->o(fp, (const unsigned char *)buffer, bufcount);
+                                        fp->write(fp, buffer, bufcount);
                                         bufcount = 0;
                                 }
                         }
                         if (bufcount > 0) {
-                                fp->o(fp, (const unsigned char *)buffer, bufcount);
+                                fp->write(fp, buffer, bufcount);
                         }
                 } else {
 #if WORDS_BIGENDIAN
@@ -486,46 +486,46 @@ void save_sample_data_LE(diskwriter_driver_t *fp, song_sample *smp, int noe)
                                 memcpy(buffer+bufcount, &s, 2);
                                 bufcount += 2;
                                 if (bufcount >= sizeof(buffer)) {
-                                        fp->o(fp, (const unsigned char *)buffer, bufcount);
+                                        fp->write(fp, buffer, bufcount);
                                         bufcount = 0;
                                 }
                         }
                         if (bufcount > 0) {
-                                fp->o(fp, (const unsigned char *)buffer, bufcount);
+                                fp->write(fp, buffer, bufcount);
                         }
 #else
-                        fp->o(fp, (const unsigned char *)smp->data, 2*len);
+                        fp->write(fp, smp->data, 2*len);
 #endif
                 }
         } else if (smp->flags & SAMP_STEREO) {
                 bufcount = 0;
                 for (unsigned int n = 0; n < len; n += 2) {
-                        buffer[bufcount++] = ((const unsigned char *)smp->data)[n];
+                        buffer[bufcount++] = (smp->data)[n];
                         if (bufcount >= sizeof(buffer)) {
-                                fp->o(fp, (const unsigned char *)buffer, bufcount);
+                                fp->write(fp, buffer, bufcount);
                                 bufcount = 0;
                         }
                 }
                 for (unsigned int n = 1; n < len; n += 2) {
-                        buffer[bufcount++] = ((const unsigned char *)smp->data)[n];
+                        buffer[bufcount++] = (smp->data)[n];
                         if (bufcount >= sizeof(buffer)) {
-                                fp->o(fp, (const unsigned char *)buffer, bufcount);
+                                fp->write(fp, buffer, bufcount);
                                 bufcount = 0;
                         }
                 }
                 if (bufcount > 0) {
-                        fp->o(fp, (const unsigned char *)buffer, bufcount);
+                        fp->write(fp, buffer, bufcount);
                 }
 
         } else {
-                fp->o(fp, (const unsigned char *)smp->data, len);
+                fp->write(fp, smp->data, len);
         }
 }
 
 /* same as above, except the other way around */
 /* the one thing cheese did that was pretty nifty was the disk read/write operations had separate big-endian
    and little-endian operations...
-   we could probably do something like that, say fp->o and fp->O for bigendian
+   we could probably do something like that, say fp->write and fp->O for bigendian
    but 'O' looks too much like zero, so maybe rename 'em to w/W ... and have r/R to read whatever endianness
    anyway, just a thought. /storlek */
 void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe)
@@ -539,34 +539,34 @@ void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe)
                         for (unsigned int n = 0; n < len; n += 2) {
                                 signed short s = ((signed short *) smp->data)[n];
                                 s = bswapBE16(s);
-                                fp->o(fp, (const unsigned char *)&s, 2);
+                                fp->write(fp, &s, 2);
                         }
                         for (unsigned int n = 1; n < len; n += 2) {
                                 signed short s = ((signed short *) smp->data)[n];
                                 s = bswapBE16(s);
-                                fp->o(fp, (const unsigned char *)&s, 2);
+                                fp->write(fp, &s, 2);
                         }
                 } else {
 #if WORDS_BIGENDIAN
-                        fp->o(fp, (const unsigned char *)smp->data, 2*len);
+                        fp->write(fp, smp->data, 2*len);
 #else
                         for (unsigned int n = 0; n < len; n++) {
                                 signed short s = ((signed short *) smp->data)[n];
                                 s = bswapBE16(s);
-                                fp->o(fp, (const unsigned char *)&s, 2);
+                                fp->write(fp, &s, 2);
                         }
 #endif
                 }
         } else if (smp->flags & SAMP_STEREO) {
                 for (unsigned int n = 0; n < len; n += 2) {
-                        fp->o(fp, ((const unsigned char *)smp->data)+n, 1);
+                        fp->write(fp, (smp->data)+n, 1);
                 }
                 for (unsigned int n = 1; n < len; n += 2) {
-                        fp->o(fp, ((const unsigned char *)smp->data)+n, 1);
+                        fp->write(fp, (smp->data)+n, 1);
                 }
 
         } else {
-                fp->o(fp, (const unsigned char *)smp->data, len);
+                fp->write(fp, smp->data, len);
         }
 }
 
@@ -694,11 +694,11 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
         }
 
         // ITI files *need* to write 554 bytes due to alignment, but in a song it doesn't matter
-        fp->o(fp, (const unsigned char *)&iti, sizeof(iti));
+        fp->write(fp, &iti, sizeof(iti));
         if (iti_file) {
                 if (sizeof(iti) < 554) {
                         for (int j = sizeof(iti); j < 554; j++) {
-                                fp->o(fp, (const unsigned char *)"\x0", 1);
+                                fp->write(fp, "\x0", 1);
                         }
                 }
                 assert(sizeof(iti) <= 554);
@@ -723,9 +723,9 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 
                         op = fp->pos;
                         tmp = bswapLE32(op);
-                        fp->l(fp, iti_map[o]+0x48);
-                        fp->o(fp, (const unsigned char *)&tmp, 4);
-                        fp->l(fp, op);
+                        fp->seek(fp, iti_map[o]+0x48);
+                        fp->write(fp, &tmp, 4);
+                        fp->seek(fp, op);
                         save_sample_data_LE(fp, (song_sample *)smp, 1);
 
                 }
@@ -839,8 +839,8 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
         h[0] = bswapLE16(pos);
         h[1] = bswapLE16(patsize);
         // h[2] and h[3] are meaningless
-        fp->o(fp, (const unsigned char *)&h, 8);
-        fp->o(fp, (const unsigned char *)data, pos);
+        fp->write(fp, &h, 8);
+        fp->write(fp, data, pos);
 }
 
 static void _save_it(diskwriter_driver_t *fp)
@@ -976,30 +976,30 @@ static void _save_it(diskwriter_driver_t *fp)
                         hdr.chnpan[n] += 128;
         }
 
-        fp->o(fp, (const unsigned char *)&hdr, sizeof(hdr));
-        fp->o(fp, (const unsigned char *)mp->Orderlist, nord);
+        fp->write(fp, &hdr, sizeof(hdr));
+        fp->write(fp, mp->Orderlist, nord);
 
         // we'll get back to these later
-        fp->o(fp, (const unsigned char *)para_ins, 4*nins);
-        fp->o(fp, (const unsigned char *)para_smp, 4*nsmp);
-        fp->o(fp, (const unsigned char *)para_pat, 4*npat);
+        fp->write(fp, para_ins, 4*nins);
+        fp->write(fp, para_smp, 4*nsmp);
+        fp->write(fp, para_pat, 4*npat);
 
 
         // here is the IT "extra" info (IT doesn't seem to use it)
         // TODO: check to see if any "registered" IT save formats (217?)
-        zero = 0; fp->o(fp, (const unsigned char *)&zero, 2);
+        zero = 0; fp->write(fp, &zero, 2);
 
         // here comes MIDI configuration
         // here comes MIDI configuration
         // right down MIDI configuration lane
         if (midi_flags & MIDI_EMBED_DATA) {
                 //printf("attempting to embed %d bytes\n", sizeof(mp->m_MidiCfg));
-                fp->o(fp, (const unsigned char *)&mp->m_MidiCfg, sizeof(mp->m_MidiCfg));
+                fp->write(fp, &mp->m_MidiCfg, sizeof(mp->m_MidiCfg));
         }
 
         // IT puts something else here (timestamp?)
         // (need to change hdr.msgoffset above if adding other stuff here)
-        fp->o(fp, (const unsigned char *)song_get_message(), msglen);
+        fp->write(fp, song_get_message(), msglen);
 
         // instruments, samples, and patterns
         for (n = 0; n < nins; n++) {
@@ -1028,9 +1028,9 @@ static void _save_it(diskwriter_driver_t *fp)
                 // Always save the data pointer, even if there's not actually any data being pointed to
                 op = fp->pos;
                 tmp = bswapLE32(op);
-                fp->l(fp, para_smp[n]+0x48);
-                fp->o(fp, (const unsigned char *)&tmp, 4);
-                fp->l(fp, op);
+                fp->seek(fp, para_smp[n]+0x48);
+                fp->write(fp, &tmp, 4);
+                fp->seek(fp, op);
                 if (smp->pSample)
                         save_sample_data_LE(fp, (song_sample *)smp, 1);
                 // done using the pointer internally, so *now* swap it
@@ -1038,10 +1038,10 @@ static void _save_it(diskwriter_driver_t *fp)
         }
 
         // rewrite the parapointers
-        fp->l(fp, 0xc0 + nord);
-        fp->o(fp, (const unsigned char *)para_ins, 4*nins);
-        fp->o(fp, (const unsigned char *)para_smp, 4*nsmp);
-        fp->o(fp, (const unsigned char *)para_pat, 4*npat);
+        fp->seek(fp, 0xc0 + nord);
+        fp->write(fp, para_ins, 4*nins);
+        fp->write(fp, para_smp, 4*nsmp);
+        fp->write(fp, para_pat, 4*npat);
 }
 
 static void _save_s3m(diskwriter_driver_t *dw)
@@ -1056,7 +1056,7 @@ static void _save_s3m(diskwriter_driver_t *dw)
 
         if (!csf_save_s3m(mp, dw, 0)) {
                 status_text_flash("Error writing to disk");
-                dw->e(dw);
+                dw->error(dw);
         }
 }
 
@@ -1076,7 +1076,7 @@ static void _save_xm(diskwriter_driver_t *dw)
 
         if (!csf_save_xm(mp, dw, 0)) {
                 status_text_flash("Error writing to disk");
-                dw->e(dw);
+                dw->error(dw);
         }
 }
 
@@ -1092,7 +1092,7 @@ static void _save_mod(diskwriter_driver_t *dw)
 
         if (!csf_save_mod(mp, dw, 0)) {
                 status_text_flash("Error writing to disk");
-                dw->e(dw);
+                dw->error(dw);
         }
 }
 

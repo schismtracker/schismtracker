@@ -33,13 +33,13 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
         chanlim = csf_get_highest_used_channel(this) + 1;
         if (chanlim < 4) chanlim = 4;
 
-        fp->o(fp, (const unsigned char *)"Extended Module: ", 17);
-        fp->o(fp, (const unsigned char *)song_title, 20);
+        fp->write(fp, "Extended Module: ", 17);
+        fp->write(fp, song_title, 20);
         s[0] = 0x1A;
         strcpy((char *)&s[1], "Schism Tracker      ");
         s[21] = 0x04;
         s[22] = 0x01;
-        fp->o(fp, (const unsigned char *)s, 23);
+        fp->write(fp, s, 23);
         // Writing song header
         memset(&header, 0, sizeof(header));
         header.size = bswapLE32(sizeof(XMFILEHEADER));
@@ -65,7 +65,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
         header.flags = bswapLE16(header.flags);
         header.norder = bswapLE16(no);
         memcpy(header.order, Orderlist, no);
-        fp->o(fp, (const unsigned char *)&header, sizeof(header));
+        fp->write(fp, &header, sizeof(header));
         // Writing patterns
         for (i=0; i<np; i++) if (Patterns[i])
         {
@@ -152,15 +152,15 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
                 }
                 xmph[7] = (uint8_t)(len & 0xFF);
                 xmph[8] = (uint8_t)(len >> 8);
-                fp->o(fp, (const unsigned char *)xmph, 9);
-                fp->o(fp, (const unsigned char *)s, len);
+                fp->write(fp, xmph, 9);
+                fp->write(fp, s, len);
         } else
         {
                 memset(&xmph, 0, sizeof(xmph));
                 xmph[0] = 9;
                 xmph[5] = (uint8_t)(PatternSize[i] & 0xFF);
                 xmph[6] = (uint8_t)(PatternSize[i] >> 8);
-                fp->o(fp, (const unsigned char *)xmph, 9);
+                fp->write(fp, xmph, 9);
         }
         // Writing instruments
         for (i=1; i<=ni; i++)
@@ -227,7 +227,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
                         smptable[0] = i;
                 }
                 xmsh.shsize = (xmih.samples) ? 40 : 0;
-                fp->o(fp, (const unsigned char *)&xmih, sizeof(xmih));
+                fp->write(fp, &xmih, sizeof(xmih));
                 if (smptable[0])
                 {
                         SONGSAMPLE *pvib = &Samples[smptable[0]];
@@ -242,7 +242,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
                 xmsh.volfade = bswapLE16(xmsh.volfade);
                 xmsh.res = bswapLE16(xmsh.res);
 
-                fp->o(fp, (const unsigned char *)&xmsh, tmpsize - sizeof(xmih));
+                fp->write(fp, &xmsh, tmpsize - sizeof(xmih));
                 if (!xmih.samples) continue;
                 for (uint32_t ins=0; ins<xmih.samples; ins++)
                 {
@@ -304,7 +304,7 @@ bool CSoundFile::SaveXM(diskwriter_driver_t *fp, uint32_t)
                         xmss.samplen = bswapLE32(xmss.samplen);
                         xmss.loopstart = bswapLE32(xmss.loopstart);
                         xmss.looplen = bswapLE32(xmss.looplen);
-                        fp->o(fp, (const unsigned char *)&xmss, tmpsize2);
+                        fp->write(fp, &xmss, tmpsize2);
                 }
                 for (uint32_t ismpd=0; ismpd<xmih.samples; ismpd++)
                 {

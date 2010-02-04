@@ -362,12 +362,12 @@ uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFl
                                 }
                                 bufcount += 2;
                                 if (bufcount >= sizeof(buffer) - 1) {
-                                        f->o(f, buffer.u8, bufcount);
+                                        f->write(f, buffer.u8, bufcount);
                                         bufcount = 0;
                                 }
                         }
                         if (bufcount)
-                                f->o(f, buffer.u8, bufcount);
+                                f->write(f, buffer.u8, bufcount);
                 }
                 break;
 
@@ -393,12 +393,12 @@ uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFl
                                                 buffer.s8[bufcount++] = s_new + s_ofs;
                                         }
                                         if (bufcount >= sizeof(buffer)) {
-                                                f->o(f, buffer.u8, bufcount);
+                                                f->write(f, buffer.u8, bufcount);
                                                 bufcount = 0;
                                         }
                                 }
                                 if (bufcount)
-                                        f->o(f, buffer.u8, bufcount);
+                                        f->write(f, buffer.u8, bufcount);
                         }
                 }
                 len = nLen * 2;
@@ -429,12 +429,12 @@ uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFl
                                         bufcount += 2;
                                         if (bufcount >= sizeof(buffer))
                                         {
-                                                f->o(f, buffer.u8, bufcount);
+                                                f->write(f, buffer.u8, bufcount);
                                                 bufcount = 0;
                                         }
                                 }
                                 if (bufcount)
-                                        f->o(f, buffer.u8, bufcount);
+                                        f->write(f, buffer.u8, bufcount);
                         }
                 }
                 len = nLen*4;
@@ -452,15 +452,15 @@ uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFl
                                         buffer.s16[bufcount / 2] = *p;
                                         bufcount += 2;
                                         if (bufcount >= sizeof(buffer)) {
-                                                f->o(f, buffer.u8, bufcount);
+                                                f->write(f, buffer.u8, bufcount);
                                                 bufcount = 0;
                                         }
                                 }
                                 if (bufcount)
-                                        f->o(f, buffer.u8, bufcount);
+                                        f->write(f, buffer.u8, bufcount);
                         };
                 } else {
-                        f->o(f, (const unsigned char *)pSample, len);
+                        f->write(f, (const unsigned char *)pSample, len);
                 }
                 break;
 
@@ -493,12 +493,12 @@ uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFl
                                         buffer.s8[bufcount++] = s_new + s_ofs;
                                 }
                                 if (bufcount >= sizeof(buffer)) {
-                                        f->o(f, buffer.u8, bufcount);
+                                        f->write(f, buffer.u8, bufcount);
                                         bufcount = 0;
                                 }
                         }
                         if (bufcount)
-                                f->o(f, buffer.u8, bufcount);
+                                f->write(f, buffer.u8, bufcount);
                 }
         }
         return len;

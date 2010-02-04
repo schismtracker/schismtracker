@@ -221,7 +221,7 @@ void save_its_header(diskwriter_driver_t *fp, song_sample *smp, char *title)
                 case VIB_SINE:      its.vit = 0; break;
         }
 
-        fp->o(fp, (const unsigned char *)&its, sizeof(its));
+        fp->write(fp, &its, sizeof(its));
 }
 
 int fmt_its_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
@@ -232,8 +232,8 @@ int fmt_its_save_sample(diskwriter_driver_t *fp, song_sample *smp, char *title)
         /* Write the sample pointer. In an ITS file, the sample data is right after the header,
         so its position in the file will be the same as the size of the header. */
         unsigned int tmp = bswapLE32(sizeof(ITSAMPLESTRUCT));
-        fp->l(fp, 0x48);
-        fp->o(fp, (const unsigned char *)&tmp, 4);
+        fp->seek(fp, 0x48);
+        fp->write(fp, &tmp, 4);
 
         return 1;
 }
