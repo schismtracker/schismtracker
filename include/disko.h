@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __diskwriter_h
-#define __diskwriter_h
+#ifndef __disko_h
+#define __disko_h
 
 #include <sys/types.h>
 
@@ -29,8 +29,8 @@
 extern "C" {
 #endif
 
-typedef struct diskwriter_driver diskwriter_driver_t;
-struct diskwriter_driver {
+typedef struct disko disko_t;
+struct disko {
         const char *name; /* this REALLY needs to be short (3 characters) */
         const char *extension; /* no dot */
         int export_only;
@@ -64,25 +64,25 @@ struct diskwriter_driver {
                 * write/seek/error are completely unrelated to the driver, and handle the
                   actual data being output to the file.
         */
-        void (*header)(diskwriter_driver_t *x);
-        void (*writeaudio)(diskwriter_driver_t *x, const void *buf, unsigned int len);
-        void (*writemidi)(diskwriter_driver_t *x, const void *buf, unsigned int len, unsigned int delay);
-        void (*finish)(diskwriter_driver_t *x);
+        void (*header)(disko_t *x);
+        void (*writeaudio)(disko_t *x, const void *buf, unsigned int len);
+        void (*writemidi)(disko_t *x, const void *buf, unsigned int len, unsigned int delay);
+        void (*finish)(disko_t *x);
 
         /* supplied by diskwriter (write function) */
-        void (*write)(diskwriter_driver_t *x, const void *buf, unsigned int len);
-        void (*seek)(diskwriter_driver_t *x, off_t pos);
+        void (*write)(disko_t *x, const void *buf, unsigned int len);
+        void (*seek)(disko_t *x, off_t pos);
         /* error condition */
-        void (*error)(diskwriter_driver_t *x);
+        void (*error)(disko_t *x);
 
         /* supplied by driver
                 if "s" is supplied, schism will call it and expect IT
-                to call diskwriter_start(0,0) again when its actually ready.
+                to call disko_start(0,0) again when its actually ready.
 
                 this routine is supplied to allow drivers to write dialogs for
                 accepting some configuration
         */
-        void (*configure)(diskwriter_driver_t *x);
+        void (*configure)(disko_t *x);
 
         /* untouched by diskwriter; driver may use for anything */
         void *userdata;
@@ -107,50 +107,50 @@ enum {
 
 /* starts up the diskwriter.
 return values: DW_OK, DW_ERROR */
-int diskwriter_start(const char *file, diskwriter_driver_t *f);
+int disko_start(const char *file, disko_t *f);
 
 /* multiout */
-int diskwriter_multiout(const char *dir, diskwriter_driver_t *f);
+int disko_multiout(const char *dir, disko_t *f);
 
 /* kindler, gentler, (and most importantly) simpler version (can't call sync) */
-int diskwriter_writeout(const char *file, diskwriter_driver_t *f);
+int disko_writeout(const char *file, disko_t *f);
 
 /* copy a pattern into a sample */
-int diskwriter_writeout_sample(int sampno, int patno, int bindme);
+int disko_writeout_sample(int sampno, int patno, int bindme);
 
 /* this synchronizes with the diskwriter.
 return: DW_SYNC_*, self explanatory */
-int diskwriter_sync(void);
+int disko_sync(void);
 
 /* Terminate the diskwriter.
-        If called BEFORE diskwriter_sync() returns DW_OK, this will delete any
+        If called BEFORE disko_sync() returns DW_OK, this will delete any
         temporary files created; otherwise, it will commit them.
 return: DW_OK or DW_ERROR */
-int diskwriter_finish(void);
+int disko_finish(void);
 
 /* ------------------------------------------------------------------------- */
 
-extern diskwriter_driver_t *diskwriter_drivers[];
+extern disko_t *disko_formats[];
 
 /* this call is used by audio/loadsave to send midi data */
-int _diskwriter_writemidi(const void *data, unsigned int len, unsigned int delay);
+int _disko_writemidi(const void *data, unsigned int len, unsigned int delay);
 
 /* these are used inbetween diskwriter interfaces */
-void diskwriter_dialog_progress(unsigned int perc);
-void diskwriter_dialog_finished(void);
+void disko_dialog_progress(unsigned int perc);
+void disko_dialog_finished(void);
 
 
-extern unsigned int diskwriter_output_rate, diskwriter_output_bits,
-                        diskwriter_output_channels;
+extern unsigned int disko_output_rate, disko_output_bits,
+                        disko_output_channels;
 
 
-extern diskwriter_driver_t wavewriter;
-extern diskwriter_driver_t itwriter;
-extern diskwriter_driver_t s3mwriter;
-extern diskwriter_driver_t xmwriter;
-extern diskwriter_driver_t modwriter;
-extern diskwriter_driver_t mtmwriter;
-extern diskwriter_driver_t midiwriter;
+extern disko_t wavewriter;
+extern disko_t itwriter;
+extern disko_t s3mwriter;
+extern disko_t xmwriter;
+extern disko_t modwriter;
+extern disko_t mtmwriter;
+extern disko_t midiwriter;
 
 #ifdef __cplusplus
 };

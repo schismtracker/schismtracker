@@ -108,7 +108,7 @@ enum {
         CLIPPY_PASTE_SELECTION = (1 << 14),
         CLIPPY_PASTE_BUFFER = (1 << 15),
 
-        /* if the diskwriter is active */
+        /* if the disko is active */
         DISKWRITER_ACTIVE = (1 << 16),
         DISKWRITER_ACTIVE_PATTERN = (1 << 17), /* recording only a single pattern */
 

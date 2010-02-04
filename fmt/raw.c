@@ -49,7 +49,7 @@ int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample *smp, UN
         return 1;
 }
 
-int fmt_raw_save_sample(diskwriter_driver_t *fp, song_sample *smp, UNUSED char *title)
+int fmt_raw_save_sample(disko_t *fp, song_sample *smp, UNUSED char *title)
 {
         fp->write(fp, smp->data, ((smp->flags & SAMP_16_BIT) ? 2:1)*smp->length);
         return 1;

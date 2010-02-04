@@ -409,7 +409,7 @@ static void _copysam(UNUSED void *ign)
         patno = song_get_orderlist()[current_order];
         status_text_flash("Copied pattern %d into sample %d",
                                 patno, sample_get_current());
-        diskwriter_writeout_sample(sample_get_current(), patno, 0);
+        disko_writeout_sample(sample_get_current(), patno, 0);
 }
 static void _attachsam(UNUSED void *ign)
 {
@@ -418,7 +418,7 @@ static void _attachsam(UNUSED void *ign)
         patno = song_get_orderlist()[current_order];
         status_text_flash("Linked pattern %d into sample %d",
                                 patno, sample_get_current());
-        diskwriter_writeout_sample(sample_get_current(), patno, 1);
+        disko_writeout_sample(sample_get_current(), patno, 1);
 }
 static int orderlist_handle_key_on_list(struct key_event * k)
 {

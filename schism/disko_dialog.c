@@ -26,17 +26,17 @@
 #include "song.h"
 #include "page.h"
 
-#include "diskwriter.h"
+#include "disko.h"
 
 /* -------------------------------------------------------------------------------- */
 
-static struct widget _diskwriter_widgets[1];
+static struct widget _disko_widgets[1];
 static struct dialog *dg = NULL;
 static int dg_init = 0;
 
 static int dg_progress = 0;
 
-static void _diskwriter_draw_const(void)
+static void _disko_draw_const(void)
 {
         if (dg_progress >= 63) {
                 draw_text("Finishing up...", 32, 27, 0, 2);
@@ -51,15 +51,15 @@ static void _diskwriter_draw_const(void)
         draw_vu_meter(24, 30, 32, dg_progress, 4, 4);
         draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
-static void _diskwriter_cancel(UNUSED void*ignored)
+static void _disko_cancel(UNUSED void*ignored)
 {
         if (status.flags & DISKWRITER_ACTIVE_PATTERN) return; /* err? */
         if (dg != NULL) {
-                diskwriter_finish(); /* eek! */
+                disko_finish(); /* eek! */
                 dg = NULL;
         }
 }
-void diskwriter_dialog_progress(unsigned int perc)
+void disko_dialog_progress(unsigned int perc)
 {
         int x;
 
@@ -67,19 +67,19 @@ void diskwriter_dialog_progress(unsigned int perc)
 
         if (dg_init == 0) {
                 dg_init = 1;
-                create_button(_diskwriter_widgets+0, 36, 33, 6,
+                create_button(_disko_widgets+0, 36, 33, 6,
                                 0,0,0,0,0, dialog_cancel_NULL, "Cancel", 1);
         }
         if (!dg) {
                 dg = dialog_create_custom(22,25,36,11,
-                        _diskwriter_widgets,
+                        _disko_widgets,
                         (status.flags & DISKWRITER_ACTIVE_PATTERN ? 0 : 1),
                         0,
-                        _diskwriter_draw_const,
+                        _disko_draw_const,
                         NULL);
                 if (!(status.flags & DISKWRITER_ACTIVE_PATTERN)) {
-                        dg->action_yes = _diskwriter_cancel;
-                        dg->action_cancel = _diskwriter_cancel;
+                        dg->action_yes = _disko_cancel;
+                        dg->action_cancel = _disko_cancel;
                 }
         } else if (dg_progress == x) {
                 return;
@@ -88,7 +88,7 @@ void diskwriter_dialog_progress(unsigned int perc)
         dg_progress = x;
         status.flags |= NEED_UPDATE;
 }
-void diskwriter_dialog_finished(void)
+void disko_dialog_finished(void)
 {
         if (dg) {
                 dg = NULL;

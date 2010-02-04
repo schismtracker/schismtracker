@@ -31,7 +31,7 @@
 
 #include "sdlmain.h"
 
-#include "diskwriter.h"
+#include "disko.h"
 
 #define VOLUME_SCALE    31
 

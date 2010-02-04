@@ -110,7 +110,7 @@ noinst_HEADERS = \
 	include/charset.h		\
 	include/clippy.h		\
 	include/config-parser.h		\
-	include/diskwriter.h		\
+	include/disko.h			\
 	include/dmoz.h			\
 	include/draw-char.h		\
 	include/event.h			\
@@ -261,7 +261,7 @@ schismtracker_SOURCES = \
 	schism/xpmdata.c		\
 	schism/menu.c			\
 	schism/mixer-core.c		\
-	schism/diskwriter.c		\
+	schism/disko.c			\
 	schism/page_loadinst.c		\
 	schism/mplink.c			\
 	schism/clippy.c			\
@@ -305,7 +305,7 @@ schismtracker_SOURCES = \
 	schism/inst_loader.c		\
 	schism/util.c			\
 	schism/page_midi.c		\
-	schism/diskwriter_dialog.c	\
+	schism/disko_dialog.c		\
 	schism/draw-char.c		\
 	schism/page_help.c		\
 	schism/slurp.c			\

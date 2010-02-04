@@ -323,7 +323,7 @@ void csf_loop_pattern(CSoundFile *csf, int nPat, int nRow)
 
 
 
-uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen)
+uint32_t csf_write_sample(disko_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen)
 {
         uint32_t len = 0, bufcount;
         union {

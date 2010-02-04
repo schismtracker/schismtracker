@@ -43,7 +43,7 @@ were a lot of fun to figure out.
 
 
 #include "cmixer.h"
-#include "diskwriter.h"
+#include "disko.h"
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -59,7 +59,7 @@ static unsigned int (*dw_multi_pCvt)(void *, int *, unsigned int, int*, int*) = 
 
 
 static char diskbuf[32768];
-static diskwriter_driver_t *dw = NULL;
+static disko_t *dw = NULL;
 static FILE *fp = NULL;
 static FILE *multi_fp[64] = {NULL};
 
@@ -112,7 +112,7 @@ dw->output_le
 
 /* disk writer */
 /* Nice comment, but WTF do these functions do? */
-static void _dw_stdio_seek(diskwriter_driver_t *x, off_t pos)
+static void _dw_stdio_seek(disko_t *x, off_t pos)
 {
         if (!fp) {
                 fp_ok = 0;
@@ -124,12 +124,12 @@ static void _dw_stdio_seek(diskwriter_driver_t *x, off_t pos)
         x->pos = pos;
 }
 
-static void _dw_error(UNUSED diskwriter_driver_t *x)
+static void _dw_error(UNUSED disko_t *x)
 {
         fp_ok = 0;
 }
 
-static void _dw_stdio_write(diskwriter_driver_t *x, const void *buf, unsigned int len)
+static void _dw_stdio_write(disko_t *x, const void *buf, unsigned int len)
 {
         if (!len) return;
         if (!fp) {
@@ -142,7 +142,7 @@ static void _dw_stdio_write(diskwriter_driver_t *x, const void *buf, unsigned in
 }
 
 /* memory writer */
-static void _dw_mem_write(diskwriter_driver_t *x, const void *buf, unsigned int len)
+static void _dw_mem_write(disko_t *x, const void *buf, unsigned int len)
 {
         void *tmp;
         unsigned int nl;
@@ -170,7 +170,7 @@ static void _dw_mem_write(diskwriter_driver_t *x, const void *buf, unsigned int 
         }
 }
 
-static void _dw_mem_seek(diskwriter_driver_t *x, off_t pos)
+static void _dw_mem_seek(disko_t *x, off_t pos)
 {
         if (!fp) {
                 fp_ok = 0;
@@ -180,7 +180,7 @@ static void _dw_mem_seek(diskwriter_driver_t *x, off_t pos)
         x->pos = pos;
 }
 
-static int diskwriter_start_nodriver(diskwriter_driver_t *f)
+static int disko_start_nodriver(disko_t *f)
 {
         if (fp)
                 return DW_ERROR;
@@ -193,9 +193,9 @@ static int diskwriter_start_nodriver(diskwriter_driver_t *f)
 
                 dw = f;
 
-                dw->rate = diskwriter_output_rate;
-                dw->bits = diskwriter_output_bits;
-                dw->channels = diskwriter_output_channels > 1 ? 2 : 1;
+                dw->rate = disko_output_rate;
+                dw->bits = disko_output_bits;
+                dw->channels = disko_output_channels > 1 ? 2 : 1;
 
                 if (dw->configure) {
                         dw->configure(dw);
@@ -213,12 +213,12 @@ static int diskwriter_start_nodriver(diskwriter_driver_t *f)
         return DW_OK;
 }
 
-static diskwriter_driver_t _samplewriter = {
+static disko_t _samplewriter = {
         "Sample", "blah", 1, NULL, NULL, NULL /* no midi data */,
         NULL, NULL, NULL, NULL, NULL, NULL, 44100, 16, 2, 1, 0,
 };
 
-int diskwriter_writeout_sample(int sampno, int patno, int dobind)
+int disko_writeout_sample(int sampno, int patno, int dobind)
 {
         if (sampno < 0 || sampno >= MAX_SAMPLES) return DW_ERROR;
 
@@ -226,8 +226,8 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
         song_stop();
 
         dw = &_samplewriter;
-        dw->rate = diskwriter_output_rate;
-        dw->bits = diskwriter_output_bits;
+        dw->rate = disko_output_rate;
+        dw->bits = disko_output_bits;
         dw->pos = 0;
 
         fp_ok = 1;
@@ -267,7 +267,7 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
         dw->seek = _dw_mem_seek;
 
         if (!fp_ok) {
-                diskwriter_finish();
+                disko_finish();
                 status.flags &= ~(DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN);
                 return DW_ERROR;
         }
@@ -280,12 +280,12 @@ int diskwriter_writeout_sample(int sampno, int patno, int dobind)
         return DW_OK;
 }
 
-int diskwriter_writeout(const char *file, diskwriter_driver_t *f)
+int disko_writeout(const char *file, disko_t *f)
 {
         /* f is "simplified */
-        memset(f, 0, sizeof(diskwriter_driver_t));
+        memset(f, 0, sizeof(disko_t));
         f->name = "Simple";
-        return diskwriter_start(file, f);
+        return disko_start(file, f);
 }
 
 static void chan_setup(int rate, int nchan)
@@ -299,9 +299,9 @@ static void chan_setup(int rate, int nchan)
 
 static int chan_detect(void)
 {
-        int nchan = diskwriter_output_channels;
+        int nchan = disko_output_channels;
 
-        nchan = ((mp->m_dwSongFlags & SONG_NOSTEREO) || diskwriter_output_channels == 1) ? 1 : 2;
+        nchan = ((mp->m_dwSongFlags & SONG_NOSTEREO) || disko_output_channels == 1) ? 1 : 2;
         dw->channels = nchan;
         return nchan;
 }
@@ -332,7 +332,7 @@ static void multi_out_helper(int chan, int *buf, int len)
         }
 }
 
-int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
+int disko_multiout(const char *dir, disko_t *f)
 {
         char *str;
         int i;
@@ -342,7 +342,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
         if (!str) return DW_ERROR;
         memset(multi_fp, 0, sizeof(multi_fp));
 
-        if (diskwriter_start_nodriver(f) != DW_OK)
+        if (disko_start_nodriver(f) != DW_OK)
                 return DW_ERROR;
 
         dw->write = _dw_stdio_write;
@@ -367,7 +367,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
                         fp = NULL;
                         for (; i >= 1; i--) if (multi_fp[i]) fclose(multi_fp[i]);
                         memset(multi_fp, 0, sizeof(multi_fp));
-                        diskwriter_finish();
+                        disko_finish();
                         return DW_ERROR;
                 }
                 dw->channels = 2;
@@ -383,7 +383,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
         } else if (dw->bits == 32) {
                 dw_multi_pCvt = clip_32_to_32;
         } else {
-                diskwriter_finish();
+                disko_finish();
                 return DW_ERROR;
         }
 
@@ -402,7 +402,7 @@ int diskwriter_multiout(const char *dir, diskwriter_driver_t *f)
         return DW_OK;
 }
 
-int diskwriter_start(const char *file, diskwriter_driver_t *f)
+int disko_start(const char *file, disko_t *f)
 {
         char *str;
         char *pq;
@@ -410,7 +410,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 
         put_env_var("DISKWRITER_FILE", file);
 
-        if (diskwriter_start_nodriver(f) != DW_OK)
+        if (disko_start_nodriver(f) != DW_OK)
                 return DW_ERROR;
 
         chan_setup(dw->rate,chan_detect());
@@ -433,7 +433,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
                         free(str);
                         free(dw_rename_to);
                         dw_rename_from = dw_rename_to = NULL;
-                        diskwriter_finish();
+                        disko_finish();
                         return DW_ERROR;
                 }
                 fp = fopen(str, "wb");
@@ -442,7 +442,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
                         free(str);
                         free(dw_rename_to);
                         dw_rename_from = dw_rename_to = NULL;
-                        diskwriter_finish();
+                        disko_finish();
                         return DW_ERROR;
                 }
                 close(fd);
@@ -460,7 +460,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
                 dw->header(dw);
 
         if (!fp_ok) {
-                diskwriter_finish();
+                disko_finish();
                 return DW_ERROR;
         }
 
@@ -474,7 +474,7 @@ int diskwriter_start(const char *file, diskwriter_driver_t *f)
 }
 
 extern unsigned int samples_played; /* mplink */
-int diskwriter_sync(void)
+int disko_sync(void)
 {
         unsigned int ct;
         int n;
@@ -507,7 +507,7 @@ int diskwriter_sync(void)
         ct = song_get_current_time();
         n = (int)(((double)ct * 100.0) / current_song_len);
         if (csf_multi_out_raw && dw->channels == 1) n += 50;
-        diskwriter_dialog_progress(n);
+        disko_dialog_progress(n);
 
         // estimate bytes remaining
         n = (dw->rate * dw->channels * dw->bits) / 8;
@@ -559,7 +559,7 @@ int diskwriter_sync(void)
         return DW_SYNC_MORE;
 }
 
-int diskwriter_finish(void)
+int disko_finish(void)
 {
         int need_host = 0;
         int r;
@@ -652,7 +652,7 @@ int diskwriter_finish(void)
         csf_multi_out_raw = NULL;
 
         dw = NULL; /* all done! */
-        diskwriter_dialog_finished();
+        disko_dialog_finished();
 
         if (dw_rename_from && dw_rename_to) {
                 /* I SEE YOUR SCHWARTZ IS AS BIG AS MINE */
@@ -680,7 +680,7 @@ int diskwriter_finish(void)
         return r;
 }
 
-int _diskwriter_writemidi(const void *data, unsigned int len, unsigned int delay)
+int _disko_writemidi(const void *data, unsigned int len, unsigned int delay)
 {
         if (!dw || !fp)
                 return DW_ERROR;
@@ -690,10 +690,10 @@ int _diskwriter_writemidi(const void *data, unsigned int len, unsigned int delay
 }
 
 
-unsigned int diskwriter_output_rate = 44100;
-unsigned int diskwriter_output_bits = 16;
-unsigned int diskwriter_output_channels = 2;
-diskwriter_driver_t *diskwriter_drivers[] = {
+unsigned int disko_output_rate = 44100;
+unsigned int disko_output_bits = 16;
+unsigned int disko_output_channels = 2;
+disko_t *disko_formats[] = {
         &itwriter,
         &xmwriter,
         &s3mwriter,

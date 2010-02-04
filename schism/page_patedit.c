@@ -2401,7 +2401,7 @@ static void _pattern_update_magic(void)
                 if (!s || !z) continue;
                 if (((unsigned char)z[23]) != 0xFF) continue;
                 if (((unsigned char)z[24]) != current_pattern) continue;
-                diskwriter_writeout_sample(i,current_pattern,1);
+                disko_writeout_sample(i,current_pattern,1);
                 break;
         }
 }

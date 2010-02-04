@@ -46,7 +46,7 @@ static uint8_t S3MFiller[16] =
 };
 
 
-bool CSoundFile::SaveS3M(diskwriter_driver_t *fp, uint32_t)
+bool CSoundFile::SaveS3M(disko_t *fp, uint32_t)
 //----------------------------------------------------------
 {
         uint8_t header[0x60];

@@ -28,7 +28,7 @@
 
 #include "sndfile.h"
 #include "util.h"
-#include "diskwriter.h"
+#include "disko.h"
 
 /* --------------------------------------------------------------------- */
 /* oodles o' structs */
@@ -226,7 +226,7 @@ struct sample_save_format {
         const char *name;
         const char *ext;
         //fmt_save_sample_func *save_func;
-        int (*save_func) (diskwriter_driver_t *fp,
+        int (*save_func) (disko_t *fp,
                                 song_sample *smp, char *title);
 };
 

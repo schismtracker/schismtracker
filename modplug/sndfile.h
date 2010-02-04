@@ -14,7 +14,7 @@
 #define NEED_BYTESWAP
 #include "headers.h"
 
-#include "diskwriter.h"
+#include "disko.h"
 
 #include "tables.h"
 
@@ -599,9 +599,9 @@ public:
         bool ReadUMX(const uint8_t * lpStream, uint32_t dwMemLength);
         bool ReadMID(const uint8_t * lpStream, uint32_t dwMemLength);
         // Save Functions
-        bool SaveXM(diskwriter_driver_t *f, uint32_t);
-        bool SaveS3M(diskwriter_driver_t *f, uint32_t);
-        bool SaveMod(diskwriter_driver_t *f, uint32_t);
+        bool SaveXM(disko_t *f, uint32_t);
+        bool SaveS3M(disko_t *f, uint32_t);
+        bool SaveMod(disko_t *f, uint32_t);
 #endif /* C++ */
 } CSoundFile;
 
@@ -610,9 +610,9 @@ extern "C" {
 #endif
 
 /* these should not be here */
-int csf_save_xm(CSoundFile *csf, diskwriter_driver_t *f, uint32_t z);
-int csf_save_s3m(CSoundFile *csf, diskwriter_driver_t *f, uint32_t z);
-int csf_save_mod(CSoundFile *csf, diskwriter_driver_t *f, uint32_t z);
+int csf_save_xm(CSoundFile *csf, disko_t *f, uint32_t z);
+int csf_save_s3m(CSoundFile *csf, disko_t *f, uint32_t z);
+int csf_save_mod(CSoundFile *csf, disko_t *f, uint32_t z);
 
 
 MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels);
@@ -624,7 +624,7 @@ void csf_init_instrument(SONGINSTRUMENT *ins, int samp);
 void csf_free_instrument(SONGINSTRUMENT *p);
 
 uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata, uint32_t dwMemLength);
-uint32_t csf_write_sample(diskwriter_driver_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen);
+uint32_t csf_write_sample(disko_t *f, SONGSAMPLE *pins, uint32_t nFlags, uint32_t nMaxLen);
 void csf_adjust_sample_loop(SONGSAMPLE *pIns);
 
 extern void (*csf_midi_out_note)(int chan, const MODCOMMAND *m);

@@ -1,5 +1,5 @@
 #include "sndfile.h"
-#include "diskwriter.h"
+#include "disko.h"
 #include "util.h"
 
 #include <stdint.h>
@@ -130,17 +130,17 @@ int csf_load(CSoundFile *csf, const uint8_t * lpStream, uint32_t dwMemLength)
 
 /* stupid c++ */
 
-int csf_save_xm(CSoundFile *csf, diskwriter_driver_t *f, UNUSED uint32_t z)
+int csf_save_xm(CSoundFile *csf, disko_t *f, UNUSED uint32_t z)
 {
         return csf->SaveXM(f, z);
 }
 
-int csf_save_s3m(CSoundFile *csf, diskwriter_driver_t *f, UNUSED uint32_t z)
+int csf_save_s3m(CSoundFile *csf, disko_t *f, UNUSED uint32_t z)
 {
         return csf->SaveS3M(f, z);
 }
 
-int csf_save_mod(CSoundFile *csf, diskwriter_driver_t *f, UNUSED uint32_t z)
+int csf_save_mod(CSoundFile *csf, disko_t *f, UNUSED uint32_t z)
 {
         return csf->SaveMod(f, z);
 }

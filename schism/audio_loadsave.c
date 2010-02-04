@@ -36,7 +36,7 @@
 
 #include "snd_gm.h"
 #include "midi.h"
-#include "diskwriter.h"
+#include "disko.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -441,7 +441,7 @@ int song_sample_is_empty(int n)
 // ------------------------------------------------------------------------------------------------------------
 // generic sample data saving
 
-void save_sample_data_LE(diskwriter_driver_t *fp, song_sample *smp, int noe)
+void save_sample_data_LE(disko_t *fp, song_sample *smp, int noe)
 {
         unsigned char buffer[4096];
         unsigned int bufcount;
@@ -528,7 +528,7 @@ void save_sample_data_LE(diskwriter_driver_t *fp, song_sample *smp, int noe)
    we could probably do something like that, say fp->write and fp->O for bigendian
    but 'O' looks too much like zero, so maybe rename 'em to w/W ... and have r/R to read whatever endianness
    anyway, just a thought. /storlek */
-void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe)
+void save_sample_data_BE(disko_t *fp, song_sample *smp, int noe)
 {
         unsigned int len;
         len = smp->length;
@@ -575,7 +575,7 @@ void save_sample_data_BE(diskwriter_driver_t *fp, song_sample *smp, int noe)
 static SONGINSTRUMENT blank_instrument; // should be zero, it's coming from bss
 
 // set iti_file if saving an instrument to disk by itself
-static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
+static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 {
         n++; // FIXME: this is dumb; really all the numbering should be one-based to make it simple
 
@@ -733,7 +733,7 @@ static void _save_it_instrument(int n, diskwriter_driver_t *fp, int iti_file)
 }
 
 // NOBODY expects the Spanish Inquisition!
-static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsize)
+static void _save_it_pattern(disko_t *fp, MODCOMMAND *pat, int patsize)
 {
         MODCOMMAND *noteptr = pat;
         MODCOMMAND lastnote[64];
@@ -843,7 +843,7 @@ static void _save_it_pattern(diskwriter_driver_t *fp, MODCOMMAND *pat, int patsi
         fp->write(fp, data, pos);
 }
 
-static void _save_it(diskwriter_driver_t *fp)
+static void _save_it(disko_t *fp)
 {
         ITFILEHEADER hdr;
         int n;
@@ -1044,7 +1044,7 @@ static void _save_it(diskwriter_driver_t *fp)
         fp->write(fp, para_pat, 4*npat);
 }
 
-static void _save_s3m(diskwriter_driver_t *dw)
+static void _save_s3m(disko_t *dw)
 {
         feature_check_instruments("S3M", 0, 0);
         feature_check_samples("S3M", 99, SAMP_LOOP | SAMP_ADLIB);
@@ -1060,7 +1060,7 @@ static void _save_s3m(diskwriter_driver_t *dw)
         }
 }
 
-static void _save_xm(diskwriter_driver_t *dw)
+static void _save_xm(disko_t *dw)
 {
         feature_check_instruments("XM", 99,
                         ENV_VOLUME | ENV_VOLSUSTAIN | ENV_VOLLOOP
@@ -1080,7 +1080,7 @@ static void _save_xm(diskwriter_driver_t *dw)
         }
 }
 
-static void _save_mod(diskwriter_driver_t *dw)
+static void _save_mod(disko_t *dw)
 {
         feature_check_instruments("MOD", 0,  0);
         feature_check_samples("MOD", 31, SAMP_LOOP);
@@ -1096,22 +1096,22 @@ static void _save_mod(diskwriter_driver_t *dw)
         }
 }
 
-diskwriter_driver_t itwriter = {
+disko_t itwriter = {
         "IT", "it", 0, _save_it, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
-diskwriter_driver_t s3mwriter = {
+disko_t s3mwriter = {
         "S3M", "s3m", 0, _save_s3m, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
-diskwriter_driver_t xmwriter = {
+disko_t xmwriter = {
         "XM", "xm", 0, _save_xm, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
-diskwriter_driver_t modwriter = {
+disko_t modwriter = {
         "MOD", "mod", 0, _save_mod, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
-diskwriter_driver_t mtmwriter = {
+disko_t mtmwriter = {
         "MTM", "mtm", 0, fmt_mtm_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
-diskwriter_driver_t midiwriter = {
+disko_t midiwriter = {
         "MIDI", "mid", 1, fmt_mid_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
 
@@ -1152,9 +1152,9 @@ int song_save(const char *file, const char *qt)
         mp->m_nInstruments = nins;
 
         if (!qt) {
-                for (i = 0; diskwriter_drivers[i]; i++) {
-                        if (strcasecmp(ext, diskwriter_drivers[i]->extension) == 0) {
-                                qt = diskwriter_drivers[i]->name;
+                for (i = 0; disko_formats[i]; i++) {
+                        if (strcasecmp(ext, disko_formats[i]->extension) == 0) {
+                                qt = disko_formats[i]->name;
                                 break;
                         }
                 }
@@ -1166,15 +1166,15 @@ int song_save(const char *file, const char *qt)
         mp->m_rowHighlightMajor = row_highlight_major;
         mp->m_rowHighlightMinor = row_highlight_minor;
 
-        for (i = 0; diskwriter_drivers[i]; i++) {
-                if (strcmp(qt, diskwriter_drivers[i]->name) != 0)
+        for (i = 0; disko_formats[i]; i++) {
+                if (strcmp(qt, disko_formats[i]->name) != 0)
                         continue;
-                if (diskwriter_start(file, diskwriter_drivers[i]) != DW_OK) {
+                if (disko_start(file, disko_formats[i]) != DW_OK) {
                         log_perror("Cannot start diskwriter");
                         if (freeme) free(freeme);
                         return 0;
                 }
-                if (! diskwriter_drivers[i]->export_only) {
+                if (! disko_formats[i]->export_only) {
                         status.flags &= ~SONG_NEEDS_SAVE;
                         if (strcasecmp(song_filename, file))
                                 song_set_filename(file);
@@ -1464,15 +1464,15 @@ int song_save_sample(int n, const char *file, int format_id)
                 return 0;
         }
 
-        diskwriter_driver_t fp;
-        if (!diskwriter_writeout(file, &fp)) {
+        disko_t fp;
+        if (!disko_writeout(file, &fp)) {
                 log_perror(get_basename(file));
                 return 0;
         }
 
         int ret = sample_save_formats[format_id].save_func(&fp,
                                 (song_sample *) smp, mp->Samples[n].name);
-        if (diskwriter_finish() == DW_ERROR) {
+        if (disko_finish() == DW_ERROR) {
                 log_perror(get_basename(file));
                 return 0;
         }
@@ -1497,13 +1497,13 @@ int song_save_instrument(int n, const char *file)
                 log_appendf(4, "Instrument %d: no filename", n);
                 return 0;
         }
-        diskwriter_driver_t fp;
-        if (!diskwriter_writeout(file, &fp)) {
+        disko_t fp;
+        if (!disko_writeout(file, &fp)) {
                 log_perror(get_basename(file));
                 return 0;
         }
         _save_it_instrument(n-1 /* grr.... */, &fp, 1);
-        if (diskwriter_finish() == DW_ERROR) {
+        if (disko_finish() == DW_ERROR) {
                 log_perror(get_basename(file));
                 return 0;
         }

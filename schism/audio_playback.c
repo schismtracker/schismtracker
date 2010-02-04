@@ -31,7 +31,7 @@
 #include "slurp.h"
 #include "config-parser.h"
 
-#include "diskwriter.h"
+#include "disko.h"
 #include "event.h"
 
 #include <assert.h>
@@ -949,9 +949,9 @@ void cfg_load_audio(cfg_file_t *cfg)
         audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_VOICES);
         audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, 3);
 
-        diskwriter_output_rate = cfg_get_number(cfg, "Diskwriter", "rate", 44100);
-        diskwriter_output_bits = cfg_get_number(cfg, "Diskwriter", "bits", 16);
-        diskwriter_output_channels = cfg_get_number(cfg, "Diskwriter", "channels", 2);
+        disko_output_rate = cfg_get_number(cfg, "Diskwriter", "rate", 44100);
+        disko_output_bits = cfg_get_number(cfg, "Diskwriter", "bits", 16);
+        disko_output_channels = cfg_get_number(cfg, "Diskwriter", "channels", 2);
 
         audio_settings.eq_freq[0] = cfg_get_number(cfg, "EQ Low Band", "freq", 0);
         audio_settings.eq_freq[1] = cfg_get_number(cfg, "EQ Med Low Band", "freq", 16);
@@ -1011,9 +1011,9 @@ void cfg_save_audio(cfg_file_t *cfg)
 {
         cfg_atexit_save_audio(cfg);
 
-        cfg_set_number(cfg, "Diskwriter", "rate", diskwriter_output_rate);
-        cfg_set_number(cfg, "Diskwriter", "bits", diskwriter_output_bits);
-        cfg_set_number(cfg, "Diskwriter", "channels", diskwriter_output_channels);
+        cfg_set_number(cfg, "Diskwriter", "rate", disko_output_rate);
+        cfg_set_number(cfg, "Diskwriter", "bits", disko_output_bits);
+        cfg_set_number(cfg, "Diskwriter", "channels", disko_output_channels);
 
         cfg_set_number(cfg, "General", "stop_on_load", !(status.flags & PLAY_AFTER_LOAD));
 }
@@ -1181,7 +1181,7 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
         }puts("");
 #endif
 
-        if (!_diskwriter_writemidi(data,len,pos)) midi_send_buffer(data,len,pos);
+        if (!_disko_writemidi(data,len,pos)) midi_send_buffer(data,len,pos);
 }
 
 
