@@ -182,7 +182,7 @@ static void _dw_mem_seek(disko_t *x, off_t pos, int whence)
                 pos += x->pos;
                 break;
         case SEEK_END:
-                pos += x->length;
+                pos += mbuf_len;
                 break;
         }
         if (pos < 0) pos = 0;
