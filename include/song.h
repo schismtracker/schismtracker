@@ -314,7 +314,6 @@ int song_save(const char *file, const char *type);
 void song_clear_sample(int n);
 void song_copy_sample(int n, song_sample *src);
 int song_load_sample(int n, const char *file);
-int song_preload_sample(void *f);
 int song_save_sample(int n, const char *file, int format_id);
 void song_stop_sample(song_sample *ssmp);
 

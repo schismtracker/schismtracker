@@ -1341,9 +1341,8 @@ int song_load_instrument(int n, const char *file)
         return song_load_instrument_ex(n,file,NULL,-1);
 }
 
-int song_preload_sample(void *pf)
+int song_preload_sample(dmoz_file_t *file)
 {
-        dmoz_file_t *file = (dmoz_file_t*)pf;
         // 0 is our "hidden sample"
 #define FAKE_SLOT 0
         //_squelch_sample(FAKE_SLOT);
