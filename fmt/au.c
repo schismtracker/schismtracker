@@ -87,7 +87,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------- */
 
-int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
+int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp)
 {
         struct au_header au;
 
@@ -127,8 +127,8 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp, cha
 
         if (au.data_offset > 24) {
                 int extlen = MIN(25, au.data_offset - 24);
-                memcpy(title, data + 24, extlen);
-                title[extlen] = 0;
+                memcpy(smp->name, data + 24, extlen);
+                smp->name[extlen] = 0;
         }
 
         smp->data = song_sample_allocate(au.data_size);
@@ -152,7 +152,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp, cha
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-int fmt_au_save_sample(disko_t *fp, song_sample *smp, char *title)
+int fmt_au_save_sample(disko_t *fp, song_sample *smp)
 {
         struct au_header au;
         uint32_t ln;
@@ -177,7 +177,7 @@ int fmt_au_save_sample(disko_t *fp, song_sample *smp, char *title)
         au.data_size = bswapBE32(ln);
 
         disko_write(fp, &au, sizeof(au));
-        disko_write(fp, title, 25);
+        disko_write(fp, smp->name, 25);
         save_sample_data_BE(fp, smp, 0);
 
         return 1;

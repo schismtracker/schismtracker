@@ -298,7 +298,7 @@ void fmt_mid_save_song(disko_t *dw)
         } else {
                 for (i = 1; i <= SCHISM_MAX_SAMPLES; i++) {
                         if (song_sample_is_empty(i)) continue;
-                        smp = song_get_sample(i,NULL);
+                        smp = song_get_sample(i);
                         if (!smp) continue;
                         map[i].p = 1;
                         map[i].c = i;

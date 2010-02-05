@@ -221,13 +221,10 @@ extern struct audio_settings audio_settings;
 
 /* for saving samples; see also enum sample_format_ids below */
 
-//typedef int (*fmt_save_sample_func) (FILE *fp, song_sample *smp, char *title);
 struct sample_save_format {
         const char *name;
         const char *ext;
-        //fmt_save_sample_func *save_func;
-        int (*save_func) (disko_t *fp,
-                                song_sample *smp, char *title);
+        int (*save_func) (disko_t *fp, song_sample *smp);
 };
 
 extern struct sample_save_format sample_save_formats[];
@@ -370,7 +367,7 @@ void song_pattern_install(int patno, song_note *n, int rows);
 
 
 // these return NULL on failure.
-song_sample *song_get_sample(int n, char **name_ptr);
+song_sample *song_get_sample(int n);
 song_instrument *song_get_instrument(int n, char **name_ptr);
 int song_get_instrument_number(song_instrument *ins); // 0 => no instrument; ignore above comment =)
 song_channel *song_get_channel(int n);

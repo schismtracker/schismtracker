@@ -120,7 +120,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 if (!xmss.looplen) xmss.type &= ~3;
 
                 n = instrument_loader_sample(&ii, k + 1);
-                smp = song_get_sample(n, NULL);
+                smp = song_get_sample(n);
                 smp->flags = 0;
                 memcpy(smp->filename, xmss.name, 22);
                 smp->filename[21] = '\0';

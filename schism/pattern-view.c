@@ -88,7 +88,7 @@ void draw_note_13(int x, int y, song_note * note, int cursor_pos, int fg,
 
         if (show_default_volumes && note->volume_effect == VOL_EFFECT_NONE && note->instrument > 0) {
                 /* Modplug-specific hack: volume bit shift */
-                int n = song_get_sample(note->instrument, NULL)->volume >> 2;
+                int n = song_get_sample(note->instrument)->volume >> 2;
                 note_text[6] = 0xbf;
                 note_text[7] = '0' + n / 10 % 10;
                 note_text[8] = '0' + n / 1 % 10;

@@ -58,15 +58,15 @@ enum {
 
 typedef int (*fmt_read_info_func) (dmoz_file_t *file, const uint8_t *data, size_t length);
 typedef int (*fmt_load_song_func) (CSoundFile *song, slurp_t *fp, unsigned int lflags);
-typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sample *smp, char *title);
-typedef int (*fmt_save_sample_func) (disko_t *fp, song_sample *smp, char *title);
+typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sample *smp);
+typedef int (*fmt_save_sample_func) (disko_t *fp, song_sample *smp);
 typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int slot);
 
 #define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
 #define LOAD_SONG(t) int fmt_##t##_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags);
 #define SAVE_SONG(t) void fmt_##t##_save_song(disko_t *fp);
-#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title);
-#define SAVE_SAMPLE(t) int fmt_##t##_save_sample(disko_t *fp, song_sample *smp, char *title);
+#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp);
+#define SAVE_SAMPLE(t) int fmt_##t##_save_sample(disko_t *fp, song_sample *smp);
 #define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot);
 
 #include "fmt-types.h"
@@ -106,9 +106,8 @@ void save_sample_data_LE(disko_t *fp, song_sample *smp, int noe);
 void save_sample_data_BE(disko_t *fp, song_sample *smp, int noe);
 
 /* shared by the .it, .its, and .iti saving functions */
-void save_its_header(disko_t *fp, song_sample *smp, char *title);
-int load_its_sample(const uint8_t *header, const uint8_t *data,
-                size_t length, song_sample *smp, char *title);
+void save_its_header(disko_t *fp, song_sample *smp);
+int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample *smp);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...

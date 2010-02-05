@@ -427,7 +427,6 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         int new_order = prev_order;
         int new_cursor_pos = orderlist_cursor_pos;
         song_sample *samp;
-        char *z;
         int n, p;
 
         if (k->mouse) {
@@ -649,10 +648,10 @@ static int orderlist_handle_key_on_list(struct key_event * k)
                         if (n < 1) return 0;
                         if (k->state) return 1;
 
-                        samp = song_get_sample(n,&z);
-                        if (samp && z
-                        && ((unsigned char)z[23]) == 0xFF
-                        && ((unsigned char)z[24]) < 200) {
+                        samp = song_get_sample(n);
+                        if (samp
+                        && ((unsigned char)samp->name[23]) == 0xFF
+                        && ((unsigned char)samp->name[24]) < 200) {
                                 dialog_create(DIALOG_OK_CANCEL,
         "This will replace and unlink the current sample", _copysam, dialog_cancel, 1, NULL);
                         } else if (song_sample_is_empty(n)) {
@@ -673,10 +672,10 @@ static int orderlist_handle_key_on_list(struct key_event * k)
                         if (k->state) return 1;
 
                         for (n = 1; n <= 99; n++) {
-                                samp = song_get_sample(n,&z);
-                                if (!samp || !z) continue;
-                                if (((unsigned char)z[23]) != 0xFF) continue;
-                                if (((unsigned char)z[24]) != p) continue;
+                                samp = song_get_sample(n);
+                                if (!samp) continue;
+                                if (((unsigned char)samp->name[23]) != 0xFF) continue;
+                                if (((unsigned char)samp->name[24]) != p) continue;
                                 status_text_flash("Pattern %d already linked to sample %d",
                                                 p, n);
                                 return 1;

@@ -116,12 +116,10 @@ void song_sample_free(signed char *data)
 
 // ------------------------------------------------------------------------
 
-song_sample *song_get_sample(int n, char **name_ptr)
+song_sample *song_get_sample(int n)
 {
         if (n >= MAX_SAMPLES)
                 return NULL;
-        if (name_ptr)
-                *name_ptr = mp->Samples[n].name;
         return (song_sample *) mp->Samples + n;
 }
 
@@ -568,7 +566,7 @@ int song_get_current_instrument(void)
 unsigned int song_sample_get_c5speed(int n)
 {
         song_sample *smp;
-        smp = song_get_sample(n, NULL);
+        smp = song_get_sample(n);
         if (!smp) return 8363;
         return smp->speed;
 }
@@ -576,7 +574,7 @@ unsigned int song_sample_get_c5speed(int n)
 void song_sample_set_c5speed(int n, unsigned int spd)
 {
         song_sample *smp;
-        smp = song_get_sample(n, NULL);
+        smp = song_get_sample(n);
         if (smp) smp->speed = spd;
 }
 

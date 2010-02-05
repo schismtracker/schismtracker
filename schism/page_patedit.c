@@ -1452,14 +1452,14 @@ static void selection_slide_volume(void)
                                 continue;
                         ve = VOL_EFFECT_VOLUME;
                         /* Modplug hack: volume bit shift */
-                        first = song_get_sample(note->instrument, NULL)->volume >> 2;
+                        first = song_get_sample(note->instrument)->volume >> 2;
                 }
 
                 if (lve == VOL_EFFECT_NONE) {
                         if (last_note->instrument == 0)
                                 continue;
                         lve = VOL_EFFECT_VOLUME;
-                        last = song_get_sample(last_note->instrument, NULL)->volume >> 2;
+                        last = song_get_sample(last_note->instrument)->volume >> 2;
                 }
 
                 if (!(ve == lve && (ve == VOL_EFFECT_VOLUME || ve == VOL_EFFECT_PANNING))) {
@@ -1705,7 +1705,7 @@ static void selection_amplify(int percentage)
                                 if (song_is_instrument_mode())
                                         volume = 64; /* XXX */
                                 else
-                                        volume = song_get_sample(note->instrument, NULL)->volume >> 2;
+                                        volume = song_get_sample(note->instrument)->volume >> 2;
                         } else if (note->volume_effect == VOL_EFFECT_VOLUME) {
                                 volume = note->volume;
                         } else {
@@ -2393,14 +2393,13 @@ static void fix_pb_trace(void)
 static void _pattern_update_magic(void)
 {
         song_sample *s;
-        char *z;
         int i;
 
         for (i = 1; i <= 99; i++) {
-                s = song_get_sample(i,&z);
-                if (!s || !z) continue;
-                if (((unsigned char)z[23]) != 0xFF) continue;
-                if (((unsigned char)z[24]) != current_pattern) continue;
+                s = song_get_sample(i);
+                if (!s) continue;
+                if (((unsigned char)s->name[23]) != 0xFF) continue;
+                if (((unsigned char)s->name[24]) != current_pattern) continue;
                 disko_writeout_sample(i,current_pattern,1);
                 break;
         }

@@ -117,7 +117,7 @@ static int iff_chunk_read(chunk_t *chunk, const uint8_t *data, size_t length, si
 
 #define ZEROIZE(x) memset(&(x), 0, sizeof(x))
 
-static int _read_iff(dmoz_file_t *file, song_sample *smp, char *title, const uint8_t *data, size_t length)
+static int _read_iff(dmoz_file_t *file, song_sample *smp, const uint8_t *data, size_t length)
 {
         chunk_t chunk;
         size_t pos = 0;
@@ -179,10 +179,10 @@ static int _read_iff(dmoz_file_t *file, song_sample *smp, char *title, const uin
                                 memcpy(file->title, name.data->bytes, name.size);
                                 file->title[name.size] = '\0';
                         }
-                        if (title) {
+                        if (smp) {
                                 int len = MIN(25, name.size);
-                                memcpy(title, name.data->bytes, len);
-                                title[len] = 0;
+                                memcpy(smp->name, name.data->bytes, len);
+                                smp->name[len] = 0;
                         }
                 }
 
@@ -241,10 +241,10 @@ static int _read_iff(dmoz_file_t *file, song_sample *smp, char *title, const uin
                                 memcpy(file->title, name.data->bytes, name.size);
                                 file->title[name.size] = '\0';
                         }
-                        if (title) {
+                        if (smp) {
                                 int len = MIN(25, name.size);
-                                memcpy(title, name.data->bytes, len);
-                                title[len] = 0;
+                                memcpy(smp->name, name.data->bytes, len);
+                                smp->name[len] = 0;
                         }
                 }
 
@@ -299,17 +299,17 @@ static int _read_iff(dmoz_file_t *file, song_sample *smp, char *title, const uin
 
 int fmt_aiff_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        return _read_iff(file, NULL, NULL, data, length);
+        return _read_iff(file, NULL, data, length);
 }
 
-int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
+int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample *smp)
 {
-        return _read_iff(NULL, smp, title, data, length);
+        return _read_iff(NULL, smp, data, length);
 }
 
 /* --------------------------------------------------------------------- */
 
-int fmt_aiff_save_sample(disko_t *fp, song_sample *smp, char *title)
+int fmt_aiff_save_sample(disko_t *fp, song_sample *smp)
 {
         int16_t s;
         uint32_t ul;
@@ -326,12 +326,12 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample *smp, char *title)
                ID ckID;
                int32_t ckSize;
                char text[]; */
-        tlen = strlen(title);
+        tlen = strlen(smp->name);
         if (tlen & 1)
                 tlen++; /* must be even */
         ul = bswapBE32(tlen);
         disko_write(fp, &ul, 4);
-        disko_write(fp, title, tlen);
+        disko_write(fp, smp->name, tlen);
 
         /* COMM chunk
                ID ckID;

@@ -710,9 +710,7 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 
                         iti_map[o] = qp;
                         qp += 80; /* header is 80 bytes */
-                        save_its_header(fp,
-                                (song_sample *) mp->Samples + o,
-                                mp->Samples[o].name);
+                        save_its_header(fp, (song_sample *) mp->Samples + o);
                 }
                 for (int j = 0; j < iti_nalloc; j++) {
                         unsigned int op, tmp;
@@ -1009,7 +1007,7 @@ static void _save_it(disko_t *fp)
         for (n = 0; n < nsmp; n++) {
                 // the sample parapointers are byte-swapped later
                 para_smp[n] = fp->pos;
-                save_its_header(fp, (song_sample *) mp->Samples + n + 1, mp->Samples[n + 1].name);
+                save_its_header(fp, (song_sample *) mp->Samples + n + 1);
         }
         for (n = 0; n < npat; n++) {
                 if (song_pattern_is_empty(n)) {
@@ -1288,7 +1286,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
                                         for (int k = 1; k < MAX_SAMPLES; k++) {
                                                 if (mp->Samples[k].nLength) continue;
                                                 sampmap[x] = k;
-                                                //song_sample *smp = (song_sample *)song_get_sample(k, NULL);
+                                                //song_sample *smp = (song_sample *)song_get_sample(k);
 
                                                 for (int c = 0; c < 25; c++) {
                                                         if (xl->Samples[x].name[c] == 0)
@@ -1350,7 +1348,7 @@ int song_preload_sample(void *pf)
 #define FAKE_SLOT 0
         //_squelch_sample(FAKE_SLOT);
         if (file->sample) {
-                song_sample *smp = song_get_sample(FAKE_SLOT, NULL);
+                song_sample *smp = song_get_sample(FAKE_SLOT);
 
                 song_lock_audio();
                 csf_destroy_sample(mp, FAKE_SLOT);
@@ -1370,7 +1368,6 @@ int song_load_sample(int n, const char *file)
 {
         fmt_load_sample_func *load;
         song_sample smp;
-        char title[26];
 
         const char *base = get_basename(file);
         slurp_t *s = slurp(file, NULL, 0);
@@ -1384,10 +1381,10 @@ int song_load_sample(int n, const char *file)
         song_lock_audio();
         _squelch_sample(n);
         memset(&smp, 0, sizeof(smp));
-        strncpy(title, base, 25);
+        strncpy(smp.name, base, 25);
 
         for (load = load_sample_funcs; *load; load++) {
-                if ((*load)(s->data, s->length, &smp, title)){
+                if ((*load)(s->data, s->length, &smp)) {
                         break;
                 }
         }
@@ -1400,17 +1397,17 @@ int song_load_sample(int n, const char *file)
         }
 
         // this is after the loaders because i don't trust them, even though i wrote them ;)
-        strncpy((char *) smp.filename, base, 12);
+        strncpy(smp.filename, base, 12);
         smp.filename[12] = 0;
-        title[25] = 0;
+        smp.name[25] = 0;
 
         csf_destroy_sample(mp, n);
-        if (((unsigned char)title[23]) == 0xFF) {
+        if (((unsigned char)smp.name[23]) == 0xFF) {
                 // don't load embedded samples
-                title[23] = ' ';
+                // (huhwhat?!)
+                smp.name[23] = ' ';
         }
         memcpy(&(mp->Samples[n]), &smp, sizeof(SONGSAMPLE));
-        if (n) strcpy(mp->Samples[n].name, title);
         song_unlock_audio();
 
         unslurp(s);
@@ -1461,15 +1458,13 @@ int song_save_sample(int n, const char *file, int format_id)
                 return 0;
         }
 
-        disko_t fp;
-        if (!disko_writeout(file, &fp)) {
+        disko_t *fp = disko_open(file);
+        if (!fp) {
                 log_perror(get_basename(file));
                 return 0;
         }
-
-        int ret = sample_save_formats[format_id].save_func(&fp,
-                                (song_sample *) smp, mp->Samples[n].name);
-        if (disko_finish() == DW_ERROR) {
+        int ret = sample_save_formats[format_id].save_func(fp, (song_sample *) smp);
+        if (disko_close(fp) == DW_ERROR) {
                 log_perror(get_basename(file));
                 return 0;
         }
@@ -1494,13 +1489,13 @@ int song_save_instrument(int n, const char *file)
                 log_appendf(4, "Instrument %d: no filename", n);
                 return 0;
         }
-        disko_t fp;
-        if (!disko_writeout(file, &fp)) {
+        disko_t *fp = disko_open(file);
+        if (!fp) {
                 log_perror(get_basename(file));
                 return 0;
         }
-        _save_it_instrument(n-1 /* grr.... */, &fp, 1);
-        if (disko_finish() == DW_ERROR) {
+        _save_it_instrument(n-1 /* grr.... */, fp, 1);
+        if (disko_close(fp) == DW_ERROR) {
                 log_perror(get_basename(file));
                 return 0;
         }

@@ -322,9 +322,9 @@ static void _mp_draw(void)
         } else if (_mp_text[0] == '@') {
                 /* samp */
                 n = sample_get_current();
-                if (n)
-                        name = song_get_sample(n, NULL)->name;
-                if (n == 0 || name == NULL)
+                if (n > 0)
+                        name = song_get_sample(n)->name;
+                else
                         name = "(No Sample)";
         } else {
                 name = _mp_text;
@@ -1251,7 +1251,10 @@ void update_current_instrument(void)
         } else {
                 draw_text("    Sample", 39, 3, 0, 2);
                 n = sample_get_current();
-                song_get_sample(n, &name);
+                if (n > 0)
+                        name = song_get_sample(n)->name;
+                else
+                        name = NULL;
         }
 
         if (n > 0) {

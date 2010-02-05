@@ -69,12 +69,12 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->smp_sustain_start = bswapLE32(its->susloopbegin);
         file->smp_sustain_end = bswapLE32(its->susloopend);
 
-        file->smp_filename = (char *)mem_alloc(13);
+        file->smp_filename = mem_alloc(13);
         memcpy(file->smp_filename, its->filename, 12);
         file->smp_filename[12] = 0;
 
         file->description = "Impulse Tracker Sample";
-        file->title = (char *)mem_alloc(26);
+        file->title = mem_alloc(26);
         memcpy(file->title, data + 20, 25);
         file->title[25] = 0;
         file->type = TYPE_SAMPLE_EXTD;
@@ -82,7 +82,7 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         return 1;
 }
 
-int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample *smp, char *title)
+int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample *smp)
 {
         ITSAMPLESTRUCT *its = (ITSAMPLESTRUCT *)header;
         uint32_t format;
@@ -126,7 +126,7 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
                         smp->flags |= SAMP_SUSLOOP_PINGPONG;
         }
         smp->volume = its->vol * 4;
-        strncpy(title, (const char *) its->name, 25);
+        strncpy(smp->name, (const char *) its->name, 25);
         smp->panning = (its->dfp & 127) * 4;
         if (its->dfp & 128)
                 smp->flags |= SAMP_PANNING;
@@ -169,18 +169,18 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
                         (uint32_t) (length - bp));
 }
 
-int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
+int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample *smp)
 {
-        return load_its_sample(data,data,length,smp,title);
+        return load_its_sample(data, data, length, smp);
 }
 
-void save_its_header(disko_t *fp, song_sample *smp, char *title)
+void save_its_header(disko_t *fp, song_sample *smp)
 {
         ITSAMPLESTRUCT its;
 
         memset(&its, 0, sizeof(its));
         its.id = bswapLE32(0x53504D49); // IMPS
-        strncpy((char *) its.filename, (char *) smp->filename, 12);
+        strncpy((char *) its.filename, smp->filename, 12);
         its.gvl = smp->global_volume;
         if (smp->data && smp->length)
                 its.flags |= 1;
@@ -197,7 +197,7 @@ void save_its_header(disko_t *fp, song_sample *smp, char *title)
         if (smp->flags & SAMP_SUSLOOP_PINGPONG)
                 its.flags |= 128;
         its.vol = smp->volume / 4;
-        strncpy((char *) its.name, title, 25);
+        strncpy((char *) its.name, smp->name, 25);
         its.name[25] = 0;
         its.cvt = 1;                    // signed samples
         its.dfp = smp->panning / 4;
@@ -224,9 +224,9 @@ void save_its_header(disko_t *fp, song_sample *smp, char *title)
         disko_write(fp, &its, sizeof(its));
 }
 
-int fmt_its_save_sample(disko_t *fp, song_sample *smp, char *title)
+int fmt_its_save_sample(disko_t *fp, song_sample *smp)
 {
-        save_its_header(fp, smp, title);
+        save_its_header(fp, smp);
         save_sample_data_LE(fp, smp, 1);
 
         /* Write the sample pointer. In an ITS file, the sample data is right after the header,

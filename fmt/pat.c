@@ -174,7 +174,7 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
                 pos += sizeof(gfsamp);
 
                 n = instrument_loader_sample(&ii, i+1);
-                smp = song_get_sample(n, NULL);
+                smp = song_get_sample(n);
 
                 gfsamp.samplesize = bswapLE32(gfsamp.samplesize);
                 gfsamp.loopstart = bswapLE32(gfsamp.loopstart);
