@@ -284,7 +284,7 @@ void fmt_mid_save_song(disko_t *dw)
                 assert(SCHISM_MAX_INSTRUMENTS == SCHISM_MAX_SAMPLES);
                 for (i = 1; i <= SCHISM_MAX_INSTRUMENTS; i++) {
                         if (song_instrument_is_empty(i)) continue;
-                        ins = song_get_instrument(i,NULL);
+                        ins = song_get_instrument(i);
                         if (!ins) continue;
                         if (ins->midi_channel_mask >= 0x10000) continue;
                         map[i].c = 0;

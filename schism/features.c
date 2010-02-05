@@ -40,7 +40,7 @@ void feature_check_instruments(const char *fmt,
         did_mask = 0;
         for (i = 1; i < SCHISM_MAX_INSTRUMENTS; i++) {
                 if (song_instrument_is_empty(i)) continue;
-                s = song_get_instrument(i, NULL);
+                s = song_get_instrument(i);
                 if (!s) continue;
                 if (i > limit) {
                         if (!did_lim) {

@@ -1667,7 +1667,7 @@ int sample_is_used_by_instrument(int samp)
         int i, j;
         if (samp < 1) return 0;
         for (i = 1; i <= SCHISM_MAX_INSTRUMENTS; i++) {
-                ins = song_get_instrument(i,NULL);
+                ins = song_get_instrument(i);
                 if (!ins) continue;
                 for (j = 0; j < 120; j++) {
                         if (ins->sample_map[j] == (unsigned int)samp)
@@ -1683,7 +1683,7 @@ void sample_synchronize_to_instrument(void)
         int instnum = instrument_get_current();
         int pos, first;
 
-        ins = song_get_instrument(instnum, NULL);
+        ins = song_get_instrument(instnum);
         first = 0;
         for (pos = 0; pos < 120; pos++) {
                 if (first == 0) first = ins->sample_map[pos];

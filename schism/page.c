@@ -316,8 +316,8 @@ static void _mp_draw(void)
                 /* inst */
                 n = instrument_get_current();
                 if (n)
-                        name = song_get_instrument(n, NULL)->name;
-                if (n == 0 || name == NULL)
+                        name = song_get_instrument(n)->name;
+                else
                         name = "(No Instrument)";
         } else if (_mp_text[0] == '@') {
                 /* samp */
@@ -1230,7 +1230,7 @@ static void draw_top_info_const(void)
 void update_current_instrument(void)
 {
         int ins_mode, n;
-        char *name;
+        char *name = NULL;
         char buf[4];
 
         if (page_is_instrument_list(status.current_page)
@@ -1247,14 +1247,13 @@ void update_current_instrument(void)
         if (ins_mode) {
                 draw_text("Instrument", 39, 3, 0, 2);
                 n = instrument_get_current();
-                song_get_instrument(n, &name);
+                if (n > 0)
+                        name = song_get_instrument(n)->name;
         } else {
                 draw_text("    Sample", 39, 3, 0, 2);
                 n = sample_get_current();
                 if (n > 0)
                         name = song_get_sample(n)->name;
-                else
-                        name = NULL;
         }
 
         if (n > 0) {

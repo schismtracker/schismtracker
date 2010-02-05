@@ -368,7 +368,7 @@ void song_pattern_install(int patno, song_note *n, int rows);
 
 // these return NULL on failure.
 song_sample *song_get_sample(int n);
-song_instrument *song_get_instrument(int n, char **name_ptr);
+song_instrument *song_get_instrument(int n);
 int song_get_instrument_number(song_instrument *ins); // 0 => no instrument; ignore above comment =)
 song_channel *song_get_channel(int n);
 

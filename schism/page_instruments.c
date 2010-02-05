@@ -117,7 +117,7 @@ static void save_envelope(int slot, song_envelope *e, unsigned int sec)
 
         slot = ((unsigned)slot)%10;
 
-        ins = song_get_instrument(current_instrument, NULL);
+        ins = song_get_instrument(current_instrument);
         memcpy(&saved_env[slot], e, sizeof(song_envelope));
 
         switch (sec) {
@@ -150,7 +150,7 @@ static void restore_envelope(int slot, song_envelope *e, unsigned int sec)
 
         slot = ((unsigned)slot)%10;
 
-        ins = song_get_instrument(current_instrument, NULL);
+        ins = song_get_instrument(current_instrument);
         memcpy(e, &saved_env[slot], sizeof(song_envelope));
 
         switch (sec) {
@@ -244,7 +244,7 @@ void instrument_set(int n)
         current_instrument = new_ins;
         instrument_list_reposition();
 
-        ins = song_get_instrument(current_instrument, NULL);
+        ins = song_get_instrument(current_instrument);
 
         current_node_vol = ins->vol_env.nodes ? CLAMP(current_node_vol, 0, ins->vol_env.nodes - 1) : 0;
         current_node_pan = ins->pan_env.nodes ? CLAMP(current_node_vol, 0, ins->pan_env.nodes - 1) : 0;
@@ -261,7 +261,7 @@ void instrument_synchronize_to_sample(void)
 
         /* 1. if the instrument with the same number as the current sample
          * has the sample in its sample_map, change to that instrument. */
-        ins = song_get_instrument(sample, NULL);
+        ins = song_get_instrument(sample);
         for (pos = 0; pos < 120; pos++) {
                 if ((int)(ins->sample_map[pos]) == sample) {
                         instrument_set(sample);
@@ -274,7 +274,7 @@ void instrument_synchronize_to_sample(void)
         for (n = 1; n < 100; n++) {
                 if (n == sample)
                         continue;
-                ins = song_get_instrument(n, NULL);
+                ins = song_get_instrument(n);
                 for (pos = 0; pos < 120; pos++) {
                         if ((int)(ins->sample_map[pos]) == sample) {
                                 instrument_set(n);
@@ -292,12 +292,12 @@ void instrument_synchronize_to_sample(void)
 
 static int instrument_list_add_char(int c)
 {
-        char *name;
+        song_instrument *ins;
 
         if (c < 32)
                 return 0;
-        song_get_instrument(current_instrument, &name);
-        text_add_char(name, c, &instrument_cursor_pos, 25);
+        ins = song_get_instrument(current_instrument);
+        text_add_char(ins->name, c, &instrument_cursor_pos, 25);
         if (instrument_cursor_pos == 25)
                 instrument_cursor_pos--;
 
@@ -309,9 +309,8 @@ static int instrument_list_add_char(int c)
 
 static void instrument_list_delete_char(void)
 {
-        char *name;
-        song_get_instrument(current_instrument, &name);
-        text_delete_char(name, &instrument_cursor_pos, 25);
+        song_instrument *ins = song_get_instrument(current_instrument);
+        text_delete_char(ins->name, &instrument_cursor_pos, 25);
 
         get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
         status.flags |= NEED_UPDATE;
@@ -320,9 +319,8 @@ static void instrument_list_delete_char(void)
 
 static void instrument_list_delete_next_char(void)
 {
-        char *name;
-        song_get_instrument(current_instrument, &name);
-        text_delete_next_char(name, &instrument_cursor_pos, 25);
+        song_instrument *ins = song_get_instrument(current_instrument);
+        text_delete_next_char(ins->name, &instrument_cursor_pos, 25);
 
         get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
         status.flags |= NEED_UPDATE;
@@ -331,10 +329,10 @@ static void instrument_list_delete_next_char(void)
 
 static void clear_instrument_text(void)
 {
-        char *name;
+        song_instrument *ins = song_get_instrument(current_instrument);
 
-        memset(song_get_instrument(current_instrument, &name)->filename, 0, 14);
-        memset(name, 0, 26);
+        memset(ins->filename, 0, 14);
+        memset(ins->name, 0, 26);
         if (instrument_cursor_pos != 25)
                 instrument_cursor_pos = 0;
 
@@ -390,7 +388,7 @@ static void instrument_list_draw_list(void)
         song_get_playing_instruments(is_playing);
 
         for (pos = 0, n = top_instrument; pos < 35; pos++, n++) {
-                ins = song_get_instrument(n, NULL);
+                ins = song_get_instrument(n);
                 is_current = (n == current_instrument);
 
                 if (ins->played)
@@ -644,7 +642,7 @@ static void note_trans_draw(void)
         int pos, n;
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
         int bg, sel_bg = (is_selected ? 14 : 0);
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         char buf[4];
 
         for (pos = 0, n = note_trans_top_line; pos < 32; pos++, n++) {
@@ -747,7 +745,7 @@ static int note_trans_handle_key(struct key_event * k)
         int new_line = prev_line;
         int prev_pos = note_trans_cursor_pos;
         int new_pos = prev_pos;
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         int c, n;
 
         if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
@@ -1101,8 +1099,7 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
                 m = song_get_mix_state(&channel_list);
                 while (m--) {
                         channel = song_get_mix_channel(channel_list[m]);
-                        if (channel->instrument
-                        != song_get_instrument(current_instrument,NULL))
+                        if (channel->instrument != song_get_instrument(current_instrument))
                                 continue;
 
                         envpos[0] = channel->nVolEnvPosition;
@@ -1327,7 +1324,7 @@ static void env_adsr_draw_const(void)
 static void env_adsr_dialog(UNUSED song_envelope *env)
 {
         struct dialog *dialog;
-        song_instrument *ins = song_get_instrument(current_instrument, NULL); // ARGHHH
+        song_instrument *ins = song_get_instrument(current_instrument); // ARGHHH
 
         env_adsr_cursor = 0;
         create_thumbbar(env_adsr_widgets + 0, 34, 24, 17, 4, 1, 4, NULL, 0, 128);
@@ -1750,7 +1747,7 @@ static void _draw_env_label(const char *env_name, int is_selected)
 static void volume_envelope_draw(void)
 {
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         _draw_env_label("Volume", is_selected);
         _env_draw(&ins->vol_env, 0, current_node_vol,
@@ -1761,7 +1758,7 @@ static void volume_envelope_draw(void)
 static void panning_envelope_draw(void)
 {
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         _draw_env_label("Panning", is_selected);
         _env_draw(&ins->pan_env, 1, current_node_pan,
@@ -1772,7 +1769,7 @@ static void panning_envelope_draw(void)
 static void pitch_envelope_draw(void)
 {
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         _draw_env_label("Frequency", is_selected);
         _env_draw(&ins->pitch_env, (ins->flags & ENV_FILTER) ? 0 : 1, current_node_pitch,
@@ -1782,7 +1779,7 @@ static void pitch_envelope_draw(void)
 
 static int volume_envelope_handle_key(struct key_event * k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         int r;
 
         if (_env_handle_mouse(k, &ins->vol_env, &current_node_vol)) {
@@ -1802,7 +1799,7 @@ static int volume_envelope_handle_key(struct key_event * k)
 
 static int panning_envelope_handle_key(struct key_event * k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         int r;
 
         if (_env_handle_mouse(k, &ins->pan_env, &current_node_pan)) {
@@ -1823,7 +1820,7 @@ static int panning_envelope_handle_key(struct key_event * k)
 
 static int pitch_envelope_handle_key(struct key_event * k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         int r;
 
         if (_env_handle_mouse(k, &ins->pitch_env, &current_node_pitch)) {
@@ -1846,7 +1843,7 @@ static int pitch_envelope_handle_key(struct key_event * k)
 
 static int pitch_pan_center_handle_key(struct key_event *k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         int ppc = ins->pitch_pan_center;
 
         if (k->state) return 0;
@@ -1883,7 +1880,7 @@ static void pitch_pan_center_draw(void)
 {
         char buf[4];
         int selected = (ACTIVE_PAGE.selected_widget == 16);
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         draw_text(get_note_string(ins->pitch_pan_center + 1, buf), 54, 45, selected ? 3 : 2, 0);
 }
@@ -1903,7 +1900,7 @@ static void do_ins_save(void *p)
 
 static void instrument_save(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, ins->filename);
         struct stat buf;
 
@@ -1935,7 +1932,7 @@ static void do_delete_inst(UNUSED void *ign)
 
 static void instrument_list_handle_alt_key(struct key_event *k)
 {
-        /* song_instrument *ins = song_get_instrument(current_instrument, NULL); */
+        /* song_instrument *ins = song_get_instrument(current_instrument); */
 
         if (k->state) return;
         switch (k->sym) {
@@ -2122,7 +2119,7 @@ static void change_subpage(void)
 
 static void instrument_list_general_predraw_hook(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         togglebutton_set(widgets_general, 6 + (ins->nna % 4), 0);
         togglebutton_set(widgets_general, 10 + (ins->dct % 4), 0);
@@ -2133,7 +2130,7 @@ static void instrument_list_general_predraw_hook(void)
 
 static void instrument_list_volume_predraw_hook(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         widgets_volume[6].d.toggle.state = !!(ins->flags & ENV_VOLUME);
         widgets_volume[7].d.toggle.state = !!(ins->flags & ENV_VOLCARRY);
@@ -2166,7 +2163,7 @@ static void instrument_list_volume_predraw_hook(void)
 
 static void instrument_list_panning_predraw_hook(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         widgets_panning[6].d.toggle.state = !!(ins->flags & ENV_PANNING);
         widgets_panning[7].d.toggle.state = !!(ins->flags & ENV_PANCARRY);
@@ -2197,7 +2194,7 @@ static void instrument_list_panning_predraw_hook(void)
 
 static void instrument_list_pitch_predraw_hook(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         widgets_pitch[6].d.menutoggle.state = ((ins->flags & ENV_PITCH)
                                              ? ((ins->flags & ENV_FILTER)
@@ -2244,7 +2241,7 @@ static void instrument_list_pitch_predraw_hook(void)
 
 static void instrument_list_general_update_values(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         status.flags |= SONG_NEEDS_SAVE;
         for (ins->nna = 4; ins->nna--;)
@@ -2262,7 +2259,7 @@ static void instrument_list_general_update_values(void)
 
 static void instrument_list_volume_update_values(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         status.flags |= SONG_NEEDS_SAVE;
         ins->flags &= ~(ENV_VOLUME | ENV_VOLCARRY | ENV_VOLLOOP | ENV_VOLSUSTAIN);
@@ -2294,7 +2291,7 @@ static void instrument_list_volume_update_values(void)
 
 static void instrument_list_panning_update_values(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         int n;
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -2333,7 +2330,7 @@ static void instrument_list_panning_update_values(void)
 
 static void instrument_list_pitch_update_values(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
 
         status.flags |= SONG_NEEDS_SAVE;
         ins->flags &= ~(ENV_PITCH | ENV_PITCHCARRY | ENV_PITCHLOOP | ENV_PITCHSUSTAIN | ENV_FILTER);
@@ -2619,7 +2616,7 @@ void instrument_list_general_load_page(struct page *page)
 
 static int _fixup_mouse_instpage_volume(struct key_event *k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         if (envelope_mouse_edit && ins) {
                 if (_env_handle_mouse(k, &ins->vol_env, &current_node_vol)) {
                         ins->flags |= ENV_VOLUME;
@@ -2685,7 +2682,7 @@ void instrument_list_volume_load_page(struct page *page)
 
 static int _fixup_mouse_instpage_panning(struct key_event *k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         if (envelope_mouse_edit && ins) {
                 if (_env_handle_mouse(k, &ins->pan_env, &current_node_pan)) {
                         ins->flags |= ENV_PANNING;
@@ -2759,7 +2756,7 @@ void instrument_list_panning_load_page(struct page *page)
 
 static int _fixup_mouse_instpage_pitch(struct key_event *k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument, NULL);
+        song_instrument *ins = song_get_instrument(current_instrument);
         if (envelope_mouse_edit && ins) {
                 if (_env_handle_mouse(k, &ins->pitch_env, &current_node_pitch)) {
                         ins->flags |= ENV_PITCH;
