@@ -112,6 +112,10 @@ int disko_multiout(const char *dir, disko_t *f);
 /* kindler, gentler, (and most importantly) simpler version (can't call sync) */
 int disko_writeout(const char *file, disko_t *f);
 
+/* fopen/fclose-ish writeout/finish wrapper that allocates a structure */
+disko_t *disko_open(const char *filename);
+int disko_close(disko_t *f);
+
 /* copy a pattern into a sample */
 int disko_writeout_sample(int sampno, int patno, int bindme);
 
