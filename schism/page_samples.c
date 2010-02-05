@@ -63,13 +63,12 @@ static int last_note = 61;              /* C-5 */
 
 static int _is_magic_sample(int no)
 {
-        char *name;
         song_sample *sample;
         int pn;
 
-        sample = song_get_sample(no, &name);
-        if (sample && name && ((unsigned char)name[23]) == 0xFF) {
-                pn = ((unsigned char)name[24]);
+        sample = song_get_sample(no);
+        if (sample && (sample->name[23]) == 0xFF) {
+                pn = (sample->name[24]);
                 if (pn < 200) return 1;
         }
         return 0;
@@ -152,7 +151,6 @@ void sample_set(int n)
 static void sample_list_draw_list(void)
 {
         int pos, n, nl, pn;
-        char *name;
         song_sample *sample;
         int has_data, is_selected;
         char buf[64];
@@ -165,7 +163,7 @@ static void sample_list_draw_list(void)
 
         /* list */
         for (pos = 0, n = top_sample; pos < 35; pos++, n++) {
-                sample = song_get_sample(n, &name);
+                sample = song_get_sample(n);
                 is_selected = (n == current_sample);
                 has_data = (sample->data != NULL);
 
@@ -174,8 +172,9 @@ static void sample_list_draw_list(void)
 
                 draw_text(num99tostr(n, buf), 2, 13 + pos, (sample->flags & CHN_MUTE) ? 1 : 0, 2);
 
-                pn = ((unsigned char)name[24]);
-                if (((unsigned char)name[23]) == 0xFF && pn < 200) {
+                // wow, this is entirely horrible
+                pn = ((unsigned char)sample->name[24]);
+                if (((unsigned char)sample->name[23]) == 0xFF && pn < 200) {
                         nl = 23;
                         draw_text(numtostr(3, (int)pn, buf), 32, 13 + pos, 0, 2);
                         draw_char('P', 28, 13+pos, 3, 2);
@@ -188,16 +187,16 @@ static void sample_list_draw_list(void)
                         draw_text("Play", 31, 13 + pos, (has_data ? 6 : 7), (is_selected ? 14 : 0));
                 }
 
-                draw_text_len(name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
+                draw_text_len(sample->name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
                 if (ss == n) {
-                        draw_text_len(name + cl, (cr-cl)+1, 5 + cl, 13 + pos, 3, 8);
+                        draw_text_len(sample->name + cl, (cr-cl)+1, 5 + cl, 13 + pos, 3, 8);
                 }
         }
 
         /* cursor */
         if (ACTIVE_PAGE.selected_widget == 0) {
                 pos = current_sample - top_sample;
-                sample = song_get_sample(current_sample, &name);
+                sample = song_get_sample(current_sample);
                 has_data = (sample->data != NULL);
 
                 if (pos < 0 || pos > 34) {
@@ -205,8 +204,8 @@ static void sample_list_draw_list(void)
                 } else if (sample_list_cursor_pos == 25) {
                         draw_text("Play", 31, 13 + pos, 0, (has_data ? 3 : 6));
                 } else {
-                        draw_char(((sample_list_cursor_pos > (signed) strlen(name))
-                                   ? 0 : name[sample_list_cursor_pos]),
+                        draw_char(((sample_list_cursor_pos > (signed) strlen(sample->name))
+                                   ? 0 : sample->name[sample_list_cursor_pos]),
                                   sample_list_cursor_pos + 5, 13 + pos, 0, 3);
                 }
         }
@@ -219,11 +218,10 @@ static void sample_list_draw_list(void)
 static void sample_list_predraw_hook(void)
 {
         char buf[16];
-        char *name;
         song_sample *sample;
         int has_data;
 
-        sample = song_get_sample(current_sample, &name);
+        sample = song_get_sample(current_sample);
         has_data = (sample->data != NULL);
 
         /* set all the values to the current sample */
@@ -290,12 +288,12 @@ static void sample_list_predraw_hook(void)
 
 static int sample_list_add_char(char c)
 {
-        char *name;
+        song_sample *smp;
 
         if (c < 32)
                 return 0;
-        song_get_sample(current_sample, &name);
-        text_add_char(name, c, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 22 : 25);
+        smp = song_get_sample(current_sample);
+        text_add_char(smp->name, c, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 22 : 25);
         _fix_accept_text();
 
         status.flags |= NEED_UPDATE;
@@ -305,10 +303,8 @@ static int sample_list_add_char(char c)
 
 static void sample_list_delete_char(void)
 {
-        char *name;
-
-        song_get_sample(current_sample, &name);
-        text_delete_char(name, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 23 : 25);
+        song_sample *smp = song_get_sample(current_sample);
+        text_delete_char(smp->name, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 23 : 25);
         _fix_accept_text();
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -317,10 +313,8 @@ static void sample_list_delete_char(void)
 
 static void sample_list_delete_next_char(void)
 {
-        char *name;
-
-        song_get_sample(current_sample, &name);
-        text_delete_next_char(name, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 23 : 25);
+        song_sample *smp = song_get_sample(current_sample);
+        text_delete_next_char(smp->name, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 23 : 25);
         _fix_accept_text();
 
         status.flags |= NEED_UPDATE;
@@ -329,13 +323,12 @@ static void sample_list_delete_next_char(void)
 
 static void clear_sample_text(void)
 {
-        char *name;
-
-        memset(song_get_sample(current_sample, &name)->filename, 0, 14);
+        song_sample *smp = song_get_sample(current_sample);
+        memset(smp->filename, 0, 14);
         if (_is_magic_sample(current_sample)) {
-                memset(name, 0, 24);
+                memset(smp->name, 0, 24);
         } else {
-                memset(name, 0, 26);
+                memset(smp->name, 0, 26);
         }
         sample_list_cursor_pos = 0;
         _fix_accept_text();
@@ -363,7 +356,7 @@ static void do_exchange_sample(int n)
 static void do_copy_sample(int n)
 {
         if (n >= 1 && n <= _last_vis_sample()) {
-                song_copy_sample(current_sample, song_get_sample(n, NULL));
+                song_copy_sample(current_sample, song_get_sample(n));
                 sample_host_dialog(-1);
         }
 }
@@ -566,19 +559,19 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 
 static void do_sign_convert(UNUSED void *data)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         sample_sign_convert(sample);
 }
 
 static void do_quality_convert(UNUSED void *data)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         sample_toggle_quality(sample, 1);
 }
 
 static void do_quality_toggle(UNUSED void *data)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
 
         if (sample->flags & SAMP_STEREO)
                 status_text_flash("Can't toggle quality for stereo samples");
@@ -593,7 +586,7 @@ static void do_delete_sample(UNUSED void *data)
 
 static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         unsigned long pos = ((sample->flags & SAMP_SUSLOOP)
                              ? MAX(sample->loop_end, sample->sustain_end)
                              : sample->loop_end);
@@ -612,7 +605,7 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 
 static void do_pre_loop_cut(UNUSED void *bweh)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         signed char *data;
         unsigned long pos = ((sample->flags & SAMP_SUSLOOP)
                              ? MIN(sample->loop_start, sample->sustain_start)
@@ -654,7 +647,7 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 
 static void do_centralise(UNUSED void *data)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         sample_centralise(sample);
 }
 
@@ -664,7 +657,7 @@ static struct widget sample_amplify_widgets[3];
 
 static void do_amplify(UNUSED void *data)
 {
-        sample_amplify(song_get_sample(current_sample, NULL), sample_amplify_widgets[0].d.thumbbar.value);
+        sample_amplify(song_get_sample(current_sample), sample_amplify_widgets[0].d.thumbbar.value);
 }
 
 static void sample_amplify_draw_const(void)
@@ -676,7 +669,7 @@ static void sample_amplify_draw_const(void)
 static void sample_amplify_dialog(void)
 {
         struct dialog *dialog;
-        int percent = sample_get_amplify_amount(song_get_sample(current_sample, NULL));
+        int percent = sample_get_amplify_amount(song_get_sample(current_sample));
 
         percent = MIN(percent, 400);
 
@@ -701,7 +694,7 @@ static void do_txtsynth(UNUSED void *data)
         if (!len)
                 return;
 
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         if (sample->data)
                 song_sample_free(sample->data);
         sample->data = song_sample_allocate(len);
@@ -787,7 +780,7 @@ static void do_adlibconfig(UNUSED void *data)
 {
         //page->help_index = HELP_SAMPLE_LIST;
 
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         if (sample->data)
                 song_sample_free(sample->data);
         sample->data = song_sample_allocate(1);
@@ -811,7 +804,7 @@ static void do_adlibconfig(UNUSED void *data)
 static void adlibconfig_refresh(void)
 {
         int a;
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
 
         draw_sample_data(&sample_image, sample, current_sample);
 
@@ -897,7 +890,7 @@ static int do_adlib_handlekey(struct key_event *kk)
 static void sample_adlibconfig_dialog(UNUSED void *ign)
 {
         struct dialog *dialog;
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
 
         int a;
 
@@ -961,7 +954,7 @@ static void sample_adlibpatch_finish(int n)
         if (n <= 0 || n > 128)
                 return;
 
-        sample = song_get_sample(current_sample, NULL);
+        sample = song_get_sample(current_sample);
         if (sample->data) {
                 song_sample_free(sample->data);
                 sample->data = NULL;
@@ -1009,7 +1002,7 @@ static void do_save_sample(void *ptr)
 
 static void sample_save(const char *filename, int format_id)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         char *ptr, *q;
         struct sample_save_data *data;
         struct stat buf;
@@ -1159,7 +1152,7 @@ static void configure_options(void)
 
 static void export_sample_dialog(void)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         struct dialog *dialog;
 
         create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
@@ -1186,14 +1179,14 @@ static int resize_sample_cursor;
 
 static void do_resize_sample_aa(UNUSED void *data)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
         sample_resize(sample, newlen, 1);
 }
 
 static void do_resize_sample(UNUSED void *data)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
         sample_resize(sample, newlen, 0);
 }
@@ -1207,7 +1200,7 @@ static void resize_sample_draw_const(void)
 
 static void resize_sample_dialog(int aa)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         struct dialog *dialog;
 
         resize_sample_cursor = 0;
@@ -1224,7 +1217,7 @@ static void resize_sample_dialog(int aa)
 
 static void sample_set_mute(int n, int mute)
 {
-        song_sample *smp = song_get_sample(n, NULL);
+        song_sample *smp = song_get_sample(n);
 
         if (mute) {
                 if (smp->flags & CHN_MUTE)
@@ -1242,7 +1235,7 @@ static void sample_set_mute(int n, int mute)
 
 static void sample_toggle_mute(int n)
 {
-        song_sample *smp = song_get_sample(n, NULL);
+        song_sample *smp = song_get_sample(n);
         sample_set_mute(n, !(smp->flags & CHN_MUTE));
 }
 
@@ -1250,11 +1243,11 @@ static void sample_toggle_solo(int n)
 {
         int i, solo = 0;
 
-        if (song_get_sample(n, NULL)->flags & CHN_MUTE) {
+        if (song_get_sample(n)->flags & CHN_MUTE) {
                 solo = 1;
         } else {
                 for (i = 1; i < SCHISM_MAX_SAMPLES; i++) {
-                        if (i != n && !(song_get_sample(i, NULL)->flags & CHN_MUTE)) {
+                        if (i != n && !(song_get_sample(i)->flags & CHN_MUTE)) {
                                 solo = 1;
                                 break;
                         }
@@ -1268,7 +1261,7 @@ static void sample_toggle_solo(int n)
 
 static void sample_list_handle_alt_key(struct key_event * k)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         int canmod = (sample->data != NULL && !(sample->flags & SAMP_ADLIB));
 
         if (k->state) return;
@@ -1386,7 +1379,7 @@ static void sample_list_handle_key(struct key_event * k)
 {
         int new_sample = current_sample;
         unsigned int newspd;
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
 
         switch (k->sym) {
         case SDLK_SPACE:
@@ -1542,7 +1535,7 @@ static void sample_list_draw_const(void)
 /* callback for the loop menu toggles */
 static void update_sample_loop_flags(void)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
 
         /* these switch statements fall through */
         sample->flags &= ~(SAMP_LOOP | SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG);
@@ -1579,7 +1572,7 @@ static void update_sample_loop_flags(void)
 /* callback for the loop numentries */
 static void update_sample_loop_points(void)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
         int flags_changed = 0;
 
         /* 9 = loop toggle, 10 = loop start, 11 = loop end */
@@ -1625,7 +1618,7 @@ static void update_sample_loop_points(void)
 
 static void update_values_in_song(void)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
 
         /* a few more modplug hacks here... */
         sample->volume = widgets_samplelist[1].d.thumbbar.value * 4;
@@ -1658,7 +1651,7 @@ static void update_sample_speed(void)
 
 static void update_panning(void)
 {
-        song_sample *sample = song_get_sample(current_sample, NULL);
+        song_sample *sample = song_get_sample(current_sample);
 
         sample->flags |= SAMP_PANNING;
         sample->panning = widgets_samplelist[4].d.thumbbar.value * 4;

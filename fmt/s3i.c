@@ -58,7 +58,7 @@ struct s3i_header {
 };
 #pragma pack(pop)
 
-static int load_s3i_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
+static int load_s3i_sample(const uint8_t *data, size_t length, song_sample *smp)
 {
         const struct s3i_header* header = (const struct s3i_header*) data;
         /*
@@ -121,7 +121,7 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample *smp,
                 (const char *) (data + 0x50), (uint32_t) (length - 0x50));
 
         strncpy(smp->filename, header->dosfn, 11);
-        strncpy(title, header->samplename, 28);
+        strncpy(smp->name, header->samplename, 25);
 
         return 1;
 }
@@ -131,8 +131,7 @@ int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         song_sample tmp;
         song_sample *smp = &tmp;
-        char title[32] = "";
-        if (!load_s3i_sample(data, length, smp, title))
+        if (!load_s3i_sample(data, length, smp))
                 return 0;
 
         file->smp_length = smp->length;
@@ -147,15 +146,16 @@ int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->smp_filename[12] = 0;
 
         file->description = "Scream Tracker Sample";
-        file->title = (char *) mem_alloc(32);
-        memcpy(file->title, title, 32);
-        file->title[31] = 0;
+        file->title = mem_alloc(26);
+        memcpy(file->title, smp->name, 25);
+        file->title[25] = 0;
         file->type = TYPE_SAMPLE_EXTD | TYPE_INST_OTHER;
         return 1;
 }
 
-int fmt_s3i_load_sample(const uint8_t *data, size_t length, song_sample *smp, char *title)
+int fmt_s3i_load_sample(const uint8_t *data, size_t length, song_sample *smp)
 {
-        return load_s3i_sample(data, length, smp, title);
+        // what the crap?
+        return load_s3i_sample(data, length, smp);
 }
 

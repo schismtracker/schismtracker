@@ -178,7 +178,7 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 }
 
 
-int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp, UNUSED char *title)
+int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp)
 {
         wave_file_t f;
         uint32_t flags;
@@ -327,7 +327,7 @@ disko_t wavewriter = {
 };
 
 
-int fmt_wav_save_sample(disko_t *fp, song_sample *smp, UNUSED char *title)
+int fmt_wav_save_sample(disko_t *fp, song_sample *smp)
 {
         fp->rate     = smp->speed;
         fp->channels = (smp->flags & SAMP_STEREO) ? 2 : 1;

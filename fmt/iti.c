@@ -53,7 +53,6 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
         struct instrumentloader ii;
         song_instrument *g;
         unsigned int q;
-        char *np;
         song_sample *smp;
         int j;
 
@@ -138,9 +137,9 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
         /* okay, on to samples */
         q = 554;
         for (j = 0; j < ii.expect_samples; j++) {
-                smp = song_get_sample(ii.sample_map[j+1], &np);
+                smp = song_get_sample(ii.sample_map[j+1]);
                 if (!smp) break;
-                if (!load_its_sample(data+q, data, length, smp, np)) {
+                if (!load_its_sample(data+q, data, length, smp)) {
                         status_text_flash("Could not load sample %d from ITI file", j);
                         return instrument_loader_abort(&ii);
                 }

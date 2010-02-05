@@ -307,7 +307,7 @@ static void load_sample_draw_const(void)
         draw_text("Time", 54, 47, 0, 2);
 
         if (fake_slot != KEYJAZZ_NOINST) {
-                s = song_get_sample(fake_slot, NULL);
+                s = song_get_sample(fake_slot);
                 vgamem_ovl_clear(&sample_image, 0);
                 if (s)
                         draw_sample_data(&sample_image, s, fake_slot);
@@ -442,7 +442,7 @@ static void stereo_cvt_complete_left(void)
 {
         int cur = sample_get_current();
         song_sample *smp;
-        smp = song_get_sample(cur, NULL);
+        smp = song_get_sample(cur);
         sample_mono_left(smp);
         dialog_destroy();
         finish_load(cur);
@@ -452,7 +452,7 @@ static void stereo_cvt_complete_right(void)
 {
         int cur = sample_get_current();
         song_sample *smp;
-        smp = song_get_sample(cur, NULL);
+        smp = song_get_sample(cur);
         sample_mono_right(smp);
         dialog_destroy();
         finish_load(cur);
@@ -504,7 +504,7 @@ static void finish_load(int cur)
         song_sample *smp;
 
         memused_songchanged();
-        smp = song_get_sample(cur, NULL);
+        smp = song_get_sample(cur);
         if (smp->flags & SAMP_STEREO) {
                 struct dialog *dd;
                 create_button(stereo_cvt_widgets+0, 27, 30, 6,
@@ -575,7 +575,7 @@ static void handle_enter_key(void)
                 return;
         } else if (file->sample) {
                 /* it's already been loaded, so copy it */
-                smp = song_get_sample(cur, NULL);
+                smp = song_get_sample(cur);
                 song_copy_sample(cur, file->sample);
                 strncpy(smp->name, file->title, 25);
                 smp->name[25] = 0;
@@ -882,7 +882,7 @@ static void handle_load_update(void)
         song_sample *s;
         handle_preload();
         if (fake_slot != KEYJAZZ_NOINST) {
-                s = song_get_sample(fake_slot, NULL);
+                s = song_get_sample(fake_slot);
                 if (s) {
                         handle_load_copy(s);
                         song_update_playing_sample(fake_slot);

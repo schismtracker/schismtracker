@@ -137,7 +137,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 
                 // again with the hacks...
                 if (mixchan->sample)
-                        smp = mixchan->sample - song_get_sample(0, NULL);
+                        smp = mixchan->sample - song_get_sample(0);
                 else
                         smp = 0;
                 if(smp < 0 || smp >= SCHISM_MAX_SAMPLES)
@@ -274,7 +274,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
                 in there somewhere... */
                 inuse=1;
                 if (channel->sample)
-                        smp = channel->sample - song_get_sample(0, NULL);
+                        smp = channel->sample - song_get_sample(0);
                 else
                         smp = inuse = 0;
                 if(smp < 0 || smp >= SCHISM_MAX_SAMPLES)
@@ -302,20 +302,14 @@ static void info_draw_samples(int base, int height, int active, int first_channe
                         else
                                 fg = 6;
                         draw_char(':', n++, pos, fg, 0);
-                        if (instrument_names && channel->instrument)
+                        if (instrument_names && channel->instrument) {
                                 ptr = channel->instrument->name;
-                        else
-                        {
-                                song_get_sample(smp, &ptr);
-                                if(!ptr
-                                && instrument_names
-                                && channel->instrument) /* No sample? Fallback to instrument */
-                                        ptr = channel->instrument->name;
+                        } else {
+                                ptr = song_get_sample(smp)->name;
                         }
-                        if(!ptr) ptr = (char*)"?"; /* Couldn't find the sample */
-
-                        draw_text_len( ptr, 25, n, pos, 6, 0);
+                        draw_text_len(ptr, 25, n, pos, 6, 0);
                 } else if (ins && channel->instrument && channel->instrument->midi_channel_mask) {
+                        // XXX why? what?
                         if (channel->instrument->midi_channel_mask >= 0x10000) {
                                 draw_text(numtostr(2, ((c-1) % 16)+1, buf), 31, pos, 6, 0);
                         } else {
@@ -666,7 +660,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
         int n;
         song_mix_channel *channel;
         song_mix_channel *channel0 = song_get_mix_channel(0); // XXX hack
-        song_sample *samples = song_get_sample(0, NULL); // XXX hack
+        song_sample *samples = song_get_sample(0); // XXX hack
         unsigned int *channel_list;
         char buf[4];
         uint8_t d, dn;

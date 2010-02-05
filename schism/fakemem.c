@@ -84,7 +84,7 @@ unsigned int memused_samples(void)
 
         q = 0;
         for (i = 0; i < 99; i++) {
-                s = song_get_sample(i, NULL);
+                s = song_get_sample(i);
                 q += s->length;
                 if (s->flags & SAMP_STEREO) q += s->length;
                 if (s->flags & SAMP_16_BIT) q += s->length;

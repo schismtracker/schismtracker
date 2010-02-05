@@ -85,7 +85,7 @@ void feature_check_samples(const char *fmt, int limit, unsigned int flags_mask)
         did_mask = 0;
         for (i = 1; i < SCHISM_MAX_SAMPLES; i++) {
                 if (song_sample_is_empty(i)) continue;
-                s = song_get_sample(i, NULL);
+                s = song_get_sample(i);
                 if (!s) continue;
                 if (i > limit) {
                         if (!did_lim) {
