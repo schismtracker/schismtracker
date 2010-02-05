@@ -297,6 +297,23 @@ int disko_writeout(const char *file, disko_t *f)
         return disko_start(file, f);
 }
 
+disko_t *disko_open(const char *filename)
+{
+        disko_t *f = calloc(1, sizeof(disko_t));
+        if (f && disko_writeout(filename, f))
+                return f;
+        free(f);
+        return NULL;
+}
+
+int disko_close(disko_t *fp)
+{
+        int err = disko_finish();
+        free(fp);
+        return err;
+}
+
+
 static void chan_setup(int rate, int nchan)
 {
         if (dw->writeaudio || dw->writemidi) {
