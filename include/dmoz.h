@@ -165,6 +165,9 @@ int dmoz_fill_ext_data(dmoz_file_t *file);
 /* filters stuff based on... whatever you like :) */
 void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), int *pointer, void (*onmove)(void));
 
+/* butt */
+int song_preload_sample(dmoz_file_t *f);
+
 
 /* Path handling functions */
 
