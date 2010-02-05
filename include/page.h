@@ -587,6 +587,9 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 /* Ask for a value, like the thumbbars. */
 void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue);
 
+/* Ask for a sample / instrument number, like the "swap sample" dialog. */
+void smpprompt_create(const char *title, const char *prompt, void (*finish)(int n));
+
 #ifdef __cplusplus
 };
 #endif

@@ -345,125 +345,32 @@ static void clear_instrument_text(void)
 
 /* --------------------------------------------------------------------- */
 
-static struct widget swap_instrument_widgets[6];
-static char swap_instrument_entry[4] = "";
-
-
-static void do_swap_instrument(UNUSED void *data)
+static void do_swap_instrument(int n)
 {
-        int n = atoi(swap_instrument_entry);
-
-        if (n < 1 || n > _last_vis_inst())
-                return;
-        song_swap_instruments(current_instrument, n);
+        if (n >= 1 && n <= _last_vis_inst()) {
+                song_swap_instruments(current_instrument, n);
+        }
 }
 
-static void swap_instrument_draw_const(void)
+static void do_exchange_instrument(int n)
 {
-        draw_text("Swap instrument with:", 29, 25, 0, 2);
-        draw_text("Instrument", 31, 27, 0, 2);
-        draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+        if (n >= 1 && n <= _last_vis_inst()) {
+                song_exchange_instruments(current_instrument, n);
+        }
 }
 
-static void swap_instrument_dialog(void)
+static void do_copy_instrument(int n)
 {
-        struct dialog *dialog;
-
-        swap_instrument_entry[0] = 0;
-        create_textentry(swap_instrument_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_instrument_entry, 2);
-        create_button(swap_instrument_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 23, 29, 10, swap_instrument_widgets, 2, 0,
-                                      swap_instrument_draw_const, NULL);
-        dialog->action_yes = do_swap_instrument;
+        if (n >= 1 && n <= _last_vis_inst()) {
+                song_copy_instrument(current_instrument, n);
+        }
 }
 
-
-static void do_exchange_instrument(UNUSED void *data)
+static void do_replace_instrument(int n)
 {
-        int n = atoi(swap_instrument_entry);
-
-        if (n < 1 || n > _last_vis_inst())
-                return;
-        song_exchange_instruments(current_instrument, n);
-}
-
-static void exchange_instrument_draw_const(void)
-{
-        draw_text("Exchange instrument with:", 28, 25, 0, 2);
-        draw_text("Instrument", 31, 27, 0, 2);
-        draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-}
-
-static void exchange_instrument_dialog(void)
-{
-        struct dialog *dialog;
-
-        swap_instrument_entry[0] = 0;
-        create_textentry(swap_instrument_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_instrument_entry, 2);
-        create_button(swap_instrument_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 23, 29, 10, swap_instrument_widgets, 2, 0,
-                                      exchange_instrument_draw_const, NULL);
-        dialog->action_yes = do_exchange_instrument;
-}
-
-
-static void do_copy_instrument(UNUSED void *data)
-{
-        int n = atoi(swap_instrument_entry);
-
-        if (n < 1 || n > _last_vis_inst())
-                return;
-
-        song_copy_instrument(current_instrument, n);
-}
-
-static void copy_instrument_draw_const(void)
-{
-        draw_text("Copy instrument:", 31, 25, 0, 2);
-        draw_text("Instrument", 31, 27, 0, 2);
-        draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-}
-
-static void copy_instrument_dialog(void)
-{
-        struct dialog *dialog;
-
-        swap_instrument_entry[0] = 0;
-        create_textentry(swap_instrument_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_instrument_entry, 2);
-        create_button(swap_instrument_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 23, 29, 10, swap_instrument_widgets, 2, 0,
-                                      copy_instrument_draw_const, NULL);
-        dialog->action_yes = do_copy_instrument;
-}
-
-
-
-static void do_replace_instrument(UNUSED void *data)
-{
-        int n = atoi(swap_instrument_entry);
-
-        if (n < 1 || n > _last_vis_inst())
-                return;
-        song_replace_instrument(current_instrument, n);
-}
-
-static void replace_instrument_draw_const(void)
-{
-        draw_text("Replace instrument with:", 29, 25, 0, 2);
-        draw_text("Instrument", 31, 27, 0, 2);
-        draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-}
-
-static void replace_instrument_dialog(void)
-{
-        struct dialog *dialog;
-
-        swap_instrument_entry[0] = 0;
-        create_textentry(swap_instrument_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_instrument_entry, 2);
-        create_button(swap_instrument_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 23, 29, 10, swap_instrument_widgets, 2, 0,
-                                      replace_instrument_draw_const, NULL);
-        dialog->action_yes = do_replace_instrument;
+        if (n >= 1 && n <= _last_vis_inst()) {
+                song_replace_instrument(current_instrument, n);
+        }
 }
 
 /* --------------------------------------------------------------------- */
@@ -2039,16 +1946,17 @@ static void instrument_list_handle_alt_key(struct key_event *k)
                 instrument_save();
                 return;
         case SDLK_r:
-                replace_instrument_dialog();
+                smpprompt_create("Replace instrument with:", "Instrument", do_replace_instrument);
                 return;
         case SDLK_s:
-                swap_instrument_dialog();
+                // extra space to align the text like IT
+                smpprompt_create("Swap instrument with: ", "Instrument", do_swap_instrument);
                 return;
         case SDLK_x:
-                exchange_instrument_dialog();
+                smpprompt_create("Exchange instrument with:", "Instrument", do_exchange_instrument);
                 return;
         case SDLK_p:
-                copy_instrument_dialog();
+                smpprompt_create("Copy instrument:", "Instrument", do_copy_instrument);
                 return;
         case SDLK_w:
                 song_wipe_instrument(current_instrument);

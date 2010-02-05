@@ -346,125 +346,33 @@ static void clear_sample_text(void)
 
 /* --------------------------------------------------------------------- */
 
-static struct widget swap_sample_widgets[6];
-static char swap_sample_entry[4] = "";
-
-
-static void do_swap_sample(UNUSED void *data)
+static void do_swap_sample(int n)
 {
-        int n = atoi(swap_sample_entry);
-
-        if (n < 1 || n > _last_vis_sample())
-                return;
-        song_swap_samples(current_sample, n);
+        if (n >= 1 && n <= _last_vis_sample()) {
+                song_swap_samples(current_sample, n);
+        }
 }
 
-static void swap_sample_draw_const(void)
+static void do_exchange_sample(int n)
 {
-        draw_text("Swap sample with:", 32, 25, 0, 2);
-        draw_text("Sample", 35, 27, 0, 2);
-        draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+        if (n >= 1 && n <= _last_vis_sample()) {
+                song_exchange_samples(current_sample, n);
+        }
 }
 
-static void swap_sample_dialog(void)
+static void do_copy_sample(int n)
 {
-        struct dialog *dialog;
-
-        swap_sample_entry[0] = 0;
-        create_textentry(swap_sample_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_sample_entry, 2);
-        create_button(swap_sample_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 23, 29, 10, swap_sample_widgets, 2, 0, swap_sample_draw_const, NULL);
-        dialog->action_yes = do_swap_sample;
+        if (n >= 1 && n <= _last_vis_sample()) {
+                song_copy_sample(current_sample, song_get_sample(n, NULL));
+                sample_host_dialog(-1);
+        }
 }
 
-
-static void do_exchange_sample(UNUSED void *data)
+static void do_replace_sample(int n)
 {
-        int n = atoi(swap_sample_entry);
-
-        if (n < 1 || n > _last_vis_sample())
-                return;
-        song_exchange_samples(current_sample, n);
-}
-
-static void exchange_sample_draw_const(void)
-{
-        draw_text("Exchange sample with:", 30, 25, 0, 2);
-        draw_text("Sample", 35, 27, 0, 2);
-        draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-}
-
-static void exchange_sample_dialog(void)
-{
-        struct dialog *dialog;
-
-        swap_sample_entry[0] = 0;
-        create_textentry(swap_sample_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_sample_entry, 2);
-        create_button(swap_sample_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 23, 29, 10, swap_sample_widgets, 2, 0,
-                                      exchange_sample_draw_const, NULL);
-        dialog->action_yes = do_exchange_sample;
-}
-
-
-static void do_copy_sample(UNUSED void *data)
-{
-        /* TODO accept strings like I4 for high-numbered samples */
-        int n = atoi(swap_sample_entry);
-
-        if (n < 1 || n > _last_vis_sample())
-                return;
-
-        song_copy_sample(current_sample, song_get_sample(n, NULL));
-        sample_host_dialog(-1);
-}
-
-static void copy_sample_draw_const(void)
-{
-        draw_text("Copy sample:", 36, 25, 0, 2);
-        draw_text("Sample", 35, 27, 0, 2);
-        draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-}
-
-static void copy_sample_dialog(void)
-{
-        struct dialog *dialog;
-
-        swap_sample_entry[0] = 0;
-        create_textentry(swap_sample_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_sample_entry, 2);
-        create_button(swap_sample_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 23, 29, 10, swap_sample_widgets, 2, 0,
-                                      copy_sample_draw_const, NULL);
-        dialog->action_yes = do_copy_sample;
-}
-
-
-static void do_replace_sample(UNUSED void *data)
-{
-        int n = atoi(swap_sample_entry);
-
-        if (n < 1 || n > _last_vis_sample())
-                return;
-        song_replace_sample(current_sample, n);
-}
-
-static void replace_sample_draw_const(void)
-{
-        draw_text("Replace sample:", 31, 25, 0, 2);
-        draw_text("Sample", 35, 27, 0, 2);
-        draw_box(41, 26, 45, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-}
-
-static void replace_sample_dialog(void)
-{
-        struct dialog *dialog;
-
-        swap_sample_entry[0] = 0;
-        create_textentry(swap_sample_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, swap_sample_entry, 2);
-        create_button(swap_sample_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-        dialog = dialog_create_custom(26, 23, 29, 10, swap_sample_widgets, 2, 0,
-                                      replace_sample_draw_const, NULL);
-        dialog->action_yes = do_replace_sample;
+        if (n >= 1 && n <= _last_vis_sample()) {
+                song_replace_sample(current_sample, n);
+        }
 }
 
 /* --------------------------------------------------------------------- */
@@ -1421,13 +1329,13 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 sample_save(NULL, SSMP_ITS);
                 return;
         case SDLK_p:
-                copy_sample_dialog();
+                smpprompt_create("Copy sample:", "Sample", do_copy_sample);
                 return;
         case SDLK_r:
-                replace_sample_dialog();
+                smpprompt_create("Replace sample with:", "Sample", do_replace_sample);
                 return;
         case SDLK_s:
-                swap_sample_dialog();
+                smpprompt_create("Swap sample with:", "Sample", do_swap_sample);
                 return;
         case SDLK_t:
                 export_sample_dialog();
@@ -1436,7 +1344,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 sample_save(NULL, SSMP_RAW);
                 return;
         case SDLK_x:
-                exchange_sample_dialog();
+                smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
                 return;
         case SDLK_y:
                 /* hi virt */
