@@ -1108,9 +1108,6 @@ disko_t xmwriter = {
 disko_t modwriter = {
         "MOD", "mod", 0, _save_mod, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };
-disko_t mtmwriter = {
-        "MTM", "mtm", 0, fmt_mtm_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
-};
 disko_t midiwriter = {
         "MIDI", "mid", 1, fmt_mid_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
 };

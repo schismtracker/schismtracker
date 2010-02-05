@@ -725,7 +725,6 @@ disko_t *disko_formats[] = {
         &xmwriter,
         &s3mwriter,
         &modwriter,
-        &mtmwriter,
         &wavewriter,
         &midiwriter,
         NULL,
