@@ -277,7 +277,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
                 // give the channel a sample, and maybe an instrument
                 s = (samp == KEYJAZZ_NOINST) ? NULL : mp->Samples + samp;
-                i = (ins == KEYJAZZ_NOINST) ? NULL : (SONGINSTRUMENT *) song_get_instrument(ins, NULL); // blah
+                i = (ins == KEYJAZZ_NOINST) ? NULL : (SONGINSTRUMENT *) song_get_instrument(ins); // blah
 
                 if (i && samp == KEYJAZZ_NOINST) {
                         // we're playing an instrument and don't know what sample! WHAT WILL WE EVER DO?!

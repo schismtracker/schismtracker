@@ -28,7 +28,7 @@
 song_instrument *instrument_loader_init(struct instrumentloader *ii, int slot)
 {
         ii->expect_samples = 0;
-        ii->inst = song_get_instrument(slot, NULL);
+        ii->inst = song_get_instrument(slot);
         ii->slot = slot;
         ii->basex = 1;
         memset(ii->sample_map, 0, sizeof(ii->sample_map));

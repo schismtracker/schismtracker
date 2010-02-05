@@ -123,7 +123,7 @@ song_sample *song_get_sample(int n)
         return (song_sample *) mp->Samples + n;
 }
 
-song_instrument *song_get_instrument(int n, char **name_ptr)
+song_instrument *song_get_instrument(int n)
 {
         if (n >= MAX_INSTRUMENTS)
                 return NULL;
@@ -133,8 +133,6 @@ song_instrument *song_get_instrument(int n, char **name_ptr)
                 mp->Instruments[n] = csf_allocate_instrument();
         }
 
-        if (name_ptr)
-                *name_ptr = mp->Instruments[n]->name;
         return (song_instrument *) mp->Instruments[n];
 }
 
@@ -597,8 +595,8 @@ void song_copy_instrument(int dst, int src)
         if (src == dst) return;
 
         song_lock_audio();
-        song_get_instrument(dst, NULL);
-        song_get_instrument(src, NULL);
+        song_get_instrument(dst);
+        song_get_instrument(src);
         *(mp->Instruments[dst]) = *(mp->Instruments[src]);
         status.flags |= SONG_NEEDS_SAVE;
         song_unlock_audio();
@@ -723,7 +721,7 @@ void song_init_instrument_from_sample(int insn, int samp)
 {
         if (!song_instrument_is_empty(insn)) return;
         if (mp->Samples[samp].pSample == NULL) return;
-        song_get_instrument(insn, NULL);
+        song_get_instrument(insn);
         SONGINSTRUMENT *ins = mp->Instruments[insn];
         if (!ins) return; /* eh? */
 
