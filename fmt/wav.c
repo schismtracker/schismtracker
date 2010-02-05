@@ -293,7 +293,7 @@ static void _wavout_tail(disko_t *x)
 
         // Skip RIFF
         disko_seek(x, sizeof(uint32_t), SEEK_SET);
-        disko_write(x, &tmp, sizeof(uint32_t), SEEK_SET);
+        disko_write(x, &tmp, sizeof(uint32_t));
 
         // File size after format header and so on
         tt -= sizeof(wave_format_t) + (2 * sizeof(wave_chunk_prefix_t)) + sizeof(uint32_t);
