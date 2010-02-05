@@ -188,7 +188,7 @@ int dialog_handle_key(struct key_event * k)
         if (d->handle_key && d->handle_key(k))
                 return 1;
 
-        if (k->state && NO_MODIFIER(k->mod)) {
+        if (!k->state && NO_MODIFIER(k->mod)) {
                 switch (k->sym) {
                 case SDLK_y:
                         switch (status.dialog_type) {
@@ -410,17 +410,18 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 /* --------------------------------------------------------------------- */
 /* Other prompt stuff */
 
-static const char *numprompt_text;
-static int numprompt_textlen;
+static const char *numprompt_title, *numprompt_secondary;
+static int numprompt_smp_pos1, numprompt_smp_pos2; /* used by the sample prompt */
+static int numprompt_titlelen; /* used by the number prompt */
 static char numprompt_buf[4];
-static struct widget numprompt_widgets[1];
-void (*numprompt_finish)(int n);
+static struct widget numprompt_widgets[2];
+static void (*numprompt_finish)(int n);
 
 /* this is bound to the textentry's activate callback.
 since this dialog might be called from another dialog as well as from a page, it can't use the
 normal dialog_yes handler -- it needs to destroy the prompt dialog first so that ACTIVE_WIDGET
 points to whatever thumbbar actually triggered the dialog box. */
-static void numprompt_update(void)
+static void numprompt_value(void)
 {
         char *eptr;
         long n = strtol(numprompt_buf, &eptr, 10);
@@ -436,7 +437,7 @@ static void numprompt_draw_const(void)
         int wy = numprompt_widgets[0].y;
         int ww = numprompt_widgets[0].width;
 
-        draw_text(numprompt_text, wx - numprompt_textlen - 1, wy, 3, 2);
+        draw_text(numprompt_title, wx - numprompt_titlelen - 1, wy, 3, 2);
         draw_box(wx - 1, wy - 1, wx + ww, wy + 1, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
@@ -445,23 +446,78 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
         int y = 26; // an indisputable fact of life
         int dlgwidth, dlgx, entryx;
 
-        numprompt_text = prompt;
-        numprompt_textlen = strlen(prompt);
+        numprompt_title = prompt;
+        numprompt_titlelen = strlen(prompt);
         numprompt_buf[0] = initvalue;
         numprompt_buf[1] = '\0';
 
         /* Dialog is made up of border, padding (2 left, 1 right), frame around the text entry, the entry
         itself, and the prompt; the text entry is offset from the left of the dialog by 4 chars (padding +
         borders) plus the length of the prompt. */
-        dlgwidth = 2 + 3 + 2 + 4 + numprompt_textlen;
+        dlgwidth = 2 + 3 + 2 + 4 + numprompt_titlelen;
         dlgx = (80 - dlgwidth) / 2;
-        entryx = dlgx + 4 + numprompt_textlen;
+        entryx = dlgx + 4 + numprompt_titlelen;
 
         create_textentry(numprompt_widgets + 0, entryx, y, 4, 0, 0, 0, NULL, numprompt_buf, 3);
-        numprompt_widgets[0].activate = numprompt_update;
+        numprompt_widgets[0].activate = numprompt_value;
         numprompt_widgets[0].d.textentry.cursor_pos = initvalue ? 1 : 0;
         numprompt_finish = finish;
         dialog_create_custom(dlgx, y - 2, dlgwidth, 5, numprompt_widgets, 1, 0, numprompt_draw_const, NULL);
 }
 
+
+static int strtonum99(const char *s)
+{
+        // aaarghhhh
+        int n = 0;
+        if (!s || !*s)
+                return -1;
+        if (s[1]) {
+                // two chars
+                int c = tolower(*s);
+                switch (c) {
+                        case '0' ... '9': n = c - '0'; break;
+                        case 'a' ... 'g': n = c - 'a' + 10; break;
+                        case 'h' ... 'z': n = c - 'h' + 10; break;
+                        default: return -1;
+                }
+                n *= 10;
+                s++;
+        }
+        return *s >= '0' && *s <= '9' ? n + *s - '0' : -1;
+}
+
+static void smpprompt_value(UNUSED void *data)
+{
+        int n = strtonum99(numprompt_buf);
+        numprompt_finish(n);
+}
+
+static void smpprompt_draw_const(void)
+{
+        int wx = numprompt_widgets[0].x;
+        int wy = numprompt_widgets[0].y;
+        int ww = numprompt_widgets[0].width;
+
+        draw_text(numprompt_title, numprompt_smp_pos1, 25, 0, 2);
+        draw_text(numprompt_secondary, numprompt_smp_pos2, 27, 0, 2);
+        draw_box(wx - 1, wy - 1, wx + ww, wy + 1, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+void smpprompt_create(const char *title, const char *prompt, void (*finish)(int n))
+{
+        struct dialog *dialog;
+
+        numprompt_title = title;
+        numprompt_secondary = prompt;
+        numprompt_smp_pos1 = (81 - strlen(title)) / 2;
+        numprompt_smp_pos2 = 41 - strlen(prompt);
+        numprompt_buf[0] = '\0';
+
+        create_textentry(numprompt_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, numprompt_buf, 2);
+        create_button(numprompt_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+        numprompt_finish = finish;
+        dialog = dialog_create_custom(26, 23, 29, 10, numprompt_widgets, 2, 0, smpprompt_draw_const, NULL);
+        dialog->action_yes = smpprompt_value;
+}
 
