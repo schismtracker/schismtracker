@@ -26,6 +26,7 @@
 
 #include "it.h"
 #include "song.h"
+#include "mplink.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -211,8 +212,7 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->vib_rate  = gfsamp.vibrato[1];
                 smp->vib_depth = gfsamp.vibrato[2];
 
-printf("reading len=%d\n",smp->length);
-                pos += song_copy_sample_raw(n, rs, data+pos, length - pos);
+                pos += csf_read_sample(mp->Samples + n, rs, data + pos, length - pos);
         }
         return 1;
 }

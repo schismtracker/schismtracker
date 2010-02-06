@@ -27,9 +27,7 @@
 
 #include "it.h"
 #include "song.h"
-
-#ifndef WIN32
-#endif
+#include "mplink.h"
 
 #include "snd_fx.h"
 #include "xm_defs.h"
@@ -144,7 +142,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->vib_rate = xmsh.vibrate / 4;
 
                 song_sample_set_c5speed(n, transpose_to_frequency(xmss.relnote, xmss.finetune));
-                ptr += song_copy_sample_raw(n, rs, data+ptr, length - ptr);
+                ptr += csf_read_sample(mp->Samples + n, rs, data + ptr, length - ptr);
         }
         return 1;
 }

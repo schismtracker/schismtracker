@@ -857,10 +857,6 @@ void song_delete_instrument(int n)
         song_wipe_instrument(n);
 }
 
-unsigned song_copy_sample_raw(int n, unsigned int rs, const void *data, unsigned int samples)
-{
-        return csf_read_sample(mp->Samples+n, rs, data, samples);
-}
 
 void song_replace_sample(int num, int with)
 {
