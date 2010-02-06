@@ -249,19 +249,11 @@ void song_new(int flags)
 
 // ------------------------------------------------------------------------------------------------------------
 
-static int _modplug_load_song(CSoundFile *csf, slurp_t *sl, UNUSED unsigned int flags)
-{
-        printf("note: using modplug's loader\n");
-        return csf_load(csf, sl->data, sl->length) ? LOAD_SUCCESS : LOAD_UNSUPPORTED;
-}
-
 #define LOAD_SONG(x) fmt_##x##_load_song,
 static fmt_load_song_func load_song_funcs[] = {
 #include "fmt-types.h"
-        _modplug_load_song,
         NULL,
 };
-
 
 
 static const char *fmt_strerror(int n)

@@ -23,10 +23,6 @@
 #ifndef SCHISM_LOG_H
 #define SCHISM_LOG_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void log_nl(void);
 void log_append(int color, int must_free, const char *text);
 void log_append2(int bios_font, int color, int must_free, const char *text);
@@ -42,10 +38,6 @@ void status_text_flash_bios(const char *format, ...)
         __attribute__ ((format(printf, 1, 2)));
 void status_text_flash_color(int co, const char *format, ...)
         __attribute__ ((format(printf, 2, 3)));
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
 

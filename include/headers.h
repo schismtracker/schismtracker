@@ -187,10 +187,6 @@ static inline unsigned int ARM_get32(const void *data)
 
 /* Prototypes for replacement functions */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
 #endif
@@ -204,10 +200,6 @@ char *strptime(const char *buf, const char *fmt, struct tm *tm);
 # ifdef WIN32
 struct tm *localtime_r(const time_t *timep, struct tm *result);
 # endif
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #ifdef __APPLE_CC__

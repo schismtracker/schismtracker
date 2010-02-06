@@ -52,10 +52,6 @@ struct _slurp_struct {
 
 /* --------------------------------------------------------------------- */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* slurp returns NULL and sets errno on error. 'buf' is only meaningful if you've already stat()'d
 the file; in most cases it can simply be NULL. If size is nonzero, it overrides the file's size as
 returned by stat -- this can be used to read only part of a file, or if the file size is known but
@@ -83,10 +79,6 @@ int slurp_eof(slurp_t *t); /* 1 = end of file */
 
 /* used internally by slurp, nothing else should need this */
 int mmcmp_unpack(uint8_t **data, size_t *length);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! SLURP_H */
 

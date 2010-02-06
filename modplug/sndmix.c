@@ -8,8 +8,6 @@
 #include "snd_fm.h"
 #include "snd_gm.h"
 #include "cmixer.h"
-#include "snd_flt.h"
-#include "snd_eq.h"
 
 #include "util.h" /* for clamp */
 

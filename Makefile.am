@@ -148,8 +148,6 @@ noinst_HEADERS = \
 	modplug/fmopl.h			\
 	modplug/it_defs.h		\
 	modplug/sndfile.h		\
-	modplug/snd_eq.h		\
-	modplug/snd_flt.h		\
 	modplug/snd_fm.h		\
 	modplug/snd_fx.h		\
 	modplug/snd_gm.h		\
@@ -278,9 +276,7 @@ schismtracker_SOURCES = \
 	fmt/mod.c			\
 	fmt/far.c			\
 	fmt/wav.c			\
-	fmt/mid.cc			\
 	fmt/its.c			\
-	fmt/psm.cc			\
 	fmt/s3i.c			\
 	fmt/iti.c			\
 	fmt/xi.c			\
@@ -339,27 +335,13 @@ schismtracker_SOURCES = \
 	schism/draw-misc.c		\
 	schism/fakemem.c		\
 	schism/version.c		\
-	modplug/load_xm.cpp		\
-	modplug/load_psm.cpp		\
-	modplug/load_s3m.cpp		\
 	modplug/tables.c		\
-	modplug/load_mid.cpp		\
-	modplug/load_ams.cpp		\
 	modplug/snd_fx.c		\
-	modplug/load_mod.cpp		\
 	modplug/snd_flt.c		\
-	modplug/load_dsm.cpp		\
 	modplug/snd_dsp.c		\
-	modplug/load_mt2.cpp		\
 	modplug/snd_eq.c		\
-	modplug/load_amf.cpp		\
-	modplug/load_dmf.cpp		\
-	modplug/sndfile.cpp		\
 	modplug/csndfile.c		\
-	modplug/load_med.cpp		\
-	modplug/load_dbm.cpp		\
 	modplug/sndmix.c		\
-	modplug/load_ptm.cpp		\
 	modplug/mmcmp.c			\
 	modplug/fastmix.c		\
 	modplug/fmopl.c			\
@@ -401,7 +383,6 @@ AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE \
 AM_CFLAGS = @SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_wii)
-AM_CXXFLAGS = ${AM_CFLAGS}
 AM_OBJCFLAGS = ${AM_CFLAGS}
 
 

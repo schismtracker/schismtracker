@@ -25,9 +25,8 @@
 
 #include "it.h"
 #include "page.h"
+#include "cmixer.h"
 #include "mplink.h"
-#include "snd_flt.h" // modplug
-#include "snd_eq.h"  // modplug
 #include "slurp.h"
 #include "config-parser.h"
 

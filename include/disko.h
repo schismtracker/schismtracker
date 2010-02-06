@@ -25,9 +25,6 @@
 
 #include <sys/types.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef struct disko disko_t;
 struct disko {
@@ -134,9 +131,6 @@ void disko_dialog_finished(void);
 extern unsigned int disko_output_rate, disko_output_bits,
                         disko_output_channels;
 
-#ifdef __cplusplus
-};
-#endif
 
 #endif
 

@@ -759,6 +759,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
                 }
                 break;
 
+#if 0
         // AMS compressed samples
         case RS_AMS8:
         case RS_AMS16:
@@ -773,6 +774,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
                         AMSUnpack(psrc+9, len-9, pdest, dmax, packcharacter);
                 }
                 break;
+#endif
 
         // PTM 8bit delta to 16-bit sample
         case RS_PTM8DTO16:
@@ -837,6 +839,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
                 }
                 break;
 
+#if 0
         case RS_DMF8:
         case RS_DMF16:
                 len = dwMemLength;
@@ -848,6 +851,7 @@ uint32_t csf_read_sample(SONGSAMPLE *pIns, uint32_t nFlags, const void *filedata
                         len = DMFUnpack((uint8_t *)pIns->pSample, ibuf, ibufmax, maxlen);
                 }
                 break;
+#endif
 
 #if 0 // THESE ARE BROKEN
         // PCM 24-bit signed -> load sample, and normalize it to 16-bit

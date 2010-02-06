@@ -28,10 +28,6 @@
 #ifndef PAGE_H
 #define PAGE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* there's no good place for this */
 #define MOUSE_BUTTON_LEFT       1
 #define MOUSE_BUTTON_MIDDLE     2
@@ -589,9 +585,5 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 
 /* Ask for a sample / instrument number, like the "swap sample" dialog. */
 void smpprompt_create(const char *title, const char *prompt, void (*finish)(int n));
-
-#ifdef __cplusplus
-};
-#endif
 
 #endif /* ! PAGE_H */

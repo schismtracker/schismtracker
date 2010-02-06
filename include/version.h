@@ -23,10 +23,6 @@
 #ifndef SCHISM_VERSION_H
 #define SCHISM_VERSION_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* various boilerplate defined in version.c */
 extern const char *ver_short_copyright;
 extern const char *ver_short_based_on;
@@ -40,10 +36,6 @@ void ver_init(void);
 
 /* get yyyy-mm-dd or 0.nn version from cwtv (buf should be >=11 chars) */
 void ver_decode_cwtv(uint16_t cwtv, char *buf);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
 

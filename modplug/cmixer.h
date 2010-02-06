@@ -1,6 +1,7 @@
 #ifndef MODPLUG_MIXER_H
 #define MODPLUG_MIXER_H
 
+#include "sndfile.h"
 
 // Stuff moved from sndfile.h
 #define MIXBUFFERSIZE           512
@@ -9,10 +10,6 @@
 #define MIXING_CLIPMAX          (0x03FFFFFF)
 #define VOLUMERAMPPRECISION     12
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 void init_mix_buffer(int *, unsigned int);
 void stereo_fill(int *, unsigned int, int*, int *);
@@ -25,6 +22,10 @@ void float_to_stereo_mix(const float *, const float *, int *, unsigned int);
 void mono_mix_to_float(const int *, float *, unsigned int);
 void float_to_mono_mix(const float *, int *, unsigned int);
 
+unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
+
+void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq);
+
 
 //typedef unsigned int (*convert_clip_t)(void *, int *, unsigned int, int*, int*) __attribute__((cdecl))
 
@@ -32,6 +33,14 @@ unsigned int clip_32_to_8(void *, int *, unsigned int, int *, int *);
 unsigned int clip_32_to_16(void *, int *, unsigned int, int *, int *);
 unsigned int clip_32_to_24(void *, int *, unsigned int, int *, int *);
 unsigned int clip_32_to_32(void *, int *, unsigned int, int *, int *);
+
+
+void eq_mono(int *, unsigned int);
+void eq_stereo(int *, unsigned int);
+void initialize_eq(int, float);
+void set_eq_gains(const unsigned int *, unsigned int, const unsigned int *, int, int);
+
+
 
 
 // Some things that shouldn't exist...
@@ -45,10 +54,6 @@ extern int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 // sndmix.c
 extern int gnDryROfsVol;
 extern int gnDryLOfsVol;
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
 

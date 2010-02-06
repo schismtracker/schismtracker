@@ -24,10 +24,6 @@
 #ifndef MIDI_H
 #define MIDI_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct midi_provider;
 struct midi_port;
 
@@ -164,9 +160,5 @@ int macosx_midi_setup(void);    // MACOSX
 #define MIDI_DISABLE_RECORD     0x00010000
 
 extern int midi_flags, midi_pitch_depth, midi_amplification, midi_c5note;
-
-#ifdef __cplusplus
-};
-#endif
 
 #endif
