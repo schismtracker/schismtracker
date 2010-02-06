@@ -30,6 +30,7 @@
 #include "page.h"
 #include "dmoz.h"
 #include "log.h"
+#include "fmt.h" /* only needed for SAVE_SUCCESS ... */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -179,7 +180,7 @@ idea for return codes:
     1 = no warnings or errors were printed.
     2 = there were warnings, but the song was still loaded/saved. */
 
-static void handle_file_entered_L(char *ptr)
+static void handle_file_entered_L(const char *ptr)
 {
         dmoz_filelist_t tmp;
         struct stat sb;
@@ -207,8 +208,8 @@ static void loadsave_song_changed(void)
                 return;
         ext = get_extension(ptr);
         if (ext[0]) {
-                for (i = 0; disko_formats[i]; i++) {
-                        if (strcasecmp(ext, disko_formats[i]->extension) == 0) {
+                for (i = 0; song_save_formats[i].label; i++) {
+                        if (strcasecmp(ext, song_save_formats[i].ext) == 0) {
                                 /* ugh :) offset to the button for the file type on the save module
                                    page is (position in diskwriter driver array) + 4 */
                                 r = i + 4;
@@ -220,29 +221,39 @@ static void loadsave_song_changed(void)
 }
 
 
-
-static void do_save_song(void *ptr)
+/* NOTE: ptr should be dynamically allocated, or NULL */
+static void do_save_song(char *ptr)
 {
-        int i, n;
-        const char *typ = NULL;
-        const char *f = ptr ?: song_get_filename();
+        int n, ret, export = (status.current_page == PAGE_EXPORT_MODULE);
+        const char *filename = ptr ?: song_get_filename();
+        const char *seltype = NULL;
+        struct widget *widget;
 
-        for (i = n = 0; disko_formats[i]; i++) {
-                if (disko_formats[i]->export_only
-                != (status.current_page == PAGE_EXPORT_MODULE ? 1 : 0)) {
-                        continue;
-                }
-                if (widgets_exportsave[n+4].d.togglebutton.state) {
-                        typ = widgets_exportsave[n+4].d.togglebutton.text;
-                        break;
-                }
-                n++;
-        }
         set_page(PAGE_LOG);
 
-        if (song_save(f, typ)) {
-                set_page(PAGE_LOG);
+        // 4 is the index of the first file-type button
+        for (widget = (export ? widgets_exportmodule : widgets_savemodule) + 4;
+             widget->type == WIDGET_TOGGLEBUTTON; widget++) {
+                if (widget->d.togglebutton.state) {
+                        // Aha!
+                        seltype = widget->d.togglebutton.text;
+                        break;
+                }
         }
+
+        if (!seltype) {
+                // No button was selected? (should never happen)
+                log_appendf(4, "No file format selected?");
+                ret = SAVE_INTERNAL_ERROR;
+        } else if (export) {
+                ret = song_export(filename, seltype);
+        } else {
+                ret = song_save(filename, seltype);
+        }
+
+        if (ret != SAVE_SUCCESS)
+                dialog_create(DIALOG_OK, "Could not save file", NULL, NULL, 0, NULL);
+
         free(ptr);
 }
 
@@ -250,19 +261,24 @@ void save_song_or_save_as(void)
 {
         const char *f = song_get_filename();
         if (f && *f) {
-                do_save_song(NULL);
+                do_save_song(str_dup(f));
         } else {
                 set_page(PAGE_SAVE_MODULE);
         }
 }
 
-extern disko_t wavewriter;
 static void do_multiwrite(void *ptr)
 {
-        const char *f = ptr ?: song_get_filename();
+        const char *filename = ptr ?: song_get_filename();
+
+        set_page(PAGE_LOG);
 
         /* FIXME: support other writers? */
-        disko_multiout(f, &wavewriter);
+        if (song_export(filename, "WAV-multi") != SAVE_SUCCESS) {
+                dialog_create(DIALOG_OK, "Could not save file", NULL, NULL, 0, NULL);
+        }
+
+        free(ptr);
 }
 
 static void do_save_song_overwrite(void *ptr)
@@ -270,6 +286,7 @@ static void do_save_song_overwrite(void *ptr)
         struct stat st;
 
         if (!(status.flags & CLASSIC_MODE)) {
+                // say what?
                 do_save_song(ptr);
                 return;
         }
@@ -286,29 +303,29 @@ static void do_save_song_overwrite(void *ptr)
         }
 }
 
-static void handle_file_entered_S(char *ptr)
+static void handle_file_entered_S(const char *name)
 {
         struct stat buf;
 
-        if (stat(ptr, &buf) < 0) {
+        if (stat(name, &buf) < 0) {
                 if (errno == ENOENT) {
-                        do_save_song(str_dup(ptr));
+                        do_save_song(str_dup(name));
                 } else {
-                        log_perror(ptr);
+                        log_perror(name);
                 }
         } else {
                 if (S_ISDIR(buf.st_mode)) {
                         if (status.current_page == PAGE_EXPORT_MODULE) {
                                 dialog_create(DIALOG_OK_CANCEL, "Multi-out?",
-                                              do_multiwrite, free, 1, str_dup(ptr));
+                                              do_multiwrite, free, 1, str_dup(name));
                         } else {
                                 /* TODO: maybe change the current directory in this case? */
-                                log_appendf(4, "%s: Is a directory", ptr);
+                                log_appendf(4, "%s: Is a directory", name);
                         }
 
                 } else if (S_ISREG(buf.st_mode)) {
                         dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
-                                      do_save_song_overwrite, free, 1, str_dup(ptr));
+                                      do_save_song_overwrite, free, 1, str_dup(name));
                 } else {
                         /* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
                         dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0, NULL);
@@ -317,7 +334,7 @@ static void handle_file_entered_S(char *ptr)
 }
 
 
-static void (*handle_file_entered)(char *);
+static void (*handle_file_entered)(const char *);
 
 /* --------------------------------------------------------------------- */
 
@@ -1029,7 +1046,7 @@ static void save_module_set_page(void)
 
 void save_module_load_page(struct page *page, int do_export)
 {
-        int i, n;
+        int n;
 
         if (do_export) {
                 page->title = "Export Module (Shift-F10)";
@@ -1073,20 +1090,21 @@ void save_module_load_page(struct page *page, int do_export)
         widgets_exportsave[3].activate = dirname_entered;
 
         widgets_exportsave[4].d.togglebutton.state = 1;
-        /* FIXME: pressing left and right should try and keep the cursor near the same vertical area */
-        for (i = n = 0; disko_formats[i]; i++) {
-                if (disko_formats[i]->export_only == do_export) {
-                        create_togglebutton(&widgets_exportsave[4+n], 70, 13 + (n*3), 5,
-                                        4 + (n == 0 ? 0 : (n-1)),
-                                        4 + (n+1),
-                                        1, 0, 2,
-                                        NULL, disko_formats[i]->name,
-                                        4 - ((strlen(disko_formats[i]->name)+1) / 2),
-                                        filetype_saves);
-                        page->total_widgets++;
-                        n++;
-                }
+
+
+        struct song_save_format *formats = (do_export ? song_export_formats : song_save_formats);
+        for (n = 0; formats[n].label; n++) {
+                create_togglebutton(widgets_exportsave + 4 + n,
+                                70, 13 + (3 * n), 5,
+                                4 + (n == 0 ? 0 : (n - 1)),
+                                4 + (n + 1),
+                                1, 0, 2,
+                                NULL,
+                                formats[n].label,
+                                (5 - strlen(formats[n].label)) / 2 + 1,
+                                filetype_saves);
         }
-        widgets_exportsave[4+n-1].next.down = 2;
+        widgets_exportsave[4 + n - 1].next.down = 2;
+        page->total_widgets += n;
 }
 

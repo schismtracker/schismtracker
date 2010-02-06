@@ -841,7 +841,7 @@ static void _save_it_pattern(disko_t *fp, MODCOMMAND *pat, int patsize)
         disko_write(fp, data, pos);
 }
 
-static void _save_it(disko_t *fp)
+static int _save_it(disko_t *fp, UNUSED CSoundFile *song)
 {
         ITFILEHEADER hdr;
         int n;
@@ -1040,148 +1040,98 @@ static void _save_it(disko_t *fp)
         disko_write(fp, para_ins, 4*nins);
         disko_write(fp, para_smp, 4*nsmp);
         disko_write(fp, para_pat, 4*npat);
+
+        return SAVE_SUCCESS;
 }
 
-static void _save_s3m(disko_t *dw)
+static int _save_stub(UNUSED disko_t *fp, UNUSED CSoundFile *song)
 {
-        feature_check_instruments("S3M", 0, 0);
-        feature_check_samples("S3M", 99, SAMP_LOOP | SAMP_ADLIB);
-        feature_check_notes("S3M",
-                        0, 96,
-                        0, 255,
-                        ".v",
-                        ".ABCDEFGHIJKLOQRSTUV1`"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
-
-        if (!csf_save_s3m(mp, dw, 0)) {
-                status_text_flash("Error writing to disk");
-                disko_seterror(dw);
-        }
+        log_appendf(4, "File format temporarily removed");
+        return SAVE_INTERNAL_ERROR;
 }
-
-static void _save_xm(disko_t *dw)
-{
-        feature_check_instruments("XM", 99,
-                        ENV_VOLUME | ENV_VOLSUSTAIN | ENV_VOLLOOP
-                        | ENV_PANNING | ENV_PANSUSTAIN | ENV_PANLOOP);
-        feature_check_samples("XM", 99,
-                        SAMP_STEREO | SAMP_16_BIT
-                        | SAMP_LOOP | SAMP_LOOP_PINGPONG);
-        feature_check_notes("XM",
-                        0, 96,
-                        0, 255,
-                        ".vpABCDEFGH$<>",
-                        ".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&`"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
-
-        if (!csf_save_xm(mp, dw, 0)) {
-                status_text_flash("Error writing to disk");
-                disko_seterror(dw);
-        }
-}
-
-static void _save_mod(disko_t *dw)
-{
-        feature_check_instruments("MOD", 0,  0);
-        feature_check_samples("MOD", 31, SAMP_LOOP);
-        feature_check_notes("MOD",
-                        12, 96,
-                        0, 31,
-                        ".",
-                        ".ABCDEFGHIJKLMNOPQRSTUVWXYZ1!#$%&"); /* ` means ===, 1 means ^^^, ~ means ~~~ */
-
-        if (!csf_save_mod(mp, dw, 0)) {
-                status_text_flash("Error writing to disk");
-                disko_seterror(dw);
-        }
-}
-
-disko_t itwriter = {
-        "IT", "it", 0, _save_it, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
-};
-disko_t s3mwriter = {
-        "S3M", "s3m", 0, _save_s3m, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
-};
-disko_t xmwriter = {
-        "XM", "xm", 0, _save_xm, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
-};
-disko_t modwriter = {
-        "MOD", "mod", 0, _save_mod, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
-};
-disko_t midiwriter = {
-        "MIDI", "mid", 1, fmt_mid_save_song, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0,
-};
 
 /* ------------------------------------------------------------------------- */
 
-int song_save(const char *file, const char *qt)
+struct song_save_format song_save_formats[] = {
+        {"IT", "it", _save_it},
+        {"S3M", "s3m", _save_stub},
+        {NULL, NULL, NULL} // should be last item!
+};
+
+struct song_save_format song_export_formats[] = {
+        {NULL, NULL, NULL} // should be last item!
+};
+
+
+int song_export(UNUSED const char *filename, UNUSED const char *type)
 {
-        const char *ext;
-        char *freeme;
-        int i, j, nsmp, nins;
+        log_appendf(4, "Export not ready yet");
+        return SAVE_INTERNAL_ERROR;
+}
 
-        freeme = NULL;
-        ext = get_extension(file);
-        if (!*ext) {
-                if (!qt) {
-                        log_appendf(4, "Error: no extension, and no save/type");
-                        return 1;
-                }
-                freeme = (char*)mem_alloc((i=strlen(file)) + strlen(qt) + 3);
-                strcpy(freeme, file);
-                freeme[i] = '.';i++;
-                for (j = 0; qt[j]; j++, i++) freeme[i] = tolower(((unsigned int)(qt[j])));
-                freeme[i] = '\0';
-                file = freeme;
+
+int song_save(const char *filename, const char *type)
+{
+        int n, ret;
+
+        if (!type) {
+                // why would this happen, ever?
+                log_appendf(4, "No file type given, very weird! (Try a different filename?)");
+                return SAVE_INTERNAL_ERROR;
         }
 
+/* TODO: add or replace file extension as appropriate
 
-        // fix m_nSamples and m_nInstruments
-        nsmp = 198;
-        while (nsmp >= 0 && song_sample_is_empty(nsmp))
-                nsmp--;
+From IT 2.10 update:
+  - Automatic filename extension replacement on Ctrl-S, so that if you press
+    Ctrl-S after loading a .MOD, .669, .MTM or .XM, the filename will be
+    automatically modified to have a .IT extension.
 
-        nins = 198;
-        while (nins >= 0 && song_instrument_is_empty(nins-1))
-                nins--;
-        nins++;
-        mp->m_nSamples = nsmp;
-        mp->m_nInstruments = nins;
+In IT, if the filename given has no extension ("basename"), then the extension for the proper file type
+(IT/S3M) will be appended to the name.
+A filename with an extension is not modified, even if the extension is blank. (as in "basename.")
 
-        if (!qt) {
-                for (i = 0; disko_formats[i]; i++) {
-                        if (strcasecmp(ext, disko_formats[i]->extension) == 0) {
-                                qt = disko_formats[i]->name;
-                                break;
-                        }
-                }
-        }
-        if (!qt) { /* still? damn */
-                qt = "IT";
-        }
+This brings up a rather odd bit of behavior: what happens when saving a file with the deliberately wrong
+extension? Selecting the IT type and saving as "test.s3m" works just as one would expect: an IT file is
+written, with the name "test.s3m". No surprises yet, but as soon as Ctrl-S is used, the filename is "fixed",
+producing a second file called "test.it". The reverse happens when trying to save an S3M named "test.it" --
+it's rewritten to "test.s3m".
+Note that in these scenarios, Impulse Tracker *DOES NOT* check if an existing file by that name exists; it
+will GLADLY overwrite the old "test.s3m" (or .it) with the renamed file that's being saved. Presumably this
+is NOT intentional behavior.
 
+Another note: if the file could not be saved for some reason or another, Impulse Tracker pops up a dialog
+saying "Could not save file". This can be seen rather easily by trying to save a file with a malformed name,
+such as "abc|def.it". This dialog is presented both when saving from F10 and Ctrl-S.
+*/
+
+        // ugly
         mp->m_rowHighlightMajor = row_highlight_major;
         mp->m_rowHighlightMinor = row_highlight_minor;
 
-        for (i = 0; disko_formats[i]; i++) {
-                if (strcmp(qt, disko_formats[i]->name) != 0)
-                        continue;
-                if (disko_start(file, disko_formats[i]) != DW_OK) {
-                        log_perror("Cannot start diskwriter");
-                        if (freeme) free(freeme);
-                        return 0;
+        for (n = 0; song_save_formats[n].label; n++) {
+                if (strcmp(song_save_formats[n].label, type) == 0) {
+                        // WOO! it's ours!
+                        disko_t *fp = disko_open(filename);
+                        if (!fp) {
+                                log_perror(filename);
+                                return SAVE_FILE_ERROR;
+                        }
+                        ret = song_save_formats[n].save_func(fp, mp);
+                        if (disko_close(fp) == DW_ERROR)
+                                return SAVE_FILE_ERROR;
+                        if (ret == SAVE_SUCCESS) {
+                                status.flags &= ~SONG_NEEDS_SAVE;
+                                if (strcasecmp(song_filename, filename))
+                                        song_set_filename(filename);
+                        }
+                        return ret;
                 }
-                if (! disko_formats[i]->export_only) {
-                        status.flags &= ~SONG_NEEDS_SAVE;
-                        if (strcasecmp(song_filename, file))
-                                song_set_filename(file);
-                }
-                //log_appendf(2, "Starting up diskwriter");
-                if (freeme) free(freeme);
-                return 1;
         }
 
-        log_appendf(4, "Unknown file type: %s", qt);
-        if (freeme) free(freeme);
-        return 0;
+        // Shouldn't get here...
+        log_appendf(4, "Unknown file type: %s", type);
+        return SAVE_INTERNAL_ERROR;
 }
 
 // ------------------------------------------------------------------------
