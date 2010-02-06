@@ -31,43 +31,60 @@ extern "C" {
 
 typedef struct disko disko_t;
 struct disko {
-        void (*_write)(disko_t *d, const void *buf, unsigned int len);
-        void (*_seek)(disko_t *d, long pos, int whence);
-        void (*_close)(disko_t *d);
-        void (*_seterror)(disko_t *d);
+        // Functions whose implementation depends on the backend in use
+        // Use disko_write et al. instead of these.
+        void (*_write)(disko_t *ds, const void *buf, unsigned int len);
+        void (*_putc)(disko_t *ds, int c);
+        void (*_seek)(disko_t *ds, long offset, int whence);
+        long (*_tell)(disko_t *ds);
+
+        // Temporary filename that's being written to
+        char tempname[PATH_MAX];
+
+        // Name to change it to on close (if successful)
+        char filename[PATH_MAX];
 
         // these could be unionized
+        // file pointer (only exists for disk files)
         FILE *file;
+        // data for memory buffers (no filename/handle)
         uint8_t *data;
+
+        // First errno value recorded after something went wrong.
+        int error;
 
         /* untouched by diskwriter; driver may use for anything */
         void *userdata;
 
-        /* used by readers, etc */
-        size_t pos, length;
+        // for memory buffers
+        size_t pos, length, allocated;
 };
 
 enum {
         DW_OK = 1,
         DW_ERROR = 0,
         DW_NOT_RUNNING = -1,
-
+};
+enum {
         DW_SYNC_DONE = 0,
         DW_SYNC_ERROR = -1,
         DW_SYNC_MORE = 1,
 };
 
-/* starts up the diskwriter.
-return values: DW_OK, DW_ERROR */
-int disko_start(const char *file, disko_t *f);
+/* fopen/fclose-ish writeout/finish wrapper that allocates a structure */
+disko_t *disko_open(const char *filename);
+int disko_close(disko_t *f);
+
+/* alloc/free a memory buffer
+if free_buffer is 0, the internal buffer is left alone when deallocating,
+so that it can continue to be used later */
+disko_t *disko_memopen(void);
+int disko_memclose(disko_t *f, int free_buffer);
+
 
 /* kindler, gentler, (and most importantly) simpler version (can't call sync)
 NOTE: used by orderlist and pattern editor */
 int disko_writeout(const char *file, disko_t *f);
-
-/* fopen/fclose-ish writeout/finish wrapper that allocates a structure */
-disko_t *disko_open(const char *filename);
-int disko_close(disko_t *f);
 
 /* copy a pattern into a sample */
 int disko_writeout_sample(int sampno, int patno, int bindme);
@@ -87,14 +104,20 @@ int disko_finish(void);
 /* For use by the diskwriter drivers: */
 
 /* Write data to the file, as in fwrite() */
-void disko_write(disko_t *ds, const void *buf, unsigned int len);
+void disko_write(disko_t *ds, const void *buf, size_t len);
+
+/* Write one character (unsigned char, cast to int) */
+void disko_putc(disko_t *ds, int c);
 
 /* Change file position. This CAN be used to seek past the end,
 but be cognizant that random data might exist in the "gap". */
-void disko_seek(disko_t *ds, off_t pos, int whence);
+void disko_seek(disko_t *ds, long pos, int whence);
+
+/* Get the position, as set by seek */
+long disko_tell(disko_t *ds);
 
 /* Call this to signal a nonrecoverable error condition. */
-void disko_seterror(disko_t *ds);
+void disko_seterror(disko_t *ds, int err);
 
 /* ------------------------------------------------------------------------- */
 
