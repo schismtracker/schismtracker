@@ -33,7 +33,7 @@ typedef struct disko disko_t;
 struct disko {
         // Functions whose implementation depends on the backend in use
         // Use disko_write et al. instead of these.
-        void (*_write)(disko_t *ds, const void *buf, unsigned int len);
+        void (*_write)(disko_t *ds, const void *buf, size_t len);
         void (*_putc)(disko_t *ds, int c);
         void (*_seek)(disko_t *ds, long offset, int whence);
         long (*_tell)(disko_t *ds);
