@@ -1118,12 +1118,23 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
                                 return SAVE_FILE_ERROR;
                         }
                         ret = song_save_formats[n].save_func(fp, mp);
-                        if (disko_close(fp) == DW_ERROR)
-                                return SAVE_FILE_ERROR;
-                        if (ret == SAVE_SUCCESS) {
+                        if (disko_close(fp) == DW_ERROR && ret == SAVE_SUCCESS) {
+                                // this was not as successful as originally claimed!
+                                ret = SAVE_FILE_ERROR;
+                        }
+                        switch (ret) {
+                        case SAVE_SUCCESS:
                                 status.flags &= ~SONG_NEEDS_SAVE;
                                 if (strcasecmp(song_filename, filename))
                                         song_set_filename(filename);
+                                break;
+                        case SAVE_FILE_ERROR:
+                                log_perror(filename);
+                                break;
+                        case SAVE_INTERNAL_ERROR:
+                        default: // ???
+                                log_appendf(4, "Internal error saving file");
+                                break;
                         }
                         return ret;
                 }
