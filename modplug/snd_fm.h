@@ -1,10 +1,6 @@
 #ifndef _BqtModplugSndFm
 #define _BqtModplugSndFm
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void Fmdrv_Init(int mixfreq);
 void Fmdrv_MixTo(int* buf, int count);
 
@@ -16,10 +12,6 @@ void OPL_Patch(int c, const unsigned char *D);
 void OPL_Reset(void);
 int OPL_Detect(void);
 void OPL_Close(void);
-
-#ifdef __cplusplus
-}
-#endif
 
 /*************/
 

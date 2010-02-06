@@ -34,10 +34,6 @@
 
 #include "sndfile.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* --------------------------------------------------------------------------------------------------------- */
 /* module loaders */
 
@@ -148,10 +144,6 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
 #define MOD_FINETUNE(b) (S3MFineTuneTable[((b) & 0xf) ^ 8])
 
 /* --------------------------------------------------------------------------------------------------------- */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! FMT_H */
 

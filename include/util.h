@@ -30,12 +30,6 @@
 
 /* --------------------------------------------------------------------- */
 
-/* I don't like all caps for these 'cuz they don't get highlighted. */
-#ifndef __cplusplus
-#define false (0)
-#define true (!0)
-#endif
-
 #define ARRAY_SIZE(a) ((signed)(sizeof(a)/sizeof(*(a))))
 
 
@@ -100,10 +94,6 @@
 (thus it needs free'd)... except numtostr, get_time_string, and get_date_string, which return the buffer
 passed to them in the 'buf' parameter. */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* memory */
 #ifdef __GNUC__
 extern __attribute__ ((malloc)) void *mem_alloc(size_t);
@@ -156,9 +146,5 @@ void ms_sleep(unsigned int m);
 
 /* runs a hook */
 int run_hook(const char *dir, const char *name, const char *maybe_arg);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! UTIL_H */

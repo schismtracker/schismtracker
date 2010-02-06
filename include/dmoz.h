@@ -140,10 +140,6 @@ typedef struct dmoz_dirlist {
         int selected; /* communication with cache */
 } dmoz_dirlist_t;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* For any of these, pass NULL for dirs to handle directories and files in the same list.
 for load_library, provide one of the dmoz_read_whatever_library functions, or NULL. */
 int dmoz_read(const char *path, dmoz_filelist_t *files, dmoz_dirlist_t *dirs,
@@ -219,9 +215,5 @@ enum {
         DMOZ_RENAME_EXISTS = 2, /* (if clobber) destination file exists */
 };
 int rename_file(const char *old, const char *newf, int clobber);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! DMOZ_H */

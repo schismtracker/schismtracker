@@ -302,12 +302,6 @@ enum sample_save_format_ids {
 
 /* --------------------------------------------------------------------- */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* --------------------------------------------------------------------- */
-
 /*
 song_load:
         prompt ok/cancel if the existing song hasn't been saved.
@@ -608,10 +602,6 @@ void song_set_pan_scheme(int scheme);
 #define SCHISM_MAX_MESSAGE      MAX_MESSAGE
 
 /* --------------------------------------------------------------------- */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! SONG_H */
 

@@ -1,10 +1,6 @@
 #ifndef _BqtModplugSndGm
 #define _BqtModplugSndGm
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void GM_Patch(int c, unsigned char p, int pref_chn_mask);
 void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask);
 
@@ -39,9 +35,5 @@ void GM_SendSongContinueCode(void);
 void GM_SendSongTickCode(void);
 void GM_SendSongPositionCode(unsigned note16pos);
 void GM_IncrementSongCounter(int count);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

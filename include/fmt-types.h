@@ -85,7 +85,6 @@ READ_INFO(far) LOAD_SONG(far)
 conflict with other ones. I've organized them pretty much in order of popularity. */
 READ_INFO(xm) LOAD_SONG(xm)
 READ_INFO(it) LOAD_SONG(it)
-READ_INFO(psm)
 READ_INFO(mt2)
 READ_INFO(mtm) LOAD_SONG(mtm) SAVE_SONG(mtm)
 READ_INFO(ntk)
@@ -124,7 +123,6 @@ READ_INFO(ogg)
 #endif
 
 /* FIXME where do these belong? */
-READ_INFO(mid) SAVE_SONG(mid)
 READ_INFO(pat) LOAD_INSTRUMENT(pat)
 
 /* STM seems to have a case insensitive magic string with several possible values, and only one byte

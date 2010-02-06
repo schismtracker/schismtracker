@@ -577,42 +577,7 @@ typedef struct _CSoundFile {
         int stop_at_order;
         int stop_at_row;
         unsigned int stop_at_time;
-
-#ifdef __cplusplus
-public:
-        bool Create(const uint8_t * lpStream, uint32_t dwMemLength=0);
-        // Module Loaders
-        bool ReadMod(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadMed(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadUlt(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadDSM(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadFAR(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadAMS(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadAMS2(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadOKT(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadDMF(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadPTM(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadDBM(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadAMF(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadMT2(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadPSM(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadUMX(const uint8_t * lpStream, uint32_t dwMemLength);
-        bool ReadMID(const uint8_t * lpStream, uint32_t dwMemLength);
-        // Save Functions
-        bool SaveXM(disko_t *f, uint32_t);
-        bool SaveS3M(disko_t *f, uint32_t);
-        bool SaveMod(disko_t *f, uint32_t);
-#endif /* C++ */
 } CSoundFile;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* these should not be here */
-int csf_save_xm(CSoundFile *csf, disko_t *f, uint32_t z);
-int csf_save_s3m(CSoundFile *csf, disko_t *f, uint32_t z);
-int csf_save_mod(CSoundFile *csf, disko_t *f, uint32_t z);
 
 
 MODCOMMAND *csf_allocate_pattern(uint32_t rows, uint32_t channels);
@@ -693,9 +658,6 @@ uint32_t csf_detect_unused_samples(CSoundFile *csf, int *pbIns);
 
 void csf_insert_restart_pos(CSoundFile *csf, uint32_t restart_order); // hax
 
-// fastmix
-unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
-
 
 // sample data decompressors
 
@@ -704,10 +666,6 @@ int DMFUnpack(uint8_t * psample, uint8_t * ibuf, uint8_t * ibufmax, uint32_t max
 
 /* apply a preset Adlib patch */
 void adlib_patch_apply(SONGSAMPLE *smp, int patchnum);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 
 ///////////////////////////////////////////////////////////
 // Low-level Mixing functions

@@ -5,7 +5,7 @@
 */
 
 #include "sndfile.h"
-#include "snd_flt.h"
+#include "cmixer.h"
 
 
 // AWE32: cutoff = reg[0-255] * 31.25 + 100 -> [100Hz-8060Hz]

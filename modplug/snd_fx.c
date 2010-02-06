@@ -1,9 +1,9 @@
 #include "sndfile.h"
 
+#include "cmixer.h"
 #include "snd_fm.h"
 #include "snd_fx.h"
 #include "snd_gm.h"
-#include "snd_flt.h"
 #include "tables.h"
 
 #include "util.h" /* for clamp/min */

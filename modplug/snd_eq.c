@@ -14,7 +14,6 @@
  */
 #include "sndfile.h"
 #include "cmixer.h"
-#include "snd_eq.h"
 #include <math.h>
 
 

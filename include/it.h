@@ -219,12 +219,6 @@ enum {
 };
 
 /* --------------------------------------------------------------------- */
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* --------------------------------------------------------------------- */
 /* global crap */
 
 extern struct tracker_status status;
@@ -470,10 +464,6 @@ void feature_check_notes(const char *fmt,
                 const char *volcmd, const char *fxcmd);
 
 /* --------------------------------------------------------------------- */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! IT_H */
 

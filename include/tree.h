@@ -24,11 +24,6 @@
 #ifndef TREE_H
 #define TREE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 /* opaque structure */
 typedef struct tree tree_t;
 
@@ -60,11 +55,6 @@ void *tree_replace(tree_t *tree, void *value);
 /* If one of the items in the tree compares equal to 'value', its value is returned. Otherwise, this function
 returns NULL. (Only the parts of 'value' relevant to 'cmp' need be filled in.) */
 void *tree_find(tree_t *tree, void *value);
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! TREE_H */
 
