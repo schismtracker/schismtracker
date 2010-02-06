@@ -31,65 +31,20 @@ extern "C" {
 
 typedef struct disko disko_t;
 struct disko {
-        const char *name; /* this REALLY needs to be short (3 characters) */
-        const char *extension; /* no dot */
-        int export_only;
+        void (*_write)(disko_t *d, const void *buf, unsigned int len);
+        void (*_seek)(disko_t *d, long pos, int whence);
+        void (*_close)(disko_t *d);
+        void (*_seterror)(disko_t *d);
 
-        /* supplied by driver
-                p is called before anything else (optional)
-
-                m does some mutation/work
-                g receives midi events
-
-                x is called at the end (optional)
-
-                these functions definitely need better names /storlek
-        */
-        /* (preceding comment left for posterity)
-        now that I've spent about 2 hours unobfuscating all of this code, here's what
-        these functions REALLY DO:
-                * first thing, when a .wav (or whatever export-format) write is started,
-                  the disk writer calls 'header', so that the driver can do whatever setup
-                  is necessary; namely, writing out the file header (or more realistically,
-                  seeking past it, since the file length and other stuff that's likely to
-                  go in a header isn't known yet)
-                * then, 'writeaudio' and 'writemidi' are called as necessary while the file
-                  is played through, and are given various chunks of data
-                * at the end of the song, the 'finish' function is called; this is the time
-                  to seek back to that incomplete header and fill in the fields (or do
-                  anything else that has to happen at the end)
-                * 'configure' is called FIRST, but seeing as it's not ever used, its true
-                  purpose is evidently to make the struct slightly bigger -- sort of like
-                  the button on the Alt-T dialog in the sample editor :P
-        */
-        void (*header)(disko_t *x);
-        void (*writeaudio)(disko_t *x, const void *buf, unsigned int len);
-        void (*writemidi)(disko_t *x, const void *buf, unsigned int len, unsigned int delay);
-        void (*finish)(disko_t *x);
-
-        /* don't touch these in the diskwriter drivers -- use disko_write etc. */
-        void (*_write)(disko_t *x, const void *buf, unsigned int len);
-        void (*_seek)(disko_t *x, off_t pos, int whence);
-        void (*_seterror)(disko_t *x);
-
-        /* supplied by driver
-                if "s" is supplied, schism will call it and expect IT
-                to call disko_start(0,0) again when its actually ready.
-
-                this routine is supplied to allow drivers to write dialogs for
-                accepting some configuration
-        */
-        void (*configure)(disko_t *x);
+        // these could be unionized
+        FILE *file;
+        uint8_t *data;
 
         /* untouched by diskwriter; driver may use for anything */
         void *userdata;
 
-        /* sound config */
-        unsigned int rate, bits, channels;
-        int output_le;
-
         /* used by readers, etc */
-        off_t pos;
+        size_t pos, length;
 };
 
 enum {
@@ -106,10 +61,8 @@ enum {
 return values: DW_OK, DW_ERROR */
 int disko_start(const char *file, disko_t *f);
 
-/* multiout */
-int disko_multiout(const char *dir, disko_t *f);
-
-/* kindler, gentler, (and most importantly) simpler version (can't call sync) */
+/* kindler, gentler, (and most importantly) simpler version (can't call sync)
+NOTE: used by orderlist and pattern editor */
 int disko_writeout(const char *file, disko_t *f);
 
 /* fopen/fclose-ish writeout/finish wrapper that allocates a structure */
@@ -157,15 +110,6 @@ void disko_dialog_finished(void);
 
 extern unsigned int disko_output_rate, disko_output_bits,
                         disko_output_channels;
-
-
-extern disko_t wavewriter;
-extern disko_t itwriter;
-extern disko_t s3mwriter;
-extern disko_t xmwriter;
-extern disko_t modwriter;
-extern disko_t mtmwriter;
-extern disko_t midiwriter;
 
 #ifdef __cplusplus
 };

@@ -229,6 +229,18 @@ struct sample_save_format {
 
 extern struct sample_save_format sample_save_formats[];
 
+
+/* and for saving songs */
+
+struct song_save_format {
+        const char *label; // label for the button on the save page
+        const char *ext; // no dot
+        int (*save_func) (disko_t *fp, CSoundFile *song);
+};
+
+extern struct song_save_format song_save_formats[];
+extern struct song_save_format song_export_formats[];
+
 /* --------------------------------------------------------------------- */
 /* some enums */
 
@@ -277,7 +289,8 @@ enum song_new_flags {
         KEEP_ORDERLIST = 8,
 };
 
-/* used as indices to sample_save_formats[] */
+/* used as indices to sample_save_formats[]
+TODO - don't use these, look them up by name like song_save */
 enum sample_save_format_ids {
         SSMP_ITS = 0,
         SSMP_AIFF = 1,
@@ -309,7 +322,10 @@ song_load_unchecked:
 void song_new(int flags);
 void song_load(const char *file);
 int song_load_unchecked(const char *file);
-int song_save(const char *file, const char *type);
+
+int song_save(const char *file, const char *type); // IT, S3M
+int song_export(const char *file, const char *type); // WAV
+
 
 void song_clear_sample(int n);
 void song_copy_sample(int n, song_sample *src);

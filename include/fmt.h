@@ -54,17 +54,25 @@ enum {
         LOAD_FORMAT_ERROR,      /* it appears to be the correct type, but there's something wrong */
 };
 
+/* return codes for modules savers */
+enum {
+        SAVE_SUCCESS,           /* all's well */
+        SAVE_FILE_ERROR,        /* couldn't write the file; check errno */
+        SAVE_INTERNAL_ERROR,    /* something unrelated to disk i/o */
+};
+
 /* --------------------------------------------------------------------------------------------------------- */
 
 typedef int (*fmt_read_info_func) (dmoz_file_t *file, const uint8_t *data, size_t length);
 typedef int (*fmt_load_song_func) (CSoundFile *song, slurp_t *fp, unsigned int lflags);
+typedef int (*fmt_save_song_func) (disko_t *fp, CSoundFile *song);
 typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sample *smp);
 typedef int (*fmt_save_sample_func) (disko_t *fp, song_sample *smp);
 typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int slot);
 
 #define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
 #define LOAD_SONG(t) int fmt_##t##_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags);
-#define SAVE_SONG(t) void fmt_##t##_save_song(disko_t *fp);
+#define SAVE_SONG(t) void fmt_##t##_save_song(disko_t *fp, CSoundFile *song);
 #define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp);
 #define SAVE_SAMPLE(t) int fmt_##t##_save_sample(disko_t *fp, song_sample *smp);
 #define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot);
