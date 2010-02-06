@@ -342,11 +342,6 @@ int song_save_instrument(int n, const char *file);
 midi_config *song_get_midi_config(void);
 midi_config *song_get_default_midi_config(void);
 
-/* returns bytes */
-unsigned song_copy_sample_raw(int n, unsigned int rs,
-                const void *data, unsigned int samples);
-
-
 
 void song_sample_set_c5speed(int n, unsigned int c5);
 int song_sample_is_empty(int n);
