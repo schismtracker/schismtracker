@@ -30,7 +30,7 @@
 
 /* does IT's raw sample loader use signed or unsigned samples? */
 
-int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample *smp)
+int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 {
         /* we'll uphold IT's limit of 4mb */
         if (length > 4 * 1048576) {
@@ -38,18 +38,18 @@ int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample *smp)
                 return 0;
         }
 
-        smp->speed = 8363;
+        smp->c5speed = 8363;
         smp->volume = 64 * 4;
         smp->global_volume = 64;
 
-        smp->data = song_sample_allocate(length);
+        smp->data = csf_allocate_sample(length);
         memcpy(smp->data, data, length);
         smp->length = length;
 
         return 1;
 }
 
-int fmt_raw_save_sample(disko_t *fp, song_sample *smp)
+int fmt_raw_save_sample(disko_t *fp, song_sample_t *smp)
 {
         disko_write(fp, smp->data, ((smp->flags & SAMP_16_BIT) ? 2:1)*smp->length);
         return 1;

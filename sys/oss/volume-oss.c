@@ -23,7 +23,6 @@
 
 #include "headers.h"
 
-#include "mixer.h"
 #include "util.h"
 #include "log.h"
 
@@ -72,14 +71,14 @@ static int open_mixer_device(void)
 
 /* --------------------------------------------------------------------- */
 
-int oss_mixer_get_max_volume(void);
-int oss_mixer_get_max_volume(void)
+int oss_volume_get_max(void);
+int oss_volume_get_max(void)
 {
         return VOLUME_MAX;
 }
 
-void oss_mixer_read_volume(int *left, int *right);
-void oss_mixer_read_volume(int *left, int *right)
+void oss_volume_read(int *left, int *right);
+void oss_volume_read(int *left, int *right)
 {
         int fd;
         uint8_t volume[4];
@@ -102,8 +101,8 @@ void oss_mixer_read_volume(int *left, int *right)
         close(fd);
 }
 
-void oss_mixer_write_volume(int left, int right);
-void oss_mixer_write_volume(int left, int right)
+void oss_volume_write(int left, int right);
+void oss_volume_write(int left, int right)
 {
         int fd;
         uint8_t volume[4];

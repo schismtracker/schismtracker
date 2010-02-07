@@ -23,7 +23,6 @@
 
 #include "headers.h"
 
-#include "mixer.h"
 #include "util.h"
 
 #ifdef USE_ALSA
@@ -215,23 +214,23 @@ static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
 }
 
 
-int alsa_mixer_get_max_volume(void);
-int alsa_mixer_get_max_volume(void)
+int alsa_volume_get_max(void);
+int alsa_volume_get_max(void)
 {
         int a1, a2;
         _alsa_doit(_alsa_config, &a1, &a2);
         return current_alsa_range;
 }
 
-void alsa_mixer_read_volume(int *left, int *right);
-void alsa_mixer_read_volume(int *left, int *right)
+void alsa_volume_read(int *left, int *right);
+void alsa_volume_read(int *left, int *right)
 {
         *left = *right = 0;
         _alsa_doit(_alsa_read, left, right);
 }
 
-void alsa_mixer_write_volume(int left, int right);
-void alsa_mixer_write_volume(int left, int right)
+void alsa_volume_write(int left, int right);
+void alsa_volume_write(int left, int right)
 {
         _alsa_doit(_alsa_write, &left, &right);
 }

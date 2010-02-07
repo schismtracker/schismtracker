@@ -165,13 +165,13 @@ struct mdl_envelope {
 struct mdlpat {
         int track; // which track to put here
         int rows; // 1-256
-        MODCOMMAND *note; // first note -- add 64 for next note, etc.
+        song_note_t *note; // first note -- add 64 for next note, etc.
         struct mdlpat *next;
 };
 
 struct mdlenv {
         uint32_t flags;
-        INSTRUMENTENVELOPE data;
+        song_envelope_t data;
 };
 
 enum {
@@ -188,31 +188,31 @@ enum {
 };
 
 static const uint8_t mdl_efftrans[] = {
-        /* 0 */ CMD_NONE,
+        /* 0 */ FX_NONE,
         /* 1st column only */
-        /* 1 */ CMD_PORTAMENTOUP,
-        /* 2 */ CMD_PORTAMENTODOWN,
-        /* 3 */ CMD_TONEPORTAMENTO,
-        /* 4 */ CMD_VIBRATO,
-        /* 5 */ CMD_ARPEGGIO,
-        /* 6 */ CMD_NONE,
+        /* 1 */ FX_PORTAMENTOUP,
+        /* 2 */ FX_PORTAMENTODOWN,
+        /* 3 */ FX_TONEPORTAMENTO,
+        /* 4 */ FX_VIBRATO,
+        /* 5 */ FX_ARPEGGIO,
+        /* 6 */ FX_NONE,
         /* Either column */
-        /* 7 */ CMD_TEMPO,
-        /* 8 */ CMD_PANNING,
-        /* 9 */ CMD_SETENVPOSITION,
-        /* A */ CMD_NONE,
-        /* B */ CMD_POSITIONJUMP,
-        /* C */ CMD_GLOBALVOLUME,
-        /* D */ CMD_PATTERNBREAK,
-        /* E */ CMD_S3MCMDEX,
-        /* F */ CMD_SPEED,
+        /* 7 */ FX_TEMPO,
+        /* 8 */ FX_PANNING,
+        /* 9 */ FX_SETENVPOSITION,
+        /* A */ FX_NONE,
+        /* B */ FX_POSITIONJUMP,
+        /* C */ FX_GLOBALVOLUME,
+        /* D */ FX_PATTERNBREAK,
+        /* E */ FX_S3MCMDEX,
+        /* F */ FX_SPEED,
         /* 2nd column only */
-        /* G */ CMD_VOLUMESLIDE, // up
-        /* H */ CMD_VOLUMESLIDE, // down
-        /* I */ CMD_RETRIG,
-        /* J */ CMD_TREMOLO,
-        /* K */ CMD_TREMOR,
-        /* L */ CMD_NONE,
+        /* G */ FX_VOLUMESLIDE, // up
+        /* H */ FX_VOLUMESLIDE, // down
+        /* I */ FX_RETRIG,
+        /* J */ FX_TREMOLO,
+        /* K */ FX_TREMOR,
+        /* L */ FX_NONE,
 };
 
 static const uint8_t autovib_import[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_SINE};
@@ -248,14 +248,14 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
                 case 3: // unused
                 case 5: // set finetune
                 case 8: // set samplestatus (what?)
-                        *pe = CMD_NONE;
+                        *pe = FX_NONE;
                         break;
                 case 1: // pan slide left
-                        *pe = CMD_PANNINGSLIDE;
+                        *pe = FX_PANNINGSLIDE;
                         p = (MAX(p & 0xf, 0xe) << 4) | 0xf;
                         break;
                 case 2: // pan slide right
-                        *pe = CMD_PANNINGSLIDE;
+                        *pe = FX_PANNINGSLIDE;
                         p = 0xf0 | MAX(p & 0xf, 0xe);
                         break;
                 case 4: // vibrato waveform
@@ -268,15 +268,15 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
                         p = 0x40 | (p & 0xf);
                         break;
                 case 9: // retrig
-                        *pe = CMD_RETRIG;
+                        *pe = FX_RETRIG;
                         p &= 0xf;
                         break;
                 case 0xa: // global vol slide up
-                        *pe = CMD_GLOBALVOLSLIDE;
+                        *pe = FX_GLOBALVOLSLIDE;
                         p = 0xf0 & (((p & 0xf) + 1) << 3);
                         break;
                 case 0xb: // global vol slide down
-                        *pe = CMD_GLOBALVOLSLIDE;
+                        *pe = FX_GLOBALVOLSLIDE;
                         p = ((p & 0xf) + 1) >> 1;
                         break;
                 case 0xc: // note cut
@@ -285,7 +285,7 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
                         // nothing to change here
                         break;
                 case 0xf: // offset -- further mangled later.
-                        *pe = CMD_OFFSET;
+                        *pe = FX_OFFSET;
                         break;
                 }
                 break;
@@ -324,7 +324,7 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 }
 
 // return: 1 if an effect was lost, 0 if not.
-static int cram_mdl_effects(MODCOMMAND *note, uint8_t vol, uint8_t e1, uint8_t e2, uint8_t p1, uint8_t p2)
+static int cram_mdl_effects(song_note_t *note, uint8_t vol, uint8_t e1, uint8_t e2, uint8_t p1, uint8_t p2)
 {
         int lostfx = 0;
         int n;
@@ -351,46 +351,46 @@ static int cram_mdl_effects(MODCOMMAND *note, uint8_t vol, uint8_t e1, uint8_t e
         offset, and the second data byte is shared between the two effects.
         And: an offset effect without a note will retrigger the previous note, but I'm not even going to try to
         handle that behavior. */
-        if (e1 == CMD_OFFSET) {
+        if (e1 == FX_OFFSET) {
                 // EFy -xx => offset yxx00
                 p1 = (p1 & 0xf) ? 0xff : p2;
-                if (e2 == CMD_OFFSET)
-                        e2 = CMD_NONE;
-        } else if (e2 == CMD_OFFSET) {
+                if (e2 == FX_OFFSET)
+                        e2 = FX_NONE;
+        } else if (e2 == FX_OFFSET) {
                 // --- EFy => offset y0000 (best we can do without doing a ton of extra work is 0xff00)
                 p2 = (p2 & 0xf) ? 0xff : 0;
         }
 
         if (vol) {
-                note->volcmd = VOLCMD_VOLUME;
-                note->vol = (vol + 2) >> 2;
+                note->voleffect = VOLFX_VOLUME;
+                note->volparam = (vol + 2) >> 2;
         }
 
         /* If we have Dxx + G00, or Dxx + H00, combine them into Lxx/Kxx.
         (Since pitch effects only "fit" in the first effect column, and volume effects only work in the
         second column, we don't have to check every combination here.) */
-        if (e2 == CMD_VOLUMESLIDE && p1 == 0) {
-                if (e1 == CMD_TONEPORTAMENTO) {
-                        e1 = CMD_NONE;
-                        e2 = CMD_TONEPORTAVOL;
-                } else if (e1 == CMD_VIBRATO) {
-                        e1 = CMD_NONE;
-                        e2 = CMD_VIBRATOVOL;
+        if (e2 == FX_VOLUMESLIDE && p1 == 0) {
+                if (e1 == FX_TONEPORTAMENTO) {
+                        e1 = FX_NONE;
+                        e2 = FX_TONEPORTAVOL;
+                } else if (e1 == FX_VIBRATO) {
+                        e1 = FX_NONE;
+                        e2 = FX_VIBRATOVOL;
                 }
         }
 
         /* Try to fit the "best" effect into e2. */
-        if (e1 == CMD_NONE) {
+        if (e1 == FX_NONE) {
                 // easy
-        } else if (e2 == CMD_NONE) {
+        } else if (e2 == FX_NONE) {
                 // almost as easy
                 e2 = e1;
                 p2 = p1;
-                e1 = CMD_NONE;
-        } else if (e1 == e2 && e1 != CMD_S3MCMDEX) {
+                e1 = FX_NONE;
+        } else if (e1 == e2 && e1 != FX_S3MCMDEX) {
                 /* Digitrakker processes the effects left-to-right, so if both effects are the same, the
                 second essentially overrides the first. */
-                e1 = CMD_NONE;
+                e1 = FX_NONE;
         } else if (!vol) {
                 // The volume column is free, so try to shove one of them into there.
 
@@ -398,9 +398,9 @@ static int cram_mdl_effects(MODCOMMAND *note, uint8_t vol, uint8_t e1, uint8_t e
                 // (Just because I'm using the same sort of code twice doesn't make it any less of a hack)
                 for (n = 0; n < 4; n++) {
                         if (convert_voleffect(&e1, &p1, n >> 1)) {
-                                note->volcmd = e1;
-                                note->vol = p1;
-                                e1 = CMD_NONE;
+                                note->voleffect = e1;
+                                note->volparam = p1;
+                                e1 = FX_NONE;
                                 break;
                         } else {
                                 // swap them
@@ -411,7 +411,7 @@ static int cram_mdl_effects(MODCOMMAND *note, uint8_t vol, uint8_t e1, uint8_t e
         }
 
         // If we still have two effects, pick the 'best' one
-        if (e1 != CMD_NONE && e2 != CMD_NONE) {
+        if (e1 != FX_NONE && e2 != FX_NONE) {
                 lostfx++;
                 if (effect_weight[e1] < effect_weight[e2]) {
                         e2 = e1;
@@ -419,7 +419,7 @@ static int cram_mdl_effects(MODCOMMAND *note, uint8_t vol, uint8_t e1, uint8_t e
                 }
         }
 
-        note->command = e2;
+        note->effect = e2;
         note->param = p2;
 
         return lostfx;
@@ -429,7 +429,7 @@ static int cram_mdl_effects(MODCOMMAND *note, uint8_t vol, uint8_t e1, uint8_t e
 /* block reading */
 
 // return: repeat position.
-static int mdl_read_info(CSoundFile *song, slurp_t *fp)
+static int mdl_read_info(song_t *song, slurp_t *fp)
 {
         struct mdl_infoblock info;
         int n, songlen;
@@ -442,36 +442,36 @@ static int mdl_read_info(CSoundFile *song, slurp_t *fp)
         // title is space-padded
         info.title[31] = '\0';
         trim_string(info.title);
-        strncpy(song->song_title, info.title, 25);
-        song->song_title[25] = '\0';
+        strncpy(song->title, info.title, 25);
+        song->title[25] = '\0';
 
-        song->m_nDefaultGlobalVolume = (info.globalvol + 1) >> 1;
-        song->m_nDefaultSpeed = info.speed ?: 1;
-        song->m_nDefaultTempo = MAX(info.tempo, 31); // MDL tempo range is actually 4-255
+        song->initial_global_volume = (info.globalvol + 1) >> 1;
+        song->initial_speed = info.speed ?: 1;
+        song->initial_tempo = MAX(info.tempo, 31); // MDL tempo range is actually 4-255
 
         // channel pannings
         for (n = 0; n < 32; n++) {
-                song->Channels[n].nPan = (info.chanpan[n] & 127) << 1; // ugh
+                song->channels[n].panning = (info.chanpan[n] & 127) << 1; // ugh
                 if (info.chanpan[n] & 128)
-                        song->Channels[n].dwFlags |= CHN_MUTE;
+                        song->channels[n].flags |= CHN_MUTE;
         }
         for (; n < 64; n++) {
-                song->Channels[n].nPan = 128;
-                song->Channels[n].dwFlags |= CHN_MUTE;
+                song->channels[n].panning = 128;
+                song->channels[n].flags |= CHN_MUTE;
         }
 
         songlen = MIN(info.numorders, MAX_ORDERS - 1);
         for (n = 0; n < songlen; n++) {
                 b = slurp_getc(fp);
-                song->Orderlist[n] = (b < MAX_PATTERNS) ? b : ORDER_SKIP;
+                song->orderlist[n] = (b < MAX_PATTERNS) ? b : ORDER_SKIP;
         }
 
         return info.repeatpos;
 }
 
-static void mdl_read_message(CSoundFile *song, slurp_t *fp, uint32_t blklen)
+static void mdl_read_message(song_t *song, slurp_t *fp, uint32_t blklen)
 {
-        char *ptr = song->m_lpszSongComments;
+        char *ptr = song->message;
 
         blklen = MIN(blklen, MAX_MESSAGE);
         slurp_read(fp, ptr, blklen);
@@ -481,11 +481,11 @@ static void mdl_read_message(CSoundFile *song, slurp_t *fp, uint32_t blklen)
                 *ptr = '\n';
 }
 
-static struct mdlpat *mdl_read_patterns(CSoundFile *song, slurp_t *fp)
+static struct mdlpat *mdl_read_patterns(song_t *song, slurp_t *fp)
 {
         struct mdlpat pat_head = { .next = NULL }; // only exists for .next
         struct mdlpat *patptr = &pat_head;
-        MODCOMMAND *note;
+        song_note_t *note;
         int npat, nchn, rows, pat, chn;
         uint16_t trknum;
 
@@ -497,8 +497,8 @@ static struct mdlpat *mdl_read_patterns(CSoundFile *song, slurp_t *fp)
                 rows = slurp_getc(fp) + 1;
                 slurp_seek(fp, 16, SEEK_CUR); // skip the name
 
-                note = song->Patterns[pat] = csf_allocate_pattern(rows, 64);
-                song->PatternSize[pat] = song->PatternAllocSize[pat] = rows;
+                note = song->patterns[pat] = csf_allocate_pattern(rows);
+                song->pattern_size[pat] = song->pattern_alloc_size[pat] = rows;
                 for (chn = 0; chn < nchn; chn++, note++) {
                         slurp_read(fp, &trknum, 2);
                         trknum = bswapLE16(trknum);
@@ -518,11 +518,11 @@ static struct mdlpat *mdl_read_patterns(CSoundFile *song, slurp_t *fp)
 }
 
 // mostly the same as above
-static struct mdlpat *mdl_read_patterns_v0(CSoundFile *song, slurp_t *fp)
+static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 {
         struct mdlpat pat_head = { .next = NULL };
         struct mdlpat *patptr = &pat_head;
-        MODCOMMAND *note;
+        song_note_t *note;
         int npat, pat, chn;
         uint16_t trknum;
 
@@ -530,8 +530,8 @@ static struct mdlpat *mdl_read_patterns_v0(CSoundFile *song, slurp_t *fp)
         npat = MIN(npat, MAX_PATTERNS);
         for (pat = 0; pat < npat; pat++) {
 
-                note = song->Patterns[pat] = csf_allocate_pattern(64, 64);
-                song->PatternSize[pat] = song->PatternAllocSize[pat] = 64;
+                note = song->patterns[pat] = csf_allocate_pattern(64);
+                song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
                 for (chn = 0; chn < 32; chn++, note++) {
                         slurp_read(fp, &trknum, 2);
                         trknum = bswapLE16(trknum);
@@ -550,9 +550,9 @@ static struct mdlpat *mdl_read_patterns_v0(CSoundFile *song, slurp_t *fp)
         return pat_head.next;
 }
 
-static MODCOMMAND **mdl_read_tracks(slurp_t *fp)
+static song_note_t **mdl_read_tracks(slurp_t *fp)
 {
-        MODCOMMAND **tracks = calloc(65536, sizeof(MODCOMMAND *));
+        song_note_t **tracks = calloc(65536, sizeof(song_note_t *));
         int ntrks, trk, row, lostfx = 0;
         uint16_t h;
         uint8_t b, x, y;
@@ -567,7 +567,7 @@ static MODCOMMAND **mdl_read_tracks(slurp_t *fp)
                 slurp_read(fp, &h, 2);
                 bytesleft = bswapLE16(h);
                 fp->length = MIN(fp->length, fp->pos + bytesleft); // narrow
-                tracks[trk] = calloc(256, sizeof(MODCOMMAND));
+                tracks[trk] = calloc(256, sizeof(song_note_t));
                 row = 0;
                 while (row < 256 && !slurp_eof(fp)) {
                         b = slurp_getc(fp);
@@ -601,7 +601,7 @@ static MODCOMMAND **mdl_read_tracks(slurp_t *fp)
                                         b = slurp_getc(fp);
                                         if (b >= MAX_INSTRUMENTS)
                                                 b = 0;
-                                        tracks[trk][row].instr = b;
+                                        tracks[trk][row].instrument = b;
                                 }
                                 vol = (x & MDLNOTE_VOLUME) ? slurp_getc(fp) : 0;
                                 if (x & MDLNOTE_EFFECTS) {
@@ -637,12 +637,12 @@ with the sample number. Then, when building the tracks into patterns, we'll actu
 and rewrite each instrument's sample map as a 1:1 mapping with the sample.
 In the end, the song will play back correctly (well, at least hopefully it will ;) though the instrument names
 won't always line up. */
-static void mdl_read_instruments(CSoundFile *song, slurp_t *fp)
+static void mdl_read_instruments(song_t *song, slurp_t *fp)
 {
         struct mdl_samplehdr shdr; // Etaoin shrdlu
-        SONGINSTRUMENT *ins; // 'master' instrument
-        SONGINSTRUMENT *sins; // other instruments created to track each sample's individual envelopes
-        SONGSAMPLE *smp;
+        song_instrument_t *ins; // 'master' instrument
+        song_instrument_t *sins; // other instruments created to track each sample's individual envelopes
+        song_sample_t *smp;
         int nins, nsmp;
         int insnum;
         int firstnote, note;
@@ -659,9 +659,9 @@ static void mdl_read_instruments(CSoundFile *song, slurp_t *fp)
                         continue;
                 }
                 // ok, make an instrument
-                if (!song->Instruments[insnum])
-                        song->Instruments[insnum] = csf_allocate_instrument();
-                ins = song->Instruments[insnum];
+                if (!song->instruments[insnum])
+                        song->instruments[insnum] = csf_allocate_instrument();
+                ins = song->instruments[insnum];
 
                 slurp_read(fp, ins->name, 25);
                 slurp_seek(fp, 7, SEEK_CUR); // throw away the rest
@@ -674,58 +674,58 @@ static void mdl_read_instruments(CSoundFile *song, slurp_t *fp)
                         if (shdr.smpnum == 0 || shdr.smpnum > MAX_SAMPLES) {
                                 continue;
                         }
-                        if (!song->Instruments[shdr.smpnum])
-                                song->Instruments[shdr.smpnum] = csf_allocate_instrument();
-                        sins = song->Instruments[shdr.smpnum];
+                        if (!song->instruments[shdr.smpnum])
+                                song->instruments[shdr.smpnum] = csf_allocate_instrument();
+                        sins = song->instruments[shdr.smpnum];
 
-                        smp = song->Samples + shdr.smpnum;
+                        smp = song->samples + shdr.smpnum;
 
                         // Write this sample's instrument mapping
                         // (note: test "jazz 2 jazz.mdl", it uses a multisampled piano)
                         shdr.lastnote = MIN(shdr.lastnote, 119);
                         for (note = firstnote; note <= shdr.lastnote; note++)
-                                ins->Keyboard[note] = shdr.smpnum;
+                                ins->sample_map[note] = shdr.smpnum;
                         firstnote = shdr.lastnote + 1; // get ready for the next sample
 
-                        // temporarily hijack the envelope "nNodes" field to write the envelope number
-                        sins->VolEnv.nNodes = shdr.volenv_flags & 63;
-                        sins->PanEnv.nNodes = shdr.panenv_flags & 63;
-                        sins->PitchEnv.nNodes = shdr.freqenv_flags & 63;
+                        // temporarily hijack the envelope "nodes" field to write the envelope number
+                        sins->vol_env.nodes = shdr.volenv_flags & 63;
+                        sins->pan_env.nodes = shdr.panenv_flags & 63;
+                        sins->pitch_env.nodes = shdr.freqenv_flags & 63;
 
                         if (shdr.volenv_flags & 128)
-                                sins->dwFlags |= ENV_VOLUME;
+                                sins->flags |= ENV_VOLUME;
                         if (shdr.panenv_flags & 128)
-                                sins->dwFlags |= ENV_PANNING;
+                                sins->flags |= ENV_PANNING;
                         if (shdr.freqenv_flags & 128)
-                                sins->dwFlags |= ENV_PITCH;
+                                sins->flags |= ENV_PITCH;
 
                         // DT fadeout = 0000-1fff, or 0xffff for "cut"
                         // assuming DT uses 'cut' behavior for anything past 0x1fff, too lazy to bother
                         // hex-editing a file at the moment to find out :P
-                        sins->nFadeOut = (shdr.fadeout < 0x2000)
+                        sins->fadeout = (shdr.fadeout < 0x2000)
                                 ? (shdr.fadeout + 1) >> 1 // this seems about right
                                 : MDL_FADE_CUT; // temporary
 
                         // for the volume envelope / flags:
                         //      "bit 6   -> flags, if volume is used"
                         // ... huh? what happens if the volume isn't used?
-                        smp->nVolume = shdr.volume; //mphack (range 0-255, s/b 0-64)
-                        smp->nPan = ((MIN(shdr.panning, 127) + 1) >> 1) * 4; //mphack
+                        smp->volume = shdr.volume; //mphack (range 0-255, s/b 0-64)
+                        smp->panning = ((MIN(shdr.panning, 127) + 1) >> 1) * 4; //mphack
                         if (shdr.panenv_flags & 64)
-                                smp->uFlags |= CHN_PANNING;
+                                smp->flags |= CHN_PANNING;
 
-                        smp->nVibRate = shdr.vibspeed; // XXX bother checking ranges for vibrato
-                        smp->nVibDepth = shdr.vibdepth;
-                        smp->nVibSweep = shdr.vibsweep;
-                        smp->nVibType = autovib_import[shdr.vibtype & 3];
+                        smp->vib_speed = shdr.vibspeed; // XXX bother checking ranges for vibrato
+                        smp->vib_depth = shdr.vibdepth;
+                        smp->vib_rate = shdr.vibsweep;
+                        smp->vib_type = autovib_import[shdr.vibtype & 3];
                 }
         }
 }
 
-static void mdl_read_sampleinfo(CSoundFile *song, slurp_t *fp, uint8_t *packtype)
+static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 {
         struct mdl_sampleinfo sinfo;
-        SONGSAMPLE *smp;
+        song_sample_t *smp;
         int nsmp;
 
         nsmp = slurp_getc(fp);
@@ -735,7 +735,7 @@ static void mdl_read_sampleinfo(CSoundFile *song, slurp_t *fp, uint8_t *packtype
                         continue;
                 }
 
-                smp = song->Samples + sinfo.smpnum;
+                smp = song->samples + sinfo.smpnum;
                 strncpy(smp->name, sinfo.name, 25);
                 smp->name[25] = '\0';
                 strncpy(smp->filename, sinfo.filename, 8);
@@ -743,33 +743,33 @@ static void mdl_read_sampleinfo(CSoundFile *song, slurp_t *fp, uint8_t *packtype
 
                 // MDL has ten octaves like IT, but they're not the *same* ten octaves -- dropping
                 // perfectly good note data is stupid so I'm adjusting the sample tunings instead
-                smp->nC5Speed = bswapLE32(sinfo.c4speed) * 2;
-                smp->nLength = bswapLE32(sinfo.length);
-                smp->nLoopStart = bswapLE32(sinfo.loopstart);
-                smp->nLoopEnd = bswapLE32(sinfo.looplen);
-                if (smp->nLoopEnd) {
-                        smp->nLoopEnd += smp->nLoopStart;
-                        smp->uFlags |= CHN_LOOP;
+                smp->c5speed = bswapLE32(sinfo.c4speed) * 2;
+                smp->length = bswapLE32(sinfo.length);
+                smp->loop_start = bswapLE32(sinfo.loopstart);
+                smp->loop_end = bswapLE32(sinfo.looplen);
+                if (smp->loop_end) {
+                        smp->loop_end += smp->loop_start;
+                        smp->flags |= CHN_LOOP;
                 }
                 if (sinfo.flags & 1) {
-                        smp->uFlags |= CHN_16BIT;
-                        smp->nLength >>= 1;
-                        smp->nLoopStart >>= 1;
-                        smp->nLoopEnd >>= 1;
+                        smp->flags |= CHN_16BIT;
+                        smp->length >>= 1;
+                        smp->loop_start >>= 1;
+                        smp->loop_end >>= 1;
                 }
                 if (sinfo.flags & 2)
-                        smp->uFlags |= CHN_PINGPONGLOOP;
+                        smp->flags |= CHN_PINGPONGLOOP;
                 packtype[sinfo.smpnum] = ((sinfo.flags >> 2) & 3);
 
-                smp->nGlobalVol = 64;
+                smp->global_volume = 64;
         }
 }
 
 // (ughh)
-static void mdl_read_sampleinfo_v0(CSoundFile *song, slurp_t *fp, uint8_t *packtype)
+static void mdl_read_sampleinfo_v0(song_t *song, slurp_t *fp, uint8_t *packtype)
 {
         struct mdl_sampleinfo_v0 sinfo;
-        SONGSAMPLE *smp;
+        song_sample_t *smp;
         int nsmp;
 
         nsmp = slurp_getc(fp);
@@ -779,39 +779,39 @@ static void mdl_read_sampleinfo_v0(CSoundFile *song, slurp_t *fp, uint8_t *packt
                         continue;
                 }
 
-                smp = song->Samples + sinfo.smpnum;
+                smp = song->samples + sinfo.smpnum;
                 strncpy(smp->name, sinfo.name, 25);
                 smp->name[25] = '\0';
                 strncpy(smp->filename, sinfo.filename, 8);
                 smp->filename[8] = '\0';
 
-                smp->nC5Speed = bswapLE16(sinfo.c4speed) * 2;
-                smp->nLength = bswapLE32(sinfo.length);
-                smp->nLoopStart = bswapLE32(sinfo.loopstart);
-                smp->nLoopEnd = bswapLE32(sinfo.looplen);
-                smp->nVolume = sinfo.volume; //mphack (range 0-255, I think?)
-                if (smp->nLoopEnd) {
-                        smp->nLoopEnd += smp->nLoopStart;
-                        smp->uFlags |= CHN_LOOP;
+                smp->c5speed = bswapLE16(sinfo.c4speed) * 2;
+                smp->length = bswapLE32(sinfo.length);
+                smp->loop_start = bswapLE32(sinfo.loopstart);
+                smp->loop_end = bswapLE32(sinfo.looplen);
+                smp->volume = sinfo.volume; //mphack (range 0-255, I think?)
+                if (smp->loop_end) {
+                        smp->loop_end += smp->loop_start;
+                        smp->flags |= CHN_LOOP;
                 }
                 if (sinfo.flags & 1) {
-                        smp->uFlags |= CHN_16BIT;
-                        smp->nLength >>= 1;
-                        smp->nLoopStart >>= 1;
-                        smp->nLoopEnd >>= 1;
+                        smp->flags |= CHN_16BIT;
+                        smp->length >>= 1;
+                        smp->loop_start >>= 1;
+                        smp->loop_end >>= 1;
                 }
                 if (sinfo.flags & 2)
-                        smp->uFlags |= CHN_PINGPONGLOOP;
+                        smp->flags |= CHN_PINGPONGLOOP;
                 packtype[sinfo.smpnum] = ((sinfo.flags >> 2) & 3);
 
-                smp->nGlobalVol = 64;
+                smp->global_volume = 64;
         }
 }
 
 static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags)
 {
         struct mdl_envelope ehdr;
-        INSTRUMENTENVELOPE *env;
+        song_envelope_t *env;
         uint8_t nenv;
         int n, tick;
 
@@ -825,21 +825,21 @@ static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags
                         envs[ehdr.envnum] = calloc(1, sizeof(struct mdlenv));
                 env = &envs[ehdr.envnum]->data;
 
-                env->nNodes = 15;
+                env->nodes = 15;
                 tick = -ehdr.nodes[0].x; // adjust so it starts at zero
                 for (n = 0; n < 15; n++) {
                         if (!ehdr.nodes[n].x) {
-                                env->nNodes = MAX(n, 2);
+                                env->nodes = MAX(n, 2);
                                 break;
                         }
                         tick += ehdr.nodes[n].x;
-                        env->Ticks[n] = tick;
-                        env->Values[n] = MIN(ehdr.nodes[n].y, 64); // actually 0-63
+                        env->ticks[n] = tick;
+                        env->values[n] = MIN(ehdr.nodes[n].y, 64); // actually 0-63
                 }
 
-                env->nLoopStart = ehdr.loop & 0xf;
-                env->nLoopEnd = ehdr.loop >> 4;
-                env->nSustainStart = env->nSustainEnd = ehdr.flags & 0xf;
+                env->loop_start = ehdr.loop & 0xf;
+                env->loop_end = ehdr.loop >> 4;
+                env->sustain_start = env->sustain_end = ehdr.flags & 0xf;
 
                 envs[ehdr.envnum]->flags = 0;
                 if (ehdr.flags & 16)
@@ -853,25 +853,25 @@ static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-static void copy_envelope(SONGINSTRUMENT *ins, INSTRUMENTENVELOPE *ienv, struct mdlenv **envs, uint32_t enable)
+static void copy_envelope(song_instrument_t *ins, song_envelope_t *ienv, struct mdlenv **envs, uint32_t enable)
 {
-        // nNodes temporarily indicates which envelope to load
-        struct mdlenv *env = envs[ienv->nNodes];
+        // nodes temporarily indicates which envelope to load
+        struct mdlenv *env = envs[ienv->nodes];
         if (env) {
-                ins->dwFlags |= env->flags;
-                memcpy(ienv, &env->data, sizeof(INSTRUMENTENVELOPE));
+                ins->flags |= env->flags;
+                memcpy(ienv, &env->data, sizeof(song_envelope_t));
         } else {
-                ins->dwFlags &= ~enable;
-                ienv->nNodes = 2;
+                ins->flags &= ~enable;
+                ienv->nodes = 2;
         }
 }
 
-int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 {
         struct mdlpat *pat, *patptr = NULL;
         struct mdlenv *volenvs[64] = {NULL}, *panenvs[64] = {NULL}, *freqenvs[64] = {NULL};
         uint8_t packtype[MAX_SAMPLES] = {0};
-        MODCOMMAND **tracks = NULL;
+        song_note_t **tracks = NULL;
         long datapos = 0; // where to seek for the sample data
         int restartpos = -1;
         int trk, n;
@@ -981,9 +981,9 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         if (!(readflags & MDL_HAS_INSTRUMENTS)) {
                 // Probably a v0 file, fake an instrument
                 for (n = 1; n < MAX_SAMPLES; n++) {
-                        if (song->Samples[n].nLength) {
-                                song->Instruments[n] = csf_allocate_instrument();
-                                strcpy(song->Instruments[n]->name, song->Samples[n].name);
+                        if (song->samples[n].length) {
+                                song->instruments[n] = csf_allocate_instrument();
+                                strcpy(song->instruments[n]->name, song->samples[n].name);
                         }
                 }
         }
@@ -995,32 +995,32 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 if (datapos) {
                         slurp_seek(fp, datapos, SEEK_SET);
                         for (n = 1; n < MAX_SAMPLES; n++) {
-                                if (!packtype[n] && !song->Samples[n].nLength)
+                                if (!packtype[n] && !song->samples[n].length)
                                         continue;
                                 uint32_t smpsize, flags;
                                 if (packtype[n] > 2) {
                                         log_appendf(4, " Warning: Sample %d: unknown packing type %d",
                                                     n, packtype[n]);
                                         packtype[n] = 0; // ?
-                                } else if (packtype[n] == ((song->Samples[n].uFlags & CHN_16BIT) ? 1 : 2)) {
+                                } else if (packtype[n] == ((song->samples[n].flags & CHN_16BIT) ? 1 : 2)) {
                                         log_appendf(4, " Warning: Sample %d: bit width / pack type mismatch",
                                                     n);
                                 }
                                 flags = SF_LE | SF_M;
                                 flags |= packtype[n] ? SF_MDL : SF_PCMS;
-                                flags |= (song->Samples[n].uFlags & CHN_16BIT) ? SF_16 : SF_8;
-                                smpsize = csf_read_sample(song->Samples + n, flags,
+                                flags |= (song->samples[n].flags & CHN_16BIT) ? SF_16 : SF_8;
+                                smpsize = csf_read_sample(song->samples + n, flags,
                                         fp->data + fp->pos, fp->length - fp->pos);
                                 slurp_seek(fp, smpsize, SEEK_CUR);
                         }
                 } else {
                         for (n = 1; n < MAX_SAMPLES; n++)
-                                song->Samples[n].nLength = 0;
+                                song->samples[n].length = 0;
                 }
         }
 
         if (readflags & MDL_HAS_TRACKS) {
-                MODCOMMAND *patnote, *trknote;
+                song_note_t *patnote, *trknote;
 
                 // first off, fix all the instrument numbers to compensate
                 // for the screwy envelope craziness
@@ -1032,10 +1032,11 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                         if (NOTE_IS_NOTE(trknote->note)) {
                                                 cnote = trknote->note;
                                         }
-                                        if (trknote->instr) {
+                                        if (trknote->instrument) {
                                                 // translate it
-                                                trknote->instr = song->Instruments[trknote->instr]
-                                                        ? song->Instruments[trknote->instr]->Keyboard[cnote - 1]
+                                                trknote->instrument = song->instruments[trknote->instrument]
+                                                        ? (song->instruments[trknote->instrument]
+                                                           ->sample_map[cnote - 1])
                                                         : 0;
                                         }
                                 }
@@ -1065,43 +1066,43 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 
         // Finish fixing up the instruments
         for (n = 1; n < MAX_INSTRUMENTS; n++) {
-                SONGINSTRUMENT *ins = song->Instruments[n];
+                song_instrument_t *ins = song->instruments[n];
                 if (ins) {
-                        copy_envelope(ins, &ins->VolEnv, volenvs, ENV_VOLUME);
-                        copy_envelope(ins, &ins->PanEnv, panenvs, ENV_PANNING);
-                        copy_envelope(ins, &ins->PitchEnv, freqenvs, ENV_PITCH);
+                        copy_envelope(ins, &ins->vol_env, volenvs, ENV_VOLUME);
+                        copy_envelope(ins, &ins->pan_env, panenvs, ENV_PANNING);
+                        copy_envelope(ins, &ins->pitch_env, freqenvs, ENV_PITCH);
 
-                        if (ins->dwFlags & ENV_VOLUME) {
+                        if (ins->flags & ENV_VOLUME) {
                                 // fix note-fade
-                                if (!(ins->dwFlags & ENV_VOLLOOP))
-                                        ins->VolEnv.nLoopStart = ins->VolEnv.nLoopEnd = ins->VolEnv.nNodes - 1;
-                                if (!(ins->dwFlags & ENV_VOLSUSTAIN))
-                                        ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd
-                                                = ins->VolEnv.nNodes - 1;
-                                ins->dwFlags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
+                                if (!(ins->flags & ENV_VOLLOOP))
+                                        ins->vol_env.loop_start = ins->vol_env.loop_end = ins->vol_env.nodes - 1;
+                                if (!(ins->flags & ENV_VOLSUSTAIN))
+                                        ins->vol_env.sustain_start = ins->vol_env.sustain_end
+                                                = ins->vol_env.nodes - 1;
+                                ins->flags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
                         }
-                        if (ins->nFadeOut == MDL_FADE_CUT) {
+                        if (ins->fadeout == MDL_FADE_CUT) {
                                 // fix note-off
-                                if (!(ins->dwFlags & ENV_VOLUME)) {
-                                        ins->VolEnv.Ticks[0] = 0;
-                                        ins->VolEnv.Values[0] = 64;
-                                        ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd = 0;
-                                        ins->dwFlags |= ENV_VOLUME | ENV_VOLSUSTAIN;
+                                if (!(ins->flags & ENV_VOLUME)) {
+                                        ins->vol_env.ticks[0] = 0;
+                                        ins->vol_env.values[0] = 64;
+                                        ins->vol_env.sustain_start = ins->vol_env.sustain_end = 0;
+                                        ins->flags |= ENV_VOLUME | ENV_VOLSUSTAIN;
                                         // (the rest is set below)
                                 }
-                                int se = ins->VolEnv.nSustainEnd;
-                                ins->VolEnv.nNodes = se + 2;
-                                ins->VolEnv.Ticks[se + 1] = ins->VolEnv.Ticks[se] + 1;
-                                ins->VolEnv.Values[se + 1] = 0;
-                                ins->nFadeOut = 0;
+                                int se = ins->vol_env.sustain_end;
+                                ins->vol_env.nodes = se + 2;
+                                ins->vol_env.ticks[se + 1] = ins->vol_env.ticks[se] + 1;
+                                ins->vol_env.values[se + 1] = 0;
+                                ins->fadeout = 0;
                         }
 
                         // set a 1:1 map for each instrument with a corresponding sample,
                         // and a blank map for each one that doesn't.
-                        int note, smp = song->Samples[n].pSample ? n : 0;
+                        int note, smp = song->samples[n].data ? n : 0;
                         for (note = 0; note < 120; note++) {
-                                ins->Keyboard[note] = smp;
-                                ins->NoteMap[note] = note + 1;
+                                ins->sample_map[note] = smp;
+                                ins->note_map[note] = note + 1;
                         }
                 }
         }
@@ -1122,7 +1123,7 @@ int fmt_mdl_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         if (restartpos > 0)
                 csf_insert_restart_pos(song, restartpos);
 
-        song->m_dwSongFlags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE | SONG_LINEARSLIDES;
+        song->flags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE | SONG_LINEARSLIDES;
 
         sprintf(song->tracker_id, "Digitrakker %s",
                 (fmtver == 0x11) ? "3" // really could be 2.99b -- but close enough for me

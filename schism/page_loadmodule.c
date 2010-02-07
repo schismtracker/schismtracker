@@ -41,7 +41,7 @@
 #include <ctype.h>
 #include <errno.h>
 
-#include "mplink.h"
+#include "sndfile.h"
 
 #include "disko.h"
 
@@ -224,7 +224,7 @@ static void loadsave_song_changed(void)
 /* NOTE: ptr should be dynamically allocated, or NULL */
 static void do_save_song(char *ptr)
 {
-        int n, ret, export = (status.current_page == PAGE_EXPORT_MODULE);
+        int ret, export = (status.current_page == PAGE_EXPORT_MODULE);
         const char *filename = ptr ?: song_get_filename();
         const char *seltype = NULL;
         struct widget *widget;

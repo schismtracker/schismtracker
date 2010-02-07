@@ -367,7 +367,7 @@ static void free_file(dmoz_file_t *file)
                 free(file->title);
                 /* if (file->sample) {
                         if (file->sample->data)
-                                song_sample_free(file->sample->data);
+                                csf_free_sample(file->sample->data);
                         free(file->sample);
                 } */
         }

@@ -32,67 +32,67 @@ static int _mod_period_to_note(int period)
 
         if (period)
                 for (n = 0; n <= NOTE_LAST; n++)
-                        if (period >= (32 * FreqS3MTable[n % 12] >> (n / 12 + 2)))
+                        if (period >= (32 * period_table[n % 12] >> (n / 12 + 2)))
                                 return n + 1;
         return NOTE_NONE;
 }
 
-void mod_import_note(const uint8_t p[4], MODCOMMAND *note)
+void mod_import_note(const uint8_t p[4], song_note_t *note)
 {
         note->note = _mod_period_to_note(((p[0] & 0xf) << 8) + p[1]);
-        note->instr = (p[0] & 0xf0) + (p[2] >> 4);
-        note->volcmd = VOLCMD_NONE;
-        note->vol = 0;
-        note->command = p[2] & 0xf;
+        note->instrument = (p[0] & 0xf0) + (p[2] >> 4);
+        note->voleffect = VOLFX_NONE;
+        note->volparam = 0;
+        note->effect = p[2] & 0xf;
         note->param = p[3];
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-const uint8_t effect_weight[CMD_MAX] = {
-        [CMD_PATTERNBREAK]       = 248,
-        [CMD_POSITIONJUMP]       = 240,
-        [CMD_SPEED]              = 232,
-        [CMD_TEMPO]              = 224,
-        [CMD_GLOBALVOLUME]       = 216,
-        [CMD_GLOBALVOLSLIDE]     = 208,
-        [CMD_CHANNELVOLUME]      = 200,
-        [CMD_CHANNELVOLSLIDE]    = 192,
-        [CMD_TONEPORTAVOL]       = 184,
-        [CMD_TONEPORTAMENTO]     = 176,
-        [CMD_ARPEGGIO]           = 168,
-        [CMD_RETRIG]             = 160,
-        [CMD_TREMOR]             = 152,
-        [CMD_OFFSET]             = 144,
-        [CMD_VOLUME]             = 136,
-        [CMD_VIBRATOVOL]         = 128,
-        [CMD_VOLUMESLIDE]        = 120,
-        [CMD_PORTAMENTODOWN]     = 112,
-        [CMD_PORTAMENTOUP]       = 104,
-        [CMD_NOTESLIDEDOWN]      =  96, // IMF Hxy
-        [CMD_NOTESLIDEUP]        =  88, // IMF Gxy
-        [CMD_PANNING]            =  80,
-        [CMD_PANNINGSLIDE]       =  72,
-        [CMD_MIDI]               =  64,
-        [CMD_S3MCMDEX]           =  56,
-        [CMD_PANBRELLO]          =  48,
-        [CMD_VIBRATO]            =  40,
-        [CMD_FINEVIBRATO]        =  32,
-        [CMD_TREMOLO]            =  24,
-        [CMD_KEYOFF]             =  16,
-        [CMD_SETENVPOSITION]     =   8,
-        [CMD_NONE]               =   0,
+const uint8_t effect_weight[FX_MAX] = {
+        [FX_PATTERNBREAK]       = 248,
+        [FX_POSITIONJUMP]       = 240,
+        [FX_SPEED]              = 232,
+        [FX_TEMPO]              = 224,
+        [FX_GLOBALVOLUME]       = 216,
+        [FX_GLOBALVOLSLIDE]     = 208,
+        [FX_CHANNELVOLUME]      = 200,
+        [FX_CHANNELVOLSLIDE]    = 192,
+        [FX_TONEPORTAVOL]       = 184,
+        [FX_TONEPORTAMENTO]     = 176,
+        [FX_ARPEGGIO]           = 168,
+        [FX_RETRIG]             = 160,
+        [FX_TREMOR]             = 152,
+        [FX_OFFSET]             = 144,
+        [FX_VOLUME]             = 136,
+        [FX_VIBRATOVOL]         = 128,
+        [FX_VOLUMESLIDE]        = 120,
+        [FX_PORTAMENTODOWN]     = 112,
+        [FX_PORTAMENTOUP]       = 104,
+        [FX_NOTESLIDEDOWN]      =  96, // IMF Hxy
+        [FX_NOTESLIDEUP]        =  88, // IMF Gxy
+        [FX_PANNING]            =  80,
+        [FX_PANNINGSLIDE]       =  72,
+        [FX_MIDI]               =  64,
+        [FX_S3MCMDEX]           =  56,
+        [FX_PANBRELLO]          =  48,
+        [FX_VIBRATO]            =  40,
+        [FX_FINEVIBRATO]        =  32,
+        [FX_TREMOLO]            =  24,
+        [FX_KEYOFF]             =  16,
+        [FX_SETENVPOSITION]     =   8,
+        [FX_NONE]               =   0,
 };
 
-void swap_effects(MODCOMMAND *note)
+void swap_effects(song_note_t *note)
 {
-        MODCOMMAND tmp = {
+        song_note_t tmp = {
                 .note = note->note,
-                .instr = note->instr,
-                .volcmd = note->command,
-                .vol = note->param,
-                .command = note->volcmd,
-                .param = note->vol,
+                .instrument = note->instrument,
+                .voleffect = note->effect,
+                .volparam = note->param,
+                .effect = note->voleffect,
+                .param = note->volparam,
         };
         *note = tmp;
 }
@@ -100,62 +100,62 @@ void swap_effects(MODCOMMAND *note)
 int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 {
         switch (*e) {
-        case CMD_NONE:
+        case FX_NONE:
                 return 1;
-        case CMD_VOLUME:
-                *e = VOLCMD_VOLUME;
+        case FX_VOLUME:
+                *e = VOLFX_VOLUME;
                 *p = MIN(*p, 64);
                 break;
-        case CMD_PORTAMENTOUP:
+        case FX_PORTAMENTOUP:
                 if (force)
                         *p = MIN(*p, 9);
                 else if (*p > 9)
                         return 0;
-                *e = VOLCMD_PORTAUP;
+                *e = VOLFX_PORTAUP;
                 break;
-        case CMD_PORTAMENTODOWN:
+        case FX_PORTAMENTODOWN:
                 if (force)
                         *p = MIN(*p, 9);
                 else if (*p > 9)
                         return 0;
-                *e = VOLCMD_PORTADOWN;
+                *e = VOLFX_PORTADOWN;
                 break;
-        case CMD_TONEPORTAMENTO:
+        case FX_TONEPORTAMENTO:
                 if (*p >= 0xf0) {
                         // hack for people who can't type F twice :)
-                        *e = VOLCMD_TONEPORTAMENTO;
+                        *e = VOLFX_TONEPORTAMENTO;
                         *p = 0xff;
                         return 1;
                 }
                 for (int n = 0; n < 10; n++) {
                         if (force
-                            ? (*p <= ImpulseTrackerPortaVolCmd[n])
-                            : (*p == ImpulseTrackerPortaVolCmd[n])) {
-                                *e = VOLCMD_TONEPORTAMENTO;
+                            ? (*p <= vc_portamento_table[n])
+                            : (*p == vc_portamento_table[n])) {
+                                *e = VOLFX_TONEPORTAMENTO;
                                 *p = n;
                                 return 1;
                         }
                 }
                 return 0;
-        case CMD_VIBRATO:
+        case FX_VIBRATO:
                 if (force)
                         *p = MIN(*p, 9);
                 else if (*p > 9)
                         return 0;
-                *e = VOLCMD_VIBRATODEPTH;
+                *e = VOLFX_VIBRATODEPTH;
                 break;
-        case CMD_FINEVIBRATO:
+        case FX_FINEVIBRATO:
                 if (force)
                         *p = 0;
                 else if (*p)
                         return 0;
-                *e = VOLCMD_VIBRATODEPTH;
+                *e = VOLFX_VIBRATODEPTH;
                 break;
-        case CMD_PANNING:
+        case FX_PANNING:
                 *p = MIN(64, *p * 64 / 255);
-                *e = VOLCMD_PANNING;
+                *e = VOLFX_PANNING;
                 break;
-        case CMD_VOLUMESLIDE:
+        case FX_VOLUMESLIDE:
                 // ugh
                 // (IT doesn't even attempt to do this, presumably since it'd screw up the effect memory)
                 if (*p == 0)
@@ -167,13 +167,13 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
                                 return 0;
                         else
                                 *p >>= 4;
-                        *e = VOLCMD_VOLSLIDEUP;
+                        *e = VOLFX_VOLSLIDEUP;
                 } else if ((*p & 0xf0) == 0) { // D0x / Dx
                         if (force)
                                 *p = MIN(*p, 9);
                         else if (*p > 9)
                                 return 0;
-                        *e = VOLCMD_VOLSLIDEDOWN;
+                        *e = VOLFX_VOLSLIDEDOWN;
                 } else if ((*p & 0xf) == 0xf) { // DxF / Ax
                         if (force)
                                 *p = MIN(*p >> 4, 9);
@@ -181,7 +181,7 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
                                 return 0;
                         else
                                 *p >>= 4;
-                        *e = VOLCMD_FINEVOLUP;
+                        *e = VOLFX_FINEVOLUP;
                 } else if ((*p & 0xf0) == 0xf0) { // DFx / Bx
                         if (force)
                                 *p = MIN(*p, 9);
@@ -189,20 +189,20 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
                                 return 0;
                         else
                                 *p &= 0xf;
-                        *e = VOLCMD_FINEVOLDOWN;
+                        *e = VOLFX_FINEVOLDOWN;
                 } else { // ???
                         return 0;
                 }
                 break;
-        case CMD_S3MCMDEX:
+        case FX_S3MCMDEX:
                 switch (*p >> 4) {
                 case 8:
                         /* Impulse Tracker imports XM volume-column panning very weirdly:
                                 XM = P0 P1 P2 P3 P4 P5 P6 P7 P8 P9 PA PB PC PD PE PF
                                 IT = 00 05 10 15 20 21 30 31 40 45 42 47 60 61 62 63
                         I'll be um, not duplicating that behavior. :) */
-                        *e = VOLCMD_PANNING;
-                        *p = SHORT_PANNING[*p & 0xf];
+                        *e = VOLFX_PANNING;
+                        *p = short_panning_table[*p & 0xf];
                         return 1;
                 case 0: case 1: case 2: case 0xf:
                         if (force) {

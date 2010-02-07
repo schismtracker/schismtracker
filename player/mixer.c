@@ -1,8 +1,24 @@
 /*
- * This source code is public domain.
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010 Storlek
+ * URL: http://schismtracker.org/
  *
- * Authors: Olivier Lapicque <olivierl@jps.net>
- *          Markus Fick <webmaster@mark-f.de> spline + fir-resampler
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <stdint.h>
@@ -25,13 +41,10 @@
 void (*csf_multi_out_raw) (int chan, int *buf, int len) = NULL;
 
 
-// Front Mix Buffer (Also room for interleaved rear mix)
-int MixSoundBuffer[MIXBUFFERSIZE * 4];
-
-int MixRearBuffer[MIXBUFFERSIZE * 2];
-float MixFloatBuffer[MIXBUFFERSIZE * 2];
-
-int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
+// Mix Buffer (Also room for interleaved rear mix)
+int mix_buffer[MIXBUFFERSIZE * 4];
+float mix_buffer_float[MIXBUFFERSIZE * 2];
+int mix_buffer_multi[64][MIXBUFFERSIZE * 4];
 
 
 
@@ -96,28 +109,28 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 // ----------------------------------------------------------------------------
 
 #define SNDMIX_BEGINSAMPLELOOP8 \
-        register SONGVOICE * const pChn = pChannel; \
-        nPos = pChn->nPosLo; \
-        const signed char *p = (signed char *)(pChn->pCurrentSample + pChn->nPos); \
-        if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos; \
+        register song_voice_t * const chan = channel; \
+        position = chan->position_frac; \
+        const signed char *p = (signed char *)(chan->current_sample_data + chan->position); \
+        if (chan->flags & CHN_STEREO) p += chan->position; \
         int *pvol = pbuffer;\
         do {
 
 
 #define SNDMIX_BEGINSAMPLELOOP16\
-        register SONGVOICE * const pChn = pChannel;\
-        nPos = pChn->nPosLo;\
-        const signed short *p = (signed short *)(pChn->pCurrentSample+(pChn->nPos*2));\
-        if (pChn->dwFlags & CHN_STEREO) p += pChn->nPos;\
+        register song_voice_t * const chan = channel;\
+        position = chan->position_frac;\
+        const signed short *p = (signed short *)(chan->current_sample_data+(chan->position*2));\
+        if (chan->flags & CHN_STEREO) p += chan->position;\
         int *pvol = pbuffer;\
         do {
 
 
 #define SNDMIX_ENDSAMPLELOOP \
-                nPos += pChn->nInc; \
+                position += chan->increment; \
         } while (pvol < pbufmax); \
-        pChn->nPos  += nPos >> 16; \
-        pChn->nPosLo = nPos & 0xFFFF;
+        chan->position  += position >> 16; \
+        chan->position_frac = position & 0xFFFF;
 
 
 #define SNDMIX_ENDSAMPLELOOP8   SNDMIX_ENDSAMPLELOOP
@@ -129,25 +142,25 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 // No interpolation
 #define SNDMIX_GETMONOVOL8NOIDO \
-    int vol = p[nPos >> 16] << 8;
+    int vol = p[position >> 16] << 8;
 
 
 #define SNDMIX_GETMONOVOL16NOIDO \
-    int vol = p[nPos >> 16];
+    int vol = p[position >> 16];
 
 
 // Linear Interpolation
 #define SNDMIX_GETMONOVOL8LINEAR \
-    int poshi   = nPos >> 16; \
-    int poslo   = (nPos >> 8) & 0xFF; \
+    int poshi   = position >> 16; \
+    int poslo   = (position >> 8) & 0xFF; \
     int srcvol  = p[poshi]; \
     int destvol = p[poshi+1]; \
     int vol     = (srcvol<<8) + ((int)(poslo * (destvol - srcvol)));
 
 
 #define SNDMIX_GETMONOVOL16LINEAR \
-    int poshi   = nPos >> 16; \
-    int poslo   = (nPos >> 8) & 0xFF; \
+    int poshi   = position >> 16; \
+    int poslo   = (position >> 8) & 0xFF; \
     int srcvol  = p[poshi]; \
     int destvol = p[poshi + 1]; \
     int vol     = srcvol + ((int)(poslo * (destvol - srcvol)) >> 8);
@@ -159,8 +172,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
 #define SNDMIX_GETMONOVOL8SPLINE \
-    int poshi = nPos >> 16; \
-    int poslo = (nPos >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
+    int poshi = position >> 16; \
+    int poslo = (position >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
     int vol   = (cubic_spline_lut[poslo    ] * (int)p[poshi - 1] + \
                  cubic_spline_lut[poslo + 1] * (int)p[poshi    ] + \
                  cubic_spline_lut[poslo + 3] * (int)p[poshi + 2] + \
@@ -168,8 +181,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
 #define SNDMIX_GETMONOVOL16SPLINE \
-    int poshi = nPos >> 16; \
-    int poslo = (nPos >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
+    int poshi = position >> 16; \
+    int poslo = (position >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
     int vol   = (cubic_spline_lut[poslo    ] * (int)p[poshi - 1] + \
                  cubic_spline_lut[poslo + 1] * (int)p[poshi    ] + \
                  cubic_spline_lut[poslo + 3] * (int)p[poshi + 2] + \
@@ -183,8 +196,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
 #define SNDMIX_GETMONOVOL8FIRFILTER \
-    int poshi  = nPos >> 16;\
-    int poslo  = (nPos & 0xFFFF);\
+    int poshi  = position >> 16;\
+    int poslo  = (position & 0xFFFF);\
     int firidx = ((poslo + WFIR_FRACHALVE) >> WFIR_FRACSHIFT) & WFIR_FRACMASK; \
     int vol    = (windowed_fir_lut[firidx + 0] * (int)p[poshi + 1 - 4]); \
         vol   += (windowed_fir_lut[firidx + 1] * (int)p[poshi + 2 - 4]); \
@@ -198,8 +211,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
 #define SNDMIX_GETMONOVOL16FIRFILTER \
-    int poshi  = nPos >> 16;\
-    int poslo  = (nPos & 0xFFFF);\
+    int poshi  = position >> 16;\
+    int poslo  = (position & 0xFFFF);\
     int firidx = ((poslo + WFIR_FRACHALVE) >> WFIR_FRACSHIFT) & WFIR_FRACMASK; \
     int vol1   = (windowed_fir_lut[firidx + 0] * (int)p[poshi + 1 - 4]); \
         vol1  += (windowed_fir_lut[firidx + 1] * (int)p[poshi + 2 - 4]); \
@@ -217,19 +230,19 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 // No interpolation
 #define SNDMIX_GETSTEREOVOL8NOIDO \
-    int vol_l = p[(nPos >> 16) * 2    ] << 8; \
-    int vol_r = p[(nPos >> 16) * 2 + 1] << 8;
+    int vol_l = p[(position >> 16) * 2    ] << 8; \
+    int vol_r = p[(position >> 16) * 2 + 1] << 8;
 
 
 #define SNDMIX_GETSTEREOVOL16NOIDO \
-    int vol_l = p[(nPos >> 16) * 2    ]; \
-    int vol_r = p[(nPos >> 16) * 2 + 1];
+    int vol_l = p[(position >> 16) * 2    ]; \
+    int vol_r = p[(position >> 16) * 2 + 1];
 
 
 // Linear Interpolation
 #define SNDMIX_GETSTEREOVOL8LINEAR \
-    int poshi    = nPos >> 16; \
-    int poslo    = (nPos >> 8) & 0xFF; \
+    int poshi    = position >> 16; \
+    int poslo    = (position >> 8) & 0xFF; \
     int srcvol_l = p[poshi * 2]; \
     int vol_l    = (srcvol_l << 8) + ((int)(poslo * (p[poshi * 2 + 2] - srcvol_l))); \
     int srcvol_r = p[poshi * 2 + 1]; \
@@ -237,8 +250,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
 #define SNDMIX_GETSTEREOVOL16LINEAR \
-    int poshi    = nPos >> 16; \
-    int poslo    = (nPos >> 8) & 0xFF; \
+    int poshi    = position >> 16; \
+    int poslo    = (position >> 8) & 0xFF; \
     int srcvol_l = p[poshi * 2]; \
     int vol_l    = srcvol_l + ((int)(poslo * (p[poshi * 2 + 2] - srcvol_l)) >> 8);\
     int srcvol_r = p[poshi * 2 + 1];\
@@ -247,8 +260,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 // Spline Interpolation
 #define SNDMIX_GETSTEREOVOL8SPLINE \
-    int poshi   = nPos >> 16; \
-    int poslo   = (nPos >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
+    int poshi   = position >> 16; \
+    int poslo   = (position >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
     int vol_l   = (cubic_spline_lut[poslo    ] * (int)p[(poshi - 1) * 2   ] + \
                    cubic_spline_lut[poslo + 1] * (int)p[(poshi    ) * 2   ] + \
                    cubic_spline_lut[poslo + 2] * (int)p[(poshi + 1) * 2   ] + \
@@ -260,8 +273,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
 #define SNDMIX_GETSTEREOVOL16SPLINE \
-    int poshi   = nPos >> 16; \
-    int poslo   = (nPos >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
+    int poshi   = position >> 16; \
+    int poslo   = (position >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
     int vol_l   = (cubic_spline_lut[poslo    ] * (int)p[(poshi - 1) * 2    ] + \
                    cubic_spline_lut[poslo + 1] * (int)p[(poshi    ) * 2    ] + \
                    cubic_spline_lut[poslo + 2] * (int)p[(poshi + 1) * 2    ] + \
@@ -274,8 +287,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 // fir interpolation
 #define SNDMIX_GETSTEREOVOL8FIRFILTER \
-    int poshi   = nPos >> 16;\
-    int poslo   = (nPos & 0xFFFF);\
+    int poshi   = position >> 16;\
+    int poslo   = (position & 0xFFFF);\
     int firidx  = ((poslo + WFIR_FRACHALVE) >> WFIR_FRACSHIFT) & WFIR_FRACMASK; \
     int vol_l   = (windowed_fir_lut[firidx + 0] * (int)p[(poshi + 1 - 4) * 2]); \
         vol_l  += (windowed_fir_lut[firidx + 1] * (int)p[(poshi + 2 - 4) * 2]); \
@@ -298,8 +311,8 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
 #define SNDMIX_GETSTEREOVOL16FIRFILTER \
-    int poshi   = nPos >> 16;\
-    int poslo   = (nPos & 0xFFFF);\
+    int poshi   = position >> 16;\
+    int poslo   = (position & 0xFFFF);\
     int firidx  = ((poslo + WFIR_FRACHALVE) >> WFIR_FRACSHIFT) & WFIR_FRACMASK; \
     int vol1_l  = (windowed_fir_lut[firidx + 0] * (int)p[(poshi + 1 - 4) * 2]); \
         vol1_l += (windowed_fir_lut[firidx + 1] * (int)p[(poshi + 2 - 4) * 2]); \
@@ -322,45 +335,45 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 
 #define SNDMIX_STOREMONOVOL \
-    pvol[0] += vol * pChn->nRightVol; \
-    pvol[1] += vol * pChn->nLeftVol; \
+    pvol[0] += vol * chan->right_volume; \
+    pvol[1] += vol * chan->left_volume; \
     pvol += 2;
 
 
 #define SNDMIX_STORESTEREOVOL \
-    pvol[0] += vol_l * pChn->nRightVol; \
-    pvol[1] += vol_r * pChn->nLeftVol; \
+    pvol[0] += vol_l * chan->right_volume; \
+    pvol[1] += vol_r * chan->left_volume; \
     pvol += 2;
 
 
 #define SNDMIX_STOREFASTMONOVOL \
-    int v = vol * pChn->nRightVol; \
+    int v = vol * chan->right_volume; \
     pvol[0] += v; \
     pvol[1] += v; \
     pvol += 2;
 
 
 #define SNDMIX_RAMPMONOVOL \
-    nRampLeftVol += pChn->nLeftRamp; \
-    nRampRightVol += pChn->nRightRamp; \
-    pvol[0] += vol * (nRampRightVol >> VOLUMERAMPPRECISION); \
-    pvol[1] += vol * (nRampLeftVol >> VOLUMERAMPPRECISION); \
+    left_ramp_volume += chan->left_ramp; \
+    right_ramp_volume += chan->right_ramp; \
+    pvol[0] += vol * (right_ramp_volume >> VOLUMERAMPPRECISION); \
+    pvol[1] += vol * (left_ramp_volume >> VOLUMERAMPPRECISION); \
     pvol += 2;
 
 
 #define SNDMIX_RAMPFASTMONOVOL \
-    nRampRightVol += pChn->nRightRamp; \
-    int fastvol = vol * (nRampRightVol >> VOLUMERAMPPRECISION); \
+    right_ramp_volume += chan->right_ramp; \
+    int fastvol = vol * (right_ramp_volume >> VOLUMERAMPPRECISION); \
     pvol[0] += fastvol; \
     pvol[1] += fastvol; \
     pvol += 2;
 
 
 #define SNDMIX_RAMPSTEREOVOL \
-    nRampLeftVol += pChn->nLeftRamp; \
-    nRampRightVol += pChn->nRightRamp; \
-    pvol[0] += vol_l * (nRampRightVol >> VOLUMERAMPPRECISION); \
-    pvol[1] += vol_r * (nRampLeftVol >> VOLUMERAMPPRECISION); \
+    left_ramp_volume += chan->left_ramp; \
+    right_ramp_volume += chan->right_ramp; \
+    pvol[0] += vol_l * (right_ramp_volume >> VOLUMERAMPPRECISION); \
+    pvol[1] += vol_r * (left_ramp_volume >> VOLUMERAMPPRECISION); \
     pvol += 2;
 
 
@@ -371,19 +384,19 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 // Mono
 #define MIX_BEGIN_FILTER \
-    double fy1 = pChannel->nFilter_Y1; \
-    double fy2 = pChannel->nFilter_Y2; \
+    double fy1 = channel->filter_y1; \
+    double fy2 = channel->filter_y2; \
     double ta;
 
 
 #define MIX_END_FILTER \
-    pChannel->nFilter_Y1 = fy1; \
-    pChannel->nFilter_Y2 = fy2;
+    channel->filter_y1 = fy1; \
+    channel->filter_y2 = fy2;
 
 
 #define SNDMIX_PROCESSFILTER \
-    ta = ((double)vol * pChn->nFilter_A0 + fy1 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
-          + FILT_CLIP((fy2-fy1) * pChn->nFilter_B1)); \
+    ta = ((double)vol * chan->filter_a0 + fy1 * (chan->filter_b0 + chan->filter_b1) \
+          + FILT_CLIP((fy2-fy1) * chan->filter_b1)); \
     fy2 = fy1; \
     fy1 = ta; \
     vol = (int)ta;
@@ -391,25 +404,25 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 
 // Stereo
 #define MIX_BEGIN_STEREO_FILTER \
-    double fy1 = pChannel->nFilter_Y1; \
-    double fy2 = pChannel->nFilter_Y2; \
-    double fy3 = pChannel->nFilter_Y3; \
-    double fy4 = pChannel->nFilter_Y4; \
+    double fy1 = channel->filter_y1; \
+    double fy2 = channel->filter_y2; \
+    double fy3 = channel->filter_y3; \
+    double fy4 = channel->filter_y4; \
     double ta, tb;
 
 
 #define MIX_END_STEREO_FILTER \
-    pChannel->nFilter_Y1 = fy1; \
-    pChannel->nFilter_Y2 = fy2; \
-    pChannel->nFilter_Y3 = fy3; \
-    pChannel->nFilter_Y4 = fy4; \
+    channel->filter_y1 = fy1; \
+    channel->filter_y2 = fy2; \
+    channel->filter_y3 = fy3; \
+    channel->filter_y4 = fy4; \
 
 
 #define SNDMIX_PROCESSSTEREOFILTER \
-    ta = ((double)vol_l * pChn->nFilter_A0 + fy1 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
-          + FILT_CLIP((fy2-fy1) * pChn->nFilter_B1)); \
-    tb = ((double)vol_r * pChn->nFilter_A0 + fy3 * (pChn->nFilter_B0 + pChn->nFilter_B1) \
-          + FILT_CLIP((fy4-fy3) * pChn->nFilter_B1)); \
+    ta = ((double)vol_l * chan->filter_a0 + fy1 * (chan->filter_b0 + chan->filter_b1) \
+          + FILT_CLIP((fy2-fy1) * chan->filter_b1)); \
+    tb = ((double)vol_r * chan->filter_a0 + fy3 * (chan->filter_b0 + chan->filter_b1) \
+          + FILT_CLIP((fy4-fy3) * chan->filter_b1)); \
     fy2 = fy1; fy1 = ta; vol_l = (int) ta; \
     fy4 = fy3; fy3 = tb; vol_r = (int) tb;
 
@@ -417,13 +430,13 @@ int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
 //////////////////////////////////////////////////////////
 // Interfaces
 
-typedef void(* mix_interface_t)(SONGVOICE *, int *, int *);
+typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
 
 
 #define BEGIN_MIX_INTERFACE(func) \
-    static void func(SONGVOICE *pChannel, int *pbuffer, int *pbufmax) \
+    static void func(song_voice_t *channel, int *pbuffer, int *pbufmax) \
     { \
-        int nPos;
+        int position;
 
 
 #define END_MIX_INTERFACE() \
@@ -434,30 +447,30 @@ typedef void(* mix_interface_t)(SONGVOICE *, int *, int *);
 // Volume Ramps
 #define BEGIN_RAMPMIX_INTERFACE(func) \
     BEGIN_MIX_INTERFACE(func) \
-        int nRampRightVol = pChannel->nRampRightVol; \
-        int nRampLeftVol = pChannel->nRampLeftVol;
+        int right_ramp_volume = channel->right_ramp_volume; \
+        int left_ramp_volume = channel->left_ramp_volume;
 
 
 #define END_RAMPMIX_INTERFACE() \
         SNDMIX_ENDSAMPLELOOP \
-        pChannel->nRampRightVol = nRampRightVol; \
-        pChannel->nRightVol     = nRampRightVol >> VOLUMERAMPPRECISION; \
-        pChannel->nRampLeftVol  = nRampLeftVol; \
-        pChannel->nLeftVol      = nRampLeftVol >> VOLUMERAMPPRECISION; \
+        channel->right_ramp_volume = right_ramp_volume; \
+        channel->right_volume     = right_ramp_volume >> VOLUMERAMPPRECISION; \
+        channel->left_ramp_volume  = left_ramp_volume; \
+        channel->left_volume      = left_ramp_volume >> VOLUMERAMPPRECISION; \
     }
 
 
 #define BEGIN_FASTRAMPMIX_INTERFACE(func) \
     BEGIN_MIX_INTERFACE(func) \
-        int nRampRightVol = pChannel->nRampRightVol;
+        int right_ramp_volume = channel->right_ramp_volume;
 
 
 #define END_FASTRAMPMIX_INTERFACE() \
         SNDMIX_ENDSAMPLELOOP \
-        pChannel->nRampRightVol = nRampRightVol; \
-        pChannel->nRampLeftVol  = nRampRightVol; \
-        pChannel->nRightVol     = nRampRightVol >> VOLUMERAMPPRECISION; \
-        pChannel->nLeftVol      = pChannel->nRightVol; \
+        channel->right_ramp_volume = right_ramp_volume; \
+        channel->left_ramp_volume  = right_ramp_volume; \
+        channel->right_volume     = right_ramp_volume >> VOLUMERAMPPRECISION; \
+        channel->left_volume      = channel->right_volume; \
     }
 
 
@@ -475,18 +488,18 @@ typedef void(* mix_interface_t)(SONGVOICE *, int *, int *);
 
 #define BEGIN_RAMPMIX_FLT_INTERFACE(func) \
     BEGIN_MIX_INTERFACE(func) \
-        int nRampRightVol = pChannel->nRampRightVol; \
-        int nRampLeftVol  = pChannel->nRampLeftVol; \
+        int right_ramp_volume = channel->right_ramp_volume; \
+        int left_ramp_volume  = channel->left_ramp_volume; \
         MIX_BEGIN_FILTER
 
 
 #define END_RAMPMIX_FLT_INTERFACE() \
         SNDMIX_ENDSAMPLELOOP \
         MIX_END_FILTER \
-        pChannel->nRampRightVol = nRampRightVol; \
-        pChannel->nRightVol     = nRampRightVol >> VOLUMERAMPPRECISION; \
-        pChannel->nRampLeftVol  = nRampLeftVol; \
-        pChannel->nLeftVol      = nRampLeftVol >> VOLUMERAMPPRECISION; \
+        channel->right_ramp_volume = right_ramp_volume; \
+        channel->right_volume     = right_ramp_volume >> VOLUMERAMPPRECISION; \
+        channel->left_ramp_volume  = left_ramp_volume; \
+        channel->left_volume      = left_ramp_volume >> VOLUMERAMPPRECISION; \
     }
 
 
@@ -504,18 +517,18 @@ typedef void(* mix_interface_t)(SONGVOICE *, int *, int *);
 
 #define BEGIN_RAMPMIX_STFLT_INTERFACE(func) \
     BEGIN_MIX_INTERFACE(func) \
-        int nRampRightVol = pChannel->nRampRightVol; \
-        int nRampLeftVol  = pChannel->nRampLeftVol; \
+        int right_ramp_volume = channel->right_ramp_volume; \
+        int left_ramp_volume  = channel->left_ramp_volume; \
         MIX_BEGIN_STEREO_FILTER
 
 
 #define END_RAMPMIX_STFLT_INTERFACE() \
         SNDMIX_ENDSAMPLELOOP \
         MIX_END_STEREO_FILTER \
-        pChannel->nRampRightVol = nRampRightVol; \
-        pChannel->nRightVol     = nRampRightVol >> VOLUMERAMPPRECISION; \
-        pChannel->nRampLeftVol  = nRampLeftVol; \
-        pChannel->nLeftVol      = nRampLeftVol >> VOLUMERAMPPRECISION; \
+        channel->right_ramp_volume = right_ramp_volume; \
+        channel->right_volume     = right_ramp_volume >> VOLUMERAMPPRECISION; \
+        channel->left_ramp_volume  = left_ramp_volume; \
+        channel->left_volume      = left_ramp_volume >> VOLUMERAMPPRECISION; \
     }
 
 
@@ -1181,101 +1194,101 @@ static const mix_interface_t fastmix_functions[2 * 2 * 16] = {
 };
 
 
-static int get_sample_count(SONGVOICE *pChn, int samples)
+static int get_sample_count(song_voice_t *chan, int samples)
 {
-        int nLoopStart = (pChn->dwFlags & CHN_LOOP) ? pChn->nLoopStart : 0;
-        int nInc = pChn->nInc;
+        int loop_start = (chan->flags & CHN_LOOP) ? chan->loop_start : 0;
+        int increment = chan->increment;
 
-        if (samples <= 0 || !nInc || !pChn->nLength)
+        if (samples <= 0 || !increment || !chan->length)
                 return 0;
 
         // Under zero ?
-        if ((int) pChn->nPos < nLoopStart) {
-                if (nInc < 0) {
+        if ((int) chan->position < loop_start) {
+                if (increment < 0) {
                         // Invert loop for bidi loops
-                        int nDelta = ((nLoopStart - pChn->nPos) << 16) - (pChn->nPosLo & 0xFFFF);
-                        pChn->nPos = nLoopStart | (nDelta >> 16);
-                        pChn->nPosLo = nDelta & 0xFFFF;
+                        int delta = ((loop_start - chan->position) << 16) - (chan->position_frac & 0xFFFF);
+                        chan->position = loop_start | (delta >> 16);
+                        chan->position_frac = delta & 0xFFFF;
 
-                        if ((int) pChn->nPos < nLoopStart ||
-                                pChn->nPos >= (nLoopStart + pChn->nLength) / 2) {
-                                pChn->nPos = nLoopStart;
-                                pChn->nPosLo = 0;
+                        if ((int) chan->position < loop_start ||
+                                chan->position >= (loop_start + chan->length) / 2) {
+                                chan->position = loop_start;
+                                chan->position_frac = 0;
                         }
 
-                        nInc = -nInc;
-                        pChn->nInc = nInc;
+                        increment = -increment;
+                        chan->increment = increment;
                         // go forward
-                        pChn->dwFlags &= ~(CHN_PINGPONGFLAG);
+                        chan->flags &= ~(CHN_PINGPONGFLAG);
 
-                        if ((!(pChn->dwFlags & CHN_LOOP)) ||
-                            (pChn->nPos >= pChn->nLength)) {
-                                pChn->nPos = pChn->nLength;
-                                pChn->nPosLo = 0;
+                        if ((!(chan->flags & CHN_LOOP)) ||
+                            (chan->position >= chan->length)) {
+                                chan->position = chan->length;
+                                chan->position_frac = 0;
                                 return 0;
                         }
                 }
                 else {
                         // We probably didn't hit the loop end yet (first loop), so we do nothing
-                        if ((int) pChn->nPos < 0)
-                                pChn->nPos = 0;
+                        if ((int) chan->position < 0)
+                                chan->position = 0;
                 }
         }
         // Past the end
-        else if (pChn->nPos >= pChn->nLength) {
+        else if (chan->position >= chan->length) {
                 // not looping -> stop this channel
-                if (!(pChn->dwFlags & CHN_LOOP))
+                if (!(chan->flags & CHN_LOOP))
                         return 0;
 
-                if (pChn->dwFlags & CHN_PINGPONGLOOP) {
+                if (chan->flags & CHN_PINGPONGLOOP) {
                         // Invert loop
-                        if (nInc > 0) {
-                                nInc = -nInc;
-                                pChn->nInc = nInc;
+                        if (increment > 0) {
+                                increment = -increment;
+                                chan->increment = increment;
                         }
 
-                        pChn->dwFlags |= CHN_PINGPONGFLAG;
+                        chan->flags |= CHN_PINGPONGFLAG;
                         // adjust loop position
-                        int nDeltaHi = (pChn->nPos - pChn->nLength);
-                        int nDeltaLo = 0x10000 - (pChn->nPosLo & 0xFFFF);
-                        pChn->nPos = pChn->nLength - nDeltaHi - (nDeltaLo >> 16);
-                        pChn->nPosLo = nDeltaLo & 0xFFFF;
+                        int delta_hi = (chan->position - chan->length);
+                        int delta_lo = 0x10000 - (chan->position_frac & 0xFFFF);
+                        chan->position = chan->length - delta_hi - (delta_lo >> 16);
+                        chan->position_frac = delta_lo & 0xFFFF;
 
-                        if (pChn->nPos <= pChn->nLoopStart || pChn->nPos >= pChn->nLength)
-                                pChn->nPos = pChn->nLength - PINGPONG_OFFSET;
+                        if (chan->position <= chan->loop_start || chan->position >= chan->length)
+                                chan->position = chan->length - PINGPONG_OFFSET;
                 }
                 else {
                         // This is a bug
-                        if (nInc < 0) {
-                                nInc = -nInc;
-                                pChn->nInc = nInc;
+                        if (increment < 0) {
+                                increment = -increment;
+                                chan->increment = increment;
                         }
 
                         // Restart at loop start
-                        pChn->nPos += nLoopStart - pChn->nLength;
+                        chan->position += loop_start - chan->length;
 
-                        if ((int) pChn->nPos < nLoopStart)
-                                pChn->nPos = pChn->nLoopStart;
+                        if ((int) chan->position < loop_start)
+                                chan->position = chan->loop_start;
                 }
         }
 
-        int nPos = pChn->nPos;
+        int position = chan->position;
 
         // too big increment, and/or too small loop length
-        if (nPos < nLoopStart) {
-                if (nPos < 0 || nInc < 0)
+        if (position < loop_start) {
+                if (position < 0 || increment < 0)
                         return 0;
         }
 
-        if (nPos < 0 || nPos >= (int) pChn->nLength)
+        if (position < 0 || position >= (int) chan->length)
                 return 0;
 
-        int nPosLo = (unsigned short) pChn->nPosLo,
+        int position_frac = (unsigned short) chan->position_frac,
                  sample_count = samples;
 
-        if (nInc < 0) {
-                int nInv = -nInc;
-                int maxsamples = 16384 / ((nInv >> 16) + 1);
+        if (increment < 0) {
+                int inv = -increment;
+                int maxsamples = 16384 / ((inv >> 16) + 1);
 
                 if (maxsamples < 2)
                         maxsamples = 2;
@@ -1283,19 +1296,19 @@ static int get_sample_count(SONGVOICE *pChn, int samples)
                 if (samples > maxsamples)
                         samples = maxsamples;
 
-                int nDeltaHi = (nInv >> 16) * (samples - 1);
-                int nDeltaLo = (nInv & 0xffff) * (samples - 1);
-                int nPosDest = nPos - nDeltaHi + ((nPosLo - nDeltaLo) >> 16);
+                int delta_hi = (inv >> 16) * (samples - 1);
+                int delta_lo = (inv & 0xffff) * (samples - 1);
+                int pos_dest = position - delta_hi + ((position_frac - delta_lo) >> 16);
 
-                if (nPosDest < nLoopStart) {
+                if (pos_dest < loop_start) {
                         sample_count =
-                                (unsigned int) (((((long long) nPos -
-                                        nLoopStart) << 16) + nPosLo -
-                                          1) / nInv) + 1;
+                                (unsigned int) (((((long long) position -
+                                        loop_start) << 16) + position_frac -
+                                          1) / inv) + 1;
                 }
         }
         else {
-                int maxsamples = 16384 / ((nInc >> 16) + 1);
+                int maxsamples = 16384 / ((increment >> 16) + 1);
 
                 if (maxsamples < 2)
                         maxsamples = 2;
@@ -1303,13 +1316,13 @@ static int get_sample_count(SONGVOICE *pChn, int samples)
                 if (samples > maxsamples)
                         samples = maxsamples;
 
-                int nDeltaHi = (nInc >> 16) * (samples - 1);
-                int nDeltaLo = (nInc & 0xffff) * (samples - 1);
-                int nPosDest = nPos + nDeltaHi + ((nPosLo + nDeltaLo) >> 16);
+                int delta_hi = (increment >> 16) * (samples - 1);
+                int delta_lo = (increment & 0xffff) * (samples - 1);
+                int pos_dest = position + delta_hi + ((position_frac + delta_lo) >> 16);
 
-                if (nPosDest >= (int) pChn->nLength) {
+                if (pos_dest >= (int) chan->length) {
                         sample_count = (unsigned int)
-                                (((((long long) pChn->nLength - nPos) << 16) - nPosLo - 1) / nInc) + 1;
+                                (((((long long) chan->length - position) << 16) - position_frac - 1) / increment) + 1;
                 }
         }
 
@@ -1322,79 +1335,76 @@ static int get_sample_count(SONGVOICE *pChn, int samples)
 }
 
 
-unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
+unsigned int csf_create_stereo_mix(song_t *csf, int count)
 {
-        int* pOfsL, *pOfsR;
+        int* ofsl, *ofsr;
         unsigned int nchused, nchmixed;
 
         if (!count)
                 return 0;
 
-        if (gnChannels > 2)
-                init_mix_buffer(MixRearBuffer, count * 2);
-
         nchused = nchmixed = 0;
 
         if (csf_multi_out_raw) {
-                memset(MultiSoundBuffer, 0, sizeof(MultiSoundBuffer));
+                memset(mix_buffer_multi, 0, sizeof(mix_buffer_multi));
         }
 
-        for (unsigned int nChn = 0; nChn < csf->m_nMixChannels; nChn++) {
-                const mix_interface_t *pMixFuncTable;
-                SONGVOICE *const pChannel = &csf->Voices[csf->VoiceMix[nChn]];
-                unsigned int nFlags, nMasterCh;
+        for (unsigned int nchan = 0; nchan < csf->num_voices; nchan++) {
+                const mix_interface_t *mix_func_table;
+                song_voice_t *const channel = &csf->voices[csf->voice_mix[nchan]];
+                unsigned int flags, master_ch;
                 unsigned int nrampsamples;
-                int nSmpCount;
+                int smpcount;
                 int nsamples;
                 int *pbuffer;
 
-                if (!pChannel->pCurrentSample)
+                if (!channel->current_sample_data)
                         continue;
 
-                nMasterCh = (csf->VoiceMix[nChn] < csf->m_nChannels)
-                        ? csf->VoiceMix[nChn] + 1
-                        : pChannel->nMasterChn;
-                pOfsR = &gnDryROfsVol;
-                pOfsL = &gnDryLOfsVol;
-                nFlags = 0;
+                master_ch = (csf->voice_mix[nchan] < MAX_CHANNELS)
+                        ? csf->voice_mix[nchan] + 1
+                        : channel->master_channel;
+                ofsr = &g_dry_rofs_vol;
+                ofsl = &g_dry_lofs_vol;
+                flags = 0;
 
-                if (pChannel->dwFlags & CHN_16BIT)
-                        nFlags |= MIXNDX_16BIT;
+                if (channel->flags & CHN_16BIT)
+                        flags |= MIXNDX_16BIT;
 
-                if (pChannel->dwFlags & CHN_STEREO)
-                        nFlags |= MIXNDX_STEREO;
+                if (channel->flags & CHN_STEREO)
+                        flags |= MIXNDX_STEREO;
 
-                if (pChannel->dwFlags & CHN_FILTER)
-                        nFlags |= MIXNDX_FILTER;
+                if (channel->flags & CHN_FILTER)
+                        flags |= MIXNDX_FILTER;
 
-                if (!(pChannel->dwFlags & CHN_NOIDO) &&
-                    !(gdwSoundSetup & SNDMIX_NORESAMPLING)) {
+                if (!(channel->flags & CHN_NOIDO) &&
+                    !(mix_flags & SNDMIX_NORESAMPLING)) {
                         // use hq-fir mixer?
-                        if ((gdwSoundSetup & (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
+                        if ((mix_flags & (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
                                                 == (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
-                                nFlags |= MIXNDX_FIRSRC;
-                        else if (gdwSoundSetup & SNDMIX_HQRESAMPLER)
-                                nFlags |= MIXNDX_SPLINESRC;
+                                flags |= MIXNDX_FIRSRC;
+                        else if (mix_flags & SNDMIX_HQRESAMPLER)
+                                flags |= MIXNDX_SPLINESRC;
                         else
-                                nFlags |= MIXNDX_LINEARSRC;    // use
+                                flags |= MIXNDX_LINEARSRC;    // use
                 }
 
-                if ((nFlags < 0x40) &&
-                        (pChannel->nLeftVol == pChannel->nRightVol) &&
-                        ((!pChannel->nRampLength) ||
-                        (pChannel->nLeftRamp == pChannel->nRightRamp))) {
-                        pMixFuncTable = fastmix_functions;
+                if ((flags < 0x40) &&
+                        (channel->left_volume == channel->right_volume) &&
+                        ((!channel->ramp_length) ||
+                        (channel->left_ramp == channel->right_ramp))) {
+                        mix_func_table = fastmix_functions;
                 }
                 else {
-                        pMixFuncTable = mix_functions;
+                        mix_func_table = mix_functions;
                 }
 
                 nsamples = count;
-                pbuffer = MixSoundBuffer;
+                pbuffer = mix_buffer;
 
                 // XXX this appears to be very wrong
                 if (csf_multi_out_raw) {
-                        pbuffer = MultiSoundBuffer[nMasterCh];
+                        pbuffer = mix_buffer_multi[master_ch];
                 }
 
                 nchused++;
@@ -1404,85 +1414,85 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
                 do {
                         nrampsamples = nsamples;
 
-                        if (pChannel->nRampLength > 0) {
-                                if ((int) nrampsamples > pChannel->nRampLength)
-                                        nrampsamples = pChannel->nRampLength;
+                        if (channel->ramp_length > 0) {
+                                if ((int) nrampsamples > channel->ramp_length)
+                                        nrampsamples = channel->ramp_length;
                         }
 
-                        nSmpCount = 1;
+                        smpcount = 1;
 
                         /* Figure out the number of remaining samples,
                          * unless we're in AdLib or MIDI mode (to prevent
                          * artificial KeyOffs)
                          */
-                        if (!(pChannel->dwFlags & CHN_ADLIB)) {
-                                nSmpCount = get_sample_count(pChannel, nrampsamples);
+                        if (!(channel->flags & CHN_ADLIB)) {
+                                smpcount = get_sample_count(channel, nrampsamples);
                         }
 
-                        if (nSmpCount <= 0) {
+                        if (smpcount <= 0) {
                                 // Stopping the channel
-                                pChannel->pCurrentSample = NULL;
-                                pChannel->nLength = 0;
-                                pChannel->nPos = 0;
-                                pChannel->nPosLo = 0;
-                                pChannel->nRampLength = 0;
-                                end_channel_ofs(pChannel, pbuffer, nsamples);
-                                *pOfsR += pChannel->nROfs;
-                                *pOfsL += pChannel->nLOfs;
-                                pChannel->nROfs = pChannel->nLOfs = 0;
-                                pChannel->dwFlags &= ~CHN_PINGPONGFLAG;
+                                channel->current_sample_data = NULL;
+                                channel->length = 0;
+                                channel->position = 0;
+                                channel->position_frac = 0;
+                                channel->ramp_length = 0;
+                                end_channel_ofs(channel, pbuffer, nsamples);
+                                *ofsr += channel->rofs;
+                                *ofsl += channel->lofs;
+                                channel->rofs = channel->lofs = 0;
+                                channel->flags &= ~CHN_PINGPONGFLAG;
                                 break;
                         }
 
                         // Should we mix this channel ?
 
-                        if ((nchmixed >= m_nMaxMixChannels && !(gdwSoundSetup & SNDMIX_DIRECTTODISK))
-                            || (!pChannel->nRampLength && !(pChannel->nLeftVol | pChannel->nRightVol))) {
-                                int delta = (pChannel->nInc * (int) nSmpCount) + (int) pChannel->nPosLo;
-                                pChannel->nPosLo = delta & 0xFFFF;
-                                pChannel->nPos += (delta >> 16);
-                                pChannel->nROfs = pChannel->nLOfs = 0;
-                                pbuffer += nSmpCount * 2;
+                        if ((nchmixed >= max_voices && !(mix_flags & SNDMIX_DIRECTTODISK))
+                            || (!channel->ramp_length && !(channel->left_volume | channel->right_volume))) {
+                                int delta = (channel->increment * (int) smpcount) + (int) channel->position_frac;
+                                channel->position_frac = delta & 0xFFFF;
+                                channel->position += (delta >> 16);
+                                channel->rofs = channel->lofs = 0;
+                                pbuffer += smpcount * 2;
                         } else {
                                 // Do mixing
-                                if (pChannel->nLength) {
-                                        pChannel->topnote_offset =
-                                                ((pChannel->nPos << 16) | pChannel->nPosLo) % pChannel->nLength;
+                                if (channel->length) {
+                                        channel->topnote_offset =
+                                                ((channel->position << 16) | channel->position_frac) % channel->length;
                                 }
 
                                 /* Mix the stream, unless we're in AdLib mode */
-                                if (!(pChannel->dwFlags & CHN_ADLIB)) {
+                                if (!(channel->flags & CHN_ADLIB)) {
                                         // Choose function for mixing
-                                        mix_interface_t pMixFunc;
-                                        pMixFunc = pChannel->nRampLength
-                                                ? pMixFuncTable[nFlags | MIXNDX_RAMP]
-                                                : pMixFuncTable[nFlags];
-                                        int *pbufmax = pbuffer + (nSmpCount * 2);
-                                        pChannel->nROfs = -*(pbufmax - 2);
-                                        pChannel->nLOfs = -*(pbufmax - 1);
+                                        mix_interface_t mix_func;
+                                        mix_func = channel->ramp_length
+                                                ? mix_func_table[flags | MIXNDX_RAMP]
+                                                : mix_func_table[flags];
+                                        int *pbufmax = pbuffer + (smpcount * 2);
+                                        channel->rofs = -*(pbufmax - 2);
+                                        channel->lofs = -*(pbufmax - 1);
 
-                                        pMixFunc(pChannel, pbuffer, pbufmax);
-                                        pChannel->nROfs += *(pbufmax - 2);
-                                        pChannel->nLOfs += *(pbufmax - 1);
+                                        mix_func(channel, pbuffer, pbufmax);
+                                        channel->rofs += *(pbufmax - 2);
+                                        channel->lofs += *(pbufmax - 1);
                                         pbuffer = pbufmax;
                                         naddmix = 1;
                                 }
                         }
 
-                        nsamples -= nSmpCount;
+                        nsamples -= smpcount;
 
-                        if (pChannel->nRampLength) {
-                                pChannel->nRampLength -= nSmpCount;
-                                if (pChannel->nRampLength <= 0) {
-                                        pChannel->nRampLength = 0;
-                                        pChannel->nRightVol = pChannel->nNewRightVol;
-                                        pChannel->nLeftVol = pChannel->nNewLeftVol;
-                                        pChannel->nRightRamp = pChannel->nLeftRamp = 0;
+                        if (channel->ramp_length) {
+                                channel->ramp_length -= smpcount;
+                                if (channel->ramp_length <= 0) {
+                                        channel->ramp_length = 0;
+                                        channel->right_volume = channel->right_volume_new;
+                                        channel->left_volume = channel->left_volume_new;
+                                        channel->right_ramp = channel->left_ramp = 0;
 
-                                        if ((pChannel->dwFlags & CHN_NOTEFADE)
-                                                && (!(pChannel->nFadeOutVol))) {
-                                                pChannel->nLength = 0;
-                                                pChannel->pCurrentSample = NULL;
+                                        if ((channel->flags & CHN_NOTEFADE)
+                                                && (!(channel->fadeout_volume))) {
+                                                channel->length = 0;
+                                                channel->current_sample_data = NULL;
                                         }
                                 }
                         }
@@ -1496,14 +1506,14 @@ unsigned int csf_create_stereo_mix(CSoundFile *csf, int count)
 
         if (csf_multi_out_raw) {
                 /* mix all adlib onto track one */
-                Fmdrv_MixTo(MultiSoundBuffer[1], count);
+                Fmdrv_MixTo(mix_buffer_multi[1], count);
 
                 /* XXX why is this 1...63? shouldn't it be 0...63 or 1...64? */
                 for (unsigned int n = 1; n < 64; n++) {
-                        csf_multi_out_raw(n, MultiSoundBuffer[n], count * 2);
+                        csf_multi_out_raw(n, mix_buffer_multi[n], count * 2);
                 }
         } else {
-                Fmdrv_MixTo(MixSoundBuffer, count);
+                Fmdrv_MixTo(mix_buffer, count);
         }
 
         return nchused;

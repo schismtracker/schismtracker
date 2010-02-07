@@ -36,7 +36,7 @@ unsigned int memused_patterns(void)
 {
         unsigned int i, nm, rows, q;
         static unsigned int p_cached;
-        song_note *ptr;
+        song_note_t *ptr;
 
         if (_cache_ok & 1) return p_cached;
         _cache_ok |= 1;
@@ -74,7 +74,7 @@ unsigned int memused_history(void)
 }
 unsigned int memused_samples(void)
 {
-        song_sample *s;
+        song_sample_t *s;
         static unsigned int s_cache;
         unsigned int q;
         int i;
@@ -109,12 +109,10 @@ unsigned int memused_instruments(void)
 }
 unsigned int memused_songmessage(void)
 {
-        char *p;
         static unsigned int m_cache;
         if (_cache_ok & 32) return m_cache;
         _cache_ok |= 32;
-        if (!(p=song_get_message())) return m_cache = 0;
-        return m_cache = strlen(p);
+        return m_cache = strlen(current_song->message);
 }
 
 

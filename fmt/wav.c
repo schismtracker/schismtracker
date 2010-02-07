@@ -178,7 +178,7 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 }
 
 
-int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp)
+int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 {
         wave_file_t f;
         uint32_t flags;
@@ -211,10 +211,10 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample *smp)
 
         smp->volume        = 64 * 4;
         smp->global_volume = 64;
-        smp->speed         = f.fmt.freqHz;
+        smp->c5speed         = f.fmt.freqHz;
         smp->length        = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
 
-        return csf_read_sample((SONGSAMPLE *)smp, flags, (const char *) f.buf, f.data.length);
+        return csf_read_sample((song_sample_t *)smp, flags, (const char *) f.buf, f.data.length);
 }
 
 
@@ -250,7 +250,7 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 
 
-int fmt_wav_save_sample(UNUSED disko_t *fp, UNUSED song_sample *smp)
+int fmt_wav_save_sample(UNUSED disko_t *fp, UNUSED song_sample_t *smp)
 {
         return 0;
 }

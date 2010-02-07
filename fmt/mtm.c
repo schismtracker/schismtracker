@@ -23,7 +23,6 @@
 
 #define NEED_BYTESWAP
 #include "headers.h"
-#include "it.h" /* for feature_check_blahblah */
 #include "fmt.h"
 #include "song.h"
 #include "tables.h"
@@ -72,43 +71,43 @@ int fmt_mtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-static void mtm_unpack_track(const uint8_t *b, MODCOMMAND *note, int rows)
+static void mtm_unpack_track(const uint8_t *b, song_note_t *note, int rows)
 {
         int n;
 
         for (n = 0; n < rows; n++, note++, b += 3) {
                 note->note = ((b[0] & 0xfc) ? ((b[0] >> 2) + 36 + 1) : NOTE_NONE);
-                note->instr = ((b[0] & 0x3) << 4) | (b[1] >> 4);
-                note->volcmd = VOLCMD_NONE;
-                note->vol = 0;
-                note->command = b[1] & 0xf;
+                note->instrument = ((b[0] & 0x3) << 4) | (b[1] >> 4);
+                note->voleffect = VOLFX_NONE;
+                note->volparam = 0;
+                note->effect = b[1] & 0xf;
                 note->param = b[2];
                 /* From mikmod: volume slide up always overrides slide down */
-                if (note->command == 0xa && (note->param & 0xf0))
+                if (note->effect == 0xa && (note->param & 0xf0))
                         note->param &= 0xf0;
                 csf_import_mod_effect(note, 0);
         }
 }
 
-int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         uint8_t b[192];
         uint16_t ntrk, nchan, nord, npat, nsmp;
         uint16_t comment_len;
         int n, pat, chan, smp, rows;
-        MODCOMMAND *note;
+        song_note_t *note;
         uint16_t tmp;
         uint32_t tmplong;
-        MODCOMMAND **trackdata, *tracknote;
-        SONGSAMPLE *sample;
+        song_note_t **trackdata, *tracknote;
+        song_sample_t *sample;
 
         slurp_read(fp, b, 3);
         if (memcmp(b, "MTM", 3) != 0)
                 return LOAD_UNSUPPORTED;
         n = slurp_getc(fp);
         sprintf(song->tracker_id, "MultiTracker %d.%d", n >> 4, n & 0xf);
-        slurp_read(fp, song->song_title, 20);
-        song->song_title[20] = 0;
+        slurp_read(fp, song->title, 20);
+        song->title[20] = 0;
         slurp_read(fp, &ntrk, 2);
         ntrk = bswapLE16(ntrk);
         npat = slurp_getc(fp);
@@ -125,68 +124,68 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         }
         nchan = slurp_getc(fp);
         for (n = 0; n < 32; n++) {
-                song->Channels[n].nPan = SHORT_PANNING[slurp_getc(fp) & 0xf];
-                song->Channels[n].nPan *= 4; //mphack
+                song->channels[n].panning = short_panning_table[slurp_getc(fp) & 0xf];
+                song->channels[n].panning *= 4; //mphack
         }
         for (n = nchan; n < MAX_CHANNELS; n++)
-                song->Channels[n].dwFlags = CHN_MUTE;
+                song->channels[n].flags = CHN_MUTE;
 
-        for (n = 1, sample = song->Samples + 1; n <= nsmp; n++, sample++) {
+        for (n = 1, sample = song->samples + 1; n <= nsmp; n++, sample++) {
                 slurp_read(fp, sample->name, 22);
                 sample->name[22] = 0;
                 slurp_read(fp, &tmplong, 4);
-                sample->nLength = bswapLE32(tmplong);
+                sample->length = bswapLE32(tmplong);
                 slurp_read(fp, &tmplong, 4);
-                sample->nLoopStart = bswapLE32(tmplong);
+                sample->loop_start = bswapLE32(tmplong);
                 slurp_read(fp, &tmplong, 4);
-                sample->nLoopEnd = bswapLE32(tmplong);
-                if ((sample->nLoopEnd - sample->nLoopStart) > 2) {
-                        sample->uFlags |= CHN_LOOP;
+                sample->loop_end = bswapLE32(tmplong);
+                if ((sample->loop_end - sample->loop_start) > 2) {
+                        sample->flags |= CHN_LOOP;
                 } else {
                         /* Both Impulse Tracker and Modplug do this */
-                        sample->nLoopStart = 0;
-                        sample->nLoopEnd = 0;
+                        sample->loop_start = 0;
+                        sample->loop_end = 0;
                 }
-                song->Samples[n].nC5Speed = MOD_FINETUNE(slurp_getc(fp));
-                sample->nVolume = slurp_getc(fp);
-                sample->nVolume *= 4; //mphack
-                sample->nGlobalVol = 64;
+                song->samples[n].c5speed = MOD_FINETUNE(slurp_getc(fp));
+                sample->volume = slurp_getc(fp);
+                sample->volume *= 4; //mphack
+                sample->global_volume = 64;
                 if (slurp_getc(fp) & 1) {
                         printf("TODO: double check 16 bit sample loading");
-                        sample->uFlags |= CHN_16BIT;
-                        sample->nLength >>= 1;
-                        sample->nLoopStart >>= 1;
-                        sample->nLoopEnd >>= 1;
+                        sample->flags |= CHN_16BIT;
+                        sample->length >>= 1;
+                        sample->loop_start >>= 1;
+                        sample->loop_end >>= 1;
                 }
-                song->Samples[n].nVibType = 0;
-                song->Samples[n].nVibSweep = 0;
-                song->Samples[n].nVibDepth = 0;
-                song->Samples[n].nVibRate = 0;
+                song->samples[n].vib_type = 0;
+                song->samples[n].vib_rate = 0;
+                song->samples[n].vib_depth = 0;
+                song->samples[n].vib_speed = 0;
         }
 
         /* orderlist */
-        slurp_read(fp, song->Orderlist, 128);
-        memset(song->Orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
+        slurp_read(fp, song->orderlist, 128);
+        memset(song->orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
 
         /* tracks */
-        trackdata = calloc(ntrk, sizeof(MODCOMMAND *));
+        trackdata = calloc(ntrk, sizeof(song_note_t *));
         for (n = 0; n < ntrk; n++) {
                 slurp_read(fp, b, 3 * rows);
-                trackdata[n] = calloc(rows, sizeof(MODCOMMAND));
+                trackdata[n] = calloc(rows, sizeof(song_note_t));
                 mtm_unpack_track(b, trackdata[n], rows);
         }
 
         /* patterns */
         for (pat = 0; pat <= npat; pat++) {
-                song->Patterns[pat] = csf_allocate_pattern(MAX(rows, 32), 64);
-                song->PatternSize[pat] = song->PatternAllocSize[pat] = 64;
+                song->patterns[pat] = csf_allocate_pattern(MAX(rows, 32));
+                song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
                 tracknote = trackdata[n];
                 for (chan = 0; chan < 32; chan++) {
                         slurp_read(fp, &tmp, 2);
                         tmp = bswapLE16(tmp);
                         if (tmp == 0)
                                 continue;
-                        note = song->Patterns[pat] + chan;
+                        note = song->patterns[pat] + chan;
                         tracknote = trackdata[tmp - 1];
                         for (n = 0; n < rows; n++, tracknote++, note += MAX_CHANNELS)
                                 *note = *tracknote;
@@ -194,10 +193,10 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 if (rows < 32) {
                         /* stick a pattern break on the first channel with an empty effect column
                          * (XXX don't do this if there's already one in another column) */
-                        note = song->Patterns[pat] + 64 * (rows - 1);
-                        while (note->command || note->param)
+                        note = song->patterns[pat] + 64 * (rows - 1);
+                        while (note->effect || note->param)
                                 note++;
-                        note->command = CMD_PATTERNBREAK;
+                        note->effect = FX_PATTERNBREAK;
                 }
         }
 
@@ -206,7 +205,7 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 free(trackdata[n]);
         free(trackdata);
 
-        read_lined_message(song->m_lpszSongComments, fp, comment_len, 40);
+        read_lined_message(song->message, fp, comment_len, 40);
 
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
@@ -214,23 +213,23 @@ int fmt_mtm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         int8_t *ptr;
                         int bps = 1;    /* bytes per sample (i.e. bits / 8) */
 
-                        if (song->Samples[smp].nLength == 0)
+                        if (song->samples[smp].length == 0)
                                 continue;
-                        if (song->Samples[smp].uFlags & CHN_16BIT)
+                        if (song->samples[smp].flags & CHN_16BIT)
                                 bps = 2;
-                        ptr = csf_allocate_sample(bps * song->Samples[smp].nLength);
-                        slurp_read(fp, ptr, bps * song->Samples[smp].nLength);
-                        song->Samples[smp].pSample = ptr;
+                        ptr = csf_allocate_sample(bps * song->samples[smp].length);
+                        slurp_read(fp, ptr, bps * song->samples[smp].length);
+                        song->samples[smp].data = ptr;
 
                         /* convert to signed */
-                        n = song->Samples[smp].nLength;
+                        n = song->samples[smp].length;
                         while (n-- > 0)
                                 ptr[n] += 0x80;
                 }
         }
 
         /* set the rest of the stuff */
-        song->m_dwSongFlags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
+        song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;

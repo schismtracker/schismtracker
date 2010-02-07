@@ -123,7 +123,7 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 /* these functions assume the screen is locked! */
 
 /* loop drawing */
-static void _draw_sample_loop(struct vgamem_overlay *r, song_sample * sample)
+static void _draw_sample_loop(struct vgamem_overlay *r, song_sample_t * sample)
 {
         int loopstart, loopend, y;
         int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
@@ -143,7 +143,7 @@ static void _draw_sample_loop(struct vgamem_overlay *r, song_sample * sample)
         } while (y < r->height);
 }
 
-static void _draw_sample_susloop(struct vgamem_overlay *r, song_sample * sample)
+static void _draw_sample_susloop(struct vgamem_overlay *r, song_sample_t * sample)
 {
         int loopstart, loopend, y;
         int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
@@ -164,11 +164,11 @@ static void _draw_sample_susloop(struct vgamem_overlay *r, song_sample * sample)
 }
 
 /* this does the lines for playing samples */
-static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample * sample)
+static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t * sample)
 {
         int n, x, y;
         int c;
-        song_mix_channel *channel;
+        song_voice_t *channel;
         unsigned int *channel_list;
 
         if (song_get_mode() == MODE_STOPPED)
@@ -179,11 +179,11 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample * samp
         n = song_get_mix_state(&channel_list);
         while (n--) {
                 channel = song_get_mix_channel(channel_list[n]);
-                if (channel->sample_data != sample->data)
+                if (channel->current_sample_data != sample->data)
                         continue;
                 if (!channel->final_volume) continue;
                 c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? SAMPLE_BGMARK_COLOR : SAMPLE_MARK_COLOR;
-                x = channel->sample_pos * (r->width - 1) / sample->length;
+                x = channel->position * (r->width - 1) / sample->length;
                 if (x >= r->width) {
                         /* this does, in fact, happen :( */
                         continue;
@@ -210,7 +210,7 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample * samp
 
 /* use sample #0 for the sample library
 what was n for? can we get rid of it? */
-void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int n)
+void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample, UNUSED int n)
 {
         vgamem_ovl_clear(r, 0);
 
@@ -228,18 +228,18 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample *sample, UNUSED int 
                 draw_text_len("Car", 3, 55,y1+2, 0,2);
 
                 sprintf(Buf1, "%02X %02X %02X %02X %02X %02X", // length:6*3-1=17
-                        sample->AdlibBytes[0],
-                        sample->AdlibBytes[2],
-                        sample->AdlibBytes[4],
-                        sample->AdlibBytes[6],
-                        sample->AdlibBytes[8],
-                        sample->AdlibBytes[10]);
+                        sample->adlib_bytes[0],
+                        sample->adlib_bytes[2],
+                        sample->adlib_bytes[4],
+                        sample->adlib_bytes[6],
+                        sample->adlib_bytes[8],
+                        sample->adlib_bytes[10]);
                 sprintf(Buf2, "%02X %02X %02X %02X %02X",      // length: 5*3-1=14
-                        sample->AdlibBytes[1],
-                        sample->AdlibBytes[3],
-                        sample->AdlibBytes[5],
-                        sample->AdlibBytes[7],
-                        sample->AdlibBytes[9]);
+                        sample->adlib_bytes[1],
+                        sample->adlib_bytes[3],
+                        sample->adlib_bytes[5],
+                        sample->adlib_bytes[7],
+                        sample->adlib_bytes[9]);
                 draw_text_len(Buf1, 17, 60,y1+1, 2,0);
                 draw_text_len(Buf2, 17, 60,y1+2, 2,0);
                 return;

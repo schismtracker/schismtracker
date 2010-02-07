@@ -27,8 +27,6 @@
 #include "song.h"
 #include "page.h"
 
-#include "mixer.h"
-
 #include "sdlmain.h"
 
 #include "snd_gm.h"

@@ -26,9 +26,7 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
-
-#include "mixer.h"
-
+#include "osdefs.h"
 #include "sdlmain.h"
 
 #include "disko.h"
@@ -96,8 +94,8 @@ static void preferences_draw_const(void)
 static void preferences_set_page(void)
 {
         int i, j;
-        int lim = mixer_get_max_volume();
-        mixer_read_volume(&i, &j);
+        int lim = volume_get_max();
+        volume_read(&i, &j);
         widgets_preferences[0].d.thumbbar.value = i * VOLUME_SCALE / lim;
         widgets_preferences[1].d.thumbbar.value = j * VOLUME_SCALE / lim;
 
@@ -133,8 +131,8 @@ static void preferences_set_page(void)
 
 static void change_volume(void)
 {
-        int lim = mixer_get_max_volume();
-        mixer_write_volume(
+        int lim = volume_get_max();
+        volume_write(
                 widgets_preferences[0].d.thumbbar.value * lim / VOLUME_SCALE,
                 widgets_preferences[1].d.thumbbar.value * lim / VOLUME_SCALE);
 }

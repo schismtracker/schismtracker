@@ -215,7 +215,7 @@ static int change_dir(const char *dir)
 static void load_sample_draw_const(void)
 {
         dmoz_file_t *f;
-        song_sample *s;
+        song_sample_t *s;
         char sbuf[64];
         int filled;
 
@@ -441,7 +441,7 @@ static void finish_load(int cur);
 static void stereo_cvt_complete_left(void)
 {
         int cur = sample_get_current();
-        song_sample *smp;
+        song_sample_t *smp;
         smp = song_get_sample(cur);
         sample_mono_left(smp);
         dialog_destroy();
@@ -451,7 +451,7 @@ static void stereo_cvt_complete_left(void)
 static void stereo_cvt_complete_right(void)
 {
         int cur = sample_get_current();
-        song_sample *smp;
+        song_sample_t *smp;
         smp = song_get_sample(cur);
         sample_mono_right(smp);
         dialog_destroy();
@@ -501,7 +501,7 @@ static int stereo_cvt_hk(struct key_event *k)
 
 static void finish_load(int cur)
 {
-        song_sample *smp;
+        song_sample_t *smp;
 
         memused_songchanged();
         smp = song_get_sample(cur);
@@ -558,7 +558,7 @@ static void reposition_at_slash_search(void)
 static void handle_enter_key(void)
 {
         dmoz_file_t *file;
-        song_sample *smp;
+        song_sample_t *smp;
         int cur = sample_get_current();
 
         if (current_file < 0 || current_file >= flist.num_files) return;
@@ -815,9 +815,9 @@ static void handle_load_copy_uint(unsigned int s, unsigned int *d)
         }
 }
 
-static void handle_load_copy(song_sample *s)
+static void handle_load_copy(song_sample_t *s)
 {
-        handle_load_copy_uint(widgets_loadsample[2].d.numentry.value, &s->speed);
+        handle_load_copy_uint(widgets_loadsample[2].d.numentry.value, &s->c5speed);
         handle_load_copy_uint(widgets_loadsample[4].d.numentry.value, &s->loop_start);
         handle_load_copy_uint(widgets_loadsample[5].d.numentry.value, &s->loop_end);
         handle_load_copy_uint(widgets_loadsample[7].d.numentry.value, &s->sustain_start);
@@ -879,7 +879,7 @@ static void handle_load_copy(song_sample *s)
 
 static void handle_load_update(void)
 {
-        song_sample *s;
+        song_sample_t *s;
         handle_preload();
         if (fake_slot != KEYJAZZ_NOINST) {
                 s = song_get_sample(fake_slot);

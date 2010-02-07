@@ -75,7 +75,6 @@ scripts = \
 
 EXTRA_DIST = \
 	COPYING.frag-opt		\
-	COPYING.libmodplug		\
 	include/auto/README		\
 	$(helptexts)			\
 	$(fonts)			\
@@ -109,29 +108,31 @@ noinst_HEADERS = \
 	include/auto/schismico.h	\
 	include/charset.h		\
 	include/clippy.h		\
+	include/cmixer.h		\
 	include/config-parser.h		\
 	include/disko.h			\
 	include/dmoz.h			\
 	include/draw-char.h		\
 	include/event.h			\
+	include/fmopl.h			\
 	include/fmt.h			\
 	include/fmt-types.h		\
 	include/frag-opt.h		\
 	include/headers.h		\
+	include/it_defs.h		\
 	include/it.h			\
 	include/log.h			\
-	include/macosx-sdlmain.h	\
 	include/midi.h			\
-	include/mixer.h			\
-	include/mplink.h		\
 	include/osdefs.h		\
 	include/page.h			\
-	include/palettes.h		\
 	include/pattern-view.h		\
 	include/precomp_lut.h		\
 	include/sample-edit.h		\
 	include/sdlmain.h		\
 	include/slurp.h			\
+	include/sndfile.h		\
+	include/snd_fm.h		\
+	include/snd_gm.h		\
 	include/song.h			\
 	include/tables.h		\
 	include/tree.h			\
@@ -139,19 +140,11 @@ noinst_HEADERS = \
 	include/version.h		\
 	include/vgamem-scanner.h	\
 	include/video.h			\
-	include/wine-ddraw.h		\
 	sys/wii/isfs.h			\
 	sys/wii/certs_bin.h		\
 	sys/wii/su_tik_bin.h		\
 	sys/wii/su_tmd_bin.h		\
-	modplug/cmixer.h		\
-	modplug/fmopl.h			\
-	modplug/it_defs.h		\
-	modplug/sndfile.h		\
-	modplug/snd_fm.h		\
-	modplug/snd_fx.h		\
-	modplug/snd_gm.h		\
-	modplug/xm_defs.h
+	sys/win32/wine-ddraw.h
 
 
 noinst_SCRIPTS = $(scripts)
@@ -164,9 +157,9 @@ CLEANFILES = \
 	auto/helptext.c
 
 auto/default-font.c: Makefile.am scripts/bin2h.sh scripts/build-font.sh $(fonts)
-	sh @srcdir@/scripts/build-font.sh @srcdir@ $(fonts) >$@
+	sh $(srcdir)/scripts/build-font.sh $(srcdir) $(fonts) >$@
 auto/helptext.c: Makefile.am scripts/genhelp.py $(helptexts)
-	$(PYTHON) @srcdir@/scripts/genhelp.py @srcdir@ $(helptexts) >$@
+	$(PYTHON) $(srcdir)/scripts/genhelp.py $(srcdir) $(helptexts) >$@
 
 if USE_X11
 files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c
@@ -178,7 +171,7 @@ endif
 endif
 
 if USE_ALSA
-files_alsa = sys/alsa/init.c sys/alsa/mixer-alsa.c sys/alsa/midi-alsa.c
+files_alsa = sys/alsa/init.c sys/alsa/volume-alsa.c sys/alsa/midi-alsa.c
 if USE_ALSA_DLTRICK
 cflags_alsa=-DUSE_ALSA -DUSE_DLTRICK_ALSA
 else
@@ -188,7 +181,7 @@ endif
 endif
 
 if USE_OSS
-files_oss = sys/oss/mixer-oss.c sys/oss/midi-oss.c
+files_oss = sys/oss/volume-oss.c sys/oss/midi-oss.c
 cflags_oss=-DUSE_OSS
 endif
 
@@ -200,21 +193,23 @@ if USE_WIN32
 files_win32 = \
 	sys/win32/osdefs.c		\
 	sys/win32/slurp-win32.c		\
-	sys/win32/mixer-win32mm.c	\
+	sys/win32/volume-win32mm.c	\
 	sys/win32/midi-win32mm.c	\
 	sys/win32/filetype.c		\
 	sys/win32/localtime_r.c
+cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
 endif
+
 if USE_WINDRES
 .o: .rc
-	$(WINDRES) -I@srcdir@ -i $< -o $@
+	$(WINDRES) -I$(srcdir) -i $< -o $@
 files_windres=sys/win32/schismres.rc
 endif
 
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
-cflags_wii=-I@srcdir@/sys/wii
+cflags_wii=-I$(srcdir)/sys/wii
 endif
 
 if USE_MACOSX
@@ -222,7 +217,7 @@ files_macosx = \
 	sys/macosx/macosx-sdlmain.m	\
 	sys/macosx/ibook-support.c	\
 	sys/macosx/midi-macosx.c	\
-	sys/macosx/mixer-macosx.c	\
+	sys/macosx/volume-macosx.c	\
 	sys/macosx/osdefs.c
 endif
 
@@ -259,47 +254,48 @@ schismtracker_SOURCES = \
 	schism/pattern-view.c		\
 	schism/xpmdata.c		\
 	schism/menu.c			\
-	schism/mixer-core.c		\
+	schism/volume-core.c		\
 	schism/disko.c			\
 	schism/page_loadinst.c		\
 	schism/mplink.c			\
 	schism/clippy.c			\
 	schism/page_loadmodule.c	\
 	schism/page_vars.c		\
+	schism/palettes.c		\
 	fmt/compression.c		\
 	fmt/generic.c			\
-	fmt/raw.c			\
-	fmt/liq.c			\
-	fmt/f2r.c			\
-	fmt/s3m.c			\
-	fmt/sfx.c			\
-	fmt/mod.c			\
-	fmt/far.c			\
-	fmt/wav.c			\
-	fmt/its.c			\
-	fmt/s3i.c			\
-	fmt/iti.c			\
-	fmt/xi.c			\
-	fmt/pat.c			\
-	fmt/imf.c			\
-	fmt/mtm.c			\
-	fmt/ult.c			\
-	fmt/ams.c			\
-	fmt/it.c			\
-	fmt/stm.c			\
-	fmt/mdl.c			\
+	fmt/mmcmp.c			\
 	fmt/669.c			\
-	fmt/au.c			\
-	fmt/xm.c			\
-	fmt/mt2.c			\
-	fmt/ntk.c			\
-	fmt/dtm.c			\
 	fmt/aiff.c			\
-	fmt/okt.c			\
+	fmt/ams.c			\
+	fmt/au.c			\
+	fmt/dtm.c			\
+	fmt/f2r.c			\
+	fmt/far.c			\
+	fmt/imf.c			\
+	fmt/it.c			\
+	fmt/iti.c			\
+	fmt/its.c			\
+	fmt/liq.c			\
+	fmt/mdl.c			\
 	fmt/med.c			\
 	fmt/mf.c			\
+	fmt/mod.c			\
+	fmt/mt2.c			\
+	fmt/mtm.c			\
 	fmt/mus.c			\
-	schism/inst_loader.c		\
+	fmt/ntk.c			\
+	fmt/okt.c			\
+	fmt/pat.c			\
+	fmt/raw.c			\
+	fmt/s3i.c			\
+	fmt/s3m.c			\
+	fmt/sfx.c			\
+	fmt/stm.c			\
+	fmt/ult.c			\
+	fmt/wav.c			\
+	fmt/xi.c			\
+	fmt/xm.c			\
 	schism/util.c			\
 	schism/page_midi.c		\
 	schism/disko_dialog.c		\
@@ -320,9 +316,7 @@ schismtracker_SOURCES = \
 	schism/sample-view.c		\
 	schism/page_patedit.c		\
 	schism/page_config.c		\
-	schism/draw-pixel.c		\
 	schism/keyboard.c		\
-	schism/features.c		\
 	schism/page_samples.c		\
 	schism/itf.c			\
 	schism/page_orderpan.c		\
@@ -335,20 +329,19 @@ schismtracker_SOURCES = \
 	schism/draw-misc.c		\
 	schism/fakemem.c		\
 	schism/version.c		\
-	modplug/tables.c		\
-	modplug/snd_fx.c		\
-	modplug/snd_flt.c		\
-	modplug/snd_dsp.c		\
-	modplug/snd_eq.c		\
-	modplug/csndfile.c		\
-	modplug/sndmix.c		\
-	modplug/mmcmp.c			\
-	modplug/fastmix.c		\
-	modplug/fmopl.c			\
-	modplug/fmpatches.c		\
-	modplug/snd_fm.c		\
-	modplug/snd_gm.c		\
-	modplug/cmixer.c		\
+	player/csndfile.c		\
+	player/mixutil.c		\
+	player/dsp.c			\
+	player/equalizer.c		\
+	player/mixer.c			\
+	player/filters.c		\
+	player/fmopl.c			\
+	player/fmpatches.c		\
+	player/sndmix.c			\
+	player/snd_fm.c			\
+	player/effects.c		\
+	player/snd_gm.c			\
+	player/tables.c			\
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\
@@ -378,15 +371,12 @@ schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_
 
 cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 
-AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE \
-	-I$(srcdir)/include -I$(srcdir)/modplug -I.
-AM_CFLAGS = @SDL_CFLAGS@ $(cflags_alsa) $(cflags_oss) \
+AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I.
+AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
-	$(cflags_version) $(cflags_wii)
-AM_OBJCFLAGS = ${AM_CFLAGS}
-
+	$(cflags_version) $(cflags_win32) $(cflags_wii)
+AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32) \
-	@SDL_LIBS@ @LIBM@
+schismtracker_LDADD = $(lib_asound) $(lib_win32) $(SDL_LIBS) $(LIBM)
 

@@ -305,8 +305,8 @@ static inline unsigned char unicode_to_ascii(uint16_t unicode)
  * for the currently active sample in the sample library
  * and 1-99 for the respective samples in the sample list.
  * to draw_sample_data tells where to draw it (duh ;) */
-struct _song_sample;
-void draw_sample_data(struct vgamem_overlay *r, struct _song_sample *sample, int number);
+struct song_sample;
+void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample, int number);
 
 /* this works like draw_sample_data, just without having to allocate a
  * song_sample structure, and without caching the waveform.
@@ -454,14 +454,6 @@ unsigned int memused_history(void);
 void memused_songchanged(void);
 
 void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
-
-void feature_check_instruments(const char *fmt,
-                int limit, unsigned int flags_mask);
-void feature_check_samples(const char *fmt, int limit, unsigned int flags_mask);
-void feature_check_notes(const char *fmt,
-                int min_note, int max_note,
-                int min_inst,int max_inst,
-                const char *volcmd, const char *fxcmd);
 
 /* --------------------------------------------------------------------- */
 

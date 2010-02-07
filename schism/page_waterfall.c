@@ -396,7 +396,7 @@ static int waterfall_handle_key(struct key_event *k)
 
                         order = song_get_current_order();
                         if (song_get_mode() == MODE_PLAYING) {
-                                n = song_get_orderlist()[order];
+                                n = current_song->orderlist[order];
                         } else {
                                 n = song_get_playing_pattern();
                         }

@@ -103,7 +103,7 @@ static inline void draw_song_playing_status(void)
         pos += draw_text(numtostr(0, song_get_current_order(), buf), pos, 9, 3, 2);
         draw_char('/', pos, 9, 0, 2);
         pos++;
-        pos += draw_text(numtostr(0, song_get_num_orders(), buf), pos, 9, 3, 2);
+        pos += draw_text(numtostr(0, csf_get_num_orders(current_song), buf), pos, 9, 3, 2);
         pos += draw_text(", Pattern: ", pos, 9, 0, 2);
         pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
         pos += draw_text(", Row: ", pos, 9, 0, 2);

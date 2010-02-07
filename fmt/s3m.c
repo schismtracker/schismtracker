@@ -56,12 +56,12 @@ enum {
         S3I_TYPE_ADMEL = 2,
 };
 
-int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         uint16_t nsmp, nord, npat;
         int misc = S3M_UNSIGNED | S3M_CHANPAN; // temporary flags, these are both generally true
         int n;
-        MODCOMMAND *note;
+        song_note_t *note;
         /* junk variables for reading stuff into */
         uint16_t tmp;
         uint8_t c;
@@ -72,7 +72,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         uint16_t para_pat[256];
         uint32_t para_sdata[256] = { 0 };
         uint32_t smp_flags[256] = { 0 };
-        SONGSAMPLE *sample;
+        song_sample_t *sample;
         uint16_t trkvers;
         uint16_t flags;
         uint16_t special;
@@ -88,8 +88,8 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         /* read the title */
         slurp_rewind(fp);
-        slurp_read(fp, song->song_title, 25);
-        song->song_title[25] = 0;
+        slurp_read(fp, song->title, 25);
+        song->title[25] = 0;
 
         /* skip the last three bytes of the title, the supposed-to-be-0x1a byte,
         the tracker ID, and the two useless reserved bytes */
@@ -105,7 +105,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         if (nord > MAX_ORDERS || nsmp > MAX_SAMPLES || npat > MAX_PATTERNS)
                 return LOAD_FORMAT_ERROR;
 
-        song->m_dwSongFlags = SONG_ITOLDEFFECTS;
+        song->flags = SONG_ITOLDEFFECTS;
         slurp_read(fp, &flags, 2);  /* flags (don't really care) */
         flags = bswapLE16(flags);
         slurp_read(fp, &trkvers, 2);
@@ -116,14 +116,14 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         slurp_seek(fp, 4, SEEK_CUR); /* skip the tag */
 
-        song->m_nDefaultGlobalVolume = slurp_getc(fp) << 1;
-        song->m_nDefaultSpeed = slurp_getc(fp);
-        song->m_nDefaultTempo = slurp_getc(fp);
-        song->m_nSongPreAmp = slurp_getc(fp);
-        if (song->m_nSongPreAmp & 0x80) {
-                song->m_nSongPreAmp ^= 0x80;
+        song->initial_global_volume = slurp_getc(fp) << 1;
+        song->initial_speed = slurp_getc(fp);
+        song->initial_tempo = slurp_getc(fp);
+        song->mixing_volume = slurp_getc(fp);
+        if (song->mixing_volume & 0x80) {
+                song->mixing_volume ^= 0x80;
         } else {
-                song->m_dwSongFlags |= SONG_NOSTEREO;
+                song->flags |= SONG_NOSTEREO;
         }
         uc = slurp_getc(fp); /* ultraclick removal (useless) */
 
@@ -150,35 +150,35 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 produce other strange behavior. Simply put, don't do it. :) */
                 c = slurp_getc(fp);
                 if (c & 0x80) {
-                        song->Channels[n].dwFlags |= CHN_MUTE;
+                        song->channels[n].flags |= CHN_MUTE;
                         c &= ~0x80;
                 }
                 if (c < 0x08) {
                         // L1-L8
-                        song->Channels[n].nPan = 16;
+                        song->channels[n].panning = 16;
                 } else if (c < 0x10) {
                         // R1-R8
-                        song->Channels[n].nPan = 48;
+                        song->channels[n].panning = 48;
                 } else if (c < 0x19) {
                         // A1-A9
-                        song->Channels[n].nPan = 32;
+                        song->channels[n].panning = 32;
                         adlib |= 1 << n;
                 } else {
                         // Disabled 0xff/0x7f, or broken
-                        song->Channels[n].nPan = 32;
-                        song->Channels[n].dwFlags |= CHN_MUTE;
+                        song->channels[n].panning = 32;
+                        song->channels[n].flags |= CHN_MUTE;
                 }
-                song->Channels[n].nVolume = 64;
+                song->channels[n].volume = 64;
         }
         for (; n < 64; n++) {
-                song->Channels[n].nPan = 32;
-                song->Channels[n].nVolume = 64;
-                song->Channels[n].dwFlags = CHN_MUTE;
+                song->channels[n].panning = 32;
+                song->channels[n].volume = 64;
+                song->channels[n].flags = CHN_MUTE;
         }
 
         /* orderlist */
-        slurp_read(fp, song->Orderlist, nord);
-        memset(song->Orderlist + nord, 255, 256 - nord);
+        slurp_read(fp, song->orderlist, nord);
+        memset(song->orderlist + nord, 255, 256 - nord);
 
         /* load the parapointers */
         slurp_read(fp, para_smp, 2 * nsmp);
@@ -193,16 +193,16 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 for (n = 0; n < 32; n++) {
                         c = slurp_getc(fp);
                         if (c & 0x20)
-                                song->Channels[n].nPan = ((c & 0xf) << 2) + 2;
+                                song->channels[n].panning = ((c & 0xf) << 2) + 2;
                 }
         }
 
         //mphack - fix the pannings
         for (n = 0; n < 64; n++)
-                song->Channels[n].nPan *= 4;
+                song->channels[n].panning *= 4;
 
         /* samples */
-        for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
+        for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
                 uint8_t type;
 
                 slurp_seek(fp, para_smp[n] << 4, SEEK_SET);
@@ -217,17 +217,17 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
                         if (para_sdata[n]) {
                                 slurp_read(fp, &tmplong, 4);
-                                sample->nLength = bswapLE32(tmplong);
+                                sample->length = bswapLE32(tmplong);
                                 slurp_read(fp, &tmplong, 4);
-                                sample->nLoopStart = bswapLE32(tmplong);
+                                sample->loop_start = bswapLE32(tmplong);
                                 slurp_read(fp, &tmplong, 4);
-                                sample->nLoopEnd = bswapLE32(tmplong);
-                                sample->nVolume = slurp_getc(fp) * 4; //mphack
+                                sample->loop_end = bswapLE32(tmplong);
+                                sample->volume = slurp_getc(fp) * 4; //mphack
                                 slurp_getc(fp);      /* unused byte */
                                 slurp_getc(fp);      /* packing info (never used) */
                                 c = slurp_getc(fp);  /* flags */
                                 if (c & 1)
-                                        sample->uFlags |= CHN_LOOP;
+                                        sample->flags |= CHN_LOOP;
                                 smp_flags[n] = (SF_LE
                                         | ((misc & S3M_UNSIGNED) ? SF_PCMU : SF_PCMS)
                                         | ((c & 4) ? SF_16 : SF_8)
@@ -240,40 +240,40 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         //printf("s3m: mystery-meat sample type %d\n", type);
                 case S3I_TYPE_NONE:
                         slurp_seek(fp, 12, SEEK_CUR);
-                        sample->nVolume = slurp_getc(fp) * 4; //mphack
+                        sample->volume = slurp_getc(fp) * 4; //mphack
                         slurp_seek(fp, 3, SEEK_CUR);
                         break;
 
                 case S3I_TYPE_ADMEL:
-                        slurp_read(fp, sample->AdlibBytes, 12);
-                        sample->nVolume = slurp_getc(fp) * 4; //mphack
+                        slurp_read(fp, sample->adlib_bytes, 12);
+                        sample->volume = slurp_getc(fp) * 4; //mphack
                         // next byte is "dsk", what is that?
                         slurp_seek(fp, 3, SEEK_CUR);
-                        sample->uFlags |= CHN_ADLIB;
+                        sample->flags |= CHN_ADLIB;
                         // dumb hackaround that ought to some day be fixed:
-                        sample->nLength = 1;
-                        sample->pSample = csf_allocate_sample(1);
+                        sample->length = 1;
+                        sample->data = csf_allocate_sample(1);
                         break;
                 }
 
                 slurp_read(fp, &tmplong, 4);
-                sample->nC5Speed = bswapLE32(tmplong);
+                sample->c5speed = bswapLE32(tmplong);
                 slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
                 slurp_read(fp, sample->name, 25);
                 sample->name[25] = 0;
-                sample->nVibType = 0;
-                sample->nVibSweep = 0;
-                sample->nVibDepth = 0;
-                sample->nVibRate = 0;
-                sample->nGlobalVol = 64;
+                sample->vib_type = 0;
+                sample->vib_rate = 0;
+                sample->vib_depth = 0;
+                sample->vib_speed = 0;
+                sample->global_volume = 64;
         }
 
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
-                for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
+                for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
                         uint32_t len;
 
-                        if (!sample->nLength || !para_sdata[n])
+                        if (!sample->length || !para_sdata[n])
                                 continue;
 
                         slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
@@ -290,7 +290,7 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                         data, which is superfluous for the way I'm reading the patterns. */
                         slurp_seek(fp, (para_pat[n] << 4) + 2, SEEK_SET);
 
-                        song->Patterns[n] = csf_allocate_pattern(64, 64);
+                        song->patterns[n] = csf_allocate_pattern(64);
 
                         while (row < 64) {
                                 uint8_t mask = slurp_getc(fp);
@@ -301,13 +301,13 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                         row++;
                                         continue;
                                 }
-                                note = song->Patterns[n] + 64 * row + chn;
+                                note = song->patterns[n] + 64 * row + chn;
                                 if (mask & 32) {
                                         /* note/instrument */
                                         note->note = slurp_getc(fp);
-                                        note->instr = slurp_getc(fp);
-                                        //if (note->instr > 99)
-                                        //      note->instr = 0;
+                                        note->instrument = slurp_getc(fp);
+                                        //if (note->instrument > 99)
+                                        //      note->instrument = 0;
                                         switch (note->note) {
                                         default:
                                                 // Note; hi=oct, lo=note
@@ -323,18 +323,18 @@ int fmt_s3m_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                 }
                                 if (mask & 64) {
                                         /* volume */
-                                        note->volcmd = VOLCMD_VOLUME;
-                                        note->vol = slurp_getc(fp);
-                                        if (note->vol == 255) {
-                                                note->volcmd = VOLCMD_NONE;
-                                                note->vol = 0;
-                                        } else if (note->vol > 64) {
+                                        note->voleffect = VOLFX_VOLUME;
+                                        note->volparam = slurp_getc(fp);
+                                        if (note->volparam == 255) {
+                                                note->voleffect = VOLFX_NONE;
+                                                note->volparam = 0;
+                                        } else if (note->volparam > 64) {
                                                 // some weirdly saved s3m?
-                                                note->vol = 64;
+                                                note->volparam = 64;
                                         }
                                 }
                                 if (mask & 128) {
-                                        note->command = slurp_getc(fp);
+                                        note->effect = slurp_getc(fp);
                                         note->param = slurp_getc(fp);
                                         csf_import_s3m_effect(note, 0);
                                 }

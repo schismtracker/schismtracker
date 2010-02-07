@@ -82,36 +82,33 @@ static void midiout_draw_const(void)
 }
 static void copyout_zbuf(void)
 {
-        midi_config *md;
+        midi_config_t *md = &current_song->midi_config;
         int i;
-        md = song_get_midi_config();
         song_lock_audio();
         for (i = 0; i < 9; i++) {
-                strcpy(md->midi_global_data+(i*32), mm_global+(i*32));
+                strcpy(md->global+(i*32), mm_global+(i*32));
         }
         for (i = 0; i < 16; i++) {
-                strcpy(md->midi_sfx+(i*32), mm_sfx+(i*32));
+                strcpy(md->sfx+(i*32), mm_sfx+(i*32));
         }
         for (i = 0; i < 7; i++) {
-                strcpy(md->midi_zxx+((zbuf_top+i)*32),
-                                zbuf+(i*32));
+                strcpy(md->zxx+((zbuf_top+i)*32), zbuf+(i*32));
         }
         song_unlock_audio();
 }
 static void copyin_zbuf(void)
 {
-        midi_config *md;
+        midi_config_t *md = &current_song->midi_config;
         int i;
-        md = song_get_midi_config();
         for (i = 0; i < 9; i++) {
-                strcpy(mm_global+(i*32), md->midi_global_data+(i*32));
+                strcpy(mm_global+(i*32), md->global+(i*32));
         }
         for (i = 0; i < 16; i++) {
-                strcpy(mm_sfx+(i*32), md->midi_sfx+(i*32));
+                strcpy(mm_sfx+(i*32), md->sfx+(i*32));
         }
 
         for (i = 0; i < 7; i++) {
-                strcpy(zbuf+(i*32), md->midi_zxx+((zbuf_top+i)*32));
+                strcpy(zbuf+(i*32), md->zxx+((zbuf_top+i)*32));
         }
 }
 

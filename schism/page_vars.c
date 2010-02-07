@@ -42,7 +42,7 @@ static char Amiga[6] = "Amiga";
 
 static inline void update_song_title(void)
 {
-        draw_text_len(song_get_title(), 25, 12, 3, 5, 0);
+        draw_text_len(current_song->title, 25, 12, 3, 5, 0);
         status.flags |= NEED_UPDATE;
 }
 
@@ -124,14 +124,14 @@ static void song_changed_cb(void)
         char *b;
         int c;
 
-        widgets_vars[0].d.textentry.text = song_get_title();
+        widgets_vars[0].d.textentry.text = current_song->title;
         widgets_vars[0].d.textentry.cursor_pos = strlen(widgets_vars[0].d.textentry.text);
 
-        widgets_vars[1].d.thumbbar.value = song_get_initial_tempo();
-        widgets_vars[2].d.thumbbar.value = song_get_initial_speed();
-        widgets_vars[3].d.thumbbar.value = song_get_initial_global_volume();
-        widgets_vars[4].d.thumbbar.value = song_get_mixing_volume();
-        widgets_vars[5].d.thumbbar.value = song_get_separation();
+        widgets_vars[1].d.thumbbar.value = current_song->initial_tempo;
+        widgets_vars[2].d.thumbbar.value = current_song->initial_speed;
+        widgets_vars[3].d.thumbbar.value = current_song->initial_global_volume;
+        widgets_vars[4].d.thumbbar.value = current_song->mixing_volume;
+        widgets_vars[5].d.thumbbar.value = current_song->pan_separation;
         widgets_vars[6].d.toggle.state = song_has_old_effects();
         widgets_vars[7].d.toggle.state = song_has_compatible_gxx();
 
@@ -189,7 +189,7 @@ void song_vars_load_page(struct page *page)
         page->help_index = HELP_GLOBAL;
 
         /* 0 = song name */
-        create_textentry(widgets_vars, 17, 16, 26, 0, 1, 1, update_song_title, song_get_title(), 25);
+        create_textentry(widgets_vars, 17, 16, 26, 0, 1, 1, update_song_title, current_song->title, 25);
         /* 1 = tempo */
         create_thumbbar(widgets_vars + 1, 17, 19, 33, 0, 2, 2, update_values_in_song, 31, 255);
         /* 2 = speed */

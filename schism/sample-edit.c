@@ -86,7 +86,7 @@ static void _sign_convert_16(signed short *data, unsigned long length)
         }
 }
 
-void sample_sign_convert(song_sample * sample)
+void sample_sign_convert(song_sample_t * sample)
 {
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
@@ -142,7 +142,7 @@ static void _reverse_32(signed int *data, unsigned long length)
         }
 }
 
-void sample_reverse(song_sample * sample)
+void sample_reverse(song_sample_t * sample)
 {
         unsigned long tmp;
 
@@ -198,7 +198,7 @@ static void _quality_convert_16to8(signed short *idata, signed char *odata, unsi
         }
 }
 
-void sample_toggle_quality(song_sample * sample, int convert_data)
+void sample_toggle_quality(song_sample_t * sample, int convert_data)
 {
         signed char *odata;
 
@@ -211,7 +211,7 @@ void sample_toggle_quality(song_sample * sample, int convert_data)
 
         status.flags |= SONG_NEEDS_SAVE;
         if (convert_data) {
-                odata = song_sample_allocate(sample->length
+                odata = csf_allocate_sample(sample->length
                         * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
                         * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                 if (sample->flags & SAMP_16_BIT) {
@@ -221,7 +221,7 @@ void sample_toggle_quality(song_sample * sample, int convert_data)
                         _quality_convert_16to8((signed short *) sample->data, odata,
                                 sample->length * ((sample->flags & SAMP_STEREO) ? 2 : 1));
                 }
-                song_sample_free(sample->data);
+                csf_free_sample(sample->data);
                 sample->data = odata;
         } else {
                 if (sample->flags & SAMP_16_BIT) {
@@ -290,7 +290,7 @@ static void _centralise_16(signed short *data, unsigned long length)
         }
 }
 
-void sample_centralise(song_sample * sample)
+void sample_centralise(song_sample_t * sample)
 {
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
@@ -329,7 +329,7 @@ static void _amplify_16(signed short *data, unsigned long length, int percent)
         }
 }
 
-void sample_amplify(song_sample * sample, int percent)
+void sample_amplify(song_sample_t * sample, int percent)
 {
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
@@ -359,7 +359,7 @@ static int _get_amplify_16(signed short *data, unsigned long length)
         return 32768 * 100 / MAX(max, -min);
 }
 
-int sample_get_amplify_amount(song_sample *sample)
+int sample_get_amplify_amount(song_sample_t *sample)
 {
         int percent;
 
@@ -401,7 +401,7 @@ static void _delta_decode_16(signed short *data, unsigned long length)
         }
 }
 
-void sample_delta_decode(song_sample * sample)
+void sample_delta_decode(song_sample_t * sample)
 {
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
@@ -508,7 +508,7 @@ static void _resize_16aa(signed short *dst, unsigned long newlen,
 
 
 
-void sample_resize(song_sample * sample, unsigned long newlen, int aa)
+void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
 {
         int bps;
         unsigned char *d, *z;
@@ -530,10 +530,10 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
 
         status.flags |= SONG_NEEDS_SAVE;
 
-        d = (unsigned char *) song_sample_allocate(newlen*bps);
+        d = (unsigned char *) csf_allocate_sample(newlen*bps);
         z = (unsigned char *) sample->data;
 
-        sample->speed = (unsigned long)((((double)newlen) * ((double)sample->speed))
+        sample->c5speed = (unsigned long)((((double)newlen) * ((double)sample->c5speed))
                         / ((double)sample->length));
 
         /* scale loop points */
@@ -565,11 +565,11 @@ void sample_resize(song_sample * sample, unsigned long newlen, int aa)
         }
 
         sample->data = (signed char *) d;
-        song_sample_free((signed char *) z);
+        csf_free_sample((signed char *) z);
         song_unlock_audio();
 }
 
-void sample_invert(song_sample * sample)
+void sample_invert(song_sample_t * sample)
 {
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
@@ -595,7 +595,7 @@ static void _mono_lr8(signed char *data, unsigned long length, int shift)
         for (j = 0, i = 1; j < length; j++, i += 2)
                 data[j] = data[i];
 }
-void sample_mono_left(song_sample * sample)
+void sample_mono_left(song_sample_t * sample)
 {
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;
@@ -608,7 +608,7 @@ void sample_mono_left(song_sample * sample)
         }
         song_unlock_audio();
 }
-void sample_mono_right(song_sample * sample)
+void sample_mono_right(song_sample_t * sample)
 {
         song_lock_audio();
         status.flags |= SONG_NEEDS_SAVE;

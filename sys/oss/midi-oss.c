@@ -26,7 +26,6 @@
 
 #include "midi.h"
 
-#include "mixer.h"
 #include "util.h"
 
 #ifdef USE_OSS

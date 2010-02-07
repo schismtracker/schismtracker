@@ -1,3 +1,26 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010 Storlek
+ * URL: http://schismtracker.org/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 /* General MIDI assignments used by Creative Labs' MIDI player (PLAY.EXE)
 (As found in dro2midi.) */
 
@@ -135,20 +158,20 @@ static const uint8_t patches[][11] = {
         {0x0C,0x04,0x00,0x00,0xF0,0xF6,0xF0,0xE6,0x02,0x00,0x0E}, /*128*/
 };
 
-void adlib_patch_apply(SONGSAMPLE *smp, int patchnum)
+void adlib_patch_apply(song_sample_t *smp, int patchnum)
 {
         if (patchnum < 0 || patchnum > 127) {
                 printf("adlib_patch_apply: invalid patch %d\n", patchnum);
                 return;
         }
-        memcpy(smp->AdlibBytes, patches[patchnum], 11);
+        memcpy(smp->adlib_bytes, patches[patchnum], 11);
         strncpy(smp->name, midi_program_names[patchnum], sizeof(smp->name) - 1);
         smp->name[sizeof(smp->name) - 1] = '\0'; // Paranoid.
         sprintf(smp->filename, "MIDI#%03d", patchnum + 1);
-        smp->uFlags |= CHN_ADLIB;
-        if (!smp->pSample) {
-                smp->nLength = 1;
-                smp->pSample = csf_allocate_sample(1);
+        smp->flags |= CHN_ADLIB;
+        if (!smp->data) {
+                smp->length = 1;
+                smp->data = csf_allocate_sample(1);
         }
 }
 

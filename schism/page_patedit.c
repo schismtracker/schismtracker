@@ -48,6 +48,8 @@
 /* this is actually used by pattern-view.c */
 int show_default_volumes = 0;
 
+static song_note_t empty_note; // FIXME should be const, need to fix track view draw_note functions
+
 /* --------------------------------------------------------------------- */
 /* The (way too many) static variables */
 
@@ -119,7 +121,7 @@ static int playing_pattern = -1;
 static int edit_copy_mask = MASK_NOTE | MASK_INSTRUMENT | MASK_VOLUME;
 
 /* and the mask note. note that the instrument field actually isn't used */
-static song_note mask_note = { 61, 0, 0, 0, 0, 0 };     /* C-5 */
+static song_note_t mask_note = { 61, 0, 0, 0, 0, 0 };     /* C-5 */
 
 /* playback mark (ctrl-f7) */
 static int marked_pattern = -1, marked_row;
@@ -133,7 +135,7 @@ static int fast_volume_mode = 0;        /* toggled with ctrl-j */
 /* --------------------------------------------------------------------- */
 /* undo and clipboard handling */
 struct pattern_snap {
-        song_note *data;
+        song_note_t *data;
         int channels;
         int rows;
 
@@ -537,9 +539,9 @@ static int multichannel_get_previous(int cur_channel)
 
 
 /* --------------------------------------------------------------------------------------------------------- */
-static void copyin_addnote(song_note *note, int *copyin_x, int *copyin_y)
+static void copyin_addnote(song_note_t *note, int *copyin_x, int *copyin_y)
 {
-        song_note *pattern, *p_note;
+        song_note_t *pattern, *p_note;
         int num_rows;
 
         status.flags |= (SONG_NEEDS_SAVE|NEED_UPDATE);
@@ -562,7 +564,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
         int copyin_x, copyin_y;
         int (*fx_map)(char f);
         const char *str;
-        song_note n;
+        song_note_t n;
         int x, scantmp;
 
         if (!data) return 0;
@@ -588,7 +590,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
         copyin_x = copyin_y = 0;
         /* okay, let's start parsing */
         while (*str) {
-                memset(&n, 0, sizeof(song_note));
+                memset(&n, 0, sizeof(song_note_t));
                 if (!str[0] || !str[1] || !str[2]) break;
                 switch (*str) {
                 case 'C': case 'c': n.note = 1; break;
@@ -623,31 +625,31 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
                         if (!str[0] || !str[1] || !str[2]) break;
                         if (*str >= 'a' && *str <= 'z') {
                                 if (sscanf(str+1, "%02d", &scantmp) == 1)
-                                        n.volume = scantmp;
+                                        n.volparam = scantmp;
                                 else
-                                        n.volume = 0;
+                                        n.volparam = 0;
                                 switch (*str) {
-                                case 'v':n.volume_effect=VOL_EFFECT_VOLUME;break;
-                                case 'p':n.volume_effect=VOL_EFFECT_PANNING;break;
-                                case 'c':n.volume_effect=VOL_EFFECT_VOLSLIDEUP;break;
-                                case 'd':n.volume_effect=VOL_EFFECT_VOLSLIDEDOWN;break;
-                                case 'a':n.volume_effect=VOL_EFFECT_FINEVOLUP;break;
-                                case 'b':n.volume_effect=VOL_EFFECT_FINEVOLDOWN;break;
-                                case 'u':n.volume_effect=VOL_EFFECT_VIBRATOSPEED;break;
-                                case 'h':n.volume_effect=VOL_EFFECT_VIBRATODEPTH;break;
-                                case 'l':n.volume_effect=VOL_EFFECT_PANSLIDELEFT;break;
-                                case 'r':n.volume_effect=VOL_EFFECT_PANSLIDERIGHT;break;
-                                case 'g':n.volume_effect=VOL_EFFECT_TONEPORTAMENTO;break;
-                                case 'f':n.volume_effect=VOL_EFFECT_PORTAUP;break;
-                                case 'e':n.volume_effect=VOL_EFFECT_PORTADOWN;break;
-                                default: n.volume_effect=VOL_EFFECT_NONE;n.volume=0;break;
+                                        case 'v': n.voleffect = VOLFX_VOLUME; break;
+                                        case 'p': n.voleffect = VOLFX_PANNING; break;
+                                        case 'c': n.voleffect = VOLFX_VOLSLIDEUP; break;
+                                        case 'd': n.voleffect = VOLFX_VOLSLIDEDOWN; break;
+                                        case 'a': n.voleffect = VOLFX_FINEVOLUP; break;
+                                        case 'b': n.voleffect = VOLFX_FINEVOLDOWN; break;
+                                        case 'u': n.voleffect = VOLFX_VIBRATOSPEED; break;
+                                        case 'h': n.voleffect = VOLFX_VIBRATODEPTH; break;
+                                        case 'l': n.voleffect = VOLFX_PANSLIDELEFT; break;
+                                        case 'r': n.voleffect = VOLFX_PANSLIDERIGHT; break;
+                                        case 'g': n.voleffect = VOLFX_TONEPORTAMENTO; break;
+                                        case 'f': n.voleffect = VOLFX_PORTAUP; break;
+                                        case 'e': n.voleffect = VOLFX_PORTADOWN; break;
+                                        default:  n.voleffect = VOLFX_NONE; n.volparam = 0; break;
                                 };
                         } else {
                                 n.effect = fx_map(*str);
                                 if (sscanf(str+1, "%02X", &scantmp) == 1)
-                                        n.parameter = scantmp;
+                                        n.param = scantmp;
                                 else
-                                        n.parameter = 0;
+                                        n.param = 0;
                         }
                         str += 3;
                 }
@@ -666,7 +668,7 @@ static void pattern_selection_system_copyout(void)
         char *str;
         int x, y, len;
         int total_rows;
-        song_note *pattern, *cur_note;
+        song_note_t *pattern, *cur_note;
 
 
         if (!(SELECTION_EXISTS)) {
@@ -725,21 +727,21 @@ static void pattern_selection_system_copyout(void)
                                 sprintf(str+len, "%02d", cur_note->instrument);
                         else
                                 str[len] = str[len+1] = '.';
-                        sprintf(str+len+3, "%02d", cur_note->volume);
-                        switch (cur_note->volume_effect) {
-                        case VOL_EFFECT_VOLUME:         str[len+2] = 'v';break;
-                        case VOL_EFFECT_PANNING:        str[len+2] = 'p';break;
-                        case VOL_EFFECT_VOLSLIDEUP:     str[len+2] = 'c';break;
-                        case VOL_EFFECT_VOLSLIDEDOWN:   str[len+2] = 'd';break;
-                        case VOL_EFFECT_FINEVOLUP:      str[len+2] = 'a';break;
-                        case VOL_EFFECT_FINEVOLDOWN:    str[len+2] = 'b';break;
-                        case VOL_EFFECT_VIBRATOSPEED:   str[len+2] = 'u';break;
-                        case VOL_EFFECT_VIBRATODEPTH:   str[len+2] = 'h';break;
-                        case VOL_EFFECT_PANSLIDELEFT:   str[len+2] = 'l';break;
-                        case VOL_EFFECT_PANSLIDERIGHT:  str[len+2] = 'r';break;
-                        case VOL_EFFECT_TONEPORTAMENTO: str[len+2] = 'g';break;
-                        case VOL_EFFECT_PORTAUP:        str[len+2] = 'f';break;
-                        case VOL_EFFECT_PORTADOWN:      str[len+2] = 'e';break;
+                        sprintf(str+len+3, "%02d", cur_note->volparam);
+                        switch (cur_note->voleffect) {
+                        case VOLFX_VOLUME:         str[len+2] = 'v';break;
+                        case VOLFX_PANNING:        str[len+2] = 'p';break;
+                        case VOLFX_VOLSLIDEUP:     str[len+2] = 'c';break;
+                        case VOLFX_VOLSLIDEDOWN:   str[len+2] = 'd';break;
+                        case VOLFX_FINEVOLUP:      str[len+2] = 'a';break;
+                        case VOLFX_FINEVOLDOWN:    str[len+2] = 'b';break;
+                        case VOLFX_VIBRATOSPEED:   str[len+2] = 'u';break;
+                        case VOLFX_VIBRATODEPTH:   str[len+2] = 'h';break;
+                        case VOLFX_PANSLIDELEFT:   str[len+2] = 'l';break;
+                        case VOLFX_PANSLIDERIGHT:  str[len+2] = 'r';break;
+                        case VOLFX_TONEPORTAMENTO: str[len+2] = 'g';break;
+                        case VOLFX_PORTAUP:        str[len+2] = 'f';break;
+                        case VOLFX_PORTADOWN:      str[len+2] = 'e';break;
                         default:                        str[len+2] = '.';
                                                 /* override above */
                                                         str[len+3] = '.';
@@ -748,10 +750,10 @@ static void pattern_selection_system_copyout(void)
                         len += 5;
                         sprintf(str+len, "%c%02X",
                                         get_effect_char(cur_note->effect),
-                                        cur_note->parameter);
+                                        cur_note->param);
                         if (str[len] == '.' || str[len] == '?') {
                                 str[len] = '.';
-                                if (!cur_note->parameter)
+                                if (!cur_note->param)
                                         str[len+1] = str[len+2] = '.';
                         }
                         len += 3;
@@ -997,7 +999,7 @@ static void vary_command(int how)
 
 static int current_effect(void)
 {
-        song_note *pattern, *cur_note;
+        song_note_t *pattern, *cur_note;
 
         song_get_pattern(current_pattern, &pattern);
         cur_note = pattern + 64 * current_row + current_channel - 1;
@@ -1169,7 +1171,7 @@ static void selection_clear(void)
 // FIXME | of rows is selected and 2 * sel_rows overlaps the end of the pattern
 static void block_length_double(void)
 {
-        song_note *pattern, *src, *dest;
+        song_note_t *pattern, *src, *dest;
         int sel_rows, total_rows;
         int src_end, dest_end; // = first row that is NOT affected
         int width, height, offset;
@@ -1199,9 +1201,9 @@ static void block_length_double(void)
                 offset, selection.first_row, width, height);
 
         while (dest > src) {
-                memset(dest + offset, 0, width * sizeof(song_note));
+                memset(dest + offset, 0, width * sizeof(song_note_t));
                 dest -= 64;
-                memcpy(dest + offset, src + offset, width * sizeof(song_note));
+                memcpy(dest + offset, src + offset, width * sizeof(song_note_t));
                 dest -= 64;
                 src -= 64;
         }
@@ -1212,7 +1214,7 @@ static void block_length_double(void)
 // FIXME: this should erase the end of the selection if 2 * sel_rows > total_rows
 static void block_length_halve(void)
 {
-        song_note *pattern, *src, *dest;
+        song_note_t *pattern, *src, *dest;
         int sel_rows, src_end, total_rows, row;
         int width, height, offset;
 
@@ -1238,7 +1240,7 @@ static void block_length_halve(void)
                 offset, selection.first_row, width, height);
 
         for (row = 0; row < height / 2; row++) {
-                memcpy(dest + offset, src + offset, width * sizeof(song_note));
+                memcpy(dest + offset, src + offset, width * sizeof(song_note_t));
                 src += 64 * 2;
                 dest += 64;
         }
@@ -1249,7 +1251,7 @@ static void block_length_halve(void)
 
 static void selection_erase(void)
 {
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
         int row;
         int chan_width;
         int total_rows;
@@ -1270,12 +1272,12 @@ static void selection_erase(void)
 
         if (selection.first_channel == 1 && selection.last_channel == 64) {
                 memset(pattern + 64 * selection.first_row, 0, (selection.last_row - selection.first_row + 1)
-                       * 64 * sizeof(song_note));
+                       * 64 * sizeof(song_note_t));
         } else {
                 chan_width = selection.last_channel - selection.first_channel + 1;
                 for (row = selection.first_row; row <= selection.last_row; row++) {
                         note = pattern + 64 * row + selection.first_channel - 1;
-                        memset(note, 0, chan_width * sizeof(song_note));
+                        memset(note, 0, chan_width * sizeof(song_note_t));
                 }
         }
         pattern_selection_system_copyout();
@@ -1284,7 +1286,7 @@ static void selection_erase(void)
 static void selection_set_sample(void)
 {
         int row, chan;
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
         int total_rows;
 
         total_rows = song_get_pattern(current_pattern, &pattern);
@@ -1319,7 +1321,7 @@ static void selection_set_sample(void)
 static void selection_swap(void)
 {
         /* s_note = selection; p_note = position */
-        song_note *pattern, *s_note, *p_note, tmp;
+        song_note_t *pattern, *s_note, *p_note, tmp;
         int row, chan, sel_rows, sel_chans, total_rows;
         int affected_width, affected_height;
 
@@ -1371,7 +1373,7 @@ static void selection_swap(void)
 static void selection_set_volume(void)
 {
         int row, chan, total_rows;
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
 
         CHECK_FOR_SELECTION(return);
 
@@ -1389,8 +1391,8 @@ static void selection_set_volume(void)
         for (row = selection.first_row; row <= selection.last_row; row++) {
                 note = pattern + 64 * row + selection.first_channel - 1;
                 for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
-                        note->volume = mask_note.volume;
-                        note->volume_effect = mask_note.volume_effect;
+                        note->volparam = mask_note.volparam;
+                        note->voleffect = mask_note.voleffect;
                 }
         }
         pattern_selection_system_copyout();
@@ -1400,7 +1402,7 @@ static void selection_set_volume(void)
 static void selection_slide_volume(void)
 {
         int row, chan, total_rows;
-        song_note *pattern, *note, *last_note;
+        song_note_t *pattern, *note, *last_note;
         int first, last;                /* the volumes */
         int ve, lve;                    /* volume effect */
 
@@ -1435,11 +1437,11 @@ static void selection_slide_volume(void)
                  *     [   none - volume ] / note has a sample number
                  * in any other case, no slide occurs. */
 
-                ve = note->volume_effect;
-                lve = last_note->volume_effect;
+                ve = note->voleffect;
+                lve = last_note->voleffect;
 
-                first = note->volume;
-                last = last_note->volume;
+                first = note->volparam;
+                last = last_note->volparam;
 
                 /* Note: IT only uses the sample's default volume if there is an instrument number *AND* a
                 note. I'm just checking the instrument number, as it's the minimal information needed to
@@ -1447,28 +1449,28 @@ static void selection_slide_volume(void)
 
                 Would be nice but way hard to do: if there's a note but no sample number, look back in the
                 pattern and use the last sample number in that channel (if there is one). */
-                if (ve == VOL_EFFECT_NONE) {
+                if (ve == VOLFX_NONE) {
                         if (note->instrument == 0)
                                 continue;
-                        ve = VOL_EFFECT_VOLUME;
+                        ve = VOLFX_VOLUME;
                         /* Modplug hack: volume bit shift */
                         first = song_get_sample(note->instrument)->volume >> 2;
                 }
 
-                if (lve == VOL_EFFECT_NONE) {
+                if (lve == VOLFX_NONE) {
                         if (last_note->instrument == 0)
                                 continue;
-                        lve = VOL_EFFECT_VOLUME;
+                        lve = VOLFX_VOLUME;
                         last = song_get_sample(last_note->instrument)->volume >> 2;
                 }
 
-                if (!(ve == lve && (ve == VOL_EFFECT_VOLUME || ve == VOL_EFFECT_PANNING))) {
+                if (!(ve == lve && (ve == VOLFX_VOLUME || ve == VOLFX_PANNING))) {
                         continue;
                 }
 
                 for (row = selection.first_row; row <= selection.last_row; row++, note += 64) {
-                        note->volume_effect = ve;
-                        note->volume = (((last - first)
+                        note->voleffect = ve;
+                        note->volparam = (((last - first)
                                          * (row - selection.first_row)
                                          / (selection.last_row - selection.first_row)
                                          ) + first);
@@ -1480,7 +1482,7 @@ static void selection_slide_volume(void)
 static void selection_wipe_volume(int reckless)
 {
         int row, chan, total_rows;
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
 
         CHECK_FOR_SELECTION(return);
         total_rows = song_get_pattern(current_pattern, &pattern);
@@ -1502,8 +1504,8 @@ static void selection_wipe_volume(int reckless)
                 note = pattern + 64 * row + selection.first_channel - 1;
                 for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
                         if (reckless || (note->instrument == 0 && !NOTE_IS_NOTE(note->note))) {
-                                note->volume = 0;
-                                note->volume_effect = VOL_EFFECT_NONE;
+                                note->volparam = 0;
+                                note->voleffect = VOLFX_NONE;
                         }
                 }
         }
@@ -1523,18 +1525,18 @@ static int vary_value(int ov, int limit, int depth)
 static int common_variable_group(int ch)
 {
         switch (ch) {
-        case CMD_PORTAMENTODOWN:
-        case CMD_PORTAMENTOUP:
-        case CMD_TONEPORTAMENTO:
-                return CMD_TONEPORTAMENTO;
-        case CMD_VOLUMESLIDE:
-        case CMD_TONEPORTAVOL:
-        case CMD_VIBRATOVOL:
-                return CMD_VOLUMESLIDE;
-        case CMD_PANNING:
-        case CMD_PANNINGSLIDE:
-        case CMD_PANBRELLO:
-                return CMD_PANNING;
+        case FX_PORTAMENTODOWN:
+        case FX_PORTAMENTOUP:
+        case FX_TONEPORTAMENTO:
+                return FX_TONEPORTAMENTO;
+        case FX_VOLUMESLIDE:
+        case FX_TONEPORTAVOL:
+        case FX_VIBRATOVOL:
+                return FX_VOLUMESLIDE;
+        case FX_PANNING:
+        case FX_PANNINGSLIDE:
+        case FX_PANBRELLO:
+                return FX_PANNING;
         default:
                 return ch; /* err... */
         };
@@ -1543,7 +1545,7 @@ static int common_variable_group(int ch)
 static void selection_vary(int fast, int depth, int how)
 {
         int row, chan, total_rows;
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
         static char last_vary[39];
         const char *vary_how;
         char ch;
@@ -1551,21 +1553,21 @@ static void selection_vary(int fast, int depth, int how)
         /* don't ever vary these things */
         switch (how) {
         default:
-                if (!CMD_IS_EFFECT(how))
+                if (!FX_IS_EFFECT(how))
                         return;
                 break;
 
-        case CMD_NONE:
-        case CMD_S3MCMDEX:
-        case CMD_SPEED:
-        case CMD_POSITIONJUMP:
-        case CMD_PATTERNBREAK:
+        case FX_NONE:
+        case FX_S3MCMDEX:
+        case FX_SPEED:
+        case FX_POSITIONJUMP:
+        case FX_PATTERNBREAK:
 
-        case CMD_KEYOFF:
-        case CMD_SETENVPOSITION:
-        case CMD_VOLUME:
-        case CMD_NOTESLIDEUP:
-        case CMD_NOTESLIDEDOWN:
+        case FX_KEYOFF:
+        case FX_SETENVPOSITION:
+        case FX_VOLUME:
+        case FX_NOTESLIDEUP:
+        case FX_NOTESLIDEDOWN:
                         return;
         }
 
@@ -1573,14 +1575,14 @@ static void selection_vary(int fast, int depth, int how)
 
         status.flags |= SONG_NEEDS_SAVE;
         switch (how) {
-        case CMD_CHANNELVOLUME:
-        case CMD_CHANNELVOLSLIDE:
+        case FX_CHANNELVOLUME:
+        case FX_CHANNELVOLSLIDE:
                 vary_how = "Undo volume-channel vary      (Ctrl-U)";
                 if (fast) status_text_flash("Fast volume vary");
                 break;
-        case CMD_PANNING:
-        case CMD_PANNINGSLIDE:
-        case CMD_PANBRELLO:
+        case FX_PANNING:
+        case FX_PANNINGSLIDE:
+        case FX_PANBRELLO:
                 vary_how = "Undo panning vary             (Ctrl-Y)";
                 if (fast) status_text_flash("Fast panning vary");
                 break;
@@ -1606,71 +1608,71 @@ static void selection_vary(int fast, int depth, int how)
         for (row = selection.first_row; row <= selection.last_row; row++) {
                 note = pattern + 64 * row + selection.first_channel - 1;
                 for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
-                        if (how == CMD_CHANNELVOLUME || how == CMD_CHANNELVOLSLIDE) {
-                                if (note->volume_effect == VOL_EFFECT_VOLUME) {
-                                        note->volume = vary_value(note->volume, 64, depth);
+                        if (how == FX_CHANNELVOLUME || how == FX_CHANNELVOLSLIDE) {
+                                if (note->voleffect == VOLFX_VOLUME) {
+                                        note->volparam = vary_value(note->volparam, 64, depth);
                                 }
                         }
-                        if (how == CMD_PANNINGSLIDE || how == CMD_PANNING || how == CMD_PANBRELLO) {
-                                if (note->volume_effect == VOL_EFFECT_PANNING) {
-                                        note->volume = vary_value(note->volume, 64, depth);
+                        if (how == FX_PANNINGSLIDE || how == FX_PANNING || how == FX_PANBRELLO) {
+                                if (note->voleffect == VOLFX_PANNING) {
+                                        note->volparam = vary_value(note->volparam, 64, depth);
                                 }
                         }
 
                         ch = note->effect;
-                        if (!CMD_IS_EFFECT(ch)) continue;
+                        if (!FX_IS_EFFECT(ch)) continue;
                         if (common_variable_group(ch) != common_variable_group(how)) continue;
                         switch (ch) {
                         /* these are .0 0. and .f f. values */
-                        case CMD_VOLUMESLIDE:
-                        case CMD_CHANNELVOLSLIDE:
-                        case CMD_PANNINGSLIDE:
-                        case CMD_GLOBALVOLSLIDE:
-                        case CMD_VIBRATOVOL:
-                        case CMD_TONEPORTAVOL:
-                                if ((note->parameter & 15) == 15) continue;
-                                if ((note->parameter & 0xF0) == (0xF0))continue;
-                                if ((note->parameter & 15) == 0) {
-                                        note->parameter = (1+(vary_value(note->parameter>>4, 15, depth))) << 4;
+                        case FX_VOLUMESLIDE:
+                        case FX_CHANNELVOLSLIDE:
+                        case FX_PANNINGSLIDE:
+                        case FX_GLOBALVOLSLIDE:
+                        case FX_VIBRATOVOL:
+                        case FX_TONEPORTAVOL:
+                                if ((note->param & 15) == 15) continue;
+                                if ((note->param & 0xF0) == (0xF0))continue;
+                                if ((note->param & 15) == 0) {
+                                        note->param = (1+(vary_value(note->param>>4, 15, depth))) << 4;
                                 } else {
-                                        note->parameter = 1+(vary_value(note->parameter & 15, 15, depth));
+                                        note->param = 1+(vary_value(note->param & 15, 15, depth));
                                 }
                                 break;
                         /* tempo has a slide */
-                        case CMD_TEMPO:
-                                if ((note->parameter & 15) == 15) continue;
-                                if ((note->parameter & 0xF0) == (0xF0))continue;
+                        case FX_TEMPO:
+                                if ((note->param & 15) == 15) continue;
+                                if ((note->param & 0xF0) == (0xF0))continue;
                                 /* but otherwise it's absolute */
-                                note->parameter = 1 + (vary_value(note->parameter, 255, depth));
+                                note->param = 1 + (vary_value(note->param, 255, depth));
                                 break;
                         /* don't vary .E. and .F. values */
-                        case CMD_PORTAMENTODOWN:
-                        case CMD_PORTAMENTOUP:
-                                if ((note->parameter & 15) == 15) continue;
-                                if ((note->parameter & 15) == 14) continue;
-                                if ((note->parameter & 0xF0) == (0xF0))continue;
-                                if ((note->parameter & 0xF0) == (0xE0))continue;
-                                note->parameter = 16 + (vary_value(note->parameter-16, 224, depth));
+                        case FX_PORTAMENTODOWN:
+                        case FX_PORTAMENTOUP:
+                                if ((note->param & 15) == 15) continue;
+                                if ((note->param & 15) == 14) continue;
+                                if ((note->param & 0xF0) == (0xF0))continue;
+                                if ((note->param & 0xF0) == (0xE0))continue;
+                                note->param = 16 + (vary_value(note->param-16, 224, depth));
                                 break;
                         /* these are all "xx" commands */
                         // FIXME global/channel volume should be limited to 0-128 and 0-64, respectively
-                        case CMD_TONEPORTAMENTO:
-                        case CMD_CHANNELVOLUME:
-                        case CMD_OFFSET:
-                        case CMD_GLOBALVOLUME:
-                        case CMD_PANNING:
-                                note->parameter = 1 + (vary_value(note->parameter, 255, depth));
+                        case FX_TONEPORTAMENTO:
+                        case FX_CHANNELVOLUME:
+                        case FX_OFFSET:
+                        case FX_GLOBALVOLUME:
+                        case FX_PANNING:
+                                note->param = 1 + (vary_value(note->param, 255, depth));
                                 break;
                         /* these are all "xy" commands */
-                        case CMD_VIBRATO:
-                        case CMD_TREMOR:
-                        case CMD_ARPEGGIO:
-                        case CMD_RETRIG:
-                        case CMD_TREMOLO:
-                        case CMD_PANBRELLO:
-                        case CMD_FINEVIBRATO:
-                                note->parameter = (1 + (vary_value(note->parameter & 15, 15, depth)))
-                                        | ((1 + (vary_value((note->parameter >> 4) & 15, 15, depth))) << 4);
+                        case FX_VIBRATO:
+                        case FX_TREMOR:
+                        case FX_ARPEGGIO:
+                        case FX_RETRIG:
+                        case FX_TREMOLO:
+                        case FX_PANBRELLO:
+                        case FX_FINEVIBRATO:
+                                note->param = (1 + (vary_value(note->param & 15, 15, depth)))
+                                        | ((1 + (vary_value((note->param >> 4) & 15, 15, depth))) << 4);
                                 break;
                         };
                 }
@@ -1680,7 +1682,7 @@ static void selection_vary(int fast, int depth, int how)
 static void selection_amplify(int percentage)
 {
         int row, chan, volume, total_rows;
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
 
         if (!SELECTION_EXISTS)
                 return;
@@ -1700,14 +1702,14 @@ static void selection_amplify(int percentage)
         for (row = selection.first_row; row <= selection.last_row; row++) {
                 note = pattern + 64 * row + selection.first_channel - 1;
                 for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
-                        if (note->volume_effect == VOL_EFFECT_NONE && note->instrument != 0) {
+                        if (note->voleffect == VOLFX_NONE && note->instrument != 0) {
                                 /* Modplug hack: volume bit shift */
                                 if (song_is_instrument_mode())
                                         volume = 64; /* XXX */
                                 else
                                         volume = song_get_sample(note->instrument)->volume >> 2;
-                        } else if (note->volume_effect == VOL_EFFECT_VOLUME) {
-                                volume = note->volume;
+                        } else if (note->voleffect == VOLFX_VOLUME) {
+                                volume = note->volparam;
                         } else {
                                 continue;
                         }
@@ -1715,8 +1717,8 @@ static void selection_amplify(int percentage)
                         volume /= 100;
                         if (volume > 64) volume = 64;
                         else if (volume < 0) volume = 0;
-                        note->volume = volume;
-                        note->volume_effect = VOL_EFFECT_VOLUME;
+                        note->volparam = volume;
+                        note->voleffect = VOLFX_VOLUME;
                 }
         }
         pattern_selection_system_copyout();
@@ -1725,7 +1727,7 @@ static void selection_amplify(int percentage)
 static void selection_slide_effect(void)
 {
         int row, chan, total_rows;
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
         int first, last;                /* the effect values */
 
         /* FIXME: if there's no selection, should this display a dialog, or bail silently? */
@@ -1748,11 +1750,11 @@ static void selection_slide_effect(void)
         /* the channel loop has to go on the outside for this one */
         for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
                 note = pattern + chan - 1;
-                first = note[64 * selection.first_row].parameter;
-                last = note[64 * selection.last_row].parameter;
+                first = note[64 * selection.first_row].param;
+                last = note[64 * selection.last_row].param;
                 note += 64 * selection.first_row;
                 for (row = selection.first_row; row <= selection.last_row; row++, note += 64) {
-                        note->parameter = (((last - first)
+                        note->param = (((last - first)
                                             * (row - selection.first_row)
                                             / (selection.last_row - selection.first_row)
                                             ) + first);
@@ -1764,7 +1766,7 @@ static void selection_slide_effect(void)
 static void selection_wipe_effect(void)
 {
         int row, chan, total_rows;
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
 
         CHECK_FOR_SELECTION(return);
         total_rows = song_get_pattern(current_pattern, &pattern);
@@ -1783,7 +1785,7 @@ static void selection_wipe_effect(void)
                 note = pattern + 64 * row + selection.first_channel - 1;
                 for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
                         note->effect = 0;
-                        note->parameter = 0;
+                        note->param = 0;
                 }
         }
         pattern_selection_system_copyout();
@@ -1792,12 +1794,12 @@ static void selection_wipe_effect(void)
 /* --------------------------------------------------------------------------------------------------------- */
 /* Row shifting operations */
 
-/* A couple of the parameter names here might seem a bit confusing, so:
+/* A couple of the param names here might seem a bit confusing, so:
  *     what_row = what row to start the insert (generally this would be current_row)
  *     num_rows = the number of rows to insert */
 static void pattern_insert_rows(int what_row, int num_rows, int first_channel, int chan_width)
 {
-        song_note *pattern;
+        song_note_t *pattern;
         int row, total_rows = song_get_pattern(current_pattern, &pattern);
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -1811,17 +1813,17 @@ static void pattern_insert_rows(int what_row, int num_rows, int first_channel, i
 
         if (first_channel == 1 && chan_width == 64) {
                 memmove(pattern + 64 * (what_row + num_rows), pattern + 64 * what_row,
-                        64 * sizeof(song_note) * (total_rows - what_row - num_rows));
-                memset(pattern + 64 * what_row, 0, num_rows * 64 * sizeof(song_note));
+                        64 * sizeof(song_note_t) * (total_rows - what_row - num_rows));
+                memset(pattern + 64 * what_row, 0, num_rows * 64 * sizeof(song_note_t));
         } else {
                 /* shift the area down */
                 for (row = total_rows - num_rows - 1; row >= what_row; row--) {
                         memmove(pattern + 64 * (row + num_rows) + first_channel - 1,
-                                pattern + 64 * row + first_channel - 1, chan_width * sizeof(song_note));
+                                pattern + 64 * row + first_channel - 1, chan_width * sizeof(song_note_t));
                 }
                 /* clear the inserted rows */
                 for (row = what_row; row < what_row + num_rows; row++) {
-                        memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note));
+                        memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note_t));
                 }
         }
         pattern_selection_system_copyout();
@@ -1830,7 +1832,7 @@ static void pattern_insert_rows(int what_row, int num_rows, int first_channel, i
 /* Same as above, but with a couple subtle differences. */
 static void pattern_delete_rows(int what_row, int num_rows, int first_channel, int chan_width)
 {
-        song_note *pattern;
+        song_note_t *pattern;
         int row, total_rows = song_get_pattern(current_pattern, &pattern);
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -1844,18 +1846,18 @@ static void pattern_delete_rows(int what_row, int num_rows, int first_channel, i
 
         if (first_channel == 1 && chan_width == 64) {
                 memmove(pattern + 64 * what_row, pattern + 64 * (what_row + num_rows),
-                        64 * sizeof(song_note) * (total_rows - what_row - num_rows));
-                memset(pattern + 64 * (total_rows - num_rows), 0, num_rows * 64 * sizeof(song_note));
+                        64 * sizeof(song_note_t) * (total_rows - what_row - num_rows));
+                memset(pattern + 64 * (total_rows - num_rows), 0, num_rows * 64 * sizeof(song_note_t));
         } else {
                 /* shift the area up */
                 for (row = what_row; row <= total_rows - num_rows - 1; row++) {
                         memmove(pattern + 64 * row + first_channel - 1,
                                 pattern + 64 * (row + num_rows) + first_channel - 1,
-                                chan_width * sizeof(song_note));
+                                chan_width * sizeof(song_note_t));
                 }
                 /* clear the last rows */
                 for (row = total_rows - num_rows; row < total_rows; row++) {
-                        memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note));
+                        memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note_t));
                 }
         }
         pattern_selection_system_copyout();
@@ -1880,7 +1882,7 @@ static void pated_history_clear(void)
 
 }
 
-static void set_note_note(song_note *n, int a, int b)
+static void set_note_note(song_note_t *n, int a, int b)
 {
         if (a > 0 && a < 250) {
                 a += b;
@@ -1891,7 +1893,7 @@ static void set_note_note(song_note *n, int a, int b)
 
 static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 {
-        song_note *pattern, *p_note;
+        song_note_t *pattern, *p_note;
         int row, num_rows, chan_width;
         int chan;
 
@@ -1913,7 +1915,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
         for (row = 0; row < num_rows; row++) {
                 p_note = pattern + 64 * (y + row) + x;
                 memcpy(pattern + 64 * (y + row) + x,
-                       s->data + s->channels * row, chan_width * sizeof(song_note));
+                       s->data + s->channels * row, chan_width * sizeof(song_note_t));
                 if (!xlate) continue;
                 for (chan = 0; chan < chan_width; chan++) {
                         if (chan + x > 64) break; /* defensive */
@@ -1927,7 +1929,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 
 static void snap_copy(struct pattern_snap *s, int x, int y, int width, int height)
 {
-        song_note *pattern;
+        song_note_t *pattern;
         int row, total_rows, len;
 
         memused_songchanged();
@@ -1935,7 +1937,7 @@ static void snap_copy(struct pattern_snap *s, int x, int y, int width, int heigh
         s->rows = height;
 
         total_rows = song_get_pattern(current_pattern, &pattern);
-        s->data = mem_alloc(len = (sizeof(song_note) * s->channels * s->rows));
+        s->data = mem_alloc(len = (sizeof(song_note_t) * s->channels * s->rows));
 
         if (s->rows > total_rows) {
                 memset(s->data, 0,  len);
@@ -1944,12 +1946,12 @@ static void snap_copy(struct pattern_snap *s, int x, int y, int width, int heigh
         s->x = x; s->y = y;
         if (x == 0 && width == 64) {
                 if (height >total_rows) height = total_rows;
-                memcpy(s->data, pattern + 64 * y, (width*height*sizeof(song_note)));
+                memcpy(s->data, pattern + 64 * y, (width*height*sizeof(song_note_t)));
         } else {
                 for (row = 0; row < s->rows && row < total_rows; row++) {
                         memcpy(s->data + s->channels * row,
                                pattern + 64 * (row + s->y) + s->x,
-                               s->channels * sizeof(song_note));
+                               s->channels * sizeof(song_note_t));
                 }
         }
 }
@@ -1957,7 +1959,7 @@ static void snap_copy(struct pattern_snap *s, int x, int y, int width, int heigh
 static int snap_honor_mute(struct pattern_snap *s, int base_channel)
 {
         int i,j;
-        song_note *n;
+        song_note_t *n;
         int mute[64];
         int did_any;
 
@@ -1970,7 +1972,7 @@ static int snap_honor_mute(struct pattern_snap *s, int base_channel)
         for (j = 0; j < s->rows; j++) {
                 for (i = 0; i < s->channels; i++) {
                         if (mute[i]) {
-                                memset(n, 0, sizeof(song_note));
+                                memset(n, 0, sizeof(song_note_t));
                                 did_any = 1;
                         }
                         n++;
@@ -2077,7 +2079,7 @@ static void clipboard_copy(int honor_mute)
 
 static void clipboard_paste_overwrite(int suppress, int grow)
 {
-        song_note *pattern;
+        song_note_t *pattern;
         int num_rows, chan_width;
 
         if (clipboard.data == NULL) {
@@ -2115,7 +2117,7 @@ static void clipboard_paste_overwrite(int suppress, int grow)
 static void clipboard_paste_insert(void)
 {
         int num_rows, total_rows, chan_width;
-        song_note *pattern;
+        song_note_t *pattern;
 
         if (clipboard.data == NULL) {
                 dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
@@ -2141,10 +2143,8 @@ static void clipboard_paste_insert(void)
 
 static void clipboard_paste_mix_notes(int clip, int xlate)
 {
-        static song_note empty_note = { 0, 0, 0, 0, 0, 0 };
-
         int row, chan, num_rows, chan_width;
-        song_note *pattern, *p_note, *c_note;
+        song_note_t *pattern, *p_note, *c_note;
 
         if (clipboard.data == NULL) {
                 dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
@@ -2171,7 +2171,7 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
         c_note = clipboard.data;
         for (row = 0; row < num_rows; row++) {
                 for (chan = 0; chan < chan_width; chan++) {
-                        if (memcmp(p_note + chan, &empty_note, sizeof(song_note)) == 0) {
+                        if (memcmp(p_note + chan, &empty_note, sizeof(song_note_t)) == 0) {
 
                                 p_note[chan] = c_note[chan];
                                 set_note_note(p_note+chan,
@@ -2180,15 +2180,15 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
                                 if (clip) {
                                         p_note[chan].instrument = song_get_current_instrument();
                                         if (edit_copy_mask & MASK_VOLUME) {
-                                                p_note[chan].volume_effect = mask_note.volume_effect;
-                                                p_note[chan].volume = mask_note.volume;
+                                                p_note[chan].voleffect = mask_note.voleffect;
+                                                p_note[chan].volparam = mask_note.volparam;
                                         } else {
-                                                p_note[chan].volume_effect = 0;
-                                                p_note[chan].volume = 0;
+                                                p_note[chan].voleffect = 0;
+                                                p_note[chan].volparam = 0;
                                         }
                                         if (edit_copy_mask & MASK_EFFECT) {
                                                 p_note[chan].effect = mask_note.effect;
-                                                p_note[chan].parameter = mask_note.parameter;
+                                                p_note[chan].param = mask_note.param;
                                         }
                                 }
                         }
@@ -2202,7 +2202,7 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 static void clipboard_paste_mix_fields(int prec, int xlate)
 {
         int row, chan, num_rows, chan_width;
-        song_note *pattern, *p_note, *c_note;
+        song_note_t *pattern, *p_note, *c_note;
 
         if (clipboard.data == NULL) {
                 dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
@@ -2233,15 +2233,15 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
                                 }
                                 if (c_note[chan].instrument != 0)
                                         p_note[chan].instrument = c_note[chan].instrument;
-                                if (c_note[chan].volume_effect != VOL_EFFECT_NONE) {
-                                        p_note[chan].volume_effect = c_note[chan].volume_effect;
-                                        p_note[chan].volume = c_note[chan].volume;
+                                if (c_note[chan].voleffect != VOLFX_NONE) {
+                                        p_note[chan].voleffect = c_note[chan].voleffect;
+                                        p_note[chan].volparam = c_note[chan].volparam;
                                 }
                                 if (c_note[chan].effect != 0) {
                                         p_note[chan].effect = c_note[chan].effect;
                                 }
-                                if (c_note[chan].parameter != 0)
-                                        p_note[chan].parameter = c_note[chan].parameter;
+                                if (c_note[chan].param != 0)
+                                        p_note[chan].param = c_note[chan].param;
                         } else {
                                 if (p_note[chan].note == 0) {
                                         set_note_note(p_note+chan,
@@ -2250,15 +2250,15 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
                                 }
                                 if (p_note[chan].instrument == 0)
                                         p_note[chan].instrument = c_note[chan].instrument;
-                                if (p_note[chan].volume_effect == VOL_EFFECT_NONE) {
-                                        p_note[chan].volume_effect = c_note[chan].volume_effect;
-                                        p_note[chan].volume = c_note[chan].volume;
+                                if (p_note[chan].voleffect == VOLFX_NONE) {
+                                        p_note[chan].voleffect = c_note[chan].voleffect;
+                                        p_note[chan].volparam = c_note[chan].volparam;
                                 }
                                 if (p_note[chan].effect == 0) {
                                         p_note[chan].effect = c_note[chan].effect;
                                 }
-                                if (p_note[chan].parameter == 0)
-                                        p_note[chan].parameter = c_note[chan].parameter;
+                                if (p_note[chan].param == 0)
+                                        p_note[chan].param = c_note[chan].param;
                         }
                 }
                 p_note += 64;
@@ -2392,7 +2392,7 @@ static void fix_pb_trace(void)
 
 static void _pattern_update_magic(void)
 {
-        song_sample *s;
+        song_sample_t *s;
         int i;
 
         for (i = 1; i <= 99; i++) {
@@ -2462,7 +2462,6 @@ void play_song_from_mark_orderpan(void)
 void play_song_from_mark(void)
 {
         int new_order;
-        unsigned char *ol;
 
         if (marked_pattern != -1) {
                 song_start_at_pattern(marked_pattern, marked_row);
@@ -2470,9 +2469,8 @@ void play_song_from_mark(void)
         }
 
         new_order = get_current_order();
-        ol = song_get_orderlist();
         while (new_order < 255) {
-                if (ol[new_order] == current_pattern) {
+                if (current_song->orderlist[new_order] == current_pattern) {
                         set_current_order(new_order);
                         song_start_at_order(new_order, current_row);
                         return;
@@ -2481,7 +2479,7 @@ void play_song_from_mark(void)
         }
         new_order = 0;
         while (new_order < 255) {
-                if (ol[new_order] == current_pattern) {
+                if (current_song->orderlist[new_order] == current_pattern) {
                         set_current_order(new_order);
                         song_start_at_order(new_order, current_row);
                         return;
@@ -2538,13 +2536,12 @@ static void set_view_scheme(int scheme)
 
 /* --------------------------------------------------------------------- */
 
-static song_note empty_note;
 static void pattern_editor_redraw(void)
 {
         int chan, chan_pos, chan_drawpos = 5;
         int row, row_pos;
         char buf[4];
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
         const struct track_view *track_view;
         int total_rows;
         int fg, bg;
@@ -2672,7 +2669,7 @@ static void pattern_editor_redraw(void)
 static void transpose_notes(int amount)
 {
         int row, chan;
-        song_note *pattern, *note;
+        song_note_t *pattern, *note;
 
         status.flags |= SONG_NEEDS_SAVE;
         song_get_pattern(current_pattern, &pattern);
@@ -2708,7 +2705,7 @@ static void transpose_notes(int amount)
 static void copy_note_to_mask(void)
 {
         int n;
-        song_note *pattern, *cur_note;
+        song_note_t *pattern, *cur_note;
 
         song_get_pattern(current_pattern, &pattern);
         cur_note = pattern + 64 * current_row + current_channel - 1;
@@ -2746,11 +2743,11 @@ static inline int char_to_hex(char c)
 /* pos is either 0 or 1 (0 being the left digit, 1 being the right)
  * return: 1 (move cursor) or 0 (don't)
  * this is highly modplug specific :P */
-static int handle_volume(song_note * note, struct key_event *k, int pos)
+static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 {
-        int vol = note->volume;
-        int fx = note->volume_effect;
-        int vp = panning_mode ? VOL_EFFECT_PANNING : VOL_EFFECT_VOLUME;
+        int vol = note->volparam;
+        int fx = note->voleffect;
+        int vp = panning_mode ? VOLFX_PANNING : VOLFX_VOLUME;
         int q;
 
         if (pos == 0) {
@@ -2759,39 +2756,39 @@ static int handle_volume(song_note * note, struct key_event *k, int pos)
                         vol = q * 10 + vol % 10;
                         fx = vp;
                 } else if (k->sym == SDLK_a) {
-                        fx = VOL_EFFECT_FINEVOLUP;
+                        fx = VOLFX_FINEVOLUP;
                         vol %= 10;
                 } else if (k->sym == SDLK_b) {
-                        fx = VOL_EFFECT_FINEVOLDOWN;
+                        fx = VOLFX_FINEVOLDOWN;
                         vol %= 10;
                 } else if (k->sym == SDLK_c) {
-                        fx = VOL_EFFECT_VOLSLIDEUP;
+                        fx = VOLFX_VOLSLIDEUP;
                         vol %= 10;
                 } else if (k->sym == SDLK_d) {
-                        fx = VOL_EFFECT_VOLSLIDEDOWN;
+                        fx = VOLFX_VOLSLIDEDOWN;
                         vol %= 10;
                 } else if (k->sym == SDLK_e) {
-                        fx = VOL_EFFECT_PORTADOWN;
+                        fx = VOLFX_PORTADOWN;
                         vol %= 10;
                 } else if (k->sym == SDLK_f) {
-                        fx = VOL_EFFECT_PORTAUP;
+                        fx = VOLFX_PORTAUP;
                         vol %= 10;
                 } else if (k->sym == SDLK_g) {
-                        fx = VOL_EFFECT_TONEPORTAMENTO;
+                        fx = VOLFX_TONEPORTAMENTO;
                         vol %= 10;
                 } else if (k->sym == SDLK_h) {
-                        fx = VOL_EFFECT_VIBRATODEPTH;
+                        fx = VOLFX_VIBRATODEPTH;
                         vol %= 10;
                 } else if (status.flags & CLASSIC_MODE) {
                         return 0;
                 } else if (k->sym == SDLK_DOLLAR) {
-                        fx = VOL_EFFECT_VIBRATOSPEED;
+                        fx = VOLFX_VIBRATOSPEED;
                         vol %= 10;
                 } else if (k->sym == SDLK_LESS) {
-                        fx = VOL_EFFECT_PANSLIDELEFT;
+                        fx = VOLFX_PANSLIDELEFT;
                         vol %= 10;
                 } else if (k->sym == SDLK_GREATER) {
-                        fx = VOL_EFFECT_PANSLIDERIGHT;
+                        fx = VOLFX_PANSLIDERIGHT;
                         vol %= 10;
                 } else {
                         return 0;
@@ -2801,9 +2798,9 @@ static int handle_volume(song_note * note, struct key_event *k, int pos)
                 if (q >= 0 && q <= 9) {
                         vol = (vol / 10) * 10 + q;
                         switch (fx) {
-                        case VOL_EFFECT_NONE:
-                        case VOL_EFFECT_VOLUME:
-                        case VOL_EFFECT_PANNING:
+                        case VOLFX_NONE:
+                        case VOLFX_VOLUME:
+                        case VOLFX_PANNING:
                                 fx = vp;
                         }
                 } else {
@@ -2811,29 +2808,29 @@ static int handle_volume(song_note * note, struct key_event *k, int pos)
                 }
         }
 
-        note->volume_effect = fx;
-        if (fx == VOL_EFFECT_VOLUME || fx == VOL_EFFECT_PANNING)
-                note->volume = CLAMP(vol, 0, 64);
+        note->voleffect = fx;
+        if (fx == VOLFX_VOLUME || fx == VOLFX_PANNING)
+                note->volparam = CLAMP(vol, 0, 64);
         else
-                note->volume = CLAMP(vol, 0, 9);
+                note->volparam = CLAMP(vol, 0, 9);
         return 1;
 }
 
 #if 0
-static int note_is_empty(song_note *p)
+static int note_is_empty(song_note_t *p)
 {
-        if (!p->note && p->volume_effect == VOL_EFFECT_NONE && !p->effect && !p->parameter)
+        if (!p->note && p->voleffect == VOLFX_NONE && !p->effect && !p->param)
                 return 1;
         return 0;
 }
 #endif
 
-// FIXME: why the 'row' parameter? should it be removed, or should the references to current_row be replaced?
+// FIXME: why the 'row' param? should it be removed, or should the references to current_row be replaced?
 // fwiw, every call to this uses current_row.
 // return: zero if there was a template error, nonzero otherwise
-static int patedit_record_note(song_note *cur_note, int channel, UNUSED int row, int note, int force)
+static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int row, int note, int force)
 {
-        song_note *q;
+        song_note_t *q;
         int i, r = 1, channels;
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -2887,12 +2884,12 @@ static int patedit_record_note(song_note *cur_note, int channel, UNUSED int row,
                                 cur_note->instrument = 0;
                         }
                         if (edit_copy_mask & MASK_VOLUME) {
-                                cur_note->volume_effect = 0;
-                                cur_note->volume = 0;
+                                cur_note->voleffect = 0;
+                                cur_note->volparam = 0;
                         }
                         if (edit_copy_mask & MASK_EFFECT) {
                                 cur_note->effect = 0;
-                                cur_note->parameter = 0;
+                                cur_note->param = 0;
                         }
                         cur_note++;
                 }
@@ -2903,7 +2900,7 @@ static int patedit_record_note(song_note *cur_note, int channel, UNUSED int row,
 
 static int pattern_editor_insert_midi(struct key_event *k)
 {
-        song_note *pattern, *cur_note = NULL;
+        song_note_t *pattern, *cur_note = NULL;
         int n, v = 0, c = 0, pd, spd, tk;
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -2966,14 +2963,14 @@ static int pattern_editor_insert_midi(struct key_event *k)
                         }
 
                         if (midi_flags & MIDI_RECORD_VELOCITY) {
-                                cur_note->volume_effect = VOL_EFFECT_VOLUME;
-                                cur_note->volume = v;
+                                cur_note->voleffect = VOLFX_VOLUME;
+                                cur_note->volparam = v;
                         }
                         tk %= spd;
                         if (midi_flags & MIDI_RECORD_SDX
                             && (!cur_note->effect && (tk & 15))) {
                                 cur_note->effect = 20; /* Sxx */
-                                cur_note->parameter = 0xD0 | (tk & 15);
+                                cur_note->param = 0xD0 | (tk & 15);
                         }
                 }
         }
@@ -2981,7 +2978,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
         if (!(midi_flags & MIDI_PITCHBEND) || midi_pitch_depth == 0 || k->midi_bend == 0) {
                 if (k->state && k->midi_note > -1 && cur_note->instrument > 0) {
                         song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note, v, c+1,
-                                cur_note->effect, cur_note->parameter);
+                                cur_note->effect, cur_note->param);
                         pattern_selection_system_copyout();
                 }
                 return -1;
@@ -3010,19 +3007,19 @@ static int pattern_editor_insert_midi(struct key_event *k)
                         else if (pd > 0x7F) pd = 0x7F;
                         if (pd < 0) {
                                 cur_note->effect = 3; /* Exx */
-                                cur_note->parameter = -pd;
+                                cur_note->param = -pd;
                         } else if (pd > 0) {
                                 cur_note->effect = 2; /* Fxx */
-                                cur_note->parameter = pd;
+                                cur_note->param = pd;
                         }
                         if (k->midi_note == -1 || k->state) continue;
                         if (cur_note->instrument < 1) continue;
-                        if (cur_note->volume_effect == VOL_EFFECT_VOLUME)
-                                v = cur_note->volume;
+                        if (cur_note->voleffect == VOLFX_VOLUME)
+                                v = cur_note->volparam;
                         else
                                 v = -1;
                         song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
-                                v, c+1, cur_note->effect, cur_note->parameter);
+                                v, c+1, cur_note->effect, cur_note->param);
                 }
         }
         pattern_selection_system_copyout();
@@ -3036,7 +3033,7 @@ static int pattern_editor_insert(struct key_event *k)
 {
         int total_rows;
         int ins, smp, j, n, vol;
-        song_note *pattern, *cur_note;
+        song_note_t *pattern, *cur_note;
 
         total_rows = song_get_pattern(current_pattern, &pattern);
         /* keydown events are handled here for multichannel */
@@ -3059,13 +3056,13 @@ static int pattern_editor_insert(struct key_event *k)
                 if (k->sym == SDLK_4) {
                         if (k->state) return 0;
 
-                        if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
-                                vol = cur_note->volume;
+                        if (cur_note->voleffect == VOLFX_VOLUME) {
+                                vol = cur_note->volparam;
                         } else {
                                 vol = -1;
                         }
                         song_keyrecord(smp, ins, cur_note->note,
-                                vol, current_channel, cur_note->effect, cur_note->parameter);
+                                vol, current_channel, cur_note->effect, cur_note->param);
                         advance_cursor(!(k->mod & KMOD_SHIFT), 1);
                         return 1;
                 } else if (k->sym == SDLK_8 && k->orig_sym == SDLK_8) {
@@ -3089,18 +3086,18 @@ static int pattern_editor_insert(struct key_event *k)
                         /* copy mask to note */
                         n = mask_note.note;
 
-                        vol = ((edit_copy_mask & MASK_VOLUME) && cur_note->volume_effect == VOL_EFFECT_VOLUME)
-                                ? mask_note.volume
+                        vol = ((edit_copy_mask & MASK_VOLUME) && cur_note->voleffect == VOLFX_VOLUME)
+                                ? mask_note.volparam
                                 : -1;
                 } else {
                         n = kbd_get_note(k);
                         if (n < 0)
                                 return 0;
 
-                        if ((edit_copy_mask & MASK_VOLUME) && mask_note.volume_effect == VOL_EFFECT_VOLUME) {
-                                vol = mask_note.volume;
-                        } else if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
-                                vol = cur_note->volume;
+                        if ((edit_copy_mask & MASK_VOLUME) && mask_note.voleffect == VOLFX_VOLUME) {
+                                vol = mask_note.volparam;
+                        } else if (cur_note->voleffect == VOLFX_VOLUME) {
+                                vol = cur_note->volparam;
                         } else {
                                 vol = -1;
                         }
@@ -3154,12 +3151,12 @@ static int pattern_editor_insert(struct key_event *k)
                                         cur_note->instrument = sample_get_current();
                         }
                         if (edit_copy_mask & MASK_VOLUME) {
-                                cur_note->volume_effect = mask_note.volume_effect;
-                                cur_note->volume = mask_note.volume;
+                                cur_note->voleffect = mask_note.voleffect;
+                                cur_note->volparam = mask_note.volparam;
                         }
                         if (edit_copy_mask & MASK_EFFECT) {
                                 cur_note->effect = mask_note.effect;
-                                cur_note->parameter = mask_note.parameter;
+                                cur_note->param = mask_note.param;
                         }
                 }
 
@@ -3168,8 +3165,8 @@ static int pattern_editor_insert(struct key_event *k)
                 pattern_selection_system_copyout();
 
                 n = cur_note->note;
-                if (NOTE_IS_NOTE(n) && cur_note->volume_effect == VOL_EFFECT_VOLUME)
-                        vol = cur_note->volume;
+                if (NOTE_IS_NOTE(n) && cur_note->voleffect == VOLFX_VOLUME)
+                        vol = cur_note->volparam;
                 if (k->mod & KMOD_SHIFT) {
                         // advance horizontally, stopping at channel 64
                         // (I have no idea how IT does this, it might wrap)
@@ -3259,15 +3256,15 @@ static int pattern_editor_insert(struct key_event *k)
         case 4:
         case 5:                 /* volume */
                 if (k->sym == SDLK_SPACE) {
-                        cur_note->volume = mask_note.volume;
-                        cur_note->volume_effect = mask_note.volume_effect;
+                        cur_note->volparam = mask_note.volparam;
+                        cur_note->voleffect = mask_note.voleffect;
                         advance_cursor(1, 0);
                         status.flags |= SONG_NEEDS_SAVE;
                         break;
                 }
                 if (kbd_get_note(k) == 0) {
-                        cur_note->volume = mask_note.volume = 0;
-                        cur_note->volume_effect = mask_note.volume_effect = VOL_EFFECT_NONE;
+                        cur_note->volparam = mask_note.volparam = 0;
+                        cur_note->voleffect = mask_note.voleffect = VOLFX_NONE;
                         advance_cursor(1, 0);
                         status.flags |= SONG_NEEDS_SAVE;
                         break;
@@ -3279,8 +3276,8 @@ static int pattern_editor_insert(struct key_event *k)
                 }
                 if (!handle_volume(cur_note, k, current_position - 4))
                         return 0;
-                mask_note.volume = cur_note->volume;
-                mask_note.volume_effect = cur_note->volume_effect;
+                mask_note.volparam = cur_note->volparam;
+                mask_note.voleffect = cur_note->voleffect;
                 if (current_position == 4) {
                         current_position++;
                 } else {
@@ -3309,14 +3306,14 @@ static int pattern_editor_insert(struct key_event *k)
         case 7:                 /* param, high nibble */
         case 8:                 /* param, low nibble */
                 if (k->sym == SDLK_SPACE) {
-                        cur_note->parameter = mask_note.parameter;
+                        cur_note->param = mask_note.param;
                         current_position = link_effect_column ? 6 : 7;
                         advance_cursor(1, 0);
                         status.flags |= SONG_NEEDS_SAVE;
                         pattern_selection_system_copyout();
                         break;
                 } else if (kbd_get_note(k) == 0) {
-                        cur_note->parameter = mask_note.parameter = 0;
+                        cur_note->param = mask_note.param = 0;
                         current_position = link_effect_column ? 6 : 7;
                         advance_cursor(1, 0);
                         status.flags |= SONG_NEEDS_SAVE;
@@ -3330,15 +3327,15 @@ static int pattern_editor_insert(struct key_event *k)
                 if (n < 0)
                         return 0;
                 if (current_position == 7) {
-                        cur_note->parameter = (n << 4) | (cur_note->parameter & 0xf);
+                        cur_note->param = (n << 4) | (cur_note->param & 0xf);
                         current_position++;
                 } else /* current_position == 8 */ {
-                        cur_note->parameter = (cur_note->parameter & 0xf0) | n;
+                        cur_note->param = (cur_note->param & 0xf0) | n;
                         current_position = link_effect_column ? 6 : 7;
                         advance_cursor(1, 0);
                 }
                 status.flags |= SONG_NEEDS_SAVE;
-                mask_note.parameter = cur_note->parameter;
+                mask_note.param = cur_note->param;
                 pattern_selection_system_copyout();
                 break;
         }
@@ -3739,17 +3736,17 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
         case SDLK_u:
                 if (k->state) return 1;
                 if (fast_volume_mode)
-                        selection_vary(1, 100-fast_volume_percent, CMD_CHANNELVOLUME);
+                        selection_vary(1, 100-fast_volume_percent, FX_CHANNELVOLUME);
                 else
-                        vary_command(CMD_CHANNELVOLUME);
+                        vary_command(FX_CHANNELVOLUME);
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_y:
                 if (k->state) return 1;
                 if (fast_volume_mode)
-                        selection_vary(1, 100-fast_volume_percent, CMD_PANBRELLO);
+                        selection_vary(1, 100-fast_volume_percent, FX_PANBRELLO);
                 else
-                        vary_command(CMD_PANBRELLO);
+                        vary_command(FX_PANBRELLO);
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_k:

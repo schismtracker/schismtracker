@@ -27,7 +27,6 @@
 #include "log.h"
 #include "midi.h"
 
-#include "mixer.h"
 #include "util.h"
 
 #include <windows.h>

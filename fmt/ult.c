@@ -88,22 +88,22 @@ much anywhere for that matter. I don't even think Ultra Tracker tries to
 convert them. */
 
 static const uint8_t ult_efftrans[] = {
-        CMD_ARPEGGIO,
-        CMD_PORTAMENTOUP,
-        CMD_PORTAMENTODOWN,
-        CMD_TONEPORTAMENTO,
-        CMD_VIBRATO,
-        CMD_NONE,
-        CMD_NONE,
-        CMD_TREMOLO,
-        CMD_NONE,
-        CMD_OFFSET,
-        CMD_VOLUMESLIDE,
-        CMD_PANNING,
-        CMD_VOLUME,
-        CMD_PATTERNBREAK,
-        CMD_NONE, // extended effects, processed separately
-        CMD_SPEED,
+        FX_ARPEGGIO,
+        FX_PORTAMENTOUP,
+        FX_PORTAMENTODOWN,
+        FX_TONEPORTAMENTO,
+        FX_VIBRATO,
+        FX_NONE,
+        FX_NONE,
+        FX_TREMOLO,
+        FX_NONE,
+        FX_OFFSET,
+        FX_VOLUMESLIDE,
+        FX_PANNING,
+        FX_VOLUME,
+        FX_PATTERNBREAK,
+        FX_NONE, // extended effects, processed separately
+        FX_SPEED,
 };
 
 static void translate_fx(uint8_t *pe, uint8_t *pp)
@@ -116,7 +116,7 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
         switch (e) {
         case 0:
                 if (!p)
-                        *pe = CMD_NONE;
+                        *pe = FX_NONE;
                 break;
         case 3:
                 // 300 apparently stops sliding, which is totally weird
@@ -140,44 +140,44 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
         case 0xe: // special
                 switch (p >> 4) {
                 case 1:
-                        *pe = CMD_PORTAMENTOUP;
+                        *pe = FX_PORTAMENTOUP;
                         p = 0xf0 | (p & 0xf);
                         break;
                 case 2:
-                        *pe = CMD_PORTAMENTODOWN;
+                        *pe = FX_PORTAMENTODOWN;
                         p = 0xf0 | (p & 0xf);
                         break;
                 case 8:
-                        *pe = CMD_S3MCMDEX;
+                        *pe = FX_S3MCMDEX;
                         p = 0x60 | (p & 0xf);
                         break;
                 case 9:
-                        *pe = CMD_RETRIG;
+                        *pe = FX_RETRIG;
                         p &= 0xf;
                         break;
                 case 0xa:
-                        *pe = CMD_VOLUMESLIDE;
+                        *pe = FX_VOLUMESLIDE;
                         p = ((p & 0xf) << 4) | 0xf;
                         break;
                 case 0xb:
-                        *pe = CMD_VOLUMESLIDE;
+                        *pe = FX_VOLUMESLIDE;
                         p = 0xf0 | (p & 0xf);
                         break;
                 case 0xc: case 0xd:
-                        *pe = CMD_S3MCMDEX;
+                        *pe = FX_S3MCMDEX;
                         break;
                 }
                 break;
         case 0xf:
                 if (p > 0x2f)
-                        *pe = CMD_TEMPO;
+                        *pe = FX_TEMPO;
                 break;
         }
 
         *pp = p;
 }
 
-static int read_ult_event(slurp_t *fp, MODCOMMAND *note, int *lostfx)
+static int read_ult_event(slurp_t *fp, song_note_t *note, int *lostfx)
 {
         uint8_t b, repeat = 1;
         uint32_t off;
@@ -189,31 +189,31 @@ static int read_ult_event(slurp_t *fp, MODCOMMAND *note, int *lostfx)
                 b = slurp_getc(fp);
         }
         note->note = (b > 0 && b < 61) ? b + 36 : NOTE_NONE;
-        note->instr = slurp_getc(fp);
+        note->instrument = slurp_getc(fp);
         b = slurp_getc(fp);
-        note->volcmd = b & 0xf;
-        note->command = b >> 4;
-        note->vol = slurp_getc(fp);
+        note->voleffect = b & 0xf;
+        note->effect = b >> 4;
+        note->volparam = slurp_getc(fp);
         note->param = slurp_getc(fp);
-        translate_fx(&note->volcmd, &note->vol);
-        translate_fx(&note->command, &note->param);
+        translate_fx(&note->voleffect, &note->volparam);
+        translate_fx(&note->effect, &note->param);
 
         // sample offset -- this is even more special than digitrakker's
-        if (note->volcmd == CMD_OFFSET && note->command == CMD_OFFSET) {
-                off = ((note->vol << 8) | note->param) >> 6;
-                note->volcmd = CMD_NONE;
+        if (note->voleffect == FX_OFFSET && note->effect == FX_OFFSET) {
+                off = ((note->volparam << 8) | note->param) >> 6;
+                note->voleffect = FX_NONE;
                 note->param = MIN(off, 0xff);
-        } else if (note->volcmd == CMD_OFFSET) {
-                off = note->vol * 4;
-                note->vol = MIN(off, 0xff);
-        } else if (note->command == CMD_OFFSET) {
+        } else if (note->voleffect == FX_OFFSET) {
+                off = note->volparam * 4;
+                note->volparam = MIN(off, 0xff);
+        } else if (note->effect == FX_OFFSET) {
                 off = note->param * 4;
                 note->param = MIN(off, 0xff);
-        } else if (note->volcmd == note->command) {
+        } else if (note->voleffect == note->effect) {
                 /* don't try to figure out how ultratracker does this, it's quite random */
-                note->command = CMD_NONE;
+                note->effect = FX_NONE;
         }
-        if (note->command == CMD_VOLUME || (note->command == CMD_NONE && note->volcmd != CMD_VOLUME)) {
+        if (note->effect == FX_VOLUME || (note->effect == FX_NONE && note->voleffect != FX_VOLUME)) {
                 swap_effects(note);
         }
 
@@ -227,23 +227,23 @@ static int read_ult_event(slurp_t *fp, MODCOMMAND *note, int *lostfx)
                 swap_effects(note);
         }
         if (n < 5) {
-                if (effect_weight[note->volcmd] > effect_weight[note->command])
+                if (effect_weight[note->voleffect] > effect_weight[note->effect])
                         swap_effects(note);
                 (*lostfx)++;
-                //log_appendf(4, "Effect dropped: %c%02X < %c%02X", get_effect_char(note->volcmd), note->vol,
-                //        get_effect_char(note->command), note->param);
-                note->volcmd = 0;
+                //log_appendf(4, "Effect dropped: %c%02X < %c%02X", get_effect_char(note->voleffect),
+                //        note->volparam, get_effect_char(note->effect), note->param);
+                note->voleffect = 0;
         }
-        if (!note->volcmd)
-                note->vol = 0;
-        if (!note->command)
+        if (!note->voleffect)
+                note->volparam = 0;
+        if (!note->effect)
                 note->param = 0;
         return repeat;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         char buf[34];
         uint8_t ver;
@@ -251,7 +251,7 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         int n, chn, pat, row;
         int lostfx = 0, gxx = 0;
         struct ult_sample usmp;
-        SONGSAMPLE *smp;
+        song_sample_t *smp;
         const char *verstr[] = {"<1.4", "1.4", "1.5", "1.6"};
 
         slurp_read(fp, buf, 14);
@@ -264,16 +264,16 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         slurp_read(fp, buf, 32);
         buf[25] = '\0';
-        strcpy(song->song_title, buf);
+        strcpy(song->title, buf);
 
         sprintf(song->tracker_id, "Ultra Tracker %s", verstr[ver - 1]);
-        song->m_dwSongFlags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
+        song->flags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
 
         nmsg = slurp_getc(fp);
-        read_lined_message(song->m_lpszSongComments, fp, nmsg * 32, 32);
+        read_lined_message(song->message, fp, nmsg * 32, 32);
 
         nsmp = slurp_getc(fp);
-        for (n = 0, smp = song->Samples + 1; n < nsmp; n++, smp++) {
+        for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
                 // annoying: v4 added a field before the end of the struct
                 if (ver >= 4) {
                         slurp_read(fp, &usmp, sizeof(usmp));
@@ -295,30 +295,30 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 smp->filename[12] = '\0';
                 if (usmp.size_end <= usmp.size_start)
                         continue;
-                smp->nLength = usmp.size_end - usmp.size_start;
-                smp->nLoopStart = usmp.loop_start;
-                smp->nLoopEnd = MIN(usmp.loop_end, smp->nLength);
-                smp->nVolume = usmp.volume; //mphack - should be 0-64 not 0-256
-                smp->nGlobalVol = 64;
+                smp->length = usmp.size_end - usmp.size_start;
+                smp->loop_start = usmp.loop_start;
+                smp->loop_end = MIN(usmp.loop_end, smp->length);
+                smp->volume = usmp.volume; //mphack - should be 0-64 not 0-256
+                smp->global_volume = 64;
 
                 /* mikmod does some weird integer math here, but it didn't really work for me */
-                smp->nC5Speed = usmp.speed;
+                smp->c5speed = usmp.speed;
                 if (usmp.finetune)
-                        smp->nC5Speed *= pow(2, (usmp.finetune / (12.0 * 32768)));
+                        smp->c5speed *= pow(2, (usmp.finetune / (12.0 * 32768)));
 
                 if (usmp.flags & ULT_LOOP)
-                        smp->uFlags |= CHN_LOOP;
+                        smp->flags |= CHN_LOOP;
                 if (usmp.flags & ULT_PINGPONGLOOP)
-                        smp->uFlags |= CHN_PINGPONGLOOP;
+                        smp->flags |= CHN_PINGPONGLOOP;
                 if (usmp.flags & ULT_16BIT) {
-                        smp->uFlags |= CHN_16BIT;
-                        smp->nLoopStart >>= 1;
-                        smp->nLoopEnd >>= 1;
+                        smp->flags |= CHN_16BIT;
+                        smp->loop_start >>= 1;
+                        smp->loop_end >>= 1;
                 }
         }
 
         // ult just so happens to use 255 for its end mark, so there's no need to fiddle with this
-        slurp_read(fp, song->Orderlist, 256);
+        slurp_read(fp, song->orderlist, 256);
 
         nchn = slurp_getc(fp) + 1;
         npat = slurp_getc(fp) + 1;
@@ -328,38 +328,38 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         if (ver >= 3) {
                 for (n = 0; n < nchn; n++)
-                        song->Channels[n].nPan = ((slurp_getc(fp) & 0xf) << 2) + 2;
+                        song->channels[n].panning = ((slurp_getc(fp) & 0xf) << 2) + 2;
         } else {
                 for (n = 0; n < nchn; n++)
-                        song->Channels[n].nPan = (n & 1) ? 48 : 16;
+                        song->channels[n].panning = (n & 1) ? 48 : 16;
         }
         for (; n < 64; n++) {
-                song->Channels[n].nPan = 32;
-                song->Channels[n].dwFlags = CHN_MUTE;
+                song->channels[n].panning = 32;
+                song->channels[n].flags = CHN_MUTE;
         }
         //mphack - fix the pannings
         for (n = 0; n < 64; n++)
-                song->Channels[n].nPan *= 4;
+                song->channels[n].panning *= 4;
 
         if ((lflags & (LOAD_NOSAMPLES | LOAD_NOPATTERNS)) == (LOAD_NOSAMPLES | LOAD_NOPATTERNS))
                 return LOAD_SUCCESS;
 
         for (pat = 0; pat < npat; pat++) {
-                song->PatternSize[pat] = song->PatternAllocSize[pat] = 64;
-                song->Patterns[pat] = csf_allocate_pattern(64, 64);
+                song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
+                song->patterns[pat] = csf_allocate_pattern(64);
         }
         for (chn = 0; chn < nchn; chn++) {
-                MODCOMMAND evnote;
-                MODCOMMAND *note;
+                song_note_t evnote;
+                song_note_t *note;
                 int repeat;
 
                 for (pat = 0; pat < npat; pat++) {
-                        note = song->Patterns[pat] + chn;
+                        note = song->patterns[pat] + chn;
                         row = 0;
                         while (row < 64) {
                                 repeat = read_ult_event(fp, &evnote, &lostfx);
-                                if (evnote.command == CMD_TONEPORTAMENTO
-                                    || evnote.volcmd == VOLCMD_TONEPORTAMENTO) {
+                                if (evnote.effect == FX_TONEPORTAMENTO
+                                    || evnote.voleffect == VOLFX_TONEPORTAMENTO) {
                                         gxx |= 1;
                                 }
                                 if (repeat + row > 64)
@@ -378,9 +378,9 @@ int fmt_ult_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
         if (!(lflags & LOAD_NOSAMPLES)) {
-                for (n = 0, smp = song->Samples + 1; n < nsmp; n++, smp++) {
+                for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
                         uint32_t ssize = csf_read_sample(smp,
-                                SF_LE | SF_M | SF_PCMS | ((smp->uFlags & CHN_16BIT) ? SF_16 : SF_8),
+                                SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
                                 fp->data + fp->pos, fp->length - fp->pos);
                         slurp_seek(fp, ssize, SEEK_CUR);
                 }

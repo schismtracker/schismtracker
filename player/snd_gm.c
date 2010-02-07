@@ -1,13 +1,35 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010 Storlek
+ * URL: http://schismtracker.org/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 /* This is a wrapper which converts S3M style thinking
- * into MIDI style thinking.
-*/
+ * into MIDI style thinking. */
 
 #include "headers.h"
 
 #include "log.h"
 #include "it.h" // needed for status.flags
 #include "sndfile.h"
-#include "mplink.h" // for 'mp', which we shouldn't need
+#include "song.h" // for 'current_song', which we shouldn't need
 #include "snd_gm.h"
 
 #include <math.h> // for log and log2
@@ -25,9 +47,9 @@ static double log2(double d)
 
 static const enum
 {
-    AlwaysHonor, /* Always honor nMidiChannelMask in instruments */
-    TryHonor,    /* Honor nMidiChannelMask in instruments when the channel is free */
-    Ignore       /* Ignore nMidiChannelMask in instruments */
+    AlwaysHonor, /* Always honor midi_channel_mask in instruments */
+    TryHonor,    /* Honor midi_channel_mask in instruments when the channel is free */
+    Ignore       /* Ignore midi_channel_mask in instruments */
 } PreferredChannelHandlingMode = AlwaysHonor;
 
 
@@ -109,7 +131,7 @@ static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
         if (!nbytes)
                 return;
 
-        csf_midi_send(mp, buf, nbytes, c, 0); // FIXME we should not know about 'mp' here!
+        csf_midi_send(current_song, buf, nbytes, c, 0); // FIXME we should not know about 'current_song' here!
 }
 
 
@@ -699,11 +721,11 @@ void GM_IncrementSongCounter(int count)
          * Length of row is --------------------- samples
          *                         2 * cmdT
          *
-         * where cmdA = last CMD_SPEED = m_nMusicSpeed
-         *   and cmdT = last CMD_TEMPO = m_nMusicTempo
+         * where cmdA = last FX_SPEED = current_speed
+         *   and cmdT = last FX_TEMPO = current_tempo
          */
-        int RowLengthInSamplesHi = 5 * mp->m_nMusicSpeed * gdwMixingFreq;
-        int RowLengthInSamplesLo = 2 * mp->m_nMusicTempo;
+        int RowLengthInSamplesHi = 5 * current_song->current_speed * mix_frequency;
+        int RowLengthInSamplesLo = 2 * current_song->current_tempo;
 
         double NumberOfSamplesPer32thNote =
             RowLengthInSamplesHi*8 / (double)RowLengthInSamplesLo;

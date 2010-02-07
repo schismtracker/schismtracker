@@ -1,8 +1,25 @@
 /*
- * This source code is public domain.
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010 Storlek
+ * URL: http://schismtracker.org/
  *
- * Authors: Olivier Lapicque <olivierl@jps.net>
-*/
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include "sndfile.h"
 #include "cmixer.h"
@@ -85,16 +102,16 @@ static const float dmpfac[] = {
 
 // Simple 2-poles resonant filter
 //
-// XXX freq WAS unused but is now gdwMixingFreq!
+// XXX freq WAS unused but is now mix_frequency!
 //
-void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq)
+void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int freq)
 {
         float fc;
-        float fs = freq;//(float)gdwMixingFreq;
+        float fs = freq;//(float)mix_frequency;
         float fg, fb0, fb1;
         float d2, d, e;
-        int cutoff = pChn->nCutOff;
-        int resonance = pChn->nResonance;
+        int cutoff = chan->cutoff;
+        int resonance = chan->resonance;
 
         cutoff = cutoff * (flt_modifier + 256) / 256;
 
@@ -106,7 +123,7 @@ void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq
 
         // Should be 255, but Zxx cutoff is limited to 127, so...
         if (cutoff < 254)
-                pChn->dwFlags |= CHN_FILTER;
+                chan->flags |= CHN_FILTER;
         else
                 cutoff = 255;
 
@@ -126,13 +143,13 @@ void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq
         fb0 = (d + e + e) / (1 + d + e);
         fb1 = -e / (1 + d + e);
 
-        pChn->nFilter_A0 = (double) fg;
-        pChn->nFilter_B0 = (double) fb0;
-        pChn->nFilter_B1 = (double) fb1;
+        chan->filter_a0 = (double) fg;
+        chan->filter_b0 = (double) fb0;
+        chan->filter_b1 = (double) fb1;
 
         if (reset) {
-                pChn->nFilter_Y1 = pChn->nFilter_Y2 = 0;
-                pChn->nFilter_Y3 = pChn->nFilter_Y4 = 0;
+                chan->filter_y1 = chan->filter_y2 = 0;
+                chan->filter_y3 = chan->filter_y4 = 0;
         }
 }
 

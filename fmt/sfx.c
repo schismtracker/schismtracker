@@ -71,14 +71,14 @@ int fmt_sfx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 Why did I write a loader for such an obscure format? That is, besides the fact that neither Modplug nor
 Mikmod support SFX (and for good reason; it's a particularly dumb format) */
 
-int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         uint8_t tag[4];
         int n, nord, npat, pat, chan, restart, nsmp = 0;
         uint32_t smpsize[31];
         uint16_t tmp;
-        MODCOMMAND *note;
-        SONGSAMPLE *sample;
+        song_note_t *note;
+        song_sample_t *sample;
         unsigned int effwarn = 0;
         struct sfxfmt *fmt = sfxfmts;
 
@@ -103,35 +103,35 @@ int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         if (!tmp)
                 return LOAD_UNSUPPORTED; // erf
         tmp = 14565 * 122 / bswapBE16(tmp);
-        song->m_nDefaultTempo = CLAMP(tmp, 31, 255);
+        song->initial_tempo = CLAMP(tmp, 31, 255);
 
         slurp_seek(fp, 14, SEEK_CUR); /* unknown bytes (reserved?) - see below */
 
         if (lflags & LOAD_NOSAMPLES) {
                 slurp_seek(fp, 30 * nsmp, SEEK_CUR);
         } else {
-                for (n = 0, sample = song->Samples + 1; n < nsmp; n++, sample++) {
+                for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
                         slurp_read(fp, sample->name, 22);
                         sample->name[22] = 0;
                         slurp_read(fp, &tmp, 2); /* seems to be half the sample size, minus two bytes? */
                         tmp = bswapBE16(tmp);
-                        sample->nLength = bswapBE32(smpsize[n]);
+                        sample->length = bswapBE32(smpsize[n]);
 
-                        song->Samples[n].nC5Speed = MOD_FINETUNE(slurp_getc(fp)); // ?
-                        sample->nVolume = slurp_getc(fp);
-                        if (sample->nVolume > 64)
-                                sample->nVolume = 64;
-                        sample->nVolume *= 4; //mphack
-                        sample->nGlobalVol = 64;
+                        song->samples[n].c5speed = MOD_FINETUNE(slurp_getc(fp)); // ?
+                        sample->volume = slurp_getc(fp);
+                        if (sample->volume > 64)
+                                sample->volume = 64;
+                        sample->volume *= 4; //mphack
+                        sample->global_volume = 64;
                         slurp_read(fp, &tmp, 2);
-                        sample->nLoopStart = bswapBE16(tmp);
+                        sample->loop_start = bswapBE16(tmp);
                         slurp_read(fp, &tmp, 2);
                         tmp = bswapBE16(tmp) * 2; /* loop length */
                         if (tmp > 2) {
-                                sample->nLoopEnd = sample->nLoopStart + tmp;
-                                sample->uFlags |= CHN_LOOP;
+                                sample->loop_end = sample->loop_start + tmp;
+                                sample->flags |= CHN_LOOP;
                         } else {
-                                sample->nLoopStart = sample->nLoopEnd = 0;
+                                sample->loop_start = sample->loop_end = 0;
                         }
                 }
         }
@@ -140,12 +140,12 @@ int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         nord = slurp_getc(fp);
         nord = MIN(nord, 127);
         restart = slurp_getc(fp);
-        slurp_read(fp, song->Orderlist, nord);
+        slurp_read(fp, song->orderlist, nord);
         slurp_seek(fp, 128 - nord, SEEK_CUR);
         npat = 0;
         for (n = 0; n < nord; n++) {
-                if (song->Orderlist[n] > npat)
-                        npat = song->Orderlist[n];
+                if (song->orderlist[n] > npat)
+                        npat = song->orderlist[n];
         }
         npat++;
 
@@ -157,8 +157,8 @@ int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 slurp_seek(fp, npat * 1024, SEEK_CUR);
         } else {
                 for (pat = 0; pat < npat; pat++) {
-                        note = song->Patterns[pat] = csf_allocate_pattern(64, 64);
-                        song->PatternSize[pat] = song->PatternAllocSize[pat] = 64;
+                        note = song->patterns[pat] = csf_allocate_pattern(64);
+                        song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
                         for (n = 0; n < 64; n++, note += 60) {
                                 for (chan = 0; chan < 4; chan++, note++) {
                                         uint8_t p[4];
@@ -170,35 +170,35 @@ int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                         (See SoundFX/- unknown/1st intro.sfx on modland, for example) */
                                         if (p[0] == 255 && p[1] == 254) {
                                                 note->note = NOTE_CUT;
-                                                note->instr = 0;
+                                                note->instrument = 0;
                                         }
-                                        switch (note->command) {
+                                        switch (note->effect) {
                                         case 0:
                                                 break;
                                         case 1: /* arpeggio */
-                                                note->command = CMD_ARPEGGIO;
+                                                note->effect = FX_ARPEGGIO;
                                                 break;
                                         case 2: /* pitch bend */
                                                 if (note->param >> 4) {
-                                                        note->command = CMD_PORTAMENTODOWN;
+                                                        note->effect = FX_PORTAMENTODOWN;
                                                         note->param >>= 4;
                                                 } else if (note->param & 0xf) {
-                                                        note->command = CMD_PORTAMENTOUP;
+                                                        note->effect = FX_PORTAMENTOUP;
                                                         note->param &= 0xf;
                                                 } else {
-                                                        note->command = 0;
+                                                        note->effect = 0;
                                                 }
                                                 break;
                                         case 5: /* volume up */
-                                                note->command = CMD_VOLUMESLIDE;
+                                                note->effect = FX_VOLUMESLIDE;
                                                 note->param = (note->param & 0xf) << 4;
                                                 break;
                                         case 6: /* set volume */
                                                 if (note->param > 64)
                                                         note->param = 64;
-                                                note->volcmd = VOLCMD_VOLUME;
-                                                note->vol = 64 - note->param;
-                                                note->command = 0;
+                                                note->voleffect = VOLFX_VOLUME;
+                                                note->volparam = 64 - note->param;
+                                                note->effect = 0;
                                                 note->param = 0;
                                                 break;
                                         case 3: /* LED on (wtf!) */
@@ -206,8 +206,8 @@ int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                         case 7: /* set step up */
                                         case 8: /* set step down */
                                         default:
-                                                effwarn |= (1 << note->command);
-                                                note->command = CMD_UNIMPLEMENTED;
+                                                effwarn |= (1 << note->effect);
+                                                note->effect = FX_UNIMPLEMENTED;
                                                 break;
                                         }
                                 }
@@ -224,26 +224,26 @@ int fmt_sfx_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
-                for (n = 0, sample = song->Samples + 1; n < fmt->nsmp; n++, sample++) {
+                for (n = 0, sample = song->samples + 1; n < fmt->nsmp; n++, sample++) {
                         int8_t *ptr;
 
-                        if (sample->nLength <= 2)
+                        if (sample->length <= 2)
                                 continue;
-                        ptr = csf_allocate_sample(sample->nLength);
-                        slurp_read(fp, ptr, sample->nLength);
-                        sample->pSample = ptr;
+                        ptr = csf_allocate_sample(sample->length);
+                        slurp_read(fp, ptr, sample->length);
+                        sample->data = ptr;
                 }
         }
 
         /* more header info */
-        song->m_dwSongFlags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
+        song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
         for (n = 0; n < 4; n++)
-                song->Channels[n].nPan = PROTRACKER_PANNING(n); /* ??? */
+                song->channels[n].panning = PROTRACKER_PANNING(n); /* ??? */
         for (; n < MAX_CHANNELS; n++)
-                song->Channels[n].dwFlags = CHN_MUTE;
+                song->channels[n].flags = CHN_MUTE;
 
         strcpy(song->tracker_id, fmt->id);
-        song->m_nStereoSeparation = 64;
+        song->pan_separation = 64;
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;

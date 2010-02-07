@@ -60,17 +60,17 @@ enum {
 /* --------------------------------------------------------------------------------------------------------- */
 
 typedef int (*fmt_read_info_func) (dmoz_file_t *file, const uint8_t *data, size_t length);
-typedef int (*fmt_load_song_func) (CSoundFile *song, slurp_t *fp, unsigned int lflags);
-typedef int (*fmt_save_song_func) (disko_t *fp, CSoundFile *song);
-typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sample *smp);
-typedef int (*fmt_save_sample_func) (disko_t *fp, song_sample *smp);
+typedef int (*fmt_load_song_func) (song_t *song, slurp_t *fp, unsigned int lflags);
+typedef int (*fmt_save_song_func) (disko_t *fp, song_t *song);
+typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sample_t *smp);
+typedef int (*fmt_save_sample_func) (disko_t *fp, song_sample_t *smp);
 typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int slot);
 
 #define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
-#define LOAD_SONG(t) int fmt_##t##_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags);
-#define SAVE_SONG(t) void fmt_##t##_save_song(disko_t *fp, CSoundFile *song);
-#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample *smp);
-#define SAVE_SAMPLE(t) int fmt_##t##_save_sample(disko_t *fp, song_sample *smp);
+#define LOAD_SONG(t) int fmt_##t##_load_song(song_t *song, slurp_t *fp, unsigned int lflags);
+#define SAVE_SONG(t) void fmt_##t##_save_song(disko_t *fp, song_t *song);
+#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample_t *smp);
+#define SAVE_SAMPLE(t) int fmt_##t##_save_sample(disko_t *fp, song_sample_t *smp);
 #define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot);
 
 #include "fmt-types.h"
@@ -84,11 +84,11 @@ typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int
 
 /* --------------------------------------------------------------------------------------------------------- */
 struct instrumentloader {
-        song_instrument *inst;
+        song_instrument_t *inst;
         int sample_map[SCHISM_MAX_SAMPLES];
         int basex, slot, expect_samples;
 };
-song_instrument *instrument_loader_init(struct instrumentloader *ii, int slot);
+song_instrument_t *instrument_loader_init(struct instrumentloader *ii, int slot);
 int instrument_loader_abort(struct instrumentloader *ii);
 int instrument_loader_sample(struct instrumentloader *ii, int slot);
 
@@ -106,32 +106,32 @@ uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_
 noe == no interleave (IT214)
 
 should probably return something, but... meh :P */
-void save_sample_data_LE(disko_t *fp, song_sample *smp, int noe);
-void save_sample_data_BE(disko_t *fp, song_sample *smp, int noe);
+void save_sample_data_LE(disko_t *fp, song_sample_t *smp, int noe);
+void save_sample_data_BE(disko_t *fp, song_sample_t *smp, int noe);
 
 /* shared by the .it, .its, and .iti saving functions */
-void save_its_header(disko_t *fp, song_sample *smp);
-int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample *smp);
+void save_its_header(disko_t *fp, song_sample_t *smp);
+int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample_t *smp);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
 
-/* effect_weight[CMD_something] => how "important" the effect is. */
+/* effect_weight[FX_something] => how "important" the effect is. */
 extern const uint8_t effect_weight[];
 
 /* Shuffle the effect and volume-effect values around.
 Note: this does NOT convert between volume and 'normal' effects, it only exchanges them.
 (This function is most useful in conjunction with convert_voleffect in order to try to
 cram ten pounds of crap into a five pound container) */
-void swap_effects(MODCOMMAND *note);
+void swap_effects(song_note_t *note);
 
-/* Convert volume column data from CMD_* to VOLCMD_*, if possible.
+/* Convert volume column data from FX_* to VOLFX_*, if possible.
 Return: 1 = it was properly converted, 0 = couldn't do so without loss of information. */
 int convert_voleffect(uint8_t *effect, uint8_t *param, int force);
-#define convert_voleffect_of(note,force) convert_voleffect(&((note)->volcmd), &((note)->vol), (force))
+#define convert_voleffect_of(note,force) convert_voleffect(&((note)->voleffect), &((note)->volparam), (force))
 
 // load a .mod-style 4-byte packed note
-void mod_import_note(const uint8_t p[4], MODCOMMAND *note);
+void mod_import_note(const uint8_t p[4], song_note_t *note);
 
 // Read a message with fixed-size line lengths
 void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
@@ -141,7 +141,7 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
 #define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)
 
 // convert .mod finetune byte value to c5speed
-#define MOD_FINETUNE(b) (S3MFineTuneTable[((b) & 0xf) ^ 8])
+#define MOD_FINETUNE(b) (finetune_table[((b) & 0xf) ^ 8])
 
 /* --------------------------------------------------------------------------------------------------------- */
 

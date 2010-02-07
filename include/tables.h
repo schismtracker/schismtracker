@@ -28,34 +28,26 @@
 
 /* TODO: I know just sticking _fast on all of these will break the player, but for some of 'em...? */
 
-extern uint8_t  ImpulseTrackerPortaVolCmd[16];
+extern const uint8_t vc_portamento_table[16]; // volume column Gx
 
-extern uint16_t ProTrackerPeriodTable[6*12];
-extern uint16_t ProTrackerTunedPeriods[16*12];
-extern uint16_t FreqS3MTable[16];
-extern uint16_t S3MFineTuneTable[16];
+extern const uint16_t period_table[12];
+extern const uint16_t finetune_table[16];
 
-extern int8_t FineSineData[256];
-extern int8_t FineRampDownData[256];
-extern int8_t FineSquareWave[256];
+extern const int8_t sine_table[256];
+extern const int8_t ramp_down_table[256];
+extern const int8_t square_table[256];
 
-extern int8_t   retrigTable1[16];
-extern int8_t   retrigTable2[16];
+extern const int8_t retrig_table_1[16];
+extern const int8_t retrig_table_2[16];
 
-extern uint16_t XMPeriodTable[96+8];
-extern uint32_t XMLinearTable[768];
+extern const int8_t ft2_vibrato_table[256];        // -64 .. +64
 
-extern int8_t   ft2VibratoTable[256];        // -64 .. +64
+extern const uint32_t fine_linear_slide_up_table[16];
+extern const uint32_t fine_linear_slide_down_table[16];
+extern const uint32_t linear_slide_up_table[256];
+extern const uint32_t linear_slide_down_table[256];
 
-extern uint32_t FineLinearSlideUpTable[16];
-extern uint32_t FineLinearSlideDownTable[16];
-extern uint32_t LinearSlideUpTable[256];
-extern uint32_t LinearSlideDownTable[256];
-
-extern int32_t  SpectrumSinusTable[256*2];
-
-extern const int SHORT_PANNING[16];
-
+extern const int short_panning_table[16];
 
 extern const char *midi_group_names[17];
 extern const char *midi_program_names[128];

@@ -27,13 +27,13 @@
 /* NOTE: these functions need to be called with the screen LOCKED */
 
 typedef void (*draw_channel_header_func) (int chan, int x, int y, int fg);
-typedef void (*draw_note_func) (int x, int y, song_note * note,
+typedef void (*draw_note_func) (int x, int y, song_note_t * note,
                                 int cursor_pos, int fg, int bg);
 typedef void (*draw_mask_func) (int x, int y, int mask, int cursor_pos, int fg, int bg);
 
 #define PATTERN_VIEW(n) \
         void draw_channel_header_##n(int chan, int x, int y, int fg); \
-        void draw_note_##n(int x, int y, song_note * note, \
+        void draw_note_##n(int x, int y, song_note_t * note, \
                            int cursor_pos, int fg, int bg); \
         void draw_mask_##n(int x, int y, int mask, int cursor_pos, int fg, int bg);
 
