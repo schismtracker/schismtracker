@@ -24,34 +24,34 @@
 #ifndef SAMPLE_EDIT_H
 #define SAMPLE_EDIT_H
 
-void sample_sign_convert(song_sample * sample);
-void sample_reverse(song_sample * sample);
-void sample_centralise(song_sample * sample);
-void sample_amplify(song_sample *sample, int percent);
+void sample_sign_convert(song_sample_t * sample);
+void sample_reverse(song_sample_t * sample);
+void sample_centralise(song_sample_t * sample);
+void sample_amplify(song_sample_t *sample, int percent);
 /* Return the maximum amplification that can be done without clipping (as a
  * percentage, suitable to pass to sample_amplify). */
-int sample_get_amplify_amount(song_sample *sample);
+int sample_get_amplify_amount(song_sample_t *sample);
 
 /* if convert_data is nonzero, the sample data is modified (so it sounds
  * the same); otherwise, the sample length is changed and the data is
  * left untouched (so 16 bit samples converted to 8 bit end up sounding
  * like junk, and 8 bit samples converted to 16 bit end up with 2x the
  * pitch) */
-void sample_toggle_quality(song_sample * sample, int convert_data);
+void sample_toggle_quality(song_sample_t * sample, int convert_data);
 
 /* resize a sample; if aa is set, attempt to antialias (resample) the
  * output waveform.
  */
-void sample_resize(song_sample * sample, unsigned long newlen, int aa);
+void sample_resize(song_sample_t * sample, unsigned long newlen, int aa);
 
 /* AFAIK, this was in some registered versions of IT */
-void sample_invert(song_sample * sample);
+void sample_invert(song_sample_t * sample);
 
 /* Impulse Tracker doesn't do these. */
-void sample_delta_decode(song_sample * sample);
+void sample_delta_decode(song_sample_t * sample);
 
-void sample_mono_left(song_sample * sample);
-void sample_mono_right(song_sample * sample);
+void sample_mono_left(song_sample_t * sample);
+void sample_mono_right(song_sample_t * sample);
 
 
 #endif /* ! SAMPLE_EDIT_H */

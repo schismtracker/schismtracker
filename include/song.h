@@ -31,14 +31,20 @@
 #include "disko.h"
 
 /* --------------------------------------------------------------------- */
-/* oodles o' structs */
+/* things that used to be in mplink */
 
-/* midi config */
-typedef struct _midiconfig {
-        char midi_global_data[9*32];
-        char midi_sfx[16*32];
-        char midi_zxx[128*32];
-} midi_config;
+extern song_t *current_song;
+
+extern char song_filename[]; /* the full path (as given to song_load) */
+extern char song_basename[]; /* everything after the last slash */
+
+/* milliseconds = (samples * 1000) / frequency */
+extern unsigned int samples_played;
+
+extern unsigned int max_channels_used;
+
+/* --------------------------------------------------------------------- */
+
 #define MIDI_GCF_START          (0*32)
 #define MIDI_GCF_STOP           (1*32)
 #define MIDI_GCF_TICK           (2*32)
@@ -48,157 +54,6 @@ typedef struct _midiconfig {
 #define MIDI_GCF_PAN            (6*32)
 #define MIDI_GCF_BANKCHANGE     (7*32)
 #define MIDI_GCF_PROGRAMCHANGE  (8*32)
-
-/* aka modinstrument */
-typedef struct _song_sample {
-        unsigned int length, loop_start, loop_end;
-        unsigned int sustain_start, sustain_end;
-        signed char *data;
-        unsigned int speed;
-        unsigned int panning;
-        unsigned int volume;
-        unsigned int global_volume;
-        unsigned int flags;
-        unsigned int vib_type;
-        unsigned int vib_rate;
-        unsigned int vib_depth;
-        unsigned int vib_speed;
-        char name[32];
-        char filename[22];
-        int played;
-        uint32_t globalvol_saved;
-        unsigned char AdlibBytes[12];
-} song_sample;
-
-/* modchannelsettings */
-typedef struct _song_channel {
-        unsigned int panning;
-        unsigned int volume;
-        unsigned int flags;
-} song_channel;
-
-/* instrumentenvelope */
-typedef struct _song_envelope {
-        int ticks[32];
-        uint8_t values[32];
-        int nodes;
-        int loop_start, loop_end;
-        int sustain_start, sustain_end;
-} song_envelope;
-
-/* instrumentheader */
-typedef struct _song_instrument {
-        unsigned int fadeout;
-        unsigned int flags;    // any of the ENV_* flags below
-        unsigned int global_volume;
-        unsigned int panning;
-        unsigned int sample_map[128], note_map[128];
-        song_envelope vol_env, pan_env, pitch_env;
-        unsigned int nna, dct, dca;
-        unsigned int pan_swing, volume_swing;
-        unsigned int filter_cutoff;
-        unsigned int filter_resonance;
-        unsigned int midi_bank;
-        unsigned int midi_program;
-        unsigned int midi_channel_mask;
-        unsigned int midi_drum_key;
-        int pitch_pan_separation;
-        unsigned int pitch_pan_center;
-        char name[32];
-        char filename[16];
-
-        int played;
-} song_instrument;
-
-/* modcommand */
-typedef struct _song_note {
-        uint8_t note;
-        uint8_t instrument;
-        uint8_t volume_effect;
-        uint8_t effect;
-        uint8_t volume;
-        uint8_t parameter;
-} song_note;
-
-/* modchannel (good grief...) */
-typedef struct _song_mix_channel {
-        signed char *sample_data;
-        unsigned int sample_pos;
-        unsigned int nPosLo;
-        unsigned int topnote_offset;
-        int nInc;
-        int nRightVol; // these two are the current left/right volumes
-        int nLeftVol;  /* (duh...) - i'm not sure if that's 100% right,
-                         * though. for one, the max seems to be 680, and
-                         * another, they seem to be backward (i.e. left
-                         * is right and right is left...) */
-        int nRightRamp;        // maybe these two have something to do
-        int nLeftRamp; // with fadeout or nnas or something? dunno.
-        unsigned int sample_length;    /* not counting beyond the loopend */
-        unsigned int flags;    /* the channel's flags (surround, mute,
-                                 * etc.) and the sample's (16-bit, etc.)
-                                 * combined together */
-        unsigned int nLoopStart;
-        unsigned int nLoopEnd;
-        int nRampRightVol;
-        int nRampLeftVol;
-        int strike;
-        double nFilter_Y1, nFilter_Y2, nFilter_Y3, nFilter_Y4;
-        double nFilter_A0, nFilter_B0, nFilter_B1;
-        int nROfs, nLOfs;
-        int nRampLength;
-
-        /* information not used in the mixer */
-        signed char *pSample;   /* same as sample_data, except this isn't
-                                 * set to NULL at the end of the sample */
-        int nNewRightVol, nNewLeftVol; // ???
-        /* final_volume is what's actually used for mixing (after the
-         * global volume, envelopes, etc. are accounted for). same deal
-         * for final_panning. */
-        int final_volume;      /* range 0-16384 (?) */
-        int final_panning;     /* range 0-256. */
-        /* these are the volumes set by the channel. */
-        int volume, panning;   /* range 0-256 (?) */
-        int nFadeOutVol;       /* ??? */
-        int nPeriod, nC5Speed, sample_freq, nPortamentoDest;
-        song_instrument *instrument;    /* NULL if sample mode (?) */
-        song_sample *sample;
-        int nVolEnvPosition, nPanEnvPosition, nPitchEnvPosition;
-        unsigned int master_channel;   // the channel this note was played in
-        unsigned int vu_meter;
-        int nGlobalVol;        // the channel volume (Mxx)? - range 0-64
-        int nInsVol;   /* instrument volume? sample volume? dunno, one of
-                         * those two... (range 0-64) */
-        int nPortamentoSlide, nAutoVibDepth;
-        unsigned int nAutoVibPos, nVibratoPos, nTremoloPos, nPanbrelloPos;
-
-        int nVolSwing, nPanSwing;
-
-        unsigned int note;      // the note that's playing
-        unsigned int nNNA;
-        unsigned int nNewNote;  // nfi... seems the same as nNote
-        unsigned int nNewIns;   // nfi, always seems to be zero
-        unsigned int nCommand, nArpeggio;
-        unsigned int nOldVolumeSlide, nOldFineVolUpDown;
-        unsigned int nOldGlbVolSlide;
-        unsigned int nOldPortaUpDown, nOldFinePortaUpDown;
-        unsigned int nOldPanSlide, nOldChnVolSlide;
-        unsigned int nNoteSlideCounter, nNoteSlideSpeed, nNoteSlideStep;
-        unsigned int nVibratoType, nVibratoSpeed, nVibratoDepth;
-        unsigned int nTremoloType, nTremoloSpeed, nTremoloDepth;
-        unsigned int nPanbrelloType, nPanbrelloSpeed, nPanbrelloDepth;
-        unsigned int nOldCmdEx, nOldVolParam, nOldTempo;
-        unsigned int nOldOffset, nOldHiOffset;
-        unsigned int nCutOff, nResonance;
-        unsigned int nRetrigCount, nRetrigParam;
-        int nNoteDelay, nNoteCut;
-        unsigned int nTremorParam, nTremorCount;
-        unsigned int nPatternLoop, nPatternLoopCount;
-        unsigned int nRowNote, nRowInstr;
-        unsigned int nRowVolCmd, nRowVolume;
-        unsigned int nRowCommand, nRowParam;
-        unsigned int nActiveMacro, nPadding;
-} song_mix_channel;
 
 /* --------------------------------------------------------------------- */
 /* non-song-related structures */
@@ -224,7 +79,7 @@ extern struct audio_settings audio_settings;
 struct sample_save_format {
         const char *name;
         const char *ext;
-        int (*save_func) (disko_t *fp, song_sample *smp);
+        int (*save_func) (disko_t *fp, song_sample_t *smp);
 };
 
 extern struct sample_save_format sample_save_formats[];
@@ -235,7 +90,7 @@ extern struct sample_save_format sample_save_formats[];
 struct song_save_format {
         const char *label; // label for the button on the save page
         const char *ext; // no dot
-        int (*save_func) (disko_t *fp, CSoundFile *song);
+        int (*save_func) (disko_t *fp, song_t *song);
 };
 
 extern struct song_save_format song_save_formats[];
@@ -256,22 +111,6 @@ extern struct song_save_format song_export_formats[];
 
 #define SAMP_GLOBALVOL 0x10000 /* used for feature-check, completely not related to the player */
 
-
-/* volume column effects */
-#define VOL_EFFECT_NONE            VOLCMD_NONE
-#define VOL_EFFECT_VOLUME          VOLCMD_VOLUME
-#define VOL_EFFECT_PANNING         VOLCMD_PANNING
-#define VOL_EFFECT_VOLSLIDEUP      VOLCMD_VOLSLIDEUP
-#define VOL_EFFECT_VOLSLIDEDOWN    VOLCMD_VOLSLIDEDOWN
-#define VOL_EFFECT_FINEVOLUP       VOLCMD_FINEVOLUP
-#define VOL_EFFECT_FINEVOLDOWN     VOLCMD_FINEVOLDOWN
-#define VOL_EFFECT_VIBRATOSPEED    VOLCMD_VIBRATOSPEED
-#define VOL_EFFECT_VIBRATODEPTH    VOLCMD_VIBRATODEPTH
-#define VOL_EFFECT_PANSLIDELEFT    VOLCMD_PANSLIDELEFT
-#define VOL_EFFECT_PANSLIDERIGHT   VOLCMD_PANSLIDERIGHT
-#define VOL_EFFECT_TONEPORTAMENTO  VOLCMD_TONEPORTAMENTO
-#define VOL_EFFECT_PORTAUP         VOLCMD_PORTAUP
-#define VOL_EFFECT_PORTADOWN       VOLCMD_PORTADOWN
 
 
 /* for song_get_mode */
@@ -322,20 +161,16 @@ int song_export(const char *file, const char *type); // WAV
 
 
 void song_clear_sample(int n);
-void song_copy_sample(int n, song_sample *src);
+void song_copy_sample(int n, song_sample_t *src);
 int song_load_sample(int n, const char *file);
 int song_save_sample(int n, const char *file, int format_id);
-void song_stop_sample(song_sample *ssmp);
+void song_stop_sample(song_sample_t *ssmp);
 
 void song_create_host_instrument(int smp);
 
 int song_load_instrument(int n, const char *file);
 int song_load_instrument_ex(int n, const char *file, const char *libf, int nx);
 int song_save_instrument(int n, const char *file);
-
-midi_config *song_get_midi_config(void);
-midi_config *song_get_default_midi_config(void);
-
 
 void song_sample_set_c5speed(int n, unsigned int c5);
 int song_sample_is_empty(int n);
@@ -364,17 +199,17 @@ signed char *song_sample_allocate(int bytes);
 void song_sample_free(signed char *data);
 
 // these are used to directly manipulate the pattern list
-song_note *song_pattern_allocate(int rows);
-song_note *song_pattern_allocate_copy(int patno, int *rows);
-void song_pattern_deallocate(song_note *n);
-void song_pattern_install(int patno, song_note *n, int rows);
+song_note_t *song_pattern_allocate(int rows);
+song_note_t *song_pattern_allocate_copy(int patno, int *rows);
+void song_pattern_deallocate(song_note_t *n);
+void song_pattern_install(int patno, song_note_t *n, int rows);
 
 
 // these return NULL on failure.
-song_sample *song_get_sample(int n);
-song_instrument *song_get_instrument(int n);
-int song_get_instrument_number(song_instrument *ins); // 0 => no instrument; ignore above comment =)
-song_channel *song_get_channel(int n);
+song_sample_t *song_get_sample(int n);
+song_instrument_t *song_get_instrument(int n);
+int song_get_instrument_number(song_instrument_t *ins); // 0 => no instrument; ignore above comment =)
+song_channel_t *song_get_channel(int n);
 
 // this one should probably be organized somewhere else..... meh
 void song_set_channel_mute(int channel, int muted);
@@ -389,12 +224,11 @@ void song_restore_channel_states(void);
 // deals with the saved channel state instead.)
 int song_find_last_channel(void);
 
-int song_get_pattern(int n, song_note ** buf);  // return 0 -> error
+int song_get_pattern(int n, song_note_t ** buf);  // return 0 -> error
 uint8_t *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
 
-int song_get_num_orders(void);
 int song_get_num_patterns(void);
 int song_get_rows_in_pattern(int pattern);
 
@@ -529,7 +363,7 @@ void song_set_current_global_volume(int volume);
 /* this is very different from song_get_channel!
  * this deals with the channel that's *playing* and is used mostly
  * (entirely?) for the info page. */
-song_mix_channel *song_get_mix_channel(int n);
+song_voice_t *song_get_mix_channel(int n);
 
 /* get the mix state:
  * if channel_list != NULL, it is set to an array of the channels that
@@ -538,7 +372,7 @@ song_mix_channel *song_get_mix_channel(int n);
  * channel that's being mixed:
  *
  *         unsigned int *channel_list;
- *         song_mix_channel *channel;
+ *         song_voice_t *channel;
  *         int n = song_get_mix_state(&channel_list);
  *         while (n--) {
  *                 channel = song_get_mix_channel(channel_list[n]);

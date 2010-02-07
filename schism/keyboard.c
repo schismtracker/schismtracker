@@ -26,7 +26,6 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
-#include "charset.h"
 #include "osdefs.h"
 
 #include "sdlmain.h"
@@ -328,11 +327,11 @@ char *get_volume_string(int volume, int volume_effect, char *buf)
 
         /* '$'=vibratospeed, '<'=panslideleft, '>'=panslideright */
         switch (volume_effect) {
-        case VOL_EFFECT_NONE:
+        case VOLFX_NONE:
                 buf[0] = buf[1] = 173;
                 break;
-        case VOL_EFFECT_VOLUME:
-        case VOL_EFFECT_PANNING:
+        case VOLFX_VOLUME:
+        case VOLFX_PANNING:
                 /* Yeah, a bit confusing :)
                  * The display stuff makes the distinction here with
                  * a different color for panning. */

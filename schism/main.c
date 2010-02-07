@@ -36,7 +36,6 @@
 
 #include "version.h"
 #include "song.h"
-#include "mixer.h"
 #include "midi.h"
 #include "dmoz.h"
 #include "frag-opt.h"
@@ -1043,7 +1042,7 @@ int main(int argc, char **argv)
         video_mousecursor(cfg_video_mousecursor);
         status_text_flash(" "); /* silence the mouse cursor message */
 
-        mixer_setup();
+        volume_setup();
 
         load_pages();
         main_song_changed_cb();

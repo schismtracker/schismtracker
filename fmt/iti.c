@@ -49,11 +49,11 @@ int fmt_iti_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
 {
-        ITINSTRUMENT iti;
+        struct it_instrument iti;
         struct instrumentloader ii;
-        song_instrument *g;
+        song_instrument_t *g;
         unsigned int q;
-        song_sample *smp;
+        song_sample_t *smp;
         int j;
 
         if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
@@ -74,13 +74,13 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
         if (g->panning > 256) g->panning = 128;
         g->flags = 0;
         if (iti.dfp & 0x80) g->flags = ENV_SETPANNING;
-        g->volume_swing = iti.rv;
+        g->vol_swing = iti.rv;
         g->pan_swing = iti.rp;
 
         strncpy((char *)g->name, (char *)iti.name, 25);
         g->name[25] = 0;
-        g->filter_cutoff = iti.ifc;
-        g->filter_resonance = iti.ifr;
+        g->ifc = iti.ifc;
+        g->ifr = iti.ifr;
         g->midi_channel_mask = iti.mch > 16 ? (0x10000 + iti.mch)
                              : iti.mch == 0 ? (0)
                              :                (1 << (iti.mch-1));

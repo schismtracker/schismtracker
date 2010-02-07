@@ -106,19 +106,19 @@ static void set_subpage(int page);
 static int last_note = 61;              /* C-5 */
 
 /* strange saved envelopes */
-static song_envelope saved_env[10];
+static song_envelope_t saved_env[10];
 static unsigned int flags[10] = {0};
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-static void save_envelope(int slot, song_envelope *e, unsigned int sec)
+static void save_envelope(int slot, song_envelope_t *e, unsigned int sec)
 {
-        song_instrument *ins;
+        song_instrument_t *ins;
 
         slot = ((unsigned)slot)%10;
 
         ins = song_get_instrument(current_instrument);
-        memcpy(&saved_env[slot], e, sizeof(song_envelope));
+        memcpy(&saved_env[slot], e, sizeof(song_envelope_t));
 
         switch (sec) {
         case ENV_VOLUME:
@@ -142,16 +142,16 @@ static void save_envelope(int slot, song_envelope *e, unsigned int sec)
                 break;
         };
 }
-static void restore_envelope(int slot, song_envelope *e, unsigned int sec)
+static void restore_envelope(int slot, song_envelope_t *e, unsigned int sec)
 {
-        song_instrument *ins;
+        song_instrument_t *ins;
 
         song_lock_audio();
 
         slot = ((unsigned)slot)%10;
 
         ins = song_get_instrument(current_instrument);
-        memcpy(e, &saved_env[slot], sizeof(song_envelope));
+        memcpy(e, &saved_env[slot], sizeof(song_envelope_t));
 
         switch (sec) {
         case ENV_VOLUME:
@@ -229,7 +229,7 @@ int instrument_get_current(void)
 void instrument_set(int n)
 {
         int new_ins = n;
-        song_instrument *ins;
+        song_instrument_t *ins;
 
         if (page_is_instrument_list(status.current_page)) {
                 new_ins = CLAMP(n, 1, _last_vis_inst());
@@ -255,7 +255,7 @@ void instrument_set(int n)
 
 void instrument_synchronize_to_sample(void)
 {
-        song_instrument *ins;
+        song_instrument_t *ins;
         int sample = sample_get_current();
         int n, pos;
 
@@ -292,7 +292,7 @@ void instrument_synchronize_to_sample(void)
 
 static int instrument_list_add_char(int c)
 {
-        song_instrument *ins;
+        song_instrument_t *ins;
 
         if (c < 32)
                 return 0;
@@ -309,7 +309,7 @@ static int instrument_list_add_char(int c)
 
 static void instrument_list_delete_char(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         text_delete_char(ins->name, &instrument_cursor_pos, 25);
 
         get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
@@ -319,7 +319,7 @@ static void instrument_list_delete_char(void)
 
 static void instrument_list_delete_next_char(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         text_delete_next_char(ins->name, &instrument_cursor_pos, 25);
 
         get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
@@ -329,7 +329,7 @@ static void instrument_list_delete_next_char(void)
 
 static void clear_instrument_text(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         memset(ins->filename, 0, 14);
         memset(ins->name, 0, 26);
@@ -376,7 +376,7 @@ static void do_replace_instrument(int n)
 static void instrument_list_draw_list(void)
 {
         int pos, n;
-        song_instrument *ins;
+        song_instrument_t *ins;
         int selected = (ACTIVE_PAGE.selected_widget == 0);
         int is_current;
         int ss, cl = 0, cr = 0;
@@ -642,7 +642,7 @@ static void note_trans_draw(void)
         int pos, n;
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
         int bg, sel_bg = (is_selected ? 14 : 0);
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         char buf[4];
 
         for (pos = 0, n = note_trans_top_line; pos < 32; pos++, n++) {
@@ -707,7 +707,7 @@ static void note_trans_draw(void)
         }
 }
 
-static void instrument_note_trans_transpose(song_instrument *ins, int dir)
+static void instrument_note_trans_transpose(song_instrument_t *ins, int dir)
 {
         int i;
         for (i = 0; i < 120; i++) {
@@ -715,7 +715,7 @@ static void instrument_note_trans_transpose(song_instrument *ins, int dir)
         }
 }
 
-static void instrument_note_trans_insert(song_instrument *ins, int pos)
+static void instrument_note_trans_insert(song_instrument_t *ins, int pos)
 {
         int i;
         for (i = 119; i > pos; i--) {
@@ -729,7 +729,7 @@ static void instrument_note_trans_insert(song_instrument *ins, int pos)
         }
 }
 
-static void instrument_note_trans_delete(song_instrument *ins, int pos)
+static void instrument_note_trans_delete(song_instrument_t *ins, int pos)
 {
         int i;
         for (i = pos; i < 120; i++) {
@@ -745,7 +745,7 @@ static int note_trans_handle_key(struct key_event * k)
         int new_line = prev_line;
         int prev_pos = note_trans_cursor_pos;
         int new_pos = prev_pos;
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         int c, n;
 
         if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
@@ -1046,10 +1046,10 @@ static void _env_draw_loop(int xs, int xe, int sustain)
         }
 }
 
-static void _env_draw(const song_envelope *env, int middle, int current_node,
+static void _env_draw(const song_envelope_t *env, int middle, int current_node,
                         int env_on, int loop_on, int sustain_on, int env_num)
 {
-        song_mix_channel *channel;
+        song_voice_t *channel;
         unsigned int *channel_list;
         char buf[16];
         unsigned int envpos[3];
@@ -1099,12 +1099,12 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
                 m = song_get_mix_state(&channel_list);
                 while (m--) {
                         channel = song_get_mix_channel(channel_list[m]);
-                        if (channel->instrument != song_get_instrument(current_instrument))
+                        if (channel->ptr_instrument != song_get_instrument(current_instrument))
                                 continue;
 
-                        envpos[0] = channel->nVolEnvPosition;
-                        envpos[1] = channel->nPanEnvPosition;
-                        envpos[2] = channel->nPitchEnvPosition;
+                        envpos[0] = channel->vol_env_position;
+                        envpos[1] = channel->pan_env_position;
+                        envpos[2] = channel->pitch_env_position;
 
                         x = 4 + (envpos[env_num] * (last_x-4) / max_ticks);
                         if (x > last_x)
@@ -1129,7 +1129,7 @@ static void _env_draw(const song_envelope *env, int middle, int current_node,
 }
 
 /* return: the new current node */
-static int _env_node_add(song_envelope *env, int current_node, int override_tick, int override_value)
+static int _env_node_add(song_envelope_t *env, int current_node, int override_tick, int override_value)
 {
         int newtick, newvalue;
 
@@ -1164,7 +1164,7 @@ static int _env_node_add(song_envelope *env, int current_node, int override_tick
 }
 
 /* return: the new current node */
-static int _env_node_remove(song_envelope *env, int current_node)
+static int _env_node_remove(song_envelope_t *env, int current_node)
 {
         status.flags |= SONG_NEEDS_SAVE;
 
@@ -1189,7 +1189,7 @@ static int _env_node_remove(song_envelope *env, int current_node)
 
 static void do_pre_loop_cut(void *ign)
 {
-        song_envelope *env = (song_envelope *)ign;
+        song_envelope_t *env = (song_envelope_t *)ign;
         unsigned int bt;
         int i;
         bt = env->ticks[env->loop_start];
@@ -1223,12 +1223,12 @@ static void do_pre_loop_cut(void *ign)
 
 static void do_post_loop_cut(void *ign)
 {
-        song_envelope *env = (song_envelope *)ign;
+        song_envelope_t *env = (song_envelope_t *)ign;
         env->nodes = env->loop_end+1;
 }
 
 
-static void env_resize(song_envelope *env, int ticks)
+static void env_resize(song_envelope_t *env, int ticks)
 {
         int old = env->ticks[env->nodes - 1];
         int n, t;
@@ -1248,7 +1248,7 @@ static int env_resize_cursor;
 
 static void do_env_resize(void *data)
 {
-        env_resize((song_envelope *) data, env_resize_widgets[0].d.numentry.value);
+        env_resize((song_envelope_t *) data, env_resize_widgets[0].d.numentry.value);
 }
 
 static void env_resize_draw_const(void)
@@ -1258,7 +1258,7 @@ static void env_resize_draw_const(void)
         draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
-static void env_resize_dialog(song_envelope *env)
+static void env_resize_dialog(song_envelope_t *env)
 {
         struct dialog *dialog;
 
@@ -1279,8 +1279,8 @@ static void do_env_adsr(void *data)
 {
         // FIXME | move env flags into the envelope itself, where they should be in the first place.
         // FIXME | then this nonsense can go away.
-        song_instrument *ins = (song_instrument *) data;
-        song_envelope *env = &ins->vol_env;
+        song_instrument_t *ins = (song_instrument_t *) data;
+        song_envelope_t *env = &ins->vol_env;
         int a = env_adsr_widgets[0].d.thumbbar.value;
         int d = env_adsr_widgets[1].d.thumbbar.value;
         int s = env_adsr_widgets[2].d.thumbbar.value;
@@ -1321,10 +1321,10 @@ static void env_adsr_draw_const(void)
         draw_box(33, 23, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
-static void env_adsr_dialog(UNUSED song_envelope *env)
+static void env_adsr_dialog(UNUSED song_envelope_t *env)
 {
         struct dialog *dialog;
-        song_instrument *ins = song_get_instrument(current_instrument); // ARGHHH
+        song_instrument_t *ins = song_get_instrument(current_instrument); // ARGHHH
 
         env_adsr_cursor = 0;
         create_thumbbar(env_adsr_widgets + 0, 34, 24, 17, 4, 1, 4, NULL, 0, 128);
@@ -1343,7 +1343,7 @@ static void env_adsr_dialog(UNUSED song_envelope *env)
 /* the return value here is actually a bitmask:
 r & 1 => the key was handled
 r & 2 => the envelope changed (i.e., it should be enabled) */
-static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int *current_node, unsigned int sec)
+static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, int *current_node, unsigned int sec)
 {
         int new_node = *current_node;
         int n;
@@ -1466,7 +1466,7 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope *env, int
 }
 
 /* mouse handling routines for envelope */
-static int _env_handle_mouse(struct key_event *k, song_envelope *env, int *current_node)
+static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *current_node)
 {
         int x, y, i;
         int max_ticks = 50;
@@ -1598,7 +1598,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope *env, int *curre
      that the envelope should be enabled.
    - therefore, the envelope will always be enabled when this function is called, so there is
      no reason to indicate a change in the envelope here. */
-static int _env_handle_key_editmode(struct key_event *k, song_envelope *env, int *current_node)
+static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, int *current_node)
 {
         int new_node = *current_node, new_tick = env->ticks[*current_node],
                 new_value = env->values[*current_node];
@@ -1747,7 +1747,7 @@ static void _draw_env_label(const char *env_name, int is_selected)
 static void volume_envelope_draw(void)
 {
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         _draw_env_label("Volume", is_selected);
         _env_draw(&ins->vol_env, 0, current_node_vol,
@@ -1758,7 +1758,7 @@ static void volume_envelope_draw(void)
 static void panning_envelope_draw(void)
 {
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         _draw_env_label("Panning", is_selected);
         _env_draw(&ins->pan_env, 1, current_node_pan,
@@ -1769,7 +1769,7 @@ static void panning_envelope_draw(void)
 static void pitch_envelope_draw(void)
 {
         int is_selected = (ACTIVE_PAGE.selected_widget == 5);
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         _draw_env_label("Frequency", is_selected);
         _env_draw(&ins->pitch_env, (ins->flags & ENV_FILTER) ? 0 : 1, current_node_pitch,
@@ -1779,7 +1779,7 @@ static void pitch_envelope_draw(void)
 
 static int volume_envelope_handle_key(struct key_event * k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         int r;
 
         if (_env_handle_mouse(k, &ins->vol_env, &current_node_vol)) {
@@ -1799,7 +1799,7 @@ static int volume_envelope_handle_key(struct key_event * k)
 
 static int panning_envelope_handle_key(struct key_event * k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         int r;
 
         if (_env_handle_mouse(k, &ins->pan_env, &current_node_pan)) {
@@ -1820,7 +1820,7 @@ static int panning_envelope_handle_key(struct key_event * k)
 
 static int pitch_envelope_handle_key(struct key_event * k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         int r;
 
         if (_env_handle_mouse(k, &ins->pitch_env, &current_node_pitch)) {
@@ -1843,7 +1843,7 @@ static int pitch_envelope_handle_key(struct key_event * k)
 
 static int pitch_pan_center_handle_key(struct key_event *k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         int ppc = ins->pitch_pan_center;
 
         if (k->state) return 0;
@@ -1880,7 +1880,7 @@ static void pitch_pan_center_draw(void)
 {
         char buf[4];
         int selected = (ACTIVE_PAGE.selected_widget == 16);
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         draw_text(get_note_string(ins->pitch_pan_center + 1, buf), 54, 45, selected ? 3 : 2, 0);
 }
@@ -1900,7 +1900,7 @@ static void do_ins_save(void *p)
 
 static void instrument_save(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, ins->filename);
         struct stat buf;
 
@@ -1932,7 +1932,7 @@ static void do_delete_inst(UNUSED void *ign)
 
 static void instrument_list_handle_alt_key(struct key_event *k)
 {
-        /* song_instrument *ins = song_get_instrument(current_instrument); */
+        /* song_instrument_t *ins = song_get_instrument(current_instrument); */
 
         if (k->state) return;
         switch (k->sym) {
@@ -2119,7 +2119,7 @@ static void change_subpage(void)
 
 static void instrument_list_general_predraw_hook(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         togglebutton_set(widgets_general, 6 + (ins->nna % 4), 0);
         togglebutton_set(widgets_general, 10 + (ins->dct % 4), 0);
@@ -2130,7 +2130,7 @@ static void instrument_list_general_predraw_hook(void)
 
 static void instrument_list_volume_predraw_hook(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         widgets_volume[6].d.toggle.state = !!(ins->flags & ENV_VOLUME);
         widgets_volume[7].d.toggle.state = !!(ins->flags & ENV_VOLCARRY);
@@ -2155,15 +2155,15 @@ static void instrument_list_volume_predraw_hook(void)
         widgets_volume[12].d.numentry.value = ins->vol_env.sustain_start;
         widgets_volume[13].d.numentry.value = ins->vol_env.sustain_end;
 
-        /* mp hack: shifting values all over the place here, ugh */
+        /* current_song hack: shifting values all over the place here, ugh */
         widgets_volume[14].d.thumbbar.value = ins->global_volume;
         widgets_volume[15].d.thumbbar.value = ins->fadeout >> 5;
-        widgets_volume[16].d.thumbbar.value = ins->volume_swing;
+        widgets_volume[16].d.thumbbar.value = ins->vol_swing;
 }
 
 static void instrument_list_panning_predraw_hook(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         widgets_panning[6].d.toggle.state = !!(ins->flags & ENV_PANNING);
         widgets_panning[7].d.toggle.state = !!(ins->flags & ENV_PANCARRY);
@@ -2194,7 +2194,7 @@ static void instrument_list_panning_predraw_hook(void)
 
 static void instrument_list_pitch_predraw_hook(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         widgets_pitch[6].d.menutoggle.state = ((ins->flags & ENV_PITCH)
                                              ? ((ins->flags & ENV_FILTER)
@@ -2218,12 +2218,12 @@ static void instrument_list_pitch_predraw_hook(void)
         widgets_pitch[12].d.numentry.value = ins->pitch_env.sustain_start;
         widgets_pitch[13].d.numentry.value = ins->pitch_env.sustain_end;
 
-        if (ins->filter_cutoff & 0x80)
-                widgets_pitch[14].d.thumbbar.value = ins->filter_cutoff & 0x7f;
+        if (ins->ifc & 0x80)
+                widgets_pitch[14].d.thumbbar.value = ins->ifc & 0x7f;
         else
                 widgets_pitch[14].d.thumbbar.value = -1;
-        if (ins->filter_resonance & 0x80)
-                widgets_pitch[15].d.thumbbar.value = ins->filter_resonance & 0x7f;
+        if (ins->ifr & 0x80)
+                widgets_pitch[15].d.thumbbar.value = ins->ifr & 0x7f;
         else
                 widgets_pitch[15].d.thumbbar.value = -1;
 
@@ -2241,7 +2241,7 @@ static void instrument_list_pitch_predraw_hook(void)
 
 static void instrument_list_general_update_values(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         status.flags |= SONG_NEEDS_SAVE;
         for (ins->nna = 4; ins->nna--;)
@@ -2259,7 +2259,7 @@ static void instrument_list_general_update_values(void)
 
 static void instrument_list_volume_update_values(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         status.flags |= SONG_NEEDS_SAVE;
         ins->flags &= ~(ENV_VOLUME | ENV_VOLCARRY | ENV_VOLLOOP | ENV_VOLSUSTAIN);
@@ -2284,14 +2284,14 @@ static void instrument_list_volume_update_values(void)
         /* more ugly shifts */
         ins->global_volume = widgets_volume[14].d.thumbbar.value;
         ins->fadeout = widgets_volume[15].d.thumbbar.value << 5;
-        ins->volume_swing = widgets_volume[16].d.thumbbar.value;
+        ins->vol_swing = widgets_volume[16].d.thumbbar.value;
 
         song_update_playing_instrument(current_instrument);
 }
 
 static void instrument_list_panning_update_values(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         int n;
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -2330,7 +2330,7 @@ static void instrument_list_panning_update_values(void)
 
 static void instrument_list_pitch_update_values(void)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
 
         status.flags |= SONG_NEEDS_SAVE;
         ins->flags &= ~(ENV_PITCH | ENV_PITCHCARRY | ENV_PITCHLOOP | ENV_PITCHSUSTAIN | ENV_FILTER);
@@ -2358,14 +2358,14 @@ static void instrument_list_pitch_update_values(void)
         CHECK_SET(ins->pitch_env.sustain_end, widgets_pitch[13].d.numentry.value,
                   ins->flags |= ENV_PITCHSUSTAIN);
         if (widgets_pitch[14].d.thumbbar.value > -1) {
-                ins->filter_cutoff = widgets_pitch[14].d.thumbbar.value | 0x80;
+                ins->ifc = widgets_pitch[14].d.thumbbar.value | 0x80;
         } else {
-                ins->filter_cutoff = 0x7f;
+                ins->ifc = 0x7f;
         }
         if (widgets_pitch[15].d.thumbbar.value > -1) {
-                ins->filter_resonance = widgets_pitch[15].d.thumbbar.value | 0x80;
+                ins->ifr = widgets_pitch[15].d.thumbbar.value | 0x80;
         } else {
-                ins->filter_resonance = 0x7f;
+                ins->ifr = 0x7f;
         }
         ins->midi_channel_mask = widgets_pitch[16].d.bitset.value;
         ins->midi_program = widgets_pitch[17].d.thumbbar.value;
@@ -2616,7 +2616,7 @@ void instrument_list_general_load_page(struct page *page)
 
 static int _fixup_mouse_instpage_volume(struct key_event *k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         if (envelope_mouse_edit && ins) {
                 if (_env_handle_mouse(k, &ins->vol_env, &current_node_vol)) {
                         ins->flags |= ENV_VOLUME;
@@ -2682,7 +2682,7 @@ void instrument_list_volume_load_page(struct page *page)
 
 static int _fixup_mouse_instpage_panning(struct key_event *k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         if (envelope_mouse_edit && ins) {
                 if (_env_handle_mouse(k, &ins->pan_env, &current_node_pan)) {
                         ins->flags |= ENV_PANNING;
@@ -2756,7 +2756,7 @@ void instrument_list_panning_load_page(struct page *page)
 
 static int _fixup_mouse_instpage_pitch(struct key_event *k)
 {
-        song_instrument *ins = song_get_instrument(current_instrument);
+        song_instrument_t *ins = song_get_instrument(current_instrument);
         if (envelope_mouse_edit && ins) {
                 if (_env_handle_mouse(k, &ins->pitch_env, &current_node_pitch)) {
                         ins->flags |= ENV_PITCH;

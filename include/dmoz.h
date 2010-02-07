@@ -25,7 +25,7 @@
 #define DMOZ_H
 
 #include <stdint.h>
-#include "song.h" /* for song_sample */
+#include "sndfile.h" /* for song_sample_t */
 
 /* need these for struct stat */
 #include <sys/types.h>
@@ -99,7 +99,7 @@ struct dmoz_file {
 
         /* This will usually be NULL; it is only set when browsing samples within a library, or if
         a sample was played from within the sample browser. */
-        song_sample *sample;
+        song_sample_t *sample;
         int sampsize; /* number of samples (for instruments) */
         int instnum;
 

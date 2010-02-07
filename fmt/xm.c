@@ -77,7 +77,7 @@ static uint8_t autovib_import[8] = {
 
 
 
-static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp_t *fp)
+static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *fp)
 {
         int pat, row, chan;
         uint32_t patlen;
@@ -85,7 +85,7 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
         uint16_t rows;
         uint16_t bytes;
         size_t end; // should be same data type as slurp_t's length
-        MODCOMMAND *note;
+        song_note_t *note;
         unsigned int lostpat = 0;
         unsigned int lostfx = 0;
 
@@ -115,8 +115,8 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                         continue;
                 }
 
-                note = song->Patterns[pat] = csf_allocate_pattern(rows, 64);
-                song->PatternSize[pat] = song->PatternAllocSize[pat] = rows;
+                note = song->patterns[pat] = csf_allocate_pattern(rows);
+                song->pattern_size[pat] = song->pattern_alloc_size[pat] = rows;
 
                 if (!bytes)
                         continue;
@@ -130,15 +130,15 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                 b = slurp_getc(fp);
                                 if (b & 128) {
                                         if (b & 1) note->note = slurp_getc(fp);
-                                        if (b & 2) note->instr = slurp_getc(fp);
-                                        if (b & 4) note->vol = slurp_getc(fp);
-                                        if (b & 8) note->command = slurp_getc(fp);
+                                        if (b & 2) note->instrument = slurp_getc(fp);
+                                        if (b & 4) note->volparam = slurp_getc(fp);
+                                        if (b & 8) note->effect = slurp_getc(fp);
                                         if (b & 16) note->param = slurp_getc(fp);
                                 } else {
                                         note->note = b;
-                                        note->instr = slurp_getc(fp);
-                                        note->vol = slurp_getc(fp);
-                                        note->command = slurp_getc(fp);
+                                        note->instrument = slurp_getc(fp);
+                                        note->volparam = slurp_getc(fp);
+                                        note->effect = slurp_getc(fp);
                                         note->param = slurp_getc(fp);
                                 }
                                 // translate everything
@@ -148,10 +148,10 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                         note->note = NOTE_OFF;
                                 else
                                         note->note = NOTE_NONE;
-                                if (note->command || note->param)
+                                if (note->effect || note->param)
                                         csf_import_mod_effect(note, 1);
-                                if (note->instr == 0xff)
-                                        note->instr = 0;
+                                if (note->instrument == 0xff)
+                                        note->instrument = 0;
 
                                 // now that the mundane stuff is over with... NOW IT'S TIME TO HAVE SOME FUN!
 
@@ -167,42 +167,42 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                 volume and panning slides with zero value (+0, -0, etc.) still translate to
                                 an effect -- even though volslides don't have effect memory in FT2. */
 
-                                switch (note->vol >> 4) {
+                                switch (note->volparam >> 4) {
                                 case 5: // 0x50 = volume 64, 51-5F = nothing
-                                        if (note->vol == 0x50) {
+                                        if (note->volparam == 0x50) {
                                 case 1 ... 4: // Set volume Value-$10
-                                                note->volcmd = CMD_VOLUME;
-                                                note->vol -= 0x10;
+                                                note->voleffect = FX_VOLUME;
+                                                note->volparam -= 0x10;
                                                 break;
                                         } // NOTE: falls through from case 5 when vol != 0x50
                                 case 0: // Do nothing
-                                        note->volcmd = CMD_NONE;
-                                        note->vol = 0;
+                                        note->voleffect = FX_NONE;
+                                        note->volparam = 0;
                                         break;
                                 case 6: // Volume slide down
-                                        note->vol &= 0xf;
-                                        if (note->vol)
-                                                note->volcmd = CMD_VOLUMESLIDE;
+                                        note->volparam &= 0xf;
+                                        if (note->volparam)
+                                                note->voleffect = FX_VOLUMESLIDE;
                                         break;
                                 case 7: // Volume slide up
-                                        note->vol = (note->vol & 0xf) << 4;
-                                        if (note->vol)
-                                                note->volcmd = CMD_VOLUMESLIDE;
+                                        note->volparam = (note->volparam & 0xf) << 4;
+                                        if (note->volparam)
+                                                note->voleffect = FX_VOLUMESLIDE;
                                         break;
                                 case 8: // Fine volume slide down
-                                        note->vol &= 0xf;
-                                        if (note->vol) {
-                                                if (note->vol == 0xf)
-                                                        note->vol = 0xe; // DFF is fine slide up...
-                                                note->vol |= 0xf0;
-                                                note->volcmd = CMD_VOLUMESLIDE;
+                                        note->volparam &= 0xf;
+                                        if (note->volparam) {
+                                                if (note->volparam == 0xf)
+                                                        note->volparam = 0xe; // DFF is fine slide up...
+                                                note->volparam |= 0xf0;
+                                                note->voleffect = FX_VOLUMESLIDE;
                                         }
                                         break;
                                 case 9: // Fine volume slide up
-                                        note->vol = (note->vol & 0xf) << 4;
-                                        if (note->vol) {
-                                                note->vol |= 0xf;
-                                                note->volcmd = CMD_VOLUMESLIDE;
+                                        note->volparam = (note->volparam & 0xf) << 4;
+                                        if (note->volparam) {
+                                                note->volparam |= 0xf;
+                                                note->voleffect = FX_VOLUMESLIDE;
                                         }
                                         break;
                                 case 10: // Set vibrato speed
@@ -211,74 +211,74 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                         i'll just do what impulse tracker and mpt do...
                                         (probably should write a warning saying the song might not be
                                         played correctly) */
-                                        note->vol = (note->vol & 0xf) << 4;
-                                        note->volcmd = CMD_VIBRATO;
+                                        note->volparam = (note->volparam & 0xf) << 4;
+                                        note->voleffect = FX_VIBRATO;
                                         break;
                                 case 11: // Vibrato
-                                        note->vol &= 0xf;
-                                        note->volcmd = CMD_VIBRATO;
+                                        note->volparam &= 0xf;
+                                        note->voleffect = FX_VIBRATO;
                                         break;
                                 case 12: // Set panning
-                                        note->volcmd = CMD_S3MCMDEX;
-                                        note->vol = 0x80 | (note->vol & 0xf);
+                                        note->voleffect = FX_S3MCMDEX;
+                                        note->volparam = 0x80 | (note->volparam & 0xf);
                                         break;
                                 case 13: // Panning slide left
                                         // in FT2, <0 sets the panning to far left on the SECOND tick
                                         // this is "close enough" (except at speed 1)
-                                        note->vol &= 0xf;
-                                        if (note->vol) {
-                                                note->vol <<= 4;
-                                                note->volcmd = CMD_PANNINGSLIDE;
+                                        note->volparam &= 0xf;
+                                        if (note->volparam) {
+                                                note->volparam <<= 4;
+                                                note->voleffect = FX_PANNINGSLIDE;
                                         } else {
-                                                note->vol = 0x80;
-                                                note->volcmd = CMD_S3MCMDEX;
+                                                note->volparam = 0x80;
+                                                note->voleffect = FX_S3MCMDEX;
                                         }
                                         break;
                                 case 14: // Panning slide right
-                                        note->vol &= 0xf;
-                                        if (note->vol)
-                                                note->volcmd = CMD_PANNINGSLIDE;
+                                        note->volparam &= 0xf;
+                                        if (note->volparam)
+                                                note->voleffect = FX_PANNINGSLIDE;
                                         break;
                                 case 15: // Tone porta
-                                        note->vol = (note->vol & 0xf) << 4;
-                                        note->volcmd = CMD_TONEPORTAMENTO;
+                                        note->volparam = (note->volparam & 0xf) << 4;
+                                        note->voleffect = FX_TONEPORTAMENTO;
                                         break;
                                 }
 
-                                if (note->command == CMD_KEYOFF && note->param == 0) {
+                                if (note->effect == FX_KEYOFF && note->param == 0) {
                                         // FT2 ignores both K00 and its note entirely (but still plays
                                         // previous notes and processes the volume column!)
                                         note->note = NOTE_NONE;
-                                        note->instr = 0;
-                                        note->command = CMD_NONE;
-                                } else if (note->note == NOTE_OFF && note->command == CMD_S3MCMDEX
+                                        note->instrument = 0;
+                                        note->effect = FX_NONE;
+                                } else if (note->note == NOTE_OFF && note->effect == FX_S3MCMDEX
                                            && (note->param >> 4) == 0xd) {
                                         // note off with a delay ignores the note off, and also
                                         // ignores set-panning (but not other effects!)
                                         // (actually the other vol. column effects happen on the
                                         // first tick with ft2, but this is "close enough" i think)
                                         note->note = NOTE_NONE;
-                                        note->instr = 0;
+                                        note->instrument = 0;
                                         // note: haven't fixed up volumes yet
-                                        if (note->volcmd == CMD_PANNING) {
-                                                note->volcmd = CMD_NONE;
-                                                note->vol = 0;
-                                                note->command = CMD_NONE;
+                                        if (note->voleffect == FX_PANNING) {
+                                                note->voleffect = FX_NONE;
+                                                note->volparam = 0;
+                                                note->effect = FX_NONE;
                                                 note->param = 0;
                                         }
                                 }
 
-                                if (note->command == CMD_NONE && note->volcmd != CMD_NONE) {
+                                if (note->effect == FX_NONE && note->voleffect != FX_NONE) {
                                         // put the lotion in the basket
                                         swap_effects(note);
-                                } else if (note->command == note->volcmd) {
+                                } else if (note->effect == note->voleffect) {
                                         // two of the same kind of effect => ignore the volume column
                                         // (note that ft2 behaves VERY strangely with Mx + 3xx combined --
                                         // but i'll ignore that nonsense and just go by xm.txt here because
                                         // it's easier :)
-                                        note->volcmd = note->vol = 0;
+                                        note->voleffect = note->volparam = 0;
                                 }
-                                if (note->command == CMD_VOLUME) {
+                                if (note->effect == FX_VOLUME) {
                                         // try to move set-volume into the volume column
                                         swap_effects(note);
                                 }
@@ -297,13 +297,13 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                                 }
                                 if (n < 5) {
                                         // Need to throw one out.
-                                        if (effect_weight[note->volcmd] > effect_weight[note->command]) {
-                                                note->command = note->volcmd;
-                                                note->param = note->vol;
+                                        if (effect_weight[note->voleffect] > effect_weight[note->effect]) {
+                                                note->effect = note->voleffect;
+                                                note->param = note->volparam;
                                         }
                                         //log_appendf(4, "Warning: pat%u row%u chn%u: lost effect %c%02X",
-                                        //      pat, row, chan + 1, get_effect_char(note->volcmd), note->vol);
-                                        note->volcmd = note->vol = 0;
+                                        //      pat, row, chan + 1, get_effect_char(note->voleffect), note->volparam);
+                                        note->voleffect = note->volparam = 0;
                                         lostfx++;
                                 }
 
@@ -347,25 +347,25 @@ static void load_xm_patterns(CSoundFile *song, struct xm_file_header *hdr, slurp
                 log_appendf(4, " Warning: Too many patterns in song (%d skipped)", lostpat);
 }
 
-static void load_xm_samples(SONGSAMPLE *first, int total, slurp_t *fp)
+static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 {
-        SONGSAMPLE *smp = first;
+        song_sample_t *smp = first;
         size_t smpsize;
         int ns;
 
         // dontyou: 20 samples starting at 26122
         // trnsmix: 31 samples starting at 61946
         for (ns = 0; ns < total; ns++, smp++) {
-                smpsize = smp->nLength;
+                smpsize = smp->length;
                 if (!smpsize)
                         continue;
-                if (smp->uFlags & CHN_16BIT) {
-                        smp->nLength >>= 1;
-                        smp->nLoopStart >>= 1;
-                        smp->nLoopEnd >>= 1;
+                if (smp->flags & CHN_16BIT) {
+                        smp->length >>= 1;
+                        smp->loop_start >>= 1;
+                        smp->loop_end >>= 1;
                 }
                 // modplug's sample-reading function is complicated and retarded
-                csf_read_sample(smp, SF_LE | SF_M | SF_PCMD | ((smp->uFlags & CHN_16BIT) ? SF_16 : SF_8),
+                csf_read_sample(smp, SF_LE | SF_M | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
                                 fp->data + fp->pos, fp->length - fp->pos);
                 slurp_seek(fp, smpsize, SEEK_CUR);
         }
@@ -386,7 +386,7 @@ enum {
 
 // this also does some tracker detection
 // return value is the number of samples that need to be loaded later (for old xm files)
-static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slurp_t *fp)
+static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t *fp)
 {
         int n, ni, ns;
         int abssamp = 1; // "real" sample
@@ -425,12 +425,12 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
         }
 
         // FT2 pads the song title with spaces, some other trackers don't
-        if (detected & ID_FT2GENERIC && memchr(song->song_title, '\0', 20) != NULL)
+        if (detected & ID_FT2GENERIC && memchr(song->title, '\0', 20) != NULL)
                 detected = ID_FT2CLONE | ID_MAYBEMODPLUG;
 
         for (ni = 1; ni <= hdr->instruments; ni++) {
                 int vtype, vsweep, vdepth, vrate;
-                SONGINSTRUMENT *ins;
+                song_instrument_t *ins;
                 uint16_t nsmp;
 
                 slurp_read(fp, &ihdr, 4);
@@ -441,7 +441,7 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                         log_appendf(4, " Warning: Too many instruments in file");
                         break;
                 }
-                song->Instruments[ni] = ins = csf_allocate_instrument();
+                song->instruments[ni] = ins = csf_allocate_instrument();
 
                 slurp_read(fp, ins->name, 22);
                 ins->name[22] = '\0';
@@ -494,13 +494,13 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                 }
 
                 for (n = 0; n < 12; n++)
-                        ins->NoteMap[n] = n + 1;
+                        ins->note_map[n] = n + 1;
                 for (; n < 96 + 12; n++) {
-                        ins->NoteMap[n] = n + 1;
-                        ins->Keyboard[n] = slurp_getc(fp) + abssamp;
+                        ins->note_map[n] = n + 1;
+                        ins->sample_map[n] = slurp_getc(fp) + abssamp;
                 }
                 for (; n < 120; n++)
-                        ins->NoteMap[n] = n + 1;
+                        ins->note_map[n] = n + 1;
 
                 // envelopes
                 // (god, xm stores this in such a retarded format, why isn't all the volume stuff
@@ -515,10 +515,10 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                                 // and it does some complicated stuff to adjust them. investigate?
                                 w = prevtick + 1;
                         }
-                        ins->VolEnv.Ticks[n] = prevtick = w;
+                        ins->vol_env.ticks[n] = prevtick = w;
                         slurp_read(fp, &w, 2); // value
                         w = bswapLE16(w);
-                        ins->VolEnv.Values[n] = MIN(w, 64);
+                        ins->vol_env.values[n] = MIN(w, 64);
                 }
                 // same thing again
                 prevtick = -1;
@@ -528,29 +528,29 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                         if (w < prevtick) {
                                 w = prevtick + 1;
                         }
-                        ins->PanEnv.Ticks[n] = prevtick = w;
+                        ins->pan_env.ticks[n] = prevtick = w;
                         slurp_read(fp, &w, 2); // value
                         w = bswapLE16(w);
-                        ins->PanEnv.Values[n] = MIN(w, 64);
+                        ins->pan_env.values[n] = MIN(w, 64);
                 }
                 b = slurp_getc(fp);
-                ins->VolEnv.nNodes = CLAMP(b, 2, 12);
+                ins->vol_env.nodes = CLAMP(b, 2, 12);
                 b = slurp_getc(fp);
-                ins->PanEnv.nNodes = CLAMP(b, 2, 12);
-                ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd = slurp_getc(fp);
-                ins->VolEnv.nLoopStart = slurp_getc(fp);
-                ins->VolEnv.nLoopEnd = slurp_getc(fp);
-                ins->PanEnv.nSustainStart = ins->PanEnv.nSustainEnd = slurp_getc(fp);
-                ins->PanEnv.nLoopStart = slurp_getc(fp);
-                ins->PanEnv.nLoopEnd = slurp_getc(fp);
+                ins->pan_env.nodes = CLAMP(b, 2, 12);
+                ins->vol_env.sustain_start = ins->vol_env.sustain_end = slurp_getc(fp);
+                ins->vol_env.loop_start = slurp_getc(fp);
+                ins->vol_env.loop_end = slurp_getc(fp);
+                ins->pan_env.sustain_start = ins->pan_env.sustain_end = slurp_getc(fp);
+                ins->pan_env.loop_start = slurp_getc(fp);
+                ins->pan_env.loop_end = slurp_getc(fp);
                 b = slurp_getc(fp);
-                if (b & 1) ins->dwFlags |= ENV_VOLUME;
-                if (b & 2) ins->dwFlags |= ENV_VOLSUSTAIN;
-                if (b & 4) ins->dwFlags |= ENV_VOLLOOP;
+                if (b & 1) ins->flags |= ENV_VOLUME;
+                if (b & 2) ins->flags |= ENV_VOLSUSTAIN;
+                if (b & 4) ins->flags |= ENV_VOLLOOP;
                 b = slurp_getc(fp);
-                if (b & 1) ins->dwFlags |= ENV_PANNING;
-                if (b & 2) ins->dwFlags |= ENV_PANSUSTAIN;
-                if (b & 4) ins->dwFlags |= ENV_PANLOOP;
+                if (b & 1) ins->flags |= ENV_PANNING;
+                if (b & 2) ins->flags |= ENV_PANSUSTAIN;
+                if (b & 4) ins->flags |= ENV_PANLOOP;
 
                 vtype = autovib_import[slurp_getc(fp) & 0x7];
                 vsweep = slurp_getc(fp);
@@ -558,31 +558,31 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                 vrate = slurp_getc(fp) / 4;
 
                 slurp_read(fp, &w, 2);
-                ins->nFadeOut = bswapLE16(w);
+                ins->fadeout = bswapLE16(w);
 
-                if (ins->dwFlags & ENV_VOLUME) {
+                if (ins->flags & ENV_VOLUME) {
                         // fix note-fade
-                        if (!(ins->dwFlags & ENV_VOLLOOP))
-                                ins->VolEnv.nLoopStart = ins->VolEnv.nLoopEnd = ins->VolEnv.nNodes - 1;
-                        if (!(ins->dwFlags & ENV_VOLSUSTAIN))
-                                ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd = ins->VolEnv.nNodes - 1;
-                        ins->dwFlags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
+                        if (!(ins->flags & ENV_VOLLOOP))
+                                ins->vol_env.loop_start = ins->vol_env.loop_end = ins->vol_env.nodes - 1;
+                        if (!(ins->flags & ENV_VOLSUSTAIN))
+                                ins->vol_env.sustain_start = ins->vol_env.sustain_end = ins->vol_env.nodes - 1;
+                        ins->flags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
                 } else {
                         // fix note-off
-                        ins->VolEnv.Ticks[0] = 0;
-                        ins->VolEnv.Ticks[1] = 1;
-                        ins->VolEnv.Values[0] = 64;
-                        ins->VolEnv.Values[1] = 0;
-                        ins->VolEnv.nNodes = 2;
-                        ins->VolEnv.nSustainStart = ins->VolEnv.nSustainEnd = 0;
-                        ins->dwFlags |= ENV_VOLUME | ENV_VOLSUSTAIN;
+                        ins->vol_env.ticks[0] = 0;
+                        ins->vol_env.ticks[1] = 1;
+                        ins->vol_env.values[0] = 64;
+                        ins->vol_env.values[1] = 0;
+                        ins->vol_env.nodes = 2;
+                        ins->vol_env.sustain_start = ins->vol_env.sustain_end = 0;
+                        ins->flags |= ENV_VOLUME | ENV_VOLSUSTAIN;
                 }
 
 
                 // some other things...
-                ins->nPan = 128;
-                ins->nGlobalVol = 128;
-                ins->nPPC = 60; // C-5?
+                ins->panning = 128;
+                ins->global_volume = 128;
+                ins->pitch_pan_center = 60; // C-5?
 
                 /* here we're looking at what the ft2 spec SAYS are two reserved bytes.
                 most programs blindly follow ft2's saving and add 22 zero bytes at the end (making
@@ -591,66 +591,66 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
                 are always zero) */
                 int midi_enabled = slurp_getc(fp); // instrument midi enable = 0/1
                 b = slurp_getc(fp); // midi transmit channel = 0-15
-                ins->nMidiChannelMask = (midi_enabled == 1) ? 1 << MIN(b, 15) : 0;
+                ins->midi_channel_mask = (midi_enabled == 1) ? 1 << MIN(b, 15) : 0;
                 slurp_read(fp, &w, 2); // midi program = 0-127
                 w = bswapLE16(w);
-                ins->nMidiProgram = MIN(w, 127);
+                ins->midi_program = MIN(w, 127);
                 slurp_read(fp, &w, 2); // bender range (halftones) = 0-36
                 if (slurp_getc(fp) == 1)
-                        ins->nGlobalVol = 0; // mute computer = 0/1
+                        ins->global_volume = 0; // mute computer = 0/1
 
                 slurp_seek(fp, ihdr - 248, SEEK_CUR);
 
                 for (ns = 0; ns < nsmp; ns++) {
                         int8_t relnote, finetune;
-                        SONGSAMPLE *smp;
+                        song_sample_t *smp;
 
                         if (abssamp + ns >= MAX_SAMPLES) {
                                 // TODO: try harder (fill unused sample slots)
                                 log_appendf(4, " Warning: Too many samples in file");
                                 break;
                         }
-                        smp = song->Samples + abssamp + ns;
+                        smp = song->samples + abssamp + ns;
 
                         slurp_read(fp, &d, 4);
-                        smp->nLength = bswapLE32(d);
+                        smp->length = bswapLE32(d);
                         slurp_read(fp, &d, 4);
-                        smp->nLoopStart = bswapLE32(d);
+                        smp->loop_start = bswapLE32(d);
                         slurp_read(fp, &d, 4);
-                        smp->nLoopEnd = bswapLE32(d) + smp->nLoopStart;
-                        smp->nVolume = slurp_getc(fp);
-                        smp->nVolume = MIN(64, smp->nVolume);
-                        smp->nVolume *= 4; //mphack
-                        smp->nGlobalVol = 64;
-                        smp->uFlags = CHN_PANNING;
+                        smp->loop_end = bswapLE32(d) + smp->loop_start;
+                        smp->volume = slurp_getc(fp);
+                        smp->volume = MIN(64, smp->volume);
+                        smp->volume *= 4; //mphack
+                        smp->global_volume = 64;
+                        smp->flags = CHN_PANNING;
                         finetune = slurp_getc(fp);
                         b = slurp_getc(fp); // flags
-                        if (smp->nLoopStart >= smp->nLoopEnd)
+                        if (smp->loop_start >= smp->loop_end)
                                 b &= ~3; // that loop sucks, turn it off
                         switch (b & 3) {
-                                case 2: smp->uFlags |= CHN_PINGPONGLOOP;
-                                case 1: smp->uFlags |= CHN_LOOP;
+                                case 2: smp->flags |= CHN_PINGPONGLOOP;
+                                case 1: smp->flags |= CHN_LOOP;
                         }
                         if (b & 0x10) {
-                                smp->uFlags |= CHN_16BIT;
+                                smp->flags |= CHN_16BIT;
                                 // NOTE length and loop start/end are adjusted later
                         }
-                        smp->nPan = slurp_getc(fp); //mphack, should be adjusted to 0-64
+                        smp->panning = slurp_getc(fp); //mphack, should be adjusted to 0-64
                         relnote = slurp_getc(fp);
-                        smp->nC5Speed = transpose_to_frequency(relnote, finetune);
+                        smp->c5speed = transpose_to_frequency(relnote, finetune);
                         srsvd_or |= slurp_getc(fp);
                         slurp_read(fp, smp->name, 22);
                         smp->name[22] = '\0';
                         if (detected & ID_DIGITRAK && memchr(smp->name, '\0', 22) != NULL)
                                 detected &= ~ID_DIGITRAK;
 
-                        smp->nVibType = vtype;
-                        smp->nVibSweep = vsweep;
-                        smp->nVibDepth = vdepth;
-                        smp->nVibRate = vrate;
+                        smp->vib_type = vtype;
+                        smp->vib_rate = vsweep;
+                        smp->vib_depth = vdepth;
+                        smp->vib_speed = vrate;
                 }
                 if (hdr->version == 0x0104)
-                        load_xm_samples(song->Samples + abssamp, ns, fp);
+                        load_xm_samples(song->samples + abssamp, ns, fp);
                 abssamp += ns;
                 // if we ran out of samples, stop trying to load instruments
                 // (note this will break things with xm format ver < 0x0104!)
@@ -675,7 +675,7 @@ static int load_xm_instruments(CSoundFile *song, struct xm_file_header *hdr, slu
         return (hdr->version < 0x0104) ? abssamp : 0;
 }
 
-int fmt_xm_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 {
         struct xm_file_header hdr;
         int n;
@@ -696,28 +696,28 @@ int fmt_xm_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         if (memcmp(hdr.id, "Extended Module: ", 17) != 0 || hdr.doseof != 0x1a || hdr.channels > MAX_CHANNELS)
                 return LOAD_UNSUPPORTED;
 
-        memcpy(song->song_title, hdr.name, 20);
-        song->song_title[20] = '\0';
+        memcpy(song->title, hdr.name, 20);
+        song->title[20] = '\0';
         memcpy(song->tracker_id, hdr.tracker, 20);
         song->tracker_id[20] = '\0';
 
         if (hdr.flags & 1)
-                song->m_dwSongFlags |= SONG_LINEARSLIDES;
-        song->m_dwSongFlags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE;
-        song->m_nDefaultSpeed = MIN(hdr.tempo, 255) ?: 255;
-        song->m_nDefaultTempo = CLAMP(hdr.bpm, 31, 255);
-        song->m_nDefaultGlobalVolume = 128;
-        song->m_nSongPreAmp = 48;
+                song->flags |= SONG_LINEARSLIDES;
+        song->flags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE;
+        song->initial_speed = MIN(hdr.tempo, 255) ?: 255;
+        song->initial_tempo = CLAMP(hdr.bpm, 31, 255);
+        song->initial_global_volume = 128;
+        song->mixing_volume = 48;
 
         for (n = 0; n < hdr.channels; n++)
-                song->Channels[n].nPan = 32 * 4; //mphack
+                song->channels[n].panning = 32 * 4; //mphack
         for (; n < MAX_CHANNELS; n++)
-                song->Channels[n].dwFlags |= CHN_MUTE;
+                song->channels[n].flags |= CHN_MUTE;
 
         hdr.songlen = MIN(MAX_ORDERS, hdr.songlen);
         for (n = 0; n < hdr.songlen; n++) {
                 b = slurp_getc(fp);
-                song->Orderlist[n] = (b >= MAX_PATTERNS) ? ORDER_SKIP : b;
+                song->orderlist[n] = (b >= MAX_PATTERNS) ? ORDER_SKIP : b;
         }
 
         slurp_seek(fp, 60 + hdr.headersz, SEEK_SET);
@@ -728,7 +728,7 @@ int fmt_xm_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         } else {
                 int nsamp = load_xm_instruments(song, &hdr, fp);
                 load_xm_patterns(song, &hdr, fp);
-                load_xm_samples(song->Samples + 1, nsamp, fp);
+                load_xm_samples(song->samples + 1, nsamp, fp);
         }
         csf_insert_restart_pos(song, hdr.restart);
 

@@ -27,13 +27,50 @@
 
 #include "it.h"
 #include "song.h"
-#include "mplink.h"
 
-#include "snd_fx.h"
-#include "xm_defs.h"
+#include "sndfile.h"
 
 #include <string.h>
 #include <stdlib.h>
+
+/* --------------------------------------------------------------------- */
+
+#pragma pack(push, 1)
+struct xm_instrument {
+        uint32_t size;
+        int8_t name[22];
+        uint8_t type;
+        uint8_t samples;
+        uint8_t samplesh;
+};
+
+struct xm_sample_header {
+        uint32_t shsize;
+        uint8_t snum[96];
+        uint16_t venv[24];
+        uint16_t penv[24];
+        uint8_t vnum, pnum;
+        uint8_t vsustain, vloops, vloope, psustain, ploops, ploope;
+        uint8_t vtype, ptype;
+        uint8_t vibtype, vibsweep, vibdepth, vibrate;
+        uint16_t volfade;
+        uint16_t res;
+        uint8_t reserved1[20];
+};
+
+struct xm_sample {
+        uint32_t samplen;
+        uint32_t loopstart;
+        uint32_t looplen;
+        uint8_t vol;
+        signed char finetune;
+        uint8_t type;
+        uint8_t pan;
+        signed char relnote;
+        uint8_t res;
+        char name[22];
+};
+#pragma pack(pop)
 
 /* --------------------------------------------------------------------- */
 int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
@@ -53,12 +90,11 @@ int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 {
-        //XMINSTRUMENTHEADER xi;
-        XMSAMPLEHEADER xmsh;
-        XMSAMPLESTRUCT xmss;
+        struct xm_sample_header xmsh;
+        struct xm_sample xmss;
         struct instrumentloader ii;
-        song_instrument *g;
-        song_sample *smp;
+        song_instrument_t *g;
+        song_sample_t *smp;
         unsigned int nsamples, rs;
         unsigned int samplesize;
         unsigned int ptr;
@@ -142,7 +178,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->vib_rate = xmsh.vibrate / 4;
 
                 song_sample_set_c5speed(n, transpose_to_frequency(xmss.relnote, xmss.finetune));
-                ptr += csf_read_sample(mp->Samples + n, rs, data + ptr, length - ptr);
+                ptr += csf_read_sample(current_song->samples + n, rs, data + ptr, length - ptr);
         }
         return 1;
 }

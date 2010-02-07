@@ -78,33 +78,33 @@ struct far_sample {
 #pragma pack(pop)
 
 static uint8_t far_effects[] = {
-        CMD_NONE,
-        CMD_PORTAMENTOUP,
-        CMD_PORTAMENTODOWN,
-        CMD_TONEPORTAMENTO,
-        CMD_RETRIG,
-        CMD_VIBRATO, // depth
-        CMD_VIBRATO, // speed
-        CMD_VOLUMESLIDE, // up
-        CMD_VOLUMESLIDE, // down
-        CMD_VIBRATO, // sustained (?)
-        CMD_NONE, // actually slide-to-volume
-        CMD_PANNING,
-        CMD_S3MCMDEX, // note offset => note delay?
-        CMD_NONE, // fine tempo down
-        CMD_NONE, // fine tempo up
-        CMD_SPEED,
+        FX_NONE,
+        FX_PORTAMENTOUP,
+        FX_PORTAMENTODOWN,
+        FX_TONEPORTAMENTO,
+        FX_RETRIG,
+        FX_VIBRATO, // depth
+        FX_VIBRATO, // speed
+        FX_VOLUMESLIDE, // up
+        FX_VOLUMESLIDE, // down
+        FX_VIBRATO, // sustained (?)
+        FX_NONE, // actually slide-to-volume
+        FX_PANNING,
+        FX_S3MCMDEX, // note offset => note delay?
+        FX_NONE, // fine tempo down
+        FX_NONE, // fine tempo up
+        FX_SPEED,
 };
 
-static void far_import_note(MODCOMMAND *note, const uint8_t data[4])
+static void far_import_note(song_note_t *note, const uint8_t data[4])
 {
         if (data[0] > 0 && data[0] < 85) {
                 note->note = data[0] + 36;
-                note->instr = data[1] + 1;
+                note->instrument = data[1] + 1;
         }
         if (data[2] & 0x0F) {
-                note->volcmd = VOLCMD_VOLUME;
-                note->vol = (data[2] & 0x0F) << 2; // askjdfjasdkfjasdf
+                note->voleffect = VOLFX_VOLUME;
+                note->volparam = (data[2] & 0x0F) << 2; // askjdfjasdkfjasdf
         }
         note->param = data[3] & 0xf;
         switch (data[3] >> 4) {
@@ -120,22 +120,22 @@ static void far_import_note(MODCOMMAND *note, const uint8_t data[4])
                 note->param <<= 4;
                 break;
         case 0xa: // volume-portamento (what!)
-                note->volcmd = VOLCMD_VOLUME;
-                note->vol = (note->param << 2) + 4;
+                note->voleffect = VOLFX_VOLUME;
+                note->volparam = (note->param << 2) + 4;
                 break;
         case 0xc: // note offset
                 note->param = 6 / (1 + (note->param & 0xf)) + 1;
                 note->param |= 0xd;
         }
-        note->command = far_effects[data[3] >> 4];
+        note->effect = far_effects[data[3] >> 4];
 }
 
 
-int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         struct far_header fhdr;
         struct far_sample fsmp;
-        SONGSAMPLE *smp;
+        song_sample_t *smp;
         int nord, restartpos;
         int n, pat, row, chn;
         uint8_t orderlist[256];
@@ -147,29 +147,29 @@ int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 return LOAD_UNSUPPORTED;
 
         fhdr.title[25] = '\0';
-        strcpy(song->song_title, fhdr.title);
+        strcpy(song->title, fhdr.title);
         fhdr.header_len = bswapLE16(fhdr.header_len);
         fhdr.message_len = bswapLE16(fhdr.message_len);
 
         for (n = 0; n < 16; n++) {
                 /* WHAT A GREAT WAY TO STORE THIS INFORMATION */
-                song->Channels[n].nPan = SHORT_PANNING[fhdr.chn_panning[n] & 0xf];
-                song->Channels[n].nPan *= 4; //mphack
+                song->channels[n].panning = short_panning_table[fhdr.chn_panning[n] & 0xf];
+                song->channels[n].panning *= 4; //mphack
                 if (!fhdr.onoff[n])
-                        song->Channels[n].dwFlags |= CHN_MUTE;
+                        song->channels[n].flags |= CHN_MUTE;
         }
         for (; n < 64; n++)
-                song->Channels[n].dwFlags |= CHN_MUTE;
+                song->channels[n].flags |= CHN_MUTE;
 
-        song->m_nDefaultSpeed = fhdr.default_speed;
-        song->m_nDefaultTempo = 80;
+        song->initial_speed = fhdr.default_speed;
+        song->initial_tempo = 80;
 
         // to my knowledge, no other program is insane enough to save in this format
         strcpy(song->tracker_id, "Farandole Composer");
 
         /* Farandole's song message doesn't have line breaks, and the tracker runs in
         some screwy ultra-wide text mode, so this displays more or less like crap. */
-        read_lined_message(song->m_lpszSongComments, fp, fhdr.message_len, 132);
+        read_lined_message(song->message, fp, fhdr.message_len, 132);
 
 
         slurp_seek(fp, sizeof(fhdr) + fhdr.message_len, SEEK_SET);
@@ -183,15 +183,15 @@ int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         restartpos = slurp_getc(fp);
 
         nord = MIN(nord, MAX_ORDERS);
-        memcpy(song->Orderlist, orderlist, nord);
-        memset(song->Orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
+        memcpy(song->orderlist, orderlist, nord);
+        memset(song->orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
 
         slurp_read(fp, pattern_size, 256 * 2); // byteswapped later
         slurp_seek(fp, fhdr.header_len - (869 + fhdr.message_len), SEEK_CUR);
 
         for (pat = 0; pat < 256; pat++) {
                 int breakpos, rows;
-                MODCOMMAND *note;
+                song_note_t *note;
 
                 pattern_size[pat] = bswapLE16(pattern_size[pat]);
 
@@ -205,8 +205,8 @@ int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 rows = (pattern_size[pat] - 2) / (16 * 4);
                 if (!rows)
                         continue;
-                note = song->Patterns[pat] = csf_allocate_pattern(rows, 64);
-                song->PatternSize[pat] = song->PatternAllocSize[pat] = rows;
+                note = song->patterns[pat] = csf_allocate_pattern(rows);
+                song->pattern_size[pat] = song->pattern_alloc_size[pat] = rows;
                 breakpos = breakpos && breakpos < rows - 2 ? breakpos + 1 : -1;
                 for (row = 0; row < rows; row++, note += 48) {
                         for (chn = 0; chn < 16; chn++, note++) {
@@ -214,7 +214,7 @@ int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                 far_import_note(note, data);
                         }
                         if (row == breakpos)
-                                note->command = CMD_PATTERNBREAK;
+                                note->effect = FX_PATTERNBREAK;
                 }
         }
         csf_insert_restart_pos(song, restartpos);
@@ -223,26 +223,26 @@ int fmt_far_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 return LOAD_SUCCESS;
 
         slurp_read(fp, data, 8);
-        smp = song->Samples + 1;
+        smp = song->samples + 1;
         for (n = 0; n < 64; n++, smp++) {
                 if (!(data[n / 8] & (1 << (n % 8)))) /* LOLWHAT */
                         continue;
                 slurp_read(fp, &fsmp, sizeof(fsmp));
                 fsmp.name[25] = '\0';
                 strcpy(smp->name, fsmp.name);
-                smp->nLength = fsmp.length = bswapLE32(fsmp.length);
-                smp->nLoopStart = bswapLE32(fsmp.loopstart);
-                smp->nLoopEnd = bswapLE32(fsmp.loopend);
-                smp->nVolume = fsmp.volume << 4; // "not supported", but seems to exist anyway
+                smp->length = fsmp.length = bswapLE32(fsmp.length);
+                smp->loop_start = bswapLE32(fsmp.loopstart);
+                smp->loop_end = bswapLE32(fsmp.loopend);
+                smp->volume = fsmp.volume << 4; // "not supported", but seems to exist anyway
                 if (fsmp.type & 1) {
-                        smp->nLength >>= 1;
-                        smp->nLoopStart >>= 1;
-                        smp->nLoopEnd >>= 1;
+                        smp->length >>= 1;
+                        smp->loop_start >>= 1;
+                        smp->loop_end >>= 1;
                 }
-                if (smp->nLoopEnd > smp->nLoopStart && (fsmp.loop & 8))
-                        smp->uFlags |= CHN_LOOP;
-                smp->nC5Speed = 16726;
-                smp->nGlobalVol = 64;
+                if (smp->loop_end > smp->loop_start && (fsmp.loop & 8))
+                        smp->flags |= CHN_LOOP;
+                smp->c5speed = 16726;
+                smp->global_volume = 64;
                 csf_read_sample(smp, SF_LE | SF_M | SF_PCMS | ((fsmp.type & 1) ? SF_16 : SF_8),
                         fp->data + fp->pos, fp->length - fp->pos);
                 slurp_seek(fp, fsmp.length, SEEK_CUR);

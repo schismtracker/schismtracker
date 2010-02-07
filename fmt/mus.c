@@ -83,19 +83,19 @@ Some things yet to tackle:
 #define FRACMASK ((1 << FRACBITS) - 1)
 
 
-int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 {
         struct mus_header hdr;
         int n;
-        MODCOMMAND *note;
+        song_note_t *note;
         int pat, row;
         int finished = 0;
         size_t reallen;
         int tickfrac = 0; // fixed point
         struct {
                 uint8_t note; // the last note played in this channel
-                uint8_t instr; // 1 -> 128
-                uint8_t vol; // 0 -> 64
+                uint8_t instrument; // 1 -> 128
+                uint8_t volume; // 0 -> 64
         } chanstate[16];
         uint8_t prevspeed = 1;
         uint8_t patch_samples[128] = {0};
@@ -113,7 +113,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 
         for (n = 16; n < 64; n++)
-                song->Channels[n].dwFlags |= CHN_MUTE;
+                song->channels[n].flags |= CHN_MUTE;
 
         slurp_seek(fp, hdr.scorestart, SEEK_SET);
 
@@ -126,10 +126,10 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         /* start the first pattern */
         pat = 0;
         row = 0;
-        song->PatternSize[pat] = song->PatternAllocSize[pat] = MUS_ROWS_PER_PATTERN;
-        song->Patterns[pat] = csf_allocate_pattern(MUS_ROWS_PER_PATTERN, 64);
-        note = song->Patterns[pat];
-        song->Orderlist[pat] = pat;
+        song->pattern_size[pat] = song->pattern_alloc_size[pat] = MUS_ROWS_PER_PATTERN;
+        song->patterns[pat] = csf_allocate_pattern(MUS_ROWS_PER_PATTERN);
+        note = song->patterns[pat];
+        song->orderlist[pat] = pat;
 
         while (!finished && !slurp_eof(fp)) {
                 uint8_t event, b1, b2, type, ch;
@@ -151,7 +151,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                 case 1: // Play note
                         b1 = slurp_getc(fp); // & 128 => volume follows, & 127 => note number
                         if (b1 & 128) {
-                                chanstate[ch].vol = ((slurp_getc(fp) & 127) + 1) >> 1;
+                                chanstate[ch].volume = ((slurp_getc(fp) & 127) + 1) >> 1;
                                 b1 &= 127;
                         }
                         chanstate[ch].note = MIN(b1 + 1, NOTE_LAST);
@@ -162,9 +162,9 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                         if (nsmp < MAX_SAMPLES) {
                                                 // New sample!
                                                 patch_percussion[b1] = nsmp;
-                                                strncpy(song->Samples[nsmp].name,
+                                                strncpy(song->samples[nsmp].name,
                                                         midi_percussion_names[b1 - 24], 25);
-                                                song->Samples[nsmp].name[25] = '\0';
+                                                song->samples[nsmp].name[25] = '\0';
                                                 nsmp++;
                                         } else {
                                                 // Phooey.
@@ -174,7 +174,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                 }
 #if 0
                                 note[ch].note = NOTE_MIDC;
-                                note[ch].instr = patch_percussion[b1];
+                                note[ch].instrument = patch_percussion[b1];
 #else
                                 /* adlib is broken currently: it kind of "folds" every 9th channel, but only
                                 for SOME events ... what this amounts to is attempting to play notes from
@@ -186,13 +186,13 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                 chanstate[ch].note = NOTE_NONE;
 #endif
                         } else {
-                                if (chanstate[ch].instr) {
+                                if (chanstate[ch].instrument) {
                                         note[ch].note = chanstate[ch].note;
-                                        note[ch].instr = chanstate[ch].instr;
+                                        note[ch].instrument = chanstate[ch].instrument;
                                 }
                         }
-                        note[ch].volcmd = VOLCMD_VOLUME;
-                        note[ch].vol = chanstate[ch].vol;
+                        note[ch].voleffect = VOLFX_VOLUME;
+                        note[ch].volparam = chanstate[ch].volume;
                         break;
                 case 2: // Pitch wheel (TODO)
                         b1 = slurp_getc(fp);
@@ -203,13 +203,13 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         case 10: // All sounds off
                                 for (n = 0; n < 16; n++) {
                                         note[ch].note = chanstate[ch].note = NOTE_CUT;
-                                        note[ch].instr = 0;
+                                        note[ch].instrument = 0;
                                 }
                                 break;
                         case 11: // All notes off
                                 for (n = 0; n < 16; n++) {
                                         note[ch].note = chanstate[ch].note = NOTE_OFF;
-                                        note[ch].instr = 0;
+                                        note[ch].instrument = 0;
                                 }
                                 break;
                         case 14: // Reset all controllers
@@ -234,7 +234,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                         if (nsmp < MAX_SAMPLES) {
                                                 // New sample!
                                                 patch_samples[b2] = nsmp;
-                                                adlib_patch_apply(song->Samples + nsmp, b2);
+                                                adlib_patch_apply(song->samples + nsmp, b2);
                                                 nsmp++;
                                         } else {
                                                 // Don't have a sample number for this patch, and never will.
@@ -242,13 +242,13 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                                 note[ch].note = NOTE_OFF;
                                         }
                                 }
-                                chanstate[ch].instr = patch_samples[b2];
+                                chanstate[ch].instrument = patch_samples[b2];
                                 break;
                         case 3: // Volume
                                 b2 = (b2 + 1) >> 1;
-                                chanstate[ch].vol = b2;
-                                note[ch].volcmd = VOLCMD_VOLUME;
-                                note[ch].vol = chanstate[ch].vol;
+                                chanstate[ch].volume = b2;
+                                note[ch].voleffect = VOLFX_VOLUME;
+                                note[ch].volparam = chanstate[ch].volume;
                                 break;
                         case 1: // Bank select
                         case 2: // Modulation pot
@@ -273,10 +273,10 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
 
                 if (finished) {
                         int leftover = (tickfrac + (1 << FRACBITS)) >> FRACBITS;
-                        note[MUS_BREAK_CHANNEL].command = CMD_PATTERNBREAK;
+                        note[MUS_BREAK_CHANNEL].effect = FX_PATTERNBREAK;
                         note[MUS_BREAK_CHANNEL].param = 0;
                         if (leftover && leftover != prevspeed) {
-                                note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
+                                note[MUS_SPEED_CHANNEL].effect = FX_SPEED;
                                 note[MUS_SPEED_CHANNEL].param = leftover;
                         }
                 } else if (event & 0x80) {
@@ -324,7 +324,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                 int s6xch = MUS_TICKADJ_CHANNEL;
                                 while (adjust) {
                                         int s6x = MIN(adjust, 0xf);
-                                        note[s6xch].command = CMD_S3MCMDEX;
+                                        note[s6xch].effect = FX_S3MCMDEX;
                                         note[s6xch].param = 0x60 | s6x;
                                         adjust -= s6x;
                                         s6xch++;
@@ -332,7 +332,7 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                         }
                         if (prevspeed != MIN(ticks, 255)) {
                                 prevspeed = MIN(ticks, 255);
-                                note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
+                                note[MUS_SPEED_CHANNEL].effect = FX_SPEED;
                                 note[MUS_SPEED_CHANNEL].param = prevspeed;
                         }
                         ticks = ticks / 255 + 1;
@@ -349,12 +349,12 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
                                 finished = 1;
                                 break;
                         }
-                        song->PatternSize[pat] = song->PatternAllocSize[pat] = MUS_ROWS_PER_PATTERN;
-                        song->Patterns[pat] = csf_allocate_pattern(MUS_ROWS_PER_PATTERN, 64);
-                        note = song->Patterns[pat];
-                        song->Orderlist[pat] = pat;
+                        song->pattern_size[pat] = song->pattern_alloc_size[pat] = MUS_ROWS_PER_PATTERN;
+                        song->patterns[pat] = csf_allocate_pattern(MUS_ROWS_PER_PATTERN);
+                        note = song->patterns[pat];
+                        song->orderlist[pat] = pat;
 
-                        note[MUS_SPEED_CHANNEL].command = CMD_SPEED;
+                        note[MUS_SPEED_CHANNEL].effect = FX_SPEED;
                         note[MUS_SPEED_CHANNEL].param = prevspeed;
 
                         note += 64 * row;
@@ -364,9 +364,9 @@ int fmt_mus_load_song(CSoundFile *song, slurp_t *fp, UNUSED unsigned int lflags)
         // Widen the buffer again.
         fp->length = reallen;
 
-        song->m_dwSongFlags |= SONG_NOSTEREO;
-        song->m_nDefaultSpeed = 1;
-        song->m_nDefaultTempo = 255;
+        song->flags |= SONG_NOSTEREO;
+        song->initial_speed = 1;
+        song->initial_tempo = 255;
 
         strcpy(song->tracker_id, "Doom Music File"); // ?
 

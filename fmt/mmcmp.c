@@ -180,9 +180,9 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
                                 uint32_t d = get_bits(&bb, numbits + 1);
 
                                 if (d >= mm_16bit_commands[numbits]) {
-                                        uint32_t nFetch = mm_16bit_fetch[numbits];
-                                        uint32_t newbits = get_bits(&bb, nFetch)
-                                                + ((d - mm_16bit_commands[numbits]) << nFetch);
+                                        uint32_t fetch = mm_16bit_fetch[numbits];
+                                        uint32_t newbits = get_bits(&bb, fetch)
+                                                + ((d - mm_16bit_commands[numbits]) << fetch);
                                         if (newbits != numbits) {
                                                 numbits = newbits & 0x0F;
                                         } else {
@@ -237,9 +237,9 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
                                 uint32_t d = get_bits(&bb, numbits + 1);
 
                                 if (d >= mm_8bit_commands[numbits]) {
-                                        uint32_t nFetch = mm_8bit_fetch[numbits];
-                                        uint32_t newbits = get_bits(&bb, nFetch)
-                                                + ((d - mm_8bit_commands[numbits]) << nFetch);
+                                        uint32_t fetch = mm_8bit_fetch[numbits];
+                                        uint32_t newbits = get_bits(&bb, fetch)
+                                                + ((d - mm_8bit_commands[numbits]) << fetch);
                                         if (newbits != numbits) {
                                                 numbits = newbits & 0x07;
                                         } else {

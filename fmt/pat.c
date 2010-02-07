@@ -26,7 +26,7 @@
 
 #include "it.h"
 #include "song.h"
-#include "mplink.h"
+#include "sndfile.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -142,8 +142,8 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
         struct GF1PatchHeader header;
         struct GF1PatchSampleHeader gfsamp;
         struct instrumentloader ii;
-        song_instrument *g;
-        song_sample *smp;
+        song_instrument_t *g;
+        song_sample_t *smp;
         unsigned int pos, lo, hi, tmp, rs;
         int i, nsamp, n;
 
@@ -197,7 +197,7 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->length = gfsamp.samplesize;
                 smp->loop_start = gfsamp.loopstart;
                 smp->loop_end = gfsamp.loopend;
-                smp->speed = gfsamp.samplerate;
+                smp->c5speed = gfsamp.samplerate;
 
                 smp->flags = 0;
                 rs = SF_M | SF_LE; // channels; endianness
@@ -212,7 +212,7 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->vib_rate  = gfsamp.vibrato[1];
                 smp->vib_depth = gfsamp.vibrato[2];
 
-                pos += csf_read_sample(mp->Samples + n, rs, data + pos, length - pos);
+                pos += csf_read_sample(current_song->samples + n, rs, data + pos, length - pos);
         }
         return 1;
 }

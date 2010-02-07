@@ -105,11 +105,11 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* loads everything but old 15-instrument mods... yes, even FLT8 and WOW files */
 
-int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         uint8_t tag[4];
         int n, npat, pat, chan, nchan, nord;
-        MODCOMMAND *note;
+        song_note_t *note;
         uint16_t tmp;
         int startrekker = 0;
         int test_wow = 0;
@@ -193,58 +193,58 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         /* read the title */
         slurp_rewind(fp);
-        slurp_read(fp, song->song_title, 20);
-        song->song_title[20] = 0;
+        slurp_read(fp, song->title, 20);
+        song->title[20] = 0;
 
         /* sample headers */
         for (n = 1; n < 32; n++) {
-                slurp_read(fp, song->Samples[n].name, 22);
-                song->Samples[n].name[22] = 0;
+                slurp_read(fp, song->samples[n].name, 22);
+                song->samples[n].name[22] = 0;
 
                 slurp_read(fp, &tmp, 2);
-                song->Samples[n].nLength = bswapBE16(tmp) * 2;
+                song->samples[n].length = bswapBE16(tmp) * 2;
 
                 /* this is only necessary for the wow test... */
-                samplesize += song->Samples[n].nLength;
+                samplesize += song->samples[n].length;
 
-                song->Samples[n].nC5Speed = MOD_FINETUNE(slurp_getc(fp));
+                song->samples[n].c5speed = MOD_FINETUNE(slurp_getc(fp));
 
-                song->Samples[n].nVolume = slurp_getc(fp);
-                if (song->Samples[n].nVolume > 64)
-                        song->Samples[n].nVolume = 64;
-                if (!song->Samples[n].nLength && song->Samples[n].nVolume)
+                song->samples[n].volume = slurp_getc(fp);
+                if (song->samples[n].volume > 64)
+                        song->samples[n].volume = 64;
+                if (!song->samples[n].length && song->samples[n].volume)
                         maybe_ft2 = 0;
-                song->Samples[n].nVolume *= 4; //mphack
-                song->Samples[n].nGlobalVol = 64;
+                song->samples[n].volume *= 4; //mphack
+                song->samples[n].global_volume = 64;
 
                 slurp_read(fp, &tmp, 2);
-                song->Samples[n].nLoopStart = bswapBE16(tmp) * 2;
+                song->samples[n].loop_start = bswapBE16(tmp) * 2;
                 slurp_read(fp, &tmp, 2);
                 tmp = bswapBE16(tmp) * 2;
                 if (tmp > 2)
-                        song->Samples[n].uFlags |= CHN_LOOP;
+                        song->samples[n].flags |= CHN_LOOP;
                 else if (tmp == 0)
                         maybe_st3 = 0;
-                else if (!song->Samples[n].nLength)
+                else if (!song->samples[n].length)
                         maybe_ft2 = 0;
-                song->Samples[n].nLoopEnd = song->Samples[n].nLoopStart + tmp;
-                song->Samples[n].nVibType = 0;
-                song->Samples[n].nVibSweep = 0;
-                song->Samples[n].nVibDepth = 0;
-                song->Samples[n].nVibRate = 0;
+                song->samples[n].loop_end = song->samples[n].loop_start + tmp;
+                song->samples[n].vib_type = 0;
+                song->samples[n].vib_rate = 0;
+                song->samples[n].vib_depth = 0;
+                song->samples[n].vib_speed = 0;
         }
 
         /* pattern/order stuff */
         nord = slurp_getc(fp);
         restart = slurp_getc(fp);
 
-        slurp_read(fp, song->Orderlist, 128);
+        slurp_read(fp, song->orderlist, 128);
         npat = 0;
         if (startrekker) {
                 /* from mikmod: if the file says FLT8, but the orderlist
                 has odd numbers, it's probably really an FLT4 */
                 for (n = 0; n < 128; n++) {
-                        if (song->Orderlist[n] & 1) {
+                        if (song->orderlist[n] & 1) {
                                 startrekker = 0;
                                 nchan = 4;
                                 break;
@@ -253,16 +253,16 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         }
         if (startrekker) {
                 for (n = 0; n < 128; n++)
-                        song->Orderlist[n] >>= 1;
+                        song->orderlist[n] >>= 1;
         }
         for (n = 0; n < 128; n++) {
-                if (song->Orderlist[n] >= MAX_PATTERNS)
-                        song->Orderlist[n] = ORDER_SKIP;
-                else if (song->Orderlist[n] > npat)
-                        npat = song->Orderlist[n];
+                if (song->orderlist[n] >= MAX_PATTERNS)
+                        song->orderlist[n] = ORDER_SKIP;
+                else if (song->orderlist[n] > npat)
+                        npat = song->orderlist[n];
         }
         /* set all the extra orders to the end-of-song marker */
-        memset(song->Orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
+        memset(song->orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
 
         if (restart == 0x7f && maybe_st3)
                 tid = "Scream Tracker 3?";
@@ -290,8 +290,8 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         /* pattern data */
         if (startrekker) {
                 for (pat = 0; pat <= npat; pat++) {
-                        note = song->Patterns[pat] = csf_allocate_pattern(64, 64);
-                        song->PatternSize[pat] = song->PatternAllocSize[pat] = 64;
+                        note = song->patterns[pat] = csf_allocate_pattern(64);
+                        song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
                         for (n = 0; n < 64; n++, note += 60) {
                                 for (chan = 0; chan < 4; chan++, note++) {
                                         uint8_t p[4];
@@ -300,7 +300,7 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                         csf_import_mod_effect(note, 0);
                                 }
                         }
-                        note = song->Patterns[pat] + 4;
+                        note = song->patterns[pat] + 4;
                         for (n = 0; n < 64; n++, note += 60) {
                                 for (chan = 0; chan < 4; chan++, note++) {
                                         uint8_t p[4];
@@ -312,8 +312,8 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 }
         } else {
                 for (pat = 0; pat <= npat; pat++) {
-                        note = song->Patterns[pat] = csf_allocate_pattern(64, 64);
-                        song->PatternSize[pat] = song->PatternAllocSize[pat] = 64;
+                        note = song->patterns[pat] = csf_allocate_pattern(64);
+                        song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
                         for (n = 0; n < 64; n++, note += 64 - nchan) {
                                 for (chan = 0; chan < nchan; chan++, note++) {
                                         uint8_t p[4];
@@ -332,22 +332,22 @@ int fmt_mod_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 for (n = 1; n < 32; n++) {
                         int8_t *ptr;
 
-                        if (song->Samples[n].nLength == 0)
+                        if (song->samples[n].length == 0)
                                 continue;
-                        ptr = csf_allocate_sample(song->Samples[n].nLength);
-                        slurp_read(fp, ptr, song->Samples[n].nLength);
-                        song->Samples[n].pSample = ptr;
+                        ptr = csf_allocate_sample(song->samples[n].length);
+                        slurp_read(fp, ptr, song->samples[n].length);
+                        song->samples[n].data = ptr;
                 }
         }
 
         /* set some other header info that's always the same for .mod files */
-        song->m_dwSongFlags = (SONG_ITOLDEFFECTS | SONG_COMPATGXX);
+        song->flags = (SONG_ITOLDEFFECTS | SONG_COMPATGXX);
         for (n = 0; n < nchan; n++)
-                song->Channels[n].nPan = PROTRACKER_PANNING(n);
+                song->channels[n].panning = PROTRACKER_PANNING(n);
         for (; n < MAX_CHANNELS; n++)
-                song->Channels[n].dwFlags = CHN_MUTE;
+                song->channels[n].flags = CHN_MUTE;
 
-        song->m_nStereoSeparation = 64;
+        song->pan_separation = 64;
 
 //      if (slurp_error(fp)) {
 //              return LOAD_FILE_ERROR;

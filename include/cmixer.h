@@ -13,7 +13,7 @@
 
 void init_mix_buffer(int *, unsigned int);
 void stereo_fill(int *, unsigned int, int*, int *);
-void end_channel_ofs(SONGVOICE *, int *, unsigned int);
+void end_channel_ofs(song_voice_t *, int *, unsigned int);
 void interleave_front_rear(int *, int *, unsigned int);
 void mono_from_stereo(int *, unsigned int);
 
@@ -22,9 +22,9 @@ void float_to_stereo_mix(const float *, const float *, int *, unsigned int);
 void mono_mix_to_float(const int *, float *, unsigned int);
 void float_to_mono_mix(const float *, int *, unsigned int);
 
-unsigned int csf_create_stereo_mix(CSoundFile *csf, int count);
+unsigned int csf_create_stereo_mix(song_t *csf, int count);
 
-void setup_channel_filter(SONGVOICE *pChn, int reset, int flt_modifier, int freq);
+void setup_channel_filter(song_voice_t *pChn, int reset, int flt_modifier, int freq);
 
 
 //typedef unsigned int (*convert_clip_t)(void *, int *, unsigned int, int*, int*) __attribute__((cdecl))
@@ -46,14 +46,14 @@ void set_eq_gains(const unsigned int *, unsigned int, const unsigned int *, int,
 // Some things that shouldn't exist...
 
 // fastmix.c
-extern int MixSoundBuffer[MIXBUFFERSIZE * 4];
+extern int mix_buffer[MIXBUFFERSIZE * 4];
 extern int MixRearBuffer[MIXBUFFERSIZE * 2];
-extern float MixFloatBuffer[MIXBUFFERSIZE * 2];
-extern int MultiSoundBuffer[64][MIXBUFFERSIZE * 4];
+extern float mix_buffer_float[MIXBUFFERSIZE * 2];
+extern int mix_buffer_multi[64][MIXBUFFERSIZE * 4];
 
 // sndmix.c
-extern int gnDryROfsVol;
-extern int gnDryLOfsVol;
+extern int g_dry_rofs_vol;
+extern int g_dry_lofs_vol;
 
 #endif
 

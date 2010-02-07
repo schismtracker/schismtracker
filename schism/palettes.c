@@ -21,12 +21,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef PALETTES_H
-#define PALETTES_H
+#include "headers.h"
 
+#include "it.h"
+#include "sdlmain.h"
 #include "util.h"
 
-/* *INDENT-OFF* */
+/* --------------------------------------------------------------------- */
+
 struct it_palette palettes[] = {
         {"Light Blue", {
                 /*  0 */ { 0,  0,  0},
@@ -286,8 +288,48 @@ struct it_palette palettes[] = {
         }},
         {"", {{0}}}
 };
-/* *INDENT-ON* */
 
 #define NUM_PALETTES (ARRAY_SIZE(palettes) - 1)
 
-#endif /* ! PALETTES_H */
+/* --------------------------------------------------------------------- */
+/* palette */
+
+/* this is set in cfg_load() (config.c)
+palette_apply() must be called after changing this to update the display. */
+uint8_t current_palette[16][3];
+/* this should be changed only with palette_load_preset() (which doesn't call
+palette_apply() automatically, so do that as well) */
+int current_palette_index;
+
+
+void palette_apply(void)
+{
+        int n;
+        unsigned char cx[16][3];
+
+        for (n = 0; n < 16; n++) {
+                cx[n][0] = current_palette[n][0] << 2;
+                cx[n][1] = current_palette[n][1] << 2;
+                cx[n][2] = current_palette[n][2] << 2;
+        }
+        video_colors(cx);
+
+        /* is the "light" border color actually darker than the "dark" color? */
+        if ((current_palette[1][0] + current_palette[1][1] + current_palette[1][2])
+            > (current_palette[3][0] + current_palette[3][1] + current_palette[3][2])) {
+                status.flags |= INVERTED_PALETTE;
+        } else {
+                status.flags &= ~INVERTED_PALETTE;
+        }
+}
+
+void palette_load_preset(int palette_index)
+{
+        if (palette_index < -1 || palette_index >= NUM_PALETTES)
+                return;
+
+        current_palette_index = palette_index;
+        if (palette_index == -1) return;
+        memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
+}
+

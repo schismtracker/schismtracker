@@ -117,7 +117,7 @@ static int iff_chunk_read(chunk_t *chunk, const uint8_t *data, size_t length, si
 
 #define ZEROIZE(x) memset(&(x), 0, sizeof(x))
 
-static int _read_iff(dmoz_file_t *file, song_sample *smp, const uint8_t *data, size_t length)
+static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data, size_t length)
 {
         chunk_t chunk;
         size_t pos = 0;
@@ -187,9 +187,9 @@ static int _read_iff(dmoz_file_t *file, song_sample *smp, const uint8_t *data, s
                 }
 
                 if (smp) {
-                        smp->speed = bswapBE16(vhdr.data->VHDR.smp_per_sec);
+                        smp->c5speed = bswapBE16(vhdr.data->VHDR.smp_per_sec);
                         smp->length = body.size;
-                        smp->data = song_sample_allocate(body.size);
+                        smp->data = csf_allocate_sample(body.size);
                         memcpy(smp->data, body.data->bytes, body.size);
                         smp->volume = 64*4;
                         smp->global_volume = 64;
@@ -272,9 +272,9 @@ static int _read_iff(dmoz_file_t *file, song_sample *smp, const uint8_t *data, s
                         // TODO: data checking; make sure sample count and byte size agree
                         // (and if not, cut to shorter of the two)
 
-                        smp->speed = ConvertFromIeeeExtended(comm.data->COMM.sample_rate);
+                        smp->c5speed = ConvertFromIeeeExtended(comm.data->COMM.sample_rate);
                         smp->length = bswapBE32(comm.data->COMM.num_frames);
-                        smp->data = song_sample_allocate(ssnd.size);
+                        smp->data = csf_allocate_sample(ssnd.size);
                         smp->volume = 64*4;
                         smp->global_volume = 64;
 
@@ -302,14 +302,14 @@ int fmt_aiff_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         return _read_iff(file, NULL, data, length);
 }
 
-int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample *smp)
+int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 {
         return _read_iff(NULL, smp, data, length);
 }
 
 /* --------------------------------------------------------------------- */
 
-int fmt_aiff_save_sample(UNUSED disko_t *fp, UNUSED song_sample *smp)
+int fmt_aiff_save_sample(UNUSED disko_t *fp, UNUSED song_sample_t *smp)
 {
         return 0;
 }

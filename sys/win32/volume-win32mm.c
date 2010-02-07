@@ -23,7 +23,6 @@
 
 #include "headers.h"
 
-#include "mixer.h"
 #include "util.h"
 #include "osdefs.h"
 
@@ -41,7 +40,7 @@
       it doesn't make any sense to keep the precision.
 */
 
-int win32mm_mixer_get_max_volume(void)
+int win32mm_volume_get_max(void)
 {
         return 0xFF;
 }
@@ -72,7 +71,7 @@ static HWAVEOUT open_mixer(void)
         return hwo;
 }
 
-void win32mm_mixer_read_volume(int *left, int *right)
+void win32mm_volume_read(int *left, int *right)
 {
         DWORD vol;
         HWAVEOUT hwo=open_mixer();
@@ -88,7 +87,7 @@ void win32mm_mixer_read_volume(int *left, int *right)
         waveOutClose(hwo);
 }
 
-void win32mm_mixer_write_volume(int left, int right)
+void win32mm_volume_write(int left, int right)
 {
         DWORD vol = ((left & 0xFF)<<8) | ((right & 0xFF)<<(16+8));
         HWAVEOUT hwo = open_mixer();

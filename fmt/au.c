@@ -87,7 +87,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------- */
 
-int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp)
+int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 {
         struct au_header au;
 
@@ -112,7 +112,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp)
         C__(au.encoding == AU_PCM_8 || au.encoding == AU_PCM_16);
         C__(au.channels == 1 || au.channels == 2);
 
-        smp->speed = au.sample_rate;
+        smp->c5speed = au.sample_rate;
         smp->volume = 64 * 4;
         smp->global_volume = 64;
         smp->length = au.data_size; /* maybe this should be MIN(...), for files with a wacked out length? */
@@ -131,7 +131,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp)
                 smp->name[extlen] = 0;
         }
 
-        smp->data = song_sample_allocate(au.data_size);
+        smp->data = csf_allocate_sample(au.data_size);
         memcpy(smp->data, data + au.data_offset, au.data_size);
 
 #ifndef WORDS_BIGENDIAN
@@ -152,7 +152,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample *smp)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-int fmt_au_save_sample(disko_t *fp, song_sample *smp)
+int fmt_au_save_sample(disko_t *fp, song_sample_t *smp)
 {
         struct au_header au;
         uint32_t ln;
@@ -167,7 +167,7 @@ int fmt_au_save_sample(disko_t *fp, song_sample *smp)
         } else {
                 au.encoding = bswapBE32(AU_PCM_8);
         }
-        au.sample_rate = bswapBE32(smp->speed);
+        au.sample_rate = bswapBE32(smp->c5speed);
         if (smp->flags & SAMP_STEREO) {
                 ln *= 2;
                 au.channels = bswapBE32(2);

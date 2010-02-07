@@ -76,27 +76,27 @@ enum {
 
 
 /* return: number of channels */
-static int okt_read_cmod(CSoundFile *song, slurp_t *fp)
+static int okt_read_cmod(song_t *song, slurp_t *fp)
 {
-        MODCHANNELSETTINGS *cs = song->Channels;
+        song_channel_t *cs = song->channels;
         int t, cn = 0;
 
         for (t = 0; t < 4; t++) {
                 if (slurp_getc(fp) || slurp_getc(fp))
-                        cs[cn++].nPan = PROTRACKER_PANNING(t);
-                cs[cn++].nPan = PROTRACKER_PANNING(t);
+                        cs[cn++].panning = PROTRACKER_PANNING(t);
+                cs[cn++].panning = PROTRACKER_PANNING(t);
         }
         for (t = cn; t < 64; t++)
-                cs[t].dwFlags |= CHN_MUTE;
+                cs[t].flags |= CHN_MUTE;
         return cn;
 }
 
 
-static void okt_read_samp(CSoundFile *song, slurp_t *fp, uint32_t len, uint32_t smpflag[])
+static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpflag[])
 {
         unsigned int n;
         struct okt_sample osmp;
-        SONGSAMPLE *ssmp = song->Samples + 1;
+        song_sample_t *ssmp = song->samples + 1;
 
         if (len % 32)
                 log_appendf(4, " Warning: Sample data is misaligned");
@@ -116,20 +116,20 @@ static void okt_read_samp(CSoundFile *song, slurp_t *fp, uint32_t len, uint32_t 
 
                 strncpy(ssmp->name, osmp.name, 20);
                 ssmp->name[20] = '\0';
-                ssmp->nLength = osmp.length & ~1; // round down
-                if (osmp.loop_len > 2 && osmp.loop_len + osmp.loop_start < ssmp->nLength) {
-                        ssmp->nSustainStart = osmp.loop_start;
-                        ssmp->nSustainEnd = osmp.loop_start + osmp.loop_len;
-                        if (ssmp->nSustainStart < ssmp->nLength && ssmp->nSustainEnd < ssmp->nLength)
-                                ssmp->uFlags |= CHN_SUSTAINLOOP;
+                ssmp->length = osmp.length & ~1; // round down
+                if (osmp.loop_len > 2 && osmp.loop_len + osmp.loop_start < ssmp->length) {
+                        ssmp->sustain_start = osmp.loop_start;
+                        ssmp->sustain_end = osmp.loop_start + osmp.loop_len;
+                        if (ssmp->sustain_start < ssmp->length && ssmp->sustain_end < ssmp->length)
+                                ssmp->flags |= CHN_SUSTAINLOOP;
                         else
-                                ssmp->nSustainStart = 0;
+                                ssmp->sustain_start = 0;
                 }
-                ssmp->nVolume = MIN(osmp.volume, 64) * 4; //mphack
+                ssmp->volume = MIN(osmp.volume, 64) * 4; //mphack
                 smpflag[n] = (osmp.mode == 0 || osmp.mode == 2) ? SF_7 : SF_8;
 
-                ssmp->nC5Speed = 8287;
-                ssmp->nGlobalVol = 64;
+                ssmp->c5speed = 8287;
+                ssmp->global_volume = 64;
         }
 }
 
@@ -157,11 +157,11 @@ Note that 1xx/2xx are apparently inverted from Protracker.
 I'm not sure what "Old Volume" does -- continue a slide? reset to the sample's volume? */
 
 /* return: mask indicating effects that aren't implemented/recognized */
-static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
+static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 {
         int row, chn, e;
         uint16_t rows;
-        MODCOMMAND *note;
+        song_note_t *note;
         // bitset for effect warnings: (effwarn & (1 << (okteffect - 1)))
         // bit 1 is set if out of range values are encountered (Xxx, Yxx, Zxx, or garbage data)
         uint32_t effwarn = 0;
@@ -170,21 +170,21 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
         rows = bswapBE16(rows);
         rows = CLAMP(rows, 1, 200);
 
-        song->PatternAllocSize[pat] = song->PatternSize[pat] = rows;
-        note = song->Patterns[pat] = csf_allocate_pattern(rows, 64);
+        song->pattern_alloc_size[pat] = song->pattern_size[pat] = rows;
+        note = song->patterns[pat] = csf_allocate_pattern(rows);
 
         for (row = 0; row < rows; row++, note += 64 - nchn) {
                 for (chn = 0; chn < nchn; chn++, note++) {
                         note->note = slurp_getc(fp);
-                        note->instr = slurp_getc(fp);
+                        note->instrument = slurp_getc(fp);
                         e = slurp_getc(fp);
                         note->param = slurp_getc(fp);
 
                         if (note->note && note->note <= 36) {
                                 note->note += 48;
-                                note->instr++;
+                                note->instrument++;
                         } else {
-                                note->instr = 0; // ?
+                                note->instrument = 0; // ?
                         }
 
                         /* blah -- check for read error */
@@ -197,11 +197,11 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
 
                         /* 1/2 apparently are backwards from .mod? */
                         case 1: // 1 Portamento Down (Period)
-                                note->command = CMD_PORTAMENTODOWN;
+                                note->effect = FX_PORTAMENTODOWN;
                                 note->param &= 0xf;
                                 break;
                         case 2: // 2 Portamento Up (Period)
-                                note->command = CMD_PORTAMENTOUP;
+                                note->effect = FX_PORTAMENTOUP;
                                 note->param &= 0xf;
                                 break;
 
@@ -211,26 +211,26 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
                         case 10: // A Arpeggio 1 (down, orig, up)
                         case 11: // B Arpeggio 2 (orig, up, orig, down)
                                 if (note->param)
-                                        note->command = CMD_WEIRDOKTARP;
+                                        note->effect = FX_WEIRDOKTARP;
                                 break;
 #endif
 
                         /* This one is close enough to "standard" arpeggio -- I think! */
                         case 12: // C Arpeggio 3 (up, up, orig)
                                 if (note->param)
-                                        note->command = CMD_ARPEGGIO;
+                                        note->effect = FX_ARPEGGIO;
                                 break;
 
                         case 13: // D Slide Down (Notes)
                                 if (note->param) {
-                                        note->command = CMD_NOTESLIDEDOWN;
+                                        note->effect = FX_NOTESLIDEDOWN;
                                         note->param = 0x10 | MIN(0xf, note->param);
                                 }
                                 break;
 
                         case 30: // U Slide Up (Notes)
                                 if (note->param) {
-                                        note->command = CMD_NOTESLIDEUP;
+                                        note->effect = FX_NOTESLIDEUP;
                                         note->param = 0x10 | MIN(0xf, note->param);
                                 }
                                 break;
@@ -240,39 +240,39 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
                                 per row. Sliding every 5 (non-note) ticks kind of works (at least at
                                 speed 6), but implementing fine slides would of course be better. */
                                 if (note->param) {
-                                        note->command = CMD_NOTESLIDEDOWN;
+                                        note->effect = FX_NOTESLIDEDOWN;
                                         note->param = 0x50 | MIN(0xf, note->param);
                                 }
                                 break;
 
                         case 17: // H Slide Up Once (Notes)
                                 if (note->param) {
-                                        note->command = CMD_NOTESLIDEUP;
+                                        note->effect = FX_NOTESLIDEUP;
                                         note->param = 0x50 | MIN(0xf, note->param);
                                 }
                                 break;
 
                         case 15: // F Set Filter <>00:ON
                                 // Not implemented, but let's import it anyway...
-                                note->command = CMD_S3MCMDEX;
+                                note->effect = FX_S3MCMDEX;
                                 note->param = !!note->param;
                                 break;
 
                         case 25: // P Pos Jump
-                                note->command = CMD_POSITIONJUMP;
+                                note->effect = FX_POSITIONJUMP;
                                 break;
 
                         case 27: // R Release sample (apparently not listed in the help!)
                                 note->note = NOTE_OFF;
-                                note->instr = note->command = note->param = 0;
+                                note->instrument = note->effect = note->param = 0;
                                 break;
 
                         case 28: // S Speed
-                                note->command = CMD_SPEED; // or tempo?
+                                note->effect = FX_SPEED; // or tempo?
                                 break;
 
                         case 31: // V Volume
-                                note->command = CMD_VOLUMESLIDE;
+                                note->effect = FX_VOLUMESLIDE;
                                 switch (note->param >> 4) {
                                 case 4:
                                         if (note->param != 0x40) {
@@ -281,9 +281,9 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
                                         }
                                         // 0x40 is set volume -- fall through
                                 case 0 ... 3:
-                                        note->volcmd = VOLCMD_VOLUME;
-                                        note->vol = note->param;
-                                        note->command = CMD_NONE;
+                                        note->voleffect = VOLFX_VOLUME;
+                                        note->volparam = note->param;
+                                        note->effect = FX_NONE;
                                         note->param = 0;
                                         break;
                                 case 5:
@@ -297,7 +297,7 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
                                         break;
                                 default:
                                         // Junk.
-                                        note->command = note->param = 0;
+                                        note->effect = note->param = 0;
                                         break;
                                 }
                                 break;
@@ -305,7 +305,7 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
 #if 0
                         case 24: // O Old Volume
                                 /* ? */
-                                note->command = CMD_VOLUMESLIDE;
+                                note->effect = FX_VOLUMESLIDE;
                                 note->param = 0;
                                 break;
 #endif
@@ -314,7 +314,7 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
                                 //log_appendf(2, " Pattern %d, row %d: effect %d %02X",
                                 //        pat, row, e, note->param);
                                 effwarn |= (e > 32) ? 1 : (1 << (e - 1));
-                                note->command = CMD_UNIMPLEMENTED;
+                                note->effect = FX_UNIMPLEMENTED;
                                 break;
                         }
                 }
@@ -325,7 +325,7 @@ static uint32_t okt_read_pbod(CSoundFile *song, slurp_t *fp, int nchn, int pat)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-int fmt_okt_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         uint8_t tag[8];
         unsigned int readflags = 0;
@@ -372,8 +372,8 @@ int fmt_okt_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                 readflags |= OKT_HAS_SPEE;
                                 slurp_read(fp, &w, 2);
                                 w = bswapBE16(w);
-                                song->m_nDefaultSpeed = CLAMP(w, 1, 255);
-                                song->m_nDefaultTempo = 125;
+                                song->initial_speed = CLAMP(w, 1, 255);
+                                song->initial_tempo = 125;
                         }
                         break;
                 case OKT_BLK_SLEN:
@@ -389,7 +389,7 @@ int fmt_okt_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 case OKT_BLK_PATT:
                         if (!(readflags & OKT_HAS_PATT)) {
                                 readflags |= OKT_HAS_PATT;
-                                slurp_read(fp, song->Orderlist, MIN(blklen, MAX_ORDERS));
+                                slurp_read(fp, song->orderlist, MIN(blklen, MAX_ORDERS));
                         }
                         break;
                 case OKT_BLK_PBOD:
@@ -444,31 +444,31 @@ int fmt_okt_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (sh = sd = 1; sh < MAX_SAMPLES && smpsize[sd]; sh++) {
-                        SONGSAMPLE *ssmp = song->Samples + sh;
-                        if (!ssmp->nLength)
+                        song_sample_t *ssmp = song->samples + sh;
+                        if (!ssmp->length)
                                 continue;
 
-                        if (ssmp->nLength != smpsize[sd]) {
+                        if (ssmp->length != smpsize[sd]) {
                                 log_appendf(4, " Warning: Sample %d: header/data size mismatch (%d/%d)", sh,
-                                        ssmp->nLength, smpsize[sd]);
-                                ssmp->nLength = MIN(smpsize[sd], ssmp->nLength);
+                                        ssmp->length, smpsize[sd]);
+                                ssmp->length = MIN(smpsize[sd], ssmp->length);
                         }
 
                         csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd],
-                                        fp->data + smpseek[sd], ssmp->nLength);
+                                        fp->data + smpseek[sd], ssmp->length);
                         sd++;
                 }
                 // Make sure there's nothing weird going on
                 for (; sh < MAX_SAMPLES; sh++) {
-                        if (song->Samples[sh].nLength) {
+                        if (song->samples[sh].length) {
                                 log_appendf(4, " Warning: Sample %d: file truncated", sh);
-                                song->Samples[sh].nLength = 0;
+                                song->samples[sh].length = 0;
                         }
                 }
         }
 
-        song->m_nStereoSeparation = 64;
-        memset(song->Orderlist + plen, ORDER_LAST, MAX_ORDERS - plen);
+        song->pan_separation = 64;
+        memset(song->orderlist + plen, ORDER_LAST, MAX_ORDERS - plen);
         strcpy(song->tracker_id, "Amiga Oktalyzer");
 
         return LOAD_SUCCESS;

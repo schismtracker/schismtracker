@@ -22,68 +22,67 @@
  */
 #include "headers.h"
 
-#include "mixer.h"
 #include "util.h"
-#include "SDL.h"
+#include "sdlmain.h"
 #include "osdefs.h"
 
-static int (*__mixer_get_max_volume)(void) = NULL;
-static void (*__mixer_read_volume)(int *left, int *right) = NULL;
-static void (*__mixer_write_volume)(int left, int right) = NULL;
+static int (*__volume_get_max)(void) = NULL;
+static void (*__volume_read)(int *left, int *right) = NULL;
+static void (*__volume_write)(int left, int right) = NULL;
 
 
-void mixer_setup(void)
+void volume_setup(void)
 {
         char *drv, drv_buf[256];
 
         drv = SDL_AudioDriverName(drv_buf,sizeof(drv_buf));
 
 #ifdef USE_ALSA
-        if ((!drv && !__mixer_get_max_volume)
+        if ((!drv && !__volume_get_max)
             || (drv && (!strcmp(drv, "alsa")))) {
-                __mixer_get_max_volume = alsa_mixer_get_max_volume;
-                __mixer_read_volume = alsa_mixer_read_volume;
-                __mixer_write_volume = alsa_mixer_write_volume;
+                __volume_get_max = alsa_volume_get_max;
+                __volume_read = alsa_volume_read;
+                __volume_write = alsa_volume_write;
         }
 #endif
 #ifdef USE_OSS
-        if ((!drv && !__mixer_get_max_volume)
+        if ((!drv && !__volume_get_max)
             || (drv && (!strcmp(drv, "oss") || !strcmp(drv, "dsp")))) {
-                __mixer_get_max_volume = oss_mixer_get_max_volume;
-                __mixer_read_volume = oss_mixer_read_volume;
-                __mixer_write_volume = oss_mixer_write_volume;
+                __volume_get_max = oss_volume_get_max;
+                __volume_read = oss_volume_read;
+                __volume_write = oss_volume_write;
         }
 #endif
 #ifdef MACOSX
-        if ((!drv && !__mixer_get_max_volume)
+        if ((!drv && !__volume_get_max)
             || (drv && (!strcmp(drv, "coreaudio") || !strcmp(drv, "macosx")))) {
-                __mixer_get_max_volume = macosx_mixer_get_max_volume;
-                __mixer_read_volume = macosx_mixer_read_volume;
-                __mixer_write_volume = macosx_mixer_write_volume;
+                __volume_get_max = macosx_volume_get_max;
+                __volume_read = macosx_volume_read;
+                __volume_write = macosx_volume_write;
         }
 #endif
 #ifdef WIN32
-        if ((!drv && !__mixer_get_max_volume)
+        if ((!drv && !__volume_get_max)
             || (drv && (!strcmp(drv, "waveout") || !strcmp(drv, "dsound")))) {
-                __mixer_get_max_volume = win32mm_mixer_get_max_volume;
-                __mixer_read_volume = win32mm_mixer_read_volume;
-                __mixer_write_volume = win32mm_mixer_write_volume;
+                __volume_get_max = win32mm_volume_get_max;
+                __volume_read = win32mm_volume_read;
+                __volume_write = win32mm_volume_write;
         }
 #endif
 }
 
 
-int mixer_get_max_volume(void)
+int volume_get_max(void)
 {
-        if (__mixer_get_max_volume) return __mixer_get_max_volume();
+        if (__volume_get_max) return __volume_get_max();
         return 1; /* Can't return 0, that breaks things. */
 }
-void mixer_read_volume(int *left, int *right)
+void volume_read(int *left, int *right)
 {
-        if (__mixer_read_volume) __mixer_read_volume(left,right);
+        if (__volume_read) __volume_read(left,right);
         else { *left=0; *right=0; }
 }
-void mixer_write_volume(int left, int right)
+void volume_write(int left, int right)
 {
-        if (__mixer_write_volume) __mixer_write_volume(left,right);
+        if (__volume_write) __volume_write(left,right);
 }

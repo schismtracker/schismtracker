@@ -1,8 +1,24 @@
-/* This code is based on modplug.
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010 Storlek
+ * URL: http://schismtracker.org/
  *
- * Original authors:
- *      Olivier Lapicque <olivierl@jps.net>
- *      Markus Fick <webmaster@mark-f.de> (spline + fir-resampler)
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <string.h>
@@ -46,10 +62,10 @@ void stereo_fill(int *buffer, unsigned int samples, int* profs, int *plofs)
 }
 
 
-void end_channel_ofs(SONGVOICE *channel, int *buffer, unsigned int samples)
+void end_channel_ofs(song_voice_t *channel, int *buffer, unsigned int samples)
 {
-    int rofs = channel->nROfs;
-    int lofs = channel->nLOfs;
+    int rofs = channel->rofs;
+    int lofs = channel->lofs;
 
     if (!rofs && !lofs)
         return;
@@ -64,17 +80,8 @@ void end_channel_ofs(SONGVOICE *channel, int *buffer, unsigned int samples)
         buffer[i * 2 + 1] += x_l;
     }
 
-    channel->nROfs = rofs;
-    channel->nLOfs = lofs;
-}
-
-
-void interleave_front_rear(int *front, int *rear, unsigned int samples)
-{
-    for (unsigned int i = 0; i < samples; i++) {
-        rear[i]  = front[(i * 2) + 1];
-        front[i] = front[i * 2];
-    }
+    channel->rofs = rofs;
+    channel->lofs = lofs;
 }
 
 

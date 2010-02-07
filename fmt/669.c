@@ -85,12 +85,12 @@ int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* <opinion humble="false">This is better than IT's and MPT's 669 loaders</opinion> */
 
-int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         uint8_t b[16];
         uint16_t npat, nsmp;
         int n, pat, chan, smp, row;
-        MODCOMMAND *note;
+        song_note_t *note;
         uint16_t tmp;
         uint32_t tmplong;
         uint8_t patspeed[128], breakpos[128];
@@ -113,13 +113,13 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         /* The message is 108 bytes, split onto 3 lines of 36 bytes each.
         Also copy the first part of the message into the title, because 669 doesn't actually have
         a dedicated title field... */
-        read_lined_message(song->m_lpszSongComments, fp, 108, 36);
-        strncpy(titletmp, song->m_lpszSongComments, 36);
+        read_lined_message(song->message, fp, 108, 36);
+        strncpy(titletmp, song->message, 36);
         titletmp[36] = '\0';
         titletmp[strcspn(titletmp, "\r\n")] = '\0';
         trim_string(titletmp);
         titletmp[25] = '\0';
-        strcpy(song->song_title, titletmp);
+        strcpy(song->title, titletmp);
 
         nsmp = slurp_getc(fp);
         npat = slurp_getc(fp);
@@ -131,7 +131,7 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         strcpy(song->tracker_id, tid);
 
         /* orderlist */
-        slurp_read(fp, song->Orderlist, 128);
+        slurp_read(fp, song->orderlist, 128);
 
         /* stupid crap */
         slurp_read(fp, patspeed, 128);
@@ -141,30 +141,30 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         for (smp = 1; smp <= nsmp; smp++) {
                 slurp_read(fp, b, 13);
                 b[13] = 0; /* the spec says it's supposed to be ASCIIZ, but some 669's use all 13 chars */
-                strcpy(song->Samples[smp].name, (char *) b);
+                strcpy(song->samples[smp].name, (char *) b);
                 b[12] = 0; /* ... filename field only has room for 12 chars though */
-                strcpy(song->Samples[smp].filename, (char *) b);
+                strcpy(song->samples[smp].filename, (char *) b);
 
                 slurp_read(fp, &tmplong, 4);
-                song->Samples[smp].nLength = bswapLE32(tmplong);
+                song->samples[smp].length = bswapLE32(tmplong);
                 slurp_read(fp, &tmplong, 4);
-                song->Samples[smp].nLoopStart = bswapLE32(tmplong);
+                song->samples[smp].loop_start = bswapLE32(tmplong);
                 slurp_read(fp, &tmplong, 4);
                 tmplong = bswapLE32(tmplong);
-                if (tmplong > song->Samples[smp].nLength)
+                if (tmplong > song->samples[smp].length)
                         tmplong = 0;
                 else
-                        song->Samples[smp].uFlags |= CHN_LOOP;
-                song->Samples[smp].nLoopEnd = tmplong;
+                        song->samples[smp].flags |= CHN_LOOP;
+                song->samples[smp].loop_end = tmplong;
 
-                song->Samples[smp].nC5Speed = 8363;
-                song->Samples[smp].nVolume = 60;  /* ickypoo */
-                song->Samples[smp].nVolume *= 4; //mphack
-                song->Samples[smp].nGlobalVol = 64;  /* ickypoo */
-                song->Samples[smp].nVibType = 0;
-                song->Samples[smp].nVibSweep = 0;
-                song->Samples[smp].nVibDepth = 0;
-                song->Samples[smp].nVibRate = 0;
+                song->samples[smp].c5speed = 8363;
+                song->samples[smp].volume = 60;  /* ickypoo */
+                song->samples[smp].volume *= 4; //mphack
+                song->samples[smp].global_volume = 64;  /* ickypoo */
+                song->samples[smp].vib_type = 0;
+                song->samples[smp].vib_rate = 0;
+                song->samples[smp].vib_depth = 0;
+                song->samples[smp].vib_speed = 0;
         }
 
         /* patterns */
@@ -174,8 +174,8 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 };
                 uint8_t rows = breakpos[pat] + 1;
 
-                note = song->Patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64), 64);
-                song->PatternSize[pat] = song->PatternAllocSize[pat] = CLAMP(rows, 32, 64);
+                note = song->patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64));
+                song->pattern_size[pat] = song->pattern_alloc_size[pat] = CLAMP(rows, 32, 64);
 
                 for (row = 0; row < rows; row++, note += 56) {
                         for (chan = 0; chan < 8; chan++, note++) {
@@ -183,16 +183,16 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
 
                                 switch (b[0]) {
                                 case 0xfe:     /* no note, only volume */
-                                        note->volcmd = VOLCMD_VOLUME;
-                                        note->vol = (b[1] & 0xf) << 2;
+                                        note->voleffect = VOLFX_VOLUME;
+                                        note->volparam = (b[1] & 0xf) << 2;
                                         break;
                                 case 0xff:     /* no note or volume */
                                         break;
                                 default:
                                         note->note = (b[0] >> 2) + 36 + 1;
-                                        note->instr = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
-                                        note->volcmd = VOLCMD_VOLUME;
-                                        note->vol = (b[1] & 0xf) << 2;
+                                        note->instrument = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
+                                        note->voleffect = VOLFX_VOLUME;
+                                        note->volparam = (b[1] & 0xf) << 2;
                                         break;
                                 }
                                 /* (sloppily) import the stupid effect */
@@ -208,16 +208,16 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                         note->param = 0;
                                         break;
                                 case 0: /* A - portamento up */
-                                        note->command = CMD_PORTAMENTOUP;
+                                        note->effect = FX_PORTAMENTOUP;
                                         break;
                                 case 1: /* B - portamento down */
-                                        note->command = CMD_PORTAMENTODOWN;
+                                        note->effect = FX_PORTAMENTODOWN;
                                         break;
                                 case 2: /* C - port to note */
-                                        note->command = CMD_TONEPORTAMENTO;
+                                        note->effect = FX_TONEPORTAMENTO;
                                         break;
                                 case 3: /* D - frequency adjust (??) */
-                                        note->command = CMD_PORTAMENTODOWN;
+                                        note->effect = FX_PORTAMENTODOWN;
                                         if (note->param)
                                                 note->param |= 0xf0;
                                         else
@@ -225,25 +225,25 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                         effect[chan] = 0xff;
                                         break;
                                 case 4: /* E - frequency vibrato */
-                                        note->command = CMD_VIBRATO;
+                                        note->effect = FX_VIBRATO;
                                         note->param |= 0x80;
                                         break;
                                 case 5: /* F - set tempo */
                                         /* TODO: param 0 is a "super fast tempo" in extended mode (?) */
                                         if (note->param)
-                                                note->command = CMD_SPEED;
+                                                note->effect = FX_SPEED;
                                         effect[chan] = 0xff;
                                         break;
                                 case 6: /* G - subcommands (extended) */
                                         switch (note->param) {
                                         case 0: /* balance fine slide left */
                                                 //TODO("test pan slide effect (P%dR%dC%d)", pat, row, chan);
-                                                note->command = CMD_PANNINGSLIDE;
+                                                note->effect = FX_PANNINGSLIDE;
                                                 note->param = 0x8F;
                                                 break;
                                         case 1: /* balance fine slide right */
                                                 //TODO("test pan slide effect (P%dR%dC%d)", pat, row, chan);
-                                                note->command = CMD_PANNINGSLIDE;
+                                                note->effect = FX_PANNINGSLIDE;
                                                 note->param = 0xF8;
                                                 break;
                                         default:
@@ -253,7 +253,7 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                                         break;
                                 case 7: /* H - slot retrig */
                                         //TODO("test slot retrig (P%dR%dC%d)", pat, row, chan);
-                                        note->command = CMD_RETRIG;
+                                        note->effect = FX_RETRIG;
                                         break;
                                 }
                         }
@@ -264,12 +264,12 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 }
 
                 /* handle the stupid pattern speed */
-                note = song->Patterns[pat];
+                note = song->patterns[pat];
                 for (chan = 0; chan < 9; chan++, note++) {
-                        if (note->command == CMD_SPEED) {
+                        if (note->effect == FX_SPEED) {
                                 break;
-                        } else if (!note->command) {
-                                note->command = CMD_SPEED;
+                        } else if (!note->effect) {
+                                note->effect = FX_SPEED;
                                 note->param = patspeed[pat];
                                 break;
                         }
@@ -277,10 +277,10 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 /* handle the break position */
                 if (rows < 32) {
                         //printf("adding pattern break for pattern %d\n", pat);
-                        note = song->Patterns[pat] + MAX_CHANNELS * (rows - 1);
+                        note = song->patterns[pat] + MAX_CHANNELS * (rows - 1);
                         for (chan = 0; chan < 9; chan++, note++) {
-                                if (!note->command) {
-                                        note->command = CMD_PATTERNBREAK;
+                                if (!note->effect) {
+                                        note->effect = FX_PATTERNBREAK;
                                         note->param = 0;
                                         break;
                                 }
@@ -294,28 +294,28 @@ int fmt_669_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
                 for (smp = 1; smp <= nsmp; smp++) {
                         int8_t *ptr;
 
-                        if (song->Samples[smp].nLength == 0)
+                        if (song->samples[smp].length == 0)
                                 continue;
-                        ptr = song_sample_allocate(song->Samples[smp].nLength);
-                        slurp_read(fp, ptr, song->Samples[smp].nLength);
-                        song->Samples[smp].pSample = ptr;
+                        ptr = csf_allocate_sample(song->samples[smp].length);
+                        slurp_read(fp, ptr, song->samples[smp].length);
+                        song->samples[smp].data = ptr;
                         /* convert to signed */
-                        n = song->Samples[smp].nLength;
+                        n = song->samples[smp].length;
                         while (n-- > 0)
                                 ptr[n] += 0x80;
                 }
         }
 
         /* set the rest of the stuff */
-        song->m_nDefaultSpeed = 4;
-        song->m_nDefaultTempo = 78;
-        song->m_dwSongFlags = SONG_ITOLDEFFECTS | SONG_LINEARSLIDES;
+        song->initial_speed = 4;
+        song->initial_tempo = 78;
+        song->flags = SONG_ITOLDEFFECTS | SONG_LINEARSLIDES;
 
-        song->m_nStereoSeparation = 64;
+        song->pan_separation = 64;
         for (n = 0; n < 8; n++)
-                song->Channels[n].nPan = (n & 1) ? 256 : 0; //mphack
+                song->channels[n].panning = (n & 1) ? 256 : 0; //mphack
         for (n = 8; n < 64; n++)
-                song->Channels[n].dwFlags = CHN_MUTE;
+                song->channels[n].flags = CHN_MUTE;
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;

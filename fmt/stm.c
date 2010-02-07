@@ -68,17 +68,17 @@ struct stm_sample {
 #pragma pack(pop)
 
 static uint8_t stm_effects[16] = {
-        CMD_NONE,               // .
-        CMD_SPEED,              // A
-        CMD_POSITIONJUMP,       // B
-        CMD_PATTERNBREAK,       // C
-        CMD_VOLUMESLIDE,        // D
-        CMD_PORTAMENTODOWN,     // E
-        CMD_PORTAMENTOUP,       // F
-        CMD_TONEPORTAMENTO,     // G
-        CMD_VIBRATO,            // H
-        CMD_TREMOR,             // I
-        CMD_ARPEGGIO,           // J
+        FX_NONE,               // .
+        FX_SPEED,              // A
+        FX_POSITIONJUMP,       // B
+        FX_PATTERNBREAK,       // C
+        FX_VOLUMESLIDE,        // D
+        FX_PORTAMENTODOWN,     // E
+        FX_PORTAMENTOUP,       // F
+        FX_TONEPORTAMENTO,     // G
+        FX_VIBRATO,            // H
+        FX_TREMOR,             // I
+        FX_ARPEGGIO,           // J
         // KLMNO can be entered in the editor but don't do anything
 };
 
@@ -87,7 +87,7 @@ static uint8_t stm_effects[16] = {
 I wonder if this is interesting at all. */
 
 
-static void load_stm_pattern(MODCOMMAND *note, slurp_t *fp)
+static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 {
         int row, chan;
         uint8_t v[4];
@@ -99,20 +99,20 @@ static void load_stm_pattern(MODCOMMAND *note, slurp_t *fp)
                         // mostly copied from modplug...
                         if (v[0] < 251)
                                 note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
-                        note->instr = v[1] >> 3;
-                        if (note->instr > 31)
-                                note->instr = 0; // oops never mind, that was crap
-                        note->vol = (v[1] & 0x7) + (v[2] >> 1); // I don't understand this line
-                        if (note->vol <= 64)
-                                note->volcmd = VOLCMD_VOLUME;
+                        note->instrument = v[1] >> 3;
+                        if (note->instrument > 31)
+                                note->instrument = 0; // oops never mind, that was crap
+                        note->volparam = (v[1] & 0x7) + (v[2] >> 1); // I don't understand this line
+                        if (note->volparam <= 64)
+                                note->voleffect = VOLFX_VOLUME;
                         else
-                                note->vol = 0;
+                                note->volparam = 0;
                         note->param = v[3]; // easy!
                         
-                        note->command = stm_effects[v[2] & 0xf];
+                        note->effect = stm_effects[v[2] & 0xf];
                         // patch a couple effects up
-                        switch (note->command) {
-                        case CMD_SPEED:
+                        switch (note->effect) {
+                        case FX_SPEED:
                                 // I don't know how Axx really works, but I do know that this
                                 // isn't it. It does all sorts of mindbogglingly screwy things:
                                 //      01 - very fast,
@@ -121,17 +121,17 @@ static void load_stm_pattern(MODCOMMAND *note, slurp_t *fp)
                                 // I don't get it.
                                 note->param >>= 4;
                                 break;
-                        case CMD_PATTERNBREAK:
+                        case FX_PATTERNBREAK:
                                 note->param = (note->param & 0xf0) * 10 + (note->param & 0xf);
                                 break;
-                        case CMD_POSITIONJUMP:
+                        case FX_POSITIONJUMP:
                                 // This effect is also very weird.
                                 // Bxx doesn't appear to cause an immediate break -- it merely
                                 // sets the next order for when the pattern ends (either by
                                 // playing it all the way through, or via Cxx effect)
                                 // I guess I'll "fix" it later...
                                 break;
-                        case CMD_TREMOR:
+                        case FX_TREMOR:
                                 // this actually does something with zero values, and has no
                                 // effect memory. which makes SENSE for old-effects tremor,
                                 // but ST3 went and screwed it all up by adding an effect
@@ -143,14 +143,14 @@ static void load_stm_pattern(MODCOMMAND *note, slurp_t *fp)
                                 // Anything not listed above is a no-op if there's no value.
                                 // (ST2 doesn't have effect memory)
                                 if (!note->param)
-                                        note->command = CMD_NONE;
+                                        note->effect = FX_NONE;
                                 break;
                         }
                 }
         }
 }
 
-int fmt_stm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
+int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         char id[8];
         uint8_t tmp[4];
@@ -178,13 +178,13 @@ int fmt_stm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         sprintf(song->tracker_id, "Scream Tracker %d.%02x", tmp[2], tmp[3]);
 
         slurp_seek(fp, 0, SEEK_SET);
-        slurp_read(fp, song->song_title, 20);
-        song->song_title[20] = '\0';
+        slurp_read(fp, song->title, 20);
+        song->title[20] = '\0';
         slurp_seek(fp, 12, SEEK_CUR); // skip the tag and stuff
 
-        song->m_nDefaultSpeed = (slurp_getc(fp) >> 4) ?: 1;
+        song->initial_speed = (slurp_getc(fp) >> 4) ?: 1;
         npat = slurp_getc(fp);
-        song->m_nDefaultGlobalVolume = 2 * slurp_getc(fp);
+        song->initial_global_volume = 2 * slurp_getc(fp);
         slurp_seek(fp, 13, SEEK_CUR); // junk
 
         if (npat > 64)
@@ -193,63 +193,63 @@ int fmt_stm_load_song(CSoundFile *song, slurp_t *fp, unsigned int lflags)
         for (n = 1; n <= 31; n++) {
                 struct stm_sample stmsmp;
                 uint16_t blen;
-                SONGSAMPLE *sample = song->Samples + n;
+                song_sample_t *sample = song->samples + n;
 
                 slurp_read(fp, &stmsmp, sizeof(stmsmp));
                 // the strncpy here is intentional -- ST2 doesn't show the '3' after the \0 bytes in the first
                 // sample of pm_fract.stm, for example
                 strncpy(sample->filename, stmsmp.name, 12);
                 memcpy(sample->name, sample->filename, 12);
-                blen = sample->nLength = bswapLE16(stmsmp.length);
-                sample->nLoopStart = bswapLE16(stmsmp.loop_start);
-                sample->nLoopEnd = bswapLE16(stmsmp.loop_end);
-                sample->nC5Speed = bswapLE16(stmsmp.c5speed);
-                sample->nVolume = stmsmp.volume * 4; //mphack
-                if (sample->nLoopStart < blen
-                    && sample->nLoopEnd <= blen
-                    && sample->nLoopStart < sample->nLoopEnd) {
-                        sample->uFlags |= CHN_LOOP;
+                blen = sample->length = bswapLE16(stmsmp.length);
+                sample->loop_start = bswapLE16(stmsmp.loop_start);
+                sample->loop_end = bswapLE16(stmsmp.loop_end);
+                sample->c5speed = bswapLE16(stmsmp.c5speed);
+                sample->volume = stmsmp.volume * 4; //mphack
+                if (sample->loop_start < blen
+                    && sample->loop_end <= blen
+                    && sample->loop_start < sample->loop_end) {
+                        sample->flags |= CHN_LOOP;
                 }
         }
         
-        slurp_read(fp, song->Orderlist, 128);
+        slurp_read(fp, song->orderlist, 128);
         for (n = 0; n < 128; n++) {
-                if (song->Orderlist[n] >= 64)
-                        song->Orderlist[n] = ORDER_LAST;
+                if (song->orderlist[n] >= 64)
+                        song->orderlist[n] = ORDER_LAST;
         }
         
         if (lflags & LOAD_NOPATTERNS) {
                 slurp_seek(fp, npat * 64 * 4 * 4, SEEK_CUR);
         } else {
                 for (n = 0; n < npat; n++) {
-                        song->Patterns[n] = csf_allocate_pattern(64, 64);
-                        song->PatternSize[n] = song->PatternAllocSize[n] = 64;
-                        load_stm_pattern(song->Patterns[n], fp);
+                        song->patterns[n] = csf_allocate_pattern(64);
+                        song->pattern_size[n] = song->pattern_alloc_size[n] = 64;
+                        load_stm_pattern(song->patterns[n], fp);
                 }
         }
         
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 1; n <= 31; n++) {
-                        SONGSAMPLE *sample = song->Samples + n;
-                        int align = (sample->nLength + 15) & ~15;
+                        song_sample_t *sample = song->samples + n;
+                        int align = (sample->length + 15) & ~15;
 
-                        if (sample->nLength < 3) {
+                        if (sample->length < 3) {
                                 // Garbage?
-                                sample->nLength = 0;
+                                sample->length = 0;
                         } else {
                                 csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M,
-                                        (const char *) (fp->data + fp->pos), sample->nLength);
+                                        (const char *) (fp->data + fp->pos), sample->length);
                         }
                         slurp_seek(fp, align, SEEK_CUR);
                 }
         }
         
         for (n = 0; n < 4; n++)
-                song->Channels[n].nPan = ((n & 1) ? 64 : 0) * 4; //mphack
+                song->channels[n].panning = ((n & 1) ? 64 : 0) * 4; //mphack
         for (; n < 64; n++)
-                song->Channels[n].dwFlags |= CHN_MUTE;
-        song->m_nStereoSeparation = 64;
-        song->m_dwSongFlags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
+                song->channels[n].flags |= CHN_MUTE;
+        song->pan_separation = 64;
+        song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
 
         return LOAD_SUCCESS;
 }

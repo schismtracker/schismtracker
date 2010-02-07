@@ -1,17 +1,26 @@
 /*
- * This program is  free software; you can redistribute it  and modify it
- * under the terms of the GNU  General Public License as published by the
- * Free Software Foundation; either version 2  of the license or (at your
- * option) any later version.
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010 Storlek
+ * URL: http://schismtracker.org/
  *
- * Authors: Olivier Lapicque <olivierl@jps.net>
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * Name                Date             Description
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Olivier Lapicque    --/--/--         Creation
- * Trevor Nunes        26/01/04         conditional compilation for AMD,MMX calls
- *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 #include "sndfile.h"
 #include "cmixer.h"
 #include <math.h>
@@ -21,7 +30,7 @@
 #define EQ_ZERO         0.000001
 
 
-extern float MixFloatBuffer[];
+extern float mix_buffer_float[];
 
 
 typedef struct {
@@ -82,42 +91,42 @@ static void eq_filter(eq_band *pbs, float *pbuffer, unsigned int count)
 
 void eq_mono(int *buffer, unsigned int count)
 {
-        mono_mix_to_float(buffer, MixFloatBuffer, count);
+        mono_mix_to_float(buffer, mix_buffer_float, count);
 
         for (unsigned int b = 0; b < MAX_EQ_BANDS; b++)
         {
                 if (eq[b].enabled && eq[b].gain != 1.0f)
-                        eq_filter(&eq[b], MixFloatBuffer, count);
+                        eq_filter(&eq[b], mix_buffer_float, count);
         }
 
-        float_to_mono_mix(MixFloatBuffer, buffer, count);
+        float_to_mono_mix(mix_buffer_float, buffer, count);
 }
 
 
 // XXX: I rolled the two loops into one. Make sure this works.
 void eq_stereo(int *buffer, unsigned int count)
 {
-        stereo_mix_to_float(buffer, MixFloatBuffer, MixFloatBuffer + MIXBUFFERSIZE, count);
+        stereo_mix_to_float(buffer, mix_buffer_float, mix_buffer_float + MIXBUFFERSIZE, count);
 
         for (unsigned int b = 0; b < MAX_EQ_BANDS; b++) {
                 int br = b + MAX_EQ_BANDS;
 
                 // Left band
                 if (eq[b].enabled && eq[b].gain != 1.0f)
-                        eq_filter(&eq[b], MixFloatBuffer, count);
+                        eq_filter(&eq[b], mix_buffer_float, count);
 
                 // Right band
                 if (eq[br].enabled && eq[br].gain != 1.0f)
-                        eq_filter(&eq[br], MixFloatBuffer + MIXBUFFERSIZE, count);
+                        eq_filter(&eq[br], mix_buffer_float + MIXBUFFERSIZE, count);
         }
 
-        float_to_stereo_mix(MixFloatBuffer, MixFloatBuffer + MIXBUFFERSIZE, buffer, count);
+        float_to_stereo_mix(mix_buffer_float, mix_buffer_float + MIXBUFFERSIZE, buffer, count);
 }
 
 
 void initialize_eq(int reset, float freq)
 {
-        //float fMixingFreq = (REAL)gdwMixingFreq;
+        //float fMixingFreq = (REAL)mix_frequency;
 
         // Gain = 0.5 (-6dB) .. 2 (+6dB)
         for (unsigned int band = 0; band < MAX_EQ_BANDS * 2; band++) {

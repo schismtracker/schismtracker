@@ -29,7 +29,6 @@
 #include "page.h"
 #include "util.h"
 #include "midi.h"
-#include "charset.h"
 #include "version.h"
 
 #include "sdlmain.h"
@@ -443,7 +442,7 @@ static int handle_key_global(struct key_event * k)
                         return 1;
                 } else if (k->y == 5 && k->x >= 11 && k->x <= 17) {
                         minipop_slide(song_get_current_order(), "Order",
-                                0, song_get_num_orders(),
+                                0, csf_get_num_orders(current_song),
                                 set_current_order, NULL, 14, 5);
                         return 1;
                 }
@@ -1272,7 +1271,7 @@ static void redraw_top_info(void)
         update_current_instrument();
 
         draw_text_len(song_get_basename(), 18, 12, 4, 5, 0);
-        draw_text_len(song_get_title(), 25, 12, 3, 5, 0);
+        draw_text_len(current_song->title, 25, 12, 3, 5, 0);
 
         update_current_order();
         update_current_pattern();
@@ -1594,7 +1593,7 @@ void main_song_changed_cb(void)
 
         /* perhaps this should be in page_patedit.c? */
         set_current_order(0);
-        n = song_get_orderlist()[0];
+        n = current_song->orderlist[0];
         if (n > 199)
                 n = 0;
         set_current_pattern(n);
@@ -1716,7 +1715,7 @@ static void _timejump_ok(UNUSED void *ign)
                 + _timejump_widgets[1].d.numentry.value;
         song_get_at_time(sec, &no, &nr);
         set_current_order(no);
-        np = song_get_orderlist()[no];
+        np = current_song->orderlist[no];
         if (np < 200) {
                 set_current_pattern(np);
                 set_current_row(nr);
@@ -1743,7 +1742,7 @@ void show_song_timejump(void)
 void show_song_length(void)
 {
         char buf[64];   /* this is way enough space ;) */
-        unsigned int length = song_get_length();
+        unsigned int length = csf_get_length(current_song);
 
         snprintf(buf, 64, "Total song time: %3u:%02u:%02u",
                 length / 3600, (length / 60) % 60, length % 60);

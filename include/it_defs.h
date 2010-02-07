@@ -3,8 +3,7 @@
 
 #pragma pack(push, 1)
 
-typedef struct tagITFILEHEADER
-{
+struct it_file {
         uint32_t id;                    // 0x4D504D49
         int8_t songname[26];
         uint8_t hilight_minor;
@@ -28,11 +27,10 @@ typedef struct tagITFILEHEADER
         uint32_t reserved2;
         uint8_t chnpan[64];
         uint8_t chnvol[64];
-} ITFILEHEADER;
+};
 
 
-typedef struct tagITENVELOPE
-{
+struct it_envelope {
         uint8_t flags;
         uint8_t num;
         uint8_t lpb;
@@ -41,11 +39,10 @@ typedef struct tagITENVELOPE
         uint8_t sle;
         uint8_t data[25*3];
         uint8_t reserved;
-} ITENVELOPE;
+};
 
 // Old Impulse Instrument Format (cmwt < 0x200)
-typedef struct tagITOLDINSTRUMENT
-{
+struct it_instrument_old {
         uint32_t id;                    // IMPI = 0x49504D49
         int8_t filename[12];    // DOS file name
         uint8_t zero;
@@ -66,12 +63,11 @@ typedef struct tagITOLDINSTRUMENT
         uint8_t keyboard[240];
         uint8_t volenv[200];
         uint8_t nodes[50];
-} ITOLDINSTRUMENT;
+};
 
 
 // Impulse Instrument Format
-typedef struct tagITINSTRUMENT
-{
+struct it_instrument {
         uint32_t id;
         int8_t filename[12];
         uint8_t zero;
@@ -95,16 +91,15 @@ typedef struct tagITINSTRUMENT
         uint8_t mpr;
         uint16_t mbank;
         uint8_t keyboard[240];
-        ITENVELOPE volenv;
-        ITENVELOPE panenv;
-        ITENVELOPE pitchenv;
+        struct it_envelope volenv;
+        struct it_envelope panenv;
+        struct it_envelope pitchenv;
         uint8_t dummy[4]; // was 7, but IT v2.17 saves 554 bytes
-} ITINSTRUMENT;
+};
 
 
 // IT Sample Format
-typedef struct ITSAMPLESTRUCT
-{
+struct it_sample {
         uint32_t id;            // 0x53504D49
         int8_t filename[12];
         uint8_t zero;
@@ -125,7 +120,7 @@ typedef struct ITSAMPLESTRUCT
         uint8_t vid;
         uint8_t vir;
         uint8_t vit;
-} ITSAMPLESTRUCT;
+};
 
 #pragma pack(pop)
 

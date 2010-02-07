@@ -25,18 +25,19 @@
 #include "headers.h"
 #include "fmt.h"
 
-#include "mplink.h"
+#include "sndfile.h"
+#include "song.h"
 #include "it_defs.h"
 
 /* --------------------------------------------------------------------- */
 int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        ITSAMPLESTRUCT *its;
+        struct it_sample *its;
 
         if (!(length > 80 && memcmp(data, "IMPS", 4) == 0))
                 return 0;
 
-        its = (ITSAMPLESTRUCT *)data;
+        its = (struct it_sample *)data;
         file->smp_length = bswapLE32(its->length);
         file->smp_flags = 0;
 
@@ -82,9 +83,9 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         return 1;
 }
 
-int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample *smp)
+int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample_t *smp)
 {
-        ITSAMPLESTRUCT *its = (ITSAMPLESTRUCT *)header;
+        struct it_sample *its = (struct it_sample *)header;
         uint32_t format;
         uint32_t bp;
 
@@ -132,7 +133,7 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
                 smp->flags |= SAMP_PANNING;
         smp->loop_start = bswapLE32(its->loopbegin);
         smp->loop_end = bswapLE32(its->loopend);
-        smp->speed = bswapLE32(its->C5Speed);
+        smp->c5speed = bswapLE32(its->C5Speed);
         smp->sustain_start = bswapLE32(its->susloopbegin);
         smp->sustain_end = bswapLE32(its->susloopend);
 
@@ -164,19 +165,19 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
         bp = bswapLE32(its->samplepointer);
 
         // dumb casts :P
-        return csf_read_sample((SONGSAMPLE *) smp, format,
+        return csf_read_sample((song_sample_t *) smp, format,
                         (const char *) (data + bp),
                         (uint32_t) (length - bp));
 }
 
-int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample *smp)
+int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 {
         return load_its_sample(data, data, length, smp);
 }
 
-void save_its_header(disko_t *fp, song_sample *smp)
+void save_its_header(disko_t *fp, song_sample_t *smp)
 {
-        ITSAMPLESTRUCT its;
+        struct it_sample its;
 
         memset(&its, 0, sizeof(its));
         its.id = bswapLE32(0x53504D49); // IMPS
@@ -206,7 +207,7 @@ void save_its_header(disko_t *fp, song_sample *smp)
         its.length = bswapLE32(smp->length);
         its.loopbegin = bswapLE32(smp->loop_start);
         its.loopend = bswapLE32(smp->loop_end);
-        its.C5Speed = bswapLE32(smp->speed);
+        its.C5Speed = bswapLE32(smp->c5speed);
         its.susloopbegin = bswapLE32(smp->sustain_start);
         its.susloopend = bswapLE32(smp->sustain_end);
         //its.samplepointer = 42; - this will be filled in later
@@ -224,14 +225,14 @@ void save_its_header(disko_t *fp, song_sample *smp)
         disko_write(fp, &its, sizeof(its));
 }
 
-int fmt_its_save_sample(disko_t *fp, song_sample *smp)
+int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 {
         save_its_header(fp, smp);
         save_sample_data_LE(fp, smp, 1);
 
         /* Write the sample pointer. In an ITS file, the sample data is right after the header,
         so its position in the file will be the same as the size of the header. */
-        unsigned int tmp = bswapLE32(sizeof(ITSAMPLESTRUCT));
+        unsigned int tmp = bswapLE32(sizeof(struct it_sample));
         disko_seek(fp, 0x48, SEEK_SET);
         disko_write(fp, &tmp, 4);
 

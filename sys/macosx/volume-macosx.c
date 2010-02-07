@@ -23,7 +23,6 @@
 
 #include "headers.h"
 
-#include "mixer.h"
 #include "util.h"
 
 #ifdef MACOSX
@@ -31,14 +30,14 @@
 #include <CoreServices/CoreServices.h>
 #include <CoreAudio/AudioHardware.h>
 
-int macosx_mixer_get_max_volume(void);
-int macosx_mixer_get_max_volume(void)
+int macosx_volume_get_max(void);
+int macosx_volume_get_max(void)
 {
         return 65535;
 }
 
-void macosx_mixer_read_volume(int *left, int *right);
-void macosx_mixer_read_volume(int *left, int *right)
+void macosx_volume_read(int *left, int *right);
+void macosx_volume_read(int *left, int *right)
 {
         UInt32 size;
         AudioDeviceID od;
@@ -78,8 +77,8 @@ void macosx_mixer_read_volume(int *left, int *right)
         if (right) *right = fl[1] * 65536.0f;
 }
 
-void macosx_mixer_write_volume(int left, int right);
-void macosx_mixer_write_volume(int left, int right)
+void macosx_volume_write(int left, int right);
+void macosx_volume_write(int left, int right)
 {
         UInt32 size;
         AudioDeviceID od;

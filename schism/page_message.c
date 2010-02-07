@@ -49,7 +49,6 @@ static int cursor_char = 0;
  * (should be updated whenever cursor_line/cursor_char change) */
 static int cursor_pos = 0;
 
-static char *message = NULL;
 static int edit_mode = 0;
 
 /* nonzero => message should use the alternate font */
@@ -156,7 +155,7 @@ static void message_reposition(void)
 /* returns 1 if a character was actually added */
 static int message_add_char(int newchar, int position)
 {
-        int len = strlen(message);
+        int len = strlen(current_song->message);
 
         if (len == SCHISM_MAX_MESSAGE) {
                 dialog_create(DIALOG_OK, "  Song message too long!  ", NULL, NULL, 0, NULL);
@@ -167,9 +166,9 @@ static int message_add_char(int newchar, int position)
                 return 0;
         }
 
-        memmove(message + position + 1, message + position, len - position);
-        message[len + 1] = 0;
-        message[position] = (unsigned char)newchar;
+        memmove(current_song->message + position + 1, current_song->message + position, len - position);
+        current_song->message[len + 1] = 0;
+        current_song->message[position] = (unsigned char)newchar;
         return 1;
 }
 
@@ -201,7 +200,7 @@ static int message_wrap_line(char *bol_ptr)
                 return last_space - bol_ptr;
         } else {
                 /* what, no spaces to cut at? chop it mercilessly. */
-                if (message_add_char(13, bol_ptr + LINE_WRAP - message)
+                if (message_add_char(13, bol_ptr + LINE_WRAP - current_song->message)
                     == 0)
                         /* ack, the message is too long to wrap the line!
                          * gonna have to resort to something ugly. */
@@ -230,8 +229,8 @@ static void text(char *line, int len, int n)
 
 static void message_draw(void)
 {
-        char *line, *prevline = message;
-        int len = get_nth_line(message, top_line, &line);
+        char *line, *prevline = current_song->message;
+        int len = get_nth_line(current_song->message, top_line, &line);
         int n, cp, clipl, clipr;
         int skipc, cutc;
 
@@ -261,7 +260,7 @@ static void message_draw(void)
                         text(line, len, n);
 
                         if (clipl > -1) {
-                                cp = line - message;
+                                cp = line - current_song->message;
                                 skipc = clipl - cp;
                                 cutc = clipr - clipl;
                                 if (skipc < 0) {
@@ -296,7 +295,7 @@ static void message_draw(void)
 
         if (edit_mode) {
                 /* draw the cursor */
-                len = get_nth_line(message, cursor_line, &line);
+                len = get_nth_line(current_song->message, cursor_line, &line);
 
                 /* FIXME: ... ugh */
                 if (len > LINE_WRAP)
@@ -375,14 +374,12 @@ static void message_insert_char(int c)
                         cursor_char++;
                 }
         }
-        if (get_nth_line(message, cursor_line, &ptr) >= LINE_WRAP) {
+        if (get_nth_line(current_song->message, cursor_line, &ptr) >= LINE_WRAP) {
                 message_wrap_line(ptr);
         }
         if (cursor_char >= LINE_WRAP) {
-                cursor_char = get_nth_line(message, ++cursor_line, &ptr);
-                cursor_pos =
-                        get_absolute_position(message, cursor_line,
-                                              cursor_char);
+                cursor_char = get_nth_line(current_song->message, ++cursor_line, &ptr);
+                cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
         }
 
         message_reposition();
@@ -391,18 +388,18 @@ static void message_insert_char(int c)
 
 static void message_delete_char(void)
 {
-        int len = strlen(message);
+        int len = strlen(current_song->message);
         char *ptr;
 
         if (cursor_pos == 0)
                 return;
-        memmove(message + cursor_pos - 1, message + cursor_pos,
+        memmove(current_song->message + cursor_pos - 1, current_song->message + cursor_pos,
                 len - cursor_pos + 1);
-        message[SCHISM_MAX_MESSAGE] = 0;
+        current_song->message[SCHISM_MAX_MESSAGE] = 0;
         cursor_pos--;
         if (cursor_char == 0) {
                 cursor_line--;
-                cursor_char = get_nth_line(message, cursor_line, &ptr);
+                cursor_char = get_nth_line(current_song->message, cursor_line, &ptr);
         } else {
                 cursor_char--;
         }
@@ -413,13 +410,13 @@ static void message_delete_char(void)
 
 static void message_delete_next_char(void)
 {
-        int len = strlen(message);
+        int len = strlen(current_song->message);
 
         if (cursor_pos == len)
                 return;
-        memmove(message + cursor_pos, message + cursor_pos + 1,
+        memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + 1,
                 len - cursor_pos);
-        message[SCHISM_MAX_MESSAGE] = 0;
+        current_song->message[SCHISM_MAX_MESSAGE] = 0;
 
         status.flags |= NEED_UPDATE;
 }
@@ -430,21 +427,19 @@ static void message_delete_line(void)
         int movelen;
         char *ptr;
 
-        len = get_nth_line(message, cursor_line, &ptr);
+        len = get_nth_line(current_song->message, cursor_line, &ptr);
         if (len < 0)
                 return;
         if (ptr[len] == 13 && ptr[len + 1] == 10)
                 len++;
-        movelen = (message + strlen(message) - ptr);
+        movelen = (current_song->message + strlen(current_song->message) - ptr);
         if (movelen == 0)
                 return;
         memmove(ptr, ptr + len + 1, movelen);
-        len = get_nth_line(message, cursor_line, &ptr);
+        len = get_nth_line(current_song->message, cursor_line, &ptr);
         if (cursor_char > len) {
                 cursor_char = len;
-                cursor_pos =
-                        get_absolute_position(message, cursor_line,
-                                              cursor_char);
+                cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
         }
         message_reposition();
         status.flags |= NEED_UPDATE;
@@ -452,7 +447,7 @@ static void message_delete_line(void)
 
 static void message_clear(UNUSED void *data)
 {
-        message[0] = 0;
+        current_song->message[0] = 0;
         memused_songchanged();
         message_set_viewmode();
 }
@@ -502,7 +497,7 @@ static int message_handle_key_viewmode(struct key_event * k)
                 break;
         case SDLK_END:
                 if (k->state) return 0;
-                top_line = get_num_lines(message) - 34;
+                top_line = get_num_lines(current_song->message) - 34;
                 break;
         case SDLK_t:
                 if (k->state) return 0;
@@ -528,7 +523,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 }
 static void _delete_selection(void)
 {
-        int len = strlen(message);
+        int len = strlen(current_song->message);
         int eat;
 
         cursor_pos = widgets_message[0].clip_start;
@@ -541,10 +536,10 @@ static void _delete_selection(void)
         clippy_select(NULL, NULL, 0);
         if (cursor_pos == len)
                 return;
-        memmove(message + cursor_pos, message + cursor_pos + eat + 1,
+        memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + eat + 1,
                 ((len - cursor_pos) - eat)+1);
-        message[SCHISM_MAX_MESSAGE] = 0;
-        set_absolute_position(message, cursor_pos, &cursor_line, &cursor_char);
+        current_song->message[SCHISM_MAX_MESSAGE] = 0;
+        set_absolute_position(current_song->message, cursor_pos, &cursor_line, &cursor_char);
         message_reposition();
 
         status.flags |= NEED_UPDATE;
@@ -574,7 +569,7 @@ static int message_handle_key_editmode(struct key_event * k)
                         new_cursor_char = (k->x - 2);
                         if (k->sx != k->x || k->sy != k->y) {
                                 /* yay drag operation */
-                                cp = get_absolute_position(message, (k->sy-13)+top_line,
+                                cp = get_absolute_position(current_song->message, (k->sy-13)+top_line,
                                                         (k->sx-2));
                                 widgets_message[0].clip_start = cp;
                                 doing_drag = 1;
@@ -582,7 +577,7 @@ static int message_handle_key_editmode(struct key_event * k)
                 }
         }
 
-        line_len = get_nth_line(message, cursor_line, &ptr);
+        line_len = get_nth_line(current_song->message, cursor_line, &ptr);
 
 
         switch (k->sym) {
@@ -632,7 +627,7 @@ static int message_handle_key_editmode(struct key_event * k)
         case SDLK_END:
                 if (k->state) return 1;
                 if (k->mod & KMOD_CTRL) {
-                        num_lines = get_num_lines(message);
+                        num_lines = get_num_lines(current_song->message);
                         new_cursor_line = num_lines;
                 } else {
                         new_cursor_char = line_len;
@@ -710,7 +705,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
         if (new_cursor_line != cursor_line) {
                 if (num_lines == -1)
-                        num_lines = get_num_lines(message);
+                        num_lines = get_num_lines(current_song->message);
 
                 if (new_cursor_line < 0)
                         new_cursor_line = 0;
@@ -718,7 +713,7 @@ static int message_handle_key_editmode(struct key_event * k)
                         new_cursor_line = num_lines;
 
                 /* make sure the cursor doesn't go past the new eol */
-                line_len = get_nth_line(message, new_cursor_line, &ptr);
+                line_len = get_nth_line(current_song->message, new_cursor_line, &ptr);
                 if (new_cursor_char > line_len)
                         new_cursor_char = line_len;
 
@@ -733,12 +728,12 @@ static int message_handle_key_editmode(struct key_event * k)
                         } else {
                                 cursor_line--;
                                 new_cursor_char =
-                                        get_nth_line(message, cursor_line, &ptr);
+                                        get_nth_line(current_song->message, cursor_line, &ptr);
                         }
 
                 } else if (new_cursor_char >
-                           get_nth_line(message, cursor_line, &ptr)) {
-                        if (cursor_line == get_num_lines(message)) {
+                           get_nth_line(current_song->message, cursor_line, &ptr)) {
+                        if (cursor_line == get_num_lines(current_song->message)) {
                                 new_cursor_char = cursor_char;
                         } else {
                                 cursor_line++;
@@ -749,7 +744,7 @@ static int message_handle_key_editmode(struct key_event * k)
         }
 
         message_reposition();
-        cursor_pos = get_absolute_position(message, cursor_line, cursor_char);
+        cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
 
         if (doing_drag) {
                 widgets_message[0].clip_end = cursor_pos;
@@ -761,7 +756,7 @@ static int message_handle_key_editmode(struct key_event * k)
                         clipl = clipr;
                         clipr = cp;
                 }
-                clippy_select(widgets_message, (message+clipl), clipr-clipl);
+                clippy_select(widgets_message, (current_song->message+clipl), clipr-clipl);
         }
 
         status.flags |= NEED_UPDATE;
@@ -785,9 +780,8 @@ static void song_changed_cb(void)
         widgets_message[0].accept_text = 0;
         widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
         top_line = 0;
-        message = song_get_message();
 
-        len = get_nth_line(message, 0, &line);
+        len = get_nth_line(current_song->message, 0, &line);
         while (len >= 0) {
                 if (len > LINE_WRAP)
                         message_wrap_line(line);

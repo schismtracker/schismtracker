@@ -26,7 +26,8 @@
 #include "it.h"
 #include "page.h"
 #include "cmixer.h"
-#include "mplink.h"
+#include "sndfile.h"
+#include "song.h"
 #include "slurp.h"
 #include "config-parser.h"
 
@@ -82,7 +83,7 @@ static int audio_writeout_count = 0;
 
 struct audio_settings audio_settings;
 
-static void _schism_midi_out_note(int chan, const MODCOMMAND *m);
+static void _schism_midi_out_note(int chan, const song_note_t *m);
 static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int delay);
 
 /* Audio driver related stuff */
@@ -109,11 +110,11 @@ extern void vis_work_8m(char *in, int inlen);
 // this gets called from sdl
 static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 {
-        unsigned int wasrow = mp->m_nRow;
-        unsigned int waspat = mp->m_nCurrentOrder;
+        unsigned int wasrow = current_song->row;
+        unsigned int waspat = current_song->current_order;
         int i, n;
 
-        if (!stream || !len || !mp) {
+        if (!stream || !len || !current_song) {
                 if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
                         vis_work_8m(NULL, 0);
                 }
@@ -127,10 +128,10 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
                 return;
         }
 
-        if (mp->m_dwSongFlags & SONG_ENDREACHED) {
+        if (current_song->flags & SONG_ENDREACHED) {
                 n = 0;
         } else {
-                n = csf_read(mp, stream, len);
+                n = csf_read(current_song, stream, len);
                 if (!n) {
                         if (status.current_page == PAGE_WATERFALL
                         || status.vis_style == VIS_FFT) {
@@ -173,13 +174,13 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
                 }
         }
 
-        if (mp->m_nMixChannels > max_channels_used)
-                max_channels_used = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
+        if (current_song->num_voices > max_channels_used)
+                max_channels_used = MIN(current_song->num_voices, max_voices);
 POST_EVENT:
         audio_writeout_count++;
         if (audio_writeout_count > audio_buffers_per_second) {
                 audio_writeout_count = 0;
-        } else if (waspat == mp->m_nCurrentOrder && wasrow == mp->m_nRow
+        } else if (waspat == current_song->current_order && wasrow == current_song->row
                         && !midi_need_flush()) {
                 /* skip it */
                 return;
@@ -253,10 +254,10 @@ static int keyjazz_channels[128];
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
         int ins_mode;
-        SONGVOICE *c;
-        MODCOMMAND mc;
-        SONGSAMPLE *s = NULL;
-        SONGINSTRUMENT *i = NULL;
+        song_voice_t *c;
+        song_note_t mc;
+        song_sample_t *s = NULL;
+        song_instrument_t *i = NULL;
 
         if (chan == KEYJAZZ_CHAN_CURRENT) {
                 chan = current_play_channel;
@@ -266,7 +267,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
         song_lock_audio();
 
-        c = mp->Voices + chan - 1;
+        c = current_song->voices + chan - 1;
 
         ins_mode = song_is_instrument_mode();
 
@@ -275,8 +276,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 keyjazz_channels[note] = chan;
 
                 // give the channel a sample, and maybe an instrument
-                s = (samp == KEYJAZZ_NOINST) ? NULL : mp->Samples + samp;
-                i = (ins == KEYJAZZ_NOINST) ? NULL : (SONGINSTRUMENT *) song_get_instrument(ins); // blah
+                s = (samp == KEYJAZZ_NOINST) ? NULL : current_song->samples + samp;
+                i = (ins == KEYJAZZ_NOINST) ? NULL : (song_instrument_t *) song_get_instrument(ins); // blah
 
                 if (i && samp == KEYJAZZ_NOINST) {
                         // we're playing an instrument and don't know what sample! WHAT WILL WE EVER DO?!
@@ -284,102 +285,102 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                         // the weirdness here the default value here is to mimic IT behavior: we want to use
                         // the sample corresponding to the instrument number if in sample mode and no sample
                         // is defined for the note in the instrument's note map.
-                        s = csf_translate_keyboard(mp, i, note, ins_mode ? NULL : (mp->Samples + ins));
+                        s = csf_translate_keyboard(current_song, i, note, ins_mode ? NULL : (current_song->samples + ins));
                 }
         }
 
-        c->nRowCommand = effect;
-        c->nRowParam = param;
+        c->row_effect = effect;
+        c->row_param = param;
 
         // now do a rough equivalent of csf_instrument_change and csf_note_change
         if (i)
-                csf_check_nna(mp, chan - 1, ins, note, 0);
+                csf_check_nna(current_song, chan - 1, ins, note, 0);
         if (s) {
-                if (c->dwFlags & CHN_ADLIB) {
+                if (c->flags & CHN_ADLIB) {
                         OPL_NoteOff(chan - 1);
-                        OPL_Patch(chan - 1, s->AdlibBytes);
+                        OPL_Patch(chan - 1, s->adlib_bytes);
                 }
 
-                c->dwFlags = (s->uFlags & CHN_SAMPLE_FLAGS) | (c->dwFlags & CHN_MUTE);
-                if (c->dwFlags & CHN_MUTE) {
-                        c->dwFlags &= ~CHN_MUTE;
-                        c->dwFlags |= CHN_NNAMUTE;
+                c->flags = (s->flags & CHN_SAMPLE_FLAGS) | (c->flags & CHN_MUTE);
+                if (c->flags & CHN_MUTE) {
+                        c->flags &= ~CHN_MUTE;
+                        c->flags |= CHN_NNAMUTE;
                 }
 
                 if (i) {
-                        c->pHeader = i;
+                        c->ptr_instrument = i;
 
-                        if (!(i->dwFlags & ENV_VOLCARRY)) c->nVolEnvPosition = 0;
-                        if (!(i->dwFlags & ENV_PANCARRY)) c->nPanEnvPosition = 0;
-                        if (!(i->dwFlags & ENV_PITCHCARRY)) c->nPitchEnvPosition = 0;
-                        if (i->dwFlags & ENV_VOLUME) c->dwFlags |= CHN_VOLENV;
-                        if (i->dwFlags & ENV_PANNING) c->dwFlags |= CHN_PANENV;
-                        if (i->dwFlags & ENV_PITCH) c->dwFlags |= CHN_PITCHENV;
+                        if (!(i->flags & ENV_VOLCARRY)) c->vol_env_position = 0;
+                        if (!(i->flags & ENV_PANCARRY)) c->pan_env_position = 0;
+                        if (!(i->flags & ENV_PITCHCARRY)) c->pitch_env_position = 0;
+                        if (i->flags & ENV_VOLUME) c->flags |= CHN_VOLENV;
+                        if (i->flags & ENV_PANNING) c->flags |= CHN_PANENV;
+                        if (i->flags & ENV_PITCH) c->flags |= CHN_PITCHENV;
 
                         i->played = 1;
 
                         if ((status.flags & MIDI_LIKE_TRACKER) && i) {
-                                if (i->nMidiChannelMask) {
+                                if (i->midi_channel_mask) {
                                         GM_KeyOff(chan - 1);
-                                        GM_DPatch(chan - 1, i->nMidiProgram, i->wMidiBank, i->nMidiChannelMask);
+                                        GM_DPatch(chan - 1, i->midi_program, i->midi_bank, i->midi_channel_mask);
                                 }
                         }
 
-                        if (i->nIFC & 0x80)
-                                c->nCutOff = i->nIFC & 0x7f;
-                        if (i->nIFR & 0x80)
-                                c->nResonance = i->nIFR & 0x7f;
+                        if (i->ifc & 0x80)
+                                c->cutoff = i->ifc & 0x7f;
+                        if (i->ifr & 0x80)
+                                c->resonance = i->ifr & 0x7f;
                         //?
-                        c->nVolSwing = i->nVolSwing;
-                        c->nPanSwing = i->nPanSwing;
-                        c->nNNA = i->nNNA;
+                        c->vol_swing = i->vol_swing;
+                        c->pan_swing = i->pan_swing;
+                        c->nna = i->nna;
                 } else {
-                        c->pHeader = NULL;
-                        c->nCutOff = 0x7f;
-                        c->nResonance = 0;
+                        c->ptr_instrument = NULL;
+                        c->cutoff = 0x7f;
+                        c->resonance = 0;
                 }
 
-                c->nMasterChn = 0; // indicates foreground channel.
-                //c->dwFlags &= ~(CHN_PINGPONGFLAG);
+                c->master_channel = 0; // indicates foreground channel.
+                //c->flags &= ~(CHN_PINGPONGFLAG);
 
                 // ?
-                //c->nAutoVibDepth = 0;
-                //c->nAutoVibPos = 0;
+                //c->autovib_depth = 0;
+                //c->autovib_position = 0;
 
-                // csf_note_change copies stuff from c->pInstrument as long as c->nLength is zero
+                // csf_note_change copies stuff from c->ptr_sample as long as c->length is zero
                 // and if period != 0 (ie. sample not playing at a stupid rate)
-                c->pInstrument = s;
-                c->nLength = 0;
+                c->ptr_sample = s;
+                c->length = 0;
                 // ... but it doesn't copy the volumes, for somewhat obvious reasons.
-                c->nVolume = (vol == KEYJAZZ_DEFAULTVOL) ? s->nVolume : (((unsigned) vol) << 2);
-                c->nInsVol = s->nGlobalVol;
-                c->nGlobalVol = 64;
+                c->volume = (vol == KEYJAZZ_DEFAULTVOL) ? s->volume : (((unsigned) vol) << 2);
+                c->instrument_volume = s->global_volume;
+                c->global_volume = 64;
                 // gotta set these by hand, too
-                c->nC5Speed = s->nC5Speed;
-                c->nNewNote = note;
+                c->c5speed = s->c5speed;
+                c->new_note = note;
                 s->played = 1;
         } else if (NOTE_IS_NOTE(note)) {
                 // Note given with no sample number. This might happen if on the instrument list and playing
                 // an instrument that has no sample mapped for the given note. In this case, ignore the note.
                 note = NOTE_NONE;
         }
-        if (c->nInc < 0)
-                c->nInc = -c->nInc; // lousy hack
-        csf_note_change(mp, chan - 1, note, 0, 1, 1);
+        if (c->increment < 0)
+                c->increment = -c->increment; // lousy hack
+        csf_note_change(current_song, chan - 1, note, 0, 1, 1);
 
         if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
                 mc.note = note;
-                mc.instr = ins;
-                mc.volcmd = VOLCMD_VOLUME;
-                mc.vol = vol;
-                mc.command = effect;
+                mc.instrument = ins;
+                mc.voleffect = VOLFX_VOLUME;
+                mc.volparam = vol;
+                mc.effect = effect;
                 mc.param = param;
                 _schism_midi_out_note(chan, &mc);
         }
 
-        if (mp->m_dwSongFlags & SONG_ENDREACHED) {
-                mp->m_dwSongFlags &= ~SONG_ENDREACHED;
-                mp->m_dwSongFlags |= SONG_PAUSED;
+        if (current_song->flags & SONG_ENDREACHED) {
+                current_song->flags &= ~SONG_ENDREACHED;
+                current_song->flags |= SONG_PAUSED;
         }
 
         song_unlock_audio();
@@ -389,7 +390,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 int song_keydown(int samp, int ins, int note, int vol, int chan)
 {
-        return song_keydown_ex(samp, ins, note, vol, chan, CMD_PANNING, 0x80);
+        return song_keydown_ex(samp, ins, note, vol, chan, FX_PANNING, 0x80);
 }
 
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param)
@@ -406,8 +407,8 @@ void song_single_step(int patno, int row)
 {
         int total_rows;
         int i, vol, smp, ins;
-        song_note *pattern, *cur_note;
-        song_mix_channel *cx;
+        song_note_t *pattern, *cur_note;
+        song_voice_t *cx;
 
         total_rows = song_get_pattern(patno, &pattern);
         if (!pattern || row >= total_rows) return;
@@ -416,8 +417,8 @@ void song_single_step(int patno, int row)
         cx = song_get_mix_channel(0);
         for (i = 1; i <= 64; i++, cx++, cur_note++) {
                 if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
-                if (cur_note->volume_effect == VOL_EFFECT_VOLUME) {
-                        vol = cur_note->volume;
+                if (cur_note->voleffect == VOLFX_VOLUME) {
+                        vol = cur_note->volparam;
                 } else {
                         vol = KEYJAZZ_DEFAULTVOL;
                 }
@@ -436,7 +437,7 @@ void song_single_step(int patno, int row)
                 }
 
                 song_keyrecord(smp, ins, cur_note->note,
-                        vol, i, cur_note->effect, cur_note->parameter);
+                        vol, i, cur_note->effect, cur_note->param);
         }
 }
 
@@ -450,21 +451,21 @@ static void song_reset_play_state(void)
         memset(keyjazz_channels, 0, sizeof(keyjazz_channels));
 
         // turn this crap off
-        gdwSoundSetup &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_NOMIXING | SNDMIX_DIRECTTODISK);
+        mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_NOMIXING | SNDMIX_DIRECTTODISK);
 
-        csf_initialize_dsp(mp, 1);
+        csf_initialize_dsp(current_song, 1);
 
         OPL_Reset(); /* gruh? */
 
-        csf_set_current_order(mp, 0);
+        csf_set_current_order(current_song, 0);
 
-        mp->m_nInitialRepeatCount = -1;
-        mp->m_nRepeatCount = -1;
-        mp->m_nBufferCount = 0;
-        mp->m_dwSongFlags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
+        current_song->initial_repeat_count = -1;
+        current_song->repeat_count = -1;
+        current_song->buffer_count = 0;
+        current_song->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
 
-        mp->stop_at_order = -1;
-        mp->stop_at_row = -1;
+        current_song->stop_at_order = -1;
+        current_song->stop_at_row = -1;
         samples_played = 0;
 }
 
@@ -473,16 +474,16 @@ void song_start_once(void)
         song_lock_audio();
 
         song_reset_play_state();
-        gdwSoundSetup |= SNDMIX_NOBACKWARDJUMPS;
+        mix_flags |= SNDMIX_NOBACKWARDJUMPS;
         max_channels_used = 0;
-        mp->m_nInitialRepeatCount = 0;
-        mp->m_nRepeatCount = 1;
+        current_song->initial_repeat_count = 0;
+        current_song->repeat_count = 1;
 
         GM_SendSongStartCode();
         song_unlock_audio();
         main_song_mode_changed_cb();
 
-        csf_reset_playmarks(mp);
+        csf_reset_playmarks(current_song);
 }
 
 void song_start(void)
@@ -496,15 +497,15 @@ void song_start(void)
         song_unlock_audio();
         main_song_mode_changed_cb();
 
-        csf_reset_playmarks(mp);
+        csf_reset_playmarks(current_song);
 }
 
 void song_pause(void)
 {
         song_lock_audio();
         // Highly unintuitive, but SONG_PAUSED has nothing to do with pause.
-        if (!(mp->m_dwSongFlags & SONG_PAUSED))
-                mp->m_dwSongFlags ^= SONG_ENDREACHED;
+        if (!(current_song->flags & SONG_PAUSED))
+                current_song->flags ^= SONG_ENDREACHED;
         song_unlock_audio();
         main_song_mode_changed_cb();
 }
@@ -525,12 +526,12 @@ static int was_program[16];
 static int was_banklo[16];
 static int was_bankhi[16];
 
-static const MODCOMMAND *last_row[64];
+static const song_note_t *last_row[64];
 static int last_row_number = -1;
 
 void song_stop_unlocked(int quitting)
 {
-        if (!mp) return;
+        if (!current_song) return;
 
         if (midi_playing) {
                 unsigned char moff[4];
@@ -539,25 +540,25 @@ void song_stop_unlocked(int quitting)
                 for (int chan = 0; chan < 64; chan++) {
                         if (note_tracker[chan] != 0) {
                                 for (int j = 0; j < 16; j++) {
-                                        csf_process_midi_macro(mp, chan,
-                                                &mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
+                                        csf_process_midi_macro(current_song, chan,
+                                                &current_song->midi_config.global[MIDIOUT_NOTEOFF*32],
                                                 0, note_tracker[chan], 0, j);
                                 }
                                 moff[0] = 0x80 + chan;
                                 moff[1] = note_tracker[chan];
-                                csf_midi_send(mp, (unsigned char *) moff, 2, 0, 0);
+                                csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
                         }
                 }
                 for (int j = 0; j < 16; j++) {
                         moff[0] = 0xe0 + j;
                         moff[1] = 0;
-                        csf_midi_send(mp, (unsigned char *) moff, 2, 0, 0);
+                        csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
                 }
 
                 // send all notes off
 #define _MIDI_PANIC     "\xb0\x78\0\xb0\x79\0\xb0\x7b\0"
-                csf_midi_send(mp, (unsigned char *) _MIDI_PANIC, sizeof(_MIDI_PANIC) - 1, 0, 0);
-                csf_process_midi_macro(mp, 0, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_STOP*32], 0, 0, 0, 0); // STOP!
+                csf_midi_send(current_song, (unsigned char *) _MIDI_PANIC, sizeof(_MIDI_PANIC) - 1, 0, 0);
+                csf_process_midi_macro(current_song, 0, &current_song->midi_config.global[MIDIOUT_STOP*32], 0, 0, 0, 0); // STOP!
                 midi_send_flush(); // NOW!
 
                 midi_playing = 0;
@@ -580,11 +581,11 @@ void song_stop_unlocked(int quitting)
         playback_tracing = midi_playback_tracing;
 
         song_reset_play_state();
-        // Modplug doesn't actually have a "stop" mode, but if SONG_ENDREACHED is set, mp->Read just returns.
-        mp->m_dwSongFlags |= SONG_PAUSED | SONG_ENDREACHED;
+        // Modplug doesn't actually have a "stop" mode, but if SONG_ENDREACHED is set, current_song->Read just returns.
+        current_song->flags |= SONG_PAUSED | SONG_ENDREACHED;
 
-        gnVULeft = 0;
-        gnVURight = 0;
+        global_vu_left = 0;
+        global_vu_right = 0;
         memset(audio_buffer, 0, audio_buffer_samples * audio_sample_size);
 }
 
@@ -598,14 +599,14 @@ void song_loop_pattern(int pattern, int row)
         song_reset_play_state();
 
         max_channels_used = 0;
-        csf_loop_pattern(mp, pattern, row);
+        csf_loop_pattern(current_song, pattern, row);
 
         GM_SendSongStartCode();
 
         song_unlock_audio();
         main_song_mode_changed_cb();
 
-        csf_reset_playmarks(mp);
+        csf_reset_playmarks(current_song);
 }
 
 void song_start_at_order(int order, int row)
@@ -614,8 +615,8 @@ void song_start_at_order(int order, int row)
 
         song_reset_play_state();
 
-        csf_set_current_order(mp, order);
-        mp->m_nBreakRow = row;
+        csf_set_current_order(current_song, order);
+        current_song->break_row = row;
         max_channels_used = 0;
 
         GM_SendSongStartCode();
@@ -623,7 +624,7 @@ void song_start_at_order(int order, int row)
         song_unlock_audio();
         main_song_mode_changed_cb();
 
-        csf_reset_playmarks(mp);
+        csf_reset_playmarks(current_song);
 }
 
 void song_start_at_pattern(int pattern, int row)
@@ -646,11 +647,11 @@ void song_start_at_pattern(int pattern, int row)
 
 enum song_mode song_get_mode(void)
 {
-        if ((mp->m_dwSongFlags & (SONG_ENDREACHED | SONG_PAUSED)) == (SONG_ENDREACHED | SONG_PAUSED))
+        if ((current_song->flags & (SONG_ENDREACHED | SONG_PAUSED)) == (SONG_ENDREACHED | SONG_PAUSED))
                 return MODE_STOPPED;
-        if (mp->m_dwSongFlags & SONG_PAUSED)
+        if (current_song->flags & SONG_PAUSED)
                 return MODE_SINGLE_STEP;
-        if (mp->m_dwSongFlags & SONG_PATTERNPLAYBACK)
+        if (current_song->flags & SONG_PATTERNPLAYBACK)
                 return MODE_PATTERN_LOOP;
         return MODE_PLAYING;
 }
@@ -658,52 +659,52 @@ enum song_mode song_get_mode(void)
 // returned value is in seconds
 unsigned int song_get_current_time(void)
 {
-        return samples_played / gdwMixingFreq;
+        return samples_played / mix_frequency;
 }
 
 int song_get_current_tick(void)
 {
-        return mp->m_nTickCount % mp->m_nMusicSpeed;
+        return current_song->tick_count % current_song->current_speed;
 }
 int song_get_current_speed(void)
 {
-        return mp->m_nMusicSpeed;
+        return current_song->current_speed;
 }
 
 void song_set_current_tempo(int new_tempo)
 {
         song_lock_audio();
-        mp->m_nMusicTempo = CLAMP(new_tempo, 31, 255);
+        current_song->current_tempo = CLAMP(new_tempo, 31, 255);
         song_unlock_audio();
 }
 int song_get_current_tempo(void)
 {
-        return mp->m_nMusicTempo;
+        return current_song->current_tempo;
 }
 
 int song_get_current_global_volume(void)
 {
-        return mp->m_nGlobalVolume;
+        return current_song->current_global_volume;
 }
 
 int song_get_current_order(void)
 {
-        return mp->m_nCurrentOrder;
+        return current_song->current_order;
 }
 
 int song_get_playing_pattern(void)
 {
-        return mp->m_nCurrentPattern;
+        return current_song->current_pattern;
 }
 
 int song_get_current_row(void)
 {
-        return mp->m_nRow;
+        return current_song->row;
 }
 
 int song_get_playing_channels(void)
 {
-        return MIN(mp->m_nMixChannels, m_nMaxMixChannels);
+        return MIN(current_song->num_voices, max_voices);
 }
 
 int song_get_max_channels(void)
@@ -713,44 +714,44 @@ int song_get_max_channels(void)
 
 void song_get_vu_meter(int *left, int *right)
 {
-        *left = gnVULeft;
-        *right = gnVURight;
+        *left = global_vu_left;
+        *right = global_vu_right;
 }
 
 void song_update_playing_instrument(int i_changed)
 {
-        SONGVOICE *channel;
-        SONGINSTRUMENT *inst;
+        song_voice_t *channel;
+        song_instrument_t *inst;
 
         song_lock_audio();
-        int n = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
+        int n = MIN(current_song->num_voices, max_voices);
         while (n--) {
-                channel = mp->Voices + mp->VoiceMix[n];
-                if (channel->pHeader && channel->pHeader == mp->Instruments[i_changed]) {
-                        csf_instrument_change(mp, channel, i_changed, 1, 0);
-                        inst = channel->pHeader;
+                channel = current_song->voices + current_song->voice_mix[n];
+                if (channel->ptr_instrument && channel->ptr_instrument == current_song->instruments[i_changed]) {
+                        csf_instrument_change(current_song, channel, i_changed, 1, 0);
+                        inst = channel->ptr_instrument;
                         if (!inst) continue;
 
                         /* special cases;
                                 mpt doesn't do this if porta-enabled, */
-                        if (inst->nIFR & 0x80) {
-                                channel->nResonance = inst->nIFR & 0x7F;
+                        if (inst->ifr & 0x80) {
+                                channel->resonance = inst->ifr & 0x7F;
                         } else {
-                                channel->nResonance = 0;
-                                channel->dwFlags &= (~CHN_FILTER);
+                                channel->resonance = 0;
+                                channel->flags &= (~CHN_FILTER);
                         }
-                        if (inst->nIFC & 0x80) {
-                                channel->nCutOff = inst->nIFC & 0x7F;
-                                setup_channel_filter(channel, 0, 256, gdwMixingFreq);
+                        if (inst->ifc & 0x80) {
+                                channel->cutoff = inst->ifc & 0x7F;
+                                setup_channel_filter(channel, 0, 256, mix_frequency);
                         } else {
-                                channel->nCutOff = 0x7F;
-                                if (inst->nIFR & 0x80) {
-                                        setup_channel_filter(channel, 0, 256, gdwMixingFreq);
+                                channel->cutoff = 0x7F;
+                                if (inst->ifr & 0x80) {
+                                        setup_channel_filter(channel, 0, 256, mix_frequency);
                                 }
                         }
 
                         /* flip direction */
-                        channel->dwFlags &= (~CHN_PINGPONGFLAG);
+                        channel->flags &= (~CHN_PINGPONGFLAG);
                 }
         }
         song_unlock_audio();
@@ -758,47 +759,47 @@ void song_update_playing_instrument(int i_changed)
 
 void song_update_playing_sample(int s_changed)
 {
-        SONGVOICE *channel;
-        SONGSAMPLE *inst;
+        song_voice_t *channel;
+        song_sample_t *inst;
 
         song_lock_audio();
-        int n = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
+        int n = MIN(current_song->num_voices, max_voices);
         while (n--) {
-                channel = mp->Voices + mp->VoiceMix[n];
-                if (channel->pInstrument && channel->pCurrentSample) {
-                        int s = channel->pInstrument - mp->Samples;
+                channel = current_song->voices + current_song->voice_mix[n];
+                if (channel->ptr_sample && channel->current_sample_data) {
+                        int s = channel->ptr_sample - current_song->samples;
                         if (s != s_changed) continue;
 
-                        inst = channel->pInstrument;
-                        if (inst->uFlags & (CHN_PINGPONGSUSTAIN|CHN_SUSTAINLOOP)) {
-                                channel->nLoopStart = inst->nSustainStart;
-                                channel->nLoopEnd = inst->nSustainEnd;
-                        } else if (inst->uFlags & (CHN_PINGPONGFLAG|CHN_PINGPONGLOOP|CHN_LOOP)) {
-                                channel->nLoopStart = inst->nLoopStart;
-                                channel->nLoopEnd = inst->nLoopEnd;
+                        inst = channel->ptr_sample;
+                        if (inst->flags & (CHN_PINGPONGSUSTAIN|CHN_SUSTAINLOOP)) {
+                                channel->loop_start = inst->sustain_start;
+                                channel->loop_end = inst->sustain_end;
+                        } else if (inst->flags & (CHN_PINGPONGFLAG|CHN_PINGPONGLOOP|CHN_LOOP)) {
+                                channel->loop_start = inst->loop_start;
+                                channel->loop_end = inst->loop_end;
                         }
-                        if (inst->uFlags & (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP
+                        if (inst->flags & (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP
                                             | CHN_PINGPONGFLAG | CHN_PINGPONGLOOP|CHN_LOOP)) {
-                                if (channel->nLength != channel->nLoopEnd) {
-                                        channel->nLength = channel->nLoopEnd;
+                                if (channel->length != channel->loop_end) {
+                                        channel->length = channel->loop_end;
                                 }
                         }
-                        if (channel->nLength > inst->nLength) {
-                                channel->pCurrentSample = inst->pSample;
-                                channel->nLength = inst->nLength;
+                        if (channel->length > inst->length) {
+                                channel->current_sample_data = inst->data;
+                                channel->length = inst->length;
                         }
 
-                        channel->dwFlags &= ~(CHN_PINGPONGSUSTAIN
+                        channel->flags &= ~(CHN_PINGPONGSUSTAIN
                                         | CHN_PINGPONGLOOP
                                         | CHN_PINGPONGFLAG
                                         | CHN_SUSTAINLOOP
                                         | CHN_LOOP);
-                        channel->dwFlags |= inst->uFlags & (CHN_PINGPONGSUSTAIN
+                        channel->flags |= inst->flags & (CHN_PINGPONGSUSTAIN
                                         | CHN_PINGPONGLOOP
                                         | CHN_PINGPONGFLAG
                                         | CHN_SUSTAINLOOP
                                         | CHN_LOOP);
-                        channel->nInsVol = inst->nGlobalVol;
+                        channel->instrument_volume = inst->global_volume;
                 }
         }
         song_unlock_audio();
@@ -806,16 +807,16 @@ void song_update_playing_sample(int s_changed)
 
 void song_get_playing_samples(int samples[])
 {
-        SONGVOICE *channel;
+        song_voice_t *channel;
 
         memset(samples, 0, SCHISM_MAX_SAMPLES * sizeof(int));
 
         song_lock_audio();
-        int n = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
+        int n = MIN(current_song->num_voices, max_voices);
         while (n--) {
-                channel = mp->Voices + mp->VoiceMix[n];
-                if (channel->pInstrument && channel->pCurrentSample) {
-                        int s = channel->pInstrument - mp->Samples;
+                channel = current_song->voices + current_song->voice_mix[n];
+                if (channel->ptr_sample && channel->current_sample_data) {
+                        int s = channel->ptr_sample - current_song->samples;
                         if (s >= 0 && s < SCHISM_MAX_SAMPLES) {
                                 samples[s] = MAX(samples[s], 1 + channel->strike);
                         }
@@ -829,15 +830,15 @@ void song_get_playing_samples(int samples[])
 
 void song_get_playing_instruments(int instruments[])
 {
-        SONGVOICE *channel;
+        song_voice_t *channel;
 
         memset(instruments, 0, SCHISM_MAX_INSTRUMENTS * sizeof(int));
 
         song_lock_audio();
-        int n = MIN(mp->m_nMixChannels, m_nMaxMixChannels);
+        int n = MIN(current_song->num_voices, max_voices);
         while (n--) {
-                channel = mp->Voices + mp->VoiceMix[n];
-                int ins = song_get_instrument_number((song_instrument *) channel->pHeader);
+                channel = current_song->voices + current_song->voice_mix[n];
+                int ins = song_get_instrument_number((song_instrument_t *) channel->ptr_instrument);
                 if (ins > 0 && ins < SCHISM_MAX_INSTRUMENTS) {
                         instruments[ins] = MAX(instruments[ins], 1 + channel->strike);
                 }
@@ -854,7 +855,7 @@ void song_set_current_speed(int speed)
                 return;
 
         song_lock_audio();
-        mp->m_nMusicSpeed = speed;
+        current_song->current_speed = speed;
         song_unlock_audio();
 }
 
@@ -864,14 +865,14 @@ void song_set_current_global_volume(int volume)
                 return;
 
         song_lock_audio();
-        mp->m_nGlobalVolume = volume;
+        current_song->current_global_volume = volume;
         song_unlock_audio();
 }
 
 void song_set_current_order(int order)
 {
         song_lock_audio();
-        csf_set_current_order(mp, order);
+        csf_set_current_order(current_song, order);
         song_unlock_audio();
 }
 
@@ -879,19 +880,19 @@ void song_set_current_order(int order)
 void song_set_next_order(int order)
 {
         song_lock_audio();
-        mp->m_nLockedOrder = order;
+        current_song->locked_order = order;
         song_unlock_audio();
 }
 
 // Alt-F11
 int song_toggle_orderlist_locked(void)
 {
-        mp->m_dwSongFlags ^= SONG_ORDERLOCKED;
-        if (mp->m_dwSongFlags & SONG_ORDERLOCKED)
-                mp->m_nLockedOrder = mp->m_nCurrentOrder;
+        current_song->flags ^= SONG_ORDERLOCKED;
+        if (current_song->flags & SONG_ORDERLOCKED)
+                current_song->locked_order = current_song->current_order;
         else
-                mp->m_nLockedOrder = MAX_ORDERS;
-        return mp->m_dwSongFlags & SONG_ORDERLOCKED;
+                current_song->locked_order = MAX_ORDERS;
+        return current_song->flags & SONG_ORDERLOCKED;
 }
 
 // ------------------------------------------------------------------------
@@ -899,20 +900,20 @@ int song_toggle_orderlist_locked(void)
 
 void song_flip_stereo(void)
 {
-        gdwSoundSetup ^= SNDMIX_REVERSESTEREO;
+        mix_flags ^= SNDMIX_REVERSESTEREO;
 }
 
 int song_get_surround(void)
 {
-        return (gdwSoundSetup & SNDMIX_NOSURROUND) ? 0 : 1;
+        return (mix_flags & SNDMIX_NOSURROUND) ? 0 : 1;
 }
 
 void song_set_surround(int on)
 {
         if (on)
-                gdwSoundSetup &= ~SNDMIX_NOSURROUND;
+                mix_flags &= ~SNDMIX_NOSURROUND;
         else
-                gdwSoundSetup |= SNDMIX_NOSURROUND;
+                mix_flags |= SNDMIX_NOSURROUND;
 
         // without copying the value back to audio_settings, it won't get saved (oops)
         audio_settings.surround_effect = on;
@@ -1018,7 +1019,7 @@ void cfg_save_audio(cfg_file_t *cfg)
 }
 
 // ------------------------------------------------------------------------------------------------------------
-static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
+static void _schism_midi_out_note(int chan, const song_note_t *m)
 {
         unsigned int tc;
         int m_note;
@@ -1026,17 +1027,17 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
         unsigned char buf[4];
         int ins, mc, mg, mbl, mbh;
         int need_note, need_velocity;
-        SONGVOICE *c;
+        song_voice_t *c;
 
-        if (!mp || !song_is_instrument_mode() || (status.flags & MIDI_LIKE_TRACKER)) return;
+        if (!current_song || !song_is_instrument_mode() || (status.flags & MIDI_LIKE_TRACKER)) return;
 
     /*if(m)
     fprintf(stderr, "midi_out_note called (ch %d)note(%d)instr(%d)volcmd(%02X)cmd(%02X)vol(%02X)p(%02X)\n",
-        chan, m->note, m->instr, m->volcmd, m->command, m->vol, m->param);
+        chan, m->note, m->instrument, m->voleffect, m->effect, m->volparam, m->param);
     else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
 
         if (!midi_playing) {
-                csf_process_midi_macro(mp, 0, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_START*32], 0, 0, 0, 0); // START!
+                csf_process_midi_macro(current_song, 0, &current_song->midi_config.global[MIDIOUT_START*32], 0, 0, 0, 0); // START!
                 midi_playing = 1;
         }
 
@@ -1044,43 +1045,43 @@ static void _schism_midi_out_note(int chan, const MODCOMMAND *m)
                 return;
         }
 
-        c = &mp->Voices[chan];
+        c = &current_song->voices[chan];
 
         chan %= 64;
 
         if (!m) {
-                if (last_row_number != (signed) mp->m_nRow) return;
+                if (last_row_number != (signed) current_song->row) return;
                 m = last_row[chan];
                 if (!m) return;
         } else {
                 last_row[chan] = m;
-                last_row_number = mp->m_nRow;
+                last_row_number = current_song->row;
         }
 
         ins = ins_tracker[chan];
-        if (m->instr > 0) {
-                ins = m->instr;
+        if (m->instrument > 0) {
+                ins = m->instrument;
                 ins_tracker[chan] = ins;
         }
         if (ins < 0 || ins >= MAX_INSTRUMENTS)
                 return; /* err...  almost certainly */
-        if (!mp->Instruments[ins]) return;
+        if (!current_song->instruments[ins]) return;
 
-        if (mp->Instruments[ins]->nMidiChannelMask >= 0x10000) {
+        if (current_song->instruments[ins]->midi_channel_mask >= 0x10000) {
                 mc = chan % 16;
         } else {
                 mc = 0;
-                if(mp->Instruments[ins]->nMidiChannelMask > 0)
-                        while(!(mp->Instruments[ins]->nMidiChannelMask & (1 << mc)))
+                if(current_song->instruments[ins]->midi_channel_mask > 0)
+                        while(!(current_song->instruments[ins]->midi_channel_mask & (1 << mc)))
                                 ++mc;
         }
 
         m_note = m->note;
-        tc = mp->m_nTickCount % mp->m_nMusicSpeed;
+        tc = current_song->tick_count % current_song->current_speed;
 #if 0
 printf("channel = %d note=%d\n",chan,m_note);
 #endif
-        if (m->command == CMD_S3MCMDEX) {
+        if (m->effect == FX_S3MCMDEX) {
                 switch (m->param & 0x80) {
                 case 0xC0: /* note cut */
                         if (tc == (((unsigned)m->param) & 15)) {
@@ -1101,69 +1102,69 @@ printf("channel = %d note=%d\n",chan,m_note);
         need_note = need_velocity = -1;
         if (m_note > 120) {
                 if (note_tracker[chan] != 0) {
-                        csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
+                        csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_NOTEOFF*32],
                                 0, note_tracker[chan], 0, ins);
                 }
 
                 note_tracker[chan] = 0;
-                if (m->volcmd != VOLCMD_VOLUME) {
+                if (m->voleffect != VOLFX_VOLUME) {
                         vol_tracker[chan] = 64;
                 } else {
-                        vol_tracker[chan] = m->vol;
+                        vol_tracker[chan] = m->voleffect;
                 }
-        } else if (!m->note && m->volcmd == VOLCMD_VOLUME) {
-                vol_tracker[chan] = m->vol;
+        } else if (!m->note && m->voleffect == VOLFX_VOLUME) {
+                vol_tracker[chan] = m->volparam;
                 need_velocity = vol_tracker[chan];
 
         } else if (m->note) {
                 if (note_tracker[chan] != 0) {
-                        csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEOFF*32],
+                        csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_NOTEOFF*32],
                                 0, note_tracker[chan], 0, ins);
                 }
                 note_tracker[chan] = m_note;
-                if (m->volcmd != VOLCMD_VOLUME) {
+                if (m->voleffect != VOLFX_VOLUME) {
                         vol_tracker[chan] = 64;
                 } else {
-                        vol_tracker[chan] = m->vol;
+                        vol_tracker[chan] = m->volparam;
                 }
                 need_note = note_tracker[chan];
                 need_velocity = vol_tracker[chan];
         }
 
-        mg = (mp->Instruments[ins]->nMidiProgram)
+        mg = (current_song->instruments[ins]->midi_program)
                 + ((midi_flags & MIDI_BASE_PROGRAM1) ? 1 : 0);
-        mbl = mp->Instruments[ins]->wMidiBank;
-        mbh = (mp->Instruments[ins]->wMidiBank >> 7) & 127;
+        mbl = current_song->instruments[ins]->midi_bank;
+        mbh = (current_song->instruments[ins]->midi_bank >> 7) & 127;
 
         if (mbh > -1 && was_bankhi[mc] != mbh) {
                 buf[0] = 0xB0 | (mc & 15); // controller
                 buf[1] = 0x00; // corse bank/select
                 buf[2] = mbh; // corse bank/select
-                csf_midi_send(mp, buf, 3, 0, 0);
+                csf_midi_send(current_song, buf, 3, 0, 0);
                 was_bankhi[mc] = mbh;
         }
         if (mbl > -1 && was_banklo[mc] != mbl) {
                 buf[0] = 0xB0 | (mc & 15); // controller
                 buf[1] = 0x20; // fine bank/select
                 buf[2] = mbl; // fine bank/select
-                csf_midi_send(mp, buf, 3, 0, 0);
+                csf_midi_send(current_song, buf, 3, 0, 0);
                 was_banklo[mc] = mbl;
         }
         if (mg > -1 && was_program[mc] != mg) {
                 was_program[mc] = mg;
-                csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_PROGRAM*32],
+                csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_PROGRAM*32],
                         mg, 0, 0, ins); // program change
         }
-        if (c->dwFlags & CHN_MUTE) {
+        if (c->flags & CHN_MUTE) {
                 // don't send noteon events when muted
         } else if (need_note > 0) {
                 if (need_velocity == -1) need_velocity = 64; // eh?
                 need_velocity = CLAMP(need_velocity*2,0,127);
-                csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_NOTEON*32],
+                csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_NOTEON*32],
                         0, need_note, need_velocity, ins); // noteon
         } else if (need_velocity > -1 && note_tracker[chan] > 0) {
                 need_velocity = CLAMP(need_velocity*2,0,127);
-                csf_process_midi_macro(mp, chan, &mp->m_MidiCfg.szMidiGlb[MIDIOUT_VOLUME*32],
+                csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_VOLUME*32],
                         need_velocity, note_tracker[chan], need_velocity, ins); // volume-set
         }
 
@@ -1172,7 +1173,7 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 {
 #if 0
         i = (8000*(audio_buffer_samples - delay));
-        i /= (gdwMixingFreq);
+        i /= (mix_frequency);
 #endif
 #if 0
         for (int i=0; i < len; i++) {
@@ -1314,7 +1315,7 @@ static int _audio_open(const char *driver_spec, int verbose)
         song_lock_audio();
 
         /* format&255 is SDL specific... need bits */
-        csf_set_wave_config(mp, obtained.freq,
+        csf_set_wave_config(current_song, obtained.freq,
                 obtained.format & 255,
                 obtained.channels);
         audio_output_channels = obtained.channels;
@@ -1444,10 +1445,10 @@ void song_init_eq(int do_reset)
         for (i = 0; i < 4; i++) {
                 pg[i] = audio_settings.eq_gain[i];
                 pf[i] = 120 + (((i*128) * audio_settings.eq_freq[i])
-                        * (gdwMixingFreq / 128) / 1024);
+                        * (mix_frequency / 128) / 1024);
         }
 
-        set_eq_gains(pg, 4, pf, do_reset, gdwMixingFreq);
+        set_eq_gains(pg, 4, pf, do_reset, mix_frequency);
 }
 
 
@@ -1455,27 +1456,27 @@ void song_init_modplug(void)
 {
         song_lock_audio();
 
-        m_nMaxMixChannels = audio_settings.channel_limit;
-        csf_set_wave_config_ex(mp,
+        max_voices = audio_settings.channel_limit;
+        csf_set_wave_config_ex(current_song,
                                 1, // hqido - only makes sense
                                 audio_settings.noise_reduction,
                                 1); // eq
         // audio_settings.oversampling (?)
-        csf_set_resampling_mode(mp, audio_settings.interpolation_mode);
+        csf_set_resampling_mode(current_song, audio_settings.interpolation_mode);
         if (audio_settings.no_ramping)
-                gdwSoundSetup |= SNDMIX_NORAMPING;
+                mix_flags |= SNDMIX_NORAMPING;
         else
-                gdwSoundSetup &= ~SNDMIX_NORAMPING;
+                mix_flags &= ~SNDMIX_NORAMPING;
 
         // disable the S91 effect? (this doesn't make anything faster, it
         // just sounds better with one woofer.)
         song_set_surround(audio_settings.surround_effect);
 
         // update midi queue configuration
-        midi_queue_alloc(audio_buffer_samples, audio_sample_size, gdwMixingFreq);
+        midi_queue_alloc(audio_buffer_samples, audio_sample_size, mix_frequency);
 
         // timelimit the playback_update() calls when midi isn't actively going on
-        audio_buffers_per_second = (gdwMixingFreq / (audio_buffer_samples * 8 * audio_sample_size));
+        audio_buffers_per_second = (mix_frequency / (audio_buffer_samples * 8 * audio_sample_size));
         if (audio_buffers_per_second > 1) audio_buffers_per_second--;
 
         song_unlock_audio();
@@ -1486,22 +1487,14 @@ void song_initialise(void)
         csf_midi_out_note = _schism_midi_out_note;
         csf_midi_out_raw = _schism_midi_out_raw;
 
-        assert(sizeof(midi_config)      == sizeof(MODMIDICFG));
-        assert(sizeof(song_sample)      == sizeof(SONGSAMPLE));
-        assert(sizeof(song_envelope)    == sizeof(INSTRUMENTENVELOPE));
-        assert(sizeof(song_instrument)  == sizeof(SONGINSTRUMENT));
-        assert(sizeof(song_mix_channel) == sizeof(SONGVOICE));
-        assert(sizeof(song_channel)     == sizeof(MODCHANNELSETTINGS));
-        assert(sizeof(song_note)        == sizeof(MODCOMMAND));
 
-
-        mp = csf_allocate();
+        current_song = csf_allocate();
 
         //song_stop(); <- song_new does this
         song_set_linear_pitch_slides(1);
         song_new(0);
 
         // hmm.
-        gdwSoundSetup |= SNDMIX_MUTECHNMODE;
+        mix_flags |= SNDMIX_MUTECHNMODE;
 }
 

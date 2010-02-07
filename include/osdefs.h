@@ -129,21 +129,27 @@ unsigned int key_repeat_rate(void);
 
 // Mixer interfaces
 
-int alsa_mixer_get_max_volume(void);
-void alsa_mixer_read_volume(int *, int *);
-void alsa_mixer_write_volume(int, int);
+void volume_setup(void);
+int volume_get_max(void);
+void volume_read(int *left, int *right);
+void volume_write(int left, int right);
 
-int oss_mixer_get_max_volume(void);
-void oss_mixer_read_volume(int *, int *);
-void oss_mixer_write_volume(int, int);
 
-int macosx_mixer_get_max_volume(void);
-void macosx_mixer_read_volume(int *, int *);
-void macosx_mixer_write_volume(int, int);
+int alsa_volume_get_max(void);
+void alsa_volume_read(int *, int *);
+void alsa_volume_write(int, int);
 
-int win32mm_mixer_get_max_volume(void);
-void win32mm_mixer_read_volume(int *, int *);
-void win32mm_mixer_write_volume(int, int);
+int oss_volume_get_max(void);
+void oss_volume_read(int *, int *);
+void oss_volume_write(int, int);
+
+int macosx_volume_get_max(void);
+void macosx_volume_read(int *, int *);
+void macosx_volume_write(int, int);
+
+int win32mm_volume_get_max(void);
+void win32mm_volume_read(int *, int *);
+void win32mm_volume_write(int, int);
 
 
 // Nasty alsa crap
