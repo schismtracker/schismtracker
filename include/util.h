@@ -25,6 +25,7 @@
 #define UTIL_H
 
 #include <sys/stat.h> /* roundabout way to get time_t */
+#include <sys/types.h>
 
 /* --------------------------------------------------------------------- */
 
