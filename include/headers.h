@@ -201,6 +201,9 @@ char *strptime(const char *buf, const char *fmt, struct tm *tm);
 struct tm *localtime_r(const time_t *timep, struct tm *result);
 # endif
 #endif
+#ifndef HAVE_MKSTEMP
+int mkstemp(char *template);
+#endif
 
 #ifdef __APPLE_CC__
 #define MACOSX  1
@@ -216,10 +219,5 @@ struct tm *localtime_r(const time_t *timep, struct tm *result);
 #define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
 #define PTR_SHAPED_INT(i)               ((void*)i)
 
-static inline int isdigit_safe(int n)
-{
-        if (n >= '0' && n <= '9') return 1;
-        return 0;
-}
-
 #endif
+

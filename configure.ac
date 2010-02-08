@@ -56,11 +56,13 @@ dnl Check for SDL libs
 AM_PATH_SDL(1.2.10, , AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.]))
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strptime asprintf vasprintf memcmp mmap socket nice unsetenv dup fnmatch log2)
-AM_CONDITIONAL([NEED_GNU_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
-AM_CONDITIONAL([NEED_GNU_VASPRINTF], [test "$ac_cv_func_vasprintf" = "no"])
-AM_CONDITIONAL([NEED_GNU_MEMCMP], [test "$ac_cv_func_memcmp" = "no"])
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strptime asprintf vasprintf memcmp mmap socket nice unsetenv dup fnmatch log2 mkstemp)
+AM_CONDITIONAL([NEED_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
+AM_CONDITIONAL([NEED_VASPRINTF], [test "$ac_cv_func_vasprintf" = "no"])
+AM_CONDITIONAL([NEED_MEMCMP], [test "$ac_cv_func_memcmp" = "no"])
 AM_CONDITIONAL([NEED_STRPTIME], [test "$ac_cv_func_strptime" = "no"])
+AM_CONDITIONAL([NEED_MKSTEMP], [test "$ac_cv_func_mkstemp" = "no"])
+
 AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
 
 dnl Headers, typedef crap, et al.
