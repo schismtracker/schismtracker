@@ -24,9 +24,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-/* FIXME: should include the standard header with all that #ifdef crap.
- * (the only reason time.h is here is for the time_t definition) */
-#include <time.h>
+#include <sys/stat.h> /* roundabout way to get time_t */
 
 /* --------------------------------------------------------------------- */
 
@@ -45,37 +43,43 @@
 #endif
 
 #ifdef __GNUC__
-#ifndef LIKELY
-#define LIKELY(x) __builtin_expect(!!(x),1)
-#endif
-#ifndef UNLIKELY
-#define UNLIKELY(x) __builtin_expect(!!(x),0)
-#endif
-#ifndef UNUSED
-# define UNUSED __attribute__((unused))
-#endif
-#ifndef NORETURN
-# define NORETURN __attribute__((noreturn))
-#endif
-#ifndef PACKED
-# define PACKED __attribute__((packed))
-#endif
+# ifndef LIKELY
+#  define LIKELY(x) __builtin_expect(!!(x),1)
+# endif
+# ifndef UNLIKELY
+#  define UNLIKELY(x) __builtin_expect(!!(x),0)
+# endif
+# ifndef UNUSED
+#  define UNUSED __attribute__((unused))
+# endif
+# ifndef NORETURN
+#  define NORETURN __attribute__((noreturn))
+# endif
+# ifndef PACKED
+#  define PACKED __attribute__((packed))
+# endif
+# ifndef MALLOC
+#  define MALLOC __attribute__ ((malloc))
+# endif
 #else
-#ifndef UNUSED
-# define UNUSED
-#endif
-#ifndef PACKED
-# define PACKED
-#endif
-#ifndef NORETURN
-# define NORETURN
-#endif
-#ifndef LIKELY
-#define LIKELY(x)
-#endif
-#ifndef UNLIKELY
-#define UNLIKELY(x)
-#endif
+# ifndef UNUSED
+#  define UNUSED
+# endif
+# ifndef PACKED
+#  define PACKED
+# endif
+# ifndef NORETURN
+#  define NORETURN
+# endif
+# ifndef LIKELY
+#  define LIKELY(x)
+# endif
+# ifndef UNLIKELY
+#  define UNLIKELY(x)
+# endif
+# ifndef MALLOC
+#  define MALLOC
+# endif
 #endif
 
 /* Path stuff that differs by platform */
@@ -95,13 +99,8 @@
 passed to them in the 'buf' parameter. */
 
 /* memory */
-#ifdef __GNUC__
-extern __attribute__ ((malloc)) void *mem_alloc(size_t);
-extern __attribute__ ((malloc)) char *str_dup(const char *);
-#else
-extern void *mem_alloc(size_t);
-extern char *str_dup(const char *);
-#endif
+extern MALLOC void *mem_alloc(size_t);
+extern MALLOC char *str_dup(const char *);
 extern void *mem_realloc(void *,size_t);
 extern void mem_free(void *);
 
@@ -144,7 +143,12 @@ unsigned int i_sqrt(unsigned int r);
 /* sleep in msec */
 void ms_sleep(unsigned int m);
 
-/* runs a hook */
+/* run a hook */
 int run_hook(const char *dir, const char *name, const char *maybe_arg);
 
+/* Mostly a glorified rename(), with fixes for certain dumb OSes.
+If 'overwrite' is zero, attempts to rename over an existing file will fail with EEXIST. */
+int rename_file(const char *old, const char *newf, int overwrite);
+
 #endif /* ! UTIL_H */
+

@@ -836,7 +836,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
         LPCONVERTPROC convert_func = clip_32_to_8;
         int32_t vu_min[2];
         int32_t vu_max[2];
-        unsigned int bufleft, max, sample_size, count, smpcount, stat=0;
+        unsigned int bufleft, max, sample_size, count, smpcount, mix_stat=0;
 
         vu_min[0] = vu_min[1] = 0x7FFFFFFF;
         vu_max[0] = vu_max[1] = -0x7FFFFFFF;
@@ -918,7 +918,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                                 eq_mono(mix_buffer, count);
                 }
 
-                stat++;
+                mix_stat++;
 
                 total_smpcount = smpcount;
 
@@ -951,9 +951,9 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
         if ((global_vu_right = (unsigned int)(vu_max[1] - vu_min[1])) > 0xFF)
                 global_vu_right = 0xFF;
 
-        if (stat) {
-                csf->mix_stat += stat - 1;
-                csf->mix_stat /= stat;
+        if (mix_stat) {
+                csf->mix_stat += mix_stat - 1;
+                csf->mix_stat /= mix_stat;
         }
 
         return max - bufleft;

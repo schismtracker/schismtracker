@@ -70,7 +70,16 @@ enum {
 
 /* fopen/fclose-ish writeout/finish wrapper that allocates a structure */
 disko_t *disko_open(const char *filename);
-int disko_close(disko_t *f);
+/* Close the file. If there was no error writing the file, it is renamed
+to the name specified in disko_open; otherwise, the original file is left
+intact and the temporary file is deleted. Returns DW_OK on success,
+DW_ERROR (and sets errno) if there was a file error.
+'backup' parameter:
+        <1  don't backup
+        =1  backup to file~
+        >1  keep numbered backups to file.n~
+(the semantics of this might change later to allow finer control) */
+int disko_close(disko_t *f, int backup);
 
 /* alloc/free a memory buffer
 if free_buffer is 0, the internal buffer is left alone when deallocating,

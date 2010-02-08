@@ -218,7 +218,7 @@ disko_t *disko_open(const char *filename)
         return ds;
 }
 
-int disko_close(disko_t *ds)
+int disko_close(disko_t *ds, int backup)
 {
         int err = ds->error;
 
@@ -237,7 +237,11 @@ int disko_close(disko_t *ds)
                         umask(m);
                         st.st_mode = 0666 & ~m;
                 }
-                if (rename(ds->tempname, ds->filename) < 0) {
+                if (backup) {
+                        // back up the old file
+                        make_backup_file(ds->filename, (backup != 1));
+                }
+                if (rename_file(ds->tempname, ds->filename, 1) != 0) {
                         err = errno;
                 } else {
                         // Fix the permissions on the file
