@@ -225,18 +225,25 @@ if USE_NETWORK
 cflags_network=-DUSE_NETWORK
 endif
 
-if NEED_GNU_ASPRINTF
-files_gnu_asprintf=sys/stdlib/asprintf.c
+
+## Replacement functions for crappy systems
+files_stdlib =
+if NEED_ASPRINTF
+files_stdlib += sys/stdlib/asprintf.c
 endif
-if NEED_GNU_VASPRINTF
-files_gnu_vasprintf=sys/stdlib/vasprintf.c
+if NEED_VASPRINTF
+files_stdlib += sys/stdlib/vasprintf.c
 endif
-if NEED_GNU_MEMCMP
-files_gnu_memcmp=sys/stdlib/memcmp.c
+if NEED_MEMCMP
+files_stdlib += sys/stdlib/memcmp.c
 endif
 if NEED_STRPTIME
-files_strptime=sys/stdlib/strptime.c
+files_stdlib += sys/stdlib/strptime.c
 endif
+if NEED_MKSTEMP
+files_stdlib += sys/stdlib/mkstemp.c
+endif
+
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
@@ -347,10 +354,7 @@ schismtracker_SOURCES = \
 	$(files_oss)			\
 	$(files_win32)			\
 	$(files_x11)			\
-	$(files_gnu_asprintf)		\
-	$(files_gnu_vasprintf)		\
-	$(files_gnu_memcmp)		\
-	$(files_strptime)		\
+	$(files_stdlib)			\
 	$(files_mmap)			\
 	$(files_wii)			\
 	$(files_windres)
