@@ -1015,7 +1015,7 @@ int song_export(UNUSED const char *filename, UNUSED const char *type)
 
 int song_save(const char *filename, const char *type)
 {
-        int n, ret;
+        int n, ret, backup;
 
         if (!type) {
                 // why would this happen, ever?
@@ -1061,7 +1061,10 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
                                 return SAVE_FILE_ERROR;
                         }
                         ret = song_save_formats[n].save_func(fp, current_song);
-                        if (disko_close(fp) == DW_ERROR && ret == SAVE_SUCCESS) {
+                        backup = ((status.flags & MAKE_BACKUPS)
+                                  ? (status.flags & NUMBERED_BACKUPS)
+                                  ? 65536 : 1 : 0);
+                        if (disko_close(fp, backup) == DW_ERROR && ret == SAVE_SUCCESS) {
                                 // this was not as successful as originally claimed!
                                 ret = SAVE_FILE_ERROR;
                         }
@@ -1367,7 +1370,7 @@ int song_save_sample(int n, const char *file, int format_id)
                 return 0;
         }
         int ret = sample_save_formats[format_id].save_func(fp, (song_sample_t *) smp);
-        if (disko_close(fp) == DW_ERROR) {
+        if (disko_close(fp, 0) == DW_ERROR) {
                 log_perror(get_basename(file));
                 return 0;
         }
@@ -1398,7 +1401,7 @@ int song_save_instrument(int n, const char *file)
                 return 0;
         }
         _save_it_instrument(n-1 /* grr.... */, fp, 1);
-        if (disko_close(fp) == DW_ERROR) {
+        if (disko_close(fp, 0) == DW_ERROR) {
                 log_perror(get_basename(file));
                 return 0;
         }

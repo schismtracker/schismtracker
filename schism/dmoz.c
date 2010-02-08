@@ -32,7 +32,6 @@
 #include "dmoz.h"
 #include "slurp.h"
 #include "util.h"
-#include "osdefs.h"
 
 #include "fmt.h"
 
@@ -835,107 +834,5 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 {
         dmoz_filter_ext_data(file);
         return 1;
-}
-
-
-/* FIXME: merge these -- there's a lot of unnecessary duplicate code here */
-
-static int _rename_nodestroy(const char *old, const char *newf)
-{
-/* XXX does __amigaos4__ have a special need for this? */
-#ifdef WIN32
-        /* is this code not finished? it never returns success */
-        UINT em = SetErrorMode(0);
-        if (!MoveFile(old,newf)) {
-                switch (GetLastError()) {
-                case ERROR_ALREADY_EXISTS:
-                case ERROR_FILE_EXISTS:
-                        SetErrorMode(em);
-                        return DMOZ_RENAME_EXISTS;
-                };
-                SetErrorMode(em);
-                return DMOZ_RENAME_ERRNO;
-        }
-        SetErrorMode(em);
-        return DMOZ_RENAME_OK;
-#else
-        if (link(old,newf) == -1) {
-                return (errno == EEXIST)
-                        ? DMOZ_RENAME_EXISTS
-                        : DMOZ_RENAME_ERRNO;
-        }
-        if (unlink(old) == -1) {
-                /* This can occur when people are using a system with
-                broken link() semantics, or if the user can create files
-                that he cannot remove. these systems are decidedly not POSIX.1
-                but they may try to compile schism, and we won't know they
-                are broken unless we warn them.
-                */
-                log_appendf(3, "link() succeeded, but unlink() failed. something is very wrong");
-        }
-        return DMOZ_RENAME_OK;
-#endif
-}
-
-int rename_file(const char *old, const char *newf, int clobber)
-{
-        if (!clobber)
-                return _rename_nodestroy(old, newf);
-
-#ifdef WIN32
-        UINT em;
-        em = SetErrorMode(0);
-        if (!MoveFile(old,newf)) {
-                switch (GetLastError()) {
-                case ERROR_ALREADY_EXISTS:
-                case ERROR_FILE_EXISTS:
-                        break;
-                default:
-                        /* eh... */
-                        SetErrorMode(em);
-                        return DMOZ_RENAME_ERRNO;
-                };
-
-                if (MoveFileEx(old,newf,MOVEFILE_REPLACE_EXISTING)) {
-                        /* yay */
-                        SetErrorMode(em);
-                        return DMOZ_RENAME_OK;
-                }
-                /* this sometimes work with win95 and novell shares */
-                chmod(newf,0777);
-                chmod(old,0777);
-                /* more junk */
-                SetFileAttributesA(newf,FILE_ATTRIBUTE_NORMAL);
-                SetFileAttributesA(newf,FILE_ATTRIBUTE_TEMPORARY);
-
-                if (MoveFile(old, newf)) {
-                        /* err.. yay! */
-                        win32_filecreated_callback(newf);
-                        SetErrorMode(em);
-                        return DMOZ_RENAME_OK;
-                }
-                /* okay, let's try again */
-                if (!DeleteFileA(newf)) {
-                        /* no chance! */
-                        SetErrorMode(em);
-                        return DMOZ_RENAME_ERRNO;
-                }
-                if (MoveFile(old, newf)) {
-                        /* .... */
-                        win32_filecreated_callback(newf);
-                        SetErrorMode(em);
-                        return DMOZ_RENAME_OK;
-                }
-                /* alright, thems the breaks. win95 eats your files,
-                and not a damn thing I can do about it.
-                */
-                SetErrorMode(em);
-                return DMOZ_RENAME_ERRNO;
-        }
-        win32_filecreated_callback(newf);
-#else
-        if (rename(old,newf) == -1) return DMOZ_RENAME_ERRNO;
-#endif
-        return DMOZ_RENAME_OK;
 }
 

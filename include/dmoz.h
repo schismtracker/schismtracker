@@ -208,12 +208,4 @@ void dmoz_cache_update_names(const char *path, const char *filen, const char *di
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 
-/* this isn't really dmoz-related, but... oh well */
-enum {
-        DMOZ_RENAME_OK = 0, /* success */
-        DMOZ_RENAME_ERRNO = 1, /* problem; check errno */
-        DMOZ_RENAME_EXISTS = 2, /* (if clobber) destination file exists */
-};
-int rename_file(const char *old, const char *newf, int clobber);
-
 #endif /* ! DMOZ_H */

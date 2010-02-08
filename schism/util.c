@@ -30,7 +30,7 @@ extraneous libraries (i.e. GLib). */
 #include "headers.h"
 
 #include "util.h"
-#include "dmoz.h"
+#include "osdefs.h" /* need this for win32_filecreated_callback */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -497,38 +497,30 @@ int get_num_lines(const char *text)
 /* --------------------------------------------------------------------- */
 /* FILE INFO FUNCTIONS */
 
+/* 0 = success, !0 = failed (check errno) */
 int make_backup_file(const char *filename, int numbered)
 {
-        char *buf;
-        int e = 0, n, ret;
-        int maxlen = strlen(filename) + 16; /* plenty of room to breathe */
+        char buf[PATH_MAX];
 
-        buf = mem_alloc(maxlen);
+        /* ensure plenty of room to breathe */
+        if (strlen(filename) > PATH_MAX - 16) {
+                errno = ENAMETOOLONG;
+                return -1;
+        }
+
         if (numbered) {
                 /* If some crazy person needs more than 65536 backup files,
                    they probably have more serious issues to tend to. */
-                n = 1;
+                int n = 1, ret;
                 do {
-                        snprintf(buf, maxlen, "%s.%d~", filename, n++);
+                        sprintf(buf, "%s.%d~", filename, n++);
                         ret = rename_file(filename, buf, 0);
-                } while (ret == DMOZ_RENAME_EXISTS && n < 65536);
-                if (ret == DMOZ_RENAME_ERRNO)
-                        e = errno;
-                else if (ret != DMOZ_RENAME_OK)
-                        e = EEXIST;
+                } while (ret != 0 && errno == EEXIST && n < 65536);
+                return ret;
         } else {
                 strcpy(buf, filename);
                 strcat(buf, "~");
-                if (rename_file(filename, buf, 1) == DMOZ_RENAME_ERRNO)
-                        e = errno;
-        }
-        free(buf);
-
-        if (e) {
-                errno = e;
-                return 0;
-        } else {
-                return 1;
+                return rename_file(filename, buf, 1);
         }
 }
 
@@ -706,3 +698,112 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
         return 0;
 #endif
 }
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+static int _rename_nodestroy(const char *old, const char *new)
+{
+/* XXX does __amigaos4__ have a special need for this? */
+#ifdef WIN32
+        /* is this code not finished? it never returns success */
+        UINT em = SetErrorMode(0);
+        if (!MoveFile(old, new)) {
+                switch (GetLastError()) {
+                case ERROR_ALREADY_EXISTS:
+                case ERROR_FILE_EXISTS:
+                        SetErrorMode(em);
+                        errno = EEXIST;
+                        return -1;
+                };
+                SetErrorMode(em);
+                return -1;
+        }
+        SetErrorMode(em);
+        return 0;
+#else
+        if (link(old, new) == -1) {
+                return -1;
+        }
+        if (unlink(old) == -1) {
+                /* This can occur when people are using a system with
+                broken link() semantics, or if the user can create files
+                that he cannot remove. these systems are decidedly not POSIX.1
+                but they may try to compile schism, and we won't know they
+                are broken unless we warn them.
+                */
+                fprintf(stderr, "link() succeeded, but unlink() failed. something is very wrong\n");
+        }
+        return 0;
+#endif
+}
+
+/* 0 = success, !0 = failed (check errno) */
+int rename_file(const char *old, const char *new, int overwrite)
+{
+        if (!overwrite)
+                return _rename_nodestroy(old, new);
+
+#ifdef WIN32
+        UINT em;
+        em = SetErrorMode(0);
+        if (MoveFile(old, new)) {
+                win32_filecreated_callback(new);
+                return 0;
+        }
+        switch (GetLastError()) {
+        case ERROR_ALREADY_EXISTS:
+        case ERROR_FILE_EXISTS:
+                break;
+        default:
+                /* eh... */
+                SetErrorMode(em);
+                return -1;
+        };
+
+        if (MoveFileEx(old, new, MOVEFILE_REPLACE_EXISTING)) {
+                /* yay */
+                SetErrorMode(em);
+                return 0;
+        }
+        /* this sometimes work with win95 and novell shares */
+        chmod(new, 0777);
+        chmod(old, 0777);
+        /* more junk */
+        SetFileAttributesA(new, FILE_ATTRIBUTE_NORMAL);
+        SetFileAttributesA(new, FILE_ATTRIBUTE_TEMPORARY);
+
+        if (MoveFile(old, new)) {
+                /* err.. yay! */
+                win32_filecreated_callback(new);
+                SetErrorMode(em);
+                return 0;
+        }
+        /* okay, let's try again */
+        if (!DeleteFileA(new)) {
+                /* no chance! */
+                SetErrorMode(em);
+                return -1;
+        }
+        if (MoveFile(old, new)) {
+                /* .... */
+                win32_filecreated_callback(new);
+                SetErrorMode(em);
+                return 0;
+        }
+        /* alright, thems the breaks. win95 eats your files,
+        and not a damn thing I can do about it.
+        */
+        SetErrorMode(em);
+        return -1;
+#else
+        int r = rename(old, new);
+        if (r != 0 && errno == EEXIST) {
+                /* Broken rename()? Try smashing the old file first,
+                and hope *that* doesn't also fail ;) */
+                if (unlink(old) != 0 || rename(old, new) == -1)
+                        return -1;
+        }
+        return r;
+#endif
+}
+

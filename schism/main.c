@@ -27,6 +27,7 @@
    In other news, TODO: clean this mess on a rainy day.
    and yes, that in fact rhymed :P */
 
+#define NEED_TIME
 #include "headers.h"
 
 #include "event.h"
