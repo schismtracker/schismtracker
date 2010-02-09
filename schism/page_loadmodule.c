@@ -984,7 +984,9 @@ static void load_module_set_page(void)
                 pages[PAGE_LOAD_MODULE].selected_widget = (flist.num_files > 0) ? 0 : 1;
 
         // Don't reparse the glob if it hasn't changed; that will mess with the cursor position
-        if (strcasecmp(glob_list_src, cfg_module_pattern) != 0)
+        if (strcasecmp(glob_list_src, cfg_module_pattern) == 0)
+                strcpy(filename_entry, glob_list_src);
+        else
                 set_default_glob(1);
 }
 
