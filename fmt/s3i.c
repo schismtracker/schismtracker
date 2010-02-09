@@ -96,15 +96,15 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *sm
         smp->c5speed = header->c2spd;
         smp->flags = 0;
         if (header->flags & 1)
-                smp->flags |= SAMP_LOOP;
+                smp->flags |= CHN_LOOP;
         if (header->flags & 2)
-                smp->flags |= SAMP_STEREO;
+                smp->flags |= CHN_STEREO;
         if (header->flags & 4)
-                smp->flags |= SAMP_16_BIT;
+                smp->flags |= CHN_16BIT;
 
         if (header->type == 2) {
-                smp->flags |= SAMP_ADLIB;
-                smp->flags &= ~(SAMP_LOOP|SAMP_16_BIT);
+                smp->flags |= CHN_ADLIB;
+                smp->flags &= ~(CHN_LOOP|CHN_16BIT);
 
                 memcpy(smp->adlib_bytes, &header->length, 11);
 
@@ -116,7 +116,7 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *sm
         }
 
         int format = SF_M | SF_LE; // endianness; channels
-        format |= (smp->flags & SAMP_16_BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
+        format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
 
         csf_read_sample((song_sample_t *) smp, format,
                 (const char *) (data + 0x50), (uint32_t) (length - 0x50));

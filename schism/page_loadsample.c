@@ -135,9 +135,9 @@ static void file_list_reposition(void)
 
                 widgets_loadsample[2].d.numentry.value = f ? f->smp_speed : 0;
 
-                if (f && f->smp_flags & SAMP_LOOP_PINGPONG) {
+                if (f && f->smp_flags & CHN_PINGPONGLOOP) {
                         widgets_loadsample[3].d.menutoggle.state = 2;
-                } else if (f && f->smp_flags & SAMP_LOOP) {
+                } else if (f && f->smp_flags & CHN_LOOP) {
                         widgets_loadsample[3].d.menutoggle.state = 1;
                 } else {
                         widgets_loadsample[3].d.menutoggle.state = 0;
@@ -146,9 +146,9 @@ static void file_list_reposition(void)
                 widgets_loadsample[4].d.numentry.value = f ? f->smp_loop_start : 0;
                 widgets_loadsample[5].d.numentry.value = f ? f->smp_loop_end : 0;
 
-                if (f && f->smp_flags & SAMP_SUSLOOP_PINGPONG) {
+                if (f && f->smp_flags & CHN_PINGPONGSUSTAIN) {
                         widgets_loadsample[6].d.menutoggle.state = 2;
-                } else if (f && f->smp_flags & SAMP_SUSLOOP) {
+                } else if (f && f->smp_flags & CHN_SUSTAINLOOP) {
                         widgets_loadsample[6].d.menutoggle.state = 1;
                 } else {
                         widgets_loadsample[6].d.menutoggle.state = 0;
@@ -246,14 +246,14 @@ static void load_sample_draw_const(void)
 
                 if (!f->smp_length && !f->smp_filename && !f->smp_flags) {
                         draw_text_len("No sample",13, 64, 21, 2, 0);
-                } else if (f->smp_flags & SAMP_STEREO) {
+                } else if (f->smp_flags & CHN_STEREO) {
                         draw_text_len(
-                                (f->smp_flags & SAMP_16_BIT
+                                (f->smp_flags & CHN_16BIT
                                 ? "16 bit Stereo" : "8 bit Stereo"),
                         13, 64, 21, 2, 0);
                 } else {
                         draw_text_len(
-                                (f->smp_flags & SAMP_16_BIT
+                                (f->smp_flags & CHN_16BIT
                                 ? "16 bit" : "8 bit"),
                         13, 64, 21, 2, 0);
                 }
@@ -505,7 +505,7 @@ static void finish_load(int cur)
 
         memused_songchanged();
         smp = song_get_sample(cur);
-        if (smp->flags & SAMP_STEREO) {
+        if (smp->flags & CHN_STEREO) {
                 struct dialog *dd;
                 create_button(stereo_cvt_widgets+0, 27, 30, 6,
                                 0, 0, 2, 1, 1,
@@ -833,44 +833,44 @@ static void handle_load_copy(song_sample_t *s)
         handle_load_copy_uint(widgets_loadsample[13].d.thumbbar.value, &s->vib_speed);
         switch (widgets_loadsample[3].d.menutoggle.state) {
         case 0:
-                if (s->flags & (SAMP_LOOP|SAMP_LOOP_PINGPONG)) {
-                        s->flags &= ~(SAMP_LOOP|SAMP_LOOP_PINGPONG);
+                if (s->flags & (CHN_LOOP|CHN_PINGPONGLOOP)) {
+                        s->flags &= ~(CHN_LOOP|CHN_PINGPONGLOOP);
                         fake_slot_changed=1;
                 }
                 break;
         case 1:
-                if ((s->flags & (SAMP_LOOP|SAMP_LOOP_PINGPONG)) == SAMP_LOOP) {
-                        s->flags &= ~(SAMP_LOOP|SAMP_LOOP_PINGPONG);
-                        s->flags |= (SAMP_LOOP);
+                if ((s->flags & (CHN_LOOP|CHN_PINGPONGLOOP)) == CHN_LOOP) {
+                        s->flags &= ~(CHN_LOOP|CHN_PINGPONGLOOP);
+                        s->flags |= (CHN_LOOP);
                         fake_slot_changed=1;
                 }
                 break;
         case 2:
-                if ((s->flags & (SAMP_LOOP|SAMP_LOOP_PINGPONG)) == SAMP_LOOP_PINGPONG) {
-                        s->flags &= ~(SAMP_LOOP|SAMP_LOOP_PINGPONG);
-                        s->flags |= (SAMP_LOOP_PINGPONG);
+                if ((s->flags & (CHN_LOOP|CHN_PINGPONGLOOP)) == CHN_PINGPONGLOOP) {
+                        s->flags &= ~(CHN_LOOP|CHN_PINGPONGLOOP);
+                        s->flags |= (CHN_PINGPONGLOOP);
                         fake_slot_changed=1;
                 }
                 break;
         };
         switch (widgets_loadsample[6].d.menutoggle.state) {
         case 0:
-                if (s->flags & (SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG)) {
-                        s->flags &= ~(SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG);
+                if (s->flags & (CHN_SUSTAINLOOP|CHN_PINGPONGSUSTAIN)) {
+                        s->flags &= ~(CHN_SUSTAINLOOP|CHN_PINGPONGSUSTAIN);
                         fake_slot_changed=1;
                 }
                 break;
         case 1:
-                if ((s->flags & (SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG)) == SAMP_SUSLOOP) {
-                        s->flags &= ~(SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG);
-                        s->flags |= (SAMP_SUSLOOP);
+                if ((s->flags & (CHN_SUSTAINLOOP|CHN_PINGPONGSUSTAIN)) == CHN_SUSTAINLOOP) {
+                        s->flags &= ~(CHN_SUSTAINLOOP|CHN_PINGPONGSUSTAIN);
+                        s->flags |= (CHN_SUSTAINLOOP);
                         fake_slot_changed=1;
                 }
                 break;
         case 2:
-                if ((s->flags & (SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG)) == SAMP_SUSLOOP_PINGPONG) {
-                        s->flags &= ~(SAMP_SUSLOOP|SAMP_SUSLOOP_PINGPONG);
-                        s->flags |= (SAMP_SUSLOOP_PINGPONG);
+                if ((s->flags & (CHN_SUSTAINLOOP|CHN_PINGPONGSUSTAIN)) == CHN_PINGPONGSUSTAIN) {
+                        s->flags &= ~(CHN_SUSTAINLOOP|CHN_PINGPONGSUSTAIN);
+                        s->flags |= (CHN_PINGPONGSUSTAIN);
                         fake_slot_changed=1;
                 }
                 break;

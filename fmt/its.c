@@ -42,21 +42,21 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->smp_flags = 0;
 
         if (its->flags & 2) {
-                file->smp_flags |= SAMP_16_BIT;
+                file->smp_flags |= CHN_16BIT;
         }
         if (its->flags & 16) {
-                file->smp_flags |= SAMP_LOOP;
+                file->smp_flags |= CHN_LOOP;
                 if (its->flags & 64)
-                        file->smp_flags |= SAMP_LOOP_PINGPONG;
+                        file->smp_flags |= CHN_PINGPONGLOOP;
         }
         if (its->flags & 32) {
-                file->smp_flags |= SAMP_SUSLOOP;
+                file->smp_flags |= CHN_SUSTAINLOOP;
                 if (its->flags & 128)
-                        file->smp_flags |= SAMP_SUSLOOP_PINGPONG;
+                        file->smp_flags |= CHN_PINGPONGSUSTAIN;
         }
 
-        if (its->dfp & 128) file->smp_flags |= SAMP_PANNING;
-        if (its->flags & 4) file->smp_flags |= SAMP_STEREO;
+        if (its->dfp & 128) file->smp_flags |= CHN_PANNING;
+        if (its->flags & 4) file->smp_flags |= CHN_STEREO;
 
         file->smp_defvol = its->vol;
         file->smp_gblvol = its->gvl;
@@ -117,20 +117,20 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 
         smp->global_volume = its->gvl;
         if (its->flags & 16) {
-                smp->flags |= SAMP_LOOP;
+                smp->flags |= CHN_LOOP;
                 if (its->flags & 64)
-                        smp->flags |= SAMP_LOOP_PINGPONG;
+                        smp->flags |= CHN_PINGPONGLOOP;
         }
         if (its->flags & 32) {
-                smp->flags |= SAMP_SUSLOOP;
+                smp->flags |= CHN_SUSTAINLOOP;
                 if (its->flags & 128)
-                        smp->flags |= SAMP_SUSLOOP_PINGPONG;
+                        smp->flags |= CHN_PINGPONGSUSTAIN;
         }
         smp->volume = its->vol * 4;
         strncpy(smp->name, (const char *) its->name, 25);
         smp->panning = (its->dfp & 127) * 4;
         if (its->dfp & 128)
-                smp->flags |= SAMP_PANNING;
+                smp->flags |= CHN_PANNING;
         smp->loop_start = bswapLE32(its->loopbegin);
         smp->loop_end = bswapLE32(its->loopend);
         smp->c5speed = bswapLE32(its->C5Speed);
@@ -147,19 +147,19 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
         // (I should probably have more of these in general)
         if (smp->loop_start > smp->length) {
                 smp->loop_start = smp->length;
-                smp->flags &= ~(SAMP_LOOP | SAMP_LOOP_PINGPONG);
+                smp->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
         }
         if (smp->loop_end > smp->length) {
                 smp->loop_end = smp->length;
-                smp->flags &= ~(SAMP_LOOP | SAMP_LOOP_PINGPONG);
+                smp->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
         }
         if (smp->sustain_start > smp->length) {
                 smp->sustain_start = smp->length;
-                smp->flags &= ~(SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG);
+                smp->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
         }
         if (smp->sustain_end > smp->length) {
                 smp->sustain_end = smp->length;
-                smp->flags &= ~(SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG);
+                smp->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
         }
 
         bp = bswapLE32(its->samplepointer);
@@ -185,24 +185,24 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
         its.gvl = smp->global_volume;
         if (smp->data && smp->length)
                 its.flags |= 1;
-        if (smp->flags & SAMP_16_BIT)
+        if (smp->flags & CHN_16BIT)
                 its.flags |= 2;
-        if (smp->flags & SAMP_STEREO)
+        if (smp->flags & CHN_STEREO)
                 its.flags |= 4;
-        if (smp->flags & SAMP_LOOP)
+        if (smp->flags & CHN_LOOP)
                 its.flags |= 16;
-        if (smp->flags & SAMP_SUSLOOP)
+        if (smp->flags & CHN_SUSTAINLOOP)
                 its.flags |= 32;
-        if (smp->flags & SAMP_LOOP_PINGPONG)
+        if (smp->flags & CHN_PINGPONGLOOP)
                 its.flags |= 64;
-        if (smp->flags & SAMP_SUSLOOP_PINGPONG)
+        if (smp->flags & CHN_PINGPONGSUSTAIN)
                 its.flags |= 128;
         its.vol = smp->volume / 4;
         strncpy((char *) its.name, smp->name, 25);
         its.name[25] = 0;
         its.cvt = 1;                    // signed samples
         its.dfp = smp->panning / 4;
-        if (smp->flags & SAMP_PANNING)
+        if (smp->flags & CHN_PANNING)
                 its.dfp |= 0x80;
         its.length = bswapLE32(smp->length);
         its.loopbegin = bswapLE32(smp->loop_start);

@@ -655,7 +655,7 @@ void song_init_instruments(int qq)
 
 void song_insert_sample_slot(int n)
 {
-        if (current_song->samples[SCHISM_MAX_SAMPLES - 1].data != NULL)
+        if (current_song->samples[MAX_SAMPLES - 1].data != NULL)
                 return;
 
         status.flags |= SONG_NEEDS_SAVE;
@@ -700,12 +700,12 @@ void song_insert_instrument_slot(int n)
 {
         int i;
 
-        if (!song_instrument_is_empty(SCHISM_MAX_INSTRUMENTS))
+        if (!song_instrument_is_empty(MAX_INSTRUMENTS))
                 return;
 
         status.flags |= SONG_NEEDS_SAVE;
         song_lock_audio();
-        for (i = SCHISM_MAX_INSTRUMENTS; i > n; i--)
+        for (i = MAX_INSTRUMENTS; i > n; i--)
                 current_song->instruments[i] = current_song->instruments[i-1];
         current_song->instruments[n] = NULL;
         _adjust_instruments_in_patterns(n, 1);
@@ -720,9 +720,9 @@ void song_remove_instrument_slot(int n)
                 return;
 
         song_lock_audio();
-        for (i = n; i < SCHISM_MAX_INSTRUMENTS; i++)
+        for (i = n; i < MAX_INSTRUMENTS; i++)
                 current_song->instruments[i] = current_song->instruments[i+1];
-        current_song->instruments[SCHISM_MAX_INSTRUMENTS] = NULL;
+        current_song->instruments[MAX_INSTRUMENTS] = NULL;
         _adjust_instruments_in_patterns(n, -1);
         song_unlock_audio();
 }

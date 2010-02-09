@@ -198,14 +198,14 @@ static int _last_vis_inst(void)
         n = 99;
         j = 0;
         /* 65 is last visible sample on last page */
-        for (i = 65; i < SCHISM_MAX_INSTRUMENTS; i++) {
+        for (i = 65; i < MAX_INSTRUMENTS; i++) {
                 if (!song_instrument_is_empty(i)) {
                         j = i;
                 }
         }
         while ((j + 34) > n) 
                 n += 34;
-        return MIN(n, SCHISM_MAX_INSTRUMENTS - 1);
+        return MIN(n, MAX_INSTRUMENTS - 1);
 }
 /* the actual list */
 
@@ -380,7 +380,7 @@ static void instrument_list_draw_list(void)
         int selected = (ACTIVE_PAGE.selected_widget == 0);
         int is_current;
         int ss, cl = 0, cr = 0;
-        int is_playing[SCHISM_MAX_INSTRUMENTS];
+        int is_playing[MAX_INSTRUMENTS];
         char buf[4];
 
         ss = -1;
@@ -955,7 +955,7 @@ static int note_trans_handle_key(struct key_event * k)
                                         new_pos--;
                                         new_line++;
                                 }
-                                n = MIN(n, SCHISM_MAX_SAMPLES - 1);
+                                n = MIN(n, MAX_SAMPLES - 1);
                                 ins->sample_map[note_trans_sel_line] = n;
                                 sample_set(n);
                                 break;

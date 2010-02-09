@@ -90,13 +90,13 @@ static int _last_vis_sample(void)
         n = 99;
         j = 0;
         /* 65 is last visible sample on last page */
-        for (i = 65; i < SCHISM_MAX_SAMPLES; i++) {
+        for (i = 65; i < MAX_SAMPLES; i++) {
                 if (!song_sample_is_empty(i)) {
                         j = i;
                 }
         }
         while ((j + 34) > n) n += 34;
-        if (n >= SCHISM_MAX_SAMPLES) n = SCHISM_MAX_SAMPLES - 1;
+        if (n >= MAX_SAMPLES) n = MAX_SAMPLES - 1;
         return n;
 }
 
@@ -155,7 +155,7 @@ static void sample_list_draw_list(void)
         int has_data, is_selected;
         char buf[64];
         int ss, cl = 0, cr = 0;
-        int is_playing[SCHISM_MAX_SAMPLES];
+        int is_playing[MAX_SAMPLES];
 
         ss = -1;
 
@@ -236,7 +236,7 @@ static void sample_list_predraw_hook(void)
         widgets_samplelist[2].d.thumbbar.text_at_min = (sample->flags & CHN_MUTE) ? "  Muted  " : NULL;
 
         /* default pan (another modplug hack) */
-        widgets_samplelist[3].d.toggle.state = (sample->flags & SAMP_PANNING);
+        widgets_samplelist[3].d.toggle.state = (sample->flags & CHN_PANNING);
         widgets_samplelist[4].d.thumbbar.value = sample->panning / 4;
 
         widgets_samplelist[5].d.thumbbar.value = sample->vib_speed;
@@ -245,11 +245,11 @@ static void sample_list_predraw_hook(void)
         widgets_samplelist[8].d.numentry.value = song_sample_get_c5speed(current_sample);
 
         widgets_samplelist[9].d.menutoggle.state =
-                (sample->flags & SAMP_LOOP ? (sample->flags & SAMP_LOOP_PINGPONG ? 2 : 1) : 0);
+                (sample->flags & CHN_LOOP ? (sample->flags & CHN_PINGPONGLOOP ? 2 : 1) : 0);
         widgets_samplelist[10].d.numentry.value = sample->loop_start;
         widgets_samplelist[11].d.numentry.value = sample->loop_end;
         widgets_samplelist[12].d.menutoggle.state =
-                (sample->flags & SAMP_SUSLOOP ? (sample->flags & SAMP_SUSLOOP_PINGPONG ? 2 : 1) : 0);
+                (sample->flags & CHN_SUSTAINLOOP ? (sample->flags & CHN_PINGPONGSUSTAIN ? 2 : 1) : 0);
         widgets_samplelist[13].d.numentry.value = sample->sustain_start;
         widgets_samplelist[14].d.numentry.value = sample->sustain_end;
 
@@ -272,8 +272,8 @@ static void sample_list_predraw_hook(void)
 
         if (has_data) {
                 sprintf(buf, "%d bit%s",
-                        (sample->flags & SAMP_16_BIT) ? 16 : 8,
-                        (sample->flags & SAMP_STEREO) ? " Stereo" : "");
+                        (sample->flags & CHN_16BIT) ? 16 : 8,
+                        (sample->flags & CHN_STEREO) ? " Stereo" : "");
         } else {
                 strcpy(buf, "No sample");
         }
@@ -573,7 +573,7 @@ static void do_quality_toggle(UNUSED void *data)
 {
         song_sample_t *sample = song_get_sample(current_sample);
 
-        if (sample->flags & SAMP_STEREO)
+        if (sample->flags & CHN_STEREO)
                 status_text_flash("Can't toggle quality for stereo samples");
         else
                 sample_toggle_quality(sample, 0);
@@ -587,7 +587,7 @@ static void do_delete_sample(UNUSED void *data)
 static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 {
         song_sample_t *sample = song_get_sample(current_sample);
-        unsigned long pos = ((sample->flags & SAMP_SUSLOOP)
+        unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
                              ? MAX(sample->loop_end, sample->sustain_end)
                              : sample->loop_end);
 
@@ -607,13 +607,13 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 {
         song_sample_t *sample = song_get_sample(current_sample);
         signed char *data;
-        unsigned long pos = ((sample->flags & SAMP_SUSLOOP)
+        unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
                              ? MIN(sample->loop_start, sample->sustain_start)
                              : sample->loop_start);
-        unsigned long start_byte = pos * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
-                                * ((sample->flags & SAMP_STEREO) ? 2 : 1);
-        unsigned long  bytes = (sample->length - pos) * ((sample->flags & SAMP_16_BIT) ? 2 : 1)
-                                * ((sample->flags & SAMP_STEREO) ? 2 : 1);
+        unsigned long start_byte = pos * ((sample->flags & CHN_16BIT) ? 2 : 1)
+                                * ((sample->flags & CHN_STEREO) ? 2 : 1);
+        unsigned long  bytes = (sample->length - pos) * ((sample->flags & CHN_16BIT) ? 2 : 1)
+                                * ((sample->flags & CHN_STEREO) ? 2 : 1);
 
         if (pos == 0 || pos > sample->length)
                 return;
@@ -703,9 +703,9 @@ static void do_txtsynth(UNUSED void *data)
         sample->loop_start = 0;
         sample->loop_end = len;
         sample->sustain_start = sample->sustain_end = 0;
-        sample->flags |= SAMP_LOOP;
-        sample->flags &= ~(SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG
-                           | SAMP_16_BIT | SAMP_STEREO | SAMP_ADLIB);
+        sample->flags |= CHN_LOOP;
+        sample->flags &= ~(CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN
+                           | CHN_16BIT | CHN_STEREO | CHN_ADLIB);
         sample_host_dialog(-1);
 }
 
@@ -785,12 +785,12 @@ static void do_adlibconfig(UNUSED void *data)
                 csf_free_sample(sample->data);
         sample->data = csf_allocate_sample(1);
         sample->length = 1;
-        if (!(sample->flags & SAMP_ADLIB)) {
-                sample->flags |= SAMP_ADLIB;
+        if (!(sample->flags & CHN_ADLIB)) {
+                sample->flags |= CHN_ADLIB;
                 status_text_flash("Created adlib sample");
         }
-        sample->flags &= ~(SAMP_16_BIT | SAMP_STEREO
-                        | SAMP_LOOP | SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG);
+        sample->flags &= ~(CHN_16BIT | CHN_STEREO
+                        | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
         sample->loop_start = sample->loop_end = 0;
         sample->sustain_start = sample->sustain_end = 0;
         if (!sample->c5speed) {
@@ -1246,14 +1246,14 @@ static void sample_toggle_solo(int n)
         if (song_get_sample(n)->flags & CHN_MUTE) {
                 solo = 1;
         } else {
-                for (i = 1; i < SCHISM_MAX_SAMPLES; i++) {
+                for (i = 1; i < MAX_SAMPLES; i++) {
                         if (i != n && !(song_get_sample(i)->flags & CHN_MUTE)) {
                                 solo = 1;
                                 break;
                         }
                 }
         }
-        for (i = 1; i < SCHISM_MAX_SAMPLES; i++)
+        for (i = 1; i < MAX_SAMPLES; i++)
                 sample_set_mute(i, solo && i != n);
 }
 
@@ -1262,7 +1262,7 @@ static void sample_toggle_solo(int n)
 static void sample_list_handle_alt_key(struct key_event * k)
 {
         song_sample_t *sample = song_get_sample(current_sample);
-        int canmod = (sample->data != NULL && !(sample->flags & SAMP_ADLIB));
+        int canmod = (sample->data != NULL && !(sample->flags & CHN_ADLIB));
 
         if (k->state) return;
         switch (k->sym) {
@@ -1272,7 +1272,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 return;
         case SDLK_b:
                 if (canmod && (sample->loop_start > 0
-                               || ((sample->flags & SAMP_SUSLOOP) && sample->sustain_start > 0))) {
+                               || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
                         dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
                 }
                 return;
@@ -1301,7 +1301,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 break;
         case SDLK_l:
                 if (canmod && (sample->loop_end > 0
-                               || ((sample->flags & SAMP_SUSLOOP) && sample->sustain_end > 0))) {
+                               || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_end > 0))) {
                         dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
                 }
                 return;
@@ -1538,25 +1538,25 @@ static void update_sample_loop_flags(void)
         song_sample_t *sample = song_get_sample(current_sample);
 
         /* these switch statements fall through */
-        sample->flags &= ~(SAMP_LOOP | SAMP_LOOP_PINGPONG | SAMP_SUSLOOP | SAMP_SUSLOOP_PINGPONG);
+        sample->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
         switch (widgets_samplelist[9].d.menutoggle.state) {
-        case 2: sample->flags |= SAMP_LOOP_PINGPONG;
-        case 1: sample->flags |= SAMP_LOOP;
+        case 2: sample->flags |= CHN_PINGPONGLOOP;
+        case 1: sample->flags |= CHN_LOOP;
         }
 
         switch (widgets_samplelist[12].d.menutoggle.state) {
-        case 2: sample->flags |= SAMP_SUSLOOP_PINGPONG;
-        case 1: sample->flags |= SAMP_SUSLOOP;
+        case 2: sample->flags |= CHN_PINGPONGSUSTAIN;
+        case 1: sample->flags |= CHN_SUSTAINLOOP;
         }
 
-        if (sample->flags & SAMP_LOOP) {
+        if (sample->flags & CHN_LOOP) {
                 if (sample->loop_start == sample->length)
                         sample->loop_start = 0;
                 if (sample->loop_end <= sample->loop_start)
                         sample->loop_end = sample->length;
         }
 
-        if (sample->flags & SAMP_SUSLOOP) {
+        if (sample->flags & CHN_SUSTAINLOOP) {
                 if (sample->sustain_start == sample->length)
                         sample->sustain_start = 0;
                 if (sample->sustain_end <= sample->sustain_start)
@@ -1625,9 +1625,9 @@ static void update_values_in_song(void)
         sample->global_volume = widgets_samplelist[2].d.thumbbar.value;
 
         if (widgets_samplelist[3].d.toggle.state)
-                sample->flags |= SAMP_PANNING;
+                sample->flags |= CHN_PANNING;
         else
-                sample->flags &= ~SAMP_PANNING;
+                sample->flags &= ~CHN_PANNING;
         sample->vib_speed = widgets_samplelist[5].d.thumbbar.value;
         sample->vib_depth = widgets_samplelist[6].d.thumbbar.value;
 
@@ -1653,7 +1653,7 @@ static void update_panning(void)
 {
         song_sample_t *sample = song_get_sample(current_sample);
 
-        sample->flags |= SAMP_PANNING;
+        sample->flags |= CHN_PANNING;
         sample->panning = widgets_samplelist[4].d.thumbbar.value * 4;
 
         widgets_samplelist[3].d.toggle.state = 1;
@@ -1666,7 +1666,7 @@ int sample_is_used_by_instrument(int samp)
         song_instrument_t *ins;
         int i, j;
         if (samp < 1) return 0;
-        for (i = 1; i <= SCHISM_MAX_INSTRUMENTS; i++) {
+        for (i = 1; i <= MAX_INSTRUMENTS; i++) {
                 ins = song_get_instrument(i);
                 if (!ins) continue;
                 for (j = 0; j < 120; j++) {

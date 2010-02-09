@@ -204,7 +204,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
                                 if (smp->loop_end > smp->length)
                                         smp->loop_end = smp->length;
                                 if (smp->loop_start + 2 < smp->loop_end)
-                                        smp->flags |= SAMP_LOOP;
+                                        smp->flags |= CHN_LOOP;
                         }
                         // TODO vhdr.data->VHDR.volume ?
                 }
@@ -255,7 +255,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
                         case 1:
                                 break;
                         case 2:
-                                smp->flags |= SAMP_STEREO;
+                                smp->flags |= CHN_STEREO;
                                 break;
                         }
 
@@ -265,7 +265,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
                         case 8:
                                 break;
                         case 16:
-                                smp->flags |= SAMP_16_BIT;
+                                smp->flags |= CHN_16BIT;
                                 break;
                         }
 
@@ -281,7 +281,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 #ifdef WORDS_BIGENDIAN
                         memcpy(smp->data, ssnd.data, ssnd.size);
 #else
-                        if (smp->flags & SAMP_16_BIT) {
+                        if (smp->flags & CHN_16BIT) {
                                 swab(ssnd.data, smp->data, ssnd.size & ~1);
                         } else {
                                 memcpy(smp->data, ssnd.data, ssnd.size);

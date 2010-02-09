@@ -29,6 +29,7 @@
 #include "sndfile.h"
 #include "util.h"
 #include "disko.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 /* things that used to be in mplink */
@@ -79,7 +80,7 @@ extern struct audio_settings audio_settings;
 struct sample_save_format {
         const char *name;
         const char *ext;
-        int (*save_func) (disko_t *fp, song_sample_t *smp);
+        fmt_save_sample_func save_func;
 };
 
 extern struct sample_save_format sample_save_formats[];
@@ -90,7 +91,7 @@ extern struct sample_save_format sample_save_formats[];
 struct song_save_format {
         const char *label; // label for the button on the save page
         const char *ext; // no dot
-        int (*save_func) (disko_t *fp, song_t *song);
+        fmt_save_song_func save_func;
 };
 
 extern struct song_save_format song_save_formats[];
@@ -98,20 +99,6 @@ extern struct song_save_format song_export_formats[];
 
 /* --------------------------------------------------------------------- */
 /* some enums */
-
-// sample flags
-#define SAMP_16_BIT            CHN_16BIT
-#define SAMP_LOOP              CHN_LOOP
-#define SAMP_LOOP_PINGPONG     CHN_PINGPONGLOOP
-#define SAMP_SUSLOOP           CHN_SUSTAINLOOP
-#define SAMP_SUSLOOP_PINGPONG  CHN_PINGPONGSUSTAIN
-#define SAMP_PANNING           CHN_PANNING
-#define SAMP_STEREO            CHN_STEREO
-#define SAMP_ADLIB             CHN_ADLIB // indicates an adlib sample
-
-#define SAMP_GLOBALVOL 0x10000 /* used for feature-check, completely not related to the player */
-
-
 
 /* for song_get_mode */
 enum song_mode {
@@ -429,11 +416,6 @@ enum {
 //      PANS_CROSS,
 };
 void song_set_pan_scheme(int scheme);
-
-/* actually from sndfile.h */
-#define SCHISM_MAX_SAMPLES      MAX_SAMPLES
-#define SCHISM_MAX_INSTRUMENTS  MAX_INSTRUMENTS
-#define SCHISM_MAX_MESSAGE      MAX_MESSAGE
 
 /* --------------------------------------------------------------------- */
 

@@ -203,9 +203,9 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
                 rs = SF_M | SF_LE; // channels; endianness
                 rs |= (gfsamp.smpmode & 1) ? SF_16 : SF_8; // bit width
                 rs |= (gfsamp.smpmode & 2) ? SF_PCMS : SF_PCMU; // encoding
-                if (gfsamp.smpmode & 4) smp->flags |= SAMP_LOOP;
-                if (gfsamp.smpmode & 8) smp->flags |= SAMP_LOOP_PINGPONG;
-                if (gfsamp.smpmode & 32) smp->flags |= SAMP_SUSLOOP;
+                if (gfsamp.smpmode & 4) smp->flags |= CHN_LOOP;
+                if (gfsamp.smpmode & 8) smp->flags |= CHN_PINGPONGLOOP;
+                if (gfsamp.smpmode & 32) smp->flags |= CHN_SUSTAINLOOP;
                 memcpy(smp->filename, gfsamp.wavename, 7);
                 smp->filename[8] = '\0';
                 smp->vib_speed = gfsamp.vibrato[0];

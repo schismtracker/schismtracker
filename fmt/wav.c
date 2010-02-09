@@ -234,10 +234,10 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->smp_flags  = 0;
 
         if (f.fmt.channels == 2)
-                file->smp_flags |= SAMP_STEREO;
+                file->smp_flags |= CHN_STEREO;
 
         if (f.fmt.bitspersample == 16)
-                file->smp_flags |= SAMP_16_BIT;
+                file->smp_flags |= CHN_16BIT;
 
         file->smp_speed  = f.fmt.freqHz;
         file->smp_length = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);

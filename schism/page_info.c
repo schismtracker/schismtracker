@@ -86,7 +86,7 @@ static struct info_window windows[MAX_WINDOWS] = {
 /* the various stuff that can be drawn... */
 static void info_draw_technical(int base, int height, int active, int first_channel)
 {
-        int smplist[SCHISM_MAX_SAMPLES];
+        int smplist[MAX_SAMPLES];
         int smp, pos, fg, c = first_channel;
         char buf[16];
         const char *ptr;
@@ -140,7 +140,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
                         smp = mixchan->ptr_sample - song_get_sample(0);
                 else
                         smp = 0;
-                if(smp < 0 || smp >= SCHISM_MAX_SAMPLES)
+                if(smp < 0 || smp >= MAX_SAMPLES)
                         smp = 0;
 
                 // Bleh
@@ -278,7 +278,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
                         smp = channel->ptr_sample - song_get_sample(0);
                 else
                         smp = inuse = 0;
-                if(smp < 0 || smp >= SCHISM_MAX_SAMPLES)
+                if(smp < 0 || smp >= MAX_SAMPLES)
                         smp = inuse = 0; /* This sample is not in the sample array */
 #if 0
                 // this makes ascii-art behave somewhat...
@@ -694,11 +694,11 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
                         /* yay it's easy */
                         fg = channel->ptr_sample - samples;
                 } else {
-                        for (fg = 0; fg < SCHISM_MAX_SAMPLES; fg++) {
+                        for (fg = 0; fg < MAX_SAMPLES; fg++) {
                                 if (channel->current_sample_data == samples[fg].data)
                                         break;
                         }
-                        if (fg == SCHISM_MAX_SAMPLES) {
+                        if (fg == MAX_SAMPLES) {
                                 /* no luck. oh well */
                                 fg = 0;
                         }
