@@ -165,13 +165,13 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->loop_end = xmss.looplen;
                 if (smp->loop_end > smp->loop_start) smp->loop_end = smp->length;
                 if (smp->loop_start >= smp->loop_end) smp->loop_start = smp->loop_end = 0;
-                if (xmss.type & 3) smp->flags |= SAMP_LOOP;
-                if (xmss.type & 3) smp->flags |= SAMP_LOOP_PINGPONG;
+                if (xmss.type & 3) smp->flags |= CHN_LOOP;
+                if (xmss.type & 3) smp->flags |= CHN_PINGPONGLOOP;
                 smp->volume = xmss.vol << 2;
                 if (smp->volume > 256) smp->volume = 256;
                 smp->global_volume = 64;
                 smp->panning = xmss.pan;
-                smp->flags |= SAMP_PANNING;
+                smp->flags |= CHN_PANNING;
                 smp->vib_type = xmsh.vibtype;
                 smp->vib_speed = xmsh.vibsweep;
                 smp->vib_depth = xmsh.vibdepth;

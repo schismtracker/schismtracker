@@ -25,7 +25,6 @@
 #define FMT_H
 
 #include <stdint.h>
-#include "song.h"
 #include "dmoz.h"
 #include "slurp.h"
 #include "util.h"
@@ -59,33 +58,42 @@ enum {
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-typedef int (*fmt_read_info_func) (dmoz_file_t *file, const uint8_t *data, size_t length);
-typedef int (*fmt_load_song_func) (song_t *song, slurp_t *fp, unsigned int lflags);
-typedef int (*fmt_save_song_func) (disko_t *fp, song_t *song);
-typedef int (*fmt_load_sample_func) (const uint8_t *data, size_t length, song_sample_t *smp);
-typedef int (*fmt_save_sample_func) (disko_t *fp, song_sample_t *smp);
-typedef int (*fmt_load_instrument_func) (const uint8_t *data, size_t length, int slot);
+#define PROTO_READ_INFO         (dmoz_file_t *file, const uint8_t *data, size_t length)
+#define PROTO_LOAD_SONG         (song_t *song, slurp_t *fp, unsigned int lflags)
+#define PROTO_SAVE_SONG         (disko_t *fp, song_t *song)
+#define PROTO_LOAD_SAMPLE       (const uint8_t *data, size_t length, song_sample_t *smp)
+#define PROTO_SAVE_SAMPLE       (disko_t *fp, song_sample_t *smp)
+#define PROTO_LOAD_INSTRUMENT   (const uint8_t *data, size_t length, int slot)
+#define PROTO_EXPORT_HEAD       (disko_t *fp, int bits, int channels, int rate)
+#define PROTO_EXPORT_BODY       (disko_t *fp, const uint8_t *data, size_t length)
+#define PROTO_EXPORT_TAIL       (disko_t *fp)
 
-#define READ_INFO(t) int fmt_##t##_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
-#define LOAD_SONG(t) int fmt_##t##_load_song(song_t *song, slurp_t *fp, unsigned int lflags);
-#define SAVE_SONG(t) void fmt_##t##_save_song(disko_t *fp, song_t *song);
-#define LOAD_SAMPLE(t) int fmt_##t##_load_sample(const uint8_t *data, size_t length, song_sample_t *smp);
-#define SAVE_SAMPLE(t) int fmt_##t##_save_sample(disko_t *fp, song_sample_t *smp);
-#define LOAD_INSTRUMENT(t) int fmt_##t##_load_instrument(const uint8_t *data, size_t length, int slot);
+typedef int (*fmt_read_info_func)       PROTO_READ_INFO;
+typedef int (*fmt_load_song_func)       PROTO_LOAD_SONG;
+typedef int (*fmt_save_song_func)       PROTO_SAVE_SONG;
+typedef int (*fmt_load_sample_func)     PROTO_LOAD_SAMPLE;
+typedef int (*fmt_save_sample_func)     PROTO_SAVE_SAMPLE;
+typedef int (*fmt_load_instrument_func) PROTO_LOAD_INSTRUMENT;
+typedef int (*fmt_export_head_func)     PROTO_EXPORT_HEAD;
+typedef int (*fmt_export_body_func)     PROTO_EXPORT_BODY;
+typedef int (*fmt_export_tail_func)     PROTO_EXPORT_TAIL;
+
+#define READ_INFO(t)            int fmt_##t##_read_info         PROTO_READ_INFO;
+#define LOAD_SONG(t)            int fmt_##t##_load_song         PROTO_LOAD_SONG;
+#define SAVE_SONG(t)            int fmt_##t##_save_song         PROTO_SAVE_SONG;
+#define LOAD_SAMPLE(t)          int fmt_##t##_load_sample       PROTO_LOAD_SAMPLE;
+#define SAVE_SAMPLE(t)          int fmt_##t##_save_sample       PROTO_SAVE_SAMPLE;
+#define LOAD_INSTRUMENT(t)      int fmt_##t##_load_instrument   PROTO_LOAD_INSTRUMENT;
+#define EXPORT(t)               int fmt_##t##_export_head       PROTO_EXPORT_HEAD; \
+                                int fmt_##t##_export_body       PROTO_EXPORT_BODY; \
+                                int fmt_##t##_export_tail       PROTO_EXPORT_TAIL;
 
 #include "fmt-types.h"
-
-#undef READ_INFO
-#undef LOAD_SONG
-#undef SAVE_SONG
-#undef LOAD_SAMPLE
-#undef SAVE_SAMPLE
-#undef LOAD_INSTRUMENT
 
 /* --------------------------------------------------------------------------------------------------------- */
 struct instrumentloader {
         song_instrument_t *inst;
-        int sample_map[SCHISM_MAX_SAMPLES];
+        int sample_map[MAX_SAMPLES];
         int basex, slot, expect_samples;
 };
 song_instrument_t *instrument_loader_init(struct instrumentloader *ii, int slot);

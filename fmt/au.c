@@ -60,7 +60,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         file->smp_length = hh.data_size / hh.channels;
         file->smp_flags = 0;
         if (hh.encoding == AU_PCM_16) {
-                file->smp_flags |= SAMP_16_BIT;
+                file->smp_flags |= CHN_16BIT;
                 file->smp_length /= 2;
         } else if (hh.encoding == AU_PCM_24) {
                 file->smp_length /= 3;
@@ -70,7 +70,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
                 file->smp_length /= 8;
         }
         if (hh.channels >= 2) {
-                file->smp_flags |= SAMP_STEREO;
+                file->smp_flags |= CHN_STEREO;
         }
         file->description = "AU Sample";
         if (hh.data_offset > 24) {
@@ -117,11 +117,11 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
         smp->global_volume = 64;
         smp->length = au.data_size; /* maybe this should be MIN(...), for files with a wacked out length? */
         if (au.encoding == AU_PCM_16) {
-                smp->flags |= SAMP_16_BIT;
+                smp->flags |= CHN_16BIT;
                 smp->length /= 2;
         }
         if (au.channels == 2) {
-                smp->flags |= SAMP_STEREO;
+                smp->flags |= CHN_STEREO;
                 smp->length /= 2;
         }
 
@@ -136,10 +136,10 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 
 #ifndef WORDS_BIGENDIAN
         /* maybe this could use swab()? */
-        if (smp->flags & SAMP_16_BIT) {
+        if (smp->flags & CHN_16BIT) {
                 signed short *s = (signed short *) smp->data;
                 unsigned long i = smp->length;
-                if (smp->flags & SAMP_STEREO) i *= 2;
+                if (smp->flags & CHN_STEREO) i *= 2;
                 while (i-- > 0) {
                         *s = bswapBE16(*s);
                         s++;
@@ -161,14 +161,14 @@ int fmt_au_save_sample(disko_t *fp, song_sample_t *smp)
 
         au.data_offset = bswapBE32(49); // header is 24 bytes, sample name is 25
         ln = smp->length;
-        if (smp->flags & SAMP_16_BIT) {
+        if (smp->flags & CHN_16BIT) {
                 ln *= 2;
                 au.encoding = bswapBE32(AU_PCM_16);
         } else {
                 au.encoding = bswapBE32(AU_PCM_8);
         }
         au.sample_rate = bswapBE32(smp->c5speed);
-        if (smp->flags & SAMP_STEREO) {
+        if (smp->flags & CHN_STEREO) {
                 ln *= 2;
                 au.channels = bswapBE32(2);
         } else {

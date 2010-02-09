@@ -809,7 +809,7 @@ void song_get_playing_samples(int samples[])
 {
         song_voice_t *channel;
 
-        memset(samples, 0, SCHISM_MAX_SAMPLES * sizeof(int));
+        memset(samples, 0, MAX_SAMPLES * sizeof(int));
 
         song_lock_audio();
         int n = MIN(current_song->num_voices, max_voices);
@@ -817,7 +817,7 @@ void song_get_playing_samples(int samples[])
                 channel = current_song->voices + current_song->voice_mix[n];
                 if (channel->ptr_sample && channel->current_sample_data) {
                         int s = channel->ptr_sample - current_song->samples;
-                        if (s >= 0 && s < SCHISM_MAX_SAMPLES) {
+                        if (s >= 0 && s < MAX_SAMPLES) {
                                 samples[s] = MAX(samples[s], 1 + channel->strike);
                         }
                 } else {
@@ -832,14 +832,14 @@ void song_get_playing_instruments(int instruments[])
 {
         song_voice_t *channel;
 
-        memset(instruments, 0, SCHISM_MAX_INSTRUMENTS * sizeof(int));
+        memset(instruments, 0, MAX_INSTRUMENTS * sizeof(int));
 
         song_lock_audio();
         int n = MIN(current_song->num_voices, max_voices);
         while (n--) {
                 channel = current_song->voices + current_song->voice_mix[n];
                 int ins = song_get_instrument_number((song_instrument_t *) channel->ptr_instrument);
-                if (ins > 0 && ins < SCHISM_MAX_INSTRUMENTS) {
+                if (ins > 0 && ins < MAX_INSTRUMENTS) {
                         instruments[ins] = MAX(instruments[ins], 1 + channel->strike);
                 }
         }

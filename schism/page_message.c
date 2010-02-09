@@ -157,7 +157,7 @@ static int message_add_char(int newchar, int position)
 {
         int len = strlen(current_song->message);
 
-        if (len == SCHISM_MAX_MESSAGE) {
+        if (len == MAX_MESSAGE) {
                 dialog_create(DIALOG_OK, "  Song message too long!  ", NULL, NULL, 0, NULL);
                 return 0;
         }
@@ -395,7 +395,7 @@ static void message_delete_char(void)
                 return;
         memmove(current_song->message + cursor_pos - 1, current_song->message + cursor_pos,
                 len - cursor_pos + 1);
-        current_song->message[SCHISM_MAX_MESSAGE] = 0;
+        current_song->message[MAX_MESSAGE] = 0;
         cursor_pos--;
         if (cursor_char == 0) {
                 cursor_line--;
@@ -416,7 +416,7 @@ static void message_delete_next_char(void)
                 return;
         memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + 1,
                 len - cursor_pos);
-        current_song->message[SCHISM_MAX_MESSAGE] = 0;
+        current_song->message[MAX_MESSAGE] = 0;
 
         status.flags |= NEED_UPDATE;
 }
@@ -538,7 +538,7 @@ static void _delete_selection(void)
                 return;
         memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + eat + 1,
                 ((len - cursor_pos) - eat)+1);
-        current_song->message[SCHISM_MAX_MESSAGE] = 0;
+        current_song->message[MAX_MESSAGE] = 0;
         set_absolute_position(current_song->message, cursor_pos, &cursor_line, &cursor_char);
         message_reposition();
 

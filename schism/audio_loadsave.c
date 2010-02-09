@@ -26,6 +26,7 @@
 
 #include "it.h"
 #include "sndfile.h"
+#include "song.h"
 #include "slurp.h"
 #include "page.h"
 #include "version.h"
@@ -408,10 +409,10 @@ void save_sample_data_LE(disko_t *fp, song_sample_t *smp, int noe)
         unsigned int len;
 
         len = smp->length;
-        if (smp->flags & SAMP_STEREO) len *= 2;
+        if (smp->flags & CHN_STEREO) len *= 2;
 
-        if (smp->flags & SAMP_16_BIT) {
-                if (noe && smp->flags & SAMP_STEREO) {
+        if (smp->flags & CHN_16BIT) {
+                if (noe && smp->flags & CHN_STEREO) {
                         bufcount = 0;
                         for (unsigned int n = 0; n < len; n += 2) {
 
@@ -457,7 +458,7 @@ void save_sample_data_LE(disko_t *fp, song_sample_t *smp, int noe)
                         disko_write(fp, smp->data, 2*len);
 #endif
                 }
-        } else if (smp->flags & SAMP_STEREO) {
+        } else if (smp->flags & CHN_STEREO) {
                 bufcount = 0;
                 for (unsigned int n = 0; n < len; n += 2) {
                         buffer[bufcount++] = (smp->data)[n];
@@ -492,10 +493,10 @@ void save_sample_data_BE(disko_t *fp, song_sample_t *smp, int noe)
 {
         unsigned int len;
         len = smp->length;
-        if (smp->flags & SAMP_STEREO) len *= 2;
+        if (smp->flags & CHN_STEREO) len *= 2;
 
-        if (smp->flags & SAMP_16_BIT) {
-                if (noe && smp->flags & SAMP_STEREO) {
+        if (smp->flags & CHN_16BIT) {
+                if (noe && smp->flags & CHN_STEREO) {
                         for (unsigned int n = 0; n < len; n += 2) {
                                 signed short s = ((signed short *) smp->data)[n];
                                 s = bswapBE16(s);
@@ -517,7 +518,7 @@ void save_sample_data_BE(disko_t *fp, song_sample_t *smp, int noe)
                         }
 #endif
                 }
-        } else if (smp->flags & SAMP_STEREO) {
+        } else if (smp->flags & CHN_STEREO) {
                 for (unsigned int n = 0; n < len; n += 2) {
                         disko_write(fp, (smp->data)+n, 1);
                 }
@@ -1128,9 +1129,9 @@ void song_copy_sample(int n, song_sample_t *src)
 
         if (src->data) {
                 unsigned long bytelength = src->length;
-                if (src->flags & SAMP_16_BIT)
+                if (src->flags & CHN_16BIT)
                         bytelength *= 2;
-                if (src->flags & SAMP_STEREO)
+                if (src->flags & CHN_STEREO)
                         bytelength *= 2;
 
                 current_song->samples[n].data = csf_allocate_sample(bytelength);
@@ -1544,7 +1545,7 @@ int instrument_loader_abort(struct instrumentloader *ii)
 {
         int n;
         song_wipe_instrument(ii->slot);
-        for (n = 0; n < SCHISM_MAX_SAMPLES; n++) {
+        for (n = 0; n < MAX_SAMPLES; n++) {
                 if (ii->sample_map[n]) {
                         song_delete_sample(ii->sample_map[n]-1);
                         ii->sample_map[n] = 0;
@@ -1558,7 +1559,7 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
         int x;
         if (!slot) return 0;
         if (ii->sample_map[slot]) return ii->sample_map[slot];
-        for (x = ii->basex; x < SCHISM_MAX_SAMPLES; x++) {
+        for (x = ii->basex; x < MAX_SAMPLES; x++) {
                 if (!song_sample_is_empty(x-1)) continue;
 
                 ii->expect_samples++;

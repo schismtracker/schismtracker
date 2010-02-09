@@ -128,7 +128,7 @@ static void _draw_sample_loop(struct vgamem_overlay *r, song_sample_t * sample)
         int loopstart, loopend, y;
         int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
 
-        if (!(sample->flags & SAMP_LOOP))
+        if (!(sample->flags & CHN_LOOP))
                 return;
 
         loopstart = sample->loop_start * (r->width - 1) / sample->length;
@@ -148,7 +148,7 @@ static void _draw_sample_susloop(struct vgamem_overlay *r, song_sample_t * sampl
         int loopstart, loopend, y;
         int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
 
-        if (!(sample->flags & SAMP_SUSLOOP))
+        if (!(sample->flags & CHN_SUSTAINLOOP))
                 return;
 
         loopstart = sample->sustain_start * (r->width - 1) / sample->length;
@@ -214,7 +214,7 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample, UNUSED in
 {
         vgamem_ovl_clear(r, 0);
 
-        if(sample->flags & SAMP_ADLIB)
+        if(sample->flags & CHN_ADLIB)
         {
             vgamem_ovl_clear(r, 2);
             vgamem_ovl_apply(r);
@@ -251,14 +251,14 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample, UNUSED in
         }
 
         /* do the actual drawing */
-        if (sample->flags & SAMP_16_BIT)
+        if (sample->flags & CHN_16BIT)
                 _draw_sample_data_16(r, (signed short *) sample->data,
-                                             sample->length * (sample->flags & SAMP_STEREO ? 2 : 1),
-                                sample->flags & SAMP_STEREO ? 2 : 1, 1);
+                                             sample->length * (sample->flags & CHN_STEREO ? 2 : 1),
+                                sample->flags & CHN_STEREO ? 2 : 1, 1);
         else
                 _draw_sample_data_8(r, sample->data,
-                                             sample->length * (sample->flags & SAMP_STEREO ? 2 : 1),
-                                sample->flags & SAMP_STEREO ? 2 : 1, 1);
+                                             sample->length * (sample->flags & CHN_STEREO ? 2 : 1),
+                                sample->flags & CHN_STEREO ? 2 : 1, 1);
 
         if ((status.flags & CLASSIC_MODE) == 0)
                 _draw_sample_play_marks(r, sample);
