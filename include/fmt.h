@@ -91,6 +91,50 @@ typedef int (*fmt_export_tail_func)     PROTO_EXPORT_TAIL;
 #include "fmt-types.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
+
+/* for saving samples; see also enum sample_format_ids below */
+
+struct sample_save_format {
+        const char *name;
+        const char *ext;
+        fmt_save_sample_func save_func;
+};
+
+extern struct sample_save_format sample_save_formats[];
+
+
+/* and for saving songs */
+
+struct song_save_format {
+        const char *label; // label for the button on the save page
+        const char *ext; // no dot
+        union {
+                struct {
+                        fmt_save_song_func song;
+                } save;
+                struct {
+                        fmt_export_head_func head;
+                        fmt_export_body_func body;
+                        fmt_export_tail_func tail;
+                } export;
+        } f;
+};
+
+extern struct song_save_format song_save_formats[];
+extern struct song_save_format song_export_formats[];
+
+
+/* used as indices to sample_save_formats[]
+TODO - don't use these, look them up by name like song_save */
+enum sample_save_format_ids {
+        SSMP_ITS = 0,
+        SSMP_AIFF = 1,
+        SSMP_AU = 2,
+        SSMP_WAV = 3,
+        SSMP_RAW = 4,
+        SSMP_SENTINEL = 5,
+};
+/* --------------------------------------------------------------------------------------------------------- */
 struct instrumentloader {
         song_instrument_t *inst;
         int sample_map[MAX_SAMPLES];

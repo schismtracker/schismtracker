@@ -36,7 +36,7 @@
 # define swab(a,b,c) swab((const char*)(a),(char*)(b),(size_t)(c))
 #endif
 
-static void ConvertToIeeeExtended(double num, unsigned char *bytes);
+//static void ConvertToIeeeExtended(double num, unsigned char *bytes);
 static double ConvertFromIeeeExtended(const unsigned char *bytes);
 
 /* --------------------------------------------------------------------- */
@@ -353,6 +353,7 @@ int fmt_aiff_save_sample(UNUSED disko_t *fp, UNUSED song_sample_t *smp)
 #define FloatToUnsigned(f) ((uint32_t) (((int32_t) (f - 2147483648.0)) + 2147483647L + 1))
 #define UnsignedToFloat(u) (((double) ((int32_t) (u - 2147483647L - 1))) + 2147483648.0)
 
+#if 0
 static void ConvertToIeeeExtended(double num, unsigned char *bytes)
 {
         int sign, expon;
@@ -406,6 +407,7 @@ static void ConvertToIeeeExtended(double num, unsigned char *bytes)
         bytes[8] = loMant >> 8;
         bytes[9] = loMant;
 }
+#endif
 
 static double ConvertFromIeeeExtended(const unsigned char *bytes)
 {
