@@ -236,5 +236,5 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
         disko_seek(fp, 0x48, SEEK_SET);
         disko_write(fp, &tmp, 4);
 
-        return 1;
+        return SAVE_SUCCESS;
 }
