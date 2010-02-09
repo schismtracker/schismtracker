@@ -117,7 +117,7 @@ static void _dw_mem_seek(disko_t *ds, long offset, int whence)
                 disko_seterror(ds, EINVAL);
                 return;
         }
-        if (offset >= ds->allocated) {
+        if ((size_t) offset >= ds->allocated) {
                 // TODO reallocate here? later?
         }
         ds->pos = offset;

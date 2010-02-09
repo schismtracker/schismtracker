@@ -994,22 +994,41 @@ static int _save_stub(UNUSED disko_t *fp, UNUSED song_t *song)
         return SAVE_INTERNAL_ERROR;
 }
 
+/* blah... */
+static int _export_head_stub(UNUSED disko_t *fp, UNUSED int bits, UNUSED int channels, UNUSED int rate)
+{
+        log_appendf(4, "Export not ready yet");
+        return SAVE_INTERNAL_ERROR;
+}
+
+static int _export_body_stub(UNUSED disko_t *fp, UNUSED const uint8_t *data, UNUSED size_t length)
+{
+        log_appendf(4, "Export not ready yet");
+        return SAVE_INTERNAL_ERROR;
+}
+
+static int _export_tail_stub(UNUSED disko_t *fp)
+{
+        log_appendf(4, "Export not ready yet");
+        return SAVE_INTERNAL_ERROR;
+}
+
 /* ------------------------------------------------------------------------- */
 
 struct song_save_format song_save_formats[] = {
-        {"IT", "it", _save_it},
-        {"S3M", "s3m", _save_stub},
-        {NULL, NULL, NULL} // should be last item!
+        {"IT", "it", {.save = {_save_it}}},
+        {"S3M", "s3m", {.save = {_save_stub}}},
+        {NULL, NULL, {}} // should be last item!
 };
 
 struct song_save_format song_export_formats[] = {
-        {NULL, NULL, NULL} // should be last item!
+        {"WAV", "wav", {.export = {_export_head_stub, _export_body_stub, _export_tail_stub}}},
+        {NULL, NULL, {}} // should be last item!
 };
 
 
 int song_export(UNUSED const char *filename, UNUSED const char *type)
 {
-        log_appendf(4, "Export not ready yet");
         return SAVE_INTERNAL_ERROR;
 }
 
@@ -1061,7 +1080,7 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
                                 log_perror(filename);
                                 return SAVE_FILE_ERROR;
                         }
-                        ret = song_save_formats[n].save_func(fp, current_song);
+                        ret = song_save_formats[n].f.save.song(fp, current_song);
                         backup = ((status.flags & MAKE_BACKUPS)
                                   ? (status.flags & NUMBERED_BACKUPS)
                                   ? 65536 : 1 : 0);

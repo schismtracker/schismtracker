@@ -29,6 +29,7 @@
 #include "dmoz.h"
 #include "sample-edit.h"
 #include "video.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
