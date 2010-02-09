@@ -311,7 +311,8 @@ int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 
 int fmt_aiff_save_sample(UNUSED disko_t *fp, UNUSED song_sample_t *smp)
 {
-        return 0;
+        log_appendf(4, "aiff save not implemented");
+        return SAVE_INTERNAL_ERROR;
 }
 
 /* --------------------------------------------------------------------- */

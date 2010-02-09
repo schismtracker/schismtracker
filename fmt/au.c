@@ -180,5 +180,5 @@ int fmt_au_save_sample(disko_t *fp, song_sample_t *smp)
         disko_write(fp, smp->name, 25);
         save_sample_data_BE(fp, smp, 0);
 
-        return 1;
+        return SAVE_SUCCESS;
 }

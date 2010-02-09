@@ -1094,7 +1094,7 @@ void save_module_load_page(struct page *page, int do_export)
         widgets_exportsave[4].d.togglebutton.state = 1;
 
 
-        struct song_save_format *formats = (do_export ? song_export_formats : song_save_formats);
+        struct save_format *formats = (do_export ? song_export_formats : song_save_formats);
         for (n = 0; formats[n].label; n++) {
                 create_togglebutton(widgets_exportsave + 4 + n,
                                 70, 13 + (3 * n), 5,

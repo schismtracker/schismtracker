@@ -96,6 +96,7 @@ typedef struct {
 } wave_file_t;
 #pragma pack(pop)
 
+/* --------------------------------------------------------------------------------------------------------- */
 
 static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 {
@@ -177,6 +178,7 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
         return 1;
 }
 
+/* --------------------------------------------------------------------------------------------------------- */
 
 int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 {
@@ -217,7 +219,6 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
         return csf_read_sample((song_sample_t *)smp, flags, (const char *) f.buf, f.data.length);
 }
 
-
 int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
         wave_file_t f;
@@ -248,10 +249,11 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
         return 1;
 }
 
-
+/* --------------------------------------------------------------------------------------------------------- */
 
 int fmt_wav_save_sample(UNUSED disko_t *fp, UNUSED song_sample_t *smp)
 {
-        return 0;
+        log_appendf(4, "wav save unimplemented");
+        return SAVE_INTERNAL_ERROR;
 }
 

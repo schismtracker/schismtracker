@@ -58,7 +58,11 @@ static int sample_numentry_cursor_pos = 0;
 static const char *const loop_states[] = { "Off", "On Forwards", "On Ping Pong", NULL };
 
 /* playback */
-static int last_note = 61;              /* C-5 */
+static int last_note = NOTE_MIDC;
+
+static int num_save_formats = 0;
+
+/* --------------------------------------------------------------------- */
 
 /* woo */
 
@@ -977,7 +981,7 @@ static void sample_adlibpatch_dialog(UNUSED void *ign)
 struct sample_save_data {
         char *path;
         /* char *options? */
-        int format_id;
+        const char *format;
 };
 
 static void save_sample_free_data(void *ptr)
@@ -992,16 +996,17 @@ static void do_save_sample(void *ptr)
 {
         struct sample_save_data *data = (struct sample_save_data *) ptr;
 
-        if (song_save_sample(current_sample, data->path, data->format_id)) {
-                status_text_flash("%s sample saved (sample %d)",
-                                  sample_save_formats[data->format_id].name, current_sample);
+        // maybe *this* function should check the filename & ensure sample data exists?
+        if (song_save_sample(data->path, data->format, song_get_sample(current_sample)) == SAVE_SUCCESS) {
+                // FIXME should this be using the long name?
+                status_text_flash("%s sample saved (sample %d)", data->format, current_sample);
         } else {
                 status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
         }
         save_sample_free_data(ptr);
 }
 
-static void sample_save(const char *filename, int format_id)
+static void sample_save(const char *filename, const char *format)
 {
         song_sample_t *sample = song_get_sample(current_sample);
         char *ptr, *q;
@@ -1031,7 +1036,7 @@ static void sample_save(const char *filename, int format_id)
         if (q) q[1] = tmp;
 
         data->path = ptr;
-        data->format_id = format_id;
+        data->format = format;
 
         if (filename && *filename && stat(ptr, &buf) == 0) {
                 if (S_ISREG(buf.st_mode)) {
@@ -1059,7 +1064,7 @@ static int export_sample_format = 0;
 
 static void do_export_sample(UNUSED void *data)
 {
-        sample_save(export_sample_filename, export_sample_format);
+        sample_save(export_sample_filename, sample_save_formats[export_sample_format].label);
 }
 
 static void export_sample_list_draw(void)
@@ -1067,7 +1072,7 @@ static void export_sample_list_draw(void)
         int n, focused = (*selected_widget == 3);
 
         draw_fill_chars(53, 24, 56, 31, 0);
-        for (n = 0; n < SSMP_SENTINEL; n++) {
+        for (n = 0; sample_save_formats[n].label; n++) {
                 int fg = 6, bg = 0;
                 if (focused && n == export_sample_format) {
                         fg = 0;
@@ -1075,7 +1080,7 @@ static void export_sample_list_draw(void)
                 } else if (n == export_sample_format) {
                         bg = 14;
                 }
-                draw_text_len(sample_save_formats[n].ext, 4, 53, 24 + n, fg, bg);
+                draw_text_len(sample_save_formats[n].label, 4, 53, 24 + n, fg, bg);
         }
 }
 
@@ -1105,7 +1110,7 @@ static int export_sample_list_handle_key(struct key_event * k)
         case SDLK_END:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                new_format = SSMP_SENTINEL - 1;
+                new_format = num_save_formats - 1;
                 break;
         case SDLK_TAB:
                 if (k->mod & KMOD_SHIFT) {
@@ -1123,7 +1128,7 @@ static int export_sample_list_handle_key(struct key_event * k)
                 return 0;
         }
 
-        new_format = CLAMP(new_format, 0, SSMP_SENTINEL - 1);
+        new_format = CLAMP(new_format, 0, num_save_formats - 1);
         if (new_format != export_sample_format) {
                 /* update the option string */
                 export_sample_format = new_format;
@@ -1320,7 +1325,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 }
                 return;
         case SDLK_o:
-                sample_save(NULL, SSMP_ITS);
+                sample_save(NULL, "ITS");
                 return;
         case SDLK_p:
                 smpprompt_create("Copy sample:", "Sample", do_copy_sample);
@@ -1335,7 +1340,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
                 export_sample_dialog();
                 return;
         case SDLK_w:
-                sample_save(NULL, SSMP_RAW);
+                sample_save(NULL, "RAW");
                 return;
         case SDLK_x:
                 smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
@@ -1756,5 +1761,10 @@ void sample_list_load_page(struct page *page)
                             0, 0, update_values_in_song, "Random", 1, vibrato_waveforms);
         /* 19 = vibrato rate */
         create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
+
+        /* count how many formats there really are */
+        num_save_formats = 0;
+        while (sample_save_formats[num_save_formats].label)
+                num_save_formats++;
 }
 

@@ -1015,15 +1015,24 @@ static int _export_tail_stub(UNUSED disko_t *fp)
 
 /* ------------------------------------------------------------------------- */
 
-struct song_save_format song_save_formats[] = {
-        {"IT", "it", {.save = {_save_it}}},
-        {"S3M", "s3m", {.save = {_save_stub}}},
-        {NULL, NULL, {}} // should be last item!
+struct save_format song_save_formats[] = {
+        {"IT", "Impulse Tracker", "it", {.save_song = _save_it}},
+        {"S3M", "Scream Tracker 3", "s3m", {.save_song = _save_stub}},
+        {.label = NULL}
 };
 
-struct song_save_format song_export_formats[] = {
-        {"WAV", "wav", {.export = {_export_head_stub, _export_body_stub, _export_tail_stub}}},
-        {NULL, NULL, {}} // should be last item!
+struct save_format song_export_formats[] = {
+        {"WAV", "IBM/Microsoft WAV", "wav", {.export = {_export_head_stub, _export_body_stub, _export_tail_stub}}},
+        {.label = NULL}
+};
+
+struct save_format sample_save_formats[] = {
+        {"ITS", "Impulse Tracker", "its", {.save_sample = fmt_its_save_sample}},
+        {"AIFF", "Audio IFF", "aiff", {.save_sample = fmt_aiff_save_sample}},
+        {"AU", "Sun/NeXT", "au", {.save_sample = fmt_au_save_sample}},
+        {"WAV", "IBM/Microsoft WAV", "wav", {.save_sample = fmt_wav_save_sample}},
+        {"RAW", "Raw", "raw", {.save_sample = fmt_raw_save_sample}},
+        {.label = NULL}
 };
 
 
@@ -1073,37 +1082,76 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
         current_song->row_highlight_minor = row_highlight_minor;
 
         for (n = 0; song_save_formats[n].label; n++) {
-                if (strcmp(song_save_formats[n].label, type) == 0) {
-                        // WOO! it's ours!
-                        disko_t *fp = disko_open(filename);
-                        if (!fp) {
-                                log_perror(filename);
-                                return SAVE_FILE_ERROR;
-                        }
-                        ret = song_save_formats[n].f.save.song(fp, current_song);
-                        backup = ((status.flags & MAKE_BACKUPS)
-                                  ? (status.flags & NUMBERED_BACKUPS)
-                                  ? 65536 : 1 : 0);
-                        if (disko_close(fp, backup) == DW_ERROR && ret == SAVE_SUCCESS) {
-                                // this was not as successful as originally claimed!
-                                ret = SAVE_FILE_ERROR;
-                        }
-                        switch (ret) {
-                        case SAVE_SUCCESS:
-                                status.flags &= ~SONG_NEEDS_SAVE;
-                                if (strcasecmp(song_filename, filename))
-                                        song_set_filename(filename);
-                                break;
-                        case SAVE_FILE_ERROR:
-                                log_perror(filename);
-                                break;
-                        case SAVE_INTERNAL_ERROR:
-                        default: // ???
-                                log_appendf(4, "Internal error saving file");
-                                break;
-                        }
-                        return ret;
+                if (strcmp(song_save_formats[n].label, type) != 0)
+                        continue;
+
+                // WOO! it's ours!
+                disko_t *fp = disko_open(filename);
+                if (!fp) {
+                        log_perror(filename);
+                        return SAVE_FILE_ERROR;
                 }
+                ret = song_save_formats[n].f.save_song(fp, current_song);
+                backup = ((status.flags & MAKE_BACKUPS)
+                          ? (status.flags & NUMBERED_BACKUPS)
+                          ? 65536 : 1 : 0);
+                if (disko_close(fp, backup) == DW_ERROR && ret == SAVE_SUCCESS) {
+                        // this was not as successful as originally claimed!
+                        ret = SAVE_FILE_ERROR;
+                }
+                switch (ret) {
+                case SAVE_SUCCESS:
+                        status.flags &= ~SONG_NEEDS_SAVE;
+                        if (strcasecmp(song_filename, filename))
+                                song_set_filename(filename);
+                        break;
+                case SAVE_FILE_ERROR:
+                        log_perror(filename);
+                        break;
+                case SAVE_INTERNAL_ERROR:
+                default: // ???
+                        log_appendf(4, "Internal error saving file");
+                        break;
+                }
+                return ret;
+        }
+
+        // Shouldn't get here...
+        log_appendf(4, "Unknown file type: %s", type);
+        return SAVE_INTERNAL_ERROR;
+}
+
+int song_save_sample(const char *filename, const char *type, song_sample_t *smp)
+{
+        int n, ret;
+
+        for (n = 0; song_save_formats[n].label; n++) {
+                if (strcmp(song_save_formats[n].label, type) != 0)
+                        continue;
+
+                // WOO! it's ours!
+                disko_t *fp = disko_open(filename);
+                if (!fp) {
+                        log_perror(get_basename(filename));
+                        return SAVE_FILE_ERROR;
+                }
+                ret = sample_save_formats[n].f.save_sample(fp, smp);
+                if (disko_close(fp, 0) == DW_ERROR && ret == SAVE_SUCCESS) {
+                        // this was not as successful as originally claimed!
+                        ret = SAVE_FILE_ERROR;
+                }
+                switch (ret) {
+                case SAVE_SUCCESS:
+                        break;
+                case SAVE_FILE_ERROR:
+                        log_perror(get_basename(filename));
+                        break;
+                case SAVE_INTERNAL_ERROR:
+                default: // ???
+                        log_appendf(4, "Internal error saving file");
+                        break;
+                }
+                return ret;
         }
 
         // Shouldn't get here...
@@ -1356,46 +1404,6 @@ void song_create_host_instrument(int smp)
         } else {
                 status_text_flash("Error: No available Instruments!");
         }
-}
-
-// ------------------------------------------------------------------------------------------------------------
-
-struct sample_save_format sample_save_formats[] = {
-        {"Impulse Tracker", "its", fmt_its_save_sample},
-        {"Audio IFF", "aiff", fmt_aiff_save_sample},
-        {"Sun/NeXT", "au", fmt_au_save_sample},
-        {"IBM/Microsoft WAV", "wav", fmt_wav_save_sample},
-        {"Raw", "raw", fmt_raw_save_sample},
-};
-
-
-// return: 0 = failed, !0 = success
-int song_save_sample(int n, const char *file, int format_id)
-{
-        assert(format_id < SSMP_SENTINEL);
-
-        song_sample_t *smp = current_song->samples + n;
-        if (!smp->data) {
-                log_appendf(4, "Sample %d: no data to save", n);
-                return 0;
-        }
-        if (file[0] == '\0') {
-                log_appendf(4, "Sample %d: no filename", n);
-                return 0;
-        }
-
-        disko_t *fp = disko_open(file);
-        if (!fp) {
-                log_perror(get_basename(file));
-                return 0;
-        }
-        int ret = sample_save_formats[format_id].save_func(fp, (song_sample_t *) smp);
-        if (disko_close(fp, 0) == DW_ERROR) {
-                log_perror(get_basename(file));
-                return 0;
-        }
-
-        return ret;
 }
 
 // ------------------------------------------------------------------------

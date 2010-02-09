@@ -60,6 +60,9 @@ doing weird stuff like hacking the files, but then you're just asking for troubl
 #ifndef SAVE_INSTRUMENT /* not actually used - instrument saving is currently hardcoded to write .iti files */
 # define SAVE_INSTRUMENT(x)
 #endif
+#ifndef EXPORT
+# define EXPORT(x)
+#endif
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -97,13 +100,14 @@ READ_INFO(okt) LOAD_SONG(okt)
 READ_INFO(mus) LOAD_SONG(mus)
 READ_INFO(mf)
 
-/* FIXME should these be moved? */
-READ_INFO(xi)   LOAD_INSTRUMENT(xi)
-READ_INFO(iti)  LOAD_INSTRUMENT(iti)
+/* Sample formats with magic at start of file */
 READ_INFO(its)  LOAD_SAMPLE(its)  SAVE_SAMPLE(its)
-READ_INFO(s3i)  LOAD_SAMPLE(s3i)  SAVE_SAMPLE(s3i)
 READ_INFO(au)   LOAD_SAMPLE(au)   SAVE_SAMPLE(au)
 READ_INFO(aiff) LOAD_SAMPLE(aiff) SAVE_SAMPLE(aiff)
+READ_INFO(wav)  LOAD_SAMPLE(wav)  SAVE_SAMPLE(wav)  EXPORT(wav)
+READ_INFO(iti)  LOAD_INSTRUMENT(iti)
+READ_INFO(xi)   LOAD_INSTRUMENT(xi)
+READ_INFO(pat)  LOAD_INSTRUMENT(pat)
 
 READ_INFO(ult) LOAD_SONG(ult)
 READ_INFO(liq)
@@ -111,6 +115,8 @@ READ_INFO(liq)
 READ_INFO(ams)
 READ_INFO(f2r)
 READ_INFO(dtm) /* not sure about the placement here */
+
+READ_INFO(s3i)  LOAD_SAMPLE(s3i)  SAVE_SAMPLE(s3i) /* FIXME should this be moved? S3I has magic at 0x4C... */
 
 /* IMF and SFX (as well as STX) all have the magic values at 0x3C-0x3F, which is positioned in IT's
 "reserved" field, Not sure about this positioning, but these are kind of rare formats anyway. */
@@ -122,15 +128,9 @@ READ_INFO(sfx) LOAD_SONG(sfx)
 READ_INFO(ogg)
 #endif
 
-/* FIXME where do these belong? */
-READ_INFO(pat) LOAD_INSTRUMENT(pat)
-
 /* STM seems to have a case insensitive magic string with several possible values, and only one byte
 is guaranteed to be the same in the whole file... yeagh. */
 READ_INFO(stm) LOAD_SONG(stm)
-
-/* FIXME where does this belong? */
-READ_INFO(wav) LOAD_SAMPLE(wav) SAVE_SAMPLE(wav)
 
 /* An ID3 tag could actually be anywhere in an MP3 file, and there's no guarantee that it even exists
 at all. I might move this toward the top if I can figure out how to identify an MP3 more precisely. */
@@ -152,4 +152,5 @@ LOAD_SAMPLE(raw) SAVE_SAMPLE(raw)
 #undef SAVE_SAMPLE
 #undef LOAD_INSTRUMENT
 #undef SAVE_INSTRUMENT
+#undef EXPORT
 

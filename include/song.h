@@ -116,7 +116,7 @@ int song_export(const char *file, const char *type); // WAV
 void song_clear_sample(int n);
 void song_copy_sample(int n, song_sample_t *src);
 int song_load_sample(int n, const char *file);
-int song_save_sample(int n, const char *file, int format_id);
+int song_save_sample(const char *file, const char *type, song_sample_t *smp);
 void song_stop_sample(song_sample_t *ssmp);
 
 void song_create_host_instrument(int smp);
