@@ -256,7 +256,7 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 {
         int16_t s;
         uint32_t ul;
-        int tlen, bps = 1;
+        int bps = 1;
 
         if (smp->flags & CHN_16BIT)
                 bps *= 2;

@@ -206,9 +206,11 @@ disko_t *disko_open(const char *filename)
                 return NULL;
         }
 
+#ifndef GEKKO /* FIXME - make a replacement access() */
         // Attempt to honor read-only (since we're writing them in such a roundabout way)
         if (access(filename, W_OK) != 0 && errno != ENOENT)
                 return NULL;
+#endif
 
         disko_t *ds = calloc(1, sizeof(disko_t));
         if (!ds)
@@ -254,6 +256,7 @@ int disko_close(disko_t *ds, int backup)
                 err = errno;
         } else if (!err) {
                 // preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600
+#ifndef GEKKO /* FIXME - autoconf check for this instead */
                 struct stat st;
                 if (stat(ds->filename, &st) < 0) {
                         /* Probably didn't exist already, let's make something up.
@@ -264,6 +267,7 @@ int disko_close(disko_t *ds, int backup)
                         umask(m);
                         st.st_mode = 0666 & ~m;
                 }
+#endif
                 if (backup) {
                         // back up the old file
                         make_backup_file(ds->filename, (backup != 1));
@@ -271,8 +275,10 @@ int disko_close(disko_t *ds, int backup)
                 if (rename_file(ds->tempname, ds->filename, 1) != 0) {
                         err = errno;
                 } else {
+#ifndef GEKKO
                         // Fix the permissions on the file
                         chmod(ds->filename, st.st_mode);
+#endif
                 }
         }
         // If anything failed so far, kill off the temp file
