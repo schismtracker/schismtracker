@@ -589,34 +589,32 @@ song_instrument_t *csf_allocate_instrument(void);
 void csf_init_instrument(song_instrument_t *ins, int samp);
 void csf_free_instrument(song_instrument_t *p);
 
-uint32_t csf_read_sample(song_sample_t *pIns, uint32_t nFlags, const void *filedata, uint32_t dwMemLength);
-uint32_t csf_write_sample(disko_t *f, song_sample_t *pins, uint32_t nFlags, uint32_t nMaxLen);
-void csf_adjust_sample_loop(song_sample_t *pIns);
+uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *filedata, uint32_t datalength);
+uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags);
+void csf_adjust_sample_loop(song_sample_t *sample);
 
 extern void (*csf_midi_out_note)(int chan, const song_note_t *m);
 extern void (*csf_midi_out_raw)(const unsigned char *, unsigned int, unsigned int);
 extern void (*csf_multi_out_raw)(int chan, int *buf, int len);
 
 void csf_import_mod_effect(song_note_t *m, int from_xm);
-uint16_t csf_export_mod_effect(const song_note_t *m, int bXM);
+uint16_t csf_export_mod_effect(const song_note_t *m, int xm);
 
-void csf_import_s3m_effect(song_note_t *m, int bIT);
-void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT);
+void csf_import_s3m_effect(song_note_t *m, int it);
+void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int it);
 
 
 
-int csf_set_wave_config(song_t *csf, uint32_t nRate,uint32_t nBits,uint32_t nChannels);
-int csf_set_wave_config_ex(song_t *csf, int hqido, int bNR, int bEQ);
+int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t channels);
+int csf_set_wave_config_ex(song_t *csf, int hqido, int nr, int eq);
 
 // Mixer Config
 int csf_init_player(song_t *csf, int reset); // bReset=false
-int csf_set_resampling_mode(song_t *csf, uint32_t nMode); // SRCMODE_XXXX
+int csf_set_resampling_mode(song_t *csf, uint32_t mode); // SRCMODE_XXXX
 
 
 // sndmix
-int csf_fade_song(song_t *csf, unsigned int msec);
-int csf_global_fade_song(song_t *csf, unsigned int msec);
-unsigned int csf_read(song_t *csf, void * lpDestBuffer, unsigned int cbBuffer);
+unsigned int csf_read(song_t *csf, void *v_buffer, unsigned int bufsize);
 int csf_process_tick(song_t *csf);
 int csf_read_note(song_t *csf);
 
@@ -627,16 +625,16 @@ void csf_process_mono_dsp(song_t *csf, int count);
 
 // snd_fx
 unsigned int csf_get_length(song_t *csf); // (in seconds)
-void csf_instrument_change(song_t *csf, song_voice_t *pChn, uint32_t instr, int bPorta, int instr_column);
-void csf_note_change(song_t *csf, uint32_t nChn, int note, int bPorta, int bResetEnv, int bManual);
-uint32_t csf_get_nna_channel(song_t *csf, uint32_t nChn);
-void csf_check_nna(song_t *csf, uint32_t nChn, uint32_t instr, int note, int bForceCut);
+void csf_instrument_change(song_t *csf, song_voice_t *chn, uint32_t instr, int porta, int instr_column);
+void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int reset_env, int manual);
+uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);
+void csf_check_nna(song_t *csf, uint32_t chan, uint32_t instr, int note, int force_cut);
 void csf_process_effects(song_t *csf, int firsttick);
 
-void fx_note_cut(song_t *csf, uint32_t nChn);
-void fx_key_off(song_t *csf, uint32_t nChn);
-void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t nChn, int fake);
-void csf_process_midi_macro(song_t *csf, uint32_t nChn, const char * pszMidiMacro, uint32_t param,
+void fx_note_cut(song_t *csf, uint32_t chan);
+void fx_key_off(song_t *csf, uint32_t chan);
+void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t chan, int fake);
+void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, uint32_t param,
                         uint32_t note, uint32_t velocity, uint32_t use_instr);
 song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *ins, uint32_t note, song_sample_t *def);
 
@@ -653,14 +651,13 @@ unsigned long calc_halftone(unsigned long hz, int rel);
 song_t *csf_allocate(void);
 void csf_free(song_t *csf);
 
-int csf_load(song_t *csf, const uint8_t * lpStream, uint32_t dwMemLength);
 void csf_destroy(song_t *csf); /* erase everything -- equiv. to new song */
-int csf_destroy_sample(song_t *csf, uint32_t nSample);
+int csf_destroy_sample(song_t *csf, uint32_t smpnum);
 
 void csf_reset_midi_cfg(song_t *csf);
 uint32_t csf_get_num_orders(song_t *csf);
 void csf_set_current_order(song_t *csf, uint32_t position);
-void csf_loop_pattern(song_t *csf, int nPat, int nRow);
+void csf_loop_pattern(song_t *csf, int pattern, int start_row);
 void csf_reset_playmarks(song_t *csf);
 
 uint32_t csf_get_highest_used_channel(song_t *csf);

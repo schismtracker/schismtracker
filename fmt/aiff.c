@@ -36,7 +36,7 @@
 # define swab(a,b,c) swab((const char*)(a),(char*)(b),(size_t)(c))
 #endif
 
-//static void ConvertToIeeeExtended(double num, unsigned char *bytes);
+static void ConvertToIeeeExtended(double num, unsigned char *bytes);
 static double ConvertFromIeeeExtended(const unsigned char *bytes);
 
 /* --------------------------------------------------------------------- */
@@ -248,14 +248,19 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
                         }
                 }
 
+                /* TODO loop points */
+
                 if (smp) {
+                        uint32_t flags = SF_BE | SF_PCMS;
+
                         switch (bswapBE16(comm.data->COMM.num_channels)) {
                         default:
                                 log_appendf(4, "warning: multichannel AIFF is unsupported");
                         case 1:
+                                flags |= SF_M;
                                 break;
                         case 2:
-                                smp->flags |= CHN_STEREO;
+                                flags |= SF_SI;
                                 break;
                         }
 
@@ -263,9 +268,10 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
                         default:
                                 log_appendf(4, "warning: AIFF has unsupported bit-width");
                         case 8:
+                                flags |= SF_8;
                                 break;
                         case 16:
-                                smp->flags |= CHN_16BIT;
+                                flags |= SF_16;
                                 break;
                         }
 
@@ -274,19 +280,12 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 
                         smp->c5speed = ConvertFromIeeeExtended(comm.data->COMM.sample_rate);
                         smp->length = bswapBE32(comm.data->COMM.num_frames);
-                        smp->data = csf_allocate_sample(ssnd.size);
                         smp->volume = 64*4;
                         smp->global_volume = 64;
 
-#ifdef WORDS_BIGENDIAN
-                        memcpy(smp->data, ssnd.data, ssnd.size);
-#else
-                        if (smp->flags & CHN_16BIT) {
-                                swab(ssnd.data, smp->data, ssnd.size & ~1);
-                        } else {
-                                memcpy(smp->data, ssnd.data, ssnd.size);
-                        }
-#endif
+                        // the audio data starts 8 bytes into the chunk
+                        // (don't care about the block alignment stuff)
+                        csf_read_sample(smp, flags, ssnd.data->bytes + 8, ssnd.size - 8);
                 }
 
                 return 1;
@@ -309,10 +308,87 @@ int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 
 /* --------------------------------------------------------------------- */
 
-int fmt_aiff_save_sample(UNUSED disko_t *fp, UNUSED song_sample_t *smp)
+int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 {
-        log_appendf(4, "aiff save not implemented");
-        return SAVE_INTERNAL_ERROR;
+        int16_t s;
+        uint32_t ul;
+        int tlen, bps = 1;
+        uint8_t b[10];
+
+        if (smp->flags & CHN_16BIT)
+                bps *= 2;
+        /* note: *2 for stereo is done below -- need half of the value for the COMM chunk */
+
+        /* write a very large size for now */
+        disko_write(fp, "FORM\377\377\377\377AIFFNAME", 16);
+        tlen = strlen(smp->name);
+        ul = (tlen + 1) & ~1; /* must be even */
+        ul = bswapBE32(ul);
+        disko_write(fp, &ul, 4);
+        disko_write(fp, smp->name, tlen);
+        if (tlen & 1)
+                disko_putc(fp, '\0');
+
+        /* Common Chunk
+                The Common Chunk describes fundamental parameters of the sampled sound.
+        typedef struct {
+                ID              ckID;           // 'COMM'
+                long            ckSize;         // 18
+                short           numChannels;
+                unsigned long   numSampleFrames;
+                short           sampleSize;
+                extended        sampleRate;
+        } CommonChunk; */
+        disko_write(fp, "COMM", 4);
+        ul = bswapBE32(18); /* chunk size -- won't change */
+        disko_write(fp, &ul, 4);
+        s = bswapBE16((smp->flags & CHN_STEREO) ? 2 : 1); /* num channels */
+        disko_write(fp, &s, 2);
+        ul = bswapBE32(smp->length); /* num sample frames */
+        disko_write(fp, &ul, 4);
+        s = bswapBE16(8 * bps); /* number of bits per channel of data */
+        disko_write(fp, &s, 2);
+        ConvertToIeeeExtended(smp->c5speed, b);
+        disko_write(fp, b, 10);
+
+        /* NOW do this (sample size in AIFF is indicated per channel, not per frame) */
+        if (smp->flags & CHN_STEREO)
+                bps *= 2; /* == number of bytes per (stereo) sample */
+
+        /* Sound Data Chunk
+                The Sound Data Chunk contains the actual sample frames.
+        typedef struct {
+                ID              ckID;           // 'SSND'
+                long            ckSize;         // data size in bytes, *PLUS EIGHT* (for offset and blockSize)
+                unsigned long   offset;         // just set this to 0...
+                unsigned long   blockSize;      // likewise
+                unsigned char   soundData[];
+        } SoundDataChunk; */
+        disko_write(fp, "SSND", 4);
+        ul = bswapBE32(smp->length * bps + 8);
+        disko_write(fp, &ul, 4);
+        ul = bswapBE32(0);
+        disko_write(fp, &ul, 4);
+        disko_write(fp, &ul, 4);
+
+        uint32_t flags = SF_BE | SF_PCMS;
+        flags |= (smp->flags & CHN_16BIT) ? SF_16 : SF_8;
+        flags |= (smp->flags & CHN_STEREO) ? SF_SS : SF_M;
+
+        if (csf_write_sample(fp, smp, flags) != smp->length * bps) {
+                log_appendf(4, "AIFF: unexpected data size written");
+                return SAVE_INTERNAL_ERROR;
+        }
+
+        /* TODO: loop data */
+
+        /* fix the length in the file header */
+        ul = disko_tell(fp) - 8;
+        ul = bswapBE32(ul);
+        disko_seek(fp, 4, SEEK_SET);
+        disko_write(fp, &ul, 4);
+
+        return SAVE_SUCCESS;
 }
 
 /* --------------------------------------------------------------------- */
@@ -354,7 +430,6 @@ int fmt_aiff_save_sample(UNUSED disko_t *fp, UNUSED song_sample_t *smp)
 #define FloatToUnsigned(f) ((uint32_t) (((int32_t) (f - 2147483648.0)) + 2147483647L + 1))
 #define UnsignedToFloat(u) (((double) ((int32_t) (u - 2147483647L - 1))) + 2147483648.0)
 
-#if 0
 static void ConvertToIeeeExtended(double num, unsigned char *bytes)
 {
         int sign, expon;
@@ -408,7 +483,6 @@ static void ConvertToIeeeExtended(double num, unsigned char *bytes)
         bytes[8] = loMant >> 8;
         bytes[9] = loMant;
 }
-#endif
 
 static double ConvertFromIeeeExtended(const unsigned char *bytes)
 {
