@@ -112,11 +112,13 @@ int song_load_unchecked(const char *file);
 int song_save(const char *file, const char *type); // IT, S3M
 int song_export(const char *file, const char *type); // WAV
 
+/* 'num' is only for status text feedback -- all of the sample's data is taken from 'smp'.
+this provides an eventual mechanism for saving samples modified from disk (not yet implemented) */
+int song_save_sample(const char *file, const char *type, song_sample_t *smp, int num);
 
 void song_clear_sample(int n);
 void song_copy_sample(int n, song_sample_t *src);
 int song_load_sample(int n, const char *file);
-int song_save_sample(const char *file, const char *type, song_sample_t *smp);
 void song_stop_sample(song_sample_t *ssmp);
 
 void song_create_host_instrument(int smp);
