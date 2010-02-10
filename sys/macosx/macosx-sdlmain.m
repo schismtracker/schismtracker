@@ -43,7 +43,13 @@ extern char *initial_song;
 #include "event.h"
 #include "osdefs.h"
 
-#import "macosx-sdlmain.h"
+#define Cursor AppleCursor
+#import <Cocoa/Cocoa.h>
+#undef Cursor
+
+@interface SDLMain : NSObject
+- (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename;
+@end
 
 #import <sys/param.h> /* for MAXPATHLEN */
 #import <unistd.h>

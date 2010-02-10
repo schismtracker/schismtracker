@@ -1068,7 +1068,7 @@ int song_export(UNUSED const char *filename, UNUSED const char *type)
 
 int song_save(const char *filename, const char *type)
 {
-        int n, ret, backup;
+        int ret, backup;
         struct save_format *format = get_save_format(song_save_formats, type);
 
         if (!format)
