@@ -250,10 +250,55 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
+/* wav is like aiff's retarded cousin */
 
-int fmt_wav_save_sample(UNUSED disko_t *fp, UNUSED song_sample_t *smp)
+int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 {
-        log_appendf(4, "wav save unimplemented");
-        return SAVE_INTERNAL_ERROR;
+        int16_t s;
+        uint32_t ul;
+        int tlen, bps = 1;
+
+        if (smp->flags & CHN_16BIT)
+                bps *= 2;
+        if (smp->flags & CHN_STEREO)
+                bps *= 2;
+
+        /* write a very large size for now */
+        disko_write(fp, "RIFF\377\377\377\377WAVEfmt ", 16);
+        ul = bswapLE32(16); // fmt chunk size
+        disko_write(fp, &ul, 4);
+        s = bswapLE16(1); // linear pcm
+        disko_write(fp, &s, 2);
+        s = bswapLE16((smp->flags & CHN_STEREO) ? 2 : 1); // number of channels
+        disko_write(fp, &s, 2);
+        ul = bswapLE32(smp->c5speed); // sample rate
+        disko_write(fp, &ul, 4);
+        ul = bswapLE32(bps * smp->c5speed); // "byte rate" (why?! I have no idea)
+        disko_write(fp, &ul, 4);
+        s = bswapLE16(bps); // (oh, come on! the format already stores everything needed to calculate this!)
+        disko_write(fp, &s, 2);
+        s = bswapLE16((smp->flags & CHN_16BIT) ? 16 : 8); // bits per sample
+        disko_write(fp, &s, 2);
+
+        disko_write(fp, "data", 4);
+        ul = bswapLE32(bps * smp->length);
+        disko_write(fp, &ul, 4);
+
+        uint32_t flags = SF_LE;
+        flags |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU);
+        flags |= (smp->flags & CHN_STEREO) ? SF_SS : SF_M;
+
+        if (csf_write_sample(fp, smp, flags) != smp->length * bps) {
+                log_appendf(4, "WAV: unexpected data size written");
+                return SAVE_INTERNAL_ERROR;
+        }
+
+        /* fix the length in the file header */
+        ul = disko_tell(fp) - 8;
+        ul = bswapLE32(ul);
+        disko_seek(fp, 4, SEEK_SET);
+        disko_write(fp, &ul, 4);
+
+        return SAVE_SUCCESS;
 }
 

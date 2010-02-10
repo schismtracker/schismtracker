@@ -380,9 +380,11 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
                 byteswap = 1;
                 break;
         case SF_BE:
+                byteswap = 0;
                 break;
 #else
         case SF_LE:
+                byteswap = 0;
                 break;
         case SF_BE:
                 byteswap = 1;
