@@ -205,7 +205,7 @@ void song_new(int flags)
                 }
         }
 
-        current_song->repeat_count = current_song->initial_repeat_count = -1;
+        current_song->repeat_count = -1;
         //song_stop();
 
         csf_reset_midi_cfg(current_song);
@@ -318,7 +318,7 @@ int song_load_unchecked(const char *file)
         song_lock_audio();
         csf_free(current_song);
         current_song = newsong;
-        current_song->repeat_count = current_song->initial_repeat_count = -1;
+        current_song->repeat_count = -1;
         max_channels_used = 0;
         fix_song();
         song_stop_unlocked(0);

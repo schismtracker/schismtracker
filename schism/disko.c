@@ -85,18 +85,42 @@ static long _dw_stdio_tell(disko_t *ds)
 // ---------------------------------------------------------------------------
 // memory backend
 
-// TODO: actually allocate memory, and adjust sizes
-
-static void _dw_mem_write(disko_t *ds, UNUSED const void *buf, UNUSED size_t len)
+// 0 => memory error, abandon ship
+static int _dw_bufcheck(disko_t *ds, size_t extend)
 {
-        // TODO
-        disko_seterror(ds, ENOSYS);
+        if (ds->pos + extend <= ds->length)
+                return 1;
+
+        ds->length = MAX(ds->length, ds->pos + extend);
+
+        if (ds->length >= ds->allocated) {
+                size_t newsize = MAX(ds->allocated + DW_BUFFER_SIZE, ds->length);
+                uint8_t *new = realloc(ds->data, newsize);
+                if (!new) {
+                        // Eek
+                        free(ds->data);
+                        ds->data = NULL;
+                        disko_seterror(ds, ENOMEM);
+                        return 0;
+                }
+                ds->data = new;
+                ds->allocated = newsize;
+        }
+        return 1;
 }
 
-static void _dw_mem_putc(disko_t *ds, UNUSED int c)
+static void _dw_mem_write(disko_t *ds, const void *buf, size_t len)
 {
-        // TODO
-        disko_seterror(ds, ENOSYS);
+        if (_dw_bufcheck(ds, len)) {
+                memcpy(ds->data + ds->pos, buf, len);
+                ds->pos += len;
+        }
+}
+
+static void _dw_mem_putc(disko_t *ds, int c)
+{
+        if (_dw_bufcheck(ds, 1))
+                ds->data[ds->pos++] = c;
 }
 
 static void _dw_mem_seek(disko_t *ds, long offset, int whence)
@@ -117,9 +141,12 @@ static void _dw_mem_seek(disko_t *ds, long offset, int whence)
                 disko_seterror(ds, EINVAL);
                 return;
         }
-        if ((size_t) offset >= ds->allocated) {
-                // TODO reallocate here? later?
-        }
+        /* note: seeking doesn't cause a buffer resize. This is consistent with the behavior of stdio streams.
+        Consider:
+                FILE *f = fopen("f", "w");
+                fseek(f, 1000, SEEK_SET);
+                fclose(f);
+        This will produce a zero-byte file; the size is not extended until data is written. */
         ds->pos = offset;
 }
 
@@ -285,25 +312,103 @@ disko_t *disko_memopen(void)
 
 int disko_memclose(disko_t *ds, int keep_buffer)
 {
+        int err = ds->error;
         if (!keep_buffer)
                 free(ds->data);
         free(ds);
-        return DW_OK;
+        if (err) {
+                errno = err;
+                return DW_ERROR;
+        } else {
+                return DW_OK;
+        }
 }
 
 // ---------------------------------------------------------------------------
 
 /* these are used for pattern->sample linking crap */
 
-int disko_writeout_sample(UNUSED int sampno, UNUSED int patno, UNUSED int dobind)
+int disko_writeout_sample(int smpnum, int pattern, int dobind)
 {
-        return DW_ERROR;
+        int ret = DW_OK;
+        song_t dwsong;
+        song_sample_t *sample;
+        uint8_t buf[DW_BUFFER_SIZE];
+        int bps;
+        disko_t *ds;
+        uint8_t *dsdata;
+
+        if (smpnum < 1 || smpnum >= MAX_SAMPLES)
+                return DW_ERROR;
+
+        ds = disko_memopen();
+        if (!ds)
+                return DW_ERROR;
+
+        song_lock_audio();
+
+        /* save the real settings */
+        uint32_t prev_freq = mix_frequency;
+        uint32_t prev_bits = mix_bits_per_sample;
+        uint32_t prev_channels = mix_channels;
+        uint32_t prev_flags = mix_flags;
+
+        /* install our own */
+        dwsong = *current_song; /* shadow it */
+        csf_set_wave_config(&dwsong, 44100, 16, (dwsong.flags & SONG_NOSTEREO) ? 1 : 2);
+        csf_initialize_dsp(&dwsong, 1);
+        mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
+
+        bps = mix_channels * ((mix_bits_per_sample + 7) / 8);
+
+        dwsong.repeat_count = 2; /* THIS MAKES SENSE! */
+        dwsong.buffer_count = 0;
+        dwsong.stop_at_order = -1;
+        dwsong.stop_at_row = -1;
+        csf_set_current_order(&dwsong, 0); /* rather indirect way of resetting playback variables */
+        csf_loop_pattern(&dwsong, pattern, 0);
+
+        do {
+                disko_write(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * bps);
+        } while (!(dwsong.flags & SONG_ENDREACHED));
+
+        dsdata = ds->data;
+        if (disko_memclose(ds, 1) == DW_OK) {
+                sample = current_song->samples + smpnum;
+                if (sample->data)
+                        csf_free_sample(sample->data);
+                sample->data = csf_allocate_sample(ds->length);
+                if (sample->data) {
+                        memcpy(sample->data, dsdata, ds->length);
+                        sample->length = ds->length / (mix_channels * (mix_bits_per_sample / 8));
+                        sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);
+                        if (mix_channels > 1)
+                                sample->flags |= CHN_STEREO;
+                        if (mix_bits_per_sample > 8)
+                                sample->flags |= CHN_16BIT;
+                        sample->c5speed = mix_frequency;
+                        sprintf(sample->name, "Pattern %03d", pattern);
+                        if (dobind) {
+                                /* This is hideous */
+                                sample->name[23] = 0xff;
+                                sample->name[24] = pattern;
+                        }
+                }
+        } else {
+                /* Balls. Something died. */
+                ret = DW_ERROR;
+        }
+        free(dsdata);
+
+        /* put everything back */
+        csf_set_wave_config(current_song, prev_freq, prev_bits, prev_channels);
+        mix_flags = prev_flags;
+
+        song_unlock_audio();
+
+        return ret;
 }
 
-int disko_writeout(UNUSED const char *file, UNUSED disko_t *f)
-{
-        return DW_ERROR;
-}
 
 
 /* main calls this periodically when the .wav exporter is busy */

@@ -566,8 +566,7 @@ typedef struct song {
         uint32_t mixing_volume;
         uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)
         uint32_t tempo_factor; // ditto
-        int32_t repeat_count; // does anything use this? where and why?
-        int32_t initial_repeat_count; // likewise
+        int32_t repeat_count; // disk writer uses this to keep song from looping (but that's dumb, FIXME)
         uint8_t row_highlight_major;
         uint8_t row_highlight_minor;
         char message[MAX_MESSAGE + 1];
@@ -579,7 +578,6 @@ typedef struct song {
         int stop_at_row;
         unsigned int stop_at_time;
 } song_t;
-
 
 song_note_t *csf_allocate_pattern(uint32_t rows);
 void csf_free_pattern(void *pat);
