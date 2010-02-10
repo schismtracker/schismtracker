@@ -331,192 +331,145 @@ void csf_loop_pattern(song_t *csf, int pat, int row)
         }
 }
 
+/* --------------------------------------------------------------------------------------------------------- */
 
+#define SF_FAIL(name, n) \
+        ({ log_appendf(4, "%s: internal error: unsupported %s %d", __FUNCTION__, name, n); return 0; })
 
-
-uint32_t csf_write_sample(disko_t *f, song_sample_t *pins, uint32_t flags, uint32_t maxsize)
+uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
 {
-        uint32_t len = 0, bufcount;
-        union {
-                signed char s8[4096];
-                signed short s16[2048];
-                unsigned char u8[4096];
-        } buffer;
-        signed char *data = (signed char *)pins->data;
-        uint32_t length = pins->length;
+        uint32_t pos, len = sample->length;
+        int stride;     // how much to add to the left/right pointer per sample written
+        int rightofs;   // where the right channel is in relation to the left
+        int byteswap;   // should the sample data be byte-swapped?
+        int add;        // how much to add to the sample data (for converting to unsigned)
 
-        if ((maxsize) && (length > maxsize)) length = maxsize;
-        if ((!data) || (f == NULL) || (!length)) return 0;
-        switch(flags) {
-        // 16-bit samples
-        case RS_PCM16U:
-        case RS_PCM16D:
-        case RS_PCM16S:
-                {
-                        short int *p = (short int *)data;
-                        int s_old = 0, s_ofs;
-                        len = length * 2;
-                        bufcount = 0;
-                        s_ofs = (flags == RS_PCM16U) ? 0x8000 : 0;
-                        for (uint32_t j=0; j<length; j++) {
-                                int s_new = *p;
-                                p++;
-                                if (pins->flags & CHN_STEREO) {
-                                        s_new = (s_new + (*p) + 1) >> 1;
-                                        p++;
-                                }
-                                if (flags == RS_PCM16D) {
-                                        buffer.s16[bufcount / 2] = bswapLE16(s_new - s_old);
-                                        s_old = s_new;
-                                } else {
-                                        buffer.s16[bufcount / 2] = bswapLE16(s_new + s_ofs);
-                                }
-                                bufcount += 2;
-                                if (bufcount >= sizeof(buffer) - 1) {
-                                        disko_write(f, buffer.u8, bufcount);
-                                        bufcount = 0;
-                                }
-                        }
-                        if (bufcount)
-                                disko_write(f, buffer.u8, bufcount);
-                }
+        // validate the write flags, and set up the save params
+        switch (flags & SF_CHN_MASK) {
+        case SF_SI:
+                if (!(sample->flags & CHN_STEREO))
+                        SF_FAIL("channel mask", flags & SF_CHN_MASK);
+                stride = 1;
+                rightofs = sample->length;
+                len *= 2;
                 break;
-
-
-        // 8-bit Stereo samples (not interleaved)
-        case RS_STPCM8S:
-        case RS_STPCM8U:
-        case RS_STPCM8D:
-                {
-                        int s_ofs = (flags == RS_STPCM8U) ? 0x80 : 0;
-                        for (uint32_t ch=0; ch<2; ch++) {
-                                signed char *p = data + ch;
-                                int s_old = 0;
-
-                                bufcount = 0;
-                                for (uint32_t j=0; j<length; j++) {
-                                        int s_new = *p;
-                                        p += 2;
-                                        if (flags == RS_STPCM8D) {
-                                                buffer.s8[bufcount++] = s_new - s_old;
-                                                s_old = s_new;
-                                        } else {
-                                                buffer.s8[bufcount++] = s_new + s_ofs;
-                                        }
-                                        if (bufcount >= sizeof(buffer)) {
-                                                disko_write(f, buffer.u8, bufcount);
-                                                bufcount = 0;
-                                        }
-                                }
-                                if (bufcount)
-                                        disko_write(f, buffer.u8, bufcount);
-                        }
-                }
-                len = length * 2;
+        case SF_SS:
+                if (!(sample->flags & CHN_STEREO))
+                        SF_FAIL("channel mask", flags & SF_CHN_MASK);
+                stride = 2;
+                rightofs = 1;
+                len *= 2;
                 break;
-
-        // 16-bit Stereo samples (not interleaved)
-        case RS_STPCM16S:
-        case RS_STPCM16U:
-        case RS_STPCM16D:
-                {
-                        int s_ofs = (flags == RS_STPCM16U) ? 0x8000 : 0;
-                        for (uint32_t ch=0; ch<2; ch++) {
-                                signed short *p = ((signed short *)data) + ch;
-                                int s_old = 0;
-
-                                bufcount = 0;
-                                for (uint32_t j=0; j<length; j++) {
-                                        int s_new = *p;
-                                        p += 2;
-                                        if (flags == RS_STPCM16D)
-                                        {
-                                                buffer.s16[bufcount / 2] = bswapLE16(s_new - s_old);
-                                                s_old = s_new;
-                                        } else
-                                        {
-                                                buffer.s16[bufcount / 2] = bswapLE16(s_new + s_ofs);
-                                        }
-                                        bufcount += 2;
-                                        if (bufcount >= sizeof(buffer))
-                                        {
-                                                disko_write(f, buffer.u8, bufcount);
-                                                bufcount = 0;
-                                        }
-                                }
-                                if (bufcount)
-                                        disko_write(f, buffer.u8, bufcount);
-                        }
-                }
-                len = length*4;
+        case SF_M:
+                /* Mono is actually processed the same as interleaved stereo, except without doubling
+                the data length. An extra "left" sample is written if the sample size is odd. */
+                stride = 2;
+                rightofs = 1;
                 break;
-
-        //      Stereo signed interleaved
-        case RS_STIPCM8S:
-        case RS_STIPCM16S:
-                len = length * 2;
-                if (flags == RS_STIPCM16S) {
-                        {
-                                signed short *p = (signed short *)data;
-                                bufcount = 0;
-                                for (uint32_t j=0; j<length; j++) {
-                                        buffer.s16[bufcount / 2] = *p;
-                                        bufcount += 2;
-                                        if (bufcount >= sizeof(buffer)) {
-                                                disko_write(f, buffer.u8, bufcount);
-                                                bufcount = 0;
-                                        }
-                                }
-                                if (bufcount)
-                                        disko_write(f, buffer.u8, bufcount);
-                        };
-                } else {
-                        disko_write(f, (const unsigned char *)data, len);
-                }
-                break;
-
-        // Default: assume 8-bit PCM data
         default:
-                len = length;
-                bufcount = 0;
-                {
-                        signed char *p = data;
-                        int sinc = (pins->flags & CHN_16BIT) ? 2 : 1;
-                        if (bswapLE16(0xff00) == 0x00ff) {
-                                /* skip first byte; significance is at other end */
-                                p++;
-                                len--;
-                        }
+                SF_FAIL("channel mask", flags & SF_CHN_MASK);
+        }
 
-                        int s_old = 0, s_ofs = (flags == RS_PCM8U) ? 0x80 : 0;
-                        if (pins->flags & CHN_16BIT) p++;
-                        for (uint32_t j=0; j<len; j++) {
-                                int s_new = (signed char)(*p);
-                                p += sinc;
-                                if (pins->flags & CHN_STEREO) {
-                                        s_new = (s_new + ((int)*p) + 1) >> 1;
-                                        p += sinc;
-                                }
-                                if (flags == RS_PCM8D) {
-                                        buffer.s8[bufcount++] = s_new - s_old;
-                                        s_old = s_new;
-                                } else {
-                                        buffer.s8[bufcount++] = s_new + s_ofs;
-                                }
-                                if (bufcount >= sizeof(buffer)) {
-                                        disko_write(f, buffer.u8, bufcount);
-                                        bufcount = 0;
-                                }
-                        }
-                        if (bufcount)
-                                disko_write(f, buffer.u8, bufcount);
+        // TODO allow converting bit width, this will be useful
+        if ((flags & SF_BIT_MASK) != ((sample->flags & CHN_16BIT) ? SF_16 : SF_8))
+                SF_FAIL("bit width", flags & SF_BIT_MASK);
+
+        switch (flags & SF_END_MASK) {
+#if WORDS_BIGENDIAN
+        case SF_LE:
+                byteswap = 1;
+                break;
+        case SF_BE:
+                break;
+#else
+        case SF_LE:
+                break;
+        case SF_BE:
+                byteswap = 1;
+                break;
+#endif
+        default:
+                SF_FAIL("endianness", flags & SF_END_MASK);
+        }
+
+        switch (flags & SF_ENC_MASK) {
+        case SF_PCMU:
+                add = ((flags & SF_BIT_MASK) == SF_16) ? 32768 : 128;
+                break;
+        case SF_PCMS:
+                add = 0;
+                break;
+        default:
+                SF_FAIL("encoding", flags & SF_ENC_MASK);
+        }
+
+        if ((flags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK)) != 0) {
+                SF_FAIL("extra flag", flags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK));
+        }
+
+        if (!sample || sample->length < 1 || sample->length > MAX_SAMPLE_LENGTH || !sample->data)
+                return 0;
+
+        if ((flags & SF_BIT_MASK) == SF_16) {
+                // 16-bit data.
+
+                // 'left' and 'right' samples are written in an alternating manner
+                const int16_t *left, *right;
+                int16_t v;
+
+                left = (const int16_t *) sample->data;
+                right = left + rightofs;
+
+                for (pos = 0; pos < len; pos += 2) {
+                        v = *left + add;
+                        if (byteswap)
+                                v = bswap_16(v);
+                        disko_write(fp, &v, 2);
+                        left += stride;
+
+                        v = *right + add;
+                        if (byteswap)
+                                v = bswap_16(v);
+                        disko_write(fp, &v, 2);
+                        right += stride;
+                }
+
+                if (len & 1) {
+                        // odd length => write one more 'left'
+                        v = *left + add;
+                        if (byteswap)
+                                v = bswap_16(v);
+                        disko_write(fp, &v, 2);
+                }
+
+                len *= 2;
+        } else {
+                // 8-bit data. Mostly the same as above, but a little bit simpler since
+                // there's no byteswapping, and the values can be written with putc.
+
+                const int8_t *left, *right;
+                left = (const int8_t *) sample->data;
+                right = left + rightofs;
+
+                // No point buffering the processing here -- the disk output already SHOULD have a 64kb buffer
+                for (pos = 0; pos < len; pos += 2) {
+                        disko_putc(fp, *left + add);
+                        left += stride;
+
+                        disko_putc(fp, *right + add);
+                        right += stride;
+                }
+
+                if (len & 1) {
+                        // odd length => write one more 'left'
+                        disko_putc(fp, *left + add);
                 }
         }
+
         return len;
 }
 
 
-#define SF_FAIL(name,n) log_appendf(4, "csf_read_sample: internal error: unsupported %s %d", name, n);return 0
 uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *filedata, uint32_t memsize)
 {
         uint32_t len = 0, mem;
@@ -971,6 +924,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
         return len;
 }
 
+/* --------------------------------------------------------------------------------------------------------- */
 
 void csf_adjust_sample_loop(song_sample_t *sample)
 {
