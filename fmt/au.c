@@ -47,34 +47,39 @@ struct au_header {
 
 int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        struct au_header hh;
+        struct au_header au;
 
         if (!(length > 24 && memcmp(data, ".snd", 4) == 0))
                 return 0;
 
-        memcpy(&hh, data, 24);
+        memcpy(&au, data, 24);
+        au.data_offset = bswapBE32(au.data_offset);
+        au.data_size = bswapBE32(au.data_size);
+        au.encoding = bswapBE32(au.encoding);
+        au.sample_rate = bswapBE32(au.sample_rate);
+        au.channels = bswapBE32(au.channels);
 
-        if (!(hh.data_offset < length && hh.data_size > 0 && hh.data_size <= length - hh.data_offset))
+        if (!(au.data_offset < length && au.data_size > 0 && au.data_size <= length - au.data_offset))
                 return 0;
 
-        file->smp_length = hh.data_size / hh.channels;
+        file->smp_length = au.data_size / au.channels;
         file->smp_flags = 0;
-        if (hh.encoding == AU_PCM_16) {
+        if (au.encoding == AU_PCM_16) {
                 file->smp_flags |= CHN_16BIT;
                 file->smp_length /= 2;
-        } else if (hh.encoding == AU_PCM_24) {
+        } else if (au.encoding == AU_PCM_24) {
                 file->smp_length /= 3;
-        } else if (hh.encoding == AU_PCM_32 || hh.encoding == AU_IEEE_32) {
+        } else if (au.encoding == AU_PCM_32 || au.encoding == AU_IEEE_32) {
                 file->smp_length /= 4;
-        } else if (hh.encoding == AU_IEEE_64) {
+        } else if (au.encoding == AU_IEEE_64) {
                 file->smp_length /= 8;
         }
-        if (hh.channels >= 2) {
+        if (au.channels >= 2) {
                 file->smp_flags |= CHN_STEREO;
         }
         file->description = "AU Sample";
-        if (hh.data_offset > 24) {
-                int extlen = hh.data_offset - 24;
+        if (au.data_offset > 24) {
+                int extlen = au.data_offset - 24;
 
                 file->title = calloc(extlen + 1, sizeof(char));
                 memcpy(file->title, data + 24, extlen);

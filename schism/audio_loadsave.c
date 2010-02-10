@@ -1022,22 +1022,46 @@ struct save_format song_save_formats[] = {
 };
 
 struct save_format song_export_formats[] = {
-        {"WAV", "IBM/Microsoft WAV", "wav", {.export = {_export_head_stub, _export_body_stub, _export_tail_stub}}},
+        {"WAV", "WAV", "wav", {.export = {_export_head_stub, _export_body_stub, _export_tail_stub}}},
         {.label = NULL}
 };
 
 struct save_format sample_save_formats[] = {
         {"ITS", "Impulse Tracker", "its", {.save_sample = fmt_its_save_sample}},
+        //{"S3I", "Scream Tracker", "s3i", {.save_sample = fmt_s3i_save_sample}},
         {"AIFF", "Audio IFF", "aiff", {.save_sample = fmt_aiff_save_sample}},
         {"AU", "Sun/NeXT", "au", {.save_sample = fmt_au_save_sample}},
-        {"WAV", "IBM/Microsoft WAV", "wav", {.save_sample = fmt_wav_save_sample}},
+        {"WAV", "WAV", "wav", {.save_sample = fmt_wav_save_sample}},
         {"RAW", "Raw", "raw", {.save_sample = fmt_raw_save_sample}},
         {.label = NULL}
 };
 
+static struct save_format *get_save_format(struct save_format *formats, const char *label)
+{
+        int n;
+
+        if (!label) {
+                // why would this happen, ever?
+                log_appendf(4, "No file type given, very weird! (Try a different filename?)");
+                return NULL;
+        }
+
+        for (n = 0; formats[n].label; n++)
+                if (strcmp(formats[n].label, label) == 0)
+                        return formats + n;
+
+        log_appendf(4, "Unknown save format %s", label);
+        return NULL;
+}
+
 
 int song_export(UNUSED const char *filename, UNUSED const char *type)
 {
+        struct save_format *format = get_save_format(song_export_formats, type);
+
+        if (!format)
+                return SAVE_INTERNAL_ERROR;
+
         return SAVE_INTERNAL_ERROR;
 }
 
@@ -1045,12 +1069,15 @@ int song_export(UNUSED const char *filename, UNUSED const char *type)
 int song_save(const char *filename, const char *type)
 {
         int n, ret, backup;
+        struct save_format *format = get_save_format(song_save_formats, type);
 
-        if (!type) {
-                // why would this happen, ever?
-                log_appendf(4, "No file type given, very weird! (Try a different filename?)");
+        if (!format)
                 return SAVE_INTERNAL_ERROR;
-        }
+
+        log_nl();
+        log_nl();
+        log_appendf(2, "Saving %s module", format->name);
+        log_underline(strlen(format->name) + 14);
 
 /* TODO: add or replace file extension as appropriate
 
@@ -1081,82 +1108,84 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
         current_song->row_highlight_major = row_highlight_major;
         current_song->row_highlight_minor = row_highlight_minor;
 
-        for (n = 0; song_save_formats[n].label; n++) {
-                if (strcmp(song_save_formats[n].label, type) != 0)
-                        continue;
-
-                // WOO! it's ours!
-                disko_t *fp = disko_open(filename);
-                if (!fp) {
-                        log_perror(filename);
-                        return SAVE_FILE_ERROR;
-                }
-                ret = song_save_formats[n].f.save_song(fp, current_song);
-                backup = ((status.flags & MAKE_BACKUPS)
-                          ? (status.flags & NUMBERED_BACKUPS)
-                          ? 65536 : 1 : 0);
-                if (disko_close(fp, backup) == DW_ERROR && ret == SAVE_SUCCESS) {
-                        // this was not as successful as originally claimed!
-                        ret = SAVE_FILE_ERROR;
-                }
-                switch (ret) {
-                case SAVE_SUCCESS:
-                        status.flags &= ~SONG_NEEDS_SAVE;
-                        if (strcasecmp(song_filename, filename))
-                                song_set_filename(filename);
-                        break;
-                case SAVE_FILE_ERROR:
-                        log_perror(filename);
-                        break;
-                case SAVE_INTERNAL_ERROR:
-                default: // ???
-                        log_appendf(4, "Internal error saving file");
-                        break;
-                }
-                return ret;
+        disko_t *fp = disko_open(filename);
+        if (!fp) {
+                log_perror(filename);
+                return SAVE_FILE_ERROR;
         }
 
-        // Shouldn't get here...
-        log_appendf(4, "Unknown file type: %s", type);
-        return SAVE_INTERNAL_ERROR;
+        ret = format->f.save_song(fp, current_song);
+        if (ret != SAVE_SUCCESS)
+                disko_seterror(fp, EINVAL);
+        backup = ((status.flags & MAKE_BACKUPS)
+                  ? (status.flags & NUMBERED_BACKUPS)
+                  ? 65536 : 1 : 0);
+        if (disko_close(fp, backup) == DW_ERROR && ret == SAVE_SUCCESS) {
+                // this was not as successful as originally claimed!
+                ret = SAVE_FILE_ERROR;
+        }
+
+        switch (ret) {
+        case SAVE_SUCCESS:
+                status.flags &= ~SONG_NEEDS_SAVE;
+                if (strcasecmp(song_filename, filename))
+                        song_set_filename(filename);
+                log_appendf(5, " Done");
+                break;
+        case SAVE_FILE_ERROR:
+                log_perror(filename);
+                break;
+        case SAVE_INTERNAL_ERROR:
+        default: // ???
+                log_appendf(4, " Internal error saving song");
+                break;
+        }
+
+        return ret;
 }
 
-int song_save_sample(const char *filename, const char *type, song_sample_t *smp)
+int song_save_sample(const char *filename, const char *type, song_sample_t *smp, int num)
 {
-        int n, ret;
+        int ret;
+        struct save_format *format = get_save_format(sample_save_formats, type);
 
-        for (n = 0; song_save_formats[n].label; n++) {
-                if (strcmp(song_save_formats[n].label, type) != 0)
-                        continue;
+        if (!format)
+                return SAVE_INTERNAL_ERROR;
 
-                // WOO! it's ours!
-                disko_t *fp = disko_open(filename);
-                if (!fp) {
-                        log_perror(get_basename(filename));
-                        return SAVE_FILE_ERROR;
-                }
-                ret = sample_save_formats[n].f.save_sample(fp, smp);
+        if (!filename || !filename[0]) {
+                status_text_flash("Error: Sample %d NOT saved! (%s)", num, "No Filename?");
+                return SAVE_INTERNAL_ERROR; // ?
+        }
+
+        disko_t *fp = disko_open(filename);
+        if (fp) {
+                ret = format->f.save_sample(fp, smp);
+                if (ret != SAVE_SUCCESS)
+                        disko_seterror(fp, EINVAL);
                 if (disko_close(fp, 0) == DW_ERROR && ret == SAVE_SUCCESS) {
                         // this was not as successful as originally claimed!
                         ret = SAVE_FILE_ERROR;
                 }
-                switch (ret) {
-                case SAVE_SUCCESS:
-                        break;
-                case SAVE_FILE_ERROR:
-                        log_perror(get_basename(filename));
-                        break;
-                case SAVE_INTERNAL_ERROR:
-                default: // ???
-                        log_appendf(4, "Internal error saving file");
-                        break;
-                }
-                return ret;
+        } else {
+                ret = SAVE_FILE_ERROR;
         }
 
-        // Shouldn't get here...
-        log_appendf(4, "Unknown file type: %s", type);
-        return SAVE_INTERNAL_ERROR;
+        switch (ret) {
+        case SAVE_SUCCESS:
+                status_text_flash("%s sample saved (sample %d)", format->name, num);
+                break;
+        case SAVE_FILE_ERROR:
+                status_text_flash("Error: Sample %d NOT saved! (%s)", num, "File Error");
+                log_perror(get_basename(filename));
+                break;
+        case SAVE_INTERNAL_ERROR:
+        default: // ???
+                status_text_flash("Error: Sample %d NOT saved! (%s)", num, "Internal error");
+                log_appendf(4, "Internal error saving sample");
+                break;
+        }
+
+        return ret;
 }
 
 // ------------------------------------------------------------------------

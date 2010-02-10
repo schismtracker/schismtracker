@@ -996,13 +996,9 @@ static void do_save_sample(void *ptr)
 {
         struct sample_save_data *data = (struct sample_save_data *) ptr;
 
-        // maybe *this* function should check the filename & ensure sample data exists?
-        if (song_save_sample(data->path, data->format, song_get_sample(current_sample)) == SAVE_SUCCESS) {
-                // FIXME should this be using the long name?
-                status_text_flash("%s sample saved (sample %d)", data->format, current_sample);
-        } else {
-                status_text_flash("Error: Sample %d NOT saved! (No Filename?)", current_sample);
-        }
+        // I guess this function doesn't need to care about the return value,
+        // since song_save_sample is handling all the visual feedback...
+        song_save_sample(data->path, data->format, song_get_sample(current_sample), current_sample);
         save_sample_free_data(ptr);
 }
 
