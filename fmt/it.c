@@ -393,7 +393,7 @@ static void load_it_instrument(song_instrument_t *instrument, slurp_t *fp)
 }
 
 
-static void load_it_sample(song_sample_t *sample, slurp_t *fp)
+static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
 {
         struct it_sample shdr;
 
@@ -426,8 +426,8 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp)
         sample->sustain_start = bswapLE32(shdr.susloop_start);
         sample->sustain_end = bswapLE32(shdr.susloop_end);
 
-        sample->vib_speed = shdr.vis;
-        sample->vib_depth = shdr.vid & 0x7f; // XXX why the bit mask? (copied over from modplug)
+        sample->vib_speed = MIN(shdr.vis, 64);
+        sample->vib_depth = MIN(shdr.vid, 64);
         sample->vib_rate = shdr.vir;
         sample->vib_type = autovib_import[shdr.vit % 4];
 
@@ -439,6 +439,12 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp)
                 sample->flags |= CHN_PINGPONGLOOP;
         if (shdr.flag & 128)
                 sample->flags |= CHN_PINGPONGSUSTAIN;
+
+        /* IT sometimes didn't clear the flag after loading a stereo sample. This appears to have
+        been fixed sometime before IT 2.14, which is fortunate because that's what a lot of otehr
+        programs annoyingly identify themselves as. */
+        if (cwtv < 0x0214)
+                shdr.flag &= ~4;
 
         if (shdr.flag & 1) {
                 slurp_seek(fp, bswapLE32(shdr.sample_pointer), SEEK_SET);
@@ -456,7 +462,7 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp)
                         flags |= (shdr.cvt & 4) ? SF_PCMD : (shdr.cvt & 1) ? SF_PCMS : SF_PCMU;
                 }
                 flags |= (shdr.flag & 2) ? SF_16 : SF_8;
-                csf_read_sample(sample, flags, (const char *) fp->data + fp->pos, fp->length - fp->pos);
+                csf_read_sample(sample, flags, fp->data + fp->pos, fp->length - fp->pos);
         } else {
                 sample->length = 0;
         }
@@ -603,7 +609,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                         if (!para)
                                 continue;
                         slurp_seek(fp, para, SEEK_SET);
-                        load_it_sample(sample, fp);
+                        load_it_sample(sample, fp, hdr.cwtv);
                 }
         }
         
