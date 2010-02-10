@@ -88,12 +88,8 @@ disko_t *disko_memopen(void);
 int disko_memclose(disko_t *f, int free_buffer);
 
 
-/* kindler, gentler, (and most importantly) simpler version (can't call sync)
-NOTE: used by orderlist and pattern editor */
-int disko_writeout(const char *file, disko_t *f);
-
 /* copy a pattern into a sample */
-int disko_writeout_sample(int sampno, int patno, int bindme);
+int disko_writeout_sample(int smpnum, int pattern, int bind);
 
 /* this synchronizes with the diskwriter.
 return: DW_SYNC_*, self explanatory */
