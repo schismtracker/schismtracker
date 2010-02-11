@@ -228,7 +228,9 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 {
         save_its_header(fp, smp);
-        save_sample_data_LE(fp, smp, 1);
+        csf_write_sample(fp, smp, SF_LE | SF_PCMS
+                        | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+                        | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M));
 
         /* Write the sample pointer. In an ITS file, the sample data is right after the header,
         so its position in the file will be the same as the size of the header. */
@@ -238,3 +240,4 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 
         return SAVE_SUCCESS;
 }
+
