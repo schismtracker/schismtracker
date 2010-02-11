@@ -940,16 +940,13 @@ int song_export(const char *filename, const char *type)
         log_appendf(2, "Exporting to %s", format->name);
         log_underline(strlen(format->name) + 13);
 
-
+        /* disko does the rest of the log messages itself */
         switch (disko_export_song(filename, format)) {
         case DW_OK:
-                log_appendf(5, " Done");
                 return SAVE_SUCCESS;
         case DW_ERROR:
-                log_perror(filename);
                 return SAVE_FILE_ERROR;
         default:
-                log_appendf(5, " Internal error exporting song");
                 return SAVE_INTERNAL_ERROR;
         }
 }
