@@ -884,28 +884,16 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                 break;
                         };
 
-                        while ((q = disko_sync()) == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
-                                check_update();
-                        }
-
-                        if (q == DW_SYNC_ERROR) {
-                                log_perror("Error running diskwriter");
-                                disko_finish();
-                        } else if (q == DW_SYNC_DONE) {
-                                switch (disko_finish()) {
-                                case DW_NOT_RUNNING:
-                                        /* FIXME: WHY DO WE NEED THIS? */
-                                        break;
-                                case DW_ERROR:
-                                        log_perror("Error shutting down diskwriter");
-                                        break;
-                                case DW_OK:
-                                        //log_appendf(2, "Diskwriter completed successfully");
+                        if (status.flags & DISKWRITER_ACTIVE) {
+                                q = disko_sync();
+                                while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
+                                        check_update();
+                                        q = disko_sync();
+                                }
 #ifdef ENABLE_HOOKS
+                                if (q == DW_SYNC_DONE)
                                         run_disko_complete_hook();
 #endif
-                                        break;
-                                }
                         }
 
                         /* let dmoz build directory lists, etc

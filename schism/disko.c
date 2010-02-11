@@ -440,7 +440,58 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 static song_t export_dwsong;
 static struct dw_settings export_set;
 static disko_t *export_ds[MAX_CHANNELS]; /* only [0] is used unless multichannel */
-struct save_format *export_format = NULL; /* NULL == not running */
+static struct save_format *export_format = NULL; /* NULL == not running */
+static struct widget diskodlg_widgets[1];
+static size_t est_len;
+static int prgh;
+
+/* FIXME: where is something not letting this dialog have the escape key? */
+
+static void diskodlg_draw(void)
+{
+        int sec, pos;
+        char buf[32];
+
+        if (!export_ds[0]) {
+                /* what are we doing here?! */
+                dialog_destroy_all();
+                log_appendf(4, "disk export dialog was eaten by a grue!");
+                return;
+        }
+
+        sec = export_ds[0]->length / mix_frequency;
+        pos = export_ds[0]->length * 64 / est_len;
+        snprintf(buf, 32, "Exporting song...%6d:%02d", sec / 60, sec % 60);
+        buf[31] = '\0';
+        draw_text(buf, 27, 27, 0, 2);
+        draw_fill_chars(24, 30, 55, 30, 0);
+        draw_vu_meter(24, 30, 32, pos, prgh, prgh);
+        draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
+}
+
+static void diskodlg_cancel(UNUSED void *ignored)
+{
+        disko_finish();
+}
+
+static void disko_dialog_setup(size_t len)
+{
+        create_button(diskodlg_widgets + 0, 36, 33, 6, 0, 0, 0, 0, 0, dialog_cancel_NULL, "Cancel", 1);
+        struct dialog *d = dialog_create_custom(22, 25, 36, 11, diskodlg_widgets, 1, 0, diskodlg_draw, NULL);
+        d->action_yes = diskodlg_cancel;
+        d->action_no = diskodlg_cancel;
+        d->action_cancel = diskodlg_cancel;
+
+        est_len = len;
+        switch ((rand() >> 8) & 63) { /* :) */
+                case  0 ...  7: prgh = 6; break;
+                case  8 ... 18: prgh = 3; break;
+                case 19 ... 31: prgh = 5; break;
+                default: prgh = 4; break;
+        }
+}
+
+// ---------------------------------------------------------------------------
 
 int disko_export_song(const char *filename, struct save_format *format)
 {
@@ -465,6 +516,8 @@ int disko_export_song(const char *filename, struct save_format *format)
                 _export_teardown(&export_set);
         }
 
+        disko_dialog_setup((csf_get_length(&export_dwsong) * mix_frequency) ?: 1);
+
         return ret;
 }
 
@@ -473,25 +526,43 @@ int disko_export_song(const char *filename, struct save_format *format)
 int disko_sync(void)
 {
         uint8_t buf[DW_BUFFER_SIZE];
+        size_t frames;
 
-        if (!export_format)
-                return DW_SYNC_DONE; /* no writer running (why are we here?) */
+        if (!export_format) {
+                log_appendf(4, "disko_sync: unexplained bacon");
+                return DW_SYNC_ERROR; /* no writer running (why are we here?) */
+        }
 
-        export_format->f.export.body(export_ds[0], buf,
-                csf_read(&export_dwsong, buf, sizeof(buf)) * export_set.bps);
-        if (export_ds[0]->error)
+        frames = csf_read(&export_dwsong, buf, sizeof(buf));
+        export_format->f.export.body(export_ds[0], buf, frames * export_set.bps);
+        if (export_ds[0]->error) {
+                disko_finish();
                 return DW_SYNC_ERROR;
+        }
 
-        return (export_dwsong.flags & SONG_ENDREACHED) ? DW_SYNC_DONE : DW_SYNC_MORE;
+        /* update the progress bar (kind of messy, yes...) */
+        export_ds[0]->length += frames;
+        status.flags |= NEED_UPDATE;
+
+        if (export_dwsong.flags & SONG_ENDREACHED) {
+                disko_finish();
+                return DW_SYNC_DONE;
+        } else {
+                return DW_SYNC_MORE;
+        }
 }
 
-/* called from main and disko_dialog */
+/* called from disko_dialog */
 int disko_finish(void)
 {
         int ret;
 
-        if (!export_format)
-                return DW_NOT_RUNNING; /* no writer running (why are we here?) */
+        if (!export_format) {
+                log_appendf(4, "disko_finish: unexplained eggs");
+                return DW_ERROR; /* no writer running (why are we here?) */
+        }
+
+        dialog_destroy();
 
         if (export_format->f.export.tail(export_ds[0]) != DW_OK)
                 disko_seterror(export_ds[0], errno);
@@ -519,7 +590,7 @@ int disko_finish(void)
         return ret;
 }
 
-
+// ---------------------------------------------------------------------------
 
 /* called from audio_playback.c _schism_midi_out_raw() */
 int _disko_writemidi(UNUSED const void *data, UNUSED unsigned int len, UNUSED unsigned int delay)
