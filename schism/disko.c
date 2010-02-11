@@ -332,7 +332,45 @@ int disko_memclose(disko_t *ds, int keep_buffer)
 
 // ---------------------------------------------------------------------------
 
-/* these are used for pattern->sample linking crap */
+struct dw_settings {
+        uint32_t prev_freq, prev_bits, prev_channels, prev_flags;
+        int bps;
+};
+
+static void _export_setup(song_t *dwsong, struct dw_settings *set)
+{
+        song_lock_audio();
+
+        /* save the real settings */
+        set->prev_freq = mix_frequency;
+        set->prev_bits = mix_bits_per_sample;
+        set->prev_channels = mix_channels;
+        set->prev_flags = mix_flags;
+
+        /* install our own */
+        memcpy(dwsong, current_song, sizeof(song_t)); /* shadow it */
+        csf_set_wave_config(dwsong, 44100, 16, (dwsong->flags & SONG_NOSTEREO) ? 1 : 2);
+        csf_initialize_dsp(dwsong, 1);
+        mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
+
+        set->bps = mix_channels * ((mix_bits_per_sample + 7) / 8);
+
+        dwsong->stop_at_order = -1;
+        dwsong->stop_at_row = -1;
+        csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
+        dwsong->flags &= ~(SONG_PAUSED | SONG_ENDREACHED);
+}
+
+static void _export_teardown(struct dw_settings *set)
+{
+        /* put everything back */
+        csf_set_wave_config(current_song, set->prev_freq, set->prev_bits, set->prev_channels);
+        mix_flags = set->prev_flags;
+
+        song_unlock_audio();
+}
+
+// ---------------------------------------------------------------------------
 
 int disko_writeout_sample(int smpnum, int pattern, int dobind)
 {
@@ -340,9 +378,9 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
         song_t dwsong;
         song_sample_t *sample;
         uint8_t buf[DW_BUFFER_SIZE];
-        int bps;
         disko_t *ds;
         uint8_t *dsdata;
+        struct dw_settings set;
 
         if (smpnum < 1 || smpnum >= MAX_SAMPLES)
                 return DW_ERROR;
@@ -351,31 +389,12 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
         if (!ds)
                 return DW_ERROR;
 
-        song_lock_audio();
-
-        /* save the real settings */
-        uint32_t prev_freq = mix_frequency;
-        uint32_t prev_bits = mix_bits_per_sample;
-        uint32_t prev_channels = mix_channels;
-        uint32_t prev_flags = mix_flags;
-
-        /* install our own */
-        dwsong = *current_song; /* shadow it */
-        csf_set_wave_config(&dwsong, 44100, 16, (dwsong.flags & SONG_NOSTEREO) ? 1 : 2);
-        csf_initialize_dsp(&dwsong, 1);
-        mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
-
-        bps = mix_channels * ((mix_bits_per_sample + 7) / 8);
-
+        _export_setup(&dwsong, &set);
         dwsong.repeat_count = 2; /* THIS MAKES SENSE! */
-        dwsong.buffer_count = 0;
-        dwsong.stop_at_order = -1;
-        dwsong.stop_at_row = -1;
-        csf_set_current_order(&dwsong, 0); /* rather indirect way of resetting playback variables */
         csf_loop_pattern(&dwsong, pattern, 0);
 
         do {
-                disko_write(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * bps);
+                disko_write(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * set.bps);
         } while (!(dwsong.flags & SONG_ENDREACHED));
 
         dsdata = ds->data;
@@ -386,7 +405,7 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
                 sample->data = csf_allocate_sample(ds->length);
                 if (sample->data) {
                         memcpy(sample->data, dsdata, ds->length);
-                        sample->length = ds->length / (mix_channels * (mix_bits_per_sample / 8));
+                        sample->length = ds->length / set.bps;
                         sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);
                         if (mix_channels > 1)
                                 sample->flags |= CHN_STEREO;
@@ -406,57 +425,32 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
         }
         free(dsdata);
 
-        /* put everything back */
-        csf_set_wave_config(current_song, prev_freq, prev_bits, prev_channels);
-        mix_flags = prev_flags;
-
-        song_unlock_audio();
+        _export_teardown(&set);
 
         return ret;
 }
 
 // ---------------------------------------------------------------------------
 
-// TODO factor out parts of this and disko_writeout_sample
 int disko_export_song(const char *filename, struct save_format *format)
 {
         int ret = DW_OK;
         song_t dwsong;
         uint8_t buf[DW_BUFFER_SIZE];
-        int bps;
         disko_t *ds;
+        struct dw_settings set;
 
         ds = disko_open(filename);
         if (!ds)
                 return DW_ERROR;
 
-        song_lock_audio();
-
-        /* save the real settings */
-        uint32_t prev_freq = mix_frequency;
-        uint32_t prev_bits = mix_bits_per_sample;
-        uint32_t prev_channels = mix_channels;
-        uint32_t prev_flags = mix_flags;
-
-        /* install our own */
-        dwsong = *current_song; /* shadow it */
-        csf_set_wave_config(&dwsong, 44100, 16, (dwsong.flags & SONG_NOSTEREO) ? 1 : 2);
-        csf_initialize_dsp(&dwsong, 1);
-        mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
-
-        bps = mix_channels * ((mix_bits_per_sample + 7) / 8);
-
+        _export_setup(&dwsong, &set);
         dwsong.repeat_count = 1; /* THIS MAKES SENSE! */
-        dwsong.buffer_count = 0;
-        dwsong.stop_at_order = -1;
-        dwsong.stop_at_row = -1;
-        csf_set_current_order(&dwsong, 0); /* rather indirect way of resetting playback variables */
-        dwsong.flags &= ~(SONG_PAUSED | SONG_ENDREACHED);
 
         ret = format->f.export.head(ds, mix_bits_per_sample, mix_channels, mix_frequency);
         if (ret == DW_OK) {
                 do {
-                        format->f.export.body(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * bps);
+                        format->f.export.body(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * set.bps);
                 } while (!(dwsong.flags & SONG_ENDREACHED));
                 if (format->f.export.tail(ds) != DW_OK)
                         disko_seterror(ds, errno);
@@ -465,11 +459,7 @@ int disko_export_song(const char *filename, struct save_format *format)
         }
         ret = disko_close(ds, 0);
 
-        /* put everything back */
-        csf_set_wave_config(current_song, prev_freq, prev_bits, prev_channels);
-        mix_flags = prev_flags;
-
-        song_unlock_audio();
+        _export_teardown(&set);
 
         return ret;
 }
