@@ -373,7 +373,7 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 
         uint32_t flags = SF_BE | SF_PCMS;
         flags |= (smp->flags & CHN_16BIT) ? SF_16 : SF_8;
-        flags |= (smp->flags & CHN_STEREO) ? SF_SS : SF_M;
+        flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
         if (csf_write_sample(fp, smp, flags) != smp->length * bps) {
                 log_appendf(4, "AIFF: unexpected data size written");
