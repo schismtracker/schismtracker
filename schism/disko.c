@@ -395,6 +395,11 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 
         do {
                 disko_write(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * set.bps);
+                if (ds->length >= MAX_SAMPLE_LENGTH * set.bps) {
+                        /* roughly 3 minutes at 44khz -- surely big enough (?) */
+                        ds->length = MAX_SAMPLE_LENGTH * set.bps;
+                        dwsong.flags |= SONG_ENDREACHED;
+                }
         } while (!(dwsong.flags & SONG_ENDREACHED));
 
         dsdata = ds->data;
