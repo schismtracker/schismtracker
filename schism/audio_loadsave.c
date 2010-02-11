@@ -893,6 +893,8 @@ struct save_format song_save_formats[] = {
 };
 
 struct save_format song_export_formats[] = {
+        {"AIFF", "Audio IFF", "aiff",
+                {.export = {fmt_aiff_export_head, fmt_aiff_export_body, fmt_aiff_export_tail}}},
         {"WAV", "WAV", "wav", {.export = {_export_head_stub, _export_body_stub, _export_tail_stub}}},
         {.label = NULL}
 };
@@ -926,14 +928,30 @@ static struct save_format *get_save_format(struct save_format *formats, const ch
 }
 
 
-int song_export(UNUSED const char *filename, UNUSED const char *type)
+int song_export(const char *filename, const char *type)
 {
         struct save_format *format = get_save_format(song_export_formats, type);
 
         if (!format)
                 return SAVE_INTERNAL_ERROR;
 
-        return SAVE_INTERNAL_ERROR;
+        log_nl();
+        log_nl();
+        log_appendf(2, "Exporting to %s", format->name);
+        log_underline(strlen(format->name) + 13);
+
+
+        switch (disko_export_song(filename, format)) {
+        case DW_OK:
+                log_appendf(5, " Done");
+                return SAVE_SUCCESS;
+        case DW_ERROR:
+                log_perror(filename);
+                return SAVE_FILE_ERROR;
+        default:
+                log_appendf(5, " Internal error exporting song");
+                return SAVE_INTERNAL_ERROR;
+        }
 }
 
 

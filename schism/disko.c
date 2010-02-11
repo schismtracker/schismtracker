@@ -415,6 +415,64 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
         return ret;
 }
 
+// ---------------------------------------------------------------------------
+
+// TODO factor out parts of this and disko_writeout_sample
+int disko_export_song(const char *filename, struct save_format *format)
+{
+        int ret = DW_OK;
+        song_t dwsong;
+        uint8_t buf[DW_BUFFER_SIZE];
+        int bps;
+        disko_t *ds;
+
+        ds = disko_open(filename);
+        if (!ds)
+                return DW_ERROR;
+
+        song_lock_audio();
+
+        /* save the real settings */
+        uint32_t prev_freq = mix_frequency;
+        uint32_t prev_bits = mix_bits_per_sample;
+        uint32_t prev_channels = mix_channels;
+        uint32_t prev_flags = mix_flags;
+
+        /* install our own */
+        dwsong = *current_song; /* shadow it */
+        csf_set_wave_config(&dwsong, 44100, 16, (dwsong.flags & SONG_NOSTEREO) ? 1 : 2);
+        csf_initialize_dsp(&dwsong, 1);
+        mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
+
+        bps = mix_channels * ((mix_bits_per_sample + 7) / 8);
+
+        dwsong.repeat_count = 1; /* THIS MAKES SENSE! */
+        dwsong.buffer_count = 0;
+        dwsong.stop_at_order = -1;
+        dwsong.stop_at_row = -1;
+        csf_set_current_order(&dwsong, 0); /* rather indirect way of resetting playback variables */
+        dwsong.flags &= ~(SONG_PAUSED | SONG_ENDREACHED);
+
+        ret = format->f.export.head(ds, mix_bits_per_sample, mix_channels, mix_frequency);
+        if (ret == DW_OK) {
+                do {
+                        format->f.export.body(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * bps);
+                } while (!(dwsong.flags & SONG_ENDREACHED));
+                if (format->f.export.tail(ds) != DW_OK)
+                        disko_seterror(ds, errno);
+        } else {
+                disko_seterror(ds, errno);
+        }
+        ret = disko_close(ds, 0);
+
+        /* put everything back */
+        csf_set_wave_config(current_song, prev_freq, prev_bits, prev_channels);
+        mix_flags = prev_flags;
+
+        song_unlock_audio();
+
+        return ret;
+}
 
 
 /* main calls this periodically when the .wav exporter is busy */

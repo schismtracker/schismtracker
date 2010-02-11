@@ -91,6 +91,10 @@ int disko_memclose(disko_t *f, int free_buffer);
 /* copy a pattern into a sample */
 int disko_writeout_sample(int smpnum, int pattern, int bind);
 
+/* export the song to a file */
+struct save_format;
+int disko_export_song(const char *filename, struct save_format *format);
+
 /* this synchronizes with the diskwriter.
 return: DW_SYNC_*, self explanatory */
 int disko_sync(void);
