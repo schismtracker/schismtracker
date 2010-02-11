@@ -305,7 +305,6 @@ schismtracker_SOURCES = \
 	fmt/xm.c			\
 	schism/util.c			\
 	schism/page_midi.c		\
-	schism/disko_dialog.c		\
 	schism/draw-char.c		\
 	schism/page_help.c		\
 	schism/slurp.c			\
