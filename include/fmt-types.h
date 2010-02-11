@@ -103,7 +103,7 @@ READ_INFO(mf)
 /* Sample formats with magic at start of file */
 READ_INFO(its)  LOAD_SAMPLE(its)  SAVE_SAMPLE(its)
 READ_INFO(au)   LOAD_SAMPLE(au)   SAVE_SAMPLE(au)
-READ_INFO(aiff) LOAD_SAMPLE(aiff) SAVE_SAMPLE(aiff)
+READ_INFO(aiff) LOAD_SAMPLE(aiff) SAVE_SAMPLE(aiff) EXPORT(aiff)
 READ_INFO(wav)  LOAD_SAMPLE(wav)  SAVE_SAMPLE(wav)  EXPORT(wav)
 READ_INFO(iti)  LOAD_INSTRUMENT(iti)
 READ_INFO(xi)   LOAD_INSTRUMENT(xi)
