@@ -339,32 +339,27 @@ void csf_loop_pattern(song_t *csf, int pat, int row)
 uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
 {
         uint32_t pos, len = sample->length;
-        int stride;     // how much to add to the left/right pointer per sample written
-        int rightofs;   // where the right channel is in relation to the left
-        int byteswap;   // should the sample data be byte-swapped?
-        int add;        // how much to add to the sample data (for converting to unsigned)
+        int stride = 1;     // how much to add to the left/right pointer per sample written
+        int byteswap = 0;   // should the sample data be byte-swapped?
+        int add = 0;        // how much to add to the sample data (for converting to unsigned)
+        int channel;        // counter.
 
         // validate the write flags, and set up the save params
         switch (flags & SF_CHN_MASK) {
         case SF_SI:
                 if (!(sample->flags & CHN_STEREO))
                         SF_FAIL("channel mask", flags & SF_CHN_MASK);
-                stride = 1;
-                rightofs = sample->length;
                 len *= 2;
                 break;
         case SF_SS:
                 if (!(sample->flags & CHN_STEREO))
                         SF_FAIL("channel mask", flags & SF_CHN_MASK);
                 stride = 2;
-                rightofs = 1;
                 len *= 2;
                 break;
         case SF_M:
-                /* Mono is actually processed the same as interleaved stereo, except without doubling
-                the data length. An extra "left" sample is written if the sample size is odd. */
-                stride = 2;
-                rightofs = 1;
+                if (sample->flags & CHN_STEREO)
+                        SF_FAIL("channel mask", flags & SF_CHN_MASK);
                 break;
         default:
                 SF_FAIL("channel mask", flags & SF_CHN_MASK);
@@ -380,11 +375,9 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
                 byteswap = 1;
                 break;
         case SF_BE:
-                byteswap = 0;
                 break;
 #else
         case SF_LE:
-                byteswap = 0;
                 break;
         case SF_BE:
                 byteswap = 1;
@@ -399,7 +392,6 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
                 add = ((flags & SF_BIT_MASK) == SF_16) ? 32768 : 128;
                 break;
         case SF_PCMS:
-                add = 0;
                 break;
         default:
                 SF_FAIL("encoding", flags & SF_ENC_MASK);
@@ -412,59 +404,35 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
         if (!sample || sample->length < 1 || sample->length > MAX_SAMPLE_LENGTH || !sample->data)
                 return 0;
 
+        // No point buffering the processing here -- the disk output already SHOULD have a 64kb buffer
         if ((flags & SF_BIT_MASK) == SF_16) {
                 // 16-bit data.
-
-                // 'left' and 'right' samples are written in an alternating manner
-                const int16_t *left, *right;
+                const int16_t *data;
                 int16_t v;
 
-                left = (const int16_t *) sample->data;
-                right = left + rightofs;
-
-                for (pos = 0; pos < len; pos += 2) {
-                        v = *left + add;
-                        if (byteswap)
-                                v = bswap_16(v);
-                        disko_write(fp, &v, 2);
-                        left += stride;
-
-                        v = *right + add;
-                        if (byteswap)
-                                v = bswap_16(v);
-                        disko_write(fp, &v, 2);
-                        right += stride;
-                }
-
-                if (len & 1) {
-                        // odd length => write one more 'left'
-                        v = *left + add;
-                        if (byteswap)
-                                v = bswap_16(v);
-                        disko_write(fp, &v, 2);
+                for (channel = 0; channel < stride; channel++) {
+                        data = (const int16_t *) sample->data + channel;
+                        for (pos = 0; pos < len; pos++) {
+                                v = *data + add;
+                                if (byteswap)
+                                        v = bswap_16(v);
+                                disko_write(fp, &v, 2);
+                                data += stride;
+                        }
                 }
 
                 len *= 2;
         } else {
                 // 8-bit data. Mostly the same as above, but a little bit simpler since
                 // there's no byteswapping, and the values can be written with putc.
+                const int8_t *data;
 
-                const int8_t *left, *right;
-                left = (const int8_t *) sample->data;
-                right = left + rightofs;
-
-                // No point buffering the processing here -- the disk output already SHOULD have a 64kb buffer
-                for (pos = 0; pos < len; pos += 2) {
-                        disko_putc(fp, *left + add);
-                        left += stride;
-
-                        disko_putc(fp, *right + add);
-                        right += stride;
-                }
-
-                if (len & 1) {
-                        // odd length => write one more 'left'
-                        disko_putc(fp, *left + add);
+                for (channel = 0; channel < stride; channel++) {
+                        data = (const int8_t *) sample->data + channel;
+                        for (pos = 0; pos < len; pos++) {
+                                disko_putc(fp, *data + add);
+                                data += stride;
+                        }
                 }
         }
 
