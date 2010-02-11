@@ -437,34 +437,33 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 
 // ---------------------------------------------------------------------------
 
+static song_t export_dwsong;
+static struct dw_settings export_set;
+static disko_t *export_ds[MAX_CHANNELS]; /* only [0] is used unless multichannel */
+struct save_format *export_format = NULL; /* NULL == not running */
+
 int disko_export_song(const char *filename, struct save_format *format)
 {
         int ret = DW_OK;
         song_t dwsong;
-        uint8_t buf[DW_BUFFER_SIZE];
-        disko_t *ds;
-        struct dw_settings set;
 
-        ds = disko_open(filename);
-        if (!ds)
+        export_ds[0] = disko_open(filename);
+        if (!export_ds[0])
                 return DW_ERROR;
 
-        _export_setup(&dwsong, &set);
-        dwsong.repeat_count = 1; /* THIS MAKES SENSE! */
+        _export_setup(&export_dwsong, &export_set);
+        export_dwsong.repeat_count = 1; /* THIS MAKES SENSE! */
 
-        ret = format->f.export.head(ds, mix_bits_per_sample, mix_channels, mix_frequency);
+        ret = format->f.export.head(export_ds[0], mix_bits_per_sample, mix_channels, mix_frequency);
         if (ret == DW_OK) {
-                do {
-                        format->f.export.body(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * set.bps);
-                } while (!(dwsong.flags & SONG_ENDREACHED));
-                if (format->f.export.tail(ds) != DW_OK)
-                        disko_seterror(ds, errno);
+                log_appendf(5, " %d Hz, %d bit, %s", mix_frequency, mix_bits_per_sample,
+                        mix_channels == 1 ? "mono" : "stereo");
+                export_format = format;
+                status.flags |= DISKWRITER_ACTIVE; /* tell main to care about us */
         } else {
-                disko_seterror(ds, errno);
+                disko_seterror(export_ds[0], errno);
+                _export_teardown(&export_set);
         }
-        ret = disko_close(ds, 0);
-
-        _export_teardown(&set);
 
         return ret;
 }
@@ -473,13 +472,51 @@ int disko_export_song(const char *filename, struct save_format *format)
 /* main calls this periodically when the .wav exporter is busy */
 int disko_sync(void)
 {
-        return DW_SYNC_DONE;
+        uint8_t buf[DW_BUFFER_SIZE];
+
+        if (!export_format)
+                return DW_SYNC_DONE; /* no writer running (why are we here?) */
+
+        export_format->f.export.body(export_ds[0], buf,
+                csf_read(&export_dwsong, buf, sizeof(buf)) * export_set.bps);
+        if (export_ds[0]->error)
+                return DW_SYNC_ERROR;
+
+        return (export_dwsong.flags & SONG_ENDREACHED) ? DW_SYNC_DONE : DW_SYNC_MORE;
 }
 
 /* called from main and disko_dialog */
 int disko_finish(void)
 {
-        return DW_NOT_RUNNING; /* no writer running */
+        int ret;
+
+        if (!export_format)
+                return DW_NOT_RUNNING; /* no writer running (why are we here?) */
+
+        if (export_format->f.export.tail(export_ds[0]) != DW_OK)
+                disko_seterror(export_ds[0], errno);
+
+        ret = disko_close(export_ds[0], 0);
+        _export_teardown(&export_set);
+        export_format = NULL;
+
+        status.flags &= ~DISKWRITER_ACTIVE; /* please unsubscribe me from your mailing list */
+
+        switch (ret) {
+        case DW_OK:
+                /* might be nice to print the length written or something */
+                log_appendf(5, " Done");
+                break;
+        case DW_ERROR:
+                /* hey, what was the filename? oops */
+                log_perror(" Write error");
+                break;
+        default:
+                log_appendf(5, " Internal error exporting song");
+                break;
+        }
+
+        return ret;
 }
 
 
