@@ -400,138 +400,6 @@ int song_sample_is_empty(int n)
 }
 
 // ------------------------------------------------------------------------------------------------------------
-// generic sample data saving
-
-void save_sample_data_LE(disko_t *fp, song_sample_t *smp, int noe)
-{
-        unsigned char buffer[4096];
-        unsigned int bufcount;
-        unsigned int len;
-
-        len = smp->length;
-        if (smp->flags & CHN_STEREO) len *= 2;
-
-        if (smp->flags & CHN_16BIT) {
-                if (noe && smp->flags & CHN_STEREO) {
-                        bufcount = 0;
-                        for (unsigned int n = 0; n < len; n += 2) {
-
-                                signed short s = ((signed short *) smp->data)[n];
-                                s = bswapLE16(s);
-                                memcpy(buffer+bufcount, &s, 2);
-                                bufcount += 2;
-                                if (bufcount >= sizeof(buffer)) {
-                                        disko_write(fp, buffer, bufcount);
-                                        bufcount = 0;
-                                }
-                        }
-                        for (unsigned int n = 1; n < len; n += 2) {
-                                signed short s = ((signed short *) smp->data)[n];
-                                s = bswapLE16(s);
-                                memcpy(buffer+bufcount, &s, 2);
-                                bufcount += 2;
-                                if (bufcount >= sizeof(buffer)) {
-                                        disko_write(fp, buffer, bufcount);
-                                        bufcount = 0;
-                                }
-                        }
-                        if (bufcount > 0) {
-                                disko_write(fp, buffer, bufcount);
-                        }
-                } else {
-#if WORDS_BIGENDIAN
-                        bufcount = 0;
-                        for (unsigned int n = 0; n < len; n++) {
-                                signed short s = ((signed short *) smp->data)[n];
-                                s = bswapLE16(s);
-                                memcpy(buffer+bufcount, &s, 2);
-                                bufcount += 2;
-                                if (bufcount >= sizeof(buffer)) {
-                                        disko_write(fp, buffer, bufcount);
-                                        bufcount = 0;
-                                }
-                        }
-                        if (bufcount > 0) {
-                                disko_write(fp, buffer, bufcount);
-                        }
-#else
-                        disko_write(fp, smp->data, 2*len);
-#endif
-                }
-        } else if (smp->flags & CHN_STEREO) {
-                bufcount = 0;
-                for (unsigned int n = 0; n < len; n += 2) {
-                        buffer[bufcount++] = (smp->data)[n];
-                        if (bufcount >= sizeof(buffer)) {
-                                disko_write(fp, buffer, bufcount);
-                                bufcount = 0;
-                        }
-                }
-                for (unsigned int n = 1; n < len; n += 2) {
-                        buffer[bufcount++] = (smp->data)[n];
-                        if (bufcount >= sizeof(buffer)) {
-                                disko_write(fp, buffer, bufcount);
-                                bufcount = 0;
-                        }
-                }
-                if (bufcount > 0) {
-                        disko_write(fp, buffer, bufcount);
-                }
-
-        } else {
-                disko_write(fp, smp->data, len);
-        }
-}
-
-/* same as above, except the other way around */
-/* the one thing cheese did that was pretty nifty was the disk read/write operations had separate big-endian
-   and little-endian operations...
-   we could probably do something like that, say fp->write and fp->O for bigendian
-   but 'O' looks too much like zero, so maybe rename 'em to w/W ... and have r/R to read whatever endianness
-   anyway, just a thought. /storlek */
-void save_sample_data_BE(disko_t *fp, song_sample_t *smp, int noe)
-{
-        unsigned int len;
-        len = smp->length;
-        if (smp->flags & CHN_STEREO) len *= 2;
-
-        if (smp->flags & CHN_16BIT) {
-                if (noe && smp->flags & CHN_STEREO) {
-                        for (unsigned int n = 0; n < len; n += 2) {
-                                signed short s = ((signed short *) smp->data)[n];
-                                s = bswapBE16(s);
-                                disko_write(fp, &s, 2);
-                        }
-                        for (unsigned int n = 1; n < len; n += 2) {
-                                signed short s = ((signed short *) smp->data)[n];
-                                s = bswapBE16(s);
-                                disko_write(fp, &s, 2);
-                        }
-                } else {
-#if WORDS_BIGENDIAN
-                        disko_write(fp, smp->data, 2*len);
-#else
-                        for (unsigned int n = 0; n < len; n++) {
-                                signed short s = ((signed short *) smp->data)[n];
-                                s = bswapBE16(s);
-                                disko_write(fp, &s, 2);
-                        }
-#endif
-                }
-        } else if (smp->flags & CHN_STEREO) {
-                for (unsigned int n = 0; n < len; n += 2) {
-                        disko_write(fp, (smp->data)+n, 1);
-                }
-                for (unsigned int n = 1; n < len; n += 2) {
-                        disko_write(fp, (smp->data)+n, 1);
-                }
-
-        } else {
-                disko_write(fp, smp->data, len);
-        }
-}
-
-// ------------------------------------------------------------------------------------------------------------
 
 static song_instrument_t blank_instrument; // should be zero, it's coming from bss
 
@@ -685,8 +553,9 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
                         disko_seek(fp, iti_map[o]+0x48, SEEK_SET);
                         disko_write(fp, &tmp, 4);
                         disko_seek(fp, op, SEEK_SET);
-                        save_sample_data_LE(fp, smp, 1);
-
+                        csf_write_sample(fp, smp, SF_LE | SF_PCMS
+                                        | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+                                        | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M));
                 }
         }
 }
@@ -974,7 +843,9 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
                 disko_write(fp, &tmp, 4);
                 disko_seek(fp, op, SEEK_SET);
                 if (smp->data)
-                        save_sample_data_LE(fp, smp, 1);
+                        csf_write_sample(fp, smp, SF_LE | SF_PCMS
+                                        | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+                                        | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M));
                 // done using the pointer internally, so *now* swap it
                 para_smp[n] = bswapLE32(para_smp[n]);
         }

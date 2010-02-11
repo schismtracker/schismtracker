@@ -183,7 +183,9 @@ int fmt_au_save_sample(disko_t *fp, song_sample_t *smp)
 
         disko_write(fp, &au, sizeof(au));
         disko_write(fp, smp->name, 25);
-        save_sample_data_BE(fp, smp, 0);
+        csf_write_sample(fp, smp, SF_BE | SF_PCMS
+                        | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+                        | ((smp->flags & CHN_STEREO) ? SF_SI : SF_M));
 
         return SAVE_SUCCESS;
 }

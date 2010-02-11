@@ -130,14 +130,6 @@ uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-/* save the sample's data in little- or big- endian byte order (defined in audio_loadsave.cc)
-
-noe == no interleave (IT214)
-
-should probably return something, but... meh :P */
-void save_sample_data_LE(disko_t *fp, song_sample_t *smp, int noe);
-void save_sample_data_BE(disko_t *fp, song_sample_t *smp, int noe);
-
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(disko_t *fp, song_sample_t *smp);
 int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample_t *smp);

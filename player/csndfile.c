@@ -355,7 +355,6 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
                 if (!(sample->flags & CHN_STEREO))
                         SF_FAIL("channel mask", flags & SF_CHN_MASK);
                 stride = 2;
-                len *= 2;
                 break;
         case SF_M:
                 if (sample->flags & CHN_STEREO)
@@ -436,6 +435,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
                 }
         }
 
+        len *= stride;
         return len;
 }
 
