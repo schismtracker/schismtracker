@@ -395,7 +395,7 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 
         do {
                 disko_write(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * set.bps);
-                if (ds->length >= MAX_SAMPLE_LENGTH * set.bps) {
+                if (ds->length >= (size_t) (MAX_SAMPLE_LENGTH * set.bps)) {
                         /* roughly 3 minutes at 44khz -- surely big enough (?) */
                         ds->length = MAX_SAMPLE_LENGTH * set.bps;
                         dwsong.flags |= SONG_ENDREACHED;
@@ -496,7 +496,6 @@ static void disko_dialog_setup(size_t len)
 int disko_export_song(const char *filename, struct save_format *format)
 {
         int ret = DW_OK;
-        song_t dwsong;
 
         export_ds[0] = disko_open(filename);
         if (!export_ds[0])
