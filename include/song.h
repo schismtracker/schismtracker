@@ -131,12 +131,9 @@ void song_sample_set_c5speed(int n, unsigned int c5);
 int song_sample_is_empty(int n);
 unsigned int song_sample_get_c5speed(int n);
 
-/* get the order for a particular pattern; locked can be:
-        * a starting order number (0-255)
-        * "-1" meaning start at the locked order
-        * "-2" meaning start at the current order
-*/
-int song_order_for_pattern(int pat, int locked);
+/* search the orderlist for a pattern, starting at the current order.
+return value of -1 means the pattern isn't on the list */
+int song_next_order_for_pattern(int pat);
 
 const char *song_get_filename(void);
 const char *song_get_basename(void);

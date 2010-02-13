@@ -978,11 +978,6 @@ static int increment_row(song_t *csf)
                         return 0;
                 }
         } else if (!(csf->flags & SONG_ORDERLOCKED)) {
-                if (csf->locked_order < MAX_ORDERS) {
-                        csf->process_order = csf->locked_order - 1;
-                        csf->locked_order = MAX_ORDERS;
-                }
-
                 /* [Increase ProcessOrder] */
                 /* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
                 do {

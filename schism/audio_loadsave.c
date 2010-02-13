@@ -117,14 +117,6 @@ static void _fix_names(song_t *qq)
         }
 }
 
-static void fix_song(void)
-{
-        /* poop */
-        current_song->locked_order = MAX_ORDERS;
-
-        _fix_names(current_song);
-}
-
 // ------------------------------------------------------------------------
 // file stuff
 
@@ -186,11 +178,8 @@ void song_new(int flags)
                 }
         }
         if ((flags & KEEP_ORDERLIST) == 0) {
-                current_song->locked_order = MAX_ORDERS;
                 memset(current_song->orderlist, ORDER_LAST, sizeof(current_song->orderlist));
-
                 memset(current_song->title, 0, sizeof(current_song->title));
-
                 memset(current_song->message, 0, MAX_MESSAGE);
 
                 for (i = 0; i < 64; i++) {
@@ -320,7 +309,7 @@ int song_load_unchecked(const char *file)
         current_song = newsong;
         current_song->repeat_count = -1;
         max_channels_used = 0;
-        fix_song();
+        _fix_names(current_song);
         song_stop_unlocked(0);
         song_unlock_audio();
 

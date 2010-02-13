@@ -630,7 +630,7 @@ void song_start_at_pattern(int pattern, int row)
         if (pattern < 0 || pattern > 199)
                 return;
 
-        int n = song_order_for_pattern(pattern, -2);
+        int n = song_next_order_for_pattern(pattern);
 
         if (n > -1) {
                 song_start_at_order(n, row);
@@ -878,7 +878,7 @@ void song_set_current_order(int order)
 void song_set_next_order(int order)
 {
         song_lock_audio();
-        current_song->locked_order = order;
+        current_song->process_order = order - 1;
         song_unlock_audio();
 }
 
@@ -886,10 +886,6 @@ void song_set_next_order(int order)
 int song_toggle_orderlist_locked(void)
 {
         current_song->flags ^= SONG_ORDERLOCKED;
-        if (current_song->flags & SONG_ORDERLOCKED)
-                current_song->locked_order = current_song->current_order;
-        else
-                current_song->locked_order = MAX_ORDERS;
         return current_song->flags & SONG_ORDERLOCKED;
 }
 

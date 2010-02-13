@@ -561,7 +561,6 @@ typedef struct song {
         uint32_t current_pattern;
         uint32_t current_order;
         uint32_t process_order;
-        uint32_t locked_order;
         uint32_t current_global_volume;
         uint32_t mixing_volume;
         uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)

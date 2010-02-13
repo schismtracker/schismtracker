@@ -271,27 +271,18 @@ void song_pattern_install(int patno, song_note_t *n, int rows)
 
 // ------------------------------------------------------------------------
 
-int song_order_for_pattern(int pat, int locked)
+int song_next_order_for_pattern(int pat)
 {
-        int i;
-        if (locked == -1) {
-                if (current_song->flags & SONG_ORDERLOCKED)
-                        locked = current_song->locked_order;
-                else
-                        locked = current_song->current_order;
-        } else if (locked == -2) {
-                locked = current_song->current_order;
-        }
+        int i, ord = current_song->current_order;
 
-        if (locked < 0) locked = 0;
-        if (locked > 255) locked = 255;
+        ord = CLAMP(ord, 0, 255);
 
-        for (i = locked; i < 255; i++) {
+        for (i = ord; i < 255; i++) {
                 if (current_song->orderlist[i] == pat) {
                         return i;
                 }
         }
-        for (i = 0; i < locked; i++) {
+        for (i = 0; i < ord; i++) {
                 if (current_song->orderlist[i] == pat) {
                         return i;
                 }
