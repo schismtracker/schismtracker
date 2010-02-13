@@ -1875,7 +1875,8 @@ void csf_process_effects(song_t *csf, int firsttick)
                 // Position Jump
                 case FX_POSITIONJUMP:
                         if (csf->flags & SONG_FIRSTTICK) {
-                                csf->process_order = param - 1;
+                                if (!(mix_flags & SNDMIX_NOBACKWARDJUMPS) || csf->process_order < param)
+                                        csf->process_order = param - 1;
                                 csf->process_row = PROCESS_NEXT_ORDER;
                         }
                         break;
