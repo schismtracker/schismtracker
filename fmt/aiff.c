@@ -131,7 +131,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
         // jump "into" the FORM chunk
         // if (pos < length), there's more data after the FORM chunk -- but I don't care about this scenario
         pos = 0;
-        length = chunk.size;
+        length = MIN(length, chunk.size);
         data = chunk.data->FORM.data;
 
         /* the header is already byteswapped, but anything in 'chunk' will need to be swapped as needed
