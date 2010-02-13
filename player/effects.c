@@ -366,13 +366,35 @@ static void fx_fine_vibrato(song_voice_t *p, uint32_t param)
         p->flags |= CHN_VIBRATO;
 }
 
-static void fx_panbrello(song_voice_t *p, uint32_t param)
+
+static void fx_panbrello(song_voice_t *chan, uint32_t param)
 {
+        unsigned int panpos = chan->panbrello_position & 0xFF;
+        int pdelta;
+
         if (param & 0x0F)
-                p->panbrello_depth = param & 0x0F;
+                chan->panbrello_depth = param & 0x0F;
         if (param & 0xF0)
-                p->panbrello_speed = (param >> 4) & 0x0F;
-        p->flags |= CHN_PANBRELLO;
+                chan->panbrello_speed = (param >> 4) & 0x0F;
+
+        switch (chan->panbrello_type & 0x03) {
+        default:
+                pdelta = sine_table[panpos];
+                break;
+        case 1:
+                pdelta = ramp_down_table[panpos];
+                break;
+        case 2:
+                pdelta = square_table[panpos];
+                break;
+        case 3:
+                pdelta = 128 * ((double) rand() / RAND_MAX) - 64;
+                break;
+        }
+
+        chan->panbrello_position += chan->panbrello_speed;
+        pdelta = ((pdelta * (int)chan->panbrello_depth) + 2) >> 3;
+        chan->panbrello_delta = pdelta;
 }
 
 
@@ -457,6 +479,7 @@ static void fx_panning_slide(uint32_t flags, song_voice_t *chan, uint32_t param)
                 chan->panning = CLAMP(slide, 0, 256);
         }
         chan->flags &= ~CHN_SURROUND;
+        chan->panbrello_delta = 0;
 }
 
 
@@ -651,6 +674,7 @@ static void fx_extended_s3m(song_t *csf, uint32_t nchan, uint32_t param)
         case 0x80:
                 if (csf->flags & SONG_FIRSTTICK) {
                         chan->flags &= ~CHN_SURROUND;
+                        chan->panbrello_delta = 0;
                         chan->panning = (param << 4) + 8;
                         chan->flags |= CHN_FASTVOLRAMP;
                         chan->pan_swing = 0;
@@ -660,6 +684,7 @@ static void fx_extended_s3m(song_t *csf, uint32_t nchan, uint32_t param)
         case 0x90:
                 if (param == 1 && (csf->flags & SONG_FIRSTTICK)) {
                         chan->flags |= CHN_SURROUND;
+                        chan->panbrello_delta = 0;
                         chan->panning = 128;
                 }
                 break;
@@ -1382,7 +1407,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
                 p = &csf->voices[n];
                 // Copy Channel
                 *p = *chan;
-                p->flags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
+                p->flags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PORTAMENTO);
                 p->master_channel = nchan+1;
                 p->n_command = 0;
                 // Cut the note
@@ -1463,7 +1488,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
                         p = &csf->voices[n];
                         // Copy Channel
                         *p = *chan;
-                        p->flags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PANBRELLO|CHN_PORTAMENTO);
+                        p->flags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PORTAMENTO);
                         p->master_channel = nchan+1;
                         p->n_command = 0;
                         // Key Off the note
@@ -1783,12 +1808,13 @@ void csf_process_effects(song_t *csf, int firsttick)
                         if (!(csf->flags & SONG_FIRSTTICK))
                                 break;
                         chan->flags &= ~CHN_SURROUND;
+                        chan->panbrello_delta = 0;
                         chan->panning = param;
                         chan->pan_swing = 0;
                         chan->flags |= CHN_FASTVOLRAMP;
                         break;
 
-        // Panning Slide
+                // Panning Slide
                 case FX_PANNINGSLIDE:
                         fx_panning_slide(csf->flags, chan, param);
                         break;
@@ -1912,7 +1938,6 @@ void csf_process_effects(song_t *csf, int firsttick)
                         break;
                 }
 
-
                 // Volume Column Effect (except volume & panning)
                 /*
                 A few notes, paraphrased from ITTECH.TXT:
@@ -1945,6 +1970,7 @@ void csf_process_effects(song_t *csf, int firsttick)
                                 chan->pan_swing = 0;
                                 chan->flags |= CHN_FASTVOLRAMP;
                                 chan->flags &= ~CHN_SURROUND;
+                                chan->panbrello_delta = 0;
                         }
                         break;
 

@@ -56,7 +56,7 @@
 #define CHN_VOLUMERAMP          0x8000
 #define CHN_VIBRATO             0x10000
 #define CHN_TREMOLO             0x20000
-#define CHN_PANBRELLO           0x40000
+//#define CHN_PANBRELLO         0x40000
 #define CHN_PORTAMENTO          0x80000
 #define CHN_GLISSANDO           0x100000
 #define CHN_VOLENV              0x200000
@@ -426,7 +426,7 @@ typedef struct song_voice {
         signed char * data; // I DON'T KNOW, this is more or less the same as current_sample_data...?
         int32_t right_volume_new, left_volume_new; // ?
         int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
-        int32_t final_panning; // range 0-256
+        int32_t final_panning; // range 0-256 (but can temporarily exceed that range during calculations)
         int32_t volume, panning; // range 0-256 (?); these are the current values set for the channel
         int32_t fadeout_volume;
         int32_t period;
@@ -470,6 +470,7 @@ typedef struct song_voice {
         unsigned int vib_type, vibrato_speed, vibrato_depth;
         unsigned int tremolo_type, tremolo_speed, tremolo_depth;
         unsigned int panbrello_type, panbrello_speed, panbrello_depth;
+        int panbrello_delta;
 
         unsigned int cutoff;
         unsigned int resonance;
