@@ -158,33 +158,6 @@ static inline void rn_tremor(song_voice_t *chan, int *vol)
 }
 
 
-static inline void rn_panbrello(song_voice_t *chan)
-{
-        unsigned int panpos = chan->panbrello_position & 0xFF;
-        int pdelta;
-
-        switch (chan->panbrello_type & 0x03) {
-        default:
-                pdelta = sine_table[panpos];
-                break;
-        case 1:
-                pdelta = ramp_down_table[panpos];
-                break;
-        case 2:
-                pdelta = square_table[panpos];
-                break;
-        case 3:
-                pdelta = 128 * ((double) rand() / RAND_MAX) - 64;
-                break;
-        }
-
-        chan->panbrello_position += chan->panbrello_speed;
-        pdelta = ((pdelta * (int)chan->panbrello_depth) + 2) >> 3;
-        pdelta += chan->final_panning;
-        chan->final_panning = CLAMP(pdelta, 0, 256);
-}
-
-
 static inline void rn_vibrato(song_t *csf, song_voice_t *chan, int *nperiod)
 {
         unsigned int vibpos = chan->vibrato_position & 0xFF;
@@ -241,10 +214,10 @@ static inline void rn_vibrato(song_t *csf, song_voice_t *chan, int *nperiod)
         *nperiod = period;
 }
 
-static inline void rn_instrument_vibrato(song_t *csf, song_voice_t *chan, int *nperiod, int *nperiodfrac)
+static inline void rn_instrument_vibrato(song_t *csf, song_voice_t *chan, int *nperiod, int *period_frac)
 {
         int period = *nperiod;
-        int periodfrac = *nperiodfrac;
+        int periodfrac = *period_frac;
         song_sample_t *pins = chan->ptr_sample;
 
         /* this isn't correct, but it's better... [original was without int cast] */
@@ -304,7 +277,7 @@ static inline void rn_instrument_vibrato(song_t *csf, song_voice_t *chan, int *n
         period >>= 8;
 
         *nperiod = period;
-        *nperiodfrac = periodfrac;
+        *period_frac = periodfrac;
 }
 
 
@@ -390,7 +363,7 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
                         pan += ((envpan - 32) * (pan)) / 32;
                 }
 
-                chan->final_panning = CLAMP(pan, 0, 256);
+                chan->final_panning = pan;
         }
 
         // FadeOut volume
@@ -413,9 +386,8 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
         if (penv->pitch_pan_separation && chan->final_panning && chan->note) {
                 // PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
                 // with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
-                int pandelta = (int) chan->final_panning
-                             + (int) ((int) (chan->note - penv->pitch_pan_center - 1) * (int) penv->pitch_pan_separation) / (int) 4;
-                chan->final_panning = CLAMP(pandelta, 0, 256);
+                chan->final_panning += ((int) (chan->note - penv->pitch_pan_center - 1)
+                                        * penv->pitch_pan_separation) / 4;
         }
 
         *nvol = vol;
@@ -584,7 +556,13 @@ static inline void rn_increment_env_pos(song_voice_t *chan)
 static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, int master_vol)
 {
         // Adjusting volumes
-        if (mix_channels >= 2) {
+        if (mix_channels < 2 || (csf->flags & SONG_NOSTEREO)) {
+                chan->right_volume_new = (chan->final_volume * master_vol) >> 8;
+                chan->left_volume_new = chan->right_volume_new;
+        } else if ((chan->flags & CHN_SURROUND) && !(mix_flags & SNDMIX_NOSURROUND)) {
+                chan->right_volume_new = (chan->final_volume * master_vol) >> 8;
+                chan->left_volume_new = -chan->right_volume_new;
+        } else {
                 int pan = ((int) chan->final_panning) - 128;
                 pan *= (int) csf->pan_separation;
                 pan /= 128;
@@ -594,23 +572,16 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
                     && chan->ptr_instrument->midi_channel_mask > 0)
                         GM_Pan(nchan, pan);
 
-                if (csf->flags & SONG_NOSTEREO) {
-                        pan = 128;
-                } else {
-                        pan += 128;
-                        pan = CLAMP(pan, 0, 256);
+                pan += 128;
+                pan = CLAMP(pan, 0, 256);
 
-                        if (mix_flags & SNDMIX_REVERSESTEREO)
-                                pan = 256 - pan;
-                }
+                if (mix_flags & SNDMIX_REVERSESTEREO)
+                        pan = 256 - pan;
 
                 int realvol = (chan->final_volume * master_vol) >> (8 - 1);
 
                 chan->left_volume_new  = (realvol * pan) >> 8;
                 chan->right_volume_new = (realvol * (256 - pan)) >> 8;
-        } else {
-                chan->right_volume_new = (chan->final_volume * master_vol) >> 8;
-                chan->left_volume_new = chan->right_volume_new;
         }
 
         // Clipping volumes
@@ -642,12 +613,6 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
         chan->left_volume_new  >>= MIXING_ATTENUATION;
         chan->right_ramp =
         chan->left_ramp  = 0;
-
-        // Dolby Pro-Logic Surround (S91)
-        if (chan->flags & CHN_SURROUND && mix_channels <= 2
-            && !(mix_flags & SNDMIX_NOSURROUND)
-            && !(csf->flags & SONG_NOSTEREO))
-                chan->left_volume_new = -chan->left_volume_new;
 
         // Checking Ping-Pong Loops
         if (chan->flags & CHN_PINGPONGFLAG)
@@ -1085,7 +1050,7 @@ int csf_process_tick(song_t *csf)
 
                         chan->left_volume = chan->left_volume_new;
                         chan->right_volume = chan->right_volume_new;
-                        chan->flags &= ~(CHN_PORTAMENTO | CHN_VIBRATO | CHN_TREMOLO | CHN_PANBRELLO);
+                        chan->flags &= ~(CHN_PORTAMENTO | CHN_VIBRATO | CHN_TREMOLO);
                         chan->n_command = 0;
                 }
 
@@ -1199,8 +1164,7 @@ int csf_read_note(song_t *csf)
                 // Reset channel data
                 chan->increment = 0;
                 chan->final_volume = 0;
-                chan->final_panning = chan->panning + chan->pan_swing;
-                chan->final_panning = CLAMP(chan->final_panning, 0, 256);
+                chan->final_panning = chan->panning + chan->pan_swing + chan->panbrello_delta;
                 chan->ramp_length = 0;
 
                 // Calc Frequency
@@ -1263,17 +1227,13 @@ int csf_read_note(song_t *csf)
                         if (chan->flags & CHN_VIBRATO)
                                 rn_vibrato(csf, chan, &period);
 
-                        // Panbrello
-                        if (chan->flags & CHN_PANBRELLO)
-                                rn_panbrello(chan);
-
-                        int nPeriodFrac = 0;
+                        int period_frac = 0;
 
                         // Instrument Auto-Vibrato
                         if (chan->ptr_sample && chan->ptr_sample->vib_depth)
-                                rn_instrument_vibrato(csf, chan, &period, &nPeriodFrac);
+                                rn_instrument_vibrato(csf, chan, &period, &period_frac);
 
-                        unsigned int freq = get_freq_from_period(period, chan->c5speed, nPeriodFrac,
+                        unsigned int freq = get_freq_from_period(period, chan->c5speed, period_frac,
                                 csf->flags & SONG_LINEARSLIDES);
 
                         if (!(chan->flags & CHN_NOTEFADE))
@@ -1304,6 +1264,8 @@ int csf_read_note(song_t *csf)
                 // Increment envelope position
                 if (csf->flags & SONG_INSTRUMENTMODE && chan->ptr_instrument)
                         rn_increment_env_pos(chan);
+
+                chan->final_panning = CLAMP(chan->final_panning, 0, 256);
 
                 // Volume ramping
                 chan->flags &= ~CHN_VOLUMERAMP;
