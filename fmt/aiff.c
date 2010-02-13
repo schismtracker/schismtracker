@@ -322,7 +322,6 @@ static int aiff_header(disko_t *fp, int bits, int channels, int rate,
         uint32_t ul;
         int tlen, bps = 1;
         uint8_t b[10];
-        long ssnd_size_pos;
 
         bps *= ((bits + 7) / 8);
         /* note: channel multiply is done below -- need single-channel value for the COMM chunk */
