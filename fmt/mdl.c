@@ -204,7 +204,7 @@ static const uint8_t mdl_efftrans[] = {
         /* B */ FX_POSITIONJUMP,
         /* C */ FX_GLOBALVOLUME,
         /* D */ FX_PATTERNBREAK,
-        /* E */ FX_S3MCMDEX,
+        /* E */ FX_SPECIAL,
         /* F */ FX_SPEED,
         /* 2nd column only */
         /* G */ FX_VOLUMESLIDE, // up
@@ -387,7 +387,7 @@ static int cram_mdl_effects(song_note_t *note, uint8_t vol, uint8_t e1, uint8_t 
                 e2 = e1;
                 p2 = p1;
                 e1 = FX_NONE;
-        } else if (e1 == e2 && e1 != FX_S3MCMDEX) {
+        } else if (e1 == e2 && e1 != FX_SPECIAL) {
                 /* Digitrakker processes the effects left-to-right, so if both effects are the same, the
                 second essentially overrides the first. */
                 e1 = FX_NONE;

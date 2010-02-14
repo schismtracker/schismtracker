@@ -325,7 +325,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
                                 int s6xch = MUS_TICKADJ_CHANNEL;
                                 while (adjust) {
                                         int s6x = MIN(adjust, 0xf);
-                                        note[s6xch].effect = FX_S3MCMDEX;
+                                        note[s6xch].effect = FX_SPECIAL;
                                         note[s6xch].param = 0x60 | s6x;
                                         adjust -= s6x;
                                         s6xch++;

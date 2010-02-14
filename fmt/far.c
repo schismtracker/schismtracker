@@ -90,7 +90,7 @@ static uint8_t far_effects[] = {
         FX_VIBRATO, // sustained (?)
         FX_NONE, // actually slide-to-volume
         FX_PANNING,
-        FX_S3MCMDEX, // note offset => note delay?
+        FX_SPECIAL, // note offset => note delay?
         FX_NONE, // fine tempo down
         FX_NONE, // fine tempo up
         FX_SPEED,

@@ -1558,7 +1558,7 @@ static void selection_vary(int fast, int depth, int how)
                 break;
 
         case FX_NONE:
-        case FX_S3MCMDEX:
+        case FX_SPECIAL:
         case FX_SPEED:
         case FX_POSITIONJUMP:
         case FX_PATTERNBREAK:

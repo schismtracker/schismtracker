@@ -1075,7 +1075,7 @@ static void _schism_midi_out_note(int chan, const song_note_t *m)
 #if 0
 printf("channel = %d note=%d\n",chan,m_note);
 #endif
-        if (m->effect == FX_S3MCMDEX) {
+        if (m->effect == FX_SPECIAL) {
                 switch (m->param & 0x80) {
                 case 0xC0: /* note cut */
                         if (tc == (((unsigned)m->param) & 15)) {

@@ -140,7 +140,7 @@ static uint8_t imf_efftrans[] = {
         FX_VOLUME, // 0x0C Cxx Set Volume
         FX_VOLUMESLIDE, // 0x0D Dxy Volume Slide                     (*)
         FX_VOLUMESLIDE, // 0x0E Exy Fine Volume Slide                (*)
-        FX_S3MCMDEX, // 0x0F Fxx Set Finetune
+        FX_SPECIAL, // 0x0F Fxx Set Finetune
         FX_NOTESLIDEUP, // 0x10 Gxy Note Slide Up                    (*)
         FX_NOTESLIDEDOWN, // 0x11 Hxy Note Slide Down                  (*)
         FX_PORTAMENTOUP, // 0x12 Ixx Slide Up                         (*)
@@ -158,7 +158,7 @@ static uint8_t imf_efftrans[] = {
         FX_PATTERNBREAK, // 0x1E Uxx Pattern Break
         FX_GLOBALVOLUME, // 0x1F Vxx Set Mastervolume
         FX_GLOBALVOLSLIDE, // 0x20 Wxy Mastervolume Slide               (*)
-        FX_S3MCMDEX, // 0x21 Xxx Extended Effect
+        FX_SPECIAL, // 0x21 Xxx Extended Effect
         //      X1x Set Filter
         //      X3x Glissando
         //      X5x Vibrato Waveform

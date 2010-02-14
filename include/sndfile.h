@@ -110,7 +110,7 @@
 #define FX_SPEED               16
 #define FX_TEMPO               17
 #define FX_TREMOR              18
-#define FX_S3MCMDEX            20
+#define FX_SPECIAL             20
 #define FX_CHANNELVOLUME       21
 #define FX_CHANNELVOLSLIDE     22
 #define FX_GLOBALVOLUME        23

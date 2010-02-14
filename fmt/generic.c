@@ -74,7 +74,7 @@ const uint8_t effect_weight[FX_MAX] = {
         [FX_PANNING]            =  80,
         [FX_PANNINGSLIDE]       =  72,
         [FX_MIDI]               =  64,
-        [FX_S3MCMDEX]           =  56,
+        [FX_SPECIAL]            =  56,
         [FX_PANBRELLO]          =  48,
         [FX_VIBRATO]            =  40,
         [FX_FINEVIBRATO]        =  32,
@@ -194,7 +194,7 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
                         return 0;
                 }
                 break;
-        case FX_S3MCMDEX:
+        case FX_SPECIAL:
                 switch (*p >> 4) {
                 case 8:
                         /* Impulse Tracker imports XM volume-column panning very weirdly:

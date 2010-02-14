@@ -604,7 +604,7 @@ static void fx_pattern_loop(song_t *csf, song_voice_t *chan, uint32_t param)
 }
 
 
-static void fx_extended_s3m(song_t *csf, uint32_t nchan, uint32_t param)
+static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 {
         song_voice_t *chan = &csf->voices[nchan];
         uint32_t command = param & 0xF0;
@@ -715,7 +715,7 @@ static void fx_extended_s3m(song_t *csf, uint32_t nchan, uint32_t param)
                                 csf->row_count = param + 1;
                 }
                 break;
-        // SFx: S3M: Funk Repeat, IT: Set Active Midi Macro
+        // SFx: Set Active Midi Macro
         case 0xF0:
                 chan->active_macro = param;
                 break;
@@ -1021,7 +1021,7 @@ unsigned int csf_get_length(song_t *csf)
                                 }
                                 break;
                         // Pattern Delay
-                        case FX_S3MCMDEX:
+                        case FX_SPECIAL:
                                 switch (param >> 4) {
                                 case 0x6:
                                         speed_count = param & 0x0F;
@@ -1688,8 +1688,8 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                 fx_fine_vibrato(chan, param);
                 break;
 
-        case FX_S3MCMDEX:
-                fx_extended_s3m(csf, nchan, param);
+        case FX_SPECIAL:
+                fx_special(csf, nchan, param);
                 break;
 
         case FX_KEYOFF:
@@ -1924,7 +1924,7 @@ void csf_process_effects(song_t *csf, int firsttick)
                 for hardware mixing...)
                 Oh well, the world is not perfect. */
 
-                if (cmd == FX_S3MCMDEX) {
+                if (cmd == FX_SPECIAL) {
                         if (param)
                                 chan->mem_special = param;
                         else
