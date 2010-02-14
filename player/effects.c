@@ -1514,6 +1514,381 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 }
 
 
+
+static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, int porta)
+{
+        song_voice_t *chan = csf->voices + nchan;
+
+        switch (cmd) {
+        case FX_NONE:
+                break;
+
+        // Set Volume
+        case FX_VOLUME:
+                if (!(csf->flags & SONG_FIRSTTICK))
+                        break;
+                chan->volume = (param < 64) ? param*4 : 256;
+                chan->flags |= CHN_FASTVOLRAMP;
+                break;
+
+        case FX_PORTAMENTOUP:
+                fx_portamento_up(csf->flags, chan, param);
+                break;
+
+        case FX_PORTAMENTODOWN:
+                fx_portamento_down(csf->flags, chan, param);
+                break;
+
+        case FX_VOLUMESLIDE:
+                fx_volume_slide(csf->flags, chan, param);
+                break;
+
+        case FX_TONEPORTAMENTO:
+                fx_tone_portamento(csf->flags, chan, param);
+                break;
+
+        case FX_TONEPORTAVOL:
+                fx_volume_slide(csf->flags, chan, param);
+                fx_tone_portamento(csf->flags, chan, 0);
+                break;
+
+        case FX_VIBRATO:
+                fx_vibrato(chan, param);
+                break;
+
+        case FX_VIBRATOVOL:
+                fx_volume_slide(csf->flags, chan, param);
+                fx_vibrato(chan, 0);
+                break;
+
+        case FX_SPEED:
+                if ((csf->flags & SONG_FIRSTTICK) && param) {
+                        csf->tick_count = param;
+                        csf->current_speed = param;
+                }
+                break;
+
+        case FX_TEMPO:
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (param)
+                                chan->mem_tempo = param;
+                        else
+                                param = chan->mem_tempo;
+                        if (param >= 0x20)
+                                csf->current_tempo = param;
+                } else {
+                        param = chan->mem_tempo; // this just got set on tick zero
+
+                        switch (param >> 4) {
+                        case 0:
+                                csf->current_tempo -= param & 0xf;
+                                if (csf->current_tempo < 32)
+                                        csf->current_tempo = 32;
+                                break;
+                        case 1:
+                                csf->current_tempo += param & 0xf;
+                                if (csf->current_tempo > 255)
+                                        csf->current_tempo = 255;
+                                break;
+                        }
+                }
+                break;
+
+        case FX_OFFSET: // FIXME need to test out-of-range values, with loop on/off, old effects on/off
+                if (!(csf->flags & SONG_FIRSTTICK))
+                        break;
+                if (param)
+                        chan->mem_offset = (chan->mem_offset & ~0xff00) | (param << 8);
+                if (NOTE_IS_NOTE(chan->row_note)) {
+                        // when would position *not* be zero if there's a note but no portamento?
+                        if (porta)
+                                chan->position = chan->mem_offset;
+                        else
+                                chan->position += chan->mem_offset;
+                        if (chan->position >= chan->length) {
+                                chan->position = chan->loop_start;
+                                if ((csf->flags & SONG_ITOLDEFFECTS) && chan->length > 4) {
+                                        chan->position = chan->length - 2;
+                                }
+                        }
+                }
+                break;
+
+        case FX_ARPEGGIO:
+                chan->n_command = FX_ARPEGGIO;
+                if (!(csf->flags & SONG_FIRSTTICK))
+                        break;
+                if (param)
+                        chan->mem_arpeggio = param;
+                break;
+
+        case FX_RETRIG:
+                if (param)
+                        chan->mem_retrig = param & 0xFF;
+                fx_retrig_note(csf, nchan, chan->mem_retrig);
+                break;
+
+        case FX_TREMOR:
+                // Tremor logic lifted from DUMB, which is the only player that actually gets it right.
+                // I *sort of* understand it.
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (!param)
+                                param = chan->mem_tremor;
+                        else if (!(csf->flags & SONG_ITOLDEFFECTS)) {
+                                if (param & 0xf0) param -= 0x10;
+                                if (param & 0x0f) param -= 0x01;
+                        }
+                        chan->mem_tremor = param;
+                        chan->cd_tremor |= 128;
+                }
+
+                if ((chan->cd_tremor & 128) && chan->length) {
+                        if (chan->cd_tremor == 128)
+                                chan->cd_tremor = (chan->mem_tremor >> 4) | 192;
+                        else if (chan->cd_tremor == 192)
+                                chan->cd_tremor = (chan->mem_tremor & 0xf) | 128;
+                        else
+                                chan->cd_tremor--;
+                }
+
+                chan->n_command = FX_TREMOR;
+
+                break;
+
+        case FX_GLOBALVOLUME:
+                if (!(csf->flags & SONG_FIRSTTICK))
+                        break;
+                if (param <= 128)
+                        csf->current_global_volume = param;
+                break;
+
+        case FX_GLOBALVOLSLIDE:
+                fx_global_vol_slide(csf, chan, param);
+                break;
+
+        case FX_PANNING:
+                if (!(csf->flags & SONG_FIRSTTICK))
+                        break;
+                chan->flags &= ~CHN_SURROUND;
+                chan->panbrello_delta = 0;
+                chan->panning = param;
+                chan->pan_swing = 0;
+                chan->flags |= CHN_FASTVOLRAMP;
+                break;
+
+        case FX_PANNINGSLIDE:
+                fx_panning_slide(csf->flags, chan, param);
+                break;
+
+        case FX_TREMOLO:
+                fx_tremolo(chan, param);
+                break;
+
+        case FX_FINEVIBRATO:
+                fx_fine_vibrato(chan, param);
+                break;
+
+        case FX_S3MCMDEX:
+                fx_extended_s3m(csf, nchan, param);
+                break;
+
+        case FX_KEYOFF:
+                if ((csf->current_speed - csf->tick_count) == param)
+                        fx_key_off(csf, nchan);
+                break;
+
+        case FX_CHANNELVOLUME:
+                if (!(csf->flags & SONG_FIRSTTICK))
+                        break;
+                // FIXME rename global_volume to channel_volume in the channel struct
+                if (param <= 64) {
+                        chan->global_volume = param;
+                        chan->flags |= CHN_FASTVOLRAMP;
+                }
+                break;
+
+        case FX_CHANNELVOLSLIDE:
+                fx_channel_vol_slide(csf->flags, chan, param);
+                break;
+
+        case FX_PANBRELLO:
+                fx_panbrello(chan, param);
+                break;
+
+        case FX_SETENVPOSITION:
+                if (!(csf->flags & SONG_FIRSTTICK))
+                        break;
+                chan->vol_env_position = param;
+                chan->pan_env_position = param;
+                chan->pitch_env_position = param;
+                if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument) {
+                        song_instrument_t *penv = chan->ptr_instrument;
+                        if ((chan->flags & CHN_PANENV)
+                            && (penv->pan_env.nodes)
+                            && ((int)param > penv->pan_env.ticks[penv->pan_env.nodes-1])) {
+                                chan->flags &= ~CHN_PANENV;
+                        }
+                }
+                break;
+
+        case FX_POSITIONJUMP:
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (!(mix_flags & SNDMIX_NOBACKWARDJUMPS) || csf->process_order < param)
+                                csf->process_order = param - 1;
+                        csf->process_row = PROCESS_NEXT_ORDER;
+                }
+                break;
+
+        case FX_PATTERNBREAK:
+                if (csf->flags & SONG_FIRSTTICK) {
+                        csf->break_row = param;
+                        csf->process_row = PROCESS_NEXT_ORDER;
+                }
+                break;
+
+        case FX_MIDI:
+                if (!(csf->flags & SONG_FIRSTTICK))
+                        break;
+                if (param < 0x80) {
+                        csf_process_midi_macro(csf, nchan,
+                                &csf->midi_config.sfx[chan->active_macro << 5],
+                                param, 0, 0, 0);
+                } else {
+                        csf_process_midi_macro(csf, nchan,
+                                &csf->midi_config.zxx[(param & 0x7F) << 5],
+                                0, 0, 0, 0);
+                }
+                break;
+
+        case FX_NOTESLIDEUP:
+                fx_note_slide(csf->flags, chan, param, 1);
+                break;
+        case FX_NOTESLIDEDOWN:
+                fx_note_slide(csf->flags, chan, param, -1);
+                break;
+        }
+}
+
+static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t vol, int start_note)
+{
+        /* A few notes, paraphrased from ITTECH.TXT:
+                Ex/Fx/Gx are shared with Exx/Fxx/Gxx; Ex/Fx are 4x the 'normal' slide value
+                Gx is linked with Ex/Fx if Compat Gxx is off, just like Gxx is with Exx/Fxx
+                Gx values: 1, 4, 8, 16, 32, 64, 96, 128, 255
+                Ax/Bx/Cx/Dx values are used directly (i.e. D9 == D09), and are NOT shared with Dxx
+                        (value is stored into mem_vc_volslide and used by A0/B0/C0/D0)
+                Hx uses the same value as Hxx and Uxx, and affects the *depth*
+                        so... hxx = (hx | (oldhxx & 0xf0))  ???
+
+        Additionally: volume and panning are handled on the start tick, not
+        the first tick of the row (that is, SDx alters their behavior) */
+
+        switch (volcmd) {
+        case VOLFX_NONE:
+                break;
+
+        case VOLFX_VOLUME:
+                if (start_note) {
+                        if (vol > 64) vol = 64;
+                        chan->volume = vol << 2;
+                        chan->flags |= CHN_FASTVOLRAMP;
+                }
+                break;
+
+        case VOLFX_PANNING:
+                if (start_note) {
+                        if (vol > 64) vol = 64;
+                        chan->panning = vol << 2;
+                        chan->pan_swing = 0;
+                        chan->flags |= CHN_FASTVOLRAMP;
+                        chan->flags &= ~CHN_SURROUND;
+                        chan->panbrello_delta = 0;
+                }
+                break;
+
+        case VOLFX_PORTAUP: // Fx
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (vol)
+                                chan->mem_pitchslide = 4 * vol;
+                        if (!(csf->flags & SONG_COMPATGXX))
+                                chan->mem_portanote = chan->mem_pitchslide;
+                } else {
+                        fx_reg_portamento_up(csf->flags, chan, chan->mem_pitchslide);
+                }
+                break;
+
+        case VOLFX_PORTADOWN: // Ex
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (vol)
+                                chan->mem_pitchslide = 4 * vol;
+                        if (!(csf->flags & SONG_COMPATGXX))
+                                chan->mem_portanote = chan->mem_pitchslide;
+                } else {
+                        fx_reg_portamento_down(csf->flags, chan, chan->mem_pitchslide);
+                }
+                break;
+
+        case VOLFX_TONEPORTAMENTO: // Gx
+                fx_tone_portamento(csf->flags, chan,
+                        vc_portamento_table[vol & 0x0F]);
+                break;
+
+        case VOLFX_VOLSLIDEUP: // Cx
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (vol)
+                                chan->mem_vc_volslide = vol;
+                } else {
+                        fx_volume_up(chan, chan->mem_vc_volslide);
+                }
+                break;
+
+        case VOLFX_VOLSLIDEDOWN: // Dx
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (vol)
+                                chan->mem_vc_volslide = vol;
+                } else {
+                        fx_volume_down(chan, chan->mem_vc_volslide);
+                }
+                break;
+
+        case VOLFX_FINEVOLUP: // Ax
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (vol)
+                                chan->mem_vc_volslide = vol;
+                        else
+                                vol = chan->mem_vc_volslide;
+                        fx_volume_up(chan, vol);
+                }
+                break;
+
+        case VOLFX_FINEVOLDOWN: // Bx
+                if (csf->flags & SONG_FIRSTTICK) {
+                        if (vol)
+                                chan->mem_vc_volslide = vol;
+                        else
+                                vol = chan->mem_vc_volslide;
+                        fx_volume_down(chan, vol);
+                }
+                break;
+
+        case VOLFX_VIBRATODEPTH: // Hx
+                fx_vibrato(chan, vol);
+                break;
+
+        case VOLFX_VIBRATOSPEED: // $x (FT2 compat.)
+                fx_vibrato(chan, vol << 4);
+                break;
+
+        case VOLFX_PANSLIDELEFT: // <x (FT2)
+                fx_panning_slide(csf->flags, chan, vol);
+                break;
+
+        case VOLFX_PANSLIDERIGHT: // >x (FT2)
+                fx_panning_slide(csf->flags, chan, vol << 4);
+                break;
+        }
+}
+
 /* firsttick is only used for SDx at the moment */
 void csf_process_effects(song_t *csf, int firsttick)
 {
@@ -1632,430 +2007,8 @@ void csf_process_effects(song_t *csf, int firsttick)
                         }
                 }
 
-
-                // Effects
-                switch (cmd) {
-                case FX_NONE:
-                        break;
-
-                // Set Volume
-                case FX_VOLUME:
-                        if (!(csf->flags & SONG_FIRSTTICK))
-                                break;
-                        chan->volume = (param < 64) ? param*4 : 256;
-                        chan->flags |= CHN_FASTVOLRAMP;
-                        for (uint32_t i=MAX_CHANNELS; i<MAX_VOICES; i++) {
-                                song_voice_t *c = &csf->voices[i];
-                                if (c->master_channel == nchan + 1) {
-                                        c->volume = chan->volume;
-                                        c->flags |= CHN_FASTVOLRAMP;
-                                }
-                        }
-                        break;
-
-                // Portamento Up
-                case FX_PORTAMENTOUP:
-                        fx_portamento_up(csf->flags, chan, param);
-                        break;
-
-                // Portamento Down
-                case FX_PORTAMENTODOWN:
-                        fx_portamento_down(csf->flags, chan, param);
-                        break;
-
-                // Volume Slide
-                case FX_VOLUMESLIDE:
-                        fx_volume_slide(csf->flags, chan, param);
-                        break;
-
-                // Tone-Portamento
-                case FX_TONEPORTAMENTO:
-                        fx_tone_portamento(csf->flags, chan, param);
-                        break;
-
-                // Tone-Portamento + Volume Slide
-                case FX_TONEPORTAVOL:
-                        fx_volume_slide(csf->flags, chan, param);
-                        fx_tone_portamento(csf->flags, chan, 0);
-                        break;
-
-                // Vibrato
-                case FX_VIBRATO:
-                        fx_vibrato(chan, param);
-                        break;
-
-                // Vibrato + Volume Slide
-                case FX_VIBRATOVOL:
-                        fx_volume_slide(csf->flags, chan, param);
-                        fx_vibrato(chan, 0);
-                        break;
-
-                // Set Speed
-                case FX_SPEED:
-                        if ((csf->flags & SONG_FIRSTTICK) && param) {
-                                csf->tick_count = param;
-                                csf->current_speed = param;
-                        }
-                        break;
-
-                // Set Tempo
-                case FX_TEMPO:
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (param)
-                                        chan->mem_tempo = param;
-                                else
-                                        param = chan->mem_tempo;
-                                if (param >= 0x20)
-                                        csf->current_tempo = param;
-                        } else {
-                                param = chan->mem_tempo; // this just got set on tick zero
-
-                                switch (param >> 4) {
-                                case 0:
-                                        csf->current_tempo -= param & 0xf;
-                                        if (csf->current_tempo < 32)
-                                                csf->current_tempo = 32;
-                                        break;
-                                case 1:
-                                        csf->current_tempo += param & 0xf;
-                                        if (csf->current_tempo > 255)
-                                                csf->current_tempo = 255;
-                                        break;
-                                }
-                        }
-                        break;
-
-                // Set Offset (FIXME need to test out-of-range values, with loop on/off, old effects on/off)
-                case FX_OFFSET:
-                        if (!(csf->flags & SONG_FIRSTTICK))
-                                break;
-                        if (param)
-                                chan->mem_offset = (chan->mem_offset & ~0xff00) | (param << 8);
-                        if (NOTE_IS_NOTE(chan->row_note)) {
-                                // when would position *not* be zero if there's a note but no portamento?
-                                if (porta)
-                                        chan->position = chan->mem_offset;
-                                else
-                                        chan->position += chan->mem_offset;
-                                if (chan->position >= chan->length) {
-                                        chan->position = chan->loop_start;
-                                        if ((csf->flags & SONG_ITOLDEFFECTS) && chan->length > 4) {
-                                                chan->position = chan->length - 2;
-                                        }
-                                }
-                        }
-                        break;
-
-                // Arpeggio
-                case FX_ARPEGGIO:
-                        chan->n_command = FX_ARPEGGIO;
-                        if (!(csf->flags & SONG_FIRSTTICK))
-                                break;
-                        if (param)
-                                chan->mem_arpeggio = param;
-                        break;
-
-                // Retrig
-                case FX_RETRIG:
-                        if (param)
-                                chan->mem_retrig = param & 0xFF;
-                        fx_retrig_note(csf, nchan, chan->mem_retrig);
-                        break;
-
-                // Tremor
-                case FX_TREMOR:
-                        // Tremor logic lifted from DUMB, which is the only player that actually gets it right.
-                        // I *sort of* understand it.
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (!param)
-                                        param = chan->mem_tremor;
-                                else if (!(csf->flags & SONG_ITOLDEFFECTS)) {
-                                        if (param & 0xf0) param -= 0x10;
-                                        if (param & 0x0f) param -= 0x01;
-                                }
-                                chan->mem_tremor = param;
-                                chan->cd_tremor |= 128;
-                        }
-
-                        if ((chan->cd_tremor & 128) && chan->length) {
-                                if (chan->cd_tremor == 128)
-                                        chan->cd_tremor = (chan->mem_tremor >> 4) | 192;
-                                else if (chan->cd_tremor == 192)
-                                        chan->cd_tremor = (chan->mem_tremor & 0xf) | 128;
-                                else
-                                        chan->cd_tremor--;
-                        }
-
-                        chan->n_command = FX_TREMOR;
-
-                        break;
-
-                // Set Global Volume
-                case FX_GLOBALVOLUME:
-                        if (!(csf->flags & SONG_FIRSTTICK))
-                                break;
-                        if (param <= 128)
-                                csf->current_global_volume = param;
-                        break;
-
-                // Global Volume Slide
-                case FX_GLOBALVOLSLIDE:
-                        fx_global_vol_slide(csf, chan, param);
-                        break;
-
-                // Set 8-bit Panning (Xxx)
-                case FX_PANNING:
-                        if (!(csf->flags & SONG_FIRSTTICK))
-                                break;
-                        chan->flags &= ~CHN_SURROUND;
-                        chan->panbrello_delta = 0;
-                        chan->panning = param;
-                        chan->pan_swing = 0;
-                        chan->flags |= CHN_FASTVOLRAMP;
-                        break;
-
-                // Panning Slide
-                case FX_PANNINGSLIDE:
-                        fx_panning_slide(csf->flags, chan, param);
-                        break;
-
-                // Tremolo
-                case FX_TREMOLO:
-                        fx_tremolo(chan, param);
-                        break;
-
-                // Fine Vibrato
-                case FX_FINEVIBRATO:
-                        fx_fine_vibrato(chan, param);
-                        break;
-
-                // S3M/IT Sxx Extended Commands
-                case FX_S3MCMDEX:
-                        fx_extended_s3m(csf, nchan, param);
-                        break;
-
-                // Key Off
-                case FX_KEYOFF:
-                        if ((csf->current_speed - csf->tick_count) == param)
-                                fx_key_off(csf, nchan);
-                        break;
-
-                // Set Channel Global Volume
-                case FX_CHANNELVOLUME:
-                        if (!(csf->flags & SONG_FIRSTTICK))
-                                break;
-                        if (param <= 64) {
-                                chan->global_volume = param;
-                                chan->flags |= CHN_FASTVOLRAMP;
-                                for (uint32_t i=MAX_CHANNELS; i<MAX_VOICES; i++) {
-                                        song_voice_t *c = &csf->voices[i];
-                                        if (c->master_channel == nchan + 1) {
-                                                c->global_volume = param;
-                                                c->flags |= CHN_FASTVOLRAMP;
-                                        }
-                                }
-                        }
-                        break;
-
-                // Channel volume slide
-                case FX_CHANNELVOLSLIDE:
-                        {
-                                int saw_self = 0;
-
-                                for (uint32_t i=MAX_CHANNELS; i<MAX_VOICES; i++) {
-                                        song_voice_t *c = &csf->voices[i];
-                                        if (c->master_channel == nchan + 1) {
-                                                if (c == chan)
-                                                        saw_self = 1;
-                                                fx_channel_vol_slide(csf->flags, c, param);
-                                        }
-                                }
-                                if (!saw_self)
-                                        fx_channel_vol_slide(csf->flags, chan, param);
-                        }
-
-                        break;
-
-                // Panbrello (IT)
-                case FX_PANBRELLO:
-                        fx_panbrello(chan, param);
-                        break;
-
-                // Set Envelope Position
-                case FX_SETENVPOSITION:
-                        if (!(csf->flags & SONG_FIRSTTICK))
-                                break;
-                        chan->vol_env_position = param;
-                        chan->pan_env_position = param;
-                        chan->pitch_env_position = param;
-                        if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument) {
-                                song_instrument_t *penv = chan->ptr_instrument;
-                                if ((chan->flags & CHN_PANENV)
-                                    && (penv->pan_env.nodes)
-                                    && ((int)param > penv->pan_env.ticks[penv->pan_env.nodes-1])) {
-                                        chan->flags &= ~CHN_PANENV;
-                                }
-                        }
-                        break;
-
-                // Position Jump
-                case FX_POSITIONJUMP:
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (!(mix_flags & SNDMIX_NOBACKWARDJUMPS) || csf->process_order < param)
-                                        csf->process_order = param - 1;
-                                csf->process_row = PROCESS_NEXT_ORDER;
-                        }
-                        break;
-
-                // Pattern Break
-                case FX_PATTERNBREAK:
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                csf->break_row = param;
-                                csf->process_row = PROCESS_NEXT_ORDER;
-                        }
-                        break;
-
-                // Midi Controller
-                case FX_MIDI:
-                        if (!(csf->flags & SONG_FIRSTTICK))
-                                break;
-                        if (param < 0x80) {
-                                csf_process_midi_macro(csf, nchan,
-                                        &csf->midi_config.sfx[chan->active_macro << 5],
-                                        param, 0, 0, 0);
-                        } else {
-                                csf_process_midi_macro(csf, nchan,
-                                        &csf->midi_config.zxx[(param & 0x7F) << 5],
-                                        0, 0, 0, 0);
-                        }
-                        break;
-
-                case FX_NOTESLIDEUP:
-                        fx_note_slide(csf->flags, chan, param, 1);
-                        break;
-                case FX_NOTESLIDEDOWN:
-                        fx_note_slide(csf->flags, chan, param, -1);
-                        break;
-                }
-
-                // Volume Column Effect (except volume & panning)
-                /*
-                A few notes, paraphrased from ITTECH.TXT:
-                        Ex/Fx/Gx are shared with Exx/Fxx/Gxx; Ex/Fx are 4x the 'normal' slide value
-                        Gx is linked with Ex/Fx if Compat Gxx is off, just like Gxx is with Exx/Fxx
-                        Gx values: 1, 4, 8, 16, 32, 64, 96, 128, 255
-                        Ax/Bx/Cx/Dx values are used directly (i.e. D9 == D09), and are NOT shared with Dxx
-                                (value is stored into mem_vc_volslide and used by A0/B0/C0/D0)
-                        Hx uses the same value as Hxx and Uxx, and affects the *depth*
-                                so... hxx = (hx | (oldhxx & 0xf0))  ???
-                
-                Additionally: volume and panning are handled on the start tick, not
-                the first tick of the row (that is, SDx alters their behavior) */
-                switch (volcmd) {
-                case VOLFX_NONE:
-                        break;
-
-                case VOLFX_VOLUME:
-                        if (start_note) {
-                                if (vol > 64) vol = 64;
-                                chan->volume = vol << 2;
-                                chan->flags |= CHN_FASTVOLRAMP;
-                        }
-                        break;
-
-                case VOLFX_PANNING:
-                        if (start_note) {
-                                if (vol > 64) vol = 64;
-                                chan->panning = vol << 2;
-                                chan->pan_swing = 0;
-                                chan->flags |= CHN_FASTVOLRAMP;
-                                chan->flags &= ~CHN_SURROUND;
-                                chan->panbrello_delta = 0;
-                        }
-                        break;
-
-                case VOLFX_PORTAUP: // Fx
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (vol)
-                                        chan->mem_pitchslide = 4 * vol;
-                                if (!(csf->flags & SONG_COMPATGXX))
-                                        chan->mem_portanote = chan->mem_pitchslide;
-                        } else {
-                                fx_reg_portamento_up(csf->flags, chan, chan->mem_pitchslide);
-                        }
-                        break;
-
-                case VOLFX_PORTADOWN: // Ex
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (vol)
-                                        chan->mem_pitchslide = 4 * vol;
-                                if (!(csf->flags & SONG_COMPATGXX))
-                                        chan->mem_portanote = chan->mem_pitchslide;
-                        } else {
-                                fx_reg_portamento_down(csf->flags, chan, chan->mem_pitchslide);
-                        }
-                        break;
-
-                case VOLFX_TONEPORTAMENTO: // Gx
-                        fx_tone_portamento(csf->flags, chan,
-                                vc_portamento_table[vol & 0x0F]);
-                        break;
-
-                case VOLFX_VOLSLIDEUP: // Cx
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (vol)
-                                        chan->mem_vc_volslide = vol;
-                        } else {
-                                fx_volume_up(chan, chan->mem_vc_volslide);
-                        }
-                        break;
-
-                case VOLFX_VOLSLIDEDOWN: // Dx
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (vol)
-                                        chan->mem_vc_volslide = vol;
-                        } else {
-                                fx_volume_down(chan, chan->mem_vc_volslide);
-                        }
-                        break;
-
-                case VOLFX_FINEVOLUP: // Ax
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (vol)
-                                        chan->mem_vc_volslide = vol;
-                                else
-                                        vol = chan->mem_vc_volslide;
-                                fx_volume_up(chan, vol);
-                        }
-                        break;
-
-                case VOLFX_FINEVOLDOWN: // Bx
-                        if (csf->flags & SONG_FIRSTTICK) {
-                                if (vol)
-                                        chan->mem_vc_volslide = vol;
-                                else
-                                        vol = chan->mem_vc_volslide;
-                                fx_volume_down(chan, vol);
-                        }
-                        break;
-
-                case VOLFX_VIBRATODEPTH: // Hx
-                        fx_vibrato(chan, vol);
-                        break;
-
-                case VOLFX_VIBRATOSPEED: // $x (FT2 compat.)
-                        fx_vibrato(chan, vol << 4);
-                        break;
-
-                case VOLFX_PANSLIDELEFT: // <x (FT2)
-                        fx_panning_slide(csf->flags, chan, vol);
-                        break;
-
-                case VOLFX_PANSLIDERIGHT: // >x (FT2)
-                        fx_panning_slide(csf->flags, chan, vol << 4);
-                        break;
-                }
-
+                handle_effect(csf, nchan, cmd, param, porta);
+                handle_voleffect(csf, chan, volcmd, vol, start_note);
         }
 }
 

@@ -1015,11 +1015,7 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
         case 0x05:      effect = FX_TONEPORTAVOL; if (param & 0xF0) param &= 0xF0; break;
         case 0x06:      effect = FX_VIBRATOVOL; if (param & 0xF0) param &= 0xF0; break;
         case 0x07:      effect = FX_TREMOLO; break;
-        case 0x08:
-                effect = FX_PANNING;
-                if (!from_xm)
-                        param = MAX(param * 2, 0xff);
-                break;
+        case 0x08:      effect = FX_PANNING; break;
         case 0x09:      effect = FX_OFFSET; break;
         case 0x0A:      effect = FX_VOLUMESLIDE; if (param & 0xF0) param &= 0xF0; break;
         case 0x0B:      effect = FX_POSITIONJUMP; break;
@@ -1118,7 +1114,7 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
         m->param = param;
 }
 
-uint16_t csf_export_mod_effect(const song_note_t *m, int bXM)
+uint16_t csf_export_mod_effect(const song_note_t *m, int to_xm)
 {
         uint32_t effect = m->effect & 0x3F, param = m->param;
 
@@ -1127,7 +1123,7 @@ uint16_t csf_export_mod_effect(const song_note_t *m, int bXM)
         case FX_ARPEGGIO:              effect = 0; break;
         case FX_PORTAMENTOUP:
                 if ((param & 0xF0) == 0xE0) {
-                        if (bXM) {
+                        if (to_xm) {
                                 effect = 'X' - 55;
                                 param = 0x10 | (param & 0xf);
                         } else {
@@ -1143,7 +1139,7 @@ uint16_t csf_export_mod_effect(const song_note_t *m, int bXM)
                 break;
         case FX_PORTAMENTODOWN:
                 if ((param & 0xF0) == 0xE0) {
-                        if (bXM) {
+                        if (to_xm) {
                                 effect = 'X' - 55;
                                 param = 0x20 | (param & 0xf);
                         } else {
@@ -1162,10 +1158,7 @@ uint16_t csf_export_mod_effect(const song_note_t *m, int bXM)
         case FX_TONEPORTAVOL:          effect = 0x05; break;
         case FX_VIBRATOVOL:            effect = 0x06; break;
         case FX_TREMOLO:               effect = 0x07; break;
-        case FX_PANNING:
-                effect = 0x08;
-                if (!bXM) param >>= 1;
-                break;
+        case FX_PANNING:               effect = 0x08; break;
         case FX_OFFSET:                effect = 0x09; break;
         case FX_VOLUMESLIDE:           effect = 0x0A; break;
         case FX_POSITIONJUMP:          effect = 0x0B; break;
@@ -1205,7 +1198,7 @@ uint16_t csf_export_mod_effect(const song_note_t *m, int bXM)
 }
 
 
-void csf_import_s3m_effect(song_note_t *m, int bIT)
+void csf_import_s3m_effect(song_note_t *m, int from_it)
 {
         uint32_t effect = m->effect;
         uint32_t param = m->param;
@@ -1215,7 +1208,7 @@ void csf_import_s3m_effect(song_note_t *m, int bIT)
         case 'B':       effect = FX_POSITIONJUMP; break;
         case 'C':
                 effect = FX_PATTERNBREAK;
-                if (!bIT)
+                if (!from_it)
                         param = (param >> 4) * 10 + (param & 0x0F);
                 break;
         case 'D':       effect = FX_VOLUMESLIDE; break;
@@ -1236,20 +1229,20 @@ void csf_import_s3m_effect(song_note_t *m, int bIT)
         case 'S':
                 effect = FX_S3MCMDEX;
                 // convert old SAx to S8x
-                if (!bIT && ((param & 0xf0) == 0xa0))
+                if (!from_it && ((param & 0xf0) == 0xa0))
                         param = 0x80 | ((param & 0xf) ^ 8);
                 break;
         case 'T':       effect = FX_TEMPO; break;
         case 'U':       effect = FX_FINEVIBRATO; break;
         case 'V':
                 effect = FX_GLOBALVOLUME;
-                if (!bIT)
+                if (!from_it)
                         param *= 2;
                 break;
         case 'W':       effect = FX_GLOBALVOLSLIDE; break;
         case 'X':
                 effect = FX_PANNING;
-                if (!bIT) {
+                if (!from_it) {
                         if (param == 0xa4) {
                                 effect = FX_S3MCMDEX;
                                 param = 0x91;
@@ -1268,7 +1261,7 @@ void csf_import_s3m_effect(song_note_t *m, int bIT)
         m->param = param;
 }
 
-void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
+void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int to_it)
 {
         uint32_t effect = *pcmd;
         uint32_t param = *pprm;
@@ -1276,7 +1269,7 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
         case FX_SPEED:                 effect = 'A'; break;
         case FX_POSITIONJUMP:          effect = 'B'; break;
         case FX_PATTERNBREAK:          effect = 'C';
-                                        if (!bIT) param = ((param / 10) << 4) + (param % 10); break;
+                                        if (!to_it) param = ((param / 10) << 4) + (param % 10); break;
         case FX_VOLUMESLIDE:           effect = 'D'; break;
         case FX_PORTAMENTODOWN:        effect = 'E'; break;
         case FX_PORTAMENTOUP:          effect = 'F'; break;
@@ -1293,7 +1286,7 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
         case FX_RETRIG:                effect = 'Q'; break;
         case FX_TREMOLO:               effect = 'R'; break;
         case FX_S3MCMDEX:
-                if (!bIT && param == 0x91) {
+                if (!to_it && param == 0x91) {
                         effect = 'X';
                         param = 0xA4;
                 } else {
@@ -1302,11 +1295,11 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int bIT)
                 break;
         case FX_TEMPO:                 effect = 'T'; break;
         case FX_FINEVIBRATO:           effect = 'U'; break;
-        case FX_GLOBALVOLUME:          effect = 'V'; if (!bIT) param >>= 1;break;
+        case FX_GLOBALVOLUME:          effect = 'V'; if (!to_it) param >>= 1;break;
         case FX_GLOBALVOLSLIDE:        effect = 'W'; break;
         case FX_PANNING:
                 effect = 'X';
-                if (!bIT)
+                if (!to_it)
                         param >>= 1;
                 break;
         case FX_PANBRELLO:             effect = 'Y'; break;
