@@ -138,11 +138,10 @@ static struct menu sample_menu = {
         .y = 20,
         .w = 25,
         .title = "Sample Menu",
-        .num_items = 3,
+        .num_items = 2,
         .items = {
                 "Sample List          (F3)",
                 "Sample Library  (Ctrl-F3)",
-                "Reload Soundcard (Ctrl-G)",
         },
         .selected_item = 0,
         .active_item = -1,
@@ -390,8 +389,7 @@ static void sample_menu_selected_cb(void)
                 set_page(PAGE_SAMPLE_LIST);
                 return;
         case 1: /* sample library */
-                break;
-        case 2: /* reload soundcard */
+                set_page(PAGE_LIBRARY_SAMPLE);
                 break;
         }
 
@@ -406,6 +404,7 @@ static void instrument_menu_selected_cb(void)
                 set_page(PAGE_INSTRUMENT_LIST);
                 return;
         case 1: /* instrument library */
+                set_page(PAGE_LIBRARY_INSTRUMENT);
                 break;
         }
 
