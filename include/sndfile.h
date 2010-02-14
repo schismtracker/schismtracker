@@ -402,7 +402,6 @@ typedef struct song_voice {
         signed char * current_sample_data;
         uint32_t position; // sample position, fixed-point -- integer part
         uint32_t position_frac; // fractional part
-        unsigned int topnote_offset;
         int32_t increment; // 16.16 fixed point, how much to add to position per sample-frame of output
         int32_t right_volume; // ?
         int32_t left_volume; // ?

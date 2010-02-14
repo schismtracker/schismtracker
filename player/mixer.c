@@ -1455,10 +1455,6 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
                                 pbuffer += smpcount * 2;
                         } else {
                                 // Do mixing
-                                if (channel->length) {
-                                        channel->topnote_offset =
-                                                ((channel->position << 16) | channel->position_frac) % channel->length;
-                                }
 
                                 /* Mix the stream, unless we're in AdLib mode */
                                 if (!(channel->flags & CHN_ADLIB)) {
