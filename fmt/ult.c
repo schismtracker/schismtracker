@@ -148,7 +148,7 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
                         p = 0xf0 | (p & 0xf);
                         break;
                 case 8:
-                        *pe = FX_S3MCMDEX;
+                        *pe = FX_SPECIAL;
                         p = 0x60 | (p & 0xf);
                         break;
                 case 9:
@@ -164,7 +164,7 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
                         p = 0xf0 | (p & 0xf);
                         break;
                 case 0xc: case 0xd:
-                        *pe = FX_S3MCMDEX;
+                        *pe = FX_SPECIAL;
                         break;
                 }
                 break;

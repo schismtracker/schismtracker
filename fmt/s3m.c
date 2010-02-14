@@ -337,7 +337,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                                         note->effect = slurp_getc(fp);
                                         note->param = slurp_getc(fp);
                                         csf_import_s3m_effect(note, 0);
-                                        if (note->effect == FX_S3MCMDEX) {
+                                        if (note->effect == FX_SPECIAL) {
                                                 // mimic ST3's SD0/SC0 behavior
                                                 if (note->param == 0xd0) {
                                                         note->note = NOTE_NONE;

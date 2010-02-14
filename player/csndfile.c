@@ -1032,7 +1032,7 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
                 break;
         case 0x0D:      effect = FX_PATTERNBREAK; param = ((param >> 4) * 10) + (param & 0x0F); break;
         case 0x0E:
-                effect = FX_S3MCMDEX;
+                effect = FX_SPECIAL;
                 switch(param & 0xF0) {
                         case 0x10: effect = FX_PORTAMENTOUP; param |= 0xF0; break;
                         case 0x20: effect = FX_PORTAMENTODOWN; param |= 0xF0; break;
@@ -1177,7 +1177,7 @@ uint16_t csf_export_mod_effect(const song_note_t *m, int to_xm)
         case FX_TREMOR:                effect = 'T' - 55; break;
         case FX_PANBRELLO:             effect = 'Y' - 55; break;
         case FX_MIDI:                  effect = 'Z' - 55; break;
-        case FX_S3MCMDEX:
+        case FX_SPECIAL:
                 switch (param & 0xF0) {
                 case 0x10:      effect = 0x0E; param = (param & 0x0F) | 0x30; break;
                 case 0x20:      effect = 0x0E; param = (param & 0x0F) | 0x50; break;
@@ -1227,7 +1227,7 @@ void csf_import_s3m_effect(song_note_t *m, int from_it)
         case 'Q':       effect = FX_RETRIG; break;
         case 'R':       effect = FX_TREMOLO; break;
         case 'S':
-                effect = FX_S3MCMDEX;
+                effect = FX_SPECIAL;
                 // convert old SAx to S8x
                 if (!from_it && ((param & 0xf0) == 0xa0))
                         param = 0x80 | ((param & 0xf) ^ 8);
@@ -1244,7 +1244,7 @@ void csf_import_s3m_effect(song_note_t *m, int from_it)
                 effect = FX_PANNING;
                 if (!from_it) {
                         if (param == 0xa4) {
-                                effect = FX_S3MCMDEX;
+                                effect = FX_SPECIAL;
                                 param = 0x91;
                         } else if (param > 0x7f) {
                                 param = 0xff;
@@ -1285,7 +1285,7 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int to_it)
         case FX_PANNINGSLIDE:          effect = 'P'; break;
         case FX_RETRIG:                effect = 'Q'; break;
         case FX_TREMOLO:               effect = 'R'; break;
-        case FX_S3MCMDEX:
+        case FX_SPECIAL:
                 if (!to_it && param == 0x91) {
                         effect = 'X';
                         param = 0xA4;

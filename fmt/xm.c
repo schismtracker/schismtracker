@@ -219,7 +219,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
                                         note->voleffect = FX_VIBRATO;
                                         break;
                                 case 12: // Set panning
-                                        note->voleffect = FX_S3MCMDEX;
+                                        note->voleffect = FX_SPECIAL;
                                         note->volparam = 0x80 | (note->volparam & 0xf);
                                         break;
                                 case 13: // Panning slide left
@@ -231,7 +231,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
                                                 note->voleffect = FX_PANNINGSLIDE;
                                         } else {
                                                 note->volparam = 0x80;
-                                                note->voleffect = FX_S3MCMDEX;
+                                                note->voleffect = FX_SPECIAL;
                                         }
                                         break;
                                 case 14: // Panning slide right
@@ -251,7 +251,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
                                         note->note = NOTE_NONE;
                                         note->instrument = 0;
                                         note->effect = FX_NONE;
-                                } else if (note->note == NOTE_OFF && note->effect == FX_S3MCMDEX
+                                } else if (note->note == NOTE_OFF && note->effect == FX_SPECIAL
                                            && (note->param >> 4) == 0xd) {
                                         // note off with a delay ignores the note off, and also
                                         // ignores set-panning (but not other effects!)

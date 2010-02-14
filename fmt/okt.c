@@ -254,7 +254,7 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 
                         case 15: // F Set Filter <>00:ON
                                 // Not implemented, but let's import it anyway...
-                                note->effect = FX_S3MCMDEX;
+                                note->effect = FX_SPECIAL;
                                 note->param = !!note->param;
                                 break;
 
