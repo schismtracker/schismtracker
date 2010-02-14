@@ -158,24 +158,23 @@ static inline void rn_tremor(song_voice_t *chan, int *vol)
 }
 
 
-static inline void rn_vibrato(song_t *csf, song_voice_t *chan, int *nperiod)
+static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int period)
 {
         unsigned int vibpos = chan->vibrato_position & 0xFF;
         int vdelta;
         unsigned int vdepth;
-        int period = *nperiod;
 
         switch (chan->vib_type & 0x03) {
-        default:
+        case VIB_SINE:
                 vdelta = sine_table[vibpos];
                 break;
-        case 1:
+        case VIB_RAMP_DOWN:
                 vdelta = ramp_down_table[vibpos];
                 break;
-        case 2:
+        case VIB_SQUARE:
                 vdelta = square_table[vibpos];
                 break;
-        case 3:
+        case VIB_RANDOM:
                 vdelta = 128 * ((double) rand() / RAND_MAX) - 64;
                 break;
         }
@@ -211,73 +210,62 @@ static inline void rn_vibrato(song_t *csf, song_voice_t *chan, int *nperiod)
                 chan->vibrato_position = (vibpos + 4 * chan->vibrato_speed) & 0xFF;
         }
 
-        *nperiod = period;
+        return period;
 }
 
-static inline void rn_instrument_vibrato(song_t *csf, song_voice_t *chan, int *nperiod, int *period_frac)
+static inline int rn_sample_vibrato(song_voice_t *chan, int period)
 {
-        int period = *nperiod;
-        int periodfrac = *period_frac;
+        unsigned int vibpos = chan->autovib_position & 0xFF;
+        int vdelta, adepth, val;
         song_sample_t *pins = chan->ptr_sample;
 
-        /* this isn't correct, but it's better... [original was without int cast] */
-        if (!pins->vib_rate) {
-                chan->autovib_depth = pins->vib_depth << 8;
-        } else {
-                chan->autovib_depth += pins->vib_rate;
+        /*
+        1) Mov AX, [SomeVariableNameRelatingToVibrato]
+        2) Add AL, Rate
+        3) AdC AH, 0
+        4) AH contains the depth of the vibrato as a fine-linear slide.
+        5) Mov [SomeVariableNameRelatingToVibrato], AX  ; For the next cycle.
+        */
 
-                if ((chan->autovib_depth >> 8) > (int) pins->vib_depth)
-                        chan->autovib_depth = pins->vib_depth << 8;
-        }
+        adepth = chan->autovib_depth; // (1)
+        adepth += pins->vib_rate & 0xff; // (2 & 3)
+        adepth = MIN(adepth, pins->vib_depth << 8);
+        chan->autovib_depth = adepth; // (5)
+        adepth >>= 8; // (4)
 
-        chan->autovib_position += (int) pins->vib_speed;
+        chan->autovib_position += pins->vib_speed;
 
-        int val;
-
-        // XXX why is this so completely different from the other vibrato code?
         switch(pins->vib_type) {
         case VIB_SINE:
         default:
-                val = ft2_vibrato_table[chan->autovib_position & 255];
+                vdelta = sine_table[vibpos];
                 break;
         case VIB_RAMP_DOWN:
-                val = ((0x40 - (chan->autovib_position >> 1)) & 0x7F) - 0x40;
+                vdelta = ramp_down_table[vibpos];
                 break;
         case VIB_SQUARE:
-                val = (chan->autovib_position & 128) ? +64 : -64;
+                vdelta = square_table[vibpos];
                 break;
         case VIB_RANDOM:
-                val = 128 * ((double) rand() / RAND_MAX) - 64;
+                vdelta = 128 * ((double) rand() / RAND_MAX) - 64;
                 break;
         }
+        vdelta = (vdelta * adepth) >> 6;
 
-        int n = ((val * chan->autovib_depth) >> 8);
+        int l = abs(vdelta);
+        if (vdelta < 0) {
+                vdelta = _muldiv(period, linear_slide_down_table[l >> 2], 0x10000) - period;
 
-        // is this right? -mrsb
-        if (!(csf->flags & SONG_ITOLDEFFECTS))
-                n >>= 1;
+                if (l & 0x03)
+                        vdelta += _muldiv(period, fine_linear_slide_down_table[l & 0x03], 0x10000) - period;
+        } else {
+                vdelta = _muldiv(period, linear_slide_up_table[l >> 2], 0x10000) - period;
 
-        int df1, df2;
-
-        if (n < 0) {
-                n = -n;
-                unsigned int n1 = n >> 8;
-                df1 = linear_slide_up_table[n1];
-                df2 = linear_slide_up_table[n1 + 1];
-        }
-        else {
-                unsigned int n1 = n >> 8;
-                df1 = linear_slide_down_table[n1];
-                df2 = linear_slide_down_table[n1 + 1];
+                if (l & 0x03)
+                        vdelta += _muldiv(period, fine_linear_slide_up_table[l & 0x03], 0x10000) - period;
         }
 
-        n >>= 2;
-        period = _muldiv(period, df1 + ((df2 - df1) * (n & 0x3F) >> 6), 256);
-        periodfrac = period & 0xFF;
-        period >>= 8;
-
-        *nperiod = period;
-        *period_frac = periodfrac;
+        return period - vdelta;
 }
 
 
@@ -411,7 +399,7 @@ static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int period)
                 return period;
 
         //return get_period_from_note(a + get_note_from_period(period), 8363, 0);
-        return get_freq_from_period(calc_halftone(get_freq_from_period(period, 8363, 0, 0), a), 8363, 0, 0);
+        return get_freq_from_period(calc_halftone(get_freq_from_period(period, 8363, 0), a), 8363, 0);
 }
 
 
@@ -1225,15 +1213,14 @@ int csf_read_note(song_t *csf)
 
                         // Vibrato
                         if (chan->flags & CHN_VIBRATO)
-                                rn_vibrato(csf, chan, &period);
+                                period = rn_vibrato(csf, chan, period);
 
-                        int period_frac = 0;
+                        // Sample Auto-Vibrato
+                        if (chan->ptr_sample && chan->ptr_sample->vib_depth) {
+                                period = rn_sample_vibrato(chan, period);
+                        }
 
-                        // Instrument Auto-Vibrato
-                        if (chan->ptr_sample && chan->ptr_sample->vib_depth)
-                                rn_instrument_vibrato(csf, chan, &period, &period_frac);
-
-                        unsigned int freq = get_freq_from_period(period, chan->c5speed, period_frac,
+                        unsigned int freq = get_freq_from_period(period, chan->c5speed,
                                 csf->flags & SONG_LINEARSLIDES);
 
                         if (!(chan->flags & CHN_NOTEFADE))

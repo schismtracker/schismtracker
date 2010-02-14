@@ -427,7 +427,7 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
         sample->sustain_end = bswapLE32(shdr.susloop_end);
 
         sample->vib_speed = MIN(shdr.vis, 64);
-        sample->vib_depth = MIN(shdr.vid, 64);
+        sample->vib_depth = MIN(shdr.vid, 32);
         sample->vib_rate = shdr.vir;
         sample->vib_type = autovib_import[shdr.vit % 4];
 

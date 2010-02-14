@@ -63,11 +63,11 @@ int get_period_from_note(int note, unsigned int c5speed, int linear)
 }
 
 
-unsigned int get_freq_from_period(int period, unsigned int c5speed, int frac, int linear)
+unsigned int get_freq_from_period(int period, unsigned int c5speed, int linear)
 {
         if (period <= 0)
                 return INT_MAX;
-        return _muldiv(linear ? c5speed : 8363, 1712L << 8, (period << 8) + frac);
+        return _muldiv(linear ? c5speed : 8363, 1712L << 8, (period << 8));
 }
 
 
@@ -1191,8 +1191,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
                 // Don't start new notes after ===/~~~
                 chan->period = 0;
         } else {
-                chan->period = get_freq_from_period(get_freq_from_period(chan->period, psmp->c5speed, 0, 1),
-                                                chan->c5speed, 0, 1);
+                chan->period = get_freq_from_period(get_freq_from_period(chan->period, psmp->c5speed, 1),
+                                                chan->c5speed, 1);
         }
         chan->flags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE
                            | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
