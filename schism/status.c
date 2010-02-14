@@ -34,7 +34,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static int status_color = 0;
+static int status_bios = 0;
 static char *status_text = NULL;
 static uint32_t text_timeout;
 
@@ -49,7 +49,7 @@ void status_text_flash(const char *format, ...)
         if (status_text)
                 free(status_text);
 
-        status_color = 0;
+        status_bios = 0;
         va_start(ap, format);
         if (vasprintf(&status_text, format, ap) == -1) abort();
         va_end(ap);
@@ -66,24 +66,7 @@ void status_text_flash_bios(const char *format, ...)
         if (status_text)
                 free(status_text);
 
-        status_color = 16; /* color & 16 is for bios font */
-        va_start(ap, format);
-        if (vasprintf(&status_text, format, ap) == -1) abort();
-        va_end(ap);
-
-        status.flags |= NEED_UPDATE;
-}
-
-void status_text_flash_color(int co, const char *format, ...)
-{
-        va_list ap;
-
-        text_timeout = SDL_GetTicks() + 1000;
-
-        if (status_text)
-                free(status_text);
-
-        status_color = co;
+        status_bios = 1;
         va_start(ap, format);
         if (vasprintf(&status_text, format, ap) == -1) abort();
         va_end(ap);
@@ -165,11 +148,10 @@ void status_text_redraw(void)
         }
 
         if (status_text) {
-                /* color & 16 is for bios font */
-                if (status_color & 16) {
-                        draw_text_bios_len(status_text, 60, 2, 9, status_color & 15, 2);
+                if (status_bios) {
+                        draw_text_bios_len(status_text, 60, 2, 9, 0, 2);
                 } else {
-                        draw_text_len(status_text, 60, 2, 9, status_color & 15, 2);
+                        draw_text_len(status_text, 60, 2, 9, 0, 2);
                 }
         } else {
                 switch (song_get_mode()) {
