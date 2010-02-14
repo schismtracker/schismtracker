@@ -2901,7 +2901,7 @@ static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int ro
 static int pattern_editor_insert_midi(struct key_event *k)
 {
         song_note_t *pattern, *cur_note = NULL;
-        int n, v = 0, c = 0, pd, spd, tk;
+        int n, v = 0, c = 0, pd, speed, tick;
 
         status.flags |= SONG_NEEDS_SAVE;
         song_get_pattern(current_pattern, &pattern);
@@ -2921,8 +2921,8 @@ static int pattern_editor_insert_midi(struct key_event *k)
                 };
         }
 
-        spd = song_get_current_speed();
-        tk = song_get_current_tick();
+        speed = song_get_current_speed();
+        tick = song_get_current_tick();
         if (k->midi_note == -1) {
                 /* nada */
         } else if (k->state) {
@@ -2947,7 +2947,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
                         v = 0;
                 }
                 if (!((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) && playback_tracing)) {
-                        tk = 0;
+                        tick = 0;
                 }
                 n = k->midi_note;
                 // XXX samp/ins were -1 here, I don't know what that meant (this is probably incorrect)
@@ -2966,11 +2966,10 @@ static int pattern_editor_insert_midi(struct key_event *k)
                                 cur_note->voleffect = VOLFX_VOLUME;
                                 cur_note->volparam = v;
                         }
-                        tk %= spd;
-                        if (midi_flags & MIDI_RECORD_SDX
-                            && (!cur_note->effect && (tk & 15))) {
-                                cur_note->effect = 20; /* Sxx */
-                                cur_note->param = 0xD0 | (tk & 15);
+                        tick %= speed;
+                        if (!(midi_flags & MIDI_TICK_QUANTIZE) && !cur_note->effect && tick != 0) {
+                                cur_note->effect = FX_SPECIAL;
+                                cur_note->param = 0xD0 | MIN(tick, 15);
                         }
                 }
         }
@@ -2990,7 +2989,8 @@ static int pattern_editor_insert_midi(struct key_event *k)
                         cur_note = pattern + 64 * current_row + c;
 
                         if (cur_note->effect) {
-                                if (cur_note->effect != 2 || cur_note->effect != 3) {
+                                if (cur_note->effect != FX_PORTAMENTOUP
+                                    && cur_note->effect != FX_PORTAMENTODOWN) {
                                         /* don't overwrite old effects */
                                         continue;
                                 }
@@ -3006,10 +3006,10 @@ static int pattern_editor_insert_midi(struct key_event *k)
                         if (pd < -0x7F) pd = -0x7F;
                         else if (pd > 0x7F) pd = 0x7F;
                         if (pd < 0) {
-                                cur_note->effect = 3; /* Exx */
+                                cur_note->effect = FX_PORTAMENTODOWN; /* Exx */
                                 cur_note->param = -pd;
                         } else if (pd > 0) {
-                                cur_note->effect = 2; /* Fxx */
+                                cur_note->effect = FX_PORTAMENTOUP; /* Fxx */
                                 cur_note->param = pd;
                         }
                         if (k->midi_note == -1 || k->state) continue;

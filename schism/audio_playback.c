@@ -539,7 +539,7 @@ void song_stop_unlocked(int quitting)
                         if (note_tracker[chan] != 0) {
                                 for (int j = 0; j < 16; j++) {
                                         csf_process_midi_macro(current_song, chan,
-                                                &current_song->midi_config.global[MIDIOUT_NOTEOFF*32],
+                                                current_song->midi_config.note_off,
                                                 0, note_tracker[chan], 0, j);
                                 }
                                 moff[0] = 0x80 + chan;
@@ -556,7 +556,7 @@ void song_stop_unlocked(int quitting)
                 // send all notes off
 #define _MIDI_PANIC     "\xb0\x78\0\xb0\x79\0\xb0\x7b\0"
                 csf_midi_send(current_song, (unsigned char *) _MIDI_PANIC, sizeof(_MIDI_PANIC) - 1, 0, 0);
-                csf_process_midi_macro(current_song, 0, &current_song->midi_config.global[MIDIOUT_STOP*32], 0, 0, 0, 0); // STOP!
+                csf_process_midi_macro(current_song, 0, current_song->midi_config.stop, 0, 0, 0, 0); // STOP!
                 midi_send_flush(); // NOW!
 
                 midi_playing = 0;
@@ -1031,7 +1031,7 @@ static void _schism_midi_out_note(int chan, const song_note_t *m)
     else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
 
         if (!midi_playing) {
-                csf_process_midi_macro(current_song, 0, &current_song->midi_config.global[MIDIOUT_START*32], 0, 0, 0, 0); // START!
+                csf_process_midi_macro(current_song, 0, current_song->midi_config.start, 0, 0, 0, 0); // START!
                 midi_playing = 1;
         }
 
@@ -1096,7 +1096,7 @@ printf("channel = %d note=%d\n",chan,m_note);
         need_note = need_velocity = -1;
         if (m_note > 120) {
                 if (note_tracker[chan] != 0) {
-                        csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_NOTEOFF*32],
+                        csf_process_midi_macro(current_song, chan, current_song->midi_config.note_off,
                                 0, note_tracker[chan], 0, ins);
                 }
 
@@ -1112,7 +1112,7 @@ printf("channel = %d note=%d\n",chan,m_note);
 
         } else if (m->note) {
                 if (note_tracker[chan] != 0) {
-                        csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_NOTEOFF*32],
+                        csf_process_midi_macro(current_song, chan, current_song->midi_config.note_off,
                                 0, note_tracker[chan], 0, ins);
                 }
                 note_tracker[chan] = m_note;
@@ -1146,7 +1146,7 @@ printf("channel = %d note=%d\n",chan,m_note);
         }
         if (mg > -1 && was_program[mc] != mg) {
                 was_program[mc] = mg;
-                csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_PROGRAM*32],
+                csf_process_midi_macro(current_song, chan, current_song->midi_config.set_program,
                         mg, 0, 0, ins); // program change
         }
         if (c->flags & CHN_MUTE) {
@@ -1154,11 +1154,11 @@ printf("channel = %d note=%d\n",chan,m_note);
         } else if (need_note > 0) {
                 if (need_velocity == -1) need_velocity = 64; // eh?
                 need_velocity = CLAMP(need_velocity*2,0,127);
-                csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_NOTEON*32],
+                csf_process_midi_macro(current_song, chan, current_song->midi_config.note_on,
                         0, need_note, need_velocity, ins); // noteon
         } else if (need_velocity > -1 && note_tracker[chan] > 0) {
                 need_velocity = CLAMP(need_velocity*2,0,127);
-                csf_process_midi_macro(current_song, chan, &current_song->midi_config.global[MIDIOUT_VOLUME*32],
+                csf_process_midi_macro(current_song, chan, current_song->midi_config.set_volume,
                         need_velocity, note_tracker[chan], need_velocity, ins); // volume-set
         }
 

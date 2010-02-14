@@ -503,25 +503,18 @@ typedef struct song_note {
 
 ////////////////////////////////////////////////////////////////////
 
-enum {
-        MIDIOUT_START=0,
-        MIDIOUT_STOP,
-        MIDIOUT_TICK,
-        MIDIOUT_NOTEON,
-        MIDIOUT_NOTEOFF,
-        MIDIOUT_VOLUME,
-        MIDIOUT_PAN,
-        MIDIOUT_BANKSEL,
-        MIDIOUT_PROGRAM,
-};
-
-
-// FIXME make this not so dumb
-typedef struct midi_config
-{
-        char global[9*32];
-        char sfx[16*32];
-        char zxx[128*32];
+typedef struct {
+        char start[32];
+        char stop[32];
+        char tick[32];
+        char note_on[32];
+        char note_off[32];
+        char set_volume[32];
+        char set_panning[32];
+        char set_bank[32];
+        char set_program[32];
+        char sfx[16][32];
+        char zxx[128][32];
 } midi_config_t;
 
 extern midi_config_t default_midi_config;

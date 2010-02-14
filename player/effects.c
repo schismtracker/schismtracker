@@ -1751,11 +1751,11 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                         break;
                 if (param < 0x80) {
                         csf_process_midi_macro(csf, nchan,
-                                &csf->midi_config.sfx[chan->active_macro << 5],
+                                csf->midi_config.sfx[chan->active_macro],
                                 param, 0, 0, 0);
                 } else {
                         csf_process_midi_macro(csf, nchan,
-                                &csf->midi_config.zxx[(param & 0x7F) << 5],
+                                csf->midi_config.zxx[param & 0x7F],
                                 0, 0, 0, 0);
                 }
                 break;

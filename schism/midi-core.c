@@ -187,28 +187,28 @@ void cfg_load_midi(cfg_file_t *cfg)
 
         song_lock_audio();
         md = &default_midi_config;
-        cfg_get_string(cfg,"MIDI","start", md->global+(0*32),32, "FF");
-        cfg_get_string(cfg,"MIDI","stop", md->global+(1*32),32, "FC");
-        cfg_get_string(cfg,"MIDI","tick", md->global+(2*32),32, "");
-        cfg_get_string(cfg,"MIDI","note_on", md->global+(3*32),32, "9c n v");
-        cfg_get_string(cfg,"MIDI","note_off", md->global+(4*32),32, "9c n 0");
-        cfg_get_string(cfg,"MIDI","set_volume", md->global+(5*32),32, "");
-        cfg_get_string(cfg,"MIDI","set_panning", md->global+(6*32),32, "");
-        cfg_get_string(cfg,"MIDI","set_bank", md->global+(7*32),32, "");
-        cfg_get_string(cfg,"MIDI","set_program", md->global+(8*32),32, "Cc p");
+        cfg_get_string(cfg,"MIDI","start", md->start, 32, "FF");
+        cfg_get_string(cfg,"MIDI","stop", md->stop, 32, "FC");
+        cfg_get_string(cfg,"MIDI","tick", md->tick, 32, "");
+        cfg_get_string(cfg,"MIDI","note_on", md->note_on, 32, "9c n v");
+        cfg_get_string(cfg,"MIDI","note_off", md->note_off, 32, "9c n 0");
+        cfg_get_string(cfg,"MIDI","set_volume", md->set_volume, 32, "");
+        cfg_get_string(cfg,"MIDI","set_panning", md->set_panning, 32, "");
+        cfg_get_string(cfg,"MIDI","set_bank", md->set_bank, 32, "");
+        cfg_get_string(cfg,"MIDI","set_program", md->set_program, 32, "Cc p");
         for (i = 0; i < 16; i++) {
-                sprintf(buf, "SF%01x", i);
-                cfg_get_string(cfg, "MIDI", buf, md->sfx + (i * 32), 32,
+                sprintf(buf, "SF%X", i);
+                cfg_get_string(cfg, "MIDI", buf, md->sfx[i], 32,
                                 i == 0 ? "F0F000z" : "");
         }
 
         for (i = 0; i < 128; i++) {
-                sprintf(buf, "Z%02x", i + 0x80);
+                sprintf(buf, "Z%02X", i + 0x80);
                 if (i < 16)
                         sprintf(buf2, "F0F001%02x", i * 8);
                 else
                         buf2[0] = '\0';
-                cfg_get_string(cfg, "MIDI", buf, md->zxx + (i * 32), 32, buf2);
+                cfg_get_string(cfg, "MIDI", buf, md->zxx[i], 32, buf2);
         }
 
         mc = &current_song->midi_config;
@@ -242,22 +242,22 @@ void cfg_save_midi(cfg_file_t *cfg)
         mc = &current_song->midi_config;
         memcpy(md, mc, sizeof(midi_config_t));
 
-        cfg_set_string(cfg,"MIDI","start", md->global+(0*32));
-        cfg_set_string(cfg,"MIDI","stop", md->global+(1*32));
-        cfg_set_string(cfg,"MIDI","tick", md->global+(2*32));
-        cfg_set_string(cfg,"MIDI","note_on", md->global+(3*32));
-        cfg_set_string(cfg,"MIDI","note_off", md->global+(4*32));
-        cfg_set_string(cfg,"MIDI","set_volume", md->global+(5*32));
-        cfg_set_string(cfg,"MIDI","set_panning", md->global+(6*32));
-        cfg_set_string(cfg,"MIDI","set_bank", md->global+(7*32));
-        cfg_set_string(cfg,"MIDI","set_program", md->global+(8*32));
+        cfg_set_string(cfg,"MIDI","start", md->start);
+        cfg_set_string(cfg,"MIDI","stop", md->stop);
+        cfg_set_string(cfg,"MIDI","tick", md->tick);
+        cfg_set_string(cfg,"MIDI","note_on", md->note_on);
+        cfg_set_string(cfg,"MIDI","note_off", md->note_off);
+        cfg_set_string(cfg,"MIDI","set_volume", md->set_volume);
+        cfg_set_string(cfg,"MIDI","set_panning", md->set_panning);
+        cfg_set_string(cfg,"MIDI","set_bank", md->set_bank);
+        cfg_set_string(cfg,"MIDI","set_program", md->set_program);
         for (i = 0; i < 16; i++) {
-                sprintf(buf, "SF%01x", i);
-                cfg_set_string(cfg, "MIDI", buf, md->sfx + (i * 32));
+                sprintf(buf, "SF%X", i);
+                cfg_set_string(cfg, "MIDI", buf, md->sfx[i]);
         }
         for (i = 0; i < 128; i++) {
-                sprintf(buf, "Z%02x", i + 0x80);
-                cfg_set_string(cfg, "MIDI", buf, md->zxx + (i * 32));
+                sprintf(buf, "Z%02X", i + 0x80);
+                cfg_set_string(cfg, "MIDI", buf, md->zxx[i]);
         }
         song_unlock_audio();
 

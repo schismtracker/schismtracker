@@ -575,7 +575,8 @@ static int handle_key_global(struct key_event * k)
                         if (!k->state) set_page(PAGE_CONFIG);
                 } else if (k->mod & KMOD_SHIFT) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_MIDI);
+                        if (!k->state)
+                                set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
                 } else if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
                         if (!k->state) set_page(PAGE_HELP);
