@@ -387,14 +387,11 @@ static void sample_menu_selected_cb(void)
         switch (sample_menu.selected_item) {
         case 0: /* sample list */
                 set_page(PAGE_SAMPLE_LIST);
-                return;
+                break;
         case 1: /* sample library */
                 set_page(PAGE_LIBRARY_SAMPLE);
                 break;
         }
-
-        menu_hide();
-        status.flags |= NEED_UPDATE;
 }
 
 static void instrument_menu_selected_cb(void)
@@ -402,14 +399,11 @@ static void instrument_menu_selected_cb(void)
         switch (instrument_menu.selected_item) {
         case 0: /* instrument list */
                 set_page(PAGE_INSTRUMENT_LIST);
-                return;
+                break;
         case 1: /* instrument library */
                 set_page(PAGE_LIBRARY_INSTRUMENT);
                 break;
         }
-
-        menu_hide();
-        status.flags |= NEED_UPDATE;
 }
 
 static void settings_menu_selected_cb(void)
