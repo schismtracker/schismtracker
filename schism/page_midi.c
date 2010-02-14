@@ -308,7 +308,7 @@ static void midi_page_draw_portlist(void)
 void midi_load_page(struct page *page)
 {
         page->title = "Midi Screen (Shift-F1)";
-        page->draw_const = NULL;
+        page->draw_const = midi_page_redraw;
         page->song_changed_cb = NULL;
         page->predraw_hook = NULL;
         page->playback_update = NULL;
@@ -318,7 +318,7 @@ void midi_load_page(struct page *page)
         page->widgets = widgets_midi;
         page->help_index = HELP_GLOBAL;
 
-        create_other(widgets_midi + 0, 0, midi_page_handle_key, midi_page_redraw);
+        create_other(widgets_midi + 0, 0, midi_page_handle_key, midi_page_draw_portlist);
         widgets_midi[0].x = 2;
         widgets_midi[0].y = 14;
         widgets_midi[0].width = 75;
