@@ -135,61 +135,6 @@ static void info_draw_technical(int base, int height, int active, int first_chan
                 }
                 draw_text(num99tostr(c, buf), 2, pos, fg, 2); /* channel number */
 
-                // again with the hacks...
-                if (mixchan->ptr_sample)
-                        smp = mixchan->ptr_sample - song_get_sample(0);
-                else
-                        smp = 0;
-                if(smp < 0 || smp >= MAX_SAMPLES)
-                        smp = 0;
-
-                // Bleh
-                if (mixchan->flags & (CHN_KEYOFF|CHN_NOTEFADE) && mixchan->length == 0) {
-                        smp = 0;
-                }
-
-                if (smp) {
-                        if (mixchan->sample_freq) {
-                                sprintf(buf, "%10d", mixchan->sample_freq);
-                                draw_text(buf, 5, pos, 2, 0);
-                        }
-                        if (mixchan->sample_freq | mixchan->topnote_offset) {
-                                // ... what the ballsack?
-                                sprintf(buf, "%10d", mixchan->topnote_offset);
-                                draw_text(buf, 16, pos, 2, 0);
-                        }
-
-                        draw_text(numtostr(3, smp, buf), 27, pos, 2, 0);
-
-                        draw_text(numtostr(3, mixchan->final_volume / 128, buf), 32, pos, 2, 0);
-                        draw_text(numtostr(2, mixchan->volume >> 2, buf), 36, pos, 2, 0);
-
-                        draw_text(numtostr(2, mixchan->global_volume, buf), 39, pos, 2, 0);
-                        draw_text(numtostr(2, mixchan->ptr_sample
-                                ? mixchan->ptr_sample->global_volume : 64, buf),
-                                42, pos, 2, 0);
-                        draw_text(numtostr(2, mixchan->instrument_volume, buf), 45, pos, 2, 0);
-
-                        draw_text(numtostr(3, mixchan->fadeout_volume / 128, buf), 48, pos, 2, 0);
-
-                        if (mixchan->flags & CHN_SURROUND)
-                                draw_text("Su", 52, pos, 2, 0);
-                        else
-                                draw_text(numtostr(2, mixchan->panning >> 2, buf), 52, pos, 2, 0);
-                        draw_text(numtostr(2, mixchan->final_panning >> 2, buf), 55, pos, 2, 0);
-                }
-                if (song_is_instrument_mode()) {
-                        switch (mixchan->nna) {
-                        case 1: ptr = "Cut"; break;
-                        case 2: ptr = "Con"; break;
-                        case 3: ptr = "Off"; break;
-                        case 4: ptr = "Fde"; break;
-                        default: ptr = "---"; break;
-                        };
-                        draw_text(ptr, 59, pos, 2, 0);
-                        draw_text(numtostr(3, smplist[smp], buf), 63, pos, 2, 0);
-                }
-
                 draw_char(168, 15, pos, 2, 0);
                 draw_char(168, 26, pos, 2, 0);
                 draw_char(168, 35, pos, 2, 0);
@@ -201,7 +146,53 @@ static void info_draw_technical(int base, int height, int active, int first_chan
                 draw_char(168, 54, pos, 2, 0);
 
                 if (song_is_instrument_mode()) {
+                        draw_text("--- 000", 59, pos, 2, 0); /* will be overwritten if something's playing */
                         draw_char(168, 62, pos, 2, 0);
+                }
+
+                if (mixchan->current_sample_data && mixchan->length && mixchan->ptr_sample) {
+                        // again with the hacks...
+                        smp = mixchan->ptr_sample - song_get_sample(0);
+                        if (smp <= 0 || smp >= MAX_SAMPLES)
+                                continue;
+                } else {
+                        continue;
+                }
+
+
+                sprintf(buf, "%10d", mixchan->sample_freq);
+                draw_text(buf, 5, pos, 2, 0);
+
+                sprintf(buf, "%10d", mixchan->position);
+                draw_text(buf, 16, pos, 2, 0);
+
+                draw_text(numtostr(3, smp, buf), 27, pos, 2, 0);
+
+                draw_text(numtostr(3, mixchan->final_volume / 128, buf), 32, pos, 2, 0);
+                draw_text(numtostr(2, mixchan->volume >> 2, buf), 36, pos, 2, 0);
+
+                draw_text(numtostr(2, mixchan->global_volume, buf), 39, pos, 2, 0);
+                draw_text(numtostr(2, mixchan->ptr_sample->global_volume, buf),
+                        42, pos, 2, 0);
+                draw_text(numtostr(2, mixchan->instrument_volume, buf), 45, pos, 2, 0);
+
+                draw_text(numtostr(3, mixchan->fadeout_volume / 128, buf), 48, pos, 2, 0);
+
+                if (mixchan->flags & CHN_SURROUND)
+                        draw_text("Su", 52, pos, 2, 0);
+                else
+                        draw_text(numtostr(2, mixchan->panning >> 2, buf), 52, pos, 2, 0);
+                draw_text(numtostr(2, mixchan->final_panning >> 2, buf), 55, pos, 2, 0);
+                if (song_is_instrument_mode()) {
+                        switch (mixchan->nna) {
+                                case NNA_NOTECUT: ptr = "Cut"; break;
+                                case NNA_CONTINUE: ptr = "Con"; break;
+                                case NNA_NOTEOFF: ptr = "Off"; break;
+                                case NNA_NOTEFADE: ptr = "Fde"; break;
+                                default: ptr = "???"; break;
+                        };
+                        draw_text(ptr, 59, pos, 2, 0);
+                        draw_text(numtostr(3, smplist[smp], buf), 63, pos, 2, 0);
                 }
         }
 }
