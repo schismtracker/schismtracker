@@ -126,7 +126,7 @@
 |   A-Z              Change effect
 |   . (Period)       Clear field(s)
 |   1                Note cut (^^^)
-|   `                Note off (===) / Panning Toggle
+|   `                Note off (═══) / Panning Toggle
 :   Shift-`          Note fade (~~~)
 |   Spacebar         Use last note/instrument/volume/effect/effect value
 |   Caps Lock+Key    Preview note
