@@ -3002,7 +3002,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 
 
                         pd = (((k->midi_bend - pd) * midi_pitch_depth
-                                        / 8192) * spd) / 2;
+                                        / 8192) * speed) / 2;
                         if (pd < -0x7F) pd = -0x7F;
                         else if (pd > 0x7F) pd = 0x7F;
                         if (pd < 0) {
