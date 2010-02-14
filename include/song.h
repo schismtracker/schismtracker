@@ -45,18 +45,6 @@ extern unsigned int samples_played;
 extern unsigned int max_channels_used;
 
 /* --------------------------------------------------------------------- */
-
-#define MIDI_GCF_START          (0*32)
-#define MIDI_GCF_STOP           (1*32)
-#define MIDI_GCF_TICK           (2*32)
-#define MIDI_GCF_NOTEON         (3*32)
-#define MIDI_GCF_NOTEOFF        (4*32)
-#define MIDI_GCF_VOLUME         (5*32)
-#define MIDI_GCF_PAN            (6*32)
-#define MIDI_GCF_BANKCHANGE     (7*32)
-#define MIDI_GCF_PROGRAMCHANGE  (8*32)
-
-/* --------------------------------------------------------------------- */
 /* non-song-related structures */
 
 /* defined in audio_playback.cc; also used by page_settings.c */
