@@ -3048,9 +3048,9 @@ static int pattern_editor_insert(struct key_event *k)
                 // also, this is fully idiotic
                 smp = ins = cur_note->instrument;
                 if (song_is_instrument_mode()) {
-                        smp = -1;
+                        smp = KEYJAZZ_NOINST;
                 } else {
-                        ins = -1;
+                        ins = KEYJAZZ_NOINST;
                 }
 
                 if (k->sym == SDLK_4) {
@@ -3059,7 +3059,7 @@ static int pattern_editor_insert(struct key_event *k)
                         if (cur_note->voleffect == VOLFX_VOLUME) {
                                 vol = cur_note->volparam;
                         } else {
-                                vol = -1;
+                                vol = KEYJAZZ_DEFAULTVOL;
                         }
                         song_keyrecord(smp, ins, cur_note->note,
                                 vol, current_channel, cur_note->effect, cur_note->param);
@@ -3074,10 +3074,10 @@ static int pattern_editor_insert(struct key_event *k)
                 }
 
                 if (song_is_instrument_mode()) {
-                        if (ins < 1 || (edit_copy_mask & MASK_INSTRUMENT))
+                        if (ins < 1 && (edit_copy_mask & MASK_INSTRUMENT))
                                 ins = instrument_get_current();
                 } else {
-                        if (smp < 1 || (edit_copy_mask & MASK_INSTRUMENT))
+                        if (smp < 1 && (edit_copy_mask & MASK_INSTRUMENT))
                                 smp = sample_get_current();
                 }
 
@@ -3088,7 +3088,7 @@ static int pattern_editor_insert(struct key_event *k)
 
                         vol = ((edit_copy_mask & MASK_VOLUME) && cur_note->voleffect == VOLFX_VOLUME)
                                 ? mask_note.volparam
-                                : -1;
+                                : KEYJAZZ_DEFAULTVOL;
                 } else {
                         n = kbd_get_note(k);
                         if (n < 0)
@@ -3099,7 +3099,7 @@ static int pattern_editor_insert(struct key_event *k)
                         } else if (cur_note->voleffect == VOLFX_VOLUME) {
                                 vol = cur_note->volparam;
                         } else {
-                                vol = -1;
+                                vol = KEYJAZZ_DEFAULTVOL;
                         }
                 }
 #if 0
@@ -3132,10 +3132,7 @@ static int pattern_editor_insert(struct key_event *k)
                 }
                 /* Be quiet when pasting templates.
                 It'd be nice to "play" a template when pasting it (maybe only for ones that are one row high)
-                so as to hear the chords being inserted etc., but that's a little complicated to do.
-                FIXME: this ought to be handling effects too. Problem is, they don't exist until the row and
-                mask note are both modified (below) and this needs to happen before that for caps-lock play.
-                Blah. */
+                so as to hear the chords being inserted etc., but that's a little complicated to do. */
                 if (NOTE_IS_NOTE(n) && !(template_mode && writenote))
                         song_keydown(smp, ins, n, vol, current_channel);
                 if (!writenote)
@@ -3159,6 +3156,10 @@ static int pattern_editor_insert(struct key_event *k)
                                 cur_note->param = mask_note.param;
                         }
                 }
+
+                /* try again, now that we have the effect (this is a dumb way to do this...) */
+                if (NOTE_IS_NOTE(n) && !template_mode)
+                        song_keyrecord(smp, ins, n, vol, current_channel, cur_note->effect, cur_note->param);
 
                 /* copy the note back to the mask */
                 mask_note.note = n;

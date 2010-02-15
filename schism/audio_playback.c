@@ -275,9 +275,16 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 // keep track of what channel this note was played in so we can note-off properly later
                 keyjazz_channels[note] = chan;
 
+                // handle blank instrument values
+                if (samp == 0)
+                        samp = c->last_instrument;
+                if (ins == 0)
+                        ins = c->last_instrument;
+                c->last_instrument = ins_mode ? ins : samp;
+
                 // give the channel a sample, and maybe an instrument
                 s = (samp == KEYJAZZ_NOINST) ? NULL : current_song->samples + samp;
-                i = (ins == KEYJAZZ_NOINST) ? NULL : (song_instrument_t *) song_get_instrument(ins); // blah
+                i = (ins == KEYJAZZ_NOINST) ? NULL : song_get_instrument(ins); // blah
 
                 if (i && samp == KEYJAZZ_NOINST) {
                         // we're playing an instrument and don't know what sample! WHAT WILL WE EVER DO?!
@@ -378,6 +385,14 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 _schism_midi_out_note(chan, &mc);
         }
 
+        /*
+        TODO:
+        - If this is the ONLY channel playing, and the song is stopped, always reset the tick count
+          (will fix the "random" behavior for most effects)
+        - If other channels are playing, don't reset the tick count, but do process first-tick effects
+          for this note *right now* (this will fix keyjamming with effects like Oxx and SCx)
+        - Need to handle volume column effects with this function...
+        */
         if (current_song->flags & SONG_ENDREACHED) {
                 current_song->flags &= ~SONG_ENDREACHED;
                 current_song->flags |= SONG_PAUSED;
