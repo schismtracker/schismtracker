@@ -493,6 +493,8 @@ static void fx_tremolo(uint32_t flags, song_voice_t *chan, uint32_t param)
         if (param & 0xF0)
                 chan->tremolo_speed = (param >> 4) & 0x0F;
 
+        chan->flags |= CHN_TREMOLO;
+
         // don't handle on first tick if old-effects mode
         if ((flags & SONG_FIRSTTICK) && (flags & SONG_ITOLDEFFECTS))
                 return;
@@ -515,7 +517,6 @@ static void fx_tremolo(uint32_t flags, song_voice_t *chan, uint32_t param)
         chan->tremolo_position = (trempos + 4 * chan->tremolo_speed) & 0xFF;
         tdelta = (tdelta * (int)chan->tremolo_depth) >> 5;
         chan->tremolo_delta = tdelta;
-        chan->flags |= CHN_TREMOLO;
 }
 
 
