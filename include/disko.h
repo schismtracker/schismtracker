@@ -91,6 +91,14 @@ int disko_memclose(disko_t *f, int free_buffer);
 /* copy a pattern into a sample */
 int disko_writeout_sample(int smpnum, int pattern, int bind);
 
+/* copy a pattern into multiple samples (split by channel,
+and writing into free slots starting at smpnum) */
+int disko_multiwrite_samples(int firstsmp, int pattern);
+
+/* Wrapper for the above that writes to the current sample,
+and with a confirmation dialog if the sample already has data */
+void song_pattern_to_sample(int pattern, int split, int bind);
+
 /* export the song to a file */
 struct save_format;
 int disko_export_song(const char *filename, struct save_format *format);

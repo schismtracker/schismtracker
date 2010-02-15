@@ -630,61 +630,23 @@ static int orderlist_handle_key_on_list(struct key_event * k)
                         return 1;
                 }
                 return 0;
-        case SDLK_o:
-                if (k->mod & KMOD_CTRL) {
-                        if (status.flags & CLASSIC_MODE) return 0;
-                        p = current_song->orderlist[current_order];
-                        if (p >= 200) return 0;
-                        n = sample_get_current();
-                        if (n < 1) return 0;
-                        if (k->state) return 1;
 
-                        samp = song_get_sample(n);
-                        if (samp
-                        && ((unsigned char)samp->name[23]) == 0xFF
-                        && ((unsigned char)samp->name[24]) < 200) {
-                                dialog_create(DIALOG_OK_CANCEL,
-        "This will replace and unlink the current sample", _copysam, dialog_cancel, 1, NULL);
-                        } else if (song_sample_is_empty(n)) {
-                                _copysam(NULL);
-                        } else {
-                                dialog_create(DIALOG_OK_CANCEL,
-        "This will replace the current sample", _copysam, dialog_cancel, 1, NULL);
-                        }
-                }
-                return 0;
         case SDLK_b:
-                if (k->mod & KMOD_CTRL) {
-                        if (status.flags & CLASSIC_MODE) return 0;
-                        p = current_song->orderlist[current_order];
-                        if (p >= 200) return 0;
-                        if (sample_get_current() < 1) return 0;
+                if (k->mod & KMOD_SHIFT)
+                        return 0;
+                /* fall through */
+        case SDLK_o:
+                if (!(k->mod & KMOD_CTRL))
+                        return 0;
+                if (k->state) return 1;
+                song_pattern_to_sample(current_song->orderlist[current_order],
+                                !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
+                return 1;
 
-                        if (k->state) return 1;
-
-                        for (n = 1; n <= 99; n++) {
-                                samp = song_get_sample(n);
-                                if (!samp) continue;
-                                if (((unsigned char)samp->name[23]) != 0xFF) continue;
-                                if (((unsigned char)samp->name[24]) != p) continue;
-                                status_text_flash("Pattern %d already linked to sample %d",
-                                                p, n);
-                                return 1;
-                        }
-
-                        if (song_sample_is_empty(sample_get_current())) {
-                                _attachsam(NULL);
-                        } else {
-                                dialog_create(DIALOG_OK_CANCEL,
-        "This will replace the current sample", _attachsam, dialog_cancel, 1, NULL);
-                        }
-                }
-                return 0;
         case SDLK_LESS:
         case SDLK_SEMICOLON:
         case SDLK_COLON:
                 if (!NO_MODIFIER(k->mod)) return 0;
-                if (status.flags & CLASSIC_MODE) return 0;
                 if (k->state) return 1;
                 sample_set(sample_get_current()-1);
                 status.flags |= NEED_UPDATE;
@@ -693,7 +655,6 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         case SDLK_QUOTE:
         case SDLK_QUOTEDBL:
                 if (!NO_MODIFIER(k->mod)) return 0;
-                if (status.flags & CLASSIC_MODE) return 0;
                 if (k->state) return 1;
                 sample_set(sample_get_current()+1);
                 status.flags |= NEED_UPDATE;

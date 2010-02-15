@@ -38,6 +38,7 @@
 
 #include "sdlmain.h"
 #include "clippy.h"
+#include "disko.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -3759,11 +3760,19 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
 
+        case SDLK_b:
+                if (k->mod & KMOD_SHIFT)
+                        return 0;
+                /* fall through */
+        case SDLK_o:
+                if (k->state) return 1;
+                song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
+                return 1;
+
         case SDLK_v:
                 if (k->state) return 1;
                 show_default_volumes = !show_default_volumes;
                 status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
-                status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_x:
         case SDLK_z:
