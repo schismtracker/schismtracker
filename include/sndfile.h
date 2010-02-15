@@ -525,6 +525,17 @@ extern uint32_t mix_flags; // SNDMIX_*
 extern uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
 extern uint32_t global_vu_left, global_vu_right;
 
+
+struct multi_write {
+        int used;
+        void *data;
+        /* Conveniently, this has the same prototype as disko_write :) */
+        void (*write)(void *data, const uint8_t *buf, size_t bytes);
+        /* this is optimization for channels that haven't had any data yet
+        (nothing to convert/write, just seek ahead in the data stream) */
+        void (*silence)(void *data, long bytes);
+};
+
 typedef struct song {
         song_voice_t voices[MAX_VOICES];                // Channels
         uint32_t voice_mix[MAX_VOICES];                 // Channels to be mixed
@@ -569,6 +580,9 @@ typedef struct song {
         int stop_at_order;
         int stop_at_row;
         unsigned int stop_at_time;
+
+        // multi-write stuff -- NULL if no multi-write is in progress, else array of one struct per channel
+        struct multi_write *multi_write;
 } song_t;
 
 song_note_t *csf_allocate_pattern(uint32_t rows);
@@ -585,7 +599,6 @@ void csf_adjust_sample_loop(song_sample_t *sample);
 
 extern void (*csf_midi_out_note)(int chan, const song_note_t *m);
 extern void (*csf_midi_out_raw)(const unsigned char *, unsigned int, unsigned int);
-extern void (*csf_multi_out_raw)(int chan, int *buf, int len);
 
 void csf_import_mod_effect(song_note_t *m, int from_xm);
 uint16_t csf_export_mod_effect(const song_note_t *m, int xm);

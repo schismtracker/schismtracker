@@ -857,8 +857,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                         smpcount *= 2;
                         csf->mix_stat += csf_create_stereo_mix(csf, count);
                         csf_process_stereo_dsp(csf, count);
-                }
-                else {
+                } else {
                         csf->mix_stat += csf_create_stereo_mix(csf, count);
                         mono_from_stereo(mix_buffer, count);
                         csf_process_mono_dsp(csf, count);
@@ -873,10 +872,23 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 
                 mix_stat++;
 
-                total_smpcount = smpcount;
-
-                // Perform clipping + VU-Meter
-                buffer += convert_func(buffer, mix_buffer, total_smpcount, vu_min, vu_max);
+                if (csf->multi_write) {
+                        /* multi doesn't actually write meaningful data into 'buffer', so we can use that
+                        as temp space for converting */
+                        for (unsigned int n = 0; n < 64; n++) {
+                                if (csf->multi_write[n].data) {
+                                        unsigned int bytes = convert_func(buffer, mix_buffer_multi[n],
+                                                smpcount, vu_min, vu_max);
+                                        csf->multi_write[n].write(csf->multi_write[n].data, buffer, bytes);
+                                } else {
+                                        csf->multi_write[n].silence(csf->multi_write[n].data,
+                                                smpcount * (mix_bits_per_sample + 7) / 8);
+                                }
+                        }
+                } else {
+                        // Perform clipping + VU-Meter
+                        buffer += convert_func(buffer, mix_buffer, smpcount, vu_min, vu_max);
+                }
 
                 // Buffer ready
                 bufleft -= count;

@@ -100,9 +100,10 @@ static int _dw_bufcheck(disko_t *ds, size_t extend)
                         // Eek
                         free(ds->data);
                         ds->data = NULL;
-                        disko_seterror(ds, ENOMEM);
+                        disko_seterror(ds, errno);
                         return 0;
                 }
+                memset(new + ds->allocated, 0, newsize - ds->allocated);
                 ds->data = new;
                 ds->allocated = newsize;
         }
@@ -173,6 +174,12 @@ void disko_seek(disko_t *ds, long pos, int whence)
 {
         if (!ds->error)
                 ds->_seek(ds, pos, whence);
+}
+
+/* used by multi-write */
+static void disko_seekcur(disko_t *ds, long pos)
+{
+        disko_seek(ds, pos, SEEK_CUR);
 }
 
 long disko_tell(disko_t *ds)
@@ -319,7 +326,7 @@ disko_t *disko_memopen(void)
 int disko_memclose(disko_t *ds, int keep_buffer)
 {
         int err = ds->error;
-        if (!keep_buffer)
+        if (!keep_buffer || err)
                 free(ds->data);
         free(ds);
         if (err) {
@@ -372,6 +379,36 @@ static void _export_teardown(struct dw_settings *set)
 
 // ---------------------------------------------------------------------------
 
+static int close_and_bind(disko_t *ds, song_sample_t *sample, int bps)
+{
+        disko_t dsshadow = *ds;
+        int8_t *newdata;
+
+        if (disko_memclose(ds, 1) == DW_ERROR) {
+                return DW_ERROR;
+        }
+
+        newdata = csf_allocate_sample(ds->length);
+        if (!newdata)
+                return DW_ERROR;
+        song_stop_sample(sample);
+        if (sample->data)
+                csf_free_sample(sample->data);
+        sample->data = newdata;
+
+        memcpy(newdata, dsshadow.data, dsshadow.length);
+        sample->length = dsshadow.length / bps;
+        sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);
+        if (mix_channels > 1)
+                sample->flags |= CHN_STEREO;
+        if (mix_bits_per_sample > 8)
+                sample->flags |= CHN_16BIT;
+        sample->c5speed = mix_frequency;
+        sample->name[0] = '\0';
+
+        return DW_OK;
+}
+
 int disko_writeout_sample(int smpnum, int pattern, int dobind)
 {
         int ret = DW_OK;
@@ -402,37 +439,131 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
                 }
         } while (!(dwsong.flags & SONG_ENDREACHED));
 
-        dsdata = ds->data;
-        if (disko_memclose(ds, 1) == DW_OK) {
-                sample = current_song->samples + smpnum;
-                if (sample->data)
-                        csf_free_sample(sample->data);
-                sample->data = csf_allocate_sample(ds->length);
-                if (sample->data) {
-                        memcpy(sample->data, dsdata, ds->length);
-                        sample->length = ds->length / set.bps;
-                        sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);
-                        if (mix_channels > 1)
-                                sample->flags |= CHN_STEREO;
-                        if (mix_bits_per_sample > 8)
-                                sample->flags |= CHN_16BIT;
-                        sample->c5speed = mix_frequency;
-                        sprintf(sample->name, "Pattern %03d", pattern);
-                        if (dobind) {
-                                /* This is hideous */
-                                sample->name[23] = 0xff;
-                                sample->name[24] = pattern;
-                        }
+        sample = current_song->samples + smpnum;
+        if (close_and_bind(ds, sample, set.bps) == DW_OK) {
+                sprintf(sample->name, "Pattern %03d", pattern);
+                if (dobind) {
+                        /* This is hideous */
+                        sample->name[23] = 0xff;
+                        sample->name[24] = pattern;
                 }
         } else {
                 /* Balls. Something died. */
                 ret = DW_ERROR;
         }
-        free(dsdata);
 
         _export_teardown(&set);
 
         return ret;
+}
+
+int disko_multiwrite_samples(int firstsmp, int pattern)
+{
+        int err = 0;
+        song_t dwsong;
+        song_sample_t *sample;
+        uint8_t buf[DW_BUFFER_SIZE];
+        disko_t *ds[MAX_CHANNELS] = {NULL};
+        uint8_t *dsdata;
+        struct dw_settings set;
+        size_t smpsize = 0;
+        int smpnum = CLAMP(firstsmp, 1, MAX_SAMPLES);
+        int n;
+
+        for (n = 0; n < MAX_CHANNELS; n++) {
+                ds[n] = disko_memopen();
+                if (!ds[n]) {
+                        err = errno ?: EINVAL;
+                        break;
+                }
+        }
+
+        if (err) {
+                dwsong.multi_write = NULL;
+        } else {
+                _export_setup(&dwsong, &set);
+                dwsong.repeat_count = 2; /* THIS MAKES MORE SENSE EVERY TIME I WRITE IT! */
+                csf_loop_pattern(&dwsong, pattern, 0);
+                dwsong.multi_write = calloc(MAX_CHANNELS, sizeof(struct multi_write));
+        }
+        if (!dwsong.multi_write) {
+                /* you might think this code is insane, and you might be correct ;)
+                but it's structured like this to keep all the early-termination handling HERE. */
+                err = err ?: errno;
+                free(dwsong.multi_write);
+                for (n = 0; n < MAX_CHANNELS; n++)
+                        disko_memclose(ds[n], 0);
+                errno = err;
+                return DW_ERROR;
+        }
+
+        for (n = 0; n < MAX_CHANNELS; n++) {
+                dwsong.multi_write[n].data = ds[n];
+                /* Dumb casts. (written this way to make the definition of song_t independent of disko) */
+                dwsong.multi_write[n].write = (void *) disko_write;
+                dwsong.multi_write[n].silence = (void *) disko_seekcur;
+        }
+
+        do {
+                /* buf is used as temp space for converting the individual channel buffers from 32-bit.
+                the output is being handled well inside the mixer, so we don't have to do any actual writing
+                here, but we DO need to make sure nothing died... */
+                smpsize += csf_read(&dwsong, buf, sizeof(buf));
+
+                if (smpsize >= MAX_SAMPLE_LENGTH) {
+                        /* roughly 3 minutes at 44khz -- surely big enough (?) */
+                        smpsize = MAX_SAMPLE_LENGTH;
+                        dwsong.flags |= SONG_ENDREACHED;
+                        break;
+                }
+
+                for (n = 0; n < MAX_CHANNELS; n++) {
+                        if (ds[n]->error) {
+                                // Kill the write, but leave the other files alone
+                                dwsong.flags |= SONG_ENDREACHED;
+                                break;
+                        }
+                }
+        } while (!(dwsong.flags & SONG_ENDREACHED));
+
+        for (n = 0; n < MAX_CHANNELS; n++) {
+                if (!dwsong.multi_write[n].used) {
+                        /* this channel was completely empty - don't bother with it */
+                        disko_memclose(ds[n], 0);
+                        continue;
+                }
+
+                ds[n]->length = MIN(ds[n]->length, smpsize * set.bps);
+                while (smpnum < MAX_SAMPLES && !song_sample_is_empty(smpnum - 1)) {
+                        smpnum++;
+                }
+                if (smpnum >= MAX_SAMPLES) {
+                        break;
+                }
+                sample = current_song->samples + smpnum;
+                if (close_and_bind(ds[n], sample, set.bps) == DW_OK) {
+                        sprintf(sample->name, "Pattern %03d, channel %02d", pattern, n + 1);
+                } else {
+                        /* Balls. Something died. */
+                        err = errno;
+                }
+        }
+
+        for (; n < MAX_CHANNELS; n++) {
+                if (disko_memclose(ds[n], 0) != DW_OK) {
+                        err = errno;
+                }
+        }
+
+        _export_teardown(&set);
+        free(dwsong.multi_write);
+
+        if (err) {
+                errno = err;
+                return DW_ERROR;
+        } else {
+                return DW_OK;
+        }
 }
 
 // ---------------------------------------------------------------------------
@@ -587,6 +718,81 @@ int disko_finish(void)
         }
 
         return ret;
+}
+
+// ---------------------------------------------------------------------------
+
+struct pat2smp {
+        int pattern, sample, bind;
+};
+
+static void pat2smp_single(void *data)
+{
+        struct pat2smp *ps = data;
+
+        if (disko_writeout_sample(ps->sample, ps->pattern, ps->bind) == DW_OK) {
+                set_page(PAGE_SAMPLE_LIST);
+        } else {
+                log_perror("Sample write");
+                status_text_flash("Error writing to sample");
+        }
+
+        free(ps);
+}
+
+static void pat2smp_multi(void *data)
+{
+        struct pat2smp *ps = data;
+        if (disko_multiwrite_samples(ps->sample, ps->pattern) == DW_OK) {
+                set_page(PAGE_SAMPLE_LIST);
+        } else {
+                log_perror("Sample multi-write");
+                status_text_flash("Error writing to samples");
+        }
+
+        free(ps);
+}
+
+void song_pattern_to_sample(int pattern, int split, int bind)
+{
+        struct pat2smp *ps;
+        int n;
+
+        if (split && bind) {
+                log_appendf(4, "song_pattern_to_sample: internal error!");
+                return;
+        }
+
+        if (pattern < 0 || pattern >= MAX_PATTERNS) {
+                return;
+        }
+
+        /* this is horrid */
+        for (n = 1; n < MAX_SAMPLES; n++) {
+                song_sample_t *samp = song_get_sample(n);
+                if (!samp) continue;
+                if (((unsigned char) samp->name[23]) != 0xFF) continue;
+                if (((unsigned char) samp->name[24]) != pattern) continue;
+                status_text_flash("Pattern %d already linked to sample %d", pattern, n);
+                return;
+        }
+
+        ps = malloc(sizeof(struct pat2smp));
+        ps->pattern = pattern;
+        ps->sample = sample_get_current() ?: 1;
+        ps->bind = bind;
+
+        if (split) {
+                /* Nothing to confirm, as this never overwrites samples */
+                pat2smp_multi(ps);
+        } else {
+                if (song_sample_is_empty(ps->sample - 1)) {
+                        pat2smp_single(ps);
+                } else {
+                        dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample",
+                                pat2smp_single, free, 1, ps);
+                }
+        }
 }
 
 // ---------------------------------------------------------------------------

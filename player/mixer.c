@@ -38,8 +38,6 @@
 #define PINGPONG_OFFSET 2
 
 
-void (*csf_multi_out_raw) (int chan, int *buf, int len) = NULL;
-
 
 // Mix Buffer (Also room for interleaved rear mix)
 int mix_buffer[MIXBUFFERSIZE * 4];
@@ -1345,14 +1343,13 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 
         nchused = nchmixed = 0;
 
-        if (csf_multi_out_raw) {
+        if (csf->multi_write)
                 memset(mix_buffer_multi, 0, sizeof(mix_buffer_multi));
-        }
 
         for (unsigned int nchan = 0; nchan < csf->num_voices; nchan++) {
                 const mix_interface_t *mix_func_table;
                 song_voice_t *const channel = &csf->voices[csf->voice_mix[nchan]];
-                unsigned int flags, master_ch;
+                unsigned int flags;
                 unsigned int nrampsamples;
                 int smpcount;
                 int nsamples;
@@ -1361,9 +1358,6 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
                 if (!channel->current_sample_data)
                         continue;
 
-                master_ch = (csf->voice_mix[nchan] < MAX_CHANNELS)
-                        ? csf->voice_mix[nchan] + 1
-                        : channel->master_channel;
                 ofsr = &g_dry_rofs_vol;
                 ofsl = &g_dry_lofs_vol;
                 flags = 0;
@@ -1394,17 +1388,20 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
                         ((!channel->ramp_length) ||
                         (channel->left_ramp == channel->right_ramp))) {
                         mix_func_table = fastmix_functions;
-                }
-                else {
+                } else {
                         mix_func_table = mix_functions;
                 }
 
                 nsamples = count;
-                pbuffer = mix_buffer;
 
-                // XXX this appears to be very wrong
-                if (csf_multi_out_raw) {
-                        pbuffer = mix_buffer_multi[master_ch];
+                if (csf->multi_write) {
+                        int master = (csf->voice_mix[nchan] < MAX_CHANNELS)
+                                ? csf->voice_mix[nchan]
+                                : (channel->master_channel - 1);
+                        pbuffer = mix_buffer_multi[master];
+                        csf->multi_write[master].used = 1;
+                } else {
+                        pbuffer = mix_buffer;
                 }
 
                 nchused++;
@@ -1500,14 +1497,9 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 
         GM_IncrementSongCounter(count);
 
-        if (csf_multi_out_raw) {
+        if (csf->multi_write) {
                 /* mix all adlib onto track one */
-                Fmdrv_MixTo(mix_buffer_multi[1], count);
-
-                /* XXX why is this 1...63? shouldn't it be 0...63 or 1...64? */
-                for (unsigned int n = 1; n < 64; n++) {
-                        csf_multi_out_raw(n, mix_buffer_multi[n], count * 2);
-                }
+                Fmdrv_MixTo(mix_buffer_multi[0], count);
         } else {
                 Fmdrv_MixTo(mix_buffer, count);
         }
