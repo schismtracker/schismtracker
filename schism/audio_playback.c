@@ -466,7 +466,7 @@ static void song_reset_play_state(void)
         memset(keyjazz_channels, 0, sizeof(keyjazz_channels));
 
         // turn this crap off
-        mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_NOMIXING | SNDMIX_DIRECTTODISK);
+        mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_DIRECTTODISK);
 
         csf_initialize_dsp(current_song, 1);
 

@@ -235,7 +235,7 @@
 //#define SNDMIX_MAXDEFAULTPAN  0x80000 // (no longer) Used by the MOD loader
 #define SNDMIX_MUTECHNMODE      0x100000 // Notes are not played on muted channels
 #define SNDMIX_NOSURROUND       0x200000 // ignore S91
-#define SNDMIX_NOMIXING         0x400000 // don't actually do any mixing (values only)
+//#define SNDMIX_NOMIXING       0x400000
 #define SNDMIX_NORAMPING        0x800000
 
 enum {

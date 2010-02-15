@@ -1119,15 +1119,9 @@ int csf_read_note(song_t *csf)
 
         ////////////////////////////////////////////////////////////////////////////////////
         // Update channels data
-        if (mix_flags & SNDMIX_NOMIXING)
-                return 1;
 
         // Master Volume + Pre-Amplification / Attenuation setup
-        // mixing_volume is the 'mixing volume' setting
-        // Modplug's master volume calculation limited the volume to 0x180, whereas this yields
-        // a maximum of 0x200. Try *3 here instead of <<2 if this proves to be problematic.
-        // I think this is a closer match to Impulse Tracker, though.
-        uint32_t master_vol = csf->mixing_volume << 2;
+        uint32_t master_vol = csf->mixing_volume << 2; // yields maximum of 0x200
 
         csf->num_voices = 0;
 
