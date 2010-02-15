@@ -483,13 +483,39 @@ static void fx_panning_slide(uint32_t flags, song_voice_t *chan, uint32_t param)
 }
 
 
-static void fx_tremolo(song_voice_t *p, uint32_t param)
+static void fx_tremolo(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
+        unsigned int trempos = chan->tremolo_position & 0xFF;
+        int tdelta;
+
         if (param & 0x0F)
-                p->tremolo_depth = (param & 0x0F) << 2;
+                chan->tremolo_depth = (param & 0x0F) << 2;
         if (param & 0xF0)
-                p->tremolo_speed = (param >> 4) & 0x0F;
-        p->flags |= CHN_TREMOLO;
+                chan->tremolo_speed = (param >> 4) & 0x0F;
+
+        // don't handle on first tick if old-effects mode
+        if ((flags & SONG_FIRSTTICK) && (flags & SONG_ITOLDEFFECTS))
+                return;
+
+        switch (chan->tremolo_type & 0x03) {
+        default:
+                tdelta = sine_table[trempos];
+                break;
+        case 1:
+                tdelta = ramp_down_table[trempos];
+                break;
+        case 2:
+                tdelta = square_table[trempos];
+                break;
+        case 3:
+                tdelta = 128 * ((double) rand() / RAND_MAX) - 64;
+                break;
+        }
+
+        chan->tremolo_position = (trempos + 4 * chan->tremolo_speed) & 0xFF;
+        tdelta = (tdelta * (int)chan->tremolo_depth) >> 5;
+        chan->tremolo_delta = tdelta;
+        chan->flags |= CHN_TREMOLO;
 }
 
 
@@ -1408,6 +1434,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
                 // Copy Channel
                 *p = *chan;
                 p->flags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PORTAMENTO);
+                p->tremolo_delta = 0;
                 p->master_channel = nchan+1;
                 p->n_command = 0;
                 // Cut the note
@@ -1489,6 +1516,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
                         // Copy Channel
                         *p = *chan;
                         p->flags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PORTAMENTO);
+                        p->tremolo_delta = 0;
                         p->master_channel = nchan+1;
                         p->n_command = 0;
                         // Key Off the note
@@ -1681,7 +1709,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                 break;
 
         case FX_TREMOLO:
-                fx_tremolo(chan, param);
+                fx_tremolo(csf->flags, chan, param);
                 break;
 
         case FX_FINEVIBRATO:

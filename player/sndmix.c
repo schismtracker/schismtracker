@@ -119,35 +119,6 @@ static unsigned int find_volume(unsigned short vol)
 // XXX * Get rid of the pointer passing where it is not needed
 //
 
-static inline void rn_tremolo(song_t *csf, song_voice_t *chan, int *vol)
-{
-        unsigned int trempos = chan->tremolo_position & 0xFF;
-        int tdelta;
-
-        const int tremattn = 5;
-
-        switch (chan->tremolo_type & 0x03) {
-        default:
-                tdelta = sine_table[trempos];
-                break;
-        case 1:
-                tdelta = ramp_down_table[trempos];
-                break;
-        case 2:
-                tdelta = square_table[trempos];
-                break;
-        case 3:
-                tdelta = 128 * ((double) rand() / RAND_MAX) - 64;
-                break;
-        }
-        *vol += (tdelta * (int)chan->tremolo_depth) >> tremattn;
-
-        // handle on tick-N, or all ticks if not in old-effects mode
-        if (!(csf->flags & SONG_FIRSTTICK) || !(csf->flags & SONG_ITOLDEFFECTS)) {
-                chan->tremolo_position = (trempos + 4 * chan->tremolo_speed) & 0xFF;
-        }
-}
-
 
 static inline void rn_tremor(song_voice_t *chan, int *vol)
 {
@@ -1165,11 +1136,10 @@ int csf_read_note(song_t *csf)
                 if (chan->period && chan->length) {
                         int vol = chan->volume + chan->vol_swing;
 
-                        vol = CLAMP(vol, 0, 256);
-
-                        // Tremolo
                         if (chan->flags & CHN_TREMOLO)
-                                rn_tremolo(csf, chan, &vol);
+                                vol += chan->tremolo_delta;
+
+                        vol = CLAMP(vol, 0, 256);
 
                         // Tremor
                         if (chan->n_command == FX_TREMOR)

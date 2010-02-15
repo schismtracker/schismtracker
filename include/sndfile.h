@@ -469,7 +469,7 @@ typedef struct song_voice {
         unsigned int vib_type, vibrato_speed, vibrato_depth;
         unsigned int tremolo_type, tremolo_speed, tremolo_depth;
         unsigned int panbrello_type, panbrello_speed, panbrello_depth;
-        int panbrello_delta;
+        int tremolo_delta, panbrello_delta;
 
         unsigned int cutoff;
         unsigned int resonance;
