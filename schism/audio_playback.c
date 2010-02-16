@@ -373,7 +373,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
         }
         if (c->increment < 0)
                 c->increment = -c->increment; // lousy hack
-        csf_note_change(current_song, chan - 1, note, 0, 1, 1);
+        csf_note_change(current_song, chan - 1, note, 0, 0, 1);
 
         if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
                 mc.note = note;

@@ -544,7 +544,7 @@ static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
                 int32_t period = chan->period;
                 if (NOTE_IS_NOTE(note) && chan->length)
                         csf_check_nna(csf, nchan, 0, note, 1);
-                csf_note_change(csf, nchan, note, 1, 0, 0);
+                csf_note_change(csf, nchan, note, 1, 1, 0);
                 if (period && chan->row_note == NOTE_NONE)
                         chan->period = period;
                 chan->position = chan->position_frac = 0;
@@ -1104,10 +1104,6 @@ static void env_reset(song_voice_t *chan, int always)
                 }
         }
 
-        // should this be happening here?
-        chan->autovib_depth = 0;
-        chan->autovib_position = 0;
-
         // this was migrated from csf_note_change, should it be here?
         chan->flags &= ~CHN_NOTEFADE;
         chan->fadeout_volume = 65536;
@@ -1186,8 +1182,6 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
                 } else if (!(penv->flags & ENV_VOLUME)) {
                         // XXX why is this being done?
                         chan->vol_env_position = 0;
-                        chan->autovib_depth = 0;
-                        chan->autovib_position = 0;
                 }
 
                 chan->vol_swing = chan->pan_swing = 0;
@@ -1213,6 +1207,9 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
         if (psmp == chan->ptr_sample && chan->current_sample_data && chan->length)
                 return;
 
+        // sample change: reset sample vibrato
+        chan->autovib_depth = 0;
+        chan->autovib_position = 0;
 
         if ((chan->flags & (CHN_KEYOFF | CHN_NOTEFADE)) && inst_column) {
                 // Don't start new notes after ===/~~~
@@ -1262,7 +1259,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 }
 
 
-void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int reset_env, int manual)
+void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retrig, int manual)
 {
         // why would csf_note_change ever get a negative value for 'note'?
         if (note == NOTE_NONE || note < 0)
@@ -1345,9 +1342,10 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int reset
                 chan->strike = 4; /* this affects how long the initial hit on the playback marks lasts */
                 chan->flags &= ~CHN_FILTER;
                 chan->flags |= CHN_FASTVOLRAMP;
-                if (reset_env) {
+                if (!retrig) {
                         chan->autovib_depth = 0;
                         chan->autovib_position = 0;
+                        chan->vibrato_position = 0;
                 }
                 chan->left_volume = chan->right_volume = 0;
                 // Setup Initial Filter for this note
@@ -2032,7 +2030,7 @@ void csf_process_effects(song_t *csf, int firsttick)
                                         }
                                         chan->new_instrument = 0;
                                 }
-                                csf_note_change(csf, nchan, note, porta, 1, 0);
+                                csf_note_change(csf, nchan, note, porta, 0, 0);
                         }
                 }
 

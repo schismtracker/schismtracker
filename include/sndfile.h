@@ -629,7 +629,7 @@ void csf_process_mono_dsp(song_t *csf, int count);
 // snd_fx
 unsigned int csf_get_length(song_t *csf); // (in seconds)
 void csf_instrument_change(song_t *csf, song_voice_t *chn, uint32_t instr, int porta, int instr_column);
-void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int reset_env, int manual);
+void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int retrig, int manual);
 uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);
 void csf_check_nna(song_t *csf, uint32_t chan, uint32_t instr, int note, int force_cut);
 void csf_process_effects(song_t *csf, int firsttick);
