@@ -2034,8 +2034,8 @@ void csf_process_effects(song_t *csf, int firsttick)
                         }
                 }
 
-                handle_effect(csf, nchan, cmd, param, porta);
                 handle_voleffect(csf, chan, volcmd, vol, start_note);
+                handle_effect(csf, nchan, cmd, param, porta);
         }
 }
 
