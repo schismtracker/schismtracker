@@ -40,8 +40,6 @@ extern const int8_t square_table[256];
 extern const int8_t retrig_table_1[16];
 extern const int8_t retrig_table_2[16];
 
-extern const int8_t ft2_vibrato_table[256];        // -64 .. +64
-
 extern const uint32_t fine_linear_slide_up_table[16];
 extern const uint32_t fine_linear_slide_down_table[16];
 extern const uint32_t linear_slide_up_table[256];

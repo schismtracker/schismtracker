@@ -135,8 +135,9 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int period)
         int vdelta;
         unsigned int vdepth;
 
-        switch (chan->vib_type & 0x03) {
+        switch (chan->vib_type) {
         case VIB_SINE:
+        default:
                 vdelta = sine_table[vibpos];
                 break;
         case VIB_RAMP_DOWN:
@@ -187,7 +188,7 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int period)
 static inline int rn_sample_vibrato(song_voice_t *chan, int period)
 {
         unsigned int vibpos = chan->autovib_position & 0xFF;
-        int vdelta, adepth, val;
+        int vdelta, adepth;
         song_sample_t *pins = chan->ptr_sample;
 
         /*
@@ -200,7 +201,9 @@ static inline int rn_sample_vibrato(song_voice_t *chan, int period)
 
         adepth = chan->autovib_depth; // (1)
         adepth += pins->vib_rate & 0xff; // (2 & 3)
-        adepth = MIN(adepth, pins->vib_depth << 8);
+        /* need this cast -- if adepth is unsigned, large autovib will crash the mixer (why? I don't know!)
+        but if vib_depth is changed to signed, that screws up other parts of the code. ugh. */
+        adepth = MIN(adepth, (int) (pins->vib_depth << 8));
         chan->autovib_depth = adepth; // (5)
         adepth >>= 8; // (4)
 
@@ -785,7 +788,6 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 
         while (bufleft > 0) {
                 // Update Channel Data
-                unsigned int total_smpcount;
 
                 if (!csf->buffer_count) {
                         if (!(mix_flags & SNDMIX_DIRECTTODISK))
