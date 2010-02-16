@@ -416,7 +416,6 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
         song_sample_t *sample;
         uint8_t buf[DW_BUFFER_SIZE];
         disko_t *ds;
-        uint8_t *dsdata;
         struct dw_settings set;
 
         if (smpnum < 1 || smpnum >= MAX_SAMPLES)
@@ -464,7 +463,6 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
         song_sample_t *sample;
         uint8_t buf[DW_BUFFER_SIZE];
         disko_t *ds[MAX_CHANNELS] = {NULL};
-        uint8_t *dsdata;
         struct dw_settings set;
         size_t smpsize = 0;
         int smpnum = CLAMP(firstsmp, 1, MAX_SAMPLES);

@@ -377,17 +377,18 @@ static void fx_panbrello(song_voice_t *chan, uint32_t param)
         if (param & 0xF0)
                 chan->panbrello_speed = (param >> 4) & 0x0F;
 
-        switch (chan->panbrello_type & 0x03) {
+        switch (chan->panbrello_type) {
+        case VIB_SINE:
         default:
                 pdelta = sine_table[panpos];
                 break;
-        case 1:
+        case VIB_RAMP_DOWN:
                 pdelta = ramp_down_table[panpos];
                 break;
-        case 2:
+        case VIB_SQUARE:
                 pdelta = square_table[panpos];
                 break;
-        case 3:
+        case VIB_RANDOM:
                 pdelta = 128 * ((double) rand() / RAND_MAX) - 64;
                 break;
         }
@@ -499,17 +500,18 @@ static void fx_tremolo(uint32_t flags, song_voice_t *chan, uint32_t param)
         if ((flags & SONG_FIRSTTICK) && (flags & SONG_ITOLDEFFECTS))
                 return;
 
-        switch (chan->tremolo_type & 0x03) {
+        switch (chan->tremolo_type) {
+        case VIB_SINE:
         default:
                 tdelta = sine_table[trempos];
                 break;
-        case 1:
+        case VIB_RAMP_DOWN:
                 tdelta = ramp_down_table[trempos];
                 break;
-        case 2:
+        case VIB_SQUARE:
                 tdelta = square_table[trempos];
                 break;
-        case 3:
+        case VIB_RANDOM:
                 tdelta = 128 * ((double) rand() / RAND_MAX) - 64;
                 break;
         }
@@ -646,15 +648,15 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
         // S2x: Set FineTune (no longer implemented)
         // S3x: Set Vibrato WaveForm
         case 0x30:
-                chan->vib_type = param & 0x07;
+                chan->vib_type = param;
                 break;
         // S4x: Set Tremolo WaveForm
         case 0x40:
-                chan->tremolo_type = param & 0x07;
+                chan->tremolo_type = param;
                 break;
         // S5x: Set Panbrello WaveForm
         case 0x50:
-                chan->panbrello_type = param & 0x07;
+                chan->panbrello_type = param;
                 break;
         // S6x: Pattern Delay for x ticks
         case 0x60:

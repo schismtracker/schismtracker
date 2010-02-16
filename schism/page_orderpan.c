@@ -392,32 +392,11 @@ static int orderlist_handle_char(struct key_event *k)
         return 1;
 }
 
-static void _copysam(UNUSED void *ign)
-{
-        int patno;
-
-        patno = current_song->orderlist[current_order];
-        status_text_flash("Copied pattern %d into sample %d",
-                                patno, sample_get_current());
-        disko_writeout_sample(sample_get_current(), patno, 0);
-}
-
-static void _attachsam(UNUSED void *ign)
-{
-        int patno;
-
-        patno = current_song->orderlist[current_order];
-        status_text_flash("Linked pattern %d into sample %d",
-                                patno, sample_get_current());
-        disko_writeout_sample(sample_get_current(), patno, 1);
-}
-
 static int orderlist_handle_key_on_list(struct key_event * k)
 {
         int prev_order = current_order;
         int new_order = prev_order;
         int new_cursor_pos = orderlist_cursor_pos;
-        song_sample_t *samp;
         int n, p;
 
         if (k->mouse) {
