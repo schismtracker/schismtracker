@@ -42,8 +42,8 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define ROW_IS_MAJOR(r) (row_highlight_major != 0 && (r) % row_highlight_major == 0)
-#define ROW_IS_MINOR(r) (row_highlight_minor != 0 && (r) % row_highlight_minor == 0)
+#define ROW_IS_MAJOR(r) (current_song->row_highlight_major != 0 && (r) % current_song->row_highlight_major == 0)
+#define ROW_IS_MINOR(r) (current_song->row_highlight_minor != 0 && (r) % current_song->row_highlight_minor == 0)
 #define ROW_IS_HIGHLIGHT(r) (ROW_IS_MINOR(r) || ROW_IS_MAJOR(r))
 
 /* this is actually used by pattern-view.c */
@@ -271,8 +271,8 @@ static void options_close(void *data)
         options_selected_widget = ((struct dialog *) data)->selected_widget;
 
         skip_value = options_widgets[1].d.thumbbar.value;
-        row_highlight_minor = options_widgets[2].d.thumbbar.value;
-        row_highlight_major = options_widgets[3].d.thumbbar.value;
+        current_song->row_highlight_minor = options_widgets[2].d.thumbbar.value;
+        current_song->row_highlight_major = options_widgets[3].d.thumbbar.value;
         link_effect_column = !!(options_widgets[5].d.togglebutton.state);
         status.flags |= SONG_NEEDS_SAVE;
 
@@ -334,8 +334,8 @@ void pattern_editor_display_options(void)
         options_last_octave = kbd_get_current_octave();
         options_widgets[0].d.thumbbar.value = options_last_octave;
         options_widgets[1].d.thumbbar.value = skip_value;
-        options_widgets[2].d.thumbbar.value = row_highlight_minor;
-        options_widgets[3].d.thumbbar.value = row_highlight_major;
+        options_widgets[2].d.thumbbar.value = current_song->row_highlight_minor;
+        options_widgets[3].d.thumbbar.value = current_song->row_highlight_major;
         options_widgets[4].d.thumbbar.value = song_get_pattern(current_pattern, NULL);
         togglebutton_set(options_widgets, link_effect_column ? 5 : 6, 0);
 
@@ -3412,7 +3412,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                         // emulate some weird impulse tracker behavior here:
                         // with row highlight set to zero, alt-d selects the whole channel
                         // if the cursor is at the top, and clears the selection otherwise
-                        block_double_size = row_highlight_major ?: (current_row ? 0 : 65536);
+                        block_double_size = current_song->row_highlight_major ?: (current_row ? 0 : 65536);
                         selection.first_channel = selection.last_channel = current_channel;
                         selection.first_row = current_row;
                 }
@@ -4058,7 +4058,7 @@ static int pattern_editor_handle_key(struct key_event * k)
         case SDLK_PAGEUP:
                 if (k->state) return 0;
                 {
-                        int rh = row_highlight_major ?: 16;
+                        int rh = current_song->row_highlight_major ?: 16;
                         if (current_row == total_rows)
                                 current_row -= (current_row % rh) ?: rh;
                         else
@@ -4067,7 +4067,7 @@ static int pattern_editor_handle_key(struct key_event * k)
                 return -1;
         case SDLK_PAGEDOWN:
                 if (k->state) return 0;
-                current_row += row_highlight_major ?: 16;
+                current_row += current_song->row_highlight_major ?: 16;
                 return -1;
         case SDLK_HOME:
                 if (k->state) return 0;

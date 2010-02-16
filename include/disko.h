@@ -103,15 +103,9 @@ void song_pattern_to_sample(int pattern, int split, int bind);
 struct save_format;
 int disko_export_song(const char *filename, struct save_format *format);
 
-/* this synchronizes with the diskwriter.
+/* call periodically if (status.flags & DISKWRITER_ACTIVE) to write more stuff.
 return: DW_SYNC_*, self explanatory */
 int disko_sync(void);
-
-/* Terminate the diskwriter.
-        If called BEFORE disko_sync() returns DW_OK, this will delete any
-        temporary files created; otherwise, it will commit them.
-return: DW_OK or DW_ERROR */
-int disko_finish(void);
 
 
 

@@ -339,47 +339,39 @@ int disko_memclose(disko_t *ds, int keep_buffer)
 
 // ---------------------------------------------------------------------------
 
-struct dw_settings {
-        uint32_t prev_freq, prev_bits, prev_channels, prev_flags;
-        int bps;
-};
-
-static void _export_setup(song_t *dwsong, struct dw_settings *set)
+static void _export_setup(song_t *dwsong, int *bps)
 {
         song_lock_audio();
 
-        /* save the real settings */
-        set->prev_freq = mix_frequency;
-        set->prev_bits = mix_bits_per_sample;
-        set->prev_channels = mix_channels;
-        set->prev_flags = mix_flags;
-
         /* install our own */
         memcpy(dwsong, current_song, sizeof(song_t)); /* shadow it */
-        csf_set_wave_config(dwsong, 44100, 16, (dwsong->flags & SONG_NOSTEREO) ? 1 : 2);
+
         csf_initialize_dsp(dwsong, 1);
-        mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
 
-        set->bps = mix_channels * ((mix_bits_per_sample + 7) / 8);
+        csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
+        csf_set_wave_config(dwsong, 44100, 16, (dwsong->flags & SONG_NOSTEREO) ? 1 : 2);
 
+        dwsong->mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
+
+        dwsong->repeat_count = 1;
+        dwsong->buffer_count = 0;
+        dwsong->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
         dwsong->stop_at_order = -1;
         dwsong->stop_at_row = -1;
-        csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
-        dwsong->flags &= ~(SONG_PAUSED | SONG_ENDREACHED);
-}
 
-static void _export_teardown(struct dw_settings *set)
-{
-        /* put everything back */
-        csf_set_wave_config(current_song, set->prev_freq, set->prev_bits, set->prev_channels);
-        mix_flags = set->prev_flags;
+        *bps = dwsong->mix_channels * ((dwsong->mix_bits_per_sample + 7) / 8);
 
         song_unlock_audio();
 }
 
+static void _export_teardown(void)
+{
+        global_vu_left = global_vu_right = 0;
+}
+
 // ---------------------------------------------------------------------------
 
-static int close_and_bind(disko_t *ds, song_sample_t *sample, int bps)
+static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, int bps)
 {
         disko_t dsshadow = *ds;
         int8_t *newdata;
@@ -399,11 +391,11 @@ static int close_and_bind(disko_t *ds, song_sample_t *sample, int bps)
         memcpy(newdata, dsshadow.data, dsshadow.length);
         sample->length = dsshadow.length / bps;
         sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);
-        if (mix_channels > 1)
+        if (dwsong->mix_channels > 1)
                 sample->flags |= CHN_STEREO;
-        if (mix_bits_per_sample > 8)
+        if (dwsong->mix_bits_per_sample > 8)
                 sample->flags |= CHN_16BIT;
-        sample->c5speed = mix_frequency;
+        sample->c5speed = dwsong->mix_frequency;
         sample->name[0] = '\0';
 
         return DW_OK;
@@ -416,7 +408,7 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
         song_sample_t *sample;
         uint8_t buf[DW_BUFFER_SIZE];
         disko_t *ds;
-        struct dw_settings set;
+        int bps;
 
         if (smpnum < 1 || smpnum >= MAX_SAMPLES)
                 return DW_ERROR;
@@ -425,21 +417,21 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
         if (!ds)
                 return DW_ERROR;
 
-        _export_setup(&dwsong, &set);
+        _export_setup(&dwsong, &bps);
         dwsong.repeat_count = 2; /* THIS MAKES SENSE! */
         csf_loop_pattern(&dwsong, pattern, 0);
 
         do {
-                disko_write(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * set.bps);
-                if (ds->length >= (size_t) (MAX_SAMPLE_LENGTH * set.bps)) {
+                disko_write(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * bps);
+                if (ds->length >= (size_t) (MAX_SAMPLE_LENGTH * bps)) {
                         /* roughly 3 minutes at 44khz -- surely big enough (?) */
-                        ds->length = MAX_SAMPLE_LENGTH * set.bps;
+                        ds->length = MAX_SAMPLE_LENGTH * bps;
                         dwsong.flags |= SONG_ENDREACHED;
                 }
         } while (!(dwsong.flags & SONG_ENDREACHED));
 
         sample = current_song->samples + smpnum;
-        if (close_and_bind(ds, sample, set.bps) == DW_OK) {
+        if (close_and_bind(&dwsong, ds, sample, bps) == DW_OK) {
                 sprintf(sample->name, "Pattern %03d", pattern);
                 if (dobind) {
                         /* This is hideous */
@@ -451,7 +443,7 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
                 ret = DW_ERROR;
         }
 
-        _export_teardown(&set);
+        _export_teardown();
 
         return ret;
 }
@@ -463,7 +455,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
         song_sample_t *sample;
         uint8_t buf[DW_BUFFER_SIZE];
         disko_t *ds[MAX_CHANNELS] = {NULL};
-        struct dw_settings set;
+        int bps;
         size_t smpsize = 0;
         int smpnum = CLAMP(firstsmp, 1, MAX_SAMPLES);
         int n;
@@ -479,7 +471,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
         if (err) {
                 dwsong.multi_write = NULL;
         } else {
-                _export_setup(&dwsong, &set);
+                _export_setup(&dwsong, &bps);
                 dwsong.repeat_count = 2; /* THIS MAKES MORE SENSE EVERY TIME I WRITE IT! */
                 csf_loop_pattern(&dwsong, pattern, 0);
                 dwsong.multi_write = calloc(MAX_CHANNELS, sizeof(struct multi_write));
@@ -531,7 +523,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
                         continue;
                 }
 
-                ds[n]->length = MIN(ds[n]->length, smpsize * set.bps);
+                ds[n]->length = MIN(ds[n]->length, smpsize * bps);
                 while (smpnum < MAX_SAMPLES && !song_sample_is_empty(smpnum - 1)) {
                         smpnum++;
                 }
@@ -539,7 +531,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
                         break;
                 }
                 sample = current_song->samples + smpnum;
-                if (close_and_bind(ds[n], sample, set.bps) == DW_OK) {
+                if (close_and_bind(&dwsong, ds[n], sample, bps) == DW_OK) {
                         sprintf(sample->name, "Pattern %03d, channel %02d", pattern, n + 1);
                 } else {
                         /* Balls. Something died. */
@@ -553,7 +545,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
                 }
         }
 
-        _export_teardown(&set);
+        _export_teardown();
         free(dwsong.multi_write);
 
         if (err) {
@@ -567,12 +559,14 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 // ---------------------------------------------------------------------------
 
 static song_t export_dwsong;
-static struct dw_settings export_set;
+static int export_bps;
 static disko_t *export_ds[MAX_CHANNELS]; /* only [0] is used unless multichannel */
 static struct save_format *export_format = NULL; /* NULL == not running */
 static struct widget diskodlg_widgets[1];
 static size_t est_len;
 static int prgh;
+
+static int disko_finish(void);
 
 /* FIXME: where is something not letting this dialog have the escape key? */
 
@@ -588,7 +582,7 @@ static void diskodlg_draw(void)
                 return;
         }
 
-        sec = export_ds[0]->length / mix_frequency;
+        sec = export_ds[0]->length / export_dwsong.mix_frequency;
         pos = export_ds[0]->length * 64 / est_len;
         snprintf(buf, 32, "Exporting song...%6d:%02d", sec / 60, sec % 60);
         buf[31] = '\0';
@@ -603,12 +597,19 @@ static void diskodlg_cancel(UNUSED void *ignored)
         disko_finish();
 }
 
+static void disko_dialog_setup(size_t len);
+
+// this needs to be done to work around stupid inconsistent key-up code
+static void diskodlg_reset(UNUSED void *ignored)
+{
+        disko_dialog_setup(est_len);
+}
+
 static void disko_dialog_setup(size_t len)
 {
-        create_button(diskodlg_widgets + 0, 36, 33, 6, 0, 0, 0, 0, 0, dialog_cancel_NULL, "Cancel", 1);
-        struct dialog *d = dialog_create_custom(22, 25, 36, 11, diskodlg_widgets, 1, 0, diskodlg_draw, NULL);
-        d->action_yes = diskodlg_cancel;
-        d->action_no = diskodlg_cancel;
+        struct dialog *d = dialog_create_custom(22, 25, 36, 8, diskodlg_widgets, 0, 0, diskodlg_draw, NULL);
+        d->action_yes = diskodlg_reset;
+        d->action_no = diskodlg_reset;
         d->action_cancel = diskodlg_cancel;
 
         est_len = len;
@@ -630,21 +631,22 @@ int disko_export_song(const char *filename, struct save_format *format)
         if (!export_ds[0])
                 return DW_ERROR;
 
-        _export_setup(&export_dwsong, &export_set);
-        export_dwsong.repeat_count = 1; /* THIS MAKES SENSE! */
+        _export_setup(&export_dwsong, &export_bps);
 
-        ret = format->f.export.head(export_ds[0], mix_bits_per_sample, mix_channels, mix_frequency);
+        ret = format->f.export.head(export_ds[0],
+                export_dwsong.mix_bits_per_sample, export_dwsong.mix_channels, export_dwsong.mix_frequency);
         if (ret == DW_OK) {
-                log_appendf(5, " %d Hz, %d bit, %s", mix_frequency, mix_bits_per_sample,
-                        mix_channels == 1 ? "mono" : "stereo");
+                log_appendf(5, " %d Hz, %d bit, %s",
+                        export_dwsong.mix_frequency, export_dwsong.mix_bits_per_sample,
+                        export_dwsong.mix_channels == 1 ? "mono" : "stereo");
                 export_format = format;
                 status.flags |= DISKWRITER_ACTIVE; /* tell main to care about us */
         } else {
                 disko_seterror(export_ds[0], errno);
-                _export_teardown(&export_set);
+                _export_teardown();
         }
 
-        disko_dialog_setup((csf_get_length(&export_dwsong) * mix_frequency) ?: 1);
+        disko_dialog_setup((csf_get_length(&export_dwsong) * export_dwsong.mix_frequency) ?: 1);
 
         return ret;
 }
@@ -662,7 +664,7 @@ int disko_sync(void)
         }
 
         frames = csf_read(&export_dwsong, buf, sizeof(buf));
-        export_format->f.export.body(export_ds[0], buf, frames * export_set.bps);
+        export_format->f.export.body(export_ds[0], buf, frames * export_bps);
         if (export_ds[0]->error) {
                 disko_finish();
                 return DW_SYNC_ERROR;
@@ -680,8 +682,7 @@ int disko_sync(void)
         }
 }
 
-/* called from disko_dialog */
-int disko_finish(void)
+static int disko_finish(void)
 {
         int ret;
 
@@ -696,7 +697,7 @@ int disko_finish(void)
                 disko_seterror(export_ds[0], errno);
 
         ret = disko_close(export_ds[0], 0);
-        _export_teardown(&export_set);
+        _export_teardown();
         export_format = NULL;
 
         status.flags &= ~DISKWRITER_ACTIVE; /* please unsubscribe me from your mailing list */

@@ -56,6 +56,10 @@ static void _csf_reset(song_t *csf)
         csf->row_highlight_major = 16;
         csf->row_highlight_minor = 4;
 
+        /* This is intentionally crappy quality, so that it's very obvious if it didn't get initialized */
+        csf->mix_flags = 0;
+        csf_set_wave_config(csf, 4000, 8, 1);
+
         memset(csf->voices, 0, sizeof(csf->voices));
         memset(csf->voice_mix, 0, sizeof(csf->voice_mix));
         memset(csf->samples, 0, sizeof(csf->samples));
@@ -207,19 +211,20 @@ void csf_reset_midi_cfg(song_t *csf)
 
 int csf_set_wave_config(song_t *csf, uint32_t rate,uint32_t bits,uint32_t channels)
 {
-        int reset = ((mix_frequency != rate) || (mix_bits_per_sample != bits) || (mix_channels != channels));
-        mix_channels = channels;
-        mix_frequency = rate;
-        mix_bits_per_sample = bits;
+        int reset = ((csf->mix_frequency != rate)
+                     || (csf->mix_bits_per_sample != bits)
+                     || (csf->mix_channels != channels));
+        csf->mix_channels = channels;
+        csf->mix_frequency = rate;
+        csf->mix_bits_per_sample = bits;
         csf_init_player(csf, reset);
-//printf("Rate=%u Bits=%u Channels=%u\n",mix_frequency,mix_bits_per_sample,mix_channels);
         return 1;
 }
 
 
-int csf_set_resampling_mode(UNUSED song_t *csf, uint32_t mode)
+int csf_set_resampling_mode(song_t *csf, uint32_t mode)
 {
-        uint32_t d = mix_flags & ~(SNDMIX_NORESAMPLING|SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE);
+        uint32_t d = csf->mix_flags & ~(SNDMIX_NORESAMPLING|SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE);
         switch(mode) {
                 case SRCMODE_NEAREST:   d |= SNDMIX_NORESAMPLING; break;
                 case SRCMODE_LINEAR:    break;
@@ -227,7 +232,7 @@ int csf_set_resampling_mode(UNUSED song_t *csf, uint32_t mode)
                 case SRCMODE_POLYPHASE: d |= (SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE); break;
                 default:                return 0;
         }
-        mix_flags = d;
+        csf->mix_flags = d;
         return 1;
 }
 

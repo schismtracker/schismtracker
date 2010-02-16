@@ -466,7 +466,7 @@ static void song_reset_play_state(void)
         memset(keyjazz_channels, 0, sizeof(keyjazz_channels));
 
         // turn this crap off
-        mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_DIRECTTODISK);
+        current_song->mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_DIRECTTODISK);
 
         csf_initialize_dsp(current_song, 1);
 
@@ -488,7 +488,7 @@ void song_start_once(void)
         song_lock_audio();
 
         song_reset_play_state();
-        mix_flags |= SNDMIX_NOBACKWARDJUMPS;
+        current_song->mix_flags |= SNDMIX_NOBACKWARDJUMPS;
         max_channels_used = 0;
         current_song->repeat_count = 1;
 
@@ -672,7 +672,7 @@ enum song_mode song_get_mode(void)
 // returned value is in seconds
 unsigned int song_get_current_time(void)
 {
-        return samples_played / mix_frequency;
+        return samples_played / current_song->mix_frequency;
 }
 
 int song_get_current_tick(void)
@@ -755,11 +755,11 @@ void song_update_playing_instrument(int i_changed)
                         }
                         if (inst->ifc & 0x80) {
                                 channel->cutoff = inst->ifc & 0x7F;
-                                setup_channel_filter(channel, 0, 256, mix_frequency);
+                                setup_channel_filter(channel, 0, 256, current_song->mix_frequency);
                         } else {
                                 channel->cutoff = 0x7F;
                                 if (inst->ifr & 0x80) {
-                                        setup_channel_filter(channel, 0, 256, mix_frequency);
+                                        setup_channel_filter(channel, 0, 256, current_song->mix_frequency);
                                 }
                         }
 
@@ -909,20 +909,20 @@ int song_toggle_orderlist_locked(void)
 
 void song_flip_stereo(void)
 {
-        mix_flags ^= SNDMIX_REVERSESTEREO;
+        current_song->mix_flags ^= SNDMIX_REVERSESTEREO;
 }
 
 int song_get_surround(void)
 {
-        return (mix_flags & SNDMIX_NOSURROUND) ? 0 : 1;
+        return (current_song->mix_flags & SNDMIX_NOSURROUND) ? 0 : 1;
 }
 
 void song_set_surround(int on)
 {
         if (on)
-                mix_flags &= ~SNDMIX_NOSURROUND;
+                current_song->mix_flags &= ~SNDMIX_NOSURROUND;
         else
-                mix_flags |= SNDMIX_NOSURROUND;
+                current_song->mix_flags |= SNDMIX_NOSURROUND;
 
         // without copying the value back to audio_settings, it won't get saved (oops)
         audio_settings.surround_effect = on;
@@ -1182,7 +1182,7 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 {
 #if 0
         i = (8000*(audio_buffer_samples - delay));
-        i /= (mix_frequency);
+        i /= (current_song->mix_frequency);
 #endif
 #if 0
         for (int i=0; i < len; i++) {
@@ -1454,10 +1454,10 @@ void song_init_eq(int do_reset)
         for (i = 0; i < 4; i++) {
                 pg[i] = audio_settings.eq_gain[i];
                 pf[i] = 120 + (((i*128) * audio_settings.eq_freq[i])
-                        * (mix_frequency / 128) / 1024);
+                        * (current_song->mix_frequency / 128) / 1024);
         }
 
-        set_eq_gains(pg, 4, pf, do_reset, mix_frequency);
+        set_eq_gains(pg, 4, pf, do_reset, current_song->mix_frequency);
 }
 
 
@@ -1473,19 +1473,19 @@ void song_init_modplug(void)
         // audio_settings.oversampling (?)
         csf_set_resampling_mode(current_song, audio_settings.interpolation_mode);
         if (audio_settings.no_ramping)
-                mix_flags |= SNDMIX_NORAMPING;
+                current_song->mix_flags |= SNDMIX_NORAMPING;
         else
-                mix_flags &= ~SNDMIX_NORAMPING;
+                current_song->mix_flags &= ~SNDMIX_NORAMPING;
 
         // disable the S91 effect? (this doesn't make anything faster, it
         // just sounds better with one woofer.)
         song_set_surround(audio_settings.surround_effect);
 
         // update midi queue configuration
-        midi_queue_alloc(audio_buffer_samples, audio_sample_size, mix_frequency);
+        midi_queue_alloc(audio_buffer_samples, audio_sample_size, current_song->mix_frequency);
 
         // timelimit the playback_update() calls when midi isn't actively going on
-        audio_buffers_per_second = (mix_frequency / (audio_buffer_samples * 8 * audio_sample_size));
+        audio_buffers_per_second = (current_song->mix_frequency / (audio_buffer_samples * 8 * audio_sample_size));
         if (audio_buffers_per_second > 1) audio_buffers_per_second--;
 
         song_unlock_audio();
@@ -1504,6 +1504,6 @@ void song_initialise(void)
         song_new(0);
 
         // hmm.
-        mix_flags |= SNDMIX_MUTECHNMODE;
+        current_song->mix_flags |= SNDMIX_MUTECHNMODE;
 }
 

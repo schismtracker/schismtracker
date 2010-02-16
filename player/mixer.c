@@ -39,13 +39,6 @@
 
 
 
-// Mix Buffer (Also room for interleaved rear mix)
-int mix_buffer[MIXBUFFERSIZE * 4];
-float mix_buffer_float[MIXBUFFERSIZE * 2];
-int mix_buffer_multi[64][MIXBUFFERSIZE * 4];
-
-
-
 /* The following lut settings are PRECOMPUTED.
  *
  * If you plan on changing these settings, you
@@ -1343,8 +1336,10 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 
         nchused = nchmixed = 0;
 
+        // yuck
         if (csf->multi_write)
-                memset(mix_buffer_multi, 0, sizeof(mix_buffer_multi));
+                for (unsigned int nchan = 0; nchan < MAX_CHANNELS; nchan++)
+                        memset(csf->multi_write[nchan].buffer, 0, sizeof(csf->multi_write[nchan].buffer));
 
         for (unsigned int nchan = 0; nchan < csf->num_voices; nchan++) {
                 const mix_interface_t *mix_func_table;
@@ -1372,12 +1367,12 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
                         flags |= MIXNDX_FILTER;
 
                 if (!(channel->flags & CHN_NOIDO) &&
-                    !(mix_flags & SNDMIX_NORESAMPLING)) {
+                    !(csf->mix_flags & SNDMIX_NORESAMPLING)) {
                         // use hq-fir mixer?
-                        if ((mix_flags & (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
+                        if ((csf->mix_flags & (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
                                                 == (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
                                 flags |= MIXNDX_FIRSRC;
-                        else if (mix_flags & SNDMIX_HQRESAMPLER)
+                        else if (csf->mix_flags & SNDMIX_HQRESAMPLER)
                                 flags |= MIXNDX_SPLINESRC;
                         else
                                 flags |= MIXNDX_LINEARSRC;    // use
@@ -1398,10 +1393,10 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
                         int master = (csf->voice_mix[nchan] < MAX_CHANNELS)
                                 ? csf->voice_mix[nchan]
                                 : (channel->master_channel - 1);
-                        pbuffer = mix_buffer_multi[master];
+                        pbuffer = csf->multi_write[master].buffer;
                         csf->multi_write[master].used = 1;
                 } else {
-                        pbuffer = mix_buffer;
+                        pbuffer = csf->mix_buffer;
                 }
 
                 nchused++;
@@ -1443,7 +1438,7 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 
                         // Should we mix this channel ?
 
-                        if ((nchmixed >= max_voices && !(mix_flags & SNDMIX_DIRECTTODISK))
+                        if ((nchmixed >= max_voices && !(csf->mix_flags & SNDMIX_DIRECTTODISK))
                             || (!channel->ramp_length && !(channel->left_volume | channel->right_volume))) {
                                 int delta = (channel->increment * (int) smpcount) + (int) channel->position_frac;
                                 channel->position_frac = delta & 0xFFFF;
@@ -1499,9 +1494,9 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 
         if (csf->multi_write) {
                 /* mix all adlib onto track one */
-                Fmdrv_MixTo(mix_buffer_multi[0], count);
+                Fmdrv_MixTo(csf->multi_write[0].buffer, count);
         } else {
-                Fmdrv_MixTo(mix_buffer, count);
+                Fmdrv_MixTo(csf->mix_buffer, count);
         }
 
         return nchused;

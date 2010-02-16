@@ -33,6 +33,7 @@
 #define MAX_EQ_BANDS            6
 #define MAX_MESSAGE             8000
 
+#define MIXBUFFERSIZE           512
 
 
 // Channel flags:
@@ -521,8 +522,6 @@ extern midi_config_t default_midi_config;
 
 
 extern uint32_t max_voices;
-extern uint32_t mix_flags; // SNDMIX_*
-extern uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
 extern uint32_t global_vu_left, global_vu_right;
 
 
@@ -534,9 +533,13 @@ struct multi_write {
         /* this is optimization for channels that haven't had any data yet
         (nothing to convert/write, just seek ahead in the data stream) */
         void (*silence)(void *data, long bytes);
+        int buffer[MIXBUFFERSIZE * 2];
 };
 
 typedef struct song {
+        int mix_buffer[MIXBUFFERSIZE * 2];
+        float mix_buffer_float[MIXBUFFERSIZE * 2]; // is this needed?
+
         song_voice_t voices[MAX_VOICES];                // Channels
         uint32_t voice_mix[MAX_VOICES];                 // Channels to be mixed
         song_sample_t samples[MAX_SAMPLES+1];           // Samples (1-based!)
@@ -575,6 +578,13 @@ typedef struct song {
         char message[MAX_MESSAGE + 1];
         char title[32];
         char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
+
+        // mixer stuff
+        uint32_t mix_flags; // SNDMIX_*
+        uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
+
+        // noise reduction filter
+        int32_t left_nr, right_nr;
 
         // chaseback
         int stop_at_order;
