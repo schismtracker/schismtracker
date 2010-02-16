@@ -188,7 +188,8 @@ int dialog_handle_key(struct key_event * k)
         if (d->handle_key && d->handle_key(k))
                 return 1;
 
-        if (!k->state && NO_MODIFIER(k->mod)) {
+        /* this SHOULD be handling on !k->state but the widget key handler is stealing that key. */
+        if (k->state && NO_MODIFIER(k->mod)) {
                 switch (k->sym) {
                 case SDLK_y:
                         switch (status.dialog_type) {
@@ -216,12 +217,26 @@ int dialog_handle_key(struct key_event * k)
                                 break;
                         }
                         break;
-                case SDLK_ESCAPE:
                 case SDLK_c:
+                        switch (status.dialog_type) {
+                        case DIALOG_YES_NO:
+                        case DIALOG_OK_CANCEL:
+                                break;
+                        default:
+                                return 0;
+                        } /* and fall through */
+                case SDLK_ESCAPE:
                         dialog_cancel(d->data);
                         return 1;
-                case SDLK_RETURN:
                 case SDLK_o:
+                        switch (status.dialog_type) {
+                        case DIALOG_YES_NO:
+                        case DIALOG_OK_CANCEL:
+                                break;
+                        default:
+                                return 0;
+                        } /* and fall through */
+                case SDLK_RETURN:
                         dialog_yes(d->data);
                         return 1;
                 default:
