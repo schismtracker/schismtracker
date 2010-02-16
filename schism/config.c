@@ -191,6 +191,7 @@ void cfg_load(void)
         cfg_load_patedit(&cfg);
         cfg_load_audio(&cfg);
         cfg_load_midi(&cfg);
+        cfg_load_disko(&cfg);
 
         /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -300,6 +301,7 @@ void cfg_save(void)
         cfg_save_patedit(&cfg);
         cfg_save_audio(&cfg);
         cfg_save_palette(&cfg);
+        cfg_save_disko(&cfg);
 
         cfg_write(&cfg);
         cfg_free(&cfg);

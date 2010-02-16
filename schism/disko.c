@@ -40,6 +40,7 @@ were a lot of fun to figure out.
 #include "song.h"
 #include "sndfile.h"
 #include "dmoz.h"
+#include "config-parser.h"
 
 
 #include "cmixer.h"
@@ -52,6 +53,26 @@ were a lot of fun to figure out.
 #include <errno.h>
 
 #define DW_BUFFER_SIZE 65536
+
+// ---------------------------------------------------------------------------
+
+static unsigned int disko_output_rate = 44100;
+static unsigned int disko_output_bits = 16;
+static unsigned int disko_output_channels = 2;
+
+void cfg_load_disko(cfg_file_t *cfg)
+{
+        disko_output_rate = cfg_get_number(cfg, "Diskwriter", "rate", 44100);
+        disko_output_bits = cfg_get_number(cfg, "Diskwriter", "bits", 16);
+        disko_output_channels = cfg_get_number(cfg, "Diskwriter", "channels", 2);
+}
+
+void cfg_save_disko(cfg_file_t *cfg)
+{
+        cfg_set_number(cfg, "Diskwriter", "rate", disko_output_rate);
+        cfg_set_number(cfg, "Diskwriter", "bits", disko_output_bits);
+        cfg_set_number(cfg, "Diskwriter", "channels", disko_output_channels);
+}
 
 // ---------------------------------------------------------------------------
 // stdio backend
@@ -349,7 +370,8 @@ static void _export_setup(song_t *dwsong, int *bps)
         csf_initialize_dsp(dwsong, 1);
 
         csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
-        csf_set_wave_config(dwsong, 44100, 16, (dwsong->flags & SONG_NOSTEREO) ? 1 : 2);
+        csf_set_wave_config(dwsong, disko_output_rate, disko_output_bits,
+                (dwsong->flags & SONG_NOSTEREO) ? 1 : disko_output_channels);
 
         dwsong->mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
 
@@ -801,9 +823,3 @@ int _disko_writemidi(UNUSED const void *data, UNUSED unsigned int len, UNUSED un
 {
         return DW_ERROR;
 }
-
-
-unsigned int disko_output_rate = 44100;
-unsigned int disko_output_bits = 16;
-unsigned int disko_output_channels = 2;
-

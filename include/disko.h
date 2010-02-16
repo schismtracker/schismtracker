@@ -129,19 +129,8 @@ void disko_seterror(disko_t *ds, int err);
 
 /* ------------------------------------------------------------------------- */
 
-extern disko_t *disko_formats[];
-
 /* this call is used by audio/loadsave to send midi data */
 int _disko_writemidi(const void *data, unsigned int len, unsigned int delay);
-
-/* these are used inbetween diskwriter interfaces */
-void disko_dialog_progress(unsigned int perc);
-void disko_dialog_finished(void);
-
-
-extern unsigned int disko_output_rate, disko_output_bits,
-                        disko_output_channels;
-
 
 #endif
 
