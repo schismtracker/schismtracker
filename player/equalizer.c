@@ -30,8 +30,6 @@
 #define EQ_ZERO         0.000001
 
 
-extern float mix_buffer_float[];
-
 
 typedef struct {
     float a0, a1, a2, b1, b2;
@@ -89,38 +87,38 @@ static void eq_filter(eq_band *pbs, float *pbuffer, unsigned int count)
 }
 
 
-void eq_mono(int *buffer, unsigned int count)
+void eq_mono(song_t *csf, int *buffer, unsigned int count)
 {
-        mono_mix_to_float(buffer, mix_buffer_float, count);
+        mono_mix_to_float(buffer, csf->mix_buffer_float, count);
 
         for (unsigned int b = 0; b < MAX_EQ_BANDS; b++)
         {
                 if (eq[b].enabled && eq[b].gain != 1.0f)
-                        eq_filter(&eq[b], mix_buffer_float, count);
+                        eq_filter(&eq[b], csf->mix_buffer_float, count);
         }
 
-        float_to_mono_mix(mix_buffer_float, buffer, count);
+        float_to_mono_mix(csf->mix_buffer_float, buffer, count);
 }
 
 
 // XXX: I rolled the two loops into one. Make sure this works.
-void eq_stereo(int *buffer, unsigned int count)
+void eq_stereo(song_t *csf, int *buffer, unsigned int count)
 {
-        stereo_mix_to_float(buffer, mix_buffer_float, mix_buffer_float + MIXBUFFERSIZE, count);
+        stereo_mix_to_float(buffer, csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, count);
 
         for (unsigned int b = 0; b < MAX_EQ_BANDS; b++) {
                 int br = b + MAX_EQ_BANDS;
 
                 // Left band
                 if (eq[b].enabled && eq[b].gain != 1.0f)
-                        eq_filter(&eq[b], mix_buffer_float, count);
+                        eq_filter(&eq[b], csf->mix_buffer_float, count);
 
                 // Right band
                 if (eq[br].enabled && eq[br].gain != 1.0f)
-                        eq_filter(&eq[br], mix_buffer_float + MIXBUFFERSIZE, count);
+                        eq_filter(&eq[br], csf->mix_buffer_float + MIXBUFFERSIZE, count);
         }
 
-        float_to_stereo_mix(mix_buffer_float, mix_buffer_float + MIXBUFFERSIZE, buffer, count);
+        float_to_stereo_mix(csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, buffer, count);
 }
 
 

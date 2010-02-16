@@ -36,11 +36,7 @@
 
 // SNDMIX: These are global flags for playback control
 unsigned int max_voices = 32; // ITT it is 1994
-// Mixing Configuration (SetWaveConfig)
-uint32_t mix_channels = 1;
-uint32_t mix_flags = 0;
-uint32_t mix_frequency = 44100;
-uint32_t mix_bits_per_sample = 16;
+
 // Mixing data initialized in
 static unsigned int volume_ramp_samples = 64;
 unsigned int global_vu_left = 0;
@@ -48,14 +44,7 @@ unsigned int global_vu_right = 0;
 int32_t g_dry_rofs_vol = 0;
 int32_t g_dry_lofs_vol = 0;
 
-typedef uint32_t (* LPCONVERTPROC)(void *, int *, uint32_t, int *, int *);
-
-extern void interleave_front_rear(int *, int *, unsigned int);
-extern void mono_from_stereo(int *, unsigned int);
-extern void stereo_fill(int *, unsigned int, int *, int *);
-
-extern int mix_buffer[MIXBUFFERSIZE*4];
-extern int MixRearBuffer[MIXBUFFERSIZE*2];
+typedef uint32_t (* convert_t)(void *, int *, uint32_t, int *, int *);
 
 
 
@@ -518,10 +507,10 @@ static inline void rn_increment_env_pos(song_voice_t *chan)
 static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, int master_vol)
 {
         // Adjusting volumes
-        if (mix_channels < 2 || (csf->flags & SONG_NOSTEREO)) {
+        if (csf->mix_channels < 2 || (csf->flags & SONG_NOSTEREO)) {
                 chan->right_volume_new = (chan->final_volume * master_vol) >> 8;
                 chan->left_volume_new = chan->right_volume_new;
-        } else if ((chan->flags & CHN_SURROUND) && !(mix_flags & SNDMIX_NOSURROUND)) {
+        } else if ((chan->flags & CHN_SURROUND) && !(csf->mix_flags & SNDMIX_NOSURROUND)) {
                 chan->right_volume_new = (chan->final_volume * master_vol) >> 8;
                 chan->left_volume_new = -chan->right_volume_new;
         } else {
@@ -537,7 +526,7 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
                 pan += 128;
                 pan = CLAMP(pan, 0, 256);
 
-                if (mix_flags & SNDMIX_REVERSESTEREO)
+                if (csf->mix_flags & SNDMIX_REVERSESTEREO)
                         pan = 256 - pan;
 
                 int realvol = (chan->final_volume * master_vol) >> (8 - 1);
@@ -554,7 +543,7 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
                 chan->left_volume_new  = 0xFFFF;
 
         // Check IDO
-        if (mix_flags & SNDMIX_NORESAMPLING) {
+        if (csf->mix_flags & SNDMIX_NORESAMPLING) {
                 chan->flags &= ~(CHN_HQSRC);
                 chan->flags |= CHN_NOIDO;
         } else {
@@ -563,8 +552,8 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
                 if (chan->increment == 0x10000) {
                         chan->flags |= CHN_NOIDO;
                 } else {
-                        if (!(mix_flags & SNDMIX_HQRESAMPLER) &&
-                            !(mix_flags & SNDMIX_ULTRAHQSRCMODE)) {
+                        if (!(csf->mix_flags & SNDMIX_HQRESAMPLER) &&
+                            !(csf->mix_flags & SNDMIX_ULTRAHQSRCMODE)) {
                                 if (chan->increment >= 0xFF00)
                                         chan->flags |= CHN_NOIDO;
                         }
@@ -582,7 +571,7 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
 
         if (chan->flags & CHN_MUTE) {
                 chan->left_volume = chan->right_volume = 0;
-        } else if (!(mix_flags & SNDMIX_NORAMPING) &&
+        } else if (!(csf->mix_flags & SNDMIX_NORAMPING) &&
             chan->flags & CHN_VOLUMERAMP &&
             (chan->right_volume != chan->right_volume_new ||
              chan->left_volume  != chan->left_volume_new)) {
@@ -591,7 +580,7 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
                 int right_delta = ((chan->right_volume_new - chan->right_volume) << VOLUMERAMPPRECISION);
                 int left_delta  = ((chan->left_volume_new  - chan->left_volume)  << VOLUMERAMPPRECISION);
 
-                if (mix_flags & SNDMIX_HQRESAMPLER) {
+                if (csf->mix_flags & SNDMIX_HQRESAMPLER) {
                         if (chan->right_volume | chan->left_volume &&
                             chan->right_volume_new | chan->left_volume_new &&
                             !(chan->flags & CHN_FASTVOLRAMP)) {
@@ -731,13 +720,13 @@ int csf_init_player(song_t *csf, int reset)
         if (max_voices > MAX_VOICES)
                 max_voices = MAX_VOICES;
 
-        mix_frequency = CLAMP(mix_frequency, 4000, MAX_SAMPLE_RATE);
-        volume_ramp_samples = (mix_frequency * VOLUMERAMPLEN) / 100000;
+        csf->mix_frequency = CLAMP(csf->mix_frequency, 4000, MAX_SAMPLE_RATE);
+        volume_ramp_samples = (csf->mix_frequency * VOLUMERAMPLEN) / 100000;
 
         if (volume_ramp_samples < 8)
                 volume_ramp_samples = 8;
 
-        if (mix_flags & SNDMIX_NORAMPING)
+        if (csf->mix_flags & SNDMIX_NORAMPING)
                 volume_ramp_samples = 2;
 
         g_dry_rofs_vol = g_dry_lofs_vol = 0;
@@ -748,9 +737,9 @@ int csf_init_player(song_t *csf, int reset)
         }
 
         csf_initialize_dsp(csf, reset);
-        initialize_eq(reset, mix_frequency);
+        initialize_eq(reset, csf->mix_frequency);
 
-        Fmdrv_Init(mix_frequency);
+        Fmdrv_Init(csf->mix_frequency);
         OPL_Reset();
         GM_Reset(0);
         return 1;
@@ -760,7 +749,7 @@ int csf_init_player(song_t *csf, int reset)
 unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 {
         uint8_t * buffer = (uint8_t *)v_buffer;
-        LPCONVERTPROC convert_func = clip_32_to_8;
+        convert_t convert_func = clip_32_to_8;
         int32_t vu_min[2];
         int32_t vu_max[2];
         unsigned int bufleft, max, sample_size, count, smpcount, mix_stat=0;
@@ -770,16 +759,18 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 
 
         csf->mix_stat = 0;
-        sample_size = mix_channels;
+        sample_size = csf->mix_channels;
 
-             if (mix_bits_per_sample == 16) { sample_size *= 2; convert_func = clip_32_to_16; }
-        else if (mix_bits_per_sample == 24) { sample_size *= 3; convert_func = clip_32_to_24; }
-        else if (mix_bits_per_sample == 32) { sample_size *= 4; convert_func = clip_32_to_32; }
+             if (csf->mix_bits_per_sample == 16) { sample_size *= 2; convert_func = clip_32_to_16; }
+        else if (csf->mix_bits_per_sample == 24) { sample_size *= 3; convert_func = clip_32_to_24; }
+        else if (csf->mix_bits_per_sample == 32) { sample_size *= 4; convert_func = clip_32_to_32; }
 
         max = bufsize / sample_size;
 
-        if (!max || !buffer)
+        if (!max || !buffer) {
+                printf("no buf what the fuck\n");
                 return 0;
+        }
 
         bufleft = max;
 
@@ -790,7 +781,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                 // Update Channel Data
 
                 if (!csf->buffer_count) {
-                        if (!(mix_flags & SNDMIX_DIRECTTODISK))
+                        if (!(csf->mix_flags & SNDMIX_DIRECTTODISK))
                                 csf->buffer_count = bufleft;
 
                         if (!csf_read_note(csf)) {
@@ -802,7 +793,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                                 if (bufleft == max)
                                         break;
 
-                                if (!(mix_flags & SNDMIX_DIRECTTODISK))
+                                if (!(csf->mix_flags & SNDMIX_DIRECTTODISK))
                                         csf->buffer_count = bufleft;
                         }
 
@@ -824,23 +815,23 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                 smpcount = count;
 
                 // Resetting sound buffer
-                stereo_fill(mix_buffer, smpcount, &g_dry_rofs_vol, &g_dry_lofs_vol);
+                stereo_fill(csf->mix_buffer, smpcount, &g_dry_rofs_vol, &g_dry_lofs_vol);
 
-                if (mix_channels >= 2) {
+                if (csf->mix_channels >= 2) {
                         smpcount *= 2;
                         csf->mix_stat += csf_create_stereo_mix(csf, count);
                         csf_process_stereo_dsp(csf, count);
                 } else {
                         csf->mix_stat += csf_create_stereo_mix(csf, count);
-                        mono_from_stereo(mix_buffer, count);
+                        mono_from_stereo(csf->mix_buffer, count);
                         csf_process_mono_dsp(csf, count);
                 }
 
-                if (mix_flags & SNDMIX_EQ) {
-                        if (mix_channels >= 2)
-                                eq_stereo(mix_buffer, count);
+                if (csf->mix_flags & SNDMIX_EQ) {
+                        if (csf->mix_channels >= 2)
+                                eq_stereo(csf, csf->mix_buffer, count);
                         else
-                                eq_mono(mix_buffer, count);
+                                eq_mono(csf, csf->mix_buffer, count);
                 }
 
                 mix_stat++;
@@ -850,17 +841,17 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                         as temp space for converting */
                         for (unsigned int n = 0; n < 64; n++) {
                                 if (csf->multi_write[n].data) {
-                                        unsigned int bytes = convert_func(buffer, mix_buffer_multi[n],
+                                        unsigned int bytes = convert_func(buffer, csf->multi_write[n].buffer,
                                                 smpcount, vu_min, vu_max);
                                         csf->multi_write[n].write(csf->multi_write[n].data, buffer, bytes);
                                 } else {
                                         csf->multi_write[n].silence(csf->multi_write[n].data,
-                                                smpcount * (mix_bits_per_sample + 7) / 8);
+                                                smpcount * (csf->mix_bits_per_sample + 7) / 8);
                                 }
                         }
                 } else {
                         // Perform clipping + VU-Meter
-                        buffer += convert_func(buffer, mix_buffer, smpcount, vu_min, vu_max);
+                        buffer += convert_func(buffer, csf->mix_buffer, smpcount, vu_min, vu_max);
                 }
 
                 // Buffer ready
@@ -869,7 +860,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
         }
 
         if (bufleft)
-                memset(buffer, (mix_bits_per_sample == 8) ? 0x80 : 0, bufleft * sample_size);
+                memset(buffer, (csf->mix_bits_per_sample == 8) ? 0x80 : 0, bufleft * sample_size);
 
         // VU-Meter
         vu_min[0] >>= 18;
@@ -1092,7 +1083,7 @@ int csf_read_note(song_t *csf)
         if (!csf->current_tempo)
                 return 0;
 
-        csf->buffer_count = (mix_frequency * 5 * csf->tempo_factor) / (csf->current_tempo << 8);
+        csf->buffer_count = (csf->mix_frequency * 5 * csf->tempo_factor) / (csf->current_tempo << 8);
 
         // chaseback hoo hah
         if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
@@ -1207,12 +1198,12 @@ int csf_read_note(song_t *csf)
                         // Filter Envelope: controls cutoff frequency
                         if (chan && chan->ptr_instrument && chan->ptr_instrument->flags & ENV_FILTER) {
                                 setup_channel_filter(chan,
-                                        !(chan->flags & CHN_FILTER), envpitch, mix_frequency);
+                                        !(chan->flags & CHN_FILTER), envpitch, csf->mix_frequency);
                         }
 
                         chan->sample_freq = freq;
 
-                        unsigned int ninc = _muldiv(freq, 0x10000, mix_frequency);
+                        unsigned int ninc = _muldiv(freq, 0x10000, csf->mix_frequency);
 
                         if (ninc >= 0xFFB0 && ninc <= 0x10090)
                                 ninc = 0x10000;
@@ -1262,7 +1253,7 @@ int csf_read_note(song_t *csf)
         }
 
         // Checking Max Mix Channels reached: ordering by volume
-        if (csf->num_voices >= max_voices && (!(mix_flags & SNDMIX_DIRECTTODISK))) {
+        if (csf->num_voices >= max_voices && (!(csf->mix_flags & SNDMIX_DIRECTTODISK))) {
                 for (unsigned int i = 0; i < csf->num_voices; i++) {
                         unsigned int j = i;
 

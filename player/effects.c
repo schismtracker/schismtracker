@@ -773,13 +773,13 @@ void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uin
                         if (chan->volume > 0 || oldcutoff < 0x10
                             || !(chan->flags & CHN_FILTER)
                             || !(chan->left_volume|chan->right_volume)) {
-                                setup_channel_filter(chan, !(chan->flags & CHN_FILTER), 256, mix_frequency);
+                                setup_channel_filter(chan, !(chan->flags & CHN_FILTER), 256, csf->mix_frequency);
                         }
                         break;
                 case 0x01: // set resonance
                         if (idata[3] < 0x80)
                                 chan->resonance = idata[3];
-                        setup_channel_filter(chan, !(chan->flags & CHN_FILTER), 256, mix_frequency);
+                        setup_channel_filter(chan, !(chan->flags & CHN_FILTER), 256, csf->mix_frequency);
                         break;
                 }
                 idata += 4;
@@ -1361,7 +1361,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
                 }
 
                 if (chan->cutoff < 0x7F)
-                        setup_channel_filter(chan, 1, 256, mix_frequency);
+                        setup_channel_filter(chan, 1, 256, csf->mix_frequency);
         }
         // Special case for MPT
         if (manual)
@@ -1762,7 +1762,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 
         case FX_POSITIONJUMP:
                 if (csf->flags & SONG_FIRSTTICK) {
-                        if (!(mix_flags & SNDMIX_NOBACKWARDJUMPS) || csf->process_order < param)
+                        if (!(csf->mix_flags & SNDMIX_NOBACKWARDJUMPS) || csf->process_order < param)
                                 csf->process_order = param - 1;
                         csf->process_row = PROCESS_NEXT_ORDER;
                 }

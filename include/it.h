@@ -231,9 +231,6 @@ extern int playback_tracing, midi_playback_tracing;
 
 extern const char hexdigits[16];        /* in keyboard.c at the moment */
 
-/* currently in audio_loadsave.cc */
-extern uint8_t row_highlight_major, row_highlight_minor;
-
 /* this used to just translate keys to notes, but it's sort of become the
  * keyboard map... perhaps i should rename it. */
 extern const char *note_trans;  /* keyboard.c */

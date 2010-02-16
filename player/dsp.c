@@ -33,25 +33,23 @@ void (*csf_midi_out_raw)(const unsigned char *,unsigned int, unsigned int) = NUL
 // DSP Effects internal state
 
 // Noise Reduction: simple low-pass filter
-static int32_t left_nr = 0;
-static int32_t right_nr = 0;
 
 
-void csf_initialize_dsp(UNUSED song_t *csf, int reset)
+void csf_initialize_dsp(song_t *csf, int reset)
 {
         if (reset) {
                 // Noise Reduction
-                left_nr = right_nr = 0;
+                csf->left_nr = csf->right_nr = 0;
         }
 }
 
 
-void csf_process_stereo_dsp(UNUSED song_t *csf, int count)
+void csf_process_stereo_dsp(song_t *csf, int count)
 {
         // Noise Reduction
-        if (mix_flags & SNDMIX_NOISEREDUCTION) {
-                int n1 = left_nr, n2 = right_nr;
-                int *pnr = mix_buffer;
+        if (csf->mix_flags & SNDMIX_NOISEREDUCTION) {
+                int n1 = csf->left_nr, n2 = csf->right_nr;
+                int *pnr = csf->mix_buffer;
 
                 for (int nr=count; nr; nr--) {
                         int vnr = pnr[0] >> 1;
@@ -63,19 +61,19 @@ void csf_process_stereo_dsp(UNUSED song_t *csf, int count)
                         pnr += 2;
                 }
 
-                left_nr = n1;
-                right_nr = n2;
+                csf->left_nr = n1;
+                csf->right_nr = n2;
         }
 }
 
 
-void csf_process_mono_dsp(UNUSED song_t *csf, int count)
+void csf_process_mono_dsp(song_t *csf, int count)
 //----------------------------------------
 {
         // Noise Reduction
-        if (mix_flags & SNDMIX_NOISEREDUCTION) {
-                int n = left_nr;
-                int *pnr = mix_buffer;
+        if (csf->mix_flags & SNDMIX_NOISEREDUCTION) {
+                int n = csf->left_nr;
+                int *pnr = csf->mix_buffer;
 
                 for (int nr = count; nr; pnr++, nr--) {
                         int vnr = *pnr >> 1;
@@ -83,7 +81,7 @@ void csf_process_mono_dsp(UNUSED song_t *csf, int count)
                         n = vnr;
                 }
 
-                left_nr = n;
+                csf->left_nr = n;
         }
 }
 
@@ -91,14 +89,14 @@ void csf_process_mono_dsp(UNUSED song_t *csf, int count)
 /////////////////////////////////////////////////////////////////
 // Clean DSP Effects interface
 
-int csf_set_wave_config_ex(song_t *csf, int hqido, int bNR, int bEQ)
+int csf_set_wave_config_ex(song_t *csf, int hqido, int nr, int eq)
 {
-        uint32_t d = mix_flags & ~(SNDMIX_HQRESAMPLER | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
+        uint32_t d = csf->mix_flags & ~(SNDMIX_HQRESAMPLER | SNDMIX_NOISEREDUCTION | SNDMIX_EQ);
         if (hqido) d |= SNDMIX_HQRESAMPLER;
-        if (bNR) d |= SNDMIX_NOISEREDUCTION;
-        if (bEQ) d |= SNDMIX_EQ;
+        if (nr) d |= SNDMIX_NOISEREDUCTION;
+        if (eq) d |= SNDMIX_EQ;
 
-        mix_flags = d;
+        csf->mix_flags = d;
         csf_init_player(csf, 0);
         return 1;
 }

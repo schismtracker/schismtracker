@@ -50,8 +50,6 @@
 char song_filename[PATH_MAX + 1];
 char song_basename[NAME_MAX + 1];
 
-uint8_t row_highlight_major = 16, row_highlight_minor = 4;
-
 // ------------------------------------------------------------------------
 // quiet a sample when loading
 
@@ -201,10 +199,6 @@ void song_new(int flags)
 
         song_unlock_audio();
 
-        // ugly #1
-        current_song->row_highlight_major = row_highlight_major;
-        current_song->row_highlight_minor = row_highlight_minor;
-
         main_song_changed_cb();
 }
 
@@ -239,6 +233,18 @@ static song_t *song_create_load(const char *file)
                 return NULL;
 
         song_t *newsong = csf_allocate();
+
+        if (current_song) {
+                newsong->mix_flags = current_song->mix_flags;
+                csf_set_wave_config(newsong,
+                        current_song->mix_frequency,
+                        current_song->mix_bits_per_sample,
+                        current_song->mix_channels);
+
+                // loaders might override these
+                newsong->row_highlight_major = current_song->row_highlight_major;
+                newsong->row_highlight_minor = current_song->row_highlight_minor;
+        }
 
         for (func = load_song_funcs; *func && !ok; func++) {
                 slurp_rewind(s);
@@ -315,10 +321,6 @@ int song_load_unchecked(const char *file)
 
         if (was_playing && (status.flags & PLAY_AFTER_LOAD))
                 song_start();
-
-        // ugly #2
-        row_highlight_major = current_song->row_highlight_major;
-        row_highlight_minor = current_song->row_highlight_minor;
 
         main_song_changed_cb();
 
@@ -978,10 +980,6 @@ Another note: if the file could not be saved for some reason or another, Impulse
 saying "Could not save file". This can be seen rather easily by trying to save a file with a malformed name,
 such as "abc|def.it". This dialog is presented both when saving from F10 and Ctrl-S.
 */
-
-        // ugly
-        current_song->row_highlight_major = row_highlight_major;
-        current_song->row_highlight_minor = row_highlight_minor;
 
         disko_t *fp = disko_open(filename);
         if (!fp) {
