@@ -225,13 +225,13 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 0, sample = song->samples + 1; n < fmt->nsmp; n++, sample++) {
-                        int8_t *ptr;
+                        uint32_t ssize;
 
                         if (sample->length <= 2)
                                 continue;
-                        ptr = csf_allocate_sample(sample->length);
-                        slurp_read(fp, ptr, sample->length);
-                        sample->data = ptr;
+                        ssize = csf_read_sample(sample, SF_8 | SF_LE | SF_PCMS | SF_M,
+                                fp->data + fp->pos, fp->length - fp->pos);
+                        slurp_seek(fp, ssize, SEEK_CUR);
                 }
         }
 

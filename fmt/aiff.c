@@ -187,10 +187,13 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
                 }
 
                 if (smp) {
+                        uint32_t flags = SF_BE | SF_PCMS | SF_8 | SF_M;
+
                         smp->c5speed = bswapBE16(vhdr.data->VHDR.smp_per_sec);
                         smp->length = body.size;
-                        smp->data = csf_allocate_sample(body.size);
-                        memcpy(smp->data, body.data->bytes, body.size);
+
+                        csf_read_sample(smp, SF_BE | SF_PCMS | SF_8 | SF_M, body.data->bytes, body.size);
+
                         smp->volume = 64*4;
                         smp->global_volume = 64;
 

@@ -330,13 +330,13 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 1; n < 32; n++) {
-                        int8_t *ptr;
+                        uint32_t ssize;
 
                         if (song->samples[n].length == 0)
                                 continue;
-                        ptr = csf_allocate_sample(song->samples[n].length);
-                        slurp_read(fp, ptr, song->samples[n].length);
-                        song->samples[n].data = ptr;
+                        ssize = csf_read_sample(song->samples + n, SF_8 | SF_M | SF_LE | SF_PCMS,
+                                fp->data + fp->pos, fp->length - fp->pos);
+                        slurp_seek(fp, ssize, SEEK_CUR);
                 }
         }
 

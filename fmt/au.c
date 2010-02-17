@@ -95,6 +95,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 {
         struct au_header au;
+        uint32_t sflags = SF_BE | SF_PCMS;
 
         if (length < 24)
                 return 0;
@@ -120,14 +121,18 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
         smp->c5speed = au.sample_rate;
         smp->volume = 64 * 4;
         smp->global_volume = 64;
-        smp->length = au.data_size; /* maybe this should be MIN(...), for files with a wacked out length? */
+        smp->length = au.data_size;
         if (au.encoding == AU_PCM_16) {
-                smp->flags |= CHN_16BIT;
+                sflags |= SF_16;
                 smp->length /= 2;
+        } else {
+                sflags |= SF_8;
         }
         if (au.channels == 2) {
-                smp->flags |= CHN_STEREO;
+                sflags |= SF_SI;
                 smp->length /= 2;
+        } else {
+                sflags |= SF_M;
         }
 
         if (au.data_offset > 24) {
@@ -136,21 +141,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
                 smp->name[extlen] = 0;
         }
 
-        smp->data = csf_allocate_sample(au.data_size);
-        memcpy(smp->data, data + au.data_offset, au.data_size);
-
-#ifndef WORDS_BIGENDIAN
-        /* maybe this could use swab()? */
-        if (smp->flags & CHN_16BIT) {
-                signed short *s = (signed short *) smp->data;
-                unsigned long i = smp->length;
-                if (smp->flags & CHN_STEREO) i *= 2;
-                while (i-- > 0) {
-                        *s = bswapBE16(*s);
-                        s++;
-                }
-        }
-#endif
+        csf_read_sample(smp, sflags, data + au.data_offset, length - au.data_offset);
 
         return 1;
 }

@@ -292,17 +292,14 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (smp = 1; smp <= nsmp; smp++) {
-                        int8_t *ptr;
+                        uint32_t ssize;
 
                         if (song->samples[smp].length == 0)
                                 continue;
-                        ptr = csf_allocate_sample(song->samples[smp].length);
-                        slurp_read(fp, ptr, song->samples[smp].length);
-                        song->samples[smp].data = ptr;
-                        /* convert to signed */
-                        n = song->samples[smp].length;
-                        while (n-- > 0)
-                                ptr[n] += 0x80;
+
+                        ssize = csf_read_sample(song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8,
+                                fp->data + fp->pos, fp->length - fp->pos);
+                        slurp_seek(fp, ssize, SEEK_CUR);
                 }
         }
 
