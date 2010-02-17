@@ -529,7 +529,8 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
                 for (s = 0; s < imfins.smpnum; s++) {
                         struct imf_sample imfsmp;
-                        uint32_t blen;
+                        uint32_t blen, sflags = SF_LE | SF_M | SF_PCMS;
+
                         slurp_read(fp, &imfsmp, sizeof(imfsmp));
 
                         if (memcmp(imfsmp.is10, "IS10", 4) != 0) {
@@ -552,22 +553,19 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
                         if (imfsmp.flags & 2)
                                 sample->flags |= CHN_PINGPONGLOOP;
                         if (imfsmp.flags & 4) {
-                                sample->flags |= CHN_16BIT;
+                                sflags |= SF_16;
                                 sample->length >>= 1;
                                 sample->loop_start >>= 1;
                                 sample->loop_end >>= 1;
+                        } else {
+                                sflags |= SF_8;
                         }
                         if (imfsmp.flags & 8)
                                 sample->flags |= CHN_PANNING;
 
-                        if (!blen) {
-                                /* leave it blank */
-                        } else if (lflags & LOAD_NOSAMPLES) {
-                                slurp_seek(fp, blen, SEEK_CUR);
-                        } else {
-                                sample->data = csf_allocate_sample(blen);
-                                slurp_read(fp, sample->data, blen);
-                        }
+                        if (blen && !(lflags & LOAD_NOSAMPLES))
+                                csf_read_sample(sample, sflags, fp->data + fp->pos, fp->length - fp->pos);
+                        slurp_seek(fp, blen, SEEK_CUR);
 
                         sample++;
                 }

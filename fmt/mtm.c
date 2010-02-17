@@ -131,8 +131,12 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 song->channels[n].flags = CHN_MUTE;
 
         for (n = 1, sample = song->samples + 1; n <= nsmp; n++, sample++) {
-                slurp_read(fp, sample->name, 22);
-                sample->name[22] = 0;
+                /* IT truncates .mtm sample names at the first \0 rather than the normal behavior
+                of presenting them as spaces (k-achaet.mtm has some "junk" in the sample text) */
+                char name[23];
+                slurp_read(fp, name, 22);
+                name[22] = '\0';
+                strcpy(sample->name, name);
                 slurp_read(fp, &tmplong, 4);
                 sample->length = bswapLE32(tmplong);
                 slurp_read(fp, &tmplong, 4);
@@ -210,21 +214,15 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (smp = 1; smp <= nsmp; smp++) {
-                        int8_t *ptr;
-                        int bps = 1;    /* bytes per sample (i.e. bits / 8) */
+                        uint32_t ssize;
 
                         if (song->samples[smp].length == 0)
                                 continue;
-                        if (song->samples[smp].flags & CHN_16BIT)
-                                bps = 2;
-                        ptr = csf_allocate_sample(bps * song->samples[smp].length);
-                        slurp_read(fp, ptr, bps * song->samples[smp].length);
-                        song->samples[smp].data = ptr;
-
-                        /* convert to signed */
-                        n = song->samples[smp].length;
-                        while (n-- > 0)
-                                ptr[n] += 0x80;
+                        ssize = csf_read_sample(song->samples + smp,
+                                (SF_LE | SF_PCMU | SF_M
+                                 | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)),
+                                fp->data + fp->pos, fp->length - fp->pos);
+                        slurp_seek(fp, ssize, SEEK_CUR);
                 }
         }
 
