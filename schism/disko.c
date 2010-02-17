@@ -367,6 +367,8 @@ static void _export_setup(song_t *dwsong, int *bps)
         /* install our own */
         memcpy(dwsong, current_song, sizeof(song_t)); /* shadow it */
 
+        dwsong->multi_write = NULL; /* should be null already, but to be sure... */
+
         csf_initialize_dsp(dwsong, 1);
 
         csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
@@ -482,25 +484,27 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
         int smpnum = CLAMP(firstsmp, 1, MAX_SAMPLES);
         int n;
 
-        for (n = 0; n < MAX_CHANNELS; n++) {
-                ds[n] = disko_memopen();
-                if (!ds[n]) {
-                        err = errno ?: EINVAL;
-                        break;
+        _export_setup(&dwsong, &bps);
+        dwsong.repeat_count = 2; /* THIS MAKES MORE SENSE EVERY TIME I WRITE IT! */
+        csf_loop_pattern(&dwsong, pattern, 0);
+        dwsong.multi_write = calloc(MAX_CHANNELS, sizeof(struct multi_write));
+        if (!dwsong.multi_write)
+                err = errno ?: ENOMEM;
+
+        if (!err) {
+                for (n = 0; n < MAX_CHANNELS; n++) {
+                        ds[n] = disko_memopen();
+                        if (!ds[n]) {
+                                err = errno ?: EINVAL;
+                                break;
+                        }
                 }
         }
 
         if (err) {
-                dwsong.multi_write = NULL;
-        } else {
-                _export_setup(&dwsong, &bps);
-                dwsong.repeat_count = 2; /* THIS MAKES MORE SENSE EVERY TIME I WRITE IT! */
-                csf_loop_pattern(&dwsong, pattern, 0);
-                dwsong.multi_write = calloc(MAX_CHANNELS, sizeof(struct multi_write));
-        }
-        if (!dwsong.multi_write) {
                 /* you might think this code is insane, and you might be correct ;)
                 but it's structured like this to keep all the early-termination handling HERE. */
+                _export_teardown();
                 err = err ?: errno;
                 free(dwsong.multi_write);
                 for (n = 0; n < MAX_CHANNELS; n++)
@@ -582,7 +586,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 
 static song_t export_dwsong;
 static int export_bps;
-static disko_t *export_ds[MAX_CHANNELS]; /* only [0] is used unless multichannel */
+static disko_t *export_ds[MAX_CHANNELS + 1]; /* only [0] is used unless multichannel */
 static struct save_format *export_format = NULL; /* NULL == not running */
 static struct widget diskodlg_widgets[1];
 static size_t est_len;
@@ -645,9 +649,29 @@ static void disko_dialog_setup(size_t len)
 
 // ---------------------------------------------------------------------------
 
+static char *get_filename(const char *template, int n)
+{
+        char *s, *sub, buf[4];
+
+        s = strdup(template);
+        if (!s)
+                return NULL;
+        sub = strstr(s, "%c");
+        if (!sub) {
+                errno = EINVAL;
+                free(s);
+                return NULL;
+        }
+        num99tostr(n, buf);
+        sub[0] = buf[0];
+        sub[1] = buf[1];
+        return s;
+}
+
 int disko_export_song(const char *filename, struct save_format *format)
 {
-        int ret = DW_OK;
+        int err = 0;
+        int numfiles, n;
 
         if (export_format) {
                 log_appendf(4, "Another export is already active");
@@ -655,28 +679,63 @@ int disko_export_song(const char *filename, struct save_format *format)
                 return DW_ERROR;
         }
 
-        export_ds[0] = disko_open(filename);
-        if (!export_ds[0])
-                return DW_ERROR;
+        numfiles = format->f.export.multi ? MAX_CHANNELS : 1;
 
         _export_setup(&export_dwsong, &export_bps);
-
-        ret = format->f.export.head(export_ds[0],
-                export_dwsong.mix_bits_per_sample, export_dwsong.mix_channels, export_dwsong.mix_frequency);
-        if (ret == DW_OK) {
-                log_appendf(5, " %d Hz, %d bit, %s",
-                        export_dwsong.mix_frequency, export_dwsong.mix_bits_per_sample,
-                        export_dwsong.mix_channels == 1 ? "mono" : "stereo");
-                export_format = format;
-                status.flags |= DISKWRITER_ACTIVE; /* tell main to care about us */
-        } else {
-                disko_seterror(export_ds[0], errno);
-                _export_teardown();
+        if (numfiles > 1) {
+                export_dwsong.multi_write = calloc(numfiles, sizeof(struct multi_write));
+                if (!export_dwsong.multi_write)
+                        err = errno ?: ENOMEM;
         }
+
+        memset(export_ds, 0, sizeof(export_ds));
+        for (n = 0; n < numfiles; n++) {
+                if (numfiles > 1) {
+                        char *tmp = get_filename(filename, n + 1);
+                        if (tmp) {
+                                export_ds[n] = disko_open(tmp);
+                                free(tmp);
+                        }
+                } else {
+                        export_ds[n] = disko_open(filename);
+                }
+                if (!(export_ds[n] && format->f.export.head(export_ds[n], export_dwsong.mix_bits_per_sample,
+                                export_dwsong.mix_channels, export_dwsong.mix_frequency) == DW_OK)) {
+                        err = errno ?: EINVAL;
+                        break;
+                }
+        }
+
+        if (err) {
+                _export_teardown();
+                free(export_dwsong.multi_write);
+                for (n = 0; export_ds[n]; n++) {
+                        disko_seterror(export_ds[n], err); /* keep from writing a bunch of useless files */
+                        disko_close(export_ds[n], 0);
+                }
+                errno = err ?: EINVAL;
+                log_perror(filename);
+                return DW_ERROR;
+        }
+
+        if (numfiles > 1) {
+                for (n = 0; n < numfiles; n++) {
+                        export_dwsong.multi_write[n].data = export_ds[n];
+                        /* Dumb casts, again */
+                        export_dwsong.multi_write[n].write = (void *) format->f.export.body;
+                        export_dwsong.multi_write[n].silence = NULL; /* TODO */
+                }
+        }
+
+        log_appendf(5, " %d Hz, %d bit, %s",
+                export_dwsong.mix_frequency, export_dwsong.mix_bits_per_sample,
+                export_dwsong.mix_channels == 1 ? "mono" : "stereo");
+        export_format = format;
+        status.flags |= DISKWRITER_ACTIVE; /* tell main to care about us */
 
         disko_dialog_setup((csf_get_length(&export_dwsong) * export_dwsong.mix_frequency) ?: 1);
 
-        return ret;
+        return DW_OK;
 }
 
 
@@ -685,6 +744,7 @@ int disko_sync(void)
 {
         uint8_t buf[DW_BUFFER_SIZE];
         size_t frames;
+        int n;
 
         if (!export_format) {
                 log_appendf(4, "disko_sync: unexplained bacon");
@@ -692,10 +752,15 @@ int disko_sync(void)
         }
 
         frames = csf_read(&export_dwsong, buf, sizeof(buf));
-        export_format->f.export.body(export_ds[0], buf, frames * export_bps);
-        if (export_ds[0]->error) {
-                disko_finish();
-                return DW_SYNC_ERROR;
+
+        if (!export_dwsong.multi_write)
+                export_format->f.export.body(export_ds[n], buf, frames * export_bps);
+        /* always check if something died, multi-write or not */
+        for (n = 0; export_ds[n]; n++) {
+                if (export_ds[n]->error) {
+                        disko_finish();
+                        return DW_SYNC_ERROR;
+                }
         }
 
         /* update the progress bar (kind of messy, yes...) */
@@ -712,7 +777,7 @@ int disko_sync(void)
 
 static int disko_finish(void)
 {
-        int ret;
+        int ret, n, tmp;
 
         if (!export_format) {
                 log_appendf(4, "disko_finish: unexplained eggs");
@@ -721,11 +786,24 @@ static int disko_finish(void)
 
         dialog_destroy();
 
-        if (export_format->f.export.tail(export_ds[0]) != DW_OK)
-                disko_seterror(export_ds[0], errno);
+        for (n = 0; export_ds[n]; n++) {
+                if (export_dwsong.multi_write && !export_dwsong.multi_write[n].used) {
+                        /* this channel was completely empty - don't bother with it */
+                        disko_seterror(export_ds[n], EINVAL); /* kludge */
+                        disko_close(export_ds[n], 0);
+                } else {
+                        /* there was noise on this channel */
+                        if (export_format->f.export.tail(export_ds[n]) != DW_OK)
+                                disko_seterror(export_ds[n], errno);
+                        tmp = disko_close(export_ds[n], 0);
+                        if (ret == DW_OK)
+                                ret = tmp;
+                }
+        }
+        memset(export_ds, 0, sizeof(export_ds));
 
-        ret = disko_close(export_ds[0], 0);
         _export_teardown();
+        free(export_dwsong.multi_write);
         export_format = NULL;
 
         status.flags &= ~DISKWRITER_ACTIVE; /* please unsubscribe me from your mailing list */
