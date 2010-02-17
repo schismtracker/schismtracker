@@ -3075,10 +3075,10 @@ static int pattern_editor_insert(struct key_event *k)
                 }
 
                 if (song_is_instrument_mode()) {
-                        if (ins < 1 && (edit_copy_mask & MASK_INSTRUMENT))
+                        if (edit_copy_mask & MASK_INSTRUMENT)
                                 ins = instrument_get_current();
                 } else {
-                        if (smp < 1 && (edit_copy_mask & MASK_INSTRUMENT))
+                        if (edit_copy_mask & MASK_INSTRUMENT)
                                 smp = sample_get_current();
                 }
 
@@ -3198,9 +3198,12 @@ static int pattern_editor_insert(struct key_event *k)
         case 3:                 /* instrument, second digit */
                 if (k->sym == SDLK_SPACE) {
                         if (song_is_instrument_mode())
-                                cur_note->instrument = instrument_get_current();
+                                n = instrument_get_current();
                         else
-                                cur_note->instrument = sample_get_current();
+                                n = sample_get_current();
+                        if (n && !(status.flags & CLASSIC_MODE))
+                                current_song->voices[current_channel - 1].last_instrument = n;
+                        cur_note->instrument = n;
                         advance_cursor(1, 0);
                         status.flags |= SONG_NEEDS_SAVE;
                         break;
@@ -3247,6 +3250,8 @@ static int pattern_editor_insert(struct key_event *k)
                         sample_set(j);
                 }
 
+                if (n && !(status.flags & CLASSIC_MODE))
+                        current_song->voices[current_channel - 1].last_instrument = n;
                 cur_note->instrument = n;
                 if (song_is_instrument_mode())
                         instrument_set(n);
