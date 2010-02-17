@@ -649,6 +649,12 @@ int disko_export_song(const char *filename, struct save_format *format)
 {
         int ret = DW_OK;
 
+        if (export_format) {
+                log_appendf(4, "Another export is already active");
+                errno = EAGAIN;
+                return DW_ERROR;
+        }
+
         export_ds[0] = disko_open(filename);
         if (!export_ds[0])
                 return DW_ERROR;
