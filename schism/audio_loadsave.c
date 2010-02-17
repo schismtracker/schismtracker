@@ -885,10 +885,14 @@ struct save_format song_save_formats[] = {
 
 struct save_format song_export_formats[] = {
         {"AIFF", "Audio IFF", "aiff",
-                {.export = {fmt_aiff_export_head, fmt_aiff_export_body, fmt_aiff_export_tail}}},
-        {"WAV", "WAV", "wav", {.export = {_export_head_stub, _export_body_stub, _export_tail_stub}}},
+                {.export = {fmt_aiff_export_head, fmt_aiff_export_body, fmt_aiff_export_tail, 0}}},
+        {"MAIFF", "Audio IFF multi-write", "aiff",
+                {.export = {fmt_aiff_export_head, fmt_aiff_export_body, fmt_aiff_export_tail, 1}}},
+        {"WAV", "WAV", "wav", {.export = {_export_head_stub, _export_body_stub, _export_tail_stub, 0}}},
         {.label = NULL}
 };
+// <distance> and maiff sounds like something you'd want to hug
+// <distance> .. dont ask
 
 struct save_format sample_save_formats[] = {
         {"ITS", "Impulse Tracker", "its", {.save_sample = fmt_its_save_sample}},

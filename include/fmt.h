@@ -103,6 +103,7 @@ struct save_format {
                         fmt_export_head_func head;
                         fmt_export_body_func body;
                         fmt_export_tail_func tail;
+                        int multi;
                 } export;
         } f;
 };
