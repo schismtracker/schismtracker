@@ -65,6 +65,7 @@ enum {
 #define PROTO_SAVE_SAMPLE       (disko_t *fp, song_sample_t *smp)
 #define PROTO_LOAD_INSTRUMENT   (const uint8_t *data, size_t length, int slot)
 #define PROTO_EXPORT_HEAD       (disko_t *fp, int bits, int channels, int rate)
+#define PROTO_EXPORT_SILENCE    (disko_t *fp, long bytes)
 #define PROTO_EXPORT_BODY       (disko_t *fp, const uint8_t *data, size_t length)
 #define PROTO_EXPORT_TAIL       (disko_t *fp)
 
@@ -75,6 +76,7 @@ typedef int (*fmt_load_sample_func)     PROTO_LOAD_SAMPLE;
 typedef int (*fmt_save_sample_func)     PROTO_SAVE_SAMPLE;
 typedef int (*fmt_load_instrument_func) PROTO_LOAD_INSTRUMENT;
 typedef int (*fmt_export_head_func)     PROTO_EXPORT_HEAD;
+typedef int (*fmt_export_silence_func)  PROTO_EXPORT_SILENCE;
 typedef int (*fmt_export_body_func)     PROTO_EXPORT_BODY;
 typedef int (*fmt_export_tail_func)     PROTO_EXPORT_TAIL;
 
@@ -85,6 +87,7 @@ typedef int (*fmt_export_tail_func)     PROTO_EXPORT_TAIL;
 #define SAVE_SAMPLE(t)          int fmt_##t##_save_sample       PROTO_SAVE_SAMPLE;
 #define LOAD_INSTRUMENT(t)      int fmt_##t##_load_instrument   PROTO_LOAD_INSTRUMENT;
 #define EXPORT(t)               int fmt_##t##_export_head       PROTO_EXPORT_HEAD; \
+                                int fmt_##t##_export_silence    PROTO_EXPORT_SILENCE; \
                                 int fmt_##t##_export_body       PROTO_EXPORT_BODY; \
                                 int fmt_##t##_export_tail       PROTO_EXPORT_TAIL;
 
@@ -101,6 +104,7 @@ struct save_format {
                 fmt_save_sample_func save_sample;
                 struct {
                         fmt_export_head_func head;
+                        fmt_export_silence_func silence;
                         fmt_export_body_func body;
                         fmt_export_tail_func tail;
                         int multi;

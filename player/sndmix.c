@@ -840,7 +840,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                         /* multi doesn't actually write meaningful data into 'buffer', so we can use that
                         as temp space for converting */
                         for (unsigned int n = 0; n < 64; n++) {
-                                if (csf->multi_write[n].data || csf->multi_write[n].silence == NULL) {
+                                if (csf->multi_write[n].used) {
                                         unsigned int bytes = convert_func(buffer, csf->multi_write[n].buffer,
                                                 smpcount, vu_min, vu_max);
                                         csf->multi_write[n].write(csf->multi_write[n].data, buffer, bytes);
