@@ -30,7 +30,7 @@ especially the ones that weren't actually used anywhere, those
 were a lot of fun to figure out.
 */
 
-#define NEED_BYTESWAP
+#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
@@ -591,6 +591,7 @@ static struct save_format *export_format = NULL; /* NULL == not running */
 static struct widget diskodlg_widgets[1];
 static size_t est_len;
 static int prgh;
+static struct timeval export_start_time;
 
 static int disko_finish(void);
 
@@ -679,6 +680,8 @@ int disko_export_song(const char *filename, struct save_format *format)
                 return DW_ERROR;
         }
 
+        gettimeofday(&export_start_time, NULL);
+
         numfiles = format->f.export.multi ? MAX_CHANNELS : 1;
 
         _export_setup(&export_dwsong, &export_bps);
@@ -723,7 +726,7 @@ int disko_export_song(const char *filename, struct save_format *format)
                         export_dwsong.multi_write[n].data = export_ds[n];
                         /* Dumb casts, again */
                         export_dwsong.multi_write[n].write = (void *) format->f.export.body;
-                        export_dwsong.multi_write[n].silence = NULL; /* TODO */
+                        export_dwsong.multi_write[n].silence = (void *) format->f.export.silence;
                 }
         }
 
@@ -778,6 +781,8 @@ int disko_sync(void)
 static int disko_finish(void)
 {
         int ret, n, tmp;
+        struct timeval export_end_time;
+        double elapsed;
 
         if (!export_format) {
                 log_appendf(4, "disko_finish: unexplained eggs");
@@ -810,8 +815,10 @@ static int disko_finish(void)
 
         switch (ret) {
         case DW_OK:
-                /* might be nice to print the length written or something */
-                log_appendf(5, " Done");
+                gettimeofday(&export_end_time, NULL);
+                double elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
+                        + ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
+                log_appendf(5, " Done (took %.2lf sec)\n", elapsed);
                 break;
         case DW_ERROR:
                 /* hey, what was the filename? oops */

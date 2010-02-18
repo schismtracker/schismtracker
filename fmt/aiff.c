@@ -467,6 +467,12 @@ int fmt_aiff_export_body(disko_t *fp, const uint8_t *data, size_t length)
         return DW_OK;
 }
 
+int fmt_aiff_export_silence(disko_t *fp, long bytes)
+{
+        disko_seek(fp, bytes, SEEK_CUR);
+        return DW_OK;
+}
+
 int fmt_aiff_export_tail(disko_t *fp)
 {
         struct aiff_writedata *awd = fp->userdata;
