@@ -267,20 +267,6 @@ void save_song_or_save_as(void)
         }
 }
 
-static void do_multiwrite(void *ptr)
-{
-        const char *filename = ptr ?: song_get_filename();
-
-        set_page(PAGE_LOG);
-
-        /* FIXME: support other writers? */
-        if (song_export(filename, "WAV-multi") != SAVE_SUCCESS) {
-                dialog_create(DIALOG_OK, "Could not save file", NULL, NULL, 0, NULL);
-        }
-
-        free(ptr);
-}
-
 static void do_save_song_overwrite(void *ptr)
 {
         struct stat st;
@@ -315,14 +301,8 @@ static void handle_file_entered_S(const char *name)
                 }
         } else {
                 if (S_ISDIR(buf.st_mode)) {
-                        if (status.current_page == PAGE_EXPORT_MODULE) {
-                                dialog_create(DIALOG_OK_CANCEL, "Multi-out?",
-                                              do_multiwrite, free, 1, str_dup(name));
-                        } else {
-                                /* TODO: maybe change the current directory in this case? */
-                                log_appendf(4, "%s: Is a directory", name);
-                        }
-
+                        /* TODO: maybe change the current directory in this case? */
+                        log_appendf(4, "%s: Is a directory", name);
                 } else if (S_ISREG(buf.st_mode)) {
                         dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
                                       do_save_song_overwrite, free, 1, str_dup(name));

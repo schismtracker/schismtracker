@@ -207,6 +207,8 @@ const char *get_basename(const char *filename)
 
 const char *get_extension(const char *filename)
 {
+        filename = get_basename(filename);
+
         const char *extension = strrchr(filename, '.');
         if (extension) {
                 /* skip the dot */
