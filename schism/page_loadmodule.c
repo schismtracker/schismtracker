@@ -1063,7 +1063,7 @@ void save_module_load_page(struct page *page, int do_export)
         widgets_exportsave[0].next.right = widgets_exportsave[0].next.tab = 1;
         create_other(widgets_exportsave + 1, 2, dir_list_handle_key, dir_list_draw);
         widgets_exportsave[1].accept_text = 1;
-        widgets_exportsave[1].next.right = widgets_exportsave[1].next.tab = 4;
+        widgets_exportsave[1].next.right = widgets_exportsave[1].next.tab = 5;
         widgets_exportsave[1].next.left = 0;
 
         create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
@@ -1080,7 +1080,7 @@ void save_module_load_page(struct page *page, int do_export)
                                 70, 13 + (3 * n), 5,
                                 4 + (n == 0 ? 0 : (n - 1)),
                                 4 + (n + 1),
-                                1, 0, 2,
+                                1, 2, 2,
                                 NULL,
                                 formats[n].label,
                                 (5 - strlen(formats[n].label)) / 2 + 1,
