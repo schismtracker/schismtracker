@@ -816,7 +816,7 @@ static int disko_finish(void)
         switch (ret) {
         case DW_OK:
                 gettimeofday(&export_end_time, NULL);
-                double elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
+                elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
                         + ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
                 log_appendf(5, " Done (took %.2lf sec)", elapsed);
                 break;
