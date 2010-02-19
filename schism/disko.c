@@ -757,7 +757,7 @@ int disko_sync(void)
         frames = csf_read(&export_dwsong, buf, sizeof(buf));
 
         if (!export_dwsong.multi_write)
-                export_format->f.export.body(export_ds[n], buf, frames * export_bps);
+                export_format->f.export.body(export_ds[0], buf, frames * export_bps);
         /* always check if something died, multi-write or not */
         for (n = 0; export_ds[n]; n++) {
                 if (export_ds[n]->error) {
@@ -780,7 +780,7 @@ int disko_sync(void)
 
 static int disko_finish(void)
 {
-        int ret, n, tmp;
+        int ret = DW_OK, n, tmp;
         struct timeval export_end_time;
         double elapsed;
 
