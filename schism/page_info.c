@@ -84,6 +84,7 @@ static struct info_window windows[MAX_WINDOWS] = {
 
 /* --------------------------------------------------------------------- */
 /* the various stuff that can be drawn... */
+
 static void info_draw_technical(int base, int height, int active, int first_channel)
 {
         int smplist[MAX_SAMPLES];
@@ -91,39 +92,50 @@ static void info_draw_technical(int base, int height, int active, int first_chan
         char buf[16];
         const char *ptr;
 
+        /*
+        FVl - 0-128, final calculated volume, taking everything into account:
+                (sample volume, sample global volume, instrument volume, inst. global volume,
+                volume envelope, volume swing, fadeout, channel volume, song global volume, effects (I/Q/R)
+        Vl - 0-64, sample volume / volume column (also affected by I/Q/R)
+        CV - 0-64, channel volume (M/N)
+        SV - 0-64, sample global volume + inst global volume
+        Fde - 0-512, HALF the fade
+                (initially 1024, and subtracted by instrument fade value each tick when fading out)
+        Pn - 0-64 (or "Su"), final channel panning
+                + pan swing + pitch/pan + current pan envelope value! + Yxx
+                (note: suggests that Xxx panning is reduced to 64 values when it's applied?)
+        PE - 0-64, pan envelope
+                note: this value is not changed if pan env is turned off (e.g. with S79) -- so it's copied
+        all of the above are still set to valid values in sample mode
+        */
+
         draw_fill_chars(5, base + 1, 29, base + height - 2, 0);
-        draw_fill_chars(32, base + 1, 56, base + height - 2, 0);
         draw_box(4, base, 30, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_text("Frequency", 6, base, 2, 1);
+        draw_text("Position", 17, base, 2, 1);
+        draw_text("Smp", 27, base, 2, 1);
+
+        draw_fill_chars(32, base + 1, 56, base + height - 2, 0);
         draw_box(31, base, 57, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+        draw_text("FVl", 32, base, 2, 1);
+        draw_text("Vl",  36, base, 2, 1);
+        draw_text("CV",  39, base, 2, 1);
+        draw_text("SV",  42, base, 2, 1);
+        draw_text("VE",  45, base, 2, 1);
+        draw_text("Fde", 48, base, 2, 1);
+        draw_text("Pn",  52, base, 2, 1);
+        draw_text("PE",  55, base, 2, 1);
 
         if (song_is_instrument_mode()) {
                 draw_fill_chars(59, base + 1, 65, base + height - 2, 0);
                 draw_box(58, base, 66, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
-                draw_text("NNA", 59, base, 2, 1); /* --- Cut Fde Con Off */
-                draw_text("Tot", 63, base, 2, 1); /* number of samples playing here */
-
-                song_get_playing_samples(smplist);
+                draw_text("NNA", 59, base, 2, 1);
+                draw_text("Tot", 63, base, 2, 1);
         }
 
-        draw_text("Frequency",6, base, 2,1);
-        draw_text("Position",17, base, 2,1);
-        draw_text("Smp",27, base, 2,1); /* number */
-
-        /* FIXME - these aren't all quite correct.
-           (Someone clearly didn't read IT.TXT carefully enough. Who implemented this? ;) */
-        draw_text("FVl", 32, base, 2, 1); /* final volume       0-128 */
-        draw_text("Vl",  36, base, 2, 1); /* volume             0-64  */
-        draw_text("CV",  39, base, 2, 1); /* channel volume     0-64  */
-        draw_text("SV",  42, base, 2, 1); /* sample volume      0-64  */
-        draw_text("VE",  45, base, 2, 1); /* volume envelope    0-64  */
-        draw_text("Fde", 48, base, 2, 1); /* fadeout component  0-512 ; so int val /2 */
-        draw_text("Pn",  52, base, 2, 1); /* panning            0-64 or 'Su' */
-        draw_text("PE",  55, base, 2, 1); /* panning envelope   0-32 [?] */
-
-
         for (pos = base + 1; pos < base + height - 1; pos++, c++) {
-                song_channel_t *channel = song_get_channel(c - 1);
-                song_voice_t *mixchan = song_get_mix_channel(c - 1);
+                song_channel_t *channel = current_song->channels + c - 1;
+                song_voice_t *voice = current_song->voices + c - 1;
 
                 if (c == selected_channel) {
                         fg = (channel->flags & CHN_MUTE) ? 6 : 3;
@@ -146,45 +158,54 @@ static void info_draw_technical(int base, int height, int active, int first_chan
                 draw_char(168, 54, pos, 2, 0);
 
                 if (song_is_instrument_mode()) {
-                        draw_text("--- 000", 59, pos, 2, 0); /* will be overwritten if something's playing */
-                        draw_char(168, 62, pos, 2, 0);
+                        draw_text("---\xa8", 59, pos, 2, 0); /* will be overwritten if something's playing */
+
+                        /* count how many voices claim this channel */
+                        int nv, tot;
+                        for (nv = tot = 0; nv < MAX_VOICES; nv++) {
+                                song_voice_t *v = current_song->voices + nv;
+                                if (v->master_channel == c && v->current_sample_data && v->length)
+                                        tot++;
+                        }
+                        if (voice->current_sample_data && voice->length)
+                                tot++;
+                        draw_text(numtostr(3, tot, buf), 63, pos, 2, 0);
                 }
 
-                if (mixchan->current_sample_data && mixchan->length && mixchan->ptr_sample) {
+                if (voice->current_sample_data && voice->length && voice->ptr_sample) {
                         // again with the hacks...
-                        smp = mixchan->ptr_sample - song_get_sample(0);
+                        smp = voice->ptr_sample - song_get_sample(0);
                         if (smp <= 0 || smp >= MAX_SAMPLES)
                                 continue;
                 } else {
                         continue;
                 }
 
-
-                sprintf(buf, "%10d", mixchan->sample_freq);
+                // Frequency
+                sprintf(buf, "%10d", voice->sample_freq);
                 draw_text(buf, 5, pos, 2, 0);
-
-                sprintf(buf, "%10d", mixchan->position);
+                // Position
+                sprintf(buf, "%10d", voice->position);
                 draw_text(buf, 16, pos, 2, 0);
 
-                draw_text(numtostr(3, smp, buf), 27, pos, 2, 0);
+                draw_text(numtostr(3, smp, buf), 27, pos, 2, 0); // Smp
+                draw_text(numtostr(3, voice->final_volume / 128, buf), 32, pos, 2, 0); // FVl
+                draw_text(numtostr(2, voice->volume >> 2, buf), 36, pos, 2, 0); // Vl
+                draw_text(numtostr(2, voice->global_volume, buf), 39, pos, 2, 0); // CV
+                draw_text(numtostr(2, voice->ptr_sample->global_volume, buf), 42, pos, 2, 0); // SV
+                draw_text(numtostr(2, voice->instrument_volume, buf), 45, pos, 2, 0); // VE
+                draw_text(numtostr(3, voice->fadeout_volume / 128, buf), 48, pos, 2, 0); // Fde
 
-                draw_text(numtostr(3, mixchan->final_volume / 128, buf), 32, pos, 2, 0);
-                draw_text(numtostr(2, mixchan->volume >> 2, buf), 36, pos, 2, 0);
-
-                draw_text(numtostr(2, mixchan->global_volume, buf), 39, pos, 2, 0);
-                draw_text(numtostr(2, mixchan->ptr_sample->global_volume, buf),
-                        42, pos, 2, 0);
-                draw_text(numtostr(2, mixchan->instrument_volume, buf), 45, pos, 2, 0);
-
-                draw_text(numtostr(3, mixchan->fadeout_volume / 128, buf), 48, pos, 2, 0);
-
-                if (mixchan->flags & CHN_SURROUND)
+                // Pn
+                if (voice->flags & CHN_SURROUND)
                         draw_text("Su", 52, pos, 2, 0);
                 else
-                        draw_text(numtostr(2, mixchan->panning >> 2, buf), 52, pos, 2, 0);
-                draw_text(numtostr(2, mixchan->final_panning >> 2, buf), 55, pos, 2, 0);
+                        draw_text(numtostr(2, voice->panning >> 2, buf), 52, pos, 2, 0);
+
+                draw_text(numtostr(2, voice->final_panning >> 2, buf), 55, pos, 2, 0); // PE
+
                 if (song_is_instrument_mode()) {
-                        switch (mixchan->nna) {
+                        switch (voice->nna) {
                                 case NNA_NOTECUT: ptr = "Cut"; break;
                                 case NNA_CONTINUE: ptr = "Con"; break;
                                 case NNA_NOTEOFF: ptr = "Off"; break;
@@ -192,7 +213,6 @@ static void info_draw_technical(int base, int height, int active, int first_chan
                                 default: ptr = "???"; break;
                         };
                         draw_text(ptr, 59, pos, 2, 0);
-                        draw_text(numtostr(3, smplist[smp], buf), 63, pos, 2, 0);
                 }
         }
 }
