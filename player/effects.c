@@ -1544,7 +1544,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 
 
 
-static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, int porta)
+static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, int porta, int firsttick)
 {
         song_voice_t *chan = csf->voices + nchan;
 
@@ -1561,24 +1561,24 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                 break;
 
         case FX_PORTAMENTOUP:
-                fx_portamento_up(csf->flags, chan, param);
+                fx_portamento_up(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
                 break;
 
         case FX_PORTAMENTODOWN:
-                fx_portamento_down(csf->flags, chan, param);
+                fx_portamento_down(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
                 break;
 
         case FX_VOLUMESLIDE:
-                fx_volume_slide(csf->flags, chan, param);
+                fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
                 break;
 
         case FX_TONEPORTAMENTO:
-                fx_tone_portamento(csf->flags, chan, param);
+                fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
                 break;
 
         case FX_TONEPORTAVOL:
-                fx_volume_slide(csf->flags, chan, param);
-                fx_tone_portamento(csf->flags, chan, 0);
+                fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
+                fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, 0);
                 break;
 
         case FX_VIBRATO:
@@ -1586,7 +1586,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                 break;
 
         case FX_VIBRATOVOL:
-                fx_volume_slide(csf->flags, chan, param);
+                fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
                 fx_vibrato(chan, 0);
                 break;
 
@@ -1706,11 +1706,11 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                 break;
 
         case FX_PANNINGSLIDE:
-                fx_panning_slide(csf->flags, chan, param);
+                fx_panning_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
                 break;
 
         case FX_TREMOLO:
-                fx_tremolo(csf->flags, chan, param);
+                fx_tremolo(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
                 break;
 
         case FX_FINEVIBRATO:
@@ -1737,7 +1737,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                 break;
 
         case FX_CHANNELVOLSLIDE:
-                fx_channel_vol_slide(csf->flags, chan, param);
+                fx_channel_vol_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
                 break;
 
         case FX_PANBRELLO:
@@ -1790,15 +1790,16 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                 break;
 
         case FX_NOTESLIDEUP:
-                fx_note_slide(csf->flags, chan, param, 1);
+                fx_note_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param, 1);
                 break;
         case FX_NOTESLIDEDOWN:
-                fx_note_slide(csf->flags, chan, param, -1);
+                fx_note_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param, -1);
                 break;
         }
 }
 
-static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t vol, int start_note)
+static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t vol,
+        int firsttick, int start_note)
 {
         /* A few notes, paraphrased from ITTECH.TXT:
                 Ex/Fx/Gx are shared with Exx/Fxx/Gxx; Ex/Fx are 4x the 'normal' slide value
@@ -1836,7 +1837,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
                 break;
 
         case VOLFX_PORTAUP: // Fx
-                if (csf->flags & SONG_FIRSTTICK) {
+                if (firsttick) {
                         if (vol)
                                 chan->mem_pitchslide = 4 * vol;
                         if (!(csf->flags & SONG_COMPATGXX))
@@ -1847,7 +1848,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
                 break;
 
         case VOLFX_PORTADOWN: // Ex
-                if (csf->flags & SONG_FIRSTTICK) {
+                if (firsttick) {
                         if (vol)
                                 chan->mem_pitchslide = 4 * vol;
                         if (!(csf->flags & SONG_COMPATGXX))
@@ -1858,12 +1859,12 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
                 break;
 
         case VOLFX_TONEPORTAMENTO: // Gx
-                fx_tone_portamento(csf->flags, chan,
+                fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan,
                         vc_portamento_table[vol & 0x0F]);
                 break;
 
         case VOLFX_VOLSLIDEUP: // Cx
-                if (csf->flags & SONG_FIRSTTICK) {
+                if (firsttick) {
                         if (vol)
                                 chan->mem_vc_volslide = vol;
                 } else {
@@ -1872,7 +1873,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
                 break;
 
         case VOLFX_VOLSLIDEDOWN: // Dx
-                if (csf->flags & SONG_FIRSTTICK) {
+                if (firsttick) {
                         if (vol)
                                 chan->mem_vc_volslide = vol;
                 } else {
@@ -1881,7 +1882,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
                 break;
 
         case VOLFX_FINEVOLUP: // Ax
-                if (csf->flags & SONG_FIRSTTICK) {
+                if (firsttick) {
                         if (vol)
                                 chan->mem_vc_volslide = vol;
                         else
@@ -1891,7 +1892,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
                 break;
 
         case VOLFX_FINEVOLDOWN: // Bx
-                if (csf->flags & SONG_FIRSTTICK) {
+                if (firsttick) {
                         if (vol)
                                 chan->mem_vc_volslide = vol;
                         else
@@ -2036,8 +2037,8 @@ void csf_process_effects(song_t *csf, int firsttick)
                         }
                 }
 
-                handle_voleffect(csf, chan, volcmd, vol, start_note);
-                handle_effect(csf, nchan, cmd, param, porta);
+                handle_voleffect(csf, chan, volcmd, vol, firsttick, start_note);
+                handle_effect(csf, nchan, cmd, param, porta, firsttick);
         }
 }
 
