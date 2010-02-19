@@ -1274,6 +1274,9 @@ static void redraw_top_info(void)
         draw_text_len(song_get_basename(), 18, 12, 4, 5, 0);
         draw_text_len(current_song->title, 25, 12, 3, 5, 0);
 
+        if ((status.flags & (CLASSIC_MODE | SONG_NEEDS_SAVE)) == SONG_NEEDS_SAVE)
+                draw_char('+', 29, 4, 4, 0);
+
         update_current_order();
         update_current_pattern();
         update_current_row();
