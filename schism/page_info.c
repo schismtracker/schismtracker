@@ -174,7 +174,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 
                 if (voice->current_sample_data && voice->length && voice->ptr_sample) {
                         // again with the hacks...
-                        smp = voice->ptr_sample - song_get_sample(0);
+                        smp = voice->ptr_sample - current_song->samples;
                         if (smp <= 0 || smp >= MAX_SAMPLES)
                                 continue;
                 } else {
@@ -219,7 +219,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 
 static void info_draw_samples(int base, int height, int active, int first_channel)
 {
-        int inuse, vu, smp, ins, n, pos, fg, fg2, c = first_channel;
+        int vu, smp, ins, n, pos, fg, fg2, c = first_channel;
         char buf[8];
         char *ptr;
 
@@ -235,7 +235,6 @@ static void info_draw_samples(int base, int height, int active, int first_channe
                 draw_fill_chars(63, base, 73, base + height, 2);
         }
 
-        /* FIXME: what about standalone sample playback? */
         if (song_get_mode() == MODE_STOPPED) {
                 for (pos = base + 1; pos < base + height - 1; pos++, c++) {
                         song_channel_t *channel = song_get_channel(c - 1);
@@ -253,26 +252,26 @@ static void info_draw_samples(int base, int height, int active, int first_channe
         }
 
         for (pos = base + 1; pos < base + height - 1; pos++, c++) {
-                song_voice_t *channel = song_get_mix_channel(c - 1);
+                song_voice_t *voice = current_song->voices + c - 1;
 
                 /* always draw the channel number */
                 if (c == selected_channel)
-                        fg = (channel->flags & CHN_MUTE) ? 6 : 3;
-                else if (channel->flags & CHN_MUTE)
+                        fg = (voice->flags & CHN_MUTE) ? 6 : 3;
+                else if (voice->flags & CHN_MUTE)
                         fg = 2; /* same as bg */
                 else
                         fg = active ? 1 : 0;
                 draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
 
-                if (!(channel->current_sample_data && channel->length))
+                if (!(voice->current_sample_data && voice->length))
                         continue;
 
                 /* first box: vu meter */
                 if (velocity_mode)
-                        vu = channel->final_volume >> 8;
+                        vu = voice->final_volume >> 8;
                 else
-                        vu = channel->vu_meter >> 2;
-                if (channel->flags & CHN_MUTE) {
+                        vu = voice->vu_meter >> 2;
+                if (voice->flags & CHN_MUTE) {
                         fg = 1; fg2 = 2;
                 } else {
                         fg = 5; fg2 = 4;
@@ -280,23 +279,16 @@ static void info_draw_samples(int base, int height, int active, int first_channe
                 draw_vu_meter(5, pos, 24, vu, fg, fg2);
 
                 /* second box: sample number/name */
-                ins = song_get_instrument_number(channel->ptr_instrument);
+                ins = song_get_instrument_number(voice->ptr_instrument);
                 /* figuring out the sample number is an ugly hack... considering all the crap that's
                 copied to the channel, i'm surprised that the sample and instrument numbers aren't
                 in there somewhere... */
-                inuse=1;
-                if (channel->ptr_sample)
-                        smp = channel->ptr_sample - song_get_sample(0);
+                if (voice->ptr_sample)
+                        smp = voice->ptr_sample - current_song->samples;
                 else
-                        smp = inuse = 0;
+                        smp = ins = 0;
                 if(smp < 0 || smp >= MAX_SAMPLES)
-                        smp = inuse = 0; /* This sample is not in the sample array */
-#if 0
-                // this makes ascii-art behave somewhat...
-                if (channel->flags & (CHN_KEYOFF|CHN_NOTEFADE) && channel->length == 0) {
-                        inuse = smp = ins = 0;
-                }
-#endif
+                        smp = ins = 0; /* This sample is not in the sample array */
 
                 if (smp) {
                         draw_text(num99tostr(smp, buf), 31, pos, 6, 0);
@@ -307,59 +299,75 @@ static void info_draw_samples(int base, int height, int active, int first_channe
                         } else {
                                 n = 33;
                         }
-                        if (channel->volume == 0)
+                        if (voice->volume == 0)
                                 fg = 4;
-                        else if (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
+                        else if (voice->flags & (CHN_KEYOFF | CHN_NOTEFADE))
                                 fg = 7;
                         else
                                 fg = 6;
                         draw_char(':', n++, pos, fg, 0);
-                        if (instrument_names && channel->ptr_instrument) {
-                                ptr = channel->ptr_instrument->name;
+                        if (instrument_names && voice->ptr_instrument) {
+                                ptr = voice->ptr_instrument->name;
                         } else {
-                                ptr = song_get_sample(smp)->name;
+                                ptr = current_song->samples[smp].name;
                         }
                         draw_text_len(ptr, 25, n, pos, 6, 0);
-                } else if (ins && channel->ptr_instrument && channel->ptr_instrument->midi_channel_mask) {
+                } else if (ins && voice->ptr_instrument && voice->ptr_instrument->midi_channel_mask) {
                         // XXX why? what?
-                        if (channel->ptr_instrument->midi_channel_mask >= 0x10000) {
+                        if (voice->ptr_instrument->midi_channel_mask >= 0x10000) {
                                 draw_text(numtostr(2, ((c-1) % 16)+1, buf), 31, pos, 6, 0);
                         } else {
                                 int ch = 0;
-                                while(!(channel->ptr_instrument->midi_channel_mask & (1 << ch))) ++ch;
+                                while(!(voice->ptr_instrument->midi_channel_mask & (1 << ch))) ++ch;
                                 draw_text(numtostr(2, ch, buf), 31, pos, 6, 0);
                         }
                         draw_char('/', 33, pos, 6, 0);
                         draw_text(num99tostr(ins, buf), 34, pos, 6, 0);
                         n = 36;
-                        if (channel->volume == 0)
+                        if (voice->volume == 0)
                                 fg = 4;
-                        else if (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE))
+                        else if (voice->flags & (CHN_KEYOFF | CHN_NOTEFADE))
                                 fg = 7;
                         else
                                 fg = 6;
                         draw_char(':', n++, pos, fg, 0);
-                        ptr = channel->ptr_instrument->name;
+                        ptr = voice->ptr_instrument->name;
                         draw_text_len( ptr, 25, n, pos, 6, 0);
                 } else {
-                        inuse = 0;
+                        continue;
                 }
 
                 /* last box: panning. this one's much easier than the
                  * other two, thankfully :) */
-                if (inuse && song_is_stereo()) {
-                        if (!channel->ptr_sample) {
+                if (song_is_stereo()) {
+                        if (!voice->ptr_sample) {
                                 /* nothing... */
-                        } else if (channel->flags & CHN_SURROUND) {
+                        } else if (voice->flags & CHN_SURROUND) {
                                 draw_text("Surround", 64, pos, 2, 0);
-                        } else if (channel->final_panning >> 2 == 0) {
+                        } else if (voice->final_panning >> 2 == 0) {
                                 draw_text("Left", 64, pos, 2, 0);
-                        } else if ((channel->final_panning + 3) >> 2 == 64) {
+                        } else if ((voice->final_panning + 3) >> 2 == 64) {
                                 draw_text("Right", 68, pos, 2, 0);
                         } else {
-                                draw_thumb_bar(64, pos, 9, 0, 256, channel->final_panning, 0);
+                                draw_thumb_bar(64, pos, 9, 0, 256, voice->final_panning, 0);
                         }
                 }
+        }
+}
+
+static void _draw_fill_notes(int col, int first_row, int height, int num_channels,
+                             int channel_width, int separator, draw_note_func draw_note, int bg)
+{
+        int row_pos, chan_pos;
+        song_note_t blank = {0};
+
+        for (row_pos = first_row; row_pos < first_row + height; row_pos++) {
+                for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
+                        draw_note(col + channel_width * chan_pos, row_pos, &blank, -1, 6, bg);
+                        if (separator)
+                                draw_char(168, (col - 1 + channel_width * (chan_pos + 1)), row_pos, 2, bg);
+                }
+                draw_note(col + channel_width * chan_pos, row_pos, &blank, -1, 6, bg);
         }
 }
 
@@ -380,6 +388,12 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
         if (separator)
                 channel_width++;
 
+#if 0
+        /* can't do this here -- each view does channel numbers differently, don't draw on top of them */
+        draw_box(4, base, 5 + num_channels * channel_width - !!separator, base + height - 1,
+                 BOX_THICK | BOX_INNER | BOX_INSET);
+#endif
+
         switch (song_get_mode()) {
         case MODE_PATTERN_LOOP:
                 prev_pattern_rows = next_pattern_rows = cur_pattern_rows
@@ -391,8 +405,9 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
                         /* this does, in fact, happen. just pretend that
                          * it's stopped :P */
         default:
-                        /* stopped (or step?) */
-                        /* TODO: fill the area with blank dots */
+                        /* stopped */
+                        draw_fill_chars(5, base + 1, 4 + num_channels * channel_width - !!separator,
+                                        base + height - 2, 0);
                         return;
                 }
                 cur_pattern_rows = song_get_pattern(current_song->orderlist[current_order], &cur_pattern);
@@ -414,6 +429,15 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
         if (height & 1)
                 rows_after++;
 
+        /* "fake" channels (hack for 64-channel view) */
+        if (num_channels > 64) {
+                _draw_fill_notes(5 + 64, base + 1, height - 2,
+                                 num_channels - 64, channel_width, separator, draw_note, 0);
+                _draw_fill_notes(5 + 64, base + 1 + rows_before, 1,
+                                 num_channels - 64, channel_width, separator, draw_note, 14);
+                num_channels = 64;
+        }
+
         /* draw the area above the current row */
         pattern = cur_pattern;
         total_rows = cur_pattern_rows;
@@ -422,7 +446,8 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
         while (row_pos > base) {
                 if (row < 0) {
                         if (prev_pattern == NULL) {
-                                /* TODO: fill it with blank dots */
+                                _draw_fill_notes(5, base + 1, row_pos - base,
+                                                 num_channels, channel_width, separator, draw_note, 0);
                                 break;
                         }
                         pattern = prev_pattern;
@@ -462,7 +487,8 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
         while (row_pos < base + height - 1) {
                 if (row >= total_rows) {
                         if (next_pattern == NULL) {
-                                /* TODO: fill it with blank dots */
+                                _draw_fill_notes(5, row_pos, base + height - row_pos - 1,
+                                                 num_channels, channel_width, separator, draw_note, 0);
                                 break;
                         }
                         pattern = next_pattern;
@@ -487,14 +513,9 @@ static void info_draw_track_5(int base, int height, int active, int first_channe
 {
         int chan, chan_pos, fg;
 
-        /* FIXME: once _draw_track_view draws the filler dots like it's
-         * supposed to, get rid of the draw_fill_chars here
-         * (and in all the other info_draw_track_ functions) */
-        draw_fill_chars(5, base + 1, 73, base + height - 2, 0);
-
         draw_box(4, base, 74, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 5; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (current_song->channels[chan - 1].flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -508,11 +529,9 @@ static void info_draw_track_8(int base, int height, int active, int first_channe
         int chan, chan_pos, fg;
         char buf[4];
 
-        draw_fill_chars(5, base + 1, 75, base + height - 2, 0);
-        
         draw_box(4, base, 76, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 8; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (current_song->channels[chan - 1].flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -530,11 +549,9 @@ static void info_draw_track_10(int base, int height, int active, int first_chann
         int chan, chan_pos, fg;
         char buf[4];
 
-        draw_fill_chars(5, base + 1, 74, base + height - 2, 0);
-
         draw_box(4, base, 75, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 10; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (current_song->channels[chan - 1].flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -552,11 +569,9 @@ static void info_draw_track_12(int base, int height, int active, int first_chann
         int chan, chan_pos, fg;
         char buf[4];
 
-        draw_fill_chars(5, base + 1, 76, base + height - 2, 0);
-
         draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 12; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (current_song->channels[chan - 1].flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -574,11 +589,9 @@ static void info_draw_track_18(int base, int height, int active, int first_chann
         int chan, chan_pos, fg;
         char buf[4];
 
-        draw_fill_chars(5, base + 1, 75, base + height - 2, 0);
-
         draw_box(4, base, 76, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 18; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (current_song->channels[chan - 1].flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -592,11 +605,9 @@ static void info_draw_track_24(int base, int height, int active, int first_chann
         int chan, chan_pos, fg;
         char buf[4];
 
-        draw_fill_chars(5, base + 1, 76, base + height - 2, 0);
-
         draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 24; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (current_song->channels[chan - 1].flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -610,11 +621,9 @@ static void info_draw_track_36(int base, int height, int active, int first_chann
         int chan, chan_pos, fg;
         char buf[4];
 
-        draw_fill_chars(5, base + 1, 76, base + height - 2, 0);
-
         draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 36; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (current_song->channels[chan - 1].flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 6 : 1);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 2 : 0));
@@ -631,11 +640,9 @@ static void info_draw_track_64(int base, int height, int active, int first_chann
 
         assert(first_channel == 1);
 
-        draw_fill_chars(5, base + 1, nchan + 4, base + height - 2, 0);
-
         draw_box(4, base, nchan + 5, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
         for (chan = first_channel, chan_pos = 0; chan_pos < 64; chan++, chan_pos++) {
-                if (song_get_channel(chan - 1)->flags & CHN_MUTE)
+                if (current_song->channels[chan - 1].flags & CHN_MUTE)
                         fg = (chan == selected_channel ? 14 : 9);
                 else
                         fg = (chan == selected_channel ? 3 : (active ? 10 : 8));
@@ -644,11 +651,7 @@ static void info_draw_track_64(int base, int height, int active, int first_chann
         for (; chan_pos < nchan; chan_pos++)
                 draw_char(0, 5 + chan_pos, base, 1, 1);
 
-        /* TODO | fix _draw_track_view to accept values >64 for the number of
-         * TODO | channels to draw, and put empty dots in the extra channels.
-         * TODO | (would only be useful for this particular case) */
-        /*_draw_track_view(base, height, first_channel, nchan, 1, 0, draw_note_1);*/
-        _draw_track_view(base, height, first_channel, 64, 1, 0, draw_note_1);
+        _draw_track_view(base, height, first_channel, nchan, 1, 0, draw_note_1);
 }
 
 static void info_draw_channels(int base, UNUSED int height, int active, UNUSED int first_channel)
@@ -667,84 +670,56 @@ static void info_draw_channels(int base, UNUSED int height, int active, UNUSED i
 /* Yay it works, only took me forever and a day to get it right. */
 static void info_draw_note_dots(int base, int height, int active, int first_channel)
 {
-        /* once this works, most of these variables can be optimized out (some of them are just used once) */
         int fg, v;
         int c, pos;
         int n;
-        song_voice_t *channel;
-        song_voice_t *channel0 = song_get_mix_channel(0); // XXX hack
-        song_sample_t *samples = song_get_sample(0); // XXX hack
-        unsigned int *channel_list;
+        song_voice_t *voice;
         char buf[4];
         uint8_t d, dn;
-        /* f#2 -> f#8 = 73 columns */
-        /* lower nybble = colour, upper nybble = size */
-        uint8_t dot_field[73][36] = { {0} };
+        uint8_t dot_field[73][36] = { {0} }; // f#2 -> f#8 = 73 columns
 
         draw_fill_chars(5, base + 1, 77, base + height - 2, 0);
         draw_box(4, base, 78, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
-        n = song_get_mix_state(&channel_list);
+        n = current_song->num_voices;
         while (n--) {
-                channel = song_get_mix_channel(channel_list[n]);
+                voice = current_song->voices + current_song->voice_mix[n];
 
                 /* 31 = f#2, 103 = f#8. (i hope ;) */
-                if (!(channel->ptr_sample && channel->note >= 31 && channel->note <= 103))
+                if (!(voice->ptr_sample && voice->note >= 31 && voice->note <= 103))
                         continue;
-                pos = channel->master_channel;
-                if (!pos)
-                        pos = 1 + (channel - channel0);
+                pos = voice->master_channel ?: (1 + current_song->voice_mix[n]);
                 if (pos < first_channel)
                         continue;
                 pos -= first_channel;
                 if (pos > height - 1)
                         continue;
 
-                // (XXX why check this here? it was just checked a few lines ago, did I screw up a rename?)
-                if (channel->ptr_sample) {
-                        /* yay it's easy */
-                        fg = channel->ptr_sample - samples;
-                } else {
-                        for (fg = 0; fg < MAX_SAMPLES; fg++) {
-                                if (channel->current_sample_data == samples[fg].data)
-                                        break;
-                        }
-                        if (fg == MAX_SAMPLES) {
-                                /* no luck. oh well */
-                                fg = 0;
-                        }
-                }
-                fg = (channel->flags & CHN_MUTE) ? 1 : (fg % 4 + 2);
+                fg = (voice->flags & CHN_MUTE) ? 1 : ((voice->ptr_sample - current_song->samples) % 4 + 2);
 
-                if (velocity_mode && !(status.flags & CLASSIC_MODE))
-                        v = (channel->final_volume + 2047) >> 11;
+                if (velocity_mode || (status.flags & CLASSIC_MODE))
+                        v = (voice->final_volume + 2047) >> 11;
                 else
-                        v = (channel->vu_meter + 31) >> 5;
-                d = dot_field[channel->note - 31][pos];
+                        v = (voice->vu_meter + 31) >> 5;
+                d = dot_field[voice->note - 31][pos];
                 dn = (v << 4) | fg;
                 if (dn > d)
-                        dot_field[channel->note - 31][pos] = dn;
+                        dot_field[voice->note - 31][pos] = dn;
         }
 
         for (c = first_channel, pos = 0; pos < height - 2; pos++, c++) {
                 for (n = 0; n < 73; n++) {
-                        d = dot_field[n][pos];
+                        d = dot_field[n][pos] ?: 0x06;
 
-                        if (d == 0) {
-                                /* stick a blank dot there */
-                                draw_char(193, n + 5, pos + base + 1, 6, 0);
-                                continue;
-                        }
                         fg = d & 0xf;
                         v = d >> 4;
-                        /* btw: Impulse Tracker uses char 173 instead of 193. why? */
                         draw_char(v + 193, n + 5, pos + base + 1, fg, 0);
                 }
 
                 if (c == selected_channel) {
-                        fg = (song_get_channel(c - 1)->flags & CHN_MUTE) ? 6 : 3;
+                        fg = (current_song->channels[c - 1].flags & CHN_MUTE) ? 6 : 3;
                 } else {
-                        if (song_get_channel(c - 1)->flags & CHN_MUTE)
+                        if (current_song->channels[c - 1].flags & CHN_MUTE)
                                 continue;
                         fg = active ? 1 : 0;
                 }
@@ -754,6 +729,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 
 /* --------------------------------------------------------------------- */
 /* click receivers */
+
 static void click_chn_x(int x, int w, int skip, int fc)
 {
         while (x > 0 && fc <= 64) {
@@ -766,6 +742,7 @@ static void click_chn_x(int x, int w, int skip, int fc)
                 x -= skip;
         }
 }
+
 static void click_chn_is_x(int x, UNUSED int y, int nc, int fc)
 {
         if (x < 5) return;
@@ -794,17 +771,19 @@ static void click_chn_is_x(int x, UNUSED int y, int nc, int fc)
                 break;
         };
 }
+
 static void click_chn_is_y_nohead(UNUSED int x, int y, UNUSED int nc, int fc)
 {
         selected_channel = CLAMP(y+fc, 1, 64);
 }
+
 static void click_chn_is_y(UNUSED int x, int y, UNUSED int nc, int fc)
 {
         if (!y) return;
         selected_channel = CLAMP((y+fc)-1, 1, 64);
 }
-static void click_chn_nil(UNUSED int x, UNUSED int y,
-                UNUSED int nc, UNUSED int fc)
+
+static void click_chn_nil(UNUSED int x, UNUSED int y, UNUSED int nc, UNUSED int fc)
 {
         /* do nothing */
 }
@@ -1321,16 +1300,9 @@ static int info_page_handle_key(struct key_event * k)
 
 static void info_page_playback_update(void)
 {
-        /* this will need changed after sample playback is working... */
         if (song_get_mode() != MODE_STOPPED)
                 status.flags |= NEED_UPDATE;
 }
-static void info_page_set(void)
-{
-        status.flags |= NEED_UPDATE;
-}
-
-/* --------------------------------------------------------------------- */
 
 void info_load_page(struct page *page)
 {
@@ -1339,7 +1311,6 @@ void info_load_page(struct page *page)
         page->total_widgets = 1;
         page->widgets = widgets_info;
         page->help_index = HELP_INFO_PAGE;
-        page->set_page = info_page_set;
 
         create_other(widgets_info + 0, 0, info_page_handle_key, info_page_redraw);
 }
