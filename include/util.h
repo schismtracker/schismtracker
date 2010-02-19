@@ -115,7 +115,7 @@ char *num99tostr(int n, char *buf);
 
 /* string handling */
 const char *get_basename(const char *filename);
-const char *get_extension(const char *filename);
+const char *get_extension(const char *filename); // including dot; "" if no extension (note: used to strip dot)
 char *get_parent_directory(const char *dirname);
 int ltrim_string(char *s); // return: length of string after trimming
 int rtrim_string(char *s);

@@ -210,13 +210,9 @@ const char *get_extension(const char *filename)
         filename = get_basename(filename);
 
         const char *extension = strrchr(filename, '.');
-        if (extension) {
-                /* skip the dot */
-                extension++;
-        } else {
-                /* no extension? bummer. point to the \0
-                 * at the end of the string. */
-                extension = strrchr(filename, '\0');
+        if (!extension) {
+                /* no extension? bummer. point to the \0 at the end of the string. */
+                extension = strchr(filename, '\0');
         }
 
         return extension;

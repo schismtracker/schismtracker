@@ -162,7 +162,7 @@ static int fontgrep(dmoz_file_t *f)
         if (f->type & TYPE_BROWSABLE_MASK)
                 return 0; /* we don't care about directories and stuff */
         ext = get_extension(f->base);
-        return (strcasecmp(ext, "itf") == 0 || strcasecmp(ext, "fnt") == 0);
+        return (strcasecmp(ext, ".itf") == 0 || strcasecmp(ext, ".fnt") == 0);
 }
 
 static void load_fontlist(void)
