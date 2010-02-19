@@ -657,7 +657,7 @@ static char *get_filename(const char *template, int n)
         s = strdup(template);
         if (!s)
                 return NULL;
-        sub = strstr(s, "%c");
+        sub = strcasestr(s, "%c");
         if (!sub) {
                 errno = EINVAL;
                 free(s);

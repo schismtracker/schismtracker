@@ -933,12 +933,47 @@ static struct save_format *get_save_format(struct save_format *formats, const ch
 }
 
 
+static char *mangle_filename(const char *in, const char *mid, const char *ext)
+{
+        char *ret;
+        const char *iext;
+        size_t baselen, rlen;
+
+        iext = get_extension(in);
+        rlen = baselen = iext - in;
+        if (mid)
+                rlen += strlen(mid);
+        if (iext[0])
+                rlen += strlen(iext);
+        else if (ext)
+                rlen += strlen(ext);
+        ret = malloc(rlen + 1); /* room for terminating \0 */
+        if (!ret)
+                return NULL;
+        strncpy(ret, in, baselen);
+        ret[baselen] = '\0';
+        if (mid)
+                strcat(ret, mid);
+        /* maybe output a warning if iext and ext differ? */
+        if (iext[0])
+                strcat(ret, iext);
+        else if (ext)
+                strcat(ret, ext);
+        return ret;
+}
+
 int song_export(const char *filename, const char *type)
 {
         struct save_format *format = get_save_format(song_export_formats, type);
+        const char *mid;
+        char *mangle;
+        int r;
 
         if (!format)
                 return SAVE_INTERNAL_ERROR;
+
+        mid = (format->f.export.multi && strcasestr(filename, "%c") == NULL) ? ".%c" : NULL;
+        mangle = mangle_filename(filename, mid, format->ext);
 
         log_nl();
         log_nl();
@@ -946,7 +981,9 @@ int song_export(const char *filename, const char *type)
         log_underline(strlen(format->name) + 13);
 
         /* disko does the rest of the log messages itself */
-        switch (disko_export_song(filename, format)) {
+        r = disko_export_song(mangle, format);
+        free(mangle);
+        switch (r) {
         case DW_OK:
                 return SAVE_SUCCESS;
         case DW_ERROR:
@@ -961,9 +998,12 @@ int song_save(const char *filename, const char *type)
 {
         int ret, backup;
         struct save_format *format = get_save_format(song_save_formats, type);
+        char *mangle;
 
         if (!format)
                 return SAVE_INTERNAL_ERROR;
+
+        mangle = mangle_filename(filename, NULL, format->ext);
 
         log_nl();
         log_nl();
@@ -995,9 +1035,10 @@ saying "Could not save file". This can be seen rather easily by trying to save a
 such as "abc|def.it". This dialog is presented both when saving from F10 and Ctrl-S.
 */
 
-        disko_t *fp = disko_open(filename);
+        disko_t *fp = disko_open(mangle);
         if (!fp) {
-                log_perror(filename);
+                log_perror(mangle);
+                free(mangle);
                 return SAVE_FILE_ERROR;
         }
 
@@ -1015,12 +1056,12 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
         switch (ret) {
         case SAVE_SUCCESS:
                 status.flags &= ~SONG_NEEDS_SAVE;
-                if (strcasecmp(song_filename, filename))
-                        song_set_filename(filename);
+                if (strcasecmp(song_filename, mangle))
+                        song_set_filename(mangle);
                 log_appendf(5, " Done");
                 break;
         case SAVE_FILE_ERROR:
-                log_perror(filename);
+                log_perror(mangle);
                 break;
         case SAVE_INTERNAL_ERROR:
         default: // ???
@@ -1028,6 +1069,7 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
                 break;
         }
 
+        free(mangle);
         return ret;
 }
 
