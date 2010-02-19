@@ -149,7 +149,7 @@ static void video_dialog_draw_const(void)
         draw_text("reverted to the last known-good", 21, 22, 0, 2);
         draw_text("settings.", 21, 23, 0, 2);
         draw_text("To use the new video mode, and make", 21, 24, 0, 2);
-        draw_text("it default, press select OK below.", 21, 25, 0, 2);
+        draw_text("it default, select OK.", 21, 25, 0, 2);
 }
 
 static struct widget video_dialog_widgets[2];
