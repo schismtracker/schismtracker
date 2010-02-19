@@ -208,7 +208,6 @@ static void loadsave_song_changed(void)
                 return;
         ext = get_extension(ptr);
         if (ext[0] && ext[1]) {
-                ext++; /* skip the dot */
                 for (i = 0; song_save_formats[i].label; i++) {
                         if (strcasecmp(ext, song_save_formats[i].ext) == 0) {
                                 /* ugh :) offset to the button for the file type on the save module
