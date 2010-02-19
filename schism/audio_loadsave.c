@@ -884,19 +884,19 @@ static int _export_tail_stub(UNUSED disko_t *fp)
 /* ------------------------------------------------------------------------- */
 
 struct save_format song_save_formats[] = {
-        {"IT", "Impulse Tracker", "it", {.save_song = _save_it}},
-        {"S3M", "Scream Tracker 3", "s3m", {.save_song = _save_stub}},
+        {"IT", "Impulse Tracker", ".it", {.save_song = _save_it}},
+        {"S3M", "Scream Tracker 3", ".s3m", {.save_song = _save_stub}},
         {.label = NULL}
 };
 
 struct save_format song_export_formats[] = {
-        {"AIFF", "Audio IFF", "aiff",
+        {"AIFF", "Audio IFF", ".aiff",
                 {.export = {fmt_aiff_export_head, fmt_aiff_export_silence,
                         fmt_aiff_export_body, fmt_aiff_export_tail, 0}}},
-        {"MAIFF", "Audio IFF multi-write", "aiff",
+        {"MAIFF", "Audio IFF multi-write", ".aiff",
                 {.export = {fmt_aiff_export_head, fmt_aiff_export_silence,
                         fmt_aiff_export_body, fmt_aiff_export_tail, 1}}},
-        {"WAV", "WAV", "wav",
+        {"WAV", "WAV", ".wav",
                 {.export = {_export_head_stub, _export_silence_stub,
                         _export_body_stub, _export_tail_stub, 0}}},
         {.label = NULL}
@@ -905,12 +905,12 @@ struct save_format song_export_formats[] = {
 // <distance> .. dont ask
 
 struct save_format sample_save_formats[] = {
-        {"ITS", "Impulse Tracker", "its", {.save_sample = fmt_its_save_sample}},
-        //{"S3I", "Scream Tracker", "s3i", {.save_sample = fmt_s3i_save_sample}},
-        {"AIFF", "Audio IFF", "aiff", {.save_sample = fmt_aiff_save_sample}},
-        {"AU", "Sun/NeXT", "au", {.save_sample = fmt_au_save_sample}},
-        {"WAV", "WAV", "wav", {.save_sample = fmt_wav_save_sample}},
-        {"RAW", "Raw", "raw", {.save_sample = fmt_raw_save_sample}},
+        {"ITS", "Impulse Tracker", ".its", {.save_sample = fmt_its_save_sample}},
+        //{"S3I", "Scream Tracker", ".s3i", {.save_sample = fmt_s3i_save_sample}},
+        {"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}},
+        {"AU", "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}},
+        {"WAV", "WAV", ".wav", {.save_sample = fmt_wav_save_sample}},
+        {"RAW", "Raw", ".raw", {.save_sample = fmt_raw_save_sample}},
         {.label = NULL}
 };
 
