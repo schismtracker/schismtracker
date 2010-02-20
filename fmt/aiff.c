@@ -317,7 +317,7 @@ struct aiff_writedata {
 };
 
 static int aiff_header(disko_t *fp, int bits, int channels, int rate,
-        const char *name, size_t length, struct aiff_writedata *awd)
+        const char *name, size_t length, struct aiff_writedata *awd /* out */)
 {
         int16_t s;
         uint32_t ul;

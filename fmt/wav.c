@@ -252,16 +252,21 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 /* --------------------------------------------------------------------------------------------------------- */
 /* wav is like aiff's retarded cousin */
 
-int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
+struct wav_writedata {
+        long data_size; // seek position for writing data size (in bytes)
+        size_t numbytes; // how many bytes have been written
+        int bps; // bytes per sample
+        int swap; // should be byteswapped?
+};
+
+static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t length,
+        struct wav_writedata *wwd /* out */)
 {
         int16_t s;
         uint32_t ul;
         int bps = 1;
 
-        if (smp->flags & CHN_16BIT)
-                bps *= 2;
-        if (smp->flags & CHN_STEREO)
-                bps *= 2;
+        bps *= ((bits + 7) / 8) * channels;
 
         /* write a very large size for now */
         disko_write(fp, "RIFF\377\377\377\377WAVEfmt ", 16);
@@ -269,24 +274,36 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
         disko_write(fp, &ul, 4);
         s = bswapLE16(1); // linear pcm
         disko_write(fp, &s, 2);
-        s = bswapLE16((smp->flags & CHN_STEREO) ? 2 : 1); // number of channels
+        s = bswapLE16(channels); // number of channels
         disko_write(fp, &s, 2);
-        ul = bswapLE32(smp->c5speed); // sample rate
+        ul = bswapLE32(rate); // sample rate
         disko_write(fp, &ul, 4);
-        ul = bswapLE32(bps * smp->c5speed); // "byte rate" (why?! I have no idea)
+        ul = bswapLE32(bps * rate); // "byte rate" (why?! I have no idea)
         disko_write(fp, &ul, 4);
         s = bswapLE16(bps); // (oh, come on! the format already stores everything needed to calculate this!)
         disko_write(fp, &s, 2);
-        s = bswapLE16((smp->flags & CHN_16BIT) ? 16 : 8); // bits per sample
+        s = bswapLE16(bits); // bits per sample
         disko_write(fp, &s, 2);
 
         disko_write(fp, "data", 4);
-        ul = bswapLE32(bps * smp->length);
+        if (wwd)
+                wwd->data_size = disko_tell(fp);
+        ul = bswapLE32(bps * length);
         disko_write(fp, &ul, 4);
 
+        return bps;
+}
+
+int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
+{
+        int bps;
+        uint32_t ul;
         uint32_t flags = SF_LE;
         flags |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU);
         flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
+
+        bps = wav_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
+                smp->c5speed, smp->length, NULL);
 
         if (csf_write_sample(fp, smp, flags) != smp->length * bps) {
                 log_appendf(4, "WAV: unexpected data size written");
@@ -300,5 +317,79 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
         disko_write(fp, &ul, 4);
 
         return SAVE_SUCCESS;
+}
+
+
+int fmt_wav_export_head(disko_t *fp, int bits, int channels, int rate)
+{
+        struct wav_writedata *wwd = malloc(sizeof(struct wav_writedata));
+        if (!wwd)
+                return DW_ERROR;
+        fp->userdata = wwd;
+        wwd->bps = wav_header(fp, bits, channels, rate, ~0, wwd);
+        wwd->numbytes = 0;
+#if WORDS_BIGENDIAN
+        wwd->swap = (bits > 8);
+#else
+        wwd->swap = 0;
+#endif
+
+        return DW_OK;
+}
+
+int fmt_wav_export_body(disko_t *fp, const uint8_t *data, size_t length)
+{
+        struct wav_writedata *wwd = fp->userdata;
+
+        if (length % wwd->bps) {
+                log_appendf(4, "WAV export: received uneven length");
+                return DW_ERROR;
+        }
+
+        wwd->numbytes += length;
+
+        if (wwd->swap) {
+                const int16_t *ptr = (const int16_t *) data;
+                uint16_t v;
+
+                length /= 2;
+                while (length--) {
+                        v = *ptr;
+                        v = bswapLE16(v);
+                        disko_write(fp, &v, 2);
+                        ptr++;
+                }
+        } else {
+                disko_write(fp, data, length);
+        }
+
+        return DW_OK;
+}
+
+int fmt_wav_export_silence(disko_t *fp, long bytes)
+{
+        disko_seek(fp, bytes, SEEK_CUR);
+        return DW_OK;
+}
+
+int fmt_wav_export_tail(disko_t *fp)
+{
+        struct wav_writedata *wwd = fp->userdata;
+        uint32_t ul;
+
+        /* fix the length in the file header */
+        ul = disko_tell(fp) - 8;
+        ul= bswapLE32(ul);
+        disko_seek(fp, 4, SEEK_SET);
+        disko_write(fp, &ul, 4);
+
+        /* write the other lengths */
+        disko_seek(fp, wwd->data_size, SEEK_SET);
+        ul = bswapLE32(wwd->numbytes);
+        disko_write(fp, &ul, 4);
+
+        free(wwd);
+
+        return DW_OK;
 }
 
