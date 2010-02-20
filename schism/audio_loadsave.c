@@ -856,31 +856,6 @@ static int _save_stub(UNUSED disko_t *fp, UNUSED song_t *song)
         return SAVE_INTERNAL_ERROR;
 }
 
-/* blah... */
-static int _export_head_stub(UNUSED disko_t *fp, UNUSED int bits, UNUSED int channels, UNUSED int rate)
-{
-        log_appendf(4, "Export not ready yet");
-        return SAVE_INTERNAL_ERROR;
-}
-
-static int _export_silence_stub(UNUSED disko_t *fp, UNUSED long bytes)
-{
-        log_appendf(4, "Export not ready yet");
-        return SAVE_INTERNAL_ERROR;
-}
-
-static int _export_body_stub(UNUSED disko_t *fp, UNUSED const uint8_t *data, UNUSED size_t length)
-{
-        log_appendf(4, "Export not ready yet");
-        return SAVE_INTERNAL_ERROR;
-}
-
-static int _export_tail_stub(UNUSED disko_t *fp)
-{
-        log_appendf(4, "Export not ready yet");
-        return SAVE_INTERNAL_ERROR;
-}
-
 /* ------------------------------------------------------------------------- */
 
 struct save_format song_save_formats[] = {
@@ -889,16 +864,14 @@ struct save_format song_save_formats[] = {
         {.label = NULL}
 };
 
+#define EXPORT_FUNCS(t) \
+        fmt_##t##_export_head, fmt_##t##_export_silence, fmt_##t##_export_body, fmt_##t##_export_tail
+
 struct save_format song_export_formats[] = {
-        {"AIFF", "Audio IFF", ".aiff",
-                {.export = {fmt_aiff_export_head, fmt_aiff_export_silence,
-                        fmt_aiff_export_body, fmt_aiff_export_tail, 0}}},
-        {"MAIFF", "Audio IFF multi-write", ".aiff",
-                {.export = {fmt_aiff_export_head, fmt_aiff_export_silence,
-                        fmt_aiff_export_body, fmt_aiff_export_tail, 1}}},
-        {"WAV", "WAV", ".wav",
-                {.export = {_export_head_stub, _export_silence_stub,
-                        _export_body_stub, _export_tail_stub, 0}}},
+        {"WAV", "WAV", ".wav", {.export = {EXPORT_FUNCS(wav), 0}}},
+        {"MWAV", "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}},
+        {"AIFF", "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}},
+        {"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}},
         {.label = NULL}
 };
 // <distance> and maiff sounds like something you'd want to hug
