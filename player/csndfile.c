@@ -376,21 +376,6 @@ int csf_get_highest_used_channel(song_t *csf)
         return highchan;
 }
 
-extern song_t *current_song;
-void storlek_super_debug_key(void); void storlek_super_debug_key(void)
-{
-        printf("\n");
-        printf("              song: %p\n", current_song);
-        printf("last order in song: %d\n", csf_last_order(current_song));
-        printf("  total num orders: %d\n", csf_get_num_orders(current_song));
-        printf("   pattern 0 empty: %d\n", csf_pattern_is_empty(current_song, 0));
-        printf("    total patterns: %d\n", csf_get_num_patterns(current_song));
-        printf("    sample 1 empty: %d\n", csf_sample_is_empty(current_song->samples + 1));
-        printf("     total samples: %d\n", csf_get_num_samples(current_song));
-        printf("instrument 1 empty: %d\n", csf_instrument_is_empty(current_song->instruments[1]));
-        printf(" total instruments: %d\n", csf_get_num_instruments(current_song));
-}
-
 //////////////////////////////////////////////////////////////////////////
 // Misc functions
 
