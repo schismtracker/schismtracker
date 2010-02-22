@@ -345,47 +345,8 @@ int song_load_unchecked(const char *file)
                 log_appendf(5, " %s", tid);
         if (!nins)
                 *strrchr(fmt, ',') = 0; // cut off 'instruments'
-        log_appendf(5, fmt, song_get_num_patterns(), nsmp, nins);
+        log_appendf(5, fmt, csf_get_num_patterns(current_song), nsmp, nins);
 
-
-        return 1;
-}
-
-// ------------------------------------------------------------------------------------------------------------
-
-int song_instrument_is_empty(int n)
-{
-        if (current_song->instruments[n] == NULL)
-                return 1;
-        if (current_song->instruments[n]->filename[0] != '\0')
-                return 0;
-        for (int i = 0; i < 25; i++) {
-                if (current_song->instruments[n]->name[i] != '\0' && current_song->instruments[n]->name[i] != ' ')
-                        return 0;
-        }
-        for (int i = 0; i < 119; i++) {
-                if (current_song->instruments[n]->sample_map[i] != 0)
-                        return 0;
-        }
-        // this used to check midi program and bank, but if those are set to -1 the instrument should still
-        // be considered empty. not to mention, isn't midi program 0 meaningful?
-        if (current_song->instruments[n]->midi_channel_mask != 0)
-                return 0;
-        return 1;
-}
-
-int song_sample_is_empty(int n)
-{
-        n++;
-
-        if (current_song->samples[n].length)
-                return 0;
-        if (current_song->samples[n].filename[0] != '\0')
-                return 0;
-        for (int i = 0; i < 25; i++) {
-                if (current_song->samples[n].name[i] != '\0' && current_song->samples[n].name[i] != ' ')
-                        return 0;
-        }
 
         return 1;
 }
@@ -678,29 +639,19 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
 
         extra = 2;
 
-        // IT always saves at least two orders.
-        nord = 255;
-        while (nord >= 1 && current_song->orderlist[nord] == 0xff)
-                nord--;
-        nord += 2;
+        /* IT always saves at least two orders -- and requires an extra order at the end (which gets chopped!)
+        However, the loader refuses to load files with too much data in the orderlist, so in the pathological
+        case where order 255 has data, writing an extra 0xFF at the end will result in a file that can't be
+        loaded back (for now). Eventually this can be fixed, but at least for a while it's probably a great
+        idea not to save things that other versions won't load. */
+        nord = csf_get_num_orders(current_song);
+        nord = CLAMP(nord + 1, 2, MAX_ORDERS);
 
-        nins = 198;
-        while (nins >= 0 && song_instrument_is_empty(nins))
-                nins--;
-        if (nins < 0) nins = 0; // stupid workaround
-
-        nsmp = 198;
-        while (nsmp >= 0 && song_sample_is_empty(nsmp))
-                nsmp--;
-        nsmp++;
-        if (nsmp > 200) nsmp = 200; /* is this okay? */
+        nins = csf_get_num_instruments(current_song);
+        nsmp = csf_get_num_samples(current_song);
 
         // IT always saves at least one pattern.
-        //npat = 199;
-        //while (npat >= 0 && song_pattern_is_empty(npat))
-        //      npat--;
-        //npat++;
-        npat = song_get_num_patterns() + 1;
+        npat = csf_get_num_patterns(current_song) ?: 1;
 
         hdr.id = bswapLE32(0x4D504D49); // IMPM
         strncpy((char *) hdr.songname, current_song->title, 25);
@@ -813,7 +764,7 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
                 save_its_header(fp, current_song->samples + n + 1);
         }
         for (n = 0; n < npat; n++) {
-                if (song_pattern_is_empty(n)) {
+                if (csf_pattern_is_empty(current_song, n)) {
                         para_pat[n] = 0;
                 } else {
                         para_pat[n] = disko_tell(fp);
@@ -1171,7 +1122,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
                 }
                 /* now clear everything "empty" so we have extra slots */
                 for (int j = 1; j < MAX_SAMPLES; j++) {
-                        if (song_sample_is_empty(j)) sampmap[j] = 0;
+                        if (csf_sample_is_empty(current_song->samples + j)) sampmap[j] = 0;
                 }
         }
 
@@ -1324,12 +1275,12 @@ void song_create_host_instrument(int smp)
 {
         int ins = instrument_get_current();
 
-        if (song_instrument_is_empty(smp))
+        if (csf_instrument_is_empty(current_song->instruments[smp]))
                 ins = smp;
-        else if ((status.flags & CLASSIC_MODE) || !song_instrument_is_empty(ins))
-                ins = song_first_unused_instrument();
+        else if ((status.flags & CLASSIC_MODE) || !csf_instrument_is_empty(current_song->instruments[ins]))
+                ins = csf_first_blank_instrument(current_song, 0);
 
-        if (ins) {
+        if (ins > 0) {
                 song_init_instrument_from_sample(ins, smp);
                 status_text_flash("Sample assigned to Instrument %d", ins);
         } else {
@@ -1518,7 +1469,7 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
         if (!slot) return 0;
         if (ii->sample_map[slot]) return ii->sample_map[slot];
         for (x = ii->basex; x < MAX_SAMPLES; x++) {
-                if (!song_sample_is_empty(x-1)) continue;
+                if (!csf_sample_is_empty(current_song->samples + x - 1)) continue;
 
                 ii->expect_samples++;
                 ii->sample_map[slot] = x;

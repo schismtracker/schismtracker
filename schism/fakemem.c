@@ -42,9 +42,9 @@ unsigned int memused_patterns(void)
         _cache_ok |= 1;
 
         q = 0;
-        nm = song_get_num_patterns();
+        nm = csf_get_num_patterns(current_song);
         for (i = 0; i < nm; i++) {
-                if (song_pattern_is_empty(i)) continue;
+                if (csf_pattern_is_empty(current_song, i)) continue;
                 rows = song_get_pattern(i, &ptr);
                 q += (rows*256);
         }
@@ -102,7 +102,7 @@ unsigned int memused_instruments(void)
 
         q = 0;
         for (i = 0; i < 99; i++) {
-                if (song_instrument_is_empty(i)) continue;
+                if (csf_instrument_is_empty(current_song->instruments[i])) continue;
                 q += 512;
         }
         return i_cache = q;

@@ -197,9 +197,9 @@ static int _last_vis_inst(void)
 
         n = 99;
         j = 0;
-        /* 65 is last visible sample on last page */
+        /* 65 is first visible sample on last page */
         for (i = 65; i < MAX_INSTRUMENTS; i++) {
-                if (!song_instrument_is_empty(i)) {
+                if (!csf_instrument_is_empty(current_song->instruments[i])) {
                         j = i;
                 }
         }
