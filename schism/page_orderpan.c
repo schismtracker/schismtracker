@@ -58,7 +58,7 @@ void update_current_order(void)
         char buf[4];
 
         draw_text(numtostr(3, current_order, buf), 12, 5, 5, 0);
-        draw_text(numtostr(3, csf_get_num_orders(current_song), buf), 16, 5, 5, 0);
+        draw_text(numtostr(3, csf_last_order(current_song), buf), 16, 5, 5, 0);
 }
 
 
@@ -133,7 +133,7 @@ static void orderlist_cheater(void)
         cp = get_current_pattern();
         best = first = -1;
         for (i = 0; i < 199; i++) {
-                if (song_pattern_is_empty(i)) {
+                if (csf_pattern_is_empty(current_song, i)) {
                         if (first == -1) first = i;
                         if (best == -1) best = i;
                 } else {
@@ -255,7 +255,7 @@ static void orderlist_add_unused_patterns(void)
          * n = orderlist position
          * p = pattern iterator
          * np = number of patterns */
-        int n0, n, p, np = song_get_num_patterns();
+        int n0, n, p, np = csf_get_num_patterns(current_song);
         uint8_t used[200] = {0};                /* could be a bitset... */
 
         for (n = 0; n < 255; n++)
@@ -272,7 +272,7 @@ static void orderlist_add_unused_patterns(void)
 
         n0 = n;
         for (p = 0; p <= np; p++) {
-                if (used[p] || song_pattern_is_empty(p))
+                if (used[p] || csf_pattern_is_empty(current_song, p))
                         continue;
                 if (n > 255) {
                         /* status_text_flash("No more room in orderlist"); */
@@ -487,7 +487,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 if (k->state) return 1;
-                new_order = csf_get_num_orders(current_song);
+                new_order = csf_last_order(current_song);
                 if (current_song->orderlist[new_order] != ORDER_LAST)
                         new_order++;
                 break;

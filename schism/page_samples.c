@@ -94,9 +94,9 @@ static int _last_vis_sample(void)
 
         n = 99;
         j = 0;
-        /* 65 is last visible sample on last page */
+        /* 65 is first visible sample on last page */
         for (i = 65; i < MAX_SAMPLES; i++) {
-                if (!song_sample_is_empty(i)) {
+                if (!csf_sample_is_empty(current_song->samples + i)) {
                         j = i;
                 }
         }

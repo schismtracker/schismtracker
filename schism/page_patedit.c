@@ -2367,7 +2367,7 @@ void update_current_pattern(void)
         char buf[4];
 
         draw_text(numtostr(3, current_pattern, buf), 12, 6, 5, 0);
-        draw_text(numtostr(3, song_get_num_patterns(), buf), 16, 6, 5, 0);
+        draw_text(numtostr(3, csf_get_num_patterns(current_song), buf), 16, 6, 5, 0);
 }
 
 int get_current_pattern(void)
@@ -4269,7 +4269,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
         if (k->mod & KMOD_SHIFT)
                 shift_selection_update();
 
-        draw_text(numtostr(3, song_get_num_patterns(), buf), 16, 6, 5, 0);
+        draw_text(numtostr(3, csf_get_num_patterns(current_song), buf), 16, 6, 5, 0);
         draw_text(numtostr(3, current_row, buf), 12, 7, 5, 0);
 
         status.flags |= NEED_UPDATE;

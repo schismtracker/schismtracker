@@ -196,6 +196,200 @@ void csf_free_sample(void *p)
                 free(p - 16);
 }
 
+/* --------------------------------------------------------------------------------------------------------- */
+/* Counting and checking stuff. */
+
+static int name_is_blank(char *name)
+{
+        int n;
+        for (n = 0; n < 25; n++) {
+                if (name[n] != '\0' && name[n] != ' ')
+                        return 0;
+        }
+        return 1;
+}
+
+static const song_note_t blank_pattern[64 * 64];
+int csf_pattern_is_empty(song_t *csf, int n)
+{
+        if (!csf->patterns[n])
+                return 1;
+        if (csf->pattern_size[n] != 64)
+                return 0;
+        return !memcmp(csf->patterns[n], blank_pattern, sizeof(blank_pattern));
+}
+
+int csf_sample_is_empty(song_sample_t *smp)
+{
+        return (smp->data == NULL
+                && name_is_blank(smp->name)
+                && smp->filename[0] == '\0'
+                && smp->c5speed == 8363
+                && smp->volume == 64*4 //mphack
+                && smp->global_volume == 64
+                && smp->panning == 0
+                && !(smp->flags & (CHN_LOOP | CHN_SUSTAINLOOP | CHN_PANNING))
+                && smp->length == 0
+                && smp->loop_start == 0
+                && smp->loop_end == 0
+                && smp->sustain_start == 0
+                && smp->sustain_end == 0
+                && smp->vib_type == VIB_SINE
+                && smp->vib_rate == 0
+                && smp->vib_depth == 0
+                && smp->vib_speed == 0
+        );
+}
+
+static int env_is_blank(song_envelope_t *env, int value)
+{
+        return (env->nodes == 2
+                && env->loop_start == 0
+                && env->loop_end == 0
+                && env->sustain_start == 0
+                && env->sustain_end == 0
+                && env->ticks[0] == 0
+                && env->ticks[1] == 100
+                && env->values[0] == value
+                && env->values[1] == value
+        );
+}
+
+int csf_instrument_is_empty(song_instrument_t *ins)
+{
+        int n;
+        if (!ins)
+                return 1;
+
+        for (n = 0; n < NOTE_LAST - NOTE_FIRST; n++) {
+                if (ins->sample_map[n] != 0 || ins->note_map[n] != (n + NOTE_FIRST))
+                        return 0;
+        }
+        return (name_is_blank(ins->name)
+                && ins->filename[0] == '\0'
+                && ins->flags == 0 /* No envelopes, loop points, panning, or carry flags set */
+                && ins->nna == NNA_NOTECUT
+                && ins->dct == DCT_NONE
+                && ins->dca == DCA_NOTECUT
+                && env_is_blank(&ins->vol_env, 64)
+                && ins->global_volume == 128
+                && ins->fadeout == 0
+                && ins->vol_swing == 0
+                && env_is_blank(&ins->pan_env, 32)
+                && ins->panning == 32*4 //mphack
+                && ins->pitch_pan_center == 60 // C-5 (blah)
+                && ins->pitch_pan_separation == 0
+                && ins->pan_swing == 0
+                && env_is_blank(&ins->pitch_env, 32)
+                && ins->ifc == 0
+                && ins->ifr == 0
+                && ins->midi_channel_mask == 0
+                && ins->midi_program == -1
+                && ins->midi_bank == -1
+        );
+}
+
+// IT-compatible: last order of "main song", or 0
+int csf_last_order(song_t *csf)
+{
+        int n = 0;
+        while (n < MAX_ORDERS && csf->orderlist[n] != ORDER_LAST)
+                n++;
+        return n ? n - 1 : 0;
+}
+
+// Total count of orders in orderlist before end of data
+int csf_get_num_orders(song_t *csf)
+{
+        int n = MAX_ORDERS;
+        while (n >= 0 && csf->orderlist[--n] == ORDER_LAST) {
+        }
+        return n + 1;
+}
+
+// Total number of non-empty patterns in song, according to csf_pattern_is_empty
+int csf_get_num_patterns(song_t *csf)
+{
+        int n = MAX_PATTERNS - 1;
+        while (n && csf_pattern_is_empty(csf, n))
+                n--;
+        return n;
+}
+
+int csf_get_num_samples(song_t *csf)
+{
+        int n = MAX_SAMPLES - 1;
+        while (n > 0 && csf_sample_is_empty(csf->samples + n))
+                n--;
+        return n;
+}
+
+int csf_get_num_instruments(song_t *csf)
+{
+        int n = MAX_INSTRUMENTS - 1;
+        while (n > 0 && csf_instrument_is_empty(csf->instruments[n]))
+                n--;
+        return n;
+}
+
+
+int csf_first_blank_sample(song_t *csf, int start)
+{
+        int n;
+        for (n = MAX(start, 1); n < MAX_SAMPLES; n++) {
+                if (csf_sample_is_empty(csf->samples + n))
+                        return n;
+        }
+        return -1;
+}
+
+int csf_first_blank_instrument(song_t *csf, int start)
+{
+        int n;
+        for (n = MAX(start, 1); n < MAX_INSTRUMENTS; n++) {
+                if (csf_instrument_is_empty(csf->instruments[n]))
+                        return n;
+        }
+        return -1;
+}
+
+
+// FIXME this function sucks
+int csf_get_highest_used_channel(song_t *csf)
+{
+        int highchan = 0, ipat, j, jmax;
+        song_note_t *p;
+
+        for (ipat = 0; ipat < MAX_PATTERNS; ipat++) {
+                p = csf->patterns[ipat];
+                if (!p)
+                        continue;
+                jmax = csf->pattern_size[ipat] * MAX_CHANNELS;
+                for (j = 0; j < jmax; j++, p++) {
+                        if (NOTE_IS_NOTE(p->note)) {
+                                if ((j % MAX_CHANNELS) > highchan)
+                                        highchan = j % MAX_CHANNELS;
+                        }
+                }
+        }
+
+        return highchan;
+}
+
+extern song_t *current_song;
+void storlek_super_debug_key(void); void storlek_super_debug_key(void)
+{
+        printf("\n");
+        printf("              song: %p\n", current_song);
+        printf("last order in song: %d\n", csf_last_order(current_song));
+        printf("  total num orders: %d\n", csf_get_num_orders(current_song));
+        printf("   pattern 0 empty: %d\n", csf_pattern_is_empty(current_song, 0));
+        printf("    total patterns: %d\n", csf_get_num_patterns(current_song));
+        printf("    sample 1 empty: %d\n", csf_sample_is_empty(current_song->samples + 1));
+        printf("     total samples: %d\n", csf_get_num_samples(current_song));
+        printf("instrument 1 empty: %d\n", csf_instrument_is_empty(current_song->instruments[1]));
+        printf(" total instruments: %d\n", csf_get_num_instruments(current_song));
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Misc functions
@@ -235,17 +429,6 @@ int csf_set_resampling_mode(song_t *csf, uint32_t mode)
         csf->mix_flags = d;
         return 1;
 }
-
-
-// IT-compatible...
-uint32_t csf_get_num_orders(song_t *csf)
-{
-        uint32_t i = 0;
-        while (i < MAX_ORDERS && csf->orderlist[i] < 0xFF)
-                i++;
-        return i ? i - 1 : 0;
-}
-
 
 
 // This used to use some retarded positioning based on the total number of rows elapsed, which is useless.
@@ -960,27 +1143,6 @@ void csf_adjust_sample_loop(song_sample_t *sample)
         }
 }
 
-
-// FIXME this function sucks
-uint32_t csf_get_highest_used_channel(song_t *csf)
-{
-        uint32_t highchan = 0;
-
-        for (uint32_t ipat = 0; ipat < MAX_PATTERNS; ipat++) {
-                song_note_t *p = csf->patterns[ipat];
-                if (p) {
-                        uint32_t jmax = csf->pattern_size[ipat] * MAX_CHANNELS;
-                        for (uint32_t j = 0; j < jmax; j++, p++) {
-                                if (NOTE_IS_NOTE(p->note)) {
-                                        if ((j % MAX_CHANNELS) > highchan)
-                                                highchan = j % MAX_CHANNELS;
-                                }
-                        }
-                }
-        }
-
-        return highchan;
-}
 
 
 

@@ -169,7 +169,6 @@ uint8_t *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
 
-int song_get_num_patterns(void);
 int song_get_rows_in_pattern(int pattern);
 
 void song_pattern_resize(int pattern, int rows);

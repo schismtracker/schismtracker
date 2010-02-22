@@ -291,24 +291,6 @@ int song_next_order_for_pattern(int pat)
 }
 
 
-static song_note_t blank_pattern[64 * 64];
-int song_pattern_is_empty(int n)
-{
-        if (!current_song->patterns[n])
-                return 1;
-        if (current_song->pattern_size[n] != 64)
-                return 0;
-        return !memcmp(current_song->patterns[n], blank_pattern, sizeof(blank_pattern));
-}
-
-int song_get_num_patterns(void)
-{
-        int n;
-        for (n = 199; n && song_pattern_is_empty(n); n--)
-                /* do nothing */ ;
-        return n;
-}
-
 int song_get_rows_in_pattern(int pattern)
 {
         if (pattern > MAX_PATTERNS)
@@ -612,17 +594,9 @@ static void _adjust_samples_in_instruments(int start, int delta)
         }
 }
 
-int song_first_unused_instrument(void)
-{
-        int ins;
-        for (ins = 1; ins < MAX_INSTRUMENTS; ins++)
-                if (song_instrument_is_empty(ins)) return ins;
-        return 0;
-}
-
 void song_init_instrument_from_sample(int insn, int samp)
 {
-        if (!song_instrument_is_empty(insn)) return;
+        if (!csf_instrument_is_empty(current_song->instruments[insn])) return;
         if (current_song->samples[samp].data == NULL) return;
         song_get_instrument(insn);
         song_instrument_t *ins = current_song->instruments[insn];
@@ -691,12 +665,12 @@ void song_insert_instrument_slot(int n)
 {
         int i;
 
-        if (!song_instrument_is_empty(MAX_INSTRUMENTS))
+        if (!csf_instrument_is_empty(current_song->instruments[MAX_INSTRUMENTS - 1]))
                 return;
 
         status.flags |= SONG_NEEDS_SAVE;
         song_lock_audio();
-        for (i = MAX_INSTRUMENTS; i > n; i--)
+        for (i = MAX_INSTRUMENTS - 1; i > n; i--)
                 current_song->instruments[i] = current_song->instruments[i-1];
         current_song->instruments[n] = NULL;
         _adjust_instruments_in_patterns(n, 1);
@@ -707,13 +681,13 @@ void song_remove_instrument_slot(int n)
 {
         int i;
 
-        if (!song_instrument_is_empty(n))
+        if (!csf_instrument_is_empty(current_song->instruments[n]))
                 return;
 
         song_lock_audio();
         for (i = n; i < MAX_INSTRUMENTS; i++)
                 current_song->instruments[i] = current_song->instruments[i+1];
-        current_song->instruments[MAX_INSTRUMENTS] = NULL;
+        current_song->instruments[MAX_INSTRUMENTS - 1] = NULL;
         _adjust_instruments_in_patterns(n, -1);
         song_unlock_audio();
 }
@@ -721,7 +695,7 @@ void song_remove_instrument_slot(int n)
 void song_wipe_instrument(int n)
 {
         /* wee .... */
-        if (song_instrument_is_empty(n))
+        if (csf_instrument_is_empty(current_song->instruments[n]))
                 return;
         if (!current_song->instruments[n])
                 return;

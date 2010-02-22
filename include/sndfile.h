@@ -617,6 +617,24 @@ void csf_import_s3m_effect(song_note_t *m, int it);
 void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int it);
 
 
+// counting stuff
+
+int csf_pattern_is_empty(song_t *csf, int n);
+int csf_sample_is_empty(song_sample_t *smp);
+int csf_instrument_is_empty(song_instrument_t *ins);
+int csf_last_order(song_t *csf); // last order of "main" song (IT-style, only for display)
+int csf_get_num_orders(song_t *csf); // last non-blank order (for saving)
+int csf_get_num_patterns(song_t *csf);
+int csf_get_num_samples(song_t *csf);
+int csf_get_num_instruments(song_t *csf);
+
+// for these, 'start' indicates minimum sample/instrument to check
+int csf_first_blank_sample(song_t *csf, int start);
+int csf_first_blank_instrument(song_t *csf, int start);
+
+int csf_get_highest_used_channel(song_t *csf);
+
+
 
 int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t channels);
 int csf_set_wave_config_ex(song_t *csf, int hqido, int nr, int eq);
@@ -668,12 +686,9 @@ void csf_destroy(song_t *csf); /* erase everything -- equiv. to new song */
 int csf_destroy_sample(song_t *csf, uint32_t smpnum);
 
 void csf_reset_midi_cfg(song_t *csf);
-uint32_t csf_get_num_orders(song_t *csf);
 void csf_set_current_order(song_t *csf, uint32_t position);
 void csf_loop_pattern(song_t *csf, int pattern, int start_row);
 void csf_reset_playmarks(song_t *csf);
-
-uint32_t csf_get_highest_used_channel(song_t *csf);
 
 void csf_insert_restart_pos(song_t *csf, uint32_t restart_order); // hax
 

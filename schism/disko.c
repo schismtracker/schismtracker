@@ -550,7 +550,8 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
                 }
 
                 ds[n]->length = MIN(ds[n]->length, smpsize * bps);
-                while (smpnum < MAX_SAMPLES && !song_sample_is_empty(smpnum - 1)) {
+                // FIXME rewrite using csf_first_blank_sample
+                while (smpnum < MAX_SAMPLES && !csf_sample_is_empty(current_song->samples + smpnum)) {
                         smpnum++;
                 }
                 if (smpnum >= MAX_SAMPLES) {
@@ -898,7 +899,7 @@ void song_pattern_to_sample(int pattern, int split, int bind)
                 /* Nothing to confirm, as this never overwrites samples */
                 pat2smp_multi(ps);
         } else {
-                if (song_sample_is_empty(ps->sample - 1)) {
+                if (csf_sample_is_empty(current_song->samples + ps->sample)) {
                         pat2smp_single(ps);
                 } else {
                         dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample",
