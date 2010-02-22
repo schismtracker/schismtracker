@@ -87,7 +87,6 @@ static struct info_window windows[MAX_WINDOWS] = {
 
 static void info_draw_technical(int base, int height, int active, int first_channel)
 {
-        int smplist[MAX_SAMPLES];
         int smp, pos, fg, c = first_channel;
         char buf[16];
         const char *ptr;
@@ -164,7 +163,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
                         int nv, tot;
                         for (nv = tot = 0; nv < MAX_VOICES; nv++) {
                                 song_voice_t *v = current_song->voices + nv;
-                                if (v->master_channel == c && v->current_sample_data && v->length)
+                                if (v->master_channel == (unsigned int) c && v->current_sample_data && v->length)
                                         tot++;
                         }
                         if (voice->current_sample_data && voice->length)
@@ -359,7 +358,7 @@ static void _draw_fill_notes(int col, int first_row, int height, int num_channel
                              int channel_width, int separator, draw_note_func draw_note, int bg)
 {
         int row_pos, chan_pos;
-        song_note_t blank = {0};
+        song_note_t blank = {.note = NOTE_NONE};
 
         for (row_pos = first_row; row_pos < first_row + height; row_pos++) {
                 for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
