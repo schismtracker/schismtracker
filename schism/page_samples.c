@@ -1568,7 +1568,7 @@ static void update_sample_loop_flags(void)
         /* update any samples currently playing */
         song_update_playing_sample(current_sample);
 
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 /* callback for the loop numentries */
@@ -1613,7 +1613,7 @@ static void update_sample_loop_points(void)
                 update_sample_loop_flags();
         }
 
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -1642,6 +1642,8 @@ static void update_values_in_song(void)
         else
                 sample->vib_type = VIB_RANDOM;
         sample->vib_rate = widgets_samplelist[19].d.thumbbar.value;
+
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 static void update_sample_speed(void)
@@ -1649,6 +1651,8 @@ static void update_sample_speed(void)
         song_sample_set_c5speed(current_sample,
                         widgets_samplelist[8].d.numentry.value);
         status.flags |= NEED_UPDATE;
+
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 static void update_panning(void)
@@ -1659,6 +1663,13 @@ static void update_panning(void)
         sample->panning = widgets_samplelist[4].d.thumbbar.value * 4;
 
         widgets_samplelist[3].d.toggle.state = 1;
+
+        status.flags |= SONG_NEEDS_SAVE;
+}
+
+static void update_filename(void)
+{
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -1731,7 +1742,7 @@ void sample_list_load_page(struct page *page)
         create_thumbbar(widgets_samplelist + 5, 38, 39, 9, 4, 6, 15, update_values_in_song, 0, 64);
         create_thumbbar(widgets_samplelist + 6, 38, 46, 9, 5, 6, 19, update_values_in_song, 0, 32);
         /* 7 -> 14 = top right box */
-        create_textentry(widgets_samplelist + 7, 64, 13, 13, 7, 8, 0, NULL, NULL, 12);
+        create_textentry(widgets_samplelist + 7, 64, 13, 13, 7, 8, 0, update_filename, NULL, 12);
         create_numentry(widgets_samplelist + 8, 64, 14, 7, 7, 9, 0,
                         update_sample_speed, 0, 9999999, &sample_numentry_cursor_pos);
         create_menutoggle(widgets_samplelist + 9, 64, 15, 8, 10, 1, 0, 0,

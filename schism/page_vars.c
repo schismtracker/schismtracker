@@ -40,10 +40,9 @@ static char Amiga[6] = "Amiga";
 
 /* --------------------------------------------------------------------- */
 
-static inline void update_song_title(void)
+static void update_song_title(void)
 {
-        draw_text_len(current_song->title, 25, 12, 3, 5, 0);
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -116,6 +115,8 @@ static void maybe_init_instruments(void)
         /* XXX actually, in IT the buttons on this dialog say OK/No for whatever reason */
         song_set_instrument_mode(1);
         dialog_create(DIALOG_YES_NO, "Initialise instruments?", init_instruments, NULL, 0, NULL);
+
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 
@@ -149,8 +150,6 @@ static void song_changed_cb(void)
                 togglebutton_set(widgets_vars, 12, 0);
         else
                 togglebutton_set(widgets_vars, 13, 0);
-
-        update_song_title();
 
         for (b = strpbrk(song_get_basename(), "Aa"),
         c = 12632; c && b && b[1]; c >>= 4, b++)

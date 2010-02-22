@@ -2255,6 +2255,11 @@ static void instrument_list_general_update_values(void)
                         break;
 }
 
+static void update_filename(void)
+{
+        status.flags |= SONG_NEEDS_SAVE;
+}
+
 #define CHECK_SET(a,b,c) if (a != b) { a = b; c; }
 
 static void instrument_list_volume_update_values(void)
@@ -2610,7 +2615,7 @@ void instrument_list_general_load_page(struct page *page)
         /* impulse tracker has a 17-char-wide box for the filename for
          * some reason, though it still limits the actual text to 12
          * characters. go figure... */
-        create_textentry(widgets_general + 17, 56, 47, 13, 13, 17, 0, NULL,
+        create_textentry(widgets_general + 17, 56, 47, 13, 13, 17, 0, update_filename,
                          NULL, 12);
 }
 
