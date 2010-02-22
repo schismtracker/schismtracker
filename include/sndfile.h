@@ -372,8 +372,8 @@ typedef struct song_instrument {
         uint32_t flags;
         unsigned int global_volume;
         unsigned int panning;
-        unsigned int sample_map[128];
-        unsigned int note_map[128];
+        uint8_t sample_map[128];
+        uint8_t note_map[128];
         song_envelope_t vol_env;
         song_envelope_t pan_env;
         song_envelope_t pitch_env;
@@ -384,8 +384,8 @@ typedef struct song_instrument {
         unsigned int vol_swing;
         unsigned int ifc;
         unsigned int ifr;
-        unsigned int midi_bank; // TODO split this?
-        unsigned int midi_program;
+        int midi_bank; // TODO split this?
+        int midi_program;
         unsigned int midi_channel_mask; // FIXME why is this a mask? why is a mask useful? does 2.15 use a mask?
         int pitch_pan_separation;
         unsigned int pitch_pan_center;
