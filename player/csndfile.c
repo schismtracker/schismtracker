@@ -210,6 +210,12 @@ static int name_is_blank(char *name)
 }
 
 static const song_note_t blank_pattern[64 * 64];
+
+int csf_note_is_empty(song_note_t *note)
+{
+        return !memcmp(note, blank_pattern, sizeof(song_note_t));
+}
+
 int csf_pattern_is_empty(song_t *csf, int n)
 {
         if (!csf->patterns[n])

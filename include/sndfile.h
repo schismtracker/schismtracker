@@ -619,6 +619,7 @@ void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int it);
 
 // counting stuff
 
+int csf_note_is_empty(song_note_t *note);
 int csf_pattern_is_empty(song_t *csf, int n);
 int csf_sample_is_empty(song_sample_t *smp);
 int csf_instrument_is_empty(song_instrument_t *ins);
