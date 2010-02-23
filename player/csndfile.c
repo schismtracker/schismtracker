@@ -319,7 +319,7 @@ int csf_get_num_patterns(song_t *csf)
         int n = MAX_PATTERNS - 1;
         while (n && csf_pattern_is_empty(csf, n))
                 n--;
-        return n;
+        return n+ 1;
 }
 
 int csf_get_num_samples(song_t *csf)
@@ -1419,10 +1419,10 @@ void csf_import_s3m_effect(song_note_t *m, int from_it)
         m->param = param;
 }
 
-void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int to_it)
+void csf_export_s3m_effect(uint8_t *pcmd, uint8_t *pprm, int to_it)
 {
-        uint32_t effect = *pcmd;
-        uint32_t param = *pprm;
+        uint8_t effect = *pcmd;
+        uint8_t param = *pprm;
         switch (effect) {
         case FX_SPEED:                 effect = 'A'; break;
         case FX_POSITIONJUMP:          effect = 'B'; break;
