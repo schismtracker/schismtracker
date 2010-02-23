@@ -79,7 +79,7 @@ ugh, ugh. However, it has to be above the formats with the magic at the beginnin
 READ_INFO(mod) LOAD_SONG(mod)
 
 /* S3M needs to be before a lot of stuff. */
-READ_INFO(s3m) LOAD_SONG(s3m)
+READ_INFO(s3m) LOAD_SONG(s3m) SAVE_SONG(s3m)
 /* FAR and S3M have different magic in the same place, so it doesn't really matter which one goes
 where. I just have S3M first since it's a more common format. */
 READ_INFO(far) LOAD_SONG(far)
@@ -87,9 +87,9 @@ READ_INFO(far) LOAD_SONG(far)
 /* These next formats have their magic at the beginning of the data, so none of them can possibly
 conflict with other ones. I've organized them pretty much in order of popularity. */
 READ_INFO(xm) LOAD_SONG(xm)
-READ_INFO(it) LOAD_SONG(it)
+READ_INFO(it) LOAD_SONG(it) SAVE_SONG(it)
 READ_INFO(mt2)
-READ_INFO(mtm) LOAD_SONG(mtm) SAVE_SONG(mtm)
+READ_INFO(mtm) LOAD_SONG(mtm)
 READ_INFO(ntk)
 #ifdef USE_NON_TRACKED_TYPES
 READ_INFO(sid)

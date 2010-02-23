@@ -531,7 +531,7 @@ static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
                         uint8_t m = 0;  // current mask
                         int vol = -1;
                         unsigned int note = noteptr->note;
-                        unsigned int effect = noteptr->effect, param = noteptr->param;
+                        uint8_t effect = noteptr->effect, param = noteptr->param;
 
                         if (note) {
                                 m |= 1;
@@ -801,17 +801,11 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
         return SAVE_SUCCESS;
 }
 
-static int _save_stub(UNUSED disko_t *fp, UNUSED song_t *song)
-{
-        log_appendf(4, "File format temporarily removed");
-        return SAVE_INTERNAL_ERROR;
-}
-
 /* ------------------------------------------------------------------------- */
 
 struct save_format song_save_formats[] = {
         {"IT", "Impulse Tracker", ".it", {.save_song = _save_it}},
-        {"S3M", "Scream Tracker 3", ".s3m", {.save_song = _save_stub}},
+        {"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}},
         {.label = NULL}
 };
 
