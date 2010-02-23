@@ -271,7 +271,7 @@ static void orderlist_add_unused_patterns(void)
                 n += 2;
 
         n0 = n;
-        for (p = 0; p <= np; p++) {
+        for (p = 0; p < np; p++) {
                 if (used[p] || csf_pattern_is_empty(current_song, p))
                         continue;
                 if (n > 255) {
