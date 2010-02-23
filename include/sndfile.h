@@ -614,7 +614,7 @@ void csf_import_mod_effect(song_note_t *m, int from_xm);
 uint16_t csf_export_mod_effect(const song_note_t *m, int xm);
 
 void csf_import_s3m_effect(song_note_t *m, int it);
-void csf_export_s3m_effect(uint32_t *pcmd, uint32_t *pprm, int it);
+void csf_export_s3m_effect(uint8_t *pcmd, uint8_t *pprm, int it);
 
 
 // counting stuff
