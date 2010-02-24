@@ -345,18 +345,16 @@ static int _get_amplify_8(signed char *data, unsigned long length)
 {
         signed char min, max;
         _minmax_8(data, length, &min, &max);
-        if (min == 0 && max == 0)
-                return 100;
-        return 128 * 100 / MAX(max, -min);
+        max = MAX(max, -min);
+        return max ? 128 * 100 / max : 100;
 }
 
 static int _get_amplify_16(signed short *data, unsigned long length)
 {
         signed short min, max;
         _minmax_16(data, length, &min, &max);
-        if (min == 0 && max == 0)
-                return 100;
-        return 32768 * 100 / MAX(max, -min);
+        max = MAX(max, -min);
+        return max ? 32768 * 100 / max : 100;
 }
 
 int sample_get_amplify_amount(song_sample_t *sample)
