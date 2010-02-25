@@ -114,7 +114,6 @@ READ_INFO(liq)
 
 READ_INFO(ams)
 READ_INFO(f2r)
-READ_INFO(dtm) /* not sure about the placement here */
 
 READ_INFO(s3i)  LOAD_SAMPLE(s3i)  SAVE_SAMPLE(s3i) /* FIXME should this be moved? S3I has magic at 0x4C... */
 
