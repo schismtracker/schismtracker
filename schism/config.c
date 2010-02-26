@@ -199,7 +199,7 @@ void cfg_load(void)
                 status.flags |= CLASSIC_MODE;
         else
                 status.flags &= ~CLASSIC_MODE;
-        if (cfg_get_number(&cfg, "General", "make_backups", 0))
+        if (cfg_get_number(&cfg, "General", "make_backups", 1))
                 status.flags |= MAKE_BACKUPS;
         else
                 status.flags &= ~MAKE_BACKUPS;
