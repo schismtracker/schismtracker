@@ -78,6 +78,19 @@ extern int macosx_did_finderlaunch;
 
 #define NVIDIA_PixelDataRange   1
 
+#if !defined(USE_OPENGL)
+typedef unsigned int GLuint;
+typedef int GLint;
+typedef int GLenum;
+typedef int GLsizei;
+typedef void GLvoid;
+typedef float GLfloat;
+typedef int GLboolean;
+typedef int GLbitfield;
+typedef float GLclampf;
+typedef unsigned char GLubyte;
+#endif
+
 #ifdef NVIDIA_PixelDataRange
 
 #ifndef WGL_NV_allocate_memory
@@ -569,7 +582,9 @@ void video_setup(const char *driver)
 void video_startup(void)
 {
         UNUSED static int did_this_2 = 0;
+#if USE_OPENGL
         const char *gl_ext;
+#endif
         char *q;
         SDL_Rect **modes;
         int i, j, x, y;
@@ -633,6 +648,7 @@ void video_startup(void)
 SKIP1:
 #endif
         if (video.desktop.want_type == VIDEO_GL) {
+#if defined(USE_OPENGL)
                 video.surface = SDL_SetVideoMode(640,400,0,SDL_OPENGL|SDL_RESIZABLE);
                 if (!video.surface) {
                         /* fallback */
@@ -658,6 +674,7 @@ SKIP1:
                 video.gl.pixel_data_range=(strstr(gl_ext,"GL_NV_pixel_data_range") != NULL)
                         && glPixelDataRangeNV && db_glAllocateMemoryNV && db_glFreeMemoryNV;
 #endif
+#endif // USE_OPENGL
         }
 
         x = y = -1;
@@ -883,8 +900,10 @@ static void _set_gl_attributes(void)
 
 void video_resize(unsigned int width, unsigned int height)
 {
+#if USE_OPENGL
         GLfloat tex_width, tex_height;
         int texsize;
+#endif
 
         if (!height) height = NATIVE_SCREEN_HEIGHT;
         if (!width) width = NATIVE_SCREEN_WIDTH;
@@ -1021,6 +1040,7 @@ RETRYSURF:      /* use SDL surfaces */
                 };
                 video.desktop.type = VIDEO_YUV;
                 break;
+#if defined(USE_OPENGL)
         case VIDEO_GL:
                 _set_gl_attributes();
                 _setup_surface(width, height, SDL_OPENGL);
@@ -1102,6 +1122,7 @@ RETRYSURF:      /* use SDL surfaces */
                 my_glEndList();
                 video.desktop.type = VIDEO_GL;
                 break;
+#endif // USE_OPENGL
         };
 
         status.flags |= (NEED_UPDATE);
@@ -1699,6 +1720,7 @@ void video_blit(void)
                 SDL_UnlockYUVOverlay(video.overlay);
                 SDL_DisplayYUVOverlay(video.overlay, &video.clip);
                 break;
+#if defined(USE_OPENGL)
         case VIDEO_GL:
                 my_glBindTexture(GL_TEXTURE_2D, video.gl.texture);
                 my_glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
@@ -1709,6 +1731,7 @@ void video_blit(void)
                 my_glCallList(video.gl.displaylist);
                 SDL_GL_SwapBuffers();
                 break;
+#endif
         };
 }
 

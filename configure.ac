@@ -156,6 +156,12 @@ if test "x$defaultx11" = "xno"; then
 	fi
 fi
 
+dnl OpenGL crud - it doesn't always exist
+saved_cppflags=$CPPFLAGS
+CPPFLAGS="$CPPFLAGS $SDL_CFLAGS"
+AC_CHECK_HEADER([SDL_opengl.h], [AC_DEFINE([USE_OPENGL], 1, [Define to 1 if SDL's OpenGL works])])
+CPPFLAGS=$saved_cppflags
+
 dnl -----------------------------------------------------------------------
 
 saved_libs=$LIBS
