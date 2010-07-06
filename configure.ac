@@ -56,7 +56,7 @@ dnl Check for SDL libs
 AM_PATH_SDL(1.2.10, , AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.]))
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap socket nice unsetenv dup fnmatch log2 mkstemp)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch log2 mkstemp)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "$ac_cv_func_vasprintf" = "no"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "$ac_cv_func_memcmp" = "no"])
@@ -217,26 +217,33 @@ else
 	fi
 fi
 
-if test "X$ac_cv_func_socket" = "Xyes"; then
+dnl asdjklfjklasdfaskdfjklads
+saved_LIBS="$LIBS"
+AC_SEARCH_LIBS(socket, socket network)
+LIBS="$saved_LIBS"
+if test "x$ac_cv_search_socket" = "xno"; then
+	dnl Windows sucks (I don't even know what this is about, but it apparently works)
+	AC_CHECK_HEADERS(winsock.h winsock2.h)
+	if test "x$ac_cv_header_winsock_h" = "xyes"; then
+		socketlib="-lwsock32"
+	elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+		socketlib="-lws2_32"
+	fi
+	if test "x$socketlib" = "x"; then
+		echo "*** No sockets for you!"
+		AM_CONDITIONAL([USE_NETWORK], false)
+	else
+		AM_CONDITIONAL([USE_NETWORK], true)
+		SDL_LIBS="$SDL_LIBS $socketlib"
+		AC_SUBST(SDL_LIBS)
+	fi
+elif test "x$ac_cv_search_socket" = "xnone required"; then
 	dnl free networking
 	AM_CONDITIONAL([USE_NETWORK], true)
 else
-	AC_CHECK_HEADERS(winsock.h winsock2.h sys/socket.h)
-	if test "x$ac_cv_header_winsock_h" = "xyes"; then
-		AM_CONDITIONAL([USE_NETWORK], true)
-		SDL_LIBS="$SDL_LIBS -lwsock32"
-		AC_SUBST(SDL_LIBS)
-	elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
-		AM_CONDITIONAL([USE_NETWORK], true)
-		SDL_LIBS="$SDL_LIBS -lws2_32"
-		AC_SUBST(SDL_LIBS)
-	elif test "x$ac_cv_header_sys_socket_h" = "xyes"; then
-		AM_CONDITIONAL([USE_NETWORK], true)
-		SDL_LIBS="$SDL_LIBS -lsocket"
-		AC_SUBST(SDL_LIBS)
-	else
-		AM_CONDITIONAL([USE_NETWORK], false)
-	fi
+	SDL_LIBS="$SDL_LIBS $ac_cv_search_socket"
+	AC_SUBST(SDL_LIBS)
+	AM_CONDITIONAL([USE_NETWORK], true)
 fi
 
 #AC_CHECK_LIB(kernel32, GetConsoleMode, SDL_LIBS="$SDL_LIBS -Wl,--subsystem,console")
