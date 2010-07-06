@@ -30,55 +30,54 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 /* --------------------------------------------------------------------- */
-#pragma pack(push, 1)
 
-struct GF1PatchHeader
-{
-        unsigned char   sig[22];
-        unsigned char   desc[60];
-        unsigned char   insnum;
-        unsigned char   voicenum;
-        unsigned char   channum;
-        unsigned short  waveforms;
-        unsigned short  mastervol;
-        unsigned int    datasize;
-        unsigned char   reserved1[36];
-        unsigned int    insID;
-        unsigned char   insname[16];
-        unsigned int    inssize;
-        unsigned char   layers;
-        unsigned char   reserved2[40];
-        unsigned char   layerduplicate;
-        unsigned char   layer;
-        unsigned int    layersize;
-        unsigned char   smpnum;
-        unsigned char   reserved3[40];
+#pragma pack(push, 1)
+struct GF1PatchHeader {
+        uint8_t sig[8]; // "GF1PATCH"
+        uint8_t ver[4]; // "100\0" or "110\0"
+        uint8_t id[10]; // "ID#000002\0"
+        char desc[60]; // Discription (in ASCII) [sic]
+        uint8_t insnum; // To some patch makers, 0 means 1 [what?]
+        uint8_t voicenum; // Voices (Always 14?)
+        uint8_t channum; // Channels
+        uint16_t waveforms;
+        uint16_t mastervol; // 0-127 [then why is it 16-bit? ugh]
+        uint32_t datasize;
+        uint8_t reserved1[36];
+        uint16_t insID; // Instrument ID [0..0xFFFF] [?]
+        char insname[16]; // Instrument name (in ASCII)
+        uint32_t inssize; // Instrument size
+        uint8_t layers;
+        uint8_t reserved2[40];
+        uint8_t layerduplicate;
+        uint8_t layer;
+        uint32_t layersize;
+        uint8_t smpnum;
+        uint8_t reserved3[40];
 };
 
-struct GF1PatchSampleHeader
-{
-        unsigned char   wavename[7];
-        unsigned char   fractions;
-        unsigned int    samplesize;
-        int     loopstart;
-        int     loopend;
-        unsigned short  samplerate;
-        unsigned int    lofreq;
-        unsigned int    hifreq;
-        unsigned int    rtfreq;
-        unsigned short  tune;
-        unsigned char   panning;
-
-        unsigned char   envelopes[12];
-        unsigned char   tremolo[3];
-        unsigned char   vibrato[3];
-
-        unsigned char   smpmode;
-        unsigned short  scalefreq;
-        unsigned short  scalefac;
-        unsigned char   reserved[36];
+struct GF1PatchSampleHeader {
+        char wavename[7]; // Wave name (in ASCII)
+        uint8_t fractions; // bits 0-3 loop start frac / 4-7 loop end frac
+        uint32_t samplesize; // Sample data size (s)
+        uint32_t loopstart;
+        uint32_t loopend;
+        uint16_t samplerate;
+        uint32_t lofreq; // Low frequency
+        uint32_t hifreq; // High frequency
+        uint32_t rtfreq; // Root frequency
+        uint16_t tune; // Tune (Always 1, not used anymore)
+        uint8_t panning; // Panning (L=0 -> R=15)
+        uint8_t envelopes[12];
+        uint8_t trem_speed, trem_rate, trem_depth;
+        uint8_t vib_speed, vib_rate, vib_depth;
+        uint8_t smpmode; // bit mask: 16, unsigned, loop, pingpong, reverse, sustain, envelope, clamped release
+        uint16_t scalefreq; // Scale frequency
+        uint16_t scalefac; // Scale factor [0..2048] (1024 is normal)
+        uint8_t reserved[36];
 };
 #pragma pack(pop)
 
@@ -86,8 +85,7 @@ struct GF1PatchSampleHeader
 
 static int gusfreq(unsigned int freq)
 {
-        static const unsigned int scale_table[109] =
-        {
+        unsigned int scale_table[109] = {
 /*C-0..B-*/
 /* Octave 0 */  16351, 17323, 18354, 19445, 20601, 21826,
                 23124, 24499, 25956, 27500, 29135, 30867,
@@ -107,31 +105,33 @@ static int gusfreq(unsigned int freq)
                 2959960, 3135968, 3322443, 3520006, 3729316, 3951073,
 /* Octave 8 */  4186073, 4434930, 4698645, 4978041, 5274051, 5587663,
                 5919922, 6271939, 6644889, 7040015, 7458636, 7902150,
-                0xFFFFFFFF
+                0xFFFFFFFF,
         };
-        unsigned int no;
+        int no;
 
-        for (no = 0; no < sizeof(scale_table)/sizeof(int)-1; no++)
-        {
-                if (scale_table[no] <= freq && scale_table[no+1] >= freq) return (no-12);
+        for (no = 0; scale_table[no] != 0xFFFFFFFF; no++) {
+                if (scale_table[no] <= freq && scale_table[no + 1] >= freq) {
+                        return no - 12;
+                }
         }
 
-        return 4*12;
+        return 4 * 12;
 }
 
-
-
-
 /* --------------------------------------------------------------------- */
+
 int fmt_pat_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        if (length <= 23) return 0;
-        if (memcmp(data, "GF1PATCH", 8) != 0) return 0;
-        if (memcmp(data+8, "110", 3) != 0
-        &&  memcmp(data+8, "100", 3) != 0) return 0;
-        if (data[11] != 0) return 0;
+        const struct GF1PatchHeader *header = (const struct GF1PatchHeader *) data;
+
+        if ((length <= sizeof(struct GF1PatchHeader))
+            || (memcmp(header->sig, "GF1PATCH", 8) != 0)
+            || (memcmp(header->ver, "110\0", 4) != 0 && memcmp(header->ver, "100\0", 4) != 0)
+            || (memcmp(header->id, "ID#000002\0", 10) != 0)) {
+                return 0;
+        }
         file->description = "Gravis Patch File";
-        file->title = strdup(((char*)data)+12);
+        file->title = strdup(header->desc);
         file->type = TYPE_INST_OTHER;
         return 1;
 }
@@ -144,18 +144,21 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
         struct instrumentloader ii;
         song_instrument_t *g;
         song_sample_t *smp;
-        unsigned int pos, lo, hi, tmp, rs;
-        int i, nsamp, n;
+        unsigned int pos, rs;
+        int lo, hi, tmp, i, nsamp, n;
 
-        if (length < sizeof(header)) return 0;
-        if (memcmp(data, "GF1PATCH", 8) != 0) return 0;
-        if (!slot) return 0;
-
+        if (length < sizeof(header) || !slot) return 0;
         memcpy(&header, data, sizeof(header));
+        if ((memcmp(header.sig, "GF1PATCH", 8) != 0)
+            || (memcmp(header.ver, "110\0", 4) != 0 && memcmp(header.ver, "100\0", 4) != 0)
+            || (memcmp(header.id, "ID#000002\0", 10) != 0)) {
+                return 0;
+        }
+
         header.waveforms = bswapLE16(header.waveforms);
         header.mastervol = bswapLE16(header.mastervol);
         header.datasize  = bswapLE32(header.datasize);
-        header.insID     = bswapLE32(header.insID);
+        header.insID     = bswapLE16(header.insID);
         header.inssize   = bswapLE32(header.inssize);
         header.layersize = bswapLE32(header.layersize);
 
@@ -167,14 +170,13 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
         pos = sizeof(header);
         for (i = 0; i < 120; i++) {
                 g->sample_map[i] = 0;
-                g->note_map[i] = i+1;
+                g->note_map[i] = i + 1;
         }
         for (i = 0; i < nsamp; i++) {
-                memcpy(&gfsamp, data+pos, sizeof(gfsamp));
-
+                memcpy(&gfsamp, data + pos, sizeof(gfsamp));
                 pos += sizeof(gfsamp);
 
-                n = instrument_loader_sample(&ii, i+1);
+                n = instrument_loader_sample(&ii, i + 1) - 1;
                 smp = song_get_sample(n);
 
                 gfsamp.samplesize = bswapLE32(gfsamp.samplesize);
@@ -190,27 +192,40 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
                 lo = CLAMP(gusfreq(gfsamp.lofreq), 0, 95);
                 hi = CLAMP(gusfreq(gfsamp.hifreq), 0, 95);
                 if (lo > hi) {
-                        tmp = lo; lo = hi; hi = tmp;
+                        tmp = lo;
+                        lo = hi;
+                        hi = tmp;
                 }
-                for (; lo < hi; lo++) g->sample_map[lo+12] = n;
+                for (; lo < hi; lo++) {
+                        g->sample_map[lo + 12] = n;
+                }
 
                 smp->length = gfsamp.samplesize;
-                smp->loop_start = gfsamp.loopstart;
-                smp->loop_end = gfsamp.loopend;
+                smp->loop_start = smp->sustain_start = gfsamp.loopstart;
+                smp->loop_end = smp->sustain_end = gfsamp.loopend;
                 smp->c5speed = gfsamp.samplerate;
 
                 smp->flags = 0;
                 rs = SF_M | SF_LE; // channels; endianness
                 rs |= (gfsamp.smpmode & 1) ? SF_16 : SF_8; // bit width
-                rs |= (gfsamp.smpmode & 2) ? SF_PCMS : SF_PCMU; // encoding
-                if (gfsamp.smpmode & 4) smp->flags |= CHN_LOOP;
-                if (gfsamp.smpmode & 8) smp->flags |= CHN_PINGPONGLOOP;
-                if (gfsamp.smpmode & 32) smp->flags |= CHN_SUSTAINLOOP;
+                rs |= (gfsamp.smpmode & 2) ? SF_PCMU : SF_PCMS; // encoding
+                if (gfsamp.smpmode & 32) {
+                        if (gfsamp.smpmode & 4)
+                                smp->flags |= CHN_SUSTAINLOOP;
+                        if (gfsamp.smpmode & 8)
+                                smp->flags |= CHN_PINGPONGSUSTAIN;
+                } else {
+                        if (gfsamp.smpmode & 4)
+                                smp->flags |= CHN_LOOP;
+                        if (gfsamp.smpmode & 8)
+                                smp->flags |= CHN_PINGPONGLOOP;
+                }
                 memcpy(smp->filename, gfsamp.wavename, 7);
                 smp->filename[8] = '\0';
-                smp->vib_speed = gfsamp.vibrato[0];
-                smp->vib_rate  = gfsamp.vibrato[1];
-                smp->vib_depth = gfsamp.vibrato[2];
+                strcpy(smp->name, smp->filename);
+                smp->vib_speed = gfsamp.vib_speed;
+                smp->vib_rate = gfsamp.vib_rate;
+                smp->vib_depth = gfsamp.vib_depth;
 
                 pos += csf_read_sample(current_song->samples + n, rs, data + pos, length - pos);
         }
