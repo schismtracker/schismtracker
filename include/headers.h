@@ -68,6 +68,9 @@ char *strchr(), *strrchr();
 #ifndef HAVE_STRVERSCMP
 # define strverscmp strcasecmp
 #endif
+#ifndef HAVE_STRCASESTR
+# define strcasestr strstr // derp
+#endif
 
 #if HAVE_UNISTD_H
 # include <sys/types.h>
