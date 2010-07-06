@@ -131,7 +131,9 @@ int fmt_pat_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
                 return 0;
         }
         file->description = "Gravis Patch File";
-        file->title = strdup(header->desc);
+        file->title = malloc(17);
+        memcpy(file->title, header->insname, 16);
+        file->title[16] = '\0';
         file->type = TYPE_INST_OTHER;
         return 1;
 }
@@ -166,7 +168,7 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
         memcpy(g->name, header.insname, 16);
         g->name[15] = '\0';
 
-        nsamp = header.smpnum <= 16 ? header.smpnum : 16;
+        nsamp = CLAMP(header.smpnum, 1, 16);
         pos = sizeof(header);
         for (i = 0; i < 120; i++) {
                 g->sample_map[i] = 0;
@@ -200,6 +202,11 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
                         g->sample_map[lo + 12] = n;
                 }
 
+                if (gfsamp.smpmode & 1) {
+                        gfsamp.samplesize >>= 1;
+                        gfsamp.loopstart >>= 1;
+                        gfsamp.loopend >>= 1;
+                }
                 smp->length = gfsamp.samplesize;
                 smp->loop_start = smp->sustain_start = gfsamp.loopstart;
                 smp->loop_end = smp->sustain_end = gfsamp.loopend;
