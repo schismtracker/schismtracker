@@ -90,25 +90,25 @@ defaultx11=yes
 dnl CoreMIDI (Mac OS X)
 AC_MSG_CHECKING(for CoreAudio/CoreMIDI Framework)
 if echo "$SDL_LIBS" | grep -- -framework >/dev/null 2>&1; then
-	AC_MSG_RESULT(found)
-	dnl frameworks aren't part of sdl... should be a separate variable
-	SDL_LIBS="$SDL_LIBS -framework CoreAudio -framework CoreMIDI -framework IOKit -framework OpenGL"
-	AC_SUBST(SDL_LIBS)
+        AC_MSG_RESULT(found)
+        dnl frameworks aren't part of sdl... should be a separate variable
+        SDL_LIBS="$SDL_LIBS -framework CoreAudio -framework CoreMIDI -framework IOKit -framework OpenGL"
+        AC_SUBST(SDL_LIBS)
 
-	AM_CONDITIONAL([USE_MACOSX], true)
-	AM_CONDITIONAL([am__fastdepOBJC], true)
-	defaultx11=no
+        AM_CONDITIONAL([USE_MACOSX], true)
+        AM_CONDITIONAL([am__fastdepOBJC], true)
+        defaultx11=no
 else
-	AC_MSG_RESULT(not found)
-	AM_CONDITIONAL([USE_MACOSX], false)
-	AM_CONDITIONAL([am__fastdepOBJC], false)
+        AC_MSG_RESULT(not found)
+        AM_CONDITIONAL([USE_MACOSX], false)
+        AM_CONDITIONAL([am__fastdepOBJC], false)
 fi
 
 
 dnl Windows poop
 AC_ARG_WITH(windres,
-	[  --with-windres=RSC      Name of windres tool (optional)],
-	windres="$withval", windres="")
+        [  --with-windres=RSC      Name of windres tool (optional)],
+        windres="$withval", windres="")
 AM_CONDITIONAL([USE_WINDRES], [test "x$windres" != "x"])
 
 WINDRES="$windres"
@@ -117,12 +117,12 @@ AC_SUBST(WINDRES)
 dnl winmm testing...
 AC_CHECK_HEADERS(winsock.h winsock2.h windows.h)
 if test "X$ac_cv_header_windows_h" = "Xyes"; then
-	AM_CONDITIONAL([USE_WIN32], true)
-	SDL_LIBS="$SDL_LIBS -lwinmm"
-	AC_SUBST(SDL_LIBS)
-	defaultx11=no
+        AM_CONDITIONAL([USE_WIN32], true)
+        SDL_LIBS="$SDL_LIBS -lwinmm"
+        AC_SUBST(SDL_LIBS)
+        defaultx11=no
 else
-	AM_CONDITIONAL([USE_WIN32], false)
+        AM_CONDITIONAL([USE_WIN32], false)
 fi
 
 
@@ -149,11 +149,11 @@ fi
 
 dnl should probably have some AC_MSG_CHECKING here, but meh
 if test "x$defaultx11" = "xno"; then
-	if test "x$with_x" = "x"; then
-		AC_MSG_NOTICE([X11 disabled by default; use --with-x if you really want it])
-		dnl (you don't want it, because it's probably broken anyway)
-		with_x=no
-	fi
+        if test "x$with_x" = "x"; then
+                AC_MSG_NOTICE([X11 disabled by default; use --with-x if you really want it])
+                dnl (you don't want it, because it's probably broken anyway)
+                with_x=no
+        fi
 fi
 
 dnl OpenGL crud - it doesn't always exist
@@ -169,10 +169,10 @@ alsa=no
 AC_CHECK_LIB(asound, snd_seq_open,[alsa=yes])
 alsadltrick=no
 if test "$alsa" = "yes"; then
-	if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
-		alsadltrick=yes
-		LIBS=$saved_libs
-	fi
+        if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
+                alsadltrick=yes
+                LIBS=$saved_libs
+        fi
 fi
 AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
 AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
@@ -180,41 +180,41 @@ AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
 
 AC_PATH_XTRA()
 if test "$no_x" = "yes"; then
-	dnl no X11
-	AM_CONDITIONAL([USE_X11], [false])
-	AM_CONDITIONAL([USE_XV], [false])
+        dnl no X11
+        AM_CONDITIONAL([USE_X11], [false])
+        AM_CONDITIONAL([USE_XV], [false])
 else
-	AM_CONDITIONAL([USE_X11], [true])
+        AM_CONDITIONAL([USE_X11], [true])
 
-	SDL_LIBS="$SDL_LIBS -lX11 -lXext"
-	AC_SUBST(SDL_LIBS)
-	
-	LIBS="$LIBS $X_LIBS"
-	AC_SUBST(LIBS)
+        SDL_LIBS="$SDL_LIBS -lX11 -lXext"
+        AC_SUBST(SDL_LIBS)
 
-	dnl this previously checked X11/extensions/XKB.h, but nothing
-	dnl ever used it (xkb.c still included X11/XKBlib.h even when
-	dnl autoconf reported it as nonexistent -- weird!)
-	AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h)
-	AC_CHECK_LIB(Xv, XvQueryExtension,,,-lX11 -lXext)
-	if test "$ac_cv_lib_Xv_XvQueryExtension" = "yes"; then
-		AC_CHECK_HEADERS(X11/extensions/Xvlib.h,,,[[
+        LIBS="$LIBS $X_LIBS"
+        AC_SUBST(LIBS)
+
+        dnl this previously checked X11/extensions/XKB.h, but nothing
+        dnl ever used it (xkb.c still included X11/XKBlib.h even when
+        dnl autoconf reported it as nonexistent -- weird!)
+        AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h)
+        AC_CHECK_LIB(Xv, XvQueryExtension,,,-lX11 -lXext)
+        if test "$ac_cv_lib_Xv_XvQueryExtension" = "yes"; then
+                AC_CHECK_HEADERS(X11/extensions/Xvlib.h,,,[[
 #include <X11/Xlib.h>
-		]])
-		if test "$ac_cv_header_X11_extensions_xvlib_h" = "yes"; then
-			SDL_LIBS="$SDL_LIBS -lXv -lXext"
-			AC_SUBST(SDL_LIBS)
-			AM_CONDITIONAL([USE_XV], [true])
-		elif test "$ac_cv_header_X11_extensions_Xvlib_h" = "yes"; then
-			SDL_LIBS="$SDL_LIBS -lXv -lXext"
-			AC_SUBST(SDL_LIBS)
-			AM_CONDITIONAL([USE_XV], [true])
-		else
-			AM_CONDITIONAL([USE_XV], [false])
-		fi
-	else
-		AM_CONDITIONAL([USE_XV], [false])
-	fi
+                ]])
+                if test "$ac_cv_header_X11_extensions_xvlib_h" = "yes"; then
+                        SDL_LIBS="$SDL_LIBS -lXv -lXext"
+                        AC_SUBST(SDL_LIBS)
+                        AM_CONDITIONAL([USE_XV], [true])
+                elif test "$ac_cv_header_X11_extensions_Xvlib_h" = "yes"; then
+                        SDL_LIBS="$SDL_LIBS -lXv -lXext"
+                        AC_SUBST(SDL_LIBS)
+                        AM_CONDITIONAL([USE_XV], [true])
+                else
+                        AM_CONDITIONAL([USE_XV], [false])
+                fi
+        else
+                AM_CONDITIONAL([USE_XV], [false])
+        fi
 fi
 
 dnl asdjklfjklasdfaskdfjklads
@@ -222,28 +222,28 @@ saved_LIBS="$LIBS"
 AC_SEARCH_LIBS(socket, socket network)
 LIBS="$saved_LIBS"
 if test "x$ac_cv_search_socket" = "xno"; then
-	dnl Windows sucks (I don't even know what this is about, but it apparently works)
-	AC_CHECK_HEADERS(winsock.h winsock2.h)
-	if test "x$ac_cv_header_winsock_h" = "xyes"; then
-		socketlib="-lwsock32"
-	elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
-		socketlib="-lws2_32"
-	fi
-	if test "x$socketlib" = "x"; then
-		echo "*** No sockets for you!"
-		AM_CONDITIONAL([USE_NETWORK], false)
-	else
-		AM_CONDITIONAL([USE_NETWORK], true)
-		SDL_LIBS="$SDL_LIBS $socketlib"
-		AC_SUBST(SDL_LIBS)
-	fi
+        dnl Windows sucks (I don't even know what this is about, but it apparently works)
+        AC_CHECK_HEADERS(winsock.h winsock2.h)
+        if test "x$ac_cv_header_winsock_h" = "xyes"; then
+                socketlib="-lwsock32"
+        elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+                socketlib="-lws2_32"
+        fi
+        if test "x$socketlib" = "x"; then
+                echo "*** No sockets for you!"
+                AM_CONDITIONAL([USE_NETWORK], false)
+        else
+                AM_CONDITIONAL([USE_NETWORK], true)
+                SDL_LIBS="$SDL_LIBS $socketlib"
+                AC_SUBST(SDL_LIBS)
+        fi
 elif test "x$ac_cv_search_socket" = "xnone required"; then
-	dnl free networking
-	AM_CONDITIONAL([USE_NETWORK], true)
+        dnl free networking
+        AM_CONDITIONAL([USE_NETWORK], true)
 else
-	SDL_LIBS="$SDL_LIBS $ac_cv_search_socket"
-	AC_SUBST(SDL_LIBS)
-	AM_CONDITIONAL([USE_NETWORK], true)
+        SDL_LIBS="$SDL_LIBS $ac_cv_search_socket"
+        AC_SUBST(SDL_LIBS)
+        AM_CONDITIONAL([USE_NETWORK], true)
 fi
 
 #AC_CHECK_LIB(kernel32, GetConsoleMode, SDL_LIBS="$SDL_LIBS -Wl,--subsystem,console")
@@ -259,9 +259,9 @@ dnl -----------------------------------------------------------------------
 dnl stupid version hack
 
 AC_ARG_ENABLE(mercurial,
-	AS_HELP_STRING([--enable-mercurial], [Use Mercurial for version/timestamps]),
-	USE_MERCURIAL=$enableval,
-	USE_MERCURIAL=yes)
+        AS_HELP_STRING([--enable-mercurial], [Use Mercurial for version/timestamps]),
+        USE_MERCURIAL=$enableval,
+        USE_MERCURIAL=yes)
 
 dnl We want to get the most accurate information of the version possible.
 dnl If Mercurial is present, 'hg parents' will tell us what version is
@@ -269,27 +269,27 @@ dnl really being compiled.
 
 AC_MSG_CHECKING(for Mercurial)
 if test x$USE_MERCURIAL = xyes; then
-	hg_dirstate=no
-	if test -e "$ac_abs_confdir"/.hg/dirstate; then
-		if hg --version >/dev/null; then
-			AC_MSG_RESULT(found)
-			hg_dirstate=yes
-		else
-			AC_MSG_RESULT(not found)
-			echo "*** Warning: .hg/dirstate exists, but no 'hg' command in PATH"
-			echo "*** Mercurial version information cannot be compiled in"
-		fi
-	else
-		AC_MSG_RESULT(not found)
-	fi
+        hg_dirstate=no
+        if test -e "$ac_abs_confdir"/.hg/dirstate; then
+                if hg --version >/dev/null; then
+                        AC_MSG_RESULT(found)
+                        hg_dirstate=yes
+                else
+                        AC_MSG_RESULT(not found)
+                        echo "*** Warning: .hg/dirstate exists, but no 'hg' command in PATH"
+                        echo "*** Mercurial version information cannot be compiled in"
+                fi
+        else
+                AC_MSG_RESULT(not found)
+        fi
 else
-	AC_MSG_RESULT(skipped)
+        AC_MSG_RESULT(skipped)
 fi
 
 if test "x$hg_dirstate" = "xyes"; then
-	AM_CONDITIONAL([USE_MERCURIAL], [true])
+        AM_CONDITIONAL([USE_MERCURIAL], [true])
 else
-	AM_CONDITIONAL([USE_MERCURIAL], [false])
+        AM_CONDITIONAL([USE_MERCURIAL], [false])
 fi
 
 dnl -----------------------------------------------------------------------
@@ -297,42 +297,42 @@ dnl (This ought to be above AC_PROG_CC, but that causes configure to fail
 dnl when all the insane warnings are are enabled.)
 
 AC_ARG_ENABLE(extra-opt,
-	AS_HELP_STRING([--enable-extra-opt], [Add extra optimizations]),
-	ADD_OPT=$enableval,
-	ADD_OPT=no)
+        AS_HELP_STRING([--enable-extra-opt], [Add extra optimizations]),
+        ADD_OPT=$enableval,
+        ADD_OPT=no)
 
 AC_ARG_ENABLE(all-warnings,
-	AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings]),
-	ADD_WARN=$enableval,
-	ADD_WARN=no)
+        AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings]),
+        ADD_WARN=$enableval,
+        ADD_WARN=no)
 
 AC_ARG_ENABLE(debug,
-	AS_HELP_STRING([--enable-debug], [Enable debug flags]),
-	ADD_DEBUG=$enableval,
-	ADD_DEBUG=no)
+        AS_HELP_STRING([--enable-debug], [Enable debug flags]),
+        ADD_DEBUG=$enableval,
+        ADD_DEBUG=no)
 
 AC_ARG_ENABLE(profiling,
-	AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down)]),
-	ADD_PROFILING=$enableval,
-	ADD_PROFILING=no)
+        AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down)]),
+        ADD_PROFILING=$enableval,
+        ADD_PROFILING=no)
 
 AC_ARG_ENABLE(ludicrous-mode,
-	AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings, and treat as errors]),
-	ADD_LUDICROUS=$enableval,
-	ADD_LUDICROUS=no)
+        AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings, and treat as errors]),
+        ADD_LUDICROUS=$enableval,
+        ADD_LUDICROUS=no)
 
 dnl place extra optimizations after existing cflags so that they can override
 dnl override whatever flags might exist by default (-g -O2 usually)
 if test x$ADD_OPT \!= xno; then
-	ADD_OPT="-g0 -s -O3 -ffast-math -fomit-frame-pointer -fno-exceptions"
-	ADD_OPT="$ADD_OPT -funroll-loops -frerun-cse-after-loop -fno-ident"
-	ADD_OPT="$ADD_OPT -fno-strength-reduce"
-	CFLAGS="$CFLAGS $ADD_OPT"
+        ADD_OPT="-g0 -s -O3 -ffast-math -fomit-frame-pointer -fno-exceptions"
+        ADD_OPT="$ADD_OPT -funroll-loops -frerun-cse-after-loop -fno-ident"
+        ADD_OPT="$ADD_OPT -fno-strength-reduce"
+        CFLAGS="$CFLAGS $ADD_OPT"
 fi
 
 if test x$ADD_LUDICROUS \!= xno; then
-	ADD_WARN=yes
-	CFLAGS="$CFLAGS -Werror -D_FORTIFY_SOURCE=2"
+        ADD_WARN=yes
+        CFLAGS="$CFLAGS -Werror -D_FORTIFY_SOURCE=2"
 fi
 
 dnl ... but put the warnings first, to make it possible to quiet certain
@@ -345,15 +345,15 @@ fi
 
 if test x$ADD_DEBUG \!= xno; then
         CFLAGS="$CFLAGS -g"
-	OBJCFLAGS="$OBJCFLAGS -g"
-	SDL_LIBS="$SDL_LIBS -g"
-	AC_SUBST(SDL_LIBS)
+        OBJCFLAGS="$OBJCFLAGS -g"
+        SDL_LIBS="$SDL_LIBS -g"
+        AC_SUBST(SDL_LIBS)
 fi
 if test x$ADD_PROFILING \!= xno; then
         CFLAGS="$CFLAGS -g -pg"
-	OBJCFLAGS="$OBJCFLAGS -g -pg"
-	SDL_LIBS="$SDL_LIBS -g -pg"
-	AC_SUBST(SDL_LIBS)
+        OBJCFLAGS="$OBJCFLAGS -g -pg"
+        SDL_LIBS="$SDL_LIBS -g -pg"
+        AC_SUBST(SDL_LIBS)
 fi
 
 dnl - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
