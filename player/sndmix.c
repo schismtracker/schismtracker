@@ -846,7 +846,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                                         csf->multi_write[n].write(csf->multi_write[n].data, buffer, bytes);
                                 } else {
                                         csf->multi_write[n].silence(csf->multi_write[n].data,
-                                                smpcount * (csf->mix_bits_per_sample + 7) / 8);
+                                                smpcount * ((csf->mix_bits_per_sample + 7) / 8));
                                 }
                         }
                 } else {
