@@ -125,6 +125,10 @@ static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpf
                         else
                                 ssmp->sustain_start = 0;
                 }
+                ssmp->loop_start *= 2;
+                ssmp->loop_end *= 2;
+                ssmp->sustain_start *= 2;
+                ssmp->sustain_end *= 2;
                 ssmp->volume = MIN(osmp.volume, 64) * 4; //mphack
                 smpflag[n] = (osmp.mode == 0 || osmp.mode == 2) ? SF_7 : SF_8;
 
