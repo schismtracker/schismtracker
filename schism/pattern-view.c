@@ -218,7 +218,7 @@ void draw_channel_header_8(int chan, int x, int y, int fg)
 void draw_note_8(int x, int y, song_note_t *note, UNUSED int cursor_pos, int fg, int bg)
 {
         char buf[4];
-        
+
         get_note_string(note->note, buf);
         draw_text(buf, x, y, fg, bg);
 
@@ -229,7 +229,7 @@ void draw_note_8(int x, int y, song_note_t *note, UNUSED int cursor_pos, int fg,
                 draw_char(0, x + 3, y, fg, bg);
                 draw_char(0, x + 4, y, fg, bg);
         }
-        
+
         snprintf(buf, 4, "%c%02X", get_effect_char(note->effect), note->param);
         buf[3] = '\0';
         draw_text(buf, x + 5, y, fg, bg);
@@ -292,9 +292,7 @@ void draw_note_7(int x, int y, song_note_t * note, int cursor_pos,
         case VOLFX_TONEPORTAMENTO:
         case VOLFX_VIBRATOSPEED:
         case VOLFX_VIBRATODEPTH:
-                /* for whatever reason, Impulse Tracker uses color 10 for
-                 * Gx and Hx... bug? */
-                fg1 = (status.flags & CLASSIC_MODE) ? 10 : 12;
+                fg1 = 6;
                 break;
         default:
                 fg1 = 12;
@@ -370,10 +368,21 @@ void draw_channel_header_3(int chan, int x, int y, int fg)
 void draw_note_3(int x, int y, song_note_t * note, int cursor_pos, int fg, int bg)
 {
         char buf[4];
+        int vfg = 6;
+
+        switch (note->voleffect) {
+        case VOLFX_VOLUME:
+                vfg = 2;
+                break;
+        case VOLFX_PANNING:
+        case VOLFX_NONE:
+                vfg = 1;
+                break;
+        }
 
         switch (cursor_pos) {
         case 0:
-                fg = 0;
+                vfg = fg = 0;
                 bg = 3;
                 break;
         case 1:
@@ -399,7 +408,7 @@ void draw_note_3(int x, int y, song_note_t * note, int cursor_pos, int fg, int b
                 cursor_pos -= 3;
                 buf[0] = ' ';
                 get_volume_string(note->volparam, note->voleffect, buf + 1);
-                draw_text(buf, x, y, ((note->voleffect == VOLFX_PANNING) ? 1 : 6), bg);
+                draw_text(buf, x, y, vfg, bg);
                 draw_char(buf[cursor_pos], x + cursor_pos, y, 0, 3);
                 return;
         case 6:
@@ -428,11 +437,9 @@ void draw_note_3(int x, int y, song_note_t * note, int cursor_pos, int fg, int b
                 num99tostr(note->instrument, buf + 1);
                 draw_text(buf, x, y, fg, bg);
         } else if (note->voleffect) {
-                if (cursor_pos != 0 && note->voleffect == VOLFX_PANNING)
-                        fg = 1;
                 buf[0] = ' ';
                 get_volume_string(note->volparam, note->voleffect, buf + 1);
-                draw_text(buf, x, y, fg, bg);
+                draw_text(buf, x, y, vfg, bg);
         } else if (note->effect || note->param) {
                 if (cursor_pos != 0)
                         fg = 2;
@@ -515,10 +522,21 @@ static void draw_effect_2(int x, int y, song_note_t * note, int cursor_pos, int 
 void draw_note_2(int x, int y, song_note_t * note, int cursor_pos, int fg, int bg)
 {
         char buf[4];
+        int vfg = 6;
+
+        switch (note->voleffect) {
+        case VOLFX_VOLUME:
+                vfg = 2;
+                break;
+        case VOLFX_PANNING:
+        case VOLFX_NONE:
+                vfg = 1;
+                break;
+        }
 
         switch (cursor_pos) {
         case 0:
-                fg = 0;
+                vfg = fg = 0;
                 bg = 3;
         case 1: /* Mini-accidentals on 2-col. view */
                 get_note_string(note->note, buf);
@@ -562,7 +580,7 @@ void draw_note_2(int x, int y, song_note_t * note, int cursor_pos, int fg, int b
         case 5:
                 cursor_pos -= 4;
                 get_volume_string(note->volparam, note->voleffect, buf);
-                draw_text(buf, x, y, ((note->voleffect == VOLFX_PANNING) ? 1 : 6), bg);
+                draw_text(buf, x, y, vfg, bg);
                 draw_char(buf[cursor_pos], x + cursor_pos, y, 0, 3);
                 return;
         case 6:
@@ -603,10 +621,8 @@ void draw_note_2(int x, int y, song_note_t * note, int cursor_pos, int fg, int b
                 num99tostr(note->instrument, buf);
                 draw_text(buf, x, y, fg, bg);
         } else if (note->voleffect) {
-                if (cursor_pos != 0 && note->voleffect == VOLFX_PANNING)
-                        fg = 1;
                 get_volume_string(note->volparam, note->voleffect, buf);
-                draw_text(buf, x, y, fg, bg);
+                draw_text(buf, x, y, vfg, bg);
         } else if (note->effect || note->param) {
                 draw_effect_2(x, y, note, cursor_pos, bg);
         } else {
@@ -819,12 +835,12 @@ void draw_note_6(int x, int y, song_note_t * note, int cursor_pos, UNUSED int fg
 
 #else
 
-        get_note_string (note -> note, note_buf);
+        get_note_string(note->note, note_buf);
 
         if (cursor_pos == 0)
-                draw_char (note_buf [0], x, y, 0, 3);
+                draw_char(note_buf[0], x, y, 0, 3);
         else
-                draw_char (note_buf [0], x, y, fg, bg);
+                draw_char(note_buf[0], x, y, fg, bg);
 
         bg1 = bg2 = bg;
         switch ((unsigned char) note_buf[0]) {
@@ -872,10 +888,12 @@ void draw_note_6(int x, int y, song_note_t * note, int cursor_pos, UNUSED int fg
                 fg1 = 6;
                 break;
         case VOLFX_PANNING:
+                fg1 = 10;
+                break;
         case VOLFX_TONEPORTAMENTO:
         case VOLFX_VIBRATOSPEED:
         case VOLFX_VIBRATODEPTH:
-                fg1 = 10;
+                fg1 = 6;
                 break;
         default:
                 fg1 = 12;
