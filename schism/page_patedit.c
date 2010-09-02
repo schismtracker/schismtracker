@@ -2375,22 +2375,6 @@ int get_current_pattern(void)
         return current_pattern;
 }
 
-static void fix_pb_trace(void)
-{
-        if (playback_tracing) {
-                switch (song_get_mode()) {
-                case MODE_PLAYING:
-                        song_start_at_pattern(current_pattern, 0);
-                        break;
-                case MODE_PATTERN_LOOP:
-                        song_loop_pattern(current_pattern, 0);
-                        break;
-                default:
-                        break;
-                };
-        }
-}
-
 static void _pattern_update_magic(void)
 {
         song_sample_t *s;
@@ -4129,8 +4113,7 @@ static int pattern_editor_handle_key(struct key_event * k)
                         case MODE_PATTERN_LOOP:
                                 return 1;
                         case MODE_PLAYING:
-                                prev_order_pattern();
-                                fix_pb_trace();
+                                song_set_current_order(song_get_current_order() - 1);
                                 return 1;
                         default:
                                 break;
@@ -4150,8 +4133,7 @@ static int pattern_editor_handle_key(struct key_event * k)
                         case MODE_PATTERN_LOOP:
                                 return 1;
                         case MODE_PLAYING:
-                                next_order_pattern();
-                                fix_pb_trace();
+                                song_set_current_order(song_get_current_order() + 1);
                                 return 1;
                         default:
                                 break;
