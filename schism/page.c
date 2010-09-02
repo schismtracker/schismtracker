@@ -480,8 +480,8 @@ static int handle_key_global(struct key_event * k)
                 break;
 
         case SDLK_d:
-                if (k->state) return 1; /* argh */
                 if (k->mod & KMOD_CTRL) {
+                        if (k->state) return 1; /* argh */
                         i = SDL_WM_GrabInput(SDL_GRAB_QUERY);
                         if (i == SDL_GRAB_QUERY)
                                 i = currently_grabbed;
