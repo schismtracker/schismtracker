@@ -1623,7 +1623,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                 }
                 break;
 
-        case FX_OFFSET: // FIXME need to test out-of-range values, with loop on/off, old effects on/off
+        case FX_OFFSET:
                 if (!(csf->flags & SONG_FIRSTTICK))
                         break;
                 if (param)
@@ -1634,11 +1634,8 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
                                 chan->position = chan->mem_offset;
                         else
                                 chan->position += chan->mem_offset;
-                        if (chan->position >= chan->length) {
-                                chan->position = chan->loop_start;
-                                if ((csf->flags & SONG_ITOLDEFFECTS) && chan->length > 4) {
-                                        chan->position = chan->length - 2;
-                                }
+                        if (chan->position > chan->length) {
+                                chan->position = (csf->flags & SONG_ITOLDEFFECTS) ? chan->length : 0;
                         }
                 }
                 break;
