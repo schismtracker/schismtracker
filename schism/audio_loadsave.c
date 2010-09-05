@@ -1210,6 +1210,7 @@ int song_preload_sample(dmoz_file_t *file)
                 song_unlock_audio();
                 return FAKE_SLOT;
         }
+        // WARNING this function must return 0 or KEYJAZZ_NOINST
         return song_load_sample(FAKE_SLOT, file->path) ? FAKE_SLOT : KEYJAZZ_NOINST;
 #undef FAKE_SLOT
 }

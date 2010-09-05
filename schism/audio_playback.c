@@ -275,19 +275,16 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 // keep track of what channel this note was played in so we can note-off properly later
                 keyjazz_channels[note] = chan;
 
-#if 0
-        /* XXX disabled for now; this interferes with keyjazz on the sample loader
-        (the 'fake slot' that samples are loaded into temporarily is position 0,
-        which this code interprets as "use last")
-        This breaks pattern editor keyjazz with no instrument number filled in,
-        but that's a far less common case than loading a sample and testing it */
-                // handle blank instrument values
+                // handle blank instrument values and "fake" sample #0 (used by sample loader)
                 if (samp == 0)
                         samp = c->last_instrument;
+                else if (samp == KEYJAZZ_INST_FAKE)
+                        samp = 0; // dumb hack
                 if (ins == 0)
                         ins = c->last_instrument;
+                else if (ins == KEYJAZZ_INST_FAKE)
+                        ins = 0; // dumb hack
                 c->last_instrument = ins_mode ? ins : samp;
-#endif
 
                 // give the channel a sample, and maybe an instrument
                 s = (samp == KEYJAZZ_NOINST) ? NULL : current_song->samples + samp;
