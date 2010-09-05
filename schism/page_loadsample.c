@@ -782,9 +782,9 @@ static void load_sample_handle_key(struct key_event * k)
         handle_preload();
         if (fake_slot != KEYJAZZ_NOINST) {
                 if (k->state)
-                        song_keyup(fake_slot, KEYJAZZ_NOINST, n);
+                        song_keyup(KEYJAZZ_INST_FAKE, KEYJAZZ_NOINST, n);
                 else
-                        song_keydown(fake_slot, KEYJAZZ_NOINST, n, v, KEYJAZZ_CHAN_CURRENT);
+                        song_keydown(KEYJAZZ_INST_FAKE, KEYJAZZ_NOINST, n, v, KEYJAZZ_CHAN_CURRENT);
         }
 }
 
@@ -797,7 +797,7 @@ static void handle_preload(void)
                 file = flist.files[current_file];
                 if (file && (file->type & TYPE_SAMPLE_MASK)) {
                         fake_slot_changed = 0;
-                        fake_slot = song_preload_sample(file);
+                        fake_slot = song_preload_sample(file); // either 0 or KEYJAZZ_NOTINST
                 }
         }
 }

@@ -242,11 +242,15 @@ int song_is_multichannel_mode(void);
 void song_change_current_play_channel(int relative, int wraparound);
 int song_get_current_play_channel(void);
 
-/* these return the channel that was used for the note.
-sample/inst slots 1+ are used "normally"; the sample loader uses slot #0 for preview playback */
+/* These return the channel that was used for the note.
+Sample/inst slots 1+ are used "normally"; the sample loader uses slot #0 for preview playback -- but reports
+KEYJAZZ_INST_FAKE to keydown/up, since zero conflicts with the standard "use previous sample for this channel"
+behavior which is normally internal, but is exposed on the pattern editor where it's possible to explicitly
+select sample #0. (note: this is a hack to work around another hack) */
 #define KEYJAZZ_CHAN_CURRENT 0
 #define KEYJAZZ_NOINST -1
 #define KEYJAZZ_DEFAULTVOL -1
+#define KEYJAZZ_INST_FAKE -2
 int song_keydown(int samp, int ins, int note, int vol, int chan);
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
 int song_keyup(int samp, int ins, int note);
