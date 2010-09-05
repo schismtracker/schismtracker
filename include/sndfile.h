@@ -36,41 +36,37 @@
 #define MIXBUFFERSIZE           512
 
 
-// Channel flags:
-// Bits 0-7:    Sample Flags
-#define CHN_16BIT               0x01
-#define CHN_LOOP                0x02
-#define CHN_PINGPONGLOOP        0x04
-#define CHN_SUSTAINLOOP         0x08
-#define CHN_PINGPONGSUSTAIN     0x10
-#define CHN_PANNING             0x20
-#define CHN_STEREO              0x40
-#define CHN_PINGPONGFLAG        0x80
-// Bits 8-31:   Channel Flags
-#define CHN_MUTE                0x100
-#define CHN_KEYOFF              0x200
-#define CHN_NOTEFADE            0x400
-#define CHN_SURROUND            0x800
-#define CHN_NOIDO               0x1000
-#define CHN_HQSRC               0x2000
-#define CHN_FILTER              0x4000
-#define CHN_VOLUMERAMP          0x8000
-#define CHN_VIBRATO             0x10000
-#define CHN_TREMOLO             0x20000
-//#define CHN_PANBRELLO         0x40000
-#define CHN_PORTAMENTO          0x80000
-#define CHN_GLISSANDO           0x100000
-#define CHN_VOLENV              0x200000
-#define CHN_PANENV              0x400000
-#define CHN_PITCHENV            0x800000
-#define CHN_FASTVOLRAMP         0x1000000
+#define CHN_16BIT               0x01 // 16-bit sample
+#define CHN_LOOP                0x02 // looped sample
+#define CHN_PINGPONGLOOP        0x04 // bi-directional (useless unless CHN_LOOP is also set)
+#define CHN_SUSTAINLOOP         0x08 // sample with sustain loop
+#define CHN_PINGPONGSUSTAIN     0x10 // bi-directional (useless unless CHN_SUSTAINLOOP is also set)
+#define CHN_PANNING             0x20 // sample with default panning set
+#define CHN_STEREO              0x40 // stereo sample
+#define CHN_PINGPONGFLAG        0x80 // when flag is on, sample is processed backwards
+#define CHN_MUTE                0x100 // muted channel
+#define CHN_KEYOFF              0x200 // exit sustain (note-off encountered)
+#define CHN_NOTEFADE            0x400 // fade note (~~~ or end of instrument envelope)
+#define CHN_SURROUND            0x800 // use surround channel (S91)
+#define CHN_NOIDO               0x1000 // near enough to an exact multiple of c5speed that interpolation
+                                       // won't be noticeable (or interpolation is disabled completely)
+#define CHN_HQSRC               0x2000 // ???
+#define CHN_FILTER              0x4000 // filtered output (i.e., Zxx)
+#define CHN_VOLUMERAMP          0x8000 // ramp volume
+#define CHN_VIBRATO             0x10000 // apply vibrato
+#define CHN_TREMOLO             0x20000 // apply tremolo
+//#define CHN_PANBRELLO         0x40000 // apply panbrello (handled elsewhere now)
+#define CHN_PORTAMENTO          0x80000 // apply portamento
+#define CHN_GLISSANDO           0x100000 // glissando mode ("stepped" pitch slides)
+#define CHN_VOLENV              0x200000 // volume envelope is active
+#define CHN_PANENV              0x400000 // pan envelope is active
+#define CHN_PITCHENV            0x800000 // pitch/filter envelope is active
+#define CHN_FASTVOLRAMP         0x1000000 // ramp volume very fast (XXX this is a dumb flag)
 //#define CHN_EXTRALOUD         0x2000000
 //#define CHN_REVERB            0x4000000
 //#define CHN_NOREVERB          0x8000000
-// used to turn off mute but have it reset later
-#define CHN_NNAMUTE             0x10000000
-// Another sample flag...
-#define CHN_ADLIB               0x20000000 /* OPL mode */
+#define CHN_NNAMUTE             0x10000000 // turn off mute, but have it reset later
+#define CHN_ADLIB               0x20000000 // OPL mode
 
 #define CHN_SAMPLE_FLAGS (CHN_16BIT | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP \
         | CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO | CHN_PINGPONGFLAG | CHN_ADLIB)
@@ -92,38 +88,38 @@
 #define ENV_PITCHCARRY          0x2000
 #define ENV_MUTE                0x4000
 
-#define FX_NONE                0
-#define FX_ARPEGGIO            1
-#define FX_PORTAMENTOUP        2
-#define FX_PORTAMENTODOWN      3
-#define FX_TONEPORTAMENTO      4
-#define FX_VIBRATO             5
-#define FX_TONEPORTAVOL        6
-#define FX_VIBRATOVOL          7
-#define FX_TREMOLO             8
-#define FX_PANNING             9
-#define FX_OFFSET              10
-#define FX_VOLUMESLIDE         11
-#define FX_POSITIONJUMP        12
-#define FX_VOLUME              13
-#define FX_PATTERNBREAK        14
-#define FX_RETRIG              15
-#define FX_SPEED               16
-#define FX_TEMPO               17
-#define FX_TREMOR              18
-#define FX_SPECIAL             20
-#define FX_CHANNELVOLUME       21
-#define FX_CHANNELVOLSLIDE     22
-#define FX_GLOBALVOLUME        23
-#define FX_GLOBALVOLSLIDE      24
-#define FX_KEYOFF              25
-#define FX_FINEVIBRATO         26
-#define FX_PANBRELLO           27
-#define FX_PANNINGSLIDE        29
-#define FX_SETENVPOSITION      30
-#define FX_MIDI                31
-#define FX_NOTESLIDEUP         32 // IMF Gxy
-#define FX_NOTESLIDEDOWN       33 // IMF Hxy
+#define FX_NONE                0 // .
+#define FX_ARPEGGIO            1 // J
+#define FX_PORTAMENTOUP        2 // F
+#define FX_PORTAMENTODOWN      3 // E
+#define FX_TONEPORTAMENTO      4 // G
+#define FX_VIBRATO             5 // H
+#define FX_TONEPORTAVOL        6 // L
+#define FX_VIBRATOVOL          7 // K
+#define FX_TREMOLO             8 // R
+#define FX_PANNING             9 // X
+#define FX_OFFSET              10 // O
+#define FX_VOLUMESLIDE         11 // D
+#define FX_POSITIONJUMP        12 // B
+#define FX_VOLUME              13 // ! (FT2/IMF Cxx)
+#define FX_PATTERNBREAK        14 // C
+#define FX_RETRIG              15 // Q
+#define FX_SPEED               16 // A
+#define FX_TEMPO               17 // T
+#define FX_TREMOR              18 // I
+#define FX_SPECIAL             20 // S
+#define FX_CHANNELVOLUME       21 // M
+#define FX_CHANNELVOLSLIDE     22 // N
+#define FX_GLOBALVOLUME        23 // V
+#define FX_GLOBALVOLSLIDE      24 // W
+#define FX_KEYOFF              25 // $ (FT2 Kxx)
+#define FX_FINEVIBRATO         26 // U
+#define FX_PANBRELLO           27 // Y
+#define FX_PANNINGSLIDE        29 // P
+#define FX_SETENVPOSITION      30 // & (FT2 Lxx)
+#define FX_MIDI                31 // Z
+#define FX_NOTESLIDEUP         32 // ( (IMF Gxy)
+#define FX_NOTESLIDEDOWN       33 // ) (IMF Hxy)
 #define FX_MAX                 34
 #define FX_UNIMPLEMENTED       FX_MAX // no-op, displayed as "?"
 
@@ -133,17 +129,17 @@
 #define VOLFX_NONE             0
 #define VOLFX_VOLUME           1
 #define VOLFX_PANNING          2
-#define VOLFX_VOLSLIDEUP       3
-#define VOLFX_VOLSLIDEDOWN     4
-#define VOLFX_FINEVOLUP        5
-#define VOLFX_FINEVOLDOWN      6
-#define VOLFX_VIBRATOSPEED     7
-#define VOLFX_VIBRATODEPTH     8
-#define VOLFX_PANSLIDELEFT     9
-#define VOLFX_PANSLIDERIGHT    10
-#define VOLFX_TONEPORTAMENTO   11
-#define VOLFX_PORTAUP          12
-#define VOLFX_PORTADOWN        13
+#define VOLFX_VOLSLIDEUP       3 // C
+#define VOLFX_VOLSLIDEDOWN     4 // D
+#define VOLFX_FINEVOLUP        5 // A
+#define VOLFX_FINEVOLDOWN      6 // B
+#define VOLFX_VIBRATOSPEED     7 // $ (FT2 Ax)
+#define VOLFX_VIBRATODEPTH     8 // H
+#define VOLFX_PANSLIDELEFT     9 // < (FT2 Dx)
+#define VOLFX_PANSLIDERIGHT    10 // > (FT2 Ex)
+#define VOLFX_TONEPORTAMENTO   11 // G
+#define VOLFX_PORTAUP          12 // F
+#define VOLFX_PORTADOWN        13 // E
 
 // orderlist
 #define ORDER_SKIP              254 // +++
@@ -196,48 +192,48 @@
 #define PROCESS_NEXT_ORDER      0xFFFE
 
 // Module flags
-#define SONG_EMBEDMIDICFG       0x0001
+#define SONG_EMBEDMIDICFG       0x0001 // Embed MIDI macros (Shift-F1) in file
 //#define SONG_FASTVOLSLIDES    0x0002
-#define SONG_ITOLDEFFECTS       0x0004
-#define SONG_COMPATGXX          0x0008
-#define SONG_LINEARSLIDES       0x0010
-#define SONG_PATTERNPLAYBACK    0x0020
+#define SONG_ITOLDEFFECTS       0x0004 // Old Impulse Tracker effect implementations
+#define SONG_COMPATGXX          0x0008 // "Compatible Gxx" (handle portamento more like other trackers)
+#define SONG_LINEARSLIDES       0x0010 // Linear slides vs. Amiga slides
+#define SONG_PATTERNPLAYBACK    0x0020 // Only playing current pattern
 //#define SONG_STEP             0x0040
-#define SONG_PAUSED             0x0080
+#define SONG_PAUSED             0x0080 // Playback paused (Shift-F8)
 //#define SONG_FADINGSONG       0x0100
-#define SONG_ENDREACHED         0x0200
+#define SONG_ENDREACHED         0x0200 // Song is finished (standalone keyjazz mode)
 //#define SONG_GLOBALFADE       0x0400
 //#define SONG_CPUVERYHIGH      0x0800
-#define SONG_FIRSTTICK          0x1000
+#define SONG_FIRSTTICK          0x1000 // Current tick is the first tick of the row (dopey flow-control flag)
 //#define SONG_MPTFILTERMODE    0x2000
 //#define SONG_SURROUNDPAN      0x4000
 //#define SONG_EXFILTERRANGE    0x8000
 //#define SONG_AMIGALIMITS      0x10000
-#define SONG_INSTRUMENTMODE     0x20000
-#define SONG_ORDERLOCKED        0x40000
-#define SONG_NOSTEREO           0x80000
-#define SONG_PATTERNLOOP        (SONG_PATTERNPLAYBACK | SONG_ORDERLOCKED)
+#define SONG_INSTRUMENTMODE     0x20000 // Process instruments
+#define SONG_ORDERLOCKED        0x40000 // Don't advance orderlist *(Alt-F11)
+#define SONG_NOSTEREO           0x80000 // secret code for "mono"
+#define SONG_PATTERNLOOP        (SONG_PATTERNPLAYBACK | SONG_ORDERLOCKED) // Loop current pattern (F6)
 
 // Global Options (Renderer)
-#define SNDMIX_REVERSESTEREO    0x0001
-#define SNDMIX_NOISEREDUCTION   0x0002
-//#define SNDMIX_AGC            0x0004
-#define SNDMIX_NORESAMPLING     0x0008
-#define SNDMIX_HQRESAMPLER      0x0010
+#define SNDMIX_REVERSESTEREO    0x0001 // swap L/R audio channels
+#define SNDMIX_NOISEREDUCTION   0x0002 // reduce hiss (do not use, it's just a simple low-pass filter)
+//#define SNDMIX_AGC            0x0004 // automatic gain control
+#define SNDMIX_NORESAMPLING     0x0008 // force no resampling (uninterpolated)
+#define SNDMIX_HQRESAMPLER      0x0010 // cubic resampling
 //#define SNDMIX_MEGABASS       0x0020
 //#define SNDMIX_SURROUND       0x0040
 //#define SNDMIX_REVERB         0x0080
-#define SNDMIX_EQ               0x0100
+#define SNDMIX_EQ               0x0100 // apply EQ
 //#define SNDMIX_SOFTPANNING    0x0200
-#define SNDMIX_ULTRAHQSRCMODE   0x0400
+#define SNDMIX_ULTRAHQSRCMODE   0x0400 // polyphase resampling (or FIR? I don't know)
 // Misc Flags (can safely be turned on or off)
-#define SNDMIX_DIRECTTODISK     0x10000
-#define SNDMIX_NOBACKWARDJUMPS  0x40000
+#define SNDMIX_DIRECTTODISK     0x10000 // disk writer mode
+#define SNDMIX_NOBACKWARDJUMPS  0x40000 // disallow Bxx jumps from going backward in the orderlist
 //#define SNDMIX_MAXDEFAULTPAN  0x80000 // (no longer) Used by the MOD loader
 #define SNDMIX_MUTECHNMODE      0x100000 // Notes are not played on muted channels
 #define SNDMIX_NOSURROUND       0x200000 // ignore S91
 //#define SNDMIX_NOMIXING       0x400000
-#define SNDMIX_NORAMPING        0x800000
+#define SNDMIX_NORAMPING        0x800000 // don't apply ramping on volume change (causes clicks)
 
 enum {
         SRCMODE_NEAREST,
