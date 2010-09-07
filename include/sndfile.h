@@ -419,7 +419,6 @@ typedef struct song_voice {
         int32_t rofs, lofs; // ?
         int32_t ramp_length;
         // Information not used in the mixer
-        signed char * data; // I DON'T KNOW, this is more or less the same as current_sample_data...?
         int32_t right_volume_new, left_volume_new; // ?
         int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
         int32_t final_panning; // range 0-256 (but can temporarily exceed that range during calculations)
@@ -681,6 +680,8 @@ void csf_free(song_t *csf);
 
 void csf_destroy(song_t *csf); /* erase everything -- equiv. to new song */
 int csf_destroy_sample(song_t *csf, uint32_t smpnum);
+
+void csf_stop_sample(song_t *csf, song_sample_t *smp);
 
 void csf_reset_midi_cfg(song_t *csf);
 void csf_set_current_order(song_t *csf, uint32_t position);

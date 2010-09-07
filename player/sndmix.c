@@ -1237,7 +1237,8 @@ int csf_read_note(song_t *csf)
                         chan->flags &= ~CHN_LOOP;
 
                 chan->right_volume_new = chan->left_volume_new = 0;
-                chan->current_sample_data = (chan->data && chan->length && chan->increment) ? chan->data : NULL;
+                if (!(chan->length && chan->increment))
+                        chan->current_sample_data = NULL;
 
                 update_vu_meter(chan);
 

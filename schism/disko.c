@@ -407,7 +407,7 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
         newdata = csf_allocate_sample(ds->length);
         if (!newdata)
                 return DW_ERROR;
-        song_stop_sample(sample);
+        csf_stop_sample(current_song, sample);
         if (sample->data)
                 csf_free_sample(sample->data);
         sample->data = newdata;

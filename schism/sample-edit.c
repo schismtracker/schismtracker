@@ -205,7 +205,7 @@ void sample_toggle_quality(song_sample_t * sample, int convert_data)
         song_lock_audio();
 
         // stop playing the sample because we'll be reallocating and/or changing lengths
-        song_stop_sample(sample);
+        csf_stop_sample(current_song, sample);
 
         sample->flags ^= CHN_16BIT;
 
@@ -521,7 +521,7 @@ void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
         so here's my "fix": stop the song. --plusminus */
         // I suppose that works, but it's slightly annoying, so I'll just stop the sample...
         // hopefully this won't (re)introduce crashes. --Storlek
-        song_stop_sample(sample);
+        csf_stop_sample(current_song, sample);
 
         bps = (((sample->flags & CHN_STEREO) ? 2 : 1)
                 * ((sample->flags & CHN_16BIT) ? 2 : 1));

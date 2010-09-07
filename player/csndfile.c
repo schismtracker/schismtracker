@@ -1136,24 +1136,46 @@ void csf_adjust_sample_loop(song_sample_t *sample)
 
 
 
-
-int csf_destroy_sample(song_t *csf, uint32_t smp)
+void csf_stop_sample(song_t *csf, song_sample_t *smp)
 {
-        if (smp >= MAX_SAMPLES)
-                return 0;
-        if (!csf->samples[smp].data)
-                return 1;
-        song_sample_t *pins = &csf->samples[smp];
-        signed char *data = pins->data;
-        pins->data = NULL;
-        pins->length = 0;
-        pins->flags &= ~CHN_16BIT;
-        for (uint32_t i=0; i<MAX_VOICES; i++) {
-                if (csf->voices[i].data == data) {
-                        csf->voices[i].position = csf->voices[i].length = 0;
-                        csf->voices[i].data = csf->voices[i].current_sample_data = NULL;
+        song_voice_t *v = csf->voices;
+
+        if (!smp->data)
+                return;
+        for (int i = 0; i < MAX_VOICES; i++, v++) {
+                if (v->ptr_sample == smp || v->current_sample_data == smp->data) {
+                        v->note = v->new_note = v->new_instrument = 0;
+                        v->fadeout_volume = 0;
+                        v->flags |= CHN_KEYOFF | CHN_NOTEFADE;
+                        v->period = 0;
+                        v->position = v->length = 0;
+                        v->loop_start = 0;
+                        v->loop_end = 0;
+                        v->rofs = v->lofs = 0;
+                        v->current_sample_data = NULL;
+                        v->ptr_sample = NULL;
+                        v->ptr_instrument = NULL;
+                        v->left_volume = v->right_volume = 0;
+                        v->left_volume_new = v->right_volume_new = 0;
+                        v->left_ramp = v->right_ramp = 0;
                 }
         }
+}
+
+int csf_destroy_sample(song_t *csf, uint32_t nsmp)
+{
+        song_sample_t *smp = csf->samples + nsmp;
+        signed char *data;
+
+        if (nsmp >= MAX_SAMPLES)
+                return 0;
+        data = smp->data;
+        if (!data)
+                return 1;
+        csf_stop_sample(csf, smp);
+        smp->data = NULL;
+        smp->length = 0;
+        smp->flags &= ~CHN_16BIT;
         csf_free_sample(data);
         return 1;
 }

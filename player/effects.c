@@ -1243,7 +1243,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
         chan->loop_start = psmp->loop_start;
         chan->loop_end = psmp->loop_end;
         chan->c5speed = psmp->c5speed;
-        chan->data = psmp->data;
+        chan->current_sample_data = psmp->data;
         chan->position = 0;
 
         if (chan->flags & CHN_SUSTAINLOOP) {
@@ -1309,7 +1309,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
                 }
                 if (!porta || !chan->length) {
                         chan->ptr_sample = pins;
-                        chan->data = pins->data;
+                        chan->current_sample_data = pins->data;
                         chan->length = pins->length;
                         chan->loop_end = pins->length;
                         chan->loop_start = 0;
@@ -1452,7 +1452,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
                 return;
         }
         if (instr >= MAX_INSTRUMENTS) instr = 0;
-        data = chan->data;
+        data = chan->current_sample_data;
         ptr_instrument = chan->ptr_instrument;
         if (instr && note) {
                 ptr_instrument = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
@@ -1482,7 +1482,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
                         ok = (NOTE_IS_NOTE(note) && (int) p->note == note && ptr_instrument == p->ptr_instrument);
                         break;
                 case DCT_SAMPLE:
-                        ok = (data && data == p->data);
+                        ok = (data && data == p->current_sample_data);
                         break;
                 case DCT_INSTRUMENT:
                         ok = (ptr_instrument == p->ptr_instrument);
