@@ -3050,7 +3050,7 @@ static int pattern_editor_insert(struct key_event *k)
                                 vol, current_channel, cur_note->effect, cur_note->param);
                         advance_cursor(!(k->mod & KMOD_SHIFT), 1);
                         return 1;
-                } else if (k->sym == SDLK_8 && k->orig_sym == SDLK_8) {
+                } else if (k->sym == SDLK_8) {
                         /* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
                         if (k->state) return 0;
                         song_single_step(current_pattern, current_row);
