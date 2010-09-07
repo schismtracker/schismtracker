@@ -49,24 +49,24 @@ static u32 _check_ahbprot(void) {
 
         res = ES_GetTitleID(&title_id);
         if (res < 0) {
-                log_appendf(4, "ES_GetTitleID() failed: %d\n", res);
+                log_appendf(4, "ES_GetTitleID() failed: %d", res);
                 return res;
         }
 
         res = ES_GetStoredTMDSize(title_id, &tmd_size);
         if (res < 0) {
-                log_appendf(4, "ES_GetStoredTMDSize() failed: %d\n", res);
+                log_appendf(4, "ES_GetStoredTMDSize() failed: %d", res);
                 return res;
         }
 
         if (tmd_size > 4096) {
-                log_appendf(4, "TMD too big: %d\n", tmd_size);
+                log_appendf(4, "TMD too big: %d", tmd_size);
                 return -EINVAL;
         }
 
         res = ES_GetStoredTMD(title_id, tmdbuf, tmd_size);
         if (res < 0) {
-                log_appendf(4, "ES_GetStoredTMD() failed: %d\n", res);
+                log_appendf(4, "ES_GetStoredTMD() failed: %d", res);
                 return -EINVAL;
         }
 
