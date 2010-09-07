@@ -31,11 +31,51 @@
 
 #include <di/di.h>
 #include <fat.h>
+#include <ogc/machine/processor.h>
 #include <ogc/system.h>
+#include <ogc/es.h>
+#include <ogc/ios.h>
+#include <errno.h>
 #include <sys/dir.h>
 #include "isfs.h"
 #define CACHE_PAGES 8
 
+// cargopasta'd from libogc git __di_check_ahbprot
+static u32 _check_ahbprot(void) {
+        s32 res;
+        u64 title_id;
+        u32 tmd_size;
+        STACK_ALIGN(u32, tmdbuf, 1024, 32);
+
+        res = ES_GetTitleID(&title_id);
+        if (res < 0) {
+                log_appendf(4, "ES_GetTitleID() failed: %d\n", res);
+                return res;
+        }
+
+        res = ES_GetStoredTMDSize(title_id, &tmd_size);
+        if (res < 0) {
+                log_appendf(4, "ES_GetStoredTMDSize() failed: %d\n", res);
+                return res;
+        }
+
+        if (tmd_size > 4096) {
+                log_appendf(4, "TMD too big: %d\n", tmd_size);
+                return -EINVAL;
+        }
+
+        res = ES_GetStoredTMD(title_id, tmdbuf, tmd_size);
+        if (res < 0) {
+                log_appendf(4, "ES_GetStoredTMD() failed: %d\n", res);
+                return -EINVAL;
+        }
+
+        if ((tmdbuf[0x76] & 3) == 3) {
+                return 1;
+        }
+
+        return 0;
+}
 
 const char *osname = "wii";
 
@@ -43,6 +83,17 @@ void wii_sysinit(int *pargc, char ***pargv)
 {
         DIR_ITER *dir;
         char *ptr = NULL;
+
+        log_appendf(1, "[Wii] This is IOS%d v%X, and AHBPROT is %s",
+                IOS_GetVersion(), IOS_GetRevision(), _check_ahbprot() > 0 ? "enabled" : "disabled");
+        if (*pargc == 0 && *pargv == NULL && SYS_GetHollywoodRevision() == 0) {
+                // I don't know if any other loaders provide similarly broken environments
+                log_appendf(1, "[Wii] Was I just bannerbombed? Prepare for crash at exit...");
+        } else if (memcmp((void *) 0x80001804, "STUBHAXX", 8) == 0) {
+                log_appendf(1, "[Wii] Hello, HBC user!");
+        } else {
+                log_appendf(1, "[Wii] Where am I?!");
+        }
 
         ISFS_SU();
         if (ISFS_Initialize() == IPC_OK)
@@ -134,9 +185,8 @@ static SDLKey hat_to_keysym(int value)
 // but it at least allows simple song playback.
 int wii_sdlevent(SDL_Event *event)
 {
-        SDL_Event newev;
+        SDL_Event newev = {};
         SDLKey sym;
-        memset(&newev, 0, sizeof(newev));
 
         switch (event->type) {
         case SDL_KEYDOWN:
@@ -163,18 +213,14 @@ int wii_sdlevent(SDL_Event *event)
                         sym = lasthatsym;
                         lasthatsym = 0;
                 }
-                newev.key.which = newev.jhat.which;
-                newev.key.keysym.mod = 0;
-                newev.key.keysym.scancode = 0;
-                newev.key.keysym.unicode = 0;
+                newev.key.which = event->jhat.which;
                 newev.key.keysym.sym = sym;
-                newev.key.type = newev.type;
+                newev.key.type = newev.type; // is this a no-op?
                 *event = newev;
                 return 1;
 
         case SDL_JOYBUTTONDOWN:
         case SDL_JOYBUTTONUP:
-                newev.key.keysym.mod = 0;
                 switch (event->jbutton.button) {
                 case 0: // A
                 case 1: // B
@@ -220,9 +266,7 @@ int wii_sdlevent(SDL_Event *event)
                         event->type = SDL_QUIT;
                         return 1;
                 }
-                newev.key.which = newev.jbutton.which;
-                newev.key.keysym.scancode = 0;
-                newev.key.keysym.unicode = 0;
+                newev.key.which = event->jbutton.which;
                 newev.key.keysym.sym = sym;
                 if (event->type == SDL_JOYBUTTONDOWN) {
                         newev.type = SDL_KEYDOWN;
@@ -231,7 +275,7 @@ int wii_sdlevent(SDL_Event *event)
                         newev.type = SDL_KEYUP;
                         newev.key.state = SDL_RELEASED;
                 }
-                newev.key.type = newev.type;
+                newev.key.type = newev.type; // no-op?
                 *event = newev;
                 return 1;
         }

@@ -341,6 +341,8 @@ static const devoptab_t dotab_isfs = {
     NULL,
     NULL,
     NULL,
+    NULL,
+    NULL,
     NULL
 };
 
