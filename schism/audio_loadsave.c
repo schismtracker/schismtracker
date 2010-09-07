@@ -51,51 +51,12 @@ char song_filename[PATH_MAX + 1];
 char song_basename[NAME_MAX + 1];
 
 // ------------------------------------------------------------------------
-// quiet a sample when loading
-
-void song_stop_sample(song_sample_t *ssmp)
-{
-        int i;
-        song_sample_t *smp = (song_sample_t *) ssmp; // bleargh
-
-        for (i = 0; i < MAX_VOICES; i++) {
-                if (current_song->voices[i].ptr_sample == smp
-                    || current_song->voices[i].current_sample_data == smp->data
-                    || current_song->voices[i].data == smp->data) {
-                        current_song->voices[i].note = current_song->voices[i].new_note = current_song->voices[i].new_instrument = 0;
-                        current_song->voices[i].fadeout_volume = 0;
-                        current_song->voices[i].flags |= CHN_KEYOFF|CHN_NOTEFADE;
-                        current_song->voices[i].period = 0;
-                        current_song->voices[i].position = current_song->voices[i].length = 0;
-                        current_song->voices[i].loop_start = 0;
-                        current_song->voices[i].loop_end = 0;
-                        current_song->voices[i].rofs = current_song->voices[i].lofs = 0;
-                        current_song->voices[i].data = NULL;
-                        current_song->voices[i].ptr_sample = NULL;
-                        current_song->voices[i].ptr_instrument = NULL;
-                        current_song->voices[i].left_volume = current_song->voices[i].right_volume = 0;
-                        current_song->voices[i].left_volume_new = current_song->voices[i].right_volume_new = 0;
-                        current_song->voices[i].left_ramp = current_song->voices[i].right_ramp = 0;
-                }
-        }
-}
-
-static void _squelch_sample(int n)
-{
-        song_stop_sample(current_song->samples + n); // sdkflhaghljfsdh
-}
-
-
-// functions to "fix" the song for editing.
-// these are all called by fix_song after a file is loaded.
-
-
-
 // replace any '\0' chars with spaces, mostly to make the string handling
 // much easier.
 // TODO | Maybe this should be done with the filenames and the song title
 // TODO | as well? (though I've never come across any cases of either of
 // TODO | these having null characters in them...)
+
 static void _fix_names(song_t *qq)
 {
         int c, n;
@@ -1196,7 +1157,7 @@ int song_preload_sample(dmoz_file_t *file)
 {
         // 0 is our "hidden sample"
 #define FAKE_SLOT 0
-        //_squelch_sample(FAKE_SLOT);
+        //csf_stop_sample(current_song, current_song->samples + FAKE_SLOT);
         if (file->sample) {
                 song_sample_t *smp = song_get_sample(FAKE_SLOT);
 
@@ -1230,7 +1191,7 @@ int song_load_sample(int n, const char *file)
 
         // set some default stuff
         song_lock_audio();
-        _squelch_sample(n);
+        csf_stop_sample(current_song, current_song->samples + n);
         memset(&smp, 0, sizeof(smp));
         strncpy(smp.name, base, 25);
 
@@ -1339,7 +1300,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
         unsigned int j;
         int x;
 
-        _squelch_sample(0);
+        csf_stop_sample(current_song, current_song->samples + 0);
         csf_free(library);
 
         const char *base = get_basename(path);
@@ -1386,7 +1347,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 
 int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
 {
-        _squelch_sample(0);
+        csf_stop_sample(current_song, current_song->samples + 0);
         csf_free(library);
 
         const char *base = get_basename(path);
