@@ -86,7 +86,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 
         log_appendf(1, "[Wii] This is IOS%d v%X, and AHBPROT is %s",
                 IOS_GetVersion(), IOS_GetRevision(), _check_ahbprot() > 0 ? "enabled" : "disabled");
-        if (*pargc == 0 && *pargv == NULL && SYS_GetHollywoodRevision() == 0) {
+        if (*pargc == 0 && *pargv == NULL) {
                 // I don't know if any other loaders provide similarly broken environments
                 log_appendf(1, "[Wii] Was I just bannerbombed? Prepare for crash at exit...");
         } else if (memcmp((void *) 0x80001804, "STUBHAXX", 8) == 0) {
