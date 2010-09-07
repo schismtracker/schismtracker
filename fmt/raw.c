@@ -28,13 +28,12 @@
 
 /* --------------------------------------------------------------------- */
 
+// Impulse Tracker handles raw sample data as unsigned, EXCEPT when saving a 16-bit sample as raw.
+
 int fmt_raw_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 {
         /* we'll uphold IT's limit of 4mb */
-        if (length > 4 * 1048576) {
-                errno = EFBIG;
-                return 0;
-        }
+        length = MIN(length, 4 * 1048576);
 
         smp->c5speed = 8363;
         smp->volume = 64 * 4;
