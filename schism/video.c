@@ -91,7 +91,7 @@ typedef float GLclampf;
 typedef unsigned char GLubyte;
 #endif
 
-#ifdef NVIDIA_PixelDataRange
+#if USE_OPENGL && NVIDIA_PixelDataRange
 
 #ifndef WGL_NV_allocate_memory
 #define WGL_NV_allocate_memory 1
@@ -211,11 +211,13 @@ struct video_cf {
 };
 static struct video_cf video;
 
+#ifdef USE_OPENGL
 static int int_log2(int val) {
         int l = 0;
         while ((val >>= 1 ) != 0) l++;
         return l;
 }
+#endif
 
 #ifdef MACOSX
 #include <OpenGL/gl.h>
@@ -884,6 +886,7 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
         return video.surface;
 }
 
+#if USE_OPENGL
 static void _set_gl_attributes(void)
 {
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -897,6 +900,7 @@ static void _set_gl_attributes(void)
         SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
 #endif
 }
+#endif
 
 void video_resize(unsigned int width, unsigned int height)
 {
