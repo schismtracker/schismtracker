@@ -739,7 +739,9 @@ int csf_init_player(song_t *csf, int reset)
         csf_initialize_dsp(csf, reset);
         initialize_eq(reset, csf->mix_frequency);
 
-        Fmdrv_Init(csf->mix_frequency);
+        // retarded hackaround to get adlib to suck less
+        if (csf->mix_frequency != 4000)
+                Fmdrv_Init(csf->mix_frequency);
         OPL_Reset();
         GM_Reset(0);
         return 1;
