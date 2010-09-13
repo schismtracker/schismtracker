@@ -38,6 +38,8 @@
 #endif
 #include <alsa/seq.h>
 
+#include <sys/stat.h>
+
 
 
 #define PORT_NAME       "Schism Tracker"
@@ -436,6 +438,14 @@ int alsa_midi_setup(void)
 {
         static snd_seq_queue_tempo_t *tempo;
         static struct midi_driver driver;
+
+        /* only bother if alsa midi actually exists, otherwise this will
+        produce useless and annoying error messages on systems where alsa
+        libs are installed but which aren't actually running it */
+        struct stat sbuf;
+        if (stat("/dev/snd/seq", &sbuf) != 0)
+                return 0;
+
 
 #ifdef USE_DLTRICK_ALSA
         if (!dlsym(_dltrick_handle,"snd_seq_open")) return 0;
