@@ -231,7 +231,7 @@ static int load_it_pattern(song_note_t *note, slurp_t *fp, int rows, int ignorez
                         last_note[chan].volparam = note[chan].volparam;
                 }
                 if (maskvar & ITNOTE_EFFECT) {
-                        note[chan].effect = slurp_getc(fp);
+                        note[chan].effect = slurp_getc(fp) & 0x1f;
                         note[chan].param = slurp_getc(fp);
                         csf_import_s3m_effect(note + chan, 1);
                         if (ignorezxx && note[chan].effect == FX_MIDI) {
