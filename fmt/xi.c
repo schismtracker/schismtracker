@@ -36,29 +36,7 @@
 /* --------------------------------------------------------------------- */
 
 #pragma pack(push, 1)
-struct xm_instrument {
-        uint32_t size;
-        int8_t name[22];
-        uint8_t type;
-        uint8_t samples;
-        uint8_t samplesh;
-};
-
 struct xm_sample_header {
-        uint32_t shsize;
-        uint8_t snum[96];
-        uint16_t venv[24];
-        uint16_t penv[24];
-        uint8_t vnum, pnum;
-        uint8_t vsustain, vloops, vloope, psustain, ploops, ploope;
-        uint8_t vtype, ptype;
-        uint8_t vibtype, vibsweep, vibdepth, vibrate;
-        uint16_t volfade;
-        uint16_t res;
-        uint8_t reserved1[20];
-};
-
-struct xm_sample {
         uint32_t samplen;
         uint32_t loopstart;
         uint32_t looplen;
@@ -70,66 +48,111 @@ struct xm_sample {
         uint8_t res;
         char name[22];
 };
+
+struct xi_sample_header {
+        uint8_t snum[96];
+        uint16_t venv[24];
+        uint16_t penv[24];
+        uint8_t vnum, pnum;
+        uint8_t vsustain, vloops, vloope, psustain, ploops, ploope;
+        uint8_t vtype, ptype;
+        uint8_t vibtype, vibsweep, vibdepth, vibrate;
+        uint16_t volfade;
+        uint8_t reserved1[0x16];
+        uint16_t nsamples;
+};
+
+struct xi_file_header {
+        int8_t header[0x15];    // "Extended Instrument: "
+        int8_t name[0x16];      // Name of instrument
+        uint8_t magic;          // 0x1a, DOS EOF char so you can 'type file.xi'
+        int8_t tracker[0x14];   // Name of tracker
+        uint16_t version;       // big-endian 0x0102
+        struct xi_sample_header xish;
+        struct xm_sample_header sheader[];
+};
 #pragma pack(pop)
+
+static int validate_xi(const struct xi_file_header *xi, size_t length)
+{
+        if (length <= sizeof(struct xi_file_header))
+                return 0;
+        if (memcmp(xi->header, "Extended Instrument: ", 21) != 0)
+                return 0;
+        if (xi->magic != 0x1a)
+                return 0;
+        if (bswapLE16(xi->version) != 0x0102)
+                return(0);
+        return(1);
+}
 
 /* --------------------------------------------------------------------- */
 int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        if (length <= 86) return 0;
-        if (memcmp(data, "Extended Instrument: ", 21) != 0) return 0;
-        if (data[43] != 26) return 0;
-        if (memcmp(data+44, "FastTracker v", 13) != 0) return 0;
+        struct xi_file_header *xi = (struct xi_file_header *) data;
+
+        if (!validate_xi(xi, length))
+                return 0;
+
         file->description = "FastTracker Instrument";
         file->title = mem_alloc(24);
-        memcpy(file->title, ((char*)data)+21, 22);
+        memcpy(file->title, xi->name, 22);
         file->title[22]='\0';
         file->type = TYPE_INST_XI;
         return 1;
 }
 
-
 int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 {
-        struct xm_sample_header xmsh;
-        struct xm_sample xmss;
+        const struct xi_file_header *xi = (const struct xi_file_header *) data;
+        struct xi_sample_header xmsh;
         struct instrumentloader ii;
         song_instrument_t *g;
-        song_sample_t *smp;
-        unsigned int nsamples, rs;
-        unsigned int samplesize;
-        unsigned int ptr;
-        unsigned int k, j, n;
+        const uint8_t *sampledata, *eof;
+        int k;
 
-        if (length <= 302) return 0;
-        if (memcmp(data, "Extended Instrument: ", 21) != 0) return 0;
-        if (!slot) return 0;
+        if (!slot)
+                return 0;
+        if (!validate_xi(xi, length))
+                return 0;
+
+        eof = data + length;
 
         g = instrument_loader_init(&ii, slot);
-        memcpy((char*)g->name, data+21, 22);
+        memcpy(g->name, xi->name, 22);
         g->name[22] = '\0';
-        memcpy(&xmsh, data+62, sizeof(xmsh)); /* overlap */
+
+        xmsh = xi->xish;
+
         for (k = 0; k < 96; k++) {
-                if (xmsh.snum[k] > 15) xmsh.snum[k] = 15;
-                xmsh.snum[k] = instrument_loader_sample(&ii, xmsh.snum[k]+1);
-                g->note_map[k+12] = k+1+12;
-                if (xmsh.snum[k]) g->sample_map[k+12] = xmsh.snum[k];
+                if (xmsh.snum[k] > 15)
+                        xmsh.snum[k] = 15;
+                xmsh.snum[k] = instrument_loader_sample(&ii, xmsh.snum[k] + 1);
+                g->note_map[k + 12] = k + 1 + 12;
+                if (xmsh.snum[k])
+                        g->sample_map[k + 12] = xmsh.snum[k];
         }
         for (k = 0; k < 12; k++) {
-                g->note_map[k] = 0; g->sample_map[k] = 0;
-                g->note_map[k+108] = 0; g->sample_map[k+108] = 0;
+                g->note_map[k] = 0;
+                g->sample_map[k] = 0;
+                g->note_map[k + 108] = 0;
+                g->sample_map[k + 108] = 0;
         }
         for (k = 0; k < 24; k++) {
                 xmsh.venv[k] = bswapLE16(xmsh.venv[k]);
                 xmsh.penv[k] = bswapLE16(xmsh.penv[k]);
         }
+
         xmsh.volfade = bswapLE16(xmsh.volfade);
-        xmsh.res = bswapLE16(xmsh.res);
-        nsamples = ((int)data[300]) | (((int)data[301])<<8);
-        ptr = 298 + (nsamples * sizeof(xmss));
-        for (k = 0; k < nsamples; k++) {
-                j = 298 + (k * sizeof(xmss));
-                if (j >= length) return 0;
-                memcpy(&xmss, data + j, sizeof(xmss));
+        xmsh.nsamples = bswapLE16(xmsh.nsamples);
+        // Sample data begins at the end of the sample headers
+        sampledata = (const uint8_t *) (xi->sheader + xmsh.nsamples);
+
+        for (k = 0; k < xmsh.nsamples; k++) {
+                struct xm_sample_header xmss = xi->sheader[k];
+                song_sample_t *smp;
+                unsigned int rs, samplesize, n;
+
                 xmss.samplen = bswapLE32(xmss.samplen);
                 xmss.loopstart = bswapLE32(xmss.loopstart);
                 xmss.looplen = bswapLE32(xmss.looplen);
@@ -148,10 +171,13 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                         xmss.loopstart >>= 1;
                         xmss.samplen >>= 1;
                 }
-                if (xmss.loopstart >= xmss.samplen) xmss.type &= ~3;
+                if (xmss.loopstart >= xmss.samplen)
+                        xmss.type &= ~3;
                 xmss.looplen += xmss.loopstart;
-                if (xmss.looplen > xmss.samplen) xmss.looplen = xmss.samplen;
-                if (!xmss.looplen) xmss.type &= ~3;
+                if (xmss.looplen > xmss.samplen)
+                        xmss.looplen = xmss.samplen;
+                if (!xmss.looplen)
+                        xmss.type &= ~3;
 
                 n = instrument_loader_sample(&ii, k + 1);
                 smp = song_get_sample(n);
@@ -163,22 +189,28 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->length = samplesize;
                 smp->loop_start = xmss.loopstart;
                 smp->loop_end = xmss.looplen;
-                if (smp->loop_end > smp->loop_start) smp->loop_end = smp->length;
-                if (smp->loop_start >= smp->loop_end) smp->loop_start = smp->loop_end = 0;
-                if (xmss.type & 3) smp->flags |= CHN_LOOP;
-                if (xmss.type & 3) smp->flags |= CHN_PINGPONGLOOP;
+                if (smp->loop_end > smp->loop_start)
+                        smp->loop_end = smp->length;
+                if (smp->loop_start >= smp->loop_end)
+                        smp->loop_start = smp->loop_end = 0;
+                // FIXME 3?
+                if (xmss.type & 3)
+                        smp->flags |= CHN_LOOP;
+                if (xmss.type & 3)
+                        smp->flags |= CHN_PINGPONGLOOP;
                 smp->volume = xmss.vol << 2;
-                if (smp->volume > 256) smp->volume = 256;
+                if (smp->volume > 256)
+                        smp->volume = 256;
                 smp->global_volume = 64;
                 smp->panning = xmss.pan;
                 smp->flags |= CHN_PANNING;
                 smp->vib_type = xmsh.vibtype;
                 smp->vib_speed = xmsh.vibsweep;
                 smp->vib_depth = xmsh.vibdepth;
-                smp->vib_rate = xmsh.vibrate / 4;
+                smp->vib_rate = xmsh.vibrate / 4; // XXX xm.c does not divide here, which is wrong?
 
                 song_sample_set_c5speed(n, transpose_to_frequency(xmss.relnote, xmss.finetune));
-                ptr += csf_read_sample(current_song->samples + n, rs, data + ptr, length - ptr);
+                sampledata += csf_read_sample(current_song->samples + n, rs, sampledata, (eof-sampledata));
         }
         return 1;
 }
