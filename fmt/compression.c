@@ -85,6 +85,11 @@ void it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen
 
                 // now uncompress the data block
                 while (blkpos < blklen) {
+                        if (width > 9) {
+                                // illegal width, abort
+                                printf("Illegal bit width %d for 8-bit sample\n", width);
+                                return;
+                        }
                         value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
 
                         if (width < 7) {
@@ -104,17 +109,13 @@ void it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen
                                         width = (value < width) ? value : value + 1; // and expand it
                                         continue; // ... next value
                                 }
-                        } else if (width == 9) {
+                        } else {
                                 // method 3 (9 bits)
                                 // bit 8 set?
                                 if (value & 0x100) {
                                         width = (value + 1) & 0xff; // new width...
                                         continue; // ... and next value
                                 }
-                        } else {
-                                // illegal width, abort
-                                printf("Illegal width\n");
-                                return;
                         }
 
                         // now expand value to signed byte
@@ -178,6 +179,11 @@ void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filele
 
                 // now uncompress the data block
                 while (blkpos < blklen) {
+                        if (width > 17) {
+                                // illegal width, abort
+                                printf("Illegal bit width %d for 16-bit sample\n", width);
+                                return;
+                        }
                         value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
 
                         if (width < 7) {
@@ -197,17 +203,13 @@ void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filele
                                         width = (value < width) ? value : value + 1; // and expand it
                                         continue; // ... next value
                                 }
-                        } else if (width == 17) {
+                        } else {
                                 // method 3 (17 bits)
                                 // bit 16 set?
                                 if (value & 0x10000) {
                                         width = (value + 1) & 0xff; // new width...
                                         continue; // ... and next value
                                 }
-                        } else {
-                                // illegal width, abort
-                                printf("Illegal width\n");
-                                return;
                         }
 
                         // now expand value to signed word
