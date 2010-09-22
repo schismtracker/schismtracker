@@ -1425,7 +1425,8 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
         if (!slot) return 0;
         if (ii->sample_map[slot]) return ii->sample_map[slot];
         for (x = ii->basex; x < MAX_SAMPLES; x++) {
-                if (!csf_sample_is_empty(current_song->samples + x - 1)) continue;
+                if (!csf_sample_is_empty(current_song->samples + x))
+			continue;
 
                 ii->expect_samples++;
                 ii->sample_map[slot] = x;
