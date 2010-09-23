@@ -723,11 +723,17 @@ void song_delete_instrument(int n)
         if (!current_song->instruments[n])
                 return;
         song_lock_audio();
+        // 128?  really?
         for (i = 0; i < 128; i++) {
                 j = current_song->instruments[n]->sample_map[i];
                 if (j) {
+                        song_sample_t *s = current_song->samples + j;
                         csf_destroy_sample(current_song, j);
-                        memset(current_song->samples + j, 0, sizeof(song_sample_t));
+                        memset(s, 0, sizeof(song_sample_t));
+                        s->c5speed = 8363;
+                        s->volume = 64 * 4;
+                        s->global_volume = 64;
+                        s->vib_type = VIB_SINE;
                 }
         }
         song_unlock_audio();

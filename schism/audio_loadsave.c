@@ -1422,15 +1422,20 @@ int instrument_loader_abort(struct instrumentloader *ii)
 int instrument_loader_sample(struct instrumentloader *ii, int slot)
 {
         int x;
+
         if (!slot) return 0;
         if (ii->sample_map[slot]) return ii->sample_map[slot];
         for (x = ii->basex; x < MAX_SAMPLES; x++) {
-                if (!csf_sample_is_empty(current_song->samples + x))
-			continue;
+                song_sample_t *cur = (current_song->samples + x);
+
+//              if (!csf_sample_is_empty(current_song->samples + x))
+//                      continue;
+                if (cur->data != NULL)
+                        continue;
 
                 ii->expect_samples++;
                 ii->sample_map[slot] = x;
-                ii->basex = x+1;
+                ii->basex = x + 1;
                 return ii->sample_map[slot];
         }
         status_text_flash("Too many samples");
