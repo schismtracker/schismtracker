@@ -118,6 +118,8 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 
         eof = data + length;
 
+        song_delete_instrument(slot);
+
         g = instrument_loader_init(&ii, slot);
         memcpy(g->name, xi->name, 22);
         g->name[22] = '\0';
@@ -132,6 +134,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 if (xmsh.snum[k])
                         g->sample_map[k + 12] = xmsh.snum[k];
         }
+
         for (k = 0; k < 12; k++) {
                 g->note_map[k] = 0;
                 g->sample_map[k] = 0;
@@ -182,8 +185,8 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 n = instrument_loader_sample(&ii, k + 1);
                 smp = song_get_sample(n);
                 smp->flags = 0;
-                memcpy(smp->filename, xmss.name, 22);
-                smp->filename[21] = '\0';
+                memcpy(smp->name, xmss.name, 22);
+                smp->name[21] = '\0';
 
                 samplesize = xmss.samplen;
                 smp->length = samplesize;
@@ -193,10 +196,9 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                         smp->loop_end = smp->length;
                 if (smp->loop_start >= smp->loop_end)
                         smp->loop_start = smp->loop_end = 0;
-                // FIXME 3?
-                if (xmss.type & 3)
+                if ((xmss.type & 0x03) == 0x01)
                         smp->flags |= CHN_LOOP;
-                if (xmss.type & 3)
+                if ((xmss.type & 0x03) == 0x02)
                         smp->flags |= CHN_PINGPONGLOOP;
                 smp->volume = xmss.vol << 2;
                 if (smp->volume > 256)
@@ -212,6 +214,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 song_sample_set_c5speed(n, transpose_to_frequency(xmss.relnote, xmss.finetune));
                 sampledata += csf_read_sample(current_song->samples + n, rs, sampledata, (eof-sampledata));
         }
+
         return 1;
 }
 
