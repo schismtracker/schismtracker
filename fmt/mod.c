@@ -39,8 +39,11 @@ static const char *valid_tags[][2] = {
         {"M.K.", "Amiga-NewTracker"},
         {"M!K!", "Amiga-ProTracker"},
         {"FLT4", "4 Channel Startrekker"}, /* xxx */
+        {"EXO4", "4 Channel Startrekker"}, /* ??? */
+        {"FEST", "4 Channel Startrekker (?)"}, /* jobbig.mod, I have NO IDEA */
         {"CD81", "8 Channel Falcon"},      /* "Falcon"? */
         {"FLT8", "8 Channel Startrekker"}, /* xxx */
+        {"EXO8", "8 Channel Startrekker"}, /* ??? */
 
         {"8CHN", "8 Channel MOD"},  /* what is the difference */
         {"OCTA", "8 Channel MOD"},  /* between these two? */
@@ -103,7 +106,8 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-/* loads everything but old 15-instrument mods... yes, even FLT8 and WOW files */
+/* loads everything but old 15-instrument mods... yes, even FLT8 and WOW files
+   (and the definition of "everything" is always changing) */
 
 int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
@@ -136,13 +140,16 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         } else if (!memcmp(tag, "M&K!", 4) || !memcmp(tag, "N.T.", 4)) {
                 nchan = 4;
                 tid = "Amiga-NoiseTracker"; // or so the word on the street is; I don't have any of these
-        } else if (!memcmp(tag, "FLT4", 4)) {
+        } else if ((!memcmp(tag, "FLT", 3) || !memcmp(tag, "EXO", 3)) && (tag[3] == '4' || tag[3] == '8')) {
+                // Hopefully EXO8 is stored the same way as FLT8
+                nchan = tag[3] - '0';
+                startrekker = (nchan == 8);
+                tid = "%d Channel Startrekker";
+                //log_appendf(4, " Warning: Startrekker AM synth is not supported");
+        } else if (!memcmp(tag, "FEST", 4)) {
+                // the mysterious mod.jobbig
                 nchan = 4;
-                tid = "%d Channel Startrekker";
-        } else if (!memcmp(tag, "FLT8", 4)) {
-                nchan = 8;
-                startrekker = 1;
-                tid = "%d Channel Startrekker";
+                tid = "4 Channel Startrekker (?)";
         } else if (!memcmp(tag, "OCTA", 4)) {
                 nchan = 8;
                 tid = "Amiga Oktalyzer"; // IT just identifies this as "8 Channel MOD"
