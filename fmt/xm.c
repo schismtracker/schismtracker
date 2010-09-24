@@ -628,7 +628,13 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
                         if (smp->loop_start >= smp->loop_end)
                                 b &= ~3; // that loop sucks, turn it off
                         switch (b & 3) {
-                                case 2: smp->flags |= CHN_PINGPONGLOOP;
+                                /* NOTE: all cases fall through here.
+                                In FT2, type 3 is played as pingpong, but the GUI doesn't show any selected
+                                loop type. Apparently old MPT versions wrote 3 for pingpong loops, but that
+                                doesn't seem to be reliable enough to declare "THIS WAS MPT" because it seems
+                                FT2 would also SAVE that broken data after loading an instrument with loop
+                                type 3 was set. I have no idea. */
+                                case 3: case 2: smp->flags |= CHN_PINGPONGLOOP;
                                 case 1: smp->flags |= CHN_LOOP;
                         }
                         if (b & 0x10) {

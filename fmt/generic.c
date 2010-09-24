@@ -107,17 +107,17 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
                 *p = MIN(*p, 64);
                 break;
         case FX_PORTAMENTOUP:
-                if (force)
-                        *p = MIN(*p, 9);
-                else if (*p > 9)
+                /* if not force, reject when dividing causes loss of data in LSB, or if the final value is too
+                large to fit. (volume column Ex/Fx are four times stronger than effect column) */
+                if (!force && ((*p & 3) || *p > 9 * 4 + 3))
                         return 0;
+                *p = MIN(*p / 4, 9);
                 *e = VOLFX_PORTAUP;
                 break;
         case FX_PORTAMENTODOWN:
-                if (force)
-                        *p = MIN(*p, 9);
-                else if (*p > 9)
+                if (!force && ((*p & 3) || *p > 9 * 4 + 3))
                         return 0;
+                *p = MIN(*p / 4, 9);
                 *e = VOLFX_PORTADOWN;
                 break;
         case FX_TONEPORTAMENTO:
