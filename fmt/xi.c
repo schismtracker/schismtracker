@@ -36,6 +36,12 @@
 /* --------------------------------------------------------------------- */
 
 #pragma pack(push, 1)
+
+struct xm_point {
+        uint16_t ticks;        // Time in tracker ticks
+        uint16_t val;        // Value from 0x00 to 0x40.
+};
+
 struct xm_sample_header {
         uint32_t samplen;
         uint32_t loopstart;
@@ -51,8 +57,14 @@ struct xm_sample_header {
 
 struct xi_sample_header {
         uint8_t snum[96];
-        uint16_t venv[24];
-        uint16_t penv[24];
+
+        union {
+                uint16_t env[48];        // Occupies same mem as venv,penv
+                struct {
+                        struct xm_point venv[12], penv[12];
+                };
+        };
+
         uint8_t vnum, pnum;
         uint8_t vsustain, vloops, vloope, psustain, ploops, ploope;
         uint8_t vtype, ptype;
@@ -109,7 +121,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
         struct instrumentloader ii;
         song_instrument_t *g;
         const uint8_t *sampledata, *eof;
-        int k;
+        int k, prevtick;
 
         if (!slot)
                 return 0;
@@ -141,13 +153,53 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 g->note_map[k + 108] = 0;
                 g->sample_map[k + 108] = 0;
         }
-        for (k = 0; k < 24; k++) {
-                xmsh.venv[k] = bswapLE16(xmsh.venv[k]);
-                xmsh.penv[k] = bswapLE16(xmsh.penv[k]);
+
+        // bswap all volume and panning envelope points
+        for (k = 0; k < 48; k++)
+                xmsh.env[k] = bswapLE16(xmsh.env[k]);
+
+        // Set up envelope types in instrument
+        if (xmsh.vtype & 0x01) g->flags |= ENV_VOLUME;
+        if (xmsh.vtype & 0x02) g->flags |= ENV_VOLSUSTAIN;
+        if (xmsh.vtype & 0x04) g->flags |= ENV_VOLLOOP;
+        if (xmsh.ptype & 0x01) g->flags |= ENV_PANNING;
+        if (xmsh.ptype & 0x02) g->flags |= ENV_PANSUSTAIN;
+        if (xmsh.ptype & 0x04) g->flags |= ENV_PANLOOP;
+
+        prevtick = -1;
+        // Copy envelopes into instrument
+        for (k = 0; k < xmsh.vnum; k++) {
+                if (xmsh.venv[k].ticks < prevtick)
+                        prevtick++;
+                else
+                        prevtick = xmsh.venv[k].ticks;
+                g->vol_env.ticks[k] = prevtick;
+                g->vol_env.values[k] = xmsh.venv[k].val;
         }
+
+        prevtick = -1;
+        for (k = 0; k < xmsh.pnum; k++) {
+                if (xmsh.penv[k].ticks < prevtick)
+                        prevtick++;
+                else
+                        prevtick = xmsh.penv[k].ticks;
+                g->pan_env.ticks[k] = prevtick;
+                g->pan_env.values[k] = xmsh.penv[k].val;
+        }
+
+        g->vol_env.loop_start = xmsh.vloops;
+        g->vol_env.loop_end = xmsh.vloope;
+        g->vol_env.sustain_start = xmsh.vsustain;
+        g->vol_env.nodes = xmsh.vnum;
+
+        g->pan_env.loop_start = xmsh.ploops;
+        g->pan_env.loop_end = xmsh.ploope;
+        g->pan_env.sustain_start = xmsh.psustain;
+        g->pan_env.nodes = xmsh.pnum;
 
         xmsh.volfade = bswapLE16(xmsh.volfade);
         xmsh.nsamples = bswapLE16(xmsh.nsamples);
+
         // Sample data begins at the end of the sample headers
         sampledata = (const uint8_t *) (xi->sheader + xmsh.nsamples);
 
