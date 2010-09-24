@@ -244,14 +244,14 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->length = samplesize;
                 smp->loop_start = xmss.loopstart;
                 smp->loop_end = xmss.looplen;
-                if (smp->loop_end > smp->loop_start)
+                if (smp->loop_end < smp->loop_start)
                         smp->loop_end = smp->length;
                 if (smp->loop_start >= smp->loop_end)
                         smp->loop_start = smp->loop_end = 0;
-                if ((xmss.type & 0x03) == 0x01)
-                        smp->flags |= CHN_LOOP;
-                if ((xmss.type & 0x03) == 0x02)
-                        smp->flags |= CHN_PINGPONGLOOP;
+                switch (xmss.type & 3) {
+                        case 3: case 2: smp->flags |= CHN_PINGPONGLOOP;
+                        case 1: smp->flags |= CHN_LOOP;
+                }
                 smp->volume = xmss.vol << 2;
                 if (smp->volume > 256)
                         smp->volume = 256;
