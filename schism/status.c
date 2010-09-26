@@ -30,6 +30,8 @@
 #include "song.h"
 #include "page.h"
 
+#include "sndfile.h"
+
 #include "sdlmain.h"
 
 /* --------------------------------------------------------------------- */
@@ -76,13 +78,25 @@ void status_text_flash_bios(const char *format, ...)
 
 /* --------------------------------------------------------------------- */
 
+static inline int _loop_count(char *buf, int pos)
+{
+        if (current_song->repeat_count < 1 || (status.flags & CLASSIC_MODE)) {
+                pos += draw_text("Playing", pos, 9, 0, 2);
+        } else {
+                pos += draw_text("Loop: ", pos, 9, 0, 2);
+                pos += draw_text(numtostr(0, current_song->repeat_count, buf), pos, 9, 3, 2);
+        }
+        return pos;
+}
+
 static inline void draw_song_playing_status(void)
 {
         int pos = 2;
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        pos += draw_text("Playing, Order: ", 2, 9, 0, 2);
+        pos += _loop_count(buf, pos);
+        pos += draw_text(", Order: ", pos, 9, 0, 2);
         pos += draw_text(numtostr(0, song_get_current_order(), buf), pos, 9, 3, 2);
         draw_char('/', pos, 9, 0, 2);
         pos++;
@@ -110,7 +124,8 @@ static inline void draw_pattern_playing_status(void)
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        pos += draw_text("Playing, Pattern: ", 2, 9, 0, 2);
+        pos += _loop_count(buf, pos);
+        pos += draw_text(", Pattern: ", pos, 9, 0, 2);
         pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
         pos += draw_text(", Row: ", pos, 9, 0, 2);
         pos += draw_text(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);

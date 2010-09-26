@@ -895,18 +895,26 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 /////////////////////////////////////////////////////////////////////////////
 // Handles navigation/effects
 
-static int increment_row(song_t *csf)
+static int increment_order(song_t *csf)
 {
         csf->process_row = csf->break_row; /* [ProcessRow = BreakRow] */
         csf->break_row = 0;                  /* [BreakRow = 0] */
 
         /* some ugly copypasta, this should be less dumb */
         if (csf->flags & SONG_PATTERNPLAYBACK) {
-                if (csf->repeat_count > 0)
-                        csf->repeat_count--;
-                if (!csf->repeat_count) {
-                        csf->process_row = PROCESS_NEXT_ORDER;
-                        return 0;
+                /* process_order is hijacked as a "playback initiated" flag -- otherwise repeat count
+                would be incremented as soon as pattern playback started. (this is a stupid hack) */
+                if (csf->process_order) {
+                        if (++csf->repeat_count) {
+                                if (UNLIKELY(csf->repeat_count < 0)) {
+                                        csf->repeat_count = 1; // it overflowed!
+                                }
+                        } else {
+                                csf->process_row = PROCESS_NEXT_ORDER;
+                                return 0;
+                        }
+                } else {
+                        csf->process_order = 1;
                 }
         } else if (!(csf->flags & SONG_ORDERLOCKED)) {
                 /* [Increase ProcessOrder] */
@@ -917,9 +925,11 @@ static int increment_row(song_t *csf)
 
                 /* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
                 if (csf->orderlist[csf->process_order] == ORDER_LAST) {
-                        if (csf->repeat_count > 0)
-                                csf->repeat_count--;
-                        if (!csf->repeat_count) {
+                        if (++csf->repeat_count) {
+                                if (UNLIKELY(csf->repeat_count < 0)) {
+                                        csf->repeat_count = 1; // it overflowed!
+                                }
+                        } else {
                                 csf->process_row = PROCESS_NEXT_ORDER;
                                 return 0;
                         }
@@ -975,7 +985,7 @@ int csf_process_tick(song_t *csf)
                         if (++csf->process_row >= csf->pattern_size[csf->current_pattern]) {
                                 /* [-- Yes --] */
 
-                                if (!increment_row(csf))
+                                if (!increment_order(csf))
                                         return 0;
                         } /* else [-- No --] */
 

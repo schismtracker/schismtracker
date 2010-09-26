@@ -567,7 +567,7 @@ typedef struct song {
         uint32_t mixing_volume;
         uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)
         uint32_t tempo_factor; // ditto
-        int32_t repeat_count; // disk writer uses this to keep song from looping (but that's dumb, FIXME)
+        int32_t repeat_count; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
         uint8_t row_highlight_major;
         uint8_t row_highlight_minor;
         char message[MAX_MESSAGE + 1];
