@@ -500,7 +500,9 @@ void csf_loop_pattern(song_t *csf, int pat, int row)
         } else {
                 if (row < 0 || row >= csf->pattern_size[pat])
                         row = 0;
-                csf->process_order = 0; /* whatever */
+
+                csf->process_order = 0; // hack - see increment_order in sndmix.c
+                csf->process_row = PROCESS_NEXT_ORDER;
                 csf->break_row = row;
                 csf->tick_count = 1;
                 csf->row_count = 0;

@@ -478,7 +478,7 @@ static void song_reset_play_state(void)
 
         csf_set_current_order(current_song, 0);
 
-        current_song->repeat_count = -1;
+        current_song->repeat_count = 0;
         current_song->buffer_count = 0;
         current_song->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
 
@@ -494,7 +494,7 @@ void song_start_once(void)
         song_reset_play_state();
         current_song->mix_flags |= SNDMIX_NOBACKWARDJUMPS;
         max_channels_used = 0;
-        current_song->repeat_count = 1;
+        current_song->repeat_count = -1; // FIXME do this right
 
         GM_SendSongStartCode();
         song_unlock_audio();

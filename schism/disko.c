@@ -377,7 +377,7 @@ static void _export_setup(song_t *dwsong, int *bps)
 
         dwsong->mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
 
-        dwsong->repeat_count = 1;
+        dwsong->repeat_count = -1; // FIXME do this right
         dwsong->buffer_count = 0;
         dwsong->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
         dwsong->stop_at_order = -1;
@@ -442,7 +442,7 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
                 return DW_ERROR;
 
         _export_setup(&dwsong, &bps);
-        dwsong.repeat_count = 2; /* THIS MAKES SENSE! */
+        dwsong.repeat_count = -1; // FIXME do this right
         csf_loop_pattern(&dwsong, pattern, 0);
 
         do {
@@ -485,7 +485,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
         int n;
 
         _export_setup(&dwsong, &bps);
-        dwsong.repeat_count = 2; /* THIS MAKES MORE SENSE EVERY TIME I WRITE IT! */
+        dwsong.repeat_count = -1; // FIXME do this right
         csf_loop_pattern(&dwsong, pattern, 0);
         dwsong.multi_write = calloc(MAX_CHANNELS, sizeof(struct multi_write));
         if (!dwsong.multi_write)
