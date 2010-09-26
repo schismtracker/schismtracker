@@ -95,7 +95,7 @@ static inline void draw_song_playing_status(void)
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        pos += _loop_count(buf, pos);
+        pos = _loop_count(buf, pos);
         pos += draw_text(", Order: ", pos, 9, 0, 2);
         pos += draw_text(numtostr(0, song_get_current_order(), buf), pos, 9, 3, 2);
         draw_char('/', pos, 9, 0, 2);
@@ -124,7 +124,7 @@ static inline void draw_pattern_playing_status(void)
         char buf[16];
         int pattern = song_get_playing_pattern();
 
-        pos += _loop_count(buf, pos);
+        pos = _loop_count(buf, pos);
         pos += draw_text(", Pattern: ", pos, 9, 0, 2);
         pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
         pos += draw_text(", Row: ", pos, 9, 0, 2);
