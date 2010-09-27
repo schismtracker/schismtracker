@@ -23,6 +23,11 @@ for filename in sys.argv[1:]:
                 continue
         f.seek(0x20)
         ordnum, insnum, smpnum, patnum = struct.unpack('<4H', f.read(8))
+        f.seek(0x2e)
+        special, = struct.unpack('<H', f.read(2))
+        if (special & 6) != 6:
+                print("%s: history flag set to %d (old IT version?)" % (filename, special & 6))
+                continue
         f.seek(0xc0 + ordnum + 4 * (insnum + smpnum + patnum))
         hist, = struct.unpack('<H', f.read(2))
         if not hist:
