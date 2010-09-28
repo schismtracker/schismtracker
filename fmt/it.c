@@ -532,6 +532,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         }
         if (hdr.flags & 128)
                 song->flags |= SONG_EMBEDMIDICFG;
+        else
+                song->flags &= ~SONG_EMBEDMIDICFG;
 
         song->initial_global_volume = MIN(hdr.gv, 128);
         song->mixing_volume = MIN(hdr.mv, 128);

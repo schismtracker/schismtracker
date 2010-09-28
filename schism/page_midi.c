@@ -28,6 +28,8 @@
 #include "page.h"
 #include "midi.h"
 
+#include "song.h"
+
 /* --------------------------------------------------------------------- */
 
 static int top_midi_port = 0;
@@ -66,16 +68,15 @@ static void update_midi_values(void)
         |       (widgets_midi[5].d.toggle.state ? MIDI_RECORD_AFTERTOUCH : 0)
         |       (widgets_midi[6].d.toggle.state ? MIDI_CUT_NOTE_OFF : 0)
         |       (widgets_midi[9].d.toggle.state ? MIDI_PITCHBEND : 0)
-        |       (widgets_midi[11].d.toggle.state ? MIDI_EMBED_DATA : 0)
         ;
+        if (widgets_midi[11].d.toggle.state)
+                current_song->flags |= SONG_EMBEDMIDICFG;
+        else
+                current_song->flags &= ~SONG_EMBEDMIDICFG;
 
         midi_amplification = widgets_midi[7].d.thumbbar.value;
         midi_c5note = widgets_midi[8].d.thumbbar.value;
         midi_pitch_depth = widgets_midi[10].d.thumbbar.value;
-        if (midi_flags & MIDI_EMBED_DATA) {
-                /* should we really be doing this? IT doesn't seem to */
-                status.flags |= SONG_NEEDS_SAVE;
-        }
 }
 
 static void get_midi_config(void)
@@ -87,7 +88,7 @@ static void get_midi_config(void)
         widgets_midi[5].d.toggle.state = !!(midi_flags & MIDI_RECORD_AFTERTOUCH);
         widgets_midi[6].d.toggle.state = !!(midi_flags & MIDI_CUT_NOTE_OFF);
         widgets_midi[9].d.toggle.state = !!(midi_flags & MIDI_PITCHBEND);
-        widgets_midi[11].d.toggle.state = !!(midi_flags & MIDI_EMBED_DATA);
+        widgets_midi[11].d.toggle.state = !!(current_song->flags & SONG_EMBEDMIDICFG);
 
         widgets_midi[7].d.thumbbar.value = midi_amplification;
         widgets_midi[8].d.thumbbar.value = midi_c5note;
