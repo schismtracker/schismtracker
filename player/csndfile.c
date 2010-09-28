@@ -393,6 +393,11 @@ void csf_reset_midi_cfg(song_t *csf)
         memcpy(&csf->midi_config, &default_midi_config, sizeof(default_midi_config));
 }
 
+void csf_copy_midi_cfg(song_t *dest, song_t *src)
+{
+        memcpy(&dest->midi_config, &src->midi_config, sizeof(midi_config_t));
+}
+
 
 int csf_set_wave_config(song_t *csf, uint32_t rate,uint32_t bits,uint32_t channels)
 {
