@@ -571,10 +571,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 // oops it was garbage
                 // (XXX in this case, should we go back and try to read the midi config anyway?)
                 hist = 0;
-        } else if ((song->flags & SONG_EMBEDMIDICFG) && fp->pos + sizeof(midi_config_t) <= fp->length) {
+        } else if ((hdr.special & 8) && fp->pos + sizeof(midi_config_t) <= fp->length) {
                 slurp_read(fp, &song->midi_config, sizeof(midi_config_t));
-        } else {
-                csf_reset_midi_cfg(song);
         }
         if (!hist) {
                 // berotracker check

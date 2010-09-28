@@ -684,6 +684,7 @@ int csf_destroy_sample(song_t *csf, uint32_t smpnum);
 void csf_stop_sample(song_t *csf, song_sample_t *smp);
 
 void csf_reset_midi_cfg(song_t *csf);
+void csf_copy_midi_cfg(song_t *dest, song_t *src);
 void csf_set_current_order(song_t *csf, uint32_t position);
 void csf_loop_pattern(song_t *csf, int pattern, int start_row);
 void csf_reset_playmarks(song_t *csf);

@@ -156,8 +156,6 @@ void song_new(int flags)
         current_song->repeat_count = 0;
         //song_stop();
 
-        csf_reset_midi_cfg(current_song);
-
         song_unlock_audio();
 
         main_song_changed_cb();
@@ -205,6 +203,7 @@ static song_t *song_create_load(const char *file)
                 // loaders might override these
                 newsong->row_highlight_major = current_song->row_highlight_major;
                 newsong->row_highlight_minor = current_song->row_highlight_minor;
+                csf_copy_midi_cfg(newsong, current_song);
         }
 
         for (func = load_song_funcs; *func && !ok; func++) {
