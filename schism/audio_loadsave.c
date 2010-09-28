@@ -656,7 +656,7 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
                 hdr.flags |= 64;
                 hdr.pwd = midi_pitch_depth;
         }
-        if (midi_flags & MIDI_EMBED_DATA) {
+        if (current_song->flags & SONG_EMBEDMIDICFG) {
                 hdr.flags |= 128;
                 hdr.special |= 8;
                 extra += sizeof(midi_config_t);
@@ -704,8 +704,7 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
         // here comes MIDI configuration
         // here comes MIDI configuration
         // right down MIDI configuration lane
-        if (midi_flags & MIDI_EMBED_DATA) {
-                //printf("attempting to embed %d bytes\n", sizeof(current_song->midi_config));
+        if (current_song->flags & SONG_EMBEDMIDICFG) {
                 disko_write(fp, &current_song->midi_config, sizeof(current_song->midi_config));
         }
 
