@@ -644,7 +644,7 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
         }
 
         hdr.flags = 0;
-        hdr.special = 2 | 4;            // reserved (always on?)
+        hdr.special = 2 | 4;            // 2 = edit history, 4 = row highlight
 
         if (song_is_stereo())               hdr.flags |= 1;
         if (song_is_instrument_mode())      hdr.flags |= 4;
@@ -695,9 +695,10 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
         disko_write(fp, para_smp, 4*nsmp);
         disko_write(fp, para_pat, 4*npat);
 
-
-        // here is the IT "extra" info (IT doesn't seem to use it)
-        // TODO: check to see if any "registered" IT save formats (217?)
+        /* this is where the edit history should be (see scripts/timestamp.py)
+        could just clear special & 2 and skip this, but players would probably
+        choke on the resulting files. (and eventually schism will write this
+        data anyway) */
         zero = 0; disko_write(fp, &zero, 2);
 
         // here comes MIDI configuration

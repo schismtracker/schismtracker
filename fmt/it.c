@@ -507,7 +507,10 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
         if (hdr.cwtv < 0x0214)
                 ignorezxx = 1;
-        if (hdr.cwtv >= 0x0213) {
+        if (hdr.special & 4) {
+                /* "reserved" bit, experimentally determined to indicate presence of otherwise-documented row
+                highlight information - introduced in IT 2.13. Formerly checked cwtv here, but that's lame :)
+                XXX does any tracker save highlight but *not* set this bit? (old Schism versions maybe?) */
                 song->row_highlight_minor = hdr.highlight_minor;
                 song->row_highlight_major = hdr.highlight_major;
         } else {
@@ -564,9 +567,13 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         slurp_read(fp, para_pat, 4 * hdr.patnum);
 
         // skip the save history
-        slurp_read(fp, &hist, 2);
-        hist = bswapLE16(hist);
-        slurp_seek(fp, 8 * hist, SEEK_CUR);
+        if (hdr.special & 2) {
+                slurp_read(fp, &hist, 2);
+                hist = bswapLE16(hist);
+                slurp_seek(fp, 8 * hist, SEEK_CUR);
+        } else {
+                hist = 0;
+        }
         if (slurp_eof(fp)) {
                 // oops it was garbage
                 // (XXX in this case, should we go back and try to read the midi config anyway?)
