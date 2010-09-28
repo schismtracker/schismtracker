@@ -441,7 +441,7 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
                 sample->flags |= CHN_PINGPONGSUSTAIN;
 
         /* IT sometimes didn't clear the flag after loading a stereo sample. This appears to have
-        been fixed sometime before IT 2.14, which is fortunate because that's what a lot of otehr
+        been fixed sometime before IT 2.14, which is fortunate because that's what a lot of other
         programs annoyingly identify themselves as. */
         if (cwtv < 0x0214)
                 shdr.flag &= ~4;
