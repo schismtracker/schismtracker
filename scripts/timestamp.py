@@ -25,13 +25,28 @@ for filename in sys.argv[1:]:
         ordnum, insnum, smpnum, patnum = struct.unpack('<4H', f.read(8))
         f.seek(0x2e)
         special, = struct.unpack('<H', f.read(2))
-        if (special & 6) != 6:
-                print("%s: history flag set to %d (old IT version?)" % (filename, special & 6))
+        if not (special & 2):
+                print("%s: history flag not set (old IT version?)" % filename)
                 continue
-        f.seek(0xc0 + ordnum + 4 * (insnum + smpnum + patnum))
+        para = []
+        if special & 1: # message exists
+                f.seek(0x36)
+                msglen, msgoff = struct.unpack('<HL', f.read(6))
+                if msglen:
+                        para.append(msgoff)
+        f.seek(0xc0 + ordnum)
+        # we'll assume history is invalid if it ends after the first parapointer
+        para_count = insnum + smpnum + patnum
+        para.extend(struct.unpack('<%sL' % para_count, f.read(4 * para_count)))
+        para_min = min(filter(None, para))
+        # history entry count follows parapointers
         hist, = struct.unpack('<H', f.read(2))
+        hist_start = f.tell()
         if not hist:
                 print("%s: history missing (probably not saved with IT)" % filename)
+                continue
+        if para_min < hist_start + 8 * hist:
+                print("%s: history data overlaps parapointers (malformed?)" % filename)
                 continue
         histdata = f.read(8 * hist)
         if len(histdata) != 8 * hist or not f.read(1):
@@ -48,7 +63,6 @@ for filename in sys.argv[1:]:
                 fatdate, fattime, ticks = struct.unpack('<HHL', histdata[8 * n : 8 * n + 8])
                 day = fatdate & 31
                 month = (fatdate >> 5) & 15
-                #month = dict(enumerate('? Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split())).get(month, '?')
                 year = (fatdate >> 9) + 1980
                 second = (fattime & 31) * 2
                 minute = (fattime >> 5) & 63
