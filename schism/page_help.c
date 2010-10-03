@@ -55,20 +55,24 @@ enum {
 static struct widget widgets_help[2];
 
 /*
-Pointers to the start of each line for each help text,
-for both classic and "normal" mode.
+Pointers to the start of each line, and total line counts,
+for each help text, for both classic and "normal" mode.
 
 For example,
-        help_linecache[HELP_PATTERN_EDITOR][0][3][5]
+        help_cache[HELP_PATTERN_EDITOR][0].lines[3][5]
 is the fifth character of the third line of the non-classic-mode help for the
 pattern editor.
 
 Each line is terminated by some combination of \r and \n, or \0.
 */
-static const char **help_linecache[HELP_NUM_ITEMS][2] = {{NULL}};
+static struct {
+        const char **lines;
+        int num_lines;
+} help_cache[HELP_NUM_ITEMS][2] = {{{}}};
 
-/* Shortcut for sanity -- this will point to the currently applicable help. */
-#define CURRENT_HELP_LINECACHE (help_linecache[status.current_help_index][!!(status.flags & CLASSIC_MODE)])
+/* Shortcuts for sanity -- this will point to the currently applicable help. */
+#define CURRENT_HELP_LINECACHE (help_cache[status.current_help_index][!!(status.flags & CLASSIC_MODE)].lines)
+#define CURRENT_HELP_LINECOUNT (help_cache[status.current_help_index][!!(status.flags & CLASSIC_MODE)].num_lines)
 
 /* should always point to the currently applicable help text -- cached
 to prevent repetitively checking things that aren't going to change */
@@ -213,8 +217,10 @@ static void help_set_page(void)
         top_line = help_text_lastpos[status.current_help_index];
 
         lines = CURRENT_HELP_LINECACHE;
-        if (lines)
+        if (lines) {
+                num_lines = CURRENT_HELP_LINECOUNT;
                 return;
+        }
 
         /* how many lines? */
         global_lines = get_num_lines(help_text[HELP_GLOBAL]);
@@ -272,7 +278,7 @@ static void help_set_page(void)
                 lines[cur_line++] = separator_line;
 
         lines[cur_line] = NULL;
-        num_lines = cur_line;
+        CURRENT_HELP_LINECOUNT = num_lines = cur_line;
 }
 
 /* --------------------------------------------------------------------- */
