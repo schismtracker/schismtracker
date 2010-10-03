@@ -1127,7 +1127,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
         } else if (penv) {
                 if (NOTE_IS_CONTROL(penv->note_map[note-1]))
                         return;
-                psmp = csf_translate_keyboard(csf, penv, note, NULL);
+                if (!(porta && penv == chan->ptr_instrument && chan->ptr_sample && chan->current_sample_data))
+                        psmp = csf_translate_keyboard(csf, penv, note, NULL);
                 chan->flags &= ~CHN_SUSTAINLOOP; // turn off sustain
         } else {
                 psmp = csf->samples + instr;
