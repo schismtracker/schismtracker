@@ -1,4 +1,4 @@
-Written by Storlek <schism@rigelseven.com> <http://rigelseven.com/>.
+Written by Storlek <storlek@rigelseven.com> <http://rigelseven.com/>.
 
 Large swaths of code by Mrs. Brisby <mrs.brisby@nimh.org> <http://nimh.org/>.
 
@@ -33,7 +33,7 @@ Some file-loading mechanisms, in particular large portions of the IMF loader,
 as well as many of the tracker-identifying heuristics, have been adapted from
 xmp by Claudio Matsuoka and Hipolito Carraro Jr <http://xmp.sf.net/>.
 
-Tremor logic, and possible some other effect handling, stolen from DUMB by Ben
+Tremor logic, and possibly some other effect handling, stolen from DUMB by Ben
 Davis, Robert J Ohannessian and Julien Cugniere <http://dumb.sf.net/>.
 
 IMF note slide effect processing taken from Imago Orpheus by Lutz Röder
