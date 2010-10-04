@@ -1267,7 +1267,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
         // why would csf_note_change ever get a negative value for 'note'?
         if (note == NOTE_NONE || note < 0)
                 return;
-        song_voice_t * const chan = &csf->voices[nchan];
+        song_voice_t *chan = &csf->voices[nchan];
         song_sample_t *pins = chan->ptr_sample;
         song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? chan->ptr_instrument : NULL;
         if (penv && NOTE_IS_NOTE(note)) {
