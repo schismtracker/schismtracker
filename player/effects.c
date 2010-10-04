@@ -1272,7 +1272,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
         song_sample_t *pins = chan->ptr_sample;
         song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? chan->ptr_instrument : NULL;
         if (penv && NOTE_IS_NOTE(note)) {
-                if (!(have_inst && pins))
+                if (!(have_inst && porta && pins))
                         pins = csf_translate_keyboard(csf, penv, note, pins);
                 note = penv->note_map[note - 1];
                 chan->flags &= ~CHN_SUSTAINLOOP; // turn off sustain
@@ -1317,6 +1317,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
                         chan->length = pins->length;
                         chan->loop_end = pins->length;
                         chan->loop_start = 0;
+                        chan->c5speed = pins->c5speed;
                         chan->flags = (chan->flags & ~CHN_SAMPLE_FLAGS) | (pins->flags & CHN_SAMPLE_FLAGS);
                         if (chan->flags & CHN_SUSTAINLOOP) {
                                 chan->loop_start = pins->sustain_start;
