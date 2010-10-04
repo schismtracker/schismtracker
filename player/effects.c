@@ -1262,7 +1262,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 }
 
 
-void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retrig, int manual)
+// have_inst is a hack to ignore the note-sample map when no instrument number is present
+void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retrig, int have_inst)
 {
         // why would csf_note_change ever get a negative value for 'note'?
         if (note == NOTE_NONE || note < 0)
@@ -1271,7 +1272,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
         song_sample_t *pins = chan->ptr_sample;
         song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? chan->ptr_instrument : NULL;
         if (penv && NOTE_IS_NOTE(note)) {
-                pins = csf_translate_keyboard(csf, penv, note, pins);
+                if (!(have_inst && pins))
+                        pins = csf_translate_keyboard(csf, penv, note, pins);
                 note = penv->note_map[note - 1];
                 chan->flags &= ~CHN_SUSTAINLOOP; // turn off sustain
         }
@@ -1297,6 +1299,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 
         if (!pins)
                 return;
+
         note = CLAMP(note, NOTE_FIRST, NOTE_LAST);
         chan->note = note;
         chan->new_instrument = 0;
@@ -1364,10 +1367,6 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
                 if (chan->cutoff < 0x7F)
                         setup_channel_filter(chan, 1, 256, csf->mix_frequency);
         }
-        // Special case for MPT
-        if (manual)
-                chan->flags &= ~CHN_MUTE;
-
 }
 
 
@@ -2031,7 +2030,7 @@ void csf_process_effects(song_t *csf, int firsttick)
                                         }
                                         chan->new_instrument = 0;
                                 }
-                                csf_note_change(csf, nchan, note, porta, 0, 0);
+                                csf_note_change(csf, nchan, note, porta, 0, !instr);
                         }
                 }
 
