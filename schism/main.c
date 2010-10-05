@@ -39,7 +39,6 @@
 #include "song.h"
 #include "midi.h"
 #include "dmoz.h"
-#include "frag-opt.h"
 
 #include "osdefs.h"
 
@@ -56,6 +55,7 @@
 # include <signal.h>
 #endif
 
+#include <getopt.h>
 
 #if !defined(__amigaos4__) && !defined(GEKKO)
 # define ENABLE_HOOKS 1
@@ -206,31 +206,39 @@ enum {
 };
 static int startup_flags = SF_HOOKS | SF_NETWORK;
 
-/* frag_option ids */
+/* getopt ids */
+#define SHORT_OPTIONS "a:v:fFpPh" // these should correspond to the characters below (trailing colon indicates argument)
 enum {
-        O_ARG,
-        O_SDL_AUDIODRIVER,
-        O_SDL_VIDEODRIVER,
-        O_VIDEO_YUVLAYOUT,
+        // short options
+        O_SDL_AUDIODRIVER = 'a',
+        O_SDL_VIDEODRIVER = 'v',
+        O_FULLSCREEN = 'f', O_NO_FULLSCREEN = 'F',
+        O_PLAY = 'p', O_NO_PLAY = 'P',
+        O_HELP = 'h',
+        // ids for long options with no corresponding short option
+        O_VIDEO_YUVLAYOUT = 256,
         O_VIDEO_RESOLUTION,
-        O_VIDEO_ASPECT,
+        O_VIDEO_STRETCH, O_NO_VIDEO_STRETCH,
+#if USE_OPENGL
         O_VIDEO_GLPATH,
+#endif
         O_VIDEO_DEPTH,
+#if HAVE_SYS_KD_H
         O_VIDEO_FBDEV,
-        O_NETWORK,
+#endif
+#if USE_NETWORK
+        O_NETWORK, O_NO_NETWORK,
+#endif
 #ifdef USE_X11
         O_DISPLAY,
 #endif
-        O_CLASSIC_MODE,
-        O_FULLSCREEN,
-        O_FONTEDIT,
-        O_PLAY,
+        O_CLASSIC_MODE, O_NO_CLASSIC_MODE,
+        O_FONTEDIT, O_NO_FONTEDIT,
 #if ENABLE_HOOKS
-        O_HOOKS,
+        O_HOOKS, O_NO_HOOKS,
 #endif
         O_DEBUG,
         O_VERSION,
-        O_HELP,
 };
 
 #if defined(WIN32)
@@ -241,154 +249,207 @@ enum {
 # define OPENGL_PATH "/path/to/opengl.so"
 #endif
 
+#define USAGE "Usage: %s [OPTIONS] [DIRECTORY] [FILE]\n"
+
 static void parse_options(int argc, char **argv)
 {
-        FRAG *frag;
-        frag_option opts[] = {
-                {O_ARG, FRAG_PROGRAM, "[DIRECTORY] [FILE]", NULL},
-                /* FIXME this example isn't very helpful for Win/Mac/etc. users */
-                {O_SDL_AUDIODRIVER, 'a', "audio-driver", FRAG_ARG, "DRIVER", "Audio driver (e.g. alsa:hw:1)"},
-                {O_SDL_VIDEODRIVER, 'v', "video-driver", FRAG_ARG, "DRIVER", "SDL video driver"},
+        struct option long_options[] = {
+                {"audio-driver", 1, NULL, O_SDL_AUDIODRIVER},
+                {"video-driver", 1, NULL, O_SDL_VIDEODRIVER},
 
-                {O_VIDEO_YUVLAYOUT, 0, "video-yuvlayout", FRAG_ARG, "LAYOUT", "Specify YUV layout" },
-                {O_VIDEO_RESOLUTION,0, "video-size", FRAG_ARG, "WIDTHxHEIGHT", "Specify default window size" },
-                {O_VIDEO_ASPECT,0, "video-stretch", FRAG_ARG, NULL, "Unfix the aspect ratio" },
-                {O_VIDEO_GLPATH,0,"video-gl-path", FRAG_ARG, OPENGL_PATH, "Specify path of OpenGL library"},
-                {O_VIDEO_DEPTH,0,"video-depth",FRAG_ARG, "DEPTH", "Specify display depth in bits"},
+                {"video-yuvlayout", 1, NULL, O_VIDEO_YUVLAYOUT},
+                {"video-size", 1, NULL, O_VIDEO_RESOLUTION},
+                {"video-stretch", 0, NULL, O_VIDEO_STRETCH},
+                {"no-video-stretch", 0, NULL, O_NO_VIDEO_STRETCH},
+#if USE_OPENGL
+                {"video-gl-path", 1, NULL, O_VIDEO_GLPATH},
+#endif
+                {"video-depth", 1, NULL, O_VIDEO_DEPTH},
 #if HAVE_SYS_KD_H
-                {O_VIDEO_FBDEV,0,"video-fb-device", FRAG_ARG,"/dev/fb0","Specify path to framebuffer"},
+                {"video-fb-device", 1, NULL, O_VIDEO_FBDEV},
 #endif
-                {O_NETWORK, 0, "network", FRAG_NEG, NULL, "use networking (default)" },
-                {O_CLASSIC_MODE, 0, "classic", FRAG_NEG, NULL, "start Schism Tracker in \"classic\" mode" },
+#if USE_NETWORK
+                {"network", 0, NULL, O_NETWORK},
+                {"no-network", 0, NULL, O_NO_NETWORK},
+#endif
+                {"classic", 0, NULL, O_CLASSIC_MODE},
+                {"no-classic", 0, NULL, O_NO_CLASSIC_MODE},
 #ifdef USE_X11
-                {O_DISPLAY, 0, "display", FRAG_ARG, "DISPLAYNAME", "X11 display to use (e.g. \":0.0\")"},
+                {"display", 1, NULL, O_DISPLAY},
 #endif
-                {O_FULLSCREEN, 'f', "fullscreen", FRAG_NEG, NULL, "start in fullscreen mode"},
-                {O_PLAY, 'p', "play", FRAG_NEG, NULL, "start playing after loading song on command line"},
-                {O_FONTEDIT, 0, "font-editor", FRAG_NEG, NULL, "start in font editor (itf)"},
+                {"fullscreen", 0, NULL, O_FULLSCREEN},
+                {"no-fullscreen", 0, NULL, O_NO_FULLSCREEN},
+                {"play", 0, NULL, O_PLAY},
+                {"no-play", 0, NULL, O_NO_PLAY},
+                {"font-editor", 0, NULL, O_FONTEDIT},
+                {"no-font-editor", 0, NULL, O_NO_FONTEDIT},
 #if ENABLE_HOOKS
-                {O_HOOKS, 0, "hooks", FRAG_NEG, NULL, "run startup/exit hooks (default: enabled)"},
+                {"hooks", 0, NULL, O_HOOKS},
+                {"no-hooks", 0, NULL, O_NO_HOOKS},
 #endif
-                {O_DEBUG, 0, "debug", FRAG_ARG, "OPS", "Enable some debugging flags (separate with comma)"},
-                {O_VERSION, 0, "version", 0, NULL, "display version information"},
-                {O_HELP, 'h', "help", 0, NULL, "print this stuff"},
-                {FRAG_END_ARRAY}
+                {"debug", 0, NULL, O_DEBUG},
+                {"version", 0, NULL, O_VERSION},
+                {"help", 0, NULL, O_HELP},
+                {NULL, 0, NULL, 0},
         };
-        char *cwd = get_current_directory();
-        char *tmp, *norm;
+        int opt;
 
-        frag = frag_init(opts, argc, argv, FRAG_ENABLE_NO_SPACE_SHORT | FRAG_ENABLE_SPACED_LONG);
-        if (!frag) {
-                fprintf(stderr, "Error during frag_init (no memory?)\n");
-                exit(1);
-        }
-
-        while (frag_parse(frag)) {
-                switch (frag->id) {
-                case O_ARG:
-                        tmp = dmoz_path_concat(cwd, frag->arg);
-                        if (!tmp) {
-                                perror(frag->arg);
-                                break;
-                        }
-                        norm = dmoz_path_normal(tmp);
-                        free(tmp);
-                        if (is_directory(frag->arg))
-                                initial_dir = norm;
-                        else
-                                initial_song = norm;
-                        break;
+        while ((opt = getopt_long(argc, argv, SHORT_OPTIONS, long_options, NULL)) != -1) {
+                switch (opt) {
                 case O_SDL_AUDIODRIVER:
-                        audio_driver = str_dup(frag->arg);
+                        audio_driver = str_dup(optarg);
                         break;
                 case O_SDL_VIDEODRIVER:
-                        video_driver = str_dup(frag->arg);
+                        video_driver = str_dup(optarg);
                         break;
 
+                // FIXME remove all these env vars, and put these things into a global struct or something instead
+
                 case O_VIDEO_YUVLAYOUT:
-                        put_env_var("SCHISM_YUVLAYOUT", frag->arg);
+                        put_env_var("SCHISM_YUVLAYOUT", optarg);
                         break;
                 case O_VIDEO_RESOLUTION:
-                        put_env_var("SCHISM_VIDEO_RESOLUTION", frag->arg);
+                        put_env_var("SCHISM_VIDEO_RESOLUTION", optarg);
                         break;
-                case O_VIDEO_ASPECT:
-                        if (frag->type)
-                                put_env_var("SCHISM_VIDEO_ASPECT", "full");
-                        else
-                                put_env_var("SCHISM_VIDEO_ASPECT", "fixed");
+                case O_VIDEO_STRETCH:
+                        put_env_var("SCHISM_VIDEO_ASPECT", "full");
                         break;
+                case O_NO_VIDEO_STRETCH:
+                        put_env_var("SCHISM_VIDEO_ASPECT", "fixed");
+                        break;
+#if USE_OPENGL
                 case O_VIDEO_GLPATH:
-                        put_env_var("SDL_VIDEO_GL_DRIVER", frag->arg);
+                        put_env_var("SDL_VIDEO_GL_DRIVER", optarg);
                         break;
+#endif
                 case O_VIDEO_DEPTH:
-                        put_env_var("SCHISM_VIDEO_DEPTH", frag->arg);
+                        put_env_var("SCHISM_VIDEO_DEPTH", optarg);
                         break;
+#if HAVE_SYS_KD_H
                 case O_VIDEO_FBDEV:
-                        put_env_var("SDL_FBDEV", frag->arg);
+                        put_env_var("SDL_FBDEV", optarg);
                         break;
+#endif
+#if USE_NETWORK
                 case O_NETWORK:
-                        if (frag->type)
-                                startup_flags |= SF_NETWORK;
-                        else
-                                startup_flags &= ~SF_NETWORK;
+                        startup_flags |= SF_NETWORK;
                         break;
+                case O_NO_NETWORK:
+                        startup_flags &= ~SF_NETWORK;
+                        break;
+#endif
                 case O_CLASSIC_MODE:
-                        if (frag->type)
-                                startup_flags |= SF_CLASSIC;
-                        else
-                                startup_flags &= ~SF_CLASSIC;
+                        startup_flags |= SF_CLASSIC;
+                        did_classic = 1;
+                        break;
+                case O_NO_CLASSIC_MODE:
+                        startup_flags &= ~SF_CLASSIC;
                         did_classic = 1;
                         break;
 
                 case O_DEBUG:
-                        put_env_var("SCHISM_DEBUG", frag->arg);
+                        put_env_var("SCHISM_DEBUG", optarg);
                         break;
 #ifdef USE_X11
                 case O_DISPLAY:
-                        put_env_var("DISPLAY", frag->arg);
+                        put_env_var("DISPLAY", optarg);
                         break;
 #endif
                 case O_FULLSCREEN:
+                        video_fullscreen(1);
                         did_fullscreen = 1;
-                        video_fullscreen(!!frag->type);
+                        break;
+                case O_NO_FULLSCREEN:
+                        video_fullscreen(0);
+                        did_fullscreen = 1;
                         break;
                 case O_PLAY:
-                        if (frag->type)
-                                startup_flags |= SF_PLAY;
-                        else
-                                startup_flags &= ~SF_PLAY;
+                        startup_flags |= SF_PLAY;
+                        break;
+                case O_NO_PLAY:
+                        startup_flags &= ~SF_PLAY;
                         break;
                 case O_FONTEDIT:
-                        if (frag->type)
-                                startup_flags |= SF_FONTEDIT;
-                        else
-                                startup_flags &= ~SF_FONTEDIT;
+                        startup_flags |= SF_FONTEDIT;
+                        break;
+                case O_NO_FONTEDIT:
+                        startup_flags &= ~SF_FONTEDIT;
                         break;
 #if ENABLE_HOOKS
                 case O_HOOKS:
-                        if (frag->type)
-                                startup_flags |= SF_HOOKS;
-                        else
-                                startup_flags &= ~SF_HOOKS;
+                        startup_flags |= SF_HOOKS;
+                        break;
+                case O_NO_HOOKS:
+                        startup_flags &= ~SF_HOOKS;
                         break;
 #endif
                 case O_VERSION:
                         puts(schism_banner(0));
                         puts(ver_short_copyright);
-                        frag_free(frag);
                         exit(0);
                 case O_HELP:
-                        frag_usage(frag);
-                        frag_free(frag);
+                        // XXX try to keep this stuff to one screen (78x20 or so)
+                        printf(USAGE, argv[0]);
+                        printf(
+                                "  -a, --audio-driver=DRIVER\n"
+                                "  -v, --video-driver=DRIVER\n"
+                                "      --video-yuvlayout=LAYOUT\n"
+                                "      --video-size=WIDTHxHEIGHT\n"
+                                "      --video-stretch (--no-video-stretch)\n"
+#if USE_OPENGL
+                                "      --video-gl-path=/path/to/opengl.so\n"
+#endif
+                                "      --video-depth=DEPTH\n"
+#if HAVE_SYS_KD_H
+                                "      --video-fb-device=/dev/fb0\n"
+#endif
+#if USE_NETWORK
+                                "      --network (--no-network)\n"
+#endif
+                                "      --classic (--no-classic)\n"
+#ifdef USE_X11
+                                "      --display=DISPLAYNAME\n"
+#endif
+                                "  -f, --fullscreen (-F, --no-fullscreen)\n"
+                                "  -p, --play (-P, --no-play)\n"
+                                "      --font-editor (--no-font-editor)\n"
+#if ENABLE_HOOKS
+                                "      --hooks (--no-hooks)\n"
+#endif
+                                "      --debug=OPS\n"
+                                "      --version\n"
+                                "  -h, --help\n"
+                        );
+                        printf("Refer to the documentation for complete usage details.\n");
                         exit(0);
-                default:
-                        frag_usage(frag);
-                        frag_free(frag);
+                case '?': // unknown option
+                        fprintf(stderr, USAGE, argv[0]);
+                        exit(2);
+                default: // unhandled but known option
+                        fprintf(stderr, "how did this get here i am not good with computer\n");
                         exit(2);
                 }
         }
+
+        char *cwd = get_current_directory();
+        for (; optind < argc; optind++) {
+                char *arg = argv[optind];
+                char *tmp = dmoz_path_concat(cwd, arg);
+                if (!tmp) {
+                        perror(arg);
+                        continue;
+                }
+                char *norm = dmoz_path_normal(tmp);
+                free(tmp);
+                if (is_directory(arg)) {
+                        free(initial_dir);
+                        initial_dir = norm;
+                } else {
+                        free(initial_song);
+                        initial_song = norm;
+                }
+        }
         free(cwd);
-        frag_free(frag);
 }
 
 /* --------------------------------------------------------------------- */
@@ -1055,6 +1116,7 @@ int main(int argc, char **argv)
         if (startup_flags & SF_FONTEDIT) {
                 status.flags |= STARTUP_FONTEDIT;
                 set_page(PAGE_FONT_EDIT);
+                free(initial_song);
         } else if (initial_song) {
                 if (song_load_unchecked(initial_song) && (startup_flags & SF_PLAY)) {
                         song_start();

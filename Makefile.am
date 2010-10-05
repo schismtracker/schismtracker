@@ -74,7 +74,6 @@ scripts = \
 	scripts/palette.py
 
 EXTRA_DIST = \
-	COPYING.frag-opt		\
 	include/auto/README		\
 	$(helptexts)			\
 	$(fonts)			\
@@ -117,7 +116,6 @@ noinst_HEADERS = \
 	include/fmopl.h			\
 	include/fmt.h			\
 	include/fmt-types.h		\
-	include/frag-opt.h		\
 	include/headers.h		\
 	include/it_defs.h		\
 	include/it.h			\
@@ -251,7 +249,6 @@ schismtracker_SOURCES = \
 	schism/charset.c		\
 	schism/sample-edit.c		\
 	schism/dmoz.c			\
-	schism/frag-opt.c		\
 	schism/page_info.c		\
 	schism/page.c			\
 	schism/page_palette.c		\

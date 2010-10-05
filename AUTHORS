@@ -53,8 +53,6 @@ Creative Labs' MIDI player (PLAY.EXE).
 Some (small) portions of code have been borrowed from Cheesetracker, written
 by Juan Linietsky <coding@reduz.com.ar>.
 
-Frag-opt written by Ville Jokela <midianian/att/goth/dott/net/>.
-
 Various Amiga OS fixes by Juha Niemimäki <jniemima@mail.student.oulu.fi>.
 
 Win32 Mixer by Gargaj/CNS <gargaj@conspiracy.hu>.
