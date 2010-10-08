@@ -68,7 +68,7 @@ Each line is terminated by some combination of \r and \n, or \0.
 static struct {
         const char **lines;
         int num_lines;
-} help_cache[HELP_NUM_ITEMS][2] = {{{}}};
+} help_cache[HELP_NUM_ITEMS][2] = {{{NULL, 0}}};
 
 /* Shortcuts for sanity -- this will point to the currently applicable help. */
 #define CURRENT_HELP_LINECACHE (help_cache[status.current_help_index][!!(status.flags & CLASSIC_MODE)].lines)
