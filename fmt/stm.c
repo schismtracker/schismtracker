@@ -206,18 +206,19 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 sample->c5speed = bswapLE16(stmsmp.c5speed);
                 sample->volume = stmsmp.volume * 4; //mphack
                 if (sample->loop_start < blen
-                    && sample->loop_end <= blen
+                    && sample->loop_end != 0xffff
                     && sample->loop_start < sample->loop_end) {
                         sample->flags |= CHN_LOOP;
+                        sample->loop_end = CLAMP(sample->loop_end, sample->loop_start, blen);
                 }
         }
-        
+
         slurp_read(fp, song->orderlist, 128);
         for (n = 0; n < 128; n++) {
                 if (song->orderlist[n] >= 64)
                         song->orderlist[n] = ORDER_LAST;
         }
-        
+
         if (lflags & LOAD_NOPATTERNS) {
                 slurp_seek(fp, npat * 64 * 4 * 4, SEEK_CUR);
         } else {
@@ -227,7 +228,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                         load_stm_pattern(song->patterns[n], fp);
                 }
         }
-        
+
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 1; n <= 31; n++) {
                         song_sample_t *sample = song->samples + n;
@@ -243,7 +244,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                         slurp_seek(fp, align, SEEK_CUR);
                 }
         }
-        
+
         for (n = 0; n < 4; n++)
                 song->channels[n].panning = ((n & 1) ? 64 : 0) * 4; //mphack
         for (; n < 64; n++)
