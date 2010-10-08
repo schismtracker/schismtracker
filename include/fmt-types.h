@@ -97,6 +97,7 @@ READ_INFO(sid)
 READ_INFO(mdl) LOAD_SONG(mdl)
 READ_INFO(med)
 READ_INFO(okt) LOAD_SONG(okt)
+READ_INFO(mid) LOAD_SONG(mid)
 READ_INFO(mus) LOAD_SONG(mus)
 READ_INFO(mf)
 
