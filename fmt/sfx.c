@@ -164,13 +164,25 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                                         uint8_t p[4];
                                         slurp_read(fp, p, 4);
                                         mod_import_note(p, note);
-                                        /* Some sfx files have FF FE 00 00 note events (period 4094, sample
-                                        240). Judging by where these are placed in the patterns, it appears
-                                        that they're supposed to be note-cut or something.
-                                        (See SoundFX/- unknown/1st intro.sfx on modland, for example) */
-                                        if (p[0] == 255 && p[1] == 254) {
-                                                note->note = NOTE_CUT;
-                                                note->instrument = 0;
+                                        /* Note events starting with FF all seem to be special in some way:
+                                                bytes   apparent use    example file on modland
+                                                -----   ------------    -----------------------
+                                                FF FE   note cut        1st intro.sfx
+                                                FF FD   unknown!        another world (intro).sfx
+                                                FF FC   pattern break   orbit wanderer.sfx2 */
+                                        if (p[0] == 0xff) {
+                                                switch (p[1]) {
+                                                case 0xfc:
+                                                        note->note = NOTE_NONE;
+                                                        note->instrument = 0;
+                                                        // stuff a C00 in channel 5
+                                                        note[4 - chan].effect = FX_PATTERNBREAK;
+                                                        break;
+                                                case 0xfe:
+                                                        note->note = NOTE_CUT;
+                                                        note->instrument = 0;
+                                                        break;
+                                                }
                                         }
                                         switch (note->effect) {
                                         case 0:
