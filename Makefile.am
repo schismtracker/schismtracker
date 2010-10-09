@@ -199,10 +199,12 @@ cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
 endif
 
-if USE_WINDRES
-.o: .rc
+if HAVE_WINDRES
+.rc.o:
 	$(WINDRES) -I$(srcdir) -i $< -o $@
 files_windres=sys/win32/schismres.rc
+# let's depend on the .ico file, too
+sys/win32/schismres.$(OBJEXT): icons/schismres.ico
 endif
 
 if USE_WII
