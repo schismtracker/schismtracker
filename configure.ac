@@ -43,6 +43,11 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_CC_C99
 
+dnl Windows poop
+AC_CHECK_TOOL([WINDRES], [windres])
+AC_SUBST(WINDRES)
+AM_CONDITIONAL([HAVE_WINDRES], [test "x$WINDRES" != "x"])
+
 dnl Necessary for building the internal help.
 AM_PATH_PYTHON([2.4])
 
@@ -105,14 +110,6 @@ else
 fi
 
 
-dnl Windows poop
-AC_ARG_WITH(windres,
-        [  --with-windres=RSC      Name of windres tool (optional)],
-        windres="$withval", windres="")
-AM_CONDITIONAL([USE_WINDRES], [test "x$windres" != "x"])
-
-WINDRES="$windres"
-AC_SUBST(WINDRES)
 
 dnl winmm testing...
 AC_CHECK_HEADERS(winsock.h winsock2.h windows.h)
