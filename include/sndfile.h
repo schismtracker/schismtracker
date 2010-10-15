@@ -658,7 +658,7 @@ uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);
 void csf_check_nna(song_t *csf, uint32_t chan, uint32_t instr, int note, int force_cut);
 void csf_process_effects(song_t *csf, int firsttick);
 
-void fx_note_cut(song_t *csf, uint32_t chan);
+void fx_note_cut(song_t *csf, uint32_t chan, int clear_note);
 void fx_key_off(song_t *csf, uint32_t chan);
 void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t chan, int fake);
 void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, uint32_t param,

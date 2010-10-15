@@ -94,13 +94,17 @@ unsigned long calc_halftone(unsigned long hz, int rel)
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void fx_note_cut(song_t *csf, uint32_t nchan)
+void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 {
         song_voice_t *chan = &csf->voices[nchan];
         // stop the current note:
         chan->flags |= CHN_FASTVOLRAMP;
         chan->length = 0;
-        chan->period = 0; // keep instrument numbers from picking up old notes
+        if (clear_note) {
+                // keep instrument numbers from picking up old notes
+                // (SCx doesn't do this)
+                chan->period = 0;
+        }
 
         OPL_NoteOff(nchan);
         OPL_Touch(nchan, NULL, 0);
@@ -734,7 +738,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
                 if (csf->flags & SONG_FIRSTTICK)
                         chan->cd_note_cut = param ?: 1;
                 else if (--chan->cd_note_cut == 0)
-                        fx_note_cut(csf, nchan);
+                        fx_note_cut(csf, nchan, 0);
                 break;
         // SDx: Note Delay
         // SEx: Pattern Delay for x rows
@@ -1287,7 +1291,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
                         fx_key_off(csf, nchan);
                         break;
                 case NOTE_CUT:
-                        fx_note_cut(csf, nchan);
+                        fx_note_cut(csf, nchan, 1);
                         break;
                 case NOTE_FADE:
                 default: // Impulse Tracker handles all unknown notes as fade internally
@@ -1493,7 +1497,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
                 if (ok) {
                         switch(p->ptr_instrument->dca) {
                         case DCA_NOTECUT:
-                                fx_note_cut(csf, i);
+                                fx_note_cut(csf, i, 1);
                                 break;
                         case DCA_NOTEOFF:
                                 fx_key_off(csf, i);
