@@ -26,6 +26,7 @@
 #include "fmt.h"
 #include "song.h"
 #include "tables.h"
+#include "log.h"
 
 #include <stdint.h>
 
@@ -94,7 +95,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         uint8_t b[192];
         uint16_t ntrk, nchan, nord, npat, nsmp;
         uint16_t comment_len;
-        int n, pat, chan, smp, rows;
+        int n, pat, chan, smp, rows, todo = 0;
         song_note_t *note;
         uint16_t tmp;
         uint32_t tmplong;
@@ -119,9 +120,8 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         nsmp = slurp_getc(fp);
         slurp_getc(fp); /* attribute byte (unused) */
         rows = slurp_getc(fp); /* beats per track (translation: number of rows in every pattern) */
-        if (rows != 64) {
-                printf("TODO: test this file with other players (beats per track != 64)");
-        }
+        if (rows != 64)
+                todo |= 64;
         nchan = slurp_getc(fp);
         for (n = 0; n < 32; n++) {
                 song->channels[n].panning = short_panning_table[slurp_getc(fp) & 0xf];
@@ -155,7 +155,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 sample->volume *= 4; //mphack
                 sample->global_volume = 64;
                 if (slurp_getc(fp) & 1) {
-                        printf("TODO: double check 16 bit sample loading");
+                        todo |= 16;
                         sample->flags |= CHN_16BIT;
                         sample->length >>= 1;
                         sample->loop_start >>= 1;
@@ -187,8 +187,14 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 for (chan = 0; chan < 32; chan++) {
                         slurp_read(fp, &tmp, 2);
                         tmp = bswapLE16(tmp);
-                        if (tmp == 0)
+                        if (tmp == 0) {
                                 continue;
+                        } else if (tmp >= ntrk) {
+                                for (n = 0; n < ntrk; n++)
+                                        free(trackdata[n]);
+                                free(trackdata);
+                                return LOAD_FORMAT_ERROR;
+                        }
                         note = song->patterns[pat] + chan;
                         tracknote = trackdata[tmp - 1];
                         for (n = 0; n < rows; n++, tracknote++, note += MAX_CHANNELS)
@@ -232,6 +238,11 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;
 //      }
+
+        if (todo & 64)
+                log_appendf(2, " TODO: test this file with other players (beats per track != 64)");
+        if (todo & 16)
+                log_appendf(2, " TODO: double check 16 bit sample loading");
 
         /* done! */
         return LOAD_SUCCESS;
