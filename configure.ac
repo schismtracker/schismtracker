@@ -335,7 +335,7 @@ fi
 dnl ... but put the warnings first, to make it possible to quiet certain
 dnl warnings if necessary, while still providing most of the benefit
 if test x$ADD_WARN \!= xno; then
-        ADD_WARN="-Wall -Wextra -Winline -Wshadow -Wcast-align -Wwrite-strings -Waggregate-return -Wpacked"
+        ADD_WARN="-Wall -Wextra -Winline -Wshadow -Wwrite-strings -Waggregate-return -Wpacked"
         ADD_WARN="$ADD_WARN -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wnested-externs"
         CFLAGS="$ADD_WARN $CFLAGS"
 fi
