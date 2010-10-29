@@ -1272,6 +1272,11 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
         // why would csf_note_change ever get a negative value for 'note'?
         if (note == NOTE_NONE || note < 0)
                 return;
+
+        // save the note that's actually used, as it's necessary to properly calculate PPS and stuff
+        // (and also needed for correct display of note dots)
+        int truenote = note;
+
         song_voice_t *chan = &csf->voices[nchan];
         song_sample_t *pins = chan->ptr_sample;
         song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? chan->ptr_instrument : NULL;
@@ -1305,7 +1310,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
                 return;
 
         note = CLAMP(note, NOTE_FIRST, NOTE_LAST);
-        chan->note = note;
+        chan->note = CLAMP(truenote, NOTE_FIRST, NOTE_LAST);
         chan->new_instrument = 0;
         uint32_t period = get_period_from_note(note, chan->c5speed, csf->flags & SONG_LINEARSLIDES);
         if (period) {
