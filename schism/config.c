@@ -220,10 +220,7 @@ void cfg_load(void)
                 i = VIS_OSCILLOSCOPE;
         status.vis_style = i;
 
-        if (cfg_get_number(&cfg, "General", "accidentals_as_flats", 0))
-                status.flags |= ACCIDENTALS_AS_FLATS;
-        else
-                status.flags &= ~ACCIDENTALS_AS_FLATS;
+        kbd_sharp_flat_toggle(cfg_get_number(&cfg, "General", "accidentals_as_flats", 0) == 1);
 
 #ifdef MACOSX
 # define DEFAULT_META 1
