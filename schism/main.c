@@ -1021,7 +1021,6 @@ int main(int argc, char **argv)
         vis_init();
         atexit(schism_shutdown);
 
-        kbd_init();
         video_fullscreen(0);
 
         srand(time(NULL));

@@ -32,7 +32,6 @@
 #include <ctype.h>
 
 /* --------------------------------------------------------------------- */
-static const char **note_names, *note_names_short;
 
 static const char *note_names_up[12] = {
         "C-", "C#", "D-", "D#", "E-", "F-",
@@ -47,6 +46,9 @@ static const char *note_names_down[12] = {
 };
 
 static const char note_names_short_down[12] = "CdDeEFgGaAbB";
+
+static const char **note_names = note_names_up;
+static const char *note_names_short = note_names_short_up;
 
 /* --------------------------------------------------------------------- */
 
@@ -67,11 +69,7 @@ static const char ptm_effects[] = ".0123456789ABCDRFFT????GHK?YXPLZ()?";
 
 /* --------------------------------------------------------------------- */
 
-void kbd_init(void)
-{
-        note_names = note_names_up;
-        note_names_short = note_names_short_up;
-}
+// XXX stupid magic numbers...
 void kbd_sharp_flat_toggle(int e)
 {
         switch (e) {
