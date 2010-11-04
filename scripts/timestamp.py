@@ -18,7 +18,7 @@ Thanks to Saga Musix for finally figuring this crazy format out.
 
 for filename in sys.argv[1:]:
         f = open(filename, 'rb')
-        if f.read(4) != 'IMPM':
+        if f.read(4) != 'IMPM'.encode('ascii'):
                 print("%s: not an IT file" % filename)
                 continue
         f.seek(0x20)
@@ -59,7 +59,7 @@ for filename in sys.argv[1:]:
                 secs = ticks / 18.2
                 h, m, s = int(secs / 3600), int(secs / 60) % 60, int(secs) % 60
                 return ''.join([('%dh' % h if h else ''), ('%dm' % m if h or m else ''), ('%ds' % s)])
-        for n in xrange(hist):
+        for n in range(hist):
                 fatdate, fattime, ticks = struct.unpack('<HHL', histdata[8 * n : 8 * n + 8])
                 day = fatdate & 31
                 month = (fatdate >> 5) & 15

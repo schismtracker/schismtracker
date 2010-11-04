@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # This converts a palette string from the packed ASCII format used
 # in the runtime config into a C structure suitable for inclusion
 # in palettes.h.
