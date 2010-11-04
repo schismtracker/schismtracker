@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import sys, struct
 
 if sys.version_info[0] > 2:

@@ -1,7 +1,6 @@
+#!/usr/bin/env python
 import sys, os, tempfile, subprocess
 
-# this is likely prone to breaking in many entertaining ways,
-# but it appears to work with 2.4/2.5 on Linux at least
 
 def usage(ex):
         [sys.stderr, sys.stdout][not ex].write(
@@ -25,23 +24,26 @@ srcdir = sys.argv[1]
 helptexts = sys.argv[2:]
 o = sys.stdout
 
-ctrans = { '\n': '\\n', '"': '\\"', '\\': '\\\\' }
-for c in map(chr, range(32, 127)):
-        ctrans.setdefault(c, c)
+if sys.version_info[0] > 2:
+        unichr = chr
+        mapord = lambda s: s
+else:
+        mapord = lambda s: map(ord, s)
+
+ctrans = { ord('\n'): '\\n', ord('"'): '\\"', ord('\\'): '\\\\' }
+for c in range(32, 127):
+        ctrans.setdefault(c, chr(c))
 
 o.write("extern const char *help_text[];\n")
 o.write("const char *help_text[] = {")
 for idx, textfile in enumerate(sys.argv[2:]):
         blank = True
-        for lnum, line in enumerate(open(os.path.join(srcdir, textfile))):
+        for lnum, line in enumerate(open(os.path.join(srcdir, textfile), 'rb')):
                 blank = False
                 try:
-                        line = (line.rstrip('\r\n').decode('utf8')
-                                .replace(u'\u00B6', u'\x14') # paragraph mark
-                                .replace(u'\u00A7', u'\x15') # section mark (why? I don't know)
-                                .encode('cp437'))
+                        line = line.decode('utf8').rstrip('\r\n')
                 except UnicodeError:
-                        die_at(textfile, lnum, "malformed character")
+                        die_at(textfile, lnum, "malformed Unicode character")
                 if not line:
                         continue
                 elif line.endswith(' '):
@@ -51,8 +53,15 @@ for idx, textfile in enumerate(sys.argv[2:]):
                 elif line[0] not in typechars:
                         die_at(textfile, lnum, "line-type character %c is not one of %s"
                                % (line[0], ''.join(typechars)))
-                o.write('\n"' + ''.join([ctrans.get(c, '\\%03o' % ord(c))
-                                             for c in line + '\n']) + '"')
+                line += '\n'
+                try:
+                        line = (line
+                                .replace(unichr(0x00B6), unichr(0x14)) # paragraph mark
+                                .replace(unichr(0x00A7), unichr(0x15)) # section mark (why? I don't know)
+                                .encode('cp437'))
+                except UnicodeError:
+                        die_at(textfile, lnum, "invalid CP437 character")
+                o.write('\n"' + ''.join([ctrans.get(c, '\\%03o' % c) for c in mapord(line)]) + '"')
         if blank:
                 die_at(textfile, 0, "file is empty")
         o.write(",\n")

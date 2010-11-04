@@ -351,7 +351,7 @@ track_view_scheme = []
 end_reached = False
 prevchannel = -1
 
-for n, (channel, scheme) in [struct.unpack("BB", itcfg.read(2)) for n in range(100)]:
+for n, (channel, scheme) in enumerate(struct.unpack("BB", itcfg.read(2)) for n in range(100)):
         nth = getnth(n + 1)
         if channel == 0xff:
                 # End marker.
