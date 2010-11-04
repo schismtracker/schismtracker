@@ -118,8 +118,9 @@ static void sample_list_reposition(void)
         }
         if (dialog_f1_hack
             && status.current_page == PAGE_SAMPLE_LIST
-            && status.previous_page == PAGE_HELP)
+            && status.previous_page == PAGE_HELP) {
                 sample_adlibconfig_dialog(NULL);
+        }
         dialog_f1_hack = 0;
 }
 
@@ -247,7 +248,7 @@ static void sample_list_predraw_hook(void)
         widgets_samplelist[5].d.thumbbar.value = sample->vib_speed;
         widgets_samplelist[6].d.thumbbar.value = sample->vib_depth;
         widgets_samplelist[7].d.textentry.text = sample->filename;
-        widgets_samplelist[8].d.numentry.value = song_sample_get_c5speed(current_sample);
+        widgets_samplelist[8].d.numentry.value = sample->c5speed;
 
         widgets_samplelist[9].d.menutoggle.state =
                 (sample->flags & CHN_LOOP ? (sample->flags & CHN_PINGPONGLOOP ? 2 : 1) : 0);
@@ -364,6 +365,7 @@ static void do_copy_sample(int n)
                 song_copy_sample(current_sample, song_get_sample(n));
                 sample_host_dialog(-1);
         }
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 static void do_replace_sample(int n)
@@ -371,6 +373,7 @@ static void do_replace_sample(int n)
         if (n >= 1 && n <= _last_vis_sample()) {
                 song_replace_sample(current_sample, n);
         }
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -587,6 +590,7 @@ static void do_quality_toggle(UNUSED void *data)
 static void do_delete_sample(UNUSED void *data)
 {
         song_clear_sample(current_sample);
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
@@ -598,6 +602,8 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 
         if (pos == 0 || pos >= sample->length)
                 return;
+
+        status.flags |= SONG_NEEDS_SAVE;
 
         song_lock_audio();
         csf_stop_sample(current_song, sample);
@@ -622,6 +628,8 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 
         if (pos == 0 || pos > sample->length)
                 return;
+
+        status.flags |= SONG_NEEDS_SAVE;
 
         song_lock_audio();
         csf_stop_sample(current_song, sample);
@@ -712,6 +720,8 @@ static void do_txtsynth(UNUSED void *data)
         sample->flags &= ~(CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN
                            | CHN_16BIT | CHN_STEREO | CHN_ADLIB);
         sample_host_dialog(-1);
+
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 static void txtsynth_draw_const(void)
@@ -804,6 +814,8 @@ static void do_adlibconfig(UNUSED void *data)
                 sample->global_volume = 64;
         }
         sample_host_dialog(-1);
+
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 static void adlibconfig_refresh(void)
@@ -965,7 +977,7 @@ static void sample_adlibpatch_finish(int n)
                 sample->data = NULL;
         }
         adlib_patch_apply((song_sample_t *) sample, n - 1);
-        status.flags |= NEED_UPDATE; // redraw the sample
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE; // redraw the sample
 
         sample_host_dialog(-1);
 }
@@ -1380,7 +1392,6 @@ static void sample_list_handle_alt_key(struct key_event * k)
 static void sample_list_handle_key(struct key_event * k)
 {
         int new_sample = current_sample;
-        unsigned int newspd;
         song_sample_t *sample = song_get_sample(current_sample);
 
         switch (k->sym) {
@@ -1393,22 +1404,22 @@ static void sample_list_handle_key(struct key_event * k)
         case SDLK_PLUS:
                 if (k->state) return;
                 if (k->mod & KMOD_ALT) {
-                        newspd = sample->c5speed * 2;
-                        song_sample_set_c5speed(current_sample, newspd);
+                        sample->c5speed *= 2;
+                        status.flags |= SONG_NEEDS_SAVE;
                 } else if (k->mod & KMOD_CTRL) {
-                        newspd = calc_halftone(sample->c5speed, 1);
-                        song_sample_set_c5speed(current_sample, newspd);
+                        sample->c5speed = calc_halftone(sample->c5speed, 1);
+                        status.flags |= SONG_NEEDS_SAVE;
                 }
                 status.flags |= NEED_UPDATE;
                 return;
         case SDLK_MINUS:
                 if (k->state) return;
                 if (k->mod & KMOD_ALT) {
-                        newspd = sample->c5speed / 2;
-                        song_sample_set_c5speed(current_sample, newspd);
+                        sample->c5speed /= 2;
+                        status.flags |= SONG_NEEDS_SAVE;
                 } else if (k->mod & KMOD_CTRL) {
-                        newspd = calc_halftone(sample->c5speed, -1);
-                        song_sample_set_c5speed(current_sample, newspd);
+                        sample->c5speed = calc_halftone(sample->c5speed, -1);
+                        status.flags |= SONG_NEEDS_SAVE;
                 }
                 status.flags |= NEED_UPDATE;
                 return;
@@ -1648,11 +1659,11 @@ static void update_values_in_song(void)
 
 static void update_sample_speed(void)
 {
-        song_sample_set_c5speed(current_sample,
-                        widgets_samplelist[8].d.numentry.value);
-        status.flags |= NEED_UPDATE;
+        song_sample_t *sample = song_get_sample(current_sample);
 
-        status.flags |= SONG_NEEDS_SAVE;
+        sample->c5speed = widgets_samplelist[8].d.numentry.value;
+
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void update_panning(void)

@@ -446,21 +446,6 @@ int song_get_current_instrument(void)
 
 // ------------------------------------------------------------------------
 
-unsigned int song_sample_get_c5speed(int n)
-{
-        song_sample_t *smp;
-        smp = song_get_sample(n);
-        if (!smp) return 8363;
-        return smp->c5speed;
-}
-
-void song_sample_set_c5speed(int n, unsigned int spd)
-{
-        song_sample_t *smp;
-        smp = song_get_sample(n);
-        if (smp) smp->c5speed = spd;
-}
-
 void song_exchange_samples(int a, int b)
 {
         if (a == b)
@@ -707,14 +692,6 @@ void song_wipe_instrument(int n)
         song_unlock_audio();
 }
 
-void song_delete_sample(int n)
-{
-        song_lock_audio();
-        csf_destroy_sample(current_song, n);
-        memset(current_song->samples + n, 0, sizeof(song_sample_t));
-        song_unlock_audio();
-}
-
 void song_delete_instrument(int n)
 {
         unsigned long i;
@@ -722,21 +699,12 @@ void song_delete_instrument(int n)
 
         if (!current_song->instruments[n])
                 return;
-        song_lock_audio();
         // 128?  really?
         for (i = 0; i < 128; i++) {
                 j = current_song->instruments[n]->sample_map[i];
-                if (j) {
-                        song_sample_t *s = current_song->samples + j;
-                        csf_destroy_sample(current_song, j);
-                        memset(s, 0, sizeof(song_sample_t));
-                        s->c5speed = 8363;
-                        s->volume = 64 * 4;
-                        s->global_volume = 64;
-                        s->vib_type = VIB_SINE;
-                }
+                if (j)
+                        song_clear_sample(j);
         }
-        song_unlock_audio();
         song_wipe_instrument(n);
 }
 
