@@ -304,11 +304,11 @@ static void message_draw(void)
                         cursor_char = LINE_WRAP + 1;
 
                 if (cursor_char >= len) {
-                        draw_char(20, 2 + cursor_char,
-                                  13 + (cursor_line - top_line), 0, 3);
+                        (message_extfont ? draw_char_bios : draw_char)
+                                (20, 2 + cursor_char, 13 + (cursor_line - top_line), 0, 3);
                 } else {
-                        draw_char(line[cursor_char], 2 + cursor_char,
-                                  13 + (cursor_line - top_line), 8, 3);
+                        (message_extfont ? draw_char_bios : draw_char)
+                                (line[cursor_char], 2 + cursor_char, 13 + (cursor_line - top_line), 8, 3);
                 }
         }
 }
@@ -383,7 +383,7 @@ static void message_insert_char(int c)
         }
 
         message_reposition();
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void message_delete_char(void)
@@ -405,7 +405,7 @@ static void message_delete_char(void)
         }
 
         message_reposition();
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void message_delete_next_char(void)
@@ -418,7 +418,7 @@ static void message_delete_next_char(void)
                 len - cursor_pos);
         current_song->message[MAX_MESSAGE] = 0;
 
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void message_delete_line(void)
@@ -442,7 +442,7 @@ static void message_delete_line(void)
                 cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
         }
         message_reposition();
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void message_clear(UNUSED void *data)
@@ -450,6 +450,7 @@ static void message_clear(UNUSED void *data)
         current_song->message[0] = 0;
         memused_songchanged();
         message_set_viewmode();
+        status.flags |= SONG_NEEDS_SAVE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -542,7 +543,7 @@ static void _delete_selection(void)
         set_absolute_position(current_song->message, cursor_pos, &cursor_line, &cursor_char);
         message_reposition();
 
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static int message_handle_key_editmode(struct key_event * k)

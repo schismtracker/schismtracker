@@ -1411,7 +1411,7 @@ int instrument_loader_abort(struct instrumentloader *ii)
         song_wipe_instrument(ii->slot);
         for (n = 0; n < MAX_SAMPLES; n++) {
                 if (ii->sample_map[n]) {
-                        song_delete_sample(ii->sample_map[n]-1);
+                        song_clear_sample(ii->sample_map[n]-1);
                         ii->sample_map[n] = 0;
                 }
         }

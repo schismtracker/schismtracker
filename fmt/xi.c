@@ -263,7 +263,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->vib_depth = xmsh.vibdepth;
                 smp->vib_rate = xmsh.vibrate / 4; // XXX xm.c does not divide here, which is wrong?
 
-                song_sample_set_c5speed(n, transpose_to_frequency(xmss.relnote, xmss.finetune));
+                smp->c5speed = transpose_to_frequency(xmss.relnote, xmss.finetune);
                 sampledata += csf_read_sample(current_song->samples + n, rs, sampledata, (eof-sampledata));
         }
 

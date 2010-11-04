@@ -205,7 +205,7 @@ static void orderlist_insert_pos(void)
                 255 - current_order);
         current_song->orderlist[current_order] = ORDER_LAST;
 
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void orderlist_save(void)
@@ -229,7 +229,7 @@ static void orderlist_delete_pos(void)
                 255 - current_order);
         current_song->orderlist[255] = ORDER_LAST;
 
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void orderlist_insert_next(void)
@@ -246,7 +246,7 @@ static void orderlist_insert_next(void)
                 current_order++;
         orderlist_reposition();
 
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void orderlist_add_unused_patterns(void)
@@ -291,6 +291,8 @@ static void orderlist_add_unused_patterns(void)
                         status_text_flash("%d unused patterns found", n - n0);
                 }
         }
+
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void orderlist_reorder(void)
@@ -328,7 +330,7 @@ static void orderlist_reorder(void)
                 }
         }
 
-        status.flags |= NEED_UPDATE;
+        status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 
         song_stop_unlocked(0);
 
@@ -605,7 +607,6 @@ static int orderlist_handle_key_on_list(struct key_event * k)
                 if (k->mod & KMOD_ALT) {
                         if (k->state) return 1;
                         orderlist_add_unused_patterns();
-                        status.flags |= NEED_UPDATE;
                         return 1;
                 }
                 return 0;
