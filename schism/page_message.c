@@ -796,23 +796,11 @@ static void song_changed_cb(void)
 
 /* --------------------------------------------------------------------- */
 
-static int message_key_hack(struct key_event *k)
-{
-        if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod) && edit_mode) {
-                if (!k->state) return 1;
-                message_set_viewmode();
-                memused_songchanged();
-                return 1;
-        }
-        return 0;
-}
-
 void message_load_page(struct page *page)
 {
         page->title = "Message Editor (Shift-F9)";
         page->draw_const = message_draw_const;
         page->song_changed_cb = song_changed_cb;
-        page->pre_handle_key = message_key_hack;
         page->total_widgets = 1;
         page->widgets = widgets_message;
         page->help_index = HELP_MESSAGE_EDITOR;
