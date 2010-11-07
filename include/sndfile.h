@@ -574,6 +574,12 @@ typedef struct song {
         char title[32];
         char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
 
+        // These store the existing IT save history from prior editing sessions.
+        // Current session data is added at save time, and is NOT a part of histdata.
+        int histlen; // How many session history data entries exist (each entry is eight bytes)
+        uint8_t *histdata; // Preserved entries from prior sessions, might be NULL if histlen = 0
+        struct timeval editstart; // When the song was loaded
+
         // mixer stuff
         uint32_t mix_flags; // SNDMIX_*
         uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
@@ -691,6 +697,7 @@ void csf_reset_playmarks(song_t *csf);
 
 void csf_insert_restart_pos(song_t *csf, uint32_t restart_order); // hax
 
+void csf_forget_history(song_t *csf); // Send the edit log down the memory hole.
 
 /* apply a preset Adlib patch */
 void adlib_patch_apply(song_sample_t *smp, int patchnum);

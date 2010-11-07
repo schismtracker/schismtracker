@@ -22,6 +22,8 @@
  */
 
 #define NEED_BYTESWAP
+#define NEED_TIME
+#include "headers.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -68,6 +70,7 @@ static void _csf_reset(song_t *csf)
         memset(csf->patterns, 0, sizeof(csf->patterns));
 
         csf_reset_midi_cfg(csf);
+        csf_forget_history(csf);
 
         for (i = 0; i < MAX_PATTERNS; i++) {
                 csf->pattern_size[i] = 64;
@@ -194,6 +197,14 @@ void csf_free_sample(void *p)
 {
         if (p)
                 free(p - 16);
+}
+
+void csf_forget_history(song_t *csf)
+{
+        free(csf->histdata);
+        csf->histdata = NULL;
+        csf->histlen = 0;
+        gettimeofday(&csf->editstart, NULL);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

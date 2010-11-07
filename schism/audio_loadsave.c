@@ -22,6 +22,7 @@
  */
 
 #define NEED_BYTESWAP
+#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
@@ -155,6 +156,8 @@ void song_new(int flags)
 
         current_song->repeat_count = 0;
         //song_stop();
+
+        csf_forget_history(current_song);
 
         song_unlock_audio();
 
@@ -583,21 +586,21 @@ static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
         disko_write(fp, data, pos);
 }
 
+// why on earth isn't this using the 'song' parameter? will finding this out hurt my head?
 static int _save_it(disko_t *fp, UNUSED song_t *song)
 {
         struct it_file hdr;
         int n;
         int nord, nins, nsmp, npat;
         int msglen = strlen(current_song->message);
-        unsigned int para_ins[256], para_smp[256], para_pat[256];
-        unsigned int extra;
-        unsigned short zero;
+        uint32_t para_ins[256], para_smp[256], para_pat[256];
+        // how much extra data is stuffed between the parapointers and the rest of the file
+        // (2 bytes for edit history length, and 8 per entry including the current session)
+        uint32_t extra = 2 + 8 * current_song->histlen + 8;
 
         memset(&hdr, 0, sizeof(hdr));
 
         // TODO complain about nonstandard stuff? or just stop saving it to begin with
-
-        extra = 2;
 
         /* IT always saves at least two orders -- and requires an extra order at the end (which gets chopped!)
         However, the loader refuses to load files with too much data in the orderlist, so in the pathological
@@ -695,11 +698,34 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
         disko_write(fp, para_smp, 4*nsmp);
         disko_write(fp, para_pat, 4*npat);
 
-        /* this is where the edit history should be (see scripts/timestamp.py)
-        could just clear special & 2 and skip this, but players would probably
-        choke on the resulting files. (and eventually schism will write this
-        data anyway) */
-        zero = 0; disko_write(fp, &zero, 2);
+        // edit history (see scripts/timestamp.py)
+        // Should™ be fully compatible with Impulse Tracker.
+        struct timeval savetime, elapsed;
+        struct tm loadtm;
+        uint16_t h;
+
+        localtime_r(&current_song->editstart.tv_sec, &loadtm);
+        gettimeofday(&savetime, NULL);
+        timersub(&savetime, &current_song->editstart, &elapsed);
+
+        // item count
+        h = current_song->histlen + 1;
+        h = bswapLE16(h);
+        disko_write(fp, &h, 2);
+        // old data
+        disko_write(fp, current_song->histdata, 8 * current_song->histlen);
+        // 16-bit date
+        h = loadtm.tm_mday | ((loadtm.tm_mon + 1) << 5) | ((loadtm.tm_year - 80) << 9);
+        h = bswapLE16(h);
+        disko_write(fp, &h, 2);
+        // 16-bit time
+        h = (loadtm.tm_sec / 2) | (loadtm.tm_min << 5) | (loadtm.tm_hour << 11);
+        h = bswapLE16(h);
+        disko_write(fp, &h, 2);
+        // 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
+        uint32_t ticks = elapsed.tv_sec * 182 / 10 + elapsed.tv_usec / 54945;
+        ticks = bswapLE32(ticks);
+        disko_write(fp, &ticks, 4);
 
         // here comes MIDI configuration
         // here comes MIDI configuration
@@ -708,8 +734,6 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
                 disko_write(fp, &current_song->midi_config, sizeof(current_song->midi_config));
         }
 
-        // IT puts something else here (timestamp?)
-        // (need to change hdr.msgoffset above if adding other stuff here)
         disko_write(fp, current_song->message, msglen);
 
         // instruments, samples, and patterns
