@@ -471,7 +471,7 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
 int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
         struct it_header hdr;
-        uint32_t para_smp[MAX_SAMPLES], para_ins[MAX_INSTRUMENTS], para_pat[MAX_PATTERNS];
+        uint32_t para_smp[MAX_SAMPLES], para_ins[MAX_INSTRUMENTS], para_pat[MAX_PATTERNS], para_min;
         int n;
         int ignorezxx = 0, warnzxx = 0;
         song_channel_t *channel;
@@ -561,24 +561,47 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         }
 
         slurp_read(fp, song->orderlist, hdr.ordnum);
-        // These are byteswapped as they're accessed
         slurp_read(fp, para_ins, 4 * hdr.insnum);
         slurp_read(fp, para_smp, 4 * hdr.smpnum);
         slurp_read(fp, para_pat, 4 * hdr.patnum);
 
-        // skip the save history
+        para_min = ((hdr.special & 1) && hdr.msg_length) ? hdr.msg_offset : fp->length;
+        for (n = 0; n < hdr.insnum; n++) {
+                para_ins[n] = bswapLE32(para_ins[n]);
+                if (para_ins[n] < para_min)
+                        para_min = para_ins[n];
+        }
+        for (n = 0; n < hdr.smpnum; n++) {
+                para_smp[n] = bswapLE32(para_smp[n]);
+                if (para_smp[n] < para_min)
+                        para_min = para_smp[n];
+        }
+        for (n = 0; n < hdr.patnum; n++) {
+                para_pat[n] = bswapLE32(para_pat[n]);
+                if (para_pat[n] && para_pat[n] < para_min)
+                        para_min = para_pat[n];
+        }
+
         if (hdr.special & 2) {
                 slurp_read(fp, &hist, 2);
                 hist = bswapLE16(hist);
-                slurp_seek(fp, 8 * hist, SEEK_CUR);
+                if (para_min < (uint32_t) slurp_tell(fp) + 8 * hist) {
+                        /* History data overlaps the parapointers. Discard it, it's probably broken.
+                        Some programs, notably older versions of Schism Tracker, set the history flag
+                        but didn't actually write any data, so the "length" we just read is actually
+                        some other data in the file. */
+                        hist = 0;
+                }
         } else {
+                // History flag isn't even set. Probably an old version of Impulse Tracker.
                 hist = 0;
         }
-        if (slurp_eof(fp)) {
-                // oops it was garbage
-                // (XXX in this case, should we go back and try to read the midi config anyway?)
-                hist = 0;
-        } else if ((hdr.special & 8) && fp->pos + sizeof(midi_config_t) <= fp->length) {
+        if (hist) {
+                song->histlen = hist;
+                song->histdata = malloc(8 * song->histlen);
+                slurp_read(fp, song->histdata, 8 * song->histlen);
+        }
+        if ((hdr.special & 8) && fp->pos + sizeof(midi_config_t) <= fp->length) {
                 slurp_read(fp, &song->midi_config, sizeof(midi_config_t));
         }
         if (!hist) {
@@ -600,35 +623,29 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 0; n < hdr.insnum; n++) {
-                        uint32_t para = bswapLE32(para_ins[n]);
                         song_instrument_t *inst;
 
-                        if (!para)
+                        if (!para_ins[n])
                                 continue;
-                        slurp_seek(fp, para, SEEK_SET);
+                        slurp_seek(fp, para_ins[n], SEEK_SET);
                         inst = song->instruments[n + 1] = csf_allocate_instrument();
                         (hdr.cmwt >= 0x0200 ? load_it_instrument : load_it_instrument_old)(inst, fp);
                 }
 
                 for (n = 0, sample = song->samples + 1; n < hdr.smpnum; n++, sample++) {
-                        uint32_t para = bswapLE32(para_smp[n]);
-
-                        if (!para)
-                                continue;
-                        slurp_seek(fp, para, SEEK_SET);
+                        slurp_seek(fp, para_smp[n], SEEK_SET);
                         load_it_sample(sample, fp, hdr.cwtv);
                 }
         }
-        
+
         if (!(lflags & LOAD_NOPATTERNS)) {
                 for (n = 0; n < hdr.patnum; n++) {
                         uint16_t rows, bytes;
-                        uint32_t para = bswapLE32(para_pat[n]);
                         size_t got;
 
-                        if (!para)
+                        if (!para_pat[n])
                                 continue;
-                        slurp_seek(fp, para, SEEK_SET);
+                        slurp_seek(fp, para_pat[n], SEEK_SET);
                         slurp_read(fp, &bytes, 2);
                         bytes = bswapLE16(bytes);
                         slurp_read(fp, &rows, 2);
@@ -637,7 +654,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                         song->patterns[n] = csf_allocate_pattern(rows);
                         song->pattern_size[n] = song->pattern_alloc_size[n] = rows;
                         warnzxx += load_it_pattern(song->patterns[n], fp, rows, ignorezxx);
-                        got = slurp_tell(fp) - para - 8;
+                        got = slurp_tell(fp) - para_pat[n] - 8;
                         if (bytes != got)
                                 log_appendf(4, " Warning: Pattern %d: size mismatch"
                                         " (expected %d bytes, got %lu)",
@@ -679,7 +696,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 if (hdr.insnum > 0) {
                         // check trkvers -- OpenMPT writes 0x0220; older MPT writes 0x0211
                         uint16_t tmp;
-                        slurp_seek(fp, bswapLE32(para_ins[0]) + 0x1c, SEEK_SET);
+                        slurp_seek(fp, para_ins[0] + 0x1c, SEEK_SET);
                         slurp_read(fp, &tmp, 2);
                         tmp = bswapLE16(tmp);
                         if (tmp == 0x0220)
