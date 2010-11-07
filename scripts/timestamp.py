@@ -10,7 +10,7 @@ of this format), and then the length of time the file was loaded in the
 editor, in units of 1/18.2 second. (apparently this is fairly standard
 in DOS apps - I don't know)
 A new timestamp is written whenever the file is reloaded, but it is
-overwritten if the file is re-szved multiple times in the same editing
+overwritten if the file is re-saved multiple times in the same editing
 session.
 
 Thanks to Saga Musix for finally figuring this crazy format out.
