@@ -181,14 +181,12 @@ static void load_it_notetrans(song_instrument_t *instrument, struct it_notetrans
 
 
 
-// return: number of Zxx macros discarded (if ignorezxx is true)
-static int load_it_pattern(song_note_t *note, slurp_t *fp, int rows, int ignorezxx)
+static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows)
 {
         song_note_t last_note[64];
         int chan, row = 0;
         uint8_t last_mask[64] = { 0 };
         uint8_t chanvar, maskvar, c;
-        int zxx = 0;
 
         while (row < rows) {
                 chanvar = slurp_getc(fp);
@@ -234,10 +232,6 @@ static int load_it_pattern(song_note_t *note, slurp_t *fp, int rows, int ignorez
                         note[chan].effect = slurp_getc(fp) & 0x1f;
                         note[chan].param = slurp_getc(fp);
                         csf_import_s3m_effect(note + chan, 1);
-                        if (ignorezxx && note[chan].effect == FX_MIDI) {
-                                note[chan].effect = FX_NONE;
-                                zxx++;
-                        }
                         last_note[chan].effect = note[chan].effect;
                         last_note[chan].param = note[chan].param;
                 }
@@ -254,8 +248,6 @@ static int load_it_pattern(song_note_t *note, slurp_t *fp, int rows, int ignorez
                         note[chan].param = last_note[chan].param;
                 }
         }
-
-        return zxx;
 }
 
 
@@ -473,7 +465,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         struct it_header hdr;
         uint32_t para_smp[MAX_SAMPLES], para_ins[MAX_INSTRUMENTS], para_pat[MAX_PATTERNS], para_min;
         int n;
-        int ignorezxx = 0, warnzxx = 0;
+        int ignoremidi = 0;
         song_channel_t *channel;
         song_sample_t *sample;
         uint16_t hist = 0; // save history (for IT only)
@@ -506,7 +498,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         song->title[25] = '\0';
 
         if (hdr.cwtv < 0x0214)
-                ignorezxx = 1;
+                ignoremidi = 1;
         if (hdr.special & 4) {
                 /* "reserved" bit, experimentally determined to indicate presence of otherwise-documented row
                 highlight information - introduced in IT 2.13. Formerly checked cwtv here, but that's lame :)
@@ -533,7 +525,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 midi_flags |= MIDI_PITCHBEND;
                 midi_pitch_depth = hdr.pwd;
         }
-        if (hdr.flags & 128)
+        if ((hdr.flags & 128) && !ignoremidi)
                 song->flags |= SONG_EMBEDMIDICFG;
         else
                 song->flags &= ~SONG_EMBEDMIDICFG;
@@ -601,7 +593,13 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 song->histdata = malloc(8 * song->histlen);
                 slurp_read(fp, song->histdata, 8 * song->histlen);
         }
-        if ((hdr.special & 8) && fp->pos + sizeof(midi_config_t) <= fp->length) {
+        if (ignoremidi) {
+                if (hdr.special & 8) {
+                        log_appendf(4, " Warning: ignoring embedded MIDI data (CWTV is too old)");
+                        slurp_seek(fp, sizeof(midi_config_t), SEEK_CUR);
+                }
+                memset(&song->midi_config, 0, sizeof(midi_config_t));
+        } else if ((hdr.special & 8) && fp->pos + sizeof(midi_config_t) <= fp->length) {
                 slurp_read(fp, &song->midi_config, sizeof(midi_config_t));
         }
         if (!hist) {
@@ -653,16 +651,13 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                         slurp_seek(fp, 4, SEEK_CUR);
                         song->patterns[n] = csf_allocate_pattern(rows);
                         song->pattern_size[n] = song->pattern_alloc_size[n] = rows;
-                        warnzxx += load_it_pattern(song->patterns[n], fp, rows, ignorezxx);
+                        load_it_pattern(song->patterns[n], fp, rows);
                         got = slurp_tell(fp) - para_pat[n] - 8;
                         if (bytes != got)
                                 log_appendf(4, " Warning: Pattern %d: size mismatch"
                                         " (expected %d bytes, got %lu)",
                                         n, bytes, (unsigned long) got);
                 }
-                if (warnzxx)
-                        log_appendf(2, " Warning: %d Zxx effect%s discarded (too old file version)",
-                                warnzxx, warnzxx == 1 ? "" : "s");
         }
 
 
