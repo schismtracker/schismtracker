@@ -196,6 +196,9 @@ static int ibook_helper = -1;
 /* initial module directory */
 static char *initial_dir = NULL;
 
+/* diskwrite? */
+static char *diskwrite_to = NULL;
+
 /* startup flags */
 enum {
         SF_PLAY = 1, /* -p: start playing after loading initial_song */
@@ -237,6 +240,7 @@ enum {
 #if ENABLE_HOOKS
         O_HOOKS, O_NO_HOOKS,
 #endif
+        O_DISKWRITE,
         O_DEBUG,
         O_VERSION,
 };
@@ -281,6 +285,7 @@ static void parse_options(int argc, char **argv)
                 {"no-fullscreen", 0, NULL, O_NO_FULLSCREEN},
                 {"play", 0, NULL, O_PLAY},
                 {"no-play", 0, NULL, O_NO_PLAY},
+                {"diskwrite", 1, NULL, O_DISKWRITE},
                 {"font-editor", 0, NULL, O_FONTEDIT},
                 {"no-font-editor", 0, NULL, O_NO_FONTEDIT},
 #if ENABLE_HOOKS
@@ -375,6 +380,9 @@ static void parse_options(int argc, char **argv)
                 case O_NO_FONTEDIT:
                         startup_flags &= ~SF_FONTEDIT;
                         break;
+                case O_DISKWRITE:
+                        diskwrite_to = optarg;
+                        break;
 #if ENABLE_HOOKS
                 case O_HOOKS:
                         startup_flags |= SF_HOOKS;
@@ -412,11 +420,12 @@ static void parse_options(int argc, char **argv)
 #endif
                                 "  -f, --fullscreen (-F, --no-fullscreen)\n"
                                 "  -p, --play (-P, --no-play)\n"
+                                "      --diskwrite=FILENAME\n"
                                 "      --font-editor (--no-font-editor)\n"
 #if ENABLE_HOOKS
                                 "      --hooks (--no-hooks)\n"
 #endif
-                                "      --debug=OPS\n"
+                                //"      --debug=OPS\n"
                                 "      --version\n"
                                 "  -h, --help\n"
                         );
@@ -951,10 +960,15 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                         check_update();
                                         q = disko_sync();
                                 }
+                                if (q == DW_SYNC_DONE) {
 #ifdef ENABLE_HOOKS
-                                if (q == DW_SYNC_DONE)
                                         run_disko_complete_hook();
 #endif
+                                        if (diskwrite_to) {
+                                                printf("Diskwrite complete, exiting...\n");
+                                                exit(0);
+                                        }
+                                }
                         }
 
                         /* let dmoz build directory lists, etc
@@ -1117,11 +1131,20 @@ int main(int argc, char **argv)
                 set_page(PAGE_FONT_EDIT);
                 free(initial_song);
         } else if (initial_song) {
-                if (song_load_unchecked(initial_song) && (startup_flags & SF_PLAY)) {
-                        song_start();
-                        set_page(PAGE_INFO);
-                } else {
-                        set_page(PAGE_LOG);
+                set_page(PAGE_LOG);
+                if (song_load_unchecked(initial_song)) {
+                        if (diskwrite_to) {
+                                // make a guess?
+                                const char *multi = strcasestr(diskwrite_to, "%c");
+                                const char *driver = (strcasestr(diskwrite_to, ".aif")
+                                                      ? (multi ? "MAIFF" : "AIFF")
+                                                      : (multi ? "MWAV" : "WAV"));
+                                if (song_export(diskwrite_to, driver) != SAVE_SUCCESS)
+                                        exit(1); // ?
+                        } else if (startup_flags & SF_PLAY) {
+                                song_start();
+                                set_page(PAGE_INFO);
+                        }
                 }
                 free(initial_song);
         } else {
