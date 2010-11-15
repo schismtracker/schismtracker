@@ -1096,7 +1096,7 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 
         if (env_on) {
                 max_ticks = env->ticks[env->nodes-1];
-                m = song_get_mix_state(&channel_list);
+                m = max_ticks ? song_get_mix_state(&channel_list) : 0;
                 while (m--) {
                         channel = song_get_mix_channel(channel_list[m]);
                         if (channel->ptr_instrument != song_get_instrument(current_instrument))
