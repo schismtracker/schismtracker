@@ -358,15 +358,14 @@ static void _draw_fill_notes(int col, int first_row, int height, int num_channel
                              int channel_width, int separator, draw_note_func draw_note, int bg)
 {
         int row_pos, chan_pos;
-        song_note_t blank = {.note = NOTE_NONE};
 
         for (row_pos = first_row; row_pos < first_row + height; row_pos++) {
                 for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
-                        draw_note(col + channel_width * chan_pos, row_pos, &blank, -1, 6, bg);
+                        draw_note(col + channel_width * chan_pos, row_pos, blank_note, -1, 6, bg);
                         if (separator)
                                 draw_char(168, (col - 1 + channel_width * (chan_pos + 1)), row_pos, 2, bg);
                 }
-                draw_note(col + channel_width * chan_pos, row_pos, &blank, -1, 6, bg);
+                draw_note(col + channel_width * chan_pos, row_pos, blank_note, -1, 6, bg);
         }
 }
 
@@ -376,9 +375,10 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
         /* way too many variables */
         int current_row = song_get_current_row();
         int current_order = song_get_current_order();
-        song_note_t *note;
+        const song_note_t *note;
+        // These can't be const because of song_get_pattern, but song_get_pattern is stupid and smells funny.
         song_note_t *cur_pattern, *prev_pattern, *next_pattern;
-        song_note_t *pattern; /* points to either {cur,prev,next}_pattern */
+        const song_note_t *pattern; /* points to either {cur,prev,next}_pattern */
         int cur_pattern_rows = 0, prev_pattern_rows = 0, next_pattern_rows = 0;
         int total_rows; /* same as {cur,prev_next}_pattern_rows */
         int chan_pos, row, row_pos, rows_before, rows_after;

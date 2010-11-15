@@ -49,8 +49,6 @@
 /* this is actually used by pattern-view.c */
 int show_default_volumes = 0;
 
-static song_note_t empty_note; // FIXME should be const, need to fix track view draw_note functions
-
 /* --------------------------------------------------------------------- */
 /* The (way too many) static variables */
 
@@ -2172,7 +2170,7 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
         c_note = clipboard.data;
         for (row = 0; row < num_rows; row++) {
                 for (chan = 0; chan < chan_width; chan++) {
-                        if (memcmp(p_note + chan, &empty_note, sizeof(song_note_t)) == 0) {
+                        if (memcmp(p_note + chan, blank_note, sizeof(song_note_t)) == 0) {
 
                                 p_note[chan] = c_note[chan];
                                 set_note_note(p_note+chan,
@@ -2621,7 +2619,7 @@ static void pattern_editor_redraw(void)
                                 bg = 15;
                         else
                                 bg = 0;
-                        track_view->draw_note(chan_drawpos, 15 + row_pos, &empty_note, -1, 6, bg);
+                        track_view->draw_note(chan_drawpos, 15 + row_pos, blank_note, -1, 6, bg);
                         if (draw_divisions && chan_pos < visible_channels - 1) {
                                 draw_char(168, chan_drawpos + track_view->width, 15 + row_pos, 2, bg);
                         }
