@@ -519,6 +519,8 @@ extern midi_config_t default_midi_config;
 extern uint32_t max_voices;
 extern uint32_t global_vu_left, global_vu_right;
 
+extern const song_note_t blank_pattern[64 * 64];
+
 
 struct multi_write {
         int used;

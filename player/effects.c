@@ -932,114 +932,104 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 ////////////////////////////////////////////////////////////
 // Length
 
+#if MAX_CHANNELS != 64
+# error csf_get_length assumes 64 channels
+#endif
+
 unsigned int csf_get_length(song_t *csf)
 {
-        uint32_t elapsed=0, row=0, cur_pattern=0, next_pattern=0, pat=csf->orderlist[0];
-        uint32_t speed=csf->initial_speed, tempo=csf->initial_tempo, next_row=0;
-        uint32_t max_row = 0, max_pattern = 0;
-        uint8_t instr[MAX_VOICES] = {0};
-        uint8_t notes[MAX_VOICES] = {0};
-        uint32_t patloop[MAX_VOICES] = {0};
-        uint8_t vols[MAX_VOICES];
-        uint8_t chnvols[MAX_VOICES];
+        uint32_t elapsed = 0, row = 0, next_row = 0, cur_order = 0, next_order = 0, pat = csf->orderlist[0],
+                speed = csf->initial_speed, tempo = csf->initial_tempo, psize, n;
+        uint32_t patloop[MAX_CHANNELS] = {0};
+        uint8_t mem_tempo[MAX_CHANNELS] = {0};
+        uint64_t setloop = 0; // bitmask
+        const song_note_t *pdata;
 
-        memset(vols, 0xFF, sizeof(vols));
-        memset(chnvols, 64, sizeof(chnvols));
-        for (uint32_t icv=0; icv<MAX_CHANNELS; icv++)
-                chnvols[icv] = csf->channels[icv].volume;
-        max_row = csf->process_row;
-        max_pattern = csf->process_order;
-        cur_pattern = next_pattern = 0;
-        pat = csf->orderlist[0];
-        row = next_row = 0;
         for (;;) {
                 uint32_t speed_count = 0;
                 row = next_row;
-                cur_pattern = next_pattern;
+                cur_order = next_order;
 
                 // Check if pattern is valid
-                pat = csf->orderlist[cur_pattern];
+                pat = csf->orderlist[cur_order];
                 while (pat >= MAX_PATTERNS) {
                         // End of song ?
-                        if (pat == 0xFF || cur_pattern >= MAX_ORDERS) {
-                                goto EndMod;
+                        if (pat == ORDER_LAST || cur_order >= MAX_ORDERS) {
+                                pat = ORDER_LAST; // cause break from outer loop too
+                                break;
                         } else {
-                                cur_pattern++;
-                                pat = (cur_pattern < MAX_ORDERS)
-                                        ? csf->orderlist[cur_pattern]
-                                        : 0xFF;
+                                cur_order++;
+                                pat = (cur_order < MAX_ORDERS) ? csf->orderlist[cur_order] : ORDER_LAST;
                         }
-                        next_pattern = cur_pattern;
+                        next_order = cur_order;
                 }
                 // Weird stuff?
-                if ((pat >= MAX_PATTERNS) || (!csf->patterns[pat])) break;
+                if (pat >= MAX_PATTERNS)
+                        break;
+                pdata = csf->patterns[pat];
+                if (pdata) {
+                        psize = csf->pattern_size[pat];
+                } else {
+                        pdata = blank_pattern;
+                        psize = 64;
+                }
                 // Should never happen
-                if (row >= csf->pattern_size[pat]) row = 0;
+                if (row >= psize)
+                        row = 0;
                 // Update next position
                 next_row = row + 1;
-                if (next_row >= csf->pattern_size[pat]) {
-                        next_pattern = cur_pattern + 1;
+                if (next_row >= psize) {
+                        next_order = cur_order + 1;
                         next_row = 0;
                 }
+
                 /* muahahaha */
                 if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
-                        if (csf->stop_at_order <= (signed) cur_pattern && csf->stop_at_row <= (signed) row)
-                                goto EndMod;
+                        if (csf->stop_at_order <= (signed) cur_order && csf->stop_at_row <= (signed) row)
+                                break;
                         if (csf->stop_at_time > 0) {
                                 /* stupid api decision */
-                                if (((elapsed+500) / 1000) >= csf->stop_at_time) {
-                                        csf->stop_at_order = cur_pattern;
+                                if (((elapsed + 500) / 1000) >= csf->stop_at_time) {
+                                        csf->stop_at_order = cur_order;
                                         csf->stop_at_row = row;
-                                        goto EndMod;
+                                        break;
                                 }
                         }
                 }
 
-                if (!row) {
-                        for (uint32_t ipck=0; ipck<MAX_CHANNELS; ipck++)
-                                patloop[ipck] = elapsed;
+                /* This is nasty, but it fixes inaccuracies with SB0 SB1 SB1. (Simultaneous
+                loops in multiple channels are still wildly incorrect, though.) */
+                if (!row)
+                        setloop = ~0;
+                if (setloop) {
+                        for (n = 0; n < MAX_CHANNELS; n++)
+                                if (setloop & (1 << n))
+                                        patloop[n] = elapsed;
+                        setloop = 0;
                 }
-                song_voice_t *chan = csf->voices;
-                song_note_t *p = csf->patterns[pat] + row * MAX_CHANNELS;
-                for (uint32_t nchan=0; nchan<MAX_CHANNELS; p++,chan++, nchan++)
-                if (*((uint32_t *)p)) {
-                        uint32_t command = p->effect;
-                        uint32_t param = p->param;
-                        uint32_t note = p->note;
-                        if (p->instrument) {
-                                instr[nchan] = p->instrument;
-                                notes[nchan] = 0;
-                                vols[nchan] = 0xFF;
-                        }
-                        if (NOTE_IS_NOTE(note))
-                                notes[nchan] = note;
-                        if (p->voleffect == VOLFX_VOLUME)
-                                vols[nchan] = p->volparam;
-                        switch (command) {
-                        case 0: break;
-                        // Position Jump
+                const song_note_t *note = pdata + row * MAX_CHANNELS;
+                for (n = 0; n < MAX_CHANNELS; note++, n++) {
+                        uint32_t param = note->param;
+                        switch (note->effect) {
+                        case FX_NONE:
+                                break;
                         case FX_POSITIONJUMP:
-                                if (param <= cur_pattern)
-                                        goto EndMod;
-                                next_pattern = param;
+                                next_order = param > cur_order ? param : cur_order + 1;
                                 next_row = 0;
                                 break;
-                        // Pattern Break
                         case FX_PATTERNBREAK:
+                                next_order = cur_order + 1;
                                 next_row = param;
-                                next_pattern = cur_pattern + 1;
                                 break;
-                        // Set Speed
                         case FX_SPEED:
                                 if (param)
                                         speed = param;
                                 break;
-                        // Set Tempo
                         case FX_TEMPO:
                                 if (param)
-                                        chan->mem_tempo = param;
+                                        mem_tempo[n] = param;
                                 else
-                                        param = chan->mem_tempo;
+                                        param = mem_tempo[n];
                                 int d = (param & 0xf);
                                 switch (param >> 4) {
                                 default:
@@ -1053,7 +1043,6 @@ unsigned int csf_get_length(song_t *csf)
                                         break;
                                 }
                                 break;
-                        // Pattern Delay
                         case FX_SPECIAL:
                                 switch (param >> 4) {
                                 case 0x6:
@@ -1061,10 +1050,11 @@ unsigned int csf_get_length(song_t *csf)
                                         break;
                                 case 0xb:
                                         if (param & 0x0F) {
-                                                elapsed +=
-                                                        (elapsed - patloop[nchan]) * (param & 0x0F);
+                                                elapsed += (elapsed - patloop[n]) * (param & 0x0F);
+                                                patloop[n] = 0xffffffff;
+                                                setloop = 1;
                                         } else {
-                                                patloop[nchan] = elapsed;
+                                                patloop[n] = elapsed;
                                         }
                                         break;
                                 case 0xe:
@@ -1077,8 +1067,8 @@ unsigned int csf_get_length(song_t *csf)
                 speed_count += speed;
                 elapsed += (2500 * speed_count) / tempo;
         }
-EndMod:
-        return (elapsed+500) / 1000;
+
+        return (elapsed + 500) / 1000;
 }
 
 
