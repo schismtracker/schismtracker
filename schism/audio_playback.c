@@ -365,6 +365,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
                 // ... but it doesn't copy the volumes, for somewhat obvious reasons.
                 c->volume = (vol == KEYJAZZ_DEFAULTVOL) ? s->volume : (((unsigned) vol) << 2);
                 c->instrument_volume = s->global_volume;
+                if (i)
+                        c->instrument_volume = (c->instrument_volume * i->global_volume) >> 7;
                 c->global_volume = 64;
                 // gotta set these by hand, too
                 c->c5speed = s->c5speed;
