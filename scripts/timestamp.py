@@ -66,7 +66,7 @@ for filename in sys.argv[1:]:
                 year = (fatdate >> 9) + 1980
                 second = (fattime & 31) * 2
                 minute = (fattime >> 5) & 63
-                hour = fattime >> 15
+                hour = fattime >> 11
                 print('\t%04d-%02d-%02d %02d:%02d:%02d   %s' % (year, month, day, hour, minute, second, ticks2hms(ticks)))
                 totalticks += ticks
         print("\t%13d ticks = %s" % (totalticks, ticks2hms(totalticks)))
