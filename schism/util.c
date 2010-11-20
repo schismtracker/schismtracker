@@ -107,7 +107,7 @@ void *mem_realloc(void *orig, size_t amount)
 
 char *get_date_string(time_t when, char *buf)
 {
-        struct tm tm, *tmr;
+        struct tm tmr;
         const char *month_str[12] = {
                 "January",
                 "February",
@@ -125,19 +125,17 @@ char *get_date_string(time_t when, char *buf)
 
         /* DO NOT change this back to localtime(). If some backward platform
         doesn't have localtime_r, it needs to be implemented separately. */
-        tmr = localtime_r(&when, &tm);
-        snprintf(buf, 27, "%s %d, %d", month_str[tmr->tm_mon],
-                                tmr->tm_mday, 1900 + tmr->tm_year);
+        localtime_r(&when, &tmr);
+        snprintf(buf, 27, "%s %d, %d", month_str[tmr.tm_mon], tmr.tm_mday, 1900 + tmr.tm_year);
         return buf;
 }
 
 char *get_time_string(time_t when, char *buf)
 {
-        struct tm tm, *tmr;
+        struct tm tmr;
 
-        tmr = localtime_r(&when, &tm);
-        snprintf(buf, 27, "%d:%02d%s", tmr->tm_hour % 12 ? : 12,
-                 tmr->tm_min, tmr->tm_hour < 12 ? "am" : "pm");
+        localtime_r(&when, &tmr);
+        snprintf(buf, 27, "%d:%02d%s", tmr.tm_hour % 12 ? : 12, tmr.tm_min, tmr.tm_hour < 12 ? "am" : "pm");
         return buf;
 }
 

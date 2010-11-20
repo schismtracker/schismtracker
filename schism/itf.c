@@ -418,7 +418,7 @@ static inline void draw_helptext(void)
 static inline void draw_time(void)
 {
         char buf[16];
-        sprintf(buf, "%.2d:%.2d:%.2d", status.h, status.m, status.s);
+        sprintf(buf, "%.2d:%.2d:%.2d", status.tmnow.tm_hour, status.tmnow.tm_min, status.tmnow.tm_sec);
         draw_text(buf, 3, 46, 1, 0);
 }
 

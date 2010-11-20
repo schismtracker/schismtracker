@@ -541,7 +541,6 @@ static void event_loop(void)
         SDLKey last_key = 0;
         int modkey;
         time_t startdown;
-        struct tm *tmr;
 #ifdef USE_X11
         time_t last_ss;
 #endif
@@ -549,7 +548,6 @@ static void event_loop(void)
         int sawrep;
         char *debug_s;
         int fix_numlock_key;
-        int q;
 
         fix_numlock_key = status.fix_numlock_setting;
 
@@ -570,10 +568,7 @@ static void event_loop(void)
         time(&last_ss);
 #endif
         time(&status.now);
-        tmr = localtime(&status.now);
-        status.h = tmr->tm_hour;
-        status.m = tmr->tm_min;
-        status.s = tmr->tm_sec;
+        localtime_r(&status.now, &status.tmnow);
         while (SDL_WaitEvent(&event)) {
                 struct key_event kk = {
                         .midi_volume = -1,
@@ -827,23 +822,20 @@ Also why these would not be defined, I'm not sure either, but hey. */
                         break;
                 default:
                         if (event.type == SCHISM_EVENT_MIDI) {
-                                midi_engine_handle_event((void*)&event);
+                                midi_engine_handle_event(&event);
                         } else if (event.type == SCHISM_EVENT_UPDATE_IPMIDI) {
                                 status.flags |= (NEED_UPDATE);
                                 midi_engine_poll_ports();
-
                         } else if (event.type == SCHISM_EVENT_PLAYBACK) {
                                 /* this is the sound thread */
                                 midi_send_flush();
                                 if (!(status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN))) {
                                         playback_update();
                                 }
-
                         } else if (event.type == SCHISM_EVENT_PASTE) {
                                 /* handle clipboard events */
                                 _do_clipboard_paste_op(&event);
                                 free(event.user.data1);
-
                         } else if (event.type == SCHISM_EVENT_NATIVE) {
                                 /* used by native system scripting */
                                 switch (event.user.code) {
@@ -919,10 +911,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
                 }
                 if (sawrep || !SDL_PollEvent(NULL)) {
                         time(&status.now);
-                        tmr = localtime(&status.now);
-                        status.h = tmr->tm_hour;
-                        status.m = tmr->tm_min;
-                        status.s = tmr->tm_sec;
+                        localtime_r(&status.now, &status.tmnow);
 
                         if (status.dialog_type == DIALOG_NONE
                             && startdown && (status.now - startdown) > 1) {
@@ -953,7 +942,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
                         };
 
                         if (status.flags & DISKWRITER_ACTIVE) {
-                                q = disko_sync();
+                                int q = disko_sync();
                                 while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
                                         check_update();
                                         q = disko_sync();
@@ -1035,6 +1024,7 @@ int main(int argc, char **argv)
 
         video_fullscreen(0);
 
+        tzset(); // localtime_r wants this
         srand(time(NULL));
         parse_options(argc, argv); /* shouldn't this be like, first? */
 

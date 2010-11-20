@@ -174,7 +174,7 @@ struct tracker_status {
 
         /* clock is driven from the main/event thread */
         time_t now;
-        int h, m, s;
+        struct tm tmnow;
 
         int fix_numlock_setting;
 };
