@@ -29,6 +29,18 @@
 # include <config.h>
 #endif
 
+/* Some stuff was conditionally included only for files that need it, but really it's not like defining
+bswapLE32 or including sys/time.h adversely affects compilation time. This isn't some xboxhueg project
+that takes hours to build, these are little silly overoptimizations, and it's just troublesome to try
+to work out what order headers are supposed to be processed so that all the other files pick up the bits
+of headers.h that they need (song_t, I'm looking at you)
+Eventually I'll do some housekeeping with the headers and get rid of all these silly NEED_*'s, but this
+will do for now. */
+#define NEED_BYTESWAP
+#define NEED_TIME
+#define NEED_DIRENT
+
+
 #include <stdio.h>
 
 #ifdef HAVE_STDLIB_H
