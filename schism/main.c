@@ -801,15 +801,12 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                 } else {
                                         kk.mouse = MOUSE_CLICK;
                                 }
-                                if (!(status.dialog_type & DIALOG_MENU)) {
-                                        if (kk.y <= 9
-                                            && status.current_page != PAGE_FONT_EDIT
-                                            && status.current_page != PAGE_ABOUT) {
+                                if (status.dialog_type == DIALOG_NONE) {
+                                        if (kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
                                                 if (kk.state && kk.mouse_button == MOUSE_BUTTON_RIGHT) {
                                                         menu_show();
                                                         break;
-                                                } else if (!kk.state
-                                                && kk.mouse_button == MOUSE_BUTTON_LEFT) {
+                                                } else if (!kk.state && kk.mouse_button == MOUSE_BUTTON_LEFT) {
                                                         time(&startdown);
                                                 }
                                         }
