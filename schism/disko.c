@@ -550,13 +550,9 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
                 }
 
                 ds[n]->length = MIN(ds[n]->length, smpsize * bps);
-                // FIXME rewrite using csf_first_blank_sample
-                while (smpnum < MAX_SAMPLES && !csf_sample_is_empty(current_song->samples + smpnum)) {
-                        smpnum++;
-                }
-                if (smpnum >= MAX_SAMPLES) {
+                smpnum = csf_first_blank_sample(current_song, smpnum);
+                if (smpnum < 0)
                         break;
-                }
                 sample = current_song->samples + smpnum;
                 if (close_and_bind(&dwsong, ds[n], sample, bps) == DW_OK) {
                         sprintf(sample->name, "Pattern %03d, channel %02d", pattern, n + 1);
@@ -596,8 +592,6 @@ static struct timeval export_start_time;
 static int canceled = 0; /* this sucks, but so do I */
 
 static int disko_finish(void);
-
-/* FIXME: where is something not letting this dialog have the escape key? */
 
 static void diskodlg_draw(void)
 {
