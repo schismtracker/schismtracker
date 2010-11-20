@@ -233,6 +233,7 @@ void menu_draw(void)
 
 void menu_show(void)
 {
+        dialog_destroy_all();
         status.dialog_type = DIALOG_MAIN_MENU;
         current_menu[0] = &main_menu;
 
