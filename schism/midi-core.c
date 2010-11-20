@@ -1002,20 +1002,21 @@ void midi_event_sysex(const unsigned char *data, unsigned int len)
 
 int midi_engine_handle_event(void *ev)
 {
-        struct key_event kk;
+        struct key_event kk = {.is_synthetic = 0};
         unsigned int len;
         char *sysex;
         int *st;
+        SDL_Event *e = ev;
 
-        SDL_Event *e = (SDL_Event *)ev;
-        if (e->type != SCHISM_EVENT_MIDI) return 0;
-
-        if (midi_flags & MIDI_DISABLE_RECORD) return 1;
-
-        memset(&kk, 0, sizeof(kk));
-        kk.is_synthetic = 0;
+        if (e->type != SCHISM_EVENT_MIDI)
+                return 0;
 
         st = e->user.data1;
+        if (midi_flags & MIDI_DISABLE_RECORD) {
+                free(e->user.data1);
+                return 1;
+        }
+
         switch (e->user.code) {
         case SCHISM_EVENT_MIDI_NOTE:
                 if (st[0] == MIDI_NOTEON) {
@@ -1049,8 +1050,11 @@ int midi_engine_handle_event(void *ev)
                 break;
         case SCHISM_EVENT_MIDI_SYSTEM:
                 switch (st[0]) {
+                case 0x8: /* MIDI tick */
+                        break;
                 case 0xA: /* MIDI start */
                 case 0xB: /* MIDI continue */
+                        song_start();
                         break;
                 case 0xC: /* MIDI stop */
                 case 0xF: /* MIDI reset */
@@ -1068,8 +1072,6 @@ int midi_engine_handle_event(void *ev)
                 break;
         }
         free(e->user.data1);
-
-/* blah... */
 
         return 1;
 }
