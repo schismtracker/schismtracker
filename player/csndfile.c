@@ -672,7 +672,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
         if (sample->length > MAX_SAMPLE_LENGTH) sample->length = MAX_SAMPLE_LENGTH;
         mem = sample->length+6;
         sample->flags &= ~(CHN_16BIT|CHN_STEREO);
-        if ((flags & SF_BIT_MASK) == SF_16) {
+        switch (flags & SF_BIT_MASK) {
+        case SF_16: case SF_24: case SF_32:
+                // these are all stuffed into 16 bits.
                 mem *= 2;
                 sample->flags |= CHN_16BIT;
         }
@@ -985,11 +987,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
                 break;
 #endif
 
-#if 0 // THESE ARE BROKEN
         // PCM 24-bit signed -> load sample, and normalize it to 16-bit
         case RS_PCM24S:
         case RS_PCM32S:
-                printf("PCM 24/32\n");
                 len = sample->length * 3;
                 if (flags == RS_PCM32S) len += sample->length;
                 if (len > memsize) break;
@@ -1013,6 +1013,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
                 }
                 break;
 
+#if 0 // THESE ARE STILL BROKEN
         // Stereo PCM 24-bit signed -> load sample, and normalize it to 16-bit
         case RS_STIPCM24S:
         case RS_STIPCM32S:
