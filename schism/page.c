@@ -1041,7 +1041,6 @@ void handle_key(struct key_event * k)
                 }
                 break;
         case SDLK_ESCAPE:
-                if (status.flags & DISKWRITER_ACTIVE) return;
                 /* TODO | Page key handlers should return true/false depending on if the key was handled
                    TODO | (same as with other handlers), and the escape key check should go *after* the
                    TODO | page gets a chance to grab it. This way, the load sample page can switch back

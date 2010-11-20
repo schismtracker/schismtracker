@@ -593,6 +593,7 @@ static struct widget diskodlg_widgets[1];
 static size_t est_len;
 static int prgh;
 static struct timeval export_start_time;
+static int canceled = 0; /* this sucks, but so do I */
 
 static int disko_finish(void);
 
@@ -622,7 +623,20 @@ static void diskodlg_draw(void)
 
 static void diskodlg_cancel(UNUSED void *ignored)
 {
-        disko_finish();
+        canceled = 1;
+        export_dwsong.flags |= SONG_ENDREACHED;
+        if (!export_ds[0]) {
+                log_appendf(4, "export was already dead on the inside");
+                return;
+        }
+        for (int n = 0; export_ds[n]; n++)
+                disko_seterror(export_ds[n], EINTR);
+
+        /* The next disko_sync will notice the (artifical) error status and call disko_finish,
+        which will clean up all the files.
+        'canceled' prevents disko_finish from making a second call to dialog_destroy (since
+        this function is already being called in response to the dialog being canceled) and
+        also affects the message it prints at the end. */
 }
 
 static void disko_dialog_setup(size_t len);
@@ -639,6 +653,8 @@ static void disko_dialog_setup(size_t len)
         d->action_yes = diskodlg_reset;
         d->action_no = diskodlg_reset;
         d->action_cancel = diskodlg_cancel;
+
+        canceled = 0; /* stupid */
 
         est_len = len;
         switch ((rand() >> 8) & 63) { /* :) */
@@ -790,7 +806,8 @@ static int disko_finish(void)
                 return DW_ERROR; /* no writer running (why are we here?) */
         }
 
-        dialog_destroy();
+        if (!canceled)
+                dialog_destroy();
 
         for (n = 0; export_ds[n]; n++) {
                 if (export_dwsong.multi_write && !export_dwsong.multi_write[n].used) {
@@ -823,7 +840,10 @@ static int disko_finish(void)
                 break;
         case DW_ERROR:
                 /* hey, what was the filename? oops */
-                log_perror(" Write error");
+                if (canceled)
+                        log_appendf(5, " Canceled");
+                else
+                        log_perror(" Write error");
                 break;
         default:
                 log_appendf(5, " Internal error exporting song");
