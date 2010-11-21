@@ -292,7 +292,7 @@ static void parse_options(int argc, char **argv)
                 {"hooks", 0, NULL, O_HOOKS},
                 {"no-hooks", 0, NULL, O_NO_HOOKS},
 #endif
-                {"debug", 0, NULL, O_DEBUG},
+                {"debug", 1, NULL, O_DEBUG},
                 {"version", 0, NULL, O_VERSION},
                 {"help", 0, NULL, O_HELP},
                 {NULL, 0, NULL, 0},
