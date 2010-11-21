@@ -1972,41 +1972,37 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 
 static int instrument_list_pre_handle_key(struct key_event * k)
 {
-        int csamp;
+        // Only handle plain F4 key when no dialog is active.
+        if (status.dialog_type != DIALOG_NONE || k->sym != SDLK_F4 || (k->mod & (KMOD_CTRL | KMOD_ALT)))
+                return 0;
+        if (k->state)
+                return 1;
 
-        switch (k->sym) {
-        case SDLK_F4:
-                if (k->mod & (KMOD_CTRL|KMOD_ALT)) return 0;
-                if (k->state) return 1;
+        if (song_is_instrument_mode()) {
+                int csamp = sample_get_current();
+                sample_synchronize_to_instrument();
+                if (csamp != sample_get_current())
+                        return 0;
+        }
 
-                csamp = sample_get_current();
-                if (song_is_instrument_mode()) {
-                        sample_synchronize_to_instrument();
-                }
-                if (csamp != sample_get_current()) return 0;
-
-                if (k->mod & KMOD_SHIFT) {
-                        switch (status.current_page) {
+        if (k->mod & KMOD_SHIFT) {
+                switch (status.current_page) {
                         default:
                         case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
                         case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);  break;
                         case PAGE_INSTRUMENT_LIST_PITCH:   set_subpage(PAGE_INSTRUMENT_LIST_PANNING); break;
                         case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);   break;
-                        };
-                } else {
-                        switch (status.current_page) {
+                }
+        } else {
+                switch (status.current_page) {
                         default:
                         case PAGE_INSTRUMENT_LIST_PITCH:   set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
                         case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);  break;
                         case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_PANNING); break;
                         case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);   break;
-                        };
                 }
-                return 1;
-        default:
-                break;
-        };
-        return 0;
+        }
+        return 1;
 }
 static void instrument_list_handle_key(struct key_event * k)
 {

@@ -160,7 +160,7 @@ static int help_handle_key(struct key_event * k)
         }
         switch (k->sym) {
         case SDLK_ESCAPE:
-                if (!k->state) return 1;
+                if (k->state) return 1;
                 set_page(status.previous_page);
                 return 1;
         case SDLK_UP:
