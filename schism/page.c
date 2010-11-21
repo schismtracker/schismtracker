@@ -597,7 +597,9 @@ static int handle_key_global(struct key_event * k)
                 } else if (NO_MODIFIER(k->mod)) {
                         if (status.current_page == PAGE_PATTERN_EDITOR) {
                                 if (!k->state) {
-                                        if (status.dialog_type != DIALOG_NONE) {
+                                        if (status.dialog_type & DIALOG_MENU) {
+                                                return 0;
+                                        } else if (status.dialog_type != DIALOG_NONE) {
                                                 dialog_yes_NULL();
                                                 status.flags |= NEED_UPDATE;
                                         } else {
