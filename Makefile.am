@@ -144,6 +144,7 @@ noinst_HEADERS = \
 	sys/wii/su_tmd_bin.h		\
 	sys/win32/wine-ddraw.h
 
+dist_man_MANS = sys/posix/schismtracker.1
 
 noinst_SCRIPTS = $(scripts)
 
