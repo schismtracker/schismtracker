@@ -255,6 +255,8 @@ enum {
 
 #define USAGE "Usage: %s [OPTIONS] [DIRECTORY] [FILE]\n"
 
+// Remember to update the manpage when changing the command-line options!
+
 static void parse_options(int argc, char **argv)
 {
         struct option long_options[] = {
