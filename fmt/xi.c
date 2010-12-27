@@ -120,7 +120,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
         struct xi_sample_header xmsh;
         struct instrumentloader ii;
         song_instrument_t *g;
-        const uint8_t *sampledata, *eof;
+        const uint8_t *sampledata, *end;
         int k, prevtick;
 
         if (!slot)
@@ -128,7 +128,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
         if (!validate_xi(xi, length))
                 return 0;
 
-        eof = data + length;
+        end = data + length;
 
         song_delete_instrument(slot);
 
@@ -264,7 +264,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
                 smp->vib_rate = xmsh.vibrate / 4; // XXX xm.c does not divide here, which is wrong?
 
                 smp->c5speed = transpose_to_frequency(xmss.relnote, xmss.finetune);
-                sampledata += csf_read_sample(current_song->samples + n, rs, sampledata, (eof-sampledata));
+                sampledata += csf_read_sample(current_song->samples + n, rs, sampledata, (end-sampledata));
         }
 
         return 1;
