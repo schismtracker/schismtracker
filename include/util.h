@@ -132,8 +132,10 @@ char *str_concat(const char *s, ...);
 int make_backup_file(const char *filename, int numbered);
 long file_size(const char *filename);
 int is_directory(const char *filename);
-char *get_home_directory(void); /* should free() the resulting string */
-char *get_current_directory(void); /* should free() the resulting string */
+/* following functions should free() the resulting strings */
+char *get_home_directory(void); /* "default" directory for user files, i.e. $HOME, My Documents, etc. */
+char *get_dot_directory(void); /* where settings files go (%AppData% on Windows, same as $HOME elsewhere) */
+char *get_current_directory(void); /* just a getcwd() wrapper */
 
 void put_env_var(const char *key, const char *value);
 void unset_env_var(const char *key);
