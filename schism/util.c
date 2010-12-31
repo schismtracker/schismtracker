@@ -52,6 +52,7 @@ extraneous libraries (i.e. GLib). */
 #ifdef WIN32
 #include <windows.h>
 #include <process.h>
+#include <shlobj.h>
 #else
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -562,26 +563,18 @@ char *get_current_directory(void)
 /* this function is horrible */
 char *get_home_directory(void)
 {
+        char buf[PATH_MAX + 1];
+
 #if defined(__amigaos4__)
         return str_dup("PROGDIR:");
+#elif defined(WIN32)
+        if (SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, buf) == ERROR_SUCCESS)
+                return strdup(buf);
 #else
-        char *ptr, buf[PATH_MAX + 1];
-
-        ptr = getenv("HOME");
-#ifdef WIN32
-        if (!ptr) /* let $HOME override %APPDATA% on win32... */
-                ptr = getenv("APPDATA");
-        if (!ptr) {
-                /* WINE doesn't set %APPDATA% */
-                ptr = getenv("USERPROFILE");
-                if (ptr) {
-                        snprintf(buf, PATH_MAX, "%s/Application Data", ptr);
-                        ptr = buf;
-                }
-        }
-#endif
+        char *ptr = getenv("HOME");
         if (ptr)
                 return str_dup(ptr);
+#endif
 
         /* hmm. fall back to the current dir */
         if (getcwd(buf, PATH_MAX))
@@ -589,7 +582,17 @@ char *get_home_directory(void)
 
         /* still don't have a directory? sheesh. */
         return str_dup(FALLBACK_DIR);
+}
+
+char *get_dot_directory(void)
+{
+#ifdef WIN32
+        char buf[PATH_MAX + 1];
+        if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, buf) == ERROR_SUCCESS)
+                return strdup(buf);
+        // else fall back to home (but if this ever happens, things are really screwed...)
 #endif
+        return get_home_directory();
 }
 
 char *str_concat(const char *s, ...)
