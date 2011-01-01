@@ -589,7 +589,9 @@ static int handle_key_global(struct key_event * k)
                 if (k->mod & KMOD_CTRL) {
                         if (status.current_page == PAGE_PATTERN_EDITOR) {
                                 _mp_finish(NULL);
-                                if (!k->state) pattern_editor_length_edit();
+                                if (!k->state && status.dialog_type == DIALOG_NONE) {
+                                        pattern_editor_length_edit();
+                                }
                                 return 1;
                         }
                         if (status.dialog_type != DIALOG_NONE)
