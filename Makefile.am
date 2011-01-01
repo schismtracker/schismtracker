@@ -211,7 +211,7 @@ else
 wrcflags_version = -DWRC_VERSION=0,`(date +$(PACKAGE_VERSION)%Y%m%d | sed 's/\(hg\)\?\(....\)\(..\)\(..\).*/\2,\3,\4/')`
 endif
 ## --use-temp-file is needed to work around stupid bugs
-WRCFLAGS = --use-temp-file -I$(srcdir) $(cflags_version) $(wrcflags_version)
+WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
 .rc.$(OBJEXT):
 	$(WINDRES) $(WRCFLAGS) -i $< -o $@
 files_windres=sys/win32/schismres.rc
