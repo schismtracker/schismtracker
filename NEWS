@@ -1,3 +1,31 @@
+20110101
+
+  - Happy New Year! This is mostly for Windows users, as there was a huge
+    file-corruption problem which I hadn't noticed, plus a couple other small
+    changes. Aside from that, nothing major since last month.
+
+Windows-related:
+
+  - Fixed a MASSIVE problem with file saving code that destroyed any files it
+    wrote! (because of the stupid distinction between binary and text files,
+    argh!!)
+  - Fixed another tangentially related bug which stuffed increasing numbers of
+    newlines in the config file when saving. As a side effect the config file
+    will appear trashed in Notepad; just use something more competent (such as
+    Wordpad) and it'll be fine.
+  - Default directory if you haven't saved your config is now "My Documents"
+    rather than "Application Data". The config file / fonts / etc. are still
+    in the same place.
+  - Packages are now bundled with a different sdl.dll, which should fix some
+    strange bugs, such as producing "ding" noises when alt-keys are pressed
+
+Miscellaneous:
+
+  - The --diskwrite flag wasn't mentioned anywhere in the manpage. Now it is!
+  - Fixed "stacking up" on Ctrl-F2 dialog with multiple keypresses
+
+==============================================================================
+
 20101128
 
   - Forgot the manpage with the previous build. Whoops!
