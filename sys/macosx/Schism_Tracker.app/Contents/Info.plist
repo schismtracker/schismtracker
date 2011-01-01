@@ -85,7 +85,7 @@
 		</dict>
 	</array>
 	<key>CFBundleGetInfoString</key>
-	<string>Schism Tracker Copyright 2003-2010 Storlek</string>
+	<string>Schism Tracker Copyright 2003-2011 Storlek</string>
 	<key>CFBundleIconFile</key>
 	<string>appIcon.icns</string>
 	<key>CFBundleIdentifier</key>
