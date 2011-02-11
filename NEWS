@@ -1,0 +1,232 @@
+20101128
+
+  - Forgot the manpage with the previous build. Whoops!
+
+==============================================================================
+
+20101127
+
+  - Another massive update with lots of big changes!
+    As it turns out, the 20100202 build was sort of broken, and I was well
+    into tearing apart various huge chunks of code by the time the first bug
+    reports surfaced that indicated that something wasn't right. So, I just
+    reverted the download links to point back to the 20100101 build with the
+    expectation that I'd be able to pull everything together fairly soon...
+    but then Stuff Happened and then Schism Tracker sort of got shoved to the
+    back burner for a while, and now it's almost December. Oops.
+  - As you might have noticed, the website is changing significantly. Pardon
+    the dust, and please do report any troubles. :)
+
+Miscellaneous:
+
+  - MAJOR structural changes to the code: all C++ removed, many variables and
+    functions renamed, and directory layout rearranged. Apologies to anyone
+    maintaining separate patch sets! :)
+  - Manpage added for 'nix systems (mostly for Debian's sake)
+  - Command line option parsing overhauled; the old +f and +p options have
+    been replaced with -F and -P respectively.
+  - New command-line batch rendering mode:
+        schismtracker file.it --diskwrite file.wav
+    This works with both the .wav and .aiff writers (based on file extension)
+    and will also render multichannel if %c is in the output filename.
+  - Song length calculation improved somewhat
+  - Sharp/flat display setting is now honored in preferences (previously, it
+    was only "half applied" which led to the option potentially displaying
+    the opposite of the actual setting at startup)
+
+File loading:
+
+  - Due to the restructuring, a handful of obscure file formats are no longer
+    supported. If you're missing support for a format, post several test files
+    on /scdev/ and I'll write a new loader. (From what I can tell, most of the
+    remaining loaders that I hadn't rewritten were fairly broken anyway)
+  - Stereo sample flag ignored when loading old IT files (it was meaningless)
+  - Fixed dumb bug in the AIFF/8SVX sample loader that caused a crash when
+    reading a truncated or corrupted file
+  - MOD 8xx effect import fixed, it was screwing up the values in some
+    inexplicable way. (thanks Saga Musix)
+  - Slight hack added to S3M loader to discard SC0 and SD0 effects
+  - Subtle old-effects tremolo quirk implemented (you won't notice)
+  - MPT detect is slightly more lenient
+  - Raw sample loader truncates large samples, instead of loading nothing
+  - Fixed potential crash bug in the IT sample decompression code when loading
+    truncated or otherwise corrupt files
+  - Fixed a potential crash bug in the MTM loader
+  - Several improvements to XI loading, and instrument loading in general
+  - XM instruments with undefined loop type 3 are treated as ping-pong (fixes
+    some apparently malformed files which play properly in FT2)
+  - Fixed a subtle bug when importing pitch slide effects into the volume
+    column. This mostly affected XM files with both volume and effect column
+    data.
+  - "Embed MIDI data" switch is now always enabled / disabled as appropriate
+    when loading a song, and MIDI output settings are no longer reset when a
+    file does not provide its own settings.
+  - MIDI output settings are blanked when loading old IT files, to prevent
+    stray Zxx effects from interfering with playback, thus making unnecessary
+    the former destructive workaround of deleting the effects themselves.
+
+File saving / rendering:
+
+  - All low-level file output code rewritten (both file save and export)
+  - New S3M writer which actually assigns Adlib channels correctly and shows
+    warnings for unsupported features (like it always SHOULD have done).
+  - XM/MOD save support removed, sorry. If you want them, get Milky Tracker.
+    (Or alternately, describe to me why an IT clone should provide support
+    for those formats, and why they would be of benefit...)
+  - File saving doesn't fail if the file already existed (was broken on Wii,
+    and maybe also Windows)
+  - Overwriting an existing file will *attempt* to preserve permissions
+  - File output disallows overwriting a file without write permission
+  - Complete overhaul to multi-channel export: select MWAV or MAIFF format to
+    split by channel (entering a directory name won't work anymore)
+  - Completely blank channels are no longer saved when diskwriting per channel
+  - Multi-channel export replaces %c in the filename with the channel number
+  - Pattern-to-sample doesn't stop playback (note: this royally confuses
+    Adlib instruments, so don't try it :)
+  - Ctrl-Shift-O key added to write each channel to a separate sample
+  - Ctrl-O, Ctrl-Shift-O, and Ctrl-B added to pattern editor
+  - All (?) changes should now mark the file as modified
+  - Edit history (timestamp data) is now saved along with IT files. This was
+    written by Impulse Tracker, and is also supported by recent versions of
+    OpenMPT. Although it isn't yet viewable from within the tracker, there is
+    a script in the repository to output this data.
+
+Player:
+
+  - SAy effect was incorrectly applying offset to new notes
+  - Channel panning should "stay put" after panbrello effects
+  - Channel volume (Mxx/Nxx) fixed to NOT affect background notes (!)
+  - Sample vibrato code rewritten for better accuracy
+  - Vibrato waveform resets on new notes
+  - Oxx with out-of-range offsets and Old Effects off fixed to play like
+    Impulse Tracker (ignore effect and play from the start of the sample)
+  - Various strange bugs related to Gxx and multisampled instruments fixed
+  - Incoming MIDI start/continue messages (FA and FC) are now handled
+
+User interface:
+
+  - A "+" indicator is displayed next to the filename when the song has
+    unsaved changes
+  - Status line now shows how many times a song has looped
+  - Minor changes to the menu
+  - Infopage technical view was showing incorrect data sometimes
+  - Tab key behavior made much more logical on midi input/output screens
+  - Shift-F1 on the midi input screen will switch to midi output
+  - Reverted some dialog behavior that partially broke text input in the
+    previous build. (Sorry!)
+  - In the pattern editor, the '8' key on number pad now plays the row as
+    expected. (This has been inexplicably broken since 2006!)
+  - 'D' properly sends keyjazz note-offs (most obvious on instrument list)
+  - Fixed bug preventing midi pitch bend from ever being input in the pattern
+    editor (maybe!)
+  - Fixed horribly broken help text, which was sometimes cutting off the text
+    or even crashing in various circumstances
+  - Caught potential crash caused by attempting to draw playback marks on
+    broken instrument envelopes (such as those written by MPT)
+  - Right click only pops up main menu when a dialog is not active
+
+==============================================================================
+
+20100202 (Groundhog Day)
+
+  - BIG update -- lots of stuff added this month!
+
+File loading/saving:
+
+  - MMCMP decompression fixed for big-endian systems
+  - Fixed a crash bug and some problems with XM and AIFF on 64-bit
+  - Replaced loaders: FAR, MDL, ULT, OKT
+  - New loader: MUS (Doom music)
+  - Some fixes to XM and IMF envelope behavior; XM envelopes should now load
+    just like IT
+  - XM loader was leaking a ton of memory by allocating space for each sample
+    twice, whoops
+  - Added title scanner for MoonFish files, because why not :)
+  - Relative paths on the command line (e.g. schismtracker ./file.it) are
+    changed to absolute paths. This fixes a long-standing bug with the file
+    browsers getting "stuck" inside the current directory.
+  - Font path defined in the config file can be an absolute path residing
+    outside of ~/.schism/fonts now, so it's possible, for example, to share
+    the same font.cfg between Schism Tracker and Impulse Tracker.
+  - Path normalizing code rewritten, and now actually works correctly
+  - Module browser remembers cursor position (this got broken when filename
+    pattern matching was added)
+  - Changed the formatting for printing information when loading songs: less
+    "cramped", more IT-like
+
+Pattern editor:
+
+  - More template changes to better match IT behavior
+      - Enter key turns template mode off (except with Notes Only templates)
+      - Multi-cursor only shows when shift is not being held down (for block
+        selections)
+      - Note cut/off/fade and clear now correctly wipe all masked fields in
+        all affected channels
+      - Some behavior was erroneously dependent on the specific template mode
+  - PgUp from the last row of a pattern will place the cursor on the previous
+    major highlight, even if the highlight doesn't line up with the pattern
+    size.
+  - Multichannel dialog layout and cursor alignment changed to match Impulse
+    Tracker
+  - Block swap (Alt-Y) wasn't recording the pattern state for undo.
+
+Sample list:
+
+  - New feature: press Alt-Shift-Z on the sample list to select from 128
+    built-in Adlib MIDI patches!
+  - Host instrument dialog defaults to No when an instrument containing the
+    sample already exists (not QUITE the same as Impulse Tracker, but maybe
+    this is better?)
+  - When creating a host instrument, the number of the instrument used is
+    displayed in the status line
+  - Anything that "generates" a sample (Alt-P, Alt-Y, Alt-Z, Alt-Shift-Z) will
+    prompt for a host instrument if instrument mode is enabled.
+  - Sample modification keys (reverse, sign flip, amplify, etc.) are disabled
+    with Adlib samples.
+  - Quality convert fixed to show the confirmation dialog with stereo samples,
+    although changing quality without converting the data is unimplemented
+    (and probably would not be very useful, for that matter)
+  - Sample-loading page fixed to always show the current sample number/name at
+    the top of the screen (was showing the current instrument if instrument
+    mode was enabled)
+  - I was wrong: in Impulse Tracker, F8 never clears the dots that show what
+    samples have been played; *starting* playback does that. Fixed.
+  - Fixed some edge-case bugs with Alt-Ins/Del on the sample list
+
+Player:
+
+  - Modplug's extensions to S9x removed (they were mostly broken anyway, and
+    no one seemed to notice)
+  - Fixed a player bug with the handling of S6x and SDx effects on the same
+    row
+  - Envelope carry behavior changed to reset the envelope regardless of carry
+    if a new note is played after a note-off
+  - Adlib mixing volume amplified due to request from Manwe. (Sorry this took
+    so long... it was *really* easy after I found the right place to do it,
+    haha)
+  - Changed internal handling of arpeggio slightly
+
+Miscellaneous:
+
+  - Copyright text moved off of the log page to a new help screen, accessible
+    by pressing F1 at the startup dialog (or on Ctrl-F11)
+  - Several previously undocumented keys added to help
+  - Some other internal changes with help text; should be easier to keep it
+    up-to-date in the future
+  - Alt-P and Alt-N keys on instrument list note translation table fixed
+  - Upper value limit fixed for entering sample numbers on note translation
+    table
+  - Dialog changes: 'c' and 'o' keys to select OK/Cancel
+  - Global keys that open dialogs (Ctrl-N, Ctrl-P, etc.) show the dialog on
+    key-down, instead of key-up
+  - In classic mode, Schism Tracker will make the clicking sound that IT
+    produced when initializing the sound card.
+  - Audio device setup code rewritten
+  - New config file parameter: [Audio] driver=alsa:hw:2 (format is
+    driver:device)
+  - Mouse behavior is (hopefully) more consistent and expected
+
+==============================================================================
+
+For older stuff, see http://schismtracker.org/hg/file/20100202/NEWS
+

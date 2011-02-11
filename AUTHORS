@@ -1,0 +1,71 @@
+Written by Storlek <storlek@rigelseven.com> <http://rigelseven.com/>.
+
+Large swaths of code by Mrs. Brisby <mrs.brisby@nimh.org> <http://nimh.org/>.
+
+Based (obviously) on Impulse Tracker by Jeffrey Lim <jeff@lim.com.au>.
+
+Default fonts created with ITF by ZaStaR <zastar@uclink4.berkeley.edu>.
+
+Default palette settings are mostly from Impulse Tracker.
+- "Atlantic" is from an ooooold version of IT.
+- "Purple Motion" was roughly copied from an Imago Orpheus palette.
+- "Why Colors?" is loosely based on the like-named FT2 palette.
+- "Industrial" was created by Storlek.
+- "Kawaii" was co-designed by Storlek and mml.
+- "FX 2.0" was supplied by Virt.
+
+Tim Douglas <timdoug@users.sourceforge.net> maintained the original Mac OS X
+packages, and supplied patches fixing a handful of endianness issues.
+
+The Schism Tracker logo was designed by delt.
+
+The player engine was originally based on Modplug, which was written by
+Olivier Lapicque <olivierl@jps.net>, with additional programming by Markus
+Fick <webmaster@mark-f.de> (spline mixing, fir-resampler) and Adam Goode
+<adam@evdebs.org> (endian-ness and char fixes).
+
+Further changes to the player code were back-ported from the OpenMPT project
+<http://modplug.sourceforge.net/>.
+
+Ben de Graaff rewrote a large portion of libmodplug in C.
+
+Some file-loading mechanisms, in particular large portions of the IMF loader,
+as well as many of the tracker-identifying heuristics, have been adapted from
+xmp by Claudio Matsuoka and Hipolito Carraro Jr <http://xmp.sf.net/>.
+
+Tremor logic, and possibly some other effect handling, stolen from DUMB by Ben
+Davis, Robert J Ohannessian and Julien Cugniere <http://dumb.sf.net/>.
+
+IMF note slide effect processing taken from Imago Orpheus by Lutz Röder
+(and then rewritten in C).
+
+Other portions of file loading and playing code has been liberally adapted
+from Mikmod by Raphael Assenat and Miodrag Vallat.
+
+Joel Yliluoma (Bisqwit) implemented Adlib support and Scream Tracker sample
+loading, and also contributed some MIDI-related code.
+
+fmopl (OPL2-emulator used in Dosbox and MAME) was written by Jarek Burczynski.
+
+Predefined Adlib MIDI patches taken from dro2midi, originally extracted from
+Creative Labs' MIDI player (PLAY.EXE).
+
+Some (small) portions of code have been borrowed from Cheesetracker, written
+by Juan Linietsky <coding@reduz.com.ar>.
+
+Various Amiga OS fixes by Juha Niemimäki <jniemima@mail.student.oulu.fi>.
+
+Win32 Mixer by Gargaj/CNS <gargaj@conspiracy.hu>.
+
+Michael Chen improved the software scaler quite a bit.
+<zenki@users.sourceforge.net>
+
+Some little fixes by ToastyX <toastyx@toastyx.net>.
+
+Wii ISFS filesystem support code from ftpii by Joseph Jordan
+<joe.ftpii@psychlaw.com.au>.
+
+Wii Homebrew Browser icon by pbsds.
+
+Path manipulation code taken from bash.
+

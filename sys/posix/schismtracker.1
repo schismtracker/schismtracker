@@ -1,0 +1,295 @@
+.TH SCHISMTRACKER 1 "November 27, 2010"
+.\" Disable hyphenation, it's awful
+.nh
+.SH NAME
+schismtracker \- tracked music editor based on Impulse Tracker
+.SH SYNOPSIS
+\fBschismtracker\fP [\fIoptions\fP] [\fIdirectory\fP] [\fIfile\fP]
+.SH DESCRIPTION
+\fBschismtracker\fP is a tracked music module editor that aims to match the
+look and feel of Impulse Tracker as closely as possible. It can load most
+common tracker formats, supports saving as IT and S3M, and can also export
+to WAV and AIFF.
+.SH OPTIONS
+.P
+.TP
+\fB\-a\fP, \fB\-\-audio\-driver\fP=\fIDRIVER\fP[:\fIDEVICE\fP]
+Audio device configuration. \fIdriver\fP is the SDL driver to use, e.g.
+\fIalsa\fP (ALSA), \fIdma\fP or \fIdsp\fP (OSS); \fIdevice\fP is the name
+of the device itself, for example \fIhw:2\fP or \fI/dev/dsp1\fP.
+.TP
+\fB\-v\fP, \fB\-\-video\-driver\fP=\fIDRIVER\fP
+SDL video driver, such as \fIx11\fP, \fIdga\fP, or \fIfbcon\fP. Note that
+this is different from the video driver setting within the program, and is
+unlikely to be useful.
+.TP
+\fB\-\-video\-yuvlayout\fP=\fILAYOUT\fP
+Specific YUV layout to use: \fIYUY2\fP, \fIYV12\fP, \fIRGBA\fP, etc.
+This is probably best left alone under normal circumstances.
+.TP
+\fB\-\-video\-size\fP=\fIWIDTH\fPx\fIHEIGHT\fP
+Set the size of the video display.
+.TP
+\fB\-\-video\-stretch\fP=\fIVALUE\fP
+Fix the aspect ratio. (Probably does nothing!)
+.TP
+\fB\-\-video\-gl\-path\fP=\fIPATH\fP
+Specify path of OpenGL library.
+.TP
+\fB\-\-video\-depth\fP=\fIDEPTH\fP
+Specify display depth, in bits.
+.TP
+\fB\-\-video\-fb\-device\fP=\fIDEVICE\fP
+Specify path to framebuffer. Typical value is \fI/dev/fb0\fP.
+.TP
+\fB\-\-network\fP, \fB\-\-no\-network\fP
+Enable/disable networking (on by default). Used for MIDI over IP.
+.TP
+\fB\-\-classic\fP, \fB\-\-no\-classic\fP
+Start Schism Tracker in "classic" mode, or don't. This is mostly cosmetic,
+although it does change the program's behavior slightly in a few places.
+.TP
+\fB\-\-display\fP=\fIDISPLAY\fP
+X11 display to use.
+.TP
+\fB\-f\fP, \fB\-F\fP, \fB\-\-fullscreen\fP, \fB\-\-no\-fullscreen\fP
+Enable/disable fullscreen mode at startup.
+.TP
+\fB\-p\fP, \fB\-P\fP, \fB\-\-play\fP, \fB\-\-no\-play\fP
+Start playing after loading song on command line.
+.TP
+\fB\-\-diskwrite\fP=\fIFILENAME\fP
+Render output to a file, and then exit. WAV or AIFF writer is auto-selected
+based on file extension. Include \fI%c\fP somewhere in the name to write each
+channel separately. This is meaningless if no initial filename is given.
+.TP
+\fB\-\-font\-editor\fP, \fB\-\-no\-font\-editor\fP
+Run the font editor (itf). This can also be accessed by pressing Shift-F12.
+.TP
+\fB\-\-hooks\fP, \fB\-\-no\-hooks\fP
+Run hooks. Enabled by default.
+.TP
+\fB\-\-debug\fP=\fIFLAGS\fP
+Enable some debugging flags (separated by commas).
+You probably don't need this.
+.TP
+\fB\-\-version\fP
+Display version information and build date.
+.TP
+\fB\-h\fP, \fB\-\-help\fP
+Print a summary of available options.
+.P
+A filename supplied on the command line will be loaded at startup.
+Additionally, if either a file or directory name is given, the default
+module, sample, and instrument paths will be set accordingly.
+.SH USAGE
+A detailed discussion of how to use Schism Tracker is far beyond the
+scope of this document, but here is a very brief rundown of the basics.
+Context-sensitive help can be accessed at any time while running the
+program by pressing \fBF1\fP.
+.P
+The \fBF3\fP key will bring you to the \fIsample list\fP. Press enter here to
+open a file browser, navigate in the list using the up/down arrow keys, and
+hit enter again to load a sample. You will likely want to get some samples to
+work with. You can also "rip" from existing modules; see for example
+\fIhttp://www.modarchive.org/\fP for a very large selection of modules. (Keep
+in mind, however, that some authors don't appreciate having their samples
+ripped!)
+.P
+Now that you've loaded a sample, press \fBF2\fP to get to the \fIpattern
+editor\fP. This is where the majority of the composition takes place. In
+short, the song is laid out vertically, with each row representing 1/16 note;
+to play multiple notes simultaneously, they are placed in different channels.
+The four sub-columns of each channel are the note, sample number, volume, and
+effect. A list of effects is available in the pattern editor help, but you can
+safely ignore that column for now. Assuming a US keymap, notes are entered
+with the keyboard as follows:
+.PS
+    (Note)        C# D#    F# G# A#    C# D#    F# G# A#    C# D#
+               | | || | | | || || | | | || | | | || || | | | || | |
+               | | || | | | || || | | | || | | | || || | | | || | |
+    (What you  | |S||D| | |G||H||J| | |2||3| | |5||6||7| | |9||0| |
+     type)     | '-''-' | '-''-''-' | '-''-' | '-''-''-' | '-''-' |
+               | Z| X| C| V| B| N| M| Q| W| E| R| T| Y| U| I| O| P|
+               '--'--'--'--'--'--'--'--'--'--'--'--'--'--'--'--'--'
+    (Note)       C  D  E  F  G  A  B  C  D  E  F  G  A  B  C  D  E
+                (Octave 0)           (Octave 1)           (Octave 2)
+.PE
+.\" this .P is for elvis, which gets very confused by the preceding diagram
+.P
+The "/" and "*" keys on the numeric keypad change octaves, and the current
+octave is displayed near the top of the screen. Try typing "qwerty" into the
+pattern - it will enter an ascending note sequence, and you'll hear the notes
+as they're entered. (of course, assuming you loaded a sample!) Press \fBF6\fP
+to play your pattern, and \fBF8\fP to stop.
+.P
+Other important keys for the pattern editor include Ins/Del to shift notes
+up and down within a channel, Shift-Arrows to mark a block, Alt-C/Alt-P to
+copy and paste, and Alt-U to clear the mark. There are well over a hundred key
+bindings for the pattern editor; it is well worth the effort to learn them all
+eventually.
+.P
+Now that you have something in your pattern, you'll need to set up an
+\fIorderlist\fP. Press \fBF11\fP to switch to the orderlist page, and type
+0 to add the pattern you created. Now press \fBF5\fP to start playing. The
+song will begin at the first order, look up the pattern number and play that
+pattern, then advance to the next order, and so forth.
+.P
+Of course, having only one pattern isn't all that interesting, so go back to
+the pattern editor and press the + key to change to the next pattern. Now you
+can write another four bars of music and add the new pattern to the orderlist,
+and the next time you play the song, your two patterns will play in sequence.
+.P
+You may wish to give your song a title; press \fBF12\fP and type a name in the
+box at the top. You can also adjust the tempo and a number of other settings
+on this page, but for now, most of them are fine at their default values.
+.P
+To save your new song, press \fBF10\fP, type a filename, and hit enter. You
+can load it again later by pressing \fBF9\fP.
+.P
+This tutorial has deliberately omitted the \fIinstrument editor\fP (on
+\fBF4\fP), for the purposes of brevity and simplicity. You may want to
+experiment with it once you have a feel for how the program works. (Select
+"instruments" on F12 to enable instrument mode.)
+.SH HISTORY
+Storlek began studying Impulse Tracker's design in 2002, noting subtle details
+of the design and implementation. Posts on the Modplug forums about rewriting
+Impulse Tracker were met with ridicule and mockery. "It can't be done," they
+said.
+.P
+Schism Tracker v0.031a was released in July 2003, though very little worked at
+that point, and it was more of a player with primitive editing capabilities.
+File saving was hard-coded to write to "test.it" in the current directory, and
+there was no way to load a sample.
+.P
+The first version that was more or less usable was 0.15a, from December 2004.
+.P
+From 2005 through 2009, Mrs. Brisby did most of the development, and
+implemented tons of features, including MIDI support, mouse support, and
+disk writing.
+.P
+Storlek "took over" development again in 2009, and has been incrementally
+rewriting much of the code since then.
+.SH FILES
+.TP
+~/.schism/config
+Program settings, stored in an INI-style format. Most options are accessible
+from within Schism Tracker's interface, but there are a few "hidden" options.
+.TP
+~/.schism/startup\-hook, ~/.schism/exit\-hook, ~/.schism/diskwriter\-hook
+Optional files to execute upon certain events. (Must be executable)
+.TP
+~/.schism/fonts/
+\fIfont.cfg\fP, and any \fI.itf\fP files found in this directory, are
+displayed in the file browser of the font editor.
+.SS Supported file formats
+.TP
+MOD
+Amiga modules (with some obscure variants such as FLT8)
+.TP
+669
+Composer 669 / Unis669
+.TP
+MTM
+MultiTracker
+.TP
+S3M
+Scream Tracker 3 (including Adlib support)
+.TP
+XM
+Fast Tracker 2
+.TP
+IT
+Impulse Tracker (including old instrument format)
+.TP
+MDL
+Digitrakker 3
+.TP
+IMF
+Imago Orpheus
+.TP
+OKT
+Amiga Oktalyzer
+.TP
+SFX
+Sound FX
+.TP
+MUS
+Doom engine (percussion missing)
+.TP
+FAR
+Farandole Composer
+.TP
+STM
+Scream Tracker 2 (partial functionality)
+.TP
+ULT
+UltraTracker (partial functionality)
+.TP
+S3I
+Scream Tracker 3 sample
+.TP
+WAV
+Microsoft WAV audio
+.TP
+AIFF
+Audio IFF (Apple)
+.TP
+8SVX
+Amiga 8SVX sample
+.TP
+ITS
+Impulse Tracker sample
+.TP
+AU
+Sun/NeXT Audio
+.TP
+RAW
+Headerless sample data
+.TP
+PAT
+Gravis UltraSound patch
+.TP
+XI
+Fast Tracker 2 instrument
+.TP
+ITI
+Impulse Tracker instrument
+.P
+Schism Tracker is able to save modules in IT and S3M format, sample data as
+ITS, S3I, AIFF, AU, WAV, and RAW, and instruments as ITI. Additionally, it
+can render to WAV and AIFF (optionally writing each channel to a separate
+file), and can export MID files.
+.SH AUTHORS
+Schism Tracker was written by Storlek and Mrs. Brisby, with player code from
+Modplug by Olivier Lapicque. Based on Impulse Tracker by Jeffrey Lim.
+.P
+Additional code and data has been contributed by many others; refer to the
+file \fIAUTHORS\fP in the source distribution for a more complete list.
+.P
+The keyboard diagram in this manual page was adapted from the one used in
+the documentation for Impulse Tracker, which in turn borrowed it from Scream
+Tracker 3.
+.SH COPYRIGHT
+Copyright \(co 2003-2010 Storlek. Licensed under the GNU GPL
+<\fIhttp://gnu.org/licenses/gpl.html\fP>. This is free software: you are free
+to change and redistribute it. There is NO WARRANTY, to the extent permitted
+by law.
+.SH BUGS
+They almost certainly exist. Post on \fIhttp://schismtracker.org/scdev/\fP
+if you find one. Agitha shares her happiness with benefactors of the
+insect kingdom.
+.SH INTERNETS
+\fIhttp://schismtracker.org/\fP - main website
+.br
+\fIhttp://schismtracker.org/sc/\fP - userbase discussion board
+.br
+\fI#schism\fP on Freenode or Espernet - IRC channel
+.SH SEE ALSO
+.\" No favoritism: this list is alphabetical, trackers then players
+.BR chibitracker (1),
+.BR milkytracker (1),
+.BR renoise (1),
+.BR ocp (1),
+.BR xmp (1)
+

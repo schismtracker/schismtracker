@@ -1,0 +1,10 @@
+=                             78888888888888888889
+=                             4  Message Editor  6
+=                             12222222222222222223
+|
+| Enter / ESC     Edit message / finished editing
+: Ctrl-T          Toggle extended ASCII font
+|
+| Editing Keys.
+|   Ctrl-Y        Delete line
+|   Alt-C         Clear message
