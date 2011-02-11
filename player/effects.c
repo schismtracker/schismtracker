@@ -1038,7 +1038,7 @@ unsigned int csf_get_length(song_t *csf)
                                 case 0:
                                         d = -d;
                                 case 1:
-                                        d = d * speed + tempo;
+                                        d = d * (speed - 1) + tempo;
                                         tempo = CLAMP(d, 32, 255);
                                         break;
                                 }
