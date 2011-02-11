@@ -1,3 +1,5 @@
+## vi:set bd=syn\ make: for elvis
+
 AUTOMAKE_OPTIONS = foreign dist-bzip2 no-dist-gzip
 
 ## NOTE: helptexts should be in the same order as the enum in page.h
@@ -201,12 +203,20 @@ lib_win32=-lwinmm
 endif
 
 if HAVE_WINDRES
-.rc.o:
-	$(WINDRES) -I$(srcdir) -i $< -o $@
-files_windres=sys/win32/schismres.rc
-# let's depend on the .ico file, too
-sys/win32/schismres.$(OBJEXT): icons/schismres.ico
+## This got ugly.
+if USE_MERCURIAL
+wrcflags_version = -DWRC_VERSION=0,`(cat $(hg_dirstate) /dev/null | tr - ,)`
+else
+## this is assuming PACKAGE_VERSION is either 'hg' or YYYYMMDD
+wrcflags_version = -DWRC_VERSION=0,`(date +$(PACKAGE_VERSION)%Y%m%d | sed 's/\(hg\)\?\(....\)\(..\)\(..\).*/\2,\3,\4/')`
 endif
+## --use-temp-file is needed to work around stupid bugs
+WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
+.rc.$(OBJEXT):
+	$(WINDRES) $(WRCFLAGS) -i $< -o $@
+files_windres=sys/win32/schismres.rc
+sys/win32/schismres.$(OBJEXT): icons/schismres.ico config.h Makefile.am
+endif HAVE_WINDRES
 
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c

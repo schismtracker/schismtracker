@@ -3,7 +3,7 @@
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
  * copyright (c) 2009 Storlek & Mrs. Brisby
- * copyright (c) 2010 Storlek
+ * copyright (c) 2010-2011 Storlek
  * URL: http://schismtracker.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -589,7 +589,9 @@ static int handle_key_global(struct key_event * k)
                 if (k->mod & KMOD_CTRL) {
                         if (status.current_page == PAGE_PATTERN_EDITOR) {
                                 _mp_finish(NULL);
-                                if (!k->state) pattern_editor_length_edit();
+                                if (!k->state && status.dialog_type == DIALOG_NONE) {
+                                        pattern_editor_length_edit();
+                                }
                                 return 1;
                         }
                         if (status.dialog_type != DIALOG_NONE)

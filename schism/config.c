@@ -3,7 +3,7 @@
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
  * copyright (c) 2009 Storlek & Mrs. Brisby
- * copyright (c) 2010 Storlek
+ * copyright (c) 2010-2011 Storlek
  * URL: http://schismtracker.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -73,13 +73,13 @@ void cfg_init_dir(void)
 #if defined(__amigaos4__)
         strcpy(cfg_dir_dotschism, "PROGDIR:");
 #else
-        char *home_dir, *ptr;
+        char *dot_dir, *ptr;
 
-        home_dir = get_home_directory();
-        ptr = dmoz_path_concat(home_dir, DOT_SCHISM);
+        dot_dir = get_dot_directory();
+        ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
         strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
         cfg_dir_dotschism[PATH_MAX] = 0;
-        free(home_dir);
+        free(dot_dir);
         free(ptr);
 
         if (!is_directory(cfg_dir_dotschism)) {
@@ -156,12 +156,14 @@ void cfg_load(void)
         cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
         cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, tmp);
         cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, tmp);
+        free(tmp);
+
         ptr = cfg_get_string(&cfg, "Directories", "module_pattern", NULL, 0, NULL);
         if (ptr) {
                 strncpy(cfg_module_pattern, ptr, PATH_MAX);
                 cfg_module_pattern[PATH_MAX] = 0;
         }
-        free(tmp);
+
         ptr = cfg_get_string(&cfg, "Directories", "sort_with", NULL, 0, NULL);
         if (ptr) {
                 for (i = 0; compare_funcs[i].name; i++) {
