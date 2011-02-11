@@ -27,6 +27,17 @@
 #include <stdint.h>
 typedef uint64_t big_type;
 
+/* this ifdef crap lifted from slurp
+This is a hack!! We need binary mode files, but the 'b' flag to fdopen is
+evidently useless, so I'm doing it at this level instead. Dumb. */
+#ifndef O_BINARY
+# ifdef O_RAW
+#  define O_BINARY O_RAW
+# else
+#  define O_BINARY 0
+# endif
+#endif
+
 int mkstemp(char *template);
 
 /* Generate a unique temporary file name from TEMPLATE.
@@ -75,7 +86,7 @@ int mkstemp(char *template)
       v /= 62;
       XXXXXX[5] = letters[v % 62];
 
-      fd = open (template, O_RDWR|O_CREAT|O_EXCL, 0600);
+      fd = open (template, O_RDWR|O_CREAT|O_EXCL|O_BINARY, 0600);
       if (fd >= 0)
         /* The file does not exist.  */
         return fd;

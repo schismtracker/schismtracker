@@ -3,7 +3,7 @@
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
  * copyright (c) 2009 Storlek & Mrs. Brisby
- * copyright (c) 2010 Storlek
+ * copyright (c) 2010-2011 Storlek
  * URL: http://schismtracker.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -355,7 +355,7 @@ int cfg_write(cfg_file_t *cfg)
 
         make_backup_file(cfg->filename, 0);
 
-        fp = fopen(cfg->filename, "w");
+        fp = fopen(cfg->filename, "wb");
         if (!fp) {
                 /* FIXME: don't print a message here! */
                 perror(cfg->filename);
