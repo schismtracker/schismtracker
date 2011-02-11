@@ -973,7 +973,7 @@ unsigned int csf_get_length(song_t *csf)
                         pdata = blank_pattern;
                         psize = 64;
                 }
-                // Should never happen
+                // guard against Cxx to invalid row, etc.
                 if (row >= psize)
                         row = 0;
                 // Update next position
@@ -1064,8 +1064,10 @@ unsigned int csf_get_length(song_t *csf)
                                 break;
                         }
                 }
-                speed_count += speed;
-                elapsed += (2500 * speed_count) / tempo;
+                //  sec/tick = 5 / (2 * tempo)
+                // msec/tick = 5000 / (2 * tempo)
+                //           = 2500 / tempo
+                elapsed += (speed + speed_count) * 2500 / tempo;
         }
 
         return (elapsed + 500) / 1000;
