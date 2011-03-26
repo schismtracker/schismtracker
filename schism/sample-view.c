@@ -208,17 +208,14 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t * sa
 /* --------------------------------------------------------------------- */
 /* meat! */
 
-/* use sample #0 for the sample library
-what was n for? can we get rid of it? */
-void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample, UNUSED int n)
+void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 {
         vgamem_ovl_clear(r, 0);
 
-        if(sample->flags & CHN_ADLIB)
-        {
+        if (sample->flags & CHN_ADLIB) {
             vgamem_ovl_clear(r, 2);
             vgamem_ovl_apply(r);
-                char Buf1[32], Buf2[32];
+                char buf1[32], buf2[32];
 
                 int y1 = r->y1, y2 = y1+3;
 
@@ -227,21 +224,21 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample, UNUSED in
                 draw_text_len("Mod", 3, 55,y1+1, 0,2);
                 draw_text_len("Car", 3, 55,y1+2, 0,2);
 
-                sprintf(Buf1, "%02X %02X %02X %02X %02X %02X", // length:6*3-1=17
+                sprintf(buf1, "%02X %02X %02X %02X %02X %02X", // length:6*3-1=17
                         sample->adlib_bytes[0],
                         sample->adlib_bytes[2],
                         sample->adlib_bytes[4],
                         sample->adlib_bytes[6],
                         sample->adlib_bytes[8],
                         sample->adlib_bytes[10]);
-                sprintf(Buf2, "%02X %02X %02X %02X %02X",      // length: 5*3-1=14
+                sprintf(buf2, "%02X %02X %02X %02X %02X",      // length: 5*3-1=14
                         sample->adlib_bytes[1],
                         sample->adlib_bytes[3],
                         sample->adlib_bytes[5],
                         sample->adlib_bytes[7],
                         sample->adlib_bytes[9]);
-                draw_text_len(Buf1, 17, 60,y1+1, 2,0);
-                draw_text_len(Buf2, 17, 60,y1+2, 2,0);
+                draw_text_len(buf1, 17, 60,y1+1, 2,0);
+                draw_text_len(buf2, 17, 60,y1+2, 2,0);
                 return;
         }
 

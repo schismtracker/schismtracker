@@ -310,7 +310,7 @@ static void load_sample_draw_const(void)
                 s = song_get_sample(fake_slot);
                 vgamem_ovl_clear(&sample_image, 0);
                 if (s)
-                        draw_sample_data(&sample_image, s, fake_slot);
+                        draw_sample_data(&sample_image, s);
                 else
                         vgamem_ovl_apply(&sample_image);
         }

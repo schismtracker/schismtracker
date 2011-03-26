@@ -301,12 +301,8 @@ static inline unsigned char unicode_to_ascii(uint16_t unicode)
 /* character drawing (in a separate header so they're easier to find) */
 #include "draw-char.h"
 
-/* the sample number indicates what position it belongs to, zero being
- * for the currently active sample in the sample library
- * and 1-99 for the respective samples in the sample list.
- * to draw_sample_data tells where to draw it (duh ;) */
 struct song_sample;
-void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample, int number);
+void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
 
 /* this works like draw_sample_data, just without having to allocate a
  * song_sample structure, and without caching the waveform.
