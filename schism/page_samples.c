@@ -287,7 +287,7 @@ static void sample_list_predraw_hook(void)
 
         draw_text_len(numtostr(0, sample->length, buf), 13, 64, 23, 2, 0);
 
-        draw_sample_data(&sample_image, sample, current_sample);
+        draw_sample_data(&sample_image, sample);
 }
 
 /* --------------------------------------------------------------------- */
@@ -823,7 +823,7 @@ static void adlibconfig_refresh(void)
         int a;
         song_sample_t *sample = song_get_sample(current_sample);
 
-        draw_sample_data(&sample_image, sample, current_sample);
+        draw_sample_data(&sample_image, sample);
 
         for (a = 0; a < ARRAY_SIZE(adlibconfig_widgets); a++) {
                 unsigned int srcvalue = 0;
