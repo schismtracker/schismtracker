@@ -126,7 +126,11 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         // In the case of invalid data, ST3 uses the speed/tempo value that's set in the player prior to
         // loading the song, but that's just crazy.
         song->initial_speed = slurp_getc(fp) ?: 6;
-        song->initial_tempo = slurp_getc(fp) ?: 125;
+        song->initial_tempo = slurp_getc(fp);
+        if (song->initial_tempo <= 32) {
+                // (Yes, 32 is ignored by Scream Tracker.)
+                song->initial_tempo = 125;
+        }
         song->mixing_volume = slurp_getc(fp);
         if (song->mixing_volume & 0x80) {
                 song->mixing_volume ^= 0x80;
