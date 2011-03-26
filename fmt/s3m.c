@@ -274,7 +274,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
-                        if (!sample->length || !para_sdata[n])
+                        if (!sample->length)
                                 continue;
                         slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
                         csf_read_sample(sample, smp_flags[n], fp->data + fp->pos, fp->length - fp->pos);

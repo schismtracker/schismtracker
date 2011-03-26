@@ -242,7 +242,7 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
                 return;
         }
 
-        if (!sample->length) {
+        if (!sample->length || !sample->data) {
                 vgamem_ovl_apply(r);
                 return;
         }
