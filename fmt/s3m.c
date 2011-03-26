@@ -123,8 +123,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         slurp_seek(fp, 4, SEEK_CUR); /* skip the tag */
 
         song->initial_global_volume = slurp_getc(fp) << 1;
-        song->initial_speed = slurp_getc(fp);
-        song->initial_tempo = slurp_getc(fp);
+        // In the case of invalid data, ST3 uses the speed/tempo value that's set in the player prior to
+        // loading the song, but that's just crazy.
+        song->initial_speed = slurp_getc(fp) ?: 6;
+        song->initial_tempo = slurp_getc(fp) ?: 125;
         song->mixing_volume = slurp_getc(fp);
         if (song->mixing_volume & 0x80) {
                 song->mixing_volume ^= 0x80;
