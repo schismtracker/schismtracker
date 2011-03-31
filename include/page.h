@@ -471,8 +471,6 @@ int numentry_handle_digit(struct widget *widget, struct key_event *k);
 int menutoggle_handle_key(struct widget *widget, struct key_event *k);
 int bitset_handle_key(struct widget *widget, struct key_event *k);
 
-struct widget *find_widget_xy(int x, int y);
-struct widget *find_widget_xy_ex(int x, int y, int *num);
 int change_focus_to_xy(int x, int y);
 void change_focus_to(int new_widget_index);
 /* p_widgets should point to the group of widgets (not the actual widget that is
