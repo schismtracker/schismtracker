@@ -610,42 +610,37 @@ void change_focus_to(int new_widget_index)
                 status.flags |= NEED_UPDATE;
         }
 }
-struct widget *find_widget_xy_ex(int x, int y, int *num)
+
+static int _find_widget_xy(int x, int y)
 {
         struct widget *w;
         int i, pad;
 
         if (!total_widgets)
-                return NULL;
+                return -1;
         for (i = 0; i < *total_widgets; i++) {
-                w = &widgets[i];
+                w = widgets + i;
                 switch (w->type) {
                 case WIDGET_BUTTON:
-                        pad = w->d.button.padding+1;
+                        pad = w->d.button.padding + 1;
                         break;
                 case WIDGET_TOGGLEBUTTON:
-                        pad = w->d.togglebutton.padding+1;
+                        pad = w->d.togglebutton.padding + 1;
                         break;
                 default:
                         pad = 0;
-                };
-                if (x >= w->x && x < w->x+w->width+pad) {
-                        if (y >= w->y && y < w->y+w->height) {
-                                if (num) *num=i;
-                                return w;
-                        }
+                }
+                if (x >= w->x && x < w->x + w->width + pad && y >= w->y && y < w->y + w->height) {
+                        return i;
                 }
         }
-        return NULL;
+        return -1;
 }
-struct widget *find_widget_xy(int x, int y)
-{
-        return find_widget_xy_ex(x, y, NULL);
-}
+
 int change_focus_to_xy(int x, int y)
 {
-        int n;
-        if (find_widget_xy_ex(x, y, &n) != NULL) {
+        int n = _find_widget_xy(x, y);
+        if (n >= 0) {
                 change_focus_to(n);
                 return 1;
         }
