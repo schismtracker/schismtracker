@@ -62,8 +62,16 @@ static int _fixup_ignore_globals(struct key_event *k)
         case SDLK_ESCAPE:
                 /* use default handler */
                 return 0;
-        case SDLK_F1...SDLK_F5:
-        case SDLK_F9...SDLK_F12:
+        case SDLK_F2: case SDLK_F5: case SDLK_F9: case SDLK_F10:
+                // Ctrl + these keys does not lead to a new screen
+                if (k->mod & KMOD_CTRL)
+                        break;
+                // Fall through.
+        case SDLK_F1: case SDLK_F3: case SDLK_F4:
+        case SDLK_F11: case SDLK_F12:
+                // Ignore Alt and so on.
+                if (k->mod & (KMOD_ALT | KMOD_SHIFT))
+                        break;
                 dialog_destroy();
                 return 0;
         default:

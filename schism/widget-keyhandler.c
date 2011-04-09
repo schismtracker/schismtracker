@@ -161,9 +161,12 @@ static void _backtab(void)
 int widget_handle_key(struct key_event * k)
 {
         struct widget *widget = &ACTIVE_WIDGET;
+        if (!widget)
+                return 0;
+
         int n, onw, wx, fmin, fmax, pad;
-        enum widget_type current_type = widget->type;
         void (*changed)(void);
+        enum widget_type current_type = widget->type;
 
         if (!(status.flags & DISKWRITER_ACTIVE)
             && (current_type == WIDGET_OTHER)
