@@ -868,9 +868,9 @@ static int handle_key_global(struct key_event * k)
         return 0;
 }
 
-/* this is the important one */
-void handle_key(struct key_event * k)
+static int _handle_ime(struct key_event *k)
 {
+        int c, m;
         static int alt_numpad = 0;
         static int alt_numpad_c = 0;
         static int digraph_n = 0;
@@ -878,7 +878,6 @@ void handle_key(struct key_event * k)
         static int cs_unicode = 0;
         static int cs_unicode_c = 0;
         struct key_event fake;
-        int c, m;
 
         if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
             && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
@@ -899,7 +898,7 @@ void handle_key(struct key_event * k)
                                 digraph_n = -1;
                         }
                 } else if (digraph_n >= 2) {
-                        if (k->state) return;
+                        if (k->state) return 1;
                         if (!digraph_c) {
                                 digraph_c = c;
                                 status_text_flash_bios("Enter digraph: %c", c);
@@ -920,7 +919,7 @@ void handle_key(struct key_event * k)
                                         handle_key(&fake);
                                 }
                         }
-                        return;
+                        return 1;
                 } else {
                         if (digraph_n > 0) status_text_flash(" ");
                         digraph_n = 0;
@@ -944,7 +943,7 @@ void handle_key(struct key_event * k)
                                 cs_unicode = cs_unicode_c = 0;
                                 alt_numpad = alt_numpad_c = 0;
                                 digraph_n = digraph_c = 0;
-                                return;
+                                return 1;
                         }
                 } else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
                         if (cs_unicode_c >= 0) {
@@ -956,13 +955,13 @@ void handle_key(struct key_event * k)
                                 if (c == -1) {
                                         cs_unicode = cs_unicode_c = -1;
                                 } else {
-                                        if (!k->state) return;
+                                        if (!k->state) return 1;
                                         cs_unicode *= 16;
                                         cs_unicode += c;
                                         cs_unicode_c++;
                                         digraph_n = digraph_c = 0;
                                         status_text_flash_bios("Enter Unicode: U+%04X", cs_unicode);
-                                        return;
+                                        return 1;
                                 }
                         }
                 } else {
@@ -985,7 +984,7 @@ void handle_key(struct key_event * k)
                                 alt_numpad = alt_numpad_c = 0;
                                 digraph_n = digraph_c = 0;
                                 cs_unicode = cs_unicode_c = 0;
-                                return;
+                                return 1;
                         }
                 } else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
                         if (alt_numpad_c >= 0) {
@@ -996,13 +995,13 @@ void handle_key(struct key_event * k)
                                 if (c == -1 || c > 9) {
                                         alt_numpad = alt_numpad_c = -1;
                                 } else {
-                                        if (!k->state) return;
+                                        if (!k->state) return 1;
                                         alt_numpad *= 10;
                                         alt_numpad += c;
                                         alt_numpad_c++;
                                         if (!(status.flags & CLASSIC_MODE))
                                                 status_text_flash_bios("Enter DOS/ASCII: %d", (int)alt_numpad);
-                                        return;
+                                        return 1;
                                 }
                         }
                 } else {
@@ -1013,6 +1012,15 @@ void handle_key(struct key_event * k)
                 alt_numpad = alt_numpad_c = 0;
                 digraph_n = digraph_c = 0;
         }
+
+        return 0;
+}
+
+/* this is the important one */
+void handle_key(struct key_event *k)
+{
+        if (_handle_ime(k))
+                return;
 
         /* okay... */
         if (!(status.flags & DISKWRITER_ACTIVE) && ACTIVE_PAGE.pre_handle_key) {
@@ -1130,9 +1138,9 @@ void handle_key(struct key_event * k)
 
         /* and if we STILL didn't handle the key, pass it to the page.
          * (or dialog, if one's active) */
-        if (status.dialog_type & DIALOG_BOX)
+        if (status.dialog_type & DIALOG_BOX) {
                 dialog_handle_key(k);
-        else {
+        } else {
                 if (status.flags & DISKWRITER_ACTIVE) return;
                 if (ACTIVE_PAGE.handle_key) ACTIVE_PAGE.handle_key(k);
         }
