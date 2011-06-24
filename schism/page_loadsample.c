@@ -217,7 +217,6 @@ static void load_sample_draw_const(void)
         dmoz_file_t *f;
         song_sample_t *s;
         char sbuf[64];
-        int filled;
 
         draw_box(5, 12, 50, 48, BOX_THICK | BOX_INNER | BOX_INSET);
         draw_fill_chars(6, 13, 49, 47, 0);
@@ -236,7 +235,6 @@ static void load_sample_draw_const(void)
         draw_fill_chars(59, 44, 76, 47, 0);
         draw_box(58, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
-        filled = 0;
         f = NULL;
         if (current_file >= 0 && current_file < flist.num_files && flist.files[current_file]) {
                 f = flist.files[current_file];

@@ -184,14 +184,13 @@ static void handle_file_entered_L(const char *ptr)
 {
         dmoz_filelist_t tmp;
         struct stat sb;
-        dmoz_file_t *f;
 
         /* these shenanigans force the file to take another trip... */
         if (stat(ptr, &sb) == -1)
                 return;
 
         memset(&tmp, 0, sizeof(tmp));
-        f = dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
+        dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
         dmoz_free(&tmp, NULL);
 
         song_load(ptr);
@@ -452,7 +451,6 @@ static void search_redraw(void)
 
 static void search_update(void)
 {
-        int found_something = 0;
         int n;
 
         if (search_text_length > 25)
@@ -465,7 +463,6 @@ static void search_update(void)
         if (*selected_widget == 0) {
                 for (n = 0; n < flist.num_files; n++) {
                         if (strncasecmp(flist.files[n]->base, search_text, search_text_length) == 0) {
-                                found_something = 1;
                                 current_file = n;
                                 file_list_reposition();
                                 break;
@@ -474,7 +471,6 @@ static void search_update(void)
         } else {
                 for (n = 0; n < dlist.num_dirs; n++) {
                         if (strncasecmp(dlist.dirs[n]->base, search_text, search_text_length) == 0) {
-                                found_something = 1;
                                 current_dir = n;
                                 dir_list_reposition();
                                 break;

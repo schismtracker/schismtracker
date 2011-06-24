@@ -54,6 +54,7 @@ void alsa_dlinit(void)
                 if (!_alsaless_sdl_hack)
                         _alsaless_sdl_hack = RTLD_DEFAULT;
 
+#if 0
                 if (_dltrick_handle && _alsaless_sdl_hack
                 && (dlsym(_alsaless_sdl_hack, "ALSA_bootstrap")
                 || dlsym(_alsaless_sdl_hack, "snd_pcm_open"))) {
@@ -66,6 +67,7 @@ void alsa_dlinit(void)
                         alsa_snd_pcm_open = dlsym(_dltrick_handle, "snd_pcm_open");
                         alsa_snd_pcm_close = dlsym(_dltrick_handle, "snd_pcm_close");
                 }
+#endif
         }
 }
 

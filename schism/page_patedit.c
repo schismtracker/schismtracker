@@ -3014,11 +3014,10 @@ static int pattern_editor_insert_midi(struct key_event *k)
 /* return 1 => handled key, 0 => no way */
 static int pattern_editor_insert(struct key_event *k)
 {
-        int total_rows;
         int ins, smp, j, n, vol;
         song_note_t *pattern, *cur_note;
 
-        total_rows = song_get_pattern(current_pattern, &pattern);
+        song_get_pattern(current_pattern, &pattern);
         /* keydown events are handled here for multichannel */
         if (k->state && current_position) return 0;
 

@@ -268,11 +268,11 @@ static int load_imf_pattern(song_t *song, int pat, uint32_t ignore_channels, slu
 {
         uint16_t length, nrows;
         uint8_t mask, channel;
-        int row, startpos;
+        int row;
         unsigned int lostfx = 0;
         song_note_t *row_data, *note, junk_note;
 
-        startpos = slurp_tell(fp);
+        //int startpos = slurp_tell(fp);
 
         slurp_read(fp, &length, 2);
         length = bswapLE16(length);
