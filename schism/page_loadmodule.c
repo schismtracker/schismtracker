@@ -1020,6 +1020,9 @@ static void save_module_set_page(void)
         widgets_exportsave = (status.current_page == PAGE_EXPORT_MODULE)
                 ? widgets_exportmodule
                 : widgets_savemodule;
+
+        if (status.current_page == PAGE_EXPORT_MODULE && current_song->orderlist[0] == ORDER_LAST)
+                dialog_create(DIALOG_OK, "You're about to export a blank file...", NULL, NULL, 0, NULL);
 }
 
 void save_module_load_page(struct page *page, int do_export)
