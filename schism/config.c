@@ -164,6 +164,12 @@ void cfg_load(void)
                 cfg_module_pattern[PATH_MAX] = 0;
         }
 
+        ptr = cfg_get_string(&cfg, "Directories", "export_pattern", NULL, 0, NULL);
+        if (ptr) {
+                strncpy(cfg_export_pattern, ptr, PATH_MAX);
+                cfg_export_pattern[PATH_MAX] = 0;
+        }
+
         ptr = cfg_get_string(&cfg, "Directories", "sort_with", NULL, 0, NULL);
         if (ptr) {
                 for (i = 0; compare_funcs[i].name; i++) {
@@ -289,6 +295,7 @@ void cfg_save(void)
         cfg_set_string(&cfg, "Directories", "instruments", cfg_dir_instruments);
         /* No, it's not a directory, but whatever. */
         cfg_set_string(&cfg, "Directories", "module_pattern", cfg_module_pattern);
+        cfg_set_string(&cfg, "Directories", "export_pattern", cfg_export_pattern);
         for (i = 0; compare_funcs[i].name; i++) {
                 if (cfg_string_compare == compare_funcs[i].func) {
                         cfg_set_string(&cfg, "Directories", "sort_with", compare_funcs[i].name);

@@ -126,6 +126,7 @@ static char filename_entry[PATH_MAX + 1] = "";
 static char dirname_entry[PATH_MAX + 1] = "";
 
 char cfg_module_pattern[PATH_MAX + 1] = GLOB_DEFAULT;
+char cfg_export_pattern[PATH_MAX + 1] = "*.wav; *.aiff; *.aif";
 static char **glob_list = NULL;
 static char glob_list_src[PATH_MAX + 1] = ""; // the pattern used to make glob_list (this is an icky hack)
 
@@ -424,7 +425,10 @@ static void set_glob(const char *globspec)
 
 static void set_default_glob(int set_filename)
 {
-        const char *s = cfg_module_pattern;
+        const char *s = (status.current_page == PAGE_EXPORT_MODULE)
+                ? cfg_export_pattern
+                : cfg_module_pattern;
+
         if (set_filename) {
                 /* glob on load page is visible, but on save page the text should be empty */
                 strcpy(filename_entry, s);

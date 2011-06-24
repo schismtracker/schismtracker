@@ -252,6 +252,7 @@ extern char cfg_font[];
 extern int cfg_palette;
 
 extern char cfg_module_pattern[];
+extern char cfg_export_pattern[];
 
 typedef int (*compare_func) (const char *a, const char *b);
 extern compare_func cfg_string_compare;
