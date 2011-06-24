@@ -501,6 +501,7 @@ static void finish_load(int cur)
 {
         song_sample_t *smp;
 
+        status.flags |= SONG_NEEDS_SAVE;
         memused_songchanged();
         smp = song_get_sample(cur);
         if (smp->flags & CHN_STEREO) {

@@ -321,6 +321,7 @@ static void handle_enter_key(void)
                 status.flags |= NEED_UPDATE;
         } else if (file->type & TYPE_INST_MASK) {
                 if (_library_mode) return;
+                status.flags |= SONG_NEEDS_SAVE;
                 if (file->instnum > -1) {
                         song_load_instrument_ex(cur, NULL,
                                         file->path, file->instnum);
