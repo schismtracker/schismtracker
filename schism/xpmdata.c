@@ -235,8 +235,7 @@ SDL_Surface *xpmdata(const char *data[])
         char *keystrings = NULL, *nextkey;
         const char *line;
         const char ***xpmlines = NULL;
-#define get_next_line(q,l) *(*xpmlines)++
-        int pixels_len;
+#define get_next_line(q) *(*q)++
         int error;
         int usedn;
 
@@ -244,7 +243,7 @@ SDL_Surface *xpmdata(const char *data[])
 
         xpmlines = (const char ***) &data;
 
-        line = get_next_line(xpmlines, 0);
+        line = get_next_line(xpmlines);
         if(!line) goto done;
 
         /*
@@ -296,7 +295,7 @@ SDL_Surface *xpmdata(const char *data[])
         usedn = 1;
         for(n = 0; n < ncolors; ++n) {
                 const char *p;
-                line = get_next_line(xpmlines, 0);
+                line = get_next_line(xpmlines);
                 if(!line)
                         goto done;
 
@@ -353,10 +352,9 @@ SDL_Surface *xpmdata(const char *data[])
         }
 
         /* Read the pixels */
-        pixels_len = w * cpp;
         dst = image->pixels;
         for(y = 0; y < h; y++) {
-                line = get_next_line(xpmlines, pixels_len);
+                line = get_next_line(xpmlines);
                 if(indexed) {
                         /* optimization for some common cases */
                         if(cpp == 1)

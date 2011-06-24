@@ -437,7 +437,7 @@ void draw_widget(struct widget *w, int selected)
         char buf[16] = "Channel 42";
         const char *ptr, *endptr;       /* for the menutoggle */
         char *str;
-        int n, j;
+        int n;
         int tfg = selected ? 0 : 2;
         int tbg = selected ? 3 : 0;
         int drew_cursor = 0;
@@ -491,7 +491,6 @@ void draw_widget(struct widget *w, int selected)
                                 draw_text(str, (w->x+w->width) - strlen(str),
                                                 w->y, 2, 0);
                         }
-                        j = strlen(str);
                         if (selected && !drew_cursor) {
                                 while (str[0] && str[1]) str++;
                                 if (!str[0]) str[0] = ' ';
