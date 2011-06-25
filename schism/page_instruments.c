@@ -1176,11 +1176,23 @@ static int _env_node_remove(song_envelope_t *env, int current_node)
         memmove(env->values + current_node, env->values + current_node + 1,
                 (env->nodes - current_node - 1) * sizeof(env->values[0]));
         env->nodes--;
-        if (env->loop_end > current_node) env->loop_end--;
-        if (env->loop_start > current_node) env->loop_start--;
-        if (env->sustain_end > current_node) env->sustain_end--;
-        if (env->sustain_start > current_node) env->sustain_start--;
 
+        if (env->loop_start >= env->nodes)
+                env->loop_start = env->nodes - 1;
+        else if (env->loop_start > current_node)
+                env->loop_start--;
+        if (env->loop_end >= env->nodes)
+                env->loop_end = env->nodes - 1;
+        else if (env->loop_end > current_node)
+                env->loop_end--;
+        if (env->sustain_start >= env->nodes)
+                env->sustain_start = env->nodes - 1;
+        else if (env->sustain_start > current_node)
+                env->sustain_start--;
+        if (env->sustain_end >= env->nodes)
+                env->sustain_end = env->nodes - 1;
+        else if (env->sustain_end > current_node)
+                env->sustain_end--;
         if (current_node >= env->nodes)
                 current_node = env->nodes - 1;
 
