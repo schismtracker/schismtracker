@@ -203,6 +203,10 @@ static void import_imf_effect(song_note_t *note)
                 else
                         note->param |= 0xe0;
                 break;
+        case 0x16: // filter
+                // <Saga_Musix> Storlek: schism's IMF loader should shift the param of command 0x16 one to the right (cutoff range in orpheus is 8-bit, not 7-bit)
+                note->param >>= 1;
+                break;
         case 0x1f: // set global volume
                 note->param = MIN(note->param << 1, 0xff);
                 break;
@@ -571,6 +575,11 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
                 }
                 firstsample += imfins.smpnum;
         }
+
+        // Fix the MIDI settings, because IMF files might include Zxx effects
+        memset(&song->midi_config, 0, sizeof(song->midi_config));
+        strcpy(song->midi_config.sfx[0], "F0F000z");
+        song->flags |= SONG_EMBEDMIDICFG;
 
         return LOAD_SUCCESS;
 }
