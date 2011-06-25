@@ -807,12 +807,11 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                                         time(&startdown);
                                                 }
                                         }
-
-                                        if (change_focus_to_xy(kk.x, kk.y)) {
-                                                kk.on_target = 1;
-                                        } else {
-                                                kk.on_target = 0;
-                                        }
+                                }
+                                if (change_focus_to_xy(kk.x, kk.y)) {
+                                        kk.on_target = 1;
+                                } else {
+                                        kk.on_target = 0;
                                 }
                                 if (event.type == SDL_MOUSEBUTTONUP && downtrip) {
                                         downtrip = 0;
