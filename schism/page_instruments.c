@@ -814,6 +814,10 @@ static int note_trans_handle_key(struct key_event * k)
                         c = sample_get_current();
                         for (n = 0; n < (NOTE_LAST - NOTE_FIRST + 1); n++)
                                 ins->sample_map[n] = c;
+                        if (k->mod & KMOD_SHIFT) {
+                                // Copy the name too.
+                                memcpy(ins->name, current_song->samples[c].name, 32);
+                        }
                         break;
                 default:
                         return 0;
