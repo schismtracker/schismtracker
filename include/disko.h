@@ -101,7 +101,7 @@ void song_pattern_to_sample(int pattern, int split, int bind);
 
 /* export the song to a file */
 struct save_format;
-int disko_export_song(const char *filename, struct save_format *format);
+int disko_export_song(const char *filename, const struct save_format *format);
 
 /* call periodically if (status.flags & DISKWRITER_ACTIVE) to write more stuff.
 return: DW_SYNC_*, self explanatory */

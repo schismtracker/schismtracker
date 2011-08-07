@@ -112,9 +112,9 @@ struct save_format {
         } f;
 };
 
-extern struct save_format song_save_formats[];
-extern struct save_format song_export_formats[];
-extern struct save_format sample_save_formats[];
+extern const struct save_format song_save_formats[];
+extern const struct save_format song_export_formats[];
+extern const struct save_format sample_save_formats[];
 
 /* --------------------------------------------------------------------------------------------------------- */
 struct instrumentloader {
