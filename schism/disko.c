@@ -584,7 +584,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 static song_t export_dwsong;
 static int export_bps;
 static disko_t *export_ds[MAX_CHANNELS + 1]; /* only [0] is used unless multichannel */
-static struct save_format *export_format = NULL; /* NULL == not running */
+static const struct save_format *export_format = NULL; /* NULL == not running */
 static struct widget diskodlg_widgets[1];
 static size_t est_len;
 static int prgh;
@@ -680,7 +680,7 @@ static char *get_filename(const char *template, int n)
         return s;
 }
 
-int disko_export_song(const char *filename, struct save_format *format)
+int disko_export_song(const char *filename, const struct save_format *format)
 {
         int err = 0;
         int numfiles, n;

@@ -787,7 +787,7 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
 
 /* ------------------------------------------------------------------------- */
 
-struct save_format song_save_formats[] = {
+const struct save_format song_save_formats[] = {
         {"IT", "Impulse Tracker", ".it", {.save_song = _save_it}},
         {"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}},
         {.label = NULL}
@@ -796,7 +796,7 @@ struct save_format song_save_formats[] = {
 #define EXPORT_FUNCS(t) \
         fmt_##t##_export_head, fmt_##t##_export_silence, fmt_##t##_export_body, fmt_##t##_export_tail
 
-struct save_format song_export_formats[] = {
+const struct save_format song_export_formats[] = {
         {"WAV", "WAV", ".wav", {.export = {EXPORT_FUNCS(wav), 0}}},
         {"MWAV", "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}},
         {"AIFF", "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}},
@@ -806,7 +806,7 @@ struct save_format song_export_formats[] = {
 // <distance> and maiff sounds like something you'd want to hug
 // <distance> .. dont ask
 
-struct save_format sample_save_formats[] = {
+const struct save_format sample_save_formats[] = {
         {"ITS", "Impulse Tracker", ".its", {.save_sample = fmt_its_save_sample}},
         //{"S3I", "Scream Tracker", ".s3i", {.save_sample = fmt_s3i_save_sample}},
         {"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}},
@@ -816,7 +816,7 @@ struct save_format sample_save_formats[] = {
         {.label = NULL}
 };
 
-static struct save_format *get_save_format(struct save_format *formats, const char *label)
+static const struct save_format *get_save_format(const struct save_format *formats, const char *label)
 {
         int n;
 
@@ -866,7 +866,7 @@ static char *mangle_filename(const char *in, const char *mid, const char *ext)
 
 int song_export(const char *filename, const char *type)
 {
-        struct save_format *format = get_save_format(song_export_formats, type);
+        const struct save_format *format = get_save_format(song_export_formats, type);
         const char *mid;
         char *mangle;
         int r;
@@ -899,7 +899,7 @@ int song_export(const char *filename, const char *type)
 int song_save(const char *filename, const char *type)
 {
         int ret, backup;
-        struct save_format *format = get_save_format(song_save_formats, type);
+        const struct save_format *format = get_save_format(song_save_formats, type);
         char *mangle;
 
         if (!format)
@@ -978,7 +978,7 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 int song_save_sample(const char *filename, const char *type, song_sample_t *smp, int num)
 {
         int ret;
-        struct save_format *format = get_save_format(sample_save_formats, type);
+        const struct save_format *format = get_save_format(sample_save_formats, type);
 
         if (!format)
                 return SAVE_INTERNAL_ERROR;
