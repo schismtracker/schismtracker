@@ -913,10 +913,10 @@ void song_pattern_to_sample(int pattern, int split, int bind)
                 /* Nothing to confirm, as this never overwrites samples */
                 pat2smp_multi(ps);
         } else {
-                if (csf_sample_is_empty(current_song->samples + ps->sample)) {
+                if (current_song->samples[ps->sample].data == NULL) {
                         pat2smp_single(ps);
                 } else {
-                        dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample",
+                        dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
                                 pat2smp_single, free, 1, ps);
                 }
         }

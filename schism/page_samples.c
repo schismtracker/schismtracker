@@ -1363,7 +1363,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
                                 ? sample_adlibpatch_dialog
                                 : sample_adlibconfig_dialog;
                         if (canmod) {
-                                dialog_create(DIALOG_OK_CANCEL, "This will replace this sample",
+                                dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
                                               dlg, NULL, 1, NULL);
                         } else {
                                 dlg(NULL);
