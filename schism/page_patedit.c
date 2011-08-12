@@ -131,6 +131,14 @@ static int vary_depth = 10;
 static int fast_volume_percent = 67;
 static int fast_volume_mode = 0;        /* toggled with ctrl-j */
 
+enum {
+    COPY_INST_OFF = 0, /* no search (IT style) */
+    COPY_INST_UP = 1, /* search above the cursor for an instrument number */
+    COPY_INST_UP_THEN_DOWN = 2, /* search both ways, up to row 0 first, then down */
+    COPY_INST_SENTINEL = 3, /* non-value */
+};
+static int mask_copy_search_mode = COPY_INST_OFF;
+
 /* --------------------------------------------------------------------- */
 /* undo and clipboard handling */
 struct pattern_snap {
@@ -1025,6 +1033,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
         CFG_SET_PE(fast_volume_mode);
         CFG_SET_PE(keyjazz_noteoff);
         CFG_SET_PE(keyjazz_repeat);
+        CFG_SET_PE(mask_copy_search_mode);
 
         cfg_set_number(cfg, "Pattern Editor", "crayola_mode", !!(status.flags & CRAYOLA_MODE));
         for (n = 0; n < 64; n++)
@@ -1054,6 +1063,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
         CFG_GET_PE(fast_volume_mode, 0);
         CFG_GET_PE(keyjazz_noteoff, 0);
         CFG_GET_PE(keyjazz_repeat, 1);
+        CFG_GET_PE(mask_copy_search_mode, 0);
 
         if (cfg_get_number(cfg, "Pattern Editor", "crayola_mode", 0))
                 status.flags |= CRAYOLA_MODE;
@@ -2687,20 +2697,32 @@ static void transpose_notes(int amount)
 
 static void copy_note_to_mask(void)
 {
-        int n;
-        song_note_t *pattern, *cur_note;
+        int row = current_row, num_rows;
+        song_note_t *pattern, *note;
 
-        song_get_pattern(current_pattern, &pattern);
-        cur_note = pattern + 64 * current_row + current_channel - 1;
+        num_rows = song_get_pattern(current_pattern, &pattern);
+        note = pattern + 64 * current_row + current_channel - 1;
 
-        mask_note = *cur_note;
+        mask_note = *note;
 
-        n = cur_note->instrument;
-        if (n) {
+        if (mask_copy_search_mode != COPY_INST_OFF) {
+                while (!note->instrument && row > 0) {
+                        note -= 64;
+                        row--;
+                }
+                if (mask_copy_search_mode == COPY_INST_UP_THEN_DOWN && !note->instrument) {
+                        note = pattern + 64 * current_row + current_channel - 1; // Reset
+                        while (!note->instrument && row < num_rows) {
+                                note += 64;
+                                row++;
+                        }
+                }
+        }
+        if (note->instrument) {
                 if (song_is_instrument_mode())
-                        instrument_set(n);
+                        instrument_set(note->instrument);
                 else
-                        sample_set(n);
+                        sample_set(note->instrument);
         }
 }
 
