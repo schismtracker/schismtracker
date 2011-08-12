@@ -794,6 +794,8 @@ static int disko_finish(void)
         int ret = DW_OK, n, tmp;
         struct timeval export_end_time;
         double elapsed;
+        int num_files = 0;
+        size_t samples_0 = 0;
 
         if (!export_format) {
                 log_appendf(4, "disko_finish: unexplained eggs");
@@ -803,6 +805,7 @@ static int disko_finish(void)
         if (!canceled)
                 dialog_destroy();
 
+        samples_0 = export_ds[0]->length;
         for (n = 0; export_ds[n]; n++) {
                 if (export_dwsong.multi_write && !export_dwsong.multi_write[n].used) {
                         /* this channel was completely empty - don't bother with it */
@@ -810,6 +813,7 @@ static int disko_finish(void)
                         disko_close(export_ds[n], 0);
                 } else {
                         /* there was noise on this channel */
+                        num_files++;
                         if (export_format->f.export.tail(export_ds[n]) != DW_OK)
                                 disko_seterror(export_ds[n], errno);
                         tmp = disko_close(export_ds[n], 0);
@@ -830,7 +834,14 @@ static int disko_finish(void)
                 gettimeofday(&export_end_time, NULL);
                 elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
                         + ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
-                log_appendf(5, " Done (took %.2lf sec)", elapsed);
+                char fmt[80] = " %.2f mb (%d:%02d) written in %.2lf sec";
+                if (elapsed >= 9.5 && elapsed < 10.5) {
+                        strcpy(strrchr(fmt, '%'), "ten seconds flat");
+                }
+                log_appendf(5, fmt,
+                        ((double) samples_0 * (disko_output_bits / 8) * disko_output_channels * num_files) / 1048576.0,
+                        samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
+                        elapsed);
                 break;
         case DW_ERROR:
                 /* hey, what was the filename? oops */
