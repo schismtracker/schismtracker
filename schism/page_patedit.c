@@ -139,6 +139,11 @@ enum {
 };
 static int mask_copy_search_mode = COPY_INST_OFF;
 
+/* If nonzero, home/end will move to the first/last row in the current channel
+prior to moving to the first/last channel, i.e. operating in a 'z' pattern.
+This is closer to FT2's behavior for the keys. */
+static int invert_home_end = 0;
+
 /* --------------------------------------------------------------------- */
 /* undo and clipboard handling */
 struct pattern_snap {
@@ -1034,6 +1039,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
         CFG_SET_PE(keyjazz_noteoff);
         CFG_SET_PE(keyjazz_repeat);
         CFG_SET_PE(mask_copy_search_mode);
+        CFG_SET_PE(invert_home_end);
 
         cfg_set_number(cfg, "Pattern Editor", "crayola_mode", !!(status.flags & CRAYOLA_MODE));
         for (n = 0; n < 64; n++)
@@ -1064,6 +1070,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
         CFG_GET_PE(keyjazz_noteoff, 0);
         CFG_GET_PE(keyjazz_repeat, 1);
         CFG_GET_PE(mask_copy_search_mode, 0);
+        CFG_GET_PE(invert_home_end, 0);
 
         if (cfg_get_number(cfg, "Pattern Editor", "crayola_mode", 0))
                 status.flags |= CRAYOLA_MODE;
@@ -4080,10 +4087,11 @@ static int pattern_editor_handle_key(struct key_event * k)
         case SDLK_HOME:
                 if (k->state) return 0;
                 if (current_position == 0) {
-                        if (current_channel == 1)
+                        if (invert_home_end ? (current_row != 0) : (current_channel == 1)) {
                                 current_row = 0;
-                        else
+                        } else {
                                 current_channel = 1;
+                        }
                 } else {
                         current_position = 0;
                 }
@@ -4092,10 +4100,11 @@ static int pattern_editor_handle_key(struct key_event * k)
                 if (k->state) return 0;
                 n = song_find_last_channel();
                 if (current_position == 8) {
-                        if (current_channel == n)
+                        if (invert_home_end ? (current_row != total_rows) : (current_channel == n)) {
                                 current_row = total_rows;
-                        else
+                        } else {
                                 current_channel = n;
+                        }
                 } else {
                         current_position = 8;
                 }
