@@ -124,7 +124,7 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
                 if (*p >= 0xf0) {
                         // hack for people who can't type F twice :)
                         *e = VOLFX_TONEPORTAMENTO;
-                        *p = 0xff;
+                        *p = 0x9;
                         return 1;
                 }
                 for (int n = 0; n < 10; n++) {
