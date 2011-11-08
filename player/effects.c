@@ -818,7 +818,8 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 {
 /* this was all wrong. -mrsb */
         song_voice_t *chan = &csf->voices[nchan];
-        song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE)
+        song_instrument_t *penv = ((csf->flags & SONG_INSTRUMENTMODE)
+                                   && chan->last_instrument < MAX_INSTRUMENTS)
                         ? csf->instruments[use_instr ?: chan->last_instrument]
                         : NULL;
         unsigned char outbuffer[64];
