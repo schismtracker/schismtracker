@@ -391,5 +391,9 @@ AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32) $(SDL_LIBS) $(LIBM) -ldl
+schismtracker_LDADD = $(lib_asound) $(lib_win32) $(SDL_LIBS) $(LIBM)
+
+if ! USE_WIN32
+schismtracker_LDADD += -ldl
+endif
 

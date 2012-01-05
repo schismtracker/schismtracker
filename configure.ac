@@ -4,7 +4,7 @@ dnl Schism Tracker - a cross-platform Impulse Tracker clone
 dnl copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
 dnl copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
 dnl copyright (c) 2009 Storlek & Mrs. Brisby
-dnl copyright (c) 2010-2011 Storlek
+dnl copyright (c) 2010-2012 Storlek
 dnl URL: http://schismtracker.org/
 dnl
 dnl This program is free software; you can redistribute it and/or modify

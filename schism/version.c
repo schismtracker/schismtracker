@@ -3,7 +3,7 @@
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
  * copyright (c) 2009 Storlek & Mrs. Brisby
- * copyright (c) 2010-2011 Storlek
+ * copyright (c) 2010-2012 Storlek
  * URL: http://schismtracker.org/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,7 @@ short ver_cwtv;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
 const char *ver_short_copyright =
-        "Copyright (c) 2003-2011 Storlek & Mrs. Brisby";
+        "Copyright (c) 2003-2012 Storlek & Mrs. Brisby";
 const char *ver_short_based_on =
         "Based on Impulse Tracker by Jeffrey Lim aka Pulse";
 

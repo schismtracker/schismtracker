@@ -1,3 +1,23 @@
+20120105
+
+  - Happy New Year again! Not much new. (Perhaps that'll change soon?)
+
+Miscellaneous:
+
+  - Added "invert_home_end" option on the pattern editor to make the keys act
+    more like FT2. There is no UI switch for this option.
+  - Fixed a couple quirky segfaults, most of which were unlikely to happen
+    unless you were looking for them.
+  - Fixed a bug that cropped up that broke the mouse in dialogs.
+  - Small fixes to the IMF and S3M loaders.
+  - Removing the last envelope node adjusts the loop points (as it should!)
+  - A dialog now warns you if you are about to export an empty file (i.e.,
+    nothing in the orderlist)
+  - Added a separate glob pattern, listing only WAV and AIFF files by default
+  - Export shows file size and duration when it finishes
+
+==============================================================================
+
 20110101
 
   - Happy New Year! This is mostly for Windows users, as there was a huge
