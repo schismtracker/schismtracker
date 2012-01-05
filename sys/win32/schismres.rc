@@ -36,7 +36,7 @@ BEGIN
                 BLOCK "040904E4"
                 BEGIN
                         VALUE "CompanyName", "Storlek"
-                        VALUE "LegalCopyright", "Copyright \xA9 2003-2011 Storlek"
+                        VALUE "LegalCopyright", "Copyright \xA9 2003-2012 Storlek"
                         VALUE "Comments", "http://schismtracker.org/"
                         VALUE "ProductName", VER_PRODUCTNAME
                         VALUE "FileDescription", VER_PRODUCTNAME

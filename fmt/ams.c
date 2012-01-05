@@ -3,7 +3,7 @@
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
  * copyright (c) 2009 Storlek & Mrs. Brisby
- * copyright (c) 2010-2011 Storlek
+ * copyright (c) 2010-2012 Storlek
  * URL: http://schismtracker.org/
  *
  * This program is free software; you can redistribute it and/or modify
