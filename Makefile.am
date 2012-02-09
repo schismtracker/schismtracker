@@ -374,6 +374,7 @@ if USE_MERCURIAL
 hg_dirstate = auto/dirstate.check
 BUILT_SOURCES = $(hg_dirstate)
 $(hg_dirstate): $(top_srcdir)/.hg/dirstate
+	@$(MKDIR_P) auto
 	hg -R $(top_srcdir) parents --template "{date|shortdate}" >$@
 cflags_version = -DHG_VERSION=\""`(cat $(hg_dirstate) /dev/null)`"\"
 endif
