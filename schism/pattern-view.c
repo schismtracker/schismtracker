@@ -85,13 +85,20 @@ void draw_note_13(int x, int y, const song_note_t *note, int cursor_pos, int fg,
                 note_buf, instbuf, vol_buf,
                 get_effect_char(note->effect), note->param);
 
-        if (show_default_volumes && note->voleffect == VOLFX_NONE && note->instrument > 0) {
-                /* Modplug-specific hack: volume bit shift */
-                int n = song_get_sample(note->instrument)->volume >> 2;
-                note_text[6] = 0xbf;
-                note_text[7] = '0' + n / 10 % 10;
-                note_text[8] = '0' + n / 1 % 10;
-                note_text[9] = 0xc0;
+        if (show_default_volumes && note->voleffect == VOLFX_NONE
+            && note->instrument > 0 && NOTE_IS_NOTE(note->note)) {
+                song_sample_t *smp = song_is_instrument_mode()
+                        ? csf_translate_keyboard(current_song, song_get_instrument(note->instrument),
+                                                 note->note, NULL)
+                        : song_get_sample(note->instrument);
+                if (smp) {
+                        /* Modplug-specific hack: volume bit shift */
+                        int n = smp->volume >> 2;
+                        note_text[6] = 0xbf;
+                        note_text[7] = '0' + n / 10 % 10;
+                        note_text[8] = '0' + n / 1 % 10;
+                        note_text[9] = 0xc0;
+                }
         }
 
         draw_text(note_text, x, y, fg, bg);
