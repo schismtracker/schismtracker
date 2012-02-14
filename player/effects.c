@@ -1189,7 +1189,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
                         /* this was wrong, and then it was still wrong.
                         (possibly it continues to be wrong even now?) */
                         double d = 2 * (((double) rand()) / RAND_MAX) - 1;
-                        chan->vol_swing = d * penv->vol_swing / 100.0 * chan->volume;
+                        // floor() is applied to get exactly the same volume levels as in IT. -- Saga
+                        chan->vol_swing = floor(d * penv->vol_swing / 100.0 * chan->instrument_volume);
                 }
                 if (penv->pan_swing) {
                         /* this was also wrong, and even more so */

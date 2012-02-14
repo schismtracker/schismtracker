@@ -1096,7 +1096,7 @@ int csf_read_note(song_t *csf)
 
                 // Calc Frequency
                 if (chan->period && chan->length) {
-                        int vol = chan->volume + chan->vol_swing;
+                        int vol = chan->volume;
 
                         if (chan->flags & CHN_TREMOLO)
                                 vol += chan->tremolo_delta;
@@ -1127,8 +1127,11 @@ int csf_read_note(song_t *csf)
                         if (vol) {
                                 // IMPORTANT: chan->final_volume is 14 bits !!!
                                 // -> _muldiv( 14+7, 6+6, 18); => RealVolume: 14-bit result (21+12-19)
-                                chan->final_volume = _muldiv(vol * csf->current_global_volume,
-                                        chan->global_volume * chan->instrument_volume, 1 << 19);
+                                chan->final_volume = _muldiv
+                                        (vol * csf->current_global_volume,
+                                         chan->global_volume
+                                         * CLAMP(chan->instrument_volume + chan->vol_swing, 0, 64),
+                                         1 << 19);
                         }
 
                         int period = chan->period;
