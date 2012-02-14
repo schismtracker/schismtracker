@@ -546,7 +546,7 @@ typedef struct song {
         song_note_t *patterns[MAX_PATTERNS];            // Patterns
         uint16_t pattern_size[MAX_PATTERNS];            // Pattern Lengths
         uint16_t pattern_alloc_size[MAX_PATTERNS];      // Allocated lengths (for async. resizing/playback)
-        uint8_t orderlist[MAX_ORDERS];                  // Pattern Orders
+        uint8_t orderlist[MAX_ORDERS + 1];              // Pattern Orders
         midi_config_t midi_config;                      // Midi macro config table
         uint32_t initial_speed;
         uint32_t initial_tempo;
