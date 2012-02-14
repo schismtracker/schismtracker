@@ -152,6 +152,8 @@ void fx_key_off(song_t *csf, uint32_t nchan)
                         chan->loop_start = psmp->loop_start;
                         chan->loop_end = psmp->loop_end;
                         if (chan->length > chan->loop_end) chan->length = chan->loop_end;
+                        if (chan->position >= chan->length)
+                                chan->position = chan->position - chan->length + chan->loop_start;
                 } else {
                         chan->flags &= ~(CHN_LOOP|CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
                         chan->length = psmp->length;
