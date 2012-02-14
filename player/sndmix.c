@@ -422,85 +422,42 @@ static inline void rn_pitch_filter_envelope(song_voice_t *chan, int *nenvpitch, 
 }
 
 
+static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv, song_envelope_t *envelope,
+                                     int *position, uint32_t env_flag, uint32_t loop_flag, uint32_t sus_flag)
+{
+        int start = 0, end = 0x7fffffff;
+
+        if (!(chan->flags & env_flag)) {
+                return;
+        }
+
+        (*position)++;
+
+        if ((penv->flags & sus_flag) && !(chan->flags & CHN_KEYOFF)) {
+                start = envelope->ticks[envelope->sustain_start];
+                end = envelope->ticks[envelope->sustain_end] + 1;
+        } else if (penv->flags & loop_flag) {
+                start = envelope->ticks[envelope->loop_start];
+                end = envelope->ticks[envelope->loop_end] + 1;
+        } else {
+                // End of envelope
+                start = end = envelope->ticks[envelope->nodes - 1];
+        }
+        if (*position >= end) {
+                *position = start;
+        }
+}
+
 static inline void rn_increment_env_pos(song_voice_t *chan)
 {
         song_instrument_t *penv = chan->ptr_instrument;
 
-        if (chan->flags & CHN_VOLENV) {
-                chan->vol_env_position++;
-
-                if (penv->flags & ENV_VOLLOOP) {
-                        int volloopend = penv->vol_env.ticks[penv->vol_env.loop_end] + 1;
-
-                        if (chan->vol_env_position == volloopend) {
-                                chan->vol_env_position = penv->vol_env.ticks[penv->vol_env.loop_start];
-                                if (penv->vol_env.loop_end == penv->vol_env.loop_start
-                                    && !penv->vol_env.values[penv->vol_env.loop_start]) {
-                                        chan->flags |= CHN_NOTEFADE;
-                                        chan->fadeout_volume = 0;
-                                }
-                        }
-                }
-
-                if (penv->flags & ENV_VOLSUSTAIN
-                    && (chan->vol_env_position == (int)penv->vol_env.ticks[penv->vol_env.sustain_end] + 1)
-                    && !(chan->flags & CHN_KEYOFF)) {
-                        // Volume sustained
-                        chan->vol_env_position = penv->vol_env.ticks[penv->vol_env.sustain_start];
-                } else if (chan->vol_env_position > penv->vol_env.ticks[penv->vol_env.nodes - 1]) {
-                        // End of Envelope
-                        chan->vol_env_position = penv->vol_env.ticks[penv->vol_env.nodes - 1];
-                        chan->flags |= CHN_NOTEFADE;
-                        if (!penv->vol_env.values[penv->vol_env.nodes-1]) {
-                                chan->fadeout_volume = 0;
-                                chan->final_volume = 0;
-                        }
-                }
-        }
-
-        if (chan->flags & CHN_PANENV) {
-                chan->pan_env_position++;
-
-                if (penv->flags & ENV_PANLOOP) {
-                        int panloopend = penv->pan_env.ticks[penv->pan_env.loop_end] + 1;
-
-                        if (chan->pan_env_position == panloopend) {
-                                chan->pan_env_position = penv->pan_env.ticks[penv->pan_env.loop_start];
-                        }
-                }
-
-                if (penv->flags & ENV_PANSUSTAIN
-                    && (chan->pan_env_position == (int) penv->pan_env.ticks[penv->pan_env.sustain_end] + 1)
-                    && !(chan->flags & CHN_KEYOFF)) {
-                        // Panning sustained
-                        chan->pan_env_position = penv->pan_env.ticks[penv->pan_env.sustain_start];
-                } else if (chan->pan_env_position > penv->pan_env.ticks[penv->pan_env.nodes - 1]) {
-                        // End of envelope
-                        chan->pan_env_position = penv->pan_env.ticks[penv->pan_env.nodes - 1];
-                }
-        }
-
-        if (chan->flags & CHN_PITCHENV) {
-                chan->pitch_env_position++;
-
-                if (penv->flags & ENV_PITCHLOOP) {
-                        int pitchloopend = penv->pitch_env.ticks[penv->pitch_env.loop_end] + 1;
-
-                        if (chan->pitch_env_position == pitchloopend) {
-                                chan->pitch_env_position = penv->pitch_env.ticks[penv->pitch_env.loop_start];
-                        }
-                }
-
-                if (penv->flags & ENV_PITCHSUSTAIN
-                    && (chan->pitch_env_position == (int) penv->pitch_env.ticks[penv->pitch_env.sustain_end]+1)
-                    && !(chan->flags & CHN_KEYOFF)) {
-                        // Pitch sustained
-                        chan->pitch_env_position = penv->pitch_env.ticks[penv->pitch_env.sustain_start];
-                } else if (chan->pitch_env_position > penv->pitch_env.ticks[penv->pitch_env.nodes - 1]) {
-                        // End of envelope
-                        chan->pitch_env_position = penv->pitch_env.ticks[penv->pitch_env.nodes - 1];
-                }
-        }
+        _process_envelope(chan, penv, &penv->vol_env, &chan->vol_env_position,
+                          CHN_VOLENV, ENV_VOLLOOP, ENV_VOLSUSTAIN);
+        _process_envelope(chan, penv, &penv->pan_env, &chan->pan_env_position,
+                          CHN_PANENV, ENV_PANLOOP, ENV_PANSUSTAIN);
+        _process_envelope(chan, penv, &penv->pitch_env, &chan->pitch_env_position,
+                          CHN_PITCHENV, ENV_PITCHLOOP, ENV_PITCHSUSTAIN);
 }
 
 
