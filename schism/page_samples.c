@@ -617,7 +617,6 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 static void do_pre_loop_cut(UNUSED void *bweh)
 {
         song_sample_t *sample = song_get_sample(current_sample);
-        signed char *data;
         unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
                              ? MIN(sample->loop_start, sample->sustain_start)
                              : sample->loop_start);
@@ -633,10 +632,7 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 
         song_lock_audio();
         csf_stop_sample(current_song, sample);
-        data = csf_allocate_sample(bytes);
-        memcpy(data, sample->data + start_byte, bytes);
-        csf_free_sample(sample->data);
-        sample->data = data;
+        memmove(sample->data, sample->data + start_byte, bytes);
         sample->length -= pos;
 
         if (sample->loop_start > pos)
