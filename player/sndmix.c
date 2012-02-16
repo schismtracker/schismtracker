@@ -423,7 +423,8 @@ static inline void rn_pitch_filter_envelope(song_voice_t *chan, int *nenvpitch, 
 
 
 static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv, song_envelope_t *envelope,
-                                     int *position, uint32_t env_flag, uint32_t loop_flag, uint32_t sus_flag)
+                                     int *position, uint32_t env_flag, uint32_t loop_flag, uint32_t sus_flag,
+                                     uint32_t fade_flag)
 {
         int start = 0, end = 0x7fffffff;
 
@@ -436,15 +437,18 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
         if ((penv->flags & sus_flag) && !(chan->flags & CHN_KEYOFF)) {
                 start = envelope->ticks[envelope->sustain_start];
                 end = envelope->ticks[envelope->sustain_end] + 1;
+                fade_flag = 0;
         } else if (penv->flags & loop_flag) {
                 start = envelope->ticks[envelope->loop_start];
                 end = envelope->ticks[envelope->loop_end] + 1;
+                fade_flag = 0;
         } else {
                 // End of envelope
                 start = end = envelope->ticks[envelope->nodes - 1];
         }
         if (*position >= end) {
                 *position = start;
+                chan->flags |= fade_flag; // only relevant for volume envelope
         }
 }
 
@@ -453,11 +457,11 @@ static inline void rn_increment_env_pos(song_voice_t *chan)
         song_instrument_t *penv = chan->ptr_instrument;
 
         _process_envelope(chan, penv, &penv->vol_env, &chan->vol_env_position,
-                          CHN_VOLENV, ENV_VOLLOOP, ENV_VOLSUSTAIN);
+                          CHN_VOLENV, ENV_VOLLOOP, ENV_VOLSUSTAIN, CHN_NOTEFADE);
         _process_envelope(chan, penv, &penv->pan_env, &chan->pan_env_position,
-                          CHN_PANENV, ENV_PANLOOP, ENV_PANSUSTAIN);
+                          CHN_PANENV, ENV_PANLOOP, ENV_PANSUSTAIN, 0);
         _process_envelope(chan, penv, &penv->pitch_env, &chan->pitch_env_position,
-                          CHN_PITCHENV, ENV_PITCHLOOP, ENV_PITCHSUSTAIN);
+                          CHN_PITCHENV, ENV_PITCHLOOP, ENV_PITCHSUSTAIN, 0);
 }
 
 
