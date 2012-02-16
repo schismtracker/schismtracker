@@ -913,6 +913,11 @@ static int increment_order(song_t *csf)
                 csf->pattern_alloc_size[csf->current_pattern] = 64;
         }
 
+        if (csf->process_row >= csf->pattern_size[csf->current_pattern]) {
+                // Cxx to row beyond end of pattern: use 0 instead
+                csf->process_row = 0;
+        }
+
         return 1;
 }
 
