@@ -445,6 +445,9 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
         } else {
                 // End of envelope
                 start = end = envelope->ticks[envelope->nodes - 1];
+                if (fade_flag && !envelope->values[envelope->nodes - 1]) {
+                        chan->fadeout_volume = chan->final_volume = 0;
+                }
         }
         if (*position >= end) {
                 *position = start;
