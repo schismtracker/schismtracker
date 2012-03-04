@@ -38,18 +38,22 @@ for filename in sys.argv[1:]:
         # we'll assume history is invalid if it ends after the first parapointer
         para_count = insnum + smpnum + patnum
         para.extend(struct.unpack('<%sL' % para_count, f.read(4 * para_count)))
-        para_min = min(filter(None, para))
-        # history entry count follows parapointers
         hist, = struct.unpack('<H', f.read(2))
         hist_start = f.tell()
+        hist_len = hist_start + 8 * hist
+        try:
+                para_min = min(filter(None, para))
+        except ValueError:
+                para_min = hist_len
+        # history entry count follows parapointers
         if not hist:
                 print("%s: history missing (probably not saved with IT)" % filename)
                 continue
-        if para_min < hist_start + 8 * hist:
+        if para_min < hist_len:
                 print("%s: history data overlaps parapointers (malformed?)" % filename)
                 continue
         histdata = f.read(8 * hist)
-        if len(histdata) != 8 * hist or not f.read(1):
+        if len(histdata) != 8 * hist:
                 print("%s: history malformed (probably not saved by IT)" % filename)
                 continue
         f.close()
