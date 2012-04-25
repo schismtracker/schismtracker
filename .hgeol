@@ -1,0 +1,20 @@
+[repository]
+native = LF
+
+
+[patterns]
+**.c = native
+**.h = native
+**.m = native
+**.py = native
+**.sh = native
+**.desktop = native
+**.apspec = native
+**.plist = native
+**.1 = native
+**.xml = native
+
+helptext/* = native
+
+# AUTHORS, TODO, Makefile, PkgInfo etc.
+re:/[A-Z] = native
