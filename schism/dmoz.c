@@ -87,6 +87,46 @@ static const fmt_read_info_func read_info_funcs[] = {
 };
 
 /* --------------------------------------------------------------------------------------------------------- */
+/* sorting stuff */
+
+typedef int (*dmoz_fcmp_t) (const dmoz_file_t *a, const dmoz_file_t *b);
+typedef int (*dmoz_dcmp_t) (const dmoz_dir_t *a, const dmoz_dir_t *b);
+
+#define _DECL_CMP(name)                                                                 \
+        static int dmoz_fcmp_##name(const dmoz_file_t *a, const dmoz_file_t *b);        \
+        static int dmoz_dcmp_##name(const dmoz_dir_t *a, const dmoz_dir_t *b);
+_DECL_CMP(strcmp)
+_DECL_CMP(strcasecmp)
+#if HAVE_STRVERSCMP
+_DECL_CMP(strverscmp)
+#endif
+static int dmoz_fcmp_timestamp(const dmoz_file_t *a, const dmoz_file_t *b);
+
+#if HAVE_STRVERSCMP
+static dmoz_fcmp_t dmoz_file_cmp = dmoz_fcmp_strverscmp;
+static dmoz_dcmp_t dmoz_dir_cmp = dmoz_dcmp_strverscmp;
+#else
+static dmoz_fcmp_t dmoz_file_cmp = dmoz_fcmp_strcasecmp;
+static dmoz_dcmp_t dmoz_dir_cmp = dmoz_dcmp_strcasecmp;
+#endif
+
+static struct {
+        const char *name;
+        dmoz_fcmp_t fcmp;
+        dmoz_dcmp_t dcmp;
+} compare_funcs[] = {
+        {"strcmp", dmoz_fcmp_strcmp, dmoz_dcmp_strcmp},
+        {"strcasecmp", dmoz_fcmp_strcasecmp, dmoz_dcmp_strcasecmp},
+#if HAVE_STRVERSCMP
+        {"strverscmp", dmoz_fcmp_strverscmp, dmoz_dcmp_strverscmp},
+        {"timestamp", dmoz_fcmp_timestamp, dmoz_dcmp_strverscmp},
+#else
+        {"timestamp", dmoz_fcmp_timestamp, dmoz_dcmp_strcasecmp},
+#endif
+        {NULL, NULL, NULL}
+};
+
+/* --------------------------------------------------------------------------------------------------------- */
 /* "selected" and cache */
 
 struct dmoz_cache {
@@ -543,6 +583,27 @@ void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 /* --------------------------------------------------------------------------------------------------------- */
 /* sorting */
 
+#define _DEF_CMP(name)                                                                  \
+        static int dmoz_fcmp_##name(const dmoz_file_t *a, const dmoz_file_t *b)         \
+        {                                                                               \
+                return name(a->base, b->base);                                          \
+        }                                                                               \
+        static int dmoz_dcmp_##name(const dmoz_dir_t *a, const dmoz_dir_t *b)           \
+        {                                                                               \
+                return name(a->base, b->base);                                          \
+        }
+_DEF_CMP(strcmp)
+_DEF_CMP(strcasecmp)
+#if HAVE_STRVERSCMP
+_DEF_CMP(strverscmp)
+#endif
+
+/* timestamp only works for files, so can't macro-def it */
+static int dmoz_fcmp_timestamp(const dmoz_file_t *a, const dmoz_file_t *b)
+{
+        return b->timestamp - a->timestamp;
+}
+
 static int qsort_cmp_file(const void *_a, const void *_b)
 {
         const dmoz_file_t *a = *(const dmoz_file_t **) _a;
@@ -556,7 +617,7 @@ static int qsort_cmp_file(const void *_a, const void *_b)
                 return -1; /* a goes first */
         if (b->sort_order < a->sort_order)
                 return 1; /* b goes first */
-        return (*cfg_string_compare)(a->base, b->base);
+        return (*dmoz_file_cmp)(a, b);
 }
 
 static int qsort_cmp_dir(const void *_a, const void *_b)
@@ -568,7 +629,7 @@ static int qsort_cmp_dir(const void *_a, const void *_b)
                 return -1; /* a goes first */
         if (b->sort_order < a->sort_order)
                 return 1; /* b goes first */
-        return (*cfg_string_compare)(a->base, b->base);
+        return (*dmoz_dir_cmp)(a, b);
 }
 
 void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
@@ -576,6 +637,35 @@ void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
         qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
         if (dlist)
                 qsort(dlist->dirs, dlist->num_dirs, sizeof(dmoz_dir_t *), qsort_cmp_dir);
+}
+
+void cfg_load_dmoz(cfg_file_t *cfg)
+{
+        const char *ptr;
+        int i;
+
+        ptr = cfg_get_string(cfg, "Directories", "sort_with", NULL, 0, NULL);
+        if (ptr) {
+                for (i = 0; compare_funcs[i].name; i++) {
+                        if (strcasecmp(compare_funcs[i].name, ptr) == 0) {
+                                dmoz_file_cmp = compare_funcs[i].fcmp;
+                                dmoz_dir_cmp = compare_funcs[i].dcmp;
+                                break;
+                        }
+                }
+        }
+}
+
+void cfg_save_dmoz(cfg_file_t *cfg)
+{
+        int i;
+
+        for (i = 0; compare_funcs[i].name; i++) {
+                if (dmoz_file_cmp == compare_funcs[i].fcmp) {
+                        cfg_set_string(cfg, "Directories", "sort_with", compare_funcs[i].name);
+                        break;
+                }
+        }
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -693,13 +783,15 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
                         some OSes have different ideas of whether a file is hidden) */
 #if defined(WIN32)
                         /* hide these, windows makes its later */
-                        if (strcmp(ent->d_name, ".") == 0
-                        || strcmp(ent->d_name, "..") == 0)
+                        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
                                 continue;
 #else
-                        if (ent->d_name[0] == '.' || ent->d_name[namlen - 1] == '~')
+                        if (ent->d_name[0] == '.')
                                 continue;
 #endif
+                        if (ent->d_name[namlen - 1] == '~')
+                                continue;
+
                         ptr = dmoz_path_concat_len(path, ent->d_name, pathlen, namlen);
 
 #if defined(WIN32)

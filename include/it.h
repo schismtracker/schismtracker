@@ -254,9 +254,6 @@ extern int cfg_palette;
 extern char cfg_module_pattern[];
 extern char cfg_export_pattern[];
 
-typedef int (*compare_func) (const char *a, const char *b);
-extern compare_func cfg_string_compare;
-
 void cfg_init_dir(void);
 void cfg_load(void);
 void cfg_save(void);
@@ -281,6 +278,9 @@ void cfg_atexit_save_audio(cfg_file_t *cfg);
 
 void cfg_load_disko(cfg_file_t *cfg);
 void cfg_save_disko(cfg_file_t *cfg);
+
+void cfg_load_dmoz(cfg_file_t *cfg);
+void cfg_save_dmoz(cfg_file_t *cfg);
 
 /* --------------------------------------------------------------------- */
 /* text functions */

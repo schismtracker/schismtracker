@@ -42,20 +42,6 @@ char cfg_video_driver[65];
 int cfg_video_fullscreen = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 
-// ick
-struct {
-        const char *name;
-        compare_func func;
-} compare_funcs[] = {
-        {"strcmp", strcmp},
-        {"strcasecmp", strcasecmp},
-#if HAVE_STRVERSCMP
-        {"strverscmp", strverscmp},
-#endif
-        {NULL, NULL}
-};
-compare_func cfg_string_compare = strverscmp;
-
 /* --------------------------------------------------------------------- */
 
 #if defined(WIN32)
@@ -170,16 +156,6 @@ void cfg_load(void)
                 cfg_export_pattern[PATH_MAX] = 0;
         }
 
-        ptr = cfg_get_string(&cfg, "Directories", "sort_with", NULL, 0, NULL);
-        if (ptr) {
-                for (i = 0; compare_funcs[i].name; i++) {
-                        if (strcasecmp(compare_funcs[i].name, ptr) == 0) {
-                                cfg_string_compare = compare_funcs[i].func;
-                                break;
-                        }
-                }
-        }
-
         ptr = cfg_get_string(&cfg, "General", "numlock_setting", NULL, 0, NULL);
         if (!ptr)
                 status.fix_numlock_setting = NUMLOCK_GUESS;
@@ -200,6 +176,7 @@ void cfg_load(void)
         cfg_load_audio(&cfg);
         cfg_load_midi(&cfg);
         cfg_load_disko(&cfg);
+        cfg_load_dmoz(&cfg);
 
         /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -296,18 +273,13 @@ void cfg_save(void)
         /* No, it's not a directory, but whatever. */
         cfg_set_string(&cfg, "Directories", "module_pattern", cfg_module_pattern);
         cfg_set_string(&cfg, "Directories", "export_pattern", cfg_export_pattern);
-        for (i = 0; compare_funcs[i].name; i++) {
-                if (cfg_string_compare == compare_funcs[i].func) {
-                        cfg_set_string(&cfg, "Directories", "sort_with", compare_funcs[i].name);
-                        break;
-                }
-        }
 
         cfg_save_info(&cfg);
         cfg_save_patedit(&cfg);
         cfg_save_audio(&cfg);
         cfg_save_palette(&cfg);
         cfg_save_disko(&cfg);
+        cfg_save_dmoz(&cfg);
 
         cfg_write(&cfg);
         cfg_free(&cfg);
