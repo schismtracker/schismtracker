@@ -306,7 +306,7 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 
                 envpan = CLAMP(envpan, 0, 64);
 
-                int pan = chan->panning;
+                int pan = chan->final_panning;
 
                 if (pan >= 128) {
                         pan += ((envpan - 32) * (256 - pan)) / 32;
