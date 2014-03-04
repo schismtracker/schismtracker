@@ -39,13 +39,6 @@ typedef struct {
 } eq_band;
 
 
-static const unsigned int eq_linear_to_db[33] = {
-    16, 19, 22, 25, 28, 31, 34, 37,
-    40, 43, 46, 49, 52, 55, 58, 61,
-    64, 76, 88, 100, 112, 124, 136, 148,
-    160, 172, 184, 196, 208, 220, 232, 244, 256
-};
-
 
 //static REAL f2ic = (REAL)(1 << 28);
 //static REAL i2fc = (REAL)(1.0 / (1 << 28));

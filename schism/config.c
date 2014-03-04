@@ -258,7 +258,6 @@ void cfg_save(void)
 {
         char *ptr;
         cfg_file_t cfg;
-        int i;
 
         ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
         cfg_init(&cfg, ptr);

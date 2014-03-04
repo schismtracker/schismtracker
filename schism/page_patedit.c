@@ -2735,23 +2735,6 @@ static void copy_note_to_mask(void)
 
 /* --------------------------------------------------------------------- */
 
-/* input = '3', 'a', 'F', etc.
- * output = 3, 10, 15, etc. */
-static inline int char_to_hex(char c)
-{
-        switch (c) {
-        case '0'...'9':
-                return c - '0';
-        case 'a'...'f':
-                c ^= 32;
-                /* fall through */
-        case 'A'...'F':
-                return c - 'A' + 10;
-        default:
-                return -1;
-        }
-}
-
 /* pos is either 0 or 1 (0 being the left digit, 1 being the right)
  * return: 1 (move cursor) or 0 (don't)
  * this is highly modplug specific :P */
