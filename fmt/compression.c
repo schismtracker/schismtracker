@@ -49,7 +49,7 @@ static uint32_t it_readbits(int8_t n, uint32_t *bitbuf, uint32_t *bitnum, const 
 }
 
 
-void it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215)
+uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels)
 {
         const uint8_t *filebuf;         // source buffer containing compressed sample data
         const uint8_t *srcbuf;          // current position in source buffer
@@ -72,7 +72,7 @@ void it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen
                 if (srcbuf + 2 > filebuf + filelen
                     || srcbuf + 2 + (srcbuf[0] | (srcbuf[1] << 8)) > filebuf + filelen) {
                         // truncated!
-                        return;
+                        return srcbuf - filebuf;
                 }
                 srcbuf += 2;
                 bitbuf = bitnum = 0;
@@ -88,7 +88,7 @@ void it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen
                         if (width > 9) {
                                 // illegal width, abort
                                 printf("Illegal bit width %d for 8-bit sample\n", width);
-                                return;
+                                return srcbuf - filebuf;
                         }
                         value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
 
@@ -132,17 +132,19 @@ void it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen
                         d2 += d1;
                         
                         // .. and store it into the buffer
-                        *(destpos++) = it215 ? d2 : d1;
+                        *destpos = it215 ? d2 : d1;
+                        destpos += channels;
                         blkpos++;
                 }
 
                 // now subtract block length from total length and go on
                 len -= blklen;
         }
+        return srcbuf - filebuf;
 }
 
 // Mostly the same as above.
-void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215)
+uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels)
 {
         const uint8_t *filebuf;         // source buffer containing compressed sample data
         const uint8_t *srcbuf;          // current position in source buffer
@@ -165,7 +167,7 @@ void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filele
                 if (srcbuf + 2 > filebuf + filelen
                     || srcbuf + 2 + (srcbuf[0] | (srcbuf[1] << 8)) > filebuf + filelen) {
                         // truncated!
-                        return;
+                        return srcbuf - filebuf;
                 }
                 srcbuf += 2;
 
@@ -182,7 +184,7 @@ void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filele
                         if (width > 17) {
                                 // illegal width, abort
                                 printf("Illegal bit width %d for 16-bit sample\n", width);
-                                return;
+                                return srcbuf - filebuf;
                         }
                         value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
 
@@ -226,13 +228,15 @@ void it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filele
                         d2 += d1;
                         
                         // .. and store it into the buffer
-                        *(destpos++) = it215 ? d2 : d1;
+                        *destpos = it215 ? d2 : d1;
+                        destpos += channels;
                         blkpos++;
                 }
 
                 // now subtract block length from total length and go on
                 len -= blklen;
         }
+        return srcbuf - filebuf;
 }
 
 // ------------------------------------------------------------------------------------------------------------

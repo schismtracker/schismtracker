@@ -848,10 +848,28 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
                 if (len < 2) break;
                 if (flags == RS_IT2148 || flags == RS_IT2158) {
                         it_decompress8(sample->data, sample->length,
-                                        buffer, memsize, (flags == RS_IT2158));
+                                        buffer, memsize, (flags == RS_IT2158), 1);
                 } else {
                         it_decompress16(sample->data, sample->length,
-                                        buffer, memsize, (flags == RS_IT21516));
+                                        buffer, memsize, (flags == RS_IT21516), 1);
+                }
+                break;
+        case RS_IT2148S:
+        case RS_IT21416S:
+        case RS_IT2158S:
+        case RS_IT21516S:
+                len = memsize;
+                if (len < 4) break;
+                if (flags == RS_IT2148S || flags == RS_IT2158S) {
+                        uint32_t offset = it_decompress8(sample->data, sample->length,
+                                        buffer, memsize, (flags == RS_IT2158S), 2);
+                        it_decompress8(sample->data + 1, sample->length,
+                                        buffer + offset, memsize - offset, (flags == RS_IT2158S), 2);
+                } else {
+                        uint32_t offset = it_decompress16(sample->data, sample->length,
+                                        buffer, memsize, (flags == RS_IT21516S), 2);
+                        it_decompress16(sample->data + 2, sample->length,
+                                        buffer + offset, memsize - offset, (flags == RS_IT21516S), 2);
                 }
                 break;
 

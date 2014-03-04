@@ -442,11 +442,10 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
                 slurp_seek(fp, bswapLE32(shdr.sample_pointer), SEEK_SET);
                 
                 uint32_t flags = SF_LE;
+                flags |= (shdr.flag & 4) ? SF_SS : SF_M;
                 if (shdr.flag & 8) {
-                        flags |= SF_M;
                         flags |= (shdr.cvt & 4) ? SF_IT215 : SF_IT214;
                 } else {
-                        flags |= (shdr.flag & 4) ? SF_SS : SF_M;
                         // XXX for some reason I had a note in pm/fmt/it.c saying that I had found some
                         // .it files with the signed flag set incorrectly and to assume unsigned when
                         // hdr.cwtv < 0x0202. Why, and for what files?
