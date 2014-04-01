@@ -190,6 +190,12 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows)
 
         while (row < rows) {
                 chanvar = slurp_getc(fp);
+
+                if (chanvar == 255 && slurp_eof(fp)) {
+                        /* truncated file? we might want to complain or something ... eh. */
+                        return;
+                }
+
                 if (chanvar == 0) {
                         row++;
                         note += 64;
