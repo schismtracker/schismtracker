@@ -404,7 +404,7 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
                 return DW_ERROR;
         }
 
-        newdata = csf_allocate_sample(ds->length);
+        newdata = csf_allocate_sample(dsshadow.length);
         if (!newdata)
                 return DW_ERROR;
         csf_stop_sample(current_song, sample);
