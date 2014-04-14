@@ -664,6 +664,21 @@ static void do_delete_file(UNUSED void *data)
         file_list_reposition();
 }
 
+static void show_selected_song_length(void)
+{
+        if (current_file < 0 || current_file >= flist.num_files)
+                return;
+
+        char *ptr = flist.files[current_file]->path;
+        song_t *song = song_create_load(ptr);
+        if (!song) {
+                log_appendf(4, "%s: %s", ptr, fmt_strerror(errno));
+                return;
+        }
+        show_length_dialog(get_basename(ptr), csf_get_length(song));
+        csf_free(song);
+}
+
 static int file_list_handle_key(struct key_event * k)
 {
         int new_file = current_file;
@@ -708,6 +723,11 @@ static int file_list_handle_key(struct key_event * k)
                 else
                         search_text_delete_char();
                 return 1;
+        case SDLK_p:
+                if ((k->mod & KMOD_ALT) && !k->state) {
+                        show_selected_song_length();
+                        return 1;
+                } /* else fall through */
         default:
                 if (k->mouse == 0) {
                         if (k->state) return 0;

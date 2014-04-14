@@ -1755,15 +1755,20 @@ void show_song_timejump(void)
         d->action_yes = _timejump_ok;
 }
 
+void show_length_dialog(const char *label, unsigned int length)
+{
+        char *buf;
+
+        if (asprintf(&buf, "%s: %3u:%02u:%02u", label, length / 3600, (length / 60) % 60, length % 60) == -1) {
+                perror("asprintf");
+                return;
+        }
+        dialog_create(DIALOG_OK, buf, free, free, 0, buf);
+}
+
 void show_song_length(void)
 {
-        char buf[64];   /* this is way enough space ;) */
-        unsigned int length = csf_get_length(current_song);
-
-        snprintf(buf, 64, "Total song time: %3u:%02u:%02u",
-                length / 3600, (length / 60) % 60, length % 60);
-
-        dialog_create(DIALOG_OK, buf, NULL, NULL, 0, NULL);
+        show_length_dialog("Total song time", csf_get_length(current_song));
 }
 
 /* FIXME this is an illogical place to put this but whatever, i just want

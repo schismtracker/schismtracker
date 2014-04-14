@@ -173,7 +173,7 @@ static fmt_load_song_func load_song_funcs[] = {
 };
 
 
-static const char *fmt_strerror(int n)
+const char *fmt_strerror(int n)
 {
         switch (n) {
         case -LOAD_UNSUPPORTED:
@@ -185,7 +185,7 @@ static const char *fmt_strerror(int n)
         }
 }
 
-static song_t *song_create_load(const char *file)
+song_t *song_create_load(const char *file)
 {
         fmt_load_song_func *func;
         int ok = 0, err = 0;
@@ -242,6 +242,9 @@ static song_t *song_create_load(const char *file)
                 errno = err;
                 return NULL;
         }
+
+        newsong->stop_at_order = newsong->stop_at_row = -1;
+
         return newsong;
 }
 

@@ -86,16 +86,26 @@ enum song_new_flags {
 song_load:
         prompt ok/cancel if the existing song hasn't been saved.
         after loading, the current page is changed accordingly.
+        this loads into the global song.
 song_load_unchecked:
         *NO* dialog, just goes right into loading the song
-        doesn't set the page after loading
+        doesn't set the page after loading.
+        this also loads into the global song.
         return value is nonzero if the load was successful.
         generally speaking, don't use this function directly;
         use song_load instead.
+song_create_load:
+        internal back-end function that loads and returns a song.
+        the above functions both use this.
 */
 void song_new(int flags);
 void song_load(const char *file);
 int song_load_unchecked(const char *file);
+song_t *song_create_load(const char *file);
+
+// song_create_load returns NULL on error and sets errno to what might not be a standard value
+// use this to divine the meaning of these cryptic numbers
+const char *fmt_strerror(int n);
 
 int song_save(const char *file, const char *type); // IT, S3M
 int song_export(const char *file, const char *type); // WAV
@@ -127,7 +137,6 @@ char *song_get_title(void);     // editable
 char *song_get_message(void);   // editable
 
 // returned value = seconds
-unsigned int song_get_length(void);
 unsigned int song_get_length_to(int order, int row);
 void song_get_at_time(unsigned int seconds, int *order, int *row);
 
