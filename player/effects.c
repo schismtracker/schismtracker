@@ -32,6 +32,10 @@
 
 #include <math.h>
 
+
+// see also csf_midi_out_note in sndmix.c
+void (*csf_midi_out_raw)(const unsigned char *,unsigned int, unsigned int) = NULL;
+
 /* --------------------------------------------------------------------------------------------------------- */
 /* note/freq/period conversion functions */
 

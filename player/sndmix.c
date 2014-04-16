@@ -47,6 +47,9 @@ int32_t g_dry_lofs_vol = 0;
 typedef uint32_t (* convert_t)(void *, int *, uint32_t, int *, int *);
 
 
+// see also csf_midi_out_raw in effects.c
+void (*csf_midi_out_note)(int chan, const song_note_t *m) = NULL;
+
 
 // The volume we have here is in range 0..(63*255) (0..16065)
 // We should keep that range, but convert it into a logarithmic
@@ -700,7 +703,6 @@ int csf_init_player(song_t *csf, int reset)
                 global_vu_right = 0;
         }
 
-        csf_initialize_dsp(csf, reset);
         initialize_eq(reset, csf->mix_frequency);
 
         // retarded hackaround to get adlib to suck less
@@ -786,19 +788,16 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                 if (csf->mix_channels >= 2) {
                         smpcount *= 2;
                         csf->mix_stat += csf_create_stereo_mix(csf, count);
-                        csf_process_stereo_dsp(csf, count);
                 } else {
                         csf->mix_stat += csf_create_stereo_mix(csf, count);
                         mono_from_stereo(csf->mix_buffer, count);
-                        csf_process_mono_dsp(csf, count);
                 }
 
-                if (csf->mix_flags & SNDMIX_EQ) {
-                        if (csf->mix_channels >= 2)
-                                eq_stereo(csf, csf->mix_buffer, count);
-                        else
-                                eq_mono(csf, csf->mix_buffer, count);
-                }
+                // Handle eq
+                if (csf->mix_channels >= 2)
+                        eq_stereo(csf, csf->mix_buffer, count);
+                else
+                        eq_mono(csf, csf->mix_buffer, count);
 
                 mix_stat++;
 

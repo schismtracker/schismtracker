@@ -474,8 +474,6 @@ static void song_reset_play_state(void)
         // turn this crap off
         current_song->mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_DIRECTTODISK);
 
-        csf_initialize_dsp(current_song, 1);
-
         OPL_Reset(); /* gruh? */
 
         csf_set_current_order(current_song, 0);
@@ -1464,10 +1462,6 @@ void song_init_modplug(void)
         song_lock_audio();
 
         max_voices = audio_settings.channel_limit;
-        csf_set_wave_config_ex(current_song,
-                                1, // hqido - only makes sense
-                                audio_settings.noise_reduction,
-                                1); // eq
         // audio_settings.oversampling (?)
         csf_set_resampling_mode(current_song, audio_settings.interpolation_mode);
         if (audio_settings.no_ramping)

@@ -369,8 +369,6 @@ static void _export_setup(song_t *dwsong, int *bps)
 
         dwsong->multi_write = NULL; /* should be null already, but to be sure... */
 
-        csf_initialize_dsp(dwsong, 1);
-
         csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
         csf_set_wave_config(dwsong, disko_output_rate, disko_output_bits,
                 (dwsong->flags & SONG_NOSTEREO) ? 1 : disko_output_channels);

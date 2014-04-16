@@ -216,14 +216,14 @@
 
 // Global Options (Renderer)
 #define SNDMIX_REVERSESTEREO    0x0001 // swap L/R audio channels
-#define SNDMIX_NOISEREDUCTION   0x0002 // reduce hiss (do not use, it's just a simple low-pass filter)
+//#define SNDMIX_NOISEREDUCTION 0x0002 // reduce hiss (do not use, it's just a simple low-pass filter)
 //#define SNDMIX_AGC            0x0004 // automatic gain control
 #define SNDMIX_NORESAMPLING     0x0008 // force no resampling (uninterpolated)
 #define SNDMIX_HQRESAMPLER      0x0010 // cubic resampling
 //#define SNDMIX_MEGABASS       0x0020
 //#define SNDMIX_SURROUND       0x0040
 //#define SNDMIX_REVERB         0x0080
-#define SNDMIX_EQ               0x0100 // apply EQ
+//#define SNDMIX_EQ             0x0100 // apply EQ (always on)
 //#define SNDMIX_SOFTPANNING    0x0200
 #define SNDMIX_ULTRAHQSRCMODE   0x0400 // polyphase resampling (or FIR? I don't know)
 // Misc Flags (can safely be turned on or off)
@@ -646,7 +646,6 @@ int csf_get_highest_used_channel(song_t *csf);
 
 
 int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t channels);
-int csf_set_wave_config_ex(song_t *csf, int hqido, int nr, int eq);
 
 // Mixer Config
 int csf_init_player(song_t *csf, int reset); // bReset=false
@@ -657,11 +656,6 @@ int csf_set_resampling_mode(song_t *csf, uint32_t mode); // SRCMODE_XXXX
 unsigned int csf_read(song_t *csf, void *v_buffer, unsigned int bufsize);
 int csf_process_tick(song_t *csf);
 int csf_read_note(song_t *csf);
-
-// snd_dsp
-void csf_initialize_dsp(song_t *csf, int reset);
-void csf_process_stereo_dsp(song_t *csf, int count);
-void csf_process_mono_dsp(song_t *csf, int count);
 
 // snd_fx
 unsigned int csf_get_length(song_t *csf); // (in seconds)

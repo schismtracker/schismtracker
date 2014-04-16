@@ -347,7 +347,6 @@ schismtracker_SOURCES = \
 	schism/version.c		\
 	player/csndfile.c		\
 	player/mixutil.c		\
-	player/dsp.c			\
 	player/equalizer.c		\
 	player/mixer.c			\
 	player/filters.c		\
