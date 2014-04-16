@@ -143,10 +143,6 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
                 samples_played += n;
         }
 
-        if (n < len) {
-                memmove(audio_buffer, audio_buffer + (len-n),
-                                (len-(len - n)) * audio_sample_size);
-        }
         memcpy(audio_buffer, stream, n * audio_sample_size);
 
         if (audio_output_bits == 8) {
