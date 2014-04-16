@@ -736,7 +736,6 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
         max = bufsize / sample_size;
 
         if (!max || !buffer) {
-                printf("no buf what the fuck\n");
                 return 0;
         }
 

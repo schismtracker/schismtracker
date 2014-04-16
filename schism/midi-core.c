@@ -56,7 +56,7 @@ static SDL_cond *midi_play_cond = NULL;
 static struct midi_provider *port_providers = NULL;
 
 
-/* time shit */
+/* all this just for usleep?! (maybe we should have sys/win32/usleep.c) */
 #ifdef WIN32
 #include <windows.h>
 

@@ -55,7 +55,7 @@ void macosx_volume_read(int *left, int *right)
         if (e != 0) return;
 
         size=sizeof(ch);
-        e = AudioDeviceGetProperty(od, /* shit */
+        e = AudioDeviceGetProperty(od,
                 0, /* QA1016 says "0" is master channel */
                 false,
                 kAudioDevicePropertyPreferredChannelsForStereo,
@@ -93,7 +93,7 @@ void macosx_volume_write(int left, int right)
         if (e != 0) return;
 
         size=sizeof(ch);
-        e = AudioDeviceGetProperty(od, /* shit */
+        e = AudioDeviceGetProperty(od,
                 0, /* QA1016 says "0" is master channel */
                 false,
                 kAudioDevicePropertyPreferredChannelsForStereo,
