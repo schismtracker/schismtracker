@@ -79,12 +79,6 @@ static void preferences_draw_const(void)
         draw_box(25, 22+i*3, 47, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
         draw_box(52, 22+i*3, 74, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
 
-        draw_text("Oversampling", 57, 25, 0, 2);
-        draw_text("Noise Reduction", 54, 26, 0, 2);
-
-        draw_fill_chars(73, 24, 77, 26, 0);
-        draw_box(69, 24, 78, 27,  BOX_THIN | BOX_INNER | BOX_INSET);
-
 #define CORNER_BOTTOM "http://schismtracker.org/"
         draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 48, 1, 2);
 }
@@ -123,8 +117,6 @@ static void preferences_set_page(void)
                                 = audio_settings.no_ramping?0:1;
         widgets_preferences[i+11].d.togglebutton.state
                                 = audio_settings.no_ramping?1:0;
-        widgets_preferences[i+13].d.toggle.state = audio_settings.oversampling;
-        widgets_preferences[i+14].d.toggle.state = audio_settings.noise_reduction;
 }
 
 /* --------------------------------------------------------------------- */
@@ -159,8 +151,6 @@ static void change_mixer(void)
                         audio_settings.interpolation_mode = i;
                 }
         }
-        audio_settings.oversampling = widgets_preferences[i+13].d.toggle.state;
-        audio_settings.noise_reduction = widgets_preferences[i+14].d.toggle.state;
         audio_settings.no_ramping = widgets_preferences[i+11].d.togglebutton.state;
 
         song_init_modplug();
@@ -253,14 +243,5 @@ void preferences_load_page(struct page *page)
                         i+10, i+12, i+12, i+13, i+13,
                         (void *) save_config_now,
                         "Save Output Configuration", 2);
-
-        create_toggle(widgets_preferences+i+13, /* Oversampling */
-                        70, 25,
-                        i+13,i+14,1+i, i+13,i+14,
-                        change_mixer);
-        create_toggle(widgets_preferences+i+14, /* Noise Reduction */
-                        70, 26,
-                        i+13,i+15,1+i, i+14,i+15,
-                        change_mixer);
 }
 

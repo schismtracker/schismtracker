@@ -949,9 +949,6 @@ void cfg_load_audio(cfg_file_t *cfg)
 
         CFG_GET_M(channel_limit, DEF_CHANNEL_LIMIT);
         CFG_GET_M(interpolation_mode, SRCMODE_LINEAR);
-        CFG_GET_M(oversampling, 1);
-        CFG_GET_M(hq_resampling, 1);
-        CFG_GET_M(noise_reduction, 1);
         CFG_GET_M(no_ramping, 0);
         CFG_GET_M(surround_effect, 1);
 
@@ -990,9 +987,6 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 
         CFG_SET_M(channel_limit);
         CFG_SET_M(interpolation_mode);
-        CFG_SET_M(oversampling);
-        CFG_SET_M(hq_resampling);
-        CFG_SET_M(noise_reduction);
         CFG_SET_M(no_ramping);
 
         // Say, what happened to the switch for this in the gui?
@@ -1462,7 +1456,6 @@ void song_init_modplug(void)
         song_lock_audio();
 
         max_voices = audio_settings.channel_limit;
-        // audio_settings.oversampling (?)
         csf_set_resampling_mode(current_song, audio_settings.interpolation_mode);
         if (audio_settings.no_ramping)
                 current_song->mix_flags |= SNDMIX_NORAMPING;
