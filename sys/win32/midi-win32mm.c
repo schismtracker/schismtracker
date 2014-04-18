@@ -295,7 +295,7 @@ int win32mm_midi_setup(void)
                 XP_timeBeginPeriod = (void*)GetProcAddress(winmm,"timeBeginPeriod");
                 XP_timeSetEvent = (void*)GetProcAddress(winmm,"timeSetEvent");
 
-                if (XP_timeSetEvent && XP_timeBeginPeriod && XP_timeSetEvent) {
+                if (XP_timeGetDevCaps && XP_timeBeginPeriod && XP_timeSetEvent) {
                         if (XP_timeGetDevCaps(&caps, sizeof(caps)) == 0) {
                                 mm_period = caps.wPeriodMin;
                                 if (XP_timeBeginPeriod(mm_period) == 0) {
