@@ -147,7 +147,7 @@ void float_to_mono_mix(const float *in, int *out, unsigned int count)
 // The original C version was written by Rani Assaf <rani@magic.metawire.com>
 
 
-// Clip and convert to 8 bit
+// Clip and convert to 8 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
 unsigned int clip_32_to_8(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
 {
     unsigned char *p = (unsigned char *) ptr;
@@ -173,6 +173,7 @@ unsigned int clip_32_to_8(void *ptr, int *buffer, unsigned int samples, int *min
 }
 
 
+// Clip and convert to 16 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
 unsigned int clip_32_to_16(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
 {
     signed short *p = (signed short *) ptr;
@@ -198,7 +199,8 @@ unsigned int clip_32_to_16(void *ptr, int *buffer, unsigned int samples, int *mi
 }
 
 
-// 24-bit might not work...
+// Clip and convert to 24 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
+// Note, this is 24bit, not 24-in-32bits. The former is used in .wav. The latter is used in audio IO
 unsigned int clip_32_to_24(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
 {
     /* the inventor of 24bit anything should be shot */
@@ -225,11 +227,11 @@ unsigned int clip_32_to_24(void *ptr, int *buffer, unsigned int samples, int *mi
         p += 3;
     }
 
-    return samples * 2;
+    return samples * 3;
 }
 
 
-// 32-bit might not work...
+// Clip and convert to 32 bit(int). mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
 unsigned int clip_32_to_32(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
 {
     signed int *p = (signed int *) ptr;
@@ -248,9 +250,9 @@ unsigned int clip_32_to_32(void *ptr, int *buffer, unsigned int samples, int *mi
             maxs[i & 1] = n;
 
         // 32-bit signed
-        p[i] = (n >> MIXING_ATTENUATION);
+        p[i] = (n << MIXING_ATTENUATION);
     }
 
-    return samples * 2;
+    return samples * 4;
 }
 

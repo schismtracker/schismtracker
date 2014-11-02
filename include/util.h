@@ -105,6 +105,49 @@ extern MALLOC char *str_dup(const char *);
 extern void *mem_realloc(void *,size_t);
 extern void mem_free(void *);
 
+/*Conversion*/
+/* linear -> deciBell*/
+/* amplitude normalized to 1.0f.*/
+extern float dB(float amplitude);
+
+/// deciBell -> linear*/
+extern float dB2_amp(float db);
+
+/* linear -> deciBell*/
+/* power normalized to 1.0f.*/
+extern float pdB(float power);
+
+/* deciBell -> linear*/
+extern float dB2_power(float db);
+
+/* linear -> deciBell*/
+/* amplitude normalized to 1.0f.*/
+/* Output scaled (and clipped) to 128 lines with noisefloor range.*/
+/* ([0..128] = [-noisefloor..0dB])*/
+/* correction_dBs corrects the dB after converted, but before scaling.*/
+extern short dB_s(int noisefloor, float amplitude, float correction_dBs);
+
+/* deciBell -> linear*/
+/* Input scaled to 128 lines with noisefloor range.*/
+/* ([0..128] = [-noisefloor..0dB])*/
+/* amplitude normalized to 1.0f.*/
+/* correction_dBs corrects the dB after converted, but before scaling.*/
+extern short dB2_amp_s(int noisefloor, int db, float correction_dBs);
+
+/* linear -> deciBell*/
+/* power normalized to 1.0f.*/
+/* Output scaled (and clipped) to 128 lines with noisefloor range.*/
+/* ([0..128] = [-noisefloor..0dB])*/
+/* correction_dBs corrects the dB after converted, but before scaling.*/
+extern short pdB_s(int noisefloor, float power, float correction_dBs);
+
+/* deciBell -> linear*/
+/* Input scaled to 128 lines with noisefloor range.*/
+/* ([0..128] = [-noisefloor..0dB])*/
+/* power normalized to 1.0f.*/
+/* correction_dBs corrects the dB after converted, but before scaling.*/
+extern short dB2_power_s(int noisefloor, int db, float correction_dBs);
+
 /* formatting */
 /* for get_{time,date}_string, buf should be (at least) 27 chars; anything past that isn't used. */
 char *get_date_string(time_t when, char *buf);

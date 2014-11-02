@@ -30,6 +30,8 @@
 
 #include "sdlmain.h"
 
+#include <math.h>
+
 #define SAMPLE_DATA_COLOR 13 /* Sample data */
 #define SAMPLE_LOOP_COLOR 3 /* Sample loop marks */
 #define SAMPLE_MARK_COLOR 6 /* Play mark color */
@@ -41,33 +43,42 @@ there are only two changes between 8- and 16-bit samples:
 - the type of 'data'
 - the amount to divide (note though, this number is used twice!)
 
-fakemono is 2 when drawing the mono oscilloscope in the top status section, 1 otherwise */
+output channels = number of oscis
+input channels = number of channels in data
+*/
 
 static void _draw_sample_data_8(struct vgamem_overlay *r,
-        signed char *data, unsigned long length, int channels, int fakemono)
+        signed char *data, unsigned long length, unsigned int inputchans, unsigned int outputchans)
 {
         unsigned long pos;
         int level, xs, ys, xe, ye, step;
-        int nh, cc, np;
+        int nh, cc, co, np;
         int chip;
 
-        nh = (r->height / channels);
+        nh = (r->height / outputchans);
         np = r->height - (nh / 2);
 
-        length /= channels;
+        length /= inputchans;
         chip = (length < (unsigned int) r->width * 2);
 
-        for (cc = 0; cc < channels; cc++) {
+        for (cc = 0; cc < outputchans; cc++) {
                 pos = 0;
+                co = 0;
                 step = MAX(1, (length / r->width) >> 8);
-
-                level = data[(pos * channels * fakemono) + cc] * nh / (SCHAR_MAX - SCHAR_MIN + 1);
+                level=0;
+                do {
+                        level+=ceil(data[(pos * inputchans) + cc+co] * nh / (float)(SCHAR_MAX - SCHAR_MIN + 1));
+                } while (co++ < inputchans-outputchans);
                 xs = 0;
                 ys = (np - 1) - level;
                 ys = CLAMP(ys, 0, r->height - 1);
                 do {
                         pos += step;
-                        level = data[(pos * channels * fakemono) + cc] * nh / (SCHAR_MAX - SCHAR_MIN + 1);
+                        co = 0;
+                        level=0;
+                        do {
+                                level+=ceil(data[(pos * inputchans) + cc+co] * nh / (SCHAR_MAX - SCHAR_MIN + 1));
+                        } while (co++ < inputchans-outputchans);
                         xe = pos * r->width / length;
                         ye = (np - 1) - level;
                         xe = CLAMP(xe, 0, r->width - 1);
@@ -83,30 +94,37 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 }
 
 static void _draw_sample_data_16(struct vgamem_overlay *r,
-         signed short *data, unsigned long length, int channels, int fakemono)
+         signed short *data, unsigned long length, unsigned int inputchans, unsigned int outputchans)
 {
         unsigned long pos;
         int level, xs, ys, xe, ye, step;
-        int nh, cc, np;
+        int nh, cc, co, np;
         int chip;
 
-        nh = (r->height / channels);
+        nh = (r->height / outputchans);
         np = r->height - (nh / 2);
 
-        length /= channels;
+        length /= inputchans;
         chip = (length < (unsigned int) r->width * 2);
 
-        for (cc = 0; cc < channels; cc++) {
+        for (cc = 0; cc < outputchans; cc++) {
                 pos = 0;
+                co = 0;
                 step = MAX(1, (length / r->width) >> 8);
-
-                level = data[(pos * channels * fakemono) + cc] * nh / (SHRT_MAX - SHRT_MIN + 1);
+                level=0;
+                do {
+                        level += ceil(data[(pos * inputchans) + cc+co] * nh / (float)(SHRT_MAX - SHRT_MIN + 1));
+                } while(co++ < inputchans-outputchans);
                 xs = 0;
                 ys = (np - 1) - level;
                 ys = CLAMP(ys, 0, r->height - 1);
                 do {
                         pos += step;
-                        level = data[(pos * channels * fakemono) + cc] * nh / (SHRT_MAX - SHRT_MIN + 1);
+                        co = 0;
+                        level = 0;
+                        do {
+                                level = ceil(data[(pos * inputchans) + cc+co] * nh / (float)(SHRT_MAX - SHRT_MIN + 1));
+                        } while (co++ < inputchans-outputchans);
                         xe = pos * r->width / length;
                         ye = (np - 1) - level;
                         xe = CLAMP(xe, 0, r->width - 1);
@@ -248,14 +266,15 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
         }
 
         /* do the actual drawing */
+        int chans = sample->flags & CHN_STEREO ? 2 : 1;
         if (sample->flags & CHN_16BIT)
                 _draw_sample_data_16(r, (signed short *) sample->data,
-                                             sample->length * (sample->flags & CHN_STEREO ? 2 : 1),
-                                sample->flags & CHN_STEREO ? 2 : 1, 1);
+                                sample->length * chans,
+                                chans, chans);
         else
                 _draw_sample_data_8(r, sample->data,
-                                             sample->length * (sample->flags & CHN_STEREO ? 2 : 1),
-                                sample->flags & CHN_STEREO ? 2 : 1, 1);
+                                sample->length * chans,
+                                chans, chans);
 
         if ((status.flags & CLASSIC_MODE) == 0)
                 _draw_sample_play_marks(r, sample);
@@ -265,18 +284,18 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 }
 
 void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data,
-        int length, unsigned int channels, int fakemono)
+        int length, unsigned int inputchans, unsigned int outputchans)
 {
         vgamem_ovl_clear(r, 0);
-        _draw_sample_data_16(r, data, length, channels, fakemono);
+        _draw_sample_data_16(r, data, length, inputchans, outputchans);
         vgamem_ovl_apply(r);
 }
 
 void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data,
-        int length, unsigned int channels, int fakemono)
+        int length, unsigned int inputchans, unsigned int outputchans)
 {
         vgamem_ovl_clear(r, 0);
-        _draw_sample_data_8(r, data, length, channels, fakemono);
+        _draw_sample_data_8(r, data, length, inputchans, outputchans);
         vgamem_ovl_apply(r);
 }
 

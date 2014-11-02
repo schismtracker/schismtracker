@@ -39,6 +39,8 @@ extraneous libraries (i.e. GLib). */
 
 #include <stdarg.h>
 
+#include <math.h>
+
 #if defined(__amigaos4__)
 # define FALLBACK_DIR "." /* not used... */
 #elif defined(WIN32)
@@ -103,6 +105,75 @@ void *mem_realloc(void *orig, size_t amount)
         return q;
 }
 
+
+/* --------------------------------------------------------------------- */
+/* CONVERSION FUNCTIONS */
+
+/* linear -> deciBell */
+/* amplitude normalized to 1.0f. */
+float dB(float amplitude)
+{
+        return 20.0f * log10f(amplitude);
+}
+
+/* deciBell -> linear */
+float dB2_amp(float db)
+{
+        return powf(10.0f, db / 20.0f);
+}
+
+/* linear -> deciBell */
+/* power normalized to 1.0f. */
+float pdB(float power)
+{
+        return 10.0f * log10f(power);
+}
+
+/* deciBell -> linear */
+float dB2_power(float db)
+{
+        return powf(10.0f, db / 10.0f);
+}
+/* linear -> deciBell */
+/* amplitude normalized to 1.0f. */
+/* Output scaled (and clipped) to 128 lines with noisefloor range. */
+/* ([0..128] = [-noisefloor..0dB]) */
+/* correction_dBs corrects the dB after converted, but before scaling.*/
+short dB_s(int noisefloor, float amplitude, float correction_dBs)
+{
+        float db = dB(amplitude) + correction_dBs;
+        return CLAMP((int)(128.f*(db+noisefloor))/noisefloor, 0, 127);
+}
+
+/* deciBell -> linear */
+/* Input scaled to 128 lines with noisefloor range. */
+/* ([0..128] = [-noisefloor..0dB]) */
+/* amplitude normalized to 1.0f. */
+/* correction_dBs corrects the dB after converted, but before scaling.*/
+short dB2_amp_s(int noisefloor, int db, float correction_dBs)
+{
+        return dB2_amp((db*noisefloor/128.f)-noisefloor-correction_dBs);
+}
+/* linear -> deciBell */
+/* power normalized to 1.0f. */
+/* Output scaled (and clipped) to 128 lines with noisefloor range. */
+/* ([0..128] = [-noisefloor..0dB]) */
+/* correction_dBs corrects the dB after converted, but before scaling.*/
+short pdB_s(int noisefloor, float power, float correction_dBs)
+{
+        float db = pdB(power)+correction_dBs;
+        return CLAMP((int)(128.f*(db+noisefloor))/noisefloor, 0, 127);
+}
+
+/* deciBell -> linear */
+/* Input scaled to 128 lines with noisefloor range. */
+/* ([0..128] = [-noisefloor..0dB]) */
+/* power normalized to 1.0f. */
+/* correction_dBs corrects the dB after converted, but before scaling.*/
+short dB2_power_s(int noisefloor, int db, float correction_dBs)
+{
+        return dB2_power((db*noisefloor/128.f)-noisefloor-correction_dBs);
+}
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
 

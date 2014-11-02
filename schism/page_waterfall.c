@@ -34,13 +34,19 @@
 
 
 /* consts */
-#define FFT_BUFFER_SIZE_LOG     9
-#define FFT_BUFFER_SIZE         512 /*(1 << FFT_BUFFER_SIZE_LOG)*/
-#define FFT_OUTPUT_SIZE         256 /* FFT_BUFFER_SIZE/2 */
+#define FFT_BUFFER_SIZE_LOG     11
+#define FFT_BUFFER_SIZE         2048 /*(1 << FFT_BUFFER_SIZE_LOG)*/
+#define FFT_OUTPUT_SIZE         1024 /* FFT_BUFFER_SIZE/2 */  /*WARNING: Hardcoded in page.c when declaring current_fft_data*/
+#define FFT_BANDS_SIZE          256    /*WARNING: Hardcoded in page.c when declaring fftlog and when using it in vis_fft*/
 #define PI      ((double)3.14159265358979323846)
+/*This value is used internally to scale the power output of the FFT to decibells.*/
+static const float fft_inv_bufsize = 1.0f/(FFT_BUFFER_SIZE>>2);
+/*Scaling for FFT. Input is expected to be signed short int.*/
+static const float inv_s_range = 1.f/32768.f;
 
 short current_fft_data[2][FFT_OUTPUT_SIZE];
-
+/*Table to change the scale from linear to log.*/
+short fftlog[FFT_BANDS_SIZE];
 
 void vis_init(void);
 void vis_work_16s(short *in, int inlen);
@@ -50,19 +56,23 @@ void vis_work_8m(char *in, int inlen);
 
 /* variables :) */
 static int mono = 0;
-static int gain = -5;
+//gain, in dBs.
+//static int gain = 0;
+static int noisefloor=72;
 
 /* get the _whole_ display */
 static struct vgamem_overlay ovl = { 0, 0, 79, 49, NULL, 0, 0, 0 };
 
 /* tables */
 static unsigned int bit_reverse[FFT_BUFFER_SIZE];
+static float window[FFT_BUFFER_SIZE];
 static float precos[FFT_OUTPUT_SIZE];
 static float presin[FFT_OUTPUT_SIZE];
 
 /* fft state */
 static float state_real[FFT_BUFFER_SIZE];
 static float state_imag[FFT_BUFFER_SIZE];
+
 
 static int _reverse_bits(unsigned int in) {
         unsigned int r = 0, n;
@@ -79,15 +89,56 @@ void vis_init(void)
 
         for (n = 0; n < FFT_BUFFER_SIZE; n++) {
                 bit_reverse[n] = _reverse_bits(n);
+#if 0
+                /*Rectangular/none*/
+                window[n] = 1;
+                /*Cosine/sine window*/
+                window[n] = sin(PI * n/ FFT_BUFFER_SIZE -1);
+                /*Hann Window*/
+                window[n] = 0.50f - 0.50f * cos(2.0*PI * n / (FFT_BUFFER_SIZE - 1));
+                /*Hamming Window*/
+                window[n] = 0.54f - 0.46f * cos(2.0*PI * n / (FFT_BUFFER_SIZE - 1));
+                /*Gaussian*/
+                window[n] = powf(M_E,-0.5f *pow((n-(FFT_BUFFER_SIZE-1)/2.f)/(0.4*(FFT_BUFFER_SIZE-1)/2.f),2.f));
+                /*Blackmann*/
+                window[n] = 0.42659 - 0.49656 * cos(2.0*PI * n/ (FFT_BUFFER_SIZE-1)) + 0.076849 * cos(4.0*PI * n /(FFT_BUFFER_SIZE-1));
+                /*Blackman-Harris*/
+                window[n] = 0.35875 - 0.48829 * cos(2.0*PI * n/ (FFT_BUFFER_SIZE-1)) + 0.14128 * cos(4.0*PI * n /(FFT_BUFFER_SIZE-1)) - 0.01168 * cos(6.0*PI * n /(FFT_BUFFER_SIZE-1));
+#endif
+                /*Hann Window*/
+                window[n] = 0.50f - 0.50f * cos(2.0*PI * n / (FFT_BUFFER_SIZE - 1));
         }
         for (n = 0; n < FFT_OUTPUT_SIZE; n++) {
                 float j = (2.0*PI) * n / FFT_BUFFER_SIZE;
                 precos[n] = cos(j);
                 presin[n] = sin(j);
         }
+#if 0
+        /*linear*/
+        fftlog[n]=n;
+#elif 1
+        /*exponential.*/
+        float factor = (float)FFT_OUTPUT_SIZE/(FFT_BANDS_SIZE*FFT_BANDS_SIZE);
+        for (n = 0; n < FFT_BANDS_SIZE; n++ ) {
+                fftlog[n]=n*n*factor;
+        }
+#else
+        /*constant note scale.*/
+        float factor = 8.f/(float)FFT_BANDS_SIZE;
+        float factor2 = (float)FFT_OUTPUT_SIZE/256.f;
+        for (n = 0; n < FFT_BANDS_SIZE; n++ ) {
+                fftlog[n]=(powf(2.0f,n*factor)-1.f)*factor2;
+        }
+#endif
 }
 
-/* samples should already be averaged */
+/*
+* Understanding In and Out:
+* input is the samples (so, it is amplitude). The scale is expected to be signed 16bits.
+*    The window function calculated in "window" will automatically be applied.
+* output is a value between 0 and 128 representing 0 = noisefloor variable
+*    and 128 = 0dBFS (deciBell, FullScale) for each band.
+*/
 static inline void _vis_data_work(short output[FFT_OUTPUT_SIZE],
                         short input[FFT_BUFFER_SIZE])
 {
@@ -102,7 +153,8 @@ static inline void _vis_data_work(short output[FFT_OUTPUT_SIZE],
         float *rp = state_real;
         float *ip = state_imag;
         for (n = 0; n < FFT_BUFFER_SIZE; n++) {
-                *rp++ = input[ bit_reverse[n] ];
+                int nr = bit_reverse[n];
+                *rp++ = (float)input[ nr ] * inv_s_range * window[nr];
                 *ip++ = 0;
         }
         ex = 1;
@@ -128,48 +180,74 @@ static inline void _vis_data_work(short output[FFT_OUTPUT_SIZE],
         /* collect fft */
         rp = state_real; rp++;
         ip = state_imag; ip++;
+        const float fft_dbinv_bufsize = dB(fft_inv_bufsize);
         for (n = 0; n < FFT_OUTPUT_SIZE; n++) {
+                /* "out" is the total power for each band.
+                * To get amplitude from "output", use sqrt(out[N])/(sizeBuf>>2)
+                * To get dB from "output", use powerdB(out[N])+db(1/(sizeBuf>>2)).
+                * powerdB is = 10 * log10(in)
+                * dB is = 20 * log10(in)
+                */
                 out = ((*rp) * (*rp)) + ((*ip) * (*ip));
-                output[n] = ((int)sqrt(out));
+                /* +0.0000000001f is -100dB of power. Used to prevent evaluating powerdB(0.0) */
+                output[n] = pdB_s(noisefloor, out+0.0000000001f,fft_dbinv_bufsize);
                 rp++;ip++;
         }
-
-        /* scale these back a bit */
-        output[0] /= 4;
-        output[(FFT_OUTPUT_SIZE-1)] /= 4;
 }
-static inline unsigned char *_dobits(unsigned char *q,
-                        short d[FFT_OUTPUT_SIZE], int m, int y)
+/* convert the fft bands to columns of screen
+out and d have a range of 0 to 128 */
+static inline void _get_columns_from_fft(unsigned char *out,
+                                short d[FFT_OUTPUT_SIZE], int m)
 {
-        int i, j, c;
-
-        for (i = 0; i < FFT_OUTPUT_SIZE; i++) {
-                /* eh... */
-                j = d[i];
-                if (gain < 0)
-                        j >>= -gain;
-                else
-                        j <<= gain;
-
-                c = 128 + j;
-                if (c > 255) c = 255;
-                *q = c; q += y;
-                if (m) { *q = c; q += y; }
+        int i, j, c, a;
+        for (i = 0, a=0; i < FFT_BANDS_SIZE; i++)  {
+                float afloat = fftlog[i];
+                float floora = floor(afloat);
+                if (afloat + 1.0f > fftlog[i+1]) {
+                        a = (int)floora;
+                        j = d[a] + (d[a+1]-d[a])*(afloat-floora);
+                        a = floor(afloat+0.5f);
+                }
+                else {
+                        j=d[a];
+                        while(a<=afloat){
+                                j = max(j,d[a]);
+                                a++;
+                        }
+                }
+                *out = j; out++;
+                /*If mono, repeat the value.*/
+                if (m) { *out = j; out++; }
                 if ((i % FUDGE_256_TO_WIDTH) == 0) {
                         /* each band is 2.50 px wide;
                          * output display is 640 px
                          */
-                        *q = c; q += y;
-                        if (m) { *q = c; q += y; }
+                        *out = j; out++;
+                        /*If mono, repeat the value.*/
+                        if (m) { *out = j; out++; }
                 }
+        }
+}
+
+/* Convert the output of */
+static inline unsigned char *_dobits(unsigned char *q,
+                        unsigned char *in, int length, int y)
+{
+        int i, c;
+        for (i = 0; i < length; i++)  {
+                /* j is has range 0 to 128. Now use the upper side for drawing.*/
+                c = 128 + in[i];
+                if (c > 255) c = 255;
+                *q = c; q += y;
         }
         return q;
 }
+/*x = screen.x, h = 0..128, c = colour */
 static inline void _drawslice(int x, int h, int c)
 {
         int y;
 
-        y = ((h>>10) & (SCOPE_ROWS-1))+1;
+        y = ((h>>2) & (SCOPE_ROWS-1))+1;
         vgamem_ovl_drawline(&ovl,
                 x, (NATIVE_SCREEN_HEIGHT-y),
                 x, (NATIVE_SCREEN_HEIGHT-1), c);
@@ -177,7 +255,9 @@ static inline void _drawslice(int x, int h, int c)
 static void _vis_process(void)
 {
         unsigned char *q;
-        int i, j, k;
+        int i, j, k, a, v1, v2;
+        k = NATIVE_SCREEN_WIDTH/2;
+        unsigned char outfft[NATIVE_SCREEN_WIDTH];
 
         vgamem_lock();
 
@@ -192,10 +272,13 @@ static void _vis_process(void)
                 for (i = 0; i < FFT_OUTPUT_SIZE; i++)
                         current_fft_data[0][i] = (current_fft_data[0][i]
                                         + current_fft_data[1][i]) / 2;
-                _dobits(q, current_fft_data[0], 1, 1);
+                _get_columns_from_fft(outfft, current_fft_data[0], 1);
+                _dobits(q, outfft, NATIVE_SCREEN_WIDTH, 1);
         } else {
-                _dobits(q+320, current_fft_data[0], 0, -1);
-                _dobits(q+320, current_fft_data[1], 0, 1);
+                _get_columns_from_fft(outfft, current_fft_data[0], 0);
+                _dobits(q+k, outfft, k, -1);
+                _get_columns_from_fft(outfft+k, current_fft_data[1], 0);
+                _dobits(q+k, outfft+k, k, 1);
         }
 
         /* draw the scope at the bottom */
@@ -203,36 +286,15 @@ static void _vis_process(void)
         i = SCOPE_ROWS*NATIVE_SCREEN_WIDTH;
         memset(q,0,i);
         if (mono) {
-                for (i = j = 0; i < FFT_OUTPUT_SIZE; i++) {
-                        _drawslice(j, current_fft_data[0][i],5);
-                        j++;
-                        if ((i % FUDGE_256_TO_WIDTH) == 0) {
-                                _drawslice(j, current_fft_data[0][i],5);
-                                j++;
-                                _drawslice(j, current_fft_data[1][i],5);
-                                j++;
-                        }
-                        _drawslice(j, current_fft_data[1][i],5);
-                        j++;
+                for (i = 0; i < NATIVE_SCREEN_WIDTH; i++) {
+                        _drawslice(i, outfft[i],5);
                 }
         } else {
-                j = 0;
-                k = NATIVE_SCREEN_WIDTH/2;
-                for (i = 0; i < FFT_OUTPUT_SIZE; i++) {
-                        _drawslice(k-j, current_fft_data[0][i],5);
-                        _drawslice(k+j, current_fft_data[1][i],5);
-                        j++;
-                        if ((i % FUDGE_256_TO_WIDTH) == 0) {
-                                _drawslice(k-j, current_fft_data[0][i],5);
-                                _drawslice(k+j, current_fft_data[1][i],5);
-                                j++;
-                                _drawslice(k-j, current_fft_data[0][i],5);
-                                _drawslice(k+j, current_fft_data[1][i],5);
-                                j++;
-                        }
-                        _drawslice(k-j, current_fft_data[0][i],5);
-                        _drawslice(k+j, current_fft_data[1][i],5);
-                        j++;
+                for (i = 0; i < k; i++) {
+                        _drawslice(k-i-1, outfft[i],5);
+                }
+                for (i = 0; i < k; i++) {
+                        _drawslice(k+i, outfft[k+i],5);
                 }
         }
 
@@ -382,13 +444,13 @@ static int waterfall_handle_key(struct key_event *k)
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 if (k->state) return 1;
-                gain--;
+                noisefloor-=4;
                 break;
         case SDLK_RIGHT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 if (k->state) return 1;
-                gain++;
+                noisefloor+=4;
                 break;
         case SDLK_g:
                 if (k->mod & KMOD_ALT) {
@@ -465,7 +527,7 @@ static int waterfall_handle_key(struct key_event *k)
                 return 0;
         };
 
-        gain = CLAMP(gain, -8, 8);
+        noisefloor = CLAMP(noisefloor, 36, 96);
         return 1;
 }
 

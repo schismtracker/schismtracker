@@ -1358,8 +1358,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
         chan->flags &= ~CHN_KEYOFF;
         // Enable Ramping
         if (!porta) {
-                chan->vu_meter = 0x100;
-                chan->strike = 4; /* this affects how long the initial hit on the playback marks lasts */
+                chan->vu_meter = 0x0;
+                chan->strike = 4; /* this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)*/
                 chan->flags &= ~CHN_FILTER;
                 chan->flags |= CHN_FASTVOLRAMP;
                 if (!retrig) {

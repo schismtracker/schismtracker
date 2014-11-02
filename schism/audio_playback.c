@@ -724,11 +724,11 @@ int song_get_max_channels(void)
 {
         return max_channels_used;
 }
-
+// Returns the max value in dBs, scaled as 0 = -40dB and 128 = 0dB.
 void song_get_vu_meter(int *left, int *right)
 {
-        *left = global_vu_left;
-        *right = global_vu_right;
+        *left = dB_s(40, global_vu_left/256.f, 0.f);
+        *right = dB_s(40, global_vu_right/256.f, 0.f);
 }
 
 void song_update_playing_instrument(int i_changed)

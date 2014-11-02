@@ -642,6 +642,7 @@ static inline void update_vu_meter(song_voice_t *chan)
         uint32_t vutmp = chan->final_volume >> (14 - 8);
         if (vutmp > 0xFF) vutmp = 0xFF;
         if (chan->flags & CHN_ADLIB) {
+                if (chan->strike>2) { chan->vu_meter=(0xFF*chan->final_volume)>>14;}
                 // fake VU decay (intentionally similar to ST3)
                 if (chan->vu_meter > VUMETER_DECAY) {
                         chan->vu_meter -= VUMETER_DECAY;
@@ -673,8 +674,7 @@ static inline void update_vu_meter(song_voice_t *chan)
                         n = -n;
                 vutmp *= n;
                 vutmp >>= 7; // 0..255
-                if (vutmp)
-                        chan->vu_meter = vutmp;
+                chan->vu_meter = vutmp;
         } else {
                 chan->vu_meter = 0;
         }
@@ -827,10 +827,11 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
                 memset(buffer, (csf->mix_bits_per_sample == 8) ? 0x80 : 0, bufleft * sample_size);
 
         // VU-Meter
-        vu_min[0] >>= 18;
-        vu_min[1] >>= 18;
-        vu_max[0] >>= 18;
-        vu_max[1] >>= 18;
+        //Reduce range to 8bits signed (-128 to 127).
+        vu_min[0] >>= 19;
+        vu_min[1] >>= 19;
+        vu_max[0] >>= 19;
+        vu_max[1] >>= 19;
 
         if (vu_max[0] < vu_min[0])
                 vu_max[0] = vu_min[0];
@@ -838,11 +839,9 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
         if (vu_max[1] < vu_min[1])
                 vu_max[1] = vu_min[1];
 
-        if ((global_vu_left = (unsigned int)(vu_max[0] - vu_min[0])) > 0xFF)
-                global_vu_left = 0xFF;
+        global_vu_left = (unsigned int)(vu_max[0] - vu_min[0]);
 
-        if ((global_vu_right = (unsigned int)(vu_max[1] - vu_min[1])) > 0xFF)
-                global_vu_right = 0xFF;
+        global_vu_right = (unsigned int)(vu_max[1] - vu_min[1]);
 
         if (mix_stat) {
                 csf->mix_stat += mix_stat - 1;

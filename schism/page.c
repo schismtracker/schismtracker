@@ -1310,10 +1310,41 @@ static struct vgamem_overlay vis_overlay = {
         NULL, 0, 0, 0,
 };
 
-extern short current_fft_data[2][256];
+extern short current_fft_data[2][1024];
+extern short fftlog[256];
+/* convert the fft bands to columns of the vis box
+out and d have a range of 0 to 128 */
+static inline void _get_columns_from_fft(unsigned char *out, short d[2][1024])
+{
+        int i, j, jbis, t, a;
+        /*this assumes out of size 120. */
+        for (i = 0, t= 0 , a=0; i < 120; i++, t+=2)  {
+                float afloat = fftlog[t];
+                float floora = floor(afloat);
+                if (afloat + 1.0f > fftlog[t+1]) {
+                        a = (int)floora;
+                        j = d[0][a] + (d[0][a+1]-d[0][a])*(afloat-floora);
+                        jbis = d[1][a] + (d[1][a+1]-d[1][a])*(afloat-floora);
+                        j = max(j,jbis);
+                        a = floor(afloat+0.5f);
+                }
+                else {
+                        j=d[0][a];
+                        j = max(j,d[1][a]);
+                        while(a<=afloat){
+                                j = max(j,d[0][a]);
+                                j = max(j,d[1][a]);
+                                a++;
+                        }
+                }
+                *out = j; out++;
+        }
+}
 static void vis_fft(void)
 {
-        int i,j, y;
+        int i,j, y, a;
+        /*this is the size of vis_overlay.width*/
+        unsigned char outfft[120];
 
         if (_vis_virgin) {
                 vgamem_ovl_alloc(&vis_overlay);
@@ -1323,26 +1354,16 @@ static void vis_fft(void)
         song_lock_audio();
 
         vgamem_ovl_clear(&vis_overlay,0);
-        j=19;
+        _get_columns_from_fft(outfft,current_fft_data);
         for (i = 0; i < 120; i++) {
-                y = current_fft_data[0][j];
-                y += current_fft_data[1][j];
-                y >>= 1;
-                j++;
-                y = current_fft_data[0][j];
-                y += current_fft_data[1][j];
-                y >>= 1;
-                if (i != 62 && i != 31 && i != 93) j++;
-                y >>= 9;
+                y = outfft[i];
+                /*reduce range */
+                y >>= 3;
                 if (y > 15) y = 15;
                 if (y > 0) {
-                        vgamem_ovl_drawline(&vis_overlay,i,15-y,i,15,5);
-                        if (y > 5)
-                                vgamem_ovl_drawpixel(&vis_overlay,i,15-y,3);
-                        vgamem_ovl_drawpixel(&vis_overlay,i,16-y,3);
+                       vgamem_ovl_drawline(&vis_overlay,i,15-y,i,15,5);
                 }
         }
-        /* j == 256 */
         vgamem_ovl_apply(&vis_overlay);
 
         song_unlock_audio();
@@ -1359,18 +1380,18 @@ static void vis_oscilloscope(void)
                 if (audio_output_bits == 16) {
                         draw_sample_data_rect_16(&vis_overlay,audio_buffer,
                                         audio_buffer_samples,
-                                        1,2);
+                                        audio_output_channels,1);
                 } else {
                         draw_sample_data_rect_8(&vis_overlay,(void*)audio_buffer,
                                         audio_buffer_samples,
-                                        1,2);
+                                        audio_output_channels,1);
                 }
         } else if (audio_output_bits == 16) {
                 draw_sample_data_rect_16(&vis_overlay,audio_buffer,audio_buffer_samples,
-                                        audio_output_channels,1);
+                                        audio_output_channels,audio_output_channels);
         } else {
                 draw_sample_data_rect_8(&vis_overlay,(void *)audio_buffer,audio_buffer_samples,
-                                        audio_output_channels,1);
+                                        audio_output_channels,audio_output_channels);
         }
         song_unlock_audio();
 }
@@ -1380,8 +1401,8 @@ static void vis_vu_meter(void)
         int left, right;
 
         song_get_vu_meter(&left, &right);
-        left /= 4;
-        right /= 4;
+        left >>= 1;
+        right >>= 1;
 
         _draw_vis_box();
         draw_vu_meter(63, 6, 15, left, 5, 4);
