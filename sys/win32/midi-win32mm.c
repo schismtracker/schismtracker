@@ -55,11 +55,6 @@ static unsigned int mm_period = 0;
 static unsigned int last_known_in_port = 0;
 static unsigned int last_known_out_port = 0;
 
-static MMRESULT (*XP_timeGetDevCaps)(LPTIMECAPS caps, UINT size) = 0;
-static MMRESULT (*XP_timeBeginPeriod)(UINT period) = 0;
-static MMRESULT (*XP_timeSetEvent)(UINT u,UINT r,LPTIMECALLBACK proc,
-                        DWORD_PTR user, UINT flags) = 0;
-
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
 {
         char *z;
@@ -136,12 +131,12 @@ static void _win32mm_send_xp(struct midi_port *p, const unsigned char *buf,
         c->p = p;
         c->d = ((unsigned char*)c)+sizeof(struct curry);
         c->len = len;
-        XP_timeSetEvent(delay, mm_period, _win32mm_xp_output, (DWORD_PTR)c,
+        timeSetEvent(delay, mm_period, _win32mm_xp_output, (DWORD_PTR)c,
                                         TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
 }
 
-static CALLBACK void  _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD inst,
-                                                DWORD param1, UNUSED DWORD param2)
+static CALLBACK void _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR inst,
+                                           DWORD_PTR param1, DWORD_PTR param2)
 {
         struct midi_port *p = (struct midi_port *)inst;
         struct win32mm_midi *m;
@@ -159,12 +154,18 @@ static CALLBACK void  _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD inst,
                 midi_received_cb(p, c, 3);
                 break;
         case MIM_LONGDATA:
-                /* long data */
-                m = p->userdata;
-                midi_received_cb(p, (unsigned char *) m->hh.lpData, m->hh.dwBytesRecorded);
-                m->hh.dwBytesRecorded = 0;
-                (void)midiInAddBuffer(m->in, &m->hh, sizeof(MIDIHDR));
-                break;
+                {
+                        MIDIHDR* hdr = (MIDIHDR*) param1;
+                        if (hdr->dwBytesRecorded > 0)
+                        {
+                                /* long data */
+                                m = p->userdata;
+                                midi_received_cb(p, (unsigned char *) m->hh.lpData, m->hh.dwBytesRecorded);
+                                //TODO: The event for the midi sysex (midi-core.c SCHISM_EVENT_MIDI_SYSEX) should
+                                // call us back so that we can add the buffer back with midiInAddBuffer().
+                        }
+                        break;
+                }
         }
 }
 
@@ -216,6 +217,7 @@ static int _win32mm_stop(struct midi_port *p)
                 for these guys */
                 (void)midiInStop(m->in);
                 (void)midiInReset(m->in);
+                (void)midiInUnprepareHeader(m->in,&m->hh,sizeof(m->hh));
                 (void)midiInClose(m->in);
         }
         if (p->io & MIDI_OUTPUT) {
@@ -275,7 +277,7 @@ static void _win32mm_poll(struct midi_provider *p)
 int win32mm_midi_setup(void)
 {
         static struct midi_driver driver;
-        HINSTANCE winmm;
+
         TIMECAPS caps;
 
         memset(&driver, 0, sizeof(driver));
@@ -286,19 +288,10 @@ int win32mm_midi_setup(void)
         driver.enable = _win32mm_start;
         driver.disable = _win32mm_stop;
 
-        // FIXME: explanation required
-        winmm = GetModuleHandle("WINMM.DLL");
-        if (!winmm) winmm = LoadLibrary("WINMM.DLL");
-        if (!winmm) winmm = GetModuleHandle("WINMM.DLL");
-        if (winmm) {
-                XP_timeGetDevCaps = (void*)GetProcAddress(winmm,"timeGetDevCaps");
-                XP_timeBeginPeriod = (void*)GetProcAddress(winmm,"timeBeginPeriod");
-                XP_timeSetEvent = (void*)GetProcAddress(winmm,"timeSetEvent");
-
-                if (XP_timeGetDevCaps && XP_timeBeginPeriod && XP_timeSetEvent) {
-                        if (XP_timeGetDevCaps(&caps, sizeof(caps)) == 0) {
+        {
+                        if (timeGetDevCaps(&caps, sizeof(caps)) == 0) {
                                 mm_period = caps.wPeriodMin;
-                                if (XP_timeBeginPeriod(mm_period) == 0) {
+                                if (timeBeginPeriod(mm_period) == 0) {
                                         driver.send = _win32mm_send_xp;
                                         driver.flags |= MIDI_PORT_CAN_SCHEDULE;
                                 } else {
@@ -309,13 +302,6 @@ int win32mm_midi_setup(void)
                                 driver.send = _win32mm_send;
                                 log_appendf(4, "Cannot get WINMM timer capabilities (midi output will skip)");
                         }
-                } else {
-                        driver.send = _win32mm_send;
-                        log_appendf(4, "WINMM is too old a version (midi output will skip)");
-                }
-        } else {
-                driver.send = _win32mm_send;
-                log_appendf(4, "WINMM is not installed (midi output will skip)");
         }
 
         if (!midi_provider_register("Win32MM", &driver)) return 0;

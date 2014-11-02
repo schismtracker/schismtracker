@@ -98,8 +98,9 @@ static int _get_fd(int pb, int isout)
         if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void*)&opt, sizeof(opt)) < 0) {
 #ifdef WIN32
                 closesocket(fd);
-#endif
+#else
                 close(fd);
+#endif
                 return -1;
         }
 
@@ -107,8 +108,9 @@ static int _get_fd(int pb, int isout)
         if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&opt, sizeof(opt)) < 0) {
 #ifdef WIN32
                 closesocket(fd);
-#endif
+#else
                 close(fd);
+#endif
                 return -1;
         }
 
@@ -118,8 +120,9 @@ static int _get_fd(int pb, int isout)
         if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) < 0) {
 #ifdef WIN32
                 closesocket(fd);
-#endif
+#else
                 close(fd);
+#endif
                 return -1;
         }
 
@@ -127,8 +130,9 @@ static int _get_fd(int pb, int isout)
         if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void*)&opt, sizeof(opt)) < 0) {
 #ifdef WIN32
                 closesocket(fd);
-#endif
+#else
                 close(fd);
+#endif
                 return -1;
         }
 
@@ -137,14 +141,37 @@ static int _get_fd(int pb, int isout)
         ipcopy = (unsigned char *)&asin.sin_addr;
         if (!isout) {
                 /* all 0s is inaddr_any; but this is for listening */
+#ifdef WIN32
+                //JosepMa:On my machine, using the 225.0.0.37 address caused bind to fail.
+                //Didn't look too much to find why.
+                ipcopy[0] = ipcopy[1] = ipcopy[2] = ipcopy[3] = 0;
+#else
                 ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
+#endif
                 asin.sin_port = htons(MIDI_IP_BASE+pb);
         }
         if (bind(fd, (struct sockaddr *)&asin, sizeof(asin)) < 0) {
 #ifdef WIN32
+
+                int asdf = WSAGetLastError();
+                perror("binderror");
+                switch(asdf) {
+                        case WSANOTINITIALISED: perror("WSANOTINITIALISED");break;
+                        case WSAENETDOWN: perror("WSAENETDOWN");break;
+                        case WSAEFAULT: perror("WSAEFAULT");break;
+                        case WSAEINVAL: perror("WSAEINVAL");break;
+                        case WSAEINPROGRESS: perror("WSAEINPROGRESS");break;
+                        case WSAENOTSOCK: perror("WSAENOTSOCK");break;
+                        case WSAEACCES: perror("WSAEACCES");break;
+                        case WSAEADDRINUSE: perror("WSAEADDRINUSE");break;
+                        case WSAEADDRNOTAVAIL: perror("WSAEADDRNOTAVAIL");break;
+                        case WSAENOBUFS: perror("WSAENOBUFS");break;
+                        default: perror("default");break;
+                }
                 closesocket(fd);
-#endif
+#else
                 close(fd);
+#endif
                 return -1;
         }
 
@@ -193,6 +220,7 @@ static int _ip_thread(struct midi_provider *p)
         for (;;) {
                 SDL_mutexP(blocker);
                 m = (volatile int)num_ports;
+                //If no ports, wait and try again
                 if (m > real_num_ports) {
                         /* need more ports */
                         tmp = malloc(2 * (m * sizeof(int)));
@@ -223,8 +251,9 @@ static int _ip_thread(struct midi_provider *p)
                         for (i = m; i < real_num_ports; i++) {
 #ifdef WIN32
                                 closesocket(port_fd[i]);
-#endif
+#else
                                 close(port_fd[i]);
+#endif
                                 port_fd[i] = -1;
                         }
                         real_num_ports = num_ports = m;
@@ -233,6 +262,11 @@ static int _ip_thread(struct midi_provider *p)
                         do_wake_main();
                 } else {
                         SDL_mutexV(blocker);
+                        if (!real_num_ports) {
+                                //Since the thread is not finished in this case (maybe it should),
+                                //we put a delay to prevent the thread using all the cpu.
+                                SDL_Delay(1000);
+                        }
                 }
 
                 FD_ZERO(&rfds);
@@ -257,6 +291,22 @@ static int _ip_thread(struct midi_provider *p)
                                 NULL
 #endif
                                 );
+#ifdef WIN32
+                        if (i == SOCKET_ERROR ) {
+                                perror("selectError:");
+                                int asdf = WSAGetLastError();
+                                switch(asdf) {
+                                        case WSANOTINITIALISED: perror("WSANOTINITIALISED");break;
+                                        case WSAEFAULT: perror("WSAEFAULT");break;
+                                        case WSAENETDOWN: perror("WSAENETDOWN");break;
+                                        case WSAEINVAL: perror("WSAEINVAL");break;
+                                        case WSAEINTR: perror("WSAEINTR");break;
+                                        case WSAEINPROGRESS: perror("WSAEINPROGRESS");break;
+                                        case WSAENOTSOCK: perror("WSAENOTSOCK");break;
+                                        default: perror("default");break;
+                                }
+                        }
+#endif
                 } while (i == -1 && errno == EINTR);
 
 #ifndef WIN32
@@ -342,7 +392,12 @@ static void _ip_poll(struct midi_provider *p)
                 ptr = NULL;
                 while (midi_port_foreach(p, &ptr)) {
                         i = INT_SHAPED_PTR(ptr->userdata);
-                        if (i >= m) midi_port_unregister(ptr->num);
+                        if (i >= m) {
+                                midi_port_unregister(ptr->num);
+                                //port_top[i] (the address where ptr points to) is freed in midi_port_unregister.
+                                //So clear it to avoid midi_port_foreach crashing on next round
+                                ptr = NULL;
+                        }
                 }
                 last_buildout = m;
         } else if (m > last_buildout) {
@@ -357,7 +412,7 @@ static void _ip_poll(struct midi_provider *p)
                                 exit(255);
                         }
                         midi_port_register(p, MIDI_INPUT | MIDI_OUTPUT, buffer,
-                                        PTR_SHAPED_INT(i), 0);
+                                        PTR_SHAPED_INT((intptr_t)i), 0);
                 }
                 last_buildout = m;
         }
@@ -388,14 +443,14 @@ int ip_midi_setup(void)
                 if (out_fd == -1) return 0;
         }
 
-        ip_midi_setports(DEFAULT_IP_PORT_COUNT);
-
         driver.flags = 0;
         driver.poll = _ip_poll;
         driver.thread = _ip_thread;
         driver.send = _ip_send;
         driver.enable = _ip_start;
         driver.disable = _ip_stop;
+        //TODO: Save number of MIDI-IP ports
+        ip_midi_setports(DEFAULT_IP_PORT_COUNT);
 
         if (!midi_provider_register("IP", &driver)) return 0;
         return 1;
