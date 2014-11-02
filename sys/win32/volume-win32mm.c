@@ -74,26 +74,18 @@ static HWAVEOUT open_mixer(void)
 void win32mm_volume_read(int *left, int *right)
 {
         DWORD vol;
-        HWAVEOUT hwo=open_mixer();
 
         *left = *right = 0;
-        if (!hwo) return;
 
-        waveOutGetVolume(hwo,&vol);
+        waveOutGetVolume(NULL,&vol);
 
         *left = (vol & 0xFFFF) >> 8;
         *right = (vol >> 16) >> 8;
-
-        waveOutClose(hwo);
 }
 
 void win32mm_volume_write(int left, int right)
 {
         DWORD vol = ((left & 0xFF)<<8) | ((right & 0xFF)<<(16+8));
-        HWAVEOUT hwo = open_mixer();
-        if (!hwo) return;
 
-        waveOutSetVolume(hwo,vol);
-
-        waveOutClose(hwo);
+        waveOutSetVolume(NULL,vol);
 }
