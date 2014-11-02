@@ -581,16 +581,16 @@ void sample_invert(song_sample_t * sample)
 
 static void _mono_lr16(signed short *data, unsigned long length, int shift)
 {
-        unsigned long i, j;
-        if (shift) memmove(data, data+shift, 2*(length-(shift * sizeof(short))));
-        for (j = 0, i = 1; j < length; j++, i += 2)
+        unsigned long i=1, j;
+        if (shift) { i=0; }
+        for (j = 0; j < length; j++, i += 2)
                 data[j] = data[i];
 }
 static void _mono_lr8(signed char *data, unsigned long length, int shift)
 {
-        unsigned long i, j;
-        if (shift) memmove(data, data+shift, 2*(length-shift));
-        for (j = 0, i = 1; j < length; j++, i += 2)
+        unsigned long i=1, j;
+        if (shift) { i=0; }
+        for (j = 0; j < length; j++, i += 2)
                 data[j] = data[i];
 }
 void sample_mono_left(song_sample_t * sample)

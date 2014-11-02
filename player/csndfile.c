@@ -1031,7 +1031,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
                 }
                 break;
 
-#if 0 // THESE ARE STILL BROKEN
+
         // Stereo PCM 24-bit signed -> load sample, and normalize it to 16-bit
         case RS_STIPCM24S:
         case RS_STIPCM32S:
@@ -1052,16 +1052,16 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
                         max = (max / 128) + 1;
                         signed short *dest = (signed short *)sample->data;
                         for (uint32_t k=0; k<len; k+=slsize) {
-                                int32_t lr = ((((src[k+2] << 8) + src[k+1]) << 8) + src[k]) << 8;
-                                k += slsize;
                                 int32_t ll = ((((src[k+2] << 8) + src[k+1]) << 8) + src[k]) << 8;
-                                dest[0] = (signed short)ll;
-                                dest[1] = (signed short)lr;
+                                k += slsize;
+                                int32_t lr = ((((src[k+2] << 8) + src[k+1]) << 8) + src[k]) << 8;
+                                dest[0] = (signed short)(ll/max);
+                                dest[1] = (signed short)(lr/max);
                                 dest += 2;
                         }
                 }
                 break;
-#endif
+
 
         // 16-bit signed big endian interleaved stereo
         case RS_STIPCM16M:
