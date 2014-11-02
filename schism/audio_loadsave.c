@@ -706,8 +706,9 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
         struct timeval savetime, elapsed;
         struct tm loadtm;
         uint16_t h;
-
-        localtime_r(&current_song->editstart.tv_sec, &loadtm);
+        //x86/x64 compatibility
+        time_t thetime = current_song->editstart.tv_sec;
+        localtime_r(&thetime, &loadtm);
         gettimeofday(&savetime, NULL);
         timersub(&savetime, &current_song->editstart, &elapsed);
 

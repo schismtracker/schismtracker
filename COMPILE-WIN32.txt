@@ -1,0 +1,151 @@
+
+Compiling SchismTracker on Windows.
+
+
+Software needed
+================
+To compile on Windows, the following things are needed:
+
+mingw-gcc
+Python
+SDL headers and libs
+An environment where to run them, like msys
+(It could also be cygwin. Use its setup program, and get sdl sources to compile them in this case).
+
+Installing needed software
+==========================
+*** Installing mingw and msys (x86/Win32) ***
+
+They've recently created an installer that maintains packages, that works nicely:
+http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download
+That installer can also install msys if told to do so.
+
+if installing msys, then run (installdir)\msys\1.0\postinstall\pi.sh to setup where mingw is located.
+
+Get Python from http://www.python.org and install it. Get version 2 for now.
+
+Add Python to msys PATH. You can do it in two ways:
+- Add the path to Windows PATH Environment variable (msys will add it automatically to msys's environment.
+  You will need to relaunch it after the change)
+- OR modify the msys file /etc/profile and modify the export PATH adding your python path. (like export PATH=/c/python27:$PATH )
+
+for mingw x86, there is a precompiled libs and headers package that can be downloaded
+from http://www.libsdl.org/ .
+At the time of this writing, there's the file: SDL-devel-1.2.15-mingw32.tar.gz (Mingw32).
+
+You can unpack this file into mingw by copying individually the folders
+bin, include, lib and share into C:/MinGW (if that's the name you used). The rest of the package
+is not needed, as it contains examples, and other documentation, some of it used to build from
+source, which is not needed with this package.
+
+Also, you will need to modify the file sdl-config to change the "prefix" path.
+Like this:
+prefix=/mingw
+
+
+*** Installing mingw and msys (x64/Win64) ***
+Since mingw's installer only installs an x86 platform, you might opt to install winBuilds:
+http://win-builds.org/
+
+Uncompress it somewhere, like C:/MinGW64
+Get standard msys from http://www.mingw.org/wiki/MSYS and install it, like in c:/msys
+and then run c:/msys/pi/pi.sh to setup where mingw is located. (If you have both x86 and x64, you might
+want to have two msys too, just to avoid internal confusion)
+
+Get Python from http://www.python.org and install it. Get version 2 for now.
+
+Add Python to msys PATH. You can do it in two ways:
+- Add the path to Windows PATH Environment variable (msys will add it automatically to msys's environment.
+  You will need to relaunch it after the change)
+- OR modify the msys file /etc/profile and modify the export PATH adding your python path. (like export PATH=/c/python27:$PATH )
+
+For x64, there aren't precompiled SDL libs, so you have to get the sources to compile them
+from http://www.libsdl.org/ .
+At the time of this writing, there's the file: SDL-1.2.15.tar.gz
+
+unpack it somewhere (like c:/msys/opt/SDL).
+
+Get Microsoft's DirectX SDK from http://www.microsoft.com/en-us/download/details.aspx?id=6812
+and install it.
+
+Now, you need msys/mingw to know about your directx includes and libs. This is a little tricky
+and the best solution i found was to make symbolic links ( ln -s ) to the directories as follows:
+
+Let's say that the Direct X SDK is installed in:
+
+C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)
+
+run msys, and go to  /mingw/include
+type: ln -s C:/Program\ Files\ \(x86\)/Microsoft\ DirectX\ SDK\ \(June\ 2010\)/Include dxinclude
+go to /mingw/lib
+type: ln -s C:/Program\ Files\ \(x86\)/Microsoft\ DirectX\ SDK\ \(June\ 2010\)/Lib dxlib
+
+I also had to copy the file C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\include\sal.h to /mingw/include.
+This file's header says: "*sal.h - markers for documenting the semantics of APIs". It only
+has some defines, so it might be safe to just put an empty file (not tried). Else, it might be obtained from visual studio.
+
+Now, go to where you copied the SDL SDK ( example: /opt/SDL/ ) , and do:
+./configure CPPFLAGS=-I/mingw/include/dxinclude LIBS=-L/mingw/lib/dxlib
+Now look at the output of configure and see if it says something like:
+
+checking ddraw.h usability
+result: yes
+checking dsound.h usability
+result: yes
+
+(This is extracted from config.log. the output in the screen is a bit different)
+
+If it says no. Please, open the config.log file, locate the lines and see which test fail and why.
+
+If the ./configure executes successfully and you have ddraw and dsound, then continue with
+make
+make install
+
+
+Compilation
+============
+Run msys (c:/msys/1.0/msys.bat), go to schismtracker sources (hint drive letters are mapped to /x , example
+C:/ is /c/, D:/ is /d/ ...)
+
+* if configure does not exist, (you will need autoconf and automake) execute:
+autoreconf
+
+* alternatively, you can execute each individual command
+aclocal
+autoconf
+autoheader
+automake --add-missing
+
+If you get a warning that it misses AM_PATH_SDL, you should check where the sdl.m4 is, and use the -I parameter like:
+aclocal -I/usr/local/share/aclocal
+
+
+
+* when configure does exist
+mkdir build
+mkdir build/auto
+cp auto/dirstate.check build/auto/dirstate.check
+cd build
+../configure
+make
+./schismtracker &
+
+(The lines before configure are so that everything is built in the build subdir)
+
+
+Compilation problems
+=====================
+The configure script should give hints on what is missing to compile. If you've followed the steps, everything
+should already be in the place, but in case it doesn't see the config.log file, which reports a detailed
+output (more than what is seen on the screen) that could help identify what is missing, or which option is not working.
+
+
+Debugging
+==========
+Msys comes (if installed) with a 32bit gdb version. you can use it to debug the 32bit version of Schismtracker.
+
+For the 64bit version, you can get it from
+http://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20%28Win64%20hosted%29/gdb/
+I got a newer version from here : http://www.equation.com/servlet/equation.cmd?fa=gdb
+I named the file gdb64 so that it didn't get mistaken for the other.
+

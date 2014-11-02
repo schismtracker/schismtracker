@@ -16,20 +16,15 @@
 
 schismicon ICON "icons/schismres.ico"
 
-VS_VERSION_INFO         VERSIONINFO
-FILEVERSION             WRC_VERSION
-PRODUCTVERSION          WRC_VERSION // what's the difference?
-FILEFLAGSMASK           VS_FFI_FILEFLAGSMASK
-/* Ideally we'd put -DNDEBUG and the like on the rc command line, but since
-those are all stuffed into CFLAGS along with all the -W options and various
-other stuff not applicable to windres, it's kinda more trouble than it's
-worth to handle that -- so as much as it'd be neat to set the prerelease,
-debug / private build flags, it's just too much effort for no real gain. */
-FILEFLAGS               0
 
-FILEOS                  VOS_NT_WINDOWS32
-FILETYPE                VFT_APP
-
+VS_VERSION_INFO        VERSIONINFO
+FILEVERSION            WRC_VERSION
+PRODUCTVERSION         WRC_VERSION
+FILEFLAGSMASK          VS_FFI_FILEFLAGSMASK
+FILEFLAGS              0
+FILEOS                 VOS__WINDOWS32
+FILETYPE               VFT_APP
+FILESUBTYPE            VFT2_UNKNOWN
 BEGIN
         BLOCK "StringFileInfo"
         BEGIN
