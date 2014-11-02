@@ -169,9 +169,11 @@ void adlib_patch_apply(song_sample_t *smp, int patchnum)
         smp->name[sizeof(smp->name) - 1] = '\0'; // Paranoid.
         sprintf(smp->filename, "MIDI#%03d", patchnum + 1);
         smp->flags |= CHN_ADLIB;
-        if (!smp->data) {
-                smp->length = 1;
-                smp->data = csf_allocate_sample(1);
+        if (smp->data) {
+                csf_free_sample(smp->data);
+                smp->data = NULL;
         }
+        smp->length = 1;
+        smp->data = csf_allocate_sample(1);
 }
 

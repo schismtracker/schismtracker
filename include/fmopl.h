@@ -16,15 +16,15 @@ extern "C" {
 #define OPL_SAMPLE_BITS 16
 
 /* compiler dependence */
-#ifndef OSD_CPU_H
-#define OSD_CPU_H
+#ifndef __OSDCOMM_H__
+#define __OSDCOMM_H__
 typedef unsigned char   UINT8;   /* unsigned  8bit */
 typedef unsigned short  UINT16;  /* unsigned 16bit */
 typedef unsigned int    UINT32;  /* unsigned 32bit */
 typedef signed char             INT8;    /* signed  8bit   */
 typedef signed short    INT16;   /* signed 16bit   */
 typedef signed int              INT32;   /* signed 32bit   */
-#endif
+#endif /* __OSDCOMM_H__ */
 
 #ifndef INLINE
 #define INLINE static __inline__
@@ -38,28 +38,28 @@ typedef INT8 OPLSAMPLE;
 #endif
 
 
-typedef void (*OPL_TIMERHANDLER)(int channel,double interval_Sec);
-typedef void (*OPL_IRQHANDLER)(int param,int irq);
-typedef void (*OPL_UPDATEHANDLER)(int param,int min_interval_us);
-typedef void (*OPL_PORTHANDLER_W)(int param,unsigned char data);
-typedef unsigned char (*OPL_PORTHANDLER_R)(int param);
+typedef void (*OPL_TIMERHANDLER)(void *param,int timer,double period);
+typedef void (*OPL_IRQHANDLER)(void *param,int irq);
+typedef void (*OPL_UPDATEHANDLER)(void *param,int min_interval_us);
+typedef void (*OPL_PORTHANDLER_W)(void *param,unsigned char data);
+typedef unsigned char (*OPL_PORTHANDLER_R)(void *param);
 
 
 #if BUILD_YM3812
 
-int  YM3812Init(int num, int clock, int rate);
-void YM3812Shutdown(void);
-void YM3812ResetChip(int which);
-int  YM3812Write(int which, int a, int v);
-unsigned char YM3812Read(int which, int a);
-int  YM3812TimerOver(int which, int c);
-void YM3812UpdateOne(int which, INT16 *buffer, int length);
+void *ym3812_init(UINT32 clock, UINT32 rate);
+void ym3812_shutdown(void *chip);
+void ym3812_reset_chip(void *chip);
+int  ym3812_write(void *chip, int a, int v);
+unsigned char ym3812_read(void *chip, int a);
+int  ym3812_timer_over(void *chip, int c);
+void ym3812_update_one(void *chip, OPLSAMPLE *buffer, int length);
 
-void YM3812SetTimerHandler(int which, OPL_TIMERHANDLER TimerHandler, int channelOffset);
-void YM3812SetIRQHandler(int which, OPL_IRQHANDLER IRQHandler, int param);
-void YM3812SetUpdateHandler(int which, OPL_UPDATEHANDLER UpdateHandler, int param);
+void ym3812_set_timer_handler(void *chip, OPL_TIMERHANDLER TimerHandler, void *param);
+void ym3812_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);
+void ym3812_set_update_handler(void *chip, OPL_UPDATEHANDLER UpdateHandler, void *param);
 
-#endif
+#endif /* BUILD_YM3812 */
 
 
 #if BUILD_YM3526
@@ -71,13 +71,13 @@ void YM3812SetUpdateHandler(int which, OPL_UPDATEHANDLER UpdateHandler, int para
 ** 'clock' is the chip clock in Hz
 ** 'rate' is sampling rate
 */
-int  YM3526Init(int num, int clock, int rate);
+void *ym3526_init(UINT32 clock, UINT32 rate);
 /* shutdown the YM3526 emulators*/
-void YM3526Shutdown(void);
-void YM3526ResetChip(int which);
-int  YM3526Write(int which, int a, int v);
-unsigned char YM3526Read(int which, int a);
-int  YM3526TimerOver(int which, int c);
+void ym3526_shutdown(void *chip);
+void ym3526_reset_chip(void *chip);
+int  ym3526_write(void *chip, int a, int v);
+unsigned char ym3526_read(void *chip, int a);
+int  ym3526_timer_over(void *chip, int c);
 /*
 ** Generate samples for one of the YM3526's
 **
@@ -85,42 +85,38 @@ int  YM3526TimerOver(int which, int c);
 ** '*buffer' is the output buffer pointer
 ** 'length' is the number of samples that should be generated
 */
-void YM3526UpdateOne(int which, INT16 *buffer, int length);
+void ym3526_update_one(void *chip, OPLSAMPLE *buffer, int length);
 
-void YM3526SetTimerHandler(int which, OPL_TIMERHANDLER TimerHandler, int channelOffset);
-void YM3526SetIRQHandler(int which, OPL_IRQHANDLER IRQHandler, int param);
-void YM3526SetUpdateHandler(int which, OPL_UPDATEHANDLER UpdateHandler, int param);
+void ym3526_set_timer_handler(void *chip, OPL_TIMERHANDLER TimerHandler, void *param);
+void ym3526_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);
+void ym3526_set_update_handler(void *chip, OPL_UPDATEHANDLER UpdateHandler, void *param);
 
-#endif
+#endif /* BUILD_YM3526 */
 
 
 #if BUILD_Y8950
 
-#include "ymdeltat.h"
-
 /* Y8950 port handlers */
-void Y8950SetPortHandler(int which, OPL_PORTHANDLER_W PortHandler_w,
-        OPL_PORTHANDLER_R PortHandler_r, int param);
-void Y8950SetKeyboardHandler(int which, OPL_PORTHANDLER_W KeyboardHandler_w,
-        OPL_PORTHANDLER_R KeyboardHandler_r, int param);
-void Y8950SetDeltaTMemory(int which, void * deltat_mem_ptr, int deltat_mem_size );
+void y8950_set_port_handler(void *chip, OPL_PORTHANDLER_W PortHandler_w, OPL_PORTHANDLER_R PortHandler_r, void *param);
+void y8950_set_keyboard_handler(void *chip, OPL_PORTHANDLER_W KeyboardHandler_w, OPL_PORTHANDLER_R KeyboardHandler_r, void *param);
+void y8950_set_delta_t_memory(void *chip, void * deltat_mem_ptr, int deltat_mem_size );
 
-int  Y8950Init (int num, int clock, int rate);
-void Y8950Shutdown (void);
-void Y8950ResetChip (int which);
-int  Y8950Write (int which, int a, int v);
-unsigned char Y8950Read (int which, int a);
-int  Y8950TimerOver (int which, int c);
-void Y8950UpdateOne (int which, INT16 *buffer, int length);
+void * y8950_init(UINT32 clock, UINT32 rate);
+void y8950_shutdown(void *chip);
+void y8950_reset_chip(void *chip);
+int  y8950_write(void *chip, int a, int v);
+unsigned char y8950_read (void *chip, int a);
+int  y8950_timer_over(void *chip, int c);
+void y8950_update_one(void *chip, OPLSAMPLE *buffer, int length);
 
-void Y8950SetTimerHandler (int which, OPL_TIMERHANDLER TimerHandler, int channelOffset);
-void Y8950SetIRQHandler (int which, OPL_IRQHANDLER IRQHandler, int param);
-void Y8950SetUpdateHandler (int which, OPL_UPDATEHANDLER UpdateHandler, int param);
+void y8950_set_timer_handler(void *chip, OPL_TIMERHANDLER TimerHandler, void *param);
+void y8950_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);
+void y8950_set_update_handler(void *chip, OPL_UPDATEHANDLER UpdateHandler, void *param);
 
-#endif
+#endif /* BUILD_Y8950 */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /* __FMOPL_H__ */

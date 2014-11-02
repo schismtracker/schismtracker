@@ -643,6 +643,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
         uint32_t len = 0, mem;
         const char *buffer = (const char *) filedata;
 
+        if (sample->flags & CHN_ADLIB) return 0; // no sample data
+
+        if (!sample || sample->length < 1 || !buffer) return 0;
+
         // validate the read flags before anything else
         switch (flags & SF_BIT_MASK) {
                 case SF_7: case SF_8: case SF_16: case SF_24: case SF_32: break;
@@ -666,9 +670,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
                 SF_FAIL("extra flag", flags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK));
         }
 
-        if (sample->flags & CHN_ADLIB) return 0; // no sample data
-
-        if (!sample || sample->length < 1 || !buffer) return 0;
         if (sample->length > MAX_SAMPLE_LENGTH) sample->length = MAX_SAMPLE_LENGTH;
         mem = sample->length+6;
         sample->flags &= ~(CHN_16BIT|CHN_STEREO);

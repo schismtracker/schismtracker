@@ -30,11 +30,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define OPLNew(x,r)  YM3812Init(1, (x), (r))
-#define OPLResetChip YM3812ResetChip
-#define OPLWrite     YM3812Write
-#define OPLUpdateOne YM3812UpdateOne
-#define OPLClose     YM3812Shutdown
+#define OPLNew(x,r)  ym3812_init(x, r)
+#define OPLResetChip ym3812_reset_chip
+#define OPLWrite     ym3812_write
+#define OPLUpdateOne ym3812_update_one
+#define OPLClose     ym3812_shutdown
 
 /* Mostly pulled from my posterior. Original value was 2000, but Manwe says that's too quiet.
 It'd help if this was at all connected to the song's mixing volume...
@@ -53,15 +53,21 @@ to Jeffrey S. Lee's article:
 static const int oplbase = 0x388;
 
 // OPL info
-static int opl = -1,
-           oplretval = 0,
+static struct OPL* opl = NULL;
+static UINT32 oplretval = 0,
            oplregno = 0;
-static int fm_active = 0;
+static UINT32 fm_active = 0;
+
+extern int fnumToMilliHertz(unsigned int fnum, unsigned int block,
+        unsigned int conversionFactor);
+
+extern void milliHertzToFnum(unsigned int milliHertz,
+        unsigned int *fnum, unsigned int *block, unsigned int conversionFactor);
 
 
 static void Fmdrv_Outportb(unsigned port, unsigned value)
 {
-        if (opl < 0 ||
+        if (opl == NULL ||
             ((int) port) < oplbase ||
             ((int) port) >= oplbase + 4)
                 return;
@@ -91,12 +97,12 @@ static unsigned char Fmdrv_Inportb(unsigned port)
 
 void Fmdrv_Init(int mixfreq)
 {
-        if (opl !=- 1) {
-                OPLClose();
-                opl = -1;
+        if (opl != NULL) {
+                OPLClose(opl);
+                opl = NULL;
         }
-
-        opl = OPLNew(1789772 * 2, mixfreq);
+        //Clock for frequency 49716Hz. Mixfreq is used for output mix frequency.
+        opl = OPLNew(1789776 * 2, mixfreq);
         OPLResetChip(opl);
         OPL_Detect();
 }
@@ -179,9 +185,9 @@ void OPL_NoteOff(int c)
    retrig, just turns the note on and sets freq.)
    If keyoff is nonzero, doesn't even set the note on.
    Could be used for pitch bending also. */
-void OPL_HertzTouch(int c, int Hertz, int keyoff)
+void OPL_HertzTouch(int c, int milliHertz, int keyoff)
 {
-//fprintf(stderr, "OPL_NoteOn(%d,%d)\n", c, Hertz);
+
     int Oct;
 
     c = SetBase(c);
@@ -190,17 +196,6 @@ void OPL_HertzTouch(int c, int Hertz, int keyoff)
         return;
 
     fm_active = 1;
-
-#if 1
-        for (Oct = 0; Hertz > 0x1FF; Oct++)
-                Hertz >>= 1;
-#else
-        for (Oct = -1; Hertz > 0x1FF; Oct++)
-                Hertz >>= 1;
-
-        if (Oct < 0)
-                Oct = 0;
-#endif
 
 /*
     Bytes A0-B8 - Octave / F-Number / Key-On
@@ -213,13 +208,16 @@ void OPL_HertzTouch(int c, int Hertz, int keyoff)
      |           | On  |                 | most sig. |
      +-----+-----+-----+-----+-----+-----+-----+-----+
 */
-
-    /* Ok - 1.1.1999/Bisqwit */
-        OPL_Byte(0xA0 + c, Hertz & 255);       // F-Number low 8 bits
+        int outfnum;
+        int outblock;
+        const int conversion_factor = 49716; // Frequency of OPL.
+        milliHertzToFnum(milliHertz, &outfnum, &outblock, conversion_factor);
+        OPL_Byte(0xA0 + c, outfnum & 255);       // F-Number low 8 bits
         OPL_Byte(0xB0 + c, (keyoff ? 0 : 0x20) // Key on
-                      | ((Hertz >> 8) & 3)     // F-number high 2 bits
-                      | ((Oct & 7) << 2)
+                      | ((outfnum >> 8) & 3)     // F-number high 2 bits
+                      | (outblock << 2)
         );
+
 }
 
 
@@ -236,7 +234,6 @@ void OPL_Touch(int c, const unsigned char *D, unsigned vol)
 //    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
 
         Dtab[c] = D;
-        //vol = vol * (D[8]>>2) / 63;
 
         c = SetBase(c);
 
@@ -291,13 +288,10 @@ void OPL_Touch(int c, const unsigned char *D, unsigned vol)
          * the maximum volume to be set is 47.25 dB and that
          * each increase by 1 corresponds to 0.75 dB.
          *
-         * Since we know that 3 dB is equivalent to a doubling
+         * Since we know that 6 dB is equivalent to a doubling
          * of the volume, we can deduce that an increase or
-         * decrease by 4 will double / halve the volume.
+         * decrease by 8 will double / halve the volume.
          *
-         * However, the real value is 8, at least that's how fmopl.c
-         * works... I guess the documentation above is wrong, or I
-         * misinterpreted it.
          */
 }
 
@@ -330,7 +324,7 @@ void OPL_Patch(int c, const unsigned char *D)
     OPL_Byte(SUSTAIN_RELEASE+3+Ope, D[7]);
     OPL_Byte(WAVE_SELECT+    3+Ope, D[9]&3);// 6 high bits used elsewhere
 
-    /* Panning... */
+    /* feedback, additive synthesis and Panning... */
     OPL_Byte(FEEDBACK_CONNECTION+c,
         (D[10] & ~STEREO_BITS)
             | (Pans[c]<-32 ? VOICE_TO_LEFT

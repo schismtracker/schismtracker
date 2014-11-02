@@ -609,7 +609,7 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int
                 // Vol maximum is 64*64 here. (4096)
                 int volume = vol;
 
-                if (chan->flags & CHN_ADLIB && volume > 0) {
+                if ((chan->flags & CHN_ADLIB) && volume > 0) {
                         // This gives a value in the range 0..127.
                         //int o = volume;
                         volume = find_volume((unsigned short) volume) * chan->instrument_volume / 64;
@@ -622,11 +622,12 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int
                 GM_SetFreqAndVol(chan_num, freq, volume, BendMode, chan->flags & CHN_KEYOFF);
         }
         if (chan->flags & CHN_ADLIB) {
-                // For some reason, scaling by about (2*3)/(8200/8300) is needed
-                // to get a frequency that matches with ST3.
-                int oplfreq = freq * 164 / 249;
+                // Scaling is needed to get a frequency that matches with ST3 notes.
+                // 8363 is st3s middle C sample rate. 261.625 is the Hertz for middle C in a tempered scale (A4 = 440)
+                //Also, note that to be true to ST3, the frequencies should be quantized, like using the glissando control.
 
-                OPL_HertzTouch(chan_num, oplfreq, chan->flags & CHN_KEYOFF);
+                int oplmilliHertz = (long long int)freq*261625L/8363L;
+                OPL_HertzTouch(chan_num, oplmilliHertz, chan->flags & CHN_KEYOFF);
 
                 // ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
                 OPL_Touch(chan_num, NULL, vol * chan->instrument_volume * 63 / (1 << 20));
@@ -1104,7 +1105,7 @@ int csf_read_note(song_t *csf)
                 chan->ramp_length = 0;
 
                 // Calc Frequency
-                if (chan->period && chan->length) {
+                if (chan->period && (chan->length || (chan->flags & CHN_ADLIB))) {
                         int vol = chan->volume;
 
                         if (chan->flags & CHN_TREMOLO)

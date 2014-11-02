@@ -968,10 +968,6 @@ static void sample_adlibpatch_finish(int n)
                 return;
 
         sample = song_get_sample(current_sample);
-        if (sample->data) {
-                csf_free_sample(sample->data);
-                sample->data = NULL;
-        }
         adlib_patch_apply((song_sample_t *) sample, n - 1);
         status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE; // redraw the sample
 

@@ -353,6 +353,7 @@ schismtracker_SOURCES = \
 	player/fmopl.c			\
 	player/fmpatches.c		\
 	player/sndmix.c			\
+	player/opl-util.c		\
 	player/snd_fm.c			\
 	player/effects.c		\
 	player/snd_gm.c			\

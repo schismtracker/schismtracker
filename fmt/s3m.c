@@ -267,6 +267,11 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
                 slurp_read(fp, &tmplong, 4);
                 sample->c5speed = bswapLE32(tmplong);
+                if (type == S3I_TYPE_ADMEL) {
+                        if (sample->c5speed < 1000 || sample->c5speed > 0xFFFF) {
+                                sample->c5speed = 8363;
+                        }
+                }
                 slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
                 slurp_read(fp, sample->name, 25);
                 sample->name[25] = 0;
@@ -280,7 +285,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
         /* sample data */
         if (!(lflags & LOAD_NOSAMPLES)) {
                 for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
-                        if (!sample->length)
+                        if (!sample->length || (sample->flags & CHN_ADLIB))
                                 continue;
                         slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
                         csf_read_sample(sample, smp_flags[n], fp->data + fp->pos, fp->length - fp->pos);

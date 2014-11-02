@@ -109,9 +109,11 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
                 // (SCx doesn't do this)
                 chan->period = 0;
         }
-
-        OPL_NoteOff(nchan);
-        OPL_Touch(nchan, NULL, 0);
+        if (chan->flags & CHN_ADLIB) {
+                //Do this only if really an adlib chan. Important!
+                OPL_NoteOff(nchan);
+                OPL_Touch(nchan, NULL, 0);
+        }
         GM_KeyOff(nchan);
         GM_Touch(nchan, 0);
 }
@@ -122,7 +124,10 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 
         /*fprintf(stderr, "KeyOff[%d] [ch%u]: flags=0x%X\n",
                 tick_count, (unsigned)nchan, chan->flags);*/
-        OPL_NoteOff(nchan);
+        if (chan->flags & CHN_ADLIB) {
+                //Do this only if really an adlib chan. Important!
+                OPL_NoteOff(nchan);
+        }
         GM_KeyOff(nchan);
 
         song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? chan->ptr_instrument : NULL;
@@ -1459,8 +1464,11 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
                 chan->length = chan->position = chan->position_frac = 0;
                 chan->rofs = chan->lofs = 0;
                 chan->left_volume = chan->right_volume = 0;
-                OPL_NoteOff(nchan);
-                OPL_Touch(nchan, NULL, 0);
+                if (chan->flags & CHN_ADLIB) {
+                        //Do this only if really an adlib chan. Important!
+                        OPL_NoteOff(nchan);
+                        OPL_Touch(nchan, NULL, 0);
+                }
                 GM_KeyOff(nchan);
                 GM_Touch(nchan, 0);
                 return;
@@ -2000,8 +2008,11 @@ void csf_process_effects(song_t *csf, int firsttick)
                         if ((NOTE_IS_CONTROL(note)) || (note != NOTE_NONE && !porta)) {
                                 /* This is required when the instrument changes (KeyOff is not called) */
                                 /* Possibly a better bugfix could be devised. --Bisqwit */
-                                OPL_NoteOff(nchan);
-                                OPL_Touch(nchan, NULL, 0);
+                                if (chan->flags & CHN_ADLIB) {
+                                        //Do this only if really an adlib chan. Important!
+                                        OPL_NoteOff(nchan);
+                                        OPL_Touch(nchan, NULL, 0);
+                                }
                                 GM_KeyOff(nchan);
                                 GM_Touch(nchan, 0);
                         }
@@ -2018,7 +2029,9 @@ void csf_process_effects(song_t *csf, int firsttick)
                         if (instr) {
                                 song_sample_t *psmp = chan->ptr_sample;
                                 csf_instrument_change(csf, chan, instr, porta, 1);
-                                OPL_Patch(nchan, csf->samples[instr].adlib_bytes);
+                                if (csf->samples[instr].flags & CHN_ADLIB) {
+                                        OPL_Patch(nchan, csf->samples[instr].adlib_bytes);
+                                }
 
                                 if((csf->flags & SONG_INSTRUMENTMODE) && csf->instruments[instr])
                                         GM_DPatch(nchan, csf->instruments[instr]->midi_program,
@@ -2037,7 +2050,9 @@ void csf_process_effects(song_t *csf, int firsttick)
                                         csf_instrument_change(csf, chan, chan->new_instrument, porta, 0);
                                         if ((csf->flags & SONG_INSTRUMENTMODE)
                                             && csf->instruments[chan->new_instrument]) {
-                                                OPL_Patch(nchan, csf->samples[chan->new_instrument].adlib_bytes);
+                                                if (csf->samples[chan->new_instrument].flags & CHN_ADLIB) {
+                                                        OPL_Patch(nchan, csf->samples[chan->new_instrument].adlib_bytes);
+                                                }
                                                 GM_DPatch(nchan, csf->instruments[chan->new_instrument]->midi_program,
                                                         csf->instruments[chan->new_instrument]->midi_bank,
                                                         csf->instruments[chan->new_instrument]->midi_channel_mask);
