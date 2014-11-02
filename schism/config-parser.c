@@ -411,6 +411,7 @@ const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char
                         r = key->value;
         }
         if (value && r) {
+                //copy up to len chars [0..len-1]
                 strncpy(value, r, len);
                 value[len] = 0;
         }

@@ -108,8 +108,9 @@ static void cfg_save_palette(cfg_file_t *cfg)
         cfg_set_number(cfg, "General", "palette", current_palette_index);
 
         for (n = 0; n < 48; n++) {
-                /* tricky little hack: this is *massively* overstepping the array boundary */
-                palette_text[n] = palette_trans[current_palette[0][n]];
+                /* Changed older implementation for this, since it is not vital
+                to have speed here and the compiler printed a warning */
+                palette_text[n] = palette_trans[current_palette[n/3][n%3]];
         }
         palette_text[48] = '\0';
         cfg_set_string(cfg, "General", "palette_cur", palette_text);

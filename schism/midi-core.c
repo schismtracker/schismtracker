@@ -186,18 +186,18 @@ void cfg_load_midi(cfg_file_t *cfg)
 
         song_lock_audio();
         md = &default_midi_config;
-        cfg_get_string(cfg,"MIDI","start", md->start, 32, "FF");
-        cfg_get_string(cfg,"MIDI","stop", md->stop, 32, "FC");
-        cfg_get_string(cfg,"MIDI","tick", md->tick, 32, "");
-        cfg_get_string(cfg,"MIDI","note_on", md->note_on, 32, "9c n v");
-        cfg_get_string(cfg,"MIDI","note_off", md->note_off, 32, "9c n 0");
-        cfg_get_string(cfg,"MIDI","set_volume", md->set_volume, 32, "");
-        cfg_get_string(cfg,"MIDI","set_panning", md->set_panning, 32, "");
-        cfg_get_string(cfg,"MIDI","set_bank", md->set_bank, 32, "");
-        cfg_get_string(cfg,"MIDI","set_program", md->set_program, 32, "Cc p");
+        cfg_get_string(cfg,"MIDI","start", md->start, 31, "FF");
+        cfg_get_string(cfg,"MIDI","stop", md->stop, 31, "FC");
+        cfg_get_string(cfg,"MIDI","tick", md->tick, 31, "");
+        cfg_get_string(cfg,"MIDI","note_on", md->note_on, 31, "9c n v");
+        cfg_get_string(cfg,"MIDI","note_off", md->note_off, 31, "9c n 0");
+        cfg_get_string(cfg,"MIDI","set_volume", md->set_volume, 31, "");
+        cfg_get_string(cfg,"MIDI","set_panning", md->set_panning, 31, "");
+        cfg_get_string(cfg,"MIDI","set_bank", md->set_bank, 31, "");
+        cfg_get_string(cfg,"MIDI","set_program", md->set_program, 31, "Cc p");
         for (i = 0; i < 16; i++) {
                 snprintf(buf, 16, "SF%X", i);
-                cfg_get_string(cfg, "MIDI", buf, md->sfx[i], 32,
+                cfg_get_string(cfg, "MIDI", buf, md->sfx[i], 31,
                                 i == 0 ? "F0F000z" : "");
         }
 
@@ -284,6 +284,7 @@ void cfg_save_midi(cfg_file_t *cfg)
                         cfg_set_number(cfg, buf, "output", q->io & MIDI_OUTPUT ? 1 : 0);
                 }
         }
+        //TODO: Save number of MIDI-IP ports
         SDL_mutexV(midi_mutex);
 
         /* delete other MIDI port sections */
