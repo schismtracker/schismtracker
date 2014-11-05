@@ -153,7 +153,7 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
         for (n = 0; n < 16; n++) {
                 /* WHAT A GREAT WAY TO STORE THIS INFORMATION */
-                song->channels[n].panning = short_panning_table[fhdr.chn_panning[n] & 0xf];
+                song->channels[n].panning = SHORT_PANNING(fhdr.chn_panning[n] & 0xf);
                 song->channels[n].panning *= 4; //mphack
                 if (!fhdr.onoff[n])
                         song->channels[n].flags |= CHN_MUTE;

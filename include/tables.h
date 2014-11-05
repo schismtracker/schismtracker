@@ -26,6 +26,9 @@
 
 #include <stdint.h>
 
+// <eightbitbubsy> better than having a table.
+#define SHORT_PANNING(i) (((((i) << 4) | (i)) + 2) >> 2)
+
 /* TODO: I know just sticking _fast on all of these will break the player, but for some of 'em...? */
 
 extern const uint8_t vc_portamento_table[16]; // volume column Gx
@@ -44,8 +47,6 @@ extern const uint32_t fine_linear_slide_up_table[16];
 extern const uint32_t fine_linear_slide_down_table[16];
 extern const uint32_t linear_slide_up_table[256];
 extern const uint32_t linear_slide_down_table[256];
-
-extern const int short_panning_table[16];
 
 extern const char *midi_group_names[17];
 extern const char *midi_program_names[128];

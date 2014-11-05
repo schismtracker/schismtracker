@@ -191,16 +191,6 @@ const uint32_t linear_slide_down_table[256] = {
         26770, 26673, 26577, 26481, 26386, 26291, 26196, 26102,
 };
 
-
-/* This is precisely the same set of values that Impulse Tracker uses when handling the S8x effect. I doubt
-IT uses a lookup table to figure out something simple like this, but I can't quite guess the formula IT uses,
-and besides, tables are fun :P
-These values are also used in the MTM loader. However, when loading the default panning positions in S3M files,
-IT shifts the stored value left two and then adds two. (= numbers at intervals of 4, between 2 and 62) */
-const int short_panning_table[16] = {
-        0, 4, 9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64
-};
-
 /* --------------------------------------------------------------------------------------------------------- */
 
 const char *midi_group_names[17] = {

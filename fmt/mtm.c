@@ -124,8 +124,10 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
                 todo |= 64;
         nchan = slurp_getc(fp);
         for (n = 0; n < 32; n++) {
-                song->channels[n].panning = short_panning_table[slurp_getc(fp) & 0xf];
-                song->channels[n].panning *= 4; //mphack
+                int pan = slurp_getc(fp) & 0xf;
+                pan = SHORT_PANNING(pan);
+                pan *= 4; //mphack
+                song->channels[n].panning = pan;
         }
         for (n = nchan; n < MAX_CHANNELS; n++)
                 song->channels[n].flags = CHN_MUTE;
