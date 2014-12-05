@@ -296,23 +296,23 @@ struct it_palette palettes[] = {
 
 /* this is set in cfg_load() (config.c)
 palette_apply() must be called after changing this to update the display. */
-uint8_t current_palette[16][3] = {//Default palette is Gold
+uint8_t current_palette[16][3] = {
         /*  0 */ { 0,  0,  0},
-        /*  1 */ {20, 17, 10},
-        /*  2 */ {41, 36, 21},
-        /*  3 */ {63, 55, 33},
-        /*  4 */ {63, 21, 21},
-        /*  5 */ {18, 53, 18},
-        /*  6 */ {38, 37, 36},
-        /*  7 */ {22, 22, 22},
-        /*  8 */ { 0,  0, 32},
-        /*  9 */ { 0,  0, 42},
-        /* 10 */ {41, 36, 21},
-        /* 11 */ {48, 49, 46},
-        /* 12 */ {44, 44, 44},
-        /* 13 */ {21, 50, 21},
-        /* 14 */ {18, 16, 15},
-        /* 15 */ {12, 11, 10},
+        /*  1 */ { 0,  0, 42},
+        /*  2 */ { 0, 42,  0},
+        /*  3 */ { 0, 42, 42},
+        /*  4 */ {42,  0,  0},
+        /*  5 */ {42,  0, 42},
+        /*  6 */ {42, 21,  0},
+        /*  7 */ {42, 42, 42},
+        /*  8 */ {21, 21, 21},
+        /*  9 */ {21, 21, 63},
+        /* 10 */ {21, 63, 21},
+        /* 11 */ {21, 63, 63},
+        /* 12 */ {63, 21, 21},
+        /* 13 */ {63, 21, 63},
+        /* 14 */ {63, 63, 21},
+        /* 15 */ {63, 63, 63},
 };
 /* this should be changed only with palette_load_preset() (which doesn't call
 palette_apply() automatically, so do that as well) */
