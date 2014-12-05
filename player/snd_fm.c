@@ -187,9 +187,6 @@ void OPL_NoteOff(int c)
    Could be used for pitch bending also. */
 void OPL_HertzTouch(int c, int milliHertz, int keyoff)
 {
-
-    int Oct;
-
     c = SetBase(c);
 
     if (c >= 9)
@@ -208,8 +205,8 @@ void OPL_HertzTouch(int c, int milliHertz, int keyoff)
      |           | On  |                 | most sig. |
      +-----+-----+-----+-----+-----+-----+-----+-----+
 */
-        int outfnum;
-        int outblock;
+        unsigned int outfnum;
+        unsigned int outblock;
         const int conversion_factor = 49716; // Frequency of OPL.
         milliHertzToFnum(milliHertz, &outfnum, &outblock, conversion_factor);
         OPL_Byte(0xA0 + c, outfnum & 255);       // F-Number low 8 bits

@@ -51,8 +51,9 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
         signed char *data, unsigned long length, unsigned int inputchans, unsigned int outputchans)
 {
         unsigned long pos;
+        unsigned int cc, co;
         int level, xs, ys, xe, ye, step;
-        int nh, cc, co, np;
+        int nh, np;
         int chip;
 
         nh = (r->height / outputchans);
@@ -97,8 +98,9 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
          signed short *data, unsigned long length, unsigned int inputchans, unsigned int outputchans)
 {
         unsigned long pos;
+        unsigned int cc, co;
         int level, xs, ys, xe, ye, step;
-        int nh, cc, co, np;
+        int nh, np;
         int chip;
 
         nh = (r->height / outputchans);

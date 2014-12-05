@@ -702,7 +702,7 @@ INLINE void advance(FM_OPL *OPL)
                                 {
                                         op->volume += eg_inc[op->eg_sel_dr + ((OPL->eg_cnt>>op->eg_sh_dr)&7)];
 
-                                        if ( op->volume >= op->sl )
+                                        if ( (unsigned int) op->volume >= op->sl )
                                                 op->state = EG_SUS;
 
                                 }
@@ -762,7 +762,7 @@ INLINE void advance(FM_OPL *OPL)
                 if(op->vib)
                 {
                         UINT8 block;
-                        unsigned int block_fnum = CH->block_fnum;
+                        UINT32 block_fnum = CH->block_fnum;
 
                         unsigned int fnum_lfo   = (block_fnum&0x0380) >> 7;
 
@@ -1393,7 +1393,7 @@ static void OPLWriteReg(FM_OPL *OPL, int r, int v)
 {
         OPL_CH *CH;
         int slot;
-        int block_fnum;
+        UINT32 block_fnum;
 
 
         /* adjust bus to 8 bits */
@@ -1735,6 +1735,7 @@ static void OPLResetChip(FM_OPL *OPL)
 }
 
 
+#if 0 // not used anywhere
 static void OPL_postload(FM_OPL *OPL)
 {
         int slot, ch;
@@ -1790,6 +1791,7 @@ static void OPL_postload(FM_OPL *OPL)
         }
 #endif
 }
+#endif
 
 
 /* Create one of virtual YM3812/YM3526/Y8950 */

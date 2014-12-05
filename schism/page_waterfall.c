@@ -199,7 +199,7 @@ out and d have a range of 0 to 128 */
 static inline void _get_columns_from_fft(unsigned char *out,
                                 short d[FFT_OUTPUT_SIZE], int m)
 {
-        int i, j, c, a;
+        int i, j, a;
         for (i = 0, a=0; i < FFT_BANDS_SIZE; i++)  {
                 float afloat = fftlog[i];
                 float floora = floor(afloat);
@@ -211,7 +211,7 @@ static inline void _get_columns_from_fft(unsigned char *out,
                 else {
                         j=d[a];
                         while(a<=afloat){
-                                j = max(j,d[a]);
+                                j = MAX(j,d[a]);
                                 a++;
                         }
                 }
@@ -255,7 +255,7 @@ static inline void _drawslice(int x, int h, int c)
 static void _vis_process(void)
 {
         unsigned char *q;
-        int i, j, k, a, v1, v2;
+        int i, k;
         k = NATIVE_SCREEN_WIDTH/2;
         unsigned char outfft[NATIVE_SCREEN_WIDTH];
 

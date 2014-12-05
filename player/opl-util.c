@@ -20,6 +20,12 @@
 
 //Stripped down version for Schismtracker, in C.
 
+// this really should be in a header but it's only used in one other file
+int fnumToMilliHertz(unsigned int fnum, unsigned int block,
+                unsigned int conversionFactor);
+void milliHertzToFnum(unsigned int milliHertz,
+                unsigned int *fnum, unsigned int *block, unsigned int conversionFactor);
+
 
 /// Convert the given f-number and block into a note frequency.
 /**
@@ -120,7 +126,9 @@ void milliHertzToFnum(unsigned int milliHertz,
         *fnum = ((unsigned long long)milliHertz << (20 - *block)) / (conversionFactor * 1000.0) + 0.5;
 
         if (*fnum > 1023) {
-                *block++;
+                // not sure which is intended here - original line was *block++;
+                //block++;
+                (*block)++;
                 *fnum = ((unsigned long long)milliHertz << (20 - *block)) / (conversionFactor * 1000.0) + 0.5;
         }
 

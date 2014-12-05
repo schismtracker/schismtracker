@@ -1325,15 +1325,15 @@ static inline void _get_columns_from_fft(unsigned char *out, short d[2][1024])
                         a = (int)floora;
                         j = d[0][a] + (d[0][a+1]-d[0][a])*(afloat-floora);
                         jbis = d[1][a] + (d[1][a+1]-d[1][a])*(afloat-floora);
-                        j = max(j,jbis);
+                        j = MAX(j,jbis);
                         a = floor(afloat+0.5f);
                 }
                 else {
                         j=d[0][a];
-                        j = max(j,d[1][a]);
+                        j = MAX(j,d[1][a]);
                         while(a<=afloat){
-                                j = max(j,d[0][a]);
-                                j = max(j,d[1][a]);
+                                j = MAX(j,d[0][a]);
+                                j = MAX(j,d[1][a]);
                                 a++;
                         }
                 }
@@ -1342,7 +1342,7 @@ static inline void _get_columns_from_fft(unsigned char *out, short d[2][1024])
 }
 static void vis_fft(void)
 {
-        int i,j, y, a;
+        int i, y;
         /*this is the size of vis_overlay.width*/
         unsigned char outfft[120];
 
