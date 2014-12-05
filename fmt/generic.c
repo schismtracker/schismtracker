@@ -202,7 +202,7 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
                                 IT = 00 05 10 15 20 21 30 31 40 45 42 47 60 61 62 63
                         I'll be um, not duplicating that behavior. :) */
                         *e = VOLFX_PANNING;
-                        *p = short_panning_table[*p & 0xf];
+                        *p = SHORT_PANNING(*p & 0xf);
                         return 1;
                 case 0: case 1: case 2: case 0xf:
                         if (force) {

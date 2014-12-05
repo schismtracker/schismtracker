@@ -102,7 +102,7 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
                         note->instrument = v[1] >> 3;
                         if (note->instrument > 31)
                                 note->instrument = 0; // oops never mind, that was crap
-                        note->volparam = (v[1] & 0x7) + (v[2] >> 1); // I don't understand this line
+                        note->volparam = (v[1] & 0x7) + ((v[2] & 0xf0) >> 1);
                         if (note->volparam <= 64)
                                 note->voleffect = VOLFX_VOLUME;
                         else
