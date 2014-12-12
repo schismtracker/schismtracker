@@ -26,6 +26,7 @@
 #include "it.h"
 #include "util.h"
 #include "song.h"
+#include "cmixer.h"
 #include "sample-edit.h"
 
 #include "sdlmain.h"
@@ -434,74 +435,50 @@ static void _invert_16(signed short *data, unsigned long length)
         }
 }
 
-/* why is newlen unsigned long, but oldlen is unsigned int? just curious. */
+
 static void _resize_16(signed short *dst, unsigned long newlen,
-                signed short *src, unsigned int oldlen)
+                signed short *src, unsigned long oldlen, unsigned int is_stereo)
 {
         unsigned int i;
-        for (i = 0; i < newlen; i++)
-                dst[i] = src[(unsigned int)((double)i * ((double)oldlen / (double)newlen))];
+        double factor = (double)oldlen / (double)newlen;
+        if (is_stereo) for (i = 0; i < newlen; i++)
+        {
+                unsigned int pos = 2*(unsigned int)((double)i * factor);
+                dst[2*i] = src[pos];
+                dst[2*i+1] = src[pos+1];
+        }
+        else for (i = 0; i < newlen; i++)
+        {
+                dst[i] = src[(unsigned int)((double)i * factor)];
+        }
 }
-static void _resize_8(signed char *dst, unsigned long newlen,
-                signed char *src, unsigned int oldlen)
+static void _resize_8(unsigned char *dst, unsigned long newlen,
+                unsigned char *src, unsigned long oldlen, unsigned int is_stereo)
 {
         unsigned int i;
-        for (i = 0; i < newlen; i++)
-                dst[i] = src[(unsigned int)((double)i * ((double)oldlen / (double)newlen))];
+        double factor = (double)oldlen / (double)newlen;
+        if (is_stereo) for (i = 0; i < newlen; i++)
+        {
+                unsigned int pos = 2*(unsigned int)((double)i * factor);
+                dst[2*i] = src[pos];
+                dst[2*i+1] = src[pos+1];
+        }
+        else for (i = 0; i < newlen; i++)
+        {
+                dst[i] = src[(unsigned int)((double)i * factor)];
+        }
 }
-static void _resize_8aa(signed char *dst, unsigned long newlen,
-                signed char *src, unsigned int oldlen)
+static void _resize_8aa(unsigned char *dst, unsigned long newlen,
+                unsigned char *src, unsigned long oldlen, unsigned int is_stereo)
 {
-        int avg_acc = 0;
-        int avg_count = 0;
-        unsigned long i, j;
-        /* what is cp? should it be unsigned? -storlek */
-        int cp;
-        int old_pos = -1;
-        for (i = 0; i < oldlen; i++) {
-                cp = (int)((double)i * ((double)newlen) / (double)oldlen);
-                if (cp < 0) cp = 0;
-                if (cp > old_pos) {
-                        if (old_pos >= 0 && cp >= 0 && (unsigned long) cp < newlen) {
-                                for (j = 0; j < (unsigned long) (cp - old_pos); j++) {
-                                        dst[old_pos+j] = avg_acc/avg_count;
-                                }
-                        }
-                        avg_count = 0;
-                        avg_acc = 0;
-                        old_pos = cp;
-                }
-                avg_count ++;
-                avg_acc += src[i];
-        }
-        for (j = 0; j < (newlen-old_pos); j++) {
-                dst[old_pos+j] = avg_acc/avg_count;
-        }
+        if (is_stereo) ResampleStereo8BitFirFilter((signed char*)src, (signed char*)dst, oldlen, newlen);
+        else ResampleMono8BitFirFilter((signed char*)src, (signed char*)dst, oldlen, newlen);
 }
 static void _resize_16aa(signed short *dst, unsigned long newlen,
-                signed short *src, unsigned int oldlen)
+                signed short *src, unsigned long oldlen, unsigned int is_stereo)
 {
-        int avg_acc = 0;
-        int avg_count = 0;
-        int i, j, cp;
-        int old_pos = -1;
-        for (i = 0; (unsigned int) i < oldlen; i++) {
-                /* cast-o-matic! */
-                cp = (int)((double)i * ((double)newlen) / (double)oldlen);
-                if (cp < 0) cp = 0;
-                if (cp > old_pos) {
-                        if (old_pos >= 0 && cp >= 0 && (unsigned long) cp < newlen) {
-                                for (j = 0; j < (cp-old_pos); j++) {
-                                        dst[old_pos+j] = avg_acc/avg_count;
-                                }
-                        }
-                        avg_count = 0;
-                        avg_acc = 0;
-                        old_pos = cp;
-                }
-                avg_count ++;
-                avg_acc += src[i];
-        }
+        if (is_stereo) ResampleStereo16BitFirFilter(src, dst, oldlen, newlen);
+        else ResampleMono16BitFirFilter(src, dst, oldlen, newlen);
 }
 
 
@@ -546,19 +523,18 @@ void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
 
         oldlen = sample->length;
         sample->length = newlen;
-        if (sample->flags & CHN_STEREO) { newlen *= 2; oldlen *= 2; }
 
         if (sample->flags & CHN_16BIT) {
                 if (aa) {
-                        _resize_16aa((signed short *) d, newlen, (short *)sample->data, oldlen);
+                        _resize_16aa((signed short *) d, newlen, (short *)sample->data, oldlen, sample->flags & CHN_STEREO);
                 } else {
-                        _resize_16((signed short *) d, newlen, (short *)sample->data, oldlen);
+                        _resize_16((signed short *) d, newlen, (short *)sample->data, oldlen, sample->flags & CHN_STEREO);
                 }
         } else {
                 if (aa) {
-                        _resize_8aa((signed char *) d, newlen, sample->data, oldlen);
+                        _resize_8aa(d, newlen, sample->data, oldlen, sample->flags & CHN_STEREO);
                 } else {
-                        _resize_8((signed char *) d, newlen, sample->data, oldlen);
+                        _resize_8(d, newlen, sample->data, oldlen, sample->flags & CHN_STEREO);
                 }
         }
 

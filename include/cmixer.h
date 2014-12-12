@@ -44,5 +44,12 @@ void set_eq_gains(const unsigned int *, unsigned int, const unsigned int *, int,
 extern int g_dry_rofs_vol;
 extern int g_dry_lofs_vol;
 
+
+// mixer.c
+void ResampleMono8BitFirFilter(signed char *oldbuf, signed char *newbuf, unsigned long oldlen, unsigned long newlen);
+void ResampleMono16BitFirFilter(signed short *oldbuf, signed short *newbuf, unsigned long oldlen, unsigned long newlen);
+void ResampleStereo8BitFirFilter(signed char *oldbuf, signed char *newbuf, unsigned long oldlen, unsigned long newlen);
+void ResampleStereo16BitFirFilter(signed short *oldbuf, signed short *newbuf, unsigned long oldlen, unsigned long newlen);
+
 #endif
 

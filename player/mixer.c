@@ -522,6 +522,32 @@ typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
         channel->left_volume      = left_ramp_volume >> VOLUMERAMPPRECISION; \
     }
 
+#define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \
+    void func(sampletype *oldbuf, sampletype *newbuf, unsigned long oldlen, unsigned long newlen) \
+    { \
+        unsigned long long position = 0; \
+        const sampletype *p = oldbuf; \
+        sampletype *pvol = newbuf; \
+        const sampletype *pbufmax = &newbuf[newlen* numchannels]; \
+        unsigned long long increment = (((unsigned long long)oldlen)<<16)/((unsigned long long)newlen); \
+        do {
+
+#define END_RESAMPLE_INTERFACEMONO() \
+                *pvol = vol; \
+                pvol++; \
+                position += increment; \
+        } while (pvol < pbufmax); \
+    }
+
+#define END_RESAMPLE_INTERFACESTEREO() \
+                pvol[0] = vol_l; \
+                pvol[1] = vol_r; \
+                pvol += 2; \
+                position += increment; \
+        } while (pvol < pbufmax); \
+    }
+
+
 
 /////////////////////////////////////////////////////
 // Mono samples functions
@@ -1062,6 +1088,35 @@ BEGIN_RAMPMIX_STFLT_INTERFACE(FilterStereo16BitFirFilterRampMix)
 END_RAMPMIX_STFLT_INTERFACE()
 
 
+
+// Public resampling Methods (
+BEGIN_RESAMPLE_INTERFACE(ResampleMono8BitFirFilter, signed char, 1)
+        SNDMIX_GETMONOVOL8FIRFILTER
+        vol  >>= (WFIR_16BITSHIFT-WFIR_8SHIFT);  //This is used to compensate, since the code assumes that it always outputs to 16bits
+        vol = CLAMP(vol,-128,127);
+END_RESAMPLE_INTERFACEMONO()
+
+BEGIN_RESAMPLE_INTERFACE(ResampleMono16BitFirFilter, signed short, 1)
+        SNDMIX_GETMONOVOL16FIRFILTER
+        vol = CLAMP(vol,-32768,32767);
+END_RESAMPLE_INTERFACEMONO()
+
+BEGIN_RESAMPLE_INTERFACE(ResampleStereo8BitFirFilter, signed char, 2)
+        SNDMIX_GETSTEREOVOL8FIRFILTER
+        vol_l  >>= (WFIR_16BITSHIFT-WFIR_8SHIFT);  //This is used to compensate, since the code assumes that it always outputs to 16bits
+        vol_r  >>= (WFIR_16BITSHIFT-WFIR_8SHIFT);  //This is used to compensate, since the code assumes that it always outputs to 16bits
+        vol_l = CLAMP(vol_l,-128,127);
+        vol_r = CLAMP(vol_r,-128,127);
+END_RESAMPLE_INTERFACESTEREO()
+
+BEGIN_RESAMPLE_INTERFACE(ResampleStereo16BitFirFilter, signed short, 2)
+        SNDMIX_GETSTEREOVOL16FIRFILTER
+        vol_l = CLAMP(vol_l,-32768,32767);
+        vol_r = CLAMP(vol_r,-32768,32767);
+END_RESAMPLE_INTERFACESTEREO()
+
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 //
 // Mix function tables
@@ -1108,7 +1163,7 @@ static const mix_interface_t mix_functions[2 * 2 * 16] = {
         FilterMono8BitLinearRampMix,        FilterMono16BitLinearRampMix,
         FilterStereo8BitLinearRampMix,      FilterStereo16BitLinearRampMix,
 
-        // FirFilter SRC
+        // Spline SRC
         Mono8BitSplineMix,                  Mono16BitSplineMix,
         Stereo8BitSplineMix,                Stereo16BitSplineMix,
         Mono8BitSplineRampMix,              Mono16BitSplineRampMix,
@@ -1501,4 +1556,3 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 
         return nchused;
 }
-
