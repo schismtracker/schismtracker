@@ -126,8 +126,6 @@ void milliHertzToFnum(unsigned int milliHertz,
         *fnum = ((unsigned long long)milliHertz << (20 - *block)) / (conversionFactor * 1000.0) + 0.5;
 
         if (*fnum > 1023) {
-                // not sure which is intended here - original line was *block++;
-                //block++;
                 (*block)++;
                 *fnum = ((unsigned long long)milliHertz << (20 - *block)) / (conversionFactor * 1000.0) + 0.5;
         }
