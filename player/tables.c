@@ -108,18 +108,31 @@ const int8_t retrig_table_2[16] = { 0, -1, -2, -4, -8, -16, 0, 0, 0, 1, 2, 4, 8,
 
 
 
+// round(65536 * 2**(n/768))
+// 768 = 64 extra-fine finetune steps for 12 notes
+// Table content is in 16.16 format
 const uint32_t fine_linear_slide_up_table[16] = {
         65536, 65595, 65654, 65714, 65773, 65832, 65892, 65951,
         66011, 66071, 66130, 66190, 66250, 66309, 66369, 66429
 };
 
 
+// round(65536 * 2**(-n/768))
+// 768 = 64 extra-fine finetune steps for 12 notes
+// Table content is in 16.16 format
+// Note that there are a few errors in this table (typos?), but well, this table comes straight from ITTECH.TXT...
+// Entry 0 (65535) should be 65536 (this value is unused and most likely stored this way so that it fits in a 16-bit integer)
+// Entry 11 (64888) should be 64889 - rounding error?
+// Entry 15 (64645) should be 64655 - typo?
 const uint32_t fine_linear_slide_down_table[16] = {
         65535, 65477, 65418, 65359, 65300, 65241, 65182, 65123,
         65065, 65006, 64947, 64888, 64830, 64772, 64713, 64645
 };
 
 
+// floor(65536 * 2**(n/192))
+// 192 = 16 finetune steps for 12 notes
+// Table content is in 16.16 format
 const uint32_t linear_slide_up_table[256] = {
         65536, 65773, 66010, 66249, 66489, 66729, 66971, 67213,
         67456, 67700, 67945, 68190, 68437, 68685, 68933, 69182,
@@ -156,6 +169,9 @@ const uint32_t linear_slide_up_table[256] = {
 };
 
 
+// floor(65536 * 2**(-n/192))
+// 192 = 16 finetune steps for 12 notes
+// Table content is in 16.16 format
 const uint32_t linear_slide_down_table[256] = {
         65536, 65299, 65064, 64830, 64596, 64363, 64131, 63900,
         63670, 63440, 63212, 62984, 62757, 62531, 62305, 62081,

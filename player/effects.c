@@ -59,7 +59,7 @@ int get_period_from_note(int note, unsigned int c5speed, int linear)
                 return 0;
         note--;
         if (linear)
-                return (period_table[note % 12] << 5) >> (note / 12);
+                return _muldiv(c5speed, linear_slide_up_table[(note % 12) * 16] << (note / 12), 65536 << 5);
         else if (!c5speed)
                 return INT_MAX;
         else
@@ -71,7 +71,9 @@ unsigned int get_freq_from_period(int period, unsigned int c5speed, int linear)
 {
         if (period <= 0)
                 return INT_MAX;
-        return _muldiv(linear ? c5speed : 8363, 1712L << 8, (period << 8));
+        if (linear)
+                return period;
+        return _muldiv(8363, 1712L << 8, (period << 8));
 }
 
 
@@ -178,16 +180,21 @@ static void fx_do_freq_slide(uint32_t flags, song_voice_t *chan, int32_t slide)
         // IT Linear slides
         if (!chan->period) return;
         if (flags & SONG_LINEARSLIDES) {
+                int32_t old_period = chan->period;
                 if (slide < 0) {
                         uint32_t n = (-slide) >> 2;
                         if (n > 255)
                                 n = 255;
-                        chan->period = _muldivr(chan->period, linear_slide_down_table[n], 65536);
+                        chan->period = _muldivr(chan->period, linear_slide_up_table[n], 65536);
+                        if (old_period == chan->period)
+                                chan->period++;
                 } else {
                         uint32_t n = (slide) >> 2;
                         if (n > 255)
                                 n = 255;
-                        chan->period = _muldivr(chan->period, linear_slide_up_table[n], 65536);
+                        chan->period = _muldivr(chan->period, linear_slide_down_table[n], 65536);
+                        if (old_period == chan->period)
+                                chan->period--;
                 }
         } else {
                 chan->period += slide;
@@ -198,7 +205,7 @@ static void fx_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t p
 {
         if ((flags & SONG_FIRSTTICK) && chan->period && param) {
                 if (flags & SONG_LINEARSLIDES) {
-                        chan->period = _muldivr(chan->period, linear_slide_down_table[param & 0x0F], 65536);
+                        chan->period = _muldivr(chan->period, linear_slide_up_table[param & 0x0F], 65536);
                 } else {
                         chan->period -= (int)(param * 4);
                 }
@@ -209,7 +216,7 @@ static void fx_fine_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t
 {
         if ((flags & SONG_FIRSTTICK) && chan->period && param) {
                 if (flags & SONG_LINEARSLIDES) {
-                        chan->period = _muldivr(chan->period, linear_slide_up_table[param & 0x0F], 65536);
+                        chan->period = _muldivr(chan->period, linear_slide_down_table[param & 0x0F], 65536);
                 } else {
                         chan->period += (int)(param * 4);
                 }
@@ -220,7 +227,7 @@ static void fx_extra_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint
 {
         if ((flags & SONG_FIRSTTICK) && chan->period && param) {
                 if (flags & SONG_LINEARSLIDES) {
-                        chan->period = _muldivr(chan->period, fine_linear_slide_down_table[param & 0x0F], 65536);
+                        chan->period = _muldivr(chan->period, fine_linear_slide_up_table[param & 0x0F], 65536);
                 } else {
                         chan->period -= (int)(param);
                 }
@@ -231,7 +238,7 @@ static void fx_extra_fine_portamento_down(uint32_t flags, song_voice_t *chan, ui
 {
         if ((flags & SONG_FIRSTTICK) && chan->period && param) {
                 if (flags & SONG_LINEARSLIDES) {
-                        chan->period = _muldivr(chan->period, fine_linear_slide_up_table[param & 0x0F], 65536);
+                        chan->period = _muldivr(chan->period, fine_linear_slide_down_table[param & 0x0F], 65536);
                 } else {
                         chan->period += (int)(param);
                 }

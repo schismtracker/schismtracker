@@ -155,15 +155,15 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int period)
                 int l = abs(vdelta);
 
                 if (vdelta < 0) {
-                        vdelta = _muldiv(period, linear_slide_down_table[l >> 2], 0x10000) - period;
-
-                        if (l & 0x03)
-                                vdelta += _muldiv(period, fine_linear_slide_down_table[l & 0x03], 0x10000) - period;
-                } else {
                         vdelta = _muldiv(period, linear_slide_up_table[l >> 2], 0x10000) - period;
 
                         if (l & 0x03)
                                 vdelta += _muldiv(period, fine_linear_slide_up_table[l & 0x03], 0x10000) - period;
+                } else {
+                        vdelta = _muldiv(period, linear_slide_down_table[l >> 2], 0x10000) - period;
+
+                        if (l & 0x03)
+                                vdelta += _muldiv(period, fine_linear_slide_down_table[l & 0x03], 0x10000) - period;
                 }
         }
 
@@ -220,15 +220,15 @@ static inline int rn_sample_vibrato(song_voice_t *chan, int period)
 
         int l = abs(vdelta);
         if (vdelta < 0) {
-                vdelta = _muldiv(period, linear_slide_down_table[l >> 2], 0x10000) - period;
-
-                if (l & 0x03)
-                        vdelta += _muldiv(period, fine_linear_slide_down_table[l & 0x03], 0x10000) - period;
-        } else {
                 vdelta = _muldiv(period, linear_slide_up_table[l >> 2], 0x10000) - period;
 
                 if (l & 0x03)
                         vdelta += _muldiv(period, fine_linear_slide_up_table[l & 0x03], 0x10000) - period;
+        } else {
+                vdelta = _muldiv(period, linear_slide_down_table[l >> 2], 0x10000) - period;
+
+                if (l & 0x03)
+                        vdelta += _muldiv(period, fine_linear_slide_down_table[l & 0x03], 0x10000) - period;
         }
 
         return period - vdelta;
@@ -417,7 +417,7 @@ static inline void rn_pitch_filter_envelope(song_voice_t *chan, int *nenvpitch, 
                         l = 255;
 
                 period = _muldiv(period, (envpitch < 0 ?
-                        linear_slide_up_table : linear_slide_down_table)[l], 0x10000);
+                        linear_slide_down_table : linear_slide_up_table)[l], 0x10000);
         }
 
         *nperiod = period;
