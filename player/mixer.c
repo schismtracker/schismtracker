@@ -371,13 +371,13 @@
 ///////////////////////////////////////////////////
 // Resonant Filters
 
-#define FILT_CLIP(i) CLAMP(i, -4096, 4095)
+#define FILT_CLIP(i) CLAMP(i, -65536, 65534)
 
 // Mono
 #define MIX_BEGIN_FILTER \
-    double fy1 = channel->filter_y1; \
-    double fy2 = channel->filter_y2; \
-    double ta;
+    int32_t fy1 = channel->filter_y1; \
+    int32_t fy2 = channel->filter_y2; \
+    int32_t ta;
 
 
 #define MIX_END_FILTER \
@@ -386,20 +386,20 @@
 
 
 #define SNDMIX_PROCESSFILTER \
-    ta = ((double)vol * chan->filter_a0 + fy1 * (chan->filter_b0 + chan->filter_b1) \
-          + FILT_CLIP((fy2-fy1) * chan->filter_b1)); \
+    ta = (vol * chan->filter_a0 + FILT_CLIP(fy1) * chan->filter_b0 + FILT_CLIP(fy2) * chan->filter_b1 \
+        + (1 << (FILTERPRECISION - 1))) >> FILTERPRECISION; \
     fy2 = fy1; \
     fy1 = ta; \
-    vol = (int)ta;
+    vol = ta;
 
 
 // Stereo
 #define MIX_BEGIN_STEREO_FILTER \
-    double fy1 = channel->filter_y1; \
-    double fy2 = channel->filter_y2; \
-    double fy3 = channel->filter_y3; \
-    double fy4 = channel->filter_y4; \
-    double ta, tb;
+    int32_t fy1 = channel->filter_y1; \
+    int32_t fy2 = channel->filter_y2; \
+    int32_t fy3 = channel->filter_y3; \
+    int32_t fy4 = channel->filter_y4; \
+    int32_t ta, tb;
 
 
 #define MIX_END_STEREO_FILTER \
@@ -410,12 +410,12 @@
 
 
 #define SNDMIX_PROCESSSTEREOFILTER \
-    ta = ((double)vol_l * chan->filter_a0 + fy1 * (chan->filter_b0 + chan->filter_b1) \
-          + FILT_CLIP((fy2-fy1) * chan->filter_b1)); \
-    tb = ((double)vol_r * chan->filter_a0 + fy3 * (chan->filter_b0 + chan->filter_b1) \
-          + FILT_CLIP((fy4-fy3) * chan->filter_b1)); \
-    fy2 = fy1; fy1 = ta; vol_l = (int) ta; \
-    fy4 = fy3; fy3 = tb; vol_r = (int) tb;
+    ta = (vol_l * chan->filter_a0 + FILT_CLIP(fy1) * chan->filter_b0 + FILT_CLIP(fy2) * chan->filter_b1 \
+        + (1 << (FILTERPRECISION - 1))) >> FILTERPRECISION; \
+    tb = (vol_r * chan->filter_a0 + FILT_CLIP(fy3) * chan->filter_b0 + FILT_CLIP(fy4) * chan->filter_b1 \
+        + (1 << (FILTERPRECISION - 1))) >> FILTERPRECISION; \
+    fy2 = fy1; fy1 = ta; vol_l = ta; \
+    fy4 = fy3; fy3 = tb; vol_r = tb;
 
 
 //////////////////////////////////////////////////////////

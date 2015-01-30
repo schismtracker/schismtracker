@@ -417,8 +417,8 @@ typedef struct song_voice {
         int32_t left_ramp_volume; // ?
         int32_t strike; // decremented to zero. this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)
 
-        double filter_y1, filter_y2, filter_y3, filter_y4;
-        double filter_a0, filter_b0, filter_b1;
+        int32_t filter_y1, filter_y2, filter_y3, filter_y4;
+        int32_t filter_a0, filter_b0, filter_b1;
 
         int32_t rofs, lofs; // ?
         int32_t ramp_length;

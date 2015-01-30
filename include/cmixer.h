@@ -8,6 +8,7 @@
 #define MIXING_CLIPMIN          (-0x04000000)
 #define MIXING_CLIPMAX          (0x03FFFFFF)
 #define VOLUMERAMPPRECISION     12
+#define FILTERPRECISION         13
 
 
 void init_mix_buffer(int *, unsigned int);
