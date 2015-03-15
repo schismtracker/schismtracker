@@ -67,13 +67,14 @@ int get_period_from_note(int note, unsigned int c5speed, int linear)
 }
 
 
-unsigned int get_freq_from_period(int period, unsigned int c5speed, int linear)
+unsigned int get_freq_from_period(int period, UNUSED unsigned int c5speed, int linear)
 {
         if (period <= 0)
                 return INT_MAX;
-        if (linear)
+        else if (linear)
                 return period;
-        return _muldiv(8363, 1712L << 8, (period << 8));
+        else
+                return _muldiv(8363, 1712L << 8, (period << 8));
 }
 
 
@@ -175,6 +176,7 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 }
 
 
+// negative value for slide = up, positive = down
 static void fx_do_freq_slide(uint32_t flags, song_voice_t *chan, int32_t slide)
 {
         // IT Linear slides
@@ -358,13 +360,13 @@ static void fx_note_slide(uint32_t flags, song_voice_t *chan, uint32_t param, in
                         chan->note_slide_step = y;
                 chan->note_slide_counter = chan->note_slide_speed;
         } else {
-                        if (--chan->note_slide_counter == 0) {
-                                chan->note_slide_counter = chan->note_slide_speed;
-                                // update it
-                                chan->period = get_period_from_note
-                                        (sign * chan->note_slide_step + get_note_from_period(chan->period),
-                                         8363, 0);
-                        }
+                if (--chan->note_slide_counter == 0) {
+                        chan->note_slide_counter = chan->note_slide_speed;
+                        // update it
+                        chan->period = get_period_from_note
+                                (sign * chan->note_slide_step + get_note_from_period(chan->period),
+                                 8363, 0);
+                }
         }
 }
 

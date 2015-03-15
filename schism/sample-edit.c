@@ -452,33 +452,38 @@ static void _resize_16(signed short *dst, unsigned long newlen,
                 dst[i] = src[(unsigned int)((double)i * factor)];
         }
 }
-static void _resize_8(unsigned char *dst, unsigned long newlen,
-                unsigned char *src, unsigned long oldlen, unsigned int is_stereo)
+static void _resize_8(signed char *dst, unsigned long newlen,
+                signed char *src, unsigned long oldlen, unsigned int is_stereo)
 {
         unsigned int i;
         double factor = (double)oldlen / (double)newlen;
-        if (is_stereo) for (i = 0; i < newlen; i++)
-        {
-                unsigned int pos = 2*(unsigned int)((double)i * factor);
-                dst[2*i] = src[pos];
-                dst[2*i+1] = src[pos+1];
-        }
-        else for (i = 0; i < newlen; i++)
-        {
-                dst[i] = src[(unsigned int)((double)i * factor)];
+        if (is_stereo) {
+                for (i = 0; i < newlen; i++) {
+                        unsigned int pos = 2*(unsigned int)((double)i * factor);
+                        dst[2*i] = src[pos];
+                        dst[2*i+1] = src[pos+1];
+                }
+        } else {
+                for (i = 0; i < newlen; i++) {
+                        dst[i] = src[(unsigned int)((double)i * factor)];
+                }
         }
 }
-static void _resize_8aa(unsigned char *dst, unsigned long newlen,
-                unsigned char *src, unsigned long oldlen, unsigned int is_stereo)
+static void _resize_8aa(signed char *dst, unsigned long newlen,
+                signed char *src, unsigned long oldlen, unsigned int is_stereo)
 {
-        if (is_stereo) ResampleStereo8BitFirFilter((signed char*)src, (signed char*)dst, oldlen, newlen);
-        else ResampleMono8BitFirFilter((signed char*)src, (signed char*)dst, oldlen, newlen);
+        if (is_stereo)
+                ResampleStereo8BitFirFilter(src, dst, oldlen, newlen);
+        else
+                ResampleMono8BitFirFilter(src, dst, oldlen, newlen);
 }
 static void _resize_16aa(signed short *dst, unsigned long newlen,
                 signed short *src, unsigned long oldlen, unsigned int is_stereo)
 {
-        if (is_stereo) ResampleStereo16BitFirFilter(src, dst, oldlen, newlen);
-        else ResampleMono16BitFirFilter(src, dst, oldlen, newlen);
+        if (is_stereo)
+                ResampleStereo16BitFirFilter(src, dst, oldlen, newlen);
+        else
+                ResampleMono16BitFirFilter(src, dst, oldlen, newlen);
 }
 
 
@@ -486,7 +491,7 @@ static void _resize_16aa(signed short *dst, unsigned long newlen,
 void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
 {
         int bps;
-        unsigned char *d, *z;
+        signed char *d, *z;
         unsigned long oldlen;
 
         if (!newlen) return;
@@ -505,8 +510,8 @@ void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
 
         status.flags |= SONG_NEEDS_SAVE;
 
-        d = (unsigned char *) csf_allocate_sample(newlen*bps);
-        z = (unsigned char *) sample->data;
+        d = csf_allocate_sample(newlen*bps);
+        z = sample->data;
 
         sample->c5speed = (unsigned long)((((double)newlen) * ((double)sample->c5speed))
                         / ((double)sample->length));
@@ -526,9 +531,9 @@ void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
 
         if (sample->flags & CHN_16BIT) {
                 if (aa) {
-                        _resize_16aa((signed short *) d, newlen, (short *)sample->data, oldlen, sample->flags & CHN_STEREO);
+                        _resize_16aa((signed short *) d, newlen, (short *) sample->data, oldlen, sample->flags & CHN_STEREO);
                 } else {
-                        _resize_16((signed short *) d, newlen, (short *)sample->data, oldlen, sample->flags & CHN_STEREO);
+                        _resize_16((signed short *) d, newlen, (short *) sample->data, oldlen, sample->flags & CHN_STEREO);
                 }
         } else {
                 if (aa) {
@@ -538,8 +543,8 @@ void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
                 }
         }
 
-        sample->data = (signed char *) d;
-        csf_free_sample((signed char *) z);
+        sample->data = d;
+        csf_free_sample(z);
         song_unlock_audio();
 }
 

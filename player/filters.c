@@ -27,8 +27,7 @@
 
 
 // LUT for 2 * damping factor
-static const float resonance_table[128] =
-{
+static const float resonance_table[128] = {
         1.0000000000000000f, 0.9786446094512940f, 0.9577452540397644f, 0.9372922182083130f,
         0.9172759056091309f, 0.8976871371269226f, 0.8785166740417481f, 0.8597555756568909f,
         0.8413951396942139f, 0.8234267830848694f, 0.8058421611785889f, 0.7886331081390381f,
@@ -68,10 +67,12 @@ static const float resonance_table[128] =
 //
 // XXX freq WAS unused but is now mix_frequency!
 //
+#define FREQ_PARAM_MULT (128.0 / (24.0 * 256.0))
 void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int freq)
 {
         int cutoff = chan->cutoff;
         int resonance = chan->resonance;
+        float frequency, r, d, e, fg, fb0, fb1;
 
         cutoff = cutoff * (flt_modifier + 256) / 256;
 
@@ -87,19 +88,18 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
         else
                 cutoff = 255;
 
-        const float freq_parameter_multiplier = 128.0f / (24.0f * 256.0f);
-
         // 2 ^ (i / 24 * 256)
-        float frequency = 110.0f * powf(2.0f, 0.25f + (float)cutoff * freq_parameter_multiplier);
-        if (frequency > (float)(freq/ 2)) frequency = (float)(freq / 2);
-        const float r = (float)freq / (2.0f * (float)3.14159265358979f * frequency);
+        frequency = 110.0 * powf(2.0, (float) cutoff * FREQ_PARAM_MULT + 0.25);
+        if (frequency > freq / 2.0)
+                frequency = freq / 2.0;
+        r = freq / (2.0 * M_PI * frequency);
 
-        float d = resonance_table[resonance] * r + resonance_table[resonance] - 1.0f;
-        float e = r * r;
+        d = resonance_table[resonance] * r + resonance_table[resonance] - 1.0;
+        e = r * r;
 
-        float fg = 1.0f / (1.0f + d + e);
-        float fb0 = (d + e + e) / (1 + d + e);
-        float fb1 = -e / (1.0f + d + e);
+        fg = 1.0 / (1.0 + d + e);
+        fb0 = (d + e + e) / (1.0 + d + e);
+        fb1 = -e / (1.0 + d + e);
 
         chan->filter_a0 = (int32_t)(fg * (1 << FILTERPRECISION));
         chan->filter_b0 = (int32_t)(fb0 * (1 << FILTERPRECISION));
