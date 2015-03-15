@@ -364,8 +364,7 @@ static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int period)
         if (!a)
                 return period;
 
-        //return get_period_from_note(a + get_note_from_period(period), 8363, 0);
-        return get_freq_from_period(calc_halftone(get_freq_from_period(period, 8363, csf->flags & SONG_LINEARSLIDES), a), 8363, csf->flags & SONG_LINEARSLIDES);
+        return calc_halftone(period, (csf->flags & SONG_LINEARSLIDES) ? a : -a);
 }
 
 
