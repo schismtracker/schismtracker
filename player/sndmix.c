@@ -351,6 +351,7 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int period)
 {
         int a;
+
         switch ((csf->current_speed - csf->tick_count) % 3) {
         case 1:
                 a = chan->mem_arpeggio >> 4;
@@ -361,10 +362,14 @@ static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int period)
         default:
                 a = 0;
         }
+
         if (!a)
                 return period;
 
-        return calc_halftone(period, (csf->flags & SONG_LINEARSLIDES) ? a : -a);
+        a = linear_slide_up_table[a * 16];
+        return ((csf->flags & SONG_LINEARSLIDES)
+                ? _muldiv(period, a, 65536)
+                : _muldiv(period, 65536, a));
 }
 
 
