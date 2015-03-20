@@ -443,9 +443,9 @@ static void multichannel_close(UNUSED void *data)
 static int multichannel_handle_key(struct key_event *k)
 {
         if (k->sym == SDLK_n) {
-                if ((k->mod & KMOD_ALT) && !k->state)
+                if ((k->mod & KMOD_ALT) && k->state == KEY_PRESS)
                         dialog_yes(NULL);
-                else if (NO_MODIFIER(k->mod) && k->state)
+                else if (NO_MODIFIER(k->mod) && k->state == KEY_RELEASE)
                         dialog_cancel(NULL);
                 return 1;
         }
@@ -828,24 +828,28 @@ static int history_handle_key(struct key_event *k)
         if (! NO_MODIFIER(k->mod)) return 0;
         switch (k->sym) {
         case SDLK_ESCAPE:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 dialog_cancel(NULL);
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_UP:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 undo_selection--;
                 if (undo_selection < 0) undo_selection = 0;
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_DOWN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 undo_selection++;
                 if (undo_selection > 9) undo_selection = 9;
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_RETURN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 j = undo_history_top;
                 for (i = 0; i < 10; i++) {
                         if (i == undo_selection) {
@@ -957,7 +961,7 @@ static void volume_amplify_ok(UNUSED void *data)
 
 static int volume_amplify_jj(struct key_event *k)
 {
-        if (!k->state && (k->mod & KMOD_ALT) && (k->sym == SDLK_j)) {
+        if (k->state == KEY_PRESS && (k->mod & KMOD_ALT) && (k->sym == SDLK_j)) {
                 dialog_yes(NULL);
                 return 1;
         }
@@ -2920,7 +2924,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
         tick = song_get_current_tick();
         if (k->midi_note == -1) {
                 /* nada */
-        } else if (k->state) {
+        } else if (k->state == KEY_RELEASE) {
                 c = song_keyup(k->midi_channel, k->midi_channel, k->midi_note);
 
                 /* don't record noteoffs for no good reason... */
@@ -2970,7 +2974,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
         }
 
         if (!(midi_flags & MIDI_PITCHBEND) || midi_pitch_depth == 0 || k->midi_bend == 0) {
-                if (k->state && k->midi_note > -1 && cur_note->instrument > 0) {
+                if (k->state == KEY_RELEASE && k->midi_note > -1 && cur_note->instrument > 0) {
                         song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note, v, c+1,
                                 cur_note->effect, cur_note->param);
                         pattern_selection_system_copyout();
@@ -3007,8 +3011,10 @@ static int pattern_editor_insert_midi(struct key_event *k)
                                 cur_note->effect = FX_PORTAMENTOUP; /* Fxx */
                                 cur_note->param = pd;
                         }
-                        if (k->midi_note == -1 || k->state) continue;
-                        if (cur_note->instrument < 1) continue;
+                        if (k->midi_note == -1 || k->state == KEY_RELEASE)
+                                continue;
+                        if (cur_note->instrument < 1)
+                                continue;
                         if (cur_note->voleffect == VOLFX_VOLUME)
                                 v = cur_note->volparam;
                         else
@@ -3031,7 +3037,8 @@ static int pattern_editor_insert(struct key_event *k)
 
         song_get_pattern(current_pattern, &pattern);
         /* keydown events are handled here for multichannel */
-        if (k->state && current_position) return 0;
+        if (k->state == KEY_RELEASE && current_position)
+                return 0;
 
         cur_note = pattern + 64 * current_row + current_channel - 1;
 
@@ -3048,7 +3055,8 @@ static int pattern_editor_insert(struct key_event *k)
                 }
 
                 if (k->sym == SDLK_4) {
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
 
                         if (cur_note->voleffect == VOLFX_VOLUME) {
                                 vol = cur_note->volparam;
@@ -3061,7 +3069,8 @@ static int pattern_editor_insert(struct key_event *k)
                         return 1;
                 } else if (k->sym == SDLK_8) {
                         /* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         song_single_step(current_pattern, current_row);
                         advance_cursor(!(k->mod & KMOD_SHIFT), 0);
                         return 1;
@@ -3099,15 +3108,15 @@ static int pattern_editor_insert(struct key_event *k)
 #if 0
                 /* ? */
                 if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing) {
-                        if (k->state && !(midi_flags & MIDI_RECORD_NOTEOFF))
+                        if (k->state == KEY_RELEASE && !(midi_flags & MIDI_RECORD_NOTEOFF))
                                 return 1;
                         song_keyup(smp, ins, n);
-                        if (k->state)
+                        if (k->state == KEY_RELEASE)
                                 n = NOTE_OFF;
                         song_keydown(smp, ins, n, vol, current_channel);
                 }
 #endif
-                if (k->state) {
+                if (k->state == KEY_RELEASE) {
                         if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
                                 /* coda mode */
                                 song_keyup(smp, ins, n);
@@ -3364,7 +3373,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 
         n = numeric_key_event(k, 0);
         if (n > -1 && n <= 9) {
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 skip_value = (n == 9) ? 16 : n;
                 status_text_flash("Cursor step set to %d", skip_value);
                 return 1;
@@ -3372,17 +3382,20 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 
         switch (k->sym) {
         case SDLK_RETURN:
-                if (!k->state) return 1;
+                if (k->state == KEY_PRESS)
+                        return 1;
                 fast_save_update();
                 return 1;
 
         case SDLK_BACKSPACE:
-                if (!k->state) return 1;
+                if (k->state == KEY_PRESS)
+                        return 1;
                 snap_paste(&fast_save, 0, 0, 0);
                 return 1;
 
         case SDLK_b:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (!SELECTION_EXISTS) {
                         selection.last_channel = current_channel;
                         selection.last_row = current_row;
@@ -3392,7 +3405,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 normalise_block_selection();
                 break;
         case SDLK_e:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (!SELECTION_EXISTS) {
                         selection.first_channel = current_channel;
                         selection.first_row = current_row;
@@ -3402,7 +3416,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 normalise_block_selection();
                 break;
         case SDLK_d:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (status.last_keysym == SDLK_d) {
                         if (total_rows - (current_row - 1) > block_double_size)
                                 block_double_size <<= 1;
@@ -3418,7 +3433,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 selection.last_row = MIN(n, total_rows);
                 break;
         case SDLK_l:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (status.last_keysym == SDLK_l) {
                         /* 3x alt-l re-selects the current channel */
                         if (selection.first_channel == selection.last_channel) {
@@ -3435,16 +3451,19 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 pattern_selection_system_copyout();
                 break;
         case SDLK_r:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 draw_divisions = 1;
                 set_view_scheme(0);
                 break;
         case SDLK_s:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selection_set_sample();
                 break;
         case SDLK_u:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (SELECTION_EXISTS) {
                         selection_clear();
                 } else if (clipboard.data) {
@@ -3457,11 +3476,13 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 }
                 break;
         case SDLK_c:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 clipboard_copy(0);
                 break;
         case SDLK_o:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (status.last_keysym == SDLK_o) {
                         clipboard_paste_overwrite(0, 1);
                 } else {
@@ -3469,11 +3490,13 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 }
                 break;
         case SDLK_p:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 clipboard_paste_insert();
                 break;
         case SDLK_m:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (status.last_keysym == SDLK_m) {
                         clipboard_paste_mix_fields(0, 0);
                 } else {
@@ -3481,15 +3504,18 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 }
                 break;
         case SDLK_f:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 block_length_double();
                 break;
         case SDLK_g:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 block_length_halve();
                 break;
         case SDLK_n:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 channel_multi[current_channel - 1] ^= 1;
                 if (channel_multi[current_channel - 1]) {
                         channel_multi_enabled = 1;
@@ -3508,24 +3534,29 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 }
                 break;
         case SDLK_z:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 clipboard_copy(0);
                 selection_erase();
                 break;
         case SDLK_y:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selection_swap();
                 break;
         case SDLK_v:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selection_set_volume();
                 break;
         case SDLK_w:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selection_wipe_volume(0);
                 break;
         case SDLK_k:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (status.last_keysym == SDLK_k) {
                         selection_wipe_volume(1);
                 } else {
@@ -3533,7 +3564,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 }
                 break;
         case SDLK_x:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (status.last_keysym == SDLK_x) {
                         selection_wipe_effect();
                 } else {
@@ -3541,27 +3573,31 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 }
                 break;
         case SDLK_h:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 draw_divisions = !draw_divisions;
                 recalculate_visible_area();
                 pattern_editor_reposition();
                 break;
         case SDLK_q:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_SHIFT)
                         transpose_notes(12);
                 else
                         transpose_notes(1);
                 break;
         case SDLK_a:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_SHIFT)
                         transpose_notes(-12);
                 else
                         transpose_notes(-1);
                 break;
         case SDLK_i:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_SHIFT)
                         template_mode = TEMPLATE_OFF;
                 else if (fast_volume_mode)
@@ -3570,21 +3606,24 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                         template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
                 break;
         case SDLK_j:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (fast_volume_mode)
                         fast_volume_attenuate();
                 else
                         volume_amplify();
                 break;
         case SDLK_t:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 n = current_channel - top_display_channel;
                 track_view_scheme[n] = ((track_view_scheme[n] + 1) % NUM_TRACK_VIEWS);
                 recalculate_visible_area();
                 pattern_editor_reposition();
                 break;
         case SDLK_UP:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (top_display_row > 0) {
                         top_display_row--;
                         if (current_row > top_display_row + 31)
@@ -3593,7 +3632,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 }
                 return 1;
         case SDLK_DOWN:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (top_display_row + 31 < total_rows) {
                         top_display_row++;
                         if (current_row < top_display_row)
@@ -3602,29 +3642,35 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
                 }
                 return 1;
         case SDLK_LEFT:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 current_channel--;
                 return -1;
         case SDLK_RIGHT:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 current_channel++;
                 return -1;
         case SDLK_INSERT:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 pated_save("Remove inserted row(s)    (Alt-Insert)");
                 pattern_insert_rows(current_row, 1, 1, 64);
                 break;
         case SDLK_DELETE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 pated_save("Replace deleted row(s)    (Alt-Delete)");
                 pattern_delete_rows(current_row, 1, 1, 64);
                 break;
         case SDLK_F9:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_toggle_channel_mute(current_channel - 1);
                 break;
         case SDLK_F10:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_handle_channel_solo(current_channel - 1);
                 break;
         default:
@@ -3648,7 +3694,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
         if (n > -1) {
                 if (n < 0 || n >= NUM_TRACK_VIEWS)
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_SHIFT) {
                         set_view_scheme(n);
                 } else {
@@ -3663,78 +3710,94 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 
         switch (k->sym) {
         case SDLK_LEFT:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (current_channel > top_display_channel)
                         current_channel--;
                 return -1;
         case SDLK_RIGHT:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (current_channel < top_display_channel + visible_channels - 1)
                         current_channel++;
                 return -1;
         case SDLK_F6:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_loop_pattern(current_pattern, current_row);
                 return 1;
         case SDLK_F7:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 set_playback_mark();
                 return -1;
         case SDLK_UP:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 set_previous_instrument();
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_DOWN:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 set_next_instrument();
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_PAGEUP:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 current_row = 0;
                 return -1;
         case SDLK_PAGEDOWN:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 current_row = total_rows;
                 return -1;
         case SDLK_HOME:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 current_row--;
                 return -1;
         case SDLK_END:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 current_row++;
                 return -1;
         case SDLK_MINUS:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
                         return 1;
                 prev_order_pattern();
                 return 1;
         case SDLK_PLUS:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
                         return 1;
                 next_order_pattern();
                 return 1;
         case SDLK_c:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 centralise_cursor = !centralise_cursor;
                 status_text_flash("Centralise cursor %s", (centralise_cursor ? "enabled" : "disabled"));
                 return -1;
         case SDLK_h:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 highlight_current_row = !highlight_current_row;
                 status_text_flash("Row hilight %s", (highlight_current_row ? "enabled" : "disabled"));
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_j:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 fast_volume_toggle();
                 return 1;
         case SDLK_u:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (fast_volume_mode)
                         selection_vary(1, 100-fast_volume_percent, FX_CHANNELVOLUME);
                 else
@@ -3742,7 +3805,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_y:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (fast_volume_mode)
                         selection_vary(1, 100-fast_volume_percent, FX_PANBRELLO);
                 else
@@ -3750,7 +3814,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_k:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (fast_volume_mode)
                         selection_vary(1, 100-fast_volume_percent, current_effect());
                 else
@@ -3763,18 +3828,21 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
                         return 0;
                 /* fall through */
         case SDLK_o:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
                 return 1;
 
         case SDLK_v:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 show_default_volumes = !show_default_volumes;
                 status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
                 return 1;
         case SDLK_x:
         case SDLK_z:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 midi_start_record++;
                 if (midi_start_record > 2) midi_start_record = 0;
                 switch (midi_start_record) {
@@ -3790,7 +3858,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
                 };
                 return 1;
         case SDLK_BACKSPACE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 pattern_editor_display_history();
                 return 1;
         default:
@@ -3805,21 +3874,24 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 {
         /* bleah */
         if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if ((status.flags & CLASSIC_MODE) || current_position != 4) {
                         set_previous_instrument();
                         status.flags |= NEED_UPDATE;
                         return 1;
                 }
         } else if (k->sym == SDLK_GREATER || k->sym == SDLK_QUOTE || k->sym == SDLK_QUOTEDBL) {
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if ((status.flags & CLASSIC_MODE) || current_position != 4) {
                         set_next_instrument();
                         status.flags |= NEED_UPDATE;
                         return 1;
                 }
         } else if (k->sym == SDLK_COMMA) {
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 switch (current_position) {
                 case 2: case 3:
                         edit_copy_mask ^= MASK_INSTRUMENT;
@@ -3849,20 +3921,21 @@ static int pattern_editor_handle_key(struct key_event * k)
         int np, nr, nc;
         unsigned int basex;
 
-        if (k->mouse) {
-                if (k->state) {
+        if (k->mouse != MOUSE_NONE) {
+                if (k->state == KEY_RELEASE) {
                         /* mouseup */
                         memset(mute_toggle_hack, 0, sizeof(mute_toggle_hack));
                 }
 
-                if ((k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) && k->state) {
+                if ((k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) && k->state == KEY_RELEASE) {
                         shift_selection_end();
                 }
 
                 if (k->y < 13 && !shift_selection.in_progress) return 0;
 
                 if (k->y >= 15 && k->mouse != MOUSE_CLICK && k->mouse != MOUSE_DBLCLICK) {
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mouse == MOUSE_SCROLL_UP) {
                                 if (top_display_row > 0) {
                                         top_display_row = MAX(top_display_row - MOUSE_SCROLL_LINES, 0);
@@ -3897,7 +3970,7 @@ static int pattern_editor_handle_key(struct key_event * k)
                             && ((n == visible_channels && shift_selection.in_progress)
                                 || k->x < basex + track_view->width)) {
                                 if (!shift_selection.in_progress && (k->y == 14 || k->y == 13)) {
-                                        if (!k->state) {
+                                        if (k->state == KEY_PRESS) {
                                                 if (!mute_toggle_hack[n-1]) {
                                                         song_toggle_channel_mute(n-1);
                                                         status.flags |= NEED_UPDATE;
@@ -3984,7 +4057,7 @@ static int pattern_editor_handle_key(struct key_event * k)
                 if (nr < 0) nr = 0;
                 current_position = np; current_channel = nc; current_row = nr;
 
-                if (!k->state && k->sy > 14) {
+                if (k->state == KEY_PRESS && k->sy > 14) {
                         if (!shift_selection.in_progress) {
                                 shift_selection_begin();
                         } else {
@@ -4002,7 +4075,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 
         switch (k->sym) {
         case SDLK_UP:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (skip_value) {
                         if (current_row - skip_value >= 0)
                                 current_row -= skip_value;
@@ -4011,7 +4085,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 return -1;
         case SDLK_DOWN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (skip_value) {
                         if (current_row + skip_value <= total_rows)
                                 current_row += skip_value;
@@ -4020,7 +4095,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 return -1;
         case SDLK_LEFT:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (k->mod & KMOD_SHIFT) {
                         current_channel--;
                 } else if (link_effect_column && current_position == 0 && current_channel > 1) {
@@ -4031,7 +4107,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 return -1;
         case SDLK_RIGHT:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (k->mod & KMOD_SHIFT) {
                         current_channel++;
                 } else if (link_effect_column && current_position == 6 && current_channel < 64) {
@@ -4041,7 +4118,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 return -1;
         case SDLK_TAB:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if ((k->mod & KMOD_SHIFT) == 0)
                         current_channel++;
                 else if (current_position == 0)
@@ -4054,7 +4132,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 
                 return -1;
         case SDLK_PAGEUP:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 {
                         int rh = current_song->row_highlight_major ?: 16;
                         if (current_row == total_rows)
@@ -4064,11 +4143,13 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 return -1;
         case SDLK_PAGEDOWN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 current_row += current_song->row_highlight_major ?: 16;
                 return -1;
         case SDLK_HOME:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (current_position == 0) {
                         if (invert_home_end ? (current_row != 0) : (current_channel == 1)) {
                                 current_row = 0;
@@ -4080,7 +4161,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 return -1;
         case SDLK_END:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 n = song_find_last_channel();
                 if (current_position == 8) {
                         if (invert_home_end ? (current_row != total_rows) : (current_channel == n)) {
@@ -4093,7 +4175,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 return -1;
         case SDLK_INSERT:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (template_mode && clipboard.rows == 1) {
                         n = clipboard.channels;
                         if (n + current_channel > 64) {
@@ -4105,7 +4188,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 break;
         case SDLK_DELETE:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (template_mode && clipboard.rows == 1) {
                         n = clipboard.channels;
                         if (n + current_channel > 64) {
@@ -4117,7 +4201,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                 }
                 break;
         case SDLK_MINUS:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
 
                 if (playback_tracing) {
                         switch (song_get_mode()) {
@@ -4137,7 +4222,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                         set_current_pattern(current_pattern - 1);
                 return 1;
         case SDLK_PLUS:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
 
                 if (playback_tracing) {
                         switch (song_get_mode()) {
@@ -4157,7 +4243,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                         set_current_pattern(current_pattern + 1);
                 return 1;
         case SDLK_BACKSPACE:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 current_channel = multichannel_get_previous (current_channel);
                 if (skip_value)
                         current_row -= skip_value;
@@ -4165,7 +4252,8 @@ static int pattern_editor_handle_key(struct key_event * k)
                         current_row--;
                 return -1;
         case SDLK_RETURN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 copy_note_to_mask();
                 if (template_mode != TEMPLATE_NOTES_ONLY)
                         template_mode = TEMPLATE_OFF;
@@ -4173,7 +4261,8 @@ static int pattern_editor_handle_key(struct key_event * k)
         case SDLK_l:
                 if (k->mod & KMOD_SHIFT) {
                         if (status.flags & CLASSIC_MODE) return 0;
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         clipboard_copy(1);
                         break;
                 }
@@ -4181,7 +4270,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 
         case SDLK_LSHIFT:
         case SDLK_RSHIFT:
-                if (!k->state) {
+                if (k->state == KEY_PRESS) {
                         if (shift_selection.in_progress)
                                 shift_selection_end();
                 } else if (shift_chord_channels) {
@@ -4221,7 +4310,8 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
                 case SDLK_END:
                 case SDLK_PAGEUP:
                 case SDLK_PAGEDOWN:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!shift_selection.in_progress)
                                 shift_selection_begin();
                 default:
@@ -4308,7 +4398,8 @@ static int _fix_f7(struct key_event *k)
 {
         if (k->sym == SDLK_F7) {
                 if (!NO_MODIFIER(k->mod)) return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 play_song_from_mark();
                 return 1;
         }

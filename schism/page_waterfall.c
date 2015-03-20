@@ -413,7 +413,7 @@ static int waterfall_handle_key(struct key_event *k)
                         } else {
                                 ii = sample_get_current();
                         }
-                        if (k->state) {
+                        if (k->state == KEY_RELEASE) {
                                 song_keyup(KEYJAZZ_NOINST, ii, n);
                                 status.last_keysym = 0;
                         } else if (!k->is_repeat) {
@@ -426,7 +426,8 @@ static int waterfall_handle_key(struct key_event *k)
         switch (k->sym) {
         case SDLK_s:
                 if (k->mod & KMOD_ALT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
 
                         song_toggle_stereo();
                         status.flags |= NEED_UPDATE;
@@ -435,7 +436,8 @@ static int waterfall_handle_key(struct key_event *k)
                 return 0;
         case SDLK_m:
                 if (k->mod & KMOD_ALT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         mono = !mono;
                         return 1;
                 }
@@ -443,18 +445,21 @@ static int waterfall_handle_key(struct key_event *k)
         case SDLK_LEFT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 noisefloor-=4;
                 break;
         case SDLK_RIGHT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 noisefloor+=4;
                 break;
         case SDLK_g:
                 if (k->mod & KMOD_ALT) {
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
 
                         order = song_get_current_order();
                         if (song_get_mode() == MODE_PLAYING) {
@@ -473,7 +478,8 @@ static int waterfall_handle_key(struct key_event *k)
                 return 0;
         case SDLK_r:
                 if (k->mod & KMOD_ALT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
 
                         song_flip_stereo();
                         return 1;
@@ -482,7 +488,8 @@ static int waterfall_handle_key(struct key_event *k)
         case SDLK_PLUS:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (song_get_mode() == MODE_PLAYING) {
                         song_set_current_order(song_get_current_order() + 1);
                 }
@@ -490,14 +497,16 @@ static int waterfall_handle_key(struct key_event *k)
         case SDLK_MINUS:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (song_get_mode() == MODE_PLAYING) {
                         song_set_current_order(song_get_current_order() - 1);
                 }
                 return 1;
         case SDLK_SEMICOLON:
         case SDLK_COLON:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (song_is_instrument_mode()) {
                         instrument_set(instrument_get_current() - 1);
                 } else {
@@ -506,7 +515,8 @@ static int waterfall_handle_key(struct key_event *k)
                 return 1;
         case SDLK_QUOTE:
         case SDLK_QUOTEDBL:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (song_is_instrument_mode()) {
                         instrument_set(instrument_get_current() + 1);
                 } else {
@@ -515,12 +525,14 @@ static int waterfall_handle_key(struct key_event *k)
                 return 1;
         case SDLK_COMMA:
         case SDLK_LESS:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_change_current_play_channel(-1, 0);
                 return 1;
         case SDLK_PERIOD:
         case SDLK_GREATER:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_change_current_play_channel(1, 0);
                 return 1;
         default:

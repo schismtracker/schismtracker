@@ -179,10 +179,10 @@ int widget_handle_key(struct key_event * k)
                 case WIDGET_NUMENTRY:
                         if (k->mouse_button == MOUSE_BUTTON_LEFT) {
                                 k->sym = SDLK_MINUS;
-                                k->mouse = 0;
+                                k->mouse = MOUSE_NONE;
                         } else if (k->mouse_button == MOUSE_BUTTON_RIGHT) {
                                 k->sym = SDLK_PLUS;
-                                k->mouse = 0;
+                                k->mouse = MOUSE_NONE;
                         }
                         break;
                 default:
@@ -196,7 +196,8 @@ int widget_handle_key(struct key_event * k)
                 case WIDGET_TOGGLE:
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         widget->d.toggle.state = !widget->d.toggle.state;
                         if (widget->changed) widget->changed();
                         status.flags |= NEED_UPDATE;
@@ -204,7 +205,8 @@ int widget_handle_key(struct key_event * k)
                 case WIDGET_MENUTOGGLE:
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
                                 % widget->d.menutoggle.num_choices;
                         if (widget->changed) widget->changed();
@@ -226,11 +228,12 @@ int widget_handle_key(struct key_event * k)
         }
 
         if (k->mouse == MOUSE_CLICK
-            || (k->mouse == 0 && k->sym == SDLK_RETURN)) {
+            || (k->mouse == MOUSE_NONE && k->sym == SDLK_RETURN)) {
 #if 0
                 if (k->mouse && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
                         if (status.flags & DISKWRITER_ACTIVE) return 0;
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
                         status.flags |= CLIPPY_PASTE_SELECTION;
                         return 1;
                 }
@@ -282,20 +285,24 @@ int widget_handle_key(struct key_event * k)
                         onw = ((signed) k->x < widget->x
                                || (signed) k->x >= widget->x + widget->width + pad
                                || (signed) k->y != widget->y) ? 0 : 1;
-                        n = ((!k->state) && onw) ? 1 : 0;
+                        n = (k->state == KEY_RELEASE && onw) ? 1 : 0;
                         if (widget->depressed != n) status.flags |= NEED_UPDATE;
                         widget->depressed = n;
-                        if (current_type != WIDGET_TEXTENTRY
-                        &&  current_type != WIDGET_NUMENTRY) {
-                                if (!k->state || !onw) return 1;
-                        } else if (!onw) return 1;
+                        if (current_type != WIDGET_TEXTENTRY && current_type != WIDGET_NUMENTRY) {
+                                if (k->state == KEY_PRESS || !onw)
+                                        return 1;
+                        } else if (!onw) {
+                                return 1;
+                        }
                 } else {
-                        n = (!k->state) ? 1 : 0;
+                        n = (k->state == KEY_PRESS) ? 1 : 0;
                         if (widget->depressed != n)
                                 status.flags |= NEED_UPDATE;
-                        else if (k->state) return 1; // swallor
+                        else if (k->state == KEY_RELEASE)
+                                return 1; // swallor
                         widget->depressed = n;
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
                 }
 
                 if (k->mouse) {
@@ -376,7 +383,8 @@ int widget_handle_key(struct key_event * k)
 
         /* a WIDGET_OTHER that *didn't* handle the key itself needs to get run through the switch
         statement to account for stuff like the tab key */
-        if (k->state) return 0;
+        if (k->state == KEY_RELEASE)
+                return 0;
 
         if (k->mouse == MOUSE_SCROLL_UP && current_type == WIDGET_NUMENTRY) {
                 k->sym = SDLK_MINUS;

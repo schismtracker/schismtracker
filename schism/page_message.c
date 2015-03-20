@@ -464,7 +464,7 @@ static void prompt_message_clear(void)
 
 static int message_handle_key_viewmode(struct key_event * k)
 {
-        if (!k->state) {
+        if (k->state == KEY_PRESS) {
                 if (k->mouse == MOUSE_SCROLL_UP) {
                         top_line -= MOUSE_SCROLL_LINES;
                 } else if (k->mouse == MOUSE_SCROLL_DOWN) {
@@ -477,38 +477,46 @@ static int message_handle_key_viewmode(struct key_event * k)
 
         switch (k->sym) {
         case SDLK_UP:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 top_line--;
                 break;
         case SDLK_DOWN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 top_line++;
                 break;
         case SDLK_PAGEUP:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 top_line -= 35;
                 break;
         case SDLK_PAGEDOWN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 top_line += 35;
                 break;
         case SDLK_HOME:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 top_line = 0;
                 break;
         case SDLK_END:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 top_line = get_num_lines(current_song->message) - 34;
                 break;
         case SDLK_t:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (k->mod & KMOD_CTRL) {
                         message_extfont = !message_extfont;
                         break;
                 }
                 return 1;
         case SDLK_RETURN:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 message_set_editmode();
                 return 1;
         default:
@@ -556,13 +564,16 @@ static int message_handle_key_editmode(struct key_event * k)
         int clipl, clipr, cp;
 
         if (k->mouse == MOUSE_SCROLL_UP) {
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 new_cursor_line -= MOUSE_SCROLL_LINES;
         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 new_cursor_line += MOUSE_SCROLL_LINES;
         } else if (k->mouse == MOUSE_CLICK && k->mouse_button == 2) {
-                if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
+                if (k->state == KEY_RELEASE)
+                        status.flags |= CLIPPY_PASTE_SELECTION;
                 return 1;
         } else if (k->mouse == MOUSE_CLICK) {
                 if (k->x >= 2 && k->x <= 77 && k->y >= 13 && k->y <= 47) {
@@ -585,48 +596,56 @@ static int message_handle_key_editmode(struct key_event * k)
         case SDLK_UP:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_cursor_line--;
                 break;
         case SDLK_DOWN:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_cursor_line++;
                 break;
         case SDLK_LEFT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_cursor_char--;
                 break;
         case SDLK_RIGHT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_cursor_char++;
                 break;
         case SDLK_PAGEUP:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_cursor_line -= 35;
                 break;
         case SDLK_PAGEDOWN:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_cursor_line += 35;
                 break;
         case SDLK_HOME:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_CTRL)
                         new_cursor_line = 0;
                 else
                         new_cursor_char = 0;
                 break;
         case SDLK_END:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_CTRL) {
                         num_lines = get_num_lines(current_song->message);
                         new_cursor_line = num_lines;
@@ -637,14 +656,16 @@ static int message_handle_key_editmode(struct key_event * k)
         case SDLK_ESCAPE:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 message_set_viewmode();
                 memused_songchanged();
                 return 1;
         case SDLK_BACKSPACE:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
                         _delete_selection();
                 } else {
@@ -654,7 +675,8 @@ static int message_handle_key_editmode(struct key_event * k)
         case SDLK_DELETE:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
                         _delete_selection();
                 } else {
@@ -663,7 +685,8 @@ static int message_handle_key_editmode(struct key_event * k)
                 return 1;
         default:
                 if (k->mod & KMOD_CTRL) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         if (k->sym == SDLK_t) {
                                 message_extfont = !message_extfont;
                                 break;
@@ -673,15 +696,17 @@ static int message_handle_key_editmode(struct key_event * k)
                                 break;
                         }
                 } else if (k->mod & KMOD_ALT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         if (k->sym == SDLK_c) {
                                 prompt_message_clear();
                                 return 1;
                         }
-                } else if (!k->mouse) {
+                } else if (k->mouse == MOUSE_NONE) {
                         if (k->unicode == '\r' || k->unicode == '\t'
                         || k->unicode >= 32) {
-                                if (k->state) return 1;
+                                if (k->state == KEY_RELEASE)
+                                        return 1;
                                 if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
                                         _delete_selection();
                                 }
@@ -698,7 +723,8 @@ static int message_handle_key_editmode(struct key_event * k)
                 if (k->mouse != MOUSE_CLICK)
                         return 0;
 
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (!doing_drag) {
                         clippy_select(NULL, NULL, 0);
                 }

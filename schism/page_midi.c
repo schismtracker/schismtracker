@@ -143,7 +143,8 @@ static int midi_page_handle_key(struct key_event * k)
         } else if (k->mouse) {
                 if (k->x >= 3 && k->x <= 11 && k->y >= 15 && k->y <= 27) {
                         if (k->mouse == MOUSE_DBLCLICK) {
-                                if (!k->state) return 0;
+                                if (k->state == KEY_PRESS)
+                                        return 0;
                                 toggle_port();
                                 return 1;
                         }
@@ -155,7 +156,8 @@ static int midi_page_handle_key(struct key_event * k)
 
         switch (k->sym) {
         case SDLK_SPACE:
-                if (!k->state) return 1;
+                if (k->state == KEY_PRESS)
+                        return 1;
                 toggle_port();
                 return 1;
         case SDLK_PAGEUP:
@@ -181,7 +183,8 @@ static int midi_page_handle_key(struct key_event * k)
                 new_port++;
                 break;
         case SDLK_TAB:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 change_focus_to(1);
                 status.flags |= NEED_UPDATE;
                 return 1;
@@ -189,7 +192,8 @@ static int midi_page_handle_key(struct key_event * k)
                 if (!k->mouse) return 0;
                 break;
         };
-        if (k->state) return 0;
+        if (k->state == KEY_RELEASE)
+                return 0;
 
         if (new_port != current_port) {
                 if (new_port < 0 || new_port >= midi_engine_port_count()) {

@@ -347,14 +347,16 @@ static int orderlist_handle_char(struct key_event *k)
 
         switch (k->sym) {
         case SDLK_PLUS:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 status.flags |= SONG_NEEDS_SAVE;
                 current_song->orderlist[current_order] = ORDER_SKIP;
                 orderlist_cursor_pos = 2;
                 break;
         case SDLK_PERIOD:
         case SDLK_MINUS:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 status.flags |= SONG_NEEDS_SAVE;
                 current_song->orderlist[current_order] = ORDER_LAST;
                 orderlist_cursor_pos = 2;
@@ -362,7 +364,8 @@ static int orderlist_handle_char(struct key_event *k)
         default:
                 c = numeric_key_event(k, 0);
                 if (c == -1) return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
 
                 status.flags |= SONG_NEEDS_SAVE;
                 cur_pattern = current_song->orderlist[current_order];
@@ -401,7 +404,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         int new_cursor_pos = orderlist_cursor_pos;
         int n, p;
 
-        if (k->mouse) {
+        if (k->mouse != MOUSE_NONE) {
                 if (k->x >= 6 && k->x <= 8 && k->y >= 15 && k->y <= 46) {
                         /* FIXME adjust top_order, not the cursor */
                         if (k->mouse == MOUSE_SCROLL_UP) {
@@ -409,7 +412,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
                         } else if (k->mouse == MOUSE_SCROLL_DOWN) {
                                 new_order += MOUSE_SCROLL_LINES;
                         } else {
-                                if (!k->state) return 0;
+                                if (k->state == KEY_PRESS)
+                                        return 0;
 
                                 new_order = (k->y - 15) + top_order;
                                 set_current_order(new_order);
@@ -427,7 +431,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         case SDLK_BACKSPACE:
                 if (status.flags & CLASSIC_MODE) return 0;
                 if (!(k->mod & KMOD_ALT)) return 0;
-                if (!k->state) return 1;
+                if (k->state == KEY_PRESS)
+                        return 1;
                 if (!_did_save_orderlist) return 1;
                 status_text_flash("Restored orderlist");
                 orderlist_restore();
@@ -437,7 +442,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         case SDLK_KP_ENTER:
                 if (status.flags & CLASSIC_MODE) return 0;
                 if (k->mod & KMOD_ALT) {
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
                         status_text_flash("Saved orderlist");
                         orderlist_save();
                         return 1;
@@ -447,7 +453,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         case SDLK_g:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (!k->state) return 1;
+                if (k->state == KEY_PRESS)
+                        return 1;
                 n = current_song->orderlist[new_order];
                 while (n >= 200 && new_order > 0)
                         n = current_song->orderlist[--new_order];
@@ -459,36 +466,42 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 
         case SDLK_TAB:
                 if (k->mod & KMOD_SHIFT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         change_focus_to(33);
                 } else {
                         if (!NO_MODIFIER(k->mod)) return 0;
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         change_focus_to(1);
                 }
                 return 1;
         case SDLK_LEFT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_cursor_pos--;
                 break;
         case SDLK_RIGHT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_cursor_pos++;
                 break;
         case SDLK_HOME:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_order = 0;
                 break;
         case SDLK_END:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_order = csf_last_order(current_song);
                 if (current_song->orderlist[new_order] != ORDER_LAST)
                         new_order++;
@@ -496,64 +509,74 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         case SDLK_UP:
                 if (k->mod & KMOD_CTRL) {
                         if (status.flags & CLASSIC_MODE) return 0;
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         sample_set(sample_get_current()-1);
                         status.flags |= NEED_UPDATE;
                         return 1;
                 }
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_order--;
                 break;
         case SDLK_DOWN:
                 if (k->mod & KMOD_CTRL) {
                         if (status.flags & CLASSIC_MODE) return 0;
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         sample_set(sample_get_current()+1);
                         status.flags |= NEED_UPDATE;
                         return 1;
                 }
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_order++;
                 break;
         case SDLK_PAGEUP:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_order -= 16;
                 break;
         case SDLK_PAGEDOWN:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 new_order += 16;
                 break;
         case SDLK_INSERT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 orderlist_insert_pos();
                 return 1;
         case SDLK_DELETE:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 orderlist_delete_pos();
                 return 1;
         case SDLK_F7:
                 if (!(k->mod & KMOD_CTRL)) return 0;
                 /* fall through */
         case SDLK_SPACE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_set_next_order(current_order);
                 status_text_flash("Playing order %d next", current_order);
                 return 1;
         case SDLK_F6:
                 if (k->mod & KMOD_SHIFT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         song_start_at_order(current_order, 0);
                         return 1;
                 }
@@ -561,20 +584,23 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 
         case SDLK_n:
                 if (k->mod & KMOD_SHIFT) {
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
                         orderlist_cheater();
                         return 1;
                 }
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 orderlist_insert_next();
                 return 1;
         case SDLK_c:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 if (status.flags & CLASSIC_MODE) return 0;
-                if (!k->state) return 1;
+                if (k->state == KEY_PRESS)
+                        return 1;
                 p = get_current_pattern();
                 for (n = current_order+1; n < 256; n++) {
                         if (current_song->orderlist[n] == p) {
@@ -598,14 +624,16 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 
         case SDLK_r:
                 if (k->mod & KMOD_ALT) {
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
                         orderlist_reorder();
                         return 1;
                 }
                 return 0;
         case SDLK_u:
                 if (k->mod & KMOD_ALT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         orderlist_add_unused_patterns();
                         return 1;
                 }
@@ -618,7 +646,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         case SDLK_o:
                 if (!(k->mod & KMOD_CTRL))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_pattern_to_sample(current_song->orderlist[current_order],
                                 !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
                 return 1;
@@ -627,7 +656,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         case SDLK_SEMICOLON:
         case SDLK_COLON:
                 if (!NO_MODIFIER(k->mod)) return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 sample_set(sample_get_current()-1);
                 status.flags |= NEED_UPDATE;
                 return 1;
@@ -635,12 +665,13 @@ static int orderlist_handle_key_on_list(struct key_event * k)
         case SDLK_QUOTE:
         case SDLK_QUOTEDBL:
                 if (!NO_MODIFIER(k->mod)) return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 sample_set(sample_get_current()+1);
                 status.flags |= NEED_UPDATE;
                 return 1;
         default:
-                if (!k->mouse) {
+                if (k->mouse == MOUSE_NONE) {
                         if ((k->mod & (KMOD_CTRL | KMOD_ALT))==0) {
                                 return orderlist_handle_char(k);
                         }
@@ -801,7 +832,8 @@ static void order_pan_vol_handle_key(struct key_event * k)
 {
         int n = ACTIVE_PAGE.selected_widget;
 
-        if (k->state) return;
+        if (k->state == KEY_RELEASE)
+                return;
 
         if (!NO_MODIFIER(k->mod))
                 return;
@@ -833,7 +865,8 @@ static int order_pre_key(struct key_event *k)
 
         if (k->sym == SDLK_F7) {
                 if (!NO_MODIFIER(k->mod)) return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 play_song_from_mark_orderpan();
                 return 1;
         }

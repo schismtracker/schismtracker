@@ -1054,7 +1054,8 @@ static int info_page_handle_key(struct key_event * k)
 
         switch (k->sym) {
         case SDLK_g:
-                if (!k->state) return 1;
+                if (k->state == KEY_PRESS)
+                        return 1;
 
                 set_current_channel(selected_channel);
                 order = song_get_current_order();
@@ -1072,14 +1073,16 @@ static int info_page_handle_key(struct key_event * k)
                 }
                return 1;
         case SDLK_v:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
 
                 velocity_mode = !velocity_mode;
                 status_text_flash("Using %s bars", (velocity_mode ? "velocity" : "volume"));
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_i:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
 
                 instrument_names = !instrument_names;
                 status_text_flash("Using %s names", (instrument_names ? "instrument" : "sample"));
@@ -1087,7 +1090,8 @@ static int info_page_handle_key(struct key_event * k)
                 return 1;
         case SDLK_r:
                 if (k->mod & KMOD_ALT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
 
                         song_flip_stereo();
                         status_text_flash("Left/right outputs reversed");
@@ -1095,25 +1099,29 @@ static int info_page_handle_key(struct key_event * k)
                 }
                 return 0;
         case SDLK_PLUS:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (song_get_mode() == MODE_PLAYING) {
                         song_set_current_order(song_get_current_order() + 1);
                 }
                 return 1;
         case SDLK_MINUS:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (song_get_mode() == MODE_PLAYING) {
                         song_set_current_order(song_get_current_order() - 1);
                 }
                 return 1;
         case SDLK_q:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_toggle_channel_mute(selected_channel - 1);
                 orderpan_recheck_muted_channels();
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_s:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
 
                 if (k->mod & KMOD_ALT) {
                         song_toggle_stereo();
@@ -1129,14 +1137,16 @@ static int info_page_handle_key(struct key_event * k)
                 if (!NO_MODIFIER(k->mod))
                         return 0;
 
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 song_toggle_channel_mute(selected_channel - 1);
                 if (selected_channel < 64)
                         selected_channel++;
                 orderpan_recheck_muted_channels();
                 break;
         case SDLK_UP:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         /* make the current window one line shorter, and give the line to the next window
                         below it. if the window is already as small as it can get (3 lines) or if it's
@@ -1154,12 +1164,14 @@ static int info_page_handle_key(struct key_event * k)
         case SDLK_LEFT:
                 if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (selected_channel > 1)
                         selected_channel--;
                 break;
         case SDLK_DOWN:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         /* expand the current window, taking a line from
                          * the next window down. BUT: don't do anything if
@@ -1180,26 +1192,30 @@ static int info_page_handle_key(struct key_event * k)
         case SDLK_RIGHT:
                 if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (selected_channel < 64)
                         selected_channel++;
                 break;
         case SDLK_HOME:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selected_channel = 1;
                 break;
         case SDLK_END:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selected_channel = song_find_last_channel();
                 break;
         case SDLK_INSERT:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 /* add a new window, unless there's already five (the maximum)
                 or if the current window isn't big enough to split in half. */
                 if (num_windows == MAX_WINDOWS || (windows[selected_window].height < 6)) {
@@ -1224,7 +1240,8 @@ static int info_page_handle_key(struct key_event * k)
         case SDLK_DELETE:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 /* delete the current window and give the extra space to the next window down.
                 if this is the only window, well then don't delete it ;) */
                 if (num_windows == 1)
@@ -1246,7 +1263,8 @@ static int info_page_handle_key(struct key_event * k)
         case SDLK_PAGEUP:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 n = windows[selected_window].type;
                 if (n == 0)
                         n = NUM_WINDOW_TYPES;
@@ -1256,11 +1274,13 @@ static int info_page_handle_key(struct key_event * k)
         case SDLK_PAGEDOWN:
                 if (!NO_MODIFIER(k->mod))
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
                 break;
         case SDLK_TAB:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_SHIFT) {
                         if (selected_window == 0)
                                 selected_window = num_windows;
@@ -1271,7 +1291,8 @@ static int info_page_handle_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_F9:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         song_toggle_channel_mute(selected_channel - 1);
                         orderpan_recheck_muted_channels();
@@ -1280,7 +1301,8 @@ static int info_page_handle_key(struct key_event * k)
                 return 0;
         case SDLK_F10:
                 if (k->mod & KMOD_ALT) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         song_handle_channel_solo(selected_channel - 1);
                         orderpan_recheck_muted_channels();
                         return 1;

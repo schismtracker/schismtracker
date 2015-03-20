@@ -495,7 +495,7 @@ static void _synthetic_paste(const char *cbptr)
 {
         struct key_event kk;
         int isy = 2;
-        kk.mouse = 0;
+        kk.mouse = MOUSE_NONE;
         for (; cbptr && *cbptr; cbptr++) {
                 /* Win32 will have \r\n, everyone else \n */
                 if (*cbptr == '\r') continue;
@@ -515,9 +515,9 @@ static void _synthetic_paste(const char *cbptr)
                         kk.is_synthetic = isy;
                 else
                         kk.is_synthetic = 3;
-                kk.state = 0;
+                kk.state = KEY_PRESS;
                 handle_key(&kk);
-                kk.state = 1;
+                kk.state = KEY_RELEASE;
                 handle_key(&kk);
                 isy = 1;
         }
@@ -585,14 +585,14 @@ static void event_loop(void)
                         continue;
                 sawrep = 0;
                 if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
-                        kk.state = 0;
+                        kk.state = KEY_PRESS;
                 } else if (event.type == SDL_KEYUP || event.type == SDL_MOUSEBUTTONUP) {
-                        kk.state = 1;
+                        kk.state = KEY_RELEASE;
                 }
                 if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
                         if (event.key.keysym.sym == 0) {
                                 // XXX when does this happen?
-                                kk.mouse = 0;
+                                kk.mouse = MOUSE_NONE;
                                 kk.unicode = 0;
                                 kk.is_repeat = 0;
                         }
@@ -637,7 +637,7 @@ static void event_loop(void)
                                 break;
                         };
 
-                        if (!kk.state) {
+                        if (kk.state == KEY_PRESS) {
                                 modkey = (event.key.keysym.mod
                                         & ~(_ALTTRACKED_KMOD))
                                         | (modkey & _ALTTRACKED_KMOD);
@@ -674,7 +674,7 @@ static void event_loop(void)
 
                         kk.mod = modkey;
                         kk.unicode = event.key.keysym.unicode;
-                        kk.mouse = 0;
+                        kk.mouse = MOUSE_NONE;
                         if (debug_s && strstr(debug_s, "key")) {
                                 log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
                                                 (event.type == SDL_KEYDOWN) ? "Down" : "Up",
@@ -720,7 +720,7 @@ static void event_loop(void)
                 case SDL_MOUSEMOTION:
                 case SDL_MOUSEBUTTONDOWN:
                 case SDL_MOUSEBUTTONUP:
-                        if (!kk.state) {
+                        if (kk.state == KEY_PRESS) {
                                 modkey = event.key.keysym.mod;
 #if defined(WIN32)
                                 win32_get_modkey(&modkey);
@@ -782,7 +782,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                 } else {
                                         kk.mouse_button = MOUSE_BUTTON_LEFT;
                                 }
-                                if (kk.state) {
+                                if (kk.state == KEY_RELEASE) {
                                         ticker = SDL_GetTicks();
                                         if (lx == kk.x
                                         && ly == kk.y
@@ -800,10 +800,10 @@ Also why these would not be defined, I'm not sure either, but hey. */
                                 }
                                 if (status.dialog_type == DIALOG_NONE) {
                                         if (kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
-                                                if (kk.state && kk.mouse_button == MOUSE_BUTTON_RIGHT) {
+                                                if (kk.state == KEY_RELEASE && kk.mouse_button == MOUSE_BUTTON_RIGHT) {
                                                         menu_show();
                                                         break;
-                                                } else if (!kk.state && kk.mouse_button == MOUSE_BUTTON_LEFT) {
+                                                } else if (kk.state == KEY_PRESS && kk.mouse_button == MOUSE_BUTTON_LEFT) {
                                                         time(&startdown);
                                                 }
                                         }

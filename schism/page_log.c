@@ -69,31 +69,37 @@ static int log_handle_key(struct key_event * k)
 {
         switch (k->sym) {
         case SDLK_UP:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 top_line--;
                 break;
         case SDLK_PAGEUP:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 top_line -= 15;
                 break;
         case SDLK_DOWN:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 top_line++;
                 break;
         case SDLK_PAGEDOWN:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 top_line += 15;
                 break;
         case SDLK_HOME:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 top_line = 0;
                 break;
         case SDLK_END:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 top_line = last_line;
                 break;
         default:
-                if (!k->state) {
+                if (k->state == KEY_PRESS) {
                         if (k->mouse == MOUSE_SCROLL_UP) {
                                 top_line -= MOUSE_SCROLL_LINES;
                                 break;

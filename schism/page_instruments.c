@@ -424,7 +424,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 {
         int new_ins = current_instrument;
 
-        if (!k->state && k->mouse && k->y >= 13 && k->y <= 47 && k->x >= 5 && k->x <= 30) {
+        if (k->state == KEY_PRESS && k->mouse != MOUSE_NONE && k->y >= 13 && k->y <= 47 && k->x >= 5 && k->x <= 30) {
                 if (k->mouse == MOUSE_CLICK) {
                         new_ins = (k->y - 13) + top_instrument;
                         if (instrument_cursor_pos < 25)
@@ -456,7 +456,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
         } else {
                 switch (k->sym) {
                 case SDLK_UP:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_ALT) {
                                 if (current_instrument > 1) {
                                         new_ins = current_instrument - 1;
@@ -469,7 +470,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         break;
                 case SDLK_DOWN:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_ALT) {
                                 // restrict position to the "old" value of _last_vis_inst()
                                 // (this is entirely for aesthetic reasons)
@@ -486,21 +488,24 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         break;
                 case SDLK_PAGEUP:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_CTRL)
                                 new_ins = 1;
                         else
                                 new_ins -= 16;
                         break;
                 case SDLK_PAGEDOWN:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_CTRL)
                                 new_ins = _last_vis_inst();
                         else
                                 new_ins += 16;
                         break;
                 case SDLK_HOME:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         if (instrument_cursor_pos < 25) {
@@ -510,7 +515,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         return 1;
                 case SDLK_END:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         if (instrument_cursor_pos < 24) {
@@ -520,7 +526,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         return 1;
                 case SDLK_LEFT:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         if (instrument_cursor_pos < 25 && instrument_cursor_pos > 0) {
@@ -530,7 +537,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         return 1;
                 case SDLK_RIGHT:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         if (instrument_cursor_pos == 25) {
@@ -543,7 +551,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         return 1;
                 case SDLK_RETURN:
-                        if (!k->state) return 0;
+                        if (k->state == KEY_PRESS)
+                                return 0;
                         if (instrument_cursor_pos < 25) {
                                 instrument_cursor_pos = 25;
                                 get_page_widgets()->accept_text = 0;
@@ -555,7 +564,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         return 1;
                 case SDLK_ESCAPE:
                         if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
-                                if (k->state) return 1;
+                                if (k->state == KEY_RELEASE)
+                                        return 1;
                                 instrument_cursor_pos = 25;
                                 get_page_widgets()->accept_text = 0;
                                 status.flags |= NEED_UPDATE;
@@ -563,7 +573,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         return 0;
                 case SDLK_BACKSPACE:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (instrument_cursor_pos == 25)
                                 return 0;
                         if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0)
@@ -572,7 +583,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                                 instrument_list_add_char(127);
                         return 1;
                 case SDLK_INSERT:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_ALT) {
                                 song_insert_instrument_slot(current_instrument);
                                 status.flags |= NEED_UPDATE;
@@ -580,7 +592,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         return 0;
                 case SDLK_DELETE:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_ALT) {
                                 song_remove_instrument_slot(current_instrument);
                                 status.flags |= NEED_UPDATE;
@@ -593,7 +606,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
                         }
                         return 0;
                 default:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_ALT) {
                                 if (k->sym == SDLK_c) {
                                         clear_instrument_text();
@@ -749,16 +763,17 @@ static int note_trans_handle_key(struct key_event * k)
         int c, n;
 
         if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
-                if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
+                if (k->state == KEY_RELEASE)
+                        status.flags |= CLIPPY_PASTE_SELECTION;
                 return 1;
         } else if (k->mouse == MOUSE_SCROLL_UP || k->mouse == MOUSE_SCROLL_DOWN) {
-                if (!k->state) {
+                if (k->state == KEY_PRESS) {
                         note_trans_top_line += (k->mouse == MOUSE_SCROLL_UP) ? -3 : 3;
                         note_trans_top_line = CLAMP(note_trans_top_line, 0, 119 - 31);
                         status.flags |= NEED_UPDATE;
                 }
                 return 1;
-        } else if (k->mouse) {
+        } else if (k->mouse != MOUSE_NONE) {
                 if (k->x >= 32 && k->x <= 41 && k->y >= 16 && k->y <= 47) {
                         new_line = note_trans_top_line + k->y - 16;
                         if (new_line == prev_line) {
@@ -779,7 +794,7 @@ static int note_trans_handle_key(struct key_event * k)
                         }
                 }
         } else if (k->mod & KMOD_ALT) {
-                if (k->state)
+                if (k->state == KEY_RELEASE)
                         return 0;
                 switch (k->sym) {
                 case SDLK_UP:
@@ -825,7 +840,8 @@ static int note_trans_handle_key(struct key_event * k)
         } else {
                 switch (k->sym) {
                 case SDLK_UP:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_CTRL)
                                 sample_set(sample_get_current () - 1);
                         if (!NO_MODIFIER(k->mod))
@@ -836,7 +852,8 @@ static int note_trans_handle_key(struct key_event * k)
                         }
                         break;
                 case SDLK_DOWN:
-                        if (k->state) return 0;
+                        if (k->state = KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_CTRL)
                                 sample_set(sample_get_current () + 1);
                         if (!NO_MODIFIER(k->mod))
@@ -844,7 +861,8 @@ static int note_trans_handle_key(struct key_event * k)
                         new_line++;
                         break;
                 case SDLK_PAGEUP:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_CTRL) {
                                 instrument_set(current_instrument - 1);
                                 return 1;
@@ -852,7 +870,8 @@ static int note_trans_handle_key(struct key_event * k)
                         new_line -= 16;
                         break;
                 case SDLK_PAGEDOWN:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_CTRL) {
                                 instrument_set(current_instrument + 1);
                                 return 1;
@@ -860,31 +879,36 @@ static int note_trans_handle_key(struct key_event * k)
                         new_line += 16;
                         break;
                 case SDLK_HOME:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         new_line = 0;
                         break;
                 case SDLK_END:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         new_line = 119;
                         break;
                 case SDLK_LEFT:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         new_pos--;
                         break;
                 case SDLK_RIGHT:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         new_pos++;
                         break;
                 case SDLK_RETURN:
-                        if (!k->state) return 0;
+                        if (k->state == KEY_PRESS)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         sample_set(ins->sample_map[note_trans_sel_line]);
@@ -893,18 +917,21 @@ static int note_trans_handle_key(struct key_event * k)
                 case SDLK_LESS:
                 case SDLK_SEMICOLON:
                 case SDLK_COLON:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         sample_set(sample_get_current() - 1);
                         return 1;
                 case SDLK_GREATER:
                 case SDLK_QUOTE:
                 case SDLK_QUOTEDBL:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         sample_set(sample_get_current() + 1);
                         return 1;
 
                 default:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         switch (note_trans_cursor_pos) {
                         case 0:        /* note */
                                 n = kbd_get_note(k);
@@ -1366,55 +1393,64 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 
         switch (k->sym) {
         case SDLK_UP:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 change_focus_to(1);
                 return 1;
         case SDLK_DOWN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 change_focus_to(6);
                 return 1;
         case SDLK_LEFT:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 new_node--;
                 break;
         case SDLK_RIGHT:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 new_node++;
                 break;
         case SDLK_INSERT:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 *current_node = _env_node_add(env, *current_node, -1, -1);
                 status.flags |= NEED_UPDATE;
                 return 1 | 2;
         case SDLK_DELETE:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 *current_node = _env_node_remove(env, *current_node);
                 status.flags |= NEED_UPDATE;
                 return 1 | 2;
         case SDLK_SPACE:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
                 song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
                 return 1;
         case SDLK_RETURN:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 envelope_edit_mode = 1;
                 status.flags |= NEED_UPDATE;
                 return 1 | 2;
         case SDLK_l:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (!(k->mod & KMOD_ALT)) return 0;
                 if (env->loop_end < (env->nodes-1))  {
                         dialog_create(DIALOG_OK_CANCEL, "Cut envelope?", do_post_loop_cut, NULL, 1, env);
@@ -1422,7 +1458,8 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
                 }
                 return 0;
         case SDLK_b:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (!(k->mod & KMOD_ALT)) return 0;
                 if (env->loop_start > 0) {
                         dialog_create(DIALOG_OK_CANCEL, "Cut envelope?", do_pre_loop_cut, NULL, 1, env);
@@ -1433,29 +1470,34 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
         // F/G for key symmetry with pattern double/halve block
         // E for symmetry with sample resize
         case SDLK_f:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (!(k->mod & KMOD_ALT)) return 0;
                 env_resize(env, env->ticks[env->nodes - 1] * 2);
                 return 1;
         case SDLK_g:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (!(k->mod & KMOD_ALT)) return 0;
                 env_resize(env, env->ticks[env->nodes - 1] / 2);
                 return 1;
         case SDLK_e:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (!(k->mod & KMOD_ALT)) return 0;
                 env_resize_dialog(env);
                 return 1;
 
         case SDLK_z:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (!(k->mod & KMOD_ALT)) return 0;
                 env_adsr_dialog(env);
                 return 1;
 
         default:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
 
                 n = numeric_key_event(k, 0);
                 if (n > -1) {
@@ -1489,7 +1531,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 
         if (k->mouse != MOUSE_CLICK) return 0;
 
-        if (k->state) {
+        if (k->state == KEY_RELEASE) {
                 /* mouse release */
                 if (envelope_mouse_edit) {
                         if (current_node && *current_node) {
@@ -1623,33 +1665,38 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 
         switch (k->sym) {
         case SDLK_UP:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (k->mod & KMOD_ALT)
                         new_value += 16;
                 else
                         new_value++;
                 break;
         case SDLK_DOWN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (k->mod & KMOD_ALT)
                         new_value -= 16;
                 else
                         new_value--;
                 break;
         case SDLK_PAGEUP:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 new_value += 16;
                 break;
         case SDLK_PAGEDOWN:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 new_value -= 16;
                 break;
         case SDLK_LEFT:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_CTRL)
                         new_node--;
                 else if (k->mod & KMOD_ALT)
@@ -1658,7 +1705,8 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
                         new_tick--;
                 break;
         case SDLK_RIGHT:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_CTRL)
                         new_node++;
                 else if (k->mod & KMOD_ALT)
@@ -1667,47 +1715,54 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
                         new_tick++;
                 break;
         case SDLK_TAB:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (k->mod & KMOD_SHIFT)
                         new_tick -= 16;
                 else
                         new_tick += 16;
                 break;
         case SDLK_HOME:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 new_tick = 0;
                 break;
         case SDLK_END:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 new_tick = 10000;
                 break;
         case SDLK_INSERT:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 *current_node = _env_node_add(env, *current_node, -1, -1);
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_DELETE:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 *current_node = _env_node_remove(env, *current_node);
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_SPACE:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
                 song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
                 return 1;
         case SDLK_RETURN:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (!NO_MODIFIER(k->mod))
                         return 0;
                 envelope_edit_mode = 0;
@@ -1862,7 +1917,8 @@ static int pitch_pan_center_handle_key(struct key_event *k)
         song_instrument_t *ins = song_get_instrument(current_instrument);
         int ppc = ins->pitch_pan_center;
 
-        if (k->state) return 0;
+        if (k->state == KEY_RELEASE)
+                return 0;
         switch (k->sym) {
         case SDLK_LEFT:
                 if (!NO_MODIFIER(k->mod))
@@ -1950,7 +2006,8 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 {
         /* song_instrument_t *ins = song_get_instrument(current_instrument); */
 
-        if (k->state) return;
+        if (k->state == KEY_RELEASE)
+                return;
         switch (k->sym) {
         case SDLK_n:
                 song_toggle_multichannel_mode();
@@ -1991,7 +2048,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
         // Only handle plain F4 key when no dialog is active.
         if (status.dialog_type != DIALOG_NONE || k->sym != SDLK_F4 || (k->mod & (KMOD_CTRL | KMOD_ALT)))
                 return 0;
-        if (k->state)
+        if (k->state == KEY_RELEASE)
                 return 1;
 
         if (song_is_instrument_mode()) {
@@ -2029,7 +2086,8 @@ static void instrument_list_handle_key(struct key_event * k)
                         && ACTIVE_PAGE.selected_widget == 5) return;
                 }
         case SDLK_LESS:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 song_change_current_play_channel(-1, 0);
                 return;
         case SDLK_PERIOD:
@@ -2038,21 +2096,25 @@ static void instrument_list_handle_key(struct key_event * k)
                         && ACTIVE_PAGE.selected_widget == 5) return;
                 }
         case SDLK_GREATER:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 song_change_current_play_channel(1, 0);
                 return;
 
         case SDLK_PAGEUP:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 instrument_set(current_instrument - 1);
                 break;
         case SDLK_PAGEDOWN:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 instrument_set(current_instrument + 1);
                 break;
         case SDLK_ESCAPE:
                 if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
-                        if (k->state) return;
+                        if (k->state == KEY_RELEASE)
+                                return;
                         instrument_cursor_pos = 25;
                         get_page_widgets()->accept_text = 0;
                         change_focus_to(0);
@@ -2080,7 +2142,7 @@ static void instrument_list_handle_key(struct key_event * k)
                                         return;
                         }
 
-                        if (k->state) {
+                        if (k->state == KEY_REELASE) {
                                 song_keyup(0, current_instrument, n);
                                 status.last_keysym = 0;
                         } else if (!k->is_repeat) {

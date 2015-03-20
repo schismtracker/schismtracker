@@ -387,14 +387,14 @@ static int handle_key_global(struct key_event * k)
 {
         int i, ins_mode;
 
-        if (_mp_active == 2 && (k->mouse == MOUSE_CLICK && k->state)) {
+        if (_mp_active == 2 && (k->mouse == MOUSE_CLICK && k->state == KEY_RELEASE)) {
                 status.flags |= NEED_UPDATE;
                 dialog_destroy_all();
                 _mp_active = 0;
                 // eat it...
                 return 1;
         }
-        if ((!_mp_active) && (!k->state) && k->mouse == MOUSE_CLICK) {
+        if ((!_mp_active) && k->state == KEY_PRESS && k->mouse == MOUSE_CLICK) {
                 if (k->x >= 63 && k->x <= 77 && k->y >= 6 && k->y <= 7) {
                         status.vis_style++;
                         status.vis_style %= VIS_SENTINEL;
@@ -458,7 +458,7 @@ static int handle_key_global(struct key_event * k)
         }
 
         /* shortcut */
-        if (k->mouse) {
+        if (k->mouse != MOUSE_NONE) {
                 return 0;
         }
 
@@ -467,14 +467,16 @@ static int handle_key_global(struct key_event * k)
         switch (k->sym) {
         case SDLK_RETURN:
                 if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
                         toggle_display_fullscreen();
                         return 1;
                 }
                 break;
         case SDLK_m:
                 if (k->mod & KMOD_CTRL) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         video_mousecursor(MOUSE_CYCLE_STATE);
                         return 1;
                 }
@@ -482,7 +484,8 @@ static int handle_key_global(struct key_event * k)
 
         case SDLK_d:
                 if (k->mod & KMOD_CTRL) {
-                        if (k->state) return 1; /* argh */
+                        if (k->state == KEY_RELEASE)
+                                return 1; /* argh */
                         i = SDL_WM_GrabInput(SDL_GRAB_QUERY);
                         if (i == SDL_GRAB_QUERY)
                                 i = currently_grabbed;
@@ -498,7 +501,8 @@ static int handle_key_global(struct key_event * k)
         case SDLK_i:
                 /* reset audio stuff? */
                 if (k->mod & KMOD_CTRL) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         audio_reinit();
                         return 1;
                 }
@@ -506,7 +510,8 @@ static int handle_key_global(struct key_event * k)
         case SDLK_e:
                 /* This should reset everything display-related. */
                 if (k->mod & KMOD_CTRL) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         font_init();
                         status.flags |= NEED_UPDATE;
                         return 1;
@@ -515,13 +520,15 @@ static int handle_key_global(struct key_event * k)
         case SDLK_HOME:
                 if (!(k->mod & KMOD_ALT)) break;
                 if (status.flags & DISKWRITER_ACTIVE) break;
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 kbd_set_current_octave(kbd_get_current_octave() - 1);
                 return 1;
         case SDLK_END:
                 if (!(k->mod & KMOD_ALT)) break;
                 if (status.flags & DISKWRITER_ACTIVE) break;
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 kbd_set_current_octave(kbd_get_current_octave() + 1);
                 return 1;
         default:
@@ -537,7 +544,8 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (!k->state) show_exit_prompt();
+                        if (k->state == KEY_PRESS)
+                                show_exit_prompt();
                         return 1;
                 }
                 break;
@@ -546,7 +554,8 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (!k->state) new_song_dialog();
+                        if (k->state == KEY_PRESS)
+                                new_song_dialog();
                         return 1;
                 }
                 break;
@@ -555,7 +564,8 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (!k->state) show_song_timejump();
+                        if (k->state == KEY_PRESS)
+                                show_song_timejump();
                         return 1;
                 }
                 break;
@@ -564,7 +574,8 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (!k->state) show_song_length();
+                        if (k->state == KEY_PRESS)
+                                show_song_length();
                         return 1;
                 }
                 break;
@@ -573,14 +584,16 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_CONFIG);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_CONFIG);
                 } else if (k->mod & KMOD_SHIFT) {
                         _mp_finish(NULL);
-                        if (!k->state)
+                        if (k->state == KEY_PRESS)
                                 set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
                 } else if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_HELP);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_HELP);
                 } else {
                         break;
                 }
@@ -589,7 +602,7 @@ static int handle_key_global(struct key_event * k)
                 if (k->mod & KMOD_CTRL) {
                         if (status.current_page == PAGE_PATTERN_EDITOR) {
                                 _mp_finish(NULL);
-                                if (!k->state && status.dialog_type == DIALOG_NONE) {
+                                if (k->state == KEY_PRESS && status.dialog_type == DIALOG_NONE) {
                                         pattern_editor_length_edit();
                                 }
                                 return 1;
@@ -598,7 +611,7 @@ static int handle_key_global(struct key_event * k)
                                 return 0;
                 } else if (NO_MODIFIER(k->mod)) {
                         if (status.current_page == PAGE_PATTERN_EDITOR) {
-                                if (!k->state) {
+                                if (k->state == KEY_PRESS) {
                                         if (status.dialog_type & DIALOG_MENU) {
                                                 return 0;
                                         } else if (status.dialog_type != DIALOG_NONE) {
@@ -613,7 +626,8 @@ static int handle_key_global(struct key_event * k)
                                 if (status.dialog_type != DIALOG_NONE)
                                         return 0;
                                 _mp_finish(NULL);
-                                if (!k->state) set_page(PAGE_PATTERN_EDITOR);
+                                if (k->state == KEY_PRESS)
+                                        set_page(PAGE_PATTERN_EDITOR);
                         }
                         return 1;
                 }
@@ -623,7 +637,8 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_SAMPLE_LIST);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_SAMPLE_LIST);
                 } else {
                         _mp_finish(NULL);
                         if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
@@ -636,7 +651,8 @@ static int handle_key_global(struct key_event * k)
                 if (NO_MODIFIER(k->mod)) {
                         if (status.current_page == PAGE_INSTRUMENT_LIST) return 0;
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_INSTRUMENT_LIST);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_INSTRUMENT_LIST);
                 } else {
                         if (k->mod & KMOD_SHIFT) return 0;
                         _mp_finish(NULL);
@@ -647,19 +663,22 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F5:
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (!k->state) song_start();
+                        if (k->state == KEY_PRESS)
+                                song_start();
                 } else if (k->mod & KMOD_SHIFT) {
                         if (status.dialog_type != DIALOG_NONE)
                                 return 0;
                         _mp_finish(NULL);
-                        if (k->state) set_page(PAGE_PREFERENCES);
+                        if (k->state == KEY_RELEASE)
+                                set_page(PAGE_PREFERENCES);
                 } else if (NO_MODIFIER(k->mod)) {
                         if (song_get_mode() == MODE_STOPPED
                         || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)) {
                                 _mp_finish(NULL);
-                                if (!k->state) song_start();
+                                if (k->state == KEY_PRESS)
+                                        song_start();
                         }
-                        if (!k->state) {
+                        if (k->state == KEY_PRESS) {
                                 if (status.dialog_type != DIALOG_NONE)
                                         return 0;
                                 _mp_finish(NULL);
@@ -672,10 +691,12 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F6:
                 if (k->mod & KMOD_SHIFT) {
                         _mp_finish(NULL);
-                        if (!k->state) song_start_at_order(get_current_order(), 0);
+                        if (k->state == KEY_PRESS)
+                                song_start_at_order(get_current_order(), 0);
                 } else if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
-                        if (!k->state) song_loop_pattern(get_current_pattern(), 0);
+                        if (k->state == KEY_PRESS)
+                                song_loop_pattern(get_current_pattern(), 0);
                 } else {
                         break;
                 }
@@ -683,17 +704,20 @@ static int handle_key_global(struct key_event * k)
         case SDLK_F7:
                 if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
-                        if (!k->state) play_song_from_mark();
+                        if (k->state == KEY_PRESS)
+                                play_song_from_mark();
                 } else {
                         break;
                 }
                 return 1;
         case SDLK_F8:
                 if (k->mod & KMOD_SHIFT) {
-                        if (!k->state) song_pause();
+                        if (k->state == KEY_PRESS)
+                                song_pause();
                 } else if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
-                        if (!k->state) song_stop();
+                        if (k->state == KEY_PRESS)
+                                song_stop();
                         status.flags |= NEED_UPDATE;
                 } else {
                         break;
@@ -704,10 +728,12 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_SHIFT) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_MESSAGE);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_MESSAGE);
                 } else if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_LOAD_MODULE);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_LOAD_MODULE);
                 } else {
                         break;
                 }
@@ -718,7 +744,8 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (k->state) set_page(PAGE_LOAD_MODULE);
+                        if (k->state == KEY_RELEASE)
+                                set_page(PAGE_LOAD_MODULE);
                 } else {
                         break;
                 }
@@ -728,7 +755,8 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (k->state) save_song_or_save_as();
+                        if (k->state == KEY_RELEASE)
+                                save_song_or_save_as();
                 } else {
                         break;
                 }
@@ -739,7 +767,8 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (k->state) set_page(PAGE_SAVE_MODULE);
+                        if (k->state == KEY_RELEASE)
+                                set_page(PAGE_SAVE_MODULE);
                 } else {
                         break;
                 }
@@ -752,9 +781,11 @@ static int handle_key_global(struct key_event * k)
 
                 _mp_finish(NULL);
                 if (k->mod & KMOD_SHIFT) {
-                        if (!k->state) set_page(PAGE_EXPORT_MODULE);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_EXPORT_MODULE);
                 } else {
-                        if (!k->state) set_page(PAGE_SAVE_MODULE);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_SAVE_MODULE);
                 }
                 return 1;
         case SDLK_F11:
@@ -763,12 +794,14 @@ static int handle_key_global(struct key_event * k)
                 if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
                         if (status.current_page == PAGE_ORDERLIST_PANNING) {
-                                if (!k->state) set_page(PAGE_ORDERLIST_VOLUMES);
+                                if (k->state == KEY_PRESS)
+                                        set_page(PAGE_ORDERLIST_VOLUMES);
                         } else {
-                                if (!k->state) set_page(PAGE_ORDERLIST_PANNING);
+                                if (k->state == KEY_PRESS)
+                                        set_page(PAGE_ORDERLIST_PANNING);
                         }
                 } else if (k->mod & KMOD_CTRL) {
-                        if (!k->state) {
+                        if (k->state == KEY_PRESS) {
                                 _mp_finish(NULL);
                                 if (status.current_page == PAGE_LOG) {
                                         show_about();
@@ -776,7 +809,7 @@ static int handle_key_global(struct key_event * k)
                                         set_page(PAGE_LOG);
                                 }
                         }
-                } else if (!k->state && k->mod & KMOD_ALT) {
+                } else if (k->state == KEY_PRESS && (k->mod & KMOD_ALT)) {
                         _mp_finish(NULL);
                         if (song_toggle_orderlist_locked())
                                 status_text_flash("Order list locked");
@@ -791,20 +824,23 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 if ((k->mod & KMOD_ALT) && status.current_page == PAGE_INFO) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_WATERFALL);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_WATERFALL);
                 } else if (k->mod & KMOD_CTRL) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_PALETTE_EDITOR);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_PALETTE_EDITOR);
                 } else if (k->mod & KMOD_SHIFT) {
                         _mp_finish(NULL);
-                        if (!k->state) {
+                        if (k->state == KEY_PRESS) {
                                 fontedit_return_page = status.current_page;
                                 set_page(PAGE_FONT_EDIT);
                         }
 
                 } else if (NO_MODIFIER(k->mod)) {
                         _mp_finish(NULL);
-                        if (!k->state) set_page(PAGE_SONG_VARIABLES);
+                        if (k->state == KEY_PRESS)
+                                set_page(PAGE_SONG_VARIABLES);
                 } else {
                         break;
                 }
@@ -819,7 +855,7 @@ static int handle_key_global(struct key_event * k)
                         return 0;
                 _mp_finish(NULL);
                 if (k->mod & KMOD_ALT) {
-                        if (!k->state) {
+                        if (k->state == KEY_PRESS) {
                                 midi_flags ^= (MIDI_DISABLE_RECORD);
                                 status_text_flash("MIDI Input %s",
                                         (midi_flags & MIDI_DISABLE_RECORD)
@@ -829,7 +865,7 @@ static int handle_key_global(struct key_event * k)
                 } else {
                         /* os x steals plain scroll lock for brightness,
                          * so catch ctrl+scroll lock here as well */
-                        if (!k->state) {
+                        if (k->state == KEY_PRESS) {
                                 midi_playback_tracing = (playback_tracing = !playback_tracing);
                                 status_text_flash("Playback tracing %s",
                                                   (playback_tracing ? "enabled" : "disabled"));
@@ -857,7 +893,8 @@ static int handle_key_global(struct key_event * k)
                 default:
                         return 0;
                 };
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
 
                 song_toggle_channel_mute(i);
                 status.flags |= NEED_UPDATE;
@@ -881,11 +918,11 @@ static int _handle_ime(struct key_event *k)
 
         if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
             && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
-                if (digraph_n == -1 && k->state) {
+                if (digraph_n == -1 && k->state == KEY_RELEASE) {
                         digraph_n = 0;
 
                 } else if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
-                        if (k->state && digraph_n >= 0) {
+                        if (k->state == KEY_RELEASE && digraph_n >= 0) {
                                 digraph_n++;
                                 if (digraph_n >= 2)
                                         status_text_flash_bios("Enter digraph:");
@@ -893,12 +930,13 @@ static int _handle_ime(struct key_event *k)
                 } else if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
                         /* do nothing */
                 } else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->unicode) == 0 || digraph_n < 2) {
-                        if (!k->state && !k->mouse) {
+                        if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
                                 if (digraph_n > 0) status_text_flash(" ");
                                 digraph_n = -1;
                         }
                 } else if (digraph_n >= 2) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         if (!digraph_c) {
                                 digraph_c = c;
                                 status_text_flash_bios("Enter digraph: %c", c);
@@ -915,7 +953,7 @@ static int _handle_ime(struct key_event *k)
                                 if (fake.unicode) {
                                         fake.is_synthetic = 3;
                                         handle_key(&fake);
-                                        fake.state=1;
+                                        fake.state = KEY_RELEASE;
                                         handle_key(&fake);
                                 }
                         }
@@ -927,7 +965,7 @@ static int _handle_ime(struct key_event *k)
 
                 /* ctrl+shift -> unicode character */
                 if ((k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT)) {
-                        if (k->state && cs_unicode_c > 0) {
+                        if (k->state == KEY_RELEASE && cs_unicode_c > 0) {
                                 memset(&fake, 0, sizeof(fake));
                                 fake.unicode = char_unicode_to_cp437(cs_unicode);
                                 if (fake.unicode) {
@@ -935,7 +973,7 @@ static int _handle_ime(struct key_event *k)
                                                                cs_unicode, fake.unicode);
                                         fake.is_synthetic = 3;
                                         handle_key(&fake);
-                                        fake.state=1;
+                                        fake.state = KEY_RELEASE;
                                         handle_key(&fake);
                                 } else {
                                         status_text_flash_bios("Enter Unicode: U+%04X -> INVALID", cs_unicode);
@@ -955,7 +993,7 @@ static int _handle_ime(struct key_event *k)
                                 if (c == -1) {
                                         cs_unicode = cs_unicode_c = -1;
                                 } else {
-                                        if (!k->state) return 1;
+                                        if (k->state == KEY_PRESS) return 1;
                                         cs_unicode *= 16;
                                         cs_unicode += c;
                                         cs_unicode_c++;
@@ -971,7 +1009,7 @@ static int _handle_ime(struct key_event *k)
                 /* alt+numpad -> char number */
                 if (k->sym == SDLK_LALT || k->sym == SDLK_RALT
                     || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA) {
-                        if (k->state && alt_numpad_c > 0 && (alt_numpad&255) > 0) {
+                        if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {
                                 memset(&fake, 0, sizeof(fake));
                                 fake.unicode = alt_numpad & 255;
                                 if (!(status.flags & CLASSIC_MODE))
@@ -979,7 +1017,7 @@ static int _handle_ime(struct key_event *k)
                                                                (int)fake.unicode, (int)fake.unicode);
                                 fake.is_synthetic = 3;
                                 handle_key(&fake);
-                                fake.state=1;
+                                fake.state = KEY_RELEASE;
                                 handle_key(&fake);
                                 alt_numpad = alt_numpad_c = 0;
                                 digraph_n = digraph_c = 0;
@@ -995,7 +1033,7 @@ static int _handle_ime(struct key_event *k)
                                 if (c == -1 || c > 9) {
                                         alt_numpad = alt_numpad_c = -1;
                                 } else {
-                                        if (!k->state) return 1;
+                                        if (k->state == KEY_PRESS) return 1;
                                         alt_numpad *= 10;
                                         alt_numpad += c;
                                         alt_numpad_c++;
@@ -1034,7 +1072,7 @@ void handle_key(struct key_event *k)
         /* now check a couple other keys. */
         switch (k->sym) {
         case SDLK_LEFT:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE) return;
                 if (status.flags & DISKWRITER_ACTIVE) return;
                 if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
                         _mp_finish(NULL);
@@ -1044,7 +1082,7 @@ void handle_key(struct key_event *k)
                 }
                 break;
         case SDLK_RIGHT:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE) return;
                 if (status.flags & DISKWRITER_ACTIVE) return;
                 if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
                         _mp_finish(NULL);
@@ -1062,7 +1100,7 @@ void handle_key(struct key_event *k)
                 if (NO_MODIFIER(k->mod) && status.dialog_type == DIALOG_NONE
                     && status.current_page != PAGE_LOAD_SAMPLE
                     && status.current_page != PAGE_LOAD_INSTRUMENT) {
-                        if (k->state) return;
+                        if (k->state == KEY_RELEASE) return;
                         if (_mp_active) {
                                 _mp_finish(NULL);
                                 return;
@@ -1072,21 +1110,21 @@ void handle_key(struct key_event *k)
                 }
                 break;
         case SDLK_SLASH:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE) return;
                 if (status.flags & DISKWRITER_ACTIVE) return;
                 if (k->orig_sym == SDLK_KP_DIVIDE) {
                         kbd_set_current_octave(kbd_get_current_octave() - 1);
                 }
                 return;
         case SDLK_ASTERISK:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE) return;
                 if (status.flags & DISKWRITER_ACTIVE) return;
                 if (k->orig_sym == SDLK_KP_MULTIPLY) {
                         kbd_set_current_octave(kbd_get_current_octave() + 1);
                 }
                 return;
         case SDLK_LEFTBRACKET:
-                if (k->state) break;
+                if (k->state == KEY_RELEASE) break;
                 if (status.flags & DISKWRITER_ACTIVE) return;
                 if (k->mod & KMOD_SHIFT) {
                         song_set_current_speed(song_get_current_speed() - 1);
@@ -1109,7 +1147,7 @@ void handle_key(struct key_event *k)
                 }
                 return;
         case SDLK_RIGHTBRACKET:
-                if (k->state) break;
+                if (k->state == KEY_RELEASE) break;
                 if (status.flags & DISKWRITER_ACTIVE) return;
                 if (k->mod & KMOD_SHIFT) {
                         song_set_current_speed(song_get_current_speed() + 1);
@@ -1721,12 +1759,12 @@ static int _timejump_keyh(struct key_event *k)
 {
         if (k->sym == SDLK_BACKSPACE) {
                 if (*selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
-                        if (k->state) change_focus_to(0);
+                        if (k->state == KEY_RELEASE) change_focus_to(0);
                         return 1;
                 }
         }
         if (k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
-                if (k->state) {
+                if (k->state == KEY_RELEASE) {
                         if (*selected_widget == 0) {
                                 change_focus_to(1);
                         }

@@ -674,7 +674,8 @@ static void handle_key_fontlist(struct key_event * k)
                 fontlist_mode = MODE_OFF;
                 break;
         case SDLK_RETURN:
-                if (!k->state) return;
+                if (k->state == KEY_PRESS)
+                        return;
                 switch (fontlist_mode) {
                 case MODE_LOAD:
                         if (cur_font < flist.num_files
@@ -733,7 +734,8 @@ static void handle_mouse_editbox(struct key_event *k)
                         ptr[edit_y] |= (128 >> edit_x);
                         break;
                 case MOUSE_BUTTON_MIDDLE: /* invert */
-                        if (k->state) return;
+                        if (k->state == KEY_RELEASE)
+                                return;
                         ptr[edit_y] ^= (128 >> edit_x);
                         break;
                 case MOUSE_BUTTON_RIGHT: /* clear */
@@ -748,7 +750,8 @@ static void handle_mouse_editbox(struct key_event *k)
                                 ptr[n] = 255;
                         break;
                 case MOUSE_BUTTON_MIDDLE: /* invert */
-                        if (k->state) return;
+                        if (k->state == KEY_RELEASE)
+                                return;
                         for (n = 0; n < 8; n++)
                                 ptr[n] ^= 255;
                         break;
@@ -764,7 +767,8 @@ static void handle_mouse_editbox(struct key_event *k)
                         ptr[edit_y] = 255;
                         break;
                 case MOUSE_BUTTON_MIDDLE: /* invert */
-                        if (k->state) return;
+                        if (k->state == KEY_RELEASE)
+                                return;
                         ptr[edit_y] ^= 255;
                         break;
                 case MOUSE_BUTTON_RIGHT: /* clear */
@@ -779,7 +783,8 @@ static void handle_mouse_editbox(struct key_event *k)
                                 ptr[n] |= (128 >> edit_x);
                         break;
                 case MOUSE_BUTTON_MIDDLE: /* invert */
-                        if (k->state) return;
+                        if (k->state == KEY_RELEASE)
+                                return;
                         for (n = 0; n < 8; n++)
                                 ptr[n] ^= (128 >> edit_x);
                         break;
@@ -847,11 +852,13 @@ static int fontedit_handle_key(struct key_event * k)
         /* kp is special */
         switch (k->orig_sym) {
         case SDLK_KP0:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 k->sym += 10;
                 /* fall through */
         case SDLK_KP1...SDLK_KP9:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 n = k->sym - SDLK_KP1;
                 if (k->mod & KMOD_SHIFT)
                         n += 10;
@@ -865,11 +872,13 @@ static int fontedit_handle_key(struct key_event * k)
 
         switch (k->sym) {
         case '0':
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 k->sym += 10;
                 /* fall through */
         case '1'...'9':
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 n = k->sym - '1';
                 if (k->mod & KMOD_SHIFT)
                         n += 10;
@@ -878,22 +887,26 @@ static int fontedit_handle_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_F2:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selected_item = EDITBOX;
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_F3:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selected_item = CHARMAP;
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_F4:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 selected_item = ITFMAP;
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_TAB:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_SHIFT) {
                         if (selected_item == 0)
                                 selected_item = (fontlist_mode == MODE_OFF ? 2 : 3);
@@ -905,14 +918,16 @@ static int fontedit_handle_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_c:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         memcpy(clipboard, ptr, 8);
                         return 1;
                 }
                 break;
         case SDLK_p:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         memcpy(ptr, clipboard, 8);
                         status.flags |= NEED_UPDATE;
@@ -920,7 +935,8 @@ static int fontedit_handle_key(struct key_event * k)
                 }
                 break;
         case SDLK_m:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_CTRL) {
                         SDL_ToggleCursor();
                         return 1;
@@ -932,7 +948,8 @@ static int fontedit_handle_key(struct key_event * k)
                 }
                 break;
         case SDLK_z:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         memset(ptr, 0, 8);
                         status.flags |= NEED_UPDATE;
@@ -940,7 +957,8 @@ static int fontedit_handle_key(struct key_event * k)
                 }
                 break;
         case SDLK_h:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         for (n = 0; n < 8; n++) {
                                 int r = ptr[n];
@@ -954,7 +972,8 @@ static int fontedit_handle_key(struct key_event * k)
                 }
                 break;
         case SDLK_v:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         for (n = 0; n < 4; n++) {
                                 uint8_t r = ptr[n];
@@ -966,7 +985,8 @@ static int fontedit_handle_key(struct key_event * k)
                 }
                 break;
         case SDLK_i:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_ALT) {
                         for (n = 0; n < 8; n++)
                                 font_data[ci + n] ^= 255;
@@ -979,18 +999,21 @@ static int fontedit_handle_key(struct key_event * k)
 
         case SDLK_l:
         case SDLK_r:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (!(k->mod & KMOD_CTRL)) break;
                 /* fall through */
         case SDLK_F9:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 load_fontlist();
                 fontlist_mode = MODE_LOAD;
                 selected_item = FONTLIST;
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_s:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (!(k->mod & KMOD_CTRL)) break;
                 /* fall through */
         case SDLK_F10:
@@ -1007,7 +1030,8 @@ static int fontedit_handle_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_BACKSPACE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_CTRL) {
                         font_reset_bios();
                 } else if (k->mod & KMOD_ALT) {
@@ -1022,10 +1046,12 @@ static int fontedit_handle_key(struct key_event * k)
         case SDLK_q:
                 if (k->mod & KMOD_CTRL)
                         return 0;
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 break;
         default:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 break;
         }
 

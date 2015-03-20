@@ -703,7 +703,8 @@ static int file_list_handle_key(struct key_event * k)
                 new_file = flist.num_files - 1;
                 break;
         case SDLK_RETURN:
-                if (!k->state) return 1;
+                if (k->state == KEY_PRESS)
+                        return 1;
                 if (current_file < flist.num_files) {
                         dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
                         handle_file_entered(flist.files[current_file]->path);
@@ -712,34 +713,37 @@ static int file_list_handle_key(struct key_event * k)
 
                 return 1;
         case SDLK_DELETE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                    return 1;
                 if (flist.num_files > 0)
                         dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
                 return 1;
         case SDLK_BACKSPACE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (k->mod & KMOD_CTRL)
                         search_text_clear();
                 else
                         search_text_delete_char();
                 return 1;
         case SDLK_p:
-                if ((k->mod & KMOD_ALT) && !k->state) {
+                if ((k->mod & KMOD_ALT) && k->state == KEY_PRESS) {
                         show_selected_song_length();
                         return 1;
                 } /* else fall through */
         default:
-                if (k->mouse == 0) {
-                        if (k->state) return 0;
+                if (k->mouse == MOUSE_NONE) {
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         return search_text_add_char(k->unicode);
                 }
         }
 
-        if (k->mouse && !(k->x >=3 && k->x <= 46 && k->y >= 13 && k->y <= 43))
+        if (k->mouse != MOUSE_NONE && !(k->x >=3 && k->x <= 46 && k->y >= 13 && k->y <= 43))
                 return 0;
         switch (k->mouse) {
         case MOUSE_CLICK:
-                if (!k->state)
+                if (k->state == KEY_PRESS)
                         return 0;
                 new_file = (k->y - 13) + top_file;
                 break;
@@ -752,7 +756,7 @@ static int file_list_handle_key(struct key_event * k)
                 return 1;
         case MOUSE_SCROLL_UP:
         case MOUSE_SCROLL_DOWN:
-                if (!k->state)
+                if (k->state == KEY_PRESS)
                         return 0;
                 top_file += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
                 /* don't allow scrolling down past either end.
@@ -767,7 +771,7 @@ static int file_list_handle_key(struct key_event * k)
                 return 1;
         default:
                 /* hmm? */
-                if (k->state)
+                if (k->state == KEY_RELEASE)
                         return 1;
         }
 
@@ -807,7 +811,7 @@ static int dir_list_handle_key(struct key_event * k)
 {
         int new_dir = current_dir;
 
-        if (k->mouse) {
+        if (k->mouse != MOUSE_NONE) {
                 if (k->x >= 50 && k->x <= 67 && k->y >= 13 && k->y <= 33) {
                         if (k->mouse == MOUSE_CLICK) {
                                 new_dir = (k->y - 13) + top_dir;
@@ -850,7 +854,8 @@ static int dir_list_handle_key(struct key_event * k)
                 new_dir = dlist.num_dirs - 1;
                 break;
         case SDLK_RETURN:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 /* reset */
                 top_file = current_file = 0;
                 if (current_dir >= 0 && current_dir < dlist.num_dirs)
@@ -861,7 +866,8 @@ static int dir_list_handle_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return 1;
         case SDLK_BACKSPACE:
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (k->mod & KMOD_CTRL)
                         search_text_clear();
                 else
@@ -871,7 +877,8 @@ static int dir_list_handle_key(struct key_event * k)
 #ifdef WIN32
         case SDLK_BACKSLASH:
 #endif
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
                 if (search_text_length == 0 && current_dir != 0) {
                         // slash -> go to top (root) dir
                         new_dir = 0;
@@ -882,16 +889,19 @@ static int dir_list_handle_key(struct key_event * k)
                 }
                 break;
         default:
-                if (k->mouse == 0) {
-                        if (k->state) return 0;
+                if (k->mouse == MOUSE_NONE) {
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         return search_text_add_char(k->unicode);
                 }
         }
 
         if (k->mouse == MOUSE_CLICK) {
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
         } else {
-                if (k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
         }
         new_dir = CLAMP(new_dir, 0, dlist.num_dirs - 1);
         if (new_dir != current_dir) {

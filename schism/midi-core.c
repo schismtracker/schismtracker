@@ -1017,13 +1017,13 @@ int midi_engine_handle_event(void *ev)
         switch (e->user.code) {
         case SCHISM_EVENT_MIDI_NOTE:
                 if (st[0] == MIDI_NOTEON) {
-                        kk.state = 0;
+                        kk.state = KEY_PRESS;
                 } else {
                         if (!(midi_flags & MIDI_RECORD_NOTEOFF)) {
                                 /* don't record noteoff? okay... */
                                 break;
                         }
-                        kk.state = 1;
+                        kk.state = KEY_RELEASE;
                 }
                 kk.midi_channel = st[1]+1;
                 kk.midi_note = (st[2]+1 + midi_c5note) - 60;

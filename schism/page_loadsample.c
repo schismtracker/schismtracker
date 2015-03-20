@@ -480,16 +480,16 @@ static int stereo_cvt_hk(struct key_event *k)
         case SDLK_ESCAPE: case SDLK_o: case SDLK_c:
                 return 1;
         case SDLK_l:
-                if (k->state)
+                if (k->state == KEY_RELEASE)
                         stereo_cvt_complete_left();
                 return 1;
         case SDLK_r:
-                if (k->state)
+                if (k->state == KEY_RELEASE)
                         stereo_cvt_complete_right();
                 return 1;
         case SDLK_s:
         case SDLK_b:
-                if (k->state)
+                if (k->state == KEY_RELEASE)
                         stereo_cvt_complete_both();
                 return 1;
         default:
@@ -637,7 +637,7 @@ static int file_list_handle_key(struct key_event * k)
         new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
         if (!(status.flags & CLASSIC_MODE) && k->sym == SDLK_n && (k->mod & KMOD_ALT)) {
-                if (k->state)
+                if (k->state == KEY_RELEASE)
                         song_toggle_multichannel_mode();
                 return 1;
         }
@@ -664,31 +664,35 @@ static int file_list_handle_key(struct key_event * k)
 
         case SDLK_ESCAPE:
                 if (search_pos < 0) {
-                        if (k->state && NO_MODIFIER(k->mod))
+                        if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
                                 set_page(PAGE_SAMPLE_LIST);
                         return 1;
                 } /* else fall through */
         case SDLK_RETURN:
                 if (search_pos < 0) {
-                        if (!k->state) return 0;
+                        if (k->state == KEY_PRESS)
+                                return 0;
                         handle_enter_key();
                         search_pos = -1;
                 } else {
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
                         search_pos = -1;
                         status.flags |= NEED_UPDATE;
                         return 1;
                 }
                 return 1;
         case SDLK_DELETE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 search_pos = -1;
                 if (flist.num_files > 0)
                         dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
                 return 1;
         case SDLK_BACKSPACE:
                 if (search_pos > -1) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         search_pos--;
                         status.flags |= NEED_UPDATE;
                         reposition_at_slash_search();
@@ -697,7 +701,8 @@ static int file_list_handle_key(struct key_event * k)
         case SDLK_SLASH:
                 if (search_pos < 0) {
                         if (k->orig_sym == SDLK_SLASH) {
-                                if (!k->state) return 0;
+                                if (k->state == KEY_PRESS)
+                                        return 0;
                                 search_pos = 0;
                                 status.flags |= NEED_UPDATE;
                                 return 1;
@@ -707,7 +712,8 @@ static int file_list_handle_key(struct key_event * k)
         default:
                 f = flist.files[current_file];
                 if (c >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         if (search_pos < 0) search_pos = 0;
                         if (search_pos < PATH_MAX) {
                                 search_str[search_pos++] = c;
@@ -720,12 +726,14 @@ static int file_list_handle_key(struct key_event * k)
         }
 
         if (k->mouse == MOUSE_CLICK) {
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
         } else if (k->mouse == MOUSE_DBLCLICK) {
                 handle_enter_key();
                 return 1;
         } else {
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
         }
 
         new_file = CLAMP(new_file, 0, flist.num_files - 1);
@@ -756,7 +764,7 @@ static void load_sample_handle_key(struct key_event * k)
 {
         int n, v;
 
-        if (!k->state && k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod)) {
+        if (k->state == KEY_PRESS && k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod)) {
                 set_page(PAGE_SAMPLE_LIST);
                 return;
         }
@@ -780,10 +788,10 @@ static void load_sample_handle_key(struct key_event * k)
 
         handle_preload();
         if (fake_slot != KEYJAZZ_NOINST) {
-                if (k->state)
-                        song_keyup(KEYJAZZ_INST_FAKE, KEYJAZZ_NOINST, n);
-                else
+                if (k->state == KEY_PRESS)
                         song_keydown(KEYJAZZ_INST_FAKE, KEYJAZZ_NOINST, n, v, KEYJAZZ_CHAN_CURRENT);
+                else
+                        song_keyup(KEYJAZZ_INST_FAKE, KEYJAZZ_NOINST, n);
         }
 }
 

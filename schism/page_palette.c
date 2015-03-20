@@ -122,7 +122,8 @@ static int palette_list_handle_key_on_list(struct key_event * k)
         const int focus_offsets[] = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12 };
 
         if (k->mouse == MOUSE_CLICK) {
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 if (k->x < 56 || k->y < 27 || k->y > 46 || k->x > 76) return 0;
                 new_palette = (k->y - 28);
                 if (new_palette == selected_palette) {
@@ -135,9 +136,12 @@ static int palette_list_handle_key_on_list(struct key_event * k)
                         return 1;
                 }
         } else {
-                if (k->state) return 0;
-                if (k->mouse == MOUSE_SCROLL_UP) new_palette -= MOUSE_SCROLL_LINES;
-                else if (k->mouse == MOUSE_SCROLL_DOWN) new_palette += MOUSE_SCROLL_LINES;
+                if (k->state == KEY_RELEASE)
+                        return 0;
+                if (k->mouse == MOUSE_SCROLL_UP)
+                        new_palette -= MOUSE_SCROLL_LINES;
+                else if (k->mouse == MOUSE_SCROLL_DOWN)
+                        new_palette += MOUSE_SCROLL_LINES;
         }
 
         switch (k->sym) {
@@ -203,7 +207,8 @@ static int palette_list_handle_key_on_list(struct key_event * k)
                 change_focus_to(focus_offsets[selected_palette+1] + 29);
                 return 1;
         default:
-                if (!k->mouse) return 0;
+                if (k->mouse == MOUSE_NONE)
+                        return 0;
         }
 
         if (new_palette < -1) new_palette = -1;
@@ -225,7 +230,8 @@ static void palette_list_handle_key(struct key_event * k)
         if (!NO_MODIFIER(k->mod))
                 return;
 
-        if (k->state) return;
+        if (k->state == KEY_RELEASE)
+                return;
 
         switch (k->sym) {
         case SDLK_PAGEUP:

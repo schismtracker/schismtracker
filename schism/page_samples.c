@@ -384,9 +384,10 @@ static int sample_list_handle_key_on_list(struct key_event * k)
         int new_cursor_pos = sample_list_cursor_pos;
 
         if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
-                if (k->state) status.flags |= CLIPPY_PASTE_SELECTION;
+                if (k->state == KEY_RELEASE)
+                        status.flags |= CLIPPY_PASTE_SELECTION;
                 return 1;
-        } else if (!k->state && k->mouse && k->x >= 5 && k->y >= 13 && k->y <= 47 && k->x <= 34) {
+        } else if (k->state == KEY_PRESS && k->mouse != MOUSE_NONE && k->x >= 5 && k->y >= 13 && k->y <= 47 && k->x <= 34) {
                 if (k->mouse == MOUSE_SCROLL_UP) {
                         top_sample -= MOUSE_SCROLL_LINES;
                         if (top_sample < 1) top_sample = 1;
@@ -410,7 +411,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                                 } else {
                                 }
 #if 0 /* buggy and annoying, could be implemented properly but I don't care enough */
-                        } else if (k->state || k->x == k->sx) {
+                        } else if (k->state == KEY_RELEASE || k->x == k->sx) {
                                 if (k->mouse == MOUSE_DBLCLICK
                                 || (new_sample == current_sample
                                 && sample_list_cursor_pos == 25)) {
@@ -424,31 +425,36 @@ static int sample_list_handle_key_on_list(struct key_event * k)
         } else {
                 switch (k->sym) {
                 case SDLK_LEFT:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         new_cursor_pos--;
                         break;
                 case SDLK_RIGHT:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         new_cursor_pos++;
                         break;
                 case SDLK_HOME:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         new_cursor_pos = 0;
                         break;
                 case SDLK_END:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (!NO_MODIFIER(k->mod))
                                 return 0;
                         new_cursor_pos = 25;
                         break;
                 case SDLK_UP:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_ALT) {
                                 if (current_sample > 1) {
                                         new_sample = current_sample - 1;
@@ -461,7 +467,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                         }
                         break;
                 case SDLK_DOWN:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_ALT) {
                                 // restrict position to the "old" value of _last_vis_sample()
                                 // (this is entirely for aesthetic reasons)
@@ -478,7 +485,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                         }
                         break;
                 case SDLK_PAGEUP:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_CTRL) {
                                 new_sample = 1;
                         } else {
@@ -486,7 +494,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                         }
                         break;
                 case SDLK_PAGEDOWN:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if (k->mod & KMOD_CTRL) {
                                 new_sample = _last_vis_sample();
                         } else {
@@ -494,11 +503,13 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                         }
                         break;
                 case SDLK_RETURN:
-                        if (!k->state) return 0;
+                        if (k->state == KEY_PRESS)
+                                return 0;
                         set_page(PAGE_LOAD_SAMPLE);
                         break;
                 case SDLK_BACKSPACE:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
                                 if (sample_list_cursor_pos < 25) {
                                         sample_list_delete_char();
@@ -514,7 +525,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                         }
                         return 0;
                 case SDLK_DELETE:
-                        if (k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
                                 if (sample_list_cursor_pos < 25) {
                                         sample_list_delete_next_char();
@@ -524,7 +536,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                         return 0;
                 case SDLK_ESCAPE:
                         if (k->mod & KMOD_SHIFT) {
-                                if (k->state) return 1;
+                                if (k->state == KEY_RELEASE)
+                                        return 1;
                                 new_cursor_pos = 25;
                                 break;
                         }
@@ -537,7 +550,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
                                 }
                         } else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
                                 if (!k->unicode) return 0;
-                                if (k->state) return 1;
+                                if (k->state == KEY_RELEASE)
+                                        return 1;
                                 return sample_list_add_char(k->unicode);
                         }
                         return 0;
@@ -890,7 +904,8 @@ static void sample_adlibconfig_draw_const(void)
 static int do_adlib_handlekey(struct key_event *kk)
 {
         if (kk->sym == SDLK_F1) {
-                if (!kk->state) return 1;
+                if (kk->state == KEY_PRESS)
+                        return 1;
                 status.current_help_index = HELP_ADLIB_SAMPLE;
                 dialog_f1_hack = 1;
                 dialog_destroy_all();
@@ -1088,7 +1103,8 @@ static int export_sample_list_handle_key(struct key_event * k)
 {
         int new_format = export_sample_format;
 
-        if (k->state) return 0;
+        if (k->state == KEY_RELEASE)
+                return 0;
         switch (k->sym) {
         case SDLK_UP:
                 if (!NO_MODIFIER(k->mod))
@@ -1270,7 +1286,8 @@ static void sample_list_handle_alt_key(struct key_event * k)
         song_sample_t *sample = song_get_sample(current_sample);
         int canmod = (sample->data != NULL && !(sample->flags & CHN_ADLIB));
 
-        if (k->state) return;
+        if (k->state == KEY_RELEASE)
+                return;
         switch (k->sym) {
         case SDLK_a:
                 if (canmod)
@@ -1388,13 +1405,15 @@ static void sample_list_handle_key(struct key_event * k)
 
         switch (k->sym) {
         case SDLK_SPACE:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 if (selected_widget && *selected_widget == 0) {
                         status.flags |= NEED_UPDATE;
                 }
                 return;
         case SDLK_PLUS:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 if (k->mod & KMOD_ALT) {
                         sample->c5speed *= 2;
                         status.flags |= SONG_NEEDS_SAVE;
@@ -1405,7 +1424,8 @@ static void sample_list_handle_key(struct key_event * k)
                 status.flags |= NEED_UPDATE;
                 return;
         case SDLK_MINUS:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 if (k->mod & KMOD_ALT) {
                         sample->c5speed /= 2;
                         status.flags |= SONG_NEEDS_SAVE;
@@ -1418,25 +1438,30 @@ static void sample_list_handle_key(struct key_event * k)
 
         case SDLK_COMMA:
         case SDLK_LESS:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 song_change_current_play_channel(-1, 0);
                 return;
         case SDLK_PERIOD:
         case SDLK_GREATER:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 song_change_current_play_channel(1, 0);
                 return;
         case SDLK_PAGEUP:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 new_sample--;
                 break;
         case SDLK_PAGEDOWN:
-                if (k->state) return;
+                if (k->state == KEY_RELEASE)
+                        return;
                 new_sample++;
                 break;
         case SDLK_ESCAPE:
                 if (k->mod & KMOD_SHIFT) {
-                        if (k->state) return;
+                        if (k->state == KEY_RELEASE)
+                                return;
                         sample_list_cursor_pos = 25;
                         _fix_accept_text();
                         change_focus_to(0);
@@ -1446,7 +1471,8 @@ static void sample_list_handle_key(struct key_event * k)
                 return;
         default:
                 if (k->mod & KMOD_ALT) {
-                        if (k->state) return;
+                        if (k->state == KEY_RELEASE)
+                                return;
                         sample_list_handle_alt_key(k);
                 } else if (!k->is_repeat) {
                         int n, v;
@@ -1465,7 +1491,7 @@ static void sample_list_handle_key(struct key_event * k)
                                         return;
                                 v = KEYJAZZ_DEFAULTVOL;
                         }
-                        if (k->state) {
+                        if (k->state == KEY_RELEASE) {
                                 song_keyup(current_sample, KEYJAZZ_NOINST, n);
                         } else {
                                 song_keydown(current_sample, KEYJAZZ_NOINST, n, v, KEYJAZZ_CHAN_CURRENT);

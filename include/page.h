@@ -28,15 +28,6 @@
 #ifndef PAGE_H
 #define PAGE_H
 
-/* there's no good place for this */
-#define MOUSE_BUTTON_LEFT       1
-#define MOUSE_BUTTON_MIDDLE     2
-#define MOUSE_BUTTON_RIGHT      3
-#define MOUSE_CLICK             1
-#define MOUSE_SCROLL_UP         2
-#define MOUSE_SCROLL_DOWN       3
-#define MOUSE_DBLCLICK          4
-
 /* How much to scroll. */
 #define MOUSE_SCROLL_LINES       3
 
@@ -46,9 +37,9 @@ struct key_event {
         uint16_t unicode;
         int scancode;
 
-        int state; /* 0 for down, 1 for up/release */
-        int mouse; /* 0 for none, 1 for click, 2 for scrollup, 3 for down */
-        int mouse_button; /* 1 left, 2 middle, 3 right (itf only) */
+        enum { KEY_PRESS=0, KEY_RELEASE } state;
+        enum { MOUSE_NONE=0, MOUSE_CLICK, MOUSE_SCROLL_UP, MOUSE_SCROLL_DOWN, MOUSE_DBLCLICK } mouse;
+        enum { MOUSE_BUTTON_LEFT=0, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT } mouse_button;
         int midi_note;
         int midi_channel;
         int midi_volume; /* -1 for not a midi key otherwise 0...128 */

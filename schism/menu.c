@@ -456,7 +456,7 @@ int menu_handle_key(struct key_event *k)
                                 n = ((k->y - 4) - menu->y) / 3;
                                 if (n >= 0 && n < menu->num_items) {
                                         menu->selected_item = n;
-                                        if (k->state) {
+                                        if (k->state == KEY_RELEASE) {
                                                 menu->active_item = -1;
                                                 menu->selected_cb();
                                         } else {
@@ -464,7 +464,7 @@ int menu_handle_key(struct key_event *k)
                                                 menu->active_item = n;
                                         }
                                 }
-                        } else if (k->state && (k->x < menu->x || k->x > 7+menu->x+menu->w
+                        } else if (k->state == KEY_RELEASE && (k->x < menu->x || k->x > 7+menu->x+menu->w
                         || k->y < menu->y || k->y >= 5+menu->y+h)) {
                                 /* get rid of the menu */
                                 current_menu[1] = NULL;
@@ -482,7 +482,8 @@ int menu_handle_key(struct key_event *k)
 
         switch (k->sym) {
         case SDLK_ESCAPE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 current_menu[1] = NULL;
                 if (status.dialog_type == DIALOG_SUBMENU) {
                         status.dialog_type = DIALOG_MAIN_MENU;
@@ -492,14 +493,16 @@ int menu_handle_key(struct key_event *k)
                 }
                 break;
         case SDLK_UP:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (menu->selected_item > 0) {
                         menu->selected_item--;
                         break;
                 }
                 return 1;
         case SDLK_DOWN:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (menu->selected_item < menu->num_items - 1) {
                         menu->selected_item++;
                         break;
@@ -507,15 +510,17 @@ int menu_handle_key(struct key_event *k)
                 return 1;
                 /* home/end are new here :) */
         case SDLK_HOME:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 menu->selected_item = 0;
                 break;
         case SDLK_END:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 menu->selected_item = menu->num_items - 1;
                 break;
         case SDLK_RETURN:
-                if (!k->state) {
+                if (k->state == KEY_PRESS) {
                         menu->active_item = menu->selected_item;
                         status.flags |= NEED_UPDATE;
                         return 1;

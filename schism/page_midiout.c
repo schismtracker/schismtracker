@@ -103,7 +103,8 @@ static int pre_handle_key(struct key_event *k)
 {
         if (*selected_widget == 25 && k->sym == SDLK_UP) {
                 /* scroll up */
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 if (zxx_top == 0)
                         return 0; /* let the normal key handler catch it and change focus */
                 zxx_setpos(zxx_top - 1);
@@ -111,18 +112,21 @@ static int pre_handle_key(struct key_event *k)
         }
         if (*selected_widget == 31 && k->sym == SDLK_DOWN) {
                 /* scroll down */
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 zxx_setpos(zxx_top + 1);
                 return 1;
         }
         if ((*selected_widget) >= 25) {
                 switch (k->sym) {
                 case SDLK_PAGEUP:
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         zxx_setpos(zxx_top - 7);
                         return 1;
                 case SDLK_PAGEDOWN:
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         zxx_setpos(zxx_top + 7);
                         return 1;
                 default:

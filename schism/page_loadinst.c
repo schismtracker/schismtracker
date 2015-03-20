@@ -375,7 +375,7 @@ static int file_list_handle_key(struct key_event * k)
 
         new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
-        if (k->mouse) {
+        if (k->mouse != MOUSE_NONE) {
                 if (k->x >= 6 && k->x <= 67 && k->y >= 13 && k->y <= 47) {
                         slash_search_mode = -1;
                         if (k->mouse == MOUSE_SCROLL_UP) {
@@ -389,18 +389,21 @@ static int file_list_handle_key(struct key_event * k)
         } else if (slash_search_mode > -1) {
                 int c = unicode_to_ascii(k->unicode);
                 if (k->sym == SDLK_RETURN || k->sym == SDLK_ESCAPE) {
-                        if (!k->state) return 1;
+                        if (k->state == KEY_PRESS)
+                                return 1;
                         slash_search_mode = -1;
                         status.flags |= NEED_UPDATE;
                         return 1;
                 } else if (k->sym == SDLK_BACKSPACE) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         slash_search_mode--;
                         status.flags |= NEED_UPDATE;
                         reposition_at_slash_search();
                         return 1;
                 } else if (c >= 32) {
-                        if (k->state) return 1;
+                        if (k->state == KEY_RELEASE)
+                                return 1;
                         if (slash_search_mode < PATH_MAX) {
                                 slash_search_str[ slash_search_mode ] = c;
                                 slash_search_mode++;
@@ -437,40 +440,46 @@ static int file_list_handle_key(struct key_event * k)
                 slash_search_mode = -1;
                 break;
         case SDLK_RETURN:
-                if (!k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
                 handle_enter_key();
                 slash_search_mode = -1;
                 return 1;
         case SDLK_DELETE:
-                if (k->state) return 1;
+                if (k->state == KEY_RELEASE)
+                        return 1;
                 slash_search_mode = -1;
                 if (flist.num_files > 0)
                         dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
                 return 1;
         case SDLK_ESCAPE:
                 slash_search_mode = -1;
-                if (k->state && NO_MODIFIER(k->mod))
+                if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
                         set_page(PAGE_INSTRUMENT_LIST);
                 return 1;
         case SDLK_SLASH:
                 if (k->orig_sym == SDLK_SLASH) {
                         if (status.flags & CLASSIC_MODE) return 0;
-                        if (!k->state) return 0;
+                        if (k->state == KEY_RELEASE)
+                                return 0;
                         slash_search_mode = 0;
                         status.flags |= NEED_UPDATE;
                         return 1;
                 }
         default:
-                if (!k->mouse) return 0;
+                if (k->mouse == MOUSE_NONE)
+                        return 0;
         }
 
         if (k->mouse == MOUSE_CLICK) {
-                if (!k->state) return 0;
+                if (k->state == KEY_RELEASE)
+                        return 0;
         } else if (k->mouse == MOUSE_DBLCLICK) {
                 handle_enter_key();
                 return 1;
         } else {
-                if (k->state) return 0;
+                if (k->state == KEY_PRESS)
+                        return 0;
         }
 
         new_file = CLAMP(new_file, 0, flist.num_files - 1);
@@ -485,7 +494,8 @@ static int file_list_handle_key(struct key_event * k)
 
 static void load_instrument_handle_key(struct key_event * k)
 {
-        if (!k->state) return;
+        if (k->state == KEY_RELEASE)
+                return;
         if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
                 set_page(PAGE_INSTRUMENT_LIST);
 }
