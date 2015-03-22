@@ -852,7 +852,7 @@ static int note_trans_handle_key(struct key_event * k)
                         }
                         break;
                 case SDLK_DOWN:
-                        if (k->state = KEY_RELEASE)
+                        if (k->state == KEY_RELEASE)
                                 return 0;
                         if (k->mod & KMOD_CTRL)
                                 sample_set(sample_get_current () + 1);
@@ -2142,7 +2142,7 @@ static void instrument_list_handle_key(struct key_event * k)
                                         return;
                         }
 
-                        if (k->state == KEY_REELASE) {
+                        if (k->state == KEY_RELEASE) {
                                 song_keyup(0, current_instrument, n);
                                 status.last_keysym = 0;
                         } else if (!k->is_repeat) {
