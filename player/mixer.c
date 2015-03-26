@@ -1253,7 +1253,7 @@ static int get_sample_count(song_voice_t *chan, int samples)
                 if (increment < 0) {
                         // Invert loop for bidi loops
                         int delta = ((loop_start - chan->position) << 16) - (chan->position_frac & 0xFFFF);
-                        chan->position = loop_start | (delta >> 16);
+                        chan->position = loop_start + (delta >> 16);
                         chan->position_frac = delta & 0xFFFF;
 
                         if ((int) chan->position < loop_start ||
