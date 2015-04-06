@@ -360,18 +360,22 @@ int song_is_stereo(void)
 void song_toggle_stereo(void)
 {
         current_song->flags ^= SONG_NOSTEREO;
+        song_vars_sync_stereo();
 }
 void song_toggle_mono(void)
 {
         current_song->flags ^= SONG_NOSTEREO;
+        song_vars_sync_stereo();
 }
 void song_set_mono(void)
 {
         current_song->flags |= SONG_NOSTEREO;
+        song_vars_sync_stereo();
 }
 void song_set_stereo(void)
 {
         current_song->flags &= ~SONG_NOSTEREO;
+        song_vars_sync_stereo();
 }
 
 int song_has_old_effects(void)

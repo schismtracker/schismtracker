@@ -197,6 +197,9 @@ void song_set_mono(void);
 void song_toggle_stereo(void);
 void song_toggle_mono(void);
 
+/* called from song_set_stereo et al - this updates the value on F12 to match the song */
+void song_vars_sync_stereo(void);
+
 /* void song_set_stereo(int value); ??? */
 int song_has_old_effects(void);
 void song_set_old_effects(int value);

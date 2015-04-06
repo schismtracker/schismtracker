@@ -81,6 +81,15 @@ static void song_vars_draw_const(void)
 
 /* --------------------------------------------------------------------- */
 
+void song_vars_sync_stereo(void)
+{
+        // copy from the song to the page
+        if (song_is_stereo())
+                togglebutton_set(widgets_vars, 10, 0);
+        else
+                togglebutton_set(widgets_vars, 11, 0);
+}
+
 static void update_values_in_song(void)
 {
         song_set_initial_tempo(widgets_vars[1].d.thumbbar.value);
