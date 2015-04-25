@@ -26,10 +26,6 @@ AC_INIT([schismtracker], [hg])
 
 AC_CONFIG_SRCDIR([schism/main.c])
 
-dnl We'll need machine type later
-AC_CANONICAL_TARGET([])
-machtype="$target_cpu"
-
 AM_INIT_AUTOMAKE([-Wall subdir-objects])
 AC_CONFIG_HEADERS([config.h])
 
