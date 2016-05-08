@@ -1,6 +1,7 @@
 Schism Tracker copyright (c) 2003-2012 Storlek
 
-http://schismtracker.org/
+http://schismtracker.org/ is offline and development has stalled, so this fork
+was created to preserve the information from the schismtracker.org wiki and
+incorporate user-submitted patches into the main repository.
 
-Bugs? Questions? http://schismtracker.org/scdev/
-
+See https://github.com/jangler/schismtracker/wiki for more information.
