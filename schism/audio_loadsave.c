@@ -596,6 +596,7 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
         int n;
         int nord, nins, nsmp, npat;
         int msglen = strlen(current_song->message);
+        int warned_adlib = 0;
         uint32_t para_ins[256], para_smp[256], para_pat[256];
         // how much extra data is stuffed between the parapointers and the rest of the file
         // (2 bytes for edit history length, and 8 per entry including the current session)
@@ -778,6 +779,11 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
                                         | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M));
                 // done using the pointer internally, so *now* swap it
                 para_smp[n] = bswapLE32(para_smp[n]);
+
+                if (!warned_adlib && smp->flags & CHN_ADLIB) {
+                        log_appendf(4, " Warning: AdLib samples unsupported in IT format");
+                        warned_adlib = 1;
+                }
         }
 
         // rewrite the parapointers
