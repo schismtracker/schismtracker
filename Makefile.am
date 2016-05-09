@@ -207,8 +207,8 @@ if HAVE_WINDRES
 if USE_MERCURIAL
 wrcflags_version = -DWRC_VERSION=0,`(cat $(hg_dirstate) /dev/null | tr - ,)`
 else
-## this is assuming PACKAGE_VERSION is either 'hg' or YYYYMMDD
-wrcflags_version = -DWRC_VERSION=0,`(date +$(PACKAGE_VERSION)%Y%m%d | sed 's/\(hg\)\?\(....\)\(..\)\(..\).*/\2,\3,\4/')`
+## this is assuming PACKAGE_VERSION is either 'git' or YYYYMMDD
+wrcflags_version = -DWRC_VERSION=0,`(date +$(PACKAGE_VERSION)%Y%m%d | sed 's/\(git\)\?\(....\)\(..\)\(..\).*/\2,\3,\4/')`
 endif
 ## --use-temp-file is needed to work around stupid bugs
 WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
