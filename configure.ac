@@ -22,7 +22,7 @@ dnl along with this program; if not, write to the Free Software
 dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 dnl 'hg', or a date in the form YYYYMMDD
-AC_INIT([schismtracker], [hg])
+AC_INIT([schismtracker], [git])
 
 AC_CONFIG_SRCDIR([schism/main.c])
 
