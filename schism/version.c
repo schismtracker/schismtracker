@@ -125,9 +125,15 @@ void ver_init(void)
         ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
         ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
 
-        snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
-                "Schism Tracker %s built %s %s",
-                ver, __DATE__, __TIME__);
+		/* show build date if we don't know last commit date (no git) */
+		if (ver[0]) {
+			snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
+					"Schism Tracker %s", ver);
+		} else {
+			snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
+					"Schism Tracker built %s %s", __DATE__, __TIME__);
+		}
+		
         top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
 }
 
