@@ -73,14 +73,10 @@ const char *schism_banner(int classic)
 /*
 Information at our disposal:
 
-        HG_VERSION
-                "YYYY-MM-DD"
-                Only defined if .hg directory existed and hg client was installed when configuring.
-                This is the best indicator of the version if it's defined.
         VERSION
-                "hg" or "YYYYMMDD"
-                A date here indicates that the source is from one of the periodically-buit packages
-                on the homepage. Less reliable, but will probably be usable when HG_VERSION isn't.
+                " " or "YYYYMMDD"
+                A date here is the date of the last commit from git
+                " " will happen if git isn't installed
 
         __DATE__        "Jun  3 2009"
         __TIME__        "23:39:19"
@@ -92,27 +88,12 @@ Information at our disposal:
                 that's building the code, and also there is the possibility that someone was hanging
                 onto the code for a really long time before building it.
 
-If VERSION is "hg", but HG_VERSION is undefined or blank, then we are being built from one of the
-snapshot packages, or the build system is somehow broken. (This might happen if hg was uninstalled
-between cloning the repo and configuring, or the .hg directory was removed.)
-
-Note: this is a hack, it'd be great to have something that doesn't require runtime logic.
-Fortunately, most of this should be able to be optimized down to static assignment.
 */
 
 static int get_version_tm(struct tm *version)
 {
         char *ret;
-#ifdef HG_VERSION
-        memset(version, 0, sizeof(*version));
-        /* Try this first, but make sure it's not broken (can happen if 'hg' is removed after configure) */
-        if (HG_VERSION[0] >= '0' && HG_VERSION[0] <= '9') {
-                ret = strptime(HG_VERSION, "%Y-%m-%d", version);
-                if (ret && !*ret)
-                        return 1;
-        }
-#endif
-        /* Ok how about VERSION? (Note this has spaces only because strptime is dumb) */
+
         memset(version, 0, sizeof(*version));
         ret = strptime(VERSION, "%Y %m %d", version);
         if (ret && !*ret)
@@ -144,12 +125,6 @@ void ver_init(void)
         ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
         ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
 
-#ifdef HG_VERSION
-        if (strcmp(VERSION, "hg") == 0) {
-                strcat(ver, ":");
-                strcat(ver, HG_VERSION);
-        }
-#endif
         snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
                 "Schism Tracker %s built %s %s",
                 ver, __DATE__, __TIME__);

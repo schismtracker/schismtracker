@@ -83,24 +83,6 @@ EXTRA_DIST = \
 	$(sysfiles)			\
 	$(scripts)
 
-
-## The following files are available from the hg repository but are deliberately NOT being included in
-## the static packages, either because they are used to generate other source files which are already
-## included, or because they are of limited use without a repository.
-##
-##   - .hgignore
-##   - .hgtags
-##   - fmt/mp3.c
-##   - fmt/ogg.c
-##   - fmt/sid.c
-##   - schism/isysev.c
-##   - schism/tree.c
-##   - sys/wii/data/*
-##
-## To get a rough list of files that aren't listed here:
-## $ for f in `hg manifest`; do grep -Fq $f Makefile.am || echo $f; done
-
-
 bin_PROGRAMS = schismtracker
 
 noinst_HEADERS = \
@@ -203,13 +185,8 @@ lib_win32=-lwinmm
 endif
 
 if HAVE_WINDRES
-## This got ugly.
-if USE_MERCURIAL
-wrcflags_version = -DWRC_VERSION=0,`(cat $(hg_dirstate) /dev/null | tr - ,)`
-else
-## this is assuming PACKAGE_VERSION is either 'git' or YYYYMMDD
-wrcflags_version = -DWRC_VERSION=0,`(date +$(PACKAGE_VERSION)%Y%m%d | sed 's/\(git\)\?\(....\)\(..\)\(..\).*/\2,\3,\4/')`
-endif
+## this is assuming PACKAGE_VERSION is YYYYMMDD
+wrcflags_version = -DWRC_VERSION=0,`(date +$(PACKAGE_VERSION)%Y%m%d)`
 ## --use-temp-file is needed to work around stupid bugs
 WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
 .rc.$(OBJEXT):
@@ -368,20 +345,8 @@ schismtracker_SOURCES = \
 	$(files_wii)			\
 	$(files_windres)
 
-if USE_MERCURIAL
-# used in the dependency declaration of version.o to cause rebuild after commit
-# (thanks, apostrophe -- neat trick!)
-hg_dirstate = auto/dirstate.check
-BUILT_SOURCES = $(hg_dirstate)
-$(hg_dirstate): $(top_srcdir)/.hg/dirstate
-	@$(MKDIR_P) auto
-	hg -R $(top_srcdir) parents --template "{date|shortdate}" >$@
-cflags_version = -DHG_VERSION=\""`(cat $(hg_dirstate) /dev/null)`"\"
-endif
-
 # have version.o rely on all files
-schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS) $(hg_dirstate)
-
+schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
 
 cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 

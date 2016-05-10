@@ -6,11 +6,7 @@
 # define WRC_VERSION 0,0,0,0
 #endif
 
-#ifdef HG_VERSION
-# define WRC_PRODUCTVER_STR "hg:" HG_VERSION
-#else
-# define WRC_PRODUCTVER_STR PACKAGE_VERSION
-#endif
+#define WRC_PRODUCTVER_STR PACKAGE_VERSION
 
 #define VER_PRODUCTNAME "Schism Tracker"
 
