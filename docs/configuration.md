@@ -15,7 +15,7 @@ The location of this file is dependent on the OS:
 - **Wii**
   - Same directory as `boot.elf` (e.g. `sd:/apps/schismtracker`)
 
-Aside from `config`, you may also add a `fonts` subdirectory for custom font files. By default, `font.cfg` is automatically loaded on startup, and other `*.itf` files are listed by the built-in font editor (Shift-F12). See [the links page](Links) for some resources on getting fonts for Schism Tracker.
+Aside from `config`, you may also add a `fonts` subdirectory for custom font files. By default, `font.cfg` is automatically loaded on startup, and other `*.itf` files are listed by the built-in font editor (Shift-F12). See [the links page](https://github.com/jangler/schismtracker/wiki/Links) for some resources on getting fonts for Schism Tracker.
 
 ## Potentially useful "hidden" config options
 
@@ -42,7 +42,7 @@ When overwriting a `filename.it`, copy the existing file to `filename.it~`. With
     key_repeat_delay=125
     key_repeat_rate=25
 
-Alter the key repeat. "Delay" is how long before keys begin to repeat, "rate" is how long between repeated keystrokes. (Both are in milliseconds.) Above are [Storlek](Storlek)'s settings, which are very fast but convenient for speed tracking.
+Alter the key repeat. "Delay" is how long before keys begin to repeat, "rate" is how long between repeated keystrokes. (Both are in milliseconds.) Above are [Storlek](https://github.com/jangler/schismtracker/wiki/Storlek)'s settings, which are very fast but convenient for speed tracking.
 
 The *default* repeat delay and rate come from your operating system, so you only need to set this if you like having a different rate for Schism Tracker than you do for the rest of your system.
 
