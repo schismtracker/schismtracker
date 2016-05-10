@@ -74,9 +74,9 @@ const char *schism_banner(int classic)
 Information at our disposal:
 
         VERSION
-                " " or "YYYYMMDD"
+                "" or "YYYYMMDD"
                 A date here is the date of the last commit from git
-                " " will happen if git isn't installed
+                empty string will happen if git isn't installed, or no .git
 
         __DATE__        "Jun  3 2009"
         __TIME__        "23:39:19"
@@ -125,14 +125,14 @@ void ver_init(void)
         ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
         ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
 
-		/* show build date if we don't know last commit date (no git) */
-		if (ver[0]) {
-			snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
-					"Schism Tracker %s", ver);
-		} else {
-			snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
-					"Schism Tracker built %s %s", __DATE__, __TIME__);
-		}
+	/* show build date if we don't know last commit date (no git) */
+	if (ver[0]) {
+		snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
+			"Schism Tracker %s", ver);
+	} else {
+		snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
+			"Schism Tracker built %s %s", __DATE__, __TIME__);
+	}
 		
         top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
 }
