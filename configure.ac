@@ -22,7 +22,7 @@ dnl along with this program; if not, write to the Free Software
 dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 dnl PACKAGE_VERSION will be either " " if not using git, or date of the last git commit in the form YYYYMMDD
-m4_define([last_git_commit], m4_esyscmd([git log -n 1 --date=short --format=format:%cd | sed 's/-//g']))
+m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
 AC_INIT([schismtracker], [last_git_commit])
 
 AC_CONFIG_SRCDIR([schism/main.c])
