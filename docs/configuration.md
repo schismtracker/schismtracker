@@ -1,3 +1,5 @@
+# Configuration
+
 Schism Tracker saves its configuration in a plain-text, [INI-style](http://en.wikipedia.org/wiki/INI_file) file named `config`. Under normal circumstances it should theoretically not be necessary to deal with this file directly. However, there are some options that are not configurable from within Schism Tracker for one reason or another. In these cases, any plain text editor should suffice.
 
 The location of this file is dependent on the OS:

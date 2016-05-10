@@ -1,4 +1,4 @@
-# Compiling Schism Tracker on Windows
+# Building on Windows
 
 _This page was adapted from COMPILE-WIN32.txt traditionally provided with Schism Tracker sources. Any additional notes are in italics, like this one_
 

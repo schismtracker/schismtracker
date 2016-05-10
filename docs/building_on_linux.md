@@ -1,3 +1,5 @@
+# Building on Linux
+
 Since Linux is the primary development platform for [Schism Tracker](Schism%20Tracker), it's probably the easiest to compile on, and those familiar with automake-based projects will find few surprises here.
 
 ## Prerequisites
