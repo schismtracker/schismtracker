@@ -1,5 +1,5 @@
 #define compile \
-        exec gcc -Wall -pedantic -std=gnu99 -lm lutgen.c -o lutgen || exit 255
+	exec gcc -Wall -pedantic -std=gnu99 -lm lutgen.c -o lutgen || exit 255
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -75,38 +75,38 @@ void cubic_spline_init(void)
     float scale = (float) SPLINE_QUANTSCALE;
 
     for (i = 0; i < len; i++) {
-        float LCm1, LC0, LC1, LC2;
-        float LX = ((float) i) * flen;
-        int indx = i << 2;
+	float LCm1, LC0, LC1, LC2;
+	float LX = ((float) i) * flen;
+	int indx = i << 2;
 #ifdef SPLINE_CLAMPFORUNITY
-        int sum;
+	int sum;
 #endif
 
-        LCm1 = (float) floor(0.5 + scale * (-0.5 * LX * LX * LX + 1.0 * LX * LX - 0.5 * LX       ));
-        LC0  = (float) floor(0.5 + scale * ( 1.5 * LX * LX * LX - 2.5 * LX * LX             + 1.0));
-        LC1  = (float) floor(0.5 + scale * (-1.5 * LX * LX * LX + 2.0 * LX * LX + 0.5 * LX       ));
-        LC2  = (float) floor(0.5 + scale * ( 0.5 * LX * LX * LX - 0.5 * LX * LX                  ));
+	LCm1 = (float) floor(0.5 + scale * (-0.5 * LX * LX * LX + 1.0 * LX * LX - 0.5 * LX       ));
+	LC0  = (float) floor(0.5 + scale * ( 1.5 * LX * LX * LX - 2.5 * LX * LX             + 1.0));
+	LC1  = (float) floor(0.5 + scale * (-1.5 * LX * LX * LX + 2.0 * LX * LX + 0.5 * LX       ));
+	LC2  = (float) floor(0.5 + scale * ( 0.5 * LX * LX * LX - 0.5 * LX * LX                  ));
 
-        cubic_spline_lut[indx + 0] = (int16_t) ((LCm1 < -scale) ? -scale : ((LCm1 > scale) ? scale : LCm1));
-        cubic_spline_lut[indx + 1] = (int16_t) ((LC0  < -scale) ? -scale : ((LC0  > scale) ? scale : LC0 ));
-        cubic_spline_lut[indx + 2] = (int16_t) ((LC1  < -scale) ? -scale : ((LC1  > scale) ? scale : LC1 ));
-        cubic_spline_lut[indx + 3] = (int16_t) ((LC2  < -scale) ? -scale : ((LC2  > scale) ? scale : LC2 ));
+	cubic_spline_lut[indx + 0] = (int16_t) ((LCm1 < -scale) ? -scale : ((LCm1 > scale) ? scale : LCm1));
+	cubic_spline_lut[indx + 1] = (int16_t) ((LC0  < -scale) ? -scale : ((LC0  > scale) ? scale : LC0 ));
+	cubic_spline_lut[indx + 2] = (int16_t) ((LC1  < -scale) ? -scale : ((LC1  > scale) ? scale : LC1 ));
+	cubic_spline_lut[indx + 3] = (int16_t) ((LC2  < -scale) ? -scale : ((LC2  > scale) ? scale : LC2 ));
 
 #ifdef SPLINE_CLAMPFORUNITY
-        sum = cubic_spline_lut[indx + 0] +
-              cubic_spline_lut[indx + 1] +
-              cubic_spline_lut[indx + 2] +
-              cubic_spline_lut[indx + 3];
+	sum = cubic_spline_lut[indx + 0] +
+	      cubic_spline_lut[indx + 1] +
+	      cubic_spline_lut[indx + 2] +
+	      cubic_spline_lut[indx + 3];
 
-        if (sum != SPLINE_QUANTSCALE) {
-            int max = indx;
+	if (sum != SPLINE_QUANTSCALE) {
+	    int max = indx;
 
-            if (cubic_spline_lut[indx + 1] > cubic_spline_lut[max]) max = indx + 1;
-            if (cubic_spline_lut[indx + 2] > cubic_spline_lut[max]) max = indx + 2;
-            if (cubic_spline_lut[indx + 3] > cubic_spline_lut[max]) max = indx + 3;
+	    if (cubic_spline_lut[indx + 1] > cubic_spline_lut[max]) max = indx + 1;
+	    if (cubic_spline_lut[indx + 2] > cubic_spline_lut[max]) max = indx + 2;
+	    if (cubic_spline_lut[indx + 3] > cubic_spline_lut[max]) max = indx + 3;
 
-            cubic_spline_lut[max] += (SPLINE_QUANTSCALE - sum);
-        }
+	    cubic_spline_lut[max] += (SPLINE_QUANTSCALE - sum);
+	}
 #endif
     }
 }
@@ -172,50 +172,50 @@ float coef(int pc_nr, float p_ofs, float p_cut, int p_width, int p_type)
     double wc, si;
 
     if (fabs(pos) < M_zEPS) {
-        wc    = 1.0;
-        si    = p_cut;
-        return p_cut;
+	wc    = 1.0;
+	si    = p_cut;
+	return p_cut;
     }
 
     switch (p_type) {
     case WFIR_HANN:
-            wc = 0.50 - 0.50 * cos(idl * pos_u);
-            break;
+	    wc = 0.50 - 0.50 * cos(idl * pos_u);
+	    break;
 
     case WFIR_HAMMING:
-            wc = 0.54 - 0.46 * cos(idl * pos_u);
-            break;
+	    wc = 0.54 - 0.46 * cos(idl * pos_u);
+	    break;
 
     case WFIR_BLACKMANEXACT:
-            wc = 0.42 - 0.50 * cos(idl * pos_u) + 0.08 * cos(2.0 * idl * pos_u);
-            break;
+	    wc = 0.42 - 0.50 * cos(idl * pos_u) + 0.08 * cos(2.0 * idl * pos_u);
+	    break;
 
     case WFIR_BLACKMAN3T61:
-            wc = 0.44959 - 0.49364 * cos(idl * pos_u) + 0.05677 * cos(2.0 * idl * pos_u);
-            break;
+	    wc = 0.44959 - 0.49364 * cos(idl * pos_u) + 0.05677 * cos(2.0 * idl * pos_u);
+	    break;
 
     case WFIR_BLACKMAN3T67:
-            wc = 0.42323 - 0.49755 * cos(idl * pos_u) + 0.07922 * cos(2.0 * idl * pos_u);
-            break;
+	    wc = 0.42323 - 0.49755 * cos(idl * pos_u) + 0.07922 * cos(2.0 * idl * pos_u);
+	    break;
 
     case WFIR_BLACKMAN4T92:
-            wc = 0.35875 - 0.48829 * cos(idl * pos_u) + 0.14128 * cos(2.0 * idl * pos_u) -
-                    0.01168 * cos(3.0 * idl * pos_u);
-            break;
+	    wc = 0.35875 - 0.48829 * cos(idl * pos_u) + 0.14128 * cos(2.0 * idl * pos_u) -
+		    0.01168 * cos(3.0 * idl * pos_u);
+	    break;
 
     case WFIR_BLACKMAN4T74:
-            wc = 0.40217 - 0.49703 * cos(idl * pos_u) + 0.09392 * cos(2.0 * idl * pos_u) -
-                0.00183 * cos(3.0*idl*pos_u);
-            break;
+	    wc = 0.40217 - 0.49703 * cos(idl * pos_u) + 0.09392 * cos(2.0 * idl * pos_u) -
+		0.00183 * cos(3.0*idl*pos_u);
+	    break;
 
     case WFIR_KAISER4T:
-            wc = 0.40243 - 0.49804 * cos(idl * pos_u) + 0.09831 * cos(2.0 * idl * pos_u) -
-                0.00122 * cos(3.0 * idl * pos_u);
-            break;
+	    wc = 0.40243 - 0.49804 * cos(idl * pos_u) + 0.09831 * cos(2.0 * idl * pos_u) -
+		0.00122 * cos(3.0 * idl * pos_u);
+	    break;
 
     default:
-            wc = 1.0;
-            break;
+	    wc = 1.0;
+	    break;
     }
 
     pos *= M_zPI;
@@ -238,22 +238,22 @@ void windowed_fir_init(void)
     float scale = (float) WFIR_QUANTSCALE;
 
     for (pcl = 0; pcl < WFIR_LUTLEN; pcl++) {
-        float gain,coefs[WFIR_WIDTH];
-        float ofs = ((float) pcl - pcllen) * norm;
-        int cc, indx = pcl << WFIR_LOG2WIDTH;
+	float gain,coefs[WFIR_WIDTH];
+	float ofs = ((float) pcl - pcllen) * norm;
+	int cc, indx = pcl << WFIR_LOG2WIDTH;
 
-        for (cc = 0, gain = 0.0f; cc < WFIR_WIDTH; cc++) {
-            coefs[cc] = coef(cc, ofs, cut, WFIR_WIDTH, WFIR_TYPE);
-            gain += coefs[cc];
-        }
+	for (cc = 0, gain = 0.0f; cc < WFIR_WIDTH; cc++) {
+	    coefs[cc] = coef(cc, ofs, cut, WFIR_WIDTH, WFIR_TYPE);
+	    gain += coefs[cc];
+	}
 
-        gain = 1.0f / gain;
+	gain = 1.0f / gain;
 
-        for (cc = 0; cc < WFIR_WIDTH; cc++) {
-            float coef = (float)floor( 0.5 + scale * coefs[cc] * gain);
-            windowed_fir_lut[indx + cc] = (signed short)((coef < -scale) ? - scale :
-                ((coef > scale) ? scale : coef));
-        }
+	for (cc = 0; cc < WFIR_WIDTH; cc++) {
+	    float coef = (float)floor( 0.5 + scale * coefs[cc] * gain);
+	    windowed_fir_lut[indx + cc] = (signed short)((coef < -scale) ? - scale :
+		((coef > scale) ? scale : coef));
+	}
     }
 }
 
@@ -262,10 +262,10 @@ void windowed_fir_init(void)
     printf("static signed short %s[%lu] = {\n", #x, y); \
     \
     for (int i = 0; i < y; i++) { \
-        if (i && !(i % 64)) { \
-            printf("\n"); \
-        } \
-        printf(" %d,", x[i]); \
+	if (i && !(i % 64)) { \
+	    printf("\n"); \
+	} \
+	printf(" %d,", x[i]); \
     } \
     \
     printf("\n};\n\n");

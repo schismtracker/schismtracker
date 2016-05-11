@@ -45,18 +45,18 @@ chosen epoch, there can be plenty of room for the foreseeable future.
   = 0x020: any version between the 0.2a release (2005-04-29?) and 2007-04-17
   = 0x050: anywhere from 2007-04-17 to 2009-10-31 (version was updated to 0x050 in hg changeset 2f6bd40c0b79)
   > 0x050: the number of days since 2009-10-31, for example:
-        0x051 = (0x051 - 0x050) + 2009-10-31 = 2009-11-01
-        0x052 = (0x052 - 0x050) + 2009-10-31 = 2009-11-02
-        0x14f = (0x14f - 0x050) + 2009-10-31 = 2010-07-13
-        0xffe = (0xfff - 0x050) + 2009-10-31 = 2020-10-27
+	0x051 = (0x051 - 0x050) + 2009-10-31 = 2009-11-01
+	0x052 = (0x052 - 0x050) + 2009-10-31 = 2009-11-02
+	0x14f = (0x14f - 0x050) + 2009-10-31 = 2010-07-13
+	0xffe = (0xfff - 0x050) + 2009-10-31 = 2020-10-27
   = 0xfff: a non-value indicating a date after 2020-10-27 (assuming Schism Tracker still exists then) */
 short ver_cwtv;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
 const char *ver_short_copyright =
-        "Copyright (c) 2003-2012 Storlek & Mrs. Brisby";
+	"Copyright (c) 2003-2012 Storlek & Mrs. Brisby";
 const char *ver_short_based_on =
-        "Based on Impulse Tracker by Jeffrey Lim aka Pulse";
+	"Based on Impulse Tracker by Jeffrey Lim aka Pulse";
 
 /* SEE ALSO: helptext/copyright (contains full copyright information, credits, and GPL boilerplate) */
 
@@ -65,65 +65,65 @@ static time_t epoch_sec;
 
 const char *schism_banner(int classic)
 {
-        return (classic
-                ? TOP_BANNER_CLASSIC
-                : top_banner_normal);
+	return (classic
+		? TOP_BANNER_CLASSIC
+		: top_banner_normal);
 }
 
 /*
 Information at our disposal:
 
-        VERSION
-                "" or "YYYYMMDD"
-                A date here is the date of the last commit from git
-                empty string will happen if git isn't installed, or no .git
+	VERSION
+		"" or "YYYYMMDD"
+		A date here is the date of the last commit from git
+		empty string will happen if git isn't installed, or no .git
 
-        __DATE__        "Jun  3 2009"
-        __TIME__        "23:39:19"
-        __TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
-                These are annoying to manipulate beacuse of the month being in text format -- but at
-                least I don't think they're ever localized, which would make it much more annoying.
-                Should always exist, especially considering that we require gcc. However, it is a
-                poor indicator of the age of the *code*, since it depends on the clock of the computer
-                that's building the code, and also there is the possibility that someone was hanging
-                onto the code for a really long time before building it.
+	__DATE__        "Jun  3 2009"
+	__TIME__        "23:39:19"
+	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
+		These are annoying to manipulate beacuse of the month being in text format -- but at
+		least I don't think they're ever localized, which would make it much more annoying.
+		Should always exist, especially considering that we require gcc. However, it is a
+		poor indicator of the age of the *code*, since it depends on the clock of the computer
+		that's building the code, and also there is the possibility that someone was hanging
+		onto the code for a really long time before building it.
 
 */
 
 static int get_version_tm(struct tm *version)
 {
-        char *ret;
+	char *ret;
 
-        memset(version, 0, sizeof(*version));
-        ret = strptime(VERSION, "%Y %m %d", version);
-        if (ret && !*ret)
-                return 1;
-        /* Argh. */
-        memset(version, 0, sizeof(*version));
-        ret = strptime(__DATE__, "%b %e %Y", version);
-        if (ret && !*ret)
-                return 1;
-        /* Give up; we don't know anything. */
-        return 0;
+	memset(version, 0, sizeof(*version));
+	ret = strptime(VERSION, "%Y %m %d", version);
+	if (ret && !*ret)
+		return 1;
+	/* Argh. */
+	memset(version, 0, sizeof(*version));
+	ret = strptime(__DATE__, "%b %e %Y", version);
+	if (ret && !*ret)
+		return 1;
+	/* Give up; we don't know anything. */
+	return 0;
 }
 
 void ver_init(void)
 {
-        struct tm version, epoch = { .tm_year = 109, .tm_mon = 9, .tm_mday = 31 }; /* 2009-10-31 */
-        time_t version_sec;
-        char ver[32] = VERSION;
+	struct tm version, epoch = { .tm_year = 109, .tm_mon = 9, .tm_mday = 31 }; /* 2009-10-31 */
+	time_t version_sec;
+	char ver[32] = VERSION;
 
-        if (get_version_tm(&version)) {
-                version_sec = mktime(&version);
-        } else {
-                printf("help, I am very confused about myself\n");
-                version_sec = epoch_sec;
-        }
+	if (get_version_tm(&version)) {
+		version_sec = mktime(&version);
+	} else {
+		printf("help, I am very confused about myself\n");
+		version_sec = epoch_sec;
+	}
 
-        epoch_sec = mktime(&epoch);
-        version_sec = mktime(&version);
-        ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
-        ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
+	epoch_sec = mktime(&epoch);
+	version_sec = mktime(&version);
+	ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
+	ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
 
 	/* show build date if we don't know last commit date (no git) */
 	if (ver[0]) {
@@ -134,24 +134,24 @@ void ver_init(void)
 			"Schism Tracker built %s %s", __DATE__, __TIME__);
 	}
 		
-        top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
+	top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
 }
 
 void ver_decode_cwtv(uint16_t cwtv, char *buf)
 {
-        struct tm version;
-        time_t version_sec;
+	struct tm version;
+	time_t version_sec;
 
-        cwtv &= 0xfff;
-        if (cwtv > 0x050) {
-                // Annoyingly, mktime uses local time instead of UTC. Why etc.
-                version_sec = ((cwtv - 0x050) * 86400) + epoch_sec;
-                if (localtime_r(&version_sec, &version)) {
-                        sprintf(buf, "%04d-%02d-%02d",
-                                version.tm_year + 1900, version.tm_mon + 1, version.tm_mday);
-                        return;
-                }
-        }
-        sprintf(buf, "0.%x", cwtv);
+	cwtv &= 0xfff;
+	if (cwtv > 0x050) {
+		// Annoyingly, mktime uses local time instead of UTC. Why etc.
+		version_sec = ((cwtv - 0x050) * 86400) + epoch_sec;
+		if (localtime_r(&version_sec, &version)) {
+			sprintf(buf, "%04d-%02d-%02d",
+				version.tm_year + 1900, version.tm_mon + 1, version.tm_mday);
+			return;
+		}
+	}
+	sprintf(buf, "0.%x", cwtv);
 }
 

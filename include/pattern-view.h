@@ -31,9 +31,9 @@ typedef void (*draw_note_func) (int x, int y, const song_note_t *note, int curso
 typedef void (*draw_mask_func) (int x, int y, int mask, int cursor_pos, int fg, int bg);
 
 #define PATTERN_VIEW(n) \
-        void draw_channel_header_##n(int chan, int x, int y, int fg); \
-        void draw_note_##n(int x, int y, const song_note_t *note, int cursor_pos, int fg, int bg); \
-        void draw_mask_##n(int x, int y, int mask, int cursor_pos, int fg, int bg);
+	void draw_channel_header_##n(int chan, int x, int y, int fg); \
+	void draw_note_##n(int x, int y, const song_note_t *note, int cursor_pos, int fg, int bg); \
+	void draw_mask_##n(int x, int y, int mask, int cursor_pos, int fg, int bg);
 
 PATTERN_VIEW(13);
 PATTERN_VIEW(10);

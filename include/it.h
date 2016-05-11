@@ -42,25 +42,25 @@
 #define SDL_ToggleCursor() SDL_ShowCursor(!SDL_ShowCursor(-1))
 
 #define NO_MODIFIER(mod) \
-        (((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT)) == 0)
+	(((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT)) == 0)
 #define NO_CAM_MODS(mod) \
-        (((mod) & (KMOD_CTRL | KMOD_ALT)) == 0)
+	(((mod) & (KMOD_CTRL | KMOD_ALT)) == 0)
 
 /* --------------------------------------------------------------------- */
 /* structs 'n enums */
 
 /* tracker_status dialog_types */
 enum {
-        DIALOG_NONE = (0),                              /* 0000 0000 */
-        DIALOG_MENU = (1 << 0),                         /* 0000 0001 */
-        DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)),    /* 0000 0011 */
-        DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),      /* 0000 0101 */
-        DIALOG_BOX = (1 << 3),                          /* 0000 1000 */
-        DIALOG_OK = (DIALOG_BOX | (1 << 4)),            /* 0001 1000 */
-        DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),     /* 0010 1000 */
-        /* yes/no technically has a cancel as well, i.e. the escape key */
-        DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)),        /* 0100 1000 */
-        DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),        /* 1000 1000 */
+	DIALOG_NONE = (0),                              /* 0000 0000 */
+	DIALOG_MENU = (1 << 0),                         /* 0000 0001 */
+	DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)),    /* 0000 0011 */
+	DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),      /* 0000 0101 */
+	DIALOG_BOX = (1 << 3),                          /* 0000 1000 */
+	DIALOG_OK = (DIALOG_BOX | (1 << 4)),            /* 0001 1000 */
+	DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),     /* 0010 1000 */
+	/* yes/no technically has a cancel as well, i.e. the escape key */
+	DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)),        /* 0100 1000 */
+	DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),        /* 1000 1000 */
 };
 
 /* tracker_status flags
@@ -70,152 +70,152 @@ enum {
    interface in some way) and uh, something else for the internal status flags
    like IS_VISIBLE or whatever */
 enum {
-        /* if this flag is set, the screen will be redrawn */
-        NEED_UPDATE = (1 << 0),
+	/* if this flag is set, the screen will be redrawn */
+	NEED_UPDATE = (1 << 0),
 
-        /* is the current palette "backwards"? (used to make the borders look right) */
-        INVERTED_PALETTE = (1 << 1),
+	/* is the current palette "backwards"? (used to make the borders look right) */
+	INVERTED_PALETTE = (1 << 1),
 
-        DIR_MODULES_CHANGED = (1 << 2),
-        DIR_SAMPLES_CHANGED = (1 << 3),
-        DIR_INSTRUMENTS_CHANGED = (1 << 4),
+	DIR_MODULES_CHANGED = (1 << 2),
+	DIR_SAMPLES_CHANGED = (1 << 3),
+	DIR_INSTRUMENTS_CHANGED = (1 << 4),
 
-        /* these refer to the window's state.
-         * (they're rather useless on the console ;) */
-        IS_FOCUSED = (1 << 5),
-        IS_VISIBLE = (1 << 6),
-        WM_AVAILABLE = (1 << 7),
+	/* these refer to the window's state.
+	 * (they're rather useless on the console ;) */
+	IS_FOCUSED = (1 << 5),
+	IS_VISIBLE = (1 << 6),
+	WM_AVAILABLE = (1 << 7),
 
-        /* if this is set, some stuff behaves differently
-         * (grep the source files for what stuff ;) */
-        CLASSIC_MODE = (1 << 8),
+	/* if this is set, some stuff behaves differently
+	 * (grep the source files for what stuff ;) */
+	CLASSIC_MODE = (1 << 8),
 
-        /* make a backup file (song.it~) when saving a module? */
-        MAKE_BACKUPS = (1 << 9),
-        NUMBERED_BACKUPS = (1 << 10), /* song.it.3~ */
+	/* make a backup file (song.it~) when saving a module? */
+	MAKE_BACKUPS = (1 << 9),
+	NUMBERED_BACKUPS = (1 << 10), /* song.it.3~ */
 
-        LAZY_REDRAW = (1 << 11),
+	LAZY_REDRAW = (1 << 11),
 
-        /* this is here if anything is "changed" and we need to whine to
-        the user if they quit */
-        SONG_NEEDS_SAVE = (1 << 12),
+	/* this is here if anything is "changed" and we need to whine to
+	the user if they quit */
+	SONG_NEEDS_SAVE = (1 << 12),
 
-        /* if the software mouse pointer moved.... */
-        SOFTWARE_MOUSE_MOVED = (1 << 13),
+	/* if the software mouse pointer moved.... */
+	SOFTWARE_MOUSE_MOVED = (1 << 13),
 
-        /* pasting is done by setting a flag here, the main event loop then synthesizes
-        the various events... after we return */
-        CLIPPY_PASTE_SELECTION = (1 << 14),
-        CLIPPY_PASTE_BUFFER = (1 << 15),
+	/* pasting is done by setting a flag here, the main event loop then synthesizes
+	the various events... after we return */
+	CLIPPY_PASTE_SELECTION = (1 << 14),
+	CLIPPY_PASTE_BUFFER = (1 << 15),
 
-        /* if the disko is active */
-        DISKWRITER_ACTIVE = (1 << 16),
-        DISKWRITER_ACTIVE_PATTERN = (1 << 17), /* recording only a single pattern */
+	/* if the disko is active */
+	DISKWRITER_ACTIVE = (1 << 16),
+	DISKWRITER_ACTIVE_PATTERN = (1 << 17), /* recording only a single pattern */
 
-        /* mark... set by midi core when received new midi event */
-        MIDI_EVENT_CHANGED = (1 << 18),
+	/* mark... set by midi core when received new midi event */
+	MIDI_EVENT_CHANGED = (1 << 18),
 
-        /* poop */
-        ACCIDENTALS_AS_FLATS = (1 << 19),
+	/* poop */
+	ACCIDENTALS_AS_FLATS = (1 << 19),
 
-        /* fontedit */
-        STARTUP_FONTEDIT = (1 << 20),
+	/* fontedit */
+	STARTUP_FONTEDIT = (1 << 20),
 
-        /* key hacks -- should go away when keyboard redefinition is possible */
-        META_IS_CTRL = (1 << 21),
-        ALTGR_IS_ALT = (1 << 22),
+	/* key hacks -- should go away when keyboard redefinition is possible */
+	META_IS_CTRL = (1 << 21),
+	ALTGR_IS_ALT = (1 << 22),
 
-        /* holding shift (used on pattern editor for weird template thing) */
-        SHIFT_KEY_DOWN = (1 << 23),
+	/* holding shift (used on pattern editor for weird template thing) */
+	SHIFT_KEY_DOWN = (1 << 23),
 
-        /* Devi Ever's hack */
-        CRAYOLA_MODE = (1 << 25),
+	/* Devi Ever's hack */
+	CRAYOLA_MODE = (1 << 25),
 
-        /* holding caps */
-        CAPS_PRESSED = (1 << 26),
+	/* holding caps */
+	CAPS_PRESSED = (1 << 26),
 
-        NO_NETWORK = (1 << 27),
-        NO_MOUSE = (1 << 28),
+	NO_NETWORK = (1 << 27),
+	NO_MOUSE = (1 << 28),
 
-        /* Play MIDI events using the same semantics as tracker samples */
-        MIDI_LIKE_TRACKER = (1 << 29),
+	/* Play MIDI events using the same semantics as tracker samples */
+	MIDI_LIKE_TRACKER = (1 << 29),
 
-        /* if true, don't stop playing on load, and start playing new song afterward
-        (but only if the last song was already playing before loading) */
-        PLAY_AFTER_LOAD = (1 << 30),
+	/* if true, don't stop playing on load, and start playing new song afterward
+	(but only if the last song was already playing before loading) */
+	PLAY_AFTER_LOAD = (1 << 30),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
 enum tracker_time_display {
-        TIME_OFF, TIME_PLAY_ELAPSED, TIME_PLAY_CLOCK, TIME_PLAY_OFF,
-        TIME_ELAPSED, TIME_CLOCK, TIME_ABSOLUTE, TIME_PLAYBACK,
+	TIME_OFF, TIME_PLAY_ELAPSED, TIME_PLAY_CLOCK, TIME_PLAY_OFF,
+	TIME_ELAPSED, TIME_CLOCK, TIME_ABSOLUTE, TIME_PLAYBACK,
 };
 
 /* what should go in the little box on the top right? */
 enum tracker_vis_style {
-        VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
+	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
 };
 
 struct tracker_status {
-        int current_page;
-        int previous_page;
-        int current_help_index;
-        int dialog_type;        /* one of the DIALOG_* constants above */
-        int flags;
-        enum tracker_time_display time_display;
-        enum tracker_vis_style vis_style;
-        SDLKey last_keysym;
+	int current_page;
+	int previous_page;
+	int current_help_index;
+	int dialog_type;        /* one of the DIALOG_* constants above */
+	int flags;
+	enum tracker_time_display time_display;
+	enum tracker_vis_style vis_style;
+	SDLKey last_keysym;
 
-        time_t last_midi_time;
-        unsigned char last_midi_event[64];
-        unsigned int last_midi_len;
-        unsigned int last_midi_real_len;
-        void *last_midi_port; /* really a struct midi_port * */
+	time_t last_midi_time;
+	unsigned char last_midi_event[64];
+	unsigned int last_midi_len;
+	unsigned int last_midi_real_len;
+	void *last_midi_port; /* really a struct midi_port * */
 
-        /* clock is driven from the main/event thread */
-        time_t now;
-        struct tm tmnow;
+	/* clock is driven from the main/event thread */
+	time_t now;
+	struct tm tmnow;
 
-        int fix_numlock_setting;
+	int fix_numlock_setting;
 };
 
 /* numlock hackery */
 enum {
-        NUMLOCK_ALWAYS_OFF = 0,
-        NUMLOCK_ALWAYS_ON = 1,
-        NUMLOCK_HONOR = -1, /* don't fix it */
-        NUMLOCK_GUESS = -2, /* don't fix it... except on non-ibook macs */
+	NUMLOCK_ALWAYS_OFF = 0,
+	NUMLOCK_ALWAYS_ON = 1,
+	NUMLOCK_HONOR = -1, /* don't fix it */
+	NUMLOCK_GUESS = -2, /* don't fix it... except on non-ibook macs */
 };
 
 /* mouse visibility - these are passed to video_mousecursor()
 first three are stored as the physical mouse state */
 enum {
-        MOUSE_DISABLED,
-        MOUSE_EMULATED,
-        MOUSE_SYSTEM,
+	MOUSE_DISABLED,
+	MOUSE_EMULATED,
+	MOUSE_SYSTEM,
 
-        MOUSE_CYCLE_STATE,
-        MOUSE_RESET_STATE,
+	MOUSE_CYCLE_STATE,
+	MOUSE_RESET_STATE,
 };
 #define MOUSE_MAX_STATE MOUSE_CYCLE_STATE
 
 
 struct it_palette {
-        char name[21];
-        uint8_t colors[16][3];
+	char name[21];
+	uint8_t colors[16][3];
 };
 
 enum {
-        NOTE_TRANS_CLEAR = (30),
-        NOTE_TRANS_NOTE_CUT,
-        NOTE_TRANS_NOTE_OFF,
-        NOTE_TRANS_NOTE_FADE,
-        NOTE_TRANS_PREV_INS,
-        NOTE_TRANS_NEXT_INS,
-        NOTE_TRANS_TOGGLE_MASK,
-        NOTE_TRANS_VOL_PAN_SWITCH,
-        NOTE_TRANS_PLAY_NOTE,
-        NOTE_TRANS_PLAY_ROW,
+	NOTE_TRANS_CLEAR = (30),
+	NOTE_TRANS_NOTE_CUT,
+	NOTE_TRANS_NOTE_OFF,
+	NOTE_TRANS_NOTE_FADE,
+	NOTE_TRANS_PREV_INS,
+	NOTE_TRANS_NEXT_INS,
+	NOTE_TRANS_TOGGLE_MASK,
+	NOTE_TRANS_VOL_PAN_SWITCH,
+	NOTE_TRANS_PLAY_NOTE,
+	NOTE_TRANS_PLAY_ROW,
 };
 
 /* --------------------------------------------------------------------- */
@@ -292,7 +292,7 @@ void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 
 static inline unsigned char unicode_to_ascii(uint16_t unicode)
 {
-        return unicode & 0xff;
+	return unicode & 0xff;
 //        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
 }
 
@@ -309,9 +309,9 @@ void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
  * song_sample structure, and without caching the waveform.
  * mostly it's just for the oscilloscope view. */
 void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data, int length,
-        unsigned int inputchans, unsigned int outputchans);
+	unsigned int inputchans, unsigned int outputchans);
 void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int length,
-        unsigned int inputchans, unsigned int outputchans);
+	unsigned int inputchans, unsigned int outputchans);
 
 /* these are in audio_playback.cc */
 extern signed short *audio_buffer;

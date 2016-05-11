@@ -44,60 +44,60 @@ int macosx_ibook_fnswitch(int setting); /* FIXME: ugliness */
 
 int macosx_ibook_fnswitch(int setting)
 {
-        kern_return_t kr;
-        mach_port_t mp;
-        io_service_t so;
-        /*io_name_t sn;*/
-        io_connect_t dp;
-        io_iterator_t it;
-        CFDictionaryRef classToMatch;
-        /*CFNumberRef   fnMode;*/
-        unsigned int res, dummy;
+	kern_return_t kr;
+	mach_port_t mp;
+	io_service_t so;
+	/*io_name_t sn;*/
+	io_connect_t dp;
+	io_iterator_t it;
+	CFDictionaryRef classToMatch;
+	/*CFNumberRef   fnMode;*/
+	unsigned int res, dummy;
 
-        kr = IOMasterPort(bootstrap_port, &mp);
-        if (kr != KERN_SUCCESS) return -1;
+	kr = IOMasterPort(bootstrap_port, &mp);
+	if (kr != KERN_SUCCESS) return -1;
 
-        classToMatch = IOServiceMatching(kIOHIDSystemClass);
-        if (classToMatch == NULL) {
-                return -1;
-        }
-        kr = IOServiceGetMatchingServices(mp, classToMatch, &it);
-        if (kr != KERN_SUCCESS) return -1;
+	classToMatch = IOServiceMatching(kIOHIDSystemClass);
+	if (classToMatch == NULL) {
+		return -1;
+	}
+	kr = IOServiceGetMatchingServices(mp, classToMatch, &it);
+	if (kr != KERN_SUCCESS) return -1;
 
-        so = IOIteratorNext(it);
-        IOObjectRelease(it);
+	so = IOIteratorNext(it);
+	IOObjectRelease(it);
 
-        if (!so) return -1;
+	if (!so) return -1;
 
-        kr = IOServiceOpen(so, mach_task_self(), kIOHIDParamConnectType, &dp);
-        if (kr != KERN_SUCCESS) return -1;
+	kr = IOServiceOpen(so, mach_task_self(), kIOHIDParamConnectType, &dp);
+	if (kr != KERN_SUCCESS) return -1;
 
-        kr = IOHIDGetParameter(dp, CFSTR(kIOHIDFKeyModeKey), sizeof(res),
-                                                &res, (IOByteCount *) &dummy);
-        if (kr != KERN_SUCCESS) {
-                IOServiceClose(dp);
-                return -1;
-        }
+	kr = IOHIDGetParameter(dp, CFSTR(kIOHIDFKeyModeKey), sizeof(res),
+						&res, (IOByteCount *) &dummy);
+	if (kr != KERN_SUCCESS) {
+		IOServiceClose(dp);
+		return -1;
+	}
 
-        if (setting == kfnAppleMode || setting == kfntheOtherMode) {
-                dummy = setting;
-                kr = IOHIDSetParameter(dp, CFSTR(kIOHIDFKeyModeKey),
-                                        &dummy, sizeof(dummy));
-                if (kr != KERN_SUCCESS) {
-                        IOServiceClose(dp);
-                        return -1;
-                }
-        }
+	if (setting == kfnAppleMode || setting == kfntheOtherMode) {
+		dummy = setting;
+		kr = IOHIDSetParameter(dp, CFSTR(kIOHIDFKeyModeKey),
+					&dummy, sizeof(dummy));
+		if (kr != KERN_SUCCESS) {
+			IOServiceClose(dp);
+			return -1;
+		}
+	}
 
-        IOServiceClose(dp);
-        /* old setting... */
-        return res;
+	IOServiceClose(dp);
+	/* old setting... */
+	return res;
 }
 
 #else
 
 int macosx_ibook_fnswitch(UNUSED int setting)
 {
-        return 0;
+	return 0;
 }
 #endif

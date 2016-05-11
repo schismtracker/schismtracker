@@ -29,7 +29,7 @@ extern const char *ver_short_based_on;
 extern short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
 
 extern const char *schism_banner(int classic)
-        __attribute__((pure));
+	__attribute__((pure));
 
 /* little hack, need to call this at startup */
 void ver_init(void);

@@ -31,24 +31,24 @@ const char *osname = "macosx";
 
 int macosx_sdlevent(SDL_Event *event)
 {
-        if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {
-                if (event->key.keysym.sym == 0) {
-                        switch (event->key.keysym.scancode) {
-                        case 106: // mac F16 key
-                                event->key.keysym.sym = SDLK_PRINT;
-                                event->key.keysym.mod = KMOD_CTRL;
-                                return 1;
-                        case 234: // XXX what key is this?
-                                if (event->type == SDL_KEYDOWN)
-                                        song_set_current_order(song_get_current_order() - 1);
-                                return 0;
-                        case 233: // XXX what key is this?
-                                if (event->type == SDL_KEYUP)
-                                        song_set_current_order(song_get_current_order() + 1);
-                                return 0;
-                        };
-                }
-        }
-        return 1;
+	if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {
+		if (event->key.keysym.sym == 0) {
+			switch (event->key.keysym.scancode) {
+			case 106: // mac F16 key
+				event->key.keysym.sym = SDLK_PRINT;
+				event->key.keysym.mod = KMOD_CTRL;
+				return 1;
+			case 234: // XXX what key is this?
+				if (event->type == SDL_KEYDOWN)
+					song_set_current_order(song_get_current_order() - 1);
+				return 0;
+			case 233: // XXX what key is this?
+				if (event->type == SDL_KEYUP)
+					song_set_current_order(song_get_current_order() + 1);
+				return 0;
+			};
+		}
+	}
+	return 1;
 }
 

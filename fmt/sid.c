@@ -41,28 +41,28 @@
 
 int fmt_sid_read_info(dmoz_file_t *file, const uint8_t *data, size_t length);
 {
-        char buf[33];
-        int n;
+	char buf[33];
+	int n;
 
-        /* i'm not sure what the upper bound on the size of a sid is, but
-         * the biggest one i have is jch/vibrants - "better late than
-         * never", and it's only 20k. */
-        if (length > 32767)
-                return 0;
+	/* i'm not sure what the upper bound on the size of a sid is, but
+	 * the biggest one i have is jch/vibrants - "better late than
+	 * never", and it's only 20k. */
+	if (length > 32767)
+		return 0;
 
-        if (!(length > 128 && memcmp(data, "PSID", 4) == 0))
-                return 0;
+	if (!(length > 128 && memcmp(data, "PSID", 4) == 0))
+		return 0;
 
-        memcpy(buf, data + 22, 32);
-        buf[32] = 0;
-        file->title = str_dup(buf);
-        memcpy(buf, data + 54, 32);
-        buf[32] = 0;
-        file->artist = str_dup(buf);
-        /* memcpy(buf, data + 86, 32); - copyright... */
+	memcpy(buf, data + 22, 32);
+	buf[32] = 0;
+	file->title = str_dup(buf);
+	memcpy(buf, data + 54, 32);
+	buf[32] = 0;
+	file->artist = str_dup(buf);
+	/* memcpy(buf, data + 86, 32); - copyright... */
 
-        file->description = "Commodore 64 SID";
-        /*file->extension = str_dup("sid");*/
-        file->type = TYPE_SAMPLE_COMPR; /* FIXME: not even close. */
-        return 1;
+	file->description = "Commodore 64 SID";
+	/*file->extension = str_dup("sid");*/
+	file->type = TYPE_SAMPLE_COMPR; /* FIXME: not even close. */
+	return 1;
 }

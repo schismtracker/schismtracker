@@ -29,12 +29,12 @@ it needs access to the fonts, and it shrank recently :)
 void vgamem_clear(void);
 
 struct vgamem_overlay {
-        unsigned int x1, y1, x2, y2; /* in character cells... */
+	unsigned int x1, y1, x2, y2; /* in character cells... */
 
-        unsigned char *q;               /* points inside ovl */
-        unsigned int skip;
+	unsigned char *q;               /* points inside ovl */
+	unsigned int skip;
 
-        int width, height; /* in pixels; signed to avoid bugs elsewhere */
+	int width, height; /* in pixels; signed to avoid bugs elsewhere */
 };
 
 void vgamem_lock(void);
@@ -65,7 +65,7 @@ void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int tri);
 void video_translate(unsigned int vx, unsigned int vy,
-                        unsigned int *x, unsigned int *y);
+			unsigned int *x, unsigned int *y);
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);

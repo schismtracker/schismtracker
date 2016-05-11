@@ -31,212 +31,212 @@
 
 static uint32_t it_readbits(int8_t n, uint32_t *bitbuf, uint32_t *bitnum, const uint8_t **ibuf)
 {
-        uint32_t value = 0;
-        uint32_t i = n;
+	uint32_t value = 0;
+	uint32_t i = n;
 
-        // this could be better
-        while (i--) {
-                if (!*bitnum) {
-                        *bitbuf = *(*ibuf)++;
-                        *bitnum = 8;
-                }
-                value >>= 1;
-                value |= (*bitbuf) << 31;
-                (*bitbuf) >>= 1;
-                (*bitnum)--;
-        }
-        return value >> (32 - n);
+	// this could be better
+	while (i--) {
+		if (!*bitnum) {
+			*bitbuf = *(*ibuf)++;
+			*bitnum = 8;
+		}
+		value >>= 1;
+		value |= (*bitbuf) << 31;
+		(*bitbuf) >>= 1;
+		(*bitnum)--;
+	}
+	return value >> (32 - n);
 }
 
 
 uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels)
 {
-        const uint8_t *filebuf;         // source buffer containing compressed sample data
-        const uint8_t *srcbuf;          // current position in source buffer
-        int8_t *destpos;                // position in destination buffer which will be returned
-        uint16_t blklen;                // length of compressed data block in samples
-        uint16_t blkpos;                // position in block
-        uint8_t width;                  // actual "bit width"
-        uint16_t value;                 // value read from file to be processed
-        int8_t d1, d2;                  // integrator buffers (d2 for it2.15)
-        int8_t v;                       // sample value
-        uint32_t bitbuf, bitnum;        // state for it_readbits
+	const uint8_t *filebuf;         // source buffer containing compressed sample data
+	const uint8_t *srcbuf;          // current position in source buffer
+	int8_t *destpos;                // position in destination buffer which will be returned
+	uint16_t blklen;                // length of compressed data block in samples
+	uint16_t blkpos;                // position in block
+	uint8_t width;                  // actual "bit width"
+	uint16_t value;                 // value read from file to be processed
+	int8_t d1, d2;                  // integrator buffers (d2 for it2.15)
+	int8_t v;                       // sample value
+	uint32_t bitbuf, bitnum;        // state for it_readbits
 
-        filebuf = srcbuf = (const uint8_t *) file;
-        destpos = (int8_t *) dest;
+	filebuf = srcbuf = (const uint8_t *) file;
+	destpos = (int8_t *) dest;
 
-        // now unpack data till the dest buffer is full
-        while (len) {
-                // read a new block of compressed data and reset variables
-                // block layout: word size, <size> bytes data
-                if (srcbuf + 2 > filebuf + filelen
-                    || srcbuf + 2 + (srcbuf[0] | (srcbuf[1] << 8)) > filebuf + filelen) {
-                        // truncated!
-                        return srcbuf - filebuf;
-                }
-                srcbuf += 2;
-                bitbuf = bitnum = 0;
+	// now unpack data till the dest buffer is full
+	while (len) {
+		// read a new block of compressed data and reset variables
+		// block layout: word size, <size> bytes data
+		if (srcbuf + 2 > filebuf + filelen
+		    || srcbuf + 2 + (srcbuf[0] | (srcbuf[1] << 8)) > filebuf + filelen) {
+			// truncated!
+			return srcbuf - filebuf;
+		}
+		srcbuf += 2;
+		bitbuf = bitnum = 0;
 
-                blklen = MIN(0x8000, len);
-                blkpos = 0;
+		blklen = MIN(0x8000, len);
+		blkpos = 0;
 
-                width = 9; // start with width of 9 bits
-                d1 = d2 = 0; // reset integrator buffers
+		width = 9; // start with width of 9 bits
+		d1 = d2 = 0; // reset integrator buffers
 
-                // now uncompress the data block
-                while (blkpos < blklen) {
-                        if (width > 9) {
-                                // illegal width, abort
-                                printf("Illegal bit width %d for 8-bit sample\n", width);
-                                return srcbuf - filebuf;
-                        }
-                        value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
+		// now uncompress the data block
+		while (blkpos < blklen) {
+			if (width > 9) {
+				// illegal width, abort
+				printf("Illegal bit width %d for 8-bit sample\n", width);
+				return srcbuf - filebuf;
+			}
+			value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
 
-                        if (width < 7) {
-                                // method 1 (1-6 bits)
-                                // check for "100..."
-                                if (value == 1 << (width - 1)) {
-                                        // yes!
-                                        value = it_readbits(3, &bitbuf, &bitnum, &srcbuf) + 1; // read new width
-                                        width = (value < width) ? value : value + 1; // and expand it
-                                        continue; // ... next value
-                                }
-                        } else if (width < 9) {
-                                // method 2 (7-8 bits)
-                                uint8_t border = (0xFF >> (9 - width)) - 4; // lower border for width chg
-                                if (value > border && value <= (border + 8)) {
-                                        value -= border; // convert width to 1-8
-                                        width = (value < width) ? value : value + 1; // and expand it
-                                        continue; // ... next value
-                                }
-                        } else {
-                                // method 3 (9 bits)
-                                // bit 8 set?
-                                if (value & 0x100) {
-                                        width = (value + 1) & 0xff; // new width...
-                                        continue; // ... and next value
-                                }
-                        }
+			if (width < 7) {
+				// method 1 (1-6 bits)
+				// check for "100..."
+				if (value == 1 << (width - 1)) {
+					// yes!
+					value = it_readbits(3, &bitbuf, &bitnum, &srcbuf) + 1; // read new width
+					width = (value < width) ? value : value + 1; // and expand it
+					continue; // ... next value
+				}
+			} else if (width < 9) {
+				// method 2 (7-8 bits)
+				uint8_t border = (0xFF >> (9 - width)) - 4; // lower border for width chg
+				if (value > border && value <= (border + 8)) {
+					value -= border; // convert width to 1-8
+					width = (value < width) ? value : value + 1; // and expand it
+					continue; // ... next value
+				}
+			} else {
+				// method 3 (9 bits)
+				// bit 8 set?
+				if (value & 0x100) {
+					width = (value + 1) & 0xff; // new width...
+					continue; // ... and next value
+				}
+			}
 
-                        // now expand value to signed byte
-                        if (width < 8) {
-                                uint8_t shift = 8 - width;
-                                v = (value << shift);
-                                v >>= shift;
-                        } else {
-                                v = (int8_t) value;
-                        }
-                        
-                        // integrate upon the sample values
-                        d1 += v;
-                        d2 += d1;
-                        
-                        // .. and store it into the buffer
-                        *destpos = it215 ? d2 : d1;
-                        destpos += channels;
-                        blkpos++;
-                }
+			// now expand value to signed byte
+			if (width < 8) {
+				uint8_t shift = 8 - width;
+				v = (value << shift);
+				v >>= shift;
+			} else {
+				v = (int8_t) value;
+			}
+			
+			// integrate upon the sample values
+			d1 += v;
+			d2 += d1;
+			
+			// .. and store it into the buffer
+			*destpos = it215 ? d2 : d1;
+			destpos += channels;
+			blkpos++;
+		}
 
-                // now subtract block length from total length and go on
-                len -= blklen;
-        }
-        return srcbuf - filebuf;
+		// now subtract block length from total length and go on
+		len -= blklen;
+	}
+	return srcbuf - filebuf;
 }
 
 // Mostly the same as above.
 uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels)
 {
-        const uint8_t *filebuf;         // source buffer containing compressed sample data
-        const uint8_t *srcbuf;          // current position in source buffer
-        int16_t *destpos;               // position in destination buffer which will be returned
-        uint16_t blklen;                // length of compressed data block in samples
-        uint16_t blkpos;                // position in block
-        uint8_t width;                  // actual "bit width"
-        uint32_t value;                 // value read from file to be processed
-        int16_t d1, d2;                 // integrator buffers (d2 for it2.15)
-        int16_t v;                      // sample value
-        uint32_t bitbuf, bitnum;        // state for it_readbits
+	const uint8_t *filebuf;         // source buffer containing compressed sample data
+	const uint8_t *srcbuf;          // current position in source buffer
+	int16_t *destpos;               // position in destination buffer which will be returned
+	uint16_t blklen;                // length of compressed data block in samples
+	uint16_t blkpos;                // position in block
+	uint8_t width;                  // actual "bit width"
+	uint32_t value;                 // value read from file to be processed
+	int16_t d1, d2;                 // integrator buffers (d2 for it2.15)
+	int16_t v;                      // sample value
+	uint32_t bitbuf, bitnum;        // state for it_readbits
 
-        filebuf = srcbuf = (const uint8_t *) file;
-        destpos = (int16_t *) dest;
+	filebuf = srcbuf = (const uint8_t *) file;
+	destpos = (int16_t *) dest;
 
-        // now unpack data till the dest buffer is full
-        while (len) {
-                // read a new block of compressed data and reset variables
-                // block layout: word size, <size> bytes data
-                if (srcbuf + 2 > filebuf + filelen
-                    || srcbuf + 2 + (srcbuf[0] | (srcbuf[1] << 8)) > filebuf + filelen) {
-                        // truncated!
-                        return srcbuf - filebuf;
-                }
-                srcbuf += 2;
+	// now unpack data till the dest buffer is full
+	while (len) {
+		// read a new block of compressed data and reset variables
+		// block layout: word size, <size> bytes data
+		if (srcbuf + 2 > filebuf + filelen
+		    || srcbuf + 2 + (srcbuf[0] | (srcbuf[1] << 8)) > filebuf + filelen) {
+			// truncated!
+			return srcbuf - filebuf;
+		}
+		srcbuf += 2;
 
-                bitbuf = bitnum = 0;
+		bitbuf = bitnum = 0;
 
-                blklen = MIN(0x4000, len); // 0x4000 samples => 0x8000 bytes again
-                blkpos = 0;
+		blklen = MIN(0x4000, len); // 0x4000 samples => 0x8000 bytes again
+		blkpos = 0;
 
-                width = 17; // start with width of 17 bits
-                d1 = d2 = 0; // reset integrator buffers
+		width = 17; // start with width of 17 bits
+		d1 = d2 = 0; // reset integrator buffers
 
-                // now uncompress the data block
-                while (blkpos < blklen) {
-                        if (width > 17) {
-                                // illegal width, abort
-                                printf("Illegal bit width %d for 16-bit sample\n", width);
-                                return srcbuf - filebuf;
-                        }
-                        value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
+		// now uncompress the data block
+		while (blkpos < blklen) {
+			if (width > 17) {
+				// illegal width, abort
+				printf("Illegal bit width %d for 16-bit sample\n", width);
+				return srcbuf - filebuf;
+			}
+			value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
 
-                        if (width < 7) {
-                                // method 1 (1-6 bits)
-                                // check for "100..."
-                                if (value == (uint32_t) 1 << (width - 1)) {
-                                        // yes!
-                                        value = it_readbits(4, &bitbuf, &bitnum, &srcbuf) + 1; // read new width
-                                        width = (value < width) ? value : value + 1; // and expand it
-                                        continue; // ... next value
-                                }
-                        } else if (width < 17) {
-                                // method 2 (7-16 bits)
-                                uint16_t border = (0xFFFF >> (17 - width)) - 8; // lower border for width chg
-                                if (value > border && value <= (uint32_t) (border + 16)) {
-                                        value -= border; // convert width to 1-8
-                                        width = (value < width) ? value : value + 1; // and expand it
-                                        continue; // ... next value
-                                }
-                        } else {
-                                // method 3 (17 bits)
-                                // bit 16 set?
-                                if (value & 0x10000) {
-                                        width = (value + 1) & 0xff; // new width...
-                                        continue; // ... and next value
-                                }
-                        }
+			if (width < 7) {
+				// method 1 (1-6 bits)
+				// check for "100..."
+				if (value == (uint32_t) 1 << (width - 1)) {
+					// yes!
+					value = it_readbits(4, &bitbuf, &bitnum, &srcbuf) + 1; // read new width
+					width = (value < width) ? value : value + 1; // and expand it
+					continue; // ... next value
+				}
+			} else if (width < 17) {
+				// method 2 (7-16 bits)
+				uint16_t border = (0xFFFF >> (17 - width)) - 8; // lower border for width chg
+				if (value > border && value <= (uint32_t) (border + 16)) {
+					value -= border; // convert width to 1-8
+					width = (value < width) ? value : value + 1; // and expand it
+					continue; // ... next value
+				}
+			} else {
+				// method 3 (17 bits)
+				// bit 16 set?
+				if (value & 0x10000) {
+					width = (value + 1) & 0xff; // new width...
+					continue; // ... and next value
+				}
+			}
 
-                        // now expand value to signed word
-                        if (width < 16) {
-                                uint8_t shift = 16 - width;
-                                v = (value << shift);
-                                v >>= shift;
-                        } else {
-                                v = (int16_t) value;
-                        }
-                        
-                        // integrate upon the sample values
-                        d1 += v;
-                        d2 += d1;
-                        
-                        // .. and store it into the buffer
-                        *destpos = it215 ? d2 : d1;
-                        destpos += channels;
-                        blkpos++;
-                }
+			// now expand value to signed word
+			if (width < 16) {
+				uint8_t shift = 16 - width;
+				v = (value << shift);
+				v >>= shift;
+			} else {
+				v = (int16_t) value;
+			}
+			
+			// integrate upon the sample values
+			d1 += v;
+			d2 += d1;
+			
+			// .. and store it into the buffer
+			*destpos = it215 ? d2 : d1;
+			destpos += channels;
+			blkpos++;
+		}
 
-                // now subtract block length from total length and go on
-                len -= blklen;
-        }
-        return srcbuf - filebuf;
+		// now subtract block length from total length and go on
+		len -= blklen;
+	}
+	return srcbuf - filebuf;
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -244,13 +244,13 @@ uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t fi
 
 uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n)
 {
-        uint16_t v = (uint16_t)((*bitbuf) & ((1 << n) - 1) );
-        (*bitbuf) >>= n;
-        (*bitnum) -= n;
-        if ((*bitnum) <= 24) {
-                (*bitbuf) |= (((uint32_t)(*(*ibuf)++)) << (*bitnum));
-                (*bitnum) += 8;
-        }
-        return v;
+	uint16_t v = (uint16_t)((*bitbuf) & ((1 << n) - 1) );
+	(*bitbuf) >>= n;
+	(*bitnum) -= n;
+	if ((*bitnum) <= 24) {
+		(*bitbuf) |= (((uint32_t)(*(*ibuf)++)) << (*bitnum));
+		(*bitnum) += 8;
+	}
+	return v;
 }
 

@@ -150,14 +150,14 @@ char *strchr(), *strrchr();
 # ifndef timersub
 // from FreeBSD
 #  define timersub(tvp, uvp, vvp)                                       \
-        do {                                                            \
-                (vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
-                (vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
-                if ((vvp)->tv_usec < 0) {                               \
-                        (vvp)->tv_sec--;                                \
-                        (vvp)->tv_usec += 1000000;                      \
-                }                                                       \
-        } while (0)
+	do {                                                            \
+		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
+		(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
+		if ((vvp)->tv_usec < 0) {                               \
+			(vvp)->tv_sec--;                                \
+			(vvp)->tv_usec += 1000000;                      \
+		}                                                       \
+	} while (0)
 # endif
 #endif
 
@@ -173,8 +173,8 @@ char *strchr(), *strrchr();
 #  include <byteswap.h>
 # else
 #  define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
-                       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) \
-                       | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
+		       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) \
+		       | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
 #  define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
 # endif
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
@@ -185,15 +185,15 @@ char *strchr(), *strrchr();
    addresses. -mrsb */
 static inline unsigned short int ARM_get16(const void *data)
 {
-        unsigned short int s;
-        memcpy(&s,data,sizeof(s));
-        return s;
+	unsigned short int s;
+	memcpy(&s,data,sizeof(s));
+	return s;
 }
 static inline unsigned int ARM_get32(const void *data)
 {
-        unsigned int s;
-        memcpy(&s,data,sizeof(s));
-        return s;
+	unsigned int s;
+	memcpy(&s,data,sizeof(s));
+	return s;
 }
 #  define bswapLE16(x) ARM_get16(&x)
 #  define bswapLE32(x) ARM_get32(&x)

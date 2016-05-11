@@ -34,39 +34,39 @@
 /* eek... */
 void win32_get_modkey(int *mk)
 {
-        BYTE ks[256];
-        if (GetKeyboardState(ks) == 0) return;
+	BYTE ks[256];
+	if (GetKeyboardState(ks) == 0) return;
 
-        if (ks[VK_CAPITAL] & 128) {
-                status.flags |= CAPS_PRESSED;
-        } else {
-                status.flags &= ~CAPS_PRESSED;
-        }
+	if (ks[VK_CAPITAL] & 128) {
+		status.flags |= CAPS_PRESSED;
+	} else {
+		status.flags &= ~CAPS_PRESSED;
+	}
 
-        (*mk) = ((*mk) & ~(KMOD_NUM|KMOD_CAPS))
-                | ((ks[VK_NUMLOCK]&1) ? KMOD_NUM : 0)
-                | ((ks[VK_CAPITAL]&1) ? KMOD_CAPS : 0);
+	(*mk) = ((*mk) & ~(KMOD_NUM|KMOD_CAPS))
+		| ((ks[VK_NUMLOCK]&1) ? KMOD_NUM : 0)
+		| ((ks[VK_CAPITAL]&1) ? KMOD_CAPS : 0);
 }
 
 /* more windows key stuff... */
 unsigned int key_repeat_rate(void)
 {
-        DWORD spd;
-        if (!SystemParametersInfo(SPI_GETKEYBOARDSPEED, 0, &spd, 0)) return 0;
-        if (!spd) return 1;
-        return spd;
+	DWORD spd;
+	if (!SystemParametersInfo(SPI_GETKEYBOARDSPEED, 0, &spd, 0)) return 0;
+	if (!spd) return 1;
+	return spd;
 }
 unsigned int key_repeat_delay(void)
 {
-        int delay;
+	int delay;
 
-        if (!SystemParametersInfo(SPI_GETKEYBOARDDELAY, 0, &delay, 0)) return 0;
-        switch (delay) {
-        case 0: return 250;
-        case 1: return 500;
-        case 2: return 750;
-        };
-        return 1000;
+	if (!SystemParametersInfo(SPI_GETKEYBOARDDELAY, 0, &delay, 0)) return 0;
+	switch (delay) {
+	case 0: return 250;
+	case 1: return 500;
+	case 2: return 750;
+	};
+	return 1000;
 }
 
 static HKL default_keymap;
@@ -74,9 +74,9 @@ static HKL us_keymap;
 
 static void win32_setup_keymap(void)
 {
-        default_keymap = GetKeyboardLayout(0);
-        us_keymap = LoadKeyboardLayout("00000409", KLF_ACTIVATE|KLF_REPLACELANG|KLF_NOTELLSHELL);
-        ActivateKeyboardLayout(default_keymap,0);
+	default_keymap = GetKeyboardLayout(0);
+	us_keymap = LoadKeyboardLayout("00000409", KLF_ACTIVATE|KLF_REPLACELANG|KLF_NOTELLSHELL);
+	ActivateKeyboardLayout(default_keymap,0);
 }
 
 int key_scancode_lookup(int k, int def)
@@ -134,65 +134,65 @@ int key_scancode_lookup(int k, int def)
 #define VK_APOSTROPHE   0xDE
 #define VK_BACKTICK     0xDF
 #define VK_OEM_102      0xE2
-        switch (MapVirtualKeyEx(k, 1 /* MAPVK_VSC_TO_VK */, us_keymap)) {
-        case VK_0: return SDLK_0;
-        case VK_1: return SDLK_1;
-        case VK_2: return SDLK_2;
-        case VK_3: return SDLK_3;
-        case VK_4: return SDLK_4;
-        case VK_5: return SDLK_5;
-        case VK_6: return SDLK_6;
-        case VK_7: return SDLK_7;
-        case VK_8: return SDLK_8;
-        case VK_9: return SDLK_9;
-        case VK_A: return SDLK_a;
-        case VK_B: return SDLK_b;
-        case VK_C: return SDLK_c;
-        case VK_D: return SDLK_d;
-        case VK_E: return SDLK_e;
-        case VK_F: return SDLK_f;
-        case VK_G: return SDLK_g;
-        case VK_H: return SDLK_h;
-        case VK_I: return SDLK_i;
-        case VK_J: return SDLK_j;
-        case VK_K: return SDLK_k;
-        case VK_L: return SDLK_l;
-        case VK_M: return SDLK_m;
-        case VK_N: return SDLK_n;
-        case VK_O: return SDLK_o;
-        case VK_P: return SDLK_p;
-        case VK_Q: return SDLK_q;
-        case VK_R: return SDLK_r;
-        case VK_S: return SDLK_s;
-        case VK_T: return SDLK_t;
-        case VK_U: return SDLK_u;
-        case VK_V: return SDLK_v;
-        case VK_W: return SDLK_w;
-        case VK_X: return SDLK_x;
-        case VK_Y: return SDLK_y;
-        case VK_Z: return SDLK_z;
-        case VK_SEMICOLON: return SDLK_SEMICOLON;
-        case VK_GRAVE: return SDLK_BACKQUOTE;
-        case VK_APOSTROPHE: return SDLK_QUOTE;
-        case VK_BACKTICK: return SDLK_BACKQUOTE;
-        case VK_BACKSLASH: return SDLK_BACKSLASH;
-        case VK_LBRACKET: return SDLK_LEFTBRACKET;
-        case VK_RBRACKET: return SDLK_RIGHTBRACKET;
-        };
-        return def;
+	switch (MapVirtualKeyEx(k, 1 /* MAPVK_VSC_TO_VK */, us_keymap)) {
+	case VK_0: return SDLK_0;
+	case VK_1: return SDLK_1;
+	case VK_2: return SDLK_2;
+	case VK_3: return SDLK_3;
+	case VK_4: return SDLK_4;
+	case VK_5: return SDLK_5;
+	case VK_6: return SDLK_6;
+	case VK_7: return SDLK_7;
+	case VK_8: return SDLK_8;
+	case VK_9: return SDLK_9;
+	case VK_A: return SDLK_a;
+	case VK_B: return SDLK_b;
+	case VK_C: return SDLK_c;
+	case VK_D: return SDLK_d;
+	case VK_E: return SDLK_e;
+	case VK_F: return SDLK_f;
+	case VK_G: return SDLK_g;
+	case VK_H: return SDLK_h;
+	case VK_I: return SDLK_i;
+	case VK_J: return SDLK_j;
+	case VK_K: return SDLK_k;
+	case VK_L: return SDLK_l;
+	case VK_M: return SDLK_m;
+	case VK_N: return SDLK_n;
+	case VK_O: return SDLK_o;
+	case VK_P: return SDLK_p;
+	case VK_Q: return SDLK_q;
+	case VK_R: return SDLK_r;
+	case VK_S: return SDLK_s;
+	case VK_T: return SDLK_t;
+	case VK_U: return SDLK_u;
+	case VK_V: return SDLK_v;
+	case VK_W: return SDLK_w;
+	case VK_X: return SDLK_x;
+	case VK_Y: return SDLK_y;
+	case VK_Z: return SDLK_z;
+	case VK_SEMICOLON: return SDLK_SEMICOLON;
+	case VK_GRAVE: return SDLK_BACKQUOTE;
+	case VK_APOSTROPHE: return SDLK_QUOTE;
+	case VK_BACKTICK: return SDLK_BACKQUOTE;
+	case VK_BACKSLASH: return SDLK_BACKSLASH;
+	case VK_LBRACKET: return SDLK_LEFTBRACKET;
+	case VK_RBRACKET: return SDLK_RIGHTBRACKET;
+	};
+	return def;
 }
 
 
 void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 {
-        static WSADATA ignored;
+	static WSADATA ignored;
 
-        win32_setup_keymap();
+	win32_setup_keymap();
 
-        memset(&ignored, 0, sizeof(ignored));
-        if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
-                WSACleanup(); /* ? */
-                status.flags |= NO_NETWORK;
-        }
+	memset(&ignored, 0, sizeof(ignored));
+	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
+		WSACleanup(); /* ? */
+		status.flags |= NO_NETWORK;
+	}
 }
 

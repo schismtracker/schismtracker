@@ -34,19 +34,19 @@ I don't know what this data's supposed to be for :) */
 
 int fmt_ams_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        uint8_t n;
+	uint8_t n;
 
-        if (!(length > 38 && memcmp(data, "AMShdr\x1a", 7) == 0))
-                return 0;
+	if (!(length > 38 && memcmp(data, "AMShdr\x1a", 7) == 0))
+		return 0;
 
-        n = data[7];
-        if (n > 30)
-                n = 30;
-        file->description = "Velvet Studio";
-        /*file->extension = str_dup("ams");*/
-        file->title = calloc(n + 1, sizeof(char));
-        memcpy(file->title, data + 8, n);
-        file->title[n] = 0;
-        file->type = TYPE_MODULE_XM;
-        return 1;
+	n = data[7];
+	if (n > 30)
+		n = 30;
+	file->description = "Velvet Studio";
+	/*file->extension = str_dup("ams");*/
+	file->title = calloc(n + 1, sizeof(char));
+	memcpy(file->title, data + 8, n);
+	file->title[n] = 0;
+	file->type = TYPE_MODULE_XM;
+	return 1;
 }

@@ -83,7 +83,7 @@ _any_dltrick(int,snd_ctl_close,(snd_ctl_t*ctl),(ctl))
 _any_dltrick(int,snd_mixer_open,(snd_mixer_t**m,int mode),(m,mode))
 _any_dltrick(int,snd_mixer_attach,(snd_mixer_t*m,const char *name),(m,name))
 _any_dltrick(int,snd_mixer_selem_register,(snd_mixer_t*m,
-        struct snd_mixer_selem_regopt*opt, snd_mixer_class_t **cp),(m,opt,cp))
+	struct snd_mixer_selem_regopt*opt, snd_mixer_class_t **cp),(m,opt,cp))
 _any_dltrick(int,snd_mixer_selem_is_active,(snd_mixer_elem_t*e),(e))
 _any_dltrick(int,snd_mixer_selem_has_playback_volume,(snd_mixer_elem_t*e),(e))
 _any_dltrick(int,snd_mixer_selem_has_capture_switch,(snd_mixer_elem_t*e),(e))
@@ -106,110 +106,110 @@ static int current_alsa_range = 255;
 
 
 static void _alsa_writeout(snd_mixer_elem_t *em,
-                        snd_mixer_selem_channel_id_t d,
-                                int use, int lim)
+			snd_mixer_selem_channel_id_t d,
+				int use, int lim)
 {
-        if (use > lim) use = lim;
-        (void)snd_mixer_selem_set_playback_volume(em, d, (long)use);
+	if (use > lim) use = lim;
+	(void)snd_mixer_selem_set_playback_volume(em, d, (long)use);
 }
 static void _alsa_write(snd_mixer_elem_t *em, int *l, int *r, long min, long range)
 {
-        long al, ar;
-        long mr, md;
+	long al, ar;
+	long mr, md;
 
-        al = ((*l) * range / current_alsa_range) + min;
-        ar = ((*r) * range / current_alsa_range) + min;
+	al = ((*l) * range / current_alsa_range) + min;
+	ar = ((*r) * range / current_alsa_range) + min;
 
-        mr = min+range;
+	mr = min+range;
 
-        if (snd_mixer_selem_is_playback_mono(em)) {
-                md = ((al) + (ar)) / 2;
+	if (snd_mixer_selem_is_playback_mono(em)) {
+		md = ((al) + (ar)) / 2;
 
-                _alsa_writeout(em, SND_MIXER_SCHN_MONO, md, mr);
-        } else {
-                _alsa_writeout(em, SND_MIXER_SCHN_FRONT_LEFT, al, mr);
-                _alsa_writeout(em, SND_MIXER_SCHN_FRONT_RIGHT, ar, mr);
+		_alsa_writeout(em, SND_MIXER_SCHN_MONO, md, mr);
+	} else {
+		_alsa_writeout(em, SND_MIXER_SCHN_FRONT_LEFT, al, mr);
+		_alsa_writeout(em, SND_MIXER_SCHN_FRONT_RIGHT, ar, mr);
 #if 0
 /* this was probably wrong */
-                _alsa_writeout(em, SND_MIXER_SCHN_FRONT_CENTER, md, mr);
-                _alsa_writeout(em, SND_MIXER_SCHN_REAR_LEFT, al, mr);
-                _alsa_writeout(em, SND_MIXER_SCHN_REAR_RIGHT, ar, mr);
-                _alsa_writeout(em, SND_MIXER_SCHN_WOOFER, md, mr);
+		_alsa_writeout(em, SND_MIXER_SCHN_FRONT_CENTER, md, mr);
+		_alsa_writeout(em, SND_MIXER_SCHN_REAR_LEFT, al, mr);
+		_alsa_writeout(em, SND_MIXER_SCHN_REAR_RIGHT, ar, mr);
+		_alsa_writeout(em, SND_MIXER_SCHN_WOOFER, md, mr);
 #endif
-        }
+	}
 }
 static void _alsa_readin(snd_mixer_elem_t *em, snd_mixer_selem_channel_id_t d,
-                                int *aa, long min, long range)
+				int *aa, long min, long range)
 {
-        long v;
-        if (snd_mixer_selem_has_playback_channel(em, d)) {
-                snd_mixer_selem_get_playback_volume(em, d, &v);
-                v -= min;
-                v = (v * current_alsa_range) / range;
-                (*aa) = v;
-        }
+	long v;
+	if (snd_mixer_selem_has_playback_channel(em, d)) {
+		snd_mixer_selem_get_playback_volume(em, d, &v);
+		v -= min;
+		v = (v * current_alsa_range) / range;
+		(*aa) = v;
+	}
 
 }
 static void _alsa_config(UNUSED snd_mixer_elem_t *em, UNUSED int *l, UNUSED int *r, UNUSED long min, long range)
 {
-        current_alsa_range = range;
+	current_alsa_range = range;
 }
 
 static void _alsa_read(snd_mixer_elem_t *em, int *l, int *r, long min, long range)
 {
-        if (snd_mixer_selem_is_playback_mono(em)) {
-                _alsa_readin(em, SND_MIXER_SCHN_MONO, l, min, range);
-                _alsa_readin(em, SND_MIXER_SCHN_MONO, r, min, range);
-        } else {
-                _alsa_readin(em, SND_MIXER_SCHN_FRONT_LEFT, l, min, range);
-                _alsa_readin(em, SND_MIXER_SCHN_FRONT_RIGHT, r, min, range);
+	if (snd_mixer_selem_is_playback_mono(em)) {
+		_alsa_readin(em, SND_MIXER_SCHN_MONO, l, min, range);
+		_alsa_readin(em, SND_MIXER_SCHN_MONO, r, min, range);
+	} else {
+		_alsa_readin(em, SND_MIXER_SCHN_FRONT_LEFT, l, min, range);
+		_alsa_readin(em, SND_MIXER_SCHN_FRONT_RIGHT, r, min, range);
 #if 0
 /* this was probably wrong */
-                _alsa_readin(em, SND_MIXER_SCHN_REAR_LEFT, l, min, range);
-                _alsa_readin(em, SND_MIXER_SCHN_REAR_RIGHT, r, min, range);
-                _alsa_readin(em, SND_MIXER_SCHN_FRONT_CENTER, l, min, range);
-                _alsa_readin(em, SND_MIXER_SCHN_FRONT_CENTER, r, min, range);
-                _alsa_readin(em, SND_MIXER_SCHN_WOOFER, l, min, range);
-                _alsa_readin(em, SND_MIXER_SCHN_WOOFER, r, min, range);
+		_alsa_readin(em, SND_MIXER_SCHN_REAR_LEFT, l, min, range);
+		_alsa_readin(em, SND_MIXER_SCHN_REAR_RIGHT, r, min, range);
+		_alsa_readin(em, SND_MIXER_SCHN_FRONT_CENTER, l, min, range);
+		_alsa_readin(em, SND_MIXER_SCHN_FRONT_CENTER, r, min, range);
+		_alsa_readin(em, SND_MIXER_SCHN_WOOFER, l, min, range);
+		_alsa_readin(em, SND_MIXER_SCHN_WOOFER, r, min, range);
 #endif
-        }
+	}
 }
 
 static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
-                        int *, int *, long, long), int *l, int *r)
+			int *, int *, long, long), int *l, int *r)
 {
-        long ml, mr;
-        snd_mixer_selem_id_t *sid;
-        snd_mixer_elem_t *em;
-        snd_mixer_t *mix;
+	long ml, mr;
+	snd_mixer_selem_id_t *sid;
+	snd_mixer_elem_t *em;
+	snd_mixer_t *mix;
 
-        snd_mixer_selem_id_alloca(&sid);
-        snd_mixer_selem_id_set_index(sid, 0);
-        snd_mixer_selem_id_set_name(sid, "Master");
+	snd_mixer_selem_id_alloca(&sid);
+	snd_mixer_selem_id_set_index(sid, 0);
+	snd_mixer_selem_id_set_name(sid, "Master");
 
-        if (snd_mixer_open(&mix, 0) == 0) {
-                if (snd_mixer_attach(mix, alsa_card_id) < 0) {
-                        snd_mixer_close(mix);
-                        return;
-                }
-                if (snd_mixer_selem_register(mix, NULL, NULL) < 0) {
-                        snd_mixer_close(mix);
-                        return;
-                }
-                if (snd_mixer_load(mix) < 0) {
-                        snd_mixer_close(mix);
-                        return;
-                }
-                em = snd_mixer_find_selem(mix, sid);
-                if (em) {
-                        ml = mr = 0;
-                        snd_mixer_selem_get_playback_volume_range(em, &ml, &mr);
-                        if (ml != mr) {
-                                busy(em, l, r, ml, mr - ml);
-                        }
-                }
-                snd_mixer_close(mix);
-        }
+	if (snd_mixer_open(&mix, 0) == 0) {
+		if (snd_mixer_attach(mix, alsa_card_id) < 0) {
+			snd_mixer_close(mix);
+			return;
+		}
+		if (snd_mixer_selem_register(mix, NULL, NULL) < 0) {
+			snd_mixer_close(mix);
+			return;
+		}
+		if (snd_mixer_load(mix) < 0) {
+			snd_mixer_close(mix);
+			return;
+		}
+		em = snd_mixer_find_selem(mix, sid);
+		if (em) {
+			ml = mr = 0;
+			snd_mixer_selem_get_playback_volume_range(em, &ml, &mr);
+			if (ml != mr) {
+				busy(em, l, r, ml, mr - ml);
+			}
+		}
+		snd_mixer_close(mix);
+	}
 
 }
 
@@ -217,21 +217,21 @@ static void _alsa_doit(void (*busy)(snd_mixer_elem_t *em,
 int alsa_volume_get_max(void);
 int alsa_volume_get_max(void)
 {
-        int a1, a2;
-        _alsa_doit(_alsa_config, &a1, &a2);
-        return current_alsa_range;
+	int a1, a2;
+	_alsa_doit(_alsa_config, &a1, &a2);
+	return current_alsa_range;
 }
 
 void alsa_volume_read(int *left, int *right);
 void alsa_volume_read(int *left, int *right)
 {
-        *left = *right = 0;
-        _alsa_doit(_alsa_read, left, right);
+	*left = *right = 0;
+	_alsa_doit(_alsa_read, left, right);
 }
 
 void alsa_volume_write(int left, int right);
 void alsa_volume_write(int left, int right)
 {
-        _alsa_doit(_alsa_write, &left, &right);
+	_alsa_doit(_alsa_write, &left, &right);
 }
 #endif

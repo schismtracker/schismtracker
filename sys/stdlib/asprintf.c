@@ -25,10 +25,10 @@ int vasprintf(char **result, const char *format, va_list args);
 int asprintf(char **buf, const char *fmt, ...);
 int asprintf(char **buf, const char *fmt, ...)
 {
-        int status;
-        va_list ap;
-        va_start(ap, fmt);
-        status = vasprintf(buf, fmt, ap);
-        va_end(ap);
-        return status;
+	int status;
+	va_list ap;
+	va_start(ap, fmt);
+	status = vasprintf(buf, fmt, ap);
+	va_end(ap);
+	return status;
 }

@@ -28,44 +28,44 @@
 
 typedef struct disko disko_t;
 struct disko {
-        // Functions whose implementation depends on the backend in use
-        // Use disko_write et al. instead of these.
-        void (*_write)(disko_t *ds, const void *buf, size_t len);
-        void (*_putc)(disko_t *ds, int c);
-        void (*_seek)(disko_t *ds, long offset, int whence);
-        long (*_tell)(disko_t *ds);
+	// Functions whose implementation depends on the backend in use
+	// Use disko_write et al. instead of these.
+	void (*_write)(disko_t *ds, const void *buf, size_t len);
+	void (*_putc)(disko_t *ds, int c);
+	void (*_seek)(disko_t *ds, long offset, int whence);
+	long (*_tell)(disko_t *ds);
 
-        // Temporary filename that's being written to
-        char tempname[PATH_MAX];
+	// Temporary filename that's being written to
+	char tempname[PATH_MAX];
 
-        // Name to change it to on close (if successful)
-        char filename[PATH_MAX];
+	// Name to change it to on close (if successful)
+	char filename[PATH_MAX];
 
-        // these could be unionized
-        // file pointer (only exists for disk files)
-        FILE *file;
-        // data for memory buffers (no filename/handle)
-        uint8_t *data;
+	// these could be unionized
+	// file pointer (only exists for disk files)
+	FILE *file;
+	// data for memory buffers (no filename/handle)
+	uint8_t *data;
 
-        // First errno value recorded after something went wrong.
-        int error;
+	// First errno value recorded after something went wrong.
+	int error;
 
-        /* untouched by diskwriter; driver may use for anything */
-        void *userdata;
+	/* untouched by diskwriter; driver may use for anything */
+	void *userdata;
 
-        // for memory buffers
-        size_t pos, length, allocated;
+	// for memory buffers
+	size_t pos, length, allocated;
 };
 
 enum {
-        DW_OK = 1,
-        DW_ERROR = 0,
-        DW_NOT_RUNNING = -1,
+	DW_OK = 1,
+	DW_ERROR = 0,
+	DW_NOT_RUNNING = -1,
 };
 enum {
-        DW_SYNC_DONE = 0,
-        DW_SYNC_ERROR = -1,
-        DW_SYNC_MORE = 1,
+	DW_SYNC_DONE = 0,
+	DW_SYNC_ERROR = -1,
+	DW_SYNC_MORE = 1,
 };
 
 /* fopen/fclose-ish writeout/finish wrapper that allocates a structure */
@@ -75,9 +75,9 @@ to the name specified in disko_open; otherwise, the original file is left
 intact and the temporary file is deleted. Returns DW_OK on success,
 DW_ERROR (and sets errno) if there was a file error.
 'backup' parameter:
-        <1  don't backup
-        =1  backup to file~
-        >1  keep numbered backups to file.n~
+	<1  don't backup
+	=1  backup to file~
+	>1  keep numbered backups to file.n~
 (the semantics of this might change later to allow finer control) */
 int disko_close(disko_t *f, int backup);
 

@@ -55,18 +55,18 @@ static const char *device_file = NULL;
 
 static int open_mixer_device(void)
 {
-        const char *ptr;
+	const char *ptr;
 
-        if (!device_file) {
-                ptr = "/dev/sound/mixer";
-                if (access(ptr, F_OK) < 0) {
-                        /* this had better work :) */
-                        ptr = "/dev/mixer";
-                }
-                device_file = ptr;
-        }
+	if (!device_file) {
+		ptr = "/dev/sound/mixer";
+		if (access(ptr, F_OK) < 0) {
+			/* this had better work :) */
+			ptr = "/dev/mixer";
+		}
+		device_file = ptr;
+	}
 
-        return open(device_file, O_RDWR);
+	return open(device_file, O_RDWR);
 }
 
 /* --------------------------------------------------------------------- */
@@ -74,53 +74,53 @@ static int open_mixer_device(void)
 int oss_volume_get_max(void);
 int oss_volume_get_max(void)
 {
-        return VOLUME_MAX;
+	return VOLUME_MAX;
 }
 
 void oss_volume_read(int *left, int *right);
 void oss_volume_read(int *left, int *right)
 {
-        int fd;
-        uint8_t volume[4];
+	int fd;
+	uint8_t volume[4];
 
-        fd = open_mixer_device();
-        if (fd < 0) {
-                log_perror(device_file);
-                *left = *right = 0;
-                return;
-        }
+	fd = open_mixer_device();
+	if (fd < 0) {
+		log_perror(device_file);
+		*left = *right = 0;
+		return;
+	}
 
-        if (ioctl(fd, MIXER_READ(SCHISM_MIXER_CONTROL), volume) == EOF) {
-                log_perror(device_file);
-                *left = *right = 0;
-        } else {
-                *left = volume[0];
-                *right = volume[1];
-        }
+	if (ioctl(fd, MIXER_READ(SCHISM_MIXER_CONTROL), volume) == EOF) {
+		log_perror(device_file);
+		*left = *right = 0;
+	} else {
+		*left = volume[0];
+		*right = volume[1];
+	}
 
-        close(fd);
+	close(fd);
 }
 
 void oss_volume_write(int left, int right);
 void oss_volume_write(int left, int right)
 {
-        int fd;
-        uint8_t volume[4];
+	int fd;
+	uint8_t volume[4];
 
-        volume[0] = CLAMP(left, 0, VOLUME_MAX);
-        volume[1] = CLAMP(right, 0, VOLUME_MAX);
+	volume[0] = CLAMP(left, 0, VOLUME_MAX);
+	volume[1] = CLAMP(right, 0, VOLUME_MAX);
 
-        fd = open_mixer_device();
-        if (fd < 0) {
-                log_perror(device_file);
-                return;
-        }
+	fd = open_mixer_device();
+	if (fd < 0) {
+		log_perror(device_file);
+		return;
+	}
 
-        if (ioctl(fd, MIXER_WRITE(SCHISM_MIXER_CONTROL), volume) == EOF) {
-                log_perror(device_file);
-        }
+	if (ioctl(fd, MIXER_WRITE(SCHISM_MIXER_CONTROL), volume) == EOF) {
+		log_perror(device_file);
+	}
 
-        close(fd);
+	close(fd);
 }
 
 #endif

@@ -50,13 +50,13 @@ extern unsigned int max_channels_used;
 /* defined in audio_playback.cc; also used by page_settings.c */
 
 struct audio_settings {
-        int sample_rate, bits, channels, buffer_size;
-        int channel_limit, interpolation_mode;
-        int surround_effect;
+	int sample_rate, bits, channels, buffer_size;
+	int channel_limit, interpolation_mode;
+	int surround_effect;
 
-        unsigned int eq_freq[4];
-        unsigned int eq_gain[4];
-        int no_ramping;
+	unsigned int eq_freq[4];
+	unsigned int eq_gain[4];
+	int no_ramping;
 };
 
 extern struct audio_settings audio_settings;
@@ -66,36 +66,36 @@ extern struct audio_settings audio_settings;
 
 /* for song_get_mode */
 enum song_mode {
-        MODE_STOPPED = 0,
-        MODE_PLAYING = 1,
-        MODE_PATTERN_LOOP = 2,
-        MODE_SINGLE_STEP = 4,
+	MODE_STOPPED = 0,
+	MODE_PLAYING = 1,
+	MODE_PATTERN_LOOP = 2,
+	MODE_SINGLE_STEP = 4,
 };
 
 enum song_new_flags {
-        KEEP_PATTERNS = 1,
-        KEEP_SAMPLES = 2,
-        KEEP_INSTRUMENTS = 4,
-        KEEP_ORDERLIST = 8,
+	KEEP_PATTERNS = 1,
+	KEEP_SAMPLES = 2,
+	KEEP_INSTRUMENTS = 4,
+	KEEP_ORDERLIST = 8,
 };
 
 /* --------------------------------------------------------------------- */
 
 /*
 song_load:
-        prompt ok/cancel if the existing song hasn't been saved.
-        after loading, the current page is changed accordingly.
-        this loads into the global song.
+	prompt ok/cancel if the existing song hasn't been saved.
+	after loading, the current page is changed accordingly.
+	this loads into the global song.
 song_load_unchecked:
-        *NO* dialog, just goes right into loading the song
-        doesn't set the page after loading.
-        this also loads into the global song.
-        return value is nonzero if the load was successful.
-        generally speaking, don't use this function directly;
-        use song_load instead.
+	*NO* dialog, just goes right into loading the song
+	doesn't set the page after loading.
+	this also loads into the global song.
+	return value is nonzero if the load was successful.
+	generally speaking, don't use this function directly;
+	use song_load instead.
 song_create_load:
-        internal back-end function that loads and returns a song.
-        the above functions both use this.
+	internal back-end function that loads and returns a song.
+	the above functions both use this.
 */
 void song_new(int flags);
 void song_load(const char *file);
@@ -219,12 +219,12 @@ void song_init_modplug(void);
 
 /* Called at startup.
 The 'driver_spec' parameter is formatted as driver[:device].
-        'driver' is the name of the SDL driver to use
-                example: "alsa", "dsound"
-                SDL_AUDIODRIVER is set to this value
-        'device' (optional) is the name of the device to use
-                example: "hw:2", "/dev/dsp"
-                SDL_PATH_DSP and AUDIODEV are set to this
+	'driver' is the name of the SDL driver to use
+		example: "alsa", "dsound"
+		SDL_AUDIODRIVER is set to this value
+	'device' (optional) is the name of the device to use
+		example: "hw:2", "/dev/dsp"
+		SDL_PATH_DSP and AUDIODEV are set to this
 
 For the SDL driver, 'nosound' and 'none' are aliases for 'dummy', for
 compatibility with previous Schism Tracker versions, and 'oss' is an
@@ -369,13 +369,13 @@ void song_set_surround(int on);
 
 /* for the orderpan page */
 enum {
-        PANS_STEREO,
-        PANS_AMIGA,
-        PANS_LEFT,
-        PANS_RIGHT,
-        PANS_MONO,
-        PANS_SLASH,
-        PANS_BACKSLASH,
+	PANS_STEREO,
+	PANS_AMIGA,
+	PANS_LEFT,
+	PANS_RIGHT,
+	PANS_MONO,
+	PANS_SLASH,
+	PANS_BACKSLASH,
 //      PANS_CROSS,
 };
 void song_set_pan_scheme(int scheme);

@@ -33,87 +33,87 @@
 int macosx_volume_get_max(void);
 int macosx_volume_get_max(void)
 {
-        return 65535;
+	return 65535;
 }
 
 void macosx_volume_read(int *left, int *right);
 void macosx_volume_read(int *left, int *right)
 {
-        UInt32 size;
-        AudioDeviceID od;
-        OSStatus e;
-        UInt32 ch[2];
-        Float32 fl[2];
-        int i;
+	UInt32 size;
+	AudioDeviceID od;
+	OSStatus e;
+	UInt32 ch[2];
+	Float32 fl[2];
+	int i;
 
-        if (left) *left = 0;
-        if (right) *right = 0;
+	if (left) *left = 0;
+	if (right) *right = 0;
 
-        size=sizeof(od);
-        e = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice,
-                        &size, &od);
-        if (e != 0) return;
+	size=sizeof(od);
+	e = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice,
+			&size, &od);
+	if (e != 0) return;
 
-        size=sizeof(ch);
-        e = AudioDeviceGetProperty(od,
-                0, /* QA1016 says "0" is master channel */
-                false,
-                kAudioDevicePropertyPreferredChannelsForStereo,
-                &size,
-                &ch);
-        if (e != 0) return;
+	size=sizeof(ch);
+	e = AudioDeviceGetProperty(od,
+		0, /* QA1016 says "0" is master channel */
+		false,
+		kAudioDevicePropertyPreferredChannelsForStereo,
+		&size,
+		&ch);
+	if (e != 0) return;
 
-        for (i = 0; i < 2; i++) {
-                size = sizeof(Float32);
-                e = AudioDeviceGetProperty(od, /* device */
-                        ch[i], /* preferred stereo channel */
-                        false, /* output device */
-                        kAudioDevicePropertyVolumeScalar,
-                        &size,
-                        &fl[i]);
-                if (e != 0) return;
-        }
-        if (left) *left = fl[0] * 65536.0f;
-        if (right) *right = fl[1] * 65536.0f;
+	for (i = 0; i < 2; i++) {
+		size = sizeof(Float32);
+		e = AudioDeviceGetProperty(od, /* device */
+			ch[i], /* preferred stereo channel */
+			false, /* output device */
+			kAudioDevicePropertyVolumeScalar,
+			&size,
+			&fl[i]);
+		if (e != 0) return;
+	}
+	if (left) *left = fl[0] * 65536.0f;
+	if (right) *right = fl[1] * 65536.0f;
 }
 
 void macosx_volume_write(int left, int right);
 void macosx_volume_write(int left, int right)
 {
-        UInt32 size;
-        AudioDeviceID od;
-        OSStatus e;
-        UInt32 ch[2];
-        Float32 fl[2];
-        int i;
+	UInt32 size;
+	AudioDeviceID od;
+	OSStatus e;
+	UInt32 ch[2];
+	Float32 fl[2];
+	int i;
 
-        size=sizeof(od);
-        e = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice,
-                        &size, &od);
-        if (e != 0) return;
+	size=sizeof(od);
+	e = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice,
+			&size, &od);
+	if (e != 0) return;
 
-        size=sizeof(ch);
-        e = AudioDeviceGetProperty(od,
-                0, /* QA1016 says "0" is master channel */
-                false,
-                kAudioDevicePropertyPreferredChannelsForStereo,
-                &size,
-                &ch);
-        if (e != 0) return;
+	size=sizeof(ch);
+	e = AudioDeviceGetProperty(od,
+		0, /* QA1016 says "0" is master channel */
+		false,
+		kAudioDevicePropertyPreferredChannelsForStereo,
+		&size,
+		&ch);
+	if (e != 0) return;
 
-        fl[0] = ((float)left) / 65536.0f;
-        fl[1] = ((float)right) / 65536.0f;
+	fl[0] = ((float)left) / 65536.0f;
+	fl[1] = ((float)right) / 65536.0f;
 
-        for (i = 0; i < 2; i++) {
-                e = AudioDeviceSetProperty(od, /* device */
-                        NULL, /* no timestamp */
-                        ch[i], /* preferred stereo channel */
-                        false, /* output device */
-                        kAudioDevicePropertyVolumeScalar,
-                        sizeof(Float32),
-                        &fl[i]);
-                if (e != 0) return;
-        }
+	for (i = 0; i < 2; i++) {
+		e = AudioDeviceSetProperty(od, /* device */
+			NULL, /* no timestamp */
+			ch[i], /* preferred stereo channel */
+			false, /* output device */
+			kAudioDevicePropertyVolumeScalar,
+			sizeof(Float32),
+			&fl[i]);
+		if (e != 0) return;
+	}
 }
 
 #endif

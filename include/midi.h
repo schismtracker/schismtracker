@@ -29,55 +29,55 @@ struct midi_port;
 
 #define MIDI_PORT_CAN_SCHEDULE  1
 struct midi_driver {
-        unsigned int flags;
+	unsigned int flags;
 
-        void (*poll)(struct midi_provider *m);
-        int (*thread)(struct midi_provider *m);
+	void (*poll)(struct midi_provider *m);
+	int (*thread)(struct midi_provider *m);
 
-        int (*enable)(struct midi_port *d);
-        int (*disable)(struct midi_port *d);
+	int (*enable)(struct midi_port *d);
+	int (*disable)(struct midi_port *d);
 
-        void (*send)(struct midi_port *d,
-                        const unsigned char *seq, unsigned int len, unsigned int delay);
-        void (*drain)(struct midi_port *d);
+	void (*send)(struct midi_port *d,
+			const unsigned char *seq, unsigned int len, unsigned int delay);
+	void (*drain)(struct midi_port *d);
 };
 
 struct midi_provider {
-        char *name;
-        void (*poll)(struct midi_provider *);
-        void *thread; /*actually SDL_Thread* */
+	char *name;
+	void (*poll)(struct midi_provider *);
+	void *thread; /*actually SDL_Thread* */
 
-        struct midi_provider *next;
+	struct midi_provider *next;
 
-        /* forwarded; don't touch */
-        int (*enable)(struct midi_port *d);
-        int (*disable)(struct midi_port *d);
+	/* forwarded; don't touch */
+	int (*enable)(struct midi_port *d);
+	int (*disable)(struct midi_port *d);
 
-        void (*send_now)(struct midi_port *d,
-                        const unsigned char *seq, unsigned int len, unsigned int delay);
-        void (*send_later)(struct midi_port *d,
-                        const unsigned char *seq, unsigned int len, unsigned int delay);
-        void (*drain)(struct midi_port *d);
+	void (*send_now)(struct midi_port *d,
+			const unsigned char *seq, unsigned int len, unsigned int delay);
+	void (*send_later)(struct midi_port *d,
+			const unsigned char *seq, unsigned int len, unsigned int delay);
+	void (*drain)(struct midi_port *d);
 };
 
 #define MIDI_INPUT      1
 #define MIDI_OUTPUT     2
 struct midi_port {
-        int io, iocap;
-        char *name;
-        int num;
+	int io, iocap;
+	char *name;
+	int num;
 
-        void *userdata;
-        int free_userdata;
-        int (*enable)(struct midi_port *d);
-        int (*disable)(struct midi_port *d);
-        void (*send_now)(struct midi_port *d,
-                        const unsigned char *seq, unsigned int len, unsigned int delay);
-        void (*send_later)(struct midi_port *d,
-                        const unsigned char *seq, unsigned int len, unsigned int delay);
-        void (*drain)(struct midi_port *d);
+	void *userdata;
+	int free_userdata;
+	int (*enable)(struct midi_port *d);
+	int (*disable)(struct midi_port *d);
+	void (*send_now)(struct midi_port *d,
+			const unsigned char *seq, unsigned int len, unsigned int delay);
+	void (*send_later)(struct midi_port *d,
+			const unsigned char *seq, unsigned int len, unsigned int delay);
+	void (*drain)(struct midi_port *d);
 
-        struct midi_provider *provider;
+	struct midi_provider *provider;
 };
 
 
@@ -120,9 +120,9 @@ void midi_port_unregister(int num);
    midi drivers should never all these...
 */
 enum midi_note {
-        MIDI_NOTEOFF,
-        MIDI_NOTEON,
-        MIDI_KEYPRESS,
+	MIDI_NOTEOFF,
+	MIDI_NOTEON,
+	MIDI_KEYPRESS,
 };
 void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity);
 void midi_event_controller(int channel, int param, int value);

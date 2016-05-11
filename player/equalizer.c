@@ -63,193 +63,193 @@ static eq_band eq[MAX_EQ_BANDS * 2] =
 
 static void eq_filter(eq_band *pbs, float *pbuffer, unsigned int count)
 {
-        for (unsigned int i = 0; i < count; i++) {
-                float x = pbuffer[i];
-                float y = pbs->a1 * pbs->x1 +
-                          pbs->a2 * pbs->x2 +
-                          pbs->a0 * x +
-                          pbs->b1 * pbs->y1 +
-                          pbs->b2 * pbs->y2;
+	for (unsigned int i = 0; i < count; i++) {
+		float x = pbuffer[i];
+		float y = pbs->a1 * pbs->x1 +
+			  pbs->a2 * pbs->x2 +
+			  pbs->a0 * x +
+			  pbs->b1 * pbs->y1 +
+			  pbs->b2 * pbs->y2;
 
-                pbs->x2 = pbs->x1;
-                pbs->y2 = pbs->y1;
-                pbs->x1 = x;
-                pbuffer[i] = y;
-                pbs->y1 = y;
-        }
+		pbs->x2 = pbs->x1;
+		pbs->y2 = pbs->y1;
+		pbs->x1 = x;
+		pbuffer[i] = y;
+		pbs->y1 = y;
+	}
 }
 
 
 void eq_mono(song_t *csf, int *buffer, unsigned int count)
 {
-        mono_mix_to_float(buffer, csf->mix_buffer_float, count);
+	mono_mix_to_float(buffer, csf->mix_buffer_float, count);
 
-        for (unsigned int b = 0; b < MAX_EQ_BANDS; b++)
-        {
-                if (eq[b].enabled && eq[b].gain != 1.0f)
-                        eq_filter(&eq[b], csf->mix_buffer_float, count);
-        }
+	for (unsigned int b = 0; b < MAX_EQ_BANDS; b++)
+	{
+		if (eq[b].enabled && eq[b].gain != 1.0f)
+			eq_filter(&eq[b], csf->mix_buffer_float, count);
+	}
 
-        float_to_mono_mix(csf->mix_buffer_float, buffer, count);
+	float_to_mono_mix(csf->mix_buffer_float, buffer, count);
 }
 
 
 // XXX: I rolled the two loops into one. Make sure this works.
 void eq_stereo(song_t *csf, int *buffer, unsigned int count)
 {
-        stereo_mix_to_float(buffer, csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, count);
+	stereo_mix_to_float(buffer, csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, count);
 
-        for (unsigned int b = 0; b < MAX_EQ_BANDS; b++) {
-                int br = b + MAX_EQ_BANDS;
+	for (unsigned int b = 0; b < MAX_EQ_BANDS; b++) {
+		int br = b + MAX_EQ_BANDS;
 
-                // Left band
-                if (eq[b].enabled && eq[b].gain != 1.0f)
-                        eq_filter(&eq[b], csf->mix_buffer_float, count);
+		// Left band
+		if (eq[b].enabled && eq[b].gain != 1.0f)
+			eq_filter(&eq[b], csf->mix_buffer_float, count);
 
-                // Right band
-                if (eq[br].enabled && eq[br].gain != 1.0f)
-                        eq_filter(&eq[br], csf->mix_buffer_float + MIXBUFFERSIZE, count);
-        }
+		// Right band
+		if (eq[br].enabled && eq[br].gain != 1.0f)
+			eq_filter(&eq[br], csf->mix_buffer_float + MIXBUFFERSIZE, count);
+	}
 
-        float_to_stereo_mix(csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, buffer, count);
+	float_to_stereo_mix(csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, buffer, count);
 }
 
 
 void initialize_eq(int reset, float freq)
 {
-        //float fMixingFreq = (REAL)mix_frequency;
+	//float fMixingFreq = (REAL)mix_frequency;
 
-        // Gain = 0.5 (-6dB) .. 2 (+6dB)
-        for (unsigned int band = 0; band < MAX_EQ_BANDS * 2; band++) {
-                float k, k2, r, f;
-                float v0, v1;
-                int b = reset;
+	// Gain = 0.5 (-6dB) .. 2 (+6dB)
+	for (unsigned int band = 0; band < MAX_EQ_BANDS * 2; band++) {
+		float k, k2, r, f;
+		float v0, v1;
+		int b = reset;
 
-                if (!eq[band].enabled) {
-                        eq[band].a0 = 0;
-                        eq[band].a1 = 0;
-                        eq[band].a2 = 0;
-                        eq[band].b1 = 0;
-                        eq[band].b2 = 0;
-                        eq[band].x1 = 0;
-                        eq[band].x2 = 0;
-                        eq[band].y1 = 0;
-                        eq[band].y2 = 0;
-                        continue;
-                }
+		if (!eq[band].enabled) {
+			eq[band].a0 = 0;
+			eq[band].a1 = 0;
+			eq[band].a2 = 0;
+			eq[band].b1 = 0;
+			eq[band].b2 = 0;
+			eq[band].x1 = 0;
+			eq[band].x2 = 0;
+			eq[band].y1 = 0;
+			eq[band].y2 = 0;
+			continue;
+		}
 
-                f = eq[band].center_frequency / freq;
+		f = eq[band].center_frequency / freq;
 
-                if (f > 0.45f)
-                        eq[band].gain = 1;
+		if (f > 0.45f)
+			eq[band].gain = 1;
 
-                //if (f > 0.25)
-                //      f = 0.25;
+		//if (f > 0.25)
+		//      f = 0.25;
 
-                //k = tan(PI * f);
+		//k = tan(PI * f);
 
-                k = f * 3.141592654f;
-                k = k + k * f;
+		k = f * 3.141592654f;
+		k = k + k * f;
 
-                //if (k > (float) 0.707)
-                //          k = (float) 0.707;
+		//if (k > (float) 0.707)
+		//          k = (float) 0.707;
 
-                k2 = k*k;
-                v0 = eq[band].gain;
-                v1 = 1;
+		k2 = k*k;
+		v0 = eq[band].gain;
+		v1 = 1;
 
-                if (eq[band].gain < 1.0) {
-                        v0 *= 0.5f / EQ_BANDWIDTH;
-                        v1 *= 0.5f / EQ_BANDWIDTH;
-                }
-                else {
-                        v0 *= 1.0f / EQ_BANDWIDTH;
-                        v1 *= 1.0f / EQ_BANDWIDTH;
-                }
+		if (eq[band].gain < 1.0) {
+			v0 *= 0.5f / EQ_BANDWIDTH;
+			v1 *= 0.5f / EQ_BANDWIDTH;
+		}
+		else {
+			v0 *= 1.0f / EQ_BANDWIDTH;
+			v1 *= 1.0f / EQ_BANDWIDTH;
+		}
 
-                r = (1 + v0 * k + k2) / (1 + v1 * k + k2);
+		r = (1 + v0 * k + k2) / (1 + v1 * k + k2);
 
-                if (r != eq[band].a0) {
-                        eq[band].a0 = r;
-                        b = 1;
-                }
+		if (r != eq[band].a0) {
+			eq[band].a0 = r;
+			b = 1;
+		}
 
-                r = 2 * (k2 - 1) / (1 + v1 * k + k2);
+		r = 2 * (k2 - 1) / (1 + v1 * k + k2);
 
-                if (r != eq[band].a1) {
-                        eq[band].a1 = r;
-                        b = 1;
-                }
+		if (r != eq[band].a1) {
+			eq[band].a1 = r;
+			b = 1;
+		}
 
-                r = (1 - v0 * k + k2) / (1 + v1 * k + k2);
+		r = (1 - v0 * k + k2) / (1 + v1 * k + k2);
 
-                if (r != eq[band].a2) {
-                        eq[band].a2 = r;
-                        b = 1;
-                }
+		if (r != eq[band].a2) {
+			eq[band].a2 = r;
+			b = 1;
+		}
 
-                r = -2 * (k2 - 1) / (1 + v1 * k + k2);
+		r = -2 * (k2 - 1) / (1 + v1 * k + k2);
 
-                if (r != eq[band].b1) {
-                        eq[band].b1 = r;
-                        b = 1;
-                }
+		if (r != eq[band].b1) {
+			eq[band].b1 = r;
+			b = 1;
+		}
 
-                r = -(1 - v1 * k + k2) / (1 + v1 * k + k2);
+		r = -(1 - v1 * k + k2) / (1 + v1 * k + k2);
 
-                if (r != eq[band].b2) {
-                        eq[band].b2 = r;
-                        b = 1;
-                }
+		if (r != eq[band].b2) {
+			eq[band].b2 = r;
+			b = 1;
+		}
 
-                if (b) {
-                        eq[band].x1 = 0;
-                        eq[band].x2 = 0;
-                        eq[band].y1 = 0;
-                        eq[band].y2 = 0;
-                }
-        }
+		if (b) {
+			eq[band].x1 = 0;
+			eq[band].x2 = 0;
+			eq[band].y1 = 0;
+			eq[band].y2 = 0;
+		}
+	}
 }
 
 
 void set_eq_gains(const unsigned int *gainbuff, unsigned int gains, const unsigned int *freqs,
-                  int reset, int mix_freq)
+		  int reset, int mix_freq)
 {
-        for (unsigned int i = 0; i < MAX_EQ_BANDS; i++) {
-                float g, f = 0;
+	for (unsigned int i = 0; i < MAX_EQ_BANDS; i++) {
+		float g, f = 0;
 
-                if (i < gains) {
-                        unsigned int n = gainbuff[i];
+		if (i < gains) {
+			unsigned int n = gainbuff[i];
 
-                        //if (n > 32)
-                        //        n = 32;
+			//if (n > 32)
+			//        n = 32;
 
-                        g = 1.0 + (((double) n) / 64.0);
+			g = 1.0 + (((double) n) / 64.0);
 
-                        if (freqs)
-                            f = (float)(int) freqs[i];
-                }
-                else {
-                        g = 1;
-                }
+			if (freqs)
+			    f = (float)(int) freqs[i];
+		}
+		else {
+			g = 1;
+		}
 
-                eq[i].gain =
-                eq[i + MAX_EQ_BANDS].gain = g;
-                eq[i].center_frequency =
-                eq[i + MAX_EQ_BANDS].center_frequency = f;
+		eq[i].gain =
+		eq[i + MAX_EQ_BANDS].gain = g;
+		eq[i].center_frequency =
+		eq[i + MAX_EQ_BANDS].center_frequency = f;
 
-                /* don't enable bands outside... */
-                if (f > 20.0f &&
-                    i < gains) {
-                        eq[i].enabled =
-                        eq[i + MAX_EQ_BANDS].enabled = 1;
-                }
-                else {
-                        eq[i].enabled =
-                        eq[i + MAX_EQ_BANDS].enabled = 0;
-                }
-        }
+		/* don't enable bands outside... */
+		if (f > 20.0f &&
+		    i < gains) {
+			eq[i].enabled =
+			eq[i + MAX_EQ_BANDS].enabled = 1;
+		}
+		else {
+			eq[i].enabled =
+			eq[i + MAX_EQ_BANDS].enabled = 0;
+		}
+	}
 
-        initialize_eq(reset, mix_freq);
+	initialize_eq(reset, mix_freq);
 }
 

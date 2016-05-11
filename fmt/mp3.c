@@ -32,61 +32,61 @@
 
 static void get_title_from_id3(struct id3_tag const *tag, char **artist_ptr, char **title_ptr)
 {
-        struct id3_frame *frame;
-        /*union id3_field *field;*/
-        int n = -1;
-        char *artist = NULL, *title = NULL, *buf;
+	struct id3_frame *frame;
+	/*union id3_field *field;*/
+	int n = -1;
+	char *artist = NULL, *title = NULL, *buf;
 
-        frame = id3_tag_findframe(tag, ID3_FRAME_ARTIST, 0);
-        if (frame) {
-                /* this should get all the strings, not just the zeroth -- use id3_field_getnstrings(field) */
-                *artist_ptr = id3_ucs4_latin1duplicate(id3_field_getstrings(&frame->fields[1], 0));
-        }
+	frame = id3_tag_findframe(tag, ID3_FRAME_ARTIST, 0);
+	if (frame) {
+		/* this should get all the strings, not just the zeroth -- use id3_field_getnstrings(field) */
+		*artist_ptr = id3_ucs4_latin1duplicate(id3_field_getstrings(&frame->fields[1], 0));
+	}
 
-        frame = id3_tag_findframe(tag, ID3_FRAME_TITLE, 0);
-        if (frame) {
-                /* see above */
-                *title_ptr = id3_ucs4_latin1duplicate(id3_field_getstrings(&frame->fields[1], 0));
-        }
+	frame = id3_tag_findframe(tag, ID3_FRAME_TITLE, 0);
+	if (frame) {
+		/* see above */
+		*title_ptr = id3_ucs4_latin1duplicate(id3_field_getstrings(&frame->fields[1], 0));
+	}
 }
 
 /* --------------------------------------------------------------------- */
 
 int fmt_mp3_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        signed long id3len;
-        unsigned long id3off = 0;
-        struct id3_tag *tag;
-        /*int version = 2;*/
+	signed long id3len;
+	unsigned long id3off = 0;
+	struct id3_tag *tag;
+	/*int version = 2;*/
 
-        id3len = id3_tag_query(data, length);
-        if (id3len <= 0) {
-                /*version = 1;*/
-                if (length <= 128)
-                        return 0;
+	id3len = id3_tag_query(data, length);
+	if (id3len <= 0) {
+		/*version = 1;*/
+		if (length <= 128)
+			return 0;
 
-                id3off = length - 128;
-                id3len = id3_tag_query(data + id3off, 128);
-                if (id3len <= 0)
-                        /* See the note at the end of this file. */
-                        return 0;
-        }
+		id3off = length - 128;
+		id3len = id3_tag_query(data + id3off, 128);
+		if (id3len <= 0)
+			/* See the note at the end of this file. */
+			return 0;
+	}
 
-        tag = id3_tag_parse(data + id3off, id3len);
-        if (tag) {
-                get_title_from_id3(tag, &file->artist, &file->title);
-                id3_tag_delete(tag);
-        }
-        /* Dunno what it means when id3_tag_parse barfs with a NULL tag, but I bet it's not a good
-        thing. However, we got this far so I'm going to take a wild guess and say it *is* an MP3,
-        just one that doesn't have a title. */
+	tag = id3_tag_parse(data + id3off, id3len);
+	if (tag) {
+		get_title_from_id3(tag, &file->artist, &file->title);
+		id3_tag_delete(tag);
+	}
+	/* Dunno what it means when id3_tag_parse barfs with a NULL tag, but I bet it's not a good
+	thing. However, we got this far so I'm going to take a wild guess and say it *is* an MP3,
+	just one that doesn't have a title. */
 
-        /*file->extension = str_dup("mp3");*/
-        /*file->description = calloc(22, sizeof(char));*/
-        /*snprintf(file->description, 22, "MPEG Layer 3, ID3 v%d", version);*/
-        file->description = "MPEG Layer 3";
-        file->type = TYPE_SAMPLE_COMPR;
-        return 1;
+	/*file->extension = str_dup("mp3");*/
+	/*file->description = calloc(22, sizeof(char));*/
+	/*snprintf(file->description, 22, "MPEG Layer 3, ID3 v%d", version);*/
+	file->description = "MPEG Layer 3";
+	file->type = TYPE_SAMPLE_COMPR;
+	return 1;
 }
 
 /* The nonexistence of an ID3 tag does NOT necessarily mean the file isn't an MP3. Really, MP3 files can

@@ -49,7 +49,7 @@
 #define CHN_NOTEFADE            0x400 // fade note (~~~ or end of instrument envelope)
 #define CHN_SURROUND            0x800 // use surround channel (S91)
 #define CHN_NOIDO               0x1000 // near enough to an exact multiple of c5speed that interpolation
-                                       // won't be noticeable (or interpolation is disabled completely)
+				       // won't be noticeable (or interpolation is disabled completely)
 #define CHN_HQSRC               0x2000 // ???
 #define CHN_FILTER              0x4000 // filtered output (i.e., Zxx)
 #define CHN_VOLUMERAMP          0x8000 // ramp volume
@@ -69,7 +69,7 @@
 #define CHN_ADLIB               0x20000000 // OPL mode
 
 #define CHN_SAMPLE_FLAGS (CHN_16BIT | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP \
-        | CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO | CHN_PINGPONGFLAG | CHN_ADLIB)
+	| CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO | CHN_PINGPONGFLAG | CHN_ADLIB)
 
 
 #define ENV_VOLUME              0x0001
@@ -236,11 +236,11 @@
 #define SNDMIX_NORAMPING        0x800000 // don't apply ramping on volume change (causes clicks)
 
 enum {
-        SRCMODE_NEAREST,
-        SRCMODE_LINEAR,
-        SRCMODE_SPLINE,
-        SRCMODE_POLYPHASE,
-        NUM_SRC_MODES
+	SRCMODE_NEAREST,
+	SRCMODE_LINEAR,
+	SRCMODE_SPLINE,
+	SRCMODE_POLYPHASE,
+	NUM_SRC_MODES
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -333,65 +333,65 @@ enum {
 // ------------------------------------------------------------------------------------------------------------
 
 typedef struct song_sample {
-        uint32_t length;
-        uint32_t loop_start;
-        uint32_t loop_end;
-        uint32_t sustain_start;
-        uint32_t sustain_end;
-        signed char *data;
-        uint32_t c5speed;
-        uint32_t panning;
-        uint32_t volume;
-        uint32_t global_volume;
-        uint32_t flags;
-        uint32_t vib_type;
-        uint32_t vib_rate;
-        uint32_t vib_depth;
-        uint32_t vib_speed;
-        char name[32];
-        char filename[22];
-        int played; // for note playback dots
-        uint32_t globalvol_saved; // for muting individual samples
+	uint32_t length;
+	uint32_t loop_start;
+	uint32_t loop_end;
+	uint32_t sustain_start;
+	uint32_t sustain_end;
+	signed char *data;
+	uint32_t c5speed;
+	uint32_t panning;
+	uint32_t volume;
+	uint32_t global_volume;
+	uint32_t flags;
+	uint32_t vib_type;
+	uint32_t vib_rate;
+	uint32_t vib_depth;
+	uint32_t vib_speed;
+	char name[32];
+	char filename[22];
+	int played; // for note playback dots
+	uint32_t globalvol_saved; // for muting individual samples
 
-        // This must be 12-bytes to work around a bug in some gcc4.2s (XXX why? what bug?)
-        unsigned char adlib_bytes[12];
+	// This must be 12-bytes to work around a bug in some gcc4.2s (XXX why? what bug?)
+	unsigned char adlib_bytes[12];
 } song_sample_t;
 
 typedef struct song_envelope {
-        int ticks[32];
-        uint8_t values[32];
-        int nodes;
-        int loop_start;
-        int loop_end;
-        int sustain_start;
-        int sustain_end;
+	int ticks[32];
+	uint8_t values[32];
+	int nodes;
+	int loop_start;
+	int loop_end;
+	int sustain_start;
+	int sustain_end;
 } song_envelope_t;
 
 typedef struct song_instrument {
-        uint32_t fadeout;
-        uint32_t flags;
-        unsigned int global_volume;
-        unsigned int panning;
-        uint8_t sample_map[128];
-        uint8_t note_map[128];
-        song_envelope_t vol_env;
-        song_envelope_t pan_env;
-        song_envelope_t pitch_env;
-        unsigned int nna;
-        unsigned int dct;
-        unsigned int dca;
-        unsigned int pan_swing;
-        unsigned int vol_swing;
-        unsigned int ifc;
-        unsigned int ifr;
-        int midi_bank; // TODO split this?
-        int midi_program;
-        unsigned int midi_channel_mask; // FIXME why is this a mask? why is a mask useful? does 2.15 use a mask?
-        int pitch_pan_separation;
-        unsigned int pitch_pan_center;
-        char name[32];
-        char filename[16];
-        int played; // for note playback dots
+	uint32_t fadeout;
+	uint32_t flags;
+	unsigned int global_volume;
+	unsigned int panning;
+	uint8_t sample_map[128];
+	uint8_t note_map[128];
+	song_envelope_t vol_env;
+	song_envelope_t pan_env;
+	song_envelope_t pitch_env;
+	unsigned int nna;
+	unsigned int dct;
+	unsigned int dca;
+	unsigned int pan_swing;
+	unsigned int vol_swing;
+	unsigned int ifc;
+	unsigned int ifr;
+	int midi_bank; // TODO split this?
+	int midi_program;
+	unsigned int midi_channel_mask; // FIXME why is this a mask? why is a mask useful? does 2.15 use a mask?
+	int pitch_pan_separation;
+	unsigned int pitch_pan_center;
+	char name[32];
+	char filename[16];
+	int played; // for note playback dots
 } song_instrument_t;
 
 // (TODO write decent descriptions of what the various volume
@@ -399,122 +399,122 @@ typedef struct song_instrument {
 // (TODO also the majority of this is irrelevant outside of the "main" 64 channels;
 // this struct should really only be holding the stuff actually needed for mixing)
 typedef struct song_voice {
-        // First 32-bytes: Most used mixing information: don't change it
-        signed char * current_sample_data;
-        uint32_t position; // sample position, fixed-point -- integer part
-        uint32_t position_frac; // fractional part
-        int32_t increment; // 16.16 fixed point, how much to add to position per sample-frame of output
-        int32_t right_volume; // ?
-        int32_t left_volume; // ?
-        int32_t right_ramp; // ?
-        int32_t left_ramp; // ?
-        // 2nd cache line
-        uint32_t length; // only to the end of the loop
-        uint32_t flags;
-        uint32_t loop_start; // loop or sustain, whichever is active
-        uint32_t loop_end;
-        int32_t right_ramp_volume; // ?
-        int32_t left_ramp_volume; // ?
-        int32_t strike; // decremented to zero. this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)
+	// First 32-bytes: Most used mixing information: don't change it
+	signed char * current_sample_data;
+	uint32_t position; // sample position, fixed-point -- integer part
+	uint32_t position_frac; // fractional part
+	int32_t increment; // 16.16 fixed point, how much to add to position per sample-frame of output
+	int32_t right_volume; // ?
+	int32_t left_volume; // ?
+	int32_t right_ramp; // ?
+	int32_t left_ramp; // ?
+	// 2nd cache line
+	uint32_t length; // only to the end of the loop
+	uint32_t flags;
+	uint32_t loop_start; // loop or sustain, whichever is active
+	uint32_t loop_end;
+	int32_t right_ramp_volume; // ?
+	int32_t left_ramp_volume; // ?
+	int32_t strike; // decremented to zero. this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)
 
-        int32_t filter_y1, filter_y2, filter_y3, filter_y4;
-        int32_t filter_a0, filter_b0, filter_b1;
+	int32_t filter_y1, filter_y2, filter_y3, filter_y4;
+	int32_t filter_a0, filter_b0, filter_b1;
 
-        int32_t rofs, lofs; // ?
-        int32_t ramp_length;
-        // Information not used in the mixer
-        int32_t right_volume_new, left_volume_new; // ?
-        int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
-        int32_t final_panning; // range 0-256 (but can temporarily exceed that range during calculations)
-        int32_t volume, panning; // range 0-256 (?); these are the current values set for the channel
-        int32_t fadeout_volume;
-        int32_t period;
-        int32_t c5speed;
-        int32_t sample_freq;
-        int32_t portamento_target;
-        song_instrument_t *ptr_instrument;      // these two suck, and should
-        song_sample_t *ptr_sample;              // be replaced with numbers
-        int vol_env_position;
-        int pan_env_position;
-        int pitch_env_position;
-        uint32_t master_channel; // nonzero = background/NNA voice, indicates what channel it "came from"
-        uint32_t vu_meter;
-        int32_t global_volume;
-        int32_t instrument_volume;
-        int32_t autovib_depth;
-        uint32_t autovib_position, vibrato_position, tremolo_position, panbrello_position;
-        // 16-bit members
-        int vol_swing, pan_swing;
+	int32_t rofs, lofs; // ?
+	int32_t ramp_length;
+	// Information not used in the mixer
+	int32_t right_volume_new, left_volume_new; // ?
+	int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
+	int32_t final_panning; // range 0-256 (but can temporarily exceed that range during calculations)
+	int32_t volume, panning; // range 0-256 (?); these are the current values set for the channel
+	int32_t fadeout_volume;
+	int32_t period;
+	int32_t c5speed;
+	int32_t sample_freq;
+	int32_t portamento_target;
+	song_instrument_t *ptr_instrument;      // these two suck, and should
+	song_sample_t *ptr_sample;              // be replaced with numbers
+	int vol_env_position;
+	int pan_env_position;
+	int pitch_env_position;
+	uint32_t master_channel; // nonzero = background/NNA voice, indicates what channel it "came from"
+	uint32_t vu_meter;
+	int32_t global_volume;
+	int32_t instrument_volume;
+	int32_t autovib_depth;
+	uint32_t autovib_position, vibrato_position, tremolo_position, panbrello_position;
+	// 16-bit members
+	int vol_swing, pan_swing;
 
-        // formally 8-bit members
-        unsigned int note; // the note that's playing
-        unsigned int nna;
-        unsigned int new_note, new_instrument; // ?
-        // Effect memory and handling
-        unsigned int n_command; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
-        unsigned int mem_vc_volslide; // Ax Bx Cx Dx (volume column)
-        unsigned int mem_arpeggio; // Axx
-        unsigned int mem_volslide; // Dxx
-        unsigned int mem_pitchslide; // Exx Fxx (and Gxx maybe)
-        int32_t mem_portanote; // Gxx (synced with mem_pitchslide if compat gxx is set)
-        unsigned int mem_tremor; // Ixx
-        unsigned int mem_channel_volslide; // Nxx
-        unsigned int mem_offset; // final, combined yxx00h from Oxx and SAy
-        unsigned int mem_panslide; // Pxx
-        unsigned int mem_retrig; // Qxx
-        unsigned int mem_special; // Sxx
-        unsigned int mem_tempo; // Txx
-        unsigned int mem_global_volslide; // Wxx
-        unsigned int note_slide_counter, note_slide_speed, note_slide_step; // IMF effect
-        unsigned int vib_type, vibrato_speed, vibrato_depth;
-        unsigned int tremolo_type, tremolo_speed, tremolo_depth;
-        unsigned int panbrello_type, panbrello_speed, panbrello_depth;
-        int tremolo_delta, panbrello_delta;
+	// formally 8-bit members
+	unsigned int note; // the note that's playing
+	unsigned int nna;
+	unsigned int new_note, new_instrument; // ?
+	// Effect memory and handling
+	unsigned int n_command; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
+	unsigned int mem_vc_volslide; // Ax Bx Cx Dx (volume column)
+	unsigned int mem_arpeggio; // Axx
+	unsigned int mem_volslide; // Dxx
+	unsigned int mem_pitchslide; // Exx Fxx (and Gxx maybe)
+	int32_t mem_portanote; // Gxx (synced with mem_pitchslide if compat gxx is set)
+	unsigned int mem_tremor; // Ixx
+	unsigned int mem_channel_volslide; // Nxx
+	unsigned int mem_offset; // final, combined yxx00h from Oxx and SAy
+	unsigned int mem_panslide; // Pxx
+	unsigned int mem_retrig; // Qxx
+	unsigned int mem_special; // Sxx
+	unsigned int mem_tempo; // Txx
+	unsigned int mem_global_volslide; // Wxx
+	unsigned int note_slide_counter, note_slide_speed, note_slide_step; // IMF effect
+	unsigned int vib_type, vibrato_speed, vibrato_depth;
+	unsigned int tremolo_type, tremolo_speed, tremolo_depth;
+	unsigned int panbrello_type, panbrello_speed, panbrello_depth;
+	int tremolo_delta, panbrello_delta;
 
-        unsigned int cutoff;
-        unsigned int resonance;
-        int cd_note_delay; // countdown: note starts when this hits zero
-        int cd_note_cut; // countdown: note stops when this hits zero
-        int cd_retrig; // countdown: note retrigs when this hits zero
-        unsigned int cd_tremor; // (weird) countdown + flag: see snd_fx.c and sndmix.c
-        unsigned int patloop_row; // row number that SB0 was on
-        unsigned int cd_patloop; // countdown: pattern loops back when this hits zero
+	unsigned int cutoff;
+	unsigned int resonance;
+	int cd_note_delay; // countdown: note starts when this hits zero
+	int cd_note_cut; // countdown: note stops when this hits zero
+	int cd_retrig; // countdown: note retrigs when this hits zero
+	unsigned int cd_tremor; // (weird) countdown + flag: see snd_fx.c and sndmix.c
+	unsigned int patloop_row; // row number that SB0 was on
+	unsigned int cd_patloop; // countdown: pattern loops back when this hits zero
 
-        unsigned int row_note, row_instr;
-        unsigned int row_voleffect, row_volparam;
-        unsigned int row_effect, row_param;
-        unsigned int active_macro, last_instrument;
+	unsigned int row_note, row_instr;
+	unsigned int row_voleffect, row_volparam;
+	unsigned int row_effect, row_param;
+	unsigned int active_macro, last_instrument;
 } song_voice_t;
 
 typedef struct song_channel {
-        uint32_t panning;
-        uint32_t volume;
-        uint32_t flags;
+	uint32_t panning;
+	uint32_t volume;
+	uint32_t flags;
 } song_channel_t;
 
 typedef struct song_note {
-        uint8_t note;
-        uint8_t instrument;
-        uint8_t voleffect;
-        uint8_t volparam;
-        uint8_t effect;
-        uint8_t param;
+	uint8_t note;
+	uint8_t instrument;
+	uint8_t voleffect;
+	uint8_t volparam;
+	uint8_t effect;
+	uint8_t param;
 } song_note_t;
 
 ////////////////////////////////////////////////////////////////////
 
 typedef struct {
-        char start[32];
-        char stop[32];
-        char tick[32];
-        char note_on[32];
-        char note_off[32];
-        char set_volume[32];
-        char set_panning[32];
-        char set_bank[32];
-        char set_program[32];
-        char sfx[16][32];
-        char zxx[128][32];
+	char start[32];
+	char stop[32];
+	char tick[32];
+	char note_on[32];
+	char note_off[32];
+	char set_volume[32];
+	char set_panning[32];
+	char set_bank[32];
+	char set_program[32];
+	char sfx[16][32];
+	char zxx[128][32];
 } midi_config_t;
 
 extern midi_config_t default_midi_config;
@@ -528,79 +528,79 @@ extern const song_note_t *blank_note;
 
 
 struct multi_write {
-        int used;
-        void *data;
-        /* Conveniently, this has the same prototype as disko_write :) */
-        void (*write)(void *data, const uint8_t *buf, size_t bytes);
-        /* this is optimization for channels that haven't had any data yet
-        (nothing to convert/write, just seek ahead in the data stream) */
-        void (*silence)(void *data, long bytes);
-        int buffer[MIXBUFFERSIZE * 2];
+	int used;
+	void *data;
+	/* Conveniently, this has the same prototype as disko_write :) */
+	void (*write)(void *data, const uint8_t *buf, size_t bytes);
+	/* this is optimization for channels that haven't had any data yet
+	(nothing to convert/write, just seek ahead in the data stream) */
+	void (*silence)(void *data, long bytes);
+	int buffer[MIXBUFFERSIZE * 2];
 };
 
 typedef struct song {
-        int mix_buffer[MIXBUFFERSIZE * 2];
-        float mix_buffer_float[MIXBUFFERSIZE * 2]; // is this needed?
+	int mix_buffer[MIXBUFFERSIZE * 2];
+	float mix_buffer_float[MIXBUFFERSIZE * 2]; // is this needed?
 
-        song_voice_t voices[MAX_VOICES];                // Channels
-        uint32_t voice_mix[MAX_VOICES];                 // Channels to be mixed
-        song_sample_t samples[MAX_SAMPLES+1];           // Samples (1-based!)
-        song_instrument_t *instruments[MAX_INSTRUMENTS+1]; // Instruments (1-based!)
-        song_channel_t channels[MAX_CHANNELS];          // Channel settings
-        song_note_t *patterns[MAX_PATTERNS];            // Patterns
-        uint16_t pattern_size[MAX_PATTERNS];            // Pattern Lengths
-        uint16_t pattern_alloc_size[MAX_PATTERNS];      // Allocated lengths (for async. resizing/playback)
-        uint8_t orderlist[MAX_ORDERS + 1];              // Pattern Orders
-        midi_config_t midi_config;                      // Midi macro config table
-        uint32_t initial_speed;
-        uint32_t initial_tempo;
-        uint32_t initial_global_volume;
-        uint32_t flags;                                 // Song flags SONG_XXXX
-        uint32_t pan_separation;
-        uint32_t num_voices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
-        uint32_t mix_stat; // number of channels being mixed (not really used)
-        uint32_t buffer_count; // number of samples to mix per tick
-        uint32_t tick_count;
-        int32_t row_count; /* IMPORTANT needs to be signed */
-        uint32_t current_speed;
-        uint32_t current_tempo;
-        uint32_t process_row;
-        uint32_t row; // no analogue in pm.h? should be either renamed or factored out.
-        uint32_t break_row;
-        uint32_t current_pattern;
-        uint32_t current_order;
-        uint32_t process_order;
-        uint32_t current_global_volume;
-        uint32_t mixing_volume;
-        uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)
-        uint32_t tempo_factor; // ditto
-        int32_t repeat_count; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
-        uint8_t row_highlight_major;
-        uint8_t row_highlight_minor;
-        char message[MAX_MESSAGE + 1];
-        char title[32];
-        char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
+	song_voice_t voices[MAX_VOICES];                // Channels
+	uint32_t voice_mix[MAX_VOICES];                 // Channels to be mixed
+	song_sample_t samples[MAX_SAMPLES+1];           // Samples (1-based!)
+	song_instrument_t *instruments[MAX_INSTRUMENTS+1]; // Instruments (1-based!)
+	song_channel_t channels[MAX_CHANNELS];          // Channel settings
+	song_note_t *patterns[MAX_PATTERNS];            // Patterns
+	uint16_t pattern_size[MAX_PATTERNS];            // Pattern Lengths
+	uint16_t pattern_alloc_size[MAX_PATTERNS];      // Allocated lengths (for async. resizing/playback)
+	uint8_t orderlist[MAX_ORDERS + 1];              // Pattern Orders
+	midi_config_t midi_config;                      // Midi macro config table
+	uint32_t initial_speed;
+	uint32_t initial_tempo;
+	uint32_t initial_global_volume;
+	uint32_t flags;                                 // Song flags SONG_XXXX
+	uint32_t pan_separation;
+	uint32_t num_voices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
+	uint32_t mix_stat; // number of channels being mixed (not really used)
+	uint32_t buffer_count; // number of samples to mix per tick
+	uint32_t tick_count;
+	int32_t row_count; /* IMPORTANT needs to be signed */
+	uint32_t current_speed;
+	uint32_t current_tempo;
+	uint32_t process_row;
+	uint32_t row; // no analogue in pm.h? should be either renamed or factored out.
+	uint32_t break_row;
+	uint32_t current_pattern;
+	uint32_t current_order;
+	uint32_t process_order;
+	uint32_t current_global_volume;
+	uint32_t mixing_volume;
+	uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)
+	uint32_t tempo_factor; // ditto
+	int32_t repeat_count; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
+	uint8_t row_highlight_major;
+	uint8_t row_highlight_minor;
+	char message[MAX_MESSAGE + 1];
+	char title[32];
+	char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
 
-        // These store the existing IT save history from prior editing sessions.
-        // Current session data is added at save time, and is NOT a part of histdata.
-        int histlen; // How many session history data entries exist (each entry is eight bytes)
-        uint8_t *histdata; // Preserved entries from prior sessions, might be NULL if histlen = 0
-        struct timeval editstart; // When the song was loaded
+	// These store the existing IT save history from prior editing sessions.
+	// Current session data is added at save time, and is NOT a part of histdata.
+	int histlen; // How many session history data entries exist (each entry is eight bytes)
+	uint8_t *histdata; // Preserved entries from prior sessions, might be NULL if histlen = 0
+	struct timeval editstart; // When the song was loaded
 
-        // mixer stuff
-        uint32_t mix_flags; // SNDMIX_*
-        uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
+	// mixer stuff
+	uint32_t mix_flags; // SNDMIX_*
+	uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
 
-        // noise reduction filter
-        int32_t left_nr, right_nr;
+	// noise reduction filter
+	int32_t left_nr, right_nr;
 
-        // chaseback
-        int stop_at_order;
-        int stop_at_row;
-        unsigned int stop_at_time;
+	// chaseback
+	int stop_at_order;
+	int stop_at_row;
+	unsigned int stop_at_time;
 
-        // multi-write stuff -- NULL if no multi-write is in progress, else array of one struct per channel
-        struct multi_write *multi_write;
+	// multi-write stuff -- NULL if no multi-write is in progress, else array of one struct per channel
+	struct multi_write *multi_write;
 } song_t;
 
 song_note_t *csf_allocate_pattern(uint32_t rows);
@@ -669,7 +669,7 @@ void fx_note_cut(song_t *csf, uint32_t chan, int clear_note);
 void fx_key_off(song_t *csf, uint32_t chan);
 void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t chan, int fake);
 void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, uint32_t param,
-                        uint32_t note, uint32_t velocity, uint32_t use_instr);
+			uint32_t note, uint32_t velocity, uint32_t use_instr);
 song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *ins, uint32_t note, song_sample_t *def);
 
 // various utility functions in snd_fx.c
@@ -708,14 +708,14 @@ void adlib_patch_apply(song_sample_t *smp, int patchnum);
 // Return (a*b)/c - no divide error
 static inline int _muldiv(int a, int b, int c)
 {
-        return ((unsigned long long) a * (unsigned long long) b ) / c;
+	return ((unsigned long long) a * (unsigned long long) b ) / c;
 }
 
 
 // Return (a*b+c/2)/c - no divide error
 static inline int _muldivr(int a, int b, int c)
 {
-        return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
+	return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
 }
 
 

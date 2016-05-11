@@ -30,24 +30,24 @@ static CRITICAL_SECTION localtime_r_cs;
 
 static void localtime_r_atexit(void)
 {
-        DeleteCriticalSection(&localtime_r_cs);
+	DeleteCriticalSection(&localtime_r_cs);
 }
 
 struct tm * localtime_r(const time_t *timep, struct tm *result)
 {
-        static struct tm *local_tm;
-        static int initialized = 0;
+	static struct tm *local_tm;
+	static int initialized = 0;
 
-        if (!initialized) {
-                ++initialized;
-                InitializeCriticalSection(&localtime_r_cs);
-                atexit(localtime_r_atexit);
-        }
+	if (!initialized) {
+		++initialized;
+		InitializeCriticalSection(&localtime_r_cs);
+		atexit(localtime_r_atexit);
+	}
 
-        EnterCriticalSection(&localtime_r_cs);
-        local_tm = localtime(timep);
-        memcpy(result, local_tm, sizeof(struct tm));
-        LeaveCriticalSection(&localtime_r_cs);
-        return result;
+	EnterCriticalSection(&localtime_r_cs);
+	local_tm = localtime(timep);
+	memcpy(result, local_tm, sizeof(struct tm));
+	LeaveCriticalSection(&localtime_r_cs);
+	return result;
 }
 

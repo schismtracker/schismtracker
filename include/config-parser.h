@@ -34,25 +34,25 @@ user configuration that were set there in the first place. of course, cfg_set_bl
 owner, so it gets saved back to the *user* configuration file :) */
 
 struct cfg_key {
-        struct cfg_key *next; /* NULL if this is the last key in the section */
-        char *name; /* the text before the equal sign, whitespace trimmed */
-        char *value; /* the value -- never NULL (unless the key was just added) */
-        char *comments; /* any comments preceding this key, or NULL if none */
+	struct cfg_key *next; /* NULL if this is the last key in the section */
+	char *name; /* the text before the equal sign, whitespace trimmed */
+	char *value; /* the value -- never NULL (unless the key was just added) */
+	char *comments; /* any comments preceding this key, or NULL if none */
 };
 
 struct cfg_section {
-        struct cfg_section *next; /* NULL if this is the last section in the file */
-        char *name; /* the text between the brackets, whitespace trimmed */
-        struct cfg_key *keys; /* NULL if section is empty */
-        char *comments; /* any comments preceding this section, or NULL if none */
-        int omit; /* don't include in output (delete this section) */
+	struct cfg_section *next; /* NULL if this is the last section in the file */
+	char *name; /* the text between the brackets, whitespace trimmed */
+	struct cfg_key *keys; /* NULL if section is empty */
+	char *comments; /* any comments preceding this section, or NULL if none */
+	int omit; /* don't include in output (delete this section) */
 };
 
 struct cfg_file {
-        char *filename; /* this should never be NULL */
-        struct cfg_section *sections; /* NULL if file is empty */
-        char *eof_comments; /* comments following the last key are saved here */
-        int dirty; /* has this config been modified? */
+	char *filename; /* this should never be NULL */
+	struct cfg_section *sections; /* NULL if file is empty */
+	char *eof_comments; /* comments following the last key are saved here */
+	int dirty; /* has this config been modified? */
 };
 
 typedef struct cfg_file cfg_file_t;
@@ -70,7 +70,7 @@ int cfg_write(cfg_file_t *cfg);
 parameter if the length of the value is greater than the size of the buffer.
 value may be NULL, in which case nothing is copied. */
 const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char *key_name,
-                           char *value, int len, const char *def);
+			   char *value, int len, const char *def);
 int cfg_get_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int def);
 
 void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_name, const char *value);

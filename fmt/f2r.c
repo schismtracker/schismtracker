@@ -30,14 +30,14 @@
 
 int fmt_f2r_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        if (!(length > 46 && memcmp(data, "F2R", 3) == 0))
-                return 0;
+	if (!(length > 46 && memcmp(data, "F2R", 3) == 0))
+		return 0;
 
-        file->description = "Farandole 2 (linear)";
-        /*file->extension = str_dup("f2r");*/
-        file->title = calloc(41, sizeof(char));
-        memcpy(file->title, data + 6, 40);
-        file->title[40] = 0;
-        file->type = TYPE_MODULE_S3M;
-        return 1;
+	file->description = "Farandole 2 (linear)";
+	/*file->extension = str_dup("f2r");*/
+	file->title = calloc(41, sizeof(char));
+	memcpy(file->title, data + 6, 40);
+	file->title[40] = 0;
+	file->type = TYPE_MODULE_S3M;
+	return 1;
 }

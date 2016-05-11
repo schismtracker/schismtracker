@@ -55,7 +55,7 @@ the control gets back to slurp, it closes the fd (again). It doesn't seem to exi
 
 static void _slurp_closure_free(slurp_t *t)
 {
-        free(t->data);
+	free(t->data);
 }
 
 /* --------------------------------------------------------------------- */
@@ -76,99 +76,99 @@ static void _slurp_closure_free(slurp_t *t)
 
 static int _slurp_stdio_pipe(slurp_t * t, int fd)
 {
-        int old_errno;
-        FILE *fp;
-        uint8_t *read_buf, *realloc_buf;
-        size_t this_len;
-        int chunks = 0;
+	int old_errno;
+	FILE *fp;
+	uint8_t *read_buf, *realloc_buf;
+	size_t this_len;
+	int chunks = 0;
 
-        t->data = NULL;
-        fp = fdopen(dup(fd), "rb");
-        if (fp == NULL)
-                return 0;
+	t->data = NULL;
+	fp = fdopen(dup(fd), "rb");
+	if (fp == NULL)
+		return 0;
 
-        do {
-                chunks++;
-                /* Have to cast away the const... */
-                realloc_buf = realloc((void *) t->data, CHUNK * chunks);
-                if (realloc_buf == NULL) {
-                        old_errno = errno;
-                        fclose(fp);
-                        free(t->data);
-                        errno = old_errno;
-                        return 0;
-                }
-                t->data = realloc_buf;
-                read_buf = (void *) (t->data + (CHUNK * (chunks - 1)));
-                this_len = fread(read_buf, 1, CHUNK, fp);
-                if (this_len <= 0) {
-                        if (ferror(fp)) {
-                                old_errno = errno;
-                                fclose(fp);
-                                free(t->data);
-                                errno = old_errno;
-                                return 0;
-                        }
-                }
-                t->length += this_len;
-        } while (this_len);
-        fclose(fp);
-        t->closure = _slurp_closure_free;
-        return 1;
+	do {
+		chunks++;
+		/* Have to cast away the const... */
+		realloc_buf = realloc((void *) t->data, CHUNK * chunks);
+		if (realloc_buf == NULL) {
+			old_errno = errno;
+			fclose(fp);
+			free(t->data);
+			errno = old_errno;
+			return 0;
+		}
+		t->data = realloc_buf;
+		read_buf = (void *) (t->data + (CHUNK * (chunks - 1)));
+		this_len = fread(read_buf, 1, CHUNK, fp);
+		if (this_len <= 0) {
+			if (ferror(fp)) {
+				old_errno = errno;
+				fclose(fp);
+				free(t->data);
+				errno = old_errno;
+				return 0;
+			}
+		}
+		t->length += this_len;
+	} while (this_len);
+	fclose(fp);
+	t->closure = _slurp_closure_free;
+	return 1;
 }
 
 static int _slurp_stdio(slurp_t * t, int fd)
 {
-        int old_errno;
-        FILE *fp;
-        size_t got = 0, need, len;
+	int old_errno;
+	FILE *fp;
+	size_t got = 0, need, len;
 
-        if (t->length == 0) {
-                /* Hrmph. Probably a pipe or something... gotta do it the REALLY ugly way. */
-                return _slurp_stdio_pipe(t, fd);
-        }
+	if (t->length == 0) {
+		/* Hrmph. Probably a pipe or something... gotta do it the REALLY ugly way. */
+		return _slurp_stdio_pipe(t, fd);
+	}
 
-        fp = fdopen(dup(fd), "rb");
+	fp = fdopen(dup(fd), "rb");
 
-        if (!fp)
-                return 0;
+	if (!fp)
+		return 0;
 
-        t->data = (uint8_t *) malloc(t->length);
-        if (t->data == NULL) {
-                old_errno = errno;
-                fclose(fp);
-                errno = old_errno;
-                return 0;
-        }
+	t->data = (uint8_t *) malloc(t->length);
+	if (t->data == NULL) {
+		old_errno = errno;
+		fclose(fp);
+		errno = old_errno;
+		return 0;
+	}
 
-        /* Read the WHOLE thing -- fread might not get it all at once,
-         * so keep trying until it returns zero. */
-        need = t->length;
-        do {
-                len = fread(t->data + got, 1, need, fp);
-                if (len <= 0) {
-                        if (ferror(fp)) {
-                                old_errno = errno;
-                                fclose(fp);
-                                free(t->data);
-                                errno = old_errno;
-                                return 0;
-                        }
+	/* Read the WHOLE thing -- fread might not get it all at once,
+	 * so keep trying until it returns zero. */
+	need = t->length;
+	do {
+		len = fread(t->data + got, 1, need, fp);
+		if (len <= 0) {
+			if (ferror(fp)) {
+				old_errno = errno;
+				fclose(fp);
+				free(t->data);
+				errno = old_errno;
+				return 0;
+			}
 
-                        if (need > 0) {
-                                /* short file */
-                                need = 0;
-                                t->length = got;
-                        }
-                } else {
-                        got += len;
-                        need -= len;
-                }
-        } while (need > 0);
+			if (need > 0) {
+				/* short file */
+				need = 0;
+				t->length = got;
+			}
+		} else {
+			got += len;
+			need -= len;
+		}
+	} while (need > 0);
 
-        fclose(fp);
-        t->closure = _slurp_closure_free;
-        return 1;
+	fclose(fp);
+	t->closure = _slurp_closure_free;
+	return 1;
 }
 
 
@@ -176,152 +176,152 @@ static int _slurp_stdio(slurp_t * t, int fd)
 
 static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size)
 {
-        slurp_t *t;
-        int fd, old_errno;
+	slurp_t *t;
+	int fd, old_errno;
 
-        if (buf && S_ISDIR(buf->st_mode)) {
-                errno = EISDIR;
-                return NULL;
-        }
+	if (buf && S_ISDIR(buf->st_mode)) {
+		errno = EISDIR;
+		return NULL;
+	}
 
-        t = (slurp_t *) mem_alloc(sizeof(slurp_t));
-        if (t == NULL)
-                return NULL;
-        t->pos = 0;
+	t = (slurp_t *) mem_alloc(sizeof(slurp_t));
+	if (t == NULL)
+		return NULL;
+	t->pos = 0;
 
-        if (strcmp(filename, "-") == 0) {
-                if (_slurp_stdio(t, STDIN_FILENO))
-                        return t;
-                free(t);
-                return NULL;
-        }
+	if (strcmp(filename, "-") == 0) {
+		if (_slurp_stdio(t, STDIN_FILENO))
+			return t;
+		free(t);
+		return NULL;
+	}
 
-        if (size <= 0) {
-                size = (buf ? buf->st_size : file_size(filename));
-        }
+	if (size <= 0) {
+		size = (buf ? buf->st_size : file_size(filename));
+	}
 
 #ifdef WIN32
-        switch (slurp_win32(t, filename, size)) {
-        case 0: free(t); return NULL;
-        case 1: return t;
-        };
+	switch (slurp_win32(t, filename, size)) {
+	case 0: free(t); return NULL;
+	case 1: return t;
+	};
 #endif
 
 #if HAVE_MMAP
-        switch (slurp_mmap(t, filename, size)) {
-        case 0: free(t); return NULL;
-        case 1: return t;
-        };
+	switch (slurp_mmap(t, filename, size)) {
+	case 0: free(t); return NULL;
+	case 1: return t;
+	};
 #endif
 
-        fd = open(filename, O_RDONLY | O_BINARY);
+	fd = open(filename, O_RDONLY | O_BINARY);
 
-        if (fd < 0) {
-                free(t);
-                return NULL;
-        }
+	if (fd < 0) {
+		free(t);
+		return NULL;
+	}
 
-        t->length = size;
+	t->length = size;
 
-        if (_slurp_stdio(t, fd)) {
-                close(fd);
-                return t;
-        }
+	if (_slurp_stdio(t, fd)) {
+		close(fd);
+		return t;
+	}
 
-        old_errno = errno;
-        close(fd);
-        free(t);
-        errno = old_errno;
-        return NULL;
+	old_errno = errno;
+	close(fd);
+	free(t);
+	errno = old_errno;
+	return NULL;
 }
 
 slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 {
-        slurp_t *t = _slurp_open(filename, buf, size);
-        uint8_t *mmdata;
-        size_t mmlen;
+	slurp_t *t = _slurp_open(filename, buf, size);
+	uint8_t *mmdata;
+	size_t mmlen;
 
-        if (!t) {
-                return NULL;
-        }
+	if (!t) {
+		return NULL;
+	}
 
-        mmdata = t->data;
-        mmlen = t->length;
-        if (mmcmp_unpack(&mmdata, &mmlen)) {
-                // clean up the existing data
-                if (t->data && t->closure) {
-                        t->closure(t);
-                }
-                // and put the new stuff in
-                t->length = mmlen;
-                t->data = mmdata;
-                t->closure = _slurp_closure_free;
-        }
+	mmdata = t->data;
+	mmlen = t->length;
+	if (mmcmp_unpack(&mmdata, &mmlen)) {
+		// clean up the existing data
+		if (t->data && t->closure) {
+			t->closure(t);
+		}
+		// and put the new stuff in
+		t->length = mmlen;
+		t->data = mmdata;
+		t->closure = _slurp_closure_free;
+	}
 
-        // TODO re-add PP20 unpacker, possibly also handle other formats?
+	// TODO re-add PP20 unpacker, possibly also handle other formats?
 
-        return t;
+	return t;
 }
 
 
 void unslurp(slurp_t * t)
 {
-        if (!t)
-                return;
-        if (t->data && t->closure) {
-                t->closure(t);
-        }
-        free(t);
+	if (!t)
+		return;
+	if (t->data && t->closure) {
+		t->closure(t);
+	}
+	free(t);
 }
 
 /* --------------------------------------------------------------------- */
 
 int slurp_seek(slurp_t *t, long offset, int whence)
 {
-        switch (whence) {
-        default:
-        case SEEK_SET:
-                break;
-        case SEEK_CUR:
-                offset += t->pos;
-                break;
-        case SEEK_END:
-                offset += t->length;
-                break;
-        }
-        if (offset < 0 || (size_t) offset > t->length)
-                return -1;
-        t->pos = offset;
-        return 0;
+	switch (whence) {
+	default:
+	case SEEK_SET:
+		break;
+	case SEEK_CUR:
+		offset += t->pos;
+		break;
+	case SEEK_END:
+		offset += t->length;
+		break;
+	}
+	if (offset < 0 || (size_t) offset > t->length)
+		return -1;
+	t->pos = offset;
+	return 0;
 }
 
 long slurp_tell(slurp_t *t)
 {
-        return (long) t->pos;
+	return (long) t->pos;
 }
 
 size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 {
-        size_t bytesleft = t->length - t->pos;
-        if (count > bytesleft) {
-                // short read -- fill in any extra bytes with zeroes
-                size_t tail = count - bytesleft;
-                count = bytesleft;
-                memset(ptr + count, 0, tail);
-        }
-        if (count)
-                memcpy(ptr, t->data + t->pos, count);
-        t->pos += count;
-        return count;
+	size_t bytesleft = t->length - t->pos;
+	if (count > bytesleft) {
+		// short read -- fill in any extra bytes with zeroes
+		size_t tail = count - bytesleft;
+		count = bytesleft;
+		memset(ptr + count, 0, tail);
+	}
+	if (count)
+		memcpy(ptr, t->data + t->pos, count);
+	t->pos += count;
+	return count;
 }
 
 int slurp_getc(slurp_t *t)
 {
-        return (t->pos < t->length) ? t->data[t->pos++] : EOF;
+	return (t->pos < t->length) ? t->data[t->pos++] : EOF;
 }
 
 int slurp_eof(slurp_t *t)
 {
-        return t->pos >= t->length;
+	return t->pos >= t->length;
 }
 

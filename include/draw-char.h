@@ -43,7 +43,7 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color);
 
 void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
-                           uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);
+			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);
 
 /* --------------------------------------------------------------------- */
 /* boxes */
@@ -62,24 +62,24 @@ void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int shade_mask
  * (because using two different colors for an outer box results in some
  * ugliness at the corners) */
 enum {
-        BOX_OUTSET = (0),
-        BOX_INSET = (1),
-        BOX_FLAT_LIGHT = (2),
-        BOX_FLAT_DARK = (3),
+	BOX_OUTSET = (0),
+	BOX_INSET = (1),
+	BOX_FLAT_LIGHT = (2),
+	BOX_FLAT_DARK = (3),
 };
 #define BOX_SHADE_MASK 3
 
 enum {
-        BOX_INNER = (0 << 2),   /* 00 00 */
-        BOX_OUTER = (1 << 2),   /* 01 00 */
-        BOX_CORNER = (2 << 2),  /* 10 00 */
+	BOX_INNER = (0 << 2),   /* 00 00 */
+	BOX_OUTER = (1 << 2),   /* 01 00 */
+	BOX_CORNER = (2 << 2),  /* 10 00 */
 };
 #define BOX_TYPE_MASK 12
 
 /* the thickness is ignored for corner boxes, which are always thin */
 enum {
-        BOX_THIN = (0 << 4),    /* 0 00 00 */
-        BOX_THICK = (1 << 4),   /* 1 00 00 */
+	BOX_THIN = (0 << 4),    /* 0 00 00 */
+	BOX_THICK = (1 << 4),   /* 1 00 00 */
 };
 #define BOX_THICKNESS_MASK 16
 

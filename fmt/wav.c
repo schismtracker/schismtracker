@@ -100,296 +100,296 @@ typedef struct {
 
 static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 {
-        wave_file_header_t phdr;
-        size_t offset;
-        int have_format = 0;
+	wave_file_header_t phdr;
+	size_t offset;
+	int have_format = 0;
 
-        if (len < sizeof(wave_file_header_t)) {
-                return 0;
-        }
+	if (len < sizeof(wave_file_header_t)) {
+		return 0;
+	}
 
-        memcpy(&phdr, data, sizeof(wave_file_header_t));
+	memcpy(&phdr, data, sizeof(wave_file_header_t));
 #if WORDS_BIGENDIAN
-        phdr.id_RIFF  = bswapLE32(phdr.id_RIFF);
-        phdr.filesize = bswapLE32(phdr.filesize);
-        phdr.id_WAVE  = bswapLE32(phdr.id_WAVE);
+	phdr.id_RIFF  = bswapLE32(phdr.id_RIFF);
+	phdr.filesize = bswapLE32(phdr.filesize);
+	phdr.id_WAVE  = bswapLE32(phdr.id_WAVE);
 #endif
 
-        if (phdr.id_RIFF != IFFID_RIFF ||
-            phdr.id_WAVE != IFFID_WAVE) {
-                return 0;
-        }
+	if (phdr.id_RIFF != IFFID_RIFF ||
+	    phdr.id_WAVE != IFFID_WAVE) {
+		return 0;
+	}
 
-        offset = sizeof(wave_file_header_t);
+	offset = sizeof(wave_file_header_t);
 
-        while (1) {
-                wave_chunk_prefix_t c;
-                memcpy(&c, data + offset, sizeof(wave_chunk_prefix_t));
+	while (1) {
+		wave_chunk_prefix_t c;
+		memcpy(&c, data + offset, sizeof(wave_chunk_prefix_t));
 
 #if WORDS_BIGENDIAN
-                c.id     = bswapLE32(c.id);
-                c.length = bswapLE32(c.length);
+		c.id     = bswapLE32(c.id);
+		c.length = bswapLE32(c.length);
 #endif
-                offset  += sizeof(wave_chunk_prefix_t);
+		offset  += sizeof(wave_chunk_prefix_t);
 
-                if (offset + c.length > len) {
-                        log_appendf(4, "Corrupt WAV file. Chunk points outside of WAV file [%lu + %u > %lu]\n",
-                            (unsigned long) offset, c.length, (unsigned long) len);
-                        return 0;
-                }
+		if (offset + c.length > len) {
+			log_appendf(4, "Corrupt WAV file. Chunk points outside of WAV file [%lu + %u > %lu]\n",
+			    (unsigned long) offset, c.length, (unsigned long) len);
+			return 0;
+		}
 
-                switch (c.id) {
-                case IFFID_fmt: {
-                        if (have_format) {
-                                log_appendf(4, "Corrupt WAV file. Found multiple format headers.\n");
-                                return 0;
-                        }
+		switch (c.id) {
+		case IFFID_fmt: {
+			if (have_format) {
+				log_appendf(4, "Corrupt WAV file. Found multiple format headers.\n");
+				return 0;
+			}
 
-                        have_format = 1;
-                        memcpy(&f->fmt, data + offset, sizeof(wave_format_t));
+			have_format = 1;
+			memcpy(&f->fmt, data + offset, sizeof(wave_format_t));
 #if WORDS_BIGENDIAN
-                        f->fmt.format        = bswapLE16(f->fmt.format);
-                        f->fmt.channels      = bswapLE16(f->fmt.channels);
-                        f->fmt.freqHz        = bswapLE32(f->fmt.freqHz);
-                        f->fmt.bytessec      = bswapLE32(f->fmt.bytessec);
-                        f->fmt.samplesize    = bswapLE16(f->fmt.samplesize);
-                        f->fmt.bitspersample = bswapLE16(f->fmt.bitspersample);
+			f->fmt.format        = bswapLE16(f->fmt.format);
+			f->fmt.channels      = bswapLE16(f->fmt.channels);
+			f->fmt.freqHz        = bswapLE32(f->fmt.freqHz);
+			f->fmt.bytessec      = bswapLE32(f->fmt.bytessec);
+			f->fmt.samplesize    = bswapLE16(f->fmt.samplesize);
+			f->fmt.bitspersample = bswapLE16(f->fmt.bitspersample);
 #endif
-                        break;
-                }
+			break;
+		}
 
-                case IFFID_data:
-                        if (!have_format) {
-                                log_appendf(4, "WAV file did not specify format before data\n");
-                                return 0;
-                        }
+		case IFFID_data:
+			if (!have_format) {
+				log_appendf(4, "WAV file did not specify format before data\n");
+				return 0;
+			}
 
-                        memcpy(&f->data, &c, sizeof(wave_chunk_prefix_t));
-                        f->buf = (uint8_t *)(data + offset);
-                        return 1;
-                }
+			memcpy(&f->data, &c, sizeof(wave_chunk_prefix_t));
+			f->buf = (uint8_t *)(data + offset);
+			return 1;
+		}
 
-            offset += c.length;
+	    offset += c.length;
 
-            if (offset == len)
-                    break;
-        }
+	    if (offset == len)
+		    break;
+	}
 
-        return 1;
+	return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
 
 int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 {
-        wave_file_t f;
-        uint32_t flags;
+	wave_file_t f;
+	uint32_t flags;
 
-        if (!wav_load(&f, data, len))
-                return 0;
+	if (!wav_load(&f, data, len))
+		return 0;
 
-        if (f.fmt.format != WAVE_FORMAT_PCM ||
-            !f.fmt.freqHz ||
-            (f.fmt.channels != 1 && f.fmt.channels != 2))
-                return 0;
+	if (f.fmt.format != WAVE_FORMAT_PCM ||
+	    !f.fmt.freqHz ||
+	    (f.fmt.channels != 1 && f.fmt.channels != 2))
+		return 0;
 
-        smp->flags = 0; // flags are set by csf_read_sample
-        flags      = 0;
+	smp->flags = 0; // flags are set by csf_read_sample
+	flags      = 0;
 
-        // endianness
-        flags = SF_LE;
-        // channels
-        flags |= (f.fmt.channels == 2) ? SF_SI : SF_M; // interleaved stereo
-        // bit width
-        switch (f.fmt.bitspersample) {
-        case 8:  flags |= SF_8;  break;
-        case 16: flags |= SF_16; break;
-        case 24: flags |= SF_24; break;
-        case 32: flags |= SF_32; break;
-        default: return 0; // unsupported
-        }
-        // encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
-        flags |= (f.fmt.bitspersample == 8) ? SF_PCMU : SF_PCMS;
+	// endianness
+	flags = SF_LE;
+	// channels
+	flags |= (f.fmt.channels == 2) ? SF_SI : SF_M; // interleaved stereo
+	// bit width
+	switch (f.fmt.bitspersample) {
+	case 8:  flags |= SF_8;  break;
+	case 16: flags |= SF_16; break;
+	case 24: flags |= SF_24; break;
+	case 32: flags |= SF_32; break;
+	default: return 0; // unsupported
+	}
+	// encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
+	flags |= (f.fmt.bitspersample == 8) ? SF_PCMU : SF_PCMS;
 
-        smp->volume        = 64 * 4;
-        smp->global_volume = 64;
-        smp->c5speed         = f.fmt.freqHz;
-        smp->length        = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
+	smp->volume        = 64 * 4;
+	smp->global_volume = 64;
+	smp->c5speed         = f.fmt.freqHz;
+	smp->length        = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
 
-        return csf_read_sample((song_sample_t *)smp, flags, (const char *) f.buf, f.data.length);
+	return csf_read_sample((song_sample_t *)smp, flags, (const char *) f.buf, f.data.length);
 }
 
 int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-        wave_file_t f;
+	wave_file_t f;
 
-        if (!wav_load(&f, data, length))
-                return 0;
-        else if (f.fmt.format != WAVE_FORMAT_PCM ||
-                !f.fmt.freqHz ||
-                (f.fmt.channels != 1 && f.fmt.channels != 2) ||
-                (f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16 &&
-                 f.fmt.bitspersample != 24 && f.fmt.bitspersample != 32))
-                return 0;
+	if (!wav_load(&f, data, length))
+		return 0;
+	else if (f.fmt.format != WAVE_FORMAT_PCM ||
+		!f.fmt.freqHz ||
+		(f.fmt.channels != 1 && f.fmt.channels != 2) ||
+		(f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16 &&
+		 f.fmt.bitspersample != 24 && f.fmt.bitspersample != 32))
+		return 0;
 
-        file->smp_flags  = 0;
+	file->smp_flags  = 0;
 
-        if (f.fmt.channels == 2)
-                file->smp_flags |= CHN_STEREO;
+	if (f.fmt.channels == 2)
+		file->smp_flags |= CHN_STEREO;
 
-        if (f.fmt.bitspersample == 16)
-                file->smp_flags |= CHN_16BIT;
+	if (f.fmt.bitspersample == 16)
+		file->smp_flags |= CHN_16BIT;
 
-        file->smp_speed  = f.fmt.freqHz;
-        file->smp_length = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
+	file->smp_speed  = f.fmt.freqHz;
+	file->smp_length = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
 
-        file->description  = "IBM/Microsoft RIFF Audio";
-        file->type         = TYPE_SAMPLE_PLAIN;
-        file->smp_filename = file->base;
-        return 1;
+	file->description  = "IBM/Microsoft RIFF Audio";
+	file->type         = TYPE_SAMPLE_PLAIN;
+	file->smp_filename = file->base;
+	return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* wav is like aiff's retarded cousin */
 
 struct wav_writedata {
-        long data_size; // seek position for writing data size (in bytes)
-        size_t numbytes; // how many bytes have been written
-        int bps; // bytes per sample
-        int swap; // should be byteswapped?
+	long data_size; // seek position for writing data size (in bytes)
+	size_t numbytes; // how many bytes have been written
+	int bps; // bytes per sample
+	int swap; // should be byteswapped?
 };
 
 static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t length,
-        struct wav_writedata *wwd /* out */)
+	struct wav_writedata *wwd /* out */)
 {
-        int16_t s;
-        uint32_t ul;
-        int bps = 1;
+	int16_t s;
+	uint32_t ul;
+	int bps = 1;
 
-        bps *= ((bits + 7) / 8) * channels;
+	bps *= ((bits + 7) / 8) * channels;
 
-        /* write a very large size for now */
-        disko_write(fp, "RIFF\377\377\377\377WAVEfmt ", 16);
-        ul = bswapLE32(16); // fmt chunk size
-        disko_write(fp, &ul, 4);
-        s = bswapLE16(1); // linear pcm
-        disko_write(fp, &s, 2);
-        s = bswapLE16(channels); // number of channels
-        disko_write(fp, &s, 2);
-        ul = bswapLE32(rate); // sample rate
-        disko_write(fp, &ul, 4);
-        ul = bswapLE32(bps * rate); // "byte rate" (why?! I have no idea)
-        disko_write(fp, &ul, 4);
-        s = bswapLE16(bps); // (oh, come on! the format already stores everything needed to calculate this!)
-        disko_write(fp, &s, 2);
-        s = bswapLE16(bits); // bits per sample
-        disko_write(fp, &s, 2);
+	/* write a very large size for now */
+	disko_write(fp, "RIFF\377\377\377\377WAVEfmt ", 16);
+	ul = bswapLE32(16); // fmt chunk size
+	disko_write(fp, &ul, 4);
+	s = bswapLE16(1); // linear pcm
+	disko_write(fp, &s, 2);
+	s = bswapLE16(channels); // number of channels
+	disko_write(fp, &s, 2);
+	ul = bswapLE32(rate); // sample rate
+	disko_write(fp, &ul, 4);
+	ul = bswapLE32(bps * rate); // "byte rate" (why?! I have no idea)
+	disko_write(fp, &ul, 4);
+	s = bswapLE16(bps); // (oh, come on! the format already stores everything needed to calculate this!)
+	disko_write(fp, &s, 2);
+	s = bswapLE16(bits); // bits per sample
+	disko_write(fp, &s, 2);
 
-        disko_write(fp, "data", 4);
-        if (wwd)
-                wwd->data_size = disko_tell(fp);
-        ul = bswapLE32(bps * length);
-        disko_write(fp, &ul, 4);
+	disko_write(fp, "data", 4);
+	if (wwd)
+		wwd->data_size = disko_tell(fp);
+	ul = bswapLE32(bps * length);
+	disko_write(fp, &ul, 4);
 
-        return bps;
+	return bps;
 }
 
 int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 {
-        int bps;
-        uint32_t ul;
-        uint32_t flags = SF_LE;
-        flags |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU);
-        flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
+	int bps;
+	uint32_t ul;
+	uint32_t flags = SF_LE;
+	flags |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU);
+	flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
-        bps = wav_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
-                smp->c5speed, smp->length, NULL);
+	bps = wav_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
+		smp->c5speed, smp->length, NULL);
 
-        if (csf_write_sample(fp, smp, flags) != smp->length * bps) {
-                log_appendf(4, "WAV: unexpected data size written");
-                return SAVE_INTERNAL_ERROR;
-        }
+	if (csf_write_sample(fp, smp, flags) != smp->length * bps) {
+		log_appendf(4, "WAV: unexpected data size written");
+		return SAVE_INTERNAL_ERROR;
+	}
 
-        /* fix the length in the file header */
-        ul = disko_tell(fp) - 8;
-        ul = bswapLE32(ul);
-        disko_seek(fp, 4, SEEK_SET);
-        disko_write(fp, &ul, 4);
+	/* fix the length in the file header */
+	ul = disko_tell(fp) - 8;
+	ul = bswapLE32(ul);
+	disko_seek(fp, 4, SEEK_SET);
+	disko_write(fp, &ul, 4);
 
-        return SAVE_SUCCESS;
+	return SAVE_SUCCESS;
 }
 
 
 int fmt_wav_export_head(disko_t *fp, int bits, int channels, int rate)
 {
-        struct wav_writedata *wwd = malloc(sizeof(struct wav_writedata));
-        if (!wwd)
-                return DW_ERROR;
-        fp->userdata = wwd;
-        wwd->bps = wav_header(fp, bits, channels, rate, ~0, wwd);
-        wwd->numbytes = 0;
+	struct wav_writedata *wwd = malloc(sizeof(struct wav_writedata));
+	if (!wwd)
+		return DW_ERROR;
+	fp->userdata = wwd;
+	wwd->bps = wav_header(fp, bits, channels, rate, ~0, wwd);
+	wwd->numbytes = 0;
 #if WORDS_BIGENDIAN
-        wwd->swap = (bits > 8);
+	wwd->swap = (bits > 8);
 #else
-        wwd->swap = 0;
+	wwd->swap = 0;
 #endif
 
-        return DW_OK;
+	return DW_OK;
 }
 
 int fmt_wav_export_body(disko_t *fp, const uint8_t *data, size_t length)
 {
-        struct wav_writedata *wwd = fp->userdata;
+	struct wav_writedata *wwd = fp->userdata;
 
-        if (length % wwd->bps) {
-                log_appendf(4, "WAV export: received uneven length");
-                return DW_ERROR;
-        }
+	if (length % wwd->bps) {
+		log_appendf(4, "WAV export: received uneven length");
+		return DW_ERROR;
+	}
 
-        wwd->numbytes += length;
+	wwd->numbytes += length;
 
-        if (wwd->swap) {
-                const int16_t *ptr = (const int16_t *) data;
-                uint16_t v;
+	if (wwd->swap) {
+		const int16_t *ptr = (const int16_t *) data;
+		uint16_t v;
 
-                length /= 2;
-                while (length--) {
-                        v = *ptr;
-                        v = bswapLE16(v);
-                        disko_write(fp, &v, 2);
-                        ptr++;
-                }
-        } else {
-                disko_write(fp, data, length);
-        }
+		length /= 2;
+		while (length--) {
+			v = *ptr;
+			v = bswapLE16(v);
+			disko_write(fp, &v, 2);
+			ptr++;
+		}
+	} else {
+		disko_write(fp, data, length);
+	}
 
-        return DW_OK;
+	return DW_OK;
 }
 
 int fmt_wav_export_silence(disko_t *fp, long bytes)
 {
-        disko_seek(fp, bytes, SEEK_CUR);
-        return DW_OK;
+	disko_seek(fp, bytes, SEEK_CUR);
+	return DW_OK;
 }
 
 int fmt_wav_export_tail(disko_t *fp)
 {
-        struct wav_writedata *wwd = fp->userdata;
-        uint32_t ul;
+	struct wav_writedata *wwd = fp->userdata;
+	uint32_t ul;
 
-        /* fix the length in the file header */
-        ul = disko_tell(fp) - 8;
-        ul= bswapLE32(ul);
-        disko_seek(fp, 4, SEEK_SET);
-        disko_write(fp, &ul, 4);
+	/* fix the length in the file header */
+	ul = disko_tell(fp) - 8;
+	ul= bswapLE32(ul);
+	disko_seek(fp, 4, SEEK_SET);
+	disko_write(fp, &ul, 4);
 
-        /* write the other lengths */
-        disko_seek(fp, wwd->data_size, SEEK_SET);
-        ul = bswapLE32(wwd->numbytes);
-        disko_write(fp, &ul, 4);
+	/* write the other lengths */
+	disko_seek(fp, wwd->data_size, SEEK_SET);
+	ul = bswapLE32(wwd->numbytes);
+	disko_write(fp, &ul, 4);
 
-        free(wwd);
+	free(wwd);
 
-        return DW_OK;
+	return DW_OK;
 }
 

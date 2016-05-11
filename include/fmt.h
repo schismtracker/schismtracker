@@ -43,17 +43,17 @@ this is only a suggestion in order to speed loading; don't be surprised if the l
 
 /* return codes for module loaders */
 enum {
-        LOAD_SUCCESS,           /* all's well */
-        LOAD_UNSUPPORTED,       /* wrong file type for the loader */
-        LOAD_FILE_ERROR,        /* couldn't read the file; check errno */
-        LOAD_FORMAT_ERROR,      /* it appears to be the correct type, but there's something wrong */
+	LOAD_SUCCESS,           /* all's well */
+	LOAD_UNSUPPORTED,       /* wrong file type for the loader */
+	LOAD_FILE_ERROR,        /* couldn't read the file; check errno */
+	LOAD_FORMAT_ERROR,      /* it appears to be the correct type, but there's something wrong */
 };
 
 /* return codes for modules savers */
 enum {
-        SAVE_SUCCESS,           /* all's well */
-        SAVE_FILE_ERROR,        /* couldn't write the file; check errno */
-        SAVE_INTERNAL_ERROR,    /* something unrelated to disk i/o */
+	SAVE_SUCCESS,           /* all's well */
+	SAVE_FILE_ERROR,        /* couldn't write the file; check errno */
+	SAVE_INTERNAL_ERROR,    /* something unrelated to disk i/o */
 };
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -87,29 +87,29 @@ typedef int (*fmt_export_tail_func)     PROTO_EXPORT_TAIL;
 #define SAVE_SAMPLE(t)          int fmt_##t##_save_sample       PROTO_SAVE_SAMPLE;
 #define LOAD_INSTRUMENT(t)      int fmt_##t##_load_instrument   PROTO_LOAD_INSTRUMENT;
 #define EXPORT(t)               int fmt_##t##_export_head       PROTO_EXPORT_HEAD; \
-                                int fmt_##t##_export_silence    PROTO_EXPORT_SILENCE; \
-                                int fmt_##t##_export_body       PROTO_EXPORT_BODY; \
-                                int fmt_##t##_export_tail       PROTO_EXPORT_TAIL;
+				int fmt_##t##_export_silence    PROTO_EXPORT_SILENCE; \
+				int fmt_##t##_export_body       PROTO_EXPORT_BODY; \
+				int fmt_##t##_export_tail       PROTO_EXPORT_TAIL;
 
 #include "fmt-types.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 
 struct save_format {
-        const char *label; // label for the button on the save page
-        const char *name; // long name of format
-        const char *ext; // no dot
-        union {
-                fmt_save_song_func save_song;
-                fmt_save_sample_func save_sample;
-                struct {
-                        fmt_export_head_func head;
-                        fmt_export_silence_func silence;
-                        fmt_export_body_func body;
-                        fmt_export_tail_func tail;
-                        int multi;
-                } export;
-        } f;
+	const char *label; // label for the button on the save page
+	const char *name; // long name of format
+	const char *ext; // no dot
+	union {
+		fmt_save_song_func save_song;
+		fmt_save_sample_func save_sample;
+		struct {
+			fmt_export_head_func head;
+			fmt_export_silence_func silence;
+			fmt_export_body_func body;
+			fmt_export_tail_func tail;
+			int multi;
+		} export;
+	} f;
 };
 
 extern const struct save_format song_save_formats[];
@@ -118,9 +118,9 @@ extern const struct save_format sample_save_formats[];
 
 /* --------------------------------------------------------------------------------------------------------- */
 struct instrumentloader {
-        song_instrument_t *inst;
-        int sample_map[MAX_SAMPLES];
-        int basex, slot, expect_samples;
+	song_instrument_t *inst;
+	int sample_map[MAX_SAMPLES];
+	int basex, slot, expect_samples;
 };
 song_instrument_t *instrument_loader_init(struct instrumentloader *ii, int slot);
 int instrument_loader_abort(struct instrumentloader *ii);

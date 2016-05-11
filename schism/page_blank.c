@@ -36,7 +36,7 @@ static struct widget widgets_blank[1];
 
 static int blank_page_handle_key(UNUSED struct key_event * k)
 {
-        return 0;
+	return 0;
 }
 
 static void blank_page_redraw(void)
@@ -47,10 +47,10 @@ static void blank_page_redraw(void)
 
 void blank_load_page(struct page *page)
 {
-        page->title = "";
-        page->total_widgets = 1;
-        page->widgets = widgets_blank;
-        page->help_index = HELP_GLOBAL;
+	page->title = "";
+	page->total_widgets = 1;
+	page->widgets = widgets_blank;
+	page->help_index = HELP_GLOBAL;
 
-        create_other(widgets_blank + 0, 0, blank_page_handle_key, blank_page_redraw);
+	create_other(widgets_blank + 0, 0, blank_page_handle_key, blank_page_redraw);
 }

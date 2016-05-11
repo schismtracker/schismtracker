@@ -32,27 +32,27 @@
 #define MOUSE_SCROLL_LINES       3
 
 struct key_event {
-        SDLKey sym, orig_sym;
-        SDLMod mod;
-        uint16_t unicode;
-        int scancode;
+	SDLKey sym, orig_sym;
+	SDLMod mod;
+	uint16_t unicode;
+	int scancode;
 
-        enum { KEY_PRESS=0, KEY_RELEASE } state;
-        enum { MOUSE_NONE=0, MOUSE_CLICK, MOUSE_SCROLL_UP, MOUSE_SCROLL_DOWN, MOUSE_DBLCLICK } mouse;
-        enum { MOUSE_BUTTON_LEFT=0, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT } mouse_button;
-        int midi_note;
-        int midi_channel;
-        int midi_volume; /* -1 for not a midi key otherwise 0...128 */
-        int midi_bend;  /* normally 0; -8192 to +8192  */
-        unsigned int sx, sy; /* start x and y position (character) */
-        unsigned int x, hx, fx; /* x position of mouse (character, halfcharacter, fine) */
-        unsigned int y, fy; /* y position of mouse (character, fine) */
+	enum { KEY_PRESS=0, KEY_RELEASE } state;
+	enum { MOUSE_NONE=0, MOUSE_CLICK, MOUSE_SCROLL_UP, MOUSE_SCROLL_DOWN, MOUSE_DBLCLICK } mouse;
+	enum { MOUSE_BUTTON_LEFT=0, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT } mouse_button;
+	int midi_note;
+	int midi_channel;
+	int midi_volume; /* -1 for not a midi key otherwise 0...128 */
+	int midi_bend;  /* normally 0; -8192 to +8192  */
+	unsigned int sx, sy; /* start x and y position (character) */
+	unsigned int x, hx, fx; /* x position of mouse (character, halfcharacter, fine) */
+	unsigned int y, fy; /* y position of mouse (character, fine) */
 
-        unsigned int rx, ry; /* x/y resolution */
+	unsigned int rx, ry; /* x/y resolution */
 
-        int is_repeat;
-        int on_target;
-        int is_synthetic; /* 1 came from paste */
+	int is_repeat;
+	int on_target;
+	int is_synthetic; /* 1 came from paste */
 };
 
 /* --------------------------------------------------------------------- */
@@ -60,19 +60,19 @@ struct key_event {
 
 /* NOTE: this enum should be in the same order as helptexts in Makefile.am */
 enum {
-        HELP_GLOBAL, /* needs to be first! */
-        HELP_COPYRIGHT,
-        HELP_INFO_PAGE,
-        HELP_INSTRUMENT_LIST,
-        HELP_MESSAGE_EDITOR,
-        HELP_MIDI_OUTPUT,
-        HELP_ORDERLIST_PANNING,
-        HELP_ORDERLIST_VOLUME,
-        HELP_PATTERN_EDITOR,
-        HELP_ADLIB_SAMPLE,
-        HELP_SAMPLE_LIST,
+	HELP_GLOBAL, /* needs to be first! */
+	HELP_COPYRIGHT,
+	HELP_INFO_PAGE,
+	HELP_INSTRUMENT_LIST,
+	HELP_MESSAGE_EDITOR,
+	HELP_MIDI_OUTPUT,
+	HELP_ORDERLIST_PANNING,
+	HELP_ORDERLIST_VOLUME,
+	HELP_PATTERN_EDITOR,
+	HELP_ADLIB_SAMPLE,
+	HELP_SAMPLE_LIST,
 
-        HELP_NUM_ITEMS /* needs to be last! */
+	HELP_NUM_ITEMS /* needs to be last! */
 };
 
 extern const char *help_text[HELP_NUM_ITEMS];
@@ -81,15 +81,15 @@ extern const char *help_text[HELP_NUM_ITEMS];
 /* there's a value in this enum for each kind of widget... */
 
 enum widget_type {
-        WIDGET_TOGGLE, WIDGET_MENUTOGGLE,
-        WIDGET_BUTTON, WIDGET_TOGGLEBUTTON,
-        WIDGET_TEXTENTRY,
-        WIDGET_NUMENTRY, WIDGET_THUMBBAR, WIDGET_BITSET, WIDGET_PANBAR,
-        /* this last one is for anything that doesn't fit some standard
-        type, like the sample list, envelope editor, etc.; a widget of
-        this type is just a placeholder so page.c knows there's
-        something going on. */
-        WIDGET_OTHER      /* sample list, envelopes, etc. */
+	WIDGET_TOGGLE, WIDGET_MENUTOGGLE,
+	WIDGET_BUTTON, WIDGET_TOGGLEBUTTON,
+	WIDGET_TEXTENTRY,
+	WIDGET_NUMENTRY, WIDGET_THUMBBAR, WIDGET_BITSET, WIDGET_PANBAR,
+	/* this last one is for anything that doesn't fit some standard
+	type, like the sample list, envelope editor, etc.; a widget of
+	this type is just a placeholder so page.c knows there's
+	something going on. */
+	WIDGET_OTHER      /* sample list, envelopes, etc. */
 };
 
 /* --------------------------------------------------------------------- */
@@ -101,29 +101,29 @@ enum widget_type {
 
 /* space -> state changed; cb triggered */
 struct widget_toggle {
-        int state;      /* 0 = off, 1 = on */
+	int state;      /* 0 = off, 1 = on */
 };
 
 /* space -> state changed; cb triggered */
 struct widget_menutoggle {
-        int state;      /* 0, 1, ..., num_choices - 1, num_choices */
-        const char *const *choices;
-        int num_choices;
-        const char *activation_keys;
+	int state;      /* 0, 1, ..., num_choices - 1, num_choices */
+	const char *const *choices;
+	int num_choices;
+	const char *activation_keys;
 };
 
 /* enter -> cb triggered */
 struct widget_button {
-        const char *text;
-        int padding;
+	const char *text;
+	int padding;
 };
 
 /* enter -> state changed; cb triggered */
 struct widget_togglebutton {
-        const char *text;
-        int padding;
-        int state;      /* 0 = off, 1 = on */
-        const int *group;
+	const char *text;
+	int padding;
+	int state;      /* 0 = off, 1 = on */
+	const int *group;
 };
 
 /* backspace -> truncated; changed cb triggered
@@ -135,10 +135,10 @@ struct widget_togglebutton {
  * - if (max_length > (width - 1)) the text scrolls
  * - cursor_pos is set to the end of the text when the widget is focused */
 struct widget_textentry {
-        char *text;
-        int max_length;
-        int firstchar;  /* first visible character (generally 0) */
-        int cursor_pos; /* 0 = first character */
+	char *text;
+	int max_length;
+	int firstchar;  /* first visible character (generally 0) */
+	int cursor_pos; /* 0 = first character */
 };
 
 /* <0-9> -> digit @ cursor_pos changed; cursor_pos increased; cb triggered
@@ -147,12 +147,12 @@ struct widget_textentry {
  * cursor_pos for this widget is a pointer so that multiple numbers that
  * are all lined up can share the same position. */
 struct widget_numentry {
-        int min;
-        int max;
-        int value;
-        int *cursor_pos;
-        int (*handle_unknown_key)(struct key_event *k);
-        int reverse;
+	int min;
+	int max;
+	int value;
+	int *cursor_pos;
+	int (*handle_unknown_key)(struct key_event *k);
+	int reverse;
 };
 
 /* left/right -> value changed; cb triggered
@@ -161,26 +161,26 @@ struct widget_numentry {
  * home/end -> value set to min/max; cb triggered
  * <0-9> -> prompt for new number; value changed; cb triggered */
 struct widget_thumbbar {
-        /* pretty much the same as the numentry, just without the cursor
-         * position field... (NOTE - don't rearrange the order of the
-         * fields in either of these; some code depends on them being
-         * the same) */
-        int min;
-        int max;
-        int value;
-        /* this is currently only used with the midi thumbbars on the ins. list + pitch page. if
-         * this is non-NULL, and value == {min,max}, the text is drawn instead of the thumbbar. */
-        const char *text_at_min, *text_at_max;
+	/* pretty much the same as the numentry, just without the cursor
+	 * position field... (NOTE - don't rearrange the order of the
+	 * fields in either of these; some code depends on them being
+	 * the same) */
+	int min;
+	int max;
+	int value;
+	/* this is currently only used with the midi thumbbars on the ins. list + pitch page. if
+	 * this is non-NULL, and value == {min,max}, the text is drawn instead of the thumbbar. */
+	const char *text_at_min, *text_at_max;
 };
 
 struct widget_bitset {
-        /* A widget for controlling individual bits */
-        int nbits;
-        int value;
-        int *cursor_pos;
-        const char* bits_on;
-        const char* bits_off;
-        const char* activation_keys;
+	/* A widget for controlling individual bits */
+	int nbits;
+	int value;
+	int *cursor_pos;
+	const char* bits_on;
+	const char* bits_off;
+	const char* activation_keys;
 };
 
 
@@ -194,74 +194,74 @@ struct widget_bitset {
  * note that, due to some weirdness with IT, these draw the channel text
  * as well as the actual bar. */
 struct widget_panbar {
-        int min;
-        int max;
-        int value;
-        int channel;
-        unsigned int muted:1;
-        unsigned int surround:1;
+	int min;
+	int max;
+	int value;
+	int channel;
+	unsigned int muted:1;
+	unsigned int surround:1;
 };
 
 struct widget_other {
-        /* bah. can't do much of anything with this.
-         *
-         * if an 'other' type widget gets the focus, it soaks up all the
-         * keyboard events that the main handler doesn't catch. thus
-         * it is responsible for changing the focus to something else
-         * (and, of course, if it doesn't ever do that, the cursor is
-         * pretty much stuck)
-         * this MUST be set to a valid function.
-         * return value is 1 if the key was handled, 0 if not. */
-        int (*handle_key) (struct key_event * k);
+	/* bah. can't do much of anything with this.
+	 *
+	 * if an 'other' type widget gets the focus, it soaks up all the
+	 * keyboard events that the main handler doesn't catch. thus
+	 * it is responsible for changing the focus to something else
+	 * (and, of course, if it doesn't ever do that, the cursor is
+	 * pretty much stuck)
+	 * this MUST be set to a valid function.
+	 * return value is 1 if the key was handled, 0 if not. */
+	int (*handle_key) (struct key_event * k);
 
-        /* also the widget drawing function can't possibly know how to
-         * draw a custom widget, so it calls this instead.
-         * this MUST be set to a valid function. */
-        void (*redraw) (void);
+	/* also the widget drawing function can't possibly know how to
+	 * draw a custom widget, so it calls this instead.
+	 * this MUST be set to a valid function. */
+	void (*redraw) (void);
 };
 
 /* --------------------------------------------------------------------- */
 /* and all the widget structs go in the union in this struct... */
 
 union _widget_data_union {
-        struct widget_toggle toggle;
-        struct widget_menutoggle menutoggle;
-        struct widget_button button;
-        struct widget_togglebutton togglebutton;
-        struct widget_textentry textentry;
-        struct widget_numentry numentry;
-        struct widget_thumbbar thumbbar;
-        struct widget_panbar panbar;
-        struct widget_other other;
-        struct widget_bitset bitset;
+	struct widget_toggle toggle;
+	struct widget_menutoggle menutoggle;
+	struct widget_button button;
+	struct widget_togglebutton togglebutton;
+	struct widget_textentry textentry;
+	struct widget_numentry numentry;
+	struct widget_thumbbar thumbbar;
+	struct widget_panbar panbar;
+	struct widget_other other;
+	struct widget_bitset bitset;
 };
 struct widget {
-        enum widget_type type;
+	enum widget_type type;
 
-        union _widget_data_union        d;
+	union _widget_data_union        d;
 
-        /* for redrawing */
-        int x, y, width, height, depressed;
-        int clip_start, clip_end;
+	/* for redrawing */
+	int x, y, width, height, depressed;
+	int clip_start, clip_end;
 
-        /* these next 5 fields specify what widget gets selected next */
-        struct {
-                int up, down, left, right, tab;
-        } next;
+	/* these next 5 fields specify what widget gets selected next */
+	struct {
+		int up, down, left, right, tab;
+	} next;
 
-        /* called whenever the value is changed... duh ;) */
-        void (*changed) (void);
+	/* called whenever the value is changed... duh ;) */
+	void (*changed) (void);
 
-        /* called when the enter key is pressed */
-        void (*activate) (void);
+	/* called when the enter key is pressed */
+	void (*activate) (void);
 
-        /* called by the clipboard manager; really, only "other" widgets
-        should "override" this... */
-        int (*clipboard_paste)(int cb, const void *cptr);
+	/* called by the clipboard manager; really, only "other" widgets
+	should "override" this... */
+	int (*clipboard_paste)(int cb, const void *cptr);
 
-        /* true if the widget accepts "text"- used for digraphs and unicode
-        and alt+kp entry... */
-        int accept_text;
+	/* true if the widget accepts "text"- used for digraphs and unicode
+	and alt+kp entry... */
+	int accept_text;
 };
 
 /* this structure keeps all the information needed to draw a page, and a
@@ -272,44 +272,44 @@ struct widget {
  * everything in this struct MUST be set for each page.
  * functions that aren't implemented should be set to NULL. */
 struct page {
-        /* the title of the page, eg "Sample List (F3)" */
-        const char *title;
+	/* the title of the page, eg "Sample List (F3)" */
+	const char *title;
 
-        /* font editor takes over full screen */
-        void (*draw_full)(void);
-        /* draw the labels, etc. that don't change */
-        void (*draw_const) (void);
-        /* called after the song is changed. this is to copy the new
-         * values from the song to the widgets on the page. */
-        void (*song_changed_cb) (void);
-        /* called before widgets are drawn, mostly to fix the values
-         * (for example, on the sample page this sets everything to
-         * whatever values the current sample has) - this is a lousy
-         * hack. sorry. :P */
-        void (*predraw_hook) (void);
-        /* draw the parts of the page that change when the song is playing
-         * (this is called *very* frequently) */
-        void (*playback_update) (void);
-        /* this gets first shot at keys (to do unnatural overrides) */
-        int (*pre_handle_key) (struct key_event * k);
-        /* this catches any keys that the main handler doesn't deal with */
-        void (*handle_key) (struct key_event * k);
-        /* called when the page is set. this is for reloading the
-         * directory in the file browsers. */
-        void (*set_page) (void);
+	/* font editor takes over full screen */
+	void (*draw_full)(void);
+	/* draw the labels, etc. that don't change */
+	void (*draw_const) (void);
+	/* called after the song is changed. this is to copy the new
+	 * values from the song to the widgets on the page. */
+	void (*song_changed_cb) (void);
+	/* called before widgets are drawn, mostly to fix the values
+	 * (for example, on the sample page this sets everything to
+	 * whatever values the current sample has) - this is a lousy
+	 * hack. sorry. :P */
+	void (*predraw_hook) (void);
+	/* draw the parts of the page that change when the song is playing
+	 * (this is called *very* frequently) */
+	void (*playback_update) (void);
+	/* this gets first shot at keys (to do unnatural overrides) */
+	int (*pre_handle_key) (struct key_event * k);
+	/* this catches any keys that the main handler doesn't deal with */
+	void (*handle_key) (struct key_event * k);
+	/* called when the page is set. this is for reloading the
+	 * directory in the file browsers. */
+	void (*set_page) (void);
 
-        /* called when the song-mode changes */
-        void (*song_mode_changed_cb) (void);
+	/* called when the song-mode changes */
+	void (*song_mode_changed_cb) (void);
 
-        /* called by the clipboard manager */
-        int (*clipboard_paste)(int cb, const void *cptr);
+	/* called by the clipboard manager */
+	int (*clipboard_paste)(int cb, const void *cptr);
 
-        struct widget *widgets;
-        int selected_widget;
-        int total_widgets;
+	struct widget *widgets;
+	int selected_widget;
+	int total_widgets;
 
-        /* 0 if no page-specific help */
-        int help_index;
+	/* 0 if no page-specific help */
+	int help_index;
 };
 
 /* --------------------------------------------------------------------- */
@@ -338,49 +338,49 @@ extern int instrument_list_subpage;
 /* --------------------------------------------------------------------- */
 
 enum page_numbers {
-        PAGE_BLANK,
-        PAGE_HELP,
-        PAGE_ABOUT,
-        PAGE_LOG,
+	PAGE_BLANK,
+	PAGE_HELP,
+	PAGE_ABOUT,
+	PAGE_LOG,
 
-        PAGE_PATTERN_EDITOR,
-        PAGE_SAMPLE_LIST,
-        // PAGE_INSTRUMENT_LIST doesn't exist
-        PAGE_INFO,
+	PAGE_PATTERN_EDITOR,
+	PAGE_SAMPLE_LIST,
+	// PAGE_INSTRUMENT_LIST doesn't exist
+	PAGE_INFO,
 
-        PAGE_CONFIG,
-        PAGE_PREFERENCES,
+	PAGE_CONFIG,
+	PAGE_PREFERENCES,
 
-        PAGE_MIDI,
-        PAGE_MIDI_OUTPUT,
+	PAGE_MIDI,
+	PAGE_MIDI_OUTPUT,
 
-        PAGE_LOAD_MODULE,
-        PAGE_SAVE_MODULE,
-        PAGE_EXPORT_MODULE,
+	PAGE_LOAD_MODULE,
+	PAGE_SAVE_MODULE,
+	PAGE_EXPORT_MODULE,
 
-        PAGE_ORDERLIST_PANNING,
-        PAGE_ORDERLIST_VOLUMES,
+	PAGE_ORDERLIST_PANNING,
+	PAGE_ORDERLIST_VOLUMES,
 
-        PAGE_SONG_VARIABLES,
-        PAGE_MESSAGE,
+	PAGE_SONG_VARIABLES,
+	PAGE_MESSAGE,
 
-        /* don't use these directly with set_page */
-        PAGE_INSTRUMENT_LIST_GENERAL,
-        PAGE_INSTRUMENT_LIST_VOLUME,
-        PAGE_INSTRUMENT_LIST_PANNING,
-        PAGE_INSTRUMENT_LIST_PITCH,
+	/* don't use these directly with set_page */
+	PAGE_INSTRUMENT_LIST_GENERAL,
+	PAGE_INSTRUMENT_LIST_VOLUME,
+	PAGE_INSTRUMENT_LIST_PANNING,
+	PAGE_INSTRUMENT_LIST_PITCH,
 
-        PAGE_LOAD_SAMPLE,
-        PAGE_LIBRARY_SAMPLE,
-        PAGE_LOAD_INSTRUMENT,
-        PAGE_LIBRARY_INSTRUMENT,
+	PAGE_LOAD_SAMPLE,
+	PAGE_LIBRARY_SAMPLE,
+	PAGE_LOAD_INSTRUMENT,
+	PAGE_LIBRARY_INSTRUMENT,
 
-        PAGE_PALETTE_EDITOR,
-        PAGE_FONT_EDIT,
+	PAGE_PALETTE_EDITOR,
+	PAGE_FONT_EDIT,
 
-        PAGE_WATERFALL,
+	PAGE_WATERFALL,
 
-        PAGE_MAX
+	PAGE_MAX
 };
 
 /* --------------------------------------------------------------------- */
@@ -418,40 +418,40 @@ void waterfall_load_page(struct page *page);
 /* --------------------------------------------------------------------- */
 
 void create_toggle(struct widget *w, int x, int y, int next_up,
-                   int next_down, int next_left, int next_right,
-                   int next_tab, void (*changed) (void));
+		   int next_down, int next_left, int next_right,
+		   int next_tab, void (*changed) (void));
 void create_menutoggle(struct widget *w, int x, int y, int next_up,
-                       int next_down, int next_left, int next_right,
-                       int next_tab, void (*changed) (void),
-                       const char *const *choices);
+		       int next_down, int next_left, int next_right,
+		       int next_tab, void (*changed) (void),
+		       const char *const *choices);
 void create_button(struct widget *w, int x, int y, int width, int next_up,
-                   int next_down, int next_left, int next_right,
-                   int next_tab, void (*changed) (void), const char *text,
-                   int padding);
+		   int next_down, int next_left, int next_right,
+		   int next_tab, void (*changed) (void), const char *text,
+		   int padding);
 void create_togglebutton(struct widget *w, int x, int y, int width,
-                         int next_up, int next_down, int next_left,
-                         int next_right, int next_tab,
-                         void (*changed) (void), const char *text,
-                         int padding, const int *group);
+			 int next_up, int next_down, int next_left,
+			 int next_right, int next_tab,
+			 void (*changed) (void), const char *text,
+			 int padding, const int *group);
 void create_textentry(struct widget *w, int x, int y, int width, int next_up,
-                      int next_down, int next_tab, void (*changed) (void),
-                      char *text, int max_length);
+		      int next_down, int next_tab, void (*changed) (void),
+		      char *text, int max_length);
 void create_numentry(struct widget *w, int x, int y, int width, int next_up,
-                     int next_down, int next_tab, void (*changed) (void),
-                     int min, int max, int *cursor_pos);
+		     int next_down, int next_tab, void (*changed) (void),
+		     int min, int max, int *cursor_pos);
 void create_thumbbar(struct widget *w, int x, int y, int width, int next_up,
-                     int next_down, int next_tab, void (*changed) (void),
-                     int min, int max);
+		     int next_down, int next_tab, void (*changed) (void),
+		     int min, int max);
 void create_bitset(struct widget *w, int x, int y, int width, int next_up,
-                   int next_down, int next_tab, void (*changed) (void),
-                   int nbits, const char* bits_on, const char* bits_off,
-                   int *cursor_pos);
+		   int next_down, int next_tab, void (*changed) (void),
+		   int nbits, const char* bits_on, const char* bits_off,
+		   int *cursor_pos);
 void create_panbar(struct widget *w, int x, int y, int next_up,
-                   int next_down, int next_tab, void (*changed) (void),
-                   int channel);
+		   int next_down, int next_tab, void (*changed) (void),
+		   int channel);
 void create_other(struct widget *w, int next_tab,
-                  int (*w_handle_key) (struct key_event * k),
-                  void (*w_redraw) (void));
+		  int (*w_handle_key) (struct key_event * k),
+		  void (*w_redraw) (void));
 
 /* --------------------------------------------------------------------- */
 
@@ -475,7 +475,7 @@ int widget_handle_key(struct key_event * k);
 
 /* draw-misc.c */
 void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
-                    int selected);
+		    int selected);
 /* vu meter values should range from 0 to 64. the color is generally 5
  * unless the channel is disabled (in which case it's 1). impulse tracker
  * doesn't do peak color; st3 style, use color 4 (unless it's disabled,
@@ -520,29 +520,29 @@ int char_unicode_to_cp437(unsigned int c);
 /* dialog crap */
 
 struct dialog {
-        int type;
-        int x, y, w, h;
+	int type;
+	int x, y, w, h;
 
-        /* next two are for "simple" dialogs (type != DIALOG_CUSTOM) */
-        char *text;     /* malloc'ed */
-        int text_x;
+	/* next two are for "simple" dialogs (type != DIALOG_CUSTOM) */
+	char *text;     /* malloc'ed */
+	int text_x;
 
-        struct widget *widgets;     /* malloc'ed */
-        int selected_widget;
-        int total_widgets;
+	struct widget *widgets;     /* malloc'ed */
+	int selected_widget;
+	int total_widgets;
 
-        void *data; /* extra data pointer */
+	void *data; /* extra data pointer */
 
-        /* maybe these should get the data pointer as well? */
-        void (*draw_const) (void);
-        int (*handle_key) (struct key_event * k);
+	/* maybe these should get the data pointer as well? */
+	void (*draw_const) (void);
+	int (*handle_key) (struct key_event * k);
 
-        /* there's no action_ok, as yes and ok are fundamentally the same */
-        void (*action_yes) (void *data);
-        void (*action_no) (void *data); /* only useful for y/n dialogs? */
-        /* currently, this is only settable for custom dialogs.
-         * it's only used in a couple of places (mostly on the pattern editor) */
-        void (*action_cancel) (void *data);
+	/* there's no action_ok, as yes and ok are fundamentally the same */
+	void (*action_yes) (void *data);
+	void (*action_no) (void *data); /* only useful for y/n dialogs? */
+	/* currently, this is only settable for custom dialogs.
+	 * it's only used in a couple of places (mostly on the pattern editor) */
+	void (*action_cancel) (void *data);
 };
 
 /* dialog handlers
@@ -561,7 +561,7 @@ int dialog_handle_key(struct key_event * k);
 void dialog_draw(void);
 
 struct dialog *dialog_create(int type, const char *text, void (*action_yes) (void *data),
-                   void (*action_no) (void *data), int default_widget, void *data);
+		   void (*action_no) (void *data), int default_widget, void *data);
 
 void dialog_destroy(void);
 void dialog_destroy_all(void);
@@ -570,8 +570,8 @@ void dialog_destroy_all(void);
  * the caller can set other properties of the dialog (i.e. the yes/no/cancel callbacks) after
  * the dialog has been displayed. */
 struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
-                                    int dialog_total_widgets, int dialog_selected_widget,
-                                    void (*draw_const) (void), void *data);
+				    int dialog_total_widgets, int dialog_selected_widget,
+				    void (*draw_const) (void), void *data);
 
 /* --------------------------------------------------------------------- */
 /* Other UI prompt stuff. */

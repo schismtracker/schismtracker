@@ -39,35 +39,35 @@ static void *_alsaless_sdl_hack = NULL;
 
 void alsa_dlinit(void)
 {
-        /* okay, this is how this works:
-         * to operate the alsa mixer and alsa midi, we need functions in
-         * libasound.so.2 -- if we can do that, *AND* libSDL has the
-         * ALSA_bootstrap routine- then SDL was built with alsa-support-
-         * which means schism can probably use ALSA - so we set that as the
-         * default here.
-         */
-        _dltrick_handle = dlopen("libasound.so.2", RTLD_NOW);
-        if (!_dltrick_handle)
-                _dltrick_handle = dlopen("libasound.so", RTLD_NOW);
-        if (!getenv("SDL_AUDIODRIVER")) {
-                _alsaless_sdl_hack = dlopen("libSDL-1.2.so.0", RTLD_NOW);
-                if (!_alsaless_sdl_hack)
-                        _alsaless_sdl_hack = RTLD_DEFAULT;
+	/* okay, this is how this works:
+	 * to operate the alsa mixer and alsa midi, we need functions in
+	 * libasound.so.2 -- if we can do that, *AND* libSDL has the
+	 * ALSA_bootstrap routine- then SDL was built with alsa-support-
+	 * which means schism can probably use ALSA - so we set that as the
+	 * default here.
+	 */
+	_dltrick_handle = dlopen("libasound.so.2", RTLD_NOW);
+	if (!_dltrick_handle)
+		_dltrick_handle = dlopen("libasound.so", RTLD_NOW);
+	if (!getenv("SDL_AUDIODRIVER")) {
+		_alsaless_sdl_hack = dlopen("libSDL-1.2.so.0", RTLD_NOW);
+		if (!_alsaless_sdl_hack)
+			_alsaless_sdl_hack = RTLD_DEFAULT;
 
 #if 0
-                if (_dltrick_handle && _alsaless_sdl_hack
-                && (dlsym(_alsaless_sdl_hack, "ALSA_bootstrap")
-                || dlsym(_alsaless_sdl_hack, "snd_pcm_open"))) {
-                        static int (*alsa_snd_pcm_open)(void **pcm,
-                                        const char *name,
-                                        int stream,
-                                        int mode);
-                        static int (*alsa_snd_pcm_close)(void *pcm);
+		if (_dltrick_handle && _alsaless_sdl_hack
+		&& (dlsym(_alsaless_sdl_hack, "ALSA_bootstrap")
+		|| dlsym(_alsaless_sdl_hack, "snd_pcm_open"))) {
+			static int (*alsa_snd_pcm_open)(void **pcm,
+					const char *name,
+					int stream,
+					int mode);
+			static int (*alsa_snd_pcm_close)(void *pcm);
 
-                        alsa_snd_pcm_open = dlsym(_dltrick_handle, "snd_pcm_open");
-                        alsa_snd_pcm_close = dlsym(_dltrick_handle, "snd_pcm_close");
-                }
+			alsa_snd_pcm_open = dlsym(_dltrick_handle, "snd_pcm_open");
+			alsa_snd_pcm_close = dlsym(_dltrick_handle, "snd_pcm_close");
+		}
 #endif
-        }
+	}
 }
 

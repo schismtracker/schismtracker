@@ -94,42 +94,42 @@ static DIR_ENTRY *entry_from_path(const char *path) {
     const char *pathPosition = path;
     const char *pathEnd = strchr(path, '\0');
     if (pathPosition[0] == DIR_SEPARATOR) {
-        entry = root;
-        while (pathPosition[0] == DIR_SEPARATOR) pathPosition++;
-        if (pathPosition >= pathEnd) found = true;
+	entry = root;
+	while (pathPosition[0] == DIR_SEPARATOR) pathPosition++;
+	if (pathPosition >= pathEnd) found = true;
     } else {
-        entry = current;
+	entry = current;
     }
     if (entry == root && !strcmp(".", pathPosition)) found = true;
     DIR_ENTRY *dir = entry;
     while (!found && !notFound) {
-        const char *nextPathPosition = strchr(pathPosition, DIR_SEPARATOR);
-        size_t dirnameLength;
-        if (nextPathPosition != NULL) dirnameLength = nextPathPosition - pathPosition;
-        else dirnameLength = strlen(pathPosition);
-        if (dirnameLength >= ISFS_MAXPATHLEN) return NULL;
+	const char *nextPathPosition = strchr(pathPosition, DIR_SEPARATOR);
+	size_t dirnameLength;
+	if (nextPathPosition != NULL) dirnameLength = nextPathPosition - pathPosition;
+	else dirnameLength = strlen(pathPosition);
+	if (dirnameLength >= ISFS_MAXPATHLEN) return NULL;
 
-        u32 fileIndex = 0;
-        while (fileIndex < dir->fileCount && !found && !notFound) {
-            entry = &dir->children[fileIndex];
-            if (dirnameLength == strnlen(entry->name, ISFS_MAXPATHLEN - 1)
-                && !strncasecmp(pathPosition, entry->name, dirnameLength)) found = true;
-            if (found && !is_dir(entry) && nextPathPosition) found = false;
-            if (!found) fileIndex++;
-        }
+	u32 fileIndex = 0;
+	while (fileIndex < dir->fileCount && !found && !notFound) {
+	    entry = &dir->children[fileIndex];
+	    if (dirnameLength == strnlen(entry->name, ISFS_MAXPATHLEN - 1)
+		&& !strncasecmp(pathPosition, entry->name, dirnameLength)) found = true;
+	    if (found && !is_dir(entry) && nextPathPosition) found = false;
+	    if (!found) fileIndex++;
+	}
 
-        if (fileIndex >= dir->fileCount) {
-            notFound = true;
-            found = false;
-        } else if (!nextPathPosition || nextPathPosition >= pathEnd) {
-            found = true;
-        } else if (is_dir(entry)) {
-            dir = entry;
-            pathPosition = nextPathPosition;
-            while (pathPosition[0] == DIR_SEPARATOR) pathPosition++;
-            if (pathPosition >= pathEnd) found = true;
-            else found = false;
-        }
+	if (fileIndex >= dir->fileCount) {
+	    notFound = true;
+	    found = false;
+	} else if (!nextPathPosition || nextPathPosition >= pathEnd) {
+	    found = true;
+	} else if (is_dir(entry)) {
+	    dir = entry;
+	    pathPosition = nextPathPosition;
+	    while (pathPosition[0] == DIR_SEPARATOR) pathPosition++;
+	    if (pathPosition >= pathEnd) found = true;
+	    else found = false;
+	}
     }
 
     if (found && !notFound) return entry;
@@ -137,24 +137,24 @@ static DIR_ENTRY *entry_from_path(const char *path) {
 }
 
 static int _ISFS_open_r(struct _reent *r, void *fileStruct, const char *path,
-                        UNUSED int flags, UNUSED int mode) {
+			UNUSED int flags, UNUSED int mode) {
     FILE_STRUCT *file = (FILE_STRUCT *)fileStruct;
     DIR_ENTRY *entry = entry_from_path(path);
     if (!entry) {
-        r->_errno = ENOENT;
-        return -1;
+	r->_errno = ENOENT;
+	return -1;
     } else if (is_dir(entry)) {
-        r->_errno = EISDIR;
-        return -1;
+	r->_errno = EISDIR;
+	return -1;
     }
 
     file->entry = entry;
     file->inUse = true;
     file->isfs_fd = ISFS_Open(entry->abspath, ISFS_OPEN_READ);
     if (file->isfs_fd < 0) {
-        if (file->isfs_fd == ISFS_EINVAL) r->_errno = EACCES;
-        else r->_errno = -file->isfs_fd;
-        return -1;
+	if (file->isfs_fd == ISFS_EINVAL) r->_errno = EACCES;
+	else r->_errno = -file->isfs_fd;
+	return -1;
     }
 
     return (int)file;
@@ -163,15 +163,15 @@ static int _ISFS_open_r(struct _reent *r, void *fileStruct, const char *path,
 static int _ISFS_close_r(struct _reent *r, int fd) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
-        r->_errno = EBADF;
-        return -1;
+	r->_errno = EBADF;
+	return -1;
     }
     file->inUse = false;
 
     s32 ret = ISFS_Close(file->isfs_fd);
     if (ret < 0) {
-        r->_errno = -ret;
-        return -1;
+	r->_errno = -ret;
+	return -1;
     }
 
     return 0;
@@ -180,19 +180,19 @@ static int _ISFS_close_r(struct _reent *r, int fd) {
 static int _ISFS_read_r(struct _reent *r, int fd, char *ptr, size_t len) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
-        r->_errno = EBADF;
-        return -1;
+	r->_errno = EBADF;
+	return -1;
     }
     if (len <= 0) {
-        return 0;
+	return 0;
     }
 
     s32 ret = ISFS_Read(file->isfs_fd, read_buffer, len);
     if (ret < 0) {
-        r->_errno = -ret;
-        return -1;
+	r->_errno = -ret;
+	return -1;
     } else if ((size_t) ret < len) {
-        r->_errno = EOVERFLOW;
+	r->_errno = EOVERFLOW;
     }
     
     memcpy(ptr, read_buffer, ret);
@@ -202,14 +202,14 @@ static int _ISFS_read_r(struct _reent *r, int fd, char *ptr, size_t len) {
 static off_t _ISFS_seek_r(struct _reent *r, int fd, off_t pos, int dir) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
-        r->_errno = EBADF;
-        return -1;
+	r->_errno = EBADF;
+	return -1;
     }
 
     s32 ret = ISFS_Seek(file->isfs_fd, pos, dir);
     if (ret < 0) {
-        r->_errno = -ret;
-        return -1;
+	r->_errno = -ret;
+	return -1;
     }
     return ret;
 }
@@ -238,8 +238,8 @@ static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
 static int _ISFS_fstat_r(struct _reent *r, int fd, struct stat *st) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
-        r->_errno = EBADF;
-        return -1;
+	r->_errno = EBADF;
+	return -1;
     }
     stat_entry(file->entry, st);
     return 0;
@@ -248,8 +248,8 @@ static int _ISFS_fstat_r(struct _reent *r, int fd, struct stat *st) {
 static int _ISFS_stat_r(struct _reent *r, const char *path, struct stat *st) {
     DIR_ENTRY *entry = entry_from_path(path);
     if (!entry) {
-        r->_errno = ENOENT;
-        return -1;
+	r->_errno = ENOENT;
+	return -1;
     }
     stat_entry(entry, st);
     return 0;
@@ -258,11 +258,11 @@ static int _ISFS_stat_r(struct _reent *r, const char *path, struct stat *st) {
 static int _ISFS_chdir_r(struct _reent *r, const char *path) {
     DIR_ENTRY *entry = entry_from_path(path);
     if (!entry) {
-        r->_errno = ENOENT;
-        return -1;
+	r->_errno = ENOENT;
+	return -1;
     } else if (!is_dir(entry)) {
-        r->_errno = ENOTDIR;
-        return -1;
+	r->_errno = ENOTDIR;
+	return -1;
     }
     return 0;
 }
@@ -271,11 +271,11 @@ static DIR_ITER *_ISFS_diropen_r(struct _reent *r, DIR_ITER *dirState, const cha
     DIR_STATE_STRUCT *state = (DIR_STATE_STRUCT *)(dirState->dirStruct);
     state->entry = entry_from_path(path);
     if (!state->entry) {
-        r->_errno = ENOENT;
-        return NULL;
+	r->_errno = ENOENT;
+	return NULL;
     } else if (!is_dir(state->entry)) {
-        r->_errno = ENOTDIR;
-        return NULL;
+	r->_errno = ENOTDIR;
+	return NULL;
     }
     state->index = 0;
     state->inUse = true;
@@ -285,8 +285,8 @@ static DIR_ITER *_ISFS_diropen_r(struct _reent *r, DIR_ITER *dirState, const cha
 static int _ISFS_dirreset_r(struct _reent *r, DIR_ITER *dirState) {
     DIR_STATE_STRUCT *state = (DIR_STATE_STRUCT *)(dirState->dirStruct);
     if (!state->inUse) {
-        r->_errno = EBADF;
-        return -1;
+	r->_errno = EBADF;
+	return -1;
     }
     state->index = 0;
     return 0;
@@ -295,12 +295,12 @@ static int _ISFS_dirreset_r(struct _reent *r, DIR_ITER *dirState) {
 static int _ISFS_dirnext_r(struct _reent *r, DIR_ITER *dirState, char *filename, struct stat *st) {
     DIR_STATE_STRUCT *state = (DIR_STATE_STRUCT *)(dirState->dirStruct);
     if (!state->inUse) {
-        r->_errno = EBADF;
-        return -1;
+	r->_errno = EBADF;
+	return -1;
     }
     if (state->index >= state->entry->fileCount) {
-        r->_errno = ENOENT;
-        return -1;
+	r->_errno = ENOENT;
+	return -1;
     }
     DIR_ENTRY *entry = &state->entry->children[state->index++];
     strncpy(filename, entry->name, ISFS_MAXPATHLEN - 1);
@@ -311,8 +311,8 @@ static int _ISFS_dirnext_r(struct _reent *r, DIR_ITER *dirState, char *filename,
 static int _ISFS_dirclose_r(struct _reent *r, DIR_ITER *dirState) {
     DIR_STATE_STRUCT *state = (DIR_STATE_STRUCT *)(dirState->dirStruct);
     if (!state->inUse) {
-        r->_errno = EBADF;
-        return -1;
+	r->_errno = EBADF;
+	return -1;
     }
     state->inUse = false;
     return 0;
@@ -364,29 +364,29 @@ static bool read_recursive(DIR_ENTRY *parent) {
     u32 fileCount;
     s32 ret = ISFS_ReadDir(parent->abspath, NULL, &fileCount);
     if (ret != ISFS_OK) {
-        s32 fd = ISFS_Open(parent->abspath, ISFS_OPEN_READ);
-        if (fd >= 0) {
-            static fstats st __attribute__((aligned(32)));
-            if (ISFS_GetFileStats(fd, &st) == ISFS_OK) parent->size = st.file_length;
-            ISFS_Close(fd);
-        }
-        return true;
+	s32 fd = ISFS_Open(parent->abspath, ISFS_OPEN_READ);
+	if (fd >= 0) {
+	    static fstats st __attribute__((aligned(32)));
+	    if (ISFS_GetFileStats(fd, &st) == ISFS_OK) parent->size = st.file_length;
+	    ISFS_Close(fd);
+	}
+	return true;
     }
     parent->flags = FLAG_DIR;
     if (fileCount > 0) {
-        if ((ISFS_MAXPATHLEN * fileCount) > BUFFER_SIZE) return false;
-        ret = ISFS_ReadDir(parent->abspath, read_buffer, &fileCount);
-        if (ret != ISFS_OK) return false;
-        u32 fileNum;
-        char *name = read_buffer;
-        for (fileNum = 0; fileNum < fileCount; fileNum++) {
-            DIR_ENTRY *child = add_child_entry(parent, name);
-            if (!child) return false;
-            name += strlen(name) + 1;
-        }
-        for (fileNum = 0; fileNum < fileCount; fileNum++)
-            if (!read_recursive(parent->children + fileNum))
-                return false;
+	if ((ISFS_MAXPATHLEN * fileCount) > BUFFER_SIZE) return false;
+	ret = ISFS_ReadDir(parent->abspath, read_buffer, &fileCount);
+	if (ret != ISFS_OK) return false;
+	u32 fileNum;
+	char *name = read_buffer;
+	for (fileNum = 0; fileNum < fileCount; fileNum++) {
+	    DIR_ENTRY *child = add_child_entry(parent, name);
+	    if (!child) return false;
+	    name += strlen(name) + 1;
+	}
+	for (fileNum = 0; fileNum < fileCount; fileNum++)
+	    if (!read_recursive(parent->children + fileNum))
+		return false;
     }
     return true;
 }
@@ -420,14 +420,14 @@ bool ISFS_Mount() {
 
 bool ISFS_Unmount() {
     if (root) {
-        cleanup_recursive(root);
-        free(root);
-        root = NULL;
+	cleanup_recursive(root);
+	free(root);
+	root = NULL;
     }
     current = root;
     if (dotab_device >= 0) {
-        dotab_device = -1;
-        return !RemoveDevice(DEVICE_NAME ":");
+	dotab_device = -1;
+	return !RemoveDevice(DEVICE_NAME ":");
     }
     return true;
 }
@@ -439,7 +439,7 @@ bool ISFS_Unmount() {
 s32 ISFS_SU() {
     u32 key = 0;
     return ES_Identify((signed_blob *) certs_bin, sizeof(certs_bin),
-                       (signed_blob *) su_tmd_bin, sizeof(su_tmd_bin),
-                       (signed_blob *) su_tik_bin, sizeof(su_tik_bin),
-                       &key);
+		       (signed_blob *) su_tmd_bin, sizeof(su_tmd_bin),
+		       (signed_blob *) su_tik_bin, sizeof(su_tik_bin),
+		       &key);
 }

@@ -41,13 +41,13 @@
 
 typedef struct _slurp_struct slurp_t;
 struct _slurp_struct {
-        size_t length;
-        uint8_t *data;
-        int extra;
-        void *bextra;
-        void (*closure)(slurp_t *);
-        /* for reading streams */
-        size_t pos;
+	size_t length;
+	uint8_t *data;
+	int extra;
+	void *bextra;
+	void (*closure)(slurp_t *);
+	/* for reading streams */
+	size_t pos;
 };
 
 /* --------------------------------------------------------------------- */

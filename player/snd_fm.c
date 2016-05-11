@@ -46,7 +46,7 @@ The documentation in this file regarding the output ports,
 including the comment "Don't ask me why", are attributed
 to Jeffrey S. Lee's article:
   Programming the AdLib/Sound Blaster
-           FM Music Chips
+	   FM Music Chips
      Version 2.0 (24 Feb 1992)
 */
 
@@ -55,93 +55,93 @@ static const int oplbase = 0x388;
 // OPL info
 static struct OPL* opl = NULL;
 static UINT32 oplretval = 0,
-           oplregno = 0;
+	   oplregno = 0;
 static UINT32 fm_active = 0;
 
 extern int fnumToMilliHertz(unsigned int fnum, unsigned int block,
-        unsigned int conversionFactor);
+	unsigned int conversionFactor);
 
 extern void milliHertzToFnum(unsigned int milliHertz,
-        unsigned int *fnum, unsigned int *block, unsigned int conversionFactor);
+	unsigned int *fnum, unsigned int *block, unsigned int conversionFactor);
 
 
 static void Fmdrv_Outportb(unsigned port, unsigned value)
 {
-        if (opl == NULL ||
-            ((int) port) < oplbase ||
-            ((int) port) >= oplbase + 4)
-                return;
+	if (opl == NULL ||
+	    ((int) port) < oplbase ||
+	    ((int) port) >= oplbase + 4)
+		return;
 
-        unsigned ind = port - oplbase;
-        OPLWrite(opl, ind, value);
+	unsigned ind = port - oplbase;
+	OPLWrite(opl, ind, value);
 
-        if (ind & 1) {
-                if (oplregno == 4) {
-                        if (value == 0x80)
-                                oplretval = 0x02;
-                        else if (value == 0x21)
-                                oplretval = 0xC0;
-                }
-        }
-        else
-                oplregno = value;
+	if (ind & 1) {
+		if (oplregno == 4) {
+			if (value == 0x80)
+				oplretval = 0x02;
+			else if (value == 0x21)
+				oplretval = 0xC0;
+		}
+	}
+	else
+		oplregno = value;
 }
 
 
 static unsigned char Fmdrv_Inportb(unsigned port)
 {
-        return (((int) port) >= oplbase &&
-                ((int) port) < oplbase + 4) ? oplretval : 0;
+	return (((int) port) >= oplbase &&
+		((int) port) < oplbase + 4) ? oplretval : 0;
 }
 
 
 void Fmdrv_Init(int mixfreq)
 {
-        if (opl != NULL) {
-                OPLClose(opl);
-                opl = NULL;
-        }
-        //Clock for frequency 49716Hz. Mixfreq is used for output mix frequency.
-        opl = OPLNew(1789776 * 2, mixfreq);
-        OPLResetChip(opl);
-        OPL_Detect();
+	if (opl != NULL) {
+		OPLClose(opl);
+		opl = NULL;
+	}
+	//Clock for frequency 49716Hz. Mixfreq is used for output mix frequency.
+	opl = OPLNew(1789776 * 2, mixfreq);
+	OPLResetChip(opl);
+	OPL_Detect();
 }
 
 
 void Fmdrv_MixTo(int *target, int count)
 {
-        static short *buf = NULL;
-        static int buf_size = 0;
+	static short *buf = NULL;
+	static int buf_size = 0;
 
-        if (!fm_active)
-            return;
+	if (!fm_active)
+	    return;
 
-        if (buf_size != count * 2) {
-                int before = buf_size;
-                buf_size = sizeof(short) * count;
+	if (buf_size != count * 2) {
+		int before = buf_size;
+		buf_size = sizeof(short) * count;
 
-                if (before) {
-                        buf = (short *) realloc(buf, buf_size);
-                }
-                else {
-                        buf = (short *) malloc(buf_size);
-                }
-        }
+		if (before) {
+			buf = (short *) realloc(buf, buf_size);
+		}
+		else {
+			buf = (short *) malloc(buf_size);
+		}
+	}
 
-        memset(buf, 0, count * 2);
-        OPLUpdateOne(opl, buf, count);
+	memset(buf, 0, count * 2);
+	OPLUpdateOne(opl, buf, count);
 
-        /*
-        static int counter = 0;
+	/*
+	static int counter = 0;
 
-        for(int a = 0; a < count; ++a)
-                buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
-        */
+	for(int a = 0; a < count; ++a)
+		buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
+	*/
 
-        for (int a = 0; a < count; ++a) {
-            target[a * 2 + 0] += buf[a] * OPL_VOLUME;
-            target[a * 2 + 1] += buf[a] * OPL_VOLUME;
-        }
+	for (int a = 0; a < count; ++a) {
+	    target[a * 2 + 0] += buf[a] * OPL_VOLUME;
+	    target[a * 2 + 1] += buf[a] * OPL_VOLUME;
+	}
 }
 
 
@@ -155,28 +155,28 @@ static const unsigned char *Dtab[MAX_VOICES] = {NULL};
 
 static int SetBase(int c)
 {
-        return c % 9;
+	return c % 9;
 }
 
 
 static void OPL_Byte(unsigned char idx, unsigned char data)
 {
-        //register int a;
-        Fmdrv_Outportb(oplbase, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
-        Fmdrv_Outportb(oplbase + 1, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
+	//register int a;
+	Fmdrv_Outportb(oplbase, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
+	Fmdrv_Outportb(oplbase + 1, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
 }
 
 
 void OPL_NoteOff(int c)
 {
-        c = SetBase(c);
+	c = SetBase(c);
 
-        if (c<9) {
-            /* KEYON_BLOCK+c seems to not work alone?? */
-            OPL_Byte(KEYON_BLOCK + c, 0);
-            //OPL_Byte(KSL_LEVEL +     Ope, 0xFF);
-            //OPL_Byte(KSL_LEVEL + 3 + Ope, 0xFF);
-        }
+	if (c<9) {
+	    /* KEYON_BLOCK+c seems to not work alone?? */
+	    OPL_Byte(KEYON_BLOCK + c, 0);
+	    //OPL_Byte(KSL_LEVEL +     Ope, 0xFF);
+	    //OPL_Byte(KSL_LEVEL + 3 + Ope, 0xFF);
+	}
 }
 
 
@@ -190,14 +190,14 @@ void OPL_HertzTouch(int c, int milliHertz, int keyoff)
     c = SetBase(c);
 
     if (c >= 9)
-        return;
+	return;
 
     fm_active = 1;
 
 /*
     Bytes A0-B8 - Octave / F-Number / Key-On
 
-        7     6     5     4     3     2     1     0
+	7     6     5     4     3     2     1     0
      +-----+-----+-----+-----+-----+-----+-----+-----+
      |        F-Number (least significant byte)      |  (A0-A8)
      +-----+-----+-----+-----+-----+-----+-----+-----+
@@ -205,98 +205,98 @@ void OPL_HertzTouch(int c, int milliHertz, int keyoff)
      |           | On  |                 | most sig. |
      +-----+-----+-----+-----+-----+-----+-----+-----+
 */
-        unsigned int outfnum;
-        unsigned int outblock;
-        const int conversion_factor = 49716; // Frequency of OPL.
-        milliHertzToFnum(milliHertz, &outfnum, &outblock, conversion_factor);
-        OPL_Byte(0xA0 + c, outfnum & 255);       // F-Number low 8 bits
-        OPL_Byte(0xB0 + c, (keyoff ? 0 : 0x20) // Key on
-                      | ((outfnum >> 8) & 3)     // F-number high 2 bits
-                      | (outblock << 2)
-        );
+	unsigned int outfnum;
+	unsigned int outblock;
+	const int conversion_factor = 49716; // Frequency of OPL.
+	milliHertzToFnum(milliHertz, &outfnum, &outblock, conversion_factor);
+	OPL_Byte(0xA0 + c, outfnum & 255);       // F-Number low 8 bits
+	OPL_Byte(0xB0 + c, (keyoff ? 0 : 0x20) // Key on
+		      | ((outfnum >> 8) & 3)     // F-number high 2 bits
+		      | (outblock << 2)
+	);
 
 }
 
 
 void OPL_Touch(int c, const unsigned char *D, unsigned vol)
 {
-        if (!D) {
-                if (c < MAX_VOICES)
-                        D = Dtab[c];
-                if (!D)
-                        return;
-        }
+	if (!D) {
+		if (c < MAX_VOICES)
+			D = Dtab[c];
+		if (!D)
+			return;
+	}
 
 //fprintf(stderr, "OPL_Touch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
 //    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
 
-        Dtab[c] = D;
+	Dtab[c] = D;
 
-        c = SetBase(c);
+	c = SetBase(c);
 
-        if (c >= 9)
-            return;
+	if (c >= 9)
+	    return;
 
-        int Ope = PortBases[c];
+	int Ope = PortBases[c];
 
 /*
     Bytes 40-55 - Level Key Scaling / Total Level
 
-        7     6     5     4     3     2     1     0
+	7     6     5     4     3     2     1     0
      +-----+-----+-----+-----+-----+-----+-----+-----+
      |  Scaling  |             Total Level           |
      |   Level   | 24    12     6     3    1.5   .75 | <-- dB
      +-----+-----+-----+-----+-----+-----+-----+-----+
-          bits 7-6 - causes output levels to decrease as the frequency
-                     rises:
-                          00   -  no change
-                          10   -  1.5 dB/8ve
-                          01   -  3 dB/8ve
-                          11   -  6 dB/8ve
-          bits 5-0 - controls the total output level of the operator.
-                     all bits CLEAR is loudest; all bits SET is the
-                     softest.  Don't ask me why.
+	  bits 7-6 - causes output levels to decrease as the frequency
+		     rises:
+			  00   -  no change
+			  10   -  1.5 dB/8ve
+			  01   -  3 dB/8ve
+			  11   -  6 dB/8ve
+	  bits 5-0 - controls the total output level of the operator.
+		     all bits CLEAR is loudest; all bits SET is the
+		     softest.  Don't ask me why.
 */
-        OPL_Byte(KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
-        //  (63 + (d[2] & 63) * vol / 63 - vol)          - old formula
-        //  (63 - ((63 - (d[2] & 63)) * vol     ) / 63)  - older formula
-        //  (63 - ((63 - (d[2] & 63)) * vol + 32) / 64)  - revised formula, like ST3
-            (((int)(D[2] & 63) - 63) * vol + 63 * 64 - 32) / 64 // - optimized revised formula
-        );
+	OPL_Byte(KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
+	//  (63 + (d[2] & 63) * vol / 63 - vol)          - old formula
+	//  (63 - ((63 - (d[2] & 63)) * vol     ) / 63)  - older formula
+	//  (63 - ((63 - (d[2] & 63)) * vol + 32) / 64)  - revised formula, like ST3
+	    (((int)(D[2] & 63) - 63) * vol + 63 * 64 - 32) / 64 // - optimized revised formula
+	);
 
-        OPL_Byte(KSL_LEVEL + 3 + Ope, (D[3] & KSL_MASK) |
-            (((int)(D[3] & 63) - 63) * vol + 63 * 64 - 32) / 64
-        );
+	OPL_Byte(KSL_LEVEL + 3 + Ope, (D[3] & KSL_MASK) |
+	    (((int)(D[3] & 63) - 63) * vol + 63 * 64 - 32) / 64
+	);
 
-        /* 2008-09-27 Bisqwit:
-         * Did tests in ST3: The value poked
-         * to 0x43, minus from 63, is:
-         *
-         *  OplVol 63  47  31
-         * SmpVol
-         *  64     63  47  31
-         *  32     32  24  15
-         *  16     16  12   8
-         *
-         * This seems to clearly indicate that the value
-         * poked is calculated with 63 - round(oplvol*smpvol/64.0).
-         *
-         * Also, from the documentation we can deduce that
-         * the maximum volume to be set is 47.25 dB and that
-         * each increase by 1 corresponds to 0.75 dB.
-         *
-         * Since we know that 6 dB is equivalent to a doubling
-         * of the volume, we can deduce that an increase or
-         * decrease by 8 will double / halve the volume.
-         *
-         */
+	/* 2008-09-27 Bisqwit:
+	 * Did tests in ST3: The value poked
+	 * to 0x43, minus from 63, is:
+	 *
+	 *  OplVol 63  47  31
+	 * SmpVol
+	 *  64     63  47  31
+	 *  32     32  24  15
+	 *  16     16  12   8
+	 *
+	 * This seems to clearly indicate that the value
+	 * poked is calculated with 63 - round(oplvol*smpvol/64.0).
+	 *
+	 * Also, from the documentation we can deduce that
+	 * the maximum volume to be set is 47.25 dB and that
+	 * each increase by 1 corresponds to 0.75 dB.
+	 *
+	 * Since we know that 6 dB is equivalent to a doubling
+	 * of the volume, we can deduce that an increase or
+	 * decrease by 8 will double / halve the volume.
+	 *
+	 */
 }
 
 
 void OPL_Pan(int c, signed char val)
 {
-        Pans[c] = val;
-        /* Doesn't happen immediately! */
+	Pans[c] = val;
+	/* Doesn't happen immediately! */
 }
 
 
@@ -323,63 +323,63 @@ void OPL_Patch(int c, const unsigned char *D)
 
     /* feedback, additive synthesis and Panning... */
     OPL_Byte(FEEDBACK_CONNECTION+c,
-        (D[10] & ~STEREO_BITS)
-            | (Pans[c]<-32 ? VOICE_TO_LEFT
-                : Pans[c]>32 ? VOICE_TO_RIGHT
-                : (VOICE_TO_LEFT | VOICE_TO_RIGHT)
-            ));
+	(D[10] & ~STEREO_BITS)
+	    | (Pans[c]<-32 ? VOICE_TO_LEFT
+		: Pans[c]>32 ? VOICE_TO_RIGHT
+		: (VOICE_TO_LEFT | VOICE_TO_RIGHT)
+	    ));
 }
 
 
 void OPL_Reset(void)
 {
 //fprintf(stderr, "OPL_Reset\n");
-        int a;
+	int a;
 
-        for(a = 0; a < 244; a++)
-                OPL_Byte(a, 0);
+	for(a = 0; a < 244; a++)
+		OPL_Byte(a, 0);
 
-        for(a = 0; a < MAX_VOICES; ++a)
-                Dtab[a] = NULL;
+	for(a = 0; a < MAX_VOICES; ++a)
+		Dtab[a] = NULL;
 
-        OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
+	OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
 
-        fm_active = 0;
+	fm_active = 0;
 }
 
 
 int OPL_Detect(void)
 {
-        SetBase(0);
+	SetBase(0);
 
-        /* Reset timers 1 and 2 */
-        OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
+	/* Reset timers 1 and 2 */
+	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
 
-        /* Reset the IRQ of the FM chip */
-        OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
+	/* Reset the IRQ of the FM chip */
+	OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
 
-        unsigned char ST1 = Fmdrv_Inportb(oplbase); /* Status register */
+	unsigned char ST1 = Fmdrv_Inportb(oplbase); /* Status register */
 
-        OPL_Byte(TIMER1_REGISTER, 255);
-        OPL_Byte(TIMER_CONTROL_REGISTER, TIMER2_MASK | TIMER1_START);
+	OPL_Byte(TIMER1_REGISTER, 255);
+	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER2_MASK | TIMER1_START);
 
-        /*_asm xor cx,cx;P1:_asm loop P1*/
-        unsigned char ST2 = Fmdrv_Inportb(oplbase);
+	/*_asm xor cx,cx;P1:_asm loop P1*/
+	unsigned char ST2 = Fmdrv_Inportb(oplbase);
 
-        OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
-        OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
+	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
+	OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
 
-        int OPLMode = (ST2 & 0xE0) == 0xC0 && !(ST1 & 0xE0);
+	int OPLMode = (ST2 & 0xE0) == 0xC0 && !(ST1 & 0xE0);
 
-        if (!OPLMode)
-            return -1;
+	if (!OPLMode)
+	    return -1;
 
-        return 0;
+	return 0;
 }
 
 
 void OPL_Close(void)
 {
-        OPL_Reset();
+	OPL_Reset();
 }
 
