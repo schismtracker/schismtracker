@@ -446,7 +446,7 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
 
 	if (shdr.flag & 1) {
 		slurp_seek(fp, bswapLE32(shdr.sample_pointer), SEEK_SET);
-		
+
 		uint32_t flags = SF_LE;
 		flags |= (shdr.flag & 4) ? SF_SS : SF_M;
 		if (shdr.flag & 8) {

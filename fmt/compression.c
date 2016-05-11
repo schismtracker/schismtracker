@@ -126,11 +126,11 @@ uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t fil
 			} else {
 				v = (int8_t) value;
 			}
-			
+
 			// integrate upon the sample values
 			d1 += v;
 			d2 += d1;
-			
+
 			// .. and store it into the buffer
 			*destpos = it215 ? d2 : d1;
 			destpos += channels;
@@ -222,11 +222,11 @@ uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t fi
 			} else {
 				v = (int16_t) value;
 			}
-			
+
 			// integrate upon the sample values
 			d1 += v;
 			d2 += d1;
-			
+
 			// .. and store it into the buffer
 			*destpos = it215 ? d2 : d1;
 			destpos += channels;

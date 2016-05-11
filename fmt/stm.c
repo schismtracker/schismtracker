@@ -95,7 +95,7 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 	for (row = 0; row < 64; row++, note += 64 - 4) {
 		for (chan = 0; chan < 4; chan++, note++) {
 			slurp_read(fp, v, 4);
-			
+
 			// mostly copied from modplug...
 			if (v[0] < 251)
 				note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
@@ -108,7 +108,7 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 			else
 				note->volparam = 0;
 			note->param = v[3]; // easy!
-			
+
 			note->effect = stm_effects[v[2] & 0xf];
 			// patch a couple effects up
 			switch (note->effect) {

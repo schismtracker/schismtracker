@@ -133,7 +133,7 @@ void ver_init(void)
 		snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
 			"Schism Tracker built %s %s", __DATE__, __TIME__);
 	}
-		
+
 	top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
 }
 
