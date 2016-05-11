@@ -1240,7 +1240,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		// Don't start new notes after ===/~~~
 		chan->period = 0;
 	} else {
-		chan->period = get_freq_from_period(get_freq_from_period(chan->period, 1), 1);
+		chan->period = get_period_from_note(note, psmp->c5speed,
+			csf->flags & SONG_LINEARSLIDES);
 	}
 	chan->flags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE
 			   | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
