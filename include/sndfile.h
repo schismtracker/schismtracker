@@ -430,7 +430,7 @@ typedef struct song_voice {
 	int32_t fadeout_volume;
 	int32_t period;
 	int32_t c5speed;
-	int32_t sample_freq;
+	int32_t sample_freq; // only used on the info page (F5)
 	int32_t portamento_target;
 	song_instrument_t *ptr_instrument;      // these two suck, and should
 	song_sample_t *ptr_sample;              // be replaced with numbers
