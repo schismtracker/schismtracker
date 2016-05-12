@@ -103,6 +103,17 @@ static unsigned int find_volume(unsigned short vol)
 }
 
 
+unsigned int get_freq_from_period(int period, int linear)
+{
+	if (period <= 0)
+		return INT_MAX;
+	else if (linear)
+		return period;
+	else
+		return _muldiv(8363, 1712L << 8, (period << 8));
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 //
 // XXX * I prefixed these with `rn_' to avoid any namespace conflicts
