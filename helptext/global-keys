@@ -19,7 +19,7 @@
 |   Shift-F9          Message Editor
 !   F10               Save Module
 :   F10               Save Module (also Ctrl-W)
-:   Shift-F10         Export Module (to WAV, MIDI)
+:   Shift-F10         Export Module (to WAV, AIFF)
 |   F11               Order List and Panning
 | 2*F11               Order List and Channel Volume
 :   Ctrl-F11          Schism Logging
