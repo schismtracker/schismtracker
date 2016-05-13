@@ -26,3 +26,10 @@ up-to-date builds of the software.
 
 See [the wiki](https://github.com/jangler/schismtracker/wiki) for more
 information.
+
+## Download
+
+The latest stable builds for Windows, OS X, and Linux can be downloaded from
+<https://github.com/jangler/schismtracker/releases>. Older builds for other
+platforms can be found on [the
+wiki](https://github.com/jangler/schismtracker/wiki/Schism-Tracker).
