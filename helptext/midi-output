@@ -12,7 +12,7 @@
 |
 |     MIDI Start  - Player begins
 |      MIDI Stop  - Player stops playing
-|      MIDI Tick  - Every row(?)
+|      MIDI Tick  - Every tick
 |        Note On  - Every note recorded
 |       Note Off  - Every note off (including NNA note-off)
 |  Change Volume  - Volume change (more like aftertouch)
