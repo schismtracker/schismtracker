@@ -21,8 +21,8 @@ Schism Tracker was originally developed by
 [schismtracker.org](http://schismtracker.org/), but at the time of this writing
 the original website has gone offline and the project has gone unmaintained for
 over a year. This fork was created to continue the development of the program,
-preserve the information on the original website's wiki, and distribute
-up-to-date builds of the software.
+preserve the information from the original website's wiki, and distribute
+up-to-date versions of the software.
 
 See [the wiki](https://github.com/jangler/schismtracker/wiki) for more
 information.
