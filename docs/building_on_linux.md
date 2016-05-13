@@ -8,12 +8,12 @@ projects will find few surprises here.
 
 You'll need [autoconf](http://www.gnu.org/software/autoconf/),
 [automake](http://www.gnu.org/software/automake/), [gcc](http://gcc.gnu.org/),
-[make](http://www.gnu.org/software/make/), and [LibSDL](http://www.libsdl.org/)
-*at a minimum*. Additionally, [Git](https://git-scm.com/) is strongly
-recommended. If all you're planning on doing is building it once, you can just
-as easily grab the source tarball from the repository and build from that, but
-having Git installed makes it easier to keep up-to-date, help with debugging,
-and (if you're so inclined) development.
+[make](http://www.gnu.org/software/make/), [Python](https://www.python.org/)
+and [LibSDL](http://www.libsdl.org/) *at a minimum*. Additionally,
+[Git](https://git-scm.com/) is strongly recommended. If all you're planning on
+doing is building it once, you can just as easily grab the source tarball from
+the repository and build from that, but having Git installed makes it easier to
+keep up-to-date, help with debugging, and (if you're so inclined) development.
 
 See below for distro-specific instructions on how to get everything installed
 in order to build Schism Tracker.
