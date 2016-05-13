@@ -30,6 +30,6 @@ information.
 ## Download
 
 The latest stable builds for Windows, OS X, and Linux can be downloaded from
-<https://github.com/jangler/schismtracker/releases>. Older builds for other
-platforms can be found on [the
+[the releases page](https://github.com/jangler/schismtracker/releases). Older
+builds for other platforms can be found on [the
 wiki](https://github.com/jangler/schismtracker/wiki/Schism-Tracker).
