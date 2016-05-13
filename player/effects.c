@@ -532,6 +532,11 @@ static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
 	if ((csf->flags & SONG_FIRSTTICK) && chan->row_note != NOTE_NONE) {
 		chan->cd_retrig = param & 0xf;
 	} else if (--chan->cd_retrig <= 0) {
+		
+		// in Impulse Tracker, retrig only works if a sample is currently playing in the channel
+		if (chan->position == 0)
+			return;
+		
 		chan->cd_retrig = param & 0xf;
 		param >>= 4;
 		if (param) {
