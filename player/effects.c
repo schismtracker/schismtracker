@@ -251,12 +251,8 @@ static void fx_reg_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t 
 
 static void fx_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
-	if (param)
-		chan->mem_pitchslide = param;
-	else
+	if (!param)
 		param = chan->mem_pitchslide;
-	if (!(flags & SONG_COMPATGXX))
-		chan->mem_portanote = param;
 
 	switch (param & 0xf0) {
 	case 0xe0:
@@ -273,12 +269,8 @@ static void fx_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 
 static void fx_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
-	if (param)
-		chan->mem_pitchslide = param;
-	else
+	if (!param)
 		param = chan->mem_pitchslide;
-	if (!(flags & SONG_COMPATGXX))
-		chan->mem_portanote = param;
 
 	switch (param & 0xf0) {
 	case 0xe0:
@@ -297,12 +289,9 @@ static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t para
 {
 	int delta;
 
-	if (param)
-		chan->mem_portanote = param;
-	else
+	if (!param)
 		param = chan->mem_portanote;
-	if (!(flags & SONG_COMPATGXX))
-		chan->mem_pitchslide = param;
+
 	chan->flags |= CHN_PORTAMENTO;
 	if (chan->period && chan->portamento_target && !(flags & SONG_FIRSTTICK)) {
 		if (chan->period < chan->portamento_target) {
@@ -1581,10 +1570,22 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_PORTAMENTOUP:
+		if (firsttick) {
+			if (param)
+				chan->mem_pitchslide = param;
+			if (!(csf->flags & SONG_COMPATGXX))
+				chan->mem_portanote = chan->mem_pitchslide;
+		}
 		fx_portamento_up(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
 		break;
 
 	case FX_PORTAMENTODOWN:
+		if (firsttick) {
+			if (param)
+				chan->mem_pitchslide = param;
+			if (!(csf->flags & SONG_COMPATGXX))
+				chan->mem_portanote = chan->mem_pitchslide;
+		}
 		fx_portamento_down(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
 		break;
 
@@ -1593,6 +1594,12 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_TONEPORTAMENTO:
+		if (firsttick) {
+			if (param)
+				chan->mem_portanote = param;
+			if (!(csf->flags & SONG_COMPATGXX))
+				chan->mem_pitchslide = chan->mem_portanote;
+		}
 		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
 		break;
 
@@ -1876,6 +1883,12 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_TONEPORTAMENTO: // Gx
+		if (firsttick) {
+			if (vol)
+				chan->mem_portanote = vc_portamento_table[vol & 0x0F];
+			if (!(csf->flags & SONG_COMPATGXX))
+				chan->mem_pitchslide = chan->mem_portanote;
+		}
 		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan,
 			vc_portamento_table[vol & 0x0F]);
 		break;
@@ -2061,8 +2074,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 			}
 		}
 
-		handle_voleffect(csf, chan, volcmd, vol, firsttick, start_note);
 		handle_effect(csf, nchan, cmd, param, porta, firsttick);
+		handle_voleffect(csf, chan, volcmd, vol, firsttick, start_note);
 	}
 }
-
