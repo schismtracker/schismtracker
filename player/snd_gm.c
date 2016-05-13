@@ -714,33 +714,32 @@ void GM_SendSongPositionCode(unsigned note16pos)
 
 void GM_IncrementSongCounter(int count)
 {
-	/* We assume that each pattern row corresponds to a 1/4 note.
+	/* We assume that one schism tick = one midi tick (24ppq).
 	 *
 	 * We also know that:
-	 *                  5 * cmdA * mixingrate
-	 * Length of row is --------------------- samples
-	 *                         2 * cmdT
+	 *                   5 * mixingrate
+	 * Length of tick is -------------- samples
+	 *                     2 * cmdT
 	 *
-	 * where cmdA = last FX_SPEED = current_speed
-	 *   and cmdT = last FX_TEMPO = current_tempo
+	 * where cmdT = last FX_TEMPO = current_tempo
 	 */
-	int RowLengthInSamplesHi = 5 * current_song->current_speed * current_song->mix_frequency;
-	int RowLengthInSamplesLo = 2 * current_song->current_tempo;
 
-	double NumberOfSamplesPer32thNote =
-	    RowLengthInSamplesHi*8 / (double)RowLengthInSamplesLo;
+	int TickLengthInSamplesHi = 5 * current_song->mix_frequency;
+	int TickLengthInSamplesLo = 2 * current_song->current_tempo;
+
+	double TickLengthInSamples = TickLengthInSamplesHi / (double) TickLengthInSamplesLo;
 
 	/* TODO: Use fraction arithmetics instead (note: cmdA, cmdT may change any time) */
 
-	LastSongCounter += count / NumberOfSamplesPer32thNote;
+	LastSongCounter += count / TickLengthInSamples;
 
-	int n_32thNotes = (int)LastSongCounter;
+	int n_Ticks = (int)LastSongCounter;
 
-	if (n_32thNotes) {
-		for (int a = 0; a < n_32thNotes; ++a)
+	if (n_Ticks) {
+		for (int a = 0; a < n_Ticks; ++a)
 			GM_SendSongTickCode();
 
-		LastSongCounter -= n_32thNotes;
+		LastSongCounter -= n_Ticks;
 	}
 }
 
