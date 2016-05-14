@@ -126,7 +126,7 @@ If configure does not exist, (you will need autoconf and automake _[note: you
 can install them through the mingw GUI package manager - they are part of a
 package called "autotools"]_) execute:
 
-    autoreconf
+    autoreconf -i
 
 Alternatively, you can execute each individual command:
 
