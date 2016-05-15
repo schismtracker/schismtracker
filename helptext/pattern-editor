@@ -191,7 +191,9 @@
 |   Alt-U            Unmark block/Release clipboard memory
 |
 |   Alt-Q            Raise notes by a semitone  (*)
+|   Alt-Shift-Q      Raise notes by an octave  (*)
 |   Alt-A            Lower notes by a semitone  (*)
+|   Alt-Shift-A      Lower notes by an octave  (*)
 |   Alt-S            Set Instrument  (*)
 |   Alt-V            Set volume/panning  (*)
 |   Alt-W            Wipe vol/pan not associated with a note/instrument  (*)
