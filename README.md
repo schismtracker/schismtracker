@@ -17,12 +17,18 @@ Wii](http://www.wiibrew.org/wiki/Schism_Tracker). Schism will most likely build
 on *any* architecture supported by GCC4 (e.g. alpha, m68k, arm, etc.) but it
 will probably not be as well-optimized on many systems.
 
-See [the wiki](https://github.com/jangler/schismtracker/wiki) for more
+See [the wiki](https://github.com/schismtracker/schismtracker/wiki) for more
 information.
 
 ## Download
 
 The latest stable builds for Windows, OS X, and Linux can be downloaded from
-[the releases page](https://github.com/jangler/schismtracker/releases). Older
-builds for other platforms can be found on [the
-wiki](https://github.com/jangler/schismtracker/wiki/Schism-Tracker).
+[the releases page](https://github.com/schismtracker/schismtracker/releases).
+Older builds for other platforms can be found on [the
+wiki](https://github.com/schismtracker/schismtracker/wiki).
+
+## Compilation
+
+See the
+[docs/](https://github.com/schismtracker/schismtracker/tree/master/docs) folder
+for platform-specific instructions.
