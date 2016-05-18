@@ -166,6 +166,9 @@ struct video_cf {
 #define VIDEO_DDRAW             1
 #define VIDEO_YUV               2
 #define VIDEO_GL                3
+
+		int native_x;
+		int native_y;
 	} desktop;
 	struct {
 		unsigned int pitch;
@@ -384,16 +387,17 @@ static void _video_preinit(void)
 	}
 
 }
+
+// check if w and h are multiples of native res (and by the same multiplier)
 static int best_resolution(int w, int h)
 {
-	if ((w == NATIVE_SCREEN_WIDTH || w == (2*NATIVE_SCREEN_WIDTH)
-	|| w == (3*NATIVE_SCREEN_WIDTH) || w == (4*NATIVE_SCREEN_WIDTH))
-	&&
-	(h == NATIVE_SCREEN_HEIGHT || h == (2*NATIVE_SCREEN_HEIGHT)
-	|| h == (3*NATIVE_SCREEN_HEIGHT) || h == (4*NATIVE_SCREEN_HEIGHT))) {
+	if ((w % NATIVE_SCREEN_WIDTH == 0)
+	&&  (h % NATIVE_SCREEN_HEIGHT == 0)
+	&& ((w / NATIVE_SCREEN_WIDTH) == (h / NATIVE_SCREEN_HEIGHT))) {
 		return 1;
+	} else {
+		return 0;
 	}
-	return 0;
 }
 
 int video_is_fullscreen(void)
@@ -442,6 +446,8 @@ void video_setup(const char *driver)
 
 	video.draw.width = NATIVE_SCREEN_WIDTH;
 	video.draw.height = NATIVE_SCREEN_HEIGHT;
+	video.desktop.native_x = -1;
+	video.desktop.native_y = -1;
 	video.mouse.visible = MOUSE_EMULATED;
 
 	video.yuvlayout = VIDEO_YUV_NONE;
@@ -590,6 +596,14 @@ void video_startup(void)
 	char *q;
 	SDL_Rect **modes;
 	int i, j, x, y;
+
+	/* get monitor native res (assumed to be user's desktop res)
+	 * first time we start video */
+	if (video.desktop.native_x < 0 || video.desktop.native_x < 0) {
+		const SDL_VideoInfo* info = SDL_GetVideoInfo();
+		video.desktop.native_x = info->current_w;
+		video.desktop.native_y = info->current_h;
+	}
 
 	/* because first mode is 0 */
 	vgamem_clear();
@@ -823,6 +837,7 @@ SKIP1:
 	SDL_EventState(SDL_MOUSEBUTTONDOWN, SDL_ENABLE);
 	SDL_EventState(SDL_MOUSEBUTTONUP, SDL_ENABLE);
 #endif
+
 	_did_init = 1;
 	video_fullscreen(video.desktop.fullscreen);
 }
@@ -876,6 +891,43 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 		sdlflags |= (video.desktop.swsurface
 				? SDL_SWSURFACE
 				: SDL_HWSURFACE);
+		
+		/* if using swsurface, get a surface the size of the whole native monitor res
+		/* to avoid issues with weirdo display modes
+		/* get proper aspect ratio and surface of correct size */
+		if (video.desktop.fullscreen && video.desktop.swsurface) {
+			
+			double ar = NATIVE_SCREEN_WIDTH / (double) NATIVE_SCREEN_HEIGHT;
+			// ar = 4.0 / 3.0; want_fixed = 1; // uncomment for 4:3 fullscreen
+			
+			// get maximum size that can be this AR
+			if ((video.desktop.native_y * ar) > video.desktop.native_x) {
+				video.clip.h = video.desktop.native_x / ar;
+				video.clip.w = video.desktop.native_x;
+			} else {
+				video.clip.h = video.desktop.native_y;
+				video.clip.w = video.desktop.native_y * ar;
+			}	
+						
+			// clip to size (i.e. letterbox if necessary)
+			video.clip.x = (video.desktop.native_x - video.clip.w) / 2;
+			video.clip.y = (video.desktop.native_y - video.clip.h) / 2;
+			
+			// get a surface the size of the whole screen @ native res
+			w = video.desktop.native_x;
+			h = video.desktop.native_y;
+			
+			/* if we don't care about getting the right aspect ratio,
+			/* sod letterboxing and just get a surface the size of the entire display */
+			if (!want_fixed) {
+				video.clip.w = video.desktop.native_x;
+				video.clip.h = video.desktop.native_y;
+				video.clip.x = 0;
+				video.clip.y = 0;
+			}
+			
+		}
+		
 		video.surface = SDL_SetVideoMode(w, h,
 			video.desktop.bpp, sdlflags);
 	}
