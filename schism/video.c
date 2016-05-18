@@ -599,7 +599,7 @@ void video_startup(void)
 
 	/* get monitor native res (assumed to be user's desktop res)
 	 * first time we start video */
-	if (video.desktop.native_x < 0 || video.desktop.native_x < 0) {
+	if (video.desktop.native_x < 0 || video.desktop.native_y < 0) {
 		const SDL_VideoInfo* info = SDL_GetVideoInfo();
 		video.desktop.native_x = info->current_w;
 		video.desktop.native_y = info->current_h;
