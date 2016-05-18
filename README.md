@@ -22,9 +22,10 @@ information.
 
 ## Download
 
-The latest stable builds for Windows, OS X, and Linux can be downloaded from
-[the releases page](https://github.com/schismtracker/schismtracker/releases).
-Older builds for other platforms can be found on [the
+The latest stable builds for Windows, OS X, and Linux will soon be available
+from [the releases
+page](https://github.com/schismtracker/schismtracker/releases). Older builds
+for other platforms can be found on [the
 wiki](https://github.com/schismtracker/schismtracker/wiki).
 
 ## Compilation
