@@ -23,7 +23,7 @@ The location of this file is dependent on the OS:
 Aside from `config`, you may also add a `fonts` subdirectory for custom font
 files. By default, `font.cfg` is automatically loaded on startup, and other
 `*.itf` files are listed by the built-in font editor (Shift-F12). See [the
-links page](https://github.com/jangler/schismtracker/wiki/Links) for some
+links page](https://github.com/schismtracker/schismtracker/wiki/Links) for some
 resources on getting fonts for Schism Tracker.
 
 ## Potentially useful "hidden" config options
@@ -58,8 +58,8 @@ With numbered_backups, write to `filename.it.1~`, `filename.it.2~`, etc.
 
 Alter the key repeat. "Delay" is how long before keys begin to repeat, "rate"
 is how long between repeated keystrokes. (Both are in milliseconds.) Above are
-[Storlek](https://github.com/jangler/schismtracker/wiki/Storlek)'s settings,
-which are very fast but convenient for speed tracking.
+[Storlek](https://github.com/schismtracker/schismtracker/wiki/Storlek)'s
+settings, which are very fast but convenient for speed tracking.
 
 The *default* repeat delay and rate come from your operating system, so you
 only need to set this if you like having a different rate for Schism Tracker

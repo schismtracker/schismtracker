@@ -20,7 +20,7 @@ in order to build Schism Tracker.
 
 To get the source:
 
-    git clone https://github.com/jangler/schismtracker.git
+    git clone https://github.com/schismtracker/schismtracker.git
     cd schismtracker && autoreconf -i
 
 You can then update your schismtracker source directory by going to this
