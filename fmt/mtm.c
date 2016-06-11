@@ -191,7 +191,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			tmp = bswapLE16(tmp);
 			if (tmp == 0) {
 				continue;
-			} else if (tmp >= ntrk) {
+			} else if (tmp > ntrk) {
 				for (n = 0; n < ntrk; n++)
 					free(trackdata[n]);
 				free(trackdata);
