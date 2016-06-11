@@ -9,6 +9,9 @@ all intended for people to be tinkering with. Impulse Tracker has practically
 no error checking when loading the configuration, so it's very easy to cause
 a crash or hang just by changing values around in a hex editor.
 
+See also CONFIG.TXT from the Impulse Tracker source:
+https://bitbucket.org/jthlim/impulsetracker/src/tip/InternalDocumentation/
+
 
 
         0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
@@ -25,7 +28,7 @@ a crash or hang just by changing values around in a hex editor.
       ├───┬───┬───┼───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┤
 
       ├───┴───┴───┼───┴───┼───┴───┼───┴───┼───┼───┼───┼───┼───┴───┼───┤
-0130: │...........│NumView│  ???  │NormTrk│Min│Maj│Msk│Div│TrkCols│TVS│
+0130: │...........│NumView│Key Sig│NormTrk│Min│Maj│Msk│Div│TrkCols│TVS│
       ├───────────┴───────┴───────┴───────┴───┴───┴───┴───┴───────┴───┤
 0140: │ Track view scheme (2 * 100 bytes)                             │
       ├───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┤
@@ -58,6 +61,8 @@ a crash or hang just by changing values around in a hex editor.
                 file supports six views, IT only allows creating five.
                 (However, adding a sixth with a hex editor doesn't cause any
                 evident problems)
+
+      Key Sig:  "MUST be 0 (key signatures not defined)" (from IT src)
 
       NormTrk:  Number of tracks in "normal" (13-column, ST3-style) view in
                 the pattern editor.
@@ -123,7 +128,7 @@ Info Page settings (starting at 0103h):
 
         3   4   5   6   7   8   9   A   B   C   D   E   F   0   1   2
       ┌───────┬───┬───┬───────┬───────╥───────┬───┬───┬───────┬───────┐
-xxxx: │ Type  │ ? │Row│Height │MemOff ║ Type  │ ? │Row│Height │MemOff │
+xxxx: │ Type  │TCh│Row│Height │MemOff ║ Type  │TCh│Row│Height │MemOff │
       └───────┴───┴───┴───────┴───────╨───────┴───┴───┴───────┴───────┘
 
          Type:  Window "type" of respective info page window
@@ -137,6 +142,8 @@ xxxx: │ Type  │ ? │Row│Height │MemOff ║ Type  │ ? │Row│Height 
                         7 = Global volume / active channel count
                         8 = Note dots
                         9 = Technical details
+
+          TCh:  "Top channel" (from IT src)
 
           Row:  Row number on screen to draw the view.
                 Numbering starts at 0, and counts downward from the top of
@@ -192,11 +199,9 @@ File format changes:
         of the tracker (as there's no real version information in the file).
 
 
-
 And there you have it. If you have any questions, comments, anomalous IT.CFG
 files, or a decidedly ancient version of Impulse Tracker, send an e-mail to
-<storlek@rigelseven.com> or find me on IRC (/msg Storlek on Freenode, and
-usually also SynIRC and EFnet).
+<storlek@rigelseven.com>.
 
         -- Storlek - http://rigelseven.com/ - http://schismtracker.org/
 """
