@@ -32,13 +32,7 @@
 #include "song.h" // for 'current_song', which we shouldn't need
 #include "snd_gm.h"
 
-#include <math.h> // for log and log2
-#if !defined(HAVE_LOG2) && !defined(__USE_ISOC99) && !defined(log2)
-static double log2(double d)
-{
-	return log(d) / log(2.0);
-}
-#endif
+#include <math.h> // for log
 
 
 #define LinearMidivol 1
@@ -645,7 +639,7 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 	       point accuracy, but given the range of the numbers
 	       we work here with, that's hardly an issue.)
 	*/
-	double midinote = 69 + 12.0 * log2(Hertz/440.0);
+	double midinote = 69 + 12.0 * log(Hertz/440.0) / log(2.0);
 
 	// Reduce by a couple of octaves... Apparently the hertz
 	// value that comes from SchismTracker is upscaled by some 2^5.
