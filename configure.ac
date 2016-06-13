@@ -57,6 +57,9 @@ AC_C_BIGENDIAN
 dnl Check for SDL libs
 AM_PATH_SDL(1.2.10, , AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.]))
 
+dnl Libs
+AC_CHECK_LIB([dl], [dlopen])
+
 dnl Functions
 AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
