@@ -170,36 +170,37 @@ void preferences_load_page(struct page *page)
 {
 	char buf[64];
 	char *ptr;
-	int i, j, n;
+	int i, j;
+        int interp_modes;
+
+        for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++) {
+                /* nothing */
+        }
 
 	page->title = "Preferences (Shift-F5)";
 	page->draw_const = preferences_draw_const;
 	page->set_page = preferences_set_page;
-	page->total_widgets = 15;
+        page->total_widgets = 13 + interp_modes;
 	page->widgets = widgets_preferences;
 	page->help_index = HELP_GLOBAL;
-
 
 	create_thumbbar(widgets_preferences + 0, 22, 14, 5, 0, 1, 1, change_volume, 0, VOLUME_SCALE);
 	create_thumbbar(widgets_preferences + 1, 22, 15, 5, 0, 2, 2, change_volume, 0, VOLUME_SCALE);
 
-	for (n = 0; interpolation_modes[n]; n++);
 	for (i = 0; interpolation_modes[i]; i++) {
-
 		sprintf(buf, "%d Bit, %s", audio_settings.bits, interpolation_modes[i]);
 		ptr = str_dup(buf);
 		create_togglebutton(widgets_preferences+i+2,
 					6, 20 + (i * 3), 26,
-					i+1, i+3, i+2, n+11, i+3,
+                                        i+1, i+3, i+2, interp_modes+11, i+3,
 					change_mixer,
 					ptr,
 					2,
 					interp_group);
-		page->total_widgets++;
 	}
 
 	for (j = 0; j < 4; j++) {
-		n = i+(j*2);
+                int n = i+(j*2);
 		if (j == 0) n = i+1;
 		create_thumbbar(widgets_preferences+i+2+(j*2),
 						26, 23+(i*3)+j,
