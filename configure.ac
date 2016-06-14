@@ -25,6 +25,9 @@ dnl PACKAGE_VERSION will be either " " if not using git, or date of the last git
 m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
 AC_INIT([schismtracker], [last_git_commit])
 
+dnl set NO_GIT_COMMIT_DATE if we didn't get a commit date from git in the above 2 lines
+AM_CONDITIONAL(NO_GIT_COMMIT_DATE, test x[last_git_commit] = x)
+
 AC_CONFIG_SRCDIR([schism/main.c])
 
 AM_INIT_AUTOMAKE([-Wall subdir-objects])
