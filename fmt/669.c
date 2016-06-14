@@ -67,9 +67,6 @@ int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 		if (header->breaks[i] > 0x3f)
 			return 0;
 
-	/* From my very brief observation, it seems the message of a 669 file is split into 3 lines.
-	This (naively) takes the first line of it as the title, as the format doesn't actually have
-	a field for a song title. */
 	file->title = (char *) calloc(37, sizeof(char));
 	memcpy(file->title, header->songmessage, 36);
 	file->title[36] = 0;
@@ -217,7 +214,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					note->effect = FX_TONEPORTAMENTO;
 					break;
 				case 3: /* D - frequency adjust (??) */
-					note->effect = FX_PORTAMENTODOWN;
+					note->effect = FX_PORTAMENTOUP;
 					if (note->param)
 						note->param |= 0xf0;
 					else
