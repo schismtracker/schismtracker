@@ -21,12 +21,9 @@ dnl You should have received a copy of the GNU General Public License
 dnl along with this program; if not, write to the Free Software
 dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-dnl PACKAGE_VERSION will be either " " if not using git, or date of the last git commit in the form YYYYMMDD
+dnl PACKAGE_VERSION will be either "" if not using git, or date of the last git commit in the form YYYYMMDD
 m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
 AC_INIT([schismtracker], [last_git_commit])
-
-dnl set NO_GIT_COMMIT_DATE if we didn't get a commit date from git in the above 2 lines
-AM_CONDITIONAL(NO_GIT_COMMIT_DATE, test x[last_git_commit] = x)
 
 AC_CONFIG_SRCDIR([schism/main.c])
 
@@ -42,6 +39,11 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_CC_C99
+
+dnl do we have Git
+AC_CHECK_TOOL([GIT], [git])
+AC_SUBST(GIT)
+AM_CONDITIONAL([HAVE_GIT], [test "x$GIT" != "x"])
 
 dnl Windows poop
 AC_CHECK_TOOL([WINDRES], [windres])
