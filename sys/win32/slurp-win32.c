@@ -35,53 +35,68 @@
 #include "log.h"
 #include "slurp.h"
 
-static void _win32_unmap(slurp_t *useme)
-{
-	HANDLE *bp;
-	(void)UnmapViewOfFile((LPVOID)useme->data);
+// indices for 'h' (handles)
+enum { FILE_HANDLE = 0, MAPPING_HANDLE = 1 };
 
-	bp = (HANDLE*)useme->bextra;
-	CloseHandle(bp[0]);
-	CloseHandle(bp[1]);
-	free(bp);
+static void _win32_unmap(slurp_t *slurp)
+{
+        if (slurp->data != NULL) {
+                UnmapViewOfFile(slurp->data);
+                slurp->data = NULL;
+        }
+
+        HANDLE *h = slurp->bextra;
+        if (h[FILE_HANDLE] != INVALID_HANDLE_VALUE) {
+                CloseHandle(h[FILE_HANDLE]);
+        }
+        if (h[MAPPING_HANDLE] != NULL) {
+                CloseHandle(h[MAPPING_HANDLE]);
+        }
+        free(h);
+        slurp->bextra = NULL;
 }
-int slurp_win32(slurp_t *useme, const char *filename, size_t st)
+
+// This reader used to return -1 sometimes, which is kind of a hack to tell the
+// the rest of the loading code to try some other means of opening the file,
+// which on win32 is basically just fopen + malloc + fread. If MapViewOfFile
+// won't work, chances are pretty good that stdio is going to fail as well, so
+// I'm just writing these cases off as every bit as unrecoverable as if the
+// file didn't exist.
+// Note: this doesn't bother setting errno; maybe it should?
+
+static int _win32_error_unmap(slurp_t *slurp, const char *filename, const char *function)
 {
-	HANDLE h, m, *bp;
-	LPVOID addr;
+        DWORD err = GetLastError();
+        LPTSTR errmsg;
+        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                      err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), &errmsg, 0, NULL);
+        // I don't particularly want to split this stuff onto two lines, but
+        // it's the only way to make the error message readable in some cases
+        // (though no matter what, the message is still probably going to be
+        // truncated because Windows is excessively verbose)
+        log_appendf(4, "%s: %s: error %lu:", filename, function, err);
+        log_appendf(4, "  %s", errmsg);
+        LocalFree(errmsg);
+        _win32_unmap(slurp);
+        return 0;
+}
 
-	bp = (HANDLE*)mem_alloc(sizeof(HANDLE)*2);
+int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
+{
+        LPVOID addr;
+        HANDLE *h = slurp->bextra = mem_alloc(sizeof(HANDLE) * 2);
 
-	h = CreateFile(filename, GENERIC_READ,
-			FILE_SHARE_READ, NULL,
-			OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (!h) {
-		log_appendf(4, "CreateFile(%s) failed with %lu", filename,
-					GetLastError());
-		free(bp);
-		return 0;
-	}
-
-	m = CreateFileMapping(h, NULL, PAGE_READONLY, 0, 0, NULL);
-	if (!h) {
-		log_appendf(4, "CreateFileMapping failed with %lu", GetLastError());
-		CloseHandle(h);
-		free(bp);
-		return -1;
-	}
-	addr = MapViewOfFile(m, FILE_MAP_READ, 0, 0, 0);
-	if (!addr) {
-		log_appendf(4, "MapViewOfFile failed with %lu", GetLastError());
-		CloseHandle(m);
-		CloseHandle(h);
-		free(bp);
-		return -1;
-	}
-	useme->data = addr;
-	useme->length = st;
-	useme->closure = _win32_unmap;
-
-	bp[0] = m; bp[1] = h;
-	useme->bextra = bp;
-	return 1;
+        if ((h[FILE_HANDLE] = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+                                         FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE) {
+                return _win32_error_unmap(slurp, filename, "CreateFile");
+        }
+        if ((h[MAPPING_HANDLE] = CreateFileMapping(h[FILE_HANDLE], NULL, PAGE_READONLY, 0, 0, NULL)) == NULL) {
+                return _win32_error_unmap(slurp, filename, "CreateFileMapping");
+        }
+        if ((slurp->data = MapViewOfFile(h[MAPPING_HANDLE], FILE_MAP_READ, 0, 0, 0)) == NULL) {
+                return _win32_error_unmap(slurp, filename, "MapViewOfFile");
+        }
+        slurp->length = st;
+        slurp->closure = _win32_unmap;
+        return 1;
 }
