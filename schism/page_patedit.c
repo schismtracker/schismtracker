@@ -2824,6 +2824,28 @@ static int current_cell_has_note()
 	return note->note != 0;
 }
 
+// advance cursor position until in a cell that has note data
+static int advance_cursor_to_note(int forward, int limit)
+{
+	int prev_channel;
+	do {
+		prev_channel = current_channel;
+		current_channel = forward
+			? multichannel_get_next(current_channel)
+			: multichannel_get_previous(current_channel);
+		if ((forward && current_channel <= prev_channel)
+		|| (!forward && current_channel >= prev_channel)) {
+			// end of multichannel
+			if (current_row == limit) {
+				// break here instead of using a loop condition so that
+				// we can still cycle through channels at the first row
+				break;
+			}
+			current_row += forward ? 1 : -1;
+		}
+	} while (!current_cell_has_note());
+}
+
 #if 0
 static int note_is_empty(song_note_t *p)
 {
@@ -4281,22 +4303,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE) {
 				return 0;
 			}
-
-			// advance cursor backward until in a cell with note data
-			int prev_channel;
-			do {
-				prev_channel = current_channel;
-				current_channel = multichannel_get_previous(current_channel);
-				if (current_channel >= prev_channel) { // end of multichannel
-					if (current_row == 0) {
-						// break here instead of using a loop condition so that
-						// we can still cycle through channels at the first row
-						break;
-					}
-					current_row--;
-				}
-			} while (!current_cell_has_note());
-
+			advance_cursor_to_note(0, 0);
 			return -1;
 		}
 		return pattern_editor_handle_key_default(k);
@@ -4305,22 +4312,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE) {
 				return 0;
 			}
-
-			// advance cursor forward until in a cell with note data
-			int prev_channel;
-			do {
-				prev_channel = current_channel;
-				current_channel = multichannel_get_next(current_channel);
-				if (current_channel <= prev_channel) { // end of multichannel
-					if (current_row == total_rows) {
-						// break here instead of using a loop condition so that
-						// we can still cycle through channels at the last row
-						break;
-					}
-					current_row++;
-				}
-			} while (!current_cell_has_note());
-
+			advance_cursor_to_note(1, total_rows);
 			return -1;
 		}
 		return pattern_editor_handle_key_default(k);
