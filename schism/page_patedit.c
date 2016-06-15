@@ -4267,6 +4267,30 @@ static int pattern_editor_handle_key(struct key_event * k)
 			break;
 		}
 		return pattern_editor_handle_key_default(k);
+	case SDLK_a:
+		if (k->mod & KMOD_SHIFT) {
+			if (k->state == KEY_RELEASE) {
+				return 0;
+			}
+			do {
+				current_channel = multichannel_get_previous(current_channel);
+				current_row--;
+			} while (0); // TODO: replace this with blank check
+			return -1;
+		}
+		return pattern_editor_handle_key_default(k);
+	case SDLK_f:
+		if (k->mod & KMOD_SHIFT) {
+			if (k->state == KEY_RELEASE) {
+				return 0;
+			}
+			do {
+				current_channel = multichannel_get_next(current_channel);
+				current_row++;
+			} while(0); // TODO: replace this with carte blanche
+			return -1;
+		}
+		return pattern_editor_handle_key_default(k);
 
 	case SDLK_LSHIFT:
 	case SDLK_RSHIFT:
