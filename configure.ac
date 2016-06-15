@@ -281,6 +281,16 @@ AC_ARG_ENABLE(ludicrous-mode,
         ADD_LUDICROUS=$enableval,
         ADD_LUDICROUS=no)
 
+AC_ARG_ENABLE(fortify-source,
+        AS_HELP_STRING([--enable-fortify-source], [Build with FORTIFY_SOURCE]),
+        ADD_FORTIFY=$enableval,
+        ADD_FORTIFY=no)
+
+dnl fortify needs -O; do this early so ADD_OPT can override with higher -O level
+if test x$ADD_FORTIFY \!= xno; then
+        CFLAGS="$CFLAGS -O -D_FORTIFY_SOURCE=2"
+fi
+
 dnl place extra optimizations after existing cflags so that they can override
 dnl override whatever flags might exist by default (-g -O2 usually)
 if test x$ADD_OPT \!= xno; then
@@ -292,7 +302,7 @@ fi
 
 if test x$ADD_LUDICROUS \!= xno; then
         ADD_WARN=yes
-        CFLAGS="$CFLAGS -Werror -D_FORTIFY_SOURCE=2"
+        CFLAGS="$CFLAGS -Werror"
 fi
 
 dnl ... but put the warnings first, to make it possible to quiet certain
