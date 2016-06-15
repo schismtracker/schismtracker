@@ -206,6 +206,8 @@
 |   Alt-X            Slide effect value  (*)
 | 2*Alt-X            Wipe all effect data  (*)
 |
+|   Ctrl-Ins/Del     Roll block down/up
+|
 |   Alt-C            Copy block into clipboard
 :   Shift-L          Copy block to clipboard honoring current mute-settings
 |   Alt-P            Paste data from clipboard  (*)

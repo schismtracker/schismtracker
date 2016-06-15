@@ -195,7 +195,6 @@ void memused_get_pattern_saved(unsigned int *a, unsigned int *b)
 /* --------------------------------------------------------------------- */
 /* block selection handling */
 
-/* *INDENT-OFF* */
 static struct {
 	int first_channel;
 	int last_channel;
@@ -209,7 +208,6 @@ static struct {
 	int first_row;
 } shift_selection = { 0, 0, 0 };
 
-/* *INDENT-ON* */
 
 /* this is set to 1 on the first alt-d selection,
  * and shifted left on each successive press. */
@@ -1809,6 +1807,34 @@ static void selection_wipe_effect(void)
 		}
 	}
 	pattern_selection_system_copyout();
+}
+
+
+enum roll_dir { ROLL_DOWN = -1, ROLL_UP = +1 };
+static void selection_roll(enum roll_dir direction)
+{
+	song_note_t *pattern, *seldata;
+	int row, sel_rows, sel_chans, total_rows, copy_bytes, n;
+
+	if (!SELECTION_EXISTS) { return; }
+	total_rows = song_get_pattern(current_pattern, &pattern);
+	if (selection.last_row >= total_rows) { selection.last_row = total_rows - 1; }
+	if (selection.first_row > selection.last_row) { selection.first_row = selection.last_row; }
+	sel_rows = selection.last_row - selection.first_row + 1;
+	sel_chans = selection.last_channel - selection.first_channel + 1;
+	if (sel_rows < 2) { return; }
+	seldata = pattern + 64 * selection.first_row + selection.first_channel - 1;
+
+	song_note_t temp[sel_chans];
+	copy_bytes = sizeof(temp);
+	row = (direction == ROLL_DOWN ? sel_rows - 1 : 0);
+	memcpy(temp, seldata + 64 * row, copy_bytes);
+	for (n = 1; n < sel_rows; n++, row += direction) {
+		memcpy(seldata + 64 * row, seldata + 64 * (row + direction), copy_bytes);
+	}
+	memcpy(seldata + 64 * row, temp, copy_bytes);
+
+	status.flags |= SONG_NEEDS_SAVE;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -3790,6 +3816,18 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			return 1;
 		current_row++;
 		return -1;
+	case SDLK_INSERT:
+		if (k->state == KEY_RELEASE)
+			return 1;
+		selection_roll(ROLL_DOWN);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_DELETE:
+		if (k->state == KEY_RELEASE)
+			return 1;
+		selection_roll(ROLL_UP);
+		status.flags |= NEED_UPDATE;
+		return 1;
 	case SDLK_MINUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
