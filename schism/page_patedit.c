@@ -2815,31 +2815,31 @@ static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 	return 1;
 }
 
-// advance cursor position until in a cell that has note data
-static int advance_cursor_to_note(int forward, int limit)
+// return zero iff there is no value in the current cell at the current column
+static int seek_done(void)
 {
 	song_note_t *pattern, *note;
-	int prev_channel;
 
 	song_get_pattern(current_pattern, &pattern);
+	note = pattern + 64 * current_row + current_channel - 1;
 
-	do {
-		prev_channel = current_channel;
-		current_channel = forward
-			? multichannel_get_next(current_channel)
-			: multichannel_get_previous(current_channel);
-		if ((forward && current_channel <= prev_channel)
-		|| (!forward && current_channel >= prev_channel)) {
-			// end of multichannel
-			if (current_row == limit) {
-				// break here instead of using a loop condition so that
-				// we can still cycle through channels at the first row
-				break;
-			}
-			current_row += forward ? 1 : -1;
-		}
-		note = pattern + 64 * current_row + current_channel - 1;
-	} while (!note->note);
+	switch (current_position) {
+	case 0:
+	case 1:
+		return note->note != 0;
+	case 2:
+	case 3:
+		return note->instrument != 0;
+	case 4:
+	case 5:
+		return note->voleffect || note->volparam;
+	case 6:
+	case 7:
+	case 8:
+		// effect param columns intentionally check effect column instead
+		return note->effect != 0;
+	}
+	return 1; // please stop seeking because something is probably wrong
 }
 
 #if 0
@@ -4299,7 +4299,12 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE) {
 				return 0;
 			}
-			advance_cursor_to_note(0, 0);
+			if (current_row == 0) {
+				return 1;
+			}
+			do {
+				current_row--;
+			} while (!seek_done() && current_row != 0);
 			return -1;
 		}
 		return pattern_editor_handle_key_default(k);
@@ -4308,7 +4313,12 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE) {
 				return 0;
 			}
-			advance_cursor_to_note(1, total_rows);
+			if (current_row == total_rows) {
+				return 1;
+			}
+			do {
+				current_row++;
+			} while (!seek_done() && current_row != total_rows);
 			return -1;
 		}
 		return pattern_editor_handle_key_default(k);
