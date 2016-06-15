@@ -2815,19 +2815,14 @@ static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 	return 1;
 }
 
-static int current_cell_has_note()
-{
-	song_note_t *note;
-
-	song_get_pattern(current_pattern, &note);
-	note += 64 * current_row + current_channel - 1;
-	return note->note != 0;
-}
-
 // advance cursor position until in a cell that has note data
 static int advance_cursor_to_note(int forward, int limit)
 {
+	song_note_t *pattern, *note;
 	int prev_channel;
+
+	song_get_pattern(current_pattern, &pattern);
+
 	do {
 		prev_channel = current_channel;
 		current_channel = forward
@@ -2843,7 +2838,8 @@ static int advance_cursor_to_note(int forward, int limit)
 			}
 			current_row += forward ? 1 : -1;
 		}
-	} while (!current_cell_has_note());
+		note = pattern + 64 * current_row + current_channel - 1;
+	} while (!note->note);
 }
 
 #if 0
