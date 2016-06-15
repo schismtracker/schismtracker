@@ -63,11 +63,9 @@ static int fontedit_return_page = PAGE_PATTERN_EDITOR;
 
 /* --------------------------------------------------------------------- */
 
-/* *INDENT-OFF* */
 static struct {
 	int h, m, s;
 } current_time = {0, 0, 0};
-/* *INDENT-ON* */
 
 extern int playback_tracing;    /* scroll lock */
 extern int midi_playback_tracing;

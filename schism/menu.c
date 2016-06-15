@@ -67,7 +67,6 @@ struct menu {
 	void (*selected_cb) (void);     /* triggered by return key */
 };
 
-/* *INDENT-OFF* */
 static struct menu main_menu = {
 	.x = 6,
 	.y = 11,
