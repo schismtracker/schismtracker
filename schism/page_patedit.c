@@ -2815,6 +2815,15 @@ static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 	return 1;
 }
 
+static int current_cell_has_note()
+{
+	song_note_t *note;
+
+	song_get_pattern(current_pattern, &note);
+	note += 64 * current_row + current_channel - 1;
+	return note->note != 0;
+}
+
 #if 0
 static int note_is_empty(song_note_t *p)
 {
@@ -4268,26 +4277,50 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return pattern_editor_handle_key_default(k);
 	case SDLK_a:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
 			if (k->state == KEY_RELEASE) {
 				return 0;
 			}
+
+			// advance cursor backward until in a cell with note data
+			int prev_channel;
 			do {
+				prev_channel = current_channel;
 				current_channel = multichannel_get_previous(current_channel);
-				current_row--;
-			} while (0); // TODO: replace this with blank check
+				if (current_channel >= prev_channel) { // end of multichannel
+					if (current_row == 0) {
+						// break here instead of using a loop condition so that
+						// we can still cycle through channels at the first row
+						break;
+					}
+					current_row--;
+				}
+			} while (!current_cell_has_note());
+
 			return -1;
 		}
 		return pattern_editor_handle_key_default(k);
 	case SDLK_f:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
 			if (k->state == KEY_RELEASE) {
 				return 0;
 			}
+
+			// advance cursor forward until in a cell with note data
+			int prev_channel;
 			do {
+				prev_channel = current_channel;
 				current_channel = multichannel_get_next(current_channel);
-				current_row++;
-			} while(0); // TODO: replace this with carte blanche
+				if (current_channel <= prev_channel) { // end of multichannel
+					if (current_row == total_rows) {
+						// break here instead of using a loop condition so that
+						// we can still cycle through channels at the last row
+						break;
+					}
+					current_row++;
+				}
+			} while (!current_cell_has_note());
+
 			return -1;
 		}
 		return pattern_editor_handle_key_default(k);
