@@ -153,6 +153,7 @@
 |   Home             Move to start of column/start of line/start of pattern
 |   End              Move to end of column/end of line/end of pattern
 |   Backspace        Move to previous position (accounts for Multichannel)
+:   Shift-A/F        Move to previous/next position that has note data
 |
 |   Alt-N            Toggle Multichannel mode for current channel
 | 2*Alt-N            Multichannel Selection menu
