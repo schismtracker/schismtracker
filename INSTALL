@@ -1,0 +1,20 @@
+This is a fairly typical autotools package. In a nutshell, if you're using
+a roughly Unix-ish environment:
+
+    0.) autoreconf -i
+        You only need this if you've fetched this package from the repo
+        and lack ./configure in the top-level source directory.
+
+    1.) ./configure
+        Want plenty more options than you need? ./configure --help
+
+    2.) make
+        This should create a ./schismtracker binary, which you can
+        move around to wherever it makes you happiest.
+
+    3.) make install
+        If you want it installed! You likely want sudo for this.
+
+    4.) happy tracking!
+
+For more detailed instructions, peruse the files in the 'docs' directory.
