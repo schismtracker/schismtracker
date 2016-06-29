@@ -50,9 +50,12 @@ int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	}
 
 	/*file->extension = str_dup("it");*/
-	file->title = calloc(26, sizeof(char));
-	memcpy(file->title, data + 4, 25);
+	file->title = malloc(26);
+	for (int n = 0; n < 25; n++) {
+		file->title[n] = data[4 + n] ?: 32;
+	}
 	file->title[25] = 0;
+	rtrim_string(file->title);
 	file->type = TYPE_MODULE_IT;
 	return 1;
 }
@@ -499,8 +502,11 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		return LOAD_FORMAT_ERROR;
 	}
 
-	memcpy(song->title, hdr.title, 25);
-	song->title[25] = '\0';
+	for (n = 0; n < 25; n++) {
+		song->title[n] = hdr.title[n] ?: 32;
+	}
+	song->title[25] = 0;
+	rtrim_string(song->title);
 
 	if (hdr.cwtv < 0x0214)
 		ignoremidi = 1;
