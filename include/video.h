@@ -69,6 +69,7 @@ void video_translate(unsigned int vx, unsigned int vy,
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);
+int video_gl_bilinear(void);
 
 int video_is_fullscreen(void);
 

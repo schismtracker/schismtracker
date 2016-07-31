@@ -41,6 +41,7 @@ char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instr
 char cfg_video_driver[65];
 int cfg_video_fullscreen = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
+int cfg_video_gl_bilinear = 1;
 
 /* --------------------------------------------------------------------- */
 
@@ -135,6 +136,8 @@ void cfg_load(void)
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
+	cfg_video_gl_bilinear =
+		!!cfg_get_number(&cfg, "Video", "gl_bilinear", 1);
 	ptr = cfg_get_string(&cfg, "Video", "aspect", NULL, 0, NULL);
 	if (ptr && *ptr)
 		put_env_var("SCHISM_VIDEO_ASPECT", ptr);
@@ -302,6 +305,7 @@ void cfg_atexit_save(void)
 	cfg_set_string(&cfg, "Video", "driver", video_driver_name());
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
+	cfg_set_number(&cfg, "Video", "gl_bilinear", video_gl_bilinear());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);

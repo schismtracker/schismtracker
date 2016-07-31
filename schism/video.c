@@ -791,7 +791,7 @@ SKIP1:
 #else
 		video.desktop.swsurface = 0;
 #endif
-		video.gl.bilinear = 1;
+		video.gl.bilinear = cfg_video_gl_bilinear;
 		if (video.desktop.bpp == 32 || video.desktop.bpp == 16) break;
 		/* fall through */
 	case VIDEO_DDRAW:
@@ -1783,6 +1783,11 @@ void video_mousecursor(int vis)
 		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
 		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
 	}
+}
+
+int video_gl_bilinear(void)
+{
+	return video.gl.bilinear;
 }
 
 void video_translate(unsigned int vx, unsigned int vy,
