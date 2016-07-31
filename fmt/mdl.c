@@ -290,32 +290,26 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 		}
 		break;
 	case 0x10: // volslide up
-		switch (p >> 4) {
-		case 0: // G0y -> Dy0
+		if (p < 0xE0) { // Gxy -> Dz0 (z=(xy>>2))
+			p >>= 2;
+			if (p > 0x0F)
+				p = 0x0F;
 			p <<= 4;
-			break;
-		case 0xf: // GFy -> DyF
-			p = (p << 4) | 0xf;
-			break;
-		case 0xe: // GEy -> DzF (z=(y>>2))?
-			p = (p << 2) | 0xf;
-			break;
-		default: // some large slide up -- best we can do is DF0
-			p = 0xf0;
-			break;
+		} else if (p < 0xF0) { // GEy -> DzF (z=(y>>2))
+			p = (((p & 0x0F) << 2) | 0x0F);
+		} else { // GFy -> DyF
+			p = ((p << 4) | 0x0F);
 		}
 		break;
 	case 0x11: // volslide down
-		switch (p >> 4) {
-		case 0: // H0y -> D0y
-		case 0xf: // HFy -> DFy
-			break;
-		case 0xe: // HEy -> DFz (z=(y>>2))?
-			p = 0xf0 | ((p & 0xf) >> 2);
-			break;
-		default: // some huge slide down
-			p = 0xf;
-			break;
+		if (p < 0xE0) { // Hxy -> D0z (z=(xy>>2))
+			p >>= 2;
+			if(p > 0x0F)
+				p = 0x0F;
+		} else if (p < 0xF0) { // HEy -> DFz (z=(y>>2))
+			p = (((p & 0x0F) >> 2) | 0xF0);
+		} else { // HFy -> DFy
+			// Nothing to do
 		}
 		break;
 	}
