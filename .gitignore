@@ -3,9 +3,7 @@ aclocal.m4
 autom4te.cache/
 build/
 compile
-config.guess
-config.h.in
-config.sub
+config.*
 configure
 depcomp
 install-sh
