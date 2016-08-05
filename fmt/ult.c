@@ -137,6 +137,7 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 		break;
 	case 0xd: // pattern break
 		p = 10 * (p >> 4) + (p & 0xf);
+		break;
 	case 0xe: // special
 		switch (p >> 4) {
 		case 1:
