@@ -1,0 +1,13 @@
+language: c
+os:
+  - linux
+  - osx
+addons:
+  apt:
+    packages:
+      - libsdl1.2-dev
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
+script:
+  - ./scripts/build.sh
