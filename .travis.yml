@@ -11,3 +11,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
 script:
   - ./scripts/build.sh
+notifications:
+  email:
+    on_success: change
+    on_failure: change
