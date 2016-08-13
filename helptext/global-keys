@@ -42,6 +42,7 @@
 :   Ctrl-P            Calculate approximate song length
 !   Ctrl-Q            Quit to DOS
 :   Ctrl-Q            Quit Schism Tracker
+:   Ctrl-Shift-Q      Quit without asking
 |   Ctrl-S            Save current song
 |
 |   Ctrl-Alt-Enter    Toggle Fullscreen

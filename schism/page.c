@@ -542,8 +542,11 @@ static int handle_key_global(struct key_event * k)
 			return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
+			if (k->state == KEY_PRESS) {
+				if (k->mod & KMOD_SHIFT)
+					exit(0);
 				show_exit_prompt();
+			}
 			return 1;
 		}
 		break;
