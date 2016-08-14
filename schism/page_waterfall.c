@@ -203,7 +203,7 @@ static inline void _get_columns_from_fft(unsigned char *out,
 	for (i = 0, a=0; i < FFT_BANDS_SIZE; i++)  {
 		float afloat = fftlog[i];
 		float floora = floor(afloat);
-		if (afloat + 1.0f > fftlog[i+1]) {
+		if ((i == FFT_BANDS_SIZE -1) || (afloat + 1.0f > fftlog[i+1])) {
 			a = (int)floora;
 			j = d[a] + (d[a+1]-d[a])*(afloat-floora);
 			a = floor(afloat+0.5f);

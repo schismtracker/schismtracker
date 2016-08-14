@@ -83,6 +83,7 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 		resonance = 255;
 
 	// Should be 255, but Zxx cutoff is limited to 127, so...
+        //TODO: "|| ressonance > 0". Said that, I believe it only applies to Zxx command, and not to envelopes, but i should verify it.
 	if (cutoff < 254)
 		chan->flags |= CHN_FILTER;
 	else
