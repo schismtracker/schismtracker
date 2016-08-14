@@ -2,6 +2,8 @@ Makefile.in
 aclocal.m4
 autom4te.cache/
 build/
+buildx86/
+buildx64/
 compile
 config.guess
 config.h.in

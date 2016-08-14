@@ -1,7 +1,7 @@
 # Building on Windows
 
-_This page was adapted from COMPILE-WIN32.txt traditionally provided with
-Schism Tracker sources. Any additional notes are in italics, like this one_
+_This page was based originally on the COMPILE-WIN32.txt file traditionally provided with
+Schism Tracker sources. I has been rewriten with instructions that use newer tools_
 
 ## Software needed
 
@@ -10,156 +10,106 @@ To compile on Windows, the following things are needed:
 * mingw-gcc
 * Python
 * SDL headers and libs
-* An environment in which to run them, like msys (It could also be cygwin. Use
-	its setup program, and get sdl sources to compile them in this case).
+* An environment in which to run them, like msys.
 
-## Installing needed software
+## Installing MSYS2 and mingw
+These instructions describe how to install msys2, which includes all of the required packages.
 
-_note: follow the instructions in either the x86/Win32 or the x64/Win64
-section, but not both!_
+### Get MSYS2 and install it
+Go to the URL http://msys2.github.io/ and download either the 32bit installer or the 64bit installer.
+The 32bit download can run on 32bit windows and the 64bit one requires a 64bit Windows.
+64bit executables can be created with either of them.
 
-### Installing mingw and msys (x86/Win32)
+Once installed, follow these instructions to get up-to-date files. This process is also described in their
+web page, so in case of conflict, you might opt to follow their instructions.
 
-They've recently created an installer that maintains packages, that works
-nicely:
-[http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download](http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download)
-That installer can also install msys if told to do so.
+Update the pacman package manager:
+    pacman -Sy pacman
+Close the MSYS2 window.
+run it again from Start menu and update the system:
+	pacman -Syu
+Close the MSYS2 window.
+run it again from Start menu and update the rest with:
+	pacman -Su
 
-If installing msys, then run `(installdir)\msys\1.0\postinstall\pi.sh` to set
-up where mingw is located.
+### Install the toolchains
 
-Get Python from [http://www.python.org](http://www.python.org) and install it.
-Get version 2 for now.
+Once you have the shell environment ready, it's time to get the compilers. Execute the following command:
+	pacman -S mingw-w64-i686-toolchain libtool autoconf automake make
 
-Add Python to msys PATH. You can do it in two ways:
+Also, you need the following specific dependency:
+	pacman -S mingw-w64-i686-SDL
 
-* Add the path to Windows PATH Environment variable (msys will add it
-	automatically to msys's environment. You will need to relaunch it after the
-	change)
-* OR modify the msys file `/etc/profile` and modify the export PATH adding your
-	python path. (like `export PATH=/c/python27:$PATH`)
+If you also want to build for 64bits:
+	pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-SDL
+	
+You can search for packages with
+	pacman -Ss package descripption
 
-For mingw x86, there is a precompiled libs and headers package that can be
-downloaded from [http://www.libsdl.org/](http://www.libsdl.org/). At the time
-of this writing, there's the file: SDL-devel-1.2.15-mingw32.tar.gz (Mingw32).
-
-You can unpack this file into mingw by copying individually the folders bin,
-include, lib and share into C:/MinGW (if that's the name you used). The rest of
-the package is not needed, as it contains examples, and other documentation,
-some of it used to build from source, which is not needed with this package.
-
-Also, you will need to modify the file `sdl-config` to change the "prefix"
-path. Like this: `prefix=/mingw`
-
-### Installing mingw and msys (x64/Win64)
-
-_note: To build for 64-bit, you will have to compile your own SDL libraries. To
-build them with DirectX support (Schism doesn't run very well on Windows
-without DirectX support) may require Visual Studio. If you don't have Visual
-Studio you may be better off using 32-bit and the precompiled SDL libraries.
-Alternatively, something that has been known to work is to compile SDL without
-DirectX support and then replace the built SDL.dll with an SDL.dll from
-somewhere else (where it is known to have DirectX support)._
-
-Since mingw's installer only installs an x86 platform, you might opt to install
-winBuilds: [http://win-builds.org/](http://win-builds.org/)
-
-Follow the instructions from the x86 section to set up msys and python.
-
-For x64, there aren't precompiled SDL libs, so you have to get the sources to
-compile them from [http://www.libsdl.org/](http://www.libsdl.org/). At the
-time of this writing, there's the file: SDL-1.2.15.tar.gz
-
-Unpack it somewhere (like `C:/msys/opt/SDL`).
-
-Get Microsoft's DirectX SDK from
-[http://www.microsoft.com/en-us/download/details.aspx?id=6812](http://www.microsoft.com/en-us/download/details.aspx?id=6812)
-and install it.
-
-Now, you need msys/mingw to know about your directx includes and libs. This is
-a little tricky and the best solution I found was to make symbolic links (`ln
--s`) to the directories as follows:
-
-Let's say that the Direct X SDK is installed in `C:\Program Files
-(x86)\Microsoft DirectX SDK (June 2010)`
-
-1. Run msys, and go to `/mingw/include`
-2. type `ln -s C:/Program\ Files\ \(x86\)/Microsoft\ DirectX\ SDK\ \(June\
-	 2010\)/Include dxinclude`
-3. go to `/mingw/lib`
-4. type `ln -s C:/Program\ Files\ \(x86\)/Microsoft\ DirectX\ SDK\ \(June\
-	 2010\)/Lib dxlib`
-
-I also had to copy the file `C:\Program Files (x86)\Microsoft Visual Studio
-9.0\VC\include\sal.h` to `/mingw/include`.  This file's header says: "sal.h -
-markers for documenting the semantics of APIs". It only has some defines, so it
-might be safe to just put an empty file (not tried _[note: tried, doesn't
-work]_). Else, it might be obtained from Visual Studio.
-
-Now, go to where you copied the SDL SDK (`example: /opt/SDL/`) , and do
-`./configure CPPFLAGS=-I/mingw/include/dxinclude LIBS=-L/mingw/lib/dxlib`
-
-Now look at the output of configure and see if it says something like:
-
-    checking ddraw.h usability
-    result: yes
-    checking dsound.h usability
-    result: yes
-
-(This is extracted from config.log. the output in the screen is a bit
-different)
-
-If it says no, open the config.log file, locate the lines and see which test
-fail and why.
-
-If the `./configure` executes successfully and you have ddraw _(note: you probably don't - ddraw.h isn't actually supplied with the DirectX SDK! It may be supplied with Visual Studio)_ and dsound, then continue with
-
-    make
-    make install
 
 ## Compilation
 
-Run msys (`C:/msys/1.0/msys.bat`), go to schismtracker sources (hint: drive
-letters are mapped to /x , example C:/ is /c/, D:/ is /d/ ...)
+MSYS2 installs three shortcut icons, one to run the msys shell, and two more that setup the
+environment to use either the 32bit compiler or the 64bit compiler.
+You can also start the 32bit compiler with 
+	msys2_shell.cmd -migw32
+and the 64bit compiler with
+	msys2_shell.cmd -ming64
 
-If configure does not exist, (you will need autoconf and automake _[note: you
-can install them through the mingw GUI package manager - they are part of a
-package called "autotools"]_) execute:
+### Configure schismtracker to build
 
-    autoreconf -i
+Open the 32bit or 64bit shell depending on which version you want to build.
+The steps here only need to be done once, or when configure.ac or the installed package versions change.
 
-Alternatively, you can execute each individual command:
+Go to schismtracker sources root (drive letters are mapped to /x , example C:/ is /c/, D:/ is /d/ ...)
+Reconfigure it:
+	autoreconf -i
 
-    aclocal
-    autoconf
-    autoheader
-    automake --add-missing
+I recommend to have two subdirectories to build the binaries, as such, create the subfolder
+buildx86 and buildx64:
 
-If you get a warning that AM_PATH_SDL is missing, you should check where the
-sdl.m4 _(note: the folder where you unpacked SDL, probably. `grep -r "sdl.m4"
-/` for it)_ is, and use the -I parameter like:
+	mkdir buildx86
+	mkdir buildx64
+	cd buildx86
+	../configure
 
-    aclocal -I/usr/local/share/aclocal
-    autoconf
-    autoheader
-    automake --add-missing
+### Build and rebuild
 
-Once `./configure` exists, run:
+In order to build and run it, from the buildx86 subdir (or buildx64), run these:
+	make
+	../schismtracker &
+### Compilation problems
 
-    mkdir build
-    cd build
-    ../configure
-    make
+The configure script should give hints on what is missing to compile. If you've followed the steps, everything
+should already be in the place, but in case it doesn't, see the config.log file, which reports a detailed
+output (more than what is seen on the screen) that could help identify what is missing, or which option is not working.
 
-And you should find a `schismtracker.exe` in the `build/` directory.
 
-## Debugging
+### Debugging
 
-Msys comes (if installed) with a 32bit gdb version. you can use it to debug the
-32bit version of Schismtracker.
+When installing the toolchains, the gdb debugger is also installed. 
+Run it from the win32 shell to debug the 32bit exe, or run it from the Win64 shell to debug the 64bit one.
 
-For the 64bit version, you can get it from
-[http://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20%28Win64%20hosted%29/gdb/](http://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20%28Win64%20hosted%29/gdb/)
-I got a newer version from here :
-[http://www.equation.com/servlet/equation.cmd?fa=gdb](http://www.equation.com/servlet/equation.cmd?fa=gdb)
-I named the file gdb64 so that it didn't get mistaken for the other.
+
+## Prepare the distribution file
+
+To distribute the application, it is important to bundle the correct version of the SDL.dll file with the executable.
+
+For a 32bit build, the file is located in  /msys2_path/mingw32/bin/SDL.dll
+For a 64bit build, the file is located in  /msys2_path/mingw64/bin/SDL.dll
+
+The 32bit build also requires the files /msys2_path/mingw64/bin/libgcc_s_dw2-1.dll and /msys2_path/mingw64/bin/libwinpthread-1.dll
+
+If you want to reduce the exe size (removing the debugging information), use the following command:
+!!NOTE!!: do it also from the same shell than you used to build the executable, as the tool is bitsize dependant.
+
+strip -g schismtracker.exe
+
+
+## SDL2 notes
+===========
+The current version of schismtracker uses SDL1, but a fork with SDL2 has been made here https://github.com/davvid/schismtracker/tree/laptop-octave
+In order to build that branch, installing the SDL2 packages AND pkg-config is needed
+
+	pacman -S mingw-w64-i686-SDL2 mingw-w64-i686-SDL2_gfx mingw-w64-i686-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_gfx mingw-w64-x86_64-pkg-config
+
