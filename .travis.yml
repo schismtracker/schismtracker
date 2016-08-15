@@ -1,0 +1,44 @@
+language: c
+os:
+  - linux
+  - osx
+matrix:
+  include:
+    - os: linux
+    - os: linux
+      dist: trusty
+    - os: osx
+      osx_image: beta-xcode6.1
+    - os: osx
+      osx_image: beta-xcode6.2
+    - os: osx
+      osx_image: beta-xcode6.3
+    - os: osx
+      osx_image: xcode6.4
+    - os: osx
+      osx_image: xcode7
+    - os: osx
+      osx_image: xcode7.1
+    - os: osx
+      osx_image: xcode7.2
+    - os: osx
+      osx_image: xcode7.3
+    - os: osx
+      osx_image: xcode8
+addons:
+  apt:
+    packages:
+      - libsdl1.2-dev
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
+script:
+  - autoreconf -i
+  - mkdir -p build
+  - cd build
+  - sh ../configure
+  - make
+notifications:
+  email:
+    on_success: change
+    on_failure: change
