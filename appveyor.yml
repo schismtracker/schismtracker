@@ -1,0 +1,10 @@
+environment:
+    matrix:
+    - platform: x86
+      arch: i686
+      mingw: mingw32
+      msys: msys32
+    - platform: x64
+      arch: x86_64
+      mingw: mingw64
+      msys: msys64
