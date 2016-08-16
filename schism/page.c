@@ -420,11 +420,11 @@ static int handle_key_global(struct key_event * k)
 			else
 				ins_mode = song_is_instrument_mode();
 			if (ins_mode) {
-				minipop_slide(instrument_get_current(), "!",
+				minipop_slide(instrument_get_current(), "Instrument",
 					status.current_page == PAGE_INSTRUMENT_LIST ? 1 : 0,
 					99 /* FIXME */, instrument_set, NULL, 58, 3);
 			} else {
-				minipop_slide(sample_get_current(), "@",
+				minipop_slide(sample_get_current(), "Sample",
 					status.current_page == PAGE_SAMPLE_LIST ? 1 : 0,
 					99 /* FIXME */, sample_set, NULL, 58, 3);
 			}
