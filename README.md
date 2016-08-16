@@ -32,3 +32,5 @@ on [the wiki](https://github.com/schismtracker/schismtracker/wiki).
 See the
 [docs/](https://github.com/schismtracker/schismtracker/tree/master/docs) folder
 for platform-specific instructions.
+
+[![Build Status](https://travis-ci.org/schismtracker/schismtracker.svg?branch=master)](https://travis-ci.org/schismtracker/schismtracker)
