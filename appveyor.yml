@@ -77,6 +77,11 @@ build_script:
       bash "make"
       Copy-Item C:\$msys\$mingw\bin\SDL.dll .\
 
+      if ($arch -eq "i686") {
+        Copy-Item C:\$msys\$mingw\bin\libgcc_s_dw2-1.dll .\
+        Copy-Item C:\$msys\$mingw\bin\libwinpthread-1.dll .\
+      }
+
 test_script:
   - ps: |
       $exe = "$buildFolder\schismtracker.exe"
@@ -112,6 +117,8 @@ on_finish:
   - if exist "schismtracker_debug_logs.zip" appveyor PushArtifact "schismtracker_debug_logs.zip"
   - if exist "schismtracker.exe" 7z a -tzip schismtracker.zip "schismtracker.exe" > nul
   - if exist "SDL.dll" 7z a -tzip schismtracker.zip "SDL.dll" > nul
+  - if exist "libgcc_s_dw2-1.dll" 7z a -tzip schismtracker.zip "libgcc_s_dw2-1.dll" > nul
+  - if exist "libwinpthread-1.dll" 7z a -tzip schismtracker.zip "libwinpthread-1.dll" > nul
   - if exist "schismtracker.zip" appveyor PushArtifact "schismtracker.zip"
 
 artifacts:
