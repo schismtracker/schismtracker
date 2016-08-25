@@ -102,20 +102,20 @@ test_script:
 
 on_failure:
   - dir /s /b > dir.txt
-  - if exist "dir.txt" 7z a schismtracker_debug_logs.7z "dir.txt" > nul
-  - if exist "config.log" 7z a schismtracker_debug_logs.7z "config.log" > nul
-  - if exist "configure.ac" 7z a schismtracker_debug_logs.7z "configure.ac" > nul
-  - if exist "configure" 7z a schismtracker_debug_logs.7z "configure" > nul
-  - if exist "C:\msys%bits%\mingw%bits%\bin\sdl-config" 7z a schismtracker_debug_logs.7z "C:\msys%bits%\mingw%bits%\bin\sdl-config" > nul
+  - if exist "dir.txt" 7z a -tzip schismtracker_debug_logs.zip "dir.txt" > nul
+  - if exist "config.log" 7z a -tzip schismtracker_debug_logs.zip "config.log" > nul
+  - if exist "configure.ac" 7z a -tzip schismtracker_debug_logs.zip "configure.ac" > nul
+  - if exist "configure" 7z a -tzip schismtracker_debug_logs.zip "configure" > nul
+  - if exist "C:\msys%bits%\mingw%bits%\bin\sdl-config" 7z a -tzip schismtracker_debug_logs.zip "C:\msys%bits%\mingw%bits%\bin\sdl-config" > nul
 
 on_finish:
-  - if exist "schismtracker_debug_logs.7z" appveyor PushArtifact "schismtracker_debug_logs.7z"
-  - if exist "schismtracker.exe" 7z a schismtracker.7z "schismtracker.exe" > nul
-  - if exist "SDL.dll" 7z a schismtracker.7z "SDL.dll" > nul
-  - if exist "schismtracker.7z" appveyor PushArtifact "schismtracker.7z"
+  - if exist "schismtracker_debug_logs.zip" appveyor PushArtifact "schismtracker_debug_logs.zip"
+  - if exist "schismtracker.exe" 7z a -tzip schismtracker.zip "schismtracker.exe" > nul
+  - if exist "SDL.dll" 7z a -tzip schismtracker.zip "SDL.dll" > nul
+  - if exist "schismtracker.zip" appveyor PushArtifact "schismtracker.zip"
 
 artifacts:
-  - path: '*.7z'
+  - path: '*.zip'
 
 notifications:
   on_build_success: false
