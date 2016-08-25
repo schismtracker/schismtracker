@@ -16,17 +16,15 @@ install:
       $msys = "msys$bits"
       $mingw = "mingw$bits"
       $mingwUpper = $mingw.ToUpper()
-      $folder = $env:APPVEYOR_BUILD_FOLDER
-
+      $buildFolder = $env:APPVEYOR_BUILD_FOLDER
+      $posixBuildFolder = $buildFolder -Replace '\\', '/'
       $env:PATH="C:\$msys\$mingw\bin;C:\$msys\usr\bin;$env:PATH"
 
       function bash($command, $dieOnError = $true) {
         ""
         Write-Host $command
 
-        $folder = $folder -Replace '\\', '/'
-
-        & "C:\$msys\usr\bin\sh.exe" --login -c "MSYSTEM=$mingwUpper . /etc/profile && cd $folder && $command"
+        & "C:\$msys\usr\bin\sh.exe" --login -c "MSYSTEM=$mingwUpper . /etc/profile && cd $posixBuildFolder && $command"
 
         if ($LASTEXITCODE -eq 0) {
           Write-Host "'$command' succeeded. While its output might be red, it exited with '0'." -ForegroundColor Green
@@ -78,7 +76,32 @@ build_script:
       bash "./configure"
       bash "make"
 
+test_script:
+  - ps: |
+      $exe = "$buildFolder\schismtracker.exe"
+
+      if (Test-Path $exe) {
+        Write-Host "'$exe' exists. Continuing." -ForegroundColor Green
+      } else {
+        Write-Host "'$exe' does not exist. Exiting." -ForegroundColor Red
+        exit 1
+      }
+
+      $result = Invoke-Expression "& '$exe' /version"
+      if ($result -Match 'Schism Tracker') {
+        Write-Host "'$exe /version' output 'Schism Tracker'. Success!" -ForegroundColor Green
+      } elseif ([string]::IsNullOrWhiteSpace($result)) {
+        Write-Host "'$exe /version' did not output anything. It might be damaged." -ForegroundColor Red
+        exit 1
+      } else {
+        Write-Host "'$exe /version' did not output 'Schism Tracker' as expected. The result was:" -ForegroundColor Red
+        Write-Host $result -ForegroundColor Red
+        exit 1
+      }
+
 on_failure:
+  - dir /s /b > dir.txt
+  - if exist "dir.txt" 7z a schismtracker_debug_logs.7z "dir.txt" > nul
   - if exist "config.log" 7z a schismtracker_debug_logs.7z "config.log" > nul
   - if exist "configure.ac" 7z a schismtracker_debug_logs.7z "configure.ac" > nul
   - if exist "configure" 7z a schismtracker_debug_logs.7z "configure" > nul
