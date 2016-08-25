@@ -1,13 +1,9 @@
 environment:
     matrix:
-    - platform: x86
-      arch: i686
-      mingw: mingw32
-      msys: msys32
-    - platform: x64
-      arch: x86_64
-      mingw: mingw64
-      msys: msys64
+    - arch: i686
+      bits: 32
+    - arch: x86_64
+      bits: 64
 
 cache:
   - 'C:\msys32'
@@ -15,22 +11,21 @@ cache:
 install:
   - ps: |
       [Environment]::SetEnvironmentVariable("MSYS2_PATH_TYPE", "inherit", "Machine")
-      $platform = $env:Platform
       $arch = $env:Arch
-      $msys = $env:Msys
-      $mingw = $env:Mingw
+      $bits = $env:Bits
+      $msys = "msys$bits"
+      $mingw = "mingw$bits"
+      $mingwUpper = $mingw.ToUpper()
       $folder = $env:APPVEYOR_BUILD_FOLDER
 
       $env:PATH="C:\$msys\$mingw\bin;C:\$msys\usr\bin;$env:PATH"
 
       function bash($command, $dieOnError = $true) {
         ""
-
         Write-Host $command
 
         $folder = $folder -Replace '\\', '/'
 
-        $mingwUpper = $mingw.ToUpper()
         & "C:\$msys\usr\bin\sh.exe" --login -c "MSYSTEM=$mingwUpper . /etc/profile && cd $folder && $command"
 
         if ($LASTEXITCODE -eq 0) {
@@ -48,7 +43,7 @@ install:
       }
 
       # 32-bit MSYS2 is not offered on AppVeyor yet, so we need to install it.
-      if ($platform -eq "x86") {
+      if ($arch -eq "i686") {
         Write-Host "Installing 32-bit MSYS2..." -ForegroundColor Cyan
 
         # download installer
