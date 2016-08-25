@@ -75,6 +75,7 @@ build_script:
       bash "autoreconf --install --include=/$mingw/share/aclocal/"
       bash "./configure"
       bash "make"
+      Copy-Item C:\$msys\$mingw\bin\SDL.dll .\
 
 test_script:
   - ps: |
@@ -108,8 +109,10 @@ on_failure:
   - if exist "C:\msys%bits%\mingw%bits%\bin\sdl-config" 7z a schismtracker_debug_logs.7z "C:\msys%bits%\mingw%bits%\bin\sdl-config" > nul
 
 on_finish:
-  - if exist schismtracker_debug_logs.7z appveyor PushArtifact schismtracker_debug_logs.7z
-  - if exist schismtracker.exe appveyor PushArtifact schismtracker.exe
+  - if exist "schismtracker_debug_logs.7z" appveyor PushArtifact "schismtracker_debug_logs.7z"
+  - if exist "schismtracker.exe" 7z a schismtracker.7z "schismtracker.exe" > nul
+  - if exist "SDL.dll" 7z a schismtracker.7z "SDL.dll" > nul
+  - if exist "schismtracker.7z" appveyor PushArtifact "schismtracker.7z"
 
 artifacts:
   - path: '*.7z'
