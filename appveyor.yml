@@ -75,11 +75,11 @@ build_script:
       bash "autoreconf --install --include=/$mingw/share/aclocal/"
       bash "./configure"
       bash "make"
-      Copy-Item C:\$msys\$mingw\bin\SDL.dll .\
+      xcopy C:\$msys\$mingw\bin\SDL.dll .\
 
       if ($arch -eq "i686") {
-        Copy-Item C:\$msys\$mingw\bin\libgcc_s_dw2-1.dll .\
-        Copy-Item C:\$msys\$mingw\bin\libwinpthread-1.dll .\
+        xcopy C:\$msys\$mingw\bin\libgcc_s_dw2-1.dll .\
+        xcopy C:\$msys\$mingw\bin\libwinpthread-1.dll .\
       }
 
 test_script:
