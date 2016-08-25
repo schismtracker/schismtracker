@@ -79,12 +79,16 @@ build_script:
       bash "make"
 
 on_failure:
-  - ps: |
-      bash "ls -la"
-      bash "if [ -e config.log ]; then echo ''; echo 'Contents of config.log:'; cat config.log; else echo '`"config.log`" not found.'; fi;"
-      bash "if [ -e configure.ac ]; then echo ''; echo 'Contents of configure.ac:'; cat configure.ac; else echo '`"configure.ac`" not found.'; fi;"
-      bash "if [ -e configure ]; then echo ''; echo 'Contents of configure:'; cat configure; else echo '`"configure`" not found.'; fi;"
-      bash "if [ -e /$mingw/bin/sdl-config ]; then echo ''; echo 'Contents of $/mingw/bin/sdl-config:'; cat /$mingw/bin/sdl-config; else echo '`"/$mingw/bin/sdl-config`" not found.'; fi;"
+  - if exist "config.log" 7z a schismtracker_debug_logs.7z "config.log" > nul
+  - if exist "configure.ac" 7z a schismtracker_debug_logs.7z "configure.ac" > nul
+  - if exist "configure" 7z a schismtracker_debug_logs.7z "configure" > nul
+  - if exist "C:\msys%bits%\mingw%bits%\bin\sdl-config" 7z a schismtracker_debug_logs.7z "C:\msys%bits%\mingw%bits%\bin\sdl-config" > nul
+
+on_finish:
+  - if exist schismtracker_debug_logs.7z appveyor PushArtifact schismtracker_debug_logs.7z
+
+artifacts:
+  - path: '*.7z'
 
 notifications:
   on_build_success: false
