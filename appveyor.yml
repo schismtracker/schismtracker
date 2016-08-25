@@ -86,6 +86,7 @@ on_failure:
 
 on_finish:
   - if exist schismtracker_debug_logs.7z appveyor PushArtifact schismtracker_debug_logs.7z
+  - if exist schismtracker.exe appveyor PushArtifact schismtracker.exe
 
 artifacts:
   - path: '*.7z'
