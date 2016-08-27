@@ -82,8 +82,10 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 	if (resonance > 255)
 		resonance = 255;
 
+        // TODO: The enabling/disabling of channel filter is a bit more complex.
+        // More info in snd_flt.cpp in OpenMPT and filter-reset.it, filter-reset-carry.it
+        // and filter-nna.it from https://wiki.openmpt.org/Development:_Test_Cases/IT
 	// Should be 255, but Zxx cutoff is limited to 127, so...
-        //TODO: "|| ressonance > 0". Said that, I believe it only applies to Zxx command, and not to envelopes, but i should verify it.
 	if (cutoff < 254)
 		chan->flags |= CHN_FILTER;
 	else
