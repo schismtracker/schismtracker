@@ -69,7 +69,7 @@ static int _win32_error_unmap(slurp_t *slurp, const char *filename, const char *
         DWORD err = GetLastError();
         LPTSTR errmsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-                      err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), &errmsg, 0, NULL);
+                      err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), errmsg, 0, NULL);
         // I don't particularly want to split this stuff onto two lines, but
         // it's the only way to make the error message readable in some cases
         // (though no matter what, the message is still probably going to be
