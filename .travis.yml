@@ -31,13 +31,20 @@ addons:
       - libsdl1.2-dev
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
+  - wget https://raw.github.com/lehmannro/assert.sh/v1.1/assert.sh
+  - wget https://raw.githubusercontent.com/dansoton/assert.sh/assert-extras/assert-extras.sh
+  - source assert.sh
+  - source assert-extras.sh
 script:
   - autoreconf -i
   - mkdir -p build
   - cd build
   - sh ../configure
   - make
+  - assert_startswith "./schismtracker --version" "Schism Tracker"
+  - assert_end tests
 notifications:
   email:
     on_success: change
