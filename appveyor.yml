@@ -1,9 +1,9 @@
 environment:
     matrix:
-    - arch: i686
-      bits: 32
     - arch: x86_64
       bits: 64
+    - arch: i686
+      bits: 32
 
 cache:
   - 'C:\msys32'
