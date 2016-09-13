@@ -185,8 +185,14 @@ lib_win32=-lwinmm
 endif
 
 if HAVE_WINDRES
-## this is assuming PACKAGE_VERSION is YYYYMMDD
-wrcflags_version = -DWRC_VERSION=0,`(date +$(PACKAGE_VERSION)%Y%m%d)`
+
+## use today's date if we didn't get a commit date from git
+if HAVE_GIT
+wrcflags_version = -DWRC_VERSION=0,`echo '$(PACKAGE_VERSION)' | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
+else
+wrcflags_version = -DWRC_VERSION=0,`date +%Y%m%d | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
+endif
+
 ## --use-temp-file is needed to work around stupid bugs
 WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
 .rc.$(OBJEXT):
