@@ -1,9 +1,9 @@
 environment:
     matrix:
-    - arch: i686
-      bits: 32
     - arch: x86_64
       bits: 64
+    - arch: i686
+      bits: 32
 
 cache:
   - 'C:\msys32'
@@ -93,22 +93,24 @@ test_script:
         exit 1
       }
 
-      Invoke-Expression "& '$exe' /version"
+      Start-Process -Wait -FilePath $exe -ArgumentList '--version'
+      $result = Get-Content "stdout.txt"
 
-#      $result = Invoke-Expression "& '$exe' /version"
-#      if ($result -Match 'Schism Tracker') {
-#        Write-Host "'$exe /version' output 'Schism Tracker'. Success!" -ForegroundColor Green
-#      } elseif ([string]::IsNullOrWhiteSpace($result)) {
-#        Write-Host "'$exe /version' did not output anything. It might be damaged." -ForegroundColor Red
-#        exit 1
-#      } else {
-#        Write-Host "'$exe /version' did not output 'Schism Tracker' as expected. The result was:" -ForegroundColor Red
-#        Write-Host $result -ForegroundColor Red
-#        exit 1
-#      }
+      if ($result -Match 'Schism Tracker') {
+        Write-Host "'$exe --version' output 'Schism Tracker'. Success!" -ForegroundColor Green
+      } elseif ([string]::IsNullOrWhiteSpace($result)) {
+        Write-Host "'$exe --version' did not output anything. It might be damaged." -ForegroundColor Red
+        exit 1
+      } else {
+        Write-Host "'$exe --version' did not output 'Schism Tracker' as expected. The result was:" -ForegroundColor Red
+        Write-Host $result -ForegroundColor Red
+        exit 1
+      }
 
 on_failure:
   - dir /s /b > dir.txt
+  - if exist "stdout.txt" 7z a -tzip schismtracker_debug_logs.zip "stdout.txt" > nul
+  - if exist "stderr.txt" 7z a -tzip schismtracker_debug_logs.zip "stderr.txt" > nul
   - if exist "dir.txt" 7z a -tzip schismtracker_debug_logs.zip "dir.txt" > nul
   - if exist "config.log" 7z a -tzip schismtracker_debug_logs.zip "config.log" > nul
   - if exist "configure.ac" 7z a -tzip schismtracker_debug_logs.zip "configure.ac" > nul
