@@ -34,7 +34,7 @@ before_install:
 install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
   - wget https://raw.github.com/lehmannro/assert.sh/v1.1/assert.sh
-  - wget https://raw.githubusercontent.com/dansoton/assert.sh/assert-extras/assert-extras.sh
+  - wget https://raw.github.com/dansoton/assert.sh/assert-extras/assert-extras.sh
   - source assert.sh
   - source assert-extras.sh
 script:
