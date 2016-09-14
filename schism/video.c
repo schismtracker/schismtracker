@@ -407,6 +407,14 @@ int video_is_fullscreen(void)
 {
 	return video.desktop.fullscreen;
 }
+int video_width(void)
+{
+	return video.clip.w;
+}
+int video_height(void)
+{
+	return video.clip.h;
+}
 void video_shutdown(void)
 {
 	if (video.desktop.fullscreen) {

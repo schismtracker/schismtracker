@@ -373,7 +373,9 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
 	/* warp mouse to position of slider knob */
 	if (max == 0) max = 1; /* prevent division by zero */
-	SDL_WarpMouse((midx - 8)*8 + (cv - min)*96/(max - min) + 1, midy*8 + 4);
+	SDL_WarpMouse(
+		video_width()*((midx - 8)*8 + (cv - min)*96.0/(max - min) + 1)/640,
+		video_height()*midy*8/400.0 + 4);
 
 	_mp_active = 1;
 	status.flags |= NEED_UPDATE;

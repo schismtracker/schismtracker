@@ -72,6 +72,8 @@ int video_mousecursor_visible(void);
 int video_gl_bilinear(void);
 
 int video_is_fullscreen(void);
+int video_width(void);
+int video_height(void);
 
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
