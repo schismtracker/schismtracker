@@ -358,8 +358,6 @@ static void _mp_finish(UNUSED void *ign)
 static void minipop_slide(int cv, const char *name, int min, int max,
 	void (*setv)(int v), void (*setv_noplay)(int v), int midx, int midy)
 {
-	/* sweet jesus! */
-
 	if (_mp_active == 1) {
 		_mp_active = 2;
 		return;
@@ -373,6 +371,9 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	_mpw[0].d.thumbbar.value = CLAMP(cv, min, max);
 	_mpw[0].depressed = 1; /* maybe it just needs some zoloft? */
 	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
+	/* warp mouse to position of slider knob */
+	if (max == 0) max = 1; /* prevent division by zero */
+	SDL_WarpMouse((midx - 8)*8 + (cv - min)*96/(max - min) + 1, midy*8 + 4);
 
 	_mp_active = 1;
 	status.flags |= NEED_UPDATE;
@@ -440,7 +441,7 @@ static int handle_key_global(struct key_event * k)
 				set_current_pattern, NULL, 14, 6);
 			return 1;
 		} else if (k->y == 5 && k->x >= 11 && k->x <= 17) {
-			minipop_slide(song_get_current_order(), "Order",
+			minipop_slide(get_current_order(), "Order",
 				0, csf_get_num_orders(current_song),
 				set_current_order, NULL, 14, 5);
 			return 1;
