@@ -440,7 +440,7 @@ static int handle_key_global(struct key_event * k)
 				set_current_pattern, NULL, 14, 6);
 			return 1;
 		} else if (k->y == 5 && k->x >= 11 && k->x <= 17) {
-			minipop_slide(song_get_current_order(), "Order",
+			minipop_slide(get_current_order(), "Order",
 				0, csf_get_num_orders(current_song),
 				set_current_order, NULL, 14, 5);
 			return 1;
