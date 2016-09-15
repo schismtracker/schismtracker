@@ -432,21 +432,23 @@ static int handle_key_global(struct key_event * k)
 					99 /* FIXME */, sample_set, NULL, 58, 3);
 			}
 
-		} else if (k->y == 7 && k->x >= 11 && k->x <= 17) {
-			minipop_slide(get_current_row(), "Row",
-				0, song_get_rows_in_pattern(get_current_pattern()),
-				set_current_row, NULL, 14, 7);
-			return 1;
-		} else if (k->y == 6 && k->x >= 11 && k->x <= 17) {
-			minipop_slide(get_current_pattern(), "Pattern",
-				0, csf_get_num_patterns(current_song),
-				set_current_pattern, NULL, 14, 6);
-			return 1;
-		} else if (k->y == 5 && k->x >= 11 && k->x <= 17) {
-			minipop_slide(get_current_order(), "Order",
-				0, csf_get_num_orders(current_song),
-				set_current_order, NULL, 14, 5);
-			return 1;
+		} else if (k->x >= 12 && k->x <= 18) {
+			if (k->y == 7) {
+				minipop_slide(get_current_row(), "Row",
+					0, song_get_rows_in_pattern(get_current_pattern()),
+					set_current_row, NULL, 14, 7);
+				return 1;
+			} else if (k->y == 6) {
+				minipop_slide(get_current_pattern(), "Pattern",
+					0, csf_get_num_patterns(current_song),
+					set_current_pattern, NULL, 14, 6);
+				return 1;
+			} else if (k->y == 5) {
+				minipop_slide(get_current_order(), "Order",
+					0, csf_get_num_orders(current_song),
+					set_current_order, NULL, 14, 5);
+				return 1;
+			}
 		}
 	} else if ((!_mp_active) && k->mouse == MOUSE_DBLCLICK) {
 		if (k->y == 4 && k->x >= 11 && k->x <= 28) {
