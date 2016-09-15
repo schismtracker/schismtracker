@@ -20,16 +20,14 @@ will probably not be as well-optimized on many systems.
 See [the wiki](https://github.com/schismtracker/schismtracker/wiki) for more
 information.
 
+![screenshot](http://schismtracker.org/screenie.png)
+
 ## Download
 
 The latest stable builds for Windows and Linux are available from [the releases
 page](https://github.com/schismtracker/schismtracker/releases). Hopefully an
 OSX build will be soon to follow! Older builds for other platforms can be found
 on [the wiki](https://github.com/schismtracker/schismtracker/wiki).
-
-## Screenshot
-
-![screenshot](http://schismtracker.org/screenie.png)
 
 ## Compilation
 
