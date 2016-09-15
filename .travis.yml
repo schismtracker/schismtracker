@@ -40,7 +40,6 @@ script:
   - sh ../configure
   - make
   - grep '^Schism Tracker' <(./schismtracker --version)
-  - grep '^Schism Tracker' <(grep --version)
 notifications:
   email:
     on_success: change
