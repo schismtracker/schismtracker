@@ -31,6 +31,7 @@ addons:
       - libsdl1.2-dev
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
 script:
   - autoreconf -i
@@ -38,6 +39,7 @@ script:
   - cd build
   - sh ../configure
   - make
+  - grep '^Schism Tracker' <(./schismtracker --version)
 notifications:
   email:
     on_success: change
