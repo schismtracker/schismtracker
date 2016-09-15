@@ -27,6 +27,10 @@ page](https://github.com/schismtracker/schismtracker/releases). Hopefully an
 OSX build will be soon to follow! Older builds for other platforms can be found
 on [the wiki](https://github.com/schismtracker/schismtracker/wiki).
 
+## Screenshot
+
+![screenshot](http://schismtracker.org/screenie.png)
+
 ## Compilation
 
 See the
