@@ -125,13 +125,12 @@ static int resetting = 0; // boolean
 static int MPU_StringToBytes(char * config_string, unsigned char * outbytes)
 {
 
-	char * instring = malloc(strlen(config_string));
+	char instring[33];
 	char * pch;
 	unsigned short nextbyte = 0;
 	int i = 0;
 
 	/* strtok is destructive and we don't want it to chew up our config string permanently */
-	instring = malloc(strlen(config_string));
 	strcpy(instring, config_string);
 
 	pch = strtok(instring, " ");
@@ -144,7 +143,6 @@ static int MPU_StringToBytes(char * config_string, unsigned char * outbytes)
 		i++;
 	}
 
-	free(instring);
 	return i;
 
 }
