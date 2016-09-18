@@ -29,7 +29,7 @@
 #include "log.h"
 #include "it.h" // needed for status.flags
 #include "sndfile.h"
-#include "song.h" // for 'current_song', which provides ->midi_config and possibly other things
+#include "song.h" // for 'current_song', which contains the user's custom midi macros
 #include "snd_gm.h"
 
 #include <math.h> // for log
@@ -694,44 +694,34 @@ static double LastSongCounter = 0.0;
 // send codes as set by the user in their midi output settings
 void GM_SendSongStartCode(void) 
 {
-
 	csf_process_midi_macro(current_song, 0, current_song->midi_config.start, 0, 0, 0, 0);
 	LastSongCounter = 0;
-
 }
 
 void GM_SendSongStopCode(void) 
 {
-
 	csf_process_midi_macro(current_song, 0, current_song->midi_config.stop, 0, 0, 0, 0);
 	LastSongCounter = 0;
-
 }
 
 // hmm why isn't the user allowed to set this one too?
 void GM_SendSongContinueCode(void) 
 { 
-
 	unsigned char c = 0xFB; MPU_SendCommand(&c, 1, 0); 
 	LastSongCounter = 0; 
-
 }
 
 void GM_SendSongTickCode(void) 
 {
-
 	csf_process_midi_macro(current_song, 0, current_song->midi_config.tick, 0, 0, 0, 0);
-
 }
 
 // or this?
 void GM_SendSongPositionCode(unsigned note16pos)
 {
-
 	unsigned char buf[3] = {0xF2, note16pos & 127, (note16pos >> 7) & 127};
 	MPU_SendCommand(buf, 3, 0);
 	LastSongCounter = 0;
-
 }
 
 
