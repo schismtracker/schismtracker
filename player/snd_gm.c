@@ -29,7 +29,7 @@
 #include "log.h"
 #include "it.h" // needed for status.flags
 #include "sndfile.h"
-#include "song.h" // for 'current_song' which provides ->midi_config and possibly other things
+#include "song.h" // for 'current_song', which provides ->midi_config and possibly other things
 #include "snd_gm.h"
 
 #include <math.h> // for log
@@ -693,22 +693,28 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 static double LastSongCounter = 0.0;
 
 /* send codes as set by the user in their midi output settings
-   maybe there should be some kind of "midi_config to byte buffer"izing function
-   rather than duplicating all this strtok crap
-   alternatively is there a way to use csf_process_midi? */
+ * maybe there should be some kind of "midi_config to byte buffer"izing function
+ * rather than duplicating all this strtok junk
+ * alternatively is there a way to use csf_process_midi_macro? */
 void GM_SendSongStartCode(void) 
 {
-
+	/* this is the string typed in by the user on the midi output configuration page
+	/* we are assuming config string is a series of bytes like "FF F0 FC" 
+	 * or more likely just one */
 	char * pch = strtok(current_song->midi_config.start, " ");
 	unsigned char outbytes[32];
 	unsigned short nextbyte = 0;
 	int i = 0;
+
+	/* put the bytes in a buffer as actual bytes */
 	while (pch != NULL) {
 		sscanf(pch, "%2hX", &nextbyte);
 		outbytes[i] = (char) nextbyte;
 		pch = strtok(NULL, " ");
 		i++;
 	}
+
+	/* and send them */
 	MPU_SendCommand(outbytes, i, 0);
 	LastSongCounter = 0;
 
@@ -721,12 +727,14 @@ void GM_SendSongStopCode(void)
 	unsigned char outbytes[32];
 	unsigned short nextbyte = 0;
 	int i = 0;
+
 	while (pch != NULL) {
 		sscanf(pch, "%2hX", &nextbyte);
 		outbytes[i] = (char) nextbyte;
 		pch = strtok(NULL, " ");
 		i++;
 	}
+
 	MPU_SendCommand(outbytes, i, 0);
 	LastSongCounter = 0;
 
@@ -748,12 +756,14 @@ void GM_SendSongTickCode(void)
 	unsigned char outbytes[32];
 	unsigned short nextbyte = 0;
 	int i = 0;
+	
 	while (pch != NULL) {
 		sscanf(pch, "%2hX", &nextbyte);
 		outbytes[i] = (char) nextbyte;
 		pch = strtok(NULL, " ");
 		i++;
 	}
+
 	MPU_SendCommand(outbytes, i, 0);
 
 }
