@@ -83,8 +83,7 @@ Reconfigure it:
 
 _(note: if you get a "possibly undefined macro: AM\_PATH\_SDL" error, you're probably using the standard msys2 shell - either use the mingw start menu shortcuts, or start msys2_shell.cmd with either -mingw32 or -mingw64 as mentioned above)_
 
-If you're planning to build both 32- and 64-bit binaries, you may wish to create the subfolders
-build32 and build64:
+If you're planning to build both 32- and 64-bit binaries, you may wish to create the subdirs build32 and build64:
 
 	mkdir build32
 	mkdir build64
@@ -97,7 +96,7 @@ Otherwise just build will do:
 	
 Now move into the build subdir and run the configure script:
 
-	cd build	# or build32 or build64 as appropriate
+	cd build			# or build32 or build64 as appropriate
 	../configure
 	
 ### Build and rebuild
