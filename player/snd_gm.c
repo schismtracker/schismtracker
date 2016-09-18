@@ -119,6 +119,36 @@ static unsigned RunningStatus = 0;
 static int resetting = 0; // boolean
 #endif
 
+/* e.g. "FF F0 FC 87 8F" -> [0xFF, 0xF0, 0xFC, 0x87, 0x8F]
+ * doesn't handle any of the midi macro stuff as detailed in the help page
+ * because i don't know how or whether anyone would want that */
+static int MPU_StringToBytes(char * config_string, unsigned char * outbytes)
+{
+
+	char * instring = malloc(strlen(config_string));
+	char * pch;
+	unsigned short nextbyte = 0;
+	int i = 0;
+
+	/* strtok is destructive and we don't want it to chew up our config string permanently */
+	instring = malloc(strlen(config_string));
+	strcpy(instring, config_string);
+
+	pch = strtok(instring, " ");
+
+	/* put the bytes in a buffer as actual bytes */
+	while (pch != NULL) {
+		sscanf(pch, "%2hX", &nextbyte);
+		outbytes[i] = (char) nextbyte;
+		pch = strtok(NULL, " ");
+		i++;
+	}
+
+	free(instring);
+	return i;
+
+}
+
 
 static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
 {
@@ -692,29 +722,12 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 
 static double LastSongCounter = 0.0;
 
-/* send codes as set by the user in their midi output settings
- * maybe there should be some kind of "midi_config to byte buffer"izing function
- * rather than duplicating all this strtok junk
- * alternatively is there a way to use csf_process_midi_macro? */
+// send codes as set by the user in their midi output settings
 void GM_SendSongStartCode(void) 
 {
-	/* this is the string typed in by the user on the midi output configuration page
-	/* we are assuming config string is a series of bytes like "FF F0 FC" 
-	 * or more likely just one */
-	char * pch = strtok(current_song->midi_config.start, " ");
+
 	unsigned char outbytes[32];
-	unsigned short nextbyte = 0;
-	int i = 0;
-
-	/* put the bytes in a buffer as actual bytes */
-	while (pch != NULL) {
-		sscanf(pch, "%2hX", &nextbyte);
-		outbytes[i] = (char) nextbyte;
-		pch = strtok(NULL, " ");
-		i++;
-	}
-
-	/* and send them */
+	int i = MPU_StringToBytes(current_song->midi_config.start, outbytes);
 	MPU_SendCommand(outbytes, i, 0);
 	LastSongCounter = 0;
 
@@ -723,18 +736,8 @@ void GM_SendSongStartCode(void)
 void GM_SendSongStopCode(void) 
 {
 
-	char * pch = strtok(current_song->midi_config.stop, " ");
 	unsigned char outbytes[32];
-	unsigned short nextbyte = 0;
-	int i = 0;
-
-	while (pch != NULL) {
-		sscanf(pch, "%2hX", &nextbyte);
-		outbytes[i] = (char) nextbyte;
-		pch = strtok(NULL, " ");
-		i++;
-	}
-
+	int i = MPU_StringToBytes(current_song->midi_config.stop, outbytes);
 	MPU_SendCommand(outbytes, i, 0);
 	LastSongCounter = 0;
 
@@ -752,18 +755,8 @@ void GM_SendSongContinueCode(void)
 void GM_SendSongTickCode(void) 
 {
 
-	char * pch = strtok(current_song->midi_config.tick, " ");
 	unsigned char outbytes[32];
-	unsigned short nextbyte = 0;
-	int i = 0;
-	
-	while (pch != NULL) {
-		sscanf(pch, "%2hX", &nextbyte);
-		outbytes[i] = (char) nextbyte;
-		pch = strtok(NULL, " ");
-		i++;
-	}
-
+	int i = MPU_StringToBytes(current_song->midi_config.tick, outbytes);
 	MPU_SendCommand(outbytes, i, 0);
 
 }
