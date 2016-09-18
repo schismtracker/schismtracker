@@ -12,6 +12,8 @@ To compile on Windows, the following things are needed:
 * SDL headers and libs
 * An environment in which to run them, like msys.
 
+If you want proper version information, you'll need git installed and in your path too
+
 ## Installing MSYS2 and mingw
 These instructions describe how to install msys2, which includes all of the required packages.
 
@@ -62,11 +64,11 @@ environment to use either the 32bit compiler or the 64bit compiler.
 
 You can also start the 32bit compiler with 
 
-	msys2_shell.cmd -migw32
+	msys2_shell.cmd -mingw32
 	
 and the 64bit compiler with
 
-	msys2_shell.cmd -ming64
+	msys2_shell.cmd -mingw64
 
 ### Configure schismtracker to build
 
@@ -79,17 +81,28 @@ Reconfigure it:
 
 	autoreconf -i
 
-I recommend to have two subdirectories to build the binaries, as such, create the subfolder
-buildx86 and buildx64:
+_(note: if you get a "possibly undefined macro: AM\_PATH\_SDL" error, you're probably using the standard msys2 shell - either use the mingw start menu shortcuts, or start msys2_shell.cmd with either -mingw32 or -mingw64 as mentioned above)_
 
-	mkdir buildx86
-	mkdir buildx64
-	cd buildx86
+If you're planning to build both 32- and 64-bit binaries, you may wish to create the subfolders
+build32 and build64:
+
+	mkdir build32
+	mkdir build64
+
+and then follow the rest of the instructions twice, once with the -mingw32 shell in the build32 subdir, and once with the -mingw64 shell in the build64 subdir.
+
+Otherwise just build will do:
+
+	mkdir build
+	
+Now move into the build subdir and run the configure script:
+
+	cd build	# or build32 or build64 as appropriate
 	../configure
-
+	
 ### Build and rebuild
 
-In order to build and run it, from the buildx86 subdir (or buildx64), run these:
+In order to build and run it, from the appropriate build subdir, run these:
 
 	make
 	../schismtracker &
@@ -118,7 +131,7 @@ The 32bit build also requires the files /msys2_path/mingw64/bin/libgcc_s_dw2-1.d
 
 If you want to reduce the exe size (removing the debugging information), use the following command:
 
-!!NOTE!!: do it also from the same shell than you used to build the executable, as the tool is bitsize dependant.
+_(note: you MUST do this from the same shell than you used to build the executable, as the strip tool is architecture-dependent)_
 
 	strip -g schismtracker.exe
 
