@@ -24,17 +24,15 @@ The 32bit download can run on 32bit windows and the 64bit one requires a 64bit W
 Once installed, follow these instructions to get up-to-date files. This process is also described in their
 web page, so in case of conflict, you might opt to follow their instructions.
 
-Update the pacman package manager:
+Run the MSYS2 shell (a start menu shortcut should have been created) and update the pacman package manager:
 
     pacman -Sy pacman
 	
-Close the MSYS2 window.
-run it again from Start menu and update the system:
+Close the MSYS2 window. Run it again from the Start menu and update the system:
 
 	pacman -Syu
 	
-Close the MSYS2 window.
-run it again from Start menu and update the rest with:
+Close the MSYS2 window. Run it again from the Start menu _(note: the update process can, in some cases, break the start menu shortcut - in which case you may need to look in C:\msys64 (or wherever you installed msys) and run msys2\_shell.cmd)_ and update the rest with:
 
 	pacman -Su
 
