@@ -304,6 +304,37 @@ void sample_centralise(song_sample_t * sample)
 }
 
 /* --------------------------------------------------------------------- */
+/* downmix stereo to mono */
+
+static void _downmix_8(signed char *data, unsigned long length)
+{
+	unsigned long i, j;
+	for (i = j = 0; j < length; j++, i += 2)
+		data[j] = (data[i] + data[i + 1]) / 2;
+}
+
+static void _downmix_16(signed short *data, unsigned long length)
+{
+	unsigned long i, j;
+	for (i = j = 0; j < length; j++, i += 2)
+		data[j] = (data[i] + data[i + 1]) / 2;
+}
+
+void sample_downmix(song_sample_t *sample)
+{
+	if (!(sample->flags & CHN_STEREO))
+		return; /* what are we doing here with a mono sample? */
+	song_lock_audio();
+	status.flags |= SONG_NEEDS_SAVE;
+	if (sample->flags & CHN_16BIT)
+		_downmix_16((signed short *) sample->data, sample->length);
+	else
+		_downmix_8(sample->data, sample->length);
+	sample->flags &= ~CHN_STEREO;
+	song_unlock_audio();
+}
+
+/* --------------------------------------------------------------------- */
 /* amplify (or attenuate) */
 
 static void _amplify_8(signed char *data, unsigned long length, int percent)

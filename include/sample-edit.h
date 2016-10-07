@@ -27,6 +27,7 @@
 void sample_sign_convert(song_sample_t * sample);
 void sample_reverse(song_sample_t * sample);
 void sample_centralise(song_sample_t * sample);
+void sample_downmix(song_sample_t * sample);
 void sample_amplify(song_sample_t *sample, int percent);
 /* Return the maximum amplification that can be done without clipping (as a
  * percentage, suitable to pass to sample_amplify). */

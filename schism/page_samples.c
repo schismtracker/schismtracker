@@ -607,6 +607,12 @@ static void do_delete_sample(UNUSED void *data)
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
+static void do_downmix(UNUSED void *data)
+{
+	song_sample_t *sample = song_get_sample(current_sample);
+	sample_downmix(sample);
+}
+
 static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 {
 	song_sample_t *sample = song_get_sample(current_sample);
@@ -1300,7 +1306,15 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		}
 		return;
 	case SDLK_d:
-		dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample, NULL, 1, NULL);
+		if ((k->mod & KMOD_SHIFT) && !(status.flags & CLASSIC_MODE)) {
+			if (canmod && sample->flags & CHN_STEREO) {
+				dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?",
+					do_downmix, NULL, 0, NULL);
+			}
+		} else {
+			dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample,
+				NULL, 1, NULL);
+		}
 		return;
 	case SDLK_e:
 		if (canmod)

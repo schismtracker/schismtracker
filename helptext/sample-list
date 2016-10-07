@@ -11,6 +11,7 @@
 |   Alt-B        Pre-Loop cut sample
 |   Alt-C        Clear Sample Name & Filename (Used in Sample Name window)
 |   Alt-D        Delete Sample
+:   Alt-Shift-D  Downmix stereo sample to mono
 |   Alt-E        Resize Sample (with interpolation)
 |   Alt-F        Resize Sample (without interpolation)
 |   Alt-G        Reverse Sample
