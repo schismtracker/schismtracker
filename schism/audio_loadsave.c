@@ -352,8 +352,7 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 	iti.rv = i->vol_swing;
 	iti.rp = i->pan_swing;
 	if (iti_file) {
-		iti.trkvers = bswapLE16(0x0214);
-		//iti.nos = ???;
+		iti.trkvers = bswapLE16(0x1000 | ver_cwtv);
 	}
 	// reserved1
 	strncpy((char *) iti.name, (char *) i->name, 25);
@@ -395,6 +394,9 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 			iti.keyboard[2 * j + 1] = i->sample_map[j];
 		}
 		iti.keyboard[2 * j] = i->note_map[j] - 1;
+	}
+	if (iti_file) {
+		iti.nos = (uint8_t)iti_nalloc;
 	}
 	// envelope stuff from modplug
 	iti.volenv.flags = 0;
