@@ -1335,17 +1335,17 @@ static void sample_list_handle_alt_key(struct key_event * k)
 	case SDLK_n:
 		song_toggle_multichannel_mode();
 		return;
-	case SDLK_q:
-		if (canmod) {
-			dialog_create(DIALOG_YES_NO, "Convert sample?",
-			      do_quality_convert, do_quality_toggle, 0, NULL);
-		}
-		return;
 	case SDLK_o:
 		sample_save(NULL, "ITS");
 		return;
 	case SDLK_p:
 		smpprompt_create("Copy sample:", "Sample", do_copy_sample);
+		return;
+	case SDLK_q:
+		if (canmod) {
+			dialog_create(DIALOG_YES_NO, "Convert sample?",
+			      do_quality_convert, do_quality_toggle, 0, NULL);
+		}
 		return;
 	case SDLK_r:
 		smpprompt_create("Replace sample with:", "Sample", do_replace_sample);
