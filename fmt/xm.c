@@ -544,11 +544,11 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		ins->pan_env.loop_start = slurp_getc(fp);
 		ins->pan_env.loop_end = slurp_getc(fp);
 		b = slurp_getc(fp);
-		if (b & 1) ins->flags |= ENV_VOLUME;
+		if ((b & 1) && ins->vol_env.nodes > 0) ins->flags |= ENV_VOLUME;
 		if (b & 2) ins->flags |= ENV_VOLSUSTAIN;
 		if (b & 4) ins->flags |= ENV_VOLLOOP;
 		b = slurp_getc(fp);
-		if (b & 1) ins->flags |= ENV_PANNING;
+		if ((b & 1) && ins->pan_env.nodes > 0) ins->flags |= ENV_PANNING;
 		if (b & 2) ins->flags |= ENV_PANSUSTAIN;
 		if (b & 4) ins->flags |= ENV_PANLOOP;
 
