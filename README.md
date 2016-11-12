@@ -35,4 +35,17 @@ See the
 [docs/](https://github.com/schismtracker/schismtracker/tree/master/docs) folder
 for platform-specific instructions.
 
-[![Build Status](https://travis-ci.org/schismtracker/schismtracker.svg?branch=master)](https://travis-ci.org/schismtracker/schismtracker)
+## Build Status
+
+|                                | **Status**                |
+| -----------------------------: | :------------------------ |
+|                     **GitHub** | [![GitHub release][1]][2] |
+|     **Travis** (Linux & macOS) | [![Master][3]][4]         |
+|         **AppVeyor** (Windows) | [![Master][5]][6]         |
+
+[1]: https://img.shields.io/github/release/schismtracker/schismtracker.svg
+[2]: https://github.com/schismtracker/schismtracker/releases/latest
+[3]: https://travis-ci.org/schismtracker/schismtracker.svg?branch=master
+[4]: https://travis-ci.org/schismtracker/schismtracker
+[5]: https://img.shields.io/appveyor/ci/jangler/schismtracker/master.svg
+[6]: https://ci.appveyor.com/project/jangler/schismtracker/branch/master
