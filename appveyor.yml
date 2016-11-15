@@ -5,9 +5,6 @@ environment:
     - arch: i686
       bits: 32
 
-cache:
-  - 'C:\msys32'
-
 install:
   - ps: |
       [Environment]::SetEnvironmentVariable("MSYS2_PATH_TYPE", "inherit", "Machine")
