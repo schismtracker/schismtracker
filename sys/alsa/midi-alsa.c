@@ -103,6 +103,8 @@ use:
 None of this code is used, btw, if --enable-alsadltrick isn't supplied to
 the configure script, so to test it, you should use that when developing.
 
+Editor's note: currently there's an explicit directive for the build to fail if
+USE_DLTRICK_ALSA isn't defined. Doesn't say why.
 */
 
 
