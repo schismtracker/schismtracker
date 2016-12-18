@@ -87,8 +87,7 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
-LT_LIB_M
-AC_SUBST(LIBM)
+AC_SEARCH_LIBS([powf], [m])
 
 dnl -----------------------------------------------------------------------
 
