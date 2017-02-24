@@ -105,12 +105,16 @@ numbers smartly e.g. `5.it` will be listed above `10.it`).
 
     [Pattern Editor]
     keyjazz_noteoff=1
+    keyjazz_write_noteoff=0
     keyjazz_repeat=0
 
 If `keyjazz_noteoff` is 1, letting go of a key in the pattern editor will cause
 a note-off. If using this, you might also want to consider setting
 `keyjazz_repeat` to 0 in order to avoid inserting multiple notes when holding
 down keys.
+
+If `keyjazz_write_noteoff` is 1, letting go of a key in the pattern editor will
+also write a note off *if* playback tracing (Ctrl+F) is enabled.
 
 #### Pattern editor behavior tweaks
 
