@@ -83,8 +83,9 @@ static int top_display_row = 0;         /* zero-based */
 static int current_channel = 1, current_position = 0;
 static int current_row = 0;
 
-static int keyjazz_noteoff = 0; /* issue noteoffs when releasing note */
-static int keyjazz_repeat = 1; /* insert multiple notes on key repeat */
+static int keyjazz_noteoff = 0;       /* issue noteoffs when releasing note */
+static int keyjazz_write_noteoff = 0; /* write noteoffs when releasing note */
+static int keyjazz_repeat = 1;        /* insert multiple notes on key repeat */
 
 /* this is, of course, what the current pattern is */
 static int current_pattern = 0;
@@ -1039,6 +1040,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(fast_volume_percent);
 	CFG_SET_PE(fast_volume_mode);
 	CFG_SET_PE(keyjazz_noteoff);
+	CFG_SET_PE(keyjazz_write_noteoff);
 	CFG_SET_PE(keyjazz_repeat);
 	CFG_SET_PE(mask_copy_search_mode);
 	CFG_SET_PE(invert_home_end);
@@ -1070,6 +1072,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(fast_volume_percent, 67);
 	CFG_GET_PE(fast_volume_mode, 0);
 	CFG_GET_PE(keyjazz_noteoff, 0);
+	CFG_GET_PE(keyjazz_write_noteoff, 0);
 	CFG_GET_PE(keyjazz_repeat, 1);
 	CFG_GET_PE(mask_copy_search_mode, 0);
 	CFG_GET_PE(invert_home_end, 0);
@@ -3174,7 +3177,26 @@ static int pattern_editor_insert(struct key_event *k)
 				/* coda mode */
 				song_keyup(smp, ins, n);
 			}
-			return 1;
+			/* it would be weird to have this enabled and keyjazz_noteoff
+			 * disabled, but it's possible, so handle it separately. */
+			if (keyjazz_write_noteoff && playback_tracing && NOTE_IS_NOTE(n)) {
+				/* go to the next row if a note off would overwrite a note
+				 * you (likely) just entered */
+				if (cur_note->note) {
+					if (++current_row >
+						song_get_rows_in_pattern(current_pattern)) {
+						return 1;
+					}
+					cur_note += 64;
+					/* give up if the next row has a note too */
+					if (cur_note->note) {
+						return 1;
+					}
+				}
+				n = NOTE_OFF;
+			} else {
+				return 1;
+			}
 		}
 		if (k->is_repeat && !keyjazz_repeat)
 			return 1;
