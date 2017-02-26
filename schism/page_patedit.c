@@ -3161,17 +3161,7 @@ static int pattern_editor_insert(struct key_event *k)
 				vol = KEYJAZZ_DEFAULTVOL;
 			}
 		}
-#if 0
-		/* ? */
-		if ((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing) {
-			if (k->state == KEY_RELEASE && !(midi_flags & MIDI_RECORD_NOTEOFF))
-				return 1;
-			song_keyup(smp, ins, n);
-			if (k->state == KEY_RELEASE)
-				n = NOTE_OFF;
-			song_keydown(smp, ins, n, vol, current_channel);
-		}
-#endif
+
 		if (k->state == KEY_RELEASE) {
 			if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
 				/* coda mode */
