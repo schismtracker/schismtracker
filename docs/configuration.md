@@ -31,15 +31,30 @@ resources on getting fonts for Schism Tracker.
 To enable any of these, find the `[section]` in the config file, look for the
 `key=`, and change the value. If the key doesn't exist, simply add it.
 
-#### Lazy redraw
+#### Video
 
-    [General]
+    [Video]
     lazy_redraw=1
+    width=640
+    height=400
+    want_fixed=0
+    gl_bilinear=1
 
-Slow down the framerate when the program isn't focused. This used to be kind of
-useful when the GUI rendering sucked, and maybe it still is if you're stuck
-with a painfully slow video card and software rendering, and you also want to
-have a huge window that isn't active.
+`lazy_redraw` slows down the framerate when the program isn't focused. This
+used to be kind of useful when the GUI rendering sucked, and maybe it still is
+if you're stuck with a painfully slow video card and software rendering, and
+you also want to have a huge window that isn't active.
+
+`width` and `height` are the initial dimensions to use for the window, and the
+dimensions to return to when toggling fullscreen off.
+
+If you are having problems with fullscreen aspect ratio, you can try setting
+`want_fixed` to 1. This will attempt to "correct" the fullscreen resolution
+used by Schism.
+
+If `gl_bilinear` is zero, OpenGL will not use bilinear filtering when scaling
+the screen. This has no effect when running at the native resolution of
+640x400.
 
 #### Backups
 
