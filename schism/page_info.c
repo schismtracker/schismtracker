@@ -381,7 +381,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 	const song_note_t *pattern; /* points to either {cur,prev,next}_pattern */
 	int cur_pattern_rows = 0, prev_pattern_rows = 0, next_pattern_rows = 0;
 	int total_rows; /* same as {cur,prev_next}_pattern_rows */
-	int chan_pos, row, row_pos, rows_before, rows_after;
+	int chan_pos, row, row_pos, rows_before;
 	char buf[4];
 
 	if (separator)
@@ -424,9 +424,6 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 	}
 
 	rows_before = (height - 2) / 2;
-	rows_after = rows_before;
-	if (height & 1)
-		rows_after++;
 
 	/* "fake" channels (hack for 64-channel view) */
 	if (num_channels > 64) {
