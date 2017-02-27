@@ -423,7 +423,9 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 		break;
 	}
 
-	rows_before = (height - 2) / 2;
+	/* -2 for the top and bottom border, -1 because if there are an even number
+	 * of rows visible, the current row is drawn above center. */
+	rows_before = (height - 3) / 2;
 
 	/* "fake" channels (hack for 64-channel view) */
 	if (num_channels > 64) {
