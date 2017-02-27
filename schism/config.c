@@ -42,6 +42,7 @@ char cfg_video_driver[65];
 int cfg_video_fullscreen = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 int cfg_video_gl_bilinear = 1;
+int cfg_video_width, cfg_video_height;
 
 /* --------------------------------------------------------------------- */
 
@@ -133,6 +134,8 @@ void cfg_load(void)
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
+	cfg_video_width = cfg_get_number(&cfg, "Video", "width", 640);
+	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);

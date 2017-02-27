@@ -246,6 +246,7 @@ extern char cfg_video_driver[];
 extern int cfg_video_fullscreen;
 extern int cfg_video_mousecursor;
 extern int cfg_video_gl_bilinear;
+extern int cfg_video_width, cfg_video_height;
 
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
 extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */

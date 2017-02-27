@@ -970,8 +970,8 @@ void video_resize(unsigned int width, unsigned int height)
 	int texsize;
 #endif
 
-	if (!height) height = NATIVE_SCREEN_HEIGHT;
-	if (!width) width = NATIVE_SCREEN_WIDTH;
+	if (!width) width = cfg_video_width;
+	if (!height) height = cfg_video_height;
 	video.draw.width = width;
 	video.draw.height = height;
 
