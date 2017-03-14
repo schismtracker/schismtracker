@@ -145,9 +145,6 @@ switch to that one.
 move to the first or last row within the channel before moving to the first or
 last channel. FT2 users might want to enable this.
 
-(These features were recently added and are not available yet for older
-versions)
-
 #### Key modifiers
 
     [General]
