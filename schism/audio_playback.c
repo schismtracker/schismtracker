@@ -310,7 +310,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 		c->flags = (s->flags & CHN_SAMPLE_FLAGS) | (c->flags & CHN_MUTE);
 		if (c->flags & CHN_MUTE) {
-			c->flags &= ~CHN_MUTE;
 			c->flags |= CHN_NNAMUTE;
 		}
 
