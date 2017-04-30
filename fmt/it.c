@@ -697,6 +697,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		// (ordinarily ordnum == 256, but I have encountered at least one file for which this is NOT
 		// the case (trackit_r2.it by dsck) and no other trackers I know of use 0x0888)
 		tid = "OpenMPT 1.17+";
+	} else if (hdr.cwtv == 0x0300 && hdr.cmwt == 0x0300 && hdr.reserved == 0 && hdr.ordnum == 256 && hdr.sep == 128 && hdr.pwd == 0) {
+		tid = "OpenMPT 1.17.02.20 - 1.17.02.25";
 	} else if (hdr.cwtv == 0x0217 && hdr.cmwt == 0x0200 && hdr.reserved == 0) {
 		int ompt = 0;
 		if (hdr.insnum > 0) {
