@@ -730,7 +730,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		// all sample/instrument filenames say "-DEPRECATED-"
 		// 0xa for message newlines instead of 0xd
 		tid = "ChibiTracker";
-	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0214 && (hdr.flags & 0x10C6) == 4) && hdr.special <= 1 && hdr.reserved == 0) {
+	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0214 && (hdr.flags & 0x10C6) == 4 && hdr.special <= 1 && hdr.reserved == 0) {
 		// sample data stored directly after header
 		// all sample/instrument filenames say "XXXXXXXX.YYY"
 		tid = "CheeseTracker?";
