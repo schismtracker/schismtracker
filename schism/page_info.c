@@ -192,6 +192,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 		draw_text(numtostr(2, voice->volume >> 2, buf), 36, pos, 2, 0); // Vl
 		draw_text(numtostr(2, voice->global_volume, buf), 39, pos, 2, 0); // CV
 		draw_text(numtostr(2, voice->ptr_sample->global_volume, buf), 42, pos, 2, 0); // SV
+        // FIXME: VE means volume envelope. Also, voice->instrument_volume is actually sample global volume
 		draw_text(numtostr(2, voice->instrument_volume, buf), 45, pos, 2, 0); // VE
 		draw_text(numtostr(3, voice->fadeout_volume / 128, buf), 48, pos, 2, 0); // Fde
 

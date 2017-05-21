@@ -246,7 +246,7 @@ This will break if the same note was keydown'd twice without a keyup, but I thin
 fairly unlikely scenario that you'd have to TRY to bring about. */
 static int keyjazz_channels[128];
 
-
+/* **** chan ranges from 1 to 64   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
 	int ins_mode;
@@ -260,10 +260,12 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		if (multichannel_mode)
 			song_change_current_play_channel(1, 1);
 	}
+    // back to the 0..63 range
+    int chan_internal = chan -1;
 
 	song_lock_audio();
 
-	c = current_song->voices + chan - 1;
+	c = current_song->voices + chan_internal;
 
 	ins_mode = song_is_instrument_mode();
 
@@ -301,11 +303,11 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 	// now do a rough equivalent of csf_instrument_change and csf_note_change
 	if (i)
-		csf_check_nna(current_song, chan - 1, ins, note, 0);
+		csf_check_nna(current_song, chan_internal, ins, note, 0);
 	if (s) {
 		if (c->flags & CHN_ADLIB) {
-			OPL_NoteOff(chan - 1);
-			OPL_Patch(chan - 1, s->adlib_bytes);
+			OPL_NoteOff(chan_internal);
+			OPL_Patch(chan_internal, s->adlib_bytes);
 		}
 
 		c->flags = (s->flags & CHN_SAMPLE_FLAGS) | (c->flags & CHN_MUTE);
@@ -327,8 +329,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 			if ((status.flags & MIDI_LIKE_TRACKER) && i) {
 				if (i->midi_channel_mask) {
-					GM_KeyOff(chan - 1);
-					GM_DPatch(chan - 1, i->midi_program, i->midi_bank, i->midi_channel_mask);
+					GM_KeyOff(chan_internal);
+					GM_DPatch(chan_internal, i->midi_program, i->midi_bank, i->midi_channel_mask);
 				}
 			}
 
@@ -374,7 +376,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	}
 	if (c->increment < 0)
 		c->increment = -c->increment; // lousy hack
-	csf_note_change(current_song, chan - 1, note, 0, 0, 1);
+	csf_note_change(current_song, chan_internal, note, 0, 0, 1);
 
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		mc.note = note;
@@ -383,7 +385,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		mc.volparam = vol;
 		mc.effect = effect;
 		mc.param = param;
-		_schism_midi_out_note(chan, &mc);
+		_schism_midi_out_note(chan_internal, &mc);
 	}
 
 	/*

@@ -97,7 +97,8 @@ noinst_HEADERS = \
 	include/dmoz.h			\
 	include/draw-char.h		\
 	include/event.h			\
-	include/fmopl.h			\
+	include/fmopl2.h			\
+	include/fmopl3.h			\
 	include/fmt.h			\
 	include/fmt-types.h		\
 	include/headers.h		\
@@ -333,7 +334,8 @@ schismtracker_SOURCES = \
 	player/equalizer.c		\
 	player/mixer.c			\
 	player/filters.c		\
-	player/fmopl.c			\
+	player/fmopl2.c			\
+	player/fmopl3.c			\
 	player/fmpatches.c		\
 	player/sndmix.c			\
 	player/opl-util.c		\

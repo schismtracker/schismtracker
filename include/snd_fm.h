@@ -6,7 +6,7 @@ void Fmdrv_MixTo(int* buf, int count);
 
 void OPL_NoteOff(int c);
 void OPL_HertzTouch(int c, int Hertz, int keyoff); // also for pitch bending
-void OPL_Touch(int c, const unsigned char *D, unsigned Vol);
+void OPL_Touch(int c, unsigned Vol);
 void OPL_Pan(int c, signed char val);
 void OPL_Patch(int c, const unsigned char *D);
 void OPL_Reset(void);
