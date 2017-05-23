@@ -651,6 +651,12 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int
 		// This gives a value in the range 0..63.
         // log_appendf(2,"vol: %d, voiceinsvol: %d", vol , chan->instrument_volume);
 		OPL_Touch(chan_num, vol * chan->instrument_volume * 63 / (1 << 20));
+        if (csf->flags&SONG_NOSTEREO) {
+            OPL_Pan(chan_num, 128);
+        }
+        else {
+            OPL_Pan(chan_num, chan->final_panning);
+        }
 	}
 }
 

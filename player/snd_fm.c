@@ -23,6 +23,7 @@
 
 #include "snd_fm.h"
 #include "log.h"
+#include "util.h" /* for clamp */
 
 #define MAX_VOICES 256 /* Must not be less than the setting in sndfile.h */
 
@@ -50,7 +51,7 @@
     #define OPLResetChip ymf262_reset_chip
     #define OPLWrite     ymf262_write
     #define OPLReadChip     ymf262_read
-    #define OPLUpdateOne(x,y,z) { OPL3SAMPLE *a[4]={y,y,y,y}; ymf262_update_one(x,a,z); }
+    #define OPLUpdateOne ymf262_update_one
     #define OPLCloseChip     ymf262_shutdown
     // OPL3 = 14318208Hz
     #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
@@ -138,7 +139,9 @@ void Fmdrv_MixTo(int *target, int count)
 	if (!fm_active)
 	    return;
 
-	if (buf_size != count * 2) {
+#if OPLSOURCE == 2
+    // mono. Single buffer.
+	if (buf_size != count * sizeof(short)) {
 		int before = buf_size;
 		buf_size = sizeof(short) * count;
 
@@ -150,9 +153,8 @@ void Fmdrv_MixTo(int *target, int count)
 		}
 	}
 
-	memset(buf, 0, count * 2);
+	memset(buf, 0, buf_size);
 	OPLUpdateOne(opl, buf, count);
-
 	/*
 	static int counter = 0;
 
@@ -164,6 +166,38 @@ void Fmdrv_MixTo(int *target, int count)
 	    target[a * 2 + 0] += buf[a] * OPL_VOLUME;
 	    target[a * 2 + 1] += buf[a] * OPL_VOLUME;
 	}
+#else
+    //stereo. Four buffers (two unused, so allocating 3 is enough)
+	if (buf_size != sizeof(short) * count * 3) {
+		int before = buf_size;
+		buf_size = sizeof(short) * count * 3;
+
+		if (before) {
+			buf = (short *) realloc(buf, buf_size);
+		}
+		else {
+			buf = (short *) malloc(buf_size);
+		}
+	}
+   
+	memset(buf, 0, buf_size);
+    short *bufarray[4]={buf, buf+count,  buf+(count*2), buf+(count*2)};
+	OPLUpdateOne(opl, bufarray, count);
+	/*
+	static int counter = 0;
+
+	for(int a = 0; a < count; ++a)
+		buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
+	*/
+    short *bufleft = buf;
+    short *bufright = buf+count;
+    // IF we wanted to do the stereo mix in software, we could setup the voices always in mono
+    // and do the panning here.
+	for (int a = 0; a < count; ++a) {
+	    target[a * 2 + 0] += bufleft[a] * OPL_VOLUME;
+	    target[a * 2 + 1] += bufright[a] * OPL_VOLUME;
+	}
+#endif
 }
 
 
@@ -174,7 +208,7 @@ static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
 
 static const unsigned char *Dtab[9];
 static unsigned char Keyontab[9] = {0,0,0,0,0,0,0,0,0};
-static signed char Pans[MAX_VOICES];
+static int Pans[MAX_VOICES];
 
 static int OPLtoChan[9];
 static int ChantoOPL[MAX_VOICES];
@@ -221,11 +255,17 @@ static void FreeVoice(int c) {
     ChantoOPL[c]=-1;
 }
 
-static void OPL_Byte(unsigned char idx, unsigned char data)
+static void OPL_Byte(unsigned int idx, unsigned char data)
 {
 	//register int a;
 	Fmdrv_Outportb(oplbase, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
 	Fmdrv_Outportb(oplbase + 1, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
+}
+static void OPL_Byte_RightSide(unsigned int idx, unsigned char data)
+{
+	//register int a;
+	Fmdrv_Outportb(oplbase + 2, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
+	Fmdrv_Outportb(oplbase + 3, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
 }
 
 
@@ -352,10 +392,23 @@ void OPL_Touch(int c, unsigned vol)
 }
 
 
-void OPL_Pan(int c, signed char val)
+void OPL_Pan(int c, int val)
 {
-	Pans[c] = val;
-	/* Doesn't happen immediately! */
+	Pans[c] = CLAMP(val, 0, 256);
+
+	int oplc = GetVoice(c);
+	if (oplc == -1)
+        return;
+
+	const unsigned char *D = Dtab[oplc];
+
+    /* feedback, additive synthesis and Panning... */
+    OPL_Byte(FEEDBACK_CONNECTION+oplc, 
+        (D[10] & ~STEREO_BITS)
+	    | (Pans[c]<85 ? VOICE_TO_LEFT
+            : Pans[c]>170 ? VOICE_TO_RIGHT
+            : (VOICE_TO_LEFT | VOICE_TO_RIGHT))
+    );
 }
 
 
@@ -381,13 +434,12 @@ void OPL_Patch(int c, const unsigned char *D)
     OPL_Byte(WAVE_SELECT+    3+Ope, D[9]&3);// 6 high bits used elsewhere
 
     /* feedback, additive synthesis and Panning... */
-    OPL_Byte(FEEDBACK_CONNECTION+oplc, D[10]);
-/*  Current implementation doesn't implement stereo.    
+    OPL_Byte(FEEDBACK_CONNECTION+oplc, 
         (D[10] & ~STEREO_BITS)
-	    | (Pans[c]<-32 ? VOICE_TO_LEFT
-		: Pans[c]>32 ? VOICE_TO_RIGHT
-		: (VOICE_TO_LEFT | VOICE_TO_RIGHT)
-*/
+	    | (Pans[c]<85 ? VOICE_TO_LEFT
+            : Pans[c]>170 ? VOICE_TO_RIGHT
+            : (VOICE_TO_LEFT | VOICE_TO_RIGHT))
+    );
 }
 
 
@@ -409,6 +461,10 @@ void OPL_Reset(void)
     }
 
 	OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
+#if OPLSOURCE == 3
+    //Enable OPL3.
+    OPL_Byte_RightSide(OPL3_MODE_REGISTER, OPL3_ENABLE);
+#endif
 
 	fm_active = 0;
 }
