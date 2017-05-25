@@ -27,6 +27,7 @@
 #include "it.h"
 #include "disko.h"
 #include "sndfile.h"
+#include "log.h"
 #include <stdint.h>
 
 #define WAVE_FORMAT_PCM             0x0001
