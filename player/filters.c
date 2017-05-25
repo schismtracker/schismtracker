@@ -23,7 +23,7 @@
 
 #include "sndfile.h"
 #include "cmixer.h"
-#include "math.h"
+#include <math.h>
 
 
 // LUT for 2 * damping factor
