@@ -29,7 +29,7 @@
 #include "log.h"
 #include "it.h" // needed for status.flags
 #include "sndfile.h"
-#include "song.h" // for 'current_song', which we shouldn't need
+#include "song.h" // for 'current_song', which contains the user's custom midi macros
 #include "snd_gm.h"
 
 #include <math.h> // for log
@@ -119,13 +119,12 @@ static unsigned RunningStatus = 0;
 static int resetting = 0; // boolean
 #endif
 
-
 static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
 {
 	if (!nbytes)
 		return;
 
-	csf_midi_send(current_song, buf, nbytes, c, 0); // FIXME we should not know about 'current_song' here!
+	csf_midi_send(current_song, buf, nbytes, c, 0);
 }
 
 
@@ -692,12 +691,32 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 
 static double LastSongCounter = 0.0;
 
-void GM_SendSongStartCode(void)    { unsigned char c = 0xFA; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongStopCode(void)     { unsigned char c = 0xFC; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongContinueCode(void) { unsigned char c = 0xFB; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongTickCode(void)     { unsigned char c = 0xF8; MPU_SendCommand(&c, 1, 0); }
+// send codes as set by the user in their midi output settings
+void GM_SendSongStartCode(void) 
+{
+	csf_process_midi_macro(current_song, 0, current_song->midi_config.start, 0, 0, 0, 0);
+	LastSongCounter = 0;
+}
 
+void GM_SendSongStopCode(void) 
+{
+	csf_process_midi_macro(current_song, 0, current_song->midi_config.stop, 0, 0, 0, 0);
+	LastSongCounter = 0;
+}
 
+// hmm why isn't the user allowed to set this one too?
+void GM_SendSongContinueCode(void) 
+{ 
+	unsigned char c = 0xFB; MPU_SendCommand(&c, 1, 0); 
+	LastSongCounter = 0; 
+}
+
+void GM_SendSongTickCode(void) 
+{
+	csf_process_midi_macro(current_song, 0, current_song->midi_config.tick, 0, 0, 0, 0);
+}
+
+// or this?
 void GM_SendSongPositionCode(unsigned note16pos)
 {
 	unsigned char buf[3] = {0xF2, note16pos & 127, (note16pos >> 7) & 127};
@@ -722,8 +741,6 @@ void GM_IncrementSongCounter(int count)
 	int TickLengthInSamplesLo = 2 * current_song->current_tempo;
 
 	double TickLengthInSamples = TickLengthInSamplesHi / (double) TickLengthInSamplesLo;
-
-	/* TODO: Use fraction arithmetics instead (note: cmdA, cmdT may change any time) */
 
 	LastSongCounter += count / TickLengthInSamples;
 
