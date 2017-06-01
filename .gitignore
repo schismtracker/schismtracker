@@ -5,9 +5,7 @@ build/
 buildx86/
 buildx64/
 compile
-config.guess
-config.h.in
-config.sub
+config.*
 configure
 depcomp
 install-sh
