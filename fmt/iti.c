@@ -27,6 +27,7 @@
 
 #include "it.h"
 #include "song.h"
+#include "log.h"
 
 #ifndef WIN32
 #endif
