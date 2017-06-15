@@ -607,6 +607,11 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
 
 
 // XXX Rename this
+//Ranges: 
+// chan_num = 0..63
+// freq = frequency in Hertz
+// vol = 0..16384
+// chan->instrument_volume = 0..64  (corresponds to the sample global volume and instrument global volume)
 static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int freq, int vol)
 {
 	if (chan->flags & CHN_MUTE) {
@@ -621,14 +626,11 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int
 		 * This can be used to extend the range of MIDI pitch bending.
 		 */
 
-		// Vol maximum is 64*64 here. (4096)
 		int volume = vol;
 
 		if ((chan->flags & CHN_ADLIB) && volume > 0) {
-			// This gives a value in the range 0..127.
-			//int o = volume;
+			// find_volume translates volume from range 0..16384 to range 0..127. But why with that method?
 			volume = find_volume((unsigned short) volume) * chan->instrument_volume / 64;
-			//fprintf(stderr, "%d -> %d[%d]\n", o, volume, chan->instrument_volume);
 		} else {
 			// This gives a value in the range 0..127.
 			volume = volume * chan->instrument_volume / 8192;
@@ -641,11 +643,20 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int
 		// 8363 is st3s middle C sample rate. 261.625 is the Hertz for middle C in a tempered scale (A4 = 440)
 		//Also, note that to be true to ST3, the frequencies should be quantized, like using the glissando control.
 
+        // OPL_Patch is called in csf_process_effects, from csf_read_note or csf_process_tick, before calling this method.
 		int oplmilliHertz = (long long int)freq*261625L/8363L;
 		OPL_HertzTouch(chan_num, oplmilliHertz, chan->flags & CHN_KEYOFF);
 
 		// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
-		OPL_Touch(chan_num, NULL, vol * chan->instrument_volume * 63 / (1 << 20));
+		// This gives a value in the range 0..63.
+        // log_appendf(2,"vol: %d, voiceinsvol: %d", vol , chan->instrument_volume);
+		OPL_Touch(chan_num, vol * chan->instrument_volume * 63 / (1 << 20));
+        if (csf->flags&SONG_NOSTEREO) {
+            OPL_Pan(chan_num, 128);
+        }
+        else {
+            OPL_Pan(chan_num, chan->final_panning);
+        }
 	}
 }
 
@@ -721,10 +732,12 @@ int csf_init_player(song_t *csf, int reset)
 
 	initialize_eq(reset, csf->mix_frequency);
 
-	// retarded hackaround to get adlib to suck less
-	if (csf->mix_frequency != 4000)
+	// I don't know why, but this "if" makes it work at the desired sample rate instead of 4000.
+	// the "4000Hz" value comes from csf_reset, but I don't yet understand why the opl keeps that value, if
+	// each call to Fmdrv_Init generates a new opl.
+	if (csf->mix_frequency != 4000) {
 		Fmdrv_Init(csf->mix_frequency);
-	OPL_Reset();
+	}
 	GM_Reset(0);
 	return 1;
 }

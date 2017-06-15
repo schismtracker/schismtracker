@@ -439,7 +439,10 @@ typedef struct song_voice {
 	int pitch_env_position;
 	uint32_t master_channel; // nonzero = background/NNA voice, indicates what channel it "came from"
 	uint32_t vu_meter;
+    // TODO: As noted elsewhere, this means current channel volume.
 	int32_t global_volume;
+    // FIXME: Here instrument_volume means the value calculated from sample global volume and instrument global volume.
+    //  And we miss a value for "running envelope volume" for the page_info
 	int32_t instrument_volume;
 	int32_t autovib_depth;
 	uint32_t autovib_position, vibrato_position, tremolo_position, panbrello_position;

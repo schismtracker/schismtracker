@@ -21,8 +21,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "fmopl.h"
 #include "snd_fm.h"
+#include "log.h"
+#include "util.h" /* for clamp */
 
 #define MAX_VOICES 256 /* Must not be less than the setting in sndfile.h */
 
@@ -30,16 +31,39 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define OPLNew(x,r)  ym3812_init(x, r)
-#define OPLResetChip ym3812_reset_chip
-#define OPLWrite     ym3812_write
-#define OPLUpdateOne ym3812_update_one
-#define OPLClose     ym3812_shutdown
+// Choose OPL emulator source code (OPL2 or OPL3)
+#define OPLSOURCE 3
 
-/* Mostly pulled from my posterior. Original value was 2000, but Manwe says that's too quiet.
-It'd help if this was at all connected to the song's mixing volume...
+#if OPLSOURCE == 2
+ #include "fmopl2.h"
+    #define OPLNew(x,r)  ym3812_init(x, r)
+    #define OPLResetChip ym3812_reset_chip
+    #define OPLWrite     ym3812_write
+    #define OPLReadChip     ym3812_read
+    #define OPLUpdateOne ym3812_update_one
+    #define OPLCloseChip     ym3812_shutdown
+    // OPL2 = 3579552Hz
+    #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
+    #define OPLRATEDIVISOR 72
+#else
+ #include "fmopl3.h"
+    #define OPLNew(x,r)  ymf262_init(x, r)
+    #define OPLResetChip ymf262_reset_chip
+    #define OPLWrite     ymf262_write
+    #define OPLReadChip     ymf262_read
+    #define OPLUpdateOne ymf262_update_one
+    #define OPLCloseChip     ymf262_shutdown
+    // OPL3 = 14318208Hz
+    #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
+    #define OPLRATEDIVISOR 288
+#endif
+
+/* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
+fmopl works in 16bits, although tested output used to range +-10000 instead of 
+    +-20000 from adlibtracker/screamtracker in dosbox. So we need 11 bits + 1 extra bit.
+Also note when comparing volumes, that Screamtracker output on mono with PCM samples is not reduced by half.
 */
-#define OPL_VOLUME 5000
+#define OPL_VOLUME 4096
 
 /*
 The documentation in this file regarding the output ports,
@@ -98,13 +122,12 @@ static unsigned char Fmdrv_Inportb(unsigned port)
 void Fmdrv_Init(int mixfreq)
 {
 	if (opl != NULL) {
-		OPLClose(opl);
+		OPLCloseChip(opl);
 		opl = NULL;
 	}
-	//Clock for frequency 49716Hz. Mixfreq is used for output mix frequency.
-	opl = OPLNew(1789776 * 2, mixfreq);
-	OPLResetChip(opl);
-	OPL_Detect();
+	// Clock = speed at which the chip works. mixfreq = audio resampler
+	opl = OPLNew(OPLRATEBASE * OPLRATEDIVISOR, mixfreq);
+    OPL_Reset();
 }
 
 
@@ -116,7 +139,9 @@ void Fmdrv_MixTo(int *target, int count)
 	if (!fm_active)
 	    return;
 
-	if (buf_size != count * 2) {
+#if OPLSOURCE == 2
+    // mono. Single buffer.
+	if (buf_size != count * sizeof(short)) {
 		int before = buf_size;
 		buf_size = sizeof(short) * count;
 
@@ -128,9 +153,8 @@ void Fmdrv_MixTo(int *target, int count)
 		}
 	}
 
-	memset(buf, 0, count * 2);
+	memset(buf, 0, buf_size);
 	OPLUpdateOne(opl, buf, count);
-
 	/*
 	static int counter = 0;
 
@@ -142,6 +166,38 @@ void Fmdrv_MixTo(int *target, int count)
 	    target[a * 2 + 0] += buf[a] * OPL_VOLUME;
 	    target[a * 2 + 1] += buf[a] * OPL_VOLUME;
 	}
+#else
+    //stereo. Four buffers (two unused, so allocating 3 is enough)
+	if (buf_size != sizeof(short) * count * 3) {
+		int before = buf_size;
+		buf_size = sizeof(short) * count * 3;
+
+		if (before) {
+			buf = (short *) realloc(buf, buf_size);
+		}
+		else {
+			buf = (short *) malloc(buf_size);
+		}
+	}
+   
+	memset(buf, 0, buf_size);
+    short *bufarray[4]={buf, buf+count,  buf+(count*2), buf+(count*2)};
+	OPLUpdateOne(opl, bufarray, count);
+	/*
+	static int counter = 0;
+
+	for(int a = 0; a < count; ++a)
+		buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
+	*/
+    short *bufleft = buf;
+    short *bufright = buf+count;
+    // IF we wanted to do the stereo mix in software, we could setup the voices always in mono
+    // and do the panning here.
+	for (int a = 0; a < count; ++a) {
+	    target[a * 2 + 0] += bufleft[a] * OPL_VOLUME;
+	    target[a * 2 + 1] += bufright[a] * OPL_VOLUME;
+	}
+#endif
 }
 
 
@@ -149,34 +205,77 @@ void Fmdrv_MixTo(int *target, int count)
 
 
 static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
-static signed char Pans[MAX_VOICES];
-static const unsigned char *Dtab[MAX_VOICES] = {NULL};
 
+static const unsigned char *Dtab[9];
+static unsigned char Keyontab[9] = {0,0,0,0,0,0,0,0,0};
+static int Pans[MAX_VOICES];
 
-static int SetBase(int c)
+static int OPLtoChan[9];
+static int ChantoOPL[MAX_VOICES];
+
+static int GetVoice(int c) {
+    return ChantoOPL[c];
+}
+static int SetVoice(int c)
 {
-	return c % 9;
+    int a,s=-1,t=0;
+    if (ChantoOPL[c] == -1) {
+        t=1;
+        // Search for unused chans
+        for (a=0;a<9;a++) {
+            if (OPLtoChan[a]==-1) {
+                s=a;
+                OPLtoChan[a]=c;
+                ChantoOPL[c]=a;
+                break;
+            }
+        }
+        if (ChantoOPL[c] == -1) {
+            // Search for note-released chans
+            for (a=0;a<9;a++) {
+                if ((Keyontab[a]&KEYON_BIT) == 0) {
+                    s=a+10;
+                    ChantoOPL[OPLtoChan[a]]=-1;
+                    OPLtoChan[a]=c;
+                    ChantoOPL[c]=a;
+                    break;
+                }
+            }
+        }
+    }
+    //log_appendf(2,"entering with %d. tested? %d. selected %d. Current: %d",c,t,s,ChantoOPL[c]);
+	return GetVoice(c);
 }
 
 
-static void OPL_Byte(unsigned char idx, unsigned char data)
+static void FreeVoice(int c) {
+    if (ChantoOPL[c] == -1)
+        return;
+    OPLtoChan[ChantoOPL[c]]=-1;
+    ChantoOPL[c]=-1;
+}
+
+static void OPL_Byte(unsigned int idx, unsigned char data)
 {
 	//register int a;
 	Fmdrv_Outportb(oplbase, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
 	Fmdrv_Outportb(oplbase + 1, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
 }
+static void OPL_Byte_RightSide(unsigned int idx, unsigned char data)
+{
+	//register int a;
+	Fmdrv_Outportb(oplbase + 2, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
+	Fmdrv_Outportb(oplbase + 3, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
+}
 
 
 void OPL_NoteOff(int c)
 {
-	c = SetBase(c);
-
-	if (c<9) {
-	    /* KEYON_BLOCK+c seems to not work alone?? */
-	    OPL_Byte(KEYON_BLOCK + c, 0);
-	    //OPL_Byte(KSL_LEVEL +     Ope, 0xFF);
-	    //OPL_Byte(KSL_LEVEL + 3 + Ope, 0xFF);
-	}
+	int oplc = GetVoice(c);
+    if (oplc == -1)
+        return;
+    Keyontab[oplc]&=~KEYON_BIT;
+    OPL_Byte(KEYON_BLOCK + oplc, Keyontab[oplc]);
 }
 
 
@@ -187,10 +286,9 @@ void OPL_NoteOff(int c)
    Could be used for pitch bending also. */
 void OPL_HertzTouch(int c, int milliHertz, int keyoff)
 {
-    c = SetBase(c);
-
-    if (c >= 9)
-	return;
+    int oplc = GetVoice(c);
+    if (oplc == -1)
+        return;
 
     fm_active = 1;
 
@@ -207,37 +305,27 @@ void OPL_HertzTouch(int c, int milliHertz, int keyoff)
 */
 	unsigned int outfnum;
 	unsigned int outblock;
-	const int conversion_factor = 49716; // Frequency of OPL.
+	const int conversion_factor = OPLRATEBASE; // Frequency of OPL.
 	milliHertzToFnum(milliHertz, &outfnum, &outblock, conversion_factor);
-	OPL_Byte(0xA0 + c, outfnum & 255);       // F-Number low 8 bits
-	OPL_Byte(0xB0 + c, (keyoff ? 0 : 0x20) // Key on
-		      | ((outfnum >> 8) & 3)     // F-number high 2 bits
-		      | (outblock << 2)
-	);
-
+    Keyontab[oplc] = (keyoff ? 0 : KEYON_BIT)      // Key on
+		      | (outblock << 2)                    // Octave
+		      | ((outfnum >> 8) & FNUM_HIGH_MASK); // F-number high 2 bits
+	OPL_Byte(FNUM_LOW +    oplc, outfnum & 0xFF);  // F-Number low 8 bits
+	OPL_Byte(KEYON_BLOCK + oplc, Keyontab[oplc]);
 }
 
 
-void OPL_Touch(int c, const unsigned char *D, unsigned vol)
+void OPL_Touch(int c, unsigned vol)
 {
-	if (!D) {
-		if (c < MAX_VOICES)
-			D = Dtab[c];
-		if (!D)
-			return;
-	}
-
 //fprintf(stderr, "OPL_Touch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
 //    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
 
-	Dtab[c] = D;
+	int oplc = GetVoice(c);
+	if (oplc == -1)
+        return;
 
-	c = SetBase(c);
-
-	if (c >= 9)
-	    return;
-
-	int Ope = PortBases[c];
+	const unsigned char *D = Dtab[oplc];
+	int Ope = PortBases[oplc];
 
 /*
     Bytes 40-55 - Level Key Scaling / Total Level
@@ -257,17 +345,6 @@ void OPL_Touch(int c, const unsigned char *D, unsigned vol)
 		     all bits CLEAR is loudest; all bits SET is the
 		     softest.  Don't ask me why.
 */
-	OPL_Byte(KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
-	//  (63 + (d[2] & 63) * vol / 63 - vol)          - old formula
-	//  (63 - ((63 - (d[2] & 63)) * vol     ) / 63)  - older formula
-	//  (63 - ((63 - (d[2] & 63)) * vol + 32) / 64)  - revised formula, like ST3
-	    (((int)(D[2] & 63) - 63) * vol + 63 * 64 - 32) / 64 // - optimized revised formula
-	);
-
-	OPL_Byte(KSL_LEVEL + 3 + Ope, (D[3] & KSL_MASK) |
-	    (((int)(D[3] & 63) - 63) * vol + 63 * 64 - 32) / 64
-	);
-
 	/* 2008-09-27 Bisqwit:
 	 * Did tests in ST3: The value poked
 	 * to 0x43, minus from 63, is:
@@ -289,60 +366,105 @@ void OPL_Touch(int c, const unsigned char *D, unsigned vol)
 	 * of the volume, we can deduce that an increase or
 	 * decrease by 8 will double / halve the volume.
 	 *
-	 */
+        D = 63-OPLVol
+        NewD = 63-target
+
+        OPLVol = 63 - D
+        newvol = clip(vol,63)  -> max value of newvol=63, same as max of OPLVol.
+        target = OPLVOL * (newvol/63)
+
+
+        NewD = 63-(OLPVOL * (newvol/63))
+        NewD = 63-((63 - D) * (newvol/63))
+        NewD = 63-((63*newvol/63) - (D*newvol/63) )
+        NewD = 63-(newvol - (D*newvol/63) )
+        NewD = 63-(newvol) + (D*newvol/63)
+        NewD = 63 + (D*newvol/63) - newvol
+        NewD = 63 + (D*newvol/63) - newvol
+    */
+    // On Testing, ST3 does not alter the modulator volume.
+
+    // vol is previously converted to the 0..63 range.
+	OPL_Byte(KSL_LEVEL+   3+Ope, (D[3] & KSL_MASK) |
+	    (63 + ( (D[3]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
+	);
+
 }
 
 
-void OPL_Pan(int c, signed char val)
+void OPL_Pan(int c, int val)
 {
-	Pans[c] = val;
-	/* Doesn't happen immediately! */
+	Pans[c] = CLAMP(val, 0, 256);
+
+	int oplc = GetVoice(c);
+	if (oplc == -1)
+        return;
+
+	const unsigned char *D = Dtab[oplc];
+
+    /* feedback, additive synthesis and Panning... */
+    OPL_Byte(FEEDBACK_CONNECTION+oplc, 
+        (D[10] & ~STEREO_BITS)
+	    | (Pans[c]<85 ? VOICE_TO_LEFT
+            : Pans[c]>170 ? VOICE_TO_RIGHT
+            : (VOICE_TO_LEFT | VOICE_TO_RIGHT))
+    );
 }
 
 
 void OPL_Patch(int c, const unsigned char *D)
 {
-//fprintf(stderr, "OPL_Patch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X)\n",
-//    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10]);
-    Dtab[c] = D;
+    int oplc = SetVoice(c);
+    if (oplc == -1)
+        return;
 
-    c = SetBase(c);
-    if(c >= 9)return;
-
-    int Ope = PortBases[c];
+    Dtab[oplc] = D;
+    int Ope = PortBases[oplc];
 
     OPL_Byte(AM_VIB+           Ope, D[0]);
+	OPL_Byte(KSL_LEVEL+        Ope, D[2]);
     OPL_Byte(ATTACK_DECAY+     Ope, D[4]);
     OPL_Byte(SUSTAIN_RELEASE+  Ope, D[6]);
     OPL_Byte(WAVE_SELECT+      Ope, D[8]&3);// 6 high bits used elsewhere
 
     OPL_Byte(AM_VIB+         3+Ope, D[1]);
+	OPL_Byte(KSL_LEVEL+      3+Ope, D[3]);
     OPL_Byte(ATTACK_DECAY+   3+Ope, D[5]);
     OPL_Byte(SUSTAIN_RELEASE+3+Ope, D[7]);
     OPL_Byte(WAVE_SELECT+    3+Ope, D[9]&3);// 6 high bits used elsewhere
 
     /* feedback, additive synthesis and Panning... */
-    OPL_Byte(FEEDBACK_CONNECTION+c,
-	(D[10] & ~STEREO_BITS)
-	    | (Pans[c]<-32 ? VOICE_TO_LEFT
-		: Pans[c]>32 ? VOICE_TO_RIGHT
-		: (VOICE_TO_LEFT | VOICE_TO_RIGHT)
-	    ));
+    OPL_Byte(FEEDBACK_CONNECTION+oplc, 
+        (D[10] & ~STEREO_BITS)
+	    | (Pans[c]<85 ? VOICE_TO_LEFT
+            : Pans[c]>170 ? VOICE_TO_RIGHT
+            : (VOICE_TO_LEFT | VOICE_TO_RIGHT))
+    );
 }
 
 
 void OPL_Reset(void)
 {
-//fprintf(stderr, "OPL_Reset\n");
-	int a;
+    int a;
+    if (opl == NULL)
+        return;
 
-	for(a = 0; a < 244; a++)
-		OPL_Byte(a, 0);
+	OPLResetChip(opl);
+	OPL_Detect();
 
-	for(a = 0; a < MAX_VOICES; ++a)
+	for(a = 0; a < MAX_VOICES; ++a) {
+        ChantoOPL[a]=-1;
+    }
+	for(a = 0; a < 9; ++a) {
+        OPLtoChan[a]= -1;
 		Dtab[a] = NULL;
+    }
 
 	OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
+#if OPLSOURCE == 3
+    //Enable OPL3.
+    OPL_Byte_RightSide(OPL3_MODE_REGISTER, OPL3_ENABLE);
+#endif
 
 	fm_active = 0;
 }
@@ -350,8 +472,6 @@ void OPL_Reset(void)
 
 int OPL_Detect(void)
 {
-	SetBase(0);
-
 	/* Reset timers 1 and 2 */
 	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
 
@@ -377,9 +497,11 @@ int OPL_Detect(void)
 	return 0;
 }
 
-
+/* TODO: This should be called from somewhere in schismtracker to free the allocated memory on exit. */
 void OPL_Close(void)
 {
-	OPL_Reset();
+	if (opl != NULL) {
+		OPLCloseChip(opl);
+		opl = NULL;
+	}
 }
-

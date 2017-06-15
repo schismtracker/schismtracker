@@ -104,7 +104,7 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 	if (chan->flags & CHN_ADLIB) {
 		//Do this only if really an adlib chan. Important!
 		OPL_NoteOff(nchan);
-		OPL_Touch(nchan, NULL, 0);
+		OPL_Touch(nchan, 0);
 	}
 	GM_KeyOff(nchan);
 	GM_Touch(nchan, 0);
@@ -1459,7 +1459,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 		if (chan->flags & CHN_ADLIB) {
 			//Do this only if really an adlib chan. Important!
 			OPL_NoteOff(nchan);
-			OPL_Touch(nchan, NULL, 0);
+			OPL_Touch(nchan, 0);
 		}
 		GM_KeyOff(nchan);
 		GM_Touch(nchan, 0);
@@ -2027,7 +2027,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 				if (chan->flags & CHN_ADLIB) {
 					//Do this only if really an adlib chan. Important!
 					OPL_NoteOff(nchan);
-					OPL_Touch(nchan, NULL, 0);
+					OPL_Touch(nchan, 0);
 				}
 				GM_KeyOff(nchan);
 				GM_Touch(nchan, 0);
