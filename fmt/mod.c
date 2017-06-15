@@ -93,7 +93,7 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 			file->description = valid_tags[i][1];
 			/*file->extension = str_dup("mod");*/
-			file->title = calloc(21, sizeof(char));
+			file->title = mem_calloc(21, sizeof(char));
 			memcpy(file->title, data, 20);
 			file->title[20] = 0;
 			file->type = TYPE_MODULE_MOD;

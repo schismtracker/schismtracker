@@ -240,7 +240,7 @@ static void help_set_page(void)
 	}
 
 	/* allocate the array */
-	lines = CURRENT_HELP_LINECACHE = calloc(num_lines + 1, sizeof(char *));
+	lines = CURRENT_HELP_LINECACHE = mem_calloc(num_lines + 1, sizeof(char *));
 
 	/* page help text */
 	if (have_local_help) {

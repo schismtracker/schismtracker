@@ -53,7 +53,7 @@ static struct cfg_section *_get_section(cfg_file_t *cfg, const char *section_nam
 		section = section->next;
 	}
 	if (add) {
-		section = calloc(1, sizeof(struct cfg_section));
+		section = mem_calloc(1, sizeof(struct cfg_section));
 		section->omit = 0;
 		section->name = str_dup(section_name);
 		if (prev) {
@@ -80,7 +80,7 @@ static struct cfg_key *_get_key(struct cfg_section *section, const char *key_nam
 		key = key->next;
 	}
 	if (add) {
-		key = calloc(1, sizeof(struct cfg_key));
+		key = mem_calloc(1, sizeof(struct cfg_key));
 		key->name = str_dup(key_name);
 		if (prev) {
 			key->next = prev->next;

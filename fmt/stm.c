@@ -44,7 +44,7 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	file->description = "Scream Tracker 2";
 	/*file->extension = str_dup("stm");*/
 	file->type = TYPE_MODULE_MOD;
-	file->title = calloc(21, sizeof(char));
+	file->title = mem_calloc(21, sizeof(char));
 	memcpy(file->title, data, 20);
 	file->title[20] = 0;
 	return 1;

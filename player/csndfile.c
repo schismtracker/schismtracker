@@ -93,7 +93,7 @@ static void _csf_reset(song_t *csf)
 
 song_t *csf_allocate(void)
 {
-	song_t *csf = calloc(1, sizeof(song_t));
+	song_t *csf = mem_calloc(1, sizeof(song_t));
 	_csf_reset(csf);
 	return csf;
 }
@@ -135,7 +135,7 @@ void csf_init_instrument(song_instrument_t *ins, int samp)
 
 song_instrument_t *csf_allocate_instrument(void)
 {
-	song_instrument_t *ins = calloc(1, sizeof(song_instrument_t));
+	song_instrument_t *ins = mem_calloc(1, sizeof(song_instrument_t));
 	csf_init_instrument(ins, 0);
 	return ins;
 }
@@ -175,7 +175,7 @@ void csf_destroy(song_t *csf)
 
 song_note_t *csf_allocate_pattern(uint32_t rows)
 {
-	return calloc(rows * MAX_CHANNELS, sizeof(song_note_t));
+	return mem_calloc(rows * MAX_CHANNELS, sizeof(song_note_t));
 }
 
 void csf_free_pattern(void *pat)
@@ -187,7 +187,7 @@ void csf_free_pattern(void *pat)
 It isn't; it's just being confused by the adjusted pointer being stored. */
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
-	signed char *p = calloc(1, (nbytes + 39) & ~7); // magic
+	signed char *p = mem_calloc(1, (nbytes + 39) & ~7); // magic
 	if (p)
 		p += 16;
 	return p;

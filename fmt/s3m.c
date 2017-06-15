@@ -41,7 +41,7 @@ int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 	file->description = "Scream Tracker 3";
 	/*file->extension = str_dup("s3m");*/
-	file->title = calloc(28, sizeof(char));
+	file->title = mem_calloc(28, sizeof(char));
 	memcpy(file->title, data, 27);
 	file->title[27] = 0;
 	file->type = TYPE_MODULE_S3M;
