@@ -499,7 +499,7 @@ static struct mdlpat *mdl_read_patterns(song_t *song, slurp_t *fp)
 			if (!trknum)
 				continue;
 
-			patptr->next = malloc(sizeof(struct mdlpat));
+			patptr->next = mem_alloc(sizeof(struct mdlpat));
 			patptr = patptr->next;
 			patptr->track = trknum;
 			patptr->rows = rows;
@@ -532,7 +532,7 @@ static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 			if (!trknum)
 				continue;
 
-			patptr->next = malloc(sizeof(struct mdlpat));
+			patptr->next = mem_alloc(sizeof(struct mdlpat));
 			patptr = patptr->next;
 			patptr->track = trknum;
 			patptr->rows = 64;

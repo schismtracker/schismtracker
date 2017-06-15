@@ -913,7 +913,7 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 		return;
 	}
 
-	ps = malloc(sizeof(struct pat2smp));
+	ps = mem_alloc(sizeof(struct pat2smp));
 	ps->pattern = pattern;
 	ps->sample = sample_get_current() ?: 1;
 	ps->bind = bind;

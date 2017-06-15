@@ -146,10 +146,10 @@ void Fmdrv_MixTo(int *target, int count)
 		buf_size = sizeof(short) * count;
 
 		if (before) {
-			buf = (short *) realloc(buf, buf_size);
+			buf = (short *) mem_realloc(buf, buf_size);
 		}
 		else {
-			buf = (short *) malloc(buf_size);
+			buf = (short *) mem_alloc(buf_size);
 		}
 	}
 
@@ -173,10 +173,10 @@ void Fmdrv_MixTo(int *target, int count)
 		buf_size = sizeof(short) * count * 3;
 
 		if (before) {
-			buf = (short *) realloc(buf, buf_size);
+			buf = (short *) mem_realloc(buf, buf_size);
 		}
 		else {
-			buf = (short *) malloc(buf_size);
+			buf = (short *) mem_alloc(buf_size);
 		}
 	}
    

@@ -50,7 +50,7 @@ int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	}
 
 	/*file->extension = str_dup("it");*/
-	file->title = malloc(26);
+	file->title = mem_alloc(26);
 	for (int n = 0; n < 25; n++) {
 		file->title[n] = data[4 + n] ?: 32;
 	}
@@ -601,7 +601,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	if (hist) {
 		song->histlen = hist;
-		song->histdata = malloc(8 * song->histlen);
+		song->histdata = mem_alloc(8 * song->histlen);
 		slurp_read(fp, song->histdata, 8 * song->histlen);
 	}
 	if (ignoremidi) {

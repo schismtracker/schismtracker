@@ -499,7 +499,7 @@ void cfg_delete_key(cfg_file_t *cfg, const char *section_name, const char *key_n
 	key = _get_key(section, key_name, 0);
 	if (key == NULL || key->name[0] == '#')
 		return;
-	newname = malloc(strlen(key->name) + 2);
+	newname = mem_alloc(strlen(key->name) + 2);
 	newname[0] = '#';
 	strcpy(newname + 1, key->name);
 	free(key->name);

@@ -216,7 +216,7 @@ static keytab_t *keytab = NULL;
 
 static void key_add(int code, const char *name)
 {
-	keytab_t *k = malloc(sizeof(keytab_t));
+	keytab_t *k = mem_alloc(sizeof(keytab_t));
 	k->code = code;
 	k->name = name;
 	k->next = keytab;
@@ -547,7 +547,7 @@ tree_t *keymaps;
 
 static kmapnode_t *kmapnode_alloc(isysev_t ev, ev_handler handler, const char *data)
 {
-	kmapnode_t *node = malloc(sizeof(kmapnode_t));
+	kmapnode_t *node = mem_alloc(sizeof(kmapnode_t));
 	node->ev = ev;
 	node->handler = handler;
 	node->data = data;
@@ -576,7 +576,7 @@ static int kmap_cmp(const void *a, const void *b)
 
 static kmap_t *kmap_alloc(const char *name)
 {
-	kmap_t *m = malloc(sizeof(kmap_t));
+	kmap_t *m = mem_alloc(sizeof(kmap_t));
 	m->name = strdup(name);
 	m->parent = NULL;
 	m->bindings = tree_alloc(kmapnode_cmp);
@@ -714,7 +714,7 @@ static ev_handler evfunc_lookup(const char *name)
 
 static void evfunc_register(const char *name, ev_handler handler)
 {
-	evfunc_t *node = malloc(sizeof(evfunc_t));
+	evfunc_t *node = mem_alloc(sizeof(evfunc_t));
 	node->name = name;
 	node->handler = handler;
 	free(tree_replace(evfuncs, node));
