@@ -2292,17 +2292,11 @@ static OPL3 *OPL3Create(int clock, int rate, int type)
 	/* calculate OPL state size */
 	state_size  = sizeof(OPL3);
 	/* allocate memory block */
-	ptr = (char *)malloc(state_size);
-
-	if (ptr==NULL)
+	ptr = (char *)calloc(1, state_size);
+	if (ptr == NULL)
 		return NULL;
-
-
-	/* clear */
-	memset(ptr,0,state_size);
     
-    chip = (OPL3*) ptr;
-
+	chip = (OPL3*) ptr;
 	chip->type  = type;
 	chip->clock = clock;
 	chip->rate  = rate;

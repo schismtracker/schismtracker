@@ -54,7 +54,6 @@ static struct cfg_section *_get_section(cfg_file_t *cfg, const char *section_nam
 	}
 	if (add) {
 		section = mem_calloc(1, sizeof(struct cfg_section));
-		section->omit = 0;
 		section->name = str_dup(section_name);
 		if (prev) {
 			section->next = prev->next;

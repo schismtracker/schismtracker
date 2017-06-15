@@ -62,9 +62,8 @@ static void _treenode_free(treenode_t *node)
 
 tree_t *tree_alloc(treecmp_t cmp)
 {
-	tree_t *tree = mem_alloc(sizeof(tree_t));
+	tree_t *tree = mem_calloc(1, sizeof(tree_t));
 	tree->cmp = cmp;
-	tree->root = NULL;
 	return tree;
 }
 
@@ -119,8 +118,7 @@ void *tree_insert(tree_t *tree, void *value)
 	if (node)
 		return node->value;
 
-	node = mem_alloc(sizeof(treenode_t));
-	node->left = node->right = NULL;
+	node = mem_calloc(1, sizeof(treenode_t));
 	node->value = value;
 	tree->root = _treenode_insert(tree->root, tree->cmp, node);
 	return NULL;
@@ -137,8 +135,7 @@ void *tree_replace(tree_t *tree, void *value)
 		return prev;
 	}
 
-	node = mem_alloc(sizeof(treenode_t));
-	node->left = node->right = NULL;
+	node = mem_calloc(1, sizeof(treenode_t));
 	node->value = value;
 	tree->root = _treenode_insert(tree->root, tree->cmp, node);
 	return NULL;

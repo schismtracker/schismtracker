@@ -1813,13 +1813,9 @@ static FM_OPL *OPLCreate(UINT32 clock, UINT32 rate, int type)
 #endif
 
 	/* allocate memory block */
-	ptr = (char *)malloc(state_size);
-
-	if (ptr==NULL)
+	ptr = (char *)calloc(1, state_size);
+	if (ptr == NULL)
 		return NULL;
-
-	/* clear */
-	memset(ptr,0,state_size);
 
 	OPL  = (FM_OPL *)ptr;
 
