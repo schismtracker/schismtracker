@@ -499,7 +499,7 @@ static struct mdlpat *mdl_read_patterns(song_t *song, slurp_t *fp)
 			if (!trknum)
 				continue;
 
-			patptr->next = malloc(sizeof(struct mdlpat));
+			patptr->next = mem_alloc(sizeof(struct mdlpat));
 			patptr = patptr->next;
 			patptr->track = trknum;
 			patptr->rows = rows;
@@ -532,7 +532,7 @@ static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 			if (!trknum)
 				continue;
 
-			patptr->next = malloc(sizeof(struct mdlpat));
+			patptr->next = mem_alloc(sizeof(struct mdlpat));
 			patptr = patptr->next;
 			patptr->track = trknum;
 			patptr->rows = 64;
@@ -546,7 +546,7 @@ static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 
 static song_note_t **mdl_read_tracks(slurp_t *fp)
 {
-	song_note_t **tracks = calloc(65536, sizeof(song_note_t *));
+	song_note_t **tracks = mem_calloc(65536, sizeof(song_note_t *));
 	int ntrks, trk, row, lostfx = 0;
 	uint16_t h;
 	uint8_t b, x, y;
@@ -561,7 +561,7 @@ static song_note_t **mdl_read_tracks(slurp_t *fp)
 		slurp_read(fp, &h, 2);
 		bytesleft = bswapLE16(h);
 		fp->length = MIN(fp->length, fp->pos + bytesleft); // narrow
-		tracks[trk] = calloc(256, sizeof(song_note_t));
+		tracks[trk] = mem_calloc(256, sizeof(song_note_t));
 		row = 0;
 		while (row < 256 && !slurp_eof(fp)) {
 			b = slurp_getc(fp);
@@ -816,7 +816,7 @@ static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags
 			continue;
 
 		if (!envs[ehdr.envnum])
-			envs[ehdr.envnum] = calloc(1, sizeof(struct mdlenv));
+			envs[ehdr.envnum] = mem_calloc(1, sizeof(struct mdlenv));
 		env = &envs[ehdr.envnum]->data;
 
 		env->nodes = 15;

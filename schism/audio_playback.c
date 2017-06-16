@@ -1395,12 +1395,7 @@ static void _audio_init_head(const char *driver_spec, int verbose)
 static void _audio_init_tail(void)
 {
 	free(audio_buffer);
-	audio_buffer = calloc(audio_buffer_samples, audio_sample_size);
-	if (!audio_buffer) {
-		perror("calloc");
-		exit(255);
-	}
-
+	audio_buffer = mem_calloc(audio_buffer_samples, audio_sample_size);
 	samples_played = (status.flags & CLASSIC_MODE) ? SMP_INIT : 0;
 
 	song_unlock_audio();

@@ -82,7 +82,7 @@ int fmt_mp3_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	just one that doesn't have a title. */
 
 	/*file->extension = str_dup("mp3");*/
-	/*file->description = calloc(22, sizeof(char));*/
+	/*file->description = mem_calloc(22, sizeof(char));*/
 	/*snprintf(file->description, 22, "MPEG Layer 3, ID3 v%d", version);*/
 	file->description = "MPEG Layer 3";
 	file->type = TYPE_SAMPLE_COMPR;

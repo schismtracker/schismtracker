@@ -81,7 +81,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	if (au.data_offset > 24) {
 		int extlen = au.data_offset - 24;
 
-		file->title = calloc(extlen + 1, sizeof(char));
+		file->title = mem_calloc(extlen + 1, sizeof(char));
 		memcpy(file->title, data + 24, extlen);
 		file->title[extlen] = 0;
 	}

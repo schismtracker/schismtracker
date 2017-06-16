@@ -53,8 +53,7 @@ static struct cfg_section *_get_section(cfg_file_t *cfg, const char *section_nam
 		section = section->next;
 	}
 	if (add) {
-		section = calloc(1, sizeof(struct cfg_section));
-		section->omit = 0;
+		section = mem_calloc(1, sizeof(struct cfg_section));
 		section->name = str_dup(section_name);
 		if (prev) {
 			section->next = prev->next;
@@ -80,7 +79,7 @@ static struct cfg_key *_get_key(struct cfg_section *section, const char *key_nam
 		key = key->next;
 	}
 	if (add) {
-		key = calloc(1, sizeof(struct cfg_key));
+		key = mem_calloc(1, sizeof(struct cfg_key));
 		key->name = str_dup(key_name);
 		if (prev) {
 			key->next = prev->next;
@@ -499,7 +498,7 @@ void cfg_delete_key(cfg_file_t *cfg, const char *section_name, const char *key_n
 	key = _get_key(section, key_name, 0);
 	if (key == NULL || key->name[0] == '#')
 		return;
-	newname = malloc(strlen(key->name) + 2);
+	newname = mem_alloc(strlen(key->name) + 2);
 	newname[0] = '#';
 	strcpy(newname + 1, key->name);
 	free(key->name);

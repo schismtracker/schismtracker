@@ -35,7 +35,7 @@ int fmt_mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	file->description = "MoonFish";
 	/*file->extension = str_dup("mf");*/
 	titlelen = MIN(32, data[32]);
-	file->title = calloc(titlelen + 1, sizeof(char));
+	file->title = mem_calloc(titlelen + 1, sizeof(char));
 	memcpy(file->title, data + 33, titlelen);
 	file->title[titlelen] = 0;
 	file->type = TYPE_MODULE_MOD;    /* ??? */

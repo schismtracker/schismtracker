@@ -131,7 +131,7 @@ int fmt_pat_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 		return 0;
 	}
 	file->description = "Gravis Patch File";
-	file->title = malloc(17);
+	file->title = mem_alloc(17);
 	memcpy(file->title, header->insname, 16);
 	file->title[16] = '\0';
 	file->type = TYPE_INST_OTHER;

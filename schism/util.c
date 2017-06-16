@@ -92,6 +92,19 @@ void *mem_alloc(size_t amount)
 	}
 	return q;
 }
+
+void *mem_calloc(size_t nmemb, size_t size)
+{
+	void *q;
+	q = calloc(nmemb, size);
+	if (!q) {
+		/* throw out of memory exception */
+		perror("calloc");
+		exit(255);
+	}
+	return q;
+}
+
 void *mem_realloc(void *orig, size_t amount)
 {
 	void *q;

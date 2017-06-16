@@ -67,7 +67,7 @@ int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 		if (header->breaks[i] > 0x3f)
 			return 0;
 
-	file->title = (char *) calloc(37, sizeof(char));
+	file->title = (char *) mem_calloc(37, sizeof(char));
 	memcpy(file->title, header->songmessage, 36);
 	file->title[36] = 0;
 

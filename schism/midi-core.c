@@ -430,19 +430,16 @@ struct midi_provider *midi_provider_register(const char *name,
 
 	if (!midi_mutex) return NULL;
 
-	n = mem_alloc(sizeof(struct midi_provider));
+	n = mem_calloc(1, sizeof(struct midi_provider));
 	n->name = str_dup(name);
 	n->poll = driver->poll;
 	n->enable = driver->enable;
 	n->disable = driver->disable;
 	if (driver->flags & MIDI_PORT_CAN_SCHEDULE) {
 		n->send_later = driver->send;
-		n->send_now = NULL;
 		n->drain = driver->drain;
 	} else {
-		n->send_later = NULL;
 		n->send_now = driver->send;
-		n->drain = NULL;
 	}
 
 	SDL_mutexP(midi_mutex);
@@ -452,8 +449,6 @@ struct midi_provider *midi_provider_register(const char *name,
 	if (driver->thread) {
 		// FIXME this cast is stupid
 		n->thread = SDL_CreateThread((int (*)(void*))driver->thread, n);
-	} else {
-		n->thread = NULL;
 	}
 
 	SDL_mutexV(midi_mutex);

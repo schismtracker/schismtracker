@@ -148,7 +148,7 @@ static char **semicolon_split(const char *i)
 	for (j = i; j; j = strchr(j + 1, ';'))
 		n++;
 
-	o = p = calloc(n, sizeof(char *));
+	o = p = mem_calloc(n, sizeof(char *));
 	a = strdup(i);
 
 	do {

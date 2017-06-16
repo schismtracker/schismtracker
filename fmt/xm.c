@@ -41,7 +41,7 @@ int fmt_xm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	file->description = "Fast Tracker 2 Module";
 	file->type = TYPE_MODULE_XM;
 	/*file->extension = str_dup("xm");*/
-	file->title = calloc(21, sizeof(char));
+	file->title = mem_calloc(21, sizeof(char));
 	memcpy(file->title, data + 17, 20);
 	file->title[20] = 0;
 	return 1;

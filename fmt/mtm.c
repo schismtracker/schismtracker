@@ -63,7 +63,7 @@ int fmt_mtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 	file->description = "MultiTracker Module";
 	/*file->extension = str_dup("mtm");*/
-	file->title = calloc(21, sizeof(char));
+	file->title = mem_calloc(21, sizeof(char));
 	memcpy(file->title, data + 4, 20);
 	file->title[20] = 0;
 	file->type = TYPE_MODULE_MOD;
@@ -174,10 +174,10 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	memset(song->orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
 
 	/* tracks */
-	trackdata = calloc(ntrk, sizeof(song_note_t *));
+	trackdata = mem_calloc(ntrk, sizeof(song_note_t *));
 	for (n = 0; n < ntrk; n++) {
 		slurp_read(fp, b, 3 * rows);
-		trackdata[n] = calloc(rows, sizeof(song_note_t));
+		trackdata[n] = mem_calloc(rows, sizeof(song_note_t));
 		mtm_unpack_track(b, trackdata[n], rows);
 	}
 

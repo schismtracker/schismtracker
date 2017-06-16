@@ -42,7 +42,7 @@ int fmt_ult_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	file->description = "UltraTracker Module";
 	file->type = TYPE_MODULE_S3M;
 	/*file->extension = str_dup("ult");*/
-	file->title = calloc(33, sizeof(char));
+	file->title = mem_calloc(33, sizeof(char));
 	memcpy(file->title, data + 15, 32);
 	file->title[32] = 0;
 	return 1;

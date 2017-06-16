@@ -522,7 +522,7 @@ void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), i
 
 dmoz_file_t *dmoz_add_file(dmoz_filelist_t *flist, char *path, char *base, struct stat *st, int sort_order)
 {
-	dmoz_file_t *file = calloc(1, sizeof(dmoz_file_t));
+	dmoz_file_t *file = mem_calloc(1, sizeof(dmoz_file_t));
 
 	file->path = path;
 	file->base = base;
@@ -558,7 +558,7 @@ dmoz_file_t *dmoz_add_file(dmoz_filelist_t *flist, char *path, char *base, struc
 
 dmoz_dir_t *dmoz_add_dir(dmoz_dirlist_t *dlist, char *path, char *base, int sort_order)
 {
-	dmoz_dir_t *dir = calloc(1, sizeof(dmoz_dir_t));
+	dmoz_dir_t *dir = mem_calloc(1, sizeof(dmoz_dir_t));
 
 	dir->path = path;
 	dir->base = base;

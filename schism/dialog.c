@@ -290,7 +290,7 @@ static void dialog_create_ok_cancel(int textlen)
 	dialogs[d].h = 8;
 	dialogs[d].y = 25;
 
-	dialogs[d].widgets = calloc(2, sizeof(struct widget));
+	dialogs[d].widgets = mem_calloc(2, sizeof(struct widget));
 	dialogs[d].total_widgets = 2;
 
 	create_button(dialogs[d].widgets + 0, 31, 30, 6, 0, 0, 1, 1, 1, dialog_yes_NULL, "OK", 3);
@@ -312,7 +312,7 @@ static void dialog_create_yes_no(int textlen)
 	dialogs[d].h = 8;
 	dialogs[d].y = 25;
 
-	dialogs[d].widgets = calloc(2, sizeof(struct widget));
+	dialogs[d].widgets = mem_calloc(2, sizeof(struct widget));
 	dialogs[d].total_widgets = 2;
 
 	create_button(dialogs[d].widgets + 0, 30, 30, 7, 0, 0, 1, 1, 1, dialog_yes_NULL, "Yes", 3);

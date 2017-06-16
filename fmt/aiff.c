@@ -175,7 +175,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 		if (!name.id) name = anno;
 		if (name.id) {
 			if (file) {
-				file->title = calloc(1, name.size + 1);
+				file->title = mem_calloc(1, name.size + 1);
 				memcpy(file->title, name.data->bytes, name.size);
 				file->title[name.size] = '\0';
 			}
@@ -238,7 +238,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 		if (!name.id) name = anno;
 		if (name.id) {
 			if (file) {
-				file->title = calloc(1, name.size + 1);
+				file->title = mem_calloc(1, name.size + 1);
 				memcpy(file->title, name.data->bytes, name.size);
 				file->title[name.size] = '\0';
 			}
