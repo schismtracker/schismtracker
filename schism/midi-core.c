@@ -645,13 +645,7 @@ void midi_queue_alloc(int my_audio_buffer_samples, int sample_size, int samples_
 	qlen = buffer_size / ms10s;
 	/* now qlen is the number of msec in digital output buffer */
 
-	qq = malloc(qlen * sizeof(struct qent));
-	if (!qq) {
-		/* memory allocation failed. something else is bound to die real soon now */
-		return;
-	}
-	/* zero it out */
-	memset(qq, 0, sizeof(struct qent)*qlen);
+	qq = mem_calloc(qlen, sizeof(struct qent));
 }
 
 static SDL_Thread *midi_queue_thread = NULL;
