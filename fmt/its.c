@@ -70,14 +70,9 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	file->smp_sustain_start = bswapLE32(its->susloopbegin);
 	file->smp_sustain_end = bswapLE32(its->susloopend);
 
-	file->smp_filename = mem_alloc(13);
-	memcpy(file->smp_filename, its->filename, 12);
-	file->smp_filename[12] = 0;
-
+	file->smp_filename = strn_dup((const char *)its->filename, 12);
 	file->description = "Impulse Tracker Sample";
-	file->title = mem_alloc(26);
-	memcpy(file->title, data + 20, 25);
-	file->title[25] = 0;
+	file->title = strn_dup((const char *)data + 20, 25);
 	file->type = TYPE_SAMPLE_EXTD;
 
 	return 1;

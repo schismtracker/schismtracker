@@ -81,9 +81,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	if (au.data_offset > 24) {
 		int extlen = au.data_offset - 24;
 
-		file->title = mem_calloc(extlen + 1, sizeof(char));
-		memcpy(file->title, data + 24, extlen);
-		file->title[extlen] = 0;
+		file->title = strn_dup((const char *)data + 24, extlen);
 	}
 	file->smp_filename = file->title;
 	file->type = TYPE_SAMPLE_PLAIN;

@@ -110,9 +110,7 @@ static size_t _parse_comments(const char *s, char **comments)
 	len = ptr - s;
 	if (len) {
 		/* save the comments */
-		new_comments = (char *)mem_alloc(len + 1);
-		strncpy(new_comments, s, len);
-		new_comments[len] = 0;
+		new_comments = strn_dup(s, len);
 		if (*comments) {
 			/* already have some comments -- add to them */
 			if (asprintf(&tmp, "%s%s", *comments, new_comments) == -1) {
@@ -285,9 +283,7 @@ int cfg_read(cfg_file_t *cfg)
 		len = strcspn(pos, "#\r\n");
 		if (len) {
 			char *line;
-			line = mem_alloc(len + 1);
-			strncpy(line, pos, len);
-			line[len] = 0;
+			line = strn_dup(pos, len);
 			trim_string(line);
 			if (_parse_section(cfg, line, &cur_section, comments)
 			    || _parse_keyval(cfg, line, cur_section, comments)) {

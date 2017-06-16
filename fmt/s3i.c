@@ -142,14 +142,10 @@ int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	file->smp_loop_start = smp->loop_start;
 	file->smp_loop_end = smp->loop_end;
 	file->smp_speed = smp->c5speed;
-	file->smp_filename = (char*) mem_alloc(13);
-	memcpy(file->smp_filename, smp->filename, 12);
-	file->smp_filename[12] = 0;
+	file->smp_filename = strn_dup(smp->filename, 12);
 
 	file->description = "Scream Tracker Sample";
-	file->title = mem_alloc(26);
-	memcpy(file->title, smp->name, 25);
-	file->title[25] = 0;
+	file->title = strn_dup(smp->name, 25);
 	file->type = TYPE_SAMPLE_EXTD | TYPE_INST_OTHER;
 	return 1;
 }

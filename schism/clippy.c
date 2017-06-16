@@ -209,9 +209,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 					if (_current_selection != _current_clipboard) {
 						free(_current_clipboard);
 					}
-					_current_clipboard = mem_alloc(nbytes+1);
-					memcpy(_current_clipboard, (char*)src, nbytes);
-					_current_clipboard[nbytes] = 0;
+					_current_clipboard = strn_dup((const char *)src, nbytes);
 					_string_paste(CLIPPY_BUFFER, _current_clipboard);
 					_widget_owner[CLIPPY_BUFFER]
 							= _widget_owner[CLIPPY_SELECT];
@@ -363,9 +361,7 @@ static char *_internal_clippy_paste(int cb)
 					if (src) {
 						clen = GlobalSize(_hmem);
 						if (clen > 0) {
-							_current_clipboard = mem_alloc(clen+1);
-							memcpy(_current_clipboard, src, clen);
-							_current_clipboard[clen] = '\0';
+							_current_clipboard = strn_dup(src, clen);
 						}
 						GlobalUnlock(_hmem);
 					}
@@ -388,9 +384,7 @@ static char *_internal_clippy_paste(int cb)
 					if (clheader->length > 4 && *cldata == Ph_CL_TEXT) {
 						src = ((char *)clheader->data)+4;
 						clen = clheader->length - 4;
-						_current_clipboard = mem_alloc(clen+1);
-						memcpy(_current_clipboard, src, clen);
-						_current_clipboard[clen] = '\0';
+						_current_clipboard = strn_dup(src, clen);
 
 					}
 					PhClipboardPasteFinish(clhandle);
@@ -404,9 +398,7 @@ static char *_internal_clippy_paste(int cb)
 				if (clheader->length > 4 && *cldata == Ph_CL_TEXT) {
 					src = ((char *)clheader->data)+4;
 					clen = clheader->length - 4;
-					_current_clipboard = mem_alloc(clen+1);
-					memcpy(_current_clipboard, src, clen);
-					_current_clipboard[clen] = '\0';
+					_current_clipboard = strn_dup(src, clen);
 				}
 			}
 #endif /* NTO version selector */
@@ -456,9 +448,7 @@ void clippy_select(struct widget *w, char *addr, int len)
 		for (i = 0; addr[i] && (len < 0 || i < len); i++) {
 			/* nothing */
 		}
-		_current_selection = mem_alloc(i+1);
-		memcpy(_current_selection, addr, i);
-		_current_selection[i] = 0;
+		_current_selection = strn_dup(addr, i);
 		_widget_owner[CLIPPY_SELECT] = w;
 
 		/* update x11 Select (for xterms and stuff) */

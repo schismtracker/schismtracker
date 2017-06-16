@@ -44,9 +44,7 @@ int fmt_ams_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 		n = 30;
 	file->description = "Velvet Studio";
 	/*file->extension = str_dup("ams");*/
-	file->title = mem_calloc(n + 1, sizeof(char));
-	memcpy(file->title, data + 8, n);
-	file->title[n] = 0;
+	file->title = strn_dup((const char *)data + 8, n);
 	file->type = TYPE_MODULE_XM;
 	return 1;
 }

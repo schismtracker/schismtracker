@@ -40,9 +40,7 @@ int fmt_iti_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
 	file->description = "Impulse Tracker Instrument";
-	file->title = (char *)mem_calloc(26,sizeof(char *));
-	memcpy(file->title, data+32, 25);
-	file->title[25] = 0;
+	file->title = strn_dup((const char *)data + 32, 25);
 	file->type = TYPE_INST_ITI;
 
 	return 1;
