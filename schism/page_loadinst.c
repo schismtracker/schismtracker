@@ -478,8 +478,9 @@ static int file_list_handle_key(struct key_event * k)
 		handle_enter_key();
 		return 1;
 	} else {
-		if (k->state == KEY_PRESS)
-			return 0;
+		/* prevent moving the cursor twice from a single key press */
+		if (k->state == KEY_RELEASE)
+			return 1;
 	}
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);

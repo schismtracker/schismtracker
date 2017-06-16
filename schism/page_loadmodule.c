@@ -770,7 +770,7 @@ static int file_list_handle_key(struct key_event * k)
 		status.flags |= NEED_UPDATE;
 		return 1;
 	default:
-		/* hmm? */
+		/* prevent moving the cursor twice from a single key press */
 		if (k->state == KEY_RELEASE)
 			return 1;
 	}
