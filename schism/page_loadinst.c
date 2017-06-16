@@ -477,9 +477,6 @@ static int file_list_handle_key(struct key_event * k)
 	} else if (k->mouse == MOUSE_DBLCLICK) {
 		handle_enter_key();
 		return 1;
-	} else {
-		if (k->state == KEY_PRESS)
-			return 0;
 	}
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
