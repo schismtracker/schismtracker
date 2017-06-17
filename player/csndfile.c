@@ -1116,7 +1116,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
 
 void csf_adjust_sample_loop(song_sample_t *sample)
 {
-	if (!sample->data) return;
+	if (!sample->data || sample->length < 1) return;
 	if (sample->loop_end > sample->length) sample->loop_end = sample->length;
 	if (sample->loop_start+2 >= sample->loop_end) {
 		sample->loop_start = sample->loop_end = 0;
