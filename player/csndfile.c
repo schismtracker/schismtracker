@@ -662,7 +662,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
 	}
 	switch (flags & SF_ENC_MASK) {
 		case SF_PCMS: case SF_PCMU: case SF_PCMD: case SF_IT214: case SF_IT215:
-		case SF_AMS: case SF_DMF: case SF_MDL: case SF_PTM:
+		case SF_AMS: case SF_DMF: case SF_MDL: case SF_PTM: case SF_PCMD16:
 			break;
 		default: SF_FAIL("encoding", flags & SF_ENC_MASK);
 	}
@@ -1087,6 +1087,23 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *file
 		len = sample->length = MIN(sample->length, memsize);
 		for (uint32_t j = 0; j < len; j++)
 			sample->data[j] = CLAMP(buffer[j] * 2, -128, 127);
+		break;
+
+	// 8-bit ADPCM data w/ 16-byte table (MOD ADPCM)
+	case RS_PCM8D16:
+		{
+			len = (sample->length + 1) / 2 + 16;
+			if (len > memsize) break;
+
+			const signed char *p = (const signed char *)buffer;
+			signed char *data = sample->data, smpval = 0;
+			for (uint32_t j=16; j<len; j++) {
+				smpval += p[p[j] & 0xF];
+				*data++ = smpval;
+				smpval += p[(p[j] >> 4) & 0xF];
+				*data++ = smpval;
+			}
+		}
 		break;
 
 	// Default: 8-bit signed PCM data

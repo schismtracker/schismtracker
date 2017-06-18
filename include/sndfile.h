@@ -286,6 +286,7 @@ enum {
 #define SF_DMF                 _SDV_ENC(7) // DMF Huffman compression
 #define SF_MDL                 _SDV_ENC(8) // MDL Huffman compression
 #define SF_PTM                 _SDV_ENC(9) // PTM 8-bit delta value -> 16-bit sample
+#define SF_PCMD16              _SDV_ENC(10) // PCM, 16-byte table delta-encoded
 
 // Sample format shortcut
 #define SF(a,b,c,d) (SF_ ## a | SF_ ## b| SF_ ## c | SF_ ## d)
@@ -312,6 +313,7 @@ enum {
 #define RS_PCM24S       SF(PCMS,24,M,LE)
 #define RS_PCM32S       SF(PCMS,32,M,LE)
 #define RS_PCM8D        SF(PCMD,8,M,LE)
+#define RS_PCM8D16      SF(PCMD16,8,M,LE)
 #define RS_PCM8S        SF(PCMS,8,M,LE)
 #define RS_PCM8U        SF(PCMU,8,M,LE)
 #define RS_PTM8DTO16    SF(PTM,16,M,LE)

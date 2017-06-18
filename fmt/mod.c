@@ -338,11 +338,23 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 1; n < 32; n++) {
 			uint32_t ssize;
+			char sstart[5];
 
 			if (song->samples[n].length == 0)
 				continue;
-			ssize = csf_read_sample(song->samples + n, SF_8 | SF_M | SF_LE | SF_PCMS,
-				fp->data + fp->pos, fp->length - fp->pos);
+
+			/* check for ADPCM compression */
+			slurp_peek(fp, sstart, 5);
+			if (!strncmp(sstart, "ADPCM", 5)) {
+				slurp_seek(fp, 5, SEEK_CUR);
+				ssize = csf_read_sample(song->samples + n,
+					SF_8 | SF_M | SF_LE | SF_PCMD16,
+					fp->data + fp->pos, fp->length - fp->pos);
+			} else {
+				ssize = csf_read_sample(song->samples + n,
+					SF_8 | SF_M | SF_LE | SF_PCMS,
+					fp->data + fp->pos, fp->length - fp->pos);
+			}
 			slurp_seek(fp, ssize, SEEK_CUR);
 		}
 	}
