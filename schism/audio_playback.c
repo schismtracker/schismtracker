@@ -1015,8 +1015,9 @@ void cfg_save_audio(cfg_file_t *cfg)
 }
 
 // ------------------------------------------------------------------------------------------------------------
-static void _schism_midi_out_note(int chan, const song_note_t *m)
+static void _schism_midi_out_note(int chan, const song_note_t *starting_note)
 {
+	const song_note_t *m = starting_note;
 	unsigned int tc;
 	int m_note;
 
@@ -1075,7 +1076,7 @@ static void _schism_midi_out_note(int chan, const song_note_t *m)
 	m_note = m->note;
 	tc = current_song->tick_count % current_song->current_speed;
 #if 0
-printf("channel = %d note=%d\n",chan,m_note);
+printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 #endif
 	if (m->effect == FX_SPECIAL) {
 		switch (m->param & 0x80) {
@@ -1092,7 +1093,7 @@ printf("channel = %d note=%d\n",chan,m_note);
 			if (tc != 0) return;
 		};
 	} else {
-		if (tc != 0) return;
+		if (tc != 0 && !starting_note) return;
 	}
 
 	need_note = need_velocity = -1;
