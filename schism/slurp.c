@@ -302,7 +302,7 @@ long slurp_tell(slurp_t *t)
 
 size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 {
-	slurp_peek(t, ptr, count);
+	count = slurp_peek(t, ptr, count);
 	t->pos += count;
 	return count;
 }
