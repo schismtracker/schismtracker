@@ -74,6 +74,7 @@ long slurp_tell(slurp_t *t);
 #define slurp_rewind(t) slurp_seek((t), 0, SEEK_SET)
 
 size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never realy liked fread */
+size_t slurp_peek(slurp_t *t, void *ptr, size_t count);
 int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
 int slurp_eof(slurp_t *t); /* 1 = end of file */
 
