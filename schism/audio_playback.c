@@ -567,11 +567,19 @@ void song_stop_unlocked(int quitting)
 			moff[0] = 0xe0 + j;
 			moff[1] = 0;
 			csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
+
+			moff[0] = 0xb0 + j;	/* channel mode message */
+			moff[1] = 0x78;		/* all sound off */
+			moff[2] = 0;
+			csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
+
+			moff[1] = 0x79;		/* reset all controllers */
+			csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
+
+			moff[1] = 0x7b;		/* all notes off */
+			csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
 		}
 
-		// send all notes off
-#define _MIDI_PANIC     "\xb0\x78\0\xb0\x79\0\xb0\x7b\0"
-		csf_midi_send(current_song, (unsigned char *) _MIDI_PANIC, sizeof(_MIDI_PANIC) - 1, 0, 0);
 		csf_process_midi_macro(current_song, 0, current_song->midi_config.stop, 0, 0, 0, 0); // STOP!
 		midi_send_flush(); // NOW!
 
