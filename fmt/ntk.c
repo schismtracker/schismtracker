@@ -33,9 +33,7 @@ int fmt_ntk_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 	file->description = "NoiseTrekker";
 	/*file->extension = str_dup("ntk");*/
-	file->title = mem_calloc(16, sizeof(char));
-	memcpy(file->title, data + 9, 15);
-	file->title[15] = 0;
+	file->title = strn_dup((const char *)data + 9, 15);
 	file->type = TYPE_MODULE_MOD;    /* ??? */
 	return 1;
 }

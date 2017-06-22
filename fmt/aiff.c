@@ -174,11 +174,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 		if (!name.id) name = auth;
 		if (!name.id) name = anno;
 		if (name.id) {
-			if (file) {
-				file->title = mem_calloc(1, name.size + 1);
-				memcpy(file->title, name.data->bytes, name.size);
-				file->title[name.size] = '\0';
-			}
+			if (file) file->title = strn_dup((const char *)name.data->bytes, name.size);
 			if (smp) {
 				int len = MIN(25, name.size);
 				memcpy(smp->name, name.data->bytes, len);
@@ -237,11 +233,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 		if (!name.id) name = auth;
 		if (!name.id) name = anno;
 		if (name.id) {
-			if (file) {
-				file->title = mem_calloc(1, name.size + 1);
-				memcpy(file->title, name.data->bytes, name.size);
-				file->title[name.size] = '\0';
-			}
+			if (file) file->title = strn_dup((const char *)name.data->bytes, name.size);
 			if (smp) {
 				int len = MIN(25, name.size);
 				memcpy(smp->name, name.data->bytes, len);

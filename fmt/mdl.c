@@ -36,7 +36,6 @@
 int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	uint32_t position, block_length;
-	char buf[33];
 
 	/* data[4] = major version number (accept 0 or 1) */
 	if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1 && memcmp(data, "DMDL", 4) == 0))
@@ -50,13 +49,8 @@ int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 			return 0;
 		if (memcmp(data + position, "IN", 2) == 0) {
 			/* hey! we have a winner */
-			memcpy(buf, data + position + 6, 32);
-			buf[32] = 0;
-			file->title = str_dup(buf);
-			memcpy(buf, data + position + 38, 20);
-			buf[20] = 0;
-			file->artist = str_dup(buf);
-
+			file->title = strn_dup((const char *)data + position + 6, 32);
+			file->artist = strn_dup((const char *)data + position + 38, 20);
 			file->description = "Digitrakker";
 			/*file->extension = str_dup("mdl");*/
 			file->type = TYPE_MODULE_XM;

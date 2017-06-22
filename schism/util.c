@@ -81,6 +81,20 @@ char *str_dup(const char *s)
 	return q;
 }
 
+char *strn_dup(const char *s, size_t n)
+{
+	char *q;
+	q = malloc(n + 1);
+	if (!q) {
+		/* throw out of memory exception */
+		perror("strndup");
+		exit(255);
+	}
+	memcpy(q, s, n);
+	q[n] = '\0';
+	return q;
+}
+
 void *mem_alloc(size_t amount)
 {
 	void *q;

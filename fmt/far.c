@@ -39,9 +39,7 @@ int fmt_far_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 	file->description = "Farandole Module";
 	/*file->extension = str_dup("far");*/
-	file->title = mem_calloc(41, sizeof(char));
-	memcpy(file->title, data + 4, 40);
-	file->title[40] = 0;
+	file->title = strn_dup((const char *)data + 4, 40);
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }

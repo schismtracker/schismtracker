@@ -37,9 +37,7 @@ int fmt_mt2_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 	file->description = "MadTracker 2 Module";
 	/*file->extension = str_dup("mt2");*/
-	file->title = mem_calloc(65, sizeof(char));
-	memcpy(file->title, data + 42, 64);
-	file->title[64] = 0;
+	file->title = strn_dup((const char *)data + 42, 64);
 	file->type = TYPE_MODULE_XM;
 	return 1;
 }

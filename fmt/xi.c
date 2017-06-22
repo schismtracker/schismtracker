@@ -107,9 +107,7 @@ int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 		return 0;
 
 	file->description = "FastTracker Instrument";
-	file->title = mem_alloc(24);
-	memcpy(file->title, xi->name, 22);
-	file->title[22]='\0';
+	file->title = strn_dup((const char *)xi->name, 22);
 	file->type = TYPE_INST_XI;
 	return 1;
 }

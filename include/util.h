@@ -103,6 +103,7 @@ passed to them in the 'buf' parameter. */
 extern MALLOC void *mem_alloc(size_t);
 extern MALLOC void *mem_calloc(size_t, size_t);
 extern MALLOC char *str_dup(const char *);
+extern MALLOC char *strn_dup(const char *, size_t);
 extern void *mem_realloc(void *,size_t);
 extern void mem_free(void *);
 
