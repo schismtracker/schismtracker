@@ -1066,7 +1066,6 @@ static void _schism_midi_out_note(int chan, const song_note_t *starting_note)
 	ins = ins_tracker[chan];
 	if (m->instrument > 0) {
 		ins = m->instrument;
-		ins_tracker[chan] = ins;
 	}
 	if (ins < 0 || ins >= MAX_INSTRUMENTS)
 		return; /* err...  almost certainly */
@@ -1108,7 +1107,7 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 	if (m_note > 120) {
 		if (note_tracker[chan] != 0) {
 			csf_process_midi_macro(current_song, chan, current_song->midi_config.note_off,
-				0, note_tracker[chan], 0, ins);
+				0, note_tracker[chan], 0, ins_tracker[chan]);
 		}
 
 		note_tracker[chan] = 0;
@@ -1124,7 +1123,7 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 	} else if (m->note) {
 		if (note_tracker[chan] != 0) {
 			csf_process_midi_macro(current_song, chan, current_song->midi_config.note_off,
-				0, note_tracker[chan], 0, ins);
+				0, note_tracker[chan], 0, ins_tracker[chan]);
 		}
 		note_tracker[chan] = m_note;
 		if (m->voleffect != VOLFX_VOLUME) {
@@ -1134,6 +1133,10 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 		}
 		need_note = note_tracker[chan];
 		need_velocity = vol_tracker[chan];
+	}
+
+	if (m->instrument > 0) {
+		ins_tracker[chan] = ins;
 	}
 
 	mg = (current_song->instruments[ins]->midi_program)
