@@ -868,130 +868,74 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	}
 }
 
+static void midi_push_event(Uint8 code, void *data1, size_t data1_len, int alloc)
+{
+	SDL_Event e = { .user = { .type = SCHISM_EVENT_MIDI, .code = code, .data1 = data1 } };
+
+	if (data1 && alloc) {
+		e.user.data1 = mem_alloc(data1_len);
+		memcpy(e.user.data1, data1, data1_len);
+	}
+
+	SDL_PushEvent(&e);
+}
+
 void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity)
 {
-	int *st;
-	SDL_Event e;
+	int st[4] = { mnstatus, channel, note, velocity };
 
-	st = mem_alloc(sizeof(int)*4);
-	st[0] = mnstatus;
-	st[1] = channel;
-	st[2] = note;
-	st[3] = velocity;
-	e.user.type = SCHISM_EVENT_MIDI;
-	e.user.code = SCHISM_EVENT_MIDI_NOTE;
-	e.user.data1 = st;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	midi_push_event(SCHISM_EVENT_MIDI_NOTE, st, sizeof(st), 1);
 }
 
 void midi_event_controller(int channel, int param, int value)
 {
-	int *st;
-	SDL_Event e;
+	int st[4] = { value, channel, param };
 
-	st = mem_alloc(sizeof(int)*4);
-	st[0] = value;
-	st[1] = channel;
-	st[2] = param;
-	st[3] = 0;
-	e.user.type = SCHISM_EVENT_MIDI;
-	e.user.code = SCHISM_EVENT_MIDI_CONTROLLER;
-	e.user.data1 = st;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	midi_push_event(SCHISM_EVENT_MIDI_CONTROLLER, st, sizeof(st), 1);
 }
 
 void midi_event_program(int channel, int value)
 {
-	int *st;
-	SDL_Event e;
+	int st[4] = { value, channel };
 
-	st = mem_alloc(sizeof(int)*4);
-	st[0] = value;
-	st[1] = channel;
-	st[2] = 0;
-	st[3] = 0;
-	e.user.type = SCHISM_EVENT_MIDI;
-	e.user.code = SCHISM_EVENT_MIDI_PROGRAM;
-	e.user.data1 = st;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	midi_push_event(SCHISM_EVENT_MIDI_PROGRAM, st, sizeof(st), 1);
 }
 
 void midi_event_aftertouch(int channel, int value)
 {
-	int *st;
-	SDL_Event e;
+	int st[4] = { value, channel };
 
-	st = mem_alloc(sizeof(int)*4);
-	st[0] = value;
-	st[1] = channel;
-	st[2] = 0;
-	st[3] = 0;
-	e.user.type = SCHISM_EVENT_MIDI;
-	e.user.code = SCHISM_EVENT_MIDI_AFTERTOUCH;
-	e.user.data1 = st;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	midi_push_event(SCHISM_EVENT_MIDI_AFTERTOUCH, st, sizeof(st), 1);
 }
 
 void midi_event_pitchbend(int channel, int value)
 {
-	int *st;
-	SDL_Event e;
+	int st[4] = { value, channel };
 
-	st = mem_alloc(sizeof(int)*4);
-	st[0] = value;
-	st[1] = channel;
-	st[2] = 0;
-	st[3] = 0;
-	e.user.type = SCHISM_EVENT_MIDI;
-	e.user.code = SCHISM_EVENT_MIDI_PITCHBEND;
-	e.user.data1 = st;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	midi_push_event(SCHISM_EVENT_MIDI_PITCHBEND, st, sizeof(st), 1);
 }
 
 void midi_event_system(int argv, int param)
 {
-	int *st;
-	SDL_Event e;
+	int st[4] = { argv, param };
 
-	st = mem_alloc(sizeof(int)*4);
-	st[0] = argv;
-	st[1] = param;
-	st[2] = 0;
-	st[3] = 0;
-	e.user.type = SCHISM_EVENT_MIDI;
-	e.user.code = SCHISM_EVENT_MIDI_SYSTEM;
-	e.user.data1 = st;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	midi_push_event(SCHISM_EVENT_MIDI_SYSTEM, st, sizeof(st), 1);
 }
 
 void midi_event_tick(void)
 {
-	SDL_Event e;
-
-	e.user.type = SCHISM_EVENT_MIDI;
-	e.user.code = SCHISM_EVENT_MIDI_TICK;
-	e.user.data1 = NULL;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	midi_push_event(SCHISM_EVENT_MIDI_TICK, NULL, 0, 0);
 }
 
 void midi_event_sysex(const unsigned char *data, unsigned int len)
 {
-	SDL_Event e;
+	size_t packet_len = len + sizeof(len);
+	void *packet = mem_alloc(packet_len);
 
-	e.user.type = SCHISM_EVENT_MIDI;
-	e.user.code = SCHISM_EVENT_MIDI_SYSEX;
-	e.user.data1 = mem_alloc(len+sizeof(len));
-	memcpy(e.user.data1, &len, sizeof(len));
-	memcpy(e.user.data1+sizeof(len), data, len);
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	memcpy(packet, &len, sizeof(len));
+	memcpy(packet + sizeof(len), data, len);
+
+	midi_push_event(SCHISM_EVENT_MIDI_SYSEX, packet, packet_len, 0);
 }
 
 int midi_engine_handle_event(void *ev)
