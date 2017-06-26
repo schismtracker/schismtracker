@@ -115,12 +115,13 @@ on_failure:
   - if exist "C:\msys%bits%\mingw%bits%\bin\sdl-config" 7z a -tzip schismtracker_debug_logs.zip "C:\msys%bits%\mingw%bits%\bin\sdl-config" > nul
 
 on_finish:
-  - if exist "schismtracker_debug_logs.zip" appveyor PushArtifact "schismtracker_debug_logs.zip"
-  - if exist "schismtracker.exe" 7z a -tzip schismtracker.zip "schismtracker.exe" > nul
-  - if exist "SDL.dll" 7z a -tzip schismtracker.zip "SDL.dll" > nul
-  - if exist "libgcc_s_dw2-1.dll" 7z a -tzip schismtracker.zip "libgcc_s_dw2-1.dll" > nul
-  - if exist "libwinpthread-1.dll" 7z a -tzip schismtracker.zip "libwinpthread-1.dll" > nul
-  - if exist "schismtracker.zip" appveyor PushArtifact "schismtracker.zip"
+  - ps: |
+      if (Test-Path "schismtracker_debug_logs.zip") { appveyor PushArtifact "schismtracker_debug_logs.zip" }
+      if (Test-Path "schismtracker.exe") { 7z a -tzip "schismtracker-$(appveyor_build_version).zip" "schismtracker.exe" > nul }
+      if (Test-Path "SDL.dll") { 7z a -tzip "schismtracker-$(appveyor_build_version).zip" "SDL.dll" > nul }
+      if (Test-Path "libgcc_s_dw2-1.dll") { 7z a -tzip "schismtracker-$(appveyor_build_version).zip" "libgcc_s_dw2-1.dll" > nul }
+      if (Test-Path "libwinpthread-1.dll") { 7z a -tzip "schismtracker-$(appveyor_build_version).zip" "libwinpthread-1.dll" > nul }
+      if (Test-Path "schismtracker.zip") { appveyor PushArtifact "schismtracker-$(appveyor_build_version).zip" }
 
 artifacts:
   - path: '*.zip'
@@ -129,3 +130,16 @@ notifications:
   on_build_success: false
   on_build_failure: false
   on_build_status_changed: true
+
+deploy:
+  release: schismtracker-$(appveyor_build_version)
+  description: $(appveyor_build_version)
+  provider: GitHub
+  auth_token:
+    secure: 0vYg3iWKoeqKmAggg8G9FqmTZ8/R9DmnZkePvNFAJH1BfAxrd/l3Mni0t4maPW8F
+  artifact: /schismtracker-$(appveyor_build_version).zip
+  draft: false
+  prerelease: false
+  on:
+    # branch: master
+    appveyor_repo_tag: true
