@@ -41,7 +41,7 @@ script:
 - make
 - grep '^Schism Tracker' <(./schismtracker --version)
 after_success:
-- tar -cvzf "schismtracker-$TRAVIS_TAG.tar.gz" ./schismtracker ../README.md ../COPYING ../docs/configuration.md
+- tar -cvzf "schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz" ./schismtracker ../README.md ../COPYING ../docs/configuration.md
 notifications:
   email:
     on_success: change
@@ -50,7 +50,7 @@ deploy:
   provider: releases
   api_key:
     secure: cUAYZylRFR658zj3l5bgRptyca3wD/92byCKkFFwnuDjFHUcXX+B3qur5muzC/kx0MUO1T/3rPqtrfcDMiGshOXtJbGN+b0FjlBDr3QGpS57yb3ULzzESZmxWA4EFjrJjvw8L0nleUveAYXx7DvGQXHO6yVZ57q+A2DemfU8KtUrTWrX5Pjn9xYYhd4OBBiJ+HxLaaQLAIggAAA2k2Lt3Ah3bBkGVX2rM+YbqJ4ylbYaltW1S6GCAWDKpsR6dL6ddt1UAu+sahm2pFhWHupW/Kt8J4YNr6nS1Z7YydmPB8Cp7IJVpXK+XEtaLVEV5N/ggEIdJytfLz38dotkJ0XYjqPE8s4MSpvBzFCAHhAitH5sOXP78SzeCJHjlUN918BXhD/hYDfv1gnGRCj4WZuYxaxTPmSbemprpSLXiO31mrjBHDbqD4xylfnRaCFY6DV1afe2Zvz70/4dkoqVYZN18pWDnkF0ekQWaBTBB1xhJ744R0/7k5E5FYFF++xX5hmUtu+tawhXZoTY1LWqAwiF1UvFz+ROqJQqJtkKJzTF+L42ceBzYL5SVlIf/mJm5qV+HvcxYIj/d20qMmwReZLUe6Wir3wHxugIP6eCS2pRvnVAtzTVBuFNB7hi6r8/jtITmKJWPjXTWcuc/xhbTXoAZumKnNfTvfdeVbFRMqYRQjQ=
-  file: "./build/schismtracker-$TRAVIS_TAG.tar.gz"
+  file: "./build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
   skip_cleanup: true
   on:
     tags: true
