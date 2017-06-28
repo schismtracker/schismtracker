@@ -106,6 +106,13 @@ test_script:
         exit 1
       }
 
+before_deploy:
+  - ps: |
+      if (Test-Path "schismtracker.exe") { 7z a -tzip "$artifact" "schismtracker.exe" }
+      if (Test-Path "SDL.dll") { 7z a -tzip "$artifact" "SDL.dll" }
+      if (Test-Path "libgcc_s_dw2-1.dll") { 7z a -tzip "$artifact" "libgcc_s_dw2-1.dll" }
+      if (Test-Path "libwinpthread-1.dll") { 7z a -tzip "$artifact" "libwinpthread-1.dll" }
+
 on_failure:
   - dir /s /b > dir.txt
   - if exist "stdout.txt" 7z a -tzip schismtracker_debug_logs.zip "stdout.txt" > nul
