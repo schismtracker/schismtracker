@@ -38,9 +38,11 @@ static const char *valid_tags[][2] = {
 	/* the first 5 descriptions are a bit weird */
 	{"M.K.", "Amiga-NewTracker"},
 	{"M!K!", "Amiga-ProTracker"},
+	{"M&K!", "Amiga-NoiseTracker"},
+	{"N.T.", "Amiga-NoiseTracker"},
+	{"FEST", "Amiga-NoiseTracker"}, /* jobbig.mod */
 	{"FLT4", "4 Channel Startrekker"}, /* xxx */
 	{"EXO4", "4 Channel Startrekker"}, /* ??? */
-	{"FEST", "4 Channel Startrekker (?)"}, /* jobbig.mod, I have NO IDEA */
 	{"CD81", "8 Channel Falcon"},      /* "Falcon"? */
 	{"FLT8", "8 Channel Startrekker"}, /* xxx */
 	{"EXO8", "8 Channel Startrekker"}, /* ??? */
@@ -135,19 +137,15 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	} else if (!memcmp(tag, "M!K!", 4)) {
 		nchan = 4;
 		tid = "Amiga-ProTracker";
-	} else if (!memcmp(tag, "M&K!", 4) || !memcmp(tag, "N.T.", 4)) {
+	} else if (!memcmp(tag, "M&K!", 4) || !memcmp(tag, "N.T.", 4) || !memcmp(tag, "FEST", 4)) {
 		nchan = 4;
-		tid = "Amiga-NoiseTracker"; // or so the word on the street is; I don't have any of these
+		tid = "Amiga-NoiseTracker";
 	} else if ((!memcmp(tag, "FLT", 3) || !memcmp(tag, "EXO", 3)) && (tag[3] == '4' || tag[3] == '8')) {
 		// Hopefully EXO8 is stored the same way as FLT8
 		nchan = tag[3] - '0';
 		startrekker = (nchan == 8);
 		tid = "%d Channel Startrekker";
 		//log_appendf(4, " Warning: Startrekker AM synth is not supported");
-	} else if (!memcmp(tag, "FEST", 4)) {
-		// the mysterious mod.jobbig
-		nchan = 4;
-		tid = "4 Channel Startrekker (?)";
 	} else if (!memcmp(tag, "OCTA", 4)) {
 		nchan = 8;
 		tid = "Amiga Oktalyzer"; // IT just identifies this as "8 Channel MOD"
