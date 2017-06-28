@@ -16,6 +16,7 @@ install:
       $buildFolder = $env:APPVEYOR_BUILD_FOLDER
       $posixBuildFolder = $buildFolder -Replace '\\', '/'
       $env:PATH="C:\$msys\$mingw\bin;C:\$msys\usr\bin;$env:PATH"
+      $artifact = "schismtracker-$appveyor_build_version-win$bits.zip"
 
       function bash($command, $dieOnError = $true) {
         ""
@@ -116,7 +117,6 @@ on_failure:
 
 on_finish:
   - ps: |
-	  $artifact = "schismtracker-$appveyor_build_version-win$bits.zip"
       Write-Host "$artifact"
       if (Test-Path "schismtracker_debug_logs.zip") { appveyor PushArtifact "schismtracker_debug_logs.zip" }
       if (Test-Path "schismtracker.exe") { 7z a -tzip "$artifact" "schismtracker.exe" > nul }
@@ -139,7 +139,7 @@ deploy:
   provider: GitHub
   auth_token:
     secure: 0vYg3iWKoeqKmAggg8G9FqmTZ8/R9DmnZkePvNFAJH1BfAxrd/l3Mni0t4maPW8F
-  artifact: "schismtracker-$appveyor_build_version-win$bits.zip"
+  artifact: "$artifact"
   draft: false
   prerelease: false
   on:
