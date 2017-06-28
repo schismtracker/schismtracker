@@ -134,8 +134,8 @@ notifications:
   on_build_status_changed: true
 
 deploy:
-  release: schismtracker-$(appveyor_build_version)
-  description: $(appveyor_build_version)
+  release: $(APPVEYOR_REPO_TAG_NAME)
+  description: $(APPVEYOR_REPO_COMMIT_MESSAGE)
   provider: GitHub
   auth_token:
     secure: 0vYg3iWKoeqKmAggg8G9FqmTZ8/R9DmnZkePvNFAJH1BfAxrd/l3Mni0t4maPW8F
