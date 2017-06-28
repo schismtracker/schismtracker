@@ -18,6 +18,7 @@ install:
       $posixBuildFolder = $buildFolder -Replace '\\', '/'
       $env:PATH="C:\$msys\$mingw\bin;C:\$msys\usr\bin;$env:PATH"
       $artifact = "schismtracker-$tag-win$bits.zip"
+      [Environment]::SetEnvironmentVariable("SCHISMTRACKER_ARTIFACT_FILE", $artifact, "Machine")
 
       function bash($command, $dieOnError = $true) {
         ""
@@ -147,7 +148,7 @@ deploy:
   provider: GitHub
   auth_token:
     secure: 0vYg3iWKoeqKmAggg8G9FqmTZ8/R9DmnZkePvNFAJH1BfAxrd/l3Mni0t4maPW8F
-  artifact: /.*schismtracker.*\.zip/
+  artifact: $(SCHISMTRACKER_ARTIFACT_FILE)
   draft: false
   prerelease: false
   on:
