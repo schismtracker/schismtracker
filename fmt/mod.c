@@ -77,17 +77,16 @@ static const char *valid_tags[][2] = {
 
 int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	char tag[5];
+	char tag[4];
 	int i = 0;
 
 	if (length < 1085)
 		return 0;
 
 	memcpy(tag, data + 1080, 4);
-	tag[4] = 0;
 
 	for (i = 0; valid_tags[i][0] != NULL; i++) {
-		if (strcmp(tag, valid_tags[i][0]) == 0) {
+		if (memcmp(tag, valid_tags[i][0], 4) == 0) {
 			/* if (i == 0) {
 				Might be a .wow; need to calculate some crap to find out for sure.
 				For now, since I have no wow's, I'm not going to care.
@@ -120,6 +119,7 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	int mk = 0;
 	int maybe_st3 = 0;
 	int maybe_ft2 = 0;
+	int his_masters_noise = 0;
 	uint8_t restart;
 	long samplesize = 0;
 	const char *tid = NULL;
@@ -140,6 +140,10 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	} else if (!memcmp(tag, "M&K!", 4) || !memcmp(tag, "N.T.", 4) || !memcmp(tag, "FEST", 4)) {
 		nchan = 4;
 		tid = "Amiga-NoiseTracker";
+		if (!memcmp(tag, "M&K!", 4) || !memcmp(tag, "FEST", 4)) {
+			// Alternative finetuning
+			his_masters_noise = 1;
+		}
 	} else if ((!memcmp(tag, "FLT", 3) || !memcmp(tag, "EXO", 3)) && (tag[3] == '4' || tag[3] == '8')) {
 		// Hopefully EXO8 is stored the same way as FLT8
 		nchan = tag[3] - '0';
@@ -210,7 +214,11 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		/* this is only necessary for the wow test... */
 		samplesize += song->samples[n].length;
 
-		song->samples[n].c5speed = MOD_FINETUNE(slurp_getc(fp));
+		if (his_masters_noise) {
+			song->samples[n].c5speed = transpose_to_frequency(0, -(signed char)(slurp_getc(fp) << 3));
+		} else {
+			song->samples[n].c5speed = MOD_FINETUNE(slurp_getc(fp));
+		}
 
 		song->samples[n].volume = slurp_getc(fp);
 		if (song->samples[n].volume > 64)
