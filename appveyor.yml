@@ -14,9 +14,10 @@ install:
       $mingw = "mingw$bits"
       $mingwUpper = $mingw.ToUpper()
       $buildFolder = $env:APPVEYOR_BUILD_FOLDER
+      $tag = $env:APPVEYOR_REPO_TAG_NAME
       $posixBuildFolder = $buildFolder -Replace '\\', '/'
       $env:PATH="C:\$msys\$mingw\bin;C:\$msys\usr\bin;$env:PATH"
-      $artifact = "schismtracker-$appveyor_build_version-win$bits.zip"
+      $artifact = "schismtracker-$tag-win$bits.zip"
 
       function bash($command, $dieOnError = $true) {
         ""
