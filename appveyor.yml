@@ -119,10 +119,10 @@ on_finish:
   - ps: |
       Write-Host "$artifact"
       if (Test-Path "schismtracker_debug_logs.zip") { appveyor PushArtifact "schismtracker_debug_logs.zip" }
-      if (Test-Path "schismtracker.exe") { 7z a -tzip "$artifact" "schismtracker.exe" > nul }
-      if (Test-Path "SDL.dll") { 7z a -tzip "$artifact" "SDL.dll" > nul }
-      if (Test-Path "libgcc_s_dw2-1.dll") { 7z a -tzip "$artifact" "libgcc_s_dw2-1.dll" > nul }
-      if (Test-Path "libwinpthread-1.dll") { 7z a -tzip "$artifact" "libwinpthread-1.dll" > nul }
+      if (Test-Path "schismtracker.exe") { 7z a -tzip "$artifact" "schismtracker.exe" }
+      if (Test-Path "SDL.dll") { 7z a -tzip "$artifact" "SDL.dll" }
+      if (Test-Path "libgcc_s_dw2-1.dll") { 7z a -tzip "$artifact" "libgcc_s_dw2-1.dll" }
+      if (Test-Path "libwinpthread-1.dll") { 7z a -tzip "$artifact" "libwinpthread-1.dll" }
       if (Test-Path $artifact) { appveyor PushArtifact "$artifact" }
 
 artifacts:
