@@ -1,46 +1,58 @@
 language: c
 os:
-  - linux
-  - osx
+- linux
+- osx
+env:
+- ARTIFACT_FILE="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
 matrix:
   include:
-    - os: linux
-    - os: linux
-      dist: trusty
-    - os: osx
-      osx_image: beta-xcode6.1
-    - os: osx
-      osx_image: beta-xcode6.2
-    - os: osx
-      osx_image: beta-xcode6.3
-    - os: osx
-      osx_image: xcode6.4
-    - os: osx
-      osx_image: xcode7
-    - os: osx
-      osx_image: xcode7.1
-    - os: osx
-      osx_image: xcode7.2
-    - os: osx
-      osx_image: xcode7.3
-    - os: osx
-      osx_image: xcode8
+  - os: linux
+  - os: linux
+    dist: trusty
+  - os: osx
+    osx_image: beta-xcode6.1
+  - os: osx
+    osx_image: beta-xcode6.2
+  - os: osx
+    osx_image: beta-xcode6.3
+  - os: osx
+    osx_image: xcode6.4
+  - os: osx
+    osx_image: xcode7
+  - os: osx
+    osx_image: xcode7.1
+  - os: osx
+    osx_image: xcode7.2
+  - os: osx
+    osx_image: xcode7.3
+  - os: osx
+    osx_image: xcode8
 addons:
   apt:
     packages:
-      - libsdl1.2-dev
+    - libsdl1.2-dev
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
 script:
-  - autoreconf -i
-  - mkdir -p build
-  - cd build
-  - sh ../configure
-  - make
-  - grep '^Schism Tracker' <(./schismtracker --version)
+- autoreconf -i
+- mkdir -p build
+- cd build
+- sh ../configure
+- make
+- grep '^Schism Tracker' <(./schismtracker --version)
+after_success:
+- tar -cvzf "$ARTIFACT_FILE" ./schismtracker -C ../ README.md COPYING -C docs configuration.md
 notifications:
   email:
     on_success: change
     on_failure: change
+deploy:
+  provider: releases
+  api_key:
+    secure: cUAYZylRFR658zj3l5bgRptyca3wD/92byCKkFFwnuDjFHUcXX+B3qur5muzC/kx0MUO1T/3rPqtrfcDMiGshOXtJbGN+b0FjlBDr3QGpS57yb3ULzzESZmxWA4EFjrJjvw8L0nleUveAYXx7DvGQXHO6yVZ57q+A2DemfU8KtUrTWrX5Pjn9xYYhd4OBBiJ+HxLaaQLAIggAAA2k2Lt3Ah3bBkGVX2rM+YbqJ4ylbYaltW1S6GCAWDKpsR6dL6ddt1UAu+sahm2pFhWHupW/Kt8J4YNr6nS1Z7YydmPB8Cp7IJVpXK+XEtaLVEV5N/ggEIdJytfLz38dotkJ0XYjqPE8s4MSpvBzFCAHhAitH5sOXP78SzeCJHjlUN918BXhD/hYDfv1gnGRCj4WZuYxaxTPmSbemprpSLXiO31mrjBHDbqD4xylfnRaCFY6DV1afe2Zvz70/4dkoqVYZN18pWDnkF0ekQWaBTBB1xhJ744R0/7k5E5FYFF++xX5hmUtu+tawhXZoTY1LWqAwiF1UvFz+ROqJQqJtkKJzTF+L42ceBzYL5SVlIf/mJm5qV+HvcxYIj/d20qMmwReZLUe6Wir3wHxugIP6eCS2pRvnVAtzTVBuFNB7hi6r8/jtITmKJWPjXTWcuc/xhbTXoAZumKnNfTvfdeVbFRMqYRQjQ=
+  file: "$ARTIFACT_FILE"
+  skip_cleanup: true
+  on:
+    tags: true
