@@ -145,5 +145,5 @@ deploy:
   draft: false
   prerelease: false
   on:
-    # branch: master
+    branch: master
     appveyor_repo_tag: true
