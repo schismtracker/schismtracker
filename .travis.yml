@@ -43,7 +43,10 @@ script:
 - make
 - grep '^Schism Tracker' <(./schismtracker --version)
 after_success:
-- tar -cvzf "$ARTIFACT_FILE" ./schismtracker -C ../ README.md COPYING -C docs configuration.md
+- cd ..
+- mkdir -p schismtracker
+- cp build/schismtracker README.md COPYING docs/configuration.md schismtracker/
+- tar -cvzf "$ARTIFACT_FILE" schismtracker
 notifications:
   email:
     on_success: change
