@@ -14,8 +14,10 @@ install:
       $mingw = "mingw$bits"
       $mingwUpper = $mingw.ToUpper()
       $buildFolder = $env:APPVEYOR_BUILD_FOLDER
+      $tag = $env:APPVEYOR_REPO_TAG_NAME
       $posixBuildFolder = $buildFolder -Replace '\\', '/'
       $env:PATH="C:\$msys\$mingw\bin;C:\$msys\usr\bin;$env:PATH"
+      $artifact = "schismtracker-$tag-win$bits.zip"
 
       function bash($command, $dieOnError = $true) {
         ""
@@ -104,6 +106,14 @@ test_script:
         exit 1
       }
 
+before_deploy:
+  - ps: |
+      if (Test-Path "schismtracker.exe") { 7z a -tzip "$artifact" "schismtracker.exe" }
+      if (Test-Path "SDL.dll") { 7z a -tzip "$artifact" "SDL.dll" }
+      if (Test-Path "libgcc_s_dw2-1.dll") { 7z a -tzip "$artifact" "libgcc_s_dw2-1.dll" }
+      if (Test-Path "libwinpthread-1.dll") { 7z a -tzip "$artifact" "libwinpthread-1.dll" }
+      if (Test-Path $artifact) { appveyor PushArtifact "$artifact" }
+
 on_failure:
   - dir /s /b > dir.txt
   - if exist "stdout.txt" 7z a -tzip schismtracker_debug_logs.zip "stdout.txt" > nul
@@ -115,12 +125,7 @@ on_failure:
   - if exist "C:\msys%bits%\mingw%bits%\bin\sdl-config" 7z a -tzip schismtracker_debug_logs.zip "C:\msys%bits%\mingw%bits%\bin\sdl-config" > nul
 
 on_finish:
-  - if exist "schismtracker_debug_logs.zip" appveyor PushArtifact "schismtracker_debug_logs.zip"
-  - if exist "schismtracker.exe" 7z a -tzip schismtracker.zip "schismtracker.exe" > nul
-  - if exist "SDL.dll" 7z a -tzip schismtracker.zip "SDL.dll" > nul
-  - if exist "libgcc_s_dw2-1.dll" 7z a -tzip schismtracker.zip "libgcc_s_dw2-1.dll" > nul
-  - if exist "libwinpthread-1.dll" 7z a -tzip schismtracker.zip "libwinpthread-1.dll" > nul
-  - if exist "schismtracker.zip" appveyor PushArtifact "schismtracker.zip"
+  - ps: if (Test-Path "schismtracker_debug_logs.zip") { appveyor PushArtifact "schismtracker_debug_logs.zip" }
 
 artifacts:
   - path: '*.zip'
@@ -129,3 +134,16 @@ notifications:
   on_build_success: false
   on_build_failure: false
   on_build_status_changed: true
+
+deploy:
+  release: $(APPVEYOR_REPO_TAG_NAME)
+  description: $(APPVEYOR_REPO_COMMIT_MESSAGE)
+  provider: GitHub
+  auth_token:
+    secure: 0vYg3iWKoeqKmAggg8G9FqmTZ8/R9DmnZkePvNFAJH1BfAxrd/l3Mni0t4maPW8F
+  artifact: /.*\.zip/
+  draft: false
+  prerelease: false
+  on:
+    branch: master
+    appveyor_repo_tag: true
