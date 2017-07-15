@@ -169,7 +169,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		uint8_t rows = breakpos[pat] + 1;
 		if (rows > 64) {
 			return LOAD_UNSUPPORTED;
-        }
+		}
 
 		note = song->patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64));
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = CLAMP(rows, 32, 64);
