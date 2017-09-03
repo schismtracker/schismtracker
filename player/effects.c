@@ -2065,6 +2065,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 				if (!instr && chan->new_instrument && NOTE_IS_NOTE(note)) {
 					csf_instrument_change(csf, chan, chan->new_instrument, porta, 0);
 					if ((csf->flags & SONG_INSTRUMENTMODE)
+					    && chan->new_instrument < MAX_INSTRUMENTS
 					    && csf->instruments[chan->new_instrument]) {
 						if (csf->samples[chan->new_instrument].flags & CHN_ADLIB) {
 							OPL_Patch(nchan, csf->samples[chan->new_instrument].adlib_bytes);
