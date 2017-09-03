@@ -3011,11 +3011,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		patedit_record_note(cur_note, c, current_row, n, 0);
 
 		if (!template_mode) {
-			if (k->midi_channel > 0) {
-				cur_note->instrument = k->midi_channel;
-			} else {
-				cur_note->instrument = song_get_current_instrument();
-			}
+			cur_note->instrument = song_get_current_instrument();
 
 			if (midi_flags & MIDI_RECORD_VELOCITY) {
 				cur_note->voleffect = VOLFX_VOLUME;
