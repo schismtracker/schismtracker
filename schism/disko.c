@@ -21,15 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/*
-mrsbrisby:
-
-thanks for obfuscating this code, it was really fun untangling
-all of those nondescript function names like "p" and "wl".
-especially the ones that weren't actually used anywhere, those
-were a lot of fun to figure out.
-*/
-
 #define NEED_TIME
 #include "headers.h"
 
