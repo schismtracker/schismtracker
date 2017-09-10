@@ -15,7 +15,7 @@
 :   Shift-F8          Pause / Resume Playback
 |   F8                Stop Playback
 !   F9                Load Module
-:   F9                Load Module (also Ctrl-L, Ctrl-O)
+:   F9                Load Module (also Ctrl-L)
 |   Shift-F9          Message Editor
 !   F10               Save Module
 :   F10               Save Module (also Ctrl-W)
