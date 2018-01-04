@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Schism Tracker
+GenericName=Tracker
+Comment=Compose IT and S3M modules
+Keywords=impulse;module;midi;music
+Exec=schismtracker %f
+Icon=schismtracker
+Terminal=false
+Type=Application
+Categories=Audio;Midi;Sequencer;Player;Music
+MimeType=audio/x-it;audio/x-s3m;audio/x-xm;audio/x-mod
