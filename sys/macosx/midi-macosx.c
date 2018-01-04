@@ -123,9 +123,7 @@ static char *get_ep_name(MIDIEndpointRef ep)
 			defaultEncoding);
 
 	/* clean up */
-	if (endpointName) CFRelease(endpointName);
-	if (deviceName) CFRelease(deviceName);
-	if (fullName) CFRelease(fullName);
+	if (fullName && !deviceName) CFRelease(fullName);
 
 	return newName;
 }
