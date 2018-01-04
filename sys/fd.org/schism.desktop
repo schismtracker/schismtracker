@@ -1,5 +1,5 @@
 [Desktop Entry]
-Actions=Play;
+Actions=Play;FontEditor
 Version=1.0
 Name=Schism Tracker
 Comment=Impulse Tracker clone
@@ -15,3 +15,7 @@ Keywords=impulse;module;midi;music
 [Desktop Action Play]
 Name=Schism Tracker (play song)
 Exec=schismtracker -p %f
+
+[Desktop Action FontEditor]
+Name=Schism Tracker (font editor)
+Exec=schismtracker --font-editor
