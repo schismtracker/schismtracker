@@ -2,16 +2,15 @@
 Actions=Play;
 Version=1.0
 Name=Schism Tracker
-Comment=Impulse Tracker Clone
-Encoding=UTF-8
+Comment=Impulse Tracker clone
 Terminal=false
 TryExec=schismtracker
 Exec=schismtracker %f
 Type=Application
 Icon=schism-icon-128.png
-Categories=GNOME;Application;AudioVideo;Audio;Video;
-MimeType=audio/x-mod
-X-Desktop-File-Install-Version=0.10
+Categories=Audio;Midi;Sequencer;Player;Music
+MimeType=audio/x-it;audio/x-s3m;audio/x-xm;audio/x-mod
+Keywords=impulse;module;midi;music
 
 [Desktop Action Play]
 Name=Schism Tracker (play song)
