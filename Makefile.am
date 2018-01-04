@@ -131,6 +131,16 @@ noinst_HEADERS = \
 
 dist_man_MANS = sys/posix/schismtracker.1
 
+desktopdir = $(datadir)/applications
+desktop_DATA = \
+	sys/fd.org/schism.desktop \
+	sys/fd.org/itf.desktop
+
+appicondir = $(datadir)/pixmaps
+appicon_DATA= \
+	icons/schism-icon-128.png \
+	icons/schism-itf-icon-128.png
+
 noinst_SCRIPTS = $(scripts)
 
 nodist_schismtracker_SOURCES = \
