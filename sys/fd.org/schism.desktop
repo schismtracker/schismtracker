@@ -3,6 +3,7 @@ Actions=Play;FontEditor
 Version=1.0
 Name=Schism Tracker
 Comment=Impulse Tracker clone
+Comment[fr]=Clone d'Impulse Tracker
 Terminal=false
 TryExec=schismtracker
 Exec=schismtracker %f
