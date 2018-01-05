@@ -131,9 +131,10 @@ artifacts:
   - path: '*.zip'
 
 notifications:
-  on_build_success: false
-  on_build_failure: false
-  on_build_status_changed: true
+  - provider: Email
+    on_build_success: false
+    on_build_failure: false
+    on_build_status_changed: true
 
 deploy:
   release: $(APPVEYOR_REPO_TAG_NAME)
