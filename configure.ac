@@ -261,7 +261,7 @@ dnl (This ought to be above AC_PROG_CC, but that causes configure to fail
 dnl when all the insane warnings are are enabled.)
 
 AC_ARG_ENABLE(extra-opt,
-        AS_HELP_STRING([--enable-extra-opt], [Add extra optimizations]),
+        AS_HELP_STRING([--enable-extra-opt], [Add extra, system-dependent optimizations (do not use this together with debug or even profiling)]),
         ADD_OPT=$enableval,
         ADD_OPT=no)
 
@@ -276,7 +276,7 @@ AC_ARG_ENABLE(debug,
         ADD_DEBUG=no)
 
 AC_ARG_ENABLE(profiling,
-        AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down)]),
+        AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down), debugging (--enable-debug) is also enabled by this]),
         ADD_PROFILING=$enableval,
         ADD_PROFILING=no)
 
@@ -298,9 +298,10 @@ fi
 dnl place extra optimizations after existing cflags so that they can override
 dnl override whatever flags might exist by default (-g -O2 usually)
 if test x$ADD_OPT \!= xno; then
-        ADD_OPT="-g0 -s -O3 -ffast-math -fomit-frame-pointer -fno-exceptions"
-        ADD_OPT="$ADD_OPT -funroll-loops -frerun-cse-after-loop -fno-ident"
-        ADD_OPT="$ADD_OPT -fno-strength-reduce"
+        if test x$ADD_DEBUG \!= xno || test x$ADD_PROFILING \!= xno; then
+                AC_MSG_NOTICE([You aren't supposed to use --enable-debug or --enable-profiling together with --enable-extra-opt!!])
+        fi
+        ADD_OPT="-Ofast -g0 -s -fno-exceptions -march=native"
         CFLAGS="$CFLAGS $ADD_OPT"
 fi
 
@@ -317,16 +318,16 @@ if test x$ADD_WARN \!= xno; then
         CFLAGS="$ADD_WARN $CFLAGS"
 fi
 
-if test x$ADD_DEBUG \!= xno; then
-        CFLAGS="$CFLAGS -g"
-        OBJCFLAGS="$OBJCFLAGS -g"
-        SDL_LIBS="$SDL_LIBS -g"
+if test x$ADD_PROFILING \!= xno || test x$ADD_DEBUG \!= xno; then
+        CFLAGS="$CFLAGS -g -O0"
+        OBJCFLAGS="$OBJCFLAGS -g -O0"
+        SDL_LIBS="$SDL_LIBS -g -O0"
         AC_SUBST(SDL_LIBS)
 fi
 if test x$ADD_PROFILING \!= xno; then
-        CFLAGS="$CFLAGS -g -pg"
-        OBJCFLAGS="$OBJCFLAGS -g -pg"
-        SDL_LIBS="$SDL_LIBS -g -pg"
+        CFLAGS="$CFLAGS -pg"
+        OBJCFLAGS="$OBJCFLAGS -pg"
+        SDL_LIBS="$SDL_LIBS -pg"
         AC_SUBST(SDL_LIBS)
 fi
 
