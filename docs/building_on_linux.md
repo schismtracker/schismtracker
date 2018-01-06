@@ -33,8 +33,7 @@ schismtracker directory and running:
 To build Schism Tracker, you should set up a build-directory and compile from
 there. From the schismtracker directory:
 
-    mkdir -p build && cd build && ../configure && \
-    make
+    mkdir -p build && cd build && ../configure && make
 
 The resulting binary `schismtracker` is completely self-contained and can be
 copied anywhere you like on the filesystem.
