@@ -34,12 +34,11 @@ To build Schism Tracker, you should set up a build-directory and compile from
 there. From the schismtracker directory:
 
     mkdir -p build && cd build && ../configure && \
-    make -j $(nproc || sysctl -n hw.ncpu || echo 2)
+    make
 
 The resulting binary `schismtracker` is completely self-contained and can be
 copied anywhere you like on the filesystem.
 
-The flag passed to make enables compilation on multiple threads.
 You can specify custom compiler flags, e.g. to optimize schismtracker
 stronly, system-dependently:
 
@@ -47,6 +46,7 @@ stronly, system-dependently:
     ../configure --enable-extra-opt
     make -j $(nproc || sysctl -n hw.ncpu || echo 2)
 
+The -j flag passed to make enables compilation on multiple threads.
 For debugging, and other settings, see `../configure --help`.
 
 ## Packaging Schism Tracker for Linux systems
