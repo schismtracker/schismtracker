@@ -70,7 +70,11 @@ static int display_native_y = -1;
 #include "video.h"
 
 #ifndef MACOSX
+#ifdef WIN32
 #include "auto/schismico.h"
+#else
+#include "auto/schismico_hires.h"
+#endif
 #endif
 
 #ifndef APIENTRY
@@ -621,7 +625,12 @@ void video_startup(void)
 	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
+#ifdef WIN32
+/* win32 icons must be 32x32 according to SDL 1.2 doc */
 	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
+#else
+	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
+#endif
 	SDL_WM_SetIcon(icon, NULL);
 	SDL_FreeSurface(icon);
 #endif
