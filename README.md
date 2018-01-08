@@ -27,8 +27,8 @@ information.
 The latest stable builds for Windows, macOS, and Linux are available from [the
 releases page](https://github.com/schismtracker/schismtracker/releases). Builds
 can also be installed from Homebrew on macOS and from some distro repositories
-on Linux, but these may not have the latest bug fixes and enhancements. Older
-builds for other platforms can be found on [the
+on Linux, but these versions may not have the latest bug fixes and
+enhancements. Older builds for other platforms can be found on [the
 wiki](https://github.com/schismtracker/schismtracker/wiki).
 
 ## Compilation
