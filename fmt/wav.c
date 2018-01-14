@@ -369,6 +369,9 @@ int fmt_wav_export_body(disko_t *fp, const uint8_t *data, size_t length)
 
 int fmt_wav_export_silence(disko_t *fp, long bytes)
 {
+	struct wav_writedata *wwd = fp->userdata;
+	wwd->numbytes += bytes;
+
 	disko_seek(fp, bytes, SEEK_CUR);
 	return DW_OK;
 }
