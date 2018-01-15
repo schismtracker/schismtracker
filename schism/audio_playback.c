@@ -250,6 +250,7 @@ static int keyjazz_channels[128];
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
 	int ins_mode;
+	int midi_note = note; /* note gets overwritten, possibly NOTE_NONE */
 	song_voice_t *c;
 	song_note_t mc;
 	song_sample_t *s = NULL;
@@ -379,7 +380,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	csf_note_change(current_song, chan_internal, note, 0, 0, 1);
 
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
-		mc.note = note;
+		/* midi keyjazz shouldn't require a sample */
+		mc.note = note ? note : midi_note;
+
 		mc.instrument = ins;
 		mc.voleffect = VOLFX_VOLUME;
 		mc.volparam = vol;
