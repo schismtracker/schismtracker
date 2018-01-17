@@ -591,7 +591,6 @@ void song_init_instrument_from_sample(int insn, int samp)
 	song_instrument_t *ins = current_song->instruments[insn];
 	if (!ins) return; /* eh? */
 
-	memset(ins, 0, sizeof(song_instrument_t));
 	csf_init_instrument(ins, samp);
 
 	// IT doesn't set instrument filenames unless loading an instrument from disk

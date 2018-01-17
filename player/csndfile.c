@@ -119,6 +119,8 @@ static void _init_envelope(song_envelope_t *env, int n)
 void csf_init_instrument(song_instrument_t *ins, int samp)
 {
 	int n;
+
+	memset(ins, 0, sizeof(*ins));
 	_init_envelope(&ins->vol_env, 64);
 	_init_envelope(&ins->pan_env, 32);
 	_init_envelope(&ins->pitch_env, 32);
@@ -135,7 +137,7 @@ void csf_init_instrument(song_instrument_t *ins, int samp)
 
 song_instrument_t *csf_allocate_instrument(void)
 {
-	song_instrument_t *ins = mem_calloc(1, sizeof(song_instrument_t));
+	song_instrument_t *ins = mem_alloc(sizeof(song_instrument_t));
 	csf_init_instrument(ins, 0);
 	return ins;
 }
