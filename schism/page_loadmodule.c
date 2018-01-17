@@ -183,14 +183,13 @@ idea for return codes:
 
 static void handle_file_entered_L(const char *ptr)
 {
-	dmoz_filelist_t tmp;
+	dmoz_filelist_t tmp = {};
 	struct stat sb;
 
 	/* these shenanigans force the file to take another trip... */
 	if (stat(ptr, &sb) == -1)
 		return;
 
-	memset(&tmp, 0, sizeof(tmp));
 	dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
 	dmoz_free(&tmp, NULL);
 

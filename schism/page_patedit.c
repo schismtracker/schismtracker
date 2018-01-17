@@ -575,7 +575,6 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 	int copyin_x, copyin_y;
 	int (*fx_map)(char f);
 	const char *str;
-	song_note_t n;
 	int x, scantmp;
 
 	if (!data) return 0;
@@ -601,7 +600,8 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 	copyin_x = copyin_y = 0;
 	/* okay, let's start parsing */
 	while (*str) {
-		memset(&n, 0, sizeof(song_note_t));
+		song_note_t n = {};
+
 		if (!str[0] || !str[1] || !str[2]) break;
 		switch (*str) {
 		case 'C': case 'c': n.note = 1; break;

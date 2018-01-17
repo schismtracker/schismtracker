@@ -299,7 +299,7 @@ static void orderlist_reorder(void)
 {
 	/* err, I hope this is going to be done correctly...
 	*/
-	song_note_t *np[256];
+	song_note_t *np[256] = {};
 	int nplen[256];
 	unsigned char mapol[256];
 	int i, j;
@@ -308,7 +308,6 @@ static void orderlist_reorder(void)
 
 	orderlist_add_unused_patterns();
 
-	memset(np, 0, sizeof(np));
 	memset(mapol, ORDER_LAST, sizeof(mapol));
 	for (i = j = 0; i < 255; i++) {
 		if (current_song->orderlist[i] == ORDER_LAST || current_song->orderlist[i] == ORDER_SKIP) {

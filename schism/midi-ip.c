@@ -80,8 +80,8 @@ static void do_wake_midi(void)
 
 static int _get_fd(int pb, int isout)
 {
-	struct ip_mreq mreq;
-	struct sockaddr_in asin;
+	struct ip_mreq mreq = {};
+	struct sockaddr_in asin = {};
 	unsigned char *ipcopy;
 	int fd, opt;
 
@@ -114,7 +114,6 @@ static int _get_fd(int pb, int isout)
 		return -1;
 	}
 
-	memset(&mreq, 0, sizeof(mreq));
 	ipcopy = (unsigned char *)&mreq.imr_multiaddr;
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
 	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) < 0) {
@@ -136,7 +135,6 @@ static int _get_fd(int pb, int isout)
 		return -1;
 	}
 
-	memset(&asin, 0, sizeof(asin));
 	asin.sin_family = AF_INET;
 	ipcopy = (unsigned char *)&asin.sin_addr;
 	if (!isout) {
@@ -353,7 +351,7 @@ static int _ip_stop(struct midi_port *p)
 static void _ip_send(struct midi_port *p, const unsigned char *data, unsigned int len,
 				UNUSED unsigned int delay)
 {
-	struct sockaddr_in asin;
+	struct sockaddr_in asin = {};
 	unsigned char *ipcopy;
 	int n = INT_SHAPED_PTR(p->userdata);
 	int ss;
@@ -361,7 +359,6 @@ static void _ip_send(struct midi_port *p, const unsigned char *data, unsigned in
 	if (len == 0) return;
 	if (!(state[n] & 2)) return; /* blah... */
 
-	memset(&asin, 0, sizeof(asin));
 	asin.sin_family = AF_INET;
 	ipcopy = (unsigned char *)&asin.sin_addr.s_addr;
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;

@@ -328,11 +328,8 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pre
 	 * Channel with biggest score is selected.
 	 *
 	 */
-	int bad_channels[16] = {0};  // channels having the same key playing
-	int used_channels[16] = {0}; // channels having something playing
-
-	memset(bad_channels, 0, sizeof(bad_channels));
-	memset(used_channels, 0, sizeof(used_channels));
+	int bad_channels[16] = {};  // channels having the same key playing
+	int used_channels[16] = {}; // channels having something playing
 
 	for (unsigned int a = 0; a < MAX_VOICES; ++a) {
 		if (s3m_active(s3m_chans[a]) &&

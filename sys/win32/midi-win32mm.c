@@ -61,10 +61,9 @@ static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int le
 	LPMIDIHDR m;
 
 	if (!d) len=0;
-	z = mem_alloc(sizeof(MIDIHDR) + len);
+	z = mem_calloc(1, sizeof(MIDIHDR) + len);
 	m = (LPMIDIHDR)z;
 
-	memset(m, 0, sizeof(MIDIHDR));
 	if (len) memcpy(z + sizeof(MIDIHDR), d, len);
 
 	m->lpData = (z+sizeof(MIDIHDR));
@@ -245,8 +244,7 @@ static void _win32mm_poll(struct midi_provider *p)
 
 	mmin = midiInGetNumDevs();
 	for (i = last_known_in_port; i < mmin; i++) {
-		data = mem_alloc(sizeof(struct win32mm_midi));
-		memset(data,0,sizeof(struct win32mm_midi));
+		data = mem_calloc(1, sizeof(struct win32mm_midi));
 		r = midiInGetDevCaps(i, (LPMIDIINCAPS)&data->icp,
 					sizeof(MIDIINCAPS));
 		if (r != MMSYSERR_NOERROR) {
@@ -260,8 +258,7 @@ static void _win32mm_poll(struct midi_provider *p)
 
 	mmout = midiOutGetNumDevs();
 	for (i = last_known_out_port; i < mmout; i++) {
-		data = mem_alloc(sizeof(struct win32mm_midi));
-		memset(data,0,sizeof(struct win32mm_midi));
+		data = mem_calloc(1, sizeof(struct win32mm_midi));
 		r = midiOutGetDevCaps(i, (LPMIDIOUTCAPS)&data->ocp,
 					sizeof(MIDIOUTCAPS));
 		if (r != MMSYSERR_NOERROR) {
@@ -276,11 +273,9 @@ static void _win32mm_poll(struct midi_provider *p)
 
 int win32mm_midi_setup(void)
 {
-	static struct midi_driver driver;
+	static struct midi_driver driver = {};
 
 	TIMECAPS caps;
-
-	memset(&driver, 0, sizeof(driver));
 
 	driver.flags = 0;
 	driver.poll = _win32mm_poll;

@@ -185,11 +185,10 @@ int key_scancode_lookup(int k, int def)
 
 void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 {
-	static WSADATA ignored;
+	static WSADATA ignored = {};
 
 	win32_setup_keymap();
 
-	memset(&ignored, 0, sizeof(ignored));
 	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
 		WSACleanup(); /* ? */
 		status.flags |= NO_NETWORK;
