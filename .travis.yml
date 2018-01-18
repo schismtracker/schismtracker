@@ -45,7 +45,15 @@ script:
 after_success:
 - cd ..
 - mkdir -p schismtracker
-- cp build/schismtracker README.md COPYING docs/configuration.md schismtracker/
+- |
+  cp build/schismtracker README.md COPYING docs/configuration.md \
+    sys/posix/schismtracker.1 schismtracker/
+- |
+  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    echo "TODO: macosx app"
+  else
+    cp sys/fd.org/schism.desktop schismtracker/
+  fi
 - tar -cvzf "$ARTIFACT_FILE" schismtracker
 notifications:
   email:
