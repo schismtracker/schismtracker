@@ -1078,9 +1078,8 @@ static void sample_save(const char *filename, const char *format)
 
 /* export sample dialog */
 
-static struct widget export_sample_widgets[6];
+static struct widget export_sample_widgets[4];
 static char export_sample_filename[NAME_MAX + 1] = "";
-static char export_sample_options[64] = "fnord";
 static int export_sample_format = 0;
 
 static void do_export_sample(UNUSED void *data)
@@ -1167,15 +1166,7 @@ static void export_sample_draw_const(void)
 	draw_text("Filename", 24, 24, 0, 2);
 	draw_box(32, 23, 51, 25, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	draw_text("Options", 25, 27, 0, 2);
-	draw_box(32, 26, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-
 	draw_box(52, 23, 57, 32, BOX_THICK | BOX_INNER | BOX_INSET);
-}
-
-static void configure_options(void)
-{
-	dialog_create(DIALOG_OK, "This doesn't do anything yet. Stay tuned! :)", NULL, NULL, 0, NULL);
 }
 
 static void export_sample_dialog(void)
@@ -1185,17 +1176,14 @@ static void export_sample_dialog(void)
 
 	create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
 			 export_sample_filename, NAME_MAX);
-	create_textentry(export_sample_widgets + 1, 33, 27, 18, 0, 2, 3, NULL,
-			 export_sample_options, 256);
-	create_button(export_sample_widgets + 2, 33, 30, 9, 1, 4, 3, 3, 3, configure_options, "Configure", 1);
+	create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, export_sample_list_draw);
-	create_button(export_sample_widgets + 4, 31, 35, 6, 2, 4, 5, 5, 5, dialog_yes_NULL, "OK", 3);
-	create_button(export_sample_widgets + 5, 42, 35, 6, 3, 5, 4, 4, 4, dialog_cancel_NULL, "Cancel", 1);
 
 	strncpy(export_sample_filename, sample->filename, NAME_MAX);
 	export_sample_filename[NAME_MAX] = 0;
 
-	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 6, 0,
+	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 4, 0,
 				      export_sample_draw_const, NULL);
 	dialog->action_yes = do_export_sample;
 }
