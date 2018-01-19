@@ -168,7 +168,7 @@ static int fontgrep(dmoz_file_t *f)
 static void load_fontlist(void)
 {
 	char *font_dir, *p;
-	struct stat st;
+	struct stat st = {};
 
 	dmoz_free(&flist, NULL);
 
@@ -177,7 +177,6 @@ static void load_fontlist(void)
 	font_dir = dmoz_path_concat_len(cfg_dir_dotschism, "fonts", strlen(cfg_dir_dotschism), 5);
 	mkdir(font_dir, 0755);
 	p = dmoz_path_concat_len(font_dir, "font.cfg", strlen(font_dir), 8);
-	memset(&st, 0, sizeof(st));
 	dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -100); /* put it on top */
 	if (dmoz_read(font_dir, &flist, NULL, NULL) < 0)
 		log_perror(font_dir);

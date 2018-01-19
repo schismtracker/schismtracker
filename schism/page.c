@@ -51,7 +51,7 @@ struct tracker_status status = {
 	// everything else set to 0/NULL/etc.
 };
 
-struct page pages[PAGE_MAX];
+struct page pages[PAGE_MAX] = {};
 
 struct widget *widgets = NULL;
 int *selected_widget = NULL;
@@ -920,7 +920,6 @@ static int _handle_ime(struct key_event *k)
 	static int digraph_c = 0;
 	static int cs_unicode = 0;
 	static int cs_unicode_c = 0;
-	struct key_event fake;
 
 	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
 	    && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
@@ -947,7 +946,8 @@ static int _handle_ime(struct key_event *k)
 				digraph_c = c;
 				status_text_flash_bios("Enter digraph: %c", c);
 			} else {
-				memset(&fake, 0, sizeof(fake));
+				struct key_event fake = {};
+
 				fake.unicode = char_digraph(digraph_c, c);
 				if (fake.unicode) {
 					status_text_flash_bios("Enter digraph: %c%c -> %c",
@@ -972,7 +972,8 @@ static int _handle_ime(struct key_event *k)
 		/* ctrl+shift -> unicode character */
 		if ((k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT)) {
 			if (k->state == KEY_RELEASE && cs_unicode_c > 0) {
-				memset(&fake, 0, sizeof(fake));
+				struct key_event fake = {};
+
 				fake.unicode = char_unicode_to_cp437(cs_unicode);
 				if (fake.unicode) {
 					status_text_flash_bios("Enter Unicode: U+%04X -> %c",
@@ -1016,7 +1017,8 @@ static int _handle_ime(struct key_event *k)
 		if (k->sym == SDLK_LALT || k->sym == SDLK_RALT
 		    || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA) {
 			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {
-				memset(&fake, 0, sizeof(fake));
+				struct key_event fake = {};
+
 				fake.unicode = alt_numpad & 255;
 				if (!(status.flags & CLASSIC_MODE))
 					status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
@@ -1629,8 +1631,6 @@ void set_page(int new_page)
 
 void load_pages(void)
 {
-	memset(pages, 0, sizeof(pages));
-
 	blank_load_page(pages + PAGE_BLANK);
 	help_load_page(pages + PAGE_HELP);
 	pattern_editor_load_page(pages + PAGE_PATTERN_EDITOR);

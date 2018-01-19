@@ -521,10 +521,8 @@ struct s3i_header {
 
 static void write_s3i_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
 {
-	struct s3i_header hdr;
+	struct s3i_header hdr = {};
 	int n;
-
-	memset(&hdr, 0, sizeof(hdr));
 
 	if (smp->flags & CHN_ADLIB) {
 		hdr.type = S3I_TYPE_ADMEL;
@@ -831,7 +829,7 @@ static int fixup_chantypes(song_channel_t *channels, uint8_t *chantypes)
 
 int fmt_s3m_save_song(disko_t *fp, song_t *song)
 {
-	struct s3m_header hdr;
+	struct s3m_header hdr = {};
 	int nord, nsmp, npat;
 	int n;
 	song_sample_t *smp;
@@ -878,7 +876,6 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	memset(chantypes, S3I_TYPE_NONE, 32);
 
 
-	memset(&hdr, 0, sizeof(hdr));
 	memcpy(hdr.title, song->title, 25);
 	hdr.eof = 0x1a;
 	hdr.type = 16; // ST3 module (what else is there?!)

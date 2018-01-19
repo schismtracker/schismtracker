@@ -40,7 +40,7 @@ unsigned int xv_yuvlayout(void)
 	XvImageFormatValues *formats;
 	XvAdaptorInfo *ainfo;
 	XvEncodingInfo *encodings;
-	SDL_SysWMinfo info;
+	SDL_SysWMinfo info = {};
 	Display *dpy;
 	unsigned int nencode, nadaptors;
 	unsigned int fmt = VIDEO_YUV_NONE;
@@ -50,7 +50,6 @@ unsigned int xv_yuvlayout(void)
 	unsigned int w, h;
 	unsigned int best;
 
-	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 	if (SDL_GetWMInfo(&info)) {
 		dpy = info.info.x11.display;

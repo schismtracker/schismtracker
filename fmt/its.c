@@ -172,9 +172,8 @@ int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 
 void save_its_header(disko_t *fp, song_sample_t *smp)
 {
-	struct it_sample its;
+	struct it_sample its = {};
 
-	memset(&its, 0, sizeof(its));
 	its.id = bswapLE32(0x53504D49); // IMPS
 	strncpy((char *) its.filename, smp->filename, 12);
 	its.gvl = smp->global_volume;

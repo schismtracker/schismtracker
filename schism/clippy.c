@@ -169,8 +169,8 @@ static void _clippy_copy_to_sys(int do_sel)
 /* TODO: is the first parameter ever going to be used, or can we kill it? */
 static void _string_paste(UNUSED int cb, const char *cbptr)
 {
-	SDL_Event event;
-	memset(&event, 0, sizeof(SDL_Event));
+	SDL_Event event = {};
+
 	event.user.type = SCHISM_EVENT_PASTE;
 	event.user.data1 = str_dup(cbptr); /* current_clipboard... is it safe? */
 	if (!event.user.data1) return; /* eh... */
@@ -273,10 +273,9 @@ static int handle_xlib_err(Display *d, XErrorEvent *e)
 
 void clippy_init(void)
 {
-	SDL_SysWMinfo info;
+	SDL_SysWMinfo info = {};
 
 	has_sys_clip = 0;
-	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 	if (SDL_GetWMInfo(&info)) {
 #if defined(USE_X11)

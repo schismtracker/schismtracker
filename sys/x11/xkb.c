@@ -46,12 +46,11 @@ static XkbDescPtr us_kb_map;
 static void _key_info_setup(void)
 {
 	Display *dpy;
-	SDL_SysWMinfo info;
+	SDL_SysWMinfo info = {};
 
 	if (!virgin) return;
 	virgin = 0;
 
-	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 	if (SDL_GetWMInfo(&info)) {
 		if (info.info.x11.lock_func)

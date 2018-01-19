@@ -326,13 +326,11 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 {
 	n++; // FIXME: this is dumb; really all the numbering should be one-based to make it simple
 
-	struct it_instrument iti;
+	struct it_instrument iti = {};
 	song_instrument_t *i = current_song->instruments[n];
 
 	if (!i)
 		i = &blank_instrument;
-
-	memset(&iti, 0, sizeof(iti));
 
 	// envelope: flags num lpb lpe slb sle data[25*3] reserved
 
@@ -484,14 +482,12 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 {
 	song_note_t *noteptr = pat;
-	song_note_t lastnote[64];
-	uint8_t initmask[64];
+	song_note_t lastnote[64] = {};
+	uint8_t initmask[64] = {};
 	uint8_t lastmask[64];
 	unsigned short pos = 0;
 	uint8_t data[65536];
 
-	memset(lastnote, 0, sizeof(lastnote));
-	memset(initmask, 0, 64);
 	memset(lastmask, 0xff, 64);
 
 	for (int row = 0; row < patsize; row++) {
@@ -594,7 +590,7 @@ static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 // why on earth isn't this using the 'song' parameter? will finding this out hurt my head?
 static int _save_it(disko_t *fp, UNUSED song_t *song)
 {
-	struct it_file hdr;
+	struct it_file hdr = {};
 	int n;
 	int nord, nins, nsmp, npat;
 	int msglen = strlen(current_song->message);
@@ -603,8 +599,6 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
 	// how much extra data is stuffed between the parapointers and the rest of the file
 	// (2 bytes for edit history length, and 8 per entry including the current session)
 	uint32_t extra = 2 + 8 * current_song->histlen + 8;
-
-	memset(&hdr, 0, sizeof(hdr));
 
 	// TODO complain about nonstandard stuff? or just stop saving it to begin with
 
@@ -1081,14 +1075,14 @@ void song_copy_sample(int n, song_sample_t *src)
 int song_load_instrument_ex(int target, const char *file, const char *libf, int n)
 {
 	slurp_t *s;
-	int sampmap[MAX_SAMPLES];
 	int r, x;
 
 	song_lock_audio();
 
 	/* 0. delete old samples */
-	memset(sampmap, 0, sizeof(sampmap));
 	if (current_song->instruments[target]) {
+		int sampmap[MAX_SAMPLES] = {};
+
 		/* init... */
 		for (unsigned int j = 0; j < 128; j++) {
 			x = current_song->instruments[target]->sample_map[j];
@@ -1117,6 +1111,8 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	}
 
 	if (libf) { /* file is ignored */
+		int sampmap[MAX_SAMPLES] = {};
+
 		song_t *xl = song_create_load(libf);
 		if (!xl) {
 			log_appendf(4, "%s: %s", libf, fmt_strerror(errno));
@@ -1125,7 +1121,6 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		}
 
 		/* 1. find a place for all the samples */
-		memset(sampmap, 0, sizeof(sampmap));
 		for (unsigned int j = 0; j < 128; j++) {
 			x = xl->instruments[n]->sample_map[j];
 			if (!sampmap[x]) {
@@ -1214,7 +1209,7 @@ int song_preload_sample(dmoz_file_t *file)
 int song_load_sample(int n, const char *file)
 {
 	fmt_load_sample_func *load;
-	song_sample_t smp;
+	song_sample_t smp = {};
 
 	const char *base = get_basename(file);
 	slurp_t *s = slurp(file, NULL, 0);
@@ -1227,7 +1222,6 @@ int song_load_sample(int n, const char *file)
 	// set some default stuff
 	song_lock_audio();
 	csf_stop_sample(current_song, current_song->samples + n);
-	memset(&smp, 0, sizeof(smp));
 	strncpy(smp.name, base, 25);
 
 	for (load = load_sample_funcs; *load; load++) {
@@ -1353,8 +1347,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 			str_dup(path), str_dup(base), NULL, n);
 		file->title = str_dup(library->instruments[n]->name);
 
-		int count[128];
-		memset(count, 0, sizeof(count));
+		int count[128] = {};
 
 		file->sampsize = 0;
 		file->filesize = 0;
