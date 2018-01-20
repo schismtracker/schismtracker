@@ -389,6 +389,8 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 	int n, ni, ns;
 	int abssamp = 1; // "real" sample
 	int32_t ihdr, shdr; // instrument/sample header size (yes these should be signed)
+	int l_start, l_end; // envelope loop nodes
+	float v;
 	uint8_t b;
 	uint16_t w;
 	uint32_t d;
@@ -559,9 +561,44 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		ins->fadeout = bswapLE16(w);
 
 		if (ins->flags & ENV_VOLUME) {
-			// fix note-fade
-			if (!(ins->flags & ENV_VOLLOOP))
+			l_start = ins->vol_env.loop_start;
+			l_end = ins->vol_env.loop_end;
+
+			// volume loop endpoint fix 
+			// fix note-fade if either volume loop is disabled or loop nodes are equal
+			if (!(ins->flags & ENV_VOLLOOP) || l_start == l_end) {
 				ins->vol_env.loop_start = ins->vol_env.loop_end = ins->vol_env.nodes - 1;
+			} else {
+				if (ins->vol_env.ticks[l_end - 1] == ins->vol_env.ticks[l_end] - 1) {
+					// FT2 leaves out the final tick of the envelope loop
+					ins->vol_env.loop_end--;
+				} else {
+					// shift each node from loop_end right one index to insert a new node
+					for (n = ins->vol_env.nodes; n > l_end; n--) {
+						ins->vol_env.ticks[n] = ins->vol_env.ticks[n - 1];
+						ins->vol_env.values[n] = ins->vol_env.values[n - 1];
+					}
+
+					// create the new node at the previous loop_end index, one tick behind and interpolated correctly
+					ins->vol_env.ticks[l_end]--;
+					v = (float)(ins->vol_env.values[l_end + 1] - ins->vol_env.values[l_end - 1]);
+					v *= (float)(ins->vol_env.ticks[l_end] - ins->vol_env.ticks[l_end - 1]);
+					v /= (float)(ins->vol_env.ticks[l_end + 1] - ins->vol_env.ticks[l_end - 1]);
+					// alter the float so it rounds to the nearest integer when type casted
+					v = (v >= 0.0f) ? v + 0.5f : v - 0.5f;
+					ins->vol_env.values[l_end] = (uint8_t)v + ins->vol_env.values[l_end - 1];
+
+					// adjust the sustain loop as needed
+					if ((ins->flags & ENV_VOLSUSTAIN) && ins->vol_env.sustain_start >= l_end) {
+						ins->vol_env.sustain_start++;
+						ins->vol_env.sustain_end++;
+					}
+
+					// increment the node count
+					ins->vol_env.nodes++;
+				}
+			}
+
 			if (!(ins->flags & ENV_VOLSUSTAIN))
 				ins->vol_env.sustain_start = ins->vol_env.sustain_end = ins->vol_env.nodes - 1;
 			ins->flags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
@@ -574,6 +611,38 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			ins->vol_env.nodes = 2;
 			ins->vol_env.sustain_start = ins->vol_env.sustain_end = 0;
 			ins->flags |= ENV_VOLUME | ENV_VOLSUSTAIN;
+		}
+
+		// panning loop endpoint fix, similar to volume fix above
+		if ((ins->flags & ENV_PANNING) && (ins->flags & ENV_PANLOOP)) {
+			l_start = ins->pan_env.loop_start;
+			l_end = ins->pan_env.loop_end;
+			if (l_start == l_end) {
+				ins->flags &= ~ENV_PANLOOP;
+			} else {
+				if (ins->pan_env.ticks[l_end - 1] == ins->pan_env.ticks[l_end] - 1) {
+					ins->pan_env.loop_end--;
+				} else {
+					for (n = ins->pan_env.nodes; n > l_end; n--) {
+						ins->pan_env.ticks[n] = ins->pan_env.ticks[n - 1];
+						ins->pan_env.values[n] = ins->pan_env.values[n - 1];
+					}
+
+					ins->pan_env.ticks[l_end]--;
+					v = (float)(ins->pan_env.values[l_end + 1] - ins->pan_env.values[l_end - 1]);
+					v *= (float)(ins->pan_env.ticks[l_end] - ins->pan_env.ticks[l_end - 1]);
+					v /= (float)(ins->pan_env.ticks[l_end + 1] - ins->pan_env.ticks[l_end - 1]);
+					v = (v >= 0.0f) ? v + 0.5f : v - 0.5f;
+					ins->pan_env.values[l_end] = (uint8_t)v + ins->pan_env.values[l_end - 1];
+
+					if ((ins->flags & ENV_PANSUSTAIN) && ins->pan_env.sustain_start >= l_end) {
+						ins->pan_env.sustain_start++;
+						ins->pan_env.sustain_end++;
+					}
+
+					ins->pan_env.nodes++;
+				}
+			}
 		}
 
 
