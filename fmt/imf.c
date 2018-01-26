@@ -202,8 +202,7 @@ static void import_imf_effect(song_note_t *note)
 			note->param |= 0xe0;
 		break;
 	case 0x16: // filter
-		// <Saga_Musix> Storlek: schism's IMF loader should shift the param of command 0x16 one to the right (cutoff range in orpheus is 8-bit, not 7-bit)
-		note->param >>= 1;
+		note->param = (255 - note->param) / 2; // TODO: cutoff range in IMF is 125...8000 Hz
 		break;
 	case 0x1f: // set global volume
 		note->param = MIN(note->param << 1, 0xff);
