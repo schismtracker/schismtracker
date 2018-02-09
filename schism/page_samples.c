@@ -631,6 +631,7 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 	if (sample->sustain_end > pos) sample->sustain_end = pos;
 
 	sample->length = pos;
+	csf_adjust_sample_loop(sample);
 	song_unlock_audio();
 }
 
@@ -735,6 +736,7 @@ static void do_txtsynth(UNUSED void *data)
 	sample->flags |= CHN_LOOP;
 	sample->flags &= ~(CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN
 			   | CHN_16BIT | CHN_STEREO | CHN_ADLIB);
+	csf_adjust_sample_loop(sample);
 	sample_host_dialog(-1);
 
 	status.flags |= SONG_NEEDS_SAVE;
@@ -1596,6 +1598,8 @@ static void update_sample_loop_flags(void)
 			sample->sustain_end = sample->length;
 	}
 
+	csf_adjust_sample_loop(sample);
+
 	/* update any samples currently playing */
 	song_update_playing_sample(current_sample);
 
@@ -1643,6 +1647,8 @@ static void update_sample_loop_points(void)
 	if (flags_changed) {
 		update_sample_loop_flags();
 	}
+
+	csf_adjust_sample_loop(sample);
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
