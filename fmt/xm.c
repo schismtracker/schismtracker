@@ -387,7 +387,7 @@ static void fix_xm_envelope_loop(song_envelope_t *s_env, int sustain_flag)
 	}
 
 	// shift each node from loop_end right one index to insert a new node
-	// on first iteration x is one more that existing # of nodes
+	// on first iteration n is one more that existing # of nodes
 	for (n = s_env->nodes; n > s_env->loop_end; n--) {
 		s_env->ticks[n] = s_env->ticks[n - 1];
 		s_env->values[n] = s_env->values[n - 1];
