@@ -369,6 +369,49 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 	}
 }
 
+// Volume/panning envelope loop fix
+// FT2 leaves out the final tick of the envelope loop causing a slight discrepancy when loading XI instruments directly
+// from an XM file into Schism
+// Works by adding a new end node one tick behind the previous loop end by linearly interpolating (or selecting 
+// an existing node there).
+// Runs generally the same for either type of envelope (vol/pan), pointed to by s_env.
+static void xm_envelope_loop_fix(song_envelope_t *s_env, int sustain_flag)
+{
+	int n;
+	float v;
+
+	if (s_env->ticks[s_env->loop_end - 1] == s_env->ticks[s_env->loop_end] - 1) {
+		// simplest case: prior node is one tick behind already, set envelope end index
+		s_env->loop_end--;
+		return;
+	}
+
+	// shift each node from loop_end right one index to insert a new node
+	// on first iteration x is one more that existing # of nodes
+	for (n = s_env->nodes; n > s_env->loop_end; n--) {
+		s_env->ticks[n] = s_env->ticks[n - 1];
+		s_env->values[n] = s_env->values[n - 1];
+	}
+
+	// increment the node count for the previous shift
+	s_env->nodes++;
+
+	// define the new node at the previous loop_end index, one tick behind and interpolated correctly
+	s_env->ticks[s_env->loop_end]--;
+	v = (float)(s_env->values[s_env->loop_end + 1] - s_env->values[s_env->loop_end - 1]);
+	v *= (float)(s_env->ticks[s_env->loop_end] - s_env->ticks[s_env->loop_end - 1]);
+	v /= (float)(s_env->ticks[s_env->loop_end + 1] - s_env->ticks[s_env->loop_end - 1]);
+	// alter the float so it rounds to the nearest integer when type casted
+	v = (v >= 0.0f) ? v + 0.5f : v - 0.5f;
+	s_env->values[s_env->loop_end] = (uint8_t)v + s_env->values[s_env->loop_end - 1];
+
+	// adjust the sustain loop as needed
+	if (sustain_flag && s_env->sustain_start >= s_env->loop_end) {
+		s_env->sustain_start++;
+		s_env->sustain_end++;
+	}
+}
+
 enum {
 	ID_CONFIRMED = 1, // confirmed with inst/sample header sizes
 	ID_FT2GENERIC = 2, // "FastTracker v2.00", but fasttracker has NOT been ruled out
@@ -559,9 +602,14 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		ins->fadeout = bswapLE16(w);
 
 		if (ins->flags & ENV_VOLUME) {
-			// fix note-fade
-			if (!(ins->flags & ENV_VOLLOOP))
+			// fix note-fade if either volume loop is disabled or both end nodes are equal
+			if (!(ins->flags & ENV_VOLLOOP) || ins->vol_env.loop_start == ins->vol_env.loop_end) {
 				ins->vol_env.loop_start = ins->vol_env.loop_end = ins->vol_env.nodes - 1;
+			} else {
+				// fix volume envelope
+				xm_envelope_loop_fix(&ins->vol_env, ins->flags & ENV_VOLSUSTAIN);
+			}
+
 			if (!(ins->flags & ENV_VOLSUSTAIN))
 				ins->vol_env.sustain_start = ins->vol_env.sustain_end = ins->vol_env.nodes - 1;
 			ins->flags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
@@ -574,6 +622,16 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			ins->vol_env.nodes = 2;
 			ins->vol_env.sustain_start = ins->vol_env.sustain_end = 0;
 			ins->flags |= ENV_VOLUME | ENV_VOLSUSTAIN;
+		}
+
+		if ((ins->flags & ENV_PANNING) && (ins->flags & ENV_PANLOOP)) {
+			if (ins->pan_env.loop_start == ins->pan_env.loop_end) {
+				// panning is unused in XI
+				ins->flags &= ~ENV_PANLOOP;
+			} else {
+				// fix panning envelope
+				xm_envelope_loop_fix(&ins->pan_env, ins->flags & ENV_PANSUSTAIN);
+			}
 		}
 
 
