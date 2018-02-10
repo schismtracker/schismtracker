@@ -375,7 +375,7 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 // Works by adding a new end node one tick behind the previous loop end by linearly interpolating (or selecting 
 // an existing node there).
 // Runs generally the same for either type of envelope (vol/pan), pointed to by s_env.
-static void xm_envelope_loop_fix(song_envelope_t *s_env, int sustain_flag)
+static void fix_xm_envelope_loop(song_envelope_t *s_env, int sustain_flag)
 {
 	int n;
 	float v;
@@ -607,7 +607,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 				ins->vol_env.loop_start = ins->vol_env.loop_end = ins->vol_env.nodes - 1;
 			} else {
 				// fix volume envelope
-				xm_envelope_loop_fix(&ins->vol_env, ins->flags & ENV_VOLSUSTAIN);
+				fix_xm_envelope_loop(&ins->vol_env, ins->flags & ENV_VOLSUSTAIN);
 			}
 
 			if (!(ins->flags & ENV_VOLSUSTAIN))
@@ -630,7 +630,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 				ins->flags &= ~ENV_PANLOOP;
 			} else {
 				// fix panning envelope
-				xm_envelope_loop_fix(&ins->pan_env, ins->flags & ENV_PANSUSTAIN);
+				fix_xm_envelope_loop(&ins->pan_env, ins->flags & ENV_PANSUSTAIN);
 			}
 		}
 
