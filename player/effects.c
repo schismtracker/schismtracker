@@ -1310,6 +1310,9 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	if (!pins)
 		return;
 
+	if(!porta || !chan->length)
+		chan->c5speed = pins->c5speed;
+        
 	note = CLAMP(note, NOTE_FIRST, NOTE_LAST);
 	chan->note = CLAMP(truenote, NOTE_FIRST, NOTE_LAST);
 	chan->new_instrument = 0;
@@ -1327,7 +1330,6 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 			chan->length = pins->length;
 			chan->loop_end = pins->length;
 			chan->loop_start = 0;
-			chan->c5speed = pins->c5speed;
 			chan->flags = (chan->flags & ~CHN_SAMPLE_FLAGS) | (pins->flags & CHN_SAMPLE_FLAGS);
 			if (chan->flags & CHN_SUSTAINLOOP) {
 				chan->loop_start = pins->sustain_start;
