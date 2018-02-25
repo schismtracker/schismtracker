@@ -331,7 +331,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					case 0x5: // lyric
 					case 0x6: // marker
 					case 0x7: // cue point
-						y = MIN(vlen, message_left - 1);
+						y = MIN(vlen, message_left ? message_left - 1 : 0);
 						slurp_read(fp, message_cur, y);
 						if (x == 3 && y && !song->title[0]) {
 							strncpy(song->title, message_cur, MIN(y, 25));
