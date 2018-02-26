@@ -459,6 +459,10 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		while (row >= MID_ROWS_PER_PATTERN) {
 			// New pattern time!
+			if(pat >= MAX_PATTERNS) {
+				log_appendf(4, " Warning: Too many patterns, song is truncated");
+				return LOAD_SUCCESS;
+			}
 			pattern = song->patterns[pat] = csf_allocate_pattern(MID_ROWS_PER_PATTERN);
 			song->pattern_size[pat] = song->pattern_alloc_size[pat] = MID_ROWS_PER_PATTERN;
 			song->orderlist[pat] = pat;
