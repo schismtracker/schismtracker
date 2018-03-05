@@ -202,9 +202,9 @@ struct video_cf {
 	SDL_Surface * surface;
 	SDL_Overlay * overlay;
 	/* to convert 32-bit color to 24-bit color */
-	unsigned char *cv32backing;
+	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 	/* for tv mode */
-	unsigned char *cv8backing;
+	unsigned char cv8backing[NATIVE_SCREEN_WIDTH];
 	struct {
 		unsigned int x;
 		unsigned int y;
@@ -383,18 +383,6 @@ void video_report(void)
 	}
 }
 
-static int _did_preinit = 0;
-static void _video_preinit(void)
-{
-	if (!_did_preinit) {
-		memset(&video, 0, sizeof(video));
-		video.cv32backing = mem_alloc(NATIVE_SCREEN_WIDTH * 8);
-		video.cv8backing = mem_alloc(NATIVE_SCREEN_WIDTH);
-		_did_preinit = 1;
-	}
-
-}
-
 // check if w and h are multiples of native res (and by the same multiplier)
 static int best_resolution(int w, int h)
 {
@@ -428,8 +416,6 @@ void video_shutdown(void)
 }
 void video_fullscreen(int tri)
 {
-	_video_preinit();
-
 	if (tri == 0 || video.desktop.fb_hacks) {
 		video.desktop.fullscreen = 0;
 
@@ -456,8 +442,6 @@ void video_setup(const char *driver)
 
 	if (driver && strcasecmp(driver, "auto") == 0)
 		driver = NULL;
-
-	_video_preinit();
 
 	video.draw.width = NATIVE_SCREEN_WIDTH;
 	video.draw.height = NATIVE_SCREEN_HEIGHT;
