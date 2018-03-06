@@ -817,13 +817,10 @@ static uint8_t midi_event_length(uint8_t first_byte)
 		case 0xF1:
 		case 0xF3:
 			return 2;
-			break;
 		case 0xF2:
 			return 3;
-			break;
 		default:
 			return 1;
-			break;
 		}
 		break;
 	default:
