@@ -33,9 +33,9 @@ static void (*__volume_write)(int left, int right) = NULL;
 
 void volume_setup(void)
 {
-	char *drv, drv_buf[256];
+	const char *drv;
 
-	drv = SDL_AudioDriverName(drv_buf,sizeof(drv_buf));
+	drv = SDL_GetCurrentAudioDriver();
 
 #ifdef USE_ALSA
 	if ((!drv && !__volume_get_max)

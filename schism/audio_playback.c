@@ -89,7 +89,7 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 /* Audio driver related stuff */
 
 /* The (short) name of the SDL driver in use, e.g. "alsa" */
-static char driver_name[256];
+static const char *driver_name = "unknown";
 
 /* This is the full driver spec for whatever device was successfully init'ed when audio was set up.
 When reinitializing the audio, this can be used to reacquire the same device. Hopefully. */
@@ -1293,7 +1293,7 @@ static int _audio_open(const char *driver_spec, int verbose)
 	is set. (see SDL_alsa_audio.c: http://tinyurl.com/ybf398f)
 	If hw doesn't exist, so be it -- let this fail, we'll fall back to the dummy device, and the
 	user can pick a more reasonable device later. */
-	if (SDL_AudioDriverName(driver_name, sizeof(driver_name)) != NULL && !strcmp(driver_name, "alsa")) {
+	if ((driver_name = SDL_GetCurrentAudioDriver()) != NULL && !strcmp(driver_name, "alsa")) {
 		char *dev = getenv("AUDIODEV");
 		if (!dev || !*dev)
 			put_env_var("AUDIODEV", "hw");
@@ -1325,7 +1325,7 @@ static int _audio_open(const char *driver_spec, int verbose)
 		return 0;
 
 	/* I don't know why this would change between SDL_AudioInit and SDL_OpenAudio, but I'm paranoid */
-	SDL_AudioDriverName(driver_name, sizeof(driver_name));
+	driver_name = SDL_GetCurrentAudioDriver();
 
 	song_lock_audio();
 
