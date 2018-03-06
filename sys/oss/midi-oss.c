@@ -79,7 +79,7 @@ static int _oss_thread(struct midi_provider *p)
 	unsigned char midi_buf[4096];
 	int i, j, r;
 
-	for (;;) {
+	while (!p->cancelled) {
 		ptr = NULL;
 		j = 0;
 		while (midi_port_foreach(p, &ptr)) {
