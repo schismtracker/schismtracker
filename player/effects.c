@@ -759,21 +759,19 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 }
 
 
-// this is all brisby
+// Send exactly one MIDI message
 void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t nchan, int fake)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 	int oldcutoff;
-	const unsigned char *idata = data;
-	unsigned int ilen = len;
 
-	while (ilen > 4 && idata[0] == 0xF0 && idata[1] == 0xF0) {
+	if (len >= 4 && data[0] == 0xF0 && data[1] == 0xF0) {
 		// impulse tracker filter control (mfg. 0xF0)
-		switch (idata[2]) {
+		switch (data[2]) {
 		case 0x00: // set cutoff
 			oldcutoff = chan->cutoff;
-			if (idata[3] < 0x80)
-				chan->cutoff = idata[3];
+			if (data[3] < 0x80)
+				chan->cutoff = data[3];
 			oldcutoff -= chan->cutoff;
 			if (oldcutoff < 0)
 				oldcutoff = -oldcutoff;
@@ -784,16 +782,12 @@ void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uin
 			}
 			break;
 		case 0x01: // set resonance
-			if (idata[3] < 0x80)
-				chan->resonance = idata[3];
+			if (data[3] < 0x80)
+				chan->resonance = data[3];
 			setup_channel_filter(chan, !(chan->flags & CHN_FILTER), 256, csf->mix_frequency);
 			break;
 		}
-		idata += 4;
-		ilen -= 4;
-	}
-
-	if (!fake && csf_midi_out_raw) {
+	} else if (!fake && csf_midi_out_raw) {
 		/* okay, this is kind of how it works.
 		we pass buffer_count as here because while
 			1000 * ((8((buffer_size/2) - buffer_count)) / sample_rate)
@@ -809,11 +803,32 @@ void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uin
 }
 
 
-static int _was_complete_midi(unsigned char *q, unsigned int len, int nextc)
+// Get the length of a MIDI event in bytes
+static uint8_t midi_event_length(uint8_t first_byte)
 {
-	if (len == 0) return 0;
-	if (*q == 0xF0) return (q[len-1] == 0xF7 ? 1 : 0);
-	return ((nextc & 0x80) ? 1 : 0);
+	switch(first_byte & 0xF0)
+	{
+	case 0xC0:
+	case 0xD0:
+		return 2;
+	case 0xF0:
+		switch(first_byte)
+		{
+		case 0xF1:
+		case 0xF3:
+			return 2;
+			break;
+		case 0xF2:
+			return 3;
+			break;
+		default:
+			return 1;
+			break;
+		}
+		break;
+	default:
+		return 3;
+	}
 }
 
 void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uint32_t param,
@@ -826,7 +841,6 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			? csf->instruments[use_instr ?: chan->last_instrument]
 			: NULL;
 	unsigned char outbuffer[64];
-	unsigned char nextc = 0;
 	int midi_channel, fake_midi_channel = 0;
 	int saw_c;
 	int nibble_pos = 0, write_pos = 0;
@@ -845,104 +859,143 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 	}
 
 	for (int read_pos = 0; read_pos <= 32 && macro[read_pos]; read_pos++) {
-		int c, cw = 2;
+		int data, is_nibble = 0;
 		if (macro[read_pos] >= '0' && macro[read_pos] <= '9') {
-			c = macro[read_pos] - '0';
-			cw = 1;
+			data = macro[read_pos] - '0';
+			is_nibble = 1;
 		} else if (macro[read_pos] >= 'A' && macro[read_pos] <= 'F') {
-			c = (macro[read_pos] - 'A') + 10;
-			cw = 1;
+			data = (macro[read_pos] - 'A') + 10;
+			is_nibble = 1;
 		} else if (macro[read_pos] == 'c') {
-			c = midi_channel;
-			cw = 1;
+			data = midi_channel;
+			is_nibble = 1;
 			saw_c = 1;
 		} else if (macro[read_pos] == 'n') {
-			c = (note-1);
+			data = (note-1);
 		} else if (macro[read_pos] == 'v') {
-			c = velocity;
+			data = velocity;
 		} else if (macro[read_pos] == 'u') {
-			c = (chan->volume >> 1);
-			if (c > 127) c = 127;
+			data = (chan->volume >> 1);
+			if (data > 127) data = 127;
 		} else if (macro[read_pos] == 'x') {
-			c = chan->panning;
-			if (c > 127) c = 127;
+			data = chan->panning;
+			if (data > 127) data = 127;
 		} else if (macro[read_pos] == 'y') {
-			c = chan->final_panning;
-			if (c > 127) c = 127;
+			data = chan->final_panning;
+			if (data > 127) data = 127;
 		} else if (macro[read_pos] == 'a') {
 			/* MIDI Bank (high byte) */
 			if (!penv || penv->midi_bank == -1)
-				c = 0;
+				data = 0;
 			else
-				c = (penv->midi_bank >> 7) & 127;
+				data = (penv->midi_bank >> 7) & 127;
 		} else if (macro[read_pos] == 'b') {
 			/* MIDI Bank (low byte) */
 			if (!penv || penv->midi_bank == -1)
-				c = 0;
+				data = 0;
 			else
-				c = penv->midi_bank & 127;
+				data = penv->midi_bank & 127;
 		} else if (macro[read_pos] == 'p') {
 			/* MIDI Program */
 			if (!penv || penv->midi_program == -1)
-				c = 0;
+				data = 0;
 			else
-				c = penv->midi_program & 127;
+				data = penv->midi_program & 127;
 		} else if (macro[read_pos] == 'z') {
 			/* Zxx Param */
-			c = param & 0x7F;
+			data = param & 0x7F;
 		} else if (macro[read_pos] == 'h') {
 			/* Host channel */
-			c = nchan & 0x7F;
+			data = nchan & 0x7F;
 		} else if (macro[read_pos] == 'm') {
 			/* Loop direction (judging from the macro letter, this was supposed to be
 			   loop mode instead, but a wrong offset into the channel structure was used in IT.) */
-			c = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
+			data = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
 		} else if (macro[read_pos] == 'o') {
 			/* Sample offset */
-			c = (chan->mem_offset >> 8) & 0x7F;
-			if (c > 0x7F) {
+			data = (chan->mem_offset >> 8) & 0x7F;
+			if (data > 0x7F) {
 				continue;
 			}
 		} else {
 			continue;
 		}
-		if (nibble_pos == 0 && cw == 1) {
-			nextc = c;
-			nibble_pos = 1;
-			continue;
-		} else if (nibble_pos == 1 && cw == 1) {
-			nextc = (nextc << 4) | c;
-			nibble_pos = 0;
-		} else if (nibble_pos == 0) {
-			nextc = c;
-		} else if (nibble_pos == 1) {
-			outbuffer[write_pos] = nextc;
+		if (is_nibble == 1) {
+			if(nibble_pos == 0) {
+				outbuffer[write_pos] = data;
+				nibble_pos = 1;
+			} else {
+				outbuffer[write_pos] = (outbuffer[write_pos] << 4) | data;
+				write_pos++;
+				nibble_pos = 0;
+			}
+		} else {
+			if(nibble_pos == 1) {
+				write_pos++;
+				nibble_pos = 0;
+			}
+			outbuffer[write_pos] = data;
 			write_pos++;
-
-			nextc = c;
-			nibble_pos = 0;
 		}
-		// start of midi message
-		if (_was_complete_midi(outbuffer, write_pos, nextc)) {
-			csf_midi_send(csf, outbuffer, write_pos, nchan, saw_c && fake_midi_channel);
-			write_pos = 0;
-		}
-		outbuffer[write_pos] = nextc;
-		write_pos++;
 	}
 	if (nibble_pos == 1) {
-		outbuffer[write_pos] = nextc;
+		// Finish current byte
 		write_pos++;
 	}
-	if (write_pos) {
-		// terminate sysex
-		if (!_was_complete_midi(outbuffer, write_pos, 0xFF)) {
-			if (*outbuffer == 0xF0) {
-				outbuffer[write_pos] = 0xF7;
-				write_pos++;
+
+	// Macro string has been parsed and translated, now send the message(s)...
+	uint32_t send_pos = 0;
+	uint8_t running_status = 0;
+	while (send_pos < write_pos) {
+		uint32_t send_length = 0;
+		if (outbuffer[send_pos] == 0xF0) {
+			// SysEx start
+			if ((write_pos - send_pos >= 4) && outbuffer[send_pos + 1] == 0xF0)
+			{
+				// Internal macro, 4 bytes long
+				send_length = 4;
+			} else
+			{
+				// SysEx message, find end of message
+				for (uint32_t i = send_pos + 1; i < write_pos; i++) {
+					if (outbuffer[i] == 0xF7) {
+						// Found end of SysEx message
+						send_length = i - send_pos + 1;
+						break;
+					}
+				}
+				if (send_length == 0) {
+					// Didn't find end, so "invent" end of SysEx message
+					outbuffer[write_pos++] = 0xF7;
+					send_length = write_pos - send_pos;
+				}
 			}
+		} else if (!(outbuffer[send_pos] & 0x80))
+		{
+			// Missing status byte? Try inserting running status
+			if (running_status != 0) {
+				send_pos--;
+				outbuffer[send_pos] = running_status;
+			} else {
+				// No running status to re-use; skip this byte
+				send_pos++;
+			}
+			continue;
+		} else
+		{
+			// Other MIDI messages
+			send_length = MIN(midi_event_length(outbuffer[send_pos]), write_pos - send_pos);
 		}
-		csf_midi_send(csf, outbuffer, write_pos, nchan, saw_c && fake_midi_channel);
+
+		if (send_length == 0) {
+			break;
+		}
+
+		if (outbuffer[send_pos] < 0xF0) {
+			running_status = outbuffer[send_pos];
+		}
+		csf_midi_send(csf, outbuffer + send_pos, send_length, nchan, saw_c && fake_midi_channel);
+		send_pos += send_length;
 	}
 }
 
