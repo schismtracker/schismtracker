@@ -765,6 +765,14 @@ void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uin
 	song_voice_t *chan = &csf->voices[nchan];
 	int oldcutoff;
 
+	if (len >= 1 && (data[0] == 0xFA || data[0] == 0xFC || data[0] == 0xFF)) {
+		// Start Song, Stop Song, MIDI Reset
+		for (uint32_t c = 0; c < MAX_VOICES; c++) {
+			csf->voices[c].cutoff = 0x7F;
+			csf->voices[c].resonance = 0;
+		}
+	}
+
 	if (len >= 4 && data[0] == 0xF0 && data[1] == 0xF0) {
 		// impulse tracker filter control (mfg. 0xF0)
 		switch (data[2]) {
