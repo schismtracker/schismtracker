@@ -67,7 +67,7 @@ static void log_draw_const(void)
 
 static int log_handle_key(struct key_event * k)
 {
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;

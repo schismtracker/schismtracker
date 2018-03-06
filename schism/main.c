@@ -501,11 +501,11 @@ static void _synthetic_paste(const char *cbptr)
 		if (*cbptr == '\r') continue;
 		/* simulate paste */
 		kk.scancode = -1;
-		kk.sym = kk.orig_sym = 0;
+		kk.sym.sym = kk.orig_sym.sym = 0;
 		if (*cbptr == '\n') {
 			/* special attention to newlines */
 			kk.unicode = '\r';
-			kk.sym = SDLK_RETURN;
+			kk.sym.sym = SDLK_RETURN;
 		} else {
 			kk.unicode = *cbptr;
 		}
@@ -553,7 +553,7 @@ static void event_loop(void)
 	SDL_Event event;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	uint32_t last_mouse_down, ticker;
-	SDLKey last_key = 0;
+	SDL_Keysym last_key = {};
 	int modkey;
 	time_t startdown;
 #ifdef USE_X11
@@ -572,7 +572,7 @@ static void event_loop(void)
 	downtrip = 0;
 	last_mouse_down = 0;
 	startdown = 0;
-	status.last_keysym = 0;
+	status.last_keysym.sym = 0;
 
 	modkey = SDL_GetModState();
 #if defined(WIN32)
@@ -624,7 +624,7 @@ static void event_loop(void)
 		case SDL_KEYUP:
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
-			case SDLK_NUMLOCK:
+			case SDLK_NUMLOCKCLEAR:
 				modkey ^= KMOD_NUM;
 				break;
 			case SDLK_CAPSLOCK:
@@ -653,7 +653,7 @@ static void event_loop(void)
 #if defined(WIN32)
 			win32_get_modkey(&modkey);
 #endif
-			kk.sym = event.key.keysym.sym;
+			kk.sym.sym = event.key.keysym.sym;
 			kk.scancode = event.key.keysym.scancode;
 
 			switch (fix_numlock_key) {
@@ -681,7 +681,7 @@ static void event_loop(void)
 			};
 
 			kk.mod = modkey;
-			kk.unicode = event.key.keysym.unicode;
+//			kk.unicode = event.key.keysym.unicode; TODO
 			kk.mouse = MOUSE_NONE;
 			if (debug_s && strstr(debug_s, "key")) {
 				log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
@@ -691,25 +691,25 @@ static void event_loop(void)
 			}
 			key_translate(&kk);
 			if (debug_s && strstr(debug_s, "translate")
-					&& kk.orig_sym != kk.sym) {
+					&& kk.orig_sym.sym != kk.sym.sym) {
 				log_appendf(12, "[DEBUG] Translate Key%s sym=%d scancode=%d -> %d (%c)",
 						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
 						(int)event.key.keysym.sym,
 						(int)event.key.keysym.scancode,
-						kk.sym, kk.unicode);
+						kk.sym.sym, kk.unicode);
 			}
-			if (event.type == SDL_KEYDOWN && last_key == kk.sym) {
+			if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym) {
 				sawrep = kk.is_repeat = 1;
 			} else {
 				kk.is_repeat = 0;
 			}
 			handle_key(&kk);
 			if (event.type == SDL_KEYUP) {
-				status.last_keysym = kk.sym;
-				last_key = 0;
+				status.last_keysym.sym = kk.sym.sym;
+				last_key.sym = 0;
 			} else {
-				status.last_keysym = 0;
-				last_key = kk.sym;
+				status.last_keysym.sym = 0;
+				last_key.sym = kk.sym.sym;
 			}
 			break;
 		case SDL_QUIT:
@@ -735,7 +735,7 @@ static void event_loop(void)
 #endif
 			}
 
-			kk.sym = 0;
+			kk.sym.sym = 0;
 			kk.mod = 0;
 			kk.unicode = 0;
 
@@ -784,7 +784,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
 				if ((modkey & KMOD_CTRL)
 				|| event.button.button == SDL_BUTTON_RIGHT) {
 					kk.mouse_button = MOUSE_BUTTON_RIGHT;
-				} else if ((modkey & (KMOD_ALT|KMOD_META))
+				} else if ((modkey & (KMOD_ALT|KMOD_GUI))
 				|| event.button.button == SDL_BUTTON_MIDDLE) {
 					kk.mouse_button = MOUSE_BUTTON_MIDDLE;
 				} else {

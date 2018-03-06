@@ -158,7 +158,7 @@ static int help_handle_key(struct key_event * k)
 	} else if (k->mouse != MOUSE_NONE) {
 		return 0;
 	}
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;

@@ -319,7 +319,7 @@ int textentry_add_char(struct widget *w, uint16_t unicode)
 
 int menutoggle_handle_key(struct widget *w, struct key_event *k)
 {
-	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0)
+	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
 	   && w->d.menutoggle.activation_keys)
 	{
 	    const char* m = w->d.menutoggle.activation_keys;
@@ -337,7 +337,7 @@ int menutoggle_handle_key(struct widget *w, struct key_event *k)
 
 int bitset_handle_key(struct widget *w, struct key_event *k)
 {
-	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0)
+	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
 	   && w->d.bitset.activation_keys)
 	{
 	    const char* m = w->d.bitset.activation_keys;
