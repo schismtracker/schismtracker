@@ -1492,6 +1492,7 @@ void csf_import_s3m_effect(song_note_t *m, int from_it)
 		}
 		break;
 	case 'Y':       effect = FX_PANBRELLO; break;
+	case '\\': // OpenMPT smooth MIDI macro
 	case 'Z':       effect = FX_MIDI; break;
 	default:        effect = 0;
 	}
