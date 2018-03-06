@@ -845,7 +845,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 	}
 
 	for (i = j = x = 0, cx =0; i <= 32 && macro[i]; i++) {
-		int c, cw;
+		int c, cw = 2;
 		if (macro[i] >= '0' && macro[i] <= '9') {
 			c = macro[i] - '0';
 			cw = 1;
@@ -858,37 +858,51 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			saw_c = 1;
 		} else if (macro[i] == 'n') {
 			c = (note-1);
-			cw = 2;
 		} else if (macro[i] == 'v') {
 			c = velocity;
-			cw = 2;
 		} else if (macro[i] == 'u') {
 			c = (chan->volume >> 1);
 			if (c > 127) c = 127;
-			cw = 2;
 		} else if (macro[i] == 'x') {
 			c = chan->panning;
 			if (c > 127) c = 127;
-			cw = 2;
 		} else if (macro[i] == 'y') {
 			c = chan->final_panning;
 			if (c > 127) c = 127;
-			cw = 2;
 		} else if (macro[i] == 'a') {
-			if (!penv)
+			/* MIDI Bank (high byte) */
+			if (!penv || penv->midi_bank == -1)
 				c = 0;
 			else
 				c = (penv->midi_bank >> 7) & 127;
-			cw = 2;
 		} else if (macro[i] == 'b') {
-			if (!penv)
+			/* MIDI Bank (low byte) */
+			if (!penv || penv->midi_bank == -1)
 				c = 0;
 			else
 				c = penv->midi_bank & 127;
-			cw = 2;
-		} else if (macro[i] == 'z' || macro[i] == 'p') {
+		} else if (macro[i] == 'p') {
+			/* MIDI Program */
+			if (!penv || penv->midi_program == -1)
+				c = 0;
+			else
+				c = penv->midi_program & 127;
+		} else if (macro[i] == 'z') {
+			/* Zxx Param */
 			c = param & 0x7F;
-			cw = 2;
+		} else if (macro[i] == 'h') {
+			/* Host channel */
+			c = nchan & 0x7F;
+		} else if (macro[i] == 'm') {
+			/* Loop direction (judging from the macro letter, this was supposed to be
+			   loop mode instead, but a wrong offset into the channel structure was used in IT.) */
+			c = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
+		} else if (macro[i] == 'o') {
+			/* Sample offset */
+			c = (chan->mem_offset >> 8) & 0x7F;
+			if (c > 0x7F) {
+				continue;
+			}
 		} else {
 			continue;
 		}
