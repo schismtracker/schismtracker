@@ -729,7 +729,7 @@ static void event_loop(void)
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 			if (kk.state == KEY_PRESS) {
-				modkey = event.key.keysym.mod;
+				modkey = SDL_GetModState();
 #if defined(WIN32)
 				win32_get_modkey(&modkey);
 #endif
