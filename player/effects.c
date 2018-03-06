@@ -826,78 +826,78 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			? csf->instruments[use_instr ?: chan->last_instrument]
 			: NULL;
 	unsigned char outbuffer[64];
-	unsigned char cx;
-	int mc, fake = 0;
+	unsigned char nextc = 0;
+	int midi_channel, fake_midi_channel = 0;
 	int saw_c;
-	int i, j, x;
+	int nibble_pos = 0, write_pos = 0;
 
 	saw_c = 0;
 	if (!penv || penv->midi_channel_mask == 0) {
 		/* okay, there _IS_ no real midi channel. forget this for now... */
-		mc = 15;
-		fake = 1;
+		midi_channel = 15;
+		fake_midi_channel = 1;
 
 	} else if (penv->midi_channel_mask >= 0x10000) {
-		mc = (nchan-1) % 16;
+		midi_channel = (nchan-1) % 16;
 	} else {
-		mc = 0;
-		while(!(penv->midi_channel_mask & (1 << mc))) ++mc;
+		midi_channel = 0;
+		while(!(penv->midi_channel_mask & (1 << midi_channel))) ++midi_channel;
 	}
 
-	for (i = j = x = 0, cx =0; i <= 32 && macro[i]; i++) {
+	for (int read_pos = 0; read_pos <= 32 && macro[read_pos]; read_pos++) {
 		int c, cw = 2;
-		if (macro[i] >= '0' && macro[i] <= '9') {
-			c = macro[i] - '0';
+		if (macro[read_pos] >= '0' && macro[read_pos] <= '9') {
+			c = macro[read_pos] - '0';
 			cw = 1;
-		} else if (macro[i] >= 'A' && macro[i] <= 'F') {
-			c = (macro[i] - 'A') + 10;
+		} else if (macro[read_pos] >= 'A' && macro[read_pos] <= 'F') {
+			c = (macro[read_pos] - 'A') + 10;
 			cw = 1;
-		} else if (macro[i] == 'c') {
-			c = mc;
+		} else if (macro[read_pos] == 'c') {
+			c = midi_channel;
 			cw = 1;
 			saw_c = 1;
-		} else if (macro[i] == 'n') {
+		} else if (macro[read_pos] == 'n') {
 			c = (note-1);
-		} else if (macro[i] == 'v') {
+		} else if (macro[read_pos] == 'v') {
 			c = velocity;
-		} else if (macro[i] == 'u') {
+		} else if (macro[read_pos] == 'u') {
 			c = (chan->volume >> 1);
 			if (c > 127) c = 127;
-		} else if (macro[i] == 'x') {
+		} else if (macro[read_pos] == 'x') {
 			c = chan->panning;
 			if (c > 127) c = 127;
-		} else if (macro[i] == 'y') {
+		} else if (macro[read_pos] == 'y') {
 			c = chan->final_panning;
 			if (c > 127) c = 127;
-		} else if (macro[i] == 'a') {
+		} else if (macro[read_pos] == 'a') {
 			/* MIDI Bank (high byte) */
 			if (!penv || penv->midi_bank == -1)
 				c = 0;
 			else
 				c = (penv->midi_bank >> 7) & 127;
-		} else if (macro[i] == 'b') {
+		} else if (macro[read_pos] == 'b') {
 			/* MIDI Bank (low byte) */
 			if (!penv || penv->midi_bank == -1)
 				c = 0;
 			else
 				c = penv->midi_bank & 127;
-		} else if (macro[i] == 'p') {
+		} else if (macro[read_pos] == 'p') {
 			/* MIDI Program */
 			if (!penv || penv->midi_program == -1)
 				c = 0;
 			else
 				c = penv->midi_program & 127;
-		} else if (macro[i] == 'z') {
+		} else if (macro[read_pos] == 'z') {
 			/* Zxx Param */
 			c = param & 0x7F;
-		} else if (macro[i] == 'h') {
+		} else if (macro[read_pos] == 'h') {
 			/* Host channel */
 			c = nchan & 0x7F;
-		} else if (macro[i] == 'm') {
+		} else if (macro[read_pos] == 'm') {
 			/* Loop direction (judging from the macro letter, this was supposed to be
 			   loop mode instead, but a wrong offset into the channel structure was used in IT.) */
 			c = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
-		} else if (macro[i] == 'o') {
+		} else if (macro[read_pos] == 'o') {
 			/* Sample offset */
 			c = (chan->mem_offset >> 8) & 0x7F;
 			if (c > 0x7F) {
@@ -906,43 +906,43 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 		} else {
 			continue;
 		}
-		if (j == 0 && cw == 1) {
-			cx = c;
-			j = 1;
+		if (nibble_pos == 0 && cw == 1) {
+			nextc = c;
+			nibble_pos = 1;
 			continue;
-		} else if (j == 1 && cw == 1) {
-			cx = (cx << 4) | c;
-			j = 0;
-		} else if (j == 0) {
-			cx = c;
-		} else if (j == 1) {
-			outbuffer[x] = cx;
-			x++;
+		} else if (nibble_pos == 1 && cw == 1) {
+			nextc = (nextc << 4) | c;
+			nibble_pos = 0;
+		} else if (nibble_pos == 0) {
+			nextc = c;
+		} else if (nibble_pos == 1) {
+			outbuffer[write_pos] = nextc;
+			write_pos++;
 
-			cx = c;
-			j = 0;
+			nextc = c;
+			nibble_pos = 0;
 		}
 		// start of midi message
-		if (_was_complete_midi(outbuffer, x, cx)) {
-			csf_midi_send(csf, outbuffer, x, nchan, saw_c && fake);
-			x = 0;
+		if (_was_complete_midi(outbuffer, write_pos, nextc)) {
+			csf_midi_send(csf, outbuffer, write_pos, nchan, saw_c && fake_midi_channel);
+			write_pos = 0;
 		}
-		outbuffer[x] = cx;
-		x++;
+		outbuffer[write_pos] = nextc;
+		write_pos++;
 	}
-	if (j == 1) {
-		outbuffer[x] = cx;
-		x++;
+	if (nibble_pos == 1) {
+		outbuffer[write_pos] = nextc;
+		write_pos++;
 	}
-	if (x) {
+	if (write_pos) {
 		// terminate sysex
-		if (!_was_complete_midi(outbuffer, x, 0xFF)) {
+		if (!_was_complete_midi(outbuffer, write_pos, 0xFF)) {
 			if (*outbuffer == 0xF0) {
-				outbuffer[x] = 0xF7;
-				x++;
+				outbuffer[write_pos] = 0xF7;
+				write_pos++;
 			}
 		}
-		csf_midi_send(csf, outbuffer, x, nchan, saw_c && fake);
+		csf_midi_send(csf, outbuffer, write_pos, nchan, saw_c && fake_midi_channel);
 	}
 }
 
