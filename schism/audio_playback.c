@@ -114,6 +114,8 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 	unsigned int waspat = current_song->current_order;
 	int i, n;
 
+	memset(stream, 0, len);
+
 	if (!stream || !len || !current_song) {
 		if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
 			vis_work_8m(NULL, 0);
