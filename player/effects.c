@@ -763,7 +763,6 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t nchan, int fake)
 {
 	song_voice_t *chan = &csf->voices[nchan];
-	int oldcutoff;
 
 	if (len >= 1 && (data[0] == 0xFA || data[0] == 0xFC || data[0] == 0xFF)) {
 		// Start Song, Stop Song, MIDI Reset
@@ -777,22 +776,16 @@ void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uin
 		// impulse tracker filter control (mfg. 0xF0)
 		switch (data[2]) {
 		case 0x00: // set cutoff
-			oldcutoff = chan->cutoff;
-			if (data[3] < 0x80)
+			if (data[3] < 0x80) {
 				chan->cutoff = data[3];
-			oldcutoff -= chan->cutoff;
-			if (oldcutoff < 0)
-				oldcutoff = -oldcutoff;
-			if (chan->volume > 0 || oldcutoff < 0x10
-			    || !(chan->flags & CHN_FILTER)
-			    || !(chan->left_volume|chan->right_volume)) {
 				setup_channel_filter(chan, !(chan->flags & CHN_FILTER), 256, csf->mix_frequency);
 			}
 			break;
 		case 0x01: // set resonance
-			if (data[3] < 0x80)
+			if (data[3] < 0x80) {
 				chan->resonance = data[3];
-			setup_channel_filter(chan, !(chan->flags & CHN_FILTER), 256, csf->mix_frequency);
+				setup_channel_filter(chan, !(chan->flags & CHN_FILTER), 256, csf->mix_frequency);
+			}
 			break;
 		}
 	} else if (!fake && csf_midi_out_raw) {
