@@ -53,8 +53,6 @@ static void _key_info_setup(void)
 
 	SDL_VERSION(&info.version);
 	if (SDL_GetWMInfo(&info)) {
-		if (info.info.x11.lock_func)
-			info.info.x11.lock_func();
 		dpy = info.info.x11.display;
 	} else {
 		dpy = NULL;
@@ -85,8 +83,6 @@ static void _key_info_setup(void)
 		log_appendf(3, "Warning: XKB support missing or broken; keyjamming might not work right");
 
 	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
-		if (info.info.x11.unlock_func)
-			info.info.x11.unlock_func();
 		return;
 	}
 #else
@@ -96,9 +92,6 @@ static void _key_info_setup(void)
 	/* eh... */
 	delay = 125;
 	rate = 30;
-
-	if (info.info.x11.unlock_func)
-		info.info.x11.unlock_func();
 }
 
 unsigned int key_repeat_rate(void)

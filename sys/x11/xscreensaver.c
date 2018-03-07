@@ -87,12 +87,10 @@ void x11_screensaver_deactivate(void)
 		}
 
 		useit = 1;
-		if (info.info.x11.lock_func) info.info.x11.lock_func();
 		XA_SCREENSAVER = XInternAtom(dpy, "SCREENSAVER", False);
 		XA_SCREENSAVER_VERSION = XInternAtom(dpy,
 					"_SCREENSAVER_VERSION", False);
 		XA_DEACTIVATE = XInternAtom(dpy, "DEACTIVATE", False);
-		if (info.info.x11.unlock_func) info.info.x11.unlock_func();
 	}
 
 	if (!useit) return;
@@ -103,27 +101,19 @@ void x11_screensaver_deactivate(void)
 	}
 	lastpoll = now;
 
-	if (info.info.x11.lock_func)
-		info.info.x11.lock_func();
 	dpy = info.info.x11.display;
 	if (!dpy) {
 		useit = 0;
-		if (info.info.x11.unlock_func)
-			info.info.x11.unlock_func();
 		return;
 	}
 
 	root = RootWindowOfScreen(DefaultScreenOfDisplay(dpy));
 	if (!XQueryTree(dpy, root, &tmp, &parent, &kids, &nkids)) {
 		useit = 0;
-		if (info.info.x11.unlock_func)
-			info.info.x11.unlock_func();
 		return;
 	}
 	if (root != tmp || parent || !(kids && nkids)) {
 		useit = 0;
-		if (info.info.x11.unlock_func)
-			info.info.x11.unlock_func();
 		return;
 	}
 
@@ -153,8 +143,6 @@ void x11_screensaver_deactivate(void)
 	XFree(kids);
 	if (!win) {
 		useit = 0;
-		if (info.info.x11.unlock_func)
-			info.info.x11.unlock_func();
 		return;
 	}
 
@@ -169,7 +157,5 @@ void x11_screensaver_deactivate(void)
 	ev.xclient.data.l[2] = 0;
 	(void)XSendEvent(dpy, win, False, 0L, &ev);
 	XSync(dpy, 0);
-	if (info.info.x11.unlock_func)
-		info.info.x11.unlock_func();
 }
 

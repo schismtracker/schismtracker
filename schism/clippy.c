@@ -42,8 +42,6 @@ static unsigned short inputgroup;
 #elif defined(USE_X11)
 static Display *native_display = NULL;
 static Window native_window;
-static void (*lock_display)(void);
-static void (*unlock_display)(void);
 static Atom atom_sel;
 static Atom atom_clip;
 static void __noop_v(void){};
@@ -106,7 +104,6 @@ static void _clippy_copy_to_sys(int do_sel)
 #endif
 #if defined(USE_X11)
 	if (has_sys_clip) {
-		lock_display();
 		if (!dst) dst = (char *) ""; /* blah */
 		if (j < 0) j = 0;
 		if (do_sel) {
@@ -130,7 +127,6 @@ static void _clippy_copy_to_sys(int do_sel)
 				XA_CUT_BUFFER1, XA_STRING, 8,
 				PropModeReplace, (unsigned char *)dst, j);
 		}
-		unlock_display();
 	}
 #elif defined(WIN32)
 	if (!do_sel && OpenClipboard(native_window)) {
@@ -211,7 +207,6 @@ static int _x11_clip_filter(const SDL_Event *ev)
 	if (ev->syswm.msg->event.xevent.type == SelectionNotify) {
 		sevent = ev->syswm.msg->event.xevent;
 		if (sevent.xselection.requestor == native_window) {
-			lock_display();
 			src = NULL;
 			if (XGetWindowProperty(native_display, native_window, atom_sel,
 						0, 9000, False, XA_STRING,
@@ -231,7 +226,6 @@ static int _x11_clip_filter(const SDL_Event *ev)
 				}
 				XFree(src);
 			}
-			unlock_display();
 		}
 		return 1;
 	} else if (ev->syswm.msg->event.xevent.type == PropertyNotify) {
@@ -297,8 +291,6 @@ void clippy_init(void)
 		if (info.subsystem == SDL_SYSWM_X11) {
 			native_display = info.info.x11.display;
 			native_window = info.info.x11.window;
-			lock_display = info.info.x11.lock_func;
-			unlock_display = info.info.x11.unlock_func;
 			SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 			SDL_SetEventFilter(_x11_clip_filter);
 			has_sys_clip = 1;
@@ -308,8 +300,6 @@ void clippy_init(void)
 
 			orig_xlib_err = XSetErrorHandler(handle_xlib_err);
 		}
-		if (!lock_display) lock_display = __noop_v;
-		if (!unlock_display) unlock_display = __noop_v;
 #elif defined(WIN32)
 		has_sys_clip = 1;
 		native_window = info.window;
@@ -344,13 +334,10 @@ static char *_internal_clippy_paste(int cb)
 		} else {
 			getme = atom_clip;
 		}
-		lock_display();
 		owner = XGetSelectionOwner(native_display, getme);
-		unlock_display();
 		if (owner == None || owner == native_window) {
 			/* fall through to default implementation */
 		} else {
-			lock_display();
 			XConvertSelection(native_display, getme, XA_STRING, atom_sel, native_window,
 							CurrentTime);
 			/* at some point in the near future, we'll get a SelectionNotify
@@ -358,7 +345,6 @@ static char *_internal_clippy_paste(int cb)
 
 			because of this (otherwise) oddity, we take the selection immediately...
 			*/
-			unlock_display();
 			return NULL;
 		}
 #else
