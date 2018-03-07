@@ -919,9 +919,6 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 		} else if (macro[read_pos] == 'o') {
 			/* Sample offset */
 			data = (chan->mem_offset >> 8) & 0x7F;
-			if (data > 0x7F) {
-				continue;
-			}
 		} else {
 			continue;
 		}
