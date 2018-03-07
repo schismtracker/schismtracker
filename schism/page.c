@@ -30,6 +30,7 @@
 #include "util.h"
 #include "midi.h"
 #include "version.h"
+#include "video.h"
 
 #include "sdlmain.h"
 
@@ -57,7 +58,7 @@ struct widget *widgets = NULL;
 int *selected_widget = NULL;
 int *total_widgets = NULL;
 
-static int currently_grabbed = SDL_GRAB_OFF;
+static int currently_grabbed = SDL_FALSE;
 
 static int fontedit_return_page = PAGE_PATTERN_EDITOR;
 
@@ -489,11 +490,9 @@ static int handle_key_global(struct key_event * k)
 		if (k->mod & KMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1; /* argh */
-			i = SDL_WM_GrabInput(SDL_GRAB_QUERY);
-			if (i == SDL_GRAB_QUERY)
-				i = currently_grabbed;
-			currently_grabbed = i = (i != SDL_GRAB_ON ? SDL_GRAB_ON : SDL_GRAB_OFF);
-			SDL_WM_GrabInput(i);
+			i = SDL_GetWindowGrab(video_window());
+			currently_grabbed = i = (i != SDL_TRUE ? SDL_TRUE : SDL_FALSE);
+			SDL_SetWindowGrab(video_window(), i);
 			status_text_flash(i
 				? "Mouse and keyboard grabbed, press Ctrl+D to release"
 				: "Mouse and keyboard released");
