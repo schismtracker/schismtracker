@@ -116,9 +116,11 @@ static void sdl_init(void)
 
 static void display_init(void)
 {
+	SDL_SysWMinfo	info;
+
 	video_startup();
 
-	if (SDL_GetVideoInfo()->wm_available) {
+	if (SDL_GetWindowWMInfo(video_window(), &info)) {
 		status.flags |= WM_AVAILABLE;
 	}
 

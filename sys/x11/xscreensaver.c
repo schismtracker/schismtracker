@@ -33,6 +33,7 @@
 
 #define NEED_TIME
 #include "headers.h"
+#include "video.h"
 
 #include "sdlmain.h"
 #include "osdefs.h"
@@ -77,7 +78,7 @@ void x11_screensaver_deactivate(void)
 
 	if (!setup) {
 		setup = 1;
-		SDL_GetWMInfo(&info);
+		SDL_GetWindowWMInfo(video_window(), &info);
 		dpy = info.info.x11.display;
 		if (!dpy) {
 			dpy = XOpenDisplay(NULL);

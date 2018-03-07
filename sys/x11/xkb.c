@@ -25,6 +25,7 @@
 #include "sdlmain.h"
 #include "it.h"
 #include "osdefs.h"
+#include "video.h"
 
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
@@ -52,7 +53,7 @@ static void _key_info_setup(void)
 	virgin = 0;
 
 	SDL_VERSION(&info.version);
-	if (SDL_GetWMInfo(&info)) {
+	if (SDL_GetWindowWMInfo(video_window(), &info)) {
 		dpy = info.info.x11.display;
 	} else {
 		dpy = NULL;

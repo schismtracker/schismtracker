@@ -29,6 +29,7 @@
 #include "util.h"
 
 #include "sdlmain.h"
+#include "video.h"
 
 static char *_current_selection = NULL;
 static char *_current_clipboard = NULL;
@@ -286,7 +287,7 @@ void clippy_init(void)
 
 	has_sys_clip = 0;
 	SDL_VERSION(&info.version);
-	if (SDL_GetWMInfo(&info)) {
+	if (SDL_GetWindowWMInfo(video_window(), &info)) {
 #if defined(USE_X11)
 		if (info.subsystem == SDL_SYSWM_X11) {
 			native_display = info.info.x11.display;
