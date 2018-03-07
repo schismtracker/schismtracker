@@ -100,7 +100,7 @@ static void _clippy_copy_to_sys(int do_sel)
 			}
 			XChangeProperty(SDL_Display,
 				DefaultRootWindow(SDL_Display),
-				XA_CUT_BUFFER1, XA_STRING, 8,
+				XA_CUT_BUFFER0, XA_STRING, 8,
 				PropModeReplace, (unsigned char *)dst, j);
 		} else {
 			if (XGetSelectionOwner(SDL_Display, atom_clip) != SDL_Window) {
