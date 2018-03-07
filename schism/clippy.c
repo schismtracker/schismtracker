@@ -185,7 +185,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 {
 	XSelectionRequestEvent *req;
 	XEvent sevent;
-	Atom seln_type;
+	Atom seln_type, seln_target;
 	int seln_format;
 	unsigned long nbytes;
 	unsigned long overflow;
@@ -231,27 +231,27 @@ static int _x11_clip_filter(const SDL_Event *ev)
 	sevent.xselection.type = SelectionNotify;
 	sevent.xselection.display = req->display;
 	sevent.xselection.selection = req->selection;
-	sevent.xselection.target = None;
+	sevent.xselection.target = req->target;
 	sevent.xselection.property = None;
 	sevent.xselection.requestor = req->requestor;
 	sevent.xselection.time = req->time;
 	if (XGetWindowProperty(SDL_Display, DefaultRootWindow(SDL_Display),
 			XA_CUT_BUFFER0, 0, 9000, False, req->target,
-			&sevent.xselection.target, &seln_format,
+			&seln_target, &seln_format,
 			&nbytes, &overflow, &seln_data) == Success) {
-		if (sevent.xselection.target == req->target) {
-			if (sevent.xselection.target == XA_STRING) {
+		if (seln_target == req->target) {
+			if (seln_target == XA_STRING) {
 				if (nbytes && seln_data[nbytes-1] == '\0')
 					nbytes--;
 			}
 			XChangeProperty(SDL_Display, req->requestor, req->property,
-				sevent.xselection.target, seln_format, PropModeReplace,
+				seln_target, seln_format, PropModeReplace,
 				seln_data, nbytes);
 			sevent.xselection.property = req->property;
 		}
 		XFree(seln_data);
 	}
-	XSendEvent(SDL_Display,req->requestor,False,0,&sevent);
+	XSendEvent(SDL_Display, req->requestor, False, 0, &sevent);
 	XSync(SDL_Display, False);
 	return 1;
 }
