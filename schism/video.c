@@ -1870,3 +1870,7 @@ void video_translate(unsigned int vx, unsigned int vy,
 	if (y) *y = vy;
 }
 
+SDL_Window * video_window(void)
+{
+	return NULL;
+}
