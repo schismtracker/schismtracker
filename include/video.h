@@ -77,6 +77,7 @@ int video_height(void);
 typedef struct SDL_Window SDL_Window;
 SDL_Window * video_window(void);
 
+typedef struct SDL_Surface SDL_Surface;
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
 #if USE_X11
