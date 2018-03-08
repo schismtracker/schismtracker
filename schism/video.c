@@ -1295,9 +1295,19 @@ static void _gl_pal(int i, int rgb[3])
 			(rgb[1] << 8) |
 			(rgb[0] << 16) | (255 << 24);
 }
+
+static void set_surface_colors(SDL_Surface *surface, SDL_Color *colors, int firstcolor, int ncolors)
+{
+	SDL_Palette *pal;
+
+	pal = SDL_AllocPalette(16);
+	SDL_SetPaletteColors(pal, colors, firstcolor, ncolors);
+	SDL_SetSurfacePalette(surface, pal);
+	SDL_FreePalette(pal);
+}
+
 void video_colors(unsigned char palette[16][3])
 {
-	static SDL_Color imap[16];
 	void (*fun)(int i,int rgb[3]);
 	const int lastmap[] = { 0,1,2,3,5 };
 	int rgb[3], i, j, p;
@@ -1305,6 +1315,7 @@ void video_colors(unsigned char palette[16][3])
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
 		if (video.surface->format->BytesPerPixel == 1) {
+			static SDL_Color imap[16];
 			const int depthmap[] = { 0, 15,14,7,
 						8, 8, 9, 12,
 						6, 1, 2, 2,
@@ -1339,7 +1350,7 @@ void video_colors(unsigned char palette[16][3])
 					- palette[p][2]) * (j&31)) /32);
 				_bgr32_pal(i, rgb);
 			}
-			SDL_SetColors(video.surface, imap, 0, 16);
+			set_surface_colors(video.surface, imap, 0, 16);
 			return;
 		}
 		/* fall through */
