@@ -141,25 +141,50 @@ void toggle_display_fullscreen(void)
 
 /* --------------------------------------------------------------------- */
 
-static void handle_active_event(SDL_ActiveEvent * a)
+static void handle_window_event(SDL_WindowEvent *w)
 {
-	if (a->state & SDL_APPACTIVE) {
-		if (a->gain) {
-			status.flags |= (IS_VISIBLE|SOFTWARE_MOUSE_MOVED);
-			video_mousecursor(MOUSE_RESET_STATE);
-		} else {
-			status.flags &= ~IS_VISIBLE;
-		}
-	}
-
-	if (a->state & SDL_APPINPUTFOCUS) {
-		if (a->gain) {
-			status.flags |= IS_FOCUSED;
-			video_mousecursor(MOUSE_RESET_STATE);
-		} else {
-			status.flags &= ~IS_FOCUSED;
-			SDL_ShowCursor(SDL_ENABLE);
-		}
+	switch (w->event) {
+	case SDL_WINDOWEVENT_SHOWN:
+		status.flags |= (IS_VISIBLE|SOFTWARE_MOUSE_MOVED);
+		video_mousecursor(MOUSE_RESET_STATE);
+		break;
+	case SDL_WINDOWEVENT_HIDDEN:
+		status.flags &= ~IS_VISIBLE;
+		break;
+	case SDL_WINDOWEVENT_FOCUS_GAINED:
+		status.flags |= IS_FOCUSED;
+		video_mousecursor(MOUSE_RESET_STATE);
+		break;
+	case SDL_WINDOWEVENT_FOCUS_LOST:
+		status.flags &= ~IS_FOCUSED;
+		SDL_ShowCursor(SDL_ENABLE);
+		break;
+	case SDL_WINDOWEVENT_RESIZED:
+		video_resize(w->data1, w->data2);
+		/* fall through */
+	case SDL_WINDOWEVENT_EXPOSED:
+		status.flags |= (NEED_UPDATE);
+		break;
+	default:
+#if 0
+		/* ignored currently */
+		SDL_WINDOWEVENT_NONE,           /**< Never used */
+		SDL_WINDOWEVENT_MOVED,          /**< Window has been moved to data1, data2
+					     */
+		SDL_WINDOWEVENT_SIZE_CHANGED,   /**< The window size has changed, either as
+						 a result of an API call or through the
+						 system or user changing the window size. */
+		SDL_WINDOWEVENT_MINIMIZED,      /**< Window has been minimized */
+		SDL_WINDOWEVENT_MAXIMIZED,      /**< Window has been maximized */
+		SDL_WINDOWEVENT_RESTORED,       /**< Window has been restored to normal size
+						 and position */
+		SDL_WINDOWEVENT_ENTER,          /**< Window has gained mouse focus */
+		SDL_WINDOWEVENT_LEAVE,          /**< Window has lost mouse focus */
+		SDL_WINDOWEVENT_CLOSE,          /**< The window manager requests that the window be closed */
+		SDL_WINDOWEVENT_TAKE_FOCUS,     /**< Window is being offered a focus (should SetWindowInputFocus() on itself or a subwindow, or ignore) */
+		SDL_WINDOWEVENT_HIT_TEST        /**< Window had a hit test that wasn't SDL_HITTEST_NORMAL. */
+#endif
+		break;
 	}
 }
 
@@ -611,13 +636,6 @@ static void event_loop(void)
 		case SDL_SYSWMEVENT:
 			/* todo... */
 			break;
-		case SDL_VIDEORESIZE:
-			video_resize(event.resize.w, event.resize.h);
-			/* fall through */
-		case SDL_VIDEOEXPOSE:
-			status.flags |= (NEED_UPDATE);
-			break;
-
 #if defined(WIN32)
 #define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
 #else
@@ -717,7 +735,7 @@ static void event_loop(void)
 		case SDL_QUIT:
 			show_exit_prompt();
 			break;
-		case SDL_ACTIVEEVENT:
+		case SDL_WINDOWEVENT:
 			/* reset this... */
 			modkey = SDL_GetModState();
 #if defined(WIN32)
@@ -725,7 +743,7 @@ static void event_loop(void)
 #endif
 			SDL_SetModState(modkey);
 
-			handle_active_event(&(event.active));
+			handle_window_event(&event.window);
 			break;
 		case SDL_MOUSEMOTION:
 		case SDL_MOUSEBUTTONDOWN:
