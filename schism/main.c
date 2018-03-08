@@ -99,7 +99,7 @@ static void display_print_info(void)
 
 static void sdl_init(void)
 {
-	char *err;
+	const char *err;
 	if (SDL_Init(SDL_INIT_FLAGS) == 0)
 		return;
 	err = SDL_GetError();
