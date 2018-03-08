@@ -193,7 +193,7 @@ static void _string_paste(UNUSED int cb, const char *cbptr)
 
 
 #if defined(USE_X11)
-static int _x11_clip_filter(const SDL_Event *ev)
+static int _x11_clip_filter(void *userdata, SDL_Event *ev)
 {
 	XSelectionRequestEvent *req;
 	XEvent sevent;
@@ -293,7 +293,7 @@ void clippy_init(void)
 			native_display = info.info.x11.display;
 			native_window = info.info.x11.window;
 			SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-			SDL_SetEventFilter(_x11_clip_filter);
+			SDL_SetEventFilter(_x11_clip_filter, NULL);
 			has_sys_clip = 1;
 
 			atom_sel = XInternAtom(native_display, "SDL_SELECTION", False);
