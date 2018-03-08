@@ -205,8 +205,8 @@ static int _x11_clip_filter(void *userdata, SDL_Event *ev)
 	unsigned char *src;
 
 	if (ev->type != SDL_SYSWMEVENT) return 1;
-	if (ev->syswm.msg->event.xevent.type == SelectionNotify) {
-		sevent = ev->syswm.msg->event.xevent;
+	if (ev->syswm.msg->msg.x11.event.type == SelectionNotify) {
+		sevent = ev->syswm.msg->msg.x11.event;
 		if (sevent.xselection.requestor == native_window) {
 			src = NULL;
 			if (XGetWindowProperty(native_display, native_window, atom_sel,
@@ -229,15 +229,15 @@ static int _x11_clip_filter(void *userdata, SDL_Event *ev)
 			}
 		}
 		return 1;
-	} else if (ev->syswm.msg->event.xevent.type == PropertyNotify) {
-		sevent = ev->syswm.msg->event.xevent;
+	} else if (ev->syswm.msg->msg.x11.event.type == PropertyNotify) {
+		sevent = ev->syswm.msg->msg.x11.event;
 		return 1;
 
-	} else if (ev->syswm.msg->event.xevent.type != SelectionRequest) {
+	} else if (ev->syswm.msg->msg.x11.event.type != SelectionRequest) {
 		return 1;
 	}
 
-	req = &ev->syswm.msg->event.xevent.xselectionrequest;
+	req = &ev->syswm.msg->msg.x11.event.xselectionrequest;
 	sevent.xselection.type = SelectionNotify;
 	sevent.xselection.display = req->display;
 	sevent.xselection.selection = req->selection;
