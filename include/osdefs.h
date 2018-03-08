@@ -117,16 +117,6 @@ int key_scancode_lookup(int k, int def);
 #define key_scancode_lookup(k, def) def
 #endif
 
-#if defined(USE_X11) || defined(WIN32) || defined(MACOSX)
-unsigned int key_repeat_delay(void);
-unsigned int key_repeat_rate(void);
-#else
-# include "sdlmain.h" // blecch
-# define key_repeat_delay() SDL_DEFAULT_REPEAT_DELAY
-# define key_repeat_rate() SDL_DEFAULT_REPEAT_INTERVAL
-#endif
-
-
 // Mixer interfaces
 
 void volume_setup(void);

@@ -38,7 +38,6 @@
 #endif
 
 static int virgin = 1;
-static unsigned int delay, rate;
 
 #ifdef USE_XKB
 static XkbDescPtr us_kb_map;
@@ -83,27 +82,9 @@ static void _key_info_setup(void)
 	if (!us_kb_map)
 		log_appendf(3, "Warning: XKB support missing or broken; keyjamming might not work right");
 
-	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate))
-		return;
 #else
 	log_appendf(3, "Warning: XKB support not compiled in; keyjamming might not work right");
 #endif
-
-	/* eh... */
-	delay = 125;
-	rate = 30;
-}
-
-unsigned int key_repeat_rate(void)
-{
-	_key_info_setup();
-	return rate;
-}
-
-unsigned int key_repeat_delay(void)
-{
-	_key_info_setup();
-	return delay;
 }
 
 #ifdef USE_XKB

@@ -127,7 +127,6 @@ static void display_init(void)
 	clippy_init();
 
 	display_print_info();
-	set_key_repeat(0, 0); /* 0 = defaults */
 	SDL_EnableUNICODE(1);
 }
 

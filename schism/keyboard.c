@@ -608,17 +608,3 @@ int kbd_get_alnum(struct key_event *k)
 	}
 	return k->sym.sym;
 }
-
-/* --------------------------------------------------------------------- */
-
-static int keydelay = SDL_DEFAULT_REPEAT_DELAY, keyrate = SDL_DEFAULT_REPEAT_INTERVAL;
-
-void set_key_repeat(int delay, int rate)
-{
-	/* save these for later */
-	if (delay) {
-		keydelay = delay;
-		keyrate = rate;
-	}
-	SDL_EnableKeyRepeat(keydelay, keyrate);
-}
