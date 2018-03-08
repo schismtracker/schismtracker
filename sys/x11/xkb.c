@@ -83,9 +83,8 @@ static void _key_info_setup(void)
 	if (!us_kb_map)
 		log_appendf(3, "Warning: XKB support missing or broken; keyjamming might not work right");
 
-	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
+	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate))
 		return;
-	}
 #else
 	log_appendf(3, "Warning: XKB support not compiled in; keyjamming might not work right");
 #endif
