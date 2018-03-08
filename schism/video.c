@@ -319,7 +319,6 @@ const char *video_driver_name(void)
 
 void video_report(void)
 {
-	char buf[256];
 	struct {
 		unsigned int num;
 		const char *name, *type;
@@ -338,7 +337,7 @@ void video_report(void)
 		{0, NULL, NULL},
 	}, *layout = yuv_layouts;
 
-	log_appendf(5, " Using driver '%s'", SDL_VideoDriverName(buf, 256));
+	log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
 
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
