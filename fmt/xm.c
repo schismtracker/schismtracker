@@ -794,6 +794,17 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	}
 	csf_insert_restart_pos(song, hdr.restart);
 
+	// ModPlug song message
+	char text[4];
+	if (slurp_read(fp, text, sizeof(text)) == sizeof(text) && !memcmp(text, "text", 4)) {
+		uint32_t len = 0;
+		slurp_read(fp, &len, 4);
+		len = bswapLE32(len);
+		len = MIN(MAX_MESSAGE, len);
+		slurp_read(fp, song->message, len);
+		song->message[len] = '\0';
+	}
+
 	return LOAD_SUCCESS;
 }
 
