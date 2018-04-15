@@ -14,7 +14,7 @@ brew install automake autoconf sdl git
 
 Alternatively, if you have MacPorts installed, you can use this command instead:
 ```
-sudo port install automake autoconf libsdl git
+sudo port install automake autoconf libtool libsdl git
 ```
 In this case, you may have to open a new terminal shell, or else you may get warnings about the version of autoconf/automake you're using.
 
