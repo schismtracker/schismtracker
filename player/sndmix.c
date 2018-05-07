@@ -188,7 +188,7 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int period)
 	return period;
 }
 
-static inline int rn_sample_vibrato(song_voice_t *chan, int period)
+static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int period)
 {
 	unsigned int vibpos = chan->autovib_position & 0xFF;
 	int vdelta, adepth;
@@ -230,16 +230,25 @@ static inline int rn_sample_vibrato(song_voice_t *chan, int period)
 	vdelta = (vdelta * adepth) >> 6;
 
 	int l = abs(vdelta);
-	if (vdelta < 0) {
-		vdelta = _muldiv(period, linear_slide_up_table[l >> 2], 0x10000) - period;
 
-		if (l & 0x03)
+	const uint32_t *linear_slide_table, *fine_linear_slide_table;
+	if (vdelta < 0) {
+		linear_slide_table = linear_slide_up_table;
+		fine_linear_slide_table = fine_linear_slide_up_table;
 			vdelta += _muldiv(period, fine_linear_slide_up_table[l & 0x03], 0x10000) - period;
 	} else {
-		vdelta = _muldiv(period, linear_slide_down_table[l >> 2], 0x10000) - period;
+		linear_slide_table = linear_slide_down_table;
+		fine_linear_slide_table = fine_linear_slide_down_table;
+	}
 
+	if (csf->flags & SONG_LINEARSLIDES) {
+		vdelta = _muldiv(period, linear_slide_table[l >> 2], 0x10000) - period;
 		if (l & 0x03)
-			vdelta += _muldiv(period, fine_linear_slide_down_table[l & 0x03], 0x10000) - period;
+			vdelta += _muldiv(period, fine_linear_slide_table[l & 0x03], 0x10000) - period;
+	} else {
+		vdelta = _muldiv(period, 0x10000, linear_slide_table[l >> 2]) - period;
+		if (l & 0x03)
+			vdelta += _muldiv(period, 0x10000, fine_linear_slide_table[l & 0x03]) - period;
 	}
 
 	return period - vdelta;
@@ -1201,7 +1210,7 @@ int csf_read_note(song_t *csf)
 
 			// Sample Auto-Vibrato
 			if (chan->ptr_sample && chan->ptr_sample->vib_depth) {
-				period = rn_sample_vibrato(chan, period);
+				period = rn_sample_vibrato(csf, chan, period);
 			}
 
 			unsigned int freq = get_freq_from_period(period, csf->flags & SONG_LINEARSLIDES);
