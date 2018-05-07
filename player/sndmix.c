@@ -384,7 +384,8 @@ static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int period)
 }
 
 
-static inline void rn_pitch_filter_envelope(song_voice_t *chan, int *nenvpitch, int *nperiod)
+static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
+	int *nenvpitch, int *nperiod)
 {
 	song_instrument_t *penv = chan->ptr_instrument;
 	int envpos = chan->pitch_env_position;
@@ -431,8 +432,12 @@ static inline void rn_pitch_filter_envelope(song_voice_t *chan, int *nenvpitch, 
 		if (l > 255)
 			l = 255;
 
-		period = _muldiv(period, (envpitch < 0 ?
-			linear_slide_down_table : linear_slide_up_table)[l], 0x10000);
+		int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
+		if (csf->flags & SONG_LINEARSLIDES) {
+			period = _muldiv(period, ratio, 0x10000);
+		} else {
+			period = _muldiv(period, 0x10000, ratio);
+		}
 	}
 
 	*nperiod = period;
@@ -1188,7 +1193,7 @@ int csf_read_note(song_t *csf)
 
 			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument
 				&& (chan->flags & CHN_PITCHENV) && chan->ptr_instrument->pitch_env.nodes)
-				rn_pitch_filter_envelope(chan, &envpitch, &period);
+				rn_pitch_filter_envelope(csf, chan, &envpitch, &period);
 
 			// Vibrato
 			if (chan->flags & CHN_VIBRATO)
