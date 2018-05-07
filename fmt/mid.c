@@ -331,7 +331,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					case 0x5: // lyric
 					case 0x6: // marker
 					case 0x7: // cue point
-						y = MIN(vlen, message_left - 1);
+						y = MIN(vlen, message_left ? message_left - 1 : 0);
 						slurp_read(fp, message_cur, y);
 						if (x == 3 && y && !song->title[0]) {
 							strncpy(song->title, message_cur, MIN(y, 25));
@@ -459,6 +459,10 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		while (row >= MID_ROWS_PER_PATTERN) {
 			// New pattern time!
+			if(pat >= MAX_PATTERNS) {
+				log_appendf(4, " Warning: Too many patterns, song is truncated");
+				return LOAD_SUCCESS;
+			}
 			pattern = song->patterns[pat] = csf_allocate_pattern(MID_ROWS_PER_PATTERN);
 			song->pattern_size[pat] = song->pattern_alloc_size[pat] = MID_ROWS_PER_PATTERN;
 			song->orderlist[pat] = pat;

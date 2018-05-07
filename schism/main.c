@@ -533,6 +533,19 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 	_synthetic_paste((const char *)e->user.data1);
 }
 
+static void key_event_reset(struct key_event *kk, int start_x, int start_y)
+{
+	memset(kk, 0, sizeof(*kk));
+
+	kk->midi_volume = -1;
+	kk->midi_note = -1;
+	/* X/Y resolution */
+	kk->rx = NATIVE_SCREEN_WIDTH / 80;
+	kk->ry = NATIVE_SCREEN_HEIGHT / 50;
+	/* preserve the start position */
+	kk->sx = start_x;
+	kk->sy = start_y;
+}
 
 static void event_loop(void) NORETURN;
 static void event_loop(void)
@@ -550,6 +563,7 @@ static void event_loop(void)
 	int sawrep;
 	char *debug_s;
 	int fix_numlock_key;
+	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
 
@@ -572,17 +586,11 @@ static void event_loop(void)
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
 	while (SDL_WaitEvent(&event)) {
-		struct key_event kk = {
-			.midi_volume = -1,
-			.midi_note = -1,
-			// X/Y resolution
-			.rx = NATIVE_SCREEN_WIDTH / 80,
-			.ry = NATIVE_SCREEN_HEIGHT / 50,
-			// everything else will be set to 0
-		};
-
 		if (!os_sdlevent(&event))
 			continue;
+
+		key_event_reset(&kk, kk.sx, kk.sy);
+
 		sawrep = 0;
 		if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
 			kk.state = KEY_PRESS;
@@ -721,7 +729,7 @@ static void event_loop(void)
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 			if (kk.state == KEY_PRESS) {
-				modkey = event.key.keysym.mod;
+				modkey = SDL_GetModState();
 #if defined(WIN32)
 				win32_get_modkey(&modkey);
 #endif
