@@ -76,18 +76,19 @@ unsigned int memused_samples(void)
 {
 	song_sample_t *s;
 	static unsigned int s_cache;
-	unsigned int q;
+	unsigned int q, qs;
 	int i;
 
 	if (_cache_ok & 8) return s_cache;
 	_cache_ok |= 8;
 
 	q = 0;
-	for (i = 0; i < 99; i++) {
+	for (i = 0; i < MAX_SAMPLES; i++) {
 		s = song_get_sample(i);
-		q += s->length;
-		if (s->flags & CHN_STEREO) q += s->length;
-		if (s->flags & CHN_16BIT) q += s->length;
+		qs = s->length;
+		if (s->flags & CHN_STEREO) qs *= 2;
+		if (s->flags & CHN_16BIT) qs *= 2;
+		q += qs;
 	}
 	return s_cache = q;
 }
@@ -101,7 +102,7 @@ unsigned int memused_instruments(void)
 	_cache_ok |= 16;
 
 	q = 0;
-	for (i = 0; i < 99; i++) {
+	for (i = 0; i < MAX_INSTRUMENTS; i++) {
 		if (csf_instrument_is_empty(current_song->instruments[i])) continue;
 		q += 512;
 	}
