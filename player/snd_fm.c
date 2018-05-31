@@ -385,6 +385,13 @@ void OPL_Touch(int c, unsigned vol)
     // On Testing, ST3 does not alter the modulator volume.
 
     // vol is previously converted to the 0..63 range.
+
+	// Set volume of both operators in additive mode
+	if(D[10] & CONNECTION_BIT)
+		OPL_Byte(KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
+		    (63 + ( (D[2]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
+		);
+
 	OPL_Byte(KSL_LEVEL+   3+Ope, (D[3] & KSL_MASK) |
 	    (63 + ( (D[3]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
 	);
