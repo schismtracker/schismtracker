@@ -797,14 +797,14 @@ static const struct {
 	{2,  7, B, 1, 4, 1 }, // carrier scale envelope flag
 	{2,  8, N, 3, 6, 2 }, // carrier level scaling (This is actually reversed bits...)
 	{2,  9, N, 1, 0, 4 }, // carrier frequency multiplier
-	{2, 10, N, 9, 0, 2 }, // carrier wave select
+	{2, 10, N, 9, 0, 3 }, // carrier wave select
 	{2, 11, B, 1, 6, 1 }, // carrier pitch vibrato
 	{2, 12, B, 1, 7, 1 }, // carrier volume vibrato
 
 	{3,  7, B, 0, 4, 1 }, // modulator scale envelope flag
 	{3,  8, N, 2, 6, 2 }, // modulator level scaling (This is actually reversed bits...)
 	{3,  9, N, 0, 0, 4 }, // modulator frequency multiplier
-	{3, 10, N, 8, 0, 2 }, // modulator wave select
+	{3, 10, N, 8, 0, 3 }, // modulator wave select
 	{3, 11, B, 0, 6, 1 }, // modulator pitch vibrato
 	{3, 12, B, 0, 7, 1 }, // modulator volume vibrato
 };

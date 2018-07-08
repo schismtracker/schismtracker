@@ -432,13 +432,13 @@ void OPL_Patch(int c, const unsigned char *D)
 	OPL_Byte(KSL_LEVEL+        Ope, D[2]);
     OPL_Byte(ATTACK_DECAY+     Ope, D[4]);
     OPL_Byte(SUSTAIN_RELEASE+  Ope, D[6]);
-    OPL_Byte(WAVE_SELECT+      Ope, D[8]&3);// 6 high bits used elsewhere
+    OPL_Byte(WAVE_SELECT+      Ope, D[8]&7);// 5 high bits used elsewhere
 
     OPL_Byte(AM_VIB+         3+Ope, D[1]);
 	OPL_Byte(KSL_LEVEL+      3+Ope, D[3]);
     OPL_Byte(ATTACK_DECAY+   3+Ope, D[5]);
     OPL_Byte(SUSTAIN_RELEASE+3+Ope, D[7]);
-    OPL_Byte(WAVE_SELECT+    3+Ope, D[9]&3);// 6 high bits used elsewhere
+    OPL_Byte(WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
 
     /* feedback, additive synthesis and Panning... */
     OPL_Byte(FEEDBACK_CONNECTION+oplc, 
