@@ -75,8 +75,11 @@ READ_INFO(669) LOAD_SONG(669)
 /* Since so many programs have added noncompatible extensions to the mod format, there are about 30 strings to
 compare against for the magic. Also, there are special cases for WOW files, which even share the same magic
 as plain ProTracker, but are quite different; there are some really nasty heuristics to detect these... ugh,
-ugh, ugh. However, it has to be above the formats with the magic at the beginning... */
-READ_INFO(mod) LOAD_SONG(mod)
+ugh, ugh. However, it has to be above the formats with the magic at the beginning...
+
+This only handles 31-sample mods; 15-sample ones have no identifying
+information and are therefore placed much lower in this list. */
+READ_INFO(mod) LOAD_SONG(mod31)
 
 /* S3M needs to be before a lot of stuff. */
 READ_INFO(s3m) LOAD_SONG(s3m) SAVE_SONG(s3m)
@@ -134,6 +137,9 @@ at all. I might move this toward the top if I can figure out how to identify an 
 #ifdef USE_NON_TRACKED_TYPES
 READ_INFO(mp3)
 #endif
+
+/* 15-sample mods have literally no identifying information */
+READ_INFO(mod) LOAD_SONG(mod15)
 
 /* not really a type, so no info reader for these */
 LOAD_SAMPLE(raw) SAVE_SAMPLE(raw)

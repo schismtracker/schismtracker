@@ -107,8 +107,21 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* loads everything but old 15-instrument mods... yes, even FLT8 and WOW files
    (and the definition of "everything" is always changing) */
+int fmt_mod31_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+{
+	return fmt_mod_load_song(song, fp, lflags, 0);
+}
 
-int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+/* loads everything including old 15-instrument mods. this is a separate
+   function so that it can be called later in the format-checking sequence. */
+int fmt_mod15_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+{
+	return fmt_mod_load_song(song, fp, lflags, 1);
+}
+
+/* force determines whether the loader will force-read untagged files as
+   15-sample mods */
+int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int force)
 {
 	uint8_t tag[4];
 	int n, npat, pat, chan, nchan, nord;
@@ -123,6 +136,7 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t restart;
 	long samplesize = 0;
 	const char *tid = NULL;
+	int nsamples = 31; /* default; tagless mods have 15 */
 
 	/* check the tag (and set the number of channels) -- this is ugly, so don't look */
 	slurp_seek(fp, 1080, SEEK_SET);
@@ -188,6 +202,11 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			tid = "%d Channel TakeTracker";
 		else
 			tid = "%d Channel MOD";
+	} else if (force) {
+		/* some old modules don't have tags, so try loading anyway */
+		nchan = 4;
+		nsamples = 15;
+		tid = "%d Channel MOD";
 	} else {
 		return LOAD_UNSUPPORTED;
 	}
@@ -204,7 +223,7 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->title[20] = 0;
 
 	/* sample headers */
-	for (n = 1; n < 32; n++) {
+	for (n = 1; n < nsamples + 1; n++) {
 		slurp_read(fp, song->samples[n].name, 22);
 		song->samples[n].name[22] = 0;
 
@@ -296,7 +315,8 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	// http://llvm.org/viewvc/llvm-project?view=rev&revision=91888
 	sprintf(song->tracker_id, tid ? tid : "%d Channel MOD", nchan);
-	slurp_seek(fp, 1084, SEEK_SET);
+	/* 15-sample mods don't have a 4-byte tag… or the other 16 samples */
+	slurp_seek(fp, nsamples == 15 ? 600 : 1084, SEEK_SET);
 
 	/* pattern data */
 	if (startrekker) {
@@ -340,7 +360,7 @@ int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
-		for (n = 1; n < 32; n++) {
+		for (n = 1; n < nsamples + 1; n++) {
 			if (song->samples[n].length == 0)
 				continue;
 
