@@ -4,6 +4,7 @@ os:
 - osx
 env:
 - ARTIFACT_FILE="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
+- YEAR=$(date +'%Y')
 matrix:
   include:
   - os: linux
@@ -54,6 +55,7 @@ after_success:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     mkdir -p ./schismtracker/Schism\ Tracker.app/Contents/MacOS
     cp -r ./sys/macosx/Schism_Tracker.app/* ./schismtracker/Schism\ Tracker.app/
+    sed -i '' "s/<string>Copyright<\/string>/<string>Schism Tracker $TRAVIS_TAG Copyright 2003-$YEAR Storlek<\/string>/g" ./schismtracker/Schism\ Tracker.app/Contents/Info.plist
     cp build/schismtracker ./schismtracker/Schism\ Tracker.app/Contents/MacOS/
   else
     cp build/schismtracker \
