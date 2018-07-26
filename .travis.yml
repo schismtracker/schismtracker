@@ -3,8 +3,9 @@ os:
 - linux
 - osx
 env:
-- ARTIFACT_FILE="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
-- YEAR=$(date +'%Y')
+  global:
+  - ARTIFACT_FILE="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
+  - YEAR=$(date +'%Y')
 matrix:
   include:
   - os: linux
