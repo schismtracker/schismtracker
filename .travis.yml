@@ -52,16 +52,16 @@ after_success:
      schismtracker/
 - |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    mkdir -p sys/macosx/Schism_Tracker.app/Contents/MacOS
-    cp build/schismtracker sys/macosx/Schism_Tracker.app/Contents/MacOS/
-    tar -cvzf "$ARTIFACT_FILE" -C $TRAVIS_BUILD_DIR/schismtracker . -C $TRAVIS_BUILD_DIR/sys/macosx Schism_Tracker.app
+    mkdir -p ./schismtracker/Schism\ Tracker.app/Contents/MacOS
+    cp -r ./sys/macosx/Schism_Tracker.app/* ./schismtracker/Schism\ Tracker.app/
+    cp build/schismtracker ./schismtracker/Schism\ Tracker.app/Contents/MacOS/
   else
     cp build/schismtracker \
        sys/posix/schismtracker.1 \
        sys/fd.org/schism.desktop \
        schismtracker/
-    tar -cvzf "$ARTIFACT_FILE" schismtracker
   fi
+  tar -cvzf "$ARTIFACT_FILE" schismtracker
 notifications:
   email:
     on_success: change
