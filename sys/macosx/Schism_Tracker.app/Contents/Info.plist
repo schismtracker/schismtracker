@@ -86,6 +86,8 @@
 	</array>
 	<key>CFBundleGetInfoString</key>
 	<string>Copyright</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright</string>
 	<key>CFBundleIconFile</key>
 	<string>appIcon.icns</string>
 	<key>CFBundleIdentifier</key>
