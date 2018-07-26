@@ -46,16 +46,20 @@ after_success:
 - cd ..
 - mkdir -p schismtracker
 - |
-  cp build/schismtracker README.md COPYING docs/configuration.md \
-    sys/posix/schismtracker.1 schismtracker/
+  cp README.md \
+     COPYING \
+     docs/configuration.md \
+     schismtracker/
 - |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     mkdir -p sys/macosx/Schism_Tracker.app/Contents/MacOS
     cp build/schismtracker sys/macosx/Schism_Tracker.app/Contents/MacOS/
-    cd sys/macosx
-    tar -cvzf "$ARTIFACT_FILE" Schism_Tracker.app
+    tar -cvzf "$ARTIFACT_FILE" -C $TRAVIS_BUILD_DIR/schismtracker . -C $TRAVIS_BUILD_DIR/sys/macosx Schism_Tracker.app
   else
-    cp sys/fd.org/schism.desktop schismtracker/
+    cp build/schismtracker \
+       sys/posix/schismtracker.1 \
+       sys/fd.org/schism.desktop \
+       schismtracker/
     tar -cvzf "$ARTIFACT_FILE" schismtracker
   fi
 notifications:
