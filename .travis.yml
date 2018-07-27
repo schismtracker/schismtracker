@@ -3,7 +3,9 @@ os:
 - linux
 - osx
 env:
-- ARTIFACT_FILE="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
+  global:
+  - ARTIFACT_FILE="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
+  - YEAR=$(date +'%Y')
 matrix:
   include:
   - os: linux
@@ -46,13 +48,23 @@ after_success:
 - cd ..
 - mkdir -p schismtracker
 - |
-  cp build/schismtracker README.md COPYING docs/configuration.md \
-    sys/posix/schismtracker.1 schismtracker/
+  cp README.md \
+     COPYING \
+     docs/configuration.md \
+     schismtracker/
 - |
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    echo "TODO: macosx app"
+    mkdir -p ./schismtracker/Schism\ Tracker.app/Contents/MacOS
+    cp -r ./sys/macosx/Schism_Tracker.app/* ./schismtracker/Schism\ Tracker.app/
+    sed -i '' "s/<string>Copyright<\/string>/<string>Schism Tracker $TRAVIS_TAG Copyright 2003-$YEAR Storlek<\/string>/g" ./schismtracker/Schism\ Tracker.app/Contents/Info.plist
+    sed -i '' "s/<string>CFBundleShortVersionString<\/string>/<string>$TRAVIS_TAG<\/string>/g" ./schismtracker/Schism\ Tracker.app/Contents/Info.plist
+    sed -i '' "s/<string>CFBundleVersion<\/string>/<string>$TRAVIS_BUILD_NUMBER<\/string>/g" ./schismtracker/Schism\ Tracker.app/Contents/Info.plist
+    cp build/schismtracker ./schismtracker/Schism\ Tracker.app/Contents/MacOS/    
   else
-    cp sys/fd.org/schism.desktop schismtracker/
+    cp build/schismtracker \
+       sys/posix/schismtracker.1 \
+       sys/fd.org/schism.desktop \
+       schismtracker/
   fi
 - tar -cvzf "$ARTIFACT_FILE" schismtracker
 notifications:
