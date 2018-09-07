@@ -9,9 +9,9 @@ TryExec=schismtracker
 Exec=schismtracker %f
 Type=Application
 Icon=schism-icon-128
-Categories=Audio;Midi;Sequencer;Player;Music
-MimeType=audio/x-it;audio/x-s3m;audio/x-xm;audio/x-mod
-Keywords=impulse;module;midi;music
+Categories=Audio;Midi;Sequencer;Player;Music;
+MimeType=audio/x-it;audio/x-s3m;audio/x-xm;audio/x-mod;
+Keywords=impulse;module;midi;music;
 
 [Desktop Action Play]
 Name=Schism Tracker (play song)
