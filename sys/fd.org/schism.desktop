@@ -20,3 +20,7 @@ Exec=schismtracker -p %f
 [Desktop Action FontEditor]
 Name=Schism Tracker (font editor)
 Exec=schismtracker --font-editor
+
+[Desktop Action Render WAV]
+Name=Schism Tracker (render song)
+Exec=schismtracker --diskwrite=%f.wav %f
