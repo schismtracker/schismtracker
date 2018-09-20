@@ -6,6 +6,7 @@ env:
   global:
   - ARTIFACT_FILE="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
   - YEAR=$(date +'%Y')
+  - MACOSX_DEPLOYMENT_TARGET=10.11
 matrix:
   include:
   - os: linux
