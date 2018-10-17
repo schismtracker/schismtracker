@@ -40,6 +40,7 @@ before_install:
 install:
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
 before_script:
+- echo $SOURCE_CODE_ARTIFACT
 - cd ..
 - tar --exclude='$TRAVIS_BUILD_DIR/.git' -cvzf $SOURCE_CODE_ARTIFACT $TRAVIS_BUILD_DIR
 - cd $TRAVIS_BUILD_DIR
