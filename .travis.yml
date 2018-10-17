@@ -42,7 +42,7 @@ install:
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
 before_script:
 - echo $SOURCE_CODE_ARTIFACT
-- tar --exclude='$TRAVIS_BUILD_DIR/.git' -cvzf $SOURCE_CODE_ARTIFACT $TRAVIS_BUILD_DIR
+- tar --exclude='$TRAVIS_BUILD_DIR/.git' --exclude='$SOURCE_CODE_ARTIFACT' -cvzf $SOURCE_CODE_ARTIFACT $TRAVIS_BUILD_DIR
 script:
 - autoreconf -i
 - mkdir -p build
