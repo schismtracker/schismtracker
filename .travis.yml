@@ -5,7 +5,7 @@ os:
 env:
   global:
   - BINARIES_ARTIFACT="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
-  - SOURCE_CODE_ARTIFACT="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME_source.tar.gz"
+  - SOURCE_CODE_ARTIFACT="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.source.tar.gz"
   - YEAR=$(date +'%Y')
   - MACOSX_DEPLOYMENT_TARGET=10.11
 matrix:
@@ -41,10 +41,7 @@ install:
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
 before_script:
 - echo $SOURCE_CODE_ARTIFACT
-- cd ..
 - tar --exclude='$TRAVIS_BUILD_DIR/.git' -cvzf $SOURCE_CODE_ARTIFACT $TRAVIS_BUILD_DIR
-- cd $TRAVIS_BUILD_DIR
-- mv ../$SOURCE_CODE_ARTIFACT .
 script:
 - autoreconf -i
 - mkdir -p build
