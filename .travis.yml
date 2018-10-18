@@ -5,7 +5,7 @@ os:
 env:
   global:
   - DIR_NAME=${PWD##*/}
-  - BRANCH=${TRAVIS_BRANCH/\//\-}
+  - BRANCH=${TRAVIS_BRANCH##*/}
   - BINARIES_ARTIFACT="$TRAVIS_BUILD_DIR/build/schismtracker-$BRANCH-$TRAVIS_OS_NAME.tar.gz"
   - SOURCE_CODE_ARTIFACT="schismtracker-${BRANCH}.source.tar.gz"
   - YEAR=$(date +'%Y')
