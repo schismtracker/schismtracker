@@ -4,7 +4,10 @@ os:
 - osx
 env:
   global:
-  - ARTIFACT_FILE="$TRAVIS_BUILD_DIR/build/schismtracker-$TRAVIS_TAG-$TRAVIS_OS_NAME.tar.gz"
+  - DIR_NAME=${PWD##*/}
+  - BRANCH=${TRAVIS_BRANCH##*/}
+  - BINARIES_ARTIFACT="$TRAVIS_BUILD_DIR/build/schismtracker-$BRANCH-$TRAVIS_OS_NAME.tar.gz"
+  - SOURCE_CODE_ARTIFACT="schismtracker-${BRANCH}.source.tar.gz"
   - YEAR=$(date +'%Y')
   - MACOSX_DEPLOYMENT_TARGET=10.11
 matrix:
@@ -38,6 +41,11 @@ before_install:
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
 install:
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl; fi
+before_script:
+- cd ..
+- tar --exclude='schismtracker/.git' -cvzf $SOURCE_CODE_ARTIFACT $DIR_NAME
+- mv $SOURCE_CODE_ARTIFACT $DIR_NAME
+- cd $DIR_NAME
 script:
 - autoreconf -i
 - mkdir -p build
@@ -67,7 +75,7 @@ after_success:
        sys/fd.org/schism.desktop \
        schismtracker/
   fi
-- tar -cvzf "$ARTIFACT_FILE" schismtracker
+- tar -cvzf "$BINARIES_ARTIFACT" schismtracker
 notifications:
   email:
     on_success: change
@@ -76,7 +84,9 @@ deploy:
   provider: releases
   api_key:
     secure: K4vJ1+jbWBRSFcHOAiDNgJ2T0pKbF3ZaEIa7qPXGznE1dYnORndTVz29FBo8/TBhiZEyEPwdOik/CbOp8HhSa1QmLvsRCBTsN/JHquV4eN3Yyvu2Rmj+M7Krj/4zoPA6j00D7uzfrknnAAPpacN3OjhSZNxr9hF3FFcjbP4E7Sa2ixHSuKWAzqm7SayxE6rAi9siDf+QyXnQEgyYZQvVfZ29/7YjYef0o+RGuau9V8ygVx8Ul109dESU0PyLqr785hJA5tIUCwMKvXKQPmRXGNuL7DgYN/MvbVS/GS5gStO8VjEGosABO1f+rVrI6PToS9ffYyG2Mc/KP4orWe6DSGcvhY8u1M6XTznLZOROyPEF9swywkcHIQfKa8smvwW/w/XDgjYBU6ixK+sP9pP/fXGZsQ5mYW8O6IaqeL9zS9qFqjBNiCJEavki5u9FNafEf+tx+oyC2vF0M6kDTL1uWX1fHeg7BayFFoboQ4PFQ1EEx4hf2TY8Pcdbz4BwRI6CJO/Z4QGET6/Dml9ca4PTFxkh5nFkEo7JS9/t+eokPz5Rn4UphjE6MI8YPaNV5D/Ouh9JmXsJ9KjDeoaj7gUId14OJIW4qef5h0FrUJ0CIXej2vOTkGiZLqf/m3t/EKuZxpDV4vL0n/DgctnHpjcyIRJC2/pHkMAnHM0BVbfxu6E=
-  file: "$ARTIFACT_FILE"
+  file:
+    - "$BINARIES_ARTIFACT"
+    - "$SOURCE_CODE_ARTIFACT"
   skip_cleanup: true
   on:
     tags: true
