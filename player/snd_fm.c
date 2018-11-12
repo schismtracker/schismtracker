@@ -63,7 +63,7 @@ fmopl works in 16bits, although tested output used to range +-10000 instead of
     +-20000 from adlibtracker/screamtracker in dosbox. So we need 11 bits + 1 extra bit.
 Also note when comparing volumes, that Screamtracker output on mono with PCM samples is not reduced by half.
 */
-#define OPL_VOLUME 4096
+#define OPL_VOLUME 2274
 
 /*
 The documentation in this file regarding the output ports,
