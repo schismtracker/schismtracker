@@ -191,7 +191,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	// Schism Tracker before 2018-11-12 played AdLib instruments louder than ST3. Compensate by lowering the sample mixing volume.
-	if (adlib && trkvers >= 0x4000 && trckvers < 0x4D33) {
+	if (adlib && trkvers >= 0x4000 && trkvers < 0x4D33) {
 		song->mixing_volume = song->mixing_volume * 2274 / 4096;
 	}
 
