@@ -70,7 +70,7 @@ after_success:
     sed -i '' "s/<string>CFBundleVersion<\/string>/<string>$TRAVIS_BUILD_NUMBER<\/string>/g" ./schismtracker/Schism\ Tracker.app/Contents/Info.plist
     cp build/schismtracker ./schismtracker/Schism\ Tracker.app/Contents/MacOS/    
     cp libs/libSDL-1.2.0.dylib ./schismtracker/Schism\ Tracker.app/Contents/MacOS/
-    install_name_tool -change /usr/local/opt/sdl/lib/libSDL-1.2.0.dylib @executable_path/../libSDL-1.2.0.dylib ./schismtracker/Schism\ Tracker.app/Contents/MacOS/schismtracker
+    install_name_tool -change /usr/local/opt/sdl/lib/libSDL-1.2.0.dylib @executable_path/libSDL-1.2.0.dylib ./schismtracker/Schism\ Tracker.app/Contents/MacOS/schismtracker
   else
     cp build/schismtracker \
        sys/posix/schismtracker.1 \
