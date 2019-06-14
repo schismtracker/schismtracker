@@ -54,7 +54,7 @@ short ver_cwtv;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
 const char *ver_short_copyright =
-	"Copyright (c) 2003-2018 Storlek, Mrs. Brisby et al.";
+	"Copyright (c) 2003-2019 Storlek, Mrs. Brisby et al.";
 const char *ver_short_based_on =
 	"Based on Impulse Tracker by Jeffrey Lim aka Pulse";
 
