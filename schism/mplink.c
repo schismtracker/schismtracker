@@ -695,7 +695,48 @@ void song_wipe_instrument(int n)
 	song_unlock_audio();
 }
 
-void song_delete_instrument(int n)
+// Returns 1 if sample `n` is used by the specified instrument; 0 otherwise.
+static int _song_sample_used_by_instrument(int n, const song_instrument_t *instrument)
+{
+	int i;
+
+	for (i = 0; i < sizeof instrument->sample_map; i++) {
+		if (instrument->sample_map[i] == n) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+// Returns 1 if sample `n` is used by at least two instruments; 0 otherwise.
+static int _song_sample_used_by_many_instruments(int n)
+{
+	const song_instrument_t *instrument;
+	int found;
+	int i;
+
+	found = 0;
+
+	for (i = 1; i < MAX_INSTRUMENTS+1; i++) {
+		instrument = current_song->instruments[i];
+		if (instrument != NULL) {
+			if (_song_sample_used_by_instrument(n, instrument)) {
+				if (found) {
+					return 1;
+				}
+				found = 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+// n: The index of the instrument to delete (base-1).
+// preserve_samples: If 0, delete all samples used by instrument.
+//                   If 1, only delete samples that no other instruments use.
+void song_delete_instrument(int n, int preserve_samples)
 {
 	unsigned long i;
 	int j;
@@ -705,12 +746,14 @@ void song_delete_instrument(int n)
 	// 128?  really?
 	for (i = 0; i < 128; i++) {
 		j = current_song->instruments[n]->sample_map[i];
-		if (j)
-			song_clear_sample(j);
+		if (j) {
+			if (!preserve_samples || !_song_sample_used_by_many_instruments(j)) {
+				song_clear_sample(j);
+			}
+		}
 	}
 	song_wipe_instrument(n);
 }
-
 
 void song_replace_sample(int num, int with)
 {

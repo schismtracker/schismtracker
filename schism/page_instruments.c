@@ -1999,7 +1999,12 @@ static void instrument_save(void)
 
 static void do_delete_inst(UNUSED void *ign)
 {
-	song_delete_instrument(current_instrument);
+	song_delete_instrument(current_instrument, 0);
+}
+
+static void do_delete_inst_preserve(UNUSED void *ign)
+{
+	song_delete_instrument(current_instrument, 1);
 }
 
 static void instrument_list_handle_alt_key(struct key_event *k)
@@ -2032,9 +2037,15 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 		song_wipe_instrument(current_instrument);
 		break;
 	case SDLK_d:
-		dialog_create(DIALOG_OK_CANCEL,
-			"Delete Instrument?",
-			do_delete_inst, NULL, 1, NULL);
+        if (k->mod & KMOD_SHIFT) {
+            dialog_create(DIALOG_OK_CANCEL,
+                "Delete Instrument? (used samples preserved)",
+                do_delete_inst_preserve, NULL, 1, NULL);
+        } else {
+            dialog_create(DIALOG_OK_CANCEL,
+                "Delete Instrument?",
+                do_delete_inst, NULL, 1, NULL);
+        }
 		return;
 	default:
 		return;

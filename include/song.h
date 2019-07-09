@@ -349,7 +349,7 @@ void song_remove_sample_slot(int n);
 void song_insert_instrument_slot(int n);
 void song_remove_instrument_slot(int n);
 
-void song_delete_instrument(int n);
+void song_delete_instrument(int n, int preserve_samples);
 void song_wipe_instrument(int n);
 
 int song_instrument_is_empty(int n);
