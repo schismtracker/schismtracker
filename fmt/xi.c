@@ -128,7 +128,7 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 
 	end = data + length;
 
-	song_delete_instrument(slot);
+	song_delete_instrument(slot, 0);
 
 	g = instrument_loader_init(&ii, slot);
 	memcpy(g->name, xi->name, 22);

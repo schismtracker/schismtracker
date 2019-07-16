@@ -10,6 +10,7 @@
 |   Spacebar        Edit instrument name (ESC to exit)
 |
 |   Alt-D           Delete instrument & all related samples
+|   Alt-Shift-D     Delete instrument & all related unused samples
 :   Alt-L           Post-Loop cut envelope
 |   Alt-N           Toggle Multichannel playback
 |   Alt-O           Save current instrument to disk
