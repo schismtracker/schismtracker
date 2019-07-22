@@ -835,3 +835,7 @@ void message_load_page(struct page *page)
 	widgets_message[0].accept_text = edit_mode;
 }
 
+void message_reset_selection(void)
+{
+	widgets_message[0].clip_start = widgets_message[0].clip_end = 0;
+}

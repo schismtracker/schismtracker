@@ -244,6 +244,7 @@ song_t *song_create_load(const char *file)
 	}
 
 	newsong->stop_at_order = newsong->stop_at_row = -1;
+	message_reset_selection();
 
 	return newsong;
 }

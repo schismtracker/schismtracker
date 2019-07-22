@@ -516,6 +516,9 @@ void status_text_redraw(void);
 int char_digraph(int k1, int k2);
 int char_unicode_to_cp437(unsigned int c);
 
+// page_message.c
+void message_reset_selection(void);
+
 /* --------------------------------------------------------------------- */
 /* dialog crap */
 
