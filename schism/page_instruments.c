@@ -2039,7 +2039,7 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 	case SDLK_d:
         if (k->mod & KMOD_SHIFT) {
             dialog_create(DIALOG_OK_CANCEL,
-                "Delete Instrument? (used samples preserved)",
+                "Delete Instrument? (preserve shared samples)",
                 do_delete_inst_preserve, NULL, 1, NULL);
         } else {
             dialog_create(DIALOG_OK_CANCEL,
