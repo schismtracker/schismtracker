@@ -185,6 +185,16 @@ const char *fmt_strerror(int n)
 	}
 }
 
+// IT uses \r in song messages; replace errant \n's
+void message_convert_newlines(song_t *song) {
+	int i = 0, len = strlen(song->message);
+	for (i = 0; i < len; i++) {
+		if (song->message[i] == '\n') {
+			song->message[i] = '\r';
+		}
+	}
+}
+
 song_t *song_create_load(const char *file)
 {
 	fmt_load_song_func *func;
@@ -244,6 +254,7 @@ song_t *song_create_load(const char *file)
 	}
 
 	newsong->stop_at_order = newsong->stop_at_row = -1;
+	message_convert_newlines(newsong);
 	message_reset_selection();
 
 	return newsong;
