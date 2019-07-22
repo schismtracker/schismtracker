@@ -25,6 +25,10 @@
 
 #include <sys/types.h>
 
+// hurd doesn't have limits.h
+#ifdef __GNU__
+#define PATH_MAX 4096
+#endif
 
 typedef struct disko disko_t;
 struct disko {
