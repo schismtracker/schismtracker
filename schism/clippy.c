@@ -81,7 +81,8 @@ static void _clippy_copy_to_sys(int do_sel)
 		if (!dst) return;
 		for (i = j = 0; _current_selection[i]; i++) {
 			dst[j] = _current_selection[i];
-			if (dst[j] != '\r') j++;
+			if (dst[j] == '\r') dst[j] = '\n';
+			j++;
 		}
 		dst[j] = '\0';
 	} else {
