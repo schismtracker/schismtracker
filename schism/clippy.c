@@ -72,7 +72,21 @@ static void _clippy_copy_to_sys(int do_sel)
 		j = 0;
 	} else
 #if defined(WIN32)
-	j = strlen(_current_selection);
+	{
+		int i;
+		/* need twice the space since newlines are replaced with \r\n */
+		freeme = tmp = malloc(strlen(_current_selection)*2 + 1);
+		if (!tmp) return;
+		for (i = j = 0; _current_selection[i]; i++) {
+			if (_current_selection[i] == '\r' || _current_selection[i] == '\n') {
+				tmp[j++] = '\r';
+				tmp[j++] = '\n';
+			} else {
+				tmp[j++] = _current_selection[i];
+			}
+		}
+		tmp[j] = '\0';
+	}
 #else
 	if (has_sys_clip) {
 		int i;
@@ -125,7 +139,7 @@ static void _clippy_copy_to_sys(int do_sel)
 			dst = (char *)GlobalLock(_hmem);
 			if (dst) {
 				/* this seems wrong, but msdn does this */
-				memcpy(dst, _current_selection, j);
+				memcpy(dst, tmp, j);
 				dst[j] = '\0';
 				GlobalUnlock(_hmem);
 				EmptyClipboard();
