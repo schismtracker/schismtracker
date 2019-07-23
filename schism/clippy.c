@@ -57,11 +57,11 @@ extern void macosx_clippy_put(const char *buf);
 static void _clippy_copy_to_sys(int do_sel)
 {
 	int j;
+	char *tmp;
 	char *dst;
 	char *freeme;
 #if defined(__QNXNTO__)
 	PhClipboardHdr clheader = {Ph_CLIPBOARD_TYPE_TEXT, 0, NULL};
-	char *tmp;
 	int *cldata;
 	int status;
 #endif
