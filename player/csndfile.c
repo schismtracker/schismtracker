@@ -60,7 +60,9 @@ static void _csf_reset(song_t *csf)
 
 	/* This is intentionally crappy quality, so that it's very obvious if it didn't get initialized */
 	csf->mix_flags = 0;
-	csf_set_wave_config(csf, 4000, 8, 1);
+	csf->mix_frequency = 4000;
+	csf->mix_bits_per_sample = 8;
+	csf->mix_channels = 1;
 
 	memset(csf->voices, 0, sizeof(csf->voices));
 	memset(csf->voice_mix, 0, sizeof(csf->voice_mix));
