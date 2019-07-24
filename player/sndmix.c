@@ -21,6 +21,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "song.h"
 #include "sndfile.h"
 #include "snd_fm.h"
 #include "snd_gm.h"
@@ -744,7 +745,7 @@ int csf_init_player(song_t *csf, int reset)
 		global_vu_right = 0;
 	}
 
-	initialize_eq(reset, csf->mix_frequency);
+	song_init_eq(reset, csf->mix_frequency);
 
 	// I don't know why, but this "if" makes it work at the desired sample rate instead of 4000.
 	// the "4000Hz" value comes from csf_reset, but I don't yet understand why the opl keeps that value, if

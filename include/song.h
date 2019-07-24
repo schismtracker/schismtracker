@@ -235,7 +235,7 @@ void audio_init(const char *driver_spec);
 void audio_reinit(void);
 
 /* eq */
-void song_init_eq(int do_reset);
+void song_init_eq(int do_reset, uint32_t mix_freq);
 
 /* --------------------------------------------------------------------- */
 /* playback */

@@ -139,7 +139,7 @@ static void change_eq(void)
 		audio_settings.eq_freq[j] = widgets_preferences[i+2+(j*2)].d.thumbbar.value;
 		audio_settings.eq_gain[j] = widgets_preferences[i+3+(j*2)].d.thumbbar.value;
 	}
-	song_init_eq(1);
+	song_init_eq(1, current_song->mix_frequency);
 }
 
 

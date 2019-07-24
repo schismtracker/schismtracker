@@ -1442,7 +1442,7 @@ void audio_reinit(void)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-void song_init_eq(int do_reset)
+void song_init_eq(int do_reset, uint32_t mix_freq)
 {
 	uint32_t pg[4];
 	uint32_t pf[4];
@@ -1451,10 +1451,10 @@ void song_init_eq(int do_reset)
 	for (i = 0; i < 4; i++) {
 		pg[i] = audio_settings.eq_gain[i];
 		pf[i] = 120 + (((i*128) * audio_settings.eq_freq[i])
-			* (current_song->mix_frequency / 128) / 1024);
+			* (mix_freq / 128) / 1024);
 	}
 
-	set_eq_gains(pg, 4, pf, do_reset, current_song->mix_frequency);
+	set_eq_gains(pg, 4, pf, do_reset, mix_freq);
 }
 
 
