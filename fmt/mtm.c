@@ -91,7 +91,7 @@ static void mtm_unpack_track(const uint8_t *b, song_note_t *note, int rows)
 int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	uint8_t b[192];
-	uint16_t ntrk, nchan, nord, npat, nsmp;
+	int16_t ntrk, nchan, nord, npat, nsmp; // signed so that EOF is -1
 	uint16_t comment_len;
 	int n, pat, chan, smp, rows, todo = 0;
 	song_note_t *note;
@@ -120,6 +120,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	rows = slurp_getc(fp); /* beats per track (translation: number of rows in every pattern) */
 	if (rows != 64)
 		todo |= 64;
+	rows = MIN(rows, 64);
 	nchan = slurp_getc(fp);
 	for (n = 0; n < 32; n++) {
 		int pan = slurp_getc(fp) & 0xf;
@@ -131,6 +132,11 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		song->channels[n].flags = CHN_MUTE;
 
 	for (n = 1, sample = song->samples + 1; n <= nsmp; n++, sample++) {
+		if (n > MAX_SAMPLES) {
+			slurp_seek(fp, 37, SEEK_CUR);
+			continue;
+		}
+
 		/* IT truncates .mtm sample names at the first \0 rather than the normal behavior
 		of presenting them as spaces (k-achaet.mtm has some "junk" in the sample text) */
 		char name[23];
@@ -219,7 +225,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
-		for (smp = 1; smp <= nsmp; smp++) {
+		for (smp = 1; smp <= nsmp && smp <= MAX_SAMPLES; smp++) {
 			uint32_t ssize;
 
 			if (song->samples[smp].length == 0)
