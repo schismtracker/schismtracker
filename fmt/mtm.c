@@ -131,6 +131,10 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (n = nchan; n < MAX_CHANNELS; n++)
 		song->channels[n].flags = CHN_MUTE;
 
+	/* samples */
+	if (nsmp > MAX_SAMPLES) {
+		log_appendf(4, " Warning: Too many samples");
+	}
 	for (n = 1, sample = song->samples + 1; n <= nsmp; n++, sample++) {
 		if (n > MAX_SAMPLES) {
 			slurp_seek(fp, 37, SEEK_CUR);
@@ -186,6 +190,9 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	/* patterns */
+	if (npat >= MAX_PATTERNS) {
+		log_appendf(4, " Warning: Too many patterns");
+	}
 	for (pat = 0; pat <= npat; pat++) {
 		// skip ones that can't be loaded
 		if (pat >= MAX_PATTERNS) {
