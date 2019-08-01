@@ -91,8 +91,8 @@ static void mtm_unpack_track(const uint8_t *b, song_note_t *note, int rows)
 int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	uint8_t b[192];
-	int16_t ntrk, nchan, nord, npat, nsmp; // signed so that EOF is -1
-	uint16_t comment_len;
+	uint8_t nchan, nord, npat, nsmp;
+	uint16_t ntrk, comment_len;
 	int n, pat, chan, smp, rows, todo = 0;
 	song_note_t *note;
 	uint16_t tmp;
@@ -122,6 +122,11 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		todo |= 64;
 	rows = MIN(rows, 64);
 	nchan = slurp_getc(fp);
+
+	if (slurp_eof(fp)) {
+		return LOAD_FORMAT_ERROR;
+	}
+
 	for (n = 0; n < 32; n++) {
 		int pan = slurp_getc(fp) & 0xf;
 		pan = SHORT_PANNING(pan);
@@ -130,10 +135,6 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	for (n = nchan; n < MAX_CHANNELS; n++)
 		song->channels[n].flags = CHN_MUTE;
-
-	if (slurp_eof(fp)) {
-		return LOAD_FORMAT_ERROR;
-	}
 
 	/* samples */
 	if (nsmp > MAX_SAMPLES) {
