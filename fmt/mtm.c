@@ -187,6 +187,12 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	/* patterns */
 	for (pat = 0; pat <= npat; pat++) {
+		// skip ones that can't be loaded
+		if (pat >= MAX_PATTERNS) {
+			slurp_seek(fp, 64, SEEK_CUR);
+			continue;
+		}
+
 		song->patterns[pat] = csf_allocate_pattern(MAX(rows, 32));
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
 		tracknote = trackdata[n];
