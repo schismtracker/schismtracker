@@ -472,7 +472,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	song->pan_separation = 64;
-	memset(song->orderlist + plen, ORDER_LAST, MAX_ORDERS - plen);
+	memset(song->orderlist + plen, ORDER_LAST, MAX(0, MAX_ORDERS - plen));
 	strcpy(song->tracker_id, "Amiga Oktalyzer");
 
 	return LOAD_SUCCESS;

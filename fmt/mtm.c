@@ -131,6 +131,10 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (n = nchan; n < MAX_CHANNELS; n++)
 		song->channels[n].flags = CHN_MUTE;
 
+	if (slurp_eof(fp)) {
+		return LOAD_FORMAT_ERROR;
+	}
+
 	/* samples */
 	if (nsmp > MAX_SAMPLES) {
 		log_appendf(4, " Warning: Too many samples");
