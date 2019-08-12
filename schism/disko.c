@@ -828,7 +828,7 @@ static int disko_finish(void)
 			strcpy(strrchr(fmt, '%'), "ten seconds flat");
 		}
 		log_appendf(5, fmt,
-			((double) samples_0 * (disko_output_bits / 8) * disko_output_channels * num_files) / 1048576.0,
+			((double) samples_0 * (disko_output_bits / 8) * export_dwsong.mix_channels * num_files) / 1048576.0,
 			samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
 			elapsed);
 		break;
