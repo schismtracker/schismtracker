@@ -24,7 +24,7 @@ struct it_file {
 	uint8_t pwd;
 	uint16_t msglength;
 	uint32_t msgoffset;
-	uint32_t reserved2;
+	uint32_t reserved;
 	uint8_t chnpan[64];
 	uint8_t chnvol[64];
 };

@@ -679,7 +679,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	} else if ((hdr.cwtv >> 12) == 1) {
 		tid = NULL;
 		strcpy(song->tracker_id, "Schism Tracker ");
-		ver_decode_cwtv(hdr.cwtv, song->tracker_id + strlen(song->tracker_id));
+		ver_decode_cwtv(hdr.cwtv, hdr.reserved, song->tracker_id + strlen(song->tracker_id));
 	} else if ((hdr.cwtv >> 12) == 0 && hist != 0 && hdr.reserved != 0) {
 		// early catch to exclude possible false positives without repeating a bunch of stuff.
 	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0200 && hdr.flags == 9 && hdr.special == 0

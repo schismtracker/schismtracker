@@ -49,8 +49,10 @@ chosen epoch, there can be plenty of room for the foreseeable future.
 	0x052 = (0x052 - 0x050) + 2009-10-31 = 2009-11-02
 	0x14f = (0x14f - 0x050) + 2009-10-31 = 2010-07-13
 	0xffe = (0xfff - 0x050) + 2009-10-31 = 2020-10-27
-  = 0xfff: a non-value indicating a date after 2020-10-27 (assuming Schism Tracker still exists then) */
-short ver_cwtv;
+  = 0xfff: a non-value indicating a date after 2020-10-27. in this case, the full version number is stored in a reserved header field.
+           this field follows the same format, using the same epoch, but without adding 0x50. */
+unsigned short ver_cwtv;
+unsigned short ver_reserved;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
 const char *ver_short_copyright =
@@ -123,6 +125,7 @@ void ver_init(void)
 	epoch_sec = mktime(&epoch);
 	version_sec = mktime(&version);
 	ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
+	ver_reserved = ver_cwtv < 0xfff ? 0 : (ver_cwtv - 0x050);
 	ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
 
 	/* show build date if we don't know last commit date (no git) */
@@ -137,7 +140,7 @@ void ver_init(void)
 	top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
 }
 
-void ver_decode_cwtv(uint16_t cwtv, char *buf)
+void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf)
 {
 	struct tm version;
 	time_t version_sec;
@@ -145,7 +148,7 @@ void ver_decode_cwtv(uint16_t cwtv, char *buf)
 	cwtv &= 0xfff;
 	if (cwtv > 0x050) {
 		// Annoyingly, mktime uses local time instead of UTC. Why etc.
-		version_sec = ((cwtv - 0x050) * 86400) + epoch_sec;
+		version_sec = ((cwtv < 0xfff ? (cwtv - 0x050) : reserved) * 86400) + epoch_sec;
 		if (localtime_r(&version_sec, &version)) {
 			sprintf(buf, "%04d-%02d-%02d",
 				version.tm_year + 1900, version.tm_mon + 1, version.tm_mday);

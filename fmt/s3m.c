@@ -80,6 +80,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t trkvers;
 	uint16_t flags;
 	uint16_t special;
+	uint16_t reserved;
 	uint32_t adlib = 0; // bitset
 	int uc;
 	const char *tid = NULL;
@@ -140,10 +141,11 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (slurp_getc(fp) != 0xfc)
 		misc &= ~S3M_CHANPAN;     /* stored pan values */
 
-	/* Interesting: Impulse Tracker appears to leave some junk data in this unused section, and what's
-	more, it always seems to follow the same general pattern. So it's actually possible to identify
-	whether a song was saved in IT, then loaded and re-saved in ST3. */
-	slurp_seek(fp, 8, SEEK_CUR);
+	/* Extended Schism Tracker version information */
+	slurp_read(fp, &reserved, 2);
+	reserved = bswapLE16(reserved);
+	/* Impulse Tracker hides its edit timer in the next four bytes. */
+	slurp_seek(fp, 6, SEEK_CUR);
 	slurp_read(fp, &special, 2); // field not used by st3
 	special = bswapLE16(special);
 
@@ -415,7 +417,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		case 4:
 			tid = NULL;
 			strcpy(song->tracker_id, "Schism Tracker ");
-			ver_decode_cwtv(trkvers, song->tracker_id + strlen(song->tracker_id));
+			ver_decode_cwtv(trkvers, reserved, song->tracker_id + strlen(song->tracker_id));
 			break;
 		case 5:
 			tid = "OpenMPT %d.%02x";
@@ -492,7 +494,9 @@ struct s3m_header {
 	uint16_t flags, cwtv, ffi; // 0, 0x4nnn, 2 for unsigned
 	char scrm[4]; // "SCRM"
 	uint8_t gv, is, it, mv, uc, dp; // gv is half range of IT, uc should be 8/12/16, dp is 252
-	uint8_t junk[10]; // last 2 bytes are "special", which means "more junk"
+	uint16_t reserved; // extended version information is stored here
+	uint32_t reserved2; // Impulse Tracker hides its edit timer here
+	uint8_t junk[4]; // last 2 bytes are "special", which means "more junk"
 };
 
 struct s3i_header {
@@ -899,6 +903,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 		hdr.mv |= 128;
 	hdr.uc = 16; // ultraclick (the "Waste GUS channels" option)
 	hdr.dp = 252;
+	hdr.reserved = bswapLE16(ver_reserved);
 
 	/* The sample data parapointers are 24+4 bits, whereas pattern data and sample headers are only 16+4
 	bits -- so while the sample data can be written up to 268 MB within the file (starting at 0xffffff0),

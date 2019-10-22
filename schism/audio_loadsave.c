@@ -692,7 +692,7 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
 		hdr.msgoffset = bswapLE32(extra + 0xc0 + nord + 4 * (nins + nsmp + npat));
 		hdr.msglength = bswapLE16(msglen);
 	}
-	// hdr.reserved2
+	hdr.reserved = bswapLE32(ver_reserved);
 
 	for (n = 0; n < 64; n++) {
 		hdr.chnpan[n] = ((current_song->channels[n].flags & CHN_SURROUND)
