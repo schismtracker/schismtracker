@@ -26,7 +26,8 @@
 /* various boilerplate defined in version.c */
 extern const char *ver_short_copyright;
 extern const char *ver_short_based_on;
-extern short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
+extern unsigned short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
+extern unsigned short ver_reserved; /* full version number in case 12 bits are not enough */
 
 extern const char *schism_banner(int classic)
 	__attribute__((pure));
@@ -34,8 +35,8 @@ extern const char *schism_banner(int classic)
 /* little hack, need to call this at startup */
 void ver_init(void);
 
-/* get yyyy-mm-dd or 0.nn version from cwtv (buf should be >=11 chars) */
-void ver_decode_cwtv(uint16_t cwtv, char *buf);
+/* get yyyy-mm-dd or 0.nn version from cwtv + reserved (buf should be >=11 chars) */
+void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf);
 
 #endif
 
