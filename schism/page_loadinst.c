@@ -371,7 +371,9 @@ static void do_delete_file(UNUSED void *data)
 
 static int file_list_handle_key(struct key_event * k)
 {
+	dmoz_file_t *f;
 	int new_file = current_file;
+	int c = unicode_to_ascii(k->unicode);
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
@@ -386,64 +388,34 @@ static int file_list_handle_key(struct key_event * k)
 				new_file = top_file + (k->y - 13);
 			}
 		}
-	} else if (slash_search_mode > -1) {
-		int c = unicode_to_ascii(k->unicode);
-		if (k->sym == SDLK_RETURN || k->sym == SDLK_ESCAPE) {
+	}
+	switch (k->sym) {
+	case SDLK_UP:           new_file--; slash_search_mode = -1; break;
+	case SDLK_DOWN:         new_file++; slash_search_mode = -1; break;
+	case SDLK_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
+	case SDLK_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
+	case SDLK_HOME:         new_file = 0; slash_search_mode = -1; break;
+	case SDLK_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
+
+	case SDLK_ESCAPE:
+		if (slash_search_mode < 0) {
+			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
+				set_page(PAGE_SAMPLE_LIST);
+			return 1;
+		} /* else fall through */
+	case SDLK_RETURN:
+		if (slash_search_mode < 0) {
+			if (k->state == KEY_PRESS)
+				return 0;
+			handle_enter_key();
+			slash_search_mode = -1;
+		} else {
 			if (k->state == KEY_PRESS)
 				return 1;
 			slash_search_mode = -1;
 			status.flags |= NEED_UPDATE;
 			return 1;
-		} else if (k->sym == SDLK_BACKSPACE) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			slash_search_mode--;
-			status.flags |= NEED_UPDATE;
-			reposition_at_slash_search();
-			return 1;
-		} else if (c >= 32) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			if (slash_search_mode < PATH_MAX) {
-				slash_search_str[ slash_search_mode ] = c;
-				slash_search_mode++;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
 		}
-	}
-
-	switch (k->sym) {
-	case SDLK_UP:
-		new_file--;
-		slash_search_mode = -1;
-		break;
-	case SDLK_DOWN:
-		new_file++;
-		slash_search_mode = -1;
-		break;
-	case SDLK_PAGEUP:
-		new_file -= 35;
-		slash_search_mode = -1;
-		break;
-	case SDLK_PAGEDOWN:
-		new_file += 35;
-		slash_search_mode = -1;
-		break;
-	case SDLK_HOME:
-		new_file = 0;
-		slash_search_mode = -1;
-		break;
-	case SDLK_END:
-		new_file = flist.num_files - 1;
-		slash_search_mode = -1;
-		break;
-	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 0;
-		handle_enter_key();
-		slash_search_mode = -1;
 		return 1;
 	case SDLK_DELETE:
 		if (k->state == KEY_RELEASE)
@@ -452,23 +424,40 @@ static int file_list_handle_key(struct key_event * k)
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SDLK_ESCAPE:
-		slash_search_mode = -1;
-		if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
-			set_page(PAGE_INSTRUMENT_LIST);
-		return 1;
-	case SDLK_SLASH:
-		if (k->orig_sym == SDLK_SLASH) {
-			if (status.flags & CLASSIC_MODE) return 0;
+	case SDLK_BACKSPACE:
+		if (slash_search_mode > -1) {
 			if (k->state == KEY_RELEASE)
-				return 0;
-			slash_search_mode = 0;
+				return 1;
+			slash_search_mode--;
 			status.flags |= NEED_UPDATE;
+			reposition_at_slash_search();
 			return 1;
 		}
-	default:
-		if (k->mouse == MOUSE_NONE)
+	case SDLK_SLASH:
+		if (slash_search_mode < 0) {
+			if (k->orig_sym == SDLK_SLASH) {
+				if (k->state == KEY_PRESS)
+					return 0;
+				slash_search_mode = 0;
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
 			return 0;
+		} /* else fall through */
+	default:
+		f = flist.files[current_file];
+		if (c >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+			if (slash_search_mode < 0) slash_search_mode = 0;
+			if (slash_search_mode < PATH_MAX) {
+				slash_search_str[slash_search_mode++] = c;
+				reposition_at_slash_search();
+				status.flags |= NEED_UPDATE;
+			}
+			return 1;
+		}
+		if (!k->mouse) return 0;
 	}
 
 	if (k->mouse == MOUSE_CLICK) {
@@ -484,7 +473,6 @@ static int file_list_handle_key(struct key_event * k)
 	}
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
-	if (new_file < 0) new_file = 0;
 	if (new_file != current_file) {
 		current_file = new_file;
 		file_list_reposition();
