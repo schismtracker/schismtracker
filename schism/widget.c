@@ -417,12 +417,9 @@ void togglebutton_set(struct widget *p_widgets, int widget, int do_callback)
 
 	if (!group) return; /* assert */
 
-	for (i = 0; group[i] >= 0; i++) {
+	for (i = 0; group[i] >= 0; i++)
 		p_widgets[group[i]].d.togglebutton.state = 0;
-		p_widgets[group[i]].depressed = 0;
-	}
 	p_widgets[widget].d.togglebutton.state = 1;
-	p_widgets[widget].depressed = 1;
 
 	if (do_callback) {
 		if (p_widgets[widget].changed)
