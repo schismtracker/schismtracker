@@ -898,7 +898,14 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	hdr.gv = song->initial_global_volume / 2;
 	hdr.is = song->initial_speed;
 	hdr.it = song->initial_tempo;
-	hdr.mv = song->mixing_volume;
+
+	/* .S3M "MasterVolume" only supports 0x10 .. 0x7f,
+	 * if we save 0x80, the schism max volume, it becomes zero in S3M.
+	 * I didn't test to see what ScreamTracker does if a value below 0x10
+	 * is loaded into it, but its UI prevents setting below 0x10.
+	 * Just enforce both bounds here.
+	 */
+	hdr.mv = MIN(MAX(0x10, song->mixing_volume), 0x7f);
 	if (!(song->flags & SONG_NOSTEREO))
 		hdr.mv |= 128;
 	hdr.uc = 16; // ultraclick (the "Waste GUS channels" option)
