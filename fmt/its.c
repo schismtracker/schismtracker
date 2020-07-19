@@ -95,15 +95,12 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 
 	// endianness (always little)
 	format = SF_LE;
+	// channels
+	format |= (its->flags & 4) ? SF_SS : SF_M;
 	if (its->flags & 8) {
-		// no such thing as compressed stereo
-		// (TODO perhaps test with various players to see how this is implemented)
-		format |= SF_M;
 		// compression algorithm
 		format |= (its->cvt & 4) ? SF_IT215 : SF_IT214;
 	} else {
-		// channels
-		format |= (its->flags & 4) ? SF_SS : SF_M;
 		// signedness (or delta?)
 		format |= (its->cvt & 4) ? SF_PCMD : (its->cvt & 1) ? SF_PCMS : SF_PCMU;
 	}
