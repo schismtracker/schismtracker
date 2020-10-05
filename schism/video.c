@@ -174,8 +174,7 @@ struct video_cf {
 		int type;
 #define VIDEO_SURFACE           0
 #define VIDEO_DDRAW             1
-#define VIDEO_YUV               2
-#define VIDEO_GL                3
+#define VIDEO_GL                2
 	} desktop;
 	struct {
 		unsigned int pitch;
@@ -197,10 +196,8 @@ struct video_cf {
 		DDBLTFX fx;
 	} ddblit;
 #endif
-	unsigned int yuvlayout;
 	SDL_Rect clip;
 	SDL_Surface * surface;
-	SDL_Overlay * overlay;
 	/* to convert 32-bit color to 24-bit color */
 	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 	/* for tv mode */
@@ -210,10 +207,6 @@ struct video_cf {
 		unsigned int y;
 		int visible;
 	} mouse;
-
-	unsigned int yuv_y[256];
-	unsigned int yuv_u[256];
-	unsigned int yuv_v[256];
 
 	unsigned int pal[256];
 
@@ -306,8 +299,6 @@ const char *video_driver_name(void)
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
 		return "sdl";
-	case VIDEO_YUV:
-		return "yuv";
 	case VIDEO_GL:
 		return "opengl";
 	case VIDEO_DDRAW:
@@ -319,24 +310,6 @@ const char *video_driver_name(void)
 
 void video_report(void)
 {
-	struct {
-		unsigned int num;
-		const char *name, *type;
-	} yuv_layouts[] = {
-		{VIDEO_YUV_IYUV, "IYUV", "planar"},
-		{VIDEO_YUV_YV12_TV, "YV12", "planar+tv"},
-		{VIDEO_YUV_IYUV_TV, "IYUV", "planar+tv"},
-		{VIDEO_YUV_YVYU, "YVYU", "packed"},
-		{VIDEO_YUV_UYVY, "UYVY", "packed"},
-		{VIDEO_YUV_YUY2, "YUY2", "packed"},
-		{VIDEO_YUV_RGBA, "RGBA", "packed"},
-		{VIDEO_YUV_RGBT, "RGBT", "packed"},
-		{VIDEO_YUV_RGB565, "RGB565", "packed"},
-		{VIDEO_YUV_RGB24, "RGB24", "packed"},
-		{VIDEO_YUV_RGB32, "RGB32", "packed"},
-		{0, NULL, NULL},
-	}, *layout = yuv_layouts;
-
 	log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
 
 	switch (video.desktop.type) {
@@ -349,17 +322,6 @@ void video_report(void)
 		log_appendf(5, " Display format: %d bits/pixel", video.surface->format->BitsPerPixel);
 		break;
 
-	case VIDEO_YUV:
-		/* if an overlay isn't hardware accelerated, what is it? I guess this works */
-		log_appendf(5, " %s-accelerated video overlay",
-			video.overlay->hw_overlay ? "Hardware" : "Non");
-		while (video.yuvlayout != layout->num && layout->name != NULL)
-			layout++;
-		if (layout->name)
-			log_appendf(5, " Display format: %s (%s)", layout->name, layout->type);
-		else
-			log_appendf(5, " Display format: %x", video.yuvlayout);
-		break;
 	case VIDEO_GL:
 		log_appendf(5, " %s%s OpenGL interface",
 			(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
@@ -446,40 +408,6 @@ void video_setup(const char *driver)
 	video.draw.height = NATIVE_SCREEN_HEIGHT;
 	video.mouse.visible = MOUSE_EMULATED;
 
-	video.yuvlayout = VIDEO_YUV_NONE;
-	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
-		if (strcasecmp(q, "YUY2") == 0
-		|| strcasecmp(q, "YUNV") == 0
-		|| strcasecmp(q, "V422") == 0
-		|| strcasecmp(q, "YUYV") == 0) {
-			video.yuvlayout = VIDEO_YUV_YUY2;
-		} else if (strcasecmp(q, "UYVY") == 0) {
-			video.yuvlayout = VIDEO_YUV_UYVY;
-		} else if (strcasecmp(q, "YVYU") == 0) {
-			video.yuvlayout = VIDEO_YUV_YVYU;
-		} else if (strcasecmp(q, "YV12") == 0) {
-			video.yuvlayout = VIDEO_YUV_YV12;
-		} else if (strcasecmp(q, "IYUV") == 0) {
-			video.yuvlayout = VIDEO_YUV_IYUV;
-		} else if (strcasecmp(q, "YV12/2") == 0) {
-			video.yuvlayout = VIDEO_YUV_YV12_TV;
-		} else if (strcasecmp(q, "IYUV/2") == 0) {
-			video.yuvlayout = VIDEO_YUV_IYUV_TV;
-		} else if (strcasecmp(q, "RGBA") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGBA;
-		} else if (strcasecmp(q, "RGBT") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGBT;
-		} else if (strcasecmp(q, "RGB565") == 0 || strcasecmp(q, "RGB2") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGB565;
-		} else if (strcasecmp(q, "RGB24") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGB24;
-		} else if (strcasecmp(q, "RGB32") == 0 || strcasecmp(q, "RGB") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGB32;
-		} else if (sscanf(q, "%x", &video.yuvlayout) != 1) {
-			video.yuvlayout = 0;
-		}
-	}
-
 	q = getenv("SCHISM_DEBUG");
 	if (q && strstr(q,"doublebuf")) {
 		video.desktop.doublebuf = 1;
@@ -500,10 +428,6 @@ void video_setup(const char *driver)
 	} else if (!strcasecmp(driver, "sdlddraw")) {
 		putenv("SDL_VIDEODRIVER=directx");
 	}
-#elif defined(GEKKO)
-	if (!driver) {
-		driver = "yuv";
-	}
 #else
 	if (!driver) {
 		if (getenv("DISPLAY")) {
@@ -515,19 +439,8 @@ void video_setup(const char *driver)
 #endif
 
 	video.desktop.fb_hacks = 0;
-	/* get xv info */
-	if (video.yuvlayout == VIDEO_YUV_NONE)
-		video.yuvlayout = os_yuvlayout();
-	if ((video.yuvlayout != VIDEO_YUV_YV12_TV
-	&& video.yuvlayout != VIDEO_YUV_IYUV_TV
-	&& video.yuvlayout != VIDEO_YUV_NONE && 0) /* don't do this until we figure out how to make it better */
-			 && !strcasecmp(driver, "x11")) {
-		video.desktop.want_type = VIDEO_YUV;
-		putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
-		putenv((char *) "SDL_VIDEO_YUV_HWACCEL=1");
-		putenv((char *) "SDL_VIDEODRIVER=x11");
 #ifdef USE_X11
-	} else if (!strcasecmp(driver, "dga")) {
+	if (!strcasecmp(driver, "dga")) {
 		putenv((char *) "SDL_VIDEODRIVER=dga");
 		video.desktop.want_type = VIDEO_SURFACE;
 	} else if (!strcasecmp(driver, "directfb")) {
@@ -558,11 +471,6 @@ void video_setup(const char *driver)
 		video.desktop.want_type = VIDEO_SURFACE;
 		video.desktop.fb_hacks = 1;
 
-	} else if (video.yuvlayout != VIDEO_YUV_NONE && !strcasecmp(driver, "yuv")) {
-		video.desktop.want_type = VIDEO_YUV;
-		putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
-		putenv((char *) "SDL_VIDEO_YUV_HWACCEL=1");
-		/* leave everything else alone... */
 	} else if (!strcasecmp(driver, "dummy")
 	|| !strcasecmp(driver, "null")
 	|| !strcasecmp(driver, "none")) {
@@ -792,14 +700,6 @@ SKIP1:
 	video.desktop.height = y;
 
 	switch (video.desktop.want_type) {
-	case VIDEO_YUV:
-#ifdef MACOSX
-		video.desktop.swsurface = 1;
-#else
-		video.desktop.swsurface = 0;
-#endif
-		break;
-
 	case VIDEO_GL:
 #ifdef MACOSX
 		video.desktop.swsurface = 1;
@@ -1007,96 +907,6 @@ RETRYSURF:      /* use SDL surfaces */
 		_setup_surface(width, height, 0);
 		video.desktop.type = VIDEO_SURFACE;
 		break;
-
-	case VIDEO_YUV:
-		if (video.overlay) {
-			SDL_FreeYUVOverlay(video.overlay);
-			video.overlay = NULL;
-		}
-		_setup_surface(width, height, 0);
-		/* TODO: switch? */
-		switch (video.yuvlayout) {
-		case VIDEO_YUV_YV12_TV:
-			video.overlay = SDL_CreateYUVOverlay
-				(NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-				 SDL_YV12_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_IYUV_TV:
-			video.overlay = SDL_CreateYUVOverlay
-				(NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-				 SDL_IYUV_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_YV12:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 2 * NATIVE_SCREEN_HEIGHT,
-				 SDL_YV12_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_IYUV:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 2 * NATIVE_SCREEN_HEIGHT,
-				 SDL_IYUV_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_UYVY:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 SDL_UYVY_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_YVYU:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 SDL_YVYU_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_YUY2:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 SDL_YUY2_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_RGBA:
-		case VIDEO_YUV_RGB32:
-			video.overlay = SDL_CreateYUVOverlay
-				(4*NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 video.yuvlayout, video.surface);
-			break;
-		case VIDEO_YUV_RGB24:
-			video.overlay = SDL_CreateYUVOverlay
-				(3*NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 video.yuvlayout, video.surface);
-			break;
-		case VIDEO_YUV_RGBT:
-		case VIDEO_YUV_RGB565:
-			video.overlay = SDL_CreateYUVOverlay
-				(2*NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 video.yuvlayout, video.surface);
-			break;
-
-		default:
-			/* unknown layout */
-			goto RETRYSURF;
-		}
-		if (!video.overlay) {
-			/* can't get an overlay */
-			goto RETRYSURF;
-		}
-		switch (video.overlay->planes) {
-		case 3:
-		case 1:
-			break;
-		default:
-			/* can't get a recognized planes */
-			SDL_FreeYUVOverlay(video.overlay);
-			video.overlay = NULL;
-			goto RETRYSURF;
-		};
-		video.desktop.type = VIDEO_YUV;
-		break;
 #if defined(USE_OPENGL)
 	case VIDEO_GL:
 		_set_gl_attributes();
@@ -1184,100 +994,7 @@ RETRYSURF:      /* use SDL surfaces */
 
 	status.flags |= (NEED_UPDATE);
 }
-static void _make_yuv(unsigned int *y, unsigned int *u, unsigned int *v,
-						int rgb[3])
-{
-	double red, green, blue, yy, cr, cb, ry, ru, rv;
-	int r = rgb[0];
-	int g = rgb[1];
-	int b = rgb[2];
 
-	red = (double)r / 255.0;
-	green = (double)g / 255.0;
-	blue = (double)b / 255.0;
-	yy = 0.299 * red + 0.587 * green + 0.114 * blue;
-	cb = blue - yy;
-	cr = red - yy;
-	ry = 16.0 + 219.0 * yy;
-	ru = 128.0 + 126.0 * cb;
-	rv = 128.0 + 160.0 * cr;
-	*y = (uint8_t) ry;
-	*u = (uint8_t) ru;
-	*v = (uint8_t) rv;
-}
-static void _yuv_pal(int i, int rgb[3])
-{
-	unsigned int y,u,v;
-	_make_yuv(&y, &u, &v, rgb);
-	switch (video.yuvlayout) {
-	/* planar modes */
-	case VIDEO_YUV_YV12:
-	case VIDEO_YUV_IYUV:
-		/* this is fake; we simply record the infomration here */
-		video.yuv_y[i] = y|(y<<8);
-		video.yuv_u[i] = u;
-		video.yuv_v[i] = v;
-		break;
-
-	/* tv planar modes */
-	case VIDEO_YUV_YV12_TV:
-	case VIDEO_YUV_IYUV_TV:
-		/* _blitTV */
-		video.yuv_y[i] = y;
-		video.yuv_u[i] = (u >> 4) & 0xF;
-		video.yuv_v[i] = (v >> 4) & 0xF;
-		break;
-
-	/* packed modes */
-	case VIDEO_YUV_YVYU:
-		/* y0 v0 y1 u0 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-		video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
-#else
-		video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
-#endif
-		break;
-	case VIDEO_YUV_UYVY:
-		/* u0 y0 v0 y1 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-		video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
-#else
-		video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
-#endif
-		break;
-	case VIDEO_YUV_YUY2:
-		/* y0 u0 y1 v0 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-		video.pal[i] = v | (y << 8) | (u << 16) | (y << 24);
-#else
-		video.pal[i] = y | (u << 8) | (y << 16) | (v << 24);
-#endif
-		break;
-	case VIDEO_YUV_RGBA:
-	case VIDEO_YUV_RGB32:
-		video.pal[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (255 << 24);
-		break;
-	case VIDEO_YUV_RGB24:
-		video.pal[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16);
-		break;
-	case VIDEO_YUV_RGBT:
-		video.pal[i] =
-			((rgb[0] <<  8) & 0x7c00)
-		|       ((rgb[1] <<  3) & 0x3e0)
-		|       ((rgb[2] >>  2) & 0x1f);
-		break;
-	case VIDEO_YUV_RGB565:
-		video.pal[i] =
-			((rgb[0] <<  9) & 0xf800)
-		|       ((rgb[1] <<  4) & 0x7e0)
-		|       ((rgb[2] >>  2) & 0x1f);
-		break;
-	};
-}
 static void _sdl_pal(int i, int rgb[3])
 {
 	video.pal[i] = SDL_MapRGB(video.surface->format,
@@ -1356,9 +1073,6 @@ void video_colors(unsigned char palette[16][3])
 		/* fall through */
 	case VIDEO_DDRAW:
 		fun = _sdl_pal;
-		break;
-	case VIDEO_YUV:
-		fun = _yuv_pal;
 		break;
 	case VIDEO_GL:
 		fun = _gl_pal;
@@ -1650,44 +1364,6 @@ static void _blit11(int bpp, unsigned char *pixels, unsigned int pitch,
 	};
 }
 
-static void _video_blit_planar(void) {
-	SDL_LockYUVOverlay(video.overlay);
-	vgamem_lock();
-
-	switch (video.yuvlayout) {
-	case VIDEO_YUV_YV12_TV:
-		/* halfwidth Y+V+U */
-		_blitUV(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
-		_blitTV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
-		_blitTV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
-		break;
-	case VIDEO_YUV_IYUV_TV:
-		/* halfwidth Y+U+V */
-		_blitUV(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
-		_blitTV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);
-		_blitTV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_v);
-		break;
-
-	case VIDEO_YUV_YV12:
-		/* Y+V+U */
-		_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
-		_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
-		_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
-		break;
-	case VIDEO_YUV_IYUV:
-		/* Y+U+V */
-		_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
-		_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);
-		_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_v);
-		break;
-	};
-
-	vgamem_unlock();
-
-	SDL_UnlockYUVOverlay(video.overlay);
-	SDL_DisplayYUVOverlay(video.overlay, &video.clip);
-}
-
 void video_blit(void)
 {
 	unsigned char *pixels = NULL;
@@ -1706,23 +1382,6 @@ void video_blit(void)
 		pixels += video.clip.y * video.surface->pitch;
 		pixels += video.clip.x * bpp;
 		pitch = video.surface->pitch;
-		break;
-	case VIDEO_YUV:
-		if (video.overlay->planes == 3) {
-			_video_blit_planar();
-			return;
-		}
-
-		SDL_LockYUVOverlay(video.overlay);
-		pixels = (unsigned char *)*(video.overlay->pixels);
-		pitch = *(video.overlay->pitches);
-		switch (video.yuvlayout) {
-		case VIDEO_YUV_RGBT:   bpp = 2; break;
-		case VIDEO_YUV_RGB565: bpp = 2; break;
-		case VIDEO_YUV_RGB24:  bpp = 3; break;
-		default:
-			bpp = 4;
-		};
 		break;
 	case VIDEO_GL:
 		pixels = (unsigned char *)video.gl.framebuf;
@@ -1784,10 +1443,6 @@ void video_blit(void)
 		SDL_Flip(video.surface);
 		break;
 #endif
-	case VIDEO_YUV:
-		SDL_UnlockYUVOverlay(video.overlay);
-		SDL_DisplayYUVOverlay(video.overlay, &video.clip);
-		break;
 #if defined(USE_OPENGL)
 	case VIDEO_GL:
 		my_glBindTexture(GL_TEXTURE_2D, video.gl.texture);
