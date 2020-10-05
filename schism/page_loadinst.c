@@ -435,7 +435,7 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	case SDLK_SLASH:
 		if (slash_search_mode < 0) {
-			if (k->orig_sym == SDLK_SLASH) {
+			if (k->orig_sym.sym == SDLK_SLASH) {
 				if (k->state == KEY_PRESS)
 					return 0;
 				slash_search_mode = 0;
