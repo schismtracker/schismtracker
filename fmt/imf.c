@@ -490,9 +490,9 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		ins->name[25] = 0;
 
 		if (imfins.smpnum) {
-			for (s = 0; s < 120; s++) {
+			for (s = 12; s < 120; s++) {
 				ins->note_map[s] = s + 1;
-				ins->sample_map[s] = firstsample + imfins.map[s];
+				ins->sample_map[s] = firstsample + imfins.map[s - 12];
 			}
 		}
 
