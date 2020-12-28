@@ -38,3 +38,7 @@ is not supported or maintained by anyone directly involved in the project.
 See the
 [docs/](https://github.com/schismtracker/schismtracker/tree/master/docs) folder
 for platform-specific instructions.
+
+## Packaging status
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/schismtracker.svg)](https://repology.org/project/schismtracker/versions)
