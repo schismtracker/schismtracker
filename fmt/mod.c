@@ -449,11 +449,11 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 {
 	uint8_t mod_songtitle[20];
 	uint8_t mod_sampleheader[30];
-	uint8_t mod_data0;
-	uint8_t mod_data1;
 	uint8_t mod_orders[128];
+	uint8_t tmp[128];
+	uint8_t mod_pattern[1024];
 
-	int nsmp;
+	int nord, nsmp, maxpat;
 	int i, j, n;
 	unsigned int warn = 0;
 
@@ -473,7 +473,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 
 	// Now writing sample headers
 	for(n = 1; n <= 31; ++n) {
-		for(i = 0; i<30; ++i) mod_sampleheader[i] = 0;
+		for(i = 0; i < 30; ++i) mod_sampleheader[i] = 0;
 		if(n <= nsmp) {
 			memcpy(mod_sampleheader, song->samples[n].name, 22); // sample name
 			mod_sampleheader[22] = song->samples[n].length >> 9; // sample 11th word MSB length/2
@@ -492,6 +492,31 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		}
 		disko_write(fp, mod_sampleheader, 30); // writing current sample
 	}
+
+	tmp[0] = nord = csf_get_num_orders(song); // or "csf_get_num_orders(song_t *csf);"
+	tmp[1] = 0x7f;
+	disko_write(fp, tmp, 2);
+
+	for(maxpat = i = 0; (i < nord) && (i < 128); ++i) {
+		mod_orders[i] = song->orderlist[i];
+		if(maxpat < mod_orders[i]) maxpat = mod_orders[i];
+	}
+
+	for(; i < 128; ++i)
+		mod_orders[i] = 0;
+
+	disko_write(fp, mod_orders, 128);
+
+	disko_write(fp, valid_tags[0][0], 4);
+
+	for(n = 0; n <= maxpat; ++n) {
+		for(i = 0; i < 1024; ++i)
+			mod_pattern[i] = 0;
+		// TODO : fill mod_pattern[] with pattern data from song->*.*
+		disko_write(fp, mod_pattern, 1024);
+	}
+
+	// TODO : store samples, truncate on even length per sample
 
 	/* announce all the things we broke - ripped from s3m.c */
 	for (n = 0; n < MAX_WARN; ++n) {
