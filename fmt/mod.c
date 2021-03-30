@@ -28,6 +28,13 @@
 
 #include "sndfile.h"
 
+#include "version.h"
+#include "disko.h"
+#include "log.h"
+
+
+
+
 /* --------------------------------------------------------------------- */
 
 /* TODO: WOW files */
@@ -74,6 +81,46 @@ static const char *valid_tags[][2] = {
 	{"32CH", "32 Channel MOD"},
 	{NULL, NULL}
 };
+
+enum {
+	WARN_MAXPATTERNS,
+	WARN_CHANNELVOL,
+	WARN_LINEARSLIDES,
+	WARN_SAMPLEVOL,
+	WARN_LOOPS,
+	WARN_SAMPLEVIB,
+	WARN_INSTRUMENTS,
+	WARN_PATTERNLEN,
+	WARN_MAXCHANNELS,
+	WARN_MAXPCM,
+	WARN_MAXADLIB,
+	WARN_PCMADLIBMIX,
+	WARN_MUTED,
+	WARN_NOTERANGE,
+	WARN_VOLEFFECTS,
+	WARN_MAXSAMPLES,
+
+	MAX_WARN
+};
+
+static const char *mod_warnings[] = {
+	[WARN_MAXPATTERNS]  = "Over 64 patterns",
+	[WARN_CHANNELVOL]   = "Channel volumes",
+	[WARN_LINEARSLIDES] = "Linear slides",
+	[WARN_SAMPLEVOL]    = "Sample volumes",
+	[WARN_LOOPS]        = "Sustain and Ping Pong loops",
+	[WARN_SAMPLEVIB]    = "Sample vibrato",
+	[WARN_INSTRUMENTS]  = "Instrument functions",
+	[WARN_PATTERNLEN]   = "Pattern lengths other than 64 rows",
+	[WARN_MAXCHANNELS]  = "Data outside 4 channels",
+	[WARN_NOTERANGE]    = "Notes outside the range C-1 to B-8",
+	[WARN_VOLEFFECTS]   = "Extended volume column effects",
+	[WARN_MAXSAMPLES]   = "Over 31 samples",
+
+	[MAX_WARN]          = NULL
+};
+
+
 
 int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
@@ -395,4 +442,62 @@ int fmt_mod31_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 int fmt_mod15_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	return fmt_mod_load_song(song, fp, lflags, 1);
+}
+
+/* incomplete 31 sample M.K. amiga mod saving routine */
+int fmt_mod_save_song(disko_t *fp, song_t *song)
+{
+	uint8_t mod_songtitle[20];
+	uint8_t mod_sampleheader[30];
+	uint8_t mod_data0;
+	uint8_t mod_data1;
+	uint8_t mod_orders[128];
+
+	int nsmp;
+	int i, j, n;
+	unsigned int warn = 0;
+
+	if (song->flags & SONG_INSTRUMENTMODE)
+		warn |= 1 << WARN_INSTRUMENTS;
+	if (song->flags & SONG_LINEARSLIDES)
+		warn |= 1 << WARN_LINEARSLIDES;
+
+	nsmp = csf_get_num_samples(song); // Getting number of samples
+	if (nsmp > 31) {
+		nsmp = 31;
+		warn |= 1 << WARN_MAXSAMPLES;
+	}
+
+	memcpy(mod_songtitle, song->title, 20);
+	disko_write(fp, mod_songtitle, 20); // writing song title
+
+	// Now writing sample headers
+	for(n = 1; n <= 31; ++n) {
+		for(i = 0; i<30; ++i) mod_sampleheader[i] = 0;
+		if(n <= nsmp) {
+			memcpy(mod_sampleheader, song->samples[n].name, 22); // sample name
+			mod_sampleheader[22] = song->samples[n].length >> 9; // sample 11th word MSB length/2
+			mod_sampleheader[23] = song->samples[n].length >> 1; // sample 11th word LSB length/2
+			for(j = 15; j && (finetune_table[j] >= song->samples[n].c5speed); --j)
+				if(((song->samples[n].c5speed) > 10000) && (j == 8))
+					break; // determine from finetune_table entry
+			mod_sampleheader[24] = (j ^ 8) & 0x0f; // sample 24th byte finetune value
+			mod_sampleheader[25] = (song->samples[n].volume + 1) / 4; // sample 25th byte sample volume value 0..64 scaled
+			if( song->samples[n].flags & CHN_LOOP ) {
+				mod_sampleheader[26] = song->samples[n].loop_start >> 9;// loop start MSB /2
+				mod_sampleheader[27] = song->samples[n].loop_start >> 1;// loop start LSB /2
+				mod_sampleheader[28] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 9;// loop length MSB /2
+				mod_sampleheader[29] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 1;// loop length LSB /2
+			}
+		}
+		disko_write(fp, mod_sampleheader, 30); // writing current sample
+	}
+
+	/* announce all the things we broke - ripped from s3m.c */
+	for (n = 0; n < MAX_WARN; ++n) {
+		if (warn & (1 << n))
+			log_appendf(4, " Warning: %s unsupported in MOD format", mod_warnings[n]);
+	}
+
+	return SAVE_SUCCESS;
 }

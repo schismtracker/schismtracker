@@ -79,7 +79,7 @@ ugh, ugh. However, it has to be above the formats with the magic at the beginnin
 
 This only handles 31-sample mods; 15-sample ones have no identifying
 information and are therefore placed much lower in this list. */
-READ_INFO(mod) LOAD_SONG(mod31)
+READ_INFO(mod) LOAD_SONG(mod31) SAVE_SONG(mod)
 
 /* S3M needs to be before a lot of stuff. */
 READ_INFO(s3m) LOAD_SONG(s3m) SAVE_SONG(s3m)
