@@ -478,7 +478,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 			memcpy(mod_sampleheader, song->samples[n].name, 22); // sample name
 			mod_sampleheader[22] = song->samples[n].length >> 9; // sample 11th word MSB length/2
 			mod_sampleheader[23] = song->samples[n].length >> 1; // sample 11th word LSB length/2
-			for(j = 15; j && (finetune_table[j] >= song->samples[n].c5speed); --j)
+			for(j = 15; j && (finetune_table[j] > song->samples[n].c5speed); --j)
 				if(((song->samples[n].c5speed) > 10000) && (j == 8))
 					break; // determine from finetune_table entry
 			mod_sampleheader[24] = (j ^ 8) & 0x0f; // sample 24th byte finetune value
