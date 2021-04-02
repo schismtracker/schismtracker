@@ -104,23 +104,47 @@ enum {
 };
 
 static const char *mod_warnings[] = {
-	[WARN_MAXPATTERNS]  = "Over 64 patterns",
-	[WARN_CHANNELVOL]   = "Channel volumes",
-	[WARN_LINEARSLIDES] = "Linear slides",
-	[WARN_SAMPLEVOL]    = "Sample volumes",
-	[WARN_LOOPS]        = "Sustain and Ping Pong loops",
-	[WARN_SAMPLEVIB]    = "Sample vibrato",
-	[WARN_INSTRUMENTS]  = "Instrument functions",
-	[WARN_PATTERNLEN]   = "Pattern lengths other than 64 rows",
-	[WARN_MAXCHANNELS]  = "Data outside 4 channels",
-	[WARN_NOTERANGE]    = "Notes outside the range C-1 to B-8",
-	[WARN_VOLEFFECTS]   = "Extended volume column effects",
-	[WARN_MAXSAMPLES]   = "Over 31 samples",
+//	[WARN_MAXPATTERNS]  = "Over 64 patterns", // M!K!
+//	[WARN_CHANNELVOL]   = "Channel volumes",
+	[WARN_LINEARSLIDES] = "Linear slides", // done
+//	[WARN_SAMPLEVOL]    = "Sample volumes",
+//	[WARN_LOOPS]        = "Sustain and Ping Pong loops",
+//	[WARN_SAMPLEVIB]    = "Sample vibrato",
+	[WARN_INSTRUMENTS]  = "Instrument functions", // done
+//	[WARN_PATTERNLEN]   = "Pattern lengths other than 64 rows",
+	[WARN_MAXCHANNELS]  = "Data outside 4 channels", // done
+	[WARN_NOTERANGE]    = "Notes outside the range C-3 to B-5", // done
+//	[WARN_VOLEFFECTS]   = "Extended volume column effects",
+	[WARN_MAXSAMPLES]   = "Over 31 samples", // done
 
 	[MAX_WARN]          = NULL
 };
 
-
+const uint16_t amigaperiod_table[256] = {
+	0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,   0,    0,    0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,   0,    0,    0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,   0,    0,    0,
+	1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 906,
+	856,  808,  762,  720,  678,  640,  604,  570,  538,  508,  480, 453,
+	428,  404,  381,  360,  339,  320,  302,  285,  269,  254,  240, 226,
+	214,  202,  190,  180,  170,  160,  151,  143,  135,  127,  120, 113,
+	107,  101,  95,   90,   85,   80,   75,   71,   67,   63,   60,  56,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
+	0,    0,    0
+};
 
 int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
@@ -453,9 +477,10 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	uint8_t tmp[128];
 	uint8_t mod_pattern[1024];
 
-	int nord, nsmp, maxpat;
-	int i, j, n;
+	int nord, nsmp, maxpat, jmax, joutpos;
+	int i, j, n, period;
 	unsigned int warn = 0;
+	song_note_t *m;
 
 	if (song->flags & SONG_INSTRUMENTMODE)
 		warn |= 1 << WARN_INSTRUMENTS;
@@ -467,6 +492,9 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		nsmp = 31;
 		warn |= 1 << WARN_MAXSAMPLES;
 	}
+
+	if (3 < csf_get_highest_used_channel(song))
+		warn |= 1 << WARN_MAXCHANNELS;
 
 	memcpy(mod_songtitle, song->title, 20);
 	disko_write(fp, mod_songtitle, 20); // writing song title
@@ -490,7 +518,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 				mod_sampleheader[29] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 1;// loop length LSB /2
 			}
 		}
-		disko_write(fp, mod_sampleheader, 30); // writing current sample
+		disko_write(fp, mod_sampleheader, 30); // writing current sample header
 	}
 
 	tmp[0] = nord = csf_get_num_orders(song); // or "csf_get_num_orders(song_t *csf);"
@@ -501,7 +529,6 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		mod_orders[i] = song->orderlist[i];
 		if(maxpat < mod_orders[i]) maxpat = mod_orders[i];
 	}
-
 	for(; i < 128; ++i)
 		mod_orders[i] = 0;
 
@@ -510,13 +537,34 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	disko_write(fp, valid_tags[0][0], 4);
 
 	for(n = 0; n <= maxpat; ++n) {
+		m = song->patterns[n];
 		for(i = 0; i < 1024; ++i)
 			mod_pattern[i] = 0;
-		// TODO : fill mod_pattern[] with pattern data from song->*.*
+		jmax = song->pattern_size[n];
+		jmax = (jmax > 64 ? 64 : jmax) * MAX_CHANNELS;
+		for (j = joutpos = 0; j < jmax; ++j, ++m) {
+			if ((j % MAX_CHANNELS) < 4) {
+				//if (m->note || m->instrument || m->voleffect || m->volparam || m->effect || m->param) {...
+				period = amigaperiod_table[(m->note) & 0xff];
+				if (((m->note) & 0xff) && ((period < 113) || (period > 856)))
+					warn |= 1 << WARN_NOTERANGE;
+				mod_pattern[joutpos] = ((m->instrument) & 0x10) | (period >> 8);
+				mod_pattern[joutpos + 1] = period & 0xff;
+				mod_pattern[joutpos + 2] = ((m->instrument & 0xf) << 4) | ((csf_export_mod_effect(m, 0) >> 8) & 0x0f); // vvvvvvvvvvvv
+				mod_pattern[joutpos + 3] = csf_export_mod_effect(m, 0) & 0xff; // TODO: replace lame and buggy csf_export_mod_effect()
+				joutpos += 4;
+			}
+		}
 		disko_write(fp, mod_pattern, 1024);
 	}
 
-	// TODO : store samples, truncate on even length per sample
+	// TODO : store samples, truncate to even length per sample //Signed 8-bit mono sample data.
+	// Now writing sample data
+	for (n = 0; (n < nsmp) && (n < 31); ++n) {
+		song_sample_t *smp = song->samples + (n + 1);
+		if (smp->data)
+			csf_write_sample(fp, smp, RS_PCM8S); // last argument is a compound flag: PCMS,8,M,LE (endianness is obsolete)
+	}
 
 	/* announce all the things we broke - ripped from s3m.c */
 	for (n = 0; n < MAX_WARN; ++n) {
