@@ -106,16 +106,16 @@ enum {
 static const char *mod_warnings[] = {
 //	[WARN_MAXPATTERNS]  = "Over 64 patterns", // M!K!
 //	[WARN_CHANNELVOL]   = "Channel volumes",
-	[WARN_LINEARSLIDES] = "Linear slides", // done
-//	[WARN_SAMPLEVOL]    = "Sample volumes",
-//	[WARN_LOOPS]        = "Sustain and Ping Pong loops",
-//	[WARN_SAMPLEVIB]    = "Sample vibrato",
-	[WARN_INSTRUMENTS]  = "Instrument functions", // done
-//	[WARN_PATTERNLEN]   = "Pattern lengths other than 64 rows",
-	[WARN_MAXCHANNELS]  = "Data outside 4 channels", // done
-	[WARN_NOTERANGE]    = "Notes outside the range C-3 to B-5", // done
-//	[WARN_VOLEFFECTS]   = "Extended volume column effects",
-	[WARN_MAXSAMPLES]   = "Over 31 samples", // done
+	[WARN_LINEARSLIDES] = "Linear slides",
+	[WARN_SAMPLEVOL]    = "Sample volumes",
+	[WARN_LOOPS]        = "Sustain and Ping Pong loops",
+	[WARN_SAMPLEVIB]    = "Sample vibrato",
+	[WARN_INSTRUMENTS]  = "Instrument functions",
+	[WARN_PATTERNLEN]   = "Pattern lengths other than 64 rows",
+	[WARN_MAXCHANNELS]  = "Data outside 4 channels",
+	[WARN_NOTERANGE]    = "Notes outside the range C-3 to B-5",
+	[WARN_VOLEFFECTS]   = "Extended volume column effects",
+	[WARN_MAXSAMPLES]   = "Over 31 samples",
 
 	[MAX_WARN]          = NULL
 };
@@ -503,6 +503,12 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	for(n = 1; n <= 31; ++n) {
 		for(i = 0; i < 30; ++i) mod_sampleheader[i] = 0;
 		if(n <= nsmp) {
+			if(song->samples[n].global_volume != 64)
+				warn |= 1 << WARN_SAMPLEVOL;
+			if((song->samples[n].flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == (CHN_LOOP | CHN_PINGPONGLOOP) || (song->samples[n].flags & CHN_SUSTAINLOOP))
+				warn |= 1 << WARN_LOOPS;
+			if(song->samples[n].vib_depth != 0)
+				warn |= 1 << WARN_SAMPLEVIB;
 			memcpy(mod_sampleheader, song->samples[n].name, 22); // sample name
 			mod_sampleheader[22] = song->samples[n].length >> 9; // sample 11th word MSB length/2
 			mod_sampleheader[23] = song->samples[n].length >> 1; // sample 11th word LSB length/2
@@ -541,8 +547,14 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		for(i = 0; i < 1024; ++i)
 			mod_pattern[i] = 0;
 		jmax = song->pattern_size[n];
-		jmax = (jmax > 64 ? 64 : jmax) * MAX_CHANNELS;
+		if(jmax != 64) {
+			if(jmax > 64)
+				jmax = 64;
+			warn |= 1 << WARN_PATTERNLEN;
+		}
+		jmax *= MAX_CHANNELS;
 		for (j = joutpos = 0; j < jmax; ++j, ++m) {
+			uint8_t mod_fx, mod_fx_val;
 			if ((j % MAX_CHANNELS) < 4) {
 				//if (m->note || m->instrument || m->voleffect || m->volparam || m->effect || m->param) {...
 				period = amigaperiod_table[(m->note) & 0xff];
@@ -550,8 +562,78 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 					warn |= 1 << WARN_NOTERANGE;
 				mod_pattern[joutpos] = ((m->instrument) & 0x10) | (period >> 8);
 				mod_pattern[joutpos + 1] = period & 0xff;
-				mod_pattern[joutpos + 2] = ((m->instrument & 0xf) << 4) | ((csf_export_mod_effect(m, 0) >> 8) & 0x0f); // vvvvvvvvvvvv
-				mod_pattern[joutpos + 3] = csf_export_mod_effect(m, 0) & 0xff; // TODO: replace lame and buggy csf_export_mod_effect()
+				mod_pattern[joutpos + 2] = (m->instrument & 0xf) << 4;
+				mod_fx = 0; mod_fx_val = m->param;
+				if(m->voleffect == VOLFX_VOLUME) {
+					mod_fx = 0x0c;
+					mod_fx_val = m->volparam;
+				} else if (m->voleffect == VOLFX_NONE) {
+					switch(m->effect) {
+						case 0: mod_fx_val = 0; break;
+						case FX_ARPEGGIO: mod_fx = 0; break;
+						case FX_PORTAMENTOUP:
+							mod_fx = 1;
+							if ((mod_fx_val & 0xf0) == 0xe0) {
+								mod_fx = 0x0e;
+								mod_fx_val = 0x10 | ((mod_fx_val & 0xf) >> 2);
+							} else if ((mod_fx_val & 0xf0) == 0xf0) {
+								mod_fx = 0x0e;
+								mod_fx_val = 0x10 | (mod_fx_val & 0xf);
+							}
+							break;
+						case FX_PORTAMENTODOWN:
+							mod_fx = 2;
+							if ((mod_fx_val & 0xf0) == 0xe0) {
+								mod_fx = 0x0e;
+								mod_fx_val = 0x20 | ((mod_fx_val & 0xf) >> 2);
+							} else if ((mod_fx_val & 0xf0) == 0xf0) {
+								mod_fx = 0x0e;
+								mod_fx_val = 0x20 | (mod_fx_val & 0xf);
+							}
+							break;
+						case FX_TONEPORTAMENTO: mod_fx = 3; break;
+						case FX_VIBRATO: mod_fx = 4; break;
+						case FX_TONEPORTAVOL: mod_fx = 5; break;
+						case FX_VIBRATOVOL: mod_fx = 6; break;
+						case FX_TREMOLO: mod_fx = 7; break;
+						case FX_PANNING: mod_fx = 8; break;
+						case FX_OFFSET: mod_fx = 9; break;
+						case FX_VOLUMESLIDE:
+							mod_fx = 0x0a;
+							if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
+								mod_fx = 0x0e;
+								mod_fx_val &= 0xbf;
+							} else if ((mod_fx_val & 0x0f) == 0x0f) { // fine volslide up!
+								mod_fx = 0x0e;
+								mod_fx_val = 0xa0 | (mod_fx_val >> 4);
+							}
+							break;
+						case FX_POSITIONJUMP: mod_fx = 0x0b; break;
+						case FX_VOLUME: mod_fx = 0x0c; break;
+						case FX_PATTERNBREAK: mod_fx = 0x0d; mod_fx_val = ((mod_fx_val / 10) << 4) | (mod_fx_val % 10); break;
+						case FX_SPEED: mod_fx = 0x0f; break;
+						case FX_TEMPO: mod_fx = 0x0f; break;
+						case FX_SPECIAL:
+							mod_fx = 0x0e;
+							switch (mod_fx_val & 0xf0) {
+								case 0x10: mod_fx_val = (mod_fx_val & 0x0f) | 0x30; break;
+								case 0x20: mod_fx_val = (mod_fx_val & 0x0f) | 0x50; break; // there is an error in Protracker 2.1 docs!
+								case 0x30: mod_fx_val = (mod_fx_val & 0x0f) | 0x40; break;
+								case 0x40: mod_fx_val = (mod_fx_val & 0x0f) | 0x70; break;
+								case 0xb0: mod_fx_val = (mod_fx_val & 0x0f) | 0x60; break;
+								default: break; // handling silently E0x,E6x,E8x,ECx,EDx,EEx,(?EFx)
+							}
+							break;
+						case FX_RETRIG: mod_fx = 0x0e; mod_fx_val = 0x90 | (mod_fx_val & 0x0f); break;
+						default:
+							warn |= 1 << WARN_VOLEFFECTS;
+							break;
+					}
+				} else {
+					warn |= 1 << WARN_VOLEFFECTS;
+				}
+				mod_pattern[joutpos + 2] |= mod_fx & 0x0f;
+				mod_pattern[joutpos + 3] = mod_fx_val;
 				joutpos += 4;
 			}
 		}
