@@ -207,7 +207,6 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		song->patterns[pat] = csf_allocate_pattern(MAX(rows, 32));
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
-		tracknote = trackdata[n];
 		for (chan = 0; chan < 32; chan++) {
 			slurp_read(fp, &tmp, 2);
 			tmp = bswapLE16(tmp);
