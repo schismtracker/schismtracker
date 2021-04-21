@@ -540,7 +540,10 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 
 	disko_write(fp, mod_orders, 128);
 
-	disko_write(fp, valid_tags[0][0], 4);
+	if(maxpat < 64)
+		disko_write(fp, valid_tags[0][0], 4);
+	else
+		disko_write(fp, valid_tags[1][0], 4);
 
 	for(n = 0; n <= maxpat; ++n) {
 		m = song->patterns[n];
