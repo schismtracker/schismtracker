@@ -572,7 +572,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 					mod_fx_val = m->volparam;
 				} else if (m->voleffect == VOLFX_NONE) {
 					switch(m->effect) {
-						case 0: mod_fx_val = 0; break;
+						case FX_NONE: mod_fx_val = 0; break;
 						case FX_ARPEGGIO: mod_fx = 0; break;
 						case FX_PORTAMENTOUP:
 							mod_fx = 1;
