@@ -648,7 +648,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	for (n = 0; (n < nsmp) && (n < 31); ++n) {
 		song_sample_t *smp = song->samples + (n + 1);
 		if (smp->data)
-			csf_write_sample(fp, smp, RS_PCM8S); // last argument is a compound flag: PCMS,8,M,LE (endianness is obsolete)
+			csf_write_sample(fp, smp, RS_PCM8S); // last argument is a compound flag: PCMS,8,M,LE
 	}
 
 	/* announce all the things we broke - ripped from s3m.c */
