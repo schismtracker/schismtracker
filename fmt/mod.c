@@ -100,6 +100,7 @@ enum {
 	WARN_NOTERANGE,
 	WARN_VOLEFFECTS,
 	WARN_MAXSAMPLES,
+	WARN_LONGSAMPLES,
 
 	MAX_WARN
 };
@@ -117,6 +118,7 @@ static const char *mod_warnings[] = {
 	[WARN_NOTERANGE]    = "Notes outside the range C-3 to B-5",
 	[WARN_VOLEFFECTS]   = "Extended volume column effects",
 	[WARN_MAXSAMPLES]   = "Over 31 samples",
+	[WARN_LONGSAMPLES]  = "Odd sample length or greater than 131070",
 
 	[MAX_WARN]          = NULL
 };
@@ -511,8 +513,16 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 			if(song->samples[n].vib_depth != 0)
 				warn |= 1 << WARN_SAMPLEVIB;
 			memcpy(mod_sampleheader, song->samples[n].name, 22); // sample name
-			mod_sampleheader[22] = song->samples[n].length >> 9; // sample 11th word MSB length/2
-			mod_sampleheader[23] = song->samples[n].length >> 1; // sample 11th word LSB length/2
+			if(song->samples[n].length <= 0x1FFFE) {
+				mod_sampleheader[22] = song->samples[n].length >> 9; // sample 11th word MSB length/2
+				mod_sampleheader[23] = song->samples[n].length >> 1; // sample 11th word LSB length/2
+				if(1 & song->samples[n].length)
+					warn |= 1 << WARN_LONGSAMPLES;
+			} else {
+				mod_sampleheader[22] = 0xFF;
+				mod_sampleheader[23] = 0xFF;
+				warn |= 1 << WARN_LONGSAMPLES;
+			}
 			for(j = 15; j && (finetune_table[j] > song->samples[n].c5speed); --j)
 				if(((song->samples[n].c5speed) > 10000) && (j == 8))
 					break; // determine from finetune_table entry
@@ -523,6 +533,11 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 				mod_sampleheader[27] = song->samples[n].loop_start >> 1;// loop start LSB /2
 				mod_sampleheader[28] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 9;// loop length MSB /2
 				mod_sampleheader[29] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 1;// loop length LSB /2
+			} else {
+				mod_sampleheader[26] = 0;
+				mod_sampleheader[27] = 0;
+				mod_sampleheader[28] = 0;
+				mod_sampleheader[29] = 1;
 			}
 		}
 		disko_write(fp, mod_sampleheader, 30); // writing current sample header
@@ -646,12 +661,11 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		disko_write(fp, mod_pattern, 1024);
 	}
 
-	// TODO : store samples, truncate to even length per sample //Signed 8-bit mono sample data.
 	// Now writing sample data
 	for (n = 0; (n < nsmp) && (n < 31); ++n) {
 		song_sample_t *smp = song->samples + (n + 1);
 		if (smp->data)
-			csf_write_sample(fp, smp, RS_PCM8S); // last argument is a compound flag: PCMS,8,M,LE
+			csf_write_sample(fp, smp, RS_PCM8S, 0x1FFFE); // third argument is a compound flag: PCMS,8,M,LE
 	}
 
 	/* announce all the things we broke - ripped from s3m.c */

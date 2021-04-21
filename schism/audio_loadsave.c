@@ -485,7 +485,8 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 			disko_seek(fp, op, SEEK_SET);
 			csf_write_sample(fp, smp, SF_LE | SF_PCMS
 					| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
-					| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M));
+					| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
+					UINT32_MAX);
 		}
 	}
 }
@@ -784,7 +785,8 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
 		if (smp->data)
 			csf_write_sample(fp, smp, SF_LE | SF_PCMS
 					| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
-					| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M));
+					| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
+					UINT32_MAX);
 		// done using the pointer internally, so *now* swap it
 		para_smp[n] = bswapLE32(para_smp[n]);
 

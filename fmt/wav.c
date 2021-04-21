@@ -306,7 +306,7 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 	bps = wav_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
 		smp->c5speed, smp->length, NULL);
 
-	if (csf_write_sample(fp, smp, flags) != smp->length * bps) {
+	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bps) {
 		log_appendf(4, "WAV: unexpected data size written");
 		return SAVE_INTERNAL_ERROR;
 	}
