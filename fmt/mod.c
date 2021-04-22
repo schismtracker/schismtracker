@@ -83,7 +83,6 @@ static const char *valid_tags[][2] = {
 };
 
 enum {
-	WARN_MORETHAN64PATTERNS,
 	WARN_MAXPATTERNS,
 	WARN_CHANNELVOL,
 	WARN_LINEARSLIDES,
@@ -106,7 +105,6 @@ enum {
 };
 
 static const char *mod_warnings[] = {
-	[WARN_MORETHAN64PATTERNS]  = "Over 64 patterns", // M!K!
 //	[WARN_CHANNELVOL]   = "Channel volumes",
 	[WARN_LINEARSLIDES] = "Linear slides",
 	[WARN_SAMPLEVOL]    = "Sample volumes",
@@ -558,10 +556,8 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 
 	if(maxpat < 64)
 		disko_write(fp, valid_tags[0][0], 4);
-	else {
-		warn |= 1 << WARN_MORETHAN64PATTERNS;
+	else
 		disko_write(fp, valid_tags[1][0], 4);
-	}
 
 	for(n = 0; n <= maxpat; ++n) {
 		m = song->patterns[n];
