@@ -526,7 +526,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 					break; // determine from finetune_table entry
 			mod_sampleheader[24] = (j ^ 8) & 0x0f; // sample 24th byte finetune value
 			mod_sampleheader[25] = (song->samples[n].volume + 1) / 4; // sample 25th byte sample volume value 0..64 scaled
-			if( song->samples[n].flags & CHN_LOOP ) {
+			if( (song->samples[n].flags & CHN_LOOP) && (song->samples[n].loop_start < song->samples[n].loop_end) && (song->samples[n].loop_end <= MIN(song->samples[n].length, 0x1FFFE)) ) {
 				mod_sampleheader[26] = song->samples[n].loop_start >> 9;// loop start MSB /2
 				mod_sampleheader[27] = song->samples[n].loop_start >> 1;// loop start LSB /2
 				mod_sampleheader[28] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 9;// loop length MSB /2
