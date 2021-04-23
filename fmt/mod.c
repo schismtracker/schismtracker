@@ -479,6 +479,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	uint8_t mod_pattern[1024];
 
 	int nord, nsmp, maxpat, jmax, joutpos;
+	long tmppos;
 	int i, j, n, period;
 	unsigned int warn = 0;
 	song_note_t *m;
@@ -653,10 +654,18 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	}
 
 	// Now writing sample data
-	for (n = 0; (n < nsmp) && (n < 31); ++n) {
+	for (tmp[0] = tmp[1] = n = 0; (n < nsmp) && (n < 31); ++n) {
 		song_sample_t *smp = song->samples + (n + 1);
 		if (smp->data)
-			csf_write_sample(fp, smp, RS_PCM8S, 0x1FFFE); // third argument is a compound flag: PCMS,8,M,LE
+			if( (smp->flags & CHN_LOOP) && (smp->loop_start < smp->loop_end) && (smp->loop_end <= MIN(smp->length, 0x1FFFE)) ) {
+				csf_write_sample(fp, smp, RS_PCM8S, 0x1FFFE); // third argument is a compound flag: PCMS,8,M,LE
+			} else if (1 < smp->length) { // floor(smp->length / 2) MUST be positive!
+				tmppos = disko_tell(fp);
+				csf_write_sample(fp, smp, RS_PCM8S, 0x1FFFE); // third argument is a compound flag: PCMS,8,M,LE
+				disko_seek(fp, tmppos, SEEK_SET);
+				disko_write(fp, tmp, 2);
+				disko_seek(fp, 0, SEEK_END);
+			}
 	}
 
 	/* announce all the things we broke - ripped from s3m.c */
