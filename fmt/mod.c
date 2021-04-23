@@ -502,7 +502,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 
 	// Now writing sample headers
 	for(n = 1; n <= 31; ++n) {
-		for(i = 0; i < 30; ++i) mod_sampleheader[i] = 0;
+		for(i = 0; i < 30; ++i) mod_sampleheader[i] = i / 29;
 		if(n <= nsmp) {
 			if(song->samples[n].global_volume != 64)
 				warn |= 1 << WARN_SAMPLEVOL;
@@ -531,11 +531,6 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 				mod_sampleheader[27] = song->samples[n].loop_start >> 1;// loop start LSB /2
 				mod_sampleheader[28] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 9;// loop length MSB /2
 				mod_sampleheader[29] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 1;// loop length LSB /2
-			} else {
-				mod_sampleheader[26] = 0;
-				mod_sampleheader[27] = 0;
-				mod_sampleheader[28] = 0;
-				mod_sampleheader[29] = 1;
 			}
 		}
 		disko_write(fp, mod_sampleheader, 30); // writing current sample header
