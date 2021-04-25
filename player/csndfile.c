@@ -1283,19 +1283,19 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 			case 0x70: param = (param & 0x0F) | 0x40; break;
 			case 0x90: effect = FX_RETRIG; param &= 0x0F; break;
 			case 0xA0:
+				effect = FX_VOLUMESLIDE;
 				if (param & 0x0F) {
-					effect = FX_VOLUMESLIDE;
 					param = (param << 4) | 0x0F;
 				} else {
-					effect = param = 0;
+					param = 0;
 				}
 				break;
 			case 0xB0:
+				effect = FX_VOLUMESLIDE;
 				if (param & 0x0F) {
-					effect = FX_VOLUMESLIDE;
 					param |= 0xF0;
 				} else {
-					effect=param=0;
+					param = 0;
 				}
 				break;
 		}
