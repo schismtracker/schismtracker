@@ -618,13 +618,14 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 						case FX_OFFSET: mod_fx = 9; break;
 						case FX_VOLUMESLIDE:
 							mod_fx = 0x0a;
-							if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
-								mod_fx = 0x0e;
-								mod_fx_val &= 0xbf;
-							} else if ((mod_fx_val & 0x0f) == 0x0f) { // fine volslide up!
-								mod_fx = 0x0e;
-								mod_fx_val = 0xa0 | (mod_fx_val >> 4);
-							}
+							if( (mod_fx_val & 0xf0) && (mod_fx_val & 0x0f) )
+								if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
+									mod_fx = 0x0e;
+									mod_fx_val &= 0xbf;
+								} else if ((mod_fx_val & 0x0f) == 0x0f) { // fine volslide up!
+									mod_fx = 0x0e;
+									mod_fx_val = 0xa0 | (mod_fx_val >> 4);
+								}
 							break;
 						case FX_POSITIONJUMP: mod_fx = 0x0b; break;
 						case FX_VOLUME: mod_fx = 0x0c; break;
