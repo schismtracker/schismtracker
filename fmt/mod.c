@@ -83,8 +83,6 @@ static const char *valid_tags[][2] = {
 };
 
 enum {
-	WARN_MAXPATTERNS,
-	WARN_CHANNELVOL,
 	WARN_LINEARSLIDES,
 	WARN_SAMPLEVOL,
 	WARN_LOOPS,
@@ -92,10 +90,6 @@ enum {
 	WARN_INSTRUMENTS,
 	WARN_PATTERNLEN,
 	WARN_MAXCHANNELS,
-	WARN_MAXPCM,
-	WARN_MAXADLIB,
-	WARN_PCMADLIBMIX,
-	WARN_MUTED,
 	WARN_NOTERANGE,
 	WARN_VOLEFFECTS,
 	WARN_MAXSAMPLES,
@@ -105,7 +99,6 @@ enum {
 };
 
 static const char *mod_warnings[] = {
-//	[WARN_CHANNELVOL]   = "Channel volumes",
 	[WARN_LINEARSLIDES] = "Linear slides",
 	[WARN_SAMPLEVOL]    = "Sample volumes",
 	[WARN_LOOPS]        = "Sustain and Ping Pong loops",
