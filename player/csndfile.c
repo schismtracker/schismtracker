@@ -538,9 +538,11 @@ void csf_loop_pattern(song_t *csf, int pat, int row)
 #define SF_FAIL(name, n) \
 	({ log_appendf(4, "%s: internal error: unsupported %s %d", __FUNCTION__, name, n); return 0; })
 
-uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags)
+uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, uint32_t maxlengthmask)
 {
 	uint32_t pos, len = sample->length;
+	if(maxlengthmask != UINT32_MAX)
+		len = len > maxlengthmask ? maxlengthmask : (len & maxlengthmask);
 	int stride = 1;     // how much to add to the left/right pointer per sample written
 	int byteswap = 0;   // should the sample data be byte-swapped?
 	int add = 0;        // how much to add to the sample data (for converting to unsigned)

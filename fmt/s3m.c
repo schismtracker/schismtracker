@@ -971,7 +971,8 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 		para_sdata[n] = disko_tell(fp);
 		csf_write_sample(fp, smp, SF_LE | SF_PCMU
 			| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
-			| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M));
+			| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
+			UINT32_MAX);
 	}
 
 	/* now that we're done adding stuff to the end of the file,
