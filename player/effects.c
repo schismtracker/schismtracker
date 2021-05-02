@@ -1198,15 +1198,9 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		if (penv) {
 			penv->played = 1;
 			chan->instrument_volume = (psmp->global_volume * penv->global_volume) >> 7;
-			if (penv->flags & ENV_SETPANNING) {
-				set_instrument_panning(chan, penv->panning);
-			}
 			chan->nna = penv->nna;
 		} else {
 			chan->instrument_volume = psmp->global_volume;
-		}
-		if (psmp->flags & CHN_PANNING) {
-			set_instrument_panning(chan, psmp->panning);
 		}
 	}
 
@@ -1397,6 +1391,12 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 			chan->position = chan->loop_start;
 	} else {
 		porta = 0;
+	}
+
+	if (penv && (penv->flags & ENV_SETPANNING)) {
+		set_instrument_panning(chan, penv->panning);
+	} else if (pins->flags & CHN_PANNING) {
+		set_instrument_panning(chan, pins->panning);
 	}
 
 	if (!porta)
