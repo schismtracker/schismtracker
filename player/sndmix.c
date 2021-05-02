@@ -104,17 +104,6 @@ static unsigned int find_volume(unsigned short vol)
 }
 
 
-unsigned int get_freq_from_period(int period, int linear)
-{
-	if (period <= 0)
-		return INT_MAX;
-	else if (linear)
-		return period;
-	else
-		return _muldiv(8363, 1712L << 8, (period << 8));
-}
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////
 //
 // XXX * I prefixed these with `rn_' to avoid any namespace conflicts
@@ -133,7 +122,7 @@ static inline void rn_tremor(song_voice_t *chan, int *vol)
 }
 
 
-static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int period)
+static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 {
 	unsigned int vibpos = chan->vibrato_position & 0xFF;
 	int vdelta;
@@ -163,33 +152,17 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int period)
 	}
 	vdelta = (vdelta * (int)chan->vibrato_depth) >> vdepth;
 
-	if (csf->flags & SONG_LINEARSLIDES) {
-		int l = abs(vdelta);
-
-		if (vdelta < 0) {
-			vdelta = _muldiv(period, linear_slide_up_table[l >> 2], 0x10000) - period;
-
-			if (l & 0x03)
-				vdelta += _muldiv(period, fine_linear_slide_up_table[l & 0x03], 0x10000) - period;
-		} else {
-			vdelta = _muldiv(period, linear_slide_down_table[l >> 2], 0x10000) - period;
-
-			if (l & 0x03)
-				vdelta += _muldiv(period, fine_linear_slide_down_table[l & 0x03], 0x10000) - period;
-		}
-	}
-
-	period -= vdelta;
+	frequency = csf_fx_do_freq_slide(csf->flags, frequency, vdelta);
 
 	// handle on tick-N, or all ticks if not in old-effects mode
 	if (!(csf->flags & SONG_FIRSTTICK) || !(csf->flags & SONG_ITOLDEFFECTS)) {
 		chan->vibrato_position = (vibpos + 4 * chan->vibrato_speed) & 0xFF;
 	}
 
-	return period;
+	return frequency;
 }
 
-static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int period)
+static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 {
 	unsigned int vibpos = chan->autovib_position & 0xFF;
 	int vdelta, adepth;
@@ -236,23 +209,17 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int period)
 	if (vdelta < 0) {
 		linear_slide_table = linear_slide_up_table;
 		fine_linear_slide_table = fine_linear_slide_up_table;
-			vdelta += _muldiv(period, fine_linear_slide_up_table[l & 0x03], 0x10000) - period;
+			vdelta += _muldiv(frequency, fine_linear_slide_up_table[l & 0x03], 0x10000) - frequency;
 	} else {
 		linear_slide_table = linear_slide_down_table;
 		fine_linear_slide_table = fine_linear_slide_down_table;
 	}
 
-	if (csf->flags & SONG_LINEARSLIDES) {
-		vdelta = _muldiv(period, linear_slide_table[l >> 2], 0x10000) - period;
-		if (l & 0x03)
-			vdelta += _muldiv(period, fine_linear_slide_table[l & 0x03], 0x10000) - period;
-	} else {
-		vdelta = _muldiv(period, 0x10000, linear_slide_table[l >> 2]) - period;
-		if (l & 0x03)
-			vdelta += _muldiv(period, 0x10000, fine_linear_slide_table[l & 0x03]) - period;
-	}
+	vdelta = _muldiv(frequency, linear_slide_table[l >> 2], 0x10000) - frequency;
+	if (l & 0x03)
+		vdelta += _muldiv(frequency, fine_linear_slide_table[l & 0x03], 0x10000) - frequency;
 
-	return period - vdelta;
+	return frequency - vdelta;
 }
 
 
@@ -369,7 +336,7 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 }
 
 
-static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int period)
+static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int frequency)
 {
 	int a;
 
@@ -385,22 +352,20 @@ static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int period)
 	}
 
 	if (!a)
-		return period;
+		return frequency;
 
 	a = linear_slide_up_table[a * 16];
-	return ((csf->flags & SONG_LINEARSLIDES)
-		? _muldiv(period, a, 65536)
-		: _muldiv(period, 65536, a));
+	return _muldiv(frequency, a, 65536);
 }
 
 
 static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
-	int *nenvpitch, int *nperiod)
+	int *nenvpitch, int *nfrequency)
 {
 	song_instrument_t *penv = chan->ptr_instrument;
 	int envpos = chan->pitch_env_position;
 	unsigned int pt = penv->pitch_env.nodes - 1;
-	int period = *nperiod;
+	int frequency = *nfrequency;
 	int envpitch = *nenvpitch;
 
 	for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
@@ -443,14 +408,10 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 			l = 255;
 
 		int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
-		if (csf->flags & SONG_LINEARSLIDES) {
-			period = _muldiv(period, ratio, 0x10000);
-		} else {
-			period = _muldiv(period, 0x10000, ratio);
-		}
+		frequency = _muldiv(frequency, ratio, 0x10000);
 	}
 
-	*nperiod = period;
+	*nfrequency = frequency;
 	*nenvpitch = envpitch;
 }
 
@@ -1126,7 +1087,7 @@ int csf_read_note(song_t *csf)
 	for (cn = 0, chan = csf->voices; cn < MAX_VOICES; cn++, chan++) {
 		/*if(cn == 0 || cn == 1)
 		fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
-			(int)cn, chan->period, chan->position, chan->length, chan->flags);*/
+			(int)cn, chan->frequency, chan->position, chan->length, chan->flags);*/
 
 		if (chan->flags & CHN_NOTEFADE &&
 		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
@@ -1148,7 +1109,7 @@ int csf_read_note(song_t *csf)
 		chan->ramp_length = 0;
 
 		// Calc Frequency
-		if (chan->period && (chan->length || (chan->flags & CHN_ADLIB))) {
+		if (chan->frequency && (chan->length || (chan->flags & CHN_ADLIB))) {
 			int vol = chan->volume;
 
 			if (chan->flags & CHN_TREMOLO)
@@ -1187,37 +1148,34 @@ int csf_read_note(song_t *csf)
 					 1 << 19);
 			}
 
-			int period = chan->period;
+			int frequency = chan->frequency;
 
 			if ((chan->flags & (CHN_GLISSANDO|CHN_PORTAMENTO)) == (CHN_GLISSANDO|CHN_PORTAMENTO)) {
-				period = get_period_from_note(get_note_from_period(period),
-					chan->c5speed, csf->flags & SONG_LINEARSLIDES);
+				frequency = get_frequency_from_note(get_note_from_frequency(frequency, chan->c5speed), chan->c5speed);
 			}
 
 			// Arpeggio ?
 			if (chan->n_command == FX_ARPEGGIO)
-				period = rn_arpeggio(csf, chan, period);
+				frequency = rn_arpeggio(csf, chan, frequency);
 
 			// Pitch/Filter Envelope
 			int envpitch = 0;
 
 			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument
 				&& (chan->flags & CHN_PITCHENV) && chan->ptr_instrument->pitch_env.nodes)
-				rn_pitch_filter_envelope(csf, chan, &envpitch, &period);
+				rn_pitch_filter_envelope(csf, chan, &envpitch, &frequency);
 
 			// Vibrato
 			if (chan->flags & CHN_VIBRATO)
-				period = rn_vibrato(csf, chan, period);
+				frequency = rn_vibrato(csf, chan, frequency);
 
 			// Sample Auto-Vibrato
 			if (chan->ptr_sample && chan->ptr_sample->vib_depth) {
-				period = rn_sample_vibrato(csf, chan, period);
+				frequency = rn_sample_vibrato(csf, chan, frequency);
 			}
 
-			unsigned int freq = get_freq_from_period(period, csf->flags & SONG_LINEARSLIDES);
-
 			if (!(chan->flags & CHN_NOTEFADE))
-				rn_gen_key(csf, chan, cn, freq, vol);
+				rn_gen_key(csf, chan, cn, frequency, vol);
 
 			// Filter Envelope: controls cutoff frequency
 			if (chan && chan->ptr_instrument && chan->ptr_instrument->flags & ENV_FILTER) {
@@ -1225,9 +1183,9 @@ int csf_read_note(song_t *csf)
 					!(chan->flags & CHN_FILTER), envpitch, csf->mix_frequency);
 			}
 
-			chan->sample_freq = freq;
+			chan->sample_freq = frequency;
 
-			unsigned int ninc = _muldiv(freq, 0x10000, csf->mix_frequency);
+			unsigned int ninc = _muldiv(frequency, 0x10000, csf->mix_frequency);
 
 			if (ninc >= 0xFFB0 && ninc <= 0x10090)
 				ninc = 0x10000;

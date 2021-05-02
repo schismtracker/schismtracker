@@ -430,7 +430,7 @@ typedef struct song_voice {
 	int32_t final_panning; // range 0-256 (but can temporarily exceed that range during calculations)
 	int32_t volume, panning; // range 0-256 (?); these are the current values set for the channel
 	int32_t fadeout_volume;
-	int32_t period;
+	int32_t frequency;
 	int32_t c5speed;
 	int32_t sample_freq; // only used on the info page (F5)
 	int32_t portamento_target;
@@ -669,6 +669,7 @@ void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int retrig
 uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);
 void csf_check_nna(song_t *csf, uint32_t chan, uint32_t instr, int note, int force_cut);
 void csf_process_effects(song_t *csf, int firsttick);
+int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide);
 
 void fx_note_cut(song_t *csf, uint32_t chan, int clear_note);
 void fx_key_off(song_t *csf, uint32_t chan);
@@ -678,9 +679,8 @@ void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, 
 song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *ins, uint32_t note, song_sample_t *def);
 
 // various utility functions in snd_fx.c
-int get_note_from_period(int period);
-int get_period_from_note(int note, unsigned int c5speed, int linear);
-unsigned int get_freq_from_period(int period, int linear);
+int get_note_from_frequency(int frequency, unsigned int c5speed);
+int get_frequency_from_note(int note, unsigned int c5speed);
 unsigned int transpose_to_frequency(int transp, int ftune);
 int frequency_to_transpose(unsigned int freq);
 unsigned long calc_halftone(unsigned long hz, int rel);

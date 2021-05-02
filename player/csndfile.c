@@ -473,7 +473,7 @@ void csf_set_current_order(song_t *csf, uint32_t position)
 	for (uint32_t j = 0; j < MAX_VOICES; j++) {
 		song_voice_t *v = csf->voices + j;
 
-		v->period = 0;
+		v->frequency = 0;
 		v->note = v->new_note = v->new_instrument = 0;
 		v->portamento_target = 0;
 		v->n_command = 0;
@@ -1209,7 +1209,7 @@ void csf_stop_sample(song_t *csf, song_sample_t *smp)
 			v->note = v->new_note = v->new_instrument = 0;
 			v->fadeout_volume = 0;
 			v->flags |= CHN_KEYOFF | CHN_NOTEFADE;
-			v->period = 0;
+			v->frequency = 0;
 			v->position = v->length = 0;
 			v->loop_start = 0;
 			v->loop_end = 0;
