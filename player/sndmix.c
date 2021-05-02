@@ -619,20 +619,20 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int
 		// 8363 is st3s middle C sample rate. 261.625 is the Hertz for middle C in a tempered scale (A4 = 440)
 		//Also, note that to be true to ST3, the frequencies should be quantized, like using the glissando control.
 
-        // OPL_Patch is called in csf_process_effects, from csf_read_note or csf_process_tick, before calling this method.
+		// OPL_Patch is called in csf_process_effects, from csf_read_note or csf_process_tick, before calling this method.
 		int oplmilliHertz = (long long int)freq*261625L/8363L;
 		OPL_HertzTouch(chan_num, oplmilliHertz, chan->flags & CHN_KEYOFF);
 
 		// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
 		// This gives a value in the range 0..63.
-        // log_appendf(2,"vol: %d, voiceinsvol: %d", vol , chan->instrument_volume);
+		// log_appendf(2,"vol: %d, voiceinsvol: %d", vol , chan->instrument_volume);
 		OPL_Touch(chan_num, vol * chan->instrument_volume * 63 / (1 << 20));
-        if (csf->flags&SONG_NOSTEREO) {
-            OPL_Pan(chan_num, 128);
-        }
-        else {
-            OPL_Pan(chan_num, chan->final_panning);
-        }
+		if (csf->flags&SONG_NOSTEREO) {
+			OPL_Pan(chan_num, 128);
+		}
+		else {
+			OPL_Pan(chan_num, chan->final_panning);
+		}
 	}
 }
 
