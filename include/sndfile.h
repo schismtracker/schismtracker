@@ -450,6 +450,7 @@ typedef struct song_voice {
 	uint32_t autovib_position, vibrato_position, tremolo_position, panbrello_position;
 	// 16-bit members
 	int vol_swing, pan_swing;
+	uint16_t channel_panning;
 
 	// formally 8-bit members
 	unsigned int note; // the note that's playing

@@ -199,6 +199,15 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide)
 	return frequency;
 }
 
+static void set_instrument_panning(song_voice_t *chan, int32_t panning)
+{
+	chan->channel_panning = (int16_t)(chan->panning + 1);
+	if (chan->flags & CHN_SURROUND)
+		chan->channel_panning |= 0x8000;
+	chan->panning = panning;
+	chan->flags &= ~CHN_SURROUND;
+}
+
 static void fx_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->frequency && param) {
@@ -455,6 +464,7 @@ static void fx_panning_slide(uint32_t flags, song_voice_t *chan, uint32_t param)
 	if (slide) {
 		slide += chan->panning;
 		chan->panning = CLAMP(slide, 0, 256);
+		chan->channel_panning = 0;
 	}
 	chan->flags &= ~CHN_SURROUND;
 	chan->panbrello_delta = 0;
@@ -687,6 +697,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 			chan->flags &= ~CHN_SURROUND;
 			chan->panbrello_delta = 0;
 			chan->panning = (param << 4) + 8;
+			chan->channel_panning = 0;
 			chan->flags |= CHN_FASTVOLRAMP;
 			chan->pan_swing = 0;
 		}
@@ -697,6 +708,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 			chan->flags |= CHN_SURROUND;
 			chan->panbrello_delta = 0;
 			chan->panning = 128;
+			chan->channel_panning = 0;
 		}
 		break;
 	// SAx: Set 64k Offset
@@ -1187,16 +1199,14 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 			penv->played = 1;
 			chan->instrument_volume = (psmp->global_volume * penv->global_volume) >> 7;
 			if (penv->flags & ENV_SETPANNING) {
-				chan->panning = penv->panning;
-				chan->flags &= ~CHN_SURROUND;
+				set_instrument_panning(chan, penv->panning);
 			}
 			chan->nna = penv->nna;
 		} else {
 			chan->instrument_volume = psmp->global_volume;
 		}
 		if (psmp->flags & CHN_PANNING) {
-			chan->panning = psmp->panning;
-			chan->flags &= ~CHN_SURROUND;
+			set_instrument_panning(chan, psmp->panning);
 		}
 	}
 
@@ -1770,6 +1780,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		chan->flags &= ~CHN_SURROUND;
 		chan->panbrello_delta = 0;
 		chan->panning = param;
+		chan->channel_panning = 0;
 		chan->pan_swing = 0;
 		chan->flags |= CHN_FASTVOLRAMP;
 		break;
@@ -1898,6 +1909,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		if (start_note) {
 			if (vol > 64) vol = 64;
 			chan->panning = vol << 2;
+			chan->channel_panning = 0;
 			chan->pan_swing = 0;
 			chan->flags |= CHN_FASTVOLRAMP;
 			chan->flags &= ~CHN_SURROUND;
@@ -2077,6 +2089,14 @@ void csf_process_effects(song_t *csf, int firsttick)
 				instr = 0;
 			} else if (NOTE_IS_NOTE(note)) {
 				chan->new_note = note;
+				if (chan->channel_panning > 0)
+				{
+					chan->panning = (chan->channel_panning & 0x7FFF) - 1;
+					if (chan->channel_panning & 0x8000)
+						chan->flags |= CHN_SURROUND;
+					chan->channel_panning = 0;
+				}
+
 				// New Note Action ? (not when paused!!!)
 				if (!porta)
 					csf_check_nna(csf, nchan, instr, note, 0);
