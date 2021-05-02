@@ -669,6 +669,7 @@ void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int retrig
 uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);
 void csf_check_nna(song_t *csf, uint32_t chan, uint32_t instr, int note, int force_cut);
 void csf_process_effects(song_t *csf, int firsttick);
+int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t period, int32_t slide);
 
 void fx_note_cut(song_t *csf, uint32_t chan, int clear_note);
 void fx_key_off(song_t *csf, uint32_t chan);
@@ -679,8 +680,8 @@ song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *ins, uint3
 
 // various utility functions in snd_fx.c
 int get_note_from_period(int period);
-int get_period_from_note(int note, unsigned int c5speed, int linear);
-unsigned int get_freq_from_period(int period, int linear);
+int get_period_from_note(int note, unsigned int c5speed);
+unsigned int get_freq_from_period(int period);
 unsigned int transpose_to_frequency(int transp, int ftune);
 int frequency_to_transpose(unsigned int freq);
 unsigned long calc_halftone(unsigned long hz, int rel);

@@ -53,17 +53,12 @@ int get_note_from_period(int period)
 	return 120;
 }
 
-int get_period_from_note(int note, unsigned int c5speed, int linear)
+int get_period_from_note(int note, unsigned int c5speed)
 {
 	if (!note || note > 0xF0)
 		return 0;
 	note--;
-	if (linear)
-		return _muldiv(c5speed, linear_slide_up_table[(note % 12) * 16] << (note / 12), 65536 << 5);
-	else if (!c5speed)
-		return INT_MAX;
-	else
-		return _muldiv(8363, (period_table[note % 12] << 5), c5speed << (note / 12));
+	return _muldiv(c5speed, linear_slide_up_table[(note % 12) * 16] << (note / 12), 65536 << 5);
 }
 
 
@@ -165,87 +160,83 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 }
 
 
-// negative value for slide = up, positive = down
-static void fx_do_freq_slide(uint32_t flags, song_voice_t *chan, int32_t slide)
+// negative value for slide = down, positive = up
+int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t period, int32_t slide)
 {
 	// IT Linear slides
-	if (!chan->period) return;
+	if (!period) return 0;
 	if (flags & SONG_LINEARSLIDES) {
-		int32_t old_period = chan->period;
-		if (slide < 0) {
-			uint32_t n = (-slide) >> 2;
-			if (n > 255)
-				n = 255;
-			chan->period = _muldivr(chan->period, linear_slide_up_table[n], 65536);
-			if (old_period == chan->period)
-				chan->period++;
+		int32_t old_period = period;
+		uint32_t n = abs(slide), delta = 0;
+		if (n > 255 * 4) n = 255 * 4;
+
+		if (slide > 0) {
+			if (n < 16)
+				period = _muldivr(period, fine_linear_slide_up_table[n], 65536);
+			else
+				period = _muldivr(period, linear_slide_up_table[n / 4], 65536);
+			if (old_period == period)
+				period++;
 		} else {
-			uint32_t n = (slide) >> 2;
-			if (n > 255)
-				n = 255;
-			chan->period = _muldivr(chan->period, linear_slide_down_table[n], 65536);
-			if (old_period == chan->period)
-				chan->period--;
+			if (n < 16)
+				period = _muldivr(period, fine_linear_slide_down_table[n], 65536);
+			else
+				period = _muldivr(period, linear_slide_down_table[n / 4], 65536);
+			if (old_period == period)
+				period--;
 		}
 	} else {
-		chan->period += slide;
+		if (slide < 0) {
+			period = (int32_t)((1712 * 8363 * (int64_t)period) / (((int64_t)(period) * -slide) + 1712 * 8363));
+		} else if (slide > 0) {
+			int32_t period_div = 1712 * 8363 - ((int64_t)(period) * slide);
+			if (period_div <= 0) {
+				return 0;
+			}
+			period = (int32_t)((1712 * 8363 * (int64_t)period) / period_div);
+		}
 	}
+	return period;
 }
 
 static void fx_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->period && param) {
-		if (flags & SONG_LINEARSLIDES) {
-			chan->period = _muldivr(chan->period, linear_slide_up_table[param & 0x0F], 65536);
-		} else {
-			chan->period -= (int)(param * 4);
-		}
+		chan->period = csf_fx_do_freq_slide(flags, chan->period, param * 4);
 	}
 }
 
 static void fx_fine_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->period && param) {
-		if (flags & SONG_LINEARSLIDES) {
-			chan->period = _muldivr(chan->period, linear_slide_down_table[param & 0x0F], 65536);
-		} else {
-			chan->period += (int)(param * 4);
-		}
+		chan->period = csf_fx_do_freq_slide(flags, chan->period, param * -4);
 	}
 }
 
 static void fx_extra_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->period && param) {
-		if (flags & SONG_LINEARSLIDES) {
-			chan->period = _muldivr(chan->period, fine_linear_slide_up_table[param & 0x0F], 65536);
-		} else {
-			chan->period -= (int)(param);
-		}
+		chan->period = csf_fx_do_freq_slide(flags, chan->period, param);
 	}
 }
 
 static void fx_extra_fine_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->period && param) {
-		if (flags & SONG_LINEARSLIDES) {
-			chan->period = _muldivr(chan->period, fine_linear_slide_down_table[param & 0x0F], 65536);
-		} else {
-			chan->period += (int)(param);
-		}
+		chan->period = csf_fx_do_freq_slide(flags, chan->period, -(int)param);
 	}
 }
 
 static void fx_reg_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if (!(flags & SONG_FIRSTTICK))
-		fx_do_freq_slide(flags, chan, -(int)(param * 4));
+		chan->period = csf_fx_do_freq_slide(flags, chan->period, (int)(param * 4));
 }
 
 static void fx_reg_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if (!(flags & SONG_FIRSTTICK))
-		fx_do_freq_slide(flags, chan, (int)(param * 4));
+		chan->period = csf_fx_do_freq_slide(flags, chan->period, -(int)(param * 4));
 }
 
 
@@ -287,35 +278,19 @@ static void fx_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t para
 
 static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
-	int delta;
-
 	if (!param)
 		param = chan->mem_portanote;
 
 	chan->flags |= CHN_PORTAMENTO;
 	if (chan->period && chan->portamento_target && !(flags & SONG_FIRSTTICK)) {
 		if (chan->period < chan->portamento_target) {
-			if (flags & SONG_LINEARSLIDES) {
-				uint32_t n = MIN(255, param);
-				delta = _muldivr(chan->period, linear_slide_up_table[n], 65536) - chan->period;
-				if (delta < 1) delta = 1;
-			} else {
-				delta = param * 4;
-			}
-			chan->period += delta;
+			chan->period = csf_fx_do_freq_slide(flags, chan->period, param * 4);
 			if (chan->period > chan->portamento_target) {
 				chan->period = chan->portamento_target;
 				chan->portamento_target = 0;
 			}
 		} else if (chan->period > chan->portamento_target) {
-			if (flags & SONG_LINEARSLIDES) {
-				uint32_t n = MIN(255, param);
-				delta = _muldivr(chan->period, linear_slide_down_table[n], 65536) - chan->period;
-				if (delta > -1) delta = -1;
-			} else {
-				delta = -param * 4;
-			}
-			chan->period += delta;
+			chan->period = csf_fx_do_freq_slide(flags, chan->period, param * -4);
 			if (chan->period < chan->portamento_target) {
 				chan->period = chan->portamento_target;
 				chan->portamento_target = 0;
@@ -343,7 +318,7 @@ static void fx_note_slide(uint32_t flags, song_voice_t *chan, uint32_t param, in
 			// update it
 			chan->period = get_period_from_note
 				(sign * chan->note_slide_step + get_note_from_period(chan->period),
-				 8363, 0);
+				 8363);
 		}
 	}
 }
@@ -1287,8 +1262,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		// Don't start new notes after ===/~~~
 		chan->period = 0;
 	} else {
-		chan->period = get_period_from_note(note, psmp->c5speed,
-			csf->flags & SONG_LINEARSLIDES);
+		chan->period = get_period_from_note(note, psmp->c5speed);
 	}
 	chan->flags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE
 			   | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
@@ -1376,11 +1350,11 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 
 	if(!porta || !chan->length)
 		chan->c5speed = pins->c5speed;
-        
+
 	note = CLAMP(note, NOTE_FIRST, NOTE_LAST);
 	chan->note = CLAMP(truenote, NOTE_FIRST, NOTE_LAST);
 	chan->new_instrument = 0;
-	uint32_t period = get_period_from_note(note, chan->c5speed, csf->flags & SONG_LINEARSLIDES);
+	uint32_t period = get_period_from_note(note, chan->c5speed);
 	if (period) {
 		if (porta && chan->period) {
 			chan->portamento_target = period;
