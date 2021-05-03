@@ -209,15 +209,15 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 	if (vdelta < 0) {
 		linear_slide_table = linear_slide_up_table;
 		fine_linear_slide_table = fine_linear_slide_up_table;
-			vdelta += _muldiv(frequency, fine_linear_slide_up_table[l & 0x03], 0x10000) - frequency;
 	} else {
 		linear_slide_table = linear_slide_down_table;
 		fine_linear_slide_table = fine_linear_slide_down_table;
 	}
 
-	vdelta = _muldiv(frequency, linear_slide_table[l >> 2], 0x10000) - frequency;
-	if (l & 0x03)
-		vdelta += _muldiv(frequency, fine_linear_slide_table[l & 0x03], 0x10000) - frequency;
+	if(l < 16)
+		vdelta = _muldiv(frequency, fine_linear_slide_table[l], 0x10000) - frequency;
+	else
+		vdelta = _muldiv(frequency, linear_slide_table[l >> 2], 0x10000) - frequency;
 
 	return frequency - vdelta;
 }
