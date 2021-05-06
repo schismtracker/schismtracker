@@ -152,7 +152,7 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 	}
 	vdelta = (vdelta * (int)chan->vibrato_depth) >> vdepth;
 
-	frequency = csf_fx_do_freq_slide(csf->flags, frequency, vdelta);
+	frequency = csf_fx_do_freq_slide(csf->flags, frequency, vdelta, 0);
 
 	// handle on tick-N, or all ticks if not in old-effects mode
 	if (!(csf->flags & SONG_FIRSTTICK) || !(csf->flags & SONG_ITOLDEFFECTS)) {

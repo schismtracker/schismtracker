@@ -670,7 +670,7 @@ void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int retrig
 uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);
 void csf_check_nna(song_t *csf, uint32_t chan, uint32_t instr, int note, int force_cut);
 void csf_process_effects(song_t *csf, int firsttick);
-int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide);
+int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int is_tone_portamento);
 
 void fx_note_cut(song_t *csf, uint32_t chan, int clear_note);
 void fx_key_off(song_t *csf, uint32_t chan);

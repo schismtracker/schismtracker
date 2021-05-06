@@ -161,7 +161,7 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 
 
 // negative value for slide = down, positive = up
-int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide)
+int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int is_tone_portamento)
 {
 	// IT Linear slides
 	if (!frequency) return 0;
@@ -191,7 +191,10 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide)
 		} else if (slide > 0) {
 			int32_t frequency_div = 1712 * 8363 - ((int64_t)(frequency) * slide);
 			if (frequency_div <= 0) {
-				return 0;
+				if (is_tone_portamento)
+					frequency_div = 1;
+				else
+					return 0;
 			}
 			frequency = (int32_t)((1712 * 8363 * (int64_t)frequency) / frequency_div);
 		}
@@ -211,41 +214,41 @@ static void set_instrument_panning(song_voice_t *chan, int32_t panning)
 static void fx_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->frequency && param) {
-		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * 4);
+		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * 4, 0);
 	}
 }
 
 static void fx_fine_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->frequency && param) {
-		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * -4);
+		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * -4, 0);
 	}
 }
 
 static void fx_extra_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->frequency && param) {
-		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param);
+		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param, 0);
 	}
 }
 
 static void fx_extra_fine_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if ((flags & SONG_FIRSTTICK) && chan->frequency && param) {
-		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, -(int)param);
+		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, -(int)param, 0);
 	}
 }
 
 static void fx_reg_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if (!(flags & SONG_FIRSTTICK))
-		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, (int)(param * 4));
+		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, (int)(param * 4), 0);
 }
 
 static void fx_reg_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if (!(flags & SONG_FIRSTTICK))
-		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, -(int)(param * 4));
+		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, -(int)(param * 4), 0);
 }
 
 
@@ -293,13 +296,13 @@ static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t para
 	chan->flags |= CHN_PORTAMENTO;
 	if (chan->frequency && chan->portamento_target && !(flags & SONG_FIRSTTICK)) {
 		if (chan->frequency < chan->portamento_target) {
-			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * 4);
+			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * 4, 1);
 			if (chan->frequency > chan->portamento_target) {
 				chan->frequency = chan->portamento_target;
 				chan->portamento_target = 0;
 			}
 		} else if (chan->frequency > chan->portamento_target) {
-			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * -4);
+			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * -4, 1);
 			if (chan->frequency < chan->portamento_target) {
 				chan->frequency = chan->portamento_target;
 				chan->portamento_target = 0;
