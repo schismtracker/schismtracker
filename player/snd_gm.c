@@ -342,7 +342,7 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pre
 		}
 	}
 
-	int best_mc = c,
+	int best_mc = c % 16,
 	    best_score = -999;
 
 	for (int mc = 0; mc < 16; ++mc) {
