@@ -177,7 +177,7 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, i
 				frequency = _muldivr(frequency, linear_slide_up_table[n / 4], 65536);
 			if (old_frequency == frequency)
 				frequency++;
-		} else {
+		} else if (slide < 0) {
 			if (n < 16)
 				frequency = _muldivr(frequency, fine_linear_slide_down_table[n], 65536);
 			else
