@@ -303,10 +303,13 @@ static void _midi_engine_connect(void)
 #ifdef USE_NETWORK
 	ip_midi_setup();
 #endif
-#ifdef USE_OSS
+//Prefer ALSA MIDI over OSS, but do not enable both since ALSA's OSS emulation can cause conflicts
+#if defined(USE_ALSA) && defined(USE_OSS)
+	if (!alsa_midi_setup())
+		oss_midi_setup();
+#elif !defined(USE_ALSA) && defined(USE_OSS)
 	oss_midi_setup();
-#endif
-#ifdef USE_ALSA
+#elif defined(USE_ALSA) && !defined(USE_OSS)
 	alsa_midi_setup();
 #endif
 #ifdef WIN32
