@@ -196,7 +196,11 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, i
 				else
 					return 0;
 			}
-			frequency = (int32_t)((1712 * 8363 * (int64_t)frequency) / frequency_div);
+			int64_t freq = ((1712 * 8363 * (int64_t)frequency) / frequency_div);
+			if (freq > INT32_MAX)
+				frequency = INT32_MAX;
+			else
+				frequency = (int32_t)freq;
 		}
 	}
 	return frequency;
