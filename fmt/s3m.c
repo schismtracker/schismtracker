@@ -383,7 +383,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	/* MPT identifies as ST3.20 in the trkvers field, but it puts zeroes for the 'special' field, only ever
 	 * sets flags 0x10 and 0x40, writes multiples of 16 orders, always saves channel pannings, and writes
-	 * zero into the ultraclick removal field. (ST3 always puts either 8, 12, or 16 there).
+	 * zero into the ultraclick removal field. (ST3.2x always puts either 16, 24, or 32 there, older versions put 0).
 	 * Velvet Studio also pretends to be ST3, but writes zeroes for 'special'. ultraclick, and flags, and
 	 * does NOT save channel pannings. Also, it writes a fairly recognizable LRRL pattern for the channels,
 	 * but I'm not checking that. (yet?) */
@@ -393,7 +393,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			tid = "Modplug Tracker";
 		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
 			tid = "Velvet Studio";
-		} else if (uc != 8 && uc != 12 && uc != 16) {
+		} else if (uc != 16 && uc != 24 && uc != 32) {
 			// sure isn't scream tracker
 			tid = "Unknown tracker";
 		}
