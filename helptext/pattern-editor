@@ -82,7 +82,6 @@
 |   S7C Turn on pitch envelope
 |   S8x Set panning position
 |   S91 Set surround sound
-#   S99 Toggle duck modulator (not implemented)
 |   SAy Set high value of sample offset yxx00h
 |   SB0 Set loopback point
 |   SBx Loop x times to loopback point
