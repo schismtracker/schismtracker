@@ -447,7 +447,15 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
 	if (cwtv < 0x0214)
 		shdr.flag &= ~4;
 
-	if (shdr.flag & 1) {
+	if ((shdr.flag & 1) && shdr.cvt == 64 && sample->length == 12) {
+		// OPL instruments in OpenMPT MPTM files (which are essentially extended IT files)
+		slurp_seek(fp, bswapLE32(shdr.sample_pointer), SEEK_SET);
+		slurp_read(fp, sample->adlib_bytes, 12);
+		sample->flags |= CHN_ADLIB;
+		// dumb hackaround that ought to some day be fixed:
+		sample->length = 1;
+		sample->data = csf_allocate_sample(1);
+	} else if (shdr.flag & 1) {
 		slurp_seek(fp, bswapLE32(shdr.sample_pointer), SEEK_SET);
 
 		uint32_t flags = SF_LE;
