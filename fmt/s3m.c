@@ -352,6 +352,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					if (note->volparam == 255) {
 						note->voleffect = VOLFX_NONE;
 						note->volparam = 0;
+					} else if (note->volparam >= 128 && note->volparam <= 192) {
+						// ModPlug (or was there any earlier tracker using this command?)
+						note->voleffect = VOLFX_PANNING;
+						note->volparam -= 128;
 					} else if (note->volparam > 64) {
 						// some weirdly saved s3m?
 						note->volparam = 64;
