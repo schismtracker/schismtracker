@@ -82,6 +82,8 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t special;
 	uint16_t reserved;
 	uint32_t adlib = 0; // bitset
+	uint16_t gus_addresses = 0;
+	char any_samples = 0;
 	int uc;
 	const char *tid = NULL;
 
@@ -209,7 +211,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (misc & S3M_CHANPAN) {
 		for (n = 0; n < 32; n++) {
 			c = slurp_getc(fp);
-			if (c & 0x20)
+			if ((c & 0x20) && (!(adlib & (1 << n)) || trkvers > 0x1320))
 				song->channels[n].panning = ((c & 0xf) << 2) + 2;
 		}
 	}
@@ -248,6 +250,8 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				| ((misc & S3M_UNSIGNED) ? SF_PCMU : SF_PCMS)
 				| ((c & 4) ? SF_16 : SF_8)
 				| ((c & 2) ? SF_SS : SF_M));
+			if (sample->length)
+				any_samples = 1;
 			break;
 
 		default:
@@ -277,7 +281,11 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				sample->c5speed = 8363;
 			}
 		}
-		slurp_seek(fp, 12, SEEK_CUR);        /* wasted space */
+		slurp_seek(fp, 4, SEEK_CUR);        /* unused space */
+		int16_t gus_address;
+		slurp_read(fp, &gus_address, 2);
+		gus_addresses |= gus_address;
+		slurp_seek(fp, 6, SEEK_CUR);
 		slurp_read(fp, sample->name, 25);
 		sample->name[25] = 0;
 		sample->vib_type = 0;
@@ -296,6 +304,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			csf_read_sample(sample, smp_flags[n], fp->data + fp->pos, fp->length - fp->pos);
 		}
 	}
+
+	// Mixing volume is not used with the GUS driver; relevant for PCM + OPL tracks
+	if (gus_addresses > 1)
+		song->mixing_volume = 48;
 
 	if (!(lflags & LOAD_NOPATTERNS)) {
 		for (n = 0; n < npat; n++) {
@@ -405,7 +417,12 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (!tid) {
 		switch (trkvers >> 12) {
 		case 1:
-			tid = "Scream Tracker %d.%02x";
+			if (gus_addresses > 1)
+				tid = "Scream Tracker %d.%02x (GUS)";
+			else if (gus_addresses == 1 || !any_samples || trkvers == 0x1300)
+				tid = "Scream Tracker %d.%02x (SB)"; // could also be a GUS file with a single sample
+			else
+				tid = "Unknown tracker";
 			break;
 		case 2:
 			tid = "Imago Orpheus %d.%02x";
