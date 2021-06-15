@@ -1248,6 +1248,30 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 {
 	uint32_t effect = m->effect, param = m->param;
 
+	// strip no-op effect commands that have memory in IT but not MOD/XM.
+	// arpeggio is safe since it's handled in the next switch.
+	if (!param || (effect == 0x0E && !(param & 0xF))) {
+		switch(effect) {
+		case 0x01:
+		case 0x02:
+		case 0x0A:
+			if (!from_xm) effect = 0;
+			break;
+		case 0x0E:
+			switch(param & 0xF0) {
+			case 0x10:
+			case 0x20:
+			case 0xA0:
+			case 0xB0:
+				if (from_xm) break;
+			case 0x90:
+				effect = param = 0;
+				break;
+			}
+			break;
+		}
+	}
+
 	switch(effect) {
 	case 0x00:      if (param) effect = FX_ARPEGGIO; break;
 	case 0x01:      effect = FX_PORTAMENTOUP; break;
