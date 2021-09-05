@@ -1,26 +1,60 @@
-name: schismtracker x64 build test 1
-on: [push, pull_request]
+name: schismtracker build test 2
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build:
+  win-makepkg:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { icon: '⬛', sys: mingw32, env: i686, win: win32 }
+          - { icon: '🟦', sys: mingw64, env: x86_64, win: win64 }
+    name: 🚧${{ matrix.icon }} ${{ matrix.sys }} | make
     defaults:
       run:
         shell: msys2 {0}
+    env:
+      MINGW_ARCH: ${{ matrix.sys }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: mingw-w64-x86_64-toolchain libtool autoconf automake mingw-w64-i686-SDL make zip git
-      - name: Build Windows x64
-        run: |
-          autoupdate
-          autoreconf -i
-          mkdir build64
-          cd build64
-          ../configure
-          make
-          strip -g schismtracker.exe
-          zip schismtracker-$(date YYYYMMDD)-win64.zip schismtracker.exe /mingw64/bin/SDL.dll
+
+    - name: '⚙️ git config'
+      run: git config --global core.autocrlf input
+      shell: bash
+
+    - name: 'Checkout'
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: 'Setup MSYS2'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{ matrix.sys }}
+        update: true
+        install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL
+    - name: 'Set current date as environment variable'
+      run: echo "DATE::$(date YYYYMMDD')" >> $GITHUB_ENV
+    - name: 'Build package'
+      run: |
+        autoreconf -i
+        mkdir build
+        cd build
+        ../configure
+        make
+        strip -g schismtracker.exe
+        if [ ${{ matrix.win }} == "win32" ]
+        then
+          zip schismtracker-${{ DATE }}-${{ matrix.win }}.zip /mingw32/bin/SDL.dll /mingw64/bin/libgcc_s_dw2-1.dll /mingw64/bin/libwinpthread-1.dll
+        else
+          zip schismtracker-${{ DATE }}-${{ matrix.win }}.zip /mingw64/bin/SDL.dll
+
+    - name: 'Upload artifact: package'
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ matrix.sys }}-schismtracker
+        path: build/schismtracker-$(date YYYYMMDD)-${{ matrix.win }}.zip
