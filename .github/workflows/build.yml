@@ -6,15 +6,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  win-makepkg:
+  build:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { icon: '⬛', sys: mingw32, env: i686, win: win32 }
-          - { icon: '🟦', sys: mingw64, env: x86_64, win: win64 }
-    name: 🚧${{ matrix.icon }} ${{ matrix.sys }} | make
+          - { sys: mingw32, env: i686, win: win32 }
+          - { sys: mingw64, env: x86_64, win: win64 }
+    name: ${{ matrix.sys }}
     defaults:
       run:
         shell: msys2 {0}
@@ -22,7 +23,7 @@ jobs:
       MINGW_ARCH: ${{ matrix.sys }}
     steps:
 
-    - name: '⚙️ git config'
+    - name: 'git config'
       run: git config --global core.autocrlf input
       shell: bash
 
