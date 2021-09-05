@@ -1,0 +1,25 @@
+name: schismtracker x64 build test 1
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-toolchain libtool autoconf automake make zip
+      - name: Build Windows x64
+        run: |
+          autoreconf -i
+          mkdir build64
+          cd build64
+          ../configure
+          make
+          strip -g schismtracker.exe
+          zip schismtracker-$(date YYYYMMDD)-win64.zip schismtracker.exe /mingw64/bin/SDL.dll
