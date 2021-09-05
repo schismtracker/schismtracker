@@ -52,9 +52,9 @@ jobs:
         strip -g schismtracker.exe
         if [ ${{ matrix.win }} == "win32" ]
         then
-          zip schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip /mingw32/bin/SDL.dll /mingw64/bin/libgcc_s_dw2-1.dll /mingw64/bin/libwinpthread-1.dll
+          zip -j schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip schismtracker.exe /mingw32/bin/SDL.dll /mingw64/bin/libgcc_s_dw2-1.dll /mingw64/bin/libwinpthread-1.dll
         else
-          zip schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip /mingw64/bin/SDL.dll
+          zip -j schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip schismtracker.exe /mingw64/bin/SDL.dll
         fi
 
     - name: 'Upload artifact: package'
