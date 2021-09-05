@@ -13,7 +13,7 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          install: mingw-w64-x86_64-toolchain libtool autoconf automake make zip git
+          install: mingw-w64-x86_64-toolchain libtool autoconf automake mingw-w64-i686-SDL make zip git
       - name: Build Windows x64
         run: |
           autoupdate
