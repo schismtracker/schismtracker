@@ -16,6 +16,7 @@ jobs:
           install: mingw-w64-x86_64-toolchain libtool autoconf automake make zip git
       - name: Build Windows x64
         run: |
+          autoupdate
           autoreconf -i
           mkdir build64
           cd build64
