@@ -55,6 +55,7 @@ jobs:
           zip schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip /mingw32/bin/SDL.dll /mingw64/bin/libgcc_s_dw2-1.dll /mingw64/bin/libwinpthread-1.dll
         else
           zip schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip /mingw64/bin/SDL.dll
+        fi
 
     - name: 'Upload artifact: package'
       uses: actions/upload-artifact@v2
