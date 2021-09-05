@@ -37,8 +37,11 @@ jobs:
         msystem: ${{ matrix.sys }}
         update: true
         install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL
-    - name: 'Set current date as environment variable'
-      run: echo "DATE::$(date YYYYMMDD')" >> $GITHUB_ENV
+  
+    - name: 'Get current date'
+      id: date
+      run: echo "::set-output name=date::$(date YYYYMMDD)"
+
     - name: 'Build package'
       run: |
         autoreconf -i
@@ -49,12 +52,12 @@ jobs:
         strip -g schismtracker.exe
         if [ ${{ matrix.win }} == "win32" ]
         then
-          zip schismtracker-${{ DATE }}-${{ matrix.win }}.zip /mingw32/bin/SDL.dll /mingw64/bin/libgcc_s_dw2-1.dll /mingw64/bin/libwinpthread-1.dll
+          zip schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip /mingw32/bin/SDL.dll /mingw64/bin/libgcc_s_dw2-1.dll /mingw64/bin/libwinpthread-1.dll
         else
-          zip schismtracker-${{ DATE }}-${{ matrix.win }}.zip /mingw64/bin/SDL.dll
+          zip schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip /mingw64/bin/SDL.dll
 
     - name: 'Upload artifact: package'
       uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.sys }}-schismtracker
-        path: build/schismtracker-$(date YYYYMMDD)-${{ matrix.win }}.zip
+        path: build/schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}.zip
