@@ -50,8 +50,6 @@ jobs:
         ../configure
         make
         strip -g schismtracker.exe
-        cd ..
-        cp build/schismtracker.exe
 
     - name: 'Upload artifact (win32)'
       if: matrix.win == 'win32'
