@@ -40,7 +40,7 @@ jobs:
   
     - name: 'Get current date'
       id: date
-      run: echo "::set-output name=date::$(date +%Y%M%D)"
+      run: echo "::set-output name=date::$(date +%Y%m%d)"
 
     - name: 'Build package'
       run: |
@@ -83,7 +83,7 @@ jobs:
 
       - name: 'Get current date'
         id: date
-        run: echo "::set-output name=date::$(date +%Y%M%D)"
+        run: echo "::set-output name=date::$(date +%Y%m%d)"
 
       - name: 'Build package'
         run: |
