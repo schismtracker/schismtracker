@@ -50,6 +50,8 @@ jobs:
         ../configure
         make
         strip -g schismtracker.exe
+        cp /mingw64/bin/libgcc_s_dw2-1.dll ..
+        cp /mingw64/bin/libwinpthread-1.dll ..
 
     - name: 'Upload artifact (win32)'
       if: matrix.win == 'win32'
@@ -59,8 +61,8 @@ jobs:
         path: |
           build/schismtracker.exe
           C:\msys64\mingw32\bin\SDL.dll
-          C:\msys64\mingw64\bin\libgcc_s_dw2-1.dll
-          C:\msys64\mingw64\bin\libwinpthread-1.dll
+          libgcc_s_dw2-1.dll
+          libwinpthread-1.dll
 
     - name: 'Upload artifact (win64)'
       if: matrix.win == 'win64'
