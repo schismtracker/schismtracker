@@ -58,9 +58,9 @@ jobs:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
           build/schismtracker.exe
-          ../../../../mingw32/bin/SDL.dll
-          ../../../../mingw64/bin/libgcc_s_dw2-1.dll
-          ../../../../mingw64/bin/libwinpthread-1.dll
+          /mingw32/bin/SDL.dll
+          /mingw64/bin/libgcc_s_dw2-1.dll
+          /mingw64/bin/libwinpthread-1.dll
 
     - name: 'Upload artifact (win64)'
       if: matrix.win == 'win64'
@@ -69,7 +69,7 @@ jobs:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
           build/schismtracker.exe
-          ../../../../mingw64/bin/SDL.dll
+          /mingw64/bin/SDL.dll
 
   build-osx:
     runs-on: macos-latest
