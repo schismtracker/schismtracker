@@ -50,6 +50,7 @@ jobs:
         ../configure
         make
         strip -g schismtracker.exe
+        mv schismtracker.exe ..
 
     - name: 'Upload artifact (win32)'
       if: matrix.win == 'win32'
@@ -57,7 +58,7 @@ jobs:
       with:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
-          build/schismtracker.exe
+          schismtracker.exe
           /mingw32/bin/SDL.dll
           /mingw64/bin/libgcc_s_dw2-1.dll
           /mingw64/bin/libwinpthread-1.dll
@@ -68,7 +69,7 @@ jobs:
       with:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
-          build/schismtracker.exe
+          schismtracker.exe
           /mingw64/bin/SDL.dll
 
   build-osx:
