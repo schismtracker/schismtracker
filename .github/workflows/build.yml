@@ -50,7 +50,15 @@ jobs:
         ../configure
         make
         strip -g schismtracker.exe
-        mv schismtracker.exe ..
+        cp schismtracker.exe ..
+        if [ ${{ matrix.win }} == "win32" ]
+        then
+          cp /mingw32/bin/SDL.dll ..
+          cp /mingw64/bin/libgcc_s_dw2-1.dll ..
+          cp /mingw64/bin/libwinpthread-1.dll ..
+        else
+          cp /mingw64/bin/SDL.dll ..
+        fi
 
     - name: 'Upload artifact (win32)'
       if: matrix.win == 'win32'
@@ -59,9 +67,9 @@ jobs:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
           schismtracker.exe
-          /mingw32/bin/SDL.dll
-          /mingw64/bin/libgcc_s_dw2-1.dll
-          /mingw64/bin/libwinpthread-1.dll
+          SDL.dll
+          libgcc_s_dw2-1.dll
+          libwinpthread-1.dll
 
     - name: 'Upload artifact (win64)'
       if: matrix.win == 'win64'
@@ -70,7 +78,7 @@ jobs:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
           schismtracker.exe
-          /mingw64/bin/SDL.dll
+          SDL.dll
 
   build-osx:
     runs-on: macos-latest
