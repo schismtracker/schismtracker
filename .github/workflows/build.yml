@@ -54,8 +54,8 @@ jobs:
         if [ ${{ matrix.win }} == "win32" ]
         then
           cp /mingw32/bin/SDL.dll ..
-          cp /mingw64/bin/libgcc_s_dw2-1.dll ..
-          cp /mingw64/bin/libwinpthread-1.dll ..
+          cp /mingw32/bin/libgcc_s_dw2-1.dll ..
+          cp /mingw32/bin/libwinpthread-1.dll ..
         else
           cp /mingw64/bin/SDL.dll ..
         fi
