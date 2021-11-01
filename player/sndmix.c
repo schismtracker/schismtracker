@@ -324,14 +324,6 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 		}
 	}
 
-	// Pitch/Pan separation
-	if (penv->pitch_pan_separation && chan->final_panning && chan->note) {
-		// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
-		// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
-		chan->final_panning += ((int) (chan->note - penv->pitch_pan_center - 1)
-					* penv->pitch_pan_separation) / 2;
-	}
-
 	*nvol = vol;
 }
 
