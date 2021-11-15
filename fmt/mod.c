@@ -167,7 +167,42 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 		}
 	}
 
-	return 0;
+	/* check if it could be a SoundTracker MOD */
+	int errors = 0;
+	for (i = 0; i < 20; i++) {
+		if (data[i] > 0 && data[i] < 32) {
+			errors++;
+			if (errors > 5) {
+				return 0;
+			}
+		}
+	}
+
+	uint8_t all_volumes = 0, all_lengths = 0;
+	for (i = 0; i < 15; i++) {
+		if (data[20 + i * 30 + 24] != 0) {
+			return 0; /* invalid finetune */
+		}
+		if (data[20 + i * 30 + 25] > 64) {
+			return 0; /* invalid volume */
+		}
+		all_volumes |= data[20 + i * 30 + 25];
+		if (data[20 + i * 30 + 22] * 256 + data[20 + i * 30 + 23] > 32768) {
+			return 0; /* invalid sample length */
+		}
+		all_lengths |= data[20 + i * 30 + 22] | data[20 + i * 30 + 23];
+	}
+
+	if (all_lengths == 0 || all_volumes == 0) {
+		return 0;
+	}
+
+	file->description = "SoundTracker";
+	/*file->extension = str_dup("mod");*/
+	file->title = strn_dup((const char *)data, 20);
+	file->type = TYPE_MODULE_MOD;
+
+	return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

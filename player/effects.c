@@ -1406,6 +1406,18 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		set_instrument_panning(chan, pins->panning);
 	}
 
+	// Pitch/Pan separation
+	if (penv && penv->pitch_pan_separation) {
+		if (!chan->channel_panning) {
+			chan->channel_panning = (int16_t)(chan->panning + 1);
+		}
+
+		// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
+		// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
+		int delta = (int)(chan->note - penv->pitch_pan_center - NOTE_FIRST) * penv->pitch_pan_separation / 2;
+		chan->panning = CLAMP(chan->panning + delta, 0, 256);
+	}
+
 	if (!porta)
 		env_reset(chan, 0);
 

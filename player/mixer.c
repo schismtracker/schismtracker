@@ -31,11 +31,11 @@
 #include "util.h" // for CLAMP
 
 // For pingpong loops that work like most of Impulse Tracker's drivers
-// (including SB16, SBPro, and the disk writer) -- as well as XMPlay, use 2
-// To make them sound like the GUS driver, use 1.
+// (including SB16, SBPro, and the disk writer) -- as well as XMPlay, use 1
+// To make them sound like the GUS driver, use 0.
 // It's really only noticeable for very small loops... (e.g. chip samples)
 // (thanks Saga_Musix for this)
-#define PINGPONG_OFFSET 2
+#define PINGPONG_OFFSET 1
 
 
 
@@ -1295,13 +1295,17 @@ static int get_sample_count(song_voice_t *chan, int samples)
 
 			chan->flags |= CHN_PINGPONGFLAG;
 			// adjust loop position
-			int delta_hi = (chan->position - chan->length);
-			int delta_lo = 0x10000 - (chan->position_frac & 0xFFFF);
-			chan->position = chan->length - delta_hi - (delta_lo >> 16);
-			chan->position_frac = delta_lo & 0xFFFF;
-
-			if (chan->position <= chan->loop_start || chan->position >= chan->length)
-				chan->position = chan->length - PINGPONG_OFFSET;
+			uint64_t overshoot = (uint64_t)((chan->position - chan->length) << 16) + chan->position_frac;
+			uint64_t loop_length = (uint64_t)(chan->loop_end - chan->loop_start - PINGPONG_OFFSET) << 16;
+			if (overshoot < loop_length) {
+				uint64_t new_position = ((uint64_t)(chan->length - PINGPONG_OFFSET) << 16) - overshoot;
+				chan->position = (uint32_t)(new_position >> 16);
+				chan->position_frac = (uint32_t)(new_position & 0xFFFF);
+			}
+			else {
+				chan->position = chan->loop_start; /* not 100% accurate, but only matters for extremely small loops played at extremely high frequencies */
+				chan->position_frac = 0;
+			}
 		}
 		else {
 			// This is a bug
