@@ -102,10 +102,10 @@ distributions.
 
 #### Ubuntu / Debian
 
-    apt-get install build-essential automake autoconf autoconf-archive    \
-                    libx11-dev libxext-dev libxv-dev libxxf86misc-dev     \
-                    libxxf86vm-dev libsdl1.2-dev libasound2-dev mercurial \
-										libtool
+    apt-get install build-essential automake autoconf autoconf-archive \
+                    libx11-dev libxext-dev libxv-dev libxxf86misc-dev \
+                    libxxf86vm-dev libsdl1.2-dev libasound2-dev git \
+                    libtool
 
 Additionally, for cross-compiling win32 binaries:
 
@@ -113,7 +113,7 @@ Additionally, for cross-compiling win32 binaries:
 
 #### Arch Linux
 
-    pacman -S base-devel mercurial sdl alsa-lib libxv libxxf86vm
+    pacman -S base-devel git sdl alsa-lib libxv libxxf86vm
 
 For cross-compiling win32 binaries:
 
