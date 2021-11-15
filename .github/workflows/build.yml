@@ -1,4 +1,4 @@
-name: schismtracker build test
+name: schismtracker build
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
       with:
         msystem: ${{ matrix.sys }}
         update: true
-        install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL zip
+        install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL zip dos2unix
   
     - name: 'Get current date'
       id: date
@@ -59,6 +59,9 @@ jobs:
         else
           cp /mingw64/bin/SDL.dll ..
         fi
+        cd ..
+        cp docs/configuration.md .
+        unix2dos COPYING README.md configuration.md
 
     - name: 'Upload artifact (win32)'
       if: matrix.win == 'win32'
@@ -70,6 +73,9 @@ jobs:
           SDL.dll
           libgcc_s_dw2-1.dll
           libwinpthread-1.dll
+          COPYING
+          README.md
+          configuration.md
 
     - name: 'Upload artifact (win64)'
       if: matrix.win == 'win64'
@@ -79,13 +85,16 @@ jobs:
         path: |
           schismtracker.exe
           SDL.dll
+          COPYING
+          README.md
+          configuration.md
 
-  build-osx:
+  build-macos:
     runs-on: macos-latest
     
     steps:
       - name: 'Install dependencies'
-        run: 'brew install automake autoconf sdl git'
+        run: brew install automake autoconf sdl git zip
 
       - name: 'Checkout'
         uses: actions/checkout@v2
@@ -107,16 +116,47 @@ jobs:
           cp ../../../../../build/schismtracker .
           cp /usr/local/lib/libSDL-* .
           cd ../../../../..
-          mkdir -p schismtracker
-          cd schismtracker
-          cp -r ../sys/macosx/Schism_Tracker.app Schism\ Tracker.app
-          cp ../docs/configuration.md configuration.md
-          cp ../COPYING COPYING
-          cp ../README.md README.md
+          cp -r sys/macosx/Schism_Tracker.app Schism\ Tracker.app
+          cp docs/configuration.md .
+          zip schismtracker.zip configuration.md COPYING README.md Schism\ Tracker.app
 
       - name: 'Upload artifact'
         uses: actions/upload-artifact@v2
         with:
-          name: schismtracker-${{ steps.date.outputs.date }}-osx
-          path: | 
-            schismtracker
+          name: schismtracker-${{ steps.date.outputs.date }}-macos
+          path: schismtracker.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Install dependencies'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl1.2-dev libasound2-dev git libtool zip
+
+      - name: 'Checkout'
+        uses: actions/checkout@v2
+
+      - name: 'Get current date'
+        id: date
+        run: echo "::set-output name=date::$(date +%Y%m%d)"
+
+      - name: 'Build package'
+        run: |
+          autoreconf -i
+          mkdir -p build
+          cd build
+          ../configure
+          make
+          cd ..
+          cp build/schismtracker .
+          cp docs/configuration.md .
+          cp sys/posix/schismtracker.1 .
+          zip schismtracker.zip configuration.md COPYING README.md schismtracker.1 schismtracker
+
+      - name: 'Upload artifact'
+        uses: actions/upload-artifact@v2
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-linux
+          path: schismtracker.zip
