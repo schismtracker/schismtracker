@@ -1,0 +1,122 @@
+name: schismtracker build test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { sys: mingw32, env: i686, win: win32 }
+          - { sys: mingw64, env: x86_64, win: win64 }
+    name: ${{ matrix.win }}
+    defaults:
+      run:
+        shell: msys2 {0}
+    env:
+      MINGW_ARCH: ${{ matrix.sys }}
+    steps:
+
+    - name: 'git config'
+      run: git config --global core.autocrlf input
+      shell: bash
+
+    - name: 'Checkout'
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: 'Setup MSYS2'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{ matrix.sys }}
+        update: true
+        install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL zip
+  
+    - name: 'Get current date'
+      id: date
+      run: echo "::set-output name=date::$(date +%Y%m%d)"
+
+    - name: 'Build package'
+      run: |
+        autoreconf -i
+        mkdir build
+        cd build
+        ../configure
+        make
+        strip -g schismtracker.exe
+        cp schismtracker.exe ..
+        if [ ${{ matrix.win }} == "win32" ]
+        then
+          cp /mingw32/bin/SDL.dll ..
+          cp /mingw32/bin/libgcc_s_dw2-1.dll ..
+          cp /mingw32/bin/libwinpthread-1.dll ..
+        else
+          cp /mingw64/bin/SDL.dll ..
+        fi
+
+    - name: 'Upload artifact (win32)'
+      if: matrix.win == 'win32'
+      uses: actions/upload-artifact@v2
+      with:
+        name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
+        path: |
+          schismtracker.exe
+          SDL.dll
+          libgcc_s_dw2-1.dll
+          libwinpthread-1.dll
+
+    - name: 'Upload artifact (win64)'
+      if: matrix.win == 'win64'
+      uses: actions/upload-artifact@v2
+      with:
+        name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
+        path: |
+          schismtracker.exe
+          SDL.dll
+
+  build-osx:
+    runs-on: macos-latest
+    
+    steps:
+      - name: 'Install dependencies'
+        run: 'brew install automake autoconf sdl git'
+
+      - name: 'Checkout'
+        uses: actions/checkout@v2
+
+      - name: 'Get current date'
+        id: date
+        run: echo "::set-output name=date::$(date +%Y%m%d)"
+
+      - name: 'Build package'
+        run: |
+          autoreconf -i
+          mkdir -p build
+          cd build
+          ../configure
+          make
+          cd ../sys/macosx/Schism_Tracker.app/Contents/
+          mkdir MacOS
+          cd MacOS
+          cp ../../../../../build/schismtracker .
+          cp /usr/local/lib/libSDL-* .
+          cd ../../../../..
+          mkdir -p schismtracker
+          cd schismtracker
+          cp -r ../sys/macosx/Schism_Tracker.app Schism\ Tracker.app
+          cp ../docs/configuration.md configuration.md
+          cp ../COPYING COPYING
+          cp ../README.md README.md
+
+      - name: 'Upload artifact'
+        uses: actions/upload-artifact@v2
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-osx
+          path: | 
+            schismtracker
