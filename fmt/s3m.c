@@ -284,7 +284,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		slurp_seek(fp, 4, SEEK_CUR);        /* unused space */
 		int16_t gus_address;
 		slurp_read(fp, &gus_address, 2);
-		gus_addresses |= gus_address;
+		gus_addresses |= bswapLE16(gus_address);
 		slurp_seek(fp, 6, SEEK_CUR);
 		slurp_read(fp, sample->name, 25);
 		sample->name[25] = 0;
