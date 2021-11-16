@@ -316,6 +316,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			c->flags |= CHN_NNAMUTE;
 		}
 
+		c->cutoff = 0x7f;
+		c->resonance = 0;
 		if (i) {
 			c->ptr_instrument = i;
 
