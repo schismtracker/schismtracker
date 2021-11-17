@@ -344,15 +344,13 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 							message_left--;
 						}
 						vlen -= y;
-						if (vlen)
-							slurp_seek(fp, vlen, SEEK_CUR);
-						continue;
+						break;
 
 					case 0x20: // MIDI channel (FF 20 len* cc)
 						// specifies which midi-channel sysexes are assigned to
 					case 0x21: // MIDI port (FF 21 len* pp)
 						// specifies which port/bus this track's events are routed to
-						continue;
+						break;
 
 					case 0x2f:
 						found_end = 1;
@@ -371,18 +369,18 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						break;
 					case 0x54: // SMPTE offset (what time in the song this track starts)
 						// (what?!)
-						continue;
+						break;
 					case 0x58: // time signature (FF 58 len* nn dd cc bb)
 					case 0x59: // key signature (FF 59 len* sf mi)
 						// TODO care? don't care?
-						continue;
+						break;
 					case 0x7f: // some proprietary crap
-						continue;
+						break;
 
 					default:
 						// some mystery crap
 						log_appendf(2, " Unknown meta-event FF %02X", x);
-						continue;
+						break;
 					}
 					slurp_seek(fp, vlen, SEEK_CUR);
 					break;
