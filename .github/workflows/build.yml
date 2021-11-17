@@ -111,6 +111,8 @@ jobs:
           ../configure
           make
           cd ../sys/macosx/Schism_Tracker.app/Contents/
+          sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
+          rm Info.plist.bak
           mkdir MacOS
           cd MacOS
           cp ../../../../../build/schismtracker .
