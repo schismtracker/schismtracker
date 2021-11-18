@@ -23,7 +23,7 @@ dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 dnl PACKAGE_VERSION will be either "" if not using git, or date of the last git commit in the form YYYYMMDD
 m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
-AC_INIT([schismtracker], [last_git_commit])
+AC_INIT([schismtracker],[last_git_commit])
 
 AC_CONFIG_SRCDIR([schism/main.c])
 
@@ -38,7 +38,6 @@ AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
-AC_PROG_CC_C99
 
 dnl do we have Git
 AC_CHECK_TOOL([GIT], [git])
@@ -60,7 +59,16 @@ dnl check endianness
 AC_C_BIGENDIAN
 
 dnl Check for SDL libs
-AM_PATH_SDL(1.2.10, , AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.]))
+AC_CHECK_TOOL([SDL_CONFIG], [sdl-config])
+AC_SUBST(SDL_CONFIG)
+if test "x$SDL_CONFIG" == "x"; then
+        AC_MSG_ERROR([*** sdl-config not found.])
+fi
+if grep -qv 1.2.1 <(sdl-config --version); then
+        AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.])
+fi
+SDL_CFLAGS=$(sdl-config --cflags)
+SDL_LIBS=$(sdl-config --libs)
 
 dnl Libs
 AC_CHECK_LIB([dl], [dlopen])
@@ -76,9 +84,9 @@ AM_CONDITIONAL([NEED_MKSTEMP], [test "$ac_cv_func_mkstemp" = "no"])
 AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
 
 dnl Headers, typedef crap, et al.
-AC_HEADER_STDC
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
 AC_HEADER_DIRENT
-AC_HEADER_TIME
 AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/soundcard.h)
 AM_CONDITIONAL([USE_OSS], [test "$ac_cv_header_sys_soundcard_h" = yes])
 
