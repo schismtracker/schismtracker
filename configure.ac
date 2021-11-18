@@ -64,7 +64,7 @@ AC_SUBST(SDL_CONFIG)
 if test "x$SDL_CONFIG" == "x"; then
         AC_MSG_ERROR([*** sdl-config not found.])
 fi
-if grep -qv 1.2.1 <(sdl-config --version); then
+if sdl-config --version | grep -qv 1.2.1; then
         AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.])
 fi
 SDL_CFLAGS=$(sdl-config --cflags)
@@ -84,8 +84,6 @@ AM_CONDITIONAL([NEED_MKSTEMP], [test "$ac_cv_func_mkstemp" = "no"])
 AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
 
 dnl Headers, typedef crap, et al.
-AC_CHECK_INCLUDES_DEFAULT
-AC_PROG_EGREP
 AC_HEADER_DIRENT
 AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/soundcard.h)
 AM_CONDITIONAL([USE_OSS], [test "$ac_cv_header_sys_soundcard_h" = yes])
