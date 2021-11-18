@@ -85,6 +85,7 @@ AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
 
 dnl Headers, typedef crap, et al.
 AC_HEADER_DIRENT
+AC_HEADER_TIME
 AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/soundcard.h)
 AM_CONDITIONAL([USE_OSS], [test "$ac_cv_header_sys_soundcard_h" = yes])
 
