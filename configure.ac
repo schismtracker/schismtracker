@@ -59,13 +59,13 @@ dnl check endianness
 AC_C_BIGENDIAN
 
 dnl Check for SDL libs
-AC_CHECK_TOOL([SDL_CONFIG], [sdl-config])
+AC_CHECK_TOOL([SDL_CONFIG], [sdl2-config])
 AC_SUBST(SDL_CONFIG)
 if test "x$SDL_CONFIG" == "x"; then
-        AC_MSG_ERROR([*** sdl-config not found.])
+        AC_MSG_ERROR([*** sdl2-config not found.])
 fi
-if $SDL_CONFIG --version | grep -qv 1.2.1; then
-        AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.])
+if $SDL_CONFIG --version | grep -qv ^2\\.0\\.; then
+        AC_MSG_ERROR([*** SDL version >= 2.0.0 not found.])
 fi
 SDL_CFLAGS=$($SDL_CONFIG --cflags)
 SDL_LIBS=$($SDL_CONFIG --libs)
