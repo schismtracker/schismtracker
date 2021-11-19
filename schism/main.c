@@ -85,7 +85,7 @@ static void display_print_info(void)
 {
 	log_append(2, 0, "Video initialised");
 	log_underline(17);
-	video_report();
+	//video_report();
 }
 
 /* If we're not not debugging, don't not dump core. (Have I ever mentioned
@@ -699,7 +699,13 @@ static void event_loop(void)
 			};
 
 			kk.mod = modkey;
+			/* SDL2 has eliminated .unicode, and instead has a TEXTINPUT event,
+			 * but this really doesn't fit the input model of schism.  For now
+			 * I've just wired .sym into .unicode and it minimally functions,
+			 * it's unclear to me what the best solution is here.
+			 */
 //			kk.unicode = event.key.keysym.unicode; TODO
+			kk.unicode = event.key.keysym.sym;
 			kk.mouse = MOUSE_NONE;
 			if (debug_s && strstr(debug_s, "key")) {
 				log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
@@ -744,6 +750,29 @@ static void event_loop(void)
 			handle_window_event(&event.window);
 			break;
 		case SDL_MOUSEMOTION:
+			if (kk.state == KEY_PRESS) {
+				modkey = SDL_GetModState();
+#if defined(WIN32)
+				win32_get_modkey(&modkey);
+#endif
+			}
+
+			kk.sym.sym = 0;
+			kk.mod = 0;
+
+			video_translate(event.motion.x, event.motion.y, &kk.fx, &kk.fy);
+
+			/* character resolution */
+			kk.x = kk.fx / kk.rx;
+			/* half-character selection */
+			if ((kk.fx / (kk.rx/2)) % 2 == 0) {
+				kk.hx = 0;
+			} else {
+				kk.hx = 1;
+			}
+			kk.y = kk.fy / kk.ry;
+			if (startdown) startdown = 0;
+			break;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 			if (kk.state == KEY_PRESS) {
@@ -755,7 +784,6 @@ static void event_loop(void)
 
 			kk.sym.sym = 0;
 			kk.mod = 0;
-			kk.unicode = 0;
 
 			video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
 
@@ -773,7 +801,7 @@ static void event_loop(void)
 				kk.sy = kk.y;
 			}
 			if (startdown) startdown = 0;
-			if (event.type != SDL_MOUSEMOTION && debug_s && strstr(debug_s, "mouse")) {
+			if (debug_s && strstr(debug_s, "mouse")) {
 				log_appendf(12, "[DEBUG] Mouse%s button=%d x=%d y=%d",
 					(event.type == SDL_MOUSEBUTTONDOWN) ? "Down" : "Up",
 						(int)event.button.button,
@@ -1102,7 +1130,6 @@ int main(int argc, char **argv)
 	shutdown_process |= EXIT_SDLQUIT;
 	os_sdlinit();
 
-	video_setup(video_driver);
 	display_init();
 	palette_apply();
 	font_init();

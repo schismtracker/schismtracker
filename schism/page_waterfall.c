@@ -259,8 +259,6 @@ static void _vis_process(void)
 	k = NATIVE_SCREEN_WIDTH/2;
 	unsigned char outfft[NATIVE_SCREEN_WIDTH];
 
-	vgamem_lock();
-
 	/* move up by one pixel */
 	memmove(ovl.q, ovl.q+NATIVE_SCREEN_WIDTH,
 			(NATIVE_SCREEN_WIDTH*
@@ -298,7 +296,6 @@ static void _vis_process(void)
 		}
 	}
 
-	vgamem_unlock();
 	status.flags |= NEED_UPDATE;
 }
 
