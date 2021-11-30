@@ -240,10 +240,17 @@ static void import_imf_effect(song_note_t *note)
 			// no change
 			break;
 		case 0xe: // ignore envelope
-			/* predicament: we can only disable one envelope at a time.
-			volume is probably most noticeable, so let's go with that.
-			(... actually, orpheus doesn't even seem to implement this at all) */
-			note->param = 0x77;
+			switch (note->param & 0x0F) {
+				/* predicament: we can only disable one envelope at a time.
+				volume is probably most noticeable, so let's go with that. */
+			case 0: note->param = 0x77; break;
+				// Volume
+			case 1: note->param = 0x77; break;
+				// Panning
+			case 2: note->param = 0x79; break;
+				// Filter
+			case 3: note->param = 0x7B; break;
+			}
 			break;
 		case 0x18: // sample offset
 			// O00 doesn't pick up the previous value
@@ -380,6 +387,7 @@ static void load_imf_envelope(song_instrument_t *ins, song_envelope_t *env, stru
 	int n, t, v;
 	int min = 0; // minimum tick value for next node
 	int shift = (e == IMF_ENV_VOL ? 0 : 2);
+	int mirror = (e == IMF_ENV_FILTER) ? 0xff : 0x00;
 
 	env->nodes = CLAMP(imfins->env[e].points, 2, 25);
 	env->loop_start = imfins->env[e].loop_start;
@@ -388,7 +396,7 @@ static void load_imf_envelope(song_instrument_t *ins, song_envelope_t *env, stru
 
 	for (n = 0; n < env->nodes; n++) {
 		t = bswapLE16(imfins->nodes[e][n].tick);
-		v = bswapLE16(imfins->nodes[e][n].value) >> shift;
+		v = ((bswapLE16(imfins->nodes[e][n].value) & 0xff) ^ mirror) >> shift;
 		env->ticks[n] = MAX(min, t);
 		env->values[n] = v = MIN(v, 64);
 		min = t + 1;
