@@ -120,7 +120,7 @@ jobs:
           mkdir MacOS
           cd MacOS
           cp ../../../../../build/schismtracker .
-          cp /usr/local/lib/libSDL-* .
+          cp ../../../../../lib/libSDL-1.2.0.dylib .
           install_name_tool -change /usr/local/opt/sdl/lib/libSDL-1.2.0.dylib @executable_path/libSDL-1.2.0.dylib schismtracker
           cd ../../../../..
           cp -r sys/macosx/Schism_Tracker.app Schism\ Tracker.app
