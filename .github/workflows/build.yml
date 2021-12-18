@@ -96,7 +96,7 @@ jobs:
     
     steps:
       - name: 'Install dependencies'
-        run: brew install automake autoconf sdl git zip
+        run: brew install automake autoconf sdl git zip xz
 
       - name: 'Checkout'
         uses: actions/checkout@v2
@@ -108,7 +108,7 @@ jobs:
       - name: 'Build package'
         run: |
           curl -o sdk.tar.xz "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
-          tar xf sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
+          tar xJf sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
           autoreconf -i
           mkdir -p build
           cd build
