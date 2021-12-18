@@ -107,9 +107,8 @@ jobs:
 
       - name: 'Build package'
         run: |
-          curl -o MacOSX10.9.sdk.tar.xz "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
-          xz -d MacOSX10.9.sdk.tar.xz
-          tar xvf MacOSX10.9.sdk.tar -C /Library/Developer/CommandLineTools/SDKs/
+          curl -O MacOSX10.9.sdk.tar.xz "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz
+          tar -xJf MacOSX10.9.sdk.tar -C /Library/Developer/CommandLineTools/SDKs/
           autoreconf -i
           mkdir -p build
           cd build
