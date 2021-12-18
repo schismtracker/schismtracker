@@ -220,6 +220,7 @@ files_macosx = \
 	sys/macosx/midi-macosx.c	\
 	sys/macosx/volume-macosx.c	\
 	sys/macosx/osdefs.c
+cflags_macosx=-mmacosx-version-min=10.9
 endif
 
 if USE_NETWORK
@@ -367,7 +368,8 @@ cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I.
 AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
-	$(cflags_version) $(cflags_win32) $(cflags_wii)
+	$(cflags_version) $(cflags_win32) $(cflags_wii) \
+	$(cflags_macosx)
 AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
