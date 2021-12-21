@@ -459,6 +459,9 @@ int fmt_aiff_export_body(disko_t *fp, const uint8_t *data, size_t length)
 
 int fmt_aiff_export_silence(disko_t *fp, long bytes)
 {
+	struct aiff_writedata *awd = fp->userdata;
+	awd->numbytes += bytes;
+
 	disko_seek(fp, bytes, SEEK_CUR);
 	return DW_OK;
 }
