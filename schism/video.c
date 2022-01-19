@@ -505,6 +505,10 @@ void video_setup(const char *driver)
 	if (!driver) {
 		driver = "yuv";
 	}
+#elif defined(__APPLE__)
+	if (!driver) {
+		driver = "opengl";
+	}
 #else
 	if (!driver) {
 		if (getenv("DISPLAY")) {
