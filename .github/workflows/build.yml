@@ -103,14 +103,16 @@ jobs:
         uses: actions/cache@v2
         id: cache
         with:
-          path: MacOSX10.9.sdk.tar.xz
-          key: 10.9-SDK
+          path: '/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/'
+          key: 10.9-SDK-Folder
 
       - name: 'Install dependencies'
         run: |
           brew install automake sdl zip
-          wget "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
-          sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
+          if [ ! -f "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/" ]; then
+            wget -nc "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
+            sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
+          fi
 
       - name: 'Checkout'
         uses: actions/checkout@v2
