@@ -91,17 +91,31 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
+    env:
+      MACOSX_DEPLOYMENT_TARGET: 10.9
     
     steps:
-      - name: 'Install dependencies'
-        run: brew install automake autoconf sdl git zip
-
-      - name: 'Checkout'
-        uses: actions/checkout@v2
-
       - name: 'Get current date'
         id: date
         run: echo "::set-output name=date::$(date +%Y%m%d)"
+
+      - name: 'Cache SDK'
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: '/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/'
+          key: 10.9-SDK-Folder
+
+      - name: 'Install dependencies'
+        run: |
+          brew install automake sdl zip
+          if [ ! -f "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/" ]; then
+            wget -nc "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
+            sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
+          fi
+
+      - name: 'Checkout'
+        uses: actions/checkout@v2
 
       - name: 'Build package'
         run: |
@@ -109,14 +123,14 @@ jobs:
           mkdir -p build
           cd build
           ../configure
-          make
+          make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"
           cd ../sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
           rm Info.plist.bak
           mkdir MacOS
           cd MacOS
           cp ../../../../../build/schismtracker .
-          cp /usr/local/lib/libSDL-* .
+          cp ../../../../../libs/libSDL-1.2.0.dylib .
           install_name_tool -change /usr/local/opt/sdl/lib/libSDL-1.2.0.dylib @executable_path/libSDL-1.2.0.dylib schismtracker
           cd ../../../../..
           cp -r sys/macosx/Schism_Tracker.app Schism\ Tracker.app
