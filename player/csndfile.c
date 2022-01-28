@@ -1319,7 +1319,7 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 			case 0xB0:
 				effect = FX_VOLUMESLIDE;
 				if (param & 0x0F) {
-					param |= 0xF0;
+					param = 0xF0 | MIN(param & 0x0F, 0x0E);
 				} else {
 					param = 0;
 				}
