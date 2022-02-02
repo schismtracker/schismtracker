@@ -130,7 +130,7 @@ jobs:
           cd build
           ../configure
           make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"
-          strip schismtracker
+          strip -S schismtracker
           cd ../sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
           rm Info.plist.bak
