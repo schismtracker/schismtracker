@@ -99,6 +99,12 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date +%Y%m%d)"
 
+      - name: 'chown SDK directory'
+        id: chown
+        run: |
+          sudo mkdir -p /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk
+          sudo chown $(whoami) /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk
+
       - name: 'Cache SDK'
         uses: actions/cache@v2
         id: cache
@@ -124,6 +130,7 @@ jobs:
           cd build
           ../configure
           make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"
+          strip -S schismtracker
           cd ../sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
           rm Info.plist.bak
@@ -166,6 +173,7 @@ jobs:
           cd build
           ../configure
           make
+          strip -S schismtracker
           cd ..
           cp build/schismtracker .
           cp docs/configuration.md .
