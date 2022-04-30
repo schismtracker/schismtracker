@@ -1174,6 +1174,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	if (instr >= MAX_INSTRUMENTS) return;
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
 	song_sample_t *psmp = chan->ptr_sample;
+	const song_sample_t *oldsmp = chan->ptr_sample;
 	uint32_t note = chan->new_note;
 
 	if (note == NOTE_NONE) {
@@ -1183,7 +1184,9 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	} else if (penv) {
 		if (NOTE_IS_CONTROL(penv->note_map[note-1]))
 			return;
-		if (!(porta && penv == chan->ptr_instrument && chan->ptr_sample && chan->current_sample_data))
+		if (!penv->sample_map[note - 1])
+			return;
+		if (!(porta && (csf->flags & SONG_COMPATGXX) && penv == chan->ptr_instrument && chan->ptr_sample && chan->current_sample_data))
 			psmp = csf_translate_keyboard(csf, penv, note, NULL);
 		chan->flags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	} else {
@@ -1209,6 +1212,10 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		} else {
 			chan->instrument_volume = psmp->global_volume;
 		}
+	}
+
+	if(penv && !inst_changed && psmp != oldsmp && chan->current_sample_data && !NOTE_IS_NOTE(note)) {
+		return;
 	}
 
 	// Reset envelopes
@@ -1272,8 +1279,6 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	if ((chan->flags & (CHN_KEYOFF | CHN_NOTEFADE)) && inst_column) {
 		// Don't start new notes after ===/~~~
 		chan->frequency = 0;
-	} else {
-		chan->frequency = get_frequency_from_note(note, psmp->c5speed);
 	}
 	chan->flags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE
 			   | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
@@ -1331,6 +1336,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	song_sample_t *pins = chan->ptr_sample;
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? chan->ptr_instrument : NULL;
 	if (penv && NOTE_IS_NOTE(note)) {
+		if (!penv->sample_map[note - 1])
+			return;
 		if (!(have_inst && porta && pins))
 			pins = csf_translate_keyboard(csf, penv, note, pins);
 		note = penv->note_map[note - 1];
@@ -1359,7 +1366,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	if (!pins)
 		return;
 
-	if(!porta || !chan->length)
+	if(!porta && pins)
 		chan->c5speed = pins->c5speed;
 
 	note = CLAMP(note, NOTE_FIRST, NOTE_LAST);
@@ -2045,7 +2052,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 		chan->flags &= ~CHN_FASTVOLRAMP;
 
 		// set instrument before doing anything else
-		if (instr) chan->new_instrument = instr;
+		if (instr && start_note) chan->new_instrument = instr;
 
 		/* Have to handle SDx specially because of the way the effects are structured.
 		In a PERFECT world, this would be very straightforward:
@@ -2134,9 +2141,8 @@ void csf_process_effects(song_t *csf, int firsttick)
 						csf->instruments[instr]->midi_channel_mask);
 
 				chan->new_instrument = 0;
-				// Special IT case: portamento+note causes sample change -> ignore portamento
-				if (psmp != chan->ptr_sample && NOTE_IS_NOTE(note)) {
-					porta = 0;
+				if (NOTE_IS_NOTE(note) && psmp != chan->ptr_sample) {
+					chan->position = chan->position_frac = 0;
 				}
 			}
 			// New Note ?
