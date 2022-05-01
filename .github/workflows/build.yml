@@ -133,8 +133,8 @@ jobs:
         run: |
           cd sdl
           wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
-          sed 's/10.6/10.9/g' build-scripts/clang-fat.sh
-          sed 's/1060/1090/g' build-scripts/clang-fat.sh
+          sed -e 's/10.6/10.9/g' build-scripts/clang-fat.sh
+          sed -e 's/1060/1090/g' build-scripts/clang-fat.sh
           ./configure CC="sh build-scripts/clang-fat.sh"
           make
           sudo make install
