@@ -114,7 +114,7 @@ jobs:
 
       - name: 'Install dependencies'
         run: |
-          brew install automake sdl zip
+          brew install automake zip
           if [ ! -f "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/" ]; then
             wget -nc "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
             sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
