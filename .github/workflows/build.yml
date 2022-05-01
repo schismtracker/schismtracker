@@ -123,14 +123,23 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v3
 
+      - name: 'Cache SDL 1.2 dylib'
+        uses: actions/cache@v2
+        id: cacheSDL
+        with:
+          path: '/usr/local/lib/libSDL-1.2.0.dylib'
+          key: SDL-1.2-dylib
+
       - name: 'Checkout SDL 1.2'
+        if: success()
         uses: actions/checkout@v3
         with:
           repository: libsdl-org/SDL-1.2
           path: sdl
-      
+
       - name: 'Build SDL 1.2'
         run: |
+          test -f /usr/local/lib/libSDL-1.2.0.dylib || exit # if file exists, exit
           cd sdl
           wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
           sed -i.bak 's/10.6/10.9/g' build-scripts/clang-fat.sh
@@ -140,13 +149,6 @@ jobs:
           sudo make install
           rm -rf arm64 x64
           cd ..
-
-      - name: 'Cache SDL 1.2 dylib'
-        uses: actions/cache@v2
-        id: cacheSDL
-        with:
-          path: '/usr/local/lib/libSDL-1.2.0.dylib'
-          key: SDL-1.2-dylib
 
       - name: 'Build package'
         run: |
