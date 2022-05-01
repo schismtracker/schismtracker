@@ -148,7 +148,7 @@ jobs:
           mkdir -p build
           cd build
           ../configure
-          make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"
+          make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
           strip -S schismtracker
           cd ../sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
