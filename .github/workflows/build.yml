@@ -106,7 +106,7 @@ jobs:
           sudo chown $(whoami) /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk /usr/local/lib
 
       - name: 'Cache SDK'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache
         with:
           path: '/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/'
@@ -123,15 +123,7 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v3
 
-      - name: 'Cache SDL 1.2 dylib'
-        uses: actions/cache@v2
-        id: cacheSDL
-        with:
-          path: '/usr/local/lib/libSDL-1.2.0.dylib'
-          key: SDL-1.2-dylib
-
       - name: 'Checkout SDL 1.2'
-        if: failure()
         uses: actions/checkout@v3
         with:
           repository: libsdl-org/SDL-1.2
@@ -139,10 +131,6 @@ jobs:
 
       - name: 'Build SDL 1.2'
         run: |
-          if [ -f /usr/local/lib/libSDL-1.2.0.dylib ]
-          then
-            exit 0
-          fi
           cd sdl
           wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
           sed -i.bak 's/10.6/10.9/g' build-scripts/clang-fat.sh
