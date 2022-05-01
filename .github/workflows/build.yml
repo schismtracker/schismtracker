@@ -139,7 +139,8 @@ jobs:
 
       - name: 'Build SDL 1.2'
         run: |
-          if [ -f /usr/local/lib/libSDL-1.2.0.dylib ]:
+          if [ -f /usr/local/lib/libSDL-1.2.0.dylib ]
+          then
             exit 0
           fi
           cd sdl
