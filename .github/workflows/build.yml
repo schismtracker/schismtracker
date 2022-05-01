@@ -135,7 +135,7 @@ jobs:
           wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
           sed 's/10.6/10.9/g' build-scripts/clang-fat.sh
           sed 's/1060/1090/g' build-scripts/clang-fat.sh
-          ./configure CC="sh clang-fat.sh"
+          ./configure CC="sh build-scripts/clang-fat.sh"
           make
           sudo make install
           rm -rf arm64 x64
