@@ -132,7 +132,7 @@ jobs:
       - name: 'Build SDL 1.2'
         run: |
           cd sdl
-          curl -o build-scripts/clang-fat.sh https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh
+          curl -O build-scripts/clang-fat.sh https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh
           sed 's/10.6/10.9/g' build-scripts/clang-fat.sh
           sed 's/1060/1090/g' build-scripts/clang-fat.sh
           ./configure CC="sh clang-fat.sh"
