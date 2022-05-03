@@ -1510,7 +1510,15 @@ static void _blit1n(int bpp, unsigned char *pixels, unsigned int pitch)
 				break;
 			case 3:
 				/* inline MapRGB */
-				(*(unsigned int *)pixels) = (outr << 16) | (outg << 8) | outb;
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+				pixels[0] = outr;
+				pixels[1] = outg;
+				pixels[2] = outb;
+#else
+				pixels[2] = outr;
+				pixels[1] = outg;
+				pixels[0] = outb;
+#endif
 				break;
 			case 2:
 				/* inline MapRGB if possible */
