@@ -103,10 +103,10 @@ jobs:
         id: chown
         run: |
           sudo mkdir -p /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk
-          sudo chown $(whoami) /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk
+          sudo chown $(whoami) /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk /usr/local/lib
 
       - name: 'Cache SDK'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache
         with:
           path: '/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/'
@@ -114,14 +114,32 @@ jobs:
 
       - name: 'Install dependencies'
         run: |
-          brew install automake sdl zip
-          if [ ! -f "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/" ]; then
+          brew install automake zip
+          if [ ! -d "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/" ]; then
             wget -nc "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
             sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
           fi
 
       - name: 'Checkout'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: 'Checkout SDL 1.2'
+        uses: actions/checkout@v3
+        with:
+          repository: libsdl-org/SDL-1.2
+          path: sdl
+
+      - name: 'Build SDL 1.2'
+        run: |
+          cd sdl
+          wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
+          sed -i.bak 's/10.6/10.9/g' build-scripts/clang-fat.sh
+          sed -i.bak 's/1060/1090/g' build-scripts/clang-fat.sh
+          ./configure CC="sh build-scripts/clang-fat.sh"
+          make
+          sudo make install
+          rm -rf arm64 x64
+          cd ..
 
       - name: 'Build package'
         run: |
@@ -129,7 +147,7 @@ jobs:
           mkdir -p build
           cd build
           ../configure
-          make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"
+          make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
           strip -S schismtracker
           cd ../sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
@@ -137,8 +155,8 @@ jobs:
           mkdir MacOS
           cd MacOS
           cp ../../../../../build/schismtracker .
-          cp ../../../../../libs/libSDL-1.2.0.dylib .
-          install_name_tool -change /usr/local/opt/sdl/lib/libSDL-1.2.0.dylib @executable_path/libSDL-1.2.0.dylib schismtracker
+          cp /usr/local/lib/libSDL-1.2.0.dylib .
+          install_name_tool -change /usr/local/lib/libSDL-1.2.0.dylib @executable_path/libSDL-1.2.0.dylib schismtracker
           cd ../../../../..
           cp -r sys/macosx/Schism_Tracker.app Schism\ Tracker.app
           cp docs/configuration.md .
