@@ -132,11 +132,10 @@ jobs:
       - name: 'Build SDL 1.2'
         run: |
           cd sdl
-          mkdir ~/build-scripts
-          wget -O '~/build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
-          sed -i.bak 's/10.6/10.9/g' ~/build-scripts/clang-fat.sh
-          sed -i.bak 's/1060/1090/g' ~/build-scripts/clang-fat.sh
-          ./configure CC="sh ~/build-scripts/clang-fat.sh"
+          wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
+          sed -i.bak 's/10.6/10.9/g' build-scripts/clang-fat.sh
+          sed -i.bak 's/1060/1090/g' build-scripts/clang-fat.sh
+          ./configure CC="sh build-scripts/clang-fat.sh"
           make
           sudo make install
           rm -rf arm64 x64
@@ -147,7 +146,7 @@ jobs:
           autoreconf -i
           mkdir -p build
           cd build
-          ../configure CC="sh ~/build-scripts/clang-fat.sh"
+          ../configure CC="sh ../sdl/build-scripts/clang-fat.sh"
           make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
           strip -S schismtracker
           cd ../sys/macosx/Schism_Tracker.app/Contents/
