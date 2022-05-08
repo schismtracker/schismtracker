@@ -146,16 +146,21 @@ jobs:
           autoreconf -i
           mkdir -p build
           cd build
-          chmod +x ../sys/macosx/build-fat.sh
-          ../configure CC="sh ../sys/macosx/build-fat.sh"
-          make CFLAGS="-I/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
+          ../configure
+          make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
+          mkdir -p ../buildarm
+          cd ../buildarm
+          ../configure
+          make LDFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk" CFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers" OBJCFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
+          cd ..
+          lipo -create -o schismtracker buildarm/schismtracker build/schismtracker
           strip -S schismtracker
           cd ../sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
           rm Info.plist.bak
           mkdir MacOS
           cd MacOS
-          cp ../../../../../build/schismtracker .
+          cp ../../../../../schismtracker .
           cp /usr/local/lib/libSDL-1.2.0.dylib .
           install_name_tool -change /usr/local/lib/libSDL-1.2.0.dylib @executable_path/libSDL-1.2.0.dylib schismtracker
           cd ../../../../..
