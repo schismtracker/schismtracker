@@ -18,7 +18,7 @@ CLANG_LINK_X64="-mmacosx-version-min=10.6"
 # ARM 64-bit compiler flags (11.0 runtime compatibility)
 CLANG_COMPILE_ARM64="clang -arch arm64 -mmacosx-version-min=11.0 \
 -I/usr/local/include
--isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.1.sdk"
+-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk"
 
 CLANG_LINK_ARM64="-mmacosx-version-min=11.0"
 
