@@ -155,7 +155,7 @@ jobs:
           cd ..
           lipo -create -o schismtracker buildarm/schismtracker build/schismtracker
           strip -S schismtracker
-          cd ../sys/macosx/Schism_Tracker.app/Contents/
+          cd sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
           rm Info.plist.bak
           mkdir MacOS
