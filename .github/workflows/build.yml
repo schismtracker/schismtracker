@@ -132,7 +132,7 @@ jobs:
       - name: 'Build SDL 1.2'
         run: |
           cd sdl
-          wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
+          wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/0c7c4bfcf920cfc5d66b0a7054a53904c668ef8f/build-scripts/clang-fat.sh'
           sed -i.bak 's/10.6/10.9/g' build-scripts/clang-fat.sh
           sed -i.bak 's/1060/1090/g' build-scripts/clang-fat.sh
           ./configure CC="sh build-scripts/clang-fat.sh"
