@@ -113,11 +113,12 @@ jobs:
           key: 10.9-SDK-Folder
 
       - name: 'Download SDK'
-        if: failure()
         id: download
         run: |
-          wget -nc "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
-          sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
+          if [[ "${{ steps.date.outputs.date }}" == "Cache not found for input keys: 10.9-SDK-Folder" ]]; then
+            wget -nc "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
+            sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
+          done
 
       - name: 'Install dependencies'
         run: |
