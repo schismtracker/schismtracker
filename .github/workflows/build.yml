@@ -112,13 +112,17 @@ jobs:
           path: '/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/'
           key: 10.9-SDK-Folder
 
-      - name: 'Install dependencies'
+      - name: 'Download SDK'
+        id: download
         run: |
-          brew install automake zip
-          if [ ! -d "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/" ]; then
+          if [ -z "$(ls -A /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk)" ]; then
             wget -nc "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz"
             sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
           fi
+
+      - name: 'Install dependencies'
+        run: |
+          brew install automake zip
 
       - name: 'Checkout'
         uses: actions/checkout@v3
@@ -132,7 +136,7 @@ jobs:
       - name: 'Build SDL 1.2'
         run: |
           cd sdl
-          wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/main/build-scripts/clang-fat.sh'
+          wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/0c7c4bfcf920cfc5d66b0a7054a53904c668ef8f/build-scripts/clang-fat.sh'
           sed -i.bak 's/10.6/10.9/g' build-scripts/clang-fat.sh
           sed -i.bak 's/1060/1090/g' build-scripts/clang-fat.sh
           ./configure CC="sh build-scripts/clang-fat.sh"
@@ -148,13 +152,19 @@ jobs:
           cd build
           ../configure
           make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
+          mkdir -p ../buildarm
+          cd ../buildarm
+          ../configure
+          make LDFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk" CFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers" OBJCFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
+          cd ..
+          lipo -create -o schismtracker buildarm/schismtracker build/schismtracker
           strip -S schismtracker
-          cd ../sys/macosx/Schism_Tracker.app/Contents/
+          cd sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
           rm Info.plist.bak
           mkdir MacOS
           cd MacOS
-          cp ../../../../../build/schismtracker .
+          cp ../../../../../schismtracker .
           cp /usr/local/lib/libSDL-1.2.0.dylib .
           install_name_tool -change /usr/local/lib/libSDL-1.2.0.dylib @executable_path/libSDL-1.2.0.dylib schismtracker
           cd ../../../../..
