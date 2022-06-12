@@ -64,7 +64,7 @@ AC_SUBST(SDL_CONFIG)
 if test "x$SDL_CONFIG" == "x"; then
         AC_MSG_ERROR([*** sdl-config not found.])
 fi
-if $SDL_CONFIG --version | grep -qv 1.2.1; then
+if $SDL_CONFIG --version | grep -qv '1.2.\[1-9\]'; then
         AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.])
 fi
 SDL_CFLAGS=$($SDL_CONFIG --cflags)
