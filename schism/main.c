@@ -127,6 +127,7 @@ static void display_init(void)
 	clippy_init();
 
 	display_print_info();
+	SDL_StartTextInput();
 }
 
 static void check_update(void);
@@ -158,6 +159,7 @@ static void handle_window_event(SDL_WindowEvent *w)
 		SDL_ShowCursor(SDL_ENABLE);
 		break;
 	case SDL_WINDOWEVENT_RESIZED:
+	case SDL_WINDOWEVENT_SIZE_CHANGED:  // tiling window managers
 		video_resize(w->data1, w->data2);
 		/* fall through */
 	case SDL_WINDOWEVENT_EXPOSED:
@@ -585,6 +587,8 @@ static void event_loop(void)
 	time_t last_ss;
 #endif
 	int downtrip;
+	int wheel_x;
+	int wheel_y;
 	int sawrep;
 	char *debug_s;
 	int fix_numlock_key;
@@ -631,6 +635,7 @@ static void event_loop(void)
 			}
 		}
 		switch (event.type) {
+		case SDL_AUDIODEVICEADDED:
 		case SDL_SYSWMEVENT:
 			/* todo... */
 			break;
@@ -639,6 +644,9 @@ static void event_loop(void)
 #else
 #define _ALTTRACKED_KMOD        0
 #endif
+		case SDL_TEXTINPUT:
+			_synthetic_paste(event.text.text);
+			break;
 		case SDL_KEYUP:
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
@@ -699,13 +707,6 @@ static void event_loop(void)
 			};
 
 			kk.mod = modkey;
-			/* SDL2 has eliminated .unicode, and instead has a TEXTINPUT event,
-			 * but this really doesn't fit the input model of schism.  For now
-			 * I've just wired .sym into .unicode and it minimally functions,
-			 * it's unclear to me what the best solution is here.
-			 */
-//			kk.unicode = event.key.keysym.unicode; TODO
-			kk.unicode = event.key.keysym.sym;
 			kk.mouse = MOUSE_NONE;
 			if (debug_s && strstr(debug_s, "key")) {
 				log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
@@ -727,6 +728,8 @@ static void event_loop(void)
 			} else {
 				kk.is_repeat = 0;
 			}
+			if (kk.sym.sym == SDLK_RETURN)
+				kk.unicode = '\r';
 			handle_key(&kk);
 			if (event.type == SDL_KEYUP) {
 				status.last_keysym.sym = kk.sym.sym;
@@ -748,6 +751,33 @@ static void event_loop(void)
 			SDL_SetModState(modkey);
 
 			handle_window_event(&event.window);
+			break;
+		case SDL_MOUSEWHEEL:
+			if (kk.state == KEY_PRESS) {
+					modkey = SDL_GetModState();
+#if defined(WIN32)
+					win32_get_modkey(&modkey);
+#endif
+			}
+			kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE */
+			kk.sym.sym = 0;
+			kk.mod = 0;
+			SDL_GetMouseState(&wheel_x, &wheel_y);
+			video_translate(wheel_x, wheel_y, &kk.fx, &kk.fy);
+			/* character resolution */
+			kk.x = kk.fx / kk.rx;
+			/* half-character selection */
+			if ((kk.fx / (kk.rx/2)) % 2 == 0) {
+					kk.hx = 0;
+			} else {
+					kk.hx = 1;
+			}
+			kk.y = kk.fy / kk.ry;
+			if (event.wheel.y > 0)
+					kk.mouse = MOUSE_SCROLL_UP;
+			else if (event.wheel.y < 0)
+					kk.mouse = MOUSE_SCROLL_DOWN;
+			handle_key(&kk);
 			break;
 		case SDL_MOUSEMOTION:
 			if (kk.state == KEY_PRESS) {
@@ -810,20 +840,6 @@ static void event_loop(void)
 			}
 
 			switch (event.button.button) {
-
-/* Why only one of these would be defined I have no clue.
-Also why these would not be defined, I'm not sure either, but hey. */
-#if defined(SDL_BUTTON_WHEELUP) && defined(SDL_BUTTON_WHEELDOWN)
-			case SDL_BUTTON_WHEELUP:
-				kk.mouse = MOUSE_SCROLL_UP;
-				handle_key(&kk);
-				break;
-			case SDL_BUTTON_WHEELDOWN:
-				kk.mouse = MOUSE_SCROLL_DOWN;
-				handle_key(&kk);
-				break;
-#endif
-
 			case SDL_BUTTON_RIGHT:
 			case SDL_BUTTON_MIDDLE:
 			case SDL_BUTTON_LEFT:
@@ -1064,6 +1080,10 @@ extern void vis_init(void);
 
 int main(int argc, char **argv)
 {
+	if (! SDL_VERSION_ATLEAST(2,0,5)) {
+		SDL_Log("SDL_VERSION %i.%i.%i less than required!", SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL);
+		return 1;
+	}
 	os_sysinit(&argc, &argv);
 
 	/* this needs to be done very early, because the version is used in the help text etc.
