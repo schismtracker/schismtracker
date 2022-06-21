@@ -303,7 +303,7 @@ void clippy_init(void)
 		}
 #elif defined(WIN32)
 		has_sys_clip = 1;
-		native_window = info.window;
+		native_window = info.info.win.window;
 #elif defined(__QNXNTO__)
 		has_sys_clip = 1;
 		inputgroup = PhInputGroup(NULL);
