@@ -220,7 +220,7 @@ files_macosx = \
 	sys/macosx/midi-macosx.c	\
 	sys/macosx/volume-macosx.c	\
 	sys/macosx/osdefs.c
-cflags_macosx=-mmacosx-version-min=10.9
+cflags_macosx=
 endif
 
 if USE_NETWORK
