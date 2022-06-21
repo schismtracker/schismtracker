@@ -479,7 +479,7 @@ int menu_handle_key(struct key_event *k)
 		return 1;
 	}
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;

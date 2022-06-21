@@ -682,7 +682,7 @@ static int file_list_handle_key(struct key_event * k)
 {
 	int new_file = current_file;
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_UP:
 		new_file--;
 		break;
@@ -833,7 +833,7 @@ static int dir_list_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_UP:
 		new_dir--;
 		break;
@@ -968,18 +968,18 @@ static int update_directory(void)
 #if CACHEFREE
 static int _save_cachefree_hack(struct key_event *k)
 {
-	if ((k->sym == SDLK_F10 && NO_MODIFIER(k->mod))
-	|| (k->sym == SDLK_w && (k->mod & KMOD_CTRL))
-	|| (k->sym == SDLK_s && (k->mod & KMOD_CTRL))) {
+	if ((k->sym.sym == SDLK_F10 && NO_MODIFIER(k->mod))
+	|| (k->sym.sym == SDLK_w && (k->mod & KMOD_CTRL))
+	|| (k->sym.sym == SDLK_s && (k->mod & KMOD_CTRL))) {
 		status.flags |= DIR_MODULES_CHANGED;
 	}
 	return 0;
 }
 static int _load_cachefree_hack(struct key_event *k)
 {
-	if ((k->sym == SDLK_F9 && NO_MODIFIER(k->mod))
-	|| (k->sym == SDLK_l && (k->mod & KMOD_CTRL))
-	|| (k->sym == SDLK_r && (k->mod & KMOD_CTRL))) {
+	if ((k->sym.sym == SDLK_F9 && NO_MODIFIER(k->mod))
+	|| (k->sym.sym == SDLK_l && (k->mod & KMOD_CTRL))
+	|| (k->sym.sym == SDLK_r && (k->mod & KMOD_CTRL))) {
 		status.flags |= DIR_MODULES_CHANGED;
 	}
 	return 0;

@@ -173,9 +173,6 @@ void cfg_load(void)
 	else
 		status.fix_numlock_setting = NUMLOCK_HONOR;
 
-	set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", key_repeat_delay()),
-		       cfg_get_number(&cfg, "General", "key_repeat_rate", key_repeat_rate()));
-
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 	cfg_load_info(&cfg);
@@ -308,7 +305,7 @@ void cfg_atexit_save(void)
 	cfg_set_string(&cfg, "Video", "driver", video_driver_name());
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
-	cfg_set_number(&cfg, "Video", "gl_bilinear", video_gl_bilinear());
+	cfg_set_number(&cfg, "Video", "gl_bilinear", 1);
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);

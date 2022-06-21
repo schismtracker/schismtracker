@@ -375,12 +375,6 @@ void vgamem_flip(void)
 {
 	memcpy(vgamem_read, vgamem, sizeof(vgamem));
 }
-void vgamem_lock(void)
-{
-}
-void vgamem_unlock(void)
-{
-}
 
 void vgamem_clear(void)
 {

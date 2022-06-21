@@ -101,7 +101,7 @@ static void zxx_setpos(int pos)
 
 static int pre_handle_key(struct key_event *k)
 {
-	if (*selected_widget == 25 && k->sym == SDLK_UP) {
+	if (*selected_widget == 25 && k->sym.sym == SDLK_UP) {
 		/* scroll up */
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -110,7 +110,7 @@ static int pre_handle_key(struct key_event *k)
 		zxx_setpos(zxx_top - 1);
 		return 1;
 	}
-	if (*selected_widget == 31 && k->sym == SDLK_DOWN) {
+	if (*selected_widget == 31 && k->sym.sym == SDLK_DOWN) {
 		/* scroll down */
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -118,7 +118,7 @@ static int pre_handle_key(struct key_event *k)
 		return 1;
 	}
 	if ((*selected_widget) >= 25) {
-		switch (k->sym) {
+		switch (k->sym.sym) {
 		case SDLK_PAGEUP:
 			if (k->state == KEY_RELEASE)
 				return 1;

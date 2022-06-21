@@ -69,12 +69,14 @@ void video_translate(unsigned int vx, unsigned int vy,
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);
-int video_gl_bilinear(void);
 
 int video_is_fullscreen(void);
 int video_width(void);
 int video_height(void);
+typedef struct SDL_Window SDL_Window;
+SDL_Window * video_window(void);
 
+typedef struct SDL_Surface SDL_Surface;
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
 #if USE_X11

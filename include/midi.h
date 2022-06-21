@@ -46,6 +46,7 @@ struct midi_provider {
 	char *name;
 	void (*poll)(struct midi_provider *);
 	void *thread; /*actually SDL_Thread* */
+	volatile int cancelled;
 
 	struct midi_provider *next;
 

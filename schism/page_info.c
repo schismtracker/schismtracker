@@ -1046,13 +1046,13 @@ static int info_page_handle_key(struct key_event * k)
 	}
 
 	/* hack to render this useful :) */
-	if (k->orig_sym == SDLK_KP9) {
-		k->sym = SDLK_F9;
-	} else if (k->orig_sym == SDLK_KP0) {
-		k->sym = SDLK_F10;
+	if (k->orig_sym.sym == SDLK_KP_9) {
+		k->sym.sym = SDLK_F9;
+	} else if (k->orig_sym.sym == SDLK_KP_0) {
+		k->sym.sym = SDLK_F10;
 	}
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_g:
 		if (k->state == KEY_PRESS)
 			return 1;

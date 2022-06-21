@@ -30,6 +30,7 @@
 #include "util.h"
 #include "midi.h"
 #include "version.h"
+#include "video.h"
 
 #include "sdlmain.h"
 
@@ -57,7 +58,7 @@ struct widget *widgets = NULL;
 int *selected_widget = NULL;
 int *total_widgets = NULL;
 
-static int currently_grabbed = SDL_GRAB_OFF;
+static int currently_grabbed = SDL_FALSE;
 
 static int fontedit_return_page = PAGE_PATTERN_EDITOR;
 
@@ -373,7 +374,7 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
 	/* warp mouse to position of slider knob */
 	if (max == 0) max = 1; /* prevent division by zero */
-	SDL_WarpMouse(
+	SDL_WarpMouseGlobal(
 		video_width()*((midx - 8)*8 + (cv - min)*96.0/(max - min) + 1)/640,
 		video_height()*midy*8/400.0 + 4);
 
@@ -467,7 +468,7 @@ static int handle_key_global(struct key_event * k)
 
 	/* first, check the truly global keys (the ones that still work if
 	 * a dialog's open) */
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_RETURN:
 		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
 			if (k->state == KEY_PRESS)
@@ -489,11 +490,9 @@ static int handle_key_global(struct key_event * k)
 		if (k->mod & KMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1; /* argh */
-			i = SDL_WM_GrabInput(SDL_GRAB_QUERY);
-			if (i == SDL_GRAB_QUERY)
-				i = currently_grabbed;
-			currently_grabbed = i = (i != SDL_GRAB_ON ? SDL_GRAB_ON : SDL_GRAB_OFF);
-			SDL_WM_GrabInput(i);
+			i = SDL_GetWindowGrab(video_window());
+			currently_grabbed = i = (i != SDL_TRUE ? SDL_TRUE : SDL_FALSE);
+			SDL_SetWindowGrab(video_window(), i);
 			status_text_flash(i
 				? "Mouse and keyboard grabbed, press Ctrl+D to release"
 				: "Mouse and keyboard released");
@@ -541,7 +540,7 @@ static int handle_key_global(struct key_event * k)
 	/* next, if there's no dialog, check the rest of the keys */
 	if (status.flags & DISKWRITER_ACTIVE) return 0;
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_q:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
@@ -856,7 +855,7 @@ static int handle_key_global(struct key_event * k)
 		if (!(k->mod & KMOD_CTRL))
 			return 0;
 		/* fall through */
-	case SDLK_SCROLLOCK:
+	case SDLK_SCROLLLOCK:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		_mp_finish(NULL);
@@ -885,7 +884,7 @@ static int handle_key_global(struct key_event * k)
 	}
 
 	/* got a bit ugly here, sorry */
-	i = k->sym;
+	i = k->sym.sym;
 	if (k->mod & KMOD_ALT) {
 		switch (i) {
 		case SDLK_F1: i = 0; break;
@@ -926,13 +925,13 @@ static int _handle_ime(struct key_event *k)
 		if (digraph_n == -1 && k->state == KEY_RELEASE) {
 			digraph_n = 0;
 
-		} else if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
+		} else if (!(status.flags & CLASSIC_MODE) && (k->sym.sym == SDLK_LCTRL || k->sym.sym == SDLK_RCTRL)) {
 			if (k->state == KEY_RELEASE && digraph_n >= 0) {
 				digraph_n++;
 				if (digraph_n >= 2)
 					status_text_flash_bios("Enter digraph:");
 			}
-		} else if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
+		} else if (k->sym.sym == SDLK_LSHIFT || k->sym.sym == SDLK_RSHIFT) {
 			/* do nothing */
 		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->unicode) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
@@ -970,7 +969,7 @@ static int _handle_ime(struct key_event *k)
 		}
 
 		/* ctrl+shift -> unicode character */
-		if ((k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT)) {
+		if ((k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT)) {
 			if (k->state == KEY_RELEASE && cs_unicode_c > 0) {
 				struct key_event fake = {};
 
@@ -1014,8 +1013,8 @@ static int _handle_ime(struct key_event *k)
 		}
 
 		/* alt+numpad -> char number */
-		if (k->sym == SDLK_LALT || k->sym == SDLK_RALT
-		    || k->sym == SDLK_LMETA || k->sym == SDLK_RMETA) {
+		if (k->sym.sym == SDLK_LALT || k->sym.sym == SDLK_RALT
+		    || k->sym.sym == SDLK_LGUI || k->sym.sym == SDLK_RGUI) {
 			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {
 				struct key_event fake = {};
 
@@ -1078,7 +1077,7 @@ void handle_key(struct key_event *k)
 	if (widget_handle_key(k)) return;
 
 	/* now check a couple other keys. */
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_LEFT:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
@@ -1120,14 +1119,14 @@ void handle_key(struct key_event *k)
 	case SDLK_SLASH:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->orig_sym == SDLK_KP_DIVIDE) {
+		if (k->orig_sym.sym == SDLK_KP_DIVIDE) {
 			kbd_set_current_octave(kbd_get_current_octave() - 1);
 		}
 		return;
 	case SDLK_ASTERISK:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->orig_sym == SDLK_KP_MULTIPLY) {
+		if (k->orig_sym.sym == SDLK_KP_MULTIPLY) {
 			kbd_set_current_octave(kbd_get_current_octave() + 1);
 		}
 		return;
@@ -1763,13 +1762,13 @@ static int _tj_num1 = 0, _tj_num2 = 0;
 
 static int _timejump_keyh(struct key_event *k)
 {
-	if (k->sym == SDLK_BACKSPACE) {
+	if (k->sym.sym == SDLK_BACKSPACE) {
 		if (*selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
 			if (k->state == KEY_RELEASE) change_focus_to(0);
 			return 1;
 		}
 	}
-	if (k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
+	if (k->sym.sym == SDLK_COLON || k->sym.sym == SDLK_SEMICOLON) {
 		if (k->state == KEY_RELEASE) {
 			if (*selected_widget == 0) {
 				change_focus_to(1);

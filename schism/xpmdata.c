@@ -346,7 +346,7 @@ SDL_Surface *xpmdata(const char *data[])
 			add_colorhash(colors, nextkey, cpp, pixel);
 			nextkey += cpp;
 			if(rgb == 0xffffffff)
-				SDL_SetColorKey(image, SDL_SRCCOLORKEY, pixel);
+				SDL_SetColorKey(image, SDL_TRUE, pixel);
 			break;
 		}
 	}

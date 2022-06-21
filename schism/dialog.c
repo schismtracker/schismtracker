@@ -190,7 +190,7 @@ int dialog_handle_key(struct key_event * k)
 
 	/* this SHOULD be handling on k->state press but the widget key handler is stealing that key. */
 	if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) {
-		switch (k->sym) {
+		switch (k->sym.sym) {
 		case SDLK_y:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:

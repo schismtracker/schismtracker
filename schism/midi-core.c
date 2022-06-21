@@ -385,7 +385,8 @@ void midi_engine_stop(void)
 		}
 
 		if (n->thread) {
-			SDL_KillThread(n->thread);
+			n->cancelled = 1;
+			SDL_WaitThread(n->thread, NULL);
 		}
 		free(n->name);
 		free(n);
@@ -451,7 +452,7 @@ struct midi_provider *midi_provider_register(const char *name,
 
 	if (driver->thread) {
 		// FIXME this cast is stupid
-		n->thread = SDL_CreateThread((int (*)(void*))driver->thread, n);
+		n->thread = SDL_CreateThread((int (*)(void*))driver->thread, NULL, n);
 	}
 
 	SDL_mutexV(midi_mutex);
@@ -723,7 +724,7 @@ void midi_send_flush(void)
 	if (!need_explicit_flush) return;
 
 	if (!midi_queue_thread) {
-		midi_queue_thread = SDL_CreateThread(_midi_queue_run, NULL);
+		midi_queue_thread = SDL_CreateThread(_midi_queue_run, NULL, NULL);
 		if (midi_queue_thread) {
 			log_appendf(3, "Started MIDI queue thread");
 		} else {

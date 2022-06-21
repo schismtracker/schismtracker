@@ -25,6 +25,7 @@
 #include "sdlmain.h"
 #include "it.h"
 #include "osdefs.h"
+#include "video.h"
 
 #include <X11/Xproto.h>
 #include <X11/Xlib.h>
@@ -37,7 +38,6 @@
 #endif
 
 static int virgin = 1;
-static unsigned int delay, rate;
 
 #ifdef USE_XKB
 static XkbDescPtr us_kb_map;
@@ -52,9 +52,7 @@ static void _key_info_setup(void)
 	virgin = 0;
 
 	SDL_VERSION(&info.version);
-	if (SDL_GetWMInfo(&info)) {
-		if (info.info.x11.lock_func)
-			info.info.x11.lock_func();
+	if (SDL_GetWindowWMInfo(video_window(), &info)) {
 		dpy = info.info.x11.display;
 	} else {
 		dpy = NULL;
@@ -84,33 +82,9 @@ static void _key_info_setup(void)
 	if (!us_kb_map)
 		log_appendf(3, "Warning: XKB support missing or broken; keyjamming might not work right");
 
-	if (XkbGetAutoRepeatRate(dpy, XkbUseCoreKbd, &delay, &rate)) {
-		if (info.info.x11.unlock_func)
-			info.info.x11.unlock_func();
-		return;
-	}
 #else
 	log_appendf(3, "Warning: XKB support not compiled in; keyjamming might not work right");
 #endif
-
-	/* eh... */
-	delay = 125;
-	rate = 30;
-
-	if (info.info.x11.unlock_func)
-		info.info.x11.unlock_func();
-}
-
-unsigned int key_repeat_rate(void)
-{
-	_key_info_setup();
-	return rate;
-}
-
-unsigned int key_repeat_delay(void)
-{
-	_key_info_setup();
-	return delay;
 }
 
 #ifdef USE_XKB

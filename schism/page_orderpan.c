@@ -344,7 +344,7 @@ static int orderlist_handle_char(struct key_event *k)
 	song_note_t *tmp;
 	int n[3] = { 0 };
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -426,7 +426,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_BACKSPACE:
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
@@ -648,7 +648,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_pattern_to_sample(current_song->orderlist[current_order],
-				!!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
+				!!(k->mod & KMOD_SHIFT), !!(k->sym.sym == SDLK_b));
 		return 1;
 
 	case SDLK_LESS:
@@ -837,7 +837,7 @@ static void order_pan_vol_handle_key(struct key_event * k)
 	if (!NO_MODIFIER(k->mod))
 		return;
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_PAGEDOWN:
 		n += 8;
 		break;
@@ -862,7 +862,7 @@ static int order_pre_key(struct key_event *k)
 			= ACTIVE_PAGE.selected_widget;
 	}
 
-	if (k->sym == SDLK_F7) {
+	if (k->sym.sym == SDLK_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;

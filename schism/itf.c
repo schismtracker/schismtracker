@@ -461,7 +461,7 @@ static void handle_key_editbox(struct key_event * k)
 	int n, bit;
 	uint8_t *ptr = font_data + ci;
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_UP:
 		if (k->mod & KMOD_SHIFT) {
 			int s = ptr[0];
@@ -562,7 +562,7 @@ static void handle_key_editbox(struct key_event * k)
 
 static void handle_key_charmap(struct key_event * k)
 {
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_UP:
 		current_char -= 16;
 		break;
@@ -589,7 +589,7 @@ static void handle_key_charmap(struct key_event * k)
 
 static void handle_key_itfmap(struct key_event * k)
 {
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_UP:
 		if (itfmap_pos < 0) {
 			itfmap_pos = 224;
@@ -649,7 +649,7 @@ static void handle_key_fontlist(struct key_event * k)
 {
 	int new_font = cur_font;
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_HOME:
 		new_font = 0;
 		break;
@@ -849,16 +849,16 @@ static int fontedit_handle_key(struct key_event * k)
 	}
 
 	/* kp is special */
-	switch (k->orig_sym) {
-	case SDLK_KP0:
+	switch (k->orig_sym.sym) {
+	case SDLK_KP_0:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		k->sym += 10;
+		k->sym.sym += 10;
 		/* fall through */
-	case SDLK_KP1...SDLK_KP9:
+	case SDLK_KP_1...SDLK_KP_9:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = k->sym - SDLK_KP1;
+		n = k->sym.sym - SDLK_KP_1;
 		if (k->mod & KMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
@@ -869,16 +869,16 @@ static int fontedit_handle_key(struct key_event * k)
 		break;
 	};
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case '0':
 		if (k->state == KEY_RELEASE)
 			return 1;
-		k->sym += 10;
+		k->sym.sym += 10;
 		/* fall through */
 	case '1'...'9':
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = k->sym - '1';
+		n = k->sym.sym - '1';
 		if (k->mod & KMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
@@ -1078,7 +1078,7 @@ static struct widget fontedit_widget_hack[1];
 
 static int fontedit_key_hack(struct key_event *k)
 {
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_r: case SDLK_l: case SDLK_s:
 	case SDLK_c: case SDLK_p: case SDLK_m:
 	case SDLK_z: case SDLK_v: case SDLK_h:

@@ -164,7 +164,7 @@ struct tracker_status {
 	int flags;
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
-	SDLKey last_keysym;
+	SDL_Keysym last_keysym;
 
 	time_t last_midi_time;
 	unsigned char last_midi_event[64];

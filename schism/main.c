@@ -85,7 +85,7 @@ static void display_print_info(void)
 {
 	log_append(2, 0, "Video initialised");
 	log_underline(17);
-	video_report();
+	//video_report();
 }
 
 /* If we're not not debugging, don't not dump core. (Have I ever mentioned
@@ -99,7 +99,7 @@ static void display_print_info(void)
 
 static void sdl_init(void)
 {
-	char *err;
+	const char *err;
 	if (SDL_Init(SDL_INIT_FLAGS) == 0)
 		return;
 	err = SDL_GetError();
@@ -116,17 +116,17 @@ static void sdl_init(void)
 
 static void display_init(void)
 {
+	SDL_SysWMinfo	info;
+
 	video_startup();
 
-	if (SDL_GetVideoInfo()->wm_available) {
+	if (SDL_GetWindowWMInfo(video_window(), &info)) {
 		status.flags |= WM_AVAILABLE;
 	}
 
 	clippy_init();
 
 	display_print_info();
-	set_key_repeat(0, 0); /* 0 = defaults */
-	SDL_EnableUNICODE(1);
 }
 
 static void check_update(void);
@@ -139,25 +139,50 @@ void toggle_display_fullscreen(void)
 
 /* --------------------------------------------------------------------- */
 
-static void handle_active_event(SDL_ActiveEvent * a)
+static void handle_window_event(SDL_WindowEvent *w)
 {
-	if (a->state & SDL_APPACTIVE) {
-		if (a->gain) {
-			status.flags |= (IS_VISIBLE|SOFTWARE_MOUSE_MOVED);
-			video_mousecursor(MOUSE_RESET_STATE);
-		} else {
-			status.flags &= ~IS_VISIBLE;
-		}
-	}
-
-	if (a->state & SDL_APPINPUTFOCUS) {
-		if (a->gain) {
-			status.flags |= IS_FOCUSED;
-			video_mousecursor(MOUSE_RESET_STATE);
-		} else {
-			status.flags &= ~IS_FOCUSED;
-			SDL_ShowCursor(SDL_ENABLE);
-		}
+	switch (w->event) {
+	case SDL_WINDOWEVENT_SHOWN:
+		status.flags |= (IS_VISIBLE|SOFTWARE_MOUSE_MOVED);
+		video_mousecursor(MOUSE_RESET_STATE);
+		break;
+	case SDL_WINDOWEVENT_HIDDEN:
+		status.flags &= ~IS_VISIBLE;
+		break;
+	case SDL_WINDOWEVENT_FOCUS_GAINED:
+		status.flags |= IS_FOCUSED;
+		video_mousecursor(MOUSE_RESET_STATE);
+		break;
+	case SDL_WINDOWEVENT_FOCUS_LOST:
+		status.flags &= ~IS_FOCUSED;
+		SDL_ShowCursor(SDL_ENABLE);
+		break;
+	case SDL_WINDOWEVENT_RESIZED:
+		video_resize(w->data1, w->data2);
+		/* fall through */
+	case SDL_WINDOWEVENT_EXPOSED:
+		status.flags |= (NEED_UPDATE);
+		break;
+	default:
+#if 0
+		/* ignored currently */
+		SDL_WINDOWEVENT_NONE,           /**< Never used */
+		SDL_WINDOWEVENT_MOVED,          /**< Window has been moved to data1, data2
+					     */
+		SDL_WINDOWEVENT_SIZE_CHANGED,   /**< The window size has changed, either as
+						 a result of an API call or through the
+						 system or user changing the window size. */
+		SDL_WINDOWEVENT_MINIMIZED,      /**< Window has been minimized */
+		SDL_WINDOWEVENT_MAXIMIZED,      /**< Window has been maximized */
+		SDL_WINDOWEVENT_RESTORED,       /**< Window has been restored to normal size
+						 and position */
+		SDL_WINDOWEVENT_ENTER,          /**< Window has gained mouse focus */
+		SDL_WINDOWEVENT_LEAVE,          /**< Window has lost mouse focus */
+		SDL_WINDOWEVENT_CLOSE,          /**< The window manager requests that the window be closed */
+		SDL_WINDOWEVENT_TAKE_FOCUS,     /**< Window is being offered a focus (should SetWindowInputFocus() on itself or a subwindow, or ignore) */
+		SDL_WINDOWEVENT_HIT_TEST        /**< Window had a hit test that wasn't SDL_HITTEST_NORMAL. */
+#endif
+		break;
 	}
 }
 
@@ -501,11 +526,11 @@ static void _synthetic_paste(const char *cbptr)
 		if (*cbptr == '\r') continue;
 		/* simulate paste */
 		kk.scancode = -1;
-		kk.sym = kk.orig_sym = 0;
+		kk.sym.sym = kk.orig_sym.sym = 0;
 		if (*cbptr == '\n') {
 			/* special attention to newlines */
 			kk.unicode = '\r';
-			kk.sym = SDLK_RETURN;
+			kk.sym.sym = SDLK_RETURN;
 		} else {
 			kk.unicode = *cbptr;
 		}
@@ -553,7 +578,7 @@ static void event_loop(void)
 	SDL_Event event;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	uint32_t last_mouse_down, ticker;
-	SDLKey last_key = 0;
+	SDL_Keysym last_key = {};
 	int modkey;
 	time_t startdown;
 #ifdef USE_X11
@@ -572,7 +597,7 @@ static void event_loop(void)
 	downtrip = 0;
 	last_mouse_down = 0;
 	startdown = 0;
-	status.last_keysym = 0;
+	status.last_keysym.sym = 0;
 
 	modkey = SDL_GetModState();
 #if defined(WIN32)
@@ -609,13 +634,6 @@ static void event_loop(void)
 		case SDL_SYSWMEVENT:
 			/* todo... */
 			break;
-		case SDL_VIDEORESIZE:
-			video_resize(event.resize.w, event.resize.h);
-			/* fall through */
-		case SDL_VIDEOEXPOSE:
-			status.flags |= (NEED_UPDATE);
-			break;
-
 #if defined(WIN32)
 #define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
 #else
@@ -624,7 +642,7 @@ static void event_loop(void)
 		case SDL_KEYUP:
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
-			case SDLK_NUMLOCK:
+			case SDLK_NUMLOCKCLEAR:
 				modkey ^= KMOD_NUM;
 				break;
 			case SDLK_CAPSLOCK:
@@ -653,7 +671,7 @@ static void event_loop(void)
 #if defined(WIN32)
 			win32_get_modkey(&modkey);
 #endif
-			kk.sym = event.key.keysym.sym;
+			kk.sym.sym = event.key.keysym.sym;
 			kk.scancode = event.key.keysym.scancode;
 
 			switch (fix_numlock_key) {
@@ -681,7 +699,13 @@ static void event_loop(void)
 			};
 
 			kk.mod = modkey;
-			kk.unicode = event.key.keysym.unicode;
+			/* SDL2 has eliminated .unicode, and instead has a TEXTINPUT event,
+			 * but this really doesn't fit the input model of schism.  For now
+			 * I've just wired .sym into .unicode and it minimally functions,
+			 * it's unclear to me what the best solution is here.
+			 */
+//			kk.unicode = event.key.keysym.unicode; TODO
+			kk.unicode = event.key.keysym.sym;
 			kk.mouse = MOUSE_NONE;
 			if (debug_s && strstr(debug_s, "key")) {
 				log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
@@ -691,31 +715,31 @@ static void event_loop(void)
 			}
 			key_translate(&kk);
 			if (debug_s && strstr(debug_s, "translate")
-					&& kk.orig_sym != kk.sym) {
+					&& kk.orig_sym.sym != kk.sym.sym) {
 				log_appendf(12, "[DEBUG] Translate Key%s sym=%d scancode=%d -> %d (%c)",
 						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
 						(int)event.key.keysym.sym,
 						(int)event.key.keysym.scancode,
-						kk.sym, kk.unicode);
+						kk.sym.sym, kk.unicode);
 			}
-			if (event.type == SDL_KEYDOWN && last_key == kk.sym) {
+			if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym) {
 				sawrep = kk.is_repeat = 1;
 			} else {
 				kk.is_repeat = 0;
 			}
 			handle_key(&kk);
 			if (event.type == SDL_KEYUP) {
-				status.last_keysym = kk.sym;
-				last_key = 0;
+				status.last_keysym.sym = kk.sym.sym;
+				last_key.sym = 0;
 			} else {
-				status.last_keysym = 0;
-				last_key = kk.sym;
+				status.last_keysym.sym = 0;
+				last_key.sym = kk.sym.sym;
 			}
 			break;
 		case SDL_QUIT:
 			show_exit_prompt();
 			break;
-		case SDL_ACTIVEEVENT:
+		case SDL_WINDOWEVENT:
 			/* reset this... */
 			modkey = SDL_GetModState();
 #if defined(WIN32)
@@ -723,9 +747,32 @@ static void event_loop(void)
 #endif
 			SDL_SetModState(modkey);
 
-			handle_active_event(&(event.active));
+			handle_window_event(&event.window);
 			break;
 		case SDL_MOUSEMOTION:
+			if (kk.state == KEY_PRESS) {
+				modkey = SDL_GetModState();
+#if defined(WIN32)
+				win32_get_modkey(&modkey);
+#endif
+			}
+
+			kk.sym.sym = 0;
+			kk.mod = 0;
+
+			video_translate(event.motion.x, event.motion.y, &kk.fx, &kk.fy);
+
+			/* character resolution */
+			kk.x = kk.fx / kk.rx;
+			/* half-character selection */
+			if ((kk.fx / (kk.rx/2)) % 2 == 0) {
+				kk.hx = 0;
+			} else {
+				kk.hx = 1;
+			}
+			kk.y = kk.fy / kk.ry;
+			if (startdown) startdown = 0;
+			break;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 			if (kk.state == KEY_PRESS) {
@@ -735,9 +782,8 @@ static void event_loop(void)
 #endif
 			}
 
-			kk.sym = 0;
+			kk.sym.sym = 0;
 			kk.mod = 0;
-			kk.unicode = 0;
 
 			video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
 
@@ -755,7 +801,7 @@ static void event_loop(void)
 				kk.sy = kk.y;
 			}
 			if (startdown) startdown = 0;
-			if (event.type != SDL_MOUSEMOTION && debug_s && strstr(debug_s, "mouse")) {
+			if (debug_s && strstr(debug_s, "mouse")) {
 				log_appendf(12, "[DEBUG] Mouse%s button=%d x=%d y=%d",
 					(event.type == SDL_MOUSEBUTTONDOWN) ? "Down" : "Up",
 						(int)event.button.button,
@@ -784,7 +830,7 @@ Also why these would not be defined, I'm not sure either, but hey. */
 				if ((modkey & KMOD_CTRL)
 				|| event.button.button == SDL_BUTTON_RIGHT) {
 					kk.mouse_button = MOUSE_BUTTON_RIGHT;
-				} else if ((modkey & (KMOD_ALT|KMOD_META))
+				} else if ((modkey & (KMOD_ALT|KMOD_GUI))
 				|| event.button.button == SDL_BUTTON_MIDDLE) {
 					kk.mouse_button = MOUSE_BUTTON_MIDDLE;
 				} else {
@@ -1084,7 +1130,6 @@ int main(int argc, char **argv)
 	shutdown_process |= EXIT_SDLQUIT;
 	os_sdlinit();
 
-	video_setup(video_driver);
 	display_init();
 	palette_apply();
 	font_init();

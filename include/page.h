@@ -32,8 +32,8 @@
 #define MOUSE_SCROLL_LINES       3
 
 struct key_event {
-	SDLKey sym, orig_sym;
-	SDLMod mod;
+	SDL_Keysym sym, orig_sym;
+	SDL_Keymod mod;
 	uint16_t unicode;
 	int scancode;
 
