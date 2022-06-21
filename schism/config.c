@@ -38,7 +38,7 @@
 
 char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1],
 	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
-char cfg_video_driver[65];
+char cfg_video_interpolation[8];
 int cfg_video_fullscreen = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 int cfg_video_gl_bilinear = 1;
@@ -133,7 +133,7 @@ void cfg_load(void)
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-	cfg_get_string(&cfg, "Video", "driver", cfg_video_driver, 64, "");
+	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, 64, "");
 	cfg_video_width = cfg_get_number(&cfg, "Video", "width", 640);
 	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
@@ -302,7 +302,7 @@ void cfg_atexit_save(void)
 	/* TODO: move these config options to video.c, this is lame :)
 	Or put everything here, which is what the note in audio_loadsave.cc
 	says. Very well, I contradict myself. */
-	cfg_set_string(&cfg, "Video", "driver", video_driver_name());
+	cfg_set_string(&cfg, "Video", "interpolation", SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY));
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
 	cfg_set_number(&cfg, "Video", "gl_bilinear", 1);

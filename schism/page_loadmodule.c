@@ -812,21 +812,28 @@ static int dir_list_handle_key(struct key_event * k)
 
 	if (k->mouse != MOUSE_NONE) {
 		if (k->x >= 50 && k->x <= 67 && k->y >= 13 && k->y <= 33) {
-			if (k->mouse == MOUSE_CLICK) {
-				new_dir = (k->y - 13) + top_dir;
-			} else if (k->mouse == MOUSE_DBLCLICK) {
-				top_file = current_file = 0;
-				change_dir(dlist.dirs[current_dir]->path);
+			switch (k->mouse) {
+				case MOUSE_CLICK:
+						new_dir = (k->y - 13) + top_dir;
+						break;
+				case MOUSE_DBLCLICK:
+						top_file = current_file = 0;
+						change_dir(dlist.dirs[current_dir]->path);
 
-				if (flist.num_files > 0)
-					*selected_widget = 0;
-				status.flags |= NEED_UPDATE;
-				return 1;
-			/* FIXME wheel should be adjusting top_dir instead (and then adjust it later) */
-			} else if (k->mouse == MOUSE_SCROLL_UP) {
-				new_dir -= MOUSE_SCROLL_LINES;
-			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-				new_dir += MOUSE_SCROLL_LINES;
+						if (flist.num_files > 0)
+								*selected_widget = 0;
+						status.flags |= NEED_UPDATE;
+						return 1;
+						break;
+				case MOUSE_SCROLL_UP:
+				case MOUSE_SCROLL_DOWN:
+						top_dir += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
+						if (top_dir > dlist.num_dirs - 21)
+								top_dir = dlist.num_dirs - 21;
+						if (top_dir < 0)
+								top_dir = 0;
+						status.flags |= NEED_UPDATE;
+						break;
 			}
 		} else {
 			return 0;

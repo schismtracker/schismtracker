@@ -105,14 +105,30 @@ struct video_cf {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
+	SDL_DisplayMode display;
 	unsigned char *framebuf;
-	int fullscreen;
+	unsigned int width;
+	unsigned int height;
+	int x;
+	int y;
+	int width_height_defined;
+
+	struct {
+		unsigned int width;
+		unsigned int height;
+	} prev;
 
 	struct {
 		unsigned int x;
 		unsigned int y;
 		int visible;
 	} mouse;
+
+	struct {
+		unsigned int width;
+		unsigned int height;
+		int fullscreen;
+	} fullscreen;
 
 	unsigned int pal[256];
 
@@ -122,21 +138,22 @@ static struct video_cf video;
 
 int video_is_fullscreen(void)
 {
-	return video.fullscreen;
+	return video.fullscreen.fullscreen;
 }
 
 int video_width(void)
 {
-	return NATIVE_SCREEN_WIDTH;
+	return video.width;
 }
 
 int video_height(void)
 {
-	return NATIVE_SCREEN_HEIGHT;
+	return video.height;
 }
 
-void video_shutdown(void)
+void video_update(void)
 {
+	SDL_GetWindowPosition(video.window, &video.x, &video.y);
 }
 
 const char * video_driver_name(void)
@@ -144,31 +161,62 @@ const char * video_driver_name(void)
 	return "SDL2";
 }
 
-void video_fullscreen(int tri)
+void video_redraw_texture(void)
 {
+	SDL_DestroyTexture(video.texture);
+	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 }
-#if 0
-	if (tri == 0 || video.desktop.fb_hacks) {
-		video.desktop.fullscreen = 0;
 
-	} else if (tri == 1) {
-		video.desktop.fullscreen = 1;
+void video_shutdown(void)
+{
+	SDL_GetWindowPosition(video.window, &video.x, &video.y);
+	SDL_DestroyRenderer(video.renderer);
+	SDL_DestroyWindow(video.window);
+	SDL_DestroyTexture(video.texture);
+}
 
-	} else if (tri < 0) {
-		video.desktop.fullscreen = video.desktop.fullscreen ? 0 : 1;
-	}
-	if (_did_init) {
-		if (video.desktop.fullscreen) {
-			video_resize(video.desktop.width, video.desktop.height);
+void video_setup(const char* quality)
+{
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
+}
+
+void video_fullscreen(int new_fs_flag)
+{
+	/**
+	 * new_fs_flag has three values:
+	 * >0 being fullscreen,
+	 *  0 being windowed, and
+	 * <0 meaning to switch.
+	**/
+	if (new_fs_flag == video.fullscreen.fullscreen) return;
+	if (new_fs_flag > 0) {
+		video.fullscreen.fullscreen = 1;
+	} else if (new_fs_flag < 0){
+		if (video.fullscreen.fullscreen > 0) {
+			video.fullscreen.fullscreen = 0;
 		} else {
-			video_resize(0, 0);
+			video.fullscreen.fullscreen = 1;
 		}
-		/* video_report(); - this should be done in main, not here */
+	} else {
+		video.fullscreen.fullscreen = 0;
 	}
+	if (video.fullscreen.fullscreen) {
+		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		video_resize(video.display.w, video.display.h);
+		SDL_SetWindowResizable(video.window, SDL_FALSE);
+	} else {
+		SDL_SetWindowFullscreen(video.window, 0);
+		SDL_SetWindowSize(video.window, video.fullscreen.width, video.fullscreen.height);
+		video_resize(video.fullscreen.width, video.fullscreen.height);
+		SDL_SetWindowResizable(video.window, SDL_TRUE);
+	}
+	video.fullscreen.width = video.prev.width;
+	video.fullscreen.height = video.prev.height;
 }
-#endif
+
 static void set_icon(void)
 {
+	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
 #ifndef MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
 #ifdef WIN32
@@ -187,19 +235,38 @@ void video_startup(void)
 	vgamem_clear();
 	vgamem_flip();
 
-	SDL_CreateWindowAndRenderer(NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE, &video.window, &video.renderer);// if fullscreen +SDL_WINDOW_FULLSCREEN_DESKTOP
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
-	SDL_RenderSetLogicalSize(video.renderer, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
+	if (!SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, cfg_video_interpolation);
+
+	if (!video.width_height_defined) {
+		video.x = SDL_WINDOWPOS_UNDEFINED;
+		video.y = SDL_WINDOWPOS_UNDEFINED;
+		video.fullscreen.width = video.prev.width = video.width = NATIVE_SCREEN_WIDTH;
+		video.fullscreen.height = video.prev.height = video.height = NATIVE_SCREEN_HEIGHT;
+	}
+
+	SDL_CreateWindowAndRenderer(video.width, video.height, SDL_WINDOW_RESIZABLE, &video.window, &video.renderer);
+	video_resize(video.width, video.height);
 	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(Uint32));
+
+	SDL_SetWindowPosition(video.window, video.x, video.y);
+	SDL_GetCurrentDisplayMode(0, &video.display);
+	video_fullscreen(cfg_video_fullscreen);
 
 	/* okay, i think we're ready */
 	SDL_ShowCursor(SDL_DISABLE);
 	set_icon();
+	video.width_height_defined = 1;
 }
 
 void video_resize(unsigned int width, unsigned int height)
 {
+	SDL_RenderSetLogicalSize(video.renderer, width, height);
+	video.prev.width = video.width;
+	video.prev.height = video.height;
+	video.width = width;
+	video.height = height;
 	status.flags |= (NEED_UPDATE);
 }
 
@@ -347,31 +414,13 @@ void video_mousecursor(int vis)
 
 void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
 {
-#if 0
-	if ((signed) vx < video.clip.x) vx = video.clip.x;
-	vx -= video.clip.x;
-
-	if ((signed) vy < video.clip.y) vy = video.clip.y;
-	vy -= video.clip.y;
-
-	if ((signed) vx > video.clip.w) vx = video.clip.w;
-	if ((signed) vy > video.clip.h) vy = video.clip.h;
+	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
+		status.flags |= SOFTWARE_MOUSE_MOVED;
 
 	vx *= NATIVE_SCREEN_WIDTH;
 	vy *= NATIVE_SCREEN_HEIGHT;
-	vx /= (video.draw.width - (video.draw.width - video.clip.w));
-	vy /= (video.draw.height - (video.draw.height - video.clip.h));
-
-	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy)) {
-		status.flags |= SOFTWARE_MOUSE_MOVED;
-	}
-	video.mouse.x = vx;
-	video.mouse.y = vy;
-	if (x) *x = vx;
-	if (y) *y = vy;
-#else
-	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
-		status.flags |= SOFTWARE_MOUSE_MOVED;
+	vx /= (video.width - (video.width - video.prev.width));
+	vy /= (video.height - (video.height - video.prev.height));
 
 	video.mouse.x = vx;
 	video.mouse.y = vy;
@@ -380,7 +429,6 @@ void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned
 
 	if (y)
 		*y = vy;
-#endif
 }
 
 SDL_Window * video_window(void)

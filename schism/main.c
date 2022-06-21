@@ -171,9 +171,6 @@ static void handle_window_event(SDL_WindowEvent *w)
 		SDL_WINDOWEVENT_NONE,           /**< Never used */
 		SDL_WINDOWEVENT_MOVED,          /**< Window has been moved to data1, data2
 					     */
-		SDL_WINDOWEVENT_SIZE_CHANGED,   /**< The window size has changed, either as
-						 a result of an API call or through the
-						 system or user changing the window size. */
 		SDL_WINDOWEVENT_MINIMIZED,      /**< Window has been minimized */
 		SDL_WINDOWEVENT_MAXIMIZED,      /**< Window has been maximized */
 		SDL_WINDOWEVENT_RESTORED,       /**< Window has been restored to normal size
@@ -1132,10 +1129,6 @@ int main(int argc, char **argv)
 		if (startup_flags & SF_CLASSIC) status.flags |= CLASSIC_MODE;
 	}
 
-	if (!video_driver) {
-		video_driver = cfg_video_driver;
-		if (!video_driver || !*video_driver) video_driver = NULL;
-	}
 	if (!did_fullscreen) {
 		video_fullscreen(cfg_video_fullscreen);
 	}
