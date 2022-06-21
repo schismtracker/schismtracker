@@ -38,7 +38,6 @@ To enable any of these, find the `[section]` in the config file, look for the
     width=640
     height=400
     want_fixed=0
-    gl_bilinear=1
 
 `lazy_redraw` slows down the framerate when the program isn't focused. This
 used to be kind of useful when the GUI rendering sucked, and maybe it still is
@@ -51,10 +50,6 @@ dimensions to return to when toggling fullscreen off.
 If you are having problems with fullscreen aspect ratio, you can try setting
 `want_fixed` to 1. This will attempt to "correct" the fullscreen resolution
 used by Schism.
-
-If `gl_bilinear` is zero, OpenGL will not use bilinear filtering when scaling
-the screen. This has no effect when running at the native resolution of
-640x400.
 
 #### Backups
 
