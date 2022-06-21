@@ -36,7 +36,7 @@ jobs:
       with:
         msystem: ${{ matrix.sys }}
         update: true
-        install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL zip dos2unix
+        install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix
   
     - name: 'Get current date'
       id: date
@@ -53,11 +53,11 @@ jobs:
         cp schismtracker.exe ..
         if [ ${{ matrix.win }} == "win32" ]
         then
-          cp /mingw32/bin/SDL.dll ..
+          cp /mingw32/bin/SDL2.dll ..
           cp /mingw32/bin/libgcc_s_dw2-1.dll ..
           cp /mingw32/bin/libwinpthread-1.dll ..
         else
-          cp /mingw64/bin/SDL.dll ..
+          cp /mingw64/bin/SDL2.dll ..
         fi
         cd ..
         cp docs/configuration.md .
@@ -70,7 +70,7 @@ jobs:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
           schismtracker.exe
-          SDL.dll
+          SDL2.dll
           libgcc_s_dw2-1.dll
           libwinpthread-1.dll
           COPYING
@@ -84,7 +84,7 @@ jobs:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
           schismtracker.exe
-          SDL.dll
+          SDL2.dll
           COPYING
           README.md
           configuration.md
@@ -127,19 +127,14 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v3
 
-      - name: 'Checkout SDL 1.2'
-        uses: actions/checkout@v3
-        with:
-          repository: libsdl-org/SDL-1.2
-          path: sdl
-
-      - name: 'Build SDL 1.2'
+      - name: 'Download SDL2 sources'
         run: |
-          cd sdl
-          wget -O 'build-scripts/clang-fat.sh' 'https://raw.githubusercontent.com/libsdl-org/SDL/0c7c4bfcf920cfc5d66b0a7054a53904c668ef8f/build-scripts/clang-fat.sh'
-          sed -i.bak 's/10.6/10.9/g' build-scripts/clang-fat.sh
-          sed -i.bak 's/1060/1090/g' build-scripts/clang-fat.sh
-          ./configure CC="sh build-scripts/clang-fat.sh"
+          curl https://www.libsdl.org/release/SDL2-2.0.22.tar.gz | tar xvf -
+
+      - name: 'Build SDL2'
+        run: |
+          cd SDL2-2.0.22
+          ./configure CC="sh ../scripts/build-uni.sh"
           make
           sudo make install
           rm -rf arm64 x64
@@ -165,8 +160,8 @@ jobs:
           mkdir MacOS
           cd MacOS
           cp ../../../../../schismtracker .
-          cp /usr/local/lib/libSDL-1.2.0.dylib .
-          install_name_tool -change /usr/local/lib/libSDL-1.2.0.dylib @executable_path/libSDL-1.2.0.dylib schismtracker
+          cp /usr/local/lib/libSDL2.dylib ../Resources
+          install_name_tool -change /usr/local/lib/libSDL2.dylib @executable_path/../Resources/libSDL2.dylib schismtracker
           cd ../../../../..
           cp -r sys/macosx/Schism_Tracker.app Schism\ Tracker.app
           cp docs/configuration.md .
@@ -185,7 +180,7 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl1.2-dev libasound2-dev git libtool zip
+          sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl2-dev libasound2-dev git libtool zip
 
       - name: 'Checkout'
         uses: actions/checkout@v2
