@@ -37,8 +37,6 @@ struct vgamem_overlay {
 	int width, height; /* in pixels; signed to avoid bugs elsewhere */
 };
 
-void vgamem_lock(void);
-void vgamem_unlock(void);
 void vgamem_flip(void);
 
 void vgamem_ovl_alloc(struct vgamem_overlay *n);
@@ -62,6 +60,7 @@ void video_startup(void);
 void video_shutdown(void);
 void video_report(void);
 void video_refresh(void);
+void video_update(void);
 void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int new_fs_flag);

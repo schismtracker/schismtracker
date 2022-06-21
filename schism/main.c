@@ -165,12 +165,13 @@ static void handle_window_event(SDL_WindowEvent *w)
 	case SDL_WINDOWEVENT_EXPOSED:
 		status.flags |= (NEED_UPDATE);
 		break;
+	case SDL_WINDOWEVENT_MOVED:
+		video_update();
+		break;
 	default:
 #if 0
 		/* ignored currently */
 		SDL_WINDOWEVENT_NONE,           /**< Never used */
-		SDL_WINDOWEVENT_MOVED,          /**< Window has been moved to data1, data2
-					     */
 		SDL_WINDOWEVENT_MINIMIZED,      /**< Window has been minimized */
 		SDL_WINDOWEVENT_MAXIMIZED,      /**< Window has been maximized */
 		SDL_WINDOWEVENT_RESTORED,       /**< Window has been restored to normal size
