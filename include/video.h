@@ -54,6 +54,7 @@ void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16], unsigne
 /* video output routines */
 const char *video_driver_name(void);
 
+void video_warp_mouse(unsigned int x, unsigned int y);
 void video_redraw_texture(void);
 void video_setup(const char *quality);
 void video_startup(void);
