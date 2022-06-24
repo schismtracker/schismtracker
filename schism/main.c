@@ -753,34 +753,11 @@ static void event_loop(void)
 			handle_window_event(&event.window);
 			break;
 		case SDL_MOUSEWHEEL:
-			if (kk.state == KEY_PRESS) {
-					modkey = SDL_GetModState();
-#if defined(WIN32)
-					win32_get_modkey(&modkey);
-#endif
-			}
 			kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE */
-			kk.sym.sym = 0;
-			kk.mod = 0;
 			SDL_GetMouseState(&wheel_x, &wheel_y);
 			video_translate(wheel_x, wheel_y, &kk.fx, &kk.fy);
-			/* character resolution */
-			kk.x = kk.fx / kk.rx;
-			/* half-character selection */
-			if ((kk.fx / (kk.rx/2)) % 2 == 0) {
-					kk.hx = 0;
-			} else {
-					kk.hx = 1;
-			}
-			kk.y = kk.fy / kk.ry;
-			if (event.wheel.y > 0)
-					kk.mouse = MOUSE_SCROLL_UP;
-			else if (event.wheel.y < 0)
-					kk.mouse = MOUSE_SCROLL_DOWN;
-			handle_key(&kk);
-			break;
+			kk.mouse = (event.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
 		case SDL_MOUSEMOTION:
-			if (startdown) startdown = 0;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 			if (kk.state == KEY_PRESS) {
@@ -793,7 +770,8 @@ static void event_loop(void)
 			kk.sym.sym = 0;
 			kk.mod = 0;
 
-			video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
+			if (event.type != SDL_MOUSEWHEEL)
+				video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
 
 			/* character resolution */
 			kk.x = kk.fx / kk.rx;
@@ -804,6 +782,10 @@ static void event_loop(void)
 				kk.hx = 1;
 			}
 			kk.y = kk.fy / kk.ry;
+			if (event.type == SDL_MOUSEWHEEL) {
+				handle_key(&kk);
+				break; /* nothing else to do here */
+			}
 			if (event.type == SDL_MOUSEBUTTONDOWN) {
 				kk.sx = kk.x;
 				kk.sy = kk.y;
