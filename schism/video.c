@@ -184,6 +184,22 @@ void video_setup(const char* quality)
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 }
 
+static void set_icon(void)
+{
+	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
+#ifndef MACOSX
+/* apple/macs use a bundle; this overrides their nice pretty icon */
+#ifdef WIN32
+/* win32 icons must be 32x32 according to SDL 1.2 doc */
+	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
+#else
+	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
+#endif
+	SDL_SetWindowIcon(video.window, icon);
+	SDL_FreeSurface(icon);
+#endif
+}
+
 void video_fullscreen(int new_fs_flag)
 {
 	/**
@@ -213,25 +229,10 @@ void video_fullscreen(int new_fs_flag)
 		video_resize(video.fullscreen.width, video.fullscreen.height);
 		SDL_SetWindowSize(video.window, video.fullscreen.width, video.fullscreen.height);
 		SDL_SetWindowResizable(video.window, SDL_TRUE);
+		set_icon();
 	}
 	video.fullscreen.width = video.prev.width;
 	video.fullscreen.height = video.prev.height;
-}
-
-static void set_icon(void)
-{
-	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
-#ifndef MACOSX
-/* apple/macs use a bundle; this overrides their nice pretty icon */
-#ifdef WIN32
-/* win32 icons must be 32x32 according to SDL 1.2 doc */
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
-#else
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
-#endif
-	SDL_SetWindowIcon(video.window, icon);
-	SDL_FreeSurface(icon);
-#endif
 }
 
 void video_startup(void)
