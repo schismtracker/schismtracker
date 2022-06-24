@@ -192,7 +192,6 @@ void video_fullscreen(int new_fs_flag)
 	 *  0 being windowed, and
 	 * <0 meaning to switch.
 	**/
-	if (new_fs_flag == video.fullscreen.fullscreen) return;
 	if (new_fs_flag > 0) {
 		video.fullscreen.fullscreen = 1;
 	} else if (new_fs_flag < 0){
@@ -205,13 +204,14 @@ void video_fullscreen(int new_fs_flag)
 		video.fullscreen.fullscreen = 0;
 	}
 	if (video.fullscreen.fullscreen) {
-		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		SDL_SetWindowSize(video.window, video.display.w, video.display.h);
 		video_resize(video.display.w, video.display.h);
+		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		SDL_SetWindowResizable(video.window, SDL_FALSE);
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
-		SDL_SetWindowSize(video.window, video.fullscreen.width, video.fullscreen.height);
 		video_resize(video.fullscreen.width, video.fullscreen.height);
+		SDL_SetWindowSize(video.window, video.fullscreen.width, video.fullscreen.height);
 		SDL_SetWindowResizable(video.window, SDL_TRUE);
 	}
 	video.fullscreen.width = video.prev.width;
