@@ -273,6 +273,7 @@ static void update_palette(void)
 	}
 	selected_palette = current_palette_index = -1;
 	palette_apply();
+	cfg_save();
 	status.flags |= NEED_UPDATE;
 }
 

@@ -644,7 +644,7 @@ static void event_loop(void)
 #define _ALTTRACKED_KMOD        0
 #endif
 		case SDL_TEXTINPUT:
-			if (status.current_page != PAGE_PATTERN_EDITOR)
+			if (status.current_page != PAGE_PATTERN_EDITOR && status.current_page != PAGE_ORDERLIST_PANNING)
 				_synthetic_paste(event.text.text, 1);
 			break;
 		case SDL_KEYUP:

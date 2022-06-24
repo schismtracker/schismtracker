@@ -614,11 +614,10 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					return 1;
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0) {
-				if (k->is_synthetic) return 1;
 				if (!k->unicode) return 0;
 				if (instrument_cursor_pos < 25) {
 					return instrument_list_add_char(k->unicode);
-				} else if (k->sym.sym == SDLK_SPACE) {
+				} else if (k->sym.sym == SDLK_SPACE || k->unicode == ' ') {
 					instrument_cursor_pos = 0;
 					get_page_widgets()->accept_text = 0;
 					status.flags |= NEED_UPDATE;
@@ -2091,8 +2090,6 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 }
 static void instrument_list_handle_key(struct key_event * k)
 {
-	if (k->is_synthetic)
-		return;
 	switch (k->sym.sym) {
 	case SDLK_COMMA:
 		if (NO_MODIFIER(k->mod)) {
