@@ -117,6 +117,7 @@ static void sdl_init(void)
 static void display_init(void)
 {
 	SDL_SysWMinfo	info;
+	SDL_VERSION(&info.version);
 
 	video_startup();
 
