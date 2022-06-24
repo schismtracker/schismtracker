@@ -780,29 +780,7 @@ static void event_loop(void)
 			handle_key(&kk);
 			break;
 		case SDL_MOUSEMOTION:
-			if (kk.state == KEY_PRESS) {
-				modkey = SDL_GetModState();
-#if defined(WIN32)
-				win32_get_modkey(&modkey);
-#endif
-			}
-
-			kk.sym.sym = 0;
-			kk.mod = 0;
-
-			video_translate(event.motion.x, event.motion.y, &kk.fx, &kk.fy);
-
-			/* character resolution */
-			kk.x = kk.fx / kk.rx;
-			/* half-character selection */
-			if ((kk.fx / (kk.rx/2)) % 2 == 0) {
-				kk.hx = 0;
-			} else {
-				kk.hx = 1;
-			}
-			kk.y = kk.fy / kk.ry;
 			if (startdown) startdown = 0;
-			break;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 			if (kk.state == KEY_PRESS) {
