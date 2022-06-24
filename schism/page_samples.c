@@ -550,7 +550,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
 				if (!k->unicode) return 0;
-				if (k->state == KEY_RELEASE)
+				if (k->state == KEY_RELEASE || !k->is_synthetic)
 					return 1;
 				return sample_list_add_char(k->unicode);
 			}
@@ -1404,6 +1404,8 @@ static void sample_list_handle_alt_key(struct key_event * k)
 
 static void sample_list_handle_key(struct key_event * k)
 {
+	if (k->is_synthetic)
+		return;
 	int new_sample = current_sample;
 	song_sample_t *sample = song_get_sample(current_sample);
 

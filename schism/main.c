@@ -517,7 +517,7 @@ static void check_update(void)
 	}
 }
 
-static void _synthetic_paste(const char *cbptr)
+static void _synthetic_paste(const char *cbptr, int is_textinput)
 {
 	struct key_event kk;
 	int isy = 2;
@@ -535,7 +535,7 @@ static void _synthetic_paste(const char *cbptr)
 		} else {
 			kk.unicode = *cbptr;
 		}
-		kk.mod = 0;
+		kk.mod = is_textinput ? SDL_GetModState() : 0;
 		kk.is_repeat = 0;
 		if (cbptr[1])
 			kk.is_synthetic = isy;
@@ -556,7 +556,7 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 	if (ACTIVE_WIDGET.clipboard_paste
 	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
 				e->user.data1)) return;
-	_synthetic_paste((const char *)e->user.data1);
+	_synthetic_paste((const char *)e->user.data1, 0);
 }
 
 static void key_event_reset(struct key_event *kk, int start_x, int start_y)
@@ -645,7 +645,7 @@ static void event_loop(void)
 #endif
 		case SDL_TEXTINPUT:
 			if (status.current_page != PAGE_PATTERN_EDITOR)
-				_synthetic_paste(event.text.text);
+				_synthetic_paste(event.text.text, 1);
 			break;
 		case SDL_KEYUP:
 		case SDL_KEYDOWN:
