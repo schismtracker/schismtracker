@@ -644,15 +644,7 @@ static void event_loop(void)
 #define _ALTTRACKED_KMOD        0
 #endif
 		case SDL_TEXTINPUT:
-			switch (status.current_page) {
-				case PAGE_PATTERN_EDITOR:
-				case PAGE_ORDERLIST_PANNING:
-				case PAGE_ORDERLIST_VOLUMES:
-					break;
-				default:
-					_synthetic_paste(event.text.text, 1);
-					break;
-			}
+			_synthetic_paste(event.text.text, 1);
 			break;
 		case SDL_KEYUP:
 		case SDL_KEYDOWN:

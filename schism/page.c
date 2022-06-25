@@ -374,7 +374,8 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
 	/* warp mouse to position of slider knob */
 	if (max == 0) max = 1; /* prevent division by zero */
-	video_warp_mouse(
+	SDL_WarpMouseInWindow(
+		video_window(),
 		video_width()*((midx - 8)*8 + (cv - min)*96.0/(max - min) + 1)/640,
 		video_height()*midy*8/400.0 + 4);
 
@@ -1598,6 +1599,16 @@ static void _set_from_f4(void)
 }
 void set_page(int new_page)
 {
+	switch (new_page) {
+		case PAGE_PATTERN_EDITOR:
+		case PAGE_ORDERLIST_PANNING:
+		case PAGE_ORDERLIST_VOLUMES:
+			SDL_StopTextInput();
+			break;
+		default:
+			SDL_StartTextInput();
+			break;
+	}
 	int prev_page = status.current_page;
 
 	if (new_page != prev_page)
@@ -1623,7 +1634,6 @@ void set_page(int new_page)
 
 	if (ACTIVE_PAGE.set_page) ACTIVE_PAGE.set_page();
 	status.flags |= NEED_UPDATE;
-
 }
 
 /* --------------------------------------------------------------------- */

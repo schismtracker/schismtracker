@@ -136,10 +136,6 @@ struct video_cf {
 };
 static struct video_cf video;
 
-void video_warp_mouse(unsigned int x, unsigned int y) {
-	SDL_WarpMouseInWindow(video.window, x, y);
-}
-
 int video_is_fullscreen(void)
 {
 	return video.fullscreen.fullscreen;
