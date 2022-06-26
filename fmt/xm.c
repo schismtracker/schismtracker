@@ -368,7 +368,7 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 			smp->loop_end >>= 1;
 		}
 		if (smp->adlib_bytes[0] != 0xAD) {
-			csf_read_sample(smp, SF_LE | SF_M | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
+			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
 					fp->data + fp->pos, fp->length - fp->pos);
 		} else {
 			smp->adlib_bytes[0] = 0;
