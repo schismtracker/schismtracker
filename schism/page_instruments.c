@@ -2091,7 +2091,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 }
 static void instrument_list_handle_key(struct key_event * k)
 {
-	if (k->is_synthetic) return 1;
+	if (k->is_synthetic) return;
 	switch (k->sym.sym) {
 	case SDLK_COMMA:
 		if (NO_MODIFIER(k->mod)) {
