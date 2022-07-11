@@ -1122,8 +1122,6 @@ int main(int argc, char **argv)
 	video_mousecursor(cfg_video_mousecursor);
 	status_text_flash(" "); /* silence the mouse cursor message */
 
-	volume_setup();
-
 	load_pages();
 	main_song_changed_cb();
 

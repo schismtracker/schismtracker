@@ -35,6 +35,8 @@ unsigned int clip_32_to_24(void *, int *, unsigned int, int *, int *);
 unsigned int clip_32_to_32(void *, int *, unsigned int, int *, int *);
 
 
+void normalize_mono(song_t *, int *, unsigned int);
+void normalize_stereo(song_t *, int *, unsigned int);
 void eq_mono(song_t *, int *, unsigned int);
 void eq_stereo(song_t *, int *, unsigned int);
 void initialize_eq(int, float);

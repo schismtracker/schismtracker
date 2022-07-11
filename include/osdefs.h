@@ -117,31 +117,6 @@ int key_scancode_lookup(int k, int def);
 #define key_scancode_lookup(k, def) def
 #endif
 
-// Mixer interfaces
-
-void volume_setup(void);
-int volume_get_max(void);
-void volume_read(int *left, int *right);
-void volume_write(int left, int right);
-
-
-int alsa_volume_get_max(void);
-void alsa_volume_read(int *, int *);
-void alsa_volume_write(int, int);
-
-int oss_volume_get_max(void);
-void oss_volume_read(int *, int *);
-void oss_volume_write(int, int);
-
-int macosx_volume_get_max(void);
-void macosx_volume_read(int *, int *);
-void macosx_volume_write(int, int);
-
-int win32mm_volume_get_max(void);
-void win32mm_volume_read(int *, int *);
-void win32mm_volume_write(int, int);
-
-
 // Nasty alsa crap
 void alsa_dlinit(void);
 

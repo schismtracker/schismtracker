@@ -334,6 +334,8 @@ enum {
 
 // ------------------------------------------------------------------------------------------------------------
 
+extern int global_volume_left, global_volume_right;
+
 typedef struct song_sample {
 	uint32_t length;
 	uint32_t loop_start;

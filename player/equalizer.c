@@ -29,7 +29,7 @@
 #define EQ_BANDWIDTH    2.0
 #define EQ_ZERO         0.000001
 
-
+int global_volume_left, global_volume_right;
 
 typedef struct {
     float a0, a1, a2, b1, b2;
@@ -79,6 +79,26 @@ static void eq_filter(eq_band *pbs, float *pbuffer, unsigned int count)
 	}
 }
 
+// this ~~probably~~ shouldn't be here
+void normalize_mono(song_t *csf, int *buffer, unsigned int count)
+{
+	for (unsigned int b = 0; b < count; b++) {
+		csf->mix_buffer[b] *= (((global_volume_left + global_volume_right) << 1) / 31.0F);
+	}
+}
+
+void normalize_stereo(song_t *csf, int *buffer, unsigned int count)
+{
+	stereo_mix_to_float(buffer, csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, count);
+
+	for (unsigned int b = 0; b < count; b++) {
+		csf->mix_buffer_float[b] *= ((float)global_volume_left / 31.0F);
+		(csf->mix_buffer_float + MIXBUFFERSIZE)[b] *= ((float)global_volume_right / 31.0F);
+	}
+
+	float_to_stereo_mix(csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, buffer, count);
+}
+
 
 void eq_mono(song_t *csf, int *buffer, unsigned int count)
 {
@@ -92,7 +112,6 @@ void eq_mono(song_t *csf, int *buffer, unsigned int count)
 
 	float_to_mono_mix(csf->mix_buffer_float, buffer, count);
 }
-
 
 // XXX: I rolled the two loops into one. Make sure this works.
 void eq_stereo(song_t *csf, int *buffer, unsigned int count)

@@ -98,6 +98,9 @@ static char active_audio_driver[256];
 /* Whatever was in the config file. This is used if no driver is given to audio_setup. */
 static char cfg_audio_driver[256];
 
+/* Required for updating SDL1.2 -> SDL2 on Windows (WASAPI) */
+static SDL_AudioDeviceID audio_dev;
+
 // ------------------------------------------------------------------------
 // playback
 
@@ -1205,19 +1208,19 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 
 void song_lock_audio(void)
 {
-	SDL_LockAudio();
+	SDL_LockAudioDevice(audio_dev);
 }
 void song_unlock_audio(void)
 {
-	SDL_UnlockAudio();
+	SDL_UnlockAudioDevice(audio_dev);
 }
 void song_start_audio(void)
 {
-	SDL_PauseAudio(0);
+	SDL_PauseAudioDevice(audio_dev, 0);
 }
 void song_stop_audio(void)
 {
-	SDL_PauseAudio(1);
+	SDL_PauseAudioDevice(audio_dev, 1);
 }
 
 
@@ -1321,7 +1324,7 @@ static int _audio_open(const char *driver_spec, int verbose)
 	};
 	SDL_AudioSpec obtained;
 
-	if (SDL_OpenAudio(&desired, &obtained) < 0)
+	if (!(audio_dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE)))
 		return 0;
 
 	/* I don't know why this would change between SDL_AudioInit and SDL_OpenAudio, but I'm paranoid */
