@@ -82,9 +82,13 @@ static void eq_filter(eq_band *pbs, float *pbuffer, unsigned int count)
 // this ~~probably~~ shouldn't be here
 void normalize_mono(song_t *csf, int *buffer, unsigned int count)
 {
+	mono_mix_to_float(buffer, csf->mix_buffer_float, count);
+
 	for (unsigned int b = 0; b < count; b++) {
-		csf->mix_buffer[b] *= (((global_volume_left + global_volume_right) << 1) / 31.0F);
+		csf->mix_buffer[b] *= ((((float)global_volume_left + (float)global_volume_right) / 2.0F) / 31.0F);
 	}
+
+	float_to_mono_mix(csf->mix_buffer_float, buffer, count);
 }
 
 void normalize_stereo(song_t *csf, int *buffer, unsigned int count)
