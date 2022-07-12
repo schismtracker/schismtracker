@@ -340,8 +340,9 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 
 static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
-	unsigned int mouseline_x = (video.mouse.x / 8);
-	unsigned int mouseline_v = (video.mouse.x % 8);
+	/* emulates how SDL 1.2 handled it :p */
+	unsigned int mouseline_x = (video.mouse.x < 640) ? (video.mouse.x / 8) : 79;
+	unsigned int mouseline_v = (video.mouse.x < 640) ? (video.mouse.x % 8) : 7;
 	unsigned int mouseline[80];
 	unsigned char *pdata;
 	unsigned int x, y;

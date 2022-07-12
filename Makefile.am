@@ -126,8 +126,7 @@ noinst_HEADERS = \
 	sys/wii/isfs.h			\
 	sys/wii/certs_bin.h		\
 	sys/wii/su_tik_bin.h		\
-	sys/wii/su_tmd_bin.h		\
-	sys/win32/wine-ddraw.h
+	sys/wii/su_tmd_bin.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 

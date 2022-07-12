@@ -511,49 +511,49 @@ inline int kbd_get_note(struct key_event *k)
 		return 0;
 	}
 
-	switch (key_scancode_lookup(k->scancode, k->sym.sym)) {
-	case SDLK_BACKQUOTE:
-		if (k->mod & KMOD_SHIFT) return NOTE_FADE;
-	case SDLK_HASH: /* for delt */
-		return NOTE_OFF;
-	case SDLK_KP_1:
+	if (k->sym.sym == SDLK_KP_1 || k->sym.sym == SDLK_KP_PERIOD)
 		if (!(k->mod & KMOD_NUM)) return -1;
-	case SDLK_1:
-		return NOTE_CUT;
-	case SDLK_KP_PERIOD:
-		if (!(k->mod & KMOD_NUM)) return -1;
-	case SDLK_PERIOD:
-		return 0; /* clear */
-	case SDLK_z: note = 1; break;
-	case SDLK_s: note = 2; break;
-	case SDLK_x: note = 3; break;
-	case SDLK_d: note = 4; break;
-	case SDLK_c: note = 5; break;
-	case SDLK_v: note = 6; break;
-	case SDLK_g: note = 7; break;
-	case SDLK_b: note = 8; break;
-	case SDLK_h: note = 9; break;
-	case SDLK_n: note = 10; break;
-	case SDLK_j: note = 11; break;
-	case SDLK_m: note = 12; break;
 
-	case SDLK_q: note = 13; break;
-	case SDLK_2: note = 14; break;
-	case SDLK_w: note = 15; break;
-	case SDLK_3: note = 16; break;
-	case SDLK_e: note = 17; break;
-	case SDLK_r: note = 18; break;
-	case SDLK_5: note = 19; break;
-	case SDLK_t: note = 20; break;
-	case SDLK_6: note = 21; break;
-	case SDLK_y: note = 22; break;
-	case SDLK_7: note = 23; break;
-	case SDLK_u: note = 24; break;
-	case SDLK_i: note = 25; break;
-	case SDLK_9: note = 26; break;
-	case SDLK_o: note = 27; break;
-	case SDLK_0: note = 28; break;
-	case SDLK_p: note = 29; break;
+	switch (k->scancode) {
+	case SDL_SCANCODE_GRAVE:
+		if (k->mod & KMOD_SHIFT) return NOTE_FADE;
+	case SDL_SCANCODE_NONUSHASH: /* for delt */
+	case SDL_SCANCODE_KP_HASH:
+		return NOTE_OFF;
+	case SDL_SCANCODE_1:
+		return NOTE_CUT;
+	case SDL_SCANCODE_PERIOD:
+		return 0; /* clear */
+	case SDL_SCANCODE_Z: note = 1; break;
+	case SDL_SCANCODE_S: note = 2; break;
+	case SDL_SCANCODE_X: note = 3; break;
+	case SDL_SCANCODE_D: note = 4; break;
+	case SDL_SCANCODE_C: note = 5; break;
+	case SDL_SCANCODE_V: note = 6; break;
+	case SDL_SCANCODE_G: note = 7; break;
+	case SDL_SCANCODE_B: note = 8; break;
+	case SDL_SCANCODE_H: note = 9; break;
+	case SDL_SCANCODE_N: note = 10; break;
+	case SDL_SCANCODE_J: note = 11; break;
+	case SDL_SCANCODE_M: note = 12; break;
+
+	case SDL_SCANCODE_Q: note = 13; break;
+	case SDL_SCANCODE_2: note = 14; break;
+	case SDL_SCANCODE_W: note = 15; break;
+	case SDL_SCANCODE_3: note = 16; break;
+	case SDL_SCANCODE_E: note = 17; break;
+	case SDL_SCANCODE_R: note = 18; break;
+	case SDL_SCANCODE_5: note = 19; break;
+	case SDL_SCANCODE_T: note = 20; break;
+	case SDL_SCANCODE_6: note = 21; break;
+	case SDL_SCANCODE_Y: note = 22; break;
+	case SDL_SCANCODE_7: note = 23; break;
+	case SDL_SCANCODE_U: note = 24; break;
+	case SDL_SCANCODE_I: note = 25; break;
+	case SDL_SCANCODE_9: note = 26; break;
+	case SDL_SCANCODE_O: note = 27; break;
+	case SDL_SCANCODE_0: note = 28; break;
+	case SDL_SCANCODE_P: note = 29; break;
 
 	default: return -1;
 	};

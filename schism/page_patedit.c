@@ -3339,7 +3339,7 @@ static int pattern_editor_insert(struct key_event *k)
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
-		if (key_scancode_lookup(k->scancode, k->sym.sym) == SDLK_BACKQUOTE) {
+		if (k->scancode == SDL_SCANCODE_GRAVE) {
 			panning_mode = !panning_mode;
 			status_text_flash("%s control set", (panning_mode ? "Panning" : "Volume"));
 			return 0;
