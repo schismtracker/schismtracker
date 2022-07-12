@@ -362,9 +362,19 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 			smp->loop_start >>= 1;
 			smp->loop_end >>= 1;
 		}
-		// modplug's sample-reading function is complicated and retarded
-		csf_read_sample(smp, SF_LE | SF_M | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
-				fp->data + fp->pos, fp->length - fp->pos);
+		if (smp->flags & CHN_STEREO) {
+			smp->length >>= 1;
+			smp->loop_start >>= 1;
+			smp->loop_end >>= 1;
+		}
+		if (smp->adlib_bytes[0] != 0xAD) {
+			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
+					fp->data + fp->pos, fp->length - fp->pos);
+		} else {
+			smp->adlib_bytes[0] = 0;
+			smpsize = 16 + (smpsize + 1) / 2;
+			csf_read_sample(smp, SF_8 | SF_M | SF_LE | SF_PCMD16, fp->data + fp->pos, fp->length - fp->pos);
+		}
 		slurp_seek(fp, smpsize, SEEK_CUR);
 	}
 }
@@ -697,10 +707,18 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 				smp->flags |= CHN_16BIT;
 				// NOTE length and loop start/end are adjusted later
 			}
+			if (b & 0x20) {
+				smp->flags |= CHN_STEREO;
+				// NOTE length and loop start/end are adjusted later
+			}
 			smp->panning = slurp_getc(fp); //mphack, should be adjusted to 0-64
 			relnote = slurp_getc(fp);
 			smp->c5speed = transpose_to_frequency(relnote, finetune);
-			srsvd_or |= slurp_getc(fp);
+			uint8_t reserved = slurp_getc(fp);
+			srsvd_or |= reserved;
+			if (reserved == 0xAD && !(b & 0x10) && !(b & 0x20)) {
+				smp->adlib_bytes[0] = 0xAD; // temp storage
+			}
 			slurp_read(fp, smp->name, 22);
 			smp->name[22] = '\0';
 			if (detected & ID_DIGITRAK && memchr(smp->name, '\0', 22) != NULL)
