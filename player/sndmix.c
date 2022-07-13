@@ -802,6 +802,8 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 			as temp space for converting */
 			for (unsigned int n = 0; n < 64; n++) {
 				if (csf->multi_write[n].used) {
+					if (csf->mix_channels < 2)
+						mono_from_stereo(csf->multi_write[n].buffer, count);
 					unsigned int bytes = convert_func(buffer, csf->multi_write[n].buffer,
 						smpcount, vu_min, vu_max);
 					csf->multi_write[n].write(csf->multi_write[n].data, buffer, bytes);
