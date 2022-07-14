@@ -53,6 +53,7 @@ struct key_event {
 	int is_repeat;
 	int on_target;
 	int is_synthetic; /* 1 came from paste */
+	int is_textinput; /* SDL_TEXTINPUT, 1 if true, 0 if not */
 };
 
 /* --------------------------------------------------------------------- */

@@ -615,7 +615,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0) {
 				if (instrument_cursor_pos < 25) {
-					if (!k->is_synthetic) return 1;
+					if (!k->is_textinput) return 1;
 					if (!k->unicode) return 0;
 					return instrument_list_add_char(k->unicode);
 				} else if (k->sym.sym == SDLK_SPACE || k->unicode == ' ') {
@@ -2091,7 +2091,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 }
 static void instrument_list_handle_key(struct key_event * k)
 {
-	if (k->is_synthetic) return;
+	if (k->is_textinput) return;
 	switch (k->sym.sym) {
 	case SDLK_COMMA:
 		if (NO_MODIFIER(k->mod)) {

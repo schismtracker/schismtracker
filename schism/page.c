@@ -970,7 +970,7 @@ static int _handle_ime(struct key_event *k)
 		}
 
 		/* ctrl+shift -> unicode character */
-		if ((k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT)) {
+		if ((k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) && !k->is_textinput) {
 			if (k->state == KEY_RELEASE && cs_unicode_c > 0) {
 				struct key_event fake = {};
 
@@ -988,9 +988,10 @@ static int _handle_ime(struct key_event *k)
 				cs_unicode = cs_unicode_c = 0;
 				alt_numpad = alt_numpad_c = 0;
 				digraph_n = digraph_c = 0;
+				SDL_StartTextInput();
 				return 1;
 			}
-		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
+		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT) && !k->is_textinput) {
 			if (cs_unicode_c >= 0) {
 				/* bleh... */
 				m = k->mod;
@@ -1006,16 +1007,21 @@ static int _handle_ime(struct key_event *k)
 					cs_unicode_c++;
 					digraph_n = digraph_c = 0;
 					status_text_flash_bios("Enter Unicode: U+%04X", cs_unicode);
+					SDL_StopTextInput();
 					return 1;
 				}
 			}
 		} else {
+			if ((k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) && k->is_textinput) {
+				return 1;
+			}
+			SDL_StartTextInput();
 			cs_unicode = cs_unicode_c = 0;
 		}
 
 		/* alt+numpad -> char number */
 		if (k->sym.sym == SDLK_LALT || k->sym.sym == SDLK_RALT
-		    || k->sym.sym == SDLK_LGUI || k->sym.sym == SDLK_RGUI) {
+			|| k->sym.sym == SDLK_LGUI || k->sym.sym == SDLK_RGUI) {
 			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {
 				struct key_event fake = {};
 
@@ -1030,6 +1036,7 @@ static int _handle_ime(struct key_event *k)
 				alt_numpad = alt_numpad_c = 0;
 				digraph_n = digraph_c = 0;
 				cs_unicode = cs_unicode_c = 0;
+				SDL_StartTextInput();
 				return 1;
 			}
 		} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
@@ -1047,10 +1054,12 @@ static int _handle_ime(struct key_event *k)
 					alt_numpad_c++;
 					if (!(status.flags & CLASSIC_MODE))
 						status_text_flash_bios("Enter DOS/ASCII: %d", (int)alt_numpad);
+					SDL_StopTextInput();
 					return 1;
 				}
 			}
 		} else {
+			SDL_StartTextInput();
 			alt_numpad = alt_numpad_c = 0;
 		}
 	} else {

@@ -110,6 +110,21 @@ int char_digraph(int k1, int k2)
 #undef DG
 	return 0;
 }
+char* str_unicode_to_cp437(const char* s)
+{
+	int s_len = strlen(s), i;
+	char* out = calloc(s_len, sizeof(char));
+
+	if (s == NULL)
+		return NULL;
+
+	for ( i = 0 ; i < s_len ; i++ ) {
+		out[i] = char_unicode_to_cp437(s[i]);
+	}
+
+	return out;
+}
+
 int char_unicode_to_cp437(unsigned int c)
 {
 	if (c >= 32 && c <= 127) return c;

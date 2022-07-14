@@ -368,6 +368,7 @@ void numentry_change_value(struct widget *w, int new_value)
 /* I'm sure there must be a simpler way to do this. */
 int numentry_handle_digit(struct widget *w, struct key_event *k)
 {
+	if (k->is_textinput) return 1;
 	int width, value, n;
 	static const int tens[7] = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
 	int digits[7] = { 0 };

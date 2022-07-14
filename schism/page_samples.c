@@ -1405,7 +1405,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 
 static void sample_list_handle_key(struct key_event * k)
 {
-	if (k->is_synthetic)
+	if (k->is_textinput)
 		return;
 	int new_sample = current_sample;
 	song_sample_t *sample = song_get_sample(current_sample);

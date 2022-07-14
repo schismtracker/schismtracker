@@ -39,6 +39,7 @@
 #include "song.h"
 #include "midi.h"
 #include "dmoz.h"
+#include "charset.h"
 
 #include "osdefs.h"
 
@@ -541,6 +542,7 @@ static void _synthetic_paste(const char *cbptr, int is_textinput)
 			kk.is_synthetic = isy;
 		else
 			kk.is_synthetic = 3;
+		kk.is_textinput = is_textinput;
 		kk.state = KEY_PRESS;
 		handle_key(&kk);
 		kk.state = KEY_RELEASE;
@@ -643,9 +645,15 @@ static void event_loop(void)
 #else
 #define _ALTTRACKED_KMOD        0
 #endif
-		case SDL_TEXTINPUT:
-			_synthetic_paste(event.text.text, 1);
+		case SDL_TEXTINPUT: {
+			char* input_text = str_unicode_to_cp437(event.text.text);
+			if (input_text != NULL) {
+				if (input_text[0] != '\0')
+					_synthetic_paste(input_text, 1);
+				free(input_text);
+			}
 			break;
+		}
 		case SDL_KEYUP:
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
