@@ -323,17 +323,19 @@ void video_refresh(void)
 
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80])
 {
+	int y_int =	(video.mouse.y >= 5368708) ? 0 :
+			(video.mouse.y >= 400)     ? 399 : (int)video.mouse.y;
 	unsigned int z;
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
 	if (video.mouse.visible != MOUSE_EMULATED
 	    || !(status.flags & IS_FOCUSED)
-	    || y < video.mouse.y
-	    || y >= video.mouse.y+MOUSE_HEIGHT) {
+	    || y < y_int
+	    || y >= y_int+MOUSE_HEIGHT) {
 		return;
 	}
 
-	z = _mouse_pointer[ y - video.mouse.y ];
+	z = _mouse_pointer[ y - y_int ];
 	mouseline[x] = z >> v;
 	if (x < 79) mouseline[x+1] = (z << (8-v)) & 0xff;
 }
@@ -341,8 +343,11 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
 	/* emulates how SDL 1.2 handled it :p */
-	unsigned int mouseline_x = (video.mouse.x < 640) ? (video.mouse.x / 8) : 79;
-	unsigned int mouseline_v = (video.mouse.x < 640) ? (video.mouse.x % 8) : 7;
+	/* effectively handles underflows/overflows */
+	unsigned int mouseline_x =	(video.mouse.x >= 3355443) ? 0  :
+					(video.mouse.x >= 640)     ? 79 : (video.mouse.x / 8);
+	unsigned int mouseline_v =	(video.mouse.x >= 3355443) ? 0  :
+					(video.mouse.x >= 640)     ? 7  : (video.mouse.x % 8);
 	unsigned int mouseline[80];
 	unsigned char *pdata;
 	unsigned int x, y;
