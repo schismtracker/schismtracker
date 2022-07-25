@@ -138,8 +138,6 @@ void cfg_load(void)
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
-	global_volume_left = cfg_get_number(&cfg, "Audio", "global_volume_left", 31);
-	global_volume_right = cfg_get_number(&cfg, "Audio", "global_volume_right", 31);
 	ptr = cfg_get_string(&cfg, "Video", "aspect", NULL, 0, NULL);
 	if (ptr && *ptr)
 		put_env_var("SCHISM_VIDEO_ASPECT", ptr);
@@ -305,9 +303,6 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
-
-	cfg_set_number(&cfg, "Audio", "global_volume_left", global_volume_left);
-	cfg_set_number(&cfg, "Audio", "global_volume_right", global_volume_right);
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);
 	cfg_set_number(&cfg, "General", "time_display", status.time_display);

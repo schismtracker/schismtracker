@@ -959,6 +959,8 @@ void cfg_load_audio(cfg_file_t *cfg)
 	CFG_GET_A(bits, 16);
 	CFG_GET_A(channels, 2);
 	CFG_GET_A(buffer_size, DEF_BUFFER_SIZE);
+	CFG_GET_A(master.left, 31);
+	CFG_GET_A(master.right, 31);
 
 	cfg_get_string(cfg, "Audio", "driver", cfg_audio_driver, 255, NULL);
 
@@ -999,6 +1001,8 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 	CFG_SET_A(bits);
 	CFG_SET_A(channels);
 	CFG_SET_A(buffer_size);
+	CFG_SET_A(master.left);
+	CFG_SET_A(master.right);
 
 	CFG_SET_M(channel_limit);
 	CFG_SET_M(interpolation_mode);

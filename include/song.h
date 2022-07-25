@@ -50,8 +50,14 @@ extern unsigned int max_channels_used;
 /* defined in audio_playback.cc; also used by page_settings.c */
 
 struct audio_settings {
-	int sample_rate, bits, channels, buffer_size, global_volume;
+	int sample_rate, bits, channels, buffer_size;
 	int channel_limit, interpolation_mode;
+
+	struct {
+		int left;
+		int right;
+	} master;
+	
 	int surround_effect;
 
 	unsigned int eq_freq[4];

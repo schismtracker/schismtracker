@@ -28,7 +28,6 @@
 #include "page.h"
 #include "osdefs.h"
 #include "sdlmain.h"
-#include "sndfile.h"
 
 #include "disko.h"
 
@@ -89,8 +88,8 @@ static void preferences_draw_const(void)
 static void preferences_set_page(void)
 {
 	int i, j;
-	widgets_preferences[0].d.thumbbar.value = global_volume_left;
-	widgets_preferences[1].d.thumbbar.value = global_volume_right;
+	widgets_preferences[0].d.thumbbar.value = audio_settings.master.left;
+	widgets_preferences[1].d.thumbbar.value = audio_settings.master.right;
 
 	for (i = j = 0; interpolation_modes[i]; i++) {
 		if (i == audio_settings.interpolation_mode) {
@@ -122,8 +121,8 @@ static void preferences_set_page(void)
 
 static void change_volume(void)
 {
-	global_volume_left = widgets_preferences[0].d.thumbbar.value;
-	global_volume_right = widgets_preferences[1].d.thumbbar.value;
+	audio_settings.master.left = widgets_preferences[0].d.thumbbar.value;
+	audio_settings.master.right = widgets_preferences[1].d.thumbbar.value;
 }
 
 #define SAVED_AT_EXIT "Audio configuration will be saved at exit"
