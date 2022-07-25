@@ -104,7 +104,77 @@ static void change_ui_settings(void)
 static int countdown = 10;
 static time_t started = 0;
 
+static const char *video_revert_driver = NULL;
+static int video_revert_fs = 0;
+
+static void video_mode_keep(UNUSED void*ign)
+{
+	status_text_flash(SAVED_AT_EXIT);
+	config_set_page();
+	status.flags |= NEED_UPDATE;
+}
+static void video_mode_cancel(UNUSED void*ign)
+{
+	if (video_revert_driver) {
+		video_setup(video_revert_driver);
+		video_startup();
+	}
+	video_fullscreen(video_revert_fs);
+	palette_apply();
+	font_init();
+	config_set_page();
+	status.flags |= NEED_UPDATE;
+}
+
+static void video_dialog_draw_const(void)
+{
+	char buf[80];
+	time_t now;
+
+	time(&now);
+	if (now != started) {
+		countdown--;
+		time(&started); /* err... */
+		status.flags |= NEED_UPDATE;
+		if (countdown == 0) {
+			dialog_destroy();
+			video_mode_cancel(NULL);
+			return;
+		}
+	}
+
+	draw_text("Your video settings have been changed.", 21,19,0,2);
+	sprintf(buf, "In %2d seconds, your changes will be", countdown);
+	draw_text(buf, 23, 21, 0, 2);
+	draw_text("reverted to the last known-good", 21, 22, 0, 2);
+	draw_text("settings.", 21, 23, 0, 2);
+	draw_text("To use the new video mode, and make", 21, 24, 0, 2);
+	draw_text("it default, select OK.", 21, 25, 0, 2);
+}
+
 static struct widget video_dialog_widgets[2];
+static void video_change_dialog(void)
+{
+	struct dialog *d;
+
+	video_revert_driver = video_driver_name();
+	video_revert_fs = video_is_fullscreen();
+
+	countdown = 10;
+	time(&started);
+
+	create_button(video_dialog_widgets+0, 28,28,8, 0, 0, 0, 1, 1,
+					dialog_yes_NULL, "OK", 4);
+	create_button(video_dialog_widgets+1, 42,28,8, 1, 1, 0, 1, 0,
+					dialog_cancel_NULL, "Cancel", 2);
+	d = dialog_create_custom(20, 17, 40, 14,
+			video_dialog_widgets,
+			2, 1,
+			video_dialog_draw_const, NULL);
+	d->action_yes = video_mode_keep;
+	d->action_no = video_mode_cancel;
+	d->action_cancel = video_mode_cancel;
+}
 
 static void change_video_settings(void)
 {
@@ -132,6 +202,7 @@ static void change_video_settings(void)
 		return;
 	}
 
+	video_change_dialog();
 	if (SDL_strcasecmp(new_video_driver, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))) {
 		video_setup(new_video_driver);
 	}
