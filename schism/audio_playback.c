@@ -1328,7 +1328,7 @@ static int _audio_open(const char *driver_spec, int verbose)
 	};
 	SDL_AudioSpec obtained;
 
-	if (!(audio_dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE)))
+	if (!(audio_dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE)))
 		return 0;
 
 	/* I don't know why this would change between SDL_AudioInit and SDL_OpenAudio, but I'm paranoid */

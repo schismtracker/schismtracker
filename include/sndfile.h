@@ -546,7 +546,6 @@ struct multi_write {
 
 typedef struct song {
 	int mix_buffer[MIXBUFFERSIZE * 2];
-	float mix_buffer_float[MIXBUFFERSIZE * 2]; // is this needed?
 
 	song_voice_t voices[MAX_VOICES];                // Channels
 	uint32_t voice_mix[MAX_VOICES];                 // Channels to be mixed

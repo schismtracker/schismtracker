@@ -93,52 +93,6 @@ void mono_from_stereo(int *mix_buf, unsigned int samples)
     }
 }
 
-
-static const float f2ic = (float) (1 << 28);
-static const float i2fc = (float) (1.0 / (1 << 28));
-
-
-void stereo_mix_to_float(const int *src, float *out1, float *out2, unsigned int count)
-{
-    for (unsigned int i = 0; i < count; i++) {
-	*out1++ = *src * i2fc;
-	src++;
-
-	*out2++ = *src * i2fc;
-	src++;
-    }
-}
-
-
-void float_to_stereo_mix(const float *in1, const float *in2, int *out, unsigned int count)
-{
-    for (unsigned int i = 0; i < count; i++) {
-	*out++ = (int) (*in1 * f2ic);
-	*out++ = (int) (*in2 * f2ic);
-	in1++;
-	in2++;
-    }
-}
-
-
-void mono_mix_to_float(const int *src, float *out, unsigned int count)
-{
-    for (unsigned int i = 0; i < count; i++) {
-	*out++ = *src * i2fc;
-	src++;
-    }
-}
-
-
-void float_to_mono_mix(const float *in, int *out, unsigned int count)
-{
-    for (unsigned int i = 0; i < count; i++) {
-	*out++ = (int) (*in * f2ic);
-	in++;
-    }
-}
-
-
 // ----------------------------------------------------------------------------
 // Clip and convert functions
 // ----------------------------------------------------------------------------
