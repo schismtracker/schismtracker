@@ -779,7 +779,8 @@ int widget_handle_key(struct key_event * k)
 		break;
 	case WIDGET_TEXTENTRY:
 		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0
-				&& textentry_add_char(widget, k->unicode))
+				&& (textentry_add_char(widget, k->unicode)
+				|| !k->is_synthetic))
 			return 1;
 		break;
 	default:
