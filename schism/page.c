@@ -45,7 +45,7 @@ struct tracker_status status = {
 	.previous_page = PAGE_BLANK,
 	.current_help_index = HELP_GLOBAL,
 	.dialog_type = DIALOG_NONE,
-	.flags = IS_FOCUSED | IS_VISIBLE,
+	.flags = IS_FOCUSED | IS_VISIBLE | ACCEPTING_INPUT,
 	.time_display = TIME_PLAY_ELAPSED,
 	.vis_style = VIS_VU_METER,
 	.last_midi_event = "",
@@ -1608,16 +1608,6 @@ static void _set_from_f4(void)
 }
 void set_page(int new_page)
 {
-	switch (new_page) {
-		case PAGE_PATTERN_EDITOR:
-		case PAGE_ORDERLIST_PANNING:
-		case PAGE_ORDERLIST_VOLUMES:
-			SDL_StopTextInput();
-			break;
-		default:
-			SDL_StartTextInput();
-			break;
-	}
 	int prev_page = status.current_page;
 
 	if (new_page != prev_page)

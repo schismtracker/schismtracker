@@ -769,7 +769,8 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		break;
 	case WIDGET_NUMENTRY:
-		if (numentry_handle_digit(widget, k))
+		if (numentry_handle_digit(widget, k)
+			|| !k->is_synthetic)
 			return 1;
 		break;
 	case WIDGET_THUMBBAR:

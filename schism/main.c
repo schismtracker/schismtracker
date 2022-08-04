@@ -496,6 +496,22 @@ static void check_update(void)
 {
 	static unsigned long next = 0;
 
+	switch (ACTIVE_WIDGET.type) {
+		case WIDGET_TEXTENTRY:
+		case WIDGET_NUMENTRY:
+		case WIDGET_OTHER:
+			if (!(status.flags & ACCEPTING_INPUT)) {
+				status.flags |= (ACCEPTING_INPUT);
+				SDL_StartTextInput();
+			}
+			break;
+		default:
+			if (status.flags & ACCEPTING_INPUT) {
+				status.flags &= ~(ACCEPTING_INPUT);
+				SDL_StopTextInput();
+			}
+			break;
+	}
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
 	if ((status.flags & (NEED_UPDATE | IS_VISIBLE)) == (NEED_UPDATE | IS_VISIBLE)) {
@@ -648,7 +664,7 @@ static void event_loop(void)
 		case SDL_TEXTINPUT: {
 			char* input_text = str_unicode_to_cp437(event.text.text);
 			if (input_text != NULL) {
-				if (input_text[0] != '\0')
+				if (input_text[0] != '\0' && (status.flags & ACCEPTING_INPUT))
 					_synthetic_paste(input_text, 1);
 				free(input_text);
 			}
@@ -696,7 +712,7 @@ static void event_loop(void)
 				if (ibook_helper != -1) {
 					if (ACTIVE_PAGE.selected_widget > -1
 					    && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
-					    && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
+					    && ACTIVE_PAGE_WIDGET.accept_text) {
 						/* text is more likely? */
 						modkey |= KMOD_NUM;
 					} else {
