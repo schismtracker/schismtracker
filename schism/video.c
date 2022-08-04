@@ -161,6 +161,19 @@ const char * video_driver_name(void)
 	return "SDL2";
 }
 
+void video_report(void)
+{
+	Uint32 format;
+	SDL_QueryTexture(video.texture, &format, NULL, NULL, NULL);
+
+	log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
+
+	log_appendf(5, " Display format: %d bits/pixel", SDL_BITSPERPIXEL(format));
+	if (video.fullscreen.fullscreen) {
+		log_appendf(5, " Display dimensions: %dx%d", video.display.w, video.display.h);
+	}
+}
+
 void video_redraw_texture(void)
 {
 	SDL_DestroyTexture(video.texture);

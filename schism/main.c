@@ -86,7 +86,7 @@ static void display_print_info(void)
 {
 	log_append(2, 0, "Video initialised");
 	log_underline(17);
-	//video_report();
+	video_report();
 }
 
 /* If we're not not debugging, don't not dump core. (Have I ever mentioned

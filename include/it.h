@@ -245,7 +245,6 @@ extern char cfg_video_interpolation[];
 /* TODO: consolidate these into cfg_video_flags */
 extern int cfg_video_fullscreen;
 extern int cfg_video_mousecursor;
-extern int cfg_video_gl_bilinear;
 extern int cfg_video_width, cfg_video_height;
 
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
