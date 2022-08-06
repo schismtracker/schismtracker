@@ -189,9 +189,22 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date +%Y%m%d)"
 
+      - name: 'autoreconf -i'
+        run: autoreconf -i
+        
+      - name: 'Create source tarball'
+        run: |
+          touch schismtracker-${{ steps.date.outputs.date }}.source.tar.gz
+          tar --exclude=schismtracker-${{ steps.date.outputs.date }}.source.tar.gz --exclude-vcs -zcvf schismtracker-${{ steps.date.outputs.date }}.source.tar.gz *
+
+      - name: 'Upload source tarball'
+        uses: actions/upload-artifact@v2
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}.source
+          path: schismtracker-${{ steps.date.outputs.date }}.source.tar.gz
+
       - name: 'Build package'
         run: |
-          autoreconf -i
           mkdir -p build
           cd build
           ../configure
