@@ -35,7 +35,7 @@ int macosx_sdlevent(SDL_Event *event)
 		if (event->key.keysym.sym == 0) {
 			switch (event->key.keysym.scancode) {
 			case 106: // mac F16 key
-				event->key.keysym.sym = SDLK_PRINT;
+				event->key.keysym.sym = SDLK_PRINTSCREEN;
 				event->key.keysym.mod = KMOD_CTRL;
 				return 1;
 			case 234: // XXX what key is this?

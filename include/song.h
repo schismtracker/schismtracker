@@ -52,6 +52,12 @@ extern unsigned int max_channels_used;
 struct audio_settings {
 	int sample_rate, bits, channels, buffer_size;
 	int channel_limit, interpolation_mode;
+
+	struct {
+		int left;
+		int right;
+	} master;
+	
 	int surround_effect;
 
 	unsigned int eq_freq[4];

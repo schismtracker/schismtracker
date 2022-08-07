@@ -319,7 +319,7 @@ int textentry_add_char(struct widget *w, uint16_t unicode)
 
 int menutoggle_handle_key(struct widget *w, struct key_event *k)
 {
-	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0)
+	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
 	   && w->d.menutoggle.activation_keys)
 	{
 	    const char* m = w->d.menutoggle.activation_keys;
@@ -337,7 +337,7 @@ int menutoggle_handle_key(struct widget *w, struct key_event *k)
 
 int bitset_handle_key(struct widget *w, struct key_event *k)
 {
-	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0)
+	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
 	   && w->d.bitset.activation_keys)
 	{
 	    const char* m = w->d.bitset.activation_keys;
@@ -368,6 +368,7 @@ void numentry_change_value(struct widget *w, int new_value)
 /* I'm sure there must be a simpler way to do this. */
 int numentry_handle_digit(struct widget *w, struct key_event *k)
 {
+	if (k->is_textinput) return 1;
 	int width, value, n;
 	static const int tens[7] = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
 	int digits[7] = { 0 };

@@ -215,7 +215,7 @@ static int _ip_thread(struct midi_provider *p)
 	int *tmp2, *tmp;
 	int i, m;
 
-	for (;;) {
+	while (!p->cancelled) {
 		SDL_mutexP(blocker);
 		m = (volatile int)num_ports;
 		//If no ports, wait and try again

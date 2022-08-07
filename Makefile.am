@@ -126,8 +126,7 @@ noinst_HEADERS = \
 	sys/wii/isfs.h			\
 	sys/wii/certs_bin.h		\
 	sys/wii/su_tik_bin.h		\
-	sys/wii/su_tmd_bin.h		\
-	sys/win32/wine-ddraw.h
+	sys/wii/su_tmd_bin.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -161,7 +160,7 @@ endif
 endif
 
 if USE_ALSA
-files_alsa = sys/alsa/init.c sys/alsa/volume-alsa.c sys/alsa/midi-alsa.c
+files_alsa = sys/alsa/init.c sys/alsa/midi-alsa.c
 if USE_ALSA_DLTRICK
 cflags_alsa=-DUSE_ALSA -DUSE_DLTRICK_ALSA
 else
@@ -171,7 +170,7 @@ endif
 endif
 
 if USE_OSS
-files_oss = sys/oss/volume-oss.c sys/oss/midi-oss.c
+files_oss = sys/oss/midi-oss.c
 cflags_oss=-DUSE_OSS
 endif
 
@@ -183,7 +182,6 @@ if USE_WIN32
 files_win32 = \
 	sys/win32/osdefs.c		\
 	sys/win32/slurp-win32.c		\
-	sys/win32/volume-win32mm.c	\
 	sys/win32/midi-win32mm.c	\
 	sys/win32/filetype.c		\
 	sys/win32/localtime_r.c
@@ -218,9 +216,8 @@ files_macosx = \
 	sys/macosx/macosx-sdlmain.m	\
 	sys/macosx/ibook-support.c	\
 	sys/macosx/midi-macosx.c	\
-	sys/macosx/volume-macosx.c	\
 	sys/macosx/osdefs.c
-cflags_macosx=-mmacosx-version-min=10.9
+cflags_macosx=
 endif
 
 if USE_NETWORK
@@ -262,7 +259,6 @@ schismtracker_SOURCES = \
 	schism/pattern-view.c		\
 	schism/xpmdata.c		\
 	schism/menu.c			\
-	schism/volume-core.c		\
 	schism/disko.c			\
 	schism/page_loadinst.c		\
 	schism/mplink.c			\

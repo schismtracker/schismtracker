@@ -154,7 +154,7 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_SPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
@@ -198,7 +198,7 @@ static int midi_page_handle_key(struct key_event * k)
 	if (new_port != current_port) {
 		if (new_port < 0 || new_port >= midi_engine_port_count()) {
 			new_port = current_port;
-			if (k->sym == SDLK_DOWN) {
+			if (k->sym.sym == SDLK_DOWN) {
 				change_focus_to(1);
 			}
 		}

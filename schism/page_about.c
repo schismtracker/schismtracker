@@ -52,7 +52,7 @@ static struct vgamem_overlay logo_image = {
 static int _fixup_ignore_globals(struct key_event *k)
 {
 	if (k->mouse && k->y > 20) return 0;
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_LEFT:
 	case SDLK_RIGHT:
 	case SDLK_DOWN:

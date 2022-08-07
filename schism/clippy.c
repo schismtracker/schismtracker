@@ -29,6 +29,7 @@
 #include "util.h"
 
 #include "sdlmain.h"
+#include "video.h"
 
 static char *_current_selection = NULL;
 static char *_current_clipboard = NULL;
@@ -36,14 +37,12 @@ static struct widget *_widget_owner[16] = {NULL};
 
 static int has_sys_clip;
 #if defined(WIN32)
-static HWND SDL_Window, _hmem;
+static HWND native_window, _hmem;
 #elif defined(__QNXNTO__)
 static unsigned short inputgroup;
 #elif defined(USE_X11)
-static Display *SDL_Display = NULL;
-static Window SDL_Window;
-static void (*lock_display)(void);
-static void (*unlock_display)(void);
+static Display *native_display = NULL;
+static Window native_window;
 static Atom atom_sel;
 static Atom atom_clip;
 static void __noop_v(void){};
@@ -106,34 +105,32 @@ static void _clippy_copy_to_sys(int do_sel)
 #endif
 #if defined(USE_X11)
 	if (has_sys_clip) {
-		lock_display();
 		if (!dst) dst = (char *) ""; /* blah */
 		if (j < 0) j = 0;
 		if (do_sel) {
-			if (XGetSelectionOwner(SDL_Display, XA_PRIMARY) != SDL_Window) {
-				XSetSelectionOwner(SDL_Display, XA_PRIMARY, SDL_Window, CurrentTime);
+			if (XGetSelectionOwner(native_display, XA_PRIMARY) != native_window) {
+				XSetSelectionOwner(native_display, XA_PRIMARY, native_window, CurrentTime);
 			}
-			XChangeProperty(SDL_Display,
-				DefaultRootWindow(SDL_Display),
+			XChangeProperty(native_display,
+				DefaultRootWindow(native_display),
 				XA_CUT_BUFFER0, XA_STRING, 8,
 				PropModeReplace, (unsigned char *)dst, j);
 		} else {
-			if (XGetSelectionOwner(SDL_Display, atom_clip) != SDL_Window) {
-				XSetSelectionOwner(SDL_Display, atom_clip, SDL_Window, CurrentTime);
+			if (XGetSelectionOwner(native_display, atom_clip) != native_window) {
+				XSetSelectionOwner(native_display, atom_clip, native_window, CurrentTime);
 			}
-			XChangeProperty(SDL_Display,
-				DefaultRootWindow(SDL_Display),
+			XChangeProperty(native_display,
+				DefaultRootWindow(native_display),
 				XA_CUT_BUFFER0, XA_STRING, 8,
 				PropModeReplace, (unsigned char *)dst, j);
-			XChangeProperty(SDL_Display,
-				DefaultRootWindow(SDL_Display),
+			XChangeProperty(native_display,
+				DefaultRootWindow(native_display),
 				XA_CUT_BUFFER1, XA_STRING, 8,
 				PropModeReplace, (unsigned char *)dst, j);
 		}
-		unlock_display();
 	}
 #elif defined(WIN32)
-	if (!do_sel && OpenClipboard(SDL_Window)) {
+	if (!do_sel && OpenClipboard(native_window)) {
 		_hmem = GlobalAlloc((GMEM_MOVEABLE|GMEM_DDESHARE), j+1);
 		if (_hmem) {
 			dst = (char *)GlobalLock(_hmem);
@@ -196,7 +193,7 @@ static void _string_paste(UNUSED int cb, const char *cbptr)
 
 
 #if defined(USE_X11)
-static int _x11_clip_filter(const SDL_Event *ev)
+static int _x11_clip_filter(void *userdata, SDL_Event *ev)
 {
 	XSelectionRequestEvent *req;
 	XEvent sevent;
@@ -208,12 +205,11 @@ static int _x11_clip_filter(const SDL_Event *ev)
 	unsigned char *src;
 
 	if (ev->type != SDL_SYSWMEVENT) return 1;
-	if (ev->syswm.msg->event.xevent.type == SelectionNotify) {
-		sevent = ev->syswm.msg->event.xevent;
-		if (sevent.xselection.requestor == SDL_Window) {
-			lock_display();
+	if (ev->syswm.msg->msg.x11.event.type == SelectionNotify) {
+		sevent = ev->syswm.msg->msg.x11.event;
+		if (sevent.xselection.requestor == native_window) {
 			src = NULL;
-			if (XGetWindowProperty(SDL_Display, SDL_Window, atom_sel,
+			if (XGetWindowProperty(native_display, native_window, atom_sel,
 						0, 9000, False, XA_STRING,
 						(Atom *)&seln_type,
 						(int *)&seln_format,
@@ -231,18 +227,17 @@ static int _x11_clip_filter(const SDL_Event *ev)
 				}
 				XFree(src);
 			}
-			unlock_display();
 		}
 		return 1;
-	} else if (ev->syswm.msg->event.xevent.type == PropertyNotify) {
-		sevent = ev->syswm.msg->event.xevent;
+	} else if (ev->syswm.msg->msg.x11.event.type == PropertyNotify) {
+		sevent = ev->syswm.msg->msg.x11.event;
 		return 1;
 
-	} else if (ev->syswm.msg->event.xevent.type != SelectionRequest) {
+	} else if (ev->syswm.msg->msg.x11.event.type != SelectionRequest) {
 		return 1;
 	}
 
-	req = &ev->syswm.msg->event.xevent.xselectionrequest;
+	req = &ev->syswm.msg->msg.x11.event.xselectionrequest;
 	sevent.xselection.type = SelectionNotify;
 	sevent.xselection.display = req->display;
 	sevent.xselection.selection = req->selection;
@@ -250,7 +245,7 @@ static int _x11_clip_filter(const SDL_Event *ev)
 	sevent.xselection.property = None;
 	sevent.xselection.requestor = req->requestor;
 	sevent.xselection.time = req->time;
-	if (XGetWindowProperty(SDL_Display, DefaultRootWindow(SDL_Display),
+	if (XGetWindowProperty(native_display, DefaultRootWindow(native_display),
 			XA_CUT_BUFFER0, 0, 9000, False, req->target,
 			&seln_target, &seln_format,
 			&nbytes, &overflow, &seln_data) == Success) {
@@ -259,15 +254,15 @@ static int _x11_clip_filter(const SDL_Event *ev)
 				if (nbytes && seln_data[nbytes-1] == '\0')
 					nbytes--;
 			}
-			XChangeProperty(SDL_Display, req->requestor, req->property,
+			XChangeProperty(native_display, req->requestor, req->property,
 				seln_target, seln_format, PropModeReplace,
 				seln_data, nbytes);
 			sevent.xselection.property = req->property;
 		}
 		XFree(seln_data);
 	}
-	XSendEvent(SDL_Display, req->requestor, False, 0, &sevent);
-	XSync(SDL_Display, False);
+	XSendEvent(native_display, req->requestor, False, 0, &sevent);
+	XSync(native_display, False);
 	return 1;
 }
 
@@ -292,27 +287,23 @@ void clippy_init(void)
 
 	has_sys_clip = 0;
 	SDL_VERSION(&info.version);
-	if (SDL_GetWMInfo(&info)) {
+	if (SDL_GetWindowWMInfo(video_window(), &info)) {
 #if defined(USE_X11)
 		if (info.subsystem == SDL_SYSWM_X11) {
-			SDL_Display = info.info.x11.display;
-			SDL_Window = info.info.x11.window;
-			lock_display = info.info.x11.lock_func;
-			unlock_display = info.info.x11.unlock_func;
+			native_display = info.info.x11.display;
+			native_window = info.info.x11.window;
 			SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-			SDL_SetEventFilter(_x11_clip_filter);
+			SDL_SetEventFilter(_x11_clip_filter, NULL);
 			has_sys_clip = 1;
 
-			atom_sel = XInternAtom(SDL_Display, "SDL_SELECTION", False);
-			atom_clip = XInternAtom(SDL_Display, "CLIPBOARD", False);
+			atom_sel = XInternAtom(native_display, "SDL_SELECTION", False);
+			atom_clip = XInternAtom(native_display, "CLIPBOARD", False);
 
 			orig_xlib_err = XSetErrorHandler(handle_xlib_err);
 		}
-		if (!lock_display) lock_display = __noop_v;
-		if (!unlock_display) unlock_display = __noop_v;
 #elif defined(WIN32)
 		has_sys_clip = 1;
-		SDL_Window = info.window;
+		native_window = info.info.win.window;
 #elif defined(__QNXNTO__)
 		has_sys_clip = 1;
 		inputgroup = PhInputGroup(NULL);
@@ -344,27 +335,23 @@ static char *_internal_clippy_paste(int cb)
 		} else {
 			getme = atom_clip;
 		}
-		lock_display();
-		owner = XGetSelectionOwner(SDL_Display, getme);
-		unlock_display();
-		if (owner == None || owner == SDL_Window) {
+		owner = XGetSelectionOwner(native_display, getme);
+		if (owner == None || owner == native_window) {
 			/* fall through to default implementation */
 		} else {
-			lock_display();
-			XConvertSelection(SDL_Display, getme, XA_STRING, atom_sel, SDL_Window,
+			XConvertSelection(native_display, getme, XA_STRING, atom_sel, native_window,
 							CurrentTime);
 			/* at some point in the near future, we'll get a SelectionNotify
 			see _x11_clip_filter for more details;
 
 			because of this (otherwise) oddity, we take the selection immediately...
 			*/
-			unlock_display();
 			return NULL;
 		}
 #else
 		if (cb == CLIPPY_BUFFER) {
 #if defined(WIN32)
-			if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(SDL_Window)) {
+			if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(native_window)) {
 				_hmem  = GetClipboardData(CF_TEXT);
 				if (_hmem) {
 					if (_current_selection != _current_clipboard) {

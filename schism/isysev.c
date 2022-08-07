@@ -509,7 +509,7 @@ static void keytab_init(void)
 
 		// Miscellaneous function keys
 		{SDLK_HELP, "Help"},
-		{SDLK_PRINT, "Print"},
+		{SDLK_PRINTSCREEN, "Print Screen"},
 		{SDLK_SYSREQ, "SysRq"},
 		{SDLK_BREAK, "Break"},
 		{SDLK_MENU, "Menu"},

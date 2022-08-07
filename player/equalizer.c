@@ -23,13 +23,12 @@
 
 #include "sndfile.h"
 #include "cmixer.h"
+#include "song.h"
 #include <math.h>
 
 
 #define EQ_BANDWIDTH    2.0
 #define EQ_ZERO         0.000001
-
-
 
 typedef struct {
     float a0, a1, a2, b1, b2;
@@ -61,10 +60,11 @@ static eq_band eq[MAX_EQ_BANDS * 2] =
 };
 
 
-static void eq_filter(eq_band *pbs, float *pbuffer, unsigned int count)
+static void eq_filter(eq_band *pbs, int *buffer, unsigned int count)
 {
-	for (unsigned int i = 0; i < count; i++) {
-		float x = pbuffer[i];
+	int amt = (!!(audio_settings.channels-1)+1); // if 1, amt is 1, else 2
+	for (unsigned int i = 0; i < count; i+=amt) {
+		float x = buffer[i];
 		float y = pbs->a1 * pbs->x1 +
 			  pbs->a2 * pbs->x2 +
 			  pbs->a0 * x +
@@ -74,44 +74,50 @@ static void eq_filter(eq_band *pbs, float *pbuffer, unsigned int count)
 		pbs->x2 = pbs->x1;
 		pbs->y2 = pbs->y1;
 		pbs->x1 = x;
-		pbuffer[i] = y;
+		buffer[i] = y;
 		pbs->y1 = y;
+	}
+}
+
+void normalize_mono(song_t *csf, int *buffer, unsigned int count)
+{
+	for (unsigned int b = 0; b < count; b++) {
+		buffer[b] *= (((float)audio_settings.master.left + (float)audio_settings.master.right) / 62.0F);
+	}
+}
+
+void normalize_stereo(song_t *csf, int *buffer, unsigned int count)
+{
+	for (unsigned int b = 0; b < count; b++) {
+		buffer[b] *= ((float)audio_settings.master.left / 31.0F);
+		buffer[++b] *= ((float)audio_settings.master.right / 31.0F);
 	}
 }
 
 
 void eq_mono(song_t *csf, int *buffer, unsigned int count)
 {
-	mono_mix_to_float(buffer, csf->mix_buffer_float, count);
-
 	for (unsigned int b = 0; b < MAX_EQ_BANDS; b++)
 	{
 		if (eq[b].enabled && eq[b].gain != 1.0f)
-			eq_filter(&eq[b], csf->mix_buffer_float, count);
+			eq_filter(&eq[b], buffer, count);
 	}
-
-	float_to_mono_mix(csf->mix_buffer_float, buffer, count);
 }
-
 
 // XXX: I rolled the two loops into one. Make sure this works.
 void eq_stereo(song_t *csf, int *buffer, unsigned int count)
 {
-	stereo_mix_to_float(buffer, csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, count);
-
 	for (unsigned int b = 0; b < MAX_EQ_BANDS; b++) {
 		int br = b + MAX_EQ_BANDS;
 
 		// Left band
 		if (eq[b].enabled && eq[b].gain != 1.0f)
-			eq_filter(&eq[b], csf->mix_buffer_float, count);
+			eq_filter(&eq[b], buffer, count << 1);
 
 		// Right band
 		if (eq[br].enabled && eq[br].gain != 1.0f)
-			eq_filter(&eq[br], csf->mix_buffer_float + MIXBUFFERSIZE, count);
+			eq_filter(&eq[br], buffer + 1, count << 1);
 	}
-
-	float_to_stereo_mix(csf->mix_buffer_float, csf->mix_buffer_float + MIXBUFFERSIZE, buffer, count);
 }
 
 

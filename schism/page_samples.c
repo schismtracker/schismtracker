@@ -423,7 +423,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 		}
 	} else {
-		switch (k->sym) {
+		switch (k->sym.sym) {
 		case SDLK_LEFT:
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -472,7 +472,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			if (k->mod & KMOD_ALT) {
 				// restrict position to the "old" value of _last_vis_sample()
 				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+				if (status.last_keysym.sym != SDLK_DOWN && !k->is_repeat)
 					_altswap_lastvis = _last_vis_sample();
 				if (current_sample < _altswap_lastvis) {
 					new_sample = current_sample + 1;
@@ -544,11 +544,12 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		default:
 			if (k->mod & KMOD_ALT) {
-				if (k->sym == SDLK_c) {
+				if (k->sym.sym == SDLK_c) {
 					clear_sample_text();
 					return 1;
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
+				if (!k->is_synthetic) return 1;
 				if (!k->unicode) return 0;
 				if (k->state == KEY_RELEASE)
 					return 1;
@@ -911,7 +912,7 @@ static void sample_adlibconfig_draw_const(void)
 
 static int do_adlib_handlekey(struct key_event *kk)
 {
-	if (kk->sym == SDLK_F1) {
+	if (kk->sym.sym == SDLK_F1) {
 		if (kk->state == KEY_PRESS)
 			return 1;
 		status.current_help_index = HELP_ADLIB_SAMPLE;
@@ -1112,7 +1113,7 @@ static int export_sample_list_handle_key(struct key_event * k)
 
 	if (k->state == KEY_RELEASE)
 		return 0;
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
@@ -1284,7 +1285,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 
 	if (k->state == KEY_RELEASE)
 		return;
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_a:
 		if (canmod)
 			dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
@@ -1404,10 +1405,12 @@ static void sample_list_handle_alt_key(struct key_event * k)
 
 static void sample_list_handle_key(struct key_event * k)
 {
+	if (k->is_textinput)
+		return;
 	int new_sample = current_sample;
 	song_sample_t *sample = song_get_sample(current_sample);
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_SPACE:
 		if (k->state == KEY_RELEASE)
 			return;
@@ -1488,7 +1491,7 @@ static void sample_list_handle_key(struct key_event * k)
 					v = KEYJAZZ_DEFAULTVOL;
 				}
 			} else {
-				n = (k->sym == SDLK_SPACE)
+				n = (k->sym.sym == SDLK_SPACE)
 					? last_note
 					: kbd_get_note(k);
 				if (n <= 0 || n > 120)

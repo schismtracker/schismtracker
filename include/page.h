@@ -32,8 +32,8 @@
 #define MOUSE_SCROLL_LINES       3
 
 struct key_event {
-	SDLKey sym, orig_sym;
-	SDLMod mod;
+	SDL_Keysym sym, orig_sym;
+	SDL_Keymod mod;
 	uint16_t unicode;
 	int scancode;
 
@@ -53,6 +53,7 @@ struct key_event {
 	int is_repeat;
 	int on_target;
 	int is_synthetic; /* 1 came from paste */
+	int is_textinput; /* SDL_TEXTINPUT, 1 if true, 0 if not */
 };
 
 /* --------------------------------------------------------------------- */

@@ -389,7 +389,7 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_UP:           new_file--; slash_search_mode = -1; break;
 	case SDLK_DOWN:         new_file++; slash_search_mode = -1; break;
 	case SDLK_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
@@ -435,7 +435,7 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	case SDLK_SLASH:
 		if (slash_search_mode < 0) {
-			if (k->orig_sym == SDLK_SLASH) {
+			if (k->orig_sym.sym == SDLK_SLASH) {
 				if (k->state == KEY_PRESS)
 					return 0;
 				slash_search_mode = 0;
@@ -485,7 +485,7 @@ static void load_instrument_handle_key(struct key_event * k)
 {
 	if (k->state == KEY_RELEASE)
 		return;
-	if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
+	if (k->sym.sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
 		set_page(PAGE_INSTRUMENT_LIST);
 }
 

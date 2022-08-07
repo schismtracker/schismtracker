@@ -51,7 +51,7 @@ unsigned int xv_yuvlayout(void)
 	unsigned int best;
 
 	SDL_VERSION(&info.version);
-	if (SDL_GetWMInfo(&info)) {
+	if (SDL_GetWindowWMInfo(video_window(), &info)) {
 		dpy = info.info.x11.display;
 	} else {
 		dpy = NULL;

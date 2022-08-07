@@ -259,8 +259,6 @@ static void _vis_process(void)
 	k = NATIVE_SCREEN_WIDTH/2;
 	unsigned char outfft[NATIVE_SCREEN_WIDTH];
 
-	vgamem_lock();
-
 	/* move up by one pixel */
 	memmove(ovl.q, ovl.q+NATIVE_SCREEN_WIDTH,
 			(NATIVE_SCREEN_WIDTH*
@@ -298,7 +296,6 @@ static void _vis_process(void)
 		}
 	}
 
-	vgamem_unlock();
 	status.flags |= NEED_UPDATE;
 }
 
@@ -415,7 +412,7 @@ static int waterfall_handle_key(struct key_event *k)
 			}
 			if (k->state == KEY_RELEASE) {
 				song_keyup(KEYJAZZ_NOINST, ii, n);
-				status.last_keysym = 0;
+				status.last_keysym.sym = 0;
 			} else if (!k->is_repeat) {
 				song_keydown(KEYJAZZ_NOINST, ii, n, v, KEYJAZZ_CHAN_CURRENT);
 			}
@@ -423,7 +420,7 @@ static int waterfall_handle_key(struct key_event *k)
 		}
 	}
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_s:
 		if (k->mod & KMOD_ALT) {
 			if (k->state == KEY_RELEASE)

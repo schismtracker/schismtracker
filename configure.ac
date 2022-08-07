@@ -30,6 +30,8 @@ AC_CONFIG_SRCDIR([schism/main.c])
 AM_INIT_AUTOMAKE([-Wall subdir-objects])
 AC_CONFIG_HEADERS([config.h])
 
+AC_CANONICAL_HOST
+
 dnl -----------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -59,13 +61,13 @@ dnl check endianness
 AC_C_BIGENDIAN
 
 dnl Check for SDL libs
-AC_CHECK_TOOL([SDL_CONFIG], [sdl-config])
+AC_CHECK_TOOL([SDL_CONFIG], [sdl2-config])
 AC_SUBST(SDL_CONFIG)
 if test "x$SDL_CONFIG" == "x"; then
-        AC_MSG_ERROR([*** sdl-config not found.])
+        AC_MSG_ERROR([*** sdl2-config not found.])
 fi
-if $SDL_CONFIG --version | grep -qv '1.2.\[1-9\]'; then
-        AC_MSG_ERROR([*** SDL version >= 1.2.10 not found.])
+if $SDL_CONFIG --version | grep -qE "^2\.0\.[0-9]+|[5-9]"; then
+        AC_MSG_ERROR([*** SDL version >= 2.0.5 not found.])
 fi
 SDL_CFLAGS=$($SDL_CONFIG --cflags)
 SDL_LIBS=$($SDL_CONFIG --libs)
@@ -104,21 +106,25 @@ defaultx11=yes
 
 
 dnl CoreMIDI (Mac OS X)
-AC_MSG_CHECKING(for CoreAudio/CoreMIDI Framework)
-if echo "$SDL_LIBS" | grep -- -framework >/dev/null 2>&1; then
-        AC_MSG_RESULT(found)
-        dnl frameworks aren't part of sdl... should be a separate variable
-        SDL_LIBS="$SDL_LIBS -framework CoreAudio -framework CoreMIDI -framework IOKit -framework OpenGL"
-        AC_SUBST(SDL_LIBS)
+AC_MSG_CHECKING(for Darwin host OS)
+case "${host_os}" in
+	darwin*)
+		AC_MSG_RESULT(found)
+		dnl frameworks aren't part of sdl... should be a separate variable
 
-        AM_CONDITIONAL([USE_MACOSX], true)
-        AM_CONDITIONAL([am__fastdepOBJC], true)
-        defaultx11=no
-else
-        AC_MSG_RESULT(not found)
-        AM_CONDITIONAL([USE_MACOSX], false)
-        AM_CONDITIONAL([am__fastdepOBJC], false)
-fi
+		SDL_LIBS="$SDL_LIBS -lSDL2main -framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit -framework OpenGL"
+		AC_SUBST(SDL_LIBS)
+
+		AM_CONDITIONAL([USE_MACOSX], true)
+		AM_CONDITIONAL([am__fastdepOBJC], true)
+		defaultx11=no
+		;;
+	*)
+		AC_MSG_RESULT(not found)
+		AM_CONDITIONAL([USE_MACOSX], false)
+		AM_CONDITIONAL([am__fastdepOBJC], false)
+		;;
+esac
 
 
 

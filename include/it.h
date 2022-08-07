@@ -143,6 +143,8 @@ enum {
 	/* if true, don't stop playing on load, and start playing new song afterward
 	(but only if the last song was already playing before loading) */
 	PLAY_AFTER_LOAD = (1 << 30),
+
+	ACCEPTING_INPUT = (1 << 31),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
@@ -164,7 +166,7 @@ struct tracker_status {
 	int flags;
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
-	SDLKey last_keysym;
+	SDL_Keysym last_keysym;
 
 	time_t last_midi_time;
 	unsigned char last_midi_event[64];
@@ -241,11 +243,10 @@ extern int show_default_volumes;        /* pattern-view.c */
 /* --------------------------------------------------------------------- */
 /* settings (config.c) */
 
-extern char cfg_video_driver[];
+extern char cfg_video_interpolation[];
 /* TODO: consolidate these into cfg_video_flags */
 extern int cfg_video_fullscreen;
 extern int cfg_video_mousecursor;
-extern int cfg_video_gl_bilinear;
 extern int cfg_video_width, cfg_video_height;
 
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];

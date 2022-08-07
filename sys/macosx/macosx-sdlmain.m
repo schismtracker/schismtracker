@@ -447,7 +447,7 @@ static void CustomApplicationMain (int argc, char **argv)
         [self setupWorkingDirectory:gFinderLaunch];
 
         /* Hand off to main application code */
-        status = SDL_main (gArgc, gArgv);
+        status = SDL_Init (gArgv);
 
         /* We're done, thank you for playing */
         exit(status);
@@ -502,7 +502,8 @@ static void CustomApplicationMain (int argc, char **argv)
 
 
 /* Main entry point to executable - should *not* be SDL_main! */
-int main (int argc, char **argv)
+/* JK LOL... SDL2 */
+int SDL_main (int argc, char **argv)
 {
         /* Copy the arguments into a global variable */
         /* This is passed if we are launched by double-clicking */
@@ -545,23 +546,6 @@ void macosx_clippy_put(const char *buf)
         NSPasteboard *pb = [NSPasteboard generalPasteboard];
         [pb declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
         [pb setString:contents forType:NSStringPboardType];
-}
-// ktt appears to be 1/60th of a second?
-unsigned int key_repeat_rate(void)
-{
-        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        int ktt = [defaults integerForKey:@"KeyRepeat"];
-        if (!ktt || ktt < 0) ktt = 4; // eh?
-        ktt = (ktt * 1000) / 60;
-        return (unsigned)ktt;
-}
-unsigned int key_repeat_delay(void)
-{
-        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        int ktt = [defaults integerForKey:@"InitialKeyRepeat"];
-        if (!ktt || ktt < 0) ktt = 35;
-        ktt = (ktt * 1000) / 60;
-        return (unsigned)ktt;
 }
 int key_scancode_lookup(int k, int def)
 {

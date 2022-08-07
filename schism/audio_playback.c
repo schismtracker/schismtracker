@@ -89,7 +89,7 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 /* Audio driver related stuff */
 
 /* The (short) name of the SDL driver in use, e.g. "alsa" */
-static char driver_name[256];
+static const char *driver_name = "unknown";
 
 /* This is the full driver spec for whatever device was successfully init'ed when audio was set up.
 When reinitializing the audio, this can be used to reacquire the same device. Hopefully. */
@@ -97,6 +97,9 @@ static char active_audio_driver[256];
 
 /* Whatever was in the config file. This is used if no driver is given to audio_setup. */
 static char cfg_audio_driver[256];
+
+/* Required for updating SDL1.2 -> SDL2 on Windows (WASAPI) */
+static SDL_AudioDeviceID audio_dev;
 
 // ------------------------------------------------------------------------
 // playback
@@ -113,6 +116,8 @@ static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
 	unsigned int wasrow = current_song->row;
 	unsigned int waspat = current_song->current_order;
 	int i, n;
+
+	memset(stream, 0, len);
 
 	if (!stream || !len || !current_song) {
 		if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
@@ -954,6 +959,8 @@ void cfg_load_audio(cfg_file_t *cfg)
 	CFG_GET_A(bits, 16);
 	CFG_GET_A(channels, 2);
 	CFG_GET_A(buffer_size, DEF_BUFFER_SIZE);
+	CFG_GET_A(master.left, 31);
+	CFG_GET_A(master.right, 31);
 
 	cfg_get_string(cfg, "Audio", "driver", cfg_audio_driver, 255, NULL);
 
@@ -994,6 +1001,8 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 	CFG_SET_A(bits);
 	CFG_SET_A(channels);
 	CFG_SET_A(buffer_size);
+	CFG_SET_A(master.left);
+	CFG_SET_A(master.right);
 
 	CFG_SET_M(channel_limit);
 	CFG_SET_M(interpolation_mode);
@@ -1203,19 +1212,19 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 
 void song_lock_audio(void)
 {
-	SDL_LockAudio();
+	SDL_LockAudioDevice(audio_dev);
 }
 void song_unlock_audio(void)
 {
-	SDL_UnlockAudio();
+	SDL_UnlockAudioDevice(audio_dev);
 }
 void song_start_audio(void)
 {
-	SDL_PauseAudio(0);
+	SDL_PauseAudioDevice(audio_dev, 0);
 }
 void song_stop_audio(void)
 {
-	SDL_PauseAudio(1);
+	SDL_PauseAudioDevice(audio_dev, 1);
 }
 
 
@@ -1291,7 +1300,7 @@ static int _audio_open(const char *driver_spec, int verbose)
 	is set. (see SDL_alsa_audio.c: http://tinyurl.com/ybf398f)
 	If hw doesn't exist, so be it -- let this fail, we'll fall back to the dummy device, and the
 	user can pick a more reasonable device later. */
-	if (SDL_AudioDriverName(driver_name, sizeof(driver_name)) != NULL && !strcmp(driver_name, "alsa")) {
+	if ((driver_name = SDL_GetCurrentAudioDriver()) != NULL && !strcmp(driver_name, "alsa")) {
 		char *dev = getenv("AUDIODEV");
 		if (!dev || !*dev)
 			put_env_var("AUDIODEV", "hw");
@@ -1319,11 +1328,11 @@ static int _audio_open(const char *driver_spec, int verbose)
 	};
 	SDL_AudioSpec obtained;
 
-	if (SDL_OpenAudio(&desired, &obtained) < 0)
+	if (!(audio_dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE)))
 		return 0;
 
 	/* I don't know why this would change between SDL_AudioInit and SDL_OpenAudio, but I'm paranoid */
-	SDL_AudioDriverName(driver_name, sizeof(driver_name));
+	driver_name = SDL_GetCurrentAudioDriver();
 
 	song_lock_audio();
 

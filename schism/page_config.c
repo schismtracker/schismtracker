@@ -182,15 +182,13 @@ static void change_video_settings(void)
 	int new_fs_flag;
 
 	if (widgets_config[11].d.togglebutton.state) {
-		new_video_driver = "sdl";
+		new_video_driver = "nearest";
 	} else if (widgets_config[12].d.togglebutton.state) {
-		new_video_driver = "yuv";
+		new_video_driver = "linear";
 	} else if (widgets_config[13].d.togglebutton.state) {
-		new_video_driver = "gl";
-	} else if (widgets_config[14].d.togglebutton.state) {
-		new_video_driver = "directdraw";
+		new_video_driver = "best";
 	} else {
-		new_video_driver = "sdl";
+		new_video_driver = "linear";
 	}
 
 	if (widgets_config[9].d.togglebutton.state) {
@@ -199,18 +197,18 @@ static void change_video_settings(void)
 		new_fs_flag = 0;
 	}
 
-	if (!strcasecmp(new_video_driver, video_driver_name())
+	if (!SDL_strcasecmp(new_video_driver, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
 	&& new_fs_flag == video_is_fullscreen()) {
 		return;
 	}
 
 	video_change_dialog();
-	if (strcasecmp(new_video_driver, video_driver_name())) {
+	if (SDL_strcasecmp(new_video_driver, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))) {
 		video_setup(new_video_driver);
-		video_startup();
 	}
+	video_redraw_texture();
 	if (new_fs_flag != video_is_fullscreen())
-		video_fullscreen(new_fs_flag);
+		toggle_display_fullscreen();
 	palette_apply();
 	font_init();
 }
@@ -233,7 +231,7 @@ static void config_draw_const(void)
 
 	draw_text("MIDI mode", 8,25, 0, 2);
 
-	draw_text("Video Driver:", 2, 28, 0, 2);
+	draw_text("Video Scaling:", 2, 28, 0, 2);
 	draw_text("Full Screen:", 38, 28, 0, 2);
 
 	draw_fill_chars(18, 15, 34, 25, 0);
@@ -264,11 +262,10 @@ static void config_set_page(void)
 	widgets_config[9].d.togglebutton.state = video_is_fullscreen();
 	widgets_config[10].d.togglebutton.state = !video_is_fullscreen();
 
-	nn = video_driver_name();
-	widgets_config[11].d.togglebutton.state = (strcasecmp(nn,"sdl") == 0);
-	widgets_config[12].d.togglebutton.state = (strcasecmp(nn,"yuv") == 0);
-	widgets_config[13].d.togglebutton.state = (strcasecmp(nn,"opengl") == 0);
-	widgets_config[14].d.togglebutton.state = (strcasecmp(nn,"directdraw") == 0);
+	const char* hint = SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
+	widgets_config[11].d.togglebutton.state = (!hint || *hint == '0' || SDL_strcasecmp(hint, "nearest") == 0);
+	widgets_config[12].d.togglebutton.state = (!hint || *hint == '1' || SDL_strcasecmp(hint, "linear") == 0);
+	widgets_config[13].d.togglebutton.state = (!hint || *hint == '2' || SDL_strcasecmp(hint, "best") == 0);
 }
 
 /* --------------------------------------------------------------------- */
@@ -277,7 +274,7 @@ void config_load_page(struct page *page)
 	page->title = "System Configuration (Ctrl-F1)";
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;
-	page->total_widgets = 15;
+	page->total_widgets = 14;
 	page->widgets = widgets_config;
 	page->help_index = HELP_GLOBAL;
 
@@ -345,36 +342,21 @@ void config_load_page(struct page *page)
 			6, 30, 26,
 			8,12,11,9,12,
 			change_video_settings,
-			"SDL Video Surface",
+			"Nearest",
 			2, video_group);
 
 	create_togglebutton(widgets_config+12,
 			6, 33, 26,
 			11,13,12,9,13,
 			change_video_settings,
-			"YUV Video Overlay",
+			"Linear",
 			2, video_group);
 
 	create_togglebutton(widgets_config+13,
 			6, 36, 26,
 			12,14,13,9,14,
 			change_video_settings,
-			"OpenGL Graphic Context",
+			"Best",
 			2, video_group);
-
-	create_togglebutton(widgets_config+14,
-			6, 39, 26,
-			13,14,14,9,9,
-			change_video_settings,
-			"DirectDraw Surface",
-			2, video_group);
-#ifndef WIN32
-	/* patch ddraw out */
-	video_group[3] = -1;
-	widgets_config[14].d.togglebutton.state = 0;
-	widgets_config[13].next.down = 13;
-	widgets_config[13].next.tab = 9;
-	page->total_widgets--;
-#endif
 
 }

@@ -37,8 +37,6 @@ struct vgamem_overlay {
 	int width, height; /* in pixels; signed to avoid bugs elsewhere */
 };
 
-void vgamem_lock(void);
-void vgamem_unlock(void);
 void vgamem_flip(void);
 
 void vgamem_ovl_alloc(struct vgamem_overlay *n);
@@ -56,25 +54,30 @@ void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16], unsigne
 /* video output routines */
 const char *video_driver_name(void);
 
-void video_setup(const char *driver);
+void video_warp_mouse(unsigned int x, unsigned int y);
+void video_redraw_texture(void);
+void video_setup(const char *quality);
 void video_startup(void);
 void video_shutdown(void);
 void video_report(void);
 void video_refresh(void);
+void video_update(void);
 void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
-void video_fullscreen(int tri);
+void video_fullscreen(int new_fs_flag);
 void video_translate(unsigned int vx, unsigned int vy,
 			unsigned int *x, unsigned int *y);
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);
-int video_gl_bilinear(void);
 
 int video_is_fullscreen(void);
 int video_width(void);
 int video_height(void);
+typedef struct SDL_Window SDL_Window;
+SDL_Window * video_window(void);
 
+typedef struct SDL_Surface SDL_Surface;
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
 #if USE_X11

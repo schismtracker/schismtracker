@@ -282,7 +282,7 @@ static int _alsa_thread(struct midi_provider *p)
 	pfd = (struct pollfd *)mem_alloc(npfd * sizeof(struct pollfd));
 	if (!pfd) return 0;
 
-	for (;;) {
+	while (!p->cancelled) {
 		if (snd_seq_poll_descriptors(seq, pfd, npfd, POLLIN) != npfd) {
 			free(pfd);
 			return 0;

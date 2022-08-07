@@ -81,7 +81,7 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 		/* annoying */
 		return 0;
 	}
-	if (k->sym == SDLK_MINUS) {
+	if (k->sym.sym == SDLK_MINUS) {
 		if (widget->d.thumbbar.min >= 0)
 			return 0;
 		c = '-';
@@ -178,10 +178,10 @@ int widget_handle_key(struct key_event * k)
 		switch(current_type) {
 		case WIDGET_NUMENTRY:
 			if (k->mouse_button == MOUSE_BUTTON_LEFT) {
-				k->sym = SDLK_MINUS;
+				k->sym.sym = SDLK_MINUS;
 				k->mouse = MOUSE_NONE;
 			} else if (k->mouse_button == MOUSE_BUTTON_RIGHT) {
-				k->sym = SDLK_PLUS;
+				k->sym.sym = SDLK_PLUS;
 				k->mouse = MOUSE_NONE;
 			}
 			break;
@@ -228,7 +228,7 @@ int widget_handle_key(struct key_event * k)
 	}
 
 	if (k->mouse == MOUSE_CLICK
-	    || (k->mouse == MOUSE_NONE && k->sym == SDLK_RETURN)) {
+	    || (k->mouse == MOUSE_NONE && k->sym.sym == SDLK_RETURN)) {
 #if 0
 		if (k->mouse && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
@@ -387,12 +387,12 @@ int widget_handle_key(struct key_event * k)
 		return 0;
 
 	if (k->mouse == MOUSE_SCROLL_UP && current_type == WIDGET_NUMENTRY) {
-		k->sym = SDLK_MINUS;
+		k->sym.sym = SDLK_MINUS;
 	} else if (k->mouse == MOUSE_SCROLL_DOWN && current_type == WIDGET_NUMENTRY) {
-		k->sym = SDLK_PLUS;
+		k->sym.sym = SDLK_PLUS;
 	}
 
-	switch (k->sym) {
+	switch (k->sym.sym) {
 	case SDLK_ESCAPE:
 		/* this is to keep the text entries from taking the key hostage and inserting '<-'
 		characters instead of showing the menu */
@@ -446,7 +446,7 @@ int widget_handle_key(struct key_event * k)
 			/* I'm handling the key modifiers differently than Impulse Tracker, but only
 			because I think this is much more useful. :) */
 			n = 1;
-			if (k->mod & (KMOD_ALT | KMOD_META))
+			if (k->mod & (KMOD_ALT | KMOD_GUI))
 				n *= 8;
 			if (k->mod & KMOD_SHIFT)
 				n *= 4;
@@ -489,7 +489,7 @@ int widget_handle_key(struct key_event * k)
 			/* fall through */
 		case WIDGET_THUMBBAR:
 			n = 1;
-			if (k->mod & (KMOD_ALT | KMOD_META))
+			if (k->mod & (KMOD_ALT | KMOD_GUI))
 				n *= 8;
 			if (k->mod & KMOD_SHIFT)
 				n *= 4;
@@ -769,7 +769,8 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		break;
 	case WIDGET_NUMENTRY:
-		if (numentry_handle_digit(widget, k))
+		if (numentry_handle_digit(widget, k)
+			|| !k->is_synthetic)
 			return 1;
 		break;
 	case WIDGET_THUMBBAR:
@@ -778,8 +779,9 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		break;
 	case WIDGET_TEXTENTRY:
-		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_META)) == 0
-				&& textentry_add_char(widget, k->unicode))
+		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0
+				&& (textentry_add_char(widget, k->unicode)
+				|| !k->is_synthetic))
 			return 1;
 		break;
 	default:
