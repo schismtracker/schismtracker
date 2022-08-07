@@ -1,5 +1,7 @@
 # Building on OS X
 
+**TODO: Update these instructions for SDL2.**
+
 Start by installing [Homebrew](http://brew.sh/). Open up the Terminal and paste in the following command.
 
 ```

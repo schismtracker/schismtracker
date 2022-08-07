@@ -1,5 +1,7 @@
 # Building on Windows
 
+**TODO: Update these instructions for SDL2.**
+
 _This page was based originally on the COMPILE-WIN32.txt file traditionally
 provided with Schism Tracker sources. It has been rewriten with instructions
 that use newer tools._

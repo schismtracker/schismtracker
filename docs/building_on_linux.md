@@ -1,5 +1,7 @@
 # Building on Linux
 
+**TODO: Update these instructions for SDL2.**
+
 Since Linux is the primary development platform for Schism Tracker, it's
 probably the easiest to compile on, and those familiar with automake-based
 projects will find few surprises here.
