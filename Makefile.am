@@ -370,3 +370,11 @@ AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
 schismtracker_LDADD = $(lib_asound) $(lib_win32) $(SDL_LIBS) $(LIBM)
+
+if USE_LUA
+AM_CFLAGS += -DUSE_LUA $(lua_CFLAGS)
+schismtracker_SOURCES += \
+	schism/lua-engine.c \
+	schism/page_lua.c
+schismtracker_LDADD += $(lua_LIBS)
+endif

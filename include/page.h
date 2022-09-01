@@ -381,6 +381,10 @@ enum page_numbers {
 
 	PAGE_WATERFALL,
 
+#ifdef USE_LUA
+	PAGE_LUA,
+#endif
+
 	PAGE_MAX
 };
 
@@ -415,6 +419,9 @@ void library_sample_load_page(struct page *page);
 void library_instrument_load_page(struct page *page);
 void config_load_page(struct page *page);
 void waterfall_load_page(struct page *page);
+#ifdef USE_LUA
+void lua_load_page(struct page *page);
+#endif
 
 /* --------------------------------------------------------------------- */
 

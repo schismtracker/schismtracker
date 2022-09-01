@@ -832,6 +832,12 @@ static int handle_key_global(struct key_event * k)
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_WATERFALL);
+#ifdef USE_LUA
+		} else if ((k->mod & KMOD_ALT) && status.current_page == PAGE_PATTERN_EDITOR) {
+			_mp_finish(NULL);
+			if (k->state == KEY_PRESS)
+				set_page(PAGE_LUA);
+#endif
 		} else if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
@@ -1665,6 +1671,9 @@ void load_pages(void)
 	load_instrument_load_page(pages + PAGE_LOAD_INSTRUMENT);
 	library_instrument_load_page(pages + PAGE_LIBRARY_INSTRUMENT);
 	waterfall_load_page(pages + PAGE_WATERFALL);
+#ifdef USE_LUA
+	lua_load_page(pages + PAGE_LUA);
+#endif
 	about_load_page(pages+PAGE_ABOUT);
 	config_load_page(pages + PAGE_CONFIG);
 	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
