@@ -2981,7 +2981,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	if (k->midi_note == -1) {
 		/* nada */
 	} else if (k->state == KEY_RELEASE) {
-		c = song_keyup(k->midi_channel, k->midi_channel, k->midi_note);
+		c = song_keyup(KEYJAZZ_NOINST, KEYJAZZ_NOINST, k->midi_note);
 
 		/* don't record noteoffs for no good reason... */
 		if (!((midi_flags & MIDI_RECORD_NOTEOFF)
@@ -3005,8 +3005,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			tick = 0;
 		}
 		n = k->midi_note;
-		// XXX samp/ins were -1 here, I don't know what that meant (this is probably incorrect)
-		c = song_keydown(k->midi_channel, k->midi_channel, n, v, current_channel);
+		c = song_keydown(KEYJAZZ_NOINST, KEYJAZZ_NOINST, n, v, current_channel);
 		cur_note = pattern + 64 * current_row + (c-1);
 		patedit_record_note(cur_note, c, current_row, n, 0);
 
