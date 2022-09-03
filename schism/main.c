@@ -538,6 +538,9 @@ static void _synthetic_paste(const char *cbptr, int is_textinput)
 {
 	struct key_event kk;
 	int isy = 2;
+	memset(&kk, 0, sizeof(kk));
+	kk.midi_volume = -1;
+	kk.midi_note = -1;
 	kk.mouse = MOUSE_NONE;
 	for (; cbptr && *cbptr; cbptr++) {
 		/* Win32 will have \r\n, everyone else \n */
