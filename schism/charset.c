@@ -112,11 +112,11 @@ int char_digraph(int k1, int k2)
 }
 char* str_unicode_to_cp437(const char* s)
 {
-	int s_len = strlen(s), i;
-	char* out = calloc(s_len, sizeof(char));
-
 	if (s == NULL)
 		return NULL;
+
+	int s_len = strlen(s), i;
+	char* out = calloc(s_len + 1, sizeof(char));
 
 	for ( i = 0 ; i < s_len ; i++ ) {
 		out[i] = char_unicode_to_cp437(s[i]);
