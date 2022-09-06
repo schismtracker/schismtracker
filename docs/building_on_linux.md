@@ -68,7 +68,7 @@ output.
 ## Cross-compiling for Win32
 
 Schism Tracker can be built using the MinGW cross-compiler on a Linux host.
-You will also need the [SDL2 mingw development library][1]. If you unpacked it
+You will also need the [SDL2 MinGW development library][1]. If you unpacked it
 into `/usr/i586-mingw32/`, you could use the following to cross-compile Schism
 Tracker for Win32:
 
