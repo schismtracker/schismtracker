@@ -166,7 +166,9 @@ line. If you're using Alsa on Linux and want to use you can set
 `driver=alsa:dmix` to get Schism Tracker to play with other programs. (However,
 Alsa completely ignores the latency with dmix so it might cause massive delays
 between pressing a note and hearing it, which is why Schism Tracker requests a
-"real" device by default.)
+"real" device by default.) If neither the `driver` nor `--audio-driver` is set,
+the `SDL_AUDIODRIVER`, `AUDIODEV` and `SDL_PATH_DSP` environment variables can
+be used to configure Schism's audio output.
 
     [Diskwriter]
     rate=96000
