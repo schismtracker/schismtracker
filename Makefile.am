@@ -375,6 +375,7 @@ if USE_LUA
 AM_CFLAGS += -DUSE_LUA $(lua_CFLAGS)
 schismtracker_SOURCES += \
 	schism/lua-engine.c \
-	schism/page_lua.c
+	schism/page_lua.c \
+	schism/lua-yieldhook.c
 schismtracker_LDADD += $(lua_LIBS)
 endif

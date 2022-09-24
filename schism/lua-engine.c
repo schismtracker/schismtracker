@@ -27,13 +27,18 @@
 #include "util.h"
 #include "song.h"
 #include "lua-engine.h"
+#include "lua-yieldhook.h"
 
 #include <assert.h>
 #include <lua.h>
 #include <lauxlib.h>
+#include <lualib.h>
 
 static lua_State *L;
 static lua_console_write console_write = NULL;
+
+static int running = 0;
+static int interrupt = 0;
 
 void set_lua_print(lua_console_write write_func)
 {
@@ -60,7 +65,48 @@ static int lua_print_console(lua_State *L) {
 }
 
 void eval_lua_input(char *input) {
-	luaL_dostring(L, input);
+	int nres;
+	int n;
+
+	if (running) {
+		return;
+	}
+
+	luaL_loadstring(L, input);
+	switch (lua_resume(L, NULL, 0, &nres)) {
+	case LUA_OK:
+		running = 0;
+		break;
+	case LUA_YIELD:
+		running = 1;
+		break;
+	default:
+		// TODO: log failure
+		break;
+	}
+
+	return;
+}
+
+void continue_lua_eval() {
+	int nres;
+	
+	if (!running) {
+		return;
+	}
+
+	switch (lua_resume(L, NULL, 0, &nres)) {
+	case LUA_OK:
+		running = 0;
+		break;
+	case LUA_YIELD:
+		running = 1;
+		break;
+	default:
+		// TODO: log failure
+		break;
+	}
+
 }
 
 static int lua_song_start(lua_State *L)
@@ -82,6 +128,10 @@ void lua_init(void)
 		fprintf(stderr, "Couldn't initialise lua!\n");
 		exit(1);
 	}
+
+	luaL_openlibs(L);
+	luaopen_yieldhook(L);
+	luaL_dostring(L, "debug.sethook(function() return true end, 'y', 10)");
 
 	lua_pushcfunction(L, lua_print_console);
 	lua_setglobal(L, "print");

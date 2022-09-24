@@ -1022,6 +1022,8 @@ static void event_loop(void)
 			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL))
 				/* nothing */;
 		}
+
+		continue_lua_eval();
 	}
 	exit(0); /* atexit :) */
 }

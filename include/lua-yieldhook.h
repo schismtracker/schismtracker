@@ -20,14 +20,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef SCHISM_LUA_ENGINE_H
-#define SCHISM_LUA_ENGINE_H
+#ifndef SCHISM_LUA_YIELDHOOK_H
+#define SCHISM_LUA_YIELDHOOK_H
 
-typedef void (*lua_console_write) (const char*, int);
+#include <lua.h>
 
-void set_lua_print(lua_console_write write_func);
-void eval_lua_input(char *input);
-void continue_lua_eval();
-void lua_init(void);
+int luaopen_yieldhook(lua_State *L);
 
 #endif
