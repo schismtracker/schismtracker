@@ -27,7 +27,6 @@
 #include "util.h"
 #include "song.h"
 #include "lua-engine.h"
-#include "lua-yieldhook.h"
 
 #include <assert.h>
 #include <lua.h>
@@ -64,28 +63,44 @@ static int lua_print_console(lua_State *L) {
     return 0;
 }
 
-void eval_lua_input(char *input) {
+static void multitask_hook(lua_State *L, lua_Debug *ar) {
+	lua_yield(L, 0);
+}
+
+void do_lua_resume() {
 	int nres;
+	int n;
+	const char *err;
+
+	switch (lua_resume(L, NULL, 0, &nres)) {
+	case LUA_YIELD:
+		running = 1;
+		break;
+	case LUA_OK:
+		running = 0;
+	default:
+		n = lua_gettop(L);
+		if (n > 0) {
+			lua_getglobal(L, "print");
+			lua_insert(L, 1);
+			lua_call(L, n, 0);
+		}
+
+		lua_resetthread(L);
+		break;
+	}
+}
+
+void eval_lua_input(char *input) {
 	int n;
 
 	if (running) {
 		return;
 	}
 
+	lua_sethook(L, multitask_hook, LUA_MASKCOUNT, 50);
 	luaL_loadstring(L, input);
-	switch (lua_resume(L, NULL, 0, &nres)) {
-	case LUA_OK:
-		running = 0;
-		break;
-	case LUA_YIELD:
-		running = 1;
-		break;
-	default:
-		// TODO: log failure
-		break;
-	}
-
-	return;
+	do_lua_resume();
 }
 
 void continue_lua_eval() {
@@ -95,18 +110,7 @@ void continue_lua_eval() {
 		return;
 	}
 
-	switch (lua_resume(L, NULL, 0, &nres)) {
-	case LUA_OK:
-		running = 0;
-		break;
-	case LUA_YIELD:
-		running = 1;
-		break;
-	default:
-		// TODO: log failure
-		break;
-	}
-
+	do_lua_resume();
 }
 
 static int lua_song_start(lua_State *L)
@@ -130,8 +134,6 @@ void lua_init(void)
 	}
 
 	luaL_openlibs(L);
-	luaopen_yieldhook(L);
-	luaL_dostring(L, "debug.sethook(function() return true end, 'y', 10)");
 
 	lua_pushcfunction(L, lua_print_console);
 	lua_setglobal(L, "print");
