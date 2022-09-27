@@ -326,7 +326,7 @@ void lua_load_page(struct page *page)
 {
 	set_lua_print(&scrollback_write);
 	eval_lua_input("print(\"hello from lua!\", 1+1)");
-	
+
 	page->title = "Lua Console";
 	page->draw_const = message_draw_const;
 	page->total_widgets = 1;

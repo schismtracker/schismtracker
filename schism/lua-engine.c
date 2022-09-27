@@ -105,12 +105,37 @@ void eval_lua_input(char *input) {
 
 void continue_lua_eval() {
 	int nres;
-	
+
 	if (!running) {
 		return;
 	}
 
 	do_lua_resume();
+}
+
+static song_note_t *get_note_at(lua_State *L, int pattern, int channel, int row) {
+	pattern = MAX(pattern, 0);
+	channel = CLAMP(channel, 1, 64);
+	row = MAX(row, 0);
+
+	song_note_t *notes = NULL;
+	int length = song_get_pattern(pattern, &notes);
+	if (row >= length || !notes) {
+		luaL_error(L, "requested note %d:%d:%d does not exist");
+	}
+
+	return notes + 64 * row + channel - 1;
+}
+
+static int lua_set_note(lua_State *L)
+{
+	int pattern = luaL_checkinteger(L, 1);
+	int channel = luaL_checkinteger(L, 2);
+	int row = luaL_checkinteger(L, 3);
+	int note = luaL_checkinteger(L, 4);
+
+	get_note_at(L, pattern, channel, row)->note = note;
+	return 0;
 }
 
 static int lua_song_start(lua_State *L)
@@ -137,6 +162,9 @@ void lua_init(void)
 
 	lua_pushcfunction(L, lua_print_console);
 	lua_setglobal(L, "print");
+
+	lua_pushcfunction(L, lua_set_note);
+	lua_setglobal(L, "set_note");
 
 	lua_pushcfunction(L, lua_song_start);
 	lua_setglobal(L, "song_start");
