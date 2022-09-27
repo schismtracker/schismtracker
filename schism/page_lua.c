@@ -296,7 +296,12 @@ static int lua_page_handle_key(UNUSED struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		// message_delete_char();
+
+		if (input_cursor > input) {
+			input_cursor--;
+			*input_cursor = 0;
+			status.flags |= NEED_UPDATE;
+		}
 		return 1;
 	default:
 		if (k->unicode == '\r') {
@@ -306,6 +311,7 @@ static int lua_page_handle_key(UNUSED struct key_event * k)
 			scrollback_putc('\n');
 			eval_lua_input(input);
 			input_clear();
+			return 1;
 		} else if (k->unicode >= 32) {
 			if (k->state == KEY_RELEASE)
 				return 1;
