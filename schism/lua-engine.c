@@ -98,9 +98,10 @@ void eval_lua_input(char *input) {
 		return;
 	}
 
-	lua_sethook(L, multitask_hook, LUA_MASKCOUNT, 50);
+	lua_sethook(L, multitask_hook, LUA_MASKCOUNT, 1000);
 	luaL_loadstring(L, input);
 	do_lua_resume();
+	status.flags |= NEED_UPDATE;
 }
 
 void continue_lua_eval() {
@@ -111,6 +112,7 @@ void continue_lua_eval() {
 	}
 
 	do_lua_resume();
+	status.flags |= NEED_UPDATE;
 }
 
 static song_note_t *get_note_at(lua_State *L, int pattern, int channel, int row) {
