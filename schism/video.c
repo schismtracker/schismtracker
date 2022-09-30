@@ -276,7 +276,13 @@ void video_startup(void)
 
 void video_resize(unsigned int width, unsigned int height)
 {
-	SDL_RenderSetLogicalSize(video.renderer, width, height);
+	/* Aspect ratio correction if it's wanted */
+	if (cfg_video_want_fixed)
+		SDL_RenderSetLogicalSize(video.renderer,
+					 NATIVE_SCREEN_WIDTH * 5, NATIVE_SCREEN_HEIGHT * 6); // 4:3
+	else 
+		SDL_RenderSetLogicalSize(video.renderer, width, height);
+
 	video.prev.width = video.width;
 	video.prev.height = video.height;
 	video.width = width;
