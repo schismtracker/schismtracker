@@ -455,6 +455,9 @@ void memused_songchanged(void);
 
 void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
 
+/* Shutdown the SDL2 system from anywhere without having to use atexit() */
+void schism_exit(int status);
+
 /* --------------------------------------------------------------------- */
 
 #endif /* ! IT_H */
