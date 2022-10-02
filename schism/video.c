@@ -252,6 +252,8 @@ void video_startup(void)
 	if (!SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, cfg_video_interpolation);
 
+	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+
 	if (!video.width_height_defined) {
 		video.x = SDL_WINDOWPOS_UNDEFINED;
 		video.y = SDL_WINDOWPOS_UNDEFINED;
