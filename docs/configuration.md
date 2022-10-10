@@ -47,9 +47,8 @@ you also want to have a huge window that isn't active.
 `width` and `height` are the initial dimensions to use for the window, and the
 dimensions to return to when toggling fullscreen off.
 
-If you are having problems with fullscreen aspect ratio, you can try setting
-`want_fixed` to 1. This will attempt to "correct" the fullscreen resolution
-used by Schism.
+If `want_fixed` is set to 1, Schism will be displayed with a 4:3 aspect ratio
+regardless of the actual window size.
 
 #### Backups
 
