@@ -112,7 +112,7 @@ static void sdl_init(void)
 			return;
 	}
 	fprintf(stderr, "SDL_Init: %s\n", err);
-	exit(1);
+	schism_exit(1);
 }
 
 static void display_init(void)
@@ -1010,7 +1010,7 @@ static void event_loop(void)
 #endif
 					if (diskwrite_to) {
 						printf("Diskwrite complete, exiting...\n");
-						exit(0);
+						schism_exit(0);
 					}
 				}
 			}
@@ -1022,11 +1022,11 @@ static void event_loop(void)
 				/* nothing */;
 		}
 	}
-	exit(0); /* atexit :) */
+	schism_exit(0);
 }
 
 
-static void schism_shutdown(void)
+void schism_exit(int status)
 {
 #if ENABLE_HOOKS
 	if (shutdown_process & EXIT_HOOK)
@@ -1049,17 +1049,17 @@ static void schism_shutdown(void)
 		video_blit();
 		video_shutdown();
 		/*
-		If this is the atexit() handler, why are we calling SDL_Quit?
-
-		Simple, SDL's documentation says always call SDL_Quit. :) In
-		fact, in the examples they recommend writing atexit(SDL_Quit)
-		directly after SDL_Init. I'm not sure exactly why, but I don't
-		see a reason *not* to do it...
-			/ Storlek
+		Don't use this function as atexit handler, because that will cause
+		segfault when MESA runs on Wayland or KMS/DRM: Never call SDL_Quit()
+		inside an atexit handler.
+		You're probably still on X11 if this has not bitten you yet.
+		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184	
+			/ Vanfanel
 		*/
 		SDL_Quit();
 	}
 	os_sysexit();
+	exit(status);
 }
 
 extern void vis_init(void);
@@ -1081,7 +1081,6 @@ int main(int argc, char **argv)
 	put_env_var("SCHISM_VIDEO_ASPECT", "full");
 
 	vis_init();
-	atexit(schism_shutdown);
 
 	video_fullscreen(0);
 
@@ -1181,8 +1180,9 @@ int main(int argc, char **argv)
 				const char *driver = (strcasestr(diskwrite_to, ".aif")
 						      ? (multi ? "MAIFF" : "AIFF")
 						      : (multi ? "MWAV" : "WAV"));
-				if (song_export(diskwrite_to, driver) != SAVE_SUCCESS)
-					exit(1); // ?
+				if (song_export(diskwrite_to, driver) != SAVE_SUCCESS) {
+					schism_exit(1);
+				}
 			} else if (startup_flags & SF_PLAY) {
 				song_start();
 				set_page(PAGE_INFO);

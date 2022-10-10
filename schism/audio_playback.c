@@ -1411,7 +1411,7 @@ static void _audio_init_head(const char *driver_spec, int verbose)
 			fprintf(stderr, "%s: %s\n", driver_spec, err);
 		fprintf(stderr, "%s\n", err_default);
 		fprintf(stderr, "Couldn't initialise audio!\n");
-		exit(1);
+		schism_exit(1);
 	}
 }
 
