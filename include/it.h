@@ -246,6 +246,7 @@ extern int show_default_volumes;        /* pattern-view.c */
 extern char cfg_video_interpolation[];
 /* TODO: consolidate these into cfg_video_flags */
 extern int cfg_video_fullscreen;
+extern int cfg_video_want_fixed;
 extern int cfg_video_mousecursor;
 extern int cfg_video_width, cfg_video_height;
 
