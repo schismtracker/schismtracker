@@ -257,8 +257,8 @@ void video_startup(void)
 	if (!video.width_height_defined) {
 		video.x = SDL_WINDOWPOS_UNDEFINED;
 		video.y = SDL_WINDOWPOS_UNDEFINED;
-		video.fullscreen.width = video.prev.width = video.width = NATIVE_SCREEN_WIDTH;
-		video.fullscreen.height = video.prev.height = video.height = NATIVE_SCREEN_HEIGHT;
+		video.fullscreen.width = video.prev.width = video.width = cfg_video_width;
+		video.fullscreen.height = video.prev.height = video.height = cfg_video_height;
 	}
 
 	SDL_CreateWindowAndRenderer(video.width, video.height, SDL_WINDOW_RESIZABLE, &video.window, &video.renderer);
