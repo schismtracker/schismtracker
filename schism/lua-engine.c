@@ -26,6 +26,7 @@
 #include "it.h"
 #include "util.h"
 #include "song.h"
+#include "lua-patternlib.h"
 #include "lua-engine.h"
 
 #include <assert.h>
@@ -115,31 +116,6 @@ void continue_lua_eval() {
 	status.flags |= NEED_UPDATE;
 }
 
-static song_note_t *get_note_at(lua_State *L, int pattern, int channel, int row) {
-	pattern = MAX(pattern, 0);
-	channel = CLAMP(channel, 1, 64);
-	row = MAX(row, 0);
-
-	song_note_t *notes = NULL;
-	int length = song_get_pattern(pattern, &notes);
-	if (row >= length || !notes) {
-		luaL_error(L, "requested note %d:%d:%d does not exist");
-	}
-
-	return notes + 64 * row + channel - 1;
-}
-
-static int lua_set_note(lua_State *L)
-{
-	int pattern = luaL_checkinteger(L, 1);
-	int channel = luaL_checkinteger(L, 2);
-	int row = luaL_checkinteger(L, 3);
-	int note = luaL_checkinteger(L, 4);
-
-	get_note_at(L, pattern, channel, row)->note = note;
-	return 0;
-}
-
 static int lua_song_start(lua_State *L)
 {
 	song_start();
@@ -161,12 +137,11 @@ void lua_init(void)
 	}
 
 	luaL_openlibs(L);
+	luaL_requiref(L, "pattern", luaopen_pattern, 1);
+	lua_pop(L, 1);
 
 	lua_pushcfunction(L, lua_print_console);
 	lua_setglobal(L, "print");
-
-	lua_pushcfunction(L, lua_set_note);
-	lua_setglobal(L, "set_note");
 
 	lua_pushcfunction(L, lua_song_start);
 	lua_setglobal(L, "song_start");
