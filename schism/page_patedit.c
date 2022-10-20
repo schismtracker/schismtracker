@@ -2778,6 +2778,8 @@ static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 	int vp = panning_mode ? VOLFX_PANNING : VOLFX_VOLUME;
 	int q;
 
+	if (k->is_synthetic)
+		return 1;
 	if (pos == 0) {
 		q = kbd_char_to_hex(k);
 		if (q >= 0 && q <= 9) {
@@ -3944,6 +3946,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
+	if (k->is_synthetic)
+		return 1;
 	/* bleah */
 	if (k->sym.sym == SDLK_LESS || k->sym.sym == SDLK_COLON || k->sym.sym == SDLK_SEMICOLON) {
 		if (k->state == KEY_RELEASE)
