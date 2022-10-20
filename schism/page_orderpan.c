@@ -363,7 +363,8 @@ static int orderlist_handle_char(struct key_event *k)
 	default:
 		c = numeric_key_event(k, 0);
 		if (c == -1) return 0;
-		if (k->state == KEY_RELEASE)
+		if (k->state == KEY_RELEASE
+		    || k->is_synthetic)
 			return 1;
 
 		status.flags |= SONG_NEEDS_SAVE;

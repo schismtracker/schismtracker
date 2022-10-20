@@ -957,6 +957,8 @@ static int note_trans_handle_key(struct key_event * k)
 
 			case 2:        /* instrument, first digit */
 			case 3:        /* instrument, second digit */
+				if (!k->is_synthetic)
+					break;
 				if (k->sym.sym == SDLK_SPACE) {
 					ins->sample_map[note_trans_sel_line] =
 						sample_get_current();
