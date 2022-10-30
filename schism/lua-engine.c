@@ -40,6 +40,9 @@ static lua_console_write console_write = NULL;
 static int running = 0;
 static int interrupt = 0;
 
+extern const unsigned char taskqueue_script[];
+extern size_t taskqueue_script_size;
+
 void set_lua_print(lua_console_write write_func)
 {
 	console_write = write_func;
@@ -73,13 +76,14 @@ void do_lua_resume() {
 	int n;
 	const char *err;
 
+	lua_sethook(L, multitask_hook, LUA_MASKCOUNT, 1000);
 	switch (lua_resume(L, NULL, 0, &nres)) {
 	case LUA_YIELD:
 		running = 1;
 		break;
 	case LUA_OK:
-		running = 0;
 	default:
+		running = 0;
 		n = lua_gettop(L);
 		if (n > 0) {
 			lua_getglobal(L, "print");
@@ -90,6 +94,7 @@ void do_lua_resume() {
 		lua_resetthread(L);
 		break;
 	}
+	status.flags |= NEED_UPDATE;
 }
 
 void eval_lua_input(char *input) {
@@ -99,21 +104,55 @@ void eval_lua_input(char *input) {
 		return;
 	}
 
-	lua_sethook(L, multitask_hook, LUA_MASKCOUNT, 1000);
 	luaL_loadstring(L, input);
+	
 	do_lua_resume();
-	status.flags |= NEED_UPDATE;
 }
 
 void continue_lua_eval() {
 	int nres;
 
-	if (!running) {
+	if (running) {
+		do_lua_resume();
 		return;
 	}
 
-	do_lua_resume();
-	status.flags |= NEED_UPDATE;
+	lua_sethook(L, NULL, LUA_MASKCOUNT, 1000);
+	lua_getglobal(L, "_pop_task");
+	lua_call(L, 0, 1);
+	if (!lua_isnil(L, 1)) {
+		do_lua_resume();
+	} else {
+		lua_pop(L, 1);
+	}
+}
+
+int _midi_task(lua_State *L) {
+	int value = lua_tointeger(L, lua_upvalueindex(1));
+	int param = lua_tointeger(L, lua_upvalueindex(2));
+	lua_getglobal(L, "_on_midi");
+	if (lua_isnil(L, 1)) {
+		return 0;
+	}
+	lua_pushinteger(L, value);
+	lua_pushinteger(L, param);
+	lua_call(L, 2, 0);
+	return 0;
+}
+
+int push_lua_midi_task(int value, int param)
+{
+
+	lua_pushinteger(L, value);
+	lua_pushinteger(L, param);
+
+	lua_pushcclosure(L, _midi_task, 2);
+
+	lua_getglobal(L, "_push_task");
+	lua_insert(L, 1);
+	lua_call(L, 1, 0);
+
+	return 0;
 }
 
 static int lua_song_start(lua_State *L)
@@ -126,6 +165,24 @@ static int lua_song_stop(lua_State *L)
 {
 	song_stop();
 	return 0;
+}
+
+static int lua_current_pattern(lua_State *L)
+{
+	lua_pushinteger(L, get_current_pattern());
+	return 1;
+}
+
+static int lua_current_row(lua_State *L)
+{
+	lua_pushinteger(L, get_current_row());
+	return 1;
+}
+
+static int lua_current_channel(lua_State *L)
+{
+	lua_pushinteger(L, get_current_channel());
+	return 1;
 }
 
 void lua_init(void)
@@ -148,6 +205,19 @@ void lua_init(void)
 
 	lua_pushcfunction(L, lua_song_stop);
 	lua_setglobal(L, "song_stop");
+
+	lua_pushcfunction(L, lua_current_pattern);
+	lua_setglobal(L, "current_pattern");
+
+	lua_pushcfunction(L, lua_current_channel);
+	lua_setglobal(L, "current_channel");
+
+	lua_pushcfunction(L, lua_current_row);
+	lua_setglobal(L, "current_row");
+
+	// luaL_loadbuffer
+	luaL_loadbuffer(L, taskqueue_script, taskqueue_script_size, "@taskqueue.lua");
+	lua_pcall(L, 0, LUA_MULTRET, 0);
 
 	log_append(2, 0, "Lua initialised");
 	log_underline(15);

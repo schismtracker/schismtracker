@@ -39,6 +39,10 @@
 
 #include "dmoz.h"
 
+#ifdef USE_LUA
+#include "lua-engine.h"
+#endif
+
 #include <ctype.h>
 #include <assert.h>
 
@@ -983,6 +987,9 @@ int midi_engine_handle_event(void *ev)
 		break;
 	case SCHISM_EVENT_MIDI_CONTROLLER:
 		/* controller events */
+#ifdef USE_LUA
+		push_lua_midi_task(st[0], st[2]);
+#endif
 		break;
 	case SCHISM_EVENT_MIDI_SYSTEM:
 		switch (st[0]) {

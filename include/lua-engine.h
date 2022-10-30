@@ -30,4 +30,6 @@ void eval_lua_input(char *input);
 void continue_lua_eval();
 void lua_init(void);
 
+int push_lua_midi_task(int value, int param);
+
 #endif

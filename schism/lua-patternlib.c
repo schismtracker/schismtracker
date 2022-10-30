@@ -55,9 +55,21 @@ static int set_note(lua_State *L)
 	return 0;
 }
 
+static int set_param(lua_State *L)
+{
+	int pattern = luaL_checkinteger(L, 1);
+	int channel = luaL_checkinteger(L, 2);
+	int row = luaL_checkinteger(L, 3);
+	int param = luaL_checkinteger(L, 4);
+
+	_get_note_at(L, pattern, channel, row)->param = param;
+	return 0;
+}
+
 static const struct luaL_Reg patternlib [] = {
-    {"set_note", set_note},
-    {NULL, NULL}
+	{"set_note", set_note},
+	{"set_param", set_param},
+	{NULL, NULL}
 };
 
 int luaopen_pattern(lua_State *L)

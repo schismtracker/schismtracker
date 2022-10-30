@@ -34,9 +34,16 @@ if [ "X$SED" = "X" ]; then
         SED="sed"
 fi
 
+length="$(cat "$@" | wc -c | tr -d ' ')"
+
+echo "#include <stddef.h>"
+
 case "$type" in
         *static*) ;;
-        *) echo "extern $type $name""[];" ;;
+        *)
+                echo "extern $type $name""[];"
+                echo "extern size_t $name""_size;"
+                ;;
 esac
 echo "$type $name""[] = {"
 $OD -b -v "$@" \
@@ -45,3 +52,4 @@ $OD -b -v "$@" \
 | $SED -e '$ s/,$//'
 echo "};"
 
+echo "size_t $name""_size = $length;"
