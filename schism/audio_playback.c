@@ -96,7 +96,7 @@ When reinitializing the audio, this can be used to reacquire the same device. Ho
 static char active_audio_driver[256];
 
 /* Whatever was in the config file. This is used if no driver is given to audio_setup. */
-static char cfg_audio_driver[256];
+static char cfg_audio_driver[256] = { 0 };
 
 /* Required for updating SDL1.2 -> SDL2 on Windows (WASAPI) */
 static SDL_AudioDeviceID audio_dev;
@@ -1249,9 +1249,6 @@ static void _audio_set_envvars(const char *driver_spec)
 {
 	char *driver = NULL, *device = NULL;
 
-	unset_env_var("AUDIODEV");
-	unset_env_var("SDL_PATH_DSP");
-
 	if (!*driver_spec) {
 		unset_env_var("SDL_AUDIODRIVER");
 	} else if (str_break(driver_spec, ':', &driver, &device)) {
@@ -1288,7 +1285,9 @@ static void _audio_set_envvars(const char *driver_spec)
 'verbose' => print stuff to the log about what device/driver was configured */
 static int _audio_open(const char *driver_spec, int verbose)
 {
-	_audio_set_envvars(driver_spec);
+	if (!(getenv("SDL_AUDIODRIVER") || getenv("AUDIODEV") || getenv("SDL_PATH_DSP"))
+		&& (cfg_audio_driver[0] == '\0'))
+		_audio_set_envvars(driver_spec);
 
 	if (SDL_WasInit(SDL_INIT_AUDIO))
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
@@ -1412,7 +1411,7 @@ static void _audio_init_head(const char *driver_spec, int verbose)
 			fprintf(stderr, "%s: %s\n", driver_spec, err);
 		fprintf(stderr, "%s\n", err_default);
 		fprintf(stderr, "Couldn't initialise audio!\n");
-		exit(1);
+		schism_exit(1);
 	}
 }
 

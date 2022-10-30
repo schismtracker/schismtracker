@@ -252,11 +252,13 @@ void video_startup(void)
 	if (!SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, cfg_video_interpolation);
 
+	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+
 	if (!video.width_height_defined) {
 		video.x = SDL_WINDOWPOS_UNDEFINED;
 		video.y = SDL_WINDOWPOS_UNDEFINED;
-		video.fullscreen.width = video.prev.width = video.width = NATIVE_SCREEN_WIDTH;
-		video.fullscreen.height = video.prev.height = video.height = NATIVE_SCREEN_HEIGHT;
+		video.fullscreen.width = video.prev.width = video.width = cfg_video_width;
+		video.fullscreen.height = video.prev.height = video.height = cfg_video_height;
 	}
 
 	SDL_CreateWindowAndRenderer(video.width, video.height, SDL_WINDOW_RESIZABLE, &video.window, &video.renderer);
@@ -276,7 +278,13 @@ void video_startup(void)
 
 void video_resize(unsigned int width, unsigned int height)
 {
-	SDL_RenderSetLogicalSize(video.renderer, width, height);
+	/* Aspect ratio correction if it's wanted */
+	if (cfg_video_want_fixed)
+		SDL_RenderSetLogicalSize(video.renderer,
+					 NATIVE_SCREEN_WIDTH * 5, NATIVE_SCREEN_HEIGHT * 6); // 4:3
+	else 
+		SDL_RenderSetLogicalSize(video.renderer, width, height);
+
 	video.prev.width = video.width;
 	video.prev.height = video.height;
 	video.width = width;

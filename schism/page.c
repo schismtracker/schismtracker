@@ -549,7 +549,7 @@ static int handle_key_global(struct key_event * k)
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS) {
 				if (k->mod & KMOD_SHIFT)
-					exit(0);
+					schism_exit(0);
 				show_exit_prompt();
 			}
 			return 1;
@@ -1725,7 +1725,7 @@ static void savecheck(void (*ok)(void *data), void (*cancel)(void *data), void *
 
 static void exit_ok_confirm(UNUSED void *data)
 {
-	exit(0);
+	schism_exit(0);
 }
 
 static void exit_ok(UNUSED void *data)
@@ -1756,7 +1756,7 @@ void show_exit_prompt(void)
 
 	if (status.current_page == PAGE_ABOUT) {
 		/* haven't even started up yet; don't bother confirming */
-		exit(0);
+		schism_exit(0);
 	} else if (status.current_page == PAGE_FONT_EDIT) {
 		if (status.flags & STARTUP_FONTEDIT) {
 			dialog_create(DIALOG_OK_CANCEL, "Exit Font Editor?",

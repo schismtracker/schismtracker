@@ -47,9 +47,8 @@ you also want to have a huge window that isn't active.
 `width` and `height` are the initial dimensions to use for the window, and the
 dimensions to return to when toggling fullscreen off.
 
-If you are having problems with fullscreen aspect ratio, you can try setting
-`want_fixed` to 1. This will attempt to "correct" the fullscreen resolution
-used by Schism.
+If `want_fixed` is set to 1, Schism will be displayed with a 4:3 aspect ratio
+regardless of the actual window size.
 
 #### Backups
 
@@ -68,8 +67,7 @@ With numbered_backups, write to `filename.it.1~`, `filename.it.2~`, etc.
 
 Alter the key repeat. "Delay" is how long before keys begin to repeat, "rate"
 is how long between repeated keystrokes. (Both are in milliseconds.) Above are
-[Storlek](https://github.com/schismtracker/schismtracker/wiki/Storlek)'s
-settings, which are very fast but convenient for speed tracking.
+Storlek's settings, which are very fast but convenient for speed tracking.
 
 The *default* repeat delay and rate come from your operating system, so you
 only need to set this if you like having a different rate for Schism Tracker
@@ -167,7 +165,9 @@ line. If you're using Alsa on Linux and want to use you can set
 `driver=alsa:dmix` to get Schism Tracker to play with other programs. (However,
 Alsa completely ignores the latency with dmix so it might cause massive delays
 between pressing a note and hearing it, which is why Schism Tracker requests a
-"real" device by default.)
+"real" device by default.) If neither the `driver` nor `--audio-driver` is set,
+the `SDL_AUDIODRIVER`, `AUDIODEV` and `SDL_PATH_DSP` environment variables can
+be used to configure Schism's audio output.
 
     [Diskwriter]
     rate=96000

@@ -2778,6 +2778,8 @@ static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 	int vp = panning_mode ? VOLFX_PANNING : VOLFX_VOLUME;
 	int q;
 
+	if (k->is_synthetic)
+		return 1;
 	if (pos == 0) {
 		q = kbd_char_to_hex(k);
 		if (q >= 0 && q <= 9) {
@@ -2981,7 +2983,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	if (k->midi_note == -1) {
 		/* nada */
 	} else if (k->state == KEY_RELEASE) {
-		c = song_keyup(k->midi_channel, k->midi_channel, k->midi_note);
+		c = song_keyup(KEYJAZZ_NOINST, KEYJAZZ_NOINST, k->midi_note);
 
 		/* don't record noteoffs for no good reason... */
 		if (!((midi_flags & MIDI_RECORD_NOTEOFF)
@@ -3005,8 +3007,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			tick = 0;
 		}
 		n = k->midi_note;
-		// XXX samp/ins were -1 here, I don't know what that meant (this is probably incorrect)
-		c = song_keydown(k->midi_channel, k->midi_channel, n, v, current_channel);
+		c = song_keydown(KEYJAZZ_NOINST, KEYJAZZ_NOINST, n, v, current_channel);
 		cur_note = pattern + 64 * current_row + (c-1);
 		patedit_record_note(cur_note, c, current_row, n, 0);
 
@@ -3945,6 +3946,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
+	if (k->is_synthetic)
+		return 1;
 	/* bleah */
 	if (k->sym.sym == SDLK_LESS || k->sym.sym == SDLK_COLON || k->sym.sym == SDLK_SEMICOLON) {
 		if (k->state == KEY_RELEASE)

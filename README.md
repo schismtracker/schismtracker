@@ -10,12 +10,11 @@ number of bugfixes and changes to [improve IT
 playback](https://github.com/schismtracker/schismtracker/wiki/Player-abuse-tests).
 
 Where Impulse Tracker was limited to i386-based systems running MS-DOS, Schism
-Tracker runs on almost any platform that [SDL](http://www.libsdl.org/)
-supports, and has been successfully built for Linux, Mac OS X, Windows,
-FreeBSD, AmigaOS, BeOS, and even [the
-Wii](http://www.wiibrew.org/wiki/Schism_Tracker). Schism will most likely build
-on *any* architecture supported by GCC4 (e.g. alpha, m68k, arm, etc.) but it
-will probably not be as well-optimized on many systems.
+Tracker runs on almost any platform that [SDL 2](https://www.libsdl.org/index.php) 
+supports. Currently builds are provided for Linux, Mac OS X, and Windows. Most 
+development is currently done on 64-bit Linux. Schism will most likely build on
+_any_ architecture supported by GCC4 (e.g. alpha, m68k, arm, etc.) but it will 
+probably not be as well-optimized on many systems.
 
 See [the wiki](https://github.com/schismtracker/schismtracker/wiki) for more
 information.

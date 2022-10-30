@@ -36,7 +36,7 @@ jobs:
       with:
         msystem: ${{ matrix.sys }}
         update: true
-        install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix
+        install: git mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix
   
     - name: 'Get current date'
       id: date
