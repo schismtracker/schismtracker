@@ -46,6 +46,8 @@
 #define ROW_IS_MINOR(r) (current_song->row_highlight_minor != 0 && (r) % current_song->row_highlight_minor == 0)
 #define ROW_IS_HIGHLIGHT(r) (ROW_IS_MINOR(r) || ROW_IS_MAJOR(r))
 
+#define SONG_PLAYING (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
+
 /* this is actually used by pattern-view.c */
 int show_default_volumes = 0;
 
@@ -2350,7 +2352,7 @@ static void advance_cursor(int next_row, int multichannel)
 {
 	int total_rows;
 
-	if (next_row && !((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing)) {
+	if (next_row && !(SONG_PLAYING && playback_tracing)) {
 		total_rows = song_get_rows_in_pattern(current_pattern);
 
 		if (skip_value) {
@@ -2443,7 +2445,7 @@ void set_current_pattern(int n)
 	int total_rows;
 	char undostr[64];
 
-	if (!playback_tracing || !(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))) {
+	if (!playback_tracing || !SONG_PLAYING) {
 		_pattern_update_magic();
 	}
 
@@ -2966,7 +2968,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	status.flags |= SONG_NEEDS_SAVE;
 	song_get_pattern(current_pattern, &pattern);
 
-	if (midi_start_record && !(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))) {
+	if (midi_start_record && !SONG_PLAYING) {
 		switch (midi_start_record) {
 		case 1: /* pattern loop */
 			song_loop_pattern(current_pattern, r);
@@ -2988,7 +2990,8 @@ static int pattern_editor_insert_midi(struct key_event *k)
 
 	/* correct late notes to the next row */
 	/* tick + 1 because processing the keydown itself takes another tick */
-	if (midi_flags & MIDI_TICK_QUANTIZE && !first_note && tick + 1 < speed / 2) {
+	if (midi_flags & MIDI_TICK_QUANTIZE && SONG_PLAYING && !first_note
+			&& tick + 1 < speed / 2) {
 		r = (r + 1) % song_get_rows_in_pattern(current_pattern);
 		quantize_next_row = 1;
 	}
