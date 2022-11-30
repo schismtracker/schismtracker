@@ -66,8 +66,8 @@ AC_SUBST(SDL_CONFIG)
 if test "x$SDL_CONFIG" == "x"; then
         AC_MSG_ERROR([*** sdl2-config not found.])
 fi
-dnl m4_version_compare would probably be better here.
-if ! sort -Cn -t '.' -k 1,1 -k 2,2 -k 3,3 <(echo 2.0.5; $SDL_CONFIG --version); then
+dnl I couldn't get substitution of SDL_CONFIG to work right here.
+if test m4_version_compare(m4_esyscmd([sdl2-config --version]), [2.0.5]) == -1; then
         AC_MSG_ERROR([*** SDL version >= 2.0.5 not found.])
 fi
 SDL_CFLAGS=$($SDL_CONFIG --cflags)
