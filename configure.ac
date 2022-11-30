@@ -66,7 +66,8 @@ AC_SUBST(SDL_CONFIG)
 if test "x$SDL_CONFIG" == "x"; then
         AC_MSG_ERROR([*** sdl2-config not found.])
 fi
-if $SDL_CONFIG --version | grep -qEe "^2\.(0\.([0-9]{2,}|[5-9])|([0-9]{2,}|[1-9])\.[0-9]+)"; then
+dnl m4_version_compare would probably be better here.
+if ! sort -Cn -t '.' -k 1,1 -k 2,2 -k 3,3 <(echo 2.0.5; $SDL_CONFIG --version); then
         AC_MSG_ERROR([*** SDL version >= 2.0.5 not found.])
 fi
 SDL_CFLAGS=$($SDL_CONFIG --cflags)
