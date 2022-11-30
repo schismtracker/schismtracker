@@ -133,7 +133,7 @@ void cfg_load(void)
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, 64, "");
+	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, 7, "nearest");
 	cfg_video_width = cfg_get_number(&cfg, "Video", "width", 640);
 	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);

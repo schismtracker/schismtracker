@@ -103,8 +103,7 @@ static void change_ui_settings(void)
 }
 static int countdown = 10;
 static time_t started = 0;
-
-static const char *video_revert_driver = NULL;
+static char video_revert_interpolation[8] = {'\0'};
 static int video_revert_fs = 0;
 
 static void video_mode_keep(UNUSED void*ign)
@@ -115,11 +114,12 @@ static void video_mode_keep(UNUSED void*ign)
 }
 static void video_mode_cancel(UNUSED void*ign)
 {
-	if (video_revert_driver) {
-		video_setup(video_revert_driver);
-		video_startup();
+	if (video_revert_interpolation[0]) {
+		video_setup(video_revert_interpolation);
+		video_redraw_texture();
 	}
-	video_fullscreen(video_revert_fs);
+	if (video_is_fullscreen() != video_revert_fs)
+		video_fullscreen(-1);
 	palette_apply();
 	font_init();
 	config_set_page();
@@ -157,7 +157,7 @@ static void video_change_dialog(void)
 {
 	struct dialog *d;
 
-	video_revert_driver = video_driver_name();
+	strncpy(video_revert_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY), 7);
 	video_revert_fs = video_is_fullscreen();
 
 	countdown = 10;
@@ -178,35 +178,27 @@ static void video_change_dialog(void)
 
 static void change_video_settings(void)
 {
-	const char *new_video_driver;
+	const char *new_video_interpolation;
 	int new_fs_flag;
 
-	if (widgets_config[11].d.togglebutton.state) {
-		new_video_driver = "nearest";
-	} else if (widgets_config[12].d.togglebutton.state) {
-		new_video_driver = "linear";
-	} else if (widgets_config[13].d.togglebutton.state) {
-		new_video_driver = "best";
-	} else {
-		new_video_driver = "linear";
-	}
+	new_video_interpolation = widgets_config[11].d.togglebutton.state ? "nearest" :
+	                          widgets_config[12].d.togglebutton.state ? "linear" :
+					          widgets_config[13].d.togglebutton.state ? "best" :
+					          "nearest";
 
-	if (widgets_config[9].d.togglebutton.state) {
-		new_fs_flag = 1;
-	} else {
-		new_fs_flag = 0;
-	}
 
-	if (!SDL_strcasecmp(new_video_driver, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
+	new_fs_flag = widgets_config[9].d.togglebutton.state;
+
+	if (!SDL_strcasecmp(new_video_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
 	&& new_fs_flag == video_is_fullscreen()) {
 		return;
 	}
 
 	video_change_dialog();
-	if (SDL_strcasecmp(new_video_driver, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))) {
-		video_setup(new_video_driver);
+	if (SDL_strcasecmp(new_video_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))) {
+		video_setup(new_video_interpolation);
+		video_redraw_texture();
 	}
-	video_redraw_texture();
 	if (new_fs_flag != video_is_fullscreen())
 		toggle_display_fullscreen();
 	palette_apply();
@@ -245,8 +237,6 @@ static void config_draw_const(void)
 }
 static void config_set_page(void)
 {
-	const char *nn;
-
 	widgets_config[0].d.thumbbar.value = audio_settings.channel_limit;
 	widgets_config[1].d.numentry.value = audio_settings.sample_rate;
 	widgets_config[2].d.menutoggle.state = !!(audio_settings.bits == 16);

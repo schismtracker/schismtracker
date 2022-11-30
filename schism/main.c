@@ -1064,7 +1064,11 @@ void schism_exit(int status)
 
 extern void vis_init(void);
 
+#ifdef MACOSX
+int SDL_main(int argc, char** argv)
+#else
 int main(int argc, char **argv)
+#endif
 {
 	if (! SDL_VERSION_ATLEAST(2,0,5)) {
 		SDL_Log("SDL_VERSION %i.%i.%i less than required!", SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL);
