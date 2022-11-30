@@ -27,7 +27,7 @@ jobs:
       shell: bash
 
     - name: 'Checkout'
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -65,7 +65,7 @@ jobs:
 
     - name: 'Upload artifact (win32)'
       if: matrix.win == 'win32'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
@@ -79,7 +79,7 @@ jobs:
 
     - name: 'Upload artifact (win64)'
       if: matrix.win == 'win64'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
         path: |
@@ -168,7 +168,7 @@ jobs:
           zip -r schismtracker.zip configuration.md COPYING README.md Schism\ Tracker.app
 
       - name: 'Upload artifact'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: schismtracker-${{ steps.date.outputs.date }}-macos
           path: schismtracker.zip
@@ -183,7 +183,7 @@ jobs:
           sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl2-dev libasound2-dev git libtool zip
 
       - name: 'Checkout'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: 'Get current date'
         id: date
@@ -198,7 +198,7 @@ jobs:
           tar --exclude=schismtracker-${{ steps.date.outputs.date }}.source.tar.gz --exclude-vcs -zcvf schismtracker-${{ steps.date.outputs.date }}.source.tar.gz *
 
       - name: 'Upload source tarball'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: schismtracker-${{ steps.date.outputs.date }}.source
           path: schismtracker-${{ steps.date.outputs.date }}.source.tar.gz
@@ -217,7 +217,7 @@ jobs:
           zip schismtracker.zip configuration.md COPYING README.md schismtracker.1 schismtracker
 
       - name: 'Upload artifact'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: schismtracker-${{ steps.date.outputs.date }}-linux
           path: schismtracker.zip
