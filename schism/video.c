@@ -111,7 +111,6 @@ struct video_cf {
 	unsigned int height;
 	int x;
 	int y;
-	int width_height_defined;
 
 	struct {
 		unsigned int width;
@@ -249,17 +248,14 @@ void video_startup(void)
 	vgamem_clear();
 	vgamem_flip();
 
-	if (!SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, cfg_video_interpolation);
+	video_setup(cfg_video_interpolation);
 
 	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 
-	if (!video.width_height_defined) {
-		video.x = SDL_WINDOWPOS_UNDEFINED;
-		video.y = SDL_WINDOWPOS_UNDEFINED;
-		video.fullscreen.width = video.prev.width = video.width = cfg_video_width;
-		video.fullscreen.height = video.prev.height = video.height = cfg_video_height;
-	}
+	video.x = SDL_WINDOWPOS_CENTERED;
+	video.y = SDL_WINDOWPOS_CENTERED;
+	video.fullscreen.width = video.prev.width = video.width = cfg_video_width;
+	video.fullscreen.height = video.prev.height = video.height = cfg_video_height;
 
 	SDL_CreateWindowAndRenderer(video.width, video.height, SDL_WINDOW_RESIZABLE, &video.window, &video.renderer);
 	video_resize(video.width, video.height);
@@ -273,7 +269,6 @@ void video_startup(void)
 	/* okay, i think we're ready */
 	SDL_ShowCursor(SDL_DISABLE);
 	set_icon();
-	video.width_height_defined = 1;
 }
 
 void video_resize(unsigned int width, unsigned int height)
@@ -344,31 +339,25 @@ void video_refresh(void)
 
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80])
 {
-	int y_int =	(video.mouse.y >= 5368708) ? 0 :
-			(video.mouse.y >= 400)     ? 399 : (int)video.mouse.y;
 	unsigned int z;
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
 	if (video.mouse.visible != MOUSE_EMULATED
 	    || !(status.flags & IS_FOCUSED)
-	    || y < y_int
-	    || y >= y_int+MOUSE_HEIGHT) {
+	    || y < video.mouse.y
+	    || y >= video.mouse.y+MOUSE_HEIGHT) {
 		return;
 	}
 
-	z = _mouse_pointer[ y - y_int ];
+	z = _mouse_pointer[ y - video.mouse.y ];
 	mouseline[x] = z >> v;
 	if (x < 79) mouseline[x+1] = (z << (8-v)) & 0xff;
 }
 
 static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
-	/* emulates how SDL 1.2 handled it :p */
-	/* effectively handles underflows/overflows */
-	unsigned int mouseline_x =	(video.mouse.x >= 3355443) ? 0  :
-					(video.mouse.x >= 640)     ? 79 : (video.mouse.x / 8);
-	unsigned int mouseline_v =	(video.mouse.x >= 3355443) ? 0  :
-					(video.mouse.x >= 640)     ? 7  : (video.mouse.x % 8);
+	unsigned int mouseline_x = (video.mouse.x / 8);
+	unsigned int mouseline_v = (video.mouse.x % 8);
 	unsigned int mouseline[80];
 	unsigned char *pdata;
 	unsigned int x, y;
@@ -450,13 +439,8 @@ void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned
 	vx /= (video.width - (video.width - video.prev.width));
 	vy /= (video.height - (video.height - video.prev.height));
 
-	video.mouse.x = vx;
-	video.mouse.y = vy;
-	if (x)
-		*x = vx;
-
-	if (y)
-		*y = vy;
+	*x = (vx < 640) ? (video.mouse.x = vx) : video.mouse.x;
+	*y = (vy < 640) ? (video.mouse.y = vy) : video.mouse.y;
 }
 
 SDL_Window * video_window(void)
