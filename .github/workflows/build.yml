@@ -90,7 +90,7 @@ jobs:
           configuration.md
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-11
     env:
       MACOSX_DEPLOYMENT_TARGET: 10.9
     
@@ -129,11 +129,11 @@ jobs:
 
       - name: 'Download SDL2 sources'
         run: |
-          curl https://www.libsdl.org/release/SDL2-2.0.22.tar.gz | tar xvf -
+          curl https://www.libsdl.org/release/SDL2-2.26.0.tar.gz | tar xvf -
 
       - name: 'Build SDL2'
         run: |
-          cd SDL2-2.0.22
+          cd SDL2-2.26.0
           ./configure CC="sh ../scripts/build-uni.sh"
           make
           sudo make install
