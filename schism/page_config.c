@@ -182,9 +182,9 @@ static void change_video_settings(void)
 	int new_fs_flag;
 
 	new_video_interpolation = widgets_config[11].d.togglebutton.state ? "nearest" :
-	                          widgets_config[12].d.togglebutton.state ? "linear" :
-					          widgets_config[13].d.togglebutton.state ? "best" :
-					          "nearest";
+							  widgets_config[12].d.togglebutton.state ? "linear" :
+							  widgets_config[13].d.togglebutton.state ? "best" :
+							  "nearest";
 
 
 	new_fs_flag = widgets_config[9].d.togglebutton.state;
@@ -288,7 +288,7 @@ void config_load_page(struct page *page)
 			2,4,3,3,4,
 			change_mixer_limits,
 			output_channels);
-    ////
+	////
 	create_menutoggle(widgets_config+4,
 			18, 20,
 			3,5,4,4,5,
@@ -308,13 +308,13 @@ void config_load_page(struct page *page)
 			6,8,7,7,8,
 			change_ui_settings,
 			time_displays);
-    ////
+	////
 	create_menutoggle(widgets_config+8,
 			18, 25,
 			7,11,8,8,11,
 			change_ui_settings,
 			midi_modes);
-    ////
+	////
 	create_togglebutton(widgets_config+9,
 			44, 30, 5,
 			8,9,11,10,10,
@@ -327,7 +327,7 @@ void config_load_page(struct page *page)
 			change_video_settings,
 			"No",
 			2, video_fs_group);
-    ////
+	////
 	create_togglebutton(widgets_config+11,
 			6, 30, 26,
 			8,12,11,9,12,
