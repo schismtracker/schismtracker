@@ -129,11 +129,11 @@ jobs:
 
       - name: 'Download SDL2 sources'
         run: |
-          curl https://www.libsdl.org/release/SDL2-2.26.0.tar.gz | tar xvf -
+          curl https://www.libsdl.org/release/SDL2-2.24.2.tar.gz | tar xvf -
 
       - name: 'Build SDL2'
         run: |
-          cd SDL2-2.26.0
+          cd SDL2-2.24.2
           ./configure CC="sh ../scripts/build-uni.sh"
           make
           sudo make install
