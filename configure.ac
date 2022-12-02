@@ -63,7 +63,7 @@ AC_C_BIGENDIAN
 dnl Check for SDL libs
 AC_CHECK_TOOL([SDL_CONFIG], [sdl2-config])
 AC_SUBST(SDL_CONFIG)
-if test "x$SDL_CONFIG" == "x"; then
+if test "x$SDL_CONFIG" = "x"; then
         AC_MSG_ERROR([*** sdl2-config not found.])
 fi
 AS_VERSION_COMPARE([$($SDL_CONFIG --version)], [2.0.5], [AC_MSG_ERROR([*** SDL version >= 2.0.5 not found.])])
