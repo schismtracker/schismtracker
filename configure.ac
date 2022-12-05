@@ -138,7 +138,7 @@ else
 fi
 
 dnl FLAC stuff
-AC_CHECK_LIB(FLAC, FLAC__stream_decoder_new, libflac_found=yes, libflac_found=no)
+AC_CHECK_HEADER(FLAC/stream_decoder.h, libflac_found=yes, libflac_found=no)
 if test x"$libflac_found" = "xyes"; then
 		AM_CONDITIONAL([USE_FLAC], true)
 		CFLAGS=""
