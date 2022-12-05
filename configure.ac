@@ -137,6 +137,15 @@ else
         AM_CONDITIONAL([USE_WIN32], false)
 fi
 
+dnl FLAC stuff
+AC_CHECK_LIB(FLAC, FLAC__stream_decoder_new, libflac_found=yes, libflac_found=no)
+if test x"$libflac_found" = "xyes"; then
+		AM_CONDITIONAL([USE_FLAC], true)
+		CFLAGS=""
+		LIBS="$LIBS -lFLAC"
+else
+		AM_CONDITIONAL([USE_FLAC], false)
+fi
 
 dnl Wii crap
 AC_CHECK_LIB(ogc, IOS_ReloadIOS, libogc_found=yes, libogc_found=no, [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
