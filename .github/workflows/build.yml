@@ -14,7 +14,7 @@ jobs:
         include:
           - { sys: mingw32, env: i686, win: win32 }
           - { sys: mingw64, env: x86_64, win: win64 }
-    name: ${{ matrix.win }}
+    name: build-${{ matrix.win }}
     defaults:
       run:
         shell: msys2 {0}
@@ -36,11 +36,11 @@ jobs:
       with:
         msystem: ${{ matrix.sys }}
         update: true
-        install: git mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix
+        install: git mingw-w64-${{ matrix.env }}-toolchain mingw-w64-${{ matrix.env }}-flac libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix
   
     - name: 'Get current date'
       id: date
-      run: echo "::set-output name=date::$(date +%Y%m%d)"
+      run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
 
     - name: 'Build package'
       run: |
@@ -51,15 +51,15 @@ jobs:
         make
         strip -g schismtracker.exe
         cp schismtracker.exe ..
+        cd ..
         if [ ${{ matrix.win }} == "win32" ]
         then
-          cp /mingw32/bin/SDL2.dll ..
-          cp /mingw32/bin/libgcc_s_dw2-1.dll ..
-          cp /mingw32/bin/libwinpthread-1.dll ..
-        else
-          cp /mingw64/bin/SDL2.dll ..
+          cp /mingw32/bin/libgcc_s_dw2-1.dll .
+          cp /mingw32/bin/libwinpthread-1.dll .
         fi
-        cd ..
+        cp /${{ matrix.sys }}/bin/SDL2.dll .
+        cp /${{ matrix.sys }}/bin/libFLAC.dll .
+        cp /${{ matrix.sys }}/bin/libogg-0.dll .
         cp docs/configuration.md .
         unix2dos COPYING README.md configuration.md
 
@@ -97,7 +97,7 @@ jobs:
     steps:
       - name: 'Get current date'
         id: date
-        run: echo "::set-output name=date::$(date +%Y%m%d)"
+        run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
 
       - name: 'chown SDK directory'
         id: chown
@@ -127,6 +127,7 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v3
 
+        # Since Homebrew doesn't provide binaries for old versions, we have to compile our own:
       - name: 'Download SDL2 sources'
         run: |
           curl https://www.libsdl.org/release/SDL2-2.24.2.tar.gz | tar xvf -
@@ -134,6 +135,19 @@ jobs:
       - name: 'Build SDL2'
         run: |
           cd SDL2-2.24.2
+          ./configure CC="sh ../scripts/build-uni.sh"
+          make
+          sudo make install
+          rm -rf arm64 x64
+          cd ..
+      
+      - name: 'Download libFLAC sources'
+        run: |
+          curl https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.4.2.tar.xz | tar -xvf -
+
+      - name: 'Build libFLAC'
+        run: |
+          cd flac-1.4.2
           ./configure CC="sh ../scripts/build-uni.sh"
           make
           sudo make install
@@ -180,14 +194,14 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl2-dev libasound2-dev git libtool zip
+          sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip
 
       - name: 'Checkout'
         uses: actions/checkout@v3
 
       - name: 'Get current date'
         id: date
-        run: echo "::set-output name=date::$(date +%Y%m%d)"
+        run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
 
       - name: 'autoreconf -i'
         run: autoreconf -i
