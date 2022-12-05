@@ -157,14 +157,12 @@ jobs:
           cd build
           ../configure CC="sh $PWD/../../scripts/build-uni.sh" LDFLAGS="-L/usr/local/lib"
           make
-          make test
           make install
           cd ../../flac-1.4.2
           mkdir build
           cd build
           ../configure CC="sh $PWD/../../scripts/build-uni.sh" LDFLAGS="-L/usr/local/lib"
           make
-          make test
           make install
           cd ../..
 
