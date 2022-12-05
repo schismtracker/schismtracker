@@ -138,7 +138,7 @@ jobs:
 
       - name: 'Build SDL2'
         run: |
-          cd SDL2-2.24.2
+          cd SDL2-2.26.1
           ./configure CC="sh ../scripts/build-uni.sh"
           make
           make install
