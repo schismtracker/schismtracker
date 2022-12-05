@@ -122,7 +122,7 @@ jobs:
 
       - name: 'Install dependencies'
         run: |
-          brew install automake zip
+          brew install automake zip cmake
 
       - name: 'Checkout'
         uses: actions/checkout@v3
@@ -148,11 +148,13 @@ jobs:
       - name: 'Build libFLAC'
         run: |
           cd flac-1.4.2
-          ./configure CC="sh ../scripts/build-uni.sh"
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           make
+          make test
           sudo make install
-          rm -rf arm64 x64
-          cd ..
+          cd ../..
 
       - name: 'Build package'
         run: |
