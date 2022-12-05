@@ -71,6 +71,8 @@ jobs:
         path: |
           schismtracker.exe
           SDL2.dll
+          libFLAC.dll
+          libogg-0.dll
           libgcc_s_dw2-1.dll
           libwinpthread-1.dll
           COPYING
@@ -85,6 +87,8 @@ jobs:
         path: |
           schismtracker.exe
           SDL2.dll
+          libFLAC.dll
+          libogg-0.dll
           COPYING
           README.md
           configuration.md
