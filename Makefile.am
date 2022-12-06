@@ -224,6 +224,7 @@ if USE_FLAC
 files_flac = \
 	fmt/flac.c
 cflags_flac=-DUSE_FLAC
+libs_flac=-lFLAC
 endif
 
 if USE_NETWORK
@@ -376,4 +377,4 @@ AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32) $(SDL_LIBS) $(LIBM)
+schismtracker_LDADD = $(lib_asound) $(lib_win32) $(libs_flac) $(SDL_LIBS) $(LIBM)
