@@ -99,7 +99,12 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 			}
 			break;
 		}
+		default:
+			break;
     }
+
+	(void)client_data;
+	(void)decoder;
 }
 
 static FLAC__StreamDecoderReadStatus on_read(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data) {
@@ -129,20 +134,14 @@ static void on_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErro
 static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data) {
 	struct flac_file* flac_file = (struct flac_file*)client_data;
 
-	if (flac_file->streaminfo.total_samples == 0 || flac_file->streaminfo.channels == 0) {
-		log_appendf(4, "Error loading FLAC: The sample is empty or corrupt!");
+	if (!flac_file->streaminfo.total_samples || !flac_file->streaminfo.channels)
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
-	}
 
-	if (flac_file->streaminfo.channels > 2) {
-		log_appendf(4, "Error loading FLAC: Only mono/stereo FLACs are supported!");
+	if (flac_file->streaminfo.channels > 2)
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
-	}
 
-	if (flac_file->streaminfo.bits_per_sample != 8 && flac_file->streaminfo.bits_per_sample != 16 && flac_file->streaminfo.bits_per_sample != 24) {
-		log_appendf(4, "Error loading FLAC: Only FLACs with a bitdepth of 8/16/24 are supported!");
-		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
-	}
+	if (!((flac_file->streaminfo.bits_per_sample == 8) || (flac_file->streaminfo.bits_per_sample == 12) || (flac_file->streaminfo.bits_per_sample == 16)
+		|| (flac_file->streaminfo.bits_per_sample == 20 || (flac_file->streaminfo.bits_per_sample == 24))))
 
 	if (frame->header.number.sample_number == 0)
 	{
@@ -156,6 +155,7 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 		samples_decoded = 0;
 	}
 
+	/* this isn't true, but it works fine for what we do */
 	uint32_t block_size = frame->header.blocksize*flac_file->streaminfo.channels;
 
 	const uint32_t samples_allocated = flac_file->streaminfo.total_samples*flac_file->streaminfo.channels;
@@ -166,28 +166,33 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 	switch (flac_file->streaminfo.bits_per_sample) {
 		case 8: {
 			int8_t *buf_ptr = flac_file->uncomp_buf + samples_decoded;
-			for (i = 0, j = 0; j < block_size; j++) {
+			for (i = 0, j = 0; i < block_size; j++) {
 				buf_ptr[i++] = (int8_t)buffer[0][j];
 				if (flac_file->streaminfo.channels == 2)
 					buf_ptr[i++] = (int8_t)buffer[1][j];
 			}
 			break;
 		}
-		case 16: {
+		/* here we cheat by just increasing 12-bit to 16-bit */
+		case 12: case 16: {
 			int16_t *buf_ptr = (int16_t*)flac_file->uncomp_buf + samples_decoded;
-			for (i = 0, j = 0; j < block_size; j++) {
-				buf_ptr[i++] = (int16_t)buffer[0][j];
+			uint32_t bit_shift = 16 - flac_file->streaminfo.bits_per_sample;
+			for (i = 0, j = 0; i < block_size; j++) {
+				buf_ptr[i++] = buffer[0][j] << bit_shift;
 				if (flac_file->streaminfo.channels == 2)
-					buf_ptr[i++] = (int16_t)buffer[1][j];
+					buf_ptr[i++] = buffer[1][j] << bit_shift;
 			}
 			break;
 		}
-		case 24: {
+		/* here we just make everything 16-bit, we don't support
+		   24-bit anyway */
+		case 20: case 24: {
 			int16_t *buf_ptr = (int16_t*)flac_file->uncomp_buf + samples_decoded;
-			for (i = 0, j = 0; j < block_size; j++) {
-				buf_ptr[i++] = buffer[0][j] >> 8;
+			uint32_t bit_shift = flac_file->streaminfo.bits_per_sample - 16;
+			for (i = 0, j = 0; i < block_size; j++) {
+				buf_ptr[i++] = buffer[0][j] >> bit_shift;
 				if (flac_file->streaminfo.channels == 2)
-					buf_ptr[i++] = buffer[1][j] >> 8;
+					buf_ptr[i++] = buffer[1][j] >> bit_shift;
 			}
 			break;
 		}
@@ -249,8 +254,6 @@ int fmt_flac_load_sample(const uint8_t *data, size_t len, song_sample_t *smp) {
 	flac_file.flags.loop.type = -1;
 	if (!flac_load(&flac_file, len, 0))
 		return 0;
-	
-	int bits_per_sample = (flac_file.streaminfo.bits_per_sample == 24) ? 16 : flac_file.streaminfo.bits_per_sample;
 
 	smp->volume        = 64 * 4;
 	smp->global_volume = 64;
@@ -267,10 +270,15 @@ int fmt_flac_load_sample(const uint8_t *data, size_t len, song_sample_t *smp) {
 	// channels
 	flags |= (flac_file.streaminfo.channels == 2) ? SF_SI : SF_M;
 	// bit width
-	switch (bits_per_sample) {
+	switch (flac_file.streaminfo.bits_per_sample) {
 	case 8:  flags |= SF_8;  break;
-	case 16: flags |= SF_16; break;
-	default: return 0;
+	case 12:
+	case 16:
+	case 20:
+	case 24: flags |= SF_16; break;
+	default:
+		free(flac_file.uncomp_buf);
+		return 0;
 	}
 	// libFLAC always returns signed
 	flags |= SF_PCMS;
@@ -295,11 +303,25 @@ int fmt_flac_read_info(dmoz_file_t *file, const uint8_t *data, size_t len)
 
 	file->smp_flags = 0;
 
+	/* don't even attempt */
+	if (flac_file.streaminfo.channels > 2 || !flac_file.streaminfo.total_samples ||
+		!flac_file.streaminfo.channels)
+		return 0;
+
+	switch (flac_file.streaminfo.bits_per_sample) {
+		case 12:
+		case 16:
+		case 20:
+		case 24:
+			file->smp_flags |= CHN_16BIT;
+		case 8:
+			break;
+		default:
+			return 0;
+	}
+
 	if (flac_file.streaminfo.channels == 2)
 		file->smp_flags |= CHN_STEREO;
-
-	if (!(flac_file.streaminfo.bits_per_sample == 8))
-		file->smp_flags |= CHN_16BIT;
 
 	file->smp_speed      = flac_file.streaminfo.sample_rate;
 	file->smp_length     = flac_file.streaminfo.total_samples;
