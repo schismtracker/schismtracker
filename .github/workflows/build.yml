@@ -184,7 +184,7 @@ jobs:
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
           rm Info.plist.bak
           mkdir MacOS
-          cp ../../../../../schismtracker MacOS
+          cp ../../../../schismtracker MacOS
           cp /usr/local/lib/libSDL2-2.0.0.dylib Resources
           cp /usr/local/lib/libFLAC.12.dylib Resources
           cp /usr/local/lib/libogg.0.dylib Resources
