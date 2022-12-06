@@ -54,8 +54,8 @@ static size_t total_size = 0;
 
 static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data) {
 	struct flac_file* flac_file = (struct flac_file*)client_data;
-    switch (metadata->type) {
-        case FLAC__METADATA_TYPE_STREAMINFO:
+	switch (metadata->type) {
+		case FLAC__METADATA_TYPE_STREAMINFO:
 			flac_file->streaminfo = metadata->data.stream_info;
 			break;
 		case FLAC__METADATA_TYPE_APPLICATION: {
@@ -101,7 +101,7 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 		}
 		default:
 			break;
-    }
+	}
 
 	(void)client_data;
 	(void)decoder;
