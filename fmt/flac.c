@@ -140,8 +140,10 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 	if (flac_file->streaminfo.channels > 2)
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
-	if (!((flac_file->streaminfo.bits_per_sample == 8) || (flac_file->streaminfo.bits_per_sample == 12) || (flac_file->streaminfo.bits_per_sample == 16)
-		|| (flac_file->streaminfo.bits_per_sample == 20 || (flac_file->streaminfo.bits_per_sample == 24))))
+	/* ew... */
+	if (!(flac_file->streaminfo.bits_per_sample == 8) && !(flac_file->streaminfo.bits_per_sample == 12) && !(flac_file->streaminfo.bits_per_sample == 16)
+		&& !(flac_file->streaminfo.bits_per_sample == 20 && !(flac_file->streaminfo.bits_per_sample == 24)))
+		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
 	if (frame->header.number.sample_number == 0)
 	{
