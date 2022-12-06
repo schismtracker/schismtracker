@@ -25,6 +25,8 @@ dnl PACKAGE_VERSION will be either "" if not using git, or date of the last git 
 m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
 AC_INIT([schismtracker],[last_git_commit])
 
+PKG_PROG_PKG_CONFIG
+
 AC_CONFIG_SRCDIR([schism/main.c])
 
 AM_INIT_AUTOMAKE([-Wall subdir-objects])
@@ -300,6 +302,17 @@ AC_ARG_ENABLE(fortify-source,
         AS_HELP_STRING([--enable-fortify-source], [Build with FORTIFY_SOURCE]),
         ADD_FORTIFY=$enableval,
         ADD_FORTIFY=no)
+
+AC_ARG_WITH([lua],
+  [AS_HELP_STRING([--with-lua],
+    [Build with Lua scripting support @<:@default=no@:>@])],
+  [],
+  [with_lua=no])
+AS_CASE(["$with_lua"],
+  [yes], [PKG_CHECK_MODULES([lua], [lua5.4], [HAVE_LUA=1])],
+  [no], [HAVE_LUA=0],
+  [HAVE_LUA=0])
+AM_CONDITIONAL([USE_LUA], [test "$with_lua" != no -a "$HAVE_LUA" -eq 1])
 
 dnl fortify needs -O; do this early so ADD_OPT can override with higher -O level
 if test x$ADD_FORTIFY \!= xno; then

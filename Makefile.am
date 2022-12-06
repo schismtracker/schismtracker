@@ -346,6 +346,7 @@ schismtracker_SOURCES = \
 	player/effects.c		\
 	player/snd_gm.c			\
 	player/tables.c			\
+	schism/taskqueue.lua    \
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\
@@ -370,3 +371,16 @@ AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
 schismtracker_LDADD = $(lib_asound) $(lib_win32) $(SDL_LIBS) $(LIBM)
+
+if USE_LUA
+auto/lua-taskqueue.c: scripts/bin2h.sh schism/taskqueue.lua
+	sh $(srcdir)/scripts/build-lua.sh $(srcdir) schism/taskqueue.lua >$@
+
+AM_CFLAGS += -DUSE_LUA $(lua_CFLAGS)
+schismtracker_SOURCES += \
+	schism/lua-engine.c \
+	schism/lua-patternlib.c \
+	schism/page_lua.c \
+	auto/lua-taskqueue.c
+schismtracker_LDADD += $(lua_LIBS)
+endif
